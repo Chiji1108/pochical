@@ -33,7 +33,7 @@
     "typescript": "~5.9.3",
     "ultracite": "7.6.2"
   },
-  "name": "my-app",
+  "name": "nurse-shift",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
