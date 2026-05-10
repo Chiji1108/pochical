@@ -12,7 +12,7 @@ export const WeekRow: FC<WeekRowProps> = ({ date = new Date(), children }) => (
     {getWeekDates(date).map((weekDate, index) => (
       <View
         className="flex-1 items-center justify-center text-center"
-        // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+        // biome-ignore lint/suspicious/noArrayIndexKey: <wip for better key>
         key={index}
       >
         {children(weekDate)}

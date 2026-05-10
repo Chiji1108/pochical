@@ -14,7 +14,7 @@ export const WeekList: FC<WeekListProps> = ({ yearMonth, children }) => {
   return (
     <View className="flex flex-col">
       {weeks.map((week, index) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+        // biome-ignore lint/suspicious/noArrayIndexKey: <wip for better key>
         <WeekRow date={week} key={index}>
           {children}
         </WeekRow>

@@ -19,5 +19,8 @@
         "noGlobalDirnameFilename": "off"
       }
     }
+  },
+  "files": {
+    "includes": ["!**/uniwind-types.d.ts", "!example"]
   }
 }

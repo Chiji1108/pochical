@@ -30,7 +30,7 @@ export const CalendarHeader: FC<CalendarHeaderProps> = ({
       onPress={() => {
         setYearMonth(subMonths(yearMonth, 1));
       }}
-      variant="outline"
+      variant="ghost"
     >
       <StyledFontAwesome6
         className="text-foreground"
@@ -49,7 +49,7 @@ export const CalendarHeader: FC<CalendarHeaderProps> = ({
       onPress={() => {
         setYearMonth(addMonths(yearMonth, 1));
       }}
-      variant="outline"
+      variant="ghost"
     >
       <StyledFontAwesome6
         className="text-foreground"
