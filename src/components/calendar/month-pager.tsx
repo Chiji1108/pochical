@@ -20,7 +20,7 @@ const StyledPagerView = withUniwind(PagerView);
 
 type MonthPagerProps = {
   onTargetDateHandled?: () => void;
-  selectedDate?: Date;
+  selectedDate: Date;
   setSelectedDate: (date: Date) => void;
   setYearMonth: Dispatch<SetStateAction<Date>>;
   targetDate?: Date;

@@ -1,18 +1,18 @@
-import { DatePickerDialog, Host } from "@expo/ui/jetpack-compose";
 import { isSameMonth, isToday } from "date-fns";
+import { selectionAsync } from "expo-haptics";
+import { SymbolView } from "expo-symbols";
 import { Button } from "heroui-native/button";
-import type { FC, ReactNode } from "react";
-import { useState } from "react";
-import { Platform, View } from "react-native";
+import type { FC } from "react";
+import { View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { cn } from "@/lib/utils";
-import { NativeDatePicker } from "./native-date-picker";
+import { CalendarDatePickerButton } from "./calendar-date-picker-button";
 import { WeekRow } from "./week-row";
 
 type CalendarHeaderProps = {
   onSelectDate: (date: Date) => void;
   onPressToday: () => void;
-  selectedDate?: Date;
+  selectedDate: Date;
   yearMonth: Date;
   className?: string;
 };
@@ -20,32 +20,52 @@ type CalendarHeaderProps = {
 type CalendarHeaderContentProps = {
   canReturnToToday: boolean;
   className?: string;
-  onPressMonth: () => void;
   onPressToday: () => void;
+  onSelectDate: (date: Date) => void;
+  selectedDate: Date;
   yearMonth: Date;
 };
 
 const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
   canReturnToToday,
   className,
-  onPressMonth,
   onPressToday,
+  onSelectDate,
+  selectedDate,
   yearMonth,
 }) => (
   <View className={cn("flex flex-col gap-2 px-2 pt-4", className)}>
     <View className="flex flex-row items-center justify-between">
-      <Button onPress={onPressMonth} variant="ghost">
+      <CalendarDatePickerButton
+        onSelectDate={onSelectDate}
+        value={selectedDate}
+        variant="ghost"
+      >
         <Button.Label className="font-bold text-4xl leading-tight">
           {yearMonth.getMonth() + 1}
         </Button.Label>
-      </Button>
+      </CalendarDatePickerButton>
       <Button
+        accessibilityLabel="今日に戻る"
+        className="mx-2"
         isDisabled={!canReturnToToday}
-        onPress={onPressToday}
+        onPress={async () => {
+          onPressToday();
+
+          try {
+            await selectionAsync();
+          } catch {
+            // Haptics can be unavailable depending on the device or platform.
+          }
+        }}
         size="sm"
         variant="outline"
       >
-        今日
+        <SymbolView
+          name={{ android: "undo", ios: "arrow.uturn.backward", web: "undo" }}
+          size={16}
+        />
+        <Button.Label>今日</Button.Label>
       </Button>
     </View>
     <WeekRow>
@@ -67,64 +87,19 @@ export const CalendarHeader: FC<CalendarHeaderProps> = ({
   yearMonth,
   className,
 }) => {
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const today = new Date();
-  const canReturnToToday =
-    !isSameMonth(yearMonth, today) ||
-    (!!selectedDate && !isToday(selectedDate));
-  const datePickerValue = selectedDate ?? yearMonth;
-
-  const openDatePicker = () => {
-    setIsDatePickerOpen(true);
-  };
-
-  const selectDateFromPicker = (selectedPickerDate: Date) => {
-    onSelectDate(selectedPickerDate);
-  };
-
-  const selectDateFromDialog = (selectedPickerDate: Date) => {
-    onSelectDate(selectedPickerDate);
-    setIsDatePickerOpen(false);
-  };
-
-  let datePicker: ReactNode = null;
-
-  if (Platform.OS === "android" && isDatePickerOpen) {
-    datePicker = (
-      <Host matchContents>
-        <DatePickerDialog
-          confirmButtonLabel="完了"
-          dismissButtonLabel="キャンセル"
-          initialDate={datePickerValue.toISOString()}
-          onDateSelected={selectDateFromDialog}
-          onDismissRequest={() => {
-            setIsDatePickerOpen(false);
-          }}
-          variant="picker"
-        />
-      </Host>
-    );
-  } else if (Platform.OS !== "android") {
-    datePicker = (
-      <NativeDatePicker
-        isPresented={isDatePickerOpen}
-        onDateChange={selectDateFromPicker}
-        onIsPresentedChange={setIsDatePickerOpen}
-        value={datePickerValue}
-      />
-    );
-  }
+  const canReturnToToday = !(
+    isSameMonth(yearMonth, today) && isToday(selectedDate)
+  );
 
   return (
-    <>
-      <CalendarHeaderContent
-        canReturnToToday={canReturnToToday}
-        className={className}
-        onPressMonth={openDatePicker}
-        onPressToday={onPressToday}
-        yearMonth={yearMonth}
-      />
-      {datePicker}
-    </>
+    <CalendarHeaderContent
+      canReturnToToday={canReturnToToday}
+      className={className}
+      onPressToday={onPressToday}
+      onSelectDate={onSelectDate}
+      selectedDate={selectedDate}
+      yearMonth={yearMonth}
+    />
   );
 };
