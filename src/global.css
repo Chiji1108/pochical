@@ -2,6 +2,7 @@
 @import "uniwind";
 
 @import "heroui-native/styles";
+
 /* Path to the heroui-native lib inside node_modules relative to global.css */
 /* Examples:
  *   - If global.css is at project root: ./node_modules/heroui-native/lib

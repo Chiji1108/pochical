@@ -1,3 +1,4 @@
+import holidayJp from "@holiday-jp/holiday_jp";
 import {
   eachDayOfInterval,
   eachWeekOfInterval,
@@ -26,3 +27,6 @@ export const getWeeksOfMonth = (date: Date): Date[] => {
   const end = endOfMonth(date);
   return eachWeekOfInterval({ start, end });
 };
+
+export const isJapaneseHoliday = (date: Date): boolean =>
+  holidayJp.isHoliday(date);
