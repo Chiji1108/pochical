@@ -13,7 +13,8 @@
           "options": {
             "style": "type"
           }
-        }
+        },
+        "noNonNullAssertion": "off"
       },
       "correctness": {
         "noGlobalDirnameFilename": "off"
@@ -21,6 +22,6 @@
     }
   },
   "files": {
-    "includes": ["!**/uniwind-types.d.ts", "!example"]
+    "includes": ["!**/uniwind-types.d.ts", "!example", "!node_modules"]
   }
 }
