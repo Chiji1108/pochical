@@ -1,8 +1,8 @@
+import { Text } from "heroui-native";
 import { useDb, useSession } from "jazz-tools/react-native";
 import { useState } from "react";
 import { Pressable, TextInput, View } from "react-native";
 import { app } from "../schema";
-import { AppText } from "./app-text";
 
 export function AddTodo() {
   const db = useDb();
@@ -26,7 +26,7 @@ export function AddTodo() {
         value={name}
       />
       <Pressable onPress={addTodo}>
-        <AppText>Add</AppText>
+        <Text>Add</Text>
       </Pressable>
     </View>
   );

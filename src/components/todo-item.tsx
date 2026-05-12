@@ -1,7 +1,7 @@
+import { Text } from "heroui-native";
 import { useAll, useDb } from "jazz-tools/react-native";
 import { Pressable, Switch, View } from "react-native";
 import { app } from "../schema";
-import { AppText } from "./app-text";
 
 export function TodoItem({ id }: { id: string }) {
   const db = useDb();
@@ -19,9 +19,9 @@ export function TodoItem({ id }: { id: string }) {
         }}
         value={todo.done}
       />
-      <AppText>{todo.name}</AppText>
+      <Text>{todo.name}</Text>
       <Pressable onPress={() => db.delete(app.todos, id)}>
-        <AppText>Delete</AppText>
+        <Text>Delete</Text>
       </Pressable>
     </View>
   );

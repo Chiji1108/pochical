@@ -1,28 +1,16 @@
 import { addDays } from "date-fns";
-import { selectionAsync } from "expo-haptics";
-import { SymbolView } from "expo-symbols";
-import { Button } from "heroui-native/button";
-import { useState } from "react";
-import { View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { withUniwind } from "uniwind";
-import { CalendarDatePickerButton } from "@/components/calendar/calendar-date-picker-button";
+import { BlurTargetView, BlurView } from "expo-blur";
+import { useRef, useState } from "react";
+import { ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CalendarHeader } from "@/components/calendar/calendar-header";
 import { MonthPager } from "@/components/calendar/month-pager";
-
-const selectedDateFormatter = new Intl.DateTimeFormat("ja-JP", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
-
-const selectedWeekdayFormatter = new Intl.DateTimeFormat("ja-JP", {
-  weekday: "short",
-});
-
-const StyledSafeAreaView = withUniwind(SafeAreaView);
+import { PatternGridHeader } from "@/components/pattern/pattern-grid-header";
+import { PatternGridView } from "@/components/pattern/pattern-grid-view";
 
 export default function Index() {
+  const insets = useSafeAreaInsets();
+  const blurTargetRef = useRef<View | null>(null);
   const [yearMonth, setYearMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [targetDate, setTargetDate] = useState<Date>();
@@ -31,69 +19,57 @@ export default function Index() {
     setTargetDate(new Date());
   };
 
-  const selectNextDay = async () => {
+  const selectNextDay = () => {
     setTargetDate(addDays(selectedDate, 1));
-
-    try {
-      await selectionAsync();
-    } catch {
-      // Haptics can be unavailable depending on the device or platform.
-    }
   };
 
   return (
-    <StyledSafeAreaView
-      className="flex-1 bg-background"
-      edges={["top", "left", "right"]}
-    >
-      <View className="w-full">
-        <CalendarHeader
-          onPressToday={returnToToday}
-          onSelectDate={setTargetDate}
-          selectedDate={selectedDate}
-          yearMonth={yearMonth}
-        />
-        <MonthPager
-          onTargetDateHandled={() => {
-            setTargetDate(undefined);
-          }}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-          setYearMonth={setYearMonth}
-          targetDate={targetDate}
-          yearMonth={yearMonth}
-        />
-        <View className="flex-row items-center justify-between px-2 pt-3">
-          <CalendarDatePickerButton
-            onSelectDate={setTargetDate}
-            value={selectedDate}
-            variant="ghost"
-          >
-            <Button.Label className="font-semibold text-base">
-              {`${selectedDateFormatter.format(selectedDate)}(${selectedWeekdayFormatter.format(
-                selectedDate
-              )})`}
-            </Button.Label>
-          </CalendarDatePickerButton>
-          <Button
-            accessibilityLabel="翌日を選択"
-            className="mx-2"
-            onPress={selectNextDay}
-            size="sm"
-            variant="outline"
-          >
-            <SymbolView
-              name={{
-                android: "forward",
-                ios: "forward",
-                web: "forward",
-              }}
-              size={16}
+    <View className="flex-1 bg-background">
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="w-full pb-6"
+        showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[0]}
+      >
+        <BlurView
+          blurMethod="dimezisBlurViewSdk31Plus"
+          blurTarget={blurTargetRef}
+          className="bg-background/80"
+          intensity={30}
+          tint="systemThinMaterial"
+        >
+          <View style={{ paddingTop: insets.top }}>
+            <CalendarHeader
+              className="pt-0"
+              onPressToday={returnToToday}
+              onSelectDate={setTargetDate}
+              selectedDate={selectedDate}
+              yearMonth={yearMonth}
             />
-            <Button.Label>翌日</Button.Label>
-          </Button>
-        </View>
-      </View>
-    </StyledSafeAreaView>
+          </View>
+        </BlurView>
+        <BlurTargetView ref={blurTargetRef}>
+          <MonthPager
+            onTargetDateHandled={() => {
+              setTargetDate(undefined);
+            }}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            setYearMonth={setYearMonth}
+            targetDate={targetDate}
+            yearMonth={yearMonth}
+          />
+          <PatternGridHeader
+            onSelectDate={setTargetDate}
+            onSelectNextDay={selectNextDay}
+            selectedDate={selectedDate}
+          />
+          <PatternGridView
+            onSelectDate={setTargetDate}
+            selectedDate={selectedDate}
+          />
+        </BlurTargetView>
+      </ScrollView>
+    </View>
   );
 }

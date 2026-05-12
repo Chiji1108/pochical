@@ -1,10 +1,10 @@
 import { isSameMonth, isToday } from "date-fns";
 import { selectionAsync } from "expo-haptics";
 import { SymbolView } from "expo-symbols";
+import { Text } from "heroui-native";
 import { Button } from "heroui-native/button";
 import type { FC } from "react";
 import { View } from "react-native";
-import { AppText } from "@/components/app-text";
 import { cn } from "@/lib/utils";
 import { CalendarDatePickerButton } from "./calendar-date-picker-button";
 import { WeekRow } from "./week-row";
@@ -34,7 +34,7 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
   selectedDate,
   yearMonth,
 }) => (
-  <View className={cn("flex flex-col gap-2 px-2 pt-4", className)}>
+  <View className={cn("flex flex-col gap-1 px-2", className)}>
     <View className="flex flex-row items-center justify-between">
       <CalendarDatePickerButton
         onSelectDate={onSelectDate}
@@ -70,11 +70,11 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
     </View>
     <WeekRow>
       {(date) => (
-        <AppText className="text-xs">
+        <Text className="text-xs">
           {date.toLocaleDateString("ja-JP", {
             weekday: "short",
           })}
-        </AppText>
+        </Text>
       )}
     </WeekRow>
   </View>

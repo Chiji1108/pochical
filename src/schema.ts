@@ -9,10 +9,11 @@ const schema = {
   patterns: s.table({
     name: s.string(),
     emoji: s.string(),
+    orderIndex: s.int(),
     isHoliday: s.boolean(),
-    isAllday: s.boolean(),
-    startDate: s.timestamp(),
-    endDate: s.timestamp(),
+    isAllDay: s.boolean(),
+    startDate: s.timestamp().optional(),
+    endDate: s.timestamp().optional(),
     nextDayPatternId: s.ref("patterns").optional(),
   }),
   shifts: s.table({
