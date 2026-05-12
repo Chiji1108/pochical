@@ -80,7 +80,7 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
               style={{ height: CALENDAR_DAY_CELL_HEIGHT }}
             >
               <Text
-                className={cn("text-xs", {
+                className={cn("font-semibold text-xs", {
                   "text-red-500": isJapaneseHoliday(date),
                   "text-background": isSelectedDate,
                 })}

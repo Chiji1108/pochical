@@ -1,9 +1,12 @@
+import { isSameDay } from "date-fns";
 import { selectionAsync } from "expo-haptics";
 import { SymbolView } from "expo-symbols";
 import { Button } from "heroui-native/button";
+import { useAll, useDb } from "jazz-tools/react-native";
 import type { FC } from "react";
 import { View } from "react-native";
 import { CalendarDatePickerButton } from "@/components/calendar/calendar-date-picker-button";
+import { app } from "@/schema";
 
 const selectedDateFormatter = new Intl.DateTimeFormat("ja-JP", {
   day: "numeric",
@@ -26,7 +29,22 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
   onSelectNextDay,
   selectedDate,
 }) => {
-  const selectNextDay = async () => {
+  const db = useDb();
+  const shifts = useAll(app.shifts) ?? [];
+  const selectedDateShifts = shifts.filter((shift) =>
+    isSameDay(shift.startDate, selectedDate)
+  );
+  const hasSelectedDateShift = selectedDateShifts.length > 0;
+
+  const handleNextAction = async () => {
+    if (hasSelectedDateShift) {
+      db.batch((batch) => {
+        for (const shift of selectedDateShifts) {
+          batch.delete(app.shifts, shift.id);
+        }
+      });
+    }
+
     onSelectNextDay();
 
     try {
@@ -51,21 +69,25 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
         </Button.Label>
       </CalendarDatePickerButton>
       <Button
-        accessibilityLabel="翌日を選択"
+        accessibilityLabel={
+          hasSelectedDateShift
+            ? "選択日のシフトを削除して翌日へ移動"
+            : "翌日を選択"
+        }
         className="mx-2"
-        onPress={selectNextDay}
+        onPress={handleNextAction}
         size="sm"
         variant="outline"
       >
         <SymbolView
           name={{
-            android: "forward",
-            ios: "forward",
-            web: "forward",
+            android: hasSelectedDateShift ? "delete" : "forward",
+            ios: hasSelectedDateShift ? "trash" : "forward",
+            web: hasSelectedDateShift ? "delete" : "forward",
           }}
           size={16}
         />
-        <Button.Label>翌日</Button.Label>
+        <Button.Label>{hasSelectedDateShift ? "削除" : "翌日"}</Button.Label>
       </Button>
     </View>
   );

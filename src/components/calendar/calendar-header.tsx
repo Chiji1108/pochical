@@ -70,7 +70,7 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
     </View>
     <WeekRow>
       {(date) => (
-        <Text className="text-xs">
+        <Text className="font-semibold text-xs">
           {date.toLocaleDateString("ja-JP", {
             weekday: "short",
           })}
