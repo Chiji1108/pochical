@@ -17,8 +17,8 @@ import { EmojiPopup } from "react-native-emoji-popup";
 import { PatternTimePickerButton } from "@/components/pattern/pattern-time-picker-button";
 import { app, type Pattern } from "@/schema";
 
-const DEFAULT_EMOJI = "☀️";
-const DEFAULT_NAME = "";
+const DEFAULT_EMOJI = "🐶";
+const DEFAULT_NAME = "ポチ";
 const DEFAULT_START_HOUR = 8;
 const DEFAULT_END_HOUR = 17;
 const DEFAULT_END_MINUTE = 30;
@@ -306,21 +306,18 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
             }}
           />
 
-          <View className="gap-2">
-            <SectionLabel>表示</SectionLabel>
-            <ListGroup>
-              <SettingRow
-                description="シフト共有相手に休日と表示します"
-                label="休日"
-                trailing={
-                  <Switch
-                    isSelected={formState.isHoliday}
-                    onSelectedChange={setHoliday}
-                  />
-                }
-              />
-            </ListGroup>
-          </View>
+          <ListGroup>
+            <SettingRow
+              description="シフト共有相手に休日と表示します"
+              label="休日"
+              trailing={
+                <Switch
+                  isSelected={formState.isHoliday}
+                  onSelectedChange={setHoliday}
+                />
+              }
+            />
+          </ListGroup>
 
           {formState.isHoliday ? null : (
             <TimeSettings
@@ -355,16 +352,6 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
   );
 };
 
-type SectionLabelProps = {
-  children: ReactNode;
-};
-
-const SectionLabel = ({ children }: SectionLabelProps) => (
-  <Text className="px-2 text-sm" color="muted">
-    {children}
-  </Text>
-);
-
 type PatternPreviewProps = {
   emoji: string;
   name: string;
@@ -396,40 +383,40 @@ const BasicInfoGroup = ({
   onChangeEmoji,
   onChangeName,
 }: BasicInfoGroupProps) => (
-  <View className="gap-2">
-    <SectionLabel>基本情報</SectionLabel>
-    <ListGroup>
-      <View className="items-center py-5">
-        <PatternPreview emoji={emoji} name={name} />
-      </View>
-      <Separator className="mx-4" />
-      <EmojiPopup onEmojiSelected={onChangeEmoji}>
-        <ListGroup.Item>
-          <ListGroup.ItemContent>
-            <ListGroup.ItemTitle>絵文字</ListGroup.ItemTitle>
-          </ListGroup.ItemContent>
-          <ListGroup.ItemSuffix>
-            <Text className="text-3xl">{emoji}</Text>
-          </ListGroup.ItemSuffix>
-        </ListGroup.Item>
-      </EmojiPopup>
-      <Separator className="mx-4" />
-      <ListGroup.Item className="items-start">
-        <ListGroup.ItemContent className="gap-2">
-          <ListGroup.ItemTitle>名前</ListGroup.ItemTitle>
-          <TextField>
-            <Input
-              autoCapitalize="none"
-              autoCorrect={false}
-              onChangeText={onChangeName}
-              placeholder="日勤"
-              value={name}
-            />
-          </TextField>
+  <ListGroup>
+    <View className="items-center py-5">
+      <PatternPreview emoji={emoji} name={name} />
+    </View>
+    <Separator className="mx-4" />
+    <EmojiPopup onEmojiSelected={onChangeEmoji}>
+      <ListGroup.Item>
+        <ListGroup.ItemContent>
+          <ListGroup.ItemTitle>絵文字</ListGroup.ItemTitle>
         </ListGroup.ItemContent>
+        <ListGroup.ItemSuffix>
+          <Text className="text-3xl">{emoji}</Text>
+        </ListGroup.ItemSuffix>
       </ListGroup.Item>
-    </ListGroup>
-  </View>
+    </EmojiPopup>
+    <Separator className="mx-4" />
+    <ListGroup.Item>
+      <ListGroup.ItemContent>
+        <ListGroup.ItemTitle>名前</ListGroup.ItemTitle>
+      </ListGroup.ItemContent>
+      <ListGroup.ItemSuffix className="w-16">
+        <TextField>
+          <Input
+            autoCapitalize="none"
+            autoCorrect={false}
+            className="text-center"
+            onChangeText={onChangeName}
+            placeholder="名前"
+            value={name}
+          />
+        </TextField>
+      </ListGroup.ItemSuffix>
+    </ListGroup.Item>
+  </ListGroup>
 );
 
 type TimeSettingsProps = {
@@ -457,101 +444,129 @@ const TimeSettings = ({
   onChangeStartDate,
   startDate,
 }: TimeSettingsProps) => (
-  <View className="gap-2">
-    <SectionLabel>時間</SectionLabel>
-    <ListGroup>
-      <SettingRow
-        label="終日"
-        trailing={
-          <Switch isSelected={isAllDay} onSelectedChange={onChangeAllDay} />
-        }
-      />
-      {isAllDay ? null : (
-        <>
-          <Separator className="mx-4" />
-          <TimePickerRow
-            date={startDate}
-            dayLabel={isContinueUntilNextDay ? "当日" : undefined}
-            label="開始時間"
-            onChangeDate={onChangeStartDate}
-          />
-          <Separator className="mx-4" />
-          <TimePickerRow
-            date={endDate}
-            dayLabel={isContinueUntilNextDay ? "翌日" : undefined}
-            label="終了時間"
-            onChangeDate={onChangeEndDate}
-          />
-        </>
-      )}
-      {isAllDay || !isContinueUntilNextDay ? null : (
-        <>
-          <Separator className="mx-4" />
-          <ListGroup.Item>
-            <ListGroup.ItemContent>
-              <ListGroup.ItemTitle>翌日パターン</ListGroup.ItemTitle>
-              <ListGroup.ItemDescription>
-                休日、終日から選べます
-              </ListGroup.ItemDescription>
-            </ListGroup.ItemContent>
-            <ListGroup.ItemSuffix className="min-w-40">
-              <Select
-                onValueChange={(option) => {
-                  onChangeNextDayPattern(option?.value || undefined);
-                }}
-                presentation="bottom-sheet"
-                value={nextDaySelectValue}
-              >
-                <Select.Trigger>
-                  <Select.Value placeholder="無し" />
-                  <Select.TriggerIndicator />
-                </Select.Trigger>
-                <Select.Portal>
-                  <Select.Overlay />
-                  <Select.Content presentation="bottom-sheet">
-                    <Select.Item label="無し" value="" />
-                    {nextDayPatternOptions.map((option) => (
-                      <Select.Item
-                        key={option.value}
-                        label={option.label}
-                        value={option.value}
-                      />
-                    ))}
-                  </Select.Content>
-                </Select.Portal>
-              </Select>
-            </ListGroup.ItemSuffix>
-          </ListGroup.Item>
-        </>
-      )}
-    </ListGroup>
-  </View>
+  <ListGroup>
+    <SettingRow
+      label="終日"
+      trailing={
+        <Switch isSelected={isAllDay} onSelectedChange={onChangeAllDay} />
+      }
+    />
+    {isAllDay ? null : (
+      <>
+        <Separator className="mx-4" />
+        <TimeRangePickerRow
+          endDate={endDate}
+          endDayLabel={isContinueUntilNextDay ? "翌日" : undefined}
+          onChangeEndDate={onChangeEndDate}
+          onChangeStartDate={onChangeStartDate}
+          startDate={startDate}
+          startDayLabel={isContinueUntilNextDay ? "当日" : undefined}
+        />
+      </>
+    )}
+    {isAllDay || !isContinueUntilNextDay ? null : (
+      <>
+        <Separator className="mx-4" />
+        <ListGroup.Item>
+          <ListGroup.ItemContent>
+            <ListGroup.ItemTitle>翌日パターン</ListGroup.ItemTitle>
+            <ListGroup.ItemDescription>
+              休日、終日から選べます
+            </ListGroup.ItemDescription>
+          </ListGroup.ItemContent>
+          <ListGroup.ItemSuffix className="min-w-40">
+            <Select
+              onValueChange={(option) => {
+                onChangeNextDayPattern(option?.value || undefined);
+              }}
+              presentation="bottom-sheet"
+              value={nextDaySelectValue}
+            >
+              <Select.Trigger>
+                <Select.Value placeholder="無し" />
+                <Select.TriggerIndicator />
+              </Select.Trigger>
+              <Select.Portal>
+                <Select.Overlay />
+                <Select.Content presentation="bottom-sheet">
+                  <Select.Item label="無し" value="" />
+                  {nextDayPatternOptions.map((option) => (
+                    <Select.Item
+                      key={option.value}
+                      label={option.label}
+                      value={option.value}
+                    />
+                  ))}
+                </Select.Content>
+              </Select.Portal>
+            </Select>
+          </ListGroup.ItemSuffix>
+        </ListGroup.Item>
+      </>
+    )}
+  </ListGroup>
 );
 
-type TimePickerRowProps = {
-  date: Date;
-  dayLabel?: string;
-  label: string;
-  onChangeDate: (date: Date) => void;
+type TimeRangePickerRowProps = {
+  endDate: Date;
+  endDayLabel?: string;
+  onChangeEndDate: (date: Date) => void;
+  onChangeStartDate: (date: Date) => void;
+  startDate: Date;
+  startDayLabel?: string;
 };
 
-const TimePickerRow = ({
-  date,
-  dayLabel,
-  label,
-  onChangeDate,
-}: TimePickerRowProps) => (
+const TimeRangePickerRow = ({
+  endDate,
+  endDayLabel,
+  onChangeEndDate,
+  onChangeStartDate,
+  startDate,
+  startDayLabel,
+}: TimeRangePickerRowProps) => (
   <ListGroup.Item>
     <ListGroup.ItemContent>
-      <ListGroup.ItemTitle>{label}</ListGroup.ItemTitle>
-      {dayLabel ? (
-        <ListGroup.ItemDescription>{dayLabel}</ListGroup.ItemDescription>
-      ) : null}
+      <ListGroup.ItemTitle>時間</ListGroup.ItemTitle>
     </ListGroup.ItemContent>
-    <ListGroup.ItemSuffix>
-      <PatternTimePickerButton onSelectDate={onChangeDate} value={date} />
+    <ListGroup.ItemSuffix className="min-w-42">
+      <View className="flex-row items-end gap-2">
+        <TimeRangePickerButton
+          dayLabel={startDayLabel}
+          onChangeDate={onChangeStartDate}
+          value={startDate}
+        />
+        <Text className="pb-2 text-xl leading-none" color="muted">
+          ›
+        </Text>
+        <TimeRangePickerButton
+          dayLabel={endDayLabel}
+          onChangeDate={onChangeEndDate}
+          value={endDate}
+        />
+      </View>
     </ListGroup.ItemSuffix>
   </ListGroup.Item>
+);
+
+type TimeRangePickerButtonProps = {
+  dayLabel?: string;
+  onChangeDate: (date: Date) => void;
+  value: Date;
+};
+
+const TimeRangePickerButton = ({
+  dayLabel,
+  onChangeDate,
+  value,
+}: TimeRangePickerButtonProps) => (
+  <View className="items-center gap-1">
+    {dayLabel ? (
+      <Text className="text-xs" color="muted">
+        {dayLabel}
+      </Text>
+    ) : null}
+    <PatternTimePickerButton onSelectDate={onChangeDate} value={value} />
+  </View>
 );
 
 type DeletePatternGroupProps = {
@@ -565,32 +580,29 @@ const DeletePatternGroup = ({
   onDelete,
   shiftCount,
 }: DeletePatternGroupProps) => (
-  <View className="gap-2">
-    <SectionLabel>削除</SectionLabel>
-    <ListGroup>
-      <PressableFeedback
-        animation={false}
-        isDisabled={isDisabled}
-        onPress={onDelete}
-      >
-        <PressableFeedback.Scale>
-          <ListGroup.Item disabled={isDisabled}>
-            <ListGroup.ItemContent>
-              <ListGroup.ItemTitle className="text-danger">
-                パターンを削除
-              </ListGroup.ItemTitle>
-              {shiftCount > 0 ? (
-                <ListGroup.ItemDescription>
-                  関連する{shiftCount}件のシフトも削除されます
-                </ListGroup.ItemDescription>
-              ) : null}
-            </ListGroup.ItemContent>
-          </ListGroup.Item>
-        </PressableFeedback.Scale>
-        <PressableFeedback.Ripple />
-      </PressableFeedback>
-    </ListGroup>
-  </View>
+  <ListGroup>
+    <PressableFeedback
+      animation={false}
+      isDisabled={isDisabled}
+      onPress={onDelete}
+    >
+      <PressableFeedback.Scale>
+        <ListGroup.Item disabled={isDisabled}>
+          <ListGroup.ItemContent>
+            <ListGroup.ItemTitle className="text-danger">
+              パターンを削除
+            </ListGroup.ItemTitle>
+            {shiftCount > 0 ? (
+              <ListGroup.ItemDescription>
+                関連する{shiftCount}件のシフトも削除されます
+              </ListGroup.ItemDescription>
+            ) : null}
+          </ListGroup.ItemContent>
+        </ListGroup.Item>
+      </PressableFeedback.Scale>
+      <PressableFeedback.Ripple />
+    </PressableFeedback>
+  </ListGroup>
 );
 
 type SettingRowProps = {

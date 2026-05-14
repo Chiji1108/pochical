@@ -89,10 +89,13 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
               </Text>
               {shiftPattern ? (
                 <View className="min-w-0 flex-1 items-center justify-center">
-                  <Text className="text-center text-lg" numberOfLines={1}>
+                  <Text className="text-center text-sm" numberOfLines={1}>
                     {shiftPattern.emoji}
                   </Text>
-                  {/* <Text
+                  {/* <Text className="text-center text-lg" numberOfLines={1}>
+                    {shiftPattern.emoji}
+                  </Text>
+                  <Text
                     className={cn("w-full text-center text-xs leading-0", {
                       "text-background": isSelectedDate,
                     })}

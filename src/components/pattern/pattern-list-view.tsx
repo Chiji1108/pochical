@@ -50,7 +50,6 @@ const PatternListItem = ({
   <ListGroup>
     <ListGroup.Item
       accessibilityLabel={`${pattern.name}を編集`}
-      className="min-h-20"
       onPress={onPress}
     >
       <ListGroup.ItemPrefix>

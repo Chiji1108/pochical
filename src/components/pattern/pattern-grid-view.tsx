@@ -202,7 +202,7 @@ export function PatternGridView({
   return (
     <View className="px-3 pt-1">
       {sortedPatterns.length > 0 ? (
-        <View className="gap-1">
+        <View className="gap-2">
           <View className="flex-row flex-wrap">
             {sortedPatterns.map((pattern) => (
               <View

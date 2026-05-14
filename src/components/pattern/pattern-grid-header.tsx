@@ -55,7 +55,7 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
   };
 
   return (
-    <View className="flex-row items-center justify-between px-2 pt-1">
+    <View className="flex-row items-center justify-between px-2 pt-2">
       <CalendarDatePickerButton
         onSelectDate={onSelectDate}
         size="sm"
