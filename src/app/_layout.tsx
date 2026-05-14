@@ -1,7 +1,7 @@
 import "@/global.css";
 import "jazz-tools/expo/polyfills";
 
-import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { Stack } from "expo-router";
 import { HeroUINativeProvider } from "heroui-native";
 import { useLocalFirstAuth } from "jazz-tools/expo";
 import { JazzProvider } from "jazz-tools/react-native";
@@ -23,16 +23,13 @@ export default function RootLayout() {
           <HeroUINativeProvider
             config={{ devInfo: { stylingPrinciples: false } }}
           >
-            <NativeTabs>
-              <NativeTabs.Trigger name="index">
-                <NativeTabs.Trigger.Icon md="calendar_month" sf="calendar" />
-                <NativeTabs.Trigger.Label>カレンダー</NativeTabs.Trigger.Label>
-              </NativeTabs.Trigger>
-              <NativeTabs.Trigger name="group">
-                <NativeTabs.Trigger.Icon md="groups" sf="person.2.fill" />
-                <NativeTabs.Trigger.Label>グループ</NativeTabs.Trigger.Label>
-              </NativeTabs.Trigger>
-            </NativeTabs>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen
+                name="patterns"
+                options={{ presentation: "fullScreenModal" }}
+              />
+            </Stack>
           </HeroUINativeProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>

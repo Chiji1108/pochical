@@ -13,7 +13,7 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 const config = getDefaultConfig(projectRoot);
 
 // Start the Jazz dev server and inject EXPO_PUBLIC_JAZZ_* env vars for Metro to inline.
-await withJazz(config, { schemaDir: projectRoot });
+await withJazz(config, { schemaDir: `${projectRoot}/src/` });
 
 export default withUniwindConfig(config, {
   // relative path to your global.css file (from previous step)

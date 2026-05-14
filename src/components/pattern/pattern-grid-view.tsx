@@ -1,5 +1,6 @@
 import { addDays, isSameDay, startOfDay } from "date-fns";
 import { selectionAsync } from "expo-haptics";
+import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Text } from "heroui-native";
 import { Button } from "heroui-native/button";
@@ -104,6 +105,7 @@ export function PatternGridView({
   selectedDate,
 }: PatternGridViewProps) {
   const db = useDb();
+  const router = useRouter();
   const session = useSession();
   const patterns = useAll(app.patterns) ?? [];
   const shifts = useAll(app.shifts) ?? [];
@@ -236,7 +238,7 @@ export function PatternGridView({
           <Button
             className="self-center"
             onPress={() => {
-              // Pattern editing UI will be added later.
+              router.push("/patterns");
             }}
             size="sm"
             variant="outline"

@@ -1,0 +1,533 @@
+import { useRouter } from "expo-router";
+import { SymbolView } from "expo-symbols";
+import {
+  Input,
+  ListGroup,
+  Select,
+  Separator,
+  Switch,
+  Text,
+  TextField,
+} from "heroui-native";
+import { Button } from "heroui-native/button";
+import { useAll, useDb, useSession } from "jazz-tools/react-native";
+import type { ReactNode } from "react";
+import { useMemo, useState } from "react";
+import { Alert, ScrollView, View } from "react-native";
+import { EmojiPopup } from "react-native-emoji-popup";
+import { PatternTimePickerButton } from "@/components/pattern/pattern-time-picker-button";
+import { app, type Pattern } from "@/schema";
+
+const DEFAULT_EMOJI = "☀️";
+const DEFAULT_NAME = "";
+const DEFAULT_START_HOUR = 8;
+const DEFAULT_END_HOUR = 17;
+const DEFAULT_END_MINUTE = 30;
+const MINUTES_PER_HOUR = 60;
+
+type PatternEditViewProps = {
+  pattern?: Pattern;
+  topInset?: number;
+};
+
+type PatternFormState = {
+  emoji: string;
+  endDate: Date;
+  isAllDay: boolean;
+  isHoliday: boolean;
+  name: string;
+  nextDayPatternId?: string;
+  startDate: Date;
+};
+
+type PatternSaveFields = {
+  emoji: string;
+  endDate: Date | null;
+  isAllDay: boolean;
+  isHoliday: boolean;
+  name: string;
+  nextDayPatternId?: string | null;
+  startDate: Date | null;
+};
+
+type SelectOption = {
+  label: string;
+  value: string;
+};
+
+const createTime = (hour: number, minute = 0): Date => {
+  const date = new Date();
+  date.setHours(hour, minute, 0, 0);
+  return date;
+};
+
+const toDate = (
+  value: Date | number | null | undefined,
+  fallback: Date
+): Date => {
+  if (value instanceof Date) {
+    return value;
+  }
+
+  return value == null ? fallback : new Date(value);
+};
+
+const getMinutesOfDay = (date: Date): number =>
+  date.getHours() * MINUTES_PER_HOUR + date.getMinutes();
+
+const isContinuingUntilNextDay = (startDate: Date, endDate: Date): boolean =>
+  getMinutesOfDay(endDate) <= getMinutesOfDay(startDate);
+
+const getInitialFormState = (pattern?: Pattern): PatternFormState => ({
+  emoji: pattern?.emoji || DEFAULT_EMOJI,
+  endDate: toDate(
+    pattern?.endDate,
+    createTime(DEFAULT_END_HOUR, DEFAULT_END_MINUTE)
+  ),
+  isAllDay: pattern?.isAllDay ?? false,
+  isHoliday: pattern?.isHoliday ?? false,
+  name: pattern?.name ?? DEFAULT_NAME,
+  nextDayPatternId: pattern?.nextDayPatternId ?? undefined,
+  startDate: toDate(pattern?.startDate, createTime(DEFAULT_START_HOUR)),
+});
+
+const createPatternSaveFields = (
+  formState: PatternFormState,
+  isContinueUntilNextDay: boolean
+): PatternSaveFields => {
+  const isAllDay = formState.isHoliday ? true : formState.isAllDay;
+
+  return {
+    emoji: formState.emoji || DEFAULT_EMOJI,
+    endDate: isAllDay ? null : formState.endDate,
+    isAllDay,
+    isHoliday: formState.isHoliday,
+    name: formState.name.trim(),
+    nextDayPatternId: isContinueUntilNextDay
+      ? (formState.nextDayPatternId ?? null)
+      : null,
+    startDate: isAllDay ? null : formState.startDate,
+  };
+};
+
+export const PatternEditView = ({
+  pattern,
+  topInset = 0,
+}: PatternEditViewProps) => {
+  const db = useDb();
+  const router = useRouter();
+  const session = useSession();
+  const patterns = useAll(app.patterns) ?? [];
+  const [formState, setFormState] = useState(() =>
+    getInitialFormState(pattern)
+  );
+  const selectedNextDayPattern = formState.nextDayPatternId
+    ? patterns.find((item) => item.id === formState.nextDayPatternId)
+    : undefined;
+  const isNewPattern = !pattern;
+  const isContinueUntilNextDay =
+    !(formState.isHoliday || formState.isAllDay) &&
+    isContinuingUntilNextDay(formState.startDate, formState.endDate);
+  const nextDayPatternOptions = useMemo(
+    () =>
+      patterns
+        .filter(
+          (item) =>
+            item.id !== pattern?.id &&
+            (item.isHoliday ||
+              item.isAllDay ||
+              item.id === formState.nextDayPatternId)
+        )
+        .map<SelectOption>((item) => ({
+          label: `${item.emoji} ${item.name}`,
+          value: item.id,
+        })),
+    [formState.nextDayPatternId, pattern?.id, patterns]
+  );
+  const nextDaySelectValue: SelectOption | undefined =
+    formState.nextDayPatternId
+      ? {
+          label: selectedNextDayPattern
+            ? `${selectedNextDayPattern.emoji} ${selectedNextDayPattern.name}`
+            : "選択中のパターン",
+          value: formState.nextDayPatternId,
+        }
+      : undefined;
+
+  const updateFormState = (nextFormState: Partial<PatternFormState>) => {
+    setFormState((currentFormState) => ({
+      ...currentFormState,
+      ...nextFormState,
+    }));
+  };
+
+  const savePattern = () => {
+    if (!session) {
+      return;
+    }
+
+    if (!formState.name.trim()) {
+      Alert.alert("名前を入力してください");
+      return;
+    }
+
+    const saveFields = createPatternSaveFields(
+      formState,
+      isContinueUntilNextDay
+    );
+
+    if (pattern) {
+      db.update(app.patterns, pattern.id, saveFields);
+    } else {
+      db.insert(app.patterns, {
+        ...saveFields,
+        orderIndex: patterns.length,
+      });
+    }
+
+    router.back();
+  };
+
+  const setHoliday = (isHoliday: boolean) => {
+    updateFormState({
+      isAllDay: isHoliday ? true : formState.isAllDay,
+      isHoliday,
+      nextDayPatternId: isHoliday ? undefined : formState.nextDayPatternId,
+    });
+  };
+
+  const setAllDay = (isAllDay: boolean) => {
+    updateFormState({
+      isAllDay,
+      nextDayPatternId: isAllDay ? undefined : formState.nextDayPatternId,
+    });
+  };
+
+  return (
+    <View className="flex-1 bg-background" style={{ paddingTop: topInset }}>
+      <PatternEditHeader
+        isNewPattern={isNewPattern}
+        isSaveDisabled={!session}
+        onBack={() => {
+          router.back();
+        }}
+        onSave={savePattern}
+      />
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="gap-4 px-4 py-5"
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+      >
+        <BasicInfoGroup
+          emoji={formState.emoji}
+          name={formState.name}
+          onChangeEmoji={(emoji) => {
+            updateFormState({ emoji });
+          }}
+          onChangeName={(name) => {
+            updateFormState({ name });
+          }}
+        />
+
+        <View className="gap-2">
+          <SectionLabel>表示</SectionLabel>
+          <ListGroup>
+            <SettingRow
+              description="シフト共有相手に休日と表示します"
+              label="休日"
+              trailing={
+                <Switch
+                  isSelected={formState.isHoliday}
+                  onSelectedChange={setHoliday}
+                />
+              }
+            />
+          </ListGroup>
+        </View>
+
+        {formState.isHoliday ? null : (
+          <TimeSettings
+            endDate={formState.endDate}
+            isAllDay={formState.isAllDay}
+            isContinueUntilNextDay={isContinueUntilNextDay}
+            nextDayPatternOptions={nextDayPatternOptions}
+            nextDaySelectValue={nextDaySelectValue}
+            onChangeAllDay={setAllDay}
+            onChangeEndDate={(endDate) => {
+              updateFormState({ endDate });
+            }}
+            onChangeNextDayPattern={(nextDayPatternId) => {
+              updateFormState({ nextDayPatternId });
+            }}
+            onChangeStartDate={(startDate) => {
+              updateFormState({ startDate });
+            }}
+            startDate={formState.startDate}
+          />
+        )}
+      </ScrollView>
+    </View>
+  );
+};
+
+type PatternEditHeaderProps = {
+  isNewPattern: boolean;
+  isSaveDisabled: boolean;
+  onBack: () => void;
+  onSave: () => void;
+};
+
+const PatternEditHeader = ({
+  isNewPattern,
+  isSaveDisabled,
+  onBack,
+  onSave,
+}: PatternEditHeaderProps) => (
+  <View className="relative h-14 flex-row items-center justify-between border-foreground/10 border-b px-3">
+    <Text className="absolute inset-x-20 text-center font-semibold text-xl">
+      {isNewPattern ? "新規追加" : "編集"}
+    </Text>
+    <Button
+      accessibilityLabel="戻る"
+      className="z-10 h-10 w-10 rounded-full px-0"
+      onPress={onBack}
+      variant="ghost"
+    >
+      <SymbolView
+        name={{
+          android: "arrow_back",
+          ios: "chevron.left",
+          web: "arrow_back",
+        }}
+        size={20}
+      />
+    </Button>
+    <Button
+      className="z-10"
+      isDisabled={isSaveDisabled}
+      onPress={onSave}
+      size="sm"
+      variant="primary"
+    >
+      <Button.Label>保存</Button.Label>
+    </Button>
+  </View>
+);
+
+type SectionLabelProps = {
+  children: ReactNode;
+};
+
+const SectionLabel = ({ children }: SectionLabelProps) => (
+  <Text className="px-2 text-sm" color="muted">
+    {children}
+  </Text>
+);
+
+type PatternPreviewProps = {
+  emoji: string;
+  name: string;
+};
+
+const PatternPreview = ({ emoji, name }: PatternPreviewProps) => (
+  <View className="items-center">
+    <View className="h-20 w-18 items-center justify-center gap-1 rounded-xl bg-background px-2 py-2 shadow-foreground/20 shadow-sm">
+      <Text className="text-3xl" numberOfLines={1}>
+        {emoji}
+      </Text>
+      <Text className="text-center text-sm" numberOfLines={1}>
+        {name || "名前"}
+      </Text>
+    </View>
+  </View>
+);
+
+type BasicInfoGroupProps = {
+  emoji: string;
+  name: string;
+  onChangeEmoji: (emoji: string) => void;
+  onChangeName: (name: string) => void;
+};
+
+const BasicInfoGroup = ({
+  emoji,
+  name,
+  onChangeEmoji,
+  onChangeName,
+}: BasicInfoGroupProps) => (
+  <View className="gap-2">
+    <SectionLabel>基本情報</SectionLabel>
+    <ListGroup>
+      <View className="items-center py-5">
+        <PatternPreview emoji={emoji} name={name} />
+      </View>
+      <Separator className="mx-4" />
+      <EmojiPopup onEmojiSelected={onChangeEmoji}>
+        <ListGroup.Item>
+          <ListGroup.ItemContent>
+            <ListGroup.ItemTitle>絵文字</ListGroup.ItemTitle>
+          </ListGroup.ItemContent>
+          <ListGroup.ItemSuffix>
+            <Text className="text-3xl">{emoji}</Text>
+          </ListGroup.ItemSuffix>
+        </ListGroup.Item>
+      </EmojiPopup>
+      <Separator className="mx-4" />
+      <ListGroup.Item className="items-start">
+        <ListGroup.ItemContent className="gap-2">
+          <ListGroup.ItemTitle>名前</ListGroup.ItemTitle>
+          <TextField>
+            <Input
+              autoCapitalize="none"
+              autoCorrect={false}
+              onChangeText={onChangeName}
+              placeholder="日勤"
+              value={name}
+            />
+          </TextField>
+        </ListGroup.ItemContent>
+      </ListGroup.Item>
+    </ListGroup>
+  </View>
+);
+
+type TimeSettingsProps = {
+  endDate: Date;
+  isAllDay: boolean;
+  isContinueUntilNextDay: boolean;
+  nextDayPatternOptions: SelectOption[];
+  nextDaySelectValue?: SelectOption;
+  onChangeAllDay: (isAllDay: boolean) => void;
+  onChangeEndDate: (date: Date) => void;
+  onChangeNextDayPattern: (patternId?: string) => void;
+  onChangeStartDate: (date: Date) => void;
+  startDate: Date;
+};
+
+const TimeSettings = ({
+  endDate,
+  isAllDay,
+  isContinueUntilNextDay,
+  nextDayPatternOptions,
+  nextDaySelectValue,
+  onChangeAllDay,
+  onChangeEndDate,
+  onChangeNextDayPattern,
+  onChangeStartDate,
+  startDate,
+}: TimeSettingsProps) => (
+  <View className="gap-2">
+    <SectionLabel>時間</SectionLabel>
+    <ListGroup>
+      <SettingRow
+        label="終日"
+        trailing={
+          <Switch isSelected={isAllDay} onSelectedChange={onChangeAllDay} />
+        }
+      />
+      {isAllDay ? null : (
+        <>
+          <Separator className="mx-4" />
+          <TimePickerRow
+            date={startDate}
+            dayLabel={isContinueUntilNextDay ? "当日" : undefined}
+            label="開始時間"
+            onChangeDate={onChangeStartDate}
+          />
+          <Separator className="mx-4" />
+          <TimePickerRow
+            date={endDate}
+            dayLabel={isContinueUntilNextDay ? "翌日" : undefined}
+            label="終了時間"
+            onChangeDate={onChangeEndDate}
+          />
+        </>
+      )}
+      {isAllDay || !isContinueUntilNextDay ? null : (
+        <>
+          <Separator className="mx-4" />
+          <ListGroup.Item>
+            <ListGroup.ItemContent>
+              <ListGroup.ItemTitle>翌日パターン</ListGroup.ItemTitle>
+              <ListGroup.ItemDescription>
+                休日、終日から選べます
+              </ListGroup.ItemDescription>
+            </ListGroup.ItemContent>
+            <ListGroup.ItemSuffix className="min-w-40">
+              <Select
+                onValueChange={(option) => {
+                  onChangeNextDayPattern(option?.value || undefined);
+                }}
+                presentation="bottom-sheet"
+                value={nextDaySelectValue}
+              >
+                <Select.Trigger>
+                  <Select.Value placeholder="無し" />
+                  <Select.TriggerIndicator />
+                </Select.Trigger>
+                <Select.Portal>
+                  <Select.Overlay />
+                  <Select.Content presentation="bottom-sheet">
+                    <Select.Item label="無し" value="" />
+                    {nextDayPatternOptions.map((option) => (
+                      <Select.Item
+                        key={option.value}
+                        label={option.label}
+                        value={option.value}
+                      />
+                    ))}
+                  </Select.Content>
+                </Select.Portal>
+              </Select>
+            </ListGroup.ItemSuffix>
+          </ListGroup.Item>
+        </>
+      )}
+    </ListGroup>
+  </View>
+);
+
+type TimePickerRowProps = {
+  date: Date;
+  dayLabel?: string;
+  label: string;
+  onChangeDate: (date: Date) => void;
+};
+
+const TimePickerRow = ({
+  date,
+  dayLabel,
+  label,
+  onChangeDate,
+}: TimePickerRowProps) => (
+  <ListGroup.Item>
+    <ListGroup.ItemContent>
+      <ListGroup.ItemTitle>{label}</ListGroup.ItemTitle>
+      {dayLabel ? (
+        <ListGroup.ItemDescription>{dayLabel}</ListGroup.ItemDescription>
+      ) : null}
+    </ListGroup.ItemContent>
+    <ListGroup.ItemSuffix>
+      <PatternTimePickerButton onSelectDate={onChangeDate} value={date} />
+    </ListGroup.ItemSuffix>
+  </ListGroup.Item>
+);
+
+type SettingRowProps = {
+  description?: string;
+  label: string;
+  trailing: ReactNode;
+};
+
+const SettingRow = ({ description, label, trailing }: SettingRowProps) => (
+  <ListGroup.Item>
+    <ListGroup.ItemContent>
+      <ListGroup.ItemTitle>{label}</ListGroup.ItemTitle>
+      {description ? (
+        <ListGroup.ItemDescription>{description}</ListGroup.ItemDescription>
+      ) : null}
+    </ListGroup.ItemContent>
+    <ListGroup.ItemSuffix>{trailing}</ListGroup.ItemSuffix>
+  </ListGroup.Item>
+);
