@@ -161,7 +161,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
       ? {
           label: selectedNextDayPattern
             ? `${selectedNextDayPattern.emoji} ${selectedNextDayPattern.name}`
-            : "選択中のパターン",
+            : "選択中のシフトパターン",
           value: formState.nextDayPatternId,
         }
       : undefined;
@@ -212,7 +212,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
       return;
     }
 
-    const patternName = pattern.name.trim() || "パターン";
+    const patternName = pattern.name.trim() || "シフトパターン";
     const message =
       relatedShifts.length > 0
         ? `関連する${relatedShifts.length}件のシフトも削除されます。`
@@ -277,7 +277,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
     <View className="flex-1 bg-background">
       <AppHeader
         leftAction={{
-          accessibilityLabel: "パターン一覧に戻る",
+          accessibilityLabel: "シフトパターン一覧に戻る",
           icon: {
             android: "arrow_back",
             ios: "chevron.left",
@@ -289,7 +289,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
           },
         }}
         rightAction={{
-          accessibilityLabel: "パターンを保存",
+          accessibilityLabel: "シフトパターンを保存",
           isDisabled: !session,
           label: "保存",
           onPress: savePattern,
@@ -476,7 +476,7 @@ const TimeSettings = ({
         <Separator className="mx-4" />
         <ListGroup.Item>
           <ListGroup.ItemContent>
-            <ListGroup.ItemTitle>翌日パターン</ListGroup.ItemTitle>
+            <ListGroup.ItemTitle>翌日シフトパターン</ListGroup.ItemTitle>
             <ListGroup.ItemDescription>
               休日、終日から選べます
             </ListGroup.ItemDescription>
@@ -597,7 +597,7 @@ const DeletePatternGroup = ({
         <ListGroup.Item disabled={isDisabled}>
           <ListGroup.ItemContent>
             <ListGroup.ItemTitle className="text-danger">
-              パターンを削除
+              シフトパターンを削除
             </ListGroup.ItemTitle>
             {shiftCount > 0 ? (
               <ListGroup.ItemDescription>

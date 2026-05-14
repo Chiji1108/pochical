@@ -17,7 +17,7 @@ export default function PatternDetail() {
       <View className="flex-1 bg-background">
         <AppHeader
           leftAction={{
-            accessibilityLabel: "パターン一覧に戻る",
+            accessibilityLabel: "シフトパターン一覧に戻る",
             icon: {
               android: "arrow_back",
               ios: "chevron.left",
@@ -32,7 +32,7 @@ export default function PatternDetail() {
         />
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-center text-base" color="muted">
-            パターンが見つかりません
+            シフトパターンが見つかりません
           </Text>
         </View>
       </View>

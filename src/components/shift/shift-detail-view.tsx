@@ -48,25 +48,7 @@ export const ShiftDetailView = ({ selectedDate }: ShiftDetailViewProps) => {
     : undefined;
 
   if (!selectedPattern) {
-    return (
-      <View className="px-3 pt-1">
-        <ListGroup>
-          <ListGroup.Item>
-            <ListGroup.ItemPrefix>
-              <Text className="w-9 text-center text-2xl" numberOfLines={1}>
-                -
-              </Text>
-            </ListGroup.ItemPrefix>
-            <ListGroup.ItemContent>
-              <ListGroup.ItemTitle numberOfLines={1}>
-                シフト未入力
-              </ListGroup.ItemTitle>
-            </ListGroup.ItemContent>
-            <ListGroup.ItemSuffix />
-          </ListGroup.Item>
-        </ListGroup>
-      </View>
-    );
+    return null;
   }
 
   return (

@@ -97,7 +97,7 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
             <SymbolView
               name={{
                 android: hasSelectedDateShift ? "delete" : "forward",
-                ios: hasSelectedDateShift ? "trash" : "forward",
+                ios: hasSelectedDateShift ? "trash" : "forward.fill",
                 web: hasSelectedDateShift ? "delete" : "forward",
               }}
               size={16}

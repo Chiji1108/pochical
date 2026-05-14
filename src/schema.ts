@@ -19,6 +19,11 @@ const schema = {
   shifts: s.table({
     patternId: s.ref("patterns"),
     startDate: s.timestamp(),
+    notes: s.string().optional(),
+    memberIds: s.array(s.ref("members")),
+  }),
+  members: s.table({
+    name: s.string(),
   }),
 };
 

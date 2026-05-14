@@ -132,7 +132,7 @@ export function PatternGridView({
       const akeSeed = seedPatterns.find((pattern) => pattern.name === "明け");
 
       if (!akeSeed) {
-        throw new Error("明けパターンの seed が見つかりません。");
+        throw new Error("明けシフトパターンの seed が見つかりません。");
       }
 
       const ake = batch.insert(app.patterns, createPatternInsert(akeSeed));
@@ -177,6 +177,7 @@ export function PatternGridView({
           batch.insert(app.shifts, {
             patternId,
             startDate,
+            memberIds: [],
           });
         }
 
@@ -251,7 +252,7 @@ export function PatternGridView({
               }}
               size={16}
             />
-            <Button.Label>パターンを編集</Button.Label>
+            <Button.Label>シフトパターンを編集</Button.Label>
           </Button>
         </View>
       ) : (
@@ -271,7 +272,7 @@ export function PatternGridView({
               size={18}
               tintColor="white"
             />
-            <Button.Label>パターン作成</Button.Label>
+            <Button.Label>シフトパターンを追加</Button.Label>
           </Button>
           {session ? null : (
             <Text className="mt-3 text-sm" color="muted">

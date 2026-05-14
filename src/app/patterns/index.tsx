@@ -17,7 +17,7 @@ export default function Patterns() {
           },
         }}
         rightAction={{
-          accessibilityLabel: "パターンを新規追加",
+          accessibilityLabel: "シフトパターンを新規追加",
           icon: {
             android: "add",
             ios: "plus",
@@ -27,7 +27,7 @@ export default function Patterns() {
             router.push("/patterns/new");
           },
         }}
-        title="パターン"
+        title="シフトパターン"
       />
       <PatternListView />
     </View>
