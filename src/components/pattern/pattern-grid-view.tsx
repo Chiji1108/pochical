@@ -96,11 +96,15 @@ const seedPatterns: SeedPattern[] = [
 ] as const;
 
 type PatternGridViewProps = {
+  isDetailInputMode: boolean;
+  onToggleDetailInputMode: () => void;
   onSelectDate: (date: Date) => void;
   selectedDate: Date;
 };
 
 export function PatternGridView({
+  isDetailInputMode,
+  onToggleDetailInputMode,
   onSelectDate,
   selectedDate,
 }: PatternGridViewProps) {
@@ -236,24 +240,46 @@ export function PatternGridView({
               </View>
             ))}
           </View>
-          <Button
-            className="self-center"
-            onPress={() => {
-              router.push("/patterns");
-            }}
-            size="sm"
-            variant="outline"
-          >
-            <SymbolView
-              name={{
-                android: "edit",
-                ios: "pencil",
-                web: "edit",
+          <View className="flex-row items-center justify-center gap-2">
+            <Button
+              accessibilityLabel={
+                isDetailInputMode ? "詳細入力を終了" : "詳細入力を開始"
+              }
+              className="self-center"
+              onPress={onToggleDetailInputMode}
+              size="sm"
+              variant={isDetailInputMode ? "primary" : "outline"}
+            >
+              <SymbolView
+                name={{
+                  android: "view_week",
+                  ios: "list.bullet.rectangle",
+                  web: "view_week",
+                }}
+                size={16}
+                tintColor={isDetailInputMode ? "white" : undefined}
+              />
+              <Button.Label>詳細入力</Button.Label>
+            </Button>
+            <Button
+              className="self-center"
+              onPress={() => {
+                router.push("/patterns");
               }}
-              size={16}
-            />
-            <Button.Label>シフトパターンを編集</Button.Label>
-          </Button>
+              size="sm"
+              variant="outline"
+            >
+              <SymbolView
+                name={{
+                  android: "edit",
+                  ios: "pencil",
+                  web: "edit",
+                }}
+                size={16}
+              />
+              <Button.Label>シフトパターンを編集</Button.Label>
+            </Button>
+          </View>
         </View>
       ) : (
         <View className="items-center py-6">

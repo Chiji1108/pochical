@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { type LayoutChangeEvent, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CalendarHeader } from "@/components/calendar/calendar-header";
-import { MonthPager } from "@/components/calendar/month-pager";
+import { CalendarPager } from "@/components/calendar/calendar-pager";
 import { PatternGridHeader } from "@/components/pattern/pattern-grid-header";
 import { PatternGridView } from "@/components/pattern/pattern-grid-view";
 import { ShiftDetailView } from "@/components/shift/shift-detail-view";
@@ -15,6 +15,7 @@ export default function Index() {
   const insets = useSafeAreaInsets();
   const blurTargetRef = useRef<View | null>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
+  const [isDetailInputMode, setIsDetailInputMode] = useState(false);
   const [isShiftInputMode, setIsShiftInputMode] = useState(false);
   const [yearMonth, setYearMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -35,6 +36,16 @@ export default function Index() {
 
   const selectNextDay = () => {
     selectDateImmediately(addDays(selectedDate, 1));
+  };
+
+  const toggleShiftInputMode = () => {
+    setIsShiftInputMode((current) => {
+      if (current) {
+        setIsDetailInputMode(false);
+      }
+
+      return !current;
+    });
   };
 
   const handleHeaderLayout = (event: LayoutChangeEvent) => {
@@ -75,7 +86,8 @@ export default function Index() {
         showsVerticalScrollIndicator={false}
       >
         <BlurTargetView ref={blurTargetRef}>
-          <MonthPager
+          <CalendarPager
+            isDetailInputMode={isDetailInputMode}
             onTargetDateHandled={() => {
               setTargetDate(undefined);
             }}
@@ -89,14 +101,16 @@ export default function Index() {
             isShiftInputMode={isShiftInputMode}
             onSelectDate={setTargetDate}
             onSelectNextDay={selectNextDay}
-            onToggleShiftInputMode={() => {
-              setIsShiftInputMode((current) => !current);
-            }}
+            onToggleShiftInputMode={toggleShiftInputMode}
             selectedDate={selectedDate}
           />
           {isShiftInputMode ? (
             <PatternGridView
+              isDetailInputMode={isDetailInputMode}
               onSelectDate={selectDateImmediately}
+              onToggleDetailInputMode={() => {
+                setIsDetailInputMode((current) => !current);
+              }}
               selectedDate={selectedDate}
             />
           ) : (

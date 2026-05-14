@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import { useWindowDimensions, View } from "react-native";
+import type { SharedValue } from "react-native-reanimated";
 import { CalendarBody } from "./calendar-body";
 import { CALENDAR_PAGER_HEIGHT } from "./constants";
 
@@ -19,10 +20,13 @@ const MONTH_APPEND_BATCH_SIZE = 6;
 const MONTH_APPEND_THRESHOLD = 3;
 
 type MonthPagerProps = {
+  detailTransitionProgress?: SharedValue<number>;
   onTargetDateHandled?: () => void;
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
   setYearMonth: Dispatch<SetStateAction<Date>>;
+  scrollEnabled?: boolean;
+  syncDate?: Date;
   targetDate?: Date;
   yearMonth: Date;
 };
@@ -52,10 +56,13 @@ const findMonthIndex = (months: Date[], targetMonth: Date): number =>
   months.findIndex((month) => isSameMonth(month, targetMonth));
 
 export const MonthPager: FC<MonthPagerProps> = ({
+  detailTransitionProgress,
   onTargetDateHandled,
   selectedDate,
   setSelectedDate,
   setYearMonth,
+  scrollEnabled = true,
+  syncDate,
   targetDate,
   yearMonth,
 }) => {
@@ -184,6 +191,23 @@ export const MonthPager: FC<MonthPagerProps> = ({
     yearMonths,
   ]);
 
+  useEffect(() => {
+    if (!syncDate) {
+      return;
+    }
+
+    const syncMonth = startOfMonth(syncDate);
+
+    setYearMonths((currentMonths) => {
+      if (containsMonth(currentMonths, syncMonth)) {
+        return currentMonths;
+      }
+
+      return getMonthsAround(syncMonth, MONTH_BUFFER_SIZE);
+    });
+    scrollToMonth(syncMonth, false);
+  }, [scrollToMonth, syncDate]);
+
   useLayoutEffect(() => {
     const pendingPrependCount = pendingPrependCountRef.current;
 
@@ -226,13 +250,14 @@ export const MonthPager: FC<MonthPagerProps> = ({
     ({ item }: ListRenderItemInfo<Date>) => (
       <View style={{ width: pageWidth }}>
         <CalendarBody
+          detailTransitionProgress={detailTransitionProgress}
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
           yearMonth={item}
         />
       </View>
     ),
-    [pageWidth, selectedDate, setSelectedDate]
+    [detailTransitionProgress, pageWidth, selectedDate, setSelectedDate]
   );
 
   return (
@@ -251,6 +276,7 @@ export const MonthPager: FC<MonthPagerProps> = ({
       pagingEnabled
       ref={listRef}
       renderItem={renderMonth}
+      scrollEnabled={scrollEnabled}
       scrollEventThrottle={16}
       showsHorizontalScrollIndicator={false}
       style={{ height: CALENDAR_PAGER_HEIGHT, width: "100%" }}

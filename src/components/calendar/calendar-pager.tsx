@@ -1,0 +1,104 @@
+import type { Dispatch, FC, SetStateAction } from "react";
+import { useEffect } from "react";
+import Animated, {
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+import { CALENDAR_PAGER_HEIGHT, CALENDAR_WEEK_PAGER_HEIGHT } from "./constants";
+import { MonthPager } from "./month-pager";
+import { WeekPager } from "./week-pager";
+
+const DETAIL_TRANSITION_DURATION = 260;
+
+type CalendarPagerProps = {
+  isDetailInputMode: boolean;
+  onTargetDateHandled?: () => void;
+  selectedDate: Date;
+  setSelectedDate: (date: Date) => void;
+  setYearMonth: Dispatch<SetStateAction<Date>>;
+  targetDate?: Date;
+  yearMonth: Date;
+};
+
+export const CalendarPager: FC<CalendarPagerProps> = ({
+  isDetailInputMode,
+  onTargetDateHandled,
+  selectedDate,
+  setSelectedDate,
+  setYearMonth,
+  targetDate,
+  yearMonth,
+}) => {
+  const transitionProgress = useSharedValue(isDetailInputMode ? 1 : 0);
+  const containerStyle = useAnimatedStyle(() => {
+    const nextHeight =
+      CALENDAR_PAGER_HEIGHT -
+      (CALENDAR_PAGER_HEIGHT - CALENDAR_WEEK_PAGER_HEIGHT) *
+        transitionProgress.value;
+
+    return {
+      height: nextHeight,
+    };
+  });
+  const monthLayerStyle = useAnimatedStyle(() => ({
+    opacity: 1 - transitionProgress.value,
+  }));
+  const weekLayerStyle = useAnimatedStyle(() => ({
+    opacity: transitionProgress.value,
+  }));
+
+  useEffect(() => {
+    cancelAnimation(transitionProgress);
+    transitionProgress.value = withTiming(isDetailInputMode ? 1 : 0, {
+      duration: DETAIL_TRANSITION_DURATION,
+    });
+  }, [isDetailInputMode, transitionProgress]);
+
+  return (
+    <Animated.View style={[containerStyle, { overflow: "hidden" }]}>
+      <Animated.View
+        pointerEvents={isDetailInputMode ? "none" : "auto"}
+        style={monthLayerStyle}
+      >
+        <MonthPager
+          detailTransitionProgress={transitionProgress}
+          onTargetDateHandled={
+            isDetailInputMode ? undefined : onTargetDateHandled
+          }
+          scrollEnabled={!isDetailInputMode}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          setYearMonth={setYearMonth}
+          syncDate={isDetailInputMode ? selectedDate : undefined}
+          targetDate={isDetailInputMode ? undefined : targetDate}
+          yearMonth={yearMonth}
+        />
+      </Animated.View>
+      <Animated.View
+        pointerEvents={isDetailInputMode ? "auto" : "none"}
+        style={[
+          {
+            left: 0,
+            position: "absolute",
+            right: 0,
+            top: 0,
+          },
+          weekLayerStyle,
+        ]}
+      >
+        <WeekPager
+          onTargetDateHandled={
+            isDetailInputMode ? onTargetDateHandled : undefined
+          }
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          setYearMonth={setYearMonth}
+          targetDate={isDetailInputMode ? targetDate : undefined}
+          yearMonth={yearMonth}
+        />
+      </Animated.View>
+    </Animated.View>
+  );
+};
