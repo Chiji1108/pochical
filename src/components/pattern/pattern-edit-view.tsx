@@ -1,4 +1,4 @@
-import { Stack, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import {
   Input,
   ListGroup,
@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { EmojiPopup } from "react-native-emoji-popup";
+import { AppHeader } from "@/components/navigation/app-header";
 import { PatternTimePickerButton } from "@/components/pattern/pattern-time-picker-button";
 import { app, type Pattern } from "@/schema";
 
@@ -273,82 +274,88 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
   };
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          title: isNewPattern ? "新規追加" : "編集",
+    <View className="flex-1 bg-background">
+      <AppHeader
+        leftAction={{
+          accessibilityLabel: "パターン一覧に戻る",
+          icon: {
+            android: "arrow_back",
+            ios: "chevron.left",
+            web: "arrow_back",
+          },
+          label: "戻る",
+          onPress: () => {
+            router.back();
+          },
         }}
+        rightAction={{
+          accessibilityLabel: "パターンを保存",
+          isDisabled: !session,
+          label: "保存",
+          onPress: savePattern,
+          variant: "primary",
+        }}
+        title={isNewPattern ? "新規追加" : "編集"}
       />
-      <Stack.Toolbar placement="right">
-        <Stack.Toolbar.Button
-          disabled={!session}
-          onPress={savePattern}
-          variant="done"
-        >
-          保存
-        </Stack.Toolbar.Button>
-      </Stack.Toolbar>
-      <View className="flex-1 bg-background">
-        <ScrollView
-          className="flex-1"
-          contentContainerClassName="gap-4 px-4 py-5"
-          contentInsetAdjustmentBehavior="automatic"
-          keyboardShouldPersistTaps="handled"
-        >
-          <BasicInfoGroup
-            emoji={formState.emoji}
-            name={formState.name}
-            onChangeEmoji={(emoji) => {
-              updateFormState({ emoji });
-            }}
-            onChangeName={(name) => {
-              updateFormState({ name });
-            }}
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="gap-4 px-4 py-5"
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+      >
+        <BasicInfoGroup
+          emoji={formState.emoji}
+          name={formState.name}
+          onChangeEmoji={(emoji) => {
+            updateFormState({ emoji });
+          }}
+          onChangeName={(name) => {
+            updateFormState({ name });
+          }}
+        />
+
+        <ListGroup>
+          <SettingRow
+            description="シフト共有相手に休日と表示します"
+            label="休日"
+            trailing={
+              <Switch
+                isSelected={formState.isHoliday}
+                onSelectedChange={setHoliday}
+              />
+            }
           />
+        </ListGroup>
 
-          <ListGroup>
-            <SettingRow
-              description="シフト共有相手に休日と表示します"
-              label="休日"
-              trailing={
-                <Switch
-                  isSelected={formState.isHoliday}
-                  onSelectedChange={setHoliday}
-                />
-              }
-            />
-          </ListGroup>
-
-          {formState.isHoliday ? null : (
-            <TimeSettings
-              endDate={formState.endDate}
-              isAllDay={formState.isAllDay}
-              isContinueUntilNextDay={isContinueUntilNextDay}
-              nextDayPatternOptions={nextDayPatternOptions}
-              nextDaySelectValue={nextDaySelectValue}
-              onChangeAllDay={setAllDay}
-              onChangeEndDate={(endDate) => {
-                updateFormState({ endDate });
-              }}
-              onChangeNextDayPattern={(nextDayPatternId) => {
-                updateFormState({ nextDayPatternId });
-              }}
-              onChangeStartDate={(startDate) => {
-                updateFormState({ startDate });
-              }}
-              startDate={formState.startDate}
-            />
-          )}
-          {pattern ? (
-            <DeletePatternGroup
-              isDisabled={!session}
-              onDelete={confirmDeletePattern}
-              shiftCount={relatedShifts.length}
-            />
-          ) : null}
-        </ScrollView>
-      </View>
-    </>
+        {formState.isHoliday ? null : (
+          <TimeSettings
+            endDate={formState.endDate}
+            isAllDay={formState.isAllDay}
+            isContinueUntilNextDay={isContinueUntilNextDay}
+            nextDayPatternOptions={nextDayPatternOptions}
+            nextDaySelectValue={nextDaySelectValue}
+            onChangeAllDay={setAllDay}
+            onChangeEndDate={(endDate) => {
+              updateFormState({ endDate });
+            }}
+            onChangeNextDayPattern={(nextDayPatternId) => {
+              updateFormState({ nextDayPatternId });
+            }}
+            onChangeStartDate={(startDate) => {
+              updateFormState({ startDate });
+            }}
+            startDate={formState.startDate}
+          />
+        )}
+        {pattern ? (
+          <DeletePatternGroup
+            isDisabled={!session}
+            onDelete={confirmDeletePattern}
+            shiftCount={relatedShifts.length}
+          />
+        ) : null}
+      </ScrollView>
+    </View>
   );
 };
 

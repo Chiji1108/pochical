@@ -212,7 +212,7 @@ export function PatternGridView({
               >
                 <Button
                   accessibilityLabel={`${pattern.name}を入力`}
-                  className="h-15 w-full flex-col gap-0 rounded-lg bg-foreground/5 px-1 py-3"
+                  className="h-15 w-full flex-col justify-center gap-1 rounded-lg bg-foreground/5 px-1 py-2"
                   isDisabled={!session}
                   onPress={() => {
                     handlePatternPress(pattern);
@@ -220,7 +220,7 @@ export function PatternGridView({
                   variant="ghost"
                 >
                   <Button.Label
-                    className="text-center text-xl"
+                    className="text-center text-sm"
                     numberOfLines={1}
                   >
                     {pattern.emoji}
