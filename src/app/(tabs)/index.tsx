@@ -7,6 +7,7 @@ import { CalendarHeader } from "@/components/calendar/calendar-header";
 import { MonthPager } from "@/components/calendar/month-pager";
 import { PatternGridHeader } from "@/components/pattern/pattern-grid-header";
 import { PatternGridView } from "@/components/pattern/pattern-grid-view";
+import { ShiftDetailView } from "@/components/shift/shift-detail-view";
 
 const TAB_OVERLAP_SCROLL_PADDING = 36;
 
@@ -14,6 +15,7 @@ export default function Index() {
   const insets = useSafeAreaInsets();
   const blurTargetRef = useRef<View | null>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
+  const [isShiftInputMode, setIsShiftInputMode] = useState(false);
   const [yearMonth, setYearMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [targetDate, setTargetDate] = useState<Date>();
@@ -84,14 +86,22 @@ export default function Index() {
             yearMonth={yearMonth}
           />
           <PatternGridHeader
+            isShiftInputMode={isShiftInputMode}
             onSelectDate={setTargetDate}
             onSelectNextDay={selectNextDay}
+            onToggleShiftInputMode={() => {
+              setIsShiftInputMode((current) => !current);
+            }}
             selectedDate={selectedDate}
           />
-          <PatternGridView
-            onSelectDate={selectDateImmediately}
-            selectedDate={selectedDate}
-          />
+          {isShiftInputMode ? (
+            <PatternGridView
+              onSelectDate={selectDateImmediately}
+              selectedDate={selectedDate}
+            />
+          ) : (
+            <ShiftDetailView selectedDate={selectedDate} />
+          )}
         </BlurTargetView>
       </ScrollView>
     </View>

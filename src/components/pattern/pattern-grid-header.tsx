@@ -19,14 +19,18 @@ const selectedWeekdayFormatter = new Intl.DateTimeFormat("ja-JP", {
 });
 
 type PatternGridHeaderProps = {
+  isShiftInputMode: boolean;
   onSelectDate: (date: Date) => void;
   onSelectNextDay: () => void;
+  onToggleShiftInputMode: () => void;
   selectedDate: Date;
 };
 
 export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
+  isShiftInputMode,
   onSelectDate,
   onSelectNextDay,
+  onToggleShiftInputMode,
   selectedDate,
 }) => {
   const db = useDb();
@@ -54,8 +58,18 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
     }
   };
 
+  const handleToggleShiftInputMode = async () => {
+    onToggleShiftInputMode();
+
+    try {
+      await selectionAsync();
+    } catch {
+      // Haptics can be unavailable depending on the device or platform.
+    }
+  };
+
   return (
-    <View className="flex-row items-center justify-between px-2 pt-2">
+    <View className="flex-row items-center justify-between p-2">
       <CalendarDatePickerButton
         onSelectDate={onSelectDate}
         size="sm"
@@ -68,27 +82,53 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
           )})`}
         </Button.Label>
       </CalendarDatePickerButton>
-      <Button
-        accessibilityLabel={
-          hasSelectedDateShift
-            ? "選択日のシフトを削除して翌日へ移動"
-            : "翌日を選択"
-        }
-        className="mx-2"
-        onPress={handleNextAction}
-        size="sm"
-        variant="outline"
-      >
-        <SymbolView
-          name={{
-            android: hasSelectedDateShift ? "delete" : "forward",
-            ios: hasSelectedDateShift ? "trash" : "forward",
-            web: hasSelectedDateShift ? "delete" : "forward",
-          }}
-          size={16}
-        />
-        <Button.Label>{hasSelectedDateShift ? "削除" : "翌日"}</Button.Label>
-      </Button>
+      <View className="flex-row items-center gap-2">
+        {isShiftInputMode ? (
+          <Button
+            accessibilityLabel={
+              hasSelectedDateShift
+                ? "選択日のシフトを削除して翌日へ移動"
+                : "翌日を選択"
+            }
+            onPress={handleNextAction}
+            size="sm"
+            variant="outline"
+          >
+            <SymbolView
+              name={{
+                android: hasSelectedDateShift ? "delete" : "forward",
+                ios: hasSelectedDateShift ? "trash" : "forward",
+                web: hasSelectedDateShift ? "delete" : "forward",
+              }}
+              size={16}
+            />
+            <Button.Label>
+              {hasSelectedDateShift ? "削除" : "翌日"}
+            </Button.Label>
+          </Button>
+        ) : null}
+        <Button
+          accessibilityLabel={
+            isShiftInputMode ? "シフト入力を完了" : "シフト入力を開始"
+          }
+          onPress={handleToggleShiftInputMode}
+          size="sm"
+          variant={isShiftInputMode ? "primary" : "outline"}
+        >
+          <SymbolView
+            name={{
+              android: isShiftInputMode ? "check" : "edit",
+              ios: isShiftInputMode ? "checkmark" : "pencil",
+              web: isShiftInputMode ? "check" : "edit",
+            }}
+            size={16}
+            tintColor={isShiftInputMode ? "white" : undefined}
+          />
+          <Button.Label>
+            {isShiftInputMode ? "完了" : "シフト入力"}
+          </Button.Label>
+        </Button>
+      </View>
     </View>
   );
 };
