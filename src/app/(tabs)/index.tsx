@@ -8,6 +8,8 @@ import { MonthPager } from "@/components/calendar/month-pager";
 import { PatternGridHeader } from "@/components/pattern/pattern-grid-header";
 import { PatternGridView } from "@/components/pattern/pattern-grid-view";
 
+const TAB_OVERLAP_SCROLL_PADDING = 36;
+
 export default function Index() {
   const insets = useSafeAreaInsets();
   const blurTargetRef = useRef<View | null>(null);
@@ -63,8 +65,11 @@ export default function Index() {
       </BlurView>
       <ScrollView
         className="flex-1 bg-background"
-        contentContainerClassName="w-full pb-6"
-        contentContainerStyle={{ paddingTop: headerHeight }}
+        contentContainerClassName="w-full"
+        contentContainerStyle={{
+          paddingBottom: insets.bottom + TAB_OVERLAP_SCROLL_PADDING,
+          paddingTop: headerHeight,
+        }}
         showsVerticalScrollIndicator={false}
       >
         <BlurTargetView ref={blurTargetRef}>

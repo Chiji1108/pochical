@@ -1,15 +1,14 @@
-import { useRouter } from "expo-router";
-import { SymbolView } from "expo-symbols";
+import { Stack, useRouter } from "expo-router";
 import {
   Input,
   ListGroup,
+  PressableFeedback,
   Select,
   Separator,
   Switch,
   Text,
   TextField,
 } from "heroui-native";
-import { Button } from "heroui-native/button";
 import { useAll, useDb, useSession } from "jazz-tools/react-native";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
@@ -27,7 +26,6 @@ const MINUTES_PER_HOUR = 60;
 
 type PatternEditViewProps = {
   pattern?: Pattern;
-  topInset?: number;
 };
 
 type PatternFormState = {
@@ -110,14 +108,12 @@ const createPatternSaveFields = (
   };
 };
 
-export const PatternEditView = ({
-  pattern,
-  topInset = 0,
-}: PatternEditViewProps) => {
+export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
   const db = useDb();
   const router = useRouter();
   const session = useSession();
   const patterns = useAll(app.patterns) ?? [];
+  const shifts = useAll(app.shifts) ?? [];
   const [formState, setFormState] = useState(() =>
     getInitialFormState(pattern)
   );
@@ -128,6 +124,21 @@ export const PatternEditView = ({
   const isContinueUntilNextDay =
     !(formState.isHoliday || formState.isAllDay) &&
     isContinuingUntilNextDay(formState.startDate, formState.endDate);
+  const relatedShifts = useMemo(
+    () =>
+      pattern ? shifts.filter((shift) => shift.patternId === pattern.id) : [],
+    [pattern, shifts]
+  );
+  const patternsUsingThisAsNextDay = useMemo(
+    () =>
+      pattern
+        ? patterns.filter(
+            (item) =>
+              item.id !== pattern.id && item.nextDayPatternId === pattern.id
+          )
+        : [],
+    [pattern, patterns]
+  );
   const nextDayPatternOptions = useMemo(
     () =>
       patterns
@@ -159,6 +170,64 @@ export const PatternEditView = ({
       ...currentFormState,
       ...nextFormState,
     }));
+  };
+
+  const deletePattern = () => {
+    if (!(pattern && session)) {
+      return;
+    }
+
+    db.batch((batch) => {
+      for (const shift of relatedShifts) {
+        batch.delete(app.shifts, shift.id);
+      }
+
+      for (const item of patternsUsingThisAsNextDay) {
+        batch.update(app.patterns, item.id, {
+          nextDayPatternId: null,
+        });
+      }
+
+      const remainingPatterns = patterns
+        .filter((item) => item.id !== pattern.id)
+        .sort((a, b) => a.orderIndex - b.orderIndex);
+
+      for (const [orderIndex, item] of remainingPatterns.entries()) {
+        if (item.orderIndex !== orderIndex) {
+          batch.update(app.patterns, item.id, {
+            orderIndex,
+          });
+        }
+      }
+
+      batch.delete(app.patterns, pattern.id);
+    });
+
+    router.back();
+  };
+
+  const confirmDeletePattern = () => {
+    if (!pattern) {
+      return;
+    }
+
+    const patternName = pattern.name.trim() || "パターン";
+    const message =
+      relatedShifts.length > 0
+        ? `関連する${relatedShifts.length}件のシフトも削除されます。`
+        : "この操作は取り消せません。";
+
+    Alert.alert(`${patternName}を削除しますか？`, message, [
+      {
+        style: "cancel",
+        text: "キャンセル",
+      },
+      {
+        onPress: deletePattern,
+        style: "destructive",
+        text: "削除",
+      },
+    ]);
   };
 
   const savePattern = () => {
@@ -204,116 +273,87 @@ export const PatternEditView = ({
   };
 
   return (
-    <View className="flex-1 bg-background" style={{ paddingTop: topInset }}>
-      <PatternEditHeader
-        isNewPattern={isNewPattern}
-        isSaveDisabled={!session}
-        onBack={() => {
-          router.back();
+    <>
+      <Stack.Screen
+        options={{
+          title: isNewPattern ? "新規追加" : "編集",
         }}
-        onSave={savePattern}
       />
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="gap-4 px-4 py-5"
-        contentInsetAdjustmentBehavior="automatic"
-        keyboardShouldPersistTaps="handled"
-      >
-        <BasicInfoGroup
-          emoji={formState.emoji}
-          name={formState.name}
-          onChangeEmoji={(emoji) => {
-            updateFormState({ emoji });
-          }}
-          onChangeName={(name) => {
-            updateFormState({ name });
-          }}
-        />
-
-        <View className="gap-2">
-          <SectionLabel>表示</SectionLabel>
-          <ListGroup>
-            <SettingRow
-              description="シフト共有相手に休日と表示します"
-              label="休日"
-              trailing={
-                <Switch
-                  isSelected={formState.isHoliday}
-                  onSelectedChange={setHoliday}
-                />
-              }
-            />
-          </ListGroup>
-        </View>
-
-        {formState.isHoliday ? null : (
-          <TimeSettings
-            endDate={formState.endDate}
-            isAllDay={formState.isAllDay}
-            isContinueUntilNextDay={isContinueUntilNextDay}
-            nextDayPatternOptions={nextDayPatternOptions}
-            nextDaySelectValue={nextDaySelectValue}
-            onChangeAllDay={setAllDay}
-            onChangeEndDate={(endDate) => {
-              updateFormState({ endDate });
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          disabled={!session}
+          onPress={savePattern}
+          variant="done"
+        >
+          保存
+        </Stack.Toolbar.Button>
+      </Stack.Toolbar>
+      <View className="flex-1 bg-background">
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="gap-4 px-4 py-5"
+          contentInsetAdjustmentBehavior="automatic"
+          keyboardShouldPersistTaps="handled"
+        >
+          <BasicInfoGroup
+            emoji={formState.emoji}
+            name={formState.name}
+            onChangeEmoji={(emoji) => {
+              updateFormState({ emoji });
             }}
-            onChangeNextDayPattern={(nextDayPatternId) => {
-              updateFormState({ nextDayPatternId });
+            onChangeName={(name) => {
+              updateFormState({ name });
             }}
-            onChangeStartDate={(startDate) => {
-              updateFormState({ startDate });
-            }}
-            startDate={formState.startDate}
           />
-        )}
-      </ScrollView>
-    </View>
+
+          <View className="gap-2">
+            <SectionLabel>表示</SectionLabel>
+            <ListGroup>
+              <SettingRow
+                description="シフト共有相手に休日と表示します"
+                label="休日"
+                trailing={
+                  <Switch
+                    isSelected={formState.isHoliday}
+                    onSelectedChange={setHoliday}
+                  />
+                }
+              />
+            </ListGroup>
+          </View>
+
+          {formState.isHoliday ? null : (
+            <TimeSettings
+              endDate={formState.endDate}
+              isAllDay={formState.isAllDay}
+              isContinueUntilNextDay={isContinueUntilNextDay}
+              nextDayPatternOptions={nextDayPatternOptions}
+              nextDaySelectValue={nextDaySelectValue}
+              onChangeAllDay={setAllDay}
+              onChangeEndDate={(endDate) => {
+                updateFormState({ endDate });
+              }}
+              onChangeNextDayPattern={(nextDayPatternId) => {
+                updateFormState({ nextDayPatternId });
+              }}
+              onChangeStartDate={(startDate) => {
+                updateFormState({ startDate });
+              }}
+              startDate={formState.startDate}
+            />
+          )}
+          {pattern ? (
+            <DeletePatternGroup
+              isDisabled={!session}
+              onDelete={confirmDeletePattern}
+              shiftCount={relatedShifts.length}
+            />
+          ) : null}
+        </ScrollView>
+      </View>
+    </>
   );
 };
-
-type PatternEditHeaderProps = {
-  isNewPattern: boolean;
-  isSaveDisabled: boolean;
-  onBack: () => void;
-  onSave: () => void;
-};
-
-const PatternEditHeader = ({
-  isNewPattern,
-  isSaveDisabled,
-  onBack,
-  onSave,
-}: PatternEditHeaderProps) => (
-  <View className="relative h-14 flex-row items-center justify-between border-foreground/10 border-b px-3">
-    <Text className="absolute inset-x-20 text-center font-semibold text-xl">
-      {isNewPattern ? "新規追加" : "編集"}
-    </Text>
-    <Button
-      accessibilityLabel="戻る"
-      className="z-10 h-10 w-10 rounded-full px-0"
-      onPress={onBack}
-      variant="ghost"
-    >
-      <SymbolView
-        name={{
-          android: "arrow_back",
-          ios: "chevron.left",
-          web: "arrow_back",
-        }}
-        size={20}
-      />
-    </Button>
-    <Button
-      className="z-10"
-      isDisabled={isSaveDisabled}
-      onPress={onSave}
-      size="sm"
-      variant="primary"
-    >
-      <Button.Label>保存</Button.Label>
-    </Button>
-  </View>
-);
 
 type SectionLabelProps = {
   children: ReactNode;
@@ -512,6 +552,45 @@ const TimePickerRow = ({
       <PatternTimePickerButton onSelectDate={onChangeDate} value={date} />
     </ListGroup.ItemSuffix>
   </ListGroup.Item>
+);
+
+type DeletePatternGroupProps = {
+  isDisabled: boolean;
+  onDelete: () => void;
+  shiftCount: number;
+};
+
+const DeletePatternGroup = ({
+  isDisabled,
+  onDelete,
+  shiftCount,
+}: DeletePatternGroupProps) => (
+  <View className="gap-2">
+    <SectionLabel>削除</SectionLabel>
+    <ListGroup>
+      <PressableFeedback
+        animation={false}
+        isDisabled={isDisabled}
+        onPress={onDelete}
+      >
+        <PressableFeedback.Scale>
+          <ListGroup.Item disabled={isDisabled}>
+            <ListGroup.ItemContent>
+              <ListGroup.ItemTitle className="text-danger">
+                パターンを削除
+              </ListGroup.ItemTitle>
+              {shiftCount > 0 ? (
+                <ListGroup.ItemDescription>
+                  関連する{shiftCount}件のシフトも削除されます
+                </ListGroup.ItemDescription>
+              ) : null}
+            </ListGroup.ItemContent>
+          </ListGroup.Item>
+        </PressableFeedback.Scale>
+        <PressableFeedback.Ripple />
+      </PressableFeedback>
+    </ListGroup>
+  </View>
 );
 
 type SettingRowProps = {

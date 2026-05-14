@@ -65,7 +65,7 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
                 {
                   "opacity-40": !isSameMonth(date, yearMonth),
                   "bg-foreground/5": isToday(date),
-                  "bg-foreground": isSelectedDate,
+                  "bg-foreground/85": isSelectedDate,
                 }
               )}
               onPress={async () => {
@@ -92,14 +92,14 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
                   <Text className="text-center text-lg" numberOfLines={1}>
                     {shiftPattern.emoji}
                   </Text>
-                  <Text
+                  {/* <Text
                     className={cn("w-full text-center text-xs leading-0", {
                       "text-background": isSelectedDate,
                     })}
                     numberOfLines={1}
                   >
                     {shiftPattern.name}
-                  </Text>
+                  </Text> */}
                 </View>
               ) : null}
             </PressableFeedback>
