@@ -2,6 +2,7 @@ import type { Dispatch, FC, SetStateAction } from "react";
 import { useEffect } from "react";
 import Animated, {
   cancelAnimation,
+  type SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -13,6 +14,7 @@ import { WeekPager } from "./week-pager";
 const DETAIL_TRANSITION_DURATION = 260;
 
 type CalendarPagerProps = {
+  detailTransitionProgress?: SharedValue<number>;
   isDetailInputMode: boolean;
   onTargetDateHandled?: () => void;
   selectedDate: Date;
@@ -23,6 +25,7 @@ type CalendarPagerProps = {
 };
 
 export const CalendarPager: FC<CalendarPagerProps> = ({
+  detailTransitionProgress,
   isDetailInputMode,
   onTargetDateHandled,
   selectedDate,
@@ -31,7 +34,8 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
   targetDate,
   yearMonth,
 }) => {
-  const transitionProgress = useSharedValue(isDetailInputMode ? 1 : 0);
+  const fallbackProgress = useSharedValue(isDetailInputMode ? 1 : 0);
+  const transitionProgress = detailTransitionProgress ?? fallbackProgress;
   const containerStyle = useAnimatedStyle(() => {
     const nextHeight =
       CALENDAR_PAGER_HEIGHT -
@@ -50,11 +54,15 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
   }));
 
   useEffect(() => {
+    if (detailTransitionProgress) {
+      return;
+    }
+
     cancelAnimation(transitionProgress);
     transitionProgress.value = withTiming(isDetailInputMode ? 1 : 0, {
       duration: DETAIL_TRANSITION_DURATION,
     });
-  }, [isDetailInputMode, transitionProgress]);
+  }, [detailTransitionProgress, isDetailInputMode, transitionProgress]);
 
   return (
     <Animated.View style={[containerStyle, { overflow: "hidden" }]}>

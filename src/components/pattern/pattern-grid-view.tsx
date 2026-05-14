@@ -7,6 +7,7 @@ import { Button } from "heroui-native/button";
 import { useAll, useDb, useSession } from "jazz-tools/react-native";
 import { useMemo } from "react";
 import { useWindowDimensions, View } from "react-native";
+import { ShiftDetailInputPanel } from "@/components/shift/shift-detail-input-panel";
 import { app, type Pattern } from "@/schema";
 
 const MIN_PATTERN_CELL_WIDTH = 48;
@@ -96,15 +97,11 @@ const seedPatterns: SeedPattern[] = [
 ] as const;
 
 type PatternGridViewProps = {
-  isDetailInputMode: boolean;
-  onToggleDetailInputMode: () => void;
   onSelectDate: (date: Date) => void;
   selectedDate: Date;
 };
 
 export function PatternGridView({
-  isDetailInputMode,
-  onToggleDetailInputMode,
   onSelectDate,
   selectedDate,
 }: PatternGridViewProps) {
@@ -126,6 +123,9 @@ export function PatternGridView({
     )
   );
   const cellWidth = `${100 / columnCount}%` as const;
+  const selectedDateShift = shifts.find((shift) =>
+    isSameDay(shift.startDate, selectedDate)
+  );
 
   const createSeedPatterns = () => {
     if (!session || patterns.length > 0) {
@@ -205,62 +205,44 @@ export function PatternGridView({
   };
 
   return (
-    <View className="px-3">
+    <View className="flex-1 px-3">
       {sortedPatterns.length > 0 ? (
         <View className="gap-2">
-          <View className="flex-row flex-wrap">
-            {sortedPatterns.map((pattern) => (
-              <View
-                className="p-1"
-                key={pattern.id}
-                style={{ width: cellWidth }}
-              >
-                <Button
-                  accessibilityLabel={`${pattern.name}を入力`}
-                  className="h-15 w-full flex-col justify-center gap-1 rounded-lg bg-foreground/5 px-1 py-2"
-                  isDisabled={!session}
-                  onPress={() => {
-                    handlePatternPress(pattern);
-                  }}
-                  variant="ghost"
+          <View>
+            <View className="flex-row flex-wrap">
+              {sortedPatterns.map((pattern) => (
+                <View
+                  className="p-1"
+                  key={pattern.id}
+                  style={{ width: cellWidth }}
                 >
-                  <Button.Label
-                    className="text-center text-sm"
-                    numberOfLines={1}
+                  <Button
+                    accessibilityLabel={`${pattern.name}を入力`}
+                    className="h-15 w-full flex-col justify-center gap-1 rounded-lg bg-foreground/5 px-1 py-2"
+                    isDisabled={!session}
+                    onPress={() => {
+                      handlePatternPress(pattern);
+                    }}
+                    variant="ghost"
                   >
-                    {pattern.emoji}
-                  </Button.Label>
-                  <Button.Label
-                    className="text-center font-normal text-sm"
-                    numberOfLines={1}
-                  >
-                    {pattern.name}
-                  </Button.Label>
-                </Button>
-              </View>
-            ))}
+                    <Button.Label
+                      className="text-center text-sm"
+                      numberOfLines={1}
+                    >
+                      {pattern.emoji}
+                    </Button.Label>
+                    <Button.Label
+                      className="text-center font-normal text-sm"
+                      numberOfLines={1}
+                    >
+                      {pattern.name}
+                    </Button.Label>
+                  </Button>
+                </View>
+              ))}
+            </View>
           </View>
-          <View className="flex-row items-center justify-center gap-2">
-            <Button
-              accessibilityLabel={
-                isDetailInputMode ? "詳細入力を終了" : "詳細入力を開始"
-              }
-              className="self-center"
-              onPress={onToggleDetailInputMode}
-              size="sm"
-              variant={isDetailInputMode ? "primary" : "outline"}
-            >
-              <SymbolView
-                name={{
-                  android: "view_week",
-                  ios: "list.bullet.rectangle",
-                  web: "view_week",
-                }}
-                size={16}
-                tintColor={isDetailInputMode ? "white" : undefined}
-              />
-              <Button.Label>詳細入力</Button.Label>
-            </Button>
+          <View className="flex-row items-center justify-end gap-2">
             <Button
               className="self-center"
               onPress={() => {
@@ -280,6 +262,7 @@ export function PatternGridView({
               <Button.Label>シフトパターンを編集</Button.Label>
             </Button>
           </View>
+          <ShiftDetailInputPanel selectedShift={selectedDateShift} />
         </View>
       ) : (
         <View className="items-center py-6">

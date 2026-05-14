@@ -3,7 +3,7 @@ import { NativeTabs } from "expo-router/unstable-native-tabs";
 export default function TabLayout() {
   return (
     <NativeTabs>
-      <NativeTabs.Trigger name="index">
+      <NativeTabs.Trigger disableAutomaticContentInsets name="index">
         <NativeTabs.Trigger.Icon md="calendar_month" sf="calendar" />
         <NativeTabs.Trigger.Label>カレンダー</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>

@@ -69,7 +69,7 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
   };
 
   return (
-    <View className="flex-row items-center justify-between p-2">
+    <View className="flex-row items-center justify-between px-2 py-2">
       <CalendarDatePickerButton
         onSelectDate={onSelectDate}
         size="sm"
@@ -82,7 +82,7 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
           )})`}
         </Button.Label>
       </CalendarDatePickerButton>
-      <View className="flex-row items-center gap-2">
+      <View className="flex-row items-center gap-2 pr-2">
         {isShiftInputMode ? (
           <Button
             accessibilityLabel={

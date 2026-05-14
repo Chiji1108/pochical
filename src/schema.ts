@@ -24,6 +24,7 @@ const schema = {
   }),
   members: s.table({
     name: s.string(),
+    orderIndex: s.int(),
   }),
 };
 
@@ -38,3 +39,6 @@ export type PatternQueryBuilder = typeof app.patterns;
 
 export type Shift = s.RowOf<typeof app.shifts>;
 export type ShiftQueryBuilder = typeof app.shifts;
+
+export type Member = s.RowOf<typeof app.members>;
+export type MemberQueryBuilder = typeof app.members;

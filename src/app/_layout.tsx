@@ -29,6 +29,10 @@ export default function RootLayout() {
                 name="patterns"
                 options={{ presentation: "fullScreenModal" }}
               />
+              <Stack.Screen
+                name="members"
+                options={{ presentation: "fullScreenModal" }}
+              />
             </Stack>
           </HeroUINativeProvider>
         </SafeAreaProvider>
