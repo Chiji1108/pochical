@@ -18,7 +18,7 @@
 - 共有グループは公開コミュニティではなく、LINEグループのような仲間内の共有を想定する。
 - MVPでは admin / owner / role の概念を持たない。グループ所属者は全員、招待と表示名変更ができる。
 - 勤務メンバーは、当面は自分のシフト詳細に付ける補助情報として扱う。
-- この計画は [勤務パターン休み判定 リファクタリング計画](./pattern-day-off-refactor-plan.md) を先に完了し、`patterns.countsAsDayOff` が使える状態になっている前提で進める。
+- `patterns.countsAsDayOff` と `shiftNotes` は実装済みの前提で進める。
 
 ## 用語
 
@@ -29,7 +29,7 @@
 
 ## 推奨データモデル
 
-`src/schema.ts` に personal shift sharing のための table を追加する。`patterns.countsAsDayOff` は事前リファクタリングで追加済みとする。
+`src/schema.ts` に personal shift sharing のための table を追加する。
 
 ```ts
 shareGroups: s.table({
@@ -56,8 +56,12 @@ patterns: s.table({
 shifts: s.table({
   patternId: s.ref("patterns"),
   startDate: s.timestamp(),
-  notes: s.string().optional(),
   memberIds: s.array(s.ref("members")),
+}),
+
+shiftNotes: s.table({
+  shiftId: s.ref("shifts"),
+  notes: s.string(),
 }),
 
 members: s.table({
@@ -72,7 +76,6 @@ members: s.table({
 - `patterns`, `members`, `shifts` は Jazz の magic column `$createdBy` で所有者を判定する。MVPでは明示的な `ownerUserId` は持たない。
 - `shifts.memberIds` は既存の意味を維持する。これは「その日に一緒に働く勤務メンバー」であり、共有グループのメンバーとは別物。
 - 共有は shift 単位ではなく、shareGroup membership 単位にする。自分が所属する shareGroup のメンバーには、自分の全 shift を見せる。
-- `patterns.countsAsDayOff` は事前リファクタリング済みの前提で使う。
 - メモは共有しない。`shifts.notes` ではなく、本人だけが読める `shiftNotes` として分離済みの前提にする。
 - 代理入力や公式シフト表を後で作る場合は、`$createdBy` とは別に「誰の勤務か」を表す `subjectUserId` や `ownerMemberId` を追加する。
 
@@ -297,11 +300,20 @@ const shifts = useAll(app.shifts.where({ $createdBy: session.user_id })) ?? [];
 
 `countsAsDayOff` は `isAllDay` と独立している前提。例えば「明け」は終日表示で `countsAsDayOff: true` にできるし、「待機」は終日表示でも `countsAsDayOff: false` にできる。
 
+休み判定は日単位で行い、時間単位の空き時間計算は扱わない。MVPでは `未設定 OR countsAsDayOff === true` を休み扱いとして確定する。
+
 グループ画面では、`shareGroupMembers` から group の user_id 一覧を取得し、それぞれの `$createdBy` の shift を表示する。クエリ形は Jazz 2 の `where` / join 相当の表現に合わせて実装時に確認する。
 
 ## 招待機能
 
 招待は MVP 後に追加する。
+
+MVP検証では、開発時のみ `session.user_id` を使った手動追加UIを用意する。
+
+- グループリスト画面に `__DEV__` 限定で自分の `session.user_id` を表示する。
+- グループ編集/詳細画面に `__DEV__` 限定で user_id 手入力のメンバー追加UIを置く。
+- 本番では user_id 手入力UIを提供しない。
+- 本番UXは招待URLにする。
 
 ### 推奨方式
 
@@ -371,12 +383,6 @@ user_123
 
 ## 実装ステップ
 
-### Phase 0: 勤務パターンの休み判定を整理する
-
-- [勤務パターン休み判定 リファクタリング計画](./pattern-day-off-refactor-plan.md) を先に実施する。
-- `patterns.isHoliday` を `patterns.countsAsDayOff` にリネームする。
-- 休み合わせ判定を `countsAsDayOff` で行える状態にする。
-
 ### Phase 1: 自分のデータを `$createdBy` 前提にする
 
 - 既存 query を `$createdBy` で絞る。
@@ -405,15 +411,11 @@ user_123
 ### Phase 5: 拡張
 
 - メモは `shiftNotes` として分離済み。共有後は本人だけが読める permissions にする。
-- 共有範囲を「全 shift」以外にする必要が出たら、月単位や shift 単位の共有 table を追加する。
+- 外部カレンダーへの書き出しを検討する。
 - 代理入力や承認フローを検討する。
 
 ## 未決事項
-
-- 将来的に shift 単位や月単位の公開範囲が必要になるか。
-- グループごとの表示名を `shareGroupMembers.displayName` だけで十分とするか。
-- 休み判定は `patterns.countsAsDayOff` で十分か、勤務区分を別途持つか。
-- 招待なしの検証時に、user_id をどうやって交換するか。
+なし。
 
 ## 推奨MVP
 
