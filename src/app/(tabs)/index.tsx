@@ -28,7 +28,7 @@ import { CalendarPager } from "@/components/calendar/calendar-pager";
 import { PatternGridHeader } from "@/components/pattern/pattern-grid-header";
 import { PatternGridView } from "@/components/pattern/pattern-grid-view";
 import { ShiftDetailView } from "@/components/shift/shift-detail-view";
-import { app, type Member, type Pattern } from "@/schema";
+import { app, type Member, type Pattern, type ShiftNote } from "@/schema";
 
 const DETAIL_PAGE_DRAG_DISTANCE = 180;
 const DETAIL_PAGE_SETTLE_THRESHOLD = 0.45;
@@ -49,6 +49,7 @@ export default function Index() {
   const bottomContentPadding = insets.bottom + TAB_OVERLAP_PADDING;
   const patterns = useAll(app.patterns) ?? [];
   const shifts = useAll(app.shifts) ?? [];
+  const shiftNotes = useAll(app.shiftNotes) ?? [];
   const members = useAll(app.members) ?? [];
   const patternsById = useMemo(() => {
     const nextPatternsById = new Map<string, Pattern>();
@@ -68,23 +69,35 @@ export default function Index() {
 
     return nextMembersById;
   }, [members]);
+  const shiftNotesByShiftId = useMemo(() => {
+    const nextShiftNotesByShiftId = new Map<string, ShiftNote>();
+
+    for (const shiftNote of shiftNotes) {
+      nextShiftNotesByShiftId.set(shiftNote.shiftId, shiftNote);
+    }
+
+    return nextShiftNotesByShiftId;
+  }, [shiftNotes]);
   const shiftsByDate = useMemo(() => {
     const nextShiftsByDate = new Map<number, CalendarShiftSummary>();
 
     for (const shift of shifts) {
       nextShiftsByDate.set(startOfDay(shift.startDate).getTime(), {
-        hasNotes: Boolean(shift.notes?.trim()),
+        hasNotes: Boolean(shiftNotesByShiftId.get(shift.id)?.notes.trim()),
         patternId: shift.patternId,
       });
     }
 
     return nextShiftsByDate;
-  }, [shifts]);
+  }, [shiftNotesByShiftId, shifts]);
   const selectedDateShifts = useMemo(
     () => shifts.filter((shift) => isSameDay(shift.startDate, selectedDate)),
     [selectedDate, shifts]
   );
   const [selectedDateShift] = selectedDateShifts;
+  const selectedDateShiftNote = selectedDateShift
+    ? shiftNotesByShiftId.get(selectedDateShift.id)
+    : undefined;
 
   const returnToToday = () => {
     setTargetDate(new Date());
@@ -208,6 +221,7 @@ export default function Index() {
               onToggleShiftInputMode={toggleShiftInputMode}
               selectedDate={selectedDate}
               selectedDateShifts={selectedDateShifts}
+              shiftNotesByShiftId={shiftNotesByShiftId}
             />
             <View className="flex-1">
               {isShiftInputMode ? (
@@ -220,6 +234,8 @@ export default function Index() {
                   patterns={patterns}
                   selectedDate={selectedDate}
                   selectedDateShift={selectedDateShift}
+                  selectedDateShiftNote={selectedDateShiftNote}
+                  shiftNotesByShiftId={shiftNotesByShiftId}
                   shifts={shifts}
                 />
               ) : (
@@ -228,6 +244,7 @@ export default function Index() {
                   membersById={membersById}
                   patternsById={patternsById}
                   selectedDateShift={selectedDateShift}
+                  selectedDateShiftNote={selectedDateShiftNote}
                 />
               )}
             </View>

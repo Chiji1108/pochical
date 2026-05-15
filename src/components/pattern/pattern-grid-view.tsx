@@ -12,7 +12,7 @@ import Animated, {
   useAnimatedStyle,
 } from "react-native-reanimated";
 import { ShiftDetailInputPanel } from "@/components/shift/shift-detail-input-panel";
-import { app, type Pattern, type Shift } from "@/schema";
+import { app, type Pattern, type Shift, type ShiftNote } from "@/schema";
 
 const MIN_PATTERN_CELL_WIDTH = 48;
 const PATTERN_GRID_GAP = 8;
@@ -115,6 +115,8 @@ type PatternGridViewProps = {
   patterns: Pattern[];
   selectedDate: Date;
   selectedDateShift?: Shift;
+  selectedDateShiftNote?: ShiftNote;
+  shiftNotesByShiftId: ReadonlyMap<string, ShiftNote>;
   shifts: Shift[];
 };
 
@@ -127,6 +129,8 @@ export function PatternGridView({
   patterns,
   selectedDate,
   selectedDateShift,
+  selectedDateShiftNote,
+  shiftNotesByShiftId,
   shifts,
 }: PatternGridViewProps) {
   const db = useDb();
@@ -208,6 +212,12 @@ export function PatternGridView({
         }
 
         for (const duplicateShift of duplicateShifts) {
+          const duplicateShiftNote = shiftNotesByShiftId.get(duplicateShift.id);
+
+          if (duplicateShiftNote) {
+            batch.delete(app.shiftNotes, duplicateShiftNote.id);
+          }
+
           batch.delete(app.shifts, duplicateShift.id);
         }
       };
@@ -303,6 +313,7 @@ export function PatternGridView({
             <ShiftDetailInputPanel
               onSelectNextDay={onSelectNextDay}
               selectedShift={selectedDateShift}
+              selectedShiftNote={selectedDateShiftNote}
             />
           </Animated.View>
         </View>

@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import { Chip, ListGroup, Separator, Text } from "heroui-native";
 import { useMemo } from "react";
 import { View } from "react-native";
-import type { Member, Pattern, Shift } from "@/schema";
+import type { Member, Pattern, Shift, ShiftNote } from "@/schema";
 
 const getPatternScheduleLabel = (pattern: Pattern): string => {
   if (pattern.isAllDay) {
@@ -25,6 +25,7 @@ type ShiftDetailViewProps = {
   membersById: ReadonlyMap<string, Member>;
   patternsById: ReadonlyMap<string, Pattern>;
   selectedDateShift?: Shift;
+  selectedDateShiftNote?: ShiftNote;
 };
 
 export const ShiftDetailView = ({
@@ -32,6 +33,7 @@ export const ShiftDetailView = ({
   membersById,
   patternsById,
   selectedDateShift,
+  selectedDateShiftNote,
 }: ShiftDetailViewProps) => {
   const selectedPattern = selectedDateShift
     ? patternsById.get(selectedDateShift.patternId)
@@ -49,7 +51,7 @@ export const ShiftDetailView = ({
         return orderDiff === 0 ? a.id.localeCompare(b.id) : orderDiff;
       });
   }, [membersById, selectedDateShift]);
-  const notes = selectedDateShift?.notes?.trim() ?? "";
+  const notes = selectedDateShiftNote?.notes.trim() ?? "";
   const hasSelectedMembers = selectedMembers.length > 0;
 
   if (!selectedPattern) {

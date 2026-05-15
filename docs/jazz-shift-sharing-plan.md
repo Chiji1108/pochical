@@ -73,7 +73,7 @@ members: s.table({
 - `shifts.memberIds` は既存の意味を維持する。これは「その日に一緒に働く勤務メンバー」であり、共有グループのメンバーとは別物。
 - 共有は shift 単位ではなく、shareGroup membership 単位にする。自分が所属する shareGroup のメンバーには、自分の全 shift を見せる。
 - `patterns.countsAsDayOff` は事前リファクタリング済みの前提で使う。
-- メモを共有したくない場合は、後で `shiftPrivateNotes` に分離する。MVPでは既存の `shifts.notes` を残してもよいが、共有相手にも見える点に注意する。
+- メモは共有しない。`shifts.notes` ではなく、本人だけが読める `shiftNotes` として分離済みの前提にする。
 - 代理入力や公式シフト表を後で作る場合は、`$createdBy` とは別に「誰の勤務か」を表す `subjectUserId` や `ownerMemberId` を追加する。
 
 ## 権限モデル
@@ -404,13 +404,12 @@ user_123
 
 ### Phase 5: 拡張
 
-- メモを `shiftPrivateNotes` に分離する。
+- メモは `shiftNotes` として分離済み。共有後は本人だけが読める permissions にする。
 - 共有範囲を「全 shift」以外にする必要が出たら、月単位や shift 単位の共有 table を追加する。
 - 代理入力や承認フローを検討する。
 
 ## 未決事項
 
-- メモを共有するか、最初から個人用に分離するか。
 - 将来的に shift 単位や月単位の公開範囲が必要になるか。
 - グループごとの表示名を `shareGroupMembers.displayName` だけで十分とするか。
 - 休み判定は `patterns.countsAsDayOff` で十分か、勤務区分を別途持つか。

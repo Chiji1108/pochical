@@ -111,6 +111,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
   const session = useSession();
   const patterns = useAll(app.patterns) ?? [];
   const shifts = useAll(app.shifts) ?? [];
+  const shiftNotes = useAll(app.shiftNotes) ?? [];
   const [formState, setFormState] = useState(() =>
     getInitialFormState(pattern)
   );
@@ -126,6 +127,18 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
       pattern ? shifts.filter((shift) => shift.patternId === pattern.id) : [],
     [pattern, shifts]
   );
+  const shiftNotesByShiftId = useMemo(() => {
+    const nextShiftNotesByShiftId = new Map<
+      string,
+      (typeof shiftNotes)[number]
+    >();
+
+    for (const shiftNote of shiftNotes) {
+      nextShiftNotesByShiftId.set(shiftNote.shiftId, shiftNote);
+    }
+
+    return nextShiftNotesByShiftId;
+  }, [shiftNotes]);
   const patternsUsingThisAsNextDay = useMemo(
     () =>
       pattern
@@ -174,6 +187,12 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
 
     db.batch((batch) => {
       for (const shift of relatedShifts) {
+        const shiftNote = shiftNotesByShiftId.get(shift.id);
+
+        if (shiftNote) {
+          batch.delete(app.shiftNotes, shiftNote.id);
+        }
+
         batch.delete(app.shifts, shift.id);
       }
 
@@ -306,19 +325,6 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
           }}
         />
 
-        <ListGroup>
-          <SettingRow
-            description="休み合わせ画面で休日として数えます"
-            label="休み扱い"
-            trailing={
-              <Switch
-                isSelected={formState.countsAsDayOff}
-                onSelectedChange={setCountsAsDayOff}
-              />
-            }
-          />
-        </ListGroup>
-
         <TimeSettings
           endDate={formState.endDate}
           isAllDay={formState.isAllDay}
@@ -337,6 +343,19 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
           }}
           startDate={formState.startDate}
         />
+
+        <ListGroup>
+          <SettingRow
+            description="休み合わせ画面で休日として数えます"
+            label="休み扱い"
+            trailing={
+              <Switch
+                isSelected={formState.countsAsDayOff}
+                onSelectedChange={setCountsAsDayOff}
+              />
+            }
+          />
+        </ListGroup>
         {pattern ? (
           <DeletePatternGroup
             isDisabled={!session}

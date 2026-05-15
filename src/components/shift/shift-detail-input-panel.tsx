@@ -1,23 +1,32 @@
 import { selectionAsync } from "expo-haptics";
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { Input, Label, TagGroup, Text, TextField } from "heroui-native";
+import {
+  Description,
+  Input,
+  Label,
+  TagGroup,
+  Text,
+  TextField,
+} from "heroui-native";
 import { Button } from "heroui-native/button";
 import { useAll, useDb, useSession } from "jazz-tools/react-native";
 import { useMemo } from "react";
 import { View } from "react-native";
-import { app, type Shift } from "@/schema";
+import { app, type Shift, type ShiftNote } from "@/schema";
 
 const seedMembers = ["佐藤師長", "鈴木主任", "田中先輩"] as const;
 
 type ShiftDetailInputPanelProps = {
   onSelectNextDay: () => void;
   selectedShift?: Shift;
+  selectedShiftNote?: ShiftNote;
 };
 
 export const ShiftDetailInputPanel = ({
   onSelectNextDay,
   selectedShift,
+  selectedShiftNote,
 }: ShiftDetailInputPanelProps) => {
   const db = useDb();
   const router = useRouter();
@@ -57,9 +66,23 @@ export const ShiftDetailInputPanel = ({
       return;
     }
 
-    db.update(app.shifts, selectedShift.id, {
-      notes: notes.trim() ? notes : null,
-    });
+    const trimmedNotes = notes.trim();
+
+    if (selectedShiftNote) {
+      if (trimmedNotes) {
+        db.update(app.shiftNotes, selectedShiftNote.id, { notes });
+      } else {
+        db.delete(app.shiftNotes, selectedShiftNote.id);
+      }
+      return;
+    }
+
+    if (trimmedNotes) {
+      db.insert(app.shiftNotes, {
+        notes,
+        shiftId: selectedShift.id,
+      });
+    }
   };
 
   const handleDeleteShift = () => {
@@ -67,7 +90,13 @@ export const ShiftDetailInputPanel = ({
       return;
     }
 
-    db.delete(app.shifts, selectedShift.id);
+    db.batch((batch) => {
+      if (selectedShiftNote) {
+        batch.delete(app.shiftNotes, selectedShiftNote.id);
+      }
+
+      batch.delete(app.shifts, selectedShift.id);
+    });
 
     selectionAsync().catch(() => {
       // Haptics can be unavailable depending on the device or platform.
@@ -86,7 +115,7 @@ export const ShiftDetailInputPanel = ({
     return (
       <View className="items-center px-3 py-4">
         <Text className="text-center text-sm" color="muted">
-          シフトを選択すると詳細を入力できます
+          シフトを選ぶと詳細を入力できます
         </Text>
       </View>
     );
@@ -187,8 +216,9 @@ export const ShiftDetailInputPanel = ({
           onChangeText={updateNotes}
           placeholder="メモを入力"
           returnKeyType="done"
-          value={selectedShift.notes ?? ""}
+          value={selectedShiftNote?.notes ?? ""}
         />
+        <Description>他のユーザーには共有されません</Description>
       </TextField>
       <View className="flex-row items-center justify-between gap-3 pt-1">
         <Button
