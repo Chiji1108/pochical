@@ -73,16 +73,16 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
     const isSelectedDate = isSameDay(date, selectedDate);
     const shift = shiftsByDate.get(startOfDay(date).getTime());
     const shiftPattern = shift ? patternsById.get(shift.patternId) : undefined;
-    const shouldShowStandaloneNotesIndicator =
-      Boolean(shift?.hasNotes) && !shiftPattern;
-
     return (
       <PressableFeedback
-        className={cn("flex w-full flex-col items-center rounded-lg p-1", {
-          "opacity-40": shouldDimOutOfMonth && !isSameMonth(date, yearMonth),
-          "bg-foreground/5": isToday(date),
-          "bg-foreground/85": isSelectedDate,
-        })}
+        className={cn(
+          "relative flex w-full flex-col items-center rounded-lg p-1",
+          {
+            "opacity-40": shouldDimOutOfMonth && !isSameMonth(date, yearMonth),
+            "bg-foreground/5": isToday(date),
+            "bg-foreground/85": isSelectedDate,
+          }
+        )}
         onPress={async () => {
           setSelectedDate(date);
 
@@ -94,6 +94,17 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
         }}
         style={{ height: CALENDAR_DAY_CELL_HEIGHT }}
       >
+        {shift?.hasNotes ? (
+          <View
+            className={cn(
+              "absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full",
+              {
+                "bg-background": isSelectedDate,
+                "bg-foreground/70": !isSelectedDate,
+              }
+            )}
+          />
+        ) : null}
         <Text
           className={cn("font-semibold text-xs", {
             "text-red-500": isJapaneseHoliday(date),
@@ -107,23 +118,7 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
             <Text className="text-center text-sm" numberOfLines={1}>
               {shiftPattern.emoji}
             </Text>
-            {shift.hasNotes ? (
-              <View
-                className={cn("mt-0.5 h-1.5 w-1.5 rounded-full", {
-                  "bg-background": isSelectedDate,
-                  "bg-foreground/70": !isSelectedDate,
-                })}
-              />
-            ) : null}
           </View>
-        ) : null}
-        {shouldShowStandaloneNotesIndicator ? (
-          <View
-            className={cn("mt-1 h-1.5 w-1.5 rounded-full", {
-              "bg-background": isSelectedDate,
-              "bg-foreground/70": !isSelectedDate,
-            })}
-          />
         ) : null}
       </PressableFeedback>
     );
