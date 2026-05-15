@@ -5,10 +5,9 @@ import {
   startOfDay,
   startOfMonth,
 } from "date-fns";
-import { BlurTargetView, BlurView } from "expo-blur";
 import { selectionAsync } from "expo-haptics";
 import { useAll } from "jazz-tools/react-native";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   type LayoutChangeEvent,
@@ -39,7 +38,6 @@ const TAB_OVERLAP_PADDING = 36;
 
 export default function Index() {
   const insets = useSafeAreaInsets();
-  const blurTargetRef = useRef<View | null>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [isDetailInputMode, setIsDetailInputMode] = useState(false);
   const [isShiftInputMode, setIsShiftInputMode] = useState(false);
@@ -181,14 +179,10 @@ export default function Index() {
 
   return (
     <View className="flex-1 bg-background">
-      <BlurView
-        blurMethod="dimezisBlurViewSdk31Plus"
-        blurTarget={blurTargetRef}
-        className="absolute inset-x-0 top-0 z-10 bg-background/95"
-        intensity={30}
+      <View
+        className="absolute inset-x-0 top-0 z-10 bg-background"
         onLayout={handleHeaderLayout}
         style={{ paddingTop: insets.top }}
-        tint="systemThinMaterial"
       >
         <CalendarHeader
           className="pt-0"
@@ -197,15 +191,14 @@ export default function Index() {
           selectedDate={selectedDate}
           yearMonth={yearMonth}
         />
-      </BlurView>
+      </View>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
       >
         <GestureDetector gesture={detailModeGesture}>
-          <BlurTargetView
+          <View
             className="flex-1 bg-background"
-            ref={blurTargetRef}
             style={{
               paddingTop: headerHeight,
             }}
@@ -256,7 +249,7 @@ export default function Index() {
                 />
               )}
             </View>
-          </BlurTargetView>
+          </View>
         </GestureDetector>
       </KeyboardAvoidingView>
     </View>

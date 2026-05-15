@@ -210,7 +210,7 @@ export const ShiftDetailInputPanel = ({
           <Button.Label>削除</Button.Label>
         </Button>
         <Button
-          accessibilityLabel="保存して翌日へ移動"
+          accessibilityLabel="翌日へ移動"
           className="flex-1"
           isDisabled={!session}
           onPress={handleSaveAndSelectNextDay}
@@ -226,7 +226,7 @@ export const ShiftDetailInputPanel = ({
             size={16}
             tintColor="white"
           />
-          <Button.Label>保存して翌日</Button.Label>
+          <Button.Label>翌日</Button.Label>
         </Button>
       </View>
     </View>

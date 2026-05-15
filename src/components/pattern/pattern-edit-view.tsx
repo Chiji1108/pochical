@@ -366,7 +366,7 @@ type PatternPreviewProps = {
 
 const PatternPreview = ({ emoji, name }: PatternPreviewProps) => (
   <View className="items-center">
-    <View className="h-20 w-18 items-center justify-center gap-1 rounded-xl bg-background px-2 py-2 shadow-foreground/20 shadow-sm">
+    <View className="h-20 w-18 items-center justify-center gap-1 rounded-xl bg-surface-secondary px-2 py-2 shadow-surface">
       <Text className="text-3xl" numberOfLines={1}>
         {emoji}
       </Text>

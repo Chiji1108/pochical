@@ -338,6 +338,7 @@ const MemberNameDialog = ({
               <Input
                 autoCapitalize="none"
                 autoCorrect={false}
+                autoFocus={true}
                 onChangeText={setName}
                 onSubmitEditing={submit}
                 placeholder="名前"
