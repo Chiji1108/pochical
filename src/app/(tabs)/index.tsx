@@ -1,6 +1,13 @@
-import { addDays, isSameMonth, startOfMonth } from "date-fns";
+import {
+  addDays,
+  isSameDay,
+  isSameMonth,
+  startOfDay,
+  startOfMonth,
+} from "date-fns";
 import { BlurTargetView, BlurView } from "expo-blur";
 import { selectionAsync } from "expo-haptics";
+import { useAll } from "jazz-tools/react-native";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -21,6 +28,7 @@ import { CalendarPager } from "@/components/calendar/calendar-pager";
 import { PatternGridHeader } from "@/components/pattern/pattern-grid-header";
 import { PatternGridView } from "@/components/pattern/pattern-grid-view";
 import { ShiftDetailView } from "@/components/shift/shift-detail-view";
+import { app, type Member, type Pattern } from "@/schema";
 
 const DETAIL_PAGE_DRAG_DISTANCE = 180;
 const DETAIL_PAGE_SETTLE_THRESHOLD = 0.45;
@@ -40,6 +48,44 @@ export default function Index() {
   const detailPageProgress = useSharedValue(0);
   const detailGestureStartProgress = useSharedValue(0);
   const bottomContentPadding = insets.bottom + TAB_OVERLAP_PADDING;
+  const patterns = useAll(app.patterns) ?? [];
+  const shifts = useAll(app.shifts) ?? [];
+  const members = useAll(app.members) ?? [];
+  const patternsById = useMemo(() => {
+    const nextPatternsById = new Map<string, Pattern>();
+
+    for (const pattern of patterns) {
+      nextPatternsById.set(pattern.id, pattern);
+    }
+
+    return nextPatternsById;
+  }, [patterns]);
+  const membersById = useMemo(() => {
+    const nextMembersById = new Map<string, Member>();
+
+    for (const member of members) {
+      nextMembersById.set(member.id, member);
+    }
+
+    return nextMembersById;
+  }, [members]);
+  const shiftsByDate = useMemo(() => {
+    const nextShiftsByDate = new Map<number, string>();
+
+    for (const shift of shifts) {
+      nextShiftsByDate.set(
+        startOfDay(shift.startDate).getTime(),
+        shift.patternId
+      );
+    }
+
+    return nextShiftsByDate;
+  }, [shifts]);
+  const selectedDateShifts = useMemo(
+    () => shifts.filter((shift) => isSameDay(shift.startDate, selectedDate)),
+    [selectedDate, shifts]
+  );
+  const [selectedDateShift] = selectedDateShifts;
 
   const returnToToday = () => {
     setTargetDate(new Date());
@@ -169,9 +215,11 @@ export default function Index() {
               onTargetDateHandled={() => {
                 setTargetDate(undefined);
               }}
+              patternsById={patternsById}
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
               setYearMonth={setYearMonth}
+              shiftsByDate={shiftsByDate}
               targetDate={targetDate}
               yearMonth={yearMonth}
             />
@@ -183,6 +231,7 @@ export default function Index() {
               onSelectNextDay={selectNextDay}
               onToggleShiftInputMode={toggleShiftInputMode}
               selectedDate={selectedDate}
+              selectedDateShifts={selectedDateShifts}
             />
             <View className="flex-1">
               {isShiftInputMode ? (
@@ -192,12 +241,17 @@ export default function Index() {
                   isDetailInputMode={isDetailInputMode}
                   onSelectDate={selectDateImmediately}
                   onSelectNextDay={selectNextDay}
+                  patterns={patterns}
                   selectedDate={selectedDate}
+                  selectedDateShift={selectedDateShift}
+                  shifts={shifts}
                 />
               ) : (
                 <ShiftDetailView
                   bottomContentPadding={bottomContentPadding}
-                  selectedDate={selectedDate}
+                  membersById={membersById}
+                  patternsById={patternsById}
+                  selectedDateShift={selectedDateShift}
                 />
               )}
             </View>

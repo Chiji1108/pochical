@@ -1,9 +1,8 @@
-import { format, isSameDay } from "date-fns";
-import { ListGroup, Text } from "heroui-native";
-import { useAll } from "jazz-tools/react-native";
+import { format } from "date-fns";
+import { Chip, ListGroup, Text } from "heroui-native";
 import { useMemo } from "react";
 import { View } from "react-native";
-import { app, type Pattern } from "@/schema";
+import type { Member, Pattern, Shift } from "@/schema";
 
 const getPatternScheduleLabel = (pattern: Pattern): string => {
   if (pattern.isHoliday) {
@@ -26,30 +25,34 @@ const getPatternScheduleLabel = (pattern: Pattern): string => {
 
 type ShiftDetailViewProps = {
   bottomContentPadding: number;
-  selectedDate: Date;
+  membersById: ReadonlyMap<string, Member>;
+  patternsById: ReadonlyMap<string, Pattern>;
+  selectedDateShift?: Shift;
 };
 
 export const ShiftDetailView = ({
   bottomContentPadding,
-  selectedDate,
+  membersById,
+  patternsById,
+  selectedDateShift,
 }: ShiftDetailViewProps) => {
-  const patterns = useAll(app.patterns) ?? [];
-  const shifts = useAll(app.shifts) ?? [];
-  const patternsById = useMemo(() => {
-    const nextPatternsById = new Map<string, Pattern>();
-
-    for (const pattern of patterns) {
-      nextPatternsById.set(pattern.id, pattern);
-    }
-
-    return nextPatternsById;
-  }, [patterns]);
-  const selectedDateShift = shifts.find((shift) =>
-    isSameDay(shift.startDate, selectedDate)
-  );
   const selectedPattern = selectedDateShift
     ? patternsById.get(selectedDateShift.patternId)
     : undefined;
+  const selectedMembers = useMemo(() => {
+    if (!selectedDateShift) {
+      return [];
+    }
+
+    return selectedDateShift.memberIds
+      .map((memberId) => membersById.get(memberId))
+      .filter((member): member is Member => Boolean(member))
+      .sort((a, b) => {
+        const orderDiff = a.orderIndex - b.orderIndex;
+        return orderDiff === 0 ? a.id.localeCompare(b.id) : orderDiff;
+      });
+  }, [membersById, selectedDateShift]);
+  const notes = selectedDateShift?.notes?.trim() ?? "";
 
   if (!selectedPattern) {
     return null;
@@ -68,6 +71,27 @@ export const ShiftDetailView = ({
             <ListGroup.ItemTitle numberOfLines={1}>
               {selectedPattern.name}
             </ListGroup.ItemTitle>
+            {selectedMembers.length > 0 ? (
+              <View className="mt-1 flex-row flex-wrap gap-1">
+                {selectedMembers.map((member) => (
+                  <Chip
+                    animation="disable-all"
+                    className="max-w-28"
+                    color="default"
+                    key={member.id}
+                    size="sm"
+                    variant="soft"
+                  >
+                    <Chip.Label numberOfLines={1}>{member.name}</Chip.Label>
+                  </Chip>
+                ))}
+              </View>
+            ) : null}
+            {notes ? (
+              <Text className="mt-1 text-sm" color="muted" numberOfLines={3}>
+                {notes}
+              </Text>
+            ) : null}
           </ListGroup.ItemContent>
           <ListGroup.ItemSuffix>
             <Text color="muted" numberOfLines={1}>

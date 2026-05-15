@@ -4,6 +4,7 @@ import {
   addDays,
   addWeeks,
   getDay,
+  isSameMonth,
   isSameWeek,
   startOfMonth,
   startOfWeek,
@@ -18,6 +19,7 @@ import {
 } from "react";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import { useWindowDimensions, View } from "react-native";
+import type { Pattern } from "@/schema";
 import { CalendarBody } from "./calendar-body";
 import { CALENDAR_WEEK_PAGER_HEIGHT } from "./constants";
 
@@ -27,9 +29,11 @@ const WEEK_APPEND_THRESHOLD = 3;
 
 type WeekPagerProps = {
   onTargetDateHandled?: () => void;
+  patternsById: ReadonlyMap<string, Pattern>;
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
   setYearMonth: Dispatch<SetStateAction<Date>>;
+  shiftsByDate: ReadonlyMap<number, string>;
   targetDate?: Date;
   yearMonth: Date;
 };
@@ -60,9 +64,11 @@ const findWeekIndex = (weeks: Date[], targetWeek: Date): number =>
 
 export const WeekPager: FC<WeekPagerProps> = ({
   onTargetDateHandled,
+  patternsById,
   selectedDate,
   setSelectedDate,
   setYearMonth,
+  shiftsByDate,
   targetDate,
   yearMonth,
 }) => {
@@ -70,6 +76,7 @@ export const WeekPager: FC<WeekPagerProps> = ({
   const listRef = useRef<FlashListRef<Date>>(null);
   const currentOffsetRef = useRef(WEEK_BUFFER_SIZE * pageWidth);
   const pendingPrependCountRef = useRef(0);
+  const visibleWeekRef = useRef(startOfWeek(selectedDate));
   const selectedWeekdayRef = useRef(getDay(selectedDate));
   const [pendingScrollWeek, setPendingScrollWeek] =
     useState<PendingScrollWeek>();
@@ -155,6 +162,7 @@ export const WeekPager: FC<WeekPagerProps> = ({
       }
 
       currentOffsetRef.current = pageIndex * pageWidth;
+      visibleWeekRef.current = visibleWeek;
       appendWeeksIfNeeded(pageIndex);
 
       if (!isSameWeek(visibleWeek, selectedDate)) {
@@ -177,9 +185,25 @@ export const WeekPager: FC<WeekPagerProps> = ({
   );
 
   useEffect(() => {
+    const selectedWeek = startOfWeek(selectedDate);
+
     selectedWeekdayRef.current = getDay(selectedDate);
-    setYearMonth(startOfMonth(selectedDate));
-    scrollToWeek(selectedDate, true);
+    setYearMonth((currentYearMonth) =>
+      isSameMonth(currentYearMonth, selectedDate)
+        ? currentYearMonth
+        : startOfMonth(selectedDate)
+    );
+    setWeeks((currentWeeks) => {
+      if (containsWeek(currentWeeks, selectedWeek)) {
+        return currentWeeks;
+      }
+
+      return getWeeksAround(selectedDate, WEEK_BUFFER_SIZE);
+    });
+
+    if (!isSameWeek(visibleWeekRef.current, selectedWeek)) {
+      scrollToWeek(selectedWeek, true);
+    }
   }, [scrollToWeek, selectedDate, setYearMonth]);
 
   useEffect(() => {
@@ -240,6 +264,7 @@ export const WeekPager: FC<WeekPagerProps> = ({
 
     setPendingScrollWeek(undefined);
     currentOffsetRef.current = pageIndex * pageWidth;
+    visibleWeekRef.current = pendingScrollWeek.week;
     requestAnimationFrame(() => {
       listRef.current?.scrollToOffset({
         animated: pendingScrollWeek.animated,
@@ -252,14 +277,23 @@ export const WeekPager: FC<WeekPagerProps> = ({
     ({ item }: ListRenderItemInfo<Date>) => (
       <View style={{ width: pageWidth }}>
         <CalendarBody
+          patternsById={patternsById}
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
+          shiftsByDate={shiftsByDate}
           weekDate={item}
           yearMonth={yearMonth}
         />
       </View>
     ),
-    [pageWidth, selectedDate, setSelectedDate, yearMonth]
+    [
+      pageWidth,
+      patternsById,
+      selectedDate,
+      setSelectedDate,
+      shiftsByDate,
+      yearMonth,
+    ]
   );
 
   return (

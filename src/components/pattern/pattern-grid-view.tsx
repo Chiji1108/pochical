@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Text } from "heroui-native";
 import { Button } from "heroui-native/button";
-import { useAll, useDb, useSession } from "jazz-tools/react-native";
+import { useDb, useSession } from "jazz-tools/react-native";
 import { useMemo } from "react";
 import { ScrollView, useWindowDimensions, View } from "react-native";
 import Animated, {
@@ -12,7 +12,7 @@ import Animated, {
   useAnimatedStyle,
 } from "react-native-reanimated";
 import { ShiftDetailInputPanel } from "@/components/shift/shift-detail-input-panel";
-import { app, type Pattern } from "@/schema";
+import { app, type Pattern, type Shift } from "@/schema";
 
 const MIN_PATTERN_CELL_WIDTH = 48;
 const PATTERN_GRID_GAP = 8;
@@ -106,7 +106,10 @@ type PatternGridViewProps = {
   isDetailInputMode: boolean;
   onSelectDate: (date: Date) => void;
   onSelectNextDay: () => void;
+  patterns: Pattern[];
   selectedDate: Date;
+  selectedDateShift?: Shift;
+  shifts: Shift[];
 };
 
 export function PatternGridView({
@@ -115,13 +118,14 @@ export function PatternGridView({
   isDetailInputMode,
   onSelectDate,
   onSelectNextDay,
+  patterns,
   selectedDate,
+  selectedDateShift,
+  shifts,
 }: PatternGridViewProps) {
   const db = useDb();
   const router = useRouter();
   const session = useSession();
-  const patterns = useAll(app.patterns) ?? [];
-  const shifts = useAll(app.shifts) ?? [];
   const { width } = useWindowDimensions();
   const sortedPatterns = useMemo(
     () => [...patterns].sort((a, b) => a.orderIndex - b.orderIndex),
@@ -135,9 +139,6 @@ export function PatternGridView({
     )
   );
   const cellWidth = `${100 / columnCount}%` as const;
-  const selectedDateShift = shifts.find((shift) =>
-    isSameDay(shift.startDate, selectedDate)
-  );
   const detailInputStyle = useAnimatedStyle(() => ({
     opacity: detailTransitionProgress.value,
   }));

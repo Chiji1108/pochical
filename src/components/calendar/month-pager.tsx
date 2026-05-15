@@ -12,6 +12,7 @@ import {
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import { useWindowDimensions, View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
+import type { Pattern } from "@/schema";
 import { CalendarBody } from "./calendar-body";
 import { CALENDAR_PAGER_HEIGHT } from "./constants";
 
@@ -22,9 +23,11 @@ const MONTH_APPEND_THRESHOLD = 3;
 type MonthPagerProps = {
   detailTransitionProgress?: SharedValue<number>;
   onTargetDateHandled?: () => void;
+  patternsById: ReadonlyMap<string, Pattern>;
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
   setYearMonth: Dispatch<SetStateAction<Date>>;
+  shiftsByDate: ReadonlyMap<number, string>;
   scrollEnabled?: boolean;
   syncDate?: Date;
   targetDate?: Date;
@@ -58,9 +61,11 @@ const findMonthIndex = (months: Date[], targetMonth: Date): number =>
 export const MonthPager: FC<MonthPagerProps> = ({
   detailTransitionProgress,
   onTargetDateHandled,
+  patternsById,
   selectedDate,
   setSelectedDate,
   setYearMonth,
+  shiftsByDate,
   scrollEnabled = true,
   syncDate,
   targetDate,
@@ -251,13 +256,22 @@ export const MonthPager: FC<MonthPagerProps> = ({
       <View style={{ width: pageWidth }}>
         <CalendarBody
           detailTransitionProgress={detailTransitionProgress}
+          patternsById={patternsById}
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
+          shiftsByDate={shiftsByDate}
           yearMonth={item}
         />
       </View>
     ),
-    [detailTransitionProgress, pageWidth, selectedDate, setSelectedDate]
+    [
+      detailTransitionProgress,
+      pageWidth,
+      patternsById,
+      selectedDate,
+      setSelectedDate,
+      shiftsByDate,
+    ]
   );
 
   return (

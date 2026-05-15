@@ -8,7 +8,6 @@ import {
 } from "date-fns";
 import { selectionAsync } from "expo-haptics";
 import { PressableFeedback, Text } from "heroui-native";
-import { useAll } from "jazz-tools/react-native";
 import type { FC, ReactNode } from "react";
 import { useMemo } from "react";
 import { View } from "react-native";
@@ -19,14 +18,16 @@ import Animated, {
 } from "react-native-reanimated";
 import { getWeeksOfMonth, isJapaneseHoliday } from "@/lib/date";
 import { cn } from "@/lib/utils";
-import { app, type Pattern } from "@/schema";
+import type { Pattern } from "@/schema";
 import { CALENDAR_DAY_CELL_HEIGHT } from "./constants";
 import { WeekRow } from "./week-row";
 
 type CalendarBodyProps = {
   detailTransitionProgress?: SharedValue<number>;
+  patternsById: ReadonlyMap<string, Pattern>;
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
+  shiftsByDate: ReadonlyMap<number, string>;
   yearMonth: Date;
   className?: string;
   weekDate?: Date;
@@ -34,16 +35,16 @@ type CalendarBodyProps = {
 
 export const CalendarBody: FC<CalendarBodyProps> = ({
   detailTransitionProgress,
+  patternsById,
   yearMonth,
   selectedDate,
   setSelectedDate,
+  shiftsByDate,
   className,
   weekDate,
 }) => {
   const fallbackProgress = useSharedValue(0);
   const transitionProgress = detailTransitionProgress ?? fallbackProgress;
-  const patterns = useAll(app.patterns) ?? [];
-  const shifts = useAll(app.shifts) ?? [];
   const weeks = useMemo(() => getWeeksOfMonth(yearMonth), [yearMonth]);
   const selectedWeekIndex = Math.max(
     0,
@@ -62,27 +63,6 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
     }),
     [selectedWeekIndex, transitionProgress]
   );
-  const patternsById = useMemo(() => {
-    const nextPatternsById = new Map<string, Pattern>();
-
-    for (const pattern of patterns) {
-      nextPatternsById.set(pattern.id, pattern);
-    }
-
-    return nextPatternsById;
-  }, [patterns]);
-  const shiftsByDate = useMemo(() => {
-    const nextShiftsByDate = new Map<number, string>();
-
-    for (const shift of shifts) {
-      nextShiftsByDate.set(
-        startOfDay(shift.startDate).getTime(),
-        shift.patternId
-      );
-    }
-
-    return nextShiftsByDate;
-  }, [shifts]);
 
   const renderDateCell = (date: Date, shouldDimOutOfMonth: boolean) => {
     const isSelectedDate = isSameDay(date, selectedDate);

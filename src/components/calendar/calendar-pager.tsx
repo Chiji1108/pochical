@@ -7,6 +7,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import type { Pattern } from "@/schema";
 import { CALENDAR_PAGER_HEIGHT, CALENDAR_WEEK_PAGER_HEIGHT } from "./constants";
 import { MonthPager } from "./month-pager";
 import { WeekPager } from "./week-pager";
@@ -17,9 +18,11 @@ type CalendarPagerProps = {
   detailTransitionProgress?: SharedValue<number>;
   isDetailInputMode: boolean;
   onTargetDateHandled?: () => void;
+  patternsById: ReadonlyMap<string, Pattern>;
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
   setYearMonth: Dispatch<SetStateAction<Date>>;
+  shiftsByDate: ReadonlyMap<number, string>;
   targetDate?: Date;
   yearMonth: Date;
 };
@@ -28,9 +31,11 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
   detailTransitionProgress,
   isDetailInputMode,
   onTargetDateHandled,
+  patternsById,
   selectedDate,
   setSelectedDate,
   setYearMonth,
+  shiftsByDate,
   targetDate,
   yearMonth,
 }) => {
@@ -75,10 +80,12 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
           onTargetDateHandled={
             isDetailInputMode ? undefined : onTargetDateHandled
           }
+          patternsById={patternsById}
           scrollEnabled={!isDetailInputMode}
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
           setYearMonth={setYearMonth}
+          shiftsByDate={shiftsByDate}
           syncDate={isDetailInputMode ? selectedDate : undefined}
           targetDate={isDetailInputMode ? undefined : targetDate}
           yearMonth={yearMonth}
@@ -100,9 +107,11 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
           onTargetDateHandled={
             isDetailInputMode ? onTargetDateHandled : undefined
           }
+          patternsById={patternsById}
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
           setYearMonth={setYearMonth}
+          shiftsByDate={shiftsByDate}
           targetDate={isDetailInputMode ? targetDate : undefined}
           yearMonth={yearMonth}
         />

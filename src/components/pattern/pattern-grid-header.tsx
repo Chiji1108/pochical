@@ -1,8 +1,7 @@
-import { isSameDay } from "date-fns";
 import { selectionAsync } from "expo-haptics";
 import { SymbolView } from "expo-symbols";
 import { Button } from "heroui-native/button";
-import { useAll, useDb } from "jazz-tools/react-native";
+import { useDb } from "jazz-tools/react-native";
 import type { FC } from "react";
 import { View } from "react-native";
 import Animated, {
@@ -10,7 +9,7 @@ import Animated, {
   useAnimatedStyle,
 } from "react-native-reanimated";
 import { CalendarDatePickerButton } from "@/components/calendar/calendar-date-picker-button";
-import { app } from "@/schema";
+import { app, type Shift } from "@/schema";
 
 const selectedDateFormatter = new Intl.DateTimeFormat("ja-JP", {
   day: "numeric",
@@ -30,6 +29,7 @@ type PatternGridHeaderProps = {
   onSelectNextDay: () => void;
   onToggleShiftInputMode: () => void;
   selectedDate: Date;
+  selectedDateShifts: Shift[];
 };
 
 type NextActionButtonProps = {
@@ -69,12 +69,9 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
   onSelectNextDay,
   onToggleShiftInputMode,
   selectedDate,
+  selectedDateShifts,
 }) => {
   const db = useDb();
-  const shifts = useAll(app.shifts) ?? [];
-  const selectedDateShifts = shifts.filter((shift) =>
-    isSameDay(shift.startDate, selectedDate)
-  );
   const hasSelectedDateShift = selectedDateShifts.length > 0;
   const nextActionStyle = useAnimatedStyle(() => ({
     opacity: 1 - detailTransitionProgress.value,
