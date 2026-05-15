@@ -15,22 +15,19 @@ import { app, type Pattern } from "@/schema";
 const PATTERN_ROW_GAP = 10;
 
 const getPatternScheduleLabel = (pattern: Pattern): string => {
-  if (pattern.isHoliday) {
-    return "休日";
-  }
-
   if (pattern.isAllDay) {
-    return "終日";
+    return pattern.countsAsDayOff ? "終日・休み扱い" : "終日";
   }
 
   if (!(pattern.startDate && pattern.endDate)) {
-    return "時間未設定";
+    return pattern.countsAsDayOff ? "時間未設定・休み扱い" : "時間未設定";
   }
 
-  return `${format(pattern.startDate, "HH:mm")} - ${format(
+  const timeLabel = `${format(pattern.startDate, "HH:mm")} - ${format(
     pattern.endDate,
     "HH:mm"
   )}`;
+  return pattern.countsAsDayOff ? `${timeLabel}・休み扱い` : timeLabel;
 };
 
 type PatternRowProps = {

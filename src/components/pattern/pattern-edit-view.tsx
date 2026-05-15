@@ -30,20 +30,20 @@ type PatternEditViewProps = {
 };
 
 type PatternFormState = {
+  countsAsDayOff: boolean;
   emoji: string;
   endDate: Date;
   isAllDay: boolean;
-  isHoliday: boolean;
   name: string;
   nextDayPatternId?: string;
   startDate: Date;
 };
 
 type PatternSaveFields = {
+  countsAsDayOff: boolean;
   emoji: string;
   endDate: Date | null;
   isAllDay: boolean;
-  isHoliday: boolean;
   name: string;
   nextDayPatternId?: string | null;
   startDate: Date | null;
@@ -78,13 +78,13 @@ const isContinuingUntilNextDay = (startDate: Date, endDate: Date): boolean =>
   getMinutesOfDay(endDate) <= getMinutesOfDay(startDate);
 
 const getInitialFormState = (pattern?: Pattern): PatternFormState => ({
+  countsAsDayOff: pattern?.countsAsDayOff ?? false,
   emoji: pattern?.emoji || DEFAULT_EMOJI,
   endDate: toDate(
     pattern?.endDate,
     createTime(DEFAULT_END_HOUR, DEFAULT_END_MINUTE)
   ),
   isAllDay: pattern?.isAllDay ?? false,
-  isHoliday: pattern?.isHoliday ?? false,
   name: pattern?.name ?? DEFAULT_NAME,
   nextDayPatternId: pattern?.nextDayPatternId ?? undefined,
   startDate: toDate(pattern?.startDate, createTime(DEFAULT_START_HOUR)),
@@ -93,21 +93,17 @@ const getInitialFormState = (pattern?: Pattern): PatternFormState => ({
 const createPatternSaveFields = (
   formState: PatternFormState,
   isContinueUntilNextDay: boolean
-): PatternSaveFields => {
-  const isAllDay = formState.isHoliday ? true : formState.isAllDay;
-
-  return {
-    emoji: formState.emoji || DEFAULT_EMOJI,
-    endDate: isAllDay ? null : formState.endDate,
-    isAllDay,
-    isHoliday: formState.isHoliday,
-    name: formState.name.trim(),
-    nextDayPatternId: isContinueUntilNextDay
-      ? (formState.nextDayPatternId ?? null)
-      : null,
-    startDate: isAllDay ? null : formState.startDate,
-  };
-};
+): PatternSaveFields => ({
+  countsAsDayOff: formState.countsAsDayOff,
+  emoji: formState.emoji || DEFAULT_EMOJI,
+  endDate: formState.isAllDay ? null : formState.endDate,
+  isAllDay: formState.isAllDay,
+  name: formState.name.trim(),
+  nextDayPatternId: isContinueUntilNextDay
+    ? (formState.nextDayPatternId ?? null)
+    : null,
+  startDate: formState.isAllDay ? null : formState.startDate,
+});
 
 export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
   const db = useDb();
@@ -123,7 +119,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
     : undefined;
   const isNewPattern = !pattern;
   const isContinueUntilNextDay =
-    !(formState.isHoliday || formState.isAllDay) &&
+    !formState.isAllDay &&
     isContinuingUntilNextDay(formState.startDate, formState.endDate);
   const relatedShifts = useMemo(
     () =>
@@ -146,9 +142,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
         .filter(
           (item) =>
             item.id !== pattern?.id &&
-            (item.isHoliday ||
-              item.isAllDay ||
-              item.id === formState.nextDayPatternId)
+            (item.isAllDay || item.id === formState.nextDayPatternId)
         )
         .map<SelectOption>((item) => ({
           label: `${item.emoji} ${item.name}`,
@@ -258,11 +252,9 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
     router.back();
   };
 
-  const setHoliday = (isHoliday: boolean) => {
+  const setCountsAsDayOff = (countsAsDayOff: boolean) => {
     updateFormState({
-      isAllDay: isHoliday ? true : formState.isAllDay,
-      isHoliday,
-      nextDayPatternId: isHoliday ? undefined : formState.nextDayPatternId,
+      countsAsDayOff,
     });
   };
 
@@ -316,37 +308,35 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
 
         <ListGroup>
           <SettingRow
-            description="シフト共有相手に休日と表示します"
-            label="休日"
+            description="休み合わせ画面で休日として数えます"
+            label="休み扱い"
             trailing={
               <Switch
-                isSelected={formState.isHoliday}
-                onSelectedChange={setHoliday}
+                isSelected={formState.countsAsDayOff}
+                onSelectedChange={setCountsAsDayOff}
               />
             }
           />
         </ListGroup>
 
-        {formState.isHoliday ? null : (
-          <TimeSettings
-            endDate={formState.endDate}
-            isAllDay={formState.isAllDay}
-            isContinueUntilNextDay={isContinueUntilNextDay}
-            nextDayPatternOptions={nextDayPatternOptions}
-            nextDaySelectValue={nextDaySelectValue}
-            onChangeAllDay={setAllDay}
-            onChangeEndDate={(endDate) => {
-              updateFormState({ endDate });
-            }}
-            onChangeNextDayPattern={(nextDayPatternId) => {
-              updateFormState({ nextDayPatternId });
-            }}
-            onChangeStartDate={(startDate) => {
-              updateFormState({ startDate });
-            }}
-            startDate={formState.startDate}
-          />
-        )}
+        <TimeSettings
+          endDate={formState.endDate}
+          isAllDay={formState.isAllDay}
+          isContinueUntilNextDay={isContinueUntilNextDay}
+          nextDayPatternOptions={nextDayPatternOptions}
+          nextDaySelectValue={nextDaySelectValue}
+          onChangeAllDay={setAllDay}
+          onChangeEndDate={(endDate) => {
+            updateFormState({ endDate });
+          }}
+          onChangeNextDayPattern={(nextDayPatternId) => {
+            updateFormState({ nextDayPatternId });
+          }}
+          onChangeStartDate={(startDate) => {
+            updateFormState({ startDate });
+          }}
+          startDate={formState.startDate}
+        />
         {pattern ? (
           <DeletePatternGroup
             isDisabled={!session}
@@ -478,7 +468,7 @@ const TimeSettings = ({
           <ListGroup.ItemContent>
             <ListGroup.ItemTitle>翌日シフトパターン</ListGroup.ItemTitle>
             <ListGroup.ItemDescription>
-              休日、終日から選べます
+              終日パターンから選べます
             </ListGroup.ItemDescription>
           </ListGroup.ItemContent>
           <ListGroup.ItemSuffix className="min-w-40">

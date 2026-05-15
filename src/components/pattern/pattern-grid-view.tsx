@@ -18,10 +18,10 @@ const MIN_PATTERN_CELL_WIDTH = 48;
 const PATTERN_GRID_GAP = 8;
 
 type SeedPattern = {
+  countsAsDayOff?: boolean;
   emoji: string;
   end?: [hour: number, minute: number];
   isAllDay?: boolean;
-  isHoliday?: boolean;
   name: string;
   orderIndex: number;
   start?: [hour: number, minute: number];
@@ -29,10 +29,10 @@ type SeedPattern = {
 };
 
 type PatternInsert = {
+  countsAsDayOff: boolean;
   emoji: string;
   endDate: Date | null;
   isAllDay: boolean;
-  isHoliday: boolean;
   name: string;
   nextDayPatternId?: string | null;
   orderIndex: number;
@@ -49,10 +49,10 @@ const createPatternInsert = (
   pattern: SeedPattern,
   nextDayPatternId?: string
 ): PatternInsert => ({
+  countsAsDayOff: pattern.countsAsDayOff ?? false,
   emoji: pattern.emoji,
   endDate: pattern.end ? seedTime(pattern.end) : null,
   isAllDay: pattern.isAllDay ?? false,
-  isHoliday: pattern.isHoliday ?? false,
   name: pattern.name,
   nextDayPatternId: nextDayPatternId ?? null,
   orderIndex: pattern.orderIndex,
@@ -69,11 +69,17 @@ const seedPatterns: SeedPattern[] = [
     start: [17, 0],
     usesAkeAsNextDay: true,
   },
-  { emoji: "🌅", isAllDay: true, name: "明け", orderIndex: 2 },
   {
+    countsAsDayOff: true,
+    emoji: "🌅",
+    isAllDay: true,
+    name: "明け",
+    orderIndex: 2,
+  },
+  {
+    countsAsDayOff: true,
     emoji: "💤",
     isAllDay: true,
-    isHoliday: true,
     name: "休み",
     orderIndex: 3,
   },
@@ -92,9 +98,9 @@ const seedPatterns: SeedPattern[] = [
   { emoji: "🏠", isAllDay: true, name: "待機", orderIndex: 9 },
   { emoji: "📚", end: [17, 0], name: "研修", orderIndex: 10, start: [9, 0] },
   {
+    countsAsDayOff: true,
     emoji: "🎉",
     isAllDay: true,
-    isHoliday: true,
     name: "有給",
     orderIndex: 11,
   },

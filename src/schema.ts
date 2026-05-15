@@ -10,7 +10,7 @@ const schema = {
     name: s.string(),
     emoji: s.string(),
     orderIndex: s.int(),
-    isHoliday: s.boolean(),
+    countsAsDayOff: s.boolean(),
     isAllDay: s.boolean(),
     startDate: s.timestamp().optional(),
     endDate: s.timestamp().optional(),

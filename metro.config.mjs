@@ -1,7 +1,7 @@
-import { withJazz } from "jazz-tools/dev/expo";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { withJazz } from "jazz-tools/dev/expo";
 
 const require = createRequire(import.meta.url);
 // Learn more https://docs.expo.io/guides/customizing-metro
