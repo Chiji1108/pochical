@@ -74,19 +74,16 @@ export default function Index() {
       detailPageProgress.value = withTiming(isEnabled ? 1 : 0, {
         duration: DETAIL_PAGE_TRANSITION_DURATION,
       });
-      setIsDetailInputMode((current) => {
-        if (current === isEnabled) {
-          return current;
-        }
 
+      if (isDetailInputMode !== isEnabled) {
         selectionAsync().catch(() => {
           // Haptics can be unavailable depending on the device or platform.
         });
+      }
 
-        return isEnabled;
-      });
+      setIsDetailInputMode(isEnabled);
     },
-    [detailPageProgress]
+    [detailPageProgress, isDetailInputMode]
   );
 
   const toggleShiftInputMode = () => {
