@@ -13,7 +13,7 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import { useWindowDimensions, View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
 import type { Pattern } from "@/schema";
-import { CalendarBody } from "./calendar-body";
+import { CalendarBody, type CalendarShiftSummary } from "./calendar-body";
 import { CALENDAR_PAGER_HEIGHT } from "./constants";
 
 const MONTH_BUFFER_SIZE = 10;
@@ -27,7 +27,7 @@ type MonthPagerProps = {
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
   setYearMonth: Dispatch<SetStateAction<Date>>;
-  shiftsByDate: ReadonlyMap<number, string>;
+  shiftsByDate: ReadonlyMap<number, CalendarShiftSummary>;
   scrollEnabled?: boolean;
   syncDate?: Date;
   targetDate?: Date;

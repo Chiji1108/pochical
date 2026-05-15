@@ -23,6 +23,7 @@ import {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { CalendarShiftSummary } from "@/components/calendar/calendar-body";
 import { CalendarHeader } from "@/components/calendar/calendar-header";
 import { CalendarPager } from "@/components/calendar/calendar-pager";
 import { PatternGridHeader } from "@/components/pattern/pattern-grid-header";
@@ -70,13 +71,13 @@ export default function Index() {
     return nextMembersById;
   }, [members]);
   const shiftsByDate = useMemo(() => {
-    const nextShiftsByDate = new Map<number, string>();
+    const nextShiftsByDate = new Map<number, CalendarShiftSummary>();
 
     for (const shift of shifts) {
-      nextShiftsByDate.set(
-        startOfDay(shift.startDate).getTime(),
-        shift.patternId
-      );
+      nextShiftsByDate.set(startOfDay(shift.startDate).getTime(), {
+        hasNotes: Boolean(shift.notes?.trim()),
+        patternId: shift.patternId,
+      });
     }
 
     return nextShiftsByDate;

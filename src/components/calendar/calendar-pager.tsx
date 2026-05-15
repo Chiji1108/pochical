@@ -8,6 +8,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import type { Pattern } from "@/schema";
+import type { CalendarShiftSummary } from "./calendar-body";
 import { CALENDAR_PAGER_HEIGHT, CALENDAR_WEEK_PAGER_HEIGHT } from "./constants";
 import { MonthPager } from "./month-pager";
 import { WeekPager } from "./week-pager";
@@ -22,7 +23,7 @@ type CalendarPagerProps = {
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
   setYearMonth: Dispatch<SetStateAction<Date>>;
-  shiftsByDate: ReadonlyMap<number, string>;
+  shiftsByDate: ReadonlyMap<number, CalendarShiftSummary>;
   targetDate?: Date;
   yearMonth: Date;
 };

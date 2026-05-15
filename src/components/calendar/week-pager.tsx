@@ -20,7 +20,7 @@ import {
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import { useWindowDimensions, View } from "react-native";
 import type { Pattern } from "@/schema";
-import { CalendarBody } from "./calendar-body";
+import { CalendarBody, type CalendarShiftSummary } from "./calendar-body";
 import { CALENDAR_WEEK_PAGER_HEIGHT } from "./constants";
 
 const WEEK_BUFFER_SIZE = 10;
@@ -33,7 +33,7 @@ type WeekPagerProps = {
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
   setYearMonth: Dispatch<SetStateAction<Date>>;
-  shiftsByDate: ReadonlyMap<number, string>;
+  shiftsByDate: ReadonlyMap<number, CalendarShiftSummary>;
   targetDate?: Date;
   yearMonth: Date;
 };

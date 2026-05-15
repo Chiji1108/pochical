@@ -22,12 +22,17 @@ import type { Pattern } from "@/schema";
 import { CALENDAR_DAY_CELL_HEIGHT } from "./constants";
 import { WeekRow } from "./week-row";
 
+export type CalendarShiftSummary = {
+  hasNotes: boolean;
+  patternId: string;
+};
+
 type CalendarBodyProps = {
   detailTransitionProgress?: SharedValue<number>;
   patternsById: ReadonlyMap<string, Pattern>;
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
-  shiftsByDate: ReadonlyMap<number, string>;
+  shiftsByDate: ReadonlyMap<number, CalendarShiftSummary>;
   yearMonth: Date;
   className?: string;
   weekDate?: Date;
@@ -66,10 +71,10 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
 
   const renderDateCell = (date: Date, shouldDimOutOfMonth: boolean) => {
     const isSelectedDate = isSameDay(date, selectedDate);
-    const shiftPatternId = shiftsByDate.get(startOfDay(date).getTime());
-    const shiftPattern = shiftPatternId
-      ? patternsById.get(shiftPatternId)
-      : undefined;
+    const shift = shiftsByDate.get(startOfDay(date).getTime());
+    const shiftPattern = shift ? patternsById.get(shift.patternId) : undefined;
+    const shouldShowStandaloneNotesIndicator =
+      Boolean(shift?.hasNotes) && !shiftPattern;
 
     return (
       <PressableFeedback
@@ -102,7 +107,23 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
             <Text className="text-center text-sm" numberOfLines={1}>
               {shiftPattern.emoji}
             </Text>
+            {shift.hasNotes ? (
+              <View
+                className={cn("mt-0.5 h-1.5 w-1.5 rounded-full", {
+                  "bg-background": isSelectedDate,
+                  "bg-foreground/70": !isSelectedDate,
+                })}
+              />
+            ) : null}
           </View>
+        ) : null}
+        {shouldShowStandaloneNotesIndicator ? (
+          <View
+            className={cn("mt-1 h-1.5 w-1.5 rounded-full", {
+              "bg-background": isSelectedDate,
+              "bg-foreground/70": !isSelectedDate,
+            })}
+          />
         ) : null}
       </PressableFeedback>
     );

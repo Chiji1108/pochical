@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { Chip, ListGroup, Text } from "heroui-native";
+import { Chip, ListGroup, Separator, Text } from "heroui-native";
 import { useMemo } from "react";
 import { View } from "react-native";
 import type { Member, Pattern, Shift } from "@/schema";
@@ -53,6 +53,7 @@ export const ShiftDetailView = ({
       });
   }, [membersById, selectedDateShift]);
   const notes = selectedDateShift?.notes?.trim() ?? "";
+  const hasSelectedMembers = selectedMembers.length > 0;
 
   if (!selectedPattern) {
     return null;
@@ -71,8 +72,8 @@ export const ShiftDetailView = ({
             <ListGroup.ItemTitle numberOfLines={1}>
               {selectedPattern.name}
             </ListGroup.ItemTitle>
-            {selectedMembers.length > 0 ? (
-              <View className="mt-1 flex-row flex-wrap gap-1">
+            {hasSelectedMembers ? (
+              <View className="mt-1 min-w-0 flex-row flex-wrap items-center gap-1">
                 {selectedMembers.map((member) => (
                   <Chip
                     animation="disable-all"
@@ -87,11 +88,6 @@ export const ShiftDetailView = ({
                 ))}
               </View>
             ) : null}
-            {notes ? (
-              <Text className="mt-1 text-sm" color="muted" numberOfLines={3}>
-                {notes}
-              </Text>
-            ) : null}
           </ListGroup.ItemContent>
           <ListGroup.ItemSuffix>
             <Text color="muted" numberOfLines={1}>
@@ -99,6 +95,18 @@ export const ShiftDetailView = ({
             </Text>
           </ListGroup.ItemSuffix>
         </ListGroup.Item>
+        {notes ? (
+          <>
+            <Separator className="mx-4" />
+            <ListGroup.Item className="items-start py-3">
+              <ListGroup.ItemContent>
+                <Text className="text-sm" color="muted">
+                  {notes}
+                </Text>
+              </ListGroup.ItemContent>
+            </ListGroup.Item>
+          </>
+        ) : null}
       </ListGroup>
     </View>
   );
