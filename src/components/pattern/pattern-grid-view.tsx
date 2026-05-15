@@ -7,6 +7,10 @@ import { Button } from "heroui-native/button";
 import { useAll, useDb, useSession } from "jazz-tools/react-native";
 import { useMemo } from "react";
 import { useWindowDimensions, View } from "react-native";
+import Animated, {
+  type SharedValue,
+  useAnimatedStyle,
+} from "react-native-reanimated";
 import { ShiftDetailInputPanel } from "@/components/shift/shift-detail-input-panel";
 import { app, type Pattern } from "@/schema";
 
@@ -97,11 +101,15 @@ const seedPatterns: SeedPattern[] = [
 ] as const;
 
 type PatternGridViewProps = {
+  detailTransitionProgress: SharedValue<number>;
+  isDetailInputMode: boolean;
   onSelectDate: (date: Date) => void;
   selectedDate: Date;
 };
 
 export function PatternGridView({
+  detailTransitionProgress,
+  isDetailInputMode,
   onSelectDate,
   selectedDate,
 }: PatternGridViewProps) {
@@ -126,6 +134,9 @@ export function PatternGridView({
   const selectedDateShift = shifts.find((shift) =>
     isSameDay(shift.startDate, selectedDate)
   );
+  const detailInputStyle = useAnimatedStyle(() => ({
+    opacity: detailTransitionProgress.value,
+  }));
 
   const createSeedPatterns = () => {
     if (!session || patterns.length > 0) {
@@ -262,7 +273,12 @@ export function PatternGridView({
               <Button.Label>シフトパターンを編集</Button.Label>
             </Button>
           </View>
-          <ShiftDetailInputPanel selectedShift={selectedDateShift} />
+          <Animated.View
+            pointerEvents={isDetailInputMode ? "auto" : "none"}
+            style={detailInputStyle}
+          >
+            <ShiftDetailInputPanel selectedShift={selectedDateShift} />
+          </Animated.View>
         </View>
       ) : (
         <View className="items-center py-6">

@@ -1,20 +1,17 @@
 import { addDays, isSameMonth, startOfMonth } from "date-fns";
 import { BlurTargetView, BlurView } from "expo-blur";
 import { selectionAsync } from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   type LayoutChangeEvent,
   Platform,
-  useColorScheme,
   View,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, {
+import {
   cancelAnimation,
   runOnJS,
-  useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
@@ -29,14 +26,10 @@ const DETAIL_PAGE_DRAG_DISTANCE = 180;
 const DETAIL_PAGE_SETTLE_THRESHOLD = 0.45;
 const DETAIL_PAGE_SWIPE_VELOCITY = 600;
 const DETAIL_PAGE_TRANSITION_DURATION = 220;
-const BOTTOM_EDGE_FADE_HEIGHT = 36;
 const TAB_OVERLAP_PADDING = 36;
-const LIGHT_BOTTOM_FADE_RGB = "156, 163, 175";
-const DARK_BOTTOM_FADE_RGB = "0, 0, 0";
 
 export default function Index() {
   const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme();
   const blurTargetRef = useRef<View | null>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [isDetailInputMode, setIsDetailInputMode] = useState(false);
@@ -46,11 +39,6 @@ export default function Index() {
   const [targetDate, setTargetDate] = useState<Date>();
   const detailPageProgress = useSharedValue(0);
   const detailGestureStartProgress = useSharedValue(0);
-  const bottomFadeRgb =
-    colorScheme === "dark" ? DARK_BOTTOM_FADE_RGB : LIGHT_BOTTOM_FADE_RGB;
-  const bottomFadeStyle = useAnimatedStyle(() => ({
-    opacity: 1 - detailPageProgress.value,
-  }));
 
   const returnToToday = () => {
     setTargetDate(new Date());
@@ -197,6 +185,8 @@ export default function Index() {
             <View className="flex-1">
               {isShiftInputMode ? (
                 <PatternGridView
+                  detailTransitionProgress={detailPageProgress}
+                  isDetailInputMode={isDetailInputMode}
                   onSelectDate={selectDateImmediately}
                   selectedDate={selectedDate}
                 />
@@ -207,25 +197,6 @@ export default function Index() {
           </BlurTargetView>
         </GestureDetector>
       </KeyboardAvoidingView>
-      {isShiftInputMode ? (
-        <Animated.View
-          className="absolute inset-x-0 bottom-0 z-20"
-          pointerEvents={isDetailInputMode ? "none" : "auto"}
-          style={[
-            { height: insets.bottom + BOTTOM_EDGE_FADE_HEIGHT },
-            bottomFadeStyle,
-          ]}
-        >
-          <LinearGradient
-            colors={[
-              `rgba(${bottomFadeRgb}, 0)`,
-              `rgba(${bottomFadeRgb}, 0.9)`,
-            ]}
-            locations={[0, 1]}
-            style={{ flex: 1 }}
-          />
-        </Animated.View>
-      ) : null}
     </View>
   );
 }
