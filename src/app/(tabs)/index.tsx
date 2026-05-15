@@ -121,10 +121,6 @@ export default function Index() {
   );
 
   const toggleShiftInputMode = () => {
-    if (isShiftInputMode) {
-      setDetailInputMode(false);
-    }
-
     setIsShiftInputMode((current) => !current);
   };
 
@@ -147,20 +143,12 @@ export default function Index() {
           detailGestureStartProgress.value = detailPageProgress.value;
         })
         .onUpdate((event) => {
-          if (!(isShiftInputMode || isDetailInputMode)) {
-            return;
-          }
-
           const nextProgress =
             detailGestureStartProgress.value -
             event.translationY / DETAIL_PAGE_DRAG_DISTANCE;
           detailPageProgress.value = Math.min(1, Math.max(0, nextProgress));
         })
         .onEnd((event) => {
-          if (!(isShiftInputMode || isDetailInputMode)) {
-            return;
-          }
-
           const shouldOpen =
             event.velocityY < -DETAIL_PAGE_SWIPE_VELOCITY ||
             (event.velocityY <= DETAIL_PAGE_SWIPE_VELOCITY &&
@@ -168,13 +156,7 @@ export default function Index() {
 
           runOnJS(setDetailInputMode)(shouldOpen);
         }),
-    [
-      detailGestureStartProgress,
-      detailPageProgress,
-      isDetailInputMode,
-      isShiftInputMode,
-      setDetailInputMode,
-    ]
+    [detailGestureStartProgress, detailPageProgress, setDetailInputMode]
   );
 
   return (
