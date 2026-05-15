@@ -39,6 +39,7 @@ export default function Index() {
   const [targetDate, setTargetDate] = useState<Date>();
   const detailPageProgress = useSharedValue(0);
   const detailGestureStartProgress = useSharedValue(0);
+  const bottomContentPadding = insets.bottom + TAB_OVERLAP_PADDING;
 
   const returnToToday = () => {
     setTargetDate(new Date());
@@ -159,7 +160,6 @@ export default function Index() {
             className="flex-1 bg-background"
             ref={blurTargetRef}
             style={{
-              paddingBottom: insets.bottom + TAB_OVERLAP_PADDING,
               paddingTop: headerHeight,
             }}
           >
@@ -176,6 +176,8 @@ export default function Index() {
               yearMonth={yearMonth}
             />
             <PatternGridHeader
+              detailTransitionProgress={detailPageProgress}
+              isDetailInputMode={isDetailInputMode}
               isShiftInputMode={isShiftInputMode}
               onSelectDate={setTargetDate}
               onSelectNextDay={selectNextDay}
@@ -185,13 +187,18 @@ export default function Index() {
             <View className="flex-1">
               {isShiftInputMode ? (
                 <PatternGridView
+                  bottomContentPadding={bottomContentPadding}
                   detailTransitionProgress={detailPageProgress}
                   isDetailInputMode={isDetailInputMode}
                   onSelectDate={selectDateImmediately}
+                  onSelectNextDay={selectNextDay}
                   selectedDate={selectedDate}
                 />
               ) : (
-                <ShiftDetailView selectedDate={selectedDate} />
+                <ShiftDetailView
+                  bottomContentPadding={bottomContentPadding}
+                  selectedDate={selectedDate}
+                />
               )}
             </View>
           </BlurTargetView>

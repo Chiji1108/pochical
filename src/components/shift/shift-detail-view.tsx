@@ -25,10 +25,14 @@ const getPatternScheduleLabel = (pattern: Pattern): string => {
 };
 
 type ShiftDetailViewProps = {
+  bottomContentPadding: number;
   selectedDate: Date;
 };
 
-export const ShiftDetailView = ({ selectedDate }: ShiftDetailViewProps) => {
+export const ShiftDetailView = ({
+  bottomContentPadding,
+  selectedDate,
+}: ShiftDetailViewProps) => {
   const patterns = useAll(app.patterns) ?? [];
   const shifts = useAll(app.shifts) ?? [];
   const patternsById = useMemo(() => {
@@ -52,7 +56,7 @@ export const ShiftDetailView = ({ selectedDate }: ShiftDetailViewProps) => {
   }
 
   return (
-    <View className="px-3 pt-1">
+    <View className="px-3 pt-1" style={{ paddingBottom: bottomContentPadding }}>
       <ListGroup>
         <ListGroup.Item>
           <ListGroup.ItemPrefix>

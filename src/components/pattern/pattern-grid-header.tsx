@@ -5,6 +5,10 @@ import { Button } from "heroui-native/button";
 import { useAll, useDb } from "jazz-tools/react-native";
 import type { FC } from "react";
 import { View } from "react-native";
+import Animated, {
+  type SharedValue,
+  useAnimatedStyle,
+} from "react-native-reanimated";
 import { CalendarDatePickerButton } from "@/components/calendar/calendar-date-picker-button";
 import { app } from "@/schema";
 
@@ -19,6 +23,8 @@ const selectedWeekdayFormatter = new Intl.DateTimeFormat("ja-JP", {
 });
 
 type PatternGridHeaderProps = {
+  detailTransitionProgress: SharedValue<number>;
+  isDetailInputMode: boolean;
   isShiftInputMode: boolean;
   onSelectDate: (date: Date) => void;
   onSelectNextDay: () => void;
@@ -26,7 +32,38 @@ type PatternGridHeaderProps = {
   selectedDate: Date;
 };
 
+type NextActionButtonProps = {
+  hasSelectedDateShift: boolean;
+  onPress: () => void;
+};
+
+const NextActionButton: FC<NextActionButtonProps> = ({
+  hasSelectedDateShift,
+  onPress,
+}) => (
+  <Button
+    accessibilityLabel={
+      hasSelectedDateShift ? "選択日のシフトを削除して翌日へ移動" : "翌日を選択"
+    }
+    onPress={onPress}
+    size="sm"
+    variant="outline"
+  >
+    <SymbolView
+      name={{
+        android: hasSelectedDateShift ? "delete" : "forward",
+        ios: hasSelectedDateShift ? "trash" : "forward.fill",
+        web: hasSelectedDateShift ? "delete" : "forward",
+      }}
+      size={16}
+    />
+    <Button.Label>{hasSelectedDateShift ? "削除" : "翌日"}</Button.Label>
+  </Button>
+);
+
 export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
+  detailTransitionProgress,
+  isDetailInputMode,
   isShiftInputMode,
   onSelectDate,
   onSelectNextDay,
@@ -39,6 +76,9 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
     isSameDay(shift.startDate, selectedDate)
   );
   const hasSelectedDateShift = selectedDateShifts.length > 0;
+  const nextActionStyle = useAnimatedStyle(() => ({
+    opacity: 1 - detailTransitionProgress.value,
+  }));
 
   const handleNextAction = async () => {
     if (hasSelectedDateShift) {
@@ -84,28 +124,15 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
       </CalendarDatePickerButton>
       <View className="flex-row items-center gap-2 pr-2">
         {isShiftInputMode ? (
-          <Button
-            accessibilityLabel={
-              hasSelectedDateShift
-                ? "選択日のシフトを削除して翌日へ移動"
-                : "翌日を選択"
-            }
-            onPress={handleNextAction}
-            size="sm"
-            variant="outline"
+          <Animated.View
+            pointerEvents={isDetailInputMode ? "none" : "auto"}
+            style={nextActionStyle}
           >
-            <SymbolView
-              name={{
-                android: hasSelectedDateShift ? "delete" : "forward",
-                ios: hasSelectedDateShift ? "trash" : "forward.fill",
-                web: hasSelectedDateShift ? "delete" : "forward",
-              }}
-              size={16}
+            <NextActionButton
+              hasSelectedDateShift={hasSelectedDateShift}
+              onPress={handleNextAction}
             />
-            <Button.Label>
-              {hasSelectedDateShift ? "削除" : "翌日"}
-            </Button.Label>
-          </Button>
+          </Animated.View>
         ) : null}
         <Button
           accessibilityLabel={

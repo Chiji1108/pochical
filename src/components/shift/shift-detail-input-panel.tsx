@@ -1,6 +1,7 @@
+import { selectionAsync } from "expo-haptics";
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { Label, TagGroup, Text, TextArea, TextField } from "heroui-native";
+import { Input, Label, TagGroup, Text, TextField } from "heroui-native";
 import { Button } from "heroui-native/button";
 import { useAll, useDb, useSession } from "jazz-tools/react-native";
 import { useMemo } from "react";
@@ -10,10 +11,12 @@ import { app, type Shift } from "@/schema";
 const seedMembers = ["佐藤師長", "鈴木主任", "田中先輩"] as const;
 
 type ShiftDetailInputPanelProps = {
+  onSelectNextDay: () => void;
   selectedShift?: Shift;
 };
 
 export const ShiftDetailInputPanel = ({
+  onSelectNextDay,
   selectedShift,
 }: ShiftDetailInputPanelProps) => {
   const db = useDb();
@@ -59,6 +62,26 @@ export const ShiftDetailInputPanel = ({
     });
   };
 
+  const handleDeleteShift = () => {
+    if (!(session && selectedShift)) {
+      return;
+    }
+
+    db.delete(app.shifts, selectedShift.id);
+
+    selectionAsync().catch(() => {
+      // Haptics can be unavailable depending on the device or platform.
+    });
+  };
+
+  const handleSaveAndSelectNextDay = () => {
+    onSelectNextDay();
+
+    selectionAsync().catch(() => {
+      // Haptics can be unavailable depending on the device or platform.
+    });
+  };
+
   if (!selectedShift) {
     return (
       <View className="items-center px-3 py-4">
@@ -82,6 +105,9 @@ export const ShiftDetailInputPanel = ({
             isDisabled={!session}
             onSelectionChange={(keys) => {
               updateMemberIds(Array.from(keys).map(String));
+              selectionAsync().catch(() => {
+                // Haptics can be unavailable depending on the device or platform.
+              });
             }}
             selectedKeys={selectedMemberIds}
             selectionMode="multiple"
@@ -155,12 +181,54 @@ export const ShiftDetailInputPanel = ({
       </View>
       <TextField isDisabled={!session}>
         <Label>メモ</Label>
-        <TextArea
+        <Input
+          autoCapitalize="none"
+          autoCorrect={false}
           onChangeText={updateNotes}
           placeholder="メモを入力"
+          returnKeyType="done"
           value={selectedShift.notes ?? ""}
         />
       </TextField>
+      <View className="flex-row items-center justify-between gap-3 pt-1">
+        <Button
+          accessibilityLabel="選択日のシフトを削除"
+          className="flex-1"
+          isDisabled={!session}
+          onPress={handleDeleteShift}
+          size="md"
+          variant="outline"
+        >
+          <SymbolView
+            name={{
+              android: "delete",
+              ios: "trash",
+              web: "delete",
+            }}
+            size={16}
+          />
+          <Button.Label>削除</Button.Label>
+        </Button>
+        <Button
+          accessibilityLabel="保存して翌日へ移動"
+          className="flex-1"
+          isDisabled={!session}
+          onPress={handleSaveAndSelectNextDay}
+          size="md"
+          variant="primary"
+        >
+          <SymbolView
+            name={{
+              android: "forward",
+              ios: "forward.fill",
+              web: "forward",
+            }}
+            size={16}
+            tintColor="white"
+          />
+          <Button.Label>保存して翌日</Button.Label>
+        </Button>
+      </View>
     </View>
   );
 };

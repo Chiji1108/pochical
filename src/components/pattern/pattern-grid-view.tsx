@@ -6,7 +6,7 @@ import { Text } from "heroui-native";
 import { Button } from "heroui-native/button";
 import { useAll, useDb, useSession } from "jazz-tools/react-native";
 import { useMemo } from "react";
-import { useWindowDimensions, View } from "react-native";
+import { ScrollView, useWindowDimensions, View } from "react-native";
 import Animated, {
   type SharedValue,
   useAnimatedStyle,
@@ -101,16 +101,20 @@ const seedPatterns: SeedPattern[] = [
 ] as const;
 
 type PatternGridViewProps = {
+  bottomContentPadding: number;
   detailTransitionProgress: SharedValue<number>;
   isDetailInputMode: boolean;
   onSelectDate: (date: Date) => void;
+  onSelectNextDay: () => void;
   selectedDate: Date;
 };
 
 export function PatternGridView({
+  bottomContentPadding,
   detailTransitionProgress,
   isDetailInputMode,
   onSelectDate,
+  onSelectNextDay,
   selectedDate,
 }: PatternGridViewProps) {
   const db = useDb();
@@ -208,7 +212,9 @@ export function PatternGridView({
       }
     });
 
-    onSelectDate(addDays(shiftStartDate, pattern.nextDayPatternId ? 2 : 1));
+    if (!isDetailInputMode) {
+      onSelectDate(addDays(shiftStartDate, pattern.nextDayPatternId ? 2 : 1));
+    }
 
     selectionAsync().catch(() => {
       // Haptics can be unavailable depending on the device or platform.
@@ -216,7 +222,17 @@ export function PatternGridView({
   };
 
   return (
-    <View className="flex-1 px-3">
+    <ScrollView
+      alwaysBounceVertical={false}
+      bounces={false}
+      className="flex-1"
+      contentContainerClassName="px-3"
+      contentContainerStyle={{ paddingBottom: bottomContentPadding }}
+      contentInsetAdjustmentBehavior="automatic"
+      keyboardShouldPersistTaps="handled"
+      overScrollMode="never"
+      scrollEnabled={isDetailInputMode}
+    >
       {sortedPatterns.length > 0 ? (
         <View className="gap-2">
           <View>
@@ -277,7 +293,10 @@ export function PatternGridView({
             pointerEvents={isDetailInputMode ? "auto" : "none"}
             style={detailInputStyle}
           >
-            <ShiftDetailInputPanel selectedShift={selectedDateShift} />
+            <ShiftDetailInputPanel
+              onSelectNextDay={onSelectNextDay}
+              selectedShift={selectedDateShift}
+            />
           </Animated.View>
         </View>
       ) : (
@@ -306,6 +325,6 @@ export function PatternGridView({
           )}
         </View>
       )}
-    </View>
+    </ScrollView>
   );
 }
