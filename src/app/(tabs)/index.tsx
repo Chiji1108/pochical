@@ -6,7 +6,7 @@ import {
   startOfMonth,
 } from "date-fns";
 import { selectionAsync } from "expo-haptics";
-import { useAll } from "jazz-tools/react-native";
+import { useAll, useSession } from "jazz-tools/react-native";
 import { useCallback, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -44,13 +44,22 @@ export default function Index() {
   const [yearMonth, setYearMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [targetDate, setTargetDate] = useState<Date>();
+  const session = useSession();
+  const currentUserId = session?.user_id ?? "";
   const detailPageProgress = useSharedValue(0);
   const detailGestureStartProgress = useSharedValue(0);
   const bottomContentPadding = insets.bottom + TAB_OVERLAP_PADDING;
-  const patterns = useAll(app.patterns) ?? [];
-  const shifts = useAll(app.shifts) ?? [];
-  const shiftNotes = useAll(app.shiftNotes) ?? [];
-  const members = useAll(app.members) ?? [];
+  const patterns =
+    useAll(
+      currentUserId
+        ? app.patterns.where({ ownerUserId: currentUserId })
+        : undefined
+    ) ?? [];
+  const shifts = useAll(app.shifts.where({ ownerUserId: currentUserId })) ?? [];
+  const shiftNotes =
+    useAll(app.shiftNotes.where({ ownerUserId: currentUserId })) ?? [];
+  const members =
+    useAll(app.members.where({ ownerUserId: currentUserId })) ?? [];
   const patternsById = useMemo(() => {
     const nextPatternsById = new Map<string, Pattern>();
 

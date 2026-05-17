@@ -105,8 +105,10 @@ export const PatternListView = () => {
   const db = useDb();
   const router = useRouter();
   const session = useSession();
+  const currentUserId = session?.user_id ?? "";
   const scrollableRef = useAnimatedRef<Animated.ScrollView>();
-  const patterns = useAll(app.patterns) ?? [];
+  const patterns =
+    useAll(app.patterns.where({ ownerUserId: currentUserId })) ?? [];
   const sortedPatterns = useMemo(
     () =>
       [...patterns].sort((a, b) => {

@@ -9,7 +9,7 @@ import {
   TextField,
 } from "heroui-native";
 import { useAll, useDb, useSession } from "jazz-tools/react-native";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, View } from "react-native";
 import Animated, { useAnimatedRef } from "react-native-reanimated";
 import Sortable, {
@@ -37,9 +37,11 @@ export const MemberListView = ({
 }: MemberListViewProps) => {
   const db = useDb();
   const session = useSession();
+  const currentUserId = session?.user_id ?? "";
   const scrollableRef = useAnimatedRef<Animated.ScrollView>();
-  const members = useAll(app.members) ?? [];
-  const shifts = useAll(app.shifts) ?? [];
+  const members =
+    useAll(app.members.where({ ownerUserId: currentUserId })) ?? [];
+  const shifts = useAll(app.shifts.where({ ownerUserId: currentUserId })) ?? [];
   const sortedMembers = useMemo(
     () =>
       [...members].sort((a, b) => {
@@ -198,7 +200,11 @@ export const MemberListView = ({
             return;
           }
 
-          db.insert(app.members, { name, orderIndex: members.length });
+          db.insert(app.members, {
+            name,
+            orderIndex: members.length,
+            ownerUserId: session.user_id,
+          });
           onCloseAddDialog();
         }}
         title="勤務メンバーを追加"
@@ -304,16 +310,19 @@ const MemberNameDialog = ({
   onSubmit,
   title,
 }: MemberNameDialogProps) => {
-  const [name, setName] = useState(initialName);
-  const trimmedName = name.trim();
+  const nameRef = useRef(initialName);
+  const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
     if (isOpen) {
-      setName(initialName);
+      nameRef.current = initialName;
+      setFormKey((currentKey) => currentKey + 1);
     }
   }, [initialName, isOpen]);
 
   const submit = () => {
+    const trimmedName = nameRef.current.trim();
+
     if (!trimmedName) {
       Alert.alert("名前を入力してください");
       return;
@@ -339,11 +348,14 @@ const MemberNameDialog = ({
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoFocus={true}
-                onChangeText={setName}
+                defaultValue={initialName}
+                key={`member-name-${formKey}`}
+                onChangeText={(text) => {
+                  nameRef.current = text;
+                }}
                 onSubmitEditing={submit}
                 placeholder="名前"
                 returnKeyType="done"
-                value={name}
               />
             </TextField>
             <View className="mt-5 flex-row justify-end gap-3">
@@ -356,12 +368,7 @@ const MemberNameDialog = ({
               >
                 <Button.Label>キャンセル</Button.Label>
               </Button>
-              <Button
-                isDisabled={!trimmedName}
-                onPress={submit}
-                size="sm"
-                variant="primary"
-              >
+              <Button onPress={submit} size="sm" variant="primary">
                 <Button.Label>保存</Button.Label>
               </Button>
             </View>

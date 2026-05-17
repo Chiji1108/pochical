@@ -1,11 +1,6 @@
 import { BlurView } from "expo-blur";
 import { SymbolView, type SymbolViewProps } from "expo-symbols";
-import {
-  Button,
-  type ButtonRootProps,
-  Text,
-  useThemeColor,
-} from "heroui-native";
+import { Button, type ButtonRootProps, Text } from "heroui-native";
 import type { FC } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,6 +11,7 @@ type AppHeaderAction = {
   icon?: SymbolViewProps["name"];
   isDisabled?: boolean;
   label?: string;
+  labelClassName?: string;
   onPress: () => void;
   variant?: ButtonRootProps["variant"];
 };
@@ -23,64 +19,46 @@ type AppHeaderAction = {
 type AppHeaderProps = {
   leftAction?: AppHeaderAction;
   rightAction?: AppHeaderAction;
+  rightActions?: AppHeaderAction[];
   title: string;
 };
 
 type HeaderActionButtonProps = {
   action?: AppHeaderAction;
-  align: "left" | "right";
 };
 
-const HeaderActionButton: FC<HeaderActionButtonProps> = ({ action, align }) => {
-  const [accentForegroundColor, foregroundColor, mutedColor] = useThemeColor([
-    "accent-foreground",
-    "foreground",
-    "muted",
-  ]);
-  const iconColor =
-    action?.variant === "primary" ? accentForegroundColor : foregroundColor;
-
-  return (
-    <View
-      className={cn(
-        "min-w-20 flex-1",
-        align === "right" ? "items-end" : "items-start"
-      )}
-    >
-      {action ? (
-        <Button
-          accessibilityLabel={action.accessibilityLabel}
-          className={cn(action.label ? "px-3" : "h-9 w-9")}
-          isDisabled={action.isDisabled}
-          isIconOnly={!action.label}
-          onPress={action.onPress}
-          size="sm"
-          variant={action.variant ?? "ghost"}
-        >
-          {action.icon ? (
-            <SymbolView
-              name={action.icon}
-              size={18}
-              tintColor={action.isDisabled ? mutedColor : iconColor}
-            />
-          ) : null}
-          {action.label ? (
-            <Button.Label className="font-semibold">
-              {action.label}
-            </Button.Label>
-          ) : null}
-        </Button>
-      ) : null}
-    </View>
-  );
-};
+const HeaderActionButton: FC<HeaderActionButtonProps> = ({ action }) => (
+  <View>
+    {action ? (
+      <Button
+        accessibilityLabel={action.accessibilityLabel}
+        className={cn(action.label ? "px-3" : "h-9 w-9")}
+        isDisabled={action.isDisabled}
+        isIconOnly={!action.label}
+        onPress={action.onPress}
+        size="sm"
+        variant={action.variant ?? "ghost"}
+      >
+        {action.icon ? <SymbolView name={action.icon} size={16} /> : null}
+        {action.label ? (
+          <Button.Label className={action.labelClassName}>
+            {action.label}
+          </Button.Label>
+        ) : null}
+      </Button>
+    ) : null}
+  </View>
+);
 
 export const AppHeader: FC<AppHeaderProps> = ({
   leftAction,
   rightAction,
+  rightActions,
   title,
 }) => {
   const insets = useSafeAreaInsets();
+  const resolvedRightActions =
+    rightActions ?? (rightAction ? [rightAction] : []);
 
   return (
     <BlurView
@@ -91,14 +69,23 @@ export const AppHeader: FC<AppHeaderProps> = ({
       tint="systemThinMaterial"
     >
       <View className="h-14 flex-row items-center px-3">
-        <HeaderActionButton action={leftAction} align="left" />
+        <View className="min-w-20 flex-1 items-start">
+          <HeaderActionButton action={leftAction} />
+        </View>
         <Text
           className="min-w-0 px-3 text-center font-bold text-lg"
           numberOfLines={1}
         >
           {title}
         </Text>
-        <HeaderActionButton action={rightAction} align="right" />
+        <View className="min-w-20 flex-1 flex-row justify-end gap-1">
+          {resolvedRightActions.map((action) => (
+            <HeaderActionButton
+              action={action}
+              key={action.accessibilityLabel}
+            />
+          ))}
+        </View>
       </View>
     </BlurView>
   );

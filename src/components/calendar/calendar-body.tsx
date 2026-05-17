@@ -7,10 +7,10 @@ import {
   startOfDay,
 } from "date-fns";
 import { selectionAsync } from "expo-haptics";
-import { PressableFeedback, Text } from "heroui-native";
+import { Text } from "heroui-native";
 import type { FC, ReactNode } from "react";
 import { useMemo } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import Animated, {
   type SharedValue,
   useAnimatedStyle,
@@ -74,7 +74,7 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
     const shift = shiftsByDate.get(startOfDay(date).getTime());
     const shiftPattern = shift ? patternsById.get(shift.patternId) : undefined;
     return (
-      <PressableFeedback
+      <Pressable
         className={cn(
           "relative flex w-full flex-col items-center rounded-lg p-1",
           {
@@ -120,7 +120,7 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
             </Text>
           </View>
         ) : null}
-      </PressableFeedback>
+      </Pressable>
     );
   };
 
