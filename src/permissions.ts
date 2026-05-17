@@ -17,15 +17,6 @@ export const permissions = s.definePermissions(
         groupId,
         user_id: session.user_id,
       });
-    const isUserShareGroupMember = (
-      groupId: ShareGroupMemberGroupId,
-      userId: ShareGroupMemberWhere["user_id"]
-    ) =>
-      policy.shareGroupMembers.exists.where({
-        groupId,
-        user_id: userId,
-      });
-
     policy.todos.allowRead.where({ $createdBy: session.user_id });
     policy.todos.allowInsert.always();
     policy.todos.allowUpdate.where({ $createdBy: session.user_id });
@@ -50,16 +41,7 @@ export const permissions = s.definePermissions(
       isShareGroupMember(member.groupId)
     );
     policy.shareGroupMembers.allowInsert.where((member) =>
-      anyOf([
-        allOf([
-          { user_id: session.user_id },
-          policy.shareGroups.exists.where({
-            id: member.groupId,
-            $createdBy: session.user_id,
-          }),
-        ]),
-        isShareGroupMember(member.groupId),
-      ])
+      anyOf([{ user_id: session.user_id }, isShareGroupMember(member.groupId)])
     );
     policy.shareGroupMembers.allowUpdate
       .whereOld({ user_id: session.user_id })
@@ -74,11 +56,7 @@ export const permissions = s.definePermissions(
       ])
     );
     policy.shareGroupAccess.allowInsert.where((access) =>
-      allOf([
-        isShareGroupMember(access.groupId),
-        isUserShareGroupMember(access.groupId, access.ownerUserId),
-        isUserShareGroupMember(access.groupId, access.viewerUserId),
-      ])
+      isShareGroupMember(access.groupId)
     );
     policy.shareGroupAccess.allowUpdate.never();
     policy.shareGroupAccess.allowDelete.where((access) =>

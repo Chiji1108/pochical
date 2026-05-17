@@ -71,22 +71,6 @@ export const ShiftDetailView = ({
             <ListGroup.ItemTitle numberOfLines={1}>
               {selectedPattern.name}
             </ListGroup.ItemTitle>
-            {hasSelectedMembers ? (
-              <View className="mt-1 min-w-0 flex-row flex-wrap items-center gap-1">
-                {selectedMembers.map((member) => (
-                  <Chip
-                    animation="disable-all"
-                    className="max-w-28"
-                    color="default"
-                    key={member.id}
-                    size="sm"
-                    variant="soft"
-                  >
-                    <Chip.Label numberOfLines={1}>{member.name}</Chip.Label>
-                  </Chip>
-                ))}
-              </View>
-            ) : null}
           </ListGroup.ItemContent>
           <ListGroup.ItemSuffix>
             <Text color="muted" numberOfLines={1}>
@@ -94,10 +78,39 @@ export const ShiftDetailView = ({
             </Text>
           </ListGroup.ItemSuffix>
         </ListGroup.Item>
-        {notes ? (
+        {hasSelectedMembers ? (
           <>
             <Separator className="mx-4" />
-            <ListGroup.Item className="items-start py-3">
+            <ListGroup.Item className={notes ? "pt-3 pb-1" : "py-3"}>
+              <ListGroup.ItemContent>
+                <View className="min-w-0 flex-row flex-wrap items-center gap-1">
+                  {selectedMembers.map((member) => (
+                    <Chip
+                      animation="disable-all"
+                      className="max-w-28"
+                      color="default"
+                      key={member.id}
+                      size="sm"
+                      variant="soft"
+                    >
+                      <Chip.Label numberOfLines={1}>{member.name}</Chip.Label>
+                    </Chip>
+                  ))}
+                </View>
+              </ListGroup.ItemContent>
+            </ListGroup.Item>
+          </>
+        ) : null}
+        {notes ? (
+          <>
+            {hasSelectedMembers ? null : <Separator className="mx-4" />}
+            <ListGroup.Item
+              className={
+                hasSelectedMembers
+                  ? "items-start pt-1 pb-3"
+                  : "items-start py-3"
+              }
+            >
               <ListGroup.ItemContent>
                 <Text className="text-sm" color="muted">
                   {notes}

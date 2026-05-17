@@ -121,7 +121,7 @@ members: s.table({
 
 このアプリは仲間内の共有を前提にしており、公開グループや荒らし対策を MVP の主目的にしない。モバイルアプリで通常 UI から操作する前提なので、permissions は「通常利用で事故らない」「シフト・メモの private データが雑に漏れない」ことを優先する。
 
-そのため、グループ名変更や最後のメンバーによる group row 削除は group member に許可する。一方で、`shareGroupAccess` は読み取り範囲に直結するため、insert 時に `ownerUserId` と `viewerUserId` の両方が対象 group の member であることを検証する。
+そのため、グループ名変更や最後のメンバーによる group row 削除は group member に許可する。`shareGroupAccess` もメンバー追加時に同じ batch で作るため、MVP では group member に insert を許可する。公開招待や外部流入を作る段階で、backend API 側で owner/viewer の membership を検証する。
 
 `shareGroupMembers` の `displayName` 更新は本人だけに許可する。Jazz permissions だけで `groupId` を immutable にする表現は現状難しいため、MVP では通常 UI が `displayName` だけを更新する前提にする。公開招待や外部ユーザー流入を作る段階で、backend API 経由の membership 管理に移す。
 
@@ -209,13 +209,7 @@ policy.shareGroupMembers.allowRead.where((member) =>
 
 policy.shareGroupMembers.allowInsert.where((member) =>
   anyOf([
-    allOf([
-      { user_id: session.user_id },
-      policy.shareGroups.exists.where({
-        id: member.groupId,
-        $createdBy: session.user_id,
-      }),
-    ]),
+    { user_id: session.user_id },
     isShareGroupMember(member.groupId),
   ])
 );
@@ -224,7 +218,7 @@ policy.shareGroupMembers.allowUpdate.where({ user_id: session.user_id });
 policy.shareGroupMembers.allowDelete.where({ user_id: session.user_id });
 ```
 
-MVPでは user_id 直接追加で検証し、招待URLを実装する段階で `shareGroupInvites` と API Route に置き換える。`shareGroupAccess` は、insert 時に `ownerUserId` と `viewerUserId` の両方が対象 group の member であることを permissions で検証する。
+MVPでは user_id 直接追加で検証し、招待URLを実装する段階で `shareGroupInvites` と API Route に置き換える。グループ作成時は `shareGroups` と自分の `shareGroupMembers` を同じ batch で作るため、自分自身の membership insert は許可する。メンバー追加時も `shareGroupMembers` と `shareGroupAccess` を同じ batch で作るため、`shareGroupAccess` insert は group member に許可する。
 
 グループ削除は同じ group の member に許可する。MVP では悪意ある member からの削除防止より、通常操作で空 group を残さないことを優先する。UI では最後の member が脱退するときだけ group row も削除する。
 

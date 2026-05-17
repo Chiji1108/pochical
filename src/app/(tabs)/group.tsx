@@ -452,6 +452,7 @@ const GroupFormDialog = ({
                   placeholder="グループ名"
                   returnKeyType="next"
                 />
+                {/* <Description>全員に共有されます</Description> */}
               </TextField>
               <TextField>
                 <Label>あなたの名前</Label>
