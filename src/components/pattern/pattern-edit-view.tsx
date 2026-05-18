@@ -111,10 +111,23 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
   const session = useSession();
   const currentUserId = session?.user_id ?? "";
   const patterns =
-    useAll(app.patterns.where({ ownerUserId: currentUserId })) ?? [];
-  const shifts = useAll(app.shifts.where({ ownerUserId: currentUserId })) ?? [];
+    useAll(
+      currentUserId
+        ? app.patterns.where({ $createdBy: currentUserId })
+        : undefined
+    ) ?? [];
+  const shifts =
+    useAll(
+      currentUserId
+        ? app.shifts.where({ $createdBy: currentUserId })
+        : undefined
+    ) ?? [];
   const shiftNotes =
-    useAll(app.shiftNotes.where({ ownerUserId: currentUserId })) ?? [];
+    useAll(
+      currentUserId
+        ? app.shiftNotes.where({ $createdBy: currentUserId })
+        : undefined
+    ) ?? [];
   const [formState, setFormState] = useState(() =>
     getInitialFormState(pattern)
   );
@@ -268,7 +281,6 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
       db.insert(app.patterns, {
         ...saveFields,
         orderIndex: patterns.length,
-        ownerUserId: session.user_id,
       });
     }
 

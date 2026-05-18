@@ -44,23 +44,23 @@ export const permissions = s.definePermissions(
     policy.shareGroupMembers.allowDelete.where({ user_id: session.user_id });
 
     policy.patterns.allowRead.always();
-    policy.patterns.allowInsert.where({ ownerUserId: session.user_id });
-    policy.patterns.allowUpdate.where({ ownerUserId: session.user_id });
-    policy.patterns.allowDelete.where({ ownerUserId: session.user_id });
+    policy.patterns.allowInsert.always();
+    policy.patterns.allowUpdate.where({ $createdBy: session.user_id });
+    policy.patterns.allowDelete.where({ $createdBy: session.user_id });
 
     policy.shifts.allowRead.always();
-    policy.shifts.allowInsert.where({ ownerUserId: session.user_id });
-    policy.shifts.allowUpdate.where({ ownerUserId: session.user_id });
-    policy.shifts.allowDelete.where({ ownerUserId: session.user_id });
+    policy.shifts.allowInsert.always();
+    policy.shifts.allowUpdate.where({ $createdBy: session.user_id });
+    policy.shifts.allowDelete.where({ $createdBy: session.user_id });
 
-    policy.shiftNotes.allowRead.where({ ownerUserId: session.user_id });
-    policy.shiftNotes.allowInsert.where({ ownerUserId: session.user_id });
-    policy.shiftNotes.allowUpdate.where({ ownerUserId: session.user_id });
-    policy.shiftNotes.allowDelete.where({ ownerUserId: session.user_id });
+    policy.shiftNotes.allowRead.where({ $createdBy: session.user_id });
+    policy.shiftNotes.allowInsert.always();
+    policy.shiftNotes.allowUpdate.where({ $createdBy: session.user_id });
+    policy.shiftNotes.allowDelete.where({ $createdBy: session.user_id });
 
     policy.members.allowRead.always();
-    policy.members.allowInsert.where({ ownerUserId: session.user_id });
-    policy.members.allowUpdate.where({ ownerUserId: session.user_id });
-    policy.members.allowDelete.where({ ownerUserId: session.user_id });
+    policy.members.allowInsert.always();
+    policy.members.allowUpdate.where({ $createdBy: session.user_id });
+    policy.members.allowDelete.where({ $createdBy: session.user_id });
   }
 );

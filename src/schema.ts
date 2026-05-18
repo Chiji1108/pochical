@@ -10,7 +10,6 @@ const schema = {
     displayName: s.string(),
   }),
   patterns: s.table({
-    ownerUserId: s.string(),
     name: s.string(),
     emoji: s.string(),
     orderIndex: s.int(),
@@ -21,18 +20,15 @@ const schema = {
     nextDayPatternId: s.ref("patterns").optional(),
   }),
   shifts: s.table({
-    ownerUserId: s.string(),
     patternId: s.ref("patterns"),
     startDate: s.timestamp(),
     memberIds: s.array(s.ref("members")),
   }),
   shiftNotes: s.table({
-    ownerUserId: s.string(),
     shiftId: s.ref("shifts"),
     notes: s.string(),
   }),
   members: s.table({
-    ownerUserId: s.string(),
     name: s.string(),
     orderIndex: s.int(),
   }),

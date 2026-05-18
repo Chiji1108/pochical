@@ -42,7 +42,6 @@ type PatternInsert = {
   name: string;
   nextDayPatternId?: string | null;
   orderIndex: number;
-  ownerUserId: string;
   startDate: Date | null;
 };
 
@@ -54,7 +53,6 @@ const seedTime = ([hour, minute]: [hour: number, minute: number]): Date => {
 
 const createPatternInsert = (
   pattern: SeedPattern,
-  ownerUserId: string,
   nextDayPatternId?: string
 ): PatternInsert => ({
   countsAsDayOff: pattern.countsAsDayOff ?? false,
@@ -64,7 +62,6 @@ const createPatternInsert = (
   name: pattern.name,
   nextDayPatternId: nextDayPatternId ?? null,
   orderIndex: pattern.orderIndex,
-  ownerUserId,
   startDate: pattern.start ? seedTime(pattern.start) : null,
 });
 
@@ -182,10 +179,7 @@ export function PatternGridView({
         throw new Error("明けシフトパターンの seed が見つかりません。");
       }
 
-      const ake = batch.insert(
-        app.patterns,
-        createPatternInsert(akeSeed, session.user_id)
-      );
+      const ake = batch.insert(app.patterns, createPatternInsert(akeSeed));
 
       for (const pattern of seedPatterns) {
         if (pattern.name === "明け") {
@@ -196,7 +190,6 @@ export function PatternGridView({
           app.patterns,
           createPatternInsert(
             pattern,
-            session.user_id,
             pattern.usesAkeAsNextDay ? ake.id : undefined
           )
         );
@@ -227,7 +220,6 @@ export function PatternGridView({
         } else {
           batch.insert(app.shifts, {
             patternId,
-            ownerUserId: session.user_id,
             startDate,
             memberIds: [],
           });

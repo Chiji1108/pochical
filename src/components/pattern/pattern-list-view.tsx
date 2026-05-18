@@ -108,7 +108,11 @@ export const PatternListView = () => {
   const currentUserId = session?.user_id ?? "";
   const scrollableRef = useAnimatedRef<Animated.ScrollView>();
   const patterns =
-    useAll(app.patterns.where({ ownerUserId: currentUserId })) ?? [];
+    useAll(
+      currentUserId
+        ? app.patterns.where({ $createdBy: currentUserId })
+        : undefined
+    ) ?? [];
   const sortedPatterns = useMemo(
     () =>
       [...patterns].sort((a, b) => {

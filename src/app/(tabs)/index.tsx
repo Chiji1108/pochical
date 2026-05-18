@@ -61,14 +61,27 @@ export default function Index() {
   const patterns =
     useAll(
       currentUserId
-        ? app.patterns.where({ ownerUserId: currentUserId })
+        ? app.patterns.where({ $createdBy: currentUserId })
         : undefined
     ) ?? [];
-  const shifts = useAll(app.shifts.where({ ownerUserId: currentUserId })) ?? [];
+  const shifts =
+    useAll(
+      currentUserId
+        ? app.shifts.where({ $createdBy: currentUserId })
+        : undefined
+    ) ?? [];
   const shiftNotes =
-    useAll(app.shiftNotes.where({ ownerUserId: currentUserId })) ?? [];
+    useAll(
+      currentUserId
+        ? app.shiftNotes.where({ $createdBy: currentUserId })
+        : undefined
+    ) ?? [];
   const members =
-    useAll(app.members.where({ ownerUserId: currentUserId })) ?? [];
+    useAll(
+      currentUserId
+        ? app.members.where({ $createdBy: currentUserId })
+        : undefined
+    ) ?? [];
   const patternsById = useMemo(() => {
     const nextPatternsById = new Map<string, Pattern>();
 

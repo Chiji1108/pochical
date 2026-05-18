@@ -33,7 +33,11 @@ export const ShiftDetailInputPanel = ({
   const session = useSession();
   const currentUserId = session?.user_id ?? "";
   const members =
-    useAll(app.members.where({ ownerUserId: currentUserId })) ?? [];
+    useAll(
+      currentUserId
+        ? app.members.where({ $createdBy: currentUserId })
+        : undefined
+    ) ?? [];
   const sortedMembers = useMemo(
     () =>
       [...members].sort((a, b) => {
@@ -53,7 +57,6 @@ export const ShiftDetailInputPanel = ({
         batch.insert(app.members, {
           name,
           orderIndex,
-          ownerUserId: session.user_id,
         });
       }
     });
@@ -86,7 +89,6 @@ export const ShiftDetailInputPanel = ({
     if (trimmedNotes) {
       db.insert(app.shiftNotes, {
         notes,
-        ownerUserId: session.user_id,
         shiftId: selectedShift.id,
       });
     }

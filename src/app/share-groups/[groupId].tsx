@@ -34,10 +34,6 @@ const RANGE_CHUNK_MONTHS = 6;
 const TABLE_BOTTOM_PADDING = 24;
 const TODAY_ROW_VIEW_POSITION = 0.35;
 
-type CreatedByRow = {
-  ownerUserId: string;
-};
-
 type ScheduleDay = {
   date: Date;
   time: number;
@@ -45,8 +41,9 @@ type ScheduleDay = {
 
 type BorderVariant = boolean | "subtle";
 
-const getCreatedBy = (row: object): string =>
-  (row as CreatedByRow).ownerUserId ?? "";
+type ShiftWithCreatedBy = Shift & {
+  $createdBy: string;
+};
 
 export default function ShareGroupDetail() {
   const router = useRouter();
@@ -78,7 +75,16 @@ export default function ShareGroupDetail() {
       ),
     [memberRows]
   );
-  const shifts = useAll(app.shifts) ?? [];
+  const shifts =
+    useAll(
+      app.shifts.select(
+        "id",
+        "patternId",
+        "startDate",
+        "memberIds",
+        "$createdBy"
+      )
+    ) ?? [];
   const patterns = useAll(app.patterns) ?? [];
   const memberUserIds = useMemo(
     () => new Set(members.map((member) => member.user_id)),
@@ -94,10 +100,10 @@ export default function ShareGroupDetail() {
     return nextPatternsById;
   }, [patterns]);
   const shiftsByUserAndDate = useMemo(() => {
-    const nextShiftsByUserAndDate = new Map<string, Shift>();
+    const nextShiftsByUserAndDate = new Map<string, ShiftWithCreatedBy>();
 
     for (const shift of shifts) {
-      const createdBy = getCreatedBy(shift);
+      const createdBy = shift.$createdBy;
 
       if (!memberUserIds.has(createdBy)) {
         continue;

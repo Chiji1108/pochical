@@ -13,7 +13,11 @@ export default function PatternDetail() {
   const { patternId } = useLocalSearchParams<{ patternId: string }>();
   const [pattern] =
     useAll(
-      app.patterns.where({ id: patternId, ownerUserId: currentUserId }).limit(1)
+      patternId && currentUserId
+        ? app.patterns
+            .where({ $createdBy: currentUserId, id: patternId })
+            .limit(1)
+        : undefined
     ) ?? [];
 
   if (!pattern) {

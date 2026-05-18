@@ -40,8 +40,17 @@ export const MemberListView = ({
   const currentUserId = session?.user_id ?? "";
   const scrollableRef = useAnimatedRef<Animated.ScrollView>();
   const members =
-    useAll(app.members.where({ ownerUserId: currentUserId })) ?? [];
-  const shifts = useAll(app.shifts.where({ ownerUserId: currentUserId })) ?? [];
+    useAll(
+      currentUserId
+        ? app.members.where({ $createdBy: currentUserId })
+        : undefined
+    ) ?? [];
+  const shifts =
+    useAll(
+      currentUserId
+        ? app.shifts.where({ $createdBy: currentUserId })
+        : undefined
+    ) ?? [];
   const sortedMembers = useMemo(
     () =>
       [...members].sort((a, b) => {
@@ -203,7 +212,6 @@ export const MemberListView = ({
           db.insert(app.members, {
             name,
             orderIndex: members.length,
-            ownerUserId: session.user_id,
           });
           onCloseAddDialog();
         }}
