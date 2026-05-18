@@ -6,18 +6,17 @@ import type { Member, Pattern, Shift, ShiftNote } from "@/schema";
 
 const getPatternScheduleLabel = (pattern: Pattern): string => {
   if (pattern.isAllDay) {
-    return pattern.countsAsDayOff ? "終日・休み扱い" : "終日";
+    return "終日";
   }
 
   if (!(pattern.startDate && pattern.endDate)) {
-    return pattern.countsAsDayOff ? "時間未設定・休み扱い" : "時間未設定";
+    return "時間未設定";
   }
 
-  const timeLabel = `${format(pattern.startDate, "HH:mm")} - ${format(
+  return `${format(pattern.startDate, "HH:mm")} - ${format(
     pattern.endDate,
     "HH:mm"
   )}`;
-  return pattern.countsAsDayOff ? `${timeLabel}・休み扱い` : timeLabel;
 };
 
 type ShiftDetailViewProps = {
