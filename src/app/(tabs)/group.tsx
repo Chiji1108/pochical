@@ -23,6 +23,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
+import {
+  dedupeShareGroupMembers,
+  getShareGroupMemberDisplayName,
+} from "@/lib/share-group-members";
 import { app, type ShareGroup, type ShareGroupMember } from "@/schema";
 
 const StyledSafeAreaView = withUniwind(SafeAreaView);
@@ -58,9 +62,6 @@ type MemberChipData = {
   id: string;
 };
 
-const getShareGroupMemberDisplayName = (member: ShareGroupMember): string =>
-  member.displayName?.trim() || "名前未設定";
-
 export default function Group() {
   const db = useDb();
   const router = useRouter();
@@ -77,6 +78,10 @@ export default function Group() {
       : undefined
   );
   const readableMembers = useAll(app.shareGroupMembers);
+  const uniqueReadableMembers = useMemo(
+    () => dedupeShareGroupMembers(readableMembers ?? []),
+    [readableMembers]
+  );
   const accessRows = useAll(app.shareGroupAccess);
   const hasLoadedGroups =
     Boolean(session) &&
@@ -91,16 +96,16 @@ export default function Group() {
   const memberCountsByGroupId = useMemo(() => {
     const nextCounts = new Map<string, number>();
 
-    for (const member of readableMembers ?? []) {
+    for (const member of uniqueReadableMembers) {
       nextCounts.set(member.groupId, (nextCounts.get(member.groupId) ?? 0) + 1);
     }
 
     return nextCounts;
-  }, [readableMembers]);
+  }, [uniqueReadableMembers]);
   const memberChipsByGroupId = useMemo(() => {
     const nextMembers = new Map<string, MemberChipData[]>();
 
-    for (const member of readableMembers ?? []) {
+    for (const member of uniqueReadableMembers) {
       const groupMembers = nextMembers.get(member.groupId) ?? [];
       groupMembers.push({
         displayName: getShareGroupMemberDisplayName(member),
@@ -116,7 +121,7 @@ export default function Group() {
     }
 
     return nextMembers;
-  }, [readableMembers]);
+  }, [uniqueReadableMembers]);
   const ownMembershipByGroupId = useMemo(() => {
     const nextMemberships = new Map<string, ShareGroupMember>();
 
@@ -175,7 +180,7 @@ export default function Group() {
       return;
     }
 
-    const groupMembers = (readableMembers ?? []).filter(
+    const groupMembers = uniqueReadableMembers.filter(
       (member) => member.groupId === editingGroup.id
     );
     const isLastMember = groupMembers.length === 1;
@@ -183,10 +188,10 @@ export default function Group() {
       ? `${editingGroup.name}を削除しますか？`
       : `${editingGroup.name}から脱退しますか？`;
     let message =
-      "このグループのメンバーには、あなたのシフトが共有されなくなります。";
+      "このシフト共有グループのメンバーには、あなたのシフトが共有されなくなります。";
 
     if (isLastMember) {
-      message = "最後のメンバーのため、グループも削除されます。";
+      message = "最後のメンバーのため、シフト共有グループも削除されます。";
     }
 
     Alert.alert(title, message, [
@@ -302,10 +307,10 @@ export default function Group() {
     groupContent = (
       <View className="flex-1 items-center justify-center gap-4 px-6">
         <Text className="text-center text-base" color="muted">
-          共有グループがありません
+          シフト共有がありません
         </Text>
         <Button
-          accessibilityLabel="共有グループを作成"
+          accessibilityLabel="シフト共有グループを作成"
           isDisabled={!session}
           onPress={() => {
             setIsCreateDialogOpen(true);
@@ -318,7 +323,7 @@ export default function Group() {
             size={18}
             tintColor={accentForegroundColor}
           />
-          <Button.Label>共有グループを作成</Button.Label>
+          <Button.Label>シフト共有グループを作成</Button.Label>
         </Button>
       </View>
     );
@@ -331,9 +336,9 @@ export default function Group() {
     >
       <View className="flex-1">
         <View className="h-14 flex-row items-center justify-between px-4">
-          <Text className="font-bold text-xl">グループ</Text>
+          <Text className="font-bold text-xl">シフト共有</Text>
           <Button
-            accessibilityLabel="共有グループを作成"
+            accessibilityLabel="シフト共有グループを作成"
             isDisabled={!session}
             isIconOnly={true}
             onPress={() => {
@@ -355,7 +360,7 @@ export default function Group() {
         onOpenChange={setIsCreateDialogOpen}
         onSubmit={createGroup}
         submitLabel="保存"
-        title="共有グループを作成"
+        title="シフト共有グループを作成"
       />
       <GroupFormDialog
         group={editingGroup}
@@ -374,7 +379,7 @@ export default function Group() {
         }}
         onSubmit={updateGroup}
         submitLabel="保存"
-        title="グループを編集"
+        title="シフト共有グループを編集"
       />
     </StyledSafeAreaView>
   );
@@ -510,7 +515,7 @@ const GroupFormDialog = ({
     const trimmedDisplayName = displayNameRef.current.trim();
 
     if (!(trimmedGroupName && trimmedDisplayName)) {
-      Alert.alert("グループ名とあなたの名前を入力してください");
+      Alert.alert("シフト共有グループ名とあなたの名前を入力してください");
       return;
     }
 
@@ -531,7 +536,7 @@ const GroupFormDialog = ({
             </View>
             <View className="gap-4">
               <TextField>
-                <Label>グループ名</Label>
+                <Label>シフト共有グループ名</Label>
                 <Input
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -541,7 +546,7 @@ const GroupFormDialog = ({
                   onChangeText={(text) => {
                     groupNameRef.current = text;
                   }}
-                  placeholder="グループ名"
+                  placeholder="シフト共有グループ名"
                   returnKeyType="next"
                 />
                 {/* <Description>全員に共有されます</Description> */}

@@ -34,9 +34,9 @@ const getInviteApiBaseUrl = (): string => {
   return "";
 };
 
-const fetchInvitePreview = async (token: string): Promise<InvitePreview> => {
+const fetchInvitePreview = async (inviteId: string): Promise<InvitePreview> => {
   const response = await fetch(
-    `${getInviteApiBaseUrl()}/api/invites/${encodeURIComponent(token)}`
+    `${getInviteApiBaseUrl()}/api/invites/${encodeURIComponent(inviteId)}`
   );
 
   if (!response.ok) {
@@ -47,14 +47,14 @@ const fetchInvitePreview = async (token: string): Promise<InvitePreview> => {
 };
 
 const loadInvitePreview = async (
-  token?: string
+  inviteId?: string
 ): Promise<{ errorMessage?: string; invite?: InvitePreview }> => {
-  if (!token) {
+  if (!inviteId) {
     return { errorMessage: "招待リンクが正しくありません" };
   }
 
   try {
-    return { invite: await fetchInvitePreview(token) };
+    return { invite: await fetchInvitePreview(inviteId) };
   } catch (error) {
     return {
       errorMessage:
@@ -70,7 +70,7 @@ export default function InviteScreen() {
   const router = useRouter();
   const session = useSession();
   const accentForegroundColor = useThemeColor("accent-foreground");
-  const { token } = useLocalSearchParams<{ token: string }>();
+  const { inviteId } = useLocalSearchParams<{ inviteId: string }>();
   const displayNameRef = useRef("");
   const [displayName, setDisplayName] = useState("");
   const [invite, setInvite] = useState<InvitePreview>();
@@ -92,12 +92,20 @@ export default function InviteScreen() {
       (groupMembers ?? []).find((member) => member.user_id === currentUserId),
     [currentUserId, groupMembers]
   );
+  const goBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace("/group");
+  }, [router]);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadInvite = async () => {
-      const result = await loadInvitePreview(token);
+      const result = await loadInvitePreview(inviteId);
 
       if (!isMounted) {
         return;
@@ -113,7 +121,7 @@ export default function InviteScreen() {
     return () => {
       isMounted = false;
     };
-  }, [token]);
+  }, [inviteId]);
 
   const ensureAccessRows = useCallback(() => {
     if (!(invite && session && groupMembers && accessRows)) {
@@ -133,29 +141,41 @@ export default function InviteScreen() {
     const existingAccessKeys = new Set(
       accessRows.map((access) => `${access.ownerUserId}:${access.viewerUserId}`)
     );
+    const missingAccessRows: {
+      ownerUserId: string;
+      viewerUserId: string;
+    }[] = [];
 
-    db.batch((batch) => {
-      for (const otherUserId of otherUserIds) {
-        const currentUserCanViewOther = `${otherUserId}:${session.user_id}`;
-        const otherCanViewCurrentUser = `${session.user_id}:${otherUserId}`;
+    for (const otherUserId of otherUserIds) {
+      const currentUserCanViewOther = `${otherUserId}:${session.user_id}`;
+      const otherCanViewCurrentUser = `${session.user_id}:${otherUserId}`;
 
-        if (!existingAccessKeys.has(currentUserCanViewOther)) {
-          batch.insert(app.shareGroupAccess, {
-            groupId: invite.groupId,
-            ownerUserId: otherUserId,
-            viewerUserId: session.user_id,
-          });
-        }
-
-        if (!existingAccessKeys.has(otherCanViewCurrentUser)) {
-          batch.insert(app.shareGroupAccess, {
-            groupId: invite.groupId,
-            ownerUserId: session.user_id,
-            viewerUserId: otherUserId,
-          });
-        }
+      if (!existingAccessKeys.has(currentUserCanViewOther)) {
+        missingAccessRows.push({
+          ownerUserId: otherUserId,
+          viewerUserId: session.user_id,
+        });
       }
-    });
+
+      if (!existingAccessKeys.has(otherCanViewCurrentUser)) {
+        missingAccessRows.push({
+          ownerUserId: session.user_id,
+          viewerUserId: otherUserId,
+        });
+      }
+    }
+
+    if (missingAccessRows.length > 0) {
+      db.batch((batch) => {
+        for (const access of missingAccessRows) {
+          batch.insert(app.shareGroupAccess, {
+            groupId: invite.groupId,
+            ownerUserId: access.ownerUserId,
+            viewerUserId: access.viewerUserId,
+          });
+        }
+      });
+    }
 
     return true;
   }, [accessRows, db, groupMembers, invite, session]);
@@ -173,6 +193,14 @@ export default function InviteScreen() {
     setIsJoining(false);
     router.replace(`/share-groups/${ownMembership.groupId}`);
   }, [ensureAccessRows, isPreparingAccess, ownMembership, router]);
+
+  useEffect(() => {
+    if (!(invite && ownMembership && ensureAccessRows())) {
+      return;
+    }
+
+    router.replace(`/share-groups/${ownMembership.groupId}`);
+  }, [ensureAccessRows, invite, ownMembership, router]);
 
   const joinGroup = async () => {
     const trimmedDisplayName = displayNameRef.current.trim();
@@ -238,11 +266,9 @@ export default function InviteScreen() {
             web: "arrow_back",
           },
           label: "戻る",
-          onPress: () => {
-            router.back();
-          },
+          onPress: goBack,
         }}
-        title="グループ招待"
+        title="シフト共有招待"
       />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -254,7 +280,7 @@ export default function InviteScreen() {
             <Text className="text-base" color="muted">
               {isLoadingInvite
                 ? "招待リンクを確認しています"
-                : "このグループに参加します"}
+                : "このシフト共有に参加します"}
             </Text>
           </View>
           {errorMessage ? (
@@ -262,7 +288,7 @@ export default function InviteScreen() {
           ) : (
             <View className="gap-5">
               <TextField>
-                <Label>グループ内での表示名</Label>
+                <Label>シフト共有内での表示名</Label>
                 <Input
                   autoCapitalize="none"
                   autoCorrect={false}

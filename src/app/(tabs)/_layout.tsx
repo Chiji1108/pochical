@@ -9,7 +9,7 @@ export default function TabLayout() {
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="group">
         <NativeTabs.Trigger.Icon md="groups" sf="person.2.fill" />
-        <NativeTabs.Trigger.Label>グループ</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>シフト共有</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );

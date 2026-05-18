@@ -19,6 +19,7 @@ import { useAll } from "jazz-tools/react-native";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { ScrollView, useWindowDimensions, View } from "react-native";
 import { AppHeader } from "@/components/navigation/app-header";
+import { dedupeShareGroupMembers } from "@/lib/share-group-members";
 import { app, type Pattern, type Shift } from "@/schema";
 
 const DATE_COLUMN_WIDTH = 58;
@@ -67,9 +68,16 @@ export default function ShareGroupDetail() {
     "border",
   ]);
   const [group] = useAll(app.shareGroups.where({ id: groupId }).limit(1)) ?? [];
-  const members =
+  const memberRows =
     useAll(app.shareGroupMembers.where({ groupId }).orderBy("displayName")) ??
     [];
+  const members = useMemo(
+    () =>
+      dedupeShareGroupMembers(memberRows).sort((a, b) =>
+        a.displayName.localeCompare(b.displayName, "ja")
+      ),
+    [memberRows]
+  );
   const shifts = useAll(app.shifts) ?? [];
   const patterns = useAll(app.patterns) ?? [];
   const memberUserIds = useMemo(
@@ -122,6 +130,14 @@ export default function ShareGroupDetail() {
         )
       : MEMBER_COLUMN_WIDTH;
   const tableWidth = DATE_COLUMN_WIDTH + members.length * memberColumnWidth;
+  const goBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace("/group");
+  }, [router]);
 
   const prependDays = useCallback(() => {
     setDateRange((currentRange) => ({
@@ -255,22 +271,20 @@ export default function ShareGroupDetail() {
       <View className="flex-1 bg-background">
         <AppHeader
           leftAction={{
-            accessibilityLabel: "グループ一覧に戻る",
+            accessibilityLabel: "シフト共有一覧に戻る",
             icon: {
               android: "arrow_back",
               ios: "chevron.left",
               web: "arrow_back",
             },
             label: "戻る",
-            onPress: () => {
-              router.back();
-            },
+            onPress: goBack,
           }}
-          title="グループ"
+          title="シフト共有"
         />
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-center text-base" color="muted">
-            グループが見つかりません
+            シフト共有が見つかりません
           </Text>
         </View>
       </View>
@@ -281,16 +295,14 @@ export default function ShareGroupDetail() {
     <View className="flex-1 bg-background">
       <AppHeader
         leftAction={{
-          accessibilityLabel: "グループ一覧に戻る",
+          accessibilityLabel: "シフト共有一覧に戻る",
           icon: {
             android: "arrow_back",
             ios: "chevron.left",
             web: "arrow_back",
           },
           label: "戻る",
-          onPress: () => {
-            router.back();
-          },
+          onPress: goBack,
         }}
         rightActions={[
           {
