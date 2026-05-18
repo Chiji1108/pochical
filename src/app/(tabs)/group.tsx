@@ -55,19 +55,28 @@ export default function Group() {
   const [editingGroup, setEditingGroup] = useState<ShareGroup>();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const currentUserId = session?.user_id ?? "";
-  const groups = useAll(app.shareGroups) ?? [];
-  const memberships =
-    useAll(app.shareGroupMembers.where({ user_id: currentUserId })) ?? [];
-  const readableMembers = useAll(app.shareGroupMembers) ?? [];
-  const accessRows = useAll(app.shareGroupAccess) ?? [];
+  const groups = useAll(app.shareGroups);
+  const memberships = useAll(
+    currentUserId
+      ? app.shareGroupMembers.where({ user_id: currentUserId })
+      : undefined
+  );
+  const readableMembers = useAll(app.shareGroupMembers);
+  const accessRows = useAll(app.shareGroupAccess);
+  const hasLoadedGroups =
+    Boolean(session) &&
+    groups !== undefined &&
+    memberships !== undefined &&
+    readableMembers !== undefined &&
+    accessRows !== undefined;
   const groupIds = useMemo(
-    () => new Set(memberships.map((membership) => membership.groupId)),
+    () => new Set((memberships ?? []).map((membership) => membership.groupId)),
     [memberships]
   );
   const memberCountsByGroupId = useMemo(() => {
     const nextCounts = new Map<string, number>();
 
-    for (const member of readableMembers) {
+    for (const member of readableMembers ?? []) {
       nextCounts.set(member.groupId, (nextCounts.get(member.groupId) ?? 0) + 1);
     }
 
@@ -76,7 +85,7 @@ export default function Group() {
   const memberChipsByGroupId = useMemo(() => {
     const nextMembers = new Map<string, MemberChipData[]>();
 
-    for (const member of readableMembers) {
+    for (const member of readableMembers ?? []) {
       const groupMembers = nextMembers.get(member.groupId) ?? [];
       groupMembers.push({
         displayName: getShareGroupMemberDisplayName(member),
@@ -96,7 +105,7 @@ export default function Group() {
   const ownMembershipByGroupId = useMemo(() => {
     const nextMemberships = new Map<string, ShareGroupMember>();
 
-    for (const membership of memberships) {
+    for (const membership of memberships ?? []) {
       nextMemberships.set(membership.groupId, membership);
     }
 
@@ -104,7 +113,7 @@ export default function Group() {
   }, [memberships]);
   const joinedGroups = useMemo(
     () =>
-      groups
+      (groups ?? [])
         .filter((group) => groupIds.has(group.id))
         .sort((a, b) => a.name.localeCompare(b.name, "ja")),
     [groupIds, groups]
@@ -151,7 +160,7 @@ export default function Group() {
       return;
     }
 
-    const groupMembers = readableMembers.filter(
+    const groupMembers = (readableMembers ?? []).filter(
       (member) => member.groupId === editingGroup.id
     );
     const isLastMember = groupMembers.length === 1;
@@ -170,7 +179,7 @@ export default function Group() {
       {
         onPress: () => {
           db.batch((batch) => {
-            for (const access of accessRows) {
+            for (const access of accessRows ?? []) {
               if (
                 access.groupId === editingGroup.id &&
                 (access.ownerUserId === session.user_id ||
@@ -193,6 +202,65 @@ export default function Group() {
       },
     ]);
   };
+
+  let groupContent = <View className="flex-1" />;
+
+  if (joinedGroups.length > 0) {
+    groupContent = (
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{
+          gap: 12,
+          paddingBottom: 16,
+          paddingHorizontal: 16,
+          paddingTop: 8,
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        {joinedGroups.map((group) => (
+          <GroupListItem
+            group={group}
+            key={group.id}
+            memberChips={memberChipsByGroupId.get(group.id) ?? []}
+            memberCount={memberCountsByGroupId.get(group.id) ?? 0}
+            onEdit={() => {
+              setEditingGroup(group);
+            }}
+            onInvite={() => {
+              Alert.alert("招待", "招待機能は準備中です");
+            }}
+            onOpen={() => {
+              router.push(`/share-groups/${group.id}`);
+            }}
+          />
+        ))}
+      </ScrollView>
+    );
+  } else if (hasLoadedGroups) {
+    groupContent = (
+      <View className="flex-1 items-center justify-center gap-4 px-6">
+        <Text className="text-center text-base" color="muted">
+          共有グループがありません
+        </Text>
+        <Button
+          accessibilityLabel="共有グループを作成"
+          isDisabled={!session}
+          onPress={() => {
+            setIsCreateDialogOpen(true);
+          }}
+          size="sm"
+          variant="primary"
+        >
+          <SymbolView
+            name={{ android: "add", ios: "plus", web: "add" }}
+            size={18}
+            tintColor={accentForegroundColor}
+          />
+          <Button.Label>共有グループを作成</Button.Label>
+        </Button>
+      </View>
+    );
+  }
 
   return (
     <StyledSafeAreaView
@@ -218,58 +286,7 @@ export default function Group() {
             />
           </Button>
         </View>
-        {joinedGroups.length > 0 ? (
-          <ScrollView
-            className="flex-1"
-            contentContainerStyle={{
-              gap: 12,
-              paddingBottom: 16,
-              paddingHorizontal: 16,
-              paddingTop: 8,
-            }}
-            showsVerticalScrollIndicator={false}
-          >
-            {joinedGroups.map((group) => (
-              <GroupListItem
-                group={group}
-                key={group.id}
-                memberChips={memberChipsByGroupId.get(group.id) ?? []}
-                memberCount={memberCountsByGroupId.get(group.id) ?? 0}
-                onEdit={() => {
-                  setEditingGroup(group);
-                }}
-                onInvite={() => {
-                  Alert.alert("招待", "招待機能は準備中です");
-                }}
-                onOpen={() => {
-                  router.push(`/share-groups/${group.id}`);
-                }}
-              />
-            ))}
-          </ScrollView>
-        ) : (
-          <View className="flex-1 items-center justify-center gap-4 px-6">
-            <Text className="text-center text-base" color="muted">
-              共有グループがありません
-            </Text>
-            <Button
-              accessibilityLabel="共有グループを作成"
-              isDisabled={!session}
-              onPress={() => {
-                setIsCreateDialogOpen(true);
-              }}
-              size="sm"
-              variant="primary"
-            >
-              <SymbolView
-                name={{ android: "add", ios: "plus", web: "add" }}
-                size={18}
-                tintColor={accentForegroundColor}
-              />
-              <Button.Label>共有グループを作成</Button.Label>
-            </Button>
-          </View>
-        )}
+        {groupContent}
       </View>
       <GroupFormDialog
         isOpen={isCreateDialogOpen}
