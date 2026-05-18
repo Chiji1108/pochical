@@ -18,6 +18,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Share,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -26,6 +27,19 @@ import { app, type ShareGroup, type ShareGroupMember } from "@/schema";
 
 const StyledSafeAreaView = withUniwind(SafeAreaView);
 const MAX_MEMBER_CHIPS = 5;
+const TRAILING_SLASH_REGEX = /\/$/;
+
+const getInviteApiBaseUrl = (): string => {
+  const configuredBaseUrl =
+    process.env.EXPO_PUBLIC_INVITE_API_BASE_URL ??
+    process.env.EXPO_PUBLIC_INVITE_BASE_URL;
+
+  if (configuredBaseUrl) {
+    return configuredBaseUrl.replace(TRAILING_SLASH_REGEX, "");
+  }
+
+  return "";
+};
 
 type GroupFormDialogProps = {
   group?: ShareGroup;
@@ -53,6 +67,7 @@ export default function Group() {
   const session = useSession();
   const accentForegroundColor = useThemeColor("accent-foreground");
   const [editingGroup, setEditingGroup] = useState<ShareGroup>();
+  const [creatingInviteGroupId, setCreatingInviteGroupId] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const currentUserId = session?.user_id ?? "";
   const groups = useAll(app.shareGroups);
@@ -203,6 +218,52 @@ export default function Group() {
     ]);
   };
 
+  const createInvite = async (group: ShareGroup) => {
+    const inviteApiBaseUrl = getInviteApiBaseUrl();
+
+    if (!inviteApiBaseUrl && Platform.OS !== "web") {
+      Alert.alert(
+        "招待リンクを作成できません",
+        "EXPO_PUBLIC_INVITE_BASE_URL を設定してください"
+      );
+      return;
+    }
+
+    setCreatingInviteGroupId(group.id);
+
+    try {
+      const response = await fetch(`${inviteApiBaseUrl}/api/invites`, {
+        body: JSON.stringify({
+          groupId: group.id,
+          groupName: group.name,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("招待リンクを作成できませんでした");
+      }
+
+      const { url } = (await response.json()) as { url: string };
+      await Share.share({
+        message: `${group.name}のシフト共有に参加してください\n${url}`,
+        url,
+      });
+    } catch (error) {
+      Alert.alert(
+        "招待リンクを作成できません",
+        error instanceof Error
+          ? error.message
+          : "時間をおいて再試行してください"
+      );
+    } finally {
+      setCreatingInviteGroupId("");
+    }
+  };
+
   let groupContent = <View className="flex-1" />;
 
   if (joinedGroups.length > 0) {
@@ -220,6 +281,7 @@ export default function Group() {
         {joinedGroups.map((group) => (
           <GroupListItem
             group={group}
+            isCreatingInvite={creatingInviteGroupId === group.id}
             key={group.id}
             memberChips={memberChipsByGroupId.get(group.id) ?? []}
             memberCount={memberCountsByGroupId.get(group.id) ?? 0}
@@ -227,7 +289,7 @@ export default function Group() {
               setEditingGroup(group);
             }}
             onInvite={() => {
-              Alert.alert("招待", "招待機能は準備中です");
+              createInvite(group);
             }}
             onOpen={() => {
               router.push(`/share-groups/${group.id}`);
@@ -320,6 +382,7 @@ export default function Group() {
 
 const GroupListItem = ({
   group,
+  isCreatingInvite,
   memberChips,
   memberCount,
   onEdit,
@@ -327,6 +390,7 @@ const GroupListItem = ({
   onOpen,
 }: {
   group: ShareGroup;
+  isCreatingInvite: boolean;
   memberChips: MemberChipData[];
   memberCount: number;
   onEdit: () => void;
@@ -390,6 +454,7 @@ const GroupListItem = ({
       <View className="mt-4 flex-row justify-end gap-2">
         <Button
           accessibilityLabel={`${group.name}に招待`}
+          isDisabled={isCreatingInvite}
           onPress={onInvite}
           size="sm"
           variant="outline"
@@ -402,7 +467,7 @@ const GroupListItem = ({
             }}
             size={16}
           />
-          <Button.Label>招待</Button.Label>
+          <Button.Label>{isCreatingInvite ? "作成中" : "招待"}</Button.Label>
         </Button>
         <Button
           accessibilityLabel={`${group.name}のシフトを見る`}

@@ -21,10 +21,11 @@
 - このプロジェクトは Jazz 2 の `schema as s` / `s.table` / `s.defineApp` API を使っている。
 - classic Jazz の `Group.create()` や `createInviteLink()` 前提では設計しない。
 - クラウド同期は Jazz Cloud を使う。
-- 招待 token の発行や検証は、必要になったら Expo API Routes などの自前サーバーで行う。
+- 招待 token の発行や検証は、既存の `chiji.tech` 紹介サイトの Next.js API で行う。詳細は `docs/invite-link-nextjs-plan.md` を参照する。
 - 共有グループは「閲覧範囲」であり、共同編集シフト表ではない。
 - 共有グループは公開コミュニティではなく、LINEグループのような仲間内の共有を想定する。
 - MVPでは admin / owner / role の概念を持たない。グループ所属者は全員、招待と表示名変更ができる。
+- 招待URLのMVPは、公開グループや悪意ある改造クライアントを強く想定しない。署名付き token で改ざんだけ防ぎ、参加時の membership / access 作成はモバイルクライアントが行う。
 - 勤務メンバーは、当面は自分のシフト詳細に付ける補助情報として扱う。
 - `patterns.countsAsDayOff` と `shiftNotes` は実装済みの前提で進める。
 
@@ -100,6 +101,12 @@ members: s.table({
 - 代理入力や公式シフト表を後で作る場合は、`$createdBy` とは別に「誰の勤務か」を表す `subjectUserId` や `ownerMemberId` を追加する。
 
 ## 実装判断メモ
+
+### 招待URL MVP の軽量方式
+
+招待URL/API の最新方針は `docs/invite-link-nextjs-plan.md` を参照する。
+
+この文書内の Expo API Routes 前提の記述は、実装検討時の履歴として扱う。現在の採用方針では、招待URLの landing / fallback / API は既存の `chiji.tech` 紹介サイトの Next.js repo 側に実装し、EAS Hosting に招待 API はデプロイしない。
 
 ### `ownerUserId` を持つ理由
 
@@ -218,17 +225,9 @@ policy.shareGroupMembers.allowUpdate.where({ user_id: session.user_id });
 policy.shareGroupMembers.allowDelete.where({ user_id: session.user_id });
 ```
 
-MVPでは user_id 直接追加で検証し、招待URLを実装する段階で `shareGroupInvites` と API Route に置き換える。グループ作成時は `shareGroups` と自分の `shareGroupMembers` を同じ batch で作るため、自分自身の membership insert は許可する。メンバー追加時も `shareGroupMembers` と `shareGroupAccess` を同じ batch で作るため、`shareGroupAccess` insert は group member に許可する。
+MVPでは、署名付き招待 token を Next.js API で検証し、参加時の `shareGroupMembers` と `shareGroupAccess` はモバイルクライアントが作る。グループ作成時は `shareGroups` と自分の `shareGroupMembers` を同じ batch で作るため、自分自身の membership insert は許可する。メンバー追加時も `shareGroupMembers` と `shareGroupAccess` を同じ batch で作るため、`shareGroupAccess` insert は group member に許可する。
 
 グループ削除は同じ group の member に許可する。MVP では悪意ある member からの削除防止より、通常操作で空 group を残さないことを優先する。UI では最後の member が脱退するときだけ group row も削除する。
-
-招待作成は、同じ group の member なら誰でもできる。
-
-```ts
-policy.shareGroupInvites.allowInsert.where((invite) =>
-  isShareGroupMember(invite.groupId)
-);
-```
 
 公開招待や管理機能を入れる段階では、membership の作成・変更を backend API 経由に寄せる。MVP では admin / owner / role を作らない。
 
@@ -358,50 +357,13 @@ const shifts = useAll(app.shifts.where({ ownerUserId: session.user_id })) ?? [];
 
 ## 招待機能
 
-招待は MVP 後に追加する。
+招待URL/API の最新方針は `docs/invite-link-nextjs-plan.md` を参照する。
 
-- 本番UXは招待URLにする。
+現在は Expo API Routes ではなく、既存の `chiji.tech` 紹介サイトの Next.js repo 側に `/invite/[token]` と `/api/invites` を実装する。EAS Hosting に招待 API はデプロイしない。
 
-### 推奨方式
+MVPでは Jazz Cloud 上に `shareGroupInvites` table は作らない。`INVITE_TOKEN_SECRET` で署名した token に `groupId` と `groupName` を入れ、Next.js API は token の改ざん防止と期限切れ判定だけを担当する。
 
-別DBは持たず、Jazz Cloud 上に `shareGroupInvites` table を追加する。
-
-```ts
-shareGroupInvites: s.table({
-  groupId: s.ref("shareGroups"),
-  tokenHash: s.string(),
-  createdBy: s.string(),
-  revoked: s.boolean(),
-  usedAt: s.timestamp().optional(),
-  expiresAt: s.timestamp().optional(),
-}),
-```
-
-raw token は API Route が一度だけ返す。Jazz Cloud には hash のみ保存する。
-
-招待URL:
-
-```txt
-nurseshift://invite#inviteId=...&token=...
-```
-
-secret は `#` 以降に置く。path や query に入れるとサーバーログに残る可能性がある。
-
-### API Routes
-
-Expo API Routes で作る想定:
-
-```txt
-app/api/share-groups/[groupId]/invites+api.ts
-  POST: group member が招待リンクを作る
-
-app/api/invites/accept+api.ts
-  POST: token を検証し、shareGroupMembers を作る
-```
-
-API Route は `JAZZ_BACKEND_SECRET` または `JAZZ_ADMIN_SECRET` を持ち、Jazz Cloud に backend 権限で接続する。招待作成時は、リクエストした user が対象 group の member であることを確認する。
-
-クライアントには backend/admin secret を絶対に置かない。
+参加時は、Expo アプリが表示名入力後に `shareGroupMembers` と `shareGroupAccess` を Jazz に書き込む。
 
 ## 複数グループ対応
 
@@ -451,8 +413,7 @@ user_123
 
 ### Phase 4: 招待
 
-- `shareGroupInvites` を schema に追加する。
-- Expo API Routes で invite 作成/accept を実装する。
+- Next.js 側に `/api/invites` と `/invite/[token]` を実装する。
 - deep link の `/invite` 画面を作る。
 
 ### Phase 5: 拡張
@@ -463,7 +424,6 @@ user_123
 
 ## 未決事項
 
-- 招待URLの発行・受け入れを Expo API Routes で実装するか。
 - `shareGroupMembers` の membership 管理をいつ backend API 経由に寄せるか。
 - owner 移譲や admin role を将来作るか。MVP では作らない。
 

@@ -78,6 +78,7 @@ function RootLayoutContent() {
                 options={{ presentation: "fullScreenModal" }}
               />
               <Stack.Screen name="share-groups/[groupId]" />
+              <Stack.Screen name="invite/[token]" />
             </Stack>
           </HeroUINativeProvider>
         </SafeAreaProvider>
