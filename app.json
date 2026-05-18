@@ -40,6 +40,12 @@
       "expo-font",
       "expo-secure-store",
       [
+        "expo-calendar",
+        {
+          "calendarPermission": "シフトを端末カレンダーに書き出すためにカレンダーを使用します。"
+        }
+      ],
+      [
         "expo-camera",
         {
           "cameraPermission": "招待QRコードを読み取るためにカメラを使用します。"

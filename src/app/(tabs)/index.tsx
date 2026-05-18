@@ -1,14 +1,24 @@
 import {
   addDays,
+  format,
   isSameDay,
   isSameMonth,
   startOfDay,
   startOfMonth,
 } from "date-fns";
+import {
+  CalendarAccessLevel,
+  createEventAsync,
+  EntityTypes,
+  getCalendarsAsync,
+  getDefaultCalendarAsync,
+  requestCalendarPermissionsAsync,
+} from "expo-calendar";
 import { selectionAsync } from "expo-haptics";
 import { useAll, useSession } from "jazz-tools/react-native";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   type LayoutChangeEvent,
   Platform,
@@ -32,6 +42,7 @@ import { CalendarPager } from "@/components/calendar/calendar-pager";
 import { PatternGridHeader } from "@/components/pattern/pattern-grid-header";
 import { PatternGridView } from "@/components/pattern/pattern-grid-view";
 import { ShiftDetailView } from "@/components/shift/shift-detail-view";
+import { getMonthlyShiftCalendarEvents } from "@/lib/calendar-export";
 import { app, type Member, type Pattern, type ShiftNote } from "@/schema";
 
 const DETAIL_PAGE_DRAG_DISTANCE = 180;
@@ -39,10 +50,49 @@ const DETAIL_PAGE_SETTLE_THRESHOLD = 0.45;
 const DETAIL_PAGE_SWIPE_VELOCITY = 600;
 const DETAIL_PAGE_TRANSITION_DURATION = 220;
 const TAB_OVERLAP_PADDING = 36;
+const READ_ONLY_CALENDAR_ACCESS_LEVELS = new Set<CalendarAccessLevel>([
+  CalendarAccessLevel.FREEBUSY,
+  CalendarAccessLevel.NONE,
+  CalendarAccessLevel.READ,
+]);
+
+const getWritableCalendarId = async (): Promise<string | undefined> => {
+  const permission = await requestCalendarPermissionsAsync();
+
+  if (!permission.granted) {
+    return;
+  }
+
+  try {
+    const defaultCalendar = await getDefaultCalendarAsync();
+
+    if (defaultCalendar.allowsModifications) {
+      return defaultCalendar.id;
+    }
+  } catch {
+    // Android does not always expose a default calendar through this API.
+  }
+
+  const calendars = await getCalendarsAsync(EntityTypes.EVENT);
+  const writableCalendars = calendars.filter(
+    (calendar) =>
+      calendar.allowsModifications &&
+      !(
+        calendar.accessLevel &&
+        READ_ONLY_CALENDAR_ACCESS_LEVELS.has(calendar.accessLevel)
+      )
+  );
+  const primaryCalendar = writableCalendars.find(
+    (calendar) => calendar.isPrimary
+  );
+
+  return primaryCalendar?.id ?? writableCalendars[0]?.id;
+};
 
 export default function Index() {
   const insets = useSafeAreaInsets();
   const [headerHeight, setHeaderHeight] = useState(0);
+  const [isExportingMonth, setIsExportingMonth] = useState(false);
   const [isDetailInputMode, setIsDetailInputMode] = useState(false);
   const [isShiftInputMode, setIsShiftInputMode] = useState(false);
   const [yearMonth, setYearMonth] = useState<Date>(new Date());
@@ -129,6 +179,17 @@ export default function Index() {
   const selectedDateShiftNote = selectedDateShift
     ? shiftNotesByShiftId.get(selectedDateShift.id)
     : undefined;
+  const monthlyShiftCalendarEvents = useMemo(
+    () =>
+      getMonthlyShiftCalendarEvents({
+        membersById,
+        patternsById,
+        shiftNotesByShiftId,
+        shifts,
+        yearMonth,
+      }),
+    [membersById, patternsById, shiftNotesByShiftId, shifts, yearMonth]
+  );
 
   const returnToToday = () => {
     setTargetDate(new Date());
@@ -174,6 +235,69 @@ export default function Index() {
       currentHeaderHeight === nextHeaderHeight
         ? currentHeaderHeight
         : nextHeaderHeight
+    );
+  };
+
+  const exportMonthlyShifts = async () => {
+    if (Platform.OS === "web") {
+      Alert.alert(
+        "カレンダーに書き出せません",
+        "端末のカレンダーアプリへの書き出しは iOS / Android で利用できます。"
+      );
+      return;
+    }
+
+    if (monthlyShiftCalendarEvents.length === 0) {
+      Alert.alert("書き出すシフトがありません");
+      return;
+    }
+
+    setIsExportingMonth(true);
+
+    try {
+      const calendarId = await getWritableCalendarId();
+
+      if (!calendarId) {
+        Alert.alert(
+          "カレンダー権限が必要です",
+          "端末のカレンダーへのアクセスを許可してから、もう一度お試しください。"
+        );
+        return;
+      }
+
+      for (const event of monthlyShiftCalendarEvents) {
+        await createEventAsync(calendarId, event);
+      }
+
+      Alert.alert(
+        "書き出しました",
+        `${format(yearMonth, "yyyy年M月")}のシフト ${monthlyShiftCalendarEvents.length}件を端末カレンダーに追加しました。`
+      );
+    } catch {
+      Alert.alert(
+        "書き出しに失敗しました",
+        "端末カレンダーに予定を追加できませんでした。カレンダー設定を確認してから、もう一度お試しください。"
+      );
+    } finally {
+      setIsExportingMonth(false);
+    }
+  };
+
+  const confirmExportMonthlyShifts = () => {
+    Alert.alert(
+      "シフトを書き出しますか？",
+      `${format(yearMonth, "yyyy年M月")}のシフト ${monthlyShiftCalendarEvents.length}件を端末カレンダーに追加します。既に書き出した予定は重複する場合があります。`,
+      [
+        { style: "cancel", text: "キャンセル" },
+        {
+          onPress: () => {
+            exportMonthlyShifts().catch(() => {
+              Alert.alert("書き出しに失敗しました");
+            });
+          },
+          text: "書き出す",
+        },
+      ]
     );
   };
 
@@ -256,6 +380,9 @@ export default function Index() {
       >
         <CalendarHeader
           className="pt-0"
+          isExportingMonth={isExportingMonth}
+          monthlyShiftCount={monthlyShiftCalendarEvents.length}
+          onExportMonth={confirmExportMonthlyShifts}
           onPressToday={returnToToday}
           onSelectDate={setTargetDate}
           selectedDate={selectedDate}

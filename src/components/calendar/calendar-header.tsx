@@ -10,6 +10,9 @@ import { CalendarDatePickerButton } from "./calendar-date-picker-button";
 import { WeekRow } from "./week-row";
 
 type CalendarHeaderProps = {
+  isExportingMonth?: boolean;
+  monthlyShiftCount?: number;
+  onExportMonth?: () => void;
   onSelectDate: (date: Date) => void;
   onPressToday: () => void;
   selectedDate: Date;
@@ -20,6 +23,9 @@ type CalendarHeaderProps = {
 type CalendarHeaderContentProps = {
   canReturnToToday: boolean;
   className?: string;
+  isExportingMonth?: boolean;
+  monthlyShiftCount?: number;
+  onExportMonth?: () => void;
   onPressToday: () => void;
   onSelectDate: (date: Date) => void;
   selectedDate: Date;
@@ -29,6 +35,9 @@ type CalendarHeaderContentProps = {
 const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
   canReturnToToday,
   className,
+  isExportingMonth,
+  monthlyShiftCount = 0,
+  onExportMonth,
   onPressToday,
   onSelectDate,
   selectedDate,
@@ -45,28 +54,49 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
           {yearMonth.getMonth() + 1}
         </Button.Label>
       </CalendarDatePickerButton>
-      <Button
-        accessibilityLabel="今日に戻る"
-        className="mx-2"
-        isDisabled={!canReturnToToday}
-        onPress={async () => {
-          onPressToday();
+      <View className="mx-2 flex-row items-center gap-1">
+        {onExportMonth ? (
+          <Button
+            accessibilityLabel="表示月のシフトをカレンダーに書き出す"
+            className="h-9 w-9"
+            isDisabled={isExportingMonth || monthlyShiftCount === 0}
+            isIconOnly
+            onPress={onExportMonth}
+            size="sm"
+            variant="ghost"
+          >
+            <SymbolView
+              name={{
+                android: "calendar_month",
+                ios: "square.and.arrow.up",
+                web: "calendar_month",
+              }}
+              size={16}
+            />
+          </Button>
+        ) : null}
+        <Button
+          accessibilityLabel="今日に戻る"
+          isDisabled={!canReturnToToday}
+          onPress={async () => {
+            onPressToday();
 
-          try {
-            await selectionAsync();
-          } catch {
-            // Haptics can be unavailable depending on the device or platform.
-          }
-        }}
-        size="sm"
-        variant="ghost"
-      >
-        <SymbolView
-          name={{ android: "undo", ios: "arrow.uturn.backward", web: "undo" }}
-          size={16}
-        />
-        <Button.Label>今日</Button.Label>
-      </Button>
+            try {
+              await selectionAsync();
+            } catch {
+              // Haptics can be unavailable depending on the device or platform.
+            }
+          }}
+          size="sm"
+          variant="ghost"
+        >
+          <SymbolView
+            name={{ android: "undo", ios: "arrow.uturn.backward", web: "undo" }}
+            size={16}
+          />
+          <Button.Label>今日</Button.Label>
+        </Button>
+      </View>
     </View>
     <WeekRow>
       {(date) => (
@@ -81,6 +111,9 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
 );
 
 export const CalendarHeader: FC<CalendarHeaderProps> = ({
+  isExportingMonth,
+  monthlyShiftCount,
+  onExportMonth,
   onSelectDate,
   onPressToday,
   selectedDate,
@@ -96,6 +129,9 @@ export const CalendarHeader: FC<CalendarHeaderProps> = ({
     <CalendarHeaderContent
       canReturnToToday={canReturnToToday}
       className={className}
+      isExportingMonth={isExportingMonth}
+      monthlyShiftCount={monthlyShiftCount}
+      onExportMonth={onExportMonth}
       onPressToday={onPressToday}
       onSelectDate={onSelectDate}
       selectedDate={selectedDate}
