@@ -16,7 +16,8 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
-import { getWeeksOfMonth, isJapaneseHoliday } from "@/lib/date";
+import type { CalendarHighlightTarget, WeekStartsOn } from "@/lib/app-settings";
+import { getCalendarDateHighlightColor, getWeeksOfMonth } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import type { Pattern } from "@/schema";
 import { CALENDAR_DAY_CELL_HEIGHT } from "./constants";
@@ -28,32 +29,39 @@ export type CalendarShiftSummary = {
 };
 
 type CalendarBodyProps = {
+  calendarHighlightTargets: CalendarHighlightTarget[];
   detailTransitionProgress?: SharedValue<number>;
   patternsById: ReadonlyMap<string, Pattern>;
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
   shiftsByDate: ReadonlyMap<number, CalendarShiftSummary>;
+  weekStartsOn: WeekStartsOn;
   yearMonth: Date;
   className?: string;
   weekDate?: Date;
 };
 
 export const CalendarBody: FC<CalendarBodyProps> = ({
+  calendarHighlightTargets,
   detailTransitionProgress,
   patternsById,
   yearMonth,
   selectedDate,
   setSelectedDate,
   shiftsByDate,
+  weekStartsOn,
   className,
   weekDate,
 }) => {
   const fallbackProgress = useSharedValue(0);
   const transitionProgress = detailTransitionProgress ?? fallbackProgress;
-  const weeks = useMemo(() => getWeeksOfMonth(yearMonth), [yearMonth]);
+  const weeks = useMemo(
+    () => getWeeksOfMonth(yearMonth, { weekStartsOn }),
+    [weekStartsOn, yearMonth]
+  );
   const selectedWeekIndex = Math.max(
     0,
-    weeks.findIndex((week) => isSameWeek(week, selectedDate))
+    weeks.findIndex((week) => isSameWeek(week, selectedDate, { weekStartsOn }))
   );
   const monthContentStyle = useAnimatedStyle(
     () => ({
@@ -71,6 +79,10 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
 
   const renderDateCell = (date: Date, shouldDimOutOfMonth: boolean) => {
     const isSelectedDate = isSameDay(date, selectedDate);
+    const highlightColor = getCalendarDateHighlightColor(
+      date,
+      calendarHighlightTargets
+    );
     const shift = shiftsByDate.get(startOfDay(date).getTime());
     const shiftPattern = shift ? patternsById.get(shift.patternId) : undefined;
     return (
@@ -107,8 +119,9 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
         ) : null}
         <Text
           className={cn("font-semibold text-xs", {
-            "text-red-500": isJapaneseHoliday(date),
+            "text-blue-500": !isSelectedDate && highlightColor === "blue",
             "text-background": isSelectedDate,
+            "text-red-500": !isSelectedDate && highlightColor === "red",
           })}
         >
           {getDate(date)}
@@ -127,17 +140,18 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
   return (
     <View className={cn("px-2", className)}>
       {weekDate ? (
-        <WeekRow date={weekDate}>
+        <WeekRow date={weekDate} weekStartsOn={weekStartsOn}>
           {(date) => renderDateCell(date, false)}
         </WeekRow>
       ) : (
         <Animated.View style={monthContentStyle}>
           {weeks.map((week) => (
             <CalendarAnimatedWeekRow
-              isSelectedWeek={isSameWeek(week, selectedDate)}
+              isSelectedWeek={isSameWeek(week, selectedDate, { weekStartsOn })}
               key={week.toISOString()}
               progress={transitionProgress}
               week={week}
+              weekStartsOn={weekStartsOn}
             >
               {(date) => renderDateCell(date, true)}
             </CalendarAnimatedWeekRow>
@@ -153,6 +167,7 @@ type CalendarAnimatedWeekRowProps = {
   isSelectedWeek: boolean;
   progress: SharedValue<number>;
   week: Date;
+  weekStartsOn: WeekStartsOn;
 };
 
 const CalendarAnimatedWeekRow: FC<CalendarAnimatedWeekRowProps> = ({
@@ -160,6 +175,7 @@ const CalendarAnimatedWeekRow: FC<CalendarAnimatedWeekRowProps> = ({
   isSelectedWeek,
   progress,
   week,
+  weekStartsOn,
 }) => {
   const rowStyle = useAnimatedStyle(
     () => ({
@@ -170,7 +186,9 @@ const CalendarAnimatedWeekRow: FC<CalendarAnimatedWeekRowProps> = ({
 
   return (
     <Animated.View style={rowStyle}>
-      <WeekRow date={week}>{children}</WeekRow>
+      <WeekRow date={week} weekStartsOn={weekStartsOn}>
+        {children}
+      </WeekRow>
     </Animated.View>
   );
 };

@@ -5,21 +5,26 @@ import { Text } from "heroui-native";
 import { Button } from "heroui-native/button";
 import type { FC } from "react";
 import { View } from "react-native";
+import type { CalendarHighlightTarget, WeekStartsOn } from "@/lib/app-settings";
+import { getCalendarWeekdayHighlightColor } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { CalendarDatePickerButton } from "./calendar-date-picker-button";
 import { WeekRow } from "./week-row";
 
 type CalendarHeaderProps = {
+  calendarHighlightTargets: CalendarHighlightTarget[];
   isExportingMonth?: boolean;
   onExportMonth?: () => void;
   onSelectDate: (date: Date) => void;
   onPressToday: () => void;
   selectedDate: Date;
+  weekStartsOn: WeekStartsOn;
   yearMonth: Date;
   className?: string;
 };
 
 type CalendarHeaderContentProps = {
+  calendarHighlightTargets: CalendarHighlightTarget[];
   canReturnToToday: boolean;
   className?: string;
   isExportingMonth?: boolean;
@@ -27,10 +32,12 @@ type CalendarHeaderContentProps = {
   onPressToday: () => void;
   onSelectDate: (date: Date) => void;
   selectedDate: Date;
+  weekStartsOn: WeekStartsOn;
   yearMonth: Date;
 };
 
 const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
+  calendarHighlightTargets,
   canReturnToToday,
   className,
   isExportingMonth,
@@ -38,6 +45,7 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
   onPressToday,
   onSelectDate,
   selectedDate,
+  weekStartsOn,
   yearMonth,
 }) => (
   <View className={cn("flex flex-col gap-1 px-2", className)}>
@@ -95,24 +103,38 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
         </Button>
       </View>
     </View>
-    <WeekRow>
-      {(date) => (
-        <Text className="font-semibold text-xs">
-          {date.toLocaleDateString("ja-JP", {
-            weekday: "short",
-          })}
-        </Text>
-      )}
+    <WeekRow weekStartsOn={weekStartsOn}>
+      {(date) => {
+        const highlightColor = getCalendarWeekdayHighlightColor(
+          date,
+          calendarHighlightTargets
+        );
+
+        return (
+          <Text
+            className={cn("font-semibold text-xs", {
+              "text-blue-500": highlightColor === "blue",
+              "text-red-500": highlightColor === "red",
+            })}
+          >
+            {date.toLocaleDateString("ja-JP", {
+              weekday: "short",
+            })}
+          </Text>
+        );
+      }}
     </WeekRow>
   </View>
 );
 
 export const CalendarHeader: FC<CalendarHeaderProps> = ({
+  calendarHighlightTargets,
   isExportingMonth,
   onExportMonth,
   onSelectDate,
   onPressToday,
   selectedDate,
+  weekStartsOn,
   yearMonth,
   className,
 }) => {
@@ -123,6 +145,7 @@ export const CalendarHeader: FC<CalendarHeaderProps> = ({
 
   return (
     <CalendarHeaderContent
+      calendarHighlightTargets={calendarHighlightTargets}
       canReturnToToday={canReturnToToday}
       className={className}
       isExportingMonth={isExportingMonth}
@@ -130,6 +153,7 @@ export const CalendarHeader: FC<CalendarHeaderProps> = ({
       onPressToday={onPressToday}
       onSelectDate={onSelectDate}
       selectedDate={selectedDate}
+      weekStartsOn={weekStartsOn}
       yearMonth={yearMonth}
     />
   );

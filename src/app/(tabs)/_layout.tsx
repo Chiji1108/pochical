@@ -11,6 +11,10 @@ export default function TabLayout() {
         <NativeTabs.Trigger.Icon md="groups" sf="person.2.fill" />
         <NativeTabs.Trigger.Label>シフト共有</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="settings">
+        <NativeTabs.Trigger.Icon md="settings" sf="gearshape.fill" />
+        <NativeTabs.Trigger.Label>設定</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }

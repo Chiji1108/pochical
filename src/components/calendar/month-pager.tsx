@@ -12,6 +12,7 @@ import {
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import { useWindowDimensions, View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
+import type { CalendarHighlightTarget, WeekStartsOn } from "@/lib/app-settings";
 import type { Pattern } from "@/schema";
 import { CalendarBody, type CalendarShiftSummary } from "./calendar-body";
 import { CALENDAR_PAGER_HEIGHT } from "./constants";
@@ -21,6 +22,7 @@ const MONTH_APPEND_BATCH_SIZE = 6;
 const MONTH_APPEND_THRESHOLD = 3;
 
 type MonthPagerProps = {
+  calendarHighlightTargets: CalendarHighlightTarget[];
   detailTransitionProgress?: SharedValue<number>;
   onTargetDateHandled?: () => void;
   patternsById: ReadonlyMap<string, Pattern>;
@@ -31,6 +33,7 @@ type MonthPagerProps = {
   scrollEnabled?: boolean;
   syncDate?: Date;
   targetDate?: Date;
+  weekStartsOn: WeekStartsOn;
   yearMonth: Date;
 };
 
@@ -59,6 +62,7 @@ const findMonthIndex = (months: Date[], targetMonth: Date): number =>
   months.findIndex((month) => isSameMonth(month, targetMonth));
 
 export const MonthPager: FC<MonthPagerProps> = ({
+  calendarHighlightTargets,
   detailTransitionProgress,
   onTargetDateHandled,
   patternsById,
@@ -69,6 +73,7 @@ export const MonthPager: FC<MonthPagerProps> = ({
   scrollEnabled = true,
   syncDate,
   targetDate,
+  weekStartsOn,
   yearMonth,
 }) => {
   const { width: pageWidth } = useWindowDimensions();
@@ -255,22 +260,26 @@ export const MonthPager: FC<MonthPagerProps> = ({
     ({ item }: ListRenderItemInfo<Date>) => (
       <View style={{ width: pageWidth }}>
         <CalendarBody
+          calendarHighlightTargets={calendarHighlightTargets}
           detailTransitionProgress={detailTransitionProgress}
           patternsById={patternsById}
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
           shiftsByDate={shiftsByDate}
+          weekStartsOn={weekStartsOn}
           yearMonth={item}
         />
       </View>
     ),
     [
       detailTransitionProgress,
+      calendarHighlightTargets,
       pageWidth,
       patternsById,
       selectedDate,
       setSelectedDate,
       shiftsByDate,
+      weekStartsOn,
     ]
   );
 
@@ -279,7 +288,7 @@ export const MonthPager: FC<MonthPagerProps> = ({
       contentInsetAdjustmentBehavior="never"
       data={yearMonths}
       decelerationRate="fast"
-      extraData={{ pageWidth, selectedDate }}
+      extraData={{ pageWidth, selectedDate, weekStartsOn }}
       horizontal
       initialScrollIndex={MONTH_BUFFER_SIZE}
       keyExtractor={getMonthKey}

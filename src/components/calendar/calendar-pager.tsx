@@ -7,6 +7,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import type { CalendarHighlightTarget, WeekStartsOn } from "@/lib/app-settings";
 import type { Pattern } from "@/schema";
 import type { CalendarShiftSummary } from "./calendar-body";
 import { CALENDAR_PAGER_HEIGHT, CALENDAR_WEEK_PAGER_HEIGHT } from "./constants";
@@ -16,6 +17,7 @@ import { WeekPager } from "./week-pager";
 const DETAIL_TRANSITION_DURATION = 260;
 
 type CalendarPagerProps = {
+  calendarHighlightTargets: CalendarHighlightTarget[];
   detailTransitionProgress?: SharedValue<number>;
   isDetailInputMode: boolean;
   onTargetDateHandled?: () => void;
@@ -25,10 +27,12 @@ type CalendarPagerProps = {
   setYearMonth: Dispatch<SetStateAction<Date>>;
   shiftsByDate: ReadonlyMap<number, CalendarShiftSummary>;
   targetDate?: Date;
+  weekStartsOn: WeekStartsOn;
   yearMonth: Date;
 };
 
 export const CalendarPager: FC<CalendarPagerProps> = ({
+  calendarHighlightTargets,
   detailTransitionProgress,
   isDetailInputMode,
   onTargetDateHandled,
@@ -38,6 +42,7 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
   setYearMonth,
   shiftsByDate,
   targetDate,
+  weekStartsOn,
   yearMonth,
 }) => {
   const fallbackProgress = useSharedValue(isDetailInputMode ? 1 : 0);
@@ -77,6 +82,7 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
         style={monthLayerStyle}
       >
         <MonthPager
+          calendarHighlightTargets={calendarHighlightTargets}
           detailTransitionProgress={transitionProgress}
           onTargetDateHandled={
             isDetailInputMode ? undefined : onTargetDateHandled
@@ -89,6 +95,7 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
           shiftsByDate={shiftsByDate}
           syncDate={isDetailInputMode ? selectedDate : undefined}
           targetDate={isDetailInputMode ? undefined : targetDate}
+          weekStartsOn={weekStartsOn}
           yearMonth={yearMonth}
         />
       </Animated.View>
@@ -105,6 +112,7 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
         ]}
       >
         <WeekPager
+          calendarHighlightTargets={calendarHighlightTargets}
           onTargetDateHandled={
             isDetailInputMode ? onTargetDateHandled : undefined
           }
@@ -114,6 +122,7 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
           setYearMonth={setYearMonth}
           shiftsByDate={shiftsByDate}
           targetDate={isDetailInputMode ? targetDate : undefined}
+          weekStartsOn={weekStartsOn}
           yearMonth={yearMonth}
         />
       </Animated.View>

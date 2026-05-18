@@ -37,6 +37,7 @@ import {
 import { PatternGridHeader } from "@/components/pattern/pattern-grid-header";
 import { PatternGridView } from "@/components/pattern/pattern-grid-view";
 import { ShiftDetailView } from "@/components/shift/shift-detail-view";
+import { useAppSettings } from "@/lib/app-settings";
 import { getMonthlyShiftCalendarEvents } from "@/lib/calendar-export";
 import {
   addEventsToDeviceCalendar,
@@ -54,6 +55,7 @@ const TAB_OVERLAP_PADDING = 36;
 
 export default function Index() {
   const insets = useSafeAreaInsets();
+  const { settings } = useAppSettings();
   const [excludeDayOffShiftsFromExport, setExcludeDayOffShiftsFromExport] =
     useState(true);
   const [calendarSelectOptions, setCalendarSelectOptions] = useState<
@@ -414,12 +416,14 @@ export default function Index() {
         style={{ paddingTop: insets.top }}
       >
         <CalendarHeader
+          calendarHighlightTargets={settings.calendarHighlightTargets}
           className="pt-0"
           isExportingMonth={isExportingMonth}
           onExportMonth={confirmExportMonthlyShifts}
           onPressToday={returnToToday}
           onSelectDate={setTargetDate}
           selectedDate={selectedDate}
+          weekStartsOn={settings.weekStartsOn}
           yearMonth={yearMonth}
         />
       </View>
@@ -458,6 +462,7 @@ export default function Index() {
             }}
           >
             <CalendarPager
+              calendarHighlightTargets={settings.calendarHighlightTargets}
               detailTransitionProgress={detailPageProgress}
               isDetailInputMode={isDetailInputMode}
               onTargetDateHandled={() => {
@@ -469,6 +474,7 @@ export default function Index() {
               setYearMonth={setYearMonth}
               shiftsByDate={shiftsByDate}
               targetDate={targetDate}
+              weekStartsOn={settings.weekStartsOn}
               yearMonth={yearMonth}
             />
             <PatternGridHeader

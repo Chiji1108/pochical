@@ -8,6 +8,7 @@ import { JazzProvider, loadJazzRn } from "jazz-tools/react-native";
 import { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AppSettingsProvider } from "@/lib/app-settings";
 
 export default function RootLayout() {
   const [loadError, setLoadError] = useState<Error | null>(null);
@@ -67,20 +68,22 @@ function RootLayoutContent() {
           <HeroUINativeProvider
             config={{ devInfo: { stylingPrinciples: false } }}
           >
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen
-                name="patterns"
-                options={{ presentation: "fullScreenModal" }}
-              />
-              <Stack.Screen
-                name="members"
-                options={{ presentation: "fullScreenModal" }}
-              />
-              <Stack.Screen name="share-groups/[groupId]" />
-              <Stack.Screen name="invite/scan" />
-              <Stack.Screen name="invite/[inviteId]" />
-            </Stack>
+            <AppSettingsProvider>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen
+                  name="patterns"
+                  options={{ presentation: "fullScreenModal" }}
+                />
+                <Stack.Screen
+                  name="members"
+                  options={{ presentation: "fullScreenModal" }}
+                />
+                <Stack.Screen name="share-groups/[groupId]" />
+                <Stack.Screen name="invite/scan" />
+                <Stack.Screen name="invite/[inviteId]" />
+              </Stack>
+            </AppSettingsProvider>
           </HeroUINativeProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
