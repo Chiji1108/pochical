@@ -7,14 +7,18 @@ import {
 } from "date-fns";
 import { selectionAsync } from "expo-haptics";
 import { useAll, useSession } from "jazz-tools/react-native";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   type LayoutChangeEvent,
   Platform,
   View,
 } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import {
+  Gesture,
+  GestureDetector,
+  type GestureType,
+} from "react-native-gesture-handler";
 import {
   cancelAnimation,
   runOnJS,
@@ -47,8 +51,12 @@ export default function Index() {
   const session = useSession();
   const currentUserId = session?.user_id ?? "";
   const detailPageProgress = useSharedValue(0);
+  const detailModeGestureRef = useRef<GestureType>(undefined);
   const detailGestureStartProgress = useSharedValue(0);
+  const detailGestureActivationTranslationY = useSharedValue(0);
   const detailGestureActive = useSharedValue(0);
+  const detailGestureIsDriving = useSharedValue(0);
+  const detailScrollOffsetY = useSharedValue(0);
   const bottomContentPadding = insets.bottom + TAB_OVERLAP_PADDING;
   const patterns =
     useAll(
@@ -159,22 +167,49 @@ export default function Index() {
   const detailModeGesture = useMemo(
     () =>
       Gesture.Pan()
+        .withRef(detailModeGestureRef)
         .activeOffsetY([-12, 12])
         .failOffsetX([-24, 24])
         .onBegin(() => {
           cancelAnimation(detailPageProgress);
-          detailGestureActive.value = withTiming(1, {
-            duration: 120,
-          });
-          detailGestureStartProgress.value = detailPageProgress.value;
+          detailGestureActive.value = 0;
+          detailGestureActivationTranslationY.value = 0;
+          detailGestureIsDriving.value = 0;
         })
         .onUpdate((event) => {
+          if (detailGestureIsDriving.value === 0) {
+            // Let the detail page pan take over only when the detail scroll is already at the top.
+            const isOpeningFromCalendar =
+              event.translationY < 0 && detailPageProgress.value < 1;
+            const isClosingFromScrollTop =
+              event.translationY > 0 &&
+              detailPageProgress.value > 0 &&
+              detailScrollOffsetY.value <= 0;
+
+            if (!(isOpeningFromCalendar || isClosingFromScrollTop)) {
+              return;
+            }
+
+            detailGestureIsDriving.value = 1;
+            detailGestureActivationTranslationY.value = event.translationY;
+            detailGestureStartProgress.value = detailPageProgress.value;
+            detailGestureActive.value = withTiming(1, {
+              duration: 120,
+            });
+          }
+
+          const gestureTranslationY =
+            event.translationY - detailGestureActivationTranslationY.value;
           const nextProgress =
             detailGestureStartProgress.value -
-            event.translationY / DETAIL_PAGE_DRAG_DISTANCE;
+            gestureTranslationY / DETAIL_PAGE_DRAG_DISTANCE;
           detailPageProgress.value = Math.min(1, Math.max(0, nextProgress));
         })
         .onEnd((event) => {
+          if (detailGestureIsDriving.value === 0) {
+            return;
+          }
+
           const shouldOpen =
             event.velocityY < -DETAIL_PAGE_SWIPE_VELOCITY ||
             (event.velocityY <= DETAIL_PAGE_SWIPE_VELOCITY &&
@@ -186,11 +221,15 @@ export default function Index() {
           detailGestureActive.value = withTiming(0, {
             duration: 180,
           });
+          detailGestureIsDriving.value = 0;
         }),
     [
+      detailGestureActivationTranslationY,
       detailGestureActive,
+      detailGestureIsDriving,
       detailGestureStartProgress,
       detailPageProgress,
+      detailScrollOffsetY,
       setDetailInputMode,
     ]
   );
@@ -251,6 +290,8 @@ export default function Index() {
               {isShiftInputMode ? (
                 <PatternGridView
                   bottomContentPadding={bottomContentPadding}
+                  detailModeGestureRef={detailModeGestureRef}
+                  detailScrollOffsetY={detailScrollOffsetY}
                   detailTransitionProgress={detailPageProgress}
                   isDetailInputMode={isDetailInputMode}
                   onSelectDate={selectDateImmediately}

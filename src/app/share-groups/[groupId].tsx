@@ -57,7 +57,6 @@ export default function ShareGroupDetail() {
     start: subMonths(today, INITIAL_MONTH_RADIUS),
   }));
   const scheduleListRef = useRef<FlashListRef<ScheduleDay>>(null);
-  const hasAlignedInitialScrollRef = useRef(false);
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 40,
   }).current;
@@ -167,15 +166,6 @@ export default function ShareGroupDetail() {
     },
     [today, todayIndex]
   );
-
-  const alignInitialScrollToToday = useCallback(async () => {
-    if (hasAlignedInitialScrollRef.current) {
-      return;
-    }
-
-    hasAlignedInitialScrollRef.current = true;
-    await scrollToTodayIndex(false);
-  }, [scrollToTodayIndex]);
 
   const scrollToToday = useCallback(async () => {
     await scrollToTodayIndex(true);
@@ -360,7 +350,6 @@ export default function ShareGroupDetail() {
                   }}
                   onEndReached={appendDays}
                   onEndReachedThreshold={0.4}
-                  onLoad={alignInitialScrollToToday}
                   onStartReached={prependDays}
                   onStartReachedThreshold={0.4}
                   onViewableItemsChanged={updateVisibleMonth}

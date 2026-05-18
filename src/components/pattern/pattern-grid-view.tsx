@@ -5,8 +5,14 @@ import { SymbolView } from "expo-symbols";
 import { Text } from "heroui-native";
 import { Button } from "heroui-native/button";
 import { useDb, useSession } from "jazz-tools/react-native";
-import { useMemo } from "react";
-import { ScrollView, useWindowDimensions, View } from "react-native";
+import { type RefObject, useMemo } from "react";
+import {
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import { type GestureType, ScrollView } from "react-native-gesture-handler";
 import Animated, {
   type SharedValue,
   useAnimatedStyle,
@@ -111,6 +117,8 @@ const seedPatterns: SeedPattern[] = [
 
 type PatternGridViewProps = {
   bottomContentPadding: number;
+  detailModeGestureRef: RefObject<GestureType | undefined>;
+  detailScrollOffsetY: SharedValue<number>;
   detailTransitionProgress: SharedValue<number>;
   isDetailInputMode: boolean;
   onSelectDate: (date: Date) => void;
@@ -125,6 +133,8 @@ type PatternGridViewProps = {
 
 export function PatternGridView({
   bottomContentPadding,
+  detailModeGestureRef,
+  detailScrollOffsetY,
   detailTransitionProgress,
   isDetailInputMode,
   onSelectDate,
@@ -155,6 +165,10 @@ export function PatternGridView({
   const detailInputStyle = useAnimatedStyle(() => ({
     opacity: detailTransitionProgress.value,
   }));
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    detailScrollOffsetY.value = event.nativeEvent.contentOffset.y;
+  };
 
   const createSeedPatterns = () => {
     if (!session || patterns.length > 0) {
@@ -255,8 +269,11 @@ export function PatternGridView({
       contentContainerStyle={{ paddingBottom: bottomContentPadding }}
       contentInsetAdjustmentBehavior="automatic"
       keyboardShouldPersistTaps="handled"
+      onScroll={handleScroll}
       overScrollMode="never"
       scrollEnabled={isDetailInputMode}
+      scrollEventThrottle={16}
+      simultaneousHandlers={detailModeGestureRef}
     >
       {sortedPatterns.length > 0 ? (
         <View className="gap-2">
