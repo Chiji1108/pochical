@@ -38,7 +38,13 @@
         }
       ],
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "招待QRコードを読み取るためにカメラを使用します。"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,3 +1,4 @@
+import { setStringAsync } from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import {
@@ -21,6 +22,7 @@ import {
   Share,
   View,
 } from "react-native";
+import QRCode from "react-native-qrcode-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
 import {
@@ -62,6 +64,11 @@ type MemberChipData = {
   id: string;
 };
 
+type InviteDetails = {
+  groupName: string;
+  url: string;
+};
+
 export default function Group() {
   const db = useDb();
   const router = useRouter();
@@ -69,6 +76,7 @@ export default function Group() {
   const accentForegroundColor = useThemeColor("accent-foreground");
   const [editingGroup, setEditingGroup] = useState<ShareGroup>();
   const [creatingInviteGroupId, setCreatingInviteGroupId] = useState("");
+  const [inviteDetails, setInviteDetails] = useState<InviteDetails>();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const currentUserId = session?.user_id ?? "";
   const groups = useAll(app.shareGroups);
@@ -253,10 +261,7 @@ export default function Group() {
       }
 
       const { url } = (await response.json()) as { url: string };
-      await Share.share({
-        message: `${group.name}のシフト共有に参加してください\n${url}`,
-        url,
-      });
+      setInviteDetails({ groupName: group.name, url });
     } catch (error) {
       Alert.alert(
         "招待リンクを作成できません",
@@ -337,21 +342,41 @@ export default function Group() {
       <View className="flex-1">
         <View className="h-14 flex-row items-center justify-between px-4">
           <Text className="font-bold text-xl">シフト共有</Text>
-          <Button
-            accessibilityLabel="シフト共有グループを作成"
-            isDisabled={!session}
-            isIconOnly={true}
-            onPress={() => {
-              setIsCreateDialogOpen(true);
-            }}
-            size="sm"
-            variant="ghost"
-          >
-            <SymbolView
-              name={{ android: "add", ios: "plus", web: "add" }}
-              size={16}
-            />
-          </Button>
+          <View className="flex-row items-center gap-1">
+            <Button
+              accessibilityLabel="招待QRコードを読み取る"
+              isIconOnly={true}
+              onPress={() => {
+                router.push("/invite/scan");
+              }}
+              size="sm"
+              variant="ghost"
+            >
+              <SymbolView
+                name={{
+                  android: "qr_code_scanner",
+                  ios: "qrcode.viewfinder",
+                  web: "qr_code_scanner",
+                }}
+                size={16}
+              />
+            </Button>
+            <Button
+              accessibilityLabel="シフト共有グループを作成"
+              isDisabled={!session}
+              isIconOnly={true}
+              onPress={() => {
+                setIsCreateDialogOpen(true);
+              }}
+              size="sm"
+              variant="ghost"
+            >
+              <SymbolView
+                name={{ android: "add", ios: "plus", web: "add" }}
+                size={16}
+              />
+            </Button>
+          </View>
         </View>
         {groupContent}
       </View>
@@ -380,6 +405,14 @@ export default function Group() {
         onSubmit={updateGroup}
         submitLabel="保存"
         title="シフト共有グループを編集"
+      />
+      <InviteDialog
+        inviteDetails={inviteDetails}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setInviteDetails(undefined);
+          }
+        }}
       />
     </StyledSafeAreaView>
   );
@@ -484,6 +517,115 @@ const GroupListItem = ({
         </Button>
       </View>
     </Card>
+  );
+};
+
+const InviteDialog = ({
+  inviteDetails,
+  onOpenChange,
+}: {
+  inviteDetails?: InviteDetails;
+  onOpenChange: (isOpen: boolean) => void;
+}) => {
+  const accentForegroundColor = useThemeColor("accent-foreground");
+  const isOpen = Boolean(inviteDetails);
+  const shareInvite = async () => {
+    if (!inviteDetails) {
+      return;
+    }
+
+    try {
+      await Share.share({
+        message: `${inviteDetails.groupName}のシフト共有に参加してください\n${inviteDetails.url}`,
+        url: inviteDetails.url,
+      });
+    } catch (error) {
+      Alert.alert(
+        "共有できません",
+        error instanceof Error
+          ? error.message
+          : "時間をおいて再試行してください"
+      );
+    }
+  };
+  const copyInviteUrl = async () => {
+    if (!inviteDetails) {
+      return;
+    }
+
+    await setStringAsync(inviteDetails.url);
+    Alert.alert("コピーしました", "招待URLをクリップボードにコピーしました");
+  };
+
+  return (
+    <Dialog isOpen={isOpen} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay />
+        <Dialog.Content>
+          <Dialog.Close variant="ghost" />
+          <View className="mb-5 gap-1.5">
+            <Dialog.Title>招待</Dialog.Title>
+            {inviteDetails ? (
+              <Text className="text-sm" color="muted">
+                {inviteDetails.groupName}に参加するためのリンクです
+              </Text>
+            ) : null}
+          </View>
+          {inviteDetails ? (
+            <View className="items-center gap-5">
+              <View className="rounded-lg bg-white p-4">
+                <QRCode size={200} value={inviteDetails.url} />
+              </View>
+              <View className="w-full gap-2">
+                <Label>招待URL</Label>
+                <View className="rounded-lg border border-border bg-content1 px-3 py-2">
+                  <Text className="text-sm" selectable={true}>
+                    {inviteDetails.url}
+                  </Text>
+                </View>
+              </View>
+              <View className="w-full flex-row gap-3">
+                <Button
+                  accessibilityLabel="招待URLをコピー"
+                  className="flex-1"
+                  onPress={copyInviteUrl}
+                  size="sm"
+                  variant="outline"
+                >
+                  <SymbolView
+                    name={{
+                      android: "content_copy",
+                      ios: "doc.on.doc",
+                      web: "content_copy",
+                    }}
+                    size={16}
+                  />
+                  <Button.Label>コピー</Button.Label>
+                </Button>
+                <Button
+                  accessibilityLabel="招待URLを共有"
+                  className="flex-1"
+                  onPress={shareInvite}
+                  size="sm"
+                  variant="primary"
+                >
+                  <SymbolView
+                    name={{
+                      android: "share",
+                      ios: "square.and.arrow.up",
+                      web: "share",
+                    }}
+                    size={16}
+                    tintColor={accentForegroundColor}
+                  />
+                  <Button.Label>共有</Button.Label>
+                </Button>
+              </View>
+            </View>
+          ) : null}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog>
   );
 };
 
