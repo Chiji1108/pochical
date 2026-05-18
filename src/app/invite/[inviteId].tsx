@@ -77,15 +77,11 @@ export default function InviteScreen() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoadingInvite, setIsLoadingInvite] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
-  const [isPreparingAccess, setIsPreparingAccess] = useState(false);
   const currentUserId = session?.user_id ?? "";
   const groupMembers = useAll(
     invite
       ? app.shareGroupMembers.where({ groupId: invite.groupId })
       : undefined
-  );
-  const accessRows = useAll(
-    invite ? app.shareGroupAccess.where({ groupId: invite.groupId }) : undefined
   );
   const ownMembership = useMemo(
     () =>
@@ -123,84 +119,13 @@ export default function InviteScreen() {
     };
   }, [inviteId]);
 
-  const ensureAccessRows = useCallback(() => {
-    if (!(invite && session && groupMembers && accessRows)) {
-      return false;
-    }
-
-    const otherUserIds = new Set(
-      groupMembers
-        .map((member) => member.user_id)
-        .filter((userId) => userId !== session.user_id)
-    );
-
-    if (otherUserIds.size === 0) {
-      return true;
-    }
-
-    const existingAccessKeys = new Set(
-      accessRows.map((access) => `${access.ownerUserId}:${access.viewerUserId}`)
-    );
-    const missingAccessRows: {
-      ownerUserId: string;
-      viewerUserId: string;
-    }[] = [];
-
-    for (const otherUserId of otherUserIds) {
-      const currentUserCanViewOther = `${otherUserId}:${session.user_id}`;
-      const otherCanViewCurrentUser = `${session.user_id}:${otherUserId}`;
-
-      if (!existingAccessKeys.has(currentUserCanViewOther)) {
-        missingAccessRows.push({
-          ownerUserId: otherUserId,
-          viewerUserId: session.user_id,
-        });
-      }
-
-      if (!existingAccessKeys.has(otherCanViewCurrentUser)) {
-        missingAccessRows.push({
-          ownerUserId: session.user_id,
-          viewerUserId: otherUserId,
-        });
-      }
-    }
-
-    if (missingAccessRows.length > 0) {
-      db.batch((batch) => {
-        for (const access of missingAccessRows) {
-          batch.insert(app.shareGroupAccess, {
-            groupId: invite.groupId,
-            ownerUserId: access.ownerUserId,
-            viewerUserId: access.viewerUserId,
-          });
-        }
-      });
-    }
-
-    return true;
-  }, [accessRows, db, groupMembers, invite, session]);
-
   useEffect(() => {
-    if (!isPreparingAccess) {
-      return;
-    }
-
-    if (!(ownMembership && ensureAccessRows())) {
-      return;
-    }
-
-    setIsPreparingAccess(false);
-    setIsJoining(false);
-    router.replace(`/share-groups/${ownMembership.groupId}`);
-  }, [ensureAccessRows, isPreparingAccess, ownMembership, router]);
-
-  useEffect(() => {
-    if (!(invite && ownMembership && ensureAccessRows())) {
+    if (!(invite && ownMembership)) {
       return;
     }
 
     router.replace(`/share-groups/${ownMembership.groupId}`);
-  }, [ensureAccessRows, invite, ownMembership, router]);
+  }, [invite, ownMembership, router]);
 
   const joinGroup = async () => {
     const trimmedDisplayName = displayNameRef.current.trim();
@@ -228,7 +153,6 @@ export default function InviteScreen() {
             displayName: trimmedDisplayName,
           })
           .wait({ tier: "edge" });
-        ensureAccessRows();
         router.replace(`/share-groups/${invite.groupId}`);
         return;
       }
@@ -240,7 +164,7 @@ export default function InviteScreen() {
           user_id: session.user_id,
         })
         .wait({ tier: "edge" });
-      setIsPreparingAccess(true);
+      router.replace(`/share-groups/${invite.groupId}`);
     } catch (error) {
       setIsJoining(false);
       Alert.alert(

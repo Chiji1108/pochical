@@ -90,13 +90,11 @@ export default function Group() {
     () => dedupeShareGroupMembers(readableMembers ?? []),
     [readableMembers]
   );
-  const accessRows = useAll(app.shareGroupAccess);
   const hasLoadedGroups =
     Boolean(session) &&
     groups !== undefined &&
     memberships !== undefined &&
-    readableMembers !== undefined &&
-    accessRows !== undefined;
+    readableMembers !== undefined;
   const groupIds = useMemo(
     () => new Set((memberships ?? []).map((membership) => membership.groupId)),
     [memberships]
@@ -207,16 +205,6 @@ export default function Group() {
       {
         onPress: () => {
           db.batch((batch) => {
-            for (const access of accessRows ?? []) {
-              if (
-                access.groupId === editingGroup.id &&
-                (access.ownerUserId === session.user_id ||
-                  access.viewerUserId === session.user_id)
-              ) {
-                batch.delete(app.shareGroupAccess, access.id);
-              }
-            }
-
             if (isLastMember) {
               batch.delete(app.shareGroups, editingGroup.id);
             }
