@@ -25,7 +25,6 @@ import { withUniwind } from "uniwind";
 import { app, type ShareGroup, type ShareGroupMember } from "@/schema";
 
 const StyledSafeAreaView = withUniwind(SafeAreaView);
-const IS_DEVELOPMENT = process.env.NODE_ENV !== "production";
 const MAX_MEMBER_CHIPS = 5;
 
 type GroupFormDialogProps = {
@@ -44,6 +43,9 @@ type MemberChipData = {
   displayName: string;
   id: string;
 };
+
+const getShareGroupMemberDisplayName = (member: ShareGroupMember): string =>
+  member.displayName?.trim() || "名前未設定";
 
 export default function Group() {
   const db = useDb();
@@ -76,7 +78,10 @@ export default function Group() {
 
     for (const member of readableMembers) {
       const groupMembers = nextMembers.get(member.groupId) ?? [];
-      groupMembers.push({ displayName: member.displayName, id: member.id });
+      groupMembers.push({
+        displayName: getShareGroupMemberDisplayName(member),
+        id: member.id,
+      });
       nextMembers.set(member.groupId, groupMembers);
     }
 
@@ -233,6 +238,9 @@ export default function Group() {
                 onEdit={() => {
                   setEditingGroup(group);
                 }}
+                onInvite={() => {
+                  Alert.alert("招待", "招待機能は準備中です");
+                }}
                 onOpen={() => {
                   router.push(`/share-groups/${group.id}`);
                 }}
@@ -262,13 +270,6 @@ export default function Group() {
             </Button>
           </View>
         )}
-        {IS_DEVELOPMENT && session ? (
-          <View className="border-border/60 border-t px-4 py-3">
-            <Text className="text-xs" color="muted" selectable={true}>
-              user_id: {session.user_id}
-            </Text>
-          </View>
-        ) : null}
       </View>
       <GroupFormDialog
         isOpen={isCreateDialogOpen}
@@ -305,22 +306,23 @@ const GroupListItem = ({
   memberChips,
   memberCount,
   onEdit,
+  onInvite,
   onOpen,
 }: {
   group: ShareGroup;
   memberChips: MemberChipData[];
   memberCount: number;
   onEdit: () => void;
+  onInvite: () => void;
   onOpen: () => void;
 }) => {
-  const accentForegroundColor = useThemeColor("accent-foreground");
   const visibleMemberChips = memberChips.slice(0, MAX_MEMBER_CHIPS);
   const hiddenMemberCount = memberCount - visibleMemberChips.length;
 
   return (
-    <Card className="p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="min-w-0 flex-1 gap-2">
+    <Card className="relative p-4">
+      <View className="pr-10">
+        <View className="min-w-0 gap-1">
           <Text className="font-semibold text-lg" numberOfLines={1}>
             {group.name}
           </Text>
@@ -354,36 +356,44 @@ const GroupListItem = ({
             ) : null}
           </View>
         </View>
+      </View>
+      <Button
+        accessibilityLabel={`${group.name}を編集`}
+        className="absolute top-3 right-3"
+        isIconOnly={true}
+        onPress={onEdit}
+        size="sm"
+        variant="ghost"
+      >
+        <SymbolView
+          name={{ android: "edit", ios: "pencil", web: "edit" }}
+          size={16}
+        />
+      </Button>
+      <View className="mt-4 flex-row justify-end gap-2">
         <Button
-          accessibilityLabel={`${group.name}を編集`}
-          onPress={onEdit}
+          accessibilityLabel={`${group.name}に招待`}
+          onPress={onInvite}
           size="sm"
           variant="outline"
         >
           <SymbolView
-            name={{ android: "edit", ios: "pencil", web: "edit" }}
+            name={{
+              android: "person_add",
+              ios: "person.badge.plus",
+              web: "person_add",
+            }}
             size={16}
           />
-          <Button.Label>編集</Button.Label>
+          <Button.Label>招待</Button.Label>
         </Button>
-      </View>
-      <View className="mt-4 items-end">
         <Button
-          accessibilityLabel={`${group.name}のみんなのシフトを確認する`}
+          accessibilityLabel={`${group.name}のシフトを見る`}
           onPress={onOpen}
           size="sm"
           variant="primary"
         >
-          <Button.Label>みんなのシフトを確認する</Button.Label>
-          <SymbolView
-            name={{
-              android: "chevron_right",
-              ios: "chevron.right",
-              web: "chevron_right",
-            }}
-            size={16}
-            tintColor={accentForegroundColor}
-          />
+          <Button.Label>シフトを見る</Button.Label>
         </Button>
       </View>
     </Card>

@@ -360,11 +360,6 @@ const shifts = useAll(app.shifts.where({ ownerUserId: session.user_id })) ?? [];
 
 招待は MVP 後に追加する。
 
-MVP検証では、開発時のみ `session.user_id` を使った手動追加UIを用意する。
-
-- グループリスト画面に `__DEV__` 限定で自分の `session.user_id` を表示する。
-- グループ編集/詳細画面に `__DEV__` 限定で user_id 手入力のメンバー追加UIを置く。
-- 本番では user_id 手入力UIを提供しない。
 - 本番UXは招待URLにする。
 
 ### 推奨方式
@@ -482,4 +477,4 @@ user_123
 - 共有グループに所属している相手には、自分の全 shift が見える。
 - 同じ共有グループのユーザーの shift を読める。
 - グループ画面で「休みが合う日」を確認できる。
-- 招待URLはまだ作らず、開発中は user_id を直接 `shareGroupMembers` に追加して検証する。
+- 招待URLはまだ作らず、手動の user_id 追加 UI も置かない。

@@ -22,6 +22,7 @@ const selectedWeekdayFormatter = new Intl.DateTimeFormat("ja-JP", {
 });
 
 type PatternGridHeaderProps = {
+  detailGestureActive: SharedValue<number>;
   detailTransitionProgress: SharedValue<number>;
   isDetailInputMode: boolean;
   isShiftInputMode: boolean;
@@ -63,6 +64,7 @@ const NextActionButton: FC<NextActionButtonProps> = ({
 );
 
 export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
+  detailGestureActive,
   detailTransitionProgress,
   isDetailInputMode,
   isShiftInputMode,
@@ -77,6 +79,9 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
   const hasSelectedDateShift = selectedDateShifts.length > 0;
   const nextActionStyle = useAnimatedStyle(() => ({
     opacity: 1 - detailTransitionProgress.value,
+  }));
+  const dragHandleStyle = useAnimatedStyle(() => ({
+    opacity: detailGestureActive.value,
   }));
 
   const handleNextAction = async () => {
@@ -114,52 +119,63 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
   };
 
   return (
-    <View className="flex-row items-center justify-between px-2 py-2">
-      <CalendarDatePickerButton
-        onSelectDate={onSelectDate}
-        size="sm"
-        value={selectedDate}
-        variant="ghost"
+    <View className="pt-1">
+      <Animated.View
+        accessibilityElementsHidden
+        accessible={false}
+        className="items-center"
+        importantForAccessibility="no-hide-descendants"
+        style={dragHandleStyle}
       >
-        <Button.Label className="font-semibold text-base">
-          {`${selectedDateFormatter.format(selectedDate)}(${selectedWeekdayFormatter.format(
-            selectedDate
-          )})`}
-        </Button.Label>
-      </CalendarDatePickerButton>
-      <View className="flex-row items-center gap-2 pr-2">
-        {isShiftInputMode ? (
-          <Animated.View
-            pointerEvents={isDetailInputMode ? "none" : "auto"}
-            style={nextActionStyle}
-          >
-            <NextActionButton
-              hasSelectedDateShift={hasSelectedDateShift}
-              onPress={handleNextAction}
-            />
-          </Animated.View>
-        ) : null}
-        <Button
-          accessibilityLabel={
-            isShiftInputMode ? "シフト入力を完了" : "シフト入力を開始"
-          }
-          onPress={handleToggleShiftInputMode}
+        <View className="h-1 w-10 rounded-full bg-foreground/25" />
+      </Animated.View>
+      <View className="flex-row items-center justify-between px-2 pb-2">
+        <CalendarDatePickerButton
+          onSelectDate={onSelectDate}
           size="sm"
-          variant={isShiftInputMode ? "primary" : "outline"}
+          value={selectedDate}
+          variant="ghost"
         >
-          <SymbolView
-            name={{
-              android: isShiftInputMode ? "check" : "edit",
-              ios: isShiftInputMode ? "checkmark" : "pencil",
-              web: isShiftInputMode ? "check" : "edit",
-            }}
-            size={16}
-            tintColor={isShiftInputMode ? "white" : undefined}
-          />
-          <Button.Label>
-            {isShiftInputMode ? "完了" : "シフト入力"}
+          <Button.Label className="font-semibold text-base">
+            {`${selectedDateFormatter.format(selectedDate)}(${selectedWeekdayFormatter.format(
+              selectedDate
+            )})`}
           </Button.Label>
-        </Button>
+        </CalendarDatePickerButton>
+        <View className="flex-row items-center gap-2 pr-2">
+          {isShiftInputMode ? (
+            <Animated.View
+              pointerEvents={isDetailInputMode ? "none" : "auto"}
+              style={nextActionStyle}
+            >
+              <NextActionButton
+                hasSelectedDateShift={hasSelectedDateShift}
+                onPress={handleNextAction}
+              />
+            </Animated.View>
+          ) : null}
+          <Button
+            accessibilityLabel={
+              isShiftInputMode ? "シフト入力を完了" : "シフト入力を開始"
+            }
+            onPress={handleToggleShiftInputMode}
+            size="sm"
+            variant={isShiftInputMode ? "primary" : "outline"}
+          >
+            <SymbolView
+              name={{
+                android: isShiftInputMode ? "check" : "edit",
+                ios: isShiftInputMode ? "checkmark" : "pencil",
+                web: isShiftInputMode ? "check" : "edit",
+              }}
+              size={16}
+              tintColor={isShiftInputMode ? "white" : undefined}
+            />
+            <Button.Label>
+              {isShiftInputMode ? "完了" : "シフト入力"}
+            </Button.Label>
+          </Button>
+        </View>
       </View>
     </View>
   );

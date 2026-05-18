@@ -59,7 +59,7 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
           }
         }}
         size="sm"
-        variant="outline"
+        variant="ghost"
       >
         <SymbolView
           name={{ android: "undo", ios: "arrow.uturn.backward", web: "undo" }}

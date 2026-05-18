@@ -48,6 +48,7 @@ export default function Index() {
   const currentUserId = session?.user_id ?? "";
   const detailPageProgress = useSharedValue(0);
   const detailGestureStartProgress = useSharedValue(0);
+  const detailGestureActive = useSharedValue(0);
   const bottomContentPadding = insets.bottom + TAB_OVERLAP_PADDING;
   const patterns =
     useAll(
@@ -162,6 +163,9 @@ export default function Index() {
         .failOffsetX([-24, 24])
         .onBegin(() => {
           cancelAnimation(detailPageProgress);
+          detailGestureActive.value = withTiming(1, {
+            duration: 120,
+          });
           detailGestureStartProgress.value = detailPageProgress.value;
         })
         .onUpdate((event) => {
@@ -177,8 +181,18 @@ export default function Index() {
               detailPageProgress.value >= DETAIL_PAGE_SETTLE_THRESHOLD);
 
           runOnJS(setDetailInputMode)(shouldOpen);
+        })
+        .onFinalize(() => {
+          detailGestureActive.value = withTiming(0, {
+            duration: 180,
+          });
         }),
-    [detailGestureStartProgress, detailPageProgress, setDetailInputMode]
+    [
+      detailGestureActive,
+      detailGestureStartProgress,
+      detailPageProgress,
+      setDetailInputMode,
+    ]
   );
 
   return (
@@ -222,6 +236,7 @@ export default function Index() {
               yearMonth={yearMonth}
             />
             <PatternGridHeader
+              detailGestureActive={detailGestureActive}
               detailTransitionProgress={detailPageProgress}
               isDetailInputMode={isDetailInputMode}
               isShiftInputMode={isShiftInputMode}

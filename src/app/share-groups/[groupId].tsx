@@ -14,45 +14,27 @@ import {
 } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { SymbolView } from "expo-symbols";
-import {
-  Button,
-  Dialog,
-  Input,
-  Text,
-  TextField,
-  useThemeColor,
-} from "heroui-native";
-import { useAll, useDb, useSession } from "jazz-tools/react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  View,
-} from "react-native";
+import { Text, useThemeColor } from "heroui-native";
+import { useAll } from "jazz-tools/react-native";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { ScrollView, useWindowDimensions, View } from "react-native";
 import { AppHeader } from "@/components/navigation/app-header";
-import { app, type Pattern, type ShareGroupMember, type Shift } from "@/schema";
+import { app, type Pattern, type Shift } from "@/schema";
 
-const DATE_COLUMN_WIDTH = 64;
-const MEMBER_COLUMN_WIDTH = 106;
-const DAY_ROW_HEIGHT = 44;
-const DATE_COLUMN_LEFT_PADDING = 16;
+const DATE_COLUMN_WIDTH = 58;
+const MEMBER_COLUMN_WIDTH = 68;
+const DAY_ROW_HEIGHT = 38;
+const DATE_COLUMN_LEFT_PADDING = 12;
+const CELL_HORIZONTAL_PADDING = 6;
+const STRONG_BORDER_ALPHA = "B3";
+const SUBTLE_BORDER_ALPHA = "4D";
 const INITIAL_MONTH_RADIUS = 12;
 const RANGE_CHUNK_MONTHS = 6;
 const TABLE_BOTTOM_PADDING = 24;
-const IS_DEVELOPMENT = process.env.NODE_ENV !== "production";
+const TODAY_ROW_VIEW_POSITION = 0.35;
 
 type CreatedByRow = {
   ownerUserId: string;
-};
-
-type DevAddMemberDialogProps = {
-  groupId: string;
-  isOpen: boolean;
-  members: ShareGroupMember[];
-  onOpenChange: (isOpen: boolean) => void;
 };
 
 type ScheduleDay = {
@@ -60,21 +42,22 @@ type ScheduleDay = {
   time: number;
 };
 
+type BorderVariant = boolean | "subtle";
+
 const getCreatedBy = (row: object): string =>
   (row as CreatedByRow).ownerUserId ?? "";
 
 export default function ShareGroupDetail() {
   const router = useRouter();
-  const session = useSession();
+  const { width: screenWidth } = useWindowDimensions();
   const today = useMemo(() => startOfDay(new Date()), []);
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(today));
   const [dateRange, setDateRange] = useState(() => ({
     end: addMonths(today, INITIAL_MONTH_RADIUS),
     start: subMonths(today, INITIAL_MONTH_RADIUS),
   }));
-  const [isDevAddMemberDialogOpen, setIsDevAddMemberDialogOpen] =
-    useState(false);
   const scheduleListRef = useRef<FlashListRef<ScheduleDay>>(null);
+  const hasAlignedInitialScrollRef = useRef(false);
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 40,
   }).current;
@@ -90,9 +73,6 @@ export default function ShareGroupDetail() {
     [];
   const shifts = useAll(app.shifts) ?? [];
   const patterns = useAll(app.patterns) ?? [];
-  const ownMembership = members.find(
-    (member) => member.user_id === session?.user_id
-  );
   const memberUserIds = useMemo(
     () => new Set(members.map((member) => member.user_id)),
     [members]
@@ -135,7 +115,14 @@ export default function ShareGroupDetail() {
     [dateRange.start, today]
   );
   const todayIndex = initialScrollIndex;
-  const tableWidth = DATE_COLUMN_WIDTH + members.length * MEMBER_COLUMN_WIDTH;
+  const memberColumnWidth =
+    members.length > 0
+      ? Math.max(
+          MEMBER_COLUMN_WIDTH,
+          (screenWidth - DATE_COLUMN_WIDTH) / members.length
+        )
+      : MEMBER_COLUMN_WIDTH;
+  const tableWidth = DATE_COLUMN_WIDTH + members.length * memberColumnWidth;
 
   const prependDays = useCallback(() => {
     setDateRange((currentRange) => ({
@@ -169,14 +156,30 @@ export default function ShareGroupDetail() {
     []
   );
 
-  const scrollToToday = useCallback(() => {
-    scheduleListRef.current?.scrollToIndex({
-      animated: true,
-      index: todayIndex,
-      viewPosition: 0.35,
-    });
-    setVisibleMonth(startOfMonth(today));
-  }, [today, todayIndex]);
+  const scrollToTodayIndex = useCallback(
+    async (animated: boolean) => {
+      await scheduleListRef.current?.scrollToIndex({
+        animated,
+        index: todayIndex,
+        viewPosition: TODAY_ROW_VIEW_POSITION,
+      });
+      setVisibleMonth(startOfMonth(today));
+    },
+    [today, todayIndex]
+  );
+
+  const alignInitialScrollToToday = useCallback(async () => {
+    if (hasAlignedInitialScrollRef.current) {
+      return;
+    }
+
+    hasAlignedInitialScrollRef.current = true;
+    await scrollToTodayIndex(false);
+  }, [scrollToTodayIndex]);
+
+  const scrollToToday = useCallback(async () => {
+    await scrollToTodayIndex(true);
+  }, [scrollToTodayIndex]);
 
   const renderScheduleDay = useCallback<ListRenderItem<ScheduleDay>>(
     ({ item }) => {
@@ -187,13 +190,14 @@ export default function ShareGroupDetail() {
 
         return { member, pattern, shift };
       });
+      const hasRegisteredShift = cells.some(({ shift }) => shift);
       const isEveryoneOff = cells.every(
         ({ pattern, shift }) => !shift || pattern?.countsAsDayOff
       );
       const isToday = item.time === today.getTime();
       let rowBackgroundColor: string | undefined;
 
-      if (isEveryoneOff) {
+      if (hasRegisteredShift && isEveryoneOff) {
         rowBackgroundColor = `${highlightBackground}22`;
       } else if (isToday) {
         rowBackgroundColor = `${todayColor}16`;
@@ -216,22 +220,27 @@ export default function ShareGroupDetail() {
             }}
           >
             <TableBodyCell
-              label={format(item.date, "d E", { locale: ja })}
+              borderColor={borderColor}
+              label={format(item.date, "d(E)", { locale: ja })}
               muted={true}
               paddingLeft={
                 isToday
                   ? DATE_COLUMN_LEFT_PADDING - 3
                   : DATE_COLUMN_LEFT_PADDING
               }
+              rightBorder={true}
               width={DATE_COLUMN_WIDTH - (isToday ? 3 : 0)}
             />
-            {cells.map(({ member, pattern, shift }) => (
+            {cells.map(({ member, pattern, shift }, index) => (
               <TableBodyCell
+                borderColor={borderColor}
                 key={member.id}
-                label={shift ? (pattern?.name ?? "不明") : "未設定"}
+                label={shift ? (pattern?.name ?? "不明") : ""}
                 muted={!shift}
                 prefix={pattern?.emoji}
-                width={MEMBER_COLUMN_WIDTH}
+                rightBorder={index < cells.length - 1 ? "subtle" : false}
+                textAlign="center"
+                width={memberColumnWidth}
               />
             ))}
           </View>
@@ -240,6 +249,8 @@ export default function ShareGroupDetail() {
     },
     [
       highlightBackground,
+      borderColor,
+      memberColumnWidth,
       members,
       patternsById,
       shiftsByUserAndDate,
@@ -301,7 +312,6 @@ export default function ShareGroupDetail() {
             },
             label: "今日",
             onPress: scrollToToday,
-            variant: "outline",
           },
         ]}
         title={group.name}
@@ -317,15 +327,22 @@ export default function ShareGroupDetail() {
               <View className="flex-1" style={{ width: tableWidth }}>
                 <View className="flex-row">
                   <TableHeaderCell
+                    borderColor={borderColor}
                     label={format(visibleMonth, "M月", { locale: ja })}
                     paddingLeft={DATE_COLUMN_LEFT_PADDING}
+                    rightBorder={true}
                     width={DATE_COLUMN_WIDTH}
                   />
-                  {members.map((member) => (
+                  {members.map((member, index) => (
                     <TableHeaderCell
+                      borderColor={borderColor}
                       key={member.id}
                       label={member.displayName}
-                      width={MEMBER_COLUMN_WIDTH}
+                      rightBorder={
+                        index < members.length - 1 ? "subtle" : false
+                      }
+                      textAlign="center"
+                      width={memberColumnWidth}
                     />
                   ))}
                 </View>
@@ -343,6 +360,7 @@ export default function ShareGroupDetail() {
                   }}
                   onEndReached={appendDays}
                   onEndReachedThreshold={0.4}
+                  onLoad={alignInitialScrollToToday}
                   onStartReached={prependDays}
                   onStartReachedThreshold={0.4}
                   onViewableItemsChanged={updateVisibleMonth}
@@ -362,204 +380,92 @@ export default function ShareGroupDetail() {
             </Text>
           </View>
         )}
-        {IS_DEVELOPMENT && ownMembership ? (
-          <View className="border-t px-4 py-3" style={{ borderColor }}>
-            <Button
-              accessibilityLabel="開発用にuser_idでメンバーを追加"
-              onPress={() => {
-                setIsDevAddMemberDialogOpen(true);
-              }}
-              size="sm"
-              variant="outline"
-            >
-              <SymbolView
-                name={{
-                  android: "person_add",
-                  ios: "person.badge.plus",
-                  web: "person_add",
-                }}
-                size={16}
-              />
-              <Button.Label>user_idで追加</Button.Label>
-            </Button>
-          </View>
-        ) : null}
       </View>
-      <DevAddMemberDialog
-        groupId={group.id}
-        isOpen={isDevAddMemberDialogOpen}
-        members={members}
-        onOpenChange={setIsDevAddMemberDialogOpen}
-      />
     </View>
   );
 }
 
 const TableHeaderCell = ({
+  borderColor,
   label,
   paddingLeft,
+  rightBorder = false,
+  textAlign = "left",
   width,
 }: {
+  borderColor: string;
   label: string;
   paddingLeft?: number;
+  rightBorder?: BorderVariant;
+  textAlign?: "center" | "left";
   width: number;
 }) => (
   <View
-    className="border-border/70 border-b py-2 pr-2"
-    style={{ paddingLeft: paddingLeft ?? 8, width }}
+    className="py-2"
+    style={{
+      borderBottomColor: `${borderColor}${STRONG_BORDER_ALPHA}`,
+      borderBottomWidth: 1,
+      borderRightColor: `${borderColor}${
+        rightBorder === "subtle" ? SUBTLE_BORDER_ALPHA : STRONG_BORDER_ALPHA
+      }`,
+      borderRightWidth: rightBorder ? 1 : 0,
+      paddingLeft: paddingLeft ?? CELL_HORIZONTAL_PADDING,
+      paddingRight: CELL_HORIZONTAL_PADDING,
+      width,
+    }}
   >
-    <Text className="font-semibold text-xs" color="muted" numberOfLines={1}>
+    <Text
+      className="font-semibold text-xs"
+      color="muted"
+      numberOfLines={1}
+      style={{ textAlign }}
+    >
       {label}
     </Text>
   </View>
 );
 
 const TableBodyCell = ({
+  borderColor,
   label,
   muted = false,
   paddingLeft,
   prefix,
+  rightBorder = false,
+  textAlign = "left",
   width,
 }: {
+  borderColor: string;
   label: string;
   muted?: boolean;
   paddingLeft?: number;
   prefix?: string;
+  rightBorder?: BorderVariant;
+  textAlign?: "center" | "left";
   width: number;
 }) => (
   <View
-    className="h-11 justify-center border-border/50 border-b pr-2"
-    style={{ paddingLeft: paddingLeft ?? 8, width }}
+    className="justify-center"
+    style={{
+      borderBottomColor: `${borderColor}${SUBTLE_BORDER_ALPHA}`,
+      borderBottomWidth: 1,
+      borderRightColor: `${borderColor}${
+        rightBorder === "subtle" ? SUBTLE_BORDER_ALPHA : STRONG_BORDER_ALPHA
+      }`,
+      borderRightWidth: rightBorder ? 1 : 0,
+      height: DAY_ROW_HEIGHT,
+      paddingLeft: paddingLeft ?? CELL_HORIZONTAL_PADDING,
+      paddingRight: CELL_HORIZONTAL_PADDING,
+      width,
+    }}
   >
     <Text
-      className="text-sm"
+      className="text-xs"
       color={muted ? "muted" : undefined}
       numberOfLines={1}
+      style={{ textAlign }}
     >
       {prefix ? `${prefix} ${label}` : label}
     </Text>
   </View>
 );
-
-const DevAddMemberDialog = ({
-  groupId,
-  isOpen,
-  members,
-  onOpenChange,
-}: DevAddMemberDialogProps) => {
-  const db = useDb();
-  const userIdRef = useRef("");
-  const displayNameRef = useRef("");
-  const [formKey, setFormKey] = useState(0);
-  const memberUserIds = useMemo(
-    () => new Set(members.map((member) => member.user_id)),
-    [members]
-  );
-
-  useEffect(() => {
-    if (isOpen) {
-      userIdRef.current = "";
-      displayNameRef.current = "";
-      setFormKey((currentKey) => currentKey + 1);
-    }
-  }, [isOpen]);
-
-  const submit = () => {
-    const trimmedUserId = userIdRef.current.trim();
-    const trimmedDisplayName = displayNameRef.current.trim();
-
-    if (!(trimmedUserId && trimmedDisplayName)) {
-      Alert.alert("user_idと表示名を入力してください");
-      return;
-    }
-
-    if (memberUserIds.has(trimmedUserId)) {
-      Alert.alert("このuser_idはすでに追加されています");
-      return;
-    }
-
-    db.batch((batch) => {
-      batch.insert(app.shareGroupMembers, {
-        displayName: trimmedDisplayName,
-        groupId,
-        user_id: trimmedUserId,
-      });
-
-      for (const member of members) {
-        batch.insert(app.shareGroupAccess, {
-          groupId,
-          ownerUserId: member.user_id,
-          viewerUserId: trimmedUserId,
-        });
-        batch.insert(app.shareGroupAccess, {
-          groupId,
-          ownerUserId: trimmedUserId,
-          viewerUserId: member.user_id,
-        });
-      }
-    });
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog isOpen={isOpen} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
-          <Dialog.Content>
-            <Dialog.Close variant="ghost" />
-            <View className="mb-5 gap-1.5">
-              <Dialog.Title>メンバーを追加</Dialog.Title>
-            </View>
-            <View className="gap-4">
-              <TextField>
-                <Input
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoFocus={true}
-                  defaultValue=""
-                  key={`user-id-${formKey}`}
-                  onChangeText={(text) => {
-                    userIdRef.current = text;
-                  }}
-                  placeholder="user_id"
-                  returnKeyType="next"
-                />
-              </TextField>
-              <TextField>
-                <Input
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  defaultValue=""
-                  key={`display-name-${formKey}`}
-                  onChangeText={(text) => {
-                    displayNameRef.current = text;
-                  }}
-                  onSubmitEditing={submit}
-                  placeholder="表示名"
-                  returnKeyType="done"
-                />
-              </TextField>
-            </View>
-            <View className="mt-5 flex-row justify-end gap-3">
-              <Button
-                onPress={() => {
-                  onOpenChange(false);
-                }}
-                size="sm"
-                variant="ghost"
-              >
-                <Button.Label>キャンセル</Button.Label>
-              </Button>
-              <Button onPress={submit} size="sm" variant="primary">
-                <Button.Label>追加</Button.Label>
-              </Button>
-            </View>
-          </Dialog.Content>
-        </KeyboardAvoidingView>
-      </Dialog.Portal>
-    </Dialog>
-  );
-};
