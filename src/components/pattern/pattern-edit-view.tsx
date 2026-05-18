@@ -362,7 +362,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
 
         <ListGroup>
           <SettingRow
-            description="休み合わせ画面で休日として数えます"
+            description="シフト共有画面で休みとして数えます"
             label="休み扱い"
             trailing={
               <Switch

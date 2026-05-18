@@ -55,7 +55,7 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
         {onExportMonth ? (
           <Button
             accessibilityLabel="表示月のシフトを端末カレンダーに追加"
-            className="h-9 w-9"
+            className="h-10 w-10"
             isDisabled={isExportingMonth}
             isIconOnly
             onPress={onExportMonth}
@@ -68,7 +68,7 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
                 ios: "calendar.badge.plus",
                 web: "calendar_add_on",
               }}
-              size={16}
+              size={18}
             />
           </Button>
         ) : null}
@@ -89,7 +89,7 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
         >
           <SymbolView
             name={{ android: "undo", ios: "arrow.uturn.backward", web: "undo" }}
-            size={16}
+            size={18}
           />
           <Button.Label>今日</Button.Label>
         </Button>

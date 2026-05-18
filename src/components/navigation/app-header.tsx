@@ -32,14 +32,14 @@ const HeaderActionButton: FC<HeaderActionButtonProps> = ({ action }) => (
     {action ? (
       <Button
         accessibilityLabel={action.accessibilityLabel}
-        className={cn(action.label ? "px-3" : "h-9 w-9")}
+        className={cn(action.label ? "px-3" : "h-10 w-10")}
         isDisabled={action.isDisabled}
         isIconOnly={!action.label}
         onPress={action.onPress}
         size="sm"
         variant={action.variant ?? "ghost"}
       >
-        {action.icon ? <SymbolView name={action.icon} size={16} /> : null}
+        {action.icon ? <SymbolView name={action.icon} size={18} /> : null}
         {action.label ? (
           <Button.Label className={action.labelClassName}>
             {action.label}
