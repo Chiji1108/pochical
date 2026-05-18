@@ -17,6 +17,7 @@ type ShiftCalendarEventInput = {
 };
 
 type MonthlyShiftCalendarEventsInput = {
+  excludeDayOffShifts: boolean;
   membersById: ReadonlyMap<string, Member>;
   patternsById: ReadonlyMap<string, Pattern>;
   shiftNotesByShiftId: ReadonlyMap<string, ShiftNote>;
@@ -121,6 +122,7 @@ const createShiftCalendarEvent = ({
 });
 
 export const getMonthlyShiftCalendarEvents = ({
+  excludeDayOffShifts,
   membersById,
   patternsById,
   shiftNotesByShiftId,
@@ -141,6 +143,10 @@ export const getMonthlyShiftCalendarEvents = ({
     const pattern = patternsById.get(shift.patternId);
 
     if (!pattern) {
+      continue;
+    }
+
+    if (excludeDayOffShifts && pattern.countsAsDayOff) {
       continue;
     }
 

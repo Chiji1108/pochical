@@ -60,6 +60,40 @@ Jazz
   - shiftNotes
 ```
 
+## Convex schema/functions の管理場所
+
+Convex schema/functions は Expo repo 側で管理する。
+
+```txt
+nurse-shift/
+  convex/
+    schema.ts
+    groups.ts
+    invites.ts
+    chat.ts
+    notifications.ts
+  src/
+    app/
+```
+
+この Convex backend は Nurse Shift アプリのドメインロジックであり、Next.js landing site の付属物ではないため。
+
+Next.js repo は同じ Convex deployment の consumer として扱う。Next.js repo には Convex schema/functions を置かない。
+
+```txt
+Expo repo
+  - Convex schema/functions の owner
+  - Expo app から Convex client で query/mutation を直接呼ぶ
+  - Next.js landing page 向けの invite preview HTTP action も定義する
+
+Next.js repo
+  - Universal Link / landing / fallback ページのみ担当
+  - Convex HTTP action を fetch して invite preview を表示する
+  - Convex schema の生成型には依存しない
+```
+
+Next.js 側で必要なのは invite landing page の `groupName` と `expiresAt` 程度なので、repo 間で Convex generated API 型を共有しない。型共有 package は作らず、HTTP action の JSON contract で十分とする。
+
 ## Convex データモデル案
 
 ### `users`
@@ -275,6 +309,8 @@ Expo app は招待作成、招待 preview、参加を Convex client で直接呼
 Next.js 側は `/nurse-shift/invite/[inviteId]` の Universal Link / landing / fallback だけを担当する。landing page でグループ名を表示したい場合は、Next.js server component 側から Convex の invite preview を読む。
 
 Expo app 向けの互換 API は作らない。
+
+Next.js から Convex を読む場合は、Expo repo 側の Convex HTTP action を `fetch` する。Next.js repo に Convex schema/functions や generated API 型は持ち込まない。
 
 ### Landing page
 

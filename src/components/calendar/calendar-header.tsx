@@ -11,7 +11,6 @@ import { WeekRow } from "./week-row";
 
 type CalendarHeaderProps = {
   isExportingMonth?: boolean;
-  monthlyShiftCount?: number;
   onExportMonth?: () => void;
   onSelectDate: (date: Date) => void;
   onPressToday: () => void;
@@ -24,7 +23,6 @@ type CalendarHeaderContentProps = {
   canReturnToToday: boolean;
   className?: string;
   isExportingMonth?: boolean;
-  monthlyShiftCount?: number;
   onExportMonth?: () => void;
   onPressToday: () => void;
   onSelectDate: (date: Date) => void;
@@ -36,7 +34,6 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
   canReturnToToday,
   className,
   isExportingMonth,
-  monthlyShiftCount = 0,
   onExportMonth,
   onPressToday,
   onSelectDate,
@@ -57,9 +54,9 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
       <View className="mx-2 flex-row items-center gap-1">
         {onExportMonth ? (
           <Button
-            accessibilityLabel="表示月のシフトをカレンダーに書き出す"
+            accessibilityLabel="表示月のシフトを端末カレンダーに追加"
             className="h-9 w-9"
-            isDisabled={isExportingMonth || monthlyShiftCount === 0}
+            isDisabled={isExportingMonth}
             isIconOnly
             onPress={onExportMonth}
             size="sm"
@@ -67,9 +64,9 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
           >
             <SymbolView
               name={{
-                android: "calendar_month",
-                ios: "square.and.arrow.up",
-                web: "calendar_month",
+                android: "calendar_add_on",
+                ios: "calendar.badge.plus",
+                web: "calendar_add_on",
               }}
               size={16}
             />
@@ -112,7 +109,6 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
 
 export const CalendarHeader: FC<CalendarHeaderProps> = ({
   isExportingMonth,
-  monthlyShiftCount,
   onExportMonth,
   onSelectDate,
   onPressToday,
@@ -130,7 +126,6 @@ export const CalendarHeader: FC<CalendarHeaderProps> = ({
       canReturnToToday={canReturnToToday}
       className={className}
       isExportingMonth={isExportingMonth}
-      monthlyShiftCount={monthlyShiftCount}
       onExportMonth={onExportMonth}
       onPressToday={onPressToday}
       onSelectDate={onSelectDate}
