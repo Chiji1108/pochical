@@ -3,6 +3,7 @@ import {
   type FlashListRef,
   type ListRenderItem,
 } from "@shopify/flash-list";
+import { useQuery } from "convex/react";
 import {
   addMonths,
   differenceInCalendarDays,
@@ -15,12 +16,13 @@ import {
 import { ja } from "date-fns/locale";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Text, useThemeColor } from "heroui-native";
-import { useAll } from "jazz-tools/react-native";
+import { useAll, useSession } from "jazz-tools/react-native";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { ScrollView, useWindowDimensions, View } from "react-native";
 import { AppHeader } from "@/components/navigation/app-header";
-import { dedupeShareGroupMembers } from "@/lib/share-group-members";
 import { app, type Pattern, type Shift } from "@/schema";
+import { api as convexApi } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 const DATE_COLUMN_WIDTH = 58;
 const MEMBER_COLUMN_WIDTH = 68;
@@ -47,6 +49,7 @@ type ShiftWithCreatedBy = Shift & {
 
 export default function ShareGroupDetail() {
   const router = useRouter();
+  const session = useSession();
   const { width: screenWidth } = useWindowDimensions();
   const today = useMemo(() => startOfDay(new Date()), []);
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(today));
@@ -59,22 +62,19 @@ export default function ShareGroupDetail() {
     itemVisiblePercentThreshold: 40,
   }).current;
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
+  const currentUserId = session?.user_id ?? "";
+  const group = useQuery(
+    convexApi.groups.getDetail,
+    groupId && currentUserId
+      ? { groupId: groupId as Id<"groups">, jazzUserId: currentUserId }
+      : "skip"
+  );
   const [highlightBackground, todayColor, borderColor] = useThemeColor([
     "success",
     "accent",
     "border",
   ]);
-  const [group] = useAll(app.shareGroups.where({ id: groupId }).limit(1)) ?? [];
-  const memberRows =
-    useAll(app.shareGroupMembers.where({ groupId }).orderBy("displayName")) ??
-    [];
-  const members = useMemo(
-    () =>
-      dedupeShareGroupMembers(memberRows).sort((a, b) =>
-        a.displayName.localeCompare(b.displayName, "ja")
-      ),
-    [memberRows]
-  );
+  const members = group?.members ?? [];
   const shifts =
     useAll(
       app.shifts.select(
@@ -87,7 +87,7 @@ export default function ShareGroupDetail() {
     ) ?? [];
   const patterns = useAll(app.patterns) ?? [];
   const memberUserIds = useMemo(
-    () => new Set(members.map((member) => member.user_id)),
+    () => new Set(members.map((member) => member.jazzUserId)),
     [members]
   );
   const patternsById = useMemo(() => {
@@ -196,7 +196,7 @@ export default function ShareGroupDetail() {
   const renderScheduleDay = useCallback<ListRenderItem<ScheduleDay>>(
     ({ item }) => {
       const cells = members.map((member) => {
-        const key = `${member.user_id}:${item.time}`;
+        const key = `${member.jazzUserId}:${item.time}`;
         const shift = shiftsByUserAndDate.get(key);
         const pattern = shift ? patternsById.get(shift.patternId) : undefined;
 
@@ -246,7 +246,7 @@ export default function ShareGroupDetail() {
             {cells.map(({ member, pattern, shift }, index) => (
               <TableBodyCell
                 borderColor={borderColor}
-                key={member.id}
+                key={member._id}
                 label={shift ? (pattern?.name ?? "不明") : ""}
                 muted={!shift}
                 prefix={pattern?.emoji}
@@ -272,12 +272,16 @@ export default function ShareGroupDetail() {
     ]
   );
 
+  if (group === undefined) {
+    return <View className="flex-1 bg-background" />;
+  }
+
   if (!group) {
     return (
       <View className="flex-1 bg-background">
         <AppHeader
           leftAction={{
-            accessibilityLabel: "シフト共有一覧に戻る",
+            accessibilityLabel: "グループ一覧に戻る",
             icon: {
               android: "arrow_back",
               ios: "chevron.left",
@@ -286,11 +290,11 @@ export default function ShareGroupDetail() {
             label: "戻る",
             onPress: goBack,
           }}
-          title="シフト共有"
+          title="グループ"
         />
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-center text-base" color="muted">
-            シフト共有が見つかりません
+            グループが見つかりません
           </Text>
         </View>
       </View>
@@ -301,7 +305,7 @@ export default function ShareGroupDetail() {
     <View className="flex-1 bg-background">
       <AppHeader
         leftAction={{
-          accessibilityLabel: "シフト共有一覧に戻る",
+          accessibilityLabel: "グループ一覧に戻る",
           icon: {
             android: "arrow_back",
             ios: "chevron.left",
@@ -344,7 +348,7 @@ export default function ShareGroupDetail() {
                   {members.map((member, index) => (
                     <TableHeaderCell
                       borderColor={borderColor}
-                      key={member.id}
+                      key={member._id}
                       label={member.displayName}
                       rightBorder={
                         index < members.length - 1 ? "subtle" : false

@@ -1,0 +1,185 @@
+import { useMutation, useQuery } from "convex/react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { SymbolView } from "expo-symbols";
+import {
+  Button,
+  Input,
+  Label,
+  Text,
+  TextField,
+  useThemeColor,
+} from "heroui-native";
+import { useSession } from "jazz-tools/react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Alert, KeyboardAvoidingView, Platform, View } from "react-native";
+import { AppHeader } from "@/components/navigation/app-header";
+import { api as convexApi } from "../../../convex/_generated/api";
+
+const INVALID_INVITE_MESSAGE = "この招待リンクは無効です";
+
+export default function InviteScreen() {
+  const router = useRouter();
+  const session = useSession();
+  const accentForegroundColor = useThemeColor("accent-foreground");
+  const { inviteCode } = useLocalSearchParams<{ inviteCode: string }>();
+  const normalizedInviteCode =
+    typeof inviteCode === "string" ? inviteCode.trim() : "";
+  const displayNameRef = useRef("");
+  const isJoiningRef = useRef(false);
+  const [displayName, setDisplayName] = useState("");
+  const [isJoining, setIsJoining] = useState(false);
+  const invite = useQuery(
+    convexApi.invites.preview,
+    normalizedInviteCode
+      ? { inviteCode: normalizedInviteCode, jazzUserId: session?.user_id }
+      : "skip"
+  );
+  const joinInvite = useMutation(convexApi.invites.join);
+  const goBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace("/group");
+  }, [router]);
+
+  const joinGroup = async () => {
+    if (isJoiningRef.current) {
+      return;
+    }
+
+    const trimmedDisplayName = displayNameRef.current.trim();
+
+    if (!(normalizedInviteCode && invite)) {
+      return;
+    }
+
+    if (!session) {
+      Alert.alert("参加できません", "ユーザー情報の準備ができていません");
+      return;
+    }
+
+    if (!trimmedDisplayName) {
+      Alert.alert("表示名を入力してください");
+      return;
+    }
+
+    isJoiningRef.current = true;
+    setIsJoining(true);
+
+    try {
+      const result = await joinInvite({
+        displayName: trimmedDisplayName,
+        inviteCode: normalizedInviteCode,
+        jazzUserId: session.user_id,
+      });
+      router.replace(`/share-groups/${result.groupId}`);
+    } catch (error) {
+      isJoiningRef.current = false;
+      setIsJoining(false);
+      Alert.alert(
+        "参加できませんでした",
+        error instanceof Error
+          ? error.message
+          : "時間をおいて再試行してください"
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (!invite?.isMember) {
+      return;
+    }
+
+    router.replace(`/share-groups/${invite.groupId}`);
+  }, [invite, router]);
+
+  const isLoadingInvite = normalizedInviteCode && invite === undefined;
+  const isInvalidInvite = !normalizedInviteCode || invite === null;
+  const title = invite?.groupName ?? "招待";
+  const isRedirectingToGroup = Boolean(invite?.isMember);
+  const isSubmitDisabled =
+    isJoining || isRedirectingToGroup || !invite || !displayName.trim();
+  let description = "このグループに参加します";
+  let formContent = (
+    <View className="gap-5">
+      <TextField>
+        <Label>グループ内での表示名</Label>
+        <Input
+          autoCapitalize="none"
+          autoCorrect={false}
+          editable={!isJoining}
+          onChangeText={(text) => {
+            displayNameRef.current = text;
+            setDisplayName(text);
+          }}
+          onSubmitEditing={joinGroup}
+          placeholder="例: 佐藤"
+          returnKeyType="done"
+        />
+      </TextField>
+      <Button
+        accessibilityLabel={`${title}に参加`}
+        isDisabled={isSubmitDisabled}
+        onPress={joinGroup}
+        size="md"
+        variant="primary"
+      >
+        <SymbolView
+          name={{
+            android: "person_add",
+            ios: "person.badge.plus",
+            web: "person_add",
+          }}
+          size={18}
+          tintColor={accentForegroundColor}
+        />
+        <Button.Label>{isJoining ? "参加中" : "参加する"}</Button.Label>
+      </Button>
+    </View>
+  );
+
+  if (isLoadingInvite) {
+    description = "招待リンクを確認しています";
+  } else if (isRedirectingToGroup) {
+    description = "グループを開いています";
+    formContent = <View />;
+  } else if (isInvalidInvite) {
+    formContent = (
+      <Text className="text-base text-danger">{INVALID_INVITE_MESSAGE}</Text>
+    );
+  }
+
+  return (
+    <View className="flex-1 bg-background">
+      <AppHeader
+        leftAction={{
+          accessibilityLabel: "戻る",
+          icon: {
+            android: "arrow_back",
+            ios: "chevron.left",
+            web: "arrow_back",
+          },
+          label: "戻る",
+          onPress: goBack,
+        }}
+        title="グループ招待"
+      />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        className="flex-1"
+      >
+        <View className="flex-1 justify-center gap-6 px-6">
+          <View className="gap-2">
+            <Text className="font-bold text-2xl">{title}</Text>
+            <Text className="text-base" color="muted">
+              {description}
+            </Text>
+          </View>
+          {formContent}
+        </View>
+      </KeyboardAvoidingView>
+    </View>
+  );
+}

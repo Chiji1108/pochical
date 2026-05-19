@@ -6,10 +6,10 @@ import {
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Button, Text, useThemeColor } from "heroui-native";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppHeader } from "@/components/navigation/app-header";
-import { getInviteIdFromInviteUrl } from "@/lib/invite-links";
+import { getInviteCodeFromInviteUrl } from "@/lib/invite-links";
 
 const INVALID_CODE_RESET_MS = 1800;
 
@@ -17,7 +17,8 @@ export default function InviteScanScreen() {
   const router = useRouter();
   const accentForegroundColor = useThemeColor("accent-foreground");
   const [permission, requestPermission] = useCameraPermissions();
-  const [scannedInviteId, setScannedInviteId] = useState("");
+  const scannedInviteCodeRef = useRef("");
+  const [scannedInviteCode, setScannedInviteCode] = useState("");
   const [invalidCodeMessage, setInvalidCodeMessage] = useState("");
 
   const goBack = useCallback(() => {
@@ -45,21 +46,22 @@ export default function InviteScanScreen() {
 
   const handleBarcodeScanned = useCallback(
     ({ data }: BarcodeScanningResult) => {
-      if (scannedInviteId || invalidCodeMessage) {
+      if (scannedInviteCodeRef.current || invalidCodeMessage) {
         return;
       }
 
-      const inviteId = getInviteIdFromInviteUrl(data);
+      const inviteCode = getInviteCodeFromInviteUrl(data);
 
-      if (!inviteId) {
-        setInvalidCodeMessage("シフト共有の招待QRコードではありません");
+      if (!inviteCode) {
+        setInvalidCodeMessage("グループの招待QRコードではありません");
         return;
       }
 
-      setScannedInviteId(inviteId);
-      router.replace(`/invite/${encodeURIComponent(inviteId)}`);
+      scannedInviteCodeRef.current = inviteCode;
+      setScannedInviteCode(inviteCode);
+      router.replace(`/invite/${encodeURIComponent(inviteCode)}`);
     },
-    [invalidCodeMessage, router, scannedInviteId]
+    [invalidCodeMessage, router]
   );
 
   let content = (
@@ -72,7 +74,7 @@ export default function InviteScanScreen() {
     content = (
       <View className="flex-1 bg-black">
         <CameraView
-          active={!scannedInviteId}
+          active={!scannedInviteCode}
           barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
           facing="back"
           onBarcodeScanned={handleBarcodeScanned}

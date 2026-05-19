@@ -3,14 +3,12 @@ const INVITE_PATH_SEGMENT = "invite";
 const TRAILING_SLASH_REGEX = /\/$/;
 
 const getConfiguredInviteBaseUrl = (): string => {
-  const configuredBaseUrl =
-    process.env.EXPO_PUBLIC_INVITE_BASE_URL ??
-    process.env.EXPO_PUBLIC_INVITE_API_BASE_URL;
+  const configuredBaseUrl = process.env.EXPO_PUBLIC_INVITE_BASE_URL;
 
   return configuredBaseUrl?.replace(TRAILING_SLASH_REGEX, "") ?? "";
 };
 
-const getInviteIdFromSegments = (segments: string[]): string | undefined => {
+const getInviteCodeFromSegments = (segments: string[]): string | undefined => {
   const inviteSegmentIndex = segments.indexOf(INVITE_PATH_SEGMENT);
 
   if (inviteSegmentIndex < 0) {
@@ -44,7 +42,9 @@ const hasConfiguredBasePath = (segments: string[]): boolean => {
   return baseSegments.every((segment, index) => segments[index] === segment);
 };
 
-export const getInviteIdFromInviteUrl = (value: string): string | undefined => {
+export const getInviteCodeFromInviteUrl = (
+  value: string
+): string | undefined => {
   const trimmedValue = value.trim();
 
   if (!trimmedValue) {
@@ -58,7 +58,7 @@ export const getInviteIdFromInviteUrl = (value: string): string | undefined => {
       const segments = [url.hostname, ...url.pathname.split("/")]
         .map((segment) => segment.trim())
         .filter(Boolean);
-      return getInviteIdFromSegments(segments);
+      return getInviteCodeFromSegments(segments);
     }
 
     if (!(url.protocol === "https:" || url.protocol === "http:")) {
@@ -81,7 +81,7 @@ export const getInviteIdFromInviteUrl = (value: string): string | undefined => {
       return;
     }
 
-    return getInviteIdFromSegments(segments);
+    return getInviteCodeFromSegments(segments);
   } catch {
     return;
   }

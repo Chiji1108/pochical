@@ -1,3 +1,5 @@
+import { useMutation, useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { setStringAsync } from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
@@ -12,8 +14,8 @@ import {
   TextField,
   useThemeColor,
 } from "heroui-native";
-import { useAll, useDb, useSession } from "jazz-tools/react-native";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useSession } from "jazz-tools/react-native";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -25,43 +27,27 @@ import {
 import QRCode from "react-native-qrcode-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
-import {
-  dedupeShareGroupMembers,
-  getShareGroupMemberDisplayName,
-} from "@/lib/share-group-members";
-import { app, type ShareGroup, type ShareGroupMember } from "@/schema";
+import { api as convexApi } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 const StyledSafeAreaView = withUniwind(SafeAreaView);
 const MAX_MEMBER_CHIPS = 5;
-const TRAILING_SLASH_REGEX = /\/$/;
 
-const getInviteApiBaseUrl = (): string => {
-  const configuredBaseUrl =
-    process.env.EXPO_PUBLIC_INVITE_API_BASE_URL ??
-    process.env.EXPO_PUBLIC_INVITE_BASE_URL;
-
-  if (configuredBaseUrl) {
-    return configuredBaseUrl.replace(TRAILING_SLASH_REGEX, "");
-  }
-
-  return "";
-};
+type ConvexGroupSummary = FunctionReturnType<
+  typeof convexApi.groups.listForCurrentUser
+>[number];
 
 type GroupFormDialogProps = {
-  group?: ShareGroup;
+  group?: ConvexGroupSummary;
   initialDisplayName?: string;
   initialGroupName?: string;
   isOpen: boolean;
+  isLeaving?: boolean;
   onLeave?: () => void;
   onOpenChange: (isOpen: boolean) => void;
-  onSubmit: (groupName: string, displayName: string) => void;
+  onSubmit: (groupName: string, displayName: string) => Promise<void> | void;
   submitLabel: string;
   title: string;
-};
-
-type MemberChipData = {
-  displayName: string;
-  id: string;
 };
 
 type InviteDetails = {
@@ -70,201 +56,139 @@ type InviteDetails = {
 };
 
 export default function Group() {
-  const db = useDb();
   const router = useRouter();
   const session = useSession();
   const accentForegroundColor = useThemeColor("accent-foreground");
-  const [editingGroup, setEditingGroup] = useState<ShareGroup>();
-  const [creatingInviteGroupId, setCreatingInviteGroupId] = useState("");
+  const [editingGroup, setEditingGroup] = useState<ConvexGroupSummary>();
   const [inviteDetails, setInviteDetails] = useState<InviteDetails>();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const isLeavingGroupRef = useRef(false);
+  const [leavingGroupId, setLeavingGroupId] = useState<Id<"groups"> | "">("");
+  const [pendingGroupId, setPendingGroupId] = useState("");
   const currentUserId = session?.user_id ?? "";
-  const groups = useAll(app.shareGroups);
-  const memberships = useAll(
-    currentUserId
-      ? app.shareGroupMembers.where({ user_id: currentUserId })
-      : undefined
+  const groups = useQuery(
+    convexApi.groups.listForCurrentUser,
+    currentUserId ? { jazzUserId: currentUserId } : "skip"
   );
-  const readableMembers = useAll(app.shareGroupMembers);
-  const uniqueReadableMembers = useMemo(
-    () => dedupeShareGroupMembers(readableMembers ?? []),
-    [readableMembers]
-  );
-  const hasLoadedGroups =
-    Boolean(session) &&
-    groups !== undefined &&
-    memberships !== undefined &&
-    readableMembers !== undefined;
-  const groupIds = useMemo(
-    () => new Set((memberships ?? []).map((membership) => membership.groupId)),
-    [memberships]
-  );
-  const memberCountsByGroupId = useMemo(() => {
-    const nextCounts = new Map<string, number>();
+  const createGroupMutation = useMutation(convexApi.groups.create);
+  const updateGroupName = useMutation(convexApi.groups.updateName);
+  const updateDisplayName = useMutation(convexApi.groups.updateDisplayName);
+  const leaveGroupMutation = useMutation(convexApi.groups.leave);
+  const hasLoadedGroups = Boolean(session) && groups !== undefined;
 
-    for (const member of uniqueReadableMembers) {
-      nextCounts.set(member.groupId, (nextCounts.get(member.groupId) ?? 0) + 1);
-    }
-
-    return nextCounts;
-  }, [uniqueReadableMembers]);
-  const memberChipsByGroupId = useMemo(() => {
-    const nextMembers = new Map<string, MemberChipData[]>();
-
-    for (const member of uniqueReadableMembers) {
-      const groupMembers = nextMembers.get(member.groupId) ?? [];
-      groupMembers.push({
-        displayName: getShareGroupMemberDisplayName(member),
-        id: member.id,
-      });
-      nextMembers.set(member.groupId, groupMembers);
-    }
-
-    for (const groupMembers of nextMembers.values()) {
-      groupMembers.sort((a, b) =>
-        a.displayName.localeCompare(b.displayName, "ja")
-      );
-    }
-
-    return nextMembers;
-  }, [uniqueReadableMembers]);
-  const ownMembershipByGroupId = useMemo(() => {
-    const nextMemberships = new Map<string, ShareGroupMember>();
-
-    for (const membership of memberships ?? []) {
-      nextMemberships.set(membership.groupId, membership);
-    }
-
-    return nextMemberships;
-  }, [memberships]);
-  const joinedGroups = useMemo(
-    () =>
-      (groups ?? [])
-        .filter((group) => groupIds.has(group.id))
-        .sort((a, b) => a.name.localeCompare(b.name, "ja")),
-    [groupIds, groups]
-  );
-
-  const createGroup = (groupName: string, displayName: string) => {
+  const createGroup = async (groupName: string, displayName: string) => {
     if (!session) {
       return;
     }
 
-    db.batch((batch) => {
-      const group = batch.insert(app.shareGroups, { name: groupName });
-      batch.insert(app.shareGroupMembers, {
-        displayName,
-        groupId: group.id,
-        user_id: session.user_id,
-      });
-    });
-    setIsCreateDialogOpen(false);
-  };
-
-  const updateGroup = (groupName: string, displayName: string) => {
-    const membership = editingGroup
-      ? ownMembershipByGroupId.get(editingGroup.id)
-      : undefined;
-
-    if (!(editingGroup && membership)) {
-      return;
-    }
-
-    db.batch((batch) => {
-      batch.update(app.shareGroups, editingGroup.id, { name: groupName });
-      batch.update(app.shareGroupMembers, membership.id, { displayName });
-    });
-    setEditingGroup(undefined);
-  };
-
-  const leaveGroup = () => {
-    const membership = editingGroup
-      ? ownMembershipByGroupId.get(editingGroup.id)
-      : undefined;
-
-    if (!(editingGroup && membership && session)) {
-      return;
-    }
-
-    const groupMembers = uniqueReadableMembers.filter(
-      (member) => member.groupId === editingGroup.id
-    );
-    const isLastMember = groupMembers.length === 1;
-    const title = isLastMember
-      ? `${editingGroup.name}を削除しますか？`
-      : `${editingGroup.name}から脱退しますか？`;
-    let message =
-      "このシフト共有グループのメンバーには、あなたのシフトが共有されなくなります。";
-
-    if (isLastMember) {
-      message = "最後のメンバーのため、シフト共有グループも削除されます。";
-    }
-
-    Alert.alert(title, message, [
-      { style: "cancel", text: "キャンセル" },
-      {
-        onPress: () => {
-          db.batch((batch) => {
-            if (isLastMember) {
-              batch.delete(app.shareGroups, editingGroup.id);
-            }
-
-            batch.delete(app.shareGroupMembers, membership.id);
-          });
-          setEditingGroup(undefined);
-        },
-        style: "destructive",
-        text: isLastMember ? "削除" : "脱退",
-      },
-    ]);
-  };
-
-  const createInvite = async (group: ShareGroup) => {
-    const inviteApiBaseUrl = getInviteApiBaseUrl();
-
-    if (!inviteApiBaseUrl && Platform.OS !== "web") {
-      Alert.alert(
-        "招待リンクを作成できません",
-        "EXPO_PUBLIC_INVITE_BASE_URL を設定してください"
-      );
-      return;
-    }
-
-    setCreatingInviteGroupId(group.id);
-
     try {
-      const response = await fetch(`${inviteApiBaseUrl}/api/invites`, {
-        body: JSON.stringify({
-          groupId: group.id,
-          groupName: group.name,
-        }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        method: "POST",
+      await createGroupMutation({
+        displayName,
+        jazzUserId: session.user_id,
+        name: groupName,
       });
-
-      if (!response.ok) {
-        throw new Error("招待リンクを作成できませんでした");
-      }
-
-      const { url } = (await response.json()) as { url: string };
-      setInviteDetails({ groupName: group.name, url });
+      setIsCreateDialogOpen(false);
     } catch (error) {
       Alert.alert(
-        "招待リンクを作成できません",
+        "作成できませんでした",
         error instanceof Error
           ? error.message
           : "時間をおいて再試行してください"
       );
-    } finally {
-      setCreatingInviteGroupId("");
     }
+  };
+
+  const updateGroup = async (groupName: string, displayName: string) => {
+    if (!(editingGroup && session)) {
+      return;
+    }
+
+    const groupId = editingGroup._id;
+
+    try {
+      await Promise.all([
+        updateGroupName({
+          groupId,
+          jazzUserId: session.user_id,
+          name: groupName,
+        }),
+        updateDisplayName({
+          displayName,
+          groupId,
+          jazzUserId: session.user_id,
+        }),
+      ]);
+      setEditingGroup(undefined);
+    } catch (error) {
+      Alert.alert(
+        "保存できませんでした",
+        error instanceof Error
+          ? error.message
+          : "時間をおいて再試行してください"
+      );
+    }
+  };
+
+  const leaveGroup = () => {
+    if (!(editingGroup && session) || isLeavingGroupRef.current) {
+      return;
+    }
+
+    const isLastMember = editingGroup.memberCount === 1;
+    const title = isLastMember
+      ? `${editingGroup.name}を削除しますか？`
+      : `${editingGroup.name}から脱退しますか？`;
+    const message = isLastMember
+      ? "最後のメンバーのため、グループも削除されます。"
+      : "このグループのメンバーには、あなたのシフトが共有されなくなります。";
+    const groupId = editingGroup._id;
+    const jazzUserId = session.user_id;
+    const clearLeaveLock = () => {
+      isLeavingGroupRef.current = false;
+      setLeavingGroupId("");
+    };
+
+    isLeavingGroupRef.current = true;
+    setLeavingGroupId(groupId);
+
+    Alert.alert(
+      title,
+      message,
+      [
+        { onPress: clearLeaveLock, style: "cancel", text: "キャンセル" },
+        {
+          onPress: async () => {
+            try {
+              await leaveGroupMutation({ groupId, jazzUserId });
+              setEditingGroup(undefined);
+            } catch (error) {
+              Alert.alert(
+                "脱退できませんでした",
+                error instanceof Error
+                  ? error.message
+                  : "時間をおいて再試行してください"
+              );
+            } finally {
+              clearLeaveLock();
+            }
+          },
+          style: "destructive",
+          text: isLastMember ? "削除" : "脱退",
+        },
+      ],
+      {
+        cancelable: false,
+      }
+    );
+  };
+
+  const openInvite = (group: ConvexGroupSummary) => {
+    setInviteDetails({ groupName: group.name, url: group.inviteUrl });
   };
 
   let groupContent = <View className="flex-1" />;
 
-  if (joinedGroups.length > 0) {
+  if (groups && groups.length > 0) {
     groupContent = (
       <ScrollView
         className="flex-1"
@@ -276,22 +200,21 @@ export default function Group() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {joinedGroups.map((group) => (
+        {groups.map((group) => (
           <GroupListItem
             group={group}
-            isCreatingInvite={creatingInviteGroupId === group.id}
-            key={group.id}
-            memberChips={memberChipsByGroupId.get(group.id) ?? []}
-            memberCount={memberCountsByGroupId.get(group.id) ?? 0}
+            isPending={pendingGroupId === group._id}
+            key={group._id}
             onEdit={() => {
               setEditingGroup(group);
             }}
             onInvite={() => {
-              createInvite(group);
+              openInvite(group);
             }}
             onOpen={() => {
-              router.push(`/share-groups/${group.id}`);
+              router.push(`/share-groups/${group._id}`);
             }}
+            setPendingGroupId={setPendingGroupId}
           />
         ))}
       </ScrollView>
@@ -300,10 +223,10 @@ export default function Group() {
     groupContent = (
       <View className="flex-1 items-center justify-center gap-4 px-6">
         <Text className="text-center text-base" color="muted">
-          シフト共有がありません
+          グループがありません
         </Text>
         <Button
-          accessibilityLabel="シフト共有グループを作成"
+          accessibilityLabel="グループを作成"
           isDisabled={!session}
           onPress={() => {
             setIsCreateDialogOpen(true);
@@ -316,7 +239,7 @@ export default function Group() {
             size={18}
             tintColor={accentForegroundColor}
           />
-          <Button.Label>シフト共有グループを作成</Button.Label>
+          <Button.Label>グループを作成</Button.Label>
         </Button>
       </View>
     );
@@ -329,7 +252,7 @@ export default function Group() {
     >
       <View className="flex-1">
         <View className="h-14 flex-row items-center justify-between px-4">
-          <Text className="font-bold text-xl">シフト共有</Text>
+          <Text className="font-bold text-xl">グループ</Text>
           <View className="flex-row items-center gap-1">
             <Button
               accessibilityLabel="招待QRコードを読み取る"
@@ -350,7 +273,7 @@ export default function Group() {
               />
             </Button>
             <Button
-              accessibilityLabel="シフト共有グループを作成"
+              accessibilityLabel="グループを作成"
               isDisabled={!session}
               isIconOnly={true}
               onPress={() => {
@@ -373,16 +296,15 @@ export default function Group() {
         onOpenChange={setIsCreateDialogOpen}
         onSubmit={createGroup}
         submitLabel="保存"
-        title="シフト共有グループを作成"
+        title="グループを作成"
       />
       <GroupFormDialog
         group={editingGroup}
-        initialDisplayName={
-          editingGroup
-            ? ownMembershipByGroupId.get(editingGroup.id)?.displayName
-            : undefined
-        }
+        initialDisplayName={editingGroup?.ownDisplayName}
         initialGroupName={editingGroup?.name}
+        isLeaving={
+          Boolean(editingGroup) && leavingGroupId === editingGroup?._id
+        }
         isOpen={Boolean(editingGroup)}
         onLeave={leaveGroup}
         onOpenChange={(isOpen) => {
@@ -392,7 +314,7 @@ export default function Group() {
         }}
         onSubmit={updateGroup}
         submitLabel="保存"
-        title="シフト共有グループを編集"
+        title="グループを編集"
       />
       <InviteDialog
         inviteDetails={inviteDetails}
@@ -408,23 +330,21 @@ export default function Group() {
 
 const GroupListItem = ({
   group,
-  isCreatingInvite,
-  memberChips,
-  memberCount,
+  isPending,
   onEdit,
   onInvite,
   onOpen,
+  setPendingGroupId,
 }: {
-  group: ShareGroup;
-  isCreatingInvite: boolean;
-  memberChips: MemberChipData[];
-  memberCount: number;
+  group: ConvexGroupSummary;
+  isPending: boolean;
   onEdit: () => void;
   onInvite: () => void;
   onOpen: () => void;
+  setPendingGroupId: (groupId: Id<"groups"> | "") => void;
 }) => {
-  const visibleMemberChips = memberChips.slice(0, MAX_MEMBER_CHIPS);
-  const hiddenMemberCount = memberCount - visibleMemberChips.length;
+  const visibleMemberChips = group.members.slice(0, MAX_MEMBER_CHIPS);
+  const hiddenMemberCount = group.memberCount - visibleMemberChips.length;
 
   return (
     <Card className="relative p-4">
@@ -439,7 +359,7 @@ const GroupListItem = ({
                 animation="disable-all"
                 className="max-w-28"
                 color="default"
-                key={member.id}
+                key={member._id}
                 size="sm"
                 variant="soft"
               >
@@ -456,7 +376,7 @@ const GroupListItem = ({
                 <Chip.Label>+{hiddenMemberCount}</Chip.Label>
               </Chip>
             ) : null}
-            {memberCount === 0 ? (
+            {group.memberCount === 0 ? (
               <Text className="text-sm" color="muted">
                 メンバーなし
               </Text>
@@ -480,8 +400,12 @@ const GroupListItem = ({
       <View className="mt-4 flex-row justify-end gap-2">
         <Button
           accessibilityLabel={`${group.name}に招待`}
-          isDisabled={isCreatingInvite}
-          onPress={onInvite}
+          isDisabled={isPending}
+          onPress={() => {
+            setPendingGroupId(group._id);
+            onInvite();
+            setPendingGroupId("");
+          }}
           size="sm"
           variant="outline"
         >
@@ -493,7 +417,7 @@ const GroupListItem = ({
             }}
             size={16}
           />
-          <Button.Label>{isCreatingInvite ? "作成中" : "招待"}</Button.Label>
+          <Button.Label>招待</Button.Label>
         </Button>
         <Button
           accessibilityLabel={`${group.name}のシフトを見る`}
@@ -522,10 +446,15 @@ const InviteDialog = ({
       return;
     }
 
+    const shareMessage = `${inviteDetails.groupName}に参加してください\n${inviteDetails.url}`;
+    const shareUrl = inviteDetails.url;
+
     try {
+      onOpenChange(false);
+
       await Share.share({
-        message: `${inviteDetails.groupName}のシフト共有に参加してください\n${inviteDetails.url}`,
-        url: inviteDetails.url,
+        message: shareMessage,
+        url: shareUrl,
       });
     } catch (error) {
       Alert.alert(
@@ -622,6 +551,7 @@ const GroupFormDialog = ({
   initialDisplayName = "",
   initialGroupName = "",
   isOpen,
+  isLeaving = false,
   onLeave,
   onOpenChange,
   onSubmit,
@@ -630,26 +560,42 @@ const GroupFormDialog = ({
 }: GroupFormDialogProps) => {
   const groupNameRef = useRef(initialGroupName);
   const displayNameRef = useRef(initialDisplayName);
+  const isSubmittingRef = useRef(false);
   const [formKey, setFormKey] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       groupNameRef.current = initialGroupName;
       displayNameRef.current = initialDisplayName;
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
       setFormKey((currentKey) => currentKey + 1);
     }
   }, [initialDisplayName, initialGroupName, isOpen]);
 
-  const submit = () => {
+  const submit = async () => {
+    if (isSubmittingRef.current) {
+      return;
+    }
+
     const trimmedGroupName = groupNameRef.current.trim();
     const trimmedDisplayName = displayNameRef.current.trim();
 
     if (!(trimmedGroupName && trimmedDisplayName)) {
-      Alert.alert("シフト共有グループ名とあなたの名前を入力してください");
+      Alert.alert("グループ名とあなたの名前を入力してください");
       return;
     }
 
-    onSubmit(trimmedGroupName, trimmedDisplayName);
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+
+    try {
+      await onSubmit(trimmedGroupName, trimmedDisplayName);
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -666,20 +612,20 @@ const GroupFormDialog = ({
             </View>
             <View className="gap-4">
               <TextField>
-                <Label>シフト共有グループ名</Label>
+                <Label>グループ名</Label>
                 <Input
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoFocus={true}
                   defaultValue={initialGroupName}
+                  editable={!isSubmitting}
                   key={`group-name-${formKey}`}
                   onChangeText={(text) => {
                     groupNameRef.current = text;
                   }}
-                  placeholder="シフト共有グループ名"
+                  placeholder="グループ名"
                   returnKeyType="next"
                 />
-                {/* <Description>全員に共有されます</Description> */}
               </TextField>
               <TextField>
                 <Label>あなたの名前</Label>
@@ -687,6 +633,7 @@ const GroupFormDialog = ({
                   autoCapitalize="none"
                   autoCorrect={false}
                   defaultValue={initialDisplayName}
+                  editable={!isSubmitting}
                   key={`display-name-${formKey}`}
                   onChangeText={(text) => {
                     displayNameRef.current = text;
@@ -699,12 +646,18 @@ const GroupFormDialog = ({
             </View>
             <View className="mt-5 flex-row justify-end gap-3">
               {group ? (
-                <Button onPress={onLeave} size="sm" variant="outline">
-                  <Button.Label>脱退</Button.Label>
+                <Button
+                  isDisabled={isSubmitting || isLeaving}
+                  onPress={onLeave}
+                  size="sm"
+                  variant="outline"
+                >
+                  <Button.Label>{isLeaving ? "処理中" : "脱退"}</Button.Label>
                 </Button>
               ) : null}
               {group ? <View className="flex-1" /> : null}
               <Button
+                isDisabled={isSubmitting || isLeaving}
                 onPress={() => {
                   onOpenChange(false);
                 }}
@@ -713,8 +666,15 @@ const GroupFormDialog = ({
               >
                 <Button.Label>キャンセル</Button.Label>
               </Button>
-              <Button onPress={submit} size="sm" variant="primary">
-                <Button.Label>{submitLabel}</Button.Label>
+              <Button
+                isDisabled={isSubmitting || isLeaving}
+                onPress={submit}
+                size="sm"
+                variant="primary"
+              >
+                <Button.Label>
+                  {isSubmitting ? "保存中" : submitLabel}
+                </Button.Label>
               </Button>
             </View>
           </Dialog.Content>

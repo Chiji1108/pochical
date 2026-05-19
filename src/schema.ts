@@ -1,14 +1,6 @@
 import { schema as s } from "jazz-tools";
 
 const schema = {
-  shareGroups: s.table({
-    name: s.string(),
-  }),
-  shareGroupMembers: s.table({
-    groupId: s.ref("shareGroups"),
-    user_id: s.string(),
-    displayName: s.string(),
-  }),
   patterns: s.table({
     name: s.string(),
     emoji: s.string(),
@@ -36,12 +28,6 @@ const schema = {
 
 type AppSchema = s.Schema<typeof schema>;
 export const app: s.App<AppSchema> = s.defineApp(schema);
-
-export type ShareGroup = s.RowOf<typeof app.shareGroups>;
-export type ShareGroupQueryBuilder = typeof app.shareGroups;
-
-export type ShareGroupMember = s.RowOf<typeof app.shareGroupMembers>;
-export type ShareGroupMemberQueryBuilder = typeof app.shareGroupMembers;
 
 export type Pattern = s.RowOf<typeof app.patterns>;
 export type PatternQueryBuilder = typeof app.patterns;
