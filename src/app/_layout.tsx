@@ -95,6 +95,7 @@ function RootLayoutContent() {
                     options={{ presentation: "fullScreenModal" }}
                   />
                   <Stack.Screen name="share-groups/[groupId]" />
+                  <Stack.Screen name="share-groups/[groupId]/shifts" />
                   <Stack.Screen name="invite/scan" />
                   <Stack.Screen name="invite/[inviteCode]" />
                 </Stack>

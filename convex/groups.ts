@@ -184,11 +184,13 @@ export const getDetail = query({
 
     return {
       _id: group._id,
+      inviteUrl: buildInviteUrl(group.inviteCode),
       members: members.map((member) => ({
         _id: member._id,
         displayName: member.displayName,
         jazzUserId: member.jazzUserId,
       })),
+      ownDisplayName: membership.displayName,
       name: group.name,
     };
   },
