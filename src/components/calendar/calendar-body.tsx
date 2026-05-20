@@ -38,6 +38,7 @@ type CalendarBodyProps = {
   weekStartsOn: WeekStartsOn;
   yearMonth: Date;
   className?: string;
+  isExportMode?: boolean;
   weekDate?: Date;
 };
 
@@ -51,6 +52,7 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
   shiftsByDate,
   weekStartsOn,
   className,
+  isExportMode = false,
   weekDate,
 }) => {
   const fallbackProgress = useSharedValue(0);
@@ -78,7 +80,7 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
   );
 
   const renderDateCell = (date: Date, shouldDimOutOfMonth: boolean) => {
-    const isSelectedDate = isSameDay(date, selectedDate);
+    const isSelectedDate = !isExportMode && isSameDay(date, selectedDate);
     const highlightColor = getCalendarDateHighlightColor(
       date,
       calendarHighlightTargets
@@ -87,6 +89,7 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
     const shiftPattern = shift?.patternId
       ? patternsById.get(shift.patternId)
       : undefined;
+    const isDayOffShift = Boolean(shiftPattern?.countsAsDayOff);
     return (
       <Pressable
         className={cn(
@@ -97,6 +100,7 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
             "bg-foreground/85": isSelectedDate,
           }
         )}
+        disabled={isExportMode}
         onPress={async () => {
           setSelectedDate(date);
 
@@ -108,7 +112,10 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
         }}
         style={{ height: CALENDAR_DAY_CELL_HEIGHT }}
       >
-        {shift?.hasNotes ? (
+        {isExportMode && isDayOffShift ? (
+          <View className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        ) : null}
+        {shift?.hasNotes && !isExportMode ? (
           <View
             className={cn(
               "absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full",
@@ -119,20 +126,30 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
             )}
           />
         ) : null}
-        <Text
-          className={cn("font-semibold text-xs", {
-            "text-blue-500": !isSelectedDate && highlightColor === "blue",
-            "text-background": isSelectedDate,
-            "text-red-500": !isSelectedDate && highlightColor === "red",
-          })}
-        >
-          {getDate(date)}
-        </Text>
+        <View className="min-h-5 min-w-5 items-center justify-center">
+          <Text
+            className={cn("font-semibold text-xs", {
+              "text-blue-500": !isSelectedDate && highlightColor === "blue",
+              "text-background": isSelectedDate,
+              "text-red-500": !isSelectedDate && highlightColor === "red",
+            })}
+          >
+            {getDate(date)}
+          </Text>
+        </View>
         {shiftPattern ? (
-          <View className="min-w-0 flex-1 items-center justify-center">
+          <View className="min-w-0 flex-1 items-center justify-center gap-0.5">
             <Text className="text-center text-sm" numberOfLines={1}>
               {shiftPattern.emoji}
             </Text>
+            {isExportMode ? (
+              <Text
+                className="max-w-full text-center font-medium text-[9px] text-foreground/75 leading-3"
+                numberOfLines={1}
+              >
+                {shiftPattern.name}
+              </Text>
+            ) : null}
           </View>
         ) : null}
       </Pressable>

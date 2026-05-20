@@ -22,6 +22,7 @@ type AppHeaderProps = {
   rightAction?: AppHeaderAction;
   rightActions?: AppHeaderAction[];
   title: string;
+  titleAlign?: "center" | "left";
 };
 
 type HeaderActionButtonProps = {
@@ -57,10 +58,12 @@ export const AppHeader: FC<AppHeaderProps> = ({
   rightAction,
   rightActions,
   title,
+  titleAlign = "center",
 }) => {
   const insets = useSafeAreaInsets();
   const resolvedRightActions =
     rightActions ?? (rightAction ? [rightAction] : []);
+  const isLeftAligned = titleAlign === "left";
 
   return (
     <BlurView
@@ -71,16 +74,28 @@ export const AppHeader: FC<AppHeaderProps> = ({
       tint="systemThinMaterial"
     >
       <View className="h-14 flex-row items-center px-3">
-        <View className="min-w-20 flex-1 items-start">
+        <View
+          className={cn(
+            isLeftAligned ? "items-start" : "min-w-20 flex-1 items-start"
+          )}
+        >
           <HeaderActionButton action={leftAction} />
         </View>
         <Text
-          className="min-w-0 px-3 text-center font-bold text-lg"
+          className={cn(
+            "min-w-0 px-3 font-bold text-lg",
+            isLeftAligned ? "flex-1 text-left" : "text-center"
+          )}
           numberOfLines={1}
         >
           {title}
         </Text>
-        <View className="min-w-20 flex-1 flex-row justify-end gap-1">
+        <View
+          className={cn(
+            "flex-row justify-end gap-1",
+            isLeftAligned ? undefined : "min-w-20 flex-1"
+          )}
+        >
           {resolvedRightActions.map((action) => (
             <HeaderActionButton
               action={action}

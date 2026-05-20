@@ -416,7 +416,7 @@ export default function ShareGroupShifts() {
             onPress: scrollToToday,
           },
         ]}
-        title={`${group.name}のシフト表`}
+        title={group.name}
       />
       <View className="flex-1">
         {members.length > 0 ? (

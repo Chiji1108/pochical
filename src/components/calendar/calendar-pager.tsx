@@ -26,6 +26,7 @@ type CalendarPagerProps = {
   setSelectedDate: (date: Date) => void;
   setYearMonth: Dispatch<SetStateAction<Date>>;
   shiftsByDate: ReadonlyMap<number, CalendarShiftSummary>;
+  isExportMode?: boolean;
   targetDate?: Date;
   weekStartsOn: WeekStartsOn;
   yearMonth: Date;
@@ -41,6 +42,7 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
   setSelectedDate,
   setYearMonth,
   shiftsByDate,
+  isExportMode = false,
   targetDate,
   weekStartsOn,
   yearMonth,
@@ -57,12 +59,18 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
       height: nextHeight,
     };
   });
-  const monthLayerStyle = useAnimatedStyle(() => ({
-    opacity: 1 - transitionProgress.value,
-  }));
-  const weekLayerStyle = useAnimatedStyle(() => ({
-    opacity: transitionProgress.value,
-  }));
+  const monthLayerStyle = useAnimatedStyle(
+    () => ({
+      opacity: isExportMode ? 1 : 1 - transitionProgress.value,
+    }),
+    [isExportMode, transitionProgress]
+  );
+  const weekLayerStyle = useAnimatedStyle(
+    () => ({
+      opacity: isExportMode ? 0 : transitionProgress.value,
+    }),
+    [isExportMode, transitionProgress]
+  );
 
   useEffect(() => {
     if (detailTransitionProgress) {
@@ -78,12 +86,13 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
   return (
     <Animated.View style={[containerStyle, { overflow: "hidden" }]}>
       <Animated.View
-        pointerEvents={isDetailInputMode ? "none" : "auto"}
+        pointerEvents={isDetailInputMode && !isExportMode ? "none" : "auto"}
         style={monthLayerStyle}
       >
         <MonthPager
           calendarHighlightTargets={calendarHighlightTargets}
           detailTransitionProgress={transitionProgress}
+          isExportMode={isExportMode}
           onTargetDateHandled={
             isDetailInputMode ? undefined : onTargetDateHandled
           }
@@ -100,7 +109,7 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
         />
       </Animated.View>
       <Animated.View
-        pointerEvents={isDetailInputMode ? "auto" : "none"}
+        pointerEvents={isDetailInputMode && !isExportMode ? "auto" : "none"}
         style={[
           {
             left: 0,

@@ -126,13 +126,22 @@ export default function Settings() {
       [
         { style: "cancel", text: "キャンセル" },
         {
-          onPress: () => {
-            deleteWorkData(db, {
-              dayNotes,
-              members,
-              patterns,
-              shifts,
-            });
+          onPress: async () => {
+            try {
+              await deleteWorkData(db, {
+                dayNotes,
+                members,
+                patterns,
+                shifts,
+              });
+            } catch (error) {
+              Alert.alert(
+                "リセットできませんでした",
+                error instanceof Error
+                  ? error.message
+                  : "時間をおいて再試行してください"
+              );
+            }
           },
           style: "destructive",
           text: "リセット",
@@ -157,7 +166,7 @@ export default function Settings() {
             setIsResettingAppData(true);
 
             try {
-              deleteWorkData(db, {
+              await deleteWorkData(db, {
                 dayNotes,
                 members,
                 patterns,

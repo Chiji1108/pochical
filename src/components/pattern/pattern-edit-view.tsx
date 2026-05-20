@@ -16,6 +16,11 @@ import { Alert, ScrollView, View } from "react-native";
 import { EmojiPopup } from "react-native-emoji-popup";
 import { AppHeader } from "@/components/navigation/app-header";
 import { PatternTimePickerButton } from "@/components/pattern/pattern-time-picker-button";
+import {
+  playLightImpactHaptic,
+  playSelectionHaptic,
+  playWarningHaptic,
+} from "@/lib/haptics";
 import { app, type Pattern } from "@/schema";
 
 const DEFAULT_EMOJI = "❤️";
@@ -209,6 +214,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
       batch.delete(app.patterns, pattern.id);
     });
 
+    playLightImpactHaptic();
     router.back();
   };
 
@@ -222,6 +228,8 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
       relatedShifts.length > 0
         ? `関連する${relatedShifts.length}件のシフトも削除されます。`
         : "この操作は取り消せません。";
+
+    playWarningHaptic();
 
     Alert.alert(`${patternName}を削除しますか？`, message, [
       {
@@ -260,16 +268,19 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
       });
     }
 
+    playLightImpactHaptic();
     router.back();
   };
 
   const setCountsAsDayOff = (countsAsDayOff: boolean) => {
+    playSelectionHaptic();
     updateFormState({
       countsAsDayOff,
     });
   };
 
   const setAllDay = (isAllDay: boolean) => {
+    playSelectionHaptic();
     updateFormState({
       isAllDay,
       nextDayPatternId: isAllDay ? undefined : formState.nextDayPatternId,
@@ -310,6 +321,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
           emoji={formState.emoji}
           name={formState.name}
           onChangeEmoji={(emoji) => {
+            playSelectionHaptic();
             updateFormState({ emoji });
           }}
           onChangeName={(name) => {
@@ -328,6 +340,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
             updateFormState({ endDate });
           }}
           onChangeNextDayPattern={(nextDayPatternId) => {
+            playSelectionHaptic();
             updateFormState({ nextDayPatternId });
           }}
           onChangeStartDate={(startDate) => {

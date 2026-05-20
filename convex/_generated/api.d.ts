@@ -12,6 +12,7 @@ import type * as chat from "../chat.js";
 import type * as groups from "../groups.js";
 import type * as http from "../http.js";
 import type * as invites from "../invites.js";
+import type * as presence from "../presence.js";
 
 import type {
   ApiFromModules,
@@ -24,6 +25,7 @@ declare const fullApi: ApiFromModules<{
   groups: typeof groups;
   http: typeof http;
   invites: typeof invites;
+  presence: typeof presence;
 }>;
 
 /**
@@ -52,4 +54,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  presence: import("@convex-dev/presence/_generated/component.js").ComponentApi<"presence">;
+};

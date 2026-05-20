@@ -30,6 +30,7 @@ type MonthPagerProps = {
   setSelectedDate: (date: Date) => void;
   setYearMonth: Dispatch<SetStateAction<Date>>;
   shiftsByDate: ReadonlyMap<number, CalendarShiftSummary>;
+  isExportMode?: boolean;
   scrollEnabled?: boolean;
   syncDate?: Date;
   targetDate?: Date;
@@ -70,6 +71,7 @@ export const MonthPager: FC<MonthPagerProps> = ({
   setSelectedDate,
   setYearMonth,
   shiftsByDate,
+  isExportMode = false,
   scrollEnabled = true,
   syncDate,
   targetDate,
@@ -262,6 +264,7 @@ export const MonthPager: FC<MonthPagerProps> = ({
         <CalendarBody
           calendarHighlightTargets={calendarHighlightTargets}
           detailTransitionProgress={detailTransitionProgress}
+          isExportMode={isExportMode}
           patternsById={patternsById}
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
@@ -274,6 +277,7 @@ export const MonthPager: FC<MonthPagerProps> = ({
     [
       detailTransitionProgress,
       calendarHighlightTargets,
+      isExportMode,
       pageWidth,
       patternsById,
       selectedDate,

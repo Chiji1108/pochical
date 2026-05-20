@@ -1,4 +1,5 @@
-import { useQuery } from "convex/react";
+import { usePresence } from "@convex-dev/presence/react-native";
+import { useMutation, useQuery } from "convex/react";
 import { setStringAsync } from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
@@ -10,7 +11,7 @@ import {
   useThemeColor,
 } from "heroui-native";
 import type { ReactNode } from "react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -25,6 +26,7 @@ import {
   AppHeader,
   type AppHeaderAction,
 } from "@/components/navigation/app-header";
+import type { ChatPresenceMember, ChatPresenceUser } from "@/lib/chat-presence";
 import { getInviteCodeFromInviteUrl } from "@/lib/invite-links";
 import { api as convexApi } from "../../../convex/_generated/api";
 import { LinkifiedText } from "../common/linkified-text";
@@ -96,11 +98,26 @@ type ChatViewProps = {
   onBack: () => void;
   onLoadMore: () => void;
   onSend: (body: string) => Promise<void>;
+  presenceMembers: ChatPresenceMember[];
+  presenceRoomId: string;
   readReceiptMode: "count" | "direct";
   rightActions?: AppHeaderAction[];
   title: string;
   topContent?: ReactNode;
 };
+
+type PresenceStateWithData = {
+  data?: unknown;
+  lastDisconnected: number;
+  online: boolean;
+  userId: string;
+};
+
+const isTypingPresenceData = (data: unknown) =>
+  typeof data === "object" &&
+  data !== null &&
+  "isTyping" in data &&
+  (data as { isTyping?: unknown }).isTyping === true;
 
 const messageTimeFormatter = new Intl.DateTimeFormat("ja-JP", {
   hour: "2-digit",
@@ -127,6 +144,7 @@ const dateKeyFormatter = new Intl.DateTimeFormat("sv-SE", {
 });
 const urlRegex = /(?:https?:\/\/|www\.)[^\s<>"']+/gi;
 const trailingPunctuationRegex = /[),.。、]+$/;
+const optimisticMessageIdPrefix = "message:";
 
 const getStartOfDay = (date: Date) => {
   const startOfDay = new Date(date);
@@ -263,6 +281,18 @@ const getChatListItemKey = (item: ChatListItem) => {
   return item.key;
 };
 
+const getTypingSummary = (typingUsers: ChatPresenceUser[]) => {
+  if (typingUsers.length === 0) {
+    return null;
+  }
+
+  if (typingUsers.length === 1) {
+    return `${typingUsers[0].displayName}さんが入力中...`;
+  }
+
+  return `${typingUsers.length}人が入力中...`;
+};
+
 export const ChatView = ({
   currentUserId,
   events = [],
@@ -271,6 +301,8 @@ export const ChatView = ({
   onBack,
   onLoadMore,
   onSend,
+  presenceMembers,
+  presenceRoomId,
   readReceiptMode,
   rightActions,
   title,
@@ -286,11 +318,65 @@ export const ChatView = ({
   const [body, setBody] = useState("");
   const [isSending, setIsSending] = useState(false);
   const trimmedBody = body.trim();
+  const isTyping = trimmedBody.length > 0;
   const isSendDisabled = isSending || !trimmedBody;
+  const presenceState = usePresence(
+    convexApi.presence,
+    presenceRoomId,
+    currentUserId
+  );
+  const updateTypingMutation = useMutation(convexApi.presence.updateTyping);
   const listItems = useMemo(
     () => buildChatListItems(messages, events),
     [events, messages]
   );
+  const presenceUsers = useMemo(() => {
+    const membersByJazzUserId = new Map(
+      presenceMembers.map((member) => [member.jazzUserId, member])
+    );
+    const states = (presenceState ?? []) as PresenceStateWithData[];
+    const users: ChatPresenceUser[] = [];
+
+    for (const state of states) {
+      if (state.userId === currentUserId || !state.online) {
+        continue;
+      }
+
+      const member = membersByJazzUserId.get(state.userId);
+
+      if (!member) {
+        continue;
+      }
+
+      users.push({
+        ...member,
+        isTyping: isTypingPresenceData(state.data),
+        online: state.online,
+      });
+    }
+
+    return users;
+  }, [currentUserId, presenceMembers, presenceState]);
+  const typingUsers = presenceUsers.filter((user) => user.isTyping);
+  const typingSummary = getTypingSummary(typingUsers);
+
+  useEffect(() => {
+    updateTypingMutation({
+      isTyping,
+      roomId: presenceRoomId,
+      userId: currentUserId,
+    }).catch(() => undefined);
+
+    return () => {
+      if (isTyping) {
+        updateTypingMutation({
+          isTyping: false,
+          roomId: presenceRoomId,
+          userId: currentUserId,
+        }).catch(() => undefined);
+      }
+    };
+  }, [currentUserId, isTyping, presenceRoomId, updateTypingMutation]);
 
   const sendMessage = async () => {
     if (isSendDisabled) {
@@ -299,6 +385,11 @@ export const ChatView = ({
 
     const messageBody = trimmedBody;
     setBody("");
+    updateTypingMutation({
+      isTyping: false,
+      roomId: presenceRoomId,
+      userId: currentUserId,
+    }).catch(() => undefined);
     setIsSending(true);
 
     try {
@@ -370,6 +461,7 @@ export const ChatView = ({
         onEndReachedThreshold={0.4}
         renderItem={renderListItem}
       />
+      <TypingIndicator label={typingSummary} />
       <View
         className="border-border border-t bg-background px-3 pt-2"
         style={{ paddingBottom: Math.max(12, insets.bottom + 8) }}
@@ -415,6 +507,16 @@ const formatEventActor = (event: ChatEvent, currentUserId: string) =>
   event.actorJazzUserId === currentUserId
     ? "あなた"
     : `${event.actorDisplayNameSnapshot}さん`;
+
+const TypingIndicator = ({ label }: { label: string | null }) => (
+  <View className="min-h-0 justify-center bg-background px-4">
+    {label ? (
+      <Text className="pb-1 text-xs" color="muted" numberOfLines={1}>
+        {label}
+      </Text>
+    ) : null}
+  </View>
+);
 
 const formatValueChangeEvent = (
   actor: string,
@@ -677,12 +779,16 @@ const MessageMetadata = ({
   message: ChatMessage;
   readReceiptMode: "count" | "direct";
 }) => {
+  const mutedColor = useThemeColor("muted");
   let readLabel: string | null = null;
 
   if (isOwnMessage && message.readCount > 0) {
     readLabel =
       readReceiptMode === "count" ? `既読 ${message.readCount}` : "既読";
   }
+
+  const isSending =
+    isOwnMessage && message._id.startsWith(optimisticMessageIdPrefix);
 
   return (
     <View className={isOwnMessage ? "mb-0.5 items-end" : "mb-0.5 items-start"}>
@@ -691,9 +797,19 @@ const MessageMetadata = ({
           {readLabel}
         </Text>
       ) : null}
-      <Text className="text-[10px] leading-tight" color="muted">
-        {messageTimeFormatter.format(new Date(message.createdAt))}
-      </Text>
+      {isSending ? (
+        <View className="h-3 justify-center">
+          <SymbolView
+            name={{ android: "send", ios: "paperplane", web: "send" }}
+            size={10}
+            tintColor={mutedColor}
+          />
+        </View>
+      ) : (
+        <Text className="text-[10px] leading-tight" color="muted">
+          {messageTimeFormatter.format(new Date(message.createdAt))}
+        </Text>
+      )}
     </View>
   );
 };

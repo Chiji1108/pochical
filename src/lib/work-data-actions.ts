@@ -8,6 +8,10 @@ import {
 } from "@/schema";
 
 type JazzDb = ReturnType<typeof useDb>;
+type DeleteOperation = {
+  id: string;
+  run: () => ReturnType<JazzDb["delete"]>;
+};
 
 type ShiftPatternResetData = {
   patterns: Pattern[];
@@ -22,47 +26,75 @@ type WorkDataResetData = ShiftPatternResetData & {
 export const deleteShiftPatternsAndRelatedData = (
   db: JazzDb,
   data: ShiftPatternResetData
-): void => {
+): Promise<void> => {
   if (data.patterns.length === 0 && data.shifts.length === 0) {
-    return;
+    return Promise.resolve();
   }
 
-  db.batch((batch) => {
-    for (const shift of data.shifts) {
-      batch.delete(app.shifts, shift.id);
-    }
-
-    for (const pattern of data.patterns) {
-      batch.delete(app.patterns, pattern.id);
-    }
-  });
+  return deleteRows([
+    ...data.shifts.map((shift) => ({
+      id: shift.id,
+      run: () => db.delete(app.shifts, shift.id),
+    })),
+    ...data.patterns.map((pattern) => ({
+      id: pattern.id,
+      run: () => db.delete(app.patterns, pattern.id),
+    })),
+  ]);
 };
 
-export const deleteWorkData = (db: JazzDb, data: WorkDataResetData): void => {
+export const deleteWorkData = (
+  db: JazzDb,
+  data: WorkDataResetData
+): Promise<void> => {
   if (
     data.dayNotes.length === 0 &&
     data.members.length === 0 &&
     data.patterns.length === 0 &&
     data.shifts.length === 0
   ) {
-    return;
+    return Promise.resolve();
   }
 
-  db.batch((batch) => {
-    for (const dayNote of data.dayNotes) {
-      batch.delete(app.dayNotes, dayNote.id);
-    }
-
-    for (const shift of data.shifts) {
-      batch.delete(app.shifts, shift.id);
-    }
-
-    for (const pattern of data.patterns) {
-      batch.delete(app.patterns, pattern.id);
-    }
-
-    for (const member of data.members) {
-      batch.delete(app.members, member.id);
-    }
-  });
+  return deleteRows([
+    ...data.dayNotes.map((dayNote) => ({
+      id: dayNote.id,
+      run: () => db.delete(app.dayNotes, dayNote.id),
+    })),
+    ...data.shifts.map((shift) => ({
+      id: shift.id,
+      run: () => db.delete(app.shifts, shift.id),
+    })),
+    ...data.patterns.map((pattern) => ({
+      id: pattern.id,
+      run: () => db.delete(app.patterns, pattern.id),
+    })),
+    ...data.members.map((member) => ({
+      id: member.id,
+      run: () => db.delete(app.members, member.id),
+    })),
+  ]);
 };
+
+const deleteRows = async (rows: DeleteOperation[]): Promise<void> => {
+  const seenRowIds = new Set<string>();
+
+  for (const row of rows) {
+    if (seenRowIds.has(row.id)) {
+      continue;
+    }
+
+    seenRowIds.add(row.id);
+
+    try {
+      await row.run().wait({ tier: "local" });
+    } catch (error) {
+      if (!isAlreadyDeletedError(error)) {
+        throw error;
+      }
+    }
+  }
+};
+
+const isAlreadyDeletedError = (error: unknown): boolean =>
+  error instanceof Error && error.message.includes("row already deleted");

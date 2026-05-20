@@ -9,6 +9,7 @@ import { useSession } from "jazz-tools/react-native";
 import { useEffect } from "react";
 import { Alert, View } from "react-native";
 import { ChatView } from "@/components/chat/chat-view";
+import { createGroupPresenceRoomId } from "@/lib/chat-presence";
 import { api as convexApi } from "../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
 
@@ -136,6 +137,8 @@ export default function GroupChat() {
           throw error;
         }
       }}
+      presenceMembers={group.members}
+      presenceRoomId={createGroupPresenceRoomId(group._id)}
       readReceiptMode="count"
       title={group.name}
     />

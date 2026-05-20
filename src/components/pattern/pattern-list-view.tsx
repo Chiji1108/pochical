@@ -11,6 +11,11 @@ import Sortable, {
   type SortableGridRenderItem,
 } from "react-native-sortables";
 import {
+  playLightImpactHaptic,
+  playSelectionHaptic,
+  playWarningHaptic,
+} from "@/lib/haptics";
+import {
   BUNDLED_SHIFT_PATTERN_PRESETS,
   insertShiftPatternPreset,
   type ShiftPatternPreset,
@@ -96,6 +101,8 @@ export const PatternListView = () => {
         return;
       }
 
+      playLightImpactHaptic();
+
       db.batch((batch) => {
         for (const [index, pattern] of data.entries()) {
           batch.update(app.patterns, pattern.id, {
@@ -114,6 +121,7 @@ export const PatternListView = () => {
     }
 
     isDraggingRef.current = true;
+    playSelectionHaptic();
   }, []);
 
   const addPreset = (preset: ShiftPatternPreset) => {
@@ -121,6 +129,8 @@ export const PatternListView = () => {
       Alert.alert("作成できません", "接続後に作成できます。");
       return;
     }
+
+    playLightImpactHaptic();
 
     db.batch((batch) => {
       insertShiftPatternPreset(batch, preset, patterns.length);
@@ -132,6 +142,8 @@ export const PatternListView = () => {
       return;
     }
 
+    playWarningHaptic();
+
     Alert.alert(
       "すべてのパターンをリセットしますか？",
       shifts.length > 0
@@ -140,11 +152,20 @@ export const PatternListView = () => {
       [
         { style: "cancel", text: "キャンセル" },
         {
-          onPress: () => {
-            deleteShiftPatternsAndRelatedData(db, {
-              patterns,
-              shifts,
-            });
+          onPress: async () => {
+            try {
+              await deleteShiftPatternsAndRelatedData(db, {
+                patterns,
+                shifts,
+              });
+            } catch (error) {
+              Alert.alert(
+                "リセットできませんでした",
+                error instanceof Error
+                  ? error.message
+                  : "時間をおいて再試行してください"
+              );
+            }
           },
           style: "destructive",
           text: "リセット",
@@ -253,6 +274,7 @@ export const PatternListView = () => {
         <Tabs
           onValueChange={(value) => {
             if (isPresetTabValue(value)) {
+              playSelectionHaptic();
               setActiveTab(value);
             }
           }}

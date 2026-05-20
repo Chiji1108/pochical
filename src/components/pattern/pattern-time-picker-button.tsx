@@ -4,6 +4,7 @@ import { Button } from "heroui-native/button";
 import type { FC } from "react";
 import { useState } from "react";
 import { Platform } from "react-native";
+import { playSelectionHaptic } from "@/lib/haptics";
 import { NativeTimePicker } from "./native-time-picker";
 
 type PatternTimePickerButtonProps = {
@@ -18,6 +19,7 @@ export const PatternTimePickerButton: FC<PatternTimePickerButtonProps> = ({
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
 
   const openTimePicker = () => {
+    playSelectionHaptic();
     setIsTimePickerOpen(true);
   };
 

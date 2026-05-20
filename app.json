@@ -27,6 +27,7 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/with-mc-emoji-picker-fork",
       [
         "expo-splash-screen",
         {
@@ -50,7 +51,14 @@
         {
           "cameraPermission": "招待QRコードを読み取るためにカメラを使用します。"
         }
-      ]
+      ],
+      [
+        "expo-media-library",
+        {
+          "savePhotosPermission": "書き出したシフト画像を写真ライブラリに保存するために使用します。"
+        }
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

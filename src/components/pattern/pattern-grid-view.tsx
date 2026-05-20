@@ -60,6 +60,10 @@ export function PatternGridView({
     () => [...patterns].sort((a, b) => a.orderIndex - b.orderIndex),
     [patterns]
   );
+  const patternsById = useMemo(
+    () => new Map(patterns.map((item) => [item.id, item])),
+    [patterns]
+  );
   const columnCount = Math.max(
     1,
     Math.floor(
@@ -111,13 +115,22 @@ export function PatternGridView({
 
       upsertShift(pattern.id, shiftStartDate);
 
-      if (pattern.nextDayPatternId) {
+      if (
+        pattern.nextDayPatternId &&
+        patternsById.has(pattern.nextDayPatternId)
+      ) {
         upsertShift(pattern.nextDayPatternId, nextShiftStartDate);
+      } else if (pattern.nextDayPatternId) {
+        batch.update(app.patterns, pattern.id, {
+          nextDayPatternId: null,
+        });
       }
     });
 
     if (!isDetailInputMode) {
-      onSelectDate(addDays(shiftStartDate, pattern.nextDayPatternId ? 2 : 1));
+      const hasNextDayPattern =
+        pattern.nextDayPatternId && patternsById.has(pattern.nextDayPatternId);
+      onSelectDate(addDays(shiftStartDate, hasNextDayPattern ? 2 : 1));
     }
 
     selectionAsync().catch(() => {

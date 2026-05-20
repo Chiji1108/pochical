@@ -1,16 +1,18 @@
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useRouter } from "expo-router";
-import { SymbolView } from "expo-symbols";
-import { Card, ListGroup, Separator, Text } from "heroui-native";
+import { SymbolView, type SymbolViewProps } from "expo-symbols";
+import { Button, Card, ListGroup, Separator, Text } from "heroui-native";
 import { useSession } from "jazz-tools/react-native";
+import type { FC } from "react";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   type InviteDetails,
   InviteDialog,
 } from "@/components/group/group-dialogs";
-import { AppHeader } from "@/components/navigation/app-header";
+import { cn } from "@/lib/utils";
 import { api as convexApi } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 
@@ -26,6 +28,20 @@ type GroupDetailViewProps = {
   onBack?: () => void;
   onAutoInviteShown?: () => void;
   showInvite?: boolean;
+};
+
+type GroupDetailHeaderAction = {
+  accessibilityLabel: string;
+  icon: SymbolViewProps["name"];
+  onPress: () => void;
+};
+
+type GroupDetailHeaderProps = {
+  includeTopInset?: boolean;
+  leftAction?: GroupDetailHeaderAction;
+  rightAction?: GroupDetailHeaderAction;
+  title: string;
+  titleAlign?: "center" | "left";
 };
 
 const dateKeyFormatter = new Intl.DateTimeFormat("ja-JP", {
@@ -103,7 +119,7 @@ export const GroupDetailView = ({
   if (!group) {
     return (
       <View className="flex-1 bg-background">
-        <AppHeader
+        <GroupDetailHeader
           includeTopInset={!isEmbedded}
           leftAction={
             onBack
@@ -114,7 +130,6 @@ export const GroupDetailView = ({
                     ios: "chevron.left",
                     web: "arrow_back",
                   },
-                  label: "戻る",
                   onPress: onBack,
                 }
               : undefined
@@ -157,7 +172,7 @@ export const GroupDetailView = ({
 
   return (
     <View className="flex-1 bg-background">
-      <AppHeader
+      <GroupDetailHeader
         includeTopInset={!isEmbedded}
         leftAction={
           onBack
@@ -168,25 +183,23 @@ export const GroupDetailView = ({
                   ios: "chevron.left",
                   web: "arrow_back",
                 },
-                label: "戻る",
                 onPress: onBack,
               }
             : undefined
         }
-        rightActions={[
-          {
-            accessibilityLabel: `${group.name}の設定を開く`,
-            icon: {
-              android: "settings",
-              ios: "gearshape",
-              web: "settings",
-            },
-            onPress: () => {
-              router.push(`/share-groups/${group._id}/settings`);
-            },
+        rightAction={{
+          accessibilityLabel: `${group.name}の設定を開く`,
+          icon: {
+            android: "settings",
+            ios: "gearshape",
+            web: "settings",
           },
-        ]}
+          onPress: () => {
+            router.push(`/share-groups/${group._id}/settings`);
+          },
+        }}
         title={group.name}
+        titleAlign="left"
       />
       <ScrollView
         className="flex-1"
@@ -293,6 +306,72 @@ export const GroupDetailView = ({
           }
         }}
       />
+    </View>
+  );
+};
+
+const GroupDetailHeaderActionButton: FC<{
+  action?: GroupDetailHeaderAction;
+}> = ({ action }) => (
+  <View className="h-10 w-10">
+    {action ? (
+      <Button
+        accessibilityLabel={action.accessibilityLabel}
+        className="h-10 w-10"
+        isIconOnly
+        onPress={action.onPress}
+        size="sm"
+        variant="ghost"
+      >
+        <SymbolView name={action.icon} size={18} />
+      </Button>
+    ) : null}
+  </View>
+);
+
+const GroupDetailHeader: FC<GroupDetailHeaderProps> = ({
+  includeTopInset = true,
+  leftAction,
+  rightAction,
+  title,
+  titleAlign = "center",
+}) => {
+  const insets = useSafeAreaInsets();
+  const isLeftAligned = titleAlign === "left";
+
+  return (
+    <View
+      className="border-border/60 border-b bg-background"
+      style={{ paddingTop: includeTopInset ? insets.top : 0 }}
+    >
+      <View className="h-14 flex-row items-center px-3">
+        {isLeftAligned && !leftAction ? null : (
+          <View
+            className={cn(
+              isLeftAligned ? "items-start" : "min-w-20 flex-1 items-start"
+            )}
+          >
+            <GroupDetailHeaderActionButton action={leftAction} />
+          </View>
+        )}
+        <Text
+          className={cn(
+            "min-w-0 px-3 font-bold text-lg",
+            isLeftAligned ? "flex-1 text-left" : "text-center"
+          )}
+          numberOfLines={1}
+        >
+          {title}
+        </Text>
+        <View
+          className={cn(
+            "items-end",
+            isLeftAligned ? undefined : "min-w-20 flex-1"
+          )}
+        >
+          <GroupDetailHeaderActionButton action={rightAction} />
+        </View>
+      </View>
     </View>
   );
 };

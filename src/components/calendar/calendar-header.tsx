@@ -13,8 +13,7 @@ import { WeekRow } from "./week-row";
 
 type CalendarHeaderProps = {
   calendarHighlightTargets: CalendarHighlightTarget[];
-  isExportingMonth?: boolean;
-  onExportMonth?: () => void;
+  onOpenExport?: () => void;
   onSelectDate: (date: Date) => void;
   onPressToday: () => void;
   selectedDate: Date;
@@ -27,8 +26,7 @@ type CalendarHeaderContentProps = {
   calendarHighlightTargets: CalendarHighlightTarget[];
   canReturnToToday: boolean;
   className?: string;
-  isExportingMonth?: boolean;
-  onExportMonth?: () => void;
+  onOpenExport?: () => void;
   onPressToday: () => void;
   onSelectDate: (date: Date) => void;
   selectedDate: Date;
@@ -40,8 +38,7 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
   calendarHighlightTargets,
   canReturnToToday,
   className,
-  isExportingMonth,
-  onExportMonth,
+  onOpenExport,
   onPressToday,
   onSelectDate,
   selectedDate,
@@ -60,21 +57,28 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
         </Button.Label>
       </CalendarDatePickerButton>
       <View className="mx-2 flex-row items-center gap-1">
-        {onExportMonth ? (
+        {onOpenExport ? (
           <Button
-            accessibilityLabel="表示月のシフトを端末カレンダーに追加"
+            accessibilityLabel="書き出し画面を開く"
             className="h-10 w-10"
-            isDisabled={isExportingMonth}
             isIconOnly
-            onPress={onExportMonth}
+            onPress={async () => {
+              onOpenExport();
+
+              try {
+                await selectionAsync();
+              } catch {
+                // Haptics can be unavailable depending on the device or platform.
+              }
+            }}
             size="sm"
             variant="ghost"
           >
             <SymbolView
               name={{
-                android: "calendar_add_on",
-                ios: "calendar.badge.plus",
-                web: "calendar_add_on",
+                android: "ios_share",
+                ios: "square.and.arrow.up",
+                web: "ios_share",
               }}
               size={18}
             />
@@ -129,8 +133,7 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
 
 export const CalendarHeader: FC<CalendarHeaderProps> = ({
   calendarHighlightTargets,
-  isExportingMonth,
-  onExportMonth,
+  onOpenExport,
   onSelectDate,
   onPressToday,
   selectedDate,
@@ -148,8 +151,7 @@ export const CalendarHeader: FC<CalendarHeaderProps> = ({
       calendarHighlightTargets={calendarHighlightTargets}
       canReturnToToday={canReturnToToday}
       className={className}
-      isExportingMonth={isExportingMonth}
-      onExportMonth={onExportMonth}
+      onOpenExport={onOpenExport}
       onPressToday={onPressToday}
       onSelectDate={onSelectDate}
       selectedDate={selectedDate}

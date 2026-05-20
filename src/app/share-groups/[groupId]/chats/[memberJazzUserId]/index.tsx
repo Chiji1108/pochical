@@ -9,6 +9,7 @@ import { useSession } from "jazz-tools/react-native";
 import { useEffect } from "react";
 import { Alert, View } from "react-native";
 import { ChatView } from "@/components/chat/chat-view";
+import { createDirectPresenceRoomId } from "@/lib/chat-presence";
 import { api as convexApi } from "../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
 
@@ -161,6 +162,12 @@ export default function DirectChat() {
           throw error;
         }
       }}
+      presenceMembers={group.members}
+      presenceRoomId={createDirectPresenceRoomId(
+        group._id,
+        currentUserId,
+        targetMember.jazzUserId
+      )}
       readReceiptMode="direct"
       title={targetMember.displayName}
     />

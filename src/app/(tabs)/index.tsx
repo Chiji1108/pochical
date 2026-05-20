@@ -1,12 +1,12 @@
 import {
   addDays,
-  format,
   isSameDay,
   isSameMonth,
   startOfDay,
   startOfMonth,
 } from "date-fns";
 import { selectionAsync } from "expo-haptics";
+import { useRouter } from "expo-router";
 import { useAll, useSession } from "jazz-tools/react-native";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
@@ -30,21 +30,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { CalendarShiftSummary } from "@/components/calendar/calendar-body";
 import { CalendarHeader } from "@/components/calendar/calendar-header";
 import { CalendarPager } from "@/components/calendar/calendar-pager";
-import {
-  ExportCalendarDialog,
-  type ExportDialogResult,
-} from "@/components/calendar/export-calendar-dialog";
 import { PatternGridHeader } from "@/components/pattern/pattern-grid-header";
 import { PatternGridView } from "@/components/pattern/pattern-grid-view";
 import { ShiftDetailView } from "@/components/shift/shift-detail-view";
 import { useAppSettings } from "@/lib/app-settings";
-import { getMonthlyShiftCalendarEvents } from "@/lib/calendar-export";
-import {
-  addEventsToDeviceCalendar,
-  type CalendarSelectOption,
-  getCalendarSelectOptions,
-  getWritableCalendars,
-} from "@/lib/device-calendar";
 import { app, type DayNote, type Member, type Pattern } from "@/schema";
 
 const DETAIL_PAGE_DRAG_DISTANCE = 180;
@@ -55,19 +44,9 @@ const TAB_OVERLAP_PADDING = 36;
 
 export default function Index() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { settings } = useAppSettings();
-  const [excludeDayOffShiftsFromExport, setExcludeDayOffShiftsFromExport] =
-    useState(true);
-  const [calendarSelectOptions, setCalendarSelectOptions] = useState<
-    CalendarSelectOption[]
-  >([]);
-  const [exportDialogResult, setExportDialogResult] =
-    useState<ExportDialogResult>();
   const [headerHeight, setHeaderHeight] = useState(0);
-  const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
-  const [isExportingMonth, setIsExportingMonth] = useState(false);
-  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-  const [selectedCalendarId, setSelectedCalendarId] = useState<string>();
   const [isDetailInputMode, setIsDetailInputMode] = useState(false);
   const [isShiftInputMode, setIsShiftInputMode] = useState(false);
   const [yearMonth, setYearMonth] = useState<Date>(new Date());
@@ -163,36 +142,17 @@ export default function Index() {
   const selectedDateDayNote = dayNotesByDate.get(
     startOfDay(selectedDate).getTime()
   );
-  const monthlyShiftCalendarEvents = useMemo(
-    () =>
-      getMonthlyShiftCalendarEvents({
-        dayNotesByDate,
-        excludeDayOffShifts: excludeDayOffShiftsFromExport,
-        membersById,
-        patternsById,
-        shifts,
-        yearMonth,
-      }),
-    [
-      dayNotesByDate,
-      excludeDayOffShiftsFromExport,
-      membersById,
-      patternsById,
-      shifts,
-      yearMonth,
-    ]
-  );
-  const monthLabel = format(yearMonth, "yyyy年M月");
-  const selectedCalendarOption = useMemo(
-    () =>
-      calendarSelectOptions.find(
-        (option) => option.value === selectedCalendarId
-      ),
-    [calendarSelectOptions, selectedCalendarId]
-  );
-
   const returnToToday = () => {
     setTargetDate(new Date());
+  };
+
+  const openExport = () => {
+    router.push({
+      pathname: "/export",
+      params: {
+        yearMonth: startOfMonth(yearMonth).toISOString(),
+      },
+    });
   };
 
   const selectDateImmediately = (date: Date) => {
@@ -236,115 +196,6 @@ export default function Index() {
         ? currentHeaderHeight
         : nextHeaderHeight
     );
-  };
-
-  const loadWritableCalendars = async () => {
-    setIsLoadingCalendars(true);
-
-    try {
-      const writableCalendars = await getWritableCalendars();
-
-      if (!writableCalendars) {
-        setCalendarSelectOptions([]);
-        setSelectedCalendarId(undefined);
-        setExportDialogResult({
-          message:
-            "端末のカレンダーへのアクセスを許可してから、もう一度お試しください。",
-          title: "カレンダー権限が必要です",
-        });
-        return;
-      }
-
-      const nextOptions = getCalendarSelectOptions(writableCalendars);
-
-      setCalendarSelectOptions(nextOptions);
-      setSelectedCalendarId((currentCalendarId) =>
-        nextOptions.some((option) => option.value === currentCalendarId)
-          ? currentCalendarId
-          : nextOptions[0]?.value
-      );
-
-      if (nextOptions.length === 0) {
-        setExportDialogResult({
-          message:
-            "書き込み可能な端末カレンダーが見つかりませんでした。端末のカレンダー設定を確認してください。",
-          title: "追加先カレンダーがありません",
-        });
-      }
-    } catch {
-      setCalendarSelectOptions([]);
-      setSelectedCalendarId(undefined);
-      setExportDialogResult({
-        message:
-          "端末カレンダーの一覧を取得できませんでした。カレンダー設定を確認してから、もう一度お試しください。",
-        title: "追加先カレンダーを取得できません",
-      });
-    } finally {
-      setIsLoadingCalendars(false);
-    }
-  };
-
-  const exportMonthlyShifts = async () => {
-    if (Platform.OS === "web") {
-      setExportDialogResult({
-        message:
-          "端末のカレンダーアプリへの追加は iOS / Android で利用できます。",
-        title: "端末カレンダーに追加できません",
-      });
-      return;
-    }
-
-    if (monthlyShiftCalendarEvents.length === 0) {
-      setExportDialogResult({
-        message: "表示中の月に追加対象のシフトがありません。",
-        title: "追加するシフトがありません",
-      });
-      return;
-    }
-
-    setIsExportingMonth(true);
-
-    try {
-      if (!selectedCalendarId) {
-        setExportDialogResult({
-          message:
-            "追加先の端末カレンダーを選択してから、もう一度お試しください。",
-          title: "追加先カレンダーが必要です",
-        });
-        return;
-      }
-
-      await addEventsToDeviceCalendar(
-        selectedCalendarId,
-        monthlyShiftCalendarEvents
-      );
-
-      setExportDialogResult({
-        message: `${format(yearMonth, "yyyy年M月")}のシフト ${monthlyShiftCalendarEvents.length}件を端末カレンダーに追加しました。`,
-        title: "追加しました",
-      });
-    } catch {
-      setExportDialogResult({
-        message:
-          "端末カレンダーに予定を追加できませんでした。カレンダー設定を確認してから、もう一度お試しください。",
-        title: "追加に失敗しました",
-      });
-    } finally {
-      setIsExportingMonth(false);
-    }
-  };
-
-  const confirmExportMonthlyShifts = () => {
-    setCalendarSelectOptions([]);
-    setExportDialogResult(undefined);
-    setIsExportDialogOpen(true);
-    loadWritableCalendars().catch(() => {
-      setExportDialogResult({
-        message:
-          "端末カレンダーの一覧を取得できませんでした。カレンダー設定を確認してから、もう一度お試しください。",
-        title: "追加先カレンダーを取得できません",
-      });
-    });
   };
 
   const detailModeGesture = useMemo(
@@ -427,8 +278,7 @@ export default function Index() {
         <CalendarHeader
           calendarHighlightTargets={settings.calendarHighlightTargets}
           className="pt-0"
-          isExportingMonth={isExportingMonth}
-          onExportMonth={confirmExportMonthlyShifts}
+          onOpenExport={openExport}
           onPressToday={returnToToday}
           onSelectDate={setTargetDate}
           selectedDate={selectedDate}
@@ -436,29 +286,6 @@ export default function Index() {
           yearMonth={yearMonth}
         />
       </View>
-      <ExportCalendarDialog
-        calendarSelectOptions={calendarSelectOptions}
-        excludeDayOffShiftsFromExport={excludeDayOffShiftsFromExport}
-        exportDialogResult={exportDialogResult}
-        isExportingMonth={isExportingMonth}
-        isLoadingCalendars={isLoadingCalendars}
-        isOpen={isExportDialogOpen}
-        monthLabel={monthLabel}
-        onChangeExcludeDayOffShiftsFromExport={setExcludeDayOffShiftsFromExport}
-        onChangeOpen={setIsExportDialogOpen}
-        onChangeSelectedCalendarId={setSelectedCalendarId}
-        onExport={exportMonthlyShifts}
-        onExportError={() => {
-          setExportDialogResult({
-            message:
-              "端末カレンダーに予定を追加できませんでした。カレンダー設定を確認してから、もう一度お試しください。",
-            title: "追加に失敗しました",
-          });
-        }}
-        selectedCalendarId={selectedCalendarId}
-        selectedCalendarOption={selectedCalendarOption}
-        shiftCount={monthlyShiftCalendarEvents.length}
-      />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
