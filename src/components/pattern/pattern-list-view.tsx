@@ -11,11 +11,11 @@ import Sortable, {
   type SortableGridRenderItem,
 } from "react-native-sortables";
 import {
+  BUNDLED_SHIFT_PATTERN_PRESETS,
   insertShiftPatternPreset,
-  SHIFT_PATTERN_PRESETS,
   type ShiftPatternPreset,
-  type ShiftPatternPresetCategory,
   type ShiftPatternPresetPattern,
+  SINGLE_SHIFT_PATTERN_PRESETS,
 } from "@/lib/shift-pattern-presets";
 import { deleteShiftPatternsAndRelatedData } from "@/lib/work-data-actions";
 import { app, type Pattern } from "@/schema";
@@ -23,12 +23,23 @@ import { app, type Pattern } from "@/schema";
 const PATTERN_COLUMN_COUNT = 6;
 const PATTERN_GRID_GAP = 8;
 
+type PresetTabValue = "bundle" | "single";
+
 const PRESET_TABS: {
   label: string;
-  value: ShiftPatternPresetCategory;
+  presets: ShiftPatternPreset[];
+  value: PresetTabValue;
 }[] = [
-  { label: "まとめて追加", value: "workstyle" },
-  { label: "1個だけ追加", value: "other" },
+  {
+    label: "まとめて追加",
+    presets: BUNDLED_SHIFT_PATTERN_PRESETS,
+    value: "bundle",
+  },
+  {
+    label: "1個だけ追加",
+    presets: SINGLE_SHIFT_PATTERN_PRESETS,
+    value: "single",
+  },
 ];
 
 export const PatternListView = () => {
@@ -42,8 +53,7 @@ export const PatternListView = () => {
   const clearDraggingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
-  const [activeTab, setActiveTab] =
-    useState<ShiftPatternPresetCategory>("workstyle");
+  const [activeTab, setActiveTab] = useState<PresetTabValue>("bundle");
   const patterns =
     useAll(
       currentUserId
@@ -64,22 +74,6 @@ export const PatternListView = () => {
       }),
     [patterns]
   );
-  const presetsByCategory = useMemo(() => {
-    const nextPresetsByCategory = new Map<
-      ShiftPatternPresetCategory,
-      ShiftPatternPreset[]
-    >();
-
-    for (const tab of PRESET_TABS) {
-      nextPresetsByCategory.set(
-        tab.value,
-        SHIFT_PATTERN_PRESETS.filter((preset) => preset.category === tab.value)
-      );
-    }
-
-    return nextPresetsByCategory;
-  }, []);
-
   const handleDragEnd = useCallback<SortableGridDragEndCallback<Pattern>>(
     ({ data }) => {
       if (clearDraggingTimeoutRef.current) {
@@ -258,7 +252,7 @@ export const PatternListView = () => {
         <SectionTitle>シフトパターンを追加</SectionTitle>
         <Tabs
           onValueChange={(value) => {
-            if (isShiftPatternPresetCategory(value)) {
+            if (isPresetTabValue(value)) {
               setActiveTab(value);
             }
           }}
@@ -275,11 +269,11 @@ export const PatternListView = () => {
           </Tabs.List>
           {PRESET_TABS.map((tab) => (
             <Tabs.Content className="pt-3" key={tab.value} value={tab.value}>
-              {tab.value === "workstyle" ? (
+              {tab.value === "bundle" ? (
                 <PresetList
                   isDisabled={!session}
                   onAddPreset={addPreset}
-                  presets={presetsByCategory.get(tab.value) ?? []}
+                  presets={tab.presets}
                 />
               ) : (
                 <AddPartsGrid
@@ -288,7 +282,7 @@ export const PatternListView = () => {
                     router.push("/patterns/new");
                   }}
                   onAddPreset={addPreset}
-                  presets={presetsByCategory.get(tab.value) ?? []}
+                  presets={tab.presets}
                 />
               )}
             </Tabs.Content>
@@ -299,9 +293,7 @@ export const PatternListView = () => {
   );
 };
 
-const isShiftPatternPresetCategory = (
-  value: string
-): value is ShiftPatternPresetCategory =>
+const isPresetTabValue = (value: string): value is PresetTabValue =>
   PRESET_TABS.some((tab) => tab.value === value);
 
 type SectionTitleProps = {
