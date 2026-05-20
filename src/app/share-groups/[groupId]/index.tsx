@@ -1,14 +1,12 @@
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { Button, Card, ListGroup, Text, useThemeColor } from "heroui-native";
+import { Card, ListGroup, Separator, Text } from "heroui-native";
 import { useSession } from "jazz-tools/react-native";
-import { useRef, useState } from "react";
-import { Alert, ScrollView, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ScrollView, View } from "react-native";
 import {
-  DisplayNameFormDialog,
-  GroupFormDialog,
   type InviteDetails,
   InviteDialog,
 } from "@/components/group/group-dialogs";
@@ -22,25 +20,52 @@ type GroupDetail = NonNullable<
 
 type GroupMember = GroupDetail["members"][number];
 
-export default function ShareGroupDetail() {
+const dateKeyFormatter = new Intl.DateTimeFormat("ja-JP", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
+const latestDateFormatter = new Intl.DateTimeFormat("ja-JP", {
+  day: "numeric",
+  month: "numeric",
+});
+
+const latestTimeFormatter = new Intl.DateTimeFormat("ja-JP", {
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+const formatLatestMessageTime = (timestamp?: number) => {
+  if (!timestamp) {
+    return null;
+  }
+
+  const date = new Date(timestamp);
+  const today = new Date();
+
+  if (dateKeyFormatter.format(date) === dateKeyFormatter.format(today)) {
+    return latestTimeFormatter.format(date);
+  }
+
+  return latestDateFormatter.format(date);
+};
+
+export default function ShareGroupChats() {
   const router = useRouter();
   const session = useSession();
-  const { groupId } = useLocalSearchParams<{ groupId: string }>();
+  const { groupId, showInvite } = useLocalSearchParams<{
+    groupId: string;
+    showInvite?: string;
+  }>();
   const currentUserId = session?.user_id ?? "";
+  const [inviteDetails, setInviteDetails] = useState<InviteDetails>();
   const group = useQuery(
     convexApi.groups.getDetail,
     groupId && currentUserId
       ? { groupId: groupId as Id<"groups">, jazzUserId: currentUserId }
       : "skip"
   );
-  const updateGroupName = useMutation(convexApi.groups.updateName);
-  const updateDisplayName = useMutation(convexApi.groups.updateDisplayName);
-  const leaveGroupMutation = useMutation(convexApi.groups.leave);
-  const isLeavingGroupRef = useRef(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDisplayNameDialogOpen, setIsDisplayNameDialogOpen] = useState(false);
-  const [inviteDetails, setInviteDetails] = useState<InviteDetails>();
-  const [isLeaving, setIsLeaving] = useState(false);
 
   const goBack = () => {
     if (router.canGoBack()) {
@@ -48,128 +73,16 @@ export default function ShareGroupDetail() {
       return;
     }
 
-    router.replace("/group");
+    router.replace(groupId ? `/share-groups/${groupId}` : "/group");
   };
 
-  const openGroupShift = () => {
-    if (!group) {
-      return;
-    }
-
-    router.push(`/share-groups/${group._id}/shifts`);
-  };
-
-  const showChatPlaceholder = (title: string) => {
-    Alert.alert(title, "チャット画面はまだ準備中です。");
-  };
-
-  const openInvite = () => {
-    if (!group) {
+  useEffect(() => {
+    if (!(group && showInvite === "1")) {
       return;
     }
 
     setInviteDetails({ groupName: group.name, url: group.inviteUrl });
-  };
-
-  const updateGroup = async (groupName: string) => {
-    if (!(group && session)) {
-      return;
-    }
-
-    const targetGroupId = group._id;
-
-    try {
-      await updateGroupName({
-        groupId: targetGroupId,
-        jazzUserId: session.user_id,
-        name: groupName,
-      });
-      setIsEditDialogOpen(false);
-    } catch (error) {
-      Alert.alert(
-        "保存できませんでした",
-        error instanceof Error
-          ? error.message
-          : "時間をおいて再試行してください"
-      );
-    }
-  };
-
-  const updateOwnDisplayName = async (displayName: string) => {
-    if (!(group && session)) {
-      return;
-    }
-
-    try {
-      await updateDisplayName({
-        displayName,
-        groupId: group._id,
-        jazzUserId: session.user_id,
-      });
-      setIsDisplayNameDialogOpen(false);
-    } catch (error) {
-      Alert.alert(
-        "保存できませんでした",
-        error instanceof Error
-          ? error.message
-          : "時間をおいて再試行してください"
-      );
-    }
-  };
-
-  const leaveGroup = () => {
-    if (!(group && session) || isLeavingGroupRef.current) {
-      return;
-    }
-
-    const isLastMember = group.members.length === 1;
-    const title = isLastMember
-      ? `${group.name}を削除しますか？`
-      : `${group.name}から脱退しますか？`;
-    const message = isLastMember
-      ? "最後のメンバーのため、グループも削除されます。"
-      : "このグループのメンバーには、あなたのシフトが共有されなくなります。";
-    const targetGroupId = group._id;
-    const jazzUserId = session.user_id;
-    const clearLeaveLock = () => {
-      isLeavingGroupRef.current = false;
-      setIsLeaving(false);
-    };
-
-    isLeavingGroupRef.current = true;
-    setIsLeaving(true);
-
-    Alert.alert(
-      title,
-      message,
-      [
-        { onPress: clearLeaveLock, style: "cancel", text: "キャンセル" },
-        {
-          onPress: async () => {
-            try {
-              await leaveGroupMutation({ groupId: targetGroupId, jazzUserId });
-              setIsEditDialogOpen(false);
-              router.replace("/group");
-            } catch (error) {
-              Alert.alert(
-                "脱退できませんでした",
-                error instanceof Error
-                  ? error.message
-                  : "時間をおいて再試行してください"
-              );
-            } finally {
-              clearLeaveLock();
-            }
-          },
-          style: "destructive",
-          text: isLastMember ? "削除" : "脱退",
-        },
-      ],
-      {
-        cancelable: false,
-      }
-    );
-  };
+  }, [group, showInvite]);
 
   if (group === undefined) {
     return <View className="flex-1 bg-background" />;
@@ -180,7 +93,7 @@ export default function ShareGroupDetail() {
       <View className="flex-1 bg-background">
         <AppHeader
           leftAction={{
-            accessibilityLabel: "グループ一覧に戻る",
+            accessibilityLabel: "グループに戻る",
             icon: {
               android: "arrow_back",
               ios: "chevron.left",
@@ -200,6 +113,31 @@ export default function ShareGroupDetail() {
     );
   }
 
+  const directMembers = group.members
+    .filter((member) => member.jazzUserId !== currentUserId)
+    .sort((firstMember, secondMember) => {
+      const unreadDifference =
+        Number(secondMember.unreadCount > 0) -
+        Number(firstMember.unreadCount > 0);
+
+      if (unreadDifference !== 0) {
+        return unreadDifference;
+      }
+
+      const latestMessageDifference =
+        (secondMember.lastMessageCreatedAt ?? 0) -
+        (firstMember.lastMessageCreatedAt ?? 0);
+
+      if (latestMessageDifference !== 0) {
+        return latestMessageDifference;
+      }
+
+      return firstMember.displayName.localeCompare(
+        secondMember.displayName,
+        "ja"
+      );
+    });
+
   return (
     <View className="flex-1 bg-background">
       <AppHeader
@@ -215,10 +153,14 @@ export default function ShareGroupDetail() {
         }}
         rightActions={[
           {
-            accessibilityLabel: `${group.name}を編集`,
-            icon: { android: "edit", ios: "pencil", web: "edit" },
+            accessibilityLabel: `${group.name}の設定を開く`,
+            icon: {
+              android: "settings",
+              ios: "gearshape",
+              web: "settings",
+            },
             onPress: () => {
-              setIsEditDialogOpen(true);
+              router.push(`/share-groups/${group._id}/settings`);
             },
           },
         ]}
@@ -233,48 +175,103 @@ export default function ShareGroupDetail() {
           paddingTop: 16,
         }}
       >
-        <GroupActionSection
-          group={group}
-          onOpenChat={() => {
-            showChatPlaceholder("全体チャット");
-          }}
-          onOpenShift={openGroupShift}
-        />
-        <MemberSection
-          currentUserId={currentUserId}
-          members={group.members}
-          onInvite={openInvite}
-          onOpenMemberChat={(member) => {
-            showChatPlaceholder(`${member.displayName}さんとのチャット`);
-          }}
-          onOpenOwnDisplayNameEdit={() => {
-            setIsDisplayNameDialogOpen(true);
-          }}
-        />
+        <View className="gap-3">
+          <Text className="font-semibold text-lg">グループ</Text>
+          <ListGroup>
+            <ListGroup.Item
+              accessibilityLabel={`${group.name}のシフト表を開く`}
+              onPress={() => {
+                router.push(`/share-groups/${group._id}/shifts`);
+              }}
+            >
+              <ListGroup.ItemPrefix>
+                <SymbolView
+                  name={{
+                    android: "calendar_month",
+                    ios: "calendar",
+                    web: "calendar_month",
+                  }}
+                  size={20}
+                />
+              </ListGroup.ItemPrefix>
+              <ListGroup.ItemContent>
+                <ListGroup.ItemTitle numberOfLines={1}>
+                  シフト表
+                </ListGroup.ItemTitle>
+              </ListGroup.ItemContent>
+              <ListGroup.ItemSuffix />
+            </ListGroup.Item>
+            <Separator className="mx-4" />
+            <ListGroup.Item
+              accessibilityLabel={`${group.name}の全体チャットを開く`}
+              onPress={() => {
+                router.push(`/share-groups/${group._id}/chats/group`);
+              }}
+            >
+              <ListGroup.ItemPrefix>
+                <SymbolView
+                  name={{
+                    android: "forum",
+                    ios: "bubble.left.and.bubble.right",
+                    web: "forum",
+                  }}
+                  size={20}
+                />
+              </ListGroup.ItemPrefix>
+              <ListGroup.ItemContent>
+                <ListGroup.ItemTitle numberOfLines={1}>
+                  全体チャット
+                </ListGroup.ItemTitle>
+                {group.groupLastMessagePreview ? (
+                  <ListGroup.ItemDescription numberOfLines={1}>
+                    {group.groupLastMessagePreview}
+                  </ListGroup.ItemDescription>
+                ) : null}
+              </ListGroup.ItemContent>
+              <ChatItemSuffix
+                latestAt={group.groupLastMessageCreatedAt}
+                unreadCount={group.groupUnreadCount}
+              />
+            </ListGroup.Item>
+          </ListGroup>
+        </View>
+        <View className="gap-3">
+          <Text className="font-semibold text-lg">個人チャット</Text>
+          {directMembers.length > 0 ? (
+            <ListGroup>
+              {directMembers.map((member, index) => (
+                <View key={member._id}>
+                  <DirectChatListItem
+                    member={member}
+                    onOpen={() => {
+                      router.push(
+                        `/share-groups/${group._id}/chats/${encodeURIComponent(member.jazzUserId)}`
+                      );
+                    }}
+                  />
+                  {index < directMembers.length - 1 ? (
+                    <Separator className="mx-4" />
+                  ) : null}
+                </View>
+              ))}
+            </ListGroup>
+          ) : (
+            <Card className="p-4">
+              <Text className="text-sm" color="muted">
+                個人チャットできるメンバーがいません
+              </Text>
+            </Card>
+          )}
+        </View>
       </ScrollView>
-      <GroupFormDialog
-        group={group}
-        initialGroupName={group.name}
-        isDisplayNameVisible={false}
-        isLeaving={isLeaving}
-        isOpen={isEditDialogOpen}
-        onLeave={leaveGroup}
-        onOpenChange={setIsEditDialogOpen}
-        onSubmit={updateGroup}
-        submitLabel="保存"
-        title="グループを編集"
-      />
-      <DisplayNameFormDialog
-        initialDisplayName={group.ownDisplayName}
-        isOpen={isDisplayNameDialogOpen}
-        onOpenChange={setIsDisplayNameDialogOpen}
-        onSubmit={updateOwnDisplayName}
-      />
       <InviteDialog
         inviteDetails={inviteDetails}
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             setInviteDetails(undefined);
+            if (showInvite === "1") {
+              router.setParams({ showInvite: undefined });
+            }
           }
         }}
       />
@@ -282,179 +279,70 @@ export default function ShareGroupDetail() {
   );
 }
 
-const GroupActionSection = ({
-  group,
-  onOpenChat,
-  onOpenShift,
-}: {
-  group: GroupDetail;
-  onOpenChat: () => void;
-  onOpenShift: () => void;
-}) => {
-  const accentForegroundColor = useThemeColor("accent-foreground");
-
-  return (
-    <View className="flex-row gap-2">
-      <Button
-        accessibilityLabel={`${group.name}のシフト表を開く`}
-        className="flex-1"
-        onPress={onOpenShift}
-        size="sm"
-        variant="primary"
-      >
-        <SymbolView
-          name={{
-            android: "calendar_month",
-            ios: "calendar",
-            web: "calendar_month",
-          }}
-          size={16}
-          tintColor={accentForegroundColor}
-        />
-        <Button.Label>シフト表</Button.Label>
-      </Button>
-      <Button
-        accessibilityLabel={`${group.name}の全体チャットを開く`}
-        className="flex-1"
-        onPress={onOpenChat}
-        size="sm"
-        variant="outline"
-      >
-        <SymbolView
-          name={{
-            android: "chat_bubble",
-            ios: "message",
-            web: "chat_bubble",
-          }}
-          size={16}
-        />
-        <Button.Label>全体チャット</Button.Label>
-      </Button>
-    </View>
-  );
-};
-
-const MemberSection = ({
-  currentUserId,
-  members,
-  onInvite,
-  onOpenMemberChat,
-  onOpenOwnDisplayNameEdit,
-}: {
-  currentUserId: string;
-  members: GroupMember[];
-  onInvite: () => void;
-  onOpenMemberChat: (member: GroupMember) => void;
-  onOpenOwnDisplayNameEdit: () => void;
-}) => {
-  const ownMember = members.find(
-    (member) => member.jazzUserId === currentUserId
-  );
-  const otherMembers = members.filter(
-    (member) => member.jazzUserId !== currentUserId
-  );
-  const orderedMembers = ownMember ? [ownMember, ...otherMembers] : members;
-
-  return (
-    <View className="gap-3">
-      <View className="flex-row items-center justify-between gap-3">
-        <Text className="min-w-0 flex-1 font-semibold text-lg">
-          メンバー ({members.length}人)
-        </Text>
-        <Button
-          accessibilityLabel="メンバーを招待"
-          onPress={onInvite}
-          size="sm"
-          variant="outline"
-        >
-          <SymbolView
-            name={{
-              android: "person_add",
-              ios: "person.badge.plus",
-              web: "person_add",
-            }}
-            size={16}
-          />
-          <Button.Label>招待</Button.Label>
-        </Button>
-      </View>
-      <View className="gap-2">
-        {orderedMembers.length > 0 ? (
-          orderedMembers.map((member) => {
-            const isOwnMember = member.jazzUserId === currentUserId;
-
-            return (
-              <MemberListItem
-                isOwnMember={isOwnMember}
-                key={member._id}
-                member={member}
-                onOpenChat={() => {
-                  onOpenMemberChat(member);
-                }}
-                onOpenOwnDisplayNameEdit={onOpenOwnDisplayNameEdit}
-              />
-            );
-          })
-        ) : (
-          <Card className="p-4">
-            <Text className="text-sm" color="muted">
-              メンバーがいません
-            </Text>
-          </Card>
-        )}
-      </View>
-    </View>
-  );
-};
-
-const MemberListItem = ({
-  isOwnMember,
+const DirectChatListItem = ({
   member,
-  onOpenChat,
-  onOpenOwnDisplayNameEdit,
+  onOpen,
 }: {
-  isOwnMember: boolean;
   member: GroupMember;
-  onOpenChat: () => void;
-  onOpenOwnDisplayNameEdit: () => void;
+  onOpen: () => void;
 }) => (
-  <ListGroup>
-    <ListGroup.Item
-      accessibilityLabel={
-        isOwnMember
-          ? `${member.displayName}さん（あなた）`
-          : `${member.displayName}さんとのチャットを開く`
-      }
-      onPress={isOwnMember ? undefined : onOpenChat}
-    >
-      <ListGroup.ItemContent>
-        <ListGroup.ItemTitle numberOfLines={1}>
-          {member.displayName}
-        </ListGroup.ItemTitle>
-        {isOwnMember ? (
-          <ListGroup.ItemDescription numberOfLines={1}>
-            あなた
-          </ListGroup.ItemDescription>
-        ) : null}
-      </ListGroup.ItemContent>
-      {isOwnMember ? (
-        <ListGroup.ItemSuffix>
-          <Button
-            accessibilityLabel="あなたの名前を編集"
-            isIconOnly={true}
-            onPress={onOpenOwnDisplayNameEdit}
-            size="sm"
-            variant="ghost"
-          >
-            <SymbolView
-              name={{ android: "edit", ios: "pencil", web: "edit" }}
-              size={16}
-            />
-          </Button>
-        </ListGroup.ItemSuffix>
-      ) : (
+  <ListGroup.Item
+    accessibilityLabel={`${member.displayName}さんとのチャットを開く`}
+    onPress={onOpen}
+  >
+    <ListGroup.ItemPrefix>
+      <SymbolView
+        name={{ android: "chat_bubble", ios: "message", web: "chat" }}
+        size={20}
+      />
+    </ListGroup.ItemPrefix>
+    <ListGroup.ItemContent>
+      <ListGroup.ItemTitle numberOfLines={1}>
+        {member.displayName}
+      </ListGroup.ItemTitle>
+      {member.lastMessagePreview ? (
+        <ListGroup.ItemDescription numberOfLines={1}>
+          {member.lastMessagePreview}
+        </ListGroup.ItemDescription>
+      ) : null}
+    </ListGroup.ItemContent>
+    <ChatItemSuffix
+      latestAt={member.lastMessageCreatedAt}
+      unreadCount={member.unreadCount}
+    />
+  </ListGroup.Item>
+);
+
+const ChatItemSuffix = ({
+  latestAt,
+  unreadCount,
+}: {
+  latestAt?: number;
+  unreadCount: number;
+}) => {
+  const latestTime = formatLatestMessageTime(latestAt);
+
+  return (
+    <ListGroup.ItemSuffix>
+      <View className="flex-row items-center gap-2">
+        <View className="min-w-10 items-end gap-1">
+          {unreadCount > 0 ? <UnreadBadge count={unreadCount} /> : null}
+          {latestTime ? (
+            <Text className="text-[11px]" color="muted">
+              {latestTime}
+            </Text>
+          ) : null}
+        </View>
         <ListGroup.ItemSuffix />
-      )}
-    </ListGroup.Item>
-  </ListGroup>
+      </View>
+    </ListGroup.ItemSuffix>
+  );
+};
+
+const UnreadBadge = ({ count }: { count: number }) => (
+  <View className="min-w-5 items-center rounded-full bg-danger px-1.5 py-0.5">
+    <Text className="font-semibold text-[11px] text-danger-foreground">
+      {count > 99 ? "99+" : count}
+    </Text>
+  </View>
 );

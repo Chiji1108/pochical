@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as chat from "../chat.js";
 import type * as groups from "../groups.js";
 import type * as http from "../http.js";
 import type * as invites from "../invites.js";
@@ -19,6 +20,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  chat: typeof chat;
   groups: typeof groups;
   http: typeof http;
   invites: typeof invites;

@@ -234,8 +234,9 @@ export const GroupFormDialog = ({
             </View>
             <View className="gap-4">
               <TextField>
-                <Label>グループ名</Label>
+                {isDisplayNameVisible ? <Label>グループ名</Label> : null}
                 <Input
+                  accessibilityLabel="グループ名"
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoFocus={true}
@@ -270,7 +271,7 @@ export const GroupFormDialog = ({
               ) : null}
             </View>
             <View className="mt-5 flex-row justify-end gap-3">
-              {group ? (
+              {group && onLeave ? (
                 <Button
                   isDisabled={isSubmitting || isLeaving}
                   onPress={onLeave}
@@ -280,7 +281,7 @@ export const GroupFormDialog = ({
                   <Button.Label>{isLeaving ? "処理中" : "脱退"}</Button.Label>
                 </Button>
               ) : null}
-              {group ? <View className="flex-1" /> : null}
+              {group && onLeave ? <View className="flex-1" /> : null}
               <Button
                 isDisabled={isSubmitting || isLeaving}
                 onPress={() => {
@@ -365,8 +366,8 @@ export const DisplayNameFormDialog = ({
               <Dialog.Title>あなたの名前を編集</Dialog.Title>
             </View>
             <TextField>
-              <Label>あなたの名前</Label>
               <Input
+                accessibilityLabel="あなたの名前"
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoFocus={true}
@@ -377,7 +378,7 @@ export const DisplayNameFormDialog = ({
                   displayNameRef.current = text;
                 }}
                 onSubmitEditing={submit}
-                placeholder="例: 佐藤"
+                placeholder="あなたの名前"
                 returnKeyType="done"
               />
             </TextField>

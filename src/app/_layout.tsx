@@ -95,6 +95,9 @@ function RootLayoutContent() {
                     options={{ presentation: "fullScreenModal" }}
                   />
                   <Stack.Screen name="share-groups/[groupId]" />
+                  <Stack.Screen name="share-groups/[groupId]/chats/group" />
+                  <Stack.Screen name="share-groups/[groupId]/chats/[memberJazzUserId]" />
+                  <Stack.Screen name="share-groups/[groupId]/settings" />
                   <Stack.Screen name="share-groups/[groupId]/shifts" />
                   <Stack.Screen name="invite/scan" />
                   <Stack.Screen name="invite/[inviteCode]" />

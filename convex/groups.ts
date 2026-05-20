@@ -14,6 +14,7 @@ const MAX_CREATE_INVITE_CODE_ATTEMPTS = 8;
 const MAX_GROUP_NAME_LENGTH = 80;
 const MAX_DISPLAY_NAME_LENGTH = 40;
 const TRAILING_SLASH_REGEX = /\/$/;
+const GROUP_THREAD_PAIR_KEY = "group";
 
 const normalizeRequiredText = (
   value: string,
@@ -121,16 +122,152 @@ const listMembers = async (
   );
 };
 
+const createDirectPairKey = (jazzUserId: string, targetJazzUserId: string) =>
+  JSON.stringify([jazzUserId, targetJazzUserId].sort());
+
+const getChatThread = async (
+  ctx: QueryCtx,
+  groupId: Id<"groups">,
+  kind: "group" | "direct",
+  pairKey: string
+) =>
+  ctx.db
+    .query("chatThreads")
+    .withIndex("by_groupId_kind_pairKey", (q) =>
+      q.eq("groupId", groupId).eq("kind", kind).eq("pairKey", pairKey)
+    )
+    .unique();
+
+const getThreadUnreadCount = async (
+  ctx: QueryCtx,
+  thread: Doc<"chatThreads"> | null,
+  jazzUserId: string
+) => {
+  if (!thread?.lastMessageCreatedAt) {
+    return 0;
+  }
+
+  const read = await ctx.db
+    .query("chatReads")
+    .withIndex("by_threadId_jazzUserId", (q) =>
+      q.eq("threadId", thread._id).eq("jazzUserId", jazzUserId)
+    )
+    .unique();
+  const lastReadMessageCreatedAt = read?.lastReadMessageCreatedAt ?? 0;
+  const unreadMessages = await ctx.db
+    .query("chatMessages")
+    .withIndex("by_threadId_createdAt", (q) =>
+      q.eq("threadId", thread._id).gt("createdAt", lastReadMessageCreatedAt)
+    )
+    .collect();
+
+  return unreadMessages.filter(
+    (message) => message.authorJazzUserId !== jazzUserId
+  ).length;
+};
+
+const getGroupChatOverview = async (
+  ctx: QueryCtx,
+  groupId: Id<"groups">,
+  jazzUserId: string,
+  members: Doc<"groupMembers">[]
+) => {
+  const groupThread = await getChatThread(
+    ctx,
+    groupId,
+    "group",
+    GROUP_THREAD_PAIR_KEY
+  );
+  const groupUnreadCount = await getThreadUnreadCount(
+    ctx,
+    groupThread,
+    jazzUserId
+  );
+  let directUnreadCount = 0;
+
+  for (const member of members) {
+    if (member.jazzUserId === jazzUserId) {
+      continue;
+    }
+
+    const directThread = await getChatThread(
+      ctx,
+      groupId,
+      "direct",
+      createDirectPairKey(jazzUserId, member.jazzUserId)
+    );
+    directUnreadCount += await getThreadUnreadCount(
+      ctx,
+      directThread,
+      jazzUserId
+    );
+  }
+
+  const threads = await ctx.db
+    .query("chatThreads")
+    .withIndex("by_groupId_updatedAt", (q) => q.eq("groupId", groupId))
+    .collect();
+  const latestThread = threads
+    .filter((thread) => thread.lastMessageCreatedAt)
+    .sort(
+      (a, b) => (b.lastMessageCreatedAt ?? 0) - (a.lastMessageCreatedAt ?? 0)
+    )[0];
+
+  return {
+    groupUnreadCount,
+    lastMessagePreview: latestThread?.lastMessagePreview,
+    unreadCount: groupUnreadCount + directUnreadCount,
+  };
+};
+
+const deleteGroupChatData = async (ctx: MutationCtx, groupId: Id<"groups">) => {
+  const threads = await ctx.db
+    .query("chatThreads")
+    .withIndex("by_groupId_updatedAt", (q) => q.eq("groupId", groupId))
+    .collect();
+
+  for (const thread of threads) {
+    const messages = await ctx.db
+      .query("chatMessages")
+      .withIndex("by_threadId_createdAt", (q) => q.eq("threadId", thread._id))
+      .collect();
+
+    for (const message of messages) {
+      await ctx.db.delete(message._id);
+    }
+
+    const reads = await ctx.db
+      .query("chatReads")
+      .filter((q) => q.eq(q.field("threadId"), thread._id))
+      .collect();
+
+    for (const read of reads) {
+      await ctx.db.delete(read._id);
+    }
+
+    await ctx.db.delete(thread._id);
+  }
+};
+
 type GroupMemberSummary = Pick<
   Doc<"groupMembers">,
   "_id" | "displayName" | "jazzUserId"
->;
+> & {
+  lastMessageCreatedAt?: number;
+  lastMessagePreview?: string;
+  unreadCount: number;
+};
 
 type GroupSummary = Pick<Doc<"groups">, "_id" | "name"> & {
+  groupLastMessageCreatedAt?: number;
+  groupLastMessagePreview?: string;
+  groupUnreadCount: number;
   inviteUrl: string;
+  lastMessagePreview?: string;
   memberCount: number;
   members: GroupMemberSummary[];
   ownDisplayName: string;
+  unreadCount: number;
 };
 
 export const listForCurrentUser = query({
@@ -150,17 +287,59 @@ export const listForCurrentUser = query({
       }
 
       const members = await listMembers(ctx, group._id);
+      const chatOverview = await getGroupChatOverview(
+        ctx,
+        group._id,
+        args.jazzUserId,
+        members
+      );
+      const groupThread = await getChatThread(
+        ctx,
+        group._id,
+        "group",
+        GROUP_THREAD_PAIR_KEY
+      );
       groups.push({
         _id: group._id,
+        groupLastMessageCreatedAt: groupThread?.lastMessageCreatedAt,
+        groupLastMessagePreview: groupThread?.lastMessagePreview,
+        groupUnreadCount: chatOverview.groupUnreadCount,
         inviteUrl: buildInviteUrl(group.inviteCode),
+        lastMessagePreview: chatOverview.lastMessagePreview,
         memberCount: members.length,
-        members: members.map((member) => ({
-          _id: member._id,
-          displayName: member.displayName,
-          jazzUserId: member.jazzUserId,
-        })),
+        members: await Promise.all(
+          members.map(async (member) => {
+            const directThread =
+              member.jazzUserId === args.jazzUserId
+                ? null
+                : await getChatThread(
+                    ctx,
+                    group._id,
+                    "direct",
+                    createDirectPairKey(args.jazzUserId, member.jazzUserId)
+                  );
+            const unreadCount =
+              member.jazzUserId === args.jazzUserId
+                ? 0
+                : await getThreadUnreadCount(
+                    ctx,
+                    directThread,
+                    args.jazzUserId
+                  );
+
+            return {
+              _id: member._id,
+              displayName: member.displayName,
+              jazzUserId: member.jazzUserId,
+              lastMessageCreatedAt: directThread?.lastMessageCreatedAt,
+              lastMessagePreview: directThread?.lastMessagePreview,
+              unreadCount,
+            };
+          })
+        ),
         name: group.name,
         ownDisplayName: membership.displayName,
+        unreadCount: chatOverview.unreadCount,
       });
     }
 
@@ -181,17 +360,55 @@ export const getDetail = query({
     }
 
     const members = await listMembers(ctx, group._id);
+    const chatOverview = await getGroupChatOverview(
+      ctx,
+      group._id,
+      args.jazzUserId,
+      members
+    );
+    const groupThread = await getChatThread(
+      ctx,
+      group._id,
+      "group",
+      GROUP_THREAD_PAIR_KEY
+    );
 
     return {
       _id: group._id,
+      groupLastMessageCreatedAt: groupThread?.lastMessageCreatedAt,
+      groupLastMessagePreview: groupThread?.lastMessagePreview,
+      groupUnreadCount: chatOverview.groupUnreadCount,
       inviteUrl: buildInviteUrl(group.inviteCode),
-      members: members.map((member) => ({
-        _id: member._id,
-        displayName: member.displayName,
-        jazzUserId: member.jazzUserId,
-      })),
+      lastMessagePreview: chatOverview.lastMessagePreview,
+      members: await Promise.all(
+        members.map(async (member) => {
+          const directThread =
+            member.jazzUserId === args.jazzUserId
+              ? null
+              : await getChatThread(
+                  ctx,
+                  group._id,
+                  "direct",
+                  createDirectPairKey(args.jazzUserId, member.jazzUserId)
+                );
+          const unreadCount =
+            member.jazzUserId === args.jazzUserId
+              ? 0
+              : await getThreadUnreadCount(ctx, directThread, args.jazzUserId);
+
+          return {
+            _id: member._id,
+            displayName: member.displayName,
+            jazzUserId: member.jazzUserId,
+            lastMessageCreatedAt: directThread?.lastMessageCreatedAt,
+            lastMessagePreview: directThread?.lastMessagePreview,
+            unreadCount,
+          };
+        })
+      ),
       ownDisplayName: membership.displayName,
       name: group.name,
+      unreadCount: chatOverview.unreadCount,
     };
   },
 });
@@ -299,6 +516,44 @@ export const leave = mutation({
 
     const remainingMembers = await listMembers(ctx, args.groupId);
     if (remainingMembers.length === 0) {
+      await deleteGroupChatData(ctx, args.groupId);
+      await ctx.db.delete(args.groupId);
+    }
+  },
+});
+
+export const removeMember = mutation({
+  args: {
+    groupId: v.id("groups"),
+    jazzUserId: v.string(),
+    targetJazzUserId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const actorMembership = await getMembership(
+      ctx,
+      args.groupId,
+      args.jazzUserId
+    );
+
+    if (!actorMembership) {
+      throw new ConvexError("Group not found");
+    }
+
+    const targetMembership = await getMembership(
+      ctx,
+      args.groupId,
+      args.targetJazzUserId
+    );
+
+    if (!targetMembership) {
+      return;
+    }
+
+    await ctx.db.delete(targetMembership._id);
+
+    const remainingMembers = await listMembers(ctx, args.groupId);
+    if (remainingMembers.length === 0) {
+      await deleteGroupChatData(ctx, args.groupId);
       await ctx.db.delete(args.groupId);
     }
   },

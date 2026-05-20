@@ -6,7 +6,7 @@ import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { cn } from "@/lib/utils";
 
-type AppHeaderAction = {
+export type AppHeaderAction = {
   accessibilityLabel: string;
   icon?: SymbolViewProps["name"];
   isDisabled?: boolean;

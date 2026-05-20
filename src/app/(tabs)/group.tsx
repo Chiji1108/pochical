@@ -53,12 +53,13 @@ export default function Group() {
     }
 
     try {
-      await createGroupMutation({
+      const result = await createGroupMutation({
         displayName,
         jazzUserId: session.user_id,
         name: groupName,
       });
       setIsCreateDialogOpen(false);
+      router.push(`/share-groups/${result.groupId}?showInvite=1`);
     } catch (error) {
       Alert.alert(
         "作成できませんでした",
@@ -197,7 +198,30 @@ const GroupListItem = ({
           {getMemberSummary(group)}
         </ListGroup.ItemDescription>
       </ListGroup.ItemContent>
-      <ListGroup.ItemSuffix />
+      <GroupItemSuffix unreadCount={group.unreadCount} />
     </ListGroup.Item>
   </ListGroup>
+);
+
+const GroupItemSuffix = ({ unreadCount }: { unreadCount: number }) => {
+  if (unreadCount <= 0) {
+    return <ListGroup.ItemSuffix />;
+  }
+
+  return (
+    <ListGroup.ItemSuffix>
+      <View className="flex-row items-center gap-2">
+        <UnreadBadge count={unreadCount} />
+        <ListGroup.ItemSuffix />
+      </View>
+    </ListGroup.ItemSuffix>
+  );
+};
+
+const UnreadBadge = ({ count }: { count: number }) => (
+  <View className="min-w-5 items-center rounded-full bg-danger px-1.5 py-0.5">
+    <Text className="font-semibold text-[11px] text-danger-foreground">
+      {count > 99 ? "99+" : count}
+    </Text>
+  </View>
 );

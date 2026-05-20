@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { Chip, ListGroup, Separator, Text } from "heroui-native";
 import { useMemo } from "react";
 import { View } from "react-native";
+import { LinkifiedText } from "@/components/common/linkified-text";
 import type { Member, Pattern, Shift, ShiftNote } from "@/schema";
 
 const getPatternScheduleLabel = (pattern: Pattern): string => {
@@ -111,9 +112,11 @@ export const ShiftDetailView = ({
               }
             >
               <ListGroup.ItemContent>
-                <Text className="text-sm" color="muted">
-                  {notes}
-                </Text>
+                <LinkifiedText
+                  className="text-muted text-sm"
+                  linkClassName="text-muted underline"
+                  text={notes}
+                />
               </ListGroup.ItemContent>
             </ListGroup.Item>
           </>
