@@ -213,7 +213,7 @@ export function PatternGridView({
           <Button
             isDisabled={!session}
             onPress={() => {
-              router.push("/patterns/presets");
+              router.push("/patterns");
             }}
             size="lg"
             variant="primary"
@@ -227,7 +227,7 @@ export function PatternGridView({
               size={18}
               tintColor="white"
             />
-            <Button.Label>勤務体系を選択</Button.Label>
+            <Button.Label>シフトパターンを追加</Button.Label>
           </Button>
           {session ? null : (
             <Text className="mt-3 text-sm" color="muted">

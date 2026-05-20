@@ -109,17 +109,13 @@ export const ShiftDetailView = ({
       ) : null}
 
       {notes ? (
-        <ListGroup>
-          <ListGroup.Item className="items-start py-3">
-            <ListGroup.ItemContent>
-              <LinkifiedText
-                className="text-muted text-sm"
-                linkClassName="text-muted underline"
-                text={notes}
-              />
-            </ListGroup.ItemContent>
-          </ListGroup.Item>
-        </ListGroup>
+        <View className="items-center px-3 py-1">
+          <LinkifiedText
+            className="text-center text-muted text-sm"
+            linkClassName="text-muted underline"
+            text={notes}
+          />
+        </View>
       ) : null}
     </View>
   );

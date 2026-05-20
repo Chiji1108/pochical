@@ -23,6 +23,10 @@ export const deleteShiftPatternsAndRelatedData = (
   db: JazzDb,
   data: ShiftPatternResetData
 ): void => {
+  if (data.patterns.length === 0 && data.shifts.length === 0) {
+    return;
+  }
+
   db.batch((batch) => {
     for (const shift of data.shifts) {
       batch.delete(app.shifts, shift.id);
@@ -35,6 +39,15 @@ export const deleteShiftPatternsAndRelatedData = (
 };
 
 export const deleteWorkData = (db: JazzDb, data: WorkDataResetData): void => {
+  if (
+    data.dayNotes.length === 0 &&
+    data.members.length === 0 &&
+    data.patterns.length === 0 &&
+    data.shifts.length === 0
+  ) {
+    return;
+  }
+
   db.batch((batch) => {
     for (const dayNote of data.dayNotes) {
       batch.delete(app.dayNotes, dayNote.id);

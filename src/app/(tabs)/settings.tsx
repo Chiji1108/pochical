@@ -27,10 +27,7 @@ import {
   getWeeksOfMonth,
 } from "@/lib/date";
 import { cn } from "@/lib/utils";
-import {
-  deleteShiftPatternsAndRelatedData,
-  deleteWorkData,
-} from "@/lib/work-data-actions";
+import { deleteWorkData } from "@/lib/work-data-actions";
 import { app } from "@/schema";
 import { api as convexApi } from "../../../convex/_generated/api";
 
@@ -117,31 +114,6 @@ export default function Settings() {
     settings.calendarHighlightTargets
   );
   const isDangerActionDisabled = !session || isResettingAppData;
-
-  const confirmRecreatePatterns = () => {
-    if (!session) {
-      return;
-    }
-
-    Alert.alert(
-      "シフトパターンを作り直しますか？",
-      "すべてのシフト、シフトパターンが削除されます。メモ、勤務メンバー、グループは残ります。この操作は取り消せません。",
-      [
-        { style: "cancel", text: "キャンセル" },
-        {
-          onPress: () => {
-            deleteShiftPatternsAndRelatedData(db, {
-              patterns,
-              shifts,
-            });
-            router.push("/patterns/presets");
-          },
-          style: "destructive",
-          text: "削除して選び直す",
-        },
-      ]
-    );
-  };
 
   const confirmDeleteWorkData = () => {
     if (!session) {
@@ -340,13 +312,6 @@ export default function Settings() {
         <View className="gap-2">
           <SectionTitle>危険な操作</SectionTitle>
           <ListGroup>
-            <DestructiveSettingRow
-              description="すべてのシフト、シフトパターンを削除して勤務体系を選び直します"
-              isDisabled={isDangerActionDisabled}
-              label="シフトパターンを作り直す"
-              onPress={confirmRecreatePatterns}
-            />
-            <Separator className="mx-4" />
             <DestructiveSettingRow
               description="すべてのシフト、シフトパターン、勤務メンバー、メモを削除します。グループは残ります"
               isDisabled={isDangerActionDisabled}

@@ -197,8 +197,7 @@ export const GroupDetailView = ({
           paddingTop: 16,
         }}
       >
-        <View className="gap-3">
-          <Text className="font-semibold text-lg">グループ</Text>
+        <View>
           <ListGroup>
             <ListGroup.Item
               accessibilityLabel={`${group.name}のシフト表を開く`}

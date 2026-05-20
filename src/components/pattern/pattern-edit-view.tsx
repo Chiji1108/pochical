@@ -482,7 +482,7 @@ const TimeSettings = ({
               終日パターンから選べます
             </ListGroup.ItemDescription>
           </ListGroup.ItemContent>
-          <ListGroup.ItemSuffix className="min-w-40">
+          <ListGroup.ItemSuffix className="min-w-32">
             <Select
               onValueChange={(option) => {
                 onChangeNextDayPattern(option?.value || undefined);
