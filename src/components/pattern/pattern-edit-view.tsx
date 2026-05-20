@@ -47,11 +47,11 @@ type PatternFormState = {
 type PatternSaveFields = {
   countsAsDayOff: boolean;
   emoji: string;
-  endDate: Date | null;
+  endDate?: Date | null;
   isAllDay: boolean;
   name: string;
   nextDayPatternId?: string | null;
-  startDate: Date | null;
+  startDate?: Date | null;
 };
 
 type SelectOption = {
@@ -97,18 +97,34 @@ const getInitialFormState = (pattern?: Pattern): PatternFormState => ({
 
 const createPatternSaveFields = (
   formState: PatternFormState,
-  isContinueUntilNextDay: boolean
-): PatternSaveFields => ({
-  countsAsDayOff: formState.countsAsDayOff,
-  emoji: formState.emoji || DEFAULT_EMOJI,
-  endDate: formState.isAllDay ? null : formState.endDate,
-  isAllDay: formState.isAllDay,
-  name: formState.name.trim(),
-  nextDayPatternId: isContinueUntilNextDay
-    ? (formState.nextDayPatternId ?? null)
-    : null,
-  startDate: formState.isAllDay ? null : formState.startDate,
-});
+  isContinueUntilNextDay: boolean,
+  shouldClearEmptyOptionals: boolean
+): PatternSaveFields => {
+  const saveFields: PatternSaveFields = {
+    countsAsDayOff: formState.countsAsDayOff,
+    emoji: formState.emoji || DEFAULT_EMOJI,
+    isAllDay: formState.isAllDay,
+    name: formState.name.trim(),
+  };
+
+  if (formState.isAllDay) {
+    if (shouldClearEmptyOptionals) {
+      saveFields.endDate = null;
+      saveFields.startDate = null;
+    }
+  } else {
+    saveFields.endDate = formState.endDate;
+    saveFields.startDate = formState.startDate;
+  }
+
+  if (isContinueUntilNextDay && formState.nextDayPatternId) {
+    saveFields.nextDayPatternId = formState.nextDayPatternId;
+  } else if (shouldClearEmptyOptionals) {
+    saveFields.nextDayPatternId = null;
+  }
+
+  return saveFields;
+};
 
 export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
   const db = useDb();
@@ -256,7 +272,8 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
 
     const saveFields = createPatternSaveFields(
       formState,
-      isContinueUntilNextDay
+      isContinueUntilNextDay,
+      Boolean(pattern)
     );
 
     if (pattern) {

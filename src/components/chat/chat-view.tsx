@@ -9,6 +9,7 @@ import {
   type PopoverTriggerRef,
   Text,
   useThemeColor,
+  useToast,
 } from "heroui-native";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -595,6 +596,7 @@ const MessageBubble = ({
   readReceiptMode: "count" | "direct";
   showAuthor: boolean;
 }) => {
+  const { toast } = useToast();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const popoverTriggerRef = useRef<PopoverTriggerRef>(null);
 
@@ -603,6 +605,11 @@ const MessageBubble = ({
 
     try {
       await copyMessageBody(message.body);
+      toast.show({
+        description: "メッセージをクリップボードにコピーしました。",
+        label: "コピーしました",
+        variant: "success",
+      });
     } catch (error) {
       Alert.alert(
         "コピーできません",

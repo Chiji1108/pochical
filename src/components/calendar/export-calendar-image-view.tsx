@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { Text } from "heroui-native";
 import type { FC } from "react";
 import { View } from "react-native";
@@ -5,12 +6,16 @@ import type { CalendarHighlightTarget, WeekStartsOn } from "@/lib/app-settings";
 import { getCalendarWeekdayHighlightColor } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import type { Pattern } from "@/schema";
-import { CalendarBody, type CalendarShiftSummary } from "./calendar-body";
+import {
+  CalendarBody,
+  type CalendarShiftSummary,
+  type ExportCalendarColorScheme,
+} from "./calendar-body";
 import { WeekRow } from "./week-row";
 
 type ExportCalendarImageViewProps = {
   calendarHighlightTargets: CalendarHighlightTarget[];
-  monthLabel: string;
+  colorScheme: ExportCalendarColorScheme;
   patternsById: ReadonlyMap<string, Pattern>;
   shiftsByDate: ReadonlyMap<number, CalendarShiftSummary>;
   weekStartsOn: WeekStartsOn;
@@ -21,22 +26,31 @@ const ignoreDateSelection = (_date: Date) => undefined;
 
 export const ExportCalendarImageView: FC<ExportCalendarImageViewProps> = ({
   calendarHighlightTargets,
-  monthLabel,
+  colorScheme,
   patternsById,
   shiftsByDate,
   weekStartsOn,
   yearMonth,
 }) => (
-  <View className="bg-background px-5 pt-5 pb-4">
-    <View className="gap-4">
-      <View className="flex-row items-end justify-between gap-3">
-        <Text className="font-bold text-2xl leading-8">{monthLabel}</Text>
-        <Text className="font-semibold text-foreground/50 text-xs">
-          ナースシフト
+  <View
+    className={cn("p-5", {
+      "bg-white": colorScheme === "light",
+      "bg-zinc-900": colorScheme === "dark",
+    })}
+  >
+    <View className="gap-2">
+      <View className="items-center">
+        <Text
+          className={cn("font-bold text-2xl leading-8", {
+            "text-zinc-50": colorScheme === "dark",
+            "text-zinc-950": colorScheme === "light",
+          })}
+        >
+          {format(yearMonth, "yyyy.M")}
         </Text>
       </View>
-      <View className="gap-2">
-        <WeekRow className="px-2" weekStartsOn={weekStartsOn}>
+      <View>
+        <WeekRow weekStartsOn={weekStartsOn}>
           {(date) => {
             const highlightColor = getCalendarWeekdayHighlightColor(
               date,
@@ -45,10 +59,17 @@ export const ExportCalendarImageView: FC<ExportCalendarImageViewProps> = ({
 
             return (
               <Text
-                className={cn("font-semibold text-foreground/55 text-xs", {
-                  "text-blue-500": highlightColor === "blue",
-                  "text-red-500": highlightColor === "red",
-                })}
+                className={cn(
+                  "font-semibold text-xs",
+                  {
+                    "text-zinc-400": colorScheme === "dark",
+                    "text-zinc-500": colorScheme === "light",
+                  },
+                  {
+                    "text-blue-500": highlightColor === "blue",
+                    "text-red-500": highlightColor === "red",
+                  }
+                )}
               >
                 {date.toLocaleDateString("ja-JP", {
                   weekday: "short",
@@ -59,6 +80,8 @@ export const ExportCalendarImageView: FC<ExportCalendarImageViewProps> = ({
         </WeekRow>
         <CalendarBody
           calendarHighlightTargets={calendarHighlightTargets}
+          className="px-0"
+          exportColorScheme={colorScheme}
           isExportMode
           patternsById={patternsById}
           selectedDate={yearMonth}

@@ -13,7 +13,10 @@ import { WeekRow } from "./week-row";
 
 type CalendarHeaderProps = {
   calendarHighlightTargets: CalendarHighlightTarget[];
-  onOpenExport?: () => void;
+  isExportingMonth?: boolean;
+  onExportMonth?: () => void;
+  onOpenImageExport?: () => void;
+  onOpenSaveActions?: () => void;
   onSelectDate: (date: Date) => void;
   onPressToday: () => void;
   selectedDate: Date;
@@ -26,7 +29,10 @@ type CalendarHeaderContentProps = {
   calendarHighlightTargets: CalendarHighlightTarget[];
   canReturnToToday: boolean;
   className?: string;
-  onOpenExport?: () => void;
+  isExportingMonth?: boolean;
+  onExportMonth?: () => void;
+  onOpenImageExport?: () => void;
+  onOpenSaveActions?: () => void;
   onPressToday: () => void;
   onSelectDate: (date: Date) => void;
   selectedDate: Date;
@@ -38,7 +44,10 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
   calendarHighlightTargets,
   canReturnToToday,
   className,
-  onOpenExport,
+  isExportingMonth,
+  onExportMonth,
+  onOpenImageExport,
+  onOpenSaveActions,
   onPressToday,
   onSelectDate,
   selectedDate,
@@ -57,13 +66,20 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
         </Button.Label>
       </CalendarDatePickerButton>
       <View className="mx-2 flex-row items-center gap-1">
-        {onOpenExport ? (
+        {onOpenSaveActions || onExportMonth || onOpenImageExport ? (
           <Button
-            accessibilityLabel="書き出し画面を開く"
+            accessibilityLabel="シフトの保存方法を開く"
             className="h-10 w-10"
+            isDisabled={isExportingMonth}
             isIconOnly
             onPress={async () => {
-              onOpenExport();
+              if (onOpenSaveActions) {
+                onOpenSaveActions();
+              } else if (onExportMonth) {
+                onExportMonth();
+              } else {
+                onOpenImageExport?.();
+              }
 
               try {
                 await selectionAsync();
@@ -76,9 +92,9 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
           >
             <SymbolView
               name={{
-                android: "ios_share",
-                ios: "square.and.arrow.up",
-                web: "ios_share",
+                android: "save",
+                ios: "square.and.arrow.down",
+                web: "save",
               }}
               size={18}
             />
@@ -133,7 +149,10 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
 
 export const CalendarHeader: FC<CalendarHeaderProps> = ({
   calendarHighlightTargets,
-  onOpenExport,
+  isExportingMonth,
+  onExportMonth,
+  onOpenImageExport,
+  onOpenSaveActions,
   onSelectDate,
   onPressToday,
   selectedDate,
@@ -151,7 +170,10 @@ export const CalendarHeader: FC<CalendarHeaderProps> = ({
       calendarHighlightTargets={calendarHighlightTargets}
       canReturnToToday={canReturnToToday}
       className={className}
-      onOpenExport={onOpenExport}
+      isExportingMonth={isExportingMonth}
+      onExportMonth={onExportMonth}
+      onOpenImageExport={onOpenImageExport}
+      onOpenSaveActions={onOpenSaveActions}
       onPressToday={onPressToday}
       onSelectDate={onSelectDate}
       selectedDate={selectedDate}

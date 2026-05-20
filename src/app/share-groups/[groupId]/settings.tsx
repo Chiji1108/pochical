@@ -10,6 +10,7 @@ import {
   Switch,
   Text,
   useThemeColor,
+  useToast,
 } from "heroui-native";
 import { useSession } from "jazz-tools/react-native";
 import { useRef, useState } from "react";
@@ -35,6 +36,7 @@ export default function ShareGroupSettings() {
   const router = useRouter();
   const session = useSession();
   const accentForegroundColor = useThemeColor("accent-foreground");
+  const { toast } = useToast();
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const currentUserId = session?.user_id ?? "";
   const group = useQuery(
@@ -93,6 +95,11 @@ export default function ShareGroupSettings() {
         name: groupName,
       });
       setIsEditDialogOpen(false);
+      toast.show({
+        description: "グループ名を更新しました。",
+        label: "保存しました",
+        variant: "success",
+      });
     } catch (error) {
       Alert.alert(
         "保存できませんでした",
@@ -113,6 +120,11 @@ export default function ShareGroupSettings() {
         emoji,
         groupId: group._id,
         jazzUserId: session.user_id,
+      });
+      toast.show({
+        description: "グループの絵文字を更新しました。",
+        label: "保存しました",
+        variant: "success",
       });
     } catch (error) {
       Alert.alert(
@@ -136,6 +148,11 @@ export default function ShareGroupSettings() {
         jazzUserId: session.user_id,
       });
       setIsDisplayNameDialogOpen(false);
+      toast.show({
+        description: "あなたの表示名を更新しました。",
+        label: "保存しました",
+        variant: "success",
+      });
     } catch (error) {
       Alert.alert(
         "保存できませんでした",
@@ -163,7 +180,11 @@ export default function ShareGroupSettings() {
         groupName: group.name,
         url: result.inviteUrl,
       });
-      Alert.alert("再発行しました", "以前の招待URLは使えなくなりました");
+      toast.show({
+        description: "以前の招待URLは使えなくなりました。",
+        label: "招待リンクを再発行しました",
+        variant: "success",
+      });
     } catch (error) {
       Alert.alert(
         "再発行できませんでした",
@@ -204,6 +225,15 @@ export default function ShareGroupSettings() {
               await leaveGroupMutation({ groupId: targetGroupId, jazzUserId });
               setIsEditDialogOpen(false);
               router.replace("/group");
+              toast.show({
+                description: isLastMember
+                  ? "最後のメンバーだったため、グループを削除しました。"
+                  : "グループから脱退しました。",
+                label: isLastMember
+                  ? "グループを削除しました"
+                  : "グループから脱退しました",
+                variant: "success",
+              });
             } catch (error) {
               Alert.alert(
                 "脱退できませんでした",
@@ -243,6 +273,11 @@ export default function ShareGroupSettings() {
                 groupId: group._id,
                 jazzUserId: session.user_id,
                 targetJazzUserId: member.jazzUserId,
+              });
+              toast.show({
+                description: `${member.displayName}さんをグループから削除しました。`,
+                label: "メンバーを削除しました",
+                variant: "success",
               });
             } catch (error) {
               Alert.alert(

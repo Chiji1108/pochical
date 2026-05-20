@@ -10,6 +10,7 @@ import {
   Separator,
   TagGroup,
   Text,
+  useToast,
 } from "heroui-native";
 import { useAll, useDb, useSession } from "jazz-tools/react-native";
 import { useMemo, useRef, useState } from "react";
@@ -75,6 +76,7 @@ export default function Settings() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const session = useSession();
+  const { toast } = useToast();
   const leaveAllGroupsMutation = useMutation(
     convexApi.groups.leaveAllForCurrentUser
   );
@@ -134,6 +136,12 @@ export default function Settings() {
                 patterns,
                 shifts,
               });
+              toast.show({
+                description:
+                  "シフト、シフトパターン、勤務メンバー、メモを削除しました。",
+                label: "カレンダーをリセットしました",
+                variant: "success",
+              });
             } catch (error) {
               Alert.alert(
                 "リセットできませんでした",
@@ -175,6 +183,12 @@ export default function Settings() {
               await leaveAllGroupsMutation({ jazzUserId: session.user_id });
               await deleteItemAsync(SELECTED_GROUP_STORAGE_KEY);
               router.replace("/settings");
+              toast.show({
+                description:
+                  "カレンダーをリセットし、すべてのグループから脱退しました。",
+                label: "アプリのデータをリセットしました",
+                variant: "success",
+              });
             } catch (error) {
               Alert.alert(
                 "リセットできませんでした",

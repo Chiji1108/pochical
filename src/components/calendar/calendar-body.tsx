@@ -28,6 +28,12 @@ export type CalendarShiftSummary = {
   patternId?: string;
 };
 
+export type ExportCalendarColorScheme = "dark" | "light";
+
+type CalendarDateHighlightColor = ReturnType<
+  typeof getCalendarDateHighlightColor
+>;
+
 type CalendarBodyProps = {
   calendarHighlightTargets: CalendarHighlightTarget[];
   detailTransitionProgress?: SharedValue<number>;
@@ -38,6 +44,7 @@ type CalendarBodyProps = {
   weekStartsOn: WeekStartsOn;
   yearMonth: Date;
   className?: string;
+  exportColorScheme?: ExportCalendarColorScheme;
   isExportMode?: boolean;
   weekDate?: Date;
 };
@@ -52,6 +59,7 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
   shiftsByDate,
   weekStartsOn,
   className,
+  exportColorScheme = "light",
   isExportMode = false,
   weekDate,
 }) => {
@@ -90,13 +98,15 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
       ? patternsById.get(shift.patternId)
       : undefined;
     const isDayOffShift = Boolean(shiftPattern?.countsAsDayOff);
+    const isDarkExport = isExportMode && exportColorScheme === "dark";
+    const todayClassName = getTodayClassName(isToday(date), isExportMode);
     return (
       <Pressable
         className={cn(
           "relative flex w-full flex-col items-center rounded-lg p-1",
+          todayClassName,
           {
             "opacity-40": shouldDimOutOfMonth && !isSameMonth(date, yearMonth),
-            "bg-foreground/5": isToday(date),
             "bg-foreground/85": isSelectedDate,
           }
         )}
@@ -128,10 +138,11 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
         ) : null}
         <View className="min-h-5 min-w-5 items-center justify-center">
           <Text
-            className={cn("font-semibold text-xs", {
-              "text-blue-500": !isSelectedDate && highlightColor === "blue",
-              "text-background": isSelectedDate,
-              "text-red-500": !isSelectedDate && highlightColor === "red",
+            className={getDateTextClassName({
+              highlightColor,
+              isDarkExport,
+              isExportMode,
+              isSelectedDate,
             })}
           >
             {getDate(date)}
@@ -144,7 +155,7 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
             </Text>
             {isExportMode ? (
               <Text
-                className="max-w-full text-center font-medium text-[9px] text-foreground/75 leading-3"
+                className={getShiftNameClassName(isDarkExport, isExportMode)}
                 numberOfLines={1}
               >
                 {shiftPattern.name}
@@ -188,6 +199,48 @@ type CalendarAnimatedWeekRowProps = {
   week: Date;
   weekStartsOn: WeekStartsOn;
 };
+
+const getTodayClassName = (
+  isCurrentDateToday: boolean,
+  isExportMode: boolean
+) => {
+  if (!isCurrentDateToday) {
+    return;
+  }
+
+  if (!isExportMode) {
+    return "bg-foreground/5";
+  }
+
+  return;
+};
+
+const getDateTextClassName = ({
+  highlightColor,
+  isDarkExport,
+  isExportMode,
+  isSelectedDate,
+}: {
+  highlightColor: CalendarDateHighlightColor;
+  isDarkExport: boolean;
+  isExportMode: boolean;
+  isSelectedDate: boolean;
+}) =>
+  cn("font-semibold text-xs", {
+    "text-blue-500": !isSelectedDate && highlightColor === "blue",
+    "text-background": isSelectedDate,
+    "text-red-500": !isSelectedDate && highlightColor === "red",
+    "text-zinc-50": isDarkExport && highlightColor === undefined,
+    "text-zinc-950":
+      isExportMode && !isDarkExport && highlightColor === undefined,
+  });
+
+const getShiftNameClassName = (isDarkExport: boolean, isExportMode: boolean) =>
+  cn("max-w-full text-center font-medium text-[9px] leading-3", {
+    "text-foreground/75": !isExportMode,
+    "text-zinc-300": isDarkExport,
+    "text-zinc-600": isExportMode && !isDarkExport,
+  });
 
 const CalendarAnimatedWeekRow: FC<CalendarAnimatedWeekRowProps> = ({
   children,

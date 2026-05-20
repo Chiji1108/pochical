@@ -8,6 +8,7 @@ import {
   Text,
   TextField,
   useThemeColor,
+  useToast,
 } from "heroui-native";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -64,6 +65,7 @@ export const InviteDialog = ({
   onRegenerateInvite?: () => Promise<void> | void;
 }) => {
   const accentForegroundColor = useThemeColor("accent-foreground");
+  const { toast } = useToast();
   const isOpen = Boolean(inviteDetails);
   const inviteGroupLabel = inviteDetails
     ? `${inviteDetails.groupEmoji} ${inviteDetails.groupName}`
@@ -97,8 +99,21 @@ export const InviteDialog = ({
       return;
     }
 
-    await setStringAsync(inviteDetails.url);
-    Alert.alert("コピーしました", "招待URLをクリップボードにコピーしました");
+    try {
+      await setStringAsync(inviteDetails.url);
+      toast.show({
+        description: "招待URLをクリップボードにコピーしました。",
+        label: "コピーしました",
+        variant: "success",
+      });
+    } catch (error) {
+      Alert.alert(
+        "コピーできません",
+        error instanceof Error
+          ? error.message
+          : "時間をおいて再試行してください"
+      );
+    }
   };
   const confirmRegenerateInvite = () => {
     if (!(inviteDetails && onRegenerateInvite)) {

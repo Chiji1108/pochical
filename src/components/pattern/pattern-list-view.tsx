@@ -1,6 +1,13 @@
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { Button, ListGroup, Separator, Tabs, Text } from "heroui-native";
+import {
+  Button,
+  ListGroup,
+  Separator,
+  Tabs,
+  Text,
+  useToast,
+} from "heroui-native";
 import { useAll, useDb, useSession } from "jazz-tools/react-native";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Alert, View } from "react-native";
@@ -52,6 +59,7 @@ export const PatternListView = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const session = useSession();
+  const { toast } = useToast();
   const currentUserId = session?.user_id ?? "";
   const scrollableRef = useAnimatedRef<Animated.ScrollView>();
   const isDraggingRef = useRef(false);
@@ -157,6 +165,14 @@ export const PatternListView = () => {
               await deleteShiftPatternsAndRelatedData(db, {
                 patterns,
                 shifts,
+              });
+              toast.show({
+                description:
+                  shifts.length > 0
+                    ? "シフトパターンと関連するシフトを削除しました。"
+                    : "すべてのシフトパターンを削除しました。",
+                label: "パターンをリセットしました",
+                variant: "success",
               });
             } catch (error) {
               Alert.alert(

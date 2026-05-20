@@ -31,6 +31,7 @@ type PatternGridViewProps = {
   isDetailInputMode: boolean;
   onSelectDate: (date: Date) => void;
   onSelectNextDay: () => void;
+  onShiftSaved?: (date: Date) => void;
   patterns: Pattern[];
   selectedDate: Date;
   selectedDateDayNote?: DayNote;
@@ -46,6 +47,7 @@ export function PatternGridView({
   isDetailInputMode,
   onSelectDate,
   onSelectNextDay,
+  onShiftSaved,
   patterns,
   selectedDate,
   selectedDateDayNote,
@@ -126,6 +128,7 @@ export function PatternGridView({
         });
       }
     });
+    onShiftSaved?.(shiftStartDate);
 
     if (!isDetailInputMode) {
       const hasNextDayPattern =

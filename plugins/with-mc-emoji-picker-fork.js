@@ -3,10 +3,10 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 
 const podName = "MCEmojiPicker";
-const podGitUrl = "https://github.com/Jeanno/MCEmojiPicker.git";
+const podspecPathFromIos = "../plugins/MCEmojiPicker.podspec";
 const podComment =
   "  # Override react-native-emoji-popup's transitive MCEmojiPicker pod for iOS 26 support.";
-const podLine = `  pod '${podName}', :git => '${podGitUrl}'`;
+const podLine = `  pod '${podName}', :podspec => '${podspecPathFromIos}'`;
 const podBlock = `${podComment}\n${podLine}`;
 const emojiPopupPodspecPath = path.join(
   "node_modules",

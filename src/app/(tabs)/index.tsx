@@ -1,5 +1,8 @@
 import {
   addDays,
+  eachDayOfInterval,
+  endOfMonth,
+  format,
   isSameDay,
   isSameMonth,
   startOfDay,
@@ -7,8 +10,9 @@ import {
 } from "date-fns";
 import { selectionAsync } from "expo-haptics";
 import { useRouter } from "expo-router";
+import { useToast } from "heroui-native";
 import { useAll, useSession } from "jazz-tools/react-native";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   type LayoutChangeEvent,
@@ -30,10 +34,23 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { CalendarShiftSummary } from "@/components/calendar/calendar-body";
 import { CalendarHeader } from "@/components/calendar/calendar-header";
 import { CalendarPager } from "@/components/calendar/calendar-pager";
+import { CalendarSaveActionsSheet } from "@/components/calendar/calendar-save-actions-sheet";
+import {
+  ExportCalendarDialog,
+  type ExportDialogResult,
+} from "@/components/calendar/export-calendar-dialog";
+import { MonthCompletionConfetti } from "@/components/calendar/month-completion-confetti";
 import { PatternGridHeader } from "@/components/pattern/pattern-grid-header";
 import { PatternGridView } from "@/components/pattern/pattern-grid-view";
 import { ShiftDetailView } from "@/components/shift/shift-detail-view";
 import { useAppSettings } from "@/lib/app-settings";
+import { getMonthlyShiftCalendarEvents } from "@/lib/calendar-export";
+import {
+  addEventsToDeviceCalendar,
+  type CalendarSelectOption,
+  getCalendarSelectOptions,
+  getWritableCalendars,
+} from "@/lib/device-calendar";
 import { app, type DayNote, type Member, type Pattern } from "@/schema";
 
 const DETAIL_PAGE_DRAG_DISTANCE = 180;
@@ -42,17 +59,39 @@ const DETAIL_PAGE_SWIPE_VELOCITY = 600;
 const DETAIL_PAGE_TRANSITION_DURATION = 220;
 const TAB_OVERLAP_PADDING = 36;
 
+type SaveActionsSheetMode = "completion" | "manual";
+
 export default function Index() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { toast } = useToast();
   const { settings } = useAppSettings();
+  const [calendarSelectOptions, setCalendarSelectOptions] = useState<
+    CalendarSelectOption[]
+  >([]);
+  const [excludeDayOffShiftsFromExport, setExcludeDayOffShiftsFromExport] =
+    useState(true);
+  const [exportDialogResult, setExportDialogResult] =
+    useState<ExportDialogResult>();
   const [headerHeight, setHeaderHeight] = useState(0);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [isExportingMonth, setIsExportingMonth] = useState(false);
+  const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
+  const [isSaveActionsSheetOpen, setIsSaveActionsSheetOpen] = useState(false);
   const [isDetailInputMode, setIsDetailInputMode] = useState(false);
   const [isShiftInputMode, setIsShiftInputMode] = useState(false);
+  const [saveActionsSheetMode, setSaveActionsSheetMode] =
+    useState<SaveActionsSheetMode>("manual");
+  const [selectedCalendarId, setSelectedCalendarId] = useState<string>();
   const [yearMonth, setYearMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [targetDate, setTargetDate] = useState<Date>();
+  const [confettiBurstKey, setConfettiBurstKey] = useState<string>();
+  const [completionMonthLabel, setCompletionMonthLabel] = useState("");
+  const [lastShiftInputMonth, setLastShiftInputMonth] = useState<Date>();
   const session = useSession();
+  const celebratedMonthKeys = useRef(new Set<string>());
+  const hasRecentShiftInput = useRef(false);
   const currentUserId = session?.user_id ?? "";
   const detailPageProgress = useSharedValue(0);
   const detailModeGestureRef = useRef<GestureType>(undefined);
@@ -142,17 +181,69 @@ export default function Index() {
   const selectedDateDayNote = dayNotesByDate.get(
     startOfDay(selectedDate).getTime()
   );
+  const monthlyShiftCalendarEvents = useMemo(
+    () =>
+      getMonthlyShiftCalendarEvents({
+        dayNotesByDate,
+        excludeDayOffShifts: excludeDayOffShiftsFromExport,
+        membersById,
+        patternsById,
+        shifts,
+        yearMonth,
+      }),
+    [
+      dayNotesByDate,
+      excludeDayOffShiftsFromExport,
+      membersById,
+      patternsById,
+      shifts,
+      yearMonth,
+    ]
+  );
+  const monthLabel = format(yearMonth, "yyyy年M月");
+  const getIsMonthComplete = useCallback(
+    (month: Date) => {
+      const datesInMonth = eachDayOfInterval({
+        end: endOfMonth(month),
+        start: startOfMonth(month),
+      });
+
+      return datesInMonth.every((date) => {
+        const shiftSummary = shiftsByDate.get(startOfDay(date).getTime());
+        return Boolean(shiftSummary?.patternId);
+      });
+    },
+    [shiftsByDate]
+  );
+  const selectedCalendarOption = useMemo(
+    () =>
+      calendarSelectOptions.find(
+        (option) => option.value === selectedCalendarId
+      ),
+    [calendarSelectOptions, selectedCalendarId]
+  );
+
   const returnToToday = () => {
     setTargetDate(new Date());
   };
 
-  const openExport = () => {
+  const openImageExport = () => {
     router.push({
       pathname: "/export",
       params: {
         yearMonth: startOfMonth(yearMonth).toISOString(),
       },
     });
+  };
+
+  const openSaveActions = () => {
+    setSaveActionsSheetMode("manual");
+    setIsSaveActionsSheetOpen(true);
+  };
+
+  const markShiftInputActivity = (date: Date) => {
+    hasRecentShiftInput.current = true;
+    setLastShiftInputMonth(startOfMonth(date));
   };
 
   const selectDateImmediately = (date: Date) => {
@@ -197,6 +288,145 @@ export default function Index() {
         : nextHeaderHeight
     );
   };
+
+  const loadWritableCalendars = async () => {
+    setIsLoadingCalendars(true);
+
+    try {
+      const writableCalendars = await getWritableCalendars();
+
+      if (!writableCalendars) {
+        setCalendarSelectOptions([]);
+        setSelectedCalendarId(undefined);
+        setExportDialogResult({
+          message:
+            "端末のカレンダーへのアクセスを許可してから、もう一度お試しください。",
+          title: "カレンダー権限が必要です",
+        });
+        return;
+      }
+
+      const nextOptions = getCalendarSelectOptions(writableCalendars);
+
+      setCalendarSelectOptions(nextOptions);
+      setSelectedCalendarId((currentCalendarId) =>
+        nextOptions.some((option) => option.value === currentCalendarId)
+          ? currentCalendarId
+          : nextOptions[0]?.value
+      );
+
+      if (nextOptions.length === 0) {
+        setExportDialogResult({
+          message:
+            "書き込み可能な端末カレンダーが見つかりませんでした。端末のカレンダー設定を確認してください。",
+          title: "追加先カレンダーがありません",
+        });
+      }
+    } catch {
+      setCalendarSelectOptions([]);
+      setSelectedCalendarId(undefined);
+      setExportDialogResult({
+        message:
+          "端末カレンダーの一覧を取得できませんでした。カレンダー設定を確認してから、もう一度お試しください。",
+        title: "追加先カレンダーを取得できません",
+      });
+    } finally {
+      setIsLoadingCalendars(false);
+    }
+  };
+
+  const exportMonthlyShifts = async () => {
+    if (Platform.OS === "web") {
+      setExportDialogResult({
+        message:
+          "端末のカレンダーアプリへの追加は iOS / Android で利用できます。",
+        title: "端末カレンダーに追加できません",
+      });
+      return;
+    }
+
+    if (monthlyShiftCalendarEvents.length === 0) {
+      setExportDialogResult({
+        message: "表示中の月に追加対象のシフトがありません。",
+        title: "追加するシフトがありません",
+      });
+      return;
+    }
+
+    setIsExportingMonth(true);
+
+    try {
+      if (!selectedCalendarId) {
+        setExportDialogResult({
+          message:
+            "追加先の端末カレンダーを選択してから、もう一度お試しください。",
+          title: "追加先カレンダーが必要です",
+        });
+        return;
+      }
+
+      await addEventsToDeviceCalendar(
+        selectedCalendarId,
+        monthlyShiftCalendarEvents
+      );
+
+      setIsExportDialogOpen(false);
+      toast.show({
+        description: `${monthLabel}のシフト ${monthlyShiftCalendarEvents.length}件を追加しました。`,
+        label: "端末カレンダーに追加しました",
+        variant: "success",
+      });
+    } catch {
+      toast.show({
+        description: "カレンダー設定を確認してから、もう一度お試しください。",
+        label: "端末カレンダーに追加できませんでした",
+        variant: "danger",
+      });
+    } finally {
+      setIsExportingMonth(false);
+    }
+  };
+
+  const confirmExportMonthlyShifts = () => {
+    setCalendarSelectOptions([]);
+    setExportDialogResult(undefined);
+    setIsExportDialogOpen(true);
+    loadWritableCalendars().catch(() => {
+      setExportDialogResult({
+        message:
+          "端末カレンダーの一覧を取得できませんでした。カレンダー設定を確認してから、もう一度お試しください。",
+        title: "追加先カレンダーを取得できません",
+      });
+    });
+  };
+
+  useEffect(() => {
+    if (!lastShiftInputMonth) {
+      return;
+    }
+
+    const inputMonthKey = format(lastShiftInputMonth, "yyyy-MM");
+
+    if (!getIsMonthComplete(lastShiftInputMonth)) {
+      return;
+    }
+
+    if (!hasRecentShiftInput.current) {
+      return;
+    }
+
+    if (celebratedMonthKeys.current.has(inputMonthKey)) {
+      hasRecentShiftInput.current = false;
+      return;
+    }
+
+    celebratedMonthKeys.current.add(inputMonthKey);
+    hasRecentShiftInput.current = false;
+    setCompletionMonthLabel(format(lastShiftInputMonth, "yyyy年M月"));
+    setConfettiBurstKey(`${inputMonthKey}-${Date.now()}`);
+    setSaveActionsSheetMode("completion");
+    setIsSaveActionsSheetOpen(true);
+  }, [getIsMonthComplete, lastShiftInputMonth]);
 
   const detailModeGesture = useMemo(
     () =>
@@ -278,7 +508,10 @@ export default function Index() {
         <CalendarHeader
           calendarHighlightTargets={settings.calendarHighlightTargets}
           className="pt-0"
-          onOpenExport={openExport}
+          isExportingMonth={isExportingMonth}
+          onExportMonth={confirmExportMonthlyShifts}
+          onOpenImageExport={openImageExport}
+          onOpenSaveActions={openSaveActions}
           onPressToday={returnToToday}
           onSelectDate={setTargetDate}
           selectedDate={selectedDate}
@@ -286,6 +519,49 @@ export default function Index() {
           yearMonth={yearMonth}
         />
       </View>
+      <ExportCalendarDialog
+        calendarSelectOptions={calendarSelectOptions}
+        excludeDayOffShiftsFromExport={excludeDayOffShiftsFromExport}
+        exportDialogResult={exportDialogResult}
+        isExportingMonth={isExportingMonth}
+        isLoadingCalendars={isLoadingCalendars}
+        isOpen={isExportDialogOpen}
+        monthLabel={monthLabel}
+        onChangeExcludeDayOffShiftsFromExport={setExcludeDayOffShiftsFromExport}
+        onChangeOpen={setIsExportDialogOpen}
+        onChangeSelectedCalendarId={setSelectedCalendarId}
+        onExport={exportMonthlyShifts}
+        onExportError={() => {
+          toast.show({
+            description:
+              "カレンダー設定を確認してから、もう一度お試しください。",
+            label: "端末カレンダーに追加できませんでした",
+            variant: "danger",
+          });
+        }}
+        selectedCalendarId={selectedCalendarId}
+        selectedCalendarOption={selectedCalendarOption}
+        shiftCount={monthlyShiftCalendarEvents.length}
+      />
+      <CalendarSaveActionsSheet
+        description={
+          saveActionsSheetMode === "completion"
+            ? "あとから見返せるように保存しておきますか？"
+            : "保存方法を選んでください。"
+        }
+        isCalendarExportDisabled={isExportingMonth}
+        isOpen={isSaveActionsSheetOpen}
+        isTertiaryActionVisible={saveActionsSheetMode === "completion"}
+        onAddToDeviceCalendar={confirmExportMonthlyShifts}
+        onChangeOpen={setIsSaveActionsSheetOpen}
+        onSaveAsImage={openImageExport}
+        title={
+          saveActionsSheetMode === "completion"
+            ? `${completionMonthLabel || monthLabel}のシフト入力が完了しました`
+            : `${monthLabel}のシフトを保存`
+        }
+      />
+      <MonthCompletionConfetti burstKey={confettiBurstKey} />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
@@ -334,6 +610,7 @@ export default function Index() {
                   isDetailInputMode={isDetailInputMode}
                   onSelectDate={selectDateImmediately}
                   onSelectNextDay={selectNextDay}
+                  onShiftSaved={markShiftInputActivity}
                   patterns={patterns}
                   selectedDate={selectedDate}
                   selectedDateDayNote={selectedDateDayNote}

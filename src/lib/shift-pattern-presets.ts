@@ -42,12 +42,11 @@ export type ShiftPatternPreset = {
 type PatternInsert = {
   countsAsDayOff: boolean;
   emoji: string;
-  endDate: Date | null;
+  endDate?: Date;
   isAllDay: boolean;
   name: string;
-  nextDayPatternId?: string | null;
   orderIndex: number;
-  startDate: Date | null;
+  startDate?: Date;
 };
 
 const createPresetTime = ([hour, minute]: TimeTuple): Date => {
@@ -59,16 +58,25 @@ const createPresetTime = ([hour, minute]: TimeTuple): Date => {
 const createPatternInsert = (
   pattern: ShiftPatternPresetPattern,
   orderIndex: number
-): PatternInsert => ({
-  countsAsDayOff: pattern.countsAsDayOff ?? false,
-  emoji: pattern.emoji,
-  endDate: pattern.end ? createPresetTime(pattern.end) : null,
-  isAllDay: pattern.isAllDay ?? false,
-  name: pattern.name,
-  nextDayPatternId: null,
-  orderIndex,
-  startDate: pattern.start ? createPresetTime(pattern.start) : null,
-});
+): PatternInsert => {
+  const insert: PatternInsert = {
+    countsAsDayOff: pattern.countsAsDayOff ?? false,
+    emoji: pattern.emoji,
+    isAllDay: pattern.isAllDay ?? false,
+    name: pattern.name,
+    orderIndex,
+  };
+
+  if (pattern.end) {
+    insert.endDate = createPresetTime(pattern.end);
+  }
+
+  if (pattern.start) {
+    insert.startDate = createPresetTime(pattern.start);
+  }
+
+  return insert;
+};
 
 export const BUNDLED_SHIFT_PATTERN_PRESETS: ShiftPatternPreset[] = [
   {
