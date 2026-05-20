@@ -69,20 +69,21 @@ const createInviteCode = (seed: string) => {
 
 const createUniqueInviteCode = async (
   ctx: MutationCtx,
-  groupId: Id<"groups">
+  groupId: Id<"groups">,
+  seedNonce = ""
 ) => {
   for (
     let attempt = 0;
     attempt < MAX_CREATE_INVITE_CODE_ATTEMPTS;
     attempt += 1
   ) {
-    const inviteCode = createInviteCode(`${groupId}:${attempt}`);
+    const inviteCode = createInviteCode(`${groupId}:${seedNonce}:${attempt}`);
     const existingGroup = await ctx.db
       .query("groups")
       .withIndex("by_inviteCode", (q) => q.eq("inviteCode", inviteCode))
       .unique();
 
-    if (!existingGroup || existingGroup._id === groupId) {
+    if (!existingGroup) {
       return inviteCode;
     }
   }
@@ -492,6 +493,14 @@ export const create = mutation({
       jazzUserId: args.jazzUserId,
       joinedAt: now,
     });
+    await insertGroupChatEvent(ctx, {
+      actorDisplayNameSnapshot: displayName,
+      actorJazzUserId: args.jazzUserId,
+      body: `${displayName}さんがグループに参加しました`,
+      createdAt: now,
+      groupId,
+      kind: "member_joined",
+    });
 
     return { groupId };
   },
@@ -576,6 +585,45 @@ export const updateEmoji = mutation({
       nextValue: emoji,
       previousValue: group.emoji,
     });
+  },
+});
+
+export const regenerateInviteCode = mutation({
+  args: {
+    groupId: v.id("groups"),
+    jazzUserId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const [group, membership] = await Promise.all([
+      getGroup(ctx, args.groupId),
+      getMembership(ctx, args.groupId, args.jazzUserId),
+    ]);
+
+    if (!(group && membership)) {
+      throw new ConvexError("Group not found");
+    }
+
+    const now = Date.now();
+    const inviteCode = await createUniqueInviteCode(
+      ctx,
+      group._id,
+      `${now}:${args.jazzUserId}:${group.inviteCode}`
+    );
+
+    await ctx.db.patch(group._id, {
+      inviteCode,
+      updatedAt: now,
+    });
+    await insertGroupChatEvent(ctx, {
+      actorDisplayNameSnapshot: membership.displayName,
+      actorJazzUserId: args.jazzUserId,
+      body: `${membership.displayName}さんが招待リンクを再発行しました`,
+      createdAt: now,
+      groupId: group._id,
+      kind: "invite_code_regenerated",
+    });
+
+    return { inviteUrl: buildInviteUrl(inviteCode) };
   },
 });
 

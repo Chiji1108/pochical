@@ -48,6 +48,7 @@ export type ChatEvent = {
     | "group_name_updated"
     | "group_emoji_updated"
     | "display_name_updated"
+    | "invite_code_regenerated"
     | "member_joined"
     | "member_left"
     | "member_removed";
@@ -415,25 +416,32 @@ const formatEventActor = (event: ChatEvent, currentUserId: string) =>
     ? "あなた"
     : `${event.actorDisplayNameSnapshot}さん`;
 
+const formatValueChangeEvent = (
+  actor: string,
+  event: ChatEvent,
+  label: string
+) =>
+  event.previousValue && event.nextValue
+    ? `${actor}が${label}を「${event.previousValue}」から「${event.nextValue}」に変更しました`
+    : event.body;
+
 const formatEventBody = (event: ChatEvent, currentUserId: string) => {
   const actor = formatEventActor(event, currentUserId);
 
   if (event.kind === "group_name_updated") {
-    return event.previousValue && event.nextValue
-      ? `${actor}がグループ名を「${event.previousValue}」から「${event.nextValue}」に変更しました`
-      : event.body;
+    return formatValueChangeEvent(actor, event, "グループ名");
   }
 
   if (event.kind === "group_emoji_updated") {
-    return event.previousValue && event.nextValue
-      ? `${actor}がグループアイコンを「${event.previousValue}」から「${event.nextValue}」に変更しました`
-      : event.body;
+    return formatValueChangeEvent(actor, event, "グループアイコン");
   }
 
   if (event.kind === "display_name_updated") {
-    return event.previousValue && event.nextValue
-      ? `${actor}が名前を「${event.previousValue}」から「${event.nextValue}」に変更しました`
-      : event.body;
+    return formatValueChangeEvent(actor, event, "名前");
+  }
+
+  if (event.kind === "invite_code_regenerated") {
+    return `${actor}が招待リンクを再発行しました`;
   }
 
   if (event.kind === "member_joined" || event.kind === "member_left") {

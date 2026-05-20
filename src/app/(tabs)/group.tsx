@@ -119,6 +119,19 @@ export default function Group() {
     router.push("/invite/scan");
   }, [router]);
 
+  const clearConsumedInvitePrompt = useCallback(() => {
+    if (showInvite !== "1") {
+      return;
+    }
+
+    if (requestedGroupId) {
+      router.replace(`/group?groupId=${encodeURIComponent(requestedGroupId)}`);
+      return;
+    }
+
+    router.replace("/group");
+  }, [requestedGroupId, router, showInvite]);
+
   let mainContent = <View className="flex-1" />;
 
   if (selectedGroup) {
@@ -126,6 +139,7 @@ export default function Group() {
       <GroupDetailView
         groupId={selectedGroup._id}
         isEmbedded={true}
+        onAutoInviteShown={clearConsumedInvitePrompt}
         showInvite={
           showInvite === "1" && selectedGroup._id === requestedGroupId
         }

@@ -46,6 +46,9 @@ export default function ShareGroupSettings() {
   const updateGroupName = useMutation(convexApi.groups.updateName);
   const updateGroupEmoji = useMutation(convexApi.groups.updateEmoji);
   const updateDisplayName = useMutation(convexApi.groups.updateDisplayName);
+  const regenerateInviteCode = useMutation(
+    convexApi.groups.regenerateInviteCode
+  );
   const leaveGroupMutation = useMutation(convexApi.groups.leave);
   const removeMemberMutation = useMutation(convexApi.groups.removeMember);
   const isLeavingGroupRef = useRef(false);
@@ -53,6 +56,7 @@ export default function ShareGroupSettings() {
   const [isDisplayNameDialogOpen, setIsDisplayNameDialogOpen] = useState(false);
   const [inviteDetails, setInviteDetails] = useState<InviteDetails>();
   const [isLeaving, setIsLeaving] = useState(false);
+  const [isRegeneratingInvite, setIsRegeneratingInvite] = useState(false);
 
   const goBack = () => {
     if (router.canGoBack()) {
@@ -139,6 +143,36 @@ export default function ShareGroupSettings() {
           ? error.message
           : "時間をおいて再試行してください"
       );
+    }
+  };
+
+  const regenerateInvite = async () => {
+    if (!(group && session) || isRegeneratingInvite) {
+      return;
+    }
+
+    setIsRegeneratingInvite(true);
+
+    try {
+      const result = await regenerateInviteCode({
+        groupId: group._id,
+        jazzUserId: session.user_id,
+      });
+      setInviteDetails({
+        groupEmoji: group.emoji,
+        groupName: group.name,
+        url: result.inviteUrl,
+      });
+      Alert.alert("再発行しました", "以前の招待URLは使えなくなりました");
+    } catch (error) {
+      Alert.alert(
+        "再発行できませんでした",
+        error instanceof Error
+          ? error.message
+          : "時間をおいて再試行してください"
+      );
+    } finally {
+      setIsRegeneratingInvite(false);
     }
   };
 
@@ -333,11 +367,13 @@ export default function ShareGroupSettings() {
       />
       <InviteDialog
         inviteDetails={inviteDetails}
+        isRegeneratingInvite={isRegeneratingInvite}
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             setInviteDetails(undefined);
           }
         }}
+        onRegenerateInvite={regenerateInvite}
       />
     </View>
   );

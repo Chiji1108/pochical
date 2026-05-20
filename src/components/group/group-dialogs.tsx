@@ -53,11 +53,15 @@ type DisplayNameFormDialogProps = {
 };
 
 export const InviteDialog = ({
+  isRegeneratingInvite = false,
   inviteDetails,
   onOpenChange,
+  onRegenerateInvite,
 }: {
+  isRegeneratingInvite?: boolean;
   inviteDetails?: InviteDetails;
   onOpenChange: (isOpen: boolean) => void;
+  onRegenerateInvite?: () => Promise<void> | void;
 }) => {
   const accentForegroundColor = useThemeColor("accent-foreground");
   const isOpen = Boolean(inviteDetails);
@@ -95,6 +99,26 @@ export const InviteDialog = ({
 
     await setStringAsync(inviteDetails.url);
     Alert.alert("コピーしました", "招待URLをクリップボードにコピーしました");
+  };
+  const confirmRegenerateInvite = () => {
+    if (!(inviteDetails && onRegenerateInvite)) {
+      return;
+    }
+
+    Alert.alert(
+      "招待リンクを再発行しますか？",
+      "現在の招待リンクは使えなくなります。",
+      [
+        { style: "cancel", text: "キャンセル" },
+        {
+          onPress: () => {
+            Promise.resolve(onRegenerateInvite()).catch(() => undefined);
+          },
+          style: "destructive",
+          text: "再発行",
+        },
+      ]
+    );
   };
 
   return (
@@ -161,6 +185,28 @@ export const InviteDialog = ({
                   <Button.Label>共有</Button.Label>
                 </Button>
               </View>
+              {onRegenerateInvite ? (
+                <Button
+                  accessibilityLabel="招待URLを再発行"
+                  className="w-full"
+                  isDisabled={isRegeneratingInvite}
+                  onPress={confirmRegenerateInvite}
+                  size="sm"
+                  variant="ghost"
+                >
+                  <SymbolView
+                    name={{
+                      android: "sync",
+                      ios: "arrow.clockwise",
+                      web: "sync",
+                    }}
+                    size={16}
+                  />
+                  <Button.Label>
+                    {isRegeneratingInvite ? "処理中" : "招待リンクを再発行"}
+                  </Button.Label>
+                </Button>
+              ) : null}
             </View>
           ) : null}
         </Dialog.Content>

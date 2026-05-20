@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Card, ListGroup, Separator, Text } from "heroui-native";
 import { useSession } from "jazz-tools/react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
 import {
   type InviteDetails,
@@ -24,6 +24,7 @@ type GroupDetailViewProps = {
   groupId?: string;
   isEmbedded?: boolean;
   onBack?: () => void;
+  onAutoInviteShown?: () => void;
   showInvite?: boolean;
 };
 
@@ -62,11 +63,13 @@ export const GroupDetailView = ({
   groupId,
   isEmbedded = false,
   onBack,
+  onAutoInviteShown,
   showInvite = false,
 }: GroupDetailViewProps) => {
   const router = useRouter();
   const session = useSession();
   const currentUserId = session?.user_id ?? "";
+  const autoInviteShownGroupIdRef = useRef("");
   const [inviteDetails, setInviteDetails] = useState<InviteDetails>();
   const group = useQuery(
     convexApi.groups.getDetail,
@@ -80,12 +83,18 @@ export const GroupDetailView = ({
       return;
     }
 
+    if (autoInviteShownGroupIdRef.current === group._id) {
+      return;
+    }
+
+    autoInviteShownGroupIdRef.current = group._id;
     setInviteDetails({
       groupEmoji: group.emoji,
       groupName: group.name,
       url: group.inviteUrl,
     });
-  }, [group, showInvite]);
+    onAutoInviteShown?.();
+  }, [group, onAutoInviteShown, showInvite]);
 
   if (!groupId || group === undefined) {
     return <View className="flex-1 bg-background" />;

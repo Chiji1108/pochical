@@ -51,6 +51,7 @@ export default defineSchema({
       v.literal("group_name_updated"),
       v.literal("group_emoji_updated"),
       v.literal("display_name_updated"),
+      v.literal("invite_code_regenerated"),
       v.literal("member_joined"),
       v.literal("member_left"),
       v.literal("member_removed")
