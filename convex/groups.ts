@@ -129,6 +129,24 @@ const listMembers = async (
 const createDirectPairKey = (jazzUserId: string, targetJazzUserId: string) =>
   JSON.stringify([jazzUserId, targetJazzUserId].sort());
 
+const insertGroupChatEvent = async (
+  ctx: MutationCtx,
+  event: {
+    actorDisplayNameSnapshot: string;
+    actorJazzUserId: string;
+    body: string;
+    createdAt: number;
+    groupId: Id<"groups">;
+    kind: Doc<"chatEvents">["kind"];
+    nextValue?: string;
+    previousValue?: string;
+    targetDisplayNameSnapshot?: string;
+    targetJazzUserId?: string;
+  }
+) => {
+  await ctx.db.insert("chatEvents", event);
+};
+
 const getChatThread = async (
   ctx: QueryCtx,
   groupId: Id<"groups">,
@@ -224,7 +242,23 @@ const getGroupChatOverview = async (
   };
 };
 
+const deleteGroupChatEvents = async (
+  ctx: MutationCtx,
+  groupId: Id<"groups">
+) => {
+  const events = await ctx.db
+    .query("chatEvents")
+    .withIndex("by_groupId_createdAt", (q) => q.eq("groupId", groupId))
+    .collect();
+
+  for (const event of events) {
+    await ctx.db.delete(event._id);
+  }
+};
+
 const deleteGroupChatData = async (ctx: MutationCtx, groupId: Id<"groups">) => {
+  await deleteGroupChatEvents(ctx, groupId);
+
   const threads = await ctx.db
     .query("chatThreads")
     .withIndex("by_groupId_updatedAt", (q) => q.eq("groupId", groupId))
@@ -479,13 +513,29 @@ export const updateName = mutation({
       throw new ConvexError("Group not found");
     }
 
+    const name = normalizeRequiredText(
+      args.name,
+      "Group name",
+      MAX_GROUP_NAME_LENGTH
+    );
+    if (name === group.name) {
+      return;
+    }
+
+    const now = Date.now();
     await ctx.db.patch(group._id, {
-      name: normalizeRequiredText(
-        args.name,
-        "Group name",
-        MAX_GROUP_NAME_LENGTH
-      ),
-      updatedAt: Date.now(),
+      name,
+      updatedAt: now,
+    });
+    await insertGroupChatEvent(ctx, {
+      actorDisplayNameSnapshot: membership.displayName,
+      actorJazzUserId: args.jazzUserId,
+      body: `${membership.displayName}さんがグループ名を「${group.name}」から「${name}」に変更しました`,
+      createdAt: now,
+      groupId: group._id,
+      kind: "group_name_updated",
+      nextValue: name,
+      previousValue: group.name,
     });
   },
 });
@@ -506,9 +556,25 @@ export const updateEmoji = mutation({
       throw new ConvexError("Group not found");
     }
 
+    const emoji = normalizeGroupEmoji(args.emoji);
+    if (emoji === group.emoji) {
+      return;
+    }
+
+    const now = Date.now();
     await ctx.db.patch(group._id, {
-      emoji: normalizeGroupEmoji(args.emoji),
-      updatedAt: Date.now(),
+      emoji,
+      updatedAt: now,
+    });
+    await insertGroupChatEvent(ctx, {
+      actorDisplayNameSnapshot: membership.displayName,
+      actorJazzUserId: args.jazzUserId,
+      body: `${membership.displayName}さんがグループアイコンを「${group.emoji}」から「${emoji}」に変更しました`,
+      createdAt: now,
+      groupId: group._id,
+      kind: "group_emoji_updated",
+      nextValue: emoji,
+      previousValue: group.emoji,
     });
   },
 });
@@ -526,12 +592,30 @@ export const updateDisplayName = mutation({
       throw new ConvexError("Group not found");
     }
 
+    const displayName = normalizeRequiredText(
+      args.displayName,
+      "Display name",
+      MAX_DISPLAY_NAME_LENGTH
+    );
+    if (displayName === membership.displayName) {
+      return;
+    }
+
+    const now = Date.now();
     await ctx.db.patch(membership._id, {
-      displayName: normalizeRequiredText(
-        args.displayName,
-        "Display name",
-        MAX_DISPLAY_NAME_LENGTH
-      ),
+      displayName,
+    });
+    await insertGroupChatEvent(ctx, {
+      actorDisplayNameSnapshot: displayName,
+      actorJazzUserId: args.jazzUserId,
+      body: `${membership.displayName}さんが名前を「${membership.displayName}」から「${displayName}」に変更しました`,
+      createdAt: now,
+      groupId: args.groupId,
+      kind: "display_name_updated",
+      nextValue: displayName,
+      previousValue: membership.displayName,
+      targetDisplayNameSnapshot: displayName,
+      targetJazzUserId: args.jazzUserId,
     });
   },
 });
@@ -545,13 +629,24 @@ export const leave = mutation({
       return;
     }
 
+    const now = Date.now();
     await ctx.db.delete(membership._id);
 
     const remainingMembers = await listMembers(ctx, args.groupId);
     if (remainingMembers.length === 0) {
       await deleteGroupChatData(ctx, args.groupId);
       await ctx.db.delete(args.groupId);
+      return;
     }
+
+    await insertGroupChatEvent(ctx, {
+      actorDisplayNameSnapshot: membership.displayName,
+      actorJazzUserId: args.jazzUserId,
+      body: `${membership.displayName}さんがグループから脱退しました`,
+      createdAt: now,
+      groupId: args.groupId,
+      kind: "member_left",
+    });
   },
 });
 
@@ -582,6 +677,17 @@ export const removeMember = mutation({
       return;
     }
 
+    const now = Date.now();
+    await insertGroupChatEvent(ctx, {
+      actorDisplayNameSnapshot: actorMembership.displayName,
+      actorJazzUserId: args.jazzUserId,
+      body: `${actorMembership.displayName}さんが${targetMembership.displayName}さんをグループから削除しました`,
+      createdAt: now,
+      groupId: args.groupId,
+      kind: "member_removed",
+      targetDisplayNameSnapshot: targetMembership.displayName,
+      targetJazzUserId: args.targetJazzUserId,
+    });
     await ctx.db.delete(targetMembership._id);
 
     const remainingMembers = await listMembers(ctx, args.groupId);

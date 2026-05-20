@@ -37,6 +37,12 @@ export default function GroupChat() {
       : "skip",
     { initialNumItems: INITIAL_MESSAGE_COUNT }
   );
+  const events = useQuery(
+    convexApi.chat.listGroupEvents,
+    groupId && currentUserId
+      ? { groupId: targetGroupId, jazzUserId: currentUserId }
+      : "skip"
+  );
   const sendMessageMutation = useMutation(
     convexApi.chat.sendGroupMessage
   ).withOptimisticUpdate((localQueryStore, args) => {
@@ -100,6 +106,7 @@ export default function GroupChat() {
   return (
     <ChatView
       currentUserId={currentUserId}
+      events={events ?? []}
       isLoadingMore={status === "LoadingMore"}
       messages={results}
       onBack={goBack}

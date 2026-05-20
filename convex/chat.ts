@@ -260,6 +260,53 @@ export const listGroupMessages = query({
   },
 });
 
+export const listGroupEvents = query({
+  args: {
+    groupId: v.id("groups"),
+    jazzUserId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireMembership(ctx, args.groupId, args.jazzUserId);
+
+    return ctx.db
+      .query("chatEvents")
+      .withIndex("by_groupId_createdAt", (q) => q.eq("groupId", args.groupId))
+      .order("desc")
+      .collect();
+  },
+});
+
+export const listDirectEvents = query({
+  args: {
+    groupId: v.id("groups"),
+    jazzUserId: v.string(),
+    targetJazzUserId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireDirectMembership(
+      ctx,
+      args.groupId,
+      args.jazzUserId,
+      args.targetJazzUserId
+    );
+    const participantJazzUserIds = new Set([
+      args.jazzUserId,
+      args.targetJazzUserId,
+    ]);
+    const events = await ctx.db
+      .query("chatEvents")
+      .withIndex("by_groupId_createdAt", (q) => q.eq("groupId", args.groupId))
+      .order("desc")
+      .collect();
+
+    return events.filter(
+      (event) =>
+        event.kind === "display_name_updated" &&
+        participantJazzUserIds.has(event.actorJazzUserId)
+    );
+  },
+});
+
 export const listDirectMessages = query({
   args: {
     groupId: v.id("groups"),

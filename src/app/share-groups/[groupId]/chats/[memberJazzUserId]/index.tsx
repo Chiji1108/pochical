@@ -47,6 +47,16 @@ export default function DirectChat() {
       : "skip",
     { initialNumItems: INITIAL_MESSAGE_COUNT }
   );
+  const events = useQuery(
+    convexApi.chat.listDirectEvents,
+    groupId && currentUserId && memberJazzUserId
+      ? {
+          groupId: targetGroupId,
+          jazzUserId: currentUserId,
+          targetJazzUserId: memberJazzUserId,
+        }
+      : "skip"
+  );
   const sendMessageMutation = useMutation(
     convexApi.chat.sendDirectMessage
   ).withOptimisticUpdate((localQueryStore, args) => {
@@ -119,6 +129,7 @@ export default function DirectChat() {
   return (
     <ChatView
       currentUserId={currentUserId}
+      events={events ?? []}
       isLoadingMore={status === "LoadingMore"}
       messages={results}
       onBack={goBack}

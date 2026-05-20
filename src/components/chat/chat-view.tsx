@@ -38,11 +38,48 @@ export type ChatMessage = {
   readCount: number;
 };
 
+export type ChatEvent = {
+  _id: string;
+  actorDisplayNameSnapshot: string;
+  actorJazzUserId: string;
+  body: string;
+  createdAt: number;
+  kind:
+    | "group_name_updated"
+    | "group_emoji_updated"
+    | "display_name_updated"
+    | "member_joined"
+    | "member_left"
+    | "member_removed";
+  nextValue?: string;
+  previousValue?: string;
+  targetDisplayNameSnapshot?: string;
+  targetJazzUserId?: string;
+};
+
+type ChatTimelineItem =
+  | {
+      createdAt: number;
+      event: ChatEvent;
+      id: string;
+      type: "event";
+    }
+  | {
+      createdAt: number;
+      id: string;
+      message: ChatMessage;
+      type: "message";
+    };
+
 type ChatListItem =
   | {
       message: ChatMessage;
       showAuthor: boolean;
       type: "message";
+    }
+  | {
+      event: ChatEvent;
+      type: "event";
     }
   | {
       date: string;
@@ -52,6 +89,7 @@ type ChatListItem =
 
 type ChatViewProps = {
   currentUserId: string;
+  events?: ChatEvent[];
   isLoadingMore: boolean;
   messages: ChatMessage[];
   onBack: () => void;
@@ -120,28 +158,71 @@ const formatDateBadge = (date: Date) => {
     : dateBadgeFormatter.format(targetDate);
 };
 
-const buildChatListItems = (messages: ChatMessage[]): ChatListItem[] => {
+const buildTimelineItems = (
+  messages: ChatMessage[],
+  events: ChatEvent[]
+): ChatTimelineItem[] =>
+  [
+    ...messages.map((message) => ({
+      createdAt: message.createdAt,
+      id: message._id,
+      message,
+      type: "message" as const,
+    })),
+    ...events.map((event) => ({
+      createdAt: event.createdAt,
+      event,
+      id: event._id,
+      type: "event" as const,
+    })),
+  ].sort((firstItem, secondItem) => {
+    const createdAtDifference = secondItem.createdAt - firstItem.createdAt;
+
+    if (createdAtDifference !== 0) {
+      return createdAtDifference;
+    }
+
+    return firstItem.id.localeCompare(secondItem.id);
+  });
+
+const buildChatListItems = (
+  messages: ChatMessage[],
+  events: ChatEvent[]
+): ChatListItem[] => {
+  const timelineItems = buildTimelineItems(messages, events);
   const items: ChatListItem[] = [];
 
-  for (let index = 0; index < messages.length; index += 1) {
-    const message = messages[index];
-    const currentDateKey = dateKeyFormatter.format(new Date(message.createdAt));
-    const nextMessage = messages[index + 1];
-    const nextMessageDateKey = nextMessage
-      ? dateKeyFormatter.format(new Date(nextMessage.createdAt))
+  for (let index = 0; index < timelineItems.length; index += 1) {
+    const timelineItem = timelineItems[index];
+    const currentDateKey = dateKeyFormatter.format(
+      new Date(timelineItem.createdAt)
+    );
+    const nextTimelineItem = timelineItems[index + 1];
+    const nextItemDateKey = nextTimelineItem
+      ? dateKeyFormatter.format(new Date(nextTimelineItem.createdAt))
       : null;
-    const showAuthor =
-      !nextMessage ||
-      nextMessage.authorJazzUserId !== message.authorJazzUserId ||
-      nextMessageDateKey !== currentDateKey;
 
-    items.push({ message, showAuthor, type: "message" });
-
-    if (!nextMessage || nextMessageDateKey !== currentDateKey) {
-      const messageDate = new Date(message.createdAt);
+    if (timelineItem.type === "message") {
+      const showAuthor =
+        nextTimelineItem?.type !== "message" ||
+        nextTimelineItem.message.authorJazzUserId !==
+          timelineItem.message.authorJazzUserId ||
+        nextItemDateKey !== currentDateKey;
 
       items.push({
-        date: formatDateBadge(messageDate),
+        message: timelineItem.message,
+        showAuthor,
+        type: "message",
+      });
+    } else {
+      items.push({ event: timelineItem.event, type: "event" });
+    }
+
+    if (!nextTimelineItem || nextItemDateKey !== currentDateKey) {
+      const itemDate = new Date(timelineItem.createdAt);
+
+      items.push({
+        date: formatDateBadge(itemDate),
         key: currentDateKey,
         type: "date",
       });
@@ -169,8 +250,21 @@ const copyMessageBody = async (body: string) => {
   await setStringAsync(body);
 };
 
+const getChatListItemKey = (item: ChatListItem) => {
+  if (item.type === "message") {
+    return item.message._id;
+  }
+
+  if (item.type === "event") {
+    return item.event._id;
+  }
+
+  return item.key;
+};
+
 export const ChatView = ({
   currentUserId,
+  events = [],
   isLoadingMore,
   messages,
   onBack,
@@ -192,7 +286,10 @@ export const ChatView = ({
   const [isSending, setIsSending] = useState(false);
   const trimmedBody = body.trim();
   const isSendDisabled = isSending || !trimmedBody;
-  const listItems = useMemo(() => buildChatListItems(messages), [messages]);
+  const listItems = useMemo(
+    () => buildChatListItems(messages, events),
+    [events, messages]
+  );
 
   const sendMessage = async () => {
     if (isSendDisabled) {
@@ -210,6 +307,25 @@ export const ChatView = ({
     } finally {
       setIsSending(false);
     }
+  };
+
+  const renderListItem = ({ item }: { item: ChatListItem }) => {
+    if (item.type === "date") {
+      return <DateBadge date={item.date} />;
+    }
+
+    if (item.type === "event") {
+      return <EventRow currentUserId={currentUserId} event={item.event} />;
+    }
+
+    return (
+      <MessageBubble
+        isOwnMessage={item.message.authorJazzUserId === currentUserId}
+        message={item.message}
+        readReceiptMode={readReceiptMode}
+        showAuthor={item.showAuthor}
+      />
+    );
   };
 
   return (
@@ -237,9 +353,7 @@ export const ChatView = ({
         contentContainerClassName="gap-2 px-4 py-3"
         data={listItems}
         inverted={true}
-        keyExtractor={(item) =>
-          item.type === "message" ? item.message._id : item.key
-        }
+        keyExtractor={getChatListItemKey}
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center px-6 py-12">
             <Text className="text-center text-base" color="muted">
@@ -253,18 +367,7 @@ export const ChatView = ({
           }
         }}
         onEndReachedThreshold={0.4}
-        renderItem={({ item }) =>
-          item.type === "date" ? (
-            <DateBadge date={item.date} />
-          ) : (
-            <MessageBubble
-              isOwnMessage={item.message.authorJazzUserId === currentUserId}
-              message={item.message}
-              readReceiptMode={readReceiptMode}
-              showAuthor={item.showAuthor}
-            />
-          )
-        }
+        renderItem={renderListItem}
       />
       <View
         className="border-border border-t bg-background px-3 pt-2"
@@ -306,6 +409,70 @@ export const ChatView = ({
     </KeyboardAvoidingView>
   );
 };
+
+const formatEventActor = (event: ChatEvent, currentUserId: string) =>
+  event.actorJazzUserId === currentUserId
+    ? "あなた"
+    : `${event.actorDisplayNameSnapshot}さん`;
+
+const formatEventBody = (event: ChatEvent, currentUserId: string) => {
+  const actor = formatEventActor(event, currentUserId);
+
+  if (event.kind === "group_name_updated") {
+    return event.previousValue && event.nextValue
+      ? `${actor}がグループ名を「${event.previousValue}」から「${event.nextValue}」に変更しました`
+      : event.body;
+  }
+
+  if (event.kind === "group_emoji_updated") {
+    return event.previousValue && event.nextValue
+      ? `${actor}がグループアイコンを「${event.previousValue}」から「${event.nextValue}」に変更しました`
+      : event.body;
+  }
+
+  if (event.kind === "display_name_updated") {
+    return event.previousValue && event.nextValue
+      ? `${actor}が名前を「${event.previousValue}」から「${event.nextValue}」に変更しました`
+      : event.body;
+  }
+
+  if (event.kind === "member_joined" || event.kind === "member_left") {
+    return event.actorJazzUserId === currentUserId
+      ? event.body.replace(`${event.actorDisplayNameSnapshot}さん`, "あなた")
+      : event.body;
+  }
+
+  if (event.kind === "member_removed") {
+    const targetDisplayName = event.targetDisplayNameSnapshot ?? "メンバー";
+    const target =
+      event.targetJazzUserId === currentUserId
+        ? "あなた"
+        : `${targetDisplayName}さん`;
+
+    return `${actor}が${target}をグループから削除しました`;
+  }
+
+  return event.body;
+};
+
+const EventRow = ({
+  currentUserId,
+  event,
+}: {
+  currentUserId: string;
+  event: ChatEvent;
+}) => (
+  <View className="items-center py-1">
+    <View className="max-w-[88%] items-center px-3 py-1">
+      <Text className="text-[10px] leading-tight" color="muted">
+        {messageTimeFormatter.format(new Date(event.createdAt))}
+      </Text>
+      <Text className="text-center text-xs leading-4" color="muted">
+        {formatEventBody(event, currentUserId)}
+      </Text>
+    </View>
+  </View>
+);
 
 const MessageBubble = ({
   isOwnMessage,
@@ -525,7 +692,7 @@ const MessageMetadata = ({
 
 const DateBadge = ({ date }: { date: string }) => (
   <View className="items-center py-2">
-    <View className="rounded-full bg-content2 px-3 py-1">
+    <View className="rounded-full bg-surface-secondary px-3 py-1">
       <Text className="font-medium text-xs" color="muted">
         {date}
       </Text>

@@ -1,4 +1,5 @@
 import { ConvexError, v } from "convex/values";
+import type { Doc, Id } from "./_generated/dataModel";
 import {
   type MutationCtx,
   mutation,
@@ -19,6 +20,24 @@ const normalizeDisplayName = (displayName: string) => {
   }
 
   return trimmedDisplayName;
+};
+
+const insertGroupChatEvent = async (
+  ctx: MutationCtx,
+  event: {
+    actorDisplayNameSnapshot: string;
+    actorJazzUserId: string;
+    body: string;
+    createdAt: number;
+    groupId: Id<"groups">;
+    kind: Doc<"chatEvents">["kind"];
+    nextValue?: string;
+    previousValue?: string;
+    targetDisplayNameSnapshot?: string;
+    targetJazzUserId?: string;
+  }
+) => {
+  await ctx.db.insert("chatEvents", event);
 };
 
 const getGroupByInviteCode = async (
@@ -85,15 +104,38 @@ export const join = mutation({
         q.eq("groupId", group._id).eq("jazzUserId", args.jazzUserId)
       )
       .unique();
+    const now = Date.now();
 
     if (existingMembership) {
-      await ctx.db.patch(existingMembership._id, { displayName });
+      if (displayName !== existingMembership.displayName) {
+        await ctx.db.patch(existingMembership._id, { displayName });
+        await insertGroupChatEvent(ctx, {
+          actorDisplayNameSnapshot: displayName,
+          actorJazzUserId: args.jazzUserId,
+          body: `${existingMembership.displayName}さんが名前を「${existingMembership.displayName}」から「${displayName}」に変更しました`,
+          createdAt: now,
+          groupId: group._id,
+          kind: "display_name_updated",
+          nextValue: displayName,
+          previousValue: existingMembership.displayName,
+          targetDisplayNameSnapshot: displayName,
+          targetJazzUserId: args.jazzUserId,
+        });
+      }
     } else {
       await ctx.db.insert("groupMembers", {
         displayName,
         groupId: group._id,
         jazzUserId: args.jazzUserId,
-        joinedAt: Date.now(),
+        joinedAt: now,
+      });
+      await insertGroupChatEvent(ctx, {
+        actorDisplayNameSnapshot: displayName,
+        actorJazzUserId: args.jazzUserId,
+        body: `${displayName}さんがグループに参加しました`,
+        createdAt: now,
+        groupId: group._id,
+        kind: "member_joined",
       });
     }
 
