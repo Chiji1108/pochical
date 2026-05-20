@@ -56,7 +56,7 @@ export default function NewShareGroup() {
         jazzUserId: session.user_id,
         name: groupName,
       });
-      router.replace(`/share-groups/${result.groupId}?showInvite=1`);
+      router.replace(`/group?groupId=${result.groupId}&showInvite=1`);
     } catch (error) {
       Alert.alert(
         "作成できませんでした",

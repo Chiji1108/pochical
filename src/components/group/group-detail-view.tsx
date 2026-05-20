@@ -1,6 +1,6 @@
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Card, ListGroup, Separator, Text } from "heroui-native";
 import { useSession } from "jazz-tools/react-native";
@@ -11,14 +11,21 @@ import {
   InviteDialog,
 } from "@/components/group/group-dialogs";
 import { AppHeader } from "@/components/navigation/app-header";
-import { api as convexApi } from "../../../../convex/_generated/api";
-import type { Id } from "../../../../convex/_generated/dataModel";
+import { api as convexApi } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 type GroupDetail = NonNullable<
   FunctionReturnType<typeof convexApi.groups.getDetail>
 >;
 
 type GroupMember = GroupDetail["members"][number];
+
+type GroupDetailViewProps = {
+  groupId?: string;
+  isEmbedded?: boolean;
+  onBack?: () => void;
+  showInvite?: boolean;
+};
 
 const dateKeyFormatter = new Intl.DateTimeFormat("ja-JP", {
   day: "2-digit",
@@ -51,13 +58,14 @@ const formatLatestMessageTime = (timestamp?: number) => {
   return latestDateFormatter.format(date);
 };
 
-export default function ShareGroupChats() {
+export const GroupDetailView = ({
+  groupId,
+  isEmbedded = false,
+  onBack,
+  showInvite = false,
+}: GroupDetailViewProps) => {
   const router = useRouter();
   const session = useSession();
-  const { groupId, showInvite } = useLocalSearchParams<{
-    groupId: string;
-    showInvite?: string;
-  }>();
   const currentUserId = session?.user_id ?? "";
   const [inviteDetails, setInviteDetails] = useState<InviteDetails>();
   const group = useQuery(
@@ -67,17 +75,8 @@ export default function ShareGroupChats() {
       : "skip"
   );
 
-  const goBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-
-    router.replace(groupId ? `/share-groups/${groupId}` : "/group");
-  };
-
   useEffect(() => {
-    if (!(group && showInvite === "1")) {
+    if (!(group && showInvite)) {
       return;
     }
 
@@ -88,7 +87,7 @@ export default function ShareGroupChats() {
     });
   }, [group, showInvite]);
 
-  if (group === undefined) {
+  if (!groupId || group === undefined) {
     return <View className="flex-1 bg-background" />;
   }
 
@@ -96,16 +95,21 @@ export default function ShareGroupChats() {
     return (
       <View className="flex-1 bg-background">
         <AppHeader
-          leftAction={{
-            accessibilityLabel: "グループに戻る",
-            icon: {
-              android: "arrow_back",
-              ios: "chevron.left",
-              web: "arrow_back",
-            },
-            label: "戻る",
-            onPress: goBack,
-          }}
+          includeTopInset={!isEmbedded}
+          leftAction={
+            onBack
+              ? {
+                  accessibilityLabel: "グループに戻る",
+                  icon: {
+                    android: "arrow_back",
+                    ios: "chevron.left",
+                    web: "arrow_back",
+                  },
+                  label: "戻る",
+                  onPress: onBack,
+                }
+              : undefined
+          }
           title="グループ"
         />
         <View className="flex-1 items-center justify-center px-6">
@@ -145,16 +149,21 @@ export default function ShareGroupChats() {
   return (
     <View className="flex-1 bg-background">
       <AppHeader
-        leftAction={{
-          accessibilityLabel: "グループ一覧に戻る",
-          icon: {
-            android: "arrow_back",
-            ios: "chevron.left",
-            web: "arrow_back",
-          },
-          label: "戻る",
-          onPress: goBack,
-        }}
+        includeTopInset={!isEmbedded}
+        leftAction={
+          onBack
+            ? {
+                accessibilityLabel: "グループ一覧に戻る",
+                icon: {
+                  android: "arrow_back",
+                  ios: "chevron.left",
+                  web: "arrow_back",
+                },
+                label: "戻る",
+                onPress: onBack,
+              }
+            : undefined
+        }
         rightActions={[
           {
             accessibilityLabel: `${group.name}の設定を開く`,
@@ -273,15 +282,12 @@ export default function ShareGroupChats() {
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             setInviteDetails(undefined);
-            if (showInvite === "1") {
-              router.setParams({ showInvite: undefined });
-            }
           }
         }}
       />
     </View>
   );
-}
+};
 
 const DirectChatListItem = ({
   member,

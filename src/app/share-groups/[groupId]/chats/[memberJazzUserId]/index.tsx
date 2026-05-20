@@ -104,7 +104,7 @@ export default function DirectChat() {
       return;
     }
 
-    router.replace(`/share-groups/${groupId}`);
+    router.replace(`/group?groupId=${groupId}`);
   };
 
   if (group === undefined) {
@@ -112,7 +112,7 @@ export default function DirectChat() {
   }
 
   if (!(group && targetMember)) {
-    router.replace(`/share-groups/${groupId}`);
+    router.replace(`/group?groupId=${groupId}`);
     return <View className="flex-1 bg-background" />;
   }
 

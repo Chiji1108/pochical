@@ -17,6 +17,7 @@ export type AppHeaderAction = {
 };
 
 type AppHeaderProps = {
+  includeTopInset?: boolean;
   leftAction?: AppHeaderAction;
   rightAction?: AppHeaderAction;
   rightActions?: AppHeaderAction[];
@@ -51,6 +52,7 @@ const HeaderActionButton: FC<HeaderActionButtonProps> = ({ action }) => (
 );
 
 export const AppHeader: FC<AppHeaderProps> = ({
+  includeTopInset = true,
   leftAction,
   rightAction,
   rightActions,
@@ -65,7 +67,7 @@ export const AppHeader: FC<AppHeaderProps> = ({
       blurMethod="dimezisBlurViewSdk31Plus"
       className="border-border/60 border-b bg-background/95"
       intensity={30}
-      style={{ paddingTop: insets.top }}
+      style={{ paddingTop: includeTopInset ? insets.top : 0 }}
       tint="systemThinMaterial"
     >
       <View className="h-14 flex-row items-center px-3">

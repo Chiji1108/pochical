@@ -85,7 +85,7 @@ export default function GroupChat() {
       return;
     }
 
-    router.replace(groupId ? `/share-groups/${groupId}` : "/group");
+    router.replace(groupId ? `/group?groupId=${groupId}` : "/group");
   };
 
   if (group === undefined) {

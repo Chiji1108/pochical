@@ -74,7 +74,7 @@ export default function InviteScreen() {
         inviteCode: normalizedInviteCode,
         jazzUserId: session.user_id,
       });
-      router.replace(`/share-groups/${result.groupId}`);
+      router.replace(`/group?groupId=${result.groupId}`);
     } catch (error) {
       isJoiningRef.current = false;
       setIsJoining(false);
@@ -92,7 +92,7 @@ export default function InviteScreen() {
       return;
     }
 
-    router.replace(`/share-groups/${invite.groupId}`);
+    router.replace(`/group?groupId=${invite.groupId}`);
   }, [invite, router]);
 
   const isLoadingInvite = normalizedInviteCode && invite === undefined;

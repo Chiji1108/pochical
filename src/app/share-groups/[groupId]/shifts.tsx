@@ -232,7 +232,7 @@ export default function ShareGroupShifts() {
       return;
     }
 
-    router.replace(groupId ? `/share-groups/${groupId}` : "/group");
+    router.replace(groupId ? `/group?groupId=${groupId}` : "/group");
   }, [groupId, router]);
 
   const prependDays = useCallback(() => {
