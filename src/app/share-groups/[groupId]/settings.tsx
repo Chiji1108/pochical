@@ -14,6 +14,7 @@ import {
 import { useSession } from "jazz-tools/react-native";
 import { useRef, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
+import { EmojiPopup } from "react-native-emoji-popup";
 import {
   DisplayNameFormDialog,
   GroupFormDialog,
@@ -43,6 +44,7 @@ export default function ShareGroupSettings() {
       : "skip"
   );
   const updateGroupName = useMutation(convexApi.groups.updateName);
+  const updateGroupEmoji = useMutation(convexApi.groups.updateEmoji);
   const updateDisplayName = useMutation(convexApi.groups.updateDisplayName);
   const leaveGroupMutation = useMutation(convexApi.groups.leave);
   const removeMemberMutation = useMutation(convexApi.groups.removeMember);
@@ -66,7 +68,11 @@ export default function ShareGroupSettings() {
       return;
     }
 
-    setInviteDetails({ groupName: group.name, url: group.inviteUrl });
+    setInviteDetails({
+      groupEmoji: group.emoji,
+      groupName: group.name,
+      url: group.inviteUrl,
+    });
   };
 
   const updateGroup = async (groupName: string) => {
@@ -83,6 +89,27 @@ export default function ShareGroupSettings() {
         name: groupName,
       });
       setIsEditDialogOpen(false);
+    } catch (error) {
+      Alert.alert(
+        "保存できませんでした",
+        error instanceof Error
+          ? error.message
+          : "時間をおいて再試行してください"
+      );
+    }
+  };
+
+  const updateEmoji = async (emoji: string) => {
+    if (!(group && session)) {
+      return;
+    }
+
+    try {
+      await updateGroupEmoji({
+        emoji,
+        groupId: group._id,
+        jazzUserId: session.user_id,
+      });
     } catch (error) {
       Alert.alert(
         "保存できませんでした",
@@ -271,6 +298,7 @@ export default function ShareGroupSettings() {
         </Button>
         <GroupSettingsSection
           group={group}
+          onChangeEmoji={updateEmoji}
           onOpenDisplayNameEdit={() => {
             setIsDisplayNameDialogOpen(true);
           }}
@@ -317,16 +345,29 @@ export default function ShareGroupSettings() {
 
 const GroupSettingsSection = ({
   group,
+  onChangeEmoji,
   onOpenGroupNameEdit,
   onOpenDisplayNameEdit,
 }: {
   group: GroupDetail;
+  onChangeEmoji: (emoji: string) => void;
   onOpenGroupNameEdit: () => void;
   onOpenDisplayNameEdit: () => void;
 }) => (
   <View className="gap-3">
     <Text className="font-semibold text-lg">グループ</Text>
     <ListGroup>
+      <EmojiPopup onEmojiSelected={onChangeEmoji}>
+        <ListGroup.Item accessibilityLabel="グループアイコンを編集">
+          <ListGroup.ItemContent>
+            <ListGroup.ItemTitle>アイコン</ListGroup.ItemTitle>
+          </ListGroup.ItemContent>
+          <ListGroup.ItemSuffix>
+            <Text className="text-3xl">{group.emoji}</Text>
+          </ListGroup.ItemSuffix>
+        </ListGroup.Item>
+      </EmojiPopup>
+      <Separator className="mx-4" />
       <ListGroup.Item
         accessibilityLabel="グループ名を編集"
         onPress={onOpenGroupNameEdit}

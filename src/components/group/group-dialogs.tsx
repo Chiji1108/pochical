@@ -19,7 +19,10 @@ import {
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 
+export const DEFAULT_GROUP_EMOJI = "💼";
+
 export type InviteDetails = {
+  groupEmoji: string;
   groupName: string;
   url: string;
 };
@@ -58,12 +61,15 @@ export const InviteDialog = ({
 }) => {
   const accentForegroundColor = useThemeColor("accent-foreground");
   const isOpen = Boolean(inviteDetails);
+  const inviteGroupLabel = inviteDetails
+    ? `${inviteDetails.groupEmoji} ${inviteDetails.groupName}`
+    : "";
   const shareInvite = async () => {
     if (!inviteDetails) {
       return;
     }
 
-    const shareMessage = `${inviteDetails.groupName}に参加してください\n${inviteDetails.url}`;
+    const shareMessage = `${inviteGroupLabel}に参加してください\n${inviteDetails.url}`;
     const shareUrl = inviteDetails.url;
 
     try {
@@ -101,7 +107,7 @@ export const InviteDialog = ({
             <Dialog.Title>招待</Dialog.Title>
             {inviteDetails ? (
               <Text className="text-sm" color="muted">
-                {inviteDetails.groupName}に参加するためのリンクです
+                {inviteGroupLabel}に参加するためのリンクです
               </Text>
             ) : null}
           </View>

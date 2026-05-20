@@ -98,6 +98,7 @@ export default function InviteScreen() {
   const isLoadingInvite = normalizedInviteCode && invite === undefined;
   const isInvalidInvite = !normalizedInviteCode || invite === null;
   const title = invite?.groupName ?? "招待";
+  const titleText = invite ? `${invite.groupEmoji} ${title}` : title;
   const isRedirectingToGroup = Boolean(invite?.isMember);
   const isSubmitDisabled =
     isJoining || isRedirectingToGroup || !invite || !displayName.trim();
@@ -172,7 +173,7 @@ export default function InviteScreen() {
       >
         <View className="flex-1 justify-center gap-6 px-6">
           <View className="gap-2">
-            <Text className="font-bold text-2xl">{title}</Text>
+            <Text className="font-bold text-2xl">{titleText}</Text>
             <Text className="text-base" color="muted">
               {description}
             </Text>

@@ -7,7 +7,6 @@ import {
 } from "./_generated/server";
 
 const MAX_DISPLAY_NAME_LENGTH = 40;
-
 const normalizeDisplayName = (displayName: string) => {
   const trimmedDisplayName = displayName.trim();
 
@@ -58,6 +57,7 @@ export const preview = query({
       : null;
 
     return {
+      groupEmoji: group.emoji,
       groupId: group._id,
       groupName: group.name,
       isMember: Boolean(membership),
@@ -98,6 +98,7 @@ export const join = mutation({
     }
 
     return {
+      groupEmoji: group.emoji,
       groupId: group._id,
       groupName: group.name,
     };

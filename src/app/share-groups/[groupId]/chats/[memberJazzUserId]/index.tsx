@@ -51,6 +51,7 @@ export default function DirectChat() {
     convexApi.chat.sendDirectMessage
   ).withOptimisticUpdate((localQueryStore, args) => {
     const now = Date.now();
+    const authorDisplayName = group?.ownDisplayName ?? "あなた";
 
     insertAtPosition({
       argsToMatch: {
@@ -61,8 +62,8 @@ export default function DirectChat() {
       item: {
         _creationTime: now,
         _id: createOptimisticId("message") as Id<"chatMessages">,
-        authorDisplayName: group?.ownDisplayName ?? "あなた",
-        authorDisplayNameSnapshot: group?.ownDisplayName,
+        authorDisplayName,
+        authorDisplayNameSnapshot: authorDisplayName,
         authorJazzUserId: args.jazzUserId,
         body: args.body,
         createdAt: now,

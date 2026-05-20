@@ -81,7 +81,11 @@ export default function ShareGroupChats() {
       return;
     }
 
-    setInviteDetails({ groupName: group.name, url: group.inviteUrl });
+    setInviteDetails({
+      groupEmoji: group.emoji,
+      groupName: group.name,
+      url: group.inviteUrl,
+    });
   }, [group, showInvite]);
 
   if (group === undefined) {

@@ -207,7 +207,7 @@ const addMessageMetadata = async (
 
   for (const message of page) {
     let displayName =
-      message.authorDisplayNameSnapshot ??
+      message.authorDisplayNameSnapshot ||
       displayNames.get(message.authorJazzUserId);
 
     if (!displayName) {

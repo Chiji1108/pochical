@@ -18,8 +18,8 @@ import { AppHeader } from "@/components/navigation/app-header";
 import { PatternTimePickerButton } from "@/components/pattern/pattern-time-picker-button";
 import { app, type Pattern } from "@/schema";
 
-const DEFAULT_EMOJI = "🐶";
-const DEFAULT_NAME = "ポチ";
+const DEFAULT_EMOJI = "❤️";
+const DEFAULT_NAME = "";
 const DEFAULT_START_HOUR = 8;
 const DEFAULT_END_HOUR = 17;
 const DEFAULT_END_MINUTE = 30;
@@ -423,7 +423,7 @@ const BasicInfoGroup = ({
     <EmojiPopup onEmojiSelected={onChangeEmoji}>
       <ListGroup.Item>
         <ListGroup.ItemContent>
-          <ListGroup.ItemTitle>絵文字</ListGroup.ItemTitle>
+          <ListGroup.ItemTitle>アイコン</ListGroup.ItemTitle>
         </ListGroup.ItemContent>
         <ListGroup.ItemSuffix>
           <Text className="text-3xl">{emoji}</Text>

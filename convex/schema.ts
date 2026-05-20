@@ -5,6 +5,7 @@ export default defineSchema({
   groups: defineTable({
     createdAt: v.number(),
     createdBy: v.string(),
+    emoji: v.string(),
     inviteCode: v.string(),
     name: v.string(),
     updatedAt: v.number(),
@@ -32,7 +33,7 @@ export default defineSchema({
     .index("by_groupId_kind_pairKey", ["groupId", "kind", "pairKey"])
     .index("by_groupId_updatedAt", ["groupId", "updatedAt"]),
   chatMessages: defineTable({
-    authorDisplayNameSnapshot: v.optional(v.string()),
+    authorDisplayNameSnapshot: v.string(),
     authorJazzUserId: v.string(),
     body: v.string(),
     createdAt: v.number(),

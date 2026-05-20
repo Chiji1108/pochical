@@ -438,7 +438,9 @@ const InviteLinkCard = ({
   }
 
   const iconColor = isOwnMessage ? accentForegroundColor : foregroundColor;
-  const title = invite?.groupName ?? "グループ招待";
+  const title = invite
+    ? `${invite.groupEmoji} ${invite.groupName}`
+    : "グループ招待";
   const description =
     invite === undefined ? "招待リンクを確認しています" : "タップして参加";
 

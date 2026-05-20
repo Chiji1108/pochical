@@ -13,6 +13,7 @@ const INVITE_CODE_LENGTH = 8;
 const MAX_CREATE_INVITE_CODE_ATTEMPTS = 8;
 const MAX_GROUP_NAME_LENGTH = 80;
 const MAX_DISPLAY_NAME_LENGTH = 40;
+const MAX_GROUP_EMOJI_LENGTH = 16;
 const TRAILING_SLASH_REGEX = /\/$/;
 const GROUP_THREAD_PAIR_KEY = "group";
 
@@ -33,6 +34,9 @@ const normalizeRequiredText = (
 
   return trimmedValue;
 };
+
+const normalizeGroupEmoji = (emoji: string) =>
+  normalizeRequiredText(emoji, "Group emoji", MAX_GROUP_EMOJI_LENGTH);
 
 const getInviteBaseUrl = () => {
   const inviteBaseUrl = process.env.EXPO_PUBLIC_INVITE_BASE_URL?.trim();
@@ -259,6 +263,7 @@ type GroupMemberSummary = Pick<
 };
 
 type GroupSummary = Pick<Doc<"groups">, "_id" | "name"> & {
+  emoji: string;
   groupLastMessageCreatedAt?: number;
   groupLastMessagePreview?: string;
   groupUnreadCount: number;
@@ -301,6 +306,7 @@ export const listForCurrentUser = query({
       );
       groups.push({
         _id: group._id,
+        emoji: group.emoji,
         groupLastMessageCreatedAt: groupThread?.lastMessageCreatedAt,
         groupLastMessagePreview: groupThread?.lastMessagePreview,
         groupUnreadCount: chatOverview.groupUnreadCount,
@@ -375,6 +381,7 @@ export const getDetail = query({
 
     return {
       _id: group._id,
+      emoji: group.emoji,
       groupLastMessageCreatedAt: groupThread?.lastMessageCreatedAt,
       groupLastMessagePreview: groupThread?.lastMessagePreview,
       groupUnreadCount: chatOverview.groupUnreadCount,
@@ -416,6 +423,7 @@ export const getDetail = query({
 export const create = mutation({
   args: {
     displayName: v.string(),
+    emoji: v.string(),
     jazzUserId: v.string(),
     name: v.string(),
   },
@@ -431,9 +439,11 @@ export const create = mutation({
       "Display name",
       MAX_DISPLAY_NAME_LENGTH
     );
+    const emoji = normalizeGroupEmoji(args.emoji);
     const groupId = await ctx.db.insert("groups", {
       createdAt: now,
       createdBy: args.jazzUserId,
+      emoji,
       inviteCode: `pending:${now}:${args.jazzUserId}`,
       name,
       updatedAt: now,
@@ -475,6 +485,29 @@ export const updateName = mutation({
         "Group name",
         MAX_GROUP_NAME_LENGTH
       ),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+export const updateEmoji = mutation({
+  args: {
+    emoji: v.string(),
+    groupId: v.id("groups"),
+    jazzUserId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const [group, membership] = await Promise.all([
+      getGroup(ctx, args.groupId),
+      getMembership(ctx, args.groupId, args.jazzUserId),
+    ]);
+
+    if (!(group && membership)) {
+      throw new ConvexError("Group not found");
+    }
+
+    await ctx.db.patch(group._id, {
+      emoji: normalizeGroupEmoji(args.emoji),
       updatedAt: Date.now(),
     });
   },

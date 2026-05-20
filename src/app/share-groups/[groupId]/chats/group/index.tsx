@@ -41,6 +41,7 @@ export default function GroupChat() {
     convexApi.chat.sendGroupMessage
   ).withOptimisticUpdate((localQueryStore, args) => {
     const now = Date.now();
+    const authorDisplayName = group?.ownDisplayName ?? "あなた";
 
     insertAtPosition({
       argsToMatch: {
@@ -50,8 +51,8 @@ export default function GroupChat() {
       item: {
         _creationTime: now,
         _id: createOptimisticId("message") as Id<"chatMessages">,
-        authorDisplayName: group?.ownDisplayName ?? "あなた",
-        authorDisplayNameSnapshot: group?.ownDisplayName,
+        authorDisplayName,
+        authorDisplayNameSnapshot: authorDisplayName,
         authorJazzUserId: args.jazzUserId,
         body: args.body,
         createdAt: now,

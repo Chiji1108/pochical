@@ -25,7 +25,11 @@ http.route({
       return json({ ok: false, reason: "not_found" }, 404);
     }
 
-    return json({ groupName: preview.groupName, ok: true });
+    return json({
+      groupEmoji: preview.groupEmoji,
+      groupName: preview.groupName,
+      ok: true,
+    });
   }),
   method: "GET",
   path: "/invite-preview",

@@ -1,14 +1,12 @@
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Button, ListGroup, Text, useThemeColor } from "heroui-native";
 import { useSession } from "jazz-tools/react-native";
-import { useState } from "react";
-import { Alert, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
-import { GroupFormDialog } from "@/components/group/group-dialogs";
 import { api as convexApi } from "../../../convex/_generated/api";
 
 const StyledSafeAreaView = withUniwind(SafeAreaView);
@@ -38,37 +36,12 @@ export default function Group() {
   const router = useRouter();
   const session = useSession();
   const accentForegroundColor = useThemeColor("accent-foreground");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const currentUserId = session?.user_id ?? "";
   const groups = useQuery(
     convexApi.groups.listForCurrentUser,
     currentUserId ? { jazzUserId: currentUserId } : "skip"
   );
-  const createGroupMutation = useMutation(convexApi.groups.create);
   const hasLoadedGroups = Boolean(session) && groups !== undefined;
-
-  const createGroup = async (groupName: string, displayName: string) => {
-    if (!session) {
-      return;
-    }
-
-    try {
-      const result = await createGroupMutation({
-        displayName,
-        jazzUserId: session.user_id,
-        name: groupName,
-      });
-      setIsCreateDialogOpen(false);
-      router.push(`/share-groups/${result.groupId}?showInvite=1`);
-    } catch (error) {
-      Alert.alert(
-        "作成できませんでした",
-        error instanceof Error
-          ? error.message
-          : "時間をおいて再試行してください"
-      );
-    }
-  };
 
   let groupContent = <View className="flex-1" />;
 
@@ -105,7 +78,7 @@ export default function Group() {
           accessibilityLabel="グループを作成"
           isDisabled={!session}
           onPress={() => {
-            setIsCreateDialogOpen(true);
+            router.push("/share-groups/new");
           }}
           size="sm"
           variant="primary"
@@ -153,7 +126,7 @@ export default function Group() {
               isDisabled={!session}
               isIconOnly={true}
               onPress={() => {
-                setIsCreateDialogOpen(true);
+                router.push("/share-groups/new");
               }}
               size="sm"
               variant="ghost"
@@ -167,13 +140,6 @@ export default function Group() {
         </View>
         {groupContent}
       </View>
-      <GroupFormDialog
-        isOpen={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        onSubmit={createGroup}
-        submitLabel="保存"
-        title="グループを作成"
-      />
     </StyledSafeAreaView>
   );
 }
@@ -190,6 +156,9 @@ const GroupListItem = ({
       accessibilityLabel={`${group.name}の詳細を開く`}
       onPress={onOpen}
     >
+      <ListGroup.ItemPrefix>
+        <Text className="text-2xl">{group.emoji}</Text>
+      </ListGroup.ItemPrefix>
       <ListGroup.ItemContent>
         <ListGroup.ItemTitle numberOfLines={1}>
           {group.name}
