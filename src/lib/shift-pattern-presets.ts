@@ -95,7 +95,7 @@ export const BUNDLED_SHIFT_PATTERN_PRESETS: ShiftPatternPreset[] = [
         name: "休み",
       },
     ],
-    title: "医療 二交代制",
+    title: "二交代制",
   },
   {
     id: "medical-three-shift",
@@ -123,14 +123,12 @@ export const BUNDLED_SHIFT_PATTERN_PRESETS: ShiftPatternPreset[] = [
         name: "休み",
       },
     ],
-    title: "医療 三交代制",
+    title: "三交代制",
   },
   {
     id: "care-worker",
     patterns: [
-      { emoji: "🐰", end: [16, 0], name: "早番", start: [7, 0] },
       { emoji: "☀️", end: [18, 0], name: "日勤", start: [9, 0] },
-      { emoji: "🐢", end: [20, 0], name: "遅番", start: [11, 0] },
       {
         emoji: "🌃",
         end: [10, 0],
@@ -150,8 +148,10 @@ export const BUNDLED_SHIFT_PATTERN_PRESETS: ShiftPatternPreset[] = [
         isAllDay: true,
         name: "休み",
       },
+      { emoji: "🐰", end: [16, 0], name: "早番", start: [7, 0] },
+      { emoji: "🐢", end: [20, 0], name: "遅番", start: [11, 0] },
     ],
-    title: "介護士",
+    title: "二交代制 + 早遅",
   },
 ];
 

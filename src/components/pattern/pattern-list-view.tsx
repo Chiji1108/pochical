@@ -31,12 +31,12 @@ const PRESET_TABS: {
   value: PresetTabValue;
 }[] = [
   {
-    label: "まとめて追加",
+    label: "セットから追加",
     presets: BUNDLED_SHIFT_PATTERN_PRESETS,
     value: "bundle",
   },
   {
-    label: "1個だけ追加",
+    label: "足りない分を追加",
     presets: SINGLE_SHIFT_PATTERN_PRESETS,
     value: "single",
   },
@@ -349,30 +349,6 @@ const AddPartsGrid = ({
   presets,
 }: AddPartsGridProps) => (
   <View className="gap-3">
-    <ListGroup>
-      <ListGroup.Item
-        accessibilityLabel="シフトパターンをカスタムで追加"
-        disabled={isDisabled}
-        onPress={onAddCustom}
-      >
-        <ListGroup.ItemContent>
-          <ListGroup.ItemTitle>カスタムで追加</ListGroup.ItemTitle>
-          <ListGroup.ItemDescription>
-            名前、時間、休み扱いを自分で設定します
-          </ListGroup.ItemDescription>
-        </ListGroup.ItemContent>
-        <ListGroup.ItemSuffix>
-          <SymbolView
-            name={{
-              android: "add",
-              ios: "plus",
-              web: "add",
-            }}
-            size={18}
-          />
-        </ListGroup.ItemSuffix>
-      </ListGroup.Item>
-    </ListGroup>
     <View className="flex-row flex-wrap">
       {presets.map((preset) => {
         const [pattern] = preset.patterns;
@@ -413,6 +389,27 @@ const AddPartsGrid = ({
         );
       })}
     </View>
+    <ListGroup>
+      <ListGroup.Item
+        accessibilityLabel="シフトパターンをカスタムで追加"
+        disabled={isDisabled}
+        onPress={onAddCustom}
+      >
+        <ListGroup.ItemContent>
+          <ListGroup.ItemTitle>カスタムで追加</ListGroup.ItemTitle>
+        </ListGroup.ItemContent>
+        <ListGroup.ItemSuffix>
+          <SymbolView
+            name={{
+              android: "add",
+              ios: "plus",
+              web: "add",
+            }}
+            size={18}
+          />
+        </ListGroup.ItemSuffix>
+      </ListGroup.Item>
+    </ListGroup>
   </View>
 );
 
@@ -441,7 +438,7 @@ const PresetListItem = ({
               }}
               size={15}
             />
-            <Button.Label>追加</Button.Label>
+            <Button.Label>セットを追加</Button.Label>
           </Button>
         </View>
         <View className="flex-row flex-wrap gap-2">
