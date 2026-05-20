@@ -7,20 +7,20 @@ import {
   startOfMonth,
 } from "date-fns";
 import type { Event } from "expo-calendar";
-import type { Member, Pattern, Shift, ShiftNote } from "@/schema";
+import type { DayNote, Member, Pattern, Shift } from "@/schema";
 
 type ShiftCalendarEventInput = {
+  dayNote?: DayNote;
   membersById: ReadonlyMap<string, Member>;
   pattern: Pattern;
   shift: Shift;
-  shiftNote?: ShiftNote;
 };
 
 type MonthlyShiftCalendarEventsInput = {
+  dayNotesByDate: ReadonlyMap<number, DayNote>;
   excludeDayOffShifts: boolean;
   membersById: ReadonlyMap<string, Member>;
   patternsById: ReadonlyMap<string, Pattern>;
-  shiftNotesByShiftId: ReadonlyMap<string, ShiftNote>;
   shifts: Shift[];
   yearMonth: Date;
 };
@@ -83,12 +83,12 @@ const getShiftEventDates = (
 };
 
 const getShiftEventNotes = ({
+  dayNote,
   membersById,
   shift,
-  shiftNote,
 }: Pick<
   ShiftCalendarEventInput,
-  "membersById" | "shift" | "shiftNote"
+  "dayNote" | "membersById" | "shift"
 >): string => {
   const members = getSortedShiftMembers(shift, membersById);
   const noteLines: string[] = [];
@@ -99,7 +99,7 @@ const getShiftEventNotes = ({
     );
   }
 
-  const notes = shiftNote?.notes.trim();
+  const notes = dayNote?.notes.trim();
 
   if (notes) {
     noteLines.push(`備考: ${notes}`);
@@ -111,21 +111,21 @@ const getShiftEventNotes = ({
 };
 
 const createShiftCalendarEvent = ({
+  dayNote,
   membersById,
   pattern,
   shift,
-  shiftNote,
 }: ShiftCalendarEventInput): ShiftCalendarEvent => ({
   ...getShiftEventDates(shift, pattern),
-  notes: getShiftEventNotes({ membersById, shift, shiftNote }),
+  notes: getShiftEventNotes({ dayNote, membersById, shift }),
   title: `${pattern.emoji} ${pattern.name}`,
 });
 
 export const getMonthlyShiftCalendarEvents = ({
+  dayNotesByDate,
   excludeDayOffShifts,
   membersById,
   patternsById,
-  shiftNotesByShiftId,
   shifts,
   yearMonth,
 }: MonthlyShiftCalendarEventsInput): ShiftCalendarEvent[] => {
@@ -152,10 +152,10 @@ export const getMonthlyShiftCalendarEvents = ({
 
     events.push(
       createShiftCalendarEvent({
+        dayNote: dayNotesByDate.get(startOfDay(shift.startDate).getTime()),
         membersById,
         pattern,
         shift,
-        shiftNote: shiftNotesByShiftId.get(shift.id),
       })
     );
   }

@@ -12,10 +12,10 @@ export const permissions = s.definePermissions(app, ({ policy, session }) => {
   policy.shifts.allowUpdate.where({ $createdBy: session.user_id });
   policy.shifts.allowDelete.where({ $createdBy: session.user_id });
 
-  policy.shiftNotes.allowRead.where({ $createdBy: session.user_id });
-  policy.shiftNotes.allowInsert.always();
-  policy.shiftNotes.allowUpdate.where({ $createdBy: session.user_id });
-  policy.shiftNotes.allowDelete.where({ $createdBy: session.user_id });
+  policy.dayNotes.allowRead.where({ $createdBy: session.user_id });
+  policy.dayNotes.allowInsert.always();
+  policy.dayNotes.allowUpdate.where({ $createdBy: session.user_id });
+  policy.dayNotes.allowDelete.where({ $createdBy: session.user_id });
 
   policy.members.allowRead.always();
   policy.members.allowInsert.always();

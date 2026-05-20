@@ -25,7 +25,7 @@ import { WeekRow } from "./week-row";
 
 export type CalendarShiftSummary = {
   hasNotes: boolean;
-  patternId: string;
+  patternId?: string;
 };
 
 type CalendarBodyProps = {
@@ -84,7 +84,9 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
       calendarHighlightTargets
     );
     const shift = shiftsByDate.get(startOfDay(date).getTime());
-    const shiftPattern = shift ? patternsById.get(shift.patternId) : undefined;
+    const shiftPattern = shift?.patternId
+      ? patternsById.get(shift.patternId)
+      : undefined;
     return (
       <Pressable
         className={cn(

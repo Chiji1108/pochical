@@ -1,15 +1,22 @@
 import { format } from "date-fns";
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { ListGroup, Text } from "heroui-native";
+import {
+  Button,
+  ListGroup,
+  PressableFeedback,
+  Separator,
+  Text,
+} from "heroui-native";
 import { useAll, useDb, useSession } from "jazz-tools/react-native";
 import { useCallback, useMemo } from "react";
-import { View } from "react-native";
+import { Alert, View } from "react-native";
 import Animated, { useAnimatedRef } from "react-native-reanimated";
 import Sortable, {
   type SortableGridDragEndCallback,
   type SortableGridRenderItem,
 } from "react-native-sortables";
+import { deleteShiftPatternsAndRelatedData } from "@/lib/work-data-actions";
 import { app, type Pattern } from "@/schema";
 
 const PATTERN_ROW_GAP = 10;
@@ -112,6 +119,12 @@ export const PatternListView = () => {
         ? app.patterns.where({ $createdBy: currentUserId })
         : undefined
     ) ?? [];
+  const shifts =
+    useAll(
+      currentUserId
+        ? app.shifts.where({ $createdBy: currentUserId })
+        : undefined
+    ) ?? [];
   const sortedPatterns = useMemo(
     () =>
       [...patterns].sort((a, b) => {
@@ -155,6 +168,31 @@ export const PatternListView = () => {
     [db, session]
   );
 
+  const confirmRecreatePatterns = () => {
+    if (!session) {
+      return;
+    }
+
+    Alert.alert(
+      "シフトパターンを作り直しますか？",
+      "すべてのシフト、シフトパターンが削除されます。メモ、勤務メンバー、グループは残ります。この操作は取り消せません。",
+      [
+        { style: "cancel", text: "キャンセル" },
+        {
+          onPress: () => {
+            deleteShiftPatternsAndRelatedData(db, {
+              patterns,
+              shifts,
+            });
+            router.push("/patterns/presets");
+          },
+          style: "destructive",
+          text: "削除して選び直す",
+        },
+      ]
+    );
+  };
+
   const renderPattern = useCallback<SortableGridRenderItem<Pattern>>(
     ({ item }) => (
       <PatternListItem
@@ -174,10 +212,39 @@ export const PatternListView = () => {
 
   if (sortedPatterns.length === 0) {
     return (
-      <View className="flex-1 items-center justify-center px-6">
+      <View className="flex-1 items-center justify-center gap-4 px-6">
         <Text className="text-center text-base" color="muted">
           シフトパターンがありません
         </Text>
+        <View className="items-center gap-3">
+          <Button
+            isDisabled={!session}
+            onPress={() => {
+              router.push("/patterns/presets");
+            }}
+            variant="primary"
+          >
+            <SymbolView
+              name={{
+                android: "add",
+                ios: "plus",
+                web: "add",
+              }}
+              size={18}
+              tintColor="white"
+            />
+            <Button.Label>勤務体系を選択</Button.Label>
+          </Button>
+          <Button
+            isDisabled={!session}
+            onPress={() => {
+              router.push("/patterns/new");
+            }}
+            variant="outline"
+          >
+            <Button.Label>1つずつ追加</Button.Label>
+          </Button>
+        </View>
       </View>
     );
   }
@@ -206,6 +273,44 @@ export const PatternListView = () => {
         showDropIndicator={true}
         sortEnabled={Boolean(session)}
       />
+      <View className="mt-4 gap-2">
+        <ListGroup>
+          <ListGroup.Item
+            accessibilityLabel="勤務体系からシフトパターンを追加"
+            onPress={() => {
+              router.push("/patterns/presets");
+            }}
+          >
+            <ListGroup.ItemContent>
+              <ListGroup.ItemTitle>勤務体系から追加</ListGroup.ItemTitle>
+              <ListGroup.ItemDescription>
+                現在のシフトパターンは残したまま追加します
+              </ListGroup.ItemDescription>
+            </ListGroup.ItemContent>
+            <ListGroup.ItemSuffix />
+          </ListGroup.Item>
+          <Separator className="mx-4" />
+          <PressableFeedback
+            animation={false}
+            isDisabled={!session}
+            onPress={confirmRecreatePatterns}
+          >
+            <PressableFeedback.Scale>
+              <ListGroup.Item disabled={!session}>
+                <ListGroup.ItemContent>
+                  <ListGroup.ItemTitle className="text-danger">
+                    シフトパターンを作り直す
+                  </ListGroup.ItemTitle>
+                  <ListGroup.ItemDescription>
+                    すべてのシフト、シフトパターンを削除して勤務体系を選び直します
+                  </ListGroup.ItemDescription>
+                </ListGroup.ItemContent>
+              </ListGroup.Item>
+            </PressableFeedback.Scale>
+            <PressableFeedback.Ripple />
+          </PressableFeedback>
+        </ListGroup>
+      </View>
       {session ? null : (
         <Text className="mt-4 text-center text-sm" color="muted">
           接続後に並び替えできます

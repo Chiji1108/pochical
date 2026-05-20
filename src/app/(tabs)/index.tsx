@@ -45,7 +45,7 @@ import {
   getCalendarSelectOptions,
   getWritableCalendars,
 } from "@/lib/device-calendar";
-import { app, type Member, type Pattern, type ShiftNote } from "@/schema";
+import { app, type DayNote, type Member, type Pattern } from "@/schema";
 
 const DETAIL_PAGE_DRAG_DISTANCE = 180;
 const DETAIL_PAGE_SETTLE_THRESHOLD = 0.45;
@@ -95,10 +95,10 @@ export default function Index() {
         ? app.shifts.where({ $createdBy: currentUserId })
         : undefined
     ) ?? [];
-  const shiftNotes =
+  const dayNotes =
     useAll(
       currentUserId
-        ? app.shiftNotes.where({ $createdBy: currentUserId })
+        ? app.dayNotes.where({ $createdBy: currentUserId })
         : undefined
     ) ?? [];
   const members =
@@ -125,50 +125,59 @@ export default function Index() {
 
     return nextMembersById;
   }, [members]);
-  const shiftNotesByShiftId = useMemo(() => {
-    const nextShiftNotesByShiftId = new Map<string, ShiftNote>();
+  const dayNotesByDate = useMemo(() => {
+    const nextDayNotesByDate = new Map<number, DayNote>();
 
-    for (const shiftNote of shiftNotes) {
-      nextShiftNotesByShiftId.set(shiftNote.shiftId, shiftNote);
+    for (const dayNote of dayNotes) {
+      nextDayNotesByDate.set(startOfDay(dayNote.date).getTime(), dayNote);
     }
 
-    return nextShiftNotesByShiftId;
-  }, [shiftNotes]);
+    return nextDayNotesByDate;
+  }, [dayNotes]);
   const shiftsByDate = useMemo(() => {
     const nextShiftsByDate = new Map<number, CalendarShiftSummary>();
 
+    for (const dayNote of dayNotes) {
+      nextShiftsByDate.set(startOfDay(dayNote.date).getTime(), {
+        hasNotes: Boolean(dayNote.notes.trim()),
+      });
+    }
+
     for (const shift of shifts) {
-      nextShiftsByDate.set(startOfDay(shift.startDate).getTime(), {
-        hasNotes: Boolean(shiftNotesByShiftId.get(shift.id)?.notes.trim()),
+      const dateKey = startOfDay(shift.startDate).getTime();
+      const existingSummary = nextShiftsByDate.get(dateKey);
+
+      nextShiftsByDate.set(dateKey, {
+        hasNotes: existingSummary?.hasNotes ?? false,
         patternId: shift.patternId,
       });
     }
 
     return nextShiftsByDate;
-  }, [shiftNotesByShiftId, shifts]);
+  }, [dayNotes, shifts]);
   const selectedDateShifts = useMemo(
     () => shifts.filter((shift) => isSameDay(shift.startDate, selectedDate)),
     [selectedDate, shifts]
   );
   const [selectedDateShift] = selectedDateShifts;
-  const selectedDateShiftNote = selectedDateShift
-    ? shiftNotesByShiftId.get(selectedDateShift.id)
-    : undefined;
+  const selectedDateDayNote = dayNotesByDate.get(
+    startOfDay(selectedDate).getTime()
+  );
   const monthlyShiftCalendarEvents = useMemo(
     () =>
       getMonthlyShiftCalendarEvents({
+        dayNotesByDate,
         excludeDayOffShifts: excludeDayOffShiftsFromExport,
         membersById,
         patternsById,
-        shiftNotesByShiftId,
         shifts,
         yearMonth,
       }),
     [
+      dayNotesByDate,
       excludeDayOffShiftsFromExport,
       membersById,
       patternsById,
-      shiftNotesByShiftId,
       shifts,
       yearMonth,
     ]
@@ -487,7 +496,6 @@ export default function Index() {
               onToggleShiftInputMode={toggleShiftInputMode}
               selectedDate={selectedDate}
               selectedDateShifts={selectedDateShifts}
-              shiftNotesByShiftId={shiftNotesByShiftId}
             />
             <View className="flex-1">
               {isShiftInputMode ? (
@@ -501,9 +509,8 @@ export default function Index() {
                   onSelectNextDay={selectNextDay}
                   patterns={patterns}
                   selectedDate={selectedDate}
+                  selectedDateDayNote={selectedDateDayNote}
                   selectedDateShift={selectedDateShift}
-                  selectedDateShiftNote={selectedDateShiftNote}
-                  shiftNotesByShiftId={shiftNotesByShiftId}
                   shifts={shifts}
                 />
               ) : (
@@ -511,8 +518,8 @@ export default function Index() {
                   bottomContentPadding={bottomContentPadding}
                   membersById={membersById}
                   patternsById={patternsById}
+                  selectedDateDayNote={selectedDateDayNote}
                   selectedDateShift={selectedDateShift}
-                  selectedDateShiftNote={selectedDateShiftNote}
                 />
               )}
             </View>

@@ -1,3 +1,4 @@
+import { startOfDay } from "date-fns";
 import { selectionAsync } from "expo-haptics";
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
@@ -13,20 +14,22 @@ import { Button } from "heroui-native/button";
 import { useAll, useDb, useSession } from "jazz-tools/react-native";
 import { useMemo } from "react";
 import { View } from "react-native";
-import { app, type Shift, type ShiftNote } from "@/schema";
+import { app, type DayNote, type Shift } from "@/schema";
 
 const seedMembers = ["佐藤師長", "鈴木主任", "田中先輩"] as const;
 
 type ShiftDetailInputPanelProps = {
   onSelectNextDay: () => void;
+  selectedDate: Date;
+  selectedDateDayNote?: DayNote;
   selectedShift?: Shift;
-  selectedShiftNote?: ShiftNote;
 };
 
 export const ShiftDetailInputPanel = ({
   onSelectNextDay,
+  selectedDate,
+  selectedDateDayNote,
   selectedShift,
-  selectedShiftNote,
 }: ShiftDetailInputPanelProps) => {
   const db = useDb();
   const router = useRouter();
@@ -71,25 +74,25 @@ export const ShiftDetailInputPanel = ({
   };
 
   const updateNotes = (notes: string) => {
-    if (!(session && selectedShift)) {
+    if (!session) {
       return;
     }
 
     const trimmedNotes = notes.trim();
 
-    if (selectedShiftNote) {
+    if (selectedDateDayNote) {
       if (trimmedNotes) {
-        db.update(app.shiftNotes, selectedShiftNote.id, { notes });
+        db.update(app.dayNotes, selectedDateDayNote.id, { notes });
       } else {
-        db.delete(app.shiftNotes, selectedShiftNote.id);
+        db.delete(app.dayNotes, selectedDateDayNote.id);
       }
       return;
     }
 
     if (trimmedNotes) {
-      db.insert(app.shiftNotes, {
+      db.insert(app.dayNotes, {
+        date: startOfDay(selectedDate),
         notes,
-        shiftId: selectedShift.id,
       });
     }
   };
@@ -99,13 +102,7 @@ export const ShiftDetailInputPanel = ({
       return;
     }
 
-    db.batch((batch) => {
-      if (selectedShiftNote) {
-        batch.delete(app.shiftNotes, selectedShiftNote.id);
-      }
-
-      batch.delete(app.shifts, selectedShift.id);
-    });
+    db.delete(app.shifts, selectedShift.id);
 
     selectionAsync().catch(() => {
       // Haptics can be unavailable depending on the device or platform.
@@ -120,103 +117,95 @@ export const ShiftDetailInputPanel = ({
     });
   };
 
-  if (!selectedShift) {
-    return (
-      <View className="items-center px-3 py-4">
-        <Text className="text-center text-sm" color="muted">
-          シフトを選ぶと詳細を入力できます
-        </Text>
-      </View>
-    );
-  }
-
-  const selectedMemberIds = new Set(selectedShift.memberIds ?? []);
+  const selectedMemberIds = new Set(selectedShift?.memberIds ?? []);
 
   return (
     <View className="gap-4 px-1 pt-2">
-      <View className="gap-2">
-        <View className="flex-row items-center justify-between gap-3">
-          <Text className="font-semibold">勤務メンバー</Text>
-        </View>
-        {sortedMembers.length > 0 ? (
-          <TagGroup
-            isDisabled={!session}
-            onSelectionChange={(keys) => {
-              updateMemberIds(Array.from(keys).map(String));
-              selectionAsync().catch(() => {
-                // Haptics can be unavailable depending on the device or platform.
-              });
-            }}
-            selectedKeys={selectedMemberIds}
-            selectionMode="multiple"
-            size="md"
-          >
-            <TagGroup.List>
-              {sortedMembers.map((member) => (
-                <TagGroup.Item id={member.id} key={member.id}>
-                  {({ isSelected }) => (
-                    <>
-                      <SymbolView
-                        name={{
-                          android: isSelected ? "check" : "add",
-                          ios: isSelected ? "checkmark" : "plus",
-                          web: isSelected ? "check" : "add",
-                        }}
-                        size={12}
-                      />
-                      <TagGroup.ItemLabel numberOfLines={1}>
-                        {member.name}
-                      </TagGroup.ItemLabel>
-                    </>
-                  )}
-                </TagGroup.Item>
-              ))}
-            </TagGroup.List>
-          </TagGroup>
-        ) : (
-          <View className="items-center py-2">
-            <Button
+      {selectedShift ? (
+        <View className="gap-2">
+          <View className="flex-row items-center justify-between gap-3">
+            <Text className="font-semibold">勤務メンバー</Text>
+          </View>
+          {sortedMembers.length > 0 ? (
+            <TagGroup
               isDisabled={!session}
-              onPress={createSeedMembers}
-              size="sm"
-              variant="primary"
-            >
-              <SymbolView
-                name={{
-                  android: "add",
-                  ios: "plus",
-                  web: "add",
-                }}
-                size={14}
-                tintColor="white"
-              />
-              <Button.Label>勤務メンバーを追加</Button.Label>
-            </Button>
-          </View>
-        )}
-        {sortedMembers.length > 0 ? (
-          <View className="flex-row items-center justify-end pt-1">
-            <Button
-              accessibilityLabel="勤務メンバーを編集"
-              onPress={() => {
-                router.push("/members");
+              onSelectionChange={(keys) => {
+                updateMemberIds(Array.from(keys).map(String));
+                selectionAsync().catch(() => {
+                  // Haptics can be unavailable depending on the device or platform.
+                });
               }}
-              size="sm"
-              variant="outline"
+              selectedKeys={selectedMemberIds}
+              selectionMode="multiple"
+              size="md"
             >
-              <SymbolView
-                name={{
-                  android: "edit",
-                  ios: "pencil",
-                  web: "edit",
+              <TagGroup.List>
+                {sortedMembers.map((member) => (
+                  <TagGroup.Item id={member.id} key={member.id}>
+                    {({ isSelected }) => (
+                      <>
+                        <SymbolView
+                          name={{
+                            android: isSelected ? "check" : "add",
+                            ios: isSelected ? "checkmark" : "plus",
+                            web: isSelected ? "check" : "add",
+                          }}
+                          size={12}
+                        />
+                        <TagGroup.ItemLabel numberOfLines={1}>
+                          {member.name}
+                        </TagGroup.ItemLabel>
+                      </>
+                    )}
+                  </TagGroup.Item>
+                ))}
+              </TagGroup.List>
+            </TagGroup>
+          ) : (
+            <View className="items-center py-2">
+              <Button
+                isDisabled={!session}
+                onPress={createSeedMembers}
+                size="sm"
+                variant="primary"
+              >
+                <SymbolView
+                  name={{
+                    android: "add",
+                    ios: "plus",
+                    web: "add",
+                  }}
+                  size={14}
+                  tintColor="white"
+                />
+                <Button.Label>勤務メンバーを追加</Button.Label>
+              </Button>
+            </View>
+          )}
+          {sortedMembers.length > 0 ? (
+            <View className="flex-row items-center justify-end pt-1">
+              <Button
+                accessibilityLabel="勤務メンバーを編集"
+                onPress={() => {
+                  router.push("/members");
                 }}
-                size={14}
-              />
-              <Button.Label>勤務メンバーを編集</Button.Label>
-            </Button>
-          </View>
-        ) : null}
-      </View>
+                size="sm"
+                variant="outline"
+              >
+                <SymbolView
+                  name={{
+                    android: "edit",
+                    ios: "pencil",
+                    web: "edit",
+                  }}
+                  size={14}
+                />
+                <Button.Label>勤務メンバーを編集</Button.Label>
+              </Button>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
       <TextField isDisabled={!session}>
         <Label>メモ</Label>
         <Input
@@ -225,15 +214,19 @@ export const ShiftDetailInputPanel = ({
           onChangeText={updateNotes}
           placeholder="メモを入力"
           returnKeyType="done"
-          value={selectedShiftNote?.notes ?? ""}
+          value={selectedDateDayNote?.notes ?? ""}
         />
         <Description>他のユーザーには共有されません</Description>
       </TextField>
       <View className="flex-row items-center justify-between gap-3 pt-1">
         <Button
-          accessibilityLabel="選択日のシフトを削除"
+          accessibilityLabel={
+            selectedShift
+              ? "選択日のシフトを削除"
+              : "削除できるシフトがありません"
+          }
           className="flex-1"
-          isDisabled={!session}
+          isDisabled={!(session && selectedShift)}
           onPress={handleDeleteShift}
           size="md"
           variant="outline"

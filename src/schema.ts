@@ -16,8 +16,8 @@ const schema = {
     startDate: s.timestamp(),
     memberIds: s.array(s.ref("members")),
   }),
-  shiftNotes: s.table({
-    shiftId: s.ref("shifts"),
+  dayNotes: s.table({
+    date: s.timestamp(),
     notes: s.string(),
   }),
   members: s.table({
@@ -35,8 +35,8 @@ export type PatternQueryBuilder = typeof app.patterns;
 export type Shift = s.RowOf<typeof app.shifts>;
 export type ShiftQueryBuilder = typeof app.shifts;
 
-export type ShiftNote = s.RowOf<typeof app.shiftNotes>;
-export type ShiftNoteQueryBuilder = typeof app.shiftNotes;
+export type DayNote = s.RowOf<typeof app.dayNotes>;
+export type DayNoteQueryBuilder = typeof app.dayNotes;
 
 export type Member = s.RowOf<typeof app.members>;
 export type MemberQueryBuilder = typeof app.members;

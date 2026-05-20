@@ -23,7 +23,7 @@ Jazz は次のデータの source of truth のままにする。
 - `patterns`
 - `shifts`
 - `members`
-- `shiftNotes`
+- `dayNotes`
 
 共有画面では、Convex の membership から Jazz user id を取得し、その user id を使って Jazz のシフトを読む。
 
@@ -61,7 +61,7 @@ Jazz
   - patterns
   - shifts
   - members
-  - shiftNotes
+  - dayNotes
 ```
 
 ## Convex schema/functions の管理場所
@@ -508,7 +508,7 @@ Convex SoT 移行後、Jazz から以下を削除する。
 ```ts
 patterns
 shifts
-shiftNotes
+dayNotes
 members
 ```
 
@@ -516,7 +516,7 @@ permissions 方針:
 
 - `patterns`, `shifts`, `members` は read を広めに許可する。
 - update/delete は `$createdBy` の本人だけ。
-- `shiftNotes` は read/update/delete すべて `$createdBy` の本人だけ。
+- `dayNotes` は read/update/delete すべて `$createdBy` の本人だけ。
 - insert は Jazz の実行時挙動に合わせて `always()` にする。
 
 ## 移行フェーズ

@@ -27,7 +27,7 @@
 - MVPでは admin / owner / role の概念を持たない。グループ所属者は全員、招待と表示名変更ができる。
 - 招待URLのMVPは、公開グループや悪意ある改造クライアントを強く想定しない。署名付き token で改ざんだけ防ぎ、参加時の membership / access 作成はモバイルクライアントが行う。
 - 勤務メンバーは、当面は自分のシフト詳細に付ける補助情報として扱う。
-- `patterns.countsAsDayOff` と `shiftNotes` は実装済みの前提で進める。
+- `patterns.countsAsDayOff` と `dayNotes` は実装済みの前提で進める。
 
 ## 用語
 
@@ -76,9 +76,9 @@ shifts: s.table({
   memberIds: s.array(s.ref("members")),
 }),
 
-shiftNotes: s.table({
+dayNotes: s.table({
   ownerUserId: s.string(),
-  shiftId: s.ref("shifts"),
+  date: s.timestamp(),
   notes: s.string(),
 }),
 
@@ -92,12 +92,12 @@ members: s.table({
 ### schema の判断理由
 
 - `teams` ではなく `shareGroups` として、共有範囲を表す。
-- `patterns`, `members`, `shifts`, `shiftNotes` は `ownerUserId` を持つ。値は insert 時の `session.user_id` とし、Jazz の magic column `$createdBy` と同じ所有者を表す。
+- `patterns`, `members`, `shifts`, `dayNotes` は `ownerUserId` を持つ。値は insert 時の `session.user_id` とし、Jazz の magic column `$createdBy` と同じ所有者を表す。
 - 当初は `$createdBy` のみで所有者を判定する想定だったが、Jazz 2 alpha の permissions callback row では `shift.$createdBy` / `pattern.$createdBy` を型安全に参照できず、共有アクセス用 table と相関できない。そのため明示的な `ownerUserId` を持つ。
 - `shareGroupAccess` は、同じ group に所属する user 同士の read access を `ownerUserId` / `viewerUserId` の組として正規化した derived table として扱う。Jazz permissions では `shareGroupMembers` 同士の二段 exists / self-join を直接 validate できないため、読み取り判定に使う。
 - `shifts.memberIds` は既存の意味を維持する。これは「その日に一緒に働く勤務メンバー」であり、共有グループのメンバーとは別物。
 - 共有は shift 単位ではなく、shareGroup membership 単位にする。自分が所属する shareGroup のメンバーには、自分の全 shift を見せる。
-- メモは共有しない。`shifts.notes` ではなく、本人だけが読める `shiftNotes` として分離済みの前提にする。
+- メモは共有しない。`shifts.notes` ではなく、本人だけが読める `dayNotes` として日付単位で分離済みの前提にする。
 - 代理入力や公式シフト表を後で作る場合は、`$createdBy` とは別に「誰の勤務か」を表す `subjectUserId` や `ownerMemberId` を追加する。
 
 ## 実装判断メモ
@@ -418,7 +418,7 @@ user_123
 
 ### Phase 5: 拡張
 
-- メモは `shiftNotes` として分離済み。共有後は本人だけが読める permissions にする。
+- メモは `dayNotes` として日付単位で分離済み。共有後は本人だけが読める permissions にする。
 - 外部カレンダーへの書き出しを検討する。
 - 代理入力や承認フローを検討する。
 

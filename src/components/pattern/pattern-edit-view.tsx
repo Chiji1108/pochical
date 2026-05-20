@@ -122,12 +122,6 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
         ? app.shifts.where({ $createdBy: currentUserId })
         : undefined
     ) ?? [];
-  const shiftNotes =
-    useAll(
-      currentUserId
-        ? app.shiftNotes.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
   const [formState, setFormState] = useState(() =>
     getInitialFormState(pattern)
   );
@@ -143,18 +137,6 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
       pattern ? shifts.filter((shift) => shift.patternId === pattern.id) : [],
     [pattern, shifts]
   );
-  const shiftNotesByShiftId = useMemo(() => {
-    const nextShiftNotesByShiftId = new Map<
-      string,
-      (typeof shiftNotes)[number]
-    >();
-
-    for (const shiftNote of shiftNotes) {
-      nextShiftNotesByShiftId.set(shiftNote.shiftId, shiftNote);
-    }
-
-    return nextShiftNotesByShiftId;
-  }, [shiftNotes]);
   const patternsUsingThisAsNextDay = useMemo(
     () =>
       pattern
@@ -203,12 +185,6 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
 
     db.batch((batch) => {
       for (const shift of relatedShifts) {
-        const shiftNote = shiftNotesByShiftId.get(shift.id);
-
-        if (shiftNote) {
-          batch.delete(app.shiftNotes, shiftNote.id);
-        }
-
         batch.delete(app.shifts, shift.id);
       }
 

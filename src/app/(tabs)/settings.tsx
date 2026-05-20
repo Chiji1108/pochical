@@ -1,8 +1,19 @@
+import { useMutation } from "convex/react";
 import { getDate, isSameMonth, startOfMonth } from "date-fns";
+import { useRouter } from "expo-router";
+import { deleteItemAsync } from "expo-secure-store";
 import { SymbolView } from "expo-symbols";
-import { ListGroup, Select, Separator, TagGroup, Text } from "heroui-native";
-import { useMemo } from "react";
-import { ScrollView, View } from "react-native";
+import {
+  ListGroup,
+  PressableFeedback,
+  Select,
+  Separator,
+  TagGroup,
+  Text,
+} from "heroui-native";
+import { useAll, useDb, useSession } from "jazz-tools/react-native";
+import { useMemo, useRef, useState } from "react";
+import { Alert, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "@/components/navigation/app-header";
 import {
@@ -16,6 +27,12 @@ import {
   getWeeksOfMonth,
 } from "@/lib/date";
 import { cn } from "@/lib/utils";
+import {
+  deleteShiftPatternsAndRelatedData,
+  deleteWorkData,
+} from "@/lib/work-data-actions";
+import { app } from "@/schema";
+import { api as convexApi } from "../../../convex/_generated/api";
 
 type WeekStartOption = {
   id: WeekStartsOn;
@@ -44,6 +61,7 @@ const HIGHLIGHT_OPTIONS: HighlightOption[] = [
 ];
 
 const ORDERED_HIGHLIGHT_TARGETS = HIGHLIGHT_OPTIONS.map((option) => option.id);
+const SELECTED_GROUP_STORAGE_KEY = "nurse-shift-selected-group-id";
 
 const getOrderedHighlightTargets = (
   targets: Iterable<string>
@@ -56,15 +74,147 @@ const getOrderedHighlightTargets = (
 };
 
 export default function Settings() {
+  const db = useDb();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const session = useSession();
+  const leaveAllGroupsMutation = useMutation(
+    convexApi.groups.leaveAllForCurrentUser
+  );
+  const isResettingAppDataRef = useRef(false);
+  const [isResettingAppData, setIsResettingAppData] = useState(false);
   const { settings, setCalendarHighlightTargets, setWeekStartsOn } =
     useAppSettings();
+  const currentUserId = session?.user_id ?? "";
+  const patterns =
+    useAll(
+      currentUserId
+        ? app.patterns.where({ $createdBy: currentUserId })
+        : undefined
+    ) ?? [];
+  const shifts =
+    useAll(
+      currentUserId
+        ? app.shifts.where({ $createdBy: currentUserId })
+        : undefined
+    ) ?? [];
+  const dayNotes =
+    useAll(
+      currentUserId
+        ? app.dayNotes.where({ $createdBy: currentUserId })
+        : undefined
+    ) ?? [];
+  const members =
+    useAll(
+      currentUserId
+        ? app.members.where({ $createdBy: currentUserId })
+        : undefined
+    ) ?? [];
   const selectedWeekStartOption = WEEK_START_OPTIONS.find(
     (option) => option.id === settings.weekStartsOn
   );
   const selectedHighlightKeys = new Set<string>(
     settings.calendarHighlightTargets
   );
+  const isDangerActionDisabled = !session || isResettingAppData;
+
+  const confirmRecreatePatterns = () => {
+    if (!session) {
+      return;
+    }
+
+    Alert.alert(
+      "シフトパターンを作り直しますか？",
+      "すべてのシフト、シフトパターンが削除されます。メモ、勤務メンバー、グループは残ります。この操作は取り消せません。",
+      [
+        { style: "cancel", text: "キャンセル" },
+        {
+          onPress: () => {
+            deleteShiftPatternsAndRelatedData(db, {
+              patterns,
+              shifts,
+            });
+            router.push("/patterns/presets");
+          },
+          style: "destructive",
+          text: "削除して選び直す",
+        },
+      ]
+    );
+  };
+
+  const confirmDeleteWorkData = () => {
+    if (!session) {
+      return;
+    }
+
+    Alert.alert(
+      "カレンダーをリセットしますか？",
+      "すべてのシフト、シフトパターン、勤務メンバー、メモが削除されます。グループとチャットは残ります。この操作は取り消せません。",
+      [
+        { style: "cancel", text: "キャンセル" },
+        {
+          onPress: () => {
+            deleteWorkData(db, {
+              dayNotes,
+              members,
+              patterns,
+              shifts,
+            });
+          },
+          style: "destructive",
+          text: "リセット",
+        },
+      ]
+    );
+  };
+
+  const confirmResetAppData = () => {
+    if (!(session && !isResettingAppDataRef.current)) {
+      return;
+    }
+
+    Alert.alert(
+      "アプリのデータをリセットしますか？",
+      "カレンダーをリセットし、すべてのグループから脱退します。自分だけのグループは削除されます。この操作は取り消せません。",
+      [
+        { style: "cancel", text: "キャンセル" },
+        {
+          onPress: async () => {
+            isResettingAppDataRef.current = true;
+            setIsResettingAppData(true);
+
+            try {
+              deleteWorkData(db, {
+                dayNotes,
+                members,
+                patterns,
+                shifts,
+              });
+              await leaveAllGroupsMutation({ jazzUserId: session.user_id });
+              await deleteItemAsync(SELECTED_GROUP_STORAGE_KEY);
+              router.replace("/settings");
+            } catch (error) {
+              Alert.alert(
+                "リセットできませんでした",
+                error instanceof Error
+                  ? error.message
+                  : "時間をおいて再試行してください"
+              );
+            } finally {
+              isResettingAppDataRef.current = false;
+              setIsResettingAppData(false);
+            }
+          },
+          style: "destructive",
+          text: "リセット",
+        },
+      ],
+      {
+        cancelable: false,
+      }
+    );
+  };
 
   return (
     <View className="flex-1 bg-background">
@@ -183,6 +333,36 @@ export default function Settings() {
             <PlaceholderRow
               description="現在の端末からアカウント連携を外します"
               label="紐付け解除"
+            />
+          </ListGroup>
+        </View>
+
+        <View className="gap-2">
+          <SectionTitle>危険な操作</SectionTitle>
+          <ListGroup>
+            <DestructiveSettingRow
+              description="すべてのシフト、シフトパターンを削除して勤務体系を選び直します"
+              isDisabled={isDangerActionDisabled}
+              label="シフトパターンを作り直す"
+              onPress={confirmRecreatePatterns}
+            />
+            <Separator className="mx-4" />
+            <DestructiveSettingRow
+              description="すべてのシフト、シフトパターン、勤務メンバー、メモを削除します。グループは残ります"
+              isDisabled={isDangerActionDisabled}
+              label="カレンダーをリセット"
+              onPress={confirmDeleteWorkData}
+            />
+            <Separator className="mx-4" />
+            <DestructiveSettingRow
+              description="カレンダーをリセットし、すべてのグループから脱退します。自分だけのグループは削除されます"
+              isDisabled={isDangerActionDisabled}
+              label={
+                isResettingAppData
+                  ? "リセットしています"
+                  : "アプリのデータをリセット"
+              }
+              onPress={confirmResetAppData}
             />
           </ListGroup>
         </View>
@@ -328,4 +508,36 @@ const PlaceholderRow = ({ description, label }: PlaceholderRowProps) => (
       </Text>
     </ListGroup.ItemSuffix>
   </ListGroup.Item>
+);
+
+type DestructiveSettingRowProps = {
+  description: string;
+  isDisabled: boolean;
+  label: string;
+  onPress: () => void;
+};
+
+const DestructiveSettingRow = ({
+  description,
+  isDisabled,
+  label,
+  onPress,
+}: DestructiveSettingRowProps) => (
+  <PressableFeedback
+    animation={false}
+    isDisabled={isDisabled}
+    onPress={onPress}
+  >
+    <PressableFeedback.Scale>
+      <ListGroup.Item disabled={isDisabled}>
+        <ListGroup.ItemContent>
+          <ListGroup.ItemTitle className="text-danger">
+            {label}
+          </ListGroup.ItemTitle>
+          <ListGroup.ItemDescription>{description}</ListGroup.ItemDescription>
+        </ListGroup.ItemContent>
+      </ListGroup.Item>
+    </PressableFeedback.Scale>
+    <PressableFeedback.Ripple />
+  </PressableFeedback>
 );
