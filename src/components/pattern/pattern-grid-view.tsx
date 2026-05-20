@@ -31,6 +31,7 @@ type PatternGridViewProps = {
   isDetailInputMode: boolean;
   onSelectDate: (date: Date) => void;
   onSelectNextDay: () => void;
+  onShouldStayAfterShiftSaved?: (savedDates: Date[]) => boolean;
   onShiftSaved?: (date: Date) => void;
   patterns: Pattern[];
   selectedDate: Date;
@@ -47,6 +48,7 @@ export function PatternGridView({
   isDetailInputMode,
   onSelectDate,
   onSelectNextDay,
+  onShouldStayAfterShiftSaved,
   onShiftSaved,
   patterns,
   selectedDate,
@@ -133,7 +135,13 @@ export function PatternGridView({
     if (!isDetailInputMode) {
       const hasNextDayPattern =
         pattern.nextDayPatternId && patternsById.has(pattern.nextDayPatternId);
-      onSelectDate(addDays(shiftStartDate, hasNextDayPattern ? 2 : 1));
+      const savedDates = hasNextDayPattern
+        ? [shiftStartDate, nextShiftStartDate]
+        : [shiftStartDate];
+
+      if (!onShouldStayAfterShiftSaved?.(savedDates)) {
+        onSelectDate(addDays(shiftStartDate, hasNextDayPattern ? 2 : 1));
+      }
     }
 
     selectionAsync().catch(() => {

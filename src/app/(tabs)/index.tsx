@@ -39,7 +39,6 @@ import {
   ExportCalendarDialog,
   type ExportDialogResult,
 } from "@/components/calendar/export-calendar-dialog";
-import { MonthCompletionConfetti } from "@/components/calendar/month-completion-confetti";
 import { PatternGridHeader } from "@/components/pattern/pattern-grid-header";
 import { PatternGridView } from "@/components/pattern/pattern-grid-view";
 import { ShiftDetailView } from "@/components/shift/shift-detail-view";
@@ -214,6 +213,43 @@ export default function Index() {
       });
     },
     [shiftsByDate]
+  );
+  const getWillCompleteMonthAfterShiftInput = useCallback(
+    (savedDates: Date[]) => {
+      const savedDateKeys = new Set(
+        savedDates.map((date) => startOfDay(date).getTime())
+      );
+      const affectedMonthKeys = new Set(
+        savedDates.map((date) => format(startOfMonth(date), "yyyy-MM"))
+      );
+
+      for (const monthKey of affectedMonthKeys) {
+        const [yearText, monthText] = monthKey.split("-");
+        const affectedMonth = new Date(Number(yearText), Number(monthText) - 1);
+
+        if (getIsMonthComplete(affectedMonth)) {
+          continue;
+        }
+
+        const datesInMonth = eachDayOfInterval({
+          end: endOfMonth(affectedMonth),
+          start: startOfMonth(affectedMonth),
+        });
+        const isCompleteAfterInput = datesInMonth.every((date) => {
+          const dateKey = startOfDay(date).getTime();
+          const shiftSummary = shiftsByDate.get(dateKey);
+
+          return savedDateKeys.has(dateKey) || Boolean(shiftSummary?.patternId);
+        });
+
+        if (isCompleteAfterInput) {
+          return true;
+        }
+      }
+
+      return false;
+    },
+    [getIsMonthComplete, shiftsByDate]
   );
   const selectedCalendarOption = useMemo(
     () =>
@@ -544,9 +580,12 @@ export default function Index() {
         shiftCount={monthlyShiftCalendarEvents.length}
       />
       <CalendarSaveActionsSheet
+        confettiBurstKey={
+          saveActionsSheetMode === "completion" ? confettiBurstKey : undefined
+        }
         description={
           saveActionsSheetMode === "completion"
-            ? "あとから見返せるように保存しておきますか？"
+            ? "アプリ外にも保存しますか？"
             : "保存方法を選んでください。"
         }
         isCalendarExportDisabled={isExportingMonth}
@@ -561,7 +600,6 @@ export default function Index() {
             : `${monthLabel}のシフトを保存`
         }
       />
-      <MonthCompletionConfetti burstKey={confettiBurstKey} />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
@@ -611,6 +649,9 @@ export default function Index() {
                   onSelectDate={selectDateImmediately}
                   onSelectNextDay={selectNextDay}
                   onShiftSaved={markShiftInputActivity}
+                  onShouldStayAfterShiftSaved={
+                    getWillCompleteMonthAfterShiftInput
+                  }
                   patterns={patterns}
                   selectedDate={selectedDate}
                   selectedDateDayNote={selectedDateDayNote}

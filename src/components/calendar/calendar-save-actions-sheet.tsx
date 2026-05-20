@@ -1,8 +1,10 @@
 import { SymbolView } from "expo-symbols";
 import { BottomSheet, Button } from "heroui-native";
 import { View } from "react-native";
+import { MonthCompletionConfetti } from "@/components/calendar/month-completion-confetti";
 
 type CalendarSaveActionsSheetProps = {
+  confettiBurstKey?: string;
   description: string;
   isCalendarExportDisabled?: boolean;
   isOpen: boolean;
@@ -14,6 +16,7 @@ type CalendarSaveActionsSheetProps = {
 };
 
 export const CalendarSaveActionsSheet = ({
+  confettiBurstKey,
   description,
   isCalendarExportDisabled,
   isOpen,
@@ -81,6 +84,7 @@ export const CalendarSaveActionsSheet = ({
           ) : null}
         </View>
       </BottomSheet.Content>
+      <MonthCompletionConfetti burstKey={confettiBurstKey} />
     </BottomSheet.Portal>
   </BottomSheet>
 );
