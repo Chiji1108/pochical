@@ -13,12 +13,7 @@ import { useRouter } from "expo-router";
 import { useToast } from "heroui-native";
 import { useAll, useSession } from "jazz-tools/react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  KeyboardAvoidingView,
-  type LayoutChangeEvent,
-  Platform,
-  View,
-} from "react-native";
+import { type LayoutChangeEvent, Platform, View } from "react-native";
 import {
   Gesture,
   GestureDetector,
@@ -600,10 +595,7 @@ export default function Index() {
             : `${monthLabel}のシフトを保存`
         }
       />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        className="flex-1"
-      >
+      <View className="flex-1">
         <GestureDetector gesture={detailModeGesture}>
           <View
             className="flex-1 bg-background"
@@ -642,7 +634,6 @@ export default function Index() {
               {isShiftInputMode ? (
                 <PatternGridView
                   bottomContentPadding={bottomContentPadding}
-                  detailModeGestureRef={detailModeGestureRef}
                   detailScrollOffsetY={detailScrollOffsetY}
                   detailTransitionProgress={detailPageProgress}
                   isDetailInputMode={isDetailInputMode}
@@ -670,7 +661,7 @@ export default function Index() {
             </View>
           </View>
         </GestureDetector>
-      </KeyboardAvoidingView>
+      </View>
     </View>
   );
 }

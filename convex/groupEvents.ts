@@ -1,3 +1,4 @@
+import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import {
   requireDirectMembership,
@@ -40,22 +41,54 @@ export const deleteGroupEvents = async (
   }
 };
 
-const listEventsForGroup = (ctx: QueryCtx, groupId: Id<"groups">) =>
+const listEventsForGroup = (
+  ctx: QueryCtx,
+  groupId: Id<"groups">,
+  paginationOpts: {
+    cursor: string | null;
+    numItems: number;
+    endCursor?: string | null;
+    id?: number;
+    maximumBytesRead?: number;
+    maximumRowsRead?: number;
+  }
+) =>
   ctx.db
     .query("groupEvents")
     .withIndex("by_groupId_createdAt", (q) => q.eq("groupId", groupId))
     .order("desc")
-    .collect();
+    .paginate(paginationOpts);
+
+const listDisplayNameEventsForGroup = (
+  ctx: QueryCtx,
+  groupId: Id<"groups">,
+  paginationOpts: {
+    cursor: string | null;
+    numItems: number;
+    endCursor?: string | null;
+    id?: number;
+    maximumBytesRead?: number;
+    maximumRowsRead?: number;
+  }
+) =>
+  ctx.db
+    .query("groupEvents")
+    .withIndex("by_groupId_kind_createdAt", (q) =>
+      q.eq("groupId", groupId).eq("kind", "display_name_updated")
+    )
+    .order("desc")
+    .paginate(paginationOpts);
 
 export const listGroup = query({
   args: {
     groupId: v.id("groups"),
     jazzUserId: v.string(),
+    paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
     await requireMembership(ctx, args.groupId, args.jazzUserId);
 
-    return listEventsForGroup(ctx, args.groupId);
+    return listEventsForGroup(ctx, args.groupId, args.paginationOpts);
   },
 });
 
@@ -63,6 +96,7 @@ export const listDirect = query({
   args: {
     groupId: v.id("groups"),
     jazzUserId: v.string(),
+    paginationOpts: paginationOptsValidator,
     targetJazzUserId: v.string(),
   },
   handler: async (ctx, args) => {
@@ -76,12 +110,17 @@ export const listDirect = query({
       args.jazzUserId,
       args.targetJazzUserId,
     ]);
-    const events = await listEventsForGroup(ctx, args.groupId);
-
-    return events.filter(
-      (event) =>
-        event.kind === "display_name_updated" &&
-        participantJazzUserIds.has(event.actorJazzUserId)
+    const events = await listDisplayNameEventsForGroup(
+      ctx,
+      args.groupId,
+      args.paginationOpts
     );
+
+    return {
+      ...events,
+      page: events.page.filter((event) =>
+        participantJazzUserIds.has(event.actorJazzUserId)
+      ),
+    };
   },
 });

@@ -54,6 +54,29 @@ export const markThreadRead = async (
   });
 };
 
+export const markThreadsReadUpTo = async (
+  ctx: MutationCtx,
+  args: {
+    jazzUserId: string;
+    threads: Doc<"chatThreads">[];
+    timestamp: number;
+  }
+) => {
+  await ensureOwnMessagesIgnored(ctx, args.jazzUserId);
+
+  for (const thread of args.threads) {
+    if (!thread.lastMessageCreatedAt) {
+      continue;
+    }
+
+    await unreads.markReadUpTo(ctx, {
+      channelId: thread._id,
+      timestamp: args.timestamp,
+      userId: args.jazzUserId,
+    });
+  }
+};
+
 export const getLastReadByChannelId = async (
   ctx: QueryCtx,
   args: {

@@ -132,6 +132,9 @@ export default function Group() {
     router.replace("/group");
   }, [requestedGroupId, router, showInvite]);
 
+  const shouldShowInviteForSelectedGroup =
+    showInvite === "1" && selectedGroup?._id === requestedGroupId;
+
   let mainContent = <View className="flex-1" />;
 
   if (selectedGroup) {
@@ -140,9 +143,7 @@ export default function Group() {
         groupId={selectedGroup._id}
         isEmbedded={true}
         onAutoInviteShown={clearConsumedInvitePrompt}
-        showInvite={
-          showInvite === "1" && selectedGroup._id === requestedGroupId
-        }
+        showInvite={shouldShowInviteForSelectedGroup}
       />
     );
   } else if (hasLoadedGroups && !hasGroups) {

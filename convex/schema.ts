@@ -60,5 +60,7 @@ export default defineSchema({
     previousValue: v.optional(v.string()),
     targetDisplayNameSnapshot: v.optional(v.string()),
     targetJazzUserId: v.optional(v.string()),
-  }).index("by_groupId_createdAt", ["groupId", "createdAt"]),
+  })
+    .index("by_groupId_createdAt", ["groupId", "createdAt"])
+    .index("by_groupId_kind_createdAt", ["groupId", "kind", "createdAt"]),
 });

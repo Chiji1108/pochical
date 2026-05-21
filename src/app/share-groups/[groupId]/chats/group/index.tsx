@@ -14,7 +14,9 @@ import { api as convexApi } from "../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
 
 const INITIAL_MESSAGE_COUNT = 40;
+const INITIAL_EVENT_COUNT = 40;
 const LOAD_MORE_MESSAGE_COUNT = 40;
+const LOAD_MORE_EVENT_COUNT = 40;
 
 const createOptimisticId = (prefix: string) =>
   `${prefix}:${Date.now()}:${Math.random()}`;
@@ -31,18 +33,27 @@ export default function GroupChat() {
       ? { groupId: targetGroupId, jazzUserId: currentUserId }
       : "skip"
   );
-  const { loadMore, results, status } = usePaginatedQuery(
+  const {
+    loadMore: loadMoreMessages,
+    results: messages,
+    status: messageStatus,
+  } = usePaginatedQuery(
     convexApi.chat.listGroupMessages,
     groupId && currentUserId
       ? { groupId: targetGroupId, jazzUserId: currentUserId }
       : "skip",
     { initialNumItems: INITIAL_MESSAGE_COUNT }
   );
-  const events = useQuery(
+  const {
+    loadMore: loadMoreEvents,
+    results: events,
+    status: eventStatus,
+  } = usePaginatedQuery(
     convexApi.groupEvents.listGroup,
     groupId && currentUserId
       ? { groupId: targetGroupId, jazzUserId: currentUserId }
-      : "skip"
+      : "skip",
+    { initialNumItems: INITIAL_EVENT_COUNT }
   );
   const sendMessageMutation = useMutation(
     convexApi.chat.sendGroupMessage
@@ -76,7 +87,7 @@ export default function GroupChat() {
   const markReadMutation = useMutation(convexApi.chat.markGroupRead);
 
   useEffect(() => {
-    if (!(groupId && currentUserId && results.length > 0)) {
+    if (!(groupId && currentUserId && messages.length > 0)) {
       return;
     }
 
@@ -84,7 +95,13 @@ export default function GroupChat() {
       groupId: targetGroupId,
       jazzUserId: currentUserId,
     }).catch(() => undefined);
-  }, [currentUserId, groupId, markReadMutation, results.length, targetGroupId]);
+  }, [
+    currentUserId,
+    groupId,
+    markReadMutation,
+    messages.length,
+    targetGroupId,
+  ]);
 
   const goBack = () => {
     if (router.canGoBack()) {
@@ -107,13 +124,18 @@ export default function GroupChat() {
   return (
     <ChatView
       currentUserId={currentUserId}
-      events={events ?? []}
-      isLoadingMore={status === "LoadingMore"}
-      messages={results}
+      events={events}
+      isLoadingMore={
+        messageStatus === "LoadingMore" || eventStatus === "LoadingMore"
+      }
+      messages={messages}
       onBack={goBack}
       onLoadMore={() => {
-        if (status === "CanLoadMore") {
-          loadMore(LOAD_MORE_MESSAGE_COUNT);
+        if (messageStatus === "CanLoadMore") {
+          loadMoreMessages(LOAD_MORE_MESSAGE_COUNT);
+        }
+        if (eventStatus === "CanLoadMore") {
+          loadMoreEvents(LOAD_MORE_EVENT_COUNT);
         }
       }}
       onSend={async (body) => {

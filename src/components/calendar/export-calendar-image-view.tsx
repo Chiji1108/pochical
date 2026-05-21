@@ -82,6 +82,7 @@ export const ExportCalendarImageView: FC<ExportCalendarImageViewProps> = ({
           calendarHighlightTargets={calendarHighlightTargets}
           className="px-0"
           exportColorScheme={colorScheme}
+          hideOutOfMonthDates
           isExportMode
           patternsById={patternsById}
           selectedDate={yearMonth}

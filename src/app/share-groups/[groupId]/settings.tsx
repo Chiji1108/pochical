@@ -14,8 +14,9 @@ import {
 } from "heroui-native";
 import { useSession } from "jazz-tools/react-native";
 import { useRef, useState } from "react";
-import { Alert, ScrollView, View } from "react-native";
+import { Alert, Platform, ScrollView, View } from "react-native";
 import { EmojiPopup } from "react-native-emoji-popup";
+import { EmojiPopupCloseButton } from "@/components/common/emoji-popup-close-button";
 import {
   DisplayNameFormDialog,
   GroupFormDialog,
@@ -428,8 +429,14 @@ const GroupSettingsSection = ({
   <View className="gap-3">
     <Text className="font-semibold text-lg">グループ</Text>
     <ListGroup>
-      <EmojiPopup onEmojiSelected={onChangeEmoji}>
-        <ListGroup.Item accessibilityLabel="グループアイコンを編集">
+      <EmojiPopup
+        closeButton={EmojiPopupCloseButton}
+        onEmojiSelected={onChangeEmoji}
+      >
+        <ListGroup.Item
+          accessibilityLabel="グループアイコンを編集"
+          disabled={Platform.OS === "android"}
+        >
           <ListGroup.ItemContent>
             <ListGroup.ItemTitle>アイコン</ListGroup.ItemTitle>
           </ListGroup.ItemContent>

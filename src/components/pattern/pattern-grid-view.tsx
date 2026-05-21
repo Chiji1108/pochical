@@ -5,14 +5,15 @@ import { SymbolView } from "expo-symbols";
 import { Text } from "heroui-native";
 import { Button } from "heroui-native/button";
 import { useDb, useSession } from "jazz-tools/react-native";
-import { type RefObject, useMemo } from "react";
+import { useMemo } from "react";
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  Platform,
   useWindowDimensions,
   View,
 } from "react-native";
-import { type GestureType, ScrollView } from "react-native-gesture-handler";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import Animated, {
   type SharedValue,
   useAnimatedStyle,
@@ -22,10 +23,10 @@ import { app, type DayNote, type Pattern, type Shift } from "@/schema";
 
 const MIN_PATTERN_CELL_WIDTH = 48;
 const PATTERN_GRID_GAP = 8;
+const ANDROID_KEYBOARD_BOTTOM_OFFSET_EXTRA = 32;
 
 type PatternGridViewProps = {
   bottomContentPadding: number;
-  detailModeGestureRef: RefObject<GestureType | undefined>;
   detailScrollOffsetY: SharedValue<number>;
   detailTransitionProgress: SharedValue<number>;
   isDetailInputMode: boolean;
@@ -42,7 +43,6 @@ type PatternGridViewProps = {
 
 export function PatternGridView({
   bottomContentPadding,
-  detailModeGestureRef,
   detailScrollOffsetY,
   detailTransitionProgress,
   isDetailInputMode,
@@ -150,19 +150,24 @@ export function PatternGridView({
   }
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       alwaysBounceVertical={false}
+      bottomOffset={
+        bottomContentPadding +
+        (Platform.OS === "android" ? ANDROID_KEYBOARD_BOTTOM_OFFSET_EXTRA : 0)
+      }
       bounces={false}
       className="flex-1"
       contentContainerClassName="px-3"
       contentContainerStyle={{ paddingBottom: bottomContentPadding }}
       contentInsetAdjustmentBehavior="automatic"
+      enabled={isDetailInputMode}
       keyboardShouldPersistTaps="handled"
+      mode="layout"
       onScroll={handleScroll}
       overScrollMode="never"
       scrollEnabled={isDetailInputMode}
       scrollEventThrottle={16}
-      simultaneousHandlers={detailModeGestureRef}
     >
       {sortedPatterns.length > 0 ? (
         <View className="gap-2">
@@ -260,6 +265,6 @@ export function PatternGridView({
           )}
         </View>
       )}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }

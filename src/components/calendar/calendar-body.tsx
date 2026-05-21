@@ -45,6 +45,7 @@ type CalendarBodyProps = {
   yearMonth: Date;
   className?: string;
   exportColorScheme?: ExportCalendarColorScheme;
+  hideOutOfMonthDates?: boolean;
   isExportMode?: boolean;
   weekDate?: Date;
 };
@@ -60,6 +61,7 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
   weekStartsOn,
   className,
   exportColorScheme = "light",
+  hideOutOfMonthDates = false,
   isExportMode = false,
   weekDate,
 }) => {
@@ -88,6 +90,8 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
   );
 
   const renderDateCell = (date: Date, shouldDimOutOfMonth: boolean) => {
+    const isOutOfMonth = shouldDimOutOfMonth && !isSameMonth(date, yearMonth);
+    const shouldHideDateContent = hideOutOfMonthDates && isOutOfMonth;
     const isSelectedDate = !isExportMode && isSameDay(date, selectedDate);
     const highlightColor = getCalendarDateHighlightColor(
       date,
@@ -97,7 +101,6 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
     const shiftPattern = shift?.patternId
       ? patternsById.get(shift.patternId)
       : undefined;
-    const isDayOffShift = Boolean(shiftPattern?.countsAsDayOff);
     const isDarkExport = isExportMode && exportColorScheme === "dark";
     const todayClassName = getTodayClassName(isToday(date), isExportMode);
     return (
@@ -106,11 +109,11 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
           "relative flex w-full flex-col items-center rounded-lg p-1",
           todayClassName,
           {
-            "opacity-40": shouldDimOutOfMonth && !isSameMonth(date, yearMonth),
-            "bg-foreground/85": isSelectedDate,
+            "opacity-40": isOutOfMonth && !shouldHideDateContent,
+            "bg-foreground/85": isSelectedDate && !shouldHideDateContent,
           }
         )}
-        disabled={isExportMode}
+        disabled={isExportMode || shouldHideDateContent}
         onPress={async () => {
           setSelectedDate(date);
 
@@ -122,47 +125,17 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
         }}
         style={{ height: CALENDAR_DAY_CELL_HEIGHT }}
       >
-        {isExportMode && isDayOffShift ? (
-          <View className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500" />
-        ) : null}
-        {shift?.hasNotes && !isExportMode ? (
-          <View
-            className={cn(
-              "absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full",
-              {
-                "bg-background": isSelectedDate,
-                "bg-foreground/70": !isSelectedDate,
-              }
-            )}
+        {shouldHideDateContent ? null : (
+          <CalendarDateCellContent
+            date={date}
+            highlightColor={highlightColor}
+            isDarkExport={isDarkExport}
+            isExportMode={isExportMode}
+            isSelectedDate={isSelectedDate}
+            shift={shift}
+            shiftPattern={shiftPattern}
           />
-        ) : null}
-        <View className="min-h-5 min-w-5 items-center justify-center">
-          <Text
-            className={getDateTextClassName({
-              highlightColor,
-              isDarkExport,
-              isExportMode,
-              isSelectedDate,
-            })}
-          >
-            {getDate(date)}
-          </Text>
-        </View>
-        {shiftPattern ? (
-          <View className="min-w-0 flex-1 items-center justify-center gap-0.5">
-            <Text className="text-center text-sm" numberOfLines={1}>
-              {shiftPattern.emoji}
-            </Text>
-            {isExportMode ? (
-              <Text
-                className={getShiftNameClassName(isDarkExport, isExportMode)}
-                numberOfLines={1}
-              >
-                {shiftPattern.name}
-              </Text>
-            ) : null}
-          </View>
-        ) : null}
+        )}
       </Pressable>
     );
   };
@@ -189,6 +162,71 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
         </Animated.View>
       )}
     </View>
+  );
+};
+
+type CalendarDateCellContentProps = {
+  date: Date;
+  highlightColor: CalendarDateHighlightColor;
+  isDarkExport: boolean;
+  isExportMode: boolean;
+  isSelectedDate: boolean;
+  shift?: CalendarShiftSummary;
+  shiftPattern?: Pattern;
+};
+
+const CalendarDateCellContent: FC<CalendarDateCellContentProps> = ({
+  date,
+  highlightColor,
+  isDarkExport,
+  isExportMode,
+  isSelectedDate,
+  shift,
+  shiftPattern,
+}) => {
+  const isDayOffShift = Boolean(shiftPattern?.countsAsDayOff);
+
+  return (
+    <>
+      {isExportMode && isDayOffShift ? (
+        <View className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+      ) : null}
+      {shift?.hasNotes && !isExportMode ? (
+        <View
+          className={cn("absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full", {
+            "bg-background": isSelectedDate,
+            "bg-foreground/70": !isSelectedDate,
+          })}
+        />
+      ) : null}
+      <View className="min-h-5 min-w-5 items-center justify-center">
+        <Text
+          className={getDateTextClassName({
+            highlightColor,
+            isDarkExport,
+            isExportMode,
+            isSelectedDate,
+          })}
+        >
+          {getDate(date)}
+        </Text>
+      </View>
+      {shiftPattern ? (
+        <View className="min-w-0 flex-1 items-center justify-center gap-0.5">
+          <Text className="text-center text-sm" numberOfLines={1}>
+            {shiftPattern.emoji}
+          </Text>
+          {isExportMode ? (
+            <Text
+              className={getShiftNameClassName(isDarkExport, isExportMode)}
+              numberOfLines={1}
+            >
+              {shiftPattern.name}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+    </>
   );
 };
 

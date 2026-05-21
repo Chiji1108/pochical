@@ -1,4 +1,5 @@
 import { usePresence } from "@convex-dev/presence/react-native";
+import { FlashList } from "@shopify/flash-list";
 import { useMutation, useQuery } from "convex/react";
 import { setStringAsync } from "expo-clipboard";
 import { useRouter } from "expo-router";
@@ -11,17 +12,20 @@ import {
   useThemeColor,
   useToast,
 } from "heroui-native";
-import type { ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import type { ElementRef, ReactNode, Ref } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
+  type ScrollViewProps,
   TextInput,
   View,
 } from "react-native";
+import {
+  KeyboardChatScrollView,
+  type KeyboardChatScrollViewProps,
+  KeyboardStickyView,
+} from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AppHeader,
@@ -31,6 +35,16 @@ import type { ChatPresenceMember, ChatPresenceUser } from "@/lib/chat-presence";
 import { getInviteCodeFromInviteUrl } from "@/lib/invite-links";
 import { api as convexApi } from "../../../convex/_generated/api";
 import { LinkifiedText } from "../common/linkified-text";
+
+type ChatScrollViewRef = ElementRef<typeof KeyboardChatScrollView>;
+type ChatScrollViewProps = KeyboardChatScrollViewProps & ScrollViewProps;
+
+const ChatScrollView = ({
+  ref,
+  ...props
+}: ChatScrollViewProps & { ref?: Ref<ChatScrollViewRef> }) => (
+  <KeyboardChatScrollView keyboardLiftBehavior="always" ref={ref} {...props} />
+);
 
 export type ChatMessage = {
   _id: string;
@@ -331,6 +345,7 @@ export const ChatView = ({
     () => buildChatListItems(messages, events),
     [events, messages]
   );
+  const visibleListItems = useMemo(() => [...listItems].reverse(), [listItems]);
   const presenceUsers = useMemo(() => {
     const membersByJazzUserId = new Map(
       presenceMembers.map((member) => [member.jazzUserId, member])
@@ -403,29 +418,32 @@ export const ChatView = ({
   };
 
   const renderListItem = ({ item }: { item: ChatListItem }) => {
+    let content: ReactNode;
+
     if (item.type === "date") {
-      return <DateBadge date={item.date} />;
+      content = <DateBadge date={item.date} />;
+    } else if (item.type === "event") {
+      content = <EventRow currentUserId={currentUserId} event={item.event} />;
+    } else {
+      content = (
+        <MessageBubble
+          isOwnMessage={item.message.authorJazzUserId === currentUserId}
+          message={item.message}
+          readReceiptMode={readReceiptMode}
+          showAuthor={item.showAuthor}
+        />
+      );
     }
 
-    if (item.type === "event") {
-      return <EventRow currentUserId={currentUserId} event={item.event} />;
-    }
-
-    return (
-      <MessageBubble
-        isOwnMessage={item.message.authorJazzUserId === currentUserId}
-        message={item.message}
-        readReceiptMode={readReceiptMode}
-        showAuthor={item.showAuthor}
-      />
-    );
+    return <View className="mt-1.5">{content}</View>;
   };
+  const renderChatScrollComponent = useCallback(
+    (props: ScrollViewProps) => <ChatScrollView {...props} />,
+    []
+  );
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-background"
-    >
+    <View className="flex-1 bg-background">
       <AppHeader
         leftAction={{
           accessibilityLabel: "戻る",
@@ -441,11 +459,11 @@ export const ChatView = ({
         title={title}
       />
       {topContent}
-      <FlatList
+      <FlashList
         className="flex-1"
-        contentContainerClassName="gap-2 px-4 py-3"
-        data={listItems}
-        inverted={true}
+        contentContainerClassName="px-4 py-3"
+        data={visibleListItems}
+        drawDistance={1200}
         keyExtractor={getChatListItemKey}
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center px-6 py-12">
@@ -454,17 +472,23 @@ export const ChatView = ({
             </Text>
           </View>
         }
-        onEndReached={() => {
+        maintainVisibleContentPosition={{
+          autoscrollToBottomThreshold: 0.2,
+          startRenderingFromBottom: true,
+        }}
+        onStartReached={() => {
           if (!isLoadingMore) {
             onLoadMore();
           }
         }}
-        onEndReachedThreshold={0.4}
+        onStartReachedThreshold={0.4}
         renderItem={renderListItem}
+        renderScrollComponent={renderChatScrollComponent}
       />
       <TypingIndicator label={typingSummary} />
-      <View
+      <KeyboardStickyView
         className="border-border border-t bg-background px-3 pt-2"
+        offset={{ closed: 0, opened: 0 }}
         style={{ paddingBottom: Math.max(12, insets.bottom + 8) }}
       >
         <View className="flex-row items-end gap-2">
@@ -499,8 +523,8 @@ export const ChatView = ({
             />
           </Button>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardStickyView>
+    </View>
   );
 };
 

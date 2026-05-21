@@ -14,7 +14,9 @@ import { api as convexApi } from "../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
 
 const INITIAL_MESSAGE_COUNT = 40;
+const INITIAL_EVENT_COUNT = 40;
 const LOAD_MORE_MESSAGE_COUNT = 40;
+const LOAD_MORE_EVENT_COUNT = 40;
 
 const createOptimisticId = (prefix: string) =>
   `${prefix}:${Date.now()}:${Math.random()}`;
@@ -37,7 +39,11 @@ export default function DirectChat() {
   const targetMember = group?.members.find(
     (member) => member.jazzUserId === memberJazzUserId
   );
-  const { loadMore, results, status } = usePaginatedQuery(
+  const {
+    loadMore: loadMoreMessages,
+    results: messages,
+    status: messageStatus,
+  } = usePaginatedQuery(
     convexApi.chat.listDirectMessages,
     groupId && currentUserId && memberJazzUserId
       ? {
@@ -48,7 +54,11 @@ export default function DirectChat() {
       : "skip",
     { initialNumItems: INITIAL_MESSAGE_COUNT }
   );
-  const events = useQuery(
+  const {
+    loadMore: loadMoreEvents,
+    results: events,
+    status: eventStatus,
+  } = usePaginatedQuery(
     convexApi.groupEvents.listDirect,
     groupId && currentUserId && memberJazzUserId
       ? {
@@ -56,7 +66,8 @@ export default function DirectChat() {
           jazzUserId: currentUserId,
           targetJazzUserId: memberJazzUserId,
         }
-      : "skip"
+      : "skip",
+    { initialNumItems: INITIAL_EVENT_COUNT }
   );
   const sendMessageMutation = useMutation(
     convexApi.chat.sendDirectMessage
@@ -91,7 +102,9 @@ export default function DirectChat() {
   const markReadMutation = useMutation(convexApi.chat.markDirectRead);
 
   useEffect(() => {
-    if (!(groupId && currentUserId && memberJazzUserId && results.length > 0)) {
+    if (
+      !(groupId && currentUserId && memberJazzUserId && messages.length > 0)
+    ) {
       return;
     }
 
@@ -105,7 +118,7 @@ export default function DirectChat() {
     groupId,
     markReadMutation,
     memberJazzUserId,
-    results.length,
+    messages.length,
     targetGroupId,
   ]);
 
@@ -130,13 +143,18 @@ export default function DirectChat() {
   return (
     <ChatView
       currentUserId={currentUserId}
-      events={events ?? []}
-      isLoadingMore={status === "LoadingMore"}
-      messages={results}
+      events={events}
+      isLoadingMore={
+        messageStatus === "LoadingMore" || eventStatus === "LoadingMore"
+      }
+      messages={messages}
       onBack={goBack}
       onLoadMore={() => {
-        if (status === "CanLoadMore") {
-          loadMore(LOAD_MORE_MESSAGE_COUNT);
+        if (messageStatus === "CanLoadMore") {
+          loadMoreMessages(LOAD_MORE_MESSAGE_COUNT);
+        }
+        if (eventStatus === "CanLoadMore") {
+          loadMoreEvents(LOAD_MORE_EVENT_COUNT);
         }
       }}
       onSend={async (body) => {

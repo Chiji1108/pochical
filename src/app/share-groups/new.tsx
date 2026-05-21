@@ -3,8 +3,9 @@ import { useRouter } from "expo-router";
 import { Input, ListGroup, Separator, Text, TextField } from "heroui-native";
 import { useSession } from "jazz-tools/react-native";
 import { useRef, useState } from "react";
-import { Alert, ScrollView, View } from "react-native";
+import { Alert, Platform, ScrollView, View } from "react-native";
 import { EmojiPopup } from "react-native-emoji-popup";
+import { EmojiPopupCloseButton } from "@/components/common/emoji-popup-close-button";
 import { DEFAULT_GROUP_EMOJI } from "@/components/group/group-dialogs";
 import { AppHeader } from "@/components/navigation/app-header";
 import { api as convexApi } from "../../../convex/_generated/api";
@@ -103,8 +104,14 @@ export default function NewShareGroup() {
         keyboardShouldPersistTaps="handled"
       >
         <ListGroup>
-          <EmojiPopup onEmojiSelected={setGroupEmoji}>
-            <ListGroup.Item accessibilityLabel="グループアイコンを選択">
+          <EmojiPopup
+            closeButton={EmojiPopupCloseButton}
+            onEmojiSelected={setGroupEmoji}
+          >
+            <ListGroup.Item
+              accessibilityLabel="グループアイコンを選択"
+              disabled={Platform.OS === "android"}
+            >
               <ListGroup.ItemContent>
                 <ListGroup.ItemTitle>アイコン</ListGroup.ItemTitle>
               </ListGroup.ItemContent>

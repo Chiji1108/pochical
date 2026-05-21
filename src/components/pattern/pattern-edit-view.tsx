@@ -12,8 +12,9 @@ import {
 import { useAll, useDb, useSession } from "jazz-tools/react-native";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { Alert, ScrollView, View } from "react-native";
+import { Alert, Platform, ScrollView, View } from "react-native";
 import { EmojiPopup } from "react-native-emoji-popup";
+import { EmojiPopupCloseButton } from "@/components/common/emoji-popup-close-button";
 import { AppHeader } from "@/components/navigation/app-header";
 import { PatternTimePickerButton } from "@/components/pattern/pattern-time-picker-button";
 import {
@@ -426,8 +427,11 @@ const BasicInfoGroup = ({
       <PatternPreview emoji={emoji} name={name} />
     </View>
     <Separator className="mx-4" />
-    <EmojiPopup onEmojiSelected={onChangeEmoji}>
-      <ListGroup.Item>
+    <EmojiPopup
+      closeButton={EmojiPopupCloseButton}
+      onEmojiSelected={onChangeEmoji}
+    >
+      <ListGroup.Item disabled={Platform.OS === "android"}>
         <ListGroup.ItemContent>
           <ListGroup.ItemTitle>アイコン</ListGroup.ItemTitle>
         </ListGroup.ItemContent>

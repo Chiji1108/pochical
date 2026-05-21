@@ -1,7 +1,11 @@
 import { ConvexError, v } from "convex/values";
+import { listThreadsForGroup } from "../convex-lib/chatThreads";
 import { getMembership } from "../convex-lib/groupMembers";
 import { getGroupByInviteCode } from "../convex-lib/inviteCodes";
-import { ensureOwnMessagesIgnored } from "../convex-lib/unreads";
+import {
+  ensureOwnMessagesIgnored,
+  markThreadsReadUpTo,
+} from "../convex-lib/unreads";
 import { normalizeDisplayName } from "../convex-lib/validators";
 import { mutation, query } from "./_generated/server";
 import { insertGroupEvent } from "./groupEvents";
@@ -75,7 +79,11 @@ export const join = mutation({
         jazzUserId: args.jazzUserId,
         joinedAt: now,
       });
-      await ensureOwnMessagesIgnored(ctx, args.jazzUserId);
+      await markThreadsReadUpTo(ctx, {
+        jazzUserId: args.jazzUserId,
+        threads: await listThreadsForGroup(ctx, group._id),
+        timestamp: now,
+      });
       await insertGroupEvent(ctx, {
         actorDisplayNameSnapshot: displayName,
         actorJazzUserId: args.jazzUserId,

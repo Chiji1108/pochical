@@ -10,6 +10,7 @@ import { JazzProvider, loadJazzRn } from "jazz-tools/react-native";
 import { useEffect, useMemo, useState } from "react";
 import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppSettingsProvider } from "@/lib/app-settings";
 
@@ -83,39 +84,39 @@ function RootLayoutContent() {
       <ConvexProvider client={convexClient}>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <SafeAreaProvider>
-            <HeroUINativeProvider
-              config={{ devInfo: { stylingPrinciples: false } }}
-            >
-              <AppSettingsProvider>
-                <StatusBar
-                  backgroundColor="transparent"
-                  style={colorScheme === "dark" ? "light" : "dark"}
-                  translucent
-                />
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen
-                    name="patterns"
-                    options={{ presentation: "fullScreenModal" }}
+            <KeyboardProvider>
+              <HeroUINativeProvider
+                config={{ devInfo: { stylingPrinciples: false } }}
+              >
+                <AppSettingsProvider>
+                  <StatusBar
+                    style={colorScheme === "dark" ? "light" : "dark"}
                   />
-                  <Stack.Screen
-                    name="members"
-                    options={{ presentation: "fullScreenModal" }}
-                  />
-                  <Stack.Screen
-                    name="export"
-                    options={{ presentation: "fullScreenModal" }}
-                  />
-                  <Stack.Screen name="share-groups/new" />
-                  <Stack.Screen name="share-groups/[groupId]/chats/group/index" />
-                  <Stack.Screen name="share-groups/[groupId]/chats/[memberJazzUserId]/index" />
-                  <Stack.Screen name="share-groups/[groupId]/settings" />
-                  <Stack.Screen name="share-groups/[groupId]/shifts" />
-                  <Stack.Screen name="invite/scan" />
-                  <Stack.Screen name="invite/[inviteCode]" />
-                </Stack>
-              </AppSettingsProvider>
-            </HeroUINativeProvider>
+                  <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen
+                      name="patterns"
+                      options={{ presentation: "fullScreenModal" }}
+                    />
+                    <Stack.Screen
+                      name="members"
+                      options={{ presentation: "fullScreenModal" }}
+                    />
+                    <Stack.Screen
+                      name="export"
+                      options={{ presentation: "fullScreenModal" }}
+                    />
+                    <Stack.Screen name="share-groups/new" />
+                    <Stack.Screen name="share-groups/[groupId]/chats/group/index" />
+                    <Stack.Screen name="share-groups/[groupId]/chats/[memberJazzUserId]/index" />
+                    <Stack.Screen name="share-groups/[groupId]/settings" />
+                    <Stack.Screen name="share-groups/[groupId]/shifts" />
+                    <Stack.Screen name="invite/scan" />
+                    <Stack.Screen name="invite/[inviteCode]" />
+                  </Stack>
+                </AppSettingsProvider>
+              </HeroUINativeProvider>
+            </KeyboardProvider>
           </SafeAreaProvider>
         </GestureHandlerRootView>
       </ConvexProvider>
