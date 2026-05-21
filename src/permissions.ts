@@ -2,10 +2,10 @@ import { schema as s } from "jazz-tools";
 import { app } from "@/schema";
 
 export const permissions = s.definePermissions(app, ({ policy, session }) => {
-  policy.patterns.allowRead.always();
-  policy.patterns.allowInsert.always();
-  policy.patterns.allowUpdate.where({ $createdBy: session.user_id });
-  policy.patterns.allowDelete.where({ $createdBy: session.user_id });
+  policy.shiftPatterns.allowRead.always();
+  policy.shiftPatterns.allowInsert.always();
+  policy.shiftPatterns.allowUpdate.where({ $createdBy: session.user_id });
+  policy.shiftPatterns.allowDelete.where({ $createdBy: session.user_id });
 
   policy.shifts.allowRead.always();
   policy.shifts.allowInsert.always();

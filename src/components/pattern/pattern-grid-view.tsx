@@ -93,7 +93,7 @@ export function PatternGridView({
     const nextShiftStartDate = addDays(shiftStartDate, 1);
 
     db.batch((batch) => {
-      const upsertShift = (patternId: string, startDate: Date) => {
+      const upsertShift = (shiftPatternId: string, startDate: Date) => {
         const sameDateShifts = shifts.filter((shift) =>
           isSameDay(shift.startDate, startDate)
         );
@@ -101,12 +101,12 @@ export function PatternGridView({
 
         if (existingShift) {
           batch.update(app.shifts, existingShift.id, {
-            patternId,
+            shiftPatternId,
             startDate,
           });
         } else {
           batch.insert(app.shifts, {
-            patternId,
+            shiftPatternId,
             startDate,
             memberIds: [],
           });
@@ -125,7 +125,7 @@ export function PatternGridView({
       ) {
         upsertShift(pattern.nextDayPatternId, nextShiftStartDate);
       } else if (pattern.nextDayPatternId) {
-        batch.update(app.patterns, pattern.id, {
+        batch.update(app.shiftPatterns, pattern.id, {
           nextDayPatternId: null,
         });
       }

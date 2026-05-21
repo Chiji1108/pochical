@@ -98,7 +98,7 @@ export default function Index() {
   const patterns =
     useAll(
       currentUserId
-        ? app.patterns.where({ $createdBy: currentUserId })
+        ? app.shiftPatterns.where({ $createdBy: currentUserId })
         : undefined
     ) ?? [];
   const shifts =
@@ -161,7 +161,7 @@ export default function Index() {
 
       nextShiftsByDate.set(dateKey, {
         hasNotes: existingSummary?.hasNotes ?? false,
-        patternId: shift.patternId,
+        shiftPatternId: shift.shiftPatternId,
       });
     }
 
@@ -204,7 +204,7 @@ export default function Index() {
 
       return datesInMonth.every((date) => {
         const shiftSummary = shiftsByDate.get(startOfDay(date).getTime());
-        return Boolean(shiftSummary?.patternId);
+        return Boolean(shiftSummary?.shiftPatternId);
       });
     },
     [shiftsByDate]
@@ -234,7 +234,9 @@ export default function Index() {
           const dateKey = startOfDay(date).getTime();
           const shiftSummary = shiftsByDate.get(dateKey);
 
-          return savedDateKeys.has(dateKey) || Boolean(shiftSummary?.patternId);
+          return (
+            savedDateKeys.has(dateKey) || Boolean(shiftSummary?.shiftPatternId)
+          );
         });
 
         if (isCompleteAfterInput) {

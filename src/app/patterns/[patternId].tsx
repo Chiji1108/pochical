@@ -14,7 +14,7 @@ export default function PatternDetail() {
   const [pattern] =
     useAll(
       patternId && currentUserId
-        ? app.patterns
+        ? app.shiftPatterns
             .where({ $createdBy: currentUserId, id: patternId })
             .limit(1)
         : undefined

@@ -38,7 +38,7 @@ export const deleteShiftPatternsAndRelatedData = (
     })),
     ...data.patterns.map((pattern) => ({
       id: pattern.id,
-      run: () => db.delete(app.patterns, pattern.id),
+      run: () => db.delete(app.shiftPatterns, pattern.id),
     })),
   ]);
 };
@@ -67,7 +67,7 @@ export const deleteWorkData = (
     })),
     ...data.patterns.map((pattern) => ({
       id: pattern.id,
-      run: () => db.delete(app.patterns, pattern.id),
+      run: () => db.delete(app.shiftPatterns, pattern.id),
     })),
     ...data.members.map((member) => ({
       id: member.id,

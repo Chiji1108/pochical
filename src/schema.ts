@@ -1,7 +1,7 @@
 import { schema as s } from "jazz-tools";
 
 const schema = {
-  patterns: s.table({
+  shiftPatterns: s.table({
     name: s.string(),
     emoji: s.string(),
     orderIndex: s.int(),
@@ -9,10 +9,10 @@ const schema = {
     isAllDay: s.boolean(),
     startDate: s.timestamp().optional(),
     endDate: s.timestamp().optional(),
-    nextDayPatternId: s.ref("patterns").optional(),
+    nextDayPatternId: s.ref("shiftPatterns").optional(),
   }),
   shifts: s.table({
-    patternId: s.ref("patterns"),
+    shiftPatternId: s.ref("shiftPatterns"),
     startDate: s.timestamp(),
     memberIds: s.array(s.ref("members")),
   }),
@@ -29,8 +29,8 @@ const schema = {
 type AppSchema = s.Schema<typeof schema>;
 export const app: s.App<AppSchema> = s.defineApp(schema);
 
-export type Pattern = s.RowOf<typeof app.patterns>;
-export type PatternQueryBuilder = typeof app.patterns;
+export type Pattern = s.RowOf<typeof app.shiftPatterns>;
+export type PatternQueryBuilder = typeof app.shiftPatterns;
 
 export type Shift = s.RowOf<typeof app.shifts>;
 export type ShiftQueryBuilder = typeof app.shifts;

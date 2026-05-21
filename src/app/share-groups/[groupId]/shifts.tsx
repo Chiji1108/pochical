@@ -103,7 +103,7 @@ const areShiftsEqual = (
     if (
       firstShift.$createdBy !== secondShift.$createdBy ||
       firstShift.id !== secondShift.id ||
-      firstShift.patternId !== secondShift.patternId ||
+      firstShift.shiftPatternId !== secondShift.shiftPatternId ||
       firstShift.startDate.getTime() !== secondShift.startDate.getTime() ||
       !areStringArraysEqual(firstShift.memberIds, secondShift.memberIds)
     ) {
@@ -288,7 +288,9 @@ export default function ShareGroupShifts() {
       const cells = members.map((member) => {
         const key = `${member.jazzUserId}:${item.time}`;
         const shift = shiftsByUserAndDate.get(key);
-        const pattern = shift ? patternsById.get(shift.patternId) : undefined;
+        const pattern = shift
+          ? patternsById.get(shift.shiftPatternId)
+          : undefined;
 
         return { member, pattern, shift };
       });
@@ -545,13 +547,19 @@ const MemberScheduleSubscription = ({
       memberUserId
         ? app.shifts
             .where({ $createdBy: memberUserId })
-            .select("id", "patternId", "startDate", "memberIds", "$createdBy")
+            .select(
+              "id",
+              "shiftPatternId",
+              "startDate",
+              "memberIds",
+              "$createdBy"
+            )
         : undefined
     ) ?? [];
   const patterns =
     useAll(
       memberUserId
-        ? app.patterns.where({ $createdBy: memberUserId })
+        ? app.shiftPatterns.where({ $createdBy: memberUserId })
         : undefined
     ) ?? [];
 

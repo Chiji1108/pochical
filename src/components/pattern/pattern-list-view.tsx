@@ -70,7 +70,7 @@ export const PatternListView = () => {
   const patterns =
     useAll(
       currentUserId
-        ? app.patterns.where({ $createdBy: currentUserId })
+        ? app.shiftPatterns.where({ $createdBy: currentUserId })
         : undefined
     ) ?? [];
   const shifts =
@@ -113,7 +113,7 @@ export const PatternListView = () => {
 
       db.batch((batch) => {
         for (const [index, pattern] of data.entries()) {
-          batch.update(app.patterns, pattern.id, {
+          batch.update(app.shiftPatterns, pattern.id, {
             orderIndex: index,
           });
         }

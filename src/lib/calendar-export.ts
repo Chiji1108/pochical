@@ -140,7 +140,7 @@ export const getMonthlyShiftCalendarEvents = ({
       continue;
     }
 
-    const pattern = patternsById.get(shift.patternId);
+    const pattern = patternsById.get(shift.shiftPatternId);
 
     if (!pattern) {
       continue;

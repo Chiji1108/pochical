@@ -25,7 +25,7 @@ import { WeekRow } from "./week-row";
 
 export type CalendarShiftSummary = {
   hasNotes: boolean;
-  patternId?: string;
+  shiftPatternId?: string;
 };
 
 export type ExportCalendarColorScheme = "dark" | "light";
@@ -98,8 +98,8 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
       calendarHighlightTargets
     );
     const shift = shiftsByDate.get(startOfDay(date).getTime());
-    const shiftPattern = shift?.patternId
-      ? patternsById.get(shift.patternId)
+    const shiftPattern = shift?.shiftPatternId
+      ? patternsById.get(shift.shiftPatternId)
       : undefined;
     const isDarkExport = isExportMode && exportColorScheme === "dark";
     const todayClassName = getTodayClassName(isToday(date), isExportMode);

@@ -36,7 +36,7 @@ export const ShiftDetailView = ({
   selectedDateShift,
 }: ShiftDetailViewProps) => {
   const selectedPattern = selectedDateShift
-    ? patternsById.get(selectedDateShift.patternId)
+    ? patternsById.get(selectedDateShift.shiftPatternId)
     : undefined;
   const selectedMembers = useMemo(() => {
     if (!selectedDateShift) {

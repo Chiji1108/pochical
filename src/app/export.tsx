@@ -56,7 +56,7 @@ export default function ExportScreen() {
   const patterns =
     useAll(
       currentUserId
-        ? app.patterns.where({ $createdBy: currentUserId })
+        ? app.shiftPatterns.where({ $createdBy: currentUserId })
         : undefined
     ) ?? [];
   const shifts =
@@ -95,7 +95,7 @@ export default function ExportScreen() {
 
       nextShiftsByDate.set(dateKey, {
         hasNotes: existingSummary?.hasNotes ?? false,
-        patternId: shift.patternId,
+        shiftPatternId: shift.shiftPatternId,
       });
     }
 

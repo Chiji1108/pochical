@@ -88,7 +88,7 @@ export default function Settings() {
   const patterns =
     useAll(
       currentUserId
-        ? app.patterns.where({ $createdBy: currentUserId })
+        ? app.shiftPatterns.where({ $createdBy: currentUserId })
         : undefined
     ) ?? [];
   const shifts =

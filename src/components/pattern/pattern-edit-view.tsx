@@ -135,7 +135,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
   const patterns =
     useAll(
       currentUserId
-        ? app.patterns.where({ $createdBy: currentUserId })
+        ? app.shiftPatterns.where({ $createdBy: currentUserId })
         : undefined
     ) ?? [];
   const shifts =
@@ -156,7 +156,9 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
     isContinuingUntilNextDay(formState.startDate, formState.endDate);
   const relatedShifts = useMemo(
     () =>
-      pattern ? shifts.filter((shift) => shift.patternId === pattern.id) : [],
+      pattern
+        ? shifts.filter((shift) => shift.shiftPatternId === pattern.id)
+        : [],
     [pattern, shifts]
   );
   const patternsUsingThisAsNextDay = useMemo(
@@ -211,7 +213,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
       }
 
       for (const item of patternsUsingThisAsNextDay) {
-        batch.update(app.patterns, item.id, {
+        batch.update(app.shiftPatterns, item.id, {
           nextDayPatternId: null,
         });
       }
@@ -222,13 +224,13 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
 
       for (const [orderIndex, item] of remainingPatterns.entries()) {
         if (item.orderIndex !== orderIndex) {
-          batch.update(app.patterns, item.id, {
+          batch.update(app.shiftPatterns, item.id, {
             orderIndex,
           });
         }
       }
 
-      batch.delete(app.patterns, pattern.id);
+      batch.delete(app.shiftPatterns, pattern.id);
     });
 
     playLightImpactHaptic();
@@ -278,9 +280,9 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
     );
 
     if (pattern) {
-      db.update(app.patterns, pattern.id, saveFields);
+      db.update(app.shiftPatterns, pattern.id, saveFields);
     } else {
-      db.insert(app.patterns, {
+      db.insert(app.shiftPatterns, {
         ...saveFields,
         orderIndex: patterns.length,
       });

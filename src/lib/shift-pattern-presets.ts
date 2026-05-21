@@ -256,7 +256,7 @@ export const insertShiftPatternPreset = (
 
   for (const [index, pattern] of preset.patterns.entries()) {
     const insertedPattern = batch.insert(
-      app.patterns,
+      app.shiftPatterns,
       createPatternInsert(pattern, startOrderIndex + index)
     );
     insertedPatternsByName.set(pattern.name, insertedPattern);
@@ -273,7 +273,7 @@ export const insertShiftPatternPreset = (
     );
 
     if (insertedPattern && nextDayPattern) {
-      batch.update(app.patterns, insertedPattern.id, {
+      batch.update(app.shiftPatterns, insertedPattern.id, {
         nextDayPatternId: nextDayPattern.id,
       });
     }
