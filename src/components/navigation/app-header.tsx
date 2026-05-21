@@ -1,4 +1,3 @@
-import { BlurView } from "expo-blur";
 import { SymbolView, type SymbolViewProps } from "expo-symbols";
 import { Button, type ButtonRootProps, Text } from "heroui-native";
 import type { FC } from "react";
@@ -66,12 +65,9 @@ export const AppHeader: FC<AppHeaderProps> = ({
   const isLeftAligned = titleAlign === "left";
 
   return (
-    <BlurView
-      blurMethod="dimezisBlurViewSdk31Plus"
-      className="border-border/60 border-b bg-background/95"
-      intensity={30}
+    <View
+      className="border-border/60 border-b bg-background"
       style={{ paddingTop: includeTopInset ? insets.top : 0 }}
-      tint="systemThinMaterial"
     >
       <View className="h-14 flex-row items-center px-3">
         <View
@@ -104,6 +100,6 @@ export const AppHeader: FC<AppHeaderProps> = ({
           ))}
         </View>
       </View>
-    </BlurView>
+    </View>
   );
 };

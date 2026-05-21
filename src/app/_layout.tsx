@@ -3,10 +3,12 @@ import "jazz-tools/expo/polyfills";
 
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { HeroUINativeProvider } from "heroui-native";
 import { useLocalFirstAuth } from "jazz-tools/expo";
 import { JazzProvider, loadJazzRn } from "jazz-tools/react-native";
 import { useEffect, useMemo, useState } from "react";
+import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppSettingsProvider } from "@/lib/app-settings";
@@ -52,6 +54,7 @@ export default function RootLayout() {
 
 function RootLayoutContent() {
   const { secret, isLoading } = useLocalFirstAuth();
+  const colorScheme = useColorScheme();
   const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
   const convexClient = useMemo(() => {
     if (!convexUrl) {
@@ -84,6 +87,11 @@ function RootLayoutContent() {
               config={{ devInfo: { stylingPrinciples: false } }}
             >
               <AppSettingsProvider>
+                <StatusBar
+                  backgroundColor="transparent"
+                  style={colorScheme === "dark" ? "light" : "dark"}
+                  translucent
+                />
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen name="(tabs)" />
                   <Stack.Screen

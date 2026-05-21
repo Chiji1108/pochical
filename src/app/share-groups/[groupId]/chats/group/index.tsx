@@ -39,7 +39,7 @@ export default function GroupChat() {
     { initialNumItems: INITIAL_MESSAGE_COUNT }
   );
   const events = useQuery(
-    convexApi.chat.listGroupEvents,
+    convexApi.groupEvents.listGroup,
     groupId && currentUserId
       ? { groupId: targetGroupId, jazzUserId: currentUserId }
       : "skip"

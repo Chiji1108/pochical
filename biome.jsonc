@@ -23,5 +23,23 @@
   },
   "files": {
     "includes": ["!**/uniwind-types.d.ts", "!example", "!node_modules"]
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["convex/**/*.ts", "convex-lib/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useFilenamingConvention": {
+              "level": "error",
+              "options": {
+                "filenameCases": ["camelCase"],
+                "requireAscii": true
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

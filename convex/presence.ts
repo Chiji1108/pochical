@@ -1,13 +1,9 @@
 import { Presence } from "@convex-dev/presence";
 import { ConvexError, v } from "convex/values";
+import { type DatabaseCtx, getMembership } from "../convex-lib/groupMembers";
 import { components } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import {
-  type MutationCtx,
-  mutation,
-  type QueryCtx,
-  query,
-} from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 
 const presence = new Presence(components.presence);
 
@@ -63,20 +59,8 @@ const parsePresenceRoomId = (roomId: string): PresenceRoomPayload => {
   throw new ConvexError("Invalid presence room");
 };
 
-const getMembership = async (
-  ctx: QueryCtx | MutationCtx,
-  groupId: Id<"groups">,
-  jazzUserId: string
-) =>
-  ctx.db
-    .query("groupMembers")
-    .withIndex("by_groupId_jazzUserId", (q) =>
-      q.eq("groupId", groupId).eq("jazzUserId", jazzUserId)
-    )
-    .unique();
-
 const requirePresenceRoomAccess = async (
-  ctx: QueryCtx | MutationCtx,
+  ctx: DatabaseCtx,
   roomId: string,
   jazzUserId: string
 ) => {

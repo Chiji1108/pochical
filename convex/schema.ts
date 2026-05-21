@@ -41,7 +41,7 @@ export default defineSchema({
     groupId: v.id("groups"),
     threadId: v.id("chatThreads"),
   }).index("by_threadId_createdAt", ["threadId", "createdAt"]),
-  chatEvents: defineTable({
+  groupEvents: defineTable({
     actorDisplayNameSnapshot: v.string(),
     actorJazzUserId: v.string(),
     body: v.string(),
@@ -61,10 +61,4 @@ export default defineSchema({
     targetDisplayNameSnapshot: v.optional(v.string()),
     targetJazzUserId: v.optional(v.string()),
   }).index("by_groupId_createdAt", ["groupId", "createdAt"]),
-  chatReads: defineTable({
-    jazzUserId: v.string(),
-    lastReadMessageCreatedAt: v.number(),
-    threadId: v.id("chatThreads"),
-    updatedAt: v.number(),
-  }).index("by_threadId_jazzUserId", ["threadId", "jazzUserId"]),
 });

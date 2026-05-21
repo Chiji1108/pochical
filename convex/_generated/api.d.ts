@@ -9,6 +9,7 @@
  */
 
 import type * as chat from "../chat.js";
+import type * as groupEvents from "../groupEvents.js";
 import type * as groups from "../groups.js";
 import type * as http from "../http.js";
 import type * as invites from "../invites.js";
@@ -22,6 +23,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   chat: typeof chat;
+  groupEvents: typeof groupEvents;
   groups: typeof groups;
   http: typeof http;
   invites: typeof invites;
@@ -56,4 +58,5 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   presence: import("@convex-dev/presence/_generated/component.js").ComponentApi<"presence">;
+  unreadTracking: import("convex-unread-tracking/_generated/component.js").ComponentApi<"unreadTracking">;
 };

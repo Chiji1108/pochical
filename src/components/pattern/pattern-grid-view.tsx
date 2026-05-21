@@ -184,13 +184,13 @@ export function PatternGridView({
                     variant="ghost"
                   >
                     <Button.Label
-                      className="text-center text-sm leading-0"
+                      className="text-center text-sm leading-none"
                       numberOfLines={1}
                     >
                       {pattern.emoji}
                     </Button.Label>
                     <Button.Label
-                      className="text-center text-sm leading-0"
+                      className="text-center text-sm leading-none"
                       numberOfLines={1}
                     >
                       {pattern.name}

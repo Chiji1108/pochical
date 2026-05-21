@@ -206,13 +206,13 @@ export const PatternListView = () => {
         variant="ghost"
       >
         <Button.Label
-          className="text-center text-sm leading-0"
+          className="text-center text-sm leading-none"
           numberOfLines={1}
         >
           {item.emoji}
         </Button.Label>
         <Button.Label
-          className="text-center text-sm leading-0"
+          className="text-center text-sm leading-none"
           numberOfLines={1}
         >
           {item.name}
@@ -411,13 +411,13 @@ const AddPartsGrid = ({
               variant="ghost"
             >
               <Button.Label
-                className="text-center text-sm leading-0"
+                className="text-center text-sm leading-none"
                 numberOfLines={1}
               >
                 {pattern.emoji}
               </Button.Label>
               <Button.Label
-                className="text-center text-sm leading-0"
+                className="text-center text-sm leading-none"
                 numberOfLines={1}
               >
                 {pattern.name}
@@ -498,10 +498,10 @@ type PatternPreviewChipProps = {
 
 const PatternPreviewChip = ({ pattern }: PatternPreviewChipProps) => (
   <View className="h-15 w-15 items-center justify-center gap-1 rounded-lg bg-foreground/5 px-1 py-2">
-    <Text className="text-center text-sm leading-0" numberOfLines={1}>
+    <Text className="text-center text-sm leading-none" numberOfLines={1}>
       {pattern.emoji}
     </Text>
-    <Text className="text-center text-sm leading-0" numberOfLines={1}>
+    <Text className="text-center text-sm leading-none" numberOfLines={1}>
       {pattern.name}
     </Text>
   </View>

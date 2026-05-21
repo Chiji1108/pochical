@@ -49,7 +49,7 @@ export default function DirectChat() {
     { initialNumItems: INITIAL_MESSAGE_COUNT }
   );
   const events = useQuery(
-    convexApi.chat.listDirectEvents,
+    convexApi.groupEvents.listDirect,
     groupId && currentUserId && memberJazzUserId
       ? {
           groupId: targetGroupId,
