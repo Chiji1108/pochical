@@ -333,6 +333,19 @@ export default function Settings() {
         </View>
 
         <View className="gap-2">
+          <SectionTitle>開発</SectionTitle>
+          <ListGroup>
+            <SettingLinkRow
+              description="Guest Auth、MMKV、links、range query を確認します"
+              label="InstantDB Sandbox"
+              onPress={() => {
+                router.push("../instant-sandbox");
+              }}
+            />
+          </ListGroup>
+        </View>
+
+        <View className="gap-2">
           <SectionTitle>危険な操作</SectionTitle>
           <ListGroup>
             <DestructiveSettingRow
@@ -496,6 +509,40 @@ const PlaceholderRow = ({ description, label }: PlaceholderRowProps) => (
       </Text>
     </ListGroup.ItemSuffix>
   </ListGroup.Item>
+);
+
+type SettingLinkRowProps = {
+  description: string;
+  label: string;
+  onPress: () => void;
+};
+
+const SettingLinkRow = ({
+  description,
+  label,
+  onPress,
+}: SettingLinkRowProps) => (
+  <PressableFeedback animation={false} onPress={onPress}>
+    <PressableFeedback.Scale>
+      <ListGroup.Item>
+        <ListGroup.ItemContent>
+          <ListGroup.ItemTitle>{label}</ListGroup.ItemTitle>
+          <ListGroup.ItemDescription>{description}</ListGroup.ItemDescription>
+        </ListGroup.ItemContent>
+        <ListGroup.ItemSuffix>
+          <SymbolView
+            name={{
+              android: "chevron_right",
+              ios: "chevron.right",
+              web: "chevron_right",
+            }}
+            size={16}
+          />
+        </ListGroup.ItemSuffix>
+      </ListGroup.Item>
+    </PressableFeedback.Scale>
+    <PressableFeedback.Ripple />
+  </PressableFeedback>
 );
 
 type DestructiveSettingRowProps = {

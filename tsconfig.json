@@ -10,6 +10,8 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
+    "instant.schema.ts",
+    "instant.perms.ts",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
   ]
