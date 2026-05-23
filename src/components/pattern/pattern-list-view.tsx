@@ -268,7 +268,7 @@ export const PatternListView = () => {
         ) : (
           <View className="items-center justify-center rounded-lg bg-foreground/5 px-4 py-8">
             <Text className="text-center text-sm" color="muted">
-              シフトパターンがありません
+              下からシフトパターンを組み立ててください
             </Text>
           </View>
         )}
