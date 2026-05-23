@@ -1,10 +1,10 @@
+import { id } from "@instantdb/react-native";
 import { addDays, isSameDay, startOfDay } from "date-fns";
 import { selectionAsync } from "expo-haptics";
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Text } from "heroui-native";
 import { Button } from "heroui-native/button";
-import { useDb, useSession } from "jazz-tools/react-native";
 import { useMemo } from "react";
 import {
   type NativeScrollEvent,
@@ -19,7 +19,14 @@ import Animated, {
   useAnimatedStyle,
 } from "react-native-reanimated";
 import { ShiftDetailInputPanel } from "@/components/shift/shift-detail-input-panel";
-import { app, type DayNote, type Pattern, type Shift } from "@/schema";
+import {
+  type DayNote,
+  db,
+  type InstantTransaction,
+  type Pattern,
+  type Shift,
+  useCurrentUserId,
+} from "@/lib/instant";
 
 const MIN_PATTERN_CELL_WIDTH = 48;
 const PATTERN_GRID_GAP = 8;
@@ -56,9 +63,8 @@ export function PatternGridView({
   selectedDateShift,
   shifts,
 }: PatternGridViewProps) {
-  const db = useDb();
   const router = useRouter();
-  const session = useSession();
+  const currentUserId = useCurrentUserId();
   const { width } = useWindowDimensions();
   const sortedPatterns = useMemo(
     () => [...patterns].sort((a, b) => a.orderIndex - b.orderIndex),
@@ -84,57 +90,64 @@ export function PatternGridView({
     detailScrollOffsetY.value = event.nativeEvent.contentOffset.y;
   };
 
-  function handlePatternPress(pattern: Pattern) {
-    if (!session) {
+  async function handlePatternPress(pattern: Pattern) {
+    if (!currentUserId) {
       return;
     }
 
     const shiftStartDate = startOfDay(selectedDate);
     const nextShiftStartDate = addDays(shiftStartDate, 1);
 
-    db.batch((batch) => {
-      const upsertShift = (shiftPatternId: string, startDate: Date) => {
-        const sameDateShifts = shifts.filter((shift) =>
-          isSameDay(shift.startDate, startDate)
+    const transactions: InstantTransaction[] = [];
+    const upsertShift = (shiftPattern: Pattern, startDate: Date) => {
+      const sameDateShifts = shifts.filter((shift) =>
+        isSameDay(shift.startDate, startDate)
+      );
+      const [existingShift, ...duplicateShifts] = sameDateShifts;
+
+      if (existingShift) {
+        const currentPatternId = existingShift.pattern?.id;
+        transactions.push(db.tx.shifts[existingShift.id].update({ startDate }));
+        if (currentPatternId && currentPatternId !== shiftPattern.id) {
+          transactions.push(
+            db.tx.shifts[existingShift.id].unlink({
+              pattern: currentPatternId,
+            })
+          );
+        }
+        if (currentPatternId !== shiftPattern.id) {
+          transactions.push(
+            db.tx.shifts[existingShift.id].link({
+              pattern: shiftPattern.id,
+            })
+          );
+        }
+      } else {
+        transactions.push(
+          db.tx.shifts[id()]
+            .create({ startDate })
+            .link({ owner: currentUserId, pattern: shiftPattern.id })
         );
-        const [existingShift, ...duplicateShifts] = sameDateShifts;
-
-        if (existingShift) {
-          batch.update(app.shifts, existingShift.id, {
-            shiftPatternId,
-            startDate,
-          });
-        } else {
-          batch.insert(app.shifts, {
-            shiftPatternId,
-            startDate,
-            memberIds: [],
-          });
-        }
-
-        for (const duplicateShift of duplicateShifts) {
-          batch.delete(app.shifts, duplicateShift.id);
-        }
-      };
-
-      upsertShift(pattern.id, shiftStartDate);
-
-      if (
-        pattern.nextDayPatternId &&
-        patternsById.has(pattern.nextDayPatternId)
-      ) {
-        upsertShift(pattern.nextDayPatternId, nextShiftStartDate);
-      } else if (pattern.nextDayPatternId) {
-        batch.update(app.shiftPatterns, pattern.id, {
-          nextDayPatternId: null,
-        });
       }
-    });
+
+      for (const duplicateShift of duplicateShifts) {
+        transactions.push(db.tx.shifts[duplicateShift.id].delete());
+      }
+    };
+
+    upsertShift(pattern, shiftStartDate);
+
+    if (pattern.nextDayPattern) {
+      const nextDayPattern =
+        patternsById.get(pattern.nextDayPattern.id) ?? pattern.nextDayPattern;
+      upsertShift(nextDayPattern, nextShiftStartDate);
+    }
+
+    await db.transact(transactions);
     onShiftSaved?.(shiftStartDate);
 
     if (!isDetailInputMode) {
-      const hasNextDayPattern =
-        pattern.nextDayPatternId && patternsById.has(pattern.nextDayPatternId);
+      const hasNextDayPattern = Boolean(pattern.nextDayPattern);
       const savedDates = hasNextDayPattern
         ? [shiftStartDate, nextShiftStartDate]
         : [shiftStartDate];
@@ -182,7 +195,7 @@ export function PatternGridView({
                   <Button
                     accessibilityLabel={`${pattern.name}を入力`}
                     className="h-15 w-full flex-col justify-center gap-1 rounded-lg bg-foreground/5 px-1 py-2"
-                    isDisabled={!session}
+                    isDisabled={!currentUserId}
                     onPress={() => {
                       handlePatternPress(pattern);
                     }}
@@ -240,7 +253,7 @@ export function PatternGridView({
       ) : (
         <View className="items-center py-6">
           <Button
-            isDisabled={!session}
+            isDisabled={!currentUserId}
             onPress={() => {
               router.push("/patterns");
             }}
@@ -258,7 +271,7 @@ export function PatternGridView({
             />
             <Button.Label>シフトパターンを追加</Button.Label>
           </Button>
-          {session ? null : (
+          {currentUserId ? null : (
             <Text className="mt-3 text-sm" color="muted">
               接続後に作成できます
             </Text>

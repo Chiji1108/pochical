@@ -49,7 +49,7 @@ const ChatScrollView = ({
 export type ChatMessage = {
   _id: string;
   authorDisplayName: string;
-  authorJazzUserId: string;
+  authorInstantUserId: string;
   body: string;
   createdAt: number;
   readCount: number;
@@ -58,7 +58,7 @@ export type ChatMessage = {
 export type ChatEvent = {
   _id: string;
   actorDisplayNameSnapshot: string;
-  actorJazzUserId: string;
+  actorInstantUserId: string;
   body: string;
   createdAt: number;
   kind:
@@ -72,7 +72,7 @@ export type ChatEvent = {
   nextValue?: string;
   previousValue?: string;
   targetDisplayNameSnapshot?: string;
-  targetJazzUserId?: string;
+  targetInstantUserId?: string;
 };
 
 type ChatTimelineItem =
@@ -239,8 +239,8 @@ const buildChatListItems = (
     if (timelineItem.type === "message") {
       const showAuthor =
         nextTimelineItem?.type !== "message" ||
-        nextTimelineItem.message.authorJazzUserId !==
-          timelineItem.message.authorJazzUserId ||
+        nextTimelineItem.message.authorInstantUserId !==
+          timelineItem.message.authorInstantUserId ||
         nextItemDateKey !== currentDateKey;
 
       items.push({
@@ -347,8 +347,8 @@ export const ChatView = ({
   );
   const visibleListItems = useMemo(() => [...listItems].reverse(), [listItems]);
   const presenceUsers = useMemo(() => {
-    const membersByJazzUserId = new Map(
-      presenceMembers.map((member) => [member.jazzUserId, member])
+    const membersByInstantUserId = new Map(
+      presenceMembers.map((member) => [member.instantUserId, member])
     );
     const states = (presenceState ?? []) as PresenceStateWithData[];
     const users: ChatPresenceUser[] = [];
@@ -358,7 +358,7 @@ export const ChatView = ({
         continue;
       }
 
-      const member = membersByJazzUserId.get(state.userId);
+      const member = membersByInstantUserId.get(state.userId);
 
       if (!member) {
         continue;
@@ -427,7 +427,7 @@ export const ChatView = ({
     } else {
       content = (
         <MessageBubble
-          isOwnMessage={item.message.authorJazzUserId === currentUserId}
+          isOwnMessage={item.message.authorInstantUserId === currentUserId}
           message={item.message}
           readReceiptMode={readReceiptMode}
           showAuthor={item.showAuthor}
@@ -529,7 +529,7 @@ export const ChatView = ({
 };
 
 const formatEventActor = (event: ChatEvent, currentUserId: string) =>
-  event.actorJazzUserId === currentUserId
+  event.actorInstantUserId === currentUserId
     ? "あなた"
     : `${event.actorDisplayNameSnapshot}さん`;
 
@@ -572,7 +572,7 @@ const formatEventBody = (event: ChatEvent, currentUserId: string) => {
   }
 
   if (event.kind === "member_joined" || event.kind === "member_left") {
-    return event.actorJazzUserId === currentUserId
+    return event.actorInstantUserId === currentUserId
       ? event.body.replace(`${event.actorDisplayNameSnapshot}さん`, "あなた")
       : event.body;
   }
@@ -580,7 +580,7 @@ const formatEventBody = (event: ChatEvent, currentUserId: string) => {
   if (event.kind === "member_removed") {
     const targetDisplayName = event.targetDisplayNameSnapshot ?? "メンバー";
     const target =
-      event.targetJazzUserId === currentUserId
+      event.targetInstantUserId === currentUserId
         ? "あなた"
         : `${targetDisplayName}さん`;
 

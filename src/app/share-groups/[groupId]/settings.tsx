@@ -12,7 +12,6 @@ import {
   useThemeColor,
   useToast,
 } from "heroui-native";
-import { useSession } from "jazz-tools/react-native";
 import { useRef, useState } from "react";
 import { Alert, Platform, ScrollView, View } from "react-native";
 import { EmojiPopup } from "react-native-emoji-popup";
@@ -24,6 +23,7 @@ import {
   InviteDialog,
 } from "@/components/group/group-dialogs";
 import { AppHeader } from "@/components/navigation/app-header";
+import { useCurrentUserId } from "@/lib/instant";
 import { api as convexApi } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
@@ -35,15 +35,14 @@ type GroupMember = GroupDetail["members"][number];
 
 export default function ShareGroupSettings() {
   const router = useRouter();
-  const session = useSession();
   const accentForegroundColor = useThemeColor("accent-foreground");
   const { toast } = useToast();
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
-  const currentUserId = session?.user_id ?? "";
+  const currentUserId = useCurrentUserId();
   const group = useQuery(
     convexApi.groups.getDetail,
     groupId && currentUserId
-      ? { groupId: groupId as Id<"groups">, jazzUserId: currentUserId }
+      ? { groupId: groupId as Id<"groups">, instantUserId: currentUserId }
       : "skip"
   );
   const updateGroupName = useMutation(convexApi.groups.updateName);
@@ -83,7 +82,7 @@ export default function ShareGroupSettings() {
   };
 
   const updateGroup = async (groupName: string) => {
-    if (!(group && session)) {
+    if (!(group && currentUserId)) {
       return;
     }
 
@@ -92,7 +91,7 @@ export default function ShareGroupSettings() {
     try {
       await updateGroupName({
         groupId: targetGroupId,
-        jazzUserId: session.user_id,
+        instantUserId: currentUserId,
         name: groupName,
       });
       setIsEditDialogOpen(false);
@@ -112,7 +111,7 @@ export default function ShareGroupSettings() {
   };
 
   const updateEmoji = async (emoji: string) => {
-    if (!(group && session)) {
+    if (!(group && currentUserId)) {
       return;
     }
 
@@ -120,7 +119,7 @@ export default function ShareGroupSettings() {
       await updateGroupEmoji({
         emoji,
         groupId: group._id,
-        jazzUserId: session.user_id,
+        instantUserId: currentUserId,
       });
       toast.show({
         description: "グループの絵文字を更新しました。",
@@ -138,7 +137,7 @@ export default function ShareGroupSettings() {
   };
 
   const updateOwnDisplayName = async (displayName: string) => {
-    if (!(group && session)) {
+    if (!(group && currentUserId)) {
       return;
     }
 
@@ -146,7 +145,7 @@ export default function ShareGroupSettings() {
       await updateDisplayName({
         displayName,
         groupId: group._id,
-        jazzUserId: session.user_id,
+        instantUserId: currentUserId,
       });
       setIsDisplayNameDialogOpen(false);
       toast.show({
@@ -165,7 +164,7 @@ export default function ShareGroupSettings() {
   };
 
   const regenerateInvite = async () => {
-    if (!(group && session) || isRegeneratingInvite) {
+    if (!(group && currentUserId) || isRegeneratingInvite) {
       return;
     }
 
@@ -174,7 +173,7 @@ export default function ShareGroupSettings() {
     try {
       const result = await regenerateInviteCode({
         groupId: group._id,
-        jazzUserId: session.user_id,
+        instantUserId: currentUserId,
       });
       setInviteDetails({
         groupEmoji: group.emoji,
@@ -199,7 +198,7 @@ export default function ShareGroupSettings() {
   };
 
   const leaveGroup = () => {
-    if (!(group && session) || isLeavingGroupRef.current) {
+    if (!(group && currentUserId) || isLeavingGroupRef.current) {
       return;
     }
 
@@ -211,7 +210,7 @@ export default function ShareGroupSettings() {
       ? "最後のメンバーのため、グループも削除されます。"
       : "このグループのメンバーには、あなたのシフトが共有されなくなります。";
     const targetGroupId = group._id;
-    const jazzUserId = session.user_id;
+    const instantUserId = currentUserId;
     Alert.alert(
       title,
       message,
@@ -223,7 +222,10 @@ export default function ShareGroupSettings() {
             setIsLeaving(true);
 
             try {
-              await leaveGroupMutation({ groupId: targetGroupId, jazzUserId });
+              await leaveGroupMutation({
+                groupId: targetGroupId,
+                instantUserId,
+              });
               setIsEditDialogOpen(false);
               router.replace("/group");
               toast.show({
@@ -258,7 +260,7 @@ export default function ShareGroupSettings() {
   };
 
   const removeMember = (member: GroupMember) => {
-    if (!(group && session) || member.jazzUserId === session.user_id) {
+    if (!(group && currentUserId) || member.instantUserId === currentUserId) {
       return;
     }
 
@@ -272,8 +274,8 @@ export default function ShareGroupSettings() {
             try {
               await removeMemberMutation({
                 groupId: group._id,
-                jazzUserId: session.user_id,
-                targetJazzUserId: member.jazzUserId,
+                instantUserId: currentUserId,
+                targetInstantUserId: member.instantUserId,
               });
               toast.show({
                 description: `${member.displayName}さんをグループから削除しました。`,
@@ -378,7 +380,7 @@ export default function ShareGroupSettings() {
         />
         <NotificationSection />
         <MemberSection
-          currentUserId={currentUserId}
+          currentUserId={currentUserId ?? ""}
           members={group.members}
           onRemoveMember={removeMember}
         />
@@ -556,10 +558,10 @@ const MemberSection = ({
   onRemoveMember: (member: GroupMember) => void;
 }) => {
   const ownMember = members.find(
-    (member) => member.jazzUserId === currentUserId
+    (member) => member.instantUserId === currentUserId
   );
   const otherMembers = members.filter(
-    (member) => member.jazzUserId !== currentUserId
+    (member) => member.instantUserId !== currentUserId
   );
   const orderedMembers = ownMember ? [ownMember, ...otherMembers] : members;
 
@@ -571,7 +573,7 @@ const MemberSection = ({
       {orderedMembers.length > 0 ? (
         <ListGroup>
           {orderedMembers.map((member, index) => {
-            const isOwnMember = member.jazzUserId === currentUserId;
+            const isOwnMember = member.instantUserId === currentUserId;
 
             return (
               <View key={member._id}>

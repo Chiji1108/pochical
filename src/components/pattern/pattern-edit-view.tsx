@@ -1,3 +1,4 @@
+import { id } from "@instantdb/react-native";
 import { useRouter } from "expo-router";
 import {
   Input,
@@ -9,7 +10,6 @@ import {
   Text,
   TextField,
 } from "heroui-native";
-import { useAll, useDb, useSession } from "jazz-tools/react-native";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { Alert, Platform, ScrollView, View } from "react-native";
@@ -22,7 +22,13 @@ import {
   playSelectionHaptic,
   playWarningHaptic,
 } from "@/lib/haptics";
-import { app, type Pattern } from "@/schema";
+import {
+  db,
+  type InstantTransaction,
+  type Pattern,
+  useCurrentUserId,
+  useOwnWorkData,
+} from "@/lib/instant";
 
 const DEFAULT_EMOJI = "❤️";
 const DEFAULT_NAME = "";
@@ -51,7 +57,6 @@ type PatternSaveFields = {
   endDate?: Date | null;
   isAllDay: boolean;
   name: string;
-  nextDayPatternId?: string | null;
   startDate?: Date | null;
 };
 
@@ -92,13 +97,12 @@ const getInitialFormState = (pattern?: Pattern): PatternFormState => ({
   ),
   isAllDay: pattern?.isAllDay ?? false,
   name: pattern?.name ?? DEFAULT_NAME,
-  nextDayPatternId: pattern?.nextDayPatternId ?? undefined,
+  nextDayPatternId: pattern?.nextDayPattern?.id ?? undefined,
   startDate: toDate(pattern?.startDate, createTime(DEFAULT_START_HOUR)),
 });
 
 const createPatternSaveFields = (
   formState: PatternFormState,
-  isContinueUntilNextDay: boolean,
   shouldClearEmptyOptionals: boolean
 ): PatternSaveFields => {
   const saveFields: PatternSaveFields = {
@@ -118,32 +122,14 @@ const createPatternSaveFields = (
     saveFields.startDate = formState.startDate;
   }
 
-  if (isContinueUntilNextDay && formState.nextDayPatternId) {
-    saveFields.nextDayPatternId = formState.nextDayPatternId;
-  } else if (shouldClearEmptyOptionals) {
-    saveFields.nextDayPatternId = null;
-  }
-
   return saveFields;
 };
 
 export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
-  const db = useDb();
   const router = useRouter();
-  const session = useSession();
-  const currentUserId = session?.user_id ?? "";
-  const patterns =
-    useAll(
-      currentUserId
-        ? app.shiftPatterns.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
-  const shifts =
-    useAll(
-      currentUserId
-        ? app.shifts.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
+  const currentUserId = useCurrentUserId();
+  const isSignedIn = Boolean(currentUserId);
+  const { patterns, shifts } = useOwnWorkData(currentUserId);
   const [formState, setFormState] = useState(() =>
     getInitialFormState(pattern)
   );
@@ -156,9 +142,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
     isContinuingUntilNextDay(formState.startDate, formState.endDate);
   const relatedShifts = useMemo(
     () =>
-      pattern
-        ? shifts.filter((shift) => shift.shiftPatternId === pattern.id)
-        : [],
+      pattern ? shifts.filter((shift) => shift.pattern?.id === pattern.id) : [],
     [pattern, shifts]
   );
   const patternsUsingThisAsNextDay = useMemo(
@@ -166,7 +150,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
       pattern
         ? patterns.filter(
             (item) =>
-              item.id !== pattern.id && item.nextDayPatternId === pattern.id
+              item.id !== pattern.id && item.nextDayPattern?.id === pattern.id
           )
         : [],
     [pattern, patterns]
@@ -202,36 +186,37 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
     }));
   };
 
-  const deletePattern = () => {
-    if (!(pattern && session)) {
+  const deletePattern = async () => {
+    if (!(pattern && currentUserId)) {
       return;
     }
 
-    db.batch((batch) => {
-      for (const shift of relatedShifts) {
-        batch.delete(app.shifts, shift.id);
-      }
+    const transactions: InstantTransaction[] = relatedShifts.map((shift) =>
+      db.tx.shifts[shift.id].delete()
+    );
 
-      for (const item of patternsUsingThisAsNextDay) {
-        batch.update(app.shiftPatterns, item.id, {
-          nextDayPatternId: null,
-        });
-      }
+    for (const item of patternsUsingThisAsNextDay) {
+      transactions.push(
+        db.tx.shiftPatterns[item.id].unlink({ nextDayPattern: pattern.id })
+      );
+    }
 
-      const remainingPatterns = patterns
-        .filter((item) => item.id !== pattern.id)
-        .sort((a, b) => a.orderIndex - b.orderIndex);
+    const remainingPatterns = patterns
+      .filter((item) => item.id !== pattern.id)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
 
-      for (const [orderIndex, item] of remainingPatterns.entries()) {
-        if (item.orderIndex !== orderIndex) {
-          batch.update(app.shiftPatterns, item.id, {
+    for (const [orderIndex, item] of remainingPatterns.entries()) {
+      if (item.orderIndex !== orderIndex) {
+        transactions.push(
+          db.tx.shiftPatterns[item.id].update({
             orderIndex,
-          });
-        }
+          })
+        );
       }
+    }
 
-      batch.delete(app.shiftPatterns, pattern.id);
-    });
+    transactions.push(db.tx.shiftPatterns[pattern.id].delete());
+    await db.transact(transactions);
 
     playLightImpactHaptic();
     router.back();
@@ -263,8 +248,8 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
     ]);
   };
 
-  const savePattern = () => {
-    if (!session) {
+  const savePattern = async () => {
+    if (!currentUserId) {
       return;
     }
 
@@ -273,19 +258,36 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
       return;
     }
 
-    const saveFields = createPatternSaveFields(
-      formState,
-      isContinueUntilNextDay,
-      Boolean(pattern)
-    );
+    const saveFields = createPatternSaveFields(formState, Boolean(pattern));
+
+    const shouldLinkNextDayPattern =
+      isContinueUntilNextDay && Boolean(formState.nextDayPatternId);
 
     if (pattern) {
-      db.update(app.shiftPatterns, pattern.id, saveFields);
+      let transaction = db.tx.shiftPatterns[pattern.id].update(saveFields);
+      if (shouldLinkNextDayPattern && formState.nextDayPatternId) {
+        transaction = transaction.link({
+          nextDayPattern: formState.nextDayPatternId,
+        });
+      } else if (pattern.nextDayPattern?.id) {
+        transaction = transaction.unlink({
+          nextDayPattern: pattern.nextDayPattern.id,
+        });
+      }
+      await db.transact(transaction);
     } else {
-      db.insert(app.shiftPatterns, {
-        ...saveFields,
-        orderIndex: patterns.length,
-      });
+      let transaction = db.tx.shiftPatterns[id()]
+        .create({
+          ...saveFields,
+          orderIndex: patterns.length,
+        })
+        .link({ owner: currentUserId });
+      if (shouldLinkNextDayPattern && formState.nextDayPatternId) {
+        transaction = transaction.link({
+          nextDayPattern: formState.nextDayPatternId,
+        });
+      }
+      await db.transact(transaction);
     }
 
     playLightImpactHaptic();
@@ -324,7 +326,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
         }}
         rightAction={{
           accessibilityLabel: "シフトパターンを保存",
-          isDisabled: !session,
+          isDisabled: !isSignedIn,
           label: "保存",
           onPress: savePattern,
           variant: "primary",
@@ -383,7 +385,7 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
         </ListGroup>
         {pattern ? (
           <DeletePatternGroup
-            isDisabled={!session}
+            isDisabled={!isSignedIn}
             onDelete={confirmDeletePattern}
             shiftCount={relatedShifts.length}
           />

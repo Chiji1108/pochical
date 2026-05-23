@@ -20,7 +20,7 @@ import {
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import { useWindowDimensions, View } from "react-native";
 import type { CalendarHighlightTarget, WeekStartsOn } from "@/lib/app-settings";
-import type { Pattern } from "@/schema";
+import type { Pattern } from "@/lib/instant";
 import { CalendarBody, type CalendarShiftSummary } from "./calendar-body";
 import { CALENDAR_WEEK_PAGER_HEIGHT } from "./constants";
 

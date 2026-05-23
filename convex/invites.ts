@@ -11,7 +11,7 @@ import { mutation, query } from "./_generated/server";
 import { insertGroupEvent } from "./groupEvents";
 
 export const preview = query({
-  args: { inviteCode: v.string(), jazzUserId: v.optional(v.string()) },
+  args: { inviteCode: v.string(), instantUserId: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const group = await getGroupByInviteCode(ctx, args.inviteCode.trim());
 
@@ -19,9 +19,9 @@ export const preview = query({
       return null;
     }
 
-    const jazzUserId = args.jazzUserId;
-    const membership = jazzUserId
-      ? await getMembership(ctx, group._id, jazzUserId)
+    const instantUserId = args.instantUserId;
+    const membership = instantUserId
+      ? await getMembership(ctx, group._id, instantUserId)
       : null;
 
     return {
@@ -37,7 +37,7 @@ export const join = mutation({
   args: {
     displayName: v.string(),
     inviteCode: v.string(),
-    jazzUserId: v.string(),
+    instantUserId: v.string(),
   },
   handler: async (ctx, args) => {
     const group = await getGroupByInviteCode(ctx, args.inviteCode.trim());
@@ -50,18 +50,18 @@ export const join = mutation({
     const existingMembership = await getMembership(
       ctx,
       group._id,
-      args.jazzUserId
+      args.instantUserId
     );
     const now = Date.now();
 
     if (existingMembership) {
-      await ensureOwnMessagesIgnored(ctx, args.jazzUserId);
+      await ensureOwnMessagesIgnored(ctx, args.instantUserId);
 
       if (displayName !== existingMembership.displayName) {
         await ctx.db.patch(existingMembership._id, { displayName });
         await insertGroupEvent(ctx, {
           actorDisplayNameSnapshot: displayName,
-          actorJazzUserId: args.jazzUserId,
+          actorInstantUserId: args.instantUserId,
           body: `${existingMembership.displayName}さんが名前を「${existingMembership.displayName}」から「${displayName}」に変更しました`,
           createdAt: now,
           groupId: group._id,
@@ -69,24 +69,24 @@ export const join = mutation({
           nextValue: displayName,
           previousValue: existingMembership.displayName,
           targetDisplayNameSnapshot: displayName,
-          targetJazzUserId: args.jazzUserId,
+          targetInstantUserId: args.instantUserId,
         });
       }
     } else {
       await ctx.db.insert("groupMembers", {
         displayName,
         groupId: group._id,
-        jazzUserId: args.jazzUserId,
+        instantUserId: args.instantUserId,
         joinedAt: now,
       });
       await markThreadsReadUpTo(ctx, {
-        jazzUserId: args.jazzUserId,
+        instantUserId: args.instantUserId,
         threads: await listThreadsForGroup(ctx, group._id),
         timestamp: now,
       });
       await insertGroupEvent(ctx, {
         actorDisplayNameSnapshot: displayName,
-        actorJazzUserId: args.jazzUserId,
+        actorInstantUserId: args.instantUserId,
         body: `${displayName}さんがグループに参加しました`,
         createdAt: now,
         groupId: group._id,

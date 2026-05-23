@@ -1,24 +1,15 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Text } from "heroui-native";
-import { useAll, useSession } from "jazz-tools/react-native";
 import { View } from "react-native";
 import { AppHeader } from "@/components/navigation/app-header";
 import { PatternEditView } from "@/components/pattern/pattern-edit-view";
-import { app } from "@/schema";
+import { useCurrentUserId, usePatternById } from "@/lib/instant";
 
 export default function PatternDetail() {
   const router = useRouter();
-  const session = useSession();
-  const currentUserId = session?.user_id ?? "";
+  const currentUserId = useCurrentUserId();
   const { patternId } = useLocalSearchParams<{ patternId: string }>();
-  const [pattern] =
-    useAll(
-      patternId && currentUserId
-        ? app.shiftPatterns
-            .where({ $createdBy: currentUserId, id: patternId })
-            .limit(1)
-        : undefined
-    ) ?? [];
+  const pattern = usePatternById(patternId, currentUserId);
 
   if (!pattern) {
     return (

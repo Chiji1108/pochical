@@ -15,7 +15,7 @@ type PresenceRoomPayload =
   | {
       groupId: string;
       kind: "direct";
-      participantJazzUserIds: string[];
+      participantInstantUserIds: string[];
     };
 
 const isPresenceRoomPayload = (
@@ -37,10 +37,10 @@ const isPresenceRoomPayload = (
 
   return (
     room.kind === "group" ||
-    (Array.isArray(room.participantJazzUserIds) &&
-      room.participantJazzUserIds.every(
-        (participantJazzUserId: unknown) =>
-          typeof participantJazzUserId === "string"
+    (Array.isArray(room.participantInstantUserIds) &&
+      room.participantInstantUserIds.every(
+        (participantInstantUserId: unknown) =>
+          typeof participantInstantUserId === "string"
       ))
   );
 };
@@ -62,11 +62,11 @@ const parsePresenceRoomId = (roomId: string): PresenceRoomPayload => {
 const requirePresenceRoomAccess = async (
   ctx: DatabaseCtx,
   roomId: string,
-  jazzUserId: string
+  instantUserId: string
 ) => {
   const room = parsePresenceRoomId(roomId);
   const groupId = room.groupId as Id<"groups">;
-  const membership = await getMembership(ctx, groupId, jazzUserId);
+  const membership = await getMembership(ctx, groupId, instantUserId);
 
   if (!membership) {
     throw new ConvexError("Group not found");
@@ -76,17 +76,17 @@ const requirePresenceRoomAccess = async (
     return;
   }
 
-  const participants = new Set(room.participantJazzUserIds);
+  const participants = new Set(room.participantInstantUserIds);
 
-  if (participants.size !== 2 || !participants.has(jazzUserId)) {
+  if (participants.size !== 2 || !participants.has(instantUserId)) {
     throw new ConvexError("Chat not found");
   }
 
-  for (const participantJazzUserId of participants) {
+  for (const participantInstantUserId of participants) {
     const participantMembership = await getMembership(
       ctx,
       groupId,
-      participantJazzUserId
+      participantInstantUserId
     );
 
     if (!participantMembership) {

@@ -8,7 +8,6 @@ import {
   Text,
   useToast,
 } from "heroui-native";
-import { useAll, useDb, useSession } from "jazz-tools/react-native";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Alert, View } from "react-native";
 import Animated, { useAnimatedRef } from "react-native-reanimated";
@@ -23,6 +22,12 @@ import {
   playWarningHaptic,
 } from "@/lib/haptics";
 import {
+  db,
+  type Pattern,
+  useCurrentUserId,
+  useOwnWorkData,
+} from "@/lib/instant";
+import {
   BUNDLED_SHIFT_PATTERN_PRESETS,
   insertShiftPatternPreset,
   type ShiftPatternPreset,
@@ -30,7 +35,6 @@ import {
   SINGLE_SHIFT_PATTERN_PRESETS,
 } from "@/lib/shift-pattern-presets";
 import { deleteShiftPatternsAndRelatedData } from "@/lib/work-data-actions";
-import { app, type Pattern } from "@/schema";
 
 const PATTERN_COLUMN_COUNT = 6;
 const PATTERN_GRID_GAP = 8;
@@ -55,30 +59,18 @@ const PRESET_TABS: {
 ];
 
 export const PatternListView = () => {
-  const db = useDb();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const session = useSession();
   const { toast } = useToast();
-  const currentUserId = session?.user_id ?? "";
+  const currentUserId = useCurrentUserId();
+  const isSignedIn = Boolean(currentUserId);
+  const { patterns, shifts } = useOwnWorkData(currentUserId);
   const scrollableRef = useAnimatedRef<Animated.ScrollView>();
   const isDraggingRef = useRef(false);
   const clearDraggingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
   const [activeTab, setActiveTab] = useState<PresetTabValue>("bundle");
-  const patterns =
-    useAll(
-      currentUserId
-        ? app.shiftPatterns.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
-  const shifts =
-    useAll(
-      currentUserId
-        ? app.shifts.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
   const sortedPatterns = useMemo(
     () =>
       [...patterns].sort((a, b) => {
@@ -97,7 +89,7 @@ export const PatternListView = () => {
         clearDraggingTimeoutRef.current = null;
       }, 150);
 
-      if (!session) {
+      if (!currentUserId) {
         return;
       }
 
@@ -109,17 +101,19 @@ export const PatternListView = () => {
         return;
       }
 
+      if (!currentUserId) {
+        return;
+      }
+
       playLightImpactHaptic();
 
-      db.batch((batch) => {
-        for (const [index, pattern] of data.entries()) {
-          batch.update(app.shiftPatterns, pattern.id, {
-            orderIndex: index,
-          });
-        }
-      });
+      db.transact(
+        data.map((pattern, index) =>
+          db.tx.shiftPatterns[pattern.id].update({ orderIndex: index })
+        )
+      ).catch(() => undefined);
     },
-    [db, session]
+    [currentUserId]
   );
 
   const handleDragStart = useCallback(() => {
@@ -133,20 +127,20 @@ export const PatternListView = () => {
   }, []);
 
   const addPreset = (preset: ShiftPatternPreset) => {
-    if (!session) {
+    if (!currentUserId) {
       Alert.alert("作成できません", "接続後に作成できます。");
       return;
     }
 
     playLightImpactHaptic();
 
-    db.batch((batch) => {
-      insertShiftPatternPreset(batch, preset, patterns.length);
-    });
+    insertShiftPatternPreset(preset, patterns.length, currentUserId).catch(
+      () => undefined
+    );
   };
 
   const confirmResetPatterns = () => {
-    if (!session || patterns.length === 0) {
+    if (!currentUserId || patterns.length === 0) {
       return;
     }
 
@@ -162,7 +156,7 @@ export const PatternListView = () => {
         {
           onPress: async () => {
             try {
-              await deleteShiftPatternsAndRelatedData(db, {
+              await deleteShiftPatternsAndRelatedData({
                 patterns,
                 shifts,
               });
@@ -195,7 +189,7 @@ export const PatternListView = () => {
       <Button
         accessibilityLabel={`${item.name}を編集`}
         className="h-15 w-full flex-col justify-center gap-1 rounded-lg bg-foreground/5 px-1 py-2"
-        isDisabled={!session}
+        isDisabled={!isSignedIn}
         onPress={() => {
           if (isDraggingRef.current) {
             return;
@@ -219,7 +213,7 @@ export const PatternListView = () => {
         </Button.Label>
       </Button>
     ),
-    [router, session]
+    [isSignedIn, router]
   );
 
   return (
@@ -237,7 +231,7 @@ export const PatternListView = () => {
           <Button
             accessibilityLabel="すべてのパターンをリセット"
             className="h-9 w-9"
-            isDisabled={!session || patterns.length === 0}
+            isDisabled={!isSignedIn || patterns.length === 0}
             isIconOnly={true}
             onPress={confirmResetPatterns}
             size="sm"
@@ -269,7 +263,7 @@ export const PatternListView = () => {
             rowGap={PATTERN_GRID_GAP}
             scrollableRef={scrollableRef}
             showDropIndicator={true}
-            sortEnabled={Boolean(session)}
+            sortEnabled={isSignedIn}
           />
         ) : (
           <View className="items-center justify-center rounded-lg bg-foreground/5 px-4 py-8">
@@ -278,7 +272,7 @@ export const PatternListView = () => {
             </Text>
           </View>
         )}
-        {session ? null : (
+        {isSignedIn ? null : (
           <Text className="px-1 text-center text-sm" color="muted">
             接続後に編集できます
           </Text>
@@ -309,13 +303,13 @@ export const PatternListView = () => {
             <Tabs.Content className="pt-3" key={tab.value} value={tab.value}>
               {tab.value === "bundle" ? (
                 <PresetList
-                  isDisabled={!session}
+                  isDisabled={!isSignedIn}
                   onAddPreset={addPreset}
                   presets={tab.presets}
                 />
               ) : (
                 <AddPartsGrid
-                  isDisabled={!session}
+                  isDisabled={!isSignedIn}
                   onAddCustom={() => {
                     router.push("/patterns/new");
                   }}

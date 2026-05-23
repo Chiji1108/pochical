@@ -10,7 +10,7 @@ import { db } from "@/lib/instant";
 
 const SANDBOX_PREFIX = "[InstantSandbox]";
 
-const formatTime = (time: number) =>
+const formatTime = (time: Date | number) =>
   new Intl.DateTimeFormat("ja-JP", {
     day: "2-digit",
     hour: "2-digit",
@@ -28,11 +28,11 @@ export default function InstantSandbox() {
   const [lastResult, setLastResult] = useState("未実行");
   const userId = auth.user?.id;
   const range = useMemo(() => {
-    const today = startOfDay(new Date()).getTime();
+    const today = startOfDay(new Date());
 
     return {
-      end: addDays(today, 3).getTime(),
-      start: addDays(today, -3).getTime(),
+      end: addDays(today, 3),
+      start: addDays(today, -3),
       today,
     };
   }, []);

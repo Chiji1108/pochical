@@ -5,11 +5,11 @@ import {
   useQuery,
 } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useSession } from "jazz-tools/react-native";
 import { useEffect } from "react";
 import { Alert, View } from "react-native";
 import { ChatView } from "@/components/chat/chat-view";
 import { createDirectPresenceRoomId } from "@/lib/chat-presence";
+import { useCurrentUserId } from "@/lib/instant";
 import { api as convexApi } from "../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
 
@@ -23,21 +23,20 @@ const createOptimisticId = (prefix: string) =>
 
 export default function DirectChat() {
   const router = useRouter();
-  const session = useSession();
-  const { groupId, memberJazzUserId } = useLocalSearchParams<{
+  const { groupId, memberInstantUserId } = useLocalSearchParams<{
     groupId: string;
-    memberJazzUserId: string;
+    memberInstantUserId: string;
   }>();
-  const currentUserId = session?.user_id ?? "";
+  const currentUserId = useCurrentUserId() ?? "";
   const targetGroupId = groupId as Id<"groups">;
   const group = useQuery(
     convexApi.groups.getDetail,
     groupId && currentUserId
-      ? { groupId: targetGroupId, jazzUserId: currentUserId }
+      ? { groupId: targetGroupId, instantUserId: currentUserId }
       : "skip"
   );
   const targetMember = group?.members.find(
-    (member) => member.jazzUserId === memberJazzUserId
+    (member) => member.instantUserId === memberInstantUserId
   );
   const {
     loadMore: loadMoreMessages,
@@ -45,11 +44,11 @@ export default function DirectChat() {
     status: messageStatus,
   } = usePaginatedQuery(
     convexApi.chat.listDirectMessages,
-    groupId && currentUserId && memberJazzUserId
+    groupId && currentUserId && memberInstantUserId
       ? {
           groupId: targetGroupId,
-          jazzUserId: currentUserId,
-          targetJazzUserId: memberJazzUserId,
+          instantUserId: currentUserId,
+          targetInstantUserId: memberInstantUserId,
         }
       : "skip",
     { initialNumItems: INITIAL_MESSAGE_COUNT }
@@ -60,11 +59,11 @@ export default function DirectChat() {
     status: eventStatus,
   } = usePaginatedQuery(
     convexApi.groupEvents.listDirect,
-    groupId && currentUserId && memberJazzUserId
+    groupId && currentUserId && memberInstantUserId
       ? {
           groupId: targetGroupId,
-          jazzUserId: currentUserId,
-          targetJazzUserId: memberJazzUserId,
+          instantUserId: currentUserId,
+          targetInstantUserId: memberInstantUserId,
         }
       : "skip",
     { initialNumItems: INITIAL_EVENT_COUNT }
@@ -78,15 +77,15 @@ export default function DirectChat() {
     insertAtPosition({
       argsToMatch: {
         groupId: args.groupId,
-        jazzUserId: args.jazzUserId,
-        targetJazzUserId: args.targetJazzUserId,
+        instantUserId: args.instantUserId,
+        targetInstantUserId: args.targetInstantUserId,
       },
       item: {
         _creationTime: now,
         _id: createOptimisticId("message") as Id<"chatMessages">,
         authorDisplayName,
         authorDisplayNameSnapshot: authorDisplayName,
-        authorJazzUserId: args.jazzUserId,
+        authorInstantUserId: args.instantUserId,
         body: args.body,
         createdAt: now,
         groupId: args.groupId,
@@ -103,21 +102,21 @@ export default function DirectChat() {
 
   useEffect(() => {
     if (
-      !(groupId && currentUserId && memberJazzUserId && messages.length > 0)
+      !(groupId && currentUserId && memberInstantUserId && messages.length > 0)
     ) {
       return;
     }
 
     markReadMutation({
       groupId: targetGroupId,
-      jazzUserId: currentUserId,
-      targetJazzUserId: memberJazzUserId,
+      instantUserId: currentUserId,
+      targetInstantUserId: memberInstantUserId,
     }).catch(() => undefined);
   }, [
     currentUserId,
     groupId,
     markReadMutation,
-    memberJazzUserId,
+    memberInstantUserId,
     messages.length,
     targetGroupId,
   ]);
@@ -162,13 +161,13 @@ export default function DirectChat() {
           await sendMessageMutation({
             body,
             groupId: group._id,
-            jazzUserId: currentUserId,
-            targetJazzUserId: targetMember.jazzUserId,
+            instantUserId: currentUserId,
+            targetInstantUserId: targetMember.instantUserId,
           });
           await markReadMutation({
             groupId: group._id,
-            jazzUserId: currentUserId,
-            targetJazzUserId: targetMember.jazzUserId,
+            instantUserId: currentUserId,
+            targetInstantUserId: targetMember.instantUserId,
           });
         } catch (error) {
           Alert.alert(
@@ -184,7 +183,7 @@ export default function DirectChat() {
       presenceRoomId={createDirectPresenceRoomId(
         group._id,
         currentUserId,
-        targetMember.jazzUserId
+        targetMember.instantUserId
       )}
       readReceiptMode="direct"
       title={targetMember.displayName}

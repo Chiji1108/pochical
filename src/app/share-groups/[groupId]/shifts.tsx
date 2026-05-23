@@ -16,11 +16,11 @@ import {
 import { ja } from "date-fns/locale";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Text, useThemeColor } from "heroui-native";
-import { useAll, useSession } from "jazz-tools/react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, useWindowDimensions, View } from "react-native";
+import useUnmount from "react-use/lib/useUnmount";
 import { AppHeader } from "@/components/navigation/app-header";
-import { app, type Pattern, type Shift } from "@/schema";
+import { db, type Pattern, type Shift, useCurrentUserId } from "@/lib/instant";
 import { api as convexApi } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
@@ -43,13 +43,9 @@ type ScheduleDay = {
 
 type BorderVariant = boolean | "subtle";
 
-type ShiftWithCreatedBy = Shift & {
-  $createdBy: string;
-};
-
 type MemberScheduleData = {
   patterns: Pattern[];
-  shifts: ShiftWithCreatedBy[];
+  shifts: Shift[];
 };
 
 const areStringArraysEqual = (first: string[], second: string[]) => {
@@ -88,10 +84,7 @@ const arePatternsEqual = (first: Pattern[], second: Pattern[]) => {
   return true;
 };
 
-const areShiftsEqual = (
-  first: ShiftWithCreatedBy[],
-  second: ShiftWithCreatedBy[]
-) => {
+const areShiftsEqual = (first: Shift[], second: Shift[]) => {
   if (first.length !== second.length) {
     return false;
   }
@@ -100,12 +93,19 @@ const areShiftsEqual = (
     const firstShift = first[index];
     const secondShift = second[index];
 
+    const firstMemberIds = (firstShift.shiftMembers ?? [])
+      .map((member) => member.id)
+      .sort();
+    const secondMemberIds = (secondShift.shiftMembers ?? [])
+      .map((member) => member.id)
+      .sort();
+
     if (
-      firstShift.$createdBy !== secondShift.$createdBy ||
+      firstShift.owner?.id !== secondShift.owner?.id ||
       firstShift.id !== secondShift.id ||
-      firstShift.shiftPatternId !== secondShift.shiftPatternId ||
+      firstShift.pattern?.id !== secondShift.pattern?.id ||
       firstShift.startDate.getTime() !== secondShift.startDate.getTime() ||
-      !areStringArraysEqual(firstShift.memberIds, secondShift.memberIds)
+      !areStringArraysEqual(firstMemberIds, secondMemberIds)
     ) {
       return false;
     }
@@ -123,7 +123,6 @@ const areMemberScheduleDataEqual = (
 
 export default function ShareGroupShifts() {
   const router = useRouter();
-  const session = useSession();
   const { width: screenWidth } = useWindowDimensions();
   const today = useMemo(() => startOfDay(new Date()), []);
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(today));
@@ -136,11 +135,11 @@ export default function ShareGroupShifts() {
     itemVisiblePercentThreshold: 40,
   }).current;
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
-  const currentUserId = session?.user_id ?? "";
+  const currentUserId = useCurrentUserId();
   const group = useQuery(
     convexApi.groups.getDetail,
     groupId && currentUserId
-      ? { groupId: groupId as Id<"groups">, jazzUserId: currentUserId }
+      ? { groupId: groupId as Id<"groups">, instantUserId: currentUserId }
       : "skip"
   );
   const [highlightBackground, todayColor, borderColor] = useThemeColor([
@@ -182,23 +181,18 @@ export default function ShareGroupShifts() {
     },
     []
   );
-  const patternsById = useMemo(() => {
-    const nextPatternsById = new Map<string, Pattern>();
-
-    for (const scheduleData of Object.values(memberScheduleData)) {
-      for (const pattern of scheduleData.patterns) {
-        nextPatternsById.set(pattern.id, pattern);
-      }
-    }
-
-    return nextPatternsById;
-  }, [memberScheduleData]);
   const shiftsByUserAndDate = useMemo(() => {
-    const nextShiftsByUserAndDate = new Map<string, ShiftWithCreatedBy>();
+    const nextShiftsByUserAndDate = new Map<string, Shift>();
 
     for (const scheduleData of Object.values(memberScheduleData)) {
       for (const shift of scheduleData.shifts) {
-        const key = `${shift.$createdBy}:${startOfDay(shift.startDate).getTime()}`;
+        const ownerId = shift.owner?.id;
+
+        if (!ownerId) {
+          continue;
+        }
+
+        const key = `${ownerId}:${startOfDay(shift.startDate).getTime()}`;
         nextShiftsByUserAndDate.set(key, shift);
       }
     }
@@ -286,11 +280,9 @@ export default function ShareGroupShifts() {
   const renderScheduleDay = useCallback<ListRenderItem<ScheduleDay>>(
     ({ item }) => {
       const cells = members.map((member) => {
-        const key = `${member.jazzUserId}:${item.time}`;
+        const key = `${member.instantUserId}:${item.time}`;
         const shift = shiftsByUserAndDate.get(key);
-        const pattern = shift
-          ? patternsById.get(shift.shiftPatternId)
-          : undefined;
+        const pattern = shift?.pattern;
 
         return { member, pattern, shift };
       });
@@ -356,7 +348,6 @@ export default function ShareGroupShifts() {
       borderColor,
       memberColumnWidth,
       members,
-      patternsById,
       shiftsByUserAndDate,
       tableWidth,
       today,
@@ -426,7 +417,7 @@ export default function ShareGroupShifts() {
             {members.map((member) => (
               <MemberScheduleSubscription
                 key={member._id}
-                memberUserId={member.jazzUserId}
+                memberUserId={member.instantUserId}
                 onChange={updateMemberScheduleData}
               />
             ))}
@@ -542,37 +533,32 @@ const MemberScheduleSubscription = ({
   memberUserId: string;
   onChange: (memberUserId: string, scheduleData?: MemberScheduleData) => void;
 }) => {
-  const shifts =
-    useAll(
-      memberUserId
-        ? app.shifts
-            .where({ $createdBy: memberUserId })
-            .select(
-              "id",
-              "shiftPatternId",
-              "startDate",
-              "memberIds",
-              "$createdBy"
-            )
-        : undefined
-    ) ?? [];
-  const patterns =
-    useAll(
-      memberUserId
-        ? app.shiftPatterns.where({ $createdBy: memberUserId })
-        : undefined
-    ) ?? [];
+  const { data } = db.useQuery(
+    memberUserId
+      ? {
+          shiftPatterns: {
+            $: { where: { "owner.id": memberUserId } },
+            owner: {},
+          },
+          shifts: {
+            $: { where: { "owner.id": memberUserId } },
+            owner: {},
+            pattern: {},
+            shiftMembers: {},
+          },
+        }
+      : null
+  );
+  const patterns = (data?.shiftPatterns ?? []) as Pattern[];
+  const shifts = (data?.shifts ?? []) as Shift[];
 
   useEffect(() => {
     onChange(memberUserId, { patterns, shifts });
   }, [memberUserId, onChange, patterns, shifts]);
 
-  useEffect(
-    () => () => {
-      onChange(memberUserId);
-    },
-    [memberUserId, onChange]
-  );
+  useUnmount(() => {
+    onChange(memberUserId);
+  });
 
   return null;
 };

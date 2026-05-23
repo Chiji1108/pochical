@@ -4,8 +4,8 @@ import type { FC } from "react";
 import { View } from "react-native";
 import type { CalendarHighlightTarget, WeekStartsOn } from "@/lib/app-settings";
 import { getCalendarWeekdayHighlightColor } from "@/lib/date";
+import type { Pattern } from "@/lib/instant";
 import { cn } from "@/lib/utils";
-import type { Pattern } from "@/schema";
 import {
   CalendarBody,
   type CalendarShiftSummary,

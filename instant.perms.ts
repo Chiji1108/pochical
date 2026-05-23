@@ -13,7 +13,10 @@ const rules = {
   },
   $users: {
     allow: {
-      view: "auth.id != null && auth.id == data.id",
+      view: "auth.id != null",
+    },
+    fields: {
+      email: "auth.id != null && auth.id == data.id",
     },
   },
   shiftPatterns: {
@@ -21,7 +24,7 @@ const rules = {
       create: "isOwner",
       delete: "isOwner",
       update: "isOwner",
-      view: "true",
+      view: "auth.id != null",
     },
     bind: {
       isOwner: "auth.id != null && auth.id in data.ref('owner.id')",
@@ -32,7 +35,7 @@ const rules = {
       create: "isOwner",
       delete: "isOwner",
       update: "isOwner",
-      view: "true",
+      view: "auth.id != null",
     },
     bind: {
       isOwner: "auth.id != null && auth.id in data.ref('owner.id')",
@@ -54,7 +57,7 @@ const rules = {
       create: "isOwner",
       delete: "isOwner",
       update: "isOwner",
-      view: "true",
+      view: "auth.id != null",
     },
     bind: {
       isOwner: "auth.id != null && auth.id in data.ref('owner.id')",

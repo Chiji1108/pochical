@@ -3,7 +3,6 @@ import type { FunctionReturnType } from "convex/server";
 import { useRouter } from "expo-router";
 import { SymbolView, type SymbolViewProps } from "expo-symbols";
 import { Button, Card, ListGroup, Separator, Text } from "heroui-native";
-import { useSession } from "jazz-tools/react-native";
 import type { FC } from "react";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -12,6 +11,7 @@ import {
   type InviteDetails,
   InviteDialog,
 } from "@/components/group/group-dialogs";
+import { useCurrentUserId } from "@/lib/instant";
 import { cn } from "@/lib/utils";
 import { api as convexApi } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -83,14 +83,13 @@ export const GroupDetailView = ({
   showInvite = false,
 }: GroupDetailViewProps) => {
   const router = useRouter();
-  const session = useSession();
-  const currentUserId = session?.user_id ?? "";
+  const currentUserId = useCurrentUserId();
   const autoInviteShownGroupIdRef = useRef("");
   const [inviteDetails, setInviteDetails] = useState<InviteDetails>();
   const group = useQuery(
     convexApi.groups.getDetail,
     groupId && currentUserId
-      ? { groupId: groupId as Id<"groups">, jazzUserId: currentUserId }
+      ? { groupId: groupId as Id<"groups">, instantUserId: currentUserId }
       : "skip"
   );
 
@@ -146,7 +145,7 @@ export const GroupDetailView = ({
   }
 
   const directMembers = group.members
-    .filter((member) => member.jazzUserId !== currentUserId)
+    .filter((member) => member.instantUserId !== currentUserId)
     .sort((firstMember, secondMember) => {
       const unreadDifference =
         Number(secondMember.unreadCount > 0) -
@@ -279,7 +278,7 @@ export const GroupDetailView = ({
                     member={member}
                     onOpen={() => {
                       router.push(
-                        `/share-groups/${group._id}/chats/${encodeURIComponent(member.jazzUserId)}`
+                        `/share-groups/${group._id}/chats/${encodeURIComponent(member.instantUserId)}`
                       );
                     }}
                   />

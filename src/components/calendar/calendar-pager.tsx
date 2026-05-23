@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import type { CalendarHighlightTarget, WeekStartsOn } from "@/lib/app-settings";
-import type { Pattern } from "@/schema";
+import type { Pattern } from "@/lib/instant";
 import type { CalendarShiftSummary } from "./calendar-body";
 import { CALENDAR_PAGER_HEIGHT, CALENDAR_WEEK_PAGER_HEIGHT } from "./constants";
 import { MonthPager } from "./month-pager";

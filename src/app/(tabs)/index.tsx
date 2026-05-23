@@ -11,7 +11,6 @@ import {
 import { selectionAsync } from "expo-haptics";
 import { useRouter } from "expo-router";
 import { useToast } from "heroui-native";
-import { useAll, useSession } from "jazz-tools/react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type LayoutChangeEvent, Platform, View } from "react-native";
 import {
@@ -45,7 +44,13 @@ import {
   getCalendarSelectOptions,
   getWritableCalendars,
 } from "@/lib/device-calendar";
-import { app, type DayNote, type Member, type Pattern } from "@/schema";
+import {
+  type DayNote,
+  type Member,
+  type Pattern,
+  useCurrentUserId,
+  useOwnWorkData,
+} from "@/lib/instant";
 
 const DETAIL_PAGE_DRAG_DISTANCE = 180;
 const DETAIL_PAGE_SETTLE_THRESHOLD = 0.45;
@@ -83,10 +88,10 @@ export default function Index() {
   const [confettiBurstKey, setConfettiBurstKey] = useState<string>();
   const [completionMonthLabel, setCompletionMonthLabel] = useState("");
   const [lastShiftInputMonth, setLastShiftInputMonth] = useState<Date>();
-  const session = useSession();
+  const currentUserId = useCurrentUserId();
+  const { dayNotes, members, patterns, shifts } = useOwnWorkData(currentUserId);
   const celebratedMonthKeys = useRef(new Set<string>());
   const hasRecentShiftInput = useRef(false);
-  const currentUserId = session?.user_id ?? "";
   const detailPageProgress = useSharedValue(0);
   const detailModeGestureRef = useRef<GestureType>(undefined);
   const detailGestureStartProgress = useSharedValue(0);
@@ -95,30 +100,6 @@ export default function Index() {
   const detailGestureIsDriving = useSharedValue(0);
   const detailScrollOffsetY = useSharedValue(0);
   const bottomContentPadding = insets.bottom + TAB_OVERLAP_PADDING;
-  const patterns =
-    useAll(
-      currentUserId
-        ? app.shiftPatterns.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
-  const shifts =
-    useAll(
-      currentUserId
-        ? app.shifts.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
-  const dayNotes =
-    useAll(
-      currentUserId
-        ? app.dayNotes.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
-  const members =
-    useAll(
-      currentUserId
-        ? app.members.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
   const patternsById = useMemo(() => {
     const nextPatternsById = new Map<string, Pattern>();
 
@@ -161,7 +142,7 @@ export default function Index() {
 
       nextShiftsByDate.set(dateKey, {
         hasNotes: existingSummary?.hasNotes ?? false,
-        shiftPatternId: shift.shiftPatternId,
+        pattern: shift.pattern,
       });
     }
 
@@ -204,7 +185,7 @@ export default function Index() {
 
       return datesInMonth.every((date) => {
         const shiftSummary = shiftsByDate.get(startOfDay(date).getTime());
-        return Boolean(shiftSummary?.shiftPatternId);
+        return Boolean(shiftSummary?.pattern);
       });
     },
     [shiftsByDate]
@@ -234,9 +215,7 @@ export default function Index() {
           const dateKey = startOfDay(date).getTime();
           const shiftSummary = shiftsByDate.get(dateKey);
 
-          return (
-            savedDateKeys.has(dateKey) || Boolean(shiftSummary?.shiftPatternId)
-          );
+          return savedDateKeys.has(dateKey) || Boolean(shiftSummary?.pattern);
         });
 
         if (isCompleteAfterInput) {

@@ -9,7 +9,7 @@ import { type MutationCtx, type QueryCtx, query } from "./_generated/server";
 
 export type GroupEventInput = {
   actorDisplayNameSnapshot: string;
-  actorJazzUserId: string;
+  actorInstantUserId: string;
   body: string;
   createdAt: number;
   groupId: Id<"groups">;
@@ -17,7 +17,7 @@ export type GroupEventInput = {
   nextValue?: string;
   previousValue?: string;
   targetDisplayNameSnapshot?: string;
-  targetJazzUserId?: string;
+  targetInstantUserId?: string;
 };
 
 export const insertGroupEvent = async (
@@ -82,11 +82,11 @@ const listDisplayNameEventsForGroup = (
 export const listGroup = query({
   args: {
     groupId: v.id("groups"),
-    jazzUserId: v.string(),
+    instantUserId: v.string(),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.groupId, args.jazzUserId);
+    await requireMembership(ctx, args.groupId, args.instantUserId);
 
     return listEventsForGroup(ctx, args.groupId, args.paginationOpts);
   },
@@ -95,20 +95,20 @@ export const listGroup = query({
 export const listDirect = query({
   args: {
     groupId: v.id("groups"),
-    jazzUserId: v.string(),
+    instantUserId: v.string(),
     paginationOpts: paginationOptsValidator,
-    targetJazzUserId: v.string(),
+    targetInstantUserId: v.string(),
   },
   handler: async (ctx, args) => {
     await requireDirectMembership(
       ctx,
       args.groupId,
-      args.jazzUserId,
-      args.targetJazzUserId
+      args.instantUserId,
+      args.targetInstantUserId
     );
-    const participantJazzUserIds = new Set([
-      args.jazzUserId,
-      args.targetJazzUserId,
+    const participantInstantUserIds = new Set([
+      args.instantUserId,
+      args.targetInstantUserId,
     ]);
     const events = await listDisplayNameEventsForGroup(
       ctx,
@@ -119,7 +119,7 @@ export const listDirect = query({
     return {
       ...events,
       page: events.page.filter((event) =>
-        participantJazzUserIds.has(event.actorJazzUserId)
+        participantInstantUserIds.has(event.actorInstantUserId)
       ),
     };
   },

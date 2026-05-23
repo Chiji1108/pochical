@@ -3,7 +3,7 @@ import { useState } from "react";
 import { View } from "react-native";
 import { MemberListView } from "@/components/member/member-list-view";
 import { AppHeader } from "@/components/navigation/app-header";
-import type { Member } from "@/schema";
+import type { Member } from "@/lib/instant";
 
 export default function Members() {
   const router = useRouter();

@@ -3,7 +3,7 @@ import { Chip, ListGroup, Separator, Text } from "heroui-native";
 import { useMemo } from "react";
 import { View } from "react-native";
 import { LinkifiedText } from "@/components/common/linkified-text";
-import type { DayNote, Member, Pattern, Shift } from "@/schema";
+import type { DayNote, Member, Pattern, Shift } from "@/lib/instant";
 
 const getPatternScheduleLabel = (pattern: Pattern): string => {
   if (pattern.isAllDay) {
@@ -35,17 +35,17 @@ export const ShiftDetailView = ({
   selectedDateDayNote,
   selectedDateShift,
 }: ShiftDetailViewProps) => {
-  const selectedPattern = selectedDateShift
-    ? patternsById.get(selectedDateShift.shiftPatternId)
+  const selectedPattern = selectedDateShift?.pattern
+    ? (patternsById.get(selectedDateShift.pattern.id) ??
+      selectedDateShift.pattern)
     : undefined;
   const selectedMembers = useMemo(() => {
     if (!selectedDateShift) {
       return [];
     }
 
-    return selectedDateShift.memberIds
-      .map((memberId) => membersById.get(memberId))
-      .filter((member): member is Member => Boolean(member))
+    return (selectedDateShift.shiftMembers ?? [])
+      .map((member) => membersById.get(member.id) ?? member)
       .sort((a, b) => {
         const orderDiff = a.orderIndex - b.orderIndex;
         return orderDiff === 0 ? a.id.localeCompare(b.id) : orderDiff;

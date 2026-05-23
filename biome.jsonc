@@ -14,7 +14,15 @@
             "style": "type"
           }
         },
-        "noNonNullAssertion": "off"
+        "noNonNullAssertion": "off",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "react-use": "Use deep imports like react-use/lib/useMount in React Native."
+            }
+          }
+        }
       },
       "correctness": {
         "noGlobalDirnameFilename": "off"

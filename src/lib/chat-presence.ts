@@ -2,7 +2,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 
 export type ChatPresenceMember = {
   displayName: string;
-  jazzUserId: string;
+  instantUserId: string;
 };
 
 export type ChatPresenceUser = ChatPresenceMember & {
@@ -18,7 +18,7 @@ type GroupPresenceRoom = {
 type DirectPresenceRoom = {
   groupId: Id<"groups">;
   kind: "direct";
-  participantJazzUserIds: string[];
+  participantInstantUserIds: string[];
 };
 
 export const createGroupPresenceRoomId = (groupId: Id<"groups">) =>
@@ -35,5 +35,5 @@ export const createDirectPresenceRoomId = (
   JSON.stringify({
     groupId,
     kind: "direct",
-    participantJazzUserIds: [currentUserId, targetUserId].sort(),
+    participantInstantUserIds: [currentUserId, targetUserId].sort(),
   } satisfies DirectPresenceRoom);

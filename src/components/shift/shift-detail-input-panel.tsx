@@ -1,3 +1,4 @@
+import { id } from "@instantdb/react-native";
 import { startOfDay } from "date-fns";
 import { selectionAsync } from "expo-haptics";
 import { useRouter } from "expo-router";
@@ -11,10 +12,15 @@ import {
   TextField,
 } from "heroui-native";
 import { Button } from "heroui-native/button";
-import { useAll, useDb, useSession } from "jazz-tools/react-native";
 import { useMemo } from "react";
 import { View } from "react-native";
-import { app, type DayNote, type Shift } from "@/schema";
+import {
+  type DayNote,
+  db,
+  type Shift,
+  useCurrentUserId,
+  useOwnWorkData,
+} from "@/lib/instant";
 
 const seedMembers = ["佐藤師長", "鈴木主任", "田中先輩"] as const;
 
@@ -31,16 +37,10 @@ export const ShiftDetailInputPanel = ({
   selectedDateDayNote,
   selectedShift,
 }: ShiftDetailInputPanelProps) => {
-  const db = useDb();
   const router = useRouter();
-  const session = useSession();
-  const currentUserId = session?.user_id ?? "";
-  const members =
-    useAll(
-      currentUserId
-        ? app.members.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
+  const currentUserId = useCurrentUserId();
+  const { members } = useOwnWorkData(currentUserId);
+  const isSignedIn = Boolean(currentUserId);
   const sortedMembers = useMemo(
     () =>
       [...members].sort((a, b) => {
@@ -50,31 +50,48 @@ export const ShiftDetailInputPanel = ({
     [members]
   );
 
-  const createSeedMembers = () => {
-    if (!session || members.length > 0) {
+  const createSeedMembers = async () => {
+    if (!(currentUserId && members.length === 0)) {
       return;
     }
 
-    db.batch((batch) => {
-      for (const [orderIndex, name] of seedMembers.entries()) {
-        batch.insert(app.members, {
-          name,
-          orderIndex,
-        });
-      }
-    });
+    await db.transact(
+      seedMembers.map((name, orderIndex) =>
+        db.tx.shiftMembers[id()]
+          .create({ name, orderIndex })
+          .link({ owner: currentUserId })
+      )
+    );
   };
 
-  const updateMemberIds = (memberIds: string[]) => {
-    if (!(session && selectedShift)) {
+  const updateMemberIds = async (memberIds: string[]) => {
+    if (!(currentUserId && selectedShift)) {
       return;
     }
 
-    db.update(app.shifts, selectedShift.id, { memberIds });
+    const currentMemberIds = new Set(
+      (selectedShift.shiftMembers ?? []).map((member) => member.id)
+    );
+    const nextMemberIds = new Set(memberIds);
+    const membersToLink = memberIds.filter(
+      (memberId) => !currentMemberIds.has(memberId)
+    );
+    const membersToUnlink = Array.from(currentMemberIds).filter(
+      (memberId) => !nextMemberIds.has(memberId)
+    );
+
+    await db.transact([
+      ...membersToLink.map((memberId) =>
+        db.tx.shifts[selectedShift.id].link({ shiftMembers: memberId })
+      ),
+      ...membersToUnlink.map((memberId) =>
+        db.tx.shifts[selectedShift.id].unlink({ shiftMembers: memberId })
+      ),
+    ]);
   };
 
-  const updateNotes = (notes: string) => {
-    if (!session) {
+  const updateNotes = async (notes: string) => {
+    if (!currentUserId) {
       return;
     }
 
@@ -82,27 +99,33 @@ export const ShiftDetailInputPanel = ({
 
     if (selectedDateDayNote) {
       if (trimmedNotes) {
-        db.update(app.dayNotes, selectedDateDayNote.id, { notes });
+        await db.transact(
+          db.tx.dayNotes[selectedDateDayNote.id].update({ notes })
+        );
       } else {
-        db.delete(app.dayNotes, selectedDateDayNote.id);
+        await db.transact(db.tx.dayNotes[selectedDateDayNote.id].delete());
       }
       return;
     }
 
     if (trimmedNotes) {
-      db.insert(app.dayNotes, {
-        date: startOfDay(selectedDate),
-        notes,
-      });
+      await db.transact(
+        db.tx.dayNotes[id()]
+          .create({
+            date: startOfDay(selectedDate),
+            notes,
+          })
+          .link({ owner: currentUserId })
+      );
     }
   };
 
-  const handleDeleteShift = () => {
-    if (!(session && selectedShift)) {
+  const handleDeleteShift = async () => {
+    if (!(currentUserId && selectedShift)) {
       return;
     }
 
-    db.delete(app.shifts, selectedShift.id);
+    await db.transact(db.tx.shifts[selectedShift.id].delete());
 
     selectionAsync().catch(() => {
       // Haptics can be unavailable depending on the device or platform.
@@ -117,7 +140,9 @@ export const ShiftDetailInputPanel = ({
     });
   };
 
-  const selectedMemberIds = new Set(selectedShift?.memberIds ?? []);
+  const selectedMemberIds = new Set(
+    selectedShift?.shiftMembers?.map((member) => member.id) ?? []
+  );
 
   return (
     <View className="gap-4 px-1 pt-2">
@@ -128,9 +153,11 @@ export const ShiftDetailInputPanel = ({
           </View>
           {sortedMembers.length > 0 ? (
             <TagGroup
-              isDisabled={!session}
+              isDisabled={!isSignedIn}
               onSelectionChange={(keys) => {
-                updateMemberIds(Array.from(keys).map(String));
+                updateMemberIds(Array.from(keys).map(String)).catch(() => {
+                  // The query will surface write errors during development.
+                });
                 selectionAsync().catch(() => {
                   // Haptics can be unavailable depending on the device or platform.
                 });
@@ -164,7 +191,7 @@ export const ShiftDetailInputPanel = ({
           ) : (
             <View className="items-center py-2">
               <Button
-                isDisabled={!session}
+                isDisabled={!isSignedIn}
                 onPress={createSeedMembers}
                 size="sm"
                 variant="primary"
@@ -206,7 +233,7 @@ export const ShiftDetailInputPanel = ({
           ) : null}
         </View>
       ) : null}
-      <TextField isDisabled={!session}>
+      <TextField isDisabled={!isSignedIn}>
         <Label>メモ</Label>
         <Input
           autoCapitalize="none"
@@ -226,7 +253,7 @@ export const ShiftDetailInputPanel = ({
               : "削除できるシフトがありません"
           }
           className="flex-1"
-          isDisabled={!(session && selectedShift)}
+          isDisabled={!(isSignedIn && selectedShift)}
           onPress={handleDeleteShift}
           size="md"
           variant="outline"
@@ -244,7 +271,7 @@ export const ShiftDetailInputPanel = ({
         <Button
           accessibilityLabel="翌日へ移動"
           className="flex-1"
-          isDisabled={!session}
+          isDisabled={!isSignedIn}
           onPress={handleSaveAndSelectNextDay}
           size="md"
           variant="primary"

@@ -4,12 +4,12 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { getItemAsync, setItemAsync } from "expo-secure-store";
 import { SymbolView } from "expo-symbols";
 import { Button, Text, useThemeColor } from "heroui-native";
-import { useSession } from "jazz-tools/react-native";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
 import { GroupDetailView } from "@/components/group/group-detail-view";
+import { useCurrentUserId } from "@/lib/instant";
 import { api as convexApi } from "../../../convex/_generated/api";
 
 const StyledSafeAreaView = withUniwind(SafeAreaView);
@@ -26,19 +26,18 @@ export default function Group() {
     groupId?: string;
     showInvite?: string;
   }>();
-  const session = useSession();
-  const currentUserId = session?.user_id ?? "";
+  const currentUserId = useCurrentUserId();
   const accentForegroundColor = useThemeColor("accent-foreground");
   const groups = useQuery(
     convexApi.groups.listForCurrentUser,
-    currentUserId ? { jazzUserId: currentUserId } : "skip"
+    currentUserId ? { instantUserId: currentUserId } : "skip"
   );
   const [hasLoadedSelectedGroupId, setHasLoadedSelectedGroupId] =
     useState(false);
   const [lastAppliedRequestedGroupId, setLastAppliedRequestedGroupId] =
     useState<string>();
   const [selectedGroupId, setSelectedGroupId] = useState<string>();
-  const hasLoadedGroups = Boolean(session) && groups !== undefined;
+  const hasLoadedGroups = Boolean(currentUserId) && groups !== undefined;
   const hasGroups = Boolean(groups && groups.length > 0);
   const selectedGroup = groups?.find((group) => group._id === selectedGroupId);
 
@@ -150,7 +149,7 @@ export default function Group() {
     mainContent = (
       <EmptyGroupsView
         accentForegroundColor={accentForegroundColor}
-        isCreateDisabled={!session}
+        isCreateDisabled={!currentUserId}
         onCreateGroup={openGroupCreator}
         onScanQr={openQrScanner}
       />
@@ -166,7 +165,7 @@ export default function Group() {
         {hasGroups ? (
           <GroupRail
             groups={groups ?? []}
-            isCreateDisabled={!session}
+            isCreateDisabled={!currentUserId}
             onCreateGroup={openGroupCreator}
             onScanQr={openQrScanner}
             onSelectGroup={selectGroup}

@@ -18,14 +18,14 @@ import Animated, {
 } from "react-native-reanimated";
 import type { CalendarHighlightTarget, WeekStartsOn } from "@/lib/app-settings";
 import { getCalendarDateHighlightColor, getWeeksOfMonth } from "@/lib/date";
+import type { Pattern } from "@/lib/instant";
 import { cn } from "@/lib/utils";
-import type { Pattern } from "@/schema";
 import { CALENDAR_DAY_CELL_HEIGHT } from "./constants";
 import { WeekRow } from "./week-row";
 
 export type CalendarShiftSummary = {
   hasNotes: boolean;
-  shiftPatternId?: string;
+  pattern?: Pattern;
 };
 
 export type ExportCalendarColorScheme = "dark" | "light";
@@ -98,8 +98,8 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
       calendarHighlightTargets
     );
     const shift = shiftsByDate.get(startOfDay(date).getTime());
-    const shiftPattern = shift?.shiftPatternId
-      ? patternsById.get(shift.shiftPatternId)
+    const shiftPattern = shift?.pattern
+      ? (patternsById.get(shift.pattern.id) ?? shift.pattern)
       : undefined;
     const isDarkExport = isExportMode && exportColorScheme === "dark";
     const todayClassName = getTodayClassName(isToday(date), isExportMode);

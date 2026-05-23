@@ -69,11 +69,11 @@ const listMessagesForThread = (
 export const listGroupMessages = query({
   args: {
     groupId: v.id("groups"),
-    jazzUserId: v.string(),
+    instantUserId: v.string(),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.groupId, args.jazzUserId);
+    await requireMembership(ctx, args.groupId, args.instantUserId);
     const thread = await getThread(
       ctx,
       args.groupId,
@@ -96,20 +96,20 @@ export const listGroupMessages = query({
 export const listDirectMessages = query({
   args: {
     groupId: v.id("groups"),
-    jazzUserId: v.string(),
+    instantUserId: v.string(),
     paginationOpts: paginationOptsValidator,
-    targetJazzUserId: v.string(),
+    targetInstantUserId: v.string(),
   },
   handler: async (ctx, args) => {
     await requireDirectMembership(
       ctx,
       args.groupId,
-      args.jazzUserId,
-      args.targetJazzUserId
+      args.instantUserId,
+      args.targetInstantUserId
     );
     const { pairKey } = createDirectPair(
-      args.jazzUserId,
-      args.targetJazzUserId
+      args.instantUserId,
+      args.targetInstantUserId
     );
     const thread = await getThread(ctx, args.groupId, "direct", pairKey);
     const result = await listMessagesForThread(
@@ -129,13 +129,13 @@ export const sendGroupMessage = mutation({
   args: {
     body: v.string(),
     groupId: v.id("groups"),
-    jazzUserId: v.string(),
+    instantUserId: v.string(),
   },
   handler: async (ctx, args) => {
     const { membership } = await requireMembership(
       ctx,
       args.groupId,
-      args.jazzUserId
+      args.instantUserId
     );
     const body = normalizeMessageBody(args.body);
     const thread = await getOrCreateThread(
@@ -148,14 +148,14 @@ export const sendGroupMessage = mutation({
 
     await ctx.db.insert("chatMessages", {
       authorDisplayNameSnapshot: membership.displayName,
-      authorJazzUserId: args.jazzUserId,
+      authorInstantUserId: args.instantUserId,
       body,
       createdAt: now,
       groupId: args.groupId,
       threadId: thread._id,
     });
     await recordChatMessageUnread(ctx, {
-      authorJazzUserId: args.jazzUserId,
+      authorInstantUserId: args.instantUserId,
       createdAt: now,
       threadId: thread._id,
     });
@@ -173,19 +173,19 @@ export const sendDirectMessage = mutation({
   args: {
     body: v.string(),
     groupId: v.id("groups"),
-    jazzUserId: v.string(),
-    targetJazzUserId: v.string(),
+    instantUserId: v.string(),
+    targetInstantUserId: v.string(),
   },
   handler: async (ctx, args) => {
     const { membership } = await requireDirectMembership(
       ctx,
       args.groupId,
-      args.jazzUserId,
-      args.targetJazzUserId
+      args.instantUserId,
+      args.targetInstantUserId
     );
     const body = normalizeMessageBody(args.body);
     const { directParticipantA, directParticipantB, pairKey } =
-      createDirectPair(args.jazzUserId, args.targetJazzUserId);
+      createDirectPair(args.instantUserId, args.targetInstantUserId);
     const thread = await getOrCreateThread(
       ctx,
       args.groupId,
@@ -200,14 +200,14 @@ export const sendDirectMessage = mutation({
 
     await ctx.db.insert("chatMessages", {
       authorDisplayNameSnapshot: membership.displayName,
-      authorJazzUserId: args.jazzUserId,
+      authorInstantUserId: args.instantUserId,
       body,
       createdAt: now,
       groupId: args.groupId,
       threadId: thread._id,
     });
     await recordChatMessageUnread(ctx, {
-      authorJazzUserId: args.jazzUserId,
+      authorInstantUserId: args.instantUserId,
       createdAt: now,
       threadId: thread._id,
     });
@@ -224,10 +224,10 @@ export const sendDirectMessage = mutation({
 export const markGroupRead = mutation({
   args: {
     groupId: v.id("groups"),
-    jazzUserId: v.string(),
+    instantUserId: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.groupId, args.jazzUserId);
+    await requireMembership(ctx, args.groupId, args.instantUserId);
     const thread = await getThread(
       ctx,
       args.groupId,
@@ -239,26 +239,26 @@ export const markGroupRead = mutation({
       return;
     }
 
-    await markThreadRead(ctx, { jazzUserId: args.jazzUserId, thread });
+    await markThreadRead(ctx, { instantUserId: args.instantUserId, thread });
   },
 });
 
 export const markDirectRead = mutation({
   args: {
     groupId: v.id("groups"),
-    jazzUserId: v.string(),
-    targetJazzUserId: v.string(),
+    instantUserId: v.string(),
+    targetInstantUserId: v.string(),
   },
   handler: async (ctx, args) => {
     await requireDirectMembership(
       ctx,
       args.groupId,
-      args.jazzUserId,
-      args.targetJazzUserId
+      args.instantUserId,
+      args.targetInstantUserId
     );
     const { pairKey } = createDirectPair(
-      args.jazzUserId,
-      args.targetJazzUserId
+      args.instantUserId,
+      args.targetInstantUserId
     );
     const thread = await getThread(ctx, args.groupId, "direct", pairKey);
 
@@ -266,6 +266,6 @@ export const markDirectRead = mutation({
       return;
     }
 
-    await markThreadRead(ctx, { jazzUserId: args.jazzUserId, thread });
+    await markThreadRead(ctx, { instantUserId: args.instantUserId, thread });
   },
 });

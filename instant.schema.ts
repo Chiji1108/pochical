@@ -8,17 +8,17 @@ const _schema = i.schema({
     shiftPatterns: i.entity({
       countsAsDayOff: i.boolean(),
       emoji: i.string(),
-      endDate: i.number().optional(),
+      endDate: i.date().optional(),
       isAllDay: i.boolean(),
       name: i.string(),
       orderIndex: i.number().indexed(),
-      startDate: i.number().optional(),
+      startDate: i.date().optional(),
     }),
     shifts: i.entity({
-      startDate: i.number().indexed(),
+      startDate: i.date().indexed(),
     }),
     dayNotes: i.entity({
-      date: i.number().indexed(),
+      date: i.date().indexed(),
       notes: i.string(),
     }),
     shiftMembers: i.entity({

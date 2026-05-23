@@ -1,18 +1,18 @@
 import { useMutation } from "convex/react";
 import { useRouter } from "expo-router";
 import { Input, ListGroup, Separator, Text, TextField } from "heroui-native";
-import { useSession } from "jazz-tools/react-native";
 import { useRef, useState } from "react";
 import { Alert, Platform, ScrollView, View } from "react-native";
 import { EmojiPopup } from "react-native-emoji-popup";
 import { EmojiPopupCloseButton } from "@/components/common/emoji-popup-close-button";
 import { DEFAULT_GROUP_EMOJI } from "@/components/group/group-dialogs";
 import { AppHeader } from "@/components/navigation/app-header";
+import { useCurrentUserId } from "@/lib/instant";
 import { api as convexApi } from "../../../convex/_generated/api";
 
 export default function NewShareGroup() {
   const router = useRouter();
-  const session = useSession();
+  const currentUserId = useCurrentUserId();
   const createGroupMutation = useMutation(convexApi.groups.create);
   const groupNameRef = useRef("");
   const displayNameRef = useRef("");
@@ -34,7 +34,7 @@ export default function NewShareGroup() {
       return;
     }
 
-    if (!session) {
+    if (!currentUserId) {
       Alert.alert("作成できません", "ユーザー情報の準備ができていません");
       return;
     }
@@ -54,7 +54,7 @@ export default function NewShareGroup() {
       const result = await createGroupMutation({
         displayName,
         emoji: groupEmoji,
-        jazzUserId: session.user_id,
+        instantUserId: currentUserId,
         name: groupName,
       });
       router.replace(`/group?groupId=${result.groupId}&showInvite=1`);
@@ -86,7 +86,7 @@ export default function NewShareGroup() {
         }}
         rightAction={{
           accessibilityLabel: "グループを保存",
-          isDisabled: isSubmitting || !session,
+          isDisabled: isSubmitting || !currentUserId,
           label: isSubmitting ? "保存中" : "保存",
           onPress: createGroup,
           variant: "primary",

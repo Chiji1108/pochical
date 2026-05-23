@@ -17,12 +17,12 @@ export const getGroup = async (ctx: DatabaseCtx, groupId: Id<"groups">) => {
 export const getMembership = async (
   ctx: DatabaseCtx,
   groupId: Id<"groups">,
-  jazzUserId: string
+  instantUserId: string
 ) =>
   ctx.db
     .query("groupMembers")
-    .withIndex("by_groupId_jazzUserId", (q) =>
-      q.eq("groupId", groupId).eq("jazzUserId", jazzUserId)
+    .withIndex("by_groupId_instantUserId", (q) =>
+      q.eq("groupId", groupId).eq("instantUserId", instantUserId)
     )
     .unique();
 
@@ -40,11 +40,11 @@ export const listMembers = async (ctx: DatabaseCtx, groupId: Id<"groups">) => {
 export const requireMembership = async (
   ctx: DatabaseCtx,
   groupId: Id<"groups">,
-  jazzUserId: string
+  instantUserId: string
 ) => {
   const [group, membership] = await Promise.all([
     getGroup(ctx, groupId),
-    getMembership(ctx, groupId, jazzUserId),
+    getMembership(ctx, groupId, instantUserId),
   ]);
 
   if (!(group && membership)) {
@@ -57,15 +57,19 @@ export const requireMembership = async (
 export const requireDirectMembership = async (
   ctx: DatabaseCtx,
   groupId: Id<"groups">,
-  jazzUserId: string,
-  targetJazzUserId: string
+  instantUserId: string,
+  targetInstantUserId: string
 ) => {
   const { group, membership } = await requireMembership(
     ctx,
     groupId,
-    jazzUserId
+    instantUserId
   );
-  const targetMembership = await getMembership(ctx, groupId, targetJazzUserId);
+  const targetMembership = await getMembership(
+    ctx,
+    groupId,
+    targetInstantUserId
+  );
 
   if (!targetMembership) {
     throw new ConvexError("Member not found");

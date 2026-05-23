@@ -8,27 +8,27 @@ type ChatKind = Doc<"chatThreads">["kind"];
 type DatabaseCtx = QueryCtx | MutationCtx;
 
 export const createDirectPairKey = (
-  jazzUserId: string,
-  targetJazzUserId: string
-) => JSON.stringify([jazzUserId, targetJazzUserId].sort());
+  instantUserId: string,
+  targetInstantUserId: string
+) => JSON.stringify([instantUserId, targetInstantUserId].sort());
 
 export const createDirectPair = (
-  jazzUserId: string,
-  targetJazzUserId: string
+  instantUserId: string,
+  targetInstantUserId: string
 ) => {
-  if (jazzUserId === targetJazzUserId) {
+  if (instantUserId === targetInstantUserId) {
     throw new ConvexError("Direct chat target is invalid");
   }
 
   const [directParticipantA, directParticipantB] = [
-    jazzUserId,
-    targetJazzUserId,
+    instantUserId,
+    targetInstantUserId,
   ].sort();
 
   return {
     directParticipantA,
     directParticipantB,
-    pairKey: createDirectPairKey(jazzUserId, targetJazzUserId),
+    pairKey: createDirectPairKey(instantUserId, targetInstantUserId),
   };
 };
 

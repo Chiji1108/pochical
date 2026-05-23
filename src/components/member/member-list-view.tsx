@@ -1,3 +1,4 @@
+import { id } from "@instantdb/react-native";
 import { SymbolView } from "expo-symbols";
 import {
   Button,
@@ -8,7 +9,6 @@ import {
   Text,
   TextField,
 } from "heroui-native";
-import { useAll, useDb, useSession } from "jazz-tools/react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, View } from "react-native";
 import Animated, { useAnimatedRef } from "react-native-reanimated";
@@ -16,7 +16,13 @@ import Sortable, {
   type SortableGridDragEndCallback,
   type SortableGridRenderItem,
 } from "react-native-sortables";
-import { app, type Member } from "@/schema";
+import {
+  db,
+  type InstantTransaction,
+  type Member,
+  useCurrentUserId,
+  useOwnWorkData,
+} from "@/lib/instant";
 
 const MEMBER_ROW_GAP = 10;
 
@@ -35,22 +41,10 @@ export const MemberListView = ({
   onCloseEditDialog,
   onEditMember,
 }: MemberListViewProps) => {
-  const db = useDb();
-  const session = useSession();
-  const currentUserId = session?.user_id ?? "";
+  const currentUserId = useCurrentUserId();
+  const isSignedIn = Boolean(currentUserId);
+  const { members, shifts } = useOwnWorkData(currentUserId);
   const scrollableRef = useAnimatedRef<Animated.ScrollView>();
-  const members =
-    useAll(
-      currentUserId
-        ? app.members.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
-  const shifts =
-    useAll(
-      currentUserId
-        ? app.shifts.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
   const sortedMembers = useMemo(
     () =>
       [...members].sort((a, b) => {
@@ -62,7 +56,7 @@ export const MemberListView = ({
 
   const handleDragEnd = useCallback<SortableGridDragEndCallback<Member>>(
     ({ data }) => {
-      if (!session) {
+      if (!currentUserId) {
         return;
       }
 
@@ -74,54 +68,55 @@ export const MemberListView = ({
         return;
       }
 
-      db.batch((batch) => {
-        for (const [orderIndex, member] of data.entries()) {
-          batch.update(app.members, member.id, { orderIndex });
-        }
-      });
+      db.transact(
+        data.map((member, orderIndex) =>
+          db.tx.shiftMembers[member.id].update({ orderIndex })
+        )
+      ).catch(() => undefined);
     },
-    [db, session]
+    [currentUserId]
   );
 
   const deleteMember = useCallback(
     (member: Member) => {
-      if (!session) {
+      if (!currentUserId) {
         return;
       }
 
-      db.batch((batch) => {
-        for (const shift of shifts) {
-          if (!shift.memberIds.includes(member.id)) {
-            continue;
-          }
+      const transactions: InstantTransaction[] = [];
 
-          batch.update(app.shifts, shift.id, {
-            memberIds: shift.memberIds.filter(
-              (memberId) => memberId !== member.id
-            ),
-          });
+      for (const shift of shifts) {
+        const hasMember = (shift.shiftMembers ?? []).some(
+          (item) => item.id === member.id
+        );
+
+        if (hasMember) {
+          transactions.push(
+            db.tx.shifts[shift.id].unlink({ shiftMembers: member.id })
+          );
         }
+      }
 
-        const remainingMembers = members
-          .filter((item) => item.id !== member.id)
-          .sort((a, b) => a.orderIndex - b.orderIndex);
+      const remainingMembers = members
+        .filter((item) => item.id !== member.id)
+        .sort((a, b) => a.orderIndex - b.orderIndex);
 
-        for (const [orderIndex, item] of remainingMembers.entries()) {
-          if (item.orderIndex !== orderIndex) {
-            batch.update(app.members, item.id, { orderIndex });
-          }
+      for (const [orderIndex, item] of remainingMembers.entries()) {
+        if (item.orderIndex !== orderIndex) {
+          transactions.push(db.tx.shiftMembers[item.id].update({ orderIndex }));
         }
+      }
 
-        batch.delete(app.members, member.id);
-      });
+      transactions.push(db.tx.shiftMembers[member.id].delete());
+      db.transact(transactions).catch(() => undefined);
     },
-    [db, members, session, shifts]
+    [currentUserId, members, shifts]
   );
 
   const confirmDeleteMember = useCallback(
     (member: Member) => {
       const relatedShiftCount = shifts.filter((shift) =>
-        shift.memberIds.includes(member.id)
+        (shift.shiftMembers ?? []).some((item) => item.id === member.id)
       ).length;
       const message =
         relatedShiftCount > 0
@@ -145,6 +140,7 @@ export const MemberListView = ({
   const renderMember = useCallback<SortableGridRenderItem<Member>>(
     ({ item }) => (
       <MemberListItem
+        isSignedIn={isSignedIn}
         member={item}
         onDelete={() => {
           confirmDeleteMember(item);
@@ -152,10 +148,9 @@ export const MemberListView = ({
         onPress={() => {
           onEditMember(item);
         }}
-        session={Boolean(session)}
       />
     ),
-    [confirmDeleteMember, onEditMember, session]
+    [confirmDeleteMember, isSignedIn, onEditMember]
   );
 
   return (
@@ -182,9 +177,9 @@ export const MemberListView = ({
             rowGap={MEMBER_ROW_GAP}
             scrollableRef={scrollableRef}
             showDropIndicator={true}
-            sortEnabled={Boolean(session)}
+            sortEnabled={isSignedIn}
           />
-          {session ? null : (
+          {isSignedIn ? null : (
             <Text className="mt-4 text-center text-sm" color="muted">
               接続後に編集できます
             </Text>
@@ -205,14 +200,18 @@ export const MemberListView = ({
           }
         }}
         onSubmit={(name) => {
-          if (!session) {
+          if (!currentUserId) {
             return;
           }
 
-          db.insert(app.members, {
-            name,
-            orderIndex: members.length,
-          });
+          db.transact(
+            db.tx.shiftMembers[id()]
+              .create({
+                name,
+                orderIndex: members.length,
+              })
+              .link({ owner: currentUserId })
+          ).catch(() => undefined);
           onCloseAddDialog();
         }}
         title="勤務メンバーを追加"
@@ -226,11 +225,13 @@ export const MemberListView = ({
           }
         }}
         onSubmit={(name) => {
-          if (!(session && editingMember)) {
+          if (!editingMember) {
             return;
           }
 
-          db.update(app.members, editingMember.id, { name });
+          db.transact(
+            db.tx.shiftMembers[editingMember.id].update({ name })
+          ).catch(() => undefined);
           onCloseEditDialog();
         }}
         title="勤務メンバーを編集"
@@ -241,16 +242,16 @@ export const MemberListView = ({
 
 type MemberListItemProps = {
   member: Member;
+  isSignedIn: boolean;
   onDelete: () => void;
   onPress: () => void;
-  session: boolean;
 };
 
 const MemberListItem = ({
+  isSignedIn,
   member,
   onDelete,
   onPress,
-  session,
 }: MemberListItemProps) => (
   <ListGroup>
     <ListGroup.Item
@@ -283,7 +284,7 @@ const MemberListItem = ({
         <PressableFeedback
           accessibilityLabel={`${member.name}を削除`}
           className="h-9 w-9 items-center justify-center rounded-full"
-          isDisabled={!session}
+          isDisabled={!isSignedIn}
           onPress={(event) => {
             event.stopPropagation();
             onDelete();

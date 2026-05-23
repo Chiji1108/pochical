@@ -8,7 +8,6 @@ import { isAvailableAsync, shareAsync } from "expo-sharing";
 import { SymbolView } from "expo-symbols";
 import { Tabs, useToast } from "heroui-native";
 import { Button } from "heroui-native/button";
-import { useAll, useSession } from "jazz-tools/react-native";
 import { useMemo, useRef, useState } from "react";
 import { Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -20,7 +19,7 @@ import type {
 import { ExportCalendarImageView } from "@/components/calendar/export-calendar-image-view";
 import { AppHeader } from "@/components/navigation/app-header";
 import { useAppSettings } from "@/lib/app-settings";
-import { app, type Pattern } from "@/schema";
+import { type Pattern, useCurrentUserId, useOwnWorkData } from "@/lib/instant";
 
 const EXPORT_SCREEN_BOTTOM_PADDING = 24;
 
@@ -41,8 +40,8 @@ export default function ExportScreen() {
   const params = useLocalSearchParams<{ yearMonth?: string }>();
   const { toast } = useToast();
   const { settings } = useAppSettings();
-  const session = useSession();
-  const currentUserId = session?.user_id ?? "";
+  const currentUserId = useCurrentUserId();
+  const { dayNotes, patterns, shifts } = useOwnWorkData(currentUserId);
   const exportCalendarImageRef = useRef<View>(null);
   const [exportColorScheme, setExportColorScheme] =
     useState<ExportCalendarColorScheme>("light");
@@ -53,24 +52,6 @@ export default function ExportScreen() {
     [params.yearMonth]
   );
   const monthLabel = format(yearMonth, "yyyy年M月");
-  const patterns =
-    useAll(
-      currentUserId
-        ? app.shiftPatterns.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
-  const shifts =
-    useAll(
-      currentUserId
-        ? app.shifts.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
-  const dayNotes =
-    useAll(
-      currentUserId
-        ? app.dayNotes.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
   const patternsById = useMemo(() => {
     const nextPatternsById = new Map<string, Pattern>();
 
@@ -95,7 +76,7 @@ export default function ExportScreen() {
 
       nextShiftsByDate.set(dateKey, {
         hasNotes: existingSummary?.hasNotes ?? false,
-        shiftPatternId: shift.shiftPatternId,
+        pattern: shift.pattern,
       });
     }
 

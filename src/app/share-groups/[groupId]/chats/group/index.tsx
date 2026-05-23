@@ -5,11 +5,11 @@ import {
   useQuery,
 } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useSession } from "jazz-tools/react-native";
 import { useEffect } from "react";
 import { Alert, View } from "react-native";
 import { ChatView } from "@/components/chat/chat-view";
 import { createGroupPresenceRoomId } from "@/lib/chat-presence";
+import { useCurrentUserId } from "@/lib/instant";
 import { api as convexApi } from "../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
 
@@ -23,14 +23,13 @@ const createOptimisticId = (prefix: string) =>
 
 export default function GroupChat() {
   const router = useRouter();
-  const session = useSession();
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
-  const currentUserId = session?.user_id ?? "";
+  const currentUserId = useCurrentUserId() ?? "";
   const targetGroupId = groupId as Id<"groups">;
   const group = useQuery(
     convexApi.groups.getDetail,
     groupId && currentUserId
-      ? { groupId: targetGroupId, jazzUserId: currentUserId }
+      ? { groupId: targetGroupId, instantUserId: currentUserId }
       : "skip"
   );
   const {
@@ -40,7 +39,7 @@ export default function GroupChat() {
   } = usePaginatedQuery(
     convexApi.chat.listGroupMessages,
     groupId && currentUserId
-      ? { groupId: targetGroupId, jazzUserId: currentUserId }
+      ? { groupId: targetGroupId, instantUserId: currentUserId }
       : "skip",
     { initialNumItems: INITIAL_MESSAGE_COUNT }
   );
@@ -51,7 +50,7 @@ export default function GroupChat() {
   } = usePaginatedQuery(
     convexApi.groupEvents.listGroup,
     groupId && currentUserId
-      ? { groupId: targetGroupId, jazzUserId: currentUserId }
+      ? { groupId: targetGroupId, instantUserId: currentUserId }
       : "skip",
     { initialNumItems: INITIAL_EVENT_COUNT }
   );
@@ -64,14 +63,14 @@ export default function GroupChat() {
     insertAtPosition({
       argsToMatch: {
         groupId: args.groupId,
-        jazzUserId: args.jazzUserId,
+        instantUserId: args.instantUserId,
       },
       item: {
         _creationTime: now,
         _id: createOptimisticId("message") as Id<"chatMessages">,
         authorDisplayName,
         authorDisplayNameSnapshot: authorDisplayName,
-        authorJazzUserId: args.jazzUserId,
+        authorInstantUserId: args.instantUserId,
         body: args.body,
         createdAt: now,
         groupId: args.groupId,
@@ -93,7 +92,7 @@ export default function GroupChat() {
 
     markReadMutation({
       groupId: targetGroupId,
-      jazzUserId: currentUserId,
+      instantUserId: currentUserId,
     }).catch(() => undefined);
   }, [
     currentUserId,
@@ -143,11 +142,11 @@ export default function GroupChat() {
           await sendMessageMutation({
             body,
             groupId: group._id,
-            jazzUserId: currentUserId,
+            instantUserId: currentUserId,
           });
           await markReadMutation({
             groupId: group._id,
-            jazzUserId: currentUserId,
+            instantUserId: currentUserId,
           });
         } catch (error) {
           Alert.alert(

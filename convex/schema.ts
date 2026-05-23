@@ -13,12 +13,12 @@ export default defineSchema({
   groupMembers: defineTable({
     displayName: v.string(),
     groupId: v.id("groups"),
-    jazzUserId: v.string(),
+    instantUserId: v.string(),
     joinedAt: v.number(),
   })
     .index("by_groupId", ["groupId"])
-    .index("by_jazzUserId", ["jazzUserId"])
-    .index("by_groupId_jazzUserId", ["groupId", "jazzUserId"]),
+    .index("by_instantUserId", ["instantUserId"])
+    .index("by_groupId_instantUserId", ["groupId", "instantUserId"]),
   chatThreads: defineTable({
     directParticipantA: v.optional(v.string()),
     directParticipantB: v.optional(v.string()),
@@ -34,7 +34,7 @@ export default defineSchema({
     .index("by_groupId_updatedAt", ["groupId", "updatedAt"]),
   chatMessages: defineTable({
     authorDisplayNameSnapshot: v.string(),
-    authorJazzUserId: v.string(),
+    authorInstantUserId: v.string(),
     body: v.string(),
     createdAt: v.number(),
     deletedAt: v.optional(v.number()),
@@ -43,7 +43,7 @@ export default defineSchema({
   }).index("by_threadId_createdAt", ["threadId", "createdAt"]),
   groupEvents: defineTable({
     actorDisplayNameSnapshot: v.string(),
-    actorJazzUserId: v.string(),
+    actorInstantUserId: v.string(),
     body: v.string(),
     createdAt: v.number(),
     groupId: v.id("groups"),
@@ -59,7 +59,7 @@ export default defineSchema({
     nextValue: v.optional(v.string()),
     previousValue: v.optional(v.string()),
     targetDisplayNameSnapshot: v.optional(v.string()),
-    targetJazzUserId: v.optional(v.string()),
+    targetInstantUserId: v.optional(v.string()),
   })
     .index("by_groupId_createdAt", ["groupId", "createdAt"])
     .index("by_groupId_kind_createdAt", ["groupId", "kind", "createdAt"]),

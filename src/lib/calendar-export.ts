@@ -7,11 +7,11 @@ import {
   startOfMonth,
 } from "date-fns";
 import type { Event } from "expo-calendar";
-import type { DayNote, Member, Pattern, Shift } from "@/schema";
+import type { DayNote, Pattern, Shift, ShiftMember } from "@/lib/instant";
 
 type ShiftCalendarEventInput = {
   dayNote?: DayNote;
-  membersById: ReadonlyMap<string, Member>;
+  membersById: ReadonlyMap<string, ShiftMember>;
   pattern: Pattern;
   shift: Shift;
 };
@@ -19,7 +19,7 @@ type ShiftCalendarEventInput = {
 type MonthlyShiftCalendarEventsInput = {
   dayNotesByDate: ReadonlyMap<number, DayNote>;
   excludeDayOffShifts: boolean;
-  membersById: ReadonlyMap<string, Member>;
+  membersById: ReadonlyMap<string, ShiftMember>;
   patternsById: ReadonlyMap<string, Pattern>;
   shifts: Shift[];
   yearMonth: Date;
@@ -44,11 +44,10 @@ const getShiftTime = (shiftDate: Date, timeDate: Date): Date => {
 
 const getSortedShiftMembers = (
   shift: Shift,
-  membersById: ReadonlyMap<string, Member>
-): Member[] =>
-  shift.memberIds
-    .map((memberId) => membersById.get(memberId))
-    .filter((member): member is Member => Boolean(member))
+  membersById: ReadonlyMap<string, ShiftMember>
+): ShiftMember[] =>
+  (shift.shiftMembers ?? [])
+    .map((member) => membersById.get(member.id) ?? member)
     .sort((a, b) => {
       const orderDiff = a.orderIndex - b.orderIndex;
       return orderDiff === 0 ? a.id.localeCompare(b.id) : orderDiff;
@@ -140,7 +139,9 @@ export const getMonthlyShiftCalendarEvents = ({
       continue;
     }
 
-    const pattern = patternsById.get(shift.shiftPatternId);
+    const pattern = shift.pattern
+      ? (patternsById.get(shift.pattern.id) ?? shift.pattern)
+      : undefined;
 
     if (!pattern) {
       continue;

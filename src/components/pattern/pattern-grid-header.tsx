@@ -1,7 +1,6 @@
 import { selectionAsync } from "expo-haptics";
 import { SymbolView } from "expo-symbols";
 import { Button } from "heroui-native/button";
-import { useDb } from "jazz-tools/react-native";
 import type { FC } from "react";
 import { View } from "react-native";
 import Animated, {
@@ -9,7 +8,7 @@ import Animated, {
   useAnimatedStyle,
 } from "react-native-reanimated";
 import { CalendarDatePickerButton } from "@/components/calendar/calendar-date-picker-button";
-import { app, type Shift } from "@/schema";
+import { db, type Shift } from "@/lib/instant";
 
 const selectedDateFormatter = new Intl.DateTimeFormat("ja-JP", {
   day: "numeric",
@@ -73,7 +72,6 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
   selectedDate,
   selectedDateShifts,
 }) => {
-  const db = useDb();
   const hasSelectedDateShift = selectedDateShifts.length > 0;
   const nextActionStyle = useAnimatedStyle(() => ({
     opacity: 1 - detailTransitionProgress.value,
@@ -84,11 +82,9 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
 
   const handleNextAction = async () => {
     if (hasSelectedDateShift) {
-      db.batch((batch) => {
-        for (const shift of selectedDateShifts) {
-          batch.delete(app.shifts, shift.id);
-        }
-      });
+      await db.transact(
+        selectedDateShifts.map((shift) => db.tx.shifts[shift.id].delete())
+      );
     }
 
     onSelectNextDay();

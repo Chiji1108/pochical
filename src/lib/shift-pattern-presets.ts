@@ -1,8 +1,5 @@
-import type { useDb } from "jazz-tools/react-native";
-import { app } from "@/schema";
-
-type JazzDb = ReturnType<typeof useDb>;
-type JazzBatch = Parameters<Parameters<JazzDb["batch"]>[0]>[0];
+import { id } from "@instantdb/react-native";
+import { db } from "@/lib/instant";
 
 type TimeTuple = [hour: number, minute: number];
 
@@ -247,35 +244,35 @@ export const SINGLE_SHIFT_PATTERN_PRESETS: ShiftPatternPreset[] = [
   },
 ];
 
-export const insertShiftPatternPreset = (
-  batch: JazzBatch,
+export const insertShiftPatternPreset = async (
   preset: ShiftPatternPreset,
-  startOrderIndex: number
-): void => {
-  const insertedPatternsByName = new Map<string, { id: string }>();
+  startOrderIndex: number,
+  userId: string
+): Promise<void> => {
+  const patternIdsByName = new Map(
+    preset.patterns.map((pattern) => [pattern.name, id()])
+  );
 
-  for (const [index, pattern] of preset.patterns.entries()) {
-    const insertedPattern = batch.insert(
-      app.shiftPatterns,
-      createPatternInsert(pattern, startOrderIndex + index)
-    );
-    insertedPatternsByName.set(pattern.name, insertedPattern);
-  }
+  await db.transact(
+    preset.patterns.map((pattern, index) => {
+      const patternId = patternIdsByName.get(pattern.name);
+      const nextDayPatternId = pattern.nextDayPatternName
+        ? patternIdsByName.get(pattern.nextDayPatternName)
+        : undefined;
 
-  for (const pattern of preset.patterns) {
-    if (!pattern.nextDayPatternName) {
-      continue;
-    }
+      if (!patternId) {
+        throw new Error(`Pattern id not found: ${pattern.name}`);
+      }
 
-    const insertedPattern = insertedPatternsByName.get(pattern.name);
-    const nextDayPattern = insertedPatternsByName.get(
-      pattern.nextDayPatternName
-    );
+      let transaction = db.tx.shiftPatterns[patternId]
+        .create(createPatternInsert(pattern, startOrderIndex + index))
+        .link({ owner: userId });
 
-    if (insertedPattern && nextDayPattern) {
-      batch.update(app.shiftPatterns, insertedPattern.id, {
-        nextDayPatternId: nextDayPattern.id,
-      });
-    }
-  }
+      if (nextDayPatternId) {
+        transaction = transaction.link({ nextDayPattern: nextDayPatternId });
+      }
+
+      return transaction;
+    })
+  );
 };

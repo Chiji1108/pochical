@@ -9,17 +9,17 @@ import {
   TextField,
   useThemeColor,
 } from "heroui-native";
-import { useSession } from "jazz-tools/react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, View } from "react-native";
 import { AppHeader } from "@/components/navigation/app-header";
+import { useCurrentUserId } from "@/lib/instant";
 import { api as convexApi } from "../../../convex/_generated/api";
 
 const INVALID_INVITE_MESSAGE = "この招待リンクは無効です";
 
 export default function InviteScreen() {
   const router = useRouter();
-  const session = useSession();
+  const currentUserId = useCurrentUserId();
   const accentForegroundColor = useThemeColor("accent-foreground");
   const { inviteCode } = useLocalSearchParams<{ inviteCode: string }>();
   const normalizedInviteCode =
@@ -31,7 +31,7 @@ export default function InviteScreen() {
   const invite = useQuery(
     convexApi.invites.preview,
     normalizedInviteCode
-      ? { inviteCode: normalizedInviteCode, jazzUserId: session?.user_id }
+      ? { inviteCode: normalizedInviteCode, instantUserId: currentUserId }
       : "skip"
   );
   const joinInvite = useMutation(convexApi.invites.join);
@@ -55,7 +55,7 @@ export default function InviteScreen() {
       return;
     }
 
-    if (!session) {
+    if (!currentUserId) {
       Alert.alert("参加できません", "ユーザー情報の準備ができていません");
       return;
     }
@@ -72,7 +72,7 @@ export default function InviteScreen() {
       const result = await joinInvite({
         displayName: trimmedDisplayName,
         inviteCode: normalizedInviteCode,
-        jazzUserId: session.user_id,
+        instantUserId: currentUserId,
       });
       router.replace(`/group?groupId=${result.groupId}`);
     } catch (error) {

@@ -12,7 +12,6 @@ import {
   Text,
   useToast,
 } from "heroui-native";
-import { useAll, useDb, useSession } from "jazz-tools/react-native";
 import { useMemo, useRef, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -27,9 +26,9 @@ import {
   getCalendarWeekdayHighlightColor,
   getWeeksOfMonth,
 } from "@/lib/date";
+import { useCurrentUserId, useOwnWorkData } from "@/lib/instant";
 import { cn } from "@/lib/utils";
 import { deleteWorkData } from "@/lib/work-data-actions";
-import { app } from "@/schema";
 import { api as convexApi } from "../../../convex/_generated/api";
 
 type WeekStartOption = {
@@ -72,10 +71,8 @@ const getOrderedHighlightTargets = (
 };
 
 export default function Settings() {
-  const db = useDb();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const session = useSession();
   const { toast } = useToast();
   const leaveAllGroupsMutation = useMutation(
     convexApi.groups.leaveAllForCurrentUser
@@ -84,41 +81,18 @@ export default function Settings() {
   const [isResettingAppData, setIsResettingAppData] = useState(false);
   const { settings, setCalendarHighlightTargets, setWeekStartsOn } =
     useAppSettings();
-  const currentUserId = session?.user_id ?? "";
-  const patterns =
-    useAll(
-      currentUserId
-        ? app.shiftPatterns.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
-  const shifts =
-    useAll(
-      currentUserId
-        ? app.shifts.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
-  const dayNotes =
-    useAll(
-      currentUserId
-        ? app.dayNotes.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
-  const members =
-    useAll(
-      currentUserId
-        ? app.members.where({ $createdBy: currentUserId })
-        : undefined
-    ) ?? [];
+  const currentUserId = useCurrentUserId();
+  const { dayNotes, members, patterns, shifts } = useOwnWorkData(currentUserId);
   const selectedWeekStartOption = WEEK_START_OPTIONS.find(
     (option) => option.id === settings.weekStartsOn
   );
   const selectedHighlightKeys = new Set<string>(
     settings.calendarHighlightTargets
   );
-  const isDangerActionDisabled = !session || isResettingAppData;
+  const isDangerActionDisabled = !currentUserId || isResettingAppData;
 
   const confirmDeleteWorkData = () => {
-    if (!session) {
+    if (!currentUserId) {
       return;
     }
 
@@ -130,7 +104,7 @@ export default function Settings() {
         {
           onPress: async () => {
             try {
-              await deleteWorkData(db, {
+              await deleteWorkData({
                 dayNotes,
                 members,
                 patterns,
@@ -159,7 +133,7 @@ export default function Settings() {
   };
 
   const confirmResetAppData = () => {
-    if (!(session && !isResettingAppDataRef.current)) {
+    if (!(currentUserId && !isResettingAppDataRef.current)) {
       return;
     }
 
@@ -174,13 +148,13 @@ export default function Settings() {
             setIsResettingAppData(true);
 
             try {
-              await deleteWorkData(db, {
+              await deleteWorkData({
                 dayNotes,
                 members,
                 patterns,
                 shifts,
               });
-              await leaveAllGroupsMutation({ jazzUserId: session.user_id });
+              await leaveAllGroupsMutation({ instantUserId: currentUserId });
               await deleteItemAsync(SELECTED_GROUP_STORAGE_KEY);
               router.replace("/settings");
               toast.show({
