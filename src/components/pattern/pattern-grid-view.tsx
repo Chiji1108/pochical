@@ -23,6 +23,7 @@ import {
   type DayNote,
   db,
   type InstantTransaction,
+  type Member,
   type Pattern,
   type Shift,
   useCurrentUserId,
@@ -41,6 +42,7 @@ type PatternGridViewProps = {
   onSelectNextDay: () => void;
   onShouldStayAfterShiftSaved?: (savedDates: Date[]) => boolean;
   onShiftSaved?: (date: Date) => void;
+  members: Member[];
   patterns: Pattern[];
   selectedDate: Date;
   selectedDateDayNote?: DayNote;
@@ -57,6 +59,7 @@ export function PatternGridView({
   onSelectNextDay,
   onShouldStayAfterShiftSaved,
   onShiftSaved,
+  members,
   patterns,
   selectedDate,
   selectedDateDayNote,
@@ -90,7 +93,7 @@ export function PatternGridView({
     detailScrollOffsetY.value = event.nativeEvent.contentOffset.y;
   };
 
-  async function handlePatternPress(pattern: Pattern) {
+  function handlePatternPress(pattern: Pattern) {
     if (!currentUserId) {
       return;
     }
@@ -143,19 +146,18 @@ export function PatternGridView({
       upsertShift(nextDayPattern, nextShiftStartDate);
     }
 
-    await db.transact(transactions);
     onShiftSaved?.(shiftStartDate);
 
-    if (!isDetailInputMode) {
-      const hasNextDayPattern = Boolean(pattern.nextDayPattern);
-      const savedDates = hasNextDayPattern
-        ? [shiftStartDate, nextShiftStartDate]
-        : [shiftStartDate];
+    const hasNextDayPattern = Boolean(pattern.nextDayPattern);
+    const savedDates = hasNextDayPattern
+      ? [shiftStartDate, nextShiftStartDate]
+      : [shiftStartDate];
 
-      if (!onShouldStayAfterShiftSaved?.(savedDates)) {
-        onSelectDate(addDays(shiftStartDate, hasNextDayPattern ? 2 : 1));
-      }
+    if (!(isDetailInputMode || onShouldStayAfterShiftSaved?.(savedDates))) {
+      onSelectDate(addDays(shiftStartDate, hasNextDayPattern ? 2 : 1));
     }
+
+    db.transact(transactions).catch(() => undefined);
 
     selectionAsync().catch(() => {
       // Haptics can be unavailable depending on the device or platform.
@@ -243,6 +245,7 @@ export function PatternGridView({
             style={detailInputStyle}
           >
             <ShiftDetailInputPanel
+              members={members}
               onSelectNextDay={onSelectNextDay}
               selectedDate={selectedDate}
               selectedDateDayNote={selectedDateDayNote}

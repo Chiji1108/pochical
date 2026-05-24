@@ -80,30 +80,26 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
     opacity: detailGestureActive.value,
   }));
 
-  const handleNextAction = async () => {
+  const handleNextAction = () => {
     if (hasSelectedDateShift) {
-      await db.transact(
+      db.transact(
         selectedDateShifts.map((shift) => db.tx.shifts[shift.id].delete())
-      );
+      ).catch(() => undefined);
     }
 
     onSelectNextDay();
 
-    try {
-      await selectionAsync();
-    } catch {
+    selectionAsync().catch(() => {
       // Haptics can be unavailable depending on the device or platform.
-    }
+    });
   };
 
-  const handleToggleShiftInputMode = async () => {
+  const handleToggleShiftInputMode = () => {
     onToggleShiftInputMode();
 
-    try {
-      await selectionAsync();
-    } catch {
+    selectionAsync().catch(() => {
       // Haptics can be unavailable depending on the device or platform.
-    }
+    });
   };
 
   return (

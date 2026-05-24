@@ -618,6 +618,7 @@ export default function Index() {
                   detailScrollOffsetY={detailScrollOffsetY}
                   detailTransitionProgress={detailPageProgress}
                   isDetailInputMode={isDetailInputMode}
+                  members={members}
                   onSelectDate={selectDateImmediately}
                   onSelectNextDay={selectNextDay}
                   onShiftSaved={markShiftInputActivity}

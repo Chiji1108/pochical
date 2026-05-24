@@ -72,7 +72,7 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
             className="h-10 w-10"
             isDisabled={isExportingMonth}
             isIconOnly
-            onPress={async () => {
+            onPress={() => {
               if (onOpenSaveActions) {
                 onOpenSaveActions();
               } else if (onExportMonth) {
@@ -81,11 +81,9 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
                 onOpenImageExport?.();
               }
 
-              try {
-                await selectionAsync();
-              } catch {
+              selectionAsync().catch(() => {
                 // Haptics can be unavailable depending on the device or platform.
-              }
+              });
             }}
             size="sm"
             variant="ghost"
@@ -103,14 +101,12 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
         <Button
           accessibilityLabel="今日に戻る"
           isDisabled={!canReturnToToday}
-          onPress={async () => {
+          onPress={() => {
             onPressToday();
 
-            try {
-              await selectionAsync();
-            } catch {
+            selectionAsync().catch(() => {
               // Haptics can be unavailable depending on the device or platform.
-            }
+            });
           }}
           size="sm"
           variant="ghost"

@@ -12,19 +12,22 @@ import {
   TextField,
 } from "heroui-native";
 import { Button } from "heroui-native/button";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
+import useDebounce from "react-use/lib/useDebounce";
 import {
   type DayNote,
   db,
+  type Member,
   type Shift,
   useCurrentUserId,
-  useOwnWorkData,
 } from "@/lib/instant";
 
 const seedMembers = ["佐藤師長", "鈴木主任", "田中先輩"] as const;
+const NOTE_SAVE_DEBOUNCE_MS = 450;
 
 type ShiftDetailInputPanelProps = {
+  members: Member[];
   onSelectNextDay: () => void;
   selectedDate: Date;
   selectedDateDayNote?: DayNote;
@@ -32,6 +35,7 @@ type ShiftDetailInputPanelProps = {
 };
 
 export const ShiftDetailInputPanel = ({
+  members,
   onSelectNextDay,
   selectedDate,
   selectedDateDayNote,
@@ -39,8 +43,8 @@ export const ShiftDetailInputPanel = ({
 }: ShiftDetailInputPanelProps) => {
   const router = useRouter();
   const currentUserId = useCurrentUserId();
-  const { members } = useOwnWorkData(currentUserId);
   const isSignedIn = Boolean(currentUserId);
+  const [noteText, setNoteText] = useState(selectedDateDayNote?.notes ?? "");
   const sortedMembers = useMemo(
     () =>
       [...members].sort((a, b) => {
@@ -49,6 +53,10 @@ export const ShiftDetailInputPanel = ({
       }),
     [members]
   );
+
+  useEffect(() => {
+    setNoteText(selectedDateDayNote?.notes ?? "");
+  }, [selectedDateDayNote?.notes]);
 
   const createSeedMembers = async () => {
     if (!(currentUserId && members.length === 0)) {
@@ -90,7 +98,7 @@ export const ShiftDetailInputPanel = ({
     ]);
   };
 
-  const updateNotes = async (notes: string) => {
+  const saveNotes = async (notes: string) => {
     if (!currentUserId) {
       return;
     }
@@ -119,6 +127,14 @@ export const ShiftDetailInputPanel = ({
       );
     }
   };
+
+  useDebounce(
+    () => {
+      saveNotes(noteText).catch(() => undefined);
+    },
+    NOTE_SAVE_DEBOUNCE_MS,
+    [noteText]
+  );
 
   const handleDeleteShift = async () => {
     if (!(currentUserId && selectedShift)) {
@@ -238,10 +254,10 @@ export const ShiftDetailInputPanel = ({
         <Input
           autoCapitalize="none"
           autoCorrect={false}
-          onChangeText={updateNotes}
+          onChangeText={setNoteText}
           placeholder="メモを入力"
           returnKeyType="done"
-          value={selectedDateDayNote?.notes ?? ""}
+          value={noteText}
         />
         <Description>他のユーザーには共有されません</Description>
       </TextField>

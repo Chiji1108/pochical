@@ -1,6 +1,5 @@
 import {
   getDate,
-  isSameDay,
   isSameMonth,
   isSameWeek,
   isToday,
@@ -9,7 +8,7 @@ import {
 import { selectionAsync } from "expo-haptics";
 import { Text } from "heroui-native";
 import type { FC, ReactNode } from "react";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { Pressable, View } from "react-native";
 import Animated, {
   type SharedValue,
@@ -33,6 +32,8 @@ export type ExportCalendarColorScheme = "dark" | "light";
 type CalendarDateHighlightColor = ReturnType<
   typeof getCalendarDateHighlightColor
 >;
+
+const getDayKey = (date: Date): number => startOfDay(date).getTime();
 
 type CalendarBodyProps = {
   calendarHighlightTargets: CalendarHighlightTarget[];
@@ -71,6 +72,8 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
     () => getWeeksOfMonth(yearMonth, { weekStartsOn }),
     [weekStartsOn, yearMonth]
   );
+  const selectedDateKey = getDayKey(selectedDate);
+  const yearMonthKey = getDayKey(yearMonth);
   const selectedWeekIndex = Math.max(
     0,
     weeks.findIndex((week) => isSameWeek(week, selectedDate, { weekStartsOn }))
@@ -90,53 +93,27 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
   );
 
   const renderDateCell = (date: Date, shouldDimOutOfMonth: boolean) => {
-    const isOutOfMonth = shouldDimOutOfMonth && !isSameMonth(date, yearMonth);
-    const shouldHideDateContent = hideOutOfMonthDates && isOutOfMonth;
-    const isSelectedDate = !isExportMode && isSameDay(date, selectedDate);
-    const highlightColor = getCalendarDateHighlightColor(
-      date,
-      calendarHighlightTargets
-    );
-    const shift = shiftsByDate.get(startOfDay(date).getTime());
+    const dateKey = getDayKey(date);
+    const shift = shiftsByDate.get(dateKey);
     const shiftPattern = shift?.pattern
       ? (patternsById.get(shift.pattern.id) ?? shift.pattern)
       : undefined;
-    const isDarkExport = isExportMode && exportColorScheme === "dark";
-    const todayClassName = getTodayClassName(isToday(date), isExportMode);
-    return (
-      <Pressable
-        className={cn(
-          "relative flex w-full flex-col items-center rounded-lg p-1",
-          todayClassName,
-          {
-            "opacity-40": isOutOfMonth && !shouldHideDateContent,
-            "bg-foreground/85": isSelectedDate && !shouldHideDateContent,
-          }
-        )}
-        disabled={isExportMode || shouldHideDateContent}
-        onPress={async () => {
-          setSelectedDate(date);
 
-          try {
-            await selectionAsync();
-          } catch {
-            // Haptics can be unavailable depending on the device or platform.
-          }
-        }}
-        style={{ height: CALENDAR_DAY_CELL_HEIGHT }}
-      >
-        {shouldHideDateContent ? null : (
-          <CalendarDateCellContent
-            date={date}
-            highlightColor={highlightColor}
-            isDarkExport={isDarkExport}
-            isExportMode={isExportMode}
-            isSelectedDate={isSelectedDate}
-            shift={shift}
-            shiftPattern={shiftPattern}
-          />
-        )}
-      </Pressable>
+    return (
+      <CalendarDateCell
+        calendarHighlightTargets={calendarHighlightTargets}
+        date={date}
+        dateKey={dateKey}
+        exportColorScheme={exportColorScheme}
+        hideOutOfMonthDates={hideOutOfMonthDates}
+        isExportMode={isExportMode}
+        selectedDateKey={selectedDateKey}
+        setSelectedDate={setSelectedDate}
+        shift={shift}
+        shiftPattern={shiftPattern}
+        shouldDimOutOfMonth={shouldDimOutOfMonth}
+        yearMonthKey={yearMonthKey}
+      />
     );
   };
 
@@ -164,6 +141,99 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
     </View>
   );
 };
+
+type CalendarDateCellProps = {
+  calendarHighlightTargets: CalendarHighlightTarget[];
+  date: Date;
+  dateKey: number;
+  exportColorScheme: ExportCalendarColorScheme;
+  hideOutOfMonthDates: boolean;
+  isExportMode: boolean;
+  selectedDateKey: number;
+  setSelectedDate: (date: Date) => void;
+  shift?: CalendarShiftSummary;
+  shiftPattern?: Pattern;
+  shouldDimOutOfMonth: boolean;
+  yearMonthKey: number;
+};
+
+const CalendarDateCell: FC<CalendarDateCellProps> = memo(
+  ({
+    calendarHighlightTargets,
+    date,
+    dateKey,
+    exportColorScheme,
+    hideOutOfMonthDates,
+    isExportMode,
+    selectedDateKey,
+    setSelectedDate,
+    shift,
+    shiftPattern,
+    shouldDimOutOfMonth,
+    yearMonthKey,
+  }) => {
+    const yearMonth = new Date(yearMonthKey);
+    const isOutOfMonth = shouldDimOutOfMonth && !isSameMonth(date, yearMonth);
+    const shouldHideDateContent = hideOutOfMonthDates && isOutOfMonth;
+    const isSelectedDate = !isExportMode && dateKey === selectedDateKey;
+    const highlightColor = getCalendarDateHighlightColor(
+      date,
+      calendarHighlightTargets
+    );
+    const isDarkExport = isExportMode && exportColorScheme === "dark";
+    const todayClassName = getTodayClassName(isToday(date), isExportMode);
+
+    return (
+      <Pressable
+        className={cn(
+          "relative flex w-full flex-col items-center rounded-lg p-1",
+          todayClassName,
+          {
+            "opacity-40": isOutOfMonth && !shouldHideDateContent,
+            "bg-foreground/85": isSelectedDate && !shouldHideDateContent,
+          }
+        )}
+        disabled={isExportMode || shouldHideDateContent}
+        onPress={() => {
+          setSelectedDate(date);
+
+          selectionAsync().catch(() => {
+            // Haptics can be unavailable depending on the device or platform.
+          });
+        }}
+        style={{ height: CALENDAR_DAY_CELL_HEIGHT }}
+      >
+        {shouldHideDateContent ? null : (
+          <CalendarDateCellContent
+            date={date}
+            highlightColor={highlightColor}
+            isDarkExport={isDarkExport}
+            isExportMode={isExportMode}
+            isSelectedDate={isSelectedDate}
+            shift={shift}
+            shiftPattern={shiftPattern}
+          />
+        )}
+      </Pressable>
+    );
+  },
+  (previous, next) =>
+    previous.calendarHighlightTargets === next.calendarHighlightTargets &&
+    previous.dateKey === next.dateKey &&
+    previous.exportColorScheme === next.exportColorScheme &&
+    previous.hideOutOfMonthDates === next.hideOutOfMonthDates &&
+    previous.isExportMode === next.isExportMode &&
+    previous.selectedDateKey === next.selectedDateKey &&
+    previous.setSelectedDate === next.setSelectedDate &&
+    previous.shift?.hasNotes === next.shift?.hasNotes &&
+    previous.shiftPattern?.countsAsDayOff ===
+      next.shiftPattern?.countsAsDayOff &&
+    previous.shiftPattern?.emoji === next.shiftPattern?.emoji &&
+    previous.shiftPattern?.id === next.shiftPattern?.id &&
+    previous.shiftPattern?.name === next.shiftPattern?.name &&
+    previous.shouldDimOutOfMonth === next.shouldDimOutOfMonth &&
+    previous.yearMonthKey === next.yearMonthKey
+);
 
 type CalendarDateCellContentProps = {
   date: Date;
