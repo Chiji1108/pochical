@@ -2,17 +2,23 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useRouter } from "expo-router";
 import { SymbolView, type SymbolViewProps } from "expo-symbols";
-import { Button, Card, ListGroup, Separator, Text } from "heroui-native";
+import {
+  Button,
+  Card,
+  ListGroup,
+  Separator,
+  Text,
+  useThemeColor,
+} from "heroui-native";
 import type { FC } from "react";
 import { useEffect, useRef, useState } from "react";
-import { ScrollView, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   type InviteDetails,
   InviteDialog,
 } from "@/components/group/group-dialogs";
 import { useCurrentUserId } from "@/lib/instant";
-import { cn } from "@/lib/utils";
 import { api as convexApi } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 
@@ -85,6 +91,11 @@ export const GroupDetailView = ({
   const router = useRouter();
   const currentUserId = useCurrentUserId();
   const autoInviteShownGroupIdRef = useRef("");
+  const [backgroundColor, dangerColor, dangerForegroundColor] = useThemeColor([
+    "background",
+    "danger",
+    "danger-foreground",
+  ]);
   const [inviteDetails, setInviteDetails] = useState<InviteDetails>();
   const group = useQuery(
     convexApi.groups.getDetail,
@@ -112,12 +123,12 @@ export const GroupDetailView = ({
   }, [group, onAutoInviteShown, showInvite]);
 
   if (!groupId || group === undefined) {
-    return <View className="flex-1 bg-background" />;
+    return <View style={[styles.flex, { backgroundColor }]} />;
   }
 
   if (!group) {
     return (
-      <View className="flex-1 bg-background">
+      <View style={[styles.flex, { backgroundColor }]}>
         <GroupDetailHeader
           includeTopInset={!isEmbedded}
           leftAction={
@@ -135,8 +146,8 @@ export const GroupDetailView = ({
           }
           title="グループ"
         />
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-base" color="muted">
+        <View style={styles.centerState}>
+          <Text color="muted" style={styles.centerStateText}>
             グループが見つかりません
           </Text>
         </View>
@@ -170,7 +181,7 @@ export const GroupDetailView = ({
     });
 
   return (
-    <View className="flex-1 bg-background">
+    <View style={[styles.flex, { backgroundColor }]}>
       <GroupDetailHeader
         includeTopInset={!isEmbedded}
         leftAction={
@@ -201,13 +212,8 @@ export const GroupDetailView = ({
         titleAlign="left"
       />
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{
-          gap: 16,
-          paddingBottom: 24,
-          paddingHorizontal: 16,
-          paddingTop: 16,
-        }}
+        contentContainerStyle={styles.scrollContent}
+        style={styles.flex}
       >
         <View>
           <ListGroup>
@@ -262,19 +268,23 @@ export const GroupDetailView = ({
                 ) : null}
               </ListGroup.ItemContent>
               <ChatItemSuffix
+                dangerColor={dangerColor}
+                dangerForegroundColor={dangerForegroundColor}
                 latestAt={group.groupLastMessageCreatedAt}
                 unreadCount={group.groupUnreadCount}
               />
             </ListGroup.Item>
           </ListGroup>
         </View>
-        <View className="gap-3">
-          <Text className="font-semibold text-lg">個人チャット</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>個人チャット</Text>
           {directMembers.length > 0 ? (
             <ListGroup>
               {directMembers.map((member, index) => (
                 <View key={member._id}>
                   <DirectChatListItem
+                    dangerColor={dangerColor}
+                    dangerForegroundColor={dangerForegroundColor}
                     member={member}
                     onOpen={() => {
                       router.push(
@@ -290,7 +300,7 @@ export const GroupDetailView = ({
             </ListGroup>
           ) : (
             <Card className="p-4">
-              <Text className="text-sm" color="muted">
+              <Text color="muted" style={styles.emptyCardText}>
                 個人チャットできるメンバーがいません
               </Text>
             </Card>
@@ -312,14 +322,14 @@ export const GroupDetailView = ({
 const GroupDetailHeaderActionButton: FC<{
   action?: GroupDetailHeaderAction;
 }> = ({ action }) => (
-  <View className="h-10 w-10">
+  <View style={styles.headerActionSlot}>
     {action ? (
       <Button
         accessibilityLabel={action.accessibilityLabel}
-        className="h-10 w-10"
         isIconOnly
         onPress={action.onPress}
         size="sm"
+        style={styles.headerActionButton}
         variant="ghost"
       >
         <SymbolView name={action.icon} size={18} />
@@ -337,36 +347,49 @@ const GroupDetailHeader: FC<GroupDetailHeaderProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const isLeftAligned = titleAlign === "left";
+  const [backgroundColor, borderColor] = useThemeColor([
+    "background",
+    "border",
+  ]);
 
   return (
     <View
-      className="border-border/60 border-b bg-background"
-      style={{ paddingTop: includeTopInset ? insets.top : 0 }}
+      style={[
+        styles.header,
+        {
+          backgroundColor,
+          borderColor,
+          paddingTop: includeTopInset ? insets.top : 0,
+        },
+      ]}
     >
-      <View className="h-14 flex-row items-center px-3">
+      <View style={styles.headerContent}>
         {isLeftAligned && !leftAction ? null : (
           <View
-            className={cn(
-              isLeftAligned ? "items-start" : "min-w-20 flex-1 items-start"
-            )}
+            style={
+              isLeftAligned
+                ? styles.headerLeftCompact
+                : styles.headerSideExpanded
+            }
           >
             <GroupDetailHeaderActionButton action={leftAction} />
           </View>
         )}
         <Text
-          className={cn(
-            "min-w-0 px-3 font-bold text-lg",
-            isLeftAligned ? "flex-1 text-left" : "text-center"
-          )}
           numberOfLines={1}
+          style={[
+            styles.headerTitle,
+            isLeftAligned ? styles.leftHeaderTitle : styles.centerHeaderTitle,
+          ]}
         >
           {title}
         </Text>
         <View
-          className={cn(
-            "items-end",
-            isLeftAligned ? undefined : "min-w-20 flex-1"
-          )}
+          style={
+            isLeftAligned
+              ? styles.headerRightCompact
+              : styles.headerRightExpanded
+          }
         >
           <GroupDetailHeaderActionButton action={rightAction} />
         </View>
@@ -376,9 +399,13 @@ const GroupDetailHeader: FC<GroupDetailHeaderProps> = ({
 };
 
 const DirectChatListItem = ({
+  dangerColor,
+  dangerForegroundColor,
   member,
   onOpen,
 }: {
+  dangerColor: string;
+  dangerForegroundColor: string;
   member: GroupMember;
   onOpen: () => void;
 }) => (
@@ -403,6 +430,8 @@ const DirectChatListItem = ({
       ) : null}
     </ListGroup.ItemContent>
     <ChatItemSuffix
+      dangerColor={dangerColor}
+      dangerForegroundColor={dangerForegroundColor}
       latestAt={member.lastMessageCreatedAt}
       unreadCount={member.unreadCount}
     />
@@ -410,9 +439,13 @@ const DirectChatListItem = ({
 );
 
 const ChatItemSuffix = ({
+  dangerColor,
+  dangerForegroundColor,
   latestAt,
   unreadCount,
 }: {
+  dangerColor: string;
+  dangerForegroundColor: string;
   latestAt?: number;
   unreadCount: number;
 }) => {
@@ -420,11 +453,25 @@ const ChatItemSuffix = ({
 
   return (
     <ListGroup.ItemSuffix>
-      <View className="flex-row items-center gap-2">
-        <View className="min-w-10 items-end gap-1">
-          {unreadCount > 0 ? <UnreadBadge count={unreadCount} /> : null}
+      <View style={styles.chatSuffix}>
+        <View style={styles.chatSuffixContent}>
+          {unreadCount > 0 ? (
+            <View style={styles.chatUnreadBadgeSlot}>
+              <UnreadBadge
+                color={dangerColor}
+                count={unreadCount}
+                foregroundColor={dangerForegroundColor}
+              />
+            </View>
+          ) : null}
           {latestTime ? (
-            <Text className="text-[11px]" color="muted">
+            <Text
+              color="muted"
+              style={[
+                styles.latestTime,
+                unreadCount > 0 ? styles.latestTimeBelowBadge : null,
+              ]}
+            >
               {latestTime}
             </Text>
           ) : null}
@@ -435,10 +482,137 @@ const ChatItemSuffix = ({
   );
 };
 
-const UnreadBadge = ({ count }: { count: number }) => (
-  <View className="min-w-5 items-center rounded-full bg-danger px-1.5 py-0.5">
-    <Text className="font-semibold text-[11px] text-danger-foreground">
+const UnreadBadge = ({
+  color,
+  count,
+  foregroundColor,
+}: {
+  color: string;
+  count: number;
+  foregroundColor: string;
+}) => (
+  <View style={[styles.unreadBadge, { backgroundColor: color }]}>
+    <Text style={[styles.unreadBadgeText, { color: foregroundColor }]}>
       {count > 99 ? "99+" : count}
     </Text>
   </View>
 );
+
+const styles = StyleSheet.create({
+  centerHeaderTitle: {
+    textAlign: "center",
+  },
+  centerState: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  centerStateText: {
+    fontSize: 16,
+    textAlign: "center",
+  },
+  chatSuffix: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  chatSuffixContent: {
+    alignItems: "flex-end",
+    height: 44,
+    minWidth: 40,
+    position: "relative",
+  },
+  chatUnreadBadgeSlot: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+  },
+  emptyCardText: {
+    fontSize: 14,
+  },
+  flex: {
+    flex: 1,
+  },
+  header: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  headerActionButton: {
+    height: 40,
+    width: 40,
+  },
+  headerActionSlot: {
+    height: 40,
+    width: 40,
+  },
+  headerContent: {
+    alignItems: "center",
+    flexDirection: "row",
+    height: 56,
+    paddingHorizontal: 12,
+  },
+  headerLeftCompact: {
+    alignItems: "flex-start",
+  },
+  headerRightCompact: {
+    alignItems: "flex-end",
+  },
+  headerRightExpanded: {
+    alignItems: "flex-end",
+    flex: 1,
+    minWidth: 80,
+  },
+  headerSideExpanded: {
+    alignItems: "flex-start",
+    flex: 1,
+    minWidth: 80,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    minWidth: 0,
+    paddingHorizontal: 12,
+  },
+  latestTime: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    fontSize: 11,
+  },
+  latestTimeBelowBadge: {
+    bottom: 0,
+    top: "auto",
+  },
+  leftHeaderTitle: {
+    flex: 1,
+    textAlign: "left",
+  },
+  scrollContent: {
+    gap: 16,
+    paddingBottom: 24,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  section: {
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  unreadBadge: {
+    alignItems: "center",
+    borderRadius: 999,
+    height: 20,
+    justifyContent: "center",
+    minWidth: 20,
+    paddingHorizontal: 6,
+  },
+  unreadBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    includeFontPadding: false,
+    lineHeight: 13,
+    textAlign: "center",
+  },
+});

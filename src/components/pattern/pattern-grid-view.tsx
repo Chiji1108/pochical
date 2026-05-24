@@ -3,13 +3,14 @@ import { addDays, isSameDay, startOfDay } from "date-fns";
 import { selectionAsync } from "expo-haptics";
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { Text } from "heroui-native";
+import { Text, useThemeColor } from "heroui-native";
 import { Button } from "heroui-native/button";
 import { useMemo } from "react";
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Platform,
+  StyleSheet,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -69,6 +70,7 @@ export function PatternGridView({
   const router = useRouter();
   const currentUserId = useCurrentUserId();
   const { width } = useWindowDimensions();
+  const patternButtonBackgroundColor = useThemeColor("surface-secondary");
   const sortedPatterns = useMemo(
     () => [...patterns].sort((a, b) => a.orderIndex - b.orderIndex),
     [patterns]
@@ -172,9 +174,10 @@ export function PatternGridView({
         (Platform.OS === "android" ? ANDROID_KEYBOARD_BOTTOM_OFFSET_EXTRA : 0)
       }
       bounces={false}
-      className="flex-1"
-      contentContainerClassName="px-3"
-      contentContainerStyle={{ paddingBottom: bottomContentPadding }}
+      contentContainerStyle={[
+        styles.scrollContent,
+        { paddingBottom: bottomContentPadding },
+      ]}
       contentInsetAdjustmentBehavior="automatic"
       enabled={isDetailInputMode}
       keyboardShouldPersistTaps="handled"
@@ -183,35 +186,38 @@ export function PatternGridView({
       overScrollMode="never"
       scrollEnabled={isDetailInputMode}
       scrollEventThrottle={16}
+      style={styles.flex}
     >
       {sortedPatterns.length > 0 ? (
-        <View className="gap-2">
+        <View style={styles.patternSection}>
           <View>
-            <View className="flex-row flex-wrap">
+            <View style={styles.patternGrid}>
               {sortedPatterns.map((pattern) => (
                 <View
-                  className="p-1"
                   key={pattern.id}
-                  style={{ width: cellWidth }}
+                  style={[styles.patternCell, { width: cellWidth }]}
                 >
                   <Button
                     accessibilityLabel={`${pattern.name}を入力`}
-                    className="h-15 w-full flex-col justify-center gap-1 rounded-lg bg-foreground/5 px-1 py-2"
                     isDisabled={!currentUserId}
                     onPress={() => {
                       handlePatternPress(pattern);
                     }}
+                    style={[
+                      styles.patternButton,
+                      { backgroundColor: patternButtonBackgroundColor },
+                    ]}
                     variant="ghost"
                   >
                     <Button.Label
-                      className="text-center text-sm leading-5"
                       numberOfLines={1}
+                      style={styles.patternEmojiLabel}
                     >
                       {pattern.emoji}
                     </Button.Label>
                     <Button.Label
-                      className="text-center text-sm leading-none"
                       numberOfLines={1}
+                      style={styles.patternNameLabel}
                     >
                       {pattern.name}
                     </Button.Label>
@@ -220,9 +226,8 @@ export function PatternGridView({
               ))}
             </View>
           </View>
-          <View className="flex-row items-center justify-end gap-2">
+          <View style={styles.actionsRow}>
             <Button
-              className="self-center"
               onPress={() => {
                 router.push("/patterns");
               }}
@@ -254,7 +259,7 @@ export function PatternGridView({
           </Animated.View>
         </View>
       ) : (
-        <View className="items-center py-6">
+        <View style={styles.emptyState}>
           <Button
             isDisabled={!currentUserId}
             onPress={() => {
@@ -275,7 +280,7 @@ export function PatternGridView({
             <Button.Label>シフトパターンを追加</Button.Label>
           </Button>
           {currentUserId ? null : (
-            <Text className="mt-3 text-sm" color="muted">
+            <Text color="muted" style={styles.signedOutHint}>
               接続後に作成できます
             </Text>
           )}
@@ -284,3 +289,57 @@ export function PatternGridView({
     </KeyboardAwareScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  actionsRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "flex-end",
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 24,
+  },
+  flex: {
+    flex: 1,
+  },
+  patternButton: {
+    alignItems: "center",
+    borderRadius: 8,
+    flexDirection: "column",
+    gap: 4,
+    height: 60,
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    width: "100%",
+  },
+  patternCell: {
+    padding: 4,
+  },
+  patternEmojiLabel: {
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+  },
+  patternGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  patternNameLabel: {
+    fontSize: 14,
+    lineHeight: 14,
+    textAlign: "center",
+  },
+  patternSection: {
+    gap: 8,
+  },
+  scrollContent: {
+    paddingHorizontal: 12,
+  },
+  signedOutHint: {
+    fontSize: 14,
+    marginTop: 12,
+  },
+});

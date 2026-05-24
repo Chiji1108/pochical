@@ -10,12 +10,14 @@ import {
   useThemeColor,
 } from "heroui-native";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, View } from "react-native";
+import { Alert, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { AppHeader } from "@/components/navigation/app-header";
 import { useCurrentUserId } from "@/lib/instant";
 import { api as convexApi } from "../../../convex/_generated/api";
 
 const INVALID_INVITE_MESSAGE = "この招待リンクは無効です";
+const KEYBOARD_BOTTOM_OFFSET = 24;
 
 export default function InviteScreen() {
   const router = useRouter();
@@ -167,20 +169,28 @@ export default function InviteScreen() {
         }}
         title="グループ招待"
       />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      <KeyboardAwareScrollView
+        bottomOffset={KEYBOARD_BOTTOM_OFFSET}
         className="flex-1"
+        contentContainerStyle={{
+          flexGrow: 1,
+          gap: 24,
+          justifyContent: "center",
+          paddingHorizontal: 24,
+          paddingVertical: 24,
+        }}
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+        mode="layout"
       >
-        <View className="flex-1 justify-center gap-6 px-6">
-          <View className="gap-2">
-            <Text className="font-bold text-2xl">{titleText}</Text>
-            <Text className="text-base" color="muted">
-              {description}
-            </Text>
-          </View>
-          {formContent}
+        <View className="gap-2">
+          <Text className="font-bold text-2xl">{titleText}</Text>
+          <Text className="text-base" color="muted">
+            {description}
+          </Text>
         </View>
-      </KeyboardAvoidingView>
+        {formContent}
+      </KeyboardAwareScrollView>
     </View>
   );
 }

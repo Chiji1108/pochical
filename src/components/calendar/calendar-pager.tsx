@@ -20,6 +20,7 @@ type CalendarPagerProps = {
   calendarHighlightTargets: CalendarHighlightTarget[];
   detailTransitionProgress?: SharedValue<number>;
   isDetailInputMode: boolean;
+  onPressSelectedDate?: () => void;
   onTargetDateHandled?: () => void;
   patternsById: ReadonlyMap<string, Pattern>;
   selectedDate: Date;
@@ -36,6 +37,7 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
   calendarHighlightTargets,
   detailTransitionProgress,
   isDetailInputMode,
+  onPressSelectedDate,
   onTargetDateHandled,
   patternsById,
   selectedDate,
@@ -93,6 +95,7 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
           calendarHighlightTargets={calendarHighlightTargets}
           detailTransitionProgress={transitionProgress}
           isExportMode={isExportMode}
+          onPressSelectedDate={onPressSelectedDate}
           onTargetDateHandled={
             isDetailInputMode ? undefined : onTargetDateHandled
           }
@@ -123,6 +126,7 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
         <WeekPager
           calendarHighlightTargets={calendarHighlightTargets}
           isScrollSelectionEnabled={isDetailInputMode && !isExportMode}
+          onPressSelectedDate={onPressSelectedDate}
           onTargetDateHandled={
             isDetailInputMode ? onTargetDateHandled : undefined
           }

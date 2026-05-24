@@ -24,6 +24,7 @@ const MONTH_APPEND_THRESHOLD = 1;
 type MonthPagerProps = {
   calendarHighlightTargets: CalendarHighlightTarget[];
   detailTransitionProgress?: SharedValue<number>;
+  onPressSelectedDate?: () => void;
   onTargetDateHandled?: () => void;
   patternsById: ReadonlyMap<string, Pattern>;
   selectedDate: Date;
@@ -65,6 +66,7 @@ const findMonthIndex = (months: Date[], targetMonth: Date): number =>
 export const MonthPager: FC<MonthPagerProps> = ({
   calendarHighlightTargets,
   detailTransitionProgress,
+  onPressSelectedDate,
   onTargetDateHandled,
   patternsById,
   selectedDate,
@@ -265,6 +267,7 @@ export const MonthPager: FC<MonthPagerProps> = ({
           calendarHighlightTargets={calendarHighlightTargets}
           detailTransitionProgress={detailTransitionProgress}
           isExportMode={isExportMode}
+          onPressSelectedDate={onPressSelectedDate}
           patternsById={patternsById}
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
@@ -278,6 +281,7 @@ export const MonthPager: FC<MonthPagerProps> = ({
       detailTransitionProgress,
       calendarHighlightTargets,
       isExportMode,
+      onPressSelectedDate,
       pageWidth,
       patternsById,
       selectedDate,

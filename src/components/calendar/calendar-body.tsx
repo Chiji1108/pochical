@@ -6,10 +6,10 @@ import {
   startOfDay,
 } from "date-fns";
 import { selectionAsync } from "expo-haptics";
-import { Text } from "heroui-native";
+import { Text, useThemeColor } from "heroui-native";
 import type { FC, ReactNode } from "react";
 import { memo, useMemo } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   type SharedValue,
   useAnimatedStyle,
@@ -35,10 +35,17 @@ type CalendarDateHighlightColor = ReturnType<
 
 const getDayKey = (date: Date): number => startOfDay(date).getTime();
 
+type CalendarThemeColors = {
+  background: string;
+  foreground: string;
+  surfaceSecondary: string;
+};
+
 type CalendarBodyProps = {
   calendarHighlightTargets: CalendarHighlightTarget[];
   detailTransitionProgress?: SharedValue<number>;
   patternsById: ReadonlyMap<string, Pattern>;
+  onPressSelectedDate?: () => void;
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
   shiftsByDate: ReadonlyMap<number, CalendarShiftSummary>;
@@ -64,6 +71,7 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
   exportColorScheme = "light",
   hideOutOfMonthDates = false,
   isExportMode = false,
+  onPressSelectedDate,
   weekDate,
 }) => {
   const fallbackProgress = useSharedValue(0);
@@ -71,6 +79,16 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
   const weeks = useMemo(
     () => getWeeksOfMonth(yearMonth, { weekStartsOn }),
     [weekStartsOn, yearMonth]
+  );
+  const [backgroundColor, foregroundColor, surfaceSecondaryColor] =
+    useThemeColor(["background", "foreground", "surface-secondary"]);
+  const themeColors = useMemo<CalendarThemeColors>(
+    () => ({
+      background: backgroundColor,
+      foreground: foregroundColor,
+      surfaceSecondary: surfaceSecondaryColor,
+    }),
+    [backgroundColor, foregroundColor, surfaceSecondaryColor]
   );
   const selectedDateKey = getDayKey(selectedDate);
   const yearMonthKey = getDayKey(yearMonth);
@@ -107,11 +125,13 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
         exportColorScheme={exportColorScheme}
         hideOutOfMonthDates={hideOutOfMonthDates}
         isExportMode={isExportMode}
+        onPressSelectedDate={onPressSelectedDate}
         selectedDateKey={selectedDateKey}
         setSelectedDate={setSelectedDate}
         shift={shift}
         shiftPattern={shiftPattern}
         shouldDimOutOfMonth={shouldDimOutOfMonth}
+        themeColors={themeColors}
         yearMonthKey={yearMonthKey}
       />
     );
@@ -149,11 +169,13 @@ type CalendarDateCellProps = {
   exportColorScheme: ExportCalendarColorScheme;
   hideOutOfMonthDates: boolean;
   isExportMode: boolean;
+  onPressSelectedDate?: () => void;
   selectedDateKey: number;
   setSelectedDate: (date: Date) => void;
   shift?: CalendarShiftSummary;
   shiftPattern?: Pattern;
   shouldDimOutOfMonth: boolean;
+  themeColors: CalendarThemeColors;
   yearMonthKey: number;
 };
 
@@ -165,11 +187,13 @@ const CalendarDateCell: FC<CalendarDateCellProps> = memo(
     exportColorScheme,
     hideOutOfMonthDates,
     isExportMode,
+    onPressSelectedDate,
     selectedDateKey,
     setSelectedDate,
     shift,
     shiftPattern,
     shouldDimOutOfMonth,
+    themeColors,
     yearMonthKey,
   }) => {
     const yearMonth = new Date(yearMonthKey);
@@ -181,27 +205,35 @@ const CalendarDateCell: FC<CalendarDateCellProps> = memo(
       calendarHighlightTargets
     );
     const isDarkExport = isExportMode && exportColorScheme === "dark";
-    const todayClassName = getTodayClassName(isToday(date), isExportMode);
+    const todayStyle = getTodayStyle(isToday(date), isExportMode, themeColors);
+    const handlePress = () => {
+      if (isSelectedDate) {
+        onPressSelectedDate?.();
+        return;
+      }
+
+      setSelectedDate(date);
+
+      selectionAsync().catch(() => {
+        // Haptics can be unavailable depending on the device or platform.
+      });
+    };
 
     return (
       <Pressable
-        className={cn(
-          "relative flex w-full flex-col items-center rounded-lg p-1",
-          todayClassName,
-          {
-            "opacity-40": isOutOfMonth && !shouldHideDateContent,
-            "bg-foreground/85": isSelectedDate && !shouldHideDateContent,
-          }
-        )}
         disabled={isExportMode || shouldHideDateContent}
-        onPress={() => {
-          setSelectedDate(date);
-
-          selectionAsync().catch(() => {
-            // Haptics can be unavailable depending on the device or platform.
-          });
-        }}
-        style={{ height: CALENDAR_DAY_CELL_HEIGHT }}
+        onPress={handlePress}
+        style={[
+          styles.dateCell,
+          { height: CALENDAR_DAY_CELL_HEIGHT },
+          todayStyle,
+          isOutOfMonth && !shouldHideDateContent
+            ? styles.outOfMonthDateCell
+            : undefined,
+          isSelectedDate && !shouldHideDateContent
+            ? { backgroundColor: themeColors.foreground }
+            : undefined,
+        ]}
       >
         {shouldHideDateContent ? null : (
           <CalendarDateCellContent
@@ -212,6 +244,7 @@ const CalendarDateCell: FC<CalendarDateCellProps> = memo(
             isSelectedDate={isSelectedDate}
             shift={shift}
             shiftPattern={shiftPattern}
+            themeColors={themeColors}
           />
         )}
       </Pressable>
@@ -223,6 +256,7 @@ const CalendarDateCell: FC<CalendarDateCellProps> = memo(
     previous.exportColorScheme === next.exportColorScheme &&
     previous.hideOutOfMonthDates === next.hideOutOfMonthDates &&
     previous.isExportMode === next.isExportMode &&
+    previous.onPressSelectedDate === next.onPressSelectedDate &&
     previous.selectedDateKey === next.selectedDateKey &&
     previous.setSelectedDate === next.setSelectedDate &&
     previous.shift?.hasNotes === next.shift?.hasNotes &&
@@ -232,6 +266,7 @@ const CalendarDateCell: FC<CalendarDateCellProps> = memo(
     previous.shiftPattern?.id === next.shiftPattern?.id &&
     previous.shiftPattern?.name === next.shiftPattern?.name &&
     previous.shouldDimOutOfMonth === next.shouldDimOutOfMonth &&
+    previous.themeColors === next.themeColors &&
     previous.yearMonthKey === next.yearMonthKey
 );
 
@@ -243,6 +278,7 @@ type CalendarDateCellContentProps = {
   isSelectedDate: boolean;
   shift?: CalendarShiftSummary;
   shiftPattern?: Pattern;
+  themeColors: CalendarThemeColors;
 };
 
 const CalendarDateCellContent: FC<CalendarDateCellContentProps> = ({
@@ -253,43 +289,49 @@ const CalendarDateCellContent: FC<CalendarDateCellContentProps> = ({
   isSelectedDate,
   shift,
   shiftPattern,
+  themeColors,
 }) => {
   const isDayOffShift = Boolean(shiftPattern?.countsAsDayOff);
 
   return (
     <>
       {isExportMode && isDayOffShift ? (
-        <View className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        <View style={[styles.dateMarker, styles.dayOffMarker]} />
       ) : null}
       {shift?.hasNotes && !isExportMode ? (
         <View
-          className={cn("absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full", {
-            "bg-background": isSelectedDate,
-            "bg-foreground/70": !isSelectedDate,
-          })}
+          style={[
+            styles.dateMarker,
+            {
+              backgroundColor: isSelectedDate
+                ? themeColors.background
+                : themeColors.foreground,
+            },
+          ]}
         />
       ) : null}
-      <View className="min-h-5 min-w-5 items-center justify-center">
+      <View style={styles.dateLabelBox}>
         <Text
-          className={getDateTextClassName({
+          style={getDateTextStyle({
             highlightColor,
             isDarkExport,
             isExportMode,
             isSelectedDate,
+            themeColors,
           })}
         >
           {getDate(date)}
         </Text>
       </View>
       {shiftPattern ? (
-        <View className="min-w-0 flex-1 items-center justify-center gap-0.5">
-          <Text className="text-center text-sm" numberOfLines={1}>
+        <View style={styles.shiftSummary}>
+          <Text numberOfLines={1} style={styles.shiftEmoji}>
             {shiftPattern.emoji}
           </Text>
           {isExportMode ? (
             <Text
-              className={getShiftNameClassName(isDarkExport, isExportMode)}
               numberOfLines={1}
+              style={getShiftNameStyle(isDarkExport, isExportMode, themeColors)}
             >
               {shiftPattern.name}
             </Text>
@@ -308,47 +350,59 @@ type CalendarAnimatedWeekRowProps = {
   weekStartsOn: WeekStartsOn;
 };
 
-const getTodayClassName = (
+const getTodayStyle = (
   isCurrentDateToday: boolean,
-  isExportMode: boolean
+  isExportMode: boolean,
+  themeColors: CalendarThemeColors
 ) => {
   if (!isCurrentDateToday) {
     return;
   }
 
   if (!isExportMode) {
-    return "bg-foreground/5";
+    return { backgroundColor: themeColors.surfaceSecondary };
   }
 
   return;
 };
 
-const getDateTextClassName = ({
+const getDateTextStyle = ({
   highlightColor,
   isDarkExport,
   isExportMode,
   isSelectedDate,
+  themeColors,
 }: {
   highlightColor: CalendarDateHighlightColor;
   isDarkExport: boolean;
   isExportMode: boolean;
   isSelectedDate: boolean;
-}) =>
-  cn("font-semibold text-xs", {
-    "text-blue-500": !isSelectedDate && highlightColor === "blue",
-    "text-background": isSelectedDate,
-    "text-red-500": !isSelectedDate && highlightColor === "red",
-    "text-zinc-50": isDarkExport && highlightColor === undefined,
-    "text-zinc-950":
-      isExportMode && !isDarkExport && highlightColor === undefined,
-  });
+  themeColors: CalendarThemeColors;
+}) => [
+  styles.dateText,
+  !isSelectedDate && highlightColor === "blue"
+    ? styles.blueDateText
+    : undefined,
+  isSelectedDate ? { color: themeColors.background } : undefined,
+  !isSelectedDate && highlightColor === "red" ? styles.redDateText : undefined,
+  isDarkExport && highlightColor === undefined
+    ? styles.darkExportDateText
+    : undefined,
+  isExportMode && !isDarkExport && highlightColor === undefined
+    ? styles.lightExportDateText
+    : undefined,
+];
 
-const getShiftNameClassName = (isDarkExport: boolean, isExportMode: boolean) =>
-  cn("max-w-full text-center font-medium text-[9px] leading-3", {
-    "text-foreground/75": !isExportMode,
-    "text-zinc-300": isDarkExport,
-    "text-zinc-600": isExportMode && !isDarkExport,
-  });
+const getShiftNameStyle = (
+  isDarkExport: boolean,
+  isExportMode: boolean,
+  themeColors: CalendarThemeColors
+) => [
+  styles.shiftName,
+  isExportMode ? undefined : { color: themeColors.foreground },
+  isDarkExport ? styles.darkExportShiftName : undefined,
+  isExportMode && !isDarkExport ? styles.lightExportShiftName : undefined,
+];
 
 const CalendarAnimatedWeekRow: FC<CalendarAnimatedWeekRowProps> = ({
   children,
@@ -372,3 +426,74 @@ const CalendarAnimatedWeekRow: FC<CalendarAnimatedWeekRowProps> = ({
     </Animated.View>
   );
 };
+
+const styles = StyleSheet.create({
+  blueDateText: {
+    color: "#3b82f6",
+  },
+  darkExportDateText: {
+    color: "#fafafa",
+  },
+  darkExportShiftName: {
+    color: "#d4d4d8",
+  },
+  dateCell: {
+    alignItems: "center",
+    borderRadius: 8,
+    flexDirection: "column",
+    padding: 4,
+    position: "relative",
+    width: "100%",
+  },
+  dateLabelBox: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 20,
+    minWidth: 20,
+  },
+  dateMarker: {
+    borderRadius: 3,
+    height: 6,
+    position: "absolute",
+    right: 6,
+    top: 6,
+    width: 6,
+  },
+  dateText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  dayOffMarker: {
+    backgroundColor: "#10b981",
+  },
+  lightExportDateText: {
+    color: "#09090b",
+  },
+  lightExportShiftName: {
+    color: "#52525b",
+  },
+  outOfMonthDateCell: {
+    opacity: 0.4,
+  },
+  redDateText: {
+    color: "#ef4444",
+  },
+  shiftEmoji: {
+    fontSize: 14,
+    textAlign: "center",
+  },
+  shiftName: {
+    fontSize: 9,
+    fontWeight: "500",
+    lineHeight: 12,
+    maxWidth: "100%",
+    textAlign: "center",
+  },
+  shiftSummary: {
+    alignItems: "center",
+    flex: 1,
+    gap: 2,
+    justifyContent: "center",
+    minWidth: 0,
+  },
+});

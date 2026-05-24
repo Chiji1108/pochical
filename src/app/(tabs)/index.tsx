@@ -164,6 +164,10 @@ export default function Index() {
     [detailPageProgress, isDetailInputMode]
   );
 
+  const toggleCalendarPagerMode = useCallback(() => {
+    setDetailInputMode(!isDetailInputMode);
+  }, [isDetailInputMode, setDetailInputMode]);
+
   const toggleShiftInputMode = () => {
     setIsShiftInputMode((current) => !current);
   };
@@ -464,6 +468,7 @@ export default function Index() {
               calendarHighlightTargets={settings.calendarHighlightTargets}
               detailTransitionProgress={detailPageProgress}
               isDetailInputMode={isDetailInputMode}
+              onPressSelectedDate={toggleCalendarPagerMode}
               onTargetDateHandled={() => {
                 setTargetDate(undefined);
               }}

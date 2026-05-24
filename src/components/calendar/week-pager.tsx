@@ -31,6 +31,7 @@ const WEEK_APPEND_THRESHOLD = 3;
 type WeekPagerProps = {
   calendarHighlightTargets: CalendarHighlightTarget[];
   isScrollSelectionEnabled: boolean;
+  onPressSelectedDate?: () => void;
   onTargetDateHandled?: () => void;
   patternsById: ReadonlyMap<string, Pattern>;
   selectedDate: Date;
@@ -84,6 +85,7 @@ const findWeekIndex = (
 export const WeekPager: FC<WeekPagerProps> = ({
   calendarHighlightTargets,
   isScrollSelectionEnabled,
+  onPressSelectedDate,
   onTargetDateHandled,
   patternsById,
   selectedDate,
@@ -370,6 +372,7 @@ export const WeekPager: FC<WeekPagerProps> = ({
       <View style={{ width: pageWidth }}>
         <CalendarBody
           calendarHighlightTargets={calendarHighlightTargets}
+          onPressSelectedDate={onPressSelectedDate}
           patternsById={patternsById}
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
@@ -382,6 +385,7 @@ export const WeekPager: FC<WeekPagerProps> = ({
     ),
     [
       calendarHighlightTargets,
+      onPressSelectedDate,
       pageWidth,
       patternsById,
       selectedDate,
