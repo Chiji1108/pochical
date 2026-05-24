@@ -6,7 +6,7 @@ import {
   startOfDay,
   startOfMonth,
 } from "date-fns";
-import type { Event } from "expo-calendar";
+import type { ModifiableEventProperties } from "expo-calendar";
 import type { DayNote, Pattern, Shift, ShiftMember } from "@/lib/instant";
 
 type ShiftCalendarEventInput = {
@@ -25,7 +25,7 @@ type MonthlyShiftCalendarEventsInput = {
   yearMonth: Date;
 };
 
-export type ShiftCalendarEvent = Omit<Partial<Event>, "id" | "organizer"> & {
+export type ShiftCalendarEvent = Partial<ModifiableEventProperties> & {
   endDate: Date;
   startDate: Date;
   title: string;

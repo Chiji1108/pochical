@@ -1,8 +1,5 @@
 import { format, isValid, startOfDay, startOfMonth } from "date-fns";
-import {
-  requestPermissionsAsync,
-  saveToLibraryAsync,
-} from "expo-media-library";
+import { Asset, requestPermissionsAsync } from "expo-media-library";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { isAvailableAsync, shareAsync } from "expo-sharing";
 import { SymbolView } from "expo-symbols";
@@ -144,7 +141,7 @@ export default function ExportScreen() {
         return;
       }
 
-      await saveToLibraryAsync(imageUri);
+      await Asset.create(imageUri);
       toast.show({
         description: `${monthLabel}のシフト画像を写真ライブラリに保存しました。`,
         label: "保存しました",

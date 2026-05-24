@@ -1,13 +1,14 @@
 import {
   CalendarAccessLevel,
-  createEventAsync,
-  type Calendar as DeviceCalendar,
   EntityTypes,
-  getCalendarsAsync,
-  getDefaultCalendarAsync,
-  requestCalendarPermissionsAsync,
+  ExpoCalendar,
+  getCalendars,
+  getDefaultCalendarSync,
+  requestCalendarPermissions,
 } from "expo-calendar";
 import type { ShiftCalendarEvent } from "@/lib/calendar-export";
+
+type DeviceCalendar = ExpoCalendar;
 
 const READ_ONLY_CALENDAR_ACCESS_LEVELS = new Set<CalendarAccessLevel>([
   CalendarAccessLevel.FREEBUSY,
@@ -35,7 +36,7 @@ const isWritableCalendar = (calendar: DeviceCalendar): boolean =>
 export const getWritableCalendars = async (): Promise<
   DeviceCalendar[] | undefined
 > => {
-  const permission = await requestCalendarPermissionsAsync();
+  const permission = await requestCalendarPermissions();
 
   if (!permission.granted) {
     return;
@@ -44,12 +45,12 @@ export const getWritableCalendars = async (): Promise<
   let defaultCalendar: DeviceCalendar | undefined;
 
   try {
-    defaultCalendar = await getDefaultCalendarAsync();
+    defaultCalendar = getDefaultCalendarSync();
   } catch {
     // Android does not always expose a default calendar through this API.
   }
 
-  const calendars = await getCalendarsAsync(EntityTypes.EVENT);
+  const calendars = await getCalendars(EntityTypes.EVENT);
   const writableCalendars = calendars.filter(isWritableCalendar);
   const orderedWritableCalendars: DeviceCalendar[] = [];
 
@@ -98,7 +99,9 @@ export const addEventsToDeviceCalendar = async (
   calendarId: string,
   events: ShiftCalendarEvent[]
 ): Promise<void> => {
+  const calendar = new ExpoCalendar(calendarId);
+
   for (const event of events) {
-    await createEventAsync(calendarId, event);
+    await calendar.createEvent(event);
   }
 };
