@@ -30,6 +30,7 @@ const WEEK_APPEND_THRESHOLD = 3;
 
 type WeekPagerProps = {
   calendarHighlightTargets: CalendarHighlightTarget[];
+  isScrollSelectionEnabled: boolean;
   onTargetDateHandled?: () => void;
   patternsById: ReadonlyMap<string, Pattern>;
   selectedDate: Date;
@@ -82,6 +83,7 @@ const findWeekIndex = (
 
 export const WeekPager: FC<WeekPagerProps> = ({
   calendarHighlightTargets,
+  isScrollSelectionEnabled,
   onTargetDateHandled,
   patternsById,
   selectedDate,
@@ -95,6 +97,10 @@ export const WeekPager: FC<WeekPagerProps> = ({
   const { width: pageWidth } = useWindowDimensions();
   const listRef = useRef<FlashListRef<Date>>(null);
   const currentOffsetRef = useRef(WEEK_BUFFER_SIZE * pageWidth);
+  const endDragTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined
+  );
+  const isUserScrollActiveRef = useRef(false);
   const pendingPrependCountRef = useRef(0);
   const visibleWeekRef = useRef(startOfWeek(selectedDate, { weekStartsOn }));
   const selectedWeekdayRef = useRef(
@@ -171,6 +177,22 @@ export const WeekPager: FC<WeekPagerProps> = ({
     []
   );
 
+  const handleScrollBeginDrag = useCallback(() => {
+    if (endDragTimeoutRef.current) {
+      clearTimeout(endDragTimeoutRef.current);
+      endDragTimeoutRef.current = undefined;
+    }
+
+    isUserScrollActiveRef.current = true;
+  }, []);
+
+  const handleMomentumScrollBegin = useCallback(() => {
+    if (endDragTimeoutRef.current) {
+      clearTimeout(endDragTimeoutRef.current);
+      endDragTimeoutRef.current = undefined;
+    }
+  }, []);
+
   const handleScrollSettled = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       if (pageWidth === 0) {
@@ -190,7 +212,11 @@ export const WeekPager: FC<WeekPagerProps> = ({
       visibleWeekRef.current = visibleWeek;
       appendWeeksIfNeeded(pageIndex);
 
-      if (!isSameWeek(visibleWeek, selectedDate, { weekStartsOn })) {
+      if (
+        isScrollSelectionEnabled &&
+        isUserScrollActiveRef.current &&
+        !isSameWeek(visibleWeek, selectedDate, { weekStartsOn })
+      ) {
         const nextSelectedDate = addDays(
           visibleWeek,
           selectedWeekdayRef.current
@@ -201,6 +227,7 @@ export const WeekPager: FC<WeekPagerProps> = ({
     },
     [
       appendWeeksIfNeeded,
+      isScrollSelectionEnabled,
       pageWidth,
       selectedDate,
       setSelectedDate,
@@ -208,6 +235,40 @@ export const WeekPager: FC<WeekPagerProps> = ({
       weekStartsOn,
       weeks,
     ]
+  );
+
+  const handleScrollEndDrag = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      handleScrollSettled(event);
+
+      endDragTimeoutRef.current = setTimeout(() => {
+        isUserScrollActiveRef.current = false;
+        endDragTimeoutRef.current = undefined;
+      }, 120);
+    },
+    [handleScrollSettled]
+  );
+
+  const handleMomentumScrollEnd = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (endDragTimeoutRef.current) {
+        clearTimeout(endDragTimeoutRef.current);
+        endDragTimeoutRef.current = undefined;
+      }
+
+      handleScrollSettled(event);
+      isUserScrollActiveRef.current = false;
+    },
+    [handleScrollSettled]
+  );
+
+  useEffect(
+    () => () => {
+      if (endDragTimeoutRef.current) {
+        clearTimeout(endDragTimeoutRef.current);
+      }
+    },
+    []
   );
 
   useEffect(() => {
@@ -341,9 +402,11 @@ export const WeekPager: FC<WeekPagerProps> = ({
       initialScrollIndex={WEEK_BUFFER_SIZE}
       keyExtractor={getWeekKey}
       maintainVisibleContentPosition={{ disabled: true }}
-      onMomentumScrollEnd={handleScrollSettled}
+      onMomentumScrollBegin={handleMomentumScrollBegin}
+      onMomentumScrollEnd={handleMomentumScrollEnd}
       onScroll={handleScroll}
-      onScrollEndDrag={handleScrollSettled}
+      onScrollBeginDrag={handleScrollBeginDrag}
+      onScrollEndDrag={handleScrollEndDrag}
       pagingEnabled
       ref={listRef}
       renderItem={renderWeek}

@@ -122,6 +122,7 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
       >
         <WeekPager
           calendarHighlightTargets={calendarHighlightTargets}
+          isScrollSelectionEnabled={isDetailInputMode && !isExportMode}
           onTargetDateHandled={
             isDetailInputMode ? onTargetDateHandled : undefined
           }

@@ -17,9 +17,9 @@ import type { Pattern } from "@/lib/instant";
 import { CalendarBody, type CalendarShiftSummary } from "./calendar-body";
 import { CALENDAR_PAGER_HEIGHT } from "./constants";
 
-const MONTH_BUFFER_SIZE = 10;
-const MONTH_APPEND_BATCH_SIZE = 6;
-const MONTH_APPEND_THRESHOLD = 3;
+const MONTH_BUFFER_SIZE = 3;
+const MONTH_APPEND_BATCH_SIZE = 3;
+const MONTH_APPEND_THRESHOLD = 1;
 
 type MonthPagerProps = {
   calendarHighlightTargets: CalendarHighlightTarget[];
