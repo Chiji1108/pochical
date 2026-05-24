@@ -1,14 +1,4 @@
-import {
-  addDays,
-  addMonths,
-  eachDayOfInterval,
-  endOfMonth,
-  format,
-  isSameDay,
-  isSameMonth,
-  startOfDay,
-  startOfMonth,
-} from "date-fns";
+import { addDays, format, isSameMonth, startOfMonth } from "date-fns";
 import { selectionAsync } from "expo-haptics";
 import { useRouter } from "expo-router";
 import { useToast } from "heroui-native";
@@ -26,7 +16,6 @@ import {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { CalendarShiftSummary } from "@/components/calendar/calendar-body";
 import { CalendarHeader } from "@/components/calendar/calendar-header";
 import { CalendarPager } from "@/components/calendar/calendar-pager";
 import { CalendarSaveActionsSheet } from "@/components/calendar/calendar-save-actions-sheet";
@@ -38,22 +27,15 @@ import { PatternGridHeader } from "@/components/pattern/pattern-grid-header";
 import { PatternGridView } from "@/components/pattern/pattern-grid-view";
 import { ShiftDetailView } from "@/components/shift/shift-detail-view";
 import { useAppSettings } from "@/lib/app-settings";
-import { getMonthlyShiftCalendarEvents } from "@/lib/calendar-export";
+import { useCalendarWorkData } from "@/lib/calendar-work-data";
 import {
   addEventsToDeviceCalendar,
   type CalendarSelectOption,
   getCalendarSelectOptions,
   getWritableCalendars,
 } from "@/lib/device-calendar";
-import {
-  type DayNote,
-  type Member,
-  type Pattern,
-  useCurrentUserId,
-  useOwnWorkData,
-} from "@/lib/instant";
+import { useCurrentUserId } from "@/lib/instant";
 
-const CALENDAR_QUERY_MONTH_RADIUS = 3;
 const DETAIL_PAGE_DRAG_DISTANCE = 180;
 const DETAIL_PAGE_SETTLE_THRESHOLD = 0.45;
 const DETAIL_PAGE_SWIPE_VELOCITY = 600;
@@ -91,17 +73,25 @@ export default function Index() {
   const [completionMonthLabel, setCompletionMonthLabel] = useState("");
   const [lastShiftInputMonth, setLastShiftInputMonth] = useState<Date>();
   const currentUserId = useCurrentUserId();
-  const workDataDateRange = useMemo(
-    () => ({
-      end: endOfMonth(addMonths(yearMonth, CALENDAR_QUERY_MONTH_RADIUS)),
-      start: startOfMonth(addMonths(yearMonth, -CALENDAR_QUERY_MONTH_RADIUS)),
-    }),
-    [yearMonth]
-  );
-  const { dayNotes, members, patterns, shifts } = useOwnWorkData(
+  const {
+    getIsMonthComplete,
+    getWillCompleteMonthAfterShiftInput,
+    members,
+    membersById,
+    monthlyShiftCalendarEvents,
+    patterns,
+    patternsById,
+    selectedDateDayNote,
+    selectedDateShift,
+    selectedDateShifts,
+    shifts,
+    shiftsByDate,
+  } = useCalendarWorkData({
     currentUserId,
-    workDataDateRange
-  );
+    excludeDayOffShiftsFromExport,
+    selectedDate,
+    yearMonth,
+  });
   const celebratedMonthKeys = useRef(new Set<string>());
   const hasRecentShiftInput = useRef(false);
   const detailPageProgress = useSharedValue(0);
@@ -112,133 +102,7 @@ export default function Index() {
   const detailGestureIsDriving = useSharedValue(0);
   const detailScrollOffsetY = useSharedValue(0);
   const bottomContentPadding = insets.bottom + TAB_OVERLAP_PADDING;
-  const patternsById = useMemo(() => {
-    const nextPatternsById = new Map<string, Pattern>();
-
-    for (const pattern of patterns) {
-      nextPatternsById.set(pattern.id, pattern);
-    }
-
-    return nextPatternsById;
-  }, [patterns]);
-  const membersById = useMemo(() => {
-    const nextMembersById = new Map<string, Member>();
-
-    for (const member of members) {
-      nextMembersById.set(member.id, member);
-    }
-
-    return nextMembersById;
-  }, [members]);
-  const dayNotesByDate = useMemo(() => {
-    const nextDayNotesByDate = new Map<number, DayNote>();
-
-    for (const dayNote of dayNotes) {
-      nextDayNotesByDate.set(startOfDay(dayNote.date).getTime(), dayNote);
-    }
-
-    return nextDayNotesByDate;
-  }, [dayNotes]);
-  const shiftsByDate = useMemo(() => {
-    const nextShiftsByDate = new Map<number, CalendarShiftSummary>();
-
-    for (const dayNote of dayNotes) {
-      nextShiftsByDate.set(startOfDay(dayNote.date).getTime(), {
-        hasNotes: Boolean(dayNote.notes.trim()),
-      });
-    }
-
-    for (const shift of shifts) {
-      const dateKey = startOfDay(shift.startDate).getTime();
-      const existingSummary = nextShiftsByDate.get(dateKey);
-
-      nextShiftsByDate.set(dateKey, {
-        hasNotes: existingSummary?.hasNotes ?? false,
-        pattern: shift.pattern,
-      });
-    }
-
-    return nextShiftsByDate;
-  }, [dayNotes, shifts]);
-  const selectedDateShifts = useMemo(
-    () => shifts.filter((shift) => isSameDay(shift.startDate, selectedDate)),
-    [selectedDate, shifts]
-  );
-  const [selectedDateShift] = selectedDateShifts;
-  const selectedDateDayNote = dayNotesByDate.get(
-    startOfDay(selectedDate).getTime()
-  );
-  const monthlyShiftCalendarEvents = useMemo(
-    () =>
-      getMonthlyShiftCalendarEvents({
-        dayNotesByDate,
-        excludeDayOffShifts: excludeDayOffShiftsFromExport,
-        membersById,
-        patternsById,
-        shifts,
-        yearMonth,
-      }),
-    [
-      dayNotesByDate,
-      excludeDayOffShiftsFromExport,
-      membersById,
-      patternsById,
-      shifts,
-      yearMonth,
-    ]
-  );
   const monthLabel = format(yearMonth, "yyyy年M月");
-  const getIsMonthComplete = useCallback(
-    (month: Date) => {
-      const datesInMonth = eachDayOfInterval({
-        end: endOfMonth(month),
-        start: startOfMonth(month),
-      });
-
-      return datesInMonth.every((date) => {
-        const shiftSummary = shiftsByDate.get(startOfDay(date).getTime());
-        return Boolean(shiftSummary?.pattern);
-      });
-    },
-    [shiftsByDate]
-  );
-  const getWillCompleteMonthAfterShiftInput = useCallback(
-    (savedDates: Date[]) => {
-      const savedDateKeys = new Set(
-        savedDates.map((date) => startOfDay(date).getTime())
-      );
-      const affectedMonthKeys = new Set(
-        savedDates.map((date) => format(startOfMonth(date), "yyyy-MM"))
-      );
-
-      for (const monthKey of affectedMonthKeys) {
-        const [yearText, monthText] = monthKey.split("-");
-        const affectedMonth = new Date(Number(yearText), Number(monthText) - 1);
-
-        if (getIsMonthComplete(affectedMonth)) {
-          continue;
-        }
-
-        const datesInMonth = eachDayOfInterval({
-          end: endOfMonth(affectedMonth),
-          start: startOfMonth(affectedMonth),
-        });
-        const isCompleteAfterInput = datesInMonth.every((date) => {
-          const dateKey = startOfDay(date).getTime();
-          const shiftSummary = shiftsByDate.get(dateKey);
-
-          return savedDateKeys.has(dateKey) || Boolean(shiftSummary?.pattern);
-        });
-
-        if (isCompleteAfterInput) {
-          return true;
-        }
-      }
-
-      return false;
-    },
-    [getIsMonthComplete, shiftsByDate]
-  );
   const selectedCalendarOption = useMemo(
     () =>
       calendarSelectOptions.find(

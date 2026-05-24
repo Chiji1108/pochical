@@ -204,7 +204,7 @@ export function PatternGridView({
                     variant="ghost"
                   >
                     <Button.Label
-                      className="text-center text-sm leading-none"
+                      className="text-center text-sm leading-5"
                       numberOfLines={1}
                     >
                       {pattern.emoji}

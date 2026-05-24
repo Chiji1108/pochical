@@ -1,5 +1,6 @@
 import { init } from "@instantdb/react-native";
 import MMKVStore from "@instantdb/react-native-mmkv";
+import { useRef } from "react";
 import schema from "../../instant.schema";
 
 const appId = process.env.EXPO_PUBLIC_INSTANT_APP_ID;
@@ -92,6 +93,7 @@ export const useOwnWorkData = (
   userId?: string,
   dateRange?: WorkDataDateRange
 ): WorkData => {
+  const previousWorkDataRef = useRef<WorkData>(EMPTY_WORK_DATA);
   const { data } = db.useQuery(
     userId
       ? {
@@ -136,16 +138,24 @@ export const useOwnWorkData = (
       : null
   );
 
-  if (!data) {
+  if (!userId) {
+    previousWorkDataRef.current = EMPTY_WORK_DATA;
     return EMPTY_WORK_DATA;
   }
 
-  return {
+  if (!data) {
+    return previousWorkDataRef.current;
+  }
+
+  const workData = {
     dayNotes: (data.dayNotes ?? []) as DayNote[],
     members: (data.shiftMembers ?? []) as ShiftMember[],
     patterns: (data.shiftPatterns ?? []) as Pattern[],
     shifts: (data.shifts ?? []) as Shift[],
   };
+
+  previousWorkDataRef.current = workData;
+  return workData;
 };
 
 export const usePatternById = (
