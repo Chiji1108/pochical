@@ -416,6 +416,7 @@ export default function ShareGroupShifts() {
           <View className="flex-1">
             {members.map((member) => (
               <MemberScheduleSubscription
+                dateRange={dateRange}
                 key={member._id}
                 memberUserId={member.instantUserId}
                 onChange={updateMemberScheduleData}
@@ -527,9 +528,11 @@ const TableHeaderCell = ({
 );
 
 const MemberScheduleSubscription = ({
+  dateRange,
   memberUserId,
   onChange,
 }: {
+  dateRange: { end: Date; start: Date };
   memberUserId: string;
   onChange: (memberUserId: string, scheduleData?: MemberScheduleData) => void;
 }) => {
@@ -541,7 +544,15 @@ const MemberScheduleSubscription = ({
             owner: {},
           },
           shifts: {
-            $: { where: { "owner.id": memberUserId } },
+            $: {
+              where: {
+                "owner.id": memberUserId,
+                startDate: {
+                  $gte: dateRange.start,
+                  $lte: dateRange.end,
+                },
+              },
+            },
             owner: {},
             pattern: {},
             shiftMembers: {},

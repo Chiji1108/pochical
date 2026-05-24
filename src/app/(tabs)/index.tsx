@@ -1,5 +1,6 @@
 import {
   addDays,
+  addMonths,
   eachDayOfInterval,
   endOfMonth,
   format,
@@ -52,6 +53,7 @@ import {
   useOwnWorkData,
 } from "@/lib/instant";
 
+const CALENDAR_QUERY_MONTH_RADIUS = 3;
 const DETAIL_PAGE_DRAG_DISTANCE = 180;
 const DETAIL_PAGE_SETTLE_THRESHOLD = 0.45;
 const DETAIL_PAGE_SWIPE_VELOCITY = 600;
@@ -89,7 +91,17 @@ export default function Index() {
   const [completionMonthLabel, setCompletionMonthLabel] = useState("");
   const [lastShiftInputMonth, setLastShiftInputMonth] = useState<Date>();
   const currentUserId = useCurrentUserId();
-  const { dayNotes, members, patterns, shifts } = useOwnWorkData(currentUserId);
+  const workDataDateRange = useMemo(
+    () => ({
+      end: endOfMonth(addMonths(yearMonth, CALENDAR_QUERY_MONTH_RADIUS)),
+      start: startOfMonth(addMonths(yearMonth, -CALENDAR_QUERY_MONTH_RADIUS)),
+    }),
+    [yearMonth]
+  );
+  const { dayNotes, members, patterns, shifts } = useOwnWorkData(
+    currentUserId,
+    workDataDateRange
+  );
   const celebratedMonthKeys = useRef(new Set<string>());
   const hasRecentShiftInput = useRef(false);
   const detailPageProgress = useSharedValue(0);

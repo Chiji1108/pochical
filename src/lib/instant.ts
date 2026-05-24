@@ -74,6 +74,11 @@ export type WorkData = {
   shifts: Shift[];
 };
 
+export type WorkDataDateRange = {
+  end: Date;
+  start: Date;
+};
+
 export const useCurrentUserId = (): string | undefined => db.useAuth().user?.id;
 
 const EMPTY_WORK_DATA: WorkData = {
@@ -83,12 +88,22 @@ const EMPTY_WORK_DATA: WorkData = {
   shifts: [],
 };
 
-export const useOwnWorkData = (userId?: string): WorkData => {
+export const useOwnWorkData = (
+  userId?: string,
+  dateRange?: WorkDataDateRange
+): WorkData => {
   const { data } = db.useQuery(
     userId
       ? {
           dayNotes: {
-            $: { where: { "owner.id": userId } },
+            $: {
+              where: dateRange
+                ? {
+                    "owner.id": userId,
+                    date: { $gte: dateRange.start, $lte: dateRange.end },
+                  }
+                : { "owner.id": userId },
+            },
             owner: {},
           },
           shiftMembers: {
@@ -102,7 +117,17 @@ export const useOwnWorkData = (userId?: string): WorkData => {
             previousDayPatterns: {},
           },
           shifts: {
-            $: { where: { "owner.id": userId } },
+            $: {
+              where: dateRange
+                ? {
+                    "owner.id": userId,
+                    startDate: {
+                      $gte: dateRange.start,
+                      $lte: dateRange.end,
+                    },
+                  }
+                : { "owner.id": userId },
+            },
             owner: {},
             pattern: {},
             shiftMembers: {},

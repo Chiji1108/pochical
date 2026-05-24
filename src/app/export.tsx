@@ -1,4 +1,10 @@
-import { format, isValid, startOfDay, startOfMonth } from "date-fns";
+import {
+  endOfMonth,
+  format,
+  isValid,
+  startOfDay,
+  startOfMonth,
+} from "date-fns";
 import { Asset, requestPermissionsAsync } from "expo-media-library";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { isAvailableAsync, shareAsync } from "expo-sharing";
@@ -38,7 +44,6 @@ export default function ExportScreen() {
   const { toast } = useToast();
   const { settings } = useAppSettings();
   const currentUserId = useCurrentUserId();
-  const { dayNotes, patterns, shifts } = useOwnWorkData(currentUserId);
   const exportCalendarImageRef = useRef<View>(null);
   const [exportColorScheme, setExportColorScheme] =
     useState<ExportCalendarColorScheme>("light");
@@ -47,6 +52,17 @@ export default function ExportScreen() {
   const yearMonth = useMemo(
     () => getInitialYearMonth(params.yearMonth),
     [params.yearMonth]
+  );
+  const workDataDateRange = useMemo(
+    () => ({
+      end: endOfMonth(yearMonth),
+      start: startOfMonth(yearMonth),
+    }),
+    [yearMonth]
+  );
+  const { dayNotes, patterns, shifts } = useOwnWorkData(
+    currentUserId,
+    workDataDateRange
   );
   const monthLabel = format(yearMonth, "yyyy年M月");
   const patternsById = useMemo(() => {
