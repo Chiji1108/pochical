@@ -86,7 +86,6 @@ function AppShell({ colorScheme }: { colorScheme: ColorSchemeName }) {
                 <Stack.Screen name="share-groups/[groupId]/shifts" />
                 <Stack.Screen name="invite/scan" />
                 <Stack.Screen name="invite/[inviteCode]" />
-                <Stack.Screen name="instant-sandbox" />
               </Stack>
             </AppSettingsProvider>
           </HeroUINativeProvider>
