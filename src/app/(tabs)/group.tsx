@@ -58,9 +58,9 @@ const SAMPLE_SHARED_SHIFT_DAYS: SharedShiftScheduleDay[] = Array.from(
 const SAMPLE_SHARED_SHIFT_ASSIGNMENTS = [
   ["early", "late", "off"],
   ["late", "off", "night"],
-  ["off", "early", "nightAfter"],
-  ["night", "paidLeave", "late"],
-  ["nightAfter", "off", "off"],
+  ["off", "paidLeave", "nightAfter"],
+  ["night", "early", "late"],
+  ["nightAfter", "off", "early"],
 ] as const;
 const SAMPLE_SHARED_SHIFTS_BY_USER_AND_DATE =
   SAMPLE_SHARED_SHIFT_ASSIGNMENTS.reduce((shiftMap, assignments, dayIndex) => {
@@ -548,7 +548,6 @@ const SampleShiftPreview = ({
           showsHorizontalScrollIndicator={false}
           showsVerticalScrollIndicator={false}
           tableWidth={previewWidth}
-          today={addDays(SAMPLE_SHIFT_START_DATE, 1)}
           useVirtualizedRows={false}
           visibleMonth={startOfMonth(SAMPLE_SHIFT_START_DATE)}
         />

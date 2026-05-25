@@ -50,7 +50,7 @@ type SharedShiftTableProps = {
   scheduleDays: SharedShiftScheduleDay[];
   shiftsByUserAndDate: ReadonlyMap<string, SharedShiftCellValue>;
   tableWidth: number;
-  today: Date;
+  today?: Date;
   visibleMonth: Date;
   centerContent?: boolean;
   initialScrollIndex?: number;
@@ -213,7 +213,7 @@ const SharedShiftTableRow = ({
   members: SharedShiftMember[];
   shiftsByUserAndDate: ReadonlyMap<string, SharedShiftCellValue>;
   tableWidth: number;
-  today: Date;
+  today?: Date;
 }) => {
   const cells = members.map((member) => {
     const shift = shiftsByUserAndDate.get(
@@ -226,7 +226,7 @@ const SharedShiftTableRow = ({
   const isEveryoneOff = cells.every(
     ({ shift }) => !shift || shift.pattern?.countsAsDayOff
   );
-  const isToday = day.time === today.getTime();
+  const isToday = today ? day.time === today.getTime() : false;
   let rowBackgroundColor: string | undefined;
 
   if (hasRegisteredShift && isEveryoneOff) {

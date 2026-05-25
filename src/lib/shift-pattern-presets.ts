@@ -235,7 +235,7 @@ export const SINGLE_SHIFT_PATTERN_PRESETS: ShiftPatternPreset[] = [
     patterns: [
       {
         countsAsDayOff: true,
-        emoji: "🎉",
+        emoji: "🌿",
         isAllDay: true,
         name: "有給",
       },
