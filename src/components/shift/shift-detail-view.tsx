@@ -27,6 +27,59 @@ type ShiftDetailViewProps = {
   selectedDateShift?: Shift;
 };
 
+type ShiftSupplementalDetailsProps = {
+  notes: string;
+  selectedMembers: Member[];
+};
+
+const ShiftSupplementalDetails = ({
+  notes,
+  selectedMembers,
+}: ShiftSupplementalDetailsProps) => {
+  const hasSelectedMembers = selectedMembers.length > 0;
+
+  if (!(hasSelectedMembers || notes)) {
+    return null;
+  }
+
+  return (
+    <>
+      <Separator className="mx-4" />
+      {hasSelectedMembers ? (
+        <ListGroup.Item className={notes ? "pt-3 pb-2" : "py-3"}>
+          <ListGroup.ItemContent>
+            <View className="min-w-0 flex-row flex-wrap items-center gap-1">
+              {selectedMembers.map((member) => (
+                <Chip
+                  animation="disable-all"
+                  className="max-w-28"
+                  color="default"
+                  key={member.id}
+                  size="sm"
+                  variant="soft"
+                >
+                  <Chip.Label numberOfLines={1}>{member.name}</Chip.Label>
+                </Chip>
+              ))}
+            </View>
+          </ListGroup.ItemContent>
+        </ListGroup.Item>
+      ) : null}
+      {notes ? (
+        <ListGroup.Item className={hasSelectedMembers ? "pt-0 pb-3" : "py-3"}>
+          <ListGroup.ItemContent>
+            <LinkifiedText
+              className="text-muted text-sm"
+              linkClassName="text-muted underline"
+              text={notes}
+            />
+          </ListGroup.ItemContent>
+        </ListGroup.Item>
+      ) : null}
+    </>
+  );
+};
+
 export const ShiftDetailView = ({
   bottomContentPadding,
   membersById,
@@ -50,8 +103,6 @@ export const ShiftDetailView = ({
       });
   }, [membersById, selectedDateShift]);
   const notes = (selectedDateShift?.notes ?? "").trim();
-  const hasSelectedMembers = selectedMembers.length > 0;
-  const hasSupplementalDetails = hasSelectedMembers || Boolean(notes);
 
   if (!(selectedPattern || notes)) {
     return null;
@@ -81,46 +132,10 @@ export const ShiftDetailView = ({
               </Text>
             </ListGroup.ItemSuffix>
           </ListGroup.Item>
-          {hasSupplementalDetails ? (
-            <>
-              <Separator className="mx-4" />
-              {hasSelectedMembers ? (
-                <ListGroup.Item className="py-3">
-                  <ListGroup.ItemContent>
-                    <View className="min-w-0 flex-row flex-wrap items-center gap-1">
-                      {selectedMembers.map((member) => (
-                        <Chip
-                          animation="disable-all"
-                          className="max-w-28"
-                          color="default"
-                          key={member.id}
-                          size="sm"
-                          variant="soft"
-                        >
-                          <Chip.Label numberOfLines={1}>
-                            {member.name}
-                          </Chip.Label>
-                        </Chip>
-                      ))}
-                    </View>
-                  </ListGroup.ItemContent>
-                </ListGroup.Item>
-              ) : null}
-              {notes ? (
-                <ListGroup.Item
-                  className={hasSelectedMembers ? "pt-0 pb-3" : "py-3"}
-                >
-                  <ListGroup.ItemContent>
-                    <LinkifiedText
-                      className="text-muted text-sm"
-                      linkClassName="text-muted underline"
-                      text={notes}
-                    />
-                  </ListGroup.ItemContent>
-                </ListGroup.Item>
-              ) : null}
-            </>
-          ) : null}
+          <ShiftSupplementalDetails
+            notes={notes}
+            selectedMembers={selectedMembers}
+          />
         </ListGroup>
       ) : null}
     </View>
