@@ -98,7 +98,7 @@ const getShiftEventNotes = ({
     noteLines.push(`備考: ${notes}`);
   }
 
-  noteLines.push("ナースシフトから書き出し");
+  noteLines.push("ポチカレから書き出し");
 
   return noteLines.join("\n");
 };

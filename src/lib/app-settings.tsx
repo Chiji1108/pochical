@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 
-const APP_SETTINGS_STORAGE_KEY = "nurse-shift-app-settings";
+const APP_SETTINGS_STORAGE_KEY = "pochical-app-settings";
 
 export type WeekStartsOn = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 

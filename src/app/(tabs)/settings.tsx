@@ -58,7 +58,7 @@ const HIGHLIGHT_OPTIONS: HighlightOption[] = [
 ];
 
 const ORDERED_HIGHLIGHT_TARGETS = HIGHLIGHT_OPTIONS.map((option) => option.id);
-const SELECTED_GROUP_STORAGE_KEY = "nurse-shift-selected-group-id";
+const SELECTED_GROUP_STORAGE_KEY = "pochical-selected-group-id";
 
 const getOrderedHighlightTargets = (
   targets: Iterable<string>

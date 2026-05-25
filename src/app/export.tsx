@@ -100,7 +100,7 @@ export default function ExportScreen() {
 
     try {
       return await captureRef(captureTarget, {
-        fileName: `nurse-shift-${monthLabel}`,
+        fileName: `pochical-${monthLabel}`,
         format: "png",
         quality: 1,
         result: "tmpfile",

@@ -26,7 +26,7 @@ import {
 import { useCurrentUserId } from "@/lib/instant";
 import { api as convexApi } from "../../../convex/_generated/api";
 
-const SELECTED_GROUP_STORAGE_KEY = "nurse-shift-selected-group-id";
+const SELECTED_GROUP_STORAGE_KEY = "pochical-selected-group-id";
 const MAX_RAIL_UNREAD_COUNT = 99;
 const EMPTY_GROUPS_HORIZONTAL_PADDING = 24;
 const SAMPLE_PREVIEW_MAX_WIDTH = 360;

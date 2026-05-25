@@ -1,4 +1,4 @@
-const INVITE_SCHEME = "nurse-shift:";
+const INVITE_SCHEME = "pochical:";
 const INVITE_PATH_SEGMENT = "invite";
 const TRAILING_SLASH_REGEX = /\/$/;
 

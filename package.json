@@ -71,7 +71,7 @@
     "typescript": "~6.0.3",
     "ultracite": "7.6.2"
   },
-  "name": "nurse-shift",
+  "name": "pochical",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",

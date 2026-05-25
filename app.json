@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "nurse-shift",
-    "slug": "nurse-shift",
+    "name": "ポチカレ",
+    "slug": "pochical",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "nurse-shift",
+    "scheme": "pochical",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "tech.chiji.nurse-shift"
+      "bundleIdentifier": "tech.chiji.pochical"
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +19,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "tech.chiji.nurseshift"
+      "package": "tech.chiji.pochical"
     },
     "web": {
       "output": "static",
