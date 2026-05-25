@@ -12,8 +12,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#ebebec",
-        "foregroundImage": "./assets/images/transparent.png"
+        "foregroundImage": "./assets/images/adaptive.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "tech.chiji.pochical"
