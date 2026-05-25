@@ -11,6 +11,10 @@
       "bundleIdentifier": "tech.chiji.pochical"
     },
     "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ebebec",
+        "foregroundImage": "./assets/images/transparent.png"
+      },
       "predictiveBackGestureEnabled": false,
       "package": "tech.chiji.pochical"
     },
@@ -21,7 +25,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#ebebec",
-          "image": "./assets/images/splash.png",
+          "image": "./assets/images/transparent.png",
           "imageWidth": 160
         }
       ],
