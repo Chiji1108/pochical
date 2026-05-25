@@ -11,7 +11,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CalendarShiftSummary } from "@/components/calendar/calendar-body";
 import { getMonthlyShiftCalendarEvents } from "@/lib/calendar-export";
 import {
-  type DayNote,
   type Member,
   type Pattern,
   useOwnWorkData,
@@ -66,7 +65,7 @@ export const useCalendarWorkData = ({
     setWorkDataDateRange(getCalendarWorkDataDateRange(yearMonth));
   }, [workDataDateRange, yearMonth]);
 
-  const { dayNotes, members, patterns, shifts } = useOwnWorkData(
+  const { members, patterns, shifts } = useOwnWorkData(
     currentUserId,
     workDataDateRange
   );
@@ -88,48 +87,28 @@ export const useCalendarWorkData = ({
 
     return nextMembersById;
   }, [members]);
-  const dayNotesByDate = useMemo(() => {
-    const nextDayNotesByDate = new Map<number, DayNote>();
-
-    for (const dayNote of dayNotes) {
-      nextDayNotesByDate.set(startOfDay(dayNote.date).getTime(), dayNote);
-    }
-
-    return nextDayNotesByDate;
-  }, [dayNotes]);
   const shiftsByDate = useMemo(() => {
     const nextShiftsByDate = new Map<number, CalendarShiftSummary>();
 
-    for (const dayNote of dayNotes) {
-      nextShiftsByDate.set(startOfDay(dayNote.date).getTime(), {
-        hasNotes: Boolean(dayNote.notes.trim()),
-      });
-    }
-
     for (const shift of shifts) {
       const dateKey = startOfDay(shift.startDate).getTime();
-      const existingSummary = nextShiftsByDate.get(dateKey);
 
       nextShiftsByDate.set(dateKey, {
-        hasNotes: existingSummary?.hasNotes ?? false,
+        hasNotes: Boolean((shift.notes ?? "").trim()),
         pattern: shift.pattern,
       });
     }
 
     return nextShiftsByDate;
-  }, [dayNotes, shifts]);
+  }, [shifts]);
   const selectedDateShifts = useMemo(
     () => shifts.filter((shift) => isSameDay(shift.startDate, selectedDate)),
     [selectedDate, shifts]
   );
   const [selectedDateShift] = selectedDateShifts;
-  const selectedDateDayNote = dayNotesByDate.get(
-    startOfDay(selectedDate).getTime()
-  );
   const monthlyShiftCalendarEvents = useMemo(
     () =>
       getMonthlyShiftCalendarEvents({
-        dayNotesByDate,
         excludeDayOffShifts: excludeDayOffShiftsFromExport,
         membersById,
         patternsById,
@@ -137,7 +116,6 @@ export const useCalendarWorkData = ({
         yearMonth,
       }),
     [
-      dayNotesByDate,
       excludeDayOffShiftsFromExport,
       membersById,
       patternsById,
@@ -198,8 +176,6 @@ export const useCalendarWorkData = ({
   );
 
   return {
-    dayNotes,
-    dayNotesByDate,
     getIsMonthComplete,
     getWillCompleteMonthAfterShiftInput,
     members,
@@ -207,7 +183,6 @@ export const useCalendarWorkData = ({
     monthlyShiftCalendarEvents,
     patterns,
     patternsById,
-    selectedDateDayNote,
     selectedDateShift,
     selectedDateShifts,
     shifts,

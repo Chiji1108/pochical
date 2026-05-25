@@ -3,7 +3,7 @@ import { Chip, ListGroup, Separator, Text } from "heroui-native";
 import { useMemo } from "react";
 import { View } from "react-native";
 import { LinkifiedText } from "@/components/common/linkified-text";
-import type { DayNote, Member, Pattern, Shift } from "@/lib/instant";
+import type { Member, Pattern, Shift } from "@/lib/instant";
 
 const getPatternScheduleLabel = (pattern: Pattern): string => {
   if (pattern.isAllDay) {
@@ -24,7 +24,6 @@ type ShiftDetailViewProps = {
   bottomContentPadding: number;
   membersById: ReadonlyMap<string, Member>;
   patternsById: ReadonlyMap<string, Pattern>;
-  selectedDateDayNote?: DayNote;
   selectedDateShift?: Shift;
 };
 
@@ -32,7 +31,6 @@ export const ShiftDetailView = ({
   bottomContentPadding,
   membersById,
   patternsById,
-  selectedDateDayNote,
   selectedDateShift,
 }: ShiftDetailViewProps) => {
   const selectedPattern = selectedDateShift?.pattern
@@ -51,8 +49,9 @@ export const ShiftDetailView = ({
         return orderDiff === 0 ? a.id.localeCompare(b.id) : orderDiff;
       });
   }, [membersById, selectedDateShift]);
-  const notes = selectedDateDayNote?.notes.trim() ?? "";
+  const notes = (selectedDateShift?.notes ?? "").trim();
   const hasSelectedMembers = selectedMembers.length > 0;
+  const hasSupplementalDetails = hasSelectedMembers || Boolean(notes);
 
   if (!(selectedPattern || notes)) {
     return null;
@@ -82,40 +81,47 @@ export const ShiftDetailView = ({
               </Text>
             </ListGroup.ItemSuffix>
           </ListGroup.Item>
-          {hasSelectedMembers ? (
+          {hasSupplementalDetails ? (
             <>
               <Separator className="mx-4" />
-              <ListGroup.Item className="py-3">
-                <ListGroup.ItemContent>
-                  <View className="min-w-0 flex-row flex-wrap items-center gap-1">
-                    {selectedMembers.map((member) => (
-                      <Chip
-                        animation="disable-all"
-                        className="max-w-28"
-                        color="default"
-                        key={member.id}
-                        size="sm"
-                        variant="soft"
-                      >
-                        <Chip.Label numberOfLines={1}>{member.name}</Chip.Label>
-                      </Chip>
-                    ))}
-                  </View>
-                </ListGroup.ItemContent>
-              </ListGroup.Item>
+              {hasSelectedMembers ? (
+                <ListGroup.Item className="py-3">
+                  <ListGroup.ItemContent>
+                    <View className="min-w-0 flex-row flex-wrap items-center gap-1">
+                      {selectedMembers.map((member) => (
+                        <Chip
+                          animation="disable-all"
+                          className="max-w-28"
+                          color="default"
+                          key={member.id}
+                          size="sm"
+                          variant="soft"
+                        >
+                          <Chip.Label numberOfLines={1}>
+                            {member.name}
+                          </Chip.Label>
+                        </Chip>
+                      ))}
+                    </View>
+                  </ListGroup.ItemContent>
+                </ListGroup.Item>
+              ) : null}
+              {notes ? (
+                <ListGroup.Item
+                  className={hasSelectedMembers ? "pt-0 pb-3" : "py-3"}
+                >
+                  <ListGroup.ItemContent>
+                    <LinkifiedText
+                      className="text-muted text-sm"
+                      linkClassName="text-muted underline"
+                      text={notes}
+                    />
+                  </ListGroup.ItemContent>
+                </ListGroup.Item>
+              ) : null}
             </>
           ) : null}
         </ListGroup>
-      ) : null}
-
-      {notes ? (
-        <View className="items-center px-3 py-1">
-          <LinkifiedText
-            className="text-center text-muted text-sm"
-            linkClassName="text-muted underline"
-            text={notes}
-          />
-        </View>
       ) : null}
     </View>
   );

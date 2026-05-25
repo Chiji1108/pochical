@@ -15,11 +15,8 @@ const _schema = i.schema({
       startDate: i.date().optional(),
     }),
     shifts: i.entity({
+      notes: i.string().optional(),
       startDate: i.date().indexed(),
-    }),
-    dayNotes: i.entity({
-      date: i.date().indexed(),
-      notes: i.string(),
     }),
     shiftMembers: i.entity({
       name: i.string(),
@@ -34,10 +31,6 @@ const _schema = i.schema({
     shiftOwner: {
       forward: { has: "one", label: "owner", on: "shifts" },
       reverse: { has: "many", label: "shifts", on: "$users" },
-    },
-    dayNoteOwner: {
-      forward: { has: "one", label: "owner", on: "dayNotes" },
-      reverse: { has: "many", label: "dayNotes", on: "$users" },
     },
     shiftMemberOwner: {
       forward: { has: "one", label: "owner", on: "shiftMembers" },

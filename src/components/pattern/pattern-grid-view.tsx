@@ -5,8 +5,9 @@ import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Text, useThemeColor } from "heroui-native";
 import { Button } from "heroui-native/button";
-import { useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import {
+  type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Platform,
@@ -21,7 +22,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { ShiftDetailInputPanel } from "@/components/shift/shift-detail-input-panel";
 import {
-  type DayNote,
   db,
   type InstantTransaction,
   type Member,
@@ -46,7 +46,6 @@ type PatternGridViewProps = {
   members: Member[];
   patterns: Pattern[];
   selectedDate: Date;
-  selectedDateDayNote?: DayNote;
   selectedDateShift?: Shift;
   shifts: Shift[];
 };
@@ -63,7 +62,6 @@ export function PatternGridView({
   members,
   patterns,
   selectedDate,
-  selectedDateDayNote,
   selectedDateShift,
   shifts,
 }: PatternGridViewProps) {
@@ -71,6 +69,8 @@ export function PatternGridView({
   const currentUserId = useCurrentUserId();
   const { width } = useWindowDimensions();
   const patternButtonBackgroundColor = useThemeColor("surface-secondary");
+  const scrollContentHeightRef = useRef(0);
+  const scrollLayoutHeightRef = useRef(0);
   const sortedPatterns = useMemo(
     () => [...patterns].sort((a, b) => a.orderIndex - b.orderIndex),
     [patterns]
@@ -94,6 +94,25 @@ export function PatternGridView({
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     detailScrollOffsetY.value = event.nativeEvent.contentOffset.y;
   };
+  const syncDetailScrollOffsetBounds = useCallback(() => {
+    if (scrollContentHeightRef.current <= scrollLayoutHeightRef.current + 1) {
+      detailScrollOffsetY.value = 0;
+    }
+  }, [detailScrollOffsetY]);
+  const handleScrollContentSizeChange = useCallback(
+    (_width: number, height: number) => {
+      scrollContentHeightRef.current = height;
+      syncDetailScrollOffsetBounds();
+    },
+    [syncDetailScrollOffsetBounds]
+  );
+  const handleScrollLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      scrollLayoutHeightRef.current = event.nativeEvent.layout.height;
+      syncDetailScrollOffsetBounds();
+    },
+    [syncDetailScrollOffsetBounds]
+  );
 
   function handlePatternPress(pattern: Pattern) {
     if (!currentUserId) {
@@ -182,6 +201,8 @@ export function PatternGridView({
       enabled={isDetailInputMode}
       keyboardShouldPersistTaps="handled"
       mode="layout"
+      onContentSizeChange={handleScrollContentSizeChange}
+      onLayout={handleScrollLayout}
       onScroll={handleScroll}
       overScrollMode="never"
       scrollEnabled={isDetailInputMode}
@@ -252,8 +273,6 @@ export function PatternGridView({
             <ShiftDetailInputPanel
               members={members}
               onSelectNextDay={onSelectNextDay}
-              selectedDate={selectedDate}
-              selectedDateDayNote={selectedDateDayNote}
               selectedShift={selectedDateShift}
             />
           </Animated.View>

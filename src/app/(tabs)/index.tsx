@@ -81,7 +81,6 @@ export default function Index() {
     monthlyShiftCalendarEvents,
     patterns,
     patternsById,
-    selectedDateDayNote,
     selectedDateShift,
     selectedDateShifts,
     shifts,
@@ -508,7 +507,6 @@ export default function Index() {
                   }
                   patterns={patterns}
                   selectedDate={selectedDate}
-                  selectedDateDayNote={selectedDateDayNote}
                   selectedDateShift={selectedDateShift}
                   shifts={shifts}
                 />
@@ -517,7 +515,6 @@ export default function Index() {
                   bottomContentPadding={bottomContentPadding}
                   membersById={membersById}
                   patternsById={patternsById}
-                  selectedDateDayNote={selectedDateDayNote}
                   selectedDateShift={selectedDateShift}
                 />
               )}

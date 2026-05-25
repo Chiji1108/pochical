@@ -55,21 +55,14 @@ export type Member = ShiftMember;
 
 export type Shift = {
   id: string;
+  notes?: string;
   owner?: InstantUserRef;
   pattern?: Pattern;
   shiftMembers?: ShiftMember[];
   startDate: Date;
 };
 
-export type DayNote = {
-  date: Date;
-  id: string;
-  notes: string;
-  owner?: InstantUserRef;
-};
-
 export type WorkData = {
-  dayNotes: DayNote[];
   members: ShiftMember[];
   patterns: Pattern[];
   shifts: Shift[];
@@ -83,7 +76,6 @@ export type WorkDataDateRange = {
 export const useCurrentUserId = (): string | undefined => db.useAuth().user?.id;
 
 const EMPTY_WORK_DATA: WorkData = {
-  dayNotes: [],
   members: [],
   patterns: [],
   shifts: [],
@@ -97,17 +89,6 @@ export const useOwnWorkData = (
   const { data } = db.useQuery(
     userId
       ? {
-          dayNotes: {
-            $: {
-              where: dateRange
-                ? {
-                    "owner.id": userId,
-                    date: { $gte: dateRange.start, $lte: dateRange.end },
-                  }
-                : { "owner.id": userId },
-            },
-            owner: {},
-          },
           shiftMembers: {
             $: { where: { "owner.id": userId } },
             owner: {},
@@ -148,7 +129,6 @@ export const useOwnWorkData = (
   }
 
   const workData = {
-    dayNotes: (data.dayNotes ?? []) as DayNote[],
     members: (data.shiftMembers ?? []) as ShiftMember[],
     patterns: (data.shiftPatterns ?? []) as Pattern[],
     shifts: (data.shifts ?? []) as Shift[],

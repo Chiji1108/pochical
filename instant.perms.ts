@@ -41,17 +41,6 @@ const rules = {
       isOwner: "auth.id != null && auth.id in data.ref('owner.id')",
     },
   },
-  dayNotes: {
-    allow: {
-      create: "isOwner",
-      delete: "isOwner",
-      update: "isOwner",
-      view: "isOwner",
-    },
-    bind: {
-      isOwner: "auth.id != null && auth.id in data.ref('owner.id')",
-    },
-  },
   shiftMembers: {
     allow: {
       create: "isOwner",

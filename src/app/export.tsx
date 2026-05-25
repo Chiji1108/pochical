@@ -60,10 +60,7 @@ export default function ExportScreen() {
     }),
     [yearMonth]
   );
-  const { dayNotes, patterns, shifts } = useOwnWorkData(
-    currentUserId,
-    workDataDateRange
-  );
+  const { patterns, shifts } = useOwnWorkData(currentUserId, workDataDateRange);
   const monthLabel = format(yearMonth, "yyyy年M月");
   const patternsById = useMemo(() => {
     const nextPatternsById = new Map<string, Pattern>();
@@ -77,24 +74,17 @@ export default function ExportScreen() {
   const shiftsByDate = useMemo(() => {
     const nextShiftsByDate = new Map<number, CalendarShiftSummary>();
 
-    for (const dayNote of dayNotes) {
-      nextShiftsByDate.set(startOfDay(dayNote.date).getTime(), {
-        hasNotes: Boolean(dayNote.notes.trim()),
-      });
-    }
-
     for (const shift of shifts) {
       const dateKey = startOfDay(shift.startDate).getTime();
-      const existingSummary = nextShiftsByDate.get(dateKey);
 
       nextShiftsByDate.set(dateKey, {
-        hasNotes: existingSummary?.hasNotes ?? false,
+        hasNotes: Boolean((shift.notes ?? "").trim()),
         pattern: shift.pattern,
       });
     }
 
     return nextShiftsByDate;
-  }, [dayNotes, shifts]);
+  }, [shifts]);
 
   const captureImage = async (): Promise<string | undefined> => {
     const captureTarget = exportCalendarImageRef.current;

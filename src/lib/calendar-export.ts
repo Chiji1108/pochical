@@ -7,17 +7,15 @@ import {
   startOfMonth,
 } from "date-fns";
 import type { ModifiableEventProperties } from "expo-calendar";
-import type { DayNote, Pattern, Shift, ShiftMember } from "@/lib/instant";
+import type { Pattern, Shift, ShiftMember } from "@/lib/instant";
 
 type ShiftCalendarEventInput = {
-  dayNote?: DayNote;
   membersById: ReadonlyMap<string, ShiftMember>;
   pattern: Pattern;
   shift: Shift;
 };
 
 type MonthlyShiftCalendarEventsInput = {
-  dayNotesByDate: ReadonlyMap<number, DayNote>;
   excludeDayOffShifts: boolean;
   membersById: ReadonlyMap<string, ShiftMember>;
   patternsById: ReadonlyMap<string, Pattern>;
@@ -82,13 +80,9 @@ const getShiftEventDates = (
 };
 
 const getShiftEventNotes = ({
-  dayNote,
   membersById,
   shift,
-}: Pick<
-  ShiftCalendarEventInput,
-  "dayNote" | "membersById" | "shift"
->): string => {
+}: Pick<ShiftCalendarEventInput, "membersById" | "shift">): string => {
   const members = getSortedShiftMembers(shift, membersById);
   const noteLines: string[] = [];
 
@@ -98,7 +92,7 @@ const getShiftEventNotes = ({
     );
   }
 
-  const notes = dayNote?.notes.trim();
+  const notes = (shift.notes ?? "").trim();
 
   if (notes) {
     noteLines.push(`備考: ${notes}`);
@@ -110,18 +104,16 @@ const getShiftEventNotes = ({
 };
 
 const createShiftCalendarEvent = ({
-  dayNote,
   membersById,
   pattern,
   shift,
 }: ShiftCalendarEventInput): ShiftCalendarEvent => ({
   ...getShiftEventDates(shift, pattern),
-  notes: getShiftEventNotes({ dayNote, membersById, shift }),
+  notes: getShiftEventNotes({ membersById, shift }),
   title: `${pattern.emoji} ${pattern.name}`,
 });
 
 export const getMonthlyShiftCalendarEvents = ({
-  dayNotesByDate,
   excludeDayOffShifts,
   membersById,
   patternsById,
@@ -153,7 +145,6 @@ export const getMonthlyShiftCalendarEvents = ({
 
     events.push(
       createShiftCalendarEvent({
-        dayNote: dayNotesByDate.get(startOfDay(shift.startDate).getTime()),
         membersById,
         pattern,
         shift,

@@ -1,27 +1,13 @@
 import { id } from "@instantdb/react-native";
-import { startOfDay } from "date-fns";
 import { selectionAsync } from "expo-haptics";
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import {
-  Description,
-  Input,
-  Label,
-  TagGroup,
-  Text,
-  TextField,
-} from "heroui-native";
+import { Input, Label, TagGroup, Text, TextField } from "heroui-native";
 import { Button } from "heroui-native/button";
 import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import useDebounce from "react-use/lib/useDebounce";
-import {
-  type DayNote,
-  db,
-  type Member,
-  type Shift,
-  useCurrentUserId,
-} from "@/lib/instant";
+import { db, type Member, type Shift, useCurrentUserId } from "@/lib/instant";
 
 const seedMembers = ["佐藤師長", "鈴木主任", "田中先輩"] as const;
 const NOTE_SAVE_DEBOUNCE_MS = 450;
@@ -29,22 +15,18 @@ const NOTE_SAVE_DEBOUNCE_MS = 450;
 type ShiftDetailInputPanelProps = {
   members: Member[];
   onSelectNextDay: () => void;
-  selectedDate: Date;
-  selectedDateDayNote?: DayNote;
   selectedShift?: Shift;
 };
 
 export const ShiftDetailInputPanel = ({
   members,
   onSelectNextDay,
-  selectedDate,
-  selectedDateDayNote,
   selectedShift,
 }: ShiftDetailInputPanelProps) => {
   const router = useRouter();
   const currentUserId = useCurrentUserId();
   const isSignedIn = Boolean(currentUserId);
-  const [noteText, setNoteText] = useState(selectedDateDayNote?.notes ?? "");
+  const [noteText, setNoteText] = useState(selectedShift?.notes ?? "");
   const sortedMembers = useMemo(
     () =>
       [...members].sort((a, b) => {
@@ -55,8 +37,8 @@ export const ShiftDetailInputPanel = ({
   );
 
   useEffect(() => {
-    setNoteText(selectedDateDayNote?.notes ?? "");
-  }, [selectedDateDayNote?.notes]);
+    setNoteText(selectedShift?.notes ?? "");
+  }, [selectedShift?.notes]);
 
   const createSeedMembers = async () => {
     if (!(currentUserId && members.length === 0)) {
@@ -99,33 +81,11 @@ export const ShiftDetailInputPanel = ({
   };
 
   const saveNotes = async (notes: string) => {
-    if (!currentUserId) {
+    if (!(currentUserId && selectedShift)) {
       return;
     }
 
-    const trimmedNotes = notes.trim();
-
-    if (selectedDateDayNote) {
-      if (trimmedNotes) {
-        await db.transact(
-          db.tx.dayNotes[selectedDateDayNote.id].update({ notes })
-        );
-      } else {
-        await db.transact(db.tx.dayNotes[selectedDateDayNote.id].delete());
-      }
-      return;
-    }
-
-    if (trimmedNotes) {
-      await db.transact(
-        db.tx.dayNotes[id()]
-          .create({
-            date: startOfDay(selectedDate),
-            notes,
-          })
-          .link({ owner: currentUserId })
-      );
-    }
+    await db.transact(db.tx.shifts[selectedShift.id].update({ notes }));
   };
 
   useDebounce(
@@ -249,18 +209,19 @@ export const ShiftDetailInputPanel = ({
           ) : null}
         </View>
       ) : null}
-      <TextField isDisabled={!isSignedIn}>
-        <Label>メモ</Label>
-        <Input
-          autoCapitalize="none"
-          autoCorrect={false}
-          onChangeText={setNoteText}
-          placeholder="メモを入力"
-          returnKeyType="done"
-          value={noteText}
-        />
-        <Description>他のユーザーには共有されません</Description>
-      </TextField>
+      {selectedShift ? (
+        <TextField isDisabled={!isSignedIn}>
+          <Label>メモ</Label>
+          <Input
+            autoCapitalize="none"
+            autoCorrect={false}
+            onChangeText={setNoteText}
+            placeholder="メモを入力"
+            returnKeyType="done"
+            value={noteText}
+          />
+        </TextField>
+      ) : null}
       <View className="flex-row items-center justify-between gap-3 pt-1">
         <Button
           accessibilityLabel={

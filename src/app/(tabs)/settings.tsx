@@ -82,7 +82,7 @@ export default function Settings() {
   const { settings, setCalendarHighlightTargets, setWeekStartsOn } =
     useAppSettings();
   const currentUserId = useCurrentUserId();
-  const { dayNotes, members, patterns, shifts } = useOwnWorkData(currentUserId);
+  const { members, patterns, shifts } = useOwnWorkData(currentUserId);
   const selectedWeekStartOption = WEEK_START_OPTIONS.find(
     (option) => option.id === settings.weekStartsOn
   );
@@ -105,7 +105,6 @@ export default function Settings() {
           onPress: async () => {
             try {
               await deleteWorkData({
-                dayNotes,
                 members,
                 patterns,
                 shifts,
@@ -149,7 +148,6 @@ export default function Settings() {
 
             try {
               await deleteWorkData({
-                dayNotes,
                 members,
                 patterns,
                 shifts,
