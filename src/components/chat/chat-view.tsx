@@ -323,12 +323,8 @@ export const ChatView = ({
   title,
   topContent,
 }: ChatViewProps) => {
-  const [accentForegroundColor, fieldForegroundColor, fieldPlaceholderColor] =
-    useThemeColor([
-      "accent-foreground",
-      "field-foreground",
-      "field-placeholder",
-    ]);
+  const [accentColor, fieldForegroundColor, fieldPlaceholderColor] =
+    useThemeColor(["accent", "field-foreground", "field-placeholder"]);
   const insets = useSafeAreaInsets();
   const [body, setBody] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -491,37 +487,52 @@ export const ChatView = ({
         offset={{ closed: 0, opened: 0 }}
         style={{ paddingBottom: Math.max(12, insets.bottom + 8) }}
       >
-        <View className="flex-row items-end gap-2">
-          <TextInput
-            accessibilityLabel="メッセージ"
-            className="max-h-32 min-h-10 flex-1 rounded-lg border border-border bg-content1 px-3 py-2 text-base"
-            enablesReturnKeyAutomatically={true}
-            multiline={true}
-            onChangeText={setBody}
-            onSubmitEditing={() => {
-              sendMessage().catch(() => undefined);
-            }}
-            placeholder="メッセージ"
-            placeholderTextColor={fieldPlaceholderColor}
-            returnKeyType="send"
-            style={{ color: fieldForegroundColor }}
-            submitBehavior="submit"
-            value={body}
-          />
-          <Button
-            accessibilityLabel="メッセージを送信"
-            isDisabled={isSendDisabled}
-            isIconOnly={true}
-            onPress={sendMessage}
-            size="sm"
-            variant="primary"
-          >
-            <SymbolView
-              name={{ android: "send", ios: "paperplane.fill", web: "send" }}
-              size={16}
-              tintColor={accentForegroundColor}
+        <View className="flex-row items-end">
+          <View className="relative flex-1">
+            <TextInput
+              accessibilityLabel="メッセージ"
+              className="max-h-32 min-h-10 w-full rounded-lg border border-border bg-content1 py-2 pr-12 pl-3 text-base"
+              enablesReturnKeyAutomatically={true}
+              multiline={true}
+              onChangeText={setBody}
+              onSubmitEditing={() => {
+                sendMessage().catch(() => undefined);
+              }}
+              placeholder="メッセージ"
+              placeholderTextColor={fieldPlaceholderColor}
+              returnKeyType="send"
+              style={{ color: fieldForegroundColor }}
+              submitBehavior="submit"
+              value={body}
             />
-          </Button>
+            <View
+              className="absolute"
+              pointerEvents="box-none"
+              style={{ bottom: 4, right: 4 }}
+            >
+              <Button
+                accessibilityLabel="メッセージを送信"
+                className="h-8 w-8 rounded-full"
+                isDisabled={isSendDisabled}
+                isIconOnly={true}
+                onPress={sendMessage}
+                size="sm"
+                variant="ghost"
+              >
+                <SymbolView
+                  name={{
+                    android: "send",
+                    ios: "paperplane.fill",
+                    web: "send",
+                  }}
+                  size={15}
+                  tintColor={
+                    isSendDisabled ? fieldPlaceholderColor : accentColor
+                  }
+                />
+              </Button>
+            </View>
+          </View>
         </View>
       </KeyboardStickyView>
     </View>
