@@ -1,0 +1,12 @@
+diff --git a/ios/EmojiPopupViewManager.mm b/ios/EmojiPopupViewManager.mm
+index 3174d47af971fc1181d6bad524066486ec8c0d40..4b472afd412ba9e770eac7150340d1cab44f490c 100644
+--- a/ios/EmojiPopupViewManager.mm
++++ b/ios/EmojiPopupViewManager.mm
+@@ -1,6 +1,6 @@
+ #import <React/RCTViewManager.h>
+ #import <React/RCTUIManager.h>
+-#import "RCTBridge.h"
++#import <React/RCTBridge.h>
+ 
+ #if __has_include("EmojiPopup/EmojiPopup-Swift.h")
+ #import "EmojiPopup/EmojiPopup-Swift.h"

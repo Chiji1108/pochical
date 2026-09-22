@@ -1,0 +1,48 @@
+diff --git a/lib/index.d.ts b/lib/index.d.ts
+index 32267073a62a968288555a51d1dd333318d207aa..68628dd8284c3bf02ca9945a8ae5d2df96722d36 100644
+--- a/lib/index.d.ts
++++ b/lib/index.d.ts
+@@ -1,5 +1,5 @@
+ import React, { ReactNode } from "react";
+-import { View, StyleProp, ViewStyle, LayoutChangeEvent } from "react-native";
++import { View, LayoutChangeEvent } from "react-native";
+ export interface CaptureOptions {
+     /**
+      * (Android only) the file name of the file. Must be at least 3 characters long.
+@@ -80,9 +80,9 @@ export interface ViewShotProperties {
+      */
+     onLayout?(event: LayoutChangeEvent): void;
+     /**
+-     * style prop as StyleProp<ViewStyle>
++     * Same style type as the underlying React Native View
+      */
+-    style?: StyleProp<ViewStyle>;
++    style?: React.ComponentProps<typeof View>["style"];
+ }
+ interface HostElement {
+     readonly nodeType: number;
+diff --git a/src/index.tsx b/src/index.tsx
+index 584c073d575e365de1694a6a8a749c51874ded64..1b1d2ebe585d196e79892d3974f824d73cdc60ef 100644
+--- a/src/index.tsx
++++ b/src/index.tsx
+@@ -10,8 +10,6 @@ import {
+   View,
+   Platform,
+   findNodeHandle,
+-  StyleProp,
+-  ViewStyle,
+   LayoutChangeEvent,
+ } from "react-native";
+ import RNViewShot from "./RNViewShot";
+@@ -104,9 +102,9 @@ export interface ViewShotProperties {
+    */
+   onLayout?(event: LayoutChangeEvent): void;
+   /**
+-   * style prop as StyleProp<ViewStyle>
++   * Same style type as the underlying React Native View
+    */
+-  style?: StyleProp<ViewStyle>;
++  style?: React.ComponentProps<typeof View>["style"];
+ }
+ 
+ const acceptedFormats = ["png", "jpg"].concat(

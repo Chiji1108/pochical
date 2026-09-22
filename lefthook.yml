@@ -1,6 +1,10 @@
 pre-commit:
   jobs:
-    - run: bun x ultracite fix
+    - name: ultracite fix
+      run: |
+        # GUI Git clients may not load the shell's proto/Bun PATH settings.
+        export PATH="$PATH:${PROTO_HOME:-$HOME/.proto}/shims:${BUN_INSTALL:-$HOME/.bun}/bin"
+        bun x ultracite fix
       glob:
         - "**/*.js"
         - "**/*.jsx"

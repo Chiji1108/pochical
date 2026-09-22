@@ -1,5 +1,5 @@
 import { useQuery } from "convex/react";
-import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { NativeTabs } from "expo-router/native-tabs";
 import { useCurrentUserId } from "@/lib/instant";
 import { api as convexApi } from "../../../convex/_generated/api";
 

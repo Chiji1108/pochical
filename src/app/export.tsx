@@ -11,7 +11,7 @@ import { isAvailableAsync, shareAsync } from "expo-sharing";
 import { SymbolView } from "expo-symbols";
 import { Tabs, useToast } from "heroui-native";
 import { Button } from "heroui-native/button";
-import { useMemo, useRef, useState } from "react";
+import { type ComponentRef, useMemo, useRef, useState } from "react";
 import { Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
@@ -44,7 +44,7 @@ export default function ExportScreen() {
   const { toast } = useToast();
   const { settings } = useAppSettings();
   const currentUserId = useCurrentUserId();
-  const exportCalendarImageRef = useRef<View>(null);
+  const exportCalendarImageRef = useRef<ComponentRef<typeof View>>(null);
   const [exportColorScheme, setExportColorScheme] =
     useState<ExportCalendarColorScheme>("light");
   const [isSaving, setIsSaving] = useState(false);

@@ -5,7 +5,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { HeroUINativeProvider } from "heroui-native";
 import { useMemo, useState } from "react";
-import { type ColorSchemeName, useColorScheme } from "react-native";
+import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -55,7 +55,11 @@ function RootLayoutContent() {
   );
 }
 
-function AppShell({ colorScheme }: { colorScheme: ColorSchemeName }) {
+function AppShell({
+  colorScheme,
+}: {
+  colorScheme: ReturnType<typeof useColorScheme>;
+}) {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

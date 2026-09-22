@@ -1,56 +1,28 @@
-# Welcome to your Expo app 👋
+# ポチカレ
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo SDK `58.0.0-preview.4` / React Native `0.88.0-rc.1` を使用しています。
 
-## Get started
+## iOSでのローカル開発
 
-1. Install dependencies
+XcodeとiOSランタイム、Bun、Node.js（22.13以上の22系、24.3以上の24系、または26以上）が必要です。
 
-   ```bash
-   npm install
-   ```
+1. `bun install` で依存関係をインストールします。
+2. Uniwind Proを初めて使うMacでは `bunx uniwind-pro` で認証し、本体を取得します。
+3. `.env.local` に `EXPO_PUBLIC_INSTANT_APP_ID` と `EXPO_PUBLIC_CONVEX_URL` を設定します。
+4. `bun run ios --device` でiOS Simulatorを選択し、開発用アプリをビルド・起動します。Xcode 27ではDevice Hubが開きます。
 
-2. Start the app
+初回ビルド後は `bun run start` を実行し、`i` キーで起動できます。ネイティブ依存関係を更新したときは再ビルドしてください。
 
-   ```bash
-   npx expo start
-   ```
+`ios/` と `android/` は自動生成され、Gitでは管理しません。SDK更新後は `bunx expo prebuild --platform ios --clean` で再生成してからビルドします。ネイティブのカスタマイズは `app.json` と `plugins/` で管理します。
 
-In the output, you'll find options to open the app in a
+検証コマンド：`bunx expo-doctor`、`bunx expo install --check`、`bunx tsc --noEmit`、`bun run check`。
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+画像保存に使う `react-native-view-shot` が旧型定義に依存するため、`tsconfig.json` ではReact Nativeの型互換モードを有効にしています。ライブラリが新しい型定義に対応したら、この設定を外して再検証してください。
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+`patches/` の絵文字ピッカー用パッチは、React Nativeの事前ビルド済みフレームワークからヘッダーを読み込むための修正です。`bun install` 時に自動適用されます。
 
-## Get a fresh project
+## 参考情報
 
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-### Other setup steps
-
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- [Expo SDK 58 beta](https://expo.dev/changelog/sdk-58-beta)
+- [Expoローカル開発](https://docs.expo.dev/guides/local-app-development/)
+- [Uniwind Pro](https://docs.uniwind.dev/migrate-to-pro)
