@@ -122,8 +122,8 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
         exportColorScheme={exportColorScheme}
         hideOutOfMonthDates={hideOutOfMonthDates}
         isExportMode={isExportMode}
+        isSelectedDate={!isExportMode && dateKey === selectedDateKey}
         onPressSelectedDate={onPressSelectedDate}
-        selectedDateKey={selectedDateKey}
         setSelectedDate={setSelectedDate}
         shift={shift}
         shiftPattern={shiftPattern}
@@ -167,7 +167,7 @@ type CalendarDateCellProps = {
   hideOutOfMonthDates: boolean;
   isExportMode: boolean;
   onPressSelectedDate?: () => void;
-  selectedDateKey: number;
+  isSelectedDate: boolean;
   setSelectedDate: (date: Date) => void;
   shift?: CalendarShiftSummary;
   shiftPattern?: Pattern;
@@ -180,12 +180,11 @@ const CalendarDateCell: FC<CalendarDateCellProps> = memo(
   ({
     calendarHighlightTargets,
     date,
-    dateKey,
     exportColorScheme,
     hideOutOfMonthDates,
     isExportMode,
     onPressSelectedDate,
-    selectedDateKey,
+    isSelectedDate,
     setSelectedDate,
     shift,
     shiftPattern,
@@ -196,7 +195,6 @@ const CalendarDateCell: FC<CalendarDateCellProps> = memo(
     const yearMonth = new Date(yearMonthKey);
     const isOutOfMonth = shouldDimOutOfMonth && !isSameMonth(date, yearMonth);
     const shouldHideDateContent = hideOutOfMonthDates && isOutOfMonth;
-    const isSelectedDate = !isExportMode && dateKey === selectedDateKey;
     const highlightColor = getCalendarDateHighlightColor(
       date,
       calendarHighlightTargets
@@ -254,7 +252,7 @@ const CalendarDateCell: FC<CalendarDateCellProps> = memo(
     previous.hideOutOfMonthDates === next.hideOutOfMonthDates &&
     previous.isExportMode === next.isExportMode &&
     previous.onPressSelectedDate === next.onPressSelectedDate &&
-    previous.selectedDateKey === next.selectedDateKey &&
+    previous.isSelectedDate === next.isSelectedDate &&
     previous.setSelectedDate === next.setSelectedDate &&
     previous.shift?.hasNotes === next.shift?.hasNotes &&
     previous.shiftPattern?.countsAsDayOff ===
