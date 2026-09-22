@@ -61,18 +61,12 @@ export const CalendarPager: FC<CalendarPagerProps> = ({
       height: nextHeight,
     };
   });
-  const monthLayerStyle = useAnimatedStyle(
-    () => ({
-      opacity: isExportMode ? 1 : 1 - transitionProgress.value,
-    }),
-    [isExportMode, transitionProgress]
-  );
-  const weekLayerStyle = useAnimatedStyle(
-    () => ({
-      opacity: isExportMode ? 0 : transitionProgress.value,
-    }),
-    [isExportMode, transitionProgress]
-  );
+  const monthLayerStyle = useAnimatedStyle(() => ({
+    opacity: isExportMode ? 1 : 1 - transitionProgress.value,
+  }));
+  const weekLayerStyle = useAnimatedStyle(() => ({
+    opacity: isExportMode ? 0 : transitionProgress.value,
+  }));
 
   useEffect(() => {
     if (detailTransitionProgress) {

@@ -96,19 +96,16 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
     0,
     weeks.findIndex((week) => isSameWeek(week, selectedDate, { weekStartsOn }))
   );
-  const monthContentStyle = useAnimatedStyle(
-    () => ({
-      transform: [
-        {
-          translateY:
-            -selectedWeekIndex *
-            CALENDAR_DAY_CELL_HEIGHT *
-            transitionProgress.value,
-        },
-      ],
-    }),
-    [selectedWeekIndex, transitionProgress]
-  );
+  const monthContentStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateY:
+          -selectedWeekIndex *
+          CALENDAR_DAY_CELL_HEIGHT *
+          transitionProgress.value,
+      },
+    ],
+  }));
 
   const renderDateCell = (date: Date, shouldDimOutOfMonth: boolean) => {
     const dateKey = getDayKey(date);
@@ -411,12 +408,9 @@ const CalendarAnimatedWeekRow: FC<CalendarAnimatedWeekRowProps> = ({
   week,
   weekStartsOn,
 }) => {
-  const rowStyle = useAnimatedStyle(
-    () => ({
-      opacity: isSelectedWeek ? 1 : 1 - progress.value,
-    }),
-    [isSelectedWeek, progress]
-  );
+  const rowStyle = useAnimatedStyle(() => ({
+    opacity: isSelectedWeek ? 1 : 1 - progress.value,
+  }));
 
   return (
     <Animated.View style={rowStyle}>
