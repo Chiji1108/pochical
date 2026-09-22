@@ -12,9 +12,8 @@ import {
 } from "heroui-native";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { Alert, Platform, ScrollView, View } from "react-native";
-import { EmojiPopup } from "react-native-emoji-popup";
-import { EmojiPopupCloseButton } from "@/components/common/emoji-popup-close-button";
+import { Alert, ScrollView, View } from "react-native";
+import { EmojiPickerItem } from "@/components/common/emoji-picker-item";
 import { AppHeader } from "@/components/navigation/app-header";
 import { PatternTimePickerButton } from "@/components/pattern/pattern-time-picker-button";
 import {
@@ -431,19 +430,7 @@ const BasicInfoGroup = ({
       <PatternPreview emoji={emoji} name={name} />
     </View>
     <Separator className="mx-4" />
-    <EmojiPopup
-      closeButton={EmojiPopupCloseButton}
-      onEmojiSelected={onChangeEmoji}
-    >
-      <ListGroup.Item disabled={Platform.OS === "android"}>
-        <ListGroup.ItemContent>
-          <ListGroup.ItemTitle>アイコン</ListGroup.ItemTitle>
-        </ListGroup.ItemContent>
-        <ListGroup.ItemSuffix>
-          <Text className="text-3xl">{emoji}</Text>
-        </ListGroup.ItemSuffix>
-      </ListGroup.Item>
-    </EmojiPopup>
+    <EmojiPickerItem emoji={emoji} onChangeEmoji={onChangeEmoji} />
     <Separator className="mx-4" />
     <ListGroup.Item>
       <ListGroup.ItemContent>

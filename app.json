@@ -19,7 +19,12 @@
     },
     "plugins": [
       "expo-router",
-      "./plugins/with-mc-emoji-picker-fork",
+      [
+        "expo-native-sheet-emojis",
+        {
+          "searchLocales": ["ja"]
+        }
+      ],
       [
         "expo-splash-screen",
         {

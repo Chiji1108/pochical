@@ -13,9 +13,8 @@ import {
   useToast,
 } from "heroui-native";
 import { useRef, useState } from "react";
-import { Alert, Platform, ScrollView, View } from "react-native";
-import { EmojiPopup } from "react-native-emoji-popup";
-import { EmojiPopupCloseButton } from "@/components/common/emoji-popup-close-button";
+import { Alert, ScrollView, View } from "react-native";
+import { EmojiPickerItem } from "@/components/common/emoji-picker-item";
 import {
   DisplayNameFormDialog,
   GroupFormDialog,
@@ -431,22 +430,7 @@ const GroupSettingsSection = ({
   <View className="gap-3">
     <Text className="font-semibold text-lg">グループ</Text>
     <ListGroup>
-      <EmojiPopup
-        closeButton={EmojiPopupCloseButton}
-        onEmojiSelected={onChangeEmoji}
-      >
-        <ListGroup.Item
-          accessibilityLabel="グループアイコンを編集"
-          disabled={Platform.OS === "android"}
-        >
-          <ListGroup.ItemContent>
-            <ListGroup.ItemTitle>アイコン</ListGroup.ItemTitle>
-          </ListGroup.ItemContent>
-          <ListGroup.ItemSuffix>
-            <Text className="text-3xl">{group.emoji}</Text>
-          </ListGroup.ItemSuffix>
-        </ListGroup.Item>
-      </EmojiPopup>
+      <EmojiPickerItem emoji={group.emoji} onChangeEmoji={onChangeEmoji} />
       <Separator className="mx-4" />
       <ListGroup.Item
         accessibilityLabel="グループ名を編集"

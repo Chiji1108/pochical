@@ -17,9 +17,9 @@ XcodeとiOSランタイム、Bun、Node.js（22.13以上の22系、24.3以上の
 
 検証コマンド：`bunx expo-doctor`、`bunx expo install --check`、`bunx tsc --noEmit`、`bun run check`。
 
-画像保存に使う `react-native-view-shot` が旧型定義に依存するため、`tsconfig.json` ではReact Nativeの型互換モードを有効にしています。ライブラリが新しい型定義に対応したら、この設定を外して再検証してください。
+画像保存に使う `react-native-view-shot@6.0.1` には、ExpoとReact Nativeのstyle型の不一致を修正するパッチを適用しています。React Nativeの型互換モードは不要です。パッチは `bun install` 時に自動適用されます。
 
-`patches/` の絵文字ピッカー用パッチは、React Nativeの事前ビルド済みフレームワークからヘッダーを読み込むための修正です。`bun install` 時に自動適用されます。
+絵文字選択は `expo-native-sheet-emojis@2.1.2` を使います。シフトとグループのアイコン選択で共通のネイティブシートを開き、アプリの配色と日本語の表示ラベルを適用します。日本語検索辞書は `app.json` の `searchLocales: ["ja"]` で追加しています。導入前の開発用アプリでは動かないため、`bunx expo prebuild --clean` で旧MCEmojiPickerの設定を除去し、`bun run ios` または `bun run android` で再ビルドしてください。
 
 ## 参考情報
 

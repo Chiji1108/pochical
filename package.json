@@ -28,6 +28,7 @@
     "expo-image": "~58.0.3",
     "expo-linking": "~58.0.4",
     "expo-media-library": "~58.0.0",
+    "expo-native-sheet-emojis": "2.1.2",
     "expo-router": "~58.0.5",
     "expo-secure-store": "~58.0.0",
     "expo-sharing": "~58.0.7",
@@ -40,7 +41,6 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.0-rc.1",
-    "react-native-emoji-popup": "^0.3.3",
     "react-native-fast-confetti": "^1.1.2",
     "react-native-gesture-handler": "~3.2.1",
     "react-native-get-random-values": "~1.11.0",
@@ -92,7 +92,6 @@
     "uniwind"
   ],
   "patchedDependencies": {
-    "react-native-emoji-popup@0.3.3": "patches/react-native-emoji-popup@0.3.3.patch",
     "react-native-view-shot@6.0.1": "patches/react-native-view-shot@6.0.1.patch"
   }
 }

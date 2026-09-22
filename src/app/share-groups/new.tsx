@@ -1,10 +1,9 @@
 import { useMutation } from "convex/react";
 import { useRouter } from "expo-router";
-import { Input, ListGroup, Separator, Text, TextField } from "heroui-native";
+import { Input, ListGroup, Separator, TextField } from "heroui-native";
 import { useRef, useState } from "react";
-import { Alert, Platform, ScrollView, View } from "react-native";
-import { EmojiPopup } from "react-native-emoji-popup";
-import { EmojiPopupCloseButton } from "@/components/common/emoji-popup-close-button";
+import { Alert, ScrollView, View } from "react-native";
+import { EmojiPickerItem } from "@/components/common/emoji-picker-item";
 import { DEFAULT_GROUP_EMOJI } from "@/components/group/group-dialogs";
 import { AppHeader } from "@/components/navigation/app-header";
 import { useCurrentUserId } from "@/lib/instant";
@@ -104,22 +103,7 @@ export default function NewShareGroup() {
         keyboardShouldPersistTaps="handled"
       >
         <ListGroup>
-          <EmojiPopup
-            closeButton={EmojiPopupCloseButton}
-            onEmojiSelected={setGroupEmoji}
-          >
-            <ListGroup.Item
-              accessibilityLabel="グループアイコンを選択"
-              disabled={Platform.OS === "android"}
-            >
-              <ListGroup.ItemContent>
-                <ListGroup.ItemTitle>アイコン</ListGroup.ItemTitle>
-              </ListGroup.ItemContent>
-              <ListGroup.ItemSuffix>
-                <Text className="text-3xl">{groupEmoji}</Text>
-              </ListGroup.ItemSuffix>
-            </ListGroup.Item>
-          </EmojiPopup>
+          <EmojiPickerItem emoji={groupEmoji} onChangeEmoji={setGroupEmoji} />
           <Separator className="mx-4" />
           <ListGroup.Item>
             <ListGroup.ItemContent>
