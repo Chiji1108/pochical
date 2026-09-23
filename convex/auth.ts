@@ -1,8 +1,8 @@
-import Apple from "@auth/core/providers/apple";
 import Google from "@auth/core/providers/google";
 import { Anonymous } from "@convex-dev/auth/providers/Anonymous";
 import { convexAuth } from "@convex-dev/auth/server";
 
+import { appleAuthProvider } from "../convex-lib/appleAuthProvider";
 import { nativeAuthProvider } from "../convex-lib/nativeAuthProvider";
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
@@ -10,18 +10,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
     Anonymous,
     nativeAuthProvider("apple"),
     nativeAuthProvider("google"),
-    Apple({
-      allowDangerousEmailAccountLinking: false,
-      profile: (profile) => ({
-        id: profile.sub,
-        email: profile.email,
-        ...(profile.user?.name
-          ? {
-              name: `${profile.user.name.firstName} ${profile.user.name.lastName}`.trim(),
-            }
-          : {}),
-      }),
-    }),
+    appleAuthProvider(),
     Google({ allowDangerousEmailAccountLinking: false }),
   ],
   callbacks: {

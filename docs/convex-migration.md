@@ -77,18 +77,24 @@ iOSネイティブだけならService ID・`.p8`・client secretは不要。氏�
    - Domains and Subdomains: `veracious-buffalo-766.convex.site`
    - Return URLs: `https://veracious-buffalo-766.convex.site/api/auth/callback/apple`
 4. Keys で Sign in with Apple 用のキーを作成し、同じ App ID に紐付ける。`.p8` を安全な場所にダウンロードする。
-5. Team ID・Key ID・Service ID・`.p8` から Apple の client secret（ES256 JWT）を生成する。下のスクリプトはローカルで生成し、指定したファイルへ保存する：
-
-   ```sh
-   node scripts/create-apple-secret.mjs --team-id YOUR_TEAM_ID --key-id YOUR_KEY_ID --service-id tech.chiji.pochical.auth --key-file /absolute/path/AuthKey_KEYID.p8 --output /tmp/pochical-apple-secret.txt
-   ```
-
-6. Convex Dashboard の Environment Variables に設定：
+5. Convex Dashboard の Environment Variables に設定（開発・本番は別々に設定する）：
    - `AUTH_APPLE_ID`: Service ID（Bundle IDではない）
-   - `AUTH_APPLE_SECRET`: 生成したファイルの内容
-7. アプリの「Appleと連携」で確認。登録後、生成した一時ファイルを削除する。
+   - `AUTH_APPLE_TEAM_ID`: Apple Developer の Team ID
+   - `AUTH_APPLE_KEY_ID`: ダウンロードしたキーの Key ID
+   - `AUTH_APPLE_PRIVATE_KEY`: `.p8` の内容全体（BEGIN/END行を含む）。実際の改行、文字列の `\n` のどちらも利用可能。
+6. アプリの「Appleと連携」で確認する。Androidでログアウト後の再ログインと、iOSと同じアカウントに戻れることを確認する。
 
-このスクリプトのsecret有効期限は180日。期限前に同じ手順で更新する。`.p8` 自体を `AUTH_APPLE_SECRET` に貼り付けない。
+`convex-lib/appleAuthProvider.ts` が Apple のトークン交換直前に、有効期間5分の client secret（ES256 JWT）を毎回生成する。定期ジョブ・180日ごとのSecret更新・アプリ再配布は不要。`.p8` はサーバー側の環境変数だけに保存し、`EXPO_PUBLIC_*`・Git・アプリのバンドルには含めない。Apple側でキーを失効させた場合は、新しい秘密鍵とKey IDへ更新する。
+
+### 既存の固定Secretからの移行
+
+1. 自動生成対応コードをデプロイする。新しい3項目がすべて未設定なら、既存の `AUTH_APPLE_SECRET` を引き続き使用する。
+2. `AUTH_APPLE_TEAM_ID`・`AUTH_APPLE_KEY_ID`・`AUTH_APPLE_PRIVATE_KEY` をまとめて設定する。CLIの `bun x convex env set --from-file /安全な場所/apple.env` で複数項目を一括設定できる（本番には `--prod` を付ける）。ファイルには今回設定する項目だけを入れ、リポジトリ外に置いてアクセス権を制限し、設定後に削除する。
+3. AndroidでAppleログインを確認し、不要になった `AUTH_APPLE_SECRET` を削除する。
+
+新しい3項目のどれかが設定されると自動生成を使う。不足・不正な鍵がある場合はエラーにし、古いSecretには戻さない。途中状態を避けるため、3項目を一括設定する。
+
+旧 `scripts/create-apple-secret.mjs` は手動運用の補助として残している。このスクリプトのSecretは180日で失効するため、自動生成への移行前は期限管理が必要。`.p8` 自体を `AUTH_APPLE_SECRET` に貼り付けない。
 
 ## 4. 実機での確認
 
