@@ -16,6 +16,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     plugins: [
       ...(config.plugins ?? []),
       "expo-apple-authentication",
+      "./plugins/with-ios-ime-patch.cjs",
+      "./plugins/with-uniwind-native-check.cjs",
       "./plugins/with-mlkit-keep-rules.cjs",
       ["./plugins/with-native-auth.cjs", { configurePods: !iosClientId }],
       // The plugin requires a real iOS client ID. Add it after Google Cloud setup.

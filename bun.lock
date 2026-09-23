@@ -92,6 +92,7 @@
   ],
   "patchedDependencies": {
     "@convex-dev/auth@0.0.95": "patches/@convex-dev%2Fauth@0.0.95.patch",
+    "react-native@0.88.0-rc.1": "patches/react-native@0.88.0-rc.1.patch",
     "react-native-view-shot@6.0.1": "patches/react-native-view-shot@6.0.1.patch",
   },
   "packages": {
