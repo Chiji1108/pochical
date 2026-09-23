@@ -34,7 +34,7 @@ import {
   getCalendarSelectOptions,
   getWritableCalendars,
 } from "@/lib/device-calendar";
-import { useCurrentUserId } from "@/lib/instant";
+import { useCurrentUserId } from "@/lib/work-data";
 
 const DETAIL_PAGE_DRAG_DISTANCE = 180;
 const DETAIL_PAGE_SETTLE_THRESHOLD = 0.45;

@@ -6,7 +6,7 @@ import { Alert, ScrollView, View } from "react-native";
 import { EmojiPickerItem } from "@/components/common/emoji-picker-item";
 import { DEFAULT_GROUP_EMOJI } from "@/components/group/group-dialogs";
 import { AppHeader } from "@/components/navigation/app-header";
-import { useCurrentUserId } from "@/lib/instant";
+import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../convex/_generated/api";
 
 export default function NewShareGroup() {
@@ -53,7 +53,7 @@ export default function NewShareGroup() {
       const result = await createGroupMutation({
         displayName,
         emoji: groupEmoji,
-        instantUserId: currentUserId,
+
         name: groupName,
       });
       router.replace(`/group?groupId=${result.groupId}&showInvite=1`);

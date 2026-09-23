@@ -1,4 +1,4 @@
-import { Text } from "heroui-native";
+import { Typography } from "heroui-native";
 import { Alert, Linking } from "react-native";
 
 const URL_REGEX = /(?:https?:\/\/|www\.)[^\s<>"']+/gi;
@@ -86,32 +86,32 @@ export const LinkifiedText = ({
   );
 
   return (
-    <Text className={className}>
+    <Typography className={className}>
       {splitTextIntoParts(text).map((part, index) => {
         const key = `${part.type}-${index}`;
 
         if (part.type === "text") {
           return (
-            <Text className={className} key={key}>
+            <Typography className={className} key={key}>
               {part.text}
-            </Text>
+            </Typography>
           );
         }
 
         return (
-          <Text className={className} key={key}>
-            <Text
+          <Typography className={className} key={key}>
+            <Typography
               className={resolvedLinkClassName}
               onPress={() => {
                 openUrl(part.url).catch(() => undefined);
               }}
             >
               {part.displayText}
-            </Text>
-            <Text className={className}>{part.trailingText}</Text>
-          </Text>
+            </Typography>
+            <Typography className={className}>{part.trailingText}</Typography>
+          </Typography>
         );
       })}
-    </Text>
+    </Typography>
   );
 };

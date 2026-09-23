@@ -5,8 +5,8 @@ import {
   Dialog,
   Input,
   Label,
-  Text,
   TextField,
+  Typography,
   useThemeColor,
   useToast,
 } from "heroui-native";
@@ -145,9 +145,9 @@ export const InviteDialog = ({
           <View className="mb-5 gap-1.5">
             <Dialog.Title>招待</Dialog.Title>
             {inviteDetails ? (
-              <Text className="text-sm" color="muted">
+              <Typography className="text-sm" color="muted">
                 {inviteGroupLabel}に参加するためのリンクです
-              </Text>
+              </Typography>
             ) : null}
           </View>
           {inviteDetails ? (
@@ -158,9 +158,9 @@ export const InviteDialog = ({
               <View className="w-full gap-2">
                 <Label>招待URL</Label>
                 <View className="rounded-lg border border-border bg-content1 px-3 py-2">
-                  <Text className="text-sm" selectable={true}>
+                  <Typography className="text-sm" selectable={true}>
                     {inviteDetails.url}
-                  </Text>
+                  </Typography>
                 </View>
               </View>
               <View className="w-full flex-row gap-3">

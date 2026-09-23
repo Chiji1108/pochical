@@ -1,13 +1,19 @@
-import { id } from "@instantdb/react-native";
+import { randomUUID as id } from "expo-crypto";
 import { selectionAsync } from "expo-haptics";
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { Input, Label, TagGroup, Text, TextField } from "heroui-native";
+import { Input, Label, TagGroup, TextField, Typography } from "heroui-native";
 import { Button } from "heroui-native/button";
 import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
-import { db, type Member, type Shift, useCurrentUserId } from "@/lib/instant";
 import { shiftNoteDrafts } from "@/lib/shift-notes";
+import { patchShift, putMember, removeRecord } from "@/lib/work-changes";
+import {
+  type Member,
+  type Shift,
+  useCurrentUserId,
+  writeWork,
+} from "@/lib/work-data";
 
 const seedMembers = ["佐藤師長", "鈴木主任", "田中先輩"] as const;
 
@@ -65,11 +71,9 @@ export const ShiftDetailInputPanel = ({
       return;
     }
 
-    await db.transact(
+    await writeWork(
       seedMembers.map((name, orderIndex) =>
-        db.tx.shiftMembers[id()]
-          .create({ name, orderIndex })
-          .link({ owner: currentUserId })
+        putMember(id(), { name, orderIndex })
       )
     );
   };
@@ -79,25 +83,7 @@ export const ShiftDetailInputPanel = ({
       return;
     }
 
-    const currentMemberIds = new Set(
-      (selectedShift.shiftMembers ?? []).map((member) => member.id)
-    );
-    const nextMemberIds = new Set(memberIds);
-    const membersToLink = memberIds.filter(
-      (memberId) => !currentMemberIds.has(memberId)
-    );
-    const membersToUnlink = Array.from(currentMemberIds).filter(
-      (memberId) => !nextMemberIds.has(memberId)
-    );
-
-    await db.transact([
-      ...membersToLink.map((memberId) =>
-        db.tx.shifts[selectedShift.id].link({ shiftMembers: memberId })
-      ),
-      ...membersToUnlink.map((memberId) =>
-        db.tx.shifts[selectedShift.id].unlink({ shiftMembers: memberId })
-      ),
-    ]);
+    await writeWork(patchShift(selectedShift.id, { memberIds }));
   };
 
   const handleDeleteShift = async () => {
@@ -106,7 +92,7 @@ export const ShiftDetailInputPanel = ({
     }
 
     shiftNoteDrafts.discard(selectedShift.id);
-    await db.transact(db.tx.shifts[selectedShift.id].delete());
+    await writeWork(removeRecord("shifts", selectedShift.id));
 
     selectionAsync().catch(() => {
       // Haptics can be unavailable depending on the device or platform.
@@ -133,7 +119,7 @@ export const ShiftDetailInputPanel = ({
       {selectedShift ? (
         <View className="gap-2">
           <View className="flex-row items-center justify-between gap-3">
-            <Text className="font-semibold">勤務メンバー</Text>
+            <Typography className="font-semibold">勤務メンバー</Typography>
           </View>
           {sortedMembers.length > 0 ? (
             <TagGroup

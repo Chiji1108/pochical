@@ -3,12 +3,12 @@ import type { QueryCtx } from "../convex/_generated/server";
 import { getMembership, listMembers } from "./groupMembers";
 import { getLastReadByChannelId } from "./unreads";
 
-const getDisplayNameByInstantUserId = async (
+const getDisplayNameByUserId = async (
   ctx: QueryCtx,
   groupId: Id<"groups">,
-  instantUserId: string
+  userId: string
 ) => {
-  const membership = await getMembership(ctx, groupId, instantUserId);
+  const membership = await getMembership(ctx, groupId, userId);
 
   return membership?.displayName ?? "脱退済みメンバー";
 };
@@ -19,49 +19,46 @@ const getThreadReaderIds = async (
 ) => {
   if (thread.kind === "direct") {
     return [thread.directParticipantA, thread.directParticipantB].filter(
-      (instantUserId): instantUserId is string => Boolean(instantUserId)
+      (userId): userId is string => Boolean(userId)
     );
   }
 
   return (await listMembers(ctx, thread.groupId)).map(
-    (member) => member.instantUserId
+    (member) => member.userId
   );
 };
 
-const getLastReadByInstantUserId = async (
+const getLastReadByUserId = async (
   ctx: QueryCtx,
   thread: Doc<"chatThreads"> | null
 ) => {
-  const lastReadByInstantUserId = new Map<string, number>();
+  const lastReadByUserId = new Map<string, number>();
 
   if (!thread) {
-    return lastReadByInstantUserId;
+    return lastReadByUserId;
   }
 
-  for (const instantUserId of await getThreadReaderIds(ctx, thread)) {
-    lastReadByInstantUserId.set(
-      instantUserId,
+  for (const userId of await getThreadReaderIds(ctx, thread)) {
+    lastReadByUserId.set(
+      userId,
       await getLastReadByChannelId(ctx, {
         channelId: thread._id,
-        instantUserId,
+        userId,
       })
     );
   }
 
-  return lastReadByInstantUserId;
+  return lastReadByUserId;
 };
 
 const countReadReceipts = (
-  lastReadByInstantUserId: Map<string, number>,
+  lastReadByUserId: Map<string, number>,
   message: Doc<"chatMessages">
 ) => {
   let readCount = 0;
 
-  for (const [instantUserId, lastReadAt] of lastReadByInstantUserId) {
-    if (
-      instantUserId !== message.authorInstantUserId &&
-      lastReadAt >= message.createdAt
-    ) {
+  for (const [userId, lastReadAt] of lastReadByUserId) {
+    if (userId !== message.authorUserId && lastReadAt >= message.createdAt) {
       readCount += 1;
     }
   }
@@ -75,7 +72,7 @@ export const addMessageMetadata = async (
   page: Doc<"chatMessages">[]
 ) => {
   const displayNames = new Map<string, string>();
-  const lastReadByInstantUserId = await getLastReadByInstantUserId(ctx, thread);
+  const lastReadByUserId = await getLastReadByUserId(ctx, thread);
   const messages: (Doc<"chatMessages"> & {
     authorDisplayName: string;
     readCount: number;
@@ -84,21 +81,21 @@ export const addMessageMetadata = async (
   for (const message of page) {
     let displayName =
       message.authorDisplayNameSnapshot ||
-      displayNames.get(message.authorInstantUserId);
+      displayNames.get(message.authorUserId);
 
     if (!displayName) {
-      displayName = await getDisplayNameByInstantUserId(
+      displayName = await getDisplayNameByUserId(
         ctx,
         message.groupId,
-        message.authorInstantUserId
+        message.authorUserId
       );
-      displayNames.set(message.authorInstantUserId, displayName);
+      displayNames.set(message.authorUserId, displayName);
     }
 
     messages.push({
       ...message,
       authorDisplayName: displayName,
-      readCount: countReadReceipts(lastReadByInstantUserId, message),
+      readCount: countReadReceipts(lastReadByUserId, message),
     });
   }
 

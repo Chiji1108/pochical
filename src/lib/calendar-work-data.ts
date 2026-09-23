@@ -15,7 +15,7 @@ import {
   type Pattern,
   useOwnWorkData,
   type WorkDataDateRange,
-} from "@/lib/instant";
+} from "@/lib/work-data";
 
 const CALENDAR_QUERY_MONTH_RADIUS = 3;
 const CALENDAR_QUERY_RECENTER_THRESHOLD_MONTHS = 1;

@@ -1,9 +1,9 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Text } from "heroui-native";
+import { Typography } from "heroui-native";
 import { View } from "react-native";
 import { AppHeader } from "@/components/navigation/app-header";
 import { PatternEditView } from "@/components/pattern/pattern-edit-view";
-import { useCurrentUserId, usePatternById } from "@/lib/instant";
+import { useCurrentUserId, usePatternById } from "@/lib/work-data";
 
 export default function PatternDetail() {
   const router = useRouter();
@@ -30,9 +30,9 @@ export default function PatternDetail() {
           title="編集"
         />
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-base" color="muted">
+          <Typography className="text-center text-base" color="muted">
             シフトパターンが見つかりません
-          </Text>
+          </Typography>
         </View>
       </View>
     );

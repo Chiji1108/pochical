@@ -5,10 +5,10 @@ import {
 } from "@shopify/flash-list";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
-import { Text } from "heroui-native";
+import { Typography } from "heroui-native";
 import type { Ref } from "react";
 import { ScrollView, View } from "react-native";
-import type { Pattern } from "@/lib/instant";
+import type { Pattern } from "@/lib/work-data";
 
 export const SHARED_SHIFT_DATE_COLUMN_WIDTH = 58;
 export const SHARED_SHIFT_MEMBER_COLUMN_WIDTH = 68;
@@ -28,7 +28,7 @@ export type SharedShiftScheduleDay = {
 export type SharedShiftMember = {
   _id: string;
   displayName: string;
-  instantUserId: string;
+  userId: string;
 };
 
 export type SharedShiftCellValue = {
@@ -216,9 +216,7 @@ const SharedShiftTableRow = ({
   today?: Date;
 }) => {
   const cells = members.map((member) => {
-    const shift = shiftsByUserAndDate.get(
-      `${member.instantUserId}:${day.time}`
-    );
+    const shift = shiftsByUserAndDate.get(`${member.userId}:${day.time}`);
 
     return { member, shift };
   });
@@ -309,14 +307,14 @@ const TableHeaderCell = ({
       width,
     }}
   >
-    <Text
+    <Typography
       className="font-semibold text-xs"
       color="muted"
       numberOfLines={1}
       style={{ textAlign }}
     >
       {label}
-    </Text>
+    </Typography>
   </View>
 );
 
@@ -354,13 +352,13 @@ const TableBodyCell = ({
       width,
     }}
   >
-    <Text
+    <Typography
       className="text-xs"
       color={muted ? "muted" : undefined}
       numberOfLines={1}
       style={{ textAlign }}
     >
       {prefix ? `${prefix} ${label}` : label}
-    </Text>
+    </Typography>
   </View>
 );

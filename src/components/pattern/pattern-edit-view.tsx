@@ -1,4 +1,4 @@
-import { id } from "@instantdb/react-native";
+import { randomUUID as id } from "expo-crypto";
 import { useRouter } from "expo-router";
 import {
   Input,
@@ -7,8 +7,8 @@ import {
   Select,
   Separator,
   Switch,
-  Text,
   TextField,
+  Typography,
 } from "heroui-native";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
@@ -21,13 +21,14 @@ import {
   playSelectionHaptic,
   playWarningHaptic,
 } from "@/lib/haptics";
+import { patchPattern, putPattern, removeRecord } from "@/lib/work-changes";
 import {
-  db,
-  type InstantTransaction,
   type Pattern,
   useCurrentUserId,
   useOwnWorkData,
-} from "@/lib/instant";
+  type WorkChange,
+  writeWork,
+} from "@/lib/work-data";
 
 const DEFAULT_EMOJI = "❤️";
 const DEFAULT_NAME = "";
@@ -190,14 +191,12 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
       return;
     }
 
-    const transactions: InstantTransaction[] = relatedShifts.map((shift) =>
-      db.tx.shifts[shift.id].delete()
+    const transactions: WorkChange[] = relatedShifts.map((shift) =>
+      removeRecord("shifts", shift.id)
     );
 
     for (const item of patternsUsingThisAsNextDay) {
-      transactions.push(
-        db.tx.shiftPatterns[item.id].unlink({ nextDayPattern: pattern.id })
-      );
+      transactions.push(patchPattern(item.id, { nextDayPatternId: null }));
     }
 
     const remainingPatterns = patterns
@@ -207,15 +206,15 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
     for (const [orderIndex, item] of remainingPatterns.entries()) {
       if (item.orderIndex !== orderIndex) {
         transactions.push(
-          db.tx.shiftPatterns[item.id].update({
+          patchPattern(item.id, {
             orderIndex,
           })
         );
       }
     }
 
-    transactions.push(db.tx.shiftPatterns[pattern.id].delete());
-    await db.transact(transactions);
+    transactions.push(removeRecord("shiftPatterns", pattern.id));
+    await writeWork(transactions);
 
     playLightImpactHaptic();
     router.back();
@@ -262,32 +261,17 @@ export const PatternEditView = ({ pattern }: PatternEditViewProps) => {
     const shouldLinkNextDayPattern =
       isContinueUntilNextDay && Boolean(formState.nextDayPatternId);
 
-    if (pattern) {
-      let transaction = db.tx.shiftPatterns[pattern.id].update(saveFields);
-      if (shouldLinkNextDayPattern && formState.nextDayPatternId) {
-        transaction = transaction.link({
-          nextDayPattern: formState.nextDayPatternId,
-        });
-      } else if (pattern.nextDayPattern?.id) {
-        transaction = transaction.unlink({
-          nextDayPattern: pattern.nextDayPattern.id,
-        });
-      }
-      await db.transact(transaction);
-    } else {
-      let transaction = db.tx.shiftPatterns[id()]
-        .create({
-          ...saveFields,
-          orderIndex: patterns.length,
-        })
-        .link({ owner: currentUserId });
-      if (shouldLinkNextDayPattern && formState.nextDayPatternId) {
-        transaction = transaction.link({
-          nextDayPattern: formState.nextDayPatternId,
-        });
-      }
-      await db.transact(transaction);
-    }
+    const fields = {
+      ...saveFields,
+      nextDayPatternId: shouldLinkNextDayPattern
+        ? (formState.nextDayPatternId ?? null)
+        : null,
+    };
+    await writeWork(
+      pattern
+        ? patchPattern(pattern.id, fields)
+        : putPattern(id(), { ...fields, orderIndex: patterns.length })
+    );
 
     playLightImpactHaptic();
     router.back();
@@ -402,12 +386,12 @@ type PatternPreviewProps = {
 const PatternPreview = ({ emoji, name }: PatternPreviewProps) => (
   <View className="items-center">
     <View className="h-20 w-18 items-center justify-center gap-1 rounded-xl bg-surface-secondary px-2 py-2 shadow-surface">
-      <Text className="text-3xl" numberOfLines={1}>
+      <Typography className="text-3xl" numberOfLines={1}>
         {emoji}
-      </Text>
-      <Text className="text-center text-sm" numberOfLines={1}>
+      </Typography>
+      <Typography className="text-center text-sm" numberOfLines={1}>
         {name || "名前"}
-      </Text>
+      </Typography>
     </View>
   </View>
 );
@@ -568,9 +552,9 @@ const TimeRangePickerRow = ({
           onChangeDate={onChangeStartDate}
           value={startDate}
         />
-        <Text className="pb-2 text-xl leading-none" color="muted">
+        <Typography className="pb-2 text-xl leading-none" color="muted">
           ›
-        </Text>
+        </Typography>
         <TimeRangePickerButton
           dayLabel={endDayLabel}
           onChangeDate={onChangeEndDate}
@@ -594,9 +578,9 @@ const TimeRangePickerButton = ({
 }: TimeRangePickerButtonProps) => (
   <View className="items-center gap-1">
     {dayLabel ? (
-      <Text className="text-xs" color="muted">
+      <Typography className="text-xs" color="muted">
         {dayLabel}
-      </Text>
+      </Typography>
     ) : null}
     <PatternTimePickerButton onSelectDate={onChangeDate} value={value} />
   </View>

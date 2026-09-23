@@ -1,5 +1,6 @@
 import { Presence } from "@convex-dev/presence";
 import { ConvexError, v } from "convex/values";
+import { requireUserId } from "../convex-lib/auth";
 import { type DatabaseCtx, getMembership } from "../convex-lib/groupMembers";
 import { components } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -15,7 +16,7 @@ type PresenceRoomPayload =
   | {
       groupId: string;
       kind: "direct";
-      participantInstantUserIds: string[];
+      participantUserIds: string[];
     };
 
 const isPresenceRoomPayload = (
@@ -37,10 +38,9 @@ const isPresenceRoomPayload = (
 
   return (
     room.kind === "group" ||
-    (Array.isArray(room.participantInstantUserIds) &&
-      room.participantInstantUserIds.every(
-        (participantInstantUserId: unknown) =>
-          typeof participantInstantUserId === "string"
+    (Array.isArray(room.participantUserIds) &&
+      room.participantUserIds.every(
+        (participantUserId: unknown) => typeof participantUserId === "string"
       ))
   );
 };
@@ -62,11 +62,14 @@ const parsePresenceRoomId = (roomId: string): PresenceRoomPayload => {
 const requirePresenceRoomAccess = async (
   ctx: DatabaseCtx,
   roomId: string,
-  instantUserId: string
+  userId: string
 ) => {
+  if (userId !== (await requireUserId(ctx))) {
+    throw new ConvexError("Unauthorized");
+  }
   const room = parsePresenceRoomId(roomId);
   const groupId = room.groupId as Id<"groups">;
-  const membership = await getMembership(ctx, groupId, instantUserId);
+  const membership = await getMembership(ctx, groupId, userId);
 
   if (!membership) {
     throw new ConvexError("Group not found");
@@ -76,17 +79,17 @@ const requirePresenceRoomAccess = async (
     return;
   }
 
-  const participants = new Set(room.participantInstantUserIds);
+  const participants = new Set(room.participantUserIds);
 
-  if (participants.size !== 2 || !participants.has(instantUserId)) {
+  if (participants.size !== 2 || !participants.has(userId)) {
     throw new ConvexError("Chat not found");
   }
 
-  for (const participantInstantUserId of participants) {
+  for (const participantUserId of participants) {
     const participantMembership = await getMembership(
       ctx,
       groupId,
-      participantInstantUserId
+      participantUserId
     );
 
     if (!participantMembership) {

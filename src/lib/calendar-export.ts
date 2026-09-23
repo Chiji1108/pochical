@@ -7,7 +7,7 @@ import {
   startOfMonth,
 } from "date-fns";
 import type { ModifiableEventProperties } from "expo-calendar";
-import type { Pattern, Shift, ShiftMember } from "@/lib/instant";
+import type { Pattern, Shift, ShiftMember } from "@/lib/work-data";
 
 type ShiftCalendarEventInput = {
   membersById: ReadonlyMap<string, ShiftMember>;

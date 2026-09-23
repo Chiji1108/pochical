@@ -3,18 +3,11 @@
 
 @import "heroui-native/styles";
 
-/* Path to the heroui-native lib inside node_modules relative to global.css */
-/* Examples:
- *   - If global.css is at project root: ./node_modules/heroui-native/lib
- *   - If global.css is in app/: ../node_modules/heroui-native/lib
- *   - If global.css is in src/styles/: ../../node_modules/heroui-native/lib
- */
-@source "../node_modules/heroui-native/lib";
-
 @layer theme {
   @variant dark {
     --background: oklch(0.17 0.006 285.823);
     --surface: oklch(0.22 0.006 285.89);
+    --overlay: var(--surface);
     --surface-secondary: oklch(0.27 0.005 286.14);
     --surface-tertiary: oklch(0.31 0.004 247.91);
     --field-background: var(--surface);

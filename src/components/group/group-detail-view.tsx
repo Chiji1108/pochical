@@ -7,7 +7,7 @@ import {
   Card,
   ListGroup,
   Separator,
-  Text,
+  Typography,
   useThemeColor,
 } from "heroui-native";
 import type { FC } from "react";
@@ -18,7 +18,7 @@ import {
   type InviteDetails,
   InviteDialog,
 } from "@/components/group/group-dialogs";
-import { useCurrentUserId } from "@/lib/instant";
+import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 
@@ -99,9 +99,7 @@ export const GroupDetailView = ({
   const [inviteDetails, setInviteDetails] = useState<InviteDetails>();
   const group = useQuery(
     convexApi.groups.getDetail,
-    groupId && currentUserId
-      ? { groupId: groupId as Id<"groups">, instantUserId: currentUserId }
-      : "skip"
+    groupId && currentUserId ? { groupId: groupId as Id<"groups"> } : "skip"
   );
 
   useEffect(() => {
@@ -147,16 +145,16 @@ export const GroupDetailView = ({
           title="グループ"
         />
         <View style={styles.centerState}>
-          <Text color="muted" style={styles.centerStateText}>
+          <Typography color="muted" style={styles.centerStateText}>
             グループが見つかりません
-          </Text>
+          </Typography>
         </View>
       </View>
     );
   }
 
   const directMembers = group.members
-    .filter((member) => member.instantUserId !== currentUserId)
+    .filter((member) => member.userId !== currentUserId)
     .sort((firstMember, secondMember) => {
       const unreadDifference =
         Number(secondMember.unreadCount > 0) -
@@ -277,7 +275,7 @@ export const GroupDetailView = ({
           </ListGroup>
         </View>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>個人チャット</Text>
+          <Typography style={styles.sectionTitle}>個人チャット</Typography>
           {directMembers.length > 0 ? (
             <ListGroup>
               {directMembers.map((member, index) => (
@@ -288,7 +286,7 @@ export const GroupDetailView = ({
                     member={member}
                     onOpen={() => {
                       router.push(
-                        `/share-groups/${group._id}/chats/${encodeURIComponent(member.instantUserId)}`
+                        `/share-groups/${group._id}/chats/${encodeURIComponent(member.userId)}`
                       );
                     }}
                   />
@@ -300,9 +298,9 @@ export const GroupDetailView = ({
             </ListGroup>
           ) : (
             <Card className="p-4">
-              <Text color="muted" style={styles.emptyCardText}>
+              <Typography color="muted" style={styles.emptyCardText}>
                 個人チャットできるメンバーがいません
-              </Text>
+              </Typography>
             </Card>
           )}
         </View>
@@ -375,7 +373,7 @@ const GroupDetailHeader: FC<GroupDetailHeaderProps> = ({
             <GroupDetailHeaderActionButton action={leftAction} />
           </View>
         )}
-        <Text
+        <Typography
           numberOfLines={1}
           style={[
             styles.headerTitle,
@@ -383,7 +381,7 @@ const GroupDetailHeader: FC<GroupDetailHeaderProps> = ({
           ]}
         >
           {title}
-        </Text>
+        </Typography>
         <View
           style={
             isLeftAligned
@@ -465,7 +463,7 @@ const ChatItemSuffix = ({
             </View>
           ) : null}
           {latestTime ? (
-            <Text
+            <Typography
               color="muted"
               style={[
                 styles.latestTime,
@@ -473,7 +471,7 @@ const ChatItemSuffix = ({
               ]}
             >
               {latestTime}
-            </Text>
+            </Typography>
           ) : null}
         </View>
         <ListGroup.ItemSuffix />
@@ -492,9 +490,9 @@ const UnreadBadge = ({
   foregroundColor: string;
 }) => (
   <View style={[styles.unreadBadge, { backgroundColor: color }]}>
-    <Text style={[styles.unreadBadgeText, { color: foregroundColor }]}>
+    <Typography style={[styles.unreadBadgeText, { color: foregroundColor }]}>
       {count > 99 ? "99+" : count}
-    </Text>
+    </Typography>
   </View>
 );
 

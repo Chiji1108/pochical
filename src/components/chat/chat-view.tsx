@@ -8,7 +8,7 @@ import {
   Button,
   Popover,
   type PopoverTriggerRef,
-  Text,
+  Typography,
   useThemeColor,
   useToast,
 } from "heroui-native";
@@ -49,7 +49,7 @@ const ChatScrollView = ({
 export type ChatMessage = {
   _id: string;
   authorDisplayName: string;
-  authorInstantUserId: string;
+  authorUserId: string;
   body: string;
   createdAt: number;
   readCount: number;
@@ -58,7 +58,7 @@ export type ChatMessage = {
 export type ChatEvent = {
   _id: string;
   actorDisplayNameSnapshot: string;
-  actorInstantUserId: string;
+  actorUserId: string;
   body: string;
   createdAt: number;
   kind:
@@ -72,7 +72,7 @@ export type ChatEvent = {
   nextValue?: string;
   previousValue?: string;
   targetDisplayNameSnapshot?: string;
-  targetInstantUserId?: string;
+  targetUserId?: string;
 };
 
 type ChatTimelineItem =
@@ -239,8 +239,8 @@ const buildChatListItems = (
     if (timelineItem.type === "message") {
       const showAuthor =
         nextTimelineItem?.type !== "message" ||
-        nextTimelineItem.message.authorInstantUserId !==
-          timelineItem.message.authorInstantUserId ||
+        nextTimelineItem.message.authorUserId !==
+          timelineItem.message.authorUserId ||
         nextItemDateKey !== currentDateKey;
 
       items.push({
@@ -343,8 +343,8 @@ export const ChatView = ({
   );
   const visibleListItems = useMemo(() => [...listItems].reverse(), [listItems]);
   const presenceUsers = useMemo(() => {
-    const membersByInstantUserId = new Map(
-      presenceMembers.map((member) => [member.instantUserId, member])
+    const membersByUserId = new Map(
+      presenceMembers.map((member) => [member.userId, member])
     );
     const states = (presenceState ?? []) as PresenceStateWithData[];
     const users: ChatPresenceUser[] = [];
@@ -354,7 +354,7 @@ export const ChatView = ({
         continue;
       }
 
-      const member = membersByInstantUserId.get(state.userId);
+      const member = membersByUserId.get(state.userId);
 
       if (!member) {
         continue;
@@ -423,7 +423,7 @@ export const ChatView = ({
     } else {
       content = (
         <MessageBubble
-          isOwnMessage={item.message.authorInstantUserId === currentUserId}
+          isOwnMessage={item.message.authorUserId === currentUserId}
           message={item.message}
           readReceiptMode={readReceiptMode}
           showAuthor={item.showAuthor}
@@ -463,9 +463,9 @@ export const ChatView = ({
         keyExtractor={getChatListItemKey}
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center px-6 py-12">
-            <Text className="text-center text-base" color="muted">
+            <Typography className="text-center text-base" color="muted">
               まだメッセージがありません
-            </Text>
+            </Typography>
           </View>
         }
         maintainVisibleContentPosition={{
@@ -540,16 +540,16 @@ export const ChatView = ({
 };
 
 const formatEventActor = (event: ChatEvent, currentUserId: string) =>
-  event.actorInstantUserId === currentUserId
+  event.actorUserId === currentUserId
     ? "あなた"
     : `${event.actorDisplayNameSnapshot}さん`;
 
 const TypingIndicator = ({ label }: { label: string | null }) => (
   <View className="min-h-0 justify-center bg-background px-4">
     {label ? (
-      <Text className="pb-1 text-xs" color="muted" numberOfLines={1}>
+      <Typography className="pb-1 text-xs" color="muted" numberOfLines={1}>
         {label}
-      </Text>
+      </Typography>
     ) : null}
   </View>
 );
@@ -583,7 +583,7 @@ const formatEventBody = (event: ChatEvent, currentUserId: string) => {
   }
 
   if (event.kind === "member_joined" || event.kind === "member_left") {
-    return event.actorInstantUserId === currentUserId
+    return event.actorUserId === currentUserId
       ? event.body.replace(`${event.actorDisplayNameSnapshot}さん`, "あなた")
       : event.body;
   }
@@ -591,7 +591,7 @@ const formatEventBody = (event: ChatEvent, currentUserId: string) => {
   if (event.kind === "member_removed") {
     const targetDisplayName = event.targetDisplayNameSnapshot ?? "メンバー";
     const target =
-      event.targetInstantUserId === currentUserId
+      event.targetUserId === currentUserId
         ? "あなた"
         : `${targetDisplayName}さん`;
 
@@ -610,12 +610,12 @@ const EventRow = ({
 }) => (
   <View className="items-center py-1">
     <View className="max-w-[88%] items-center px-3 py-1">
-      <Text className="text-[10px] leading-tight" color="muted">
+      <Typography className="text-[10px] leading-tight" color="muted">
         {messageTimeFormatter.format(new Date(event.createdAt))}
-      </Text>
-      <Text className="text-center text-xs leading-4" color="muted">
+      </Typography>
+      <Typography className="text-center text-xs leading-4" color="muted">
         {formatEventBody(event, currentUserId)}
-      </Text>
+      </Typography>
     </View>
   </View>
 );
@@ -658,9 +658,13 @@ const MessageBubble = ({
   return (
     <View className={isOwnMessage ? "items-end" : "items-start"}>
       {isOwnMessage || !showAuthor ? null : (
-        <Text className="mb-0.5 px-1 text-xs" color="muted" numberOfLines={1}>
+        <Typography
+          className="mb-0.5 px-1 text-xs"
+          color="muted"
+          numberOfLines={1}
+        >
           {message.authorDisplayName}
-        </Text>
+        </Typography>
       )}
       <View
         className={
@@ -786,7 +790,7 @@ const InviteLinkCard = ({
           tintColor={iconColor}
         />
         <View className="min-w-0 flex-1">
-          <Text
+          <Typography
             className={
               isOwnMessage
                 ? "font-semibold text-accent-foreground text-sm"
@@ -795,8 +799,8 @@ const InviteLinkCard = ({
             numberOfLines={1}
           >
             {title}
-          </Text>
-          <Text
+          </Typography>
+          <Typography
             className={
               isOwnMessage
                 ? "text-accent-foreground/80 text-xs"
@@ -805,7 +809,7 @@ const InviteLinkCard = ({
             numberOfLines={1}
           >
             {description}
-          </Text>
+          </Typography>
         </View>
       </View>
     </Pressable>
@@ -835,9 +839,9 @@ const MessageMetadata = ({
   return (
     <View className={isOwnMessage ? "mb-0.5 items-end" : "mb-0.5 items-start"}>
       {readLabel ? (
-        <Text className="text-[10px] leading-tight" color="muted">
+        <Typography className="text-[10px] leading-tight" color="muted">
           {readLabel}
-        </Text>
+        </Typography>
       ) : null}
       {isSending ? (
         <View className="h-3 justify-center">
@@ -848,9 +852,9 @@ const MessageMetadata = ({
           />
         </View>
       ) : (
-        <Text className="text-[10px] leading-tight" color="muted">
+        <Typography className="text-[10px] leading-tight" color="muted">
           {messageTimeFormatter.format(new Date(message.createdAt))}
-        </Text>
+        </Typography>
       )}
     </View>
   );
@@ -859,9 +863,9 @@ const MessageMetadata = ({
 const DateBadge = ({ date }: { date: string }) => (
   <View className="items-center py-2">
     <View className="rounded-full bg-surface-secondary px-3 py-1">
-      <Text className="font-medium text-xs" color="muted">
+      <Typography className="font-medium text-xs" color="muted">
         {date}
-      </Text>
+      </Typography>
     </View>
   </View>
 );

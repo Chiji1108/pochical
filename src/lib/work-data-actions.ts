@@ -1,4 +1,10 @@
-import { db, type Pattern, type Shift, type ShiftMember } from "@/lib/instant";
+import { removeRecord } from "@/lib/work-changes";
+import {
+  type Pattern,
+  type Shift,
+  type ShiftMember,
+  writeWork,
+} from "@/lib/work-data";
 
 type ShiftPatternResetData = {
   patterns: Pattern[];
@@ -17,9 +23,9 @@ export const deleteShiftPatternsAndRelatedData = async ({
     return;
   }
 
-  await db.transact([
-    ...shifts.map((shift) => db.tx.shifts[shift.id].delete()),
-    ...patterns.map((pattern) => db.tx.shiftPatterns[pattern.id].delete()),
+  await writeWork([
+    ...shifts.map((shift) => removeRecord("shifts", shift.id)),
+    ...patterns.map((pattern) => removeRecord("shiftPatterns", pattern.id)),
   ]);
 };
 
@@ -32,9 +38,9 @@ export const deleteWorkData = async ({
     return;
   }
 
-  await db.transact([
-    ...shifts.map((shift) => db.tx.shifts[shift.id].delete()),
-    ...patterns.map((pattern) => db.tx.shiftPatterns[pattern.id].delete()),
-    ...members.map((member) => db.tx.shiftMembers[member.id].delete()),
+  await writeWork([
+    ...shifts.map((shift) => removeRecord("shifts", shift.id)),
+    ...patterns.map((pattern) => removeRecord("shiftPatterns", pattern.id)),
+    ...members.map((member) => removeRecord("shiftMembers", member.id)),
   ]);
 };

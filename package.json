@@ -1,20 +1,22 @@
 {
   "dependencies": {
+    "@auth/core": "0.41.1",
+    "@convex-dev/auth": "0.0.95",
     "@convex-dev/presence": "^0.3.0",
     "@expo/ui": "~58.0.4",
-    "@gorhom/bottom-sheet": "^5.2.8",
+    "@gorhom/bottom-sheet": "^5.2.9",
     "@holiday-jp/holiday_jp": "^2.5.1",
-    "@instantdb/react-native": "^1.0.39",
-    "@instantdb/react-native-mmkv": "^1.0.39",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/netinfo": "12.0.1",
     "@shopify/flash-list": "2.3.2",
     "@shopify/react-native-skia": "2.11.2",
+    "@trestleinc/replicate": "2.0.0-preview.0",
     "clsx": "^2.1.1",
     "convex": "^1.39.1",
     "convex-unread-tracking": "^1.1.0",
     "date-fns": "^4.1.0",
-    "expo": "58.0.0-preview.4",
+    "expo": "58.0.0-preview.5",
+    "expo-apple-authentication": "~58.0.1",
     "expo-calendar": "~58.0.2",
     "expo-camera": "~58.0.2",
     "expo-clipboard": "~58.0.1",
@@ -37,7 +39,8 @@
     "expo-symbols": "~58.0.2",
     "expo-system-ui": "~58.0.2",
     "expo-web-browser": "~58.0.1",
-    "heroui-native": "^1.0.3",
+    "heroui-native": "^1.0.10",
+    "jose": "6.2.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.0-rc.1",
@@ -46,6 +49,7 @@
     "react-native-get-random-values": "~1.11.0",
     "react-native-keyboard-controller": "1.22.4",
     "react-native-mmkv": "^4.3.2",
+    "react-native-nitro-google-signin": "2.3.0",
     "react-native-nitro-modules": "^0.37.1",
     "react-native-pager-view": "9.0.4",
     "react-native-qrcode-svg": "^6.3.21",
@@ -61,13 +65,17 @@
     "tailwind-merge": "^3.5.0",
     "tailwind-variants": "^3.2.2",
     "tailwindcss": "^4.3.3",
-    "uniwind": "npm:uniwind-pro@latest"
+    "uniwind": "npm:uniwind-pro@latest",
+    "yjs": "13.6.29"
   },
   "devDependencies": {
     "@babel/plugin-transform-flow-strip-types": "^7.27.1",
     "@biomejs/biome": "2.4.12",
+    "@types/node": "25.6.0",
     "@types/react": "~19.3.0",
+    "convex-test": "0.0.54",
     "lefthook": "^2.1.6",
+    "react-test-renderer": "19.3.0",
     "typescript": "~6.0.3",
     "ultracite": "7.6.2"
   },
@@ -92,6 +100,7 @@
     "uniwind"
   ],
   "patchedDependencies": {
-    "react-native-view-shot@6.0.1": "patches/react-native-view-shot@6.0.1.patch"
+    "react-native-view-shot@6.0.1": "patches/react-native-view-shot@6.0.1.patch",
+    "@convex-dev/auth@0.0.95": "patches/@convex-dev%2Fauth@0.0.95.patch"
   }
 }

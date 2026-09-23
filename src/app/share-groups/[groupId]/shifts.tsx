@@ -9,7 +9,7 @@ import {
   subMonths,
 } from "date-fns";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Text, useThemeColor } from "heroui-native";
+import { Typography, useThemeColor } from "heroui-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWindowDimensions, View } from "react-native";
 import useUnmount from "react-use/lib/useUnmount";
@@ -21,7 +21,8 @@ import {
   SharedShiftTable,
 } from "@/components/group/shared-shift-table";
 import { AppHeader } from "@/components/navigation/app-header";
-import { db, type Pattern, type Shift, useCurrentUserId } from "@/lib/instant";
+import { type Pattern, type Shift, useCurrentUserId } from "@/lib/work-data";
+import { hydrateWorkData } from "@/lib/work-model";
 import { api as convexApi } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
@@ -124,9 +125,7 @@ export default function ShareGroupShifts() {
   const currentUserId = useCurrentUserId();
   const group = useQuery(
     convexApi.groups.getDetail,
-    groupId && currentUserId
-      ? { groupId: groupId as Id<"groups">, instantUserId: currentUserId }
-      : "skip"
+    groupId && currentUserId ? { groupId: groupId as Id<"groups"> } : "skip"
   );
   const [highlightBackground, todayColor, borderColor] = useThemeColor([
     "success",
@@ -289,9 +288,9 @@ export default function ShareGroupShifts() {
           title="シフト表"
         />
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-base" color="muted">
+          <Typography className="text-center text-base" color="muted">
             グループが見つかりません
-          </Text>
+          </Typography>
         </View>
       </View>
     );
@@ -330,8 +329,9 @@ export default function ShareGroupShifts() {
             {members.map((member) => (
               <MemberScheduleSubscription
                 dateRange={dateRange}
+                groupId={groupId as Id<"groups">}
                 key={member._id}
-                memberUserId={member.instantUserId}
+                memberUserId={member.userId}
                 onChange={updateMemberScheduleData}
               />
             ))}
@@ -358,9 +358,9 @@ export default function ShareGroupShifts() {
           </View>
         ) : (
           <View className="flex-1 items-center justify-center px-6">
-            <Text className="text-center text-base" color="muted">
+            <Typography className="text-center text-base" color="muted">
               メンバーがいません
-            </Text>
+            </Typography>
           </View>
         )}
       </View>
@@ -370,39 +370,25 @@ export default function ShareGroupShifts() {
 
 const MemberScheduleSubscription = ({
   dateRange,
+  groupId,
   memberUserId,
   onChange,
 }: {
   dateRange: { end: Date; start: Date };
+  groupId: Id<"groups">;
   memberUserId: string;
   onChange: (memberUserId: string, scheduleData?: MemberScheduleData) => void;
 }) => {
-  const { data } = db.useQuery(
-    memberUserId
-      ? {
-          shiftPatterns: {
-            $: { where: { "owner.id": memberUserId } },
-            owner: {},
-          },
-          shifts: {
-            $: {
-              where: {
-                "owner.id": memberUserId,
-                startDate: {
-                  $gte: dateRange.start,
-                  $lte: dateRange.end,
-                },
-              },
-            },
-            owner: {},
-            pattern: {},
-            shiftMembers: {},
-          },
-        }
-      : null
+  const data = useQuery(convexApi.sharedWork.forMember, {
+    groupId,
+    memberUserId,
+    start: dateRange.start.getTime(),
+    end: dateRange.end.getTime(),
+  });
+  const { patterns, shifts } = useMemo(
+    () => hydrateWorkData(data?.patterns ?? [], [], data?.shifts ?? []),
+    [data]
   );
-  const patterns = (data?.shiftPatterns ?? []) as Pattern[];
-  const shifts = (data?.shifts ?? []) as Shift[];
 
   useEffect(() => {
     onChange(memberUserId, { patterns, shifts });

@@ -1,4 +1,4 @@
-import { id } from "@instantdb/react-native";
+import { randomUUID as id } from "expo-crypto";
 import { SymbolView } from "expo-symbols";
 import {
   Button,
@@ -6,8 +6,8 @@ import {
   Input,
   ListGroup,
   PressableFeedback,
-  Text,
   TextField,
+  Typography,
 } from "heroui-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, View } from "react-native";
@@ -17,12 +17,18 @@ import Sortable, {
   type SortableGridRenderItem,
 } from "react-native-sortables";
 import {
-  db,
-  type InstantTransaction,
+  patchMember,
+  patchShift,
+  putMember,
+  removeRecord,
+} from "@/lib/work-changes";
+import {
   type Member,
   useCurrentUserId,
   useOwnWorkData,
-} from "@/lib/instant";
+  type WorkChange,
+  writeWork,
+} from "@/lib/work-data";
 
 const MEMBER_ROW_GAP = 10;
 
@@ -68,10 +74,8 @@ export const MemberListView = ({
         return;
       }
 
-      db.transact(
-        data.map((member, orderIndex) =>
-          db.tx.shiftMembers[member.id].update({ orderIndex })
-        )
+      writeWork(
+        data.map((member, orderIndex) => patchMember(member.id, { orderIndex }))
       ).catch(() => undefined);
     },
     [currentUserId]
@@ -83,7 +87,7 @@ export const MemberListView = ({
         return;
       }
 
-      const transactions: InstantTransaction[] = [];
+      const transactions: WorkChange[] = [];
 
       for (const shift of shifts) {
         const hasMember = (shift.shiftMembers ?? []).some(
@@ -92,7 +96,11 @@ export const MemberListView = ({
 
         if (hasMember) {
           transactions.push(
-            db.tx.shifts[shift.id].unlink({ shiftMembers: member.id })
+            patchShift(shift.id, {
+              memberIds: (shift.shiftMembers ?? [])
+                .filter((item) => item.id !== member.id)
+                .map((item) => item.id),
+            })
           );
         }
       }
@@ -103,12 +111,12 @@ export const MemberListView = ({
 
       for (const [orderIndex, item] of remainingMembers.entries()) {
         if (item.orderIndex !== orderIndex) {
-          transactions.push(db.tx.shiftMembers[item.id].update({ orderIndex }));
+          transactions.push(patchMember(item.id, { orderIndex }));
         }
       }
 
-      transactions.push(db.tx.shiftMembers[member.id].delete());
-      db.transact(transactions).catch(() => undefined);
+      transactions.push(removeRecord("shiftMembers", member.id));
+      writeWork(transactions).catch(() => undefined);
     },
     [currentUserId, members, shifts]
   );
@@ -180,16 +188,16 @@ export const MemberListView = ({
             sortEnabled={isSignedIn}
           />
           {isSignedIn ? null : (
-            <Text className="mt-4 text-center text-sm" color="muted">
+            <Typography className="mt-4 text-center text-sm" color="muted">
               接続後に編集できます
-            </Text>
+            </Typography>
           )}
         </Animated.ScrollView>
       ) : (
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-base" color="muted">
+          <Typography className="text-center text-base" color="muted">
             勤務メンバーがいません
-          </Text>
+          </Typography>
         </View>
       )}
       <MemberNameDialog
@@ -204,13 +212,8 @@ export const MemberListView = ({
             return;
           }
 
-          db.transact(
-            db.tx.shiftMembers[id()]
-              .create({
-                name,
-                orderIndex: members.length,
-              })
-              .link({ owner: currentUserId })
+          writeWork(
+            putMember(id(), { name, orderIndex: members.length })
           ).catch(() => undefined);
           onCloseAddDialog();
         }}
@@ -229,9 +232,9 @@ export const MemberListView = ({
             return;
           }
 
-          db.transact(
-            db.tx.shiftMembers[editingMember.id].update({ name })
-          ).catch(() => undefined);
+          writeWork(patchMember(editingMember.id, { name })).catch(
+            () => undefined
+          );
           onCloseEditDialog();
         }}
         title="勤務メンバーを編集"

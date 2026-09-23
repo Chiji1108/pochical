@@ -1,5 +1,5 @@
 import { SymbolView, type SymbolViewProps } from "expo-symbols";
-import { Button, type ButtonRootProps, Text } from "heroui-native";
+import { Button, type ButtonRootProps, Typography } from "heroui-native";
 import type { FC } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -77,7 +77,7 @@ export const AppHeader: FC<AppHeaderProps> = ({
         >
           <HeaderActionButton action={leftAction} />
         </View>
-        <Text
+        <Typography
           className={cn(
             "min-w-0 px-3 font-bold text-lg",
             isLeftAligned ? "flex-1 text-left" : "text-center"
@@ -85,7 +85,7 @@ export const AppHeader: FC<AppHeaderProps> = ({
           numberOfLines={1}
         >
           {title}
-        </Text>
+        </Typography>
         <View
           className={cn(
             "flex-row justify-end gap-1",

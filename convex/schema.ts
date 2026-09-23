@@ -1,7 +1,53 @@
+import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import {
+  memberFields,
+  patternFields,
+  shiftFields,
+} from "../shared/work-schema";
 
 export default defineSchema({
+  ...authTables,
+  users: defineTable({
+    ...authTables.users.validator.fields,
+    workspaceId: v.optional(v.id("users")),
+  })
+    .index("email", ["email"])
+    .index("phone", ["phone"]),
+  nativeAuthChallenges: defineTable({
+    provider: v.union(v.literal("apple"), v.literal("google")),
+    nonce: v.string(),
+    expiresAt: v.number(),
+  }),
+  accountLinks: defineTable({
+    tokenHash: v.string(),
+    sourceUserId: v.id("users"),
+    expiresAt: v.number(),
+    usedAt: v.optional(v.number()),
+    completedTargetId: v.optional(v.id("users")),
+  }).index("by_tokenHash", ["tokenHash"]),
+  shiftPatterns: defineTable({
+    ...patternFields,
+    deleted: v.boolean(),
+    timestamp: v.number(),
+  })
+    .index("by_doc_id", ["id"])
+    .index("by_ownerId", ["ownerId"]),
+  shiftMembers: defineTable({
+    ...memberFields,
+    deleted: v.boolean(),
+    timestamp: v.number(),
+  })
+    .index("by_doc_id", ["id"])
+    .index("by_ownerId", ["ownerId"]),
+  shifts: defineTable({
+    ...shiftFields,
+    deleted: v.boolean(),
+    timestamp: v.number(),
+  })
+    .index("by_doc_id", ["id"])
+    .index("by_ownerId", ["ownerId"]),
   groups: defineTable({
     createdAt: v.number(),
     createdBy: v.string(),
@@ -13,12 +59,12 @@ export default defineSchema({
   groupMembers: defineTable({
     displayName: v.string(),
     groupId: v.id("groups"),
-    instantUserId: v.string(),
+    userId: v.string(),
     joinedAt: v.number(),
   })
     .index("by_groupId", ["groupId"])
-    .index("by_instantUserId", ["instantUserId"])
-    .index("by_groupId_instantUserId", ["groupId", "instantUserId"]),
+    .index("by_userId", ["userId"])
+    .index("by_groupId_userId", ["groupId", "userId"]),
   chatThreads: defineTable({
     directParticipantA: v.optional(v.string()),
     directParticipantB: v.optional(v.string()),
@@ -34,7 +80,7 @@ export default defineSchema({
     .index("by_groupId_updatedAt", ["groupId", "updatedAt"]),
   chatMessages: defineTable({
     authorDisplayNameSnapshot: v.string(),
-    authorInstantUserId: v.string(),
+    authorUserId: v.string(),
     body: v.string(),
     createdAt: v.number(),
     deletedAt: v.optional(v.number()),
@@ -43,7 +89,7 @@ export default defineSchema({
   }).index("by_threadId_createdAt", ["threadId", "createdAt"]),
   groupEvents: defineTable({
     actorDisplayNameSnapshot: v.string(),
-    actorInstantUserId: v.string(),
+    actorUserId: v.string(),
     body: v.string(),
     createdAt: v.number(),
     groupId: v.id("groups"),
@@ -59,7 +105,7 @@ export default defineSchema({
     nextValue: v.optional(v.string()),
     previousValue: v.optional(v.string()),
     targetDisplayNameSnapshot: v.optional(v.string()),
-    targetInstantUserId: v.optional(v.string()),
+    targetUserId: v.optional(v.string()),
   })
     .index("by_groupId_createdAt", ["groupId", "createdAt"])
     .index("by_groupId_kind_createdAt", ["groupId", "kind", "createdAt"]),

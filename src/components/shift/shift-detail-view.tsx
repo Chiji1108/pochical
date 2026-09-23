@@ -1,9 +1,9 @@
 import { format } from "date-fns";
-import { Chip, ListGroup, Separator, Text } from "heroui-native";
+import { Chip, ListGroup, Separator, Typography } from "heroui-native";
 import { useMemo } from "react";
 import { View } from "react-native";
 import { LinkifiedText } from "@/components/common/linkified-text";
-import type { Member, Pattern, Shift } from "@/lib/instant";
+import type { Member, Pattern, Shift } from "@/lib/work-data";
 
 const getPatternScheduleLabel = (pattern: Pattern): string => {
   if (pattern.isAllDay) {
@@ -117,9 +117,12 @@ export const ShiftDetailView = ({
         <ListGroup>
           <ListGroup.Item>
             <ListGroup.ItemPrefix>
-              <Text className="w-9 text-center text-2xl" numberOfLines={1}>
+              <Typography
+                className="w-9 text-center text-2xl"
+                numberOfLines={1}
+              >
                 {selectedPattern.emoji}
-              </Text>
+              </Typography>
             </ListGroup.ItemPrefix>
             <ListGroup.ItemContent>
               <ListGroup.ItemTitle numberOfLines={1}>
@@ -127,9 +130,9 @@ export const ShiftDetailView = ({
               </ListGroup.ItemTitle>
             </ListGroup.ItemContent>
             <ListGroup.ItemSuffix>
-              <Text color="muted" numberOfLines={1}>
+              <Typography color="muted" numberOfLines={1}>
                 {getPatternScheduleLabel(selectedPattern)}
-              </Text>
+              </Typography>
             </ListGroup.ItemSuffix>
           </ListGroup.Item>
           <ShiftSupplementalDetails

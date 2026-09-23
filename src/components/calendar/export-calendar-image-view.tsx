@@ -1,11 +1,11 @@
 import { format } from "date-fns";
-import { Text } from "heroui-native";
+import { Typography } from "heroui-native";
 import type { FC } from "react";
 import { View } from "react-native";
 import type { CalendarHighlightTarget, WeekStartsOn } from "@/lib/app-settings";
 import { getCalendarWeekdayHighlightColor } from "@/lib/date";
-import type { Pattern } from "@/lib/instant";
 import { cn } from "@/lib/utils";
+import type { Pattern } from "@/lib/work-data";
 import {
   CalendarBody,
   type CalendarShiftSummary,
@@ -40,14 +40,14 @@ export const ExportCalendarImageView: FC<ExportCalendarImageViewProps> = ({
   >
     <View className="gap-2">
       <View className="items-center">
-        <Text
+        <Typography
           className={cn("font-bold text-2xl leading-8", {
             "text-zinc-50": colorScheme === "dark",
             "text-zinc-950": colorScheme === "light",
           })}
         >
           {format(yearMonth, "yyyy.M")}
-        </Text>
+        </Typography>
       </View>
       <View>
         <WeekRow weekStartsOn={weekStartsOn}>
@@ -58,7 +58,7 @@ export const ExportCalendarImageView: FC<ExportCalendarImageViewProps> = ({
             );
 
             return (
-              <Text
+              <Typography
                 className={cn(
                   "font-semibold text-xs",
                   {
@@ -74,7 +74,7 @@ export const ExportCalendarImageView: FC<ExportCalendarImageViewProps> = ({
                 {date.toLocaleDateString("ja-JP", {
                   weekday: "short",
                 })}
-              </Text>
+              </Typography>
             );
           }}
         </WeekRow>

@@ -1,9 +1,9 @@
-import { id } from "@instantdb/react-native";
 import { addDays, isSameDay, startOfDay } from "date-fns";
+import { randomUUID as id } from "expo-crypto";
 import { selectionAsync } from "expo-haptics";
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { Text, useThemeColor } from "heroui-native";
+import { Typography, useThemeColor } from "heroui-native";
 import { Button } from "heroui-native/button";
 import { useCallback, useMemo, useRef } from "react";
 import {
@@ -21,14 +21,15 @@ import Animated, {
   useAnimatedStyle,
 } from "react-native-reanimated";
 import { ShiftDetailInputPanel } from "@/components/shift/shift-detail-input-panel";
+import { patchShift, putShift, removeRecord } from "@/lib/work-changes";
 import {
-  db,
-  type InstantTransaction,
   type Member,
   type Pattern,
   type Shift,
   useCurrentUserId,
-} from "@/lib/instant";
+  type WorkChange,
+  writeWork,
+} from "@/lib/work-data";
 
 const MIN_PATTERN_CELL_WIDTH = 48;
 const PATTERN_GRID_GAP = 8;
@@ -122,7 +123,7 @@ export function PatternGridView({
     const shiftStartDate = startOfDay(selectedDate);
     const nextShiftStartDate = addDays(shiftStartDate, 1);
 
-    const transactions: InstantTransaction[] = [];
+    const transactions: WorkChange[] = [];
     const upsertShift = (shiftPattern: Pattern, startDate: Date) => {
       const sameDateShifts = shifts.filter((shift) =>
         isSameDay(shift.startDate, startDate)
@@ -130,32 +131,20 @@ export function PatternGridView({
       const [existingShift, ...duplicateShifts] = sameDateShifts;
 
       if (existingShift) {
-        const currentPatternId = existingShift.pattern?.id;
-        transactions.push(db.tx.shifts[existingShift.id].update({ startDate }));
-        if (currentPatternId && currentPatternId !== shiftPattern.id) {
-          transactions.push(
-            db.tx.shifts[existingShift.id].unlink({
-              pattern: currentPatternId,
-            })
-          );
-        }
-        if (currentPatternId !== shiftPattern.id) {
-          transactions.push(
-            db.tx.shifts[existingShift.id].link({
-              pattern: shiftPattern.id,
-            })
-          );
-        }
+        transactions.push(
+          patchShift(existingShift.id, {
+            startDate,
+            patternId: shiftPattern.id,
+          })
+        );
       } else {
         transactions.push(
-          db.tx.shifts[id()]
-            .create({ startDate })
-            .link({ owner: currentUserId, pattern: shiftPattern.id })
+          putShift(id(), { startDate, patternId: shiftPattern.id })
         );
       }
 
       for (const duplicateShift of duplicateShifts) {
-        transactions.push(db.tx.shifts[duplicateShift.id].delete());
+        transactions.push(removeRecord("shifts", duplicateShift.id));
       }
     };
 
@@ -178,7 +167,7 @@ export function PatternGridView({
       onSelectDate(addDays(shiftStartDate, hasNextDayPattern ? 2 : 1));
     }
 
-    db.transact(transactions).catch(() => undefined);
+    writeWork(transactions).catch(() => undefined);
 
     selectionAsync().catch(() => {
       // Haptics can be unavailable depending on the device or platform.
@@ -299,9 +288,9 @@ export function PatternGridView({
             <Button.Label>シフトパターンを追加</Button.Label>
           </Button>
           {currentUserId ? null : (
-            <Text color="muted" style={styles.signedOutHint}>
+            <Typography color="muted" style={styles.signedOutHint}>
               接続後に作成できます
-            </Text>
+            </Typography>
           )}
         </View>
       )}

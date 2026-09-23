@@ -5,7 +5,7 @@ import {
 } from "expo-camera";
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { Button, Text, useThemeColor } from "heroui-native";
+import { Button, Typography, useThemeColor } from "heroui-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppHeader } from "@/components/navigation/app-header";
@@ -66,7 +66,7 @@ export default function InviteScanScreen() {
 
   let content = (
     <View className="flex-1 items-center justify-center px-6">
-      <Text color="muted">カメラの準備をしています</Text>
+      <Typography color="muted">カメラの準備をしています</Typography>
     </View>
   );
 
@@ -85,13 +85,13 @@ export default function InviteScanScreen() {
         </View>
         <View className="absolute right-0 bottom-10 left-0 items-center px-6">
           <View className="rounded-lg bg-black/65 px-4 py-3">
-            <Text className="text-center text-white">
+            <Typography className="text-center text-white">
               招待QRコードを枠内に合わせてください
-            </Text>
+            </Typography>
             {invalidCodeMessage ? (
-              <Text className="mt-2 text-center text-danger">
+              <Typography className="mt-2 text-center text-danger">
                 {invalidCodeMessage}
-              </Text>
+              </Typography>
             ) : null}
           </View>
         </View>
@@ -101,10 +101,12 @@ export default function InviteScanScreen() {
     content = (
       <View className="flex-1 justify-center gap-5 px-6">
         <View className="gap-2">
-          <Text className="font-bold text-2xl">カメラを使用します</Text>
-          <Text className="text-base" color="muted">
+          <Typography className="font-bold text-2xl">
+            カメラを使用します
+          </Typography>
+          <Typography className="text-base" color="muted">
             招待QRコードを読み取るにはカメラへのアクセスが必要です
-          </Text>
+          </Typography>
         </View>
         <Button
           accessibilityLabel="カメラへのアクセスを許可"
@@ -127,9 +129,9 @@ export default function InviteScanScreen() {
           </Button.Label>
         </Button>
         {permission.canAskAgain ? null : (
-          <Text className="text-sm" color="muted">
+          <Typography className="text-sm" color="muted">
             端末の設定からカメラのアクセスを許可してください
-          </Text>
+          </Typography>
         )}
       </View>
     );

@@ -6,7 +6,7 @@ import {
   startOfDay,
 } from "date-fns";
 import { selectionAsync } from "expo-haptics";
-import { Text, useThemeColor } from "heroui-native";
+import { Typography, useThemeColor } from "heroui-native";
 import type { FC, ReactNode } from "react";
 import { memo, useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -17,8 +17,8 @@ import Animated, {
 } from "react-native-reanimated";
 import type { CalendarHighlightTarget, WeekStartsOn } from "@/lib/app-settings";
 import { getCalendarDateHighlightColor, getWeeksOfMonth } from "@/lib/date";
-import type { Pattern } from "@/lib/instant";
 import { cn } from "@/lib/utils";
+import type { Pattern } from "@/lib/work-data";
 import { CALENDAR_DAY_CELL_HEIGHT } from "./constants";
 import { WeekRow } from "./week-row";
 
@@ -306,7 +306,7 @@ const CalendarDateCellContent: FC<CalendarDateCellContentProps> = ({
         />
       ) : null}
       <View style={styles.dateLabelBox}>
-        <Text
+        <Typography
           style={getDateTextStyle({
             highlightColor,
             isDarkExport,
@@ -316,20 +316,20 @@ const CalendarDateCellContent: FC<CalendarDateCellContentProps> = ({
           })}
         >
           {getDate(date)}
-        </Text>
+        </Typography>
       </View>
       {shiftPattern ? (
         <View style={styles.shiftSummary}>
-          <Text numberOfLines={1} style={styles.shiftEmoji}>
+          <Typography numberOfLines={1} style={styles.shiftEmoji}>
             {shiftPattern.emoji}
-          </Text>
+          </Typography>
           {isExportMode ? (
-            <Text
+            <Typography
               numberOfLines={1}
               style={getShiftNameStyle(isDarkExport, isExportMode, themeColors)}
             >
               {shiftPattern.name}
-            </Text>
+            </Typography>
           ) : null}
         </View>
       ) : null}

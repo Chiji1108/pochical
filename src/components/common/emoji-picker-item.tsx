@@ -1,5 +1,5 @@
 import { EmojiSheetModule } from "expo-native-sheet-emojis";
-import { ListGroup, Text, useThemeColor } from "heroui-native";
+import { ListGroup, Typography, useThemeColor } from "heroui-native";
 import { useRef, useState } from "react";
 import { Alert, Keyboard } from "react-native";
 
@@ -83,7 +83,7 @@ export const EmojiPickerItem = ({
         <ListGroup.ItemTitle>アイコン</ListGroup.ItemTitle>
       </ListGroup.ItemContent>
       <ListGroup.ItemSuffix>
-        <Text className="text-3xl">{emoji}</Text>
+        <Typography className="text-3xl">{emoji}</Typography>
       </ListGroup.ItemSuffix>
     </ListGroup.Item>
   );

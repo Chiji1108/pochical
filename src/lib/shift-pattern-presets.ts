@@ -1,5 +1,6 @@
-import { id } from "@instantdb/react-native";
-import { db } from "@/lib/instant";
+import { randomUUID as id } from "expo-crypto";
+import { putPattern } from "@/lib/work-changes";
+import { writeWork } from "@/lib/work-data";
 
 type TimeTuple = [hour: number, minute: number];
 
@@ -247,13 +248,13 @@ export const SINGLE_SHIFT_PATTERN_PRESETS: ShiftPatternPreset[] = [
 export const insertShiftPatternPreset = async (
   preset: ShiftPatternPreset,
   startOrderIndex: number,
-  userId: string
+  _userId: string
 ): Promise<void> => {
   const patternIdsByName = new Map(
     preset.patterns.map((pattern) => [pattern.name, id()])
   );
 
-  await db.transact(
+  await writeWork(
     preset.patterns.map((pattern, index) => {
       const patternId = patternIdsByName.get(pattern.name);
       const nextDayPatternId = pattern.nextDayPatternName
@@ -264,15 +265,10 @@ export const insertShiftPatternPreset = async (
         throw new Error(`Pattern id not found: ${pattern.name}`);
       }
 
-      let transaction = db.tx.shiftPatterns[patternId]
-        .create(createPatternInsert(pattern, startOrderIndex + index))
-        .link({ owner: userId });
-
-      if (nextDayPatternId) {
-        transaction = transaction.link({ nextDayPattern: nextDayPatternId });
-      }
-
-      return transaction;
+      return putPattern(patternId, {
+        ...createPatternInsert(pattern, startOrderIndex + index),
+        nextDayPatternId: nextDayPatternId ?? null,
+      });
     })
   );
 };

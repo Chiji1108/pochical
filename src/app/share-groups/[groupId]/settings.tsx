@@ -8,7 +8,7 @@ import {
   ListGroup,
   Separator,
   Switch,
-  Text,
+  Typography,
   useThemeColor,
   useToast,
 } from "heroui-native";
@@ -22,7 +22,7 @@ import {
   InviteDialog,
 } from "@/components/group/group-dialogs";
 import { AppHeader } from "@/components/navigation/app-header";
-import { useCurrentUserId } from "@/lib/instant";
+import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
@@ -40,9 +40,7 @@ export default function ShareGroupSettings() {
   const currentUserId = useCurrentUserId();
   const group = useQuery(
     convexApi.groups.getDetail,
-    groupId && currentUserId
-      ? { groupId: groupId as Id<"groups">, instantUserId: currentUserId }
-      : "skip"
+    groupId && currentUserId ? { groupId: groupId as Id<"groups"> } : "skip"
   );
   const updateGroupName = useMutation(convexApi.groups.updateName);
   const updateGroupEmoji = useMutation(convexApi.groups.updateEmoji);
@@ -90,7 +88,7 @@ export default function ShareGroupSettings() {
     try {
       await updateGroupName({
         groupId: targetGroupId,
-        instantUserId: currentUserId,
+
         name: groupName,
       });
       setIsEditDialogOpen(false);
@@ -118,7 +116,6 @@ export default function ShareGroupSettings() {
       await updateGroupEmoji({
         emoji,
         groupId: group._id,
-        instantUserId: currentUserId,
       });
       toast.show({
         description: "グループの絵文字を更新しました。",
@@ -144,7 +141,6 @@ export default function ShareGroupSettings() {
       await updateDisplayName({
         displayName,
         groupId: group._id,
-        instantUserId: currentUserId,
       });
       setIsDisplayNameDialogOpen(false);
       toast.show({
@@ -172,7 +168,6 @@ export default function ShareGroupSettings() {
     try {
       const result = await regenerateInviteCode({
         groupId: group._id,
-        instantUserId: currentUserId,
       });
       setInviteDetails({
         groupEmoji: group.emoji,
@@ -209,7 +204,7 @@ export default function ShareGroupSettings() {
       ? "最後のメンバーのため、グループも削除されます。"
       : "このグループのメンバーには、あなたのシフトが共有されなくなります。";
     const targetGroupId = group._id;
-    const instantUserId = currentUserId;
+    const _userId = currentUserId;
     Alert.alert(
       title,
       message,
@@ -223,7 +218,6 @@ export default function ShareGroupSettings() {
             try {
               await leaveGroupMutation({
                 groupId: targetGroupId,
-                instantUserId,
               });
               setIsEditDialogOpen(false);
               router.replace("/group");
@@ -259,7 +253,7 @@ export default function ShareGroupSettings() {
   };
 
   const removeMember = (member: GroupMember) => {
-    if (!(group && currentUserId) || member.instantUserId === currentUserId) {
+    if (!(group && currentUserId) || member.userId === currentUserId) {
       return;
     }
 
@@ -273,8 +267,8 @@ export default function ShareGroupSettings() {
             try {
               await removeMemberMutation({
                 groupId: group._id,
-                instantUserId: currentUserId,
-                targetInstantUserId: member.instantUserId,
+
+                targetUserId: member.userId,
               });
               toast.show({
                 description: `${member.displayName}さんをグループから削除しました。`,
@@ -318,9 +312,9 @@ export default function ShareGroupSettings() {
           title="設定"
         />
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-base" color="muted">
+          <Typography className="text-center text-base" color="muted">
             グループが見つかりません
-          </Text>
+          </Typography>
         </View>
       </View>
     );
@@ -428,7 +422,7 @@ const GroupSettingsSection = ({
   onOpenDisplayNameEdit: () => void;
 }) => (
   <View className="gap-3">
-    <Text className="font-semibold text-lg">グループ</Text>
+    <Typography className="font-semibold text-lg">グループ</Typography>
     <ListGroup>
       <EmojiPickerItem emoji={group.emoji} onChangeEmoji={onChangeEmoji} />
       <Separator className="mx-4" />
@@ -498,7 +492,7 @@ const DangerSection = ({
   onLeave: () => void;
 }) => (
   <View className="gap-3">
-    <Text className="font-semibold text-lg">危険な操作</Text>
+    <Typography className="font-semibold text-lg">危険な操作</Typography>
     <ListGroup>
       <ListGroup.Item
         accessibilityLabel={isLeaving ? "処理中" : "グループから脱退"}
@@ -517,7 +511,7 @@ const DangerSection = ({
 
 const NotificationSection = () => (
   <View className="gap-3">
-    <Text className="font-semibold text-lg">通知</Text>
+    <Typography className="font-semibold text-lg">通知</Typography>
     <ListGroup>
       <ListGroup.Item disabled={true}>
         <ListGroup.ItemContent>
@@ -541,23 +535,21 @@ const MemberSection = ({
   members: GroupMember[];
   onRemoveMember: (member: GroupMember) => void;
 }) => {
-  const ownMember = members.find(
-    (member) => member.instantUserId === currentUserId
-  );
+  const ownMember = members.find((member) => member.userId === currentUserId);
   const otherMembers = members.filter(
-    (member) => member.instantUserId !== currentUserId
+    (member) => member.userId !== currentUserId
   );
   const orderedMembers = ownMember ? [ownMember, ...otherMembers] : members;
 
   return (
     <View className="gap-3">
-      <Text className="font-semibold text-lg">
+      <Typography className="font-semibold text-lg">
         メンバー ({members.length}人)
-      </Text>
+      </Typography>
       {orderedMembers.length > 0 ? (
         <ListGroup>
           {orderedMembers.map((member, index) => {
-            const isOwnMember = member.instantUserId === currentUserId;
+            const isOwnMember = member.userId === currentUserId;
 
             return (
               <View key={member._id}>
@@ -577,9 +569,9 @@ const MemberSection = ({
         </ListGroup>
       ) : (
         <Card className="p-4">
-          <Text className="text-sm" color="muted">
+          <Typography className="text-sm" color="muted">
             メンバーがいません
-          </Text>
+          </Typography>
         </Card>
       )}
     </View>

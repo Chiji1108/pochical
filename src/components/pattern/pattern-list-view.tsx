@@ -5,7 +5,7 @@ import {
   ListGroup,
   Separator,
   Tabs,
-  Text,
+  Typography,
   useToast,
 } from "heroui-native";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -22,18 +22,19 @@ import {
   playWarningHaptic,
 } from "@/lib/haptics";
 import {
-  db,
-  type Pattern,
-  useCurrentUserId,
-  useOwnWorkData,
-} from "@/lib/instant";
-import {
   BUNDLED_SHIFT_PATTERN_PRESETS,
   insertShiftPatternPreset,
   type ShiftPatternPreset,
   type ShiftPatternPresetPattern,
   SINGLE_SHIFT_PATTERN_PRESETS,
 } from "@/lib/shift-pattern-presets";
+import { patchPattern } from "@/lib/work-changes";
+import {
+  type Pattern,
+  useCurrentUserId,
+  useOwnWorkData,
+  writeWork,
+} from "@/lib/work-data";
 import { deleteShiftPatternsAndRelatedData } from "@/lib/work-data-actions";
 
 const PATTERN_COLUMN_COUNT = 6;
@@ -107,9 +108,9 @@ export const PatternListView = () => {
 
       playLightImpactHaptic();
 
-      db.transact(
+      writeWork(
         data.map((pattern, index) =>
-          db.tx.shiftPatterns[pattern.id].update({ orderIndex: index })
+          patchPattern(pattern.id, { orderIndex: index })
         )
       ).catch(() => undefined);
     },
@@ -267,15 +268,15 @@ export const PatternListView = () => {
           />
         ) : (
           <View className="items-center justify-center rounded-lg bg-foreground/5 px-4 py-8">
-            <Text className="text-center text-sm" color="muted">
+            <Typography className="text-center text-sm" color="muted">
               下からシフトパターンを組み立ててください
-            </Text>
+            </Typography>
           </View>
         )}
         {isSignedIn ? null : (
-          <Text className="px-1 text-center text-sm" color="muted">
+          <Typography className="px-1 text-center text-sm" color="muted">
             接続後に編集できます
-          </Text>
+          </Typography>
         )}
       </View>
 
@@ -333,9 +334,9 @@ type SectionTitleProps = {
 };
 
 const SectionTitle = ({ children }: SectionTitleProps) => (
-  <Text className="px-1 font-semibold text-sm" color="muted">
+  <Typography className="px-1 font-semibold text-sm" color="muted">
     {children}
-  </Text>
+  </Typography>
 );
 
 type PresetListItemProps = {
@@ -492,11 +493,11 @@ type PatternPreviewChipProps = {
 
 const PatternPreviewChip = ({ pattern }: PatternPreviewChipProps) => (
   <View className="h-15 w-15 items-center justify-center gap-1 rounded-lg bg-foreground/5 px-1 py-2">
-    <Text className="text-center text-sm leading-5" numberOfLines={1}>
+    <Typography className="text-center text-sm leading-5" numberOfLines={1}>
       {pattern.emoji}
-    </Text>
-    <Text className="text-center text-sm leading-none" numberOfLines={1}>
+    </Typography>
+    <Typography className="text-center text-sm leading-none" numberOfLines={1}>
       {pattern.name}
-    </Text>
+    </Typography>
   </View>
 );

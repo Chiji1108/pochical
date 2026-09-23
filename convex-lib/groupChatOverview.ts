@@ -20,7 +20,7 @@ export type GroupChatOverview = {
 export const getGroupChatOverview = async (
   ctx: QueryCtx,
   groupId: Id<"groups">,
-  instantUserId: string,
+  userId: string,
   members: Doc<"groupMembers">[]
 ): Promise<GroupChatOverview> => {
   const threads = await listThreadsForGroup(ctx, groupId);
@@ -32,7 +32,7 @@ export const getGroupChatOverview = async (
   const unreadCountsByThreadId = await getUnreadCountsByThreadId(
     ctx,
     threads,
-    instantUserId
+    userId
   );
   const groupUnreadCount = groupThread
     ? (unreadCountsByThreadId.get(groupThread._id) ?? 0)
@@ -40,8 +40,8 @@ export const getGroupChatOverview = async (
   let directUnreadCount = 0;
   const directPairKeys = new Set(
     members
-      .filter((member) => member.instantUserId !== instantUserId)
-      .map((member) => createDirectPairKey(instantUserId, member.instantUserId))
+      .filter((member) => member.userId !== userId)
+      .map((member) => createDirectPairKey(userId, member.userId))
   );
   const threadByPairKey = new Map<string, Doc<"chatThreads">>();
 

@@ -22,7 +22,11 @@ import type {
 import { ExportCalendarImageView } from "@/components/calendar/export-calendar-image-view";
 import { AppHeader } from "@/components/navigation/app-header";
 import { useAppSettings } from "@/lib/app-settings";
-import { type Pattern, useCurrentUserId, useOwnWorkData } from "@/lib/instant";
+import {
+  type Pattern,
+  useCurrentUserId,
+  useOwnWorkData,
+} from "@/lib/work-data";
 
 const EXPORT_SCREEN_BOTTOM_PADDING = 24;
 

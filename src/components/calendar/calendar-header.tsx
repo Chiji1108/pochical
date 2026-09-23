@@ -1,7 +1,7 @@
 import { isSameMonth, isToday } from "date-fns";
 import { selectionAsync } from "expo-haptics";
 import { SymbolView } from "expo-symbols";
-import { Text } from "heroui-native";
+import { Typography } from "heroui-native";
 import { Button } from "heroui-native/button";
 import type { FC } from "react";
 import { View } from "react-native";
@@ -127,7 +127,7 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
         );
 
         return (
-          <Text
+          <Typography
             className={cn("font-semibold text-xs", {
               "text-blue-500": highlightColor === "blue",
               "text-red-500": highlightColor === "red",
@@ -136,7 +136,7 @@ const CalendarHeaderContent: FC<CalendarHeaderContentProps> = ({
             {date.toLocaleDateString("ja-JP", {
               weekday: "short",
             })}
-          </Text>
+          </Typography>
         );
       }}
     </WeekRow>

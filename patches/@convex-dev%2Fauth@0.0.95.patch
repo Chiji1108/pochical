@@ -1,0 +1,47 @@
+diff --git a/node_modules/@convex-dev/auth/.bun-tag-8957e3ed82b367d5 b/.bun-tag-8957e3ed82b367d5
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/dist/react/client.js b/dist/react/client.js
+index 818636ce0729004ac3c61e45b491f8b53695046a..ecc04fb24164376af297a0e2ce34cc1a7207c711 100644
+--- a/dist/react/client.js
++++ b/dist/react/client.js
+@@ -26,6 +26,8 @@ export function AuthProvider({ client, serverState, onChange, shouldHandleCode,
+         }
+     }, [verbose]);
+     const { storageSet, storageGet, storageRemove, storageKey } = useNamespacedStorage(storage, storageNamespace);
++    // Reauthenticate subscriptions when switching accounts or sessions, not on token refresh.
++    const authSubject = tokenState === null ? null : JSON.parse(atob(tokenState.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).sub;
+     const [isRefreshingToken, setIsRefreshingToken] = useState(false);
+     const setToken = useCallback(async (args) => {
+         const wasAuthenticated = token.current !== null;
+@@ -200,7 +202,7 @@ export function AuthProvider({ client, serverState, onChange, shouldHandleCode,
+             });
+         }
+         return token.current;
+-    }, [verifyCodeAndSetToken, signOut, storageGet]);
++    }, [verifyCodeAndSetToken, signOut, storageGet, authSubject]);
+     const signingInWithCodeFromURL = useRef(false);
+     useEffect(() => {
+         // Has to happen in useEffect to avoid SSR.
+diff --git a/src/react/client.tsx b/src/react/client.tsx
+index 81a869f7bf301687483b4504fd05f481000ce4d1..4c0aa0bc108ab83283534663d71144916f32f292 100644
+--- a/src/react/client.tsx
++++ b/src/react/client.tsx
+@@ -87,6 +87,8 @@ export function AuthProvider({
+   const { storageSet, storageGet, storageRemove, storageKey } =
+     useNamespacedStorage(storage, storageNamespace);
+ 
++  // Reauthenticate subscriptions when switching accounts or sessions, not on token refresh.
++  const authSubject = tokenState === null ? null : JSON.parse(atob(tokenState.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).sub;
+   const [isRefreshingToken, setIsRefreshingToken] = useState(false);
+   const setToken = useCallback(
+     async (
+@@ -308,7 +310,7 @@ export function AuthProvider({
+       }
+       return token.current;
+     },
+-    [verifyCodeAndSetToken, signOut, storageGet],
++    [verifyCodeAndSetToken, signOut, storageGet, authSubject],
+   );
+   const signingInWithCodeFromURL = useRef<boolean>(false);
+   useEffect(

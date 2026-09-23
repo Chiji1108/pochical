@@ -1,4 +1,5 @@
 import { ConvexError, v } from "convex/values";
+import { requireUserId } from "../convex-lib/auth";
 import { deleteGroupChatData } from "../convex-lib/chatCleanup";
 import { createDirectPairKey } from "../convex-lib/chatThreads";
 import { getGroupChatOverview } from "../convex-lib/groupChatOverview";
@@ -28,13 +29,12 @@ type GroupSummary = Pick<Doc<"groups">, "_id" | "name"> & {
 };
 
 export const listForCurrentUser = query({
-  args: { instantUserId: v.string() },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx, _args) => {
+    const userId = await requireUserId(ctx);
     const memberships = await ctx.db
       .query("groupMembers")
-      .withIndex("by_instantUserId", (q) =>
-        q.eq("instantUserId", args.instantUserId)
-      )
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
       .collect();
     const groups: GroupSummary[] = [];
 
@@ -49,7 +49,7 @@ export const listForCurrentUser = query({
       const chatOverview = await getGroupChatOverview(
         ctx,
         group._id,
-        args.instantUserId,
+        userId,
         members
       );
       groups.push({
@@ -66,11 +66,12 @@ export const listForCurrentUser = query({
 });
 
 export const getDetail = query({
-  args: { groupId: v.id("groups"), instantUserId: v.string() },
+  args: { groupId: v.id("groups") },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
     const [group, membership] = await Promise.all([
       getGroup(ctx, args.groupId),
-      getMembership(ctx, args.groupId, args.instantUserId),
+      getMembership(ctx, args.groupId, userId),
     ]);
 
     if (!(group && membership)) {
@@ -81,7 +82,7 @@ export const getDetail = query({
     const chatOverview = await getGroupChatOverview(
       ctx,
       group._id,
-      args.instantUserId,
+      userId,
       members
     );
 
@@ -95,14 +96,14 @@ export const getDetail = query({
       lastMessagePreview: chatOverview.lastMessagePreview,
       members: members.map((member) => {
         const directThread =
-          member.instantUserId === args.instantUserId
+          member.userId === userId
             ? null
             : (chatOverview.threadByPairKey.get(
-                createDirectPairKey(args.instantUserId, member.instantUserId)
+                createDirectPairKey(userId, member.userId)
               ) ?? null);
         let unreadCount = 0;
 
-        if (member.instantUserId !== args.instantUserId && directThread) {
+        if (member.userId !== userId && directThread) {
           unreadCount =
             chatOverview.unreadCountsByThreadId.get(directThread._id) ?? 0;
         }
@@ -110,7 +111,7 @@ export const getDetail = query({
         return {
           _id: member._id,
           displayName: member.displayName,
-          instantUserId: member.instantUserId,
+          userId: member.userId,
           lastMessageCreatedAt: directThread?.lastMessageCreatedAt,
           lastMessagePreview: directThread?.lastMessagePreview,
           unreadCount,
@@ -127,19 +128,19 @@ export const create = mutation({
   args: {
     displayName: v.string(),
     emoji: v.string(),
-    instantUserId: v.string(),
     name: v.string(),
   },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
     const now = Date.now();
     const name = normalizeGroupName(args.name);
     const displayName = normalizeDisplayName(args.displayName);
     const emoji = normalizeGroupEmoji(args.emoji);
     const groupId = await ctx.db.insert("groups", {
       createdAt: now,
-      createdBy: args.instantUserId,
+      createdBy: userId,
       emoji,
-      inviteCode: `pending:${now}:${args.instantUserId}`,
+      inviteCode: `pending:${now}:${userId}`,
       name,
       updatedAt: now,
     });
@@ -150,13 +151,13 @@ export const create = mutation({
     await ctx.db.insert("groupMembers", {
       displayName,
       groupId,
-      instantUserId: args.instantUserId,
+      userId,
       joinedAt: now,
     });
-    await ensureOwnMessagesIgnored(ctx, args.instantUserId);
+    await ensureOwnMessagesIgnored(ctx, userId);
     await insertGroupEvent(ctx, {
       actorDisplayNameSnapshot: displayName,
-      actorInstantUserId: args.instantUserId,
+      actorUserId: userId,
       body: `${displayName}さんがグループに参加しました`,
       createdAt: now,
       groupId,
@@ -170,13 +171,13 @@ export const create = mutation({
 export const updateName = mutation({
   args: {
     groupId: v.id("groups"),
-    instantUserId: v.string(),
     name: v.string(),
   },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
     const [group, membership] = await Promise.all([
       getGroup(ctx, args.groupId),
-      getMembership(ctx, args.groupId, args.instantUserId),
+      getMembership(ctx, args.groupId, userId),
     ]);
 
     if (!(group && membership)) {
@@ -195,7 +196,7 @@ export const updateName = mutation({
     });
     await insertGroupEvent(ctx, {
       actorDisplayNameSnapshot: membership.displayName,
-      actorInstantUserId: args.instantUserId,
+      actorUserId: userId,
       body: `${membership.displayName}さんがグループ名を「${group.name}」から「${name}」に変更しました`,
       createdAt: now,
       groupId: group._id,
@@ -210,12 +211,12 @@ export const updateEmoji = mutation({
   args: {
     emoji: v.string(),
     groupId: v.id("groups"),
-    instantUserId: v.string(),
   },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
     const [group, membership] = await Promise.all([
       getGroup(ctx, args.groupId),
-      getMembership(ctx, args.groupId, args.instantUserId),
+      getMembership(ctx, args.groupId, userId),
     ]);
 
     if (!(group && membership)) {
@@ -234,7 +235,7 @@ export const updateEmoji = mutation({
     });
     await insertGroupEvent(ctx, {
       actorDisplayNameSnapshot: membership.displayName,
-      actorInstantUserId: args.instantUserId,
+      actorUserId: userId,
       body: `${membership.displayName}さんがグループアイコンを「${group.emoji}」から「${emoji}」に変更しました`,
       createdAt: now,
       groupId: group._id,
@@ -248,12 +249,12 @@ export const updateEmoji = mutation({
 export const regenerateInviteCode = mutation({
   args: {
     groupId: v.id("groups"),
-    instantUserId: v.string(),
   },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
     const [group, membership] = await Promise.all([
       getGroup(ctx, args.groupId),
-      getMembership(ctx, args.groupId, args.instantUserId),
+      getMembership(ctx, args.groupId, userId),
     ]);
 
     if (!(group && membership)) {
@@ -264,7 +265,7 @@ export const regenerateInviteCode = mutation({
     const inviteCode = await createUniqueInviteCode(
       ctx,
       group._id,
-      `${now}:${args.instantUserId}:${group.inviteCode}`
+      `${now}:${userId}:${group.inviteCode}`
     );
 
     await ctx.db.patch(group._id, {
@@ -273,7 +274,7 @@ export const regenerateInviteCode = mutation({
     });
     await insertGroupEvent(ctx, {
       actorDisplayNameSnapshot: membership.displayName,
-      actorInstantUserId: args.instantUserId,
+      actorUserId: userId,
       body: `${membership.displayName}さんが招待リンクを再発行しました`,
       createdAt: now,
       groupId: group._id,
@@ -288,14 +289,10 @@ export const updateDisplayName = mutation({
   args: {
     displayName: v.string(),
     groupId: v.id("groups"),
-    instantUserId: v.string(),
   },
   handler: async (ctx, args) => {
-    const membership = await getMembership(
-      ctx,
-      args.groupId,
-      args.instantUserId
-    );
+    const userId = await requireUserId(ctx);
+    const membership = await getMembership(ctx, args.groupId, userId);
 
     if (!membership) {
       throw new ConvexError("Group not found");
@@ -312,7 +309,7 @@ export const updateDisplayName = mutation({
     });
     await insertGroupEvent(ctx, {
       actorDisplayNameSnapshot: displayName,
-      actorInstantUserId: args.instantUserId,
+      actorUserId: userId,
       body: `${membership.displayName}さんが名前を「${membership.displayName}」から「${displayName}」に変更しました`,
       createdAt: now,
       groupId: args.groupId,
@@ -320,19 +317,16 @@ export const updateDisplayName = mutation({
       nextValue: displayName,
       previousValue: membership.displayName,
       targetDisplayNameSnapshot: displayName,
-      targetInstantUserId: args.instantUserId,
+      targetUserId: userId,
     });
   },
 });
 
 export const leave = mutation({
-  args: { groupId: v.id("groups"), instantUserId: v.string() },
+  args: { groupId: v.id("groups") },
   handler: async (ctx, args) => {
-    const membership = await getMembership(
-      ctx,
-      args.groupId,
-      args.instantUserId
-    );
+    const userId = await requireUserId(ctx);
+    const membership = await getMembership(ctx, args.groupId, userId);
 
     if (!membership) {
       return;
@@ -350,7 +344,7 @@ export const leave = mutation({
 
     await insertGroupEvent(ctx, {
       actorDisplayNameSnapshot: membership.displayName,
-      actorInstantUserId: args.instantUserId,
+      actorUserId: userId,
       body: `${membership.displayName}さんがグループから脱退しました`,
       createdAt: now,
       groupId: args.groupId,
@@ -360,13 +354,12 @@ export const leave = mutation({
 });
 
 export const leaveAllForCurrentUser = mutation({
-  args: { instantUserId: v.string() },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx, _args) => {
+    const userId = await requireUserId(ctx);
     const memberships = await ctx.db
       .query("groupMembers")
-      .withIndex("by_instantUserId", (q) =>
-        q.eq("instantUserId", args.instantUserId)
-      )
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
       .collect();
     const now = Date.now();
 
@@ -382,7 +375,7 @@ export const leaveAllForCurrentUser = mutation({
 
       await insertGroupEvent(ctx, {
         actorDisplayNameSnapshot: membership.displayName,
-        actorInstantUserId: args.instantUserId,
+        actorUserId: userId,
         body: `${membership.displayName}さんがグループから脱退しました`,
         createdAt: now,
         groupId: membership.groupId,
@@ -395,15 +388,11 @@ export const leaveAllForCurrentUser = mutation({
 export const removeMember = mutation({
   args: {
     groupId: v.id("groups"),
-    instantUserId: v.string(),
-    targetInstantUserId: v.string(),
+    targetUserId: v.string(),
   },
   handler: async (ctx, args) => {
-    const actorMembership = await getMembership(
-      ctx,
-      args.groupId,
-      args.instantUserId
-    );
+    const userId = await requireUserId(ctx);
+    const actorMembership = await getMembership(ctx, args.groupId, userId);
 
     if (!actorMembership) {
       throw new ConvexError("Group not found");
@@ -412,7 +401,7 @@ export const removeMember = mutation({
     const targetMembership = await getMembership(
       ctx,
       args.groupId,
-      args.targetInstantUserId
+      args.targetUserId
     );
 
     if (!targetMembership) {
@@ -422,13 +411,13 @@ export const removeMember = mutation({
     const now = Date.now();
     await insertGroupEvent(ctx, {
       actorDisplayNameSnapshot: actorMembership.displayName,
-      actorInstantUserId: args.instantUserId,
+      actorUserId: userId,
       body: `${actorMembership.displayName}さんが${targetMembership.displayName}さんをグループから削除しました`,
       createdAt: now,
       groupId: args.groupId,
       kind: "member_removed",
       targetDisplayNameSnapshot: targetMembership.displayName,
-      targetInstantUserId: args.targetInstantUserId,
+      targetUserId: args.targetUserId,
     });
     await ctx.db.delete(targetMembership._id);
 

@@ -9,7 +9,7 @@ import { useEffect } from "react";
 import { Alert, View } from "react-native";
 import { ChatView } from "@/components/chat/chat-view";
 import { createDirectPresenceRoomId } from "@/lib/chat-presence";
-import { useCurrentUserId } from "@/lib/instant";
+import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
 
@@ -23,20 +23,18 @@ const createOptimisticId = (prefix: string) =>
 
 export default function DirectChat() {
   const router = useRouter();
-  const { groupId, memberInstantUserId } = useLocalSearchParams<{
+  const { groupId, memberUserId } = useLocalSearchParams<{
     groupId: string;
-    memberInstantUserId: string;
+    memberUserId: string;
   }>();
   const currentUserId = useCurrentUserId() ?? "";
   const targetGroupId = groupId as Id<"groups">;
   const group = useQuery(
     convexApi.groups.getDetail,
-    groupId && currentUserId
-      ? { groupId: targetGroupId, instantUserId: currentUserId }
-      : "skip"
+    groupId && currentUserId ? { groupId: targetGroupId } : "skip"
   );
   const targetMember = group?.members.find(
-    (member) => member.instantUserId === memberInstantUserId
+    (member) => member.userId === memberUserId
   );
   const {
     loadMore: loadMoreMessages,
@@ -44,11 +42,11 @@ export default function DirectChat() {
     status: messageStatus,
   } = usePaginatedQuery(
     convexApi.chat.listDirectMessages,
-    groupId && currentUserId && memberInstantUserId
+    groupId && currentUserId && memberUserId
       ? {
           groupId: targetGroupId,
-          instantUserId: currentUserId,
-          targetInstantUserId: memberInstantUserId,
+
+          targetUserId: memberUserId,
         }
       : "skip",
     { initialNumItems: INITIAL_MESSAGE_COUNT }
@@ -59,11 +57,11 @@ export default function DirectChat() {
     status: eventStatus,
   } = usePaginatedQuery(
     convexApi.groupEvents.listDirect,
-    groupId && currentUserId && memberInstantUserId
+    groupId && currentUserId && memberUserId
       ? {
           groupId: targetGroupId,
-          instantUserId: currentUserId,
-          targetInstantUserId: memberInstantUserId,
+
+          targetUserId: memberUserId,
         }
       : "skip",
     { initialNumItems: INITIAL_EVENT_COUNT }
@@ -77,15 +75,15 @@ export default function DirectChat() {
     insertAtPosition({
       argsToMatch: {
         groupId: args.groupId,
-        instantUserId: args.instantUserId,
-        targetInstantUserId: args.targetInstantUserId,
+
+        targetUserId: args.targetUserId,
       },
       item: {
         _creationTime: now,
         _id: createOptimisticId("message") as Id<"chatMessages">,
         authorDisplayName,
         authorDisplayNameSnapshot: authorDisplayName,
-        authorInstantUserId: args.instantUserId,
+        authorUserId: currentUserId ?? "",
         body: args.body,
         createdAt: now,
         groupId: args.groupId,
@@ -101,22 +99,20 @@ export default function DirectChat() {
   const markReadMutation = useMutation(convexApi.chat.markDirectRead);
 
   useEffect(() => {
-    if (
-      !(groupId && currentUserId && memberInstantUserId && messages.length > 0)
-    ) {
+    if (!(groupId && currentUserId && memberUserId && messages.length > 0)) {
       return;
     }
 
     markReadMutation({
       groupId: targetGroupId,
-      instantUserId: currentUserId,
-      targetInstantUserId: memberInstantUserId,
+
+      targetUserId: memberUserId,
     }).catch(() => undefined);
   }, [
     currentUserId,
     groupId,
     markReadMutation,
-    memberInstantUserId,
+    memberUserId,
     messages.length,
     targetGroupId,
   ]);
@@ -161,13 +157,13 @@ export default function DirectChat() {
           await sendMessageMutation({
             body,
             groupId: group._id,
-            instantUserId: currentUserId,
-            targetInstantUserId: targetMember.instantUserId,
+
+            targetUserId: targetMember.userId,
           });
           await markReadMutation({
             groupId: group._id,
-            instantUserId: currentUserId,
-            targetInstantUserId: targetMember.instantUserId,
+
+            targetUserId: targetMember.userId,
           });
         } catch (error) {
           Alert.alert(
@@ -183,7 +179,7 @@ export default function DirectChat() {
       presenceRoomId={createDirectPresenceRoomId(
         group._id,
         currentUserId,
-        targetMember.instantUserId
+        targetMember.userId
       )}
       readReceiptMode="direct"
       title={targetMember.displayName}

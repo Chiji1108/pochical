@@ -1,4 +1,4 @@
-import { Button, Dialog, Select, Switch, Text } from "heroui-native";
+import { Button, Dialog, Select, Switch, Typography } from "heroui-native";
 import { View } from "react-native";
 import type { CalendarSelectOption } from "@/lib/device-calendar";
 
@@ -94,9 +94,12 @@ export const ExportCalendarDialog = ({
           {exportDialogResult ? null : (
             <View className="mb-5 gap-3">
               <View className="flex-row items-center justify-between gap-4 rounded-lg bg-foreground/5 px-3 py-3">
-                <Text className="min-w-0 flex-1 text-sm" numberOfLines={2}>
+                <Typography
+                  className="min-w-0 flex-1 text-sm"
+                  numberOfLines={2}
+                >
                   休日扱いのシフトは書き出さない
-                </Text>
+                </Typography>
                 <Switch
                   isDisabled={isExportingMonth}
                   isSelected={excludeDayOffShiftsFromExport}
@@ -105,9 +108,9 @@ export const ExportCalendarDialog = ({
               </View>
               {hasCalendarOptions ? (
                 <View className="gap-1">
-                  <Text className="text-sm" color="muted">
+                  <Typography className="text-sm" color="muted">
                     追加先カレンダー
-                  </Text>
+                  </Typography>
                   {calendarSelectOptions.length > 1 ? (
                     <Select
                       isDisabled={isExportingMonth || isLoadingCalendars}
@@ -144,27 +147,27 @@ export const ExportCalendarDialog = ({
                     </Select>
                   ) : (
                     <View className="rounded-lg bg-foreground/5 px-3 py-3">
-                      <Text className="text-sm" numberOfLines={1}>
+                      <Typography className="text-sm" numberOfLines={1}>
                         {selectedCalendarOption?.label}
-                      </Text>
+                      </Typography>
                     </View>
                   )}
-                  <Text className="text-xs" color="muted">
+                  <Typography className="text-xs" color="muted">
                     端末カレンダーへのアクセス許可が必要です。
-                  </Text>
+                  </Typography>
                 </View>
               ) : (
                 <View className="gap-1">
                   <View className="rounded-lg bg-foreground/5 px-3 py-3">
-                    <Text className="text-sm" color="muted">
+                    <Typography className="text-sm" color="muted">
                       {isLoadingCalendars
                         ? "追加先カレンダーを確認しています。"
                         : "追加先カレンダーが見つかりません。"}
-                    </Text>
+                    </Typography>
                   </View>
-                  <Text className="text-xs" color="muted">
+                  <Typography className="text-xs" color="muted">
                     端末カレンダーへのアクセス許可が必要です。
-                  </Text>
+                  </Typography>
                 </View>
               )}
             </View>

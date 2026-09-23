@@ -4,7 +4,7 @@ import { addDays, startOfDay, startOfMonth } from "date-fns";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getItemAsync, setItemAsync } from "expo-secure-store";
 import { SymbolView } from "expo-symbols";
-import { Button, Text, useThemeColor } from "heroui-native";
+import { Button, Typography, useThemeColor } from "heroui-native";
 import { useCallback, useEffect, useState } from "react";
 import {
   Pressable,
@@ -23,7 +23,7 @@ import {
   type SharedShiftScheduleDay,
   SharedShiftTable,
 } from "@/components/group/shared-shift-table";
-import { useCurrentUserId } from "@/lib/instant";
+import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../convex/_generated/api";
 
 const SELECTED_GROUP_STORAGE_KEY = "pochical-selected-group-id";
@@ -32,9 +32,9 @@ const EMPTY_GROUPS_HORIZONTAL_PADDING = 24;
 const SAMPLE_PREVIEW_MAX_WIDTH = 360;
 const SAMPLE_SHIFT_START_DATE = startOfDay(new Date(2026, 4, 25));
 const SAMPLE_SHARED_SHIFT_MEMBERS: SharedShiftMember[] = [
-  { _id: "sample-member-tanaka", displayName: "田中", instantUserId: "tanaka" },
-  { _id: "sample-member-sato", displayName: "佐藤", instantUserId: "sato" },
-  { _id: "sample-member-suzuki", displayName: "鈴木", instantUserId: "suzuki" },
+  { _id: "sample-member-tanaka", displayName: "田中", userId: "tanaka" },
+  { _id: "sample-member-sato", displayName: "佐藤", userId: "sato" },
+  { _id: "sample-member-suzuki", displayName: "鈴木", userId: "suzuki" },
 ] as const;
 const SAMPLE_SHIFT_PATTERNS = {
   early: { countsAsDayOff: false, emoji: "☀️", name: "早番" },
@@ -72,7 +72,7 @@ const SAMPLE_SHARED_SHIFTS_BY_USER_AND_DATE =
         continue;
       }
 
-      shiftMap.set(`${member.instantUserId}:${day.time}`, {
+      shiftMap.set(`${member.userId}:${day.time}`, {
         pattern: SAMPLE_SHIFT_PATTERNS[patternKey],
       });
     }
@@ -94,7 +94,7 @@ export default function Group() {
   const accentForegroundColor = useThemeColor("accent-foreground");
   const groups = useQuery(
     convexApi.groups.listForCurrentUser,
-    currentUserId ? { instantUserId: currentUserId } : "skip"
+    currentUserId ? {} : "skip"
   );
   const [hasLoadedSelectedGroupId, setHasLoadedSelectedGroupId] =
     useState(false);
@@ -410,7 +410,7 @@ const GroupRailIcon = ({
         },
       ]}
     >
-      <Text style={styles.railEmoji}>{emoji}</Text>
+      <Typography style={styles.railEmoji}>{emoji}</Typography>
     </View>
     {unreadCount > 0 ? (
       <RailUnreadBadge
@@ -432,9 +432,9 @@ const RailUnreadBadge = ({
   foregroundColor: string;
 }) => (
   <View style={[styles.railUnreadBadge, { backgroundColor: color }]}>
-    <Text style={[styles.railUnreadText, { color: foregroundColor }]}>
+    <Typography style={[styles.railUnreadText, { color: foregroundColor }]}>
       {count > MAX_RAIL_UNREAD_COUNT ? `${MAX_RAIL_UNREAD_COUNT}+` : count}
-    </Text>
+    </Typography>
   </View>
 );
 
@@ -462,7 +462,9 @@ const EmptyGroupsView = ({
       style={styles.flex}
     >
       <View style={styles.emptyTextGroup}>
-        <Text style={styles.emptyTitle}>グループでシフトを共有できます</Text>
+        <Typography style={styles.emptyTitle}>
+          グループでシフトを共有できます
+        </Typography>
       </View>
       <SampleShiftPreview
         borderColor={borderColor}

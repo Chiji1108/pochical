@@ -1,6 +1,6 @@
 import { useQuery } from "convex/react";
 import { NativeTabs } from "expo-router/native-tabs";
-import { useCurrentUserId } from "@/lib/instant";
+import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../convex/_generated/api";
 
 const MAX_TAB_UNREAD_COUNT = 99;
@@ -14,7 +14,7 @@ export default function TabLayout() {
   const currentUserId = useCurrentUserId();
   const groups = useQuery(
     convexApi.groups.listForCurrentUser,
-    currentUserId ? { instantUserId: currentUserId } : "skip"
+    currentUserId ? {} : "skip"
   );
   let groupUnreadCount = 0;
 

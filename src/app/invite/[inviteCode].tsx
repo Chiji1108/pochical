@@ -5,15 +5,15 @@ import {
   Button,
   Input,
   Label,
-  Text,
   TextField,
+  Typography,
   useThemeColor,
 } from "heroui-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { AppHeader } from "@/components/navigation/app-header";
-import { useCurrentUserId } from "@/lib/instant";
+import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../convex/_generated/api";
 
 const INVALID_INVITE_MESSAGE = "この招待リンクは無効です";
@@ -32,9 +32,7 @@ export default function InviteScreen() {
   const [isJoining, setIsJoining] = useState(false);
   const invite = useQuery(
     convexApi.invites.preview,
-    normalizedInviteCode
-      ? { inviteCode: normalizedInviteCode, instantUserId: currentUserId }
-      : "skip"
+    normalizedInviteCode ? { inviteCode: normalizedInviteCode } : "skip"
   );
   const joinInvite = useMutation(convexApi.invites.join);
   const goBack = useCallback(() => {
@@ -74,7 +72,6 @@ export default function InviteScreen() {
       const result = await joinInvite({
         displayName: trimmedDisplayName,
         inviteCode: normalizedInviteCode,
-        instantUserId: currentUserId,
       });
       router.replace(`/group?groupId=${result.groupId}`);
     } catch (error) {
@@ -150,7 +147,9 @@ export default function InviteScreen() {
     formContent = <View />;
   } else if (isInvalidInvite) {
     formContent = (
-      <Text className="text-base text-danger">{INVALID_INVITE_MESSAGE}</Text>
+      <Typography className="text-base text-danger">
+        {INVALID_INVITE_MESSAGE}
+      </Typography>
     );
   }
 
@@ -184,10 +183,10 @@ export default function InviteScreen() {
         mode="layout"
       >
         <View className="gap-2">
-          <Text className="font-bold text-2xl">{titleText}</Text>
-          <Text className="text-base" color="muted">
+          <Typography className="font-bold text-2xl">{titleText}</Typography>
+          <Typography className="text-base" color="muted">
             {description}
-          </Text>
+          </Typography>
         </View>
         {formContent}
       </KeyboardAwareScrollView>

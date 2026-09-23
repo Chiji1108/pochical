@@ -9,12 +9,13 @@ import {
   Select,
   Separator,
   TagGroup,
-  Text,
+  Typography,
   useToast,
 } from "heroui-native";
 import { useMemo, useRef, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AccountSettings } from "@/components/account-settings";
 import { AppHeader } from "@/components/navigation/app-header";
 import {
   type CalendarHighlightTarget,
@@ -26,8 +27,8 @@ import {
   getCalendarWeekdayHighlightColor,
   getWeeksOfMonth,
 } from "@/lib/date";
-import { useCurrentUserId, useOwnWorkData } from "@/lib/instant";
 import { cn } from "@/lib/utils";
+import { useCurrentUserId, useOwnWorkData } from "@/lib/work-data";
 import { deleteWorkData } from "@/lib/work-data-actions";
 import { api as convexApi } from "../../../convex/_generated/api";
 
@@ -152,7 +153,7 @@ export default function Settings() {
                 patterns,
                 shifts,
               });
-              await leaveAllGroupsMutation({ instantUserId: currentUserId });
+              await leaveAllGroupsMutation({});
               await deleteItemAsync(SELECTED_GROUP_STORAGE_KEY);
               router.replace("/settings");
               toast.show({
@@ -291,17 +292,7 @@ export default function Settings() {
 
         <View className="gap-2">
           <SectionTitle>アカウント</SectionTitle>
-          <ListGroup>
-            <PlaceholderRow
-              description="機種変更に備えてアカウントへ紐付けます"
-              label="アカウントを紐付け"
-            />
-            <Separator className="mx-4" />
-            <PlaceholderRow
-              description="現在の端末からアカウント連携を外します"
-              label="紐付け解除"
-            />
-          </ListGroup>
+          <AccountSettings />
         </View>
 
         <View className="gap-2">
@@ -336,9 +327,9 @@ type SectionTitleProps = {
 };
 
 const SectionTitle = ({ children }: SectionTitleProps) => (
-  <Text className="px-1 font-semibold text-sm" color="muted">
+  <Typography className="px-1 font-semibold text-sm" color="muted">
     {children}
-  </Text>
+  </Typography>
 );
 
 const isWeekStartsOn = (value: number): value is WeekStartsOn =>
@@ -386,14 +377,14 @@ const CalendarPreview = ({
                 className="aspect-square flex-1 items-center justify-center"
                 key={date.toISOString()}
               >
-                <Text
+                <Typography
                   className={cn("font-semibold text-[10px] leading-none", {
                     "text-blue-500": highlightColor === "blue",
                     "text-red-500": highlightColor === "red",
                   })}
                 >
                   {date.toLocaleDateString("ja-JP", { weekday: "short" })}
-                </Text>
+                </Typography>
               </View>
             );
           })}
@@ -436,7 +427,7 @@ const CalendarPreviewWeek = ({
           className="aspect-square flex-1 items-center justify-center"
           key={date.toISOString()}
         >
-          <Text
+          <Typography
             className={cn("font-medium text-[10px] leading-none", {
               "opacity-30": !isSameMonth(date, previewMonth),
               "text-blue-500": highlightColor === "blue",
@@ -444,7 +435,7 @@ const CalendarPreviewWeek = ({
             })}
           >
             {getDate(date)}
-          </Text>
+          </Typography>
         </View>
       );
     })}
@@ -456,16 +447,16 @@ type PlaceholderRowProps = {
   label: string;
 };
 
-const PlaceholderRow = ({ description, label }: PlaceholderRowProps) => (
+const _PlaceholderRow = ({ description, label }: PlaceholderRowProps) => (
   <ListGroup.Item disabled>
     <ListGroup.ItemContent>
       <ListGroup.ItemTitle>{label}</ListGroup.ItemTitle>
       <ListGroup.ItemDescription>{description}</ListGroup.ItemDescription>
     </ListGroup.ItemContent>
     <ListGroup.ItemSuffix>
-      <Text className="text-xs" color="muted">
+      <Typography className="text-xs" color="muted">
         準備中
-      </Text>
+      </Typography>
     </ListGroup.ItemSuffix>
   </ListGroup.Item>
 );

@@ -1,5 +1,6 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
+import { requireUserId } from "../convex-lib/auth";
 import {
   requireDirectMembership,
   requireMembership,
@@ -9,7 +10,7 @@ import { type MutationCtx, type QueryCtx, query } from "./_generated/server";
 
 export type GroupEventInput = {
   actorDisplayNameSnapshot: string;
-  actorInstantUserId: string;
+  actorUserId: string;
   body: string;
   createdAt: number;
   groupId: Id<"groups">;
@@ -17,7 +18,7 @@ export type GroupEventInput = {
   nextValue?: string;
   previousValue?: string;
   targetDisplayNameSnapshot?: string;
-  targetInstantUserId?: string;
+  targetUserId?: string;
 };
 
 export const insertGroupEvent = async (
@@ -82,11 +83,11 @@ const listDisplayNameEventsForGroup = (
 export const listGroup = query({
   args: {
     groupId: v.id("groups"),
-    instantUserId: v.string(),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.groupId, args.instantUserId);
+    const userId = await requireUserId(ctx);
+    await requireMembership(ctx, args.groupId, userId);
 
     return listEventsForGroup(ctx, args.groupId, args.paginationOpts);
   },
@@ -95,21 +96,13 @@ export const listGroup = query({
 export const listDirect = query({
   args: {
     groupId: v.id("groups"),
-    instantUserId: v.string(),
     paginationOpts: paginationOptsValidator,
-    targetInstantUserId: v.string(),
+    targetUserId: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireDirectMembership(
-      ctx,
-      args.groupId,
-      args.instantUserId,
-      args.targetInstantUserId
-    );
-    const participantInstantUserIds = new Set([
-      args.instantUserId,
-      args.targetInstantUserId,
-    ]);
+    const userId = await requireUserId(ctx);
+    await requireDirectMembership(ctx, args.groupId, userId, args.targetUserId);
+    const participantUserIds = new Set([userId, args.targetUserId]);
     const events = await listDisplayNameEventsForGroup(
       ctx,
       args.groupId,
@@ -119,7 +112,7 @@ export const listDirect = query({
     return {
       ...events,
       page: events.page.filter((event) =>
-        participantInstantUserIds.has(event.actorInstantUserId)
+        participantUserIds.has(event.actorUserId)
       ),
     };
   },

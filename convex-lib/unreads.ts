@@ -11,25 +11,25 @@ export const unreads = new UnreadTracking<
 
 export const ensureOwnMessagesIgnored = async (
   ctx: MutationCtx,
-  instantUserId: string
+  userId: string
 ) => {
   await unreads.muteSender(ctx, {
-    targetUserId: instantUserId,
-    userId: instantUserId,
+    targetUserId: userId,
+    userId,
   });
 };
 
 export const recordChatMessageUnread = async (
   ctx: MutationCtx,
   message: {
-    authorInstantUserId: string;
+    authorUserId: string;
     createdAt: number;
     threadId: Id<"chatThreads">;
   }
 ) => {
-  await ensureOwnMessagesIgnored(ctx, message.authorInstantUserId);
+  await ensureOwnMessagesIgnored(ctx, message.authorUserId);
   await unreads.insertMessage(ctx, {
-    authorId: message.authorInstantUserId,
+    authorId: message.authorUserId,
     channelId: message.threadId,
     timestamp: message.createdAt,
   });
@@ -38,7 +38,7 @@ export const recordChatMessageUnread = async (
 export const markThreadRead = async (
   ctx: MutationCtx,
   args: {
-    instantUserId: string;
+    userId: string;
     thread: Doc<"chatThreads">;
   }
 ) => {
@@ -46,23 +46,23 @@ export const markThreadRead = async (
     return;
   }
 
-  await ensureOwnMessagesIgnored(ctx, args.instantUserId);
+  await ensureOwnMessagesIgnored(ctx, args.userId);
   await unreads.markReadUpTo(ctx, {
     channelId: args.thread._id,
     timestamp: args.thread.lastMessageCreatedAt,
-    userId: args.instantUserId,
+    userId: args.userId,
   });
 };
 
 export const markThreadsReadUpTo = async (
   ctx: MutationCtx,
   args: {
-    instantUserId: string;
+    userId: string;
     threads: Doc<"chatThreads">[];
     timestamp: number;
   }
 ) => {
-  await ensureOwnMessagesIgnored(ctx, args.instantUserId);
+  await ensureOwnMessagesIgnored(ctx, args.userId);
 
   for (const thread of args.threads) {
     if (!thread.lastMessageCreatedAt) {
@@ -72,7 +72,7 @@ export const markThreadsReadUpTo = async (
     await unreads.markReadUpTo(ctx, {
       channelId: thread._id,
       timestamp: args.timestamp,
-      userId: args.instantUserId,
+      userId: args.userId,
     });
   }
 };
@@ -81,18 +81,18 @@ export const getLastReadByChannelId = async (
   ctx: QueryCtx,
   args: {
     channelId: Id<"chatThreads">;
-    instantUserId: string;
+    userId: string;
   }
 ) =>
   (await unreads.getLastRead(ctx, {
     channelId: args.channelId,
-    userId: args.instantUserId,
+    userId: args.userId,
   })) ?? 0;
 
 export const getUnreadCountsByThreadId = async (
   ctx: QueryCtx,
   threads: Doc<"chatThreads">[],
-  instantUserId: string
+  userId: string
 ) => {
   const unreadCountsByThreadId = new Map<Id<"chatThreads">, number>();
   const channelIds = threads
@@ -105,7 +105,7 @@ export const getUnreadCountsByThreadId = async (
 
   for (const result of await unreads.getSingleUnreads(ctx, {
     channelIds,
-    userId: instantUserId,
+    userId,
   })) {
     unreadCountsByThreadId.set(result.channelId, result.count);
   }

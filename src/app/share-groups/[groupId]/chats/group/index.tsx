@@ -9,7 +9,7 @@ import { useEffect } from "react";
 import { Alert, View } from "react-native";
 import { ChatView } from "@/components/chat/chat-view";
 import { createGroupPresenceRoomId } from "@/lib/chat-presence";
-import { useCurrentUserId } from "@/lib/instant";
+import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
 
@@ -28,9 +28,7 @@ export default function GroupChat() {
   const targetGroupId = groupId as Id<"groups">;
   const group = useQuery(
     convexApi.groups.getDetail,
-    groupId && currentUserId
-      ? { groupId: targetGroupId, instantUserId: currentUserId }
-      : "skip"
+    groupId && currentUserId ? { groupId: targetGroupId } : "skip"
   );
   const {
     loadMore: loadMoreMessages,
@@ -38,9 +36,7 @@ export default function GroupChat() {
     status: messageStatus,
   } = usePaginatedQuery(
     convexApi.chat.listGroupMessages,
-    groupId && currentUserId
-      ? { groupId: targetGroupId, instantUserId: currentUserId }
-      : "skip",
+    groupId && currentUserId ? { groupId: targetGroupId } : "skip",
     { initialNumItems: INITIAL_MESSAGE_COUNT }
   );
   const {
@@ -49,9 +45,7 @@ export default function GroupChat() {
     status: eventStatus,
   } = usePaginatedQuery(
     convexApi.groupEvents.listGroup,
-    groupId && currentUserId
-      ? { groupId: targetGroupId, instantUserId: currentUserId }
-      : "skip",
+    groupId && currentUserId ? { groupId: targetGroupId } : "skip",
     { initialNumItems: INITIAL_EVENT_COUNT }
   );
   const sendMessageMutation = useMutation(
@@ -63,14 +57,13 @@ export default function GroupChat() {
     insertAtPosition({
       argsToMatch: {
         groupId: args.groupId,
-        instantUserId: args.instantUserId,
       },
       item: {
         _creationTime: now,
         _id: createOptimisticId("message") as Id<"chatMessages">,
         authorDisplayName,
         authorDisplayNameSnapshot: authorDisplayName,
-        authorInstantUserId: args.instantUserId,
+        authorUserId: currentUserId ?? "",
         body: args.body,
         createdAt: now,
         groupId: args.groupId,
@@ -92,7 +85,6 @@ export default function GroupChat() {
 
     markReadMutation({
       groupId: targetGroupId,
-      instantUserId: currentUserId,
     }).catch(() => undefined);
   }, [
     currentUserId,
@@ -142,11 +134,9 @@ export default function GroupChat() {
           await sendMessageMutation({
             body,
             groupId: group._id,
-            instantUserId: currentUserId,
           });
           await markReadMutation({
             groupId: group._id,
-            instantUserId: currentUserId,
           });
         } catch (error) {
           Alert.alert(

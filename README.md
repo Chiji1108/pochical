@@ -8,7 +8,7 @@ XcodeとiOSランタイム、Bun、Node.js（22.13以上の22系、24.3以上の
 
 1. `bun install` で依存関係をインストールします。
 2. Uniwind Proを初めて使うMacでは `bunx uniwind-pro` で認証し、本体を取得します。
-3. `.env.local` に `EXPO_PUBLIC_INSTANT_APP_ID` と `EXPO_PUBLIC_CONVEX_URL` を設定します。
+3. [Convex・認証のセットアップ](docs/convex-migration.md) を行い、`.env.local` に `CONVEX_DEPLOYMENT` と `EXPO_PUBLIC_CONVEX_URL` を設定します。
 4. `bun run ios --device` でiOS Simulatorを選択し、開発用アプリをビルド・起動します。Xcode 27ではDevice Hubが開きます。
 
 初回ビルド後は `bun run start` を実行し、`i` キーで起動できます。ネイティブ依存関係を更新したときは再ビルドしてください。

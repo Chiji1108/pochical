@@ -1,5 +1,6 @@
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
+import { requireUserId } from "../convex-lib/auth";
 import { addMessageMetadata } from "../convex-lib/chatMessageMetadata";
 import {
   createDirectPair,
@@ -69,11 +70,11 @@ const listMessagesForThread = (
 export const listGroupMessages = query({
   args: {
     groupId: v.id("groups"),
-    instantUserId: v.string(),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.groupId, args.instantUserId);
+    const userId = await requireUserId(ctx);
+    await requireMembership(ctx, args.groupId, userId);
     const thread = await getThread(
       ctx,
       args.groupId,
@@ -96,21 +97,13 @@ export const listGroupMessages = query({
 export const listDirectMessages = query({
   args: {
     groupId: v.id("groups"),
-    instantUserId: v.string(),
     paginationOpts: paginationOptsValidator,
-    targetInstantUserId: v.string(),
+    targetUserId: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireDirectMembership(
-      ctx,
-      args.groupId,
-      args.instantUserId,
-      args.targetInstantUserId
-    );
-    const { pairKey } = createDirectPair(
-      args.instantUserId,
-      args.targetInstantUserId
-    );
+    const userId = await requireUserId(ctx);
+    await requireDirectMembership(ctx, args.groupId, userId, args.targetUserId);
+    const { pairKey } = createDirectPair(userId, args.targetUserId);
     const thread = await getThread(ctx, args.groupId, "direct", pairKey);
     const result = await listMessagesForThread(
       ctx,
@@ -129,14 +122,10 @@ export const sendGroupMessage = mutation({
   args: {
     body: v.string(),
     groupId: v.id("groups"),
-    instantUserId: v.string(),
   },
   handler: async (ctx, args) => {
-    const { membership } = await requireMembership(
-      ctx,
-      args.groupId,
-      args.instantUserId
-    );
+    const userId = await requireUserId(ctx);
+    const { membership } = await requireMembership(ctx, args.groupId, userId);
     const body = normalizeMessageBody(args.body);
     const thread = await getOrCreateThread(
       ctx,
@@ -148,14 +137,14 @@ export const sendGroupMessage = mutation({
 
     await ctx.db.insert("chatMessages", {
       authorDisplayNameSnapshot: membership.displayName,
-      authorInstantUserId: args.instantUserId,
+      authorUserId: userId,
       body,
       createdAt: now,
       groupId: args.groupId,
       threadId: thread._id,
     });
     await recordChatMessageUnread(ctx, {
-      authorInstantUserId: args.instantUserId,
+      authorUserId: userId,
       createdAt: now,
       threadId: thread._id,
     });
@@ -173,19 +162,19 @@ export const sendDirectMessage = mutation({
   args: {
     body: v.string(),
     groupId: v.id("groups"),
-    instantUserId: v.string(),
-    targetInstantUserId: v.string(),
+    targetUserId: v.string(),
   },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
     const { membership } = await requireDirectMembership(
       ctx,
       args.groupId,
-      args.instantUserId,
-      args.targetInstantUserId
+      userId,
+      args.targetUserId
     );
     const body = normalizeMessageBody(args.body);
     const { directParticipantA, directParticipantB, pairKey } =
-      createDirectPair(args.instantUserId, args.targetInstantUserId);
+      createDirectPair(userId, args.targetUserId);
     const thread = await getOrCreateThread(
       ctx,
       args.groupId,
@@ -200,14 +189,14 @@ export const sendDirectMessage = mutation({
 
     await ctx.db.insert("chatMessages", {
       authorDisplayNameSnapshot: membership.displayName,
-      authorInstantUserId: args.instantUserId,
+      authorUserId: userId,
       body,
       createdAt: now,
       groupId: args.groupId,
       threadId: thread._id,
     });
     await recordChatMessageUnread(ctx, {
-      authorInstantUserId: args.instantUserId,
+      authorUserId: userId,
       createdAt: now,
       threadId: thread._id,
     });
@@ -224,10 +213,10 @@ export const sendDirectMessage = mutation({
 export const markGroupRead = mutation({
   args: {
     groupId: v.id("groups"),
-    instantUserId: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.groupId, args.instantUserId);
+    const userId = await requireUserId(ctx);
+    await requireMembership(ctx, args.groupId, userId);
     const thread = await getThread(
       ctx,
       args.groupId,
@@ -239,33 +228,25 @@ export const markGroupRead = mutation({
       return;
     }
 
-    await markThreadRead(ctx, { instantUserId: args.instantUserId, thread });
+    await markThreadRead(ctx, { userId, thread });
   },
 });
 
 export const markDirectRead = mutation({
   args: {
     groupId: v.id("groups"),
-    instantUserId: v.string(),
-    targetInstantUserId: v.string(),
+    targetUserId: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireDirectMembership(
-      ctx,
-      args.groupId,
-      args.instantUserId,
-      args.targetInstantUserId
-    );
-    const { pairKey } = createDirectPair(
-      args.instantUserId,
-      args.targetInstantUserId
-    );
+    const userId = await requireUserId(ctx);
+    await requireDirectMembership(ctx, args.groupId, userId, args.targetUserId);
+    const { pairKey } = createDirectPair(userId, args.targetUserId);
     const thread = await getThread(ctx, args.groupId, "direct", pairKey);
 
     if (!thread?.lastMessageCreatedAt) {
       return;
     }
 
-    await markThreadRead(ctx, { instantUserId: args.instantUserId, thread });
+    await markThreadRead(ctx, { userId, thread });
   },
 });
