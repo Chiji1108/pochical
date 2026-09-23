@@ -9,6 +9,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { CalendarDatePickerButton } from "@/components/calendar/calendar-date-picker-button";
 import { db, type Shift } from "@/lib/instant";
+import { shiftNoteDrafts } from "@/lib/shift-notes";
 
 const selectedDateFormatter = new Intl.DateTimeFormat("ja-JP", {
   day: "numeric",
@@ -82,6 +83,9 @@ export const PatternGridHeader: FC<PatternGridHeaderProps> = ({
 
   const handleNextAction = () => {
     if (hasSelectedDateShift) {
+      for (const shift of selectedDateShifts) {
+        shiftNoteDrafts.discard(shift.id);
+      }
       db.transact(
         selectedDateShifts.map((shift) => db.tx.shifts[shift.id].delete())
       ).catch(() => undefined);

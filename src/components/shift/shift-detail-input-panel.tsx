@@ -6,11 +6,10 @@ import { Input, Label, TagGroup, Text, TextField } from "heroui-native";
 import { Button } from "heroui-native/button";
 import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
-import useDebounce from "react-use/lib/useDebounce";
 import { db, type Member, type Shift, useCurrentUserId } from "@/lib/instant";
+import { shiftNoteDrafts } from "@/lib/shift-notes";
 
 const seedMembers = ["佐藤師長", "鈴木主任", "田中先輩"] as const;
-const NOTE_SAVE_DEBOUNCE_MS = 450;
 
 type ShiftDetailInputPanelProps = {
   members: Member[];
@@ -26,7 +25,15 @@ export const ShiftDetailInputPanel = ({
   const router = useRouter();
   const currentUserId = useCurrentUserId();
   const isSignedIn = Boolean(currentUserId);
-  const [noteText, setNoteText] = useState(selectedShift?.notes ?? "");
+  const [noteDraft, setNoteDraft] = useState<{
+    shiftId: string;
+    notes: string;
+  }>();
+  const shiftId = selectedShift?.id;
+  const noteText =
+    noteDraft?.shiftId === shiftId
+      ? (noteDraft?.notes ?? "")
+      : (selectedShift?.notes ?? "");
   const sortedMembers = useMemo(
     () =>
       [...members].sort((a, b) => {
@@ -37,8 +44,21 @@ export const ShiftDetailInputPanel = ({
   );
 
   useEffect(() => {
-    setNoteText(selectedShift?.notes ?? "");
-  }, [selectedShift?.notes]);
+    setNoteDraft(undefined);
+    return () => {
+      if (shiftId) {
+        shiftNoteDrafts.flush(shiftId);
+      }
+    };
+  }, [shiftId]);
+
+  const changeNotes = (notes: string) => {
+    if (!(currentUserId && shiftId)) {
+      return;
+    }
+    setNoteDraft({ shiftId, notes });
+    shiftNoteDrafts.schedule(shiftId, notes);
+  };
 
   const createSeedMembers = async () => {
     if (!(currentUserId && members.length === 0)) {
@@ -80,27 +100,12 @@ export const ShiftDetailInputPanel = ({
     ]);
   };
 
-  const saveNotes = async (notes: string) => {
-    if (!(currentUserId && selectedShift)) {
-      return;
-    }
-
-    await db.transact(db.tx.shifts[selectedShift.id].update({ notes }));
-  };
-
-  useDebounce(
-    () => {
-      saveNotes(noteText).catch(() => undefined);
-    },
-    NOTE_SAVE_DEBOUNCE_MS,
-    [noteText]
-  );
-
   const handleDeleteShift = async () => {
     if (!(currentUserId && selectedShift)) {
       return;
     }
 
+    shiftNoteDrafts.discard(selectedShift.id);
     await db.transact(db.tx.shifts[selectedShift.id].delete());
 
     selectionAsync().catch(() => {
@@ -109,6 +114,9 @@ export const ShiftDetailInputPanel = ({
   };
 
   const handleSaveAndSelectNextDay = () => {
+    if (shiftId) {
+      shiftNoteDrafts.flush(shiftId);
+    }
     onSelectNextDay();
 
     selectionAsync().catch(() => {
@@ -215,7 +223,12 @@ export const ShiftDetailInputPanel = ({
           <Input
             autoCapitalize="none"
             autoCorrect={false}
-            onChangeText={setNoteText}
+            onBlur={() => {
+              if (shiftId) {
+                shiftNoteDrafts.flush(shiftId);
+              }
+            }}
+            onChangeText={changeNotes}
             placeholder="メモを入力"
             returnKeyType="done"
             value={noteText}
