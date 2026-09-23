@@ -56,7 +56,7 @@ export default function NewShareGroup() {
 
         name: groupName,
       });
-      router.replace(`/group?groupId=${result.groupId}&showInvite=1`);
+      router.dismissTo(`/group?groupId=${result.groupId}&showInvite=1`);
     } catch (error) {
       Alert.alert(
         "作成できませんでした",

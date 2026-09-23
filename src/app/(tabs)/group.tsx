@@ -202,13 +202,8 @@ export default function Group() {
       return;
     }
 
-    if (requestedGroupId) {
-      router.replace(`/group?groupId=${encodeURIComponent(requestedGroupId)}`);
-      return;
-    }
-
-    router.replace("/group");
-  }, [requestedGroupId, router, showInvite]);
+    router.setParams({ showInvite: undefined });
+  }, [router, showInvite]);
 
   const shouldShowInviteForSelectedGroup =
     showInvite === "1" && selectedGroup?._id === requestedGroupId;
