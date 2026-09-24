@@ -21,6 +21,7 @@ import {
   type InviteDetails,
   InviteDialog,
 } from "@/components/group/group-dialogs";
+import { GroupLoadingScreen } from "@/components/group/group-skeleton";
 import { AppHeader } from "@/components/navigation/app-header";
 import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../../convex/_generated/api";
@@ -292,7 +293,9 @@ export default function ShareGroupSettings() {
   };
 
   if (group === undefined) {
-    return <View className="flex-1 bg-background" />;
+    return (
+      <GroupLoadingScreen layout="settings" onBack={goBack} title="設定" />
+    );
   }
 
   if (!group) {

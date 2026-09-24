@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GroupDetailView } from "@/components/group/group-detail-view";
+import { GroupRailSkeleton } from "@/components/group/group-skeleton";
 import {
   SHARED_SHIFT_DATE_COLUMN_WIDTH,
   SHARED_SHIFT_MEMBER_COLUMN_WIDTH,
@@ -208,12 +209,13 @@ export default function Group() {
   const shouldShowInviteForSelectedGroup =
     showInvite === "1" && selectedGroup?._id === requestedGroupId;
 
-  let mainContent = <View style={styles.flex} />;
+  let mainContent = <GroupDetailView isEmbedded />;
 
   if (selectedGroup) {
     mainContent = (
       <GroupDetailView
         groupId={selectedGroup._id}
+        groupName={selectedGroup.name}
         isEmbedded={true}
         onAutoInviteShown={clearConsumedInvitePrompt}
         showInvite={shouldShowInviteForSelectedGroup}
@@ -236,6 +238,7 @@ export default function Group() {
       style={[styles.flex, { backgroundColor }]}
     >
       <View style={styles.rootRow}>
+        {!hasLoadedGroups && <GroupRailSkeleton />}
         {hasGroups ? (
           <GroupRail
             borderColor={borderColor}

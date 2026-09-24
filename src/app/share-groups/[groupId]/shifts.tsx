@@ -14,6 +14,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWindowDimensions, View } from "react-native";
 import useUnmount from "react-use/lib/useUnmount";
 import {
+  GroupContentSkeleton,
+  GroupLoadingScreen,
+} from "@/components/group/group-skeleton";
+import {
   SHARED_SHIFT_DATE_COLUMN_WIDTH,
   SHARED_SHIFT_MEMBER_COLUMN_WIDTH,
   type SharedShiftCellValue,
@@ -268,7 +272,9 @@ export default function ShareGroupShifts() {
   }, [scrollToTodayIndex]);
 
   if (group === undefined) {
-    return <View className="flex-1 bg-background" />;
+    return (
+      <GroupLoadingScreen layout="shifts" onBack={goBack} title="シフト表" />
+    );
   }
 
   if (!group) {
@@ -335,26 +341,30 @@ export default function ShareGroupShifts() {
                 onChange={updateMemberScheduleData}
               />
             ))}
-            <SharedShiftTable
-              colors={{
-                border: borderColor,
-                highlightBackground,
-                today: todayColor,
-              }}
-              initialScrollIndex={initialScrollIndex}
-              listRef={scheduleListRef}
-              memberColumnWidth={memberColumnWidth}
-              members={members}
-              onEndReached={appendDays}
-              onStartReached={prependDays}
-              onViewableItemsChanged={updateVisibleMonth}
-              scheduleDays={scheduleDays}
-              shiftsByUserAndDate={shiftsByUserAndDate}
-              tableWidth={tableWidth}
-              today={today}
-              viewabilityConfig={viewabilityConfig}
-              visibleMonth={visibleMonth}
-            />
+            {members.some((member) => !memberScheduleData[member.userId]) ? (
+              <GroupContentSkeleton layout="shifts" />
+            ) : (
+              <SharedShiftTable
+                colors={{
+                  border: borderColor,
+                  highlightBackground,
+                  today: todayColor,
+                }}
+                initialScrollIndex={initialScrollIndex}
+                listRef={scheduleListRef}
+                memberColumnWidth={memberColumnWidth}
+                members={members}
+                onEndReached={appendDays}
+                onStartReached={prependDays}
+                onViewableItemsChanged={updateVisibleMonth}
+                scheduleDays={scheduleDays}
+                shiftsByUserAndDate={shiftsByUserAndDate}
+                tableWidth={tableWidth}
+                today={today}
+                viewabilityConfig={viewabilityConfig}
+                visibleMonth={visibleMonth}
+              />
+            )}
           </View>
         ) : (
           <View className="flex-1 items-center justify-center px-6">
@@ -391,8 +401,11 @@ const MemberScheduleSubscription = ({
   );
 
   useEffect(() => {
+    if (data === undefined) {
+      return;
+    }
     onChange(memberUserId, { patterns, shifts });
-  }, [memberUserId, onChange, patterns, shifts]);
+  }, [data, memberUserId, onChange, patterns, shifts]);
 
   useUnmount(() => {
     onChange(memberUserId);

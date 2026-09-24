@@ -21,6 +21,7 @@ import {
 import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { GroupContentSkeleton } from "./group-skeleton";
 
 type GroupDetail = NonNullable<
   FunctionReturnType<typeof convexApi.groups.getDetail>
@@ -30,6 +31,7 @@ type GroupMember = GroupDetail["members"][number];
 
 type GroupDetailViewProps = {
   groupId?: string;
+  groupName?: string;
   isEmbedded?: boolean;
   onBack?: () => void;
   onAutoInviteShown?: () => void;
@@ -83,6 +85,7 @@ const formatLatestMessageTime = (timestamp?: number) => {
 
 export const GroupDetailView = ({
   groupId,
+  groupName,
   isEmbedded = false,
   onBack,
   onAutoInviteShown,
@@ -121,7 +124,29 @@ export const GroupDetailView = ({
   }, [group, onAutoInviteShown, showInvite]);
 
   if (!groupId || group === undefined) {
-    return <View style={[styles.flex, { backgroundColor }]} />;
+    return (
+      <View style={[styles.flex, { backgroundColor }]}>
+        <GroupDetailHeader
+          includeTopInset={!isEmbedded}
+          leftAction={
+            onBack
+              ? {
+                  accessibilityLabel: "グループに戻る",
+                  icon: {
+                    android: "arrow_back",
+                    ios: "chevron.left",
+                    web: "arrow_back",
+                  },
+                  onPress: onBack,
+                }
+              : undefined
+          }
+          title={groupName ?? "グループ"}
+          titleAlign="left"
+        />
+        <GroupContentSkeleton />
+      </View>
+    );
   }
 
   if (!group) {
