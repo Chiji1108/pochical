@@ -5,9 +5,11 @@ import {
   useQuery,
 } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect } from "react";
-import { Alert, View } from "react-native";
+import { useCallback } from "react";
+import { View } from "react-native";
+import { findChatReply } from "@/components/chat/chat-model";
 import { ChatView } from "@/components/chat/chat-view";
+import { useChatRead } from "@/components/chat/use-chat-read";
 import { createGroupPresenceRoomId } from "@/lib/chat-presence";
 import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../../../../convex/_generated/api";
@@ -68,6 +70,7 @@ export default function GroupChat() {
         createdAt: now,
         groupId: args.groupId,
         readCount: 0,
+        reply: findChatReply(messages, args.replyToMessageId),
         threadId: createOptimisticId("thread") as Id<"chatThreads">,
       },
       localQueryStore,
@@ -78,21 +81,13 @@ export default function GroupChat() {
   });
   const markReadMutation = useMutation(convexApi.chat.markGroupRead);
 
-  useEffect(() => {
-    if (!(groupId && currentUserId && messages.length > 0)) {
-      return;
-    }
-
-    markReadMutation({
-      groupId: targetGroupId,
-    }).catch(() => undefined);
-  }, [
-    currentUserId,
-    groupId,
-    markReadMutation,
-    messages.length,
-    targetGroupId,
-  ]);
+  const markRead = useCallback(async () => {
+    await markReadMutation({ groupId: targetGroupId });
+  }, [markReadMutation, targetGroupId]);
+  const latestMessageId = messages.find(
+    (message) => !message._id.startsWith("message:")
+  )?._id;
+  useChatRead(Boolean(groupId && currentUserId), latestMessageId, markRead);
 
   const goBack = () => {
     if (router.canGoBack()) {
@@ -114,8 +109,15 @@ export default function GroupChat() {
 
   return (
     <ChatView
+      canLoadMore={
+        messageStatus === "CanLoadMore" || eventStatus === "CanLoadMore"
+      }
       currentUserId={currentUserId}
       events={events}
+      isLoadingInitial={
+        messageStatus === "LoadingFirstPage" ||
+        eventStatus === "LoadingFirstPage"
+      }
       isLoadingMore={
         messageStatus === "LoadingMore" || eventStatus === "LoadingMore"
       }
@@ -129,24 +131,12 @@ export default function GroupChat() {
           loadMoreEvents(LOAD_MORE_EVENT_COUNT);
         }
       }}
-      onSend={async (body) => {
-        try {
-          await sendMessageMutation({
-            body,
-            groupId: group._id,
-          });
-          await markReadMutation({
-            groupId: group._id,
-          });
-        } catch (error) {
-          Alert.alert(
-            "送信できませんでした",
-            error instanceof Error
-              ? error.message
-              : "時間をおいて再試行してください"
-          );
-          throw error;
-        }
+      onSend={async (body, replyToMessageId) => {
+        await sendMessageMutation({
+          body,
+          replyToMessageId,
+          groupId: group._id,
+        });
       }}
       presenceMembers={group.members}
       presenceRoomId={createGroupPresenceRoomId(group._id)}

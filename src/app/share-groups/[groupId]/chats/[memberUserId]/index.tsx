@@ -5,9 +5,11 @@ import {
   useQuery,
 } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect } from "react";
-import { Alert, View } from "react-native";
+import { useCallback } from "react";
+import { View } from "react-native";
+import { findChatReply } from "@/components/chat/chat-model";
 import { ChatView } from "@/components/chat/chat-view";
+import { useChatRead } from "@/components/chat/use-chat-read";
 import { createDirectPresenceRoomId } from "@/lib/chat-presence";
 import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../../../../convex/_generated/api";
@@ -88,6 +90,7 @@ export default function DirectChat() {
         createdAt: now,
         groupId: args.groupId,
         readCount: 0,
+        reply: findChatReply(messages, args.replyToMessageId),
         threadId: createOptimisticId("thread") as Id<"chatThreads">,
       },
       localQueryStore,
@@ -98,24 +101,20 @@ export default function DirectChat() {
   });
   const markReadMutation = useMutation(convexApi.chat.markDirectRead);
 
-  useEffect(() => {
-    if (!(groupId && currentUserId && memberUserId && messages.length > 0)) {
-      return;
-    }
-
-    markReadMutation({
+  const markRead = useCallback(async () => {
+    await markReadMutation({
       groupId: targetGroupId,
-
       targetUserId: memberUserId,
-    }).catch(() => undefined);
-  }, [
-    currentUserId,
-    groupId,
-    markReadMutation,
-    memberUserId,
-    messages.length,
-    targetGroupId,
-  ]);
+    });
+  }, [markReadMutation, targetGroupId, memberUserId]);
+  const latestMessageId = messages.find(
+    (message) => !message._id.startsWith("message:")
+  )?._id;
+  useChatRead(
+    Boolean(groupId && currentUserId && memberUserId),
+    latestMessageId,
+    markRead
+  );
 
   const goBack = () => {
     if (router.canGoBack()) {
@@ -137,8 +136,15 @@ export default function DirectChat() {
 
   return (
     <ChatView
+      canLoadMore={
+        messageStatus === "CanLoadMore" || eventStatus === "CanLoadMore"
+      }
       currentUserId={currentUserId}
       events={events}
+      isLoadingInitial={
+        messageStatus === "LoadingFirstPage" ||
+        eventStatus === "LoadingFirstPage"
+      }
       isLoadingMore={
         messageStatus === "LoadingMore" || eventStatus === "LoadingMore"
       }
@@ -152,28 +158,13 @@ export default function DirectChat() {
           loadMoreEvents(LOAD_MORE_EVENT_COUNT);
         }
       }}
-      onSend={async (body) => {
-        try {
-          await sendMessageMutation({
-            body,
-            groupId: group._id,
-
-            targetUserId: targetMember.userId,
-          });
-          await markReadMutation({
-            groupId: group._id,
-
-            targetUserId: targetMember.userId,
-          });
-        } catch (error) {
-          Alert.alert(
-            "送信できませんでした",
-            error instanceof Error
-              ? error.message
-              : "時間をおいて再試行してください"
-          );
-          throw error;
-        }
+      onSend={async (body, replyToMessageId) => {
+        await sendMessageMutation({
+          body,
+          replyToMessageId,
+          groupId: group._id,
+          targetUserId: targetMember.userId,
+        });
       }}
       presenceMembers={group.members}
       presenceRoomId={createDirectPresenceRoomId(

@@ -1,6 +1,7 @@
 import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { chatMessageFields } from "../shared/chat-schema";
 import {
   memberFields,
   patternFields,
@@ -78,15 +79,10 @@ export default defineSchema({
   })
     .index("by_groupId_kind_pairKey", ["groupId", "kind", "pairKey"])
     .index("by_groupId_updatedAt", ["groupId", "updatedAt"]),
-  chatMessages: defineTable({
-    authorDisplayNameSnapshot: v.string(),
-    authorUserId: v.string(),
-    body: v.string(),
-    createdAt: v.number(),
-    deletedAt: v.optional(v.number()),
-    groupId: v.id("groups"),
-    threadId: v.id("chatThreads"),
-  }).index("by_threadId_createdAt", ["threadId", "createdAt"]),
+  chatMessages: defineTable(chatMessageFields).index("by_threadId_createdAt", [
+    "threadId",
+    "createdAt",
+  ]),
   groupEvents: defineTable({
     actorDisplayNameSnapshot: v.string(),
     actorUserId: v.string(),

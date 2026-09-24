@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     color: "#3b82f6",
   },
   darkExportDateText: {
-    color: "#fafafa",
+    color: "#e4e4e7",
   },
   darkExportShiftName: {
     color: "#d4d4d8",

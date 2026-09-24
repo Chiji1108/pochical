@@ -35,14 +35,14 @@ export const ExportCalendarImageView: FC<ExportCalendarImageViewProps> = ({
   <View
     className={cn("p-5", {
       "bg-white": colorScheme === "light",
-      "bg-zinc-900": colorScheme === "dark",
+      "bg-[#242429]": colorScheme === "dark",
     })}
   >
     <View className="gap-2">
       <View className="items-center">
         <Typography
           className={cn("font-bold text-2xl leading-8", {
-            "text-zinc-50": colorScheme === "dark",
+            "text-zinc-200": colorScheme === "dark",
             "text-zinc-950": colorScheme === "light",
           })}
         >

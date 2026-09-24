@@ -5,12 +5,16 @@
 
 @layer theme {
   @variant dark {
-    --background: oklch(0.17 0.006 285.823);
-    --surface: oklch(0.22 0.006 285.89);
+    --background: #242429;
+    --foreground: #e4e4e7;
+    --surface: #2d2d33;
     --overlay: var(--surface);
-    --surface-secondary: oklch(0.27 0.005 286.14);
-    --surface-tertiary: oklch(0.31 0.004 247.91);
+    --surface-secondary: #35353d;
+    --surface-tertiary: #3e3e47;
+    --default: var(--surface-secondary);
+    --default-foreground: var(--foreground);
     --field-background: var(--surface);
-    --border: oklch(0.34 0.006 286.033);
+    --border: #464650;
+    --separator: var(--border);
   }
 }

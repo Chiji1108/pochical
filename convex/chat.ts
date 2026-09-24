@@ -1,6 +1,13 @@
-import { paginationOptsValidator } from "convex/server";
+import {
+  paginationOptsValidator,
+  paginationResultValidator,
+} from "convex/server";
 import { ConvexError, v } from "convex/values";
 import { requireUserId } from "../convex-lib/auth";
+import {
+  getReplySnapshot,
+  requireMessageAccess,
+} from "../convex-lib/chatInteractions";
 import { addMessageMetadata } from "../convex-lib/chatMessageMetadata";
 import {
   createDirectPair,
@@ -13,11 +20,13 @@ import {
   requireMembership,
 } from "../convex-lib/groupMembers";
 import { markThreadRead, recordChatMessageUnread } from "../convex-lib/unreads";
+import { isReactionEmoji, MAX_CHAT_MESSAGE_LENGTH } from "../shared/chat";
+import { chatMessageValidator } from "../shared/chat-schema";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, type QueryCtx, query } from "./_generated/server";
 
-const MAX_MESSAGE_BODY_LENGTH = 1000;
 const MESSAGE_PREVIEW_LENGTH = 80;
+const MAX_REACTION_USERS = 1000;
 
 const normalizeMessageBody = (body: string) => {
   const trimmedBody = body.trim();
@@ -26,7 +35,7 @@ const normalizeMessageBody = (body: string) => {
     throw new ConvexError("Message is required");
   }
 
-  if (trimmedBody.length > MAX_MESSAGE_BODY_LENGTH) {
+  if (trimmedBody.length > MAX_CHAT_MESSAGE_LENGTH) {
     throw new ConvexError("Message is too long");
   }
 
@@ -68,6 +77,7 @@ const listMessagesForThread = (
 };
 
 export const listGroupMessages = query({
+  returns: paginationResultValidator(chatMessageValidator),
   args: {
     groupId: v.id("groups"),
     paginationOpts: paginationOptsValidator,
@@ -95,6 +105,7 @@ export const listGroupMessages = query({
 });
 
 export const listDirectMessages = query({
+  returns: paginationResultValidator(chatMessageValidator),
   args: {
     groupId: v.id("groups"),
     paginationOpts: paginationOptsValidator,
@@ -119,8 +130,10 @@ export const listDirectMessages = query({
 });
 
 export const sendGroupMessage = mutation({
+  returns: v.object({ threadId: v.id("chatThreads") }),
   args: {
     body: v.string(),
+    replyToMessageId: v.optional(v.id("chatMessages")),
     groupId: v.id("groups"),
   },
   handler: async (ctx, args) => {
@@ -133,9 +146,11 @@ export const sendGroupMessage = mutation({
       "group",
       GROUP_THREAD_PAIR_KEY
     );
+    const reply = await getReplySnapshot(ctx, thread, args.replyToMessageId);
     const now = Date.now();
 
     await ctx.db.insert("chatMessages", {
+      ...(reply ? { reply } : {}),
       authorDisplayNameSnapshot: membership.displayName,
       authorUserId: userId,
       body,
@@ -159,8 +174,10 @@ export const sendGroupMessage = mutation({
 });
 
 export const sendDirectMessage = mutation({
+  returns: v.object({ threadId: v.id("chatThreads") }),
   args: {
     body: v.string(),
+    replyToMessageId: v.optional(v.id("chatMessages")),
     groupId: v.id("groups"),
     targetUserId: v.string(),
   },
@@ -185,9 +202,11 @@ export const sendDirectMessage = mutation({
         directParticipantB,
       }
     );
+    const reply = await getReplySnapshot(ctx, thread, args.replyToMessageId);
     const now = Date.now();
 
     await ctx.db.insert("chatMessages", {
+      ...(reply ? { reply } : {}),
       authorDisplayNameSnapshot: membership.displayName,
       authorUserId: userId,
       body,
@@ -211,6 +230,7 @@ export const sendDirectMessage = mutation({
 });
 
 export const markGroupRead = mutation({
+  returns: v.null(),
   args: {
     groupId: v.id("groups"),
   },
@@ -225,14 +245,16 @@ export const markGroupRead = mutation({
     );
 
     if (!thread?.lastMessageCreatedAt) {
-      return;
+      return null;
     }
 
     await markThreadRead(ctx, { userId, thread });
+    return null;
   },
 });
 
 export const markDirectRead = mutation({
+  returns: v.null(),
   args: {
     groupId: v.id("groups"),
     targetUserId: v.string(),
@@ -244,9 +266,43 @@ export const markDirectRead = mutation({
     const thread = await getThread(ctx, args.groupId, "direct", pairKey);
 
     if (!thread?.lastMessageCreatedAt) {
-      return;
+      return null;
     }
 
     await markThreadRead(ctx, { userId, thread });
+    return null;
+  },
+});
+
+export const toggleReaction = mutation({
+  args: { messageId: v.id("chatMessages"), emoji: v.string() },
+  returns: v.null(),
+  handler: async (ctx, { messageId, emoji }) => {
+    const userId = await requireUserId(ctx);
+    const message = await requireMessageAccess(ctx, messageId, userId);
+    if (!isReactionEmoji(emoji)) {
+      throw new ConvexError("このリアクションは使用できません");
+    }
+    const reactions = message.reactions ?? [];
+    const existing = reactions.find((reaction) => reaction.emoji === emoji);
+    if (!existing && reactions.length >= 100) {
+      throw new ConvexError("リアクションの種類の上限に達しました");
+    }
+    const userIds = existing?.userIds ?? [];
+    const removing = userIds.includes(userId);
+    if (!removing && userIds.length >= MAX_REACTION_USERS) {
+      throw new ConvexError("リアクションの上限に達しました");
+    }
+    const nextUserIds = removing
+      ? userIds.filter((id) => id !== userId)
+      : [...userIds, userId];
+    const nextReactions = reactions.filter(
+      (reaction) => reaction.emoji !== emoji
+    );
+    if (nextUserIds.length > 0) {
+      nextReactions.push({ emoji, userIds: nextUserIds });
+    }
+    await ctx.db.patch(messageId, { reactions: nextReactions });
+    return null;
   },
 });
