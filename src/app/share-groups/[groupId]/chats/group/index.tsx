@@ -1,15 +1,12 @@
-import {
-  insertAtPosition,
-  useMutation,
-  usePaginatedQuery,
-  useQuery,
-} from "convex/react";
+import { insertAtPosition, useMutation } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback } from "react";
 import { View } from "react-native";
+import { ChatLoadingScreen } from "@/components/chat/chat-loading";
 import { findChatReply } from "@/components/chat/chat-model";
 import { ChatView } from "@/components/chat/chat-view";
 import { useChatRead } from "@/components/chat/use-chat-read";
+import { useCachedPaginatedQuery, useCachedQuery } from "@/lib/cached-query";
 import { createGroupPresenceRoomId } from "@/lib/chat-presence";
 import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../../../../convex/_generated/api";
@@ -28,24 +25,26 @@ export default function GroupChat() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const currentUserId = useCurrentUserId() ?? "";
   const targetGroupId = groupId as Id<"groups">;
-  const group = useQuery(
+  const group = useCachedQuery(
     convexApi.groups.getDetail,
     groupId && currentUserId ? { groupId: targetGroupId } : "skip"
   );
   const {
+    isShowingCache: messagesCached,
     loadMore: loadMoreMessages,
     results: messages,
     status: messageStatus,
-  } = usePaginatedQuery(
+  } = useCachedPaginatedQuery(
     convexApi.chat.listGroupMessages,
     groupId && currentUserId ? { groupId: targetGroupId } : "skip",
     { initialNumItems: INITIAL_MESSAGE_COUNT }
   );
   const {
+    isShowingCache: eventsCached,
     loadMore: loadMoreEvents,
     results: events,
     status: eventStatus,
-  } = usePaginatedQuery(
+  } = useCachedPaginatedQuery(
     convexApi.groupEvents.listGroup,
     groupId && currentUserId ? { groupId: targetGroupId } : "skip",
     { initialNumItems: INITIAL_EVENT_COUNT }
@@ -87,7 +86,11 @@ export default function GroupChat() {
   const latestMessageId = messages.find(
     (message) => !message._id.startsWith("message:")
   )?._id;
-  useChatRead(Boolean(groupId && currentUserId), latestMessageId, markRead);
+  useChatRead(
+    Boolean(groupId && currentUserId && messageStatus !== "LoadingFirstPage"),
+    latestMessageId,
+    markRead
+  );
 
   const goBack = () => {
     if (router.canGoBack()) {
@@ -99,7 +102,7 @@ export default function GroupChat() {
   };
 
   if (group === undefined) {
-    return <View className="flex-1 bg-background" />;
+    return <ChatLoadingScreen onBack={goBack} />;
   }
 
   if (!group) {
@@ -115,8 +118,9 @@ export default function GroupChat() {
       currentUserId={currentUserId}
       events={events}
       isLoadingInitial={
-        messageStatus === "LoadingFirstPage" ||
-        eventStatus === "LoadingFirstPage"
+        !(messagesCached || eventsCached) &&
+        (messageStatus === "LoadingFirstPage" ||
+          eventStatus === "LoadingFirstPage")
       }
       isLoadingMore={
         messageStatus === "LoadingMore" || eventStatus === "LoadingMore"

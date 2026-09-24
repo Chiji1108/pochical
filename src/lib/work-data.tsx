@@ -6,13 +6,18 @@ import {
   use,
   useEffect,
   useMemo,
+  useState,
   useSyncExternalStore,
 } from "react";
 import { AppState } from "react-native";
-import { createMMKV } from "react-native-mmkv";
 import { api } from "../../convex/_generated/api";
+import { createAccountStorage } from "./account-storage";
 import { hydrateWorkData, type WorkData } from "./work-model";
-import { WORK_TABLES, type WorkChange, WorkSync } from "./work-sync";
+import {
+  isWorkAccessRevoked,
+  subscribeWorkSnapshots,
+} from "./work-subscriptions";
+import { type WorkChange, WorkSync } from "./work-sync";
 
 export type {
   Member,
@@ -25,6 +30,12 @@ export type { WorkChange } from "./work-sync";
 
 const Context = createContext<WorkSync | null>(null);
 let activeStore: WorkSync | null = null;
+let activeSubscriptionCleanup: (() => void) | undefined;
+export const stopWorkSync = () => {
+  activeSubscriptionCleanup?.();
+  activeStore?.close();
+  activeStore = null;
+};
 export const writeWork = (
   changes: WorkChange | WorkChange[]
 ): Promise<void> => {
@@ -47,8 +58,9 @@ export const WorkDataProvider = ({
 }) => {
   const client = useConvex();
   const token = useAuthToken();
+  const [syncError, setSyncError] = useState<Error>();
   const store = useMemo(() => {
-    const storage = createMMKV({ id: `work-${userId}` });
+    const storage = createAccountStorage("work", userId);
     return new WorkSync(
       userId,
       storage.getString("state"),
@@ -71,15 +83,19 @@ export const WorkDataProvider = ({
     if (!token) {
       return;
     }
-    const subscriptions = WORK_TABLES.map((table) => {
-      const query = client.watchQuery(api[table].snapshot, {});
-      return query.onUpdate(() => {
-        const rows = query.localQueryResult();
-        if (rows) {
-          store.receive(table, rows);
+    const stopSnapshots = subscribeWorkSnapshots(
+      store,
+      (table) => client.watchQuery(api[table].snapshot, {}),
+      (error) => {
+        if (!isWorkAccessRevoked(error)) {
+          setSyncError(
+            error instanceof Error
+              ? error
+              : new Error("同期データを取得できませんでした")
+          );
         }
-      });
-    });
+      }
+    );
     store.flush().catch(() => undefined);
     const foreground = AppState.addEventListener("change", (state) => {
       if (state === "active") {
@@ -89,14 +105,20 @@ export const WorkDataProvider = ({
     const retry = setInterval(() => {
       store.flush().catch(() => undefined);
     }, 15_000);
-    return () => {
-      for (const stop of subscriptions) {
-        stop();
-      }
+    const cleanup = () => {
+      stopSnapshots();
       foreground.remove();
       clearInterval(retry);
+      if (activeSubscriptionCleanup === cleanup) {
+        activeSubscriptionCleanup = undefined;
+      }
     };
+    activeSubscriptionCleanup = cleanup;
+    return cleanup;
   }, [client, store, token]);
+  if (syncError) {
+    throw syncError;
+  }
   return <Context value={store}>{children}</Context>;
 };
 export const useCurrentUserId = () => use(Context)?.ownerId;

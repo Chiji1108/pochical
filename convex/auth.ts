@@ -14,6 +14,19 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
     Google({ allowDangerousEmailAccountLinking: false }),
   ],
   callbacks: {
+    beforeSessionCreation: async (ctx, { userId }) => {
+      const user = await ctx.db.get(userId);
+      const owner = user?.workspaceId
+        ? await ctx.db.get(user.workspaceId)
+        : user;
+      if (
+        !(user && owner) ||
+        user.deletingAt !== undefined ||
+        owner.deletingAt !== undefined
+      ) {
+        throw new Error("アカウントを削除中です。");
+      }
+    },
     redirect: ({ redirectTo }) => {
       if (redirectTo === "pochical://auth") {
         return Promise.resolve(redirectTo);

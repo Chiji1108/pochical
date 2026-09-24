@@ -91,3 +91,42 @@ test("chat render callbacks preserve hook boundaries inside the library's memoiz
     globalThis.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment;
   }
 });
+
+test("bubble sender names handle the library's empty previous-message sentinel", async () => {
+  const previousActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT;
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const errors = spyOn(console, "error").mockImplementation(() => undefined);
+  let renderer: ReturnType<typeof create> | undefined;
+  const cases = [
+    { previous: {}, showName: true },
+    { previous: undefined, showName: true },
+    { previous: { system: true }, showName: true },
+    { previous: message, showName: false },
+    { previous: { ...message, user: { _id: "other" } }, showName: true },
+    { previous: { ...message, createdAt: -86_400_000 }, showName: true },
+  ];
+  try {
+    for (const { previous, showName } of cases) {
+      // Runtime supplies {}, although the library's declaration requires IMessage.
+      const element = renderChatBubble({
+        currentMessage: message,
+        position: "left",
+        previousMessage: previous as typeof message | undefined,
+      });
+      await act(() => {
+        if (renderer) {
+          renderer.update(element);
+        } else {
+          renderer = create(element);
+        }
+      });
+      expect(JSON.stringify(renderer?.toJSON()).includes("名前")).toBe(
+        showName
+      );
+    }
+  } finally {
+    await act(() => renderer?.unmount());
+    errors.mockRestore();
+    globalThis.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment;
+  }
+});

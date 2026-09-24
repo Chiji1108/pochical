@@ -19,6 +19,11 @@ export const getReplySnapshot = async (
   ) {
     throw new ConvexError("返信先のメッセージが見つかりません");
   }
+  const authorId = ctx.db.normalizeId("users", message.authorUserId);
+  const author = authorId ? await ctx.db.get(authorId) : null;
+  if (!author || author.deletingAt !== undefined) {
+    throw new ConvexError("返信先のメッセージは削除されています");
+  }
   return {
     messageId: message._id,
     authorUserId: message.authorUserId,

@@ -1,4 +1,3 @@
-import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { addDays, startOfDay, startOfMonth } from "date-fns";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -24,6 +23,7 @@ import {
   type SharedShiftScheduleDay,
   SharedShiftTable,
 } from "@/components/group/shared-shift-table";
+import { useCachedQuery } from "@/lib/cached-query";
 import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../convex/_generated/api";
 
@@ -93,7 +93,7 @@ export default function Group() {
   }>();
   const currentUserId = useCurrentUserId();
   const accentForegroundColor = useThemeColor("accent-foreground");
-  const groups = useQuery(
+  const groups = useCachedQuery(
     convexApi.groups.listForCurrentUser,
     currentUserId ? {} : "skip"
   );

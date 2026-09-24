@@ -10,12 +10,33 @@ import {
 
 export default defineSchema({
   ...authTables,
+  authVerifiers: defineTable(authTables.authVerifiers.validator.fields)
+    .index("signature", ["signature"])
+    .index("by_sessionId", ["sessionId"]),
   users: defineTable({
     ...authTables.users.validator.fields,
     workspaceId: v.optional(v.id("users")),
+    deletingAt: v.optional(v.number()),
+    appleRefreshToken: v.optional(v.string()),
+    appleClientId: v.optional(v.string()),
   })
     .index("email", ["email"])
-    .index("phone", ["phone"]),
+    .index("phone", ["phone"])
+    .index("by_workspaceId", ["workspaceId"]),
+  accountDeletions: defineTable({
+    receipt: v.string(),
+    userId: v.id("users"),
+    ownerId: v.id("users"),
+    userIds: v.array(v.id("users")),
+    phase: v.number(),
+    cursor: v.union(v.string(), v.null()),
+    subphase: v.number(),
+    updatedAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_updatedAt", ["updatedAt"])
+    .index("by_receipt", ["receipt"]),
   nativeAuthChallenges: defineTable({
     provider: v.union(v.literal("apple"), v.literal("google")),
     nonce: v.string(),

@@ -8,9 +8,12 @@
  * @module
  */
 
+import type * as accountDeletion from "../accountDeletion.js";
 import type * as accounts from "../accounts.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
+import type * as crons from "../crons.js";
+import type * as deleteAccount from "../deleteAccount.js";
 import type * as groupEvents from "../groupEvents.js";
 import type * as groups from "../groups.js";
 import type * as http from "../http.js";
@@ -29,9 +32,12 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  accountDeletion: typeof accountDeletion;
   accounts: typeof accounts;
   auth: typeof auth;
   chat: typeof chat;
+  crons: typeof crons;
+  deleteAccount: typeof deleteAccount;
   groupEvents: typeof groupEvents;
   groups: typeof groups;
   http: typeof http;

@@ -8,7 +8,16 @@ export const getCurrentUserId = async (ctx: Pick<QueryCtx, "auth" | "db">) => {
     return null;
   }
   const user = await ctx.db.get(id);
-  return user ? (user.workspaceId ?? id) : null;
+  if (!user || user.deletingAt) {
+    return null;
+  }
+  if (user.workspaceId) {
+    const owner = await ctx.db.get(user.workspaceId);
+    if (!owner || owner.deletingAt) {
+      return null;
+    }
+  }
+  return user.workspaceId ?? id;
 };
 
 export const requireUserId = async (ctx: Pick<QueryCtx, "auth" | "db">) => {

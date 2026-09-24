@@ -1,5 +1,4 @@
 import type { FlashListRef } from "@shopify/flash-list";
-import { useQuery } from "convex/react";
 import {
   addMonths,
   differenceInCalendarDays,
@@ -25,6 +24,7 @@ import {
   SharedShiftTable,
 } from "@/components/group/shared-shift-table";
 import { AppHeader } from "@/components/navigation/app-header";
+import { useCachedQuery } from "@/lib/cached-query";
 import { type Pattern, type Shift, useCurrentUserId } from "@/lib/work-data";
 import { hydrateWorkData } from "@/lib/work-model";
 import { api as convexApi } from "../../../../convex/_generated/api";
@@ -127,7 +127,7 @@ export default function ShareGroupShifts() {
   }).current;
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const currentUserId = useCurrentUserId();
-  const group = useQuery(
+  const group = useCachedQuery(
     convexApi.groups.getDetail,
     groupId && currentUserId ? { groupId: groupId as Id<"groups"> } : "skip"
   );
@@ -389,7 +389,7 @@ const MemberScheduleSubscription = ({
   memberUserId: string;
   onChange: (memberUserId: string, scheduleData?: MemberScheduleData) => void;
 }) => {
-  const data = useQuery(convexApi.sharedWork.forMember, {
+  const data = useCachedQuery(convexApi.sharedWork.forMember, {
     groupId,
     memberUserId,
     start: dateRange.start.getTime(),

@@ -1,0 +1,27 @@
+diff --git a/node_modules/@trestleinc/replicate/dist/component/privacy.js b/dist/component/privacy.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..c5fbb3699e588258a8f43db2bdb3941a168af9fb
+--- /dev/null
++++ b/dist/component/privacy.js
+@@ -0,0 +1,21 @@
++import { mutationGeneric } from "convex/server";
++import { v } from "convex/values";
++
++// Application maintenance endpoint; a parent component must authorize the scope.
++const tables = [
++  ["deltas", "by_collection"], ["snapshots", "by_document"],
++  ["deltaCounts", "by_document"], ["compaction", "by_document"],
++  ["sessions", "by_collection"], ["devices", "by_user"],
++  ["wrappedKeys", "by_user"], ["docKeys", "by_document"],
++];
++export const purge = mutationGeneric({
++  args: { collection: v.string(), phase: v.number() },
++  returns: v.object({ phase: v.number(), done: v.boolean() }),
++  handler: async (ctx, { collection, phase }) => {
++    const target = tables[phase];
++    if (!target) return { phase, done: true };
++    const rows = await ctx.db.query(target[0]).withIndex(target[1], q => q.eq("collection", collection)).take(100);
++    for (const row of rows) await ctx.db.delete(row._id);
++    return { phase: rows.length ? phase : phase + 1, done: !rows.length && phase + 1 === tables.length };
++  },
++});

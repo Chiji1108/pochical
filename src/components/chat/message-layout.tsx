@@ -14,10 +14,11 @@ export const ChatBubble = (props: BubbleProps<DisplayMessage>) => {
   const theme = useTheme();
   const { currentMessage: message, previousMessage, position } = props;
   const own = position === "right";
+  // At the oldest loaded message, the library supplies {} as the previous row.
   const showName =
     !own &&
     (previousMessage?.system ||
-      previousMessage?.user._id !== message.user._id ||
+      previousMessage?.user?._id !== message.user._id ||
       !dayjs(previousMessage?.createdAt).isSame(message.createdAt, "day"));
   return (
     <View style={{ flex: 1, alignItems: own ? "flex-end" : "flex-start" }}>

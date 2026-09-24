@@ -36,6 +36,10 @@ import {
 } from "../../../shared/chat";
 import { renderChatDay } from "./chat-day";
 import {
+  ChatLoadingIndicator,
+  renderEarlierMessagesLoading,
+} from "./chat-loading";
+import {
   buildChatMessages,
   type ChatEvent,
   type ChatMessage,
@@ -400,7 +404,7 @@ export const ChatView = ({
   );
   const loadEarlierMessagesProps = useMemo(
     () => ({
-      isAvailable: canLoadMore,
+      isAvailable: canLoadMore || isLoadingMore,
       isLoading: isLoadingMore,
       isInfiniteScrollEnabled: true,
       onPress: onLoadMore,
@@ -434,43 +438,48 @@ export const ChatView = ({
         title={title}
       />
       {topContent}
-      <Chat<DisplayMessage>
-        darkTheme={theme}
-        enableGestureHandlerRootView={false}
-        enableKeyboardProvider={false}
-        isCustomViewBottom
-        isFlashListEnabled
-        isInverted
-        isScrollToBottomEnabled
-        isTyping={Boolean(typingSummary)}
-        isUsernameVisible
-        listProps={listProps}
-        loadEarlierMessagesProps={loadEarlierMessagesProps}
-        locale="ja"
-        messageActions={messageActions}
-        messages={displayMessages}
-        // The library types this as FlatList even when its FlashList engine is enabled.
-        messagesContainerRef={
-          messageListRef as unknown as ComponentProps<
-            typeof Chat<DisplayMessage>
-          >["messagesContainerRef"]
-        }
-        messageTextProps={messageTextProps}
-        onSend={sendMessage}
-        reactions={reactions}
-        renderAvatar={null}
-        renderBubble={renderChatBubble}
-        renderCustomView={renderInviteCard}
-        renderDay={renderChatDay}
-        renderSystemMessage={renderChatSystemMessage}
-        renderTypingIndicator={renderTypingIndicator}
-        reply={reply}
-        text={body}
-        textInputProps={textInputProps}
-        theme={theme}
-        timeFormat="HH:mm"
-        user={user}
-      />
+      {isLoadingInitial && displayMessages.length === 0 ? (
+        <ChatLoadingIndicator />
+      ) : (
+        <Chat<DisplayMessage>
+          darkTheme={theme}
+          enableGestureHandlerRootView={false}
+          enableKeyboardProvider={false}
+          isCustomViewBottom
+          isFlashListEnabled
+          isInverted
+          isScrollToBottomEnabled
+          isTyping={Boolean(typingSummary)}
+          isUsernameVisible
+          listProps={listProps}
+          loadEarlierMessagesProps={loadEarlierMessagesProps}
+          locale="ja"
+          messageActions={messageActions}
+          messages={displayMessages}
+          // The library types this as FlatList even when its FlashList engine is enabled.
+          messagesContainerRef={
+            messageListRef as unknown as ComponentProps<
+              typeof Chat<DisplayMessage>
+            >["messagesContainerRef"]
+          }
+          messageTextProps={messageTextProps}
+          onSend={sendMessage}
+          reactions={reactions}
+          renderAvatar={null}
+          renderBubble={renderChatBubble}
+          renderCustomView={renderInviteCard}
+          renderDay={renderChatDay}
+          renderLoadEarlier={renderEarlierMessagesLoading}
+          renderSystemMessage={renderChatSystemMessage}
+          renderTypingIndicator={renderTypingIndicator}
+          reply={reply}
+          text={body}
+          textInputProps={textInputProps}
+          theme={theme}
+          timeFormat="HH:mm"
+          user={user}
+        />
+      )}
     </View>
   );
 };

@@ -10,12 +10,15 @@ import { useState } from "react";
 import { Alert, View } from "react-native";
 import { savePendingLogin } from "@/lib/account-link";
 import { authenticateAccount } from "@/lib/account-login";
+import { useAccountSignOut } from "@/lib/account-session";
+import { showLoginError } from "@/lib/login-error";
 import { api } from "../../convex/_generated/api";
 import { AccountProviderButton } from "./account-provider-button";
 
 export const AccountSettings = () => {
   const current = useQuery(api.accounts.current);
-  const { signIn, signOut } = useAuthActions();
+  const { signIn } = useAuthActions();
+  const signOut = useAccountSignOut();
   const prepareLink = useMutation(api.accounts.prepareLink);
   const client = useConvex();
   const [isLoginOpen, setLoginOpen] = useState(false);
@@ -38,11 +41,8 @@ export const AccountSettings = () => {
       }
       await savePendingLogin({ provider, secret });
       await authenticateAccount(provider, signIn, client);
-    } catch (error) {
-      Alert.alert(
-        "アカウント連携",
-        error instanceof Error ? error.message : "ログインに失敗しました"
-      );
+    } catch {
+      showLoginError();
     } finally {
       setBusy(false);
     }
@@ -66,7 +66,21 @@ export const AccountSettings = () => {
       "再ログインするとデータを復元できます。",
       [
         { text: "キャンセル", style: "cancel" },
-        { text: "ログアウト", onPress: () => signOut() },
+        {
+          text: "ログアウト",
+          onPress: async () => {
+            try {
+              await signOut();
+            } catch (error) {
+              Alert.alert(
+                "ログアウトできませんでした",
+                error instanceof Error
+                  ? error.message
+                  : "もう一度お試しください"
+              );
+            }
+          },
+        },
       ]
     );
   };

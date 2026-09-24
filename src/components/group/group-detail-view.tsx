@@ -1,4 +1,3 @@
-import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useRouter } from "expo-router";
 import { SymbolView, type SymbolViewProps } from "expo-symbols";
@@ -18,6 +17,7 @@ import {
   type InviteDetails,
   InviteDialog,
 } from "@/components/group/group-dialogs";
+import { useCachedQuery } from "@/lib/cached-query";
 import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -100,7 +100,7 @@ export const GroupDetailView = ({
     "danger-foreground",
   ]);
   const [inviteDetails, setInviteDetails] = useState<InviteDetails>();
-  const group = useQuery(
+  const group = useCachedQuery(
     convexApi.groups.getDetail,
     groupId && currentUserId ? { groupId: groupId as Id<"groups"> } : "skip"
   );

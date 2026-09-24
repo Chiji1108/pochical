@@ -15,6 +15,7 @@ import {
 import { useMemo, useRef, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AccountDeletionSetting } from "@/components/account-deletion-setting";
 import { AccountSettings } from "@/components/account-settings";
 import { AppHeader } from "@/components/navigation/app-header";
 import {
@@ -296,25 +297,31 @@ export default function Settings() {
         </View>
 
         <View className="gap-2">
-          <SectionTitle>危険な操作</SectionTitle>
+          <SectionTitle>データ管理</SectionTitle>
           <ListGroup>
             <DestructiveSettingRow
               description="すべてのシフト、シフトパターン、勤務メンバー、メモを削除します。グループは残ります"
               isDisabled={isDangerActionDisabled}
-              label="カレンダーをリセット"
+              label="カレンダーの全データを削除"
               onPress={confirmDeleteWorkData}
             />
             <Separator className="mx-4" />
-            <DestructiveSettingRow
-              description="カレンダーをリセットし、すべてのグループから脱退します。自分だけのグループは削除されます"
-              isDisabled={isDangerActionDisabled}
-              label={
-                isResettingAppData
-                  ? "リセットしています"
-                  : "アプリのデータをリセット"
-              }
-              onPress={confirmResetAppData}
-            />
+            <AccountDeletionSetting />
+            {process.env.NODE_ENV === "development" ? (
+              <>
+                <Separator className="mx-4" />
+                <DestructiveSettingRow
+                  description="カレンダーをリセットし、すべてのグループから脱退します。自分だけのグループは削除されます"
+                  isDisabled={isDangerActionDisabled}
+                  label={
+                    isResettingAppData
+                      ? "リセットしています"
+                      : "開発用：アプリのデータをリセット"
+                  }
+                  onPress={confirmResetAppData}
+                />
+              </>
+            ) : null}
           </ListGroup>
         </View>
       </ScrollView>

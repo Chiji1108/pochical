@@ -48,7 +48,13 @@ export const appleAuthProvider = () => {
     // replaces this placeholder immediately before the token request is sent.
     clientSecret: "generated-per-request",
     allowDangerousEmailAccountLinking: false,
-    profile: (profile) => ({
+    profile: (profile, tokens) => ({
+      ...(tokens.refresh_token
+        ? {
+            appleRefreshToken: tokens.refresh_token,
+            appleClientId: process.env.AUTH_APPLE_ID,
+          }
+        : {}),
       id: profile.sub,
       email: profile.email,
       ...(profile.user?.name

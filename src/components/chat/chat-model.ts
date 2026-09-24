@@ -3,7 +3,13 @@ import type { Doc, Id } from "../../../convex/_generated/dataModel";
 
 export type ChatMessage = Pick<
   Doc<"chatMessages">,
-  "_id" | "authorUserId" | "body" | "createdAt" | "reactions" | "reply"
+  | "_id"
+  | "authorUserId"
+  | "body"
+  | "createdAt"
+  | "reactions"
+  | "reply"
+  | "deletedAt"
 > & { authorDisplayName: string; readCount: number };
 export type ReadReceiptMode = "count" | "direct";
 export interface DisplayMessage extends IMessage {
@@ -48,6 +54,9 @@ const formatValueChangeEvent = (
     : event.body;
 
 const formatEventBody = (event: ChatEvent, currentUserId: string) => {
+  if (event.actorUserId === "deleted-account") {
+    return event.body;
+  }
   const actor = formatEventActor(event, currentUserId);
 
   if (event.kind === "group_name_updated") {
@@ -92,8 +101,12 @@ export const toDisplayMessage = (
   const pending = message._id.startsWith("message:");
   return {
     _id: message._id,
-    messageId: pending ? undefined : message._id,
-    text: message.body,
+    messageId:
+      pending || message.deletedAt !== undefined ? undefined : message._id,
+    text:
+      message.deletedAt === undefined
+        ? message.body
+        : "メッセージは削除されました",
     createdAt: message.createdAt,
     user: { _id: message.authorUserId, name: message.authorDisplayName },
     pending,

@@ -1,5 +1,5 @@
-import { useQuery } from "convex/react";
 import { NativeTabs } from "expo-router/native-tabs";
+import { useCachedQuery } from "@/lib/cached-query";
 import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../convex/_generated/api";
 
@@ -12,7 +12,7 @@ const formatTabUnreadCount = (unreadCount: number): string =>
 
 export default function TabLayout() {
   const currentUserId = useCurrentUserId();
-  const groups = useQuery(
+  const groups = useCachedQuery(
     convexApi.groups.listForCurrentUser,
     currentUserId ? {} : "skip"
   );

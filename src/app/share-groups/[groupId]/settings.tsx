@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
@@ -23,6 +23,7 @@ import {
 } from "@/components/group/group-dialogs";
 import { GroupLoadingScreen } from "@/components/group/group-skeleton";
 import { AppHeader } from "@/components/navigation/app-header";
+import { useCachedQuery, useQueryCache } from "@/lib/cached-query";
 import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
@@ -35,11 +36,12 @@ type GroupMember = GroupDetail["members"][number];
 
 export default function ShareGroupSettings() {
   const router = useRouter();
+  const cache = useQueryCache();
   const accentForegroundColor = useThemeColor("accent-foreground");
   const { toast } = useToast();
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const currentUserId = useCurrentUserId();
-  const group = useQuery(
+  const group = useCachedQuery(
     convexApi.groups.getDetail,
     groupId && currentUserId ? { groupId: groupId as Id<"groups"> } : "skip"
   );
@@ -220,6 +222,7 @@ export default function ShareGroupSettings() {
               await leaveGroupMutation({
                 groupId: targetGroupId,
               });
+              cache.removeGroup(targetGroupId);
               setIsEditDialogOpen(false);
               router.replace("/group");
               toast.show({

@@ -1,7 +1,8 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError, v } from "convex/values";
 import { requireUserId } from "../convex-lib/auth";
-import { mutation, query } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { mutation, type QueryCtx, query } from "./_generated/server";
 
 const TOKEN_HASH = /^[a-f0-9]{64}$/;
 
@@ -21,6 +22,8 @@ export const current = query({
       .withIndex("userIdAndProvider", (q) => q.eq("userId", id))
       .collect();
     return {
+      deletionPending: user.deletingAt !== undefined,
+      canRevokeApple: !!(user.appleRefreshToken && user.appleClientId),
       authUserId: id,
       userId: user.workspaceId ?? id,
       isAnonymous: user.isAnonymous === true,
@@ -59,6 +62,7 @@ export const completeLink = mutation({
     if (!target || target.isAnonymous) {
       throw new ConvexError("Sign in with Apple or Google first");
     }
+    await requireUserId(ctx);
     const digest = await crypto.subtle.digest(
       "SHA-256",
       new TextEncoder().encode(secret)
@@ -73,6 +77,7 @@ export const completeLink = mutation({
     if (!link) {
       throw new ConvexError("Account link expired");
     }
+    await assertLinkSourceActive(ctx, link.sourceUserId);
     if (link.completedTargetId) {
       if (link.completedTargetId !== targetId) {
         throw new ConvexError("Account link already used");
@@ -143,3 +148,10 @@ export const completeLink = mutation({
     return null;
   },
 });
+
+const assertLinkSourceActive = async (ctx: QueryCtx, id: Id<"users">) => {
+  const user = await ctx.db.get(id);
+  if (!user || user.deletingAt !== undefined) {
+    throw new ConvexError("Account is being deleted");
+  }
+};

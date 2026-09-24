@@ -1,0 +1,21 @@
+diff --git a/node_modules/convex-unread-tracking/dist/component/privacy.js b/dist/component/privacy.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..fe6a56ee07263c8e9f566d9c265ec1f3092afc86
+--- /dev/null
++++ b/dist/component/privacy.js
+@@ -0,0 +1,15 @@
++import { mutationGeneric } from "convex/server";
++import { v } from "convex/values";
++const tables = ["readPositions", "explicitUnreads", "readRanges", "messages", "subscriptions", "groups", "mutedSenders"];
++export const purge = mutationGeneric({
++  args: { userId: v.string(), phase: v.number(), cursor: v.union(v.string(), v.null()) },
++  returns: v.object({ phase: v.number(), cursor: v.union(v.string(), v.null()), done: v.boolean() }),
++  handler: async (ctx, { userId, phase, cursor }) => {
++    if (!tables[phase]) return { phase, cursor: null, done: true };
++    const page = await ctx.db.query(tables[phase]).paginate({ cursor, numItems: 100 });
++    for (const row of page.page) {
++      if (row.userId === userId || row.authorId === userId || row.targetUserId === userId) await ctx.db.delete(row._id);
++    }
++    return { phase: page.isDone ? phase + 1 : phase, cursor: page.isDone ? null : page.continueCursor, done: page.isDone && phase + 1 === tables.length };
++  },
++});

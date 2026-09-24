@@ -1,15 +1,12 @@
-import {
-  insertAtPosition,
-  useMutation,
-  usePaginatedQuery,
-  useQuery,
-} from "convex/react";
+import { insertAtPosition, useMutation } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback } from "react";
 import { View } from "react-native";
+import { ChatLoadingScreen } from "@/components/chat/chat-loading";
 import { findChatReply } from "@/components/chat/chat-model";
 import { ChatView } from "@/components/chat/chat-view";
 import { useChatRead } from "@/components/chat/use-chat-read";
+import { useCachedPaginatedQuery, useCachedQuery } from "@/lib/cached-query";
 import { createDirectPresenceRoomId } from "@/lib/chat-presence";
 import { useCurrentUserId } from "@/lib/work-data";
 import { api as convexApi } from "../../../../../../convex/_generated/api";
@@ -31,7 +28,7 @@ export default function DirectChat() {
   }>();
   const currentUserId = useCurrentUserId() ?? "";
   const targetGroupId = groupId as Id<"groups">;
-  const group = useQuery(
+  const group = useCachedQuery(
     convexApi.groups.getDetail,
     groupId && currentUserId ? { groupId: targetGroupId } : "skip"
   );
@@ -39,10 +36,11 @@ export default function DirectChat() {
     (member) => member.userId === memberUserId
   );
   const {
+    isShowingCache: messagesCached,
     loadMore: loadMoreMessages,
     results: messages,
     status: messageStatus,
-  } = usePaginatedQuery(
+  } = useCachedPaginatedQuery(
     convexApi.chat.listDirectMessages,
     groupId && currentUserId && memberUserId
       ? {
@@ -54,10 +52,11 @@ export default function DirectChat() {
     { initialNumItems: INITIAL_MESSAGE_COUNT }
   );
   const {
+    isShowingCache: eventsCached,
     loadMore: loadMoreEvents,
     results: events,
     status: eventStatus,
-  } = usePaginatedQuery(
+  } = useCachedPaginatedQuery(
     convexApi.groupEvents.listDirect,
     groupId && currentUserId && memberUserId
       ? {
@@ -111,7 +110,12 @@ export default function DirectChat() {
     (message) => !message._id.startsWith("message:")
   )?._id;
   useChatRead(
-    Boolean(groupId && currentUserId && memberUserId),
+    Boolean(
+      groupId &&
+        currentUserId &&
+        memberUserId &&
+        messageStatus !== "LoadingFirstPage"
+    ),
     latestMessageId,
     markRead
   );
@@ -126,7 +130,7 @@ export default function DirectChat() {
   };
 
   if (group === undefined) {
-    return <View className="flex-1 bg-background" />;
+    return <ChatLoadingScreen onBack={goBack} />;
   }
 
   if (!(group && targetMember)) {
@@ -142,8 +146,9 @@ export default function DirectChat() {
       currentUserId={currentUserId}
       events={events}
       isLoadingInitial={
-        messageStatus === "LoadingFirstPage" ||
-        eventStatus === "LoadingFirstPage"
+        !(messagesCached || eventsCached) &&
+        (messageStatus === "LoadingFirstPage" ||
+          eventStatus === "LoadingFirstPage")
       }
       isLoadingMore={
         messageStatus === "LoadingMore" || eventStatus === "LoadingMore"

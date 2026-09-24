@@ -2,8 +2,9 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvex } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
-import { ActivityIndicator, Alert, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { finishLogin } from "@/lib/account-link";
+import { showLoginError } from "@/lib/login-error";
 
 export default function AuthCallback() {
   const { code } = useLocalSearchParams<{ code?: string }>();
@@ -16,12 +17,7 @@ export default function AuthCallback() {
       return;
     }
     finishLogin(code, signIn, client)
-      .catch((error: unknown) => {
-        Alert.alert(
-          "ログイン",
-          error instanceof Error ? error.message : "ログインに失敗しました"
-        );
-      })
+      .catch(showLoginError)
       .finally(() => router.replace("/(tabs)/settings"));
   }, [client, code, router, signIn]);
   return (

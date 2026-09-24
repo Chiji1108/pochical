@@ -266,3 +266,29 @@ test("unified login preserves existing accounts, including empty calendars", asy
     expect((await guest.query(api.accounts.current, {}))?.userId).toBe(source);
   }
 });
+
+test("closing the work store prevents a late acknowledgement from restoring erased disk state", async () => {
+  let disk: string | undefined;
+  let acknowledge: (() => void) | undefined;
+  const store = new WorkSync(
+    "alice",
+    undefined,
+    (value) => {
+      disk = value;
+    },
+    () =>
+      new Promise<void>((resolve) => {
+        acknowledge = resolve;
+      })
+  );
+  store.change([
+    { table: "shifts", id: "shift-a", values: record("alice"), create: true },
+  ]);
+  expect(disk).toBeDefined();
+  store.close();
+  disk = undefined;
+  acknowledge?.();
+  await sleep(0);
+  store.receive("shifts", [{ id: "shift-a", bytes: encode(record("alice")) }]);
+  expect(disk).toBeUndefined();
+});
