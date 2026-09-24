@@ -8,9 +8,9 @@ import {
   encodeStateAsUpdateV2,
   encodeStateVector,
 } from "yjs";
+import componentSchema from "../../../node_modules/@trestleinc/replicate/dist/component/schema.js";
 import { components } from "../convex/_generated/api";
 import schema from "../convex/schema";
-import componentSchema from "../node_modules/@trestleinc/replicate/dist/component/schema.js";
 
 // Isolated feasibility probe: these generated endpoints are never deployed.
 const standard = collection.create(components.replicate, "shifts", {
@@ -34,11 +34,11 @@ const setup = async () => {
   t.registerComponent("replicate", componentSchema, {
     "./_generated/api.js": () =>
       import(
-        "../node_modules/@trestleinc/replicate/dist/component/_generated/api.js"
+        "../../../node_modules/@trestleinc/replicate/dist/component/_generated/api.js"
       ),
     "./mutations.js": () =>
       import(
-        "../node_modules/@trestleinc/replicate/dist/component/mutations.js"
+        "../../../node_modules/@trestleinc/replicate/dist/component/mutations.js"
       ),
   });
   const owner = await t.run((ctx) =>

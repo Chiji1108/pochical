@@ -3,20 +3,22 @@ import { resolve } from "node:path";
 import { Glob, sleep } from "bun";
 import { convexTest } from "convex-test";
 import { Doc, encodeStateAsUpdateV2 } from "yjs";
+import presenceSchema from "../../../node_modules/@convex-dev/presence/dist/component/schema.js";
+import replicaSchema from "../../../node_modules/@trestleinc/replicate/dist/component/schema.js";
+import unreadSchema from "../../../node_modules/convex-unread-tracking/dist/component/schema.js";
 import { api, components, internal } from "../convex/_generated/api";
 import schema from "../convex/schema";
-import presenceSchema from "../node_modules/@convex-dev/presence/dist/component/schema.js";
-import replicaSchema from "../node_modules/@trestleinc/replicate/dist/component/schema.js";
-import unreadSchema from "../node_modules/convex-unread-tracking/dist/component/schema.js";
 import { toDisplayMessage } from "../src/components/chat/chat-model";
 
-const componentModules = (directory: string) =>
-  Object.fromEntries(
+const componentModules = (relativeDirectory: string) => {
+  const directory = resolve(import.meta.dir, "..", relativeDirectory);
+  return Object.fromEntries(
     [...new Glob("**/*.js").scanSync(directory)].map((path) => [
       `./${path}`,
       () => import(resolve(directory, path)),
     ])
   );
+};
 const setup = () => {
   const t = convexTest(schema, {
     "./_generated/api.ts": () => import("../convex/_generated/api"),
@@ -29,17 +31,17 @@ const setup = () => {
   t.registerComponent(
     "replicate",
     replicaSchema,
-    componentModules("node_modules/@trestleinc/replicate/dist/component")
+    componentModules("../../node_modules/@trestleinc/replicate/dist/component")
   );
   t.registerComponent(
     "unreadTracking",
     unreadSchema,
-    componentModules("node_modules/convex-unread-tracking/dist/component")
+    componentModules("../../node_modules/convex-unread-tracking/dist/component")
   );
   t.registerComponent(
     "presence",
     presenceSchema,
-    componentModules("node_modules/@convex-dev/presence/dist/component")
+    componentModules("../../node_modules/@convex-dev/presence/dist/component")
   );
   return t;
 };

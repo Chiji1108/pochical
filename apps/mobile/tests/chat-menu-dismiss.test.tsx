@@ -33,13 +33,13 @@ mock.module("react-native", () => ({
   },
 }));
 mock.module(
-  "../node_modules/@kesha-antonov/react-native-chat/lib/hooks/useTheme",
+  "../../../node_modules/@kesha-antonov/react-native-chat/lib/hooks/useTheme",
   () => ({
     useThemedStyles: () => ({}),
   })
 );
 const { ContextMenu } = await import(
-  "../node_modules/@kesha-antonov/react-native-chat/lib/components/ContextMenu.js"
+  "../../../node_modules/@kesha-antonov/react-native-chat/lib/components/ContextMenu.js"
 );
 
 test("reaction is applied immediately once after dismissal without waiting for animation", async () => {

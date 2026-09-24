@@ -4,6 +4,7 @@ import { generateKeyPairSync, verify } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 test("Apple setup script produces a verifiable ES256 secret for the Service ID", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pochical-apple-test-"));
@@ -19,7 +20,9 @@ test("Apple setup script produces a verifiable ES256 secret for the Service ID",
       { mode: 0o600 }
     );
     const result = spawnSync("node", [
-      "scripts/create-apple-secret.mjs",
+      fileURLToPath(
+        new URL("../scripts/create-apple-secret.mjs", import.meta.url)
+      ),
       "--team-id",
       "TEAM",
       "--key-id",

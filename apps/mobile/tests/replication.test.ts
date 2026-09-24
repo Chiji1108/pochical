@@ -2,9 +2,9 @@ import { expect, test } from "bun:test";
 import { CryptoHasher, sleep } from "bun";
 import { convexTest } from "convex-test";
 import { applyUpdateV2, Doc, encodeStateAsUpdateV2 } from "yjs";
+import componentSchema from "../../../node_modules/@trestleinc/replicate/dist/component/schema.js";
 import { api } from "../convex/_generated/api";
 import schema from "../convex/schema";
-import componentSchema from "../node_modules/@trestleinc/replicate/dist/component/schema.js";
 import { WorkSync } from "../src/lib/work-sync";
 
 const modules = {
@@ -21,11 +21,11 @@ const setup = () => {
   t.registerComponent("replicate", componentSchema, {
     "./_generated/api.js": () =>
       import(
-        "../node_modules/@trestleinc/replicate/dist/component/_generated/api.js"
+        "../../../node_modules/@trestleinc/replicate/dist/component/_generated/api.js"
       ),
     "./mutations.js": () =>
       import(
-        "../node_modules/@trestleinc/replicate/dist/component/mutations.js"
+        "../../../node_modules/@trestleinc/replicate/dist/component/mutations.js"
       ),
   });
   return t;

@@ -12,7 +12,7 @@
     "types": ["node"],
     "paths": {
       "@trestleinc/replicate/_generated/component.js": [
-        "../node_modules/@trestleinc/replicate/dist/component/_generated/component.d.ts"
+        "../../../node_modules/@trestleinc/replicate/dist/component/_generated/component.d.ts"
       ]
     },
 

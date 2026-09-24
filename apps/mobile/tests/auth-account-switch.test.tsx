@@ -5,7 +5,7 @@ import {
   AuthProvider,
   ConvexAuthActionsContext,
   useAuth,
-} from "../node_modules/@convex-dev/auth/dist/react/client.js";
+} from "../../../node_modules/@convex-dev/auth/dist/react/client.js";
 
 const jwt = (sub: string, exp: number) =>
   `${Buffer.from('{"alg":"RS256"}').toString("base64url")}.${Buffer.from(JSON.stringify({ sub, exp })).toString("base64url")}.test`;

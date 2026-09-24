@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
 import { getFunctionName } from "convex/server";
+// Exercise rollback and replay through the installed Convex client's engine.
+import { OptimisticQueryResults } from "../../../node_modules/convex/src/browser/sync/optimistic_updates_impl";
+import { serializePathAndArgs } from "../../../node_modules/convex/src/browser/sync/udf_path_utils";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
-// Exercise rollback and replay through the installed Convex client's engine.
-import { OptimisticQueryResults } from "../node_modules/convex/src/browser/sync/optimistic_updates_impl";
-import { serializePathAndArgs } from "../node_modules/convex/src/browser/sync/udf_path_utils";
 import { optimisticallyToggleReaction } from "../src/components/chat/optimistic-reactions";
 
 const messageId = "saved-message" as Id<"chatMessages">;

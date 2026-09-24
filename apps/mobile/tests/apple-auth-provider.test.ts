@@ -1,11 +1,11 @@
 import { afterEach, expect, mock, spyOn, test } from "bun:test";
 import { customFetch } from "@auth/core";
 import { exportPKCS8, generateKeyPair, jwtVerify } from "jose";
+import { materializeProvider } from "../../../node_modules/@convex-dev/auth/dist/server/provider_utils.js";
 import {
   appleAuthProvider,
   createAppleClientSecret,
 } from "../convex-lib/appleAuthProvider";
-import { materializeProvider } from "../node_modules/@convex-dev/auth/dist/server/provider_utils.js";
 
 const pair = await generateKeyPair("ES256", { extractable: true });
 const credentials = {

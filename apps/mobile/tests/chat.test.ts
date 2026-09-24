@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import { convexTest } from "convex-test";
+import componentSchema from "../../../node_modules/convex-unread-tracking/dist/component/schema.js";
 import { api } from "../convex/_generated/api";
 import schema from "../convex/schema";
-import componentSchema from "../node_modules/convex-unread-tracking/dist/component/schema.js";
 import {
   buildChatMessages,
   toDisplayMessage,
@@ -16,10 +16,12 @@ const setup = async () => {
   t.registerComponent("unreadTracking", componentSchema, {
     "./_generated/api.js": () =>
       import(
-        "../node_modules/convex-unread-tracking/dist/component/_generated/api.js"
+        "../../../node_modules/convex-unread-tracking/dist/component/_generated/api.js"
       ),
     "./public.js": () =>
-      import("../node_modules/convex-unread-tracking/dist/component/public.js"),
+      import(
+        "../../../node_modules/convex-unread-tracking/dist/component/public.js"
+      ),
   });
   const ids = await t.run(async (ctx) => {
     const aliceId = await ctx.db.insert("users", {});

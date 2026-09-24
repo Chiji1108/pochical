@@ -5,8 +5,8 @@ import type { ConvexClient } from "convex/browser";
 import { getFunctionName, makeFunctionReference } from "convex/server";
 import { convexTest } from "convex-test";
 import { Doc, encodeStateAsUpdateV2, encodeStateVector } from "yjs";
+import componentSchema from "../../../node_modules/@trestleinc/replicate/dist/component/schema.js";
 import schema from "../convex/schema";
-import componentSchema from "../node_modules/@trestleinc/replicate/dist/component/schema.js";
 import { shiftShape } from "../shared/work-schema";
 
 const api = {
@@ -27,11 +27,11 @@ test("standard client can read, write and delete through a scoped protocol adapt
   t.registerComponent("replicate", componentSchema, {
     "./_generated/api.js": () =>
       import(
-        "../node_modules/@trestleinc/replicate/dist/component/_generated/api.js"
+        "../../../node_modules/@trestleinc/replicate/dist/component/_generated/api.js"
       ),
     "./mutations.js": () =>
       import(
-        "../node_modules/@trestleinc/replicate/dist/component/mutations.js"
+        "../../../node_modules/@trestleinc/replicate/dist/component/mutations.js"
       ),
   });
   const [aliceId, bobId] = await t.run(async (ctx) => [
