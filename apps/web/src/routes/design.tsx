@@ -6,6 +6,12 @@ import {
   initialDesignSchedule,
 } from "../components/design-calendar";
 import designStyles from "../design.css?url";
+import {
+  type DesignVariants,
+  designVariantKeys,
+  designVariantOptions,
+  parseDesignVariants,
+} from "../lib/design-variants";
 import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/design")({
@@ -18,12 +24,21 @@ export const Route = createFileRoute("/design")({
     ),
     links: [{ rel: "stylesheet", href: designStyles }],
   }),
+  validateSearch: parseDesignVariants,
   component: DesignPage,
 });
+
+const screenLinks = [
+  { id: "design-view-title", number: "01", title: "カレンダー表示" },
+  { id: "design-edit-title", number: "02", title: "シフト入力" },
+  { id: "design-six-weeks-title", number: "03", title: "6段の月 × 8パターン" },
+];
 
 function DesignPage() {
   const [schedule, setSchedule] = useState(() => initialDesignSchedule());
   const [version, setVersion] = useState(0);
+  const variants = Route.useSearch();
+  const navigate = Route.useNavigate();
   return (
     <main className="design-page" id="main">
       <div className="design-toolbar">
@@ -49,10 +64,24 @@ function DesignPage() {
           見るときは、すっきり。入力は、ポチッと。
         </p>
       </header>
-      <nav aria-label="デザインの比較" className="design-index">
-        <a href="#design-edit-title">4パターン</a>
-        <a href="#design-six-weeks-title">6段の月 × 8パターン</a>
+      <nav aria-label="画面の一覧" className="design-index">
+        {screenLinks.map(({ id, number, title }) => (
+          <a href={`#${id}`} key={id}>
+            <span>{number}</span>
+            {title}
+          </a>
+        ))}
       </nav>
+      <VariantPanel
+        onChange={(key, value) =>
+          navigate({
+            replace: true,
+            resetScroll: false,
+            search: (previous) => ({ ...previous, [key]: value }),
+          })
+        }
+        variants={variants}
+      />
       <div className="design-screens" key={version}>
         <section aria-labelledby="design-view-title">
           <h2 id="design-view-title">
@@ -62,6 +91,7 @@ function DesignPage() {
             initialEditing={false}
             onChange={setSchedule}
             schedule={schedule}
+            variants={variants}
           />
           <p className="design-caption">ひと月の予定と、お休みをひと目で。</p>
         </section>
@@ -73,6 +103,7 @@ function DesignPage() {
             initialEditing
             onChange={setSchedule}
             schedule={schedule}
+            variants={variants}
           />
           <p className="design-caption">
             シフトを押すと翌日へ。日付をタップして修正もできます。
@@ -85,6 +116,7 @@ function DesignPage() {
           month={7}
           number="03"
           title="6段の月 × 8パターン"
+          variants={variants}
         />
       </div>
       <p className="design-footnote">
@@ -103,6 +135,7 @@ function PatternStudy({
   number,
   title,
   caption,
+  variants,
 }: {
   count: 8;
   month?: number;
@@ -110,6 +143,7 @@ function PatternStudy({
   number: string;
   title: string;
   caption: string;
+  variants: DesignVariants;
 }) {
   const [schedule, setSchedule] = useState(() =>
     initialDesignSchedule(count, month)
@@ -126,8 +160,49 @@ function PatternStudy({
         onChange={setSchedule}
         patternCount={count}
         schedule={schedule}
+        variants={variants}
       />
       <p className="design-caption">{caption}</p>
+    </section>
+  );
+}
+
+function VariantPanel({
+  variants,
+  onChange,
+}: {
+  variants: DesignVariants;
+  onChange: <K extends keyof DesignVariants>(
+    key: K,
+    value: DesignVariants[K]
+  ) => void;
+}) {
+  return (
+    <section
+      aria-labelledby="design-variants-title"
+      className="design-variants"
+    >
+      <h2 id="design-variants-title">比べる案</h2>
+      {designVariantKeys.map((key) => {
+        const { label, choices } = designVariantOptions[key];
+        return (
+          <fieldset key={key}>
+            <legend>{label}</legend>
+            <div className="design-segment">
+              {choices.map(({ value, label: choiceLabel }) => (
+                <button
+                  aria-pressed={variants[key] === value}
+                  key={value}
+                  onClick={() => onChange(key, value)}
+                  type="button"
+                >
+                  {choiceLabel}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        );
+      })}
     </section>
   );
 }
