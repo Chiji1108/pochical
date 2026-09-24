@@ -44,7 +44,10 @@ export const ChatBubble = (props: BubbleProps<DisplayMessage>) => {
         <View style={{ maxWidth: "76%", flexShrink: 1 }}>
           <Bubble
             {...props}
-            bottomContainerStyle={{ left: { height: 0 }, right: { height: 0 } }}
+            bottomContainerStyle={{
+              left: { display: "none" },
+              right: { display: "none" },
+            }}
             containerStyle={{ left: { flex: 0 }, right: { flex: 0 } }}
             isUsernameVisible={false}
             renderTicks={hide}
@@ -129,7 +132,7 @@ export const ChatReply: NonNullable<
       accessibilityRole="button"
       disabled={!onPress}
       onPress={() => onPress?.(replyMessage)}
-      style={{ paddingHorizontal: 10, paddingTop: 9 }}
+      style={{ paddingHorizontal: 12, paddingTop: 8 }}
     >
       <Text
         numberOfLines={1}
@@ -149,8 +152,7 @@ export const ChatReply: NonNullable<
           backgroundColor: color,
           opacity: 0.25,
           marginTop: 8,
-          marginBottom: 2,
-          marginHorizontal: -10,
+          marginHorizontal: -12,
         }}
       />
     </Pressable>

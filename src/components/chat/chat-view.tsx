@@ -34,6 +34,7 @@ import {
   CHAT_REACTION_EMOJIS,
   MAX_CHAT_MESSAGE_LENGTH,
 } from "../../../shared/chat";
+import { renderChatDay } from "./chat-day";
 import {
   buildChatMessages,
   type ChatEvent,
@@ -75,12 +76,6 @@ type ChatViewProps = {
 };
 
 const EMPTY_EVENTS: ChatEvent[] = [];
-const dateFormatCalendar = {
-  sameDay: "[今日]",
-  lastDay: "[昨日]",
-  lastWeek: "M月D日（ddd）",
-  sameElse: "YYYY年M月D日（ddd）",
-};
 const showError = (title: string, error: unknown) => {
   Alert.alert(
     title,
@@ -157,6 +152,7 @@ export const ChatView = ({
         dayPillText: muted,
       },
       radii: { bubble: 12, inputField: 12 },
+      spacing: { bubblePaddingV: 8, bubblePaddingH: 12 },
       composer: { maxHeight: 128 },
     }),
     [
@@ -440,7 +436,6 @@ export const ChatView = ({
       {topContent}
       <Chat<DisplayMessage>
         darkTheme={theme}
-        dateFormatCalendar={dateFormatCalendar}
         enableGestureHandlerRootView={false}
         enableKeyboardProvider={false}
         isCustomViewBottom
@@ -466,6 +461,7 @@ export const ChatView = ({
         renderAvatar={null}
         renderBubble={renderChatBubble}
         renderCustomView={renderInviteCard}
+        renderDay={renderChatDay}
         renderSystemMessage={renderChatSystemMessage}
         renderTypingIndicator={renderTypingIndicator}
         reply={reply}
