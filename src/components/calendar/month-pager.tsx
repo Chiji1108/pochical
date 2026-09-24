@@ -1,7 +1,7 @@
 import type { FlashListRef, ListRenderItemInfo } from "@shopify/flash-list";
 import { FlashList } from "@shopify/flash-list";
 import { addMonths, isSameMonth, startOfMonth } from "date-fns";
-import type { Dispatch, FC, SetStateAction } from "react";
+import type { ComponentProps, Dispatch, FC, SetStateAction } from "react";
 import {
   useCallback,
   useEffect,
@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
-import { useWindowDimensions, View } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
 import type { CalendarHighlightTarget, WeekStartsOn } from "@/lib/app-settings";
 import type { Pattern } from "@/lib/work-data";
@@ -62,6 +62,27 @@ const containsMonth = (months: Date[], targetMonth: Date): boolean =>
 
 const findMonthIndex = (months: Date[], targetMonth: Date): number =>
   months.findIndex((month) => isSameMonth(month, targetMonth));
+
+type MonthPageContainerProps = ComponentProps<typeof View> & {
+  index: number;
+};
+
+const MonthPageContainer = ({
+  index,
+  style,
+  ...props
+}: MonthPageContainerProps) => {
+  const { width } = useWindowDimensions();
+  const layout = StyleSheet.flatten(style);
+  const expectedLeft = index * width;
+  // FlashList may mount an unmeasured page at a provisional position.
+  // Keep it measurable, but do not paint it over another month.
+  const isPositioned =
+    typeof layout?.left === "number" &&
+    Math.abs(layout.left - expectedLeft) < 1;
+
+  return <View {...props} style={[style, !isPositioned && { opacity: 0 }]} />;
+};
 
 export const MonthPager: FC<MonthPagerProps> = ({
   calendarHighlightTargets,
@@ -293,6 +314,7 @@ export const MonthPager: FC<MonthPagerProps> = ({
 
   return (
     <FlashList
+      CellRendererComponent={MonthPageContainer}
       contentInsetAdjustmentBehavior="never"
       data={yearMonths}
       decelerationRate="fast"
