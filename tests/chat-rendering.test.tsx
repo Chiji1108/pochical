@@ -5,7 +5,6 @@ import { act, create } from "react-test-renderer";
 const HOOK_WARNING = /Hooks|hook|useMemo/;
 const playLightImpactHaptic = mock(() => undefined);
 mock.module("../src/lib/haptics", () => ({ playLightImpactHaptic }));
-
 const Theme = createContext({
   colors: {
     incomingMeta: "gray",

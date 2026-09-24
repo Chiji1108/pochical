@@ -6,7 +6,6 @@ import {
   type MessageTextProps,
   type ReplyMessage,
 } from "@kesha-antonov/react-native-chat";
-import type { FlashListRef } from "@shopify/flash-list";
 import { useMutation } from "convex/react";
 import { setStringAsync } from "expo-clipboard";
 import { EmojiSheetModule } from "expo-native-sheet-emojis";
@@ -21,7 +20,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Alert, Keyboard, Linking, View } from "react-native";
+import { Alert, type FlatList, Keyboard, Linking, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useUniwind } from "uniwind";
 import {
@@ -228,7 +227,7 @@ export const ChatView = ({
     () => buildChatMessages(messages, events, currentUserId, readReceiptMode),
     [messages, events, currentUserId, readReceiptMode]
   );
-  const messageListRef = useRef<FlashListRef<DisplayMessage> | null>(null);
+  const messageListRef = useRef<FlatList<DisplayMessage> | null>(null);
   const pendingSendScroll = useRef<{ previousId?: string } | null>(null);
   const latestOwnMessageId = displayMessages.find(
     (message) => !message.system && message.user._id === currentUserId
@@ -238,7 +237,7 @@ export const ChatView = ({
     if (!request || latestOwnMessageId === request.previousId) {
       return;
     }
-    // Wait for the newly inserted (including optimistic) message to render.
+    // Let the newly inserted message render before scrolling to it.
     const frame = requestAnimationFrame(() => {
       if (pendingSendScroll.current !== request) {
         return;
@@ -261,17 +260,17 @@ export const ChatView = ({
       (message) => message._id === replyTarget
     );
     if (index >= 0) {
-      // Wait for the newly loaded FlashList data to commit before locating its row.
+      // Wait for the newly loaded list data to commit before locating its row.
       const frame = requestAnimationFrame(() => {
         const list = messageListRef.current;
         if (!list) {
           return;
         }
-        list
-          .scrollToIndex({ index, animated: true, viewPosition: 0.5 })
-          .catch((error: unknown) =>
-            showError("返信元を表示できません", error)
-          );
+        try {
+          list.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+        } catch (error) {
+          showError("返信元を表示できません", error);
+        }
         setReplyTarget(null);
       });
       return () => cancelAnimationFrame(frame);
@@ -531,7 +530,7 @@ export const ChatView = ({
           enableKeyboardProvider={false}
           icons={CHAT_ICONS}
           isCustomViewBottom
-          isFlashListEnabled
+          isFlashListEnabled={false}
           isInverted
           isScrollToBottomEnabled
           isTyping={Boolean(typingSummary)}
@@ -541,7 +540,7 @@ export const ChatView = ({
           locale="ja"
           messageActions={messageActions}
           messages={displayMessages}
-          // The library types this as FlatList even when its FlashList engine is enabled.
+          // The library declares an animated component type rather than its ref instance.
           messagesContainerRef={
             messageListRef as unknown as ComponentProps<
               typeof Chat<DisplayMessage>

@@ -15,7 +15,6 @@ const hide = () => null;
 const reactionPillStyle = { paddingHorizontal: 6, paddingVertical: 2 };
 const reactionTextStyle = { fontSize: 14, lineHeight: 18 };
 const reactionCountStyle = { fontSize: 11, lineHeight: 18 };
-
 export const ChatBubble = (props: BubbleProps<DisplayMessage>) => {
   const theme = useTheme();
   const onLongPressMessage = useCallback(
@@ -27,6 +26,9 @@ export const ChatBubble = (props: BubbleProps<DisplayMessage>) => {
   );
   const { currentMessage: message, previousMessage, position } = props;
   const own = position === "right";
+  const hasReactions = Boolean(
+    props.reactions?.isEnabled && message.reactions?.length
+  );
   // At the oldest loaded message, the library supplies {} as the previous row.
   const showName =
     !own &&
@@ -94,7 +96,7 @@ export const ChatBubble = (props: BubbleProps<DisplayMessage>) => {
           </Text>
         </View>
       </View>
-      {props.reactions?.isEnabled && Boolean(message.reactions?.length) && (
+      {hasReactions && props.reactions && (
         <View style={{ width: "76%", marginBottom: 10 }}>
           <MessageReactions
             containerStyle={props.reactions.containerStyle}
