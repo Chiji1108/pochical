@@ -5,12 +5,12 @@ Bun workspacesで管理するモノレポです。
 ```text
 apps/
   mobile/     Expoアプリ。Convex、テスト、アプリの開発資料もここに配置
-  web/        LP・招待リンクなどのWebサイト用。現在は .gitkeep のみ
+  web/        TanStack Start製の専用サイト。LP・招待・アカウント削除など
 patches/      Bunが適用する依存パッケージのパッチ
 ```
 
 Convexは独立したパッケージにせず、`apps/mobile/convex` に置いています。
-Webのフレームワークや依存関係はまだ追加していません。
+Webの開発・公開設定は [WebのREADME](apps/web/README.md) を参照してください。
 
 ## 開発
 
@@ -23,8 +23,10 @@ Webのフレームワークや依存関係はまだ追加していません。
 | `bun run ios --device` | iOSの開発用アプリをビルド・起動 |
 | `bun run android` | Androidの開発用アプリをビルド・起動 |
 | `bun run convex` | モバイルに含まれるConvexの開発環境を起動 |
-| `bun run typecheck` | モバイルの型チェック |
-| `bun run test` | モバイルのテスト |
+| `bun run web` | Webの開発サーバーを起動 |
+| `bun run build:web` / `bun run preview:web` | Webのビルド・プレビュー |
+| `bun run typecheck` | モバイル・Webの型チェック |
+| `bun run test` | モバイル・Webのテスト |
 | `bun run check` / `bun run fix` | リポジトリ全体のコードチェック・整形 |
 
 環境変数は `apps/mobile/.env`、`apps/mobile/.env.local` に置きます。
@@ -37,6 +39,3 @@ Expo、EAS、ConvexのCLIを直接使う場合は、先に `cd apps/mobile` し�
 移行前に生成した `ios/`・`android/` は古いパスを含むため、そのまま使わず
 `apps/mobile` で `bunx expo prebuild --clean` を実行して再生成し、再ビルドしてください。
 初回の開発サーバー起動は `bun run start --clear` でキャッシュを更新します。
-
-`apps/web` にWebプロジェクトの `package.json` を追加すると、既存の
-`apps/*` の設定でworkspaceとして認識されます。

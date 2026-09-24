@@ -22,6 +22,8 @@ export const current = query({
       .withIndex("userIdAndProvider", (q) => q.eq("userId", id))
       .collect();
     return {
+      name: user.name ?? null,
+      email: user.email ?? null,
       deletionPending: user.deletingAt !== undefined,
       canRevokeApple: !!(user.appleRefreshToken && user.appleClientId),
       authUserId: id,

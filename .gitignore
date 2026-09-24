@@ -42,3 +42,10 @@ app-example
 # generated native folders
 /apps/mobile/ios
 /apps/mobile/android
+
+# Web / Workers
+.wrangler/
+.output/
+.tanstack/
+.dev.vars*
+!.dev.vars.example

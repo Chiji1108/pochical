@@ -3,6 +3,7 @@ import { Anonymous } from "@convex-dev/auth/providers/Anonymous";
 import { convexAuth } from "@convex-dev/auth/server";
 
 import { appleAuthProvider } from "../convex-lib/appleAuthProvider";
+import { resolveAuthRedirect } from "../convex-lib/authRedirect";
 import { nativeAuthProvider } from "../convex-lib/nativeAuthProvider";
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
@@ -27,11 +28,9 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         throw new Error("アカウントを削除中です。");
       }
     },
-    redirect: ({ redirectTo }) => {
-      if (redirectTo === "pochical://auth") {
-        return Promise.resolve(redirectTo);
-      }
-      throw new Error("Invalid authentication redirect");
-    },
+    redirect: ({ redirectTo }) =>
+      Promise.resolve(
+        resolveAuthRedirect(redirectTo, process.env.POCHICAL_WEB_ORIGIN)
+      ),
   },
 });

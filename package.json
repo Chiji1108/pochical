@@ -10,11 +10,14 @@
     "ios": "bun run --cwd apps/mobile ios",
     "android": "bun run --cwd apps/mobile android",
     "convex": "bun run --cwd apps/mobile convex",
-    "typecheck": "bun run --cwd apps/mobile typecheck",
-    "test": "bun run --cwd apps/mobile test",
+    "typecheck": "bun run --cwd apps/mobile typecheck && bun run --cwd apps/web typecheck",
+    "test": "bun run --cwd apps/mobile test && bun run --cwd apps/web test",
     "check": "ultracite check",
     "fix": "ultracite fix",
-    "prepare": "lefthook install"
+    "prepare": "lefthook install",
+    "web": "bun run --cwd apps/web dev",
+    "build:web": "bun run --cwd apps/web build",
+    "preview:web": "bun run --cwd apps/web preview"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.12",

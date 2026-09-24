@@ -30,7 +30,16 @@
     }
   },
   "files": {
-    "includes": ["!**/uniwind-types.d.ts", "!example", "!node_modules"]
+    "includes": [
+      "!**/uniwind-types.d.ts",
+      "!example",
+      "!node_modules",
+      "!**/routeTree.gen.ts",
+      "!**/worker-configuration.d.ts",
+      "!**/.wrangler",
+      "!**/.output",
+      "!**/.tanstack"
+    ]
   },
   "overrides": [
     {
@@ -45,6 +54,16 @@
                 "requireAscii": true
               }
             }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/routes/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useFilenamingConvention": "off"
           }
         }
       }
