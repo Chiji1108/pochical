@@ -22,6 +22,7 @@ import {
   useState,
 } from "react";
 import { Alert, Keyboard, Linking, View } from "react-native";
+import { useUniwind } from "uniwind";
 import {
   AppHeader,
   type AppHeaderAction,
@@ -115,6 +116,7 @@ export const ChatView = ({
   topContent,
 }: ChatViewProps) => {
   const router = useRouter();
+  const { theme: colorScheme } = useUniwind();
   const [
     accent,
     accentForeground,
@@ -123,7 +125,6 @@ export const ChatView = ({
     muted,
     surface,
     border,
-    dayBackground,
   ] = useThemeColor([
     "accent",
     "accent-foreground",
@@ -132,27 +133,28 @@ export const ChatView = ({
     "muted",
     "surface",
     "border",
-    "surface-secondary",
   ]);
+  const chatBackground = colorScheme === "dark" ? background : surface;
+  const incomingBubble = colorScheme === "dark" ? surface : background;
   const theme = useMemo(
     () => ({
       colors: {
         accent,
-        background,
-        incomingBubble: surface,
+        background: chatBackground,
+        incomingBubble,
         incomingText: foreground,
         outgoingBubble: accent,
         outgoingText: accentForeground,
         outgoingMeta: accentForeground,
         incomingMeta: muted,
-        inputBarBackground: background,
-        inputBackground: surface,
+        inputBarBackground: chatBackground,
+        inputBackground: incomingBubble,
         inputText: foreground,
         placeholder: muted,
         separator: border,
         senderName: muted,
         surface,
-        dayPillBackground: dayBackground,
+        dayPillBackground: incomingBubble,
         dayPillText: muted,
       },
       radii: { bubble: 12, inputField: 12 },
@@ -162,12 +164,12 @@ export const ChatView = ({
     [
       accent,
       accentForeground,
-      background,
+      chatBackground,
+      incomingBubble,
       foreground,
       muted,
       surface,
       border,
-      dayBackground,
     ]
   );
   const [body, setBody] = useState("");
@@ -422,7 +424,7 @@ export const ChatView = ({
   );
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-surface dark:bg-background">
       <AppHeader
         leftAction={{
           accessibilityLabel: "戻る",

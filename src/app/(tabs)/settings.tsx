@@ -61,6 +61,9 @@ const HIGHLIGHT_OPTIONS: HighlightOption[] = [
 
 const ORDERED_HIGHLIGHT_TARGETS = HIGHLIGHT_OPTIONS.map((option) => option.id);
 const SELECTED_GROUP_STORAGE_KEY = "pochical-selected-group-id";
+// Preview keys identify fixed grid positions so changing dates reuses the cells.
+const PREVIEW_WEEK_SLOTS = [0, 1, 2, 3, 4, 5] as const;
+const PREVIEW_DAY_SLOTS = [0, 1, 2, 3, 4, 5, 6] as const;
 
 const getOrderedHighlightTargets = (
   targets: Iterable<string>
@@ -360,10 +363,10 @@ const CalendarPreview = ({
   const weekdayDates = useMemo(
     () =>
       firstWeek
-        ? Array.from({ length: 7 }, (_, index) => {
+        ? PREVIEW_DAY_SLOTS.map((column) => {
             const date = new Date(firstWeek);
-            date.setDate(firstWeek.getDate() + index);
-            return date;
+            date.setDate(firstWeek.getDate() + column);
+            return { column, date };
           })
         : [],
     [firstWeek]
@@ -373,7 +376,7 @@ const CalendarPreview = ({
     <View className="w-full items-center py-1">
       <View className="aspect-square w-48 justify-center rounded-lg bg-background p-4 shadow-surface">
         <View className="flex-row">
-          {weekdayDates.map((date) => {
+          {weekdayDates.map(({ column, date }) => {
             const highlightColor = getCalendarWeekdayHighlightColor(
               date,
               calendarHighlightTargets
@@ -382,7 +385,7 @@ const CalendarPreview = ({
             return (
               <View
                 className="aspect-square flex-1 items-center justify-center"
-                key={date.toISOString()}
+                key={column}
               >
                 <Typography
                   className={cn("font-semibold text-[10px] leading-none", {
@@ -396,14 +399,18 @@ const CalendarPreview = ({
             );
           })}
         </View>
-        {weeks.map((week) => (
-          <CalendarPreviewWeek
-            calendarHighlightTargets={calendarHighlightTargets}
-            key={week.toISOString()}
-            previewMonth={previewMonth}
-            week={week}
-          />
-        ))}
+        {PREVIEW_WEEK_SLOTS.map((row) => {
+          const week = weeks[row];
+
+          return week ? (
+            <CalendarPreviewWeek
+              calendarHighlightTargets={calendarHighlightTargets}
+              key={row}
+              previewMonth={previewMonth}
+              week={week}
+            />
+          ) : null;
+        })}
       </View>
     </View>
   );
@@ -421,9 +428,9 @@ const CalendarPreviewWeek = ({
   week,
 }: CalendarPreviewWeekProps) => (
   <View className="flex-row">
-    {Array.from({ length: 7 }, (_, index) => {
+    {PREVIEW_DAY_SLOTS.map((column) => {
       const date = new Date(week);
-      date.setDate(week.getDate() + index);
+      date.setDate(week.getDate() + column);
       const highlightColor = getCalendarDateHighlightColor(
         date,
         calendarHighlightTargets
@@ -432,7 +439,7 @@ const CalendarPreviewWeek = ({
       return (
         <View
           className="aspect-square flex-1 items-center justify-center"
-          key={date.toISOString()}
+          key={column}
         >
           <Typography
             className={cn("font-medium text-[10px] leading-none", {

@@ -53,8 +53,10 @@ type CalendarBodyProps = {
   yearMonth: Date;
   className?: string;
   exportColorScheme?: ExportCalendarColorScheme;
+  emojiOnly?: boolean;
   hideOutOfMonthDates?: boolean;
   isExportMode?: boolean;
+  highlightDayOffShifts?: boolean;
   weekDate?: Date;
 };
 
@@ -69,9 +71,11 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
   weekStartsOn,
   className,
   exportColorScheme = "light",
+  emojiOnly = false,
   hideOutOfMonthDates = false,
   isExportMode = false,
   onPressSelectedDate,
+  highlightDayOffShifts = true,
   weekDate,
 }) => {
   const fallbackProgress = useSharedValue(0);
@@ -119,8 +123,10 @@ export const CalendarBody: FC<CalendarBodyProps> = ({
         calendarHighlightTargets={calendarHighlightTargets}
         date={date}
         dateKey={dateKey}
+        emojiOnly={emojiOnly}
         exportColorScheme={exportColorScheme}
         hideOutOfMonthDates={hideOutOfMonthDates}
+        highlightDayOffShifts={highlightDayOffShifts}
         isExportMode={isExportMode}
         isSelectedDate={!isExportMode && dateKey === selectedDateKey}
         onPressSelectedDate={onPressSelectedDate}
@@ -164,6 +170,7 @@ type CalendarDateCellProps = {
   date: Date;
   dateKey: number;
   exportColorScheme: ExportCalendarColorScheme;
+  emojiOnly: boolean;
   hideOutOfMonthDates: boolean;
   isExportMode: boolean;
   onPressSelectedDate?: () => void;
@@ -172,6 +179,7 @@ type CalendarDateCellProps = {
   shift?: CalendarShiftSummary;
   shiftPattern?: Pattern;
   shouldDimOutOfMonth: boolean;
+  highlightDayOffShifts: boolean;
   themeColors: CalendarThemeColors;
   yearMonthKey: number;
 };
@@ -181,6 +189,7 @@ const CalendarDateCell: FC<CalendarDateCellProps> = memo(
     calendarHighlightTargets,
     date,
     exportColorScheme,
+    emojiOnly,
     hideOutOfMonthDates,
     isExportMode,
     onPressSelectedDate,
@@ -189,6 +198,7 @@ const CalendarDateCell: FC<CalendarDateCellProps> = memo(
     shift,
     shiftPattern,
     shouldDimOutOfMonth,
+    highlightDayOffShifts,
     themeColors,
     yearMonthKey,
   }) => {
@@ -233,7 +243,9 @@ const CalendarDateCell: FC<CalendarDateCellProps> = memo(
         {shouldHideDateContent ? null : (
           <CalendarDateCellContent
             date={date}
+            emojiOnly={emojiOnly}
             highlightColor={highlightColor}
+            highlightDayOffShifts={highlightDayOffShifts}
             isDarkExport={isDarkExport}
             isExportMode={isExportMode}
             isSelectedDate={isSelectedDate}
@@ -249,6 +261,7 @@ const CalendarDateCell: FC<CalendarDateCellProps> = memo(
     previous.calendarHighlightTargets === next.calendarHighlightTargets &&
     previous.dateKey === next.dateKey &&
     previous.exportColorScheme === next.exportColorScheme &&
+    previous.emojiOnly === next.emojiOnly &&
     previous.hideOutOfMonthDates === next.hideOutOfMonthDates &&
     previous.isExportMode === next.isExportMode &&
     previous.onPressSelectedDate === next.onPressSelectedDate &&
@@ -261,38 +274,47 @@ const CalendarDateCell: FC<CalendarDateCellProps> = memo(
     previous.shiftPattern?.id === next.shiftPattern?.id &&
     previous.shiftPattern?.name === next.shiftPattern?.name &&
     previous.shouldDimOutOfMonth === next.shouldDimOutOfMonth &&
+    previous.highlightDayOffShifts === next.highlightDayOffShifts &&
     previous.themeColors === next.themeColors &&
     previous.yearMonthKey === next.yearMonthKey
 );
 
 type CalendarDateCellContentProps = {
   date: Date;
+  emojiOnly: boolean;
   highlightColor: CalendarDateHighlightColor;
   isDarkExport: boolean;
   isExportMode: boolean;
   isSelectedDate: boolean;
   shift?: CalendarShiftSummary;
   shiftPattern?: Pattern;
+  highlightDayOffShifts: boolean;
   themeColors: CalendarThemeColors;
 };
 
 const CalendarDateCellContent: FC<CalendarDateCellContentProps> = ({
   date,
+  emojiOnly,
   highlightColor,
   isDarkExport,
   isExportMode,
   isSelectedDate,
   shift,
   shiftPattern,
+  highlightDayOffShifts,
   themeColors,
 }) => {
-  const isDayOffShift = Boolean(shiftPattern?.countsAsDayOff);
+  const isHighlightedDayOff =
+    isExportMode &&
+    highlightDayOffShifts &&
+    Boolean(shiftPattern?.countsAsDayOff);
+  const showShiftName = isExportMode && !emojiOnly;
+  const dayOffDateTextStyle = isDarkExport
+    ? styles.lightExportDateText
+    : styles.darkExportDateText;
 
   return (
     <>
-      {isExportMode && isDayOffShift ? (
-        <View style={[styles.dateMarker, styles.dayOffMarker]} />
-      ) : null}
       {shift?.hasNotes && !isExportMode ? (
         <View
           style={[
@@ -306,14 +328,25 @@ const CalendarDateCellContent: FC<CalendarDateCellContentProps> = ({
         />
       ) : null}
       <View style={styles.dateLabelBox}>
+        {isHighlightedDayOff ? (
+          <View
+            style={[
+              styles.dayOffDateChip,
+              isDarkExport ? styles.darkDayOffDateChip : undefined,
+            ]}
+          />
+        ) : null}
         <Typography
-          style={getDateTextStyle({
-            highlightColor,
-            isDarkExport,
-            isExportMode,
-            isSelectedDate,
-            themeColors,
-          })}
+          style={[
+            getDateTextStyle({
+              highlightColor,
+              isDarkExport,
+              isExportMode,
+              isSelectedDate,
+              themeColors,
+            }),
+            isHighlightedDayOff ? dayOffDateTextStyle : undefined,
+          ]}
         >
           {getDate(date)}
         </Typography>
@@ -323,7 +356,7 @@ const CalendarDateCellContent: FC<CalendarDateCellContentProps> = ({
           <Typography numberOfLines={1} style={styles.shiftEmoji}>
             {shiftPattern.emoji}
           </Typography>
-          {isExportMode ? (
+          {showShiftName ? (
             <Typography
               numberOfLines={1}
               style={getShiftNameStyle(isDarkExport, isExportMode, themeColors)}
@@ -375,6 +408,7 @@ const getDateTextStyle = ({
   themeColors: CalendarThemeColors;
 }) => [
   styles.dateText,
+  isExportMode ? styles.exportDateText : undefined,
   !isSelectedDate && highlightColor === "blue"
     ? styles.blueDateText
     : undefined,
@@ -455,8 +489,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
-  dayOffMarker: {
-    backgroundColor: "#10b981",
+  dayOffDateChip: {
+    backgroundColor: "#3f3f46",
+    borderRadius: 999,
+    height: 16,
+    position: "absolute",
+    width: 32,
+  },
+  darkDayOffDateChip: {
+    backgroundColor: "#e4e4e7",
+  },
+  exportDateText: {
+    includeFontPadding: false,
+    lineHeight: 14,
   },
   lightExportDateText: {
     color: "#09090b",
@@ -477,14 +522,16 @@ const styles = StyleSheet.create({
   shiftName: {
     fontSize: 9,
     fontWeight: "500",
+    includeFontPadding: false,
     lineHeight: 12,
+    marginTop: -2,
     maxWidth: "100%",
     textAlign: "center",
   },
   shiftSummary: {
     alignItems: "center",
     flex: 1,
-    gap: 2,
+    gap: 0,
     justifyContent: "center",
     minWidth: 0,
   },

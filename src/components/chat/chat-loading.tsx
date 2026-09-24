@@ -21,7 +21,7 @@ export const ChatLoadingIndicator = () => {
 };
 
 export const ChatLoadingScreen = ({ onBack }: { onBack: () => void }) => (
-  <View className="flex-1 bg-background">
+  <View className="flex-1 bg-surface dark:bg-background">
     <AppHeader
       leftAction={{
         accessibilityLabel: "戻る",

@@ -16,8 +16,10 @@ import { WeekRow } from "./week-row";
 type ExportCalendarImageViewProps = {
   calendarHighlightTargets: CalendarHighlightTarget[];
   colorScheme: ExportCalendarColorScheme;
+  emojiOnly?: boolean;
   patternsById: ReadonlyMap<string, Pattern>;
   shiftsByDate: ReadonlyMap<number, CalendarShiftSummary>;
+  highlightDayOffShifts?: boolean;
   weekStartsOn: WeekStartsOn;
   yearMonth: Date;
 };
@@ -27,8 +29,10 @@ const ignoreDateSelection = (_date: Date) => undefined;
 export const ExportCalendarImageView: FC<ExportCalendarImageViewProps> = ({
   calendarHighlightTargets,
   colorScheme,
+  emojiOnly = false,
   patternsById,
   shiftsByDate,
+  highlightDayOffShifts = true,
   weekStartsOn,
   yearMonth,
 }) => (
@@ -81,8 +85,10 @@ export const ExportCalendarImageView: FC<ExportCalendarImageViewProps> = ({
         <CalendarBody
           calendarHighlightTargets={calendarHighlightTargets}
           className="px-0"
+          emojiOnly={emojiOnly}
           exportColorScheme={colorScheme}
           hideOutOfMonthDates
+          highlightDayOffShifts={highlightDayOffShifts}
           isExportMode
           patternsById={patternsById}
           selectedDate={yearMonth}

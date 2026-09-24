@@ -9,7 +9,14 @@ import { Asset, requestPermissionsAsync } from "expo-media-library";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { isAvailableAsync, shareAsync } from "expo-sharing";
 import { SymbolView } from "expo-symbols";
-import { Tabs, useToast } from "heroui-native";
+import {
+  ListGroup,
+  Separator,
+  Switch,
+  Tabs,
+  Typography,
+  useToast,
+} from "heroui-native";
 import { Button } from "heroui-native/button";
 import { type ComponentRef, useMemo, useRef, useState } from "react";
 import { Platform, ScrollView, View } from "react-native";
@@ -51,6 +58,8 @@ export default function ExportScreen() {
   const exportCalendarImageRef = useRef<ComponentRef<typeof View>>(null);
   const [exportColorScheme, setExportColorScheme] =
     useState<ExportCalendarColorScheme>("light");
+  const [emojiOnly, setEmojiOnly] = useState(false);
+  const [highlightDayOffShifts, setHighlightDayOffShifts] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const yearMonth = useMemo(
@@ -237,12 +246,12 @@ export default function ExportScreen() {
               value={exportColorScheme}
               variant="primary"
             >
-              <Tabs.List>
+              <Tabs.List accessibilityLabel="画像の背景">
                 <Tabs.Indicator />
-                <Tabs.Trigger value="light">
+                <Tabs.Trigger isDisabled={isActionDisabled} value="light">
                   <Tabs.Label>ライト</Tabs.Label>
                 </Tabs.Trigger>
-                <Tabs.Trigger value="dark">
+                <Tabs.Trigger isDisabled={isActionDisabled} value="dark">
                   <Tabs.Label>ダーク</Tabs.Label>
                 </Tabs.Trigger>
               </Tabs.List>
@@ -253,12 +262,50 @@ export default function ExportScreen() {
               <ExportCalendarImageView
                 calendarHighlightTargets={settings.calendarHighlightTargets}
                 colorScheme={exportColorScheme}
+                emojiOnly={emojiOnly}
+                highlightDayOffShifts={highlightDayOffShifts}
                 patternsById={patternsById}
                 shiftsByDate={shiftsByDate}
                 weekStartsOn={settings.weekStartsOn}
                 yearMonth={yearMonth}
               />
             </View>
+          </View>
+          <View className="gap-2">
+            <Typography className="px-1 font-semibold text-sm" color="muted">
+              詳細設定
+            </Typography>
+            <ListGroup>
+              <ListGroup.Item>
+                <ListGroup.ItemContent>
+                  <ListGroup.ItemTitle>絵文字のみ</ListGroup.ItemTitle>
+                </ListGroup.ItemContent>
+                <ListGroup.ItemSuffix>
+                  <Switch
+                    accessibilityHint="シフト名を非表示にして絵文字だけを表示します"
+                    accessibilityLabel="絵文字のみ"
+                    isDisabled={isActionDisabled}
+                    isSelected={emojiOnly}
+                    onSelectedChange={setEmojiOnly}
+                  />
+                </ListGroup.ItemSuffix>
+              </ListGroup.Item>
+              <Separator className="mx-4" />
+              <ListGroup.Item>
+                <ListGroup.ItemContent>
+                  <ListGroup.ItemTitle>休日をハイライト</ListGroup.ItemTitle>
+                </ListGroup.ItemContent>
+                <ListGroup.ItemSuffix>
+                  <Switch
+                    accessibilityHint="休日扱いのシフトの日付をバッジで強調します"
+                    accessibilityLabel="休日をハイライト"
+                    isDisabled={isActionDisabled}
+                    isSelected={highlightDayOffShifts}
+                    onSelectedChange={setHighlightDayOffShifts}
+                  />
+                </ListGroup.ItemSuffix>
+              </ListGroup.Item>
+            </ListGroup>
           </View>
           <View className="flex-row gap-2">
             <Button
