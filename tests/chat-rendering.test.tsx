@@ -3,6 +3,8 @@ import { createContext, useContext, useMemo } from "react";
 import { act, create } from "react-test-renderer";
 
 const HOOK_WARNING = /Hooks|hook|useMemo/;
+const playLightImpactHaptic = mock(() => undefined);
+mock.module("../src/lib/haptics", () => ({ playLightImpactHaptic }));
 
 const Theme = createContext({
   colors: {
@@ -23,6 +25,7 @@ mock.module("react-native", () => ({
 }));
 mock.module("@kesha-antonov/react-native-chat", () => ({
   Bubble: () => null,
+  MessageReactions: () => null,
   useTheme: () => useContext(Theme),
 }));
 
@@ -123,6 +126,95 @@ test("bubble sender names handle the library's empty previous-message sentinel",
       expect(JSON.stringify(renderer?.toJSON()).includes("名前")).toBe(
         showName
       );
+    }
+  } finally {
+    await act(() => renderer?.unmount());
+    errors.mockRestore();
+    globalThis.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment;
+  }
+});
+
+test("long press triggers one light haptic and forwards the message callback", async () => {
+  const { Bubble } = await import("@kesha-antonov/react-native-chat");
+  const previousActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT;
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const errors = spyOn(console, "error").mockImplementation(() => undefined);
+  const onLongPressMessage = mock(() => undefined);
+  playLightImpactHaptic.mockClear();
+  let renderer: ReturnType<typeof create> | undefined;
+  try {
+    await act(() => {
+      renderer = create(
+        renderChatBubble({
+          currentMessage: message,
+          position: "left",
+          onLongPressMessage,
+          reactions: { isEnabled: true },
+        })
+      );
+    });
+    expect(playLightImpactHaptic).not.toHaveBeenCalled();
+    renderer!.root
+      .findByType(Bubble)
+      .props.onLongPressMessage(undefined, message);
+    expect(playLightImpactHaptic).toHaveBeenCalledTimes(1);
+    expect(onLongPressMessage).toHaveBeenCalledWith(undefined, message);
+  } finally {
+    await act(() => renderer?.unmount());
+    errors.mockRestore();
+    globalThis.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment;
+  }
+});
+
+test("reactions stay outside the body and metadata row and preserve tap handling", async () => {
+  const { Bubble, MessageReactions } = await import(
+    "@kesha-antonov/react-native-chat"
+  );
+  const previousActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT;
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const errors = spyOn(console, "error").mockImplementation(() => undefined);
+  const onReactionPress = mock(() => undefined);
+  let renderer: ReturnType<typeof create> | undefined;
+  try {
+    for (const position of ["left", "right"] as const) {
+      for (const count of [2, 3, 4, 7]) {
+        const currentMessage = {
+          ...message,
+          reactions: ["👍", "❤️", "😂", "😮", "😢", "👎", "🎉"]
+            .slice(0, count)
+            .map((emoji) => ({ emoji, userIds: ["user"] })),
+          readCount: 1,
+          readReceiptMode: "count" as const,
+        };
+        await act(() => {
+          const element = renderChatBubble({
+            currentMessage,
+            position,
+            user: message.user,
+            reactions: { isEnabled: true, onReactionPress },
+          });
+          if (renderer) {
+            renderer.update(element);
+          } else {
+            renderer = create(element);
+          }
+        });
+        const bubble = renderer!.root.findByType(Bubble);
+        const reactions = renderer!.root.findByType(MessageReactions);
+        const bodyRow = bubble.parent!.parent!;
+        const reactionsRow = reactions.parent!;
+        expect(reactionsRow.parent).toBe(bodyRow.parent);
+        expect(reactionsRow.props.style.width).toBe("76%");
+        expect(bodyRow.findAllByType("Text").length).toBe(
+          position === "right" ? 2 : 1
+        );
+        expect(bubble.props.reactions.renderReactions()).toBeNull();
+        expect(bubble.props.reactions.isEnabled).toBe(true);
+        expect(reactions.props.reactions).toHaveLength(count);
+        expect(reactions.props.currentUserId).toBe("user");
+        reactions.props.onReactionPress("👍");
+        expect(onReactionPress).toHaveBeenLastCalledWith(currentMessage, "👍");
+      }
     }
   } finally {
     await act(() => renderer?.unmount());

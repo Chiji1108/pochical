@@ -106,6 +106,7 @@
     "@convex-dev/auth@0.0.95": "patches/@convex-dev%2Fauth@0.0.95.patch",
     "react-native@0.88.0-rc.1": "patches/react-native@0.88.0-rc.1.patch",
     "@trestleinc/replicate@2.0.0-preview.0": "patches/@trestleinc%2Freplicate@2.0.0-preview.0.patch",
-    "convex-unread-tracking@1.1.0": "patches/convex-unread-tracking@1.1.0.patch"
+    "convex-unread-tracking@1.1.0": "patches/convex-unread-tracking@1.1.0.patch",
+    "@kesha-antonov/react-native-chat@5.0.1": "patches/@kesha-antonov%2Freact-native-chat@5.0.1.patch"
   }
 }

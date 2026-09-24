@@ -120,6 +120,35 @@ test("reactions toggle per user, sync to other readers, and do not mark a messag
   ).toEqual([]);
 });
 
+test("existing reactions retain their order when users join or leave", async () => {
+  const { alice, bob, groupId } = await setup();
+  await alice.mutation(api.chat.sendGroupMessage, { groupId, body: "Order" });
+  const read = async () =>
+    (await alice.query(api.chat.listGroupMessages, { groupId, paginationOpts }))
+      .page[0];
+  const messageId = (await read())._id;
+  for (const emoji of ["👍", "❤️", "😂"]) {
+    await bob.mutation(api.chat.toggleReaction, { messageId, emoji });
+  }
+  for (const emoji of ["❤️", "👍", "❤️", "👍"]) {
+    await alice.mutation(api.chat.toggleReaction, { messageId, emoji });
+    expect((await read()).reactions?.map((reaction) => reaction.emoji)).toEqual(
+      ["👍", "❤️", "😂"]
+    );
+  }
+  await bob.mutation(api.chat.toggleReaction, { messageId, emoji: "❤️" });
+  expect((await read()).reactions?.map((reaction) => reaction.emoji)).toEqual([
+    "👍",
+    "😂",
+  ]);
+  await alice.mutation(api.chat.toggleReaction, { messageId, emoji: "❤️" });
+  expect((await read()).reactions?.map((reaction) => reaction.emoji)).toEqual([
+    "👍",
+    "😂",
+    "❤️",
+  ]);
+});
+
 test("direct chat replies work only within their conversation and reactions require participation", async () => {
   const { alice, bob, carol, outsider, t, groupId, aliceId, bobId, carolId } =
     await setup();

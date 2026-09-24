@@ -1,17 +1,30 @@
 import {
   Bubble,
   type BubbleProps,
+  MessageReactions,
   type ReplyProps,
   useTheme,
 } from "@kesha-antonov/react-native-chat";
 import dayjs from "dayjs";
+import { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { playLightImpactHaptic } from "@/lib/haptics";
 import type { DisplayMessage } from "./chat-model";
 
 const hide = () => null;
+const reactionPillStyle = { paddingHorizontal: 6, paddingVertical: 2 };
+const reactionTextStyle = { fontSize: 14, lineHeight: 18 };
+const reactionCountStyle = { fontSize: 11, lineHeight: 18 };
 
 export const ChatBubble = (props: BubbleProps<DisplayMessage>) => {
   const theme = useTheme();
+  const onLongPressMessage = useCallback(
+    (context?: unknown, message?: unknown) => {
+      playLightImpactHaptic();
+      props.onLongPressMessage?.(context, message);
+    },
+    [props.onLongPressMessage]
+  );
   const { currentMessage: message, previousMessage, position } = props;
   const own = position === "right";
   // At the oldest loaded message, the library supplies {} as the previous row.
@@ -51,6 +64,8 @@ export const ChatBubble = (props: BubbleProps<DisplayMessage>) => {
             }}
             containerStyle={{ left: { flex: 0 }, right: { flex: 0 } }}
             isUsernameVisible={false}
+            onLongPressMessage={onLongPressMessage}
+            reactions={{ ...props.reactions, renderReactions: hide }}
             renderTicks={hide}
             renderTime={hide}
             wrapperStyle={{
@@ -79,6 +94,33 @@ export const ChatBubble = (props: BubbleProps<DisplayMessage>) => {
           </Text>
         </View>
       </View>
+      {props.reactions?.isEnabled && Boolean(message.reactions?.length) && (
+        <View style={{ width: "76%", marginBottom: 10 }}>
+          <MessageReactions
+            containerStyle={props.reactions.containerStyle}
+            currentUserId={props.user?._id}
+            message={message}
+            onReactionPress={(emoji) =>
+              props.reactions?.onReactionPress?.(message, emoji)
+            }
+            position={position}
+            reactionActiveStyle={[
+              reactionPillStyle,
+              props.reactions.reactionActiveStyle,
+            ]}
+            reactionCountStyle={[
+              reactionCountStyle,
+              props.reactions.reactionCountStyle,
+            ]}
+            reactionStyle={[reactionPillStyle, props.reactions.reactionStyle]}
+            reactions={message.reactions ?? []}
+            reactionTextStyle={[
+              reactionTextStyle,
+              props.reactions.reactionTextStyle,
+            ]}
+          />
+        </View>
+      )}
     </View>
   );
 };

@@ -1,17 +1,9 @@
 import { Skeleton } from "heroui-native";
 import { View } from "react-native";
 import { AppHeader } from "@/components/navigation/app-header";
+import { ShiftLoadingIndicator } from "./shift-loading";
 
 const ROWS = ["first", "second", "third"] as const;
-const TABLE_ROWS = [
-  "first",
-  "second",
-  "third",
-  "fourth",
-  "fifth",
-  "sixth",
-] as const;
-
 const SkeletonRow = () => (
   <View className="flex-row items-center gap-3 px-4 py-4">
     <Skeleton className="size-6 rounded-md" variant="none" />
@@ -41,7 +33,7 @@ export const GroupRailSkeleton = () => (
 export const GroupContentSkeleton = ({
   layout = "detail",
 }: {
-  layout?: "detail" | "settings" | "shifts";
+  layout?: "detail" | "settings";
 }) => (
   <View
     accessibilityLabel="グループを読み込み中"
@@ -54,45 +46,20 @@ export const GroupContentSkeleton = ({
       className="gap-4 p-4"
       importantForAccessibility="no-hide-descendants"
     >
-      {layout === "shifts" ? (
-        <>
-          <Skeleton className="h-6 w-28 rounded-md" variant="none" />
-          <View className="overflow-hidden rounded-xl border border-border">
-            {TABLE_ROWS.map((key) => (
-              <View
-                className="flex-row gap-3 border-border border-b p-4"
-                key={key}
-              >
-                <Skeleton className="h-5 w-10 rounded-md" variant="none" />
-                {ROWS.map((column) => (
-                  <Skeleton
-                    className="h-5 flex-1 rounded-md"
-                    key={column}
-                    variant="none"
-                  />
-                ))}
-              </View>
-            ))}
-          </View>
-        </>
-      ) : (
-        <>
-          {layout === "settings" && (
-            <Skeleton className="h-12 w-full rounded-xl" variant="none" />
-          )}
-          <View className="overflow-hidden rounded-xl bg-surface">
-            <SkeletonRow />
-            <View className="mx-4 h-px bg-border" />
-            <SkeletonRow />
-          </View>
-          <Skeleton className="mt-1 h-5 w-28 rounded-md" variant="none" />
-          <View className="overflow-hidden rounded-xl bg-surface">
-            {ROWS.map((key) => (
-              <SkeletonRow key={key} />
-            ))}
-          </View>
-        </>
+      {layout === "settings" && (
+        <Skeleton className="h-12 w-full rounded-xl" variant="none" />
       )}
+      <View className="overflow-hidden rounded-xl bg-surface">
+        <SkeletonRow />
+        <View className="mx-4 h-px bg-border" />
+        <SkeletonRow />
+      </View>
+      <Skeleton className="mt-1 h-5 w-28 rounded-md" variant="none" />
+      <View className="overflow-hidden rounded-xl bg-surface">
+        {ROWS.map((key) => (
+          <SkeletonRow key={key} />
+        ))}
+      </View>
     </View>
   </View>
 );
@@ -116,6 +83,10 @@ export const GroupLoadingScreen = ({
       }}
       title={title}
     />
-    <GroupContentSkeleton layout={layout} />
+    {layout === "shifts" ? (
+      <ShiftLoadingIndicator />
+    ) : (
+      <GroupContentSkeleton layout={layout} />
+    )}
   </View>
 );

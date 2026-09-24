@@ -20,7 +20,11 @@ import {
   requireMembership,
 } from "../convex-lib/groupMembers";
 import { markThreadRead, recordChatMessageUnread } from "../convex-lib/unreads";
-import { isReactionEmoji, MAX_CHAT_MESSAGE_LENGTH } from "../shared/chat";
+import {
+  isReactionEmoji,
+  MAX_CHAT_MESSAGE_LENGTH,
+  toggleMessageReaction,
+} from "../shared/chat";
 import { chatMessageValidator } from "../shared/chat-schema";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, type QueryCtx, query } from "./_generated/server";
@@ -293,16 +297,9 @@ export const toggleReaction = mutation({
     if (!removing && userIds.length >= MAX_REACTION_USERS) {
       throw new ConvexError("リアクションの上限に達しました");
     }
-    const nextUserIds = removing
-      ? userIds.filter((id) => id !== userId)
-      : [...userIds, userId];
-    const nextReactions = reactions.filter(
-      (reaction) => reaction.emoji !== emoji
-    );
-    if (nextUserIds.length > 0) {
-      nextReactions.push({ emoji, userIds: nextUserIds });
-    }
-    await ctx.db.patch(messageId, { reactions: nextReactions });
+    await ctx.db.patch(messageId, {
+      reactions: toggleMessageReaction(reactions, emoji, userId),
+    });
     return null;
   },
 });

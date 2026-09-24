@@ -353,38 +353,6 @@ export const leave = mutation({
   },
 });
 
-export const leaveAllForCurrentUser = mutation({
-  args: {},
-  handler: async (ctx, _args) => {
-    const userId = await requireUserId(ctx);
-    const memberships = await ctx.db
-      .query("groupMembers")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
-    const now = Date.now();
-
-    for (const membership of memberships) {
-      await ctx.db.delete(membership._id);
-
-      const remainingMembers = await listMembers(ctx, membership.groupId);
-      if (remainingMembers.length === 0) {
-        await deleteGroupChatData(ctx, membership.groupId);
-        await ctx.db.delete(membership.groupId);
-        continue;
-      }
-
-      await insertGroupEvent(ctx, {
-        actorDisplayNameSnapshot: membership.displayName,
-        actorUserId: userId,
-        body: `${membership.displayName}さんがグループから脱退しました`,
-        createdAt: now,
-        groupId: membership.groupId,
-        kind: "member_left",
-      });
-    }
-  },
-});
-
 export const removeMember = mutation({
   args: {
     groupId: v.id("groups"),

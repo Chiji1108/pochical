@@ -11,7 +11,7 @@ import { useMutation } from "convex/react";
 import { setStringAsync } from "expo-clipboard";
 import { EmojiSheetModule } from "expo-native-sheet-emojis";
 import { useRouter } from "expo-router";
-import { Typography, useThemeColor } from "heroui-native";
+import { Typography, useThemeColor, useToast } from "heroui-native";
 import {
   type ComponentProps,
   type ReactNode,
@@ -22,6 +22,7 @@ import {
   useState,
 } from "react";
 import { Alert, Keyboard, Linking, View } from "react-native";
+import Svg, { Path } from "react-native-svg";
 import { useUniwind } from "uniwind";
 import {
   AppHeader,
@@ -54,6 +55,7 @@ import {
   renderChatReplyPreview,
   renderChatSystemMessage,
 } from "./message-layout";
+import { optimisticallyToggleReaction } from "./optimistic-reactions";
 import { useChatTyping } from "./use-chat-typing";
 
 // Retain the public types consumed by the chat routes.
@@ -81,6 +83,40 @@ type ChatViewProps = {
 };
 
 const EMPTY_EVENTS: ChatEvent[] = [];
+const createMenuIcon =
+  (path: string): NonNullable<MessageMenuItem["icon"]> =>
+  ({ color, size }) => (
+    <Svg
+      fill="none"
+      height={size}
+      stroke={color}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+      width={size}
+    >
+      <Path d={path} />
+    </Svg>
+  );
+const copyIcon = createMenuIcon("M9 9h12v12H9z M5 15H3V3h12v2");
+const replyIcon = createMenuIcon("M9 17l-5-5 5-5 M4 12h10a6 6 0 0 1 6 6");
+const CHAT_ICONS: ComponentProps<typeof Chat>["icons"] = {
+  send: ({ color, size }) => (
+    <Svg
+      fill="none"
+      height={size}
+      stroke={color}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2.5}
+      viewBox="0 0 24 24"
+      width={size}
+    >
+      <Path d="M12 19V5M5 12l7-7 7 7" />
+    </Svg>
+  ),
+};
 const showError = (title: string, error: unknown) => {
   Alert.alert(
     title,
@@ -116,6 +152,7 @@ export const ChatView = ({
   topContent,
 }: ChatViewProps) => {
   const router = useRouter();
+  const { toast } = useToast();
   const { theme: colorScheme } = useUniwind();
   const [
     accent,
@@ -182,12 +219,35 @@ export const ChatView = ({
     presenceMembers,
     body.trim().length > 0
   );
-  const toggleReaction = useMutation(convexApi.chat.toggleReaction);
+  const toggleReaction = useMutation(
+    convexApi.chat.toggleReaction
+  ).withOptimisticUpdate((store, args) => {
+    optimisticallyToggleReaction(store, args, currentUserId);
+  });
   const displayMessages = useMemo(
     () => buildChatMessages(messages, events, currentUserId, readReceiptMode),
     [messages, events, currentUserId, readReceiptMode]
   );
   const messageListRef = useRef<FlashListRef<DisplayMessage> | null>(null);
+  const pendingSendScroll = useRef<{ previousId?: string } | null>(null);
+  const latestOwnMessageId = displayMessages.find(
+    (message) => !message.system && message.user._id === currentUserId
+  )?._id;
+  useEffect(() => {
+    const request = pendingSendScroll.current;
+    if (!request || latestOwnMessageId === request.previousId) {
+      return;
+    }
+    // Wait for the newly inserted (including optimistic) message to render.
+    const frame = requestAnimationFrame(() => {
+      if (pendingSendScroll.current !== request) {
+        return;
+      }
+      messageListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      pendingSendScroll.current = null;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [latestOwnMessageId]);
   const [replyTarget, setReplyTarget] = useState<string | number | null>(null);
   const jumpToReply = useCallback((message: ReplyMessage) => {
     Keyboard.dismiss();
@@ -329,18 +389,31 @@ export const ChatView = ({
   const messageActions = useCallback(
     (message: DisplayMessage): MessageMenuItem[] => [
       ...(message.messageId
-        ? [{ label: "返信", onPress: () => selectReply(message) }]
+        ? [
+            {
+              icon: replyIcon,
+              label: "返信",
+              onPress: () => selectReply(message),
+            },
+          ]
         : []),
       {
+        icon: copyIcon,
         label: "コピー",
-        onPress: () => {
-          setStringAsync(message.text).catch((error: unknown) =>
-            showError("コピーできません", error)
-          );
+        onPress: async () => {
+          try {
+            const copied = await setStringAsync(message.text);
+            if (!copied) {
+              throw new Error("もう一度お試しください");
+            }
+            toast.show({ label: "コピーしました", variant: "success" });
+          } catch (error) {
+            showError("コピーできません", error);
+          }
         },
       },
     ],
-    [selectReply]
+    [selectReply, toast]
   );
   const sendMessage = useCallback(
     async ([message]: DisplayMessage[]) => {
@@ -351,6 +424,8 @@ export const ChatView = ({
         (item) => item._id === message.replyMessage?._id
       )?._id;
       sendingRef.current = true;
+      pendingSendScroll.current = { previousId: latestOwnMessageId };
+      setReplyTarget(null);
       setIsSending(true);
       setBody("");
       setReplyMessage(null);
@@ -358,6 +433,7 @@ export const ChatView = ({
         await onSend(message.text.trim(), replyToMessageId);
         setBody("");
       } catch (error) {
+        pendingSendScroll.current = null;
         setBody(message.text);
         setReplyMessage(message.replyMessage ?? null);
         showError("送信できませんでした", error);
@@ -366,7 +442,7 @@ export const ChatView = ({
         setIsSending(false);
       }
     },
-    [messages, onSend]
+    [messages, onSend, latestOwnMessageId]
   );
   const textInputProps = useMemo(
     () => ({
@@ -395,6 +471,12 @@ export const ChatView = ({
   );
   const listProps = useMemo(
     () => ({
+      // Inverted lists keep newest messages at offset 0. Override the library's
+      // bottom autoscroll, which otherwise moves toward the oldest messages.
+      maintainVisibleContentPosition: {
+        minIndexForVisible: 0,
+        autoscrollToTopThreshold: 80,
+      },
       // Pass the empty view directly to the list so it handles inversion.
       ListEmptyComponent: isLoadingInitial ? undefined : (
         <View className="items-center px-6 py-12">
@@ -447,6 +529,7 @@ export const ChatView = ({
           darkTheme={theme}
           enableGestureHandlerRootView={false}
           enableKeyboardProvider={false}
+          icons={CHAT_ICONS}
           isCustomViewBottom
           isFlashListEnabled
           isInverted

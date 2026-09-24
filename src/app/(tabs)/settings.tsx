@@ -1,7 +1,4 @@
-import { useMutation } from "convex/react";
 import { getDate, isSameMonth, startOfMonth } from "date-fns";
-import { useRouter } from "expo-router";
-import { deleteItemAsync } from "expo-secure-store";
 import { SymbolView } from "expo-symbols";
 import {
   ListGroup,
@@ -12,7 +9,7 @@ import {
   Typography,
   useToast,
 } from "heroui-native";
-import { useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AccountDeletionSetting } from "@/components/account-deletion-setting";
@@ -31,7 +28,6 @@ import {
 import { cn } from "@/lib/utils";
 import { useCurrentUserId, useOwnWorkData } from "@/lib/work-data";
 import { deleteWorkData } from "@/lib/work-data-actions";
-import { api as convexApi } from "../../../convex/_generated/api";
 
 type WeekStartOption = {
   id: WeekStartsOn;
@@ -60,7 +56,6 @@ const HIGHLIGHT_OPTIONS: HighlightOption[] = [
 ];
 
 const ORDERED_HIGHLIGHT_TARGETS = HIGHLIGHT_OPTIONS.map((option) => option.id);
-const SELECTED_GROUP_STORAGE_KEY = "pochical-selected-group-id";
 // Preview keys identify fixed grid positions so changing dates reuses the cells.
 const PREVIEW_WEEK_SLOTS = [0, 1, 2, 3, 4, 5] as const;
 const PREVIEW_DAY_SLOTS = [0, 1, 2, 3, 4, 5, 6] as const;
@@ -77,13 +72,7 @@ const getOrderedHighlightTargets = (
 
 export default function Settings() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const { toast } = useToast();
-  const leaveAllGroupsMutation = useMutation(
-    convexApi.groups.leaveAllForCurrentUser
-  );
-  const isResettingAppDataRef = useRef(false);
-  const [isResettingAppData, setIsResettingAppData] = useState(false);
   const { settings, setCalendarHighlightTargets, setWeekStartsOn } =
     useAppSettings();
   const currentUserId = useCurrentUserId();
@@ -94,7 +83,6 @@ export default function Settings() {
   const selectedHighlightKeys = new Set<string>(
     settings.calendarHighlightTargets
   );
-  const isDangerActionDisabled = !currentUserId || isResettingAppData;
 
   const confirmDeleteWorkData = () => {
     if (!currentUserId) {
@@ -133,58 +121,6 @@ export default function Settings() {
           text: "リセット",
         },
       ]
-    );
-  };
-
-  const confirmResetAppData = () => {
-    if (!(currentUserId && !isResettingAppDataRef.current)) {
-      return;
-    }
-
-    Alert.alert(
-      "アプリのデータをリセットしますか？",
-      "カレンダーをリセットし、すべてのグループから脱退します。自分だけのグループは削除されます。この操作は取り消せません。",
-      [
-        { style: "cancel", text: "キャンセル" },
-        {
-          onPress: async () => {
-            isResettingAppDataRef.current = true;
-            setIsResettingAppData(true);
-
-            try {
-              await deleteWorkData({
-                members,
-                patterns,
-                shifts,
-              });
-              await leaveAllGroupsMutation({});
-              await deleteItemAsync(SELECTED_GROUP_STORAGE_KEY);
-              router.replace("/settings");
-              toast.show({
-                description:
-                  "カレンダーをリセットし、すべてのグループから脱退しました。",
-                label: "アプリのデータをリセットしました",
-                variant: "success",
-              });
-            } catch (error) {
-              Alert.alert(
-                "リセットできませんでした",
-                error instanceof Error
-                  ? error.message
-                  : "時間をおいて再試行してください"
-              );
-            } finally {
-              isResettingAppDataRef.current = false;
-              setIsResettingAppData(false);
-            }
-          },
-          style: "destructive",
-          text: "リセット",
-        },
-      ],
-      {
-        cancelable: false,
-      }
     );
   };
 
@@ -304,27 +240,12 @@ export default function Settings() {
           <ListGroup>
             <DestructiveSettingRow
               description="すべてのシフト、シフトパターン、勤務メンバー、メモを削除します。グループは残ります"
-              isDisabled={isDangerActionDisabled}
+              isDisabled={!currentUserId}
               label="カレンダーの全データを削除"
               onPress={confirmDeleteWorkData}
             />
             <Separator className="mx-4" />
             <AccountDeletionSetting />
-            {process.env.NODE_ENV === "development" ? (
-              <>
-                <Separator className="mx-4" />
-                <DestructiveSettingRow
-                  description="カレンダーをリセットし、すべてのグループから脱退します。自分だけのグループは削除されます"
-                  isDisabled={isDangerActionDisabled}
-                  label={
-                    isResettingAppData
-                      ? "リセットしています"
-                      : "開発用：アプリのデータをリセット"
-                  }
-                  onPress={confirmResetAppData}
-                />
-              </>
-            ) : null}
           </ListGroup>
         </View>
       </ScrollView>

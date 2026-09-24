@@ -1,0 +1,207 @@
+diff --git a/lib/Bubble/index.js b/lib/Bubble/index.js
+--- a/lib/Bubble/index.js
++++ b/lib/Bubble/index.js
+@@ -23,9 +23,9 @@
+ import { createBubbleStyles } from './styles';
+ export * from './types';
+ const SCALE_PRESSED = 0.85;
+-const SCALE_DURATION_IN = 400;
+-const SCALE_DURATION_OUT = 200;
+-const SCALE_EASING = Easing.inOut(Easing.quad);
++const SCALE_DURATION_IN = 100;
++const SCALE_DURATION_OUT = 120;
++const SCALE_EASING = Easing.out(Easing.cubic);
+ /**
+  * The message row as it behaves when a long-press can open something - the reactions picker or the
+  * context menu. It owns the press-scale shared value, the animated style over it and the gesture
+@@ -61,6 +61,11 @@
+         runOnJS(measureBubble)();
+     })
+         .onStart(() => {
++        messageScale.value = withTiming(1, {
++            duration: SCALE_DURATION_OUT,
++            easing: SCALE_EASING,
++            reduceMotion: ReduceMotion.System,
++        });
+         runOnJS(onLongPressStart)();
+     })
+         .onFinalize(() => {
+@@ -84,6 +89,7 @@
+       <Animated.View style={bubbleScaleStyle}>
+         <View style={wrapperStyleList} ref={bubbleContainerRef}>
+           {children}
++
+         </View>
+       </Animated.View>
+     </View>);
+@@ -150,7 +156,8 @@
+     ]);
+     const openPicker = useCallback(() => {
+         setIsPickerVisible(true);
+-    }, []);
++        onLongPress();
++    }, [onLongPress]);
+     const measureBubble = useCallback(() => {
+         bubbleContainerRef.current?.measure((_x, _y, width, height, pageX, pageY) => {
+             setPickerAnchor({ pageX, pageY, bubbleWidth: width, bubbleHeight: height });
+@@ -486,8 +493,8 @@
+                 onSelect: (emoji) => reactions?.onReactionPress?.(currentMessage, emoji),
+             }
+             : undefined;
+-        return (<ContextMenu visible={isPickerVisible} items={menuItems} onDismiss={() => setIsPickerVisible(false)} position={position} {...pickerAnchor} reactions={reactionsRow}/>);
+-    }, [reactions, menuItems, isPickerVisible, position, pickerAnchor, currentMessage]);
++        return (<ContextMenu visible={isPickerVisible} items={menuItems} onDismiss={() => setIsPickerVisible(false)} position={position} {...pickerAnchor} reactions={reactionsRow} selectedBubble={isPickerVisible ? renderBubbleBody() : null} selectedBubbleStyle={wrapperStyleList}/>);
++    }, [reactions, menuItems, isPickerVisible, position, pickerAnchor, currentMessage, renderBubbleBody, wrapperStyleList]);
+     // Overlay path: a long-press opens either the Telegram-style context menu
+     // (when messageActions are provided, optionally with a reactions row) or the
+     // reactions quick-picker. The Animated.View carries only the scale transform.
+diff --git a/lib/components/ContextMenu.js b/lib/components/ContextMenu.js
+--- a/lib/components/ContextMenu.js
++++ b/lib/components/ContextMenu.js
+@@ -1,5 +1,5 @@
+-import React, { useCallback } from 'react';
+-import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
++import React, { useCallback, useEffect, useRef } from 'react';
++import { Animated, Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+ import { useThemedStyles } from '../hooks/useTheme';
+ const MENU_WIDTH = 240;
+ const ROW_HEIGHT = 48;
+@@ -11,8 +11,31 @@
+  * anchored to the bubble, with an optional reactions pill on top. Dependency-free
+  * (Modal + Views), dark-mode aware.
+  */
+-export const ContextMenu = ({ visible, items, onDismiss, position = 'left', pageX = 0, pageY = 0, bubbleWidth = 0, bubbleHeight = 0, reactions, }) => {
++export const ContextMenu = ({ visible, items, onDismiss, position = 'left', pageX = 0, pageY = 0, bubbleWidth = 0, bubbleHeight = 0, reactions, selectedBubble, selectedBubbleStyle, }) => {
+     const styles = useThemedStyles(createStyles);
++    const opacity = useRef(new Animated.Value(0)).current;
++    const closing = useRef(false);
++    useEffect(() => {
++        if (!visible)
++            return;
++        closing.current = false;
++        opacity.setValue(0);
++        const animation = Animated.timing(opacity, {
++            toValue: 1, duration: 150, useNativeDriver: true,
++        });
++        animation.start();
++        return () => opacity.stopAnimation();
++    }, [visible, opacity]);
++    const closeMenu = useCallback((action) => {
++        if (closing.current)
++            return;
++        closing.current = true;
++        opacity.stopAnimation();
++        opacity.setValue(0);
++        onDismiss();
++        action?.();
++    }, [opacity, onDismiss]);
++    const dismissMenu = useCallback(() => closeMenu(), [closeMenu]);
+     const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+     const menuHeight = items.length * ROW_HEIGHT + (reactions ? REACTION_ROW_HEIGHT + VERTICAL_OFFSET : 0);
+     const showAbove = pageY >= menuHeight + VERTICAL_OFFSET && pageY + bubbleHeight + menuHeight > screenHeight;
+@@ -22,19 +45,19 @@
+     const left = position === 'right'
+         ? Math.max(EDGE, Math.min(pageX + bubbleWidth - MENU_WIDTH, screenWidth - MENU_WIDTH - EDGE))
+         : Math.max(EDGE, Math.min(pageX, screenWidth - MENU_WIDTH - EDGE));
+-    const handlePress = useCallback((onPress) => {
+-        onPress();
+-        onDismiss();
+-    }, [onDismiss]);
++    const handlePress = useCallback((onPress) => closeMenu(onPress), [closeMenu]);
+     const handleReaction = useCallback((emoji) => {
+-        reactions?.onSelect(emoji);
+-        onDismiss();
+-    }, [reactions, onDismiss]);
++        closeMenu(() => reactions?.onSelect(emoji));
++    }, [reactions, closeMenu]);
+     if (!visible)
+         return null;
+-    return (<Modal transparent visible={visible} animationType='fade' onRequestClose={onDismiss} statusBarTranslucent>
+-      <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss}/>
++    return (<Modal transparent visible={visible} animationType='none' onRequestClose={dismissMenu} statusBarTranslucent>
++      <Animated.View style={{ flex: 1, opacity }}>
++      <Pressable style={[StyleSheet.absoluteFill, styles.backdrop]} onPress={dismissMenu}/>
+ 
++      {selectedBubble && (<View pointerEvents='none' accessibilityElementsHidden importantForAccessibility='no-hide-descendants' style={[selectedBubbleStyle, styles.selectedBubble, { top: pageY, left: pageX, width: bubbleWidth }]}>
++        {selectedBubble}
++      </View>)}
+       <View style={[styles.anchor, { top, left, width: MENU_WIDTH }]} pointerEvents='box-none'>
+         {reactions && reactions.emojis.length > 0 && (<View style={styles.reactionPill}>
+             {reactions.emojis.map(emoji => (<Pressable key={emoji} onPress={() => handleReaction(emoji)} style={({ pressed }) => [styles.reactionButton, pressed && styles.pressed]}>
+@@ -43,6 +66,7 @@
+           </View>)}
+ 
+         <View style={styles.menu}>
++          <View style={styles.menuContent}>
+           {items.map((item, index) => (<Pressable key={`${item.label}-${index}`} onPress={() => handlePress(item.onPress)} style={({ pressed }) => [
+                 styles.row,
+                 index > 0 && styles.rowDivider,
+@@ -56,11 +80,26 @@
+                 size: 20,
+             })}
+             </Pressable>))}
++          </View>
+         </View>
+       </View>
++      </Animated.View>
+     </Modal>);
+ };
+ const createStyles = (theme) => StyleSheet.create({
++    backdrop: {
++        backgroundColor: 'rgba(0, 0, 0, 0.15)',
++    },
++    selectedBubble: {
++        position: 'absolute',
++        maxWidth: '100%',
++        shadowColor: '#000',
++        shadowOffset: { width: 0, height: 4 },
++        shadowOpacity: 0.18,
++        shadowRadius: 12,
++        elevation: 8,
++        overflow: 'visible',
++    },
+     anchor: {
+         position: 'absolute',
+     },
+@@ -90,12 +129,15 @@
+     menu: {
+         backgroundColor: theme.colors.surface,
+         borderRadius: 14,
+-        overflow: 'hidden',
+         shadowColor: '#000',
+         shadowOffset: { width: 0, height: 4 },
+         shadowOpacity: 0.15,
+         shadowRadius: 12,
+         elevation: 8,
++    },
++    menuContent: {
++        borderRadius: 14,
++        overflow: 'hidden',
+     },
+     row: {
+         height: ROW_HEIGHT,
+diff --git a/lib/components/ContextMenu.d.ts b/lib/components/ContextMenu.d.ts
+--- a/lib/components/ContextMenu.d.ts
++++ b/lib/components/ContextMenu.d.ts
+@@ -1,10 +1,13 @@
+ import React from 'react';
++import type { StyleProp, ViewStyle } from 'react-native';
+ import { MessageMenuItem } from '../Models';
+ export interface ContextMenuReactions {
+     emojis: string[];
+     onSelect: (emoji: string) => void;
+ }
+ export interface ContextMenuProps {
++    selectedBubble?: React.ReactNode;
++    selectedBubbleStyle?: StyleProp<ViewStyle>;
+     visible: boolean;
+     items: MessageMenuItem[];
+     onDismiss: () => void;
+@@ -21,5 +24,5 @@
+  * anchored to the bubble, with an optional reactions pill on top. Dependency-free
+  * (Modal + Views), dark-mode aware.
+  */
+-export declare const ContextMenu: ({ visible, items, onDismiss, position, pageX, pageY, bubbleWidth, bubbleHeight, reactions, }: ContextMenuProps) => React.JSX.Element | null;
++export declare const ContextMenu: ({ visible, items, onDismiss, position, pageX, pageY, bubbleWidth, bubbleHeight, reactions, selectedBubble, selectedBubbleStyle, }: ContextMenuProps) => React.JSX.Element | null;
+ //# sourceMappingURL=ContextMenu.d.ts.map
+\ No newline at end of file

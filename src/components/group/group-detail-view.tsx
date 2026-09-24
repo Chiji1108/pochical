@@ -300,7 +300,9 @@ export const GroupDetailView = ({
           </ListGroup>
         </View>
         <View style={styles.section}>
-          <Typography style={styles.sectionTitle}>個人チャット</Typography>
+          <Typography className="px-1 font-semibold text-sm" color="muted">
+            個人チャット
+          </Typography>
           {directMembers.length > 0 ? (
             <ListGroup>
               {directMembers.map((member, index) => (
@@ -618,10 +620,6 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
   },
   unreadBadge: {
     alignItems: "center",

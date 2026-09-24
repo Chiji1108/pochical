@@ -12,10 +12,7 @@ import { Typography, useThemeColor } from "heroui-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWindowDimensions, View } from "react-native";
 import useUnmount from "react-use/lib/useUnmount";
-import {
-  GroupContentSkeleton,
-  GroupLoadingScreen,
-} from "@/components/group/group-skeleton";
+import { GroupLoadingScreen } from "@/components/group/group-skeleton";
 import {
   SHARED_SHIFT_DATE_COLUMN_WIDTH,
   SHARED_SHIFT_MEMBER_COLUMN_WIDTH,
@@ -23,6 +20,7 @@ import {
   type SharedShiftScheduleDay,
   SharedShiftTable,
 } from "@/components/group/shared-shift-table";
+import { ShiftLoadingIndicator } from "@/components/group/shift-loading";
 import { AppHeader } from "@/components/navigation/app-header";
 import { useCachedQuery } from "@/lib/cached-query";
 import { type Pattern, type Shift, useCurrentUserId } from "@/lib/work-data";
@@ -342,7 +340,7 @@ export default function ShareGroupShifts() {
               />
             ))}
             {members.some((member) => !memberScheduleData[member.userId]) ? (
-              <GroupContentSkeleton layout="shifts" />
+              <ShiftLoadingIndicator />
             ) : (
               <SharedShiftTable
                 colors={{
