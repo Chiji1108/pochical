@@ -1096,24 +1096,6 @@ body:has(.dc-breakdown[open]) {
 .design-page .dc-start-import:hover {
   background: #e6eee2;
 }
-.dc-start-empty > p {
-  margin: 0 0 10px;
-  font-size: 12px;
-  color: #72796e;
-}
-.design-page .dc-start-manual {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 14px;
-  margin-top: 4px;
-  font-size: 12px;
-  color: #486444;
-  background: transparent;
-  border: 0;
-  border-radius: 15px;
-}
 .dc-import-description {
   margin: 0 0 18px;
   font-size: 13px;
@@ -1137,4 +1119,169 @@ body:has(.dc-breakdown[open]) {
   background: #f0f4ed;
   border: 0;
   border-radius: 18px;
+}
+
+/* Heading: navigation next to the month, the screen's main action on the right. */
+.dc-heading-title {
+  flex-shrink: 0;
+}
+/* Reserve room for a two-digit month so the arrows beside it stay put. */
+.dc-heading-title strong {
+  display: inline-block;
+  min-width: calc(2ch + 20px);
+  font-variant-numeric: tabular-nums;
+}
+.dc-heading-nav {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+  align-items: center;
+  align-self: flex-end;
+  margin: 0 0 2px 6px;
+}
+.dc-heading-nav .dc-month-actions button {
+  width: 34px;
+  height: 40px;
+}
+.design-page .dc-this-month {
+  min-height: 30px;
+  padding: 0 11px;
+  margin-left: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #486444;
+  background: transparent;
+  border: 1px solid #dfe3da;
+  border-radius: 15px;
+}
+.design-page .dc-heading-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: #72796e;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+}
+.dc-calendar-scroll {
+  touch-action: pan-y;
+}
+.design-page .dc-start-import {
+  position: relative;
+}
+.dc-calendar-scroll {
+  position: relative;
+}
+.dc-empty-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  width: min(270px, 86%);
+  padding: 22px 18px 12px;
+  background: #fff;
+  border: 1px solid #eceee8;
+  border-radius: 22px;
+  box-shadow: 0 12px 32px #30332f14;
+  transform: translate(-50%, -50%);
+}
+.dc-empty-card > p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #30332f;
+}
+.dc-empty-card > .dc-empty-hint {
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 400;
+  color: #72796e;
+}
+.design-page .dc-empty-import {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  font-size: 13px;
+  color: #fff;
+  background: #486444;
+  border: 0;
+  border-radius: 14px;
+}
+.dc-empty-card > .dc-empty-alt {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 400;
+  color: #8a9086;
+}
+.dc-import-accounts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.design-page .dc-import-accounts button {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: #30332f;
+  border: 0;
+  border-radius: 14px;
+}
+.design-page .dc-import-accounts .dc-import-secondary {
+  font-weight: 400;
+  color: #486444;
+  background: #f0f4ed;
+}
+.dc-import-link {
+  padding: 16px;
+  background: #f6f7f3;
+  border-radius: 18px;
+}
+.dc-import-link > p {
+  margin: 0 0 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #565e52;
+}
+.dc-import-link strong {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 14px;
+  color: #30332f;
+}
+.design-page .dc-import-later {
+  display: block;
+  min-height: 44px;
+  padding: 0 16px;
+  margin: 8px auto 0;
+  font-size: 13px;
+  color: #72796e;
+  background: transparent;
+  border: 0;
+}
+.design-page .dc-import-primary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 50px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: #486444;
+  border: 0;
+  border-radius: 14px;
 }

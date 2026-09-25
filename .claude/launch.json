@@ -3,9 +3,13 @@
   "configurations": [
     {
       "name": "web",
-      "runtimeExecutable": "bun",
-      "runtimeArgs": ["run", "--cwd", "apps/web", "dev"],
-      "port": 3000
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd apps/web && exec bun x vite dev --port \"$PORT\" --strictPort"
+      ],
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }

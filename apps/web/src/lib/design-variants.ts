@@ -8,6 +8,21 @@ export const designVariantOptions = {
       { value: "sheet", label: "シート" },
     ],
   },
+  headerLayout: {
+    label: "見出しの並び",
+    choices: [
+      { value: "title", label: "月の横に ‹ ›" },
+      { value: "swipe", label: "‹ › なし（スワイプ）" },
+      { value: "current", label: "右にまとめる" },
+    ],
+  },
+  importAccess: {
+    label: "写真の取り込み",
+    choices: [
+      { value: "normal", label: "通常" },
+      { value: "limit", label: "上限に到達" },
+    ],
+  },
   startLabel: {
     label: "入力ボタンの名前",
     choices: [

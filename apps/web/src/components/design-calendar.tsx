@@ -20,8 +20,11 @@ import {
 } from "lucide-react";
 import {
   type Dispatch,
+  type MouseEvent,
+  type PointerEvent,
   type ReactNode,
   type Ref,
+  type RefObject,
   type SetStateAction,
   useRef,
   useState,
@@ -61,6 +64,7 @@ const patternSets: Record<4 | 5 | 6 | 8, Shift[]> = {
 };
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
 const designToday = new Date(2026, 8, 24);
+const swipeDistance = 50;
 const leadingZeroPattern = /^0/;
 const csvSpecialPattern = /[",\r\n]/;
 const sample: Shift[] = [
@@ -138,12 +142,13 @@ function sampleShift(patternCount: 4 | 5 | 6 | 8, index: number): Shift {
 
 export function initialDesignSchedule(
   patternCount: 4 | 5 | 6 | 8 = 4,
-  month = 8
+  month = 8,
+  year = 2026
 ): Schedule {
-  const count = new Date(2026, month + 1, 0).getDate();
+  const count = new Date(year, month + 1, 0).getDate();
   return Object.fromEntries(
     Array.from({ length: count }, (_, index) => {
-      const key = dateKey(new Date(2026, month, index + 1));
+      const key = dateKey(new Date(year, month, index + 1));
       return [
         key,
         { shift: sampleShift(patternCount, index), ...sampleDetails[key] },
@@ -346,12 +351,55 @@ export function DesignCalendar({
   const weekDetail =
     !editing && detailDate !== undefined && variants.dayDetail === "week";
   const gridDates = weekDetail ? weekDates(detailDate) : dates;
+  let headingMode: "view" | "edit" | "week" = "view";
+  if (editing) {
+    headingMode = "edit";
+  } else if (weekDetail) {
+    headingMode = "week";
+  }
   function openDetail(date: Date) {
     setDetailDate(date);
     setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
     const dialog = detailSheetRef.current;
     if (variants.dayDetail === "sheet" && dialog && !dialog.open) {
       showOverPhone(dialog, phoneRef.current);
+    }
+  }
+  function goToMonth(target: Date) {
+    setMonth(target);
+    if (editing) {
+      setSelectedDay(1);
+      setAnnouncement(
+        `${target.getFullYear()}年${target.getMonth() + 1}月1日を選択中`
+      );
+    }
+  }
+  // Move by what is on screen: a week in the week detail, otherwise a month.
+  function step(direction: 1 | -1) {
+    if (weekDetail) {
+      openDetail(addDays(detailDate, direction * 7));
+      return;
+    }
+    goToMonth(new Date(month.getFullYear(), month.getMonth() + direction, 1));
+  }
+  const swipeHandlers = useSwipe((direction) => step(direction));
+  function startInput() {
+    setSelectedDay(1);
+    setEditing(true);
+  }
+  // Stands in for the photo import: fills the empty days of the month shown.
+  function importSampleMonth() {
+    const imported = initialDesignSchedule(
+      patternCount,
+      month.getMonth(),
+      month.getFullYear()
+    );
+    onChange((previous) => ({ ...imported, ...previous }));
+    return Object.keys(imported).filter((key) => !schedule[key]).length;
+  }
+  function openImport() {
+    if (importSheetRef.current) {
+      showOverPhone(importSheetRef.current, phoneRef.current);
     }
   }
   function closeDetail() {
@@ -387,51 +435,24 @@ export function DesignCalendar({
       </div>
       <div className="dc-content">
         <div className="dc-heading">
-          <h3>
+          <h3 className="dc-heading-title">
             <span className="dc-year">{month.getFullYear()}</span>
             <strong>
               {month.getMonth() + 1}
               <span>月</span>
             </strong>
           </h3>
-          {editing || weekDetail ? (
-            <div className="dc-heading-actions">
-              {weekDetail && (
-                <div className="dc-month-actions">
-                  <button
-                    aria-label="前の週"
-                    onClick={() => openDetail(addDays(detailDate, -7))}
-                    type="button"
-                  >
-                    <ChevronLeft aria-hidden="true" size={21} />
-                  </button>
-                  <button
-                    aria-label="次の週"
-                    onClick={() => openDetail(addDays(detailDate, 7))}
-                    type="button"
-                  >
-                    <ChevronRight aria-hidden="true" size={21} />
-                  </button>
-                </div>
-              )}
-              <button
-                className="dc-done"
-                onClick={() => (editing ? setEditing(false) : closeDetail())}
-                type="button"
-              >
-                <Check aria-hidden="true" size={18} />
-                完了
-              </button>
-            </div>
-          ) : (
-            <MonthActions
-              month={month}
-              onDownload={() => downloadMonth(month, schedule)}
-              onMonthChange={setMonth}
-            />
-          )}
+          <HeadingActions
+            layout={variants.headerLayout}
+            mode={headingMode}
+            month={month}
+            onDone={() => (editing ? setEditing(false) : closeDetail())}
+            onDownload={() => downloadMonth(month, schedule)}
+            onMonthChange={goToMonth}
+            onStep={step}
+          />
         </div>
-        <div className="dc-calendar-scroll">
+        <div className="dc-calendar-scroll" {...swipeHandlers}>
           <div aria-hidden="true" className="dc-weekdays">
             {weekdays.map((day) => (
               <span key={day}>{day}</span>
@@ -461,6 +482,13 @@ export function DesignCalendar({
               />
             ))}
           </section>
+          {emptyMonth && headingMode === "view" && (
+            <EmptyMonthCard
+              label={startLabels[variants.startLabel]}
+              month={month}
+              onImport={openImport}
+            />
+          )}
         </div>
         {weekDetail && (
           <section
@@ -510,18 +538,9 @@ export function DesignCalendar({
               />
             ) : (
               <StartArea
-                emptyMonth={emptyMonth}
                 label={startLabels[variants.startLabel]}
-                month={month}
-                onImport={() => {
-                  if (importSheetRef.current) {
-                    showOverPhone(importSheetRef.current, phoneRef.current);
-                  }
-                }}
-                onStart={() => {
-                  setSelectedDay(1);
-                  setEditing(true);
-                }}
+                onImport={openImport}
+                onStart={startInput}
               />
             )}
           </div>
@@ -609,7 +628,13 @@ export function DesignCalendar({
         patternKeys={patternKeys}
         ref={detailSheetRef}
       />
-      <ImportSheet ref={importSheetRef} />
+      <ImportSheet
+        access={variants.importAccess}
+        month={month}
+        onImport={importSampleMonth}
+        onStartPochi={startInput}
+        ref={importSheetRef}
+      />
       <span aria-live="polite" className="dc-sr-only">
         {announcement}
       </span>
@@ -618,39 +643,164 @@ export function DesignCalendar({
   );
 }
 
-function StartArea({
-  emptyMonth,
-  label,
+function StepButtons({
+  unit,
+  onStep,
+}: {
+  unit: "月" | "週";
+  onStep: (direction: 1 | -1) => void;
+}) {
+  return (
+    <div className="dc-month-actions">
+      <button
+        aria-label={`前の${unit}`}
+        onClick={() => onStep(-1)}
+        type="button"
+      >
+        <ChevronLeft aria-hidden="true" size={21} />
+      </button>
+      <button
+        aria-label={`次の${unit}`}
+        onClick={() => onStep(1)}
+        type="button"
+      >
+        <ChevronRight aria-hidden="true" size={21} />
+      </button>
+    </div>
+  );
+}
+
+// Swiping the calendar sideways moves it, like the mobile app's pager.
+function useSwipe(onSwipe: (direction: 1 | -1) => void) {
+  const start = useRef<{ x: number; y: number }>(undefined);
+  const swiped = useRef(false);
+  return {
+    onPointerDown: (event: PointerEvent) => {
+      start.current = { x: event.clientX, y: event.clientY };
+      swiped.current = false;
+    },
+    onPointerUp: (event: PointerEvent) => {
+      const origin = start.current;
+      start.current = undefined;
+      if (!origin) {
+        return;
+      }
+      const dx = event.clientX - origin.x;
+      const dy = event.clientY - origin.y;
+      if (Math.abs(dx) > swipeDistance && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        swiped.current = true;
+        onSwipe(dx < 0 ? 1 : -1);
+      }
+    },
+    // Keep the day under the finger from also being tapped.
+    onClickCapture: (event: MouseEvent) => {
+      if (swiped.current) {
+        swiped.current = false;
+        event.stopPropagation();
+      }
+    },
+  };
+}
+
+function HeadingActions({
+  layout,
+  mode,
   month,
+  onStep,
+  onMonthChange,
+  onDone,
+  onDownload,
+}: {
+  layout: DesignVariants["headerLayout"];
+  mode: "view" | "edit" | "week";
+  month: Date;
+  onStep: (direction: 1 | -1) => void;
+  onMonthChange: (month: Date) => void;
+  onDone: () => void;
+  onDownload: () => void;
+}) {
+  const unit = mode === "week" ? "週" : "月";
+  if (layout === "current") {
+    return mode === "view" ? (
+      <MonthActions
+        month={month}
+        onDownload={onDownload}
+        onMonthChange={onMonthChange}
+      />
+    ) : (
+      <ModeActions onDone={onDone} onStep={onStep} unit={unit} />
+    );
+  }
+  const showingThisMonth =
+    month.getFullYear() === designToday.getFullYear() &&
+    month.getMonth() === designToday.getMonth();
+  return (
+    <>
+      <div className="dc-heading-nav">
+        {layout === "title" && <StepButtons onStep={onStep} unit={unit} />}
+        {mode !== "week" && !showingThisMonth && (
+          <button
+            aria-label="今月に戻る"
+            className="dc-this-month"
+            onClick={() =>
+              onMonthChange(
+                new Date(designToday.getFullYear(), designToday.getMonth(), 1)
+              )
+            }
+            type="button"
+          >
+            今月
+          </button>
+        )}
+      </div>
+      {mode === "view" ? (
+        <button
+          aria-label="この月のシフトをCSVで保存"
+          className="dc-heading-icon"
+          onClick={onDownload}
+          type="button"
+        >
+          <Download aria-hidden="true" size={21} />
+        </button>
+      ) : (
+        <button className="dc-done" onClick={onDone} type="button">
+          <Check aria-hidden="true" size={18} />
+          完了
+        </button>
+      )}
+    </>
+  );
+}
+
+function ModeActions({
+  unit,
+  onStep,
+  onDone,
+}: {
+  unit: "月" | "週";
+  onStep: (direction: 1 | -1) => void;
+  onDone: () => void;
+}) {
+  return (
+    <div className="dc-heading-actions">
+      <StepButtons onStep={onStep} unit={unit} />
+      <button className="dc-done" onClick={onDone} type="button">
+        <Check aria-hidden="true" size={18} />
+        完了
+      </button>
+    </div>
+  );
+}
+
+function StartArea({
+  label,
   onStart,
   onImport,
 }: {
-  emptyMonth: boolean;
   label: string;
-  month: Date;
   onStart: () => void;
   onImport: () => void;
 }) {
-  if (emptyMonth) {
-    return (
-      <div className="dc-start-area dc-start-empty">
-        <p>{month.getMonth() + 1}月のシフトはまだありません</p>
-        <button
-          aria-haspopup="dialog"
-          className="dc-start"
-          onClick={onImport}
-          type="button"
-        >
-          <Camera aria-hidden="true" size={18} />
-          勤務表の写真から取り込む
-        </button>
-        <button className="dc-start-manual" onClick={onStart} type="button">
-          <Pencil aria-hidden="true" size={14} />
-          {label}
-        </button>
-      </div>
-    );
-  }
   return (
     <div className="dc-start-area dc-start-row">
       <button className="dc-start" onClick={onStart} type="button">
@@ -670,11 +820,111 @@ function StartArea({
   );
 }
 
-function ImportSheet({ ref }: { ref: Ref<HTMLDialogElement> }) {
-  const close = (event: { currentTarget: HTMLElement }) =>
-    event.currentTarget.closest("dialog")?.close();
+// Shown over the empty calendar so the buttons below never change place.
+function EmptyMonthCard({
+  month,
+  label,
+  onImport,
+}: {
+  month: Date;
+  label: string;
+  onImport: () => void;
+}) {
   return (
-    <dialog aria-label="勤務表を取り込む" className="dc-breakdown" ref={ref}>
+    <div className="dc-empty-card">
+      <p>{month.getMonth() + 1}月のシフトはまだありません</p>
+      <p className="dc-empty-hint">勤務表を撮るだけで、1か月分が入ります</p>
+      <button
+        aria-haspopup="dialog"
+        className="dc-empty-import"
+        onClick={onImport}
+        type="button"
+      >
+        <Camera aria-hidden="true" size={17} />
+        勤務表の写真から取り込む
+      </button>
+      <p className="dc-empty-alt">手で入れるなら、下の「{label}」から</p>
+    </div>
+  );
+}
+
+function ImportPhotoActions({ onPick }: { onPick: () => void }) {
+  return (
+    <div className="dc-import-actions">
+      <button onClick={onPick} type="button">
+        <Camera aria-hidden="true" size={22} />
+        カメラで撮る
+      </button>
+      <button onClick={onPick} type="button">
+        <ImageIcon aria-hidden="true" size={22} />
+        写真を選ぶ
+      </button>
+    </div>
+  );
+}
+
+// Right after an import is the moment people feel their data is worth
+// keeping, so that is where linking an account is suggested.
+function ImportDone({
+  month,
+  days,
+  onClose,
+}: {
+  month: Date;
+  days: number;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <p className="dc-import-description">
+        {month.getMonth() + 1}月のシフトを{days}
+        日分入れました。違うところは、日付をタップして直せます。
+      </p>
+      <div className="dc-import-link">
+        <p>
+          <strong>機種変更しても消えないように</strong>
+          アカウントをつないでおくと、シフトを引き継げます。
+        </p>
+        <div className="dc-import-accounts">
+          <button type="button">Appleで続ける</button>
+          <button type="button">Googleで続ける</button>
+        </div>
+      </div>
+      <button className="dc-import-later" onClick={onClose} type="button">
+        あとで
+      </button>
+    </>
+  );
+}
+
+function ImportSheet({
+  ref,
+  access,
+  month,
+  onImport,
+  onStartPochi,
+}: {
+  ref: RefObject<HTMLDialogElement | null>;
+  access: DesignVariants["importAccess"];
+  month: Date;
+  onImport: () => number;
+  onStartPochi: () => void;
+}) {
+  const [importedDays, setImportedDays] = useState<number>();
+  const close = () => ref.current?.close();
+  let title = "勤務表を取り込む";
+  if (importedDays !== undefined) {
+    title = "取り込みました";
+  } else if (access === "limit") {
+    title = "少し時間をおいてください";
+  }
+  return (
+    <dialog
+      aria-label={title}
+      className="dc-breakdown"
+      onClose={() => setImportedDays(undefined)}
+      ref={ref}
+    >
       <button
         aria-label="取り込みを閉じる"
         className="dc-sheet-scrim"
@@ -685,27 +935,45 @@ function ImportSheet({ ref }: { ref: Ref<HTMLDialogElement> }) {
       <section className="dc-sheet">
         <div aria-hidden="true" className="dc-sheet-handle" />
         <header className="dc-sheet-heading">
-          <h4>勤務表を取り込む</h4>
+          <h4>{title}</h4>
           <button aria-label="閉じる" onClick={close} type="button">
             <X aria-hidden="true" size={20} />
           </button>
         </header>
-        <p className="dc-import-description">
-          配られた勤務表を撮ると、あなたの行を読み取ってシフトを入れます。読み取った結果は、保存する前に確認できます。
-        </p>
-        <div className="dc-import-actions">
-          <button type="button">
-            <Camera aria-hidden="true" size={22} />
-            カメラで撮る
-          </button>
-          <button type="button">
-            <ImageIcon aria-hidden="true" size={22} />
-            写真を選ぶ
-          </button>
-        </div>
-        <p className="dc-sheet-total">
-          デザインの見本です。この先の画面はまだありません。
-        </p>
+        {importedDays !== undefined && (
+          <ImportDone days={importedDays} month={month} onClose={close} />
+        )}
+        {importedDays === undefined && access === "limit" && (
+          <>
+            <p className="dc-import-description">
+              短い時間にたくさん取り込んだため、いったんお休みしています。しばらくしてから、もう一度お試しください。残りは、ポチポチ入力でも入れられます。
+            </p>
+            <div>
+              <button
+                className="dc-import-primary"
+                onClick={() => {
+                  close();
+                  onStartPochi();
+                }}
+                type="button"
+              >
+                <Pencil aria-hidden="true" size={16} />
+                ポチポチ入力で入れる
+              </button>
+            </div>
+          </>
+        )}
+        {importedDays === undefined && access === "normal" && (
+          <>
+            <p className="dc-import-description">
+              配られた勤務表を撮ると、あなたの行を読み取ってシフトを入れます。LINEで届いた画像やスクリーンショットも使えます。読み取った結果は、保存する前に確認できます。
+            </p>
+            <ImportPhotoActions onPick={() => setImportedDays(onImport())} />
+            <p className="dc-sheet-total">
+              デザインの見本です。撮影と確認の代わりに、サンプルのシフトが入ります。
+            </p>
+          </>
+        )}
       </section>
     </dialog>
   );
