@@ -217,7 +217,7 @@ body:has(.design-page) > .site-footer {
   color: #6682a0;
 }
 .dc-grid {
-  grid-template-rows: repeat(6, 64px);
+  grid-template-rows: repeat(var(--weeks, 6), 64px);
   gap: 4px;
 }
 .dc-day {
@@ -1284,4 +1284,361 @@ body:has(.dc-breakdown[open]) {
   background: #486444;
   border: 0;
   border-radius: 14px;
+}
+
+/* Repeating shifts. */
+.dc-repeat-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dc-repeat-sheet > .dc-sheet-heading,
+.dc-repeat-sheet > .dc-import-description {
+  margin-bottom: 0;
+}
+.dc-repeat-label {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 0;
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #30332f;
+}
+.dc-repeat-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: #72796e;
+}
+.dc-repeat-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+.dc-repeat-presets > legend {
+  float: left;
+  width: 100%;
+}
+.design-page .dc-repeat-presets button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 12px;
+  background: #fff;
+  border: 1px solid #e0e3db;
+  border-radius: 18px;
+}
+.dc-repeat-presets button > span {
+  font-size: 10px;
+  color: #8a9086;
+}
+.design-page .dc-repeat-presets button[aria-pressed="true"] {
+  font-weight: 600;
+  color: #486444;
+  background: #eaf0e9;
+  border-color: #a1af8f;
+}
+.dc-repeat-sequence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 58px;
+  padding: 8px;
+  margin: 0 0 8px;
+  list-style: none;
+  background: #f6f7f3;
+  border-radius: 14px;
+}
+.design-page .dc-repeat-sequence button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 58px;
+  font-size: 9px;
+  color: #565e52;
+  background: #fff;
+  border: 1px solid #e0e3db;
+  border-radius: 10px;
+}
+.dc-repeat-sequence button > small {
+  font-size: 8px;
+  color: #a7ada1;
+}
+.dc-repeat-sequence button > span {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  font-size: 18px;
+  line-height: 1.2;
+}
+.dc-repeat-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.design-page .dc-repeat-palette button {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 11px;
+  color: #486444;
+  background: transparent;
+  border: 1px dashed #b9c2b1;
+  border-radius: 16px;
+}
+.dc-repeat-anchor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dc-repeat-anchor > .dc-repeat-label {
+  margin: 0;
+}
+.design-page .dc-repeat-anchor .dc-input-date {
+  margin: 0;
+  font-size: 15px;
+}
+.dc-repeat-preview {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  font-size: 16px;
+  text-align: center;
+}
+.dc-repeat-day {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  align-items: center;
+  padding: 4px 0;
+  background: #f6f7f3;
+  border-radius: 8px;
+}
+.dc-repeat-day-number {
+  font-family: -apple-system, sans-serif;
+  font-size: 9px;
+  color: #72796e;
+}
+.dc-repeat-day-number.dc-sunday {
+  color: #a96561;
+}
+.dc-repeat-day-number.dc-saturday {
+  color: #6682a0;
+}
+.design-page .dc-import-primary:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+/* Onboarding. */
+.ob-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+  padding: 20px 6px 12px;
+  overflow-y: auto;
+}
+.ob-welcome {
+  margin: 24px 0 -8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #698367;
+  letter-spacing: 0.08em;
+}
+.ob-header h3 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.ob-header p {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #72796e;
+}
+.design-page .ob-back {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin: 0 0 8px -10px;
+  color: #72796e;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+}
+.ob-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.design-page .ob-option {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  min-height: 72px;
+  padding: 14px 14px 14px 16px;
+  color: #30332f;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #e0e3db;
+  border-radius: 18px;
+}
+.design-page .ob-option:hover {
+  background: #f6f7f3;
+  border-color: #a1af8f;
+}
+.ob-option-arrow {
+  flex-shrink: 0;
+  color: #a7ada1;
+}
+.ob-option-icon {
+  flex-shrink: 0;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  font-size: 28px;
+}
+.ob-option-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.ob-option-text strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.ob-option-note {
+  font-size: 11px;
+  color: #72796e;
+}
+.ob-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+.ob-chip {
+  padding: 2px 7px;
+  font-size: 10px;
+  color: #565e52;
+  background: #f0f4ed;
+  border-radius: 8px;
+}
+.ob-footnote {
+  margin: auto 0 0;
+  font-size: 11px;
+  color: #8a9086;
+  text-align: center;
+}
+.design-page .ob-primary {
+  width: 100%;
+  min-height: 52px;
+  margin-top: auto;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: #486444;
+  border: 0;
+  border-radius: 15px;
+}
+.design-page .ob-primary:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+.ob-month {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+}
+.design-page .ob-month button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: #72796e;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+}
+.ob-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+.design-page .ob-days button {
+  min-height: 40px;
+  font-size: 14px;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+}
+.design-page .ob-days .dc-sunday {
+  color: #a96561;
+}
+.design-page .ob-days .dc-saturday {
+  color: #6682a0;
+}
+.design-page .ob-days .ob-outside {
+  color: #c5c7c1;
+}
+.design-page .ob-days button[aria-pressed="true"] {
+  font-weight: 600;
+  color: #fff;
+  background: #486444;
+}
+.ob-finished {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.design-page .ob-restart {
+  min-height: 40px;
+  padding: 0 14px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #486444;
+  background: transparent;
+  border: 1px solid #dfe3da;
+  border-radius: 20px;
+}
+.ob-weekday {
+  padding-bottom: 4px;
+  font-size: 11px;
+  color: #8a9086;
+  text-align: center;
+}
+.ob-preview-label {
+  margin: 0 0 -10px;
+  font-size: 11px;
+  color: #72796e;
+}
+/* Any spare height stays under the calendar; the monthly summary, input
+   buttons and tab bar sit together at the bottom. */
+.dc-content > .dc-summary {
+  margin-top: auto;
+}
+.dc-content > .dc-summary ~ .dc-controls {
+  margin-top: 0;
+}
+.dc-no-input .dc-nav {
+  margin-top: auto;
+}
+.dc-no-input .dc-summary + .dc-nav {
+  margin-top: 12px;
 }

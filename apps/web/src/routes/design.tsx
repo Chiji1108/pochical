@@ -5,6 +5,7 @@ import {
   DesignCalendar,
   initialDesignSchedule,
 } from "../components/design-calendar";
+import { DesignOnboarding } from "../components/design-onboarding";
 import designStyles from "../design.css?url";
 import {
   type DesignVariants,
@@ -32,6 +33,7 @@ const screenLinks = [
   { id: "design-view-title", number: "01", title: "カレンダー表示" },
   { id: "design-edit-title", number: "02", title: "シフト入力" },
   { id: "design-six-weeks-title", number: "03", title: "6段の月 × 8パターン" },
+  { id: "design-onboarding-title", number: "04", title: "はじめての設定" },
 ];
 
 function DesignPage() {
@@ -118,6 +120,15 @@ function DesignPage() {
           title="6段の月 × 8パターン"
           variants={variants}
         />
+        <section aria-labelledby="design-onboarding-title">
+          <h2 id="design-onboarding-title">
+            <span>04</span> はじめての設定
+          </h2>
+          <DesignOnboarding variants={variants} />
+          <p className="design-caption">
+            最初の1問で、入れやすい始め方に分かれます。
+          </p>
+        </section>
       </div>
       <p className="design-footnote">
         実際にタップして試せます。01・02は連動、03は個別に操作できます。

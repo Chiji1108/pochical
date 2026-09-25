@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import {
+  type CSSProperties,
   type Dispatch,
   type MouseEvent,
   type PointerEvent,
@@ -32,8 +33,20 @@ import {
 import type { DesignVariants } from "../lib/design-variants";
 
 // Patterns without a time are all-day, so they have no time to change.
-const patterns: Record<
-  "day" | "night" | "after" | "off" | "early" | "late" | "training" | "paid",
+export const patterns: Record<
+  | "day"
+  | "night"
+  | "after"
+  | "off"
+  | "early"
+  | "late"
+  | "training"
+  | "paid"
+  | "duty"
+  | "offDuty"
+  | "evening"
+  | "junya"
+  | "midnight",
   { label: string; emoji: string; time?: readonly [string, string] }
 > = {
   day: { label: "日勤", emoji: "☀️", time: ["09:00", "18:00"] },
@@ -44,8 +57,13 @@ const patterns: Record<
   late: { label: "遅番", emoji: "🌇", time: ["12:00", "21:00"] },
   training: { label: "研修", emoji: "📚", time: ["09:30", "17:30"] },
   paid: { label: "有休", emoji: "🌷" },
+  duty: { label: "当番", emoji: "🚒", time: ["08:30", "08:30"] },
+  offDuty: { label: "非番", emoji: "🛌" },
+  evening: { label: "夕勤", emoji: "🌆", time: ["15:00", "23:00"] },
+  junya: { label: "準夜", emoji: "🌜", time: ["16:30", "01:00"] },
+  midnight: { label: "深夜", emoji: "🌛", time: ["00:00", "08:30"] },
 };
-type Shift = keyof typeof patterns;
+export type Shift = keyof typeof patterns;
 type DayEntry = {
   shift: Shift;
   // Set only when the time differs from the pattern's standard time.
@@ -55,7 +73,7 @@ type DayEntry = {
   members?: string[];
 };
 type MemberOptions = { names: string[]; onAdd: (name: string) => void };
-type Schedule = Record<string, DayEntry | undefined>;
+export type Schedule = Record<string, DayEntry | undefined>;
 const patternSets: Record<4 | 5 | 6 | 8, Shift[]> = {
   4: ["day", "night", "after", "off"],
   5: ["early", "day", "night", "after", "off"],
@@ -65,6 +83,7 @@ const patternSets: Record<4 | 5 | 6 | 8, Shift[]> = {
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
 const designToday = new Date(2026, 8, 24);
 const swipeDistance = 50;
+const dayMilliseconds = 86_400_000;
 const leadingZeroPattern = /^0/;
 const csvSpecialPattern = /[",\r\n]/;
 const sample: Shift[] = [
@@ -100,11 +119,11 @@ const sample: Shift[] = [
   "off",
 ];
 
-function dateKey(date: Date) {
+export function dateKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-function weekendClassName(date: Date) {
+export function weekendClassName(date: Date) {
   if (date.getDay() === 0) {
     return "dc-sunday";
   }
@@ -157,6 +176,37 @@ export function initialDesignSchedule(
   );
 }
 
+// Lays a repeating sequence over [from, to], counting from the anchor day so
+// days before the anchor line up too.
+export function repeatSchedule(
+  sequence: Shift[],
+  anchor: Date,
+  from: Date,
+  to: Date
+): Schedule {
+  const schedule: Schedule = {};
+  const anchorTime = Date.UTC(
+    anchor.getFullYear(),
+    anchor.getMonth(),
+    anchor.getDate()
+  );
+  for (let date = from; date <= to; date = addDays(date, 1)) {
+    const offset = Math.round(
+      (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) -
+        anchorTime) /
+        dayMilliseconds
+    );
+    const index =
+      ((offset % sequence.length) + sequence.length) % sequence.length;
+    schedule[dateKey(date)] = { shift: sequence[index] };
+  }
+  return schedule;
+}
+
+function isDayOff(shift: Shift | undefined) {
+  return shift === "off" || shift === "paid";
+}
+
 function keepDetails(entry: DayEntry | undefined, shift: Shift): DayEntry {
   if (entry?.shift === shift) {
     return entry;
@@ -176,11 +226,11 @@ function weekDates(date: Date) {
   );
 }
 
-function addDays(date: Date, days: number) {
+export function addDays(date: Date, days: number) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 }
 
-function formatDay(date: Date) {
+export function formatDay(date: Date) {
   return `${date.getMonth() + 1}月${date.getDate()}日(${weekdays[date.getDay()]})`;
 }
 
@@ -218,7 +268,7 @@ function csvField(value: string) {
     : value;
 }
 
-function monthDates(month: Date) {
+export function monthDates(month: Date) {
   const start = new Date(month.getFullYear(), month.getMonth(), 1);
   const count = new Date(
     month.getFullYear(),
@@ -265,6 +315,8 @@ function downloadMonth(month: Date, schedule: Schedule) {
 export function DesignCalendar({
   initialEditing,
   patternCount = 4,
+  patternKeys: customPatternKeys,
+  hideInputBar = false,
   initialMonth = 8,
   schedule,
   onChange,
@@ -272,6 +324,9 @@ export function DesignCalendar({
 }: {
   initialEditing: boolean;
   patternCount?: 4 | 5 | 6 | 8;
+  patternKeys?: Shift[];
+  // Repeating shifts fill every month, so the monthly input buttons go away.
+  hideInputBar?: boolean;
   initialMonth?: number;
   schedule: Schedule;
   onChange: Dispatch<SetStateAction<Schedule>>;
@@ -293,13 +348,13 @@ export function DesignCalendar({
   const [editing, setEditing] = useState(initialEditing);
   const [selectedDay, setSelectedDay] = useState(1);
   const [month, setMonth] = useState(() => new Date(2026, initialMonth, 1));
-  const patternKeys = patternSets[patternCount];
+  const patternKeys = customPatternKeys ?? patternSets[patternCount];
   const [announcement, setAnnouncement] = useState("");
   const dates = monthDates(month);
   const daysOff = dates.filter(
     (date) =>
       date.getMonth() === month.getMonth() &&
-      schedule[dateKey(date)]?.shift === "off"
+      isDayOff(schedule[dateKey(date)]?.shift)
   ).length;
   const monthDays = dates.filter(
     (date) => date.getMonth() === month.getMonth()
@@ -421,18 +476,10 @@ export function DesignCalendar({
   }
   return (
     <div
-      className={`dc-phone ${editing ? "dc-editing" : ""} ${weekDetail ? "dc-week-mode" : ""}`}
+      className={`dc-phone ${editing ? "dc-editing" : ""} ${weekDetail ? "dc-week-mode" : ""} ${hideInputBar ? "dc-no-input" : ""}`}
       ref={phoneRef}
     >
-      <div aria-hidden="true" className="dc-status">
-        <span>9:41</span>
-        <span className="dc-island" />
-        <span className="dc-status-icons">
-          <Signal size={17} strokeWidth={2.6} />
-          <Wifi size={18} strokeWidth={2.5} />
-          <BatteryFull size={25} strokeWidth={1.8} />
-        </span>
-      </div>
+      <PhoneStatusBar />
       <div className="dc-content">
         <div className="dc-heading">
           <h3 className="dc-heading-title">
@@ -461,6 +508,7 @@ export function DesignCalendar({
           <section
             aria-label={`${month.getFullYear()}年${month.getMonth() + 1}月のシフト`}
             className={`dc-grid ${weekDetail ? "dc-grid-week" : ""}`}
+            style={{ "--weeks": gridDates.length / 7 } as CSSProperties}
           >
             {gridDates.map((date) => (
               <DayCell
@@ -487,6 +535,7 @@ export function DesignCalendar({
               label={startLabels[variants.startLabel]}
               month={month}
               onImport={openImport}
+              showInputHint={!hideInputBar}
             />
           )}
         </div>
@@ -504,48 +553,40 @@ export function DesignCalendar({
             />
           </section>
         )}
-        {!(editing || weekDetail || emptyMonth) && (
-          <button
-            aria-haspopup="dialog"
-            className="dc-summary"
-            onClick={() => {
+        {headingMode === "view" && !emptyMonth && (
+          <MonthSummary
+            daysOff={daysOff}
+            month={month}
+            onOpen={() => {
               if (breakdownRef.current) {
                 showOverPhone(breakdownRef.current, phoneRef.current);
               }
             }}
-            type="button"
-          >
-            <span>今月のお休み</span>
-            <strong>
-              {daysOff}
-              <span>日</span>
-              <ChevronRight aria-hidden="true" size={17} />
-            </strong>
-          </button>
+          />
         )}
-        {!weekDetail && (
+        {headingMode === "edit" && (
           <div className="dc-controls">
-            {editing ? (
-              <ShiftInputControls
-                canSkip={selectedDay < lastDay}
-                datePicker={datePicker}
-                onEnter={enterShift}
-                onSkip={() => moveToNextDay("変更せずに進みました")}
-                patternCount={patternCount}
-                patternKeys={patternKeys}
-                selectedShift={selectedShift}
-                variants={variants}
-              />
-            ) : (
-              <StartArea
-                label={startLabels[variants.startLabel]}
-                onImport={openImport}
-                onStart={startInput}
-              />
-            )}
+            <ShiftInputControls
+              canSkip={selectedDay < lastDay}
+              datePicker={datePicker}
+              onEnter={enterShift}
+              onSkip={() => moveToNextDay("変更せずに進みました")}
+              patternKeys={patternKeys}
+              selectedShift={selectedShift}
+              variants={variants}
+            />
           </div>
         )}
-        {!(editing || weekDetail) && (
+        {headingMode === "view" && !hideInputBar && (
+          <div className="dc-controls">
+            <StartArea
+              label={startLabels[variants.startLabel]}
+              onImport={openImport}
+              onStart={startInput}
+            />
+          </div>
+        )}
+        {headingMode === "view" && (
           <div className="dc-nav">
             <span className="dc-nav-item dc-nav-active">
               <CalendarDays aria-hidden="true" size={23} />
@@ -640,6 +681,49 @@ export function DesignCalendar({
       </span>
       <div aria-hidden="true" className="dc-home-indicator" />
     </div>
+  );
+}
+
+export function PhoneStatusBar() {
+  return (
+    <div aria-hidden="true" className="dc-status">
+      <span>9:41</span>
+      <span className="dc-island" />
+      <span className="dc-status-icons">
+        <Signal size={17} strokeWidth={2.6} />
+        <Wifi size={18} strokeWidth={2.5} />
+        <BatteryFull size={25} strokeWidth={1.8} />
+      </span>
+    </div>
+  );
+}
+
+function MonthSummary({
+  month,
+  daysOff,
+  onOpen,
+}: {
+  month: Date;
+  daysOff: number;
+  onOpen: () => void;
+}) {
+  const thisMonth =
+    month.getFullYear() === designToday.getFullYear() &&
+    month.getMonth() === designToday.getMonth();
+  return (
+    <button
+      aria-haspopup="dialog"
+      className="dc-summary"
+      onClick={onOpen}
+      type="button"
+    >
+      <span>{thisMonth ? "今月" : `${month.getMonth() + 1}月`}のお休み</span>
+      <strong>
+        {daysOff}
+        <span>日</span>
+        <ChevronRight aria-hidden="true" size={17} />
+      </strong>
+    </button>
   );
 }
 
@@ -825,10 +909,12 @@ function EmptyMonthCard({
   month,
   label,
   onImport,
+  showInputHint,
 }: {
   month: Date;
   label: string;
   onImport: () => void;
+  showInputHint: boolean;
 }) {
   return (
     <div className="dc-empty-card">
@@ -843,7 +929,62 @@ function EmptyMonthCard({
         <Camera aria-hidden="true" size={17} />
         勤務表の写真から取り込む
       </button>
-      <p className="dc-empty-alt">手で入れるなら、下の「{label}」から</p>
+      {showInputHint && (
+        <p className="dc-empty-alt">手で入れるなら、下の「{label}」から</p>
+      )}
+    </div>
+  );
+}
+
+export function RepeatSequenceEditor({
+  sequence,
+  patternKeys,
+  onChange,
+}: {
+  sequence: Shift[];
+  patternKeys: Shift[];
+  onChange: (sequence: Shift[]) => void;
+}) {
+  return (
+    <div className="dc-repeat-editor">
+      <p className="dc-repeat-label">
+        並び
+        <span className="dc-repeat-hint">
+          {sequence.length > 0
+            ? `${sequence.length}日ごとに繰り返し`
+            : "下から順番に追加してください"}
+        </span>
+      </p>
+      <ol className="dc-repeat-sequence">
+        {sequence.map((shift, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: the same shift repeats, so its position is its identity.
+          <li key={index}>
+            <button
+              aria-label={`${index + 1}日目、${patterns[shift].label}。タップで外す`}
+              onClick={() =>
+                onChange(sequence.filter((_, position) => position !== index))
+              }
+              type="button"
+            >
+              <small>{index + 1}</small>
+              <span aria-hidden="true">{patterns[shift].emoji}</span>
+              {patterns[shift].label}
+            </button>
+          </li>
+        ))}
+      </ol>
+      <div className="dc-repeat-palette">
+        {patternKeys.map((key) => (
+          <button
+            key={key}
+            onClick={() => onChange([...sequence, key])}
+            type="button"
+          >
+            <Plus aria-hidden="true" size={11} />
+            {patterns[key].emoji} {patterns[key].label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1037,7 +1178,6 @@ function MonthActions({
 
 function ShiftInputControls({
   datePicker,
-  patternCount,
   patternKeys,
   selectedShift,
   canSkip,
@@ -1046,7 +1186,6 @@ function ShiftInputControls({
   onSkip,
 }: {
   datePicker: ReactNode;
-  patternCount: 4 | 5 | 6 | 8;
   patternKeys: Shift[];
   selectedShift: Shift | undefined;
   canSkip: boolean;
@@ -1066,7 +1205,7 @@ function ShiftInputControls({
       )}
       <fieldset
         aria-label="入力するシフト"
-        className={`dc-patterns ${patternCount > 4 ? "dc-patterns-two-rows" : ""} ${patternCount === 8 ? "dc-patterns-eight" : ""}`}
+        className={`dc-patterns ${patternKeys.length > 4 ? "dc-patterns-two-rows" : ""} ${patternKeys.length === 8 ? "dc-patterns-eight" : ""}`}
       >
         {patternKeys.map((key) => (
           <button key={key} onClick={() => onEnter(key)} type="button">
@@ -1440,12 +1579,14 @@ function DayDetail({
 }
 
 function InputDatePicker({
+  title = "入力する日付",
   ariaLabel,
   className,
   date,
   onSelect,
   children,
 }: {
+  title?: string;
   ariaLabel: string;
   className: string;
   date: Date;
@@ -1469,12 +1610,12 @@ function InputDatePicker({
         {children}
       </button>
       <dialog
-        aria-label="入力する日付を選択"
+        aria-label={`${title}を選択`}
         className="dc-picker-dialog"
         ref={dialogRef}
       >
         <header className="dc-picker-heading">
-          <h4>入力する日付</h4>
+          <h4>{title}</h4>
           <div className="dc-picker-heading-actions">
             <button
               aria-label="今日を選ぶ"
