@@ -32,10 +32,14 @@ import {
 } from "react";
 import type { DesignVariants } from "../lib/design-variants";
 import { DesignSettings } from "./design-settings";
+import { useThemeStyle } from "./design-theme";
 import {
   CellNamesContext,
+  lookOf,
   ShiftMark,
   ShiftMarkStyleContext,
+  useDisplayColor,
+  useOffHighlight,
 } from "./shift-mark";
 
 // Patterns without a time are all-day, so they have no time to change.
@@ -341,6 +345,7 @@ export function DesignCalendar({
   variants: DesignVariants;
 }) {
   const phoneRef = useRef<HTMLDivElement>(null);
+  const themeStyle = useThemeStyle();
   const breakdownRef = useRef<HTMLDialogElement>(null);
   const importSheetRef = useRef<HTMLDialogElement>(null);
   const [detailDate, setDetailDate] = useState<Date>();
@@ -499,6 +504,7 @@ export function DesignCalendar({
     <div
       className={`dc-phone ${editing ? "dc-editing" : ""} ${weekDetail ? "dc-week-mode" : ""} ${hideInputBar ? "dc-no-input" : ""}`}
       ref={phoneRef}
+      style={themeStyle}
     >
       <PhoneStatusBar />
       {tab === "settings" && (
@@ -1210,6 +1216,19 @@ function CellShift({ shift }: { shift: Shift }) {
   );
 }
 
+// Days off take a light tint of their own pattern color, not the theme,
+// when the setting for the current look asks for it.
+function dayOffStyle(
+  shift: Shift | undefined,
+  highlight: boolean,
+  tint: string
+) {
+  if (!(highlight && shift && isDayOff(shift))) {
+    return;
+  }
+  return { "--off-tint": tint } as CSSProperties;
+}
+
 export function DayCell({
   date,
   entry,
@@ -1227,12 +1246,13 @@ export function DayCell({
 }) {
   const markStyle = useContext(ShiftMarkStyleContext);
   const shift = outside ? undefined : entry?.shift;
-  // The green 休 badge already marks days off, so skip the cell highlight.
-  const highlightOff = shift === "off" && markStyle !== "badge";
+  const highlight = useOffHighlight(markStyle);
+  const { tint } = useDisplayColor(lookOf(shift ?? "off").color);
+  const offStyle = dayOffStyle(shift, highlight, tint);
   const today = dateKey(date) === dateKey(designToday);
   const timeChanged = Boolean(entry?.start || entry?.end);
   const hasMark = !outside && (timeChanged || Boolean(entry?.note));
-  const className = `dc-day ${outside ? "dc-outside" : ""} ${highlightOff ? "dc-off" : ""} ${today && !editing ? "dc-today" : ""} ${active ? "dc-active-day" : ""}`;
+  const className = `dc-day ${outside ? "dc-outside" : ""} ${offStyle ? "dc-off" : ""} ${today && !editing ? "dc-today" : ""} ${active ? "dc-active-day" : ""}`;
   const content = (
     <>
       <span className="dc-date">{date.getDate()}</span>
@@ -1246,7 +1266,11 @@ export function DayCell({
     </>
   );
   if (outside) {
-    return <div className={className}>{content}</div>;
+    return (
+      <div className={className} style={offStyle}>
+        {content}
+      </div>
+    );
   }
   const details = [
     shift ? patterns[shift].label : "未入力",
@@ -1260,6 +1284,7 @@ export function DayCell({
       aria-pressed={editing ? active : undefined}
       className={className}
       onClick={onPress}
+      style={offStyle}
       type="button"
     >
       {content}

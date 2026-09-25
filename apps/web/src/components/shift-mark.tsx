@@ -10,13 +10,20 @@ import {
   Bus as PhBus,
   CalendarCheck as PhCalendarCheck,
   Car as PhCar,
+  Cat as PhCat,
   Clock as PhClock,
   CloudMoon as PhCloudMoon,
   CloudSun as PhCloudSun,
   Coffee as PhCoffee,
   Confetti as PhConfetti,
+  Couch as PhCouch,
+  Dog as PhDog,
+  Drop as PhDrop,
   Fire as PhFire,
+  Fish as PhFish,
   Flower as PhFlower,
+  FlowerLotus as PhFlowerLotus,
+  FlowerTulip as PhFlowerTulip,
   ForkKnife as PhForkKnife,
   GraduationCap as PhGraduationCap,
   Heart as PhHeart,
@@ -43,9 +50,11 @@ import {
   TreePalm as PhTreePalm,
   Umbrella as PhUmbrella,
   Users as PhUsers,
+  Waves as PhWaves,
 } from "@phosphor-icons/react";
 import { createContext, useContext } from "react";
 import { patterns, type Shift } from "./design-calendar";
+import { ThemeContext, type ThemeId, themeOf } from "./design-theme";
 
 export type ShiftMarkStyle = "icon" | "emoji" | "badge";
 export const ShiftMarkStyleContext = createContext<ShiftMarkStyle>("icon");
@@ -62,6 +71,121 @@ export const CellNamesContext = createContext<{
   names: CellNames;
   setNames?: (names: CellNames) => void;
 }>({ names: defaultCellNames });
+
+// Whether days off get a tint of their pattern color, per look. Unset means
+// automatic: on, except letters on a tinted tile, which carry the color
+// already.
+export type OffHighlight = Partial<Record<ShiftMarkStyle, boolean>>;
+export const defaultOffHighlight: OffHighlight = {};
+
+export function useOffHighlight(style: ShiftMarkStyle) {
+  const { highlight } = useContext(OffHighlightContext);
+  return highlight[style] ?? true;
+}
+
+// Every look setting at once. Presets set good combinations; the switches
+// under 細かく設定 change one thing each, which makes a custom look.
+export type LookSettings = {
+  style: ShiftMarkStyle;
+  fill: boolean;
+  monochrome: boolean;
+  names: boolean;
+  highlight: boolean;
+  badgeLength: BadgeLength;
+};
+
+const baseLook: LookSettings = {
+  style: "icon",
+  fill: true,
+  monochrome: false,
+  names: false,
+  highlight: true,
+  badgeLength: "one",
+};
+
+// Ready-made styles: a theme color, a mark for 休み and a look that suit
+// each other.
+export const stylePresets: {
+  id: string;
+  name: string;
+  theme: ThemeId;
+  look: LookSettings;
+}[] = [
+  { id: "natural", name: "ナチュラル", theme: "moss", look: baseLook },
+  {
+    id: "monotone",
+    name: "モノトーン",
+    theme: "sumi",
+    look: { ...baseLook, monochrome: true },
+  },
+  {
+    id: "minimal",
+    name: "ミニマル",
+    theme: "sumi",
+    look: {
+      ...baseLook,
+      fill: false,
+      monochrome: true,
+      highlight: false,
+    },
+  },
+  {
+    id: "pop",
+    name: "ポップ",
+    theme: "moss",
+    look: { ...baseLook, style: "emoji" },
+  },
+  {
+    id: "roster",
+    name: "勤務表",
+    theme: "moss",
+    look: { ...baseLook, style: "badge", highlight: false },
+  },
+  {
+    id: "friendly",
+    name: "親しみ",
+    theme: "moss",
+    look: { ...baseLook, style: "badge", badgeLength: "two", fill: false },
+  },
+];
+
+// A theme and look together, like the last custom style.
+export type StyleChoice = { theme: ThemeId; look: LookSettings };
+
+export const LookSettingsContext = createContext<{
+  look: LookSettings;
+  setLook?: (look: LookSettings) => void;
+  custom?: StyleChoice;
+  setCustom?: (custom: StyleChoice) => void;
+}>({ look: baseLook });
+
+// Compares only what shows for the look, so an emoji look is not "custom"
+// just because of a fill setting it never uses.
+function sameLook(preset: LookSettings, look: LookSettings) {
+  if (preset.style !== look.style || preset.highlight !== look.highlight) {
+    return false;
+  }
+  if (look.style === "emoji") {
+    return preset.names === look.names;
+  }
+  const sameColor =
+    preset.fill === look.fill && preset.monochrome === look.monochrome;
+  if (look.style === "icon") {
+    return sameColor && preset.names === look.names;
+  }
+  return sameColor && preset.badgeLength === look.badgeLength;
+}
+
+export function stylePresetOf(theme: ThemeId, look: LookSettings) {
+  return stylePresets.find(
+    (preset) => preset.theme === theme && sameLook(preset.look, look)
+  );
+}
+
+export const OffHighlightContext = createContext<{
+  highlight: OffHighlight;
+  setHighlight?: (highlight: OffHighlight) => void;
+}>({ highlight: defaultOffHighlight });
 
 // Twelve muted colors that sit with the moss green theme: text color and a
 // light tint for the badge background.
@@ -93,7 +217,15 @@ export const markIcons = {
   moon: PhMoon,
   moonStar: PhMoonStars,
   cloudMoon: PhCloudMoon,
+  couch: PhCouch,
   leaf: PhLeaf,
+  drop: PhDrop,
+  waves: PhWaves,
+  cat: PhCat,
+  dog: PhDog,
+  fish: PhFish,
+  tulip: PhFlowerTulip,
+  lotus: PhFlowerLotus,
   bed: PhBed,
   coffee: PhCoffee,
   flower: PhFlower,
@@ -143,7 +275,15 @@ export const markEmojis = [
   "🌜",
   "🌃",
   "⭐️",
+  "🛋️",
   "🌿",
+  "💧",
+  "🌊",
+  "🍂",
+  "🐈‍⬛",
+  "🐕",
+  "🐟",
+  "🪻",
   "🍀",
   "🌷",
   "🌸",
@@ -181,14 +321,17 @@ export type Look = {
   symbol: string;
   symbol2: string;
   icon: MarkIcon;
-  color: number;
+  color: MarkColor;
 };
+
+// A palette index, or "theme" to follow the app's theme color.
+export type MarkColor = number | "theme";
 
 const shiftLooks: Record<Shift, Omit<Look, "emoji" | "symbol2">> = {
   day: { symbol: "日", icon: "sun", color: 1 },
   night: { symbol: "夜", icon: "moon", color: 8 },
   after: { symbol: "明", icon: "sunrise", color: 3 },
-  off: { symbol: "休", icon: "leaf", color: 0 },
+  off: { symbol: "休", icon: "leaf", color: "theme" },
   early: { symbol: "早", icon: "cloudSun", color: 2 },
   late: { symbol: "遅", icon: "cloudMoon", color: 4 },
   training: { symbol: "研", icon: "book", color: 10 },
@@ -217,7 +360,11 @@ export function lookOf(shift: Shift): Look {
 }
 
 // Longer words first, so 待機 wins over a single-letter match.
-const lookHints: { words: string[]; icon: MarkIcon; emoji: string }[] = [
+const lookHints: {
+  words: string[];
+  icon: Look["icon"];
+  emoji: string;
+}[] = [
   { words: ["待機", "オンコール"], icon: "phone", emoji: "📞" },
   { words: ["在宅", "テレワーク"], icon: "house", emoji: "🏠" },
   { words: ["出張"], icon: "briefcase", emoji: "💼" },
@@ -250,7 +397,41 @@ export function guessLook(name: string): Omit<Look, "color"> {
   };
 }
 
-export function nextColor(used: number[]) {
+export function useMarkColor(markColor: MarkColor) {
+  const theme = themeOf(useContext(ThemeContext).theme);
+  if (markColor === "theme") {
+    return { name: "テーマカラー", color: theme.accent, tint: theme.markTint };
+  }
+  return markColors[markColor];
+}
+
+// When on, icons and letters all take the theme color instead of each
+// pattern's own; emoji keep their colors, so it does not apply to them.
+export const MonochromeContext = createContext<{
+  monochrome: boolean;
+  setMonochrome?: (monochrome: boolean) => void;
+}>({ monochrome: false });
+
+// The color a mark is drawn in, after the theme-only setting.
+export function useDisplayColor(markColor: MarkColor) {
+  const { monochrome } = useContext(MonochromeContext);
+  const style = useContext(ShiftMarkStyleContext);
+  const own = useMarkColor(markColor);
+  const theme = useMarkColor("theme");
+  return monochrome && style !== "emoji" ? theme : own;
+}
+
+// The fill setting: icons get a tinted fill (Phosphor duotone) or just the
+// outline, and letters sit on a tinted tile or stand alone.
+export type IconWeight = "duotone" | "regular";
+export const IconWeightContext = createContext<IconWeight>("duotone");
+// Until the person picks one, the fill follows the color setting: filled for
+// per-shift colors, outline only when everything is the theme color.
+export const SetIconWeightContext = createContext<
+  ((weight: IconWeight) => void) | undefined
+>(undefined);
+
+export function nextColor(used: MarkColor[]) {
   const free = markColors.findIndex((_, index) => !used.includes(index));
   return free === -1 ? used.length % markColors.length : free;
 }
@@ -272,21 +453,23 @@ export function MarkGlyph({
   style: ShiftMarkStyle;
   size: number;
 }) {
-  const { color, tint } = markColors[look.color];
+  const { color, tint } = useDisplayColor(look.color);
   const { length: badgeLength } = useContext(BadgeLengthContext);
+  // The fill setting also decides whether letters sit on a tinted tile.
+  const filled = useContext(IconWeightContext) === "duotone";
   if (style === "badge") {
     const text = badgeLength === "two" ? look.symbol2 : look.symbol;
     const wide = [...text].length > 1;
     return (
       <span
         aria-hidden="true"
-        className={`sm-badge ${wide ? "sm-badge-wide" : ""}`}
+        className={`sm-badge ${wide ? "sm-badge-wide" : ""} ${filled ? "" : "sm-badge-plain"}`}
         style={{
           minWidth: size,
           height: size,
           fontSize: Math.round(size * (wide ? 0.44 : 0.56)),
           color,
-          background: tint,
+          background: filled ? tint : "transparent",
         }}
       >
         {text}
@@ -294,7 +477,7 @@ export function MarkGlyph({
     );
   }
   if (style === "icon") {
-    return <IconGlyph look={look} size={size} />;
+    return <IconGlyph icon={look.icon} look={look} size={size} />;
   }
   return (
     <span aria-hidden="true" className="sm-emoji" style={{ fontSize: size }}>
@@ -303,9 +486,18 @@ export function MarkGlyph({
   );
 }
 
-function IconGlyph({ look, size }: { look: Look; size: number }) {
-  const { color } = markColors[look.color];
-  const Icon = markIcons[look.icon];
+function IconGlyph({
+  look,
+  icon,
+  size,
+}: {
+  look: Look;
+  icon: MarkIcon;
+  size: number;
+}) {
+  const { color } = useDisplayColor(look.color);
+  const weight = useContext(IconWeightContext);
+  const Icon = markIcons[icon];
   if (!Icon) {
     return (
       <span
@@ -328,7 +520,7 @@ function IconGlyph({ look, size }: { look: Look; size: number }) {
       className="sm-icon"
       color={color}
       size={size}
-      weight="duotone"
+      weight={weight}
     />
   );
 }

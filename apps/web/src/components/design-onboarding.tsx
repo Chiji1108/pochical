@@ -16,6 +16,7 @@ import {
   type Shift,
   weekendClassName,
 } from "./design-calendar";
+import { useThemeStyle } from "./design-theme";
 import { ShiftMark } from "./shift-mark";
 
 type Template = {
@@ -124,6 +125,7 @@ function startSchedule(sequence?: Shift[], anchor?: Date): Schedule {
 
 export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
   const [step, setStep] = useState<Step>({ name: "kind" });
+  const themeStyle = useThemeStyle();
   const [finished, setFinished] = useState<{
     patternKeys: Shift[];
     rule?: RepeatRule;
@@ -180,7 +182,7 @@ export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
   }
 
   return (
-    <div className="dc-phone ob-phone">
+    <div className="dc-phone ob-phone" style={themeStyle}>
       <PhoneStatusBar />
       <div className="ob-content">
         {step.name === "kind" && (

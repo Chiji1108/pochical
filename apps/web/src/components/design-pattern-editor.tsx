@@ -14,6 +14,7 @@ import {
   nextColor,
   type ShiftMarkStyle,
   ShiftMarkStyleContext,
+  useMarkColor,
 } from "./shift-mark";
 
 // A pattern as edited on screen. Presets start with every look filled in;
@@ -47,7 +48,15 @@ const iconNames: Record<MarkIcon, string> = {
   moon: "月",
   moonStar: "月と星",
   cloudMoon: "夜空",
+  couch: "ソファ",
   leaf: "葉っぱ",
+  drop: "しずく",
+  waves: "波",
+  cat: "猫",
+  dog: "犬",
+  fish: "魚",
+  tulip: "チューリップ",
+  lotus: "蓮の花",
   bed: "ベッド",
   coffee: "コーヒー",
   flower: "花",
@@ -400,7 +409,6 @@ function PatternEditor({
             <span className="st-row-label">印と色</span>
             <span className="st-row-value pe-look-value">
               <MarkGlyph look={draft} size={20} style={style} />
-              {markColors[draft.color].name}
             </span>
             <ChevronRight
               aria-hidden="true"
@@ -534,9 +542,23 @@ function ColorPicker({
   draft: PatternDraft;
   onPick: (field: LookField, value: Partial<PatternDraft>) => void;
 }) {
+  const themeColor = useMarkColor("theme");
   return (
     <fieldset className="pe-colors">
       <legend className="dc-repeat-label pe-colors-label">色</legend>
+      <button
+        aria-pressed={draft.color === "theme"}
+        className="pe-theme-color"
+        onClick={() => onPick("color", { color: "theme" })}
+        type="button"
+      >
+        <span
+          aria-hidden="true"
+          className="pe-theme-dot"
+          style={{ background: themeColor.tint, color: themeColor.color }}
+        />
+        テーマカラーに合わせる
+      </button>
       {markColors.map(({ name, color, tint }, index) => (
         <button
           aria-label={name}
@@ -637,7 +659,7 @@ function LookEditor({
             onClick={() => onPick("emoji", { emoji })}
             type="button"
           >
-            <span className="sm-emoji">{emoji}</span>
+            <MarkGlyph look={{ ...draft, emoji }} size={20} style="emoji" />
           </button>
         ))}
       </fieldset>

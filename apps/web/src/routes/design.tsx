@@ -7,13 +7,23 @@ import {
 } from "../components/design-calendar";
 import { DesignOnboarding } from "../components/design-onboarding";
 import {
-  type BadgeLength,
+  type AppIconId,
+  ThemeContext,
+  type ThemeId,
+} from "../components/design-theme";
+import {
   BadgeLengthContext,
   CellNamesContext,
-  defaultCellNames,
+  IconWeightContext,
+  type LookSettings,
+  LookSettingsContext,
+  MonochromeContext,
+  OffHighlightContext,
+  SetIconWeightContext,
   SetShiftMarkStyleContext,
-  type ShiftMarkStyle,
   ShiftMarkStyleContext,
+  type StyleChoice,
+  stylePresets,
 } from "../components/shift-mark";
 import designStyles from "../design.css?url";
 import {
@@ -46,13 +56,21 @@ const screenLinks = [
 ];
 
 function DesignPage() {
-  const [schedule, setSchedule] = useState(() => initialDesignSchedule());
-  const [version, setVersion] = useState(0);
   const variants = Route.useSearch();
+  // The 予定 variant starts over with the sample or with nothing entered.
+  const startSchedule = (sample: DesignVariants["scheduleSample"]) =>
+    sample === "empty" ? {} : initialDesignSchedule();
+  const [schedule, setSchedule] = useState(() =>
+    startSchedule(variants.scheduleSample)
+  );
+  const [version, setVersion] = useState(0);
   const navigate = Route.useNavigate();
-  const [cellNames, setCellNames] = useState(defaultCellNames);
-  const [badgeLength, setBadgeLength] = useState<BadgeLength>("one");
-  const [shiftMark, setShiftMark] = useState<ShiftMarkStyle>("icon");
+  const [look, setLook] = useState(stylePresets[0].look);
+  const updateLook = (change: Partial<LookSettings>) =>
+    setLook((previous) => ({ ...previous, ...change }));
+  const [theme, setTheme] = useState<ThemeId>("moss");
+  const [appIcon, setAppIcon] = useState<AppIconId>("calendar");
+  const [custom, setCustom] = useState<StyleChoice>();
   return (
     <main className="design-page" id="main">
       <div className="design-toolbar">
@@ -61,7 +79,7 @@ function DesignPage() {
         </Link>
         <button
           onClick={() => {
-            setSchedule(initialDesignSchedule());
+            setSchedule(startSchedule(variants.scheduleSample));
             setVersion((value) => value + 1);
           }}
           type="button"
@@ -87,75 +105,129 @@ function DesignPage() {
         ))}
       </nav>
       <VariantPanel
-        onChange={(key, value) =>
+        onChange={(key, value) => {
+          if (key === "scheduleSample") {
+            setSchedule(
+              startSchedule(value as DesignVariants["scheduleSample"])
+            );
+            setVersion((previous) => previous + 1);
+          }
           navigate({
             replace: true,
             resetScroll: false,
             search: (previous) => ({ ...previous, [key]: value }),
-          })
-        }
+          });
+        }}
         variants={variants}
       />
-      <BadgeLengthContext
-        value={{ length: badgeLength, setLength: setBadgeLength }}
+      <ThemeContext
+        value={{ theme, setTheme, icon: appIcon, setIcon: setAppIcon }}
       >
-        <ShiftMarkStyleContext value={shiftMark}>
-          <CellNamesContext
-            value={{ names: cellNames, setNames: setCellNames }}
-          >
-            <SetShiftMarkStyleContext value={setShiftMark}>
-              <div className="design-screens" key={version}>
-                <section aria-labelledby="design-view-title">
-                  <h2 id="design-view-title">
-                    <span>01</span> カレンダー表示
-                  </h2>
-                  <DesignCalendar
-                    initialEditing={false}
-                    onChange={setSchedule}
-                    schedule={schedule}
-                    variants={variants}
-                  />
-                  <p className="design-caption">
-                    ひと月の予定と、お休みをひと目で。
-                  </p>
-                </section>
-                <section aria-labelledby="design-edit-title">
-                  <h2 id="design-edit-title">
-                    <span>02</span> シフト入力
-                  </h2>
-                  <DesignCalendar
-                    initialEditing
-                    onChange={setSchedule}
-                    schedule={schedule}
-                    variants={variants}
-                  />
-                  <p className="design-caption">
-                    シフトを押すと翌日へ。日付をタップして修正もできます。
-                  </p>
-                </section>
-                <PatternStudy
-                  caption="2026年8月。8パターンを4列×2段で比較。"
-                  count={8}
-                  id="design-six-weeks-title"
-                  month={7}
-                  number="03"
-                  title="6段の月 × 8パターン"
-                  variants={variants}
-                />
-                <section aria-labelledby="design-onboarding-title">
-                  <h2 id="design-onboarding-title">
-                    <span>04</span> はじめての設定
-                  </h2>
-                  <DesignOnboarding variants={variants} />
-                  <p className="design-caption">
-                    最初の1問で、入れやすい始め方に分かれます。
-                  </p>
-                </section>
-              </div>
-            </SetShiftMarkStyleContext>
-          </CellNamesContext>
-        </ShiftMarkStyleContext>
-      </BadgeLengthContext>
+        <LookSettingsContext value={{ look, setLook, custom, setCustom }}>
+          <IconWeightContext value={look.fill ? "duotone" : "regular"}>
+            <SetIconWeightContext
+              value={(weight) => updateLook({ fill: weight === "duotone" })}
+            >
+              <BadgeLengthContext
+                value={{
+                  length: look.badgeLength,
+                  setLength: (badgeLength) => updateLook({ badgeLength }),
+                }}
+              >
+                <ShiftMarkStyleContext value={look.style}>
+                  <CellNamesContext
+                    value={{
+                      names: { emoji: look.names, icon: look.names },
+                      setNames: (names) =>
+                        updateLook({
+                          names:
+                            look.style === "badge"
+                              ? look.names
+                              : names[look.style],
+                        }),
+                    }}
+                  >
+                    <OffHighlightContext
+                      value={{
+                        highlight: {
+                          icon: look.highlight,
+                          emoji: look.highlight,
+                          badge: look.highlight,
+                        },
+                        setHighlight: (highlight) =>
+                          updateLook({
+                            highlight: highlight[look.style] ?? look.highlight,
+                          }),
+                      }}
+                    >
+                      <MonochromeContext
+                        value={{
+                          monochrome: look.monochrome,
+                          setMonochrome: (monochrome) =>
+                            updateLook({ monochrome }),
+                        }}
+                      >
+                        <SetShiftMarkStyleContext
+                          value={(style) => updateLook({ style })}
+                        >
+                          <div className="design-screens" key={version}>
+                            <section aria-labelledby="design-view-title">
+                              <h2 id="design-view-title">
+                                <span>01</span> カレンダー表示
+                              </h2>
+                              <DesignCalendar
+                                initialEditing={false}
+                                onChange={setSchedule}
+                                schedule={schedule}
+                                variants={variants}
+                              />
+                              <p className="design-caption">
+                                ひと月の予定と、お休みをひと目で。
+                              </p>
+                            </section>
+                            <section aria-labelledby="design-edit-title">
+                              <h2 id="design-edit-title">
+                                <span>02</span> シフト入力
+                              </h2>
+                              <DesignCalendar
+                                initialEditing
+                                onChange={setSchedule}
+                                schedule={schedule}
+                                variants={variants}
+                              />
+                              <p className="design-caption">
+                                シフトを押すと翌日へ。日付をタップして修正もできます。
+                              </p>
+                            </section>
+                            <PatternStudy
+                              caption="2026年8月。8パターンを4列×2段で比較。"
+                              count={8}
+                              id="design-six-weeks-title"
+                              month={7}
+                              number="03"
+                              title="6段の月 × 8パターン"
+                              variants={variants}
+                            />
+                            <section aria-labelledby="design-onboarding-title">
+                              <h2 id="design-onboarding-title">
+                                <span>04</span> はじめての設定
+                              </h2>
+                              <DesignOnboarding variants={variants} />
+                              <p className="design-caption">
+                                最初の1問で、入れやすい始め方に分かれます。
+                              </p>
+                            </section>
+                          </div>
+                        </SetShiftMarkStyleContext>
+                      </MonochromeContext>
+                    </OffHighlightContext>
+                  </CellNamesContext>
+                </ShiftMarkStyleContext>
+              </BadgeLengthContext>
+            </SetIconWeightContext>
+          </IconWeightContext>
+        </LookSettingsContext>
+      </ThemeContext>
       <p className="design-footnote">
         実際にタップして試せます。01・02は連動、03は個別に操作できます。
         <br />

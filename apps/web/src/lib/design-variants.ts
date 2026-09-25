@@ -15,6 +15,13 @@ export const designVariantOptions = {
       { value: "limit", label: "上限に到達" },
     ],
   },
+  scheduleSample: {
+    label: "予定",
+    choices: [
+      { value: "filled", label: "入力済み" },
+      { value: "empty", label: "空" },
+    ],
+  },
   memberSample: {
     label: "登録メンバー",
     choices: [
