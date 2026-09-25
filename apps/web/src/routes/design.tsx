@@ -6,11 +6,7 @@ import {
   initialDesignSchedule,
 } from "../components/design-calendar";
 import { DesignOnboarding } from "../components/design-onboarding";
-import {
-  type AppIconId,
-  ThemeContext,
-  type ThemeId,
-} from "../components/design-theme";
+import { ThemeContext, type ThemeId } from "../components/design-theme";
 import {
   BadgeLengthContext,
   CellNamesContext,
@@ -69,7 +65,6 @@ function DesignPage() {
   const updateLook = (change: Partial<LookSettings>) =>
     setLook((previous) => ({ ...previous, ...change }));
   const [theme, setTheme] = useState<ThemeId>("moss");
-  const [appIcon, setAppIcon] = useState<AppIconId>("calendar");
   const [custom, setCustom] = useState<StyleChoice>();
   return (
     <main className="design-page" id="main">
@@ -120,9 +115,7 @@ function DesignPage() {
         }}
         variants={variants}
       />
-      <ThemeContext
-        value={{ theme, setTheme, icon: appIcon, setIcon: setAppIcon }}
-      >
+      <ThemeContext value={{ theme, setTheme }}>
         <LookSettingsContext value={{ look, setLook, custom, setCustom }}>
           <IconWeightContext value={look.fill ? "duotone" : "regular"}>
             <SetIconWeightContext

@@ -1,5 +1,12 @@
-import { Check, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
-import { useContext, useState } from "react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  GripVertical,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { useContext, useRef, useState } from "react";
 import { nextDayShifts, patterns, type Shift } from "./design-calendar";
 import {
   BadgeLengthContext,
@@ -135,6 +142,7 @@ export function PatternsPage({
   const [items, setItems] = useState(() => patternKeys.map(draftOf));
   const [editing, setEditing] = useState<PatternDraft>();
   const [isNew, setIsNew] = useState(false);
+  const [view, setView] = useState<"list" | "sort" | "add">("list");
 
   if (editing) {
     return (
@@ -159,40 +167,17 @@ export function PatternsPage({
     );
   }
 
-  return (
-    <>
-      <header className="st-page-header">
-        <button className="st-back" onClick={onBack} type="button">
-          <ChevronLeft aria-hidden="true" size={20} />
-          設定
-        </button>
-        <h3 className="st-title">シフトパターン</h3>
-      </header>
-      <div className="st-list">
-        {items.map((item) => (
-          <button
-            className="st-row st-pattern"
-            key={item.id}
-            onClick={() => {
-              setIsNew(false);
-              setEditing(item);
-            }}
-            type="button"
-          >
-            <MarkGlyph look={item} size={22} style={style} />
-            <span className="st-row-label">{item.name}</span>
-            <span className="st-row-value">{timeText(item)}</span>
-            <ChevronRight
-              aria-hidden="true"
-              className="st-row-arrow"
-              size={17}
-            />
-          </button>
-        ))}
-      </div>
-      <button
-        className="st-add"
-        onClick={() => {
+  if (view === "add") {
+    return (
+      <AddPatternPage
+        items={items}
+        onAdd={(draft) => {
+          setItems([...items, draft]);
+          setView("list");
+        }}
+        onBack={() => setView("list")}
+        onCustom={() => {
+          setView("list");
           setIsNew(true);
           setEditing({
             ...guessLook(""),
@@ -205,17 +190,247 @@ export function PatternsPage({
             countsAsOff: false,
           });
         }}
-        type="button"
-      >
-        <Plus aria-hidden="true" size={14} />
-        パターンを追加
-      </button>
-      <button className="st-link" type="button">
-        ひな形から選び直す
-      </button>
+      />
+    );
+  }
+
+  const sorting = view === "sort";
+  return (
+    <>
+      <header className="st-page-header">
+        <div className="pe-topbar">
+          <button
+            className="st-back"
+            disabled={sorting}
+            onClick={onBack}
+            type="button"
+          >
+            <ChevronLeft aria-hidden="true" size={20} />
+            設定
+          </button>
+          <button
+            className="pe-save"
+            onClick={() => setView(sorting ? "list" : "sort")}
+            type="button"
+          >
+            {sorting ? "完了" : "並び替え"}
+          </button>
+        </div>
+        <h3 className="st-title">シフトパターン</h3>
+      </header>
+      {sorting ? (
+        <SortablePatterns items={items} onChange={setItems} style={style} />
+      ) : (
+        <div className="st-list">
+          {items.map((item) => (
+            <button
+              className="st-row st-pattern"
+              key={item.id}
+              onClick={() => {
+                setIsNew(false);
+                setEditing(item);
+              }}
+              type="button"
+            >
+              <MarkGlyph look={item} size={22} style={style} />
+              <span className="st-row-label">{item.name}</span>
+              <span className="st-row-value">{timeText(item)}</span>
+              <ChevronRight
+                aria-hidden="true"
+                className="st-row-arrow"
+                size={17}
+              />
+            </button>
+          ))}
+        </div>
+      )}
+      {!sorting && (
+        <button className="st-add" onClick={() => setView("add")} type="button">
+          <Plus aria-hidden="true" size={14} />
+          パターンを追加
+        </button>
+      )}
       <p className="st-note">
-        ポチポチ入力のシフトのボタンを長押ししても、その場で直せます。ここでの変更は、この画面の中だけの見本です。
+        {sorting
+          ? "つまみを上下に動かして並べ替えます。ポチポチ入力のボタンも、この順に並びます。"
+          : "ポチポチ入力のシフトのボタンを長押ししても、その場で直せます。ここでの変更は、この画面の中だけの見本です。"}
       </p>
+    </>
+  );
+}
+
+// Rows move with the handle; arrow keys on the handle move one step. The
+// drag follows the pointer on the window, since rows swap under it.
+function SortablePatterns({
+  items,
+  style,
+  onChange,
+}: {
+  items: PatternDraft[];
+  style: ShiftMarkStyle;
+  onChange: (items: PatternDraft[]) => void;
+}) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const [drag, setDrag] = useState<{ id: string; offset: number }>();
+
+  const move = (id: string, to: number) => {
+    const list = itemsRef.current;
+    const from = list.findIndex((item) => item.id === id);
+    const target = Math.max(0, Math.min(list.length - 1, to));
+    if (from === target) {
+      return;
+    }
+    const next = [...list];
+    const [item] = next.splice(from, 1);
+    next.splice(target, 0, item);
+    itemsRef.current = next;
+    onChange(next);
+  };
+
+  const startDrag = (id: string, index: number, startY: number) => {
+    const height =
+      listRef.current?.firstElementChild?.getBoundingClientRect().height ??
+      defaultRowHeight;
+    setDrag({ id, offset: 0 });
+    const follow = (event: PointerEvent) => {
+      const moved = event.clientY - startY;
+      const target = Math.max(
+        0,
+        Math.min(
+          itemsRef.current.length - 1,
+          index + Math.round(moved / height)
+        )
+      );
+      move(id, target);
+      setDrag({ id, offset: moved - (target - index) * height });
+    };
+    const stop = () => {
+      setDrag(undefined);
+      window.removeEventListener("pointermove", follow);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+    window.addEventListener("pointermove", follow);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+  };
+
+  return (
+    <div className="st-list st-sortable" ref={listRef}>
+      {items.map((item, index) => (
+        <div
+          className={`st-row st-pattern ${drag?.id === item.id ? "st-dragging" : ""}`}
+          key={item.id}
+          style={
+            drag?.id === item.id
+              ? { transform: `translateY(${drag.offset}px)` }
+              : undefined
+          }
+        >
+          <MarkGlyph look={item} size={22} style={style} />
+          <span className="st-row-label">{item.name}</span>
+          <span className="st-row-value">{timeText(item)}</span>
+          <button
+            aria-label={`${item.name}を並べ替え。上下の矢印キーで動かせます`}
+            className="st-handle"
+            onKeyDown={(event) => {
+              if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+                event.preventDefault();
+                move(item.id, index + (event.key === "ArrowUp" ? -1 : 1));
+              }
+            }}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              startDrag(item.id, index, event.clientY);
+            }}
+            type="button"
+          >
+            <GripVertical aria-hidden="true" size={18} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const defaultRowHeight = 48;
+
+// Common patterns to add with one tap, leaving out ones already there.
+const suggestionKeys: Shift[] = [
+  "early",
+  "day",
+  "late",
+  "night",
+  "after",
+  "evening",
+  "junya",
+  "midnight",
+  "duty",
+  "offDuty",
+  "training",
+  "paid",
+  "off",
+];
+
+function AddPatternPage({
+  items,
+  onBack,
+  onAdd,
+  onCustom,
+}: {
+  items: PatternDraft[];
+  onBack: () => void;
+  onAdd: (draft: PatternDraft) => void;
+  onCustom: () => void;
+}) {
+  const style = useContext(ShiftMarkStyleContext);
+  const taken = new Set(items.flatMap((item) => [item.id, item.name]));
+  const suggestions = suggestionKeys
+    .filter((key) => !(taken.has(key) || taken.has(patterns[key].label)))
+    .map(draftOf);
+  return (
+    <>
+      <header className="st-page-header">
+        <button className="st-back" onClick={onBack} type="button">
+          <ChevronLeft aria-hidden="true" size={20} />
+          シフトパターン
+        </button>
+        <h3 className="st-title">パターンを追加</h3>
+      </header>
+      {suggestions.length > 0 && (
+        <section className="st-section">
+          <h4>よく使うパターン</h4>
+          <div className="st-list">
+            {suggestions.map((draft) => (
+              <button
+                className="st-row st-pattern"
+                key={draft.id}
+                onClick={() => onAdd(draft)}
+                type="button"
+              >
+                <MarkGlyph look={draft} size={22} style={style} />
+                <span className="st-row-label">{draft.name}</span>
+                <span className="st-row-value">{timeText(draft)}</span>
+                <Plus
+                  aria-hidden="true"
+                  className="st-row-arrow st-add-icon"
+                  size={17}
+                />
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+      <div className="st-list">
+        <button className="st-row" onClick={onCustom} type="button">
+          <span className="st-row-label">自分で作る</span>
+          <span className="st-row-value" />
+          <ChevronRight aria-hidden="true" className="st-row-arrow" size={17} />
+        </button>
+      </div>
+      <p className="st-note">名前や時間は、追加したあとで直せます。</p>
     </>
   );
 }

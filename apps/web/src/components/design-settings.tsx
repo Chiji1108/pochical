@@ -1,16 +1,22 @@
 import {
   ArrowRight,
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { type ReactNode, useContext, useState } from "react";
 import {
   addDays,
   DayCell,
   dateKey,
+  defaultHolidaysOff,
   formatDay,
   InputDatePicker,
+  isRepeating,
+  type Leave,
   nextDayShifts,
   patterns,
   type RepeatRule,
@@ -22,14 +28,9 @@ import {
   weekDates,
   weekendClassName,
 } from "./design-calendar";
+import { WorkSetupSteps } from "./design-onboarding";
 import { PatternsPage } from "./design-pattern-editor";
-import {
-  AppIcon,
-  appIcons,
-  ThemeContext,
-  themeOf,
-  themes,
-} from "./design-theme";
+import { ThemeContext, themeOf, themes } from "./design-theme";
 import {
   BadgeLengthContext,
   CellNamesContext,
@@ -50,12 +51,15 @@ import {
 
 type Page =
   | "top"
-  | "repeat"
   | "repeat-new"
+  | "repeat-fix"
+  | "job"
+  | "leave"
+  | "work"
+  | "roster"
   | "patterns"
   | "mark"
-  | "customize"
-  | "appIcon";
+  | "customize";
 
 const markOptions: { style: ShiftMarkStyle; name: string }[] = [
   { style: "icon", name: "アイコン" },
@@ -94,21 +98,42 @@ export function DesignSettings({
   memberCount,
   rules,
   schedule,
+  leaves,
+  onSaveLeave,
+  onDeleteLeave,
   onApplyRule,
+  onFixRule,
+  onChangeJob,
+  onHolidaysOff,
   onTab,
 }: {
   patternKeys: Shift[];
   memberCount: number;
   rules: RepeatRule[];
   schedule: Schedule;
+  leaves: Leave[];
+  onSaveLeave: (leave: Leave) => void;
+  onDeleteLeave: (id: string) => void;
   onApplyRule: (rule: RepeatRule) => void;
+  onFixRule: (rule: RepeatRule) => void;
+  onChangeJob: (job: { patternKeys: Shift[]; rule: RepeatRule }) => void;
+  onHolidaysOff: (holidaysOff: boolean) => void;
   onTab: (tab: "calendar" | "settings") => void;
 }) {
   const [page, setPage] = useState<Page>("top");
   // What キャンセル in 細かく設定 goes back to.
   const [cancelTo, setCancelTo] = useState<StyleChoice>();
+  // The leave being edited; undefined while adding one.
+  const [leaveId, setLeaveId] = useState<string>();
+  // Where a new order starts, when coming back from a leave.
+  const [repeatFrom, setRepeatFrom] = useState<Date>();
   const preview = stylePreviewOf(schedule, patternKeys);
-  const current = rules.at(-1);
+  const repeating = isRepeating(rules);
+  const current = repeating ? rules.at(-1) : undefined;
+  // The order to start from when repeating again.
+  const lastSequence =
+    [...rules].reverse().find((rule) => rule.sequence.length > 0)?.sequence ??
+    [];
   return (
     <div className="dc-content st-screen">
       <div
@@ -122,22 +147,92 @@ export function DesignSettings({
             patternKeys={patternKeys}
           />
         )}
-        {page === "repeat" && current && (
-          <RepeatPage
+        {page === "repeat-new" && (
+          <RepeatEditorPage
+            initialDay={repeatFrom}
+            initialSequence={lastSequence}
+            mode={current ? "switch" : "first"}
+            onApply={(rule) => {
+              onApplyRule(rule);
+              setPage(current ? "work" : "top");
+            }}
+            onBack={() => setPage("work")}
+            patternKeys={patternKeys}
+          />
+        )}
+        {page === "repeat-fix" && current && (
+          <RepeatEditorPage
+            current={current}
+            initialSequence={current.sequence}
+            mode="fix"
+            onApply={(rule) => {
+              onFixRule(rule);
+              setPage("work");
+            }}
+            onBack={() => setPage("work")}
+            patternKeys={patternKeys}
+          />
+        )}
+        {page === "job" && (
+          <JobChangePage
+            onApply={(job) => {
+              onChangeJob(job);
+              setPage("top");
+            }}
             onBack={() => setPage("top")}
-            onNew={() => setPage("repeat-new")}
+          />
+        )}
+        {page === "leave" && (
+          <LeavePage
+            initial={leaves.find((leave) => leave.id === leaveId)}
+            onBack={() => setPage("work")}
+            onDelete={() => {
+              if (leaveId) {
+                onDeleteLeave(leaveId);
+              }
+              setPage("work");
+            }}
+            onSave={(leave, resume) => {
+              onSaveLeave(leave);
+              if (resume === "new" && leave.end && repeating) {
+                setRepeatFrom(addDays(leave.end, 1));
+                setPage("repeat-new");
+              } else {
+                setPage("work");
+              }
+            }}
+            repeating={repeating}
+          />
+        )}
+        {page === "work" && (
+          <WorkStylePage
+            leaves={leaves}
+            onBack={() => setPage("top")}
+            onFix={() => setPage("repeat-fix")}
+            onHolidaysOff={onHolidaysOff}
+            onLeave={(id) => {
+              setLeaveId(id);
+              setPage("leave");
+            }}
+            onNew={() => {
+              setRepeatFrom(undefined);
+              setPage("repeat-new");
+            }}
+            onRepeat={() => {
+              setRepeatFrom(undefined);
+              setPage("repeat-new");
+            }}
+            onRoster={() => setPage("roster")}
             rules={rules}
           />
         )}
-        {page === "repeat-new" && current && (
-          <NewRepeatPage
-            current={current}
-            onApply={(rule) => {
-              onApplyRule(rule);
-              setPage("repeat");
+        {page === "roster" && (
+          <RosterSwitchPage
+            onApply={(start) => {
+              onApplyRule({ sequence: [], start });
+              setPage("top");
             }}
-            onBack={() => setPage("repeat")}
-            patternKeys={patternKeys}
+            onBack={() => setPage("work")}
           />
         )}
         {page === "mark" && (
@@ -157,7 +252,6 @@ export function DesignSettings({
             preview={preview}
           />
         )}
-        {page === "appIcon" && <AppIconPage onBack={() => setPage("top")} />}
         {page === "patterns" && (
           <PatternsPage
             onBack={() => setPage("top")}
@@ -181,7 +275,7 @@ function SettingsTop({
   memberCount: number;
   onOpen: (page: Page) => void;
 }) {
-  const { theme, icon } = useContext(ThemeContext);
+  const { theme } = useContext(ThemeContext);
   const { look } = useContext(LookSettingsContext);
   return (
     <>
@@ -189,15 +283,13 @@ function SettingsTop({
       <Section title="シフト">
         <Row
           label="働き方"
-          value={current ? "決まった順番で回る" : "勤務表が配られる"}
+          onOpen={() => onOpen("work")}
+          value={
+            current
+              ? `${sequenceLabel(current.sequence)}（${current.sequence.length}日ごと）`
+              : "勤務表が配られる"
+          }
         />
-        {current && (
-          <Row
-            label="繰り返し"
-            onOpen={() => onOpen("repeat")}
-            value={`${sequenceLabel(current.sequence)}（${current.sequence.length}日ごと）`}
-          />
-        )}
         <Row
           label="シフトパターン"
           onOpen={() => onOpen("patterns")}
@@ -213,6 +305,7 @@ function SettingsTop({
           }
         />
         <Row label="勤務メンバー" value={`${memberCount}人`} />
+        <Row label="仕事が変わったとき" onOpen={() => onOpen("job")} />
       </Section>
       <Section title="表示">
         <Row
@@ -226,16 +319,6 @@ function SettingsTop({
                 style={{ background: themeOf(theme).accent }}
               />
               {stylePresetOf(theme, look)?.name ?? "カスタム"}
-            </span>
-          }
-        />
-        <Row
-          label="アプリアイコン"
-          onOpen={() => onOpen("appIcon")}
-          value={
-            <span className="st-inline-value">
-              <AppIcon icon={icon} size={22} theme={theme} />
-              {appIcons.find((option) => option.id === icon)?.name}
             </span>
           }
         />
@@ -293,7 +376,9 @@ function Row({
       <span className={`st-row-label ${danger ? "st-danger" : ""}`}>
         {label}
       </span>
-      {value !== undefined && <span className="st-row-value">{value}</span>}
+      {(value !== undefined || onOpen) && (
+        <span className="st-row-value">{value}</span>
+      )}
       {onOpen && (
         <ChevronRight aria-hidden="true" className="st-row-arrow" size={17} />
       )}
@@ -343,22 +428,20 @@ function SequenceChips({ sequence }: { sequence: Shift[] }) {
   );
 }
 
-function RepeatPage({
-  rules,
-  onBack,
+// The order in use and what can change about it, under the work style.
+function RepeatDetails({
+  current,
   onNew,
+  onFix,
+  onHolidaysOff,
 }: {
-  rules: RepeatRule[];
-  onBack: () => void;
+  current: RepeatRule;
   onNew: () => void;
+  onFix: () => void;
+  onHolidaysOff: (holidaysOff: boolean) => void;
 }) {
-  const current = rules.at(-1);
-  if (!current) {
-    return null;
-  }
   return (
     <>
-      <PageHeader back="設定" onBack={onBack} title="繰り返し" />
       <div className="st-card">
         <p className="st-card-label">
           今の繰り返し
@@ -367,12 +450,29 @@ function RepeatPage({
         <SequenceChips sequence={current.sequence} />
         <p className="st-card-meta">{formatDay(current.start)}から</p>
       </div>
+      <div className="st-list">
+        <SwitchRow
+          checked={current.holidaysOff ?? false}
+          label="祝日は休みにする"
+          onChange={onHolidaysOff}
+        />
+      </div>
       <button className="st-primary" onClick={onNew} type="button">
         新しい繰り返しにする
+      </button>
+      <button className="st-link" onClick={onFix} type="button">
+        今の繰り返しを直す
       </button>
       <p className="st-note">
         異動などで順番が変わるときは、切り替える日を選んで新しい繰り返しにします。それより前のシフトは、そのまま残ります。
       </p>
+    </>
+  );
+}
+
+function RuleHistory({ rules }: { rules: RepeatRule[] }) {
+  return (
+    <>
       {rules.length > 1 && (
         <Section title="これまで">
           {rules
@@ -385,7 +485,11 @@ function RepeatPage({
                 <Row
                   key={dateKey(rule.start)}
                   label={period}
-                  value={sequenceLabel(rule.sequence)}
+                  value={
+                    rule.sequence.length > 0
+                      ? sequenceLabel(rule.sequence)
+                      : "勤務表"
+                  }
                 />
               );
             })
@@ -396,25 +500,530 @@ function RepeatPage({
   );
 }
 
-function NewRepeatPage({
+type RepeatMode = "first" | "switch" | "fix";
+
+const repeatModes: Record<
+  RepeatMode,
+  { title: string; back: string; dayLabel: string; action: string }
+> = {
+  first: {
+    title: "繰り返しを設定",
+    back: "働き方",
+    dayLabel: "始める日",
+    action: "から繰り返す",
+  },
+  switch: {
+    title: "新しい繰り返し",
+    back: "働き方",
+    dayLabel: "切り替える日",
+    action: "から切り替える",
+  },
+  fix: {
+    title: "今の繰り返しを直す",
+    back: "働き方",
+    dayLabel: "並びの1日目",
+    action: "から入れ直す",
+  },
+};
+
+// Sets an order from a day. Fixing keeps the rule's start and moves only
+// the day the order begins on, so no gap opens before it.
+function RepeatEditorPage({
+  mode,
   current,
+  initialDay,
+  initialSequence,
   patternKeys,
   onBack,
   onApply,
 }: {
-  current: RepeatRule;
+  mode: RepeatMode;
+  current?: RepeatRule;
+  initialDay?: Date;
+  initialSequence: Shift[];
   patternKeys: Shift[];
   onBack: () => void;
   onApply: (rule: RepeatRule) => void;
 }) {
-  const [sequence, setSequence] = useState(current.sequence);
-  const [start, setStart] = useState(() => {
-    const today = new Date(2026, 8, 24);
-    return new Date(today.getFullYear(), today.getMonth() + 1, 1);
-  });
+  const fixing = mode === "fix" && current !== undefined;
+  const text = repeatModes[mode];
+  const [sequence, setSequence] = useState(initialSequence);
+  const [day, setDay] = useState(() =>
+    fixing
+      ? (current.anchor ?? current.start)
+      : (initialDay ?? nextMonthStart())
+  );
+  const start = fixing ? current.start : day;
+  // Follows the order until the person sets it.
+  const [holidaysChoice, setHolidaysChoice] = useState(
+    fixing ? current.holidaysOff : undefined
+  );
+  const holidaysOff = holidaysChoice ?? defaultHolidaysOff(sequence, day);
+  const rule: RepeatRule = { sequence, start, anchor: day, holidaysOff };
   return (
     <>
-      <PageHeader back="繰り返し" onBack={onBack} title="新しい繰り返し" />
+      <PageHeader back={text.back} onBack={onBack} title={text.title} />
+      <div className="st-field">
+        <span className="dc-repeat-label">{text.dayLabel}</span>
+        <InputDatePicker
+          ariaLabel={`${text.dayLabel}：${formatDay(day)}。タップで変更`}
+          className="dc-input-date-filled"
+          date={day}
+          onSelect={setDay}
+          title={text.dayLabel}
+        >
+          <span>{formatDay(day)}</span>
+          <ChevronDown
+            aria-hidden="true"
+            className="dc-input-chevron"
+            size={15}
+          />
+        </InputDatePicker>
+      </div>
+      <RepeatSequenceEditor
+        onChange={setSequence}
+        patternKeys={patternKeys}
+        sequence={sequence}
+      />
+      <p className="st-note">
+        {fixing
+          ? "並びの1つ目のシフトが入る日を選びます。"
+          : `${text.dayLabel}が、並びの1日目になります。`}
+      </p>
+      <div className="st-list">
+        <SwitchRow
+          checked={holidaysOff}
+          label="祝日は休みにする"
+          onChange={setHolidaysChoice}
+        />
+      </div>
+      {sequence.length > 0 && <RepeatPreview rule={rule} />}
+      {fixing && (
+        <p className="st-note">
+          {formatDay(start)}
+          からのシフトを入れ直します。その間に自分で直した日も、並びのとおりに戻ります。
+        </p>
+      )}
+      <button
+        className="st-primary"
+        disabled={sequence.length === 0}
+        onClick={() => onApply(rule)}
+        type="button"
+      >
+        {shortDay(start)}
+        {text.action}
+        <ArrowRight aria-hidden="true" size={16} />
+      </button>
+    </>
+  );
+}
+
+// The first two weeks of a rule, from its start.
+function RepeatPreview({ rule }: { rule: RepeatRule }) {
+  const { sequence, start, holidaysOff } = rule;
+  const planned = repeatSchedule(
+    sequence,
+    rule.anchor ?? start,
+    start,
+    addDays(start, previewDays - 1),
+    holidaysOff
+  );
+  return (
+    <div aria-label="はじめの2週間" className="dc-repeat-preview" role="img">
+      {Array.from({ length: previewDays }, (_, index) => {
+        const date = addDays(start, index);
+        const shift = planned[dateKey(date)]?.shift;
+        return (
+          <span className="dc-repeat-day" key={dateKey(date)}>
+            <small className={`dc-repeat-day-number ${weekendClassName(date)}`}>
+              {date.getDate()}
+            </small>
+            {shift && <ShiftMark shift={shift} size={16} />}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+// Changing jobs: the day it happens, then the same questions as onboarding.
+// Shifts before that day stay; everything after follows the new job.
+function JobChangePage({
+  onBack,
+  onApply,
+}: {
+  onBack: () => void;
+  onApply: (job: { patternKeys: Shift[]; rule: RepeatRule }) => void;
+}) {
+  const [start, setStart] = useState(nextMonthStart);
+  const [asking, setAsking] = useState(false);
+  if (asking) {
+    return (
+      <div className="st-job">
+        <WorkSetupSteps
+          finishLabel={`${shortDay(start)}から切り替える`}
+          month={start}
+          onExit={() => setAsking(false)}
+          onFinish={({ patternKeys, sequence, anchor }) =>
+            onApply({
+              patternKeys,
+              rule: {
+                sequence: sequence ?? [],
+                start,
+                anchor,
+              },
+            })
+          }
+        />
+      </div>
+    );
+  }
+  return (
+    <>
+      <PageHeader back="設定" onBack={onBack} title="仕事が変わったとき" />
+      <p className="st-note">
+        新しい仕事の働き方とシフトパターンを、はじめの設定と同じ質問で選び直します。
+      </p>
+      <div className="st-field">
+        <span className="dc-repeat-label">新しい仕事の初日</span>
+        <InputDatePicker
+          ariaLabel={`新しい仕事の初日：${formatDay(start)}。タップで変更`}
+          className="dc-input-date-filled"
+          date={start}
+          onSelect={setStart}
+          title="新しい仕事の初日"
+        >
+          <span>{formatDay(start)}</span>
+          <ChevronDown
+            aria-hidden="true"
+            className="dc-input-chevron"
+            size={15}
+          />
+        </InputDatePicker>
+      </div>
+      <p className="st-note">
+        前の日までのシフトは、そのまま残ります。この日からのシフトは、新しい仕事に合わせて入れ直します。
+      </p>
+      <button
+        className="st-primary"
+        onClick={() => setAsking(true)}
+        type="button"
+      >
+        次へ
+        <ArrowRight aria-hidden="true" size={16} />
+      </button>
+    </>
+  );
+}
+
+const leaveKinds = ["育休", "産休", "休職", "長期研修"];
+
+type Resume = "continue" | "new";
+
+// A stretch without shifts. When work repeats, it also asks how the order
+// picks up afterwards: the same order runs on underneath by itself.
+function LeavePage({
+  initial,
+  repeating,
+  onBack,
+  onSave,
+  onDelete,
+}: {
+  initial?: Leave;
+  repeating: boolean;
+  onBack: () => void;
+  onSave: (leave: Leave, resume: Resume) => void;
+  onDelete: () => void;
+}) {
+  const [name, setName] = useState(initial?.name ?? leaveKinds[0]);
+  const [start, setStart] = useState(() => initial?.start ?? nextMonthStart());
+  const [end, setEnd] = useState<Date | undefined>(initial?.end);
+  const [resume, setResume] = useState<Resume>("continue");
+  const endBeforeStart = end !== undefined && dateKey(end) < dateKey(start);
+  const canSave = name.trim() !== "" && !endBeforeStart;
+  return (
+    <>
+      <header className="st-page-header">
+        <div className="pe-topbar">
+          <button className="st-back" onClick={onBack} type="button">
+            <ChevronLeft aria-hidden="true" size={20} />
+            働き方
+          </button>
+          <button
+            className="pe-save"
+            disabled={!canSave}
+            onClick={() =>
+              onSave(
+                {
+                  id: initial?.id ?? `leave-${dateKey(start)}`,
+                  name: name.trim(),
+                  start,
+                  end,
+                },
+                resume
+              )
+            }
+            type="button"
+          >
+            {initial ? "保存" : "追加"}
+          </button>
+        </div>
+        <h3 className="st-title">
+          {initial ? "お休み期間" : "お休み期間を入れる"}
+        </h3>
+      </header>
+      <section className="st-section">
+        <h4>名前</h4>
+        <div className="st-list">
+          <label className="st-row">
+            <span className="st-row-label">名前</span>
+            <input
+              className="pe-inline-input"
+              onChange={(event) => setName(event.target.value)}
+              placeholder="例：育休"
+              value={name}
+            />
+          </label>
+        </div>
+        <div className="st-leave-kinds">
+          {leaveKinds.map((kind) => (
+            <button
+              aria-pressed={name === kind}
+              key={kind}
+              onClick={() => setName(kind)}
+              type="button"
+            >
+              {kind}
+            </button>
+          ))}
+        </div>
+      </section>
+      <section className="st-section">
+        <h4>期間</h4>
+        <div className="st-list">
+          <DateRow date={start} label="始まる日" onSelect={setStart} />
+          <SwitchRow
+            checked={end !== undefined}
+            label="終わる日が決まっている"
+            onChange={(checked) =>
+              setEnd(checked ? addDays(start, defaultLeaveDays) : undefined)
+            }
+          />
+          {end && <DateRow date={end} label="終わる日" onSelect={setEnd} />}
+        </div>
+      </section>
+      {endBeforeStart && (
+        <p className="st-note st-danger">
+          終わる日は、始まる日より後にしてください。
+        </p>
+      )}
+      {repeating && end && (
+        <div className="st-list">
+          <SegmentRow
+            label="戻ったら"
+            onChange={setResume}
+            options={[
+              ["continue", "前の並びの続き"],
+              ["new", "新しい並び"],
+            ]}
+            value={resume}
+          />
+        </div>
+      )}
+      <p className="st-note">
+        期間中の日は、シフトの代わりに帯で表示されます。共有している人にも伝わります。
+        {end ? "" : "終わる日は、決まったらここで入れられます。"}
+      </p>
+      {initial && (
+        <button className="pe-delete" onClick={onDelete} type="button">
+          <Trash2 aria-hidden="true" size={14} />
+          このお休み期間を消す
+        </button>
+      )}
+    </>
+  );
+}
+
+// About six months, a starting point for the end date.
+const defaultLeaveDays = 182;
+
+function DateRow({
+  label,
+  date,
+  onSelect,
+}: {
+  label: string;
+  date: Date;
+  onSelect: (date: Date) => void;
+}) {
+  return (
+    <div className="st-row">
+      <span className="st-row-label">{label}</span>
+      <span className="st-row-value">
+        <InputDatePicker
+          ariaLabel={`${label}：${formatDay(date)}。タップで変更`}
+          className="dc-input-date-filled"
+          date={date}
+          onSelect={onSelect}
+          title={label}
+        >
+          <span>{formatDay(date)}</span>
+          <ChevronDown
+            aria-hidden="true"
+            className="dc-input-chevron"
+            size={15}
+          />
+        </InputDatePicker>
+      </span>
+    </div>
+  );
+}
+
+function leavePeriod(leave: Leave) {
+  return `${shortDay(leave.start)}〜${leave.end ? shortDay(leave.end) : "未定"}`;
+}
+
+function nextMonthStart() {
+  return new Date(previewToday.getFullYear(), previewToday.getMonth() + 1, 1);
+}
+
+const workStyles = [
+  {
+    repeating: false,
+    icon: "📋",
+    name: "毎月、勤務表が配られる",
+    note: "看護・介護・飲食など",
+  },
+  {
+    repeating: true,
+    icon: "🔁",
+    name: "決まった順番で回っている",
+    note: "消防・工場の交代勤務・曜日で固定など",
+  },
+];
+
+// The same two choices as onboarding. Picking the other one goes on to set
+// the order, or the day the roster takes over.
+function WorkStylePage({
+  rules,
+  leaves,
+  onLeave,
+  onBack,
+  onRepeat,
+  onRoster,
+  onNew,
+  onFix,
+  onHolidaysOff,
+}: {
+  rules: RepeatRule[];
+  leaves: Leave[];
+  onLeave: (id?: string) => void;
+  onBack: () => void;
+  onRepeat: () => void;
+  onRoster: () => void;
+  onNew: () => void;
+  onFix: () => void;
+  onHolidaysOff: (holidaysOff: boolean) => void;
+}) {
+  const repeating = isRepeating(rules);
+  const current = rules.at(-1);
+  return (
+    <>
+      <PageHeader back="設定" onBack={onBack} title="働き方" />
+      <fieldset className="ob-options st-work-options">
+        <legend className="dc-sr-only">働き方</legend>
+        {workStyles.map((style) => {
+          const selected = style.repeating === repeating;
+          return (
+            <button
+              aria-pressed={selected}
+              className="ob-option"
+              key={style.name}
+              onClick={() => {
+                if (selected) {
+                  return;
+                }
+                if (style.repeating) {
+                  onRepeat();
+                } else {
+                  onRoster();
+                }
+              }}
+              type="button"
+            >
+              <span aria-hidden="true" className="ob-option-icon">
+                {style.icon}
+              </span>
+              <span className="ob-option-text">
+                <strong>{style.name}</strong>
+                <small className="ob-option-note">{style.note}</small>
+              </span>
+              {selected ? (
+                <Check aria-hidden="true" className="st-work-check" size={20} />
+              ) : (
+                <ChevronRight
+                  aria-hidden="true"
+                  className="ob-option-arrow"
+                  size={18}
+                />
+              )}
+            </button>
+          );
+        })}
+      </fieldset>
+      {repeating && current ? (
+        <RepeatDetails
+          current={current}
+          onFix={onFix}
+          onHolidaysOff={onHolidaysOff}
+          onNew={onNew}
+        />
+      ) : (
+        <p className="st-note">
+          順番を決めると、先の月までシフトが自動で入ります。月ごとの入力はいらなくなります。
+        </p>
+      )}
+      <section className="st-section">
+        <h4>お休み期間</h4>
+        {leaves.length > 0 && (
+          <div className="st-list st-leave-list">
+            {leaves.map((leave) => (
+              <Row
+                key={leave.id}
+                label={leave.name}
+                onOpen={() => onLeave(leave.id)}
+                value={leavePeriod(leave)}
+              />
+            ))}
+          </div>
+        )}
+        <button
+          className="st-add"
+          onClick={() => onLeave(undefined)}
+          type="button"
+        >
+          <Plus aria-hidden="true" size={14} />
+          お休み期間を入れる
+        </button>
+      </section>
+      <p className="st-note">育休や休職など、しばらくシフトがない期間です。</p>
+      <RuleHistory rules={rules} />
+    </>
+  );
+}
+
+// Stopping the repeat from a chosen day. Earlier shifts stay as they are.
+function RosterSwitchPage({
+  onBack,
+  onApply,
+}: {
+  onBack: () => void;
+  onApply: (start: Date) => void;
+}) {
+  const [start, setStart] = useState(nextMonthStart);
+  return (
+    <>
+      <PageHeader back="働き方" onBack={onBack} title="勤務表に切り替え" />
       <div className="st-field">
         <span className="dc-repeat-label">切り替える日</span>
         <InputDatePicker
@@ -432,41 +1041,15 @@ function NewRepeatPage({
           />
         </InputDatePicker>
       </div>
-      <RepeatSequenceEditor
-        onChange={setSequence}
-        patternKeys={patternKeys}
-        sequence={sequence}
-      />
-      <p className="st-note">切り替える日が、並びの1日目になります。</p>
-      {sequence.length > 0 && (
-        <div
-          aria-label="切り替えてからの2週間"
-          className="dc-repeat-preview"
-          role="img"
-        >
-          {Array.from({ length: previewDays }, (_, index) => {
-            const date = addDays(start, index);
-            const shift = sequence[index % sequence.length];
-            return (
-              <span className="dc-repeat-day" key={dateKey(date)}>
-                <small
-                  className={`dc-repeat-day-number ${weekendClassName(date)}`}
-                >
-                  {date.getDate()}
-                </small>
-                <ShiftMark shift={shift} size={16} />
-              </span>
-            );
-          })}
-        </div>
-      )}
+      <p className="st-note">
+        この日からの繰り返しのシフトは消えて、空いた状態になります。前の日までのシフトは、そのまま残ります。
+      </p>
       <button
         className="st-primary"
-        disabled={sequence.length === 0}
-        onClick={() => onApply({ sequence, start })}
+        onClick={() => onApply(start)}
         type="button"
       >
-        {shortDay(start)}から切り替える
+        {shortDay(start)}から勤務表にする
         <ArrowRight aria-hidden="true" size={16} />
       </button>
     </>
@@ -859,31 +1442,5 @@ function ThemeChoices() {
         </button>
       ))}
     </fieldset>
-  );
-}
-
-function AppIconPage({ onBack }: { onBack: () => void }) {
-  const { theme, icon, setIcon } = useContext(ThemeContext);
-  return (
-    <>
-      <PageHeader back="設定" onBack={onBack} title="アプリアイコン" />
-      <p className="st-note">
-        ホーム画面のアイコンを選べます。色はテーマカラーに合わせて変わります。
-      </p>
-      <fieldset className="st-icon-grid">
-        <legend className="dc-sr-only">アプリアイコン</legend>
-        {appIcons.map((option) => (
-          <button
-            aria-pressed={icon === option.id}
-            key={option.id}
-            onClick={() => setIcon?.(option.id)}
-            type="button"
-          >
-            <AppIcon icon={option.id} size={60} theme={theme} />
-            {option.name}
-          </button>
-        ))}
-      </fieldset>
-    </>
   );
 }

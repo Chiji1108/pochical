@@ -1,3 +1,4 @@
+import holidayJp from "@holiday-jp/holiday_jp";
 import {
   ArrowRight,
   BatteryFull,
@@ -88,7 +89,39 @@ type MemberOptions = { names: string[]; onAdd: (name: string) => void };
 export type Schedule = Record<string, DayEntry | undefined>;
 // A repeating order of shifts; `start` is the first day of the sequence and
 // the day the rule takes over from the one before it.
-export type RepeatRule = { sequence: Shift[]; start: Date };
+// `holidaysOff` turns national holidays into 休み, for people off on them.
+// `anchor` is a day that falls on the first shift of the sequence, when
+// that is not `start` itself.
+export type RepeatRule = {
+  sequence: Shift[];
+  start: Date;
+  anchor?: Date;
+  holidaysOff?: boolean;
+};
+
+// A stretch without shifts, like 育休. With no end, it has not been
+// decided when work starts again.
+export type Leave = { id: string; name: string; start: Date; end?: Date };
+
+export function leaveOn(leaves: Leave[], date: Date) {
+  const key = dateKey(date);
+  return leaves.find(
+    (leave) =>
+      dateKey(leave.start) <= key && (!leave.end || key <= dateKey(leave.end))
+  );
+}
+
+// What a rule fills in from its start, a year ahead.
+function ruleSchedule(rule: RepeatRule, holidaysOff = false) {
+  const { sequence, start } = rule;
+  return repeatSchedule(
+    sequence,
+    rule.anchor ?? start,
+    start,
+    ruleEnd(start),
+    holidaysOff
+  );
+}
 const patternSets: Record<4 | 5 | 6 | 8, Shift[]> = {
   4: ["day", "night", "after", "off"],
   5: ["early", "day", "night", "after", "off"],
@@ -134,12 +167,37 @@ const sample: Shift[] = [
   "off",
 ];
 
+// The last rule decides; an empty sequence means back to a roster.
+export function isRepeating(rules: RepeatRule[]) {
+  return (rules.at(-1)?.sequence.length ?? 0) > 0;
+}
+
 export function dateKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
+const holidays: Record<string, { name: string } | undefined> =
+  holidayJp.holidays;
+
+export function holidayName(date: Date) {
+  return holidays[dateKey(date)]?.name;
+}
+
+// A week with 休み on a weekend day reads as office hours, which usually
+// have national holidays off too.
+export function defaultHolidaysOff(sequence: Shift[], start: Date) {
+  const weekLength = 7;
+  if (sequence.length !== weekLength) {
+    return false;
+  }
+  return sequence.some((shift, index) => {
+    const day = addDays(start, index).getDay();
+    return shift === "off" && (day === 0 || day === 6);
+  });
+}
+
 export function weekendClassName(date: Date) {
-  if (date.getDay() === 0) {
+  if (date.getDay() === 0 || holidayName(date)) {
     return "dc-sunday";
   }
   if (date.getDay() === 6) {
@@ -188,11 +246,17 @@ export function initialDesignSchedule(
 
 // Lays a repeating sequence over [from, to], counting from the anchor day so
 // days before the anchor line up too.
+// Repeating shifts are filled in a year ahead.
+function ruleEnd(start: Date) {
+  return new Date(start.getFullYear(), start.getMonth() + 13, 0);
+}
+
 export function repeatSchedule(
   sequence: Shift[],
   anchor: Date,
   from: Date,
-  to: Date
+  to: Date,
+  holidaysOff = false
 ): Schedule {
   const schedule: Schedule = {};
   const anchorTime = Date.UTC(
@@ -208,7 +272,10 @@ export function repeatSchedule(
     );
     const index =
       ((offset % sequence.length) + sequence.length) % sequence.length;
-    schedule[dateKey(date)] = { shift: sequence[index] };
+    const shift = sequence[index];
+    schedule[dateKey(date)] = {
+      shift: holidaysOff && holidayName(date) ? "off" : shift,
+    };
   }
   return schedule;
 }
@@ -326,7 +393,6 @@ export function DesignCalendar({
   initialEditing,
   patternCount = 4,
   patternKeys: customPatternKeys,
-  hideInputBar = false,
   initialRule,
   initialMonth = 8,
   schedule,
@@ -336,8 +402,6 @@ export function DesignCalendar({
   initialEditing: boolean;
   patternCount?: 4 | 5 | 6 | 8;
   patternKeys?: Shift[];
-  // Repeating shifts fill every month, so the monthly input buttons go away.
-  hideInputBar?: boolean;
   initialRule?: RepeatRule;
   initialMonth?: number;
   schedule: Schedule;
@@ -354,6 +418,9 @@ export function DesignCalendar({
   const [rules, setRules] = useState<RepeatRule[]>(
     initialRule ? [initialRule] : []
   );
+  const [leaves, setLeaves] = useState<Leave[]>([]);
+  // Repeating shifts fill every month, so the monthly input buttons go away.
+  const hideInputBar = isRepeating(rules);
   const members: MemberOptions = {
     names: [
       ...(variants.memberSample === "some" ? sampleMembers : []),
@@ -364,17 +431,18 @@ export function DesignCalendar({
   const [editing, setEditing] = useState(initialEditing);
   const [selectedDay, setSelectedDay] = useState(1);
   const [month, setMonth] = useState(() => new Date(2026, initialMonth, 1));
-  const patternKeys = customPatternKeys ?? patternSets[patternCount];
+  const [patternKeys, setPatternKeys] = useState(
+    () => customPatternKeys ?? patternSets[patternCount]
+  );
   const [announcement, setAnnouncement] = useState("");
   const dates = monthDates(month);
-  const daysOff = dates.filter(
-    (date) =>
-      date.getMonth() === month.getMonth() &&
-      isDayOff(schedule[dateKey(date)]?.shift)
-  ).length;
+  // Days on leave have no shifts to count.
   const monthDays = dates.filter(
-    (date) => date.getMonth() === month.getMonth()
+    (date) => date.getMonth() === month.getMonth() && !leaveOn(leaves, date)
   );
+  const daysOff = monthDays.filter((date) =>
+    isDayOff(schedule[dateKey(date)]?.shift)
+  ).length;
   const counts = patternKeys.map((key) => ({
     key,
     ...patterns[key],
@@ -458,14 +526,64 @@ export function DesignCalendar({
     return Object.keys(imported).filter((key) => !schedule[key]).length;
   }
   // From the switch day on, the new order replaces what the old one wrote.
-  function applyRule(rule: RepeatRule) {
-    const { sequence, start } = rule;
-    const end = new Date(start.getFullYear(), start.getMonth() + 13, 0);
+  // Fills the schedule from the rule's start. Everything from that day on
+  // is replaced, so an empty sequence leaves a roster to fill in.
+  function fillRule(rule: RepeatRule) {
+    const from = dateKey(rule.start);
+    const holidaysOff =
+      rule.sequence.length > 0 &&
+      (rule.holidaysOff ??
+        defaultHolidaysOff(rule.sequence, rule.anchor ?? rule.start));
     onChange((previous) => ({
-      ...previous,
-      ...repeatSchedule(sequence, start, start, end),
+      ...Object.fromEntries(
+        Object.entries(previous).filter(([key]) => key < from)
+      ),
+      ...(rule.sequence.length > 0 ? ruleSchedule(rule, holidaysOff) : {}),
     }));
-    setRules((previous) => [...previous, rule]);
+    return rule.sequence.length > 0 ? { ...rule, holidaysOff } : rule;
+  }
+  function applyRule(rule: RepeatRule) {
+    const filled = fillRule(rule);
+    setRules((previous) => [...previous, filled]);
+  }
+  // Corrects the rule in use from its own start, rather than adding one.
+  function fixRule(rule: RepeatRule) {
+    const filled = fillRule(rule);
+    setRules((previous) => [...previous.slice(0, -1), filled]);
+  }
+  function changeJob(job: { patternKeys: Shift[]; rule: RepeatRule }) {
+    setPatternKeys(job.patternKeys);
+    applyRule(job.rule);
+  }
+  // Only holidays still showing what the rule put there change, so days
+  // the person edited stay as they are.
+  function setHolidaysOff(holidaysOff: boolean) {
+    const rule = rules.at(-1);
+    if (!rule) {
+      return;
+    }
+    const planned = ruleSchedule(rule);
+    onChange((previous) => {
+      const next = { ...previous };
+      for (const [key, entry] of Object.entries(planned)) {
+        const plannedShift = entry?.shift;
+        const current = previous[key];
+        if (!(holidays[key] && plannedShift) || plannedShift === "off") {
+          continue;
+        }
+        if (holidaysOff && current?.shift === plannedShift) {
+          next[key] = { ...current, shift: "off" };
+        }
+        if (!holidaysOff && current?.shift === "off") {
+          next[key] = { ...current, shift: plannedShift };
+        }
+      }
+      return next;
+    });
+    setRules((previous) => [
+      ...previous.slice(0, -1),
+      { ...rule, holidaysOff },
+    ]);
   }
   function openImport() {
     if (importSheetRef.current) {
@@ -509,8 +627,21 @@ export function DesignCalendar({
       <PhoneStatusBar />
       {tab === "settings" && (
         <DesignSettings
+          leaves={leaves}
           memberCount={members.names.length}
           onApplyRule={applyRule}
+          onChangeJob={changeJob}
+          onDeleteLeave={(id) =>
+            setLeaves((previous) => previous.filter((leave) => leave.id !== id))
+          }
+          onFixRule={fixRule}
+          onHolidaysOff={setHolidaysOff}
+          onSaveLeave={(leave) =>
+            setLeaves((previous) => [
+              ...previous.filter((item) => item.id !== leave.id),
+              leave,
+            ])
+          }
           onTab={setTab}
           patternKeys={patternKeys}
           rules={rules}
@@ -553,6 +684,7 @@ export function DesignCalendar({
             className={`dc-grid ${weekDetail ? "dc-grid-week" : ""}`}
             style={{ "--weeks": gridDates.length / 7 } as CSSProperties}
           >
+            {!editing && <LeaveBands dates={gridDates} leaves={leaves} />}
             {gridDates.map((date) => (
               <DayCell
                 active={
@@ -566,6 +698,7 @@ export function DesignCalendar({
                 editing={editing}
                 entry={schedule[dateKey(date)]}
                 key={dateKey(date)}
+                leave={editing ? undefined : leaveOn(leaves, date)?.name}
                 onPress={() =>
                   editing ? setSelectedDay(date.getDate()) : openDetail(date)
                 }
@@ -1229,33 +1362,99 @@ function dayOffStyle(
   return { "--off-tint": tint } as CSSProperties;
 }
 
+// Leaves drawn as bars across each week row, placed in the calendar's own
+// grid. Only the real first and last days get rounded ends, so a leave
+// reads as carrying on into the next row.
+function LeaveBands({ dates, leaves }: { dates: Date[]; leaves: Leave[] }) {
+  const weekLength = 7;
+  const bands = leaves.flatMap((leave) =>
+    Array.from({ length: dates.length / weekLength }, (_, row) => {
+      const week = dates.slice(row * weekLength, (row + 1) * weekLength);
+      const inLeave = week.filter((date) => leaveOn([leave], date));
+      const first = inLeave[0];
+      const last = inLeave.at(-1);
+      if (!(first && last)) {
+        return [];
+      }
+      return [
+        {
+          key: `${leave.id}-${row}`,
+          name: leave.name,
+          row: row + 1,
+          from: week.indexOf(first) + 1,
+          to: week.indexOf(last) + 2,
+          opens: dateKey(first) === dateKey(leave.start),
+          closes:
+            leave.end !== undefined && dateKey(last) === dateKey(leave.end),
+        },
+      ];
+    }).flat()
+  );
+  return bands.map((band) => (
+    <span
+      aria-hidden="true"
+      className={`dc-leave-band ${band.opens ? "dc-leave-open" : ""} ${band.closes ? "dc-leave-close" : ""}`}
+      key={band.key}
+      // Positioned items need both lines; an open end means the grid's edge.
+      style={{
+        gridRow: `${band.row} / ${band.row + 1}`,
+        gridColumn: `${band.from} / ${band.to}`,
+      }}
+    >
+      {band.name}
+    </span>
+  ));
+}
+
+// What a screen reader says after the date.
+function dayDetails(
+  date: Date,
+  shift: Shift | undefined,
+  entry?: DayEntry,
+  leave?: string
+) {
+  const timeChanged = Boolean(entry?.start || entry?.end);
+  return [
+    holidayName(date) ?? "",
+    leave ?? (shift ? patterns[shift].label : "未入力"),
+    timeChanged && entry ? `時間変更 ${timeRange(entry)}` : "",
+    entry?.note ? "メモあり" : "",
+  ].filter(Boolean);
+}
+
 export function DayCell({
   date,
   entry,
   outside,
   editing,
   active,
+  leave,
   onPress,
 }: {
   date: Date;
   entry: DayEntry | undefined;
   outside: boolean;
+  // The leave the day falls in; its shift stays hidden under the band.
+  leave?: string;
   editing: boolean;
   active: boolean;
   onPress: () => void;
 }) {
   const markStyle = useContext(ShiftMarkStyleContext);
-  const shift = outside ? undefined : entry?.shift;
+  const shift = outside || leave ? undefined : entry?.shift;
   const highlight = useOffHighlight(markStyle);
   const { tint } = useDisplayColor(lookOf(shift ?? "off").color);
   const offStyle = dayOffStyle(shift, highlight, tint);
   const today = dateKey(date) === dateKey(designToday);
+  const holiday = holidayName(date);
   const timeChanged = Boolean(entry?.start || entry?.end);
   const hasMark = !outside && (timeChanged || Boolean(entry?.note));
   const className = `dc-day ${outside ? "dc-outside" : ""} ${offStyle ? "dc-off" : ""} ${today && !editing ? "dc-today" : ""} ${active ? "dc-active-day" : ""}`;
   const content = (
     <>
-      <span className="dc-date">{date.getDate()}</span>
+      <span className={`dc-date ${holiday ? "dc-holiday" : ""}`}>
+        {date.getDate()}
+      </span>
       {hasMark && (
         <span
           aria-hidden="true"
@@ -1272,11 +1471,7 @@ export function DayCell({
       </div>
     );
   }
-  const details = [
-    shift ? patterns[shift].label : "未入力",
-    timeChanged && entry ? `時間変更 ${timeRange(entry)}` : "",
-    entry?.note ? "メモあり" : "",
-  ].filter(Boolean);
+  const details = dayDetails(date, shift, entry, leave);
   return (
     <button
       aria-haspopup={editing ? undefined : "dialog"}

@@ -123,8 +123,15 @@ function startSchedule(sequence?: Shift[], anchor?: Date): Schedule {
   );
 }
 
+// What the setup questions end with: the patterns to use, and for work
+// that repeats, the order and a day that falls on its first shift.
+export type WorkSetup = {
+  patternKeys: Shift[];
+  sequence?: Shift[];
+  anchor?: Date;
+};
+
 export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
-  const [step, setStep] = useState<Step>({ name: "kind" });
   const themeStyle = useThemeStyle();
   const [finished, setFinished] = useState<{
     patternKeys: Shift[];
@@ -132,34 +139,18 @@ export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
   }>();
   const [schedule, setSchedule] = useState<Schedule>({});
 
-  function finish(template: Template, sequence?: Shift[], anchor?: Date) {
+  function finish({ patternKeys, sequence, anchor }: WorkSetup) {
     setSchedule(startSchedule(sequence, anchor));
     setFinished({
-      patternKeys: template.patternKeys,
+      patternKeys,
       rule: sequence && anchor ? { sequence, start: anchor } : undefined,
     });
-  }
-
-  function chooseRotation(template: Template) {
-    if (template.custom) {
-      setStep({ name: "custom", template, sequence: [] });
-    } else if (template.weekly && template.sequence) {
-      // Any Sunday works as the first day of a week-based sequence.
-      finish(
-        template,
-        template.sequence,
-        addDays(designMonth, -designMonth.getDay())
-      );
-    } else if (template.sequence) {
-      setStep({ name: "anchor", template, sequence: template.sequence });
-    }
   }
 
   if (finished) {
     return (
       <div className="ob-finished">
         <DesignCalendar
-          hideInputBar={finished.rule !== undefined}
           initialEditing={false}
           initialRule={finished.rule}
           onChange={setSchedule}
@@ -169,10 +160,7 @@ export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
         />
         <button
           className="ob-restart"
-          onClick={() => {
-            setFinished(undefined);
-            setStep({ name: "kind" });
-          }}
+          onClick={() => setFinished(undefined)}
           type="button"
         >
           最初からやり直す
@@ -185,58 +173,106 @@ export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
     <div className="dc-phone ob-phone" style={themeStyle}>
       <PhoneStatusBar />
       <div className="ob-content">
-        {step.name === "kind" && (
-          <KindStep
-            onRoster={() => setStep({ name: "roster" })}
-            onRotation={() => setStep({ name: "rotation" })}
-          />
-        )}
-        {step.name === "roster" && (
-          <TemplateStep
-            onBack={() => setStep({ name: "kind" })}
-            onChoose={(template) => finish(template)}
-            templates={rosterTemplates}
-            title="近い働き方を選んでください"
-          />
-        )}
-        {step.name === "rotation" && (
-          <TemplateStep
-            onBack={() => setStep({ name: "kind" })}
-            onChoose={chooseRotation}
-            templates={rotationTemplates}
-            title="どんな順番で回りますか？"
-          />
-        )}
-        {step.name === "custom" && (
-          <CustomStep
-            initialSequence={step.sequence}
-            onBack={() => setStep({ name: "rotation" })}
-            onNext={(sequence) =>
-              setStep({ name: "anchor", template: step.template, sequence })
-            }
-            template={step.template}
-          />
-        )}
-        {step.name === "anchor" && (
-          <AnchorStep
-            onBack={() =>
-              setStep(
-                step.template.custom
-                  ? {
-                      name: "custom",
-                      template: step.template,
-                      sequence: step.sequence,
-                    }
-                  : { name: "rotation" }
-              )
-            }
-            onStart={(anchor) => finish(step.template, step.sequence, anchor)}
-            sequence={step.sequence}
-          />
-        )}
+        <WorkSetupSteps finishLabel="はじめる" onFinish={finish} />
       </div>
       <div aria-hidden="true" className="dc-home-indicator" />
     </div>
+  );
+}
+
+// The questions from onboarding, also used when changing jobs. Without
+// `onExit` it is the first run and greets the person.
+export function WorkSetupSteps({
+  month = designMonth,
+  finishLabel,
+  onExit,
+  onFinish,
+}: {
+  month?: Date;
+  finishLabel: string;
+  onExit?: () => void;
+  onFinish: (setup: WorkSetup) => void;
+}) {
+  const [step, setStep] = useState<Step>({ name: "kind" });
+
+  function chooseRotation(template: Template) {
+    if (template.custom) {
+      setStep({ name: "custom", template, sequence: [] });
+    } else if (template.weekly && template.sequence) {
+      // Any Sunday works as the first day of a week-based sequence.
+      onFinish({
+        patternKeys: template.patternKeys,
+        sequence: template.sequence,
+        anchor: addDays(month, -month.getDay()),
+      });
+    } else if (template.sequence) {
+      setStep({ name: "anchor", template, sequence: template.sequence });
+    }
+  }
+
+  return (
+    <>
+      {step.name === "kind" && (
+        <KindStep
+          onBack={onExit}
+          onRoster={() => setStep({ name: "roster" })}
+          onRotation={() => setStep({ name: "rotation" })}
+        />
+      )}
+      {step.name === "roster" && (
+        <TemplateStep
+          onBack={() => setStep({ name: "kind" })}
+          onChoose={(template) =>
+            onFinish({ patternKeys: template.patternKeys })
+          }
+          templates={rosterTemplates}
+          title="近い働き方を選んでください"
+        />
+      )}
+      {step.name === "rotation" && (
+        <TemplateStep
+          onBack={() => setStep({ name: "kind" })}
+          onChoose={chooseRotation}
+          templates={rotationTemplates}
+          title="どんな順番で回りますか？"
+        />
+      )}
+      {step.name === "custom" && (
+        <CustomStep
+          initialSequence={step.sequence}
+          onBack={() => setStep({ name: "rotation" })}
+          onNext={(sequence) =>
+            setStep({ name: "anchor", template: step.template, sequence })
+          }
+          template={step.template}
+        />
+      )}
+      {step.name === "anchor" && (
+        <AnchorStep
+          finishLabel={finishLabel}
+          month={month}
+          onBack={() =>
+            setStep(
+              step.template.custom
+                ? {
+                    name: "custom",
+                    template: step.template,
+                    sequence: step.sequence,
+                  }
+                : { name: "rotation" }
+            )
+          }
+          onStart={(anchor) =>
+            onFinish({
+              patternKeys: step.template.patternKeys,
+              sequence: step.sequence,
+              anchor,
+            })
+          }
+          sequence={step.sequence}
+        />
+      )}
+    </>
   );
 }
 
@@ -268,18 +304,30 @@ function StepHeader({
 }
 
 function KindStep({
+  onBack,
   onRoster,
   onRotation,
 }: {
+  onBack?: () => void;
   onRoster: () => void;
   onRotation: () => void;
 }) {
+  const first = !onBack;
   return (
     <>
-      <p className="ob-welcome">ポチカレへようこそ</p>
+      {first && <p className="ob-welcome">ポチカレへようこそ</p>}
       <StepHeader
-        description="答えに合わせて、入れやすい形で始めます。"
-        title="シフトはどう決まりますか？"
+        description={
+          first
+            ? "答えに合わせて、入れやすい形で始めます。"
+            : "前の仕事のシフトは、そのまま残ります。"
+        }
+        onBack={onBack}
+        title={
+          first
+            ? "シフトはどう決まりますか？"
+            : "新しい仕事のシフトはどう決まりますか？"
+        }
       />
       <div className="ob-options">
         <button className="ob-option" onClick={onRoster} type="button">
@@ -313,7 +361,7 @@ function KindStep({
           />
         </button>
       </div>
-      <p className="ob-footnote">あとから設定で変えられます</p>
+      {first && <p className="ob-footnote">あとから設定で変えられます</p>}
     </>
   );
 }
@@ -411,14 +459,18 @@ function CustomStep({
 
 function AnchorStep({
   sequence,
+  month,
+  finishLabel,
   onBack,
   onStart,
 }: {
   sequence: Shift[];
+  month: Date;
+  finishLabel: string;
   onBack: () => void;
   onStart: (anchor: Date) => void;
 }) {
-  const [viewMonth, setViewMonth] = useState(designMonth);
+  const [viewMonth, setViewMonth] = useState(month);
   const [anchor, setAnchor] = useState<Date>();
   const first = patterns[sequence[0]].label;
   return (
@@ -506,7 +558,7 @@ function AnchorStep({
         onClick={() => anchor && onStart(anchor)}
         type="button"
       >
-        はじめる
+        {finishLabel}
       </button>
     </>
   );
