@@ -44,63 +44,25 @@ import {
   Umbrella as PhUmbrella,
   Users as PhUsers,
 } from "@phosphor-icons/react";
-import {
-  Ambulance,
-  Baby,
-  Bed,
-  BookOpen,
-  Briefcase,
-  Building2,
-  Bus,
-  CalendarCheck,
-  Car,
-  Clock,
-  CloudMoon,
-  CloudSun,
-  Coffee,
-  Dumbbell,
-  Flame,
-  Flower2,
-  GraduationCap,
-  Heart,
-  Hospital,
-  House,
-  Laptop,
-  Leaf,
-  type LucideIcon,
-  Moon,
-  MoonStar,
-  Music,
-  PartyPopper,
-  Phone,
-  Plane,
-  Shield,
-  ShoppingBag,
-  Siren,
-  Sparkles,
-  Star,
-  Stethoscope,
-  Sun,
-  SunMoon,
-  Sunrise,
-  Sunset,
-  Syringe,
-  TrainFront,
-  TreePalm,
-  Umbrella,
-  Users,
-  Utensils,
-} from "lucide-react";
 import { createContext, useContext } from "react";
 import type { DesignVariants } from "../lib/design-variants";
 import { patterns, type Shift } from "./design-calendar";
 
 export type ShiftMarkStyle = DesignVariants["shiftMark"];
-export const ShiftMarkStyleContext = createContext<ShiftMarkStyle>("emoji");
+export const ShiftMarkStyleContext = createContext<ShiftMarkStyle>("icon");
 // Lets the in-app setting change the look for the whole preview.
 export const SetShiftMarkStyleContext = createContext<
   ((style: ShiftMarkStyle) => void) | undefined
 >(undefined);
+
+// Whether calendar cells print the shift name under an emoji or icon. The
+// letter look is a name already, so it has no switch.
+export type CellNames = { emoji: boolean; icon: boolean };
+export const defaultCellNames: CellNames = { emoji: false, icon: false };
+export const CellNamesContext = createContext<{
+  names: CellNames;
+  setNames?: (names: CellNames) => void;
+}>({ names: defaultCellNames });
 
 // Twelve muted colors that sit with the moss green theme: text color and a
 // light tint for the badge background.
@@ -119,59 +81,10 @@ export const markColors = [
   { name: "グレー", color: "#56636d", tint: "#e3e7ea" },
 ] as const;
 
-// "letter" draws the symbol inside a thin circle, so any shift has an icon.
+// Phosphor duotone icons. "letter" draws the symbol inside a thin circle, so
+// any shift has an icon. Phosphor has one sun-on-the-horizon icon, so sunrise
+// and dusk share it and the sunset uses a dim sun.
 export const markIcons = {
-  letter: undefined,
-  sun: Sun,
-  cloudSun: CloudSun,
-  sunrise: Sunrise,
-  sunset: Sunset,
-  sunMoon: SunMoon,
-  moon: Moon,
-  moonStar: MoonStar,
-  cloudMoon: CloudMoon,
-  leaf: Leaf,
-  bed: Bed,
-  coffee: Coffee,
-  flower: Flower2,
-  treePalm: TreePalm,
-  umbrella: Umbrella,
-  book: BookOpen,
-  graduationCap: GraduationCap,
-  briefcase: Briefcase,
-  laptop: Laptop,
-  building: Building2,
-  house: House,
-  users: Users,
-  phone: Phone,
-  clock: Clock,
-  calendarCheck: CalendarCheck,
-  hospital: Hospital,
-  stethoscope: Stethoscope,
-  syringe: Syringe,
-  ambulance: Ambulance,
-  siren: Siren,
-  flame: Flame,
-  shield: Shield,
-  car: Car,
-  bus: Bus,
-  train: TrainFront,
-  plane: Plane,
-  baby: Baby,
-  utensils: Utensils,
-  shoppingBag: ShoppingBag,
-  dumbbell: Dumbbell,
-  music: Music,
-  heart: Heart,
-  star: Star,
-  sparkles: Sparkles,
-  partyPopper: PartyPopper,
-} satisfies Record<string, LucideIcon | undefined>;
-export type MarkIcon = keyof typeof markIcons;
-
-// The same icons from Phosphor. It has one sun-on-the-horizon icon, so
-// sunrise and dusk share it and the sunset uses a dim sun.
-const phosphorIcons: Record<MarkIcon, PhosphorIcon | undefined> = {
   letter: undefined,
   sun: PhSun,
   cloudSun: PhCloudSun,
@@ -217,16 +130,8 @@ const phosphorIcons: Record<MarkIcon, PhosphorIcon | undefined> = {
   star: PhStar,
   sparkles: PhSparkle,
   partyPopper: PhConfetti,
-};
-
-export const IconSetContext =
-  createContext<DesignVariants["iconSet"]>("phosphorDuotone");
-
-const phosphorWeights = {
-  phosphorRegular: "regular",
-  phosphorDuotone: "duotone",
-  phosphorFill: "fill",
-} as const;
+} satisfies Record<string, PhosphorIcon | undefined>;
+export type MarkIcon = keyof typeof markIcons;
 
 export const markEmojis = [
   "☀️",
@@ -336,30 +241,54 @@ export function nextColor(used: number[]) {
   return free === -1 ? used.length % markColors.length : free;
 }
 
+// The two-letter badge uses the start of the shift name (most are two
+// letters already, like 日勤 or 明け) on a slightly wider tile.
+export type BadgeLength = "one" | "two";
+export const BadgeLengthContext = createContext<{
+  length: BadgeLength;
+  setLength?: (length: BadgeLength) => void;
+}>({ length: "one" });
+
+const nameGraphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
+
+function badgeText(look: Look, name: string | undefined, length: BadgeLength) {
+  if (length === "one" || !name) {
+    return look.symbol;
+  }
+  return Array.from(nameGraphemes.segment(name), ({ segment }) => segment)
+    .slice(0, 2)
+    .join("");
+}
+
 export function MarkGlyph({
   look,
   style,
   size,
+  name,
 }: {
   look: Look;
   style: ShiftMarkStyle;
   size: number;
+  name?: string;
 }) {
   const { color, tint } = markColors[look.color];
+  const { length: badgeLength } = useContext(BadgeLengthContext);
   if (style === "badge") {
+    const text = badgeText(look, name, badgeLength);
+    const wide = [...text].length > 1;
     return (
       <span
         aria-hidden="true"
-        className="sm-badge"
+        className={`sm-badge ${wide ? "sm-badge-wide" : ""}`}
         style={{
-          width: size,
+          minWidth: size,
           height: size,
-          fontSize: Math.round(size * (look.symbol.length > 1 ? 0.4 : 0.56)),
+          fontSize: Math.round(size * (wide ? 0.44 : 0.56)),
           color,
           background: tint,
         }}
       >
-        {look.symbol}
+        {text}
       </span>
     );
   }
@@ -374,20 +303,7 @@ export function MarkGlyph({
 }
 
 function IconGlyph({ look, size }: { look: Look; size: number }) {
-  const iconSet = useContext(IconSetContext);
   const { color } = markColors[look.color];
-  const PhIcon = phosphorIcons[look.icon];
-  if (iconSet !== "lucide" && PhIcon) {
-    return (
-      <PhIcon
-        aria-hidden="true"
-        className="sm-icon"
-        color={color}
-        size={size}
-        weight={phosphorWeights[iconSet]}
-      />
-    );
-  }
   const Icon = markIcons[look.icon];
   if (!Icon) {
     return (
@@ -411,12 +327,19 @@ function IconGlyph({ look, size }: { look: Look; size: number }) {
       className="sm-icon"
       color={color}
       size={size}
-      strokeWidth={1.9}
+      weight="duotone"
     />
   );
 }
 
 export function ShiftMark({ shift, size }: { shift: Shift; size: number }) {
   const style = useContext(ShiftMarkStyleContext);
-  return <MarkGlyph look={lookOf(shift)} size={size} style={style} />;
+  return (
+    <MarkGlyph
+      look={lookOf(shift)}
+      name={patterns[shift].label}
+      size={size}
+      style={style}
+    />
+  );
 }

@@ -166,7 +166,7 @@ export function PatternsPage({
             }}
             type="button"
           >
-            <MarkGlyph look={item} size={22} style={style} />
+            <MarkGlyph look={item} name={item.name} size={22} style={style} />
             <span className="st-row-label">{item.name}</span>
             <span className="st-row-value">{timeText(item)}</span>
             <ChevronRight
@@ -265,7 +265,7 @@ function PatternEditor({
         </h3>
       </header>
       <div className="pe-preview">
-        <MarkGlyph look={draft} size={44} style={style} />
+        <MarkGlyph look={draft} name={draft.name} size={44} style={style} />
         <span className="pe-preview-text">
           <strong>{draft.name || "名前を入力"}</strong>
           <small className="pe-preview-time">{timeText(draft)}</small>

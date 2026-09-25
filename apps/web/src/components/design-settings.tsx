@@ -1,6 +1,5 @@
 import {
   ArrowRight,
-  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -8,18 +7,23 @@ import {
 import { type ReactNode, useContext, useState } from "react";
 import {
   addDays,
+  DayCell,
   dateKey,
   formatDay,
   InputDatePicker,
   patterns,
   type RepeatRule,
   RepeatSequenceEditor,
+  type Schedule,
   type Shift,
   TabBar,
+  weekDates,
   weekendClassName,
 } from "./design-calendar";
 import { PatternsPage } from "./design-pattern-editor";
 import {
+  BadgeLengthContext,
+  CellNamesContext,
   SetShiftMarkStyleContext,
   ShiftMark,
   type ShiftMarkStyle,
@@ -28,29 +32,14 @@ import {
 
 type Page = "top" | "repeat" | "repeat-new" | "patterns" | "mark";
 
-const markOptions: {
-  style: ShiftMarkStyle;
-  name: string;
-  note: string;
-}[] = [
-  {
-    style: "emoji",
-    name: "絵文字",
-    note: "にぎやかで楽しい。パターンごとに好きな絵文字を選べます",
-  },
-  {
-    style: "badge",
-    name: "文字",
-    note: "勤務表と同じ1文字で、ぱっと読めます",
-  },
-  {
-    style: "icon",
-    name: "アイコン",
-    note: "落ち着いた線のアイコンで、すっきり見えます",
-  },
+const markOptions: { style: ShiftMarkStyle; name: string }[] = [
+  { style: "icon", name: "アイコン" },
+  { style: "emoji", name: "絵文字" },
+  { style: "badge", name: "文字" },
 ];
 
 const previewDays = 14;
+const previewToday = new Date(2026, 8, 24);
 
 // Shortens runs of the same shift, e.g. 日勤×2・夕勤×2.
 function sequenceLabel(sequence: Shift[]) {
@@ -79,12 +68,14 @@ export function DesignSettings({
   patternKeys,
   memberCount,
   rules,
+  schedule,
   onApplyRule,
   onTab,
 }: {
   patternKeys: Shift[];
   memberCount: number;
   rules: RepeatRule[];
+  schedule: Schedule;
   onApplyRule: (rule: RepeatRule) => void;
   onTab: (tab: "calendar" | "settings") => void;
 }) {
@@ -120,7 +111,7 @@ export function DesignSettings({
           />
         )}
         {page === "mark" && (
-          <MarkPage onBack={() => setPage("top")} patternKeys={patternKeys} />
+          <MarkPage onBack={() => setPage("top")} schedule={schedule} />
         )}
         {page === "patterns" && (
           <PatternsPage
@@ -407,54 +398,105 @@ function NewRepeatPage({
   );
 }
 
+const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
+
 function MarkPage({
-  patternKeys,
+  schedule,
   onBack,
 }: {
-  patternKeys: Shift[];
+  schedule: Schedule;
   onBack: () => void;
 }) {
   const current = useContext(ShiftMarkStyleContext);
   const setStyle = useContext(SetShiftMarkStyleContext);
-  const sample = Array.from(
-    { length: 7 },
-    (_, index) => patternKeys[index % patternKeys.length]
-  );
+  const { names, setNames } = useContext(CellNamesContext);
+  const { length, setLength } = useContext(BadgeLengthContext);
+  // This week and next, drawn with the real calendar cells.
+  const preview = [
+    ...weekDates(previewToday),
+    ...weekDates(addDays(previewToday, 7)),
+  ];
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="シフトの見た目" />
-      <p className="st-note">
-        カレンダーやボタンに出るシフトの印を選べます。グループの人のシフトも、ここで選んだ見た目で表示されます。
-      </p>
-      <div className="st-marks-options">
+      <div aria-hidden="true" className="st-preview" inert>
+        <div className="dc-weekdays">
+          {weekdayLabels.map((day) => (
+            <span key={day}>{day}</span>
+          ))}
+        </div>
+        <div className="dc-grid st-preview-grid">
+          {preview.map((date) => (
+            <DayCell
+              active={false}
+              date={date}
+              editing={false}
+              entry={schedule[dateKey(date)]}
+              key={dateKey(date)}
+              onPress={() => undefined}
+              outside={false}
+            />
+          ))}
+        </div>
+      </div>
+      <fieldset className="st-mark-segment">
+        <legend className="dc-sr-only">シフトの見た目</legend>
         {markOptions.map((option) => (
           <button
             aria-pressed={current === option.style}
-            className="st-mark-option"
             key={option.style}
             onClick={() => setStyle?.(option.style)}
             type="button"
           >
-            <span className="st-mark-option-head">
-              <strong className="st-mark-option-name">{option.name}</strong>
-              {current === option.style && (
-                <Check aria-hidden="true" size={18} />
-              )}
-            </span>
-            <span className="st-mark-sample">
-              <ShiftMarkStyleContext value={option.style}>
-                {sample.map((shift, index) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: the sample repeats shifts, so position is its identity.
-                  <span className="st-mark-sample-day" key={index}>
-                    <ShiftMark shift={shift} size={22} />
-                  </span>
-                ))}
-              </ShiftMarkStyleContext>
-            </span>
-            <small className="st-mark-option-note">{option.note}</small>
+            <ShiftMarkStyleContext value={option.style}>
+              <ShiftMark shift="day" size={20} />
+            </ShiftMarkStyleContext>
+            {option.name}
           </button>
         ))}
-      </div>
+      </fieldset>
+      {current === "badge" && (
+        <fieldset className="st-switch st-length">
+          <legend className="st-switch-text">
+            文字の数
+            <small className="st-switch-note">名前の頭文字が入ります</small>
+          </legend>
+          <div className="design-segment">
+            {(
+              [
+                ["one", "1文字"],
+                ["two", "2文字"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                aria-pressed={length === value}
+                key={value}
+                onClick={() => setLength?.(value)}
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      )}
+      {current !== "badge" && (
+        <label className="st-switch">
+          <span className="st-switch-text">シフト名を表示</span>
+          <input
+            aria-checked={names[current]}
+            checked={names[current]}
+            onChange={(event) =>
+              setNames?.({ ...names, [current]: event.target.checked })
+            }
+            role="switch"
+            type="checkbox"
+          />
+        </label>
+      )}
+      <p className="st-note">
+        グループの人のシフトも、ここで選んだ見た目で表示されます。
+      </p>
     </>
   );
 }

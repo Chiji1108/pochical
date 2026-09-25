@@ -24,7 +24,6 @@ import {
   type MouseEvent,
   type PointerEvent,
   type ReactNode,
-  type Ref,
   type RefObject,
   type SetStateAction,
   useContext,
@@ -33,7 +32,11 @@ import {
 } from "react";
 import type { DesignVariants } from "../lib/design-variants";
 import { DesignSettings } from "./design-settings";
-import { ShiftMark, ShiftMarkStyleContext } from "./shift-mark";
+import {
+  CellNamesContext,
+  ShiftMark,
+  ShiftMarkStyleContext,
+} from "./shift-mark";
 
 // Patterns without a time are all-day, so they have no time to change.
 export const patterns: Record<
@@ -139,11 +142,6 @@ export function weekendClassName(date: Date) {
   return "";
 }
 
-const startLabels: Record<DesignVariants["startLabel"], string> = {
-  pochi: "ポチポチ入力",
-  manual: "手で入力",
-  bulk: "まとめて入力",
-};
 const sampleMembers = ["佐藤", "田中", "鈴木", "山本", "高橋"];
 const sampleDetails: Record<string, Omit<DayEntry, "shift">> = {
   "2026-09-08": { end: "20:00", note: "棚卸し" },
@@ -220,7 +218,7 @@ function keepDetails(entry: DayEntry | undefined, shift: Shift): DayEntry {
   return { shift, note: entry?.note, members: entry?.members };
 }
 
-function weekDates(date: Date) {
+export function weekDates(date: Date) {
   return Array.from(
     { length: 7 },
     (_, index) =>
@@ -342,7 +340,6 @@ export function DesignCalendar({
 }) {
   const phoneRef = useRef<HTMLDivElement>(null);
   const breakdownRef = useRef<HTMLDialogElement>(null);
-  const detailSheetRef = useRef<HTMLDialogElement>(null);
   const importSheetRef = useRef<HTMLDialogElement>(null);
   const [detailDate, setDetailDate] = useState<Date>();
   const [addedMembers, setAddedMembers] = useState<string[]>([]);
@@ -396,7 +393,6 @@ export function DesignCalendar({
   const datePicker = (
     <InputDatePicker
       ariaLabel={`入力する日付：${month.getMonth() + 1}月${selectedDay}日(${weekdays[selectedDate.getDay()]})。タップで変更`}
-      className={variants.dateChip === "filled" ? "dc-input-date-filled" : ""}
       date={selectedDate}
       onSelect={(date) => {
         setSelectedDay(date.getDate());
@@ -415,17 +411,12 @@ export function DesignCalendar({
       <ChevronDown aria-hidden="true" className="dc-input-chevron" size={15} />
     </InputDatePicker>
   );
-  const weekDetail =
-    !editing && detailDate !== undefined && variants.dayDetail === "week";
+  const weekDetail = !editing && detailDate !== undefined;
   const gridDates = weekDetail ? weekDates(detailDate) : dates;
   const headingMode = screenMode(editing, weekDetail);
   function openDetail(date: Date) {
     setDetailDate(date);
     setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
-    const dialog = detailSheetRef.current;
-    if (variants.dayDetail === "sheet" && dialog && !dialog.open) {
-      showOverPhone(dialog, phoneRef.current);
-    }
   }
   function goToMonth(target: Date) {
     setMonth(target);
@@ -475,7 +466,6 @@ export function DesignCalendar({
     }
   }
   function closeDetail() {
-    detailSheetRef.current?.close();
     setDetailDate(undefined);
   }
   function changeEntry(date: Date, entry: DayEntry | undefined) {
@@ -504,6 +494,7 @@ export function DesignCalendar({
           onTab={setTab}
           patternKeys={patternKeys}
           rules={rules}
+          schedule={schedule}
         />
       )}
       <div className="dc-content" hidden={tab === "settings"}>
@@ -558,7 +549,7 @@ export function DesignCalendar({
           </section>
           {emptyMonth && headingMode === "view" && (
             <EmptyMonthCard
-              label={startLabels[variants.startLabel]}
+              label="ポチポチ入力"
               month={month}
               onImport={openImport}
               showInputHint={!hideInputBar}
@@ -599,14 +590,13 @@ export function DesignCalendar({
               onSkip={() => moveToNextDay("変更せずに進みました")}
               patternKeys={patternKeys}
               selectedShift={selectedShift}
-              variants={variants}
             />
           </div>
         )}
         {headingMode === "view" && !hideInputBar && (
           <div className="dc-controls">
             <StartArea
-              label={startLabels[variants.startLabel]}
+              label="ポチポチ入力"
               onImport={openImport}
               onStart={startInput}
             />
@@ -669,19 +659,6 @@ export function DesignCalendar({
           <p className="dc-sheet-total">この月は全{monthDays.length}日</p>
         </section>
       </dialog>
-      <DetailSheet
-        date={variants.dayDetail === "sheet" ? detailDate : undefined}
-        entry={detailDate && schedule[dateKey(detailDate)]}
-        members={members}
-        onChange={(entry) => detailDate && changeEntry(detailDate, entry)}
-        onClose={closeDetail}
-        onClosed={() => setDetailDate(undefined)}
-        onNavigate={(days) =>
-          detailDate && openDetail(addDays(detailDate, days))
-        }
-        patternKeys={patternKeys}
-        ref={detailSheetRef}
-      />
       <ImportSheet
         access={variants.importAccess}
         month={month}
@@ -859,17 +836,6 @@ function HeadingActions({
   onDownload: () => void;
 }) {
   const unit = mode === "week" ? "週" : "月";
-  if (layout === "current") {
-    return mode === "view" ? (
-      <MonthActions
-        month={month}
-        onDownload={onDownload}
-        onMonthChange={onMonthChange}
-      />
-    ) : (
-      <ModeActions onDone={onDone} onStep={onStep} unit={unit} />
-    );
-  }
   const showingThisMonth =
     month.getFullYear() === designToday.getFullYear() &&
     month.getMonth() === designToday.getMonth();
@@ -908,26 +874,6 @@ function HeadingActions({
         </button>
       )}
     </>
-  );
-}
-
-function ModeActions({
-  unit,
-  onStep,
-  onDone,
-}: {
-  unit: "月" | "週";
-  onStep: (direction: 1 | -1) => void;
-  onDone: () => void;
-}) {
-  return (
-    <div className="dc-heading-actions">
-      <StepButtons onStep={onStep} unit={unit} />
-      <button className="dc-done" onClick={onDone} type="button">
-        <Check aria-hidden="true" size={18} />
-        完了
-      </button>
-    </div>
   );
 }
 
@@ -1176,68 +1122,11 @@ function ImportSheet({
   );
 }
 
-function MonthActions({
-  month,
-  onMonthChange,
-  onDownload,
-}: {
-  month: Date;
-  onMonthChange: (month: Date) => void;
-  onDownload: () => void;
-}) {
-  const showingTodayMonth =
-    month.getFullYear() === designToday.getFullYear() &&
-    month.getMonth() === designToday.getMonth();
-  return (
-    <div className="dc-month-actions">
-      <button
-        aria-label="この月のシフトをCSVで保存"
-        onClick={onDownload}
-        type="button"
-      >
-        <Download aria-hidden="true" size={21} />
-      </button>
-      <button
-        aria-label="前の月"
-        onClick={() =>
-          onMonthChange(new Date(month.getFullYear(), month.getMonth() - 1, 1))
-        }
-        type="button"
-      >
-        <ChevronLeft aria-hidden="true" size={21} />
-      </button>
-      <button
-        aria-label="今月に戻る"
-        className="dc-today-button"
-        disabled={showingTodayMonth}
-        onClick={() =>
-          onMonthChange(
-            new Date(designToday.getFullYear(), designToday.getMonth(), 1)
-          )
-        }
-        type="button"
-      >
-        今月
-      </button>
-      <button
-        aria-label="次の月"
-        onClick={() =>
-          onMonthChange(new Date(month.getFullYear(), month.getMonth() + 1, 1))
-        }
-        type="button"
-      >
-        <ChevronRight aria-hidden="true" size={21} />
-      </button>
-    </div>
-  );
-}
-
 function ShiftInputControls({
   datePicker,
   patternKeys,
   selectedShift,
   canSkip,
-  variants,
   onEnter,
   onSkip,
 }: {
@@ -1245,20 +1134,12 @@ function ShiftInputControls({
   patternKeys: Shift[];
   selectedShift: Shift | undefined;
   canSkip: boolean;
-  variants: DesignVariants;
   onEnter: (shift: Shift | undefined) => void;
   onSkip: () => void;
 }) {
   return (
     <>
-      {variants.inputLabel === "suffix" ? (
-        <div className="dc-input-row">
-          {datePicker}
-          <span className="dc-input-suffix">に入力</span>
-        </div>
-      ) : (
-        datePicker
-      )}
+      {datePicker}
       <fieldset
         aria-label="入力するシフト"
         className={`dc-patterns ${patternKeys.length > 4 ? "dc-patterns-two-rows" : ""} ${patternKeys.length === 8 ? "dc-patterns-eight" : ""}`}
@@ -1272,136 +1153,48 @@ function ShiftInputControls({
           </button>
         ))}
       </fieldset>
-      {variants.dayActions === "toggle" ? (
-        <div className="dc-day-actions">
-          <button
-            onClick={() => (selectedShift ? onEnter(undefined) : onSkip())}
-            type="button"
-          >
-            {selectedShift ? (
-              <>
-                <Trash2 aria-hidden="true" size={14} />
-                削除
-              </>
-            ) : (
-              <>
-                翌日
-                <ArrowRight aria-hidden="true" size={14} />
-              </>
-            )}
-          </button>
-        </div>
-      ) : (
-        <div className="dc-day-actions">
-          <button
-            disabled={!selectedShift}
-            onClick={() => onEnter(undefined)}
-            type="button"
-          >
-            <Trash2 aria-hidden="true" size={14} />
-            消す
-          </button>
-          <button disabled={!canSkip} onClick={onSkip} type="button">
-            翌日へ
-            <ArrowRight aria-hidden="true" size={14} />
-          </button>
-        </div>
-      )}
+      <div className="dc-day-actions">
+        <button
+          disabled={!selectedShift}
+          onClick={() => onEnter(undefined)}
+          type="button"
+        >
+          <Trash2 aria-hidden="true" size={14} />
+          消す
+        </button>
+        <button disabled={!canSkip} onClick={onSkip} type="button">
+          翌日へ
+          <ArrowRight aria-hidden="true" size={14} />
+        </button>
+      </div>
     </>
   );
 }
 
-function DetailSheet({
-  ref,
-  date,
-  entry,
-  patternKeys,
-  members,
-  onChange,
-  onNavigate,
-  onClose,
-  onClosed,
-}: {
-  ref: Ref<HTMLDialogElement>;
-  date: Date | undefined;
-  entry: DayEntry | undefined;
-  patternKeys: Shift[];
-  members: MemberOptions;
-  onChange: (entry: DayEntry | undefined) => void;
-  onNavigate: (days: number) => void;
-  onClose: () => void;
-  onClosed: () => void;
-}) {
-  return (
-    <dialog
-      aria-label="日付の詳細"
-      className="dc-breakdown"
-      onClose={onClosed}
-      ref={ref}
-    >
-      <button
-        aria-label="詳細を閉じる"
-        className="dc-sheet-scrim"
-        onClick={onClose}
-        tabIndex={-1}
-        type="button"
-      />
-      {date && (
-        <section className="dc-sheet dc-detail-sheet">
-          <div aria-hidden="true" className="dc-sheet-handle" />
-          <header className="dc-sheet-heading">
-            <div className="dc-detail-day-nav">
-              <button
-                aria-label="前の日"
-                onClick={() => onNavigate(-1)}
-                type="button"
-              >
-                <ChevronLeft aria-hidden="true" size={20} />
-              </button>
-              <h4>{formatDay(date)}</h4>
-              <button
-                aria-label="次の日"
-                onClick={() => onNavigate(1)}
-                type="button"
-              >
-                <ChevronRight aria-hidden="true" size={20} />
-              </button>
-            </div>
-            <button aria-label="閉じる" onClick={onClose} type="button">
-              <X aria-hidden="true" size={20} />
-            </button>
-          </header>
-          <DayDetail
-            entry={entry}
-            members={members}
-            onChange={onChange}
-            patternKeys={patternKeys}
-          />
-        </section>
-      )}
-    </dialog>
-  );
-}
-
-const cellMarkSizes = { emoji: 21, badge: 26, icon: 24 } as const;
-
 function CellShift({ shift }: { shift: Shift }) {
   const style = useContext(ShiftMarkStyleContext);
-  // Letters and line icons read poorly next to text, so those cells show the
-  // mark alone; the name stays in the buttons and the day detail.
+  const { names } = useContext(CellNamesContext);
+  // The letter look is a name already; emoji and icons follow the setting.
+  const withName = style !== "badge" && names[style];
+  let size = 24;
+  if (style === "badge") {
+    size = 26;
+  } else if (withName) {
+    size = 21;
+  }
   return (
     <>
       <span className="dc-emoji">
-        <ShiftMark shift={shift} size={cellMarkSizes[style]} />
+        <ShiftMark shift={shift} size={size} />
       </span>
-      {style === "emoji" && (
+      {withName && (
         <span className="dc-shift-label">{patterns[shift].label}</span>
       )}
     </>
   );
 }
 
-function DayCell({
+export function DayCell({
   date,
   entry,
   outside,
@@ -1653,14 +1446,14 @@ function DayDetail({
 export function InputDatePicker({
   title = "入力する日付",
   ariaLabel,
-  className,
+  className = "",
   date,
   onSelect,
   children,
 }: {
   title?: string;
   ariaLabel: string;
-  className: string;
+  className?: string;
   date: Date;
   onSelect: (date: Date) => void;
   children: ReactNode;
