@@ -45,10 +45,9 @@ import {
   Users as PhUsers,
 } from "@phosphor-icons/react";
 import { createContext, useContext } from "react";
-import type { DesignVariants } from "../lib/design-variants";
 import { patterns, type Shift } from "./design-calendar";
 
-export type ShiftMarkStyle = DesignVariants["shiftMark"];
+export type ShiftMarkStyle = "icon" | "emoji" | "badge";
 export const ShiftMarkStyleContext = createContext<ShiftMarkStyle>("icon");
 // Lets the in-app setting change the look for the whole preview.
 export const SetShiftMarkStyleContext = createContext<
@@ -178,12 +177,14 @@ export const markEmojis = [
 
 export type Look = {
   emoji: string;
+  // One- and two-letter text for the letter look; the setting picks which.
   symbol: string;
+  symbol2: string;
   icon: MarkIcon;
   color: number;
 };
 
-const shiftLooks: Record<Shift, Omit<Look, "emoji">> = {
+const shiftLooks: Record<Shift, Omit<Look, "emoji" | "symbol2">> = {
   day: { symbol: "日", icon: "sun", color: 1 },
   night: { symbol: "夜", icon: "moon", color: 8 },
   after: { symbol: "明", icon: "sunrise", color: 3 },
@@ -199,8 +200,20 @@ const shiftLooks: Record<Shift, Omit<Look, "emoji">> = {
   midnight: { symbol: "深", icon: "moonStar", color: 9 },
 };
 
+const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
+
+function leadingLetters(name: string, count: number) {
+  return Array.from(graphemes.segment(name.trim()), ({ segment }) => segment)
+    .slice(0, count)
+    .join("");
+}
+
 export function lookOf(shift: Shift): Look {
-  return { ...shiftLooks[shift], emoji: patterns[shift].emoji };
+  return {
+    ...shiftLooks[shift],
+    symbol2: leadingLetters(patterns[shift].label, 2),
+    emoji: patterns[shift].emoji,
+  };
 }
 
 // Longer words first, so 待機 wins over a single-letter match.
@@ -230,7 +243,8 @@ export function guessLook(name: string): Omit<Look, "color"> {
     words.some((word) => name.includes(word))
   );
   return {
-    symbol: [...name.trim()][0] ?? "",
+    symbol: leadingLetters(name, 1),
+    symbol2: leadingLetters(name, 2),
     icon: hint?.icon ?? "letter",
     emoji: hint?.emoji ?? "⭐️",
   };
@@ -241,40 +255,27 @@ export function nextColor(used: number[]) {
   return free === -1 ? used.length % markColors.length : free;
 }
 
-// The two-letter badge uses the start of the shift name (most are two
-// letters already, like 日勤 or 明け) on a slightly wider tile.
+// Whether the letter look shows each pattern's one- or two-letter text; the
+// two-letter one sits on a slightly wider tile.
 export type BadgeLength = "one" | "two";
 export const BadgeLengthContext = createContext<{
   length: BadgeLength;
   setLength?: (length: BadgeLength) => void;
 }>({ length: "one" });
 
-const nameGraphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
-
-function badgeText(look: Look, name: string | undefined, length: BadgeLength) {
-  if (length === "one" || !name) {
-    return look.symbol;
-  }
-  return Array.from(nameGraphemes.segment(name), ({ segment }) => segment)
-    .slice(0, 2)
-    .join("");
-}
-
 export function MarkGlyph({
   look,
   style,
   size,
-  name,
 }: {
   look: Look;
   style: ShiftMarkStyle;
   size: number;
-  name?: string;
 }) {
   const { color, tint } = markColors[look.color];
   const { length: badgeLength } = useContext(BadgeLengthContext);
   if (style === "badge") {
-    const text = badgeText(look, name, badgeLength);
+    const text = badgeLength === "two" ? look.symbol2 : look.symbol;
     const wide = [...text].length > 1;
     return (
       <span
@@ -334,12 +335,5 @@ function IconGlyph({ look, size }: { look: Look; size: number }) {
 
 export function ShiftMark({ shift, size }: { shift: Shift; size: number }) {
   const style = useContext(ShiftMarkStyleContext);
-  return (
-    <MarkGlyph
-      look={lookOf(shift)}
-      name={patterns[shift].label}
-      size={size}
-      style={style}
-    />
-  );
+  return <MarkGlyph look={lookOf(shift)} size={size} style={style} />;
 }

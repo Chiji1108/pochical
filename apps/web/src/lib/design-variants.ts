@@ -1,14 +1,6 @@
 // Design decisions that /design lets you switch between. The first choice of
 // each entry is the current proposal and is used when the URL omits it.
 export const designVariantOptions = {
-  shiftMark: {
-    label: "シフトの見た目",
-    choices: [
-      { value: "icon", label: "アイコン" },
-      { value: "emoji", label: "絵文字" },
-      { value: "badge", label: "文字" },
-    ],
-  },
   headerLayout: {
     label: "見出しの並び",
     choices: [

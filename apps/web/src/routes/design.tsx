@@ -12,6 +12,7 @@ import {
   CellNamesContext,
   defaultCellNames,
   SetShiftMarkStyleContext,
+  type ShiftMarkStyle,
   ShiftMarkStyleContext,
 } from "../components/shift-mark";
 import designStyles from "../design.css?url";
@@ -51,6 +52,7 @@ function DesignPage() {
   const navigate = Route.useNavigate();
   const [cellNames, setCellNames] = useState(defaultCellNames);
   const [badgeLength, setBadgeLength] = useState<BadgeLength>("one");
+  const [shiftMark, setShiftMark] = useState<ShiftMarkStyle>("icon");
   return (
     <main className="design-page" id="main">
       <div className="design-toolbar">
@@ -97,19 +99,11 @@ function DesignPage() {
       <BadgeLengthContext
         value={{ length: badgeLength, setLength: setBadgeLength }}
       >
-        <ShiftMarkStyleContext value={variants.shiftMark}>
+        <ShiftMarkStyleContext value={shiftMark}>
           <CellNamesContext
             value={{ names: cellNames, setNames: setCellNames }}
           >
-            <SetShiftMarkStyleContext
-              value={(style) =>
-                navigate({
-                  replace: true,
-                  resetScroll: false,
-                  search: (previous) => ({ ...previous, shiftMark: style }),
-                })
-              }
-            >
+            <SetShiftMarkStyleContext value={setShiftMark}>
               <div className="design-screens" key={version}>
                 <section aria-labelledby="design-view-title">
                   <h2 id="design-view-title">

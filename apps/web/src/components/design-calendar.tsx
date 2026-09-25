@@ -70,6 +70,8 @@ export const patterns: Record<
   midnight: { label: "深夜", emoji: "🌛", time: ["00:00", "08:30"] },
 };
 export type Shift = keyof typeof patterns;
+// Entering one of these also fills the next day, like 夜勤 then 明け.
+export const nextDayShifts: Partial<Record<Shift, Shift>> = { night: "after" };
 type DayEntry = {
   shift: Shift;
   // Set only when the time differs from the pattern's standard time.
@@ -383,8 +385,8 @@ export function DesignCalendar({
   );
   const lastDay = monthDays.length;
   const selectedShift = schedule[dateKey(selectedDate)]?.shift;
-  function moveToNextDay(result: string) {
-    const nextDay = Math.min(selectedDay + 1, lastDay);
+  function moveToNextDay(result: string, days = 1) {
+    const nextDay = Math.min(selectedDay + days, lastDay);
     setSelectedDay(nextDay);
     setAnnouncement(
       `${month.getMonth() + 1}月${selectedDay}日、${result}。${selectedDay === lastDay ? "月末です。入力が終わったら完了を押してください" : `${nextDay}日を選択中`}`
@@ -473,12 +475,24 @@ export function DesignCalendar({
   }
   function enterShift(shift: Shift | undefined) {
     const key = dateKey(selectedDate);
+    const following = shift && nextDayShifts[shift];
+    const followingKey = dateKey(addDays(selectedDate, 1));
     onChange((previous) => ({
       ...previous,
       [key]: shift && keepDetails(previous[key], shift),
+      ...(following && {
+        [followingKey]: keepDetails(previous[followingKey], following),
+      }),
     }));
+    if (!shift) {
+      moveToNextDay("シフトを消しました");
+      return;
+    }
     moveToNextDay(
-      shift ? `${patterns[shift].label}を入力しました` : "シフトを消しました"
+      following
+        ? `${patterns[shift].label}を入力しました。翌日は${patterns[following].label}です`
+        : `${patterns[shift].label}を入力しました`,
+      following ? 2 : 1
     );
   }
   return (
@@ -507,13 +521,19 @@ export function DesignCalendar({
             </strong>
           </h3>
           <HeadingActions
+            detailDate={detailDate}
             layout={variants.headerLayout}
             mode={headingMode}
             month={month}
             onDone={() => (editing ? setEditing(false) : closeDetail())}
             onDownload={() => downloadMonth(month, schedule)}
-            onMonthChange={goToMonth}
             onStep={step}
+            onThisMonth={() =>
+              goToMonth(
+                new Date(designToday.getFullYear(), designToday.getMonth(), 1)
+              )
+            }
+            onToday={() => openDetail(designToday)}
           />
         </div>
         <div className="dc-calendar-scroll" {...swipeHandlers}>
@@ -759,33 +779,6 @@ function MonthSummary({
   );
 }
 
-function StepButtons({
-  unit,
-  onStep,
-}: {
-  unit: "月" | "週";
-  onStep: (direction: 1 | -1) => void;
-}) {
-  return (
-    <div className="dc-month-actions">
-      <button
-        aria-label={`前の${unit}`}
-        onClick={() => onStep(-1)}
-        type="button"
-      >
-        <ChevronLeft aria-hidden="true" size={21} />
-      </button>
-      <button
-        aria-label={`次の${unit}`}
-        onClick={() => onStep(1)}
-        type="button"
-      >
-        <ChevronRight aria-hidden="true" size={21} />
-      </button>
-    </div>
-  );
-}
-
 // Swiping the calendar sideways moves it, like the mobile app's pager.
 function useSwipe(onSwipe: (direction: 1 | -1) => void) {
   const start = useRef<{ x: number; y: number }>(undefined);
@@ -818,43 +811,66 @@ function useSwipe(onSwipe: (direction: 1 | -1) => void) {
   };
 }
 
+// "‹ 今月 ›" sits in the middle of the heading, so it never moves with the
+// width of the month; 今月 (or 今日 in the week view) stays visible and is
+// disabled when there is nowhere to go back to.
 function HeadingActions({
   layout,
   mode,
   month,
+  detailDate,
   onStep,
-  onMonthChange,
+  onThisMonth,
+  onToday,
   onDone,
   onDownload,
 }: {
   layout: DesignVariants["headerLayout"];
   mode: "view" | "edit" | "week";
   month: Date;
+  detailDate: Date | undefined;
   onStep: (direction: 1 | -1) => void;
-  onMonthChange: (month: Date) => void;
+  onThisMonth: () => void;
+  onToday: () => void;
   onDone: () => void;
   onDownload: () => void;
 }) {
-  const unit = mode === "week" ? "週" : "月";
-  const showingThisMonth =
-    month.getFullYear() === designToday.getFullYear() &&
-    month.getMonth() === designToday.getMonth();
+  const week = mode === "week";
+  const unit = week ? "週" : "月";
+  const atToday = week
+    ? weekDates(detailDate ?? designToday).some(
+        (date) => dateKey(date) === dateKey(designToday)
+      )
+    : month.getFullYear() === designToday.getFullYear() &&
+      month.getMonth() === designToday.getMonth();
   return (
     <>
       <div className="dc-heading-nav">
-        {layout === "title" && <StepButtons onStep={onStep} unit={unit} />}
-        {mode !== "week" && !showingThisMonth && (
+        {layout === "title" && (
           <button
-            aria-label="今月に戻る"
-            className="dc-this-month"
-            onClick={() =>
-              onMonthChange(
-                new Date(designToday.getFullYear(), designToday.getMonth(), 1)
-              )
-            }
+            aria-label={`前の${unit}`}
+            onClick={() => onStep(-1)}
             type="button"
           >
-            今月
+            <ChevronLeft aria-hidden="true" size={21} />
+          </button>
+        )}
+        <button
+          aria-label={week ? "今日の週に戻る" : "今月に戻る"}
+          className="dc-this-month"
+          disabled={atToday}
+          onClick={week ? onToday : onThisMonth}
+          type="button"
+        >
+          {week ? "今日" : "今月"}
+        </button>
+        {layout === "title" && (
+          <button
+            aria-label={`次の${unit}`}
+            onClick={() => onStep(1)}
+            type="button"
+          >
+            <ChevronRight aria-hidden="true" size={21} />
           </button>
         )}
       </div>

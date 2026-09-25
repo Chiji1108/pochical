@@ -1092,28 +1092,30 @@ body:has(.dc-breakdown[open]) {
 .dc-heading-title {
   flex-shrink: 0;
 }
-/* Reserve room for a two-digit month so the arrows beside it stay put. */
-.dc-heading-title strong {
-  display: inline-block;
-  min-width: calc(2ch + 20px);
-  font-variant-numeric: tabular-nums;
-}
+
 .dc-heading-nav {
+  position: absolute;
+  bottom: 7px;
+  left: 50%;
   display: flex;
-  flex: 1;
-  gap: 4px;
+  gap: 2px;
   align-items: center;
-  align-self: flex-end;
-  margin: 0 0 2px 6px;
-}
-.dc-heading-nav .dc-month-actions button {
-  width: 34px;
   height: 40px;
+  transform: translateX(-50%);
+}
+.design-page .dc-heading-nav > button:not(.dc-this-month) {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 40px;
+  color: #72796e;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
 }
 .design-page .dc-this-month {
   min-height: 30px;
   padding: 0 11px;
-  margin-left: 2px;
   font-size: 12px;
   font-weight: 600;
   color: #486444;
@@ -1871,19 +1873,6 @@ button.st-row:hover {
   display: flex;
   flex-direction: column;
 }
-.pe-look {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 0;
-  margin: 0;
-  border: 0;
-}
-.pe-look > legend {
-  float: left;
-  width: 100%;
-  margin-bottom: 8px;
-}
 .pe-symbol {
   width: 88px;
   font-size: 20px;
@@ -1893,6 +1882,9 @@ button.st-row:hover {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 4px;
+  padding: 0;
+  margin: 0;
+  border: 0;
 }
 .design-page .pe-grid button {
   display: grid;
@@ -1910,52 +1902,29 @@ button.st-row:hover {
 .pe-colors {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 6px;
+  gap: 10px;
+  justify-items: center;
   padding: 0;
   margin: 0;
   border: 0;
 }
+/* A tint circle ringed in its own text color; the chosen one gets a thick
+   ring. */
 .design-page .pe-colors button {
-  aspect-ratio: 1;
-  font-size: 15px;
-  font-weight: 700;
-  border: 2px solid transparent;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border: 2px solid currentcolor;
+  border-radius: 50%;
 }
 .design-page .pe-colors button[aria-pressed="true"] {
-  border-color: currentcolor;
+  box-shadow:
+    0 0 0 3px #fff,
+    0 0 0 5px currentcolor;
 }
 .pe-warning {
   margin: -8px 4px 0;
   font-size: 11px;
   color: #9b3f35;
-}
-.pe-more {
-  padding: 12px 14px;
-  background: #f6f7f3;
-  border-radius: 14px;
-}
-.pe-more > summary {
-  font-size: 13px;
-  font-weight: 600;
-  color: #486444;
-  cursor: pointer;
-}
-.pe-more[open] {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.pe-check {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 13px;
-}
-.pe-check > input {
-  width: 18px;
-  height: 18px;
-  accent-color: #486444;
 }
 .design-page .pe-delete {
   display: flex;
@@ -2107,4 +2076,149 @@ button.st-row:hover {
   color: #30332f;
   background: #fff;
   box-shadow: 0 1px 3px #30332f1f;
+}
+.dc-heading {
+  position: relative;
+}
+.design-page .dc-this-month:disabled {
+  color: #b9beb4;
+  cursor: default;
+  border-color: #eceee8;
+}
+/* Line the right-hand button up with the middle of the month digits, like
+   ‹ 今月 ›, instead of centering it on the year and month together. */
+.dc-heading > .dc-heading-icon,
+.dc-heading > .dc-done {
+  align-self: flex-end;
+  margin-bottom: -5px;
+}
+/* The font adds room above the digits, so pull the month up to the year. */
+.dc-heading-title strong {
+  display: block;
+  margin-top: 1px;
+  line-height: 1;
+}
+.dc-heading-title .dc-year {
+  margin-bottom: 0;
+}
+.pe-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.design-page .pe-save {
+  min-height: 40px;
+  padding: 0 4px 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #486444;
+  background: transparent;
+  border: 0;
+}
+.design-page .pe-save:disabled {
+  color: #b9beb4;
+  cursor: default;
+}
+.pe-inline-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  color: #30332f;
+  text-align: right;
+  outline: none;
+  background: transparent;
+  border: 0;
+}
+.pe-times {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+  align-items: center;
+  justify-content: flex-end;
+  color: #72796e;
+}
+.pe-times > input {
+  padding: 4px 6px;
+  font: inherit;
+  font-size: 14px;
+  color: #30332f;
+  background: #fff;
+  border: 1px solid #e0e3db;
+  border-radius: 8px;
+}
+.pe-toggle {
+  flex-shrink: 0;
+  width: 44px;
+  height: 26px;
+  margin: 0 0 0 auto;
+  appearance: none;
+  cursor: pointer;
+  background: #d5d9cf;
+  border-radius: 13px;
+  transition: background 0.15s;
+}
+.pe-toggle::before {
+  display: block;
+  width: 22px;
+  height: 22px;
+  margin: 2px;
+  content: "";
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px #30332f33;
+  transition: transform 0.15s;
+}
+.pe-toggle:checked {
+  background: #486444;
+}
+.pe-toggle:checked::before {
+  transform: translateX(18px);
+}
+.pe-look-value {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+.pe-preview-center {
+  justify-content: center;
+  min-height: 84px;
+}
+.pe-check-mark {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: #486444;
+}
+.pe-letters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+.pe-letters > legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 0;
+}
+.pe-letter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+.pe-letter-label {
+  font-size: 11px;
+  color: #8a9086;
+}
+.pe-letter-in-use .pe-letter-label {
+  font-weight: 600;
+  color: #486444;
+}
+.pe-letter-in-use .pe-symbol {
+  background: #fff;
+  border-color: #698367;
 }
