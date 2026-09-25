@@ -18,14 +18,15 @@
     "fix": "bun run --cwd ../.. fix"
   },
   "dependencies": {
+    "@auth/core": "0.41.1",
+    "@convex-dev/auth": "0.0.95",
+    "@phosphor-icons/react": "^2.1.10",
     "@tanstack/react-router": "1.170.39",
     "@tanstack/react-start": "1.168.58",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
     "convex": "^1.46.0",
-    "@convex-dev/auth": "0.0.95",
-    "@auth/core": "0.41.1",
-    "lucide-react": "^0.577.0"
+    "lucide-react": "^0.577.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.26.0",

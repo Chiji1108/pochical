@@ -9,12 +9,14 @@ import {
   monthDates,
   PhoneStatusBar,
   patterns,
+  type RepeatRule,
   RepeatSequenceEditor,
   repeatSchedule,
   type Schedule,
   type Shift,
   weekendClassName,
 } from "./design-calendar";
+import { ShiftMark } from "./shift-mark";
 
 type Template = {
   id: string;
@@ -124,7 +126,7 @@ export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
   const [step, setStep] = useState<Step>({ name: "kind" });
   const [finished, setFinished] = useState<{
     patternKeys: Shift[];
-    repeating: boolean;
+    rule?: RepeatRule;
   }>();
   const [schedule, setSchedule] = useState<Schedule>({});
 
@@ -132,7 +134,7 @@ export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
     setSchedule(startSchedule(sequence, anchor));
     setFinished({
       patternKeys: template.patternKeys,
-      repeating: sequence !== undefined,
+      rule: sequence && anchor ? { sequence, start: anchor } : undefined,
     });
   }
 
@@ -155,8 +157,9 @@ export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
     return (
       <div className="ob-finished">
         <DesignCalendar
-          hideInputBar={finished.repeating}
+          hideInputBar={finished.rule !== undefined}
           initialEditing={false}
+          initialRule={finished.rule}
           onChange={setSchedule}
           patternKeys={finished.patternKeys}
           schedule={schedule}
@@ -348,7 +351,7 @@ function TemplateStep({
                     (key, index) => (
                       // biome-ignore lint/suspicious/noArrayIndexKey: a sequence repeats the same shift, so position is its identity.
                       <span className="ob-chip" key={index}>
-                        {patterns[key].emoji}
+                        <ShiftMark shift={key} size={11} />
                         {patterns[key].label}
                       </span>
                     )
@@ -489,7 +492,7 @@ function AnchorStep({
                 >
                   {date.getDate()}
                 </small>
-                {patterns[shift].emoji}
+                <ShiftMark shift={shift} size={16} />
               </span>
             );
           })}

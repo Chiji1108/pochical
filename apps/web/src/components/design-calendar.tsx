@@ -27,10 +27,13 @@ import {
   type Ref,
   type RefObject,
   type SetStateAction,
+  useContext,
   useRef,
   useState,
 } from "react";
 import type { DesignVariants } from "../lib/design-variants";
+import { DesignSettings } from "./design-settings";
+import { ShiftMark, ShiftMarkStyleContext } from "./shift-mark";
 
 // Patterns without a time are all-day, so they have no time to change.
 export const patterns: Record<
@@ -74,6 +77,9 @@ type DayEntry = {
 };
 type MemberOptions = { names: string[]; onAdd: (name: string) => void };
 export type Schedule = Record<string, DayEntry | undefined>;
+// A repeating order of shifts; `start` is the first day of the sequence and
+// the day the rule takes over from the one before it.
+export type RepeatRule = { sequence: Shift[]; start: Date };
 const patternSets: Record<4 | 5 | 6 | 8, Shift[]> = {
   4: ["day", "night", "after", "off"],
   5: ["early", "day", "night", "after", "off"],
@@ -252,7 +258,7 @@ function formatTime(time: string) {
   return time.replace(leadingZeroPattern, "");
 }
 
-function timeRange(entry: DayEntry) {
+export function timeRange(entry: DayEntry) {
   const time = patterns[entry.shift].time;
   if (!time) {
     return;
@@ -317,6 +323,7 @@ export function DesignCalendar({
   patternCount = 4,
   patternKeys: customPatternKeys,
   hideInputBar = false,
+  initialRule,
   initialMonth = 8,
   schedule,
   onChange,
@@ -327,6 +334,7 @@ export function DesignCalendar({
   patternKeys?: Shift[];
   // Repeating shifts fill every month, so the monthly input buttons go away.
   hideInputBar?: boolean;
+  initialRule?: RepeatRule;
   initialMonth?: number;
   schedule: Schedule;
   onChange: Dispatch<SetStateAction<Schedule>>;
@@ -338,6 +346,10 @@ export function DesignCalendar({
   const importSheetRef = useRef<HTMLDialogElement>(null);
   const [detailDate, setDetailDate] = useState<Date>();
   const [addedMembers, setAddedMembers] = useState<string[]>([]);
+  const [tab, setTab] = useState<"calendar" | "settings">("calendar");
+  const [rules, setRules] = useState<RepeatRule[]>(
+    initialRule ? [initialRule] : []
+  );
   const members: MemberOptions = {
     names: [
       ...(variants.memberSample === "some" ? sampleMembers : []),
@@ -406,12 +418,7 @@ export function DesignCalendar({
   const weekDetail =
     !editing && detailDate !== undefined && variants.dayDetail === "week";
   const gridDates = weekDetail ? weekDates(detailDate) : dates;
-  let headingMode: "view" | "edit" | "week" = "view";
-  if (editing) {
-    headingMode = "edit";
-  } else if (weekDetail) {
-    headingMode = "week";
-  }
+  const headingMode = screenMode(editing, weekDetail);
   function openDetail(date: Date) {
     setDetailDate(date);
     setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
@@ -452,6 +459,16 @@ export function DesignCalendar({
     onChange((previous) => ({ ...imported, ...previous }));
     return Object.keys(imported).filter((key) => !schedule[key]).length;
   }
+  // From the switch day on, the new order replaces what the old one wrote.
+  function applyRule(rule: RepeatRule) {
+    const { sequence, start } = rule;
+    const end = new Date(start.getFullYear(), start.getMonth() + 13, 0);
+    onChange((previous) => ({
+      ...previous,
+      ...repeatSchedule(sequence, start, start, end),
+    }));
+    setRules((previous) => [...previous, rule]);
+  }
   function openImport() {
     if (importSheetRef.current) {
       showOverPhone(importSheetRef.current, phoneRef.current);
@@ -480,7 +497,16 @@ export function DesignCalendar({
       ref={phoneRef}
     >
       <PhoneStatusBar />
-      <div className="dc-content">
+      {tab === "settings" && (
+        <DesignSettings
+          memberCount={members.names.length}
+          onApplyRule={applyRule}
+          onTab={setTab}
+          patternKeys={patternKeys}
+          rules={rules}
+        />
+      )}
+      <div className="dc-content" hidden={tab === "settings"}>
         <div className="dc-heading">
           <h3 className="dc-heading-title">
             <span className="dc-year">{month.getFullYear()}</span>
@@ -587,20 +613,7 @@ export function DesignCalendar({
           </div>
         )}
         {headingMode === "view" && (
-          <div className="dc-nav">
-            <span className="dc-nav-item dc-nav-active">
-              <CalendarDays aria-hidden="true" size={23} />
-              カレンダー
-            </span>
-            <span className="dc-nav-item">
-              <UsersRound aria-hidden="true" size={23} />
-              グループ
-            </span>
-            <span className="dc-nav-item">
-              <Settings2 aria-hidden="true" size={23} />
-              設定
-            </span>
-          </div>
+          <TabBar active="calendar" onSelect={setTab} />
         )}
       </div>
       <dialog
@@ -633,10 +646,10 @@ export function DesignCalendar({
             </button>
           </header>
           <dl className="dc-counts">
-            {counts.map(({ key, emoji, label, count }) => (
+            {counts.map(({ key, label, count }) => (
               <div key={key}>
                 <dt>
-                  <span aria-hidden="true">{emoji}</span>
+                  <ShiftMark shift={key} size={18} />
                   {label}
                 </dt>
                 <dd>
@@ -684,6 +697,41 @@ export function DesignCalendar({
   );
 }
 
+export function TabBar({
+  active,
+  onSelect,
+}: {
+  active: "calendar" | "settings";
+  onSelect: (tab: "calendar" | "settings") => void;
+}) {
+  return (
+    <nav aria-label="タブ" className="dc-nav">
+      <button
+        aria-current={active === "calendar" ? "page" : undefined}
+        className={`dc-nav-item ${active === "calendar" ? "dc-nav-active" : ""}`}
+        onClick={() => onSelect("calendar")}
+        type="button"
+      >
+        <CalendarDays aria-hidden="true" size={23} />
+        カレンダー
+      </button>
+      <span className="dc-nav-item">
+        <UsersRound aria-hidden="true" size={23} />
+        グループ
+      </span>
+      <button
+        aria-current={active === "settings" ? "page" : undefined}
+        className={`dc-nav-item ${active === "settings" ? "dc-nav-active" : ""}`}
+        onClick={() => onSelect("settings")}
+        type="button"
+      >
+        <Settings2 aria-hidden="true" size={23} />
+        設定
+      </button>
+    </nav>
+  );
+}
+
 export function PhoneStatusBar() {
   return (
     <div aria-hidden="true" className="dc-status">
@@ -696,6 +744,13 @@ export function PhoneStatusBar() {
       </span>
     </div>
   );
+}
+
+function screenMode(editing: boolean, weekDetail: boolean) {
+  if (editing) {
+    return "edit";
+  }
+  return weekDetail ? "week" : "view";
 }
 
 function MonthSummary({
@@ -967,7 +1022,7 @@ export function RepeatSequenceEditor({
               type="button"
             >
               <small>{index + 1}</small>
-              <span aria-hidden="true">{patterns[shift].emoji}</span>
+              <ShiftMark shift={shift} size={18} />
               {patterns[shift].label}
             </button>
           </li>
@@ -981,7 +1036,8 @@ export function RepeatSequenceEditor({
             type="button"
           >
             <Plus aria-hidden="true" size={11} />
-            {patterns[key].emoji} {patterns[key].label}
+            <ShiftMark shift={key} size={13} />
+            {patterns[key].label}
           </button>
         ))}
       </div>
@@ -1209,7 +1265,9 @@ function ShiftInputControls({
       >
         {patternKeys.map((key) => (
           <button key={key} onClick={() => onEnter(key)} type="button">
-            <span aria-hidden="true">{patterns[key].emoji}</span>
+            <span className="dc-pattern-mark">
+              <ShiftMark shift={key} size={26} />
+            </span>
             <span>{patterns[key].label}</span>
           </button>
         ))}
@@ -1325,6 +1383,24 @@ function DetailSheet({
   );
 }
 
+const cellMarkSizes = { emoji: 21, badge: 26, icon: 24 } as const;
+
+function CellShift({ shift }: { shift: Shift }) {
+  const style = useContext(ShiftMarkStyleContext);
+  // Letters and line icons read poorly next to text, so those cells show the
+  // mark alone; the name stays in the buttons and the day detail.
+  return (
+    <>
+      <span className="dc-emoji">
+        <ShiftMark shift={shift} size={cellMarkSizes[style]} />
+      </span>
+      {style === "emoji" && (
+        <span className="dc-shift-label">{patterns[shift].label}</span>
+      )}
+    </>
+  );
+}
+
 function DayCell({
   date,
   entry,
@@ -1340,11 +1416,14 @@ function DayCell({
   active: boolean;
   onPress: () => void;
 }) {
+  const markStyle = useContext(ShiftMarkStyleContext);
   const shift = outside ? undefined : entry?.shift;
+  // The green 休 badge already marks days off, so skip the cell highlight.
+  const highlightOff = shift === "off" && markStyle !== "badge";
   const today = dateKey(date) === dateKey(designToday);
   const timeChanged = Boolean(entry?.start || entry?.end);
   const hasMark = !outside && (timeChanged || Boolean(entry?.note));
-  const className = `dc-day ${outside ? "dc-outside" : ""} ${shift === "off" ? "dc-off" : ""} ${today && !editing ? "dc-today" : ""} ${active ? "dc-active-day" : ""}`;
+  const className = `dc-day ${outside ? "dc-outside" : ""} ${highlightOff ? "dc-off" : ""} ${today && !editing ? "dc-today" : ""} ${active ? "dc-active-day" : ""}`;
   const content = (
     <>
       <span className="dc-date">{date.getDate()}</span>
@@ -1354,14 +1433,7 @@ function DayCell({
           className={`dc-mark ${timeChanged ? "dc-mark-time" : ""}`}
         />
       )}
-      {shift && (
-        <>
-          <span aria-hidden="true" className="dc-emoji">
-            {patterns[shift].emoji}
-          </span>
-          <span className="dc-shift-label">{patterns[shift].label}</span>
-        </>
-      )}
+      {shift && <CellShift shift={shift} />}
     </>
   );
   if (outside) {
@@ -1493,7 +1565,7 @@ function DayDetail({
             onClick={() => onChange(keepDetails(entry, key))}
             type="button"
           >
-            <span aria-hidden="true">{patterns[key].emoji}</span>
+            <ShiftMark shift={key} size={14} />
             {patterns[key].label}
           </button>
         ))}
@@ -1578,7 +1650,7 @@ function DayDetail({
   );
 }
 
-function InputDatePicker({
+export function InputDatePicker({
   title = "入力する日付",
   ariaLabel,
   className,

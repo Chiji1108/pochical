@@ -8,6 +8,23 @@ export const designVariantOptions = {
       { value: "sheet", label: "シート" },
     ],
   },
+  shiftMark: {
+    label: "シフトの見た目",
+    choices: [
+      { value: "emoji", label: "絵文字（今）" },
+      { value: "badge", label: "文字バッジ" },
+      { value: "icon", label: "アイコン" },
+    ],
+  },
+  iconSet: {
+    label: "アイコンの種類",
+    choices: [
+      { value: "phosphorDuotone", label: "Phosphor（二色）" },
+      { value: "lucide", label: "lucide（線）" },
+      { value: "phosphorRegular", label: "Phosphor（線）" },
+      { value: "phosphorFill", label: "Phosphor（塗り）" },
+    ],
+  },
   headerLayout: {
     label: "見出しの並び",
     choices: [
