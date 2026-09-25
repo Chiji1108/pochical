@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  Camera,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -21,10 +22,17 @@ import {
   repeatSchedule,
   type Schedule,
   type Shift,
+  type Tab,
   TabBar,
   weekDates,
   weekendClassName,
 } from "./design-calendar";
+import {
+  PhotoAvatar,
+  type Profile,
+  samplePhoto,
+  samplePhotoIds,
+} from "./design-group";
 import { WorkSetupSteps } from "./design-onboarding";
 import { PatternsPage } from "./design-pattern-editor";
 import { ThemeContext, themeOf, themes } from "./design-theme";
@@ -55,7 +63,8 @@ type Page =
   | "roster"
   | "patterns"
   | "mark"
-  | "customize";
+  | "customize"
+  | "profile";
 
 const markOptions: { style: ShiftMarkStyle; name: string }[] = [
   { style: "icon", name: "アイコン" },
@@ -94,6 +103,8 @@ export function DesignSettings({
   memberCount,
   rules,
   schedule,
+  profile,
+  onProfile,
   onApplyRule,
   onFixRule,
   onChangeJob,
@@ -104,11 +115,13 @@ export function DesignSettings({
   memberCount: number;
   rules: RepeatRule[];
   schedule: Schedule;
+  profile: Profile;
+  onProfile: (profile: Profile) => void;
   onApplyRule: (rule: RepeatRule) => void;
   onFixRule: (rule: RepeatRule) => void;
   onChangeJob: (job: { patternKeys: Shift[]; rule: RepeatRule }) => void;
   onHolidaysOff: (holidaysOff: boolean) => void;
-  onTab: (tab: "calendar" | "settings") => void;
+  onTab: (tab: Tab) => void;
 }) {
   const [page, setPage] = useState<Page>("top");
   // What キャンセル in 細かく設定 goes back to.
@@ -131,6 +144,14 @@ export function DesignSettings({
             memberCount={memberCount}
             onOpen={setPage}
             patternKeys={patternKeys}
+            profile={profile}
+          />
+        )}
+        {page === "profile" && (
+          <ProfilePage
+            onBack={() => setPage("top")}
+            onChange={onProfile}
+            profile={profile}
           />
         )}
         {page === "repeat-new" && (
@@ -220,11 +241,13 @@ function SettingsTop({
   current,
   patternKeys,
   memberCount,
+  profile,
   onOpen,
 }: {
   current: RepeatRule | undefined;
   patternKeys: Shift[];
   memberCount: number;
+  profile: Profile;
   onOpen: (page: Page) => void;
 }) {
   const { theme } = useContext(ThemeContext);
@@ -281,6 +304,20 @@ function SettingsTop({
         <Row label="端末のカレンダーに追加" />
       </Section>
       <Section title="アカウント">
+        <Row
+          label="プロフィール"
+          onOpen={() => onOpen("profile")}
+          value={
+            <span className="st-inline-value">
+              <PhotoAvatar
+                name={profile.name}
+                photo={profile.photo}
+                size={22}
+              />
+              {profile.name}
+            </span>
+          }
+        />
         <Row label="アカウント" value="つながっていません" />
       </Section>
       <Section title="データ">
@@ -660,6 +697,87 @@ function JobChangePage({
         次へ
         <ArrowRight aria-hidden="true" size={16} />
       </button>
+    </>
+  );
+}
+
+// Your name and picture, shown to the people in your groups. The picture
+// is shared by every group; each group can use its own name for you.
+function ProfilePage({
+  profile,
+  onChange,
+  onBack,
+}: {
+  profile: Profile;
+  onChange: (profile: Profile) => void;
+  onBack: () => void;
+}) {
+  return (
+    <>
+      <PageHeader back="設定" onBack={onBack} title="プロフィール" />
+      <div className="st-profile-photo">
+        <PhotoAvatar name={profile.name} photo={profile.photo} size={88} />
+        <label className="gr-secondary st-profile-upload">
+          <Camera aria-hidden="true" size={15} />
+          写真を選ぶ
+          <input
+            accept="image/*"
+            className="dc-sr-only"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) {
+                onChange({ ...profile, photo: URL.createObjectURL(file) });
+              }
+            }}
+            type="file"
+          />
+        </label>
+      </div>
+      <section className="st-section">
+        <h4>見本の写真</h4>
+        <fieldset className="st-photo-choices">
+          <legend className="dc-sr-only">見本の写真</legend>
+          <button
+            aria-label="写真なし"
+            aria-pressed={!profile.photo}
+            onClick={() => onChange({ ...profile, photo: undefined })}
+            type="button"
+          >
+            <PhotoAvatar name={profile.name} size={44} />
+          </button>
+          {samplePhotoIds.map((id) => (
+            <button
+              aria-label={`見本の写真${id}`}
+              aria-pressed={profile.photo === samplePhoto(id)}
+              key={id}
+              onClick={() => onChange({ ...profile, photo: samplePhoto(id) })}
+              type="button"
+            >
+              <PhotoAvatar
+                name={profile.name}
+                photo={samplePhoto(id)}
+                size={44}
+              />
+            </button>
+          ))}
+        </fieldset>
+      </section>
+      <div className="st-list">
+        <label className="st-row">
+          <span className="st-row-label">名前</span>
+          <input
+            className="pe-inline-input"
+            onChange={(event) =>
+              onChange({ ...profile, name: event.target.value })
+            }
+            placeholder="例：さくら"
+            value={profile.name}
+          />
+        </label>
+      </div>
+      <p className="st-note">
+        グループの人に見える名前と写真です。写真はすべてのグループで同じです。名前は、グループごとに変えることもできます。
+      </p>
     </>
   );
 }

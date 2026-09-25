@@ -45,7 +45,7 @@ const styleNames: Record<ShiftMarkStyle, string> = {
   icon: "アイコン",
 };
 
-const iconNames: Record<MarkIcon, string> = {
+export const iconNames: Record<MarkIcon, string> = {
   letter: "文字アイコン",
   sun: "太陽",
   cloudSun: "晴れ",

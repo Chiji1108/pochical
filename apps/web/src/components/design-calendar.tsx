@@ -32,6 +32,7 @@ import {
   useState,
 } from "react";
 import type { DesignVariants } from "../lib/design-variants";
+import { DesignGroup, type Profile, samplePhoto } from "./design-group";
 import { DesignSettings } from "./design-settings";
 import { useThemeStyle } from "./design-theme";
 import {
@@ -402,7 +403,11 @@ export function DesignCalendar({
   const importSheetRef = useRef<HTMLDialogElement>(null);
   const [detailDate, setDetailDate] = useState<Date>();
   const [addedMembers, setAddedMembers] = useState<string[]>([]);
-  const [tab, setTab] = useState<"calendar" | "settings">("calendar");
+  const [tab, setTab] = useState<Tab>("calendar");
+  const [profile, setProfile] = useState<Profile>(() => ({
+    name: "さくら",
+    photo: samplePhoto(1011),
+  }));
   const [rules, setRules] = useState<RepeatRule[]>(
     initialRule ? [initialRule] : []
   );
@@ -618,13 +623,24 @@ export function DesignCalendar({
           onChangeJob={changeJob}
           onFixRule={fixRule}
           onHolidaysOff={setHolidaysOff}
+          onProfile={setProfile}
           onTab={setTab}
           patternKeys={patternKeys}
+          profile={profile}
           rules={rules}
           schedule={schedule}
         />
       )}
-      <div className="dc-content" hidden={tab === "settings"}>
+      {tab === "group" && (
+        <DesignGroup
+          onTab={setTab}
+          patternKeys={patternKeys}
+          profile={profile}
+          schedule={schedule}
+          variants={variants}
+        />
+      )}
+      <div className="dc-content" hidden={tab !== "calendar"}>
         <div className="dc-heading">
           <h3 className="dc-heading-title">
             <span className="dc-year">{month.getFullYear()}</span>
@@ -807,12 +823,14 @@ export function DesignCalendar({
   );
 }
 
+export type Tab = "calendar" | "group" | "settings";
+
 export function TabBar({
   active,
   onSelect,
 }: {
-  active: "calendar" | "settings";
-  onSelect: (tab: "calendar" | "settings") => void;
+  active: Tab;
+  onSelect: (tab: Tab) => void;
 }) {
   return (
     <nav aria-label="タブ" className="dc-nav">
@@ -825,10 +843,15 @@ export function TabBar({
         <CalendarDays aria-hidden="true" size={23} />
         カレンダー
       </button>
-      <span className="dc-nav-item">
+      <button
+        aria-current={active === "group" ? "page" : undefined}
+        className={`dc-nav-item ${active === "group" ? "dc-nav-active" : ""}`}
+        onClick={() => onSelect("group")}
+        type="button"
+      >
         <UsersRound aria-hidden="true" size={23} />
         グループ
-      </span>
+      </button>
       <button
         aria-current={active === "settings" ? "page" : undefined}
         className={`dc-nav-item ${active === "settings" ? "dc-nav-active" : ""}`}
