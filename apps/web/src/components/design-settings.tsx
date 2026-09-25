@@ -4,8 +4,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Plus,
-  Trash2,
 } from "lucide-react";
 import { type ReactNode, useContext, useState } from "react";
 import {
@@ -16,7 +14,6 @@ import {
   formatDay,
   InputDatePicker,
   isRepeating,
-  type Leave,
   nextDayShifts,
   patterns,
   type RepeatRule,
@@ -54,7 +51,6 @@ type Page =
   | "repeat-new"
   | "repeat-fix"
   | "job"
-  | "leave"
   | "work"
   | "roster"
   | "patterns"
@@ -98,9 +94,6 @@ export function DesignSettings({
   memberCount,
   rules,
   schedule,
-  leaves,
-  onSaveLeave,
-  onDeleteLeave,
   onApplyRule,
   onFixRule,
   onChangeJob,
@@ -111,9 +104,6 @@ export function DesignSettings({
   memberCount: number;
   rules: RepeatRule[];
   schedule: Schedule;
-  leaves: Leave[];
-  onSaveLeave: (leave: Leave) => void;
-  onDeleteLeave: (id: string) => void;
   onApplyRule: (rule: RepeatRule) => void;
   onFixRule: (rule: RepeatRule) => void;
   onChangeJob: (job: { patternKeys: Shift[]; rule: RepeatRule }) => void;
@@ -123,10 +113,6 @@ export function DesignSettings({
   const [page, setPage] = useState<Page>("top");
   // What キャンセル in 細かく設定 goes back to.
   const [cancelTo, setCancelTo] = useState<StyleChoice>();
-  // The leave being edited; undefined while adding one.
-  const [leaveId, setLeaveId] = useState<string>();
-  // Where a new order starts, when coming back from a leave.
-  const [repeatFrom, setRepeatFrom] = useState<Date>();
   const preview = stylePreviewOf(schedule, patternKeys);
   const repeating = isRepeating(rules);
   const current = repeating ? rules.at(-1) : undefined;
@@ -149,7 +135,6 @@ export function DesignSettings({
         )}
         {page === "repeat-new" && (
           <RepeatEditorPage
-            initialDay={repeatFrom}
             initialSequence={lastSequence}
             mode={current ? "switch" : "first"}
             onApply={(rule) => {
@@ -182,46 +167,13 @@ export function DesignSettings({
             onBack={() => setPage("top")}
           />
         )}
-        {page === "leave" && (
-          <LeavePage
-            initial={leaves.find((leave) => leave.id === leaveId)}
-            onBack={() => setPage("work")}
-            onDelete={() => {
-              if (leaveId) {
-                onDeleteLeave(leaveId);
-              }
-              setPage("work");
-            }}
-            onSave={(leave, resume) => {
-              onSaveLeave(leave);
-              if (resume === "new" && leave.end && repeating) {
-                setRepeatFrom(addDays(leave.end, 1));
-                setPage("repeat-new");
-              } else {
-                setPage("work");
-              }
-            }}
-            repeating={repeating}
-          />
-        )}
         {page === "work" && (
           <WorkStylePage
-            leaves={leaves}
             onBack={() => setPage("top")}
             onFix={() => setPage("repeat-fix")}
             onHolidaysOff={onHolidaysOff}
-            onLeave={(id) => {
-              setLeaveId(id);
-              setPage("leave");
-            }}
-            onNew={() => {
-              setRepeatFrom(undefined);
-              setPage("repeat-new");
-            }}
-            onRepeat={() => {
-              setRepeatFrom(undefined);
-              setPage("repeat-new");
-            }}
+            onNew={() => setPage("repeat-new")}
+            onRepeat={() => setPage("repeat-new")}
             onRoster={() => setPage("roster")}
             rules={rules}
           />
@@ -531,7 +483,6 @@ const repeatModes: Record<
 function RepeatEditorPage({
   mode,
   current,
-  initialDay,
   initialSequence,
   patternKeys,
   onBack,
@@ -539,7 +490,6 @@ function RepeatEditorPage({
 }: {
   mode: RepeatMode;
   current?: RepeatRule;
-  initialDay?: Date;
   initialSequence: Shift[];
   patternKeys: Shift[];
   onBack: () => void;
@@ -549,9 +499,7 @@ function RepeatEditorPage({
   const text = repeatModes[mode];
   const [sequence, setSequence] = useState(initialSequence);
   const [day, setDay] = useState(() =>
-    fixing
-      ? (current.anchor ?? current.start)
-      : (initialDay ?? nextMonthStart())
+    fixing ? (current.anchor ?? current.start) : nextMonthStart()
   );
   const start = fixing ? current.start : day;
   // Follows the order until the person sets it.
@@ -716,173 +664,6 @@ function JobChangePage({
   );
 }
 
-const leaveKinds = ["育休", "産休", "休職", "長期研修"];
-
-type Resume = "continue" | "new";
-
-// A stretch without shifts. When work repeats, it also asks how the order
-// picks up afterwards: the same order runs on underneath by itself.
-function LeavePage({
-  initial,
-  repeating,
-  onBack,
-  onSave,
-  onDelete,
-}: {
-  initial?: Leave;
-  repeating: boolean;
-  onBack: () => void;
-  onSave: (leave: Leave, resume: Resume) => void;
-  onDelete: () => void;
-}) {
-  const [name, setName] = useState(initial?.name ?? leaveKinds[0]);
-  const [start, setStart] = useState(() => initial?.start ?? nextMonthStart());
-  const [end, setEnd] = useState<Date | undefined>(initial?.end);
-  const [resume, setResume] = useState<Resume>("continue");
-  const endBeforeStart = end !== undefined && dateKey(end) < dateKey(start);
-  const canSave = name.trim() !== "" && !endBeforeStart;
-  return (
-    <>
-      <header className="st-page-header">
-        <div className="pe-topbar">
-          <button className="st-back" onClick={onBack} type="button">
-            <ChevronLeft aria-hidden="true" size={20} />
-            働き方
-          </button>
-          <button
-            className="pe-save"
-            disabled={!canSave}
-            onClick={() =>
-              onSave(
-                {
-                  id: initial?.id ?? `leave-${dateKey(start)}`,
-                  name: name.trim(),
-                  start,
-                  end,
-                },
-                resume
-              )
-            }
-            type="button"
-          >
-            {initial ? "保存" : "追加"}
-          </button>
-        </div>
-        <h3 className="st-title">
-          {initial ? "お休み期間" : "お休み期間を入れる"}
-        </h3>
-      </header>
-      <section className="st-section">
-        <h4>名前</h4>
-        <div className="st-list">
-          <label className="st-row">
-            <span className="st-row-label">名前</span>
-            <input
-              className="pe-inline-input"
-              onChange={(event) => setName(event.target.value)}
-              placeholder="例：育休"
-              value={name}
-            />
-          </label>
-        </div>
-        <div className="st-leave-kinds">
-          {leaveKinds.map((kind) => (
-            <button
-              aria-pressed={name === kind}
-              key={kind}
-              onClick={() => setName(kind)}
-              type="button"
-            >
-              {kind}
-            </button>
-          ))}
-        </div>
-      </section>
-      <section className="st-section">
-        <h4>期間</h4>
-        <div className="st-list">
-          <DateRow date={start} label="始まる日" onSelect={setStart} />
-          <SwitchRow
-            checked={end !== undefined}
-            label="終わる日が決まっている"
-            onChange={(checked) =>
-              setEnd(checked ? addDays(start, defaultLeaveDays) : undefined)
-            }
-          />
-          {end && <DateRow date={end} label="終わる日" onSelect={setEnd} />}
-        </div>
-      </section>
-      {endBeforeStart && (
-        <p className="st-note st-danger">
-          終わる日は、始まる日より後にしてください。
-        </p>
-      )}
-      {repeating && end && (
-        <div className="st-list">
-          <SegmentRow
-            label="戻ったら"
-            onChange={setResume}
-            options={[
-              ["continue", "前の並びの続き"],
-              ["new", "新しい並び"],
-            ]}
-            value={resume}
-          />
-        </div>
-      )}
-      <p className="st-note">
-        期間中の日は、シフトの代わりに帯で表示されます。共有している人にも伝わります。
-        {end ? "" : "終わる日は、決まったらここで入れられます。"}
-      </p>
-      {initial && (
-        <button className="pe-delete" onClick={onDelete} type="button">
-          <Trash2 aria-hidden="true" size={14} />
-          このお休み期間を消す
-        </button>
-      )}
-    </>
-  );
-}
-
-// About six months, a starting point for the end date.
-const defaultLeaveDays = 182;
-
-function DateRow({
-  label,
-  date,
-  onSelect,
-}: {
-  label: string;
-  date: Date;
-  onSelect: (date: Date) => void;
-}) {
-  return (
-    <div className="st-row">
-      <span className="st-row-label">{label}</span>
-      <span className="st-row-value">
-        <InputDatePicker
-          ariaLabel={`${label}：${formatDay(date)}。タップで変更`}
-          className="dc-input-date-filled"
-          date={date}
-          onSelect={onSelect}
-          title={label}
-        >
-          <span>{formatDay(date)}</span>
-          <ChevronDown
-            aria-hidden="true"
-            className="dc-input-chevron"
-            size={15}
-          />
-        </InputDatePicker>
-      </span>
-    </div>
-  );
-}
-
-function leavePeriod(leave: Leave) {
-  return `${shortDay(leave.start)}〜${leave.end ? shortDay(leave.end) : "未定"}`;
-}
-
 function nextMonthStart() {
   return new Date(previewToday.getFullYear(), previewToday.getMonth() + 1, 1);
 }
@@ -906,8 +687,6 @@ const workStyles = [
 // the order, or the day the roster takes over.
 function WorkStylePage({
   rules,
-  leaves,
-  onLeave,
   onBack,
   onRepeat,
   onRoster,
@@ -916,8 +695,6 @@ function WorkStylePage({
   onHolidaysOff,
 }: {
   rules: RepeatRule[];
-  leaves: Leave[];
-  onLeave: (id?: string) => void;
   onBack: () => void;
   onRepeat: () => void;
   onRoster: () => void;
@@ -983,30 +760,6 @@ function WorkStylePage({
           順番を決めると、先の月までシフトが自動で入ります。月ごとの入力はいらなくなります。
         </p>
       )}
-      <section className="st-section">
-        <h4>お休み期間</h4>
-        {leaves.length > 0 && (
-          <div className="st-list st-leave-list">
-            {leaves.map((leave) => (
-              <Row
-                key={leave.id}
-                label={leave.name}
-                onOpen={() => onLeave(leave.id)}
-                value={leavePeriod(leave)}
-              />
-            ))}
-          </div>
-        )}
-        <button
-          className="st-add"
-          onClick={() => onLeave(undefined)}
-          type="button"
-        >
-          <Plus aria-hidden="true" size={14} />
-          お休み期間を入れる
-        </button>
-      </section>
-      <p className="st-note">育休や休職など、しばらくシフトがない期間です。</p>
       <RuleHistory rules={rules} />
     </>
   );

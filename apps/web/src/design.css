@@ -220,36 +220,6 @@ body:has(.design-page) > .site-footer {
   grid-template-rows: repeat(var(--weeks, 6), 64px);
   gap: 4px;
 }
-.dc-grid {
-  position: relative;
-}
-/* A leave sits across the lower part of the days it covers. */
-.dc-leave-band {
-  position: absolute;
-  inset: auto 0 6px;
-  z-index: 1;
-  height: 22px;
-  padding: 0 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 22px;
-  color: var(--accent, #486444);
-  white-space: nowrap;
-  pointer-events: none;
-  background: var(--accent-soft-2, #eaf0e9);
-}
-.dc-leave-open {
-  margin-left: 4px;
-  border-top-left-radius: 11px;
-  border-bottom-left-radius: 11px;
-}
-.dc-leave-close {
-  margin-right: 4px;
-  border-top-right-radius: 11px;
-  border-bottom-right-radius: 11px;
-}
 .dc-day {
   position: relative;
   display: flex;
@@ -1510,30 +1480,6 @@ body:has(.dc-breakdown[open]) {
   cursor: default;
   background: #fff;
   border: 2px solid var(--accent, #486444);
-}
-.st-leave-kinds {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-.design-page .st-leave-kinds button {
-  min-height: 32px;
-  padding: 0 12px;
-  font-size: 12px;
-  color: #565e52;
-  background: #f6f7f3;
-  border: 1px solid transparent;
-  border-radius: 16px;
-}
-.design-page .st-leave-kinds button[aria-pressed="true"] {
-  font-weight: 600;
-  color: var(--accent, #486444);
-  background: var(--accent-soft, #f0f4ed);
-  border-color: var(--accent-border, #d9e2d3);
-}
-.st-leave-list {
-  margin-bottom: 8px;
 }
 .st-job {
   display: flex;

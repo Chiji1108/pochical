@@ -99,18 +99,6 @@ export type RepeatRule = {
   holidaysOff?: boolean;
 };
 
-// A stretch without shifts, like 育休. With no end, it has not been
-// decided when work starts again.
-export type Leave = { id: string; name: string; start: Date; end?: Date };
-
-export function leaveOn(leaves: Leave[], date: Date) {
-  const key = dateKey(date);
-  return leaves.find(
-    (leave) =>
-      dateKey(leave.start) <= key && (!leave.end || key <= dateKey(leave.end))
-  );
-}
-
 // What a rule fills in from its start, a year ahead.
 function ruleSchedule(rule: RepeatRule, holidaysOff = false) {
   const { sequence, start } = rule;
@@ -418,7 +406,6 @@ export function DesignCalendar({
   const [rules, setRules] = useState<RepeatRule[]>(
     initialRule ? [initialRule] : []
   );
-  const [leaves, setLeaves] = useState<Leave[]>([]);
   // Repeating shifts fill every month, so the monthly input buttons go away.
   const hideInputBar = isRepeating(rules);
   const members: MemberOptions = {
@@ -436,9 +423,8 @@ export function DesignCalendar({
   );
   const [announcement, setAnnouncement] = useState("");
   const dates = monthDates(month);
-  // Days on leave have no shifts to count.
   const monthDays = dates.filter(
-    (date) => date.getMonth() === month.getMonth() && !leaveOn(leaves, date)
+    (date) => date.getMonth() === month.getMonth()
   );
   const daysOff = monthDays.filter((date) =>
     isDayOff(schedule[dateKey(date)]?.shift)
@@ -627,21 +613,11 @@ export function DesignCalendar({
       <PhoneStatusBar />
       {tab === "settings" && (
         <DesignSettings
-          leaves={leaves}
           memberCount={members.names.length}
           onApplyRule={applyRule}
           onChangeJob={changeJob}
-          onDeleteLeave={(id) =>
-            setLeaves((previous) => previous.filter((leave) => leave.id !== id))
-          }
           onFixRule={fixRule}
           onHolidaysOff={setHolidaysOff}
-          onSaveLeave={(leave) =>
-            setLeaves((previous) => [
-              ...previous.filter((item) => item.id !== leave.id),
-              leave,
-            ])
-          }
           onTab={setTab}
           patternKeys={patternKeys}
           rules={rules}
@@ -684,7 +660,6 @@ export function DesignCalendar({
             className={`dc-grid ${weekDetail ? "dc-grid-week" : ""}`}
             style={{ "--weeks": gridDates.length / 7 } as CSSProperties}
           >
-            {!editing && <LeaveBands dates={gridDates} leaves={leaves} />}
             {gridDates.map((date) => (
               <DayCell
                 active={
@@ -698,7 +673,6 @@ export function DesignCalendar({
                 editing={editing}
                 entry={schedule[dateKey(date)]}
                 key={dateKey(date)}
-                leave={editing ? undefined : leaveOn(leaves, date)?.name}
                 onPress={() =>
                   editing ? setSelectedDay(date.getDate()) : openDetail(date)
                 }
@@ -1362,61 +1336,12 @@ function dayOffStyle(
   return { "--off-tint": tint } as CSSProperties;
 }
 
-// Leaves drawn as bars across each week row, placed in the calendar's own
-// grid. Only the real first and last days get rounded ends, so a leave
-// reads as carrying on into the next row.
-function LeaveBands({ dates, leaves }: { dates: Date[]; leaves: Leave[] }) {
-  const weekLength = 7;
-  const bands = leaves.flatMap((leave) =>
-    Array.from({ length: dates.length / weekLength }, (_, row) => {
-      const week = dates.slice(row * weekLength, (row + 1) * weekLength);
-      const inLeave = week.filter((date) => leaveOn([leave], date));
-      const first = inLeave[0];
-      const last = inLeave.at(-1);
-      if (!(first && last)) {
-        return [];
-      }
-      return [
-        {
-          key: `${leave.id}-${row}`,
-          name: leave.name,
-          row: row + 1,
-          from: week.indexOf(first) + 1,
-          to: week.indexOf(last) + 2,
-          opens: dateKey(first) === dateKey(leave.start),
-          closes:
-            leave.end !== undefined && dateKey(last) === dateKey(leave.end),
-        },
-      ];
-    }).flat()
-  );
-  return bands.map((band) => (
-    <span
-      aria-hidden="true"
-      className={`dc-leave-band ${band.opens ? "dc-leave-open" : ""} ${band.closes ? "dc-leave-close" : ""}`}
-      key={band.key}
-      // Positioned items need both lines; an open end means the grid's edge.
-      style={{
-        gridRow: `${band.row} / ${band.row + 1}`,
-        gridColumn: `${band.from} / ${band.to}`,
-      }}
-    >
-      {band.name}
-    </span>
-  ));
-}
-
 // What a screen reader says after the date.
-function dayDetails(
-  date: Date,
-  shift: Shift | undefined,
-  entry?: DayEntry,
-  leave?: string
-) {
+function dayDetails(date: Date, shift: Shift | undefined, entry?: DayEntry) {
   const timeChanged = Boolean(entry?.start || entry?.end);
   return [
     holidayName(date) ?? "",
-    leave ?? (shift ? patterns[shift].label : "未入力"),
+    shift ? patterns[shift].label : "未入力",
     timeChanged && entry ? `時間変更 ${timeRange(entry)}` : "",
     entry?.note ? "メモあり" : "",
   ].filter(Boolean);
@@ -1428,20 +1353,17 @@ export function DayCell({
   outside,
   editing,
   active,
-  leave,
   onPress,
 }: {
   date: Date;
   entry: DayEntry | undefined;
   outside: boolean;
-  // The leave the day falls in; its shift stays hidden under the band.
-  leave?: string;
   editing: boolean;
   active: boolean;
   onPress: () => void;
 }) {
   const markStyle = useContext(ShiftMarkStyleContext);
-  const shift = outside || leave ? undefined : entry?.shift;
+  const shift = outside ? undefined : entry?.shift;
   const highlight = useOffHighlight(markStyle);
   const { tint } = useDisplayColor(lookOf(shift ?? "off").color);
   const offStyle = dayOffStyle(shift, highlight, tint);
@@ -1471,7 +1393,7 @@ export function DayCell({
       </div>
     );
   }
-  const details = dayDetails(date, shift, entry, leave);
+  const details = dayDetails(date, shift, entry);
   return (
     <button
       aria-haspopup={editing ? undefined : "dialog"}
