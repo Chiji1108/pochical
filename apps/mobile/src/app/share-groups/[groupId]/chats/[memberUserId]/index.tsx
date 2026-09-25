@@ -1,9 +1,9 @@
 import { insertAtPosition, useMutation } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { View } from "react-native";
 import { ChatLoadingScreen } from "@/components/chat/chat-loading";
-import { findChatReply } from "@/components/chat/chat-model";
+import { findChatReply, withReadCounts } from "@/components/chat/chat-model";
 import { ChatView } from "@/components/chat/chat-view";
 import { useChatRead } from "@/components/chat/use-chat-read";
 import { useCachedPaginatedQuery, useCachedQuery } from "@/lib/cached-query";
@@ -67,6 +67,16 @@ export default function DirectChat() {
       : "skip",
     { initialNumItems: INITIAL_EVENT_COUNT }
   );
+  const readStates = useCachedQuery(
+    convexApi.chat.listDirectReadStates,
+    groupId && currentUserId && memberUserId
+      ? { groupId: targetGroupId, targetUserId: memberUserId }
+      : "skip"
+  );
+  const messagesWithReadCounts = useMemo(
+    () => withReadCounts(messages, readStates ?? []),
+    [messages, readStates]
+  );
   const sendMessageMutation = useMutation(
     convexApi.chat.sendDirectMessage
   ).withOptimisticUpdate((localQueryStore, args) => {
@@ -88,7 +98,6 @@ export default function DirectChat() {
         body: args.body,
         createdAt: now,
         groupId: args.groupId,
-        readCount: 0,
         reply: findChatReply(messages, args.replyToMessageId),
         threadId: createOptimisticId("thread") as Id<"chatThreads">,
       },
@@ -153,7 +162,7 @@ export default function DirectChat() {
       isLoadingMore={
         messageStatus === "LoadingMore" || eventStatus === "LoadingMore"
       }
-      messages={messages}
+      messages={messagesWithReadCounts}
       onBack={goBack}
       onLoadMore={() => {
         if (messageStatus === "CanLoadMore") {

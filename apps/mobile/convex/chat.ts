@@ -8,7 +8,10 @@ import {
   getReplySnapshot,
   requireMessageAccess,
 } from "../convex-lib/chatInteractions";
-import { addMessageMetadata } from "../convex-lib/chatMessageMetadata";
+import {
+  addMessageMetadata,
+  listThreadReadStates,
+} from "../convex-lib/chatMessageMetadata";
 import {
   createDirectPair,
   GROUP_THREAD_PAIR_KEY,
@@ -25,7 +28,10 @@ import {
   MAX_CHAT_MESSAGE_LENGTH,
   toggleMessageReaction,
 } from "../shared/chat";
-import { chatMessageValidator } from "../shared/chat-schema";
+import {
+  chatMessageValidator,
+  chatReadStateValidator,
+} from "../shared/chat-schema";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, type QueryCtx, query } from "./_generated/server";
 
@@ -103,7 +109,7 @@ export const listGroupMessages = query({
 
     return {
       ...result,
-      page: await addMessageMetadata(ctx, thread, result.page),
+      page: await addMessageMetadata(ctx, result.page),
     };
   },
 });
@@ -128,8 +134,43 @@ export const listDirectMessages = query({
 
     return {
       ...result,
-      page: await addMessageMetadata(ctx, thread, result.page),
+      page: await addMessageMetadata(ctx, result.page),
     };
+  },
+});
+
+export const listGroupReadStates = query({
+  returns: v.array(chatReadStateValidator),
+  args: {
+    groupId: v.id("groups"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    await requireMembership(ctx, args.groupId, userId);
+    const thread = await getThread(
+      ctx,
+      args.groupId,
+      "group",
+      GROUP_THREAD_PAIR_KEY
+    );
+
+    return await listThreadReadStates(ctx, thread);
+  },
+});
+
+export const listDirectReadStates = query({
+  returns: v.array(chatReadStateValidator),
+  args: {
+    groupId: v.id("groups"),
+    targetUserId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    await requireDirectMembership(ctx, args.groupId, userId, args.targetUserId);
+    const { pairKey } = createDirectPair(userId, args.targetUserId);
+    const thread = await getThread(ctx, args.groupId, "direct", pairKey);
+
+    return await listThreadReadStates(ctx, thread);
   },
 });
 

@@ -28,54 +28,38 @@ const getThreadReaderIds = async (
   );
 };
 
-const getLastReadByUserId = async (
+// Read positions are served separately from message pages so that marking a
+// thread read re-runs only this small query instead of every loaded page.
+export const listThreadReadStates = async (
   ctx: QueryCtx,
   thread: Doc<"chatThreads"> | null
 ) => {
-  const lastReadByUserId = new Map<string, number>();
+  const readStates: { lastReadAt: number; userId: string }[] = [];
 
   if (!thread) {
-    return lastReadByUserId;
+    return readStates;
   }
 
   for (const userId of await getThreadReaderIds(ctx, thread)) {
-    lastReadByUserId.set(
-      userId,
-      await getLastReadByChannelId(ctx, {
+    readStates.push({
+      lastReadAt: await getLastReadByChannelId(ctx, {
         channelId: thread._id,
         userId,
-      })
-    );
+      }),
+      userId,
+    });
   }
 
-  return lastReadByUserId;
-};
-
-const countReadReceipts = (
-  lastReadByUserId: Map<string, number>,
-  message: Doc<"chatMessages">
-) => {
-  let readCount = 0;
-
-  for (const [userId, lastReadAt] of lastReadByUserId) {
-    if (userId !== message.authorUserId && lastReadAt >= message.createdAt) {
-      readCount += 1;
-    }
-  }
-
-  return readCount;
+  return readStates;
 };
 
 export const addMessageMetadata = async (
   ctx: QueryCtx,
-  thread: Doc<"chatThreads"> | null,
   page: Doc<"chatMessages">[]
 ) => {
   const displayNames = new Map<string, string>();
-  const lastReadByUserId = await getLastReadByUserId(ctx, thread);
   const messages: (Doc<"chatMessages"> & {
     authorDisplayName: string;
-    readCount: number;
   })[] = [];
 
   for (const message of page) {
@@ -95,7 +79,6 @@ export const addMessageMetadata = async (
     messages.push({
       ...message,
       authorDisplayName: displayName,
-      readCount: countReadReceipts(lastReadByUserId, message),
     });
   }
 

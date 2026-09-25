@@ -1,7 +1,7 @@
 import type { IMessage } from "@kesha-antonov/react-native-chat";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 
-export type ChatMessage = Pick<
+export type ChatMessageRecord = Pick<
   Doc<"chatMessages">,
   | "_id"
   | "authorUserId"
@@ -10,8 +10,34 @@ export type ChatMessage = Pick<
   | "reactions"
   | "reply"
   | "deletedAt"
-> & { authorDisplayName: string; readCount: number };
+> & { authorDisplayName: string };
+export type ChatMessage = ChatMessageRecord & { readCount: number };
+export type ChatReadState = { lastReadAt: number; userId: string };
 export type ReadReceiptMode = "count" | "direct";
+
+export const countReadReceipts = (
+  readStates: ChatReadState[],
+  message: Pick<ChatMessageRecord, "authorUserId" | "createdAt">
+) => {
+  let readCount = 0;
+
+  for (const { lastReadAt, userId } of readStates) {
+    if (userId !== message.authorUserId && lastReadAt >= message.createdAt) {
+      readCount += 1;
+    }
+  }
+
+  return readCount;
+};
+
+export const withReadCounts = <T extends ChatMessageRecord>(
+  messages: T[],
+  readStates: ChatReadState[]
+): (T & { readCount: number })[] =>
+  messages.map((message) => ({
+    ...message,
+    readCount: countReadReceipts(readStates, message),
+  }));
 export interface DisplayMessage extends IMessage {
   _id: string;
   messageId?: Id<"chatMessages">;
@@ -151,9 +177,9 @@ export const buildChatMessages = (
   );
 
 export const findChatReply = (
-  messages: ChatMessage[],
+  messages: ChatMessageRecord[],
   messageId?: Id<"chatMessages">
-): ChatMessage["reply"] => {
+): ChatMessageRecord["reply"] => {
   const message = messages.find((item) => item._id === messageId);
   return message
     ? {

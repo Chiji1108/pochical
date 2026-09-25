@@ -31,5 +31,9 @@ export const chatMessageValidator = v.object({
   _id: v.id("chatMessages"),
   _creationTime: v.number(),
   authorDisplayName: v.string(),
-  readCount: v.number(),
+});
+
+export const chatReadStateValidator = v.object({
+  lastReadAt: v.number(),
+  userId: v.string(),
 });

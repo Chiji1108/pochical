@@ -6,6 +6,7 @@ import schema from "../convex/schema";
 import {
   buildChatMessages,
   toDisplayMessage,
+  withReadCounts,
 } from "../src/components/chat/chat-model";
 
 const setup = async () => {
@@ -76,9 +77,11 @@ test("group replies persist a server-authored quote and retain read receipts", a
     replyToMessageId: original._id,
   });
   await bob.mutation(api.chat.markGroupRead, { groupId });
-  const page = (
-    await alice.query(api.chat.listGroupMessages, { groupId, paginationOpts })
-  ).page;
+  const page = withReadCounts(
+    (await alice.query(api.chat.listGroupMessages, { groupId, paginationOpts }))
+      .page,
+    await alice.query(api.chat.listGroupReadStates, { groupId })
+  );
   const reply = page.find((message) => message.body === "返信");
   expect(reply?.reply).toEqual({
     messageId: original._id,
@@ -109,7 +112,12 @@ test("reactions toggle per user, sync to other readers, and do not mark a messag
   expect(updated.reactions).toEqual([
     { emoji: "🦊", userIds: [bobId, aliceId] },
   ]);
-  expect(updated.readCount).toBe(0);
+  expect(
+    withReadCounts(
+      [updated],
+      await alice.query(api.chat.listGroupReadStates, { groupId })
+    )[0].readCount
+  ).toBe(0);
   await bob.mutation(api.chat.toggleReaction, reaction);
   updated = (
     await alice.query(api.chat.listGroupMessages, { groupId, paginationOpts })
@@ -221,14 +229,69 @@ test("direct chat replies work only within their conversation and reactions requ
     groupId,
     targetUserId: aliceId,
   });
-  const read = (
-    await alice.query(api.chat.listDirectMessages, {
+  const read = withReadCounts(
+    (
+      await alice.query(api.chat.listDirectMessages, {
+        groupId,
+        targetUserId: bobId,
+        paginationOpts,
+      })
+    ).page,
+    await alice.query(api.chat.listDirectReadStates, {
       groupId,
       targetUserId: bobId,
-      paginationOpts,
     })
-  ).page.find((message) => message._id === original._id);
+  ).find((message) => message._id === original._id);
   expect(read?.readCount).toBe(1);
+});
+
+test("read states are listed per reader and only for conversation participants", async () => {
+  const { alice, bob, carol, outsider, groupId, aliceId, bobId, carolId } =
+    await setup();
+  await alice.mutation(api.chat.sendGroupMessage, { groupId, body: "Hello" });
+  await bob.mutation(api.chat.markGroupRead, { groupId });
+  const groupStates = await carol.query(api.chat.listGroupReadStates, {
+    groupId,
+  });
+  expect(groupStates.map((state) => state.userId).sort()).toEqual(
+    [aliceId, bobId, carolId].sort()
+  );
+  expect(
+    groupStates.find((state) => state.userId === bobId)?.lastReadAt
+  ).toBeGreaterThan(0);
+  expect(
+    groupStates.find((state) => state.userId === carolId)?.lastReadAt
+  ).toBe(0);
+  await expect(
+    outsider.query(api.chat.listGroupReadStates, { groupId })
+  ).rejects.toThrow();
+  expect(
+    await alice.query(api.chat.listDirectReadStates, {
+      groupId,
+      targetUserId: bobId,
+    })
+  ).toEqual([]);
+  await alice.mutation(api.chat.sendDirectMessage, {
+    groupId,
+    targetUserId: bobId,
+    body: "Private",
+  });
+  expect(
+    (
+      await bob.query(api.chat.listDirectReadStates, {
+        groupId,
+        targetUserId: aliceId,
+      })
+    )
+      .map((state) => state.userId)
+      .sort()
+  ).toEqual([aliceId, bobId].sort());
+  await expect(
+    outsider.query(api.chat.listDirectReadStates, {
+      groupId,
+      targetUserId: bobId,
+    })
+  ).rejects.toThrow();
 });
 
 test("deleted messages, former members, outsiders, and unsupported reactions are rejected", async () => {
@@ -281,9 +344,11 @@ test("deleted messages, former members, outsiders, and unsupported reactions are
 test("the UI adapter preserves legacy messages, pending state and event chronology", async () => {
   const { alice, groupId } = await setup();
   await alice.mutation(api.chat.sendGroupMessage, { groupId, body: "Legacy" });
-  const message = (
-    await alice.query(api.chat.listGroupMessages, { groupId, paginationOpts })
-  ).page[0];
+  const [message] = withReadCounts(
+    (await alice.query(api.chat.listGroupMessages, { groupId, paginationOpts }))
+      .page,
+    await alice.query(api.chat.listGroupReadStates, { groupId })
+  );
   expect(toDisplayMessage(message, "direct")).toMatchObject({
     text: "Legacy",
     sent: true,
