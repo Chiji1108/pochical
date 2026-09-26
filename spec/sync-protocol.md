@@ -102,10 +102,27 @@ Tab and app icon badges need unread counts across every group, without a socket 
 - The APNs `badge` and FCM notification count come from the User DO's total.
 - Reading on one device clears the badge on the user's other devices through the User DO.
 
+## Ephemeral state
+
+Presence and typing describe the present moment only. They are never written to the change log, SQLite or the outbox, and nothing is replayed after a reconnect. The Group DO relays them as their own `ServerFrame` kinds to the sockets that need them.
+
+### Presence
+
+Presence means "has this thread open on screen", not "online in the app": mobile OSes stop sockets soon after the app leaves the foreground.
+
+- No heartbeats. The Group DO lists open sockets with `ctx.getWebSockets()`, which works across hibernation, and each socket's attachment records its user and open thread.
+- On connect, close and thread switch, the Group DO sends the change to other sockets in the thread.
+- A user with several devices is present while any of their sockets is.
+
+### Typing
+
+- While composing, the client sends a typing frame at most every 3 seconds, and a stop frame when it sends the message or the field becomes empty.
+- Receivers show the indicator for about 5 seconds unless it is refreshed, so a lost stop frame cannot leave it stuck.
+
 ## Not yet specified
 
 - Authentication and membership checks on connect
 - Snapshot format for resets and how long each DO keeps its change log
 - Wire messages for shift changes, outbox acknowledgements, chat pages and resets
-- Presence and typing indicators
+- Presence and "last seen": whether to show them at all. Pochical is for family and friends, where visible presence and read markers can feel like pressure; typing alone may be enough. "Last seen" would also need storing in the User DO.
 - Read state options: whether members see read markers (and whether users can turn them off), "mark as unread" (it moves the watermark back, so `max` would become a per-thread LWW register), mention counts, and muted threads left out of badge totals
