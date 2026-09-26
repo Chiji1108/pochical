@@ -5,7 +5,7 @@ import { hexToOklch, oklchToHex } from "./oklch";
 // is a table of OKLCH lightness per role plus a chroma rule, so adding a
 // tone means adding a table, and every theme hue and shift color follows.
 
-export const generatedTones = ["pastel", "dusty"] as const;
+export const generatedTones = ["paper", "dusty"] as const;
 export type GeneratedTone = (typeof generatedTones)[number];
 
 export type AccentRole =
@@ -29,7 +29,7 @@ type Spec = { lightness: number; chroma: Chroma };
 // Chroma at which fixed tints reach full strength.
 const FULL_CHROMA = 0.05;
 
-const vivid: Chroma = (chroma) => Math.min(chroma * 1.2, 0.12);
+const ink: Chroma = (chroma) => Math.min(chroma, 0.09);
 const dust: Chroma = (chroma) => Math.min(chroma * 0.6, 0.05);
 const scaled =
   (rule: Chroma, factor: number): Chroma =>
@@ -48,37 +48,39 @@ const roleSpecs: Record<
   GeneratedTone,
   Record<ColorScheme, Record<AccentRole, Spec>>
 > = {
-  // Pale fills with dark text on them; accents stay readable on white.
-  pastel: {
+  // Dark, inky colors on a paper ground. The ground keeps its own warm hue
+  // whatever the カラー; they sit together because the ink is far darker
+  // than the paper, as indigo dye does on unbleached cotton.
+  paper: {
     dark: {
-      accent: at(0.82, scaled(vivid, 0.8)),
-      border: at(0.46, fixed(0.035)),
-      fill: at(0.8, fixed(0.07)),
-      line: at(0.72, scaled(vivid, 0.7)),
-      markTint: at(0.4, fixed(0.045)),
-      muted: at(0.55, fixed(0.05)),
-      onFill: at(0.27, fixed(0.02)),
-      press: at(0.43, fixed(0.04)),
-      soft: at(0.355, fixed(0.025)),
-      soft2: at(0.38, fixed(0.03)),
-      strong: at(0.76, scaled(vivid, 0.8)),
+      accent: at(0.8, scaled(ink, 0.8)),
+      border: at(0.45, fixed(0.022)),
+      fill: at(0.76, scaled(ink, 0.8)),
+      line: at(0.68, scaled(ink, 0.7)),
+      markTint: at(0.4, fixed(0.03)),
+      muted: at(0.53, fixed(0.035)),
+      onFill: at(0.26, fixed(0.015)),
+      press: at(0.42, fixed(0.025)),
+      soft: at(0.35, fixed(0.016)),
+      soft2: at(0.375, fixed(0.02)),
+      strong: at(0.74, scaled(ink, 0.8)),
     },
     light: {
-      accent: at(0.5, vivid),
-      border: at(0.9, fixed(0.035)),
-      fill: at(0.84, fixed(0.075)),
-      line: at(0.6, scaled(vivid, 0.9)),
-      markTint: at(0.925, fixed(0.05)),
-      muted: at(0.8, fixed(0.07)),
-      onFill: at(0.3, fixed(0.04)),
-      press: at(0.905, fixed(0.045)),
-      soft: at(0.96, fixed(0.024)),
-      soft2: at(0.94, fixed(0.032)),
-      strong: at(0.44, vivid),
+      accent: at(0.44, ink),
+      border: at(0.88, fixed(0.022)),
+      fill: at(0.46, ink),
+      line: at(0.56, scaled(ink, 0.8)),
+      markTint: at(0.91, fixed(0.028)),
+      muted: at(0.77, fixed(0.04)),
+      onFill: at(1, () => 0),
+      press: at(0.895, fixed(0.024)),
+      soft: at(0.95, fixed(0.013)),
+      soft2: at(0.93, fixed(0.018)),
+      strong: at(0.38, ink),
     },
   },
-  // Grayed, low-chroma colors on a greige ground; mid-tone fills keep white
-  // text readable.
+  // Grayed, low-chroma colors on grays of the same hue; mid-tone fills keep
+  // white text readable.
   dusty: {
     dark: {
       accent: at(0.78, scaled(dust, 0.9)),
@@ -125,30 +127,58 @@ const markSpecs: Record<
       tint: at(0.915, (chroma) => Math.min(chroma * 0.3, 0.024)),
     },
   },
-  pastel: {
+  paper: {
     dark: {
-      color: at(0.82, (chroma) => chroma * 0.8),
-      tint: at(0.4, (chroma) => Math.min(chroma * 0.6, 0.05)),
+      color: at(0.8, (chroma) => Math.min(chroma * 0.75, 0.09)),
+      tint: at(0.4, (chroma) => Math.min(chroma * 0.35, 0.035)),
     },
     light: {
-      color: at(0.51, (chroma) => chroma),
-      tint: at(0.925, (chroma) => Math.min(chroma * 0.85, 0.065)),
+      color: at(0.47, (chroma) => Math.min(chroma * 0.9, 0.1)),
+      tint: at(0.91, (chroma) => Math.min(chroma * 0.35, 0.04)),
     },
   },
 };
 
-// How each tone treats the grays: pastel leans them toward the theme,
-// dusty toward a warm greige whatever the theme. `bg` lifts the light
-// background just off pure white; it must stay lighter and less tinted
-// than --fill, or lists and the group rail sink into it.
-const GREIGE_HUE = 70;
-const neutralSpecs: Record<
-  GeneratedTone,
-  { hue: "theme" | number; strength: number; bg: Spec }
-> = {
-  dusty: { bg: at(0.994, () => 0.004), hue: GREIGE_HUE, strength: 1.3 },
-  pastel: { bg: at(0.994, fixed(0.004)), hue: "theme", strength: 1.3 },
+// The grays start from the カラー's hue and may lean toward cream (a warm
+// yellow) by up to `warmth` degrees, so they stay within the accent's
+// neighboring hues and never reach its opposite. Accents more than a
+// quarter turn from cream (藍, ラベンダー) keep their own hue: the way round
+// to cream would pass through unrelated hues. The tint strength fades with
+// the accent's own chroma, so 墨 stays neutral. Paper instead takes one
+// fixed hue for every カラー, since its ground is a material, not a tint.
+// Its dark ground is only faintly warm: tiles there are nearly as dark as
+// the ground, so lightness no longer keeps a blue apart from a brown.
+// `bg` lifts the light background off pure white; it must stay lighter and
+// less tinted than --fill, or lists and the group rail sink into it.
+type NeutralSpec = { strength: number; bg: Spec } & (
+  | { warmth: number }
+  | { hue: number; darkStrength: number }
+);
+
+const PAPER_HUE = 85;
+
+const neutralSpecs: Record<GeneratedTone, NeutralSpec> = {
+  dusty: { bg: at(0.994, fixed(0.004)), strength: 1.3, warmth: 75 },
+  paper: {
+    bg: at(0.99, () => 0.01),
+    darkStrength: 0.5,
+    hue: PAPER_HUE,
+    strength: 1.8,
+  },
 };
+
+const CREAM_HUE = 70;
+const CREAM_REACH = 90;
+
+// The hue the grays take for an accent hue, leaning toward cream.
+export function grayHue(hue: number, warmth: number) {
+  const toCream = ((CREAM_HUE - hue + 540) % 360) - 180;
+  if (Math.abs(toCream) > CREAM_REACH) {
+    return hue;
+  }
+  const turn = Math.sign(toCream) * Math.min(Math.abs(toCream), warmth);
+  return (hue + turn + 360) % 360;
+}
 
 function paint(spec: Spec, hex: string, hueOverride?: number) {
   const { chroma, hue } = hexToOklch(hex);
@@ -160,6 +190,40 @@ function paint(spec: Spec, hex: string, hueOverride?: number) {
   });
 }
 
+// The paper color washes are multiplied with: much yellower than the
+// ground shown, so pale washes are paper faintly dyed, keeping only a hint
+// of their own hue. Each wash then gets its own
+// lightness back, keeping tiles as far from the ground as before.
+const PRINT_PAPER = oklchToHex({
+  chroma: 0.035,
+  hue: PAPER_HUE,
+  lightness: 0.95,
+});
+
+const channels = (hex: string) =>
+  [1, 3, 5].map((start) => Number.parseInt(hex.slice(start, start + 2), 16));
+
+// Colors on light paper are multiplied with it, as ink printed on paper:
+// pale washes pick up the paper's yellow and sit in it instead of floating
+// on top as a separate cool color, while dark ink barely changes.
+function printed(tone: GeneratedTone, scheme: ColorScheme, hex: string) {
+  if (tone !== "paper" || scheme === "dark") {
+    return hex;
+  }
+  const paper = channels(PRINT_PAPER);
+  const multiplied = `#${channels(hex)
+    .map((channel, index) =>
+      Math.round((channel * (paper[index] ?? 255)) / 255)
+        .toString(16)
+        .padStart(2, "0")
+    )
+    .join("")}`;
+  return oklchToHex({
+    ...hexToOklch(multiplied),
+    lightness: hexToOklch(hex).lightness,
+  });
+}
+
 export function toneRoles(
   tone: GeneratedTone,
   accent: string,
@@ -167,7 +231,11 @@ export function toneRoles(
 ): Record<AccentRole, string> {
   const specs = roleSpecs[tone][scheme];
   return Object.fromEntries(
-    Object.entries(specs).map(([role, spec]) => [role, paint(spec, accent)])
+    Object.entries(specs).map(([role, spec]) => {
+      const color = paint(spec, accent);
+      // Text on a fill is not printed on the paper but on the ink.
+      return [role, role === "onFill" ? color : printed(tone, scheme, color)];
+    })
   ) as Record<AccentRole, string>;
 }
 
@@ -194,8 +262,16 @@ export function toneMarkColor(
   });
   const hue = (hexToOklch(color).hue + hueShift + 360) % 360;
   return {
-    color: paint(shift(spec.color, MARK_LIGHTNESS_SPREAD), color, hue),
-    tint: paint(shift(spec.tint, TINT_LIGHTNESS_SPREAD), color, hue),
+    color: printed(
+      tone,
+      scheme,
+      paint(shift(spec.color, MARK_LIGHTNESS_SPREAD), color, hue)
+    ),
+    tint: printed(
+      tone,
+      scheme,
+      paint(shift(spec.tint, TINT_LIGHTNESS_SPREAD), color, hue)
+    ),
   };
 }
 
@@ -205,11 +281,19 @@ export function toneNeutrals(
   scheme: ColorScheme
 ): { tint: NeutralTint; bg?: string } {
   const spec = neutralSpecs[tone];
-  const hue = spec.hue === "theme" ? hexToOklch(accent).hue : spec.hue;
-  const tint = { hue, strength: spec.strength };
+  const { chroma, hue } = hexToOklch(accent);
+  const tint =
+    "hue" in spec
+      ? {
+          hue: spec.hue,
+          strength: scheme === "dark" ? spec.darkStrength : spec.strength,
+        }
+      : {
+          hue: grayHue(hue, spec.warmth),
+          strength: spec.strength * Math.min(1, chroma / FULL_CHROMA),
+        };
   if (scheme === "dark") {
     return { tint };
   }
-  const bgHue = spec.hue === "theme" ? undefined : spec.hue;
-  return { bg: paint(spec.bg, accent, bgHue), tint };
+  return { bg: paint(spec.bg, accent, tint.hue), tint };
 }

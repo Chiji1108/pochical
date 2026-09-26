@@ -1192,7 +1192,7 @@ function SwitchRow({
 
 const toneOptions: { tone: Tone; name: string }[] = [
   { name: "深め", tone: "deep" },
-  { name: "パステル", tone: "pastel" },
+  { name: "紙", tone: "paper" },
   { name: "くすみ", tone: "dusty" },
 ];
 
@@ -1308,8 +1308,7 @@ function ColorSwatch({
     );
   }
   // Each shift color as this tone would fill with it, so the slices sit at
-  // the same depth as the theme swatches beside them (pastel fills are
-  // much paler than pastel marks).
+  // the same depth as the theme swatches beside them.
   const slices = multiSwatchShifts.map((shift) => {
     const option = markColors[lookOf(shift).color] ?? markColors[0];
     return tone === "deep"

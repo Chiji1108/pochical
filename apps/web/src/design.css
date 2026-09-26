@@ -4136,6 +4136,24 @@ button.st-row:hover {
   font-size: 10px;
   color: var(--text-2);
 }
+.cp-grays {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 12px;
+}
+.cp-grays ul {
+  display: flex;
+  height: 28px;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  border: 1px solid var(--separator);
+  border-radius: 8px;
+}
+.cp-grays li {
+  flex: 1;
+}
 .cp-theme-contrast {
   display: flex;
   flex-wrap: wrap;

@@ -35,6 +35,18 @@ const lineTokens = new Set([
   "border-strong",
 ]);
 
+// The grays a theme tints, from the screen down to the darkest text.
+const grayRoles = [
+  "bg",
+  "fill",
+  "fill-2",
+  "fill-3",
+  "control-off",
+  "border-strong",
+  "text-3",
+  "text",
+];
+
 // The accent roles of a theme, in the order a screen uses them.
 const themeRoles = [
   { key: "accent", label: "文字・線", name: "accent" },
@@ -249,6 +261,18 @@ function ThemePalette({
           </li>
         ))}
       </ul>
+      <div className="cp-grays">
+        <span className="cp-swatch-label">グレー</span>
+        <ul>
+          {grayRoles.map((name) => (
+            <li
+              key={name}
+              style={{ background: `var(--${name})` }}
+              title={`--${name}`}
+            />
+          ))}
+        </ul>
+      </div>
       <p className="cp-theme-contrast">
         文字と背景の比{" "}
         <ContrastBadge ratio={contrast(colors.accent, valueOf(scheme, "bg"))} />
@@ -262,15 +286,15 @@ function ThemePalette({
 const toneLabels: Record<Tone, string> = {
   deep: "深め",
   dusty: "くすみ",
-  pastel: "パステル",
+  paper: "紙",
 };
 
 const toneDescriptions: Record<Tone, string> = {
   deep: "設定で選べる6色です。どのテーマでも同じ役割の変数（--accent など）に入り、画面の組み方は変わりません。深めのトーンは、塗りと文字に同じ色を使います。",
   dusty:
-    "同じ6色の色相から、彩度を落としてグレーを混ぜたくすみ色です。背景とグレーはテーマに関係なく温かいグレージュにし、塗りは白い文字が読める中くらいの濃さにします。",
-  pastel:
-    "同じ6色の色相から、決まりに沿って作ったパステルです。塗りは淡く、上の文字は濃くします。文字と線は読める濃さを保ち、背景にもごく淡く色みを乗せます。",
+    "同じ6色の色相から、彩度を落として灰色を混ぜたくすみ色です。背景とグレーは、カラーの色相からクリーム色の側へ最大75°寄せます。クリームから90°より遠いカラー（藍・ラベンダー）は寄せず、反対側の色が混ざらないようにします。塗りは白い文字が読める中くらいの濃さにします。",
+  paper:
+    "同じ6色の色相から作った、インクのように濃い色です。地は生成りの紙の色で、グレーもカラーに関係なく紙の色相にそろえます。色は紙よりずっと暗いので、反対側の色相の藍でも濁りません。",
 };
 
 function ThemeTokens({ tone, id }: { tone: Tone; id: string }) {
@@ -333,7 +357,7 @@ function MarkChip({
 function MarkTokens() {
   return (
     <Section
-      description="シフトごとに選べる12色です。濃い色は記号と文字、薄い色はその地に使います。比は記号の色と地の色のコントラストです。パステルは同じ色相から作ります。"
+      description="シフトごとに選べる12色です。濃い色は記号と文字、薄い色はその地に使います。比は記号の色と地の色のコントラストです。紙とくすみは同じ色相から作ります。"
       id="cp-marks"
       title="シフトの色"
     >
@@ -457,7 +481,7 @@ export function DesignColors() {
         {[
           { href: "#cp-neutral", number: "01", title: "基本色" },
           { href: "#cp-themes", number: "02", title: "テーマ（深め）" },
-          { href: "#cp-pastel", number: "03", title: "テーマ（パステル）" },
+          { href: "#cp-paper", number: "03", title: "テーマ（紙）" },
           { href: "#cp-dusty", number: "04", title: "テーマ（くすみ）" },
           { href: "#cp-marks", number: "05", title: "シフトの色" },
           { href: "#cp-distinct", number: "06", title: "見分けやすさ" },
@@ -470,7 +494,7 @@ export function DesignColors() {
       </nav>
       <NeutralTokens />
       <ThemeTokens tone="deep" id="cp-themes" />
-      <ThemeTokens tone="pastel" id="cp-pastel" />
+      <ThemeTokens tone="paper" id="cp-paper" />
       <ThemeTokens tone="dusty" id="cp-dusty" />
       <MarkTokens />
       <DistinctTokens />
