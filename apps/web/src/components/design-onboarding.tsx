@@ -10,13 +10,11 @@ import {
   monthDates,
   PhoneStatusBar,
   patterns,
-  type RepeatRule,
   RepeatSequenceEditor,
   repeatSchedule,
-  type Schedule,
-  type Shift,
   weekendClassName,
 } from "./design-calendar";
+import type { RepeatRule, Schedule, Shift } from "./design-calendar";
 import { useThemeStyle } from "./design-theme";
 import { ShiftMark } from "./shift-mark";
 
@@ -35,41 +33,40 @@ type Template = {
 const rosterTemplates: Template[] = [
   {
     id: "two-shift",
-    title: "二交代制",
     note: "日勤と夜勤、夜勤の翌日は明け",
     patternKeys: ["day", "night", "after", "off"],
+    title: "二交代制",
   },
   {
     id: "three-shift",
-    title: "三交代制",
     note: "日勤・準夜・深夜",
     patternKeys: ["day", "junya", "midnight", "off"],
+    title: "三交代制",
   },
   {
     id: "two-shift-early-late",
-    title: "二交代制 + 早番・遅番",
     note: "時間の違う日勤が混ざる",
     patternKeys: ["early", "day", "late", "night", "after", "off"],
+    title: "二交代制 + 早番・遅番",
   },
   {
     id: "roster-custom",
-    title: "自分で作る",
     note: "まずは二交代制で始めて、あとで設定から変えられます",
     patternKeys: ["day", "night", "after", "off"],
+    title: "自分で作る",
   },
 ];
 
 const rotationTemplates: Template[] = [
   {
     id: "duty",
-    title: "当番・非番・休み",
     note: "消防などの24時間勤務",
     patternKeys: ["duty", "offDuty", "off"],
     sequence: ["duty", "offDuty", "off"],
+    title: "当番・非番・休み",
   },
   {
     id: "factory",
-    title: "日勤・夕勤・深夜の交代",
     note: "工場などの3交代（2日ずつ回る例）",
     patternKeys: ["day", "evening", "midnight", "off"],
     sequence: [
@@ -82,22 +79,23 @@ const rotationTemplates: Template[] = [
       "off",
       "off",
     ],
+    title: "日勤・夕勤・深夜の交代",
   },
   {
     id: "weekdays",
-    title: "平日は日勤、土日は休み",
     note: "曜日で決まっている勤務",
     patternKeys: ["day", "off"],
     sequence: ["off", "day", "day", "day", "day", "day", "off"],
+    title: "平日は日勤、土日は休み",
     weekly: true,
   },
   {
+    custom: true,
     id: "rotation-custom",
-    title: "自分で作る",
     note: "並びを組み立てる",
     patternKeys: ["duty", "offDuty", "day", "night", "after", "off"],
     sequence: [],
-    custom: true,
+    title: "自分で作る",
   },
 ];
 
@@ -161,7 +159,9 @@ export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
         />
         <button
           className="ob-restart"
-          onClick={() => setFinished(undefined)}
+          onClick={() => {
+            setFinished(undefined);
+          }}
           type="button"
         >
           最初からやり直す
@@ -198,16 +198,16 @@ export function WorkSetupSteps({
 
   function chooseRotation(template: Template) {
     if (template.custom) {
-      setStep({ name: "custom", template, sequence: [] });
+      setStep({ name: "custom", sequence: [], template });
     } else if (template.weekly && template.sequence) {
       // Any Sunday works as the first day of a week-based sequence.
       onFinish({
+        anchor: addDays(month, -month.getDay()),
         patternKeys: template.patternKeys,
         sequence: template.sequence,
-        anchor: addDays(month, -month.getDay()),
       });
     } else if (template.sequence) {
-      setStep({ name: "anchor", template, sequence: template.sequence });
+      setStep({ name: "anchor", sequence: template.sequence, template });
     }
   }
 
@@ -216,23 +216,31 @@ export function WorkSetupSteps({
       {step.name === "kind" && (
         <KindStep
           onBack={onExit}
-          onRoster={() => setStep({ name: "roster" })}
-          onRotation={() => setStep({ name: "rotation" })}
+          onRoster={() => {
+            setStep({ name: "roster" });
+          }}
+          onRotation={() => {
+            setStep({ name: "rotation" });
+          }}
         />
       )}
       {step.name === "roster" && (
         <TemplateStep
-          onBack={() => setStep({ name: "kind" })}
-          onChoose={(template) =>
-            onFinish({ patternKeys: template.patternKeys })
-          }
+          onBack={() => {
+            setStep({ name: "kind" });
+          }}
+          onChoose={(template) => {
+            onFinish({ patternKeys: template.patternKeys });
+          }}
           templates={rosterTemplates}
           title="近い働き方を選んでください"
         />
       )}
       {step.name === "rotation" && (
         <TemplateStep
-          onBack={() => setStep({ name: "kind" })}
+          onBack={() => {
+            setStep({ name: "kind" });
+          }}
           onChoose={chooseRotation}
           templates={rotationTemplates}
           title="どんな順番で回りますか？"
@@ -241,10 +249,12 @@ export function WorkSetupSteps({
       {step.name === "custom" && (
         <CustomStep
           initialSequence={step.sequence}
-          onBack={() => setStep({ name: "rotation" })}
-          onNext={(sequence) =>
-            setStep({ name: "anchor", template: step.template, sequence })
-          }
+          onBack={() => {
+            setStep({ name: "rotation" });
+          }}
+          onNext={(sequence) => {
+            setStep({ name: "anchor", sequence, template: step.template });
+          }}
           template={step.template}
         />
       )}
@@ -252,24 +262,24 @@ export function WorkSetupSteps({
         <AnchorStep
           finishLabel={finishLabel}
           month={month}
-          onBack={() =>
+          onBack={() => {
             setStep(
               step.template.custom
                 ? {
                     name: "custom",
-                    template: step.template,
                     sequence: step.sequence,
+                    template: step.template,
                   }
                 : { name: "rotation" }
-            )
-          }
-          onStart={(anchor) =>
+            );
+          }}
+          onStart={(anchor) => {
             onFinish({
+              anchor,
               patternKeys: step.template.patternKeys,
               sequence: step.sequence,
-              anchor,
-            })
-          }
+            });
+          }}
           sequence={step.sequence}
         />
       )}
@@ -390,7 +400,9 @@ function TemplateStep({
           <button
             className="ob-option"
             key={template.id}
-            onClick={() => onChoose(template)}
+            onClick={() => {
+              onChoose(template);
+            }}
             type="button"
           >
             <span className="ob-option-text">
@@ -449,7 +461,9 @@ function CustomStep({
       <button
         className="ob-primary"
         disabled={sequence.length === 0}
-        onClick={() => onNext(sequence)}
+        onClick={() => {
+          onNext(sequence);
+        }}
         type="button"
       >
         次へ
@@ -484,11 +498,11 @@ function AnchorStep({
       <div className="ob-month">
         <button
           aria-label="前の月"
-          onClick={() =>
+          onClick={() => {
             setViewMonth(
               new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1)
-            )
-          }
+            );
+          }}
           type="button"
         >
           <ChevronLeft aria-hidden="true" size={20} />
@@ -498,11 +512,11 @@ function AnchorStep({
         </strong>
         <button
           aria-label="次の月"
-          onClick={() =>
+          onClick={() => {
             setViewMonth(
               new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1)
-            )
-          }
+            );
+          }}
           type="button"
         >
           <ChevronRight aria-hidden="true" size={20} />
@@ -524,7 +538,9 @@ function AnchorStep({
               }
               className={`${outside ? "ob-outside" : ""} ${weekendClassName(date)}`}
               key={dateKey(date)}
-              onClick={() => setAnchor(date)}
+              onClick={() => {
+                setAnchor(date);
+              }}
               type="button"
             >
               {date.getDate()}

@@ -19,22 +19,21 @@ import {
   Wifi,
   X,
 } from "lucide-react";
-import {
-  type CSSProperties,
-  type Dispatch,
-  type MouseEvent,
-  type PointerEvent,
-  type ReactNode,
-  type RefObject,
-  type SetStateAction,
-  useContext,
-  useRef,
-  useState,
+import { useContext, useRef, useState } from "react";
+import type {
+  CSSProperties,
+  Dispatch,
+  MouseEvent,
+  PointerEvent,
+  ReactNode,
+  RefObject,
+  SetStateAction,
 } from "react";
 
 import type { DesignVariants } from "../lib/design-variants";
 import type { Coworkers } from "./design-coworkers";
-import { DesignGroup, type Profile, samplePhoto } from "./design-group";
+import { DesignGroup, samplePhoto } from "./design-group";
+import type { Profile } from "./design-group";
 import {
   defaultImageOptions,
   ImagePreviewPage,
@@ -68,19 +67,19 @@ export const patterns: Record<
   | "midnight",
   { label: string; emoji: string; time?: readonly [string, string] }
 > = {
-  day: { label: "日勤", emoji: "☀️", time: ["09:00", "18:00"] },
-  night: { label: "夜勤", emoji: "🌙", time: ["16:30", "09:30"] },
-  after: { label: "明け", emoji: "🌅" },
-  off: { label: "休み", emoji: "🌿" },
-  early: { label: "早番", emoji: "🌤️", time: ["07:00", "16:00"] },
-  late: { label: "遅番", emoji: "🌇", time: ["12:00", "21:00"] },
-  training: { label: "研修", emoji: "📚", time: ["09:30", "17:30"] },
-  paid: { label: "有休", emoji: "🌷" },
-  duty: { label: "当番", emoji: "🚒", time: ["08:30", "08:30"] },
-  offDuty: { label: "非番", emoji: "🛌" },
-  evening: { label: "夕勤", emoji: "🌆", time: ["15:00", "23:00"] },
-  junya: { label: "準夜", emoji: "🌜", time: ["16:30", "01:00"] },
-  midnight: { label: "深夜", emoji: "🌛", time: ["00:00", "08:30"] },
+  after: { emoji: "🌅", label: "明け" },
+  day: { emoji: "☀️", label: "日勤", time: ["09:00", "18:00"] },
+  duty: { emoji: "🚒", label: "当番", time: ["08:30", "08:30"] },
+  early: { emoji: "🌤️", label: "早番", time: ["07:00", "16:00"] },
+  evening: { emoji: "🌆", label: "夕勤", time: ["15:00", "23:00"] },
+  junya: { emoji: "🌜", label: "準夜", time: ["16:30", "01:00"] },
+  late: { emoji: "🌇", label: "遅番", time: ["12:00", "21:00"] },
+  midnight: { emoji: "🌛", label: "深夜", time: ["00:00", "08:30"] },
+  night: { emoji: "🌙", label: "夜勤", time: ["16:30", "09:30"] },
+  off: { emoji: "🌿", label: "休み" },
+  offDuty: { emoji: "🛌", label: "非番" },
+  paid: { emoji: "🌷", label: "有休" },
+  training: { emoji: "📚", label: "研修", time: ["09:30", "17:30"] },
 };
 export type Shift = keyof typeof patterns;
 // Entering one of these also fills the next day, like 夜勤 then 明け.
@@ -204,7 +203,7 @@ export function weekendClassName(date: Date) {
 const sampleMembers = ["佐藤", "田中", "鈴木", "山本", "高橋"];
 const sampleDetails: Record<string, Omit<DayEntry, "shift">> = {
   "2026-09-08": { end: "20:00", note: "棚卸し" },
-  "2026-09-19": { start: "08:00", members: ["田中", "山本"] },
+  "2026-09-19": { members: ["田中", "山本"], start: "08:00" },
   "2026-09-26": { note: "新人さん同行" },
 };
 
@@ -283,7 +282,7 @@ function keepDetails(entry: DayEntry | undefined, shift: Shift): DayEntry {
   if (entry?.shift === shift) {
     return entry;
   }
-  return { shift, note: entry?.note, members: entry?.members };
+  return { members: entry?.members, note: entry?.note, shift };
 }
 
 export function weekDates(date: Date) {
@@ -325,7 +324,7 @@ function formatTime(time: string) {
 }
 
 export function timeRange(entry: DayEntry) {
-  const time = patterns[entry.shift].time;
+  const { time } = patterns[entry.shift];
   if (!time) {
     return;
   }
@@ -400,7 +399,7 @@ export function DesignCalendar({
   // Repeating shifts fill every month, so the monthly input buttons go away.
   const hideInputBar = isRepeating(rules);
   // Renaming or deleting someone changes the days they are on too.
-  const updateMembersOnDays = (change: (names: string[]) => string[]) =>
+  const updateMembersOnDays = (change: (names: string[]) => string[]) => {
     onChange((previous) =>
       Object.fromEntries(
         Object.entries(previous).map(([key, entry]) => {
@@ -415,10 +414,16 @@ export function DesignCalendar({
         })
       )
     );
+  };
   const members: Coworkers = {
     names: coworkerNames,
-    onAdd: (name) => setCoworkerNames((previous) => [...previous, name]),
-    onReorder: setCoworkerNames,
+    onAdd: (name) => {
+      setCoworkerNames((previous) => [...previous, name]);
+    },
+    onDelete: (name) => {
+      setCoworkerNames((previous) => previous.filter((item) => item !== name));
+      updateMembersOnDays((names) => names.filter((item) => item !== name));
+    },
     onRename: (from, to) => {
       setCoworkerNames((previous) =>
         previous.map((name) => (name === from ? to : name))
@@ -427,10 +432,7 @@ export function DesignCalendar({
         names.map((name) => (name === from ? to : name))
       );
     },
-    onDelete: (name) => {
-      setCoworkerNames((previous) => previous.filter((item) => item !== name));
-      updateMembersOnDays((names) => names.filter((item) => item !== name));
-    },
+    onReorder: setCoworkerNames,
   };
   const [editing, setEditing] = useState(initialEditing);
   const [selectedDay, setSelectedDay] = useState(1);
@@ -513,7 +515,9 @@ export function DesignCalendar({
     }
     goToMonth(new Date(month.getFullYear(), month.getMonth() + direction, 1));
   }
-  const swipeHandlers = useSwipe((direction) => step(direction));
+  const swipeHandlers = useSwipe((direction) => {
+    step(direction);
+  });
   function startInput() {
     setSelectedDay(1);
     setEditing(true);
@@ -672,7 +676,9 @@ export function DesignCalendar({
       {tab === "calendar" && imagePreview && (
         <ImagePreviewPage
           month={month}
-          onClose={() => setImagePreview(false)}
+          onClose={() => {
+            setImagePreview(false);
+          }}
           onOptions={setImageOptions}
           options={imageOptions}
           schedule={schedule}
@@ -693,14 +699,18 @@ export function DesignCalendar({
             mode={headingMode}
             month={month}
             onDone={finishHeading}
-            onSave={() => openSave(false)}
+            onSave={() => {
+              openSave(false);
+            }}
             onStep={step}
-            onThisMonth={() =>
+            onThisMonth={() => {
               goToMonth(
                 new Date(designToday.getFullYear(), designToday.getMonth(), 1)
-              )
-            }
-            onToday={() => openDetail(designToday)}
+              );
+            }}
+            onToday={() => {
+              openDetail(designToday);
+            }}
           />
         </div>
         <div className="dc-calendar-scroll" {...swipeHandlers}>
@@ -727,9 +737,9 @@ export function DesignCalendar({
                 editing={editing}
                 entry={schedule[dateKey(date)]}
                 key={dateKey(date)}
-                onPress={() =>
-                  editing ? setSelectedDay(date.getDate()) : openDetail(date)
-                }
+                onPress={() => {
+                  editing ? setSelectedDay(date.getDate()) : openDetail(date);
+                }}
                 outside={!weekDetail && date.getMonth() !== month.getMonth()}
               />
             ))}
@@ -752,7 +762,9 @@ export function DesignCalendar({
             <DayDetail
               entry={schedule[dateKey(detailDate)]}
               members={members}
-              onChange={(entry) => changeEntry(detailDate, entry)}
+              onChange={(entry) => {
+                changeEntry(detailDate, entry);
+              }}
               patternKeys={patternKeys}
             />
           </section>
@@ -774,7 +786,9 @@ export function DesignCalendar({
               canSkip={selectedDay < lastDay}
               datePicker={datePicker}
               onEnter={enterShift}
-              onSkip={() => moveToNextDay("変更せずに進みました")}
+              onSkip={() => {
+                moveToNextDay("変更せずに進みました");
+              }}
               patternKeys={patternKeys}
               selectedShift={selectedShift}
             />
@@ -850,7 +864,9 @@ export function DesignCalendar({
         completion={saveCompletion}
         month={month}
         offCount={daysOff}
-        onImage={() => setImagePreview(true)}
+        onImage={() => {
+          setImagePreview(true);
+        }}
         ref={saveSheetRef}
         shiftCount={monthDays.length - unfilled}
       />
@@ -883,7 +899,9 @@ export function TabBar({
       <button
         aria-current={active === "calendar" ? "page" : undefined}
         className={`dc-nav-item ${active === "calendar" ? "dc-nav-active" : ""}`}
-        onClick={() => onSelect("calendar")}
+        onClick={() => {
+          onSelect("calendar");
+        }}
         type="button"
       >
         <CalendarDays aria-hidden="true" size={23} />
@@ -892,7 +910,9 @@ export function TabBar({
       <button
         aria-current={active === "group" ? "page" : undefined}
         className={`dc-nav-item ${active === "group" ? "dc-nav-active" : ""}`}
-        onClick={() => onSelect("group")}
+        onClick={() => {
+          onSelect("group");
+        }}
         type="button"
       >
         <UsersRound aria-hidden="true" size={23} />
@@ -901,7 +921,9 @@ export function TabBar({
       <button
         aria-current={active === "settings" ? "page" : undefined}
         className={`dc-nav-item ${active === "settings" ? "dc-nav-active" : ""}`}
-        onClick={() => onSelect("settings")}
+        onClick={() => {
+          onSelect("settings");
+        }}
         type="button"
       >
         <Settings2 aria-hidden="true" size={23} />
@@ -1031,7 +1053,9 @@ function HeadingActions({
         {layout === "title" && (
           <button
             aria-label={`前の${unit}`}
-            onClick={() => onStep(-1)}
+            onClick={() => {
+              onStep(-1);
+            }}
             type="button"
           >
             <ChevronLeft aria-hidden="true" size={21} />
@@ -1049,7 +1073,9 @@ function HeadingActions({
         {layout === "title" && (
           <button
             aria-label={`次の${unit}`}
-            onClick={() => onStep(1)}
+            onClick={() => {
+              onStep(1);
+            }}
             type="button"
           >
             <ChevronRight aria-hidden="true" size={21} />
@@ -1160,9 +1186,9 @@ export function RepeatSequenceEditor({
           <li key={index}>
             <button
               aria-label={`${index + 1}日目、${patterns[shift].label}。タップで外す`}
-              onClick={() =>
-                onChange(sequence.filter((_, position) => position !== index))
-              }
+              onClick={() => {
+                onChange(sequence.filter((_, position) => position !== index));
+              }}
               type="button"
             >
               <small>{index + 1}</small>
@@ -1176,7 +1202,9 @@ export function RepeatSequenceEditor({
         {patternKeys.map((key) => (
           <button
             key={key}
-            onClick={() => onChange([...sequence, key])}
+            onClick={() => {
+              onChange([...sequence, key]);
+            }}
             type="button"
           >
             <Plus aria-hidden="true" size={11} />
@@ -1263,7 +1291,9 @@ function ImportSheet({
     <dialog
       aria-label={title}
       className="dc-breakdown"
-      onClose={() => setImportedDays(undefined)}
+      onClose={() => {
+        setImportedDays(undefined);
+      }}
       ref={ref}
     >
       <button
@@ -1309,7 +1339,11 @@ function ImportSheet({
             <p className="dc-import-description">
               配られた勤務表を撮ると、あなたの行を読み取ってシフトを入れます。LINEで届いた画像やスクリーンショットも使えます。読み取った結果は、保存する前に確認できます。
             </p>
-            <ImportPhotoActions onPick={() => setImportedDays(onImport())} />
+            <ImportPhotoActions
+              onPick={() => {
+                setImportedDays(onImport());
+              }}
+            />
             <p className="dc-sheet-total">
               デザインの見本です。撮影と確認の代わりに、サンプルのシフトが入ります。
             </p>
@@ -1343,7 +1377,13 @@ function ShiftInputControls({
         className={`dc-patterns ${patternKeys.length > 4 ? "dc-patterns-two-rows" : ""} ${patternKeys.length === 8 ? "dc-patterns-eight" : ""}`}
       >
         {patternKeys.map((key) => (
-          <button key={key} onClick={() => onEnter(key)} type="button">
+          <button
+            key={key}
+            onClick={() => {
+              onEnter(key);
+            }}
+            type="button"
+          >
             <span className="dc-pattern-mark">
               <ShiftMark shift={key} size={26} />
             </span>
@@ -1354,7 +1394,9 @@ function ShiftInputControls({
       <div className="dc-day-actions">
         <button
           disabled={!selectedShift}
-          onClick={() => onEnter(undefined)}
+          onClick={() => {
+            onEnter(undefined);
+          }}
           type="button"
         >
           <Trash2 aria-hidden="true" size={14} />
@@ -1506,13 +1548,13 @@ function MemberField({
           <button
             aria-pressed={selected.includes(name)}
             key={name}
-            onClick={() =>
+            onClick={() => {
               onChange(
                 selected.includes(name)
                   ? selected.filter((member) => member !== name)
                   : [...selected, name]
-              )
-            }
+              );
+            }}
             type="button"
           >
             {selected.includes(name) && <Check aria-hidden="true" size={12} />}
@@ -1524,7 +1566,9 @@ function MemberField({
             aria-label="追加する人の名前"
             autoFocus
             className="dc-member-input"
-            onBlur={(event) => add(event.currentTarget.value)}
+            onBlur={(event) => {
+              add(event.currentTarget.value);
+            }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 add(event.currentTarget.value);
@@ -1537,7 +1581,9 @@ function MemberField({
         ) : (
           <button
             className="dc-member-add"
-            onClick={() => setAdding(true)}
+            onClick={() => {
+              setAdding(true);
+            }}
             type="button"
           >
             <Plus aria-hidden="true" size={12} />
@@ -1579,7 +1625,9 @@ function DayDetail({
           <button
             aria-pressed={entry?.shift === key}
             key={key}
-            onClick={() => onChange(keepDetails(entry, key))}
+            onClick={() => {
+              onChange(keepDetails(entry, key));
+            }}
             type="button"
           >
             <ShiftMark shift={key} size={14} />
@@ -1595,14 +1643,18 @@ function DayDetail({
               <div className="dc-detail-time">
                 <input
                   aria-label="開始時刻"
-                  onChange={(event) => changeTime("start", event.target.value)}
+                  onChange={(event) => {
+                    changeTime("start", event.target.value);
+                  }}
                   type="time"
                   value={entry.start ?? time[0]}
                 />
                 <span aria-hidden="true">–</span>
                 <input
                   aria-label="終了時刻"
-                  onChange={(event) => changeTime("end", event.target.value)}
+                  onChange={(event) => {
+                    changeTime("end", event.target.value);
+                  }}
                   type="time"
                   value={entry.end ?? time[1]}
                 />
@@ -1612,9 +1664,13 @@ function DayDetail({
                   <>
                     変更済み
                     <button
-                      onClick={() =>
-                        onChange({ ...entry, start: undefined, end: undefined })
-                      }
+                      onClick={() => {
+                        onChange({
+                          ...entry,
+                          end: undefined,
+                          start: undefined,
+                        });
+                      }}
                       type="button"
                     >
                       標準（{timeRange({ shift: entry.shift })}）に戻す
@@ -1629,12 +1685,12 @@ function DayDetail({
           {time && (
             <MemberField
               members={members}
-              onChange={(selected) =>
+              onChange={(selected) => {
                 onChange({
                   ...entry,
                   members: selected.length > 0 ? selected : undefined,
-                })
-              }
+                });
+              }}
               selected={entry.members ?? []}
             />
           )}
@@ -1642,16 +1698,18 @@ function DayDetail({
             <span className="dc-detail-label">メモ</span>
             <input
               className="dc-detail-note"
-              onChange={(event) =>
-                onChange({ ...entry, note: event.target.value || undefined })
-              }
+              onChange={(event) => {
+                onChange({ ...entry, note: event.target.value || undefined });
+              }}
               placeholder="メモを入力"
               value={entry.note ?? ""}
             />
           </label>
           <button
             className="dc-detail-delete"
-            onClick={() => onChange(undefined)}
+            onClick={() => {
+              onChange(undefined);
+            }}
             type="button"
           >
             <Trash2 aria-hidden="true" size={14} />
@@ -1729,11 +1787,11 @@ export function InputDatePicker({
         <div className="dc-picker-month">
           <button
             aria-label="前の月"
-            onClick={() =>
+            onClick={() => {
               setViewMonth(
                 new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1)
-              )
-            }
+              );
+            }}
             type="button"
           >
             <ChevronLeft aria-hidden="true" size={20} />
@@ -1743,11 +1801,11 @@ export function InputDatePicker({
           </strong>
           <button
             aria-label="次の月"
-            onClick={() =>
+            onClick={() => {
               setViewMonth(
                 new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1)
-              )
-            }
+              );
+            }}
             type="button"
           >
             <ChevronRight aria-hidden="true" size={20} />

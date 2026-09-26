@@ -113,7 +113,9 @@ function SignIn() {
         <button
           className="button button-secondary"
           disabled={busy}
-          onClick={() => login("apple")}
+          onClick={async () => {
+            await login("apple");
+          }}
           type="button"
         >
           Appleで続ける
@@ -121,7 +123,9 @@ function SignIn() {
         <button
           className="button button-secondary"
           disabled={busy}
-          onClick={() => login("google")}
+          onClick={async () => {
+            await login("google");
+          }}
           type="button"
         >
           <img alt="" height={18} src="/google.png" width={18} />
@@ -252,7 +256,9 @@ function ConfirmDeletion({
             <input
               checked={confirmed}
               disabled={busy}
-              onChange={(event) => setConfirmed(event.target.checked)}
+              onChange={(event) => {
+                setConfirmed(event.target.checked);
+              }}
               type="checkbox"
             />
             <span>

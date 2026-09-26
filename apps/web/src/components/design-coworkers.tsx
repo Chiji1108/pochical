@@ -39,7 +39,9 @@ export function CoworkersPage({
       <CoworkerEditor
         days={daysWith(schedule, editing)}
         name={editing}
-        onBack={() => setEditing(undefined)}
+        onBack={() => {
+          setEditing(undefined);
+        }}
         onDelete={() => {
           coworkers.onDelete(editing);
           setEditing(undefined);
@@ -77,7 +79,9 @@ export function CoworkersPage({
           {names.length > 1 && (
             <button
               className="pe-save"
-              onClick={() => setView(sorting ? "list" : "sort")}
+              onClick={() => {
+                setView(sorting ? "list" : "sort");
+              }}
               type="button"
             >
               {sorting ? "完了" : "並び替え"}
@@ -90,9 +94,9 @@ export function CoworkersPage({
         <SortableList
           items={names.map((name) => ({ id: name }))}
           label={(item) => item.id}
-          onChange={(items) =>
-            coworkers.onReorder(items.map((item) => item.id))
-          }
+          onChange={(items) => {
+            coworkers.onReorder(items.map((item) => item.id));
+          }}
         >
           {(item) => <span className="st-row-label">{item.id}</span>}
         </SortableList>
@@ -103,7 +107,9 @@ export function CoworkersPage({
             <button
               className="st-row"
               key={name}
-              onClick={() => setEditing(name)}
+              onClick={() => {
+                setEditing(name);
+              }}
               type="button"
             >
               <span className="st-row-label">{name}</span>
@@ -124,7 +130,9 @@ export function CoworkersPage({
               aria-label="追加する人の名前"
               autoFocus
               className="st-row st-coworker-input"
-              onBlur={(event) => add(event.currentTarget.value)}
+              onBlur={(event) => {
+                add(event.currentTarget.value);
+              }}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
                   add(event.currentTarget.value);
@@ -138,7 +146,9 @@ export function CoworkersPage({
         ) : (
           <button
             className="st-add"
-            onClick={() => setAdding(true)}
+            onClick={() => {
+              setAdding(true);
+            }}
             type="button"
           >
             <Plus aria-hidden="true" size={14} />
@@ -186,7 +196,9 @@ function CoworkerEditor({
           <button
             className="pe-save"
             disabled={!trimmed || duplicate}
-            onClick={() => onSave(trimmed)}
+            onClick={() => {
+              onSave(trimmed);
+            }}
             type="button"
           >
             保存
@@ -199,7 +211,9 @@ function CoworkerEditor({
           <span className="st-row-label">名前</span>
           <input
             className="pe-inline-input"
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) => {
+              setDraft(event.target.value);
+            }}
             value={draft}
           />
         </label>
@@ -211,7 +225,9 @@ function CoworkerEditor({
       </p>
       <button
         className="pe-delete"
-        onClick={() => (confirming ? onDelete() : setConfirming(true))}
+        onClick={() => {
+          confirming ? onDelete() : setConfirming(true);
+        }}
         type="button"
       >
         {confirming

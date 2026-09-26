@@ -7,31 +7,32 @@ import {
   initialDesignSchedule,
 } from "../components/design-calendar";
 import { DesignOnboarding } from "../components/design-onboarding";
-import { ThemeContext, type ThemeId } from "../components/design-theme";
+import { ThemeContext } from "../components/design-theme";
+import type { ThemeId } from "../components/design-theme";
 import {
   CellNamesContext,
   IconWeightContext,
-  type LookSettings,
   LookSettingsContext,
   MonochromeContext,
   OffHighlightContext,
   SetIconWeightContext,
   SetShiftMarkStyleContext,
   ShiftMarkStyleContext,
-  type StyleChoice,
   stylePresets,
 } from "../components/shift-mark";
+import type { LookSettings, StyleChoice } from "../components/shift-mark";
 import {
-  type DesignVariants,
   designVariantKeys,
   designVariantOptions,
   parseDesignVariants,
 } from "../lib/design-variants";
+import type { DesignVariants } from "../lib/design-variants";
 import { pageMeta } from "../lib/site";
 
 import designStyles from "../design.css?url";
 
 export const Route = createFileRoute("/design")({
+  component: DesignPage,
   head: () => ({
     ...pageMeta(
       "デザインプレビュー",
@@ -39,10 +40,9 @@ export const Route = createFileRoute("/design")({
       "/design",
       true
     ),
-    links: [{ rel: "stylesheet", href: designStyles }],
+    links: [{ href: designStyles, rel: "stylesheet" }],
   }),
   validateSearch: parseDesignVariants,
-  component: DesignPage,
 });
 
 const screenLinks = [
@@ -63,8 +63,9 @@ function DesignPage() {
   const [version, setVersion] = useState(0);
   const navigate = Route.useNavigate();
   const [look, setLook] = useState(stylePresets[0].look);
-  const updateLook = (change: Partial<LookSettings>) =>
+  const updateLook = (change: Partial<LookSettings>) => {
     setLook((previous) => ({ ...previous, ...change }));
+  };
   const [theme, setTheme] = useState<ThemeId>("moss");
   const [custom, setCustom] = useState<StyleChoice>();
   return (
@@ -116,46 +117,53 @@ function DesignPage() {
         }}
         variants={variants}
       />
-      <ThemeContext value={{ theme, setTheme }}>
-        <LookSettingsContext value={{ look, setLook, custom, setCustom }}>
+      <ThemeContext value={{ setTheme, theme }}>
+        <LookSettingsContext value={{ custom, look, setCustom, setLook }}>
           <IconWeightContext value={look.fill ? "duotone" : "regular"}>
             <SetIconWeightContext
-              value={(weight) => updateLook({ fill: weight === "duotone" })}
+              value={(weight) => {
+                updateLook({ fill: weight === "duotone" });
+              }}
             >
               <ShiftMarkStyleContext value={look.style}>
                 <CellNamesContext
                   value={{
                     names: {
+                      badge: look.names,
                       emoji: look.names,
                       icon: look.names,
-                      badge: look.names,
                     },
-                    setNames: (names) =>
-                      updateLook({ names: names[look.style] }),
+                    setNames: (names) => {
+                      updateLook({ names: names[look.style] });
+                    },
                   }}
                 >
                   <OffHighlightContext
                     value={{
                       highlight: {
-                        icon: look.highlight,
-                        emoji: look.highlight,
                         badge: look.highlight,
+                        emoji: look.highlight,
+                        icon: look.highlight,
                       },
-                      setHighlight: (highlight) =>
+                      setHighlight: (highlight) => {
                         updateLook({
                           highlight: highlight[look.style] ?? look.highlight,
-                        }),
+                        });
+                      },
                     }}
                   >
                     <MonochromeContext
                       value={{
                         monochrome: look.monochrome,
-                        setMonochrome: (monochrome) =>
-                          updateLook({ monochrome }),
+                        setMonochrome: (monochrome) => {
+                          updateLook({ monochrome });
+                        },
                       }}
                     >
                       <SetShiftMarkStyleContext
-                        value={(style) => updateLook({ style })}
+                        value={(style) => {
+                          updateLook({ style });
+                        }}
                       >
                         <div className="design-screens" key={version}>
                           <section aria-labelledby="design-view-title">
@@ -288,7 +296,9 @@ function VariantPanel({
                 <button
                   aria-pressed={variants[key] === value}
                   key={value}
-                  onClick={() => onChange(key, value)}
+                  onClick={() => {
+                    onChange(key, value);
+                  }}
                   type="button"
                 >
                   {choiceLabel}

@@ -1,81 +1,80 @@
 import { ChevronLeft } from "lucide-react";
-import { type ReactNode, useContext, useState } from "react";
+import { useContext, useState } from "react";
+import type { ReactNode } from "react";
 
 import {
-  type Look,
   MarkGlyph,
-  type MarkIcon,
   markColors,
   markEmojis,
   markIcons,
-  type ShiftMarkStyle,
   ShiftMarkStyleContext,
 } from "./shift-mark";
+import type { Look, MarkIcon, ShiftMarkStyle } from "./shift-mark";
 
 // The parts of a look that someone picks; picked ones stop following the
 // name when it changes.
 export type LookField = "symbol" | "icon" | "emoji" | "color";
 
 export const styleNames: Record<ShiftMarkStyle, string> = {
-  emoji: "絵文字",
   badge: "文字",
+  emoji: "絵文字",
   icon: "アイコン",
 };
 
 export const iconNames: Record<MarkIcon, string> = {
-  letter: "文字アイコン",
-  sun: "太陽",
+  ambulance: "救急車",
+  baby: "赤ちゃん",
+  bed: "ベッド",
+  book: "本",
+  briefcase: "かばん",
+  building: "ビル",
+  bus: "バス",
+  calendarCheck: "予定",
+  car: "車",
+  cat: "猫",
+  clock: "時計",
+  cloudMoon: "夜空",
   cloudSun: "晴れ",
-  sunrise: "日の出",
-  sunset: "夕日",
-  sunMoon: "夕方",
+  coffee: "コーヒー",
+  couch: "ソファ",
+  dog: "犬",
+  drop: "しずく",
+  dumbbell: "運動",
+  fish: "魚",
+  flame: "炎",
+  flower: "花",
+  graduationCap: "学位帽",
+  heart: "ハート",
+  hospital: "病院",
+  house: "家",
+  laptop: "パソコン",
+  leaf: "葉っぱ",
+  letter: "文字アイコン",
+  lotus: "蓮の花",
   moon: "月",
   moonStar: "月と星",
-  cloudMoon: "夜空",
-  couch: "ソファ",
-  leaf: "葉っぱ",
-  drop: "しずく",
-  waves: "波",
-  cat: "猫",
-  dog: "犬",
-  fish: "魚",
-  tulip: "チューリップ",
-  lotus: "蓮の花",
-  bed: "ベッド",
-  coffee: "コーヒー",
-  flower: "花",
-  treePalm: "ヤシの木",
-  umbrella: "傘",
-  book: "本",
-  graduationCap: "学位帽",
-  briefcase: "かばん",
-  laptop: "パソコン",
-  building: "ビル",
-  house: "家",
-  users: "人たち",
-  phone: "電話",
-  clock: "時計",
-  calendarCheck: "予定",
-  hospital: "病院",
-  stethoscope: "聴診器",
-  syringe: "注射器",
-  ambulance: "救急車",
-  siren: "サイレン",
-  flame: "炎",
-  shield: "盾",
-  car: "車",
-  bus: "バス",
-  train: "電車",
-  plane: "飛行機",
-  baby: "赤ちゃん",
-  utensils: "食事",
-  shoppingBag: "買い物",
-  dumbbell: "運動",
   music: "音楽",
-  heart: "ハート",
-  star: "星",
-  sparkles: "きらきら",
   partyPopper: "お祝い",
+  phone: "電話",
+  plane: "飛行機",
+  shield: "盾",
+  shoppingBag: "買い物",
+  siren: "サイレン",
+  sparkles: "きらきら",
+  star: "星",
+  stethoscope: "聴診器",
+  sun: "太陽",
+  sunMoon: "夕方",
+  sunrise: "日の出",
+  sunset: "夕日",
+  syringe: "注射器",
+  train: "電車",
+  treePalm: "ヤシの木",
+  tulip: "チューリップ",
+  umbrella: "傘",
+  users: "人たち",
+  utensils: "食事",
+  waves: "波",
 };
 
 const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
@@ -86,7 +85,7 @@ function firstGrapheme(value: string) {
 
 // The letter just typed, which replaces the one already there.
 function lastGrapheme(value: string) {
-  return Array.from(graphemes.segment(value)).at(-1)?.segment;
+  return [...graphemes.segment(value)].at(-1)?.segment;
 }
 
 const allIcons = Object.keys(markIcons) as MarkIcon[];
@@ -134,7 +133,9 @@ export function LookEditorPage({
           <button
             aria-pressed={tab === option}
             key={option}
-            onClick={() => setTab(option)}
+            onClick={() => {
+              setTab(option);
+            }}
             type="button"
           >
             <LookGlyph look={look} size={20} style={option} />
@@ -193,7 +194,9 @@ function IconGrid({
           aria-label={iconNames[icon]}
           aria-pressed={look.icon === icon}
           key={icon}
-          onClick={() => onPick("icon", { icon })}
+          onClick={() => {
+            onPick("icon", { icon });
+          }}
           type="button"
         >
           <MarkGlyph look={{ ...look, icon }} size={20} style="icon" />
@@ -220,7 +223,9 @@ function EmojiGrid({
           <button
             aria-pressed={look.emoji === emoji}
             key={emoji}
-            onClick={() => onPick("emoji", { emoji })}
+            onClick={() => {
+              onPick("emoji", { emoji });
+            }}
             type="button"
           >
             <MarkGlyph look={{ ...look, emoji }} size={20} style="emoji" />
@@ -263,7 +268,9 @@ function LetterEditor({
               onPick("symbol", { symbol });
             }
           }}
-          onFocus={(event) => event.currentTarget.select()}
+          onFocus={(event) => {
+            event.currentTarget.select();
+          }}
           value={look.symbol}
         />
       </label>
@@ -286,7 +293,9 @@ function ColorPicker({
           aria-label={name}
           aria-pressed={look.color === index}
           key={name}
-          onClick={() => onPick("color", { color: index })}
+          onClick={() => {
+            onPick("color", { color: index });
+          }}
           style={{ background: tint, color }}
           type="button"
         />

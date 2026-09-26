@@ -11,28 +11,6 @@ import { Footer, Header } from "../components/site-layout";
 import stylesheet from "../styles.css?url";
 
 export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { name: "theme-color", content: "#fbfaf7" },
-    ],
-    links: [
-      { rel: "stylesheet", href: stylesheet },
-      { rel: "icon", type: "image/png", href: "/icon.png" },
-    ],
-  }),
-  shellComponent: RootDocument,
-  notFoundComponent: () => (
-    <main className="document-page state-page" id="main">
-      <p className="eyebrow">404 / NOT FOUND</p>
-      <h1>ページが見つかりません。</h1>
-      <p>リンクが間違っているか、ページが移動した可能性があります。</p>
-      <Link className="button" to="/">
-        ホームに戻る
-      </Link>
-    </main>
-  ),
   errorComponent: ({ reset }) => (
     <main className="document-page state-page" id="main">
       <h1>ページを読み込めませんでした。</h1>
@@ -43,6 +21,28 @@ export const Route = createRootRoute({
       <Link to="/support">サポートへ</Link>
     </main>
   ),
+  head: () => ({
+    links: [
+      { href: stylesheet, rel: "stylesheet" },
+      { href: "/icon.png", rel: "icon", type: "image/png" },
+    ],
+    meta: [
+      { charSet: "utf-8" },
+      { content: "width=device-width, initial-scale=1", name: "viewport" },
+      { content: "#fbfaf7", name: "theme-color" },
+    ],
+  }),
+  notFoundComponent: () => (
+    <main className="document-page state-page" id="main">
+      <p className="eyebrow">404 / NOT FOUND</p>
+      <h1>ページが見つかりません。</h1>
+      <p>リンクが間違っているか、ページが移動した可能性があります。</p>
+      <Link className="button" to="/">
+        ホームに戻る
+      </Link>
+    </main>
+  ),
+  shellComponent: RootDocument,
 });
 
 function RootDocument({ children }: { children: ReactNode }) {

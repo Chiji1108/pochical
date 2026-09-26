@@ -17,14 +17,8 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
-import {
-  createContext,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useId,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useId, useState } from "react";
+import type { ReactNode } from "react";
 
 import type { DesignVariants } from "../lib/design-variants";
 import {
@@ -34,24 +28,20 @@ import {
   holidayName,
   monthDates,
   patterns,
-  type Schedule,
-  type Shift,
-  type Tab,
   TabBar,
   timeRange,
   weekDates,
   weekendClassName,
 } from "./design-calendar";
+import type { Schedule, Shift, Tab } from "./design-calendar";
 import { iconNames } from "./design-look-editor";
-import { ThemeContext, type ThemeId } from "./design-theme";
+import { ThemeContext } from "./design-theme";
+import type { ThemeId } from "./design-theme";
 import {
   guessLook,
   IconWeightContext,
-  type Look,
-  type LookSettings,
   lookOf,
   MarkGlyph,
-  type MarkIcon,
   MonochromeContext,
   markColors,
   markIcons,
@@ -59,6 +49,7 @@ import {
   ShiftMarkStyleContext,
   stylePresets,
 } from "./shift-mark";
+import type { Look, LookSettings, MarkIcon } from "./shift-mark";
 
 // A pattern as another member set it up. Their looks come with them, and
 // each viewer sees them in their own style.
@@ -107,22 +98,22 @@ function pattern(
 ): MemberPattern {
   return {
     id,
-    name,
-    time: extra.time,
-    off: extra.off ?? false,
     look: {
-      symbol: look.symbol ?? name.slice(0, 1),
-      icon: look.icon,
-      emoji: look.emoji,
       color: look.color,
+      emoji: look.emoji,
+      icon: look.icon,
+      symbol: look.symbol ?? name.slice(0, 1),
     },
+    name,
+    off: extra.off ?? false,
+    time: extra.time,
   };
 }
 
 const restPattern = pattern(
   "off",
   "休み",
-  { icon: "leaf", emoji: "🌿", color: 0 },
+  { color: 0, emoji: "🌿", icon: "leaf" },
   { off: true }
 );
 
@@ -147,47 +138,47 @@ function dayNumber(date: Date) {
 const partner: Member = {
   id: "yuki",
   name: "ゆうき",
-  style: { look: presetLook("pop"), theme: "moss" },
-  photo: samplePhoto(1005),
   patterns: [
     pattern(
       "office",
       "出勤",
-      { icon: "briefcase", emoji: "💼", color: 9 },
+      { color: 9, emoji: "💼", icon: "briefcase" },
       { time: "9:00 – 18:00" }
     ),
     pattern(
       "home",
       "在宅",
-      { icon: "house", emoji: "🏠", color: 10 },
+      { color: 10, emoji: "🏠", icon: "house" },
       { time: "9:00 – 18:00" }
     ),
     restPattern,
   ],
+  photo: samplePhoto(1005),
   shiftOn: (date) => {
     if (isWeekend(date) || holidayName(date)) {
       return "off";
     }
     return date.getDay() === 3 ? "home" : "office";
   },
+  style: { look: presetLook("pop"), theme: "moss" },
 };
 
 const mother: Member = {
   id: "mother",
   name: "お母さん",
-  style: { look: presetLook("roster"), theme: "terracotta" },
-  photo: samplePhoto(429),
   patterns: [
     pattern(
       "part",
       "パート",
-      { icon: "shoppingBag", emoji: "🛒", color: 2 },
+      { color: 2, emoji: "🛒", icon: "shoppingBag" },
       { time: "10:00 – 15:00" }
     ),
     restPattern,
   ],
+  photo: samplePhoto(429),
   shiftOn: (date) =>
     [1, 3, 5].includes(date.getDay()) && !holidayName(date) ? "part" : "off",
+  style: { look: presetLook("roster"), theme: "terracotta" },
 };
 
 const nurseOrder = ["day", "day", "night", "after", "off", "off"] as const;
@@ -197,16 +188,16 @@ const nurseOrder = ["day", "day", "night", "after", "off", "off"] as const;
 const misaki = (): Member => ({
   id: "misaki",
   name: "みさき",
-  style: { look: presetLook("minimal"), theme: "sumi" },
-  photo: samplePhoto(823),
   patterns: (["day", "night", "after", "off"] as Shift[]).map((key) => ({
     id: key,
-    name: patterns[key].label,
-    time: timeRange({ shift: key }),
-    off: key === "off",
     look: lookOf(key),
+    name: patterns[key].label,
+    off: key === "off",
+    time: timeRange({ shift: key }),
   })),
+  photo: samplePhoto(823),
   shiftOn: (date) => nurseOrder[(dayNumber(date) + 3) % nurseOrder.length],
+  style: { look: presetLook("minimal"), theme: "sumi" },
 });
 
 // あや made レッスン herself and never picked a look, so it has what the
@@ -214,18 +205,17 @@ const misaki = (): Member => ({
 const aya = (): Member => ({
   id: "aya",
   name: "あや",
-  style: { look: presetLook("friendly"), theme: "rose" },
   patterns: [
     pattern(
       "early",
       "早番",
-      { icon: "cloudSun", emoji: "🌤️", color: 1 },
+      { color: 1, emoji: "🌤️", icon: "cloudSun" },
       { time: "7:00 – 16:00" }
     ),
     pattern(
       "late",
       "遅番",
-      { icon: "sunset", emoji: "🌇", color: 5 },
+      { color: 5, emoji: "🌇", icon: "sunset" },
       { time: "13:00 – 22:00" }
     ),
     pattern("lesson", "レッスン", { ...guessLook("レッスン"), color: 6 }),
@@ -235,6 +225,7 @@ const aya = (): Member => ({
     const order = ["early", "early", "late", "late", "off", "lesson", "off"];
     return order[(dayNumber(date) + 3) % order.length];
   },
+  style: { look: presetLook("friendly"), theme: "rose" },
 });
 
 // Nurses from the same year, each on the same order at a different point.
@@ -247,12 +238,12 @@ const classmates = (): Member[] =>
     ["yui", "ゆい", 5, 1062, "friendly"],
   ].map(([id, name, offset, photo, preset]) => ({
     ...misaki(),
-    style: { look: presetLook(String(preset)), theme: "moss" as ThemeId },
     id: String(id),
     name: String(name),
     photo: photo ? samplePhoto(Number(photo)) : undefined,
     shiftOn: (date: Date) =>
       nurseOrder[(dayNumber(date) + Number(offset)) % nurseOrder.length],
+    style: { look: presetLook(String(preset)), theme: "moss" as ThemeId },
   }));
 
 // Old school friends in all kinds of work: a group too wide for 日ごと.
@@ -262,12 +253,12 @@ const schoolFriends = (): Member[] => [
     ["riku", "りく", 2, 1074, "monotone"],
   ].map(([id, name, offset, photo, preset]) => ({
     ...misaki(),
-    style: { look: presetLook(String(preset)), theme: "moss" as ThemeId },
     id: String(id),
     name: String(name),
     photo: samplePhoto(Number(photo)),
     shiftOn: (date: Date) =>
       nurseOrder[(dayNumber(date) + Number(offset)) % nurseOrder.length],
+    style: { look: presetLook(String(preset)), theme: "moss" as ThemeId },
   })),
   ...[
     ["shun", "しゅん", 1012, "pop"],
@@ -275,10 +266,10 @@ const schoolFriends = (): Member[] => [
     ["taichi", "たいち", 1084, "roster"],
   ].map(([id, name, photo, preset]) => ({
     ...partner,
-    style: { look: presetLook(String(preset)), theme: "moss" as ThemeId },
     id: String(id),
     name: String(name),
     photo: photo ? samplePhoto(Number(photo)) : undefined,
+    style: { look: presetLook(String(preset)), theme: "moss" as ThemeId },
   })),
   ...[
     ["mio", "みお", 1, 64],
@@ -309,16 +300,16 @@ function meFrom(
 ): Member {
   return {
     id: "me",
-    name: "自分",
     me: true,
-    photo,
+    name: "自分",
     patterns: patternKeys.map((key) => ({
       id: key,
-      name: patterns[key].label,
-      time: timeRange({ shift: key }),
-      off: key === "off" || key === "paid",
       look: lookOf(key),
+      name: patterns[key].label,
+      off: key === "off" || key === "paid",
+      time: timeRange({ shift: key }),
     })),
+    photo,
     shiftOn: (date) => schedule[dateKey(date)]?.shift,
   };
 }
@@ -361,137 +352,137 @@ const reactionChoices = ["👍", "❤️", "😂", "😮", "🙏", "🎉"];
 
 const sampleChats: Record<string, Chat> = {
   "family:group": {
-    unread: 2,
     messages: [
       {
+        from: "mother",
         id: "f1",
-        from: "mother",
-        when: "昨日",
-        time: "19:02",
+        reactions: [{ by: ["yuki"], emoji: "👍" }],
         text: "来週の日曜、みんな休みみたいだからご飯行かない？",
-        reactions: [{ emoji: "👍", by: ["yuki"] }],
-      },
-      {
-        id: "f2",
-        from: "yuki",
+        time: "19:02",
         when: "昨日",
-        time: "19:10",
-        text: "いいね！焼肉がいいな",
       },
       {
-        id: "f3",
-        from: "me",
-        when: "今日",
-        time: "8:15",
-        days: [new Date(2026, 8, 27)],
-        reactions: [{ emoji: "🎉", by: ["mother", "yuki"] }],
-      },
-      {
-        id: "f4",
-        from: "me",
-        when: "今日",
-        time: "8:15",
-        text: "27日ならいけるよ！前の日が明けじゃないから元気なはず",
-        replyTo: "f1",
-      },
-      {
-        id: "f5",
-        from: "mother",
-        when: "今日",
-        time: "9:40",
-        text: "じゃあお店予約しとくね",
-        reactions: [
-          { emoji: "🙏", by: ["me"] },
-          { emoji: "❤️", by: ["yuki"] },
-        ],
-      },
-      {
-        id: "f6",
         from: "yuki",
-        when: "今日",
-        time: "9:52",
-        text: "何時にする？",
-        replyTo: "f5",
+        id: "f2",
+        text: "いいね！焼肉がいいな",
+        time: "19:10",
+        when: "昨日",
       },
       {
-        id: "f7",
-        from: "mother",
+        days: [new Date(2026, 8, 27)],
+        from: "me",
+        id: "f3",
+        reactions: [{ by: ["mother", "yuki"], emoji: "🎉" }],
+        time: "8:15",
         when: "今日",
-        time: "10:03",
-        text: "18時でどう？焼肉にしたよ",
+      },
+      {
+        from: "me",
+        id: "f4",
+        replyTo: "f1",
+        text: "27日ならいけるよ！前の日が明けじゃないから元気なはず",
+        time: "8:15",
+        when: "今日",
+      },
+      {
+        from: "mother",
+        id: "f5",
+        reactions: [
+          { by: ["me"], emoji: "🙏" },
+          { by: ["yuki"], emoji: "❤️" },
+        ],
+        text: "じゃあお店予約しとくね",
+        time: "9:40",
+        when: "今日",
+      },
+      {
+        from: "yuki",
+        id: "f6",
+        replyTo: "f5",
+        text: "何時にする？",
+        time: "9:52",
+        when: "今日",
+      },
+      {
+        from: "mother",
+        id: "f7",
         replyTo: "f6",
+        text: "18時でどう？焼肉にしたよ",
+        time: "10:03",
+        when: "今日",
       },
     ],
+    unread: 2,
   },
   "family:yuki": {
-    unread: 0,
     messages: [
       {
-        id: "y1",
         from: "yuki",
-        when: "昨日",
-        time: "22:31",
+        id: "y1",
         text: "明日って夜勤だっけ？",
+        time: "22:31",
+        when: "昨日",
       },
       {
-        id: "y2",
         from: "me",
-        when: "昨日",
-        time: "22:40",
-        text: "ううん、明日は休み。夜ごはん作るね",
+        id: "y2",
+        reactions: [{ by: ["yuki"], emoji: "❤️" }],
         replyTo: "y1",
-        reactions: [{ emoji: "❤️", by: ["yuki"] }],
+        text: "ううん、明日は休み。夜ごはん作るね",
+        time: "22:40",
+        when: "昨日",
       },
     ],
+    unread: 0,
   },
   "friends:group": {
-    unread: 3,
     messages: [
       {
-        id: "n1",
-        from: "misaki",
-        when: "今日",
-        time: "12:05",
         days: [new Date(2026, 8, 14), new Date(2026, 8, 21)],
-      },
-      {
-        id: "n2",
         from: "misaki",
-        when: "今日",
+        id: "n1",
         time: "12:05",
-        text: "14日と21日、みんな休みじゃん！",
-        reactions: [{ emoji: "😮", by: ["aya", "me"] }],
-      },
-      {
-        id: "n3",
-        from: "aya",
         when: "今日",
-        time: "12:20",
-        text: "21日カフェ行こ〜。14日はレッスンの後ならいける",
-        replyTo: "n2",
       },
       {
-        id: "n4",
         from: "misaki",
+        id: "n2",
+        reactions: [{ by: ["aya", "me"], emoji: "😮" }],
+        text: "14日と21日、みんな休みじゃん！",
+        time: "12:05",
         when: "今日",
-        time: "12:24",
-        text: "21日にしよ！",
+      },
+      {
+        from: "aya",
+        id: "n3",
+        replyTo: "n2",
+        text: "21日カフェ行こ〜。14日はレッスンの後ならいける",
+        time: "12:20",
+        when: "今日",
+      },
+      {
+        from: "misaki",
+        id: "n4",
+        reactions: [{ by: ["aya"], emoji: "👍" }],
         replyTo: "n3",
-        reactions: [{ emoji: "👍", by: ["aya"] }],
+        text: "21日にしよ！",
+        time: "12:24",
+        when: "今日",
       },
     ],
+    unread: 3,
   },
   "friends:misaki": {
-    unread: 0,
     messages: [
       {
-        id: "m1",
         from: "misaki",
-        when: "月曜",
-        time: "18:12",
+        id: "m1",
         text: "来月の希望休、もう出した？",
+        time: "18:12",
+        when: "月曜",
       },
     ],
+    unread: 0,
   },
 };
 
@@ -537,20 +528,20 @@ export function DesignGroup({
     },
     {
       id: "friends",
+      mark: { emoji: "🌷", kind: "emoji" },
       name: "看護学校の友達",
-      mark: { kind: "emoji", emoji: "🌷" },
     },
     {
       id: "ward",
       name: "病棟の同期",
       // At work she goes by her family name and keeps her photo private.
       mine: { name: "佐藤", noPhoto: true },
-      mark: { kind: "icon", icon: "hospital", color: 10 },
+      mark: { color: 10, icon: "hospital", kind: "icon" },
     },
     {
       id: "school",
+      mark: { color: 3, kind: "letter", text: "高" },
       name: "高校の同級生",
-      mark: { kind: "letter", text: "高", color: 3 },
     },
   ]);
   const [groupId, setGroupId] = useState("family");
@@ -596,17 +587,19 @@ export function DesignGroup({
         <ChatPage
           chat={chatOf(group.id, page.chatId)}
           group={group}
-          onBack={() => setPage({ name: "hub" })}
-          onChange={(messages) =>
-            setChats({ ...chats, [key]: { unread: 0, messages } })
-          }
-          onOpenDay={(date) =>
+          onBack={() => {
+            setPage({ name: "hub" });
+          }}
+          onChange={(messages) => {
+            setChats({ ...chats, [key]: { messages, unread: 0 } });
+          }}
+          onOpenDay={(date) => {
             setPage({
-              name: "shifts",
-              month: new Date(date.getFullYear(), date.getMonth(), 1),
               from: page.chatId,
-            })
-          }
+              month: new Date(date.getFullYear(), date.getMonth(), 1),
+              name: "shifts",
+            });
+          }}
           people={
             page.chatId === groupChat
               ? group.members
@@ -627,7 +620,9 @@ export function DesignGroup({
           <div className="gr-layout">
             <GroupRail
               groups={groups}
-              onNew={() => setPage({ name: "new" })}
+              onNew={() => {
+                setPage({ name: "new" });
+              }}
               onSelect={setGroupId}
               selected={group.id}
               unreadOf={unreadOf}
@@ -644,11 +639,17 @@ export function DesignGroup({
                       unread: 0,
                     },
                   });
-                  setPage({ name: "chat", chatId });
+                  setPage({ chatId, name: "chat" });
                 }}
-                onInvite={() => setPage({ name: "invite" })}
-                onSettings={() => setPage({ name: "settings" })}
-                onShifts={() => setPage({ name: "shifts" })}
+                onInvite={() => {
+                  setPage({ name: "invite" });
+                }}
+                onSettings={() => {
+                  setPage({ name: "settings" });
+                }}
+                onShifts={() => {
+                  setPage({ name: "shifts" });
+                }}
               />
             </div>
           </div>
@@ -662,50 +663,58 @@ export function DesignGroup({
                   layouts[group.id] ?? defaultLayout(group.members.length)
                 }
                 month={page.month}
-                onBack={() =>
+                onBack={() => {
                   setPage(
                     page.from
-                      ? { name: "chat", chatId: page.from }
+                      ? { chatId: page.from, name: "chat" }
                       : { name: "hub" }
-                  )
-                }
-                onLayout={(layout) =>
-                  setLayouts({ ...layouts, [group.id]: layout })
-                }
+                  );
+                }}
+                onLayout={(layout) => {
+                  setLayouts({ ...layouts, [group.id]: layout });
+                }}
                 view={variants.groupView}
               />
             )}
             {page.name === "settings" && (
               <GroupSettingsPage
                 group={group}
-                onBack={() => setPage({ name: "hub" })}
-                onChange={(mine) =>
+                onBack={() => {
+                  setPage({ name: "hub" });
+                }}
+                onChange={(mine) => {
                   setGroups(
                     groups.map((item) =>
                       item.id === group.id ? { ...item, mine } : item
                     )
-                  )
-                }
-                onInvite={() => setPage({ name: "invite" })}
-                onMark={(mark) =>
+                  );
+                }}
+                onInvite={() => {
+                  setPage({ name: "invite" });
+                }}
+                onMark={(mark) => {
                   setGroups(
                     groups.map((item) =>
                       item.id === group.id ? { ...item, mark } : item
                     )
-                  )
-                }
+                  );
+                }}
                 profile={profile}
               />
             )}
             {page.name === "invite" && (
               <InvitePage
                 group={group}
-                onBack={() => setPage({ name: "hub" })}
+                onBack={() => {
+                  setPage({ name: "hub" });
+                }}
               />
             )}
             {page.name === "new" && (
               <NewGroupPage
-                onBack={() => setPage({ name: "hub" })}
+                onBack={() => {
+                  setPage({ name: "hub" });
+                }}
                 onCreate={({ myName, ...created }) => {
                   const id = `group-${groups.length}`;
                   const mine =
@@ -751,7 +760,9 @@ function GroupRail({
             aria-label={`${group.name}${unread > 0 ? `、未読${unread}件` : ""}`}
             className="gr-rail-item"
             key={group.id}
-            onClick={() => onSelect(group.id)}
+            onClick={() => {
+              onSelect(group.id);
+            }}
             type="button"
           >
             <span aria-hidden="true" className="gr-rail-icon">
@@ -868,7 +879,9 @@ function GroupHub({
             }
             label="全体チャット"
             members={group.members}
-            onOpen={() => onChat(groupChat)}
+            onOpen={() => {
+              onChat(groupChat);
+            }}
           />
           {others.map((member) => (
             <ChatRow
@@ -877,7 +890,9 @@ function GroupHub({
               key={member.id}
               label={member.name}
               members={group.members}
-              onOpen={() => onChat(member.id)}
+              onOpen={() => {
+                onChat(member.id);
+              }}
             />
           ))}
         </div>
@@ -972,7 +987,9 @@ function ChatPage({
       }
     };
     document.addEventListener("pointerdown", close);
-    return () => document.removeEventListener("pointerdown", close);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+    };
   }, [selected]);
   const isGroup = title === "全体チャット";
   const byId = (id?: string) =>
@@ -984,11 +1001,11 @@ function ChatPage({
       ...chat.messages,
       {
         ...message,
-        id: `sent-${chat.messages.length}`,
         from: "me",
-        when: "今日",
-        time: "10:10",
+        id: `sent-${chat.messages.length}`,
         replyTo,
+        time: "10:10",
+        when: "今日",
       },
     ]);
     setReplyTo(undefined);
@@ -1014,10 +1031,13 @@ function ChatPage({
       .getElementById(`message-${id}`)
       ?.scrollIntoView({ behavior: "smooth", block: "center" });
     setFlash(id);
-    setTimeout(() => setFlash(undefined), flashMilliseconds);
+    setTimeout(() => {
+      setFlash(undefined);
+    }, flashMilliseconds);
   };
-  const toggleSelected = (id: string) =>
+  const toggleSelected = (id: string) => {
     setSelected(selected === id ? undefined : id);
+  };
   const replying = byId(replyTo);
   return (
     <div className="dc-content st-screen gr-chat">
@@ -1066,7 +1086,9 @@ function ChatPage({
                         aria-expanded={selected === message.id}
                         aria-label={`${member?.name ?? ""}が共有した日にち。押すとリアクションと返信`}
                         className="gr-message-tap"
-                        onClick={() => toggleSelected(message.id)}
+                        onClick={() => {
+                          toggleSelected(message.id);
+                        }}
                         type="button"
                       >
                         <DayCard days={message.days} members={people} />
@@ -1079,7 +1101,9 @@ function ChatPage({
                           <button
                             aria-label={`${nameOf(quoted.from)}への返信。返信元を表示`}
                             className="gr-bubble-quote"
-                            onClick={() => jumpTo(quoted.id)}
+                            onClick={() => {
+                              jumpTo(quoted.id);
+                            }}
                             type="button"
                           >
                             <span className="gr-bubble-quote-name">
@@ -1098,7 +1122,9 @@ function ChatPage({
                           aria-expanded={selected === message.id}
                           aria-label={`${member?.name ?? ""}のメッセージ：${message.text ?? ""}。押すとリアクションと返信`}
                           className="gr-message-tap gr-bubble-text"
-                          onClick={() => toggleSelected(message.id)}
+                          onClick={() => {
+                            toggleSelected(message.id);
+                          }}
                           type="button"
                         >
                           {message.text}
@@ -1124,7 +1150,9 @@ function ChatPage({
                           aria-pressed={reaction.by.includes("me")}
                           className="gr-reaction"
                           key={reaction.emoji}
-                          onClick={() => react(message.id, reaction.emoji)}
+                          onClick={() => {
+                            react(message.id, reaction.emoji);
+                          }}
                           type="button"
                         >
                           {reaction.emoji}
@@ -1141,7 +1169,9 @@ function ChatPage({
                         <button
                           aria-label={`${emoji}でリアクション`}
                           key={emoji}
-                          onClick={() => react(message.id, emoji)}
+                          onClick={() => {
+                            react(message.id, emoji);
+                          }}
                           type="button"
                         >
                           {emoji}
@@ -1175,7 +1205,9 @@ function ChatPage({
           <button
             aria-label="返信をやめる"
             className="gr-icon-button"
-            onClick={() => setReplyTo(undefined)}
+            onClick={() => {
+              setReplyTo(undefined);
+            }}
             type="button"
           >
             <X aria-hidden="true" size={16} />
@@ -1192,14 +1224,18 @@ function ChatPage({
         <button
           aria-label="日にちを共有"
           className="gr-composer-day"
-          onClick={() => setSharing(true)}
+          onClick={() => {
+            setSharing(true);
+          }}
           type="button"
         >
           <CalendarPlus aria-hidden="true" size={20} />
         </button>
         <input
           aria-label="メッセージ"
-          onChange={(event) => setDraft(event.target.value)}
+          onChange={(event) => {
+            setDraft(event.target.value);
+          }}
           placeholder="メッセージ"
           value={draft}
         />
@@ -1215,7 +1251,9 @@ function ChatPage({
       {sharing && (
         <DaySheet
           members={people}
-          onClose={() => setSharing(false)}
+          onClose={() => {
+            setSharing(false);
+          }}
           onShare={(days) => {
             post({ days });
             setSharing(false);
@@ -1242,7 +1280,7 @@ function toggleReaction(message: Message, emoji: string): Message {
   const reactions = message.reactions ?? [];
   const existing = reactions.find((reaction) => reaction.emoji === emoji);
   if (!existing) {
-    return { ...message, reactions: [...reactions, { emoji, by: ["me"] }] };
+    return { ...message, reactions: [...reactions, { by: ["me"], emoji }] };
   }
   const mine = existing.by.includes("me");
   const by = mine
@@ -1251,7 +1289,7 @@ function toggleReaction(message: Message, emoji: string): Message {
   return {
     ...message,
     reactions: reactions
-      .map((reaction) => (reaction.emoji === emoji ? { emoji, by } : reaction))
+      .map((reaction) => (reaction.emoji === emoji ? { by, emoji } : reaction))
       .filter((reaction) => reaction.by.length > 0),
   };
 }
@@ -1342,12 +1380,13 @@ function DaySheet({
   const [picked, setPicked] = useState<Date[]>([]);
   const isPicked = (date: Date) =>
     picked.some((item) => dateKey(item) === dateKey(date));
-  const toggle = (date: Date) =>
+  const toggle = (date: Date) => {
     setPicked(
       isPicked(date)
         ? picked.filter((item) => dateKey(item) !== dateKey(date))
         : [...picked, date].sort((a, b) => a.getTime() - b.getTime())
     );
+  };
   const suggestions = Array.from({ length: 45 }, (_, index) =>
     addDays(designToday, index)
   )
@@ -1364,7 +1403,9 @@ function DaySheet({
           <button
             className="pe-save"
             disabled={picked.length === 0}
-            onClick={() => onShare(picked)}
+            onClick={() => {
+              onShare(picked);
+            }}
             type="button"
           >
             送る
@@ -1377,7 +1418,9 @@ function DaySheet({
               <button
                 aria-pressed={isPicked(date)}
                 key={dateKey(date)}
-                onClick={() => toggle(date)}
+                onClick={() => {
+                  toggle(date);
+                }}
                 type="button"
               >
                 {date.getMonth() + 1}/{date.getDate()}
@@ -1391,9 +1434,9 @@ function DaySheet({
         <div className="gr-month">
           <button
             aria-label="前の月"
-            onClick={() =>
-              setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))
-            }
+            onClick={() => {
+              setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
+            }}
             type="button"
           >
             <ChevronLeft aria-hidden="true" size={18} />
@@ -1403,9 +1446,9 @@ function DaySheet({
           </strong>
           <button
             aria-label="次の月"
-            onClick={() =>
-              setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))
-            }
+            onClick={() => {
+              setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
+            }}
             type="button"
           >
             <ChevronRight aria-hidden="true" size={18} />
@@ -1427,7 +1470,9 @@ function DaySheet({
                 className={`gr-date ${weekendClassName(date)} ${together ? "gr-together-cell" : ""}`}
                 disabled={outside}
                 key={dateKey(date)}
-                onClick={() => toggle(date)}
+                onClick={() => {
+                  toggle(date);
+                }}
                 type="button"
               >
                 {date.getDate()}
@@ -1483,12 +1528,17 @@ function ShiftsPage({
     if (!saved) {
       return;
     }
-    const timer = setTimeout(() => setSaved(false), savedNoteTime);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => {
+      setSaved(false);
+    }, savedNoteTime);
+    return () => {
+      clearTimeout(timer);
+    };
   }, [saved]);
   const dates = monthDates(month);
-  const pick = (date: Date) =>
+  const pick = (date: Date) => {
     setPicked(picked && dateKey(picked) === dateKey(date) ? undefined : date);
+  };
   return (
     <div className="gr-shifts">
       <header className="st-page-header">
@@ -1506,14 +1556,18 @@ function ShiftsPage({
               <legend className="dc-sr-only">表の形</legend>
               <button
                 aria-pressed={layout === "weeks"}
-                onClick={() => setLayout("weeks")}
+                onClick={() => {
+                  setLayout("weeks");
+                }}
                 type="button"
               >
                 週ごと
               </button>
               <button
                 aria-pressed={layout === "days"}
-                onClick={() => setLayout("days")}
+                onClick={() => {
+                  setLayout("days");
+                }}
                 type="button"
               >
                 日ごと
@@ -1523,7 +1577,9 @@ function ShiftsPage({
             <button
               aria-label="シフト表を画像で保存"
               className="dc-heading-icon"
-              onClick={() => setSaved(true)}
+              onClick={() => {
+                setSaved(true);
+              }}
               type="button"
             >
               <Download aria-hidden="true" size={19} />
@@ -1536,8 +1592,12 @@ function ShiftsPage({
         group={group}
         layout={layout}
         month={month}
-        onLegend={() => setLegend(group.members)}
-        onMember={(member) => setLegend([member])}
+        onLegend={() => {
+          setLegend(group.members);
+        }}
+        onMember={(member) => {
+          setLegend([member]);
+        }}
         onMonth={setMonth}
         onPickDay={pick}
         picked={picked}
@@ -1547,11 +1607,18 @@ function ShiftsPage({
         <DayPeek
           date={picked}
           members={group.members}
-          onClose={() => setPicked(undefined)}
+          onClose={() => {
+            setPicked(undefined);
+          }}
         />
       )}
       {legend && (
-        <LegendSheet members={legend} onClose={() => setLegend(undefined)} />
+        <LegendSheet
+          members={legend}
+          onClose={() => {
+            setLegend(undefined);
+          }}
+        />
       )}
       <p aria-live="polite" className="gr-toast" hidden={!saved}>
         <Check aria-hidden="true" size={16} />
@@ -1599,9 +1666,9 @@ function PagedShifts({
         <div className="gr-month">
           <button
             aria-label="前の月"
-            onClick={() =>
-              onMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))
-            }
+            onClick={() => {
+              onMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
+            }}
             type="button"
           >
             <ChevronLeft aria-hidden="true" size={18} />
@@ -1611,9 +1678,9 @@ function PagedShifts({
           </strong>
           <button
             aria-label="次の月"
-            onClick={() =>
-              onMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))
-            }
+            onClick={() => {
+              onMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
+            }}
             type="button"
           >
             <ChevronRight aria-hidden="true" size={18} />
@@ -1623,11 +1690,11 @@ function PagedShifts({
           aria-label="今月に戻る"
           className="dc-this-month"
           disabled={thisMonth}
-          onClick={() =>
+          onClick={() => {
             onMonth(
               new Date(designToday.getFullYear(), designToday.getMonth(), 1)
-            )
-          }
+            );
+          }}
           type="button"
         >
           今月
@@ -1705,13 +1772,20 @@ function MonthFoot({
   return (
     <div className="gr-month-foot">
       <button
-        onClick={(event) => go(previous, event.currentTarget)}
+        onClick={(event) => {
+          go(previous, event.currentTarget);
+        }}
         type="button"
       >
         <ChevronLeft aria-hidden="true" size={16} />
         {previous.getMonth() + 1}月
       </button>
-      <button onClick={(event) => go(next, event.currentTarget)} type="button">
+      <button
+        onClick={(event) => {
+          go(next, event.currentTarget);
+        }}
+        type="button"
+      >
         {next.getMonth() + 1}月
         <ChevronRight aria-hidden="true" size={16} />
       </button>
@@ -1923,7 +1997,13 @@ function DayRow({
       className={`${together ? "gr-together-cell" : ""} ${today ? "gr-rows-today" : ""} ${picked ? "gr-rows-picked" : ""}`}
     >
       <th className="gr-rows-date" scope="row">
-        <RowDate date={date} onPick={() => onPick(date)} picked={picked} />
+        <RowDate
+          date={date}
+          onPick={() => {
+            onPick(date);
+          }}
+          picked={picked}
+        />
         {together && <span className="dc-sr-only">みんな休み</span>}
       </th>
       {members.map((member) => {
@@ -1939,7 +2019,9 @@ function DayRow({
               aria-label={`${formatDay(date)} ${member.name}：${item?.name ?? "未入力"}。押すとその日のみんなの予定`}
               aria-pressed={picked}
               className="gr-rows-cell-button"
-              onClick={() => onPick(date)}
+              onClick={() => {
+                onPick(date);
+              }}
               type="button"
             >
               {item ? (
@@ -2068,7 +2150,7 @@ export function PhotoAvatar({
     <span
       aria-hidden="true"
       className={`gr-avatar ${me ? "gr-avatar-me" : ""}`}
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.45) }}
+      style={{ fontSize: Math.round(size * 0.45), height: size, width: size }}
     >
       {photo ? (
         <img alt="" height={size} loading="lazy" src={photo} width={size} />
@@ -2124,7 +2206,9 @@ function WeekDate({
       aria-label={`${formatDay(date)}の予定を見る`}
       aria-pressed={picked}
       className={`${className} gr-table-cell-button`}
-      onClick={() => onPick(date)}
+      onClick={() => {
+        onPick(date);
+      }}
       type="button"
     >
       {date.getDate()}
@@ -2162,7 +2246,9 @@ function WeekCell({
       aria-label={`${label}。押すとその日のみんなの予定`}
       aria-pressed={picked}
       className={`${className} gr-table-cell-button`}
-      onClick={() => onPick(date)}
+      onClick={() => {
+        onPick(date);
+      }}
       type="button"
     >
       <Mark date={date} member={member} size={18} />
@@ -2236,7 +2322,9 @@ function MemberTable({
                 <button
                   aria-label={`${member.name}のマークの意味`}
                   className="gr-table-name gr-table-name-button"
-                  onClick={() => onMember(member)}
+                  onClick={() => {
+                    onMember(member);
+                  }}
                   type="button"
                 >
                   <Avatar member={member} size={avatarSize} />
@@ -2298,7 +2386,9 @@ function OverlayCalendar({
               className={`gr-overlay-day ${outside ? "gr-outside" : ""} ${together ? "gr-together-cell" : ""}`}
               disabled={outside}
               key={dateKey(date)}
-              onClick={() => setPicked(date)}
+              onClick={() => {
+                setPicked(date);
+              }}
               type="button"
             >
               <span
@@ -2379,7 +2469,9 @@ function PersonCalendar({
           <button
             aria-pressed={item.id === member.id}
             key={item.id}
-            onClick={() => setMemberId(item.id)}
+            onClick={() => {
+              setMemberId(item.id);
+            }}
             type="button"
           >
             <Avatar member={item} />
@@ -2547,7 +2639,9 @@ function GroupSettingsPage({
         back="グループの設定"
         mark={group.mark}
         name={group.name}
-        onBack={() => setEditingMark(false)}
+        onBack={() => {
+          setEditingMark(false);
+        }}
         onChange={onMark}
       />
     );
@@ -2563,7 +2657,12 @@ function GroupSettingsPage({
             <span className="st-row-label">グループ名</span>
             <span className="st-row-value">{group.name}</span>
           </div>
-          <MarkRow mark={group.mark} onOpen={() => setEditingMark(true)} />
+          <MarkRow
+            mark={group.mark}
+            onOpen={() => {
+              setEditingMark(true);
+            }}
+          />
         </div>
       </section>
       <section className="st-section st-profile-section">
@@ -2572,14 +2671,20 @@ function GroupSettingsPage({
           name={shown.name}
           onRemove={
             shown.photo
-              ? () => update({ photo: undefined, noPhoto: true })
+              ? () => {
+                  update({ noPhoto: true, photo: undefined });
+                }
               : undefined
           }
-          onUpload={(photo) => update({ photo, noPhoto: false })}
+          onUpload={(photo) => {
+            update({ noPhoto: false, photo });
+          }}
           onUsual={
             usualPhoto
               ? undefined
-              : () => update({ photo: undefined, noPhoto: false })
+              : () => {
+                  update({ noPhoto: false, photo: undefined });
+                }
           }
           photo={shown.photo}
           size={72}
@@ -2589,7 +2694,9 @@ function GroupSettingsPage({
             <span className="st-row-label">名前</span>
             <input
               className="pe-inline-input"
-              onChange={(event) => update({ name: event.target.value })}
+              onChange={(event) => {
+                update({ name: event.target.value });
+              }}
               placeholder={profile.name}
               value={mine.name ?? profile.name}
             />
@@ -2640,7 +2747,7 @@ function PageHeaderBack({
 
 // Your name and picture in a group: its own, or the usual ones.
 function profileIn(group: Omit<Group, "members">, profile: Profile): Profile {
-  const mine = group.mine;
+  const { mine } = group;
   return {
     name: mine?.name || profile.name,
     photo: mine?.noPhoto ? undefined : (mine?.photo ?? profile.photo),
@@ -2700,16 +2807,16 @@ type GroupMarkKind = GroupMark["kind"];
 
 // Words in a name that suggest an emoji.
 const groupHints: { words: string[]; emoji: string }[] = [
-  { words: ["家族", "家", "夫婦"], emoji: "🏠" },
-  { words: ["学校", "同期", "クラス", "ゼミ"], emoji: "🎓" },
-  { words: ["職場", "会社", "仕事", "病棟"], emoji: "💼" },
-  { words: ["旅行", "旅"], emoji: "✈️" },
-  { words: ["ごはん", "飲み", "ランチ"], emoji: "🍙" },
-  { words: ["友達", "友だち", "仲間"], emoji: "👭" },
+  { emoji: "🏠", words: ["家族", "家", "夫婦"] },
+  { emoji: "🎓", words: ["学校", "同期", "クラス", "ゼミ"] },
+  { emoji: "💼", words: ["職場", "会社", "仕事", "病棟"] },
+  { emoji: "✈️", words: ["旅行", "旅"] },
+  { emoji: "🍙", words: ["ごはん", "飲み", "ランチ"] },
+  { emoji: "👭", words: ["友達", "友だち", "仲間"] },
 ];
 
 function firstLetter(name: string) {
-  return Array.from(name.trim())[0] ?? "";
+  return [...name.trim()][0] ?? "";
 }
 
 // From the name alone: a fitting emoji, or else its first letter.
@@ -2718,8 +2825,8 @@ function guessGroupMark(name: string, color: number): GroupMark {
     words.some((word) => name.includes(word))
   );
   return hint
-    ? { kind: "emoji", emoji: hint.emoji }
-    : { kind: "letter", text: firstLetter(name), color };
+    ? { emoji: hint.emoji, kind: "emoji" }
+    : { color, kind: "letter", text: firstLetter(name) };
 }
 
 function colorOfMark(mark: GroupMark) {
@@ -2761,7 +2868,7 @@ function GroupIcon({
     return (
       <span
         className="gr-mark-letter"
-        style={{ color, background: tint, fontSize: Math.round(size * 0.6) }}
+        style={{ background: tint, color, fontSize: Math.round(size * 0.6) }}
       >
         {mark.text}
       </span>
@@ -2774,7 +2881,7 @@ function GroupIcon({
   return (
     <span
       className={bare ? "gr-mark-icon-bare" : "gr-mark-icon"}
-      style={{ color, background: bare ? undefined : tint }}
+      style={{ background: bare ? undefined : tint, color }}
     >
       <Icon size={size} weight="duotone" />
     </span>
@@ -2891,7 +2998,9 @@ function GroupMarkPage({
           <button
             aria-pressed={kind === option.kind}
             key={option.kind}
-            onClick={() => setKind(option.kind)}
+            onClick={() => {
+              setKind(option.kind);
+            }}
             type="button"
           >
             {option.label}
@@ -2907,7 +3016,9 @@ function GroupMarkPage({
                 aria-pressed={mark.kind === "emoji" && mark.emoji === emoji}
                 className="gr-mark-choice-emoji"
                 key={emoji}
-                onClick={() => onChange({ kind: "emoji", emoji })}
+                onClick={() => {
+                  onChange({ emoji, kind: "emoji" });
+                }}
                 type="button"
               >
                 {emoji}
@@ -2923,7 +3034,7 @@ function GroupMarkPage({
                 [Symbol.iterator]()
                 .next().value?.segment;
               if (emoji) {
-                onChange({ kind: "emoji", emoji });
+                onChange({ emoji, kind: "emoji" });
               }
             }}
             placeholder="ほかの絵文字を入力"
@@ -2940,12 +3051,14 @@ function GroupMarkPage({
                 aria-label={iconNames[icon]}
                 aria-pressed={mark.kind === "icon" && mark.icon === icon}
                 key={icon}
-                onClick={() => onChange({ kind: "icon", icon, color })}
+                onClick={() => {
+                  onChange({ color, icon, kind: "icon" });
+                }}
                 type="button"
               >
                 <GroupIcon
                   bare
-                  mark={{ kind: "icon", icon, color }}
+                  mark={{ color, icon, kind: "icon" }}
                   size={22}
                 />
               </button>
@@ -2953,13 +3066,13 @@ function GroupMarkPage({
           </fieldset>
           <MarkColors
             color={color}
-            onPick={(value) =>
+            onPick={(value) => {
               onChange(
                 mark.kind === "icon"
                   ? { ...mark, color: value }
-                  : { kind: "icon", icon: groupIcons[0], color: value }
-              )
-            }
+                  : { color: value, icon: groupIcons[0], kind: "icon" }
+              );
+            }}
           />
         </>
       )}
@@ -2971,18 +3084,18 @@ function GroupMarkPage({
               <input
                 className="pe-inline-input"
                 maxLength={2}
-                onChange={(event) =>
-                  onChange({ kind: "letter", text: event.target.value, color })
-                }
+                onChange={(event) => {
+                  onChange({ color, kind: "letter", text: event.target.value });
+                }}
                 value={letter}
               />
             </label>
           </div>
           <MarkColors
             color={color}
-            onPick={(value) =>
-              onChange({ kind: "letter", text: letter, color: value })
-            }
+            onPick={(value) => {
+              onChange({ color: value, kind: "letter", text: letter });
+            }}
           />
         </>
       )}
@@ -3008,7 +3121,9 @@ function MarkColors({
           aria-label={option.name}
           aria-pressed={color === index}
           key={option.name}
-          onClick={() => onPick(index)}
+          onClick={() => {
+            onPick(index);
+          }}
           style={{ background: option.tint, color: option.color }}
           type="button"
         />
@@ -3044,7 +3159,9 @@ function NewGroupPage({
         back="グループを作る"
         mark={mark}
         name={name}
-        onBack={() => setEditingMark(false)}
+        onBack={() => {
+          setEditingMark(false);
+        }}
         onChange={(next) => {
           setMark(next);
           setPicked(true);
@@ -3063,9 +3180,9 @@ function NewGroupPage({
           <button
             className="pe-save"
             disabled={!canCreate}
-            onClick={() =>
-              onCreate({ name: name.trim(), mark, myName: myName.trim() })
-            }
+            onClick={() => {
+              onCreate({ mark, myName: myName.trim(), name: name.trim() });
+            }}
             type="button"
           >
             作る
@@ -3088,12 +3205,19 @@ function NewGroupPage({
             value={name}
           />
         </label>
-        <MarkRow mark={mark} onOpen={() => setEditingMark(true)} />
+        <MarkRow
+          mark={mark}
+          onOpen={() => {
+            setEditingMark(true);
+          }}
+        />
         <label className="st-row">
           <span className="st-row-label">このグループでの名前</span>
           <input
             className="pe-inline-input"
-            onChange={(event) => setMyName(event.target.value)}
+            onChange={(event) => {
+              setMyName(event.target.value);
+            }}
             placeholder="例：さくら"
             value={myName}
           />

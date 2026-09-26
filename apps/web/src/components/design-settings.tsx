@@ -5,7 +5,8 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { type ReactNode, useContext, useState } from "react";
+import { useContext, useState } from "react";
+import type { ReactNode } from "react";
 
 import {
   addDays,
@@ -17,18 +18,17 @@ import {
   isRepeating,
   nextDayShifts,
   patterns,
-  type RepeatRule,
   RepeatSequenceEditor,
   repeatSchedule,
-  type Schedule,
-  type Shift,
-  type Tab,
   TabBar,
   weekDates,
   weekendClassName,
 } from "./design-calendar";
-import { type Coworkers, CoworkersPage } from "./design-coworkers";
-import { PhotoAvatar, PhotoEditor, type Profile } from "./design-group";
+import type { RepeatRule, Schedule, Shift, Tab } from "./design-calendar";
+import { CoworkersPage } from "./design-coworkers";
+import type { Coworkers } from "./design-coworkers";
+import { PhotoAvatar, PhotoEditor } from "./design-group";
+import type { Profile } from "./design-group";
 import { WorkSetupSteps } from "./design-onboarding";
 import { PatternsPage } from "./design-pattern-editor";
 import { ThemeContext, themeOf, themes } from "./design-theme";
@@ -41,13 +41,12 @@ import {
   SetIconWeightContext,
   SetShiftMarkStyleContext,
   ShiftMark,
-  type ShiftMarkStyle,
   ShiftMarkStyleContext,
-  type StyleChoice,
   stylePresetOf,
   stylePresets,
   useOffHighlight,
 } from "./shift-mark";
+import type { ShiftMarkStyle, StyleChoice } from "./shift-mark";
 
 type Page =
   | "top"
@@ -63,9 +62,9 @@ type Page =
   | "profile";
 
 const markOptions: { style: ShiftMarkStyle; name: string }[] = [
-  { style: "icon", name: "アイコン" },
-  { style: "emoji", name: "絵文字" },
-  { style: "badge", name: "文字" },
+  { name: "アイコン", style: "icon" },
+  { name: "絵文字", style: "emoji" },
+  { name: "文字", style: "badge" },
 ];
 
 const previewDays = 14;
@@ -79,7 +78,7 @@ function sequenceLabel(sequence: Shift[]) {
     if (last?.shift === shift) {
       last.count += 1;
     } else {
-      runs.push({ shift, count: 1 });
+      runs.push({ count: 1, shift });
     }
   }
   return runs
@@ -145,7 +144,9 @@ export function DesignSettings({
         )}
         {page === "profile" && (
           <ProfilePage
-            onBack={() => setPage("top")}
+            onBack={() => {
+              setPage("top");
+            }}
             onChange={onProfile}
             profile={profile}
           />
@@ -158,7 +159,9 @@ export function DesignSettings({
               onApplyRule(rule);
               setPage(current ? "work" : "top");
             }}
-            onBack={() => setPage("work")}
+            onBack={() => {
+              setPage("work");
+            }}
             patternKeys={patternKeys}
           />
         )}
@@ -171,7 +174,9 @@ export function DesignSettings({
               onFixRule(rule);
               setPage("work");
             }}
-            onBack={() => setPage("work")}
+            onBack={() => {
+              setPage("work");
+            }}
             patternKeys={patternKeys}
           />
         )}
@@ -181,17 +186,29 @@ export function DesignSettings({
               onChangeJob(job);
               setPage("top");
             }}
-            onBack={() => setPage("top")}
+            onBack={() => {
+              setPage("top");
+            }}
           />
         )}
         {page === "work" && (
           <WorkStylePage
-            onBack={() => setPage("top")}
-            onFix={() => setPage("repeat-fix")}
+            onBack={() => {
+              setPage("top");
+            }}
+            onFix={() => {
+              setPage("repeat-fix");
+            }}
             onHolidaysOff={onHolidaysOff}
-            onNew={() => setPage("repeat-new")}
-            onRepeat={() => setPage("repeat-new")}
-            onRoster={() => setPage("roster")}
+            onNew={() => {
+              setPage("repeat-new");
+            }}
+            onRepeat={() => {
+              setPage("repeat-new");
+            }}
+            onRoster={() => {
+              setPage("roster");
+            }}
             rules={rules}
           />
         )}
@@ -201,12 +218,16 @@ export function DesignSettings({
               onApplyRule({ sequence: [], start });
               setPage("top");
             }}
-            onBack={() => setPage("work")}
+            onBack={() => {
+              setPage("work");
+            }}
           />
         )}
         {page === "mark" && (
           <MarkPage
-            onBack={() => setPage("top")}
+            onBack={() => {
+              setPage("top");
+            }}
             onCustomize={(before) => {
               setCancelTo(before);
               setPage("customize");
@@ -217,20 +238,26 @@ export function DesignSettings({
         {page === "customize" && (
           <CustomizePage
             cancelTo={cancelTo}
-            onDone={() => setPage("mark")}
+            onDone={() => {
+              setPage("mark");
+            }}
             preview={preview}
           />
         )}
         {page === "coworkers" && (
           <CoworkersPage
             coworkers={coworkers}
-            onBack={() => setPage("top")}
+            onBack={() => {
+              setPage("top");
+            }}
             schedule={schedule}
           />
         )}
         {page === "patterns" && (
           <PatternsPage
-            onBack={() => setPage("top")}
+            onBack={() => {
+              setPage("top");
+            }}
             patternKeys={patternKeys}
           />
         )}
@@ -261,7 +288,9 @@ function SettingsTop({
       <Section title="シフト">
         <Row
           label="働き方"
-          onOpen={() => onOpen("work")}
+          onOpen={() => {
+            onOpen("work");
+          }}
           value={
             current
               ? `${sequenceLabel(current.sequence)}（${current.sequence.length}日ごと）`
@@ -270,7 +299,9 @@ function SettingsTop({
         />
         <Row
           label="シフトパターン"
-          onOpen={() => onOpen("patterns")}
+          onOpen={() => {
+            onOpen("patterns");
+          }}
           value={
             <>
               <span className="st-marks">
@@ -284,15 +315,24 @@ function SettingsTop({
         />
         <Row
           label="一緒に働く人"
-          onOpen={() => onOpen("coworkers")}
+          onOpen={() => {
+            onOpen("coworkers");
+          }}
           value={`${coworkerCount}人`}
         />
-        <Row label="仕事が変わったとき" onOpen={() => onOpen("job")} />
+        <Row
+          label="仕事が変わったとき"
+          onOpen={() => {
+            onOpen("job");
+          }}
+        />
       </Section>
       <Section title="表示">
         <Row
           label="スタイル"
-          onOpen={() => onOpen("mark")}
+          onOpen={() => {
+            onOpen("mark");
+          }}
           value={
             <span className="st-inline-value">
               <span
@@ -310,7 +350,9 @@ function SettingsTop({
       <Section title="アカウント">
         <Row
           label="プロフィール"
-          onOpen={() => onOpen("profile")}
+          onOpen={() => {
+            onOpen("profile");
+          }}
           value={
             <span className="st-inline-value">
               <PhotoAvatar
@@ -500,22 +542,22 @@ const repeatModes: Record<
   { title: string; back: string; dayLabel: string; action: string }
 > = {
   first: {
-    title: "繰り返しを設定",
+    action: "から繰り返す",
     back: "働き方",
     dayLabel: "始める日",
-    action: "から繰り返す",
-  },
-  switch: {
-    title: "新しい繰り返し",
-    back: "働き方",
-    dayLabel: "切り替える日",
-    action: "から切り替える",
+    title: "繰り返しを設定",
   },
   fix: {
-    title: "今の繰り返しを直す",
+    action: "から入れ直す",
     back: "働き方",
     dayLabel: "並びの1日目",
-    action: "から入れ直す",
+    title: "今の繰り返しを直す",
+  },
+  switch: {
+    action: "から切り替える",
+    back: "働き方",
+    dayLabel: "切り替える日",
+    title: "新しい繰り返し",
   },
 };
 
@@ -548,7 +590,7 @@ function RepeatEditorPage({
     fixing ? current.holidaysOff : undefined
   );
   const holidaysOff = holidaysChoice ?? defaultHolidaysOff(sequence, day);
-  const rule: RepeatRule = { sequence, start, anchor: day, holidaysOff };
+  const rule: RepeatRule = { anchor: day, holidaysOff, sequence, start };
   return (
     <>
       <PageHeader back={text.back} onBack={onBack} title={text.title} />
@@ -596,7 +638,9 @@ function RepeatEditorPage({
       <button
         className="st-primary"
         disabled={sequence.length === 0}
-        onClick={() => onApply(rule)}
+        onClick={() => {
+          onApply(rule);
+        }}
         type="button"
       >
         {shortDay(start)}
@@ -652,17 +696,19 @@ function JobChangePage({
         <WorkSetupSteps
           finishLabel={`${shortDay(start)}から切り替える`}
           month={start}
-          onExit={() => setAsking(false)}
-          onFinish={({ patternKeys, sequence, anchor }) =>
+          onExit={() => {
+            setAsking(false);
+          }}
+          onFinish={({ patternKeys, sequence, anchor }) => {
             onApply({
               patternKeys,
               rule: {
+                anchor,
                 sequence: sequence ?? [],
                 start,
-                anchor,
               },
-            })
-          }
+            });
+          }}
         />
       </div>
     );
@@ -695,7 +741,9 @@ function JobChangePage({
       </p>
       <button
         className="st-primary"
-        onClick={() => setAsking(true)}
+        onClick={() => {
+          setAsking(true);
+        }}
         type="button"
       >
         次へ
@@ -725,10 +773,14 @@ function ProfilePage({
         name={profile.name}
         onRemove={
           profile.photo
-            ? () => onChange({ ...profile, photo: undefined })
+            ? () => {
+                onChange({ ...profile, photo: undefined });
+              }
             : undefined
         }
-        onUpload={(photo) => onChange({ ...profile, photo })}
+        onUpload={(photo) => {
+          onChange({ ...profile, photo });
+        }}
         photo={profile.photo}
         size={88}
       />
@@ -737,9 +789,9 @@ function ProfilePage({
           <span className="st-row-label">いつもの名前</span>
           <input
             className="pe-inline-input"
-            onChange={(event) =>
-              onChange({ ...profile, name: event.target.value })
-            }
+            onChange={(event) => {
+              onChange({ ...profile, name: event.target.value });
+            }}
             placeholder="例：さくら"
             value={profile.name}
           />
@@ -758,16 +810,16 @@ function nextMonthStart() {
 
 const workStyles = [
   {
-    repeating: false,
     icon: "📋",
     name: "毎月、勤務表が配られる",
     note: "看護・介護・飲食など",
+    repeating: false,
   },
   {
-    repeating: true,
     icon: "🔁",
     name: "決まった順番で回っている",
     note: "消防・工場の交代勤務・曜日で固定など",
+    repeating: true,
   },
 ];
 
@@ -887,7 +939,9 @@ function RosterSwitchPage({
       </p>
       <button
         className="st-primary"
-        onClick={() => onApply(start)}
+        onClick={() => {
+          onApply(start);
+        }}
         type="button"
       >
         {shortDay(start)}から勤務表にする
@@ -938,17 +992,17 @@ function stylePreviewOf(
   ];
   const filled = dates.filter((date) => schedule[dateKey(date)]).length;
   if (filled >= minPreviewDays) {
-    return { dates, schedule, sample: false };
+    return { dates, sample: false, schedule };
   }
   return {
     dates,
+    sample: true,
     schedule: repeatSchedule(
       sampleSequence(patternKeys),
       dates[0],
       dates[0],
       dates.at(-1) ?? dates[0]
     ),
-    sample: true,
   };
 }
 
@@ -1037,7 +1091,7 @@ function CustomizePage({
             className="pe-save"
             onClick={() => {
               if (!stylePresetOf(theme, look)) {
-                setCustom?.({ theme, look });
+                setCustom?.({ look, theme });
               }
               onDone();
             }}
@@ -1089,7 +1143,7 @@ function CustomChoice({ onOpen }: { onOpen: (before: StyleChoice) => void }) {
           setTheme?.(custom.theme);
           setLook?.(custom.look);
         }
-        onOpen({ theme, look });
+        onOpen({ look, theme });
       }}
       type="button"
     >
@@ -1205,7 +1259,9 @@ function SwitchRow({
         aria-checked={checked}
         checked={checked}
         className="pe-toggle"
-        onChange={(event) => onChange(event.target.checked)}
+        onChange={(event) => {
+          onChange(event.target.checked);
+        }}
         role="switch"
         type="checkbox"
       />

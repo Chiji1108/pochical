@@ -9,6 +9,12 @@ export default defineConfig({
   extends: [core, react, vitest],
   ignorePatterns,
   options: { typeAware: true },
+  overrides: [
+    {
+      files: ["apps/server/**"],
+      globals: { WebSocketPair: "readonly" },
+    },
+  ],
   rules: {
     // Match the existing codebase, which declares object shapes with `type`.
     "typescript/consistent-type-definitions": ["error", "type"],
@@ -23,10 +29,4 @@ export default defineConfig({
     "unicorn/no-useless-undefined": "off",
     "typescript/no-unnecessary-type-assertion": "off",
   },
-  overrides: [
-    {
-      files: ["apps/server/**"],
-      globals: { WebSocketPair: "readonly" },
-    },
-  ],
 });

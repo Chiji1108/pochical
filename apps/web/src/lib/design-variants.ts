@@ -2,47 +2,47 @@
 // each entry is the current proposal and is used when the URL omits it.
 export const designVariantOptions = {
   groupView: {
+    choices: [
+      { label: "表", value: "table" },
+      { label: "重ねる", value: "overlay" },
+      { label: "人ごと", value: "person" },
+    ],
     label: "グループの見せ方",
-    choices: [
-      { value: "table", label: "表" },
-      { value: "overlay", label: "重ねる" },
-      { value: "person", label: "人ごと" },
-    ],
-  },
-  memberLook: {
-    label: "相手のシフトの見た目",
-    choices: [
-      { value: "theirs", label: "相手のスタイル" },
-      { value: "mine", label: "自分のスタイル" },
-    ],
   },
   headerLayout: {
-    label: "見出しの並び",
     choices: [
-      { value: "title", label: "月の横に ‹ ›" },
-      { value: "swipe", label: "‹ › なし（スワイプ）" },
+      { label: "月の横に ‹ ›", value: "title" },
+      { label: "‹ › なし（スワイプ）", value: "swipe" },
     ],
+    label: "見出しの並び",
   },
   importAccess: {
+    choices: [
+      { label: "通常", value: "normal" },
+      { label: "上限に到達", value: "limit" },
+    ],
     label: "写真の取り込み",
-    choices: [
-      { value: "normal", label: "通常" },
-      { value: "limit", label: "上限に到達" },
-    ],
   },
-  scheduleSample: {
-    label: "予定",
+  memberLook: {
     choices: [
-      { value: "filled", label: "入力済み" },
-      { value: "empty", label: "空" },
+      { label: "相手のスタイル", value: "theirs" },
+      { label: "自分のスタイル", value: "mine" },
     ],
+    label: "相手のシフトの見た目",
   },
   memberSample: {
-    label: "一緒に働く人",
     choices: [
-      { value: "some", label: "5人" },
-      { value: "none", label: "0人" },
+      { label: "5人", value: "some" },
+      { label: "0人", value: "none" },
     ],
+    label: "一緒に働く人",
+  },
+  scheduleSample: {
+    choices: [
+      { label: "入力済み", value: "filled" },
+      { label: "空", value: "empty" },
+    ],
+    label: "予定",
   },
 } as const;
 

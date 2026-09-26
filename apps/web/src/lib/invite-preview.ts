@@ -22,9 +22,9 @@ export async function fetchInvitePreview(
     }
     url.searchParams.set("inviteCode", code);
     const response = await request(url, {
-      signal: AbortSignal.timeout(5000),
-      redirect: "error",
       cache: "no-store",
+      redirect: "error",
+      signal: AbortSignal.timeout(5000),
     });
     if (response.status === 404 || response.status === 400) {
       return { status: "invalid" };
@@ -46,9 +46,9 @@ export async function fetchInvitePreview(
       return { status: "unavailable" };
     }
     return {
-      status: "valid",
-      groupName: data.groupName,
       groupEmoji: data.groupEmoji,
+      groupName: data.groupName,
+      status: "valid",
     };
   } catch {
     return { status: "unavailable" };

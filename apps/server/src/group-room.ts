@@ -1,17 +1,13 @@
-import {
-  create,
-  fromBinary,
-  type MessageInitShape,
-  toBinary,
-} from "@bufbuild/protobuf";
+import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
+import type { MessageInitShape } from "@bufbuild/protobuf";
 import { DurableObject } from "cloudflare:workers";
 
 import {
-  type ClientFrame,
   ClientFrameSchema,
   ServerError_Code,
   ServerFrameSchema,
 } from "./gen/pochical/v1/sync_pb";
+import type { ClientFrame } from "./gen/pochical/v1/sync_pb";
 import { MIN_PROTOCOL_VERSION } from "./protocol";
 
 /** Per-socket state that survives hibernation. */
@@ -58,11 +54,13 @@ export class GroupRoom extends DurableObject<Env> {
     }
 
     switch (frame.kind.case) {
-      case "ping":
+      case "ping": {
         send(ws, { case: "pong", value: { nonce: frame.kind.value.nonce } });
         return;
-      default:
+      }
+      default: {
         rejectAndClose(ws, ServerError_Code.BAD_FRAME, "Unknown frame kind");
+      }
     }
   }
 

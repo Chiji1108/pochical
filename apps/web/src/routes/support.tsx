@@ -5,39 +5,39 @@ import { Page } from "../components/site-layout";
 import { pageMeta, site } from "../lib/site";
 
 export const Route = createFileRoute("/support")({
+  component: Support,
   head: () =>
     pageMeta(
       "サポート",
       "ポチカルのよくある質問とお問い合わせ窓口。",
       "/support"
     ),
-  component: Support,
 });
 const questions = [
   {
-    question: "アプリはどこからダウンロードできますか？",
     answer:
       "現在、App Store・Google Playでの公開を準備しています。公開後は、このサイトからダウンロードできます。",
+    question: "アプリはどこからダウンロードできますか？",
   },
   {
-    question: "日勤・夜勤以外のシフトも登録できますか？",
     answer:
       "はい。勤務パターンの名前、絵文字、時間を設定できます。勤務先のシフトに合わせて登録してお使いください。",
+    question: "日勤・夜勤以外のシフトも登録できますか？",
   },
   {
-    question: "グループに参加するには？",
     answer:
       "メンバーから届いた招待リンクを開き、「アプリで開く」を選びます。アプリ内で表示名を入力して参加してください。無効なリンクと表示された場合は、送り主に新しいリンクを確認してください。",
+    question: "グループに参加するには？",
   },
   {
-    question: "シフトを端末のカレンダーに書き出せますか？",
     answer:
       "はい。カレンダー画面の保存メニューから、端末カレンダーへの書き出しや画像保存ができます。必要なアクセス権限を許可してご利用ください。",
+    question: "シフトを端末のカレンダーに書き出せますか？",
   },
   {
-    question: "アプリを削除すると、アカウントも消えますか？",
     answer:
       "アプリのアンインストールだけでは、サーバー上のアカウントやデータは削除されません。アプリの設定、またはこのサイトのアカウント削除ページから手続きしてください。",
+    question: "アプリを削除すると、アカウントも消えますか？",
   },
 ];
 function Support() {

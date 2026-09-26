@@ -6,18 +6,21 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { type ReactNode, useContext, useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
-import { nextDayShifts, patterns, type Shift } from "./design-calendar";
-import { LookEditorPage, type LookField } from "./design-look-editor";
+import { nextDayShifts, patterns } from "./design-calendar";
+import type { Shift } from "./design-calendar";
+import { LookEditorPage } from "./design-look-editor";
+import type { LookField } from "./design-look-editor";
 import {
   guessLook,
-  type Look,
   lookOf,
   MarkGlyph,
   nextColor,
   ShiftMarkStyleContext,
 } from "./shift-mark";
+import type { Look } from "./shift-mark";
 
 // A pattern as edited on screen. Presets start with every look filled in;
 // new ones get theirs from the name until the person picks one.
@@ -35,16 +38,16 @@ type PatternDraft = Look & {
 const leadingZeroPattern = /^0/;
 
 function draftOf(key: Shift): PatternDraft {
-  const time = patterns[key].time;
+  const { time } = patterns[key];
   return {
     ...lookOf(key),
+    allDay: !time,
+    countsAsOff: key === "off" || key === "paid",
+    end: time?.[1] ?? "18:00",
     id: key,
     name: patterns[key].label,
-    allDay: !time,
-    start: time?.[0] ?? "09:00",
-    end: time?.[1] ?? "18:00",
-    countsAsOff: key === "off" || key === "paid",
     nextDay: nextDayShifts[key],
+    start: time?.[0] ?? "09:00",
   };
 }
 
@@ -75,7 +78,9 @@ export function PatternsPage({
       <PatternEditor
         initial={editing}
         isNew={isNew}
-        onBack={() => setEditing(undefined)}
+        onBack={() => {
+          setEditing(undefined);
+        }}
         onDelete={() => {
           setItems(items.filter((item) => item.id !== editing.id));
           setEditing(undefined);
@@ -101,19 +106,21 @@ export function PatternsPage({
           setItems([...items, draft]);
           setView("list");
         }}
-        onBack={() => setView("list")}
+        onBack={() => {
+          setView("list");
+        }}
         onCustom={() => {
           setView("list");
           setIsNew(true);
           setEditing({
             ...guessLook(""),
+            allDay: false,
+            color: nextColor(items.map((item) => item.color)),
+            countsAsOff: false,
+            end: "18:00",
             id: `custom-${items.length}`,
             name: "",
-            color: nextColor(items.map((item) => item.color)),
-            allDay: false,
             start: "09:00",
-            end: "18:00",
-            countsAsOff: false,
           });
         }}
       />
@@ -136,7 +143,9 @@ export function PatternsPage({
           </button>
           <button
             className="pe-save"
-            onClick={() => setView(sorting ? "list" : "sort")}
+            onClick={() => {
+              setView(sorting ? "list" : "sort");
+            }}
             type="button"
           >
             {sorting ? "完了" : "並び替え"}
@@ -183,7 +192,13 @@ export function PatternsPage({
         </div>
       )}
       {!sorting && (
-        <button className="st-add" onClick={() => setView("add")} type="button">
+        <button
+          className="st-add"
+          onClick={() => {
+            setView("add");
+          }}
+          type="button"
+        >
           <Plus aria-hidden="true" size={14} />
           パターンを追加
         </button>
@@ -347,7 +362,9 @@ function AddPatternPage({
               <button
                 className="st-row st-pattern"
                 key={draft.id}
-                onClick={() => onAdd(draft)}
+                onClick={() => {
+                  onAdd(draft);
+                }}
                 type="button"
               >
                 <MarkGlyph look={draft} size={22} style={style} />
@@ -407,10 +424,10 @@ function PatternEditor({
     const guess = guessLook(name);
     setDraft({
       ...draft,
+      emoji: picked.includes("emoji") ? draft.emoji : guess.emoji,
+      icon: picked.includes("icon") ? draft.icon : guess.icon,
       name,
       symbol: picked.includes("symbol") ? draft.symbol : guess.symbol,
-      icon: picked.includes("icon") ? draft.icon : guess.icon,
-      emoji: picked.includes("emoji") ? draft.emoji : guess.emoji,
     });
   };
   const canSave = draft.name.trim() !== "";
@@ -426,7 +443,9 @@ function PatternEditor({
       <LookEditorPage
         back={draft.name || "パターン"}
         look={draft}
-        onBack={() => setSubPage(undefined)}
+        onBack={() => {
+          setSubPage(undefined);
+        }}
         onPick={pick}
         title="印と色"
       >
@@ -443,8 +462,12 @@ function PatternEditor({
     return (
       <NextDayPicker
         draft={draft}
-        onBack={() => setSubPage(undefined)}
-        onChange={(id) => setDraft({ ...draft, nextDay: id })}
+        onBack={() => {
+          setSubPage(undefined);
+        }}
+        onChange={(id) => {
+          setDraft({ ...draft, nextDay: id });
+        }}
         others={others}
       />
     );
@@ -461,7 +484,9 @@ function PatternEditor({
           <button
             className="pe-save"
             disabled={!canSave}
-            onClick={() => onSave({ ...draft, name: draft.name.trim() })}
+            onClick={() => {
+              onSave({ ...draft, name: draft.name.trim() });
+            }}
             type="button"
           >
             {isNew ? "追加" : "保存"}
@@ -485,7 +510,9 @@ function PatternEditor({
             <span className="st-row-label">名前</span>
             <input
               className="pe-inline-input"
-              onChange={(event) => rename(event.target.value)}
+              onChange={(event) => {
+                rename(event.target.value);
+              }}
               placeholder="例：日勤"
               value={draft.name}
             />
@@ -496,9 +523,9 @@ function PatternEditor({
               aria-checked={draft.allDay}
               checked={draft.allDay}
               className="pe-toggle"
-              onChange={(event) =>
-                setDraft({ ...draft, allDay: event.target.checked })
-              }
+              onChange={(event) => {
+                setDraft({ ...draft, allDay: event.target.checked });
+              }}
               role="switch"
               type="checkbox"
             />
@@ -509,18 +536,18 @@ function PatternEditor({
               <span className="pe-times">
                 <input
                   aria-label="開始時刻"
-                  onChange={(event) =>
-                    setDraft({ ...draft, start: event.target.value })
-                  }
+                  onChange={(event) => {
+                    setDraft({ ...draft, start: event.target.value });
+                  }}
                   type="time"
                   value={draft.start}
                 />
                 <span aria-hidden="true">–</span>
                 <input
                   aria-label="終了時刻"
-                  onChange={(event) =>
-                    setDraft({ ...draft, end: event.target.value })
-                  }
+                  onChange={(event) => {
+                    setDraft({ ...draft, end: event.target.value });
+                  }}
                   type="time"
                   value={draft.end}
                 />
@@ -533,16 +560,18 @@ function PatternEditor({
               aria-checked={draft.countsAsOff}
               checked={draft.countsAsOff}
               className="pe-toggle"
-              onChange={(event) =>
-                setDraft({ ...draft, countsAsOff: event.target.checked })
-              }
+              onChange={(event) => {
+                setDraft({ ...draft, countsAsOff: event.target.checked });
+              }}
               role="switch"
               type="checkbox"
             />
           </label>
           <button
             className="st-row"
-            onClick={() => setSubPage("nextDay")}
+            onClick={() => {
+              setSubPage("nextDay");
+            }}
             type="button"
           >
             <span className="st-row-label">翌日のパターン</span>
@@ -563,7 +592,9 @@ function PatternEditor({
         <div className="st-list">
           <button
             className="st-row"
-            onClick={() => setSubPage("look")}
+            onClick={() => {
+              setSubPage("look");
+            }}
             type="button"
           >
             <span className="st-row-label">印と色</span>

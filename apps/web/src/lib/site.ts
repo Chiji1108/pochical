@@ -1,8 +1,8 @@
 export const site = {
-  name: "ポチカル",
-  email: "contact@chiji.tech",
   description:
     "日勤も、夜勤も、お休みも。ポチッと入力、さっと共有。看護師の毎日に寄り添うシフトカレンダー、ポチカル。",
+  email: "contact@chiji.tech",
+  name: "ポチカル",
 };
 
 export const getSiteOrigin = (): string | undefined => {
@@ -25,24 +25,24 @@ export const pageMeta = (
 ) => {
   const origin = getSiteOrigin();
   return {
-    meta: [
-      { title: `${title} | ポチカル` },
-      { name: "description", content: description },
-      { property: "og:title", content: `${title} | ポチカル` },
-      { property: "og:description", content: description },
-      { property: "og:type", content: "website" },
-      { property: "og:locale", content: "ja_JP" },
-      ...(origin
-        ? [{ property: "og:image", content: `${origin}/icon.png` }]
-        : []),
-      ...(privatePage
-        ? [{ name: "robots", content: "noindex, nofollow" }]
-        : []),
-    ],
     links:
       origin && !privatePage
-        ? [{ rel: "canonical", href: `${origin}${path}` }]
+        ? [{ href: `${origin}${path}`, rel: "canonical" }]
         : [],
+    meta: [
+      { title: `${title} | ポチカル` },
+      { content: description, name: "description" },
+      { content: `${title} | ポチカル`, property: "og:title" },
+      { content: description, property: "og:description" },
+      { content: "website", property: "og:type" },
+      { content: "ja_JP", property: "og:locale" },
+      ...(origin
+        ? [{ content: `${origin}/icon.png`, property: "og:image" }]
+        : []),
+      ...(privatePage
+        ? [{ content: "noindex, nofollow", name: "robots" }]
+        : []),
+    ],
   };
 };
 

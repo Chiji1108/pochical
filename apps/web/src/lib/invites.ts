@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { env } from "cloudflare:workers";
 
 import { fetchInvitePreview } from "./invite-preview";
+
 export const getInvite = createServerFn({ method: "GET" })
   .validator((code: string) => {
     if (typeof code !== "string" || code.length > 128) {

@@ -12,14 +12,14 @@ export default {
       "camera=(), microphone=(), geolocation=()"
     );
     headers.set("Cache-Control", "no-store");
-    const pathname = new URL(request.url).pathname;
+    const { pathname } = new URL(request.url);
     if (pathname.startsWith("/invite/") || pathname.startsWith("/account/")) {
       headers.set("X-Robots-Tag", "noindex, nofollow");
     }
     return new Response(response.body, {
+      headers,
       status: response.status,
       statusText: response.statusText,
-      headers,
     });
   },
 } satisfies ExportedHandler<Env>;

@@ -1,4 +1,5 @@
-import { type CSSProperties, createContext, useContext } from "react";
+import { createContext, useContext } from "react";
+import type { CSSProperties } from "react";
 
 // Accent palettes for the app. Each sets the variables design.css reads
 // inside the phone; the shift colors stay as they are.
@@ -105,13 +106,13 @@ export function themeStyle(id: ThemeId) {
   const theme = themeOf(id);
   return {
     "--accent": theme.accent,
-    "--accent-strong": theme.strong,
+    "--accent-border": theme.border,
     "--accent-line": theme.line,
     "--accent-muted": theme.muted,
+    "--accent-press": theme.press,
     "--accent-soft": theme.soft,
     "--accent-soft-2": theme.soft2,
-    "--accent-press": theme.press,
-    "--accent-border": theme.border,
+    "--accent-strong": theme.strong,
   } as CSSProperties;
 }
 

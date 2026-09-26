@@ -7,16 +7,18 @@ import {
   Share,
   X,
 } from "lucide-react";
-import { type CSSProperties, type RefObject, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import type { CSSProperties, RefObject } from "react";
 
-import { DayCell, dateKey, monthDates, type Schedule } from "./design-calendar";
+import { DayCell, dateKey, monthDates } from "./design-calendar";
+import type { Schedule } from "./design-calendar";
 import { CellNamesContext, OffHighlightContext } from "./shift-mark";
 
 // Calendars on the device, as the system lists them.
 const deviceCalendars = [
-  { id: "icloud-home", name: "ホーム", source: "iCloud", color: "#5b8def" },
-  { id: "icloud-work", name: "仕事", source: "iCloud", color: "#e0894a" },
-  { id: "google", name: "さくらの予定", source: "Google", color: "#4f9d69" },
+  { color: "#5b8def", id: "icloud-home", name: "ホーム", source: "iCloud" },
+  { color: "#e0894a", id: "icloud-work", name: "仕事", source: "iCloud" },
+  { color: "#4f9d69", id: "google", name: "さくらの予定", source: "Google" },
 ];
 
 type Step = "choose" | "calendar" | { done: string };
@@ -61,7 +63,9 @@ export function SaveSheet({
     <dialog
       aria-label={title}
       className="dc-breakdown"
-      onClose={() => setStep("choose")}
+      onClose={() => {
+        setStep("choose");
+      }}
       ref={ref}
     >
       <button
@@ -78,7 +82,9 @@ export function SaveSheet({
             <button
               aria-label="戻る"
               className="dc-save-back"
-              onClick={() => setStep("choose")}
+              onClick={() => {
+                setStep("choose");
+              }}
               type="button"
             >
               <ChevronLeft aria-hidden="true" size={20} />
@@ -110,7 +116,9 @@ export function SaveSheet({
               <button
                 className="dc-save-secondary"
                 disabled={shiftCount === 0}
-                onClick={() => setStep("calendar")}
+                onClick={() => {
+                  setStep("calendar");
+                }}
                 type="button"
               >
                 <CalendarPlus aria-hidden="true" size={18} />
@@ -144,7 +152,9 @@ export function SaveSheet({
                     checked={calendarId === item.id}
                     className="dc-sr-only"
                     name="device-calendar"
-                    onChange={() => setCalendarId(item.id)}
+                    onChange={() => {
+                      setCalendarId(item.id);
+                    }}
                     type="radio"
                   />
                   <Check
@@ -162,7 +172,9 @@ export function SaveSheet({
                   aria-checked={includeOff}
                   checked={includeOff}
                   className="pe-toggle"
-                  onChange={(event) => setIncludeOff(event.target.checked)}
+                  onChange={(event) => {
+                    setIncludeOff(event.target.checked);
+                  }}
                   role="switch"
                   type="checkbox"
                 />
@@ -171,11 +183,11 @@ export function SaveSheet({
             <button
               className="dc-import-primary dc-save-add"
               disabled={!calendar || count === 0}
-              onClick={() =>
+              onClick={() => {
                 setStep({
                   done: `「${calendar?.name}」に${monthLabel}のシフトを${count}件追加しました。`,
-                })
-              }
+                });
+              }}
               type="button"
             >
               {count}件を追加
@@ -207,8 +219,8 @@ export function SaveSheet({
 export type ImageOptions = { names: boolean; highlight: boolean };
 
 export const defaultImageOptions: ImageOptions = {
-  names: true,
   highlight: true,
+  names: true,
 };
 
 const imageWeekdays = ["日", "月", "火", "水", "木", "金", "土"];
@@ -234,8 +246,12 @@ export function ImagePreviewPage({
     if (!note) {
       return;
     }
-    const timer = setTimeout(() => setNote(undefined), savedNoteTime);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => {
+      setNote(undefined);
+    }, savedNoteTime);
+    return () => {
+      clearTimeout(timer);
+    };
   }, [note]);
   const dates = monthDates(month);
   const title = `${month.getFullYear()}年${month.getMonth() + 1}月のシフト`;
@@ -252,18 +268,18 @@ export function ImagePreviewPage({
         <CellNamesContext
           value={{
             names: {
+              badge: options.names,
               emoji: options.names,
               icon: options.names,
-              badge: options.names,
             },
           }}
         >
           <OffHighlightContext
             value={{
               highlight: {
+                badge: options.highlight,
                 emoji: options.highlight,
                 icon: options.highlight,
-                badge: options.highlight,
               },
             }}
           >
@@ -301,9 +317,9 @@ export function ImagePreviewPage({
               aria-checked={options.names}
               checked={options.names}
               className="pe-toggle"
-              onChange={(event) =>
-                onOptions({ ...options, names: event.target.checked })
-              }
+              onChange={(event) => {
+                onOptions({ ...options, names: event.target.checked });
+              }}
               role="switch"
               type="checkbox"
             />
@@ -314,9 +330,9 @@ export function ImagePreviewPage({
               aria-checked={options.highlight}
               checked={options.highlight}
               className="pe-toggle"
-              onChange={(event) =>
-                onOptions({ ...options, highlight: event.target.checked })
-              }
+              onChange={(event) => {
+                onOptions({ ...options, highlight: event.target.checked });
+              }}
               role="switch"
               type="checkbox"
             />
@@ -329,7 +345,9 @@ export function ImagePreviewPage({
       <div className="dc-image-actions">
         <button
           className="dc-save-secondary"
-          onClick={() => setNote("LINEなどに送れるメニューが開きます（見本）")}
+          onClick={() => {
+            setNote("LINEなどに送れるメニューが開きます（見本）");
+          }}
           type="button"
         >
           <Share aria-hidden="true" size={18} />
@@ -337,7 +355,9 @@ export function ImagePreviewPage({
         </button>
         <button
           className="dc-import-primary"
-          onClick={() => setNote("写真に保存しました")}
+          onClick={() => {
+            setNote("写真に保存しました");
+          }}
           type="button"
         >
           <Download aria-hidden="true" size={18} />

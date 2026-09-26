@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 
-import {
-  fetchInvitePreview,
-  type InviteFetch,
-} from "../src/lib/invite-preview";
+import { expect, test } from "vitest";
+
+import { fetchInvitePreview } from "../src/lib/invite-preview";
+import type { InviteFetch } from "../src/lib/invite-preview";
 
 const url = "https://example.convex.site";
 const respond =
@@ -15,9 +15,9 @@ test("validates an invitation response", async () => {
     await fetchInvitePreview(
       "Abcd2345",
       url,
-      respond(200, { ok: true, groupName: "同期", groupEmoji: "🌿" })
+      respond(200, { groupEmoji: "🌿", groupName: "同期", ok: true })
     )
-  ).toEqual({ status: "valid", groupName: "同期", groupEmoji: "🌿" });
+  ).toEqual({ groupEmoji: "🌿", groupName: "同期", status: "valid" });
 });
 test("distinguishes revoked links from outages and malformed replies", async () => {
   expect(
@@ -26,7 +26,7 @@ test("distinguishes revoked links from outages and malformed replies", async () 
   for (const response of [
     respond(503, {}),
     respond(200, { ok: true }),
-    respond(200, { ok: true, groupName: 12, groupEmoji: "a" }),
+    respond(200, { groupEmoji: "a", groupName: 12, ok: true }),
   ]) {
     expect(await fetchInvitePreview("Abcd2345", url, response)).toEqual({
       status: "unavailable",

@@ -34,7 +34,6 @@ import {
   Moon as PhMoon,
   MoonStars as PhMoonStars,
   MusicNote as PhMusicNote,
-  type Icon as PhosphorIcon,
   Phone as PhPhone,
   Shield as PhShield,
   ShoppingBag as PhShoppingBag,
@@ -52,10 +51,13 @@ import {
   Users as PhUsers,
   Waves as PhWaves,
 } from "@phosphor-icons/react";
+import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { createContext, useContext } from "react";
 
-import { patterns, type Shift } from "./design-calendar";
-import { ThemeContext, type ThemeId, themeOf } from "./design-theme";
+import { patterns } from "./design-calendar";
+import type { Shift } from "./design-calendar";
+import { ThemeContext, themeOf } from "./design-theme";
+import type { ThemeId } from "./design-theme";
 
 export type ShiftMarkStyle = "icon" | "emoji" | "badge";
 export const ShiftMarkStyleContext = createContext<ShiftMarkStyle>("icon");
@@ -67,9 +69,9 @@ export const SetShiftMarkStyleContext = createContext<
 // Whether calendar cells print the shift name under the mark, per look.
 export type CellNames = Record<ShiftMarkStyle, boolean>;
 export const defaultCellNames: CellNames = {
+  badge: false,
   emoji: false,
   icon: false,
-  badge: false,
 };
 export const CellNamesContext = createContext<{
   names: CellNames;
@@ -98,11 +100,11 @@ export type LookSettings = {
 };
 
 const baseLook: LookSettings = {
-  style: "icon",
   fill: true,
+  highlight: true,
   monochrome: false,
   names: false,
-  highlight: true,
+  style: "icon",
 };
 
 // Ready-made styles: a theme color, a mark for 休み and a look that suit
@@ -113,41 +115,41 @@ export const stylePresets: {
   theme: ThemeId;
   look: LookSettings;
 }[] = [
-  { id: "natural", name: "ナチュラル", theme: "moss", look: baseLook },
+  { id: "natural", look: baseLook, name: "ナチュラル", theme: "moss" },
   {
     id: "monotone",
+    look: { ...baseLook, monochrome: true },
     name: "モノトーン",
     theme: "sumi",
-    look: { ...baseLook, monochrome: true },
   },
   {
     id: "minimal",
-    name: "ミニマル",
-    theme: "sumi",
     look: {
       ...baseLook,
       fill: false,
-      monochrome: true,
       highlight: false,
+      monochrome: true,
     },
+    name: "ミニマル",
+    theme: "sumi",
   },
   {
     id: "pop",
+    look: { ...baseLook, style: "emoji" },
     name: "ポップ",
     theme: "moss",
-    look: { ...baseLook, style: "emoji" },
   },
   {
     id: "roster",
+    look: { ...baseLook, highlight: false, style: "badge" },
     name: "勤務表",
     theme: "moss",
-    look: { ...baseLook, style: "badge", highlight: false },
   },
   {
     id: "friendly",
+    look: { ...baseLook, fill: false, names: true, style: "badge" },
     name: "親しみ",
     theme: "moss",
-    look: { ...baseLook, style: "badge", fill: false, names: true },
   },
 ];
 
@@ -190,77 +192,77 @@ export const OffHighlightContext = createContext<{
 // Twelve muted colors that sit with the moss green theme: text color and a
 // light tint for the badge background.
 export const markColors = [
-  { name: "モス", color: "#486444", tint: "#e4ecdf" },
-  { name: "からし", color: "#8a6d1a", tint: "#f3ead0" },
-  { name: "オレンジ", color: "#95602e", tint: "#f5e4d2" },
-  { name: "テラコッタ", color: "#93503a", tint: "#f3dfd6" },
-  { name: "赤", color: "#9b3f35", tint: "#f4dcd8" },
-  { name: "ローズ", color: "#8d4a5a", tint: "#f2e0e4" },
-  { name: "すみれ", color: "#75497a", tint: "#eee1ef" },
-  { name: "ラベンダー", color: "#5f4f86", tint: "#e8e2f0" },
-  { name: "藍", color: "#4a5388", tint: "#e3e6f2" },
-  { name: "紺", color: "#3d4a73", tint: "#dde2ee" },
-  { name: "青緑", color: "#36706c", tint: "#dcebea" },
-  { name: "グレー", color: "#56636d", tint: "#e3e7ea" },
+  { color: "#486444", name: "モス", tint: "#e4ecdf" },
+  { color: "#8a6d1a", name: "からし", tint: "#f3ead0" },
+  { color: "#95602e", name: "オレンジ", tint: "#f5e4d2" },
+  { color: "#93503a", name: "テラコッタ", tint: "#f3dfd6" },
+  { color: "#9b3f35", name: "赤", tint: "#f4dcd8" },
+  { color: "#8d4a5a", name: "ローズ", tint: "#f2e0e4" },
+  { color: "#75497a", name: "すみれ", tint: "#eee1ef" },
+  { color: "#5f4f86", name: "ラベンダー", tint: "#e8e2f0" },
+  { color: "#4a5388", name: "藍", tint: "#e3e6f2" },
+  { color: "#3d4a73", name: "紺", tint: "#dde2ee" },
+  { color: "#36706c", name: "青緑", tint: "#dcebea" },
+  { color: "#56636d", name: "グレー", tint: "#e3e7ea" },
 ] as const;
 
 // Phosphor duotone icons. "letter" draws the symbol inside a thin circle, so
 // any shift has an icon. Phosphor has one sun-on-the-horizon icon, so sunrise
 // and dusk share it and the sunset uses a dim sun.
 export const markIcons = {
-  letter: undefined,
-  sun: PhSun,
+  ambulance: PhAmbulance,
+  baby: PhBaby,
+  bed: PhBed,
+  book: PhBookOpen,
+  briefcase: PhBriefcase,
+  building: PhBuildings,
+  bus: PhBus,
+  calendarCheck: PhCalendarCheck,
+  car: PhCar,
+  cat: PhCat,
+  clock: PhClock,
+  cloudMoon: PhCloudMoon,
   cloudSun: PhCloudSun,
-  sunrise: PhSunHorizon,
-  sunset: PhSunDim,
-  sunMoon: PhSunHorizon,
+  coffee: PhCoffee,
+  couch: PhCouch,
+  dog: PhDog,
+  drop: PhDrop,
+  dumbbell: PhBarbell,
+  fish: PhFish,
+  flame: PhFire,
+  flower: PhFlower,
+  graduationCap: PhGraduationCap,
+  heart: PhHeart,
+  hospital: PhHospital,
+  house: PhHouse,
+  laptop: PhLaptop,
+  leaf: PhLeaf,
+  letter: undefined,
+  lotus: PhFlowerLotus,
   moon: PhMoon,
   moonStar: PhMoonStars,
-  cloudMoon: PhCloudMoon,
-  couch: PhCouch,
-  leaf: PhLeaf,
-  drop: PhDrop,
-  waves: PhWaves,
-  cat: PhCat,
-  dog: PhDog,
-  fish: PhFish,
-  tulip: PhFlowerTulip,
-  lotus: PhFlowerLotus,
-  bed: PhBed,
-  coffee: PhCoffee,
-  flower: PhFlower,
-  treePalm: PhTreePalm,
-  umbrella: PhUmbrella,
-  book: PhBookOpen,
-  graduationCap: PhGraduationCap,
-  briefcase: PhBriefcase,
-  laptop: PhLaptop,
-  building: PhBuildings,
-  house: PhHouse,
-  users: PhUsers,
-  phone: PhPhone,
-  clock: PhClock,
-  calendarCheck: PhCalendarCheck,
-  hospital: PhHospital,
-  stethoscope: PhStethoscope,
-  syringe: PhSyringe,
-  ambulance: PhAmbulance,
-  siren: PhSiren,
-  flame: PhFire,
-  shield: PhShield,
-  car: PhCar,
-  bus: PhBus,
-  train: PhTrain,
-  plane: PhAirplane,
-  baby: PhBaby,
-  utensils: PhForkKnife,
-  shoppingBag: PhShoppingBag,
-  dumbbell: PhBarbell,
   music: PhMusicNote,
-  heart: PhHeart,
-  star: PhStar,
-  sparkles: PhSparkle,
   partyPopper: PhConfetti,
+  phone: PhPhone,
+  plane: PhAirplane,
+  shield: PhShield,
+  shoppingBag: PhShoppingBag,
+  siren: PhSiren,
+  sparkles: PhSparkle,
+  star: PhStar,
+  stethoscope: PhStethoscope,
+  sun: PhSun,
+  sunMoon: PhSunHorizon,
+  sunrise: PhSunHorizon,
+  sunset: PhSunDim,
+  syringe: PhSyringe,
+  train: PhTrain,
+  treePalm: PhTreePalm,
+  tulip: PhFlowerTulip,
+  umbrella: PhUmbrella,
+  users: PhUsers,
+  utensils: PhForkKnife,
+  waves: PhWaves,
 } satisfies Record<string, PhosphorIcon | undefined>;
 export type MarkIcon = keyof typeof markIcons;
 
@@ -327,19 +329,19 @@ export type Look = {
 export type MarkColor = number;
 
 const shiftLooks: Record<Shift, Omit<Look, "emoji">> = {
-  day: { symbol: "日", icon: "sun", color: 1 },
-  night: { symbol: "夜", icon: "moon", color: 8 },
-  after: { symbol: "明", icon: "sunrise", color: 3 },
-  off: { symbol: "休", icon: "leaf", color: 0 },
-  early: { symbol: "早", icon: "cloudSun", color: 2 },
-  late: { symbol: "遅", icon: "cloudMoon", color: 4 },
-  training: { symbol: "研", icon: "book", color: 10 },
-  paid: { symbol: "有", icon: "flower", color: 5 },
-  duty: { symbol: "当", icon: "siren", color: 4 },
-  offDuty: { symbol: "非", icon: "bed", color: 11 },
-  evening: { symbol: "夕", icon: "sunMoon", color: 2 },
-  junya: { symbol: "準", icon: "cloudMoon", color: 7 },
-  midnight: { symbol: "深", icon: "moonStar", color: 9 },
+  after: { color: 3, icon: "sunrise", symbol: "明" },
+  day: { color: 1, icon: "sun", symbol: "日" },
+  duty: { color: 4, icon: "siren", symbol: "当" },
+  early: { color: 2, icon: "cloudSun", symbol: "早" },
+  evening: { color: 2, icon: "sunMoon", symbol: "夕" },
+  junya: { color: 7, icon: "cloudMoon", symbol: "準" },
+  late: { color: 4, icon: "cloudMoon", symbol: "遅" },
+  midnight: { color: 9, icon: "moonStar", symbol: "深" },
+  night: { color: 8, icon: "moon", symbol: "夜" },
+  off: { color: 0, icon: "leaf", symbol: "休" },
+  offDuty: { color: 11, icon: "bed", symbol: "非" },
+  paid: { color: 5, icon: "flower", symbol: "有" },
+  training: { color: 10, icon: "book", symbol: "研" },
 };
 
 const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
@@ -364,22 +366,22 @@ const lookHints: {
   icon: Look["icon"];
   emoji: string;
 }[] = [
-  { words: ["待機", "オンコール"], icon: "phone", emoji: "📞" },
-  { words: ["在宅", "テレワーク"], icon: "house", emoji: "🏠" },
-  { words: ["出張"], icon: "briefcase", emoji: "💼" },
-  { words: ["会議", "ミーティング"], icon: "users", emoji: "💼" },
-  { words: ["研修", "勉強", "講習", "学校"], icon: "book", emoji: "📚" },
-  { words: ["当番", "当直"], icon: "siren", emoji: "🚒" },
-  { words: ["非番"], icon: "bed", emoji: "🛌" },
-  { words: ["有休", "有給", "年休"], icon: "flower", emoji: "🌷" },
-  { words: ["明け"], icon: "sunrise", emoji: "🌅" },
-  { words: ["夕"], icon: "sunMoon", emoji: "🌆" },
-  { words: ["準夜"], icon: "cloudMoon", emoji: "🌜" },
-  { words: ["深夜", "夜"], icon: "moon", emoji: "🌙" },
-  { words: ["早"], icon: "cloudSun", emoji: "🌤️" },
-  { words: ["遅"], icon: "sunset", emoji: "🌇" },
-  { words: ["休", "公"], icon: "leaf", emoji: "🌿" },
-  { words: ["日", "昼"], icon: "sun", emoji: "☀️" },
+  { emoji: "📞", icon: "phone", words: ["待機", "オンコール"] },
+  { emoji: "🏠", icon: "house", words: ["在宅", "テレワーク"] },
+  { emoji: "💼", icon: "briefcase", words: ["出張"] },
+  { emoji: "💼", icon: "users", words: ["会議", "ミーティング"] },
+  { emoji: "📚", icon: "book", words: ["研修", "勉強", "講習", "学校"] },
+  { emoji: "🚒", icon: "siren", words: ["当番", "当直"] },
+  { emoji: "🛌", icon: "bed", words: ["非番"] },
+  { emoji: "🌷", icon: "flower", words: ["有休", "有給", "年休"] },
+  { emoji: "🌅", icon: "sunrise", words: ["明け"] },
+  { emoji: "🌆", icon: "sunMoon", words: ["夕"] },
+  { emoji: "🌜", icon: "cloudMoon", words: ["準夜"] },
+  { emoji: "🌙", icon: "moon", words: ["深夜", "夜"] },
+  { emoji: "🌤️", icon: "cloudSun", words: ["早"] },
+  { emoji: "🌇", icon: "sunset", words: ["遅"] },
+  { emoji: "🌿", icon: "leaf", words: ["休", "公"] },
+  { emoji: "☀️", icon: "sun", words: ["日", "昼"] },
 ];
 
 // Fills in a look from the name alone; the letter icon and a star cover
@@ -389,9 +391,9 @@ export function guessLook(name: string): Omit<Look, "color"> {
     words.some((word) => name.includes(word))
   );
   return {
-    symbol: firstLetter(name),
-    icon: hint?.icon ?? "letter",
     emoji: hint?.emoji ?? "⭐️",
+    icon: hint?.icon ?? "letter",
+    symbol: firstLetter(name),
   };
 }
 
@@ -402,7 +404,7 @@ export function useMarkColor(markColor: MarkColor) {
 // The theme's own color, for marks drawn all in one color.
 function useThemeMarkColor() {
   const theme = themeOf(useContext(ThemeContext).theme);
-  return { name: "テーマカラー", color: theme.accent, tint: theme.markTint };
+  return { color: theme.accent, name: "テーマカラー", tint: theme.markTint };
 }
 
 // When on, icons and letters all take the theme color instead of each
@@ -454,11 +456,11 @@ export function MarkGlyph({
         aria-hidden="true"
         className={`sm-badge ${filled ? "" : "sm-badge-plain"}`}
         style={{
-          minWidth: size,
-          height: size,
-          fontSize: Math.round(size * 0.56),
-          color,
           background: filled ? tint : "transparent",
+          color,
+          fontSize: Math.round(size * 0.56),
+          height: size,
+          minWidth: size,
         }}
       >
         {look.symbol}
@@ -493,10 +495,10 @@ function IconGlyph({
         aria-hidden="true"
         className="sm-letter"
         style={{
-          width: size,
-          height: size,
-          fontSize: Math.round(size * (look.symbol.length > 1 ? 0.36 : 0.5)),
           color,
+          fontSize: Math.round(size * (look.symbol.length > 1 ? 0.36 : 0.5)),
+          height: size,
+          width: size,
         }}
       >
         {look.symbol}

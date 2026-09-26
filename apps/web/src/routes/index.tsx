@@ -12,8 +12,8 @@ import { StoreLinks } from "../components/store-links";
 import { pageMeta, site } from "../lib/site";
 
 export const Route = createFileRoute("/")({
-  head: () => pageMeta("看護師のためのシフトカレンダー", site.description, "/"),
   component: Home,
+  head: () => pageMeta("看護師のためのシフトカレンダー", site.description, "/"),
 });
 
 function Home() {

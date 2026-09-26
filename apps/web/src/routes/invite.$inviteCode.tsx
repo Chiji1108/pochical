@@ -5,10 +5,9 @@ import { useState } from "react";
 import { StoreLinks } from "../components/store-links";
 import { getInvite } from "../lib/invites";
 import { pageMeta } from "../lib/site";
+
 export const Route = createFileRoute("/invite/$inviteCode")({
-  loader: ({ params }) => getInvite({ data: params.inviteCode }),
-  staleTime: 0,
-  preload: false,
+  component: Invite,
   head: () =>
     pageMeta(
       "グループへの招待",
@@ -16,7 +15,9 @@ export const Route = createFileRoute("/invite/$inviteCode")({
       "/invite",
       true
     ),
-  component: Invite,
+  loader: async ({ params }) => await getInvite({ data: params.inviteCode }),
+  preload: false,
+  staleTime: 0,
 });
 function Invite() {
   const invite = Route.useLoaderData();

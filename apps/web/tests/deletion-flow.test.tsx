@@ -1,8 +1,10 @@
 import { expect, mock, test } from "bun:test";
 
 import { getFunctionName } from "convex/server";
-import { type ReactNode, StrictMode } from "react";
+import { StrictMode } from "react";
+import type { ReactNode } from "react";
 import { act, create } from "react-test-renderer";
+import { expect, test } from "vitest";
 
 const clients: FakeClient[] = [];
 class FakeClient {
@@ -10,25 +12,25 @@ class FakeClient {
   constructor() {
     clients.push(this);
   }
-  close() {
+  async close() {
     this.closed = true;
-    return Promise.resolve();
+    await Promise.resolve();
   }
 }
 let pending = true;
 let account = {
-  name: "検証ユーザー",
-  email: "test@example.test",
-  providers: ["google"],
   canRevokeApple: false,
+  email: "test@example.test",
   isAnonymous: false,
+  name: "検証ユーザー",
+  providers: ["google"],
 };
 const deletion = mock(async () => "test-receipt");
 const signIn = mock(async () => undefined);
 mock.module("convex/react", () => ({
   ConvexReactClient: FakeClient,
-  useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
   useAction: () => deletion,
+  useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
   useQuery: (reference: Parameters<typeof getFunctionName>[0]) =>
     getFunctionName(reference) === "accounts:current" ? account : pending,
 }));
@@ -64,8 +66,8 @@ function setupBrowser() {
   const values = new Map<string, string>();
   globalThis.sessionStorage = {
     getItem: (key: string) => values.get(key) ?? null,
-    setItem: (key: string, value: string) => values.set(key, value),
     removeItem: (key: string) => values.delete(key),
+    setItem: (key: string, value: string) => values.set(key, value),
   };
   globalThis.window = { location: { origin: "https://example.test" } };
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -138,7 +140,7 @@ test("Apple accounts without revocation credentials must reauthenticate before d
   let renderer: ReturnType<typeof create> | undefined;
   deletion.mockClear();
   signIn.mockClear();
-  account = { ...account, providers: ["apple"], canRevokeApple: false };
+  account = { ...account, canRevokeApple: false, providers: ["apple"] };
   try {
     await act(() => {
       renderer = create(<DeletionClient />);

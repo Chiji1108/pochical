@@ -41,10 +41,10 @@ const shifts = [
 ] as const;
 const calendarDays = shifts.map((shift, index) => ({ day: index + 1, shift }));
 const patterns = {
-  day: { name: "日勤", emoji: "☀️" },
-  night: { name: "夜勤", emoji: "🌙" },
-  after: { name: "明け", emoji: "🌅" },
-  off: { name: "休み", emoji: "🌿" },
+  after: { emoji: "🌅", name: "明け" },
+  day: { emoji: "☀️", name: "日勤" },
+  night: { emoji: "🌙", name: "夜勤" },
+  off: { emoji: "🌿", name: "休み" },
 };
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
 

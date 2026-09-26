@@ -4,8 +4,11 @@ import { lazy, Suspense } from "react";
 import { Page } from "../components/site-layout";
 import { pageMeta, site } from "../lib/site";
 
-const DeletionClient = lazy(() => import("../components/deletion-client"));
+const DeletionClient = lazy(
+  async () => await import("../components/deletion-client")
+);
 export const Route = createFileRoute("/account/delete")({
+  component: DeleteAccount,
   head: () =>
     pageMeta(
       "アカウント削除",
@@ -13,7 +16,6 @@ export const Route = createFileRoute("/account/delete")({
       "/account/delete",
       true
     ),
-  component: DeleteAccount,
 });
 const Loading = () => (
   <p aria-live="polite" className="loading-message">

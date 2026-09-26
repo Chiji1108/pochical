@@ -5,9 +5,9 @@ import { describe, expect, it } from "vitest";
 import {
   ClientFrameSchema,
   ServerError_Code,
-  type ServerFrame,
   ServerFrameSchema,
 } from "../src/gen/pochical/v1/sync_pb";
+import type { ServerFrame } from "../src/gen/pochical/v1/sync_pb";
 import {
   CURRENT_PROTOCOL_VERSION,
   MIN_PROTOCOL_VERSION,
@@ -34,9 +34,15 @@ const openGroupSocket = async (groupId: string): Promise<WebSocket> => {
 const nextFrame = async (socket: WebSocket): Promise<ServerFrame> => {
   // A workerd client socket delivers binary messages as Blob.
   const data = await new Promise<Blob>((resolve) => {
-    socket.addEventListener("message", (event) => resolve(event.data as Blob), {
-      once: true,
-    });
+    socket.addEventListener(
+      "message",
+      (event) => {
+        resolve(event.data as Blob);
+      },
+      {
+        once: true,
+      }
+    );
   });
   return fromBinary(
     ServerFrameSchema,
@@ -56,16 +62,16 @@ describe("SystemService", () => {
     const response = await exports.default.fetch(
       `${ORIGIN}/pochical.v1.SystemService/GetServerInfo`,
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: "{}",
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       }
     );
     expect(response.status).toBe(200);
     const body = (await response.json()) as Record<string, unknown>;
     expect(body.minProtocolVersion).toBe(MIN_PROTOCOL_VERSION);
     expect(body.currentProtocolVersion).toBe(CURRENT_PROTOCOL_VERSION);
-    expect(typeof body.serverTime).toBe("string");
+    expect(body.serverTime).toBeTypeOf("string");
   });
 });
 
