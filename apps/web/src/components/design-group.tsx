@@ -22,7 +22,6 @@ import {
 import { useContext, useEffect, useId, useState } from "react";
 import type { ReactNode } from "react";
 
-import type { DesignVariants } from "../lib/design-variants";
 import {
   addDays,
   dateKey,
@@ -513,13 +512,11 @@ export function DesignGroup({
   schedule,
   patternKeys,
   profile,
-  shiftsHeader,
   onTab,
 }: {
   schedule: Schedule;
   patternKeys: Shift[];
   profile: Profile;
-  shiftsHeader: ShiftsHeader;
   onTab: (tab: Tab) => void;
 }) {
   const [groups, setGroups] = useState<Omit<Group, "members">[]>([
@@ -656,7 +653,6 @@ export function DesignGroup({
         <div className="st-scroll">
           {page.name === "shifts" && (
             <ShiftsPage
-              header={shiftsHeader}
               backLabel={page.from ? chatTitle(group, page.from) : group.name}
               group={group}
               layout={layouts[group.id] ?? defaultLayout(group.members.length)}
@@ -1503,14 +1499,9 @@ function defaultLayout(count: number): Layout {
   return count <= marksUpTo ? "days" : "weeks";
 }
 
-// Where 週ごと / 日ごと / 人ごと live: a full-width row under the header, or
-// one menu that also holds シフトパターン and saving, compared on /design.
-type ShiftsHeader = DesignVariants["shiftsHeader"];
-
 function ShiftsPage({
   group,
   backLabel,
-  header,
   month: initialMonth,
   layout,
   onLayout: setLayout,
@@ -1518,7 +1509,6 @@ function ShiftsPage({
 }: {
   group: Group;
   backLabel: string;
-  header: ShiftsHeader;
   month?: Date;
   layout: Layout;
   onLayout: (layout: Layout) => void;
@@ -1557,64 +1547,29 @@ function ShiftsPage({
             <ChevronLeft aria-hidden="true" size={20} />
             <span className="gr-shifts-back-label">{backLabel}</span>
           </button>
-          {header === "menu" ? (
-            <ShiftsMenu
-              layout={layout}
-              onLayout={setLayout}
-              onLegend={() => {
-                setLegend(group.members);
-              }}
-              onSave={() => {
-                setSaved(true);
-              }}
-            />
-          ) : (
-            // Others' shifts only go out as a picture, so no choice first.
-            <button
-              aria-label="シフト表を画像で保存"
-              className="dc-heading-icon"
-              onClick={() => {
-                setSaved(true);
-              }}
-              type="button"
-            >
-              <Download aria-hidden="true" size={19} />
-            </button>
-          )}
+          <ShiftsMenu
+            layout={layout}
+            onLayout={setLayout}
+            onLegend={() => {
+              setLegend(group.members);
+            }}
+            onSave={() => {
+              setSaved(true);
+            }}
+          />
         </div>
       </header>
-      {header === "below" && (
-        <fieldset className="design-segment st-row-segment gr-layout-toggle gr-layout-toggle-wide">
-          <legend className="dc-sr-only">表の形</legend>
-          {layoutOptions.map((option) => (
-            <button
-              aria-pressed={layout === option.layout}
-              key={option.layout}
-              onClick={() => {
-                setLayout(option.layout);
-              }}
-              type="button"
-            >
-              {option.name}
-            </button>
-          ))}
-        </fieldset>
-      )}
       <PagedShifts
         dates={dates}
         group={group}
         layout={layout}
         month={month}
-        onLegend={() => {
-          setLegend(group.members);
-        }}
         onMember={(member) => {
           setLegend([member]);
         }}
         onMonth={setMonth}
         onPickDay={pick}
         picked={picked}
-        showLegendRow={header !== "menu"}
       />
       {picked && (
         <PickedDaySheet
@@ -1731,11 +1686,8 @@ function PagedShifts({
   onMonth,
   onPickDay,
   onMember,
-  onLegend,
-  showLegendRow,
 }: {
   group: Group;
-  showLegendRow: boolean;
   layout: Layout;
   month: Date;
   dates: Date[];
@@ -1743,8 +1695,13 @@ function PagedShifts({
   onMonth: (month: Date) => void;
   onPickDay: (date: Date) => void;
   onMember: (member: Member) => void;
-  onLegend: () => void;
 }) {
+  // Whom 人ごと shows; chosen above the month, like a filter.
+  const [personId, setPersonId] = useState(
+    group.members.find((member) => !member.me)?.id ?? group.members[0].id
+  );
+  const person =
+    group.members.find((member) => member.id === personId) ?? group.members[0];
   const offDays = dates.filter(
     (date) => sameMonth(date, month) && everyoneOff(group.members, date)
   );
@@ -1753,6 +1710,13 @@ function PagedShifts({
     month.getFullYear() === designToday.getFullYear();
   return (
     <>
+      {layout === "person" && (
+        <PeoplePicker
+          members={group.members}
+          onPick={setPersonId}
+          picked={person}
+        />
+      )}
       <div className="gr-shifts-month">
         <span />
         <div className="gr-month">
@@ -1812,7 +1776,12 @@ function PagedShifts({
         />
       )}
       {layout === "person" && (
-        <PersonCalendar dates={dates} group={group} month={month} />
+        <PersonCalendar
+          dates={dates}
+          group={group}
+          member={person}
+          month={month}
+        />
       )}
       <MonthFoot month={month} onMonth={onMonth} />
       {/* Like the calendar's days-off total, at the foot of the month. */}
@@ -1832,22 +1801,11 @@ function PagedShifts({
           {offDays.length > 0 && <small className="gr-together-unit">日</small>}
         </span>
       </div>
-      {showLegendRow && (
-        <div className="st-list">
-          <button className="st-row" onClick={onLegend} type="button">
-            <span className="st-row-label">シフトパターン</span>
-            <span className="st-row-value" />
-            <ChevronRight
-              aria-hidden="true"
-              className="st-row-arrow"
-              size={17}
-            />
-          </button>
-        </div>
+      {layout !== "person" && (
+        <p className="st-note">
+          アイコンを押すとその人のシフトパターン、マスを押すとその日のみんなの予定が見られます。
+        </p>
       )}
-      <p className="st-note">
-        アイコンを押すとその人のシフトパターン、マスを押すとその日のみんなの予定が見られます。
-      </p>
     </>
   );
 }
@@ -2460,40 +2418,53 @@ function MemberTable({
   );
 }
 
-// One member at a time, in the same kind of calendar as your own.
+// 人ごと: who to show, above the month.
+function PeoplePicker({
+  members,
+  picked,
+  onPick,
+}: {
+  members: Member[];
+  picked: Member;
+  onPick: (id: string) => void;
+}) {
+  return (
+    <fieldset className="gr-people">
+      <legend className="dc-sr-only">表示する人</legend>
+      {members.map((member) => (
+        <button
+          aria-pressed={member.id === picked.id}
+          key={member.id}
+          onClick={() => {
+            onPick(member.id);
+          }}
+          type="button"
+        >
+          <Avatar member={member} />
+          {member.name}
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
+// One member at a time, in the same kind of calendar as your own. Shift
+// names always show under the marks and days off are always lit, whatever
+// the member's style, so no separate list of their patterns is needed.
 function PersonCalendar({
   group,
+  member,
   dates,
   month,
 }: {
   group: Group;
+  member: Member;
   dates: Date[];
   month: Date;
 }) {
-  const [memberId, setMemberId] = useState(
-    group.members.find((member) => !member.me)?.id ?? group.members[0].id
-  );
-  const member =
-    group.members.find((item) => item.id === memberId) ?? group.members[0];
   const me = group.members.find((item) => item.me);
   return (
     <>
-      <fieldset className="gr-people">
-        <legend className="dc-sr-only">表示する人</legend>
-        {group.members.map((item) => (
-          <button
-            aria-pressed={item.id === member.id}
-            key={item.id}
-            onClick={() => {
-              setMemberId(item.id);
-            }}
-            type="button"
-          >
-            <Avatar member={item} />
-            {item.name}
-          </button>
-        ))}
-      </fieldset>
       <div aria-hidden="true" className="dc-weekdays gr-weekdays">
         {weekdayLabels.map((label) => (
           <span key={label}>{label}</span>
@@ -2510,7 +2481,7 @@ function PersonCalendar({
           return (
             <div
               aria-label={`${formatDay(date)}：${item?.name ?? "未入力"}${withMe ? "、自分も休み" : ""}`}
-              className={`gr-person-day ${outside ? "gr-outside" : ""} ${withMe ? "gr-together-cell" : ""}`}
+              className={`gr-person-day ${outside ? "gr-outside" : ""} ${item?.off ? "gr-person-off" : ""} ${withMe ? "gr-person-with-me" : ""}`}
               key={dateKey(date)}
               role="img"
             >
@@ -2520,7 +2491,10 @@ function PersonCalendar({
                 {date.getDate()}
               </span>
               {item && (
-                <MemberMark look={item.look} member={member} size={22} />
+                <>
+                  <MemberMark look={item.look} member={member} size={20} />
+                  <span className="gr-person-name">{item.name}</span>
+                </>
               )}
             </div>
           );
@@ -2529,32 +2503,7 @@ function PersonCalendar({
       {!member.me && (
         <p className="st-note">日付に枠がある日は、自分も休みの日です。</p>
       )}
-      <Legend members={[member]} />
     </>
-  );
-}
-
-// What each mark means, in the viewer's style, per member.
-function Legend({ members }: { members: Member[] }) {
-  return (
-    <section className="st-section">
-      <h4>シフトパターン</h4>
-      <div className="st-list">
-        {members.map((member) => (
-          <div className="st-row gr-legend-row" key={member.id}>
-            <Avatar member={member} />
-            <span className="gr-legend">
-              {member.patterns.map((item) => (
-                <span className="gr-legend-item" key={item.id}>
-                  <MemberMark look={item.look} member={member} size={16} />
-                  {item.name}
-                </span>
-              ))}
-            </span>
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }
 

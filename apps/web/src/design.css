@@ -2521,7 +2521,6 @@ button.st-row:hover {
   border-radius: 0 11px 11px 0;
 }
 /* Elsewhere a shared day off is simply lit. */
-.gr-person-day.gr-together-cell,
 .gr-day-card-row.gr-together-cell {
   background: var(--accent-soft);
 }
@@ -2654,26 +2653,10 @@ button.st-row:hover {
   background: var(--surface);
   border-color: var(--accent);
 }
+/* Date, mark and the shift name, which 人ごと always shows. */
 .gr-person-day {
-  height: 58px;
-}
-
-.gr-legend-row {
-  align-items: flex-start;
-  padding-top: 12px;
-  padding-bottom: 10px;
-}
-.gr-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  font-size: 12px;
-  color: var(--text-2);
-}
-.gr-legend-item {
-  display: inline-flex;
-  gap: 4px;
-  align-items: center;
+  gap: 2px;
+  height: 68px;
 }
 
 .gr-qr {
@@ -3118,11 +3101,6 @@ button.st-row:hover {
 }
 
 /* 日ごと: a row per day, a column per member. */
-.gr-layout-toggle {
-  padding: 2px;
-  margin: 0;
-  border: 0;
-}
 /* The table scrolls inside its frame, so the names and dates can stay put. */
 .gr-rows-scroll {
   max-height: 520px;
@@ -4382,14 +4360,7 @@ button.st-row:hover {
 .dc-phone * {
   scrollbar-width: none;
 }
-/* 週ごと / 日ごと / 人ごと as a full-width row under the header. */
-.design-segment.st-row-segment.gr-layout-toggle-wide {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  width: 100%;
-  margin: 0;
-}
-/* Or as one pull-down in the header. */
+/* 週ごと / 日ごと / 人ごと and the page's other actions, in one pull-down. */
 .gr-menu-anchor {
   position: relative;
   flex-shrink: 0;
@@ -4510,4 +4481,20 @@ button.st-row:hover {
   color: inherit;
   background: transparent;
   border: 0;
+}
+/* 人ごと: the member's days off are lit, and days you are both off are
+   framed, as the note under the calendar says. */
+.gr-person-day.gr-person-off {
+  background: var(--accent-soft);
+}
+.gr-person-day.gr-person-with-me {
+  border-color: var(--accent-muted);
+}
+.gr-person-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 9px;
+  color: var(--text-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

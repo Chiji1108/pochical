@@ -670,7 +670,6 @@ export function DesignCalendar({
           patternKeys={patternKeys}
           profile={profile}
           schedule={schedule}
-          shiftsHeader={variants.shiftsHeader}
         />
       )}
       {tab === "calendar" && imagePreview && (
