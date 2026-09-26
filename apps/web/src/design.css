@@ -2754,7 +2754,9 @@ button.st-row:hover {
   padding: 8px 6px 10px 4px;
   color: var(--text);
   text-align: left;
-  background: var(--surface);
+  /* Only a frame on the screen's own color. --surface is white like --bg
+     in light mode but lifted in dark, where the card would float. */
+  background: var(--bg);
   border: 1px solid var(--separator);
   border-radius: 16px;
 }
