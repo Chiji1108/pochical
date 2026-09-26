@@ -24,8 +24,6 @@ import {
   LookSettingsContext,
   MonochromeContext,
   OffHighlightContext,
-  SetIconWeightContext,
-  SetShiftMarkStyleContext,
   ShiftMarkStyleContext,
   baseLook,
   lookDefaults,
@@ -79,18 +77,14 @@ function DesignPage() {
   const [lookStyle, setLookStyle] = useState(baseLook.style);
   const [looks, setLooks] = useState(lookDefaults);
   const look = looks[lookStyle];
-  const setLook = (next: LookSettings) => {
-    setLookStyle(next.style);
-    setLooks((previous) => ({ ...previous, [next.style]: next }));
-  };
+  // Changes the given style's switches (the current one if none is given)
+  // and makes it the current style.
   const updateLook = (change: Partial<LookSettings>) => {
-    if (change.style) {
-      setLookStyle(change.style);
-      return;
-    }
+    const target = change.style ?? lookStyle;
+    setLookStyle(target);
     setLooks((previous) => ({
       ...previous,
-      [lookStyle]: { ...previous[lookStyle], ...change },
+      [target]: { ...previous[target], ...change },
     }));
   };
   const [color, setColor] = useState<ColorChoice>("multi");
@@ -161,105 +155,93 @@ function DesignPage() {
             <SetToneContext value={setTone}>
               <ColorChoiceContext value={{ color, setColor }}>
                 <ThemeContext value={{ theme }}>
-                  <LookSettingsContext value={{ look, setLook }}>
+                  <LookSettingsContext value={{ look, updateLook }}>
                     <IconWeightContext
                       value={look.fill ? "duotone" : "regular"}
                     >
-                      <SetIconWeightContext
-                        value={(weight) => {
-                          updateLook({ fill: weight === "duotone" });
-                        }}
-                      >
-                        <ShiftMarkStyleContext value={look.style}>
-                          <CellNamesContext
+                      <ShiftMarkStyleContext value={look.style}>
+                        <CellNamesContext
+                          value={{
+                            names: {
+                              badge: look.names,
+                              emoji: look.names,
+                              icon: look.names,
+                            },
+                            setNames: (names) => {
+                              updateLook({ names: names[look.style] });
+                            },
+                          }}
+                        >
+                          <OffHighlightContext
                             value={{
-                              names: {
-                                badge: look.names,
-                                emoji: look.names,
-                                icon: look.names,
+                              highlight: {
+                                badge: look.highlight,
+                                emoji: look.highlight,
+                                icon: look.highlight,
                               },
-                              setNames: (names) => {
-                                updateLook({ names: names[look.style] });
+                              setHighlight: (highlight) => {
+                                updateLook({
+                                  highlight:
+                                    highlight[look.style] ?? look.highlight,
+                                });
                               },
                             }}
                           >
-                            <OffHighlightContext
-                              value={{
-                                highlight: {
-                                  badge: look.highlight,
-                                  emoji: look.highlight,
-                                  icon: look.highlight,
-                                },
-                                setHighlight: (highlight) => {
-                                  updateLook({
-                                    highlight:
-                                      highlight[look.style] ?? look.highlight,
-                                  });
-                                },
-                              }}
+                            <MonochromeContext
+                              value={{ monochrome: color !== "multi" }}
                             >
-                              <MonochromeContext
-                                value={{ monochrome: color !== "multi" }}
-                              >
-                                <SetShiftMarkStyleContext
-                                  value={(style) => {
-                                    updateLook({ style });
-                                  }}
-                                >
-                                  <div className="design-screens" key={version}>
-                                    <section aria-labelledby="design-view-title">
-                                      <h2 id="design-view-title">
-                                        <span>01</span> カレンダー表示
-                                      </h2>
-                                      <DesignCalendar
-                                        initialEditing={false}
-                                        onChange={setSchedule}
-                                        schedule={schedule}
-                                        variants={variants}
-                                      />
-                                      <p className="design-caption">
-                                        ひと月の予定と、お休みをひと目で。
-                                      </p>
-                                    </section>
-                                    <section aria-labelledby="design-edit-title">
-                                      <h2 id="design-edit-title">
-                                        <span>02</span> シフト入力
-                                      </h2>
-                                      <DesignCalendar
-                                        initialEditing
-                                        onChange={setSchedule}
-                                        schedule={schedule}
-                                        variants={variants}
-                                      />
-                                      <p className="design-caption">
-                                        シフトを押すと翌日へ。日付をタップして修正もできます。
-                                      </p>
-                                    </section>
-                                    <PatternStudy
-                                      caption="2026年8月。8パターンを4列×2段で比較。"
-                                      count={8}
-                                      id="design-six-weeks-title"
-                                      month={7}
-                                      number="03"
-                                      title="6段の月 × 8パターン"
-                                      variants={variants}
-                                    />
-                                    <section aria-labelledby="design-onboarding-title">
-                                      <h2 id="design-onboarding-title">
-                                        <span>04</span> はじめての設定
-                                      </h2>
-                                      <DesignOnboarding variants={variants} />
-                                      <p className="design-caption">
-                                        最初の1問で、入れやすい始め方に分かれます。
-                                      </p>
-                                    </section>
-                                  </div>
-                                </SetShiftMarkStyleContext>
-                              </MonochromeContext>
-                            </OffHighlightContext>
-                          </CellNamesContext>
-                        </ShiftMarkStyleContext>
-                      </SetIconWeightContext>
+                              <div className="design-screens" key={version}>
+                                <section aria-labelledby="design-view-title">
+                                  <h2 id="design-view-title">
+                                    <span>01</span> カレンダー表示
+                                  </h2>
+                                  <DesignCalendar
+                                    initialEditing={false}
+                                    onChange={setSchedule}
+                                    schedule={schedule}
+                                    variants={variants}
+                                  />
+                                  <p className="design-caption">
+                                    ひと月の予定と、お休みをひと目で。
+                                  </p>
+                                </section>
+                                <section aria-labelledby="design-edit-title">
+                                  <h2 id="design-edit-title">
+                                    <span>02</span> シフト入力
+                                  </h2>
+                                  <DesignCalendar
+                                    initialEditing
+                                    onChange={setSchedule}
+                                    schedule={schedule}
+                                    variants={variants}
+                                  />
+                                  <p className="design-caption">
+                                    シフトを押すと翌日へ。日付をタップして修正もできます。
+                                  </p>
+                                </section>
+                                <PatternStudy
+                                  caption="2026年8月。8パターンを4列×2段で比較。"
+                                  count={8}
+                                  id="design-six-weeks-title"
+                                  month={7}
+                                  number="03"
+                                  title="6段の月 × 8パターン"
+                                  variants={variants}
+                                />
+                                <section aria-labelledby="design-onboarding-title">
+                                  <h2 id="design-onboarding-title">
+                                    <span>04</span> はじめての設定
+                                  </h2>
+                                  <DesignOnboarding variants={variants} />
+                                  <p className="design-caption">
+                                    最初の1問で、入れやすい始め方に分かれます。
+                                  </p>
+                                </section>
+                              </div>
+                            </MonochromeContext>
+                          </OffHighlightContext>
+                        </CellNamesContext>
+                      </ShiftMarkStyleContext>
                     </IconWeightContext>
                   </LookSettingsContext>
                 </ThemeContext>

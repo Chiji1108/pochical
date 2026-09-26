@@ -54,15 +54,13 @@ import {
   IconWeightContext,
   LookSettingsContext,
   OffHighlightContext,
-  SetIconWeightContext,
-  SetShiftMarkStyleContext,
   ShiftMark,
   ShiftMarkStyleContext,
   lookOf,
   useMarkColors,
   useOffHighlight,
 } from "./shift-mark";
-import type { ShiftMarkStyle } from "./shift-mark";
+import type { LookSettings, ShiftMarkStyle } from "./shift-mark";
 
 type Page =
   | "top"
@@ -77,11 +75,24 @@ type Page =
   | "appearance"
   | "profile";
 
-const markOptions: { style: ShiftMarkStyle; name: string }[] = [
-  { name: "アイコン", style: "icon" },
-  { name: "絵文字", style: "emoji" },
-  { name: "文字", style: "badge" },
+// The four shapes members see. Icons come filled or as outlines; letters
+// always sit on their tile, and emoji have no fill.
+const shapeOptions: { name: string; style: ShiftMarkStyle; fill: boolean }[] = [
+  { fill: true, name: "アイコン", style: "icon" },
+  { fill: false, name: "線", style: "icon" },
+  { fill: true, name: "絵文字", style: "emoji" },
+  { fill: true, name: "文字", style: "badge" },
 ];
+
+function shapeOf(look: LookSettings) {
+  return (
+    shapeOptions.find(
+      (option) =>
+        option.style === look.style &&
+        (look.style !== "icon" || option.fill === look.fill)
+    ) ?? shapeOptions[0]
+  );
+}
 
 const previewDays = 14;
 const previewToday = new Date(2026, 8, 24);
@@ -339,10 +350,9 @@ function SettingsTop({
           onOpen={() => {
             onOpen("mark");
           }}
-          value={`${
-            markOptions.find((option) => option.style === look.style)?.name ??
-            ""
-          }${tone === "deep" ? "" : `・${toneName(tone)}`}`}
+          value={`${shapeOf(look).name}${
+            tone === "deep" ? "" : `・${toneName(tone)}`
+          }`}
         />
         <AppearanceRow
           onOpen={() => {
@@ -978,7 +988,6 @@ function MarkPage({
   onBack: () => void;
 }) {
   const current = useContext(ShiftMarkStyleContext);
-  const setStyle = useContext(SetShiftMarkStyleContext);
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="スタイル" />
@@ -986,23 +995,7 @@ function MarkPage({
       {/* Every choice shows in the preview at once, so there is nothing to
           confirm or cancel. */}
       <Group note="グループの人にも表示" title="シフトの見た目">
-        <fieldset className="st-mark-segment">
-          <legend className="dc-sr-only">シフトの見た目</legend>
-          {markOptions.map((option) => (
-            <button
-              aria-pressed={current === option.style}
-              key={option.style}
-              onClick={() => setStyle?.(option.style)}
-              type="button"
-            >
-              <ShiftMarkStyleContext value={option.style}>
-                <ShiftMark shift="day" size={20} />
-              </ShiftMarkStyleContext>
-              {option.name}
-            </button>
-          ))}
-        </fieldset>
-        <MarkFillSwitch current={current} />
+        <ShapeChoices />
       </Group>
       <Group note="あなたの画面だけ" title="カラー">
         <ColorChoices />
@@ -1134,22 +1127,35 @@ const previewSchemes = [
 ] as const;
 
 // The switches for the look in use, as one list.
-// The fill is part of the shape members see; emoji have none, so the row
-// goes away for them.
-function MarkFillSwitch({ current }: { current: ShiftMarkStyle }) {
-  const iconWeight = useContext(IconWeightContext);
-  const setIconWeight = useContext(SetIconWeightContext);
-  if (current === "emoji") {
-    return null;
-  }
+function ShapeChoices() {
+  const { look, updateLook } = useContext(LookSettingsContext);
+  const current = shapeOf(look);
   return (
-    <div className="st-list st-mark-fill">
-      <SwitchRow
-        checked={iconWeight === "duotone"}
-        label="塗り"
-        onChange={(checked) => setIconWeight?.(checked ? "duotone" : "regular")}
-      />
-    </div>
+    <fieldset className="st-mark-segment">
+      <legend className="dc-sr-only">シフトの見た目</legend>
+      {shapeOptions.map((option) => (
+        <button
+          aria-pressed={option === current}
+          key={option.name}
+          onClick={() => {
+            // Only icons carry their fill; for the others it is left alone.
+            updateLook?.(
+              option.style === "icon"
+                ? { fill: option.fill, style: option.style }
+                : { style: option.style }
+            );
+          }}
+          type="button"
+        >
+          <ShiftMarkStyleContext value={option.style}>
+            <IconWeightContext value={option.fill ? "duotone" : "regular"}>
+              <ShiftMark shift="day" size={20} />
+            </IconWeightContext>
+          </ShiftMarkStyleContext>
+          {option.name}
+        </button>
+      ))}
+    </fieldset>
   );
 }
 

@@ -2092,17 +2092,10 @@ button.st-row:hover {
 .dc-detail-patterns button[aria-pressed="true"] .sm-icon {
   fill: var(--on-accent-fill);
 }
-/* Letters without their tile would sink the same way. The color is set on
-   the element, so only !important can turn it white here. */
-.dc-detail-patterns button[aria-pressed="true"] .sm-badge-plain {
-  color: var(--on-accent-fill) !important;
-}
-.st-mark-fill {
-  margin-top: 8px;
-}
 .st-mark-segment {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
   gap: 3px;
   padding: 3px;
   margin: 0;

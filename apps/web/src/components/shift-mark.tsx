@@ -67,10 +67,6 @@ import {
 
 export type ShiftMarkStyle = "icon" | "emoji" | "badge";
 export const ShiftMarkStyleContext = createContext<ShiftMarkStyle>("icon");
-// Lets the in-app setting change the look for the whole preview.
-export const SetShiftMarkStyleContext = createContext<
-  ((style: ShiftMarkStyle) => void) | undefined
->(undefined);
 
 // Whether calendar cells print the shift name under the mark, per look.
 export type CellNames = Record<ShiftMarkStyle, boolean>;
@@ -95,7 +91,8 @@ export function useOffHighlight(style: ShiftMarkStyle) {
   return highlight[style] ?? true;
 }
 
-// Every look setting at once: the style and its switches.
+// Every look setting at once: the style and its switches. `fill` only
+// matters for icons; letters always sit on their tile and emoji have none.
 export type LookSettings = {
   style: ShiftMarkStyle;
   fill: boolean;
@@ -116,7 +113,7 @@ export const baseLook = lookDefaults.icon;
 
 // Looks the sample members use, by name.
 export const sampleLooks = {
-  friendly: { ...baseLook, fill: false, names: true, style: "badge" },
+  friendly: { ...baseLook, names: true, style: "badge" },
   minimal: { ...baseLook, fill: false, highlight: false },
   natural: baseLook,
   pop: { ...baseLook, style: "emoji" },
@@ -125,7 +122,7 @@ export const sampleLooks = {
 
 export const LookSettingsContext = createContext<{
   look: LookSettings;
-  setLook?: (look: LookSettings) => void;
+  updateLook?: (change: Partial<LookSettings>) => void;
 }>({ look: baseLook });
 
 export const OffHighlightContext = createContext<{
@@ -364,14 +361,10 @@ export function useDisplayColor(markColor: MarkColor) {
 }
 
 // The fill setting: icons get a tinted fill (Phosphor duotone) or just the
-// outline, and letters sit on a tinted tile or stand alone.
+// outline. Letters without their tile would read as stray text, so they
+// always keep it.
 export type IconWeight = "duotone" | "regular";
 export const IconWeightContext = createContext<IconWeight>("duotone");
-// Until the person picks one, the fill follows the color setting: filled for
-// per-shift colors, outline only when everything is the theme color.
-export const SetIconWeightContext = createContext<
-  ((weight: IconWeight) => void) | undefined
->(undefined);
 
 export function nextColor(used: MarkColor[]) {
   const free = markColors.findIndex((_, index) => !used.includes(index));
@@ -388,15 +381,13 @@ export function MarkGlyph({
   size: number;
 }) {
   const { color, tint } = useDisplayColor(look.color);
-  // The fill setting also decides whether letters sit on a tinted tile.
-  const filled = useContext(IconWeightContext) === "duotone";
   if (style === "badge") {
     return (
       <span
         aria-hidden="true"
-        className={`sm-badge ${filled ? "" : "sm-badge-plain"}`}
+        className="sm-badge"
         style={{
-          background: filled ? tint : "transparent",
+          background: tint,
           color,
           fontSize: Math.round(size * 0.56),
           height: size,
