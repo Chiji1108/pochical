@@ -95,8 +95,7 @@ export function useOffHighlight(style: ShiftMarkStyle) {
   return highlight[style] ?? true;
 }
 
-// Every look setting at once. Presets set good combinations; the switches
-// under 細かく設定 change one thing each, which makes a custom look.
+// Every look setting at once: the style and its switches.
 export type LookSettings = {
   style: ShiftMarkStyle;
   fill: boolean;
@@ -104,12 +103,16 @@ export type LookSettings = {
   highlight: boolean;
 };
 
-export const baseLook: LookSettings = {
-  fill: true,
-  highlight: true,
-  names: false,
-  style: "icon",
+// Where each style's switches start. Letters already sit on tinted tiles
+// and are the shift's name, so they start without names and without the
+// days-off highlight behind them.
+export const lookDefaults: Record<ShiftMarkStyle, LookSettings> = {
+  badge: { fill: true, highlight: false, names: false, style: "badge" },
+  emoji: { fill: true, highlight: true, names: false, style: "emoji" },
+  icon: { fill: true, highlight: true, names: false, style: "icon" },
 };
+
+export const baseLook = lookDefaults.icon;
 
 // Looks the sample members use, by name.
 export const sampleLooks = {

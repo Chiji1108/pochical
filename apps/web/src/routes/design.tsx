@@ -28,6 +28,7 @@ import {
   SetShiftMarkStyleContext,
   ShiftMarkStyleContext,
   baseLook,
+  lookDefaults,
 } from "../components/shift-mark";
 import type { LookSettings } from "../components/shift-mark";
 import type { Tone } from "../lib/design-tokens";
@@ -73,9 +74,24 @@ function DesignPage() {
   );
   const [version, setVersion] = useState(0);
   const navigate = Route.useNavigate();
-  const [look, setLook] = useState(baseLook);
+  // Each style keeps its own switches, so going back to a style finds them
+  // as they were left.
+  const [lookStyle, setLookStyle] = useState(baseLook.style);
+  const [looks, setLooks] = useState(lookDefaults);
+  const look = looks[lookStyle];
+  const setLook = (next: LookSettings) => {
+    setLookStyle(next.style);
+    setLooks((previous) => ({ ...previous, [next.style]: next }));
+  };
   const updateLook = (change: Partial<LookSettings>) => {
-    setLook((previous) => ({ ...previous, ...change }));
+    if (change.style) {
+      setLookStyle(change.style);
+      return;
+    }
+    setLooks((previous) => ({
+      ...previous,
+      [lookStyle]: { ...previous[lookStyle], ...change },
+    }));
   };
   const [color, setColor] = useState<ColorChoice>("multi");
   const theme = themeOfColor(color);
