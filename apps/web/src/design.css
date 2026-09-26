@@ -2521,7 +2521,6 @@ button.st-row:hover {
   border-radius: 0 11px 11px 0;
 }
 /* Elsewhere a shared day off is simply lit. */
-.design-page .gr-overlay-day.gr-together-cell,
 .gr-person-day.gr-together-cell,
 .gr-day-card-row.gr-together-cell {
   background: var(--accent-soft);
@@ -2599,18 +2598,16 @@ button.st-row:hover {
   height: 30px;
 }
 
-/* Overlay: everyone in one month. */
+/* 人ごと: one member's month. */
 .gr-weekdays {
   padding-bottom: 4px;
   margin-bottom: -12px;
 }
-.gr-overlay,
 .gr-person {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 3px;
 }
-.design-page .gr-overlay-day,
 .gr-person-day {
   display: flex;
   flex-direction: column;
@@ -2624,28 +2621,9 @@ button.st-row:hover {
   border: 1px solid transparent;
   border-radius: 12px;
 }
-.design-page .gr-overlay-day[aria-pressed="true"] {
-  border-color: var(--accent);
-}
-.gr-overlay-date {
+.gr-person-date {
   font-size: 11px;
   font-weight: 600;
-}
-.gr-overlay-marks {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  align-items: center;
-}
-.gr-day-value {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  justify-content: flex-end;
-}
-.gr-day-time {
-  font-size: 11px;
-  color: var(--text-4);
 }
 
 /* One person at a time. */

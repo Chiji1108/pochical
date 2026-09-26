@@ -20,7 +20,6 @@ import {
 import { useContext, useEffect, useId, useState } from "react";
 import type { ReactNode } from "react";
 
-import type { DesignVariants } from "../lib/design-variants";
 import {
   addDays,
   dateKey,
@@ -511,13 +510,11 @@ export function DesignGroup({
   schedule,
   patternKeys,
   profile,
-  variants,
   onTab,
 }: {
   schedule: Schedule;
   patternKeys: Shift[];
   profile: Profile;
-  variants: DesignVariants;
   onTab: (tab: Tab) => void;
 }) {
   const [groups, setGroups] = useState<Omit<Group, "members">[]>([
@@ -668,7 +665,6 @@ export function DesignGroup({
               onLayout={(layout) => {
                 setLayouts({ ...layouts, [group.id]: layout });
               }}
-              view={variants.groupView}
             />
           )}
           {page.name === "settings" && (
@@ -1488,8 +1484,14 @@ const suggestionCount = 4;
 
 // 日ごと reads most easily, so it comes first while everyone fits across;
 // past that it scrolls sideways, and 週ごと, which grows only downwards,
-// takes over.
-type Layout = "weeks" | "days";
+// takes over. 人ごと shows one member at a time in a calendar like yours.
+type Layout = "weeks" | "days" | "person";
+
+const layoutOptions: { layout: Layout; name: string }[] = [
+  { layout: "weeks", name: "週ごと" },
+  { layout: "days", name: "日ごと" },
+  { layout: "person", name: "人ごと" },
+];
 
 function defaultLayout(count: number): Layout {
   return count <= marksUpTo ? "days" : "weeks";
@@ -1498,7 +1500,6 @@ function defaultLayout(count: number): Layout {
 function ShiftsPage({
   group,
   backLabel,
-  view,
   month: initialMonth,
   layout,
   onLayout: setLayout,
@@ -1506,7 +1507,6 @@ function ShiftsPage({
 }: {
   group: Group;
   backLabel: string;
-  view: DesignVariants["groupView"];
   month?: Date;
   layout: Layout;
   onLayout: (layout: Layout) => void;
@@ -1548,24 +1548,18 @@ function ShiftsPage({
           <span className="gr-shifts-actions">
             <fieldset className="design-segment st-row-segment gr-layout-toggle">
               <legend className="dc-sr-only">表の形</legend>
-              <button
-                aria-pressed={layout === "weeks"}
-                onClick={() => {
-                  setLayout("weeks");
-                }}
-                type="button"
-              >
-                週ごと
-              </button>
-              <button
-                aria-pressed={layout === "days"}
-                onClick={() => {
-                  setLayout("days");
-                }}
-                type="button"
-              >
-                日ごと
-              </button>
+              {layoutOptions.map((option) => (
+                <button
+                  aria-pressed={layout === option.layout}
+                  key={option.layout}
+                  onClick={() => {
+                    setLayout(option.layout);
+                  }}
+                  type="button"
+                >
+                  {option.name}
+                </button>
+              ))}
             </fieldset>
             {/* Others' shifts only go out as a picture, so no choice first. */}
             <button
@@ -1595,7 +1589,6 @@ function ShiftsPage({
         onMonth={setMonth}
         onPickDay={pick}
         picked={picked}
-        view={view}
       />
       {picked && (
         <DayPeek
@@ -1626,7 +1619,6 @@ const savedNoteTime = 2200;
 
 function PagedShifts({
   group,
-  view,
   layout,
   month,
   dates,
@@ -1637,7 +1629,6 @@ function PagedShifts({
   onLegend,
 }: {
   group: Group;
-  view: DesignVariants["groupView"];
   layout: Layout;
   month: Date;
   dates: Date[];
@@ -1702,7 +1693,7 @@ function PagedShifts({
           picked={picked}
         />
       )}
-      {layout === "weeks" && view === "table" && (
+      {layout === "weeks" && (
         <MemberTable
           dates={dates}
           group={group}
@@ -1712,10 +1703,7 @@ function PagedShifts({
           picked={picked}
         />
       )}
-      {layout === "weeks" && view === "overlay" && (
-        <OverlayCalendar dates={dates} group={group} month={month} />
-      )}
-      {layout === "weeks" && view === "person" && (
+      {layout === "person" && (
         <PersonCalendar dates={dates} group={group} month={month} />
       )}
       <MonthFoot month={month} onMonth={onMonth} />
@@ -2347,95 +2335,6 @@ function MemberTable({
   );
 }
 
-// One month with everyone's marks in each day; picking a day lists them
-// with names and times.
-function OverlayCalendar({
-  group,
-  dates,
-  month,
-}: {
-  group: Group;
-  dates: Date[];
-  month: Date;
-}) {
-  const [picked, setPicked] = useState(() => new Date(2026, 8, 24));
-  return (
-    <>
-      <div aria-hidden="true" className="dc-weekdays gr-weekdays">
-        {weekdayLabels.map((label) => (
-          <span key={label}>{label}</span>
-        ))}
-      </div>
-      <div className="gr-overlay">
-        {dates.map((date) => {
-          const outside = !sameMonth(date, month);
-          const together = !outside && everyoneOff(group.members, date);
-          return (
-            <button
-              aria-label={`${formatDay(date)}${together ? "、みんな休み" : ""}`}
-              aria-pressed={dateKey(date) === dateKey(picked)}
-              className={`gr-overlay-day ${outside ? "gr-outside" : ""} ${together ? "gr-together-cell" : ""}`}
-              disabled={outside}
-              key={dateKey(date)}
-              onClick={() => {
-                setPicked(date);
-              }}
-              type="button"
-            >
-              <span
-                className={`gr-overlay-date gr-date ${weekendClassName(date)}`}
-              >
-                {date.getDate()}
-              </span>
-              {!outside && (
-                <span className="gr-overlay-marks">
-                  {group.members.map((member) => (
-                    <Mark
-                      date={date}
-                      key={member.id}
-                      member={member}
-                      size={13}
-                    />
-                  ))}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-      <DayList date={picked} members={group.members} />
-    </>
-  );
-}
-
-function DayList({ date, members }: { date: Date; members: Member[] }) {
-  return (
-    <section className="st-section">
-      <h4>{formatDay(date)}</h4>
-      <div className="st-list">
-        {members.map((member) => {
-          const item = patternOn(member, date);
-          return (
-            <div className="st-row" key={member.id}>
-              <Avatar member={member} />
-              <span className="st-row-label">{member.name}</span>
-              <span className="st-row-value gr-day-value">
-                {item && (
-                  <MemberMark look={item.look} member={member} size={18} />
-                )}
-                {item ? item.name : "未入力"}
-                {item?.time && (
-                  <small className="gr-day-time">{item.time}</small>
-                )}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 // One member at a time, in the same kind of calendar as your own.
 function PersonCalendar({
   group,
@@ -2491,7 +2390,7 @@ function PersonCalendar({
               role="img"
             >
               <span
-                className={`gr-overlay-date gr-date ${weekendClassName(date)}`}
+                className={`gr-person-date gr-date ${weekendClassName(date)}`}
               >
                 {date.getDate()}
               </span>

@@ -1,14 +1,6 @@
 // Design decisions that /design lets you switch between. The first choice of
 // each entry is the current proposal and is used when the URL omits it.
 export const designVariantOptions = {
-  groupView: {
-    choices: [
-      { label: "表", value: "table" },
-      { label: "重ねる", value: "overlay" },
-      { label: "人ごと", value: "person" },
-    ],
-    label: "グループの見せ方",
-  },
   headerLayout: {
     choices: [
       { label: "月の横に ‹ ›", value: "title" },
