@@ -14,9 +14,9 @@ dir = "{{config_root}}/proto"
 run = ["buf lint", "buf format --diff --exit-code"]
 
 [tasks."proto:breaking"]
-description = "Fail on wire-incompatible proto changes against master"
+description = "Fail on wire-incompatible proto changes against main"
 dir = "{{config_root}}/proto"
-run = "buf breaking --against '../.git#branch=master,subdir=proto'"
+run = "buf breaking --against '../.git#branch=main,subdir=proto'"
 
 [tasks.server]
 description = "Run the Workers dev server"
