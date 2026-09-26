@@ -1,7 +1,5 @@
 import { expect, test } from "bun:test";
 
-import { expect, test } from "vitest";
-
 import { fetchInvitePreview } from "../src/lib/invite-preview";
 import type { InviteFetch } from "../src/lib/invite-preview";
 

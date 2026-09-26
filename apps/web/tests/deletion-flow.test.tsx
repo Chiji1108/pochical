@@ -1,10 +1,12 @@
+// react-test-renderer is deprecated; migrate to @testing-library/react with a
+// DOM environment for bun:test when this flow is rebuilt on the new backend.
+/* oxlint-disable typescript/no-deprecated */
 import { expect, mock, test } from "bun:test";
 
 import { getFunctionName } from "convex/server";
 import { StrictMode } from "react";
 import type { ReactNode } from "react";
 import { act, create } from "react-test-renderer";
-import { expect, test } from "vitest";
 
 const clients: FakeClient[] = [];
 class FakeClient {
@@ -27,21 +29,21 @@ let account = {
 };
 const deletion = mock(async () => "test-receipt");
 const signIn = mock(async () => undefined);
-mock.module("convex/react", () => ({
+await mock.module("convex/react", () => ({
   ConvexReactClient: FakeClient,
   useAction: () => deletion,
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
   useQuery: (reference: Parameters<typeof getFunctionName>[0]) =>
     getFunctionName(reference) === "accounts:current" ? account : pending,
 }));
-mock.module("@convex-dev/auth/react", () => ({
+await mock.module("@convex-dev/auth/react", () => ({
   ConvexAuthProvider: ({
     client,
     children,
   }: {
     client: FakeClient;
     children: ReactNode;
-  }) => {
+  }): ReactNode => {
     if (client.closed) {
       throw new Error("Provider received a closed client");
     }

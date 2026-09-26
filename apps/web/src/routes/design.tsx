@@ -109,7 +109,7 @@ function DesignPage() {
             );
             setVersion((previous) => previous + 1);
           }
-          navigate({
+          void navigate({
             replace: true,
             resetScroll: false,
             search: (previous) => ({ ...previous, [key]: value }),

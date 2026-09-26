@@ -80,7 +80,9 @@ function Invite() {
             <button
               className="button"
               disabled={retrying}
-              onClick={retry}
+              onClick={() => {
+                void retry();
+              }}
               type="button"
             >
               <RefreshCw aria-hidden="true" size={16} />

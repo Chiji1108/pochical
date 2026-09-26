@@ -113,8 +113,8 @@ function SignIn() {
         <button
           className="button button-secondary"
           disabled={busy}
-          onClick={async () => {
-            await login("apple");
+          onClick={() => {
+            void login("apple");
           }}
           type="button"
         >
@@ -123,8 +123,8 @@ function SignIn() {
         <button
           className="button button-secondary"
           disabled={busy}
-          onClick={async () => {
-            await login("google");
+          onClick={() => {
+            void login("google");
           }}
           type="button"
         >
@@ -205,7 +205,9 @@ function ConfirmDeletion({
         <button
           className="button button-secondary"
           disabled={busy}
-          onClick={logout}
+          onClick={() => {
+            void logout();
+          }}
           type="button"
         >
           ログインし直す
@@ -232,7 +234,9 @@ function ConfirmDeletion({
       <button
         className="text-button"
         disabled={busy}
-        onClick={logout}
+        onClick={() => {
+          void logout();
+        }}
         type="button"
       >
         <LogOut aria-hidden="true" size={14} />
@@ -244,7 +248,9 @@ function ConfirmDeletion({
           <button
             className="button button-secondary"
             disabled={busy}
-            onClick={verifyApple}
+            onClick={() => {
+              void verifyApple();
+            }}
             type="button"
           >
             Appleで本人確認
@@ -268,7 +274,9 @@ function ConfirmDeletion({
           <button
             className="button button-danger"
             disabled={!confirmed || busy}
-            onClick={remove}
+            onClick={() => {
+              void remove();
+            }}
             type="button"
           >
             {busy ? "削除を受け付けています…" : "アカウントとデータを削除する"}

@@ -1,0 +1,8 @@
+{
+  "extends": "../tsconfig.json",
+  "include": ["**/*.ts", "**/*.tsx", "../worker-configuration.d.ts"],
+  "exclude": [],
+  "compilerOptions": {
+    "types": ["../worker-configuration.d.ts", "node", "vite/client", "bun"]
+  }
+}
