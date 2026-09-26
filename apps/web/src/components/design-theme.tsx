@@ -176,8 +176,23 @@ export function themeOf(id: ThemeId): Theme {
 // Light or dark, picked on /design by the 外観 variant.
 export const ColorSchemeContext = createContext<ColorScheme>("light");
 
+// Text on a solid accent fill: white on the deep light accents, dark on the
+// light accents of dark mode.
+const onFillByScheme: Record<ColorScheme, string> = {
+  dark: "#232521",
+  light: "#ffffff",
+};
+
+// A theme's accent roles in light or dark. `accent` draws text, icons and
+// lines; `fill` is for solid backgrounds with `onFill` text on top. The deep
+// themes fill with the accent itself; lighter families will not.
 export function themeColors(theme: Theme, scheme: ColorScheme) {
-  return scheme === "dark" ? theme.dark : theme;
+  const colors = scheme === "dark" ? theme.dark : theme;
+  return {
+    ...colors,
+    fill: colors.accent,
+    onFill: onFillByScheme[scheme],
+  };
 }
 
 // Whether the neutrals take on the theme's hue, picked on /design by the
@@ -213,6 +228,7 @@ export function themeStyle(
     ),
     "--accent": colors.accent,
     "--accent-border": colors.border,
+    "--accent-fill": colors.fill,
     "--accent-line": colors.line,
     "--accent-mark-tint": colors.markTint,
     "--accent-muted": colors.muted,
@@ -220,6 +236,7 @@ export function themeStyle(
     "--accent-soft": colors.soft,
     "--accent-soft-2": colors.soft2,
     "--accent-strong": colors.strong,
+    "--on-accent-fill": colors.onFill,
   } as CSSProperties;
 }
 

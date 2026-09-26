@@ -34,7 +34,9 @@ const lineTokens = new Set([
 
 // The accent roles of a theme, in the order a screen uses them.
 const themeRoles = [
-  { key: "accent", label: "テーマ色", name: "accent" },
+  { key: "accent", label: "文字・線", name: "accent" },
+  { key: "fill", label: "塗り", name: "accent-fill" },
+  { key: "onFill", label: "塗りの上の文字", name: "on-accent-fill" },
   { key: "strong", label: "押したとき", name: "accent-strong" },
   { key: "line", label: "フォーカス・見出し", name: "accent-line" },
   { key: "muted", label: "選択中の枠", name: "accent-muted" },
@@ -116,7 +118,6 @@ function TokenSample({ token }: { token: ColorToken }) {
   }
   if (token.name.startsWith("on-")) {
     const ground = {
-      "on-accent": "var(--accent)",
       "on-badge": "var(--badge)",
       "on-inverse": "var(--inverse)",
     }[token.name];
@@ -244,12 +245,10 @@ function ThemePalette({
         ))}
       </ul>
       <p className="cp-theme-contrast">
-        背景との比{" "}
+        文字と背景の比{" "}
         <ContrastBadge ratio={contrast(colors.accent, valueOf(scheme, "bg"))} />
-        上の文字との比{" "}
-        <ContrastBadge
-          ratio={contrast(valueOf(scheme, "on-accent"), colors.accent)}
-        />
+        塗りと文字の比{" "}
+        <ContrastBadge ratio={contrast(colors.onFill, colors.fill)} />
       </p>
     </div>
   );

@@ -207,8 +207,8 @@ body:has(.design-page) > .site-footer {
   height: 44px;
   padding: 0 18px;
   font-size: 13px;
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--on-accent-fill);
+  background: var(--accent-fill);
   border: 0;
   border-radius: 24px;
 }
@@ -389,8 +389,8 @@ button.dc-day:active {
   width: 100%;
   min-height: 52px;
   font-size: 13px;
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--on-accent-fill);
+  background: var(--accent-fill);
   border: 0;
   border-radius: 15px;
 }
@@ -866,8 +866,8 @@ body:has(.dc-breakdown[open]) {
   color: var(--text-faint);
 }
 .dc-picker-days button[aria-pressed="true"] {
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--on-accent-fill);
+  background: var(--accent-fill);
 }
 
 .dc-patterns-eight {
@@ -940,8 +940,8 @@ body:has(.dc-breakdown[open]) {
 }
 .dc-detail-patterns button[aria-pressed="true"] {
   font-weight: 600;
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--on-accent-fill);
+  background: var(--accent-fill);
   border-color: var(--accent);
 }
 /* Each part's name sits above it, so a long one like 一緒に働く人 fits. */
@@ -1196,8 +1196,8 @@ body:has(.dc-breakdown[open]) {
   min-height: 48px;
   padding: 0 12px;
   font-size: 13px;
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--on-accent-fill);
+  background: var(--accent-fill);
   border: 0;
   border-radius: 14px;
 }
@@ -1266,8 +1266,8 @@ body:has(.dc-breakdown[open]) {
   min-height: 50px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--on-accent-fill);
+  background: var(--accent-fill);
   border: 0;
   border-radius: 14px;
 }
@@ -1561,8 +1561,8 @@ body:has(.dc-breakdown[open]) {
   margin-top: auto;
   font-size: 15px;
   font-weight: 600;
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--on-accent-fill);
+  background: var(--accent-fill);
   border: 0;
   border-radius: 15px;
 }
@@ -1609,8 +1609,8 @@ body:has(.dc-breakdown[open]) {
 }
 .design-page .ob-days button[aria-pressed="true"] {
   font-weight: 600;
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--on-accent-fill);
+  background: var(--accent-fill);
 }
 .ob-finished {
   display: flex;
@@ -1802,8 +1802,8 @@ button.st-row:hover {
   min-height: 50px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--on-accent-fill);
+  background: var(--accent-fill);
   border: 0;
   border-radius: 14px;
 }
@@ -2049,12 +2049,12 @@ button.st-row:hover {
 /* A colored icon would sink into the green, so it turns white like the
    text; emoji and letters on their tile keep their own colors. */
 .dc-detail-patterns button[aria-pressed="true"] .sm-icon {
-  fill: var(--on-accent);
+  fill: var(--on-accent-fill);
 }
 /* Letters without their tile would sink the same way. The color is set on
    the element, so only !important can turn it white here. */
 .dc-detail-patterns button[aria-pressed="true"] .sm-badge-plain {
-  color: var(--on-accent) !important;
+  color: var(--on-accent-fill) !important;
 }
 .st-mark-segment {
   display: grid;
@@ -2170,7 +2170,7 @@ button.st-row:hover {
   transition: transform 0.15s;
 }
 .pe-toggle:checked {
-  background: var(--accent);
+  background: var(--accent-fill);
 }
 .pe-toggle:checked::before {
   transform: translateX(18px);
@@ -2458,8 +2458,8 @@ button.st-row:hover {
   border-radius: 50%;
 }
 .gr-avatar-me {
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--on-accent-fill);
+  background: var(--accent-fill);
 }
 .gr-empty {
   width: 6px;
@@ -3046,8 +3046,8 @@ button.st-row:hover {
   border-radius: 16px 16px 16px 6px;
 }
 .gr-mine .gr-bubble {
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--on-accent-fill);
+  background: var(--accent-fill);
   border-radius: 16px 16px 6px;
 }
 .gr-message-time {
@@ -3127,8 +3127,8 @@ button.st-row:hover {
   border-radius: 50%;
 }
 .design-page .gr-composer-send {
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--on-accent-fill);
+  background: var(--accent-fill);
 }
 .design-page .gr-composer-send:disabled {
   background: var(--control-off);
@@ -3359,8 +3359,8 @@ button.st-row:hover {
   border-radius: 15px;
 }
 .design-page .gr-sheet-suggest button[aria-pressed="true"] {
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--on-accent-fill);
+  background: var(--accent-fill);
 }
 
 .gr-pick-days {
@@ -3389,8 +3389,8 @@ button.st-row:hover {
   background: var(--accent-soft);
 }
 .design-page .gr-pick-days button[aria-pressed="true"] {
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--on-accent-fill);
+  background: var(--accent-fill);
 }
 .gr-small-weekday {
   margin-left: 2px;
@@ -4301,8 +4301,8 @@ button.st-row:hover {
 }
 .cp-theme-button {
   padding: 8px 14px;
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--on-accent-fill);
+  background: var(--accent-fill);
   border-radius: 18px;
 }
 .cp-theme-chip {
@@ -4431,8 +4431,8 @@ button.st-row:hover {
   display: block;
   padding: 7px;
   font-weight: 600;
-  color: var(--on-accent);
+  color: var(--on-accent-fill);
   text-align: center;
-  background: var(--accent);
+  background: var(--accent-fill);
   border-radius: 14px;
 }

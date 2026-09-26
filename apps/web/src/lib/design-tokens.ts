@@ -150,12 +150,6 @@ export const neutralTokenGroups: ColorTokenGroup[] = [
     label: "反転・重なり",
     tokens: [
       {
-        dark: "#232521",
-        label: "テーマ色の上の文字",
-        light: "#ffffff",
-        name: "on-accent",
-      },
-      {
         dark: "#dcdfdb",
         label: "反転ボタン・トースト",
         light: "#30332f",
