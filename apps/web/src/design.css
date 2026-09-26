@@ -1524,9 +1524,14 @@ body:has(.dc-breakdown[open]) {
   gap: 4px;
   margin-top: 5px;
 }
+/* The mark and name share one line, centered on each other. */
 .ob-chip {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
   padding: 2px 7px;
   font-size: 10px;
+  line-height: 1.4;
   color: #565e52;
   background: var(--accent-soft, #f0f4ed);
   border-radius: 8px;
