@@ -96,6 +96,7 @@ function shapeOf(look: LookSettings) {
 
 const previewDays = 14;
 const previewToday = new Date(2026, 8, 24);
+const holidayWeekDay = new Date(2026, 8, 21);
 
 // Shortens runs of the same shift, e.g. 日勤×2・夕勤×2.
 function sequenceLabel(sequence: Shift[]) {
@@ -148,6 +149,14 @@ export function DesignSettings({
   const [page, setPage] = useState<Page>("top");
   const weekTools = useWeek();
   const preview = stylePreviewOf(schedule, patternKeys, weekTools.weekDates);
+  // From the week holding the 21st, so all three holidays of the 21st to
+  // 23rd fall in the fortnight whatever day the week starts on.
+  const weekPreview = stylePreviewOf(
+    schedule,
+    patternKeys,
+    weekTools.weekDates,
+    holidayWeekDay
+  );
   const repeating = isRepeating(rules);
   const current = repeating ? rules.at(-1) : undefined;
   // The order to start from when repeating again.
@@ -260,6 +269,7 @@ export function DesignSettings({
             onBack={() => {
               setPage("top");
             }}
+            preview={weekPreview}
           />
         )}
         {page === "appearance" && (
@@ -1032,12 +1042,10 @@ const minPreviewDays = 7;
 function stylePreviewOf(
   schedule: Schedule,
   patternKeys: Shift[],
-  weekDates: (date: Date) => Date[]
+  weekDates: (date: Date) => Date[],
+  from: Date = previewToday
 ): StylePreviewData {
-  const dates = [
-    ...weekDates(previewToday),
-    ...weekDates(addDays(previewToday, 7)),
-  ];
+  const dates = [...weekDates(from), ...weekDates(addDays(from, 7))];
   const filled = dates.filter((date) => schedule[dateKey(date)]).length;
   if (filled >= minPreviewDays) {
     return { dates, sample: false, schedule };
@@ -1335,37 +1343,22 @@ function WeekRow({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-// 週の始まり and 色をつける日, with this month to see them on. Only the
-// viewer's screen changes.
-function WeekPage({ onBack }: { onBack: () => void }) {
+// 週の始まり and 色をつける日, seen on the same preview as the style page.
+// Only the viewer's screen changes.
+function WeekPage({
+  preview,
+  onBack,
+}: {
+  preview: StylePreviewData;
+  onBack: () => void;
+}) {
   const { week, setWeek } = useContext(WeekSettingsContext);
-  const weekTools = useWeek();
-  const month = new Date(
-    previewToday.getFullYear(),
-    previewToday.getMonth(),
-    1
-  );
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="曜日と祝日" />
-      <div aria-hidden="true" className="st-week-preview">
-        <p className="st-week-month">{month.getMonth() + 1}月</p>
-        <div className="st-week-grid">
-          {weekTools.weekdays.map((day) => (
-            <span className={`st-week-weekday ${day.className}`} key={day.day}>
-              {day.label}
-            </span>
-          ))}
-          {weekTools.monthDates(month).map((date) => (
-            <span
-              className={`${date.getMonth() === month.getMonth() ? "" : "st-week-outside"} ${weekTools.dateClass(date)}`}
-              key={dateKey(date)}
-            >
-              {date.getDate()}
-            </span>
-          ))}
-        </div>
-      </div>
+      {/* The style page's preview, two rows high whatever day the week
+          starts on, with a Saturday, a Sunday and three holidays in it. */}
+      <StylePreview preview={preview} />
       <Group title="週の始まり">
         <fieldset className="st-mark-segment st-week-start">
           <legend className="dc-sr-only">週の始まり</legend>
@@ -1401,7 +1394,7 @@ function WeekPage({ onBack }: { onBack: () => void }) {
         </div>
       </Group>
       <p className="st-note">
-        祝日は日曜と同じ赤です。グループの画面でも、この並びと色で表示されます。
+        土曜と日曜は曜日の見出しに、祝日は日付に色がつきます。祝日は日曜と同じ赤です。グループの画面でも、この並びと色で表示されます。
       </p>
     </>
   );
