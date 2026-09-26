@@ -27,9 +27,9 @@ import {
   SetIconWeightContext,
   SetShiftMarkStyleContext,
   ShiftMarkStyleContext,
-  stylePresets,
+  baseLook,
 } from "../components/shift-mark";
-import type { LookSettings, StyleChoice } from "../components/shift-mark";
+import type { LookSettings } from "../components/shift-mark";
 import type { Tone } from "../lib/design-tokens";
 import {
   designVariantKeys,
@@ -73,7 +73,7 @@ function DesignPage() {
   );
   const [version, setVersion] = useState(0);
   const navigate = Route.useNavigate();
-  const [look, setLook] = useState(stylePresets[0].look);
+  const [look, setLook] = useState(baseLook);
   const updateLook = (change: Partial<LookSettings>) => {
     setLook((previous) => ({ ...previous, ...change }));
   };
@@ -85,7 +85,6 @@ function DesignPage() {
   // unless it keeps one.
   const deviceScheme = useDeviceScheme();
   const scheme = appearance === "system" ? deviceScheme : appearance;
-  const [custom, setCustom] = useState<StyleChoice>();
   return (
     <main className="design-page" id="main" style={themeStyle(theme, "light")}>
       <div className="design-toolbar">
@@ -146,9 +145,7 @@ function DesignPage() {
             <SetToneContext value={setTone}>
               <ColorChoiceContext value={{ color, setColor }}>
                 <ThemeContext value={{ theme }}>
-                  <LookSettingsContext
-                    value={{ custom, look, setCustom, setLook }}
-                  >
+                  <LookSettingsContext value={{ look, setLook }}>
                     <IconWeightContext
                       value={look.fill ? "duotone" : "regular"}
                     >

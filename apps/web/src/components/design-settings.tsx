@@ -59,12 +59,10 @@ import {
   ShiftMark,
   ShiftMarkStyleContext,
   lookOf,
-  stylePresetOf,
-  stylePresets,
   useMarkColors,
   useOffHighlight,
 } from "./shift-mark";
-import type { ShiftMarkStyle, StyleChoice } from "./shift-mark";
+import type { ShiftMarkStyle } from "./shift-mark";
 
 type Page =
   | "top"
@@ -76,7 +74,6 @@ type Page =
   | "patterns"
   | "coworkers"
   | "mark"
-  | "customize"
   | "appearance"
   | "profile";
 
@@ -138,8 +135,6 @@ export function DesignSettings({
   onTab: (tab: Tab) => void;
 }) {
   const [page, setPage] = useState<Page>("top");
-  // What キャンセル in 細かく設定 goes back to.
-  const [cancelTo, setCancelTo] = useState<StyleChoice>();
   const preview = stylePreviewOf(schedule, patternKeys);
   const repeating = isRepeating(rules);
   const current = repeating ? rules.at(-1) : undefined;
@@ -149,9 +144,7 @@ export function DesignSettings({
     [];
   return (
     <div className="dc-content st-screen">
-      <div
-        className={page === "customize" ? "st-scroll st-custom" : "st-scroll"}
-      >
+      <div className="st-scroll">
         {page === "top" && (
           <SettingsTop
             coworkerCount={coworkers.names.length}
@@ -247,10 +240,6 @@ export function DesignSettings({
             onBack={() => {
               setPage("top");
             }}
-            onCustomize={(before) => {
-              setCancelTo(before);
-              setPage("customize");
-            }}
             preview={preview}
           />
         )}
@@ -259,15 +248,6 @@ export function DesignSettings({
             onBack={() => {
               setPage("top");
             }}
-          />
-        )}
-        {page === "customize" && (
-          <CustomizePage
-            cancelTo={cancelTo}
-            onDone={() => {
-              setPage("mark");
-            }}
-            preview={preview}
           />
         )}
         {page === "coworkers" && (
@@ -288,7 +268,7 @@ export function DesignSettings({
           />
         )}
       </div>
-      {page !== "customize" && <TabBar active="settings" onSelect={onTab} />}
+      <TabBar active="settings" onSelect={onTab} />
     </div>
   );
 }
@@ -363,7 +343,8 @@ function SettingsTop({
           value={
             <span className="st-inline-value">
               <ColorSwatch color={color} />
-              {stylePresetOf({ look })?.name ?? "カスタム"}
+              {markOptions.find((option) => option.style === look.style)
+                ?.name ?? ""}
               {tone === "deep" ? "" : `・${toneName(tone)}`}
             </span>
           }
@@ -997,12 +978,12 @@ const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
 function MarkPage({
   preview,
   onBack,
-  onCustomize,
 }: {
   preview: StylePreviewData;
   onBack: () => void;
-  onCustomize: (before: StyleChoice) => void;
 }) {
+  const current = useContext(ShiftMarkStyleContext);
+  const setStyle = useContext(SetShiftMarkStyleContext);
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="スタイル" />
@@ -1013,10 +994,27 @@ function MarkPage({
       <Group note="あなたの画面だけ" title="トーン">
         <ToneChoices />
       </Group>
+      {/* Every choice shows in the preview at once, so there is nothing to
+          confirm or cancel. */}
       <Group note="グループの人にも表示" title="シフトの見た目">
-        <StylePresets />
+        <fieldset className="st-mark-segment">
+          <legend className="dc-sr-only">シフトの見た目</legend>
+          {markOptions.map((option) => (
+            <button
+              aria-pressed={current === option.style}
+              key={option.style}
+              onClick={() => setStyle?.(option.style)}
+              type="button"
+            >
+              <ShiftMarkStyleContext value={option.style}>
+                <ShiftMark shift="day" size={20} />
+              </ShiftMarkStyleContext>
+              {option.name}
+            </button>
+          ))}
+        </fieldset>
       </Group>
-      <CustomChoice onOpen={onCustomize} />
+      <MarkOptionsList current={current} />
     </>
   );
 }
@@ -1136,137 +1134,6 @@ const previewSchemes = [
   { Icon: Sun, name: "ライトで見る", scheme: "light" },
   { Icon: Moon, name: "ダークで見る", scheme: "dark" },
 ] as const;
-
-// An edit mode for the details, with the preview pinned on top. Changes show
-// right away; キャンセル puts back what was there when it opened.
-function CustomizePage({
-  preview,
-  cancelTo,
-  onDone,
-}: {
-  preview: StylePreviewData;
-  cancelTo?: StyleChoice;
-  onDone: () => void;
-}) {
-  const { look, setLook, setCustom } = useContext(LookSettingsContext);
-  const [opened] = useState<StyleChoice>({ look });
-  const saved = cancelTo ?? opened;
-  const current = useContext(ShiftMarkStyleContext);
-  const setStyle = useContext(SetShiftMarkStyleContext);
-  return (
-    <>
-      <div className="st-custom-top">
-        <header className="st-custom-bar">
-          <button
-            className="st-custom-cancel"
-            onClick={() => {
-              setLook?.(saved.look);
-              onDone();
-            }}
-            type="button"
-          >
-            キャンセル
-          </button>
-          <h3>細かく設定</h3>
-          <button
-            className="pe-save"
-            onClick={() => {
-              if (!stylePresetOf({ look })) {
-                setCustom?.({ look });
-              }
-              onDone();
-            }}
-            type="button"
-          >
-            完了
-          </button>
-        </header>
-        <StylePreview preview={preview} />
-      </div>
-      <Group title="シフトの見た目">
-        <fieldset className="st-mark-segment">
-          <legend className="dc-sr-only">シフトの見た目</legend>
-          {markOptions.map((option) => (
-            <button
-              aria-pressed={current === option.style}
-              key={option.style}
-              onClick={() => setStyle?.(option.style)}
-              type="button"
-            >
-              <ShiftMarkStyleContext value={option.style}>
-                <ShiftMark shift="day" size={20} />
-              </ShiftMarkStyleContext>
-              {option.name}
-            </button>
-          ))}
-        </fieldset>
-      </Group>
-      <MarkOptionsList current={current} />
-    </>
-  );
-}
-
-// The seventh choice after the presets. It always opens 細かく設定, starting
-// from the last custom style when a preset is in use.
-function CustomChoice({ onOpen }: { onOpen: (before: StyleChoice) => void }) {
-  const { look, setLook, custom } = useContext(LookSettingsContext);
-  const isCustom = !stylePresetOf({ look });
-  return (
-    <button
-      aria-pressed={isCustom}
-      className="st-custom-choice"
-      onClick={() => {
-        if (!isCustom && custom) {
-          setLook?.(custom.look);
-        }
-        onOpen({ look });
-      }}
-      type="button"
-    >
-      <span className="st-row-label">カスタム</span>
-      <span className="st-row-value">細かく設定</span>
-      <ChevronRight aria-hidden="true" className="st-row-arrow" size={17} />
-    </button>
-  );
-}
-
-const presetSample: Shift[] = ["day", "night", "after", "off"];
-
-// Ready-made looks. Each card draws a few shifts in its own settings.
-function StylePresets() {
-  const { look, setLook } = useContext(LookSettingsContext);
-  const current = stylePresetOf({ look });
-  return (
-    <fieldset className="st-preset-grid">
-      <legend className="dc-sr-only">スタイル</legend>
-      {stylePresets.map((preset) => (
-        <button
-          aria-pressed={current?.id === preset.id}
-          key={preset.id}
-          onClick={() => {
-            setLook?.(preset.look);
-          }}
-          type="button"
-        >
-          <span aria-hidden="true" className="st-preset-sample">
-            <LookSettingsContext value={{ look: preset.look }}>
-              <ShiftMarkStyleContext value={preset.look.style}>
-                <IconWeightContext
-                  value={preset.look.fill ? "duotone" : "regular"}
-                >
-                  {presetSample.map((shift) => (
-                    <ShiftMark key={shift} shift={shift} size={18} />
-                  ))}
-                </IconWeightContext>
-              </ShiftMarkStyleContext>
-            </LookSettingsContext>
-          </span>
-          {preset.name}
-        </button>
-      ))}
-    </fieldset>
-  );
-}
 
 // The switches for the look in use, as one list.
 function MarkOptionsList({ current }: { current: ShiftMarkStyle }) {

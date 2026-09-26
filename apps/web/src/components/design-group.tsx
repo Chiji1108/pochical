@@ -46,7 +46,7 @@ import {
   markIcons,
   nextColor,
   ShiftMarkStyleContext,
-  stylePresets,
+  sampleLooks,
 } from "./shift-mark";
 import type { Look, LookSettings, MarkIcon } from "./shift-mark";
 
@@ -2277,8 +2277,7 @@ const rowsMemberWidth = 76;
 const rowsMarkWidth = 40;
 
 function presetLook(id: string) {
-  return (stylePresets.find((preset) => preset.id === id) ?? stylePresets[0])
-    .look;
+  return sampleLooks[id as keyof typeof sampleLooks] ?? sampleLooks.natural;
 }
 
 // Draws one of a member's marks in the shape they picked (mark kind and

@@ -104,65 +104,26 @@ export type LookSettings = {
   highlight: boolean;
 };
 
-const baseLook: LookSettings = {
+export const baseLook: LookSettings = {
   fill: true,
   highlight: true,
   names: false,
   style: "icon",
 };
 
-// Ready-made styles: shapes only (mark kind, fill, names, the 休み
-// highlight). Colors come from the viewer's カラー and トーン instead.
-export const stylePresets: {
-  id: string;
-  name: string;
-  look: LookSettings;
-}[] = [
-  { id: "natural", look: baseLook, name: "ナチュラル" },
-  {
-    id: "minimal",
-    look: { ...baseLook, fill: false, highlight: false },
-    name: "ミニマル",
-  },
-  { id: "pop", look: { ...baseLook, style: "emoji" }, name: "ポップ" },
-  {
-    id: "roster",
-    look: { ...baseLook, highlight: false, style: "badge" },
-    name: "勤務表",
-  },
-  {
-    id: "friendly",
-    look: { ...baseLook, fill: false, names: true, style: "badge" },
-    name: "親しみ",
-  },
-];
-
-// A look, like the last custom style. Colors are not part of it: カラー and
-// トーン only change the viewer's own screen.
-export type StyleChoice = { look: LookSettings };
+// Looks the sample members use, by name.
+export const sampleLooks = {
+  friendly: { ...baseLook, fill: false, names: true, style: "badge" },
+  minimal: { ...baseLook, fill: false, highlight: false },
+  natural: baseLook,
+  pop: { ...baseLook, style: "emoji" },
+  roster: { ...baseLook, highlight: false, style: "badge" },
+} satisfies Record<string, LookSettings>;
 
 export const LookSettingsContext = createContext<{
   look: LookSettings;
   setLook?: (look: LookSettings) => void;
-  custom?: StyleChoice;
-  setCustom?: (custom: StyleChoice) => void;
 }>({ look: baseLook });
-
-// Compares only what shows for the look, so an emoji look is not "custom"
-// just because of a fill setting it never uses.
-function sameLook(preset: LookSettings, look: LookSettings) {
-  if (preset.style !== look.style || preset.highlight !== look.highlight) {
-    return false;
-  }
-  if (preset.names !== look.names) {
-    return false;
-  }
-  return look.style === "emoji" || preset.fill === look.fill;
-}
-
-export function stylePresetOf({ look }: StyleChoice) {
-  return stylePresets.find((preset) => sameLook(preset.look, look));
-}
 
 export const OffHighlightContext = createContext<{
   highlight: OffHighlight;
