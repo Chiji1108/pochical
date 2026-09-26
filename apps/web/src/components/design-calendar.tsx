@@ -1208,8 +1208,8 @@ function ImportPhotoActions({ onPick }: { onPick: () => void }) {
   );
 }
 
-// Right after an import is the moment people feel their data is worth
-// keeping, so that is where linking an account is suggested.
+// After an import, only what was entered and how to fix it: checking the
+// month is what people want to do next, so nothing else competes with it.
 function ImportDone({
   month,
   days,
@@ -1225,18 +1225,8 @@ function ImportDone({
         {month.getMonth() + 1}月のシフトを{days}
         日分入れました。違うところは、日付をタップして直せます。
       </p>
-      <div className="dc-import-link">
-        <p>
-          <strong>機種変更しても消えないように</strong>
-          アカウントをつないでおくと、シフトを引き継げます。
-        </p>
-        <div className="dc-import-accounts">
-          <button type="button">Appleで続ける</button>
-          <button type="button">Googleで続ける</button>
-        </div>
-      </div>
-      <button className="dc-import-later" onClick={onClose} type="button">
-        あとで
+      <button className="dc-import-primary" onClick={onClose} type="button">
+        閉じる
       </button>
     </>
   );

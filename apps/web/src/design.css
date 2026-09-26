@@ -1212,46 +1212,6 @@ body:has(.dc-breakdown[open]) {
   font-weight: 400;
   color: var(--text-4);
 }
-.dc-import-accounts {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.design-page .dc-import-accounts button {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  min-height: 50px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--on-inverse);
-  background: var(--inverse);
-  border: 0;
-  border-radius: 14px;
-}
-.design-page .dc-import-accounts .dc-import-secondary {
-  font-weight: 400;
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-.dc-import-link {
-  padding: 16px;
-  background: var(--fill);
-  border-radius: 18px;
-}
-.dc-import-link > p {
-  margin: 0 0 14px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--text-2);
-}
-.dc-import-link strong {
-  display: block;
-  margin-bottom: 2px;
-  font-size: 14px;
-  color: var(--text);
-}
 .design-page .dc-import-later {
   display: block;
   min-height: 44px;
