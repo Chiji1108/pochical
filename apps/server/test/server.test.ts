@@ -32,18 +32,20 @@ const openGroupSocket = async (groupId: string): Promise<WebSocket> => {
 };
 
 const nextFrame = async (socket: WebSocket): Promise<ServerFrame> => {
-  // A workerd client socket delivers binary messages as Blob.
-  const data = await new Promise<Blob>((resolve) => {
-    socket.addEventListener(
-      "message",
-      (event) => {
-        resolve(event.data as Blob);
-      },
-      {
-        once: true,
+  const { promise, resolve, reject } = Promise.withResolvers<Blob>();
+  socket.addEventListener(
+    "message",
+    (event) => {
+      // A workerd client socket delivers binary messages as Blob.
+      if (event.data instanceof Blob) {
+        resolve(event.data);
+      } else {
+        reject(new Error("Expected a binary message"));
       }
-    );
-  });
+    },
+    { once: true }
+  );
+  const data = await promise;
   return fromBinary(
     ServerFrameSchema,
     new Uint8Array(await data.arrayBuffer())
@@ -86,14 +88,16 @@ describe("group socket", () => {
         value: { protocolVersion: CURRENT_PROTOCOL_VERSION },
       },
     });
-    expect((await welcome).kind).toMatchObject({
+    const { kind: welcomeKind } = await welcome;
+    expect(welcomeKind).toMatchObject({
       case: "welcome",
       value: { cursor: 0n },
     });
 
     const pong = nextFrame(socket);
     sendFrame(socket, { kind: { case: "ping", value: { nonce: 42 } } });
-    expect((await pong).kind).toMatchObject({
+    const { kind: pongKind } = await pong;
+    expect(pongKind).toMatchObject({
       case: "pong",
       value: { nonce: 42 },
     });
@@ -104,7 +108,8 @@ describe("group socket", () => {
 
     const reply = nextFrame(socket);
     sendFrame(socket, { kind: { case: "ping", value: { nonce: 1 } } });
-    expect((await reply).kind).toMatchObject({
+    const { kind: replyKind } = await reply;
+    expect(replyKind).toMatchObject({
       case: "error",
       value: { code: ServerError_Code.BAD_FRAME },
     });
@@ -120,7 +125,8 @@ describe("group socket", () => {
         value: { protocolVersion: MIN_PROTOCOL_VERSION - 1 },
       },
     });
-    expect((await reply).kind).toMatchObject({
+    const { kind: replyKind } = await reply;
+    expect(replyKind).toMatchObject({
       case: "error",
       value: { code: ServerError_Code.PROTOCOL_TOO_OLD },
     });

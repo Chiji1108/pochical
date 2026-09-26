@@ -16,21 +16,21 @@ const rpcHandlers = new Map(
   ])
 );
 
-const GROUP_SOCKET_PATH = /^\/v1\/groups\/([^/]+)\/socket$/;
+const GROUP_SOCKET_PATH = /^\/v1\/groups\/(?<groupId>[^/]+)\/socket$/u;
 
 export default {
-  fetch(request, env) {
+  async fetch(request, env) {
     const { pathname } = new URL(request.url);
 
     const rpc = rpcHandlers.get(pathname);
     if (rpc) {
-      return rpc(request);
+      return await rpc(request);
     }
 
-    // TODO: authenticate the user and check group membership before forwarding.
-    const groupId = GROUP_SOCKET_PATH.exec(pathname)?.[1];
-    if (groupId) {
-      return env.GROUP_ROOM.getByName(groupId).fetch(request);
+    // Not yet authenticated: anyone can join any group (spec/sync-protocol.md).
+    const groupId = GROUP_SOCKET_PATH.exec(pathname)?.groups?.groupId;
+    if (groupId !== undefined) {
+      return await env.GROUP_ROOM.getByName(groupId).fetch(request);
     }
 
     return new Response("Not found", { status: 404 });
