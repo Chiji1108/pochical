@@ -4,13 +4,21 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  CloudCheck,
 } from "lucide-react";
-import { useContext, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import type { Tone, ColorScheme } from "../lib/design-tokens";
 import { markColors } from "../lib/design-tokens";
 import { toneRoles } from "../lib/tones";
+import {
+  AccountContext,
+  ProviderLogo,
+  providerNames,
+  sampleEmails,
+} from "./design-account";
+import type { AccountProvider } from "./design-account";
 import {
   addDays,
   DayCell,
@@ -23,6 +31,7 @@ import {
   patterns,
   RepeatSequenceEditor,
   repeatSchedule,
+  showOverPhone,
   TabBar,
 } from "./design-calendar";
 import type { RepeatRule, Schedule, Shift, Tab } from "./design-calendar";
@@ -73,6 +82,7 @@ type Page =
   | "mark"
   | "appearance"
   | "week"
+  | "account"
   | "profile";
 
 // The four shapes members see. Icons come filled or as outlines; letters
@@ -272,6 +282,13 @@ export function DesignSettings({
             preview={weekPreview}
           />
         )}
+        {page === "account" && (
+          <AccountPage
+            onBack={() => {
+              setPage("top");
+            }}
+          />
+        )}
         {page === "appearance" && (
           <AppearancePage
             onBack={() => {
@@ -400,14 +417,15 @@ function SettingsTop({
             </span>
           }
         />
-        <Row label="アカウント" value="つながっていません" />
+        <AccountRow
+          onOpen={() => {
+            onOpen("account");
+          }}
+        />
       </Section>
       <Section title="データ">
         <Row danger label="すべてのデータを削除" />
       </Section>
-      <p className="st-note">
-        「繰り返し」「シフトパターン」「シフトの見た目」を開けます。ほかの項目はまだ見本です。
-      </p>
     </>
   );
 }
@@ -475,6 +493,211 @@ function Row({
     );
   }
   return <div className="st-row">{content}</div>;
+}
+
+function AccountRow({ onOpen }: { onOpen: () => void }) {
+  const { account } = useContext(AccountContext);
+  return (
+    <Row
+      label="アカウント"
+      onOpen={onOpen}
+      value={
+        account ? (
+          <span className="st-inline-value">
+            <ProviderLogo provider={account.provider} size={15} />
+            {providerNames[account.provider]}
+          </span>
+        ) : (
+          "ログインしていません"
+        )
+      }
+    />
+  );
+}
+
+// How long the prototype pretends the provider's sign-in takes.
+const signInMilliseconds = 900;
+
+// Before signing in, what it is for and the two ways in; after, who is
+// signed in and the ways out. Signing in is optional, so the page never
+// pushes it beyond saying what it keeps safe.
+function AccountPage({ onBack }: { onBack: () => void }) {
+  const { account, setAccount } = useContext(AccountContext);
+  const [busy, setBusy] = useState<AccountProvider>();
+  const [confirm, setConfirm] = useState<"signOut" | "delete">();
+  const signIn = (provider: AccountProvider) => {
+    if (busy) {
+      return;
+    }
+    setBusy(provider);
+    setTimeout(() => {
+      setAccount?.({ email: sampleEmails[provider], provider });
+      setBusy(undefined);
+    }, signInMilliseconds);
+  };
+  if (!account) {
+    return (
+      <>
+        <PageHeader back="設定" onBack={onBack} title="アカウント" />
+        <div className="st-account-hero">
+          <span aria-hidden="true" className="st-account-icon">
+            <CloudCheck size={28} />
+          </span>
+          <h4>ログインして、データを守る</h4>
+          <p>
+            機種変更しても、スマホとタブレットでも、同じシフトとグループを使えます。
+          </p>
+        </div>
+        <div className="st-account-buttons">
+          {(["apple", "google"] as const).map((provider) => (
+            <button
+              className={`st-provider st-provider-${provider}`}
+              disabled={busy !== undefined}
+              key={provider}
+              onClick={() => {
+                signIn(provider);
+              }}
+              type="button"
+            >
+              <ProviderLogo provider={provider} size={19} />
+              {busy === provider
+                ? "ログイン中…"
+                : `${providerNames[provider]}で続ける`}
+            </button>
+          ))}
+        </div>
+        <p className="st-note">
+          はじめてなら、この端末のデータがそのまま引き継がれます。すでにアカウントがあれば、そのデータを開きます。ログインしなくても、この端末ではそのまま使えます。
+        </p>
+      </>
+    );
+  }
+  return (
+    <>
+      <PageHeader back="設定" onBack={onBack} title="アカウント" />
+      <Group title="ログイン中">
+        <div className="st-list">
+          <div className="st-row">
+            <span className="st-account-logo">
+              <ProviderLogo provider={account.provider} size={18} />
+            </span>
+            <span className="st-row-label">
+              {providerNames[account.provider]}
+            </span>
+            <span className="st-row-value st-account-email">
+              {account.email}
+            </span>
+          </div>
+        </div>
+        <p className="st-note">
+          シフトとグループはこのアカウントに保存され、ほかの端末でも同じデータを使えます。
+        </p>
+      </Group>
+      <div className="st-list">
+        {/* Asks first, on the spot, so no arrow as for a page. */}
+        <button
+          className="st-row"
+          onClick={() => {
+            setConfirm("signOut");
+          }}
+          type="button"
+        >
+          <span className="st-row-label st-danger">ログアウト</span>
+        </button>
+      </div>
+      <div className="st-list st-account-delete">
+        {/* Asks first, on the spot, so no arrow as for a page. */}
+        <button
+          className="st-row"
+          onClick={() => {
+            setConfirm("delete");
+          }}
+          type="button"
+        >
+          <span className="st-row-label st-danger">アカウントを削除</span>
+        </button>
+      </div>
+      {confirm === "signOut" && (
+        <ConfirmSheet
+          action="ログアウト"
+          message="この端末からデータが消えます。もう一度ログインすれば、同じデータを使えます。"
+          onCancel={() => {
+            setConfirm(undefined);
+          }}
+          onConfirm={() => {
+            setConfirm(undefined);
+            setAccount?.(undefined);
+          }}
+          title="ログアウトしますか？"
+        />
+      )}
+      {confirm === "delete" && (
+        <ConfirmSheet
+          action="アカウントを削除"
+          message="シフト、グループ、チャットがすべて削除されます。元に戻せません。"
+          onCancel={() => {
+            setConfirm(undefined);
+          }}
+          onConfirm={() => {
+            setConfirm(undefined);
+            setAccount?.(undefined);
+          }}
+          title="アカウントを削除しますか？"
+        />
+      )}
+    </>
+  );
+}
+
+// A question before something hard to undo, over the phone like the other
+// sheets. It opens as soon as it is rendered.
+function ConfirmSheet({
+  title,
+  message,
+  action,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  message: string;
+  action: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const sheetRef = useRef<HTMLDialogElement>(null);
+  const open = (sheet: HTMLDialogElement | null) => {
+    sheetRef.current = sheet;
+    if (sheet && !sheet.open) {
+      showOverPhone(sheet, sheet.closest<HTMLElement>(".dc-phone"));
+    }
+  };
+  return (
+    <dialog
+      aria-label={title}
+      className="dc-breakdown"
+      onClose={onCancel}
+      ref={open}
+    >
+      <button
+        aria-label="閉じる"
+        className="dc-sheet-scrim"
+        onClick={onCancel}
+        tabIndex={-1}
+        type="button"
+      />
+      <section className="dc-sheet st-confirm-sheet">
+        <div aria-hidden="true" className="dc-sheet-handle" />
+        <h4>{title}</h4>
+        <p>{message}</p>
+        <button className="st-confirm-action" onClick={onConfirm} type="button">
+          {action}
+        </button>
+        <button className="st-photo-cancel" onClick={onCancel} type="button">
+          キャンセル
+        </button>
+      </section>
+    </dialog>
+  );
 }
 
 function PageHeader({

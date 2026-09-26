@@ -2093,6 +2093,113 @@ button.st-row:hover {
 .dc-detail-patterns button[aria-pressed="true"] .sm-icon {
   fill: var(--on-accent-fill);
 }
+/* アカウント before signing in: what it keeps, then the two ways in. */
+.st-account-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px 22px;
+  text-align: center;
+}
+.st-account-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 6px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 50%;
+}
+.st-account-hero h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+.st-account-hero p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-3);
+}
+.st-account-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+/* Each provider's own button style: Apple black (white in dark mode),
+   Google white with a gray edge (near black in dark mode). */
+.design-page .st-provider {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 50px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 14px;
+}
+.design-page .st-provider:disabled {
+  opacity: 0.6;
+}
+.design-page .st-provider-apple {
+  color: light-dark(#ffffff, #000000);
+  background: light-dark(#000000, #ffffff);
+  border: 0;
+}
+.design-page .st-provider-google {
+  color: light-dark(#1f1f1f, #e3e3e3);
+  background: light-dark(#ffffff, #131314);
+  border: 1px solid light-dark(#747775, #8e918f);
+}
+.st-account-logo {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-right: 12px;
+  color: var(--text);
+  background: var(--surface);
+  border-radius: 50%;
+}
+.st-account-email {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.st-account-delete {
+  margin-top: 10px;
+}
+.st-confirm-sheet h4 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+.st-confirm-sheet p {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-3);
+  text-align: center;
+}
+.design-page .st-confirm-action {
+  width: 100%;
+  min-height: 48px;
+  font-size: 16px;
+  font-weight: 700;
+  /* The badge red holds white text in dark mode too; --danger is a light
+     red there, made for text. */
+  color: var(--on-badge);
+  background: var(--badge);
+  border: 0;
+  border-radius: 16px;
+}
 /* The dot before a setting that paints with a color. */
 .gr-row-mark {
   margin-right: 12px;
