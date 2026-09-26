@@ -249,7 +249,17 @@ function neutralsFor(
   }
   const { bg, tint } = toneNeutrals(tone, theme.accent, scheme);
   const style = neutralStyle(scheme, tint);
-  return (bg ? { ...style, "--bg": bg } : style) as CSSProperties;
+  if (!bg) {
+    return style;
+  }
+  // Cards and sheets share the screen's color, as white on white does in
+  // deep, so a tinted screen does not leave them floating pure white.
+  return {
+    ...style,
+    "--bg": bg,
+    "--raised": bg,
+    "--surface": bg,
+  } as CSSProperties;
 }
 
 // Every color variable design.css reads: the neutral roles plus the theme.

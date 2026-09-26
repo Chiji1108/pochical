@@ -139,14 +139,15 @@ const markSpecs: Record<
 
 // How each tone treats the grays: pastel leans them toward the theme,
 // dusty toward a warm greige whatever the theme. `bg` lifts the light
-// background off pure white.
+// background just off pure white; it must stay lighter and less tinted
+// than --fill, or lists and the group rail sink into it.
 const GREIGE_HUE = 70;
 const neutralSpecs: Record<
   GeneratedTone,
   { hue: "theme" | number; strength: number; bg: Spec }
 > = {
-  dusty: { bg: at(0.982, () => 0.01), hue: GREIGE_HUE, strength: 1.3 },
-  pastel: { bg: at(0.988, fixed(0.008)), hue: "theme", strength: 1.3 },
+  dusty: { bg: at(0.994, () => 0.004), hue: GREIGE_HUE, strength: 1.3 },
+  pastel: { bg: at(0.994, fixed(0.004)), hue: "theme", strength: 1.3 },
 };
 
 function paint(spec: Spec, hex: string, hueOverride?: number) {
