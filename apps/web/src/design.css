@@ -2819,11 +2819,36 @@ button.st-row:hover {
   border: 1px solid var(--separator);
   border-radius: 16px;
 }
-.gr-week-card-next {
-  padding-left: 8px;
-  font-size: 11px;
+.design-page .gr-week-card-table {
+  width: 100%;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+}
+/* 次にみんな休み: a row under the week, laid out like 今月のみんな休み. */
+.design-page .gr-week-card-next {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 6px 2px 10px;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-2);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--separator);
+}
+.gr-week-card-next-value {
+  margin-left: auto;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-strong);
+}
+.gr-week-card-next svg {
+  color: var(--text-faint);
 }
 .gr-table-compact .gr-week {
   padding: 0;

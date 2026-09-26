@@ -502,7 +502,7 @@ function chatKey(groupId: string, chatId: string) {
 type Page =
   | { name: "hub" }
   // `from` is the chat that opened it, to go back there.
-  | { name: "shifts"; month?: Date; from?: string }
+  | { name: "shifts"; month?: Date; day?: Date; from?: string }
   | { name: "chat"; chatId: string }
   | { name: "invite" }
   | { name: "new" }
@@ -646,6 +646,13 @@ export function DesignGroup({
               onShifts={() => {
                 setPage({ name: "shifts" });
               }}
+              onShiftsDay={(date) => {
+                setPage({
+                  day: date,
+                  month: new Date(date.getFullYear(), date.getMonth(), 1),
+                  name: "shifts",
+                });
+              }}
             />
           </div>
         </div>
@@ -656,6 +663,7 @@ export function DesignGroup({
               backLabel={page.from ? chatTitle(group, page.from) : group.name}
               group={group}
               layout={layouts[group.id] ?? defaultLayout(group.members.length)}
+              day={page.day}
               month={page.month}
               onBack={() => {
                 setPage(
@@ -793,6 +801,7 @@ function GroupHub({
   group,
   chatOf,
   onShifts,
+  onShiftsDay,
   onChat,
   onInvite,
   onSettings,
@@ -800,6 +809,8 @@ function GroupHub({
   group: Group;
   chatOf: (chatId: string) => Chat;
   onShifts: () => void;
+  // Opens the month with that day picked, as if pressed in the table.
+  onShiftsDay: (date: Date) => void;
   onChat: (chatId: string) => void;
   onInvite: () => void;
   onSettings: () => void;
@@ -845,19 +856,41 @@ function GroupHub({
             <ChevronRight aria-hidden="true" size={15} />
           </button>
         </div>
-        <button
-          aria-label="今週のみんなのシフト。押すと月で見られます"
-          className="gr-week-card"
-          onClick={onShifts}
-          type="button"
-        >
-          <MemberTable compact dates={week} group={group} month={designToday} />
-          {nextOff && (
-            <span className="gr-week-card-next">
-              次にみんな休み　{formatDay(nextOff)}
-            </span>
+        <div className="gr-week-card">
+          <button
+            aria-label="今週のみんなのシフト。押すと月で見られます"
+            className="gr-week-card-table"
+            onClick={onShifts}
+            type="button"
+          >
+            <MemberTable
+              compact
+              dates={week}
+              group={group}
+              month={designToday}
+            />
+          </button>
+          {nextOff ? (
+            <button
+              className="gr-week-card-next"
+              onClick={() => {
+                onShiftsDay(nextOff);
+              }}
+              type="button"
+            >
+              <span className="gr-week-card-next-label">次にみんな休み</span>
+              <span className="gr-week-card-next-value">
+                {formatDay(nextOff)}・{daysFromToday(nextOff)}
+              </span>
+              <ChevronRight aria-hidden="true" size={15} />
+            </button>
+          ) : (
+            <div className="gr-week-card-next">
+              <span className="gr-week-card-next-label">次にみんな休み</span>
+              <span className="gr-week-card-next-value">なし</span>
+            </div>
           )}
-        </button>
+        </div>
       </section>
       <section className="st-section">
         <h4>チャット</h4>
@@ -1482,6 +1515,28 @@ function DaySheet({
   );
 }
 
+const dayMs = 24 * 60 * 60 * 1000;
+
+// How far a day is from today, the way people say it: 今日, 明日, 3日後.
+function daysFromToday(date: Date) {
+  const days = Math.round(
+    (new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime() -
+      new Date(
+        designToday.getFullYear(),
+        designToday.getMonth(),
+        designToday.getDate()
+      ).getTime()) /
+      dayMs
+  );
+  if (days === 0) {
+    return "今日";
+  }
+  if (days === 1) {
+    return "明日";
+  }
+  return `${days}日後`;
+}
+
 const suggestionCount = 4;
 
 // 日ごと reads most easily, so it comes first while everyone fits across;
@@ -1502,6 +1557,7 @@ function defaultLayout(count: number): Layout {
 function ShiftsPage({
   group,
   backLabel,
+  day,
   month: initialMonth,
   layout,
   onLayout: setLayout,
@@ -1509,6 +1565,8 @@ function ShiftsPage({
 }: {
   group: Group;
   backLabel: string;
+  // A day to open picked, from 次にみんな休み.
+  day?: Date;
   month?: Date;
   layout: Layout;
   onLayout: (layout: Layout) => void;
@@ -1517,7 +1575,7 @@ function ShiftsPage({
   const [month, setMonth] = useState(initialMonth ?? designMonth);
   // Whose marks the legend sheet shows, when open.
   const [legend, setLegend] = useState<Member[]>();
-  const [picked, setPicked] = useState<Date>();
+  const [picked, setPicked] = useState<Date | undefined>(day);
   const [saved, setSaved] = useState(false);
   // The note that the picture was saved goes away by itself.
   useEffect(() => {
