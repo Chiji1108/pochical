@@ -1472,19 +1472,22 @@ body:has(.dc-breakdown[open]) {
   line-height: 1.7;
   color: var(--text-3);
 }
-.ob-intro-marks {
-  display: grid;
-  grid-template-columns: repeat(2, 48px);
-  gap: 8px;
-  margin-bottom: 12px;
+/* Black lines on white paper, blended into whatever ground the screen
+   has: multiplied in light, inverted and screened in dark. */
+.ob-poodle {
+  width: 200px;
+  height: 200px;
+  margin: -24px 0 -18px;
 }
-.ob-intro-marks > span {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  background: var(--fill);
-  border-radius: 14px;
+/* The scan's paper is a little gray; brightening clips it to white so no
+   square shows around the dog. */
+.ob-poodle-light {
+  filter: brightness(1.12) contrast(1.2);
+  mix-blend-mode: multiply;
+}
+.ob-poodle-dark {
+  filter: brightness(1.12) contrast(1.2) invert(1);
+  mix-blend-mode: screen;
 }
 .ob-welcome-actions {
   display: flex;

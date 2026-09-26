@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useContext, useState } from "react";
 
 import type { DesignVariants } from "../lib/design-variants";
 import { ProviderLogo, providerNames } from "./design-account";
@@ -15,7 +15,7 @@ import {
   repeatSchedule,
 } from "./design-calendar";
 import type { RepeatRule, Schedule, Shift } from "./design-calendar";
-import { useThemeStyle } from "./design-theme";
+import { ColorSchemeContext, useThemeStyle } from "./design-theme";
 import { useWeek } from "./design-week";
 import { ShiftMark } from "./shift-mark";
 
@@ -232,8 +232,6 @@ export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
   );
 }
 
-const welcomeShifts: Shift[] = ["day", "night", "after", "off"];
-
 function WelcomeStep({
   onStart,
   onLogin,
@@ -241,16 +239,19 @@ function WelcomeStep({
   onStart: () => void;
   onLogin: () => void;
 }) {
+  const scheme = useContext(ColorSchemeContext);
   return (
     <div className="ob-welcome-screen">
       <div className="ob-intro">
-        <div aria-hidden="true" className="ob-intro-marks">
-          {welcomeShifts.map((shift) => (
-            <span key={shift}>
-              <ShiftMark shift={shift} size={26} />
-            </span>
-          ))}
-        </div>
+        {/* The app icon's poodle, just the drawing: the one who was tapped on
+            the home screen, over the name it gives. */}
+        <img
+          alt=""
+          className={`ob-poodle ob-poodle-${scheme}`}
+          height={200}
+          src="/design/poodle.jpeg"
+          width={200}
+        />
         <h3>ポチカル</h3>
         <p>シフトをポチッと入れて、家族や友達と見せ合えるカレンダーです。</p>
       </div>
