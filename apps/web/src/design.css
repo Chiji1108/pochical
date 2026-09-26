@@ -2789,8 +2789,11 @@ button.st-row:hover {
 .gr-week-card-next svg {
   color: var(--text-faint);
 }
+/* Inside the week card the table takes the card's color; --bg is the
+   darkest gray in dark mode and would cut a hole in it. */
 .gr-table-compact .gr-week {
   padding: 0;
+  background: transparent;
   border: 0;
   border-radius: 0;
 }
