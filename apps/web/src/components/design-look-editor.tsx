@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import {
   MarkGlyph,
+  MonochromeContext,
   useMarkColors,
   markEmojis,
   markIcons,
@@ -286,21 +287,31 @@ function ColorPicker({
   onPick: (field: LookField, value: Partial<Look>) => void;
 }) {
   const colors = useMarkColors();
+  const { monochrome } = useContext(MonochromeContext);
   return (
-    <fieldset className="pe-colors">
-      <legend className="dc-repeat-label pe-colors-label">色</legend>
-      {colors.map(({ name, color, tint }, index) => (
-        <button
-          aria-label={name}
-          aria-pressed={look.color === index}
-          key={name}
-          onClick={() => {
-            onPick("color", { color: index });
-          }}
-          style={{ background: tint, color }}
-          type="button"
-        />
-      ))}
-    </fieldset>
+    <>
+      <fieldset className="pe-colors">
+        <legend className="dc-repeat-label pe-colors-label">色</legend>
+        {colors.map(({ name, color, tint }, index) => (
+          <button
+            aria-label={name}
+            aria-pressed={look.color === index}
+            key={name}
+            onClick={() => {
+              onPick("color", { color: index });
+            }}
+            style={{ background: tint, color }}
+            type="button"
+          />
+        ))}
+      </fieldset>
+      {/* In a single theme color every mark takes that color, so say when
+          this choice shows. */}
+      {monochrome && (
+        <p className="st-note">
+          スタイルのカラーをマルチカラーにすると、この色で表示されます。
+        </p>
+      )}
+    </>
   );
 }

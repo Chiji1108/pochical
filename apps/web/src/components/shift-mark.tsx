@@ -64,7 +64,6 @@ import {
   themeColors,
   themeOf,
 } from "./design-theme";
-import type { ThemeId } from "./design-theme";
 
 export type ShiftMarkStyle = "icon" | "emoji" | "badge";
 export const ShiftMarkStyleContext = createContext<ShiftMarkStyle>("icon");
@@ -101,7 +100,6 @@ export function useOffHighlight(style: ShiftMarkStyle) {
 export type LookSettings = {
   style: ShiftMarkStyle;
   fill: boolean;
-  monochrome: boolean;
   names: boolean;
   highlight: boolean;
 };
@@ -109,65 +107,39 @@ export type LookSettings = {
 const baseLook: LookSettings = {
   fill: true,
   highlight: true,
-  monochrome: false,
   names: false,
   style: "icon",
 };
 
-// Ready-made styles: a theme color, a mark for 休み and a look that suit
-// each other.
+// Ready-made styles: shapes only (mark kind, fill, names, the 休み
+// highlight). Colors come from the viewer's カラー and トーン instead.
 export const stylePresets: {
   id: string;
   name: string;
-  theme: ThemeId;
   look: LookSettings;
 }[] = [
-  {
-    id: "natural",
-    look: baseLook,
-    name: "ナチュラル",
-    theme: "moss",
-  },
-  {
-    id: "monotone",
-    look: { ...baseLook, monochrome: true },
-    name: "モノトーン",
-    theme: "sumi",
-  },
+  { id: "natural", look: baseLook, name: "ナチュラル" },
   {
     id: "minimal",
-    look: {
-      ...baseLook,
-      fill: false,
-      highlight: false,
-      monochrome: true,
-    },
+    look: { ...baseLook, fill: false, highlight: false },
     name: "ミニマル",
-    theme: "sumi",
   },
-  {
-    id: "pop",
-    look: { ...baseLook, style: "emoji" },
-    name: "ポップ",
-    theme: "moss",
-  },
+  { id: "pop", look: { ...baseLook, style: "emoji" }, name: "ポップ" },
   {
     id: "roster",
     look: { ...baseLook, highlight: false, style: "badge" },
     name: "勤務表",
-    theme: "moss",
   },
   {
     id: "friendly",
     look: { ...baseLook, fill: false, names: true, style: "badge" },
     name: "親しみ",
-    theme: "moss",
   },
 ];
 
-// A theme and look together, like the last custom style. The tone is
-// not part of it: it only changes the viewer's own screen.
-export type StyleChoice = { theme: ThemeId; look: LookSettings };
+// A look, like the last custom style. Colors are not part of it: カラー and
+// トーン only change the viewer's own screen.
+export type StyleChoice = { look: LookSettings };
 
 export const LookSettingsContext = createContext<{
   look: LookSettings;
@@ -185,16 +157,11 @@ function sameLook(preset: LookSettings, look: LookSettings) {
   if (preset.names !== look.names) {
     return false;
   }
-  return (
-    look.style === "emoji" ||
-    (preset.fill === look.fill && preset.monochrome === look.monochrome)
-  );
+  return look.style === "emoji" || preset.fill === look.fill;
 }
 
-export function stylePresetOf({ look, theme }: StyleChoice) {
-  return stylePresets.find(
-    (preset) => preset.theme === theme && sameLook(preset.look, look)
-  );
+export function stylePresetOf({ look }: StyleChoice) {
+  return stylePresets.find((preset) => sameLook(preset.look, look));
 }
 
 export const OffHighlightContext = createContext<{
@@ -416,12 +383,12 @@ function useThemeMarkColor() {
   return { color: accent, name: "テーマカラー", tint: markTint };
 }
 
-// When on, icons and letters all take the theme color instead of each
-// pattern's own; emoji keep their colors, so it does not apply to them.
-export const MonochromeContext = createContext<{
-  monochrome: boolean;
-  setMonochrome?: (monochrome: boolean) => void;
-}>({ monochrome: false });
+// On when the viewer's カラー is a single theme color rather than マルチカラー:
+// icons and letters, everyone's alike, take the theme color instead of each
+// pattern's own. Emoji keep their colors, so it does not apply to them.
+export const MonochromeContext = createContext<{ monochrome: boolean }>({
+  monochrome: false,
+});
 
 // The color a mark is drawn in, after the theme-only setting.
 export function useDisplayColor(markColor: MarkColor) {

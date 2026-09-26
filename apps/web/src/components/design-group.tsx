@@ -36,14 +36,11 @@ import {
 } from "./design-calendar";
 import type { Schedule, Shift, Tab } from "./design-calendar";
 import { iconNames } from "./design-look-editor";
-import { ThemeContext } from "./design-theme";
-import type { ThemeId } from "./design-theme";
 import {
   guessLook,
   IconWeightContext,
   lookOf,
   MarkGlyph,
-  MonochromeContext,
   useMarkColor,
   useMarkColors,
   markIcons,
@@ -68,7 +65,7 @@ type Member = {
   name: string;
   me?: boolean;
   // The style they picked for their own calendar.
-  style?: { look: LookSettings; theme: ThemeId };
+  style?: { look: LookSettings };
   // A profile picture; without one the avatar shows the first letter.
   photo?: string;
   patterns: MemberPattern[];
@@ -162,7 +159,7 @@ const partner: Member = {
     }
     return date.getDay() === 3 ? "home" : "office";
   },
-  style: { look: presetLook("pop"), theme: "moss" },
+  style: { look: presetLook("pop") },
 };
 
 const mother: Member = {
@@ -180,7 +177,7 @@ const mother: Member = {
   photo: samplePhoto(429),
   shiftOn: (date) =>
     [1, 3, 5].includes(date.getDay()) && !holidayName(date) ? "part" : "off",
-  style: { look: presetLook("roster"), theme: "terracotta" },
+  style: { look: presetLook("roster") },
 };
 
 const nurseOrder = ["day", "day", "night", "after", "off", "off"] as const;
@@ -199,7 +196,7 @@ const misaki = (): Member => ({
   })),
   photo: samplePhoto(823),
   shiftOn: (date) => nurseOrder[(dayNumber(date) + 3) % nurseOrder.length],
-  style: { look: presetLook("minimal"), theme: "sumi" },
+  style: { look: presetLook("minimal") },
 });
 
 // あや made レッスン herself and never picked a look, so it has what the
@@ -227,7 +224,7 @@ const aya = (): Member => ({
     const order = ["early", "early", "late", "late", "off", "lesson", "off"];
     return order[(dayNumber(date) + 3) % order.length];
   },
-  style: { look: presetLook("friendly"), theme: "rose" },
+  style: { look: presetLook("friendly") },
 });
 
 // Nurses from the same year, each on the same order at a different point.
@@ -236,7 +233,7 @@ const classmates = (): Member[] =>
     ["haruka", "はるか", 0, 1025, "natural"],
     ["ren", "れん", 1, 237, "pop"],
     ["mei", "めい", 2, 0, "roster"],
-    ["sota", "そうた", 4, 669, "monotone"],
+    ["sota", "そうた", 4, 669, "minimal"],
     ["yui", "ゆい", 5, 1062, "friendly"],
   ].map(([id, name, offset, photo, preset]) => ({
     ...misaki(),
@@ -245,14 +242,14 @@ const classmates = (): Member[] =>
     photo: photo ? samplePhoto(Number(photo)) : undefined,
     shiftOn: (date: Date) =>
       nurseOrder[(dayNumber(date) + Number(offset)) % nurseOrder.length],
-    style: { look: presetLook(String(preset)), theme: "moss" as ThemeId },
+    style: { look: presetLook(String(preset)) },
   }));
 
 // Old school friends in all kinds of work: a group too wide for 日ごと.
 const schoolFriends = (): Member[] => [
   ...[
     ["kana", "かな", 0, 1027, "natural"],
-    ["riku", "りく", 2, 1074, "monotone"],
+    ["riku", "りく", 2, 1074, "minimal"],
   ].map(([id, name, offset, photo, preset]) => ({
     ...misaki(),
     id: String(id),
@@ -260,7 +257,7 @@ const schoolFriends = (): Member[] => [
     photo: samplePhoto(Number(photo)),
     shiftOn: (date: Date) =>
       nurseOrder[(dayNumber(date) + Number(offset)) % nurseOrder.length],
-    style: { look: presetLook(String(preset)), theme: "moss" as ThemeId },
+    style: { look: presetLook(String(preset)) },
   })),
   ...[
     ["shun", "しゅん", 1012, "pop"],
@@ -271,7 +268,7 @@ const schoolFriends = (): Member[] => [
     id: String(id),
     name: String(name),
     photo: photo ? samplePhoto(Number(photo)) : undefined,
-    style: { look: presetLook(String(preset)), theme: "moss" as ThemeId },
+    style: { look: presetLook(String(preset)) },
   })),
   ...[
     ["mio", "みお", 1, 64],
@@ -291,7 +288,7 @@ const schoolFriends = (): Member[] => [
     id: "sakiko",
     name: "さきこ",
     photo: samplePhoto(1080),
-    style: { look: presetLook("friendly"), theme: "moss" },
+    style: { look: presetLook("friendly") },
   },
 ];
 
@@ -2284,10 +2281,10 @@ function presetLook(id: string) {
     .look;
 }
 
-// Draws one of a member's marks in the style they picked: their mark kind,
-// fill and theme color. The tone (deep, pastel, dusty) stays the viewer's,
-// so every member's colors sit together on one screen. You and members
-// without a style of their own use the viewer's style.
+// Draws one of a member's marks in the shape they picked (mark kind and
+// fill), in the viewer's カラー and トーン, so everyone's colors sit
+// together on one screen. You and members without a style of their own
+// use the viewer's style.
 function MemberMark({
   member,
   look,
@@ -2301,17 +2298,13 @@ function MemberMark({
   if (!theirs) {
     return <ViewerMark look={look} size={size} />;
   }
-  const { look: settings, theme } = theirs;
+  const { look: settings } = theirs;
   return (
-    <ThemeContext value={{ theme }}>
-      <ShiftMarkStyleContext value={settings.style}>
-        <IconWeightContext value={settings.fill ? "duotone" : "regular"}>
-          <MonochromeContext value={{ monochrome: settings.monochrome }}>
-            <ViewerMark look={look} size={size} />
-          </MonochromeContext>
-        </IconWeightContext>
-      </ShiftMarkStyleContext>
-    </ThemeContext>
+    <ShiftMarkStyleContext value={settings.style}>
+      <IconWeightContext value={settings.fill ? "duotone" : "regular"}>
+        <ViewerMark look={look} size={size} />
+      </IconWeightContext>
+    </ShiftMarkStyleContext>
   );
 }
 

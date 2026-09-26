@@ -2352,9 +2352,10 @@ button.st-row:hover {
   background: transparent;
   border: 0;
 }
+/* カラー: マルチカラー and the six theme colors in one row. */
 .st-theme-row.st-theme-grid {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 4px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
 }
 .design-page .st-theme-row button {
   padding: 5px 0;

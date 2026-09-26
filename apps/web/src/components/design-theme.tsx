@@ -174,6 +174,19 @@ export function themeOf(id: ThemeId): Theme {
   return themes.find((theme) => theme.id === id) ?? themes[0];
 }
 
+// カラー in the style settings: マルチカラー keeps each shift pattern's own
+// color with the moss theme it was tuned for; any single theme color also
+// draws every mark in that color. Only the viewer's screen changes.
+export type ColorChoice = "multi" | ThemeId;
+export const ColorChoiceContext = createContext<{
+  color: ColorChoice;
+  setColor?: (color: ColorChoice) => void;
+}>({ color: "multi" });
+
+export function themeOfColor(color: ColorChoice): ThemeId {
+  return color === "multi" ? "moss" : color;
+}
+
 // The scheme in effect: the device's unless 外観 in settings keeps one.
 export const ColorSchemeContext = createContext<ColorScheme>("light");
 

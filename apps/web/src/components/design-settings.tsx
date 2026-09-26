@@ -34,6 +34,7 @@ import { WorkSetupSteps } from "./design-onboarding";
 import { PatternsPage } from "./design-pattern-editor";
 import {
   AppearanceContext,
+  ColorChoiceContext,
   ColorSchemeContext,
   SetToneContext,
   ThemeContext,
@@ -42,19 +43,20 @@ import {
   themeOf,
   themes,
 } from "./design-theme";
-import type { Appearance } from "./design-theme";
+import type { Appearance, ColorChoice } from "./design-theme";
 import {
   CellNamesContext,
   IconWeightContext,
   LookSettingsContext,
-  MonochromeContext,
   OffHighlightContext,
   SetIconWeightContext,
   SetShiftMarkStyleContext,
   ShiftMark,
   ShiftMarkStyleContext,
+  lookOf,
   stylePresetOf,
   stylePresets,
+  useMarkColors,
   useOffHighlight,
 } from "./shift-mark";
 import type { ShiftMarkStyle, StyleChoice } from "./shift-mark";
@@ -299,7 +301,7 @@ function SettingsTop({
   profile: Profile;
   onOpen: (page: Page) => void;
 }) {
-  const { theme } = useContext(ThemeContext);
+  const { color } = useContext(ColorChoiceContext);
   const { look } = useContext(LookSettingsContext);
   const tone = useContext(ToneContext);
   return (
@@ -355,12 +357,8 @@ function SettingsTop({
           }}
           value={
             <span className="st-inline-value">
-              <span
-                aria-hidden="true"
-                className="st-swatch"
-                style={{ background: "var(--accent)" }}
-              />
-              {stylePresetOf({ look, theme })?.name ?? "カスタム"}
+              <ColorSwatch color={color} />
+              {stylePresetOf({ look })?.name ?? "カスタム"}
               {tone === "deep" ? "" : `・${toneName(tone)}`}
             </span>
           }
@@ -992,15 +990,18 @@ function MarkPage({
     <>
       <PageHeader back="設定" onBack={onBack} title="スタイル" />
       <StylePreview preview={preview} />
+      <Group title="カラー">
+        <ColorChoices />
+      </Group>
       <Group title="トーン">
         <ToneChoices />
       </Group>
-      <Group title="スタイル">
+      <Group title="シフトの見た目">
         <StylePresets />
       </Group>
       <CustomChoice onOpen={onCustomize} />
       <p className="st-note">
-        スタイルは、グループの人があなたのシフトを見るときにも使われます。トーンは、あなたの画面だけに反映されます。
+        シフトの見た目は、グループの人があなたのシフトを見るときにも使われます。カラーとトーンは、あなたの画面だけに反映されます。
       </p>
     </>
   );
@@ -1097,8 +1098,7 @@ function CustomizePage({
   onDone: () => void;
 }) {
   const { look, setLook, setCustom } = useContext(LookSettingsContext);
-  const { theme, setTheme } = useContext(ThemeContext);
-  const [opened] = useState<StyleChoice>({ look, theme });
+  const [opened] = useState<StyleChoice>({ look });
   const saved = cancelTo ?? opened;
   const current = useContext(ShiftMarkStyleContext);
   const setStyle = useContext(SetShiftMarkStyleContext);
@@ -1109,7 +1109,6 @@ function CustomizePage({
           <button
             className="st-custom-cancel"
             onClick={() => {
-              setTheme?.(saved.theme);
               setLook?.(saved.look);
               onDone();
             }}
@@ -1121,8 +1120,8 @@ function CustomizePage({
           <button
             className="pe-save"
             onClick={() => {
-              if (!stylePresetOf({ look, theme })) {
-                setCustom?.({ look, theme });
+              if (!stylePresetOf({ look })) {
+                setCustom?.({ look });
               }
               onDone();
             }}
@@ -1133,9 +1132,6 @@ function CustomizePage({
         </header>
         <StylePreview preview={preview} />
       </div>
-      <Group title="テーマカラー">
-        <ThemeChoices />
-      </Group>
       <Group title="シフトの見た目">
         <fieldset className="st-mark-segment">
           <legend className="dc-sr-only">シフトの見た目</legend>
@@ -1163,18 +1159,16 @@ function CustomizePage({
 // from the last custom style when a preset is in use.
 function CustomChoice({ onOpen }: { onOpen: (before: StyleChoice) => void }) {
   const { look, setLook, custom } = useContext(LookSettingsContext);
-  const { theme, setTheme } = useContext(ThemeContext);
-  const isCustom = !stylePresetOf({ look, theme });
+  const isCustom = !stylePresetOf({ look });
   return (
     <button
       aria-pressed={isCustom}
       className="st-custom-choice"
       onClick={() => {
         if (!isCustom && custom) {
-          setTheme?.(custom.theme);
           setLook?.(custom.look);
         }
-        onOpen({ look, theme });
+        onOpen({ look });
       }}
       type="button"
     >
@@ -1190,8 +1184,7 @@ const presetSample: Shift[] = ["day", "night", "after", "off"];
 // Ready-made looks. Each card draws a few shifts in its own settings.
 function StylePresets() {
   const { look, setLook } = useContext(LookSettingsContext);
-  const themeContext = useContext(ThemeContext);
-  const current = stylePresetOf({ look, theme: themeContext.theme });
+  const current = stylePresetOf({ look });
   return (
     <fieldset className="st-preset-grid">
       <legend className="dc-sr-only">スタイル</legend>
@@ -1200,29 +1193,22 @@ function StylePresets() {
           aria-pressed={current?.id === preset.id}
           key={preset.id}
           onClick={() => {
-            themeContext.setTheme?.(preset.theme);
             setLook?.(preset.look);
           }}
           type="button"
         >
           <span aria-hidden="true" className="st-preset-sample">
-            <ThemeContext value={{ ...themeContext, theme: preset.theme }}>
-              <LookSettingsContext value={{ look: preset.look }}>
-                <ShiftMarkStyleContext value={preset.look.style}>
-                  <IconWeightContext
-                    value={preset.look.fill ? "duotone" : "regular"}
-                  >
-                    <MonochromeContext
-                      value={{ monochrome: preset.look.monochrome }}
-                    >
-                      {presetSample.map((shift) => (
-                        <ShiftMark key={shift} shift={shift} size={18} />
-                      ))}
-                    </MonochromeContext>
-                  </IconWeightContext>
-                </ShiftMarkStyleContext>
-              </LookSettingsContext>
-            </ThemeContext>
+            <LookSettingsContext value={{ look: preset.look }}>
+              <ShiftMarkStyleContext value={preset.look.style}>
+                <IconWeightContext
+                  value={preset.look.fill ? "duotone" : "regular"}
+                >
+                  {presetSample.map((shift) => (
+                    <ShiftMark key={shift} shift={shift} size={18} />
+                  ))}
+                </IconWeightContext>
+              </ShiftMarkStyleContext>
+            </LookSettingsContext>
           </span>
           {preset.name}
         </button>
@@ -1231,13 +1217,11 @@ function StylePresets() {
   );
 }
 
-// The switches for the look in use, as one list. The theme-color switch
-// sits above the icon fill, which follows it until the person picks a fill.
+// The switches for the look in use, as one list.
 function MarkOptionsList({ current }: { current: ShiftMarkStyle }) {
   const { names, setNames } = useContext(CellNamesContext);
   const iconWeight = useContext(IconWeightContext);
   const setIconWeight = useContext(SetIconWeightContext);
-  const { monochrome, setMonochrome } = useContext(MonochromeContext);
   const { highlight, setHighlight } = useContext(OffHighlightContext);
   const highlightOn = useOffHighlight(current);
   return (
@@ -1247,13 +1231,6 @@ function MarkOptionsList({ current }: { current: ShiftMarkStyle }) {
         label="シフト名を表示"
         onChange={(checked) => setNames?.({ ...names, [current]: checked })}
       />
-      {current !== "emoji" && (
-        <SwitchRow
-          checked={monochrome}
-          label="テーマカラーで統一"
-          onChange={(checked) => setMonochrome?.(checked)}
-        />
-      )}
       {current !== "emoji" && (
         <SwitchRow
           checked={iconWeight === "duotone"}
@@ -1393,27 +1370,70 @@ function AppearancePage({ onBack }: { onBack: () => void }) {
   );
 }
 
-// The theme colors as swatches.
-function ThemeChoices() {
-  const { theme, setTheme } = useContext(ThemeContext);
+// The shift patterns' own colors, for the マルチカラー swatch.
+const multiSwatchShifts: Shift[] = ["day", "night", "after", "off"];
+
+// A round swatch of a カラー choice: the theme color, or a pie of the shift
+// colors for マルチカラー.
+function ColorSwatch({
+  color,
+  className = "st-swatch",
+}: {
+  color: ColorChoice;
+  className?: string;
+}) {
   const scheme = useContext(ColorSchemeContext);
   const tone = useContext(ToneContext);
+  const shiftColors = useMarkColors();
+  if (color !== "multi") {
+    return (
+      <span
+        aria-hidden="true"
+        className={className}
+        style={{ background: themeColors(themeOf(color), scheme, tone).fill }}
+      />
+    );
+  }
+  const slices = multiSwatchShifts.map(
+    (shift) => shiftColors[lookOf(shift).color]?.color ?? "transparent"
+  );
+  const quarter = 100 / slices.length;
+  const stops = slices
+    .map(
+      (slice, index) => `${slice} ${index * quarter}% ${(index + 1) * quarter}%`
+    )
+    .join(", ");
+  return (
+    <span
+      aria-hidden="true"
+      className={className}
+      style={{ background: `conic-gradient(${stops})` }}
+    />
+  );
+}
+
+const colorChoices: { color: ColorChoice; name: string }[] = [
+  { color: "multi", name: "マルチカラー" },
+  ...themes.map((theme) => ({ color: theme.id, name: theme.name })),
+];
+
+// マルチカラー keeps each shift's own color with the moss theme; a theme
+// color draws every shift in that one color. Seven choices, because the
+// other mixes (another theme with many shift colors) clash.
+function ColorChoices() {
+  const { color, setColor } = useContext(ColorChoiceContext);
   return (
     <fieldset className="st-theme-grid st-theme-row">
-      <legend className="dc-sr-only">テーマカラー</legend>
-      {themes.map((option) => (
+      <legend className="dc-sr-only">カラー</legend>
+      {colorChoices.map((option) => (
         <button
           aria-label={option.name}
-          aria-pressed={theme === option.id}
-          key={option.id}
-          onClick={() => setTheme?.(option.id)}
+          aria-pressed={color === option.color}
+          key={option.color}
+          onClick={() => setColor?.(option.color)}
           type="button"
         >
-          <span
-            aria-hidden="true"
-            className="st-theme-dot"
-            style={{ background: themeColors(option, scheme, tone).fill }}
-          />
+          <ColorSwatch className="st-theme-dot" color={option.color} />
         </button>
       ))}
     </fieldset>
