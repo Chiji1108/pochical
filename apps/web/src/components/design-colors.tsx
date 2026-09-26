@@ -1,16 +1,12 @@
 import type { ReactNode } from "react";
 
-import type {
-  ColorScheme,
-  ColorToken,
-  ThemeFamily,
-} from "../lib/design-tokens";
+import type { ColorScheme, ColorToken, Tone } from "../lib/design-tokens";
 import {
   colorSchemes,
   markColorIn,
   markColors,
   neutralTokenGroups,
-  themeFamilies,
+  tones,
 } from "../lib/design-tokens";
 import { hexToOklch } from "../lib/oklch";
 import { themeColors, themes, themeStyle } from "./design-theme";
@@ -224,20 +220,17 @@ function NeutralTokens() {
 }
 
 function ThemePalette({
-  family,
+  tone,
   scheme,
   theme,
 }: {
-  family: ThemeFamily;
+  tone: Tone;
   scheme: ColorScheme;
   theme: Theme;
 }) {
-  const colors = themeColors(theme, scheme, family);
+  const colors = themeColors(theme, scheme, tone);
   return (
-    <div
-      className="cp-theme-scheme"
-      style={themeStyle(theme.id, scheme, family)}
-    >
+    <div className="cp-theme-scheme" style={themeStyle(theme.id, scheme, tone)}>
       <div className="cp-theme-preview">
         <span className="cp-theme-button">完了</span>
         <span className="cp-theme-chip">選択中</span>
@@ -266,28 +259,28 @@ function ThemePalette({
   );
 }
 
-const familyLabels: Record<ThemeFamily, string> = {
+const toneLabels: Record<Tone, string> = {
   deep: "深め",
   dusty: "くすみ",
   pastel: "パステル",
 };
 
-const familyDescriptions: Record<ThemeFamily, string> = {
-  deep: "設定で選べる6色です。どのテーマでも同じ役割の変数（--accent など）に入り、画面の組み方は変わりません。深めの系統は、塗りと文字に同じ色を使います。",
+const toneDescriptions: Record<Tone, string> = {
+  deep: "設定で選べる6色です。どのテーマでも同じ役割の変数（--accent など）に入り、画面の組み方は変わりません。深めのトーンは、塗りと文字に同じ色を使います。",
   dusty:
     "同じ6色の色相から、彩度を落としてグレーを混ぜたくすみ色です。背景とグレーはテーマに関係なく温かいグレージュにし、塗りは白い文字が読める中くらいの濃さにします。",
   pastel:
     "同じ6色の色相から、決まりに沿って作ったパステルです。塗りは淡く、上の文字は濃くします。文字と線は読める濃さを保ち、背景にもごく淡く色みを乗せます。",
 };
 
-function ThemeTokens({ family, id }: { family: ThemeFamily; id: string }) {
+function ThemeTokens({ tone, id }: { tone: Tone; id: string }) {
   return (
     <Section
-      description={familyDescriptions[family]}
+      description={toneDescriptions[tone]}
       id={id}
-      title={`テーマカラー（${familyLabels[family]}）`}
+      title={`テーマカラー（${toneLabels[tone]}）`}
     >
-      {family === "deep" ? (
+      {tone === "deep" ? (
         <p className="cp-role-list">
           {themeRoles.map((role) => (
             <span key={role.key}>
@@ -301,8 +294,8 @@ function ThemeTokens({ family, id }: { family: ThemeFamily; id: string }) {
         {themes.map((theme) => (
           <article className="cp-theme" key={theme.id}>
             <h3>{theme.name}</h3>
-            <ThemePalette family={family} scheme="light" theme={theme} />
-            <ThemePalette family={family} scheme="dark" theme={theme} />
+            <ThemePalette tone={tone} scheme="light" theme={theme} />
+            <ThemePalette tone={tone} scheme="dark" theme={theme} />
           </article>
         ))}
       </div>
@@ -311,23 +304,23 @@ function ThemeTokens({ family, id }: { family: ThemeFamily; id: string }) {
 }
 
 function MarkChip({
-  family,
+  tone,
   option,
   scheme,
 }: {
-  family: ThemeFamily;
+  tone: Tone;
   option: (typeof markColors)[number];
   scheme: ColorScheme;
 }) {
-  const { color, tint } = markColorIn(option, scheme, family);
+  const { color, tint } = markColorIn(option, scheme, tone);
   return (
-    <div className="cp-mark" style={themeStyle("moss", scheme, family)}>
+    <div className="cp-mark" style={themeStyle("moss", scheme, tone)}>
       <span className="cp-mark-tile" style={{ background: tint, color }}>
         {option.name.slice(0, 1)}
       </span>
       <span className="cp-mark-values">
         <small>
-          {familyLabels[family]}・{schemeLabels[scheme]}
+          {toneLabels[tone]}・{schemeLabels[scheme]}
         </small>
         <code>{color}</code>
         <code>{tint}</code>
@@ -348,11 +341,11 @@ function MarkTokens() {
         {markColors.map((option) => (
           <article className="cp-mark-card" key={option.name}>
             <h3>{option.name}</h3>
-            {themeFamilies.map((family) =>
+            {tones.map((tone) =>
               colorSchemes.map((scheme) => (
                 <MarkChip
-                  family={family}
-                  key={`${family}-${scheme}`}
+                  tone={tone}
+                  key={`${tone}-${scheme}`}
                   option={option}
                   scheme={scheme}
                 />
@@ -380,10 +373,8 @@ const BLURRED_DISTANCE = 0.02;
 const CLOSE_DISTANCE = 0.03;
 const SHOWN_PAIRS = 5;
 
-function closestPairs(family: ThemeFamily, scheme: ColorScheme) {
-  const colors = markColors.map((option) =>
-    markColorIn(option, scheme, family)
-  );
+function closestPairs(tone: Tone, scheme: ColorScheme) {
+  const colors = markColors.map((option) => markColorIn(option, scheme, tone));
   const pairs = colors.flatMap((first, index) =>
     colors.slice(index + 1).map((second) => ({
       distance: colorDistance(first.color, second.color),
@@ -414,18 +405,18 @@ function DistinctTokens() {
       title="見分けやすさ"
     >
       <div className="cp-distinct">
-        {themeFamilies.map((family) =>
+        {tones.map((tone) =>
           colorSchemes.map((scheme) => (
             <article
               className="cp-distinct-card"
-              key={`${family}-${scheme}`}
-              style={themeStyle("moss", scheme, family)}
+              key={`${tone}-${scheme}`}
+              style={themeStyle("moss", scheme, tone)}
             >
               <h3>
-                {familyLabels[family]}・{schemeLabels[scheme]}
+                {toneLabels[tone]}・{schemeLabels[scheme]}
               </h3>
               <ul>
-                {closestPairs(family, scheme).map(
+                {closestPairs(tone, scheme).map(
                   ({ distance, first, second }) => (
                     <li
                       data-level={distanceLabel(distance)}
@@ -478,9 +469,9 @@ export function DesignColors() {
         ))}
       </nav>
       <NeutralTokens />
-      <ThemeTokens family="deep" id="cp-themes" />
-      <ThemeTokens family="pastel" id="cp-pastel" />
-      <ThemeTokens family="dusty" id="cp-dusty" />
+      <ThemeTokens tone="deep" id="cp-themes" />
+      <ThemeTokens tone="pastel" id="cp-pastel" />
+      <ThemeTokens tone="dusty" id="cp-dusty" />
       <MarkTokens />
       <DistinctTokens />
     </>

@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 
 import { hexToOklch, oklchToHex } from "./oklch";
-import { familyMarkColor, generatedFamilies } from "./theme-families";
+import { toneMarkColor, generatedTones } from "./tones";
 
 // The app's neutral colors by role, for light and dark. design.css reads them
 // as CSS variables (`--bg`, `--text-3`, ...); /design/colors lists them, and
@@ -319,12 +319,12 @@ export const markColors = [
   },
 ] as const;
 
-// Theme families: `deep` is the muted, hand-tuned palette; the others are
-// generated from the same hues (see theme-families.ts).
-export const themeFamilies = ["deep", ...generatedFamilies] as const;
-export type ThemeFamily = (typeof themeFamilies)[number];
+// Theme tones: `deep` is the muted, hand-tuned palette; the others are
+// generated from the same hues (see tones.ts).
+export const tones = ["deep", ...generatedTones] as const;
+export type Tone = (typeof tones)[number];
 
-// The deep shift colors' average lightness; generated families keep each
+// The deep shift colors' average lightness; generated tones keep each
 // color's offset from it.
 const MARK_MEAN_LIGHTNESS =
   markColors.reduce(
@@ -335,31 +335,28 @@ const MARK_MEAN_LIGHTNESS =
 // Low chroma crowds the warm hues together, so dusty spreads them a little
 // (degrees of OKLCH hue) to keep テラコッタ and 赤 apart. Each still reads as
 // the same color name.
-const familyHueShifts: Partial<
-  Record<
-    ThemeFamily,
-    Partial<Record<(typeof markColors)[number]["name"], number>>
-  >
+const toneHueShifts: Partial<
+  Record<Tone, Partial<Record<(typeof markColors)[number]["name"], number>>>
 > = {
   dusty: { からし: 8, オレンジ: 10, テラコッタ: 2, ローズ: -12, 赤: -8 },
 };
 
-// A shift color as drawn in light or dark mode and the given family.
+// A shift color as drawn in light or dark mode and the given tone.
 export function markColorIn(
   option: (typeof markColors)[number],
   scheme: ColorScheme,
-  family: ThemeFamily = "deep"
+  tone: Tone = "deep"
 ) {
   const deep = scheme === "dark" ? option.dark : option;
   const { color, tint } =
-    family === "deep"
+    tone === "deep"
       ? deep
-      : familyMarkColor(
-          family,
+      : toneMarkColor(
+          tone,
           option.color,
           scheme,
           hexToOklch(option.color).lightness - MARK_MEAN_LIGHTNESS,
-          familyHueShifts[family]?.[option.name]
+          toneHueShifts[tone]?.[option.name]
         );
   return { color, name: option.name, tint };
 }

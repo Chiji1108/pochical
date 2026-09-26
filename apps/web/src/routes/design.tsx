@@ -10,9 +10,9 @@ import { DesignOnboarding } from "../components/design-onboarding";
 import {
   AppearanceContext,
   ColorSchemeContext,
-  SetThemeFamilyContext,
+  SetToneContext,
   ThemeContext,
-  ThemeFamilyContext,
+  ToneContext,
   themeStyle,
 } from "../components/design-theme";
 import type { Appearance, ThemeId } from "../components/design-theme";
@@ -28,7 +28,7 @@ import {
   stylePresets,
 } from "../components/shift-mark";
 import type { LookSettings, StyleChoice } from "../components/shift-mark";
-import type { ThemeFamily } from "../lib/design-tokens";
+import type { Tone } from "../lib/design-tokens";
 import {
   designVariantKeys,
   designVariantOptions,
@@ -75,7 +75,7 @@ function DesignPage() {
     setLook((previous) => ({ ...previous, ...change }));
   };
   const [theme, setTheme] = useState<ThemeId>("moss");
-  const [family, setFamily] = useState<ThemeFamily>("deep");
+  const [tone, setTone] = useState<Tone>("deep");
   const [appearance, setAppearance] = useState<Appearance>("system");
   // 端末の外観 plays the phone's own setting; 外観 in settings can override it.
   const scheme = appearance === "system" ? variants.colorScheme : appearance;
@@ -136,8 +136,8 @@ function DesignPage() {
       />
       <AppearanceContext value={{ appearance, setAppearance }}>
         <ColorSchemeContext value={scheme}>
-          <ThemeFamilyContext value={family}>
-            <SetThemeFamilyContext value={setFamily}>
+          <ToneContext value={tone}>
+            <SetToneContext value={setTone}>
               <ThemeContext value={{ setTheme, theme }}>
                 <LookSettingsContext
                   value={{ custom, look, setCustom, setLook }}
@@ -246,8 +246,8 @@ function DesignPage() {
                   </IconWeightContext>
                 </LookSettingsContext>
               </ThemeContext>
-            </SetThemeFamilyContext>
-          </ThemeFamilyContext>
+            </SetToneContext>
+          </ToneContext>
         </ColorSchemeContext>
       </AppearanceContext>
       <p className="design-footnote">

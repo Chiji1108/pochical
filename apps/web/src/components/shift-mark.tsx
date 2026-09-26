@@ -60,7 +60,7 @@ import type { Shift } from "./design-calendar";
 import {
   ColorSchemeContext,
   ThemeContext,
-  ThemeFamilyContext,
+  ToneContext,
   themeColors,
   themeOf,
 } from "./design-theme";
@@ -165,7 +165,7 @@ export const stylePresets: {
   },
 ];
 
-// A theme and look together, like the last custom style. The family is
+// A theme and look together, like the last custom style. The tone is
 // not part of it: it only changes the viewer's own screen.
 export type StyleChoice = { theme: ThemeId; look: LookSettings };
 
@@ -396,14 +396,14 @@ export function guessLook(name: string): Omit<Look, "color"> {
 // All shift colors for the current light or dark mode, in picker order.
 export function useMarkColors() {
   const scheme = useContext(ColorSchemeContext);
-  const family = useContext(ThemeFamilyContext);
-  return markColors.map((option) => markColorIn(option, scheme, family));
+  const tone = useContext(ToneContext);
+  return markColors.map((option) => markColorIn(option, scheme, tone));
 }
 
 export function useMarkColor(markColor: MarkColor) {
   const scheme = useContext(ColorSchemeContext);
-  const family = useContext(ThemeFamilyContext);
-  return markColorIn(markColors[markColor] ?? markColors[0], scheme, family);
+  const tone = useContext(ToneContext);
+  return markColorIn(markColors[markColor] ?? markColors[0], scheme, tone);
 }
 
 // The theme's own color, for marks drawn all in one color.
@@ -411,7 +411,7 @@ function useThemeMarkColor() {
   const { accent, markTint } = themeColors(
     themeOf(useContext(ThemeContext).theme),
     useContext(ColorSchemeContext),
-    useContext(ThemeFamilyContext)
+    useContext(ToneContext)
   );
   return { color: accent, name: "テーマカラー", tint: markTint };
 }

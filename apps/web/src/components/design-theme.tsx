@@ -2,13 +2,9 @@ import { createContext, useContext } from "react";
 import type { CSSProperties } from "react";
 
 import { neutralStyle } from "../lib/design-tokens";
-import type {
-  ColorScheme,
-  NeutralTint,
-  ThemeFamily,
-} from "../lib/design-tokens";
+import type { ColorScheme, NeutralTint, Tone } from "../lib/design-tokens";
 import { hexToOklch } from "../lib/oklch";
-import { familyNeutrals, familyRoles } from "../lib/theme-families";
+import { toneNeutrals, toneRoles } from "../lib/tones";
 
 // Accent palettes for the app. Each sets the variables design.css reads
 // inside the phone; the shift colors stay as they are. `dark` holds the same
@@ -191,14 +187,14 @@ const onFillByScheme: Record<ColorScheme, string> = {
 
 // A theme's accent roles in light or dark. `accent` draws text, icons and
 // lines; `fill` is for solid backgrounds with `onFill` text on top. The deep
-// themes fill with the accent itself; generated families set their own.
+// themes fill with the accent itself; generated tones set their own.
 export function themeColors(
   theme: Theme,
   scheme: ColorScheme,
-  family: ThemeFamily = "deep"
+  tone: Tone = "deep"
 ) {
-  if (family !== "deep") {
-    return familyRoles(family, theme.accent, scheme);
+  if (tone !== "deep") {
+    return toneRoles(tone, theme.accent, scheme);
   }
   const colors = scheme === "dark" ? theme.dark : theme;
   return {
@@ -216,12 +212,12 @@ export function themeColors(
   };
 }
 
-// The viewer's theme family (系統), picked in the style settings. It stays
+// The viewer's tone (トーン), picked in the style settings. It stays
 // the viewer's even where another member's theme color is drawn.
-export const ThemeFamilyContext = createContext<ThemeFamily>("deep");
-export const SetThemeFamilyContext = createContext<
-  ((family: ThemeFamily) => void) | undefined
->(undefined);
+export const ToneContext = createContext<Tone>("deep");
+export const SetToneContext = createContext<((tone: Tone) => void) | undefined>(
+  undefined
+);
 
 // 外観 in settings: follow the device, or force light or dark.
 export type Appearance = "system" | ColorScheme;
@@ -243,16 +239,16 @@ export function neutralTintOf(theme: Theme): NeutralTint {
   };
 }
 
-// The grays lean toward the theme's hue; generated families bring their own.
+// The grays lean toward the theme's hue; generated tones bring their own.
 function neutralsFor(
   theme: Theme,
   scheme: ColorScheme,
-  family: ThemeFamily
+  tone: Tone
 ): CSSProperties {
-  if (family === "deep") {
+  if (tone === "deep") {
     return neutralStyle(scheme, neutralTintOf(theme));
   }
-  const { bg, tint } = familyNeutrals(family, theme.accent, scheme);
+  const { bg, tint } = toneNeutrals(tone, theme.accent, scheme);
   const style = neutralStyle(scheme, tint);
   return (bg ? { ...style, "--bg": bg } : style) as CSSProperties;
 }
@@ -261,12 +257,12 @@ function neutralsFor(
 export function themeStyle(
   id: ThemeId,
   scheme: ColorScheme = "light",
-  family: ThemeFamily = "deep"
+  tone: Tone = "deep"
 ) {
   const theme = themeOf(id);
-  const colors = themeColors(theme, scheme, family);
+  const colors = themeColors(theme, scheme, tone);
   return {
-    ...neutralsFor(theme, scheme, family),
+    ...neutralsFor(theme, scheme, tone),
     "--accent": colors.accent,
     "--accent-border": colors.border,
     "--accent-fill": colors.fill,
@@ -285,6 +281,6 @@ export function useThemeStyle() {
   return themeStyle(
     useContext(ThemeContext).theme,
     useContext(ColorSchemeContext),
-    useContext(ThemeFamilyContext)
+    useContext(ToneContext)
   );
 }

@@ -1,12 +1,12 @@
 import type { ColorScheme, NeutralTint } from "./design-tokens";
 import { hexToOklch, oklchToHex } from "./oklch";
 
-// Theme families generated from a hue instead of tuned by hand. Each family
+// Theme tones generated from a hue instead of tuned by hand. Each tone
 // is a table of OKLCH lightness per role plus a chroma rule, so adding a
-// family means adding a table, and every theme hue and shift color follows.
+// tone means adding a table, and every theme hue and shift color follows.
 
-export const generatedFamilies = ["pastel", "dusty"] as const;
-export type GeneratedFamily = (typeof generatedFamilies)[number];
+export const generatedTones = ["pastel", "dusty"] as const;
+export type GeneratedTone = (typeof generatedTones)[number];
 
 export type AccentRole =
   | "accent"
@@ -45,7 +45,7 @@ const at = (lightness: number, chroma: Chroma): Spec => ({
 });
 
 const roleSpecs: Record<
-  GeneratedFamily,
+  GeneratedTone,
   Record<ColorScheme, Record<AccentRole, Spec>>
 > = {
   // Pale fills with dark text on them; accents stay readable on white.
@@ -109,10 +109,10 @@ const roleSpecs: Record<
   },
 };
 
-// Shift colors keep their hue in every family, so a color picked as "red"
-// stays red; only lightness and chroma follow the family.
+// Shift colors keep their hue in every tone, so a color picked as "red"
+// stays red; only lightness and chroma follow the tone.
 const markSpecs: Record<
-  GeneratedFamily,
+  GeneratedTone,
   Record<ColorScheme, { color: Spec; tint: Spec }>
 > = {
   dusty: {
@@ -137,12 +137,12 @@ const markSpecs: Record<
   },
 };
 
-// How each family treats the grays: pastel leans them toward the theme,
+// How each tone treats the grays: pastel leans them toward the theme,
 // dusty toward a warm greige whatever the theme. `bg` lifts the light
 // background off pure white.
 const GREIGE_HUE = 70;
 const neutralSpecs: Record<
-  GeneratedFamily,
+  GeneratedTone,
   { hue: "theme" | number; strength: number; bg: Spec }
 > = {
   dusty: { bg: at(0.982, () => 0.01), hue: GREIGE_HUE, strength: 1.3 },
@@ -159,12 +159,12 @@ function paint(spec: Spec, hex: string, hueOverride?: number) {
   });
 }
 
-export function familyRoles(
-  family: GeneratedFamily,
+export function toneRoles(
+  tone: GeneratedTone,
   accent: string,
   scheme: ColorScheme
 ): Record<AccentRole, string> {
-  const specs = roleSpecs[family][scheme];
+  const specs = roleSpecs[tone][scheme];
   return Object.fromEntries(
     Object.entries(specs).map(([role, spec]) => [role, paint(spec, accent)])
   ) as Record<AccentRole, string>;
@@ -177,14 +177,14 @@ export function familyRoles(
 const MARK_LIGHTNESS_SPREAD = 0.8;
 const TINT_LIGHTNESS_SPREAD = 0.2;
 
-export function familyMarkColor(
-  family: GeneratedFamily,
+export function toneMarkColor(
+  tone: GeneratedTone,
   color: string,
   scheme: ColorScheme,
   lightnessOffset = 0,
   hueShift = 0
 ) {
-  const spec = markSpecs[family][scheme];
+  const spec = markSpecs[tone][scheme];
   const darker = Math.min(0, lightnessOffset);
   const offset = scheme === "dark" ? -darker : darker;
   const shift = (base: Spec, spread: number): Spec => ({
@@ -198,12 +198,12 @@ export function familyMarkColor(
   };
 }
 
-export function familyNeutrals(
-  family: GeneratedFamily,
+export function toneNeutrals(
+  tone: GeneratedTone,
   accent: string,
   scheme: ColorScheme
 ): { tint: NeutralTint; bg?: string } {
-  const spec = neutralSpecs[family];
+  const spec = neutralSpecs[tone];
   const hue = spec.hue === "theme" ? hexToOklch(accent).hue : spec.hue;
   const tint = { hue, strength: spec.strength };
   if (scheme === "dark") {

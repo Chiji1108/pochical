@@ -8,7 +8,7 @@ import {
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 
-import type { ThemeFamily } from "../lib/design-tokens";
+import type { Tone } from "../lib/design-tokens";
 import {
   addDays,
   DayCell,
@@ -35,9 +35,9 @@ import { PatternsPage } from "./design-pattern-editor";
 import {
   AppearanceContext,
   ColorSchemeContext,
-  SetThemeFamilyContext,
+  SetToneContext,
   ThemeContext,
-  ThemeFamilyContext,
+  ToneContext,
   themeColors,
   themeOf,
   themes,
@@ -293,7 +293,7 @@ function SettingsTop({
 }) {
   const { theme } = useContext(ThemeContext);
   const { look } = useContext(LookSettingsContext);
-  const family = useContext(ThemeFamilyContext);
+  const tone = useContext(ToneContext);
   return (
     <>
       <h3 className="st-title">設定</h3>
@@ -353,7 +353,7 @@ function SettingsTop({
                 style={{ background: "var(--accent)" }}
               />
               {stylePresetOf({ look, theme })?.name ?? "カスタム"}
-              {family === "deep" ? "" : `・${familyName(family)}`}
+              {tone === "deep" ? "" : `・${toneName(tone)}`}
             </span>
           }
         />
@@ -980,13 +980,13 @@ function MarkPage({
     <>
       <PageHeader back="設定" onBack={onBack} title="スタイル" />
       <StylePreview preview={preview} />
-      <Group title="系統">
-        <FamilyChoices />
+      <Group title="トーン">
+        <ToneChoices />
       </Group>
       <StylePresets />
       <CustomChoice onOpen={onCustomize} />
       <p className="st-note">
-        スタイルは、グループの人があなたのシフトを見るときにも使われます。系統は、あなたの画面だけに反映されます。
+        スタイルは、グループの人があなたのシフトを見るときにも使われます。トーンは、あなたの画面だけに反映されます。
       </p>
     </>
   );
@@ -1286,42 +1286,39 @@ function SwitchRow({
   );
 }
 
-const familyOptions: { family: ThemeFamily; name: string }[] = [
-  { family: "deep", name: "深め" },
-  { family: "pastel", name: "パステル" },
-  { family: "dusty", name: "くすみ" },
+const toneOptions: { tone: Tone; name: string }[] = [
+  { name: "深め", tone: "deep" },
+  { name: "パステル", tone: "pastel" },
+  { name: "くすみ", tone: "dusty" },
 ];
 
-function familyName(family: ThemeFamily) {
-  return (
-    familyOptions.find((option) => option.family === family)?.name ?? family
-  );
+function toneName(tone: Tone) {
+  return toneOptions.find((option) => option.tone === tone)?.name ?? tone;
 }
 
-// The color family: one choice changes every theme color, the grays and
+// The color tone: one choice changes every theme color, the grays and
 // the shift colors together, on the viewer's screen only. Each option shows
 // the current theme in it.
-function FamilyChoices() {
-  const family = useContext(ThemeFamilyContext);
-  const setFamily = useContext(SetThemeFamilyContext);
+function ToneChoices() {
+  const tone = useContext(ToneContext);
+  const setTone = useContext(SetToneContext);
   const { theme } = useContext(ThemeContext);
   const scheme = useContext(ColorSchemeContext);
   return (
     <fieldset className="st-mark-segment">
-      <legend className="dc-sr-only">系統</legend>
-      {familyOptions.map((option) => (
+      <legend className="dc-sr-only">トーン</legend>
+      {toneOptions.map((option) => (
         <button
-          aria-pressed={family === option.family}
-          key={option.family}
-          onClick={() => setFamily?.(option.family)}
+          aria-pressed={tone === option.tone}
+          key={option.tone}
+          onClick={() => setTone?.(option.tone)}
           type="button"
         >
           <span
             aria-hidden="true"
-            className="st-theme-dot st-family-dot"
+            className="st-theme-dot st-tone-dot"
             style={{
-              background: themeColors(themeOf(theme), scheme, option.family)
-                .fill,
+              background: themeColors(themeOf(theme), scheme, option.tone).fill,
             }}
           />
           {option.name}
@@ -1364,7 +1361,7 @@ function AppearanceRow() {
 function ThemeChoices() {
   const { theme, setTheme } = useContext(ThemeContext);
   const scheme = useContext(ColorSchemeContext);
-  const family = useContext(ThemeFamilyContext);
+  const tone = useContext(ToneContext);
   return (
     <fieldset className="st-theme-grid st-theme-row">
       <legend className="dc-sr-only">テーマカラー</legend>
@@ -1379,7 +1376,7 @@ function ThemeChoices() {
           <span
             aria-hidden="true"
             className="st-theme-dot"
-            style={{ background: themeColors(option, scheme, family).fill }}
+            style={{ background: themeColors(option, scheme, tone).fill }}
           />
         </button>
       ))}
