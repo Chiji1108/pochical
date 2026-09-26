@@ -332,13 +332,23 @@ const MARK_MEAN_LIGHTNESS =
     0
   ) / markColors.length;
 
-// Low chroma crowds the warm hues together, so dusty spreads them a little
-// (degrees of OKLCH hue) to keep テラコッタ and 赤 apart. Each still reads as
-// the same color name.
+// The generated tones crowd the warm hues together (dusty by lowering
+// chroma, paper by printing them on its yellow), so both spread them a
+// little (degrees of OKLCH hue) to keep テラコッタ and 赤 apart. Each still
+// reads as the same color name.
+const warmHueSpread = {
+  からし: 8,
+  オレンジ: 10,
+  テラコッタ: 2,
+  ローズ: -12,
+  赤: -8,
+} as const;
+
 const toneHueShifts: Partial<
   Record<Tone, Partial<Record<(typeof markColors)[number]["name"], number>>>
 > = {
-  dusty: { からし: 8, オレンジ: 10, テラコッタ: 2, ローズ: -12, 赤: -8 },
+  dusty: warmHueSpread,
+  paper: warmHueSpread,
 };
 
 // A shift color as drawn in light or dark mode and the given tone.
