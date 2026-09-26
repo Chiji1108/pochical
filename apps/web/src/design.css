@@ -4437,3 +4437,74 @@ button.st-row:hover {
 .dc-phone * {
   scrollbar-width: none;
 }
+/* 週ごと / 日ごと / 人ごと as a full-width row under the header. */
+.design-segment.st-row-segment.gr-layout-toggle-wide {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  width: 100%;
+  margin: 0;
+}
+/* Or as one pull-down in the header. */
+.gr-menu-anchor {
+  position: relative;
+  flex-shrink: 0;
+}
+.design-page .gr-menu-button {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 7px 10px 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  background: var(--fill-2);
+  border: 0;
+  border-radius: 16px;
+}
+.design-page .gr-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+.gr-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 11;
+  min-width: 190px;
+  padding: 6px;
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px var(--shadow-strong);
+}
+.design-page .gr-menu button {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 9px 10px;
+  font-size: 14px;
+  color: var(--text);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+}
+.design-page .gr-menu button:hover {
+  background: var(--fill-2);
+}
+.gr-menu hr {
+  margin: 4px 6px;
+  border: 0;
+  border-top: 1px solid var(--separator);
+}
+.gr-menu-check {
+  color: var(--accent);
+}
+.gr-menu-icon {
+  color: var(--text-3);
+}

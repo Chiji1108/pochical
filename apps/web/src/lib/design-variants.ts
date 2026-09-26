@@ -29,6 +29,13 @@ export const designVariantOptions = {
     ],
     label: "予定",
   },
+  shiftsHeader: {
+    choices: [
+      { label: "下の段", value: "below" },
+      { label: "メニュー", value: "menu" },
+    ],
+    label: "グループのシフトの切り替え",
+  },
 } as const;
 
 type VariantKey = keyof typeof designVariantOptions;

@@ -2,10 +2,12 @@ import {
   CalendarPlus,
   Camera,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Copy,
   Download,
+  Info,
   MessagesSquare,
   Plus,
   QrCode,
@@ -20,6 +22,7 @@ import {
 import { useContext, useEffect, useId, useState } from "react";
 import type { ReactNode } from "react";
 
+import type { DesignVariants } from "../lib/design-variants";
 import {
   addDays,
   dateKey,
@@ -510,11 +513,13 @@ export function DesignGroup({
   schedule,
   patternKeys,
   profile,
+  shiftsHeader,
   onTab,
 }: {
   schedule: Schedule;
   patternKeys: Shift[];
   profile: Profile;
+  shiftsHeader: ShiftsHeader;
   onTab: (tab: Tab) => void;
 }) {
   const [groups, setGroups] = useState<Omit<Group, "members">[]>([
@@ -531,7 +536,7 @@ export function DesignGroup({
     },
     {
       id: "ward",
-      name: "病棟の同期",
+      name: "3階東病棟 2024年入職の同期",
       // At work she goes by her family name and keeps her photo private.
       mine: { name: "佐藤", noPhoto: true },
       mark: { color: 10, icon: "hospital", kind: "icon" },
@@ -651,6 +656,7 @@ export function DesignGroup({
         <div className="st-scroll">
           {page.name === "shifts" && (
             <ShiftsPage
+              header={shiftsHeader}
               backLabel={page.from ? chatTitle(group, page.from) : group.name}
               group={group}
               layout={layouts[group.id] ?? defaultLayout(group.members.length)}
@@ -1497,9 +1503,14 @@ function defaultLayout(count: number): Layout {
   return count <= marksUpTo ? "days" : "weeks";
 }
 
+// Where 週ごと / 日ごと / 人ごと live: a full-width row under the header, or
+// one menu that also holds マークの意味 and saving, compared on /design.
+type ShiftsHeader = DesignVariants["shiftsHeader"];
+
 function ShiftsPage({
   group,
   backLabel,
+  header,
   month: initialMonth,
   layout,
   onLayout: setLayout,
@@ -1507,6 +1518,7 @@ function ShiftsPage({
 }: {
   group: Group;
   backLabel: string;
+  header: ShiftsHeader;
   month?: Date;
   layout: Layout;
   onLayout: (layout: Layout) => void;
@@ -1545,23 +1557,19 @@ function ShiftsPage({
             <ChevronLeft aria-hidden="true" size={20} />
             <span className="gr-shifts-back-label">{backLabel}</span>
           </button>
-          <span className="gr-shifts-actions">
-            <fieldset className="design-segment st-row-segment gr-layout-toggle">
-              <legend className="dc-sr-only">表の形</legend>
-              {layoutOptions.map((option) => (
-                <button
-                  aria-pressed={layout === option.layout}
-                  key={option.layout}
-                  onClick={() => {
-                    setLayout(option.layout);
-                  }}
-                  type="button"
-                >
-                  {option.name}
-                </button>
-              ))}
-            </fieldset>
-            {/* Others' shifts only go out as a picture, so no choice first. */}
+          {header === "menu" ? (
+            <ShiftsMenu
+              layout={layout}
+              onLayout={setLayout}
+              onLegend={() => {
+                setLegend(group.members);
+              }}
+              onSave={() => {
+                setSaved(true);
+              }}
+            />
+          ) : (
+            // Others' shifts only go out as a picture, so no choice first.
             <button
               aria-label="シフト表を画像で保存"
               className="dc-heading-icon"
@@ -1572,9 +1580,26 @@ function ShiftsPage({
             >
               <Download aria-hidden="true" size={19} />
             </button>
-          </span>
+          )}
         </div>
       </header>
+      {header === "below" && (
+        <fieldset className="design-segment st-row-segment gr-layout-toggle gr-layout-toggle-wide">
+          <legend className="dc-sr-only">表の形</legend>
+          {layoutOptions.map((option) => (
+            <button
+              aria-pressed={layout === option.layout}
+              key={option.layout}
+              onClick={() => {
+                setLayout(option.layout);
+              }}
+              type="button"
+            >
+              {option.name}
+            </button>
+          ))}
+        </fieldset>
+      )}
       <PagedShifts
         dates={dates}
         group={group}
@@ -1589,6 +1614,7 @@ function ShiftsPage({
         onMonth={setMonth}
         onPickDay={pick}
         picked={picked}
+        showLegendRow={header !== "menu"}
       />
       {picked && (
         <DayPeek
@@ -1615,6 +1641,85 @@ function ShiftsPage({
   );
 }
 
+// One pull-down for the page's secondary actions: how the table is laid
+// out, what the marks mean, and saving it as a picture.
+function ShiftsMenu({
+  layout,
+  onLayout,
+  onLegend,
+  onSave,
+}: {
+  layout: Layout;
+  onLayout: (layout: Layout) => void;
+  onLegend: () => void;
+  onSave: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const current = layoutOptions.find((option) => option.layout === layout);
+  const act = (action: () => void) => () => {
+    action();
+    setOpen(false);
+  };
+  return (
+    <span className="gr-menu-anchor">
+      <button
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="gr-menu-button"
+        onClick={() => {
+          setOpen(!open);
+        }}
+        type="button"
+      >
+        {current?.name}
+        <ChevronDown aria-hidden="true" size={15} />
+      </button>
+      {open && (
+        <>
+          <button
+            aria-label="メニューを閉じる"
+            className="gr-menu-backdrop"
+            onClick={() => {
+              setOpen(false);
+            }}
+            type="button"
+          />
+          <div className="gr-menu" role="menu">
+            {layoutOptions.map((option) => (
+              <button
+                aria-checked={layout === option.layout}
+                key={option.layout}
+                onClick={act(() => {
+                  onLayout(option.layout);
+                })}
+                role="menuitemradio"
+                type="button"
+              >
+                <Check
+                  aria-hidden="true"
+                  className="gr-menu-check"
+                  size={16}
+                  visibility={layout === option.layout ? "visible" : "hidden"}
+                />
+                {option.name}
+              </button>
+            ))}
+            <hr />
+            <button onClick={act(onLegend)} role="menuitem" type="button">
+              <Info aria-hidden="true" className="gr-menu-icon" size={16} />
+              マークの意味
+            </button>
+            <button onClick={act(onSave)} role="menuitem" type="button">
+              <Download aria-hidden="true" className="gr-menu-icon" size={16} />
+              画像で保存
+            </button>
+          </div>
+        </>
+      )}
+    </span>
+  );
+}
+
 const savedNoteTime = 2200;
 
 function PagedShifts({
@@ -1627,8 +1732,10 @@ function PagedShifts({
   onPickDay,
   onMember,
   onLegend,
+  showLegendRow,
 }: {
   group: Group;
+  showLegendRow: boolean;
   layout: Layout;
   month: Date;
   dates: Date[];
@@ -1724,13 +1831,19 @@ function PagedShifts({
           {offDays.length > 0 && <small className="gr-together-unit">日</small>}
         </span>
       </div>
-      <div className="st-list">
-        <button className="st-row" onClick={onLegend} type="button">
-          <span className="st-row-label">マークの意味</span>
-          <span className="st-row-value" />
-          <ChevronRight aria-hidden="true" className="st-row-arrow" size={17} />
-        </button>
-      </div>
+      {showLegendRow && (
+        <div className="st-list">
+          <button className="st-row" onClick={onLegend} type="button">
+            <span className="st-row-label">マークの意味</span>
+            <span className="st-row-value" />
+            <ChevronRight
+              aria-hidden="true"
+              className="st-row-arrow"
+              size={17}
+            />
+          </button>
+        </div>
+      )}
       <p className="st-note">マスを押すと、その日のみんなの予定が出ます。</p>
     </>
   );
