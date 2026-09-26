@@ -454,10 +454,9 @@ function closestPairs(family: ThemeFamily, scheme: ColorScheme) {
       second,
     }))
   );
-  // `pairs` is a fresh array, so sorting it in place is safe.
-  // oxlint-disable-next-line unicorn/no-array-sort
-  pairs.sort((a, b) => a.distance - b.distance);
-  return pairs.slice(0, SHOWN_PAIRS);
+  return pairs
+    .toSorted((a, b) => a.distance - b.distance)
+    .slice(0, SHOWN_PAIRS);
 }
 
 function distanceLabel(distance: number) {
