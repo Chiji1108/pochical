@@ -352,7 +352,8 @@ function SettingsTop({
                 className="st-swatch"
                 style={{ background: "var(--accent)" }}
               />
-              {stylePresetOf({ family, look, theme })?.name ?? "カスタム"}
+              {stylePresetOf({ look, theme })?.name ?? "カスタム"}
+              {family === "deep" ? "" : `・${familyName(family)}`}
             </span>
           }
         />
@@ -979,10 +980,13 @@ function MarkPage({
     <>
       <PageHeader back="設定" onBack={onBack} title="スタイル" />
       <StylePreview preview={preview} />
+      <Group title="系統">
+        <FamilyChoices />
+      </Group>
       <StylePresets />
       <CustomChoice onOpen={onCustomize} />
       <p className="st-note">
-        グループの人のシフトも、ここで選んだ見た目で表示されます。
+        スタイルは、グループの人があなたのシフトを見るときにも使われます。系統は、あなたの画面だけに反映されます。
       </p>
     </>
   );
@@ -1080,9 +1084,7 @@ function CustomizePage({
 }) {
   const { look, setLook, setCustom } = useContext(LookSettingsContext);
   const { theme, setTheme } = useContext(ThemeContext);
-  const family = useContext(ThemeFamilyContext);
-  const setFamily = useContext(SetThemeFamilyContext);
-  const [opened] = useState<StyleChoice>({ family, look, theme });
+  const [opened] = useState<StyleChoice>({ look, theme });
   const saved = cancelTo ?? opened;
   const current = useContext(ShiftMarkStyleContext);
   const setStyle = useContext(SetShiftMarkStyleContext);
@@ -1093,7 +1095,6 @@ function CustomizePage({
           <button
             className="st-custom-cancel"
             onClick={() => {
-              setFamily?.(saved.family);
               setTheme?.(saved.theme);
               setLook?.(saved.look);
               onDone();
@@ -1106,8 +1107,8 @@ function CustomizePage({
           <button
             className="pe-save"
             onClick={() => {
-              if (!stylePresetOf({ family, look, theme })) {
-                setCustom?.({ family, look, theme });
+              if (!stylePresetOf({ look, theme })) {
+                setCustom?.({ look, theme });
               }
               onDone();
             }}
@@ -1118,9 +1119,6 @@ function CustomizePage({
         </header>
         <StylePreview preview={preview} />
       </div>
-      <Group title="系統">
-        <FamilyChoices />
-      </Group>
       <Group title="テーマカラー">
         <ThemeChoices />
       </Group>
@@ -1152,20 +1150,17 @@ function CustomizePage({
 function CustomChoice({ onOpen }: { onOpen: (before: StyleChoice) => void }) {
   const { look, setLook, custom } = useContext(LookSettingsContext);
   const { theme, setTheme } = useContext(ThemeContext);
-  const family = useContext(ThemeFamilyContext);
-  const setFamily = useContext(SetThemeFamilyContext);
-  const isCustom = !stylePresetOf({ family, look, theme });
+  const isCustom = !stylePresetOf({ look, theme });
   return (
     <button
       aria-pressed={isCustom}
       className="st-custom-choice"
       onClick={() => {
         if (!isCustom && custom) {
-          setFamily?.(custom.family);
           setTheme?.(custom.theme);
           setLook?.(custom.look);
         }
-        onOpen({ family, look, theme });
+        onOpen({ look, theme });
       }}
       type="button"
     >
@@ -1182,9 +1177,7 @@ const presetSample: Shift[] = ["day", "night", "after", "off"];
 function StylePresets() {
   const { look, setLook } = useContext(LookSettingsContext);
   const themeContext = useContext(ThemeContext);
-  const family = useContext(ThemeFamilyContext);
-  const setFamily = useContext(SetThemeFamilyContext);
-  const current = stylePresetOf({ family, look, theme: themeContext.theme });
+  const current = stylePresetOf({ look, theme: themeContext.theme });
   return (
     <fieldset className="st-preset-grid">
       <legend className="st-preset-legend">スタイル</legend>
@@ -1193,32 +1186,29 @@ function StylePresets() {
           aria-pressed={current?.id === preset.id}
           key={preset.id}
           onClick={() => {
-            setFamily?.(preset.family);
             themeContext.setTheme?.(preset.theme);
             setLook?.(preset.look);
           }}
           type="button"
         >
           <span aria-hidden="true" className="st-preset-sample">
-            <ThemeFamilyContext value={preset.family}>
-              <ThemeContext value={{ ...themeContext, theme: preset.theme }}>
-                <LookSettingsContext value={{ look: preset.look }}>
-                  <ShiftMarkStyleContext value={preset.look.style}>
-                    <IconWeightContext
-                      value={preset.look.fill ? "duotone" : "regular"}
+            <ThemeContext value={{ ...themeContext, theme: preset.theme }}>
+              <LookSettingsContext value={{ look: preset.look }}>
+                <ShiftMarkStyleContext value={preset.look.style}>
+                  <IconWeightContext
+                    value={preset.look.fill ? "duotone" : "regular"}
+                  >
+                    <MonochromeContext
+                      value={{ monochrome: preset.look.monochrome }}
                     >
-                      <MonochromeContext
-                        value={{ monochrome: preset.look.monochrome }}
-                      >
-                        {presetSample.map((shift) => (
-                          <ShiftMark key={shift} shift={shift} size={18} />
-                        ))}
-                      </MonochromeContext>
-                    </IconWeightContext>
-                  </ShiftMarkStyleContext>
-                </LookSettingsContext>
-              </ThemeContext>
-            </ThemeFamilyContext>
+                      {presetSample.map((shift) => (
+                        <ShiftMark key={shift} shift={shift} size={18} />
+                      ))}
+                    </MonochromeContext>
+                  </IconWeightContext>
+                </ShiftMarkStyleContext>
+              </LookSettingsContext>
+            </ThemeContext>
           </span>
           {preset.name}
         </button>
@@ -1302,8 +1292,15 @@ const familyOptions: { family: ThemeFamily; name: string }[] = [
   { family: "dusty", name: "くすみ" },
 ];
 
+function familyName(family: ThemeFamily) {
+  return (
+    familyOptions.find((option) => option.family === family)?.name ?? family
+  );
+}
+
 // The color family: one choice changes every theme color, the grays and
-// the shift colors together. Each option shows the current theme in it.
+// the shift colors together, on the viewer's screen only. Each option shows
+// the current theme in it.
 function FamilyChoices() {
   const family = useContext(ThemeFamilyContext);
   const setFamily = useContext(SetThemeFamilyContext);
