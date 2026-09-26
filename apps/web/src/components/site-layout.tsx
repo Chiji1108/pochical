@@ -6,9 +6,9 @@ import { site } from "../lib/site";
 export function Header() {
   return (
     <header className="site-header">
-      <Link aria-label="ポチカレ ホーム" className="brand" to="/">
+      <Link aria-label="ポチカル ホーム" className="brand" to="/">
         <img alt="" height={36} src="/icon.png" width={36} />
-        <span>ポチカレ</span>
+        <span>ポチカル</span>
       </Link>
       <nav aria-label="メインナビゲーション">
         <Link to="/support">
@@ -29,7 +29,7 @@ export function Footer() {
         <div>
           <Link className="brand" to="/">
             <img alt="" height={30} src="/icon.png" width={30} />
-            <span>ポチカレ</span>
+            <span>ポチカル</span>
           </Link>
           <p>はたらく日も、おやすみの日も。</p>
         </div>
@@ -41,7 +41,7 @@ export function Footer() {
         </nav>
       </div>
       <div className="footer-bottom">
-        <span>© 2026 ポチカレ</span>
+        <span>© 2026 ポチカル</span>
         <a href={`mailto:${site.email}`}>
           {site.email} <ArrowUpRight aria-hidden="true" size={12} />
         </a>
@@ -64,7 +64,7 @@ export function Page({
   return (
     <main className="document-page" id="main">
       <Link className="back-link" to="/">
-        ← ポチカレについて
+        ← ポチカルについて
       </Link>
       <header className="page-heading">
         <p className="eyebrow">{eyebrow}</p>

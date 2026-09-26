@@ -1,6 +1,6 @@
-# ポチカレ Web
+# ポチカル Web
 
-看護師向けのポチカレ専用サイト。TanStack Start / React / Cloudflare Workersで動作します。
+看護師向けのポチカル専用サイト。TanStack Start / React / Cloudflare Workersで動作します。
 旧Next.jsサイトには依存せず、旧URLの互換処理もありません。
 
 ## 開発

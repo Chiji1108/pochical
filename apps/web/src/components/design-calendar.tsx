@@ -33,6 +33,11 @@ import {
 } from "react";
 import type { DesignVariants } from "../lib/design-variants";
 import { DesignGroup, type Profile, samplePhoto } from "./design-group";
+import {
+  defaultImageOptions,
+  ImagePreviewPage,
+  SaveSheet,
+} from "./design-save-sheet";
 import { DesignSettings } from "./design-settings";
 import { useThemeStyle } from "./design-theme";
 import {
@@ -122,7 +127,6 @@ const designToday = new Date(2026, 8, 24);
 const swipeDistance = 50;
 const dayMilliseconds = 86_400_000;
 const leadingZeroPattern = /^0/;
-const csvSpecialPattern = /[",\r\n]/;
 const sample: Shift[] = [
   "day",
   "day",
@@ -328,12 +332,6 @@ export function timeRange(entry: DayEntry) {
   return `${formatTime(start)} – ${end <= start ? "翌" : ""}${formatTime(end)}`;
 }
 
-function csvField(value: string) {
-  return csvSpecialPattern.test(value)
-    ? `"${value.replaceAll('"', '""')}"`
-    : value;
-}
-
 export function monthDates(month: Date) {
   const start = new Date(month.getFullYear(), month.getMonth(), 1);
   const count = new Date(
@@ -350,32 +348,6 @@ export function monthDates(month: Date) {
         index - start.getDay() + 1
       )
   );
-}
-
-function downloadMonth(month: Date, schedule: Schedule) {
-  const rows = monthDates(month)
-    .filter((date) => date.getMonth() === month.getMonth())
-    .map((date) => {
-      const entry = schedule[dateKey(date)];
-      return [
-        dateKey(date),
-        entry ? patterns[entry.shift].label : "",
-        entry ? (timeRange(entry) ?? "") : "",
-        entry?.note ?? "",
-      ]
-        .map(csvField)
-        .join(",");
-    });
-  const url = URL.createObjectURL(
-    new Blob([`\uFEFF日付,シフト,時間,メモ\r\n${rows.join("\r\n")}`], {
-      type: "text/csv;charset=utf-8",
-    })
-  );
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `pochical-${month.getFullYear()}-${month.getMonth() + 1}.csv`;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function DesignCalendar({
@@ -401,6 +373,11 @@ export function DesignCalendar({
   const themeStyle = useThemeStyle();
   const breakdownRef = useRef<HTMLDialogElement>(null);
   const importSheetRef = useRef<HTMLDialogElement>(null);
+  const saveSheetRef = useRef<HTMLDialogElement>(null);
+  // Whether the save sheet opened because the month was just filled in.
+  const [saveCompletion, setSaveCompletion] = useState(false);
+  const [imagePreview, setImagePreview] = useState(false);
+  const [imageOptions, setImageOptions] = useState(defaultImageOptions);
   const [detailDate, setDetailDate] = useState<Date>();
   const [addedMembers, setAddedMembers] = useState<string[]>([]);
   const [tab, setTab] = useState<Tab>("calendar");
@@ -576,6 +553,23 @@ export function DesignCalendar({
       { ...rule, holidaysOff },
     ]);
   }
+  function openSave(completion: boolean) {
+    setSaveCompletion(completion);
+    if (saveSheetRef.current) {
+      showOverPhone(saveSheetRef.current, phoneRef.current);
+    }
+  }
+  function finishHeading() {
+    if (!editing) {
+      closeDetail();
+      return;
+    }
+    setEditing(false);
+    // A month just filled in is worth keeping, so saving is offered then.
+    if (unfilled === 0) {
+      openSave(true);
+    }
+  }
   function openImport() {
     if (importSheetRef.current) {
       showOverPhone(importSheetRef.current, phoneRef.current);
@@ -640,7 +634,16 @@ export function DesignCalendar({
           variants={variants}
         />
       )}
-      <div className="dc-content" hidden={tab !== "calendar"}>
+      {tab === "calendar" && imagePreview && (
+        <ImagePreviewPage
+          month={month}
+          onClose={() => setImagePreview(false)}
+          onOptions={setImageOptions}
+          options={imageOptions}
+          schedule={schedule}
+        />
+      )}
+      <div className="dc-content" hidden={tab !== "calendar" || imagePreview}>
         <div className="dc-heading">
           <h3 className="dc-heading-title">
             <span className="dc-year">{month.getFullYear()}</span>
@@ -654,8 +657,8 @@ export function DesignCalendar({
             layout={variants.headerLayout}
             mode={headingMode}
             month={month}
-            onDone={() => (editing ? setEditing(false) : closeDetail())}
-            onDownload={() => downloadMonth(month, schedule)}
+            onDone={finishHeading}
+            onSave={() => openSave(false)}
             onStep={step}
             onThisMonth={() =>
               goToMonth(
@@ -808,6 +811,14 @@ export function DesignCalendar({
           <p className="dc-sheet-total">この月は全{monthDays.length}日</p>
         </section>
       </dialog>
+      <SaveSheet
+        completion={saveCompletion}
+        month={month}
+        offCount={daysOff}
+        onImage={() => setImagePreview(true)}
+        ref={saveSheetRef}
+        shiftCount={monthDays.length - unfilled}
+      />
       <ImportSheet
         access={variants.importAccess}
         month={month}
@@ -959,7 +970,7 @@ function HeadingActions({
   onThisMonth,
   onToday,
   onDone,
-  onDownload,
+  onSave,
 }: {
   layout: DesignVariants["headerLayout"];
   mode: "view" | "edit" | "week";
@@ -969,7 +980,7 @@ function HeadingActions({
   onThisMonth: () => void;
   onToday: () => void;
   onDone: () => void;
-  onDownload: () => void;
+  onSave: () => void;
 }) {
   const week = mode === "week";
   const unit = week ? "週" : "月";
@@ -1012,9 +1023,9 @@ function HeadingActions({
       </div>
       {mode === "view" ? (
         <button
-          aria-label="この月のシフトをCSVで保存"
+          aria-label="この月のシフトを保存"
           className="dc-heading-icon"
-          onClick={onDownload}
+          onClick={onSave}
           type="button"
         >
           <Download aria-hidden="true" size={21} />

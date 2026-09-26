@@ -1,8 +1,8 @@
 export const site = {
-  name: "ポチカレ",
+  name: "ポチカル",
   email: "contact@chiji.tech",
   description:
-    "日勤も、夜勤も、お休みも。ポチッと入力、さっと共有。看護師の毎日に寄り添うシフトカレンダー、ポチカレ。",
+    "日勤も、夜勤も、お休みも。ポチッと入力、さっと共有。看護師の毎日に寄り添うシフトカレンダー、ポチカル。",
 };
 
 export const getSiteOrigin = (): string | undefined => {
@@ -26,9 +26,9 @@ export const pageMeta = (
   const origin = getSiteOrigin();
   return {
     meta: [
-      { title: `${title} | ポチカレ` },
+      { title: `${title} | ポチカル` },
       { name: "description", content: description },
-      { property: "og:title", content: `${title} | ポチカレ` },
+      { property: "og:title", content: `${title} | ポチカル` },
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
       { property: "og:locale", content: "ja_JP" },

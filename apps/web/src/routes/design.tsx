@@ -70,7 +70,7 @@ function DesignPage() {
     <main className="design-page" id="main">
       <div className="design-toolbar">
         <Link to="/">
-          <ArrowLeft aria-hidden="true" size={16} /> ポチカレ
+          <ArrowLeft aria-hidden="true" size={16} /> ポチカル
         </Link>
         <button
           onClick={() => {

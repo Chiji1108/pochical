@@ -31,7 +31,7 @@ export default function DeletionClient() {
         </p>
         <a
           className="button"
-          href={`mailto:${site.email}?subject=${encodeURIComponent("ポチカレ アカウント削除の依頼")}`}
+          href={`mailto:${site.email}?subject=${encodeURIComponent("ポチカル アカウント削除の依頼")}`}
         >
           削除を依頼する
         </a>
@@ -104,7 +104,7 @@ function SignIn() {
       <p className="eyebrow">STEP 01 / VERIFY</p>
       <h2>ご本人であることを確認します</h2>
       <p>
-        ポチカレで連携したアカウントを選んでください。
+        ポチカルで連携したアカウントを選んでください。
         <br />
         ログインしただけでは削除されません。
       </p>
@@ -288,7 +288,7 @@ function DeletionReceipt({ receipt }: { receipt: string }) {
       </h2>
       <p>
         {pending === false
-          ? "サーバー上のアカウントと関連データの削除処理が完了しました。ポチカレをご利用いただき、ありがとうございました。"
+          ? "サーバー上のアカウントと関連データの削除処理が完了しました。ポチカルをご利用いただき、ありがとうございました。"
           : "サーバー上のデータを順次削除しています。このページを閉じても処理は続きます。"}
       </p>
       <p className="small-note">

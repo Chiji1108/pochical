@@ -315,7 +315,7 @@ function KindStep({
   const first = !onBack;
   return (
     <>
-      {first && <p className="ob-welcome">ポチカレへようこそ</p>}
+      {first && <p className="ob-welcome">ポチカルへようこそ</p>}
       <StepHeader
         description={
           first

@@ -7,7 +7,7 @@ export const Route = createFileRoute("/support")({
   head: () =>
     pageMeta(
       "サポート",
-      "ポチカレのよくある質問とお問い合わせ窓口。",
+      "ポチカルのよくある質問とお問い合わせ窓口。",
       "/support"
     ),
   component: Support,
@@ -68,7 +68,7 @@ function Support() {
         </p>
         <a
           className="text-link"
-          href={`mailto:${site.email}?subject=${encodeURIComponent("ポチカレのお問い合わせ")}`}
+          href={`mailto:${site.email}?subject=${encodeURIComponent("ポチカルのお問い合わせ")}`}
         >
           {site.email}
           <ArrowUpRight aria-hidden="true" size={17} />

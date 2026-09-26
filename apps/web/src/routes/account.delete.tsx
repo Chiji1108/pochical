@@ -8,7 +8,7 @@ export const Route = createFileRoute("/account/delete")({
   head: () =>
     pageMeta(
       "アカウント削除",
-      "ポチカレのアカウントと関連データの削除を、Webから申請できます。",
+      "ポチカルのアカウントと関連データの削除を、Webから申請できます。",
       "/account/delete",
       true
     ),
@@ -55,7 +55,7 @@ function DeleteAccount() {
         </p>
         <a
           className="text-link"
-          href={`mailto:${site.email}?subject=${encodeURIComponent("ポチカレ アカウント削除の依頼")}`}
+          href={`mailto:${site.email}?subject=${encodeURIComponent("ポチカル アカウント削除の依頼")}`}
         >
           削除について問い合わせる →
         </a>

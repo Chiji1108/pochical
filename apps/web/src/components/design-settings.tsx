@@ -26,7 +26,7 @@ import {
   weekDates,
   weekendClassName,
 } from "./design-calendar";
-import { PhotoAvatar, PhotoChoices, type Profile } from "./design-group";
+import { PhotoAvatar, PhotoEditor, type Profile } from "./design-group";
 import { WorkSetupSteps } from "./design-onboarding";
 import { PatternsPage } from "./design-pattern-editor";
 import { ThemeContext, themeOf, themes } from "./design-theme";
@@ -293,9 +293,6 @@ function SettingsTop({
         />
         <Row label="週の始まり" value="日曜" />
         <Row label="色をつける曜日" value="土・日" />
-      </Section>
-      <Section title="ほかのアプリ">
-        <Row label="端末のカレンダーに追加" />
       </Section>
       <Section title="アカウント">
         <Row
@@ -711,9 +708,17 @@ function ProfilePage({
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="プロフィール" />
-      <div className="st-profile-photo">
-        <PhotoAvatar name={profile.name} photo={profile.photo} size={88} />
-      </div>
+      <PhotoEditor
+        name={profile.name}
+        onRemove={
+          profile.photo
+            ? () => onChange({ ...profile, photo: undefined })
+            : undefined
+        }
+        onUpload={(photo) => onChange({ ...profile, photo })}
+        photo={profile.photo}
+        size={88}
+      />
       <div className="st-list">
         <label className="st-row">
           <span className="st-row-label">いつもの名前</span>
@@ -727,14 +732,6 @@ function ProfilePage({
           />
         </label>
       </div>
-      <section className="st-section">
-        <h4>いつもの写真</h4>
-        <PhotoChoices
-          name={profile.name}
-          onChange={(photo) => onChange({ ...profile, photo })}
-          photo={profile.photo}
-        />
-      </section>
       <p className="st-note">
         グループを作るときや参加するときに、最初に入る名前と写真です。グループごとに違う名前や写真にしたいときは、各グループの設定で変えられます。
       </p>

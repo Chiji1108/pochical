@@ -5,7 +5,7 @@ export const Route = createFileRoute("/terms")({
   head: () =>
     pageMeta(
       "利用規約",
-      "ポチカレをご利用いただく際のルールについて。",
+      "ポチカルをご利用いただく際のルールについて。",
       "/terms"
     ),
   component: () => <LegalDocument kind="terms" />,

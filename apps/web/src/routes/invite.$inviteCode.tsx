@@ -11,7 +11,7 @@ export const Route = createFileRoute("/invite/$inviteCode")({
   head: () =>
     pageMeta(
       "グループへの招待",
-      "ポチカレでシフトを共有しましょう。",
+      "ポチカルでシフトを共有しましょう。",
       "/invite",
       true
     ),
@@ -33,7 +33,7 @@ function Invite() {
   return (
     <main className="invite-page" id="main">
       <img
-        alt="ポチカレ"
+        alt="ポチカル"
         className="invite-logo"
         height={80}
         src="/icon.png"
@@ -91,7 +91,7 @@ function Invite() {
         <h2>アプリをまだお持ちでない方へ</h2>
         <StoreLinks />
         <Link className="text-link" to="/">
-          ポチカレについて <ArrowUpRight aria-hidden="true" size={15} />
+          ポチカルについて <ArrowUpRight aria-hidden="true" size={15} />
         </Link>
       </div>
     </main>

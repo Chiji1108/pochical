@@ -1,9 +1,11 @@
 import {
   CalendarPlus,
   Camera,
+  Check,
   ChevronLeft,
   ChevronRight,
   Copy,
+  Download,
   MessagesSquare,
   Plus,
   QrCode,
@@ -20,6 +22,7 @@ import {
   type ReactNode,
   useContext,
   useEffect,
+  useId,
   useState,
 } from "react";
 import type { DesignVariants } from "../lib/design-variants";
@@ -132,8 +135,6 @@ function isWeekend(date: Date) {
 export function samplePhoto(id: number) {
   return `https://picsum.photos/id/${id}/192/192`;
 }
-
-export const samplePhotoIds = [1011, 1025, 237, 429, 1062, 669, 823, 1005];
 
 export type Profile = { name: string; photo?: string };
 
@@ -254,6 +255,53 @@ const classmates = (): Member[] =>
     shiftOn: (date: Date) =>
       nurseOrder[(dayNumber(date) + Number(offset)) % nurseOrder.length],
   }));
+
+// Old school friends in all kinds of work: a group too wide for 日ごと.
+const schoolFriends = (): Member[] => [
+  ...[
+    ["kana", "かな", 0, 1027, "natural"],
+    ["riku", "りく", 2, 1074, "monotone"],
+  ].map(([id, name, offset, photo, preset]) => ({
+    ...misaki(),
+    style: { look: presetLook(String(preset)), theme: "moss" as ThemeId },
+    id: String(id),
+    name: String(name),
+    photo: samplePhoto(Number(photo)),
+    shiftOn: (date: Date) =>
+      nurseOrder[(dayNumber(date) + Number(offset)) % nurseOrder.length],
+  })),
+  ...[
+    ["shun", "しゅん", 1012, "pop"],
+    ["nana", "なな", 0, "minimal"],
+    ["taichi", "たいち", 1084, "roster"],
+  ].map(([id, name, photo, preset]) => ({
+    ...partner,
+    style: { look: presetLook(String(preset)), theme: "moss" as ThemeId },
+    id: String(id),
+    name: String(name),
+    photo: photo ? samplePhoto(Number(photo)) : undefined,
+  })),
+  ...[
+    ["mio", "みお", 1, 64],
+    ["kaito", "かいと", 4, 0],
+  ].map(([id, name, offset, photo]) => ({
+    ...aya(),
+    id: String(id),
+    name: String(name),
+    photo: photo ? samplePhoto(Number(photo)) : undefined,
+    shiftOn: (date: Date) => {
+      const order = ["early", "early", "late", "late", "off", "lesson", "off"];
+      return order[(dayNumber(date) + Number(offset)) % order.length];
+    },
+  })),
+  {
+    ...mother,
+    id: "sakiko",
+    name: "さきこ",
+    photo: samplePhoto(1080),
+    style: { look: presetLook("friendly"), theme: "moss" },
+  },
+];
 
 function meFrom(
   schedule: Schedule,
@@ -500,6 +548,11 @@ export function DesignGroup({
       mine: { name: "佐藤", noPhoto: true },
       mark: { kind: "icon", icon: "hospital", color: 10 },
     },
+    {
+      id: "school",
+      name: "高校の同級生",
+      mark: { kind: "letter", text: "高", color: 3 },
+    },
   ]);
   const [groupId, setGroupId] = useState("family");
   const [chats, setChats] = useState(sampleChats);
@@ -521,6 +574,9 @@ export function DesignGroup({
     }
     if (id === "ward") {
       return [me, ...classmates()];
+    }
+    if (id === "school") {
+      return [me, ...schoolFriends()];
     }
     return [me];
   };
@@ -1392,12 +1448,13 @@ function DaySheet({
 
 const suggestionCount = 4;
 
-// 週ごと reads the month at a glance and grows only downwards; 日ごと lists
-// every day, which suits a few people best.
+// 日ごと reads most easily, so it comes first while everyone fits across;
+// past that it scrolls sideways, and 週ごと, which grows only downwards,
+// takes over.
 type Layout = "weeks" | "days";
 
 function defaultLayout(count: number): Layout {
-  return count <= namesUpTo ? "days" : "weeks";
+  return count <= marksUpTo ? "days" : "weeks";
 }
 
 function ShiftsPage({
@@ -1418,76 +1475,182 @@ function ShiftsPage({
   onBack: () => void;
 }) {
   const [month, setMonth] = useState(initialMonth ?? designMonth);
+  // Whose marks the legend sheet shows, when open.
+  const [legend, setLegend] = useState<Member[]>();
+  const [picked, setPicked] = useState<Date>();
+  const [saved, setSaved] = useState(false);
+  // The note that the picture was saved goes away by itself.
+  useEffect(() => {
+    if (!saved) {
+      return;
+    }
+    const timer = setTimeout(() => setSaved(false), savedNoteTime);
+    return () => clearTimeout(timer);
+  }, [saved]);
   const dates = monthDates(month);
+  const pick = (date: Date) =>
+    setPicked(picked && dateKey(picked) === dateKey(date) ? undefined : date);
+  return (
+    <div className="gr-shifts">
+      <header className="st-page-header">
+        <div className="pe-topbar">
+          <button
+            className="st-back gr-shifts-back"
+            onClick={onBack}
+            type="button"
+          >
+            <ChevronLeft aria-hidden="true" size={20} />
+            <span className="gr-shifts-back-label">{backLabel}</span>
+          </button>
+          <span className="gr-shifts-actions">
+            <fieldset className="design-segment st-row-segment gr-layout-toggle">
+              <legend className="dc-sr-only">表の形</legend>
+              <button
+                aria-pressed={layout === "weeks"}
+                onClick={() => setLayout("weeks")}
+                type="button"
+              >
+                週ごと
+              </button>
+              <button
+                aria-pressed={layout === "days"}
+                onClick={() => setLayout("days")}
+                type="button"
+              >
+                日ごと
+              </button>
+            </fieldset>
+            {/* Others' shifts only go out as a picture, so no choice first. */}
+            <button
+              aria-label="シフト表を画像で保存"
+              className="dc-heading-icon"
+              onClick={() => setSaved(true)}
+              type="button"
+            >
+              <Download aria-hidden="true" size={19} />
+            </button>
+          </span>
+        </div>
+      </header>
+      <PagedShifts
+        dates={dates}
+        group={group}
+        layout={layout}
+        month={month}
+        onLegend={() => setLegend(group.members)}
+        onMember={(member) => setLegend([member])}
+        onMonth={setMonth}
+        onPickDay={pick}
+        picked={picked}
+        view={view}
+      />
+      {picked && (
+        <DayPeek
+          date={picked}
+          members={group.members}
+          onClose={() => setPicked(undefined)}
+        />
+      )}
+      {legend && (
+        <LegendSheet members={legend} onClose={() => setLegend(undefined)} />
+      )}
+      <p aria-live="polite" className="gr-toast" hidden={!saved}>
+        <Check aria-hidden="true" size={16} />
+        {month.getMonth() + 1}月のシフト表を写真に保存しました
+      </p>
+    </div>
+  );
+}
+
+const savedNoteTime = 2200;
+
+function PagedShifts({
+  group,
+  view,
+  layout,
+  month,
+  dates,
+  picked,
+  onMonth,
+  onPickDay,
+  onMember,
+  onLegend,
+}: {
+  group: Group;
+  view: DesignVariants["groupView"];
+  layout: Layout;
+  month: Date;
+  dates: Date[];
+  picked?: Date;
+  onMonth: (month: Date) => void;
+  onPickDay: (date: Date) => void;
+  onMember: (member: Member) => void;
+  onLegend: () => void;
+}) {
   const offDays = dates.filter(
     (date) => sameMonth(date, month) && everyoneOff(group.members, date)
   );
+  const thisMonth =
+    sameMonth(month, designToday) &&
+    month.getFullYear() === designToday.getFullYear();
   return (
     <>
-      <header className="st-page-header">
-        <div className="pe-topbar">
-          <button className="st-back" onClick={onBack} type="button">
-            <ChevronLeft aria-hidden="true" size={20} />
-            {backLabel}
+      <div className="gr-shifts-month">
+        <span />
+        <div className="gr-month">
+          <button
+            aria-label="前の月"
+            onClick={() =>
+              onMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))
+            }
+            type="button"
+          >
+            <ChevronLeft aria-hidden="true" size={18} />
           </button>
-          <fieldset className="design-segment st-row-segment gr-layout-toggle">
-            <legend className="dc-sr-only">表の形</legend>
-            <button
-              aria-pressed={layout === "weeks"}
-              onClick={() => setLayout("weeks")}
-              type="button"
-            >
-              週ごと
-            </button>
-            <button
-              aria-pressed={layout === "days"}
-              onClick={() => setLayout("days")}
-              type="button"
-            >
-              日ごと
-            </button>
-          </fieldset>
+          <strong aria-live="polite">
+            {month.getFullYear()}年{month.getMonth() + 1}月
+          </strong>
+          <button
+            aria-label="次の月"
+            onClick={() =>
+              onMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))
+            }
+            type="button"
+          >
+            <ChevronRight aria-hidden="true" size={18} />
+          </button>
         </div>
-        <h3 className="st-title">シフト表</h3>
-      </header>
-      <div className="gr-month">
         <button
-          aria-label="前の月"
+          aria-label="今月に戻る"
+          className="dc-this-month"
+          disabled={thisMonth}
           onClick={() =>
-            setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))
+            onMonth(
+              new Date(designToday.getFullYear(), designToday.getMonth(), 1)
+            )
           }
           type="button"
         >
-          <ChevronLeft aria-hidden="true" size={18} />
-        </button>
-        <strong aria-live="polite">
-          {month.getFullYear()}年{month.getMonth() + 1}月
-        </strong>
-        <button
-          aria-label="次の月"
-          onClick={() =>
-            setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))
-          }
-          type="button"
-        >
-          <ChevronRight aria-hidden="true" size={18} />
+          今月
         </button>
       </div>
-      <div className="gr-together">
-        <span className="gr-together-label">みんな休み</span>
-        {offDays.length > 0 ? (
-          offDays.map((date) => (
-            <span className="gr-together-day" key={dateKey(date)}>
-              {date.getDate()}日
-            </span>
-          ))
-        ) : (
-          <span className="gr-together-none">今月はありません</span>
-        )}
-      </div>
-      {layout === "days" && <DayRowsTable group={group} month={month} />}
+      {layout === "days" && (
+        <DayRowsTable
+          days={dates.filter((date) => sameMonth(date, month))}
+          group={group}
+          onPickDay={onPickDay}
+          picked={picked}
+        />
+      )}
       {layout === "weeks" && view === "table" && (
-        <MemberTable dates={dates} group={group} month={month} />
+        <MemberTable
+          dates={dates}
+          group={group}
+          month={month}
+          onMember={onMember}
+          onPickDay={onPickDay}
+          picked={picked}
+        />
       )}
       {layout === "weeks" && view === "overlay" && (
         <OverlayCalendar dates={dates} group={group} month={month} />
@@ -1495,10 +1658,165 @@ function ShiftsPage({
       {layout === "weeks" && view === "person" && (
         <PersonCalendar dates={dates} group={group} month={month} />
       )}
-      {layout === "weeks" && view !== "person" && (
-        <Legend members={group.members} />
-      )}
+      <MonthFoot month={month} onMonth={onMonth} />
+      {/* Like the calendar's days-off total, at the foot of the month. */}
+      <div className="gr-together-summary">
+        <span>
+          {thisMonth ? "今月" : `${month.getMonth() + 1}月`}
+          のみんな休み
+        </span>
+        <span className="gr-together-days">
+          {offDays.length > 0
+            ? offDays.map((date) => (
+                <span className="gr-together-day" key={dateKey(date)}>
+                  {date.getDate()}
+                </span>
+              ))
+            : "なし"}
+          {offDays.length > 0 && <small className="gr-together-unit">日</small>}
+        </span>
+      </div>
+      <div className="st-list">
+        <button className="st-row" onClick={onLegend} type="button">
+          <span className="st-row-label">マークの意味</span>
+          <span className="st-row-value" />
+          <ChevronRight aria-hidden="true" className="st-row-arrow" size={17} />
+        </button>
+      </div>
+      <p className="st-note">マスを押すと、その日のみんなの予定が出ます。</p>
     </>
+  );
+}
+
+// At the end of the month, the next one is a tap away without going back
+// up; the page then starts again from the top.
+function MonthFoot({
+  month,
+  onMonth,
+}: {
+  month: Date;
+  onMonth: (month: Date) => void;
+}) {
+  const previous = new Date(month.getFullYear(), month.getMonth() - 1, 1);
+  const next = new Date(month.getFullYear(), month.getMonth() + 1, 1);
+  const go = (target: Date, button: HTMLElement) => {
+    onMonth(target);
+    button.closest(".st-scroll")?.scrollTo({ top: 0 });
+  };
+  return (
+    <div className="gr-month-foot">
+      <button
+        onClick={(event) => go(previous, event.currentTarget)}
+        type="button"
+      >
+        <ChevronLeft aria-hidden="true" size={16} />
+        {previous.getMonth() + 1}月
+      </button>
+      <button onClick={(event) => go(next, event.currentTarget)} type="button">
+        {next.getMonth() + 1}月
+        <ChevronRight aria-hidden="true" size={16} />
+      </button>
+    </div>
+  );
+}
+
+// The day picked in the table, floating at the bottom so it shows without
+// scrolling away from the mark that was pressed.
+function DayPeek({
+  date,
+  members,
+  onClose,
+}: {
+  date: Date;
+  members: Member[];
+  onClose: () => void;
+}) {
+  const together = everyoneOff(members, date);
+  return (
+    <section aria-label={formatDay(date)} className="gr-peek">
+      <header className="gr-peek-head">
+        <strong>{formatDay(date)}</strong>
+        {together && <span className="gr-day-card-tag">みんな休み</span>}
+        <button
+          aria-label="閉じる"
+          className="gr-icon-button"
+          onClick={onClose}
+          type="button"
+        >
+          <X aria-hidden="true" size={16} />
+        </button>
+      </header>
+      <ul className="gr-peek-list">
+        {members.map((member) => {
+          const item = patternOn(member, date);
+          return (
+            <li key={member.id}>
+              <Avatar member={member} />
+              <span className="gr-peek-name">{member.name}</span>
+              {item && (
+                <MemberMark look={item.look} member={member} size={16} />
+              )}
+              <span className="gr-peek-shift">{item?.name ?? "未入力"}</span>
+              {item?.time && (
+                <small className="gr-peek-time">{item.time}</small>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+// What each mark means, for one person or everyone, in their own style.
+function LegendSheet({
+  members,
+  onClose,
+}: {
+  members: Member[];
+  onClose: () => void;
+}) {
+  const single = members.length === 1 ? members[0] : undefined;
+  return (
+    <div className="gr-sheet-backdrop">
+      <section
+        aria-label={single ? `${single.name}のマーク` : "マークの意味"}
+        className="gr-sheet gr-legend-sheet"
+      >
+        <header className="gr-sheet-header">
+          <span />
+          <h3 className="gr-legend-title">
+            {single && <Avatar member={single} />}
+            {single ? `${single.name}のマーク` : "マークの意味"}
+          </h3>
+          <button className="pe-save" onClick={onClose} type="button">
+            閉じる
+          </button>
+        </header>
+        {/* Only the marks scroll; the title and 閉じる stay in reach. */}
+        <div className="gr-legend-body">
+          {members.map((member) => (
+            <section className="st-section" key={member.id}>
+              {!single && (
+                <h4 className="gr-legend-member">
+                  <Avatar member={member} />
+                  {member.me ? "自分" : member.name}
+                </h4>
+              )}
+              <div className="st-list">
+                {member.patterns.map((item) => (
+                  <div className="st-row" key={item.id}>
+                    <MemberMark look={item.look} member={member} size={20} />
+                    <span className="st-row-label">{item.name}</span>
+                    <span className="st-row-value">{item.time ?? ""}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -1517,111 +1835,131 @@ const namesUpTo = 4;
 const marksUpTo = 7;
 
 // One row per day and a column per member, like a printed roster.
-function DayRowsTable({ group, month }: { group: Group; month: Date }) {
-  const days = monthDates(month).filter((date) => sameMonth(date, month));
+function DayRowsTable({
+  group,
+  days,
+  picked,
+  onPickDay,
+}: {
+  group: Group;
+  days: Date[];
+  picked?: Date;
+  onPickDay: (date: Date) => void;
+}) {
   const density = densityOf(group.members.length);
   const withNames = density === "names";
-  const [picked, setPicked] = useState(designToday);
   const columnWidth = withNames ? rowsMemberWidth : rowsMarkWidth;
   return (
-    <>
-      <div className="gr-rows-scroll">
-        <table
-          className={`gr-rows gr-density-${density}`}
-          style={{
-            minWidth: rowsDateWidth + group.members.length * columnWidth,
-          }}
-        >
-          <caption className="dc-sr-only">
-            {month.getMonth() + 1}月のみんなのシフト
-          </caption>
-          <thead>
-            <tr>
-              <th className="gr-rows-corner" scope="col">
-                <span className="dc-sr-only">日付</span>
+    <div
+      className={`gr-rows-scroll ${density === "scroll" ? "" : "gr-rows-page"}`}
+    >
+      <table
+        className={`gr-rows gr-density-${density}`}
+        style={{
+          minWidth: rowsDateWidth + group.members.length * columnWidth,
+        }}
+      >
+        <caption className="dc-sr-only">みんなのシフト</caption>
+        <thead>
+          <tr>
+            <th className="gr-rows-corner" scope="col">
+              {/* Pinned with the names, so the month stays in sight. */}
+              <span aria-hidden="true" className="gr-corner-month">
+                {days[0].getMonth() + 1}月
+              </span>
+              <span className="dc-sr-only">日付</span>
+            </th>
+            {group.members.map((member) => (
+              <th
+                className={member.me ? "gr-rows-me" : ""}
+                key={member.id}
+                scope="col"
+              >
+                <span className="gr-rows-member">
+                  <Avatar member={member} />
+                  {withNames ? (
+                    member.name
+                  ) : (
+                    <span className="dc-sr-only">{member.name}</span>
+                  )}
+                </span>
               </th>
-              {group.members.map((member) => (
-                <th
-                  className={member.me ? "gr-rows-me" : ""}
-                  key={member.id}
-                  scope="col"
-                >
-                  <span className="gr-rows-member">
-                    <Avatar member={member} />
-                    {withNames ? (
-                      member.name
-                    ) : (
-                      <span className="dc-sr-only">{member.name}</span>
-                    )}
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {days.map((date) => (
+            <DayRow
+              date={date}
+              key={dateKey(date)}
+              members={group.members}
+              onPick={onPickDay}
+              picked={picked !== undefined && dateKey(picked) === dateKey(date)}
+              withNames={withNames}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function DayRow({
+  date,
+  members,
+  withNames,
+  picked,
+  onPick,
+}: {
+  date: Date;
+  members: Member[];
+  withNames: boolean;
+  picked: boolean;
+  onPick: (date: Date) => void;
+}) {
+  const together = everyoneOff(members, date);
+  const today = dateKey(date) === dateKey(designToday);
+  return (
+    <tr
+      className={`${together ? "gr-together-cell" : ""} ${today ? "gr-rows-today" : ""} ${picked ? "gr-rows-picked" : ""}`}
+    >
+      <th className="gr-rows-date" scope="row">
+        <RowDate date={date} onPick={() => onPick(date)} picked={picked} />
+        {together && <span className="dc-sr-only">みんな休み</span>}
+      </th>
+      {members.map((member) => {
+        const item = patternOn(member, date);
+        return (
+          <td
+            className={`${member.me ? "gr-rows-me" : ""} ${item?.off ? "gr-off-cell" : ""}`}
+            key={member.id}
+          >
+            {/* The whole row picks the day, as the whole column does in
+                週ごと. */}
+            <button
+              aria-label={`${formatDay(date)} ${member.name}：${item?.name ?? "未入力"}。押すとその日のみんなの予定`}
+              aria-pressed={picked}
+              className="gr-rows-cell-button"
+              onClick={() => onPick(date)}
+              type="button"
+            >
+              {item ? (
+                <span className="gr-rows-cell">
+                  <MemberMark look={item.look} member={member} size={16} />
+                  <span className={withNames ? "gr-rows-name" : "dc-sr-only"}>
+                    {item.name}
                   </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {days.map((date) => {
-              const together = everyoneOff(group.members, date);
-              const today = dateKey(date) === dateKey(designToday);
-              const chosen = !withNames && dateKey(date) === dateKey(picked);
-              return (
-                <tr
-                  className={`${together ? "gr-together-cell" : ""} ${today ? "gr-rows-today" : ""} ${chosen ? "gr-rows-picked" : ""}`}
-                  key={dateKey(date)}
-                >
-                  <th className="gr-rows-date" scope="row">
-                    <RowDate
-                      date={date}
-                      onPick={withNames ? undefined : () => setPicked(date)}
-                      picked={chosen}
-                    />
-                    {together && <span className="dc-sr-only">みんな休み</span>}
-                  </th>
-                  {group.members.map((member) => {
-                    const item = patternOn(member, date);
-                    return (
-                      <td
-                        className={`${member.me ? "gr-rows-me" : ""} ${item?.off ? "gr-off-cell" : ""}`}
-                        key={member.id}
-                      >
-                        {item ? (
-                          <span className="gr-rows-cell">
-                            <MemberMark
-                              look={item.look}
-                              member={member}
-                              size={16}
-                            />
-                            <span
-                              className={
-                                withNames ? "gr-rows-name" : "dc-sr-only"
-                              }
-                            >
-                              {item.name}
-                            </span>
-                          </span>
-                        ) : (
-                          <span className="gr-rows-empty">
-                            {withNames ? "未入力" : "・"}
-                          </span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      {!withNames && (
-        <>
-          <p className="st-note">
-            日付を押すと、その日のみんなの予定が出ます。
-          </p>
-          <DayList date={picked} members={group.members} />
-          <Legend members={group.members} />
-        </>
-      )}
-    </>
+                </span>
+              ) : (
+                <span className="gr-rows-empty">
+                  {withNames ? "未入力" : "・"}
+                </span>
+              )}
+            </button>
+          </td>
+        );
+      })}
+    </tr>
   );
 }
 
@@ -1746,6 +2084,7 @@ export function PhotoAvatar({
 
 const defaultAvatarSize = 24;
 const chatAvatarSize = 32;
+const compactAvatarSize = 20;
 
 function Mark({
   member,
@@ -1763,26 +2102,112 @@ function Mark({
   return <MemberMark look={item.look} member={member} size={size} />;
 }
 
+// One person's day in the weekly table. With `onPick` it is a button that
+// shows the whole day by name below the table.
+// The date atop a week's column; like the marks under it, it picks the day.
+function WeekDate({
+  date,
+  members,
+  month,
+  picked,
+  onPick,
+}: {
+  date: Date;
+  members: Member[];
+  month?: Date;
+  picked: boolean;
+  onPick?: (date: Date) => void;
+}) {
+  const className = `gr-table-date gr-date ${weekendClassName(date)} ${!month || sameMonth(date, month) ? "" : "gr-outside"} ${everyoneOff(members, date) ? "gr-together-cell" : ""} ${picked ? "gr-picked-cell" : ""}`;
+  if (!onPick) {
+    return <span className={className}>{date.getDate()}</span>;
+  }
+  return (
+    <button
+      aria-label={`${formatDay(date)}の予定を見る`}
+      aria-pressed={picked}
+      className={`${className} gr-table-cell-button`}
+      onClick={() => onPick(date)}
+      type="button"
+    >
+      {date.getDate()}
+    </button>
+  );
+}
+
+function WeekCell({
+  date,
+  member,
+  members,
+  month,
+  picked,
+  onPick,
+}: {
+  date: Date;
+  member: Member;
+  members: Member[];
+  month?: Date;
+  picked: boolean;
+  onPick?: (date: Date) => void;
+}) {
+  const item = patternOn(member, date);
+  const className = `gr-table-cell ${!month || sameMonth(date, month) ? "" : "gr-outside"} ${item?.off ? "gr-off-cell" : ""} ${everyoneOff(members, date) ? "gr-together-cell" : ""} ${picked ? "gr-picked-cell" : ""}`;
+  const label = `${formatDay(date)} ${member.name}：${item?.name ?? "未入力"}`;
+  if (!onPick) {
+    return (
+      <span aria-label={label} className={className} role="img">
+        <Mark date={date} member={member} size={18} />
+      </span>
+    );
+  }
+  return (
+    <button
+      aria-label={`${label}。押すとその日のみんなの予定`}
+      aria-pressed={picked}
+      className={`${className} gr-table-cell-button`}
+      onClick={() => onPick(date)}
+      type="button"
+    >
+      <Mark date={date} member={member} size={18} />
+    </button>
+  );
+}
+
 // A block per week: dates across, one row per member underneath.
 function MemberTable({
   group,
   dates,
   month,
   compact = false,
+  onMember,
+  onPickDay,
+  picked,
 }: {
   group: Group;
   dates: Date[];
-  month: Date;
+  // The month shown; days outside it are dimmed.
+  month?: Date;
   // A single week inside a card, without its own frame.
   compact?: boolean;
+  // Opens a member's legend from their avatar.
+  onMember?: (member: Member) => void;
+  // Picks a day to list everyone's shifts with names.
+  onPickDay?: (date: Date) => void;
+  picked?: Date;
 }) {
+  // Short rows in the card: smaller faces keep a gap between them, the
+  // height of the day-off tiles beside them.
+  const avatarSize = compact ? compactAvatarSize : undefined;
   const weeks = Array.from({ length: dates.length / weekLength }, (_, row) =>
     dates.slice(row * weekLength, (row + 1) * weekLength)
   );
   return (
     <div className={`gr-table ${compact ? "gr-table-compact" : ""}`}>
       <div aria-hidden="true" className="gr-table-row gr-table-weekdays">
-        <span />
+        {/* Pinned above the weeks, so the month stays in sight. */}
+        <span className="gr-corner-month">
+          {month && !compact ? `${month.getMonth() + 1}月` : ""}
+        </span>
         {weekdayLabels.map((label) => (
           <span key={label}>{label}</span>
         ))}
@@ -1796,29 +2221,47 @@ function MemberTable({
           <div className="gr-table-row gr-table-dates">
             <span />
             {week.map((date) => (
-              <span
-                className={`gr-table-date gr-date ${weekendClassName(date)} ${sameMonth(date, month) ? "" : "gr-outside"} ${everyoneOff(group.members, date) ? "gr-together-cell" : ""}`}
+              <WeekDate
+                date={date}
                 key={dateKey(date)}
-              >
-                {date.getDate()}
-              </span>
+                members={group.members}
+                month={month}
+                onPick={onPickDay}
+                picked={
+                  picked !== undefined && dateKey(picked) === dateKey(date)
+                }
+              />
             ))}
           </div>
           {group.members.map((member) => (
             <div className="gr-table-row" key={member.id}>
-              <span className="gr-table-name">
-                <Avatar member={member} />
-                <span className="dc-sr-only">{member.name}</span>
-              </span>
-              {week.map((date) => (
-                <span
-                  aria-label={`${formatDay(date)} ${member.name}：${patternOn(member, date)?.name ?? "未入力"}`}
-                  className={`gr-table-cell ${sameMonth(date, month) ? "" : "gr-outside"} ${patternOn(member, date)?.off ? "gr-off-cell" : ""} ${everyoneOff(group.members, date) ? "gr-together-cell" : ""}`}
-                  key={dateKey(date)}
-                  role="img"
+              {onMember ? (
+                <button
+                  aria-label={`${member.name}のマークの意味`}
+                  className="gr-table-name gr-table-name-button"
+                  onClick={() => onMember(member)}
+                  type="button"
                 >
-                  <Mark date={date} member={member} size={18} />
+                  <Avatar member={member} size={avatarSize} />
+                </button>
+              ) : (
+                <span className="gr-table-name">
+                  <Avatar member={member} size={avatarSize} />
+                  <span className="dc-sr-only">{member.name}</span>
                 </span>
+              )}
+              {week.map((date) => (
+                <WeekCell
+                  date={date}
+                  key={dateKey(date)}
+                  member={member}
+                  members={group.members}
+                  month={month}
+                  onPick={onPickDay}
+                  picked={
+                    picked !== undefined && dateKey(picked) === dateKey(date)
+                  }
+                />
               ))}
             </div>
           ))}
@@ -2013,70 +2456,62 @@ function Legend({ members }: { members: Member[] }) {
 
 // Picking a picture: none, a sample, or one from the device. With
 // `usual`, the first choice follows the usual profile picture instead.
-export function PhotoChoices({
+// Your picture, uploaded from the device: tapping it or 写真を変更 opens the
+// photo library, as in other apps.
+export function PhotoEditor({
   name,
   photo,
-  usual,
-  onChange,
+  size,
+  onUpload,
+  onRemove,
+  onUsual,
 }: {
   name: string;
   photo?: string;
-  usual?: { photo?: string; selected: boolean; onSelect: () => void };
-  onChange: (photo: string | undefined) => void;
+  size: number;
+  onUpload: (photo: string) => void;
+  // Shown while there is a picture to take off.
+  onRemove?: () => void;
+  // A group's own picture can go back to the usual one.
+  onUsual?: () => void;
 }) {
-  const selected = (value?: string) => !usual?.selected && photo === value;
+  const inputId = useId();
   return (
-    <>
-      <fieldset className="st-photo-choices">
-        <legend className="dc-sr-only">写真</legend>
-        {usual && (
-          <button
-            aria-label="いつもの写真"
-            aria-pressed={usual.selected}
-            className="st-photo-usual"
-            onClick={usual.onSelect}
-            type="button"
-          >
-            <PhotoAvatar name={name} photo={usual.photo} size={44} />
-            <small className="st-photo-usual-label">いつもの</small>
+    <div className="st-profile-photo">
+      <input
+        accept="image/*"
+        className="dc-sr-only"
+        id={inputId}
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) {
+            onUpload(URL.createObjectURL(file));
+          }
+        }}
+        type="file"
+      />
+      <label aria-hidden="true" className="st-photo-edit" htmlFor={inputId}>
+        <PhotoAvatar name={name} photo={photo} size={size} />
+        <span className="st-photo-badge">
+          <Camera size={14} />
+        </span>
+      </label>
+      <div className="st-photo-actions">
+        <label className="st-photo-action" htmlFor={inputId}>
+          写真を変更
+        </label>
+        {onUsual && (
+          <button className="st-photo-action" onClick={onUsual} type="button">
+            いつもの写真に戻す
           </button>
         )}
-        <button
-          aria-label="写真なし"
-          aria-pressed={selected(undefined)}
-          onClick={() => onChange(undefined)}
-          type="button"
-        >
-          <PhotoAvatar name={name} size={44} />
-        </button>
-        {samplePhotoIds.map((id) => (
-          <button
-            aria-label={`見本の写真${id}`}
-            aria-pressed={selected(samplePhoto(id))}
-            key={id}
-            onClick={() => onChange(samplePhoto(id))}
-            type="button"
-          >
-            <PhotoAvatar name={name} photo={samplePhoto(id)} size={44} />
+        {onRemove && (
+          <button className="st-photo-action" onClick={onRemove} type="button">
+            写真を外す
           </button>
-        ))}
-      </fieldset>
-      <label className="gr-secondary st-profile-upload">
-        <Camera aria-hidden="true" size={15} />
-        端末の写真を選ぶ
-        <input
-          accept="image/*"
-          className="dc-sr-only"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) {
-              onChange(URL.createObjectURL(file));
-            }
-          }}
-          type="file"
-        />
-      </label>
-    </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -2134,11 +2569,24 @@ function GroupSettingsPage({
           <MarkRow mark={group.mark} onOpen={() => setEditingMark(true)} />
         </div>
       </section>
-      <section className="st-section">
+      <section className="st-section st-profile-section">
         <h4>このグループでのあなた</h4>
-        <div className="st-profile-photo">
-          <PhotoAvatar name={shown.name} photo={shown.photo} size={72} />
-        </div>
+        <PhotoEditor
+          name={shown.name}
+          onRemove={
+            shown.photo
+              ? () => update({ photo: undefined, noPhoto: true })
+              : undefined
+          }
+          onUpload={(photo) => update({ photo, noPhoto: false })}
+          onUsual={
+            usualPhoto
+              ? undefined
+              : () => update({ photo: undefined, noPhoto: false })
+          }
+          photo={shown.photo}
+          size={72}
+        />
         <div className="st-list">
           <label className="st-row">
             <span className="st-row-label">名前</span>
@@ -2150,22 +2598,10 @@ function GroupSettingsPage({
             />
           </label>
         </div>
+        <p className="st-note">
+          このグループの人にだけ、この名前と写真で表示されます。変えなければ、設定のプロフィールと同じです。
+        </p>
       </section>
-      <PhotoChoices
-        name={shown.name}
-        onChange={(photo) =>
-          update(photo ? { photo, noPhoto: false } : { photo, noPhoto: true })
-        }
-        photo={mine.photo}
-        usual={{
-          photo: profile.photo,
-          selected: usualPhoto,
-          onSelect: () => update({ photo: undefined, noPhoto: false }),
-        }}
-      />
-      <p className="st-note">
-        このグループの人にだけ、この名前と写真で表示されます。「いつもの」は、設定のプロフィールと同じです。
-      </p>
       <section className="st-section">
         <h4>メンバー</h4>
         <div className="st-list">
@@ -2382,11 +2818,14 @@ const groupEmojis = [
   "⭐️",
 ];
 
-const markKinds: { kind: GroupMarkKind; label: string }[] = [
+// A photo is uploaded from the picture itself, as with your profile, so
+// only the marks made here have tabs.
+type DrawnMarkKind = Exclude<GroupMarkKind, "photo">;
+
+const markKinds: { kind: DrawnMarkKind; label: string }[] = [
   { kind: "emoji", label: "絵文字" },
   { kind: "icon", label: "アイコン" },
   { kind: "letter", label: "文字" },
-  { kind: "photo", label: "写真" },
 ];
 
 const markGraphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
@@ -2405,7 +2844,11 @@ function GroupMarkPage({
   onBack: () => void;
   onChange: (mark: GroupMark) => void;
 }) {
-  const [kind, setKind] = useState<GroupMarkKind>(mark.kind);
+  // No tab is picked while the mark is a photo.
+  const [kind, setKind] = useState<DrawnMarkKind | undefined>(
+    mark.kind === "photo" ? undefined : mark.kind
+  );
+  const inputId = useId();
   const color = colorOfMark(mark);
   const letter = mark.kind === "letter" ? mark.text : firstLetter(name) || "グ";
   return (
@@ -2417,10 +2860,33 @@ function GroupMarkPage({
         </button>
         <h3 className="st-title">アイコン</h3>
       </header>
-      <div className="gr-mark-preview">
-        <span className="gr-rail-icon gr-mark-frame-large">
-          <GroupIcon mark={mark} size={40} />
-        </span>
+      <div className="st-profile-photo">
+        <input
+          accept="image/*"
+          className="dc-sr-only"
+          id={inputId}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) {
+              onChange({ kind: "photo", photo: URL.createObjectURL(file) });
+              setKind(undefined);
+            }
+          }}
+          type="file"
+        />
+        <label aria-hidden="true" className="st-photo-edit" htmlFor={inputId}>
+          <span className="gr-rail-icon gr-mark-frame-large">
+            <GroupIcon mark={mark} size={40} />
+          </span>
+          <span className="st-photo-badge">
+            <Camera size={14} />
+          </span>
+        </label>
+        <div className="st-photo-actions">
+          <label className="st-photo-action" htmlFor={inputId}>
+            {mark.kind === "photo" ? "写真を変更" : "写真を使う"}
+          </label>
+        </div>
       </div>
       <fieldset className="st-mark-segment gr-mark-kinds">
         <legend className="dc-sr-only">アイコンの種類</legend>
@@ -2502,60 +2968,25 @@ function GroupMarkPage({
       )}
       {kind === "letter" && (
         <>
-          <label className="st-list st-row">
-            <span className="st-row-label">文字</span>
-            <input
-              className="pe-inline-input"
-              maxLength={2}
-              onChange={(event) =>
-                onChange({ kind: "letter", text: event.target.value, color })
-              }
-              value={letter}
-            />
-          </label>
+          <div className="st-list">
+            <label className="st-row">
+              <span className="st-row-label">文字</span>
+              <input
+                className="pe-inline-input"
+                maxLength={2}
+                onChange={(event) =>
+                  onChange({ kind: "letter", text: event.target.value, color })
+                }
+                value={letter}
+              />
+            </label>
+          </div>
           <MarkColors
             color={color}
             onPick={(value) =>
               onChange({ kind: "letter", text: letter, color: value })
             }
           />
-        </>
-      )}
-      {kind === "photo" && (
-        <>
-          <fieldset className="st-photo-choices">
-            <legend className="dc-sr-only">写真</legend>
-            {samplePhotoIds.map((id) => (
-              <button
-                aria-label={`見本の写真${id}`}
-                aria-pressed={
-                  mark.kind === "photo" && mark.photo === samplePhoto(id)
-                }
-                key={id}
-                onClick={() =>
-                  onChange({ kind: "photo", photo: samplePhoto(id) })
-                }
-                type="button"
-              >
-                <PhotoAvatar name={name} photo={samplePhoto(id)} size={44} />
-              </button>
-            ))}
-          </fieldset>
-          <label className="gr-secondary st-profile-upload">
-            <Camera aria-hidden="true" size={15} />
-            端末の写真を選ぶ
-            <input
-              accept="image/*"
-              className="dc-sr-only"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) {
-                  onChange({ kind: "photo", photo: URL.createObjectURL(file) });
-                }
-              }}
-              type="file"
-            />
-          </label>
         </>
       )}
       <p className="st-note">

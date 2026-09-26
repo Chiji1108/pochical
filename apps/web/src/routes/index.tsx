@@ -32,14 +32,14 @@ function Home() {
           <br />
           ポチッと入力、さっと共有。
           <br className="mobile-break" />
-          忙しい毎日に寄り添う、ポチカレ。
+          忙しい毎日に寄り添う、ポチカル。
         </p>
         <div id="download">
           <StoreLinks />
         </div>
         <p className="release-note">iPhone・Android 向けに、ただいま準備中。</p>
         <a className="scroll-cue" href="#about">
-          <span>ポチカレでできること</span>
+          <span>ポチカルでできること</span>
           <ArrowDown aria-hidden="true" size={15} />
         </a>
       </section>
@@ -53,7 +53,7 @@ function Home() {
             もっと気軽でいい。
           </h2>
           <p>
-            勤務表をもらったら、ポチカレへ。
+            勤務表をもらったら、ポチカルへ。
             <br />
             仕事の予定も、その先の楽しみも、見通しよく。
           </p>
@@ -98,7 +98,7 @@ function Home() {
           <br />
           おやすみの日も。
         </h2>
-        <p>あなたの毎日に、ポチカレ。</p>
+        <p>あなたの毎日に、ポチカル。</p>
         <a className="text-link" href="#download">
           アプリの公開について <ArrowUpRight aria-hidden="true" size={17} />
         </a>
