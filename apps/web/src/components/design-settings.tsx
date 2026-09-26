@@ -1555,7 +1555,7 @@ function AppIconPage({ onBack }: { onBack: () => void }) {
             }}
             type="button"
           >
-            <AppIcon size={72} src={icons[option.id]} />
+            <AppIcon size={104} src={icons[option.id]} />
             <span className="st-app-icon-name">
               {icon === option.id && (
                 <Check
@@ -1569,15 +1569,6 @@ function AppIconPage({ onBack }: { onBack: () => void }) {
           </button>
         ))}
       </fieldset>
-      <div className="st-list st-app-icon-dark">
-        <div className="st-row">
-          <AppIcon size={36} src={icons.dark} />
-          <span className="st-row-label st-app-icon-dark-label">
-            ダークのホーム画面
-            <small>どのアイコンでも、この色に切り替わります</small>
-          </span>
-        </div>
-      </div>
       {alerted && (
         <SystemAlert
           onClose={() => {

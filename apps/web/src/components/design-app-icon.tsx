@@ -37,9 +37,8 @@ export const iconColorOptions: IconColors[] = [
     line: "#252823",
     name: "白",
   },
-  // iOS dark icons: a dark ground and a light glyph. The lines stay dark
-  // on a light rim, so the nose, which sits outside the outline, still
-  // shows.
+  // A dark ground and a light dog. The lines stay dark on a light rim, so
+  // the nose, which sits outside the outline, still shows.
   {
     dog: "#ece8df",
     ground: "#1f231e",
@@ -49,6 +48,36 @@ export const iconColorOptions: IconColors[] = [
     rim: 12,
   },
 ];
+
+// What iOS shows on a home screen set to dark icons: each icon darkened
+// but still itself, so choosing モス never turns into a black icon.
+const darkTwins: IconColors[] = [
+  {
+    dog: "#ece8df",
+    ground: "#2b3a29",
+    id: "moss-dark",
+    line: "#1a2219",
+    name: "モス（暗い見た目）",
+    rim: 12,
+  },
+  {
+    dog: "#efe6d6",
+    ground: "#3a342b",
+    id: "paper-dark",
+    line: "#201c17",
+    name: "紙（暗い見た目）",
+    rim: 12,
+  },
+];
+
+// The dark-home-screen version of each pickable icon. White has no dark
+// of its own, so it borrows ダーク, which is already dark.
+export const darkTwinOf: Record<string, string> = {
+  dark: "dark",
+  moss: "moss-dark",
+  paper: "paper-dark",
+  white: "dark",
+};
 
 const SOURCE = "/design/poodle.jpeg";
 const ICON_SIZE = 1024;
@@ -266,7 +295,10 @@ async function paintAll() {
   image.src = SOURCE;
   await image.decode();
   return Object.fromEntries(
-    iconColorOptions.map((colors) => [colors.id, paintIcon(image, colors)])
+    [...iconColorOptions, ...darkTwins].map((colors) => [
+      colors.id,
+      paintIcon(image, colors),
+    ])
   );
 }
 
@@ -292,11 +324,8 @@ export function useAppIcons() {
   return icons;
 }
 
-// The icons someone can pick in settings. Each shows as the dark one on a
-// dark home screen, which iOS switches by itself.
-export const pickableIcons = iconColorOptions.filter(
-  (option) => option.id !== "dark"
-);
+// The icons someone can pick in settings, ダーク among them.
+export const pickableIcons = iconColorOptions;
 
 // The picked icon's id, from the アプリアイコン settings.
 export const AppIconContext = createContext<{
@@ -329,7 +358,7 @@ export function DesignAppIcon() {
   return (
     <div className="ai-study">
       <div className="ai-choices">
-        {iconColorOptions.map((option) => (
+        {pickableIcons.map((option) => (
           <button
             aria-pressed={picked === option.id}
             className="ai-choice"
@@ -341,6 +370,14 @@ export function DesignAppIcon() {
           >
             <AppIcon size={96} src={icons[option.id]} />
             <span>{option.name}</span>
+            {/* On a home screen set to dark icons. */}
+            <span className="ai-twin">
+              <AppIcon
+                size={32}
+                src={icons[darkTwinOf[option.id] ?? option.id]}
+              />
+              暗い見た目
+            </span>
           </button>
         ))}
       </div>
@@ -369,7 +406,12 @@ export function DesignAppIcon() {
               </span>
             ))}
             <span className="ai-app">
-              <AppIcon size={60} src={scheme === "dark" ? icons.dark : src} />
+              <AppIcon
+                size={60}
+                src={
+                  scheme === "dark" ? icons[darkTwinOf[picked] ?? picked] : src
+                }
+              />
               <small>ポチカル</small>
             </span>
           </div>
