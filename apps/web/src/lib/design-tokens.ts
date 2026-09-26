@@ -318,11 +318,43 @@ export const markColors = [
   },
 ] as const;
 
-// A shift color as drawn in light or dark mode.
+// Theme families: `deep` is the muted, hand-tuned palette; `pastel` is
+// generated from the same hues with pale fills and dark text on them.
+export const themeFamilies = ["deep", "pastel"] as const;
+export type ThemeFamily = (typeof themeFamilies)[number];
+
+// Pastel shift colors keep each color's hue: a paler ground and a mark a
+// little lighter than the deep one, still readable on that ground.
+function pastelMarkColor(color: string, scheme: ColorScheme) {
+  const { chroma, hue } = hexToOklch(color);
+  if (scheme === "dark") {
+    return {
+      color: oklchToHex({ chroma: chroma * 0.8, hue, lightness: 0.82 }),
+      tint: oklchToHex({
+        chroma: Math.min(0.05, chroma * 0.6),
+        hue,
+        lightness: 0.4,
+      }),
+    };
+  }
+  return {
+    color: oklchToHex({ chroma, hue, lightness: 0.51 }),
+    tint: oklchToHex({
+      chroma: Math.min(0.065, chroma * 0.85),
+      hue,
+      lightness: 0.925,
+    }),
+  };
+}
+
+// A shift color as drawn in light or dark mode and the given family.
 export function markColorIn(
   option: (typeof markColors)[number],
-  scheme: ColorScheme
+  scheme: ColorScheme,
+  family: ThemeFamily = "deep"
 ) {
-  const { color, tint } = scheme === "dark" ? option.dark : option;
+  const deep = scheme === "dark" ? option.dark : option;
+  const { color, tint } =
+    family === "pastel" ? pastelMarkColor(option.color, scheme) : deep;
   return { color, name: option.name, tint };
 }

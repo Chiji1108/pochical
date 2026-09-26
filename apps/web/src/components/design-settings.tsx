@@ -34,6 +34,7 @@ import { PatternsPage } from "./design-pattern-editor";
 import {
   ColorSchemeContext,
   ThemeContext,
+  ThemeFamilyContext,
   themeColors,
   themes,
 } from "./design-theme";
@@ -1278,6 +1279,7 @@ function SwitchRow({
 function ThemeChoices() {
   const { theme, setTheme } = useContext(ThemeContext);
   const scheme = useContext(ColorSchemeContext);
+  const family = useContext(ThemeFamilyContext);
   return (
     <fieldset className="st-theme-grid st-theme-row">
       <legend className="dc-sr-only">テーマカラー</legend>
@@ -1292,7 +1294,7 @@ function ThemeChoices() {
           <span
             aria-hidden="true"
             className="st-theme-dot"
-            style={{ background: themeColors(option, scheme).accent }}
+            style={{ background: themeColors(option, scheme, family).fill }}
           />
         </button>
       ))}

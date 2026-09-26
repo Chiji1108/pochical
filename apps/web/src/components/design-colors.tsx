@@ -1,10 +1,16 @@
 import type { ReactNode } from "react";
 
-import type { ColorScheme, ColorToken } from "../lib/design-tokens";
+import type {
+  ColorScheme,
+  ColorToken,
+  ThemeFamily,
+} from "../lib/design-tokens";
 import {
+  colorSchemes,
   markColorIn,
   markColors,
   neutralTokenGroups,
+  themeFamilies,
 } from "../lib/design-tokens";
 import { themeColors, themes, themeStyle } from "./design-theme";
 import type { NeutralTintMode, Theme } from "./design-theme";
@@ -217,15 +223,20 @@ function NeutralTokens() {
 }
 
 function ThemePalette({
+  family,
   scheme,
   theme,
 }: {
+  family: ThemeFamily;
   scheme: ColorScheme;
   theme: Theme;
 }) {
-  const colors = themeColors(theme, scheme);
+  const colors = themeColors(theme, scheme, family);
   return (
-    <div className="cp-theme-scheme" style={themeStyle(theme.id, scheme)}>
+    <div
+      className="cp-theme-scheme"
+      style={themeStyle(theme.id, scheme, "none", family)}
+    >
       <div className="cp-theme-preview">
         <span className="cp-theme-button">完了</span>
         <span className="cp-theme-chip">選択中</span>
@@ -254,27 +265,40 @@ function ThemePalette({
   );
 }
 
-function ThemeTokens() {
+const familyLabels: Record<ThemeFamily, string> = {
+  deep: "深め",
+  pastel: "パステル",
+};
+
+const familyDescriptions: Record<ThemeFamily, string> = {
+  deep: "設定で選べる6色です。どのテーマでも同じ役割の変数（--accent など）に入り、画面の組み方は変わりません。深めの系統は、塗りと文字に同じ色を使います。",
+  pastel:
+    "同じ6色の色相から、決まりに沿って作ったパステルです。塗りは淡く、上の文字は濃くします。文字と線は読める濃さを保ち、背景にもごく淡く色みを乗せます。",
+};
+
+function ThemeTokens({ family, id }: { family: ThemeFamily; id: string }) {
   return (
     <Section
-      description="設定で選べる6色です。どのテーマでも同じ役割の変数（--accent など）に入り、画面の組み方は変わりません。"
-      id="cp-themes"
-      title="テーマカラー"
+      description={familyDescriptions[family]}
+      id={id}
+      title={`テーマカラー（${familyLabels[family]}）`}
     >
-      <p className="cp-role-list">
-        {themeRoles.map((role) => (
-          <span key={role.key}>
-            <code>--{role.name}</code>
-            {role.label}
-          </span>
-        ))}
-      </p>
+      {family === "deep" ? (
+        <p className="cp-role-list">
+          {themeRoles.map((role) => (
+            <span key={role.key}>
+              <code>--{role.name}</code>
+              {role.label}
+            </span>
+          ))}
+        </p>
+      ) : null}
       <div className="cp-themes">
         {themes.map((theme) => (
           <article className="cp-theme" key={theme.id}>
             <h3>{theme.name}</h3>
-            <ThemePalette scheme="light" theme={theme} />
-            <ThemePalette scheme="dark" theme={theme} />
+            <ThemePalette family={family} scheme="light" theme={theme} />
+            <ThemePalette family={family} scheme="dark" theme={theme} />
           </article>
         ))}
       </div>
@@ -346,19 +370,24 @@ function TintTokens() {
 }
 
 function MarkChip({
+  family,
   option,
   scheme,
 }: {
+  family: ThemeFamily;
   option: (typeof markColors)[number];
   scheme: ColorScheme;
 }) {
-  const { color, tint } = markColorIn(option, scheme);
+  const { color, tint } = markColorIn(option, scheme, family);
   return (
-    <div className="cp-mark" style={themeStyle("moss", scheme)}>
+    <div className="cp-mark" style={themeStyle("moss", scheme, "none", family)}>
       <span className="cp-mark-tile" style={{ background: tint, color }}>
         {option.name.slice(0, 1)}
       </span>
       <span className="cp-mark-values">
+        <small>
+          {familyLabels[family]}・{schemeLabels[scheme]}
+        </small>
         <code>{color}</code>
         <code>{tint}</code>
       </span>
@@ -370,7 +399,7 @@ function MarkChip({
 function MarkTokens() {
   return (
     <Section
-      description="シフトごとに選べる12色です。濃い色は記号と文字、薄い色はその地に使います。比は記号の色と地の色のコントラストです。"
+      description="シフトごとに選べる12色です。濃い色は記号と文字、薄い色はその地に使います。比は記号の色と地の色のコントラストです。パステルは同じ色相から作ります。"
       id="cp-marks"
       title="シフトの色"
     >
@@ -378,8 +407,16 @@ function MarkTokens() {
         {markColors.map((option) => (
           <article className="cp-mark-card" key={option.name}>
             <h3>{option.name}</h3>
-            <MarkChip option={option} scheme="light" />
-            <MarkChip option={option} scheme="dark" />
+            {themeFamilies.map((family) =>
+              colorSchemes.map((scheme) => (
+                <MarkChip
+                  family={family}
+                  key={`${family}-${scheme}`}
+                  option={option}
+                  scheme={scheme}
+                />
+              ))
+            )}
           </article>
         ))}
       </div>
@@ -393,9 +430,10 @@ export function DesignColors() {
       <nav aria-label="このページの内容" className="design-index">
         {[
           { href: "#cp-neutral", number: "01", title: "基本色" },
-          { href: "#cp-themes", number: "02", title: "テーマカラー" },
-          { href: "#cp-tint", number: "03", title: "背景の色み" },
-          { href: "#cp-marks", number: "04", title: "シフトの色" },
+          { href: "#cp-themes", number: "02", title: "テーマ（深め）" },
+          { href: "#cp-pastel", number: "03", title: "テーマ（パステル）" },
+          { href: "#cp-tint", number: "04", title: "背景の色み" },
+          { href: "#cp-marks", number: "05", title: "シフトの色" },
         ].map(({ href, number, title }) => (
           <a href={href} key={href}>
             <span>{number}</span>
@@ -404,7 +442,8 @@ export function DesignColors() {
         ))}
       </nav>
       <NeutralTokens />
-      <ThemeTokens />
+      <ThemeTokens family="deep" id="cp-themes" />
+      <ThemeTokens family="pastel" id="cp-pastel" />
       <TintTokens />
       <MarkTokens />
     </>

@@ -58,6 +58,13 @@ export const designVariantOptions = {
     ],
     label: "予定",
   },
+  themeFamily: {
+    choices: [
+      { label: "深め", value: "deep" },
+      { label: "パステル", value: "pastel" },
+    ],
+    label: "テーマの系統",
+  },
 } as const;
 
 type VariantKey = keyof typeof designVariantOptions;

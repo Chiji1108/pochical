@@ -60,6 +60,7 @@ import type { Shift } from "./design-calendar";
 import {
   ColorSchemeContext,
   ThemeContext,
+  ThemeFamilyContext,
   themeColors,
   themeOf,
 } from "./design-theme";
@@ -389,19 +390,22 @@ export function guessLook(name: string): Omit<Look, "color"> {
 // All shift colors for the current light or dark mode, in picker order.
 export function useMarkColors() {
   const scheme = useContext(ColorSchemeContext);
-  return markColors.map((option) => markColorIn(option, scheme));
+  const family = useContext(ThemeFamilyContext);
+  return markColors.map((option) => markColorIn(option, scheme, family));
 }
 
 export function useMarkColor(markColor: MarkColor) {
   const scheme = useContext(ColorSchemeContext);
-  return markColorIn(markColors[markColor] ?? markColors[0], scheme);
+  const family = useContext(ThemeFamilyContext);
+  return markColorIn(markColors[markColor] ?? markColors[0], scheme, family);
 }
 
 // The theme's own color, for marks drawn all in one color.
 function useThemeMarkColor() {
   const { accent, markTint } = themeColors(
     themeOf(useContext(ThemeContext).theme),
-    useContext(ColorSchemeContext)
+    useContext(ColorSchemeContext),
+    useContext(ThemeFamilyContext)
   );
   return { color: accent, name: "テーマカラー", tint: markTint };
 }
