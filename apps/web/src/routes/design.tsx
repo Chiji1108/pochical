@@ -36,6 +36,7 @@ import {
 } from "../lib/design-variants";
 import type { DesignVariants } from "../lib/design-variants";
 import { pageMeta } from "../lib/site";
+import { useDeviceScheme } from "../lib/use-device-scheme";
 
 import designStyles from "../design.css?url";
 
@@ -77,8 +78,10 @@ function DesignPage() {
   const [theme, setTheme] = useState<ThemeId>("moss");
   const [tone, setTone] = useState<Tone>("deep");
   const [appearance, setAppearance] = useState<Appearance>("system");
-  // 端末の外観 plays the phone's own setting; 外観 in settings can override it.
-  const scheme = appearance === "system" ? variants.colorScheme : appearance;
+  // 外観 in settings follows this computer's own light or dark setting
+  // unless it keeps one.
+  const deviceScheme = useDeviceScheme();
+  const scheme = appearance === "system" ? deviceScheme : appearance;
   const [custom, setCustom] = useState<StyleChoice>();
   return (
     <main className="design-page" id="main" style={themeStyle(theme, "light")}>

@@ -174,8 +174,7 @@ export function themeOf(id: ThemeId): Theme {
   return themes.find((theme) => theme.id === id) ?? themes[0];
 }
 
-// The scheme in effect: the device's (the 端末の外観 variant on /design)
-// unless 外観 in settings forces one.
+// The scheme in effect: the device's unless 外観 in settings keeps one.
 export const ColorSchemeContext = createContext<ColorScheme>("light");
 
 // Text on a solid accent fill: white on the deep light accents, dark on the

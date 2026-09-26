@@ -1,13 +1,6 @@
 // Design decisions that /design lets you switch between. The first choice of
 // each entry is the current proposal and is used when the URL omits it.
 export const designVariantOptions = {
-  colorScheme: {
-    choices: [
-      { label: "ライト", value: "light" },
-      { label: "ダーク", value: "dark" },
-    ],
-    label: "端末の外観",
-  },
   groupView: {
     choices: [
       { label: "表", value: "table" },
