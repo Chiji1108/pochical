@@ -995,7 +995,9 @@ function MarkPage({
       <Group title="トーン">
         <ToneChoices />
       </Group>
-      <StylePresets />
+      <Group title="スタイル">
+        <StylePresets />
+      </Group>
       <CustomChoice onOpen={onCustomize} />
       <p className="st-note">
         スタイルは、グループの人があなたのシフトを見るときにも使われます。トーンは、あなたの画面だけに反映されます。
@@ -1192,7 +1194,7 @@ function StylePresets() {
   const current = stylePresetOf({ look, theme: themeContext.theme });
   return (
     <fieldset className="st-preset-grid">
-      <legend className="st-preset-legend">スタイル</legend>
+      <legend className="dc-sr-only">スタイル</legend>
       {stylePresets.map((preset) => (
         <button
           aria-pressed={current?.id === preset.id}

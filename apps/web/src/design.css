@@ -2267,19 +2267,6 @@ button.st-row:hover {
   margin: 0;
   border: 0;
 }
-.st-preset-legend {
-  float: left;
-  display: flex;
-  grid-column: 1 / -1;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  padding: 0;
-  margin-bottom: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-3);
-}
 .design-page .st-custom-choice {
   display: flex;
   gap: 10px;
