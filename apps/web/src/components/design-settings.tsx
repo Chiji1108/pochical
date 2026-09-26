@@ -423,9 +423,6 @@ function SettingsTop({
           }}
         />
       </Section>
-      <Section title="データ">
-        <Row danger label="すべてのデータを削除" />
-      </Section>
     </>
   );
 }
@@ -464,19 +461,15 @@ function Group({
 function Row({
   label,
   value,
-  danger = false,
   onOpen,
 }: {
   label: string;
   value?: ReactNode;
-  danger?: boolean;
   onOpen?: () => void;
 }) {
   const content = (
     <>
-      <span className={`st-row-label ${danger ? "st-danger" : ""}`}>
-        {label}
-      </span>
+      <span className="st-row-label">{label}</span>
       {(value !== undefined || onOpen) && (
         <span className="st-row-value">{value}</span>
       )}
