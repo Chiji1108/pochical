@@ -44,7 +44,7 @@
   },
   "overrides": [
     {
-      "includes": ["apps/mobile/convex/**/*.ts", "apps/mobile/convex-lib/*.ts"],
+      "includes": ["apps/mobile-legacy/convex/**/*.ts", "apps/mobile-legacy/convex-lib/*.ts"],
       "linter": {
         "rules": {
           "style": {

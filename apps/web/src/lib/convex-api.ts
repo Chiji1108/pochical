@@ -3,7 +3,7 @@ import {
   type FunctionReturnType,
   makeFunctionReference,
 } from "convex/server";
-import type { api as mobileApi } from "../../../mobile/convex/_generated/api";
+import type { api as mobileApi } from "../../../mobile-legacy/convex/_generated/api";
 
 // Reuse the backend's generated types without importing the Expo project at runtime.
 export const api = {

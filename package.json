@@ -3,17 +3,13 @@
   "private": true,
   "packageManager": "bun@1.4.2",
   "workspaces": [
-    "apps/mobile",
+    "apps/mobile-legacy",
     "apps/server",
     "apps/web"
   ],
   "scripts": {
-    "start": "bun run --cwd apps/mobile start",
-    "ios": "bun run --cwd apps/mobile ios",
-    "android": "bun run --cwd apps/mobile android",
-    "convex": "bun run --cwd apps/mobile convex",
-    "typecheck": "bun run --cwd apps/mobile typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/server typecheck",
-    "test": "bun run --cwd apps/mobile test && bun run --cwd apps/web test && bun run --cwd apps/server test",
+    "typecheck": "bun run --cwd apps/web typecheck && bun run --cwd apps/server typecheck",
+    "test": "bun run --cwd apps/web test && bun run --cwd apps/server test",
     "check": "ultracite check",
     "fix": "ultracite fix",
     "prepare": "lefthook install",

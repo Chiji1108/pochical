@@ -78,7 +78,7 @@
     "react-test-renderer": "19.3.0",
     "typescript": "~6.0.3"
   },
-  "name": "@pochical/mobile",
+  "name": "@pochical/mobile-legacy",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",

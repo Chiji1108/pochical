@@ -54,14 +54,14 @@ Convex URL未設定でもLP・規約・サポートは動作し、削除ペー�
 
 ## Webからのアカウント削除
 
-既存の `apps/mobile/convex` を使います。Webは生成済みAPIの型だけを参照し、
+既存の `apps/mobile-legacy/convex` を使います。Webは生成済みAPIの型だけを参照し、
 Expoコードは実行時に読み込みません。新しい認証基盤や削除用DBはありません。
 
 Web OAuthの戻り先を許可するため、対象の**開発環境**で次を設定します。
 本番公開時は確定した本番サイトのオリジンに置き換えます。
 
 ```sh
-cd apps/mobile
+cd apps/mobile-legacy
 bun x convex env set POCHICAL_WEB_ORIGIN http://localhost:3000
 bun x convex dev --once
 ```
