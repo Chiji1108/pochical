@@ -1,3 +1,4 @@
+import { Moon, Sun } from "lucide-react";
 import { createContext, useContext } from "react";
 import type { CSSProperties } from "react";
 
@@ -304,5 +305,39 @@ export function useThemeStyle() {
     useContext(ThemeContext).theme,
     useContext(ColorSchemeContext),
     useContext(ToneContext)
+  );
+}
+
+const previewSchemes = [
+  { Icon: Sun, name: "ライトで見る", scheme: "light" },
+  { Icon: Moon, name: "ダークで見る", scheme: "dark" },
+] as const;
+
+// ☀︎ / ☾ on a preview's top edge, to see it in the other of light and dark
+// without changing 外観. Sits inside a `.st-preview-wrap`.
+export function PreviewSchemeSwitch({
+  shown,
+  onPick,
+}: {
+  shown: ColorScheme;
+  onPick: (scheme: ColorScheme) => void;
+}) {
+  return (
+    <fieldset className="st-preview-scheme">
+      <legend className="dc-sr-only">プレビューの明るさ</legend>
+      {previewSchemes.map((option) => (
+        <button
+          aria-label={option.name}
+          aria-pressed={shown === option.scheme}
+          key={option.scheme}
+          onClick={() => {
+            onPick(option.scheme);
+          }}
+          type="button"
+        >
+          <option.Icon aria-hidden="true" size={13} />
+        </button>
+      ))}
+    </fieldset>
   );
 }

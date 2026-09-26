@@ -7,11 +7,19 @@ import {
   Share,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
 
+import type { ColorScheme } from "../lib/design-tokens";
 import { DayCell, dateKey } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
+import {
+  ColorSchemeContext,
+  PreviewSchemeSwitch,
+  ThemeContext,
+  ToneContext,
+  themeStyle,
+} from "./design-theme";
 import { useWeek } from "./design-week";
 import { CellNamesContext, OffHighlightContext } from "./shift-mark";
 
@@ -217,14 +225,18 @@ export function SaveSheet({
 
 // How the picture shows your month. It starts from what others can read,
 // since they do not know your marks, and keeps what you choose next time.
-export type ImageOptions = { names: boolean; highlight: boolean };
+// `scheme` is the picture's own light or dark; until picked, it follows
+// the screen.
+export type ImageOptions = {
+  names: boolean;
+  highlight: boolean;
+  scheme?: ColorScheme;
+};
 
 export const defaultImageOptions: ImageOptions = {
   highlight: true,
   names: true,
 };
-
-const imageWeekdays = ["日", "月", "火", "水", "木", "金", "土"];
 
 const savedNoteTime = 2200;
 
@@ -254,7 +266,12 @@ export function ImagePreviewPage({
       clearTimeout(timer);
     };
   }, [note]);
-  const dates = useWeek().monthDates(month);
+  const weekTools = useWeek();
+  const dates = weekTools.monthDates(month);
+  const scheme = useContext(ColorSchemeContext);
+  const { theme } = useContext(ThemeContext);
+  const tone = useContext(ToneContext);
+  const shown = options.scheme ?? scheme;
   const title = `${month.getFullYear()}年${month.getMonth() + 1}月のシフト`;
   return (
     <div className="dc-content st-screen">
@@ -284,31 +301,48 @@ export function ImagePreviewPage({
               },
             }}
           >
-            <figure aria-label={`${title}の画像`} className="dc-image" inert>
-              <figcaption className="dc-image-title">{title}</figcaption>
-              <div aria-hidden="true" className="dc-weekdays">
-                {imageWeekdays.map((day) => (
-                  <span key={day}>{day}</span>
-                ))}
-              </div>
-              <div
-                className="dc-grid"
-                style={{ "--weeks": dates.length / 7 } as CSSProperties}
-              >
-                {dates.map((date) => (
-                  <DayCell
-                    active={false}
-                    date={date}
-                    editing={false}
-                    entry={schedule[dateKey(date)]}
-                    key={dateKey(date)}
-                    onPress={() => undefined}
-                    outside={date.getMonth() !== month.getMonth()}
-                  />
-                ))}
-              </div>
-              <p className="dc-image-credit">ポチカル</p>
-            </figure>
+            <div className="st-preview-wrap">
+              <ColorSchemeContext value={shown}>
+                <figure
+                  aria-label={`${title}の画像`}
+                  className="dc-image"
+                  inert
+                  style={themeStyle(theme, shown, tone)}
+                >
+                  <figcaption className="dc-image-title">{title}</figcaption>
+                  <div aria-hidden="true" className="dc-weekdays">
+                    {weekTools.weekdays.map((day) => (
+                      <span className={day.className} key={day.day}>
+                        {day.label}
+                      </span>
+                    ))}
+                  </div>
+                  <div
+                    className="dc-grid"
+                    style={{ "--weeks": dates.length / 7 } as CSSProperties}
+                  >
+                    {dates.map((date) => (
+                      <DayCell
+                        active={false}
+                        date={date}
+                        editing={false}
+                        entry={schedule[dateKey(date)]}
+                        key={dateKey(date)}
+                        onPress={() => undefined}
+                        outside={date.getMonth() !== month.getMonth()}
+                      />
+                    ))}
+                  </div>
+                  <p className="dc-image-credit">ポチカル</p>
+                </figure>
+              </ColorSchemeContext>
+              <PreviewSchemeSwitch
+                onPick={(picked) => {
+                  onOptions({ ...options, scheme: picked });
+                }}
+                shown={shown}
+              />
+            </div>
           </OffHighlightContext>
         </CellNamesContext>
         <div className="st-list">

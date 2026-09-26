@@ -3974,8 +3974,11 @@ button.st-row:hover {
 .dc-image {
   padding: 14px 10px 10px;
   margin: 0;
+  color: var(--text);
   pointer-events: none;
-  background: var(--surface);
+  /* The calendar screen's own color, so the picture is the calendar as
+     seen; --surface would lift it in dark mode. */
+  background: var(--bg);
   border: 1px solid var(--separator);
   border-radius: 18px;
   box-shadow: 0 6px 18px var(--shadow-faint);

@@ -4,8 +4,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Moon,
-  Sun,
 } from "lucide-react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
@@ -38,6 +36,7 @@ import {
   AppearanceContext,
   ColorChoiceContext,
   ColorSchemeContext,
+  PreviewSchemeSwitch,
   SetToneContext,
   ThemeContext,
   ToneContext,
@@ -1118,30 +1117,10 @@ function StylePreview({ preview }: { preview: StylePreviewData }) {
           </div>
         </div>
       </ColorSchemeContext>
-      <fieldset className="st-preview-scheme">
-        <legend className="dc-sr-only">プレビューの明るさ</legend>
-        {previewSchemes.map((option) => (
-          <button
-            aria-label={option.name}
-            aria-pressed={shown === option.scheme}
-            key={option.scheme}
-            onClick={() => {
-              setPicked(option.scheme);
-            }}
-            type="button"
-          >
-            <option.Icon aria-hidden="true" size={13} />
-          </button>
-        ))}
-      </fieldset>
+      <PreviewSchemeSwitch onPick={setPicked} shown={shown} />
     </div>
   );
 }
-
-const previewSchemes = [
-  { Icon: Sun, name: "ライトで見る", scheme: "light" },
-  { Icon: Moon, name: "ダークで見る", scheme: "dark" },
-] as const;
 
 // The switches for the look in use, as one list.
 function ShapeChoices() {
