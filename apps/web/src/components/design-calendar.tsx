@@ -18,7 +18,7 @@ import {
   Wifi,
   X,
 } from "lucide-react";
-import { useContext, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import type {
   CSSProperties,
   Dispatch,
@@ -33,6 +33,7 @@ import type { DesignVariants } from "../lib/design-variants";
 import type { Coworkers } from "./design-coworkers";
 import { DesignGroup, JoinSheet, samplePhoto } from "./design-group";
 import type { Profile } from "./design-group";
+import { ImportReviewPage } from "./design-import";
 import {
   defaultImageOptions,
   ImagePreviewPage,
@@ -126,6 +127,7 @@ const patternSets: Record<4 | 5 | 6 | 8, Shift[]> = {
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
 const designToday = new Date(2026, 8, 24);
 const swipeDistance = 50;
+const importNoteMilliseconds = 2400;
 const dayMilliseconds = 86_400_000;
 const leadingZeroPattern = /^0/;
 const sample: Shift[] = [
@@ -338,6 +340,20 @@ export function DesignCalendar({
   // Whether the save sheet opened because the month was just filled in.
   const [saveCompletion, setSaveCompletion] = useState(false);
   const [imagePreview, setImagePreview] = useState(false);
+  // The check before a photographed roster goes in, and the line after.
+  const [importReview, setImportReview] = useState(false);
+  const [importNote, setImportNote] = useState<string>();
+  useEffect(() => {
+    if (!importNote) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      setImportNote(undefined);
+    }, importNoteMilliseconds);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [importNote]);
   const [imageOptions, setImageOptions] = useState(defaultImageOptions);
   const [detailDate, setDetailDate] = useState<Date>();
   const sampleCoworkers = variants.memberSample === "some" ? sampleMembers : [];
@@ -357,7 +373,7 @@ export function DesignCalendar({
     initialRule ? [initialRule] : []
   );
   // Repeating shifts fill every month, so the monthly input buttons go away.
-  const hideInputBar = isRepeating(rules);
+  const repeating = isRepeating(rules);
   // Renaming or deleting someone changes the days they are on too.
   const updateMembersOnDays = (change: (names: string[]) => string[]) => {
     onChange((previous) =>
@@ -417,6 +433,9 @@ export function DesignCalendar({
   }));
   const unfilled = monthDays.filter((date) => !schedule[dateKey(date)]).length;
   const emptyMonth = unfilled === monthDays.length;
+  // Input is offered only while the month has days to fill: a repeating
+  // order fills them itself, and a filled month is fixed by tapping a day.
+  const showInputBar = !repeating && unfilled > 0;
   const selectedDate = new Date(
     month.getFullYear(),
     month.getMonth(),
@@ -484,16 +503,6 @@ export function DesignCalendar({
   function startInput() {
     setSelectedDay(1);
     setEditing(true);
-  }
-  // Stands in for the photo import: fills the empty days of the month shown.
-  function importSampleMonth() {
-    const imported = initialDesignSchedule(
-      patternCount,
-      month.getMonth(),
-      month.getFullYear()
-    );
-    onChange((previous) => ({ ...imported, ...previous }));
-    return Object.keys(imported).filter((key) => !schedule[key]).length;
   }
   // From the switch day on, the new order replaces what the old one wrote.
   // Fills the schedule from the rule's start. Everything from that day on
@@ -610,7 +619,7 @@ export function DesignCalendar({
   }
   return (
     <div
-      className={`dc-phone ${editing ? "dc-editing" : ""} ${weekDetail ? "dc-week-mode" : ""} ${hideInputBar ? "dc-no-input" : ""} ${variants.actionWidth === "inset" ? "dc-start-inset" : ""}`}
+      className={`dc-phone ${editing ? "dc-editing" : ""} ${weekDetail ? "dc-week-mode" : ""} ${showInputBar ? "" : "dc-no-input"} ${variants.actionWidth === "inset" ? "dc-start-inset" : ""}`}
       ref={phoneRef}
       style={themeStyle}
     >
@@ -638,6 +647,31 @@ export function DesignCalendar({
           schedule={schedule}
         />
       )}
+      {tab === "calendar" && importReview && (
+        <ImportReviewPage
+          coworkerNames={coworkerNames}
+          month={month}
+          onApply={(result) => {
+            onChange((previous) => ({ ...previous, ...result.schedule }));
+            if (result.newPatterns.length > 0) {
+              setPatternKeys([...patternKeys, ...result.newPatterns]);
+            }
+            if (result.newCoworkers.length > 0) {
+              setCoworkerNames([...coworkerNames, ...result.newCoworkers]);
+            }
+            setImportReview(false);
+            setImportNote(
+              `${month.getMonth() + 1}月のシフトを${result.days}日分入れました`
+            );
+          }}
+          onCancel={() => {
+            setImportReview(false);
+          }}
+          patternKeys={patternKeys}
+          run={variants.importRun}
+          schedule={schedule}
+        />
+      )}
       {tab === "calendar" && imagePreview && (
         <ImagePreviewPage
           month={month}
@@ -649,7 +683,10 @@ export function DesignCalendar({
           schedule={schedule}
         />
       )}
-      <div className="dc-content" hidden={tab !== "calendar" || imagePreview}>
+      <div
+        className="dc-content"
+        hidden={tab !== "calendar" || imagePreview || importReview}
+      >
         <div className="dc-heading">
           <h3 className="dc-heading-title">
             <span className="dc-year">{month.getFullYear()}</span>
@@ -711,14 +748,6 @@ export function DesignCalendar({
               />
             ))}
           </section>
-          {emptyMonth && headingMode === "view" && (
-            <EmptyMonthCard
-              label="ポチポチ入力"
-              month={month}
-              onImport={openImport}
-              showInputHint={!hideInputBar}
-            />
-          )}
         </div>
         {weekDetail && (
           <section
@@ -761,7 +790,7 @@ export function DesignCalendar({
             />
           </div>
         )}
-        {headingMode === "view" && !hideInputBar && (
+        {headingMode === "view" && showInputBar && (
           <div className="dc-controls">
             <StartArea
               label="ポチポチ入力"
@@ -847,11 +876,16 @@ export function DesignCalendar({
       />
       <ImportSheet
         access={variants.importAccess}
-        month={month}
-        onImport={importSampleMonth}
+        onRead={() => {
+          setImportReview(true);
+        }}
         onStartPochi={startInput}
         ref={importSheetRef}
       />
+      <p aria-live="polite" className="gr-toast" hidden={!importNote}>
+        <Check aria-hidden="true" size={16} />
+        {importNote}
+      </p>
       <span aria-live="polite" className="dc-sr-only">
         {announcement}
       </span>
@@ -1092,47 +1126,17 @@ function StartArea({
         <Pencil aria-hidden="true" size={18} />
         {label}
       </button>
+      {/* As wide as ポチポチ入力: only people handed a roster see these, on
+          a month with days left, which is when they photograph it. */}
       <button
         aria-haspopup="dialog"
-        aria-label="勤務表の写真から取り込む"
-        className="dc-start-import"
+        className="dc-start-photo"
         onClick={onImport}
         type="button"
       >
-        <Camera aria-hidden="true" size={21} />
+        <Camera aria-hidden="true" size={18} />
+        写真から取り込む
       </button>
-    </div>
-  );
-}
-
-// Shown over the empty calendar so the buttons below never change place.
-function EmptyMonthCard({
-  month,
-  label,
-  onImport,
-  showInputHint,
-}: {
-  month: Date;
-  label: string;
-  onImport: () => void;
-  showInputHint: boolean;
-}) {
-  return (
-    <div className="dc-empty-card">
-      <p>{month.getMonth() + 1}月のシフトはまだありません</p>
-      <p className="dc-empty-hint">勤務表を撮るだけで、1か月分が入ります</p>
-      <button
-        aria-haspopup="dialog"
-        className="dc-empty-import"
-        onClick={onImport}
-        type="button"
-      >
-        <Camera aria-hidden="true" size={17} />
-        勤務表の写真から取り込む
-      </button>
-      {showInputHint && (
-        <p className="dc-empty-alt">手で入れるなら、下の「{label}」から</p>
-      )}
     </div>
   );
 }
@@ -1208,60 +1212,24 @@ function ImportPhotoActions({ onPick }: { onPick: () => void }) {
   );
 }
 
-// After an import, only what was entered and how to fix it: checking the
-// month is what people want to do next, so nothing else competes with it.
-function ImportDone({
-  month,
-  days,
-  onClose,
-}: {
-  month: Date;
-  days: number;
-  onClose: () => void;
-}) {
-  return (
-    <>
-      <p className="dc-import-description">
-        {month.getMonth() + 1}月のシフトを{days}
-        日分入れました。違うところは、日付をタップして直せます。
-      </p>
-      <button className="dc-import-primary" onClick={onClose} type="button">
-        閉じる
-      </button>
-    </>
-  );
-}
-
+// Taking the photo. What it reads opens on its own page to check before
+// anything goes in.
 function ImportSheet({
   ref,
   access,
-  month,
-  onImport,
+  onRead,
   onStartPochi,
 }: {
   ref: RefObject<HTMLDialogElement | null>;
   access: DesignVariants["importAccess"];
-  month: Date;
-  onImport: () => number;
+  onRead: () => void;
   onStartPochi: () => void;
 }) {
-  const [importedDays, setImportedDays] = useState<number>();
   const close = () => ref.current?.close();
-  let title = "勤務表を取り込む";
-  if (importedDays !== undefined) {
-    title = "取り込みました";
-  } else if (access === "limit") {
-    title = "少し時間をおいてください";
-  }
+  const title =
+    access === "limit" ? "少し時間をおいてください" : "勤務表を取り込む";
   return (
-    <dialog
-      aria-label={title}
-      className="dc-breakdown"
-      onClose={() => {
-        setImportedDays(undefined);
-      }}
-      ref={ref}
-    >
+    <dialog aria-label={title} className="dc-breakdown" ref={ref}>
       <button
         aria-label="取り込みを閉じる"
         className="dc-sheet-scrim"
@@ -1277,10 +1245,7 @@ function ImportSheet({
             <X aria-hidden="true" size={20} />
           </button>
         </header>
-        {importedDays !== undefined && (
-          <ImportDone days={importedDays} month={month} onClose={close} />
-        )}
-        {importedDays === undefined && access === "limit" && (
+        {access === "limit" && (
           <>
             <p className="dc-import-description">
               短い時間にたくさん取り込んだため、いったんお休みしています。しばらくしてから、もう一度お試しください。残りは、ポチポチ入力でも入れられます。
@@ -1300,18 +1265,19 @@ function ImportSheet({
             </div>
           </>
         )}
-        {importedDays === undefined && access === "normal" && (
+        {access === "normal" && (
           <>
             <p className="dc-import-description">
               配られた勤務表を撮ると、あなたの行を読み取ってシフトを入れます。LINEで届いた画像やスクリーンショットも使えます。読み取った結果は、保存する前に確認できます。
             </p>
             <ImportPhotoActions
               onPick={() => {
-                setImportedDays(onImport());
+                close();
+                onRead();
               }}
             />
             <p className="dc-sheet-total">
-              デザインの見本です。撮影と確認の代わりに、サンプルのシフトが入ります。
+              デザインの見本です。撮影の代わりに、見本の勤務表を読み取った結果を開きます。
             </p>
           </>
         )}
@@ -1428,6 +1394,7 @@ export function DayCell({
   editing,
   active,
   onPress,
+  flagged = false,
 }: {
   date: Date;
   entry: DayEntry | undefined;
@@ -1435,6 +1402,8 @@ export function DayCell({
   editing: boolean;
   active: boolean;
   onPress: () => void;
+  // Marked for a second look, like a day the roster reading was unsure of.
+  flagged?: boolean;
 }) {
   const markStyle = useContext(ShiftMarkStyleContext);
   const shift = outside ? undefined : entry?.shift;
@@ -1445,7 +1414,7 @@ export function DayCell({
   const holiday = useWeek().isColoredHoliday(date);
   const timeChanged = Boolean(entry?.start || entry?.end);
   const hasMark = !outside && (timeChanged || Boolean(entry?.note));
-  const className = `dc-day ${outside ? "dc-outside" : ""} ${offStyle ? "dc-off" : ""} ${today && !editing ? "dc-today" : ""} ${active ? "dc-active-day" : ""}`;
+  const className = `dc-day ${outside ? "dc-outside" : ""} ${offStyle ? "dc-off" : ""} ${today && !editing ? "dc-today" : ""} ${active ? "dc-active-day" : ""} ${flagged ? "dc-flagged" : ""}`;
   const content = (
     <>
       <span className={`dc-date ${holiday ? "dc-holiday" : ""}`}>

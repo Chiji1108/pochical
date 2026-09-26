@@ -1071,18 +1071,21 @@ body:has(.dc-breakdown[open]) {
   flex: 1;
   width: auto;
 }
-.design-page .dc-start-import {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  width: 52px;
+/* The same size as ポチポチ入力, one step quieter in color. */
+.design-page .dc-start-photo {
+  display: flex;
+  flex: 1;
+  gap: 9px;
+  align-items: center;
+  justify-content: center;
   min-height: 52px;
+  font-size: 13px;
   color: var(--accent);
   background: var(--accent-soft);
   border: 0;
   border-radius: 15px;
 }
-.design-page .dc-start-import:hover {
+.design-page .dc-start-photo:hover {
   background: var(--accent-soft-2);
 }
 .dc-import-description {
@@ -1158,59 +1161,8 @@ body:has(.dc-breakdown[open]) {
 .dc-calendar-scroll {
   touch-action: pan-y;
 }
-.design-page .dc-start-import {
-  position: relative;
-}
 .dc-calendar-scroll {
   position: relative;
-}
-.dc-empty-card {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: center;
-  width: min(270px, 86%);
-  padding: 22px 18px 12px;
-  background: var(--surface);
-  border: 1px solid var(--separator);
-  border-radius: 22px;
-  box-shadow: 0 12px 32px var(--shadow-faint);
-  transform: translate(-50%, -50%);
-}
-.dc-empty-card > p {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-}
-.dc-empty-card > .dc-empty-hint {
-  margin-bottom: 8px;
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--text-3);
-}
-.design-page .dc-empty-import {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 48px;
-  padding: 0 12px;
-  font-size: 13px;
-  color: var(--on-accent-fill);
-  background: var(--accent-fill);
-  border: 0;
-  border-radius: 14px;
-}
-.dc-empty-card > .dc-empty-alt {
-  margin-top: 4px;
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--text-4);
 }
 .design-page .dc-import-later {
   display: block;
@@ -1678,8 +1630,10 @@ body:has(.dc-breakdown[open]) {
 .dc-no-input .dc-nav {
   margin-top: auto;
 }
+/* The same gap above the tab bar as under the input buttons, so the last
+   thing before it sits at one height whether a month has them or not. */
 .dc-no-input .dc-summary + .dc-nav {
-  margin-top: 12px;
+  margin-top: 28px;
 }
 
 /* Settings. */
@@ -4827,4 +4781,228 @@ button.st-row:hover {
   background: transparent;
   border: 0;
   border-top: 1px solid var(--separator);
+}
+
+/* 取り込みの確認: the photographed roster, checked before it goes in. */
+.im-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.im-steps {
+  margin: 2px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+.im-lead {
+  margin: -4px 4px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-3);
+}
+/* Two lines each, the name over the start of the row it read. */
+.im-row,
+.im-page label.st-row {
+  padding-top: 9px;
+  padding-bottom: 9px;
+  cursor: pointer;
+}
+.im-row .st-row-label,
+.im-page label.st-row .st-row-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.im-row-codes {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+}
+.design-page .im-next {
+  margin-top: 6px;
+}
+.im-code {
+  gap: 10px;
+}
+.im-code-chip {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  font-family: "Hiragino Mincho ProN", serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  background: #fbf8f0;
+  border: 1px solid #d9d2c2;
+  border-radius: 6px;
+}
+.im-code-select {
+  max-width: 132px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  background: var(--fill-2);
+  border: 0;
+  border-radius: 10px;
+}
+/* The row of the sheet, as paper, to hold against the calendar. */
+.im-scan {
+  margin: 0;
+}
+.im-scan figcaption {
+  margin: 0 4px 6px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.im-scan-row {
+  display: flex;
+  overflow-x: auto;
+  background: #fbf8f0;
+  border: 1px solid #d9d2c2;
+  border-radius: 8px;
+}
+.design-page .im-scan-row button {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  align-items: center;
+  width: 30px;
+  padding: 4px 0 6px;
+  font-family: "Hiragino Mincho ProN", serif;
+  font-size: 15px;
+  color: #2b2823;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid #e6dfcf;
+}
+.design-page .im-scan-row button small {
+  font-family: -apple-system, sans-serif;
+  font-size: 9px;
+  color: #8c8577;
+}
+.design-page .im-scan-row .im-scan-unsure {
+  background: #f7e7a6;
+}
+.design-page .im-scan-row button[aria-pressed="true"] {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.im-calendar .dc-grid {
+  --cell-height: 58px;
+}
+.im-fix {
+  padding: 12px 14px;
+  background: var(--fill);
+  border-radius: 16px;
+}
+.im-fix p {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.im-fix strong {
+  margin-right: 8px;
+  font-size: 14px;
+  color: var(--text);
+}
+.im-fix-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.design-page .im-fix-choices button {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 6px 10px 6px 6px;
+  font-size: 12px;
+  color: var(--text-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.design-page .im-fix-choices button[aria-pressed="true"] {
+  color: var(--text);
+  border-color: var(--accent-muted);
+  box-shadow: inset 0 0 0 1px var(--accent-muted);
+}
+.im-unsure {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0 4px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+.im-unsure-mark {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b5716;
+  background: #f7e7a6;
+  border-radius: 50%;
+}
+.im-notice {
+  padding: 12px;
+  background: var(--accent-soft);
+  border-radius: 16px;
+}
+.im-notice p {
+  margin: 0 4px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.im-check {
+  width: 18px;
+  height: 18px;
+  margin: 0 12px 0 0;
+  accent-color: var(--accent-fill);
+}
+.im-apply {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 12px;
+}
+.im-apply p {
+  margin: 0 4px;
+  font-size: 12px;
+  color: var(--text-3);
+  text-align: center;
+}
+/* A day to look at again: a small ? on its corner. */
+.dc-day.dc-flagged {
+  position: relative;
+  box-shadow: inset 0 0 0 1.5px #e3c65a;
+}
+.dc-day.dc-flagged::after {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #6b5716;
+  content: "?";
+  background: #f7e7a6;
+  border-radius: 50%;
+}
+.im-page .st-row-label {
+  flex: 1;
+  min-width: 0;
 }
