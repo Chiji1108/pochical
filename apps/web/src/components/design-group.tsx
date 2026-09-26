@@ -1788,27 +1788,100 @@ function PagedShifts({
       {/* 人ごと fits on one screen under its own month switch, like the
           calendar tab, so only the long tables get a way on at the foot. */}
       {layout !== "person" && <MonthFoot month={month} onMonth={onMonth} />}
-      {/* Like the calendar's days-off total, at the foot of the month. */}
-      <div className="gr-together-summary">
-        <span>
-          {thisMonth ? "今月" : `${month.getMonth() + 1}月`}
-          のみんな休み
-        </span>
-        <span className="gr-together-days">
-          {offDays.length > 0
-            ? offDays.map((date) => (
-                <span className="gr-together-day" key={dateKey(date)}>
-                  {date.getDate()}
-                </span>
-              ))
-            : "なし"}
-          {offDays.length > 0 && <small className="gr-together-unit">日</small>}
-        </span>
-      </div>
+      {/* Like the calendar tab's days-off total: the count, and the dates
+          in a sheet, so a month with many shared days off stays one line. */}
+      <TogetherSummary
+        days={offDays}
+        label={`${thisMonth ? "今月" : `${month.getMonth() + 1}月`}のみんな休み`}
+        onPickDay={onPickDay}
+      />
       {layout !== "person" && (
         <p className="st-note">
           アイコンを押すとその人のシフトパターン、マスを押すとその日のみんなの予定が見られます。
         </p>
+      )}
+    </>
+  );
+}
+
+function TogetherSummary({
+  label,
+  days,
+  onPickDay,
+}: {
+  label: string;
+  days: Date[];
+  onPickDay: (date: Date) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  if (days.length === 0) {
+    return (
+      <div className="dc-summary gr-together-summary">
+        <span>{label}</span>
+        <span className="gr-together-none">なし</span>
+      </div>
+    );
+  }
+  return (
+    <>
+      <button
+        className="dc-summary gr-together-summary"
+        onClick={() => {
+          setOpen(true);
+        }}
+        type="button"
+      >
+        <span>{label}</span>
+        <strong>
+          {days.length}
+          <span>日</span>
+          <ChevronRight aria-hidden="true" size={17} />
+        </strong>
+      </button>
+      {open && (
+        <div className="gr-sheet-backdrop">
+          <section aria-label={label} className="gr-sheet gr-legend-sheet">
+            <header className="gr-sheet-header">
+              <span />
+              <h3>{label}</h3>
+              <button
+                className="pe-save"
+                onClick={() => {
+                  setOpen(false);
+                }}
+                type="button"
+              >
+                閉じる
+              </button>
+            </header>
+            {/* Picking a date closes this and shows everyone that day. */}
+            <div className="gr-legend-body">
+              <div className="st-list">
+                {days.map((date) => (
+                  <button
+                    className="st-row"
+                    key={dateKey(date)}
+                    onClick={() => {
+                      setOpen(false);
+                      onPickDay(date);
+                    }}
+                    type="button"
+                  >
+                    <span className="st-row-label">{formatDay(date)}</span>
+                    <span className="st-row-value">
+                      {holidayName(date) ?? ""}
+                    </span>
+                    <ChevronRight
+                      aria-hidden="true"
+                      className="st-row-arrow"
+                      size={17}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+        </div>
       )}
     </>
   );
