@@ -4443,3 +4443,19 @@ button.st-row:hover {
   color: var(--on-badge);
   background: var(--danger);
 }
+/* A settings list whose rows are the choices, like 外観. */
+.st-choice-list {
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+.st-choice-list .st-work-check {
+  margin-left: auto;
+}
+/* Phones show scroll indicators only while scrolling; hide the desktop
+   browser's scrollbars inside the mockups. */
+.dc-phone,
+.dc-phone * {
+  scrollbar-width: none;
+}

@@ -70,6 +70,7 @@ type Page =
   | "coworkers"
   | "mark"
   | "customize"
+  | "appearance"
   | "profile";
 
 const markOptions: { style: ShiftMarkStyle; name: string }[] = [
@@ -246,6 +247,13 @@ export function DesignSettings({
             preview={preview}
           />
         )}
+        {page === "appearance" && (
+          <AppearancePage
+            onBack={() => {
+              setPage("top");
+            }}
+          />
+        )}
         {page === "customize" && (
           <CustomizePage
             cancelTo={cancelTo}
@@ -357,7 +365,11 @@ function SettingsTop({
             </span>
           }
         />
-        <AppearanceRow />
+        <AppearanceRow
+          onOpen={() => {
+            onOpen("appearance");
+          }}
+        />
         <Row label="週の始まり" value="日曜" />
         <Row label="色をつける曜日" value="土・日" />
       </Section>
@@ -1329,31 +1341,53 @@ function ToneChoices() {
 }
 
 const appearanceOptions: { appearance: Appearance; name: string }[] = [
-  { appearance: "system", name: "端末" },
+  { appearance: "system", name: "端末に合わせる" },
   { appearance: "light", name: "ライト" },
   { appearance: "dark", name: "ダーク" },
 ];
 
-// 外観: follow the device by default, or keep light or dark.
-function AppearanceRow() {
+function appearanceName(appearance: Appearance) {
+  return (
+    appearanceOptions.find((option) => option.appearance === appearance)
+      ?.name ?? appearance
+  );
+}
+
+// 外観 reads like the other rows: the current choice, opening a list.
+function AppearanceRow({ onOpen }: { onOpen: () => void }) {
+  const { appearance } = useContext(AppearanceContext);
+  return (
+    <Row label="外観" onOpen={onOpen} value={appearanceName(appearance)} />
+  );
+}
+
+// Follow the device by default, or keep light or dark.
+function AppearancePage({ onBack }: { onBack: () => void }) {
   const { appearance, setAppearance } = useContext(AppearanceContext);
   return (
-    <div className="st-row">
-      <span className="st-row-label">外観</span>
-      <fieldset className="design-segment st-row-segment">
+    <>
+      <PageHeader back="設定" onBack={onBack} title="外観" />
+      <fieldset className="st-list st-choice-list">
         <legend className="dc-sr-only">外観</legend>
         {appearanceOptions.map((option) => (
           <button
             aria-pressed={appearance === option.appearance}
+            className="st-row"
             key={option.appearance}
             onClick={() => setAppearance?.(option.appearance)}
             type="button"
           >
-            {option.name}
+            <span className="st-row-label">{option.name}</span>
+            {appearance === option.appearance ? (
+              <Check aria-hidden="true" className="st-work-check" size={20} />
+            ) : null}
           </button>
         ))}
       </fieldset>
-    </div>
+      <p className="st-note">
+        端末に合わせると、スマホの設定に合わせてライトとダークが切り替わります。
+      </p>
+    </>
   );
 }
 
