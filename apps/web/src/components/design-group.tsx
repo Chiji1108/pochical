@@ -1504,7 +1504,7 @@ function defaultLayout(count: number): Layout {
 }
 
 // Where 週ごと / 日ごと / 人ごと live: a full-width row under the header, or
-// one menu that also holds マークの意味 and saving, compared on /design.
+// one menu that also holds シフトパターン and saving, compared on /design.
 type ShiftsHeader = DesignVariants["shiftsHeader"];
 
 function ShiftsPage({
@@ -1707,7 +1707,7 @@ function ShiftsMenu({
             <hr />
             <button onClick={act(onLegend)} role="menuitem" type="button">
               <Info aria-hidden="true" className="gr-menu-icon" size={16} />
-              マークの意味
+              シフトパターン
             </button>
             <button onClick={act(onSave)} role="menuitem" type="button">
               <Download aria-hidden="true" className="gr-menu-icon" size={16} />
@@ -1835,7 +1835,7 @@ function PagedShifts({
       {showLegendRow && (
         <div className="st-list">
           <button className="st-row" onClick={onLegend} type="button">
-            <span className="st-row-label">マークの意味</span>
+            <span className="st-row-label">シフトパターン</span>
             <span className="st-row-value" />
             <ChevronRight
               aria-hidden="true"
@@ -1845,7 +1845,9 @@ function PagedShifts({
           </button>
         </div>
       )}
-      <p className="st-note">マスを押すと、その日のみんなの予定が出ます。</p>
+      <p className="st-note">
+        アイコンを押すとその人のシフトパターン、マスを押すとその日のみんなの予定が見られます。
+      </p>
     </>
   );
 }
@@ -1948,14 +1950,18 @@ function LegendSheet({
   return (
     <div className="gr-sheet-backdrop">
       <section
-        aria-label={single ? `${single.name}のマーク` : "マークの意味"}
+        aria-label={
+          single ? `${single.name}のシフトパターン` : "みんなのシフトパターン"
+        }
         className="gr-sheet gr-legend-sheet"
       >
         <header className="gr-sheet-header">
           <span />
           <h3 className="gr-legend-title">
             {single && <Avatar member={single} />}
-            {single ? `${single.name}のマーク` : "マークの意味"}
+            {single
+              ? `${single.name}のシフトパターン`
+              : "みんなのシフトパターン"}
           </h3>
           <button className="pe-save" onClick={onClose} type="button">
             閉じる
@@ -2047,7 +2053,7 @@ function DayRowsTable({
                 scope="col"
               >
                 <button
-                  aria-label={`${member.name}のマークの意味`}
+                  aria-label={`${member.name}のシフトパターン`}
                   className="gr-rows-member gr-rows-member-button"
                   onClick={() => {
                     onMember(member);
@@ -2418,7 +2424,7 @@ function MemberTable({
             <div className="gr-table-row" key={member.id}>
               {onMember ? (
                 <button
-                  aria-label={`${member.name}のマークの意味`}
+                  aria-label={`${member.name}のシフトパターン`}
                   className="gr-table-name gr-table-name-button"
                   onClick={() => {
                     onMember(member);
@@ -2532,7 +2538,7 @@ function PersonCalendar({
 function Legend({ members }: { members: Member[] }) {
   return (
     <section className="st-section">
-      <h4>マークの意味</h4>
+      <h4>シフトパターン</h4>
       <div className="st-list">
         {members.map((member) => (
           <div className="st-row gr-legend-row" key={member.id}>
