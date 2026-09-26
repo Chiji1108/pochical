@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { useContext, useEffect, useId, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import {
   addDays,
@@ -2489,45 +2489,76 @@ function PersonCalendar({
   const me = group.members.find((item) => item.me);
   return (
     <>
-      <div aria-hidden="true" className="dc-weekdays gr-weekdays">
-        {weekdayLabels.map((label) => (
-          <span key={label}>{label}</span>
-        ))}
-      </div>
-      <div className="gr-person">
-        {dates.map((date) => {
-          const outside = !sameMonth(date, month);
-          const item = outside ? undefined : patternOn(member, date);
-          const withMe =
-            !(outside || member.me) &&
-            me !== undefined &&
-            everyoneOff([me, member], date);
-          return (
-            <div
-              aria-label={`${formatDay(date)}：${item?.name ?? "未入力"}${withMe ? "、自分も休み" : ""}`}
-              className={`gr-person-day ${outside ? "gr-outside" : ""} ${item?.off ? "gr-person-off" : ""} ${withMe ? "gr-person-with-me" : ""}`}
+      {/* The same grid and cells as your own calendar, so the two read
+          alike; one wrapper keeps the page's gap from splitting them. */}
+      <div>
+        <div aria-hidden="true" className="dc-weekdays">
+          {weekdayLabels.map((label) => (
+            <span key={label}>{label}</span>
+          ))}
+        </div>
+        <div
+          className="dc-grid"
+          style={{ "--weeks": dates.length / weekLength } as CSSProperties}
+        >
+          {dates.map((date) => (
+            <PersonDay
+              date={date}
               key={dateKey(date)}
-              role="img"
-            >
-              <span
-                className={`gr-person-date gr-date ${weekendClassName(date)}`}
-              >
-                {date.getDate()}
-              </span>
-              {item && (
-                <>
-                  <MemberMark look={item.look} member={member} size={20} />
-                  <span className="gr-person-name">{item.name}</span>
-                </>
-              )}
-            </div>
-          );
-        })}
+              me={me}
+              member={member}
+              outside={!sameMonth(date, month)}
+            />
+          ))}
+        </div>
       </div>
       {!member.me && (
         <p className="st-note">日付に枠がある日は、自分も休みの日です。</p>
       )}
     </>
+  );
+}
+
+// One day of 人ごと, drawn like a day of your own calendar: the shift name
+// always shows, a day off takes its pattern's tint, and a day you are both
+// off is framed.
+function PersonDay({
+  date,
+  member,
+  me,
+  outside,
+}: {
+  date: Date;
+  member: Member;
+  me?: Member;
+  outside: boolean;
+}) {
+  const item = outside ? undefined : patternOn(member, date);
+  const { tint } = useMarkColor(item?.look.color ?? 0);
+  const withMe =
+    !(outside || member.me) &&
+    me !== undefined &&
+    everyoneOff([me, member], date);
+  const off = item?.off === true;
+  return (
+    <div
+      aria-label={`${formatDay(date)}：${item?.name ?? "未入力"}${withMe ? "、自分も休み" : ""}`}
+      className={`dc-day ${outside ? "dc-outside" : ""} ${off ? "dc-off" : ""} ${withMe ? "gr-person-with-me" : ""}`}
+      role="img"
+      style={off ? ({ "--off-tint": tint } as CSSProperties) : undefined}
+    >
+      <span className={`dc-date ${holidayName(date) ? "dc-holiday" : ""}`}>
+        {date.getDate()}
+      </span>
+      {item && (
+        <>
+          <span className="dc-emoji">
+            <MemberMark look={item.look} member={member} size={21} />
+          </span>
+          <span className="dc-shift-label">{item.name}</span>
+        </>
+      )}
+    </div>
   );
 }
 

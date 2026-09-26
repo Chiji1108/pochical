@@ -2597,34 +2597,6 @@ button.st-row:hover {
   height: 30px;
 }
 
-/* 人ごと: one member's month. */
-.gr-weekdays {
-  padding-bottom: 4px;
-  margin-bottom: -12px;
-}
-.gr-person {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 3px;
-}
-.gr-person-day {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  align-items: center;
-  min-width: 0;
-  height: 70px;
-  padding: 5px 0;
-  color: var(--text);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 12px;
-}
-.gr-person-date {
-  font-size: 11px;
-  font-weight: 600;
-}
-
 /* One person at a time. */
 /* One row that scrolls sideways. It runs to the screen's edges, so a
    half-shown name hints at more; a fieldset needs min-width: 0 to shrink
@@ -2658,11 +2630,6 @@ button.st-row:hover {
   color: var(--text);
   background: var(--surface);
   border-color: var(--accent);
-}
-/* Date, mark and the shift name, which 人ごと always shows. */
-.gr-person-day {
-  gap: 2px;
-  height: 68px;
 }
 
 .gr-qr {
@@ -4488,19 +4455,9 @@ button.st-row:hover {
   background: transparent;
   border: 0;
 }
-/* 人ごと: the member's days off are lit, and days you are both off are
-   framed, as the note under the calendar says. */
-.gr-person-day.gr-person-off {
-  background: var(--accent-soft);
-}
-.gr-person-day.gr-person-with-me {
-  border-color: var(--accent-muted);
-}
-.gr-person-name {
-  max-width: 100%;
-  overflow: hidden;
-  font-size: 9px;
-  color: var(--text-2);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* 人ごと: days you are both off are framed, as the note under the
+   calendar says. */
+.gr-person-with-me {
+  outline: 1.5px solid var(--accent-muted);
+  outline-offset: -1px;
 }
