@@ -286,7 +286,6 @@ function SettingsTop({
   profile: Profile;
   onOpen: (page: Page) => void;
 }) {
-  const { color } = useContext(ColorChoiceContext);
   const { look } = useContext(LookSettingsContext);
   const tone = useContext(ToneContext);
   return (
@@ -340,14 +339,10 @@ function SettingsTop({
           onOpen={() => {
             onOpen("mark");
           }}
-          value={
-            <span className="st-inline-value">
-              <ColorSwatch color={color} />
-              {markOptions.find((option) => option.style === look.style)
-                ?.name ?? ""}
-              {tone === "deep" ? "" : `・${toneName(tone)}`}
-            </span>
-          }
+          value={`${
+            markOptions.find((option) => option.style === look.style)?.name ??
+            ""
+          }${tone === "deep" ? "" : `・${toneName(tone)}`}`}
         />
         <AppearanceRow
           onOpen={() => {
@@ -1295,10 +1290,10 @@ const multiSwatchShifts: Shift[] = ["day", "night", "after", "off"];
 // colors for マルチカラー.
 function ColorSwatch({
   color,
-  className = "st-swatch",
+  className,
 }: {
   color: ColorChoice;
-  className?: string;
+  className: string;
 }) {
   const scheme = useContext(ColorSchemeContext);
   const tone = useContext(ToneContext);

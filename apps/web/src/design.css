@@ -2239,11 +2239,6 @@ button.st-row:hover {
   align-items: center;
   justify-content: flex-end;
 }
-.st-swatch {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-}
 .st-theme-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
