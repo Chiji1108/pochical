@@ -983,12 +983,6 @@ function MarkPage({
     <>
       <PageHeader back="設定" onBack={onBack} title="スタイル" />
       <StylePreview preview={preview} />
-      <Group note="あなたの画面だけ" title="カラー">
-        <ColorChoices />
-      </Group>
-      <Group note="あなたの画面だけ" title="トーン">
-        <ToneChoices />
-      </Group>
       {/* Every choice shows in the preview at once, so there is nothing to
           confirm or cancel. */}
       <Group note="グループの人にも表示" title="シフトの見た目">
@@ -1009,6 +1003,12 @@ function MarkPage({
           ))}
         </fieldset>
         <MarkFillSwitch current={current} />
+      </Group>
+      <Group note="あなたの画面だけ" title="カラー">
+        <ColorChoices />
+      </Group>
+      <Group note="あなたの画面だけ" title="トーン">
+        <ToneChoices />
       </Group>
       <Group note="あなたの画面だけ" title="自分のカレンダー">
         <MarkOptionsList current={current} />
