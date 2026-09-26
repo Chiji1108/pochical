@@ -1785,7 +1785,9 @@ function PagedShifts({
           picked={picked}
         />
       )}
-      <MonthFoot month={month} onMonth={onMonth} />
+      {/* 人ごと fits on one screen under its own month switch, like the
+          calendar tab, so only the long tables get a way on at the foot. */}
+      {layout !== "person" && <MonthFoot month={month} onMonth={onMonth} />}
       {/* Like the calendar's days-off total, at the foot of the month. */}
       <div className="gr-together-summary">
         <span>
