@@ -253,7 +253,13 @@ function WelcomeStep({
           width={200}
         />
         <h3>ポチカル</h3>
-        <p>シフトをポチッと入れて、家族や友達と見せ合えるカレンダーです。</p>
+        {/* Each phrase stays whole, so the line breaks after the comma. */}
+        <p>
+          <span className="ob-phrase">シフトをポチッと入れて、</span>
+          <span className="ob-phrase">
+            家族や友達と見せ合えるカレンダーです。
+          </span>
+        </p>
       </div>
       <div className="ob-welcome-actions">
         <button className="ob-primary" onClick={onStart} type="button">

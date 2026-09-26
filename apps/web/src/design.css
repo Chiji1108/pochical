@@ -1489,6 +1489,9 @@ body:has(.dc-breakdown[open]) {
   filter: brightness(1.12) contrast(1.2) invert(1);
   mix-blend-mode: screen;
 }
+.ob-phrase {
+  display: inline-block;
+}
 .ob-welcome-actions {
   display: flex;
   flex-direction: column;
