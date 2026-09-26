@@ -4688,3 +4688,178 @@ button.st-row:hover {
   font-weight: 600;
   color: var(--text-3);
 }
+
+/* 05 アプリアイコン: the poodle icon in each color, at its small sizes,
+   and on a home screen among other apps. */
+.ai-study {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  align-items: center;
+  width: min(100%, 520px);
+}
+.ai-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--fill-2);
+  /* Close to the system's continuous corner at icon sizes. */
+  border-radius: 22.5%;
+  box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.12);
+}
+.ai-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.ai-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+}
+.design-page .ai-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  font-size: 12px;
+  color: var(--text-2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 20px;
+}
+.design-page .ai-choice[aria-pressed="true"] {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.ai-sizes {
+  display: flex;
+  gap: 28px;
+  align-items: flex-end;
+}
+.ai-sizes figure {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+}
+.ai-sizes figcaption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.ai-homes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+}
+.ai-home {
+  display: grid;
+  grid-template-columns: repeat(3, 60px);
+  gap: 18px 22px;
+  padding: 26px 24px;
+  border-radius: 28px;
+}
+.ai-home-light {
+  background: linear-gradient(160deg, #7f9cc0, #c49a80);
+}
+.ai-home-dark {
+  background: linear-gradient(160deg, #1b2230, #2d2420);
+}
+.ai-app {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: center;
+}
+.ai-app small {
+  font-size: 10px;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+}
+.ai-neighbor {
+  width: 60px;
+  height: 60px;
+  opacity: 0.85;
+}
+
+/* アプリアイコン in settings: the icons to pick, the dark one they turn
+   to, and the system's alert after a change. */
+.st-app-icons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 0;
+  margin: 8px 0 20px;
+  border: 0;
+}
+.design-page .st-app-icons button {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 0 10px;
+  font-size: 13px;
+  color: var(--text-2);
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 20px;
+}
+.design-page .st-app-icons button[aria-pressed="true"] {
+  color: var(--text);
+  background: var(--fill);
+  border-color: var(--accent-muted);
+}
+.st-app-icon-name {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+.st-app-icon-check {
+  color: var(--accent);
+}
+.st-app-icon-dark-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 12px;
+}
+.st-app-icon-dark-label small {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.st-system-alert {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 270px;
+  overflow: hidden;
+  color: var(--text);
+  text-align: center;
+  background: var(--raised);
+  border-radius: 16px;
+  transform: translate(-50%, -50%);
+}
+.st-system-alert p {
+  margin: 0;
+  padding: 20px 16px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.design-page .st-system-alert button {
+  width: 100%;
+  min-height: 44px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0a84ff;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--separator);
+}

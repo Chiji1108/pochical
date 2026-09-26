@@ -20,6 +20,12 @@ import {
 } from "./design-account";
 import type { AccountProvider } from "./design-account";
 import {
+  AppIcon,
+  AppIconContext,
+  pickableIcons,
+  useAppIcons,
+} from "./design-app-icon";
+import {
   addDays,
   DayCell,
   dateKey,
@@ -82,6 +88,7 @@ type Page =
   | "mark"
   | "appearance"
   | "week"
+  | "appIcon"
   | "account"
   | "profile";
 
@@ -282,6 +289,13 @@ export function DesignSettings({
             preview={weekPreview}
           />
         )}
+        {page === "appIcon" && (
+          <AppIconPage
+            onBack={() => {
+              setPage("top");
+            }}
+          />
+        )}
         {page === "account" && (
           <AccountPage
             onBack={() => {
@@ -392,6 +406,11 @@ function SettingsTop({
         <AppearanceRow
           onOpen={() => {
             onOpen("appearance");
+          }}
+        />
+        <AppIconRow
+          onOpen={() => {
+            onOpen("appIcon");
           }}
         />
         <WeekRow
@@ -1495,6 +1514,113 @@ function appearanceName(appearance: Appearance) {
 }
 
 // 外観 reads like the other rows: the current choice, opening a list.
+function AppIconRow({ onOpen }: { onOpen: () => void }) {
+  const { icon } = useContext(AppIconContext);
+  const icons = useAppIcons();
+  const picked = pickableIcons.find((option) => option.id === icon);
+  return (
+    <Row
+      label="アプリアイコン"
+      onOpen={onOpen}
+      value={
+        <span className="st-inline-value">
+          <AppIcon size={22} src={icons[icon]} />
+          {picked?.name}
+        </span>
+      }
+    />
+  );
+}
+
+// The home screen icon. iOS confirms every change itself, so the page
+// shows its alert; on a dark home screen each icon turns to the dark one.
+function AppIconPage({ onBack }: { onBack: () => void }) {
+  const { icon, setIcon } = useContext(AppIconContext);
+  const icons = useAppIcons();
+  const [alerted, setAlerted] = useState(false);
+  return (
+    <>
+      <PageHeader back="設定" onBack={onBack} title="アプリアイコン" />
+      <fieldset className="st-app-icons">
+        <legend className="dc-sr-only">アプリアイコン</legend>
+        {pickableIcons.map((option) => (
+          <button
+            aria-pressed={icon === option.id}
+            key={option.id}
+            onClick={() => {
+              if (icon !== option.id) {
+                setIcon?.(option.id);
+                setAlerted(true);
+              }
+            }}
+            type="button"
+          >
+            <AppIcon size={72} src={icons[option.id]} />
+            <span className="st-app-icon-name">
+              {icon === option.id && (
+                <Check
+                  aria-hidden="true"
+                  className="st-app-icon-check"
+                  size={14}
+                />
+              )}
+              {option.name}
+            </span>
+          </button>
+        ))}
+      </fieldset>
+      <div className="st-list st-app-icon-dark">
+        <div className="st-row">
+          <AppIcon size={36} src={icons.dark} />
+          <span className="st-row-label st-app-icon-dark-label">
+            ダークのホーム画面
+            <small>どのアイコンでも、この色に切り替わります</small>
+          </span>
+        </div>
+      </div>
+      {alerted && (
+        <SystemAlert
+          onClose={() => {
+            setAlerted(false);
+          }}
+          title="“ポチカル”のアイコンを変更しました"
+        />
+      )}
+    </>
+  );
+}
+
+// The system's own alert, as iOS shows it after an icon change.
+function SystemAlert({
+  title,
+  onClose,
+}: {
+  title: string;
+  onClose: () => void;
+}) {
+  const open = (alert: HTMLDialogElement | null) => {
+    if (alert && !alert.open) {
+      showOverPhone(alert, alert.closest<HTMLElement>(".dc-phone"));
+    }
+  };
+  return (
+    <dialog
+      aria-label={title}
+      className="dc-breakdown"
+      onClose={onClose}
+      ref={open}
+    >
+      <div className="dc-sheet-scrim" />
+      <section className="st-system-alert">
+        <p>{title}</p>
+        <button onClick={onClose} type="button">
+          OK
+        </button>
+      </section>
+    </dialog>
+  );
+}
+
 function AppearanceRow({ onOpen }: { onOpen: () => void }) {
   const { appearance } = useContext(AppearanceContext);
   return (
