@@ -9,6 +9,8 @@ import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 
 import type { Tone } from "../lib/design-tokens";
+import { markColors } from "../lib/design-tokens";
+import { toneRoles } from "../lib/tones";
 import {
   addDays,
   DayCell,
@@ -1394,9 +1396,15 @@ function ColorSwatch({
       />
     );
   }
-  const slices = multiSwatchShifts.map(
-    (shift) => shiftColors[lookOf(shift).color]?.color ?? "transparent"
-  );
+  // Each shift color as this tone would fill with it, so the slices sit at
+  // the same depth as the theme swatches beside them (pastel fills are
+  // much paler than pastel marks).
+  const slices = multiSwatchShifts.map((shift) => {
+    const option = markColors[lookOf(shift).color] ?? markColors[0];
+    return tone === "deep"
+      ? (shiftColors[lookOf(shift).color]?.color ?? option.color)
+      : toneRoles(tone, option.color, scheme).fill;
+  });
   const quarter = 100 / slices.length;
   const stops = slices
     .map(
