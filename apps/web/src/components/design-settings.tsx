@@ -412,10 +412,22 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 // A titled block whose content brings its own background.
-function Group({ title, children }: { title: string; children: ReactNode }) {
+function Group({
+  title,
+  note,
+  children,
+}: {
+  title: string;
+  // A short aside after the title, like who a setting reaches.
+  note?: string;
+  children: ReactNode;
+}) {
   return (
     <section className="st-section">
-      <h4>{title}</h4>
+      <h4>
+        {title}
+        {note && <small className="st-section-note">{note}</small>}
+      </h4>
       {children}
     </section>
   );
@@ -992,19 +1004,16 @@ function MarkPage({
     <>
       <PageHeader back="設定" onBack={onBack} title="スタイル" />
       <StylePreview preview={preview} />
-      <Group title="カラー">
+      <Group note="あなたの画面だけ" title="カラー">
         <ColorChoices />
       </Group>
-      <Group title="トーン">
+      <Group note="あなたの画面だけ" title="トーン">
         <ToneChoices />
       </Group>
-      <Group title="シフトの見た目">
+      <Group note="グループの人にも表示" title="シフトの見た目">
         <StylePresets />
       </Group>
       <CustomChoice onOpen={onCustomize} />
-      <p className="st-note">
-        シフトの見た目は、グループの人があなたのシフトを見るときにも使われます。カラーとトーンは、あなたの画面だけに反映されます。
-      </p>
     </>
   );
 }
