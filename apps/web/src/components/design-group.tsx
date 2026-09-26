@@ -1546,7 +1546,7 @@ function ShiftsPage({
     setPicked(picked && dateKey(picked) === dateKey(date) ? undefined : date);
   };
   return (
-    <div className="gr-shifts">
+    <div className={`gr-shifts ${picked ? "gr-shifts-with-sheet" : ""}`}>
       <header className="st-page-header">
         <div className="pe-topbar">
           <button
@@ -1617,7 +1617,7 @@ function ShiftsPage({
         showLegendRow={header !== "menu"}
       />
       {picked && (
-        <DayPeek
+        <PickedDaySheet
           date={picked}
           members={group.members}
           onClose={() => {
@@ -1796,6 +1796,7 @@ function PagedShifts({
         <DayRowsTable
           days={dates.filter((date) => sameMonth(date, month))}
           group={group}
+          onMember={onMember}
           onPickDay={onPickDay}
           picked={picked}
         />
@@ -1888,9 +1889,10 @@ function MonthFoot({
   );
 }
 
-// The day picked in the table, floating at the bottom so it shows without
-// scrolling away from the mark that was pressed.
-function DayPeek({
+// The day picked in the table, in a sheet along the bottom. It leaves the
+// table undimmed and live: the picked day stays framed above it, and
+// picking another day switches the sheet to that day.
+function PickedDaySheet({
   date,
   members,
   onClose,
@@ -1901,37 +1903,35 @@ function DayPeek({
 }) {
   const together = everyoneOff(members, date);
   return (
-    <section aria-label={formatDay(date)} className="gr-peek">
-      <header className="gr-peek-head">
-        <strong>{formatDay(date)}</strong>
+    <section aria-label={formatDay(date)} className="gr-day-sheet">
+      <div aria-hidden="true" className="dc-sheet-handle" />
+      <header className="gr-day-sheet-header">
+        <h3>{formatDay(date)}</h3>
         {together && <span className="gr-day-card-tag">みんな休み</span>}
-        <button
-          aria-label="閉じる"
-          className="gr-icon-button"
-          onClick={onClose}
-          type="button"
-        >
-          <X aria-hidden="true" size={16} />
+        <button className="pe-save" onClick={onClose} type="button">
+          閉じる
         </button>
       </header>
-      <ul className="gr-peek-list">
+      <div className="st-list gr-day-sheet-list">
         {members.map((member) => {
           const item = patternOn(member, date);
           return (
-            <li key={member.id}>
+            <div className="st-row" key={member.id}>
               <Avatar member={member} />
-              <span className="gr-peek-name">{member.name}</span>
-              {item && (
-                <MemberMark look={item.look} member={member} size={16} />
-              )}
-              <span className="gr-peek-shift">{item?.name ?? "未入力"}</span>
-              {item?.time && (
-                <small className="gr-peek-time">{item.time}</small>
-              )}
-            </li>
+              <span className="st-row-label">{member.name}</span>
+              <span className="st-row-value gr-day-sheet-value">
+                {item && (
+                  <MemberMark look={item.look} member={member} size={18} />
+                )}
+                {item?.name ?? "未入力"}
+                {item?.time && (
+                  <small className="gr-day-sheet-time">{item.time}</small>
+                )}
+              </span>
+            </div>
           );
         })}
-      </ul>
+      </div>
     </section>
   );
 }
@@ -2007,11 +2007,14 @@ function DayRowsTable({
   group,
   days,
   picked,
+  onMember,
   onPickDay,
 }: {
   group: Group;
   days: Date[];
   picked?: Date;
+  // Opens a member's legend from their face or name, as in 週ごと.
+  onMember: (member: Member) => void;
   onPickDay: (date: Date) => void;
 }) {
   const density = densityOf(group.members.length);
@@ -2043,14 +2046,17 @@ function DayRowsTable({
                 key={member.id}
                 scope="col"
               >
-                <span className="gr-rows-member">
+                <button
+                  aria-label={`${member.name}のマークの意味`}
+                  className="gr-rows-member gr-rows-member-button"
+                  onClick={() => {
+                    onMember(member);
+                  }}
+                  type="button"
+                >
                   <Avatar member={member} />
-                  {withNames ? (
-                    member.name
-                  ) : (
-                    <span className="dc-sr-only">{member.name}</span>
-                  )}
-                </span>
+                  {withNames ? member.name : null}
+                </button>
               </th>
             ))}
           </tr>

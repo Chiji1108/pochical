@@ -3896,61 +3896,6 @@ button.st-row:hover {
 }
 
 /* The picked day, floating above the home bar. */
-.gr-peek {
-  position: absolute;
-  right: 14px;
-  bottom: 30px;
-  left: 14px;
-  z-index: 5;
-  max-height: 44%;
-  padding: 10px 12px 12px;
-  overflow-y: auto;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  box-shadow: 0 10px 30px var(--shadow-strong);
-}
-.gr-peek-head {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 6px;
-}
-.gr-peek-head strong {
-  font-size: 14px;
-}
-.gr-peek-head .gr-icon-button {
-  margin-left: auto;
-}
-.gr-peek-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-.gr-peek-list li {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 13px;
-}
-.gr-peek-name {
-  width: 64px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-2);
-  white-space: nowrap;
-}
-.gr-peek-shift {
-  font-weight: 600;
-}
-.gr-peek-time {
-  margin-left: auto;
-  font-size: 11px;
-  color: var(--text-4);
-}
 
 /* ‹ 8月 · 10月 › under the month's table. */
 .gr-month-foot {
@@ -4507,4 +4452,62 @@ button.st-row:hover {
 }
 .gr-menu-icon {
   color: var(--text-3);
+}
+/* The picked day, as a sheet over the bottom of the table. */
+.gr-day-sheet {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  max-height: 46%;
+  padding: 8px 18px 30px;
+  background: var(--raised);
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -6px 24px var(--shadow-strong);
+}
+.gr-day-sheet .dc-sheet-handle {
+  flex-shrink: 0;
+  margin-bottom: 10px;
+}
+.gr-day-sheet-header {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.gr-day-sheet-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.gr-day-sheet-header .pe-save {
+  margin-left: auto;
+}
+.gr-day-sheet-list {
+  min-height: 0;
+  overflow-y: auto;
+}
+.gr-day-sheet-value {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.gr-day-sheet-time {
+  font-size: 11px;
+  color: var(--text-4);
+}
+/* Room to scroll the last weeks out from under the sheet. */
+.gr-shifts-with-sheet {
+  padding-bottom: 300px;
+}
+.design-page .gr-rows-member-button {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
 }
