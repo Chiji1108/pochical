@@ -1,0 +1,31 @@
+[tools]
+bun = "1.4.2"
+buf = "1.73.0"
+java = "temurin-21"
+
+[tasks.gen]
+description = "Generate TypeScript, Swift and Kotlin code from proto/"
+dir = "{{config_root}}/proto"
+run = "buf generate"
+
+[tasks."proto:lint"]
+description = "Lint and format-check proto/"
+dir = "{{config_root}}/proto"
+run = ["buf lint", "buf format --diff --exit-code"]
+
+[tasks."proto:breaking"]
+description = "Fail on wire-incompatible proto changes against master"
+dir = "{{config_root}}/proto"
+run = "buf breaking --against '../.git#branch=master,subdir=proto'"
+
+[tasks.server]
+description = "Run the Workers dev server"
+run = "bun run --cwd apps/server dev"
+
+[tasks."server:test"]
+description = "Run server tests in the Workers runtime"
+run = "bun run --cwd apps/server test"
+
+[tasks."server:typecheck"]
+description = "Typecheck the server"
+run = "bun run --cwd apps/server typecheck"

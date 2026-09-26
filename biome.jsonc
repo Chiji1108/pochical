@@ -36,6 +36,7 @@
       "!node_modules",
       "!**/routeTree.gen.ts",
       "!**/worker-configuration.d.ts",
+      "!apps/server/src/gen",
       "!**/.wrangler",
       "!**/.output",
       "!**/.tanstack"
@@ -56,6 +57,12 @@
             }
           }
         }
+      }
+    },
+    {
+      "includes": ["apps/server/**"],
+      "javascript": {
+        "globals": ["WebSocketPair"]
       }
     },
     {

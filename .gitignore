@@ -18,6 +18,10 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# Swift Package Manager
+.build/
+.swiftpm/
+
 # Metro
 .metro-health-check*
 

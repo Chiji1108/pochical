@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package pochical.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Server metadata clients check before connecting to a group socket.
+service SystemService {
+  rpc GetServerInfo(GetServerInfoRequest) returns (GetServerInfoResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+message GetServerInfoRequest {}
+
+message GetServerInfoResponse {
+  // Oldest socket protocol version the server still accepts.
+  // Clients below this must ask the user to update the app.
+  uint32 min_protocol_version = 1;
+  // Newest socket protocol version the server speaks.
+  uint32 current_protocol_version = 2;
+  google.protobuf.Timestamp server_time = 3;
+}

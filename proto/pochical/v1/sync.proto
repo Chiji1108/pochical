@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package pochical.v1;
+
+// Every binary WebSocket message from a client is one ClientFrame.
+message ClientFrame {
+  oneof kind {
+    Hello hello = 1;
+    Ping ping = 2;
+  }
+}
+
+// Every binary WebSocket message from the server is one ServerFrame.
+message ServerFrame {
+  oneof kind {
+    Welcome welcome = 1;
+    Pong pong = 2;
+    ServerError error = 3;
+  }
+}
+
+// First frame a client sends after the socket opens.
+message Hello {
+  uint32 protocol_version = 1;
+  // Last server cursor the client has applied; 0 for a fresh install.
+  uint64 cursor = 2;
+}
+
+// Reply to Hello once the server accepts the protocol version.
+message Welcome {
+  // Current head of the group's change log.
+  uint64 cursor = 1;
+}
+
+message Ping {
+  uint32 nonce = 1;
+}
+
+message Pong {
+  uint32 nonce = 1;
+}
+
+message ServerError {
+  enum Code {
+    CODE_UNSPECIFIED = 0;
+    // The client must update before it can sync. The server closes the socket.
+    CODE_PROTOCOL_TOO_OLD = 1;
+    // The frame could not be decoded, or Hello was not sent first.
+    CODE_BAD_FRAME = 2;
+  }
+
+  Code code = 1;
+  string message = 2;
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@pochical/server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "cf-typegen": "wrangler types",
+    "typecheck": "wrangler types && tsc --noEmit",
+    "test": "vitest run",
+    "check": "bun run --cwd ../.. check",
+    "fix": "bun run --cwd ../.. fix"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "2.15.0",
+    "@connectrpc/connect": "2.2.0"
+  },
+  "devDependencies": {
+    "@bufbuild/protoc-gen-es": "2.15.0",
+    "@cloudflare/vitest-pool-workers": "0.22.0",
+    "typescript": "~6.0.3",
+    "vitest": "~4.1.11",
+    "wrangler": "^4.141.0"
+  }
+}

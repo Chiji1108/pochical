@@ -1,0 +1,12 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "pochical-server",
+  "main": "src/index.ts",
+  // Keep at or below the workerd bundled with @cloudflare/vitest-pool-workers.
+  "compatibility_date": "2026-08-15",
+  "observability": { "enabled": true },
+  "durable_objects": {
+    "bindings": [{ "name": "GROUP_ROOM", "class_name": "GroupRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GroupRoom"] }]
+}
