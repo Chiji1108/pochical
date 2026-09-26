@@ -3,7 +3,8 @@ import type { CSSProperties } from "react";
 // The app's neutral colors by role, for light and dark. design.css reads them
 // as CSS variables (`--bg`, `--text-3`, ...); /design/colors lists them, and
 // the native apps will export the same values. Dark values keep each light
-// color's hue and flip its lightness in OKLCH.
+// color's hue and flip its lightness in OKLCH, on a soft gray ground about as
+// light as Discord's rather than near-black.
 
 export const colorSchemes = ["light", "dark"] as const;
 export type ColorScheme = (typeof colorSchemes)[number];
@@ -24,39 +25,39 @@ export const neutralTokenGroups: ColorTokenGroup[] = [
   {
     label: "背景",
     tokens: [
-      { dark: "#131412", label: "画面", light: "#ffffff", name: "bg" },
+      { dark: "#2a2c29", label: "画面", light: "#ffffff", name: "bg" },
       {
-        dark: "#2c2f2b",
+        dark: "#424540",
         label: "カード・選択中のボタン",
         light: "#ffffff",
         name: "surface",
       },
       {
-        dark: "#20221f",
+        dark: "#343632",
         label: "シート・ダイアログ",
         light: "#ffffff",
         name: "raised",
       },
       {
-        dark: "#1d1f1c",
+        dark: "#323531",
         label: "リスト・入力欄",
         light: "#f6f7f3",
         name: "fill",
       },
       {
-        dark: "#262925",
+        dark: "#3a3d38",
         label: "セグメント・吹き出し",
         light: "#f0f1ec",
         name: "fill-2",
       },
       {
-        dark: "#2e312d",
+        dark: "#434641",
         label: "アバター・空の枠",
         light: "#e6e8e1",
         name: "fill-3",
       },
       {
-        dark: "#434641",
+        dark: "#585c56",
         label: "オフのスイッチ・無効なボタン",
         light: "#d5d9cf",
         name: "control-off",
@@ -66,23 +67,23 @@ export const neutralTokenGroups: ColorTokenGroup[] = [
   {
     label: "文字",
     tokens: [
-      { dark: "#e6e9e5", label: "本文", light: "#30332f", name: "text" },
-      { dark: "#bec3bb", label: "ラベル", light: "#565e52", name: "text-2" },
-      { dark: "#9ea49b", label: "補足", light: "#72796e", name: "text-3" },
+      { dark: "#dcdfdb", label: "本文", light: "#30332f", name: "text" },
+      { dark: "#bec3bc", label: "ラベル", light: "#565e52", name: "text-2" },
+      { dark: "#a7ada5", label: "補足", light: "#72796e", name: "text-3" },
       {
-        dark: "#868b83",
+        dark: "#959a92",
         label: "注記・曜日",
         light: "#8a9086",
         name: "text-4",
       },
       {
-        dark: "#6f736c",
+        dark: "#80857e",
         label: "時刻・矢印",
         light: "#a7ada1",
         name: "text-faint",
       },
       {
-        dark: "#535751",
+        dark: "#666a65",
         label: "無効・月の外の日",
         light: "#b9beb4",
         name: "text-disabled",
@@ -93,25 +94,25 @@ export const neutralTokenGroups: ColorTokenGroup[] = [
     label: "線",
     tokens: [
       {
-        dark: "#383c37",
+        dark: "#4d514c",
         label: "ボタン・入力欄の枠",
         light: "#e0e3db",
         name: "border",
       },
       {
-        dark: "#282b27",
+        dark: "#3f423d",
         label: "区切り線",
         light: "#eceee8",
         name: "separator",
       },
       {
-        dark: "#212420",
+        dark: "#373a36",
         label: "表の罫線",
         light: "#f0f1ec",
         name: "separator-faint",
       },
       {
-        dark: "#555a52",
+        dark: "#696e66",
         label: "点線の追加ボタン",
         light: "#b9c2b1",
         name: "border-strong",
@@ -122,19 +123,19 @@ export const neutralTokenGroups: ColorTokenGroup[] = [
     label: "意味のある色",
     tokens: [
       {
-        dark: "#d8938e",
+        dark: "#dd9f9a",
         label: "日曜・祝日",
         light: "#a96561",
         name: "holiday",
       },
-      { dark: "#8cabcd", label: "土曜", light: "#6682a0", name: "saturday" },
+      { dark: "#98b4d4", label: "土曜", light: "#6682a0", name: "saturday" },
       {
-        dark: "#df7f77",
+        dark: "#e58c83",
         label: "削除・警告",
         light: "#b0564f",
         name: "danger",
       },
-      { dark: "#c25d56", label: "未読バッジ", light: "#b0564f", name: "badge" },
+      { dark: "#c4675f", label: "未読バッジ", light: "#b0564f", name: "badge" },
       {
         dark: "#ffffff",
         label: "未読バッジの文字",
@@ -147,19 +148,19 @@ export const neutralTokenGroups: ColorTokenGroup[] = [
     label: "反転・重なり",
     tokens: [
       {
-        dark: "#131412",
+        dark: "#232521",
         label: "テーマ色の上の文字",
         light: "#ffffff",
         name: "on-accent",
       },
       {
-        dark: "#e6e9e5",
+        dark: "#dcdfdb",
         label: "反転ボタン・トースト",
         light: "#30332f",
         name: "inverse",
       },
       {
-        dark: "#131412",
+        dark: "#2a2c29",
         label: "反転の上の文字",
         light: "#ffffff",
         name: "on-inverse",
@@ -171,7 +172,7 @@ export const neutralTokenGroups: ColorTokenGroup[] = [
         name: "knob",
       },
       {
-        dark: "#dcdfdb",
+        dark: "#cfd2ce",
         label: "ホームインジケーター",
         light: "#363a33",
         name: "home-indicator",
@@ -211,73 +212,73 @@ export function neutralStyle(scheme: ColorScheme): CSSProperties {
 export const markColors = [
   {
     color: "#486444",
-    dark: { color: "#9cbb98", tint: "#283426" },
+    dark: { color: "#abc7a7", tint: "#3c483a" },
     name: "モス",
     tint: "#e4ecdf",
   },
   {
     color: "#8a6d1a",
-    dark: { color: "#ccad61", tint: "#3a2f14" },
+    dark: { color: "#d6bb77", tint: "#4d432a" },
     name: "からし",
     tint: "#f3ead0",
   },
   {
     color: "#95602e",
-    dark: { color: "#dda371", tint: "#412b17" },
+    dark: { color: "#e6b285", tint: "#533f2d" },
     name: "オレンジ",
     tint: "#f5e4d2",
   },
   {
     color: "#93503a",
-    dark: { color: "#e69c84", tint: "#44281f" },
+    dark: { color: "#efab95", tint: "#573c34" },
     name: "テラコッタ",
     tint: "#f3dfd6",
   },
   {
     color: "#9b3f35",
-    dark: { color: "#f69183", tint: "#442723" },
+    dark: { color: "#fea194", tint: "#573c37" },
     name: "赤",
     tint: "#f4dcd8",
   },
   {
     color: "#8d4a5a",
-    dark: { color: "#e499a8", tint: "#44262d" },
+    dark: { color: "#eda8b6", tint: "#563b40" },
     name: "ローズ",
     tint: "#f2e0e4",
   },
   {
     color: "#75497a",
-    dark: { color: "#ce9dd3", tint: "#3b283d" },
+    dark: { color: "#d8acdd", tint: "#4e3d50" },
     name: "すみれ",
     tint: "#eee1ef",
   },
   {
     color: "#5f4f86",
-    dark: { color: "#b6a6e3", tint: "#322c44" },
+    dark: { color: "#c2b4ec", tint: "#453f57" },
     name: "ラベンダー",
     tint: "#e8e2f0",
   },
   {
     color: "#4a5388",
-    dark: { color: "#a1ade9", tint: "#2a2e46" },
+    dark: { color: "#afbaf1", tint: "#3d4259" },
     name: "藍",
     tint: "#e3e6f2",
   },
   {
     color: "#3d4a73",
-    dark: { color: "#9fb0df", tint: "#293043" },
+    dark: { color: "#adbde8", tint: "#3d4355" },
     name: "紺",
     tint: "#dde2ee",
   },
   {
     color: "#36706c",
-    dark: { color: "#83beb9", tint: "#1d3534" },
+    dark: { color: "#95cac5", tint: "#334947" },
     name: "青緑",
     tint: "#dcebea",
   },
   {
     color: "#56636d",
-    dark: { color: "#a5b3be", tint: "#2b3136" },
+    dark: { color: "#b3c0ca", tint: "#3f4449" },
     name: "グレー",
     tint: "#e3e7ea",
   },
