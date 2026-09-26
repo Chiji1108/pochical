@@ -83,9 +83,29 @@ The client caches messages by `seq` and records which contiguous ranges it holds
 - Edits and deletions arrive through the change log and update cached messages; changes to uncached messages are ignored.
 - After a reset, the client loads the latest page as a new range. The gap to older ranges is filled when the user scrolls to it.
 
+### Read states
+
+A thread is a group's shared chat or a direct chat between two members. Each (user, thread) pair has one watermark, `last_read_seq`: everything up to it counts as read. Chat is read in order, so per-message receipts are not needed.
+
+- The Group DO stores `read_states(user_id, thread_id, last_read_seq)` and only moves a watermark forward (`max`). Updates from several devices, out of order or repeated, converge without conflict resolution.
+- Watermark changes go through the change log, so members see read markers update live. A message counts as read by every member whose watermark is at or past its `seq`.
+- Unread count for a thread: messages with `seq > last_read_seq` not authored by the user.
+- A member who joins starts at the thread's current head, so history before joining is not unread.
+
+Clients advance the watermark to the newest message shown on screen, batching updates while the user scrolls. The update goes through the outbox like a shift edit; since the server applies `max`, redelivery is harmless.
+
+### Unread summary
+
+Tab and app icon badges need unread counts across every group, without a socket to each Group DO. When a message is accepted, the Group DO already notifies each member's User DO to send push notifications; the same call carries the member's new unread count for that thread, and watermark changes do the same.
+
+- The User DO keeps `unread_by_thread` and streams it to the user's devices over the User DO socket.
+- The APNs `badge` and FCM notification count come from the User DO's total.
+- Reading on one device clears the badge on the user's other devices through the User DO.
+
 ## Not yet specified
 
 - Authentication and membership checks on connect
 - Snapshot format for resets and how long each DO keeps its change log
 - Wire messages for shift changes, outbox acknowledgements, chat pages and resets
-- Presence
+- Presence and typing indicators
+- Read state options: whether members see read markers (and whether users can turn them off), "mark as unread" (it moves the watermark back, so `max` would become a per-thread LWW register), mention counts, and muted threads left out of badge totals
