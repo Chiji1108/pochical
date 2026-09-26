@@ -1008,8 +1008,11 @@ function MarkPage({
             </button>
           ))}
         </fieldset>
+        <MarkFillSwitch current={current} />
       </Group>
-      <MarkOptionsList current={current} />
+      <Group note="あなたの画面だけ" title="自分のカレンダー">
+        <MarkOptionsList current={current} />
+      </Group>
     </>
   );
 }
@@ -1131,10 +1134,29 @@ const previewSchemes = [
 ] as const;
 
 // The switches for the look in use, as one list.
-function MarkOptionsList({ current }: { current: ShiftMarkStyle }) {
-  const { names, setNames } = useContext(CellNamesContext);
+// The fill is part of the shape members see; emoji have none, so the row
+// goes away for them.
+function MarkFillSwitch({ current }: { current: ShiftMarkStyle }) {
   const iconWeight = useContext(IconWeightContext);
   const setIconWeight = useContext(SetIconWeightContext);
+  if (current === "emoji") {
+    return null;
+  }
+  return (
+    <div className="st-list st-mark-fill">
+      <SwitchRow
+        checked={iconWeight === "duotone"}
+        label="塗り"
+        onChange={(checked) => setIconWeight?.(checked ? "duotone" : "regular")}
+      />
+    </div>
+  );
+}
+
+// How your own calendar shows the marks. Group screens decide these for
+// themselves, so members never see them.
+function MarkOptionsList({ current }: { current: ShiftMarkStyle }) {
+  const { names, setNames } = useContext(CellNamesContext);
   const { highlight, setHighlight } = useContext(OffHighlightContext);
   const highlightOn = useOffHighlight(current);
   return (
@@ -1151,17 +1173,6 @@ function MarkOptionsList({ current }: { current: ShiftMarkStyle }) {
           setHighlight?.({ ...highlight, [current]: checked })
         }
       />
-      {/* Last, since emoji have no fill: switching to them drops this row
-          without moving the ones above. */}
-      {current !== "emoji" && (
-        <SwitchRow
-          checked={iconWeight === "duotone"}
-          label="塗り"
-          onChange={(checked) =>
-            setIconWeight?.(checked ? "duotone" : "regular")
-          }
-        />
-      )}
     </div>
   );
 }

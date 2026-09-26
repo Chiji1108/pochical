@@ -2097,6 +2097,9 @@ button.st-row:hover {
 .dc-detail-patterns button[aria-pressed="true"] .sm-badge-plain {
   color: var(--on-accent-fill) !important;
 }
+.st-mark-fill {
+  margin-top: 8px;
+}
 .st-mark-segment {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
