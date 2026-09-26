@@ -1,4 +1,3 @@
-import holidayJp from "@holiday-jp/holiday_jp";
 import {
   ArrowRight,
   BatteryFull,
@@ -41,6 +40,7 @@ import {
 } from "./design-save-sheet";
 import { DesignSettings } from "./design-settings";
 import { useThemeStyle } from "./design-theme";
+import { holidayName, holidayNameOfKey, useWeek } from "./design-week";
 import {
   CellNamesContext,
   lookOf,
@@ -170,13 +170,6 @@ export function dateKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-const holidays: Record<string, { name: string } | undefined> =
-  holidayJp.holidays;
-
-export function holidayName(date: Date) {
-  return holidays[dateKey(date)]?.name;
-}
-
 // A week with 休み on a weekend day reads as office hours, which usually
 // have national holidays off too.
 export function defaultHolidaysOff(sequence: Shift[], start: Date) {
@@ -188,16 +181,6 @@ export function defaultHolidaysOff(sequence: Shift[], start: Date) {
     const day = addDays(start, index).getDay();
     return shift === "off" && (day === 0 || day === 6);
   });
-}
-
-export function weekendClassName(date: Date) {
-  if (date.getDay() === 0 || holidayName(date)) {
-    return "dc-sunday";
-  }
-  if (date.getDay() === 6) {
-    return "dc-saturday";
-  }
-  return "";
 }
 
 const sampleMembers = ["佐藤", "田中", "鈴木", "山本", "高橋"];
@@ -285,18 +268,6 @@ function keepDetails(entry: DayEntry | undefined, shift: Shift): DayEntry {
   return { members: entry?.members, note: entry?.note, shift };
 }
 
-export function weekDates(date: Date) {
-  return Array.from(
-    { length: 7 },
-    (_, index) =>
-      new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate() - date.getDay() + index
-      )
-  );
-}
-
 export function addDays(date: Date, days: number) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 }
@@ -306,7 +277,10 @@ export function formatDay(date: Date) {
 }
 
 // Place a modal over the phone frame so the sheet looks like part of the app.
-function showOverPhone(dialog: HTMLDialogElement, phone: HTMLElement | null) {
+export function showOverPhone(
+  dialog: HTMLDialogElement,
+  phone: HTMLElement | null
+) {
   const rect = phone?.getBoundingClientRect();
   if (rect) {
     const top = Math.max(12, rect.top + 6);
@@ -331,24 +305,6 @@ export function timeRange(entry: DayEntry) {
   const start = entry.start ?? time[0];
   const end = entry.end ?? time[1];
   return `${formatTime(start)} – ${end <= start ? "翌" : ""}${formatTime(end)}`;
-}
-
-export function monthDates(month: Date) {
-  const start = new Date(month.getFullYear(), month.getMonth(), 1);
-  const count = new Date(
-    month.getFullYear(),
-    month.getMonth() + 1,
-    0
-  ).getDate();
-  return Array.from(
-    { length: Math.ceil((start.getDay() + count) / 7) * 7 },
-    (_, index) =>
-      new Date(
-        month.getFullYear(),
-        month.getMonth(),
-        index - start.getDay() + 1
-      )
-  );
 }
 
 export function DesignCalendar({
@@ -441,7 +397,8 @@ export function DesignCalendar({
     () => customPatternKeys ?? patternSets[patternCount]
   );
   const [announcement, setAnnouncement] = useState("");
-  const dates = monthDates(month);
+  const weekTools = useWeek();
+  const dates = weekTools.monthDates(month);
   const monthDays = dates.filter(
     (date) => date.getMonth() === month.getMonth()
   );
@@ -484,7 +441,9 @@ export function DesignCalendar({
     >
       <span>
         {`${month.getMonth() + 1}月${selectedDay}日`}
-        <span className={`dc-input-weekday ${weekendClassName(selectedDate)}`}>
+        <span
+          className={`dc-input-weekday ${weekTools.dateClass(selectedDate)}`}
+        >
           ({weekdays[selectedDate.getDay()]})
         </span>
       </span>
@@ -492,7 +451,7 @@ export function DesignCalendar({
     </InputDatePicker>
   );
   const weekDetail = !editing && detailDate !== undefined;
-  const gridDates = weekDetail ? weekDates(detailDate) : dates;
+  const gridDates = weekDetail ? weekTools.weekDates(detailDate) : dates;
   const headingMode = screenMode(editing, weekDetail);
   function openDetail(date: Date) {
     setDetailDate(date);
@@ -575,7 +534,10 @@ export function DesignCalendar({
       for (const [key, entry] of Object.entries(planned)) {
         const plannedShift = entry?.shift;
         const current = previous[key];
-        if (!(holidays[key] && plannedShift) || plannedShift === "off") {
+        if (
+          !(holidayNameOfKey(key) && plannedShift) ||
+          plannedShift === "off"
+        ) {
           continue;
         }
         if (holidaysOff && current?.shift === plannedShift) {
@@ -714,8 +676,10 @@ export function DesignCalendar({
         </div>
         <div className="dc-calendar-scroll" {...swipeHandlers}>
           <div aria-hidden="true" className="dc-weekdays">
-            {weekdays.map((day) => (
-              <span key={day}>{day}</span>
+            {weekTools.weekdays.map((day) => (
+              <span className={day.className} key={day.day}>
+                {day.label}
+              </span>
             ))}
           </div>
           <section
@@ -1038,12 +1002,13 @@ function HeadingActions({
   onDone: () => void;
   onSave: () => void;
 }) {
+  const weekTools = useWeek();
   const week = mode === "week";
   const unit = week ? "週" : "月";
   const atToday = week
-    ? weekDates(detailDate ?? designToday).some(
-        (date) => dateKey(date) === dateKey(designToday)
-      )
+    ? weekTools
+        .weekDates(detailDate ?? designToday)
+        .some((date) => dateKey(date) === dateKey(designToday))
     : month.getFullYear() === designToday.getFullYear() &&
       month.getMonth() === designToday.getMonth();
   return (
@@ -1475,7 +1440,7 @@ export function DayCell({
   const { tint } = useDisplayColor(lookOf(shift ?? "off").color);
   const offStyle = dayOffStyle(shift, highlight, tint);
   const today = dateKey(date) === dateKey(designToday);
-  const holiday = holidayName(date);
+  const holiday = useWeek().isColoredHoliday(date);
   const timeChanged = Boolean(entry?.start || entry?.end);
   const hasMark = !outside && (timeChanged || Boolean(entry?.note));
   const className = `dc-day ${outside ? "dc-outside" : ""} ${offStyle ? "dc-off" : ""} ${today && !editing ? "dc-today" : ""} ${active ? "dc-active-day" : ""}`;
@@ -1741,6 +1706,7 @@ export function InputDatePicker({
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [viewMonth, setViewMonth] = useState(date);
+  const weekTools = useWeek();
   return (
     <>
       <button
@@ -1811,12 +1777,12 @@ export function InputDatePicker({
           </button>
         </div>
         <div className="dc-picker-days">
-          {weekdays.map((day) => (
-            <span aria-hidden="true" key={day}>
-              {day}
+          {weekTools.weekdays.map((day) => (
+            <span aria-hidden="true" key={day.day}>
+              {day.label}
             </span>
           ))}
-          {monthDates(viewMonth).map((day) => (
+          {weekTools.monthDates(viewMonth).map((day) => (
             <button
               aria-label={`${day.getFullYear()}年${day.getMonth() + 1}月${day.getDate()}日`}
               aria-pressed={dateKey(day) === dateKey(date)}

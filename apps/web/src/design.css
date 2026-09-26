@@ -223,10 +223,11 @@ body:has(.design-page) > .site-footer {
   color: var(--text-3);
   text-align: center;
 }
-.dc-weekdays > :first-child {
+/* Colored by day, not position, since the week can start on any day. */
+.dc-weekdays .dc-sunday {
   color: var(--holiday);
 }
-.dc-weekdays > :last-child {
+.dc-weekdays .dc-saturday {
   color: var(--saturday);
 }
 .dc-grid {
@@ -2092,6 +2093,69 @@ button.st-row:hover {
 .dc-detail-patterns button[aria-pressed="true"] .sm-icon {
   fill: var(--on-accent-fill);
 }
+/* The dot before a setting that paints with a color. */
+.gr-row-mark {
+  margin-right: 12px;
+}
+.gr-row-label-after-avatar {
+  margin-left: 12px;
+}
+.gr-edit-mark {
+  display: grid;
+  place-items: center;
+  margin: 4px 0 18px;
+}
+.gr-profile-list {
+  margin-top: 18px;
+}
+.st-row-swatch {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  margin-right: 10px;
+  border-radius: 50%;
+}
+.st-week-preview {
+  padding: 14px 16px 12px;
+  margin-bottom: 18px;
+  background: var(--surface);
+  border: 1px solid var(--separator);
+  border-radius: 16px;
+}
+.st-week-month {
+  margin: 0 0 8px 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.st-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  row-gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+}
+.st-week-grid .st-week-weekday {
+  padding-bottom: 4px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+.st-week-grid .dc-sunday {
+  color: var(--holiday);
+}
+.st-week-grid .dc-saturday {
+  color: var(--saturday);
+}
+.st-week-grid .st-week-outside {
+  visibility: hidden;
+}
+.st-week-start button {
+  min-height: 40px;
+  font-size: 14px;
+}
 .st-mark-segment {
   display: grid;
   grid-auto-columns: minmax(0, 1fr);
@@ -2496,10 +2560,10 @@ button.st-row:hover {
   font-weight: 600;
   color: var(--text-3);
 }
-.gr-table-weekdays > :nth-child(2) {
+.gr-table-weekdays .dc-sunday {
   color: var(--holiday);
 }
-.gr-table-weekdays > :last-child {
+.gr-table-weekdays .dc-saturday {
   color: var(--saturday);
 }
 .gr-table-dates {
@@ -2881,6 +2945,16 @@ button.st-row:hover {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+/* An app line about the group, between the messages. */
+.gr-notice {
+  align-self: center;
+  max-width: 85%;
+  margin: 6px auto;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-3);
+  text-align: center;
 }
 .gr-when {
   align-self: center;
@@ -3503,9 +3577,34 @@ button.st-row:hover {
 .st-profile-section > .st-note {
   margin-top: -4px;
 }
-.st-photo-edit {
+.design-page .st-photo-edit {
   position: relative;
+  padding: 0;
   cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+.st-photo-sheet .st-row {
+  width: 100%;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+.st-row-icon {
+  flex-shrink: 0;
+  margin-right: 12px;
+  color: var(--text-2);
+}
+.design-page .st-photo-cancel {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--fill);
+  border: 0;
+  border-radius: 16px;
 }
 .st-photo-badge {
   position: absolute;
@@ -3519,11 +3618,6 @@ button.st-row:hover {
   background: var(--surface);
   border-radius: 50%;
   box-shadow: 0 1px 4px var(--shadow-strong);
-}
-.st-photo-actions {
-  display: flex;
-  gap: 18px;
-  justify-content: center;
 }
 .design-page .st-photo-action {
   padding: 0;

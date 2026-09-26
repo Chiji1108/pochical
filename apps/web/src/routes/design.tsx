@@ -19,6 +19,10 @@ import {
 } from "../components/design-theme";
 import type { Appearance, ColorChoice } from "../components/design-theme";
 import {
+  defaultWeekSettings,
+  WeekSettingsContext,
+} from "../components/design-week";
+import {
   CellNamesContext,
   IconWeightContext,
   LookSettingsContext,
@@ -91,6 +95,7 @@ function DesignPage() {
   const theme = themeOfColor(color);
   const [tone, setTone] = useState<Tone>("deep");
   const [appearance, setAppearance] = useState<Appearance>("system");
+  const [week, setWeek] = useState(defaultWeekSettings);
   // 外観 in settings follows this computer's own light or dark setting
   // unless it keeps one.
   const deviceScheme = useDeviceScheme();
@@ -149,107 +154,109 @@ function DesignPage() {
         }}
         variants={variants}
       />
-      <AppearanceContext value={{ appearance, setAppearance }}>
-        <ColorSchemeContext value={scheme}>
-          <ToneContext value={tone}>
-            <SetToneContext value={setTone}>
-              <ColorChoiceContext value={{ color, setColor }}>
-                <ThemeContext value={{ theme }}>
-                  <LookSettingsContext value={{ look, updateLook }}>
-                    <IconWeightContext
-                      value={look.fill ? "duotone" : "regular"}
-                    >
-                      <ShiftMarkStyleContext value={look.style}>
-                        <CellNamesContext
-                          value={{
-                            names: {
-                              badge: look.names,
-                              emoji: look.names,
-                              icon: look.names,
-                            },
-                            setNames: (names) => {
-                              updateLook({ names: names[look.style] });
-                            },
-                          }}
-                        >
-                          <OffHighlightContext
+      <WeekSettingsContext value={{ setWeek, week }}>
+        <AppearanceContext value={{ appearance, setAppearance }}>
+          <ColorSchemeContext value={scheme}>
+            <ToneContext value={tone}>
+              <SetToneContext value={setTone}>
+                <ColorChoiceContext value={{ color, setColor }}>
+                  <ThemeContext value={{ theme }}>
+                    <LookSettingsContext value={{ look, updateLook }}>
+                      <IconWeightContext
+                        value={look.fill ? "duotone" : "regular"}
+                      >
+                        <ShiftMarkStyleContext value={look.style}>
+                          <CellNamesContext
                             value={{
-                              highlight: {
-                                badge: look.highlight,
-                                emoji: look.highlight,
-                                icon: look.highlight,
+                              names: {
+                                badge: look.names,
+                                emoji: look.names,
+                                icon: look.names,
                               },
-                              setHighlight: (highlight) => {
-                                updateLook({
-                                  highlight:
-                                    highlight[look.style] ?? look.highlight,
-                                });
+                              setNames: (names) => {
+                                updateLook({ names: names[look.style] });
                               },
                             }}
                           >
-                            <MonochromeContext
-                              value={{ monochrome: color !== "multi" }}
+                            <OffHighlightContext
+                              value={{
+                                highlight: {
+                                  badge: look.highlight,
+                                  emoji: look.highlight,
+                                  icon: look.highlight,
+                                },
+                                setHighlight: (highlight) => {
+                                  updateLook({
+                                    highlight:
+                                      highlight[look.style] ?? look.highlight,
+                                  });
+                                },
+                              }}
                             >
-                              <div className="design-screens" key={version}>
-                                <section aria-labelledby="design-view-title">
-                                  <h2 id="design-view-title">
-                                    <span>01</span> カレンダー表示
-                                  </h2>
-                                  <DesignCalendar
-                                    initialEditing={false}
-                                    onChange={setSchedule}
-                                    schedule={schedule}
+                              <MonochromeContext
+                                value={{ monochrome: color !== "multi" }}
+                              >
+                                <div className="design-screens" key={version}>
+                                  <section aria-labelledby="design-view-title">
+                                    <h2 id="design-view-title">
+                                      <span>01</span> カレンダー表示
+                                    </h2>
+                                    <DesignCalendar
+                                      initialEditing={false}
+                                      onChange={setSchedule}
+                                      schedule={schedule}
+                                      variants={variants}
+                                    />
+                                    <p className="design-caption">
+                                      ひと月の予定と、お休みをひと目で。
+                                    </p>
+                                  </section>
+                                  <section aria-labelledby="design-edit-title">
+                                    <h2 id="design-edit-title">
+                                      <span>02</span> シフト入力
+                                    </h2>
+                                    <DesignCalendar
+                                      initialEditing
+                                      onChange={setSchedule}
+                                      schedule={schedule}
+                                      variants={variants}
+                                    />
+                                    <p className="design-caption">
+                                      シフトを押すと翌日へ。日付をタップして修正もできます。
+                                    </p>
+                                  </section>
+                                  <PatternStudy
+                                    caption="2026年8月。8パターンを4列×2段で比較。"
+                                    count={8}
+                                    id="design-six-weeks-title"
+                                    month={7}
+                                    number="03"
+                                    title="6段の月 × 8パターン"
                                     variants={variants}
                                   />
-                                  <p className="design-caption">
-                                    ひと月の予定と、お休みをひと目で。
-                                  </p>
-                                </section>
-                                <section aria-labelledby="design-edit-title">
-                                  <h2 id="design-edit-title">
-                                    <span>02</span> シフト入力
-                                  </h2>
-                                  <DesignCalendar
-                                    initialEditing
-                                    onChange={setSchedule}
-                                    schedule={schedule}
-                                    variants={variants}
-                                  />
-                                  <p className="design-caption">
-                                    シフトを押すと翌日へ。日付をタップして修正もできます。
-                                  </p>
-                                </section>
-                                <PatternStudy
-                                  caption="2026年8月。8パターンを4列×2段で比較。"
-                                  count={8}
-                                  id="design-six-weeks-title"
-                                  month={7}
-                                  number="03"
-                                  title="6段の月 × 8パターン"
-                                  variants={variants}
-                                />
-                                <section aria-labelledby="design-onboarding-title">
-                                  <h2 id="design-onboarding-title">
-                                    <span>04</span> はじめての設定
-                                  </h2>
-                                  <DesignOnboarding variants={variants} />
-                                  <p className="design-caption">
-                                    最初の1問で、入れやすい始め方に分かれます。
-                                  </p>
-                                </section>
-                              </div>
-                            </MonochromeContext>
-                          </OffHighlightContext>
-                        </CellNamesContext>
-                      </ShiftMarkStyleContext>
-                    </IconWeightContext>
-                  </LookSettingsContext>
-                </ThemeContext>
-              </ColorChoiceContext>
-            </SetToneContext>
-          </ToneContext>
-        </ColorSchemeContext>
-      </AppearanceContext>
+                                  <section aria-labelledby="design-onboarding-title">
+                                    <h2 id="design-onboarding-title">
+                                      <span>04</span> はじめての設定
+                                    </h2>
+                                    <DesignOnboarding variants={variants} />
+                                    <p className="design-caption">
+                                      最初の1問で、入れやすい始め方に分かれます。
+                                    </p>
+                                  </section>
+                                </div>
+                              </MonochromeContext>
+                            </OffHighlightContext>
+                          </CellNamesContext>
+                        </ShiftMarkStyleContext>
+                      </IconWeightContext>
+                    </LookSettingsContext>
+                  </ThemeContext>
+                </ColorChoiceContext>
+              </SetToneContext>
+            </ToneContext>
+          </ColorSchemeContext>
+        </AppearanceContext>
+      </WeekSettingsContext>
       <p className="design-footnote">
         実際にタップして試せます。01・02は連動、03は個別に操作できます。
         <br />

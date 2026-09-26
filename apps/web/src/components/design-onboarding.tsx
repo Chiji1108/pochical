@@ -7,15 +7,14 @@ import {
   DesignCalendar,
   dateKey,
   formatDay,
-  monthDates,
   PhoneStatusBar,
   patterns,
   RepeatSequenceEditor,
   repeatSchedule,
-  weekendClassName,
 } from "./design-calendar";
 import type { RepeatRule, Schedule, Shift } from "./design-calendar";
 import { useThemeStyle } from "./design-theme";
+import { useWeek } from "./design-week";
 import { ShiftMark } from "./shift-mark";
 
 type Template = {
@@ -107,7 +106,6 @@ type Step =
   | { name: "anchor"; template: Template; sequence: Shift[] };
 
 const designMonth = new Date(2026, 8, 1);
-const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
 
 function startSchedule(sequence?: Shift[], anchor?: Date): Schedule {
   if (!(sequence && anchor)) {
@@ -485,6 +483,7 @@ function AnchorStep({
   onBack: () => void;
   onStart: (anchor: Date) => void;
 }) {
+  const weekTools = useWeek();
   const [viewMonth, setViewMonth] = useState(month);
   const [anchor, setAnchor] = useState<Date>();
   const first = patterns[sequence[0]].label;
@@ -523,12 +522,12 @@ function AnchorStep({
         </button>
       </div>
       <div className="ob-days">
-        {weekdayLabels.map((label) => (
-          <span aria-hidden="true" className="ob-weekday" key={label}>
-            {label}
+        {weekTools.weekdays.map((day) => (
+          <span aria-hidden="true" className="ob-weekday" key={day.day}>
+            {day.label}
           </span>
         ))}
-        {monthDates(viewMonth).map((date) => {
+        {weekTools.monthDates(viewMonth).map((date) => {
           const outside = date.getMonth() !== viewMonth.getMonth();
           return (
             <button
@@ -536,7 +535,7 @@ function AnchorStep({
               aria-pressed={
                 anchor !== undefined && dateKey(date) === dateKey(anchor)
               }
-              className={`${outside ? "ob-outside" : ""} ${weekendClassName(date)}`}
+              className={`${outside ? "ob-outside" : ""} ${weekTools.dateClass(date)}`}
               key={dateKey(date)}
               onClick={() => {
                 setAnchor(date);
@@ -559,7 +558,7 @@ function AnchorStep({
             return (
               <span className="dc-repeat-day" key={dateKey(date)}>
                 <small
-                  className={`dc-repeat-day-number ${weekendClassName(date)}`}
+                  className={`dc-repeat-day-number ${weekTools.dateClass(date)}`}
                 >
                   {date.getDate()}
                 </small>

@@ -26,8 +26,6 @@ import {
   RepeatSequenceEditor,
   repeatSchedule,
   TabBar,
-  weekDates,
-  weekendClassName,
 } from "./design-calendar";
 import type { RepeatRule, Schedule, Shift, Tab } from "./design-calendar";
 import { CoworkersPage } from "./design-coworkers";
@@ -49,6 +47,8 @@ import {
   themeStyle,
 } from "./design-theme";
 import type { Appearance, ColorChoice } from "./design-theme";
+import { WeekSettingsContext, useWeek, weekdayNames } from "./design-week";
+import type { ColoredDay } from "./design-week";
 import {
   CellNamesContext,
   IconWeightContext,
@@ -73,6 +73,7 @@ type Page =
   | "coworkers"
   | "mark"
   | "appearance"
+  | "week"
   | "profile";
 
 // The four shapes members see. Icons come filled or as outlines; letters
@@ -146,7 +147,8 @@ export function DesignSettings({
   onTab: (tab: Tab) => void;
 }) {
   const [page, setPage] = useState<Page>("top");
-  const preview = stylePreviewOf(schedule, patternKeys);
+  const weekTools = useWeek();
+  const preview = stylePreviewOf(schedule, patternKeys, weekTools.weekDates);
   const repeating = isRepeating(rules);
   const current = repeating ? rules.at(-1) : undefined;
   // The order to start from when repeating again.
@@ -254,6 +256,13 @@ export function DesignSettings({
             preview={preview}
           />
         )}
+        {page === "week" && (
+          <WeekPage
+            onBack={() => {
+              setPage("top");
+            }}
+          />
+        )}
         {page === "appearance" && (
           <AppearancePage
             onBack={() => {
@@ -359,8 +368,11 @@ function SettingsTop({
             onOpen("appearance");
           }}
         />
-        <Row label="週の始まり" value="日曜" />
-        <Row label="色をつける曜日" value="土・日" />
+        <WeekRow
+          onOpen={() => {
+            onOpen("week");
+          }}
+        />
       </Section>
       <Section title="アカウント">
         <Row
@@ -680,6 +692,7 @@ function RepeatEditorPage({
 
 // The first two weeks of a rule, from its start.
 function RepeatPreview({ rule }: { rule: RepeatRule }) {
+  const weekTools = useWeek();
   const { sequence, start, holidaysOff } = rule;
   const planned = repeatSchedule(
     sequence,
@@ -695,7 +708,9 @@ function RepeatPreview({ rule }: { rule: RepeatRule }) {
         const shift = planned[dateKey(date)]?.shift;
         return (
           <span className="dc-repeat-day" key={dateKey(date)}>
-            <small className={`dc-repeat-day-number ${weekendClassName(date)}`}>
+            <small
+              className={`dc-repeat-day-number ${weekTools.dateClass(date)}`}
+            >
               {date.getDate()}
             </small>
             {shift && <ShiftMark shift={shift} size={16} />}
@@ -978,8 +993,6 @@ function RosterSwitchPage({
   );
 }
 
-const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
-
 function MarkPage({
   preview,
   onBack,
@@ -1019,7 +1032,8 @@ const minPreviewDays = 7;
 // fortnight from their own patterns instead of blank days.
 function stylePreviewOf(
   schedule: Schedule,
-  patternKeys: Shift[]
+  patternKeys: Shift[],
+  weekDates: (date: Date) => Date[]
 ): StylePreviewData {
   const dates = [
     ...weekDates(previewToday),
@@ -1065,6 +1079,7 @@ function sampleSequence(patternKeys: Shift[]): Shift[] {
 // The preview can show the other of light and dark on its own, without
 // touching 外観, so a style can be judged in both.
 function StylePreview({ preview }: { preview: StylePreviewData }) {
+  const weekTools = useWeek();
   const { dates, schedule, sample } = preview;
   const scheme = useContext(ColorSchemeContext);
   const { theme } = useContext(ThemeContext);
@@ -1082,8 +1097,10 @@ function StylePreview({ preview }: { preview: StylePreviewData }) {
         >
           {sample && <span className="st-preview-sample">見本</span>}
           <div className="dc-weekdays">
-            {weekdayLabels.map((day) => (
-              <span key={day}>{day}</span>
+            {weekTools.weekdays.map((day) => (
+              <span className={day.className} key={day.day}>
+                {day.label}
+              </span>
             ))}
           </div>
           <div className="dc-grid st-preview-grid">
@@ -1187,13 +1204,23 @@ function SwitchRow({
   label,
   checked,
   onChange,
+  swatch,
 }: {
   label: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  // A dot in the color the setting paints with.
+  swatch?: string;
 }) {
   return (
     <label className="st-row">
+      {swatch ? (
+        <span
+          aria-hidden="true"
+          className="st-row-swatch"
+          style={{ background: swatch }}
+        />
+      ) : null}
       <span className="st-row-label">{label}</span>
       <input
         aria-checked={checked}
@@ -1297,6 +1324,105 @@ function AppearancePage({ onBack }: { onBack: () => void }) {
       </fieldset>
       <p className="st-note">
         端末に合わせると、スマホの設定に合わせてライトとダークが切り替わります。
+      </p>
+    </>
+  );
+}
+
+const coloredDayOptions: { day: ColoredDay; name: string; color: string }[] = [
+  { color: "var(--saturday)", day: "saturday", name: "土曜" },
+  { color: "var(--holiday)", day: "sunday", name: "日曜" },
+  { color: "var(--holiday)", day: "holiday", name: "祝日" },
+];
+
+const coloredDayShortNames: Record<ColoredDay, string> = {
+  holiday: "祝",
+  saturday: "土",
+  sunday: "日",
+};
+
+function WeekRow({ onOpen }: { onOpen: () => void }) {
+  const { week } = useContext(WeekSettingsContext);
+  const colored = coloredDayOptions
+    .filter((option) => week.colored[option.day])
+    .map((option) => coloredDayShortNames[option.day])
+    .join("");
+  return (
+    <Row
+      label="曜日と祝日"
+      onOpen={onOpen}
+      value={`${weekdayNames[week.weekStart]}曜はじまり・${colored || "色なし"}`}
+    />
+  );
+}
+
+// 週の始まり and 色をつける日, with this month to see them on. Only the
+// viewer's screen changes.
+function WeekPage({ onBack }: { onBack: () => void }) {
+  const { week, setWeek } = useContext(WeekSettingsContext);
+  const weekTools = useWeek();
+  const month = new Date(
+    previewToday.getFullYear(),
+    previewToday.getMonth(),
+    1
+  );
+  return (
+    <>
+      <PageHeader back="設定" onBack={onBack} title="曜日と祝日" />
+      <div aria-hidden="true" className="st-week-preview">
+        <p className="st-week-month">{month.getMonth() + 1}月</p>
+        <div className="st-week-grid">
+          {weekTools.weekdays.map((day) => (
+            <span className={`st-week-weekday ${day.className}`} key={day.day}>
+              {day.label}
+            </span>
+          ))}
+          {weekTools.monthDates(month).map((date) => (
+            <span
+              className={`${date.getMonth() === month.getMonth() ? "" : "st-week-outside"} ${weekTools.dateClass(date)}`}
+              key={dateKey(date)}
+            >
+              {date.getDate()}
+            </span>
+          ))}
+        </div>
+      </div>
+      <Group title="週の始まり">
+        <fieldset className="st-mark-segment st-week-start">
+          <legend className="dc-sr-only">週の始まり</legend>
+          {weekdayNames.map((name, day) => (
+            <button
+              aria-label={`${name}曜`}
+              aria-pressed={week.weekStart === day}
+              key={name}
+              onClick={() => setWeek?.({ ...week, weekStart: day })}
+              type="button"
+            >
+              {name}
+            </button>
+          ))}
+        </fieldset>
+      </Group>
+      <Group title="色をつける日">
+        <div className="st-list">
+          {coloredDayOptions.map((option) => (
+            <SwitchRow
+              checked={week.colored[option.day]}
+              key={option.day}
+              label={option.name}
+              onChange={(checked) =>
+                setWeek?.({
+                  ...week,
+                  colored: { ...week.colored, [option.day]: checked },
+                })
+              }
+              swatch={option.color}
+            />
+          ))}
+        </div>
+      </Group>
+      <p className="st-note">
+        祝日は日曜と同じ赤です。グループの画面でも、この並びと色で表示されます。
       </p>
     </>
   );

@@ -7,15 +7,18 @@ import {
   ChevronRight,
   Copy,
   Download,
+  ImageIcon,
   Info,
   MessagesSquare,
   Plus,
   QrCode,
   Reply,
+  RotateCcw,
   ScanLine,
   Send,
   SendHorizontal,
   Settings2,
+  Trash2,
   UserPlus,
   X,
 } from "lucide-react";
@@ -26,18 +29,16 @@ import {
   addDays,
   dateKey,
   formatDay,
-  holidayName,
-  monthDates,
   patterns,
   TabBar,
+  showOverPhone,
   timeRange,
-  weekDates,
-  weekendClassName,
 } from "./design-calendar";
 import type { Schedule, Shift, Tab } from "./design-calendar";
 import { iconNames } from "./design-look-editor";
 import { ThemeContext, themeOfColor } from "./design-theme";
 import type { ColorChoice } from "./design-theme";
+import { holidayName, useWeek } from "./design-week";
 import {
   guessLook,
   IconWeightContext,
@@ -334,13 +335,15 @@ function sameMonth(date: Date, month: Date) {
 }
 
 // A chat line. `days` shares dates, drawn with everyone's shifts;
-// `replyTo` quotes an earlier line.
+// `replyTo` quotes an earlier line; `notice` is a line from the app about
+// the group, such as a new name, shown between the messages.
 type Message = {
   id: string;
   from: string;
   when: string;
   time: string;
   text?: string;
+  notice?: string;
   days?: Date[];
   replyTo?: string;
   reactions?: Reaction[];
@@ -695,12 +698,35 @@ export function DesignGroup({
               onInvite={() => {
                 setPage({ name: "invite" });
               }}
-              onMark={(mark) => {
+              onEdit={(edit) => {
                 setGroups(
                   groups.map((item) =>
-                    item.id === group.id ? { ...item, mark } : item
+                    item.id === group.id ? { ...item, ...edit } : item
                   )
                 );
+                const notice = editNotice(
+                  profileIn(group, profile).name,
+                  group,
+                  edit
+                );
+                const key = chatKey(group.id, groupChat);
+                const chat = chatOf(group.id, groupChat);
+                setChats({
+                  ...chats,
+                  [key]: {
+                    ...chat,
+                    messages: [
+                      ...chat.messages,
+                      {
+                        from: "me",
+                        id: `notice-${chat.messages.length}`,
+                        notice,
+                        time: timeNow(),
+                        when: "今日",
+                      },
+                    ],
+                  },
+                });
               }}
               profile={profile}
             />
@@ -817,7 +843,8 @@ function GroupHub({
   onInvite: () => void;
   onSettings: () => void;
 }) {
-  const week = weekDates(designToday);
+  const weekTools = useWeek();
+  const week = weekTools.weekDates(designToday);
   const nextOff = Array.from({ length: 60 }, (_, index) =>
     addDays(designToday, index)
   ).find(
@@ -937,6 +964,9 @@ function lastLine(chat: Chat, members: Member[]) {
     return;
   }
   const who = members.find((member) => member.id === last.from);
+  if (last.notice) {
+    return last.notice;
+  }
   const text = last.days ? `${summaryOf(last)}を共有しました` : last.text;
   return who?.me ? `自分：${text}` : text;
 }
@@ -1084,8 +1114,20 @@ function ChatPage({
           const member = group.members.find((item) => item.id === message.from);
           const mine = member?.me === true;
           const firstOfRun =
-            previous?.from !== message.from || message.replyTo !== undefined;
+            previous?.from !== message.from ||
+            previous.notice !== undefined ||
+            message.replyTo !== undefined;
           const quoted = byId(message.replyTo);
+          if (message.notice) {
+            return (
+              <li className="gr-message-item" key={message.id}>
+                {previous?.when !== message.when && (
+                  <span className="gr-when">{message.when}</span>
+                )}
+                <p className="gr-notice">{message.notice}</p>
+              </li>
+            );
+          }
           return (
             <li
               className={`gr-message-item ${flash === message.id ? "gr-flash" : ""}`}
@@ -1324,6 +1366,7 @@ function toggleReaction(message: Message, emoji: string): Message {
 // Shared dates with each person's shift. One day spreads out; several
 // become a small table, a row per day.
 function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
+  const weekTools = useWeek();
   const [first] = days;
   if (days.length === 1 && first) {
     const together = everyoneOff(members, first);
@@ -1366,7 +1409,7 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
           style={columns}
         >
           <span
-            className={`gr-day-card-date gr-date ${weekendClassName(date)}`}
+            className={`gr-day-card-date gr-date ${weekTools.dateClass(date)}`}
           >
             {date.getMonth() + 1}/{date.getDate()}
             <small className="gr-small-weekday">
@@ -1401,6 +1444,7 @@ function DaySheet({
   onClose: () => void;
   onShare: (days: Date[]) => void;
 }) {
+  const weekTools = useWeek();
   const [month, setMonth] = useState(
     new Date(designToday.getFullYear(), designToday.getMonth(), 1)
   );
@@ -1482,19 +1526,23 @@ function DaySheet({
           </button>
         </div>
         <div className="gr-pick-days">
-          {weekdayLabels.map((label) => (
-            <span aria-hidden="true" className="gr-pick-weekday" key={label}>
-              {label}
+          {weekTools.weekdays.map((day) => (
+            <span
+              aria-hidden="true"
+              className={`gr-pick-weekday ${day.className}`}
+              key={day.day}
+            >
+              {day.label}
             </span>
           ))}
-          {monthDates(month).map((date) => {
+          {weekTools.monthDates(month).map((date) => {
             const outside = !sameMonth(date, month);
             const together = !outside && everyoneOff(members, date);
             return (
               <button
                 aria-label={`${formatDay(date)}${together ? "、みんな休み" : ""}`}
                 aria-pressed={isPicked(date)}
-                className={`gr-date ${weekendClassName(date)} ${together ? "gr-together-cell" : ""}`}
+                className={`gr-date ${weekTools.dateClass(date)} ${together ? "gr-together-cell" : ""}`}
                 disabled={outside}
                 key={dateKey(date)}
                 onClick={() => {
@@ -1574,6 +1622,7 @@ function ShiftsPage({
   onLayout: (layout: Layout) => void;
   onBack: () => void;
 }) {
+  const weekTools = useWeek();
   const [month, setMonth] = useState(initialMonth ?? designMonth);
   // Whose marks the legend sheet shows, when open.
   const [legend, setLegend] = useState<Member[]>();
@@ -1591,7 +1640,7 @@ function ShiftsPage({
       clearTimeout(timer);
     };
   }, [saved]);
-  const dates = monthDates(month);
+  const dates = weekTools.monthDates(month);
   const pick = (date: Date) => {
     setPicked(picked && dateKey(picked) === dateKey(date) ? undefined : date);
   };
@@ -2255,8 +2304,9 @@ function RowDate({
   picked: boolean;
   onPick?: () => void;
 }) {
+  const weekTools = useWeek();
   const label = (
-    <span className={`gr-date ${weekendClassName(date)}`}>
+    <span className={`gr-date ${weekTools.dateClass(date)}`}>
       {date.getDate()}
       <small className="gr-rows-weekday">{weekdayLabels[date.getDay()]}</small>
     </span>
@@ -2421,7 +2471,8 @@ function WeekDate({
   picked: boolean;
   onPick?: (date: Date) => void;
 }) {
-  const className = `gr-table-date gr-date ${weekendClassName(date)} ${!month || sameMonth(date, month) ? "" : "gr-outside"} ${everyoneOff(members, date) ? "gr-together-cell" : ""} ${picked ? "gr-picked-cell" : ""}`;
+  const weekTools = useWeek();
+  const className = `gr-table-date gr-date ${weekTools.dateClass(date)} ${!month || sameMonth(date, month) ? "" : "gr-outside"} ${everyoneOff(members, date) ? "gr-together-cell" : ""} ${picked ? "gr-picked-cell" : ""}`;
   if (!onPick) {
     return <span className={className}>{date.getDate()}</span>;
   }
@@ -2502,6 +2553,7 @@ function MemberTable({
   onPickDay?: (date: Date) => void;
   picked?: Date;
 }) {
+  const weekTools = useWeek();
   // Short rows in the card: smaller faces keep a gap between them, the
   // height of the day-off tiles beside them.
   const avatarSize = compact ? compactAvatarSize : undefined;
@@ -2515,8 +2567,10 @@ function MemberTable({
         <span className="gr-corner-month">
           {month && !compact ? `${month.getMonth() + 1}月` : ""}
         </span>
-        {weekdayLabels.map((label) => (
-          <span key={label}>{label}</span>
+        {weekTools.weekdays.map((day) => (
+          <span className={day.className} key={day.day}>
+            {day.label}
+          </span>
         ))}
       </div>
       {weeks.map((week) => (
@@ -2653,6 +2707,7 @@ function PersonCalendar({
   // Picks a day to list everyone's shifts, as in 週ごと and 日ごと.
   onPickDay: (date: Date) => void;
 }) {
+  const weekTools = useWeek();
   const me = group.members.find((item) => item.me);
   return (
     <>
@@ -2660,8 +2715,10 @@ function PersonCalendar({
           alike; one wrapper keeps the page's gap from splitting them. */}
       <div>
         <div aria-hidden="true" className="dc-weekdays">
-          {weekdayLabels.map((label) => (
-            <span key={label}>{label}</span>
+          {weekTools.weekdays.map((day) => (
+            <span className={day.className} key={day.day}>
+              {day.label}
+            </span>
           ))}
         </div>
         <div
@@ -2711,6 +2768,7 @@ function PersonDay({
   picked: boolean;
   onPick: (date: Date) => void;
 }) {
+  const { isColoredHoliday } = useWeek();
   const item = outside ? undefined : patternOn(member, date);
   // In their カラー, like their marks.
   const { tint } = useDisplayColor(item?.look.color ?? 0);
@@ -2723,7 +2781,7 @@ function PersonDay({
   const style = off ? ({ "--off-tint": tint } as CSSProperties) : undefined;
   const content = (
     <>
-      <span className={`dc-date ${holidayName(date) ? "dc-holiday" : ""}`}>
+      <span className={`dc-date ${isColoredHoliday(date) ? "dc-holiday" : ""}`}>
         {date.getDate()}
       </span>
       {item && (
@@ -2759,10 +2817,140 @@ function PersonDay({
   );
 }
 
-// Picking a picture: none, a sample, or one from the device. With
-// `usual`, the first choice follows the usual profile picture instead.
-// Your picture, uploaded from the device: tapping it or 写真を変更 opens the
-// photo library, as in other apps.
+// A picture with one way in, as in other apps: tapping it or the link
+// under it opens a sheet to take or pick a photo, and to go back to the
+// usual one or delete it when that applies.
+function PhotoPicker({
+  picture,
+  label,
+  onPhoto,
+  onUsual,
+  onRemove,
+}: {
+  picture: ReactNode;
+  label: string;
+  onPhoto: (photo: string) => void;
+  // A group's own picture can go back to the usual one.
+  onUsual?: () => void;
+  // Shown while there is a picture to delete.
+  onRemove?: () => void;
+}) {
+  const sheetRef = useRef<HTMLDialogElement>(null);
+  const cameraId = useId();
+  const libraryId = useId();
+  const open = () => {
+    const sheet = sheetRef.current;
+    if (sheet) {
+      showOverPhone(sheet, sheet.closest<HTMLElement>(".dc-phone"));
+    }
+  };
+  const close = () => sheetRef.current?.close();
+  const choose = (files: FileList | null) => {
+    const file = files?.[0];
+    if (file) {
+      onPhoto(URL.createObjectURL(file));
+    }
+    close();
+  };
+  return (
+    <div className="st-profile-photo">
+      <input
+        accept="image/*"
+        capture="user"
+        className="dc-sr-only"
+        id={cameraId}
+        onChange={(event) => {
+          choose(event.target.files);
+        }}
+        type="file"
+      />
+      <input
+        accept="image/*"
+        className="dc-sr-only"
+        id={libraryId}
+        onChange={(event) => {
+          choose(event.target.files);
+        }}
+        type="file"
+      />
+      <button
+        aria-label={label}
+        className="st-photo-edit"
+        onClick={open}
+        type="button"
+      >
+        {picture}
+        <span aria-hidden="true" className="st-photo-badge">
+          <Camera size={14} />
+        </span>
+      </button>
+      <button className="st-photo-action" onClick={open} type="button">
+        {label}
+      </button>
+      <dialog aria-label={label} className="dc-breakdown" ref={sheetRef}>
+        <button
+          aria-label="閉じる"
+          className="dc-sheet-scrim"
+          onClick={close}
+          tabIndex={-1}
+          type="button"
+        />
+        <section className="dc-sheet st-photo-sheet">
+          <div aria-hidden="true" className="dc-sheet-handle" />
+          <div className="st-list">
+            <label className="st-row" htmlFor={cameraId}>
+              <Camera aria-hidden="true" className="st-row-icon" size={20} />
+              <span className="st-row-label">写真を撮る</span>
+            </label>
+            <label className="st-row" htmlFor={libraryId}>
+              <ImageIcon aria-hidden="true" className="st-row-icon" size={20} />
+              <span className="st-row-label">写真を選ぶ</span>
+            </label>
+            {onUsual && (
+              <button
+                className="st-row"
+                onClick={() => {
+                  onUsual();
+                  close();
+                }}
+                type="button"
+              >
+                <RotateCcw
+                  aria-hidden="true"
+                  className="st-row-icon"
+                  size={20}
+                />
+                <span className="st-row-label">いつもの写真に戻す</span>
+              </button>
+            )}
+            {onRemove && (
+              <button
+                className="st-row"
+                onClick={() => {
+                  onRemove();
+                  close();
+                }}
+                type="button"
+              >
+                <Trash2
+                  aria-hidden="true"
+                  className="st-row-icon st-danger"
+                  size={20}
+                />
+                <span className="st-row-label st-danger">写真を削除</span>
+              </button>
+            )}
+          </div>
+          <button className="st-photo-cancel" onClick={close} type="button">
+            キャンセル
+          </button>
+        </section>
+      </dialog>
+    </div>
+  );
+}
+
+// Your picture: a photo from the device, or the first letter of your name.
 export function PhotoEditor({
   name,
   photo,
@@ -2775,48 +2963,17 @@ export function PhotoEditor({
   photo?: string;
   size: number;
   onUpload: (photo: string) => void;
-  // Shown while there is a picture to take off.
   onRemove?: () => void;
-  // A group's own picture can go back to the usual one.
   onUsual?: () => void;
 }) {
-  const inputId = useId();
   return (
-    <div className="st-profile-photo">
-      <input
-        accept="image/*"
-        className="dc-sr-only"
-        id={inputId}
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) {
-            onUpload(URL.createObjectURL(file));
-          }
-        }}
-        type="file"
-      />
-      <label aria-hidden="true" className="st-photo-edit" htmlFor={inputId}>
-        <PhotoAvatar name={name} photo={photo} size={size} />
-        <span className="st-photo-badge">
-          <Camera size={14} />
-        </span>
-      </label>
-      <div className="st-photo-actions">
-        <label className="st-photo-action" htmlFor={inputId}>
-          写真を変更
-        </label>
-        {onUsual && (
-          <button className="st-photo-action" onClick={onUsual} type="button">
-            いつもの写真に戻す
-          </button>
-        )}
-        {onRemove && (
-          <button className="st-photo-action" onClick={onRemove} type="button">
-            写真を外す
-          </button>
-        )}
-      </div>
-    </div>
+    <PhotoPicker
+      label="写真を編集"
+      onPhoto={onUpload}
+      onRemove={onRemove}
+      onUsual={onUsual}
+      picture={<PhotoAvatar name={name} photo={photo} size={size} />}
+    />
   );
 }
 
@@ -2826,39 +2983,42 @@ function GroupSettingsPage({
   group,
   profile,
   onChange,
-  onMark,
+  onEdit,
   onInvite,
   onBack,
 }: {
   group: Group;
   profile: Profile;
   onChange: (mine: GroupProfile | undefined) => void;
-  onMark: (mark: GroupMark) => void;
+  onEdit: (edit: GroupEdit) => void;
   onInvite: () => void;
   onBack: () => void;
 }) {
-  const [editingMark, setEditingMark] = useState(false);
-  const mine = group.mine ?? {};
+  const [view, setView] = useState<"settings" | "edit" | "profile">("settings");
   const shown = profileIn(group, profile);
-  const update = (change: GroupProfile) => {
-    const next = { ...mine, ...change };
-    const plain =
-      (next.name === undefined || next.name === profile.name) &&
-      next.photo === undefined &&
-      !next.noPhoto;
-    onChange(plain ? undefined : next);
-  };
-  const usualPhoto = mine.photo === undefined && !mine.noPhoto;
-  if (editingMark) {
+  if (view === "edit") {
     return (
-      <GroupMarkPage
-        back="グループの設定"
-        mark={group.mark}
-        name={group.name}
-        onBack={() => {
-          setEditingMark(false);
+      <GroupEditPage
+        group={group}
+        onCancel={() => {
+          setView("settings");
         }}
-        onChange={onMark}
+        onSave={(edit) => {
+          onEdit(edit);
+          setView("settings");
+        }}
+      />
+    );
+  }
+  if (view === "profile") {
+    return (
+      <GroupProfilePage
+        group={group}
+        onBack={() => {
+          setView("settings");
+        }}
+        onChange={onChange}
+        profile={profile}
       />
     );
   }
@@ -2869,58 +3029,53 @@ function GroupSettingsPage({
       <section className="st-section">
         <h4>グループ</h4>
         <div className="st-list">
-          <div className="st-row">
-            <span className="st-row-label">グループ名</span>
-            <span className="st-row-value">{group.name}</span>
-          </div>
-          <MarkRow
-            mark={group.mark}
-            onOpen={() => {
-              setEditingMark(true);
+          <button
+            className="st-row"
+            onClick={() => {
+              setView("edit");
             }}
-          />
-        </div>
-      </section>
-      <section className="st-section st-profile-section">
-        <h4>このグループでのあなた</h4>
-        <PhotoEditor
-          name={shown.name}
-          onRemove={
-            shown.photo
-              ? () => {
-                  update({ noPhoto: true, photo: undefined });
-                }
-              : undefined
-          }
-          onUpload={(photo) => {
-            update({ noPhoto: false, photo });
-          }}
-          onUsual={
-            usualPhoto
-              ? undefined
-              : () => {
-                  update({ noPhoto: false, photo: undefined });
-                }
-          }
-          photo={shown.photo}
-          size={72}
-        />
-        <div className="st-list">
-          <label className="st-row">
-            <span className="st-row-label">名前</span>
-            <input
-              className="pe-inline-input"
-              onChange={(event) => {
-                update({ name: event.target.value });
-              }}
-              placeholder={profile.name}
-              value={mine.name ?? profile.name}
+            type="button"
+          >
+            <span className="gr-mark-frame-small gr-row-mark">
+              <GroupIcon mark={group.mark} size={16} />
+            </span>
+            <span className="st-row-label">{group.name}</span>
+            <span className="st-row-value">編集</span>
+            <ChevronRight
+              aria-hidden="true"
+              className="st-row-arrow"
+              size={17}
             />
-          </label>
+          </button>
         </div>
         <p className="st-note">
-          このグループの人にだけ、この名前と写真で表示されます。変えなければ、設定のプロフィールと同じです。
+          グループ名とアイコンは、メンバー全員に表示されます。
         </p>
+      </section>
+      <section className="st-section">
+        <h4>このグループでのあなた</h4>
+        <div className="st-list">
+          <button
+            className="st-row"
+            onClick={() => {
+              setView("profile");
+            }}
+            type="button"
+          >
+            <PhotoAvatar name={shown.name} photo={shown.photo} size={28} />
+            <span className="st-row-label gr-row-label-after-avatar">
+              {shown.name}
+            </span>
+            <span className="st-row-value">
+              {group.mine ? "このグループだけ" : "いつもと同じ"}
+            </span>
+            <ChevronRight
+              aria-hidden="true"
+              className="st-row-arrow"
+              size={17}
+            />
+          </button>
+        </div>
       </section>
       <section className="st-section">
         <h4>メンバー</h4>
@@ -2942,6 +3097,182 @@ function GroupSettingsPage({
       <button className="pe-delete" type="button">
         このグループから抜ける
       </button>
+    </>
+  );
+}
+
+type GroupEdit = { name: string; mark: GroupMark };
+
+// The line the group chat gets when someone saves a new name or icon.
+function editNotice(by: string, before: GroupEdit, after: GroupEdit) {
+  const renamed = before.name !== after.name;
+  const remarked = JSON.stringify(before.mark) !== JSON.stringify(after.mark);
+  if (renamed && remarked) {
+    return `${by}がグループ名を「${after.name}」にして、アイコンを変更しました`;
+  }
+  if (renamed) {
+    return `${by}がグループ名を「${after.name}」に変更しました`;
+  }
+  return `${by}がグループのアイコンを変更しました`;
+}
+
+function timeNow() {
+  const now = new Date();
+  return `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
+}
+
+// The group's name and icon, which everyone in it sees: changes stay a
+// draft until 保存, so picking a photo or an emoji on the way reaches no
+// one.
+function GroupEditPage({
+  group,
+  onCancel,
+  onSave,
+}: {
+  group: GroupEdit;
+  onCancel: () => void;
+  onSave: (edit: GroupEdit) => void;
+}) {
+  const [name, setName] = useState(group.name);
+  const [mark, setMark] = useState(group.mark);
+  const [editingMark, setEditingMark] = useState(false);
+  const draft = { mark, name: name.trim() };
+  const changed =
+    draft.name !== group.name ||
+    JSON.stringify(mark) !== JSON.stringify(group.mark);
+  const canSave = changed && draft.name !== "";
+  if (editingMark) {
+    return (
+      <GroupMarkPage
+        back="グループを編集"
+        mark={mark}
+        name={name}
+        onBack={() => {
+          setEditingMark(false);
+        }}
+        onChange={setMark}
+      />
+    );
+  }
+  return (
+    <>
+      <header className="st-page-header">
+        <div className="pe-topbar">
+          <button className="st-back" onClick={onCancel} type="button">
+            キャンセル
+          </button>
+          <button
+            className="pe-save"
+            disabled={!canSave}
+            onClick={() => {
+              onSave(draft);
+            }}
+            type="button"
+          >
+            保存
+          </button>
+        </div>
+        <h3 className="st-title">グループを編集</h3>
+      </header>
+      <div className="gr-edit-mark">
+        <span className="gr-rail-icon gr-mark-frame-large">
+          <GroupIcon mark={mark} size={40} />
+        </span>
+      </div>
+      <div className="st-list">
+        <label className="st-row">
+          <span className="st-row-label">グループ名</span>
+          <input
+            className="pe-inline-input"
+            onChange={(event) => {
+              setName(event.target.value);
+            }}
+            placeholder="例：家族"
+            value={name}
+          />
+        </label>
+        <MarkRow
+          mark={mark}
+          onOpen={() => {
+            setEditingMark(true);
+          }}
+        />
+      </div>
+      <p className="st-note">
+        保存すると、メンバー全員の画面に反映され、グループのチャットにもお知らせが届きます。
+      </p>
+    </>
+  );
+}
+
+// How you appear in this group. It is yours, so changes apply at once. An
+// empty name or no photo of its own means the usual ones from settings.
+function GroupProfilePage({
+  group,
+  profile,
+  onChange,
+  onBack,
+}: {
+  group: Group;
+  profile: Profile;
+  onChange: (mine: GroupProfile | undefined) => void;
+  onBack: () => void;
+}) {
+  const mine = group.mine ?? {};
+  const shown = profileIn(group, profile);
+  const update = (change: GroupProfile) => {
+    const next = { ...mine, ...change };
+    const plain =
+      (next.name === undefined || next.name === profile.name) &&
+      next.photo === undefined &&
+      !next.noPhoto;
+    onChange(plain ? undefined : next);
+  };
+  const usualPhoto = mine.photo === undefined && !mine.noPhoto;
+  return (
+    <>
+      <PageHeaderBack label="グループの設定" onBack={onBack} />
+      <h3 className="st-title">このグループでのあなた</h3>
+      <PhotoEditor
+        name={shown.name}
+        onRemove={
+          shown.photo
+            ? () => {
+                update({ noPhoto: true, photo: undefined });
+              }
+            : undefined
+        }
+        onUpload={(photo) => {
+          update({ noPhoto: false, photo });
+        }}
+        onUsual={
+          usualPhoto
+            ? undefined
+            : () => {
+                update({ noPhoto: false, photo: undefined });
+              }
+        }
+        photo={shown.photo}
+        size={88}
+      />
+      <div className="st-list gr-profile-list">
+        <label className="st-row">
+          <span className="st-row-label">名前</span>
+          <input
+            className="pe-inline-input"
+            onChange={(event) => {
+              update({ name: event.target.value || undefined });
+            }}
+            placeholder={profile.name}
+            value={mine.name ?? ""}
+          />
+        </label>
+      </div>
+      <p className="st-note">
+        {group.name}
+        の人にだけ、この名前と写真で表示されます。名前が空欄なら「{profile.name}
+        」、写真を入れなければいつもの写真のままです。
+      </p>
     </>
   );
 }
@@ -3168,7 +3499,6 @@ function GroupMarkPage({
   const [kind, setKind] = useState<DrawnMarkKind | undefined>(
     mark.kind === "photo" ? undefined : mark.kind
   );
-  const inputId = useId();
   const color = colorOfMark(mark);
   const letter = mark.kind === "letter" ? mark.text : firstLetter(name) || "グ";
   return (
@@ -3180,34 +3510,20 @@ function GroupMarkPage({
         </button>
         <h3 className="st-title">アイコン</h3>
       </header>
-      <div className="st-profile-photo">
-        <input
-          accept="image/*"
-          className="dc-sr-only"
-          id={inputId}
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) {
-              onChange({ kind: "photo", photo: URL.createObjectURL(file) });
-              setKind(undefined);
-            }
-          }}
-          type="file"
-        />
-        <label aria-hidden="true" className="st-photo-edit" htmlFor={inputId}>
+      {/* Drawn marks are picked with the tabs below, so the sheet only
+          brings in a photo. */}
+      <PhotoPicker
+        label={mark.kind === "photo" ? "写真を変更" : "写真を使う"}
+        onPhoto={(photo) => {
+          onChange({ kind: "photo", photo });
+          setKind(undefined);
+        }}
+        picture={
           <span className="gr-rail-icon gr-mark-frame-large">
             <GroupIcon mark={mark} size={40} />
           </span>
-          <span className="st-photo-badge">
-            <Camera size={14} />
-          </span>
-        </label>
-        <div className="st-photo-actions">
-          <label className="st-photo-action" htmlFor={inputId}>
-            {mark.kind === "photo" ? "写真を変更" : "写真を使う"}
-          </label>
-        </div>
-      </div>
+        }
+      />
       <fieldset className="st-mark-segment gr-mark-kinds">
         <legend className="dc-sr-only">アイコンの種類</legend>
         {markKinds.map((option) => (

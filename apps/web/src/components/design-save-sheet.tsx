@@ -10,8 +10,9 @@ import {
 import { useEffect, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
 
-import { DayCell, dateKey, monthDates } from "./design-calendar";
+import { DayCell, dateKey } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
+import { useWeek } from "./design-week";
 import { CellNamesContext, OffHighlightContext } from "./shift-mark";
 
 // Calendars on the device, as the system lists them.
@@ -253,7 +254,7 @@ export function ImagePreviewPage({
       clearTimeout(timer);
     };
   }, [note]);
-  const dates = monthDates(month);
+  const dates = useWeek().monthDates(month);
   const title = `${month.getFullYear()}年${month.getMonth() + 1}月のシフト`;
   return (
     <div className="dc-content st-screen">
