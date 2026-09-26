@@ -6,6 +6,7 @@ import {
   MousePointer2,
   UsersRound,
 } from "lucide-react";
+
 import { CalendarPreview } from "../components/calendar-preview";
 import { StoreLinks } from "../components/store-links";
 import { pageMeta, site } from "../lib/site";

@@ -31,6 +31,7 @@ import {
   useRef,
   useState,
 } from "react";
+
 import type { DesignVariants } from "../lib/design-variants";
 import type { Coworkers } from "./design-coworkers";
 import { DesignGroup, type Profile, samplePhoto } from "./design-group";
@@ -1155,7 +1156,7 @@ export function RepeatSequenceEditor({
       </p>
       <ol className="dc-repeat-sequence">
         {sequence.map((shift, index) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: the same shift repeats, so its position is its identity.
+          // oxlint-disable-next-line react/no-array-index-key -- the same shift repeats, so its position is its identity.
           <li key={index}>
             <button
               aria-label={`${index + 1}日目、${patterns[shift].label}。タップで外す`}

@@ -1,4 +1,5 @@
 import { ArrowUpRight, Smartphone } from "lucide-react";
+
 import { storeLink } from "../lib/site";
 
 export function StoreLinks() {

@@ -1,4 +1,5 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
+
 import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
@@ -13,7 +14,8 @@ export function getRouter() {
 }
 
 declare module "@tanstack/react-router" {
-  // biome-ignore lint/style/useConsistentTypeDefinitions: TanStack Router requires module augmentation.
+  // Module augmentation only merges into an interface.
+  // oxlint-disable-next-line typescript/consistent-type-definitions
   interface Register {
     router: ReturnType<typeof getRouter>;
   }

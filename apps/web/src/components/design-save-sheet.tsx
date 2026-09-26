@@ -8,6 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { type CSSProperties, type RefObject, useEffect, useState } from "react";
+
 import { DayCell, dateKey, monthDates, type Schedule } from "./design-calendar";
 import { CellNamesContext, OffHighlightContext } from "./shift-mark";
 

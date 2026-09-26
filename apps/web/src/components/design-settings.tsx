@@ -6,6 +6,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { type ReactNode, useContext, useState } from "react";
+
 import {
   addDays,
   DayCell,
@@ -410,7 +411,7 @@ function SequenceChips({ sequence }: { sequence: Shift[] }) {
   return (
     <ol className="st-sequence">
       {sequence.map((shift, index) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: a sequence repeats the same shift, so position is its identity.
+        // oxlint-disable-next-line react/no-array-index-key -- a sequence repeats the same shift, so position is its identity.
         <li key={index}>
           <ShiftMark shift={shift} size={13} />
           {patterns[shift].label}

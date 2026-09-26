@@ -7,6 +7,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { type ReactNode, useContext, useRef, useState } from "react";
+
 import { nextDayShifts, patterns, type Shift } from "./design-calendar";
 import { LookEditorPage, type LookField } from "./design-look-editor";
 import {

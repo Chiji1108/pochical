@@ -49,7 +49,9 @@ export const designVariantOptions = {
 type VariantKey = keyof typeof designVariantOptions;
 
 export type DesignVariants = {
-  [K in VariantKey]: (typeof designVariantOptions)[K]["choices"][number]["value"];
+  [
+    K in VariantKey
+  ]: (typeof designVariantOptions)[K]["choices"][number]["value"];
 };
 
 export const designVariantKeys = Object.keys(

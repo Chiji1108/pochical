@@ -1,12 +1,12 @@
 {
-  "devDependencies": {
-    "lefthook": "^2.1.6",
-    "oxfmt": "^0.70.0",
-    "oxlint": "^1.85.0",
-    "oxlint-tsgolint": "^7.0.2003",
-    "ultracite": "7.12.0"
-  },
   "name": "pochical",
+  "private": true,
+  "workspaces": [
+    "apps/mobile-legacy",
+    "apps/server",
+    "apps/web"
+  ],
+  "type": "module",
   "scripts": {
     "typecheck": "bun run --cwd apps/web typecheck && bun run --cwd apps/server typecheck",
     "test": "bun run --cwd apps/web test && bun run --cwd apps/server test",
@@ -18,18 +18,14 @@
     "preview:web": "bun run --cwd apps/web preview",
     "server": "bun run --cwd apps/server dev"
   },
-  "workspaces": [
-    "apps/mobile-legacy",
-    "apps/server",
-    "apps/web"
-  ],
-  "private": true,
+  "devDependencies": {
+    "lefthook": "^2.1.6",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
+    "oxlint-tsgolint": "^7.0.2003",
+    "ultracite": "7.12.0"
+  },
   "packageManager": "bun@1.4.2",
-  "trustedDependencies": [
-    "@shopify/react-native-skia",
-    "protobufjs",
-    "uniwind"
-  ],
   "patchedDependencies": {
     "react-native-view-shot@6.0.1": "patches/react-native-view-shot@6.0.1.patch",
     "@convex-dev/auth@0.0.95": "patches/@convex-dev%2Fauth@0.0.95.patch",
@@ -38,5 +34,9 @@
     "convex-unread-tracking@1.1.0": "patches/convex-unread-tracking@1.1.0.patch",
     "@kesha-antonov/react-native-chat@5.0.1": "patches/@kesha-antonov%2Freact-native-chat@5.0.1.patch"
   },
-  "type": "module"
+  "trustedDependencies": [
+    "@shopify/react-native-skia",
+    "protobufjs",
+    "uniwind"
+  ]
 }

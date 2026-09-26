@@ -36,9 +36,9 @@
     "@types/react": "~19.3.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
+    "react-test-renderer": "19.3.0",
     "typescript": "~6.0.3",
     "vite": "^8.0.0",
-    "wrangler": "^4.137.0",
-    "react-test-renderer": "19.3.0"
+    "wrangler": "^4.137.0"
   }
 }

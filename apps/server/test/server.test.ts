@@ -1,6 +1,7 @@
-import { exports } from "cloudflare:workers";
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
+import { exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
+
 import {
   ClientFrameSchema,
   ServerError_Code,

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+
 import { LegalDocument } from "../components/legal-document";
 import { pageMeta } from "../lib/site";
 export const Route = createFileRoute("/terms")({

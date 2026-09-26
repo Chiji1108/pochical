@@ -1,9 +1,9 @@
 import { createConnectRouter } from "@connectrpc/connect";
 import { createFetchHandler } from "@connectrpc/connect/protocol";
+
 import { registerSystemService } from "./system-service";
 
 // Workers only binds Durable Object classes exported from the entry module.
-// biome-ignore lint/performance/noBarrelFile: required by the Workers runtime
 export { GroupRoom } from "./group-room";
 
 const router = createConnectRouter({ grpc: false, grpcWeb: false });

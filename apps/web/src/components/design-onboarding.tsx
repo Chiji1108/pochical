@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
+
 import type { DesignVariants } from "../lib/design-variants";
 import {
   addDays,
@@ -399,7 +400,7 @@ function TemplateStep({
                 <span aria-hidden="true" className="ob-chips">
                   {(template.sequence ?? template.patternKeys).map(
                     (key, index) => (
-                      // biome-ignore lint/suspicious/noArrayIndexKey: a sequence repeats the same shift, so position is its identity.
+                      // oxlint-disable-next-line react/no-array-index-key -- a sequence repeats the same shift, so position is its identity.
                       <span className="ob-chip" key={index}>
                         <ShiftMark shift={key} size={11} />
                         {patterns[key].label}

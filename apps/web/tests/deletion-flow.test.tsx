@@ -1,4 +1,5 @@
 import { expect, mock, test } from "bun:test";
+
 import { getFunctionName } from "convex/server";
 import { type ReactNode, StrictMode } from "react";
 import { act, create } from "react-test-renderer";
@@ -48,9 +49,8 @@ mock.module("@convex-dev/auth/react", () => ({
 }));
 const oldUrl = process.env.VITE_CONVEX_URL;
 process.env.VITE_CONVEX_URL = "https://test.convex.cloud";
-const { default: DeletionClient } = await import(
-  "../src/components/deletion-client"
-);
+const { default: DeletionClient } =
+  await import("../src/components/deletion-client");
 if (oldUrl === undefined) {
   delete process.env.VITE_CONVEX_URL;
 } else {

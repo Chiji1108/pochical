@@ -1,10 +1,11 @@
-import { DurableObject } from "cloudflare:workers";
 import {
   create,
   fromBinary,
   type MessageInitShape,
   toBinary,
 } from "@bufbuild/protobuf";
+import { DurableObject } from "cloudflare:workers";
+
 import {
   type ClientFrame,
   ClientFrameSchema,

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, RotateCcw } from "lucide-react";
 import { useState } from "react";
+
 import {
   DesignCalendar,
   initialDesignSchedule,
@@ -20,7 +21,6 @@ import {
   type StyleChoice,
   stylePresets,
 } from "../components/shift-mark";
-import designStyles from "../design.css?url";
 import {
   type DesignVariants,
   designVariantKeys,
@@ -28,6 +28,8 @@ import {
   parseDesignVariants,
 } from "../lib/design-variants";
 import { pageMeta } from "../lib/site";
+
+import designStyles from "../design.css?url";
 
 export const Route = createFileRoute("/design")({
   head: () => ({

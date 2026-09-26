@@ -1,5 +1,6 @@
 import { ClientOnly, createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
+
 import { Page } from "../components/site-layout";
 import { pageMeta, site } from "../lib/site";
 

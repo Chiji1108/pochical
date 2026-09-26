@@ -1,8 +1,6 @@
 # ポチカル
 
-SwiftUI・Jetpack Compose・Cloudflare Workersで作る多言語のモノレポです。
-ツールのバージョンとタスクは [mise](https://mise.jdx.dev) で管理し、
-TypeScriptのパッケージはBun workspacesで管理します。
+SwiftUI・Jetpack Compose・Cloudflare Workersで作る多言語のモノレポです。ツールのバージョンとタスクは [mise](https://mise.jdx.dev) で管理し、TypeScriptのパッケージはBun workspacesで管理します。
 
 ```text
 proto/           通信のスキーマ（Protobuf）。buf generateで各アプリにコードを生成
@@ -32,6 +30,4 @@ patches/         Bunが適用する依存パッケージのパッチ
 | `bun run test` | Web・サーバーのテスト |
 | `bun run check` / `bun run fix` | TypeScriptのコードチェック・整形 |
 
-Webの開発・公開設定は [WebのREADME](apps/web/README.md) を参照してください。
-アカウント削除ページは、新しいバックエンドに移るまで
-`apps/mobile-legacy/convex` の生成済みAPIの型を参照しています。
+Webの開発・公開設定は [WebのREADME](apps/web/README.md) を参照してください。アカウント削除ページは、新しいバックエンドに移るまで `apps/mobile-legacy/convex` の生成済みAPIの型を参照しています。
