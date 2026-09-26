@@ -1,6 +1,14 @@
-# Ultracite Code Standards
+# Repository Guide
 
-This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
+Pochical is a multi-language monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/android`) apps, a Cloudflare Workers backend (`apps/server`), and a web site (`apps/web`). `apps/mobile-legacy` is the old Expo app, kept for reference only; do not lint, test or extend it.
+
+- Tool versions and tasks live in `mise.toml` (`mise run gen`, `mise run server:test`, ...).
+- Wire types live in `proto/`. Never edit generated code (`apps/server/src/gen`, `apps/ios/Packages/PochicalProto/Sources`, `apps/android/proto/src/main`); change the `.proto` files and run `mise run gen`.
+- Behavior shared across platforms is specified in `spec/`.
+
+# TypeScript: Ultracite Code Standards
+
+The TypeScript apps (`apps/web`, `apps/server`) use **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
 
 ## Quick Reference
 
@@ -8,7 +16,7 @@ This project uses **Ultracite**, a zero-config preset that enforces strict code 
 - **Check for issues**: `bun x ultracite check`
 - **Diagnose setup**: `bun x ultracite doctor`
 
-Biome (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
+Oxlint + Oxfmt (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
 
 ---
 
@@ -107,11 +115,11 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 - Don't use `.only` or `.skip` in committed code
 - Keep test suites reasonably flat - avoid excessive `describe` nesting
 
-## When Biome Can't Help
+## When Oxlint + Oxfmt Can't Help
 
-Biome's linter will catch most issues automatically. Focus your attention on:
+Oxlint + Oxfmt's linter will catch most issues automatically. Focus your attention on:
 
-1. **Business logic correctness** - Biome can't validate your algorithms
+1. **Business logic correctness** - Oxlint + Oxfmt can't validate your algorithms
 2. **Meaningful naming** - Use descriptive names for functions, variables, and types
 3. **Architecture decisions** - Component structure, data flow, and API design
 4. **Edge cases** - Handle boundary conditions and error states
@@ -120,4 +128,4 @@ Biome's linter will catch most issues automatically. Focus your attention on:
 
 ---
 
-Most formatting and common issues are automatically fixed by Biome. Run `bun x ultracite fix` before committing to ensure compliance.
+Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `bun x ultracite fix` before committing to ensure compliance.

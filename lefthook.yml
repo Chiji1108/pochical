@@ -4,7 +4,7 @@ pre-commit:
       run: |
         # GUI Git clients may not load the shell's mise/proto/Bun PATH settings.
         export PATH="$HOME/.local/share/mise/shims:$PATH:${PROTO_HOME:-$HOME/.proto}/shims:${BUN_INSTALL:-$HOME/.bun}/bin"
-        bun x ultracite fix
+        bun x ultracite fix {staged_files}
       glob:
         - "**/*.js"
         - "**/*.jsx"
@@ -13,6 +13,12 @@ pre-commit:
         - "**/*.json"
         - "**/*.jsonc"
         - "**/*.css"
+        - "**/*.md"
+      exclude:
+        - "apps/mobile-legacy/**"
+        - "apps/ios/**"
+        - "apps/android/**"
+        - "apps/server/src/gen/**"
       stage_fixed: true
     - name: buf format and lint
       root: proto/

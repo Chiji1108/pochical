@@ -1,12 +1,12 @@
 {
+  "devDependencies": {
+    "lefthook": "^2.1.6",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
+    "oxlint-tsgolint": "^7.0.2003",
+    "ultracite": "7.12.0"
+  },
   "name": "pochical",
-  "private": true,
-  "packageManager": "bun@1.4.2",
-  "workspaces": [
-    "apps/mobile-legacy",
-    "apps/server",
-    "apps/web"
-  ],
   "scripts": {
     "typecheck": "bun run --cwd apps/web typecheck && bun run --cwd apps/server typecheck",
     "test": "bun run --cwd apps/web test && bun run --cwd apps/server test",
@@ -18,11 +18,13 @@
     "preview:web": "bun run --cwd apps/web preview",
     "server": "bun run --cwd apps/server dev"
   },
-  "devDependencies": {
-    "@biomejs/biome": "2.4.12",
-    "lefthook": "^2.1.6",
-    "ultracite": "7.6.2"
-  },
+  "workspaces": [
+    "apps/mobile-legacy",
+    "apps/server",
+    "apps/web"
+  ],
+  "private": true,
+  "packageManager": "bun@1.4.2",
   "trustedDependencies": [
     "@shopify/react-native-skia",
     "protobufjs",
@@ -35,5 +37,6 @@
     "@trestleinc/replicate@2.0.0-preview.0": "patches/@trestleinc%2Freplicate@2.0.0-preview.0.patch",
     "convex-unread-tracking@1.1.0": "patches/convex-unread-tracking@1.1.0.patch",
     "@kesha-antonov/react-native-chat@5.0.1": "patches/@kesha-antonov%2Freact-native-chat@5.0.1.patch"
-  }
+  },
+  "type": "module"
 }
