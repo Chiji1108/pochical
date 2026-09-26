@@ -208,6 +208,9 @@ function DesignPage() {
                                       <DesignCalendar
                                         initialEditing={false}
                                         onChange={setSchedule}
+                                        pendingInvite={
+                                          variants.inviteLink === "opened"
+                                        }
                                         schedule={schedule}
                                         variants={variants}
                                       />
@@ -244,7 +247,7 @@ function DesignPage() {
                                       </h2>
                                       <DesignOnboarding variants={variants} />
                                       <p className="design-caption">
-                                        最初の1問で、入れやすい始め方に分かれます。
+                                        はじめるか、ログインしてデータを戻すかを選びます。途中で招待リンクを開いていたら、カレンダーができたところで参加を聞きます。
                                       </p>
                                     </section>
                                   </div>

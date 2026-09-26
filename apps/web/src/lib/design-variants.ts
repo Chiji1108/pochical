@@ -1,6 +1,13 @@
 // Design decisions that /design lets you switch between. The first choice of
 // each entry is the current proposal and is used when the URL omits it.
 export const designVariantOptions = {
+  actionWidth: {
+    choices: [
+      { label: "今月のお休みと揃える", value: "aligned" },
+      { label: "内側に入れる", value: "inset" },
+    ],
+    label: "入力ボタンの幅",
+  },
   headerLayout: {
     choices: [
       { label: "月の横に ‹ ›", value: "title" },
@@ -14,6 +21,13 @@ export const designVariantOptions = {
       { label: "上限に到達", value: "limit" },
     ],
     label: "写真の取り込み",
+  },
+  inviteLink: {
+    choices: [
+      { label: "なし", value: "none" },
+      { label: "開いた", value: "opened" },
+    ],
+    label: "招待リンク",
   },
   memberSample: {
     choices: [

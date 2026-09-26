@@ -2817,6 +2817,162 @@ function PersonDay({
   );
 }
 
+// A group's invitation, as its link carries it.
+type Invite = {
+  group: string;
+  mark: GroupMark;
+  from: { name: string; photo?: string };
+  members: { name: string; photo?: string }[];
+};
+
+const sampleInvite = (): Invite => ({
+  from: { name: "ゆうき", photo: samplePhoto(1005) },
+  group: "いとこ会",
+  mark: { emoji: "🍉", kind: "emoji" },
+  members: [
+    { name: "ゆうき", photo: samplePhoto(1005) },
+    { name: "あかり" },
+    { name: "りく" },
+  ],
+});
+
+const settleMilliseconds = 400;
+
+// Asked whenever an invitation link is opened, and right after the first
+// setup if one was opened during it: the one place anyone joins from a
+// link. The name starts as the usual one and is what the group will see.
+export function JoinSheet({
+  name: usualName,
+  onOpenGroup,
+}: {
+  name: string;
+  onOpenGroup: () => void;
+}) {
+  const invite = sampleInvite();
+  const [name, setName] = useState(usualName);
+  const [joined, setJoined] = useState(false);
+  const sheetRef = useRef<HTMLDialogElement>(null);
+  const [closed, setClosed] = useState(false);
+  // It opens by itself, so it waits for the page to settle, and on /design
+  // brings the phone into view first; its size is taken from the phone.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const sheet = sheetRef.current;
+      if (!sheet || sheet.open) {
+        return;
+      }
+      const phone = sheet.closest<HTMLElement>(".dc-phone");
+      phone?.scrollIntoView({ behavior: "instant", block: "start" });
+      showOverPhone(sheet, phone);
+    }, settleMilliseconds);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, []);
+  const close = () => {
+    setClosed(true);
+    sheetRef.current?.close();
+  };
+  if (closed) {
+    return null;
+  }
+  return (
+    <dialog
+      aria-label={`「${invite.group}」への招待`}
+      className="dc-breakdown"
+      onClose={close}
+      ref={sheetRef}
+    >
+      <button
+        aria-label="閉じる"
+        className="dc-sheet-scrim"
+        onClick={close}
+        tabIndex={-1}
+        type="button"
+      />
+      <section className="dc-sheet gr-join-sheet">
+        <div aria-hidden="true" className="dc-sheet-handle" />
+        <span className="gr-rail-icon gr-mark-frame-large">
+          <GroupIcon mark={invite.mark} size={40} />
+        </span>
+        {joined ? (
+          <>
+            <h4>「{invite.group}」に参加しました</h4>
+            <p className="gr-join-text">
+              みんなのシフトと、みんなが休みの日が見られます。
+            </p>
+            <button
+              className="ob-primary"
+              onClick={() => {
+                close();
+                onOpenGroup();
+              }}
+              type="button"
+            >
+              グループを見る
+            </button>
+            <button className="ob-link" onClick={close} type="button">
+              閉じる
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="gr-join-from">
+              <PhotoAvatar
+                name={invite.from.name}
+                photo={invite.from.photo}
+                size={20}
+              />
+              {invite.from.name}からの招待
+            </p>
+            <h4>「{invite.group}」に参加しますか？</h4>
+            <div className="gr-join-members">
+              {invite.members.map((member) => (
+                <PhotoAvatar
+                  key={member.name}
+                  name={member.name}
+                  photo={member.photo}
+                  size={28}
+                />
+              ))}
+              <small>{invite.members.length}人が参加中</small>
+            </div>
+            <div className="st-list gr-join-name">
+              <label className="st-row">
+                <span className="st-row-label">あなたの名前</span>
+                <input
+                  className="pe-inline-input"
+                  onChange={(event) => {
+                    setName(event.target.value);
+                  }}
+                  placeholder="例：さくら"
+                  value={name}
+                />
+              </label>
+            </div>
+            <p className="gr-join-text">
+              このグループの人に、この名前で表示されます。参加すると、あなたのシフトもメンバーに見えるようになります。
+            </p>
+            <button
+              className="ob-primary"
+              disabled={name.trim() === ""}
+              onClick={() => {
+                setJoined(true);
+              }}
+              type="button"
+            >
+              参加する
+            </button>
+            <button className="ob-link" onClick={close} type="button">
+              今はしない
+            </button>
+          </>
+        )}
+      </section>
+    </dialog>
+  );
+}
+
 // A picture with one way in, as in other apps: tapping it or the link
 // under it opens a sheet to take or pick a photo, and to go back to the
 // usual one or delete it when that applies.
@@ -3382,7 +3538,7 @@ function colorOfMark(mark: GroupMark) {
 
 // Draws the mark to fill a round frame; styles never change it. `bare`
 // leaves out the tinted ground, for choices laid out on their own tiles.
-function GroupIcon({
+export function GroupIcon({
   mark,
   size,
   bare = false,

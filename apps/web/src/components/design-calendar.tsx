@@ -31,7 +31,7 @@ import type {
 
 import type { DesignVariants } from "../lib/design-variants";
 import type { Coworkers } from "./design-coworkers";
-import { DesignGroup, samplePhoto } from "./design-group";
+import { DesignGroup, JoinSheet, samplePhoto } from "./design-group";
 import type { Profile } from "./design-group";
 import {
   defaultImageOptions,
@@ -316,6 +316,7 @@ export function DesignCalendar({
   schedule,
   onChange,
   variants,
+  pendingInvite = false,
 }: {
   initialEditing: boolean;
   patternCount?: 4 | 5 | 6 | 8;
@@ -325,6 +326,9 @@ export function DesignCalendar({
   schedule: Schedule;
   onChange: Dispatch<SetStateAction<Schedule>>;
   variants: DesignVariants;
+  // A group's invitation link was opened: ask about joining over the
+  // calendar.
+  pendingInvite?: boolean;
 }) {
   const phoneRef = useRef<HTMLDivElement>(null);
   const themeStyle = useThemeStyle();
@@ -606,7 +610,7 @@ export function DesignCalendar({
   }
   return (
     <div
-      className={`dc-phone ${editing ? "dc-editing" : ""} ${weekDetail ? "dc-week-mode" : ""} ${hideInputBar ? "dc-no-input" : ""}`}
+      className={`dc-phone ${editing ? "dc-editing" : ""} ${weekDetail ? "dc-week-mode" : ""} ${hideInputBar ? "dc-no-input" : ""} ${variants.actionWidth === "inset" ? "dc-start-inset" : ""}`}
       ref={phoneRef}
       style={themeStyle}
     >
@@ -823,6 +827,14 @@ export function DesignCalendar({
           <p className="dc-sheet-total">この月は全{monthDays.length}日</p>
         </section>
       </dialog>
+      {pendingInvite && (
+        <JoinSheet
+          name={profile.name}
+          onOpenGroup={() => {
+            setTab("group");
+          }}
+        />
+      )}
       <SaveSheet
         completion={saveCompletion}
         month={month}

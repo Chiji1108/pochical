@@ -2,6 +2,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 import type { DesignVariants } from "../lib/design-variants";
+import { ProviderLogo, providerNames } from "./design-account";
+import type { AccountProvider } from "./design-account";
 import {
   addDays,
   DesignCalendar,
@@ -128,17 +130,35 @@ export type WorkSetup = {
   anchor?: Date;
 };
 
+// The patterns and order a returning account brings back in the prototype.
+const restoredSetup: WorkSetup = {
+  anchor: new Date(2026, 7, 30),
+  patternKeys: ["day", "night", "after", "off"],
+  sequence: ["day", "day", "night", "after", "off", "off"],
+};
+
+// How long the prototype pretends the provider's sign-in takes.
+const signInMilliseconds = 900;
+
+type Stage = "welcome" | "login" | "setup";
+
+// First run: a welcome with a way back in for people who already have an
+// account, then the work questions. An invitation opened on the way is
+// asked about once the calendar is ready, like any other time.
 export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
   const themeStyle = useThemeStyle();
+  const [stage, setStage] = useState<Stage>("welcome");
   const [finished, setFinished] = useState<{
     patternKeys: Shift[];
     rule?: RepeatRule;
+    note?: string;
   }>();
   const [schedule, setSchedule] = useState<Schedule>({});
 
-  function finish({ patternKeys, sequence, anchor }: WorkSetup) {
+  function finish({ patternKeys, sequence, anchor }: WorkSetup, note?: string) {
     setSchedule(startSchedule(sequence, anchor));
     setFinished({
+      note,
       patternKeys,
       rule: sequence && anchor ? { sequence, start: anchor } : undefined,
     });
@@ -152,13 +172,16 @@ export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
           initialRule={finished.rule}
           onChange={setSchedule}
           patternKeys={finished.patternKeys}
+          pendingInvite={variants.inviteLink === "opened"}
           schedule={schedule}
           variants={variants}
         />
+        {finished.note && <p className="ob-finished-note">{finished.note}</p>}
         <button
           className="ob-restart"
           onClick={() => {
             setFinished(undefined);
+            setStage("welcome");
           }}
           type="button"
         >
@@ -172,10 +195,117 @@ export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
     <div className="dc-phone ob-phone" style={themeStyle}>
       <PhoneStatusBar />
       <div className="ob-content">
-        <WorkSetupSteps finishLabel="はじめる" onFinish={finish} />
+        {stage === "welcome" && (
+          <WelcomeStep
+            onLogin={() => {
+              setStage("login");
+            }}
+            onStart={() => {
+              setStage("setup");
+            }}
+          />
+        )}
+        {stage === "login" && (
+          <LoginStep
+            onBack={() => {
+              setStage("welcome");
+            }}
+            onRestore={() => {
+              finish(restoredSetup, "前の端末のデータを戻しました（見本）。");
+            }}
+          />
+        )}
+        {stage === "setup" && (
+          <WorkSetupSteps
+            finishLabel="はじめる"
+            onBack={() => {
+              setStage("welcome");
+            }}
+            onFinish={(setup) => {
+              finish(setup);
+            }}
+          />
+        )}
       </div>
       <div aria-hidden="true" className="dc-home-indicator" />
     </div>
+  );
+}
+
+const welcomeShifts: Shift[] = ["day", "night", "after", "off"];
+
+function WelcomeStep({
+  onStart,
+  onLogin,
+}: {
+  onStart: () => void;
+  onLogin: () => void;
+}) {
+  return (
+    <div className="ob-welcome-screen">
+      <div className="ob-intro">
+        <div aria-hidden="true" className="ob-intro-marks">
+          {welcomeShifts.map((shift) => (
+            <span key={shift}>
+              <ShiftMark shift={shift} size={26} />
+            </span>
+          ))}
+        </div>
+        <h3>ポチカル</h3>
+        <p>シフトをポチッと入れて、家族や友達と見せ合えるカレンダーです。</p>
+      </div>
+      <div className="ob-welcome-actions">
+        <button className="ob-primary" onClick={onStart} type="button">
+          はじめる
+        </button>
+        <button className="ob-link" onClick={onLogin} type="button">
+          アカウントをお持ちの方はログイン
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// For someone moving to a new phone: signing in brings their data back
+// instead of answering the questions again.
+function LoginStep({
+  onBack,
+  onRestore,
+}: {
+  onBack: () => void;
+  onRestore: () => void;
+}) {
+  const [busy, setBusy] = useState<AccountProvider>();
+  return (
+    <>
+      <StepHeader
+        description="前の端末で使っていたシフトとグループを、そのまま戻します。"
+        onBack={onBack}
+        title="アカウントでログイン"
+      />
+      <div className="st-account-buttons">
+        {(["apple", "google"] as const).map((provider) => (
+          <button
+            className={`st-provider st-provider-${provider}`}
+            disabled={busy !== undefined}
+            key={provider}
+            onClick={() => {
+              setBusy(provider);
+              setTimeout(onRestore, signInMilliseconds);
+            }}
+            type="button"
+          >
+            <ProviderLogo provider={provider} size={19} />
+            {busy === provider
+              ? "ログイン中…"
+              : `${providerNames[provider]}で続ける`}
+          </button>
+        ))}
+      </div>
+      <p className="ob-footnote">
+        はじめて使うときは、戻って「はじめる」から始めてください。
+      </p>
+    </>
   );
 }
 
@@ -185,11 +315,14 @@ export function WorkSetupSteps({
   month = designMonth,
   finishLabel,
   onExit,
+  onBack,
   onFinish,
 }: {
   month?: Date;
   finishLabel: string;
   onExit?: () => void;
+  // Back from the first question on the first run, to the welcome.
+  onBack?: () => void;
   onFinish: (setup: WorkSetup) => void;
 }) {
   const [step, setStep] = useState<Step>({ name: "kind" });
@@ -213,7 +346,8 @@ export function WorkSetupSteps({
     <>
       {step.name === "kind" && (
         <KindStep
-          onBack={onExit}
+          first={!onExit}
+          onBack={onExit ?? onBack}
           onRoster={() => {
             setStep({ name: "roster" });
           }}
@@ -313,18 +447,18 @@ function StepHeader({
 }
 
 function KindStep({
+  first,
   onBack,
   onRoster,
   onRotation,
 }: {
+  first: boolean;
   onBack?: () => void;
   onRoster: () => void;
   onRotation: () => void;
 }) {
-  const first = !onBack;
   return (
     <>
-      {first && <p className="ob-welcome">ポチカルへようこそ</p>}
       <StepHeader
         description={
           first

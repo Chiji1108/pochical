@@ -378,9 +378,13 @@ button.dc-day:active {
   color: var(--text-disabled);
   cursor: default;
 }
+/* The same edges as 今月のお休み above, so the two stack as one column. */
 .dc-start-area {
-  padding: 0 19px;
   text-align: center;
+}
+/* The 入力ボタンの幅 variant: the buttons a little inside the card above. */
+.dc-start-inset .dc-start-area {
+  padding: 0 19px;
 }
 .design-page .dc-start {
   display: flex;
@@ -1438,12 +1442,70 @@ body:has(.dc-breakdown[open]) {
   padding: 20px 6px 12px;
   overflow-y: auto;
 }
-.ob-welcome {
-  margin: 24px 0 -8px;
-  font-size: 12px;
+/* The first screen: what the app is (or who invited you) in the middle,
+   the way in and the way back in at the bottom. */
+.ob-welcome-screen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.ob-intro {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  text-align: center;
+}
+.ob-intro h3 {
+  margin: 6px 0 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.ob-intro > p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-3);
+}
+.ob-intro-marks {
+  display: grid;
+  grid-template-columns: repeat(2, 48px);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.ob-intro-marks > span {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  background: var(--fill);
+  border-radius: 14px;
+}
+.ob-welcome-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.design-page .ob-link {
+  min-height: 44px;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--accent-line);
-  letter-spacing: 0.08em;
+  color: var(--accent);
+  background: transparent;
+  border: 0;
+}
+.ob-finished-note {
+  max-width: 340px;
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-3);
+  text-align: center;
 }
 .ob-header h3 {
   margin: 0;
@@ -3015,6 +3077,52 @@ button.st-row:hover {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+/* 参加の確認, over the calendar when an invitation link is opened. */
+.gr-join-sheet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.gr-join-sheet h4 {
+  margin: 10px 0 0;
+  font-size: 19px;
+  font-weight: 700;
+}
+.gr-join-from {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.gr-join-members {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 12px;
+}
+.gr-join-members small {
+  margin-left: 4px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.gr-join-name {
+  align-self: stretch;
+  margin-top: 18px;
+  text-align: left;
+}
+.gr-join-text {
+  margin: 10px 0 16px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-3);
+}
+.gr-join-sheet .ob-primary,
+.gr-join-sheet .ob-link {
+  align-self: stretch;
 }
 /* An app line about the group, between the messages. */
 .gr-notice {
