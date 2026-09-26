@@ -1144,6 +1144,15 @@ function MarkOptionsList({ current }: { current: ShiftMarkStyle }) {
         label="シフト名を表示"
         onChange={(checked) => setNames?.({ ...names, [current]: checked })}
       />
+      <SwitchRow
+        checked={highlightOn}
+        label="休みをハイライト"
+        onChange={(checked) =>
+          setHighlight?.({ ...highlight, [current]: checked })
+        }
+      />
+      {/* Last, since emoji have no fill: switching to them drops this row
+          without moving the ones above. */}
       {current !== "emoji" && (
         <SwitchRow
           checked={iconWeight === "duotone"}
@@ -1153,13 +1162,6 @@ function MarkOptionsList({ current }: { current: ShiftMarkStyle }) {
           }
         />
       )}
-      <SwitchRow
-        checked={highlightOn}
-        label="休みをハイライト"
-        onChange={(checked) =>
-          setHighlight?.({ ...highlight, [current]: checked })
-        }
-      />
     </div>
   );
 }
