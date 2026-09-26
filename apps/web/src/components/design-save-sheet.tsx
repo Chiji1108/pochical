@@ -7,19 +7,9 @@ import {
   Share,
   X,
 } from "lucide-react";
-import {
-  type CSSProperties,
-  type RefObject,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { type CSSProperties, type RefObject, useEffect, useState } from "react";
 import { DayCell, dateKey, monthDates, type Schedule } from "./design-calendar";
-import {
-  CellNamesContext,
-  OffHighlightContext,
-  ShiftMarkStyleContext,
-} from "./shift-mark";
+import { CellNamesContext, OffHighlightContext } from "./shift-mark";
 
 // Calendars on the device, as the system lists them.
 const deviceCalendars = [
@@ -237,7 +227,6 @@ export function ImagePreviewPage({
   onOptions: (options: ImageOptions) => void;
   onClose: () => void;
 }) {
-  const style = useContext(ShiftMarkStyleContext);
   const [note, setNote] = useState<string>();
   // The note after saving or sharing goes away by itself.
   useEffect(() => {
@@ -260,7 +249,13 @@ export function ImagePreviewPage({
           <h3 className="st-title">画像で保存</h3>
         </header>
         <CellNamesContext
-          value={{ names: { emoji: options.names, icon: options.names } }}
+          value={{
+            names: {
+              emoji: options.names,
+              icon: options.names,
+              badge: options.names,
+            },
+          }}
         >
           <OffHighlightContext
             value={{
@@ -299,22 +294,19 @@ export function ImagePreviewPage({
           </OffHighlightContext>
         </CellNamesContext>
         <div className="st-list">
-          {/* The letter look is a name already. */}
-          {style !== "badge" && (
-            <label className="st-row">
-              <span className="st-row-label">シフト名を表示</span>
-              <input
-                aria-checked={options.names}
-                checked={options.names}
-                className="pe-toggle"
-                onChange={(event) =>
-                  onOptions({ ...options, names: event.target.checked })
-                }
-                role="switch"
-                type="checkbox"
-              />
-            </label>
-          )}
+          <label className="st-row">
+            <span className="st-row-label">シフト名を表示</span>
+            <input
+              aria-checked={options.names}
+              checked={options.names}
+              className="pe-toggle"
+              onChange={(event) =>
+                onOptions({ ...options, names: event.target.checked })
+              }
+              role="switch"
+              type="checkbox"
+            />
+          </label>
           <label className="st-row">
             <span className="st-row-label">休みを目立たせる</span>
             <input

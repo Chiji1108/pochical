@@ -26,12 +26,12 @@ import {
   weekDates,
   weekendClassName,
 } from "./design-calendar";
+import { type Coworkers, CoworkersPage } from "./design-coworkers";
 import { PhotoAvatar, PhotoEditor, type Profile } from "./design-group";
 import { WorkSetupSteps } from "./design-onboarding";
 import { PatternsPage } from "./design-pattern-editor";
 import { ThemeContext, themeOf, themes } from "./design-theme";
 import {
-  BadgeLengthContext,
   CellNamesContext,
   IconWeightContext,
   LookSettingsContext,
@@ -56,6 +56,7 @@ type Page =
   | "work"
   | "roster"
   | "patterns"
+  | "coworkers"
   | "mark"
   | "customize"
   | "profile";
@@ -94,7 +95,7 @@ function shortDay(date: Date) {
 
 export function DesignSettings({
   patternKeys,
-  memberCount,
+  coworkers,
   rules,
   schedule,
   profile,
@@ -106,7 +107,7 @@ export function DesignSettings({
   onTab,
 }: {
   patternKeys: Shift[];
-  memberCount: number;
+  coworkers: Coworkers;
   rules: RepeatRule[];
   schedule: Schedule;
   profile: Profile;
@@ -134,8 +135,8 @@ export function DesignSettings({
       >
         {page === "top" && (
           <SettingsTop
+            coworkerCount={coworkers.names.length}
             current={current}
-            memberCount={memberCount}
             onOpen={setPage}
             patternKeys={patternKeys}
             profile={profile}
@@ -219,6 +220,13 @@ export function DesignSettings({
             preview={preview}
           />
         )}
+        {page === "coworkers" && (
+          <CoworkersPage
+            coworkers={coworkers}
+            onBack={() => setPage("top")}
+            schedule={schedule}
+          />
+        )}
         {page === "patterns" && (
           <PatternsPage
             onBack={() => setPage("top")}
@@ -234,13 +242,13 @@ export function DesignSettings({
 function SettingsTop({
   current,
   patternKeys,
-  memberCount,
+  coworkerCount,
   profile,
   onOpen,
 }: {
   current: RepeatRule | undefined;
   patternKeys: Shift[];
-  memberCount: number;
+  coworkerCount: number;
   profile: Profile;
   onOpen: (page: Page) => void;
 }) {
@@ -273,7 +281,11 @@ function SettingsTop({
             </>
           }
         />
-        <Row label="勤務メンバー" value={`${memberCount}人`} />
+        <Row
+          label="一緒に働く人"
+          onOpen={() => onOpen("coworkers")}
+          value={`${coworkerCount}人`}
+        />
         <Row label="仕事が変わったとき" onOpen={() => onOpen("job")} />
       </Section>
       <Section title="表示">
@@ -1117,13 +1129,9 @@ function StylePresets() {
                     <MonochromeContext
                       value={{ monochrome: preset.look.monochrome }}
                     >
-                      <BadgeLengthContext
-                        value={{ length: preset.look.badgeLength }}
-                      >
-                        {presetSample.map((shift) => (
-                          <ShiftMark key={shift} shift={shift} size={18} />
-                        ))}
-                      </BadgeLengthContext>
+                      {presetSample.map((shift) => (
+                        <ShiftMark key={shift} shift={shift} size={18} />
+                      ))}
                     </MonochromeContext>
                   </IconWeightContext>
                 </ShiftMarkStyleContext>
@@ -1146,16 +1154,13 @@ function MarkOptionsList({ current }: { current: ShiftMarkStyle }) {
   const { monochrome, setMonochrome } = useContext(MonochromeContext);
   const { highlight, setHighlight } = useContext(OffHighlightContext);
   const highlightOn = useOffHighlight(current);
-  const { length, setLength } = useContext(BadgeLengthContext);
   return (
     <div className="st-list">
-      {current !== "badge" && (
-        <SwitchRow
-          checked={names[current]}
-          label="シフト名を表示"
-          onChange={(checked) => setNames?.({ ...names, [current]: checked })}
-        />
-      )}
+      <SwitchRow
+        checked={names[current]}
+        label="シフト名を表示"
+        onChange={(checked) => setNames?.({ ...names, [current]: checked })}
+      />
       {current !== "emoji" && (
         <SwitchRow
           checked={monochrome}
@@ -1170,17 +1175,6 @@ function MarkOptionsList({ current }: { current: ShiftMarkStyle }) {
           onChange={(checked) =>
             setIconWeight?.(checked ? "duotone" : "regular")
           }
-        />
-      )}
-      {current === "badge" && (
-        <SegmentRow
-          label="文字の数"
-          onChange={(value) => setLength?.(value)}
-          options={[
-            ["one", "1文字"],
-            ["two", "2文字"],
-          ]}
-          value={length}
         />
       )}
       <SwitchRow
@@ -1215,36 +1209,6 @@ function SwitchRow({
         type="checkbox"
       />
     </label>
-  );
-}
-
-function SegmentRow<Value extends string>({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: Value;
-  options: [Value, string][];
-  onChange: (value: Value) => void;
-}) {
-  return (
-    <fieldset className="st-row st-segment-row">
-      <legend className="st-row-label">{label}</legend>
-      <div className="design-segment st-row-segment">
-        {options.map(([option, optionLabel]) => (
-          <button
-            aria-pressed={value === option}
-            key={option}
-            onClick={() => onChange(option)}
-            type="button"
-          >
-            {optionLabel}
-          </button>
-        ))}
-      </div>
-    </fieldset>
   );
 }
 

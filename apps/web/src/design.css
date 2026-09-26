@@ -931,11 +931,11 @@ body:has(.dc-breakdown[open]) {
   background: var(--accent, #486444);
   border-color: var(--accent, #486444);
 }
+/* Each part's name sits above it, so a long one like 一緒に働く人 fits. */
 .dc-detail-row {
-  display: grid;
-  grid-template-columns: 56px 1fr;
-  gap: 6px 10px;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 .dc-detail-label {
   font-size: 12px;
@@ -966,7 +966,6 @@ body:has(.dc-breakdown[open]) {
   border-color: var(--accent-line, #698367);
 }
 .dc-detail-hint {
-  grid-column: 2;
   margin: 0;
   font-size: 11px;
   color: #8a9086;
@@ -999,14 +998,14 @@ body:has(.dc-breakdown[open]) {
   color: #8a9086;
 }
 .dc-detail-members {
-  align-items: start;
   padding: 0;
   margin: 0;
   border: 0;
 }
 .dc-detail-members > legend {
   float: left;
-  padding: 9px 0 0;
+  width: 100%;
+  padding: 0 0 6px;
 }
 .dc-member-chips {
   display: flex;
@@ -1877,7 +1876,9 @@ button.st-row:hover {
   place-items: center;
   width: 36px;
   height: 40px;
+  /* At the right edge, whatever the row holds. */
   margin-right: -8px;
+  margin-left: auto;
   color: #a7ada1;
   touch-action: none;
   cursor: grab;
@@ -1926,11 +1927,6 @@ button.st-row:hover {
 .pe-field {
   display: flex;
   flex-direction: column;
-}
-.pe-symbol {
-  width: 88px;
-  font-size: 20px;
-  text-align: center;
 }
 .pe-grid {
   display: grid;
@@ -2032,14 +2028,15 @@ button.st-row:hover {
 .st-preview-grid.dc-grid {
   grid-template-rows: repeat(2, 64px);
 }
-.sm-badge-wide {
-  padding: 0 4px;
-  letter-spacing: -0.02em;
-  border-radius: 8px;
+/* A colored icon would sink into the green, so it turns white like the
+   text; emoji and letters on their tile keep their own colors. */
+.dc-detail-patterns button[aria-pressed="true"] .sm-icon {
+  fill: #fff;
 }
-/* Without a tile behind them, two letters need no room at the sides. */
-.sm-badge-wide.sm-badge-plain {
-  padding: 0;
+/* Letters without their tile would sink the same way. The color is set on
+   the element, so only !important can turn it white here. */
+.dc-detail-patterns button[aria-pressed="true"] .sm-badge-plain {
+  color: #fff !important;
 }
 .st-mark-segment {
   display: grid;
@@ -2175,37 +2172,6 @@ button.st-row:hover {
   margin-left: auto;
   color: var(--accent, #486444);
 }
-.pe-letters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 0;
-  margin: 0;
-  border: 0;
-}
-.pe-letters > legend {
-  float: left;
-  width: 100%;
-  margin-bottom: 0;
-}
-.pe-letter {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: center;
-}
-.pe-letter-label {
-  font-size: 11px;
-  color: #8a9086;
-}
-.pe-letter-in-use .pe-letter-label {
-  font-weight: 600;
-  color: var(--accent, #486444);
-}
-.pe-letter-in-use .pe-symbol {
-  background: #fff;
-  border-color: var(--accent-line, #698367);
-}
 
 /* Theme color and app icon settings. */
 .st-inline-value {
@@ -2252,15 +2218,6 @@ button.st-row:hover {
   height: 44px;
   border: 2px solid currentcolor;
   border-radius: 50%;
-}
-.st-segment-row {
-  padding-block: 5px;
-  margin: 0;
-  border: 0;
-}
-.st-segment-row > legend {
-  float: left;
-  padding: 0;
 }
 .design-segment.st-row-segment {
   flex-shrink: 0;

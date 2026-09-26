@@ -38,7 +38,7 @@ export const designVariantOptions = {
     ],
   },
   memberSample: {
-    label: "登録メンバー",
+    label: "一緒に働く人",
     choices: [
       { value: "some", label: "5人" },
       { value: "none", label: "0人" },

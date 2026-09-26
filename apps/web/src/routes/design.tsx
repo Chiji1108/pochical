@@ -8,7 +8,6 @@ import {
 import { DesignOnboarding } from "../components/design-onboarding";
 import { ThemeContext, type ThemeId } from "../components/design-theme";
 import {
-  BadgeLengthContext,
   CellNamesContext,
   IconWeightContext,
   type LookSettings,
@@ -121,102 +120,94 @@ function DesignPage() {
             <SetIconWeightContext
               value={(weight) => updateLook({ fill: weight === "duotone" })}
             >
-              <BadgeLengthContext
-                value={{
-                  length: look.badgeLength,
-                  setLength: (badgeLength) => updateLook({ badgeLength }),
-                }}
-              >
-                <ShiftMarkStyleContext value={look.style}>
-                  <CellNamesContext
+              <ShiftMarkStyleContext value={look.style}>
+                <CellNamesContext
+                  value={{
+                    names: {
+                      emoji: look.names,
+                      icon: look.names,
+                      badge: look.names,
+                    },
+                    setNames: (names) =>
+                      updateLook({ names: names[look.style] }),
+                  }}
+                >
+                  <OffHighlightContext
                     value={{
-                      names: { emoji: look.names, icon: look.names },
-                      setNames: (names) =>
+                      highlight: {
+                        icon: look.highlight,
+                        emoji: look.highlight,
+                        badge: look.highlight,
+                      },
+                      setHighlight: (highlight) =>
                         updateLook({
-                          names:
-                            look.style === "badge"
-                              ? look.names
-                              : names[look.style],
+                          highlight: highlight[look.style] ?? look.highlight,
                         }),
                     }}
                   >
-                    <OffHighlightContext
+                    <MonochromeContext
                       value={{
-                        highlight: {
-                          icon: look.highlight,
-                          emoji: look.highlight,
-                          badge: look.highlight,
-                        },
-                        setHighlight: (highlight) =>
-                          updateLook({
-                            highlight: highlight[look.style] ?? look.highlight,
-                          }),
+                        monochrome: look.monochrome,
+                        setMonochrome: (monochrome) =>
+                          updateLook({ monochrome }),
                       }}
                     >
-                      <MonochromeContext
-                        value={{
-                          monochrome: look.monochrome,
-                          setMonochrome: (monochrome) =>
-                            updateLook({ monochrome }),
-                        }}
+                      <SetShiftMarkStyleContext
+                        value={(style) => updateLook({ style })}
                       >
-                        <SetShiftMarkStyleContext
-                          value={(style) => updateLook({ style })}
-                        >
-                          <div className="design-screens" key={version}>
-                            <section aria-labelledby="design-view-title">
-                              <h2 id="design-view-title">
-                                <span>01</span> カレンダー表示
-                              </h2>
-                              <DesignCalendar
-                                initialEditing={false}
-                                onChange={setSchedule}
-                                schedule={schedule}
-                                variants={variants}
-                              />
-                              <p className="design-caption">
-                                ひと月の予定と、お休みをひと目で。
-                              </p>
-                            </section>
-                            <section aria-labelledby="design-edit-title">
-                              <h2 id="design-edit-title">
-                                <span>02</span> シフト入力
-                              </h2>
-                              <DesignCalendar
-                                initialEditing
-                                onChange={setSchedule}
-                                schedule={schedule}
-                                variants={variants}
-                              />
-                              <p className="design-caption">
-                                シフトを押すと翌日へ。日付をタップして修正もできます。
-                              </p>
-                            </section>
-                            <PatternStudy
-                              caption="2026年8月。8パターンを4列×2段で比較。"
-                              count={8}
-                              id="design-six-weeks-title"
-                              month={7}
-                              number="03"
-                              title="6段の月 × 8パターン"
+                        <div className="design-screens" key={version}>
+                          <section aria-labelledby="design-view-title">
+                            <h2 id="design-view-title">
+                              <span>01</span> カレンダー表示
+                            </h2>
+                            <DesignCalendar
+                              initialEditing={false}
+                              onChange={setSchedule}
+                              schedule={schedule}
                               variants={variants}
                             />
-                            <section aria-labelledby="design-onboarding-title">
-                              <h2 id="design-onboarding-title">
-                                <span>04</span> はじめての設定
-                              </h2>
-                              <DesignOnboarding variants={variants} />
-                              <p className="design-caption">
-                                最初の1問で、入れやすい始め方に分かれます。
-                              </p>
-                            </section>
-                          </div>
-                        </SetShiftMarkStyleContext>
-                      </MonochromeContext>
-                    </OffHighlightContext>
-                  </CellNamesContext>
-                </ShiftMarkStyleContext>
-              </BadgeLengthContext>
+                            <p className="design-caption">
+                              ひと月の予定と、お休みをひと目で。
+                            </p>
+                          </section>
+                          <section aria-labelledby="design-edit-title">
+                            <h2 id="design-edit-title">
+                              <span>02</span> シフト入力
+                            </h2>
+                            <DesignCalendar
+                              initialEditing
+                              onChange={setSchedule}
+                              schedule={schedule}
+                              variants={variants}
+                            />
+                            <p className="design-caption">
+                              シフトを押すと翌日へ。日付をタップして修正もできます。
+                            </p>
+                          </section>
+                          <PatternStudy
+                            caption="2026年8月。8パターンを4列×2段で比較。"
+                            count={8}
+                            id="design-six-weeks-title"
+                            month={7}
+                            number="03"
+                            title="6段の月 × 8パターン"
+                            variants={variants}
+                          />
+                          <section aria-labelledby="design-onboarding-title">
+                            <h2 id="design-onboarding-title">
+                              <span>04</span> はじめての設定
+                            </h2>
+                            <DesignOnboarding variants={variants} />
+                            <p className="design-caption">
+                              最初の1問で、入れやすい始め方に分かれます。
+                            </p>
+                          </section>
+                        </div>
+                      </SetShiftMarkStyleContext>
+                    </MonochromeContext>
+                  </OffHighlightContext>
+                </CellNamesContext>
+              </ShiftMarkStyleContext>
             </SetIconWeightContext>
           </IconWeightContext>
         </LookSettingsContext>

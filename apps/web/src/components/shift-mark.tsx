@@ -63,10 +63,13 @@ export const SetShiftMarkStyleContext = createContext<
   ((style: ShiftMarkStyle) => void) | undefined
 >(undefined);
 
-// Whether calendar cells print the shift name under an emoji or icon. The
-// letter look is a name already, so it has no switch.
-export type CellNames = { emoji: boolean; icon: boolean };
-export const defaultCellNames: CellNames = { emoji: false, icon: false };
+// Whether calendar cells print the shift name under the mark, per look.
+export type CellNames = Record<ShiftMarkStyle, boolean>;
+export const defaultCellNames: CellNames = {
+  emoji: false,
+  icon: false,
+  badge: false,
+};
 export const CellNamesContext = createContext<{
   names: CellNames;
   setNames?: (names: CellNames) => void;
@@ -91,7 +94,6 @@ export type LookSettings = {
   monochrome: boolean;
   names: boolean;
   highlight: boolean;
-  badgeLength: BadgeLength;
 };
 
 const baseLook: LookSettings = {
@@ -100,7 +102,6 @@ const baseLook: LookSettings = {
   monochrome: false,
   names: false,
   highlight: true,
-  badgeLength: "one",
 };
 
 // Ready-made styles: a theme color, a mark for 休み and a look that suit
@@ -145,7 +146,7 @@ export const stylePresets: {
     id: "friendly",
     name: "親しみ",
     theme: "moss",
-    look: { ...baseLook, style: "badge", badgeLength: "two", fill: false },
+    look: { ...baseLook, style: "badge", fill: false, names: true },
   },
 ];
 
@@ -165,15 +166,13 @@ function sameLook(preset: LookSettings, look: LookSettings) {
   if (preset.style !== look.style || preset.highlight !== look.highlight) {
     return false;
   }
-  if (look.style === "emoji") {
-    return preset.names === look.names;
+  if (preset.names !== look.names) {
+    return false;
   }
-  const sameColor =
-    preset.fill === look.fill && preset.monochrome === look.monochrome;
-  if (look.style === "icon") {
-    return sameColor && preset.names === look.names;
-  }
-  return sameColor && preset.badgeLength === look.badgeLength;
+  return (
+    look.style === "emoji" ||
+    (preset.fill === look.fill && preset.monochrome === look.monochrome)
+  );
 }
 
 export function stylePresetOf(theme: ThemeId, look: LookSettings) {
@@ -317,9 +316,8 @@ export const markEmojis = [
 
 export type Look = {
   emoji: string;
-  // One- and two-letter text for the letter look; the setting picks which.
+  // One letter for the letter look; the name can show under it.
   symbol: string;
-  symbol2: string;
   icon: MarkIcon;
   color: MarkColor;
 };
@@ -327,7 +325,7 @@ export type Look = {
 // An index into the palette below.
 export type MarkColor = number;
 
-const shiftLooks: Record<Shift, Omit<Look, "emoji" | "symbol2">> = {
+const shiftLooks: Record<Shift, Omit<Look, "emoji">> = {
   day: { symbol: "日", icon: "sun", color: 1 },
   night: { symbol: "夜", icon: "moon", color: 8 },
   after: { symbol: "明", icon: "sunrise", color: 3 },
@@ -345,16 +343,16 @@ const shiftLooks: Record<Shift, Omit<Look, "emoji" | "symbol2">> = {
 
 const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
 
-function leadingLetters(name: string, count: number) {
-  return Array.from(graphemes.segment(name.trim()), ({ segment }) => segment)
-    .slice(0, count)
-    .join("");
+function firstLetter(name: string) {
+  return (
+    graphemes.segment(name.trim())[Symbol.iterator]().next().value?.segment ??
+    ""
+  );
 }
 
 export function lookOf(shift: Shift): Look {
   return {
     ...shiftLooks[shift],
-    symbol2: leadingLetters(patterns[shift].label, 2),
     emoji: patterns[shift].emoji,
   };
 }
@@ -390,8 +388,7 @@ export function guessLook(name: string): Omit<Look, "color"> {
     words.some((word) => name.includes(word))
   );
   return {
-    symbol: leadingLetters(name, 1),
-    symbol2: leadingLetters(name, 2),
+    symbol: firstLetter(name),
     icon: hint?.icon ?? "letter",
     emoji: hint?.emoji ?? "⭐️",
   };
@@ -438,14 +435,6 @@ export function nextColor(used: MarkColor[]) {
   return free === -1 ? used.length % markColors.length : free;
 }
 
-// Whether the letter look shows each pattern's one- or two-letter text; the
-// two-letter one sits on a slightly wider tile.
-export type BadgeLength = "one" | "two";
-export const BadgeLengthContext = createContext<{
-  length: BadgeLength;
-  setLength?: (length: BadgeLength) => void;
-}>({ length: "one" });
-
 export function MarkGlyph({
   look,
   style,
@@ -456,25 +445,22 @@ export function MarkGlyph({
   size: number;
 }) {
   const { color, tint } = useDisplayColor(look.color);
-  const { length: badgeLength } = useContext(BadgeLengthContext);
   // The fill setting also decides whether letters sit on a tinted tile.
   const filled = useContext(IconWeightContext) === "duotone";
   if (style === "badge") {
-    const text = badgeLength === "two" ? look.symbol2 : look.symbol;
-    const wide = [...text].length > 1;
     return (
       <span
         aria-hidden="true"
-        className={`sm-badge ${wide ? "sm-badge-wide" : ""} ${filled ? "" : "sm-badge-plain"}`}
+        className={`sm-badge ${filled ? "" : "sm-badge-plain"}`}
         style={{
           minWidth: size,
           height: size,
-          fontSize: Math.round(size * (wide ? 0.44 : 0.56)),
+          fontSize: Math.round(size * 0.56),
           color,
           background: filled ? tint : "transparent",
         }}
       >
-        {text}
+        {look.symbol}
       </span>
     );
   }

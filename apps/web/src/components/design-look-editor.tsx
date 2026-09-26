@@ -1,7 +1,6 @@
 import { ChevronLeft } from "lucide-react";
 import { type ReactNode, useContext, useState } from "react";
 import {
-  BadgeLengthContext,
   type Look,
   MarkGlyph,
   type MarkIcon,
@@ -14,7 +13,7 @@ import {
 
 // The parts of a look that someone picks; picked ones stop following the
 // name when it changes.
-export type LookField = "symbol" | "symbol2" | "icon" | "emoji" | "color";
+export type LookField = "symbol" | "icon" | "emoji" | "color";
 
 export const styleNames: Record<ShiftMarkStyle, string> = {
   emoji: "絵文字",
@@ -82,6 +81,11 @@ const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
 
 function firstGrapheme(value: string) {
   return graphemes.segment(value)[Symbol.iterator]().next().value?.segment;
+}
+
+// The letter just typed, which replaces the one already there.
+function lastGrapheme(value: string) {
+  return Array.from(graphemes.segment(value)).at(-1)?.segment;
 }
 
 const allIcons = Object.keys(markIcons) as MarkIcon[];
@@ -238,8 +242,7 @@ function EmojiGrid({
   );
 }
 
-// Both texts sit side by side so switching the letter count holds no
-// surprise; while the letter look is on, the one in use is marked.
+// One letter, like a printed roster; the name can show under it.
 function LetterEditor({
   look,
   onPick,
@@ -247,39 +250,23 @@ function LetterEditor({
   look: Look;
   onPick: (field: LookField, value: Partial<Look>) => void;
 }) {
-  const { length } = useContext(BadgeLengthContext);
-  // Only the letter look actually shows one of these.
-  const lettersShown = useContext(ShiftMarkStyleContext) === "badge";
-  const fields = [
-    { field: "symbol", count: "one", label: "1文字", max: 1 },
-    { field: "symbol2", count: "two", label: "2文字", max: 2 },
-  ] as const;
   return (
-    <fieldset className="pe-letters">
-      <legend className="dc-repeat-label">文字</legend>
-      {fields.map(({ field, count, label, max }) => {
-        const inUse = lettersShown && length === count;
-        return (
-          <label
-            className={`pe-letter ${inUse ? "pe-letter-in-use" : ""}`}
-            key={field}
-          >
-            <input
-              className="dc-detail-note pe-symbol"
-              maxLength={max}
-              onChange={(event) =>
-                onPick(field, { [field]: event.target.value })
-              }
-              value={look[field]}
-            />
-            <span className="pe-letter-label">
-              {label}
-              {inUse && "（使用中）"}
-            </span>
-          </label>
-        );
-      })}
-    </fieldset>
+    <div className="st-list">
+      <label className="st-row">
+        <span className="st-row-label">文字</span>
+        <input
+          className="pe-inline-input"
+          onChange={(event) => {
+            const symbol = lastGrapheme(event.target.value);
+            if (symbol) {
+              onPick("symbol", { symbol });
+            }
+          }}
+          onFocus={(event) => event.currentTarget.select()}
+          value={look.symbol}
+        />
+      </label>
+    </div>
   );
 }
 

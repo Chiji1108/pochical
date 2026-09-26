@@ -44,7 +44,6 @@ import {
 import { iconNames } from "./design-look-editor";
 import { ThemeContext, type ThemeId } from "./design-theme";
 import {
-  BadgeLengthContext,
   guessLook,
   IconWeightContext,
   type Look,
@@ -112,7 +111,6 @@ function pattern(
     off: extra.off ?? false,
     look: {
       symbol: look.symbol ?? name.slice(0, 1),
-      symbol2: look.symbol2 ?? name.slice(0, 2),
       icon: look.icon,
       emoji: look.emoji,
       color: look.color,
@@ -2029,9 +2027,7 @@ function MemberMark({
       <ShiftMarkStyleContext value={settings.style}>
         <IconWeightContext value={settings.fill ? "duotone" : "regular"}>
           <MonochromeContext value={{ monochrome: settings.monochrome }}>
-            <BadgeLengthContext value={{ length: settings.badgeLength }}>
-              <ViewerMark look={look} size={size} />
-            </BadgeLengthContext>
+            <ViewerMark look={look} size={size} />
           </MonochromeContext>
         </IconWeightContext>
       </ShiftMarkStyleContext>

@@ -32,6 +32,7 @@ import {
   useState,
 } from "react";
 import type { DesignVariants } from "../lib/design-variants";
+import type { Coworkers } from "./design-coworkers";
 import { DesignGroup, type Profile, samplePhoto } from "./design-group";
 import {
   defaultImageOptions,
@@ -91,7 +92,7 @@ type DayEntry = {
   note?: string;
   members?: string[];
 };
-type MemberOptions = { names: string[]; onAdd: (name: string) => void };
+type MemberOptions = Pick<Coworkers, "names" | "onAdd">;
 export type Schedule = Record<string, DayEntry | undefined>;
 // A repeating order of shifts; `start` is the first day of the sequence and
 // the day the rule takes over from the one before it.
@@ -379,7 +380,14 @@ export function DesignCalendar({
   const [imagePreview, setImagePreview] = useState(false);
   const [imageOptions, setImageOptions] = useState(defaultImageOptions);
   const [detailDate, setDetailDate] = useState<Date>();
-  const [addedMembers, setAddedMembers] = useState<string[]>([]);
+  const sampleCoworkers = variants.memberSample === "some" ? sampleMembers : [];
+  const [coworkerNames, setCoworkerNames] = useState(sampleCoworkers);
+  // The sample switch starts the list over.
+  const [coworkersSample, setCoworkersSample] = useState(variants.memberSample);
+  if (coworkersSample !== variants.memberSample) {
+    setCoworkersSample(variants.memberSample);
+    setCoworkerNames(sampleCoworkers);
+  }
   const [tab, setTab] = useState<Tab>("calendar");
   const [profile, setProfile] = useState<Profile>(() => ({
     name: "さくら",
@@ -390,12 +398,38 @@ export function DesignCalendar({
   );
   // Repeating shifts fill every month, so the monthly input buttons go away.
   const hideInputBar = isRepeating(rules);
-  const members: MemberOptions = {
-    names: [
-      ...(variants.memberSample === "some" ? sampleMembers : []),
-      ...addedMembers,
-    ],
-    onAdd: (name) => setAddedMembers((previous) => [...previous, name]),
+  // Renaming or deleting someone changes the days they are on too.
+  const updateMembersOnDays = (change: (names: string[]) => string[]) =>
+    onChange((previous) =>
+      Object.fromEntries(
+        Object.entries(previous).map(([key, entry]) => {
+          if (!entry?.members) {
+            return [key, entry];
+          }
+          const next = change(entry.members);
+          return [
+            key,
+            { ...entry, members: next.length > 0 ? next : undefined },
+          ];
+        })
+      )
+    );
+  const members: Coworkers = {
+    names: coworkerNames,
+    onAdd: (name) => setCoworkerNames((previous) => [...previous, name]),
+    onReorder: setCoworkerNames,
+    onRename: (from, to) => {
+      setCoworkerNames((previous) =>
+        previous.map((name) => (name === from ? to : name))
+      );
+      updateMembersOnDays((names) =>
+        names.map((name) => (name === from ? to : name))
+      );
+    },
+    onDelete: (name) => {
+      setCoworkerNames((previous) => previous.filter((item) => item !== name));
+      updateMembersOnDays((names) => names.filter((item) => item !== name));
+    },
   };
   const [editing, setEditing] = useState(initialEditing);
   const [selectedDay, setSelectedDay] = useState(1);
@@ -612,7 +646,7 @@ export function DesignCalendar({
       <PhoneStatusBar />
       {tab === "settings" && (
         <DesignSettings
-          memberCount={members.names.length}
+          coworkers={members}
           onApplyRule={applyRule}
           onChangeJob={changeJob}
           onFixRule={fixRule}
@@ -1337,13 +1371,10 @@ function ShiftInputControls({
 function CellShift({ shift }: { shift: Shift }) {
   const style = useContext(ShiftMarkStyleContext);
   const { names } = useContext(CellNamesContext);
-  // The letter look is a name already; emoji and icons follow the setting.
-  const withName = style !== "badge" && names[style];
-  let size = 24;
-  if (style === "badge") {
-    size = 26;
-  } else if (withName) {
-    size = 21;
+  const withName = names[style];
+  let size = style === "badge" ? 26 : 24;
+  if (withName) {
+    size = style === "badge" ? 22 : 21;
   }
   return (
     <>
@@ -1468,7 +1499,7 @@ function MemberField({
   }
   return (
     <fieldset className="dc-detail-row dc-detail-members">
-      <legend className="dc-detail-label">メンバー</legend>
+      <legend className="dc-detail-label">一緒に働く人</legend>
       <div className="dc-member-chips">
         {members.names.map((name) => (
           <button
@@ -1489,7 +1520,7 @@ function MemberField({
         ))}
         {adding ? (
           <input
-            aria-label="追加するメンバーの名前"
+            aria-label="追加する人の名前"
             autoFocus
             className="dc-member-input"
             onBlur={(event) => add(event.currentTarget.value)}
@@ -1509,7 +1540,7 @@ function MemberField({
             type="button"
           >
             <Plus aria-hidden="true" size={12} />
-            {members.names.length > 0 ? "追加" : "メンバーを追加"}
+            {members.names.length > 0 ? "追加" : "人を追加"}
           </button>
         )}
       </div>

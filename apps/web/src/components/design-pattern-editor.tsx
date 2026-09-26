@@ -6,17 +6,15 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useContext, useRef, useState } from "react";
+import { type ReactNode, useContext, useRef, useState } from "react";
 import { nextDayShifts, patterns, type Shift } from "./design-calendar";
 import { LookEditorPage, type LookField } from "./design-look-editor";
 import {
-  BadgeLengthContext,
   guessLook,
   type Look,
   lookOf,
   MarkGlyph,
   nextColor,
-  type ShiftMarkStyle,
   ShiftMarkStyleContext,
 } from "./shift-mark";
 
@@ -146,7 +144,19 @@ export function PatternsPage({
         <h3 className="st-title">シフトパターン</h3>
       </header>
       {sorting ? (
-        <SortablePatterns items={items} onChange={setItems} style={style} />
+        <SortableList
+          items={items}
+          label={(item) => item.name}
+          onChange={setItems}
+        >
+          {(item) => (
+            <>
+              <MarkGlyph look={item} size={22} style={style} />
+              <span className="st-row-label">{item.name}</span>
+              <span className="st-row-value">{timeText(item)}</span>
+            </>
+          )}
+        </SortableList>
       ) : (
         <div className="st-list">
           {items.map((item) => (
@@ -188,14 +198,18 @@ export function PatternsPage({
 
 // Rows move with the handle; arrow keys on the handle move one step. The
 // drag follows the pointer on the window, since rows swap under it.
-function SortablePatterns({
+export function SortableList<Item extends { id: string }>({
   items,
-  style,
+  label,
   onChange,
+  children,
 }: {
-  items: PatternDraft[];
-  style: ShiftMarkStyle;
-  onChange: (items: PatternDraft[]) => void;
+  items: Item[];
+  // What the handle's label calls the row.
+  label: (item: Item) => string;
+  onChange: (items: Item[]) => void;
+  // The row's content, before the handle.
+  children: (item: Item) => ReactNode;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef(items);
@@ -256,11 +270,9 @@ function SortablePatterns({
               : undefined
           }
         >
-          <MarkGlyph look={item} size={22} style={style} />
-          <span className="st-row-label">{item.name}</span>
-          <span className="st-row-value">{timeText(item)}</span>
+          {children(item)}
           <button
-            aria-label={`${item.name}を並べ替え。上下の矢印キーで動かせます`}
+            aria-label={`${label(item)}を並べ替え。上下の矢印キーで動かせます`}
             className="st-handle"
             onKeyDown={(event) => {
               if (event.key === "ArrowUp" || event.key === "ArrowDown") {
@@ -382,7 +394,7 @@ function PatternEditor({
   const [subPage, setSubPage] = useState<"look" | "nextDay">();
   // Looks the person picked stay put when the name changes afterwards.
   const [picked, setPicked] = useState<LookField[]>(
-    isNew ? [] : ["symbol", "symbol2", "icon", "emoji"]
+    isNew ? [] : ["symbol", "icon", "emoji"]
   );
   const pick = (field: LookField, value: Partial<PatternDraft>) => {
     setDraft({ ...draft, ...value });
@@ -396,18 +408,14 @@ function PatternEditor({
       ...draft,
       name,
       symbol: picked.includes("symbol") ? draft.symbol : guess.symbol,
-      symbol2: picked.includes("symbol2") ? draft.symbol2 : guess.symbol2,
       icon: picked.includes("icon") ? draft.icon : guess.icon,
       emoji: picked.includes("emoji") ? draft.emoji : guess.emoji,
     });
   };
   const canSave = draft.name.trim() !== "";
-  const { length } = useContext(BadgeLengthContext);
-  const letterField = length === "two" ? "symbol2" : "symbol";
   // Another pattern the letter style could not tell apart from this one.
   const lookalike = others.find(
-    (other) =>
-      other[letterField] === draft[letterField] && other.color === draft.color
+    (other) => other.symbol === draft.symbol && other.color === draft.color
   );
 
   const nextDay = others.find((other) => other.id === draft.nextDay);
