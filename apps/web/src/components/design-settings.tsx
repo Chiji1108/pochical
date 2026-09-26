@@ -4,11 +4,13 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 
-import type { Tone } from "../lib/design-tokens";
+import type { Tone, ColorScheme } from "../lib/design-tokens";
 import { markColors } from "../lib/design-tokens";
 import { toneRoles } from "../lib/tones";
 import {
@@ -44,6 +46,7 @@ import {
   themeColors,
   themeOf,
   themes,
+  themeStyle,
 } from "./design-theme";
 import type { Appearance, ColorChoice } from "./design-theme";
 import {
@@ -1070,32 +1073,69 @@ function sampleSequence(patternKeys: Shift[]): Shift[] {
   return sequence.at(-1) === "off" ? sequence : [...sequence, "off"];
 }
 
+// The preview can show the other of light and dark on its own, without
+// touching 外観, so a style can be judged in both.
 function StylePreview({ preview }: { preview: StylePreviewData }) {
   const { dates, schedule, sample } = preview;
+  const scheme = useContext(ColorSchemeContext);
+  const { theme } = useContext(ThemeContext);
+  const tone = useContext(ToneContext);
+  const [picked, setPicked] = useState<ColorScheme>();
+  const shown = picked ?? scheme;
   return (
-    <div aria-hidden="true" className="st-preview" inert>
-      {sample && <span className="st-preview-sample">見本</span>}
-      <div className="dc-weekdays">
-        {weekdayLabels.map((day) => (
-          <span key={day}>{day}</span>
+    <div className="st-preview-wrap">
+      <ColorSchemeContext value={shown}>
+        <div
+          aria-hidden="true"
+          className="st-preview"
+          inert
+          style={themeStyle(theme, shown, tone)}
+        >
+          {sample && <span className="st-preview-sample">見本</span>}
+          <div className="dc-weekdays">
+            {weekdayLabels.map((day) => (
+              <span key={day}>{day}</span>
+            ))}
+          </div>
+          <div className="dc-grid st-preview-grid">
+            {dates.map((date) => (
+              <DayCell
+                active={false}
+                date={date}
+                editing={false}
+                entry={schedule[dateKey(date)]}
+                key={dateKey(date)}
+                onPress={() => undefined}
+                outside={false}
+              />
+            ))}
+          </div>
+        </div>
+      </ColorSchemeContext>
+      <fieldset className="st-preview-scheme">
+        <legend className="dc-sr-only">プレビューの明るさ</legend>
+        {previewSchemes.map((option) => (
+          <button
+            aria-label={option.name}
+            aria-pressed={shown === option.scheme}
+            key={option.scheme}
+            onClick={() => {
+              setPicked(option.scheme);
+            }}
+            type="button"
+          >
+            <option.Icon aria-hidden="true" size={13} />
+          </button>
         ))}
-      </div>
-      <div className="dc-grid st-preview-grid">
-        {dates.map((date) => (
-          <DayCell
-            active={false}
-            date={date}
-            editing={false}
-            entry={schedule[dateKey(date)]}
-            key={dateKey(date)}
-            onPress={() => undefined}
-            outside={false}
-          />
-        ))}
-      </div>
+      </fieldset>
     </div>
   );
 }
+
+const previewSchemes = [
+  { Icon: Sun, name: "ライトで見る", scheme: "light" },
+  { Icon: Moon, name: "ダークで見る", scheme: "dark" },
+] as const;
 
 // An edit mode for the details, with the preview pinned on top. Changes show
 // right away; キャンセル puts back what was there when it opened.

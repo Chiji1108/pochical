@@ -2024,15 +2024,50 @@ button.st-row:hover {
   flex: 1;
   height: auto;
 }
+/* The preview may use the other scheme's variables, so it sets its own text
+   color and uses the screen's background, like the calendar it stands for. */
 .st-preview {
-  padding: 12px 8px 8px;
+  padding: 18px 8px 8px;
+  color: var(--text);
   pointer-events: none;
-  background: var(--surface);
+  background: var(--bg);
   border: 1px solid var(--separator);
   border-radius: 18px;
 }
 .st-preview {
   position: relative;
+}
+/* ☀︎ / ☾ on the preview's top edge, like the 見本 tag, to see it in the
+   other of light and dark without changing 外観. */
+.st-preview-wrap {
+  position: relative;
+}
+.st-preview-scheme {
+  position: absolute;
+  top: -10px;
+  left: 12px;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--separator);
+  border-radius: 10px;
+}
+.design-page .st-preview-scheme button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 18px;
+  padding: 0;
+  color: var(--text-4);
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+}
+.design-page .st-preview-scheme button[aria-pressed="true"] {
+  color: var(--text);
+  background: var(--fill-2);
 }
 .st-preview-sample {
   position: absolute;
@@ -2042,7 +2077,7 @@ button.st-row:hover {
   font-size: 10px;
   font-weight: 600;
   color: var(--text-3);
-  background: var(--surface);
+  background: var(--bg);
   border: 1px solid var(--separator);
   border-radius: 8px;
 }
