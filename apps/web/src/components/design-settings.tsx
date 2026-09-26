@@ -1,6 +1,5 @@
 import {
   ArrowRight,
-  Camera,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -27,12 +26,7 @@ import {
   weekDates,
   weekendClassName,
 } from "./design-calendar";
-import {
-  PhotoAvatar,
-  type Profile,
-  samplePhoto,
-  samplePhotoIds,
-} from "./design-group";
+import { PhotoAvatar, PhotoChoices, type Profile } from "./design-group";
 import { WorkSetupSteps } from "./design-onboarding";
 import { PatternsPage } from "./design-pattern-editor";
 import { ThemeContext, themeOf, themes } from "./design-theme";
@@ -703,6 +697,8 @@ function JobChangePage({
 
 // Your name and picture, shown to the people in your groups. The picture
 // is shared by every group; each group can use its own name for you.
+// Your usual name and picture. New groups start with them; each group can
+// use its own instead.
 function ProfilePage({
   profile,
   onChange,
@@ -717,54 +713,10 @@ function ProfilePage({
       <PageHeader back="設定" onBack={onBack} title="プロフィール" />
       <div className="st-profile-photo">
         <PhotoAvatar name={profile.name} photo={profile.photo} size={88} />
-        <label className="gr-secondary st-profile-upload">
-          <Camera aria-hidden="true" size={15} />
-          写真を選ぶ
-          <input
-            accept="image/*"
-            className="dc-sr-only"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) {
-                onChange({ ...profile, photo: URL.createObjectURL(file) });
-              }
-            }}
-            type="file"
-          />
-        </label>
       </div>
-      <section className="st-section">
-        <h4>見本の写真</h4>
-        <fieldset className="st-photo-choices">
-          <legend className="dc-sr-only">見本の写真</legend>
-          <button
-            aria-label="写真なし"
-            aria-pressed={!profile.photo}
-            onClick={() => onChange({ ...profile, photo: undefined })}
-            type="button"
-          >
-            <PhotoAvatar name={profile.name} size={44} />
-          </button>
-          {samplePhotoIds.map((id) => (
-            <button
-              aria-label={`見本の写真${id}`}
-              aria-pressed={profile.photo === samplePhoto(id)}
-              key={id}
-              onClick={() => onChange({ ...profile, photo: samplePhoto(id) })}
-              type="button"
-            >
-              <PhotoAvatar
-                name={profile.name}
-                photo={samplePhoto(id)}
-                size={44}
-              />
-            </button>
-          ))}
-        </fieldset>
-      </section>
       <div className="st-list">
         <label className="st-row">
-          <span className="st-row-label">名前</span>
+          <span className="st-row-label">いつもの名前</span>
           <input
             className="pe-inline-input"
             onChange={(event) =>
@@ -775,8 +727,16 @@ function ProfilePage({
           />
         </label>
       </div>
+      <section className="st-section">
+        <h4>いつもの写真</h4>
+        <PhotoChoices
+          name={profile.name}
+          onChange={(photo) => onChange({ ...profile, photo })}
+          photo={profile.photo}
+        />
+      </section>
       <p className="st-note">
-        グループの人に見える名前と写真です。写真はすべてのグループで同じです。名前は、グループごとに変えることもできます。
+        グループを作るときや参加するときに、最初に入る名前と写真です。グループごとに違う名前や写真にしたいときは、各グループの設定で変えられます。
       </p>
     </>
   );

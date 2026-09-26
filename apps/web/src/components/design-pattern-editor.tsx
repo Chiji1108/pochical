@@ -8,20 +8,16 @@ import {
 } from "lucide-react";
 import { useContext, useRef, useState } from "react";
 import { nextDayShifts, patterns, type Shift } from "./design-calendar";
+import { LookEditorPage, type LookField } from "./design-look-editor";
 import {
   BadgeLengthContext,
   guessLook,
   type Look,
   lookOf,
   MarkGlyph,
-  type MarkIcon,
-  markColors,
-  markEmojis,
-  markIcons,
   nextColor,
   type ShiftMarkStyle,
   ShiftMarkStyleContext,
-  useMarkColor,
 } from "./shift-mark";
 
 // A pattern as edited on screen. Presets start with every look filled in;
@@ -37,76 +33,7 @@ type PatternDraft = Look & {
   nextDay?: string;
 };
 
-type LookField = "symbol" | "symbol2" | "icon" | "emoji" | "color";
-
-const styleNames: Record<ShiftMarkStyle, string> = {
-  emoji: "絵文字",
-  badge: "文字",
-  icon: "アイコン",
-};
-
-export const iconNames: Record<MarkIcon, string> = {
-  letter: "文字アイコン",
-  sun: "太陽",
-  cloudSun: "晴れ",
-  sunrise: "日の出",
-  sunset: "夕日",
-  sunMoon: "夕方",
-  moon: "月",
-  moonStar: "月と星",
-  cloudMoon: "夜空",
-  couch: "ソファ",
-  leaf: "葉っぱ",
-  drop: "しずく",
-  waves: "波",
-  cat: "猫",
-  dog: "犬",
-  fish: "魚",
-  tulip: "チューリップ",
-  lotus: "蓮の花",
-  bed: "ベッド",
-  coffee: "コーヒー",
-  flower: "花",
-  treePalm: "ヤシの木",
-  umbrella: "傘",
-  book: "本",
-  graduationCap: "学位帽",
-  briefcase: "かばん",
-  laptop: "パソコン",
-  building: "ビル",
-  house: "家",
-  users: "人たち",
-  phone: "電話",
-  clock: "時計",
-  calendarCheck: "予定",
-  hospital: "病院",
-  stethoscope: "聴診器",
-  syringe: "注射器",
-  ambulance: "救急車",
-  siren: "サイレン",
-  flame: "炎",
-  shield: "盾",
-  car: "車",
-  bus: "バス",
-  train: "電車",
-  plane: "飛行機",
-  baby: "赤ちゃん",
-  utensils: "食事",
-  shoppingBag: "買い物",
-  dumbbell: "運動",
-  music: "音楽",
-  heart: "ハート",
-  star: "星",
-  sparkles: "きらきら",
-  partyPopper: "お祝い",
-};
-
 const leadingZeroPattern = /^0/;
-const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
-
-function firstGrapheme(value: string) {
-  return graphemes.segment(value)[Symbol.iterator]().next().value?.segment;
-}
 
 function draftOf(key: Shift): PatternDraft {
   const time = patterns[key].time;
@@ -477,21 +404,30 @@ function PatternEditor({
   const canSave = draft.name.trim() !== "";
   const { length } = useContext(BadgeLengthContext);
   const letterField = length === "two" ? "symbol2" : "symbol";
+  // Another pattern the letter style could not tell apart from this one.
+  const lookalike = others.find(
+    (other) =>
+      other[letterField] === draft[letterField] && other.color === draft.color
+  );
 
   const nextDay = others.find((other) => other.id === draft.nextDay);
 
   if (subPage === "look") {
     return (
-      <LookPicker
-        draft={draft}
-        lookalike={others.find(
-          (other) =>
-            other[letterField] === draft[letterField] &&
-            other.color === draft.color
-        )}
+      <LookEditorPage
+        back={draft.name || "パターン"}
+        look={draft}
         onBack={() => setSubPage(undefined)}
         onPick={pick}
-      />
+        title="印と色"
+      >
+        {lookalike && (
+          <p className="pe-warning">
+            「{lookalike.name}
+            」と同じ文字と色です。色か文字を変えると見分けやすくなります。
+          </p>
+        )}
+      </LookEditorPage>
     );
   }
   if (subPage === "nextDay") {
@@ -695,201 +631,3 @@ function NextDayPicker({
 
 // Picks the mark for each look and the shared color. It opens on the look in
 // use; the others are there for when the setting is switched.
-function LookPicker({
-  draft,
-  lookalike,
-  onBack,
-  onPick,
-}: {
-  draft: PatternDraft;
-  lookalike: PatternDraft | undefined;
-  onBack: () => void;
-  onPick: (field: LookField, value: Partial<PatternDraft>) => void;
-}) {
-  const style = useContext(ShiftMarkStyleContext);
-  const [tab, setTab] = useState<ShiftMarkStyle>(style);
-  return (
-    <>
-      <header className="st-page-header">
-        <button className="st-back" onClick={onBack} type="button">
-          <ChevronLeft aria-hidden="true" size={20} />
-          {draft.name || "パターン"}
-        </button>
-        <h3 className="st-title">印と色</h3>
-      </header>
-      <div className="pe-preview pe-preview-center">
-        <MarkGlyph look={draft} size={48} style={tab} />
-      </div>
-      <fieldset className="st-mark-segment">
-        <legend className="dc-sr-only">どの見た目の印を選ぶか</legend>
-        {(["icon", "emoji", "badge"] as const).map((option) => (
-          <button
-            aria-pressed={tab === option}
-            key={option}
-            onClick={() => setTab(option)}
-            type="button"
-          >
-            <MarkGlyph look={draft} size={20} style={option} />
-            {styleNames[option]}
-          </button>
-        ))}
-      </fieldset>
-      <LookEditor draft={draft} onPick={onPick} style={tab} />
-      {tab !== "emoji" && <ColorPicker draft={draft} onPick={onPick} />}
-      {tab === "badge" && lookalike && (
-        <p className="pe-warning">
-          「{lookalike.name}
-          」と同じ見た目です。色か文字を変えると見分けやすくなります。
-        </p>
-      )}
-      <p className="st-note">
-        今の見た目は「{styleNames[style]}
-        」です。ほかの見た目の印は名前から自動で決まっていて、見た目を切り替えたときに使われます。
-      </p>
-    </>
-  );
-}
-
-function ColorPicker({
-  draft,
-  onPick,
-}: {
-  draft: PatternDraft;
-  onPick: (field: LookField, value: Partial<PatternDraft>) => void;
-}) {
-  const themeColor = useMarkColor("theme");
-  return (
-    <fieldset className="pe-colors">
-      <legend className="dc-repeat-label pe-colors-label">色</legend>
-      <button
-        aria-pressed={draft.color === "theme"}
-        className="pe-theme-color"
-        onClick={() => onPick("color", { color: "theme" })}
-        type="button"
-      >
-        <span
-          aria-hidden="true"
-          className="pe-theme-dot"
-          style={{ background: themeColor.tint, color: themeColor.color }}
-        />
-        テーマカラーに合わせる
-      </button>
-      {markColors.map(({ name, color, tint }, index) => (
-        <button
-          aria-label={name}
-          aria-pressed={draft.color === index}
-          key={name}
-          onClick={() => onPick("color", { color: index })}
-          style={{ background: tint, color }}
-          type="button"
-        />
-      ))}
-    </fieldset>
-  );
-}
-
-// Both texts sit side by side so switching the letter count holds no
-// surprise; while the letter look is on, the one in use is marked.
-function LetterEditor({
-  draft,
-  onPick,
-}: {
-  draft: PatternDraft;
-  onPick: (field: LookField, value: Partial<PatternDraft>) => void;
-}) {
-  const { length } = useContext(BadgeLengthContext);
-  // Only the letter look actually shows one of these.
-  const lettersShown = useContext(ShiftMarkStyleContext) === "badge";
-  const fields = [
-    { field: "symbol", count: "one", label: "1文字", max: 1 },
-    { field: "symbol2", count: "two", label: "2文字", max: 2 },
-  ] as const;
-  return (
-    <fieldset className="pe-letters">
-      <legend className="dc-repeat-label">文字</legend>
-      {fields.map(({ field, count, label, max }) => {
-        const inUse = lettersShown && length === count;
-        return (
-          <label
-            className={`pe-letter ${inUse ? "pe-letter-in-use" : ""}`}
-            key={field}
-          >
-            <input
-              className="dc-detail-note pe-symbol"
-              maxLength={max}
-              onChange={(event) =>
-                onPick(field, { [field]: event.target.value })
-              }
-              value={draft[field]}
-            />
-            <span className="pe-letter-label">
-              {label}
-              {inUse && "（使用中）"}
-            </span>
-          </label>
-        );
-      })}
-    </fieldset>
-  );
-}
-
-function LookEditor({
-  draft,
-  style,
-  onPick,
-}: {
-  draft: PatternDraft;
-  style: ShiftMarkStyle;
-  onPick: (field: LookField, value: Partial<PatternDraft>) => void;
-}) {
-  if (style === "badge") {
-    return <LetterEditor draft={draft} onPick={onPick} />;
-  }
-  if (style === "icon") {
-    return (
-      <fieldset className="pe-grid">
-        <legend className="dc-sr-only">アイコン</legend>
-        {(Object.keys(markIcons) as MarkIcon[]).map((icon) => (
-          <button
-            aria-label={iconNames[icon]}
-            aria-pressed={draft.icon === icon}
-            key={icon}
-            onClick={() => onPick("icon", { icon })}
-            type="button"
-          >
-            <MarkGlyph look={{ ...draft, icon }} size={20} style="icon" />
-          </button>
-        ))}
-      </fieldset>
-    );
-  }
-  return (
-    <>
-      <fieldset className="pe-grid">
-        <legend className="dc-sr-only">絵文字</legend>
-        {markEmojis.map((emoji) => (
-          <button
-            aria-pressed={draft.emoji === emoji}
-            key={emoji}
-            onClick={() => onPick("emoji", { emoji })}
-            type="button"
-          >
-            <MarkGlyph look={{ ...draft, emoji }} size={20} style="emoji" />
-          </button>
-        ))}
-      </fieldset>
-      <input
-        aria-label="ほかの絵文字を入力"
-        className="dc-detail-note"
-        onChange={(event) => {
-          const emoji = firstGrapheme(event.target.value);
-          if (emoji) {
-            onPick("emoji", { emoji });
-          }
-        }}
-        placeholder="ほかの絵文字を入力"
-        value=""
-      />
-    </>
-  );
-}

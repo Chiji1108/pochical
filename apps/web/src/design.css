@@ -2253,44 +2253,6 @@ button.st-row:hover {
   border: 2px solid currentcolor;
   border-radius: 50%;
 }
-.design-page .pe-theme-color {
-  display: flex;
-  grid-column: 1 / -1;
-  gap: 10px;
-  align-items: center;
-  justify-self: stretch;
-  width: auto;
-  height: auto;
-  min-height: 48px;
-  padding: 0 14px;
-  font-size: 13px;
-  color: #30332f;
-  background: #f6f7f3;
-  border: 2px solid transparent;
-  border-radius: 14px;
-}
-.design-page .pe-theme-color[aria-pressed="true"] {
-  background: #fff;
-  border-color: var(--accent, #486444);
-  box-shadow: none;
-}
-.pe-theme-dot {
-  width: 24px;
-  height: 24px;
-  border: 2px solid currentcolor;
-  border-radius: 50%;
-}
-/* Inside the color grid, the theme row spans the grid instead of taking the
-   round swatch shape. */
-.design-page .pe-colors .pe-theme-color {
-  grid-column: 1 / -1;
-  width: auto;
-  height: auto;
-  border-radius: 14px;
-}
-.design-page .pe-colors .pe-theme-color[aria-pressed="true"] {
-  box-shadow: none;
-}
 .st-segment-row {
   padding-block: 5px;
   margin: 0;
@@ -2533,7 +2495,58 @@ button.st-row:hover {
 .gr-outside {
   opacity: 0.35;
 }
-.gr-together-cell {
+/* Days off are light tiles with a little space around them, in the same
+   color whatever the person's style. When everyone is off, the tiles join
+   into one band through the date, so no second color is needed. */
+.gr-table-cell,
+.gr-table-date,
+.gr-rows td {
+  position: relative;
+  isolation: isolate;
+}
+.gr-off-cell::before,
+.gr-together-cell.gr-table-date::before,
+.gr-together-cell > .gr-rows-date::before {
+  position: absolute;
+  inset: 3px;
+  z-index: -1;
+  content: "";
+  background: var(--accent-soft, #f0f4ed);
+  border-radius: 8px;
+}
+/* 週ごと: a column from the date down to the last person. */
+.gr-together-cell.gr-table-date::before {
+  inset: 2px 2px 0;
+  border-radius: 11px 11px 0 0;
+}
+.gr-table-cell.gr-together-cell::before {
+  inset: 0 2px;
+  border-radius: 0;
+}
+.gr-week > .gr-table-row:last-child > .gr-together-cell::before {
+  inset: 0 2px 3px;
+  border-radius: 0 0 11px 11px;
+}
+/* 日ごと: a row from the date across to the last person. */
+.gr-together-cell > .gr-rows-date::before {
+  inset: 3px 0 3px 3px;
+  border-radius: 11px 0 0 11px;
+}
+.gr-together-cell > td.gr-off-cell::before {
+  inset: 3px 0;
+  border-radius: 0;
+}
+.gr-together-cell > td.gr-off-cell:last-child::before {
+  inset: 3px 3px 3px 0;
+  border-radius: 0 11px 11px 0;
+}
+/* Elsewhere a shared day off is simply lit. */
+.design-page .gr-overlay-day.gr-together-cell,
+.gr-person-day.gr-together-cell,
+.gr-day-card-row.gr-together-cell {
+  background: var(--accent-soft, #f0f4ed);
+}
+.gr-day-card-cell.gr-off-cell {
   background: var(--accent-soft, #f0f4ed);
 }
 .gr-date.dc-sunday {
@@ -2613,10 +2626,6 @@ button.st-row:hover {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 12px;
-}
-.design-page .gr-overlay-day.gr-together-cell,
-.gr-person-day.gr-together-cell {
-  background: var(--accent-soft, #f0f4ed);
 }
 .design-page .gr-overlay-day[aria-pressed="true"] {
   border-color: var(--accent, #486444);
@@ -2719,78 +2728,10 @@ button.st-row:hover {
   border: 0;
   border-radius: 14px;
 }
-.gr-new-icon {
-  display: flex;
-  justify-content: center;
-}
-.gr-rail-icon.gr-new-preview {
-  width: 64px;
-  height: 64px;
-  background: #f6f7f3;
-  border-radius: 20px;
-}
-.gr-icon-choices {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 6px;
-  padding: 0;
-  margin: 0;
-  border: 0;
-}
-.design-page .gr-icon-choices button {
-  display: grid;
-  place-items: center;
-  aspect-ratio: 1;
-  padding: 0;
-  background: #f6f7f3;
-  border: 2px solid transparent;
-  border-radius: 12px;
-}
-.design-page .gr-icon-choices button[aria-pressed="true"] {
-  background: #fff;
-  border-color: var(--accent, #486444);
-}
-.gr-colors {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 0;
-  margin: 0;
-  border: 0;
-}
-.design-page .gr-colors button {
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 2px solid currentcolor;
-  border-radius: 50%;
-}
-.design-page .gr-colors button[aria-pressed="true"] {
-  box-shadow:
-    0 0 0 2px #fff,
-    0 0 0 4px currentcolor;
-}
-.gr-other-looks {
-  display: flex;
-  gap: 18px;
-  justify-content: center;
-  padding: 12px;
-  background: #f6f7f3;
-  border-radius: 16px;
-}
-.gr-other-look {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: center;
-  font-size: 10px;
-  color: #72796e;
-}
 .gr-hub-icon {
-  display: inline-grid;
+  display: grid;
+  flex-shrink: 0;
   place-items: center;
-  margin-right: 6px;
-  vertical-align: -3px;
 }
 
 /* Rail and hub. */
@@ -2838,20 +2779,41 @@ button.st-row:hover {
   height: 30px;
 }
 .gr-rail-icon {
+  position: relative;
   display: grid;
   place-items: center;
   width: 42px;
   height: 42px;
+  overflow: hidden;
   font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
   font-size: 22px;
   background: #fff;
-  border-radius: 50%;
+  /* Groups are rounded squares; people are circles. */
+  border-radius: 14px;
   transition: border-radius 0.15s;
+}
+/* The selected ring sits on top of the mark, inside its edge, so a photo
+   does not hide it and it keeps clear of the indicator and badge. */
+.gr-rail-icon::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 2px transparent,
+    inset 0 0 0 4px transparent;
+  transition: box-shadow 0.15s;
 }
 .gr-rail-item[aria-current="page"] .gr-rail-icon {
   background: var(--accent-soft, #f0f4ed);
-  border-radius: 14px;
-  box-shadow: inset 0 0 0 2px var(--accent, #486444);
+  border-radius: 11px;
+}
+/* A thin white gap keeps the ring clear of a photo's own colors. */
+.gr-rail-item[aria-current="page"] .gr-rail-icon::after {
+  box-shadow:
+    inset 0 0 0 2px var(--accent, #486444),
+    inset 0 0 0 4px #fff;
 }
 .gr-badge {
   display: inline-grid;
@@ -2898,14 +2860,21 @@ button.st-row:hover {
   align-items: center;
   padding-top: 4px;
 }
+/* The mark and name sit side by side, centred, whatever the mark is. */
 .gr-hub-header h3 {
+  display: flex;
   flex: 1;
+  gap: 8px;
+  align-items: center;
   min-width: 0;
   margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-size: 19px;
   font-weight: 700;
+}
+.gr-hub-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .design-page .gr-icon-button {
@@ -2924,21 +2893,12 @@ button.st-row:hover {
   flex-direction: column;
   gap: 6px;
   width: 100%;
-  padding: 10px 6px 10px 4px;
+  padding: 8px 6px 10px 4px;
   color: #30332f;
   text-align: left;
   background: #fff;
   border: 1px solid #eceee8;
   border-radius: 16px;
-}
-.gr-week-card-head {
-  display: flex;
-  gap: 2px;
-  align-items: center;
-  padding-left: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #72796e;
 }
 .gr-week-card-next {
   padding-left: 8px;
@@ -3236,6 +3196,7 @@ button.st-row:hover {
   background: #fff;
   border-bottom: 1px solid #f0f1ec;
   border-left: 3px solid transparent;
+  isolation: isolate;
 }
 .gr-rows-weekday {
   margin-left: 3px;
@@ -3244,9 +3205,6 @@ button.st-row:hover {
 }
 .gr-rows-today .gr-rows-date {
   border-left-color: var(--accent, #486444);
-}
-.gr-together-cell .gr-rows-date {
-  background: var(--accent-soft, #f0f4ed);
 }
 .gr-rows td {
   padding: 0 4px;
@@ -3281,9 +3239,6 @@ button.st-row:hover {
 }
 .gr-rows thead .gr-rows-me {
   z-index: 2;
-}
-.gr-together-cell .gr-rows-me {
-  background: var(--accent-soft, #f0f4ed);
 }
 .gr-density-marks .gr-rows-member,
 .gr-density-scroll .gr-rows-member {
@@ -3639,6 +3594,8 @@ button.st-row:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  /* The labelled first choice is taller; the others keep their circles. */
+  align-items: flex-start;
   padding: 0;
   margin: 0;
   border: 0;
@@ -3651,4 +3608,124 @@ button.st-row:hover {
 }
 .design-page .st-photo-choices button[aria-pressed="true"] {
   border-color: var(--accent, #486444);
+}
+.design-page .st-photo-choices .st-photo-usual {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  border-radius: 14px;
+}
+.st-photo-usual-label {
+  font-size: 9px;
+  color: #72796e;
+}
+
+/* Group marks fill their round frame, the same for every member. */
+.gr-mark-photo,
+.gr-mark-letter,
+.gr-mark-icon {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+.gr-mark-photo {
+  object-fit: cover;
+}
+.gr-mark-letter {
+  font-weight: 700;
+  line-height: 1;
+}
+.gr-mark-emoji {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  line-height: 1;
+}
+.gr-mark-preview {
+  display: flex;
+  justify-content: center;
+}
+/* The rail's rounded square, larger, so a photo is cropped as members
+   see it. */
+.gr-rail-icon.gr-mark-frame-large {
+  width: 76px;
+  height: 76px;
+  background: #f6f7f3;
+  border-radius: 25px;
+}
+/* The same rounded square as the rail. */
+.gr-mark-frame-small {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 9px;
+}
+.gr-hub-icon {
+  width: 26px;
+  height: 26px;
+  overflow: hidden;
+  background: #f6f7f3;
+  border-radius: 8px;
+}
+.gr-mark-kinds.st-mark-segment {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.design-page .gr-mark-kinds button {
+  min-height: 40px;
+}
+.design-page .gr-mark-choice-emoji {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  font-size: 20px;
+}
+.gr-mark-icon-bare {
+  display: grid;
+  place-items: center;
+}
+.gr-day-card-cell {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 24px;
+  border-radius: 6px;
+}
+.gr-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.gr-section-head h4 {
+  margin: 0 0 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #72796e;
+}
+.design-page .gr-section-link {
+  display: inline-flex;
+  gap: 1px;
+  align-items: center;
+  padding: 0 2px 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent, #486444);
+  background: transparent;
+  border: 0;
+}
+.gr-chat-all {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--accent, #486444);
+  background: var(--accent-soft, #f0f4ed);
+  border-radius: 9px;
+}
+/* Tiles sit tighter in the small weekly table. */
+.gr-table-compact .gr-off-cell:not(.gr-together-cell)::before {
+  inset: 2px 3px;
+  border-radius: 7px;
 }

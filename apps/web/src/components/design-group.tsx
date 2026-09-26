@@ -1,6 +1,6 @@
 import {
-  CalendarDays,
   CalendarPlus,
+  Camera,
   ChevronLeft,
   ChevronRight,
   Copy,
@@ -15,7 +15,13 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
-import { type ReactNode, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import type { DesignVariants } from "../lib/design-variants";
 import {
   addDays,
@@ -32,17 +38,23 @@ import {
   weekDates,
   weekendClassName,
 } from "./design-calendar";
-import { iconNames } from "./design-pattern-editor";
+import { iconNames } from "./design-look-editor";
+import { ThemeContext, type ThemeId } from "./design-theme";
 import {
+  BadgeLengthContext,
   guessLook,
+  IconWeightContext,
   type Look,
+  type LookSettings,
   lookOf,
   MarkGlyph,
   type MarkIcon,
+  MonochromeContext,
   markColors,
+  markIcons,
   nextColor,
-  type ShiftMarkStyle,
   ShiftMarkStyleContext,
+  stylePresets,
 } from "./shift-mark";
 
 // A pattern as another member set it up. Their looks come with them, and
@@ -59,6 +71,8 @@ type Member = {
   id: string;
   name: string;
   me?: boolean;
+  // The style they picked for their own calendar.
+  style?: { look: LookSettings; theme: ThemeId };
   // A profile picture; without one the avatar shows the first letter.
   photo?: string;
   patterns: MemberPattern[];
@@ -68,10 +82,14 @@ type Member = {
 type Group = {
   id: string;
   name: string;
-  // Chosen by whoever made it; each member sees it in their own style.
-  look: Look;
+  mark: GroupMark;
+  // How you appear in this group, when it differs from your usual profile.
+  mine?: GroupProfile;
   members: Member[];
 };
+
+// `noPhoto` hides the usual picture in this group without choosing another.
+type GroupProfile = { name?: string; photo?: string; noPhoto?: boolean };
 
 const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
 const designMonth = new Date(2026, 8, 1);
@@ -102,7 +120,7 @@ function pattern(
 const restPattern = pattern(
   "off",
   "休み",
-  { icon: "leaf", emoji: "🌿", color: "theme" },
+  { icon: "leaf", emoji: "🌿", color: 0 },
   { off: true }
 );
 
@@ -129,6 +147,7 @@ function dayNumber(date: Date) {
 const partner: Member = {
   id: "yuki",
   name: "ゆうき",
+  style: { look: presetLook("pop"), theme: "moss" },
   photo: samplePhoto(1005),
   patterns: [
     pattern(
@@ -156,6 +175,7 @@ const partner: Member = {
 const mother: Member = {
   id: "mother",
   name: "お母さん",
+  style: { look: presetLook("roster"), theme: "terracotta" },
   photo: samplePhoto(429),
   patterns: [
     pattern(
@@ -177,6 +197,7 @@ const nurseOrder = ["day", "day", "night", "after", "off", "off"] as const;
 const misaki = (): Member => ({
   id: "misaki",
   name: "みさき",
+  style: { look: presetLook("minimal"), theme: "sumi" },
   photo: samplePhoto(823),
   patterns: (["day", "night", "after", "off"] as Shift[]).map((key) => ({
     id: key,
@@ -193,6 +214,7 @@ const misaki = (): Member => ({
 const aya = (): Member => ({
   id: "aya",
   name: "あや",
+  style: { look: presetLook("friendly"), theme: "rose" },
   patterns: [
     pattern(
       "early",
@@ -218,13 +240,14 @@ const aya = (): Member => ({
 // Nurses from the same year, each on the same order at a different point.
 const classmates = (): Member[] =>
   [
-    ["haruka", "はるか", 0, 1025],
-    ["ren", "れん", 1, 237],
-    ["mei", "めい", 2, 0],
-    ["sota", "そうた", 4, 669],
-    ["yui", "ゆい", 5, 1062],
-  ].map(([id, name, offset, photo]) => ({
+    ["haruka", "はるか", 0, 1025, "natural"],
+    ["ren", "れん", 1, 237, "pop"],
+    ["mei", "めい", 2, 0, "roster"],
+    ["sota", "そうた", 4, 669, "monotone"],
+    ["yui", "ゆい", 5, 1062, "friendly"],
+  ].map(([id, name, offset, photo, preset]) => ({
     ...misaki(),
+    style: { look: presetLook(String(preset)), theme: "moss" as ThemeId },
     id: String(id),
     name: String(name),
     photo: photo ? samplePhoto(Number(photo)) : undefined,
@@ -442,7 +465,8 @@ type Page =
   | { name: "shifts"; month?: Date; from?: string }
   | { name: "chat"; chatId: string }
   | { name: "invite" }
-  | { name: "new" };
+  | { name: "new" }
+  | { name: "settings" };
 
 export function DesignGroup({
   schedule,
@@ -457,27 +481,24 @@ export function DesignGroup({
   variants: DesignVariants;
   onTab: (tab: Tab) => void;
 }) {
-  const me = meFrom(schedule, patternKeys, profile.photo);
   const [groups, setGroups] = useState<Omit<Group, "members">[]>([
     {
       id: "family",
       name: "家族",
-      look: { ...guessGroupLook("家族"), color: 0 },
+      // The family dog, as the family group's picture.
+      mark: { kind: "photo", photo: samplePhoto(237) },
     },
     {
       id: "friends",
       name: "看護学校の友達",
-      look: { ...guessGroupLook("看護学校の友達"), emoji: "🌷", color: 5 },
+      mark: { kind: "emoji", emoji: "🌷" },
     },
     {
       id: "ward",
       name: "病棟の同期",
-      look: {
-        ...guessGroupLook("病棟の同期"),
-        icon: "hospital",
-        emoji: "🏥",
-        color: 10,
-      },
+      // At work she goes by her family name and keeps her photo private.
+      mine: { name: "佐藤", noPhoto: true },
+      mark: { kind: "icon", icon: "hospital", color: 10 },
     },
   ]);
   const [groupId, setGroupId] = useState("family");
@@ -485,7 +506,13 @@ export function DesignGroup({
   // The table layout each group was last seen in.
   const [layouts, setLayouts] = useState<Record<string, Layout>>({});
   const [page, setPage] = useState<Page>({ name: "hub" });
+  const meIn = (id: string) => {
+    const found = groups.find((item) => item.id === id);
+    const shown = found ? profileIn(found, profile) : profile;
+    return meFrom(schedule, patternKeys, shown.photo);
+  };
   const membersOf = (id: string): Member[] => {
+    const me = meIn(id);
     if (id === "family") {
       return [me, partner, mother];
     }
@@ -506,105 +533,141 @@ export function DesignGroup({
       .filter(([key]) => key.startsWith(`${id}:`))
       .reduce((total, [, chat]) => total + chat.unread, 0);
 
+  const theirStyle = variants.memberLook === "theirs";
   if (page.name === "chat") {
     const key = chatKey(group.id, page.chatId);
     return (
-      <ChatPage
-        chat={chatOf(group.id, page.chatId)}
-        group={group}
-        onBack={() => setPage({ name: "hub" })}
-        onChange={(messages) =>
-          setChats({ ...chats, [key]: { unread: 0, messages } })
-        }
-        onOpenDay={(date) =>
-          setPage({
-            name: "shifts",
-            month: new Date(date.getFullYear(), date.getMonth(), 1),
-            from: page.chatId,
-          })
-        }
-        people={
-          page.chatId === groupChat
-            ? group.members
-            : group.members.filter(
-                (member) => member.me || member.id === page.chatId
-              )
-        }
-        title={chatTitle(group, page.chatId)}
-      />
+      <TheirStyleContext value={theirStyle}>
+        <ChatPage
+          chat={chatOf(group.id, page.chatId)}
+          group={group}
+          onBack={() => setPage({ name: "hub" })}
+          onChange={(messages) =>
+            setChats({ ...chats, [key]: { unread: 0, messages } })
+          }
+          onOpenDay={(date) =>
+            setPage({
+              name: "shifts",
+              month: new Date(date.getFullYear(), date.getMonth(), 1),
+              from: page.chatId,
+            })
+          }
+          people={
+            page.chatId === groupChat
+              ? group.members
+              : group.members.filter(
+                  (member) => member.me || member.id === page.chatId
+                )
+          }
+          title={chatTitle(group, page.chatId)}
+        />
+      </TheirStyleContext>
     );
   }
 
   return (
-    <div className="dc-content st-screen">
-      {page.name === "hub" ? (
-        <div className="gr-layout">
-          <GroupRail
-            groups={groups}
-            onNew={() => setPage({ name: "new" })}
-            onSelect={setGroupId}
-            selected={group.id}
-            unreadOf={unreadOf}
-          />
-          <div className="st-scroll gr-hub">
-            <GroupHub
-              chatOf={(chatId) => chatOf(group.id, chatId)}
-              group={group}
-              onChat={(chatId) => {
-                setChats({
-                  ...chats,
-                  [chatKey(group.id, chatId)]: {
-                    ...chatOf(group.id, chatId),
-                    unread: 0,
-                  },
-                });
-                setPage({ name: "chat", chatId });
-              }}
-              onInvite={() => setPage({ name: "invite" })}
-              onShifts={() => setPage({ name: "shifts" })}
+    <TheirStyleContext value={theirStyle}>
+      <div className="dc-content st-screen">
+        {page.name === "hub" ? (
+          <div className="gr-layout">
+            <GroupRail
+              groups={groups}
+              onNew={() => setPage({ name: "new" })}
+              onSelect={setGroupId}
+              selected={group.id}
+              unreadOf={unreadOf}
             />
+            <div className="st-scroll gr-hub">
+              <GroupHub
+                chatOf={(chatId) => chatOf(group.id, chatId)}
+                group={group}
+                onChat={(chatId) => {
+                  setChats({
+                    ...chats,
+                    [chatKey(group.id, chatId)]: {
+                      ...chatOf(group.id, chatId),
+                      unread: 0,
+                    },
+                  });
+                  setPage({ name: "chat", chatId });
+                }}
+                onInvite={() => setPage({ name: "invite" })}
+                onSettings={() => setPage({ name: "settings" })}
+                onShifts={() => setPage({ name: "shifts" })}
+              />
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="st-scroll">
-          {page.name === "shifts" && (
-            <ShiftsPage
-              backLabel={page.from ? chatTitle(group, page.from) : group.name}
-              group={group}
-              layout={layouts[group.id] ?? defaultLayout(group.members.length)}
-              month={page.month}
-              onBack={() =>
-                setPage(
-                  page.from
-                    ? { name: "chat", chatId: page.from }
-                    : { name: "hub" }
-                )
-              }
-              onLayout={(layout) =>
-                setLayouts({ ...layouts, [group.id]: layout })
-              }
-              view={variants.groupView}
-            />
-          )}
-          {page.name === "invite" && (
-            <InvitePage group={group} onBack={() => setPage({ name: "hub" })} />
-          )}
-          {page.name === "new" && (
-            <NewGroupPage
-              onBack={() => setPage({ name: "hub" })}
-              onCreate={(created) => {
-                const id = `group-${groups.length}`;
-                setGroups([...groups, { ...created, id }]);
-                setGroupId(id);
-                setPage({ name: "invite" });
-              }}
-              usedColors={groups.map((item) => item.look.color)}
-            />
-          )}
-        </div>
-      )}
-      {page.name === "hub" && <TabBar active="group" onSelect={onTab} />}
-    </div>
+        ) : (
+          <div className="st-scroll">
+            {page.name === "shifts" && (
+              <ShiftsPage
+                backLabel={page.from ? chatTitle(group, page.from) : group.name}
+                group={group}
+                layout={
+                  layouts[group.id] ?? defaultLayout(group.members.length)
+                }
+                month={page.month}
+                onBack={() =>
+                  setPage(
+                    page.from
+                      ? { name: "chat", chatId: page.from }
+                      : { name: "hub" }
+                  )
+                }
+                onLayout={(layout) =>
+                  setLayouts({ ...layouts, [group.id]: layout })
+                }
+                view={variants.groupView}
+              />
+            )}
+            {page.name === "settings" && (
+              <GroupSettingsPage
+                group={group}
+                onBack={() => setPage({ name: "hub" })}
+                onChange={(mine) =>
+                  setGroups(
+                    groups.map((item) =>
+                      item.id === group.id ? { ...item, mine } : item
+                    )
+                  )
+                }
+                onInvite={() => setPage({ name: "invite" })}
+                onMark={(mark) =>
+                  setGroups(
+                    groups.map((item) =>
+                      item.id === group.id ? { ...item, mark } : item
+                    )
+                  )
+                }
+                profile={profile}
+              />
+            )}
+            {page.name === "invite" && (
+              <InvitePage
+                group={group}
+                onBack={() => setPage({ name: "hub" })}
+              />
+            )}
+            {page.name === "new" && (
+              <NewGroupPage
+                onBack={() => setPage({ name: "hub" })}
+                onCreate={({ myName, ...created }) => {
+                  const id = `group-${groups.length}`;
+                  const mine =
+                    myName === profile.name ? undefined : { name: myName };
+                  setGroups([...groups, { ...created, id, mine }]);
+                  setGroupId(id);
+                  setPage({ name: "invite" });
+                }}
+                profile={profile}
+                usedColors={groups.map((item) => colorOfMark(item.mark))}
+              />
+            )}
+          </div>
+        )}
+        {page.name === "hub" && <TabBar active="group" onSelect={onTab} />}
+      </div>
+    </TheirStyleContext>
   );
 }
 
@@ -637,7 +700,7 @@ function GroupRail({
             type="button"
           >
             <span aria-hidden="true" className="gr-rail-icon">
-              <GroupIcon look={group.look} size={24} />
+              <GroupIcon mark={group.mark} size={24} />
             </span>
             {unread > 0 && (
               <span aria-hidden="true" className="gr-badge gr-rail-badge">
@@ -674,12 +737,14 @@ function GroupHub({
   onShifts,
   onChat,
   onInvite,
+  onSettings,
 }: {
   group: Group;
   chatOf: (chatId: string) => Chat;
   onShifts: () => void;
   onChat: (chatId: string) => void;
   onInvite: () => void;
+  onSettings: () => void;
 }) {
   const week = weekDates(designToday);
   const nextOff = Array.from({ length: 60 }, (_, index) =>
@@ -693,9 +758,9 @@ function GroupHub({
       <header className="gr-hub-header">
         <h3>
           <span aria-hidden="true" className="gr-hub-icon">
-            <GroupIcon look={group.look} size={20} />
+            <GroupIcon mark={group.mark} size={16} />
           </span>
-          {group.name}
+          <span className="gr-hub-name">{group.name}</span>
         </h3>
         <button
           aria-label="メンバーを招待"
@@ -708,63 +773,61 @@ function GroupHub({
         <button
           aria-label="グループの設定"
           className="gr-icon-button"
+          onClick={onSettings}
           type="button"
         >
           <Settings2 aria-hidden="true" size={18} />
         </button>
       </header>
-      <button className="gr-week-card" onClick={onShifts} type="button">
-        <span className="gr-week-card-head">
-          今週のみんな
-          <ChevronRight aria-hidden="true" size={16} />
-        </span>
-        <MemberTable compact dates={week} group={group} month={designToday} />
-        {nextOff && (
-          <span className="gr-week-card-next">
-            次にみんな休み　{formatDay(nextOff)}
-          </span>
-        )}
-      </button>
-      <div className="st-list">
-        <button className="st-row" onClick={onShifts} type="button">
-          <CalendarDays aria-hidden="true" className="gr-row-icon" size={18} />
-          <span className="st-row-label">シフト表</span>
-          <span className="st-row-value" />
-          <ChevronRight aria-hidden="true" className="st-row-arrow" size={17} />
-        </button>
-        <ChatRow
-          chat={chatOf(groupChat)}
-          icon={
-            <MessagesSquare
-              aria-hidden="true"
-              className="gr-row-icon"
-              size={18}
-            />
-          }
-          label="全体チャット"
-          members={group.members}
-          onOpen={() => onChat(groupChat)}
-        />
-      </div>
       <section className="st-section">
-        <h4>個人チャット</h4>
-        {others.length > 0 ? (
-          <div className="st-list">
-            {others.map((member) => (
-              <ChatRow
-                chat={chatOf(member.id)}
-                icon={<Avatar member={member} />}
-                key={member.id}
-                label={member.name}
-                members={group.members}
-                onOpen={() => onChat(member.id)}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="st-note">
-            メンバーを招待すると、ここで1対1で話せます。
-          </p>
+        <div className="gr-section-head">
+          <h4>シフト</h4>
+          <button className="gr-section-link" onClick={onShifts} type="button">
+            月で見る
+            <ChevronRight aria-hidden="true" size={15} />
+          </button>
+        </div>
+        <button
+          aria-label="今週のみんなのシフト。押すと月で見られます"
+          className="gr-week-card"
+          onClick={onShifts}
+          type="button"
+        >
+          <MemberTable compact dates={week} group={group} month={designToday} />
+          {nextOff && (
+            <span className="gr-week-card-next">
+              次にみんな休み　{formatDay(nextOff)}
+            </span>
+          )}
+        </button>
+      </section>
+      <section className="st-section">
+        <h4>チャット</h4>
+        <div className="st-list">
+          <ChatRow
+            chat={chatOf(groupChat)}
+            icon={
+              <span className="gr-chat-all">
+                <MessagesSquare aria-hidden="true" size={15} />
+              </span>
+            }
+            label="全体チャット"
+            members={group.members}
+            onOpen={() => onChat(groupChat)}
+          />
+          {others.map((member) => (
+            <ChatRow
+              chat={chatOf(member.id)}
+              icon={<Avatar member={member} size={28} />}
+              key={member.id}
+              label={member.name}
+              members={group.members}
+              onOpen={() => onChat(member.id)}
+            />
+          ))}
+        </div>
+        {others.length === 0 && (
+          <p className="st-note">メンバーを招待すると、1対1でも話せます。</p>
         )}
       </section>
     </>
@@ -1191,7 +1254,10 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
             </small>
           </span>
           {members.map((member) => (
-            <span key={member.id}>
+            <span
+              className={`gr-day-card-cell ${patternOn(member, date)?.off ? "gr-off-cell" : ""}`}
+              key={member.id}
+            >
               <Mark date={date} member={member} size={15} />
               <span className="dc-sr-only">
                 {member.name}：{patternOn(member, date)?.name ?? "未入力"}
@@ -1317,7 +1383,7 @@ function DaySheet({
         <p className="st-note">
           {picked.length > 0
             ? `${picked.length}日分のみんなのシフトを送ります。`
-            : "色のついた日は、みんな休みの日です。"}
+            : "日付に枠がある日は、みんな休みの日です。"}
         </p>
       </section>
     </div>
@@ -1452,7 +1518,6 @@ const marksUpTo = 7;
 
 // One row per day and a column per member, like a printed roster.
 function DayRowsTable({ group, month }: { group: Group; month: Date }) {
-  const style = useContext(ShiftMarkStyleContext);
   const days = monthDates(month).filter((date) => sameMonth(date, month));
   const density = densityOf(group.members.length);
   const withNames = density === "names";
@@ -1515,15 +1580,15 @@ function DayRowsTable({ group, month }: { group: Group; month: Date }) {
                     const item = patternOn(member, date);
                     return (
                       <td
-                        className={member.me ? "gr-rows-me" : ""}
+                        className={`${member.me ? "gr-rows-me" : ""} ${item?.off ? "gr-off-cell" : ""}`}
                         key={member.id}
                       >
                         {item ? (
                           <span className="gr-rows-cell">
-                            <MarkGlyph
+                            <MemberMark
                               look={item.look}
+                              member={member}
                               size={16}
-                              style={style}
                             />
                             <span
                               className={
@@ -1595,6 +1660,52 @@ const rowsDateWidth = 46;
 const rowsMemberWidth = 76;
 const rowsMarkWidth = 40;
 
+// Whether others' shifts show in the style they picked for themselves,
+// rather than the viewer's.
+const TheirStyleContext = createContext(true);
+
+function presetLook(id: string) {
+  return (stylePresets.find((preset) => preset.id === id) ?? stylePresets[0])
+    .look;
+}
+
+// Draws one of a member's marks. In their own style, the look settings
+// and theme are theirs; the viewer's style applies otherwise, and always
+// to you.
+function MemberMark({
+  member,
+  look,
+  size,
+}: {
+  member: Member;
+  look: Look;
+  size: number;
+}) {
+  const theirs = useContext(TheirStyleContext) && member.style;
+  if (!theirs) {
+    return <ViewerMark look={look} size={size} />;
+  }
+  const { look: settings, theme } = theirs;
+  return (
+    <ThemeContext value={{ theme }}>
+      <ShiftMarkStyleContext value={settings.style}>
+        <IconWeightContext value={settings.fill ? "duotone" : "regular"}>
+          <MonochromeContext value={{ monochrome: settings.monochrome }}>
+            <BadgeLengthContext value={{ length: settings.badgeLength }}>
+              <ViewerMark look={look} size={size} />
+            </BadgeLengthContext>
+          </MonochromeContext>
+        </IconWeightContext>
+      </ShiftMarkStyleContext>
+    </ThemeContext>
+  );
+}
+
+function ViewerMark({ look, size }: { look: Look; size: number }) {
+  const style = useContext(ShiftMarkStyleContext);
+  return <MarkGlyph look={look} size={size} style={style} />;
+}
+
 function Avatar({ member, size }: { member: Member; size?: number }) {
   return (
     <PhotoAvatar
@@ -1645,12 +1756,11 @@ function Mark({
   date: Date;
   size: number;
 }) {
-  const style = useContext(ShiftMarkStyleContext);
   const item = patternOn(member, date);
   if (!item) {
     return <span aria-hidden="true" className="gr-empty" />;
   }
-  return <MarkGlyph look={item.look} size={size} style={style} />;
+  return <MemberMark look={item.look} member={member} size={size} />;
 }
 
 // A block per week: dates across, one row per member underneath.
@@ -1703,7 +1813,7 @@ function MemberTable({
               {week.map((date) => (
                 <span
                   aria-label={`${formatDay(date)} ${member.name}：${patternOn(member, date)?.name ?? "未入力"}`}
-                  className={`gr-table-cell ${sameMonth(date, month) ? "" : "gr-outside"} ${everyoneOff(group.members, date) ? "gr-together-cell" : ""}`}
+                  className={`gr-table-cell ${sameMonth(date, month) ? "" : "gr-outside"} ${patternOn(member, date)?.off ? "gr-off-cell" : ""} ${everyoneOff(group.members, date) ? "gr-together-cell" : ""}`}
                   key={dateKey(date)}
                   role="img"
                 >
@@ -1778,7 +1888,6 @@ function OverlayCalendar({
 }
 
 function DayList({ date, members }: { date: Date; members: Member[] }) {
-  const style = useContext(ShiftMarkStyleContext);
   return (
     <section className="st-section">
       <h4>{formatDay(date)}</h4>
@@ -1790,7 +1899,9 @@ function DayList({ date, members }: { date: Date; members: Member[] }) {
               <Avatar member={member} />
               <span className="st-row-label">{member.name}</span>
               <span className="st-row-value gr-day-value">
-                {item && <MarkGlyph look={item.look} size={18} style={style} />}
+                {item && (
+                  <MemberMark look={item.look} member={member} size={18} />
+                )}
                 {item ? item.name : "未入力"}
                 {item?.time && (
                   <small className="gr-day-time">{item.time}</small>
@@ -1814,7 +1925,6 @@ function PersonCalendar({
   dates: Date[];
   month: Date;
 }) {
-  const style = useContext(ShiftMarkStyleContext);
   const [memberId, setMemberId] = useState(
     group.members.find((member) => !member.me)?.id ?? group.members[0].id
   );
@@ -1862,13 +1972,15 @@ function PersonCalendar({
               >
                 {date.getDate()}
               </span>
-              {item && <MarkGlyph look={item.look} size={22} style={style} />}
+              {item && (
+                <MemberMark look={item.look} member={member} size={22} />
+              )}
             </div>
           );
         })}
       </div>
       {!member.me && (
-        <p className="st-note">色がついた日は、自分も休みの日です。</p>
+        <p className="st-note">日付に枠がある日は、自分も休みの日です。</p>
       )}
       <Legend members={[member]} />
     </>
@@ -1877,7 +1989,6 @@ function PersonCalendar({
 
 // What each mark means, in the viewer's style, per member.
 function Legend({ members }: { members: Member[] }) {
-  const style = useContext(ShiftMarkStyleContext);
   return (
     <section className="st-section">
       <h4>マークの意味</h4>
@@ -1888,7 +1999,7 @@ function Legend({ members }: { members: Member[] }) {
             <span className="gr-legend">
               {member.patterns.map((item) => (
                 <span className="gr-legend-item" key={item.id}>
-                  <MarkGlyph look={item.look} size={16} style={style} />
+                  <MemberMark look={item.look} member={member} size={16} />
                   {item.name}
                 </span>
               ))}
@@ -1898,6 +2009,209 @@ function Legend({ members }: { members: Member[] }) {
       </div>
     </section>
   );
+}
+
+// Picking a picture: none, a sample, or one from the device. With
+// `usual`, the first choice follows the usual profile picture instead.
+export function PhotoChoices({
+  name,
+  photo,
+  usual,
+  onChange,
+}: {
+  name: string;
+  photo?: string;
+  usual?: { photo?: string; selected: boolean; onSelect: () => void };
+  onChange: (photo: string | undefined) => void;
+}) {
+  const selected = (value?: string) => !usual?.selected && photo === value;
+  return (
+    <>
+      <fieldset className="st-photo-choices">
+        <legend className="dc-sr-only">写真</legend>
+        {usual && (
+          <button
+            aria-label="いつもの写真"
+            aria-pressed={usual.selected}
+            className="st-photo-usual"
+            onClick={usual.onSelect}
+            type="button"
+          >
+            <PhotoAvatar name={name} photo={usual.photo} size={44} />
+            <small className="st-photo-usual-label">いつもの</small>
+          </button>
+        )}
+        <button
+          aria-label="写真なし"
+          aria-pressed={selected(undefined)}
+          onClick={() => onChange(undefined)}
+          type="button"
+        >
+          <PhotoAvatar name={name} size={44} />
+        </button>
+        {samplePhotoIds.map((id) => (
+          <button
+            aria-label={`見本の写真${id}`}
+            aria-pressed={selected(samplePhoto(id))}
+            key={id}
+            onClick={() => onChange(samplePhoto(id))}
+            type="button"
+          >
+            <PhotoAvatar name={name} photo={samplePhoto(id)} size={44} />
+          </button>
+        ))}
+      </fieldset>
+      <label className="gr-secondary st-profile-upload">
+        <Camera aria-hidden="true" size={15} />
+        端末の写真を選ぶ
+        <input
+          accept="image/*"
+          className="dc-sr-only"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) {
+              onChange(URL.createObjectURL(file));
+            }
+          }}
+          type="file"
+        />
+      </label>
+    </>
+  );
+}
+
+// How you appear in one group, starting from your usual profile, and who
+// else is in it.
+function GroupSettingsPage({
+  group,
+  profile,
+  onChange,
+  onMark,
+  onInvite,
+  onBack,
+}: {
+  group: Group;
+  profile: Profile;
+  onChange: (mine: GroupProfile | undefined) => void;
+  onMark: (mark: GroupMark) => void;
+  onInvite: () => void;
+  onBack: () => void;
+}) {
+  const [editingMark, setEditingMark] = useState(false);
+  const mine = group.mine ?? {};
+  const shown = profileIn(group, profile);
+  const update = (change: GroupProfile) => {
+    const next = { ...mine, ...change };
+    const plain =
+      (next.name === undefined || next.name === profile.name) &&
+      next.photo === undefined &&
+      !next.noPhoto;
+    onChange(plain ? undefined : next);
+  };
+  const usualPhoto = mine.photo === undefined && !mine.noPhoto;
+  if (editingMark) {
+    return (
+      <GroupMarkPage
+        back="グループの設定"
+        mark={group.mark}
+        name={group.name}
+        onBack={() => setEditingMark(false)}
+        onChange={onMark}
+      />
+    );
+  }
+  return (
+    <>
+      <PageHeaderBack label={group.name} onBack={onBack} />
+      <h3 className="st-title">グループの設定</h3>
+      <section className="st-section">
+        <h4>グループ</h4>
+        <div className="st-list">
+          <div className="st-row">
+            <span className="st-row-label">グループ名</span>
+            <span className="st-row-value">{group.name}</span>
+          </div>
+          <MarkRow mark={group.mark} onOpen={() => setEditingMark(true)} />
+        </div>
+      </section>
+      <section className="st-section">
+        <h4>このグループでのあなた</h4>
+        <div className="st-profile-photo">
+          <PhotoAvatar name={shown.name} photo={shown.photo} size={72} />
+        </div>
+        <div className="st-list">
+          <label className="st-row">
+            <span className="st-row-label">名前</span>
+            <input
+              className="pe-inline-input"
+              onChange={(event) => update({ name: event.target.value })}
+              placeholder={profile.name}
+              value={mine.name ?? profile.name}
+            />
+          </label>
+        </div>
+      </section>
+      <PhotoChoices
+        name={shown.name}
+        onChange={(photo) =>
+          update(photo ? { photo, noPhoto: false } : { photo, noPhoto: true })
+        }
+        photo={mine.photo}
+        usual={{
+          photo: profile.photo,
+          selected: usualPhoto,
+          onSelect: () => update({ photo: undefined, noPhoto: false }),
+        }}
+      />
+      <p className="st-note">
+        このグループの人にだけ、この名前と写真で表示されます。「いつもの」は、設定のプロフィールと同じです。
+      </p>
+      <section className="st-section">
+        <h4>メンバー</h4>
+        <div className="st-list">
+          {group.members.map((member) => (
+            <div className="st-row" key={member.id}>
+              <Avatar member={member} />
+              <span className="st-row-label">
+                {member.me ? `${shown.name}（自分）` : member.name}
+              </span>
+            </div>
+          ))}
+          <button className="st-row" onClick={onInvite} type="button">
+            <UserPlus aria-hidden="true" className="gr-row-icon" size={18} />
+            <span className="st-row-label">メンバーを招待</span>
+          </button>
+        </div>
+      </section>
+      <button className="pe-delete" type="button">
+        このグループから抜ける
+      </button>
+    </>
+  );
+}
+
+function PageHeaderBack({
+  label,
+  onBack,
+}: {
+  label: string;
+  onBack: () => void;
+}) {
+  return (
+    <button className="st-back" onClick={onBack} type="button">
+      <ChevronLeft aria-hidden="true" size={20} />
+      {label}
+    </button>
+  );
+}
+
+// Your name and picture in a group: its own, or the usual ones.
+function profileIn(group: Omit<Group, "members">, profile: Profile): Profile {
+  const mine = group.mine;
+  return {
+    name: mine?.name || profile.name,
+    photo: mine?.noPhoto ? undefined : (mine?.photo ?? profile.photo),
+  };
 }
 
 function InvitePage({
@@ -1941,53 +2255,96 @@ function InvitePage({
   );
 }
 
-// Marks a group from its name. An unknown name gets no emoji, so the emoji
-// style shows its first letters instead of a mark that means nothing.
-const groupHints: { words: string[]; icon: MarkIcon; emoji: string }[] = [
-  { words: ["家族", "家", "夫婦"], icon: "house", emoji: "🏠" },
-  {
-    words: ["学校", "同期", "クラス", "ゼミ"],
-    icon: "graduationCap",
-    emoji: "🎓",
-  },
-  { words: ["職場", "会社", "仕事", "病棟"], icon: "briefcase", emoji: "💼" },
-  { words: ["旅行", "旅"], icon: "plane", emoji: "✈️" },
-  { words: ["ごはん", "飲み", "ランチ"], icon: "utensils", emoji: "🍙" },
-  { words: ["友達", "友だち", "仲間"], icon: "users", emoji: "👭" },
+// A group's face: one choice made by whoever set it up, the same for every
+// member whatever their style, like a group picture in a chat app.
+export type GroupMark =
+  | { kind: "emoji"; emoji: string }
+  | { kind: "icon"; icon: MarkIcon; color: number }
+  | { kind: "letter"; text: string; color: number }
+  | { kind: "photo"; photo: string };
+
+type GroupMarkKind = GroupMark["kind"];
+
+// Words in a name that suggest an emoji.
+const groupHints: { words: string[]; emoji: string }[] = [
+  { words: ["家族", "家", "夫婦"], emoji: "🏠" },
+  { words: ["学校", "同期", "クラス", "ゼミ"], emoji: "🎓" },
+  { words: ["職場", "会社", "仕事", "病棟"], emoji: "💼" },
+  { words: ["旅行", "旅"], emoji: "✈️" },
+  { words: ["ごはん", "飲み", "ランチ"], emoji: "🍙" },
+  { words: ["友達", "友だち", "仲間"], emoji: "👭" },
 ];
 
-function guessGroupLook(name: string): Omit<Look, "color"> {
+function firstLetter(name: string) {
+  return Array.from(name.trim())[0] ?? "";
+}
+
+// From the name alone: a fitting emoji, or else its first letter.
+function guessGroupMark(name: string, color: number): GroupMark {
   const hint = groupHints.find(({ words }) =>
     words.some((word) => name.includes(word))
   );
-  const letters = Array.from(name.trim());
-  return {
-    symbol: letters[0] ?? "",
-    symbol2: letters.slice(0, 2).join(""),
-    icon: hint?.icon ?? "letter",
-    emoji: hint?.emoji ?? "",
-  };
+  return hint
+    ? { kind: "emoji", emoji: hint.emoji }
+    : { kind: "letter", text: firstLetter(name), color };
 }
 
-// A group's mark in a given style, falling back to its letters when it has
-// no emoji.
+function colorOfMark(mark: GroupMark) {
+  return mark.kind === "icon" || mark.kind === "letter" ? mark.color : 0;
+}
+
+// Draws the mark to fill a round frame; styles never change it. `bare`
+// leaves out the tinted ground, for choices laid out on their own tiles.
 function GroupIcon({
-  look,
+  mark,
   size,
-  style,
+  bare = false,
 }: {
-  look: Look;
+  mark: GroupMark;
   size: number;
-  style?: ShiftMarkStyle;
+  bare?: boolean;
 }) {
-  const viewerStyle = useContext(ShiftMarkStyleContext);
-  const shown = style ?? viewerStyle;
+  if (mark.kind === "photo") {
+    return (
+      <img
+        alt=""
+        className="gr-mark-photo"
+        height={size}
+        loading="lazy"
+        src={mark.photo}
+        width={size}
+      />
+    );
+  }
+  if (mark.kind === "emoji") {
+    return (
+      <span className="gr-mark-emoji" style={{ fontSize: size }}>
+        {mark.emoji}
+      </span>
+    );
+  }
+  const { color, tint } = markColors[mark.color] ?? markColors[0];
+  if (mark.kind === "letter") {
+    return (
+      <span
+        className="gr-mark-letter"
+        style={{ color, background: tint, fontSize: Math.round(size * 0.6) }}
+      >
+        {mark.text}
+      </span>
+    );
+  }
+  const Icon = markIcons[mark.icon];
+  if (!Icon) {
+    return null;
+  }
   return (
-    <MarkGlyph
-      look={look}
-      size={size}
-      style={shown === "emoji" && !look.emoji ? "badge" : shown}
-    />
+    <span
+      className={bare ? "gr-mark-icon-bare" : "gr-mark-icon"}
+      style={{ color, background: bare ? undefined : tint }}
+    >
+      <Icon size={size} weight="duotone" />
+    </span>
   );
 }
 
@@ -2025,42 +2382,248 @@ const groupEmojis = [
   "⭐️",
 ];
 
-type GroupLookField = "icon" | "emoji";
+const markKinds: { kind: GroupMarkKind; label: string }[] = [
+  { kind: "emoji", label: "絵文字" },
+  { kind: "icon", label: "アイコン" },
+  { kind: "letter", label: "文字" },
+  { kind: "photo", label: "写真" },
+];
+
+const markGraphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
+
+// One page to pick the group's mark: a kind, then one choice of it.
+function GroupMarkPage({
+  back,
+  name,
+  mark,
+  onBack,
+  onChange,
+}: {
+  back: string;
+  name: string;
+  mark: GroupMark;
+  onBack: () => void;
+  onChange: (mark: GroupMark) => void;
+}) {
+  const [kind, setKind] = useState<GroupMarkKind>(mark.kind);
+  const color = colorOfMark(mark);
+  const letter = mark.kind === "letter" ? mark.text : firstLetter(name) || "グ";
+  return (
+    <>
+      <header className="st-page-header">
+        <button className="st-back" onClick={onBack} type="button">
+          <ChevronLeft aria-hidden="true" size={20} />
+          {back}
+        </button>
+        <h3 className="st-title">アイコン</h3>
+      </header>
+      <div className="gr-mark-preview">
+        <span className="gr-rail-icon gr-mark-frame-large">
+          <GroupIcon mark={mark} size={40} />
+        </span>
+      </div>
+      <fieldset className="st-mark-segment gr-mark-kinds">
+        <legend className="dc-sr-only">アイコンの種類</legend>
+        {markKinds.map((option) => (
+          <button
+            aria-pressed={kind === option.kind}
+            key={option.kind}
+            onClick={() => setKind(option.kind)}
+            type="button"
+          >
+            {option.label}
+          </button>
+        ))}
+      </fieldset>
+      {kind === "emoji" && (
+        <>
+          <fieldset className="pe-grid">
+            <legend className="dc-sr-only">絵文字</legend>
+            {groupEmojis.map((emoji) => (
+              <button
+                aria-pressed={mark.kind === "emoji" && mark.emoji === emoji}
+                className="gr-mark-choice-emoji"
+                key={emoji}
+                onClick={() => onChange({ kind: "emoji", emoji })}
+                type="button"
+              >
+                {emoji}
+              </button>
+            ))}
+          </fieldset>
+          <input
+            aria-label="ほかの絵文字を入力"
+            className="dc-detail-note"
+            onChange={(event) => {
+              const emoji = markGraphemes
+                .segment(event.target.value)
+                [Symbol.iterator]()
+                .next().value?.segment;
+              if (emoji) {
+                onChange({ kind: "emoji", emoji });
+              }
+            }}
+            placeholder="ほかの絵文字を入力"
+            value=""
+          />
+        </>
+      )}
+      {kind === "icon" && (
+        <>
+          <fieldset className="pe-grid">
+            <legend className="dc-sr-only">アイコン</legend>
+            {groupIcons.map((icon) => (
+              <button
+                aria-label={iconNames[icon]}
+                aria-pressed={mark.kind === "icon" && mark.icon === icon}
+                key={icon}
+                onClick={() => onChange({ kind: "icon", icon, color })}
+                type="button"
+              >
+                <GroupIcon
+                  bare
+                  mark={{ kind: "icon", icon, color }}
+                  size={22}
+                />
+              </button>
+            ))}
+          </fieldset>
+          <MarkColors
+            color={color}
+            onPick={(value) =>
+              onChange(
+                mark.kind === "icon"
+                  ? { ...mark, color: value }
+                  : { kind: "icon", icon: groupIcons[0], color: value }
+              )
+            }
+          />
+        </>
+      )}
+      {kind === "letter" && (
+        <>
+          <label className="st-list st-row">
+            <span className="st-row-label">文字</span>
+            <input
+              className="pe-inline-input"
+              maxLength={2}
+              onChange={(event) =>
+                onChange({ kind: "letter", text: event.target.value, color })
+              }
+              value={letter}
+            />
+          </label>
+          <MarkColors
+            color={color}
+            onPick={(value) =>
+              onChange({ kind: "letter", text: letter, color: value })
+            }
+          />
+        </>
+      )}
+      {kind === "photo" && (
+        <>
+          <fieldset className="st-photo-choices">
+            <legend className="dc-sr-only">写真</legend>
+            {samplePhotoIds.map((id) => (
+              <button
+                aria-label={`見本の写真${id}`}
+                aria-pressed={
+                  mark.kind === "photo" && mark.photo === samplePhoto(id)
+                }
+                key={id}
+                onClick={() =>
+                  onChange({ kind: "photo", photo: samplePhoto(id) })
+                }
+                type="button"
+              >
+                <PhotoAvatar name={name} photo={samplePhoto(id)} size={44} />
+              </button>
+            ))}
+          </fieldset>
+          <label className="gr-secondary st-profile-upload">
+            <Camera aria-hidden="true" size={15} />
+            端末の写真を選ぶ
+            <input
+              accept="image/*"
+              className="dc-sr-only"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) {
+                  onChange({ kind: "photo", photo: URL.createObjectURL(file) });
+                }
+              }}
+              type="file"
+            />
+          </label>
+        </>
+      )}
+      <p className="st-note">
+        メンバー全員に、このアイコンがそのまま表示されます。シフトの見た目のスタイルには左右されません。
+      </p>
+    </>
+  );
+}
+
+function MarkColors({
+  color,
+  onPick,
+}: {
+  color: number;
+  onPick: (color: number) => void;
+}) {
+  return (
+    <fieldset className="pe-colors">
+      <legend className="dc-repeat-label pe-colors-label">色</legend>
+      {markColors.map((option, index) => (
+        <button
+          aria-label={option.name}
+          aria-pressed={color === index}
+          key={option.name}
+          onClick={() => onPick(index)}
+          style={{ background: option.tint, color: option.color }}
+          type="button"
+        />
+      ))}
+    </fieldset>
+  );
+}
 
 function NewGroupPage({
   usedColors,
+  profile,
   onBack,
   onCreate,
 }: {
-  usedColors: Look["color"][];
+  usedColors: number[];
+  profile: Profile;
   onBack: () => void;
-  onCreate: (group: { name: string; look: Look }) => void;
+  onCreate: (group: { name: string; mark: GroupMark; myName: string }) => void;
 }) {
-  const style = useContext(ShiftMarkStyleContext);
   const [name, setName] = useState("");
-  const [myName, setMyName] = useState("");
-  const [look, setLook] = useState<Look>(() => ({
-    ...guessGroupLook(""),
-    color: nextColor(usedColors),
-  }));
-  // Marks the person picked stay when the name changes afterwards.
-  const [picked, setPicked] = useState<GroupLookField[]>([]);
-  const rename = (value: string) => {
-    const guess = guessGroupLook(value);
-    setName(value);
-    setLook({
-      ...look,
-      symbol: guess.symbol,
-      symbol2: guess.symbol2,
-      icon: picked.includes("icon") ? look.icon : guess.icon,
-      emoji: picked.includes("emoji") ? look.emoji : guess.emoji,
-    });
-  };
-  const pick = (field: GroupLookField, value: Partial<Look>) => {
-    setLook({ ...look, ...value });
-    setPicked(picked.includes(field) ? picked : [...picked, field]);
-  };
+  // Starts as your usual name; change it only if this group calls you
+  // something else.
+  const [myName, setMyName] = useState(profile.name);
+  const [color] = useState(() => nextColor(usedColors));
+  const [mark, setMark] = useState<GroupMark>(() => guessGroupMark("", color));
+  // Once picked, the mark stays when the name changes afterwards.
+  const [picked, setPicked] = useState(false);
+  const [editingMark, setEditingMark] = useState(false);
   const canCreate = name.trim() !== "" && myName.trim() !== "";
+  if (editingMark) {
+    return (
+      <GroupMarkPage
+        back="グループを作る"
+        mark={mark}
+        name={name}
+        onBack={() => setEditingMark(false)}
+        onChange={(next) => {
+          setMark(next);
+          setPicked(true);
+        }}
+      />
+    );
+  }
   return (
     <>
       <header className="st-page-header">
@@ -2072,7 +2635,9 @@ function NewGroupPage({
           <button
             className="pe-save"
             disabled={!canCreate}
-            onClick={() => onCreate({ name: name.trim(), look })}
+            onClick={() =>
+              onCreate({ name: name.trim(), mark, myName: myName.trim() })
+            }
             type="button"
           >
             作る
@@ -2080,23 +2645,24 @@ function NewGroupPage({
         </div>
         <h3 className="st-title">グループを作る</h3>
       </header>
-      <div className="gr-new-icon">
-        <span className="gr-rail-icon gr-new-preview">
-          <GroupIcon look={look} size={30} />
-        </span>
-      </div>
       <div className="st-list">
         <label className="st-row">
           <span className="st-row-label">グループ名</span>
           <input
             className="pe-inline-input"
-            onChange={(event) => rename(event.target.value)}
+            onChange={(event) => {
+              setName(event.target.value);
+              if (!picked) {
+                setMark(guessGroupMark(event.target.value, color));
+              }
+            }}
             placeholder="例：家族"
             value={name}
           />
         </label>
+        <MarkRow mark={mark} onOpen={() => setEditingMark(true)} />
         <label className="st-row">
-          <span className="st-row-label">あなたの名前</span>
+          <span className="st-row-label">このグループでの名前</span>
           <input
             className="pe-inline-input"
             onChange={(event) => setMyName(event.target.value)}
@@ -2106,85 +2672,22 @@ function NewGroupPage({
         </label>
       </div>
       <p className="st-note">
-        あなたの名前は、このグループの中だけで使われます。
+        アイコンはグループ名から自動で入ります。このグループでの名前は、最初はいつもの名前です。写真はあとからグループの設定で変えられます。
       </p>
-      <section className="st-section">
-        <h4>{style === "emoji" ? "絵文字" : "アイコン"}</h4>
-        {style === "icon" && (
-          <fieldset className="gr-icon-choices">
-            <legend className="dc-sr-only">アイコン</legend>
-            {groupIcons.map((icon) => (
-              <button
-                aria-label={iconNames[icon]}
-                aria-pressed={look.icon === icon}
-                key={icon}
-                onClick={() => pick("icon", { icon })}
-                type="button"
-              >
-                <MarkGlyph look={{ ...look, icon }} size={22} style="icon" />
-              </button>
-            ))}
-          </fieldset>
-        )}
-        {style === "emoji" && (
-          <fieldset className="gr-icon-choices">
-            <legend className="dc-sr-only">絵文字</legend>
-            {groupEmojis.map((emoji) => (
-              <button
-                aria-pressed={look.emoji === emoji}
-                key={emoji}
-                onClick={() => pick("emoji", { emoji })}
-                type="button"
-              >
-                <MarkGlyph look={{ ...look, emoji }} size={22} style="emoji" />
-              </button>
-            ))}
-          </fieldset>
-        )}
-        {style === "badge" && (
-          <p className="st-note">
-            文字のスタイルでは、グループ名の頭文字が入ります。
-          </p>
-        )}
-      </section>
-      <section className="st-section">
-        <h4>色</h4>
-        <fieldset className="gr-colors">
-          <legend className="dc-sr-only">色</legend>
-          {markColors.map(({ name: colorName, color, tint }, index) => (
-            <button
-              aria-label={colorName}
-              aria-pressed={look.color === index}
-              key={colorName}
-              onClick={() => setLook({ ...look, color: index })}
-              style={{ background: tint, color }}
-              type="button"
-            />
-          ))}
-        </fieldset>
-      </section>
-      <section className="st-section">
-        <h4>ほかのスタイルの人には</h4>
-        <div className="gr-other-looks">
-          {(
-            [
-              ["icon", "アイコン"],
-              ["emoji", "絵文字"],
-              ["badge", "文字"],
-            ] as const
-          ).map(([option, label]) => (
-            <span className="gr-other-look" key={option}>
-              <span className="gr-rail-icon">
-                <GroupIcon look={look} size={22} style={option} />
-              </span>
-              <small>{label}</small>
-            </span>
-          ))}
-        </div>
-        <p className="st-note">
-          メンバーには、それぞれが選んだスタイルで表示されます。選んでいない見た目は、グループ名から自動で決まります。
-        </p>
-      </section>
     </>
+  );
+}
+
+function MarkRow({ mark, onOpen }: { mark: GroupMark; onOpen: () => void }) {
+  return (
+    <button className="st-row" onClick={onOpen} type="button">
+      <span className="st-row-label">アイコン</span>
+      <span className="st-row-value pe-look-value">
+        <span className="gr-mark-frame-small">
+          <GroupIcon mark={mark} size={16} />
+        </span>
+      </span>
+      <ChevronRight aria-hidden="true" className="st-row-arrow" size={17} />
+    </button>
   );
 }

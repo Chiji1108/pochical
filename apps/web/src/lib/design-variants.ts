@@ -9,6 +9,13 @@ export const designVariantOptions = {
       { value: "person", label: "人ごと" },
     ],
   },
+  memberLook: {
+    label: "相手のシフトの見た目",
+    choices: [
+      { value: "theirs", label: "相手のスタイル" },
+      { value: "mine", label: "自分のスタイル" },
+    ],
+  },
   headerLayout: {
     label: "見出しの並び",
     choices: [

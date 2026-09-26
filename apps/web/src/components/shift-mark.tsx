@@ -324,14 +324,14 @@ export type Look = {
   color: MarkColor;
 };
 
-// A palette index, or "theme" to follow the app's theme color.
-export type MarkColor = number | "theme";
+// An index into the palette below.
+export type MarkColor = number;
 
 const shiftLooks: Record<Shift, Omit<Look, "emoji" | "symbol2">> = {
   day: { symbol: "日", icon: "sun", color: 1 },
   night: { symbol: "夜", icon: "moon", color: 8 },
   after: { symbol: "明", icon: "sunrise", color: 3 },
-  off: { symbol: "休", icon: "leaf", color: "theme" },
+  off: { symbol: "休", icon: "leaf", color: 0 },
   early: { symbol: "早", icon: "cloudSun", color: 2 },
   late: { symbol: "遅", icon: "cloudMoon", color: 4 },
   training: { symbol: "研", icon: "book", color: 10 },
@@ -398,11 +398,13 @@ export function guessLook(name: string): Omit<Look, "color"> {
 }
 
 export function useMarkColor(markColor: MarkColor) {
+  return markColors[markColor] ?? markColors[0];
+}
+
+// The theme's own color, for marks drawn all in one color.
+function useThemeMarkColor() {
   const theme = themeOf(useContext(ThemeContext).theme);
-  if (markColor === "theme") {
-    return { name: "テーマカラー", color: theme.accent, tint: theme.markTint };
-  }
-  return markColors[markColor];
+  return { name: "テーマカラー", color: theme.accent, tint: theme.markTint };
 }
 
 // When on, icons and letters all take the theme color instead of each
@@ -417,7 +419,7 @@ export function useDisplayColor(markColor: MarkColor) {
   const { monochrome } = useContext(MonochromeContext);
   const style = useContext(ShiftMarkStyleContext);
   const own = useMarkColor(markColor);
-  const theme = useMarkColor("theme");
+  const theme = useThemeMarkColor();
   return monochrome && style !== "emoji" ? theme : own;
 }
 
