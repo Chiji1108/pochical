@@ -2626,12 +2626,18 @@ button.st-row:hover {
 }
 
 /* One person at a time. */
+/* One row that scrolls sideways. It runs to the screen's edges, so a
+   half-shown name hints at more; a fieldset needs min-width: 0 to shrink
+   and scroll at all. */
 .gr-people {
+  position: relative;
   display: flex;
   gap: 6px;
-  padding: 0;
-  margin: -6px 0 0;
+  min-width: 0;
+  padding: 0 19px;
+  margin: -6px -19px 0;
   overflow-x: auto;
+  scroll-padding-inline: 19px;
   border: 0;
 }
 .design-page .gr-people button {

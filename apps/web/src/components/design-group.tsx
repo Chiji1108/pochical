@@ -19,7 +19,7 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
-import { useContext, useEffect, useId, useState } from "react";
+import { useContext, useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import {
@@ -2418,6 +2418,10 @@ function MemberTable({
   );
 }
 
+// Matches the side padding of .gr-people, so a scrolled-to person keeps
+// the same gap from the screen's edge as the first one.
+const peopleEdge = 19;
+
 // 人ごと: who to show, above the month.
 function PeoplePicker({
   members,
@@ -2428,12 +2432,32 @@ function PeoplePicker({
   picked: Member;
   onPick: (id: string) => void;
 }) {
+  const listRef = useRef<HTMLFieldSetElement>(null);
+  // Keep the chosen person in sight, sideways only, so the page itself does
+  // not jump.
+  useEffect(() => {
+    const list = listRef.current;
+    const button = list?.querySelector<HTMLElement>(
+      `[data-member="${picked.id}"]`
+    );
+    if (!(list && button)) {
+      return;
+    }
+    const start = button.offsetLeft - peopleEdge;
+    const end = button.offsetLeft + button.offsetWidth + peopleEdge;
+    if (start < list.scrollLeft) {
+      list.scrollTo({ behavior: "smooth", left: start });
+    } else if (end > list.scrollLeft + list.clientWidth) {
+      list.scrollTo({ behavior: "smooth", left: end - list.clientWidth });
+    }
+  }, [picked.id]);
   return (
-    <fieldset className="gr-people">
+    <fieldset className="gr-people" ref={listRef}>
       <legend className="dc-sr-only">表示する人</legend>
       {members.map((member) => (
         <button
           aria-pressed={member.id === picked.id}
+          data-member={member.id}
           key={member.id}
           onClick={() => {
             onPick(member.id);
