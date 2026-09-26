@@ -2,17 +2,25 @@ body:has(.design-page) > .site-header,
 body:has(.design-page) > .site-footer {
   display: none;
 }
+/* Workspace colors around the phones; the app's own colors come from
+   lib/design-tokens.ts and design-theme.tsx as CSS variables. */
 .design-page {
+  --ws-bg: #fbfaf7;
+  --ws-bg-translucent: #fbfaf7e8;
+  --ws-bezel: #333631;
+  --ws-bezel-edge: #b9bdb6;
+  --ws-bezel-shadow: #30392f35;
+  --ws-island: #242724;
   min-height: 100vh;
   padding: 28px 40px 48px;
-  background: #fbfaf7;
+  background: var(--ws-bg);
 }
 .design-page button {
   color: inherit;
 }
 .design-page button:focus-visible,
 .design-page a:focus-visible {
-  outline: 3px solid var(--accent-line, #698367);
+  outline: 3px solid var(--accent-line);
   outline-offset: 4px;
 }
 .design-toolbar {
@@ -22,7 +30,7 @@ body:has(.design-page) > .site-footer {
   max-width: 1100px;
   margin: auto;
   font-size: 12px;
-  color: #72796e;
+  color: var(--text-3);
 }
 .design-toolbar a,
 .design-toolbar button {
@@ -30,10 +38,15 @@ body:has(.design-page) > .site-footer {
   gap: 8px;
   align-items: center;
 }
-.design-toolbar button {
+.design-toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+.design-toolbar button,
+.design-toolbar-link {
   padding: 10px 14px;
   background: transparent;
-  border: 1px solid #e4e5df;
+  border: 1px solid var(--border);
   border-radius: 22px;
 }
 .design-intro {
@@ -42,7 +55,7 @@ body:has(.design-page) > .site-footer {
 }
 .design-intro > p:first-child {
   font-size: 10px;
-  color: var(--accent-line, #698367);
+  color: var(--accent-line);
   letter-spacing: 0.2em;
 }
 .design-intro h1 {
@@ -53,7 +66,7 @@ body:has(.design-page) > .site-footer {
 }
 .design-description {
   font-size: 13px;
-  color: #7f857a;
+  color: var(--text-3);
 }
 .design-screens {
   display: flex;
@@ -73,18 +86,18 @@ body:has(.design-page) > .site-footer {
   margin: 0 0 20px 8px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--accent, #486444);
+  color: var(--accent);
 }
 .design-screens h2 > span {
   margin-right: 13px;
   font-size: 10px;
-  color: #929b8c;
+  color: var(--text-4);
 }
 .design-caption,
 .design-footnote {
   font-size: 11px;
   line-height: 1.9;
-  color: #7f857a;
+  color: var(--text-3);
   text-align: center;
 }
 .design-caption {
@@ -97,13 +110,13 @@ body:has(.design-page) > .site-footer {
   position: relative;
   width: 100%;
   padding: 17px 15px 18px;
-  color: #30332f;
-  background: #fff;
-  border: 6px solid #333631;
+  color: var(--text);
+  background: var(--bg);
+  border: 6px solid var(--ws-bezel);
   border-radius: 53px;
   box-shadow:
-    0 3px 0 1px #b9bdb6,
-    0 28px 50px -30px #30392f35;
+    0 3px 0 1px var(--ws-bezel-edge),
+    0 28px 50px -30px var(--ws-bezel-shadow);
 }
 .dc-status {
   position: relative;
@@ -120,7 +133,7 @@ body:has(.design-page) > .site-footer {
   left: 50%;
   width: 92px;
   height: 27px;
-  background: #242724;
+  background: var(--ws-island);
   border-radius: 20px;
   transform: translateX(-50%);
 }
@@ -146,7 +159,7 @@ body:has(.design-page) > .site-footer {
   display: block;
   margin-bottom: 3px;
   font-size: 11px;
-  color: #6d726b;
+  color: var(--text-3);
 }
 .dc-heading strong {
   font-size: 43px;
@@ -161,7 +174,7 @@ body:has(.design-page) > .site-footer {
 .dc-month-actions {
   display: flex;
   gap: 0;
-  color: #72796e;
+  color: var(--text-3);
 }
 .dc-month-actions button {
   display: grid;
@@ -173,17 +186,17 @@ body:has(.design-page) > .site-footer {
   border-radius: 12px;
 }
 .dc-month-actions button:hover:not(:disabled) {
-  background: var(--accent-soft, #f0f4ed);
+  background: var(--accent-soft);
 }
 .design-page .dc-today-button {
   width: auto;
   padding: 0 10px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--accent, #486444);
+  color: var(--accent);
 }
 .design-page .dc-today-button:disabled {
-  color: #b9beb4;
+  color: var(--text-disabled);
   cursor: default;
 }
 .design-page .dc-done {
@@ -194,8 +207,8 @@ body:has(.design-page) > .site-footer {
   height: 44px;
   padding: 0 18px;
   font-size: 13px;
-  color: #fff;
-  background: var(--accent, #486444);
+  color: var(--on-accent);
+  background: var(--accent);
   border: 0;
   border-radius: 24px;
 }
@@ -207,14 +220,14 @@ body:has(.design-page) > .site-footer {
 .dc-weekdays {
   padding-bottom: 11px;
   font-size: 11px;
-  color: #72776f;
+  color: var(--text-3);
   text-align: center;
 }
 .dc-weekdays > :first-child {
-  color: #a96561;
+  color: var(--holiday);
 }
 .dc-weekdays > :last-child {
-  color: #6682a0;
+  color: var(--saturday);
 }
 .dc-grid {
   grid-template-rows: repeat(var(--weeks, 6), 64px);
@@ -252,26 +265,26 @@ body:has(.design-page) > .site-footer {
   flex-shrink: 0;
   font-size: 9px;
   line-height: 12px;
-  color: #565e52;
+  color: var(--text-2);
 }
 .dc-off {
-  background: var(--off-tint, #e4ecdf);
+  background: var(--off-tint, var(--accent-mark-tint));
 }
 .dc-outside {
-  color: #c5c7c1;
+  color: var(--text-disabled);
 }
 .dc-date.dc-holiday {
-  color: #a96561;
+  color: var(--holiday);
 }
 .dc-outside .dc-date {
   font-weight: 400;
 }
 .dc-today {
-  outline: 1.5px solid var(--accent-line, #698367);
+  outline: 1.5px solid var(--accent-line);
   outline-offset: -1px;
 }
 button.dc-day:not(.dc-active-day):hover {
-  background: var(--accent-soft-2, #eaf0e9);
+  background: var(--accent-soft-2);
 }
 button.dc-day:active {
   transform: scale(0.94);
@@ -283,13 +296,13 @@ button.dc-day:active {
   padding: 13px 16px;
   margin-top: 20px;
   font-size: 12px;
-  color: #666f61;
-  background: #f6f7f3;
+  color: var(--text-2);
+  background: var(--fill);
   border-radius: 13px;
 }
 .dc-summary strong {
   font-size: 25px;
-  color: var(--accent-strong, #445d43);
+  color: var(--accent-strong);
 }
 .dc-summary strong > span {
   margin-left: 2px;
@@ -319,8 +332,8 @@ button.dc-day:active {
   padding: 7px 0;
   font-size: 11px;
   line-height: 14px;
-  background: #fff;
-  border: 1px solid #e8ebe3;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 15px;
 }
 .dc-patterns button > :first-child {
@@ -333,9 +346,9 @@ button.dc-day:active {
   line-height: 1;
 }
 .dc-patterns .dc-selected {
-  background: var(--accent-soft, #f3f5ec);
-  border-color: var(--accent-muted, #a1af8f);
-  box-shadow: 0 0 0 0.5px var(--accent-muted, #a1af8f);
+  background: var(--accent-soft);
+  border-color: var(--accent-muted);
+  box-shadow: 0 0 0 0.5px var(--accent-muted);
 }
 .dc-day-actions {
   display: flex;
@@ -355,13 +368,13 @@ button.dc-day:active {
   border-radius: 15px;
 }
 .design-page .dc-day-actions button {
-  color: #7f857a;
+  color: var(--text-3);
 }
 .dc-day-actions button:hover:not(:disabled) {
-  background: var(--accent-soft, #f0f4ed);
+  background: var(--accent-soft);
 }
 .design-page .dc-day-actions button:disabled {
-  color: #c4c8bf;
+  color: var(--text-disabled);
   cursor: default;
 }
 .dc-start-area {
@@ -376,8 +389,8 @@ button.dc-day:active {
   width: 100%;
   min-height: 52px;
   font-size: 13px;
-  color: #fff;
-  background: var(--accent, #486444);
+  color: var(--on-accent);
+  background: var(--accent);
   border: 0;
   border-radius: 15px;
 }
@@ -385,7 +398,7 @@ button.dc-day:active {
   display: flex;
   justify-content: space-around;
   padding-top: 7px;
-  color: #9b9e98;
+  color: var(--text-4);
 }
 .dc-nav-item {
   display: flex;
@@ -395,13 +408,13 @@ button.dc-day:active {
   font-size: 9px;
 }
 .dc-nav .dc-nav-active {
-  color: var(--accent, #486444);
+  color: var(--accent);
 }
 .dc-home-indicator {
   width: 114px;
   height: 5px;
   margin: 18px auto 0;
-  background: #363a33;
+  background: var(--home-indicator);
   border-radius: 4px;
 }
 .dc-sr-only {
@@ -466,14 +479,14 @@ button.dc-day:active {
 .design-index a {
   padding: 10px 16px;
   font-size: 12px;
-  color: var(--accent, #486444);
-  border: 1px solid #e4e5df;
+  color: var(--accent);
+  border: 1px solid var(--border);
   border-radius: 24px;
 }
 .design-index a > span {
   margin-right: 8px;
   font-size: 10px;
-  color: #8a9086;
+  color: var(--text-4);
 }
 .design-variants {
   display: flex;
@@ -484,8 +497,8 @@ button.dc-day:active {
   max-width: 1100px;
   padding: 12px 18px;
   margin: -24px auto 44px;
-  background: #fbfaf7e8;
-  border: 1px solid #e4e5df;
+  background: var(--ws-bg-translucent);
+  border: 1px solid var(--border);
   border-radius: 20px;
   backdrop-filter: blur(8px);
 }
@@ -493,7 +506,7 @@ button.dc-day:active {
   margin: 0;
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent-line, #698367);
+  color: var(--accent-line);
   letter-spacing: 0.1em;
 }
 .design-variants fieldset {
@@ -508,12 +521,12 @@ button.dc-day:active {
   float: left;
   padding: 0;
   font-size: 11px;
-  color: #72796e;
+  color: var(--text-3);
 }
 .design-segment {
   display: flex;
   padding: 2px;
-  background: #f0f1ec;
+  background: var(--fill-2);
   border-radius: 12px;
 }
 .design-variants button {
@@ -526,12 +539,12 @@ button.dc-day:active {
 }
 .design-variants button[aria-pressed="true"] {
   font-weight: 600;
-  color: var(--accent, #486444);
-  background: #fff;
-  box-shadow: 0 1px 3px #30332f1f;
+  color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 1px 3px var(--shadow);
 }
 .design-index a:hover {
-  background: var(--accent-soft-2, #eaf0e9);
+  background: var(--accent-soft-2);
 }
 /* Buttons keep the 72px width of the one-row layout and shrink only when the
    screen is too narrow. */
@@ -582,18 +595,18 @@ button.dc-day:active {
 .dc-editing .dc-controls {
   min-height: 0;
   padding-top: 14px;
-  background: #fff;
+  background: var(--raised);
 }
 .dc-active-day {
-  outline: 2px solid var(--accent, #486444);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 .dc-patterns button:hover {
-  background: var(--accent-soft, #f0f4ed);
-  border-color: var(--accent-muted, #a1af8f);
+  background: var(--accent-soft);
+  border-color: var(--accent-muted);
 }
 .dc-patterns button:active {
-  background: var(--accent-press, #dfe9d9);
+  background: var(--accent-press);
   transform: scale(0.97);
 }
 .dc-content {
@@ -638,13 +651,13 @@ button.dc-day:active {
   padding: 0;
   margin: 0;
   overflow: hidden;
-  color: #30332f;
+  color: var(--text);
   background: transparent;
   border: 0;
   border-radius: 46px;
 }
 .dc-breakdown::backdrop {
-  background: #30332f20;
+  background: var(--scrim);
 }
 body:has(.dc-breakdown[open]) {
   overflow: hidden;
@@ -654,7 +667,7 @@ body:has(.dc-breakdown[open]) {
   inset: 0;
   width: 100%;
   height: 100%;
-  background: #30332f35;
+  background: var(--scrim);
   border: 0;
 }
 .dc-sheet {
@@ -665,14 +678,14 @@ body:has(.dc-breakdown[open]) {
   max-height: 85%;
   padding: 12px 24px 28px;
   overflow-y: auto;
-  background: #fff;
+  background: var(--raised);
   border-radius: 28px 28px 0 0;
 }
 .dc-sheet-handle {
   width: 34px;
   height: 4px;
   margin: 0 auto 20px;
-  background: #d8ddd3;
+  background: var(--control-off);
   border-radius: 8px;
 }
 .dc-sheet-heading {
@@ -684,7 +697,7 @@ body:has(.dc-breakdown[open]) {
 .dc-sheet-heading p {
   margin: 0 0 4px;
   font-size: 12px;
-  color: #72796e;
+  color: var(--text-3);
 }
 .dc-sheet-heading h4 {
   margin: 0;
@@ -696,7 +709,7 @@ body:has(.dc-breakdown[open]) {
   place-items: center;
   width: 44px;
   height: 44px;
-  background: var(--accent-soft, #f0f4ed);
+  background: var(--accent-soft);
   border: 0;
   border-radius: 50%;
 }
@@ -708,7 +721,7 @@ body:has(.dc-breakdown[open]) {
   align-items: center;
   justify-content: space-between;
   min-height: 52px;
-  border-bottom: 1px solid #edf0e8;
+  border-bottom: 1px solid var(--separator-faint);
 }
 .dc-counts dt {
   display: flex;
@@ -723,7 +736,7 @@ body:has(.dc-breakdown[open]) {
   margin: 0;
   font-size: 21px;
   font-weight: 600;
-  color: var(--accent, #486444);
+  color: var(--accent);
 }
 .dc-counts dd > span {
   margin-left: 7px;
@@ -731,12 +744,12 @@ body:has(.dc-breakdown[open]) {
   font-weight: 400;
 }
 .dc-counts .dc-unfilled {
-  color: #72796e;
+  color: var(--text-3);
 }
 .dc-sheet-total {
   margin: 18px 0 0;
   font-size: 12px;
-  color: #72796e;
+  color: var(--text-3);
   text-align: center;
 }
 .design-page .dc-input-date {
@@ -748,54 +761,54 @@ body:has(.dc-breakdown[open]) {
   margin: 0 auto 6px;
   font-size: 17px;
   font-weight: 600;
-  color: #30332f;
+  color: var(--text);
   cursor: pointer;
   background: transparent;
   border: 0;
   border-radius: 12px;
 }
 .design-page .dc-input-date:hover {
-  background: var(--accent-soft, #f0f4ed);
+  background: var(--accent-soft);
 }
 .design-page .dc-input-date-filled {
-  background: var(--accent-soft, #f0f4ed);
-  border: 1px solid var(--accent-border, #d9e2d3);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
 }
 .design-page .dc-input-date-filled:hover {
-  background: var(--accent-soft-2, #e6eee2);
-  border-color: var(--accent-muted, #a1af8f);
+  background: var(--accent-soft-2);
+  border-color: var(--accent-muted);
 }
 .design-page .dc-input-date:focus-visible {
-  outline: 2px solid var(--accent-line, #698367);
+  outline: 2px solid var(--accent-line);
   outline-offset: 2px;
 }
 .dc-input-weekday {
   margin-left: 2px;
   font-size: 14px;
   font-weight: 400;
-  color: #72776f;
+  color: var(--text-3);
 }
 .dc-input-weekday.dc-sunday {
-  color: #a96561;
+  color: var(--holiday);
 }
 .dc-input-weekday.dc-saturday {
-  color: #6682a0;
+  color: var(--saturday);
 }
 .dc-input-chevron {
-  color: var(--accent, #486444);
+  color: var(--accent);
 }
 .dc-picker-dialog {
   width: min(360px, calc(100vw - 24px));
   max-height: calc(100dvh - 24px);
   padding: 18px;
-  color: #30332f;
-  background: #fff;
+  color: var(--text);
+  background: var(--raised);
   border: 0;
   border-radius: 24px;
-  box-shadow: 0 16px 60px #30332f30;
+  box-shadow: 0 16px 60px var(--shadow-strong);
 }
 .dc-picker-dialog::backdrop {
-  background: #30332f35;
+  background: var(--scrim);
 }
 .dc-picker-heading,
 .dc-picker-month {
@@ -832,7 +845,7 @@ body:has(.dc-breakdown[open]) {
 .dc-picker-dialog .dc-picker-days > span {
   padding-bottom: 8px;
   font-size: 11px;
-  color: #72796e;
+  color: var(--text-3);
   text-align: center;
 }
 .dc-picker-days button {
@@ -843,18 +856,18 @@ body:has(.dc-breakdown[open]) {
   border-radius: 12px;
 }
 .dc-picker-days button:hover {
-  background: var(--accent-soft, #f0f4ed);
+  background: var(--accent-soft);
 }
 .dc-picker-days .dc-picker-today {
-  outline: 1.5px solid var(--accent-line, #698367);
+  outline: 1.5px solid var(--accent-line);
   outline-offset: -1px;
 }
 .dc-picker-days .dc-picker-outside {
-  color: #a7ada1;
+  color: var(--text-faint);
 }
 .dc-picker-days button[aria-pressed="true"] {
-  color: #fff;
-  background: var(--accent, #486444);
+  color: var(--on-accent);
+  background: var(--accent);
 }
 
 .dc-patterns-eight {
@@ -879,11 +892,11 @@ body:has(.dc-breakdown[open]) {
   right: 6px;
   width: 7px;
   height: 7px;
-  background: var(--accent-muted, #a1af8f);
+  background: var(--accent-muted);
   border-radius: 50%;
 }
 .dc-mark-time {
-  background: var(--accent, #486444);
+  background: var(--accent);
 }
 .dc-grid.dc-grid-week {
   grid-template-rows: 64px;
@@ -894,7 +907,7 @@ body:has(.dc-breakdown[open]) {
   padding: 16px 6px 12px;
   margin-top: 12px;
   overflow-y: auto;
-  border-top: 1px solid #eceee8;
+  border-top: 1px solid var(--separator);
 }
 .dc-detail-date {
   margin: 0 0 14px;
@@ -921,15 +934,15 @@ body:has(.dc-breakdown[open]) {
   min-height: 36px;
   padding: 0 12px;
   font-size: 12px;
-  background: #fff;
-  border: 1px solid #e0e3db;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 18px;
 }
 .dc-detail-patterns button[aria-pressed="true"] {
   font-weight: 600;
-  color: #fff;
-  background: var(--accent, #486444);
-  border-color: var(--accent, #486444);
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 /* Each part's name sits above it, so a long one like 一緒に働く人 fits. */
 .dc-detail-row {
@@ -939,13 +952,13 @@ body:has(.dc-breakdown[open]) {
 }
 .dc-detail-label {
   font-size: 12px;
-  color: #72796e;
+  color: var(--text-3);
 }
 .dc-detail-time {
   display: flex;
   gap: 6px;
   align-items: center;
-  color: #72796e;
+  color: var(--text-3);
 }
 .dc-detail-time input,
 .dc-detail-note {
@@ -954,27 +967,27 @@ body:has(.dc-breakdown[open]) {
   padding: 0 10px;
   font: inherit;
   font-size: 15px;
-  color: #30332f;
-  background: #f6f7f3;
+  color: var(--text);
+  background: var(--fill);
   border: 1px solid transparent;
   border-radius: 10px;
 }
 .dc-detail-time input:focus,
 .dc-detail-note:focus {
   outline: none;
-  background: #fff;
-  border-color: var(--accent-line, #698367);
+  background: var(--surface);
+  border-color: var(--accent-line);
 }
 .dc-detail-hint {
   margin: 0;
   font-size: 11px;
-  color: #8a9086;
+  color: var(--text-4);
 }
 .design-page .dc-detail-hint button {
   padding: 4px 6px;
   margin-left: 6px;
   font-size: 11px;
-  color: var(--accent, #486444);
+  color: var(--accent);
   text-decoration: underline;
   background: transparent;
   border: 0;
@@ -987,7 +1000,7 @@ body:has(.dc-breakdown[open]) {
   min-height: 44px;
   padding: 0 14px;
   font-size: 11px;
-  color: #a96561;
+  color: var(--danger);
   background: transparent;
   border: 0;
   border-radius: 15px;
@@ -995,7 +1008,7 @@ body:has(.dc-breakdown[open]) {
 .dc-detail-empty {
   margin: 0;
   font-size: 12px;
-  color: #8a9086;
+  color: var(--text-4);
 }
 .dc-detail-members {
   padding: 0;
@@ -1019,18 +1032,18 @@ body:has(.dc-breakdown[open]) {
   min-height: 34px;
   padding: 0 11px;
   font-size: 12px;
-  background: #fff;
-  border: 1px solid #e0e3db;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 17px;
 }
 .dc-member-chips button[aria-pressed="true"] {
   font-weight: 600;
-  color: var(--accent, #486444);
-  background: var(--accent-soft-2, #eaf0e9);
-  border-color: var(--accent-muted, #a1af8f);
+  color: var(--accent);
+  background: var(--accent-soft-2);
+  border-color: var(--accent-muted);
 }
 .design-page .dc-member-chips .dc-member-add {
-  color: #72796e;
+  color: var(--text-3);
   border-style: dashed;
 }
 .dc-member-input {
@@ -1040,7 +1053,7 @@ body:has(.dc-breakdown[open]) {
   font: inherit;
   font-size: 12px;
   outline: none;
-  border: 1px solid var(--accent-line, #698367);
+  border: 1px solid var(--accent-line);
   border-radius: 17px;
 }
 
@@ -1059,19 +1072,19 @@ body:has(.dc-breakdown[open]) {
   place-items: center;
   width: 52px;
   min-height: 52px;
-  color: var(--accent, #486444);
-  background: var(--accent-soft, #f0f4ed);
+  color: var(--accent);
+  background: var(--accent-soft);
   border: 0;
   border-radius: 15px;
 }
 .design-page .dc-start-import:hover {
-  background: var(--accent-soft-2, #e6eee2);
+  background: var(--accent-soft-2);
 }
 .dc-import-description {
   margin: 0 0 18px;
   font-size: 13px;
   line-height: 1.7;
-  color: #565e52;
+  color: var(--text-2);
 }
 .dc-import-actions {
   display: grid;
@@ -1086,8 +1099,8 @@ body:has(.dc-breakdown[open]) {
   justify-content: center;
   min-height: 96px;
   font-size: 13px;
-  color: var(--accent, #486444);
-  background: var(--accent-soft, #f0f4ed);
+  color: var(--accent);
+  background: var(--accent-soft);
   border: 0;
   border-radius: 18px;
 }
@@ -1112,7 +1125,7 @@ body:has(.dc-breakdown[open]) {
   place-items: center;
   width: 36px;
   height: 40px;
-  color: #72796e;
+  color: var(--text-3);
   background: transparent;
   border: 0;
   border-radius: 12px;
@@ -1122,9 +1135,9 @@ body:has(.dc-breakdown[open]) {
   padding: 0 11px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent, #486444);
+  color: var(--accent);
   background: transparent;
-  border: 1px solid #dfe3da;
+  border: 1px solid var(--border);
   border-radius: 15px;
 }
 .design-page .dc-heading-icon {
@@ -1132,7 +1145,7 @@ body:has(.dc-breakdown[open]) {
   place-items: center;
   width: 44px;
   height: 44px;
-  color: #72796e;
+  color: var(--text-3);
   background: transparent;
   border: 0;
   border-radius: 12px;
@@ -1156,23 +1169,23 @@ body:has(.dc-breakdown[open]) {
   align-items: center;
   width: min(270px, 86%);
   padding: 22px 18px 12px;
-  background: #fff;
-  border: 1px solid #eceee8;
+  background: var(--surface);
+  border: 1px solid var(--separator);
   border-radius: 22px;
-  box-shadow: 0 12px 32px #30332f14;
+  box-shadow: 0 12px 32px var(--shadow-faint);
   transform: translate(-50%, -50%);
 }
 .dc-empty-card > p {
   margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: #30332f;
+  color: var(--text);
 }
 .dc-empty-card > .dc-empty-hint {
   margin-bottom: 8px;
   font-size: 11px;
   font-weight: 400;
-  color: #72796e;
+  color: var(--text-3);
 }
 .design-page .dc-empty-import {
   display: flex;
@@ -1183,8 +1196,8 @@ body:has(.dc-breakdown[open]) {
   min-height: 48px;
   padding: 0 12px;
   font-size: 13px;
-  color: #fff;
-  background: var(--accent, #486444);
+  color: var(--on-accent);
+  background: var(--accent);
   border: 0;
   border-radius: 14px;
 }
@@ -1192,7 +1205,7 @@ body:has(.dc-breakdown[open]) {
   margin-top: 4px;
   font-size: 11px;
   font-weight: 400;
-  color: #8a9086;
+  color: var(--text-4);
 }
 .dc-import-accounts {
   display: flex;
@@ -1207,32 +1220,32 @@ body:has(.dc-breakdown[open]) {
   min-height: 50px;
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
-  background: #30332f;
+  color: var(--on-inverse);
+  background: var(--inverse);
   border: 0;
   border-radius: 14px;
 }
 .design-page .dc-import-accounts .dc-import-secondary {
   font-weight: 400;
-  color: var(--accent, #486444);
-  background: var(--accent-soft, #f0f4ed);
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 .dc-import-link {
   padding: 16px;
-  background: #f6f7f3;
+  background: var(--fill);
   border-radius: 18px;
 }
 .dc-import-link > p {
   margin: 0 0 14px;
   font-size: 12px;
   line-height: 1.6;
-  color: #565e52;
+  color: var(--text-2);
 }
 .dc-import-link strong {
   display: block;
   margin-bottom: 2px;
   font-size: 14px;
-  color: #30332f;
+  color: var(--text);
 }
 .design-page .dc-import-later {
   display: block;
@@ -1240,7 +1253,7 @@ body:has(.dc-breakdown[open]) {
   padding: 0 16px;
   margin: 8px auto 0;
   font-size: 13px;
-  color: #72796e;
+  color: var(--text-3);
   background: transparent;
   border: 0;
 }
@@ -1253,8 +1266,8 @@ body:has(.dc-breakdown[open]) {
   min-height: 50px;
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
-  background: var(--accent, #486444);
+  color: var(--on-accent);
+  background: var(--accent);
   border: 0;
   border-radius: 14px;
 }
@@ -1277,12 +1290,12 @@ body:has(.dc-breakdown[open]) {
   margin: 0 0 8px;
   font-size: 12px;
   font-weight: 600;
-  color: #30332f;
+  color: var(--text);
 }
 .dc-repeat-hint {
   font-size: 11px;
   font-weight: 400;
-  color: #72796e;
+  color: var(--text-3);
 }
 .dc-repeat-presets {
   display: flex;
@@ -1303,19 +1316,19 @@ body:has(.dc-breakdown[open]) {
   min-height: 36px;
   padding: 0 12px;
   font-size: 12px;
-  background: #fff;
-  border: 1px solid #e0e3db;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 18px;
 }
 .dc-repeat-presets button > span {
   font-size: 10px;
-  color: #8a9086;
+  color: var(--text-4);
 }
 .design-page .dc-repeat-presets button[aria-pressed="true"] {
   font-weight: 600;
-  color: var(--accent, #486444);
-  background: var(--accent-soft-2, #eaf0e9);
-  border-color: var(--accent-muted, #a1af8f);
+  color: var(--accent);
+  background: var(--accent-soft-2);
+  border-color: var(--accent-muted);
 }
 .dc-repeat-sequence {
   display: flex;
@@ -1325,7 +1338,7 @@ body:has(.dc-breakdown[open]) {
   padding: 8px;
   margin: 0 0 8px;
   list-style: none;
-  background: #f6f7f3;
+  background: var(--fill);
   border-radius: 14px;
 }
 .design-page .dc-repeat-sequence button {
@@ -1338,14 +1351,14 @@ body:has(.dc-breakdown[open]) {
   width: 38px;
   height: 58px;
   font-size: 9px;
-  color: #565e52;
-  background: #fff;
-  border: 1px solid #e0e3db;
+  color: var(--text-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 10px;
 }
 .dc-repeat-sequence button > small {
   font-size: 8px;
-  color: #a7ada1;
+  color: var(--text-faint);
 }
 .dc-repeat-sequence button > span {
   font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
@@ -1364,9 +1377,9 @@ body:has(.dc-breakdown[open]) {
   min-height: 32px;
   padding: 0 10px;
   font-size: 11px;
-  color: var(--accent, #486444);
+  color: var(--accent);
   background: transparent;
-  border: 1px dashed #b9c2b1;
+  border: 1px dashed var(--border-strong);
   border-radius: 16px;
 }
 .dc-repeat-anchor {
@@ -1395,19 +1408,19 @@ body:has(.dc-breakdown[open]) {
   gap: 1px;
   align-items: center;
   padding: 4px 0;
-  background: #f6f7f3;
+  background: var(--fill);
   border-radius: 8px;
 }
 .dc-repeat-day-number {
   font-family: -apple-system, sans-serif;
   font-size: 9px;
-  color: #72796e;
+  color: var(--text-3);
 }
 .dc-repeat-day-number.dc-sunday {
-  color: #a96561;
+  color: var(--holiday);
 }
 .dc-repeat-day-number.dc-saturday {
-  color: #6682a0;
+  color: var(--saturday);
 }
 .design-page .dc-import-primary:disabled {
   cursor: default;
@@ -1428,7 +1441,7 @@ body:has(.dc-breakdown[open]) {
   margin: 24px 0 -8px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent-line, #698367);
+  color: var(--accent-line);
   letter-spacing: 0.08em;
 }
 .ob-header h3 {
@@ -1440,7 +1453,7 @@ body:has(.dc-breakdown[open]) {
 .ob-header p {
   margin: 8px 0 0;
   font-size: 13px;
-  color: #72796e;
+  color: var(--text-3);
 }
 .design-page .ob-back {
   display: grid;
@@ -1448,7 +1461,7 @@ body:has(.dc-breakdown[open]) {
   width: 40px;
   height: 40px;
   margin: 0 0 8px -10px;
-  color: #72796e;
+  color: var(--text-3);
   background: transparent;
   border: 0;
   border-radius: 12px;
@@ -1465,20 +1478,20 @@ body:has(.dc-breakdown[open]) {
   width: 100%;
   min-height: 72px;
   padding: 14px 14px 14px 16px;
-  color: #30332f;
+  color: var(--text);
   text-align: left;
-  background: #fff;
-  border: 1px solid #e0e3db;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 18px;
 }
 .design-page .ob-option:hover {
-  background: #f6f7f3;
-  border-color: var(--accent-muted, #a1af8f);
+  background: var(--fill);
+  border-color: var(--accent-muted);
 }
 .design-page .st-work-options .ob-option[aria-pressed="true"] {
   cursor: default;
-  background: #fff;
-  border: 2px solid var(--accent, #486444);
+  background: var(--surface);
+  border: 2px solid var(--accent);
 }
 .st-job {
   display: flex;
@@ -1492,11 +1505,11 @@ body:has(.dc-breakdown[open]) {
 }
 .st-work-check {
   flex-shrink: 0;
-  color: var(--accent, #486444);
+  color: var(--accent);
 }
 .ob-option-arrow {
   flex-shrink: 0;
-  color: #a7ada1;
+  color: var(--text-faint);
 }
 .ob-option-icon {
   flex-shrink: 0;
@@ -1516,7 +1529,7 @@ body:has(.dc-breakdown[open]) {
 }
 .ob-option-note {
   font-size: 11px;
-  color: #72796e;
+  color: var(--text-3);
 }
 .ob-chips {
   display: flex;
@@ -1532,14 +1545,14 @@ body:has(.dc-breakdown[open]) {
   padding: 2px 7px;
   font-size: 10px;
   line-height: 1.4;
-  color: #565e52;
-  background: var(--accent-soft, #f0f4ed);
+  color: var(--text-2);
+  background: var(--accent-soft);
   border-radius: 8px;
 }
 .ob-footnote {
   margin: auto 0 0;
   font-size: 11px;
-  color: #8a9086;
+  color: var(--text-4);
   text-align: center;
 }
 .design-page .ob-primary {
@@ -1548,8 +1561,8 @@ body:has(.dc-breakdown[open]) {
   margin-top: auto;
   font-size: 15px;
   font-weight: 600;
-  color: #fff;
-  background: var(--accent, #486444);
+  color: var(--on-accent);
+  background: var(--accent);
   border: 0;
   border-radius: 15px;
 }
@@ -1568,7 +1581,7 @@ body:has(.dc-breakdown[open]) {
   place-items: center;
   width: 44px;
   height: 44px;
-  color: #72796e;
+  color: var(--text-3);
   background: transparent;
   border: 0;
   border-radius: 12px;
@@ -1586,18 +1599,18 @@ body:has(.dc-breakdown[open]) {
   border-radius: 12px;
 }
 .design-page .ob-days .dc-sunday {
-  color: #a96561;
+  color: var(--holiday);
 }
 .design-page .ob-days .dc-saturday {
-  color: #6682a0;
+  color: var(--saturday);
 }
 .design-page .ob-days .ob-outside {
-  color: #c5c7c1;
+  color: var(--text-disabled);
 }
 .design-page .ob-days button[aria-pressed="true"] {
   font-weight: 600;
-  color: #fff;
-  background: var(--accent, #486444);
+  color: var(--on-accent);
+  background: var(--accent);
 }
 .ob-finished {
   display: flex;
@@ -1609,21 +1622,21 @@ body:has(.dc-breakdown[open]) {
   padding: 0 14px;
   margin-top: 10px;
   font-size: 12px;
-  color: var(--accent, #486444);
+  color: var(--accent);
   background: transparent;
-  border: 1px solid #dfe3da;
+  border: 1px solid var(--border);
   border-radius: 20px;
 }
 .ob-weekday {
   padding-bottom: 4px;
   font-size: 11px;
-  color: #8a9086;
+  color: var(--text-4);
   text-align: center;
 }
 .ob-preview-label {
   margin: 0 0 -10px;
   font-size: 11px;
-  color: #72796e;
+  color: var(--text-3);
 }
 /* Any spare height stays under the calendar; the monthly summary, input
    buttons and tab bar sit together at the bottom. */
@@ -1671,11 +1684,11 @@ body:has(.dc-breakdown[open]) {
   margin: 0 0 6px 12px;
   font-size: 12px;
   font-weight: 600;
-  color: #72796e;
+  color: var(--text-3);
 }
 .st-list {
   overflow: hidden;
-  background: #f6f7f3;
+  background: var(--fill);
   border-radius: 16px;
 }
 .st-row {
@@ -1686,16 +1699,16 @@ body:has(.dc-breakdown[open]) {
   min-height: 48px;
   padding: 0 14px;
   font-size: 14px;
-  color: #30332f;
+  color: var(--text);
   text-align: left;
   background: transparent;
   border: 0;
 }
 .st-row + .st-row {
-  border-top: 1px solid #e6e8e1;
+  border-top: 1px solid var(--separator);
 }
 button.st-row:hover {
-  background: #eef1ea;
+  background: var(--fill-2);
 }
 .st-row-label {
   flex-shrink: 0;
@@ -1706,23 +1719,23 @@ button.st-row:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 13px;
-  color: #72796e;
+  color: var(--text-3);
   text-align: right;
   white-space: nowrap;
 }
 .st-row-arrow {
   flex-shrink: 0;
   margin-right: -4px;
-  color: #a7ada1;
+  color: var(--text-faint);
 }
 .st-danger {
-  color: #b0564f;
+  color: var(--danger);
 }
 .st-note {
   margin: 0 8px;
   font-size: 11px;
   line-height: 1.6;
-  color: #8a9086;
+  color: var(--text-4);
 }
 .st-page-header {
   display: flex;
@@ -1738,13 +1751,13 @@ button.st-row:hover {
   padding: 0 8px 0 0;
   margin-left: -6px;
   font-size: 14px;
-  color: var(--accent, #486444);
+  color: var(--accent);
   background: transparent;
   border: 0;
 }
 .st-card {
   padding: 16px;
-  background: #f6f7f3;
+  background: var(--fill);
   border-radius: 18px;
 }
 .st-card-label {
@@ -1756,12 +1769,12 @@ button.st-row:hover {
 }
 .st-card-count {
   font-weight: 400;
-  color: #72796e;
+  color: var(--text-3);
 }
 .st-card-meta {
   margin: 10px 0 0;
   font-size: 12px;
-  color: #72796e;
+  color: var(--text-3);
 }
 .st-sequence {
   display: flex;
@@ -1777,7 +1790,7 @@ button.st-row:hover {
   align-items: center;
   padding: 4px 9px;
   font-size: 12px;
-  background: #fff;
+  background: var(--surface);
   border-radius: 10px;
 }
 .design-page .st-primary {
@@ -1789,8 +1802,8 @@ button.st-row:hover {
   min-height: 50px;
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
-  background: var(--accent, #486444);
+  color: var(--on-accent);
+  background: var(--accent);
   border: 0;
   border-radius: 14px;
 }
@@ -1817,9 +1830,9 @@ button.st-row:hover {
   justify-content: center;
   min-height: 46px;
   font-size: 13px;
-  color: var(--accent, #486444);
+  color: var(--accent);
   background: transparent;
-  border: 1px dashed #b9c2b1;
+  border: 1px dashed var(--border-strong);
   border-radius: 14px;
 }
 .design-page .st-link {
@@ -1827,7 +1840,7 @@ button.st-row:hover {
   min-height: 40px;
   padding: 0 12px;
   font-size: 13px;
-  color: var(--accent, #486444);
+  color: var(--accent);
   text-decoration: underline;
   background: transparent;
   border: 0;
@@ -1870,11 +1883,11 @@ button.st-row:hover {
 /* Pattern editor. */
 .st-sortable .st-pattern {
   position: relative;
-  background: #f6f7f3;
+  background: var(--fill);
 }
 .st-sortable .st-dragging {
   z-index: 1;
-  box-shadow: 0 4px 14px #30332f26;
+  box-shadow: 0 4px 14px var(--shadow-strong);
 }
 .design-page .st-handle {
   display: grid;
@@ -1884,14 +1897,14 @@ button.st-row:hover {
   /* At the right edge, whatever the row holds. */
   margin-right: -8px;
   margin-left: auto;
-  color: #a7ada1;
+  color: var(--text-faint);
   touch-action: none;
   cursor: grab;
   background: transparent;
   border: 0;
 }
 .st-add-icon {
-  color: var(--accent, #486444);
+  color: var(--accent);
 }
 .design-page .st-back:disabled {
   visibility: hidden;
@@ -1914,7 +1927,7 @@ button.st-row:hover {
   gap: 14px;
   align-items: center;
   padding: 16px;
-  background: #f6f7f3;
+  background: var(--fill);
   border-radius: 18px;
 }
 .pe-preview-text {
@@ -1927,7 +1940,7 @@ button.st-row:hover {
 }
 .pe-preview-time {
   font-size: 12px;
-  color: #72796e;
+  color: var(--text-3);
 }
 .pe-field {
   display: flex;
@@ -1946,13 +1959,13 @@ button.st-row:hover {
   place-items: center;
   aspect-ratio: 1;
   font-size: 20px;
-  background: #f6f7f3;
+  background: var(--fill);
   border: 1.5px solid transparent;
   border-radius: 10px;
 }
 .design-page .pe-grid button[aria-pressed="true"] {
-  background: #fff;
-  border-color: var(--accent, #486444);
+  background: var(--surface);
+  border-color: var(--accent);
 }
 .pe-colors {
   display: grid;
@@ -1973,13 +1986,13 @@ button.st-row:hover {
 }
 .design-page .pe-colors button[aria-pressed="true"] {
   box-shadow:
-    0 0 0 3px #fff,
+    0 0 0 3px var(--bg),
     0 0 0 5px currentcolor;
 }
 .pe-warning {
   margin: -8px 4px 0;
   font-size: 11px;
-  color: #9b3f35;
+  color: var(--danger);
 }
 .design-page .pe-delete {
   display: flex;
@@ -1989,7 +2002,7 @@ button.st-row:hover {
   min-height: 44px;
   padding: 0 14px;
   font-size: 12px;
-  color: #b0564f;
+  color: var(--danger);
   background: transparent;
   border: 0;
 }
@@ -2008,8 +2021,8 @@ button.st-row:hover {
 .st-preview {
   padding: 12px 8px 8px;
   pointer-events: none;
-  background: #fff;
-  border: 1px solid #eceee8;
+  background: var(--surface);
+  border: 1px solid var(--separator);
   border-radius: 18px;
 }
 .st-preview {
@@ -2022,9 +2035,9 @@ button.st-row:hover {
   padding: 1px 8px;
   font-size: 10px;
   font-weight: 600;
-  color: #72796e;
-  background: #fff;
-  border: 1px solid #eceee8;
+  color: var(--text-3);
+  background: var(--surface);
+  border: 1px solid var(--separator);
   border-radius: 8px;
 }
 .st-preview .dc-weekdays {
@@ -2036,12 +2049,12 @@ button.st-row:hover {
 /* A colored icon would sink into the green, so it turns white like the
    text; emoji and letters on their tile keep their own colors. */
 .dc-detail-patterns button[aria-pressed="true"] .sm-icon {
-  fill: #fff;
+  fill: var(--on-accent);
 }
 /* Letters without their tile would sink the same way. The color is set on
    the element, so only !important can turn it white here. */
 .dc-detail-patterns button[aria-pressed="true"] .sm-badge-plain {
-  color: #fff !important;
+  color: var(--on-accent) !important;
 }
 .st-mark-segment {
   display: grid;
@@ -2049,7 +2062,7 @@ button.st-row:hover {
   gap: 3px;
   padding: 3px;
   margin: 0;
-  background: #eceee8;
+  background: var(--fill-2);
   border: 0;
   border-radius: 14px;
 }
@@ -2061,24 +2074,24 @@ button.st-row:hover {
   justify-content: center;
   min-height: 62px;
   font-size: 13px;
-  color: #565e52;
+  color: var(--text-2);
   background: transparent;
   border: 0;
   border-radius: 11px;
 }
 .design-page .st-mark-segment button[aria-pressed="true"] {
   font-weight: 600;
-  color: #30332f;
-  background: #fff;
-  box-shadow: 0 1px 3px #30332f1f;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: 0 1px 3px var(--shadow);
 }
 .dc-heading {
   position: relative;
 }
 .design-page .dc-this-month:disabled {
-  color: #b9beb4;
+  color: var(--text-disabled);
   cursor: default;
-  border-color: #eceee8;
+  border-color: var(--separator);
 }
 /* Line the right-hand button up with the middle of the month digits, like
    ‹ 今月 ›, instead of centering it on the year and month together. */
@@ -2097,12 +2110,12 @@ button.st-row:hover {
   padding: 0 4px 0 12px;
   font-size: 15px;
   font-weight: 600;
-  color: var(--accent, #486444);
+  color: var(--accent);
   background: transparent;
   border: 0;
 }
 .design-page .pe-save:disabled {
-  color: #b9beb4;
+  color: var(--text-disabled);
   cursor: default;
 }
 .pe-inline-input {
@@ -2111,7 +2124,7 @@ button.st-row:hover {
   padding: 0;
   font: inherit;
   font-size: 14px;
-  color: #30332f;
+  color: var(--text);
   text-align: right;
   outline: none;
   background: transparent;
@@ -2123,15 +2136,15 @@ button.st-row:hover {
   gap: 4px;
   align-items: center;
   justify-content: flex-end;
-  color: #72796e;
+  color: var(--text-3);
 }
 .pe-times > input {
   padding: 4px 6px;
   font: inherit;
   font-size: 14px;
-  color: #30332f;
-  background: #fff;
-  border: 1px solid #e0e3db;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
 }
 .pe-toggle {
@@ -2141,7 +2154,7 @@ button.st-row:hover {
   margin: 0 0 0 auto;
   appearance: none;
   cursor: pointer;
-  background: #d5d9cf;
+  background: var(--control-off);
   border-radius: 13px;
   transition: background 0.15s;
 }
@@ -2151,13 +2164,13 @@ button.st-row:hover {
   height: 22px;
   margin: 2px;
   content: "";
-  background: #fff;
+  background: var(--knob);
   border-radius: 50%;
-  box-shadow: 0 1px 3px #30332f33;
+  box-shadow: 0 1px 3px var(--shadow-strong);
   transition: transform 0.15s;
 }
 .pe-toggle:checked {
-  background: var(--accent, #486444);
+  background: var(--accent);
 }
 .pe-toggle:checked::before {
   transform: translateX(18px);
@@ -2175,7 +2188,7 @@ button.st-row:hover {
 .pe-check-mark {
   flex-shrink: 0;
   margin-left: auto;
-  color: var(--accent, #486444);
+  color: var(--accent);
 }
 
 /* Theme color and app icon settings. */
@@ -2205,16 +2218,16 @@ button.st-row:hover {
   align-items: center;
   padding: 14px 6px 12px;
   font-size: 12px;
-  color: #565e52;
-  background: #f6f7f3;
+  color: var(--text-2);
+  background: var(--fill);
   border: 2px solid transparent;
   border-radius: 16px;
 }
 .design-page .st-theme-grid button[aria-pressed="true"] {
   font-weight: 600;
-  color: #30332f;
-  background: #fff;
-  border-color: var(--accent, #486444);
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--accent);
 }
 .st-theme-dot {
   display: grid;
@@ -2227,7 +2240,7 @@ button.st-row:hover {
 .design-segment.st-row-segment {
   flex-shrink: 0;
   margin-left: auto;
-  background: #e8ebe3;
+  background: var(--fill-3);
 }
 .design-page .st-row-segment button {
   min-height: 32px;
@@ -2240,9 +2253,9 @@ button.st-row:hover {
 }
 .design-page .st-row-segment button[aria-pressed="true"] {
   font-weight: 600;
-  color: var(--accent, #486444);
-  background: #fff;
-  box-shadow: 0 1px 3px #30332f1f;
+  color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 1px 3px var(--shadow);
 }
 
 /* Look presets. */
@@ -2265,7 +2278,7 @@ button.st-row:hover {
   margin-bottom: 8px;
   font-size: 12px;
   font-weight: 600;
-  color: #72796e;
+  color: var(--text-3);
 }
 .design-page .st-custom-choice {
   display: flex;
@@ -2275,16 +2288,16 @@ button.st-row:hover {
   min-height: 52px;
   padding: 0 14px;
   font-size: 14px;
-  color: #30332f;
+  color: var(--text);
   text-align: left;
-  background: #f6f7f3;
+  background: var(--fill);
   border: 2px solid transparent;
   border-radius: 14px;
 }
 .design-page .st-custom-choice[aria-pressed="true"] {
   font-weight: 600;
-  background: #fff;
-  border-color: var(--accent, #486444);
+  background: var(--surface);
+  border-color: var(--accent);
 }
 .st-custom-choice .st-row-value {
   font-weight: 400;
@@ -2296,16 +2309,16 @@ button.st-row:hover {
   align-items: center;
   padding: 12px 4px 10px;
   font-size: 12px;
-  color: #565e52;
-  background: #f6f7f3;
+  color: var(--text-2);
+  background: var(--fill);
   border: 2px solid transparent;
   border-radius: 14px;
 }
 .design-page .st-preset-grid button[aria-pressed="true"] {
   font-weight: 600;
-  color: #30332f;
-  background: #fff;
-  border-color: var(--accent, #486444);
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--accent);
 }
 .st-preset-sample {
   display: flex;
@@ -2327,8 +2340,8 @@ button.st-row:hover {
   padding-inline: 4px;
   padding-bottom: 10px;
   margin: 0 -4px;
-  background: #fff;
-  box-shadow: 0 8px 8px -8px #30332f1f;
+  background: var(--bg);
+  box-shadow: 0 8px 8px -8px var(--shadow);
 }
 .st-custom-bar {
   display: grid;
@@ -2348,7 +2361,7 @@ button.st-row:hover {
   min-height: 40px;
   padding: 0 12px 0 4px;
   font-size: 15px;
-  color: var(--accent, #486444);
+  color: var(--accent);
   background: transparent;
   border: 0;
 }
@@ -2371,8 +2384,8 @@ button.st-row:hover {
 }
 .design-page .st-theme-row button[aria-pressed="true"] .st-theme-dot {
   box-shadow:
-    0 0 0 3px #fff,
-    0 0 0 5px var(--accent, #486444);
+    0 0 0 3px var(--bg),
+    0 0 0 5px var(--accent);
 }
 
 /* Groups. */
@@ -2393,7 +2406,7 @@ button.st-row:hover {
   place-items: center;
   width: 32px;
   height: 32px;
-  color: var(--accent, #486444);
+  color: var(--accent);
   background: transparent;
   border: 0;
   border-radius: 10px;
@@ -2405,26 +2418,26 @@ button.st-row:hover {
   align-items: center;
   padding: 10px 12px;
   margin-top: -6px;
-  background: var(--accent-soft, #f0f4ed);
+  background: var(--accent-soft);
   border-radius: 14px;
 }
 .gr-together-label {
   margin-right: 4px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent, #486444);
+  color: var(--accent);
 }
 .gr-together-day {
   padding: 2px 8px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent, #486444);
-  background: #fff;
+  color: var(--accent);
+  background: var(--surface);
   border-radius: 10px;
 }
 .gr-together-none {
   font-size: 12px;
-  color: #72796e;
+  color: var(--text-3);
 }
 .gr-avatar {
   display: grid;
@@ -2434,8 +2447,8 @@ button.st-row:hover {
   height: 24px;
   font-size: 11px;
   font-weight: 600;
-  color: #565e52;
-  background: #e6e8e1;
+  color: var(--text-2);
+  background: var(--fill-3);
   border-radius: 50%;
 }
 .gr-avatar img {
@@ -2445,13 +2458,13 @@ button.st-row:hover {
   border-radius: 50%;
 }
 .gr-avatar-me {
-  color: #fff;
-  background: var(--accent, #486444);
+  color: var(--on-accent);
+  background: var(--accent);
 }
 .gr-empty {
   width: 6px;
   height: 6px;
-  background: #dfe2da;
+  background: var(--fill-3);
   border-radius: 50%;
 }
 .gr-outside {
@@ -2473,7 +2486,7 @@ button.st-row:hover {
   inset: 3px;
   z-index: -1;
   content: "";
-  background: var(--accent-soft, #f0f4ed);
+  background: var(--accent-soft);
   border-radius: 8px;
 }
 /* 週ごと: a column from the date down to the last person. */
@@ -2506,16 +2519,16 @@ button.st-row:hover {
 .design-page .gr-overlay-day.gr-together-cell,
 .gr-person-day.gr-together-cell,
 .gr-day-card-row.gr-together-cell {
-  background: var(--accent-soft, #f0f4ed);
+  background: var(--accent-soft);
 }
 .gr-day-card-cell.gr-off-cell {
-  background: var(--accent-soft, #f0f4ed);
+  background: var(--accent-soft);
 }
 .gr-date.dc-sunday {
-  color: #a96561;
+  color: var(--holiday);
 }
 .gr-date.dc-saturday {
-  color: #6682a0;
+  color: var(--saturday);
 }
 
 /* Table: a block per week. */
@@ -2529,8 +2542,8 @@ button.st-row:hover {
      frame and the shared days off stay clear of the edge. */
   padding: 4px 0;
   overflow: hidden;
-  background: #fff;
-  border: 1px solid #eceee8;
+  background: var(--bg);
+  border: 1px solid var(--separator);
   border-radius: 14px;
 }
 .gr-table-row {
@@ -2540,7 +2553,7 @@ button.st-row:hover {
 }
 .gr-table-weekdays {
   font-size: 10px;
-  color: #8a9086;
+  color: var(--text-4);
   text-align: center;
 }
 /* Like the names in 日ごと, the weekdays stay at the top of the page. */
@@ -2550,18 +2563,18 @@ button.st-row:hover {
   z-index: 5;
   padding: 8px 0 4px;
   margin: -8px 0 -6px;
-  background: #fff;
+  background: var(--bg);
 }
 .gr-corner-month {
   font-size: 11px;
   font-weight: 600;
-  color: #72796e;
+  color: var(--text-3);
 }
 .gr-table-weekdays > :nth-child(2) {
-  color: #a96561;
+  color: var(--holiday);
 }
 .gr-table-weekdays > :last-child {
-  color: #6682a0;
+  color: var(--saturday);
 }
 .gr-table-dates {
   font-size: 11px;
@@ -2601,13 +2614,13 @@ button.st-row:hover {
   min-width: 0;
   height: 70px;
   padding: 5px 0;
-  color: #30332f;
+  color: var(--text);
   background: transparent;
   border: 1px solid transparent;
   border-radius: 12px;
 }
 .design-page .gr-overlay-day[aria-pressed="true"] {
-  border-color: var(--accent, #486444);
+  border-color: var(--accent);
 }
 .gr-overlay-date {
   font-size: 11px;
@@ -2627,7 +2640,7 @@ button.st-row:hover {
 }
 .gr-day-time {
   font-size: 11px;
-  color: #8a9086;
+  color: var(--text-4);
 }
 
 /* One person at a time. */
@@ -2647,16 +2660,16 @@ button.st-row:hover {
   min-height: 36px;
   padding: 0 12px 0 6px;
   font-size: 13px;
-  color: #565e52;
-  background: #f6f7f3;
+  color: var(--text-2);
+  background: var(--fill);
   border: 1px solid transparent;
   border-radius: 18px;
 }
 .design-page .gr-people button[aria-pressed="true"] {
   font-weight: 600;
-  color: #30332f;
-  background: #fff;
-  border-color: var(--accent, #486444);
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--accent);
 }
 .gr-person-day {
   height: 58px;
@@ -2672,7 +2685,7 @@ button.st-row:hover {
   flex-wrap: wrap;
   gap: 6px 12px;
   font-size: 12px;
-  color: #565e52;
+  color: var(--text-2);
 }
 .gr-legend-item {
   display: inline-flex;
@@ -2686,14 +2699,14 @@ button.st-row:hover {
   gap: 10px;
   align-items: center;
   padding: 24px 16px 18px;
-  color: #30332f;
-  background: #fff;
-  border: 1px solid #eceee8;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--separator);
   border-radius: 18px;
 }
 .gr-qr-note {
   font-size: 11px;
-  color: #72796e;
+  color: var(--text-3);
 }
 .design-page .gr-secondary {
   display: flex;
@@ -2702,8 +2715,8 @@ button.st-row:hover {
   justify-content: center;
   min-height: 46px;
   font-size: 14px;
-  color: var(--accent, #486444);
-  background: var(--accent-soft, #f0f4ed);
+  color: var(--accent);
+  background: var(--accent-soft);
   border: 0;
   border-radius: 14px;
 }
@@ -2729,7 +2742,7 @@ button.st-row:hover {
   align-items: center;
   width: 58px;
   padding: 12px 0;
-  background: #f6f7f3;
+  background: var(--fill);
   border-radius: 0 20px 20px 0;
 }
 .design-page .gr-rail-item {
@@ -2749,7 +2762,7 @@ button.st-row:hover {
   width: 4px;
   height: 0;
   content: "";
-  background: var(--accent, #486444);
+  background: var(--accent);
   border-radius: 0 3px 3px 0;
   transform: translateY(-50%);
   transition: height 0.15s;
@@ -2766,7 +2779,7 @@ button.st-row:hover {
   overflow: hidden;
   font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
   font-size: 22px;
-  background: #fff;
+  background: var(--surface);
   /* Groups are rounded squares; people are circles. */
   border-radius: 14px;
   transition: border-radius 0.15s;
@@ -2785,14 +2798,14 @@ button.st-row:hover {
   transition: box-shadow 0.15s;
 }
 .gr-rail-item[aria-current="page"] .gr-rail-icon {
-  background: var(--accent-soft, #f0f4ed);
+  background: var(--accent-soft);
   border-radius: 11px;
 }
 /* A thin white gap keeps the ring clear of a photo's own colors. */
 .gr-rail-item[aria-current="page"] .gr-rail-icon::after {
   box-shadow:
-    inset 0 0 0 2px var(--accent, #486444),
-    inset 0 0 0 4px #fff;
+    inset 0 0 0 2px var(--accent),
+    inset 0 0 0 4px var(--surface);
 }
 .gr-badge {
   display: inline-grid;
@@ -2802,20 +2815,20 @@ button.st-row:hover {
   padding: 0 5px;
   font-size: 10px;
   font-weight: 700;
-  color: #fff;
-  background: #b0564f;
+  color: var(--on-badge);
+  background: var(--badge);
   border-radius: 9px;
 }
 .gr-rail-badge {
   position: absolute;
   right: 3px;
   bottom: 0;
-  box-shadow: 0 0 0 2px #f6f7f3;
+  box-shadow: 0 0 0 2px var(--fill);
 }
 .gr-rail-divider {
   width: 28px;
   height: 2px;
-  background: #e0e3db;
+  background: var(--border);
   border-radius: 1px;
 }
 .design-page .gr-rail-action {
@@ -2823,8 +2836,8 @@ button.st-row:hover {
   place-items: center;
   width: 42px;
   height: 42px;
-  color: var(--accent, #486444);
-  background: #fff;
+  color: var(--accent);
+  background: var(--surface);
   border: 0;
   border-radius: 50%;
 }
@@ -2862,7 +2875,7 @@ button.st-row:hover {
   place-items: center;
   width: 34px;
   height: 34px;
-  color: var(--accent, #486444);
+  color: var(--accent);
   background: transparent;
   border: 0;
   border-radius: 10px;
@@ -2873,17 +2886,17 @@ button.st-row:hover {
   gap: 6px;
   width: 100%;
   padding: 8px 6px 10px 4px;
-  color: #30332f;
+  color: var(--text);
   text-align: left;
-  background: #fff;
-  border: 1px solid #eceee8;
+  background: var(--surface);
+  border: 1px solid var(--separator);
   border-radius: 16px;
 }
 .gr-week-card-next {
   padding-left: 8px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent, #486444);
+  color: var(--accent);
 }
 .gr-table-compact .gr-week {
   padding: 0;
@@ -2898,7 +2911,7 @@ button.st-row:hover {
 }
 .gr-row-icon {
   flex-shrink: 0;
-  color: var(--accent, #486444);
+  color: var(--accent);
 }
 .design-page .gr-chat-row {
   min-height: 58px;
@@ -2917,7 +2930,7 @@ button.st-row:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 11px;
-  color: #8a9086;
+  color: var(--text-4);
   white-space: nowrap;
 }
 .gr-chat-row-meta {
@@ -2929,7 +2942,7 @@ button.st-row:hover {
 }
 .gr-chat-row-time {
   font-size: 10px;
-  color: #a7ada1;
+  color: var(--text-faint);
 }
 
 /* Chat. */
@@ -2944,7 +2957,7 @@ button.st-row:hover {
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   padding: 4px 0 8px;
-  border-bottom: 1px solid #eceee8;
+  border-bottom: 1px solid var(--separator);
 }
 .gr-chat-header h3 {
   margin: 0;
@@ -2970,7 +2983,7 @@ button.st-row:hover {
 .gr-messages-empty {
   margin: auto;
   font-size: 12px;
-  color: #8a9086;
+  color: var(--text-4);
 }
 .gr-message-item {
   display: flex;
@@ -2982,8 +2995,8 @@ button.st-row:hover {
   padding: 2px 10px;
   margin: 6px 0 2px;
   font-size: 10px;
-  color: #72796e;
-  background: #f0f1ec;
+  color: var(--text-3);
+  background: var(--fill-2);
   border-radius: 9px;
 }
 /* The avatar sits at the top by the name; the time sits by the bubble,
@@ -3021,35 +3034,35 @@ button.st-row:hover {
 .gr-message-name {
   padding-left: 4px;
   font-size: 10px;
-  color: #72796e;
+  color: var(--text-3);
 }
 .gr-bubble {
   display: flex;
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
-  color: #30332f;
-  background: #f0f1ec;
+  color: var(--text);
+  background: var(--fill-2);
   border-radius: 16px 16px 16px 6px;
 }
 .gr-mine .gr-bubble {
-  color: #fff;
-  background: var(--accent, #486444);
+  color: var(--on-accent);
+  background: var(--accent);
   border-radius: 16px 16px 6px;
 }
 .gr-message-time {
   flex-shrink: 0;
   padding-bottom: 2px;
   font-size: 9px;
-  color: #a7ada1;
+  color: var(--text-faint);
 }
 .gr-day-card {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  background: #fff;
-  border: 1px solid #e0e3db;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 14px;
 }
 .design-page .gr-day-card-head {
@@ -3059,7 +3072,7 @@ button.st-row:hover {
   padding: 0;
   font-size: 12px;
   font-weight: 600;
-  color: #30332f;
+  color: var(--text);
   text-align: left;
   background: transparent;
   border: 0;
@@ -3067,8 +3080,8 @@ button.st-row:hover {
 .gr-day-card-tag {
   padding: 1px 7px;
   font-size: 10px;
-  color: var(--accent, #486444);
-  background: var(--accent-soft, #f0f4ed);
+  color: var(--accent);
+  background: var(--accent-soft);
   border-radius: 8px;
 }
 .gr-day-card-people {
@@ -3081,14 +3094,14 @@ button.st-row:hover {
   gap: 3px;
   align-items: center;
   font-size: 9px;
-  color: #72796e;
+  color: var(--text-3);
 }
 .gr-composer {
   display: flex;
   gap: 6px;
   align-items: center;
   padding: 8px 0 4px;
-  border-top: 1px solid #eceee8;
+  border-top: 1px solid var(--separator);
 }
 .gr-composer input {
   flex: 1;
@@ -3097,7 +3110,7 @@ button.st-row:hover {
   padding: 0 14px;
   font: inherit;
   font-size: 14px;
-  background: #f6f7f3;
+  background: var(--fill);
   border: 0;
   border-radius: 19px;
 }
@@ -3108,17 +3121,17 @@ button.st-row:hover {
   place-items: center;
   width: 38px;
   height: 38px;
-  color: var(--accent, #486444);
+  color: var(--accent);
   background: transparent;
   border: 0;
   border-radius: 50%;
 }
 .design-page .gr-composer-send {
-  color: #fff;
-  background: var(--accent, #486444);
+  color: var(--on-accent);
+  background: var(--accent);
 }
 .design-page .gr-composer-send:disabled {
-  background: #c9cec3;
+  background: var(--control-off);
 }
 
 /* 日ごと: a row per day, a column per member. */
@@ -3131,8 +3144,8 @@ button.st-row:hover {
 .gr-rows-scroll {
   max-height: 520px;
   overflow: auto;
-  background: #fff;
-  border: 1px solid #eceee8;
+  background: var(--bg);
+  border: 1px solid var(--separator);
   border-radius: 14px;
 }
 .gr-rows {
@@ -3148,9 +3161,9 @@ button.st-row:hover {
   z-index: 3;
   padding: 8px 4px;
   font-weight: 600;
-  background: #fff;
+  background: var(--bg);
   /* A border would scroll away with collapsed borders; a shadow stays. */
-  box-shadow: 0 1px 0 #e6e8e1;
+  box-shadow: 0 1px 0 var(--separator);
 }
 .gr-rows .gr-rows-corner {
   left: 0;
@@ -3176,8 +3189,8 @@ button.st-row:hover {
   padding: 0 0 0 10px;
   font-weight: 600;
   text-align: left;
-  background: #fff;
-  border-bottom: 1px solid #f0f1ec;
+  background: var(--bg);
+  border-bottom: 1px solid var(--separator-faint);
   border-left: 3px solid transparent;
   isolation: isolate;
 }
@@ -3187,12 +3200,12 @@ button.st-row:hover {
   font-weight: 400;
 }
 .gr-rows-today .gr-rows-date {
-  border-left-color: var(--accent, #486444);
+  border-left-color: var(--accent);
 }
 .gr-rows td {
   padding: 0 4px;
   text-align: center;
-  border-bottom: 1px solid #f0f1ec;
+  border-bottom: 1px solid var(--separator-faint);
 }
 .gr-rows-cell {
   display: flex;
@@ -3205,12 +3218,12 @@ button.st-row:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 11px;
-  color: #30332f;
+  color: var(--text);
   white-space: nowrap;
 }
 .gr-rows-empty {
   font-size: 10px;
-  color: #b9beb4;
+  color: var(--text-disabled);
 }
 
 /* Marks alone once names no longer fit; you stay next to the dates. */
@@ -3218,19 +3231,19 @@ button.st-row:hover {
   position: sticky;
   left: 46px;
   z-index: 2;
-  background: #fff;
+  background: var(--bg);
 }
 .gr-rows thead .gr-rows-me {
   z-index: 4;
 }
 /* Only a table that scrolls sideways needs the edge of the pinned columns. */
 .gr-density-scroll .gr-rows-me {
-  box-shadow: 1px 0 0 #e6e8e1;
+  box-shadow: 1px 0 0 var(--separator);
 }
 .gr-density-scroll thead .gr-rows-me {
   box-shadow:
-    0 1px 0 #e6e8e1,
-    1px 0 0 #e6e8e1;
+    0 1px 0 var(--separator),
+    1px 0 0 var(--separator);
 }
 .gr-density-marks .gr-rows-member,
 .gr-density-scroll .gr-rows-member {
@@ -3300,7 +3313,7 @@ button.st-row:hover {
   display: flex;
   align-items: flex-end;
   overflow: hidden;
-  background: #30332f40;
+  background: var(--scrim);
   border-radius: 47px;
 }
 .gr-sheet {
@@ -3309,9 +3322,9 @@ button.st-row:hover {
   gap: 12px;
   width: 100%;
   padding: 12px 18px 34px;
-  background: #fff;
+  background: var(--raised);
   border-radius: 22px 22px 0 0;
-  box-shadow: 0 -6px 24px #30332f26;
+  box-shadow: 0 -6px 24px var(--shadow-strong);
 }
 .gr-sheet-header {
   display: grid;
@@ -3332,7 +3345,7 @@ button.st-row:hover {
   gap: 6px;
   align-items: center;
   padding: 10px 12px;
-  background: var(--accent-soft, #f0f4ed);
+  background: var(--accent-soft);
   border-radius: 14px;
 }
 .design-page .gr-sheet-suggest button {
@@ -3340,14 +3353,14 @@ button.st-row:hover {
   padding: 0 10px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent, #486444);
-  background: #fff;
+  color: var(--accent);
+  background: var(--surface);
   border: 1.5px solid transparent;
   border-radius: 15px;
 }
 .design-page .gr-sheet-suggest button[aria-pressed="true"] {
-  color: #fff;
-  background: var(--accent, #486444);
+  color: var(--on-accent);
+  background: var(--accent);
 }
 
 .gr-pick-days {
@@ -3357,7 +3370,7 @@ button.st-row:hover {
 }
 .gr-pick-weekday {
   font-size: 10px;
-  color: #8a9086;
+  color: var(--text-4);
   text-align: center;
 }
 .design-page .gr-pick-days button {
@@ -3373,11 +3386,11 @@ button.st-row:hover {
   visibility: hidden;
 }
 .design-page .gr-pick-days button.gr-together-cell {
-  background: var(--accent-soft, #f0f4ed);
+  background: var(--accent-soft);
 }
 .design-page .gr-pick-days button[aria-pressed="true"] {
-  color: #fff;
-  background: var(--accent, #486444);
+  color: var(--on-accent);
+  background: var(--accent);
 }
 .gr-small-weekday {
   margin-left: 2px;
@@ -3409,17 +3422,17 @@ button.st-row:hover {
   text-align: left;
   background: transparent;
   border: 0;
-  border-left: 3px solid #d9ddd4;
+  border-left: 3px solid var(--border);
   border-radius: 2px;
 }
 .gr-mine .gr-quote {
   align-self: flex-end;
-  border-color: var(--accent-muted, #a1af8f);
+  border-color: var(--accent-muted);
 }
 .gr-quote-name {
   font-size: 10px;
   font-weight: 600;
-  color: #72796e;
+  color: var(--text-3);
 }
 .gr-quote-text {
   display: -webkit-box;
@@ -3427,7 +3440,7 @@ button.st-row:hover {
   overflow: hidden;
   -webkit-line-clamp: 1;
   font-size: 11px;
-  color: #8a9086;
+  color: var(--text-4);
 }
 .gr-reactions {
   display: flex;
@@ -3445,17 +3458,17 @@ button.st-row:hover {
   height: 24px;
   padding: 0 8px;
   font-size: 13px;
-  background: #fff;
-  border: 1px solid #e0e3db;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 12px;
 }
 .gr-reaction-count {
   font-size: 11px;
-  color: #72796e;
+  color: var(--text-3);
 }
 .design-page .gr-reaction[aria-pressed="true"] {
-  background: var(--accent-soft, #f0f4ed);
-  border-color: var(--accent, #486444);
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 /* Wider than short bubbles, so it may reach past them. */
 .gr-actions {
@@ -3464,10 +3477,10 @@ button.st-row:hover {
   align-items: center;
   width: max-content;
   padding: 4px;
-  background: #fff;
-  border: 1px solid #e6e8e1;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 18px;
-  box-shadow: 0 4px 14px #30332f1f;
+  box-shadow: 0 4px 14px var(--shadow);
 }
 .design-page .gr-actions button {
   display: grid;
@@ -3488,16 +3501,16 @@ button.st-row:hover {
   margin-left: 2px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent, #486444);
+  color: var(--accent);
   white-space: nowrap;
-  background: var(--accent-soft, #f0f4ed);
+  background: var(--accent-soft);
   border-radius: 15px;
 }
 .design-page .gr-day-open {
   align-self: flex-start;
   padding: 0 4px;
   font-size: 11px;
-  color: var(--accent, #486444);
+  color: var(--accent);
   text-decoration: underline;
   background: transparent;
   border: 0;
@@ -3512,7 +3525,7 @@ button.st-row:hover {
 @keyframes gr-flash {
   0%,
   40% {
-    box-shadow: 0 0 0 3px var(--accent-muted, #a1af8f);
+    box-shadow: 0 0 0 3px var(--accent-muted);
   }
   100% {
     box-shadow: 0 0 0 0 transparent;
@@ -3523,12 +3536,12 @@ button.st-row:hover {
   gap: 6px;
   align-items: center;
   padding: 8px 0 0;
-  border-top: 1px solid #eceee8;
+  border-top: 1px solid var(--separator);
 }
 .gr-quote.gr-replying-quote {
   flex: 1;
   min-width: 0;
-  border-color: var(--accent, #486444);
+  border-color: var(--accent);
 }
 .gr-replying + .gr-composer {
   border-top: 0;
@@ -3615,10 +3628,10 @@ button.st-row:hover {
   place-items: center;
   width: 26px;
   height: 26px;
-  color: var(--accent, #486444);
-  background: #fff;
+  color: var(--accent);
+  background: var(--surface);
   border-radius: 50%;
-  box-shadow: 0 1px 4px #30332f33;
+  box-shadow: 0 1px 4px var(--shadow-strong);
 }
 .st-photo-actions {
   display: flex;
@@ -3629,7 +3642,7 @@ button.st-row:hover {
   padding: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--accent, #486444);
+  color: var(--accent);
   cursor: pointer;
   background: transparent;
   border: 0;
@@ -3660,7 +3673,7 @@ button.st-row:hover {
 .gr-rail-icon.gr-mark-frame-large {
   width: 76px;
   height: 76px;
-  background: #f6f7f3;
+  background: var(--fill);
   border-radius: 25px;
 }
 /* The same rounded square as the rail. */
@@ -3670,14 +3683,14 @@ button.st-row:hover {
   width: 28px;
   height: 28px;
   overflow: hidden;
-  background: #fff;
+  background: var(--surface);
   border-radius: 9px;
 }
 .gr-hub-icon {
   width: 26px;
   height: 26px;
   overflow: hidden;
-  background: #f6f7f3;
+  background: var(--fill);
   border-radius: 8px;
 }
 .gr-mark-kinds.st-mark-segment {
@@ -3711,7 +3724,7 @@ button.st-row:hover {
   margin: 0 0 0 12px;
   font-size: 12px;
   font-weight: 600;
-  color: #72796e;
+  color: var(--text-3);
 }
 .design-page .gr-section-link {
   display: inline-flex;
@@ -3720,7 +3733,7 @@ button.st-row:hover {
   padding: 0 2px 0 8px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent, #486444);
+  color: var(--accent);
   background: transparent;
   border: 0;
 }
@@ -3730,8 +3743,8 @@ button.st-row:hover {
   place-items: center;
   width: 28px;
   height: 28px;
-  color: var(--accent, #486444);
-  background: var(--accent-soft, #f0f4ed);
+  color: var(--accent);
+  background: var(--accent-soft);
   border-radius: 9px;
 }
 /* Tiles sit tighter in the small weekly table. */
@@ -3747,8 +3760,8 @@ button.st-row:hover {
   justify-content: space-between;
   padding: 12px 16px;
   font-size: 12px;
-  color: #666f61;
-  background: #f6f7f3;
+  color: var(--text-2);
+  background: var(--fill);
   border-radius: 16px;
 }
 .gr-together-days {
@@ -3759,7 +3772,7 @@ button.st-row:hover {
   justify-content: flex-end;
   font-size: 18px;
   font-weight: 600;
-  color: var(--accent-strong, #445d43);
+  color: var(--accent-strong);
 }
 .gr-together-unit {
   font-size: 12px;
@@ -3773,7 +3786,7 @@ button.st-row:hover {
 .gr-together-days .gr-together-day + .gr-together-day::before {
   margin-right: 4px;
   font-weight: 400;
-  color: #a7ada1;
+  color: var(--text-faint);
   content: "・";
 }
 .design-page .gr-table-name-button {
@@ -3804,7 +3817,7 @@ button.st-row:hover {
   z-index: 1;
   pointer-events: none;
   content: "";
-  border: 0 solid var(--accent, #486444);
+  border: 0 solid var(--accent);
 }
 /* The ends reach into the week's padding to clear the date and marks. */
 .gr-table-date.gr-picked-cell::after {
@@ -3909,10 +3922,10 @@ button.st-row:hover {
   max-height: 44%;
   padding: 10px 12px 12px;
   overflow-y: auto;
-  background: #fff;
-  border: 1px solid #e6e8e1;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 18px;
-  box-shadow: 0 10px 30px #30332f2e;
+  box-shadow: 0 10px 30px var(--shadow-strong);
 }
 .gr-peek-head {
   display: flex;
@@ -3944,7 +3957,7 @@ button.st-row:hover {
   width: 64px;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #565e52;
+  color: var(--text-2);
   white-space: nowrap;
 }
 .gr-peek-shift {
@@ -3953,7 +3966,7 @@ button.st-row:hover {
 .gr-peek-time {
   margin-left: auto;
   font-size: 11px;
-  color: #8a9086;
+  color: var(--text-4);
 }
 
 /* ‹ 8月 · 10月 › under the month's table. */
@@ -3970,9 +3983,9 @@ button.st-row:hover {
   padding: 0 12px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--accent, #486444);
+  color: var(--accent);
   background: transparent;
-  border: 1px solid #dfe3da;
+  border: 1px solid var(--border);
   border-radius: 17px;
 }
 
@@ -3991,8 +4004,8 @@ button.st-row:hover {
   min-height: 50px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--accent, #486444);
-  background: var(--accent-soft, #f0f4ed);
+  color: var(--accent);
+  background: var(--accent-soft);
   border: 0;
   border-radius: 16px;
 }
@@ -4016,7 +4029,7 @@ button.st-row:hover {
   cursor: pointer;
 }
 .dc-save-calendars .st-row + .st-row {
-  border-top: 1px solid #eceee8;
+  border-top: 1px solid var(--separator);
 }
 .dc-save-dot {
   flex-shrink: 0;
@@ -4026,7 +4039,7 @@ button.st-row:hover {
 }
 .dc-save-check {
   flex-shrink: 0;
-  color: var(--accent, #486444);
+  color: var(--accent);
 }
 .dc-save-unchecked {
   visibility: hidden;
@@ -4042,7 +4055,7 @@ button.st-row:hover {
 .dc-save-done-icon {
   flex-shrink: 0;
   margin-top: 3px;
-  color: var(--accent, #486444);
+  color: var(--accent);
 }
 
 /* A short note that fades on its own, above the home bar. */
@@ -4057,9 +4070,9 @@ button.st-row:hover {
   padding: 10px 16px;
   margin: 0;
   font-size: 13px;
-  color: #fff;
+  color: var(--on-inverse);
   white-space: nowrap;
-  background: #30332fe6;
+  background: var(--inverse);
   border-radius: 20px;
   transform: translateX(-50%);
 }
@@ -4072,10 +4085,10 @@ button.st-row:hover {
   padding: 14px 10px 10px;
   margin: 0;
   pointer-events: none;
-  background: #fff;
-  border: 1px solid #eceee8;
+  background: var(--surface);
+  border: 1px solid var(--separator);
   border-radius: 18px;
-  box-shadow: 0 6px 18px #30332f14;
+  box-shadow: 0 6px 18px var(--shadow-faint);
 }
 .dc-image-title {
   margin: 0 4px 12px;
@@ -4095,7 +4108,7 @@ button.st-row:hover {
 .dc-image-credit {
   margin: 10px 4px 0;
   font-size: 10px;
-  color: #a2a79e;
+  color: var(--text-faint);
   text-align: right;
 }
 .dc-image-actions {
@@ -4108,4 +4121,250 @@ button.st-row:hover {
 /* Above the save and share buttons rather than on them. */
 .dc-image-actions ~ .gr-toast {
   bottom: 126px;
+}
+
+/* /design/colors: the palette page. Each cell sets its own light or dark
+   variables, so samples sit on the real screen background. */
+.cp-section {
+  max-width: 1100px;
+  margin: 72px auto 0;
+}
+.cp-section > h2 {
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.cp-section-description {
+  max-width: 640px;
+  margin: 8px 0 28px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text-3);
+}
+.cp-group + .cp-group {
+  margin-top: 36px;
+}
+.cp-group > h3,
+.cp-theme > h3,
+.cp-mark-card > h3 {
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.cp-table {
+  width: 100%;
+  overflow: hidden;
+  border-spacing: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.cp-table th,
+.cp-table td {
+  padding: 0;
+  text-align: left;
+  vertical-align: middle;
+}
+.cp-table tbody th,
+.cp-table tbody .cp-cell {
+  border-top: 1px solid var(--separator);
+}
+.cp-table thead th {
+  width: 36%;
+  padding: 10px 16px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-4);
+  letter-spacing: 0.08em;
+  background: var(--fill);
+}
+.cp-table thead th:first-child {
+  width: 28%;
+}
+.cp-table .cp-name {
+  padding: 14px 16px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-3);
+  background: var(--ws-bg);
+}
+.cp-name code {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: var(--text);
+}
+.cp-cell {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  height: 100%;
+  min-height: 64px;
+  padding: 12px 16px;
+  color: var(--text);
+  background: var(--bg);
+}
+.cp-cell > code,
+.cp-swatches code,
+.cp-mark-values code {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.cp-block {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 64px;
+  height: 36px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--separator);
+  border-radius: 10px;
+}
+.cp-text-sample {
+  flex-shrink: 0;
+  width: 64px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.cp-line-sample {
+  flex-shrink: 0;
+  width: 64px;
+  height: 0;
+  border-top-width: 2px;
+}
+.cp-contrast {
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
+  margin-left: auto;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+}
+.cp-contrast small {
+  padding: 1px 5px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-4);
+  background: var(--fill-2);
+  border-radius: 6px;
+}
+.cp-contrast[data-pass="true"] small {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.cp-role-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: 20px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.cp-role-list code {
+  margin-right: 6px;
+  color: var(--text);
+}
+.cp-themes,
+.cp-marks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 28px 20px;
+}
+.cp-marks {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.cp-theme-scheme,
+.cp-mark {
+  padding: 16px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--separator);
+}
+.cp-theme-scheme:first-of-type,
+.cp-mark:first-of-type {
+  border-radius: 16px 16px 0 0;
+}
+.cp-theme-scheme:last-of-type,
+.cp-mark:last-of-type {
+  border-top: 0;
+  border-radius: 0 0 16px 16px;
+}
+.cp-theme-preview {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.cp-theme-button {
+  padding: 8px 14px;
+  color: var(--on-accent);
+  background: var(--accent);
+  border-radius: 18px;
+}
+.cp-theme-chip {
+  padding: 7px 12px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-muted);
+  border-radius: 10px;
+}
+.cp-theme-link {
+  color: var(--accent-line);
+}
+.cp-swatches {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 8px;
+  padding: 0;
+  list-style: none;
+}
+.cp-swatches li {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cp-swatch {
+  height: 28px;
+  border: 1px solid var(--separator);
+  border-radius: 8px;
+}
+.cp-swatch-label {
+  font-size: 10px;
+  color: var(--text-2);
+}
+.cp-theme-contrast {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.cp-theme-contrast .cp-contrast {
+  margin-left: 0;
+}
+.cp-mark {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.cp-mark-tile {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  font-size: 17px;
+  font-weight: 700;
+  border-radius: 11px;
+}
+.cp-mark-values {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }

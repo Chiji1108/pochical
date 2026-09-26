@@ -31,7 +31,12 @@ import { PhotoAvatar, PhotoEditor } from "./design-group";
 import type { Profile } from "./design-group";
 import { WorkSetupSteps } from "./design-onboarding";
 import { PatternsPage } from "./design-pattern-editor";
-import { ThemeContext, themeOf, themes } from "./design-theme";
+import {
+  ColorSchemeContext,
+  ThemeContext,
+  themeColors,
+  themes,
+} from "./design-theme";
 import {
   CellNamesContext,
   IconWeightContext,
@@ -338,7 +343,7 @@ function SettingsTop({
               <span
                 aria-hidden="true"
                 className="st-swatch"
-                style={{ background: themeOf(theme).accent }}
+                style={{ background: "var(--accent)" }}
               />
               {stylePresetOf(theme, look)?.name ?? "カスタム"}
             </span>
@@ -1272,6 +1277,7 @@ function SwitchRow({
 // The theme colors as swatches.
 function ThemeChoices() {
   const { theme, setTheme } = useContext(ThemeContext);
+  const scheme = useContext(ColorSchemeContext);
   return (
     <fieldset className="st-theme-grid st-theme-row">
       <legend className="dc-sr-only">テーマカラー</legend>
@@ -1286,7 +1292,7 @@ function ThemeChoices() {
           <span
             aria-hidden="true"
             className="st-theme-dot"
-            style={{ background: option.accent }}
+            style={{ background: themeColors(option, scheme).accent }}
           />
         </button>
       ))}

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import {
   MarkGlyph,
-  markColors,
+  useMarkColors,
   markEmojis,
   markIcons,
   ShiftMarkStyleContext,
@@ -285,10 +285,11 @@ function ColorPicker({
   look: Look;
   onPick: (field: LookField, value: Partial<Look>) => void;
 }) {
+  const colors = useMarkColors();
   return (
     <fieldset className="pe-colors">
       <legend className="dc-repeat-label pe-colors-label">色</legend>
-      {markColors.map(({ name, color, tint }, index) => (
+      {colors.map(({ name, color, tint }, index) => (
         <button
           aria-label={name}
           aria-pressed={look.color === index}

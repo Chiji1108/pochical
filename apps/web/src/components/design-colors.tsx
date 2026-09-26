@@ -1,0 +1,348 @@
+import type { ReactNode } from "react";
+
+import type { ColorScheme, ColorToken } from "../lib/design-tokens";
+import {
+  markColorIn,
+  markColors,
+  neutralTokenGroups,
+} from "../lib/design-tokens";
+import { themeColors, themes, themeStyle } from "./design-theme";
+import type { Theme } from "./design-theme";
+
+const schemeLabels: Record<ColorScheme, string> = {
+  dark: "ダーク",
+  light: "ライト",
+};
+
+const textTokens = new Set([
+  "text",
+  "text-2",
+  "text-3",
+  "text-4",
+  "text-faint",
+  "text-disabled",
+  "holiday",
+  "saturday",
+  "danger",
+]);
+const lineTokens = new Set([
+  "border",
+  "separator",
+  "separator-faint",
+  "border-strong",
+]);
+
+// The accent roles of a theme, in the order a screen uses them.
+const themeRoles = [
+  { key: "accent", label: "テーマ色", name: "accent" },
+  { key: "strong", label: "押したとき", name: "accent-strong" },
+  { key: "line", label: "フォーカス・見出し", name: "accent-line" },
+  { key: "muted", label: "選択中の枠", name: "accent-muted" },
+  { key: "border", label: "薄い枠", name: "accent-border" },
+  { key: "press", label: "押したときの背景", name: "accent-press" },
+  { key: "soft2", label: "薄い背景2", name: "accent-soft-2" },
+  { key: "soft", label: "薄い背景", name: "accent-soft" },
+  { key: "markTint", label: "休みの地", name: "accent-mark-tint" },
+] as const;
+
+// Relative luminance of a #rrggbb color, per WCAG 2.
+function luminance(hex: string) {
+  const [red, green, blue] = [1, 3, 5].map((start) => {
+    const channel = Number.parseInt(hex.slice(start, start + 2), 16) / 255;
+    return channel <= 0.04045
+      ? channel / 12.92
+      : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+// WCAG 2 contrast ratio between two #rrggbb colors.
+function contrast(first: string, second: string) {
+  const lighter = Math.max(luminance(first), luminance(second));
+  const darker = Math.min(luminance(first), luminance(second));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function contrastGrade(ratio: number) {
+  if (ratio >= 7) {
+    return "AAA";
+  }
+  if (ratio >= 4.5) {
+    return "AA";
+  }
+  if (ratio >= 3) {
+    return "AA 大";
+  }
+  return "—";
+}
+
+function ContrastBadge({ ratio }: { ratio: number }) {
+  const grade = contrastGrade(ratio);
+  return (
+    <span className="cp-contrast" data-pass={grade !== "—"}>
+      {ratio.toFixed(1)}
+      <small>{grade}</small>
+    </span>
+  );
+}
+
+function valueOf(scheme: ColorScheme, name: string) {
+  const token = neutralTokenGroups
+    .flatMap(({ tokens }) => tokens)
+    .find((candidate) => candidate.name === name);
+  return token?.[scheme] ?? "#000000";
+}
+
+// What a neutral token looks like where the app uses it.
+function TokenSample({ token }: { token: ColorToken }) {
+  const color = `var(--${token.name})`;
+  if (textTokens.has(token.name)) {
+    return (
+      <span className="cp-text-sample" style={{ color }}>
+        Aa あ 12
+      </span>
+    );
+  }
+  if (lineTokens.has(token.name)) {
+    return (
+      <span
+        className="cp-line-sample"
+        style={{
+          borderColor: color,
+          borderStyle: token.name === "border-strong" ? "dashed" : "solid",
+        }}
+      />
+    );
+  }
+  if (token.name.startsWith("on-")) {
+    const ground = {
+      "on-accent": "var(--accent)",
+      "on-badge": "var(--badge)",
+      "on-inverse": "var(--inverse)",
+    }[token.name];
+    return (
+      <span className="cp-block" style={{ background: ground, color }}>
+        完了
+      </span>
+    );
+  }
+  if (token.name.startsWith("shadow")) {
+    return (
+      <span className="cp-block" style={{ boxShadow: `0 6px 16px ${color}` }} />
+    );
+  }
+  return <span className="cp-block" style={{ background: color }} />;
+}
+
+function TokenCell({
+  scheme,
+  token,
+}: {
+  scheme: ColorScheme;
+  token: ColorToken;
+}) {
+  const value = token[scheme];
+  const ground = valueOf(scheme, "bg");
+  return (
+    <div className="cp-cell" style={themeStyle("moss", scheme)}>
+      <TokenSample token={token} />
+      <code>{value}</code>
+      {textTokens.has(token.name) ? (
+        <ContrastBadge ratio={contrast(value.slice(0, 7), ground)} />
+      ) : null}
+    </div>
+  );
+}
+
+function Section({
+  children,
+  description,
+  id,
+  title,
+}: {
+  children: ReactNode;
+  description: string;
+  id: string;
+  title: string;
+}) {
+  return (
+    <section aria-labelledby={id} className="cp-section">
+      <h2 id={id}>{title}</h2>
+      <p className="cp-section-description">{description}</p>
+      {children}
+    </section>
+  );
+}
+
+function NeutralTokens() {
+  return (
+    <Section
+      description="役割ごとの色です。design.css はこの名前の変数だけを使います。文字の色には、画面の背景に対するコントラスト比を添えています。"
+      id="cp-neutral"
+      title="基本色"
+    >
+      {neutralTokenGroups.map((group) => (
+        <div className="cp-group" key={group.label}>
+          <h3>{group.label}</h3>
+          <table className="cp-table">
+            <thead>
+              <tr>
+                <th scope="col">名前</th>
+                <th scope="col">{schemeLabels.light}</th>
+                <th scope="col">{schemeLabels.dark}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {group.tokens.map((token) => (
+                <tr key={token.name}>
+                  <th className="cp-name" scope="row">
+                    <code>--{token.name}</code>
+                    {token.label}
+                  </th>
+                  <td>
+                    <TokenCell scheme="light" token={token} />
+                  </td>
+                  <td>
+                    <TokenCell scheme="dark" token={token} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </Section>
+  );
+}
+
+function ThemePalette({
+  scheme,
+  theme,
+}: {
+  scheme: ColorScheme;
+  theme: Theme;
+}) {
+  const colors = themeColors(theme, scheme);
+  return (
+    <div className="cp-theme-scheme" style={themeStyle(theme.id, scheme)}>
+      <div className="cp-theme-preview">
+        <span className="cp-theme-button">完了</span>
+        <span className="cp-theme-chip">選択中</span>
+        <span className="cp-theme-link">月で見る</span>
+      </div>
+      <ul className="cp-swatches">
+        {themeRoles.map((role) => (
+          <li key={role.key}>
+            <span
+              aria-hidden="true"
+              className="cp-swatch"
+              style={{ background: colors[role.key] }}
+            />
+            <span className="cp-swatch-label">{role.label}</span>
+            <code>{colors[role.key]}</code>
+          </li>
+        ))}
+      </ul>
+      <p className="cp-theme-contrast">
+        背景との比{" "}
+        <ContrastBadge ratio={contrast(colors.accent, valueOf(scheme, "bg"))} />
+        上の文字との比{" "}
+        <ContrastBadge
+          ratio={contrast(valueOf(scheme, "on-accent"), colors.accent)}
+        />
+      </p>
+    </div>
+  );
+}
+
+function ThemeTokens() {
+  return (
+    <Section
+      description="設定で選べる6色です。どのテーマでも同じ役割の変数（--accent など）に入り、画面の組み方は変わりません。"
+      id="cp-themes"
+      title="テーマカラー"
+    >
+      <p className="cp-role-list">
+        {themeRoles.map((role) => (
+          <span key={role.key}>
+            <code>--{role.name}</code>
+            {role.label}
+          </span>
+        ))}
+      </p>
+      <div className="cp-themes">
+        {themes.map((theme) => (
+          <article className="cp-theme" key={theme.id}>
+            <h3>{theme.name}</h3>
+            <ThemePalette scheme="light" theme={theme} />
+            <ThemePalette scheme="dark" theme={theme} />
+          </article>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function MarkChip({
+  option,
+  scheme,
+}: {
+  option: (typeof markColors)[number];
+  scheme: ColorScheme;
+}) {
+  const { color, tint } = markColorIn(option, scheme);
+  return (
+    <div className="cp-mark" style={themeStyle("moss", scheme)}>
+      <span className="cp-mark-tile" style={{ background: tint, color }}>
+        {option.name.slice(0, 1)}
+      </span>
+      <span className="cp-mark-values">
+        <code>{color}</code>
+        <code>{tint}</code>
+      </span>
+      <ContrastBadge ratio={contrast(color, tint)} />
+    </div>
+  );
+}
+
+function MarkTokens() {
+  return (
+    <Section
+      description="シフトごとに選べる12色です。濃い色は記号と文字、薄い色はその地に使います。比は記号の色と地の色のコントラストです。"
+      id="cp-marks"
+      title="シフトの色"
+    >
+      <div className="cp-marks">
+        {markColors.map((option) => (
+          <article className="cp-mark-card" key={option.name}>
+            <h3>{option.name}</h3>
+            <MarkChip option={option} scheme="light" />
+            <MarkChip option={option} scheme="dark" />
+          </article>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+export function DesignColors() {
+  return (
+    <>
+      <nav aria-label="このページの内容" className="design-index">
+        {[
+          { href: "#cp-neutral", number: "01", title: "基本色" },
+          { href: "#cp-themes", number: "02", title: "テーマカラー" },
+          { href: "#cp-marks", number: "03", title: "シフトの色" },
+        ].map(({ href, number, title }) => (
+          <a href={href} key={href}>
+            <span>{number}</span>
+            {title}
+          </a>
+        ))}
+      </nav>
+      <NeutralTokens />
+      <ThemeTokens />
+      <MarkTokens />
+    </>
+  );
+}

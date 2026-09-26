@@ -54,9 +54,15 @@ import {
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { createContext, useContext } from "react";
 
+import { markColorIn, markColors } from "../lib/design-tokens";
 import { patterns } from "./design-calendar";
 import type { Shift } from "./design-calendar";
-import { ThemeContext, themeOf } from "./design-theme";
+import {
+  ColorSchemeContext,
+  ThemeContext,
+  themeColors,
+  themeOf,
+} from "./design-theme";
 import type { ThemeId } from "./design-theme";
 
 export type ShiftMarkStyle = "icon" | "emoji" | "badge";
@@ -188,23 +194,6 @@ export const OffHighlightContext = createContext<{
   highlight: OffHighlight;
   setHighlight?: (highlight: OffHighlight) => void;
 }>({ highlight: defaultOffHighlight });
-
-// Twelve muted colors that sit with the moss green theme: text color and a
-// light tint for the badge background.
-export const markColors = [
-  { color: "#486444", name: "モス", tint: "#e4ecdf" },
-  { color: "#8a6d1a", name: "からし", tint: "#f3ead0" },
-  { color: "#95602e", name: "オレンジ", tint: "#f5e4d2" },
-  { color: "#93503a", name: "テラコッタ", tint: "#f3dfd6" },
-  { color: "#9b3f35", name: "赤", tint: "#f4dcd8" },
-  { color: "#8d4a5a", name: "ローズ", tint: "#f2e0e4" },
-  { color: "#75497a", name: "すみれ", tint: "#eee1ef" },
-  { color: "#5f4f86", name: "ラベンダー", tint: "#e8e2f0" },
-  { color: "#4a5388", name: "藍", tint: "#e3e6f2" },
-  { color: "#3d4a73", name: "紺", tint: "#dde2ee" },
-  { color: "#36706c", name: "青緑", tint: "#dcebea" },
-  { color: "#56636d", name: "グレー", tint: "#e3e7ea" },
-] as const;
 
 // Phosphor duotone icons. "letter" draws the symbol inside a thin circle, so
 // any shift has an icon. Phosphor has one sun-on-the-horizon icon, so sunrise
@@ -397,14 +386,24 @@ export function guessLook(name: string): Omit<Look, "color"> {
   };
 }
 
+// All shift colors for the current light or dark mode, in picker order.
+export function useMarkColors() {
+  const scheme = useContext(ColorSchemeContext);
+  return markColors.map((option) => markColorIn(option, scheme));
+}
+
 export function useMarkColor(markColor: MarkColor) {
-  return markColors[markColor] ?? markColors[0];
+  const scheme = useContext(ColorSchemeContext);
+  return markColorIn(markColors[markColor] ?? markColors[0], scheme);
 }
 
 // The theme's own color, for marks drawn all in one color.
 function useThemeMarkColor() {
-  const theme = themeOf(useContext(ThemeContext).theme);
-  return { color: theme.accent, name: "テーマカラー", tint: theme.markTint };
+  const { accent, markTint } = themeColors(
+    themeOf(useContext(ThemeContext).theme),
+    useContext(ColorSchemeContext)
+  );
+  return { color: accent, name: "テーマカラー", tint: markTint };
 }
 
 // When on, icons and letters all take the theme color instead of each

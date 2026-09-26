@@ -43,7 +43,8 @@ import {
   lookOf,
   MarkGlyph,
   MonochromeContext,
-  markColors,
+  useMarkColor,
+  useMarkColors,
   markIcons,
   nextColor,
   ShiftMarkStyleContext,
@@ -2844,6 +2845,7 @@ function GroupIcon({
   size: number;
   bare?: boolean;
 }) {
+  const { color, tint } = useMarkColor("color" in mark ? mark.color : 0);
   if (mark.kind === "photo") {
     return (
       <img
@@ -2863,7 +2865,6 @@ function GroupIcon({
       </span>
     );
   }
-  const { color, tint } = markColors[mark.color] ?? markColors[0];
   if (mark.kind === "letter") {
     return (
       <span
@@ -3113,10 +3114,11 @@ function MarkColors({
   color: number;
   onPick: (color: number) => void;
 }) {
+  const colors = useMarkColors();
   return (
     <fieldset className="pe-colors">
       <legend className="dc-repeat-label pe-colors-label">色</legend>
-      {markColors.map((option, index) => (
+      {colors.map((option, index) => (
         <button
           aria-label={option.name}
           aria-pressed={color === index}
