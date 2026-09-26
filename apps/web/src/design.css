@@ -2377,6 +2377,11 @@ button.st-row:hover {
 .design-page .st-theme-row button[aria-pressed="true"] {
   background: transparent;
 }
+.st-family-dot.st-theme-dot {
+  width: 22px;
+  height: 22px;
+  border: 0;
+}
 .st-theme-row .st-theme-dot {
   width: 30px;
   height: 30px;
@@ -4376,74 +4381,6 @@ button.st-row:hover {
 .cp-mark-values small {
   font-size: 10px;
   color: var(--text-4);
-}
-.cp-tints {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 32px 24px;
-}
-.cp-tint-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.cp-tint-row + .cp-tint-row {
-  margin-top: 10px;
-}
-.cp-tint-row figcaption {
-  margin-top: 6px;
-  font-size: 10px;
-  color: var(--text-4);
-  text-align: center;
-}
-.cp-mini {
-  padding: 14px 12px;
-  font-size: 11px;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--separator);
-  border-radius: 18px;
-}
-.cp-mini-title {
-  margin-bottom: 10px;
-  font-size: 15px;
-  font-weight: 700;
-}
-.cp-mini-heading {
-  margin-bottom: 5px;
-  font-size: 9px;
-  color: var(--text-4);
-}
-.cp-mini-list {
-  background: var(--fill);
-  border-radius: 10px;
-}
-.cp-mini-list p {
-  display: flex;
-  gap: 8px;
-  justify-content: space-between;
-  white-space: nowrap;
-  padding: 8px 10px;
-}
-.cp-mini-list p + p {
-  border-top: 1px solid var(--separator);
-}
-.cp-mini-list span {
-  color: var(--text-3);
-}
-.cp-mini-note {
-  margin: 6px 2px 12px;
-  font-size: 9px;
-  color: var(--text-3);
-}
-.cp-mini-button {
-  display: block;
-  padding: 7px;
-  font-weight: 600;
-  color: var(--on-accent-fill);
-  text-align: center;
-  background: var(--accent-fill);
-  border-radius: 14px;
 }
 .cp-distinct {
   display: grid;

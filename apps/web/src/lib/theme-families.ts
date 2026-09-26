@@ -181,7 +181,8 @@ export function familyMarkColor(
   family: GeneratedFamily,
   color: string,
   scheme: ColorScheme,
-  lightnessOffset = 0
+  lightnessOffset = 0,
+  hueShift = 0
 ) {
   const spec = markSpecs[family][scheme];
   const darker = Math.min(0, lightnessOffset);
@@ -190,9 +191,10 @@ export function familyMarkColor(
     ...base,
     lightness: base.lightness + offset * spread,
   });
+  const hue = (hexToOklch(color).hue + hueShift + 360) % 360;
   return {
-    color: paint(shift(spec.color, MARK_LIGHTNESS_SPREAD), color),
-    tint: paint(shift(spec.tint, TINT_LIGHTNESS_SPREAD), color),
+    color: paint(shift(spec.color, MARK_LIGHTNESS_SPREAD), color, hue),
+    tint: paint(shift(spec.tint, TINT_LIGHTNESS_SPREAD), color, hue),
   };
 }
 

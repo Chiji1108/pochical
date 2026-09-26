@@ -6,7 +6,7 @@ export const designVariantOptions = {
       { label: "ライト", value: "light" },
       { label: "ダーク", value: "dark" },
     ],
-    label: "外観",
+    label: "端末の外観",
   },
   groupView: {
     choices: [
@@ -30,13 +30,6 @@ export const designVariantOptions = {
     ],
     label: "写真の取り込み",
   },
-  memberLook: {
-    choices: [
-      { label: "相手のスタイル", value: "theirs" },
-      { label: "自分のスタイル", value: "mine" },
-    ],
-    label: "相手のシフトの見た目",
-  },
   memberSample: {
     choices: [
       { label: "5人", value: "some" },
@@ -44,27 +37,12 @@ export const designVariantOptions = {
     ],
     label: "一緒に働く人",
   },
-  neutralTint: {
-    choices: [
-      { label: "テーマに合わせる", value: "theme" },
-      { label: "いつも同じ", value: "none" },
-    ],
-    label: "背景の色み",
-  },
   scheduleSample: {
     choices: [
       { label: "入力済み", value: "filled" },
       { label: "空", value: "empty" },
     ],
     label: "予定",
-  },
-  themeFamily: {
-    choices: [
-      { label: "深め", value: "deep" },
-      { label: "パステル", value: "pastel" },
-      { label: "くすみ", value: "dusty" },
-    ],
-    label: "テーマの系統",
   },
 } as const;
 

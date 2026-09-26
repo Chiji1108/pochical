@@ -8,6 +8,7 @@ import {
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 
+import type { ThemeFamily } from "../lib/design-tokens";
 import {
   addDays,
   DayCell,
@@ -32,12 +33,16 @@ import type { Profile } from "./design-group";
 import { WorkSetupSteps } from "./design-onboarding";
 import { PatternsPage } from "./design-pattern-editor";
 import {
+  AppearanceContext,
   ColorSchemeContext,
+  SetThemeFamilyContext,
   ThemeContext,
   ThemeFamilyContext,
   themeColors,
+  themeOf,
   themes,
 } from "./design-theme";
+import type { Appearance } from "./design-theme";
 import {
   CellNamesContext,
   IconWeightContext,
@@ -288,6 +293,7 @@ function SettingsTop({
 }) {
   const { theme } = useContext(ThemeContext);
   const { look } = useContext(LookSettingsContext);
+  const family = useContext(ThemeFamilyContext);
   return (
     <>
       <h3 className="st-title">設定</h3>
@@ -346,10 +352,11 @@ function SettingsTop({
                 className="st-swatch"
                 style={{ background: "var(--accent)" }}
               />
-              {stylePresetOf(theme, look)?.name ?? "カスタム"}
+              {stylePresetOf({ family, look, theme })?.name ?? "カスタム"}
             </span>
           }
         />
+        <AppearanceRow />
         <Row label="週の始まり" value="日曜" />
         <Row label="色をつける曜日" value="土・日" />
       </Section>
@@ -1073,7 +1080,9 @@ function CustomizePage({
 }) {
   const { look, setLook, setCustom } = useContext(LookSettingsContext);
   const { theme, setTheme } = useContext(ThemeContext);
-  const [opened] = useState({ look, theme });
+  const family = useContext(ThemeFamilyContext);
+  const setFamily = useContext(SetThemeFamilyContext);
+  const [opened] = useState<StyleChoice>({ family, look, theme });
   const saved = cancelTo ?? opened;
   const current = useContext(ShiftMarkStyleContext);
   const setStyle = useContext(SetShiftMarkStyleContext);
@@ -1084,6 +1093,7 @@ function CustomizePage({
           <button
             className="st-custom-cancel"
             onClick={() => {
+              setFamily?.(saved.family);
               setTheme?.(saved.theme);
               setLook?.(saved.look);
               onDone();
@@ -1096,8 +1106,8 @@ function CustomizePage({
           <button
             className="pe-save"
             onClick={() => {
-              if (!stylePresetOf(theme, look)) {
-                setCustom?.({ look, theme });
+              if (!stylePresetOf({ family, look, theme })) {
+                setCustom?.({ family, look, theme });
               }
               onDone();
             }}
@@ -1108,6 +1118,9 @@ function CustomizePage({
         </header>
         <StylePreview preview={preview} />
       </div>
+      <Group title="系統">
+        <FamilyChoices />
+      </Group>
       <Group title="テーマカラー">
         <ThemeChoices />
       </Group>
@@ -1139,17 +1152,20 @@ function CustomizePage({
 function CustomChoice({ onOpen }: { onOpen: (before: StyleChoice) => void }) {
   const { look, setLook, custom } = useContext(LookSettingsContext);
   const { theme, setTheme } = useContext(ThemeContext);
-  const isCustom = !stylePresetOf(theme, look);
+  const family = useContext(ThemeFamilyContext);
+  const setFamily = useContext(SetThemeFamilyContext);
+  const isCustom = !stylePresetOf({ family, look, theme });
   return (
     <button
       aria-pressed={isCustom}
       className="st-custom-choice"
       onClick={() => {
         if (!isCustom && custom) {
+          setFamily?.(custom.family);
           setTheme?.(custom.theme);
           setLook?.(custom.look);
         }
-        onOpen({ look, theme });
+        onOpen({ family, look, theme });
       }}
       type="button"
     >
@@ -1166,7 +1182,9 @@ const presetSample: Shift[] = ["day", "night", "after", "off"];
 function StylePresets() {
   const { look, setLook } = useContext(LookSettingsContext);
   const themeContext = useContext(ThemeContext);
-  const current = stylePresetOf(themeContext.theme, look);
+  const family = useContext(ThemeFamilyContext);
+  const setFamily = useContext(SetThemeFamilyContext);
+  const current = stylePresetOf({ family, look, theme: themeContext.theme });
   return (
     <fieldset className="st-preset-grid">
       <legend className="st-preset-legend">スタイル</legend>
@@ -1175,29 +1193,32 @@ function StylePresets() {
           aria-pressed={current?.id === preset.id}
           key={preset.id}
           onClick={() => {
+            setFamily?.(preset.family);
             themeContext.setTheme?.(preset.theme);
             setLook?.(preset.look);
           }}
           type="button"
         >
           <span aria-hidden="true" className="st-preset-sample">
-            <ThemeContext value={{ ...themeContext, theme: preset.theme }}>
-              <LookSettingsContext value={{ look: preset.look }}>
-                <ShiftMarkStyleContext value={preset.look.style}>
-                  <IconWeightContext
-                    value={preset.look.fill ? "duotone" : "regular"}
-                  >
-                    <MonochromeContext
-                      value={{ monochrome: preset.look.monochrome }}
+            <ThemeFamilyContext value={preset.family}>
+              <ThemeContext value={{ ...themeContext, theme: preset.theme }}>
+                <LookSettingsContext value={{ look: preset.look }}>
+                  <ShiftMarkStyleContext value={preset.look.style}>
+                    <IconWeightContext
+                      value={preset.look.fill ? "duotone" : "regular"}
                     >
-                      {presetSample.map((shift) => (
-                        <ShiftMark key={shift} shift={shift} size={18} />
-                      ))}
-                    </MonochromeContext>
-                  </IconWeightContext>
-                </ShiftMarkStyleContext>
-              </LookSettingsContext>
-            </ThemeContext>
+                      <MonochromeContext
+                        value={{ monochrome: preset.look.monochrome }}
+                      >
+                        {presetSample.map((shift) => (
+                          <ShiftMark key={shift} shift={shift} size={18} />
+                        ))}
+                      </MonochromeContext>
+                    </IconWeightContext>
+                  </ShiftMarkStyleContext>
+                </LookSettingsContext>
+              </ThemeContext>
+            </ThemeFamilyContext>
           </span>
           {preset.name}
         </button>
@@ -1272,6 +1293,73 @@ function SwitchRow({
         type="checkbox"
       />
     </label>
+  );
+}
+
+const familyOptions: { family: ThemeFamily; name: string }[] = [
+  { family: "deep", name: "深め" },
+  { family: "pastel", name: "パステル" },
+  { family: "dusty", name: "くすみ" },
+];
+
+// The color family: one choice changes every theme color, the grays and
+// the shift colors together. Each option shows the current theme in it.
+function FamilyChoices() {
+  const family = useContext(ThemeFamilyContext);
+  const setFamily = useContext(SetThemeFamilyContext);
+  const { theme } = useContext(ThemeContext);
+  const scheme = useContext(ColorSchemeContext);
+  return (
+    <fieldset className="st-mark-segment">
+      <legend className="dc-sr-only">系統</legend>
+      {familyOptions.map((option) => (
+        <button
+          aria-pressed={family === option.family}
+          key={option.family}
+          onClick={() => setFamily?.(option.family)}
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            className="st-theme-dot st-family-dot"
+            style={{
+              background: themeColors(themeOf(theme), scheme, option.family)
+                .fill,
+            }}
+          />
+          {option.name}
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
+const appearanceOptions: { appearance: Appearance; name: string }[] = [
+  { appearance: "system", name: "端末" },
+  { appearance: "light", name: "ライト" },
+  { appearance: "dark", name: "ダーク" },
+];
+
+// 外観: follow the device by default, or keep light or dark.
+function AppearanceRow() {
+  const { appearance, setAppearance } = useContext(AppearanceContext);
+  return (
+    <div className="st-row">
+      <span className="st-row-label">外観</span>
+      <fieldset className="design-segment st-row-segment">
+        <legend className="dc-sr-only">外観</legend>
+        {appearanceOptions.map((option) => (
+          <button
+            aria-pressed={appearance === option.appearance}
+            key={option.appearance}
+            onClick={() => setAppearance?.(option.appearance)}
+            type="button"
+          >
+            {option.name}
+          </button>
+        ))}
+      </fieldset>
+    </div>
   );
 }
 

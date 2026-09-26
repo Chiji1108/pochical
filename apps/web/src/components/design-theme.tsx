@@ -178,7 +178,8 @@ export function themeOf(id: ThemeId): Theme {
   return themes.find((theme) => theme.id === id) ?? themes[0];
 }
 
-// Light or dark, picked on /design by the 外観 variant.
+// The scheme in effect: the device's (the 端末の外観 variant on /design)
+// unless 外観 in settings forces one.
 export const ColorSchemeContext = createContext<ColorScheme>("light");
 
 // Text on a solid accent fill: white on the deep light accents, dark on the
@@ -215,13 +216,19 @@ export function themeColors(
   };
 }
 
-// The theme family, picked on /design by the テーマの系統 variant.
+// The viewer's theme family (系統), picked in the style settings. It stays
+// the viewer's even where another member's theme color is drawn.
 export const ThemeFamilyContext = createContext<ThemeFamily>("deep");
+export const SetThemeFamilyContext = createContext<
+  ((family: ThemeFamily) => void) | undefined
+>(undefined);
 
-// Whether the neutrals take on the theme's hue, picked on /design by the
-// 背景の色み variant. Off keeps the moss-leaning grays for every theme.
-export type NeutralTintMode = "theme" | "none";
-export const NeutralTintContext = createContext<NeutralTintMode>("none");
+// 外観 in settings: follow the device, or force light or dark.
+export type Appearance = "system" | ColorScheme;
+export const AppearanceContext = createContext<{
+  appearance: Appearance;
+  setAppearance?: (appearance: Appearance) => void;
+}>({ appearance: "system" });
 
 // The neutral grays' base chroma suits moss; themes with more (or less)
 // saturated accents tint the grays proportionally more (or less).
@@ -236,19 +243,15 @@ export function neutralTintOf(theme: Theme): NeutralTint {
   };
 }
 
+// The grays lean toward the theme's hue; generated families bring their own.
 function neutralsFor(
   theme: Theme,
   scheme: ColorScheme,
-  tintMode: NeutralTintMode,
   family: ThemeFamily
 ): CSSProperties {
   if (family === "deep") {
-    return neutralStyle(
-      scheme,
-      tintMode === "theme" ? neutralTintOf(theme) : undefined
-    );
+    return neutralStyle(scheme, neutralTintOf(theme));
   }
-  // Generated families bring their own grays and ignore 背景の色み.
   const { bg, tint } = familyNeutrals(family, theme.accent, scheme);
   const style = neutralStyle(scheme, tint);
   return (bg ? { ...style, "--bg": bg } : style) as CSSProperties;
@@ -258,13 +261,12 @@ function neutralsFor(
 export function themeStyle(
   id: ThemeId,
   scheme: ColorScheme = "light",
-  tintMode: NeutralTintMode = "none",
   family: ThemeFamily = "deep"
 ) {
   const theme = themeOf(id);
   const colors = themeColors(theme, scheme, family);
   return {
-    ...neutralsFor(theme, scheme, tintMode, family),
+    ...neutralsFor(theme, scheme, family),
     "--accent": colors.accent,
     "--accent-border": colors.border,
     "--accent-fill": colors.fill,
@@ -283,7 +285,6 @@ export function useThemeStyle() {
   return themeStyle(
     useContext(ThemeContext).theme,
     useContext(ColorSchemeContext),
-    useContext(NeutralTintContext),
     useContext(ThemeFamilyContext)
   );
 }

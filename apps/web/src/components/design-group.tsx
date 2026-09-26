@@ -17,7 +17,7 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
-import { createContext, useContext, useEffect, useId, useState } from "react";
+import { useContext, useEffect, useId, useState } from "react";
 import type { ReactNode } from "react";
 
 import type { DesignVariants } from "../lib/design-variants";
@@ -580,159 +580,152 @@ export function DesignGroup({
       .filter(([key]) => key.startsWith(`${id}:`))
       .reduce((total, [, chat]) => total + chat.unread, 0);
 
-  const theirStyle = variants.memberLook === "theirs";
   if (page.name === "chat") {
     const key = chatKey(group.id, page.chatId);
     return (
-      <TheirStyleContext value={theirStyle}>
-        <ChatPage
-          chat={chatOf(group.id, page.chatId)}
-          group={group}
-          onBack={() => {
-            setPage({ name: "hub" });
-          }}
-          onChange={(messages) => {
-            setChats({ ...chats, [key]: { messages, unread: 0 } });
-          }}
-          onOpenDay={(date) => {
-            setPage({
-              from: page.chatId,
-              month: new Date(date.getFullYear(), date.getMonth(), 1),
-              name: "shifts",
-            });
-          }}
-          people={
-            page.chatId === groupChat
-              ? group.members
-              : group.members.filter(
-                  (member) => member.me || member.id === page.chatId
-                )
-          }
-          title={chatTitle(group, page.chatId)}
-        />
-      </TheirStyleContext>
+      <ChatPage
+        chat={chatOf(group.id, page.chatId)}
+        group={group}
+        onBack={() => {
+          setPage({ name: "hub" });
+        }}
+        onChange={(messages) => {
+          setChats({ ...chats, [key]: { messages, unread: 0 } });
+        }}
+        onOpenDay={(date) => {
+          setPage({
+            from: page.chatId,
+            month: new Date(date.getFullYear(), date.getMonth(), 1),
+            name: "shifts",
+          });
+        }}
+        people={
+          page.chatId === groupChat
+            ? group.members
+            : group.members.filter(
+                (member) => member.me || member.id === page.chatId
+              )
+        }
+        title={chatTitle(group, page.chatId)}
+      />
     );
   }
 
   return (
-    <TheirStyleContext value={theirStyle}>
-      <div className="dc-content st-screen">
-        {page.name === "hub" ? (
-          <div className="gr-layout">
-            <GroupRail
-              groups={groups}
-              onNew={() => {
-                setPage({ name: "new" });
+    <div className="dc-content st-screen">
+      {page.name === "hub" ? (
+        <div className="gr-layout">
+          <GroupRail
+            groups={groups}
+            onNew={() => {
+              setPage({ name: "new" });
+            }}
+            onSelect={setGroupId}
+            selected={group.id}
+            unreadOf={unreadOf}
+          />
+          <div className="st-scroll gr-hub">
+            <GroupHub
+              chatOf={(chatId) => chatOf(group.id, chatId)}
+              group={group}
+              onChat={(chatId) => {
+                setChats({
+                  ...chats,
+                  [chatKey(group.id, chatId)]: {
+                    ...chatOf(group.id, chatId),
+                    unread: 0,
+                  },
+                });
+                setPage({ chatId, name: "chat" });
               }}
-              onSelect={setGroupId}
-              selected={group.id}
-              unreadOf={unreadOf}
+              onInvite={() => {
+                setPage({ name: "invite" });
+              }}
+              onSettings={() => {
+                setPage({ name: "settings" });
+              }}
+              onShifts={() => {
+                setPage({ name: "shifts" });
+              }}
             />
-            <div className="st-scroll gr-hub">
-              <GroupHub
-                chatOf={(chatId) => chatOf(group.id, chatId)}
-                group={group}
-                onChat={(chatId) => {
-                  setChats({
-                    ...chats,
-                    [chatKey(group.id, chatId)]: {
-                      ...chatOf(group.id, chatId),
-                      unread: 0,
-                    },
-                  });
-                  setPage({ chatId, name: "chat" });
-                }}
-                onInvite={() => {
-                  setPage({ name: "invite" });
-                }}
-                onSettings={() => {
-                  setPage({ name: "settings" });
-                }}
-                onShifts={() => {
-                  setPage({ name: "shifts" });
-                }}
-              />
-            </div>
           </div>
-        ) : (
-          <div className="st-scroll">
-            {page.name === "shifts" && (
-              <ShiftsPage
-                backLabel={page.from ? chatTitle(group, page.from) : group.name}
-                group={group}
-                layout={
-                  layouts[group.id] ?? defaultLayout(group.members.length)
-                }
-                month={page.month}
-                onBack={() => {
-                  setPage(
-                    page.from
-                      ? { chatId: page.from, name: "chat" }
-                      : { name: "hub" }
-                  );
-                }}
-                onLayout={(layout) => {
-                  setLayouts({ ...layouts, [group.id]: layout });
-                }}
-                view={variants.groupView}
-              />
-            )}
-            {page.name === "settings" && (
-              <GroupSettingsPage
-                group={group}
-                onBack={() => {
-                  setPage({ name: "hub" });
-                }}
-                onChange={(mine) => {
-                  setGroups(
-                    groups.map((item) =>
-                      item.id === group.id ? { ...item, mine } : item
-                    )
-                  );
-                }}
-                onInvite={() => {
-                  setPage({ name: "invite" });
-                }}
-                onMark={(mark) => {
-                  setGroups(
-                    groups.map((item) =>
-                      item.id === group.id ? { ...item, mark } : item
-                    )
-                  );
-                }}
-                profile={profile}
-              />
-            )}
-            {page.name === "invite" && (
-              <InvitePage
-                group={group}
-                onBack={() => {
-                  setPage({ name: "hub" });
-                }}
-              />
-            )}
-            {page.name === "new" && (
-              <NewGroupPage
-                onBack={() => {
-                  setPage({ name: "hub" });
-                }}
-                onCreate={({ myName, ...created }) => {
-                  const id = `group-${groups.length}`;
-                  const mine =
-                    myName === profile.name ? undefined : { name: myName };
-                  setGroups([...groups, { ...created, id, mine }]);
-                  setGroupId(id);
-                  setPage({ name: "invite" });
-                }}
-                profile={profile}
-                usedColors={groups.map((item) => colorOfMark(item.mark))}
-              />
-            )}
-          </div>
-        )}
-        {page.name === "hub" && <TabBar active="group" onSelect={onTab} />}
-      </div>
-    </TheirStyleContext>
+        </div>
+      ) : (
+        <div className="st-scroll">
+          {page.name === "shifts" && (
+            <ShiftsPage
+              backLabel={page.from ? chatTitle(group, page.from) : group.name}
+              group={group}
+              layout={layouts[group.id] ?? defaultLayout(group.members.length)}
+              month={page.month}
+              onBack={() => {
+                setPage(
+                  page.from
+                    ? { chatId: page.from, name: "chat" }
+                    : { name: "hub" }
+                );
+              }}
+              onLayout={(layout) => {
+                setLayouts({ ...layouts, [group.id]: layout });
+              }}
+              view={variants.groupView}
+            />
+          )}
+          {page.name === "settings" && (
+            <GroupSettingsPage
+              group={group}
+              onBack={() => {
+                setPage({ name: "hub" });
+              }}
+              onChange={(mine) => {
+                setGroups(
+                  groups.map((item) =>
+                    item.id === group.id ? { ...item, mine } : item
+                  )
+                );
+              }}
+              onInvite={() => {
+                setPage({ name: "invite" });
+              }}
+              onMark={(mark) => {
+                setGroups(
+                  groups.map((item) =>
+                    item.id === group.id ? { ...item, mark } : item
+                  )
+                );
+              }}
+              profile={profile}
+            />
+          )}
+          {page.name === "invite" && (
+            <InvitePage
+              group={group}
+              onBack={() => {
+                setPage({ name: "hub" });
+              }}
+            />
+          )}
+          {page.name === "new" && (
+            <NewGroupPage
+              onBack={() => {
+                setPage({ name: "hub" });
+              }}
+              onCreate={({ myName, ...created }) => {
+                const id = `group-${groups.length}`;
+                const mine =
+                  myName === profile.name ? undefined : { name: myName };
+                setGroups([...groups, { ...created, id, mine }]);
+                setGroupId(id);
+                setPage({ name: "invite" });
+              }}
+              profile={profile}
+              usedColors={groups.map((item) => colorOfMark(item.mark))}
+            />
+          )}
+        </div>
+      )}
+      {page.name === "hub" && <TabBar active="group" onSelect={onTab} />}
+    </div>
   );
 }
 
@@ -2080,18 +2073,15 @@ const rowsDateWidth = 46;
 const rowsMemberWidth = 76;
 const rowsMarkWidth = 40;
 
-// Whether others' shifts show in the style they picked for themselves,
-// rather than the viewer's.
-const TheirStyleContext = createContext(true);
-
 function presetLook(id: string) {
   return (stylePresets.find((preset) => preset.id === id) ?? stylePresets[0])
     .look;
 }
 
-// Draws one of a member's marks. In their own style, the look settings
-// and theme are theirs; the viewer's style applies otherwise, and always
-// to you.
+// Draws one of a member's marks in the style they picked: their mark kind,
+// fill and theme color. The tone (deep, pastel, dusty) stays the viewer's,
+// so every member's colors sit together on one screen. You and members
+// without a style of their own use the viewer's style.
 function MemberMark({
   member,
   look,
@@ -2101,7 +2091,7 @@ function MemberMark({
   look: Look;
   size: number;
 }) {
-  const theirs = useContext(TheirStyleContext) && member.style;
+  const theirs = member.style;
   if (!theirs) {
     return <ViewerMark look={look} size={size} />;
   }

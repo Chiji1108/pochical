@@ -332,6 +332,18 @@ const MARK_MEAN_LIGHTNESS =
     0
   ) / markColors.length;
 
+// Low chroma crowds the warm hues together, so dusty spreads them a little
+// (degrees of OKLCH hue) to keep テラコッタ and 赤 apart. Each still reads as
+// the same color name.
+const familyHueShifts: Partial<
+  Record<
+    ThemeFamily,
+    Partial<Record<(typeof markColors)[number]["name"], number>>
+  >
+> = {
+  dusty: { からし: 8, オレンジ: 10, テラコッタ: 2, ローズ: -12, 赤: -8 },
+};
+
 // A shift color as drawn in light or dark mode and the given family.
 export function markColorIn(
   option: (typeof markColors)[number],
@@ -346,7 +358,8 @@ export function markColorIn(
           family,
           option.color,
           scheme,
-          hexToOklch(option.color).lightness - MARK_MEAN_LIGHTNESS
+          hexToOklch(option.color).lightness - MARK_MEAN_LIGHTNESS,
+          familyHueShifts[family]?.[option.name]
         );
   return { color, name: option.name, tint };
 }

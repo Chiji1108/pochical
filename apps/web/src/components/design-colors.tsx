@@ -14,7 +14,7 @@ import {
 } from "../lib/design-tokens";
 import { hexToOklch } from "../lib/oklch";
 import { themeColors, themes, themeStyle } from "./design-theme";
-import type { NeutralTintMode, Theme } from "./design-theme";
+import type { Theme } from "./design-theme";
 
 const schemeLabels: Record<ColorScheme, string> = {
   dark: "ダーク",
@@ -236,7 +236,7 @@ function ThemePalette({
   return (
     <div
       className="cp-theme-scheme"
-      style={themeStyle(theme.id, scheme, "none", family)}
+      style={themeStyle(theme.id, scheme, family)}
     >
       <div className="cp-theme-preview">
         <span className="cp-theme-button">完了</span>
@@ -310,69 +310,6 @@ function ThemeTokens({ family, id }: { family: ThemeFamily; id: string }) {
   );
 }
 
-const tintModes: { mode: NeutralTintMode; label: string }[] = [
-  { label: "いつも同じ", mode: "none" },
-  { label: "テーマに合わせる", mode: "theme" },
-];
-
-// A few rows of a settings-like screen, to judge the grays as a whole.
-function MiniScreen({
-  mode,
-  scheme,
-  theme,
-}: {
-  mode: NeutralTintMode;
-  scheme: ColorScheme;
-  theme: Theme;
-}) {
-  return (
-    <div className="cp-mini" style={themeStyle(theme.id, scheme, mode)}>
-      <p className="cp-mini-title">設定</p>
-      <p className="cp-mini-heading">表示</p>
-      <div className="cp-mini-list">
-        <p>
-          スタイル<span>ナチュラル</span>
-        </p>
-        <p>
-          週の始まり<span>日曜</span>
-        </p>
-      </div>
-      <p className="cp-mini-note">あとから変えられます</p>
-      <span className="cp-mini-button">保存</span>
-    </div>
-  );
-}
-
-function TintTokens() {
-  return (
-    <Section
-      description="画面のグレーをテーマの色相に寄せるかどうかの比較です。明るさはそのままで、色相をテーマに回し、テーマ色の鮮やかさに合わせて色みの強さを変えます。日曜・土曜・削除などの意味のある色は変えません。"
-      id="cp-tint"
-      title="背景の色み"
-    >
-      <div className="cp-tints">
-        {themes.map((theme) => (
-          <article key={theme.id}>
-            <h3>{theme.name}</h3>
-            {(["light", "dark"] as const).map((scheme) => (
-              <div className="cp-tint-row" key={scheme}>
-                {tintModes.map(({ label, mode }) => (
-                  <figure key={mode}>
-                    <MiniScreen mode={mode} scheme={scheme} theme={theme} />
-                    <figcaption>
-                      {schemeLabels[scheme]}・{label}
-                    </figcaption>
-                  </figure>
-                ))}
-              </div>
-            ))}
-          </article>
-        ))}
-      </div>
-    </Section>
-  );
-}
-
 function MarkChip({
   family,
   option,
@@ -384,7 +321,7 @@ function MarkChip({
 }) {
   const { color, tint } = markColorIn(option, scheme, family);
   return (
-    <div className="cp-mark" style={themeStyle("moss", scheme, "none", family)}>
+    <div className="cp-mark" style={themeStyle("moss", scheme, family)}>
       <span className="cp-mark-tile" style={{ background: tint, color }}>
         {option.name.slice(0, 1)}
       </span>
@@ -482,7 +419,7 @@ function DistinctTokens() {
             <article
               className="cp-distinct-card"
               key={`${family}-${scheme}`}
-              style={themeStyle("moss", scheme, "none", family)}
+              style={themeStyle("moss", scheme, family)}
             >
               <h3>
                 {familyLabels[family]}・{schemeLabels[scheme]}
@@ -531,9 +468,8 @@ export function DesignColors() {
           { href: "#cp-themes", number: "02", title: "テーマ（深め）" },
           { href: "#cp-pastel", number: "03", title: "テーマ（パステル）" },
           { href: "#cp-dusty", number: "04", title: "テーマ（くすみ）" },
-          { href: "#cp-tint", number: "05", title: "背景の色み" },
-          { href: "#cp-marks", number: "06", title: "シフトの色" },
-          { href: "#cp-distinct", number: "07", title: "見分けやすさ" },
+          { href: "#cp-marks", number: "05", title: "シフトの色" },
+          { href: "#cp-distinct", number: "06", title: "見分けやすさ" },
         ].map(({ href, number, title }) => (
           <a href={href} key={href}>
             <span>{number}</span>
@@ -545,7 +481,6 @@ export function DesignColors() {
       <ThemeTokens family="deep" id="cp-themes" />
       <ThemeTokens family="pastel" id="cp-pastel" />
       <ThemeTokens family="dusty" id="cp-dusty" />
-      <TintTokens />
       <MarkTokens />
       <DistinctTokens />
     </>

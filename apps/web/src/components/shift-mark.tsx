@@ -55,6 +55,7 @@ import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { createContext, useContext } from "react";
 
 import { markColorIn, markColors } from "../lib/design-tokens";
+import type { ThemeFamily } from "../lib/design-tokens";
 import { patterns } from "./design-calendar";
 import type { Shift } from "./design-calendar";
 import {
@@ -119,17 +120,26 @@ const baseLook: LookSettings = {
 export const stylePresets: {
   id: string;
   name: string;
+  family: ThemeFamily;
   theme: ThemeId;
   look: LookSettings;
 }[] = [
-  { id: "natural", look: baseLook, name: "ナチュラル", theme: "moss" },
   {
+    family: "deep",
+    id: "natural",
+    look: baseLook,
+    name: "ナチュラル",
+    theme: "moss",
+  },
+  {
+    family: "deep",
     id: "monotone",
     look: { ...baseLook, monochrome: true },
     name: "モノトーン",
     theme: "sumi",
   },
   {
+    family: "deep",
     id: "minimal",
     look: {
       ...baseLook,
@@ -141,18 +151,21 @@ export const stylePresets: {
     theme: "sumi",
   },
   {
+    family: "deep",
     id: "pop",
     look: { ...baseLook, style: "emoji" },
     name: "ポップ",
     theme: "moss",
   },
   {
+    family: "deep",
     id: "roster",
     look: { ...baseLook, highlight: false, style: "badge" },
     name: "勤務表",
     theme: "moss",
   },
   {
+    family: "deep",
     id: "friendly",
     look: { ...baseLook, fill: false, names: true, style: "badge" },
     name: "親しみ",
@@ -160,8 +173,12 @@ export const stylePresets: {
   },
 ];
 
-// A theme and look together, like the last custom style.
-export type StyleChoice = { theme: ThemeId; look: LookSettings };
+// A family, theme and look together, like the last custom style.
+export type StyleChoice = {
+  family: ThemeFamily;
+  theme: ThemeId;
+  look: LookSettings;
+};
 
 export const LookSettingsContext = createContext<{
   look: LookSettings;
@@ -185,9 +202,12 @@ function sameLook(preset: LookSettings, look: LookSettings) {
   );
 }
 
-export function stylePresetOf(theme: ThemeId, look: LookSettings) {
+export function stylePresetOf({ family, look, theme }: StyleChoice) {
   return stylePresets.find(
-    (preset) => preset.theme === theme && sameLook(preset.look, look)
+    (preset) =>
+      preset.family === family &&
+      preset.theme === theme &&
+      sameLook(preset.look, look)
   );
 }
 
