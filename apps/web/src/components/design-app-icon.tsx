@@ -45,7 +45,7 @@ export const iconColorOptions: IconColors[] = [
     id: "dark",
     line: "#1f231e",
     name: "ダーク",
-    rim: 12,
+    rim: 17,
   },
 ];
 
@@ -58,7 +58,7 @@ const darkTwins: IconColors[] = [
     id: "moss-dark",
     line: "#1a2219",
     name: "モス（暗い見た目）",
-    rim: 12,
+    rim: 17,
   },
   {
     dog: "#efe6d6",
@@ -66,7 +66,7 @@ const darkTwins: IconColors[] = [
     id: "paper-dark",
     line: "#201c17",
     name: "紙（暗い見た目）",
-    rim: 12,
+    rim: 17,
   },
 ];
 
@@ -79,7 +79,7 @@ export const darkTwinOf: Record<string, string> = {
   white: "dark",
 };
 
-const SOURCE = "/design/poodle.jpeg";
+const SOURCE = "/design/poodle.png";
 const ICON_SIZE = 1024;
 // Share of the icon's width the drawing's lines take, leaving room for the
 // rounded corners the system cuts.

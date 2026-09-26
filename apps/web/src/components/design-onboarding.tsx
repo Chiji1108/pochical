@@ -249,7 +249,7 @@ function WelcomeStep({
           alt=""
           className={`ob-poodle ob-poodle-${scheme}`}
           height={200}
-          src="/design/poodle.jpeg"
+          src="/design/poodle.png"
           width={200}
         />
         <h3>ポチカル</h3>
