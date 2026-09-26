@@ -2,7 +2,8 @@ import { createContext, useContext } from "react";
 import type { CSSProperties } from "react";
 
 import { neutralStyle } from "../lib/design-tokens";
-import type { ColorScheme } from "../lib/design-tokens";
+import type { ColorScheme, NeutralTint } from "../lib/design-tokens";
+import { hexToOklch } from "../lib/oklch";
 
 // Accent palettes for the app. Each sets the variables design.css reads
 // inside the phone; the shift colors stay as they are. `dark` holds the same
@@ -179,11 +180,37 @@ export function themeColors(theme: Theme, scheme: ColorScheme) {
   return scheme === "dark" ? theme.dark : theme;
 }
 
-// Every color variable design.css reads: the neutral roles plus the theme.
-export function themeStyle(id: ThemeId, scheme: ColorScheme = "light") {
-  const colors = themeColors(themeOf(id), scheme);
+// Whether the neutrals take on the theme's hue, picked on /design by the
+// 背景の色み variant. Off keeps the moss-leaning grays for every theme.
+export type NeutralTintMode = "theme" | "none";
+export const NeutralTintContext = createContext<NeutralTintMode>("none");
+
+// The neutral grays' base chroma suits moss; themes with more (or less)
+// saturated accents tint the grays proportionally more (or less).
+const MOSS_CHROMA = hexToOklch(themes[0].accent).chroma;
+const MAX_TINT_STRENGTH = 1.3;
+
+export function neutralTintOf(theme: Theme): NeutralTint {
+  const { chroma, hue } = hexToOklch(theme.accent);
   return {
-    ...neutralStyle(scheme),
+    hue,
+    strength: Math.min(MAX_TINT_STRENGTH, chroma / MOSS_CHROMA),
+  };
+}
+
+// Every color variable design.css reads: the neutral roles plus the theme.
+export function themeStyle(
+  id: ThemeId,
+  scheme: ColorScheme = "light",
+  tintMode: NeutralTintMode = "none"
+) {
+  const theme = themeOf(id);
+  const colors = themeColors(theme, scheme);
+  return {
+    ...neutralStyle(
+      scheme,
+      tintMode === "theme" ? neutralTintOf(theme) : undefined
+    ),
     "--accent": colors.accent,
     "--accent-border": colors.border,
     "--accent-line": colors.line,
@@ -199,6 +226,7 @@ export function themeStyle(id: ThemeId, scheme: ColorScheme = "light") {
 export function useThemeStyle() {
   return themeStyle(
     useContext(ThemeContext).theme,
-    useContext(ColorSchemeContext)
+    useContext(ColorSchemeContext),
+    useContext(NeutralTintContext)
   );
 }

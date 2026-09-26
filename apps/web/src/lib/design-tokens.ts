@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
 
+import { hexToOklch, oklchToHex } from "./oklch";
+
 // The app's neutral colors by role, for light and dark. design.css reads them
 // as CSS variables (`--bg`, `--text-3`, ...); /design/colors lists them, and
 // the native apps will export the same values. Dark values keep each light
@@ -197,10 +199,48 @@ export const neutralTokenGroups: ColorTokenGroup[] = [
 
 export const neutralTokens = neutralTokenGroups.flatMap(({ tokens }) => tokens);
 
-export function neutralStyle(scheme: ColorScheme): CSSProperties {
+// Tints the neutrals toward a theme: each token keeps its lightness, turns to
+// the theme's hue, and scales its chroma by `strength` (0 = pure gray).
+export type NeutralTint = { hue: number; strength: number };
+
+// Colors that carry their own meaning and stay put whatever the theme.
+const untintedTokens = new Set([
+  "holiday",
+  "saturday",
+  "danger",
+  "badge",
+  "on-badge",
+  "knob",
+]);
+
+export function neutralValue(
+  token: ColorToken,
+  scheme: ColorScheme,
+  tint?: NeutralTint
+): string {
+  const value = token[scheme];
+  if (!tint || untintedTokens.has(token.name)) {
+    return value;
+  }
+  const { lightness, chroma } = hexToOklch(value.slice(0, 7));
+  const tinted = oklchToHex({
+    chroma: chroma * tint.strength,
+    hue: tint.hue,
+    lightness,
+  });
+  return `${tinted}${value.slice(7)}`;
+}
+
+export function neutralStyle(
+  scheme: ColorScheme,
+  tint?: NeutralTint
+): CSSProperties {
   return {
     ...Object.fromEntries(
-      neutralTokens.map((token) => [`--${token.name}`, token[scheme]])
+      neutralTokens.map((token) => [
+        `--${token.name}`,
+        neutralValue(token, scheme, tint),
+      ])
     ),
     colorScheme: scheme,
   };

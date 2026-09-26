@@ -44,6 +44,13 @@ export const designVariantOptions = {
     ],
     label: "一緒に働く人",
   },
+  neutralTint: {
+    choices: [
+      { label: "テーマに合わせる", value: "theme" },
+      { label: "いつも同じ", value: "none" },
+    ],
+    label: "背景の色み",
+  },
   scheduleSample: {
     choices: [
       { label: "入力済み", value: "filled" },
