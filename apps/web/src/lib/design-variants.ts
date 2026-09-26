@@ -62,6 +62,7 @@ export const designVariantOptions = {
     choices: [
       { label: "深め", value: "deep" },
       { label: "パステル", value: "pastel" },
+      { label: "くすみ", value: "dusty" },
     ],
     label: "テーマの系統",
   },

@@ -4445,3 +4445,64 @@ button.st-row:hover {
   background: var(--accent-fill);
   border-radius: 14px;
 }
+.cp-distinct {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.cp-distinct-card {
+  padding: 16px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--separator);
+  border-radius: 16px;
+}
+.cp-distinct-card ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+  margin-top: 12px;
+  list-style: none;
+}
+.cp-distinct-card li {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+}
+.cp-distinct-card .cp-mark-tile {
+  width: 30px;
+  height: 30px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+.cp-distinct-names {
+  margin-left: 4px;
+  color: var(--text-2);
+}
+.cp-distinct-value {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+  margin-left: auto;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+}
+.cp-distinct-value small {
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 6px;
+}
+.cp-distinct-card li[data-level="近い"] small {
+  color: var(--text-2);
+  background: var(--fill-2);
+}
+.cp-distinct-card li[data-level="見分けにくい"] small {
+  color: var(--on-badge);
+  background: var(--danger);
+}

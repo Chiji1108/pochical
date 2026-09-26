@@ -12,6 +12,7 @@ import {
   neutralTokenGroups,
   themeFamilies,
 } from "../lib/design-tokens";
+import { hexToOklch } from "../lib/oklch";
 import { themeColors, themes, themeStyle } from "./design-theme";
 import type { NeutralTintMode, Theme } from "./design-theme";
 
@@ -267,11 +268,14 @@ function ThemePalette({
 
 const familyLabels: Record<ThemeFamily, string> = {
   deep: "深め",
+  dusty: "くすみ",
   pastel: "パステル",
 };
 
 const familyDescriptions: Record<ThemeFamily, string> = {
   deep: "設定で選べる6色です。どのテーマでも同じ役割の変数（--accent など）に入り、画面の組み方は変わりません。深めの系統は、塗りと文字に同じ色を使います。",
+  dusty:
+    "同じ6色の色相から、彩度を落としてグレーを混ぜたくすみ色です。背景とグレーはテーマに関係なく温かいグレージュにし、塗りは白い文字が読める中くらいの濃さにします。",
   pastel:
     "同じ6色の色相から、決まりに沿って作ったパステルです。塗りは淡く、上の文字は濃くします。文字と線は読める濃さを保ち、背景にもごく淡く色みを乗せます。",
 };
@@ -424,6 +428,101 @@ function MarkTokens() {
   );
 }
 
+// Distance in OKLab; about 0.02 is where two small marks start to blur.
+function colorDistance(first: string, second: string) {
+  const toLab = (hex: string) => {
+    const { chroma, hue, lightness } = hexToOklch(hex);
+    const radians = (hue * Math.PI) / 180;
+    return [lightness, chroma * Math.cos(radians), chroma * Math.sin(radians)];
+  };
+  const [a, b] = [toLab(first), toLab(second)];
+  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+}
+
+const BLURRED_DISTANCE = 0.02;
+const CLOSE_DISTANCE = 0.03;
+const SHOWN_PAIRS = 5;
+
+function closestPairs(family: ThemeFamily, scheme: ColorScheme) {
+  const colors = markColors.map((option) =>
+    markColorIn(option, scheme, family)
+  );
+  const pairs = colors.flatMap((first, index) =>
+    colors.slice(index + 1).map((second) => ({
+      distance: colorDistance(first.color, second.color),
+      first,
+      second,
+    }))
+  );
+  // `pairs` is a fresh array, so sorting it in place is safe.
+  // oxlint-disable-next-line unicorn/no-array-sort
+  pairs.sort((a, b) => a.distance - b.distance);
+  return pairs.slice(0, SHOWN_PAIRS);
+}
+
+function distanceLabel(distance: number) {
+  if (distance < BLURRED_DISTANCE) {
+    return "見分けにくい";
+  }
+  if (distance < CLOSE_DISTANCE) {
+    return "近い";
+  }
+  return "OK";
+}
+
+function DistinctTokens() {
+  return (
+    <Section
+      description={`シフトの12色のうち、記号の色がいちばん近い組み合わせです。数値はOKLabでの色の差（ΔE）で、${CLOSE_DISTANCE}未満を「近い」、${BLURRED_DISTANCE}未満を「見分けにくい」としています。同じ月に並べて使うと、小さなマスでは区別しにくくなります。`}
+      id="cp-distinct"
+      title="見分けやすさ"
+    >
+      <div className="cp-distinct">
+        {themeFamilies.map((family) =>
+          colorSchemes.map((scheme) => (
+            <article
+              className="cp-distinct-card"
+              key={`${family}-${scheme}`}
+              style={themeStyle("moss", scheme, "none", family)}
+            >
+              <h3>
+                {familyLabels[family]}・{schemeLabels[scheme]}
+              </h3>
+              <ul>
+                {closestPairs(family, scheme).map(
+                  ({ distance, first, second }) => (
+                    <li
+                      data-level={distanceLabel(distance)}
+                      key={`${first.name}-${second.name}`}
+                    >
+                      {[first, second].map((mark) => (
+                        <span
+                          className="cp-mark-tile"
+                          key={mark.name}
+                          style={{ background: mark.tint, color: mark.color }}
+                        >
+                          {mark.name.slice(0, 1)}
+                        </span>
+                      ))}
+                      <span className="cp-distinct-names">
+                        {first.name}と{second.name}
+                      </span>
+                      <span className="cp-distinct-value">
+                        {distance.toFixed(3)}
+                        <small>{distanceLabel(distance)}</small>
+                      </span>
+                    </li>
+                  )
+                )}
+              </ul>
+            </article>
+          ))
+        )}
+      </div>
+    </Section>
+  );
+}
+
 export function DesignColors() {
   return (
     <>
@@ -432,8 +531,10 @@ export function DesignColors() {
           { href: "#cp-neutral", number: "01", title: "基本色" },
           { href: "#cp-themes", number: "02", title: "テーマ（深め）" },
           { href: "#cp-pastel", number: "03", title: "テーマ（パステル）" },
-          { href: "#cp-tint", number: "04", title: "背景の色み" },
-          { href: "#cp-marks", number: "05", title: "シフトの色" },
+          { href: "#cp-dusty", number: "04", title: "テーマ（くすみ）" },
+          { href: "#cp-tint", number: "05", title: "背景の色み" },
+          { href: "#cp-marks", number: "06", title: "シフトの色" },
+          { href: "#cp-distinct", number: "07", title: "見分けやすさ" },
         ].map(({ href, number, title }) => (
           <a href={href} key={href}>
             <span>{number}</span>
@@ -444,8 +545,10 @@ export function DesignColors() {
       <NeutralTokens />
       <ThemeTokens family="deep" id="cp-themes" />
       <ThemeTokens family="pastel" id="cp-pastel" />
+      <ThemeTokens family="dusty" id="cp-dusty" />
       <TintTokens />
       <MarkTokens />
+      <DistinctTokens />
     </>
   );
 }

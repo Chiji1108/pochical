@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 
 import { hexToOklch, oklchToHex } from "./oklch";
+import { familyMarkColor, generatedFamilies } from "./theme-families";
 
 // The app's neutral colors by role, for light and dark. design.css reads them
 // as CSS variables (`--bg`, `--text-3`, ...); /design/colors lists them, and
@@ -300,7 +301,7 @@ export const markColors = [
   },
   {
     color: "#3d4a73",
-    dark: { color: "#adbde8", tint: "#3d4355" },
+    dark: { color: "#c0d0fc", tint: "#3d4355" },
     name: "紺",
     tint: "#dde2ee",
   },
@@ -318,34 +319,18 @@ export const markColors = [
   },
 ] as const;
 
-// Theme families: `deep` is the muted, hand-tuned palette; `pastel` is
-// generated from the same hues with pale fills and dark text on them.
-export const themeFamilies = ["deep", "pastel"] as const;
+// Theme families: `deep` is the muted, hand-tuned palette; the others are
+// generated from the same hues (see theme-families.ts).
+export const themeFamilies = ["deep", ...generatedFamilies] as const;
 export type ThemeFamily = (typeof themeFamilies)[number];
 
-// Pastel shift colors keep each color's hue: a paler ground and a mark a
-// little lighter than the deep one, still readable on that ground.
-function pastelMarkColor(color: string, scheme: ColorScheme) {
-  const { chroma, hue } = hexToOklch(color);
-  if (scheme === "dark") {
-    return {
-      color: oklchToHex({ chroma: chroma * 0.8, hue, lightness: 0.82 }),
-      tint: oklchToHex({
-        chroma: Math.min(0.05, chroma * 0.6),
-        hue,
-        lightness: 0.4,
-      }),
-    };
-  }
-  return {
-    color: oklchToHex({ chroma, hue, lightness: 0.51 }),
-    tint: oklchToHex({
-      chroma: Math.min(0.065, chroma * 0.85),
-      hue,
-      lightness: 0.925,
-    }),
-  };
-}
+// The deep shift colors' average lightness; generated families keep each
+// color's offset from it.
+const MARK_MEAN_LIGHTNESS =
+  markColors.reduce(
+    (sum, option) => sum + hexToOklch(option.color).lightness,
+    0
+  ) / markColors.length;
 
 // A shift color as drawn in light or dark mode and the given family.
 export function markColorIn(
@@ -355,6 +340,13 @@ export function markColorIn(
 ) {
   const deep = scheme === "dark" ? option.dark : option;
   const { color, tint } =
-    family === "pastel" ? pastelMarkColor(option.color, scheme) : deep;
+    family === "deep"
+      ? deep
+      : familyMarkColor(
+          family,
+          option.color,
+          scheme,
+          hexToOklch(option.color).lightness - MARK_MEAN_LIGHTNESS
+        );
   return { color, name: option.name, tint };
 }

@@ -7,7 +7,8 @@ import type {
   NeutralTint,
   ThemeFamily,
 } from "../lib/design-tokens";
-import { hexToOklch, oklchToHex } from "../lib/oklch";
+import { hexToOklch } from "../lib/oklch";
+import { familyNeutrals, familyRoles } from "../lib/theme-families";
 
 // Accent palettes for the app. Each sets the variables design.css reads
 // inside the phone; the shift colors stay as they are. `dark` holds the same
@@ -187,57 +188,16 @@ const onFillByScheme: Record<ColorScheme, string> = {
   light: "#ffffff",
 };
 
-// Accent chroma at which pastel tints reach full strength.
-const PASTEL_FULL_CHROMA = 0.05;
-
-// Pastel roles, generated from the theme's hue. `k` fades the tints out for
-// near-gray themes such as 墨, so their pastel stays a soft gray.
-function pastelColors(theme: Theme, scheme: ColorScheme) {
-  const { chroma, hue } = hexToOklch(theme.accent);
-  const k = Math.min(1, chroma / PASTEL_FULL_CHROMA);
-  const vivid = Math.min(chroma * 1.2, 0.12);
-  const at = (lightness: number, amount: number) =>
-    oklchToHex({ chroma: amount, hue, lightness });
-  if (scheme === "dark") {
-    return {
-      accent: at(0.82, vivid * 0.8),
-      border: at(0.46, 0.035 * k),
-      fill: at(0.8, 0.07 * k),
-      line: at(0.72, vivid * 0.7),
-      markTint: at(0.4, 0.045 * k),
-      muted: at(0.55, 0.05 * k),
-      onFill: at(0.27, 0.02 * k),
-      press: at(0.43, 0.04 * k),
-      soft: at(0.355, 0.025 * k),
-      soft2: at(0.38, 0.03 * k),
-      strong: at(0.76, vivid * 0.8),
-    };
-  }
-  return {
-    accent: at(0.5, vivid),
-    border: at(0.9, 0.035 * k),
-    fill: at(0.84, 0.075 * k),
-    line: at(0.6, vivid * 0.9),
-    markTint: at(0.925, 0.05 * k),
-    muted: at(0.8, 0.07 * k),
-    onFill: at(0.3, 0.04 * k),
-    press: at(0.905, 0.045 * k),
-    soft: at(0.96, 0.024 * k),
-    soft2: at(0.94, 0.032 * k),
-    strong: at(0.44, vivid),
-  };
-}
-
 // A theme's accent roles in light or dark. `accent` draws text, icons and
 // lines; `fill` is for solid backgrounds with `onFill` text on top. The deep
-// themes fill with the accent itself; pastel fills are pale with dark text.
+// themes fill with the accent itself; generated families set their own.
 export function themeColors(
   theme: Theme,
   scheme: ColorScheme,
   family: ThemeFamily = "deep"
 ) {
-  if (family === "pastel") {
-    return pastelColors(theme, scheme);
+  if (family !== "deep") {
+    return familyRoles(family, theme.accent, scheme);
   }
   const colors = scheme === "dark" ? theme.dark : theme;
   return {
@@ -255,7 +215,7 @@ export function themeColors(
   };
 }
 
-// Deep or pastel, picked on /design by the テーマの系統 variant.
+// The theme family, picked on /design by the テーマの系統 variant.
 export const ThemeFamilyContext = createContext<ThemeFamily>("deep");
 
 // Whether the neutrals take on the theme's hue, picked on /design by the
@@ -276,35 +236,22 @@ export function neutralTintOf(theme: Theme): NeutralTint {
   };
 }
 
-// Pastel lifts the light background off pure white with a trace of the
-// theme's hue, and always tints the grays.
-const PASTEL_BG_LIGHTNESS = 0.988;
-const PASTEL_BG_CHROMA = 0.008;
-
 function neutralsFor(
   theme: Theme,
   scheme: ColorScheme,
   tintMode: NeutralTintMode,
   family: ThemeFamily
 ): CSSProperties {
-  if (family !== "pastel") {
+  if (family === "deep") {
     return neutralStyle(
       scheme,
       tintMode === "theme" ? neutralTintOf(theme) : undefined
     );
   }
-  const tint = { ...neutralTintOf(theme), strength: MAX_TINT_STRENGTH };
+  // Generated families bring their own grays and ignore 背景の色み.
+  const { bg, tint } = familyNeutrals(family, theme.accent, scheme);
   const style = neutralStyle(scheme, tint);
-  if (scheme === "dark") {
-    return style;
-  }
-  const { chroma, hue } = hexToOklch(theme.accent);
-  const bg = oklchToHex({
-    chroma: PASTEL_BG_CHROMA * Math.min(1, chroma / PASTEL_FULL_CHROMA),
-    hue,
-    lightness: PASTEL_BG_LIGHTNESS,
-  });
-  return { ...style, "--bg": bg } as CSSProperties;
+  return (bg ? { ...style, "--bg": bg } : style) as CSSProperties;
 }
 
 // Every color variable design.css reads: the neutral roles plus the theme.
