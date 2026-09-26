@@ -1781,6 +1781,8 @@ function PagedShifts({
           group={group}
           member={person}
           month={month}
+          onPickDay={onPickDay}
+          picked={picked}
         />
       )}
       <MonthFoot month={month} onMonth={onMonth} />
@@ -2480,11 +2482,16 @@ function PersonCalendar({
   member,
   dates,
   month,
+  picked,
+  onPickDay,
 }: {
   group: Group;
   member: Member;
   dates: Date[];
   month: Date;
+  picked?: Date;
+  // Picks a day to list everyone's shifts, as in 週ごと and 日ごと.
+  onPickDay: (date: Date) => void;
 }) {
   const me = group.members.find((item) => item.me);
   return (
@@ -2507,31 +2514,38 @@ function PersonCalendar({
               key={dateKey(date)}
               me={me}
               member={member}
+              onPick={onPickDay}
               outside={!sameMonth(date, month)}
+              picked={picked !== undefined && dateKey(picked) === dateKey(date)}
             />
           ))}
         </div>
       </div>
-      {!member.me && (
-        <p className="st-note">日付に枠がある日は、自分も休みの日です。</p>
-      )}
+      <p className="st-note">
+        {member.me ? "" : "薄い枠の日は、自分も休みの日です。"}
+        日付を押すと、その日のみんなの予定が見られます。
+      </p>
     </>
   );
 }
 
 // One day of 人ごと, drawn like a day of your own calendar: the shift name
 // always shows, a day off takes its pattern's tint, and a day you are both
-// off is framed.
+// off is framed. Pressing it opens everyone's shifts that day.
 function PersonDay({
   date,
   member,
   me,
   outside,
+  picked,
+  onPick,
 }: {
   date: Date;
   member: Member;
   me?: Member;
   outside: boolean;
+  picked: boolean;
+  onPick: (date: Date) => void;
 }) {
   const item = outside ? undefined : patternOn(member, date);
   const { tint } = useMarkColor(item?.look.color ?? 0);
@@ -2540,13 +2554,10 @@ function PersonDay({
     me !== undefined &&
     everyoneOff([me, member], date);
   const off = item?.off === true;
-  return (
-    <div
-      aria-label={`${formatDay(date)}：${item?.name ?? "未入力"}${withMe ? "、自分も休み" : ""}`}
-      className={`dc-day ${outside ? "dc-outside" : ""} ${off ? "dc-off" : ""} ${withMe ? "gr-person-with-me" : ""}`}
-      role="img"
-      style={off ? ({ "--off-tint": tint } as CSSProperties) : undefined}
-    >
+  const className = `dc-day ${outside ? "dc-outside" : ""} ${off ? "dc-off" : ""} ${withMe ? "gr-person-with-me" : ""} ${picked ? "dc-active-day" : ""}`;
+  const style = off ? ({ "--off-tint": tint } as CSSProperties) : undefined;
+  const content = (
+    <>
       <span className={`dc-date ${holidayName(date) ? "dc-holiday" : ""}`}>
         {date.getDate()}
       </span>
@@ -2558,7 +2569,28 @@ function PersonDay({
           <span className="dc-shift-label">{item.name}</span>
         </>
       )}
-    </div>
+    </>
+  );
+  if (outside) {
+    return (
+      <div aria-hidden="true" className={className} style={style}>
+        {content}
+      </div>
+    );
+  }
+  return (
+    <button
+      aria-label={`${formatDay(date)}：${item?.name ?? "未入力"}${withMe ? "、自分も休み" : ""}。押すとその日のみんなの予定`}
+      aria-pressed={picked}
+      className={className}
+      onClick={() => {
+        onPick(date);
+      }}
+      style={style}
+      type="button"
+    >
+      {content}
+    </button>
   );
 }
 

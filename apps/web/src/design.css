@@ -4461,3 +4461,8 @@ button.st-row:hover {
   outline: 1.5px solid var(--accent-muted);
   outline-offset: -1px;
 }
+/* The picked day's frame wins over the shared-day-off one. */
+.gr-person-with-me.dc-active-day {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
