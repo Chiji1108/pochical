@@ -997,7 +997,7 @@ function MarkPage({
       <Group note="グループの人にも表示" title="シフトの見た目">
         <ShapeChoices />
       </Group>
-      <Group note="あなたの画面だけ" title="カラー">
+      <Group note="シフトの色はグループの人にも表示" title="カラー">
         <ColorChoices />
       </Group>
       <Group note="あなたの画面だけ" title="トーン">

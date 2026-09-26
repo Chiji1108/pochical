@@ -36,11 +36,15 @@ import {
 } from "./design-calendar";
 import type { Schedule, Shift, Tab } from "./design-calendar";
 import { iconNames } from "./design-look-editor";
+import { ThemeContext, themeOfColor } from "./design-theme";
+import type { ColorChoice } from "./design-theme";
 import {
   guessLook,
   IconWeightContext,
   lookOf,
   MarkGlyph,
+  MonochromeContext,
+  useDisplayColor,
   useMarkColor,
   useMarkColors,
   markIcons,
@@ -64,8 +68,9 @@ type Member = {
   id: string;
   name: string;
   me?: boolean;
-  // The style they picked for their own calendar.
-  style?: { look: LookSettings };
+  // The style they picked for their own calendar: its shape and カラー show
+  // to everyone as they chose them. マルチカラー when no color is given.
+  style?: { look: LookSettings; color?: ColorChoice };
   // A profile picture; without one the avatar shows the first letter.
   photo?: string;
   patterns: MemberPattern[];
@@ -196,7 +201,7 @@ const misaki = (): Member => ({
   })),
   photo: samplePhoto(823),
   shiftOn: (date) => nurseOrder[(dayNumber(date) + 3) % nurseOrder.length],
-  style: { look: presetLook("minimal") },
+  style: { color: "sumi", look: presetLook("minimal") },
 });
 
 // あや made レッスン herself and never picked a look, so it has what the
@@ -2284,6 +2289,43 @@ function presetLook(id: string) {
 // fill), in the viewer's カラー and トーン, so everyone's colors sit
 // together on one screen. You and members without a style of their own
 // use the viewer's style.
+// A member's own shape and カラー for the marks inside, drawn in the
+// viewer's tone and light or dark. You (no style of your own here) keep
+// the viewer's settings.
+function MemberLook({
+  member,
+  children,
+}: {
+  member: Member;
+  children: ReactNode;
+}) {
+  const viewer = {
+    monochrome: useContext(MonochromeContext).monochrome,
+    style: useContext(ShiftMarkStyleContext),
+    theme: useContext(ThemeContext).theme,
+    weight: useContext(IconWeightContext),
+  };
+  const theirs = member.style;
+  const color = theirs?.color ?? "multi";
+  const look = theirs
+    ? {
+        monochrome: color !== "multi",
+        style: theirs.look.style,
+        theme: themeOfColor(color),
+        weight: theirs.look.fill ? ("duotone" as const) : ("regular" as const),
+      }
+    : viewer;
+  return (
+    <ThemeContext value={{ theme: look.theme }}>
+      <MonochromeContext value={{ monochrome: look.monochrome }}>
+        <ShiftMarkStyleContext value={look.style}>
+          <IconWeightContext value={look.weight}>{children}</IconWeightContext>
+        </ShiftMarkStyleContext>
+      </MonochromeContext>
+    </ThemeContext>
+  );
+}
+
 function MemberMark({
   member,
   look,
@@ -2293,17 +2335,10 @@ function MemberMark({
   look: Look;
   size: number;
 }) {
-  const theirs = member.style;
-  if (!theirs) {
-    return <ViewerMark look={look} size={size} />;
-  }
-  const { look: settings } = theirs;
   return (
-    <ShiftMarkStyleContext value={settings.style}>
-      <IconWeightContext value={settings.fill ? "duotone" : "regular"}>
-        <ViewerMark look={look} size={size} />
-      </IconWeightContext>
-    </ShiftMarkStyleContext>
+    <MemberLook member={member}>
+      <ViewerMark look={look} size={size} />
+    </MemberLook>
   );
 }
 
@@ -2633,17 +2668,21 @@ function PersonCalendar({
           className="dc-grid"
           style={{ "--weeks": dates.length / weekLength } as CSSProperties}
         >
-          {dates.map((date) => (
-            <PersonDay
-              date={date}
-              key={dateKey(date)}
-              me={me}
-              member={member}
-              onPick={onPickDay}
-              outside={!sameMonth(date, month)}
-              picked={picked !== undefined && dateKey(picked) === dateKey(date)}
-            />
-          ))}
+          <MemberLook member={member}>
+            {dates.map((date) => (
+              <PersonDay
+                date={date}
+                key={dateKey(date)}
+                me={me}
+                member={member}
+                onPick={onPickDay}
+                outside={!sameMonth(date, month)}
+                picked={
+                  picked !== undefined && dateKey(picked) === dateKey(date)
+                }
+              />
+            ))}
+          </MemberLook>
         </div>
       </div>
       <p className="st-note">
@@ -2673,7 +2712,8 @@ function PersonDay({
   onPick: (date: Date) => void;
 }) {
   const item = outside ? undefined : patternOn(member, date);
-  const { tint } = useMarkColor(item?.look.color ?? 0);
+  // In their カラー, like their marks.
+  const { tint } = useDisplayColor(item?.look.color ?? 0);
   const withMe =
     !(outside || member.me) &&
     me !== undefined &&
