@@ -42,6 +42,13 @@ import { iconNames } from "./design-look-editor";
 import { DecideHeading, SheetHeading } from "./design-sheet";
 import { ThemeContext, themeOfColor } from "./design-theme";
 import type { ColorChoice } from "./design-theme";
+import {
+  BackButton,
+  Button,
+  HeaderAction,
+  IconButton,
+  PageHeader,
+} from "./design-ui";
 import { holidayName, useWeek } from "./design-week";
 import {
   guessLook,
@@ -906,22 +913,20 @@ function GroupHub({
           </span>
           <span className="gr-hub-name">{group.name}</span>
         </h3>
-        <button
-          aria-label="メンバーを招待"
-          className="gr-icon-button"
+        <IconButton
+          label="メンバーを招待"
+
           onClick={onInvite}
-          type="button"
         >
           <UserPlus aria-hidden="true" size={18} />
-        </button>
-        <button
-          aria-label="グループの設定"
-          className="gr-icon-button"
+        </IconButton>
+        <IconButton
+          label="グループの設定"
+
           onClick={onSettings}
-          type="button"
         >
           <Settings2 aria-hidden="true" size={18} />
-        </button>
+        </IconButton>
       </header>
       <section className="st-section">
         <div className="gr-section-head">
@@ -1145,10 +1150,7 @@ function ChatPage({
   return (
     <div className="dc-content st-screen gr-chat">
       <header className="gr-chat-header">
-        <button className="st-back" onClick={onBack} type="button">
-          <ChevronLeft aria-hidden="true" size={20} />
-          {group.name}
-        </button>
+        <BackButton onClick={onBack}>{group.name}</BackButton>
         <h3>{title}</h3>
       </header>
       <ol aria-label={`${title}のメッセージ`} className="gr-messages">
@@ -1317,16 +1319,15 @@ function ChatPage({
             <span className="gr-quote-name">{nameOf(replying.from)}に返信</span>
             <span className="gr-quote-text">{summaryOf(replying)}</span>
           </span>
-          <button
-            aria-label="返信をやめる"
-            className="gr-icon-button"
+          <IconButton
+            label="返信をやめる"
+
             onClick={() => {
               setReplyTo(undefined);
             }}
-            type="button"
           >
             <X aria-hidden="true" size={16} />
-          </button>
+          </IconButton>
         </div>
       )}
       <form
@@ -1685,16 +1686,13 @@ function ShiftsPage({
   };
   return (
     <div className={`gr-shifts ${picked ? "gr-shifts-with-sheet" : ""}`}>
-      <header className="st-page-header">
-        <div className="pe-topbar">
-          <button
-            className="st-back gr-shifts-back"
-            onClick={onBack}
-            type="button"
-          >
-            <ChevronLeft aria-hidden="true" size={20} />
+      <PageHeader
+        leading={
+          <BackButton className="gr-shifts-back" onClick={onBack}>
             <span className="gr-shifts-back-label">{backLabel}</span>
-          </button>
+          </BackButton>
+        }
+        trailing={
           <ShiftsMenu
             layout={layout}
             onLayout={setLayout}
@@ -1705,8 +1703,8 @@ function ShiftsPage({
               setSaved(true);
             }}
           />
-        </div>
-      </header>
+        }
+      />
       <PagedShifts
         dates={dates}
         group={group}
@@ -3002,23 +3000,23 @@ export function JoinSheet({
             <p className="gr-join-text">
               みんなのシフトと、みんなが休みの日が見られます。
             </p>
-            <button
-              className="ui-button ui-button-primary ob-push"
+            <Button
+              variant="primary"
+              className="ob-push"
               onClick={() => {
                 close();
                 onOpenGroup();
               }}
-              type="button"
             >
               グループを見る
-            </button>
-            <button
-              className="ui-button ui-button-text"
+            </Button>
+            <Button
+              variant="text"
+
               onClick={close}
-              type="button"
             >
               閉じる
-            </button>
+            </Button>
           </>
         ) : (
           <>
@@ -3058,23 +3056,23 @@ export function JoinSheet({
             <p className="gr-join-text">
               このグループの人に、この名前で表示されます。参加すると、あなたのシフトもメンバーに見えるようになります。
             </p>
-            <button
-              className="ui-button ui-button-primary ob-push"
+            <Button
+              variant="primary"
+              className="ob-push"
               disabled={name.trim() === ""}
               onClick={() => {
                 setJoined(true);
               }}
-              type="button"
             >
               参加する
-            </button>
-            <button
-              className="ui-button ui-button-text"
+            </Button>
+            <Button
+              variant="text"
+
               onClick={close}
-              type="button"
             >
               今はしない
-            </button>
+            </Button>
           </>
         )}
       </section>
@@ -3421,24 +3419,24 @@ function GroupEditPage({
   }
   return (
     <>
-      <header className="st-page-header">
-        <div className="pe-topbar">
-          <button className="st-back" onClick={onCancel} type="button">
+      <PageHeader
+        leading={
+          <BackButton chevron={false} onClick={onCancel}>
             キャンセル
-          </button>
-          <button
-            className="pe-save"
+          </BackButton>
+        }
+        trailing={
+          <HeaderAction
             disabled={!canSave}
             onClick={() => {
               onSave(draft);
             }}
-            type="button"
           >
             保存
-          </button>
-        </div>
-        <h3 className="st-title">グループを編集</h3>
-      </header>
+          </HeaderAction>
+        }
+        title="グループを編集"
+      />
       <div className="gr-edit-mark">
         <span className="gr-rail-icon gr-mark-frame-large">
           <GroupIcon mark={mark} size={40} />
@@ -3549,12 +3547,7 @@ function PageHeaderBack({
   label: string;
   onBack: () => void;
 }) {
-  return (
-    <button className="st-back" onClick={onBack} type="button">
-      <ChevronLeft aria-hidden="true" size={20} />
-      {label}
-    </button>
-  );
+  return <BackButton onClick={onBack}>{label}</BackButton>;
 }
 
 // Your name and picture in a group: its own, or the usual ones.
@@ -3575,34 +3568,26 @@ function InvitePage({
 }) {
   return (
     <>
-      <header className="st-page-header">
-        <button className="st-back" onClick={onBack} type="button">
-          <ChevronLeft aria-hidden="true" size={20} />
-          {group.name}
-        </button>
-        <h3 className="st-title">メンバーを招待</h3>
-      </header>
+      <PageHeader back={group.name} onBack={onBack} title="メンバーを招待" />
       <div className="gr-qr">
         <QrCode aria-hidden="true" size={132} strokeWidth={1.2} />
         <small className="gr-qr-note">
           この画面を相手に読み取ってもらいます
         </small>
       </div>
-      <button className="ui-button ui-button-primary" type="button">
+      <Button variant="primary">
         <Send aria-hidden="true" size={16} />
         招待リンクを送る
-      </button>
-      <button className="ui-button ui-button-quiet" type="button">
+      </Button>
+      <Button variant="quiet">
         <Copy aria-hidden="true" size={15} />
         リンクをコピー
-      </button>
+      </Button>
       <p className="st-note">
         リンクを知っている人は、だれでも「{group.name}
         」に参加できます。送る相手に気をつけてください。
       </p>
-      <button className="ui-button ui-button-text" type="button">
-        招待リンクを作り直す
-      </button>
+      <Button variant="text">招待リンクを作り直す</Button>
     </>
   );
 }
@@ -3768,13 +3753,7 @@ function GroupMarkPage({
   const letter = mark.kind === "letter" ? mark.text : firstLetter(name) || "グ";
   return (
     <>
-      <header className="st-page-header">
-        <button className="st-back" onClick={onBack} type="button">
-          <ChevronLeft aria-hidden="true" size={20} />
-          {back}
-        </button>
-        <h3 className="st-title">アイコン</h3>
-      </header>
+      <PageHeader back={back} onBack={onBack} title="アイコン" />
       {/* Drawn marks are picked with the tabs below, so the sheet only
           brings in a photo. */}
       <PhotoPicker
@@ -3969,25 +3948,21 @@ function NewGroupPage({
   }
   return (
     <>
-      <header className="st-page-header">
-        <div className="pe-topbar">
-          <button className="st-back" onClick={onBack} type="button">
-            <ChevronLeft aria-hidden="true" size={20} />
-            グループ
-          </button>
-          <button
-            className="pe-save"
+      <PageHeader
+        back="グループ"
+        onBack={onBack}
+        trailing={
+          <HeaderAction
             disabled={!canCreate}
             onClick={() => {
               onCreate({ mark, myName: myName.trim(), name: name.trim() });
             }}
-            type="button"
           >
             作る
-          </button>
-        </div>
-        <h3 className="st-title">グループを作る</h3>
-      </header>
+          </HeaderAction>
+        }
+        title="グループを作る"
+      />
       <div className="st-list">
         <label className="st-row">
           <span className="st-row-label">グループ名</span>

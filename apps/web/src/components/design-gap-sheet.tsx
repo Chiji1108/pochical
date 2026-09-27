@@ -4,6 +4,7 @@ import type { RefObject } from "react";
 import type { Shift } from "../lib/design-patterns";
 import type { Schedule } from "./design-calendar";
 import { SheetHeading } from "./design-sheet";
+import { Button } from "./design-ui";
 
 export type OffChoice = { key: Shift; label: string };
 
@@ -175,23 +176,23 @@ function GapSheetBody({
           </label>
         </div>
       )}
-      <button
-        className="ui-button ui-button-primary"
+      <Button
+        variant="primary"
+
         onClick={() => {
           close();
           onFill(current?.key);
         }}
-        type="button"
       >
         {current ? `${current.label}にする` : "休みを追加して入れる"}
-      </button>
-      <button
-        className="ui-button ui-button-subtle"
+      </Button>
+      <Button
+        variant="subtle"
+
         onClick={close}
-        type="button"
       >
         あとで入れる
-      </button>
+      </Button>
     </section>
   );
 }

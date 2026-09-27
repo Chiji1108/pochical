@@ -1,7 +1,6 @@
 import {
   CalendarPlus,
   Check,
-  ChevronLeft,
   Download,
   Image as ImageIcon,
   Share,
@@ -21,6 +20,7 @@ import {
   ToneContext,
   themeStyle,
 } from "./design-theme";
+import { Button, PageHeader } from "./design-ui";
 import { useWeek } from "./design-week";
 import {
   CellNamesContext,
@@ -113,37 +113,37 @@ export function SaveSheet({
               画像にして見せたり、端末のカレンダーにまとめて入れたりできます。
             </p>
             <div className="dc-save-actions">
-              <button
-                className="ui-button ui-button-primary"
+              <Button
+                variant="primary"
+
                 onClick={() => {
                   close();
                   onImage();
                 }}
-                type="button"
               >
                 <ImageIcon aria-hidden="true" size={18} />
                 画像で保存
-              </button>
-              <button
-                className="ui-button ui-button-quiet"
+              </Button>
+              <Button
+                variant="quiet"
+
                 disabled={shiftCount === 0}
                 onClick={() => {
                   setStep("calendar");
                 }}
-                type="button"
               >
                 <CalendarPlus aria-hidden="true" size={18} />
                 端末カレンダーに追加
-              </button>
+              </Button>
             </div>
             {completion && (
-              <button
-                className="ui-button ui-button-subtle"
+              <Button
+                variant="subtle"
+
                 onClick={close}
-                type="button"
               >
                 あとで
-              </button>
+              </Button>
             )}
           </>
         )}
@@ -195,18 +195,18 @@ export function SaveSheet({
                 />
               </label>
             </div>
-            <button
-              className="ui-button ui-button-primary dc-save-add"
+            <Button
+              variant="primary"
+              className="dc-save-add"
               disabled={!calendar || count === 0}
               onClick={() => {
                 setStep({
                   done: `「${calendar?.name}」に${monthLabel}のシフトを${count}件追加しました。`,
                 });
               }}
-              type="button"
             >
               {count}件を追加
-            </button>
+            </Button>
           </>
         )}
         {typeof step === "object" && (
@@ -219,13 +219,13 @@ export function SaveSheet({
               />
               {step.done}
             </p>
-            <button
-              className="ui-button ui-button-primary"
+            <Button
+              variant="primary"
+
               onClick={close}
-              type="button"
             >
               閉じる
-            </button>
+            </Button>
           </>
         )}
       </section>
@@ -271,13 +271,7 @@ export function ImagePreviewPage({
   return (
     <div className="dc-content st-screen">
       <div className="st-scroll">
-        <header className="st-page-header">
-          <button className="st-back" onClick={onClose} type="button">
-            <ChevronLeft aria-hidden="true" size={20} />
-            カレンダー
-          </button>
-          <h3 className="st-title">画像で保存</h3>
-        </header>
+        <PageHeader back="カレンダー" onBack={onClose} title="画像で保存" />
         <CellNamesContext
           value={{
             names: {
@@ -368,26 +362,26 @@ export function ImagePreviewPage({
         </p>
       </div>
       <div className="dc-image-actions">
-        <button
-          className="ui-button ui-button-quiet"
+        <Button
+          variant="quiet"
+
           onClick={() => {
             setNote("LINEなどに送れるメニューが開きます（見本）");
           }}
-          type="button"
         >
           <Share aria-hidden="true" size={18} />
           共有
-        </button>
-        <button
-          className="ui-button ui-button-primary"
+        </Button>
+        <Button
+          variant="primary"
+
           onClick={() => {
             setNote("写真に保存しました");
           }}
-          type="button"
         >
           <Download aria-hidden="true" size={18} />
           保存
-        </button>
+        </Button>
       </div>
       <p aria-live="polite" className="gr-toast" hidden={!note}>
         <Check aria-hidden="true" size={16} />

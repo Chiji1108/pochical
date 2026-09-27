@@ -4,7 +4,6 @@ import {
   CalendarPlus,
   Camera,
   Check,
-  ChevronLeft,
   ChevronRight,
   Download,
   Pencil,
@@ -22,6 +21,13 @@ import {
 import { NameTabs, OffLookTabs } from "../components/design-settings";
 import { DecideHeading, SheetHeading } from "../components/design-sheet";
 import { themeStyle, useThemeStyle } from "../components/design-theme";
+import {
+  BackButton,
+  Button,
+  HeaderAction,
+  IconButton,
+  PageHeader,
+} from "../components/design-ui";
 import {
   OffDisplayContext,
   ShiftMark,
@@ -135,84 +141,70 @@ function Buttons() {
         note="主・控えめ・文字・目立たないの4段。以前の dc-start、dc-import-primary、ob-primary、st-primary(主)、dc-start-photo、dc-save-secondary、gr-secondary(控えめ)、ob-link、st-link(文字)、dc-import-later(目立たない)をまとめたものです。"
         title="ボタン"
       >
-        <Item name="ui-button-primary" where="その画面で次にすること">
-          <button className="ui-button ui-button-primary" type="button">
+        <Item name="Button variant=primary" where="その画面で次にすること">
+          <Button>
             <Pencil aria-hidden="true" size={18} />
             ポチポチ入力
-          </button>
+          </Button>
         </Item>
-        <Item name="ui-button-quiet" where="主の横、または一段下の操作">
-          <button className="ui-button ui-button-quiet" type="button">
+        <Item name="Button variant=quiet" where="主の横、または一段下の操作">
+          <Button variant="quiet">
             <Camera aria-hidden="true" size={18} />
             写真から取り込む
-          </button>
+          </Button>
         </Item>
-        <Item name="ui-button-text" where="リンクのような選択肢">
-          <button className="ui-button ui-button-text" type="button">
-            アカウントをお持ちの方はログイン
-          </button>
+        <Item name="Button variant=text" where="リンクのような選択肢">
+          <Button variant="text">アカウントをお持ちの方はログイン</Button>
         </Item>
-        <Item name="ui-button-subtle" where="あとにする、断る">
-          <button className="ui-button ui-button-subtle" type="button">
-            あとで入れる
-          </button>
+        <Item name="Button variant=subtle" where="あとにする、断る">
+          <Button variant="subtle">あとで入れる</Button>
         </Item>
-        <Item name="ui-button-primary(押せない)" where="まだ選んでいないとき">
-          <button
-            className="ui-button ui-button-primary"
-            disabled
-            type="button"
-          >
+        <Item name="Button(押せない)" where="まだ選んでいないとき">
+          <Button disabled>
             <CalendarPlus aria-hidden="true" size={18} />
             追加する
-          </button>
+          </Button>
         </Item>
       </Group>
       <Group
-        note="見出しの右の操作が4種類。完了と保存は同じ役割です。"
-        title="見出しの操作"
+        note="戻る(またはキャンセル)・右の操作・大きなタイトル。iPhone と Android のナビゲーションバーと同じ形です。設定、グループ、パターンの編集などの pe-topbar と PageHeader をまとめたものです。"
+        title="画面の上"
       >
-        <Item name="dc-done" where="入力中・週表示の完了">
+        <Item name="PageHeader" where="戻る+タイトル" wide>
+          <PageHeader back="設定" onBack={() => undefined} title="スタイル" />
+        </Item>
+        <Item
+          name="PageHeader trailing=HeaderAction"
+          where="編集して保存するページ"
+          wide
+        >
+          <PageHeader
+            back="シフトパターン"
+            onBack={() => undefined}
+            title="パターンを編集"
+            trailing={<HeaderAction>保存</HeaderAction>}
+          />
+        </Item>
+        <Item name="BackButton chevron=false" where="入力を捨てて戻るとき">
+          <BackButton chevron={false}>キャンセル</BackButton>
+        </Item>
+        <Item name="BackButton(記号だけ)" where="はじめての設定">
+          <BackButton />
+        </Item>
+        <Item name="IconButton" where="グループの見出しの招待・設定、月の保存">
+          <span className="cmp-marks">
+            <IconButton label="招待">
+              <UserPlus aria-hidden="true" size={18} />
+            </IconButton>
+            <IconButton label="保存">
+              <Download aria-hidden="true" size={21} />
+            </IconButton>
+          </span>
+        </Item>
+        <Item name="dc-done" where="カレンダーの入力中・週表示の完了だけ">
           <button className="dc-done" type="button">
             <Check aria-hidden="true" size={18} />
             完了
-          </button>
-        </Item>
-        <Item name="pe-save" where="パターンの編集などの保存">
-          <button className="pe-save" type="button">
-            保存
-          </button>
-        </Item>
-        <Item name="dc-heading-icon" where="月の保存(今のままの見出し)">
-          <button aria-label="保存" className="dc-heading-icon" type="button">
-            <Download aria-hidden="true" size={21} />
-          </button>
-        </Item>
-        <Item name="gr-icon-button" where="グループの見出しの招待・設定">
-          <button aria-label="招待" className="gr-icon-button" type="button">
-            <UserPlus aria-hidden="true" size={20} />
-          </button>
-        </Item>
-      </Group>
-      <Group
-        note="2種類。グループの月表示は st-back に縮む指定を足したもので、同じ部品です。"
-        title="戻る"
-      >
-        <Item name="st-back" where="設定の各ページ">
-          <button className="st-back" type="button">
-            <ChevronLeft aria-hidden="true" size={20} />
-            設定
-          </button>
-        </Item>
-        <Item name="ob-back" where="はじめての設定">
-          <button aria-label="戻る" className="ob-back" type="button">
-            <ChevronLeft aria-hidden="true" size={22} />
-          </button>
-        </Item>
-        <Item name="st-back gr-shifts-back" where="グループの月表示">
-          <button className="st-back gr-shifts-back" type="button">
-            <ChevronLeft aria-hidden="true" size={20} />
-            家族
           </button>
         </Item>
       </Group>

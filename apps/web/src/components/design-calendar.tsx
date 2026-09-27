@@ -42,6 +42,7 @@ import { DesignSettings } from "./design-settings";
 import type { SettingsPage } from "./design-settings";
 import { SheetHeading } from "./design-sheet";
 import { useThemeStyle } from "./design-theme";
+import { Button, IconButton } from "./design-ui";
 import { holidayName, holidayNameOfKey, useWeek } from "./design-week";
 import {
   CellNamesContext,
@@ -1180,14 +1181,13 @@ function HeadingActions({
         </div>
       )}
       {mode === "view" && onSave && (
-        <button
-          aria-label="この月のシフトを保存"
-          className="dc-heading-icon"
+        <IconButton
+          label="この月のシフトを保存"
+
           onClick={onSave}
-          type="button"
         >
           <Download aria-hidden="true" size={21} />
-        </button>
+        </IconButton>
       )}
       {mode !== "view" && (
         <button className="dc-done" onClick={onDone} type="button">
@@ -1215,25 +1215,25 @@ function StartArea({
     <div
       className={`dc-start-area dc-start-row ${stacked ? "dc-start-stack" : ""}`}
     >
-      <button
-        className="ui-button ui-button-primary"
+      <Button
+        variant="primary"
+
         onClick={onStart}
-        type="button"
       >
         <Pencil aria-hidden="true" size={18} />
         {label}
-      </button>
+      </Button>
       {/* As wide as ポチポチ入力: only people handed a roster see these, on
           a month with days left, which is when they photograph it. */}
-      <button
+      <Button
+        variant="quiet"
         aria-haspopup="dialog"
-        className="ui-button ui-button-quiet"
+
         onClick={onImport}
-        type="button"
       >
         <Camera aria-hidden="true" size={18} />
         写真から取り込む
-      </button>
+      </Button>
     </div>
   );
 }
@@ -1250,23 +1250,23 @@ function SaveArea({
 }) {
   return (
     <div className="dc-start-area dc-start-row">
-      <button
-        className="ui-button ui-button-quiet"
+      <Button
+        variant="quiet"
+
         onClick={onImage}
-        type="button"
       >
         <ImageIcon aria-hidden="true" size={18} />
         画像で保存
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="quiet"
         aria-haspopup="dialog"
-        className="ui-button ui-button-quiet"
+
         onClick={onCalendar}
-        type="button"
       >
         <CalendarPlus aria-hidden="true" size={18} />
         カレンダーに追加
-      </button>
+      </Button>
     </div>
   );
 }
@@ -1376,17 +1376,17 @@ function ImportSheet({
               短い時間にたくさん取り込んだため、いったんお休みしています。しばらくしてから、もう一度お試しください。残りは、ポチポチ入力でも入れられます。
             </p>
             <div>
-              <button
-                className="ui-button ui-button-primary"
+              <Button
+                variant="primary"
+
                 onClick={() => {
                   close();
                   onStartPochi();
                 }}
-                type="button"
               >
                 <Pencil aria-hidden="true" size={16} />
                 ポチポチ入力で入れる
-              </button>
+              </Button>
             </div>
           </>
         )}

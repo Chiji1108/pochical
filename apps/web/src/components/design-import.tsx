@@ -1,4 +1,4 @@
-import { Check, ChevronLeft } from "lucide-react";
+import { Check } from "lucide-react";
 import { useState } from "react";
 import type { CSSProperties } from "react";
 
@@ -6,6 +6,7 @@ import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { DayCell, dateKey, formatDay } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
+import { BackButton, Button } from "./design-ui";
 import { useWeek } from "./design-week";
 import { OffDisplayContext, ShiftMark } from "./shift-mark";
 
@@ -210,10 +211,9 @@ export function ImportReviewPage({
     <div className="dc-content st-screen">
       <div className="st-scroll im-page">
         <header className="st-page-header">
-          <button className="st-back" onClick={back} type="button">
-            <ChevronLeft aria-hidden="true" size={20} />
+          <BackButton onClick={back}>
             {step === "row" || run === "repeat" ? "カレンダー" : "戻る"}
-          </button>
+          </BackButton>
           {run === "first" && (
             <p className="im-steps">
               {(["row", "codes", "check"] as const).indexOf(step) + 1} / 3
@@ -259,16 +259,16 @@ export function ImportReviewPage({
                 </button>
               ))}
             </div>
-            <button
-              className="ui-button ui-button-primary ob-push im-next"
+            <Button
+              variant="primary"
+              className="ob-push im-next"
               disabled={myRow === undefined}
               onClick={() => {
                 setStep("codes");
               }}
-              type="button"
             >
               次へ
-            </button>
+            </Button>
           </>
         )}
 
@@ -297,16 +297,16 @@ export function ImportReviewPage({
             <p className="im-lead">
               「＋」の付いたシフトは、新しいパターンとして追加します。
             </p>
-            <button
-              className="ui-button ui-button-primary ob-push im-next"
+            <Button
+              variant="primary"
+              className="ob-push im-next"
               onClick={() => {
                 setConfirmed(new Set(codes));
                 setStep("check");
               }}
-              type="button"
             >
               次へ
-            </button>
+            </Button>
           </>
         )}
 
@@ -430,13 +430,9 @@ export function ImportReviewPage({
                   日分を、読み取った内容で上書きします。
                 </p>
               )}
-              <button
-                className="ui-button ui-button-primary ob-push"
-                onClick={apply}
-                type="button"
-              >
+              <Button variant="primary" className="ob-push" onClick={apply}>
                 カレンダーに入れる
-              </button>
+              </Button>
             </div>
           </>
         )}

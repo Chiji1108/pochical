@@ -1,11 +1,4 @@
-import {
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  GripVertical,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { Check, ChevronRight, GripVertical, Plus, Trash2 } from "lucide-react";
 import { useContext, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -14,6 +7,7 @@ import type { Shift } from "../lib/design-patterns";
 import { nextDayShifts } from "./design-calendar";
 import { LookEditorPage } from "./design-look-editor";
 import type { LookField } from "./design-look-editor";
+import { BackButton, HeaderAction, PageHeader } from "./design-ui";
 import {
   guessLook,
   lookOf,
@@ -131,29 +125,23 @@ export function PatternsPage({
   const sorting = view === "sort";
   return (
     <>
-      <header className="st-page-header">
-        <div className="pe-topbar">
-          <button
-            className="st-back"
-            disabled={sorting}
-            onClick={onBack}
-            type="button"
-          >
-            <ChevronLeft aria-hidden="true" size={20} />
+      <PageHeader
+        leading={
+          <BackButton disabled={sorting} onClick={onBack}>
             設定
-          </button>
-          <button
-            className="pe-save"
+          </BackButton>
+        }
+        trailing={
+          <HeaderAction
             onClick={() => {
               setView(sorting ? "list" : "sort");
             }}
-            type="button"
           >
             {sorting ? "完了" : "並び替え"}
-          </button>
-        </div>
-        <h3 className="st-title">シフトパターン</h3>
-      </header>
+          </HeaderAction>
+        }
+        title="シフトパターン"
+      />
       {sorting ? (
         <SortableList
           items={items}
@@ -348,13 +336,11 @@ function AddPatternPage({
     .map(draftOf);
   return (
     <>
-      <header className="st-page-header">
-        <button className="st-back" onClick={onBack} type="button">
-          <ChevronLeft aria-hidden="true" size={20} />
-          シフトパターン
-        </button>
-        <h3 className="st-title">パターンを追加</h3>
-      </header>
+      <PageHeader
+        back="シフトパターン"
+        onBack={onBack}
+        title="パターンを追加"
+      />
       {suggestions.length > 0 && (
         <section className="st-section">
           <h4>よく使うパターン</h4>
@@ -476,27 +462,21 @@ function PatternEditor({
 
   return (
     <>
-      <header className="st-page-header">
-        <div className="pe-topbar">
-          <button className="st-back" onClick={onBack} type="button">
-            <ChevronLeft aria-hidden="true" size={20} />
-            シフトパターン
-          </button>
-          <button
-            className="pe-save"
+      <PageHeader
+        back="シフトパターン"
+        onBack={onBack}
+        trailing={
+          <HeaderAction
             disabled={!canSave}
             onClick={() => {
               onSave({ ...draft, name: draft.name.trim() });
             }}
-            type="button"
           >
             {isNew ? "追加" : "保存"}
-          </button>
-        </div>
-        <h3 className="st-title">
-          {isNew ? "パターンを追加" : "パターンを編集"}
-        </h3>
-      </header>
+          </HeaderAction>
+        }
+        title={isNew ? "パターンを追加" : "パターンを編集"}
+      />
       <div className="pe-preview">
         <MarkGlyph look={draft} size={44} style={style} />
         <span className="pe-preview-text">
@@ -635,13 +615,11 @@ function NextDayPicker({
   const choices = [undefined, ...others];
   return (
     <>
-      <header className="st-page-header">
-        <button className="st-back" onClick={onBack} type="button">
-          <ChevronLeft aria-hidden="true" size={20} />
-          {draft.name || "パターン"}
-        </button>
-        <h3 className="st-title">翌日のパターン</h3>
-      </header>
+      <PageHeader
+        back={draft.name || "パターン"}
+        onBack={onBack}
+        title="翌日のパターン"
+      />
       <p className="st-note">
         {draft.name || "このパターン"}
         を入れると、翌日にも自動でシフトが入ります。夜勤の翌日の明けなどに使います。

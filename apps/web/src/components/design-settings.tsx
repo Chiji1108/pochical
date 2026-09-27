@@ -2,7 +2,6 @@ import {
   ArrowRight,
   Check,
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
   CloudCheck,
 } from "lucide-react";
@@ -50,6 +49,7 @@ import {
   themeStyle,
 } from "./design-theme";
 import type { Appearance, ColorChoice } from "./design-theme";
+import { Button, PageHeader } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
 import type { ColoredDay } from "./design-week";
 import {
@@ -704,26 +704,6 @@ function ConfirmSheet({
   );
 }
 
-function PageHeader({
-  back,
-  title,
-  onBack,
-}: {
-  back: string;
-  title: string;
-  onBack: () => void;
-}) {
-  return (
-    <header className="st-page-header">
-      <button className="st-back" onClick={onBack} type="button">
-        <ChevronLeft aria-hidden="true" size={20} />
-        {back}
-      </button>
-      <h3 className="st-title">{title}</h3>
-    </header>
-  );
-}
-
 function SequenceChips({ sequence }: { sequence: Shift[] }) {
   return (
     <ol className="st-sequence">
@@ -767,20 +747,20 @@ function RepeatDetails({
           onChange={onHolidaysOff}
         />
       </div>
-      <button
-        className="ui-button ui-button-primary"
+      <Button
+        variant="primary"
+
         onClick={onNew}
-        type="button"
       >
         新しい繰り返しにする
-      </button>
-      <button
-        className="ui-button ui-button-text"
+      </Button>
+      <Button
+        variant="text"
+
         onClick={onFix}
-        type="button"
       >
         今の繰り返しを直す
-      </button>
+      </Button>
       <p className="st-note">
         異動などで順番が変わるときは、切り替える日を選んで新しい繰り返しにします。それより前のシフトは、そのまま残ります。
       </p>
@@ -918,18 +898,18 @@ function RepeatEditorPage({
           からのシフトを入れ直します。その間に自分で直した日も、並びのとおりに戻ります。
         </p>
       )}
-      <button
-        className="ui-button ui-button-primary"
+      <Button
+        variant="primary"
+
         disabled={sequence.length === 0}
         onClick={() => {
           onApply(rule);
         }}
-        type="button"
       >
         {shortDay(start)}
         {text.action}
         <ArrowRight aria-hidden="true" size={16} />
-      </button>
+      </Button>
     </>
   );
 }
@@ -1025,16 +1005,16 @@ function JobChangePage({
       <p className="st-note">
         前の日までのシフトは、そのまま残ります。この日からのシフトは、新しい仕事に合わせて入れ直します。
       </p>
-      <button
-        className="ui-button ui-button-primary"
+      <Button
+        variant="primary"
+
         onClick={() => {
           setAsking(true);
         }}
-        type="button"
       >
         次へ
         <ArrowRight aria-hidden="true" size={16} />
-      </button>
+      </Button>
     </>
   );
 }
@@ -1223,16 +1203,16 @@ function RosterSwitchPage({
       <p className="st-note">
         この日からの繰り返しのシフトは消えて、空いた状態になります。前の日までのシフトは、そのまま残ります。
       </p>
-      <button
-        className="ui-button ui-button-primary"
+      <Button
+        variant="primary"
+
         onClick={() => {
           onApply(start);
         }}
-        type="button"
       >
         {shortDay(start)}から勤務表にする
         <ArrowRight aria-hidden="true" size={16} />
-      </button>
+      </Button>
     </>
   );
 }

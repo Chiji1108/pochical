@@ -19,6 +19,7 @@ import {
 } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
 import { ColorSchemeContext, useThemeStyle } from "./design-theme";
+import { BackButton, Button } from "./design-ui";
 import { useWeek } from "./design-week";
 import { ShiftMark } from "./shift-mark";
 
@@ -298,20 +299,16 @@ function WelcomeStep({
         </p>
       </div>
       <div className="ob-welcome-actions">
-        <button
-          className="ui-button ui-button-primary ob-push"
-          onClick={onStart}
-          type="button"
-        >
+        <Button variant="primary" className="ob-push" onClick={onStart}>
           はじめる
-        </button>
-        <button
-          className="ui-button ui-button-text"
+        </Button>
+        <Button
+          variant="text"
+
           onClick={onLogin}
-          type="button"
         >
           アカウントをお持ちの方はログイン
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -484,14 +481,7 @@ function StepHeader({
   return (
     <header className="ob-header">
       {onBack && (
-        <button
-          aria-label="戻る"
-          className="ob-back"
-          onClick={onBack}
-          type="button"
-        >
-          <ChevronLeft aria-hidden="true" size={22} />
-        </button>
+        <BackButton aria-label="戻る" className="ob-back" onClick={onBack} />
       )}
       <h3>{title}</h3>
       {description && <p>{description}</p>}
@@ -643,16 +633,16 @@ function CustomStep({
         patternKeys={template.patternKeys}
         sequence={sequence}
       />
-      <button
-        className="ui-button ui-button-primary ob-push"
+      <Button
+        variant="primary"
+        className="ob-push"
         disabled={sequence.length === 0}
         onClick={() => {
           onNext(sequence);
         }}
-        type="button"
       >
         次へ
-      </button>
+      </Button>
     </>
   );
 }
@@ -755,14 +745,14 @@ function AnchorStep({
           })}
         </div>
       )}
-      <button
-        className="ui-button ui-button-primary ob-push"
+      <Button
+        variant="primary"
+        className="ob-push"
         disabled={!anchor}
         onClick={() => anchor && onStart(anchor)}
-        type="button"
       >
         {finishLabel}
-      </button>
+      </Button>
     </>
   );
 }

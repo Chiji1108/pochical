@@ -1,8 +1,9 @@
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
 import { useState } from "react";
 
 import type { Schedule } from "./design-calendar";
 import { SortableList } from "./design-pattern-editor";
+import { BackButton, HeaderAction, PageHeader } from "./design-ui";
 
 // The people you note on a day, like who is on the same shift. Only names:
 // they are not app users, unlike the members of a group.
@@ -65,31 +66,25 @@ export function CoworkersPage({
   const sorting = view === "sort";
   return (
     <>
-      <header className="st-page-header">
-        <div className="pe-topbar">
-          <button
-            className="st-back"
-            disabled={sorting}
-            onClick={onBack}
-            type="button"
-          >
-            <ChevronLeft aria-hidden="true" size={20} />
+      <PageHeader
+        leading={
+          <BackButton disabled={sorting} onClick={onBack}>
             設定
-          </button>
-          {names.length > 1 && (
-            <button
-              className="pe-save"
+          </BackButton>
+        }
+        trailing={
+          names.length > 1 && (
+            <HeaderAction
               onClick={() => {
                 setView(sorting ? "list" : "sort");
               }}
-              type="button"
             >
               {sorting ? "完了" : "並び替え"}
-            </button>
-          )}
-        </div>
-        <h3 className="st-title">一緒に働く人</h3>
-      </header>
+            </HeaderAction>
+          )
+        }
+        title="一緒に働く人"
+      />
       {sorting && (
         <SortableList
           items={names.map((name) => ({ id: name }))}
@@ -187,25 +182,21 @@ function CoworkerEditor({
   const duplicate = taken.includes(trimmed);
   return (
     <>
-      <header className="st-page-header">
-        <div className="pe-topbar">
-          <button className="st-back" onClick={onBack} type="button">
-            <ChevronLeft aria-hidden="true" size={20} />
-            一緒に働く人
-          </button>
-          <button
-            className="pe-save"
+      <PageHeader
+        back="一緒に働く人"
+        onBack={onBack}
+        trailing={
+          <HeaderAction
             disabled={!trimmed || duplicate}
             onClick={() => {
               onSave(trimmed);
             }}
-            type="button"
           >
             保存
-          </button>
-        </div>
-        <h3 className="st-title">{name}</h3>
-      </header>
+          </HeaderAction>
+        }
+        title={name}
+      />
       <div className="st-list">
         <label className="st-row">
           <span className="st-row-label">名前</span>

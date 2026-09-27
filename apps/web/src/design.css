@@ -1094,16 +1094,6 @@ body:has(.dc-breakdown[open]) {
   border: 1px solid var(--border);
   border-radius: 15px;
 }
-.design-page .dc-heading-icon {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  color: var(--text-3);
-  background: transparent;
-  border: 0;
-  border-radius: 12px;
-}
 .dc-calendar-scroll {
   touch-action: pan-y;
 }
@@ -1346,16 +1336,9 @@ body:has(.dc-breakdown[open]) {
   font-size: 13px;
   color: var(--text-3);
 }
+/* The onboarding's way back, the chevron alone above the question. */
 .design-page .ob-back {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  margin: 0 0 8px -10px;
-  color: var(--text-3);
-  background: transparent;
-  border: 0;
-  border-radius: 12px;
+  margin-bottom: 8px;
 }
 .ob-options {
   display: flex;
@@ -2115,7 +2098,7 @@ button.st-row:hover {
 }
 /* Line the right-hand button up with the middle of the month digits, like
    ‹ 今月 ›, instead of centering it on the year and month together. */
-.dc-heading > .dc-heading-icon,
+.dc-heading > .ui-icon-button,
 .dc-heading > .dc-done {
   align-self: flex-end;
   margin-bottom: -3px;
@@ -2692,17 +2675,6 @@ button.st-row:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.design-page .gr-icon-button {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  color: var(--accent);
-  background: transparent;
-  border: 0;
-  border-radius: 10px;
 }
 .design-page .gr-week-card {
   display: flex;
@@ -5403,4 +5375,20 @@ button.st-row:hover {
 .design-page .ui-sheet-action:disabled {
   color: var(--text-disabled);
   cursor: default;
+}
+
+/* An action drawn as its icon alone (design-ui IconButton). */
+.design-page .ui-icon-button {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--accent);
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+}
+.design-page .ui-icon-button:hover {
+  background: var(--fill);
 }

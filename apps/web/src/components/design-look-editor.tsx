@@ -1,7 +1,7 @@
-import { ChevronLeft } from "lucide-react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 
+import { PageHeader } from "./design-ui";
 import {
   MarkGlyph,
   MonochromeContext,
@@ -118,13 +118,7 @@ export function LookEditorPage({
   const [tab, setTab] = useState<ShiftMarkStyle>(style);
   return (
     <>
-      <header className="st-page-header">
-        <button className="st-back" onClick={onBack} type="button">
-          <ChevronLeft aria-hidden="true" size={20} />
-          {back}
-        </button>
-        <h3 className="st-title">{title}</h3>
-      </header>
+      <PageHeader back={back} onBack={onBack} title={title} />
       <div className="pe-preview pe-preview-center">
         <LookGlyph look={look} size={48} style={tab} />
       </div>
