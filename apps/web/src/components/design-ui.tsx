@@ -1236,6 +1236,9 @@ type PageOffset = -1 | 0 | 1;
 
 const pageOffsets: PageOffset[] = [-1, 0, 1];
 
+// How close, in pixels, a swiped page is to its place when it counts as there.
+const LANDED_DISTANCE = 0.5;
+
 // Pages that follow the finger sideways, as SwiftUI's TabView(.page) and
 // Compose's HorizontalPager, for months or weeks without end. Only the
 // pages before and after are drawn; once a swipe settles, `onStep` moves
@@ -1252,8 +1255,16 @@ export function Pager({
   onStep: (direction: 1 | -1) => void;
   renderPage: (offset: PageOffset) => ReactNode;
 }) {
-  const [viewportRef, api] = useEmblaCarousel({ startIndex: 1 });
+  // Keeps all three pages as places to stop even while they have no width
+  // yet, as before the stylesheet comes in; otherwise Embla folds them into
+  // one and keeps showing the page before once they widen.
+  const [viewportRef, api] = useEmblaCarousel({
+    containScroll: "keepSnaps",
+    startIndex: 1,
+  });
   const shownPage = useRef(page);
+  // Stepped already, until the new page is in the middle.
+  const stepped = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const middleRef = useRef<HTMLDivElement>(null);
   // The pager is as tall as the page in the middle, whatever the pages
@@ -1277,15 +1288,29 @@ export function Pager({
     if (!api) {
       return;
     }
-    const settle = () => {
+    // Embla's own "settle" waits for the spring to come within a
+    // thousandth of a pixel, seconds after it looks still. Step as soon as
+    // the page is within half a pixel of its place and barely moving, not
+    // passing through it on the bounce.
+    const land = () => {
       const index = api.selectedScrollSnap();
-      if (index !== 1) {
-        onStep(index === 2 ? 1 : -1);
+      const { dragHandler, location, previousLocation, target } =
+        api.internalEngine();
+      const resting =
+        !dragHandler.pointerDown() &&
+        Math.abs(target.get() - location.get()) < LANDED_DISTANCE &&
+        Math.abs(location.get() - previousLocation.get()) < LANDED_DISTANCE;
+      if (index === 1 || stepped.current || !resting) {
+        return;
       }
+      stepped.current = true;
+      onStep(index === 2 ? 1 : -1);
     };
-    api.on("settle", settle);
+    api.on("scroll", land);
+    api.on("settle", land);
     return () => {
-      api.off("settle", settle);
+      api.off("scroll", land);
+      api.off("settle", land);
     };
   }, [api, onStep]);
   // Before the new page paints, so the jump back to the middle is unseen.
@@ -1293,6 +1318,9 @@ export function Pager({
     if (shownPage.current !== page) {
       shownPage.current = page;
       api?.scrollTo(1, true);
+      // Only after the jump: Embla tells of it before it names the middle
+      // page as the one shown.
+      stepped.current = false;
     }
   }, [api, page]);
   return (
