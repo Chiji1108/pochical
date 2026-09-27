@@ -18,6 +18,24 @@ export default defineConfig({
   preflight: false,
   theme: {
     extend: {
+      // A sheet rises from the bottom of the phone and sinks back; the
+      // dimmed ground behind it fades.
+      keyframes: {
+        fadeIn: { from: { opacity: 0 }, to: { opacity: 1 } },
+        fadeOut: { from: { opacity: 1 }, to: { opacity: 0 } },
+        popIn: {
+          from: { opacity: 0, transform: "scale(1.08)" },
+          to: { opacity: 1, transform: "scale(1)" },
+        },
+        sheetIn: {
+          from: { transform: "translateY(100%)" },
+          to: { transform: "translateY(0)" },
+        },
+        sheetOut: {
+          from: { transform: "translateY(0)" },
+          to: { transform: "translateY(100%)" },
+        },
+      },
       tokens: {
         colors: {
           accent: { value: "var(--accent)" },

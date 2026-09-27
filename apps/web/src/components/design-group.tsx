@@ -36,13 +36,17 @@ import {
   dayCell,
   dayParts,
   formatDay,
-  showOverPhone,
   timeChangeOf,
   timeRange,
 } from "./design-calendar";
 import type { Schedule, Tab } from "./design-calendar";
 import { iconNames } from "./design-look-editor";
-import { DecideHeading, SheetHeading } from "./design-sheet";
+import {
+  DecideHeading,
+  PhoneContext,
+  Sheet,
+  SheetHeading,
+} from "./design-sheet";
 import { ThemeContext, themeOfColor } from "./design-theme";
 import type { ColorChoice } from "./design-theme";
 import {
@@ -2981,129 +2985,110 @@ export function JoinSheet({
   const invite = sampleInvite();
   const [name, setName] = useState(usualName);
   const [joined, setJoined] = useState(false);
-  const sheetRef = useRef<HTMLDialogElement>(null);
-  const [closed, setClosed] = useState(false);
+  const phone = useContext(PhoneContext);
+  const [open, setOpen] = useState(false);
   // It opens by itself, so it waits for the page to settle, and on /design
-  // brings the phone into view first; its size is taken from the phone.
+  // brings the phone into view first.
   useEffect(() => {
     const timer = setTimeout(() => {
-      const sheet = sheetRef.current;
-      if (!sheet || sheet.open) {
-        return;
-      }
-      const phone = sheet.closest<HTMLElement>(".dc-phone");
-      phone?.scrollIntoView({ behavior: "instant", block: "start" });
-      showOverPhone(sheet, phone);
+      phone?.current?.scrollIntoView({ behavior: "instant", block: "start" });
+      setOpen(true);
     }, settleMilliseconds);
     return () => {
       clearTimeout(timer);
     };
-  }, []);
+  }, [phone]);
   const close = () => {
-    setClosed(true);
-    sheetRef.current?.close();
+    setOpen(false);
   };
-  if (closed) {
-    return null;
-  }
   return (
-    <dialog
-      aria-label={`「${invite.group}」への招待`}
-      className="dc-breakdown"
-      onClose={close}
-      ref={sheetRef}
+    <Sheet
+      className="gr-join-sheet"
+      label={`「${invite.group}」への招待`}
+      onOpenChange={setOpen}
+      open={open}
     >
-      <button
-        aria-label="閉じる"
-        className="dc-sheet-scrim"
-        onClick={close}
-        tabIndex={-1}
-        type="button"
-      />
-      <section className="dc-sheet gr-join-sheet">
-        <div aria-hidden="true" className="dc-sheet-handle" />
-        <span className="gr-rail-icon gr-mark-frame-large">
-          <GroupIcon mark={invite.mark} size={40} />
-        </span>
-        {joined ? (
-          <>
-            <h4>「{invite.group}」に参加しました</h4>
-            <p className="gr-join-text">
-              みんなのシフトと、みんなが休みの日が見られます。
-            </p>
-            <Button
-              variant="primary"
-              className="ob-push"
-              onClick={() => {
-                close();
-                onOpenGroup();
-              }}
-            >
-              グループを見る
-            </Button>
-            <Button variant="text" onClick={close}>
-              閉じる
-            </Button>
-          </>
-        ) : (
-          <>
-            <p className="gr-join-from">
+      <span className="gr-rail-icon gr-mark-frame-large">
+        <GroupIcon mark={invite.mark} size={40} />
+      </span>
+      {joined ? (
+        <>
+          <h4>「{invite.group}」に参加しました</h4>
+          <p className="gr-join-text">
+            みんなのシフトと、みんなが休みの日が見られます。
+          </p>
+          <Button
+            variant="primary"
+            className="ob-push"
+            onClick={() => {
+              close();
+              onOpenGroup();
+            }}
+          >
+            グループを見る
+          </Button>
+          <Button variant="text" onClick={close}>
+            閉じる
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className="gr-join-from">
+            <PhotoAvatar
+              name={invite.from.name}
+              photo={invite.from.photo}
+              size={20}
+            />
+            {invite.from.name}からの招待
+          </p>
+          <h4>「{invite.group}」に参加しますか？</h4>
+          <div className="gr-join-members">
+            {invite.members.map((member) => (
               <PhotoAvatar
-                name={invite.from.name}
-                photo={invite.from.photo}
-                size={20}
+                key={member.name}
+                name={member.name}
+                photo={member.photo}
+                size={28}
               />
-              {invite.from.name}からの招待
-            </p>
-            <h4>「{invite.group}」に参加しますか？</h4>
-            <div className="gr-join-members">
-              {invite.members.map((member) => (
-                <PhotoAvatar
-                  key={member.name}
-                  name={member.name}
-                  photo={member.photo}
-                  size={28}
-                />
-              ))}
-              <small>{invite.members.length}人が参加中</small>
-            </div>
-            <List className="gr-join-name">
-              <ListRow
-                label="あなたの名前"
-                control={
-                  <>
-                    <input
-                      className="pe-inline-input"
-                      onChange={(event) => {
-                        setName(event.target.value);
-                      }}
-                      placeholder="例：さくら"
-                      value={name}
-                    />
-                  </>
-                }
-              />
-            </List>
-            <p className="gr-join-text">
-              このグループの人に、この名前で表示されます。参加すると、あなたのシフトもメンバーに見えるようになります。
-            </p>
-            <Button
-              variant="primary"
-              className="ob-push"
-              disabled={name.trim() === ""}
-              onClick={() => {
-                setJoined(true);
-              }}
-            >
-              参加する
-            </Button>
-            <Button variant="text" onClick={close}>
-              今はしない
-            </Button>
-          </>
-        )}
-      </section>
-    </dialog>
+            ))}
+            <small>{invite.members.length}人が参加中</small>
+          </div>
+          <List className="gr-join-name">
+            <ListRow
+              label="あなたの名前"
+              control={
+                <>
+                  <input
+                    className="pe-inline-input"
+                    onChange={(event) => {
+                      setName(event.target.value);
+                    }}
+                    placeholder="例：さくら"
+                    value={name}
+                  />
+                </>
+              }
+            />
+          </List>
+          <p className="gr-join-text">
+            このグループの人に、この名前で表示されます。参加すると、あなたのシフトもメンバーに見えるようになります。
+          </p>
+          <Button
+            variant="primary"
+            className="ob-push"
+            disabled={name.trim() === ""}
+            onClick={() => {
+              setJoined(true);
+            }}
+          >
+            参加する
+          </Button>
+          <Button variant="text" onClick={close}>
+            今はしない
+          </Button>
+        </>
+      )}
+    </Sheet>
   );
 }
 
@@ -3125,16 +3110,15 @@ function PhotoPicker({
   // Shown while there is a picture to delete.
   onRemove?: () => void;
 }) {
-  const sheetRef = useRef<HTMLDialogElement>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const cameraId = useId();
   const libraryId = useId();
   const open = () => {
-    const sheet = sheetRef.current;
-    if (sheet) {
-      showOverPhone(sheet, sheet.closest<HTMLElement>(".dc-phone"));
-    }
+    setSheetOpen(true);
   };
-  const close = () => sheetRef.current?.close();
+  const close = () => {
+    setSheetOpen(false);
+  };
   const choose = (files: FileList | null) => {
     const file = files?.[0];
     if (file) {
@@ -3177,70 +3161,65 @@ function PhotoPicker({
       <button className="st-photo-action" onClick={open} type="button">
         {label}
       </button>
-      <dialog aria-label={label} className="dc-breakdown" ref={sheetRef}>
-        <button
-          aria-label="閉じる"
-          className="dc-sheet-scrim"
-          onClick={close}
-          tabIndex={-1}
-          type="button"
-        />
-        <section className="dc-sheet st-photo-sheet">
-          <div aria-hidden="true" className="dc-sheet-handle" />
-          <List>
+      <Sheet
+        className="st-photo-sheet"
+        label={label}
+        onOpenChange={setSheetOpen}
+        open={sheetOpen}
+      >
+        <List>
+          <ListRow
+            htmlFor={cameraId}
+            label="写真を撮る"
+            leading={
+              <>
+                <Camera aria-hidden="true" size={20} />
+              </>
+            }
+          />
+          <ListRow
+            htmlFor={libraryId}
+            label="写真を選ぶ"
+            leading={
+              <>
+                <ImageIcon aria-hidden="true" size={20} />
+              </>
+            }
+          />
+          {onUsual && (
             <ListRow
-              htmlFor={cameraId}
-              label="写真を撮る"
+              onClick={() => {
+                onUsual();
+                close();
+              }}
+              label="いつもの写真に戻す"
               leading={
                 <>
-                  <Camera aria-hidden="true" size={20} />
+                  <RotateCcw aria-hidden="true" size={20} />
                 </>
               }
             />
+          )}
+          {onRemove && (
             <ListRow
-              htmlFor={libraryId}
-              label="写真を選ぶ"
+              onClick={() => {
+                onRemove();
+                close();
+              }}
+              label="写真を削除"
               leading={
                 <>
-                  <ImageIcon aria-hidden="true" size={20} />
+                  <Trash2 aria-hidden="true" size={20} />
                 </>
               }
+              danger
             />
-            {onUsual && (
-              <ListRow
-                onClick={() => {
-                  onUsual();
-                  close();
-                }}
-                label="いつもの写真に戻す"
-                leading={
-                  <>
-                    <RotateCcw aria-hidden="true" size={20} />
-                  </>
-                }
-              />
-            )}
-            {onRemove && (
-              <ListRow
-                onClick={() => {
-                  onRemove();
-                  close();
-                }}
-                label="写真を削除"
-                leading={
-                  <>
-                    <Trash2 aria-hidden="true" size={20} />
-                  </>
-                }
-                danger
-              />
-            )}
-          </List>
-          <button className="st-photo-cancel" onClick={close} type="button">
-            キャンセル
-          </button>
-        </section>
-      </dialog>
+          )}
+        </List>
+        <button className="st-photo-cancel" onClick={close} type="button">
+          キャンセル
+        </button>
+      </Sheet>
     </div>
   );
 }

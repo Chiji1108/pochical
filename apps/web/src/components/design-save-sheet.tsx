@@ -6,14 +6,14 @@ import {
   Share,
 } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
-import type { CSSProperties, RefObject } from "react";
+import type { CSSProperties } from "react";
 import { cx } from "styled-system/css";
 
 import type { ImageOptions } from "../lib/design-settings-store";
 import { DayCell, dateKey } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
 import { NameTabs, OffLookTabs } from "./design-settings";
-import { SheetHeading } from "./design-sheet";
+import { Sheet, SheetHeading } from "./design-sheet";
 import {
   ColorSchemeContext,
   PreviewSchemeSwitch,
@@ -49,7 +49,8 @@ type Step = "choose" | "calendar" | { done: string };
 // also opens by itself when a month has just been filled in, the moment
 // people most want to keep it.
 export function SaveSheet({
-  ref,
+  open,
+  onOpenChange,
   month,
   shiftCount,
   offCount,
@@ -57,7 +58,8 @@ export function SaveSheet({
   toCalendar = false,
   onImage,
 }: {
-  ref: RefObject<HTMLDialogElement | null>;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   month: Date;
   // Days with a shift this month, and how many of them are days off.
   shiftCount: number;
@@ -73,7 +75,16 @@ export function SaveSheet({
   // Remembered from the last time, so adding again is a single tap.
   const [calendarId, setCalendarId] = useState<string>();
   const [includeOff, setIncludeOff] = useState(false);
-  const close = () => ref.current?.close();
+  // Closed, it starts from the choice again next time.
+  const change = (next: boolean) => {
+    if (!next) {
+      setStep("choose");
+    }
+    onOpenChange(next);
+  };
+  const close = () => {
+    change(false);
+  };
   const monthLabel = `${month.getMonth() + 1}月`;
   const count = includeOff ? shiftCount : shiftCount - offCount;
   const calendar = deviceCalendars.find((item) => item.id === calendarId);
@@ -86,152 +97,131 @@ export function SaveSheet({
     title = "保存しました";
   }
   return (
-    <dialog
-      aria-label={title}
-      className="dc-breakdown"
-      onClose={() => {
-        setStep("choose");
-      }}
-      ref={ref}
-    >
-      <button
-        aria-label="保存を閉じる"
-        className="dc-sheet-scrim"
-        onClick={close}
-        tabIndex={-1}
-        type="button"
+    <Sheet label={title} onOpenChange={change} open={open}>
+      <SheetHeading
+        onBack={
+          step === "calendar" && !toCalendar
+            ? () => {
+                setStep("choose");
+              }
+            : undefined
+        }
+        onClose={close}
+        title={title}
       />
-      <section className="dc-sheet">
-        <div aria-hidden="true" className="dc-sheet-handle" />
-        <SheetHeading
-          onBack={
-            step === "calendar" && !toCalendar
-              ? () => {
-                  setStep("choose");
-                }
-              : undefined
-          }
-          onClose={close}
-          title={title}
-        />
-        {step === "choose" && (
-          <>
-            <p className="dc-import-description">
-              {completion ? "お疲れさまでした。" : ""}
-              画像にして見せたり、端末のカレンダーにまとめて入れたりできます。
-            </p>
-            <div className="dc-save-actions">
-              <Button
-                variant="primary"
-                onClick={() => {
-                  close();
-                  onImage();
-                }}
-              >
-                <ImageIcon aria-hidden="true" size={18} />
-                画像で保存
-              </Button>
-              <Button
-                variant="quiet"
-                disabled={shiftCount === 0}
-                onClick={() => {
-                  setStep("calendar");
-                }}
-              >
-                <CalendarPlus aria-hidden="true" size={18} />
-                端末カレンダーに追加
-              </Button>
-            </div>
-            {completion && (
-              <Button variant="subtle" onClick={close}>
-                あとで
-              </Button>
-            )}
-          </>
-        )}
-        {step === "calendar" && (
-          <>
-            <p className="dc-import-description">
-              {monthLabel}のシフトを、選んだカレンダーに予定として入れます。
-            </p>
-            <fieldset className={cx(listStyle, "dc-save-calendars")}>
-              <legend className="dc-sr-only">入れるカレンダー</legend>
-              {deviceCalendars.map((item) => (
-                <ListRow
-                  key={item.id}
-                  label={item.name}
-                  value={item.source}
-                  leading={
-                    <>
-                      <span
-                        aria-hidden="true"
-                        className="dc-save-dot"
-                        style={{ background: item.color }}
-                      />
-                    </>
-                  }
-                  control={
-                    <>
-                      <input
-                        checked={calendarId === item.id}
-                        className="dc-sr-only"
-                        name="device-calendar"
-                        onChange={() => {
-                          setCalendarId(item.id);
-                        }}
-                        type="radio"
-                      />
-                      <Check
-                        aria-hidden="true"
-                        className={`dc-save-check ${calendarId === item.id ? "" : "dc-save-unchecked"}`}
-                        size={18}
-                      />
-                    </>
-                  }
-                />
-              ))}
-            </fieldset>
-            <List>
-              <SwitchRow
-                label="休みの日も入れる"
-
-                checked={includeOff}
-                onChange={(checked) => {
-                  setIncludeOff(checked);
-                }}
-              />
-            </List>
+      {step === "choose" && (
+        <>
+          <p className="dc-import-description">
+            {completion ? "お疲れさまでした。" : ""}
+            画像にして見せたり、端末のカレンダーにまとめて入れたりできます。
+          </p>
+          <div className="dc-save-actions">
             <Button
               variant="primary"
-              className="dc-save-add"
-              disabled={!calendar || count === 0}
               onClick={() => {
-                setStep({
-                  done: `「${calendar?.name}」に${monthLabel}のシフトを${count}件追加しました。`,
-                });
+                close();
+                onImage();
               }}
             >
-              {count}件を追加
+              <ImageIcon aria-hidden="true" size={18} />
+              画像で保存
             </Button>
-          </>
-        )}
-        {typeof step === "object" && (
-          <>
-            <p className="dc-import-description dc-save-done">
-              <Check
-                aria-hidden="true"
-                className="dc-save-done-icon"
-                size={18}
+            <Button
+              variant="quiet"
+              disabled={shiftCount === 0}
+              onClick={() => {
+                setStep("calendar");
+              }}
+            >
+              <CalendarPlus aria-hidden="true" size={18} />
+              端末カレンダーに追加
+            </Button>
+          </div>
+          {completion && (
+            <Button variant="subtle" onClick={close}>
+              あとで
+            </Button>
+          )}
+        </>
+      )}
+      {step === "calendar" && (
+        <>
+          <p className="dc-import-description">
+            {monthLabel}のシフトを、選んだカレンダーに予定として入れます。
+          </p>
+          <fieldset className={cx(listStyle, "dc-save-calendars")}>
+            <legend className="dc-sr-only">入れるカレンダー</legend>
+            {deviceCalendars.map((item) => (
+              <ListRow
+                key={item.id}
+                label={item.name}
+                value={item.source}
+                leading={
+                  <>
+                    <span
+                      aria-hidden="true"
+                      className="dc-save-dot"
+                      style={{ background: item.color }}
+                    />
+                  </>
+                }
+                control={
+                  <>
+                    <input
+                      checked={calendarId === item.id}
+                      className="dc-sr-only"
+                      name="device-calendar"
+                      onChange={() => {
+                        setCalendarId(item.id);
+                      }}
+                      type="radio"
+                    />
+                    <Check
+                      aria-hidden="true"
+                      className={`dc-save-check ${calendarId === item.id ? "" : "dc-save-unchecked"}`}
+                      size={18}
+                    />
+                  </>
+                }
               />
-              {step.done}
-            </p>
-            <Button variant="primary" onClick={close}>
-              閉じる
-            </Button>
-          </>
-        )}
-      </section>
-    </dialog>
+            ))}
+          </fieldset>
+          <List>
+            <SwitchRow
+              label="休みの日も入れる"
+
+              checked={includeOff}
+              onChange={(checked) => {
+                setIncludeOff(checked);
+              }}
+            />
+          </List>
+          <Button
+            variant="primary"
+            className="dc-save-add"
+            disabled={!calendar || count === 0}
+            onClick={() => {
+              setStep({
+                done: `「${calendar?.name}」に${monthLabel}のシフトを${count}件追加しました。`,
+              });
+            }}
+          >
+            {count}件を追加
+          </Button>
+        </>
+      )}
+      {typeof step === "object" && (
+        <>
+          <p className="dc-import-description dc-save-done">
+            <Check aria-hidden="true" className="dc-save-done-icon" size={18} />
+            {step.done}
+          </p>
+          <Button variant="primary" onClick={close}>
+            閉じる
+          </Button>
+        </>
+      )}
+    </Sheet>
   );
 }
 

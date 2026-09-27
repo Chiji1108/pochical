@@ -20,13 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
-import type {
-  CSSProperties,
-  MouseEvent,
-  PointerEvent,
-  ReactNode,
-  RefObject,
-} from "react";
+import type { CSSProperties, MouseEvent, PointerEvent, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
@@ -41,7 +35,7 @@ import { ImportReviewPage } from "./design-import";
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import { DesignSettings } from "./design-settings";
 import type { SettingsPage } from "./design-settings";
-import { SheetHeading } from "./design-sheet";
+import { PhoneContext, Sheet, SheetHeading } from "./design-sheet";
 import { useThemeStyle } from "./design-theme";
 import { Button, Chip, ChipGroup, IconButton } from "./design-ui";
 import { holidayName, holidayNameOfKey, useWeek } from "./design-week";
@@ -250,23 +244,6 @@ export function formatDay(date: Date) {
   return `${date.getMonth() + 1}月${date.getDate()}日(${weekdays[date.getDay()]})`;
 }
 
-// Place a modal over the phone frame so the sheet looks like part of the app.
-export function showOverPhone(
-  dialog: HTMLDialogElement,
-  phone: HTMLElement | null
-) {
-  const rect = phone?.getBoundingClientRect();
-  if (rect) {
-    const top = Math.max(12, rect.top + 6);
-    const bottom = Math.min(rect.bottom - 6, window.innerHeight - 12);
-    dialog.style.left = `${rect.left + 6}px`;
-    dialog.style.top = `${top}px`;
-    dialog.style.width = `${rect.width - 12}px`;
-    dialog.style.height = `${bottom - top}px`;
-  }
-  dialog.showModal();
-}
-
 function formatTime(time: string) {
   return time.replace(leadingZeroPattern, "");
 }
@@ -341,10 +318,13 @@ export function DesignCalendar({
   const onChange = useUser((state) => state.setSchedule);
   const phoneRef = useRef<HTMLDivElement>(null);
   const themeStyle = useThemeStyle();
-  const breakdownRef = useRef<HTMLDialogElement>(null);
-  const importSheetRef = useRef<HTMLDialogElement>(null);
-  const saveSheetRef = useRef<HTMLDialogElement>(null);
-  const gapSheetRef = useRef<HTMLDialogElement>(null);
+  // The sheet open over the phone, if any; one at a time.
+  const [openSheet, setOpenSheet] = useState<
+    "breakdown" | "import" | "save" | "gap" | null
+  >(null);
+  const sheetChange = (name: typeof openSheet) => (open: boolean) => {
+    setOpenSheet(open ? name : null);
+  };
   // Blank days between entered ones, asked about when entering ends.
   const [gapDays, setGapDays] = useState<Date[]>([]);
   // Whether the sheet offers showing days off blank: decided as it opens,
@@ -584,9 +564,7 @@ export function DesignCalendar({
   function openSave(completion: boolean, toCalendar = false) {
     setSaveCompletion(completion);
     setSaveToCalendar(toCalendar);
-    if (saveSheetRef.current) {
-      showOverPhone(saveSheetRef.current, phoneRef.current);
-    }
+    setOpenSheet("save");
   }
   function finishHeading() {
     if (!editing) {
@@ -595,10 +573,10 @@ export function DesignCalendar({
     }
     setEditing(false);
     const gaps = gapDaysIn(schedule, month);
-    if (gaps.length > 0 && gapSheetRef.current) {
+    if (gaps.length > 0) {
       setGapDays(gaps);
       setOfferBlank(offDisplay === "show");
-      showOverPhone(gapSheetRef.current, phoneRef.current);
+      setOpenSheet("gap");
       return;
     }
     // A month just filled in is worth keeping, so saving is offered then.
@@ -622,9 +600,7 @@ export function DesignCalendar({
     }
   }
   function openImport() {
-    if (importSheetRef.current) {
-      showOverPhone(importSheetRef.current, phoneRef.current);
-    }
+    setOpenSheet("import");
   }
   function closeDetail() {
     setDetailDate(undefined);
@@ -655,230 +631,228 @@ export function DesignCalendar({
     );
   }
   return (
-    <div
-      className={`dc-phone ${editing ? "dc-editing" : ""} ${weekDetail ? "dc-week-mode" : ""} ${showInputBar || showSaveBar ? "" : "dc-no-input"} ${twoRows ? "dc-two-rows" : ""}`}
-      ref={phoneRef}
-      style={themeStyle}
-    >
-      <PhoneStatusBar />
-      {tab === "settings" && (
-        <DesignSettings
-          coworkers={members}
-          initialPage={initialSettingsPage}
-          onApplyRule={applyRule}
-          onChangeJob={changeJob}
-          onFixRule={fixRule}
-          onHolidaysOff={setHolidaysOff}
-          onProfile={setProfile}
-          onTab={setTab}
-          patternKeys={patternKeys}
-          profile={profile}
-          rules={rules}
-          schedule={schedule}
-        />
-      )}
-      {tab === "group" && (
-        <DesignGroup
-          onTab={setTab}
-          patternKeys={patternKeys}
-          profile={profile}
-          schedule={schedule}
-        />
-      )}
-      {tab === "calendar" && importReview && (
-        <ImportReviewPage
-          coworkerNames={coworkerNames}
-          month={month}
-          onApply={(result) => {
-            onChange((previous) => ({ ...previous, ...result.schedule }));
-            if (result.newPatterns.length > 0) {
-              setPatternKeys([...patternKeys, ...result.newPatterns]);
-            }
-            if (result.newCoworkers.length > 0) {
-              setCoworkerNames([...coworkerNames, ...result.newCoworkers]);
-            }
-            setImportReview(false);
-            setImportNote(
-              `${month.getMonth() + 1}月のシフトを${result.days}日分入れました`
-            );
-          }}
-          onCancel={() => {
-            setImportReview(false);
-          }}
-          patternKeys={patternKeys}
-          run={variants.importRun}
-          schedule={schedule}
-        />
-      )}
-      {tab === "calendar" && imagePreview && (
-        <ImagePreviewPage
-          month={month}
-          onClose={() => {
-            setImagePreview(false);
-          }}
-          onOptions={setImageOptions}
-          options={imageOptions}
-          schedule={schedule}
-        />
-      )}
+    <PhoneContext value={phoneRef}>
       <div
-        className="dc-content"
-        hidden={tab !== "calendar" || imagePreview || importReview}
+        className={`dc-phone ${editing ? "dc-editing" : ""} ${weekDetail ? "dc-week-mode" : ""} ${showInputBar || showSaveBar ? "" : "dc-no-input"} ${twoRows ? "dc-two-rows" : ""}`}
+        ref={phoneRef}
+        style={themeStyle}
       >
-        <div className="dc-heading">
-          <h3 className="dc-heading-title">
-            <span className="dc-year">{month.getFullYear()}</span>
-            <strong>
-              {month.getMonth() + 1}
-              <span>月</span>
-            </strong>
-          </h3>
-          <HeadingActions
-            atEnd={twoRows}
-            detailDate={detailDate}
-            mode={headingMode}
+        <PhoneStatusBar />
+        {tab === "settings" && (
+          <DesignSettings
+            coworkers={members}
+            initialPage={initialSettingsPage}
+            onApplyRule={applyRule}
+            onChangeJob={changeJob}
+            onFixRule={fixRule}
+            onHolidaysOff={setHolidaysOff}
+            onProfile={setProfile}
+            onTab={setTab}
+            patternKeys={patternKeys}
+            profile={profile}
+            rules={rules}
+            schedule={schedule}
+          />
+        )}
+        {tab === "group" && (
+          <DesignGroup
+            onTab={setTab}
+            patternKeys={patternKeys}
+            profile={profile}
+            schedule={schedule}
+          />
+        )}
+        {tab === "calendar" && importReview && (
+          <ImportReviewPage
+            coworkerNames={coworkerNames}
             month={month}
-            onDone={finishHeading}
-            onSave={
-              twoRows
-                ? undefined
-                : () => {
-                    openSave(false);
-                  }
-            }
-            onStep={step}
-            onThisMonth={() => {
-              goToMonth(
-                new Date(designToday.getFullYear(), designToday.getMonth(), 1)
+            onApply={(result) => {
+              onChange((previous) => ({ ...previous, ...result.schedule }));
+              if (result.newPatterns.length > 0) {
+                setPatternKeys([...patternKeys, ...result.newPatterns]);
+              }
+              if (result.newCoworkers.length > 0) {
+                setCoworkerNames([...coworkerNames, ...result.newCoworkers]);
+              }
+              setImportReview(false);
+              setImportNote(
+                `${month.getMonth() + 1}月のシフトを${result.days}日分入れました`
               );
             }}
-            onThisWeek={() => {
-              openDetail(designToday);
+            onCancel={() => {
+              setImportReview(false);
             }}
+            patternKeys={patternKeys}
+            run={variants.importRun}
+            schedule={schedule}
           />
-        </div>
-        <div className="dc-calendar-scroll" {...swipeHandlers}>
-          <div aria-hidden="true" className="dc-weekdays">
-            {weekTools.weekdays.map((day) => (
-              <span className={day.className} key={day.day}>
-                {day.label}
-              </span>
-            ))}
-          </div>
-          <OffDisplayContext
-            value={weekDetail && offDisplay === "blank" ? "faint" : offDisplay}
-          >
-            <section
-              aria-label={`${month.getFullYear()}年${month.getMonth() + 1}月のシフト`}
-              className={`dc-grid ${weekDetail ? "dc-grid-week" : ""}`}
-              style={{ "--weeks": gridDates.length / 7 } as CSSProperties}
-            >
-              {gridDates.map((date) => (
-                <DayCell
-                  active={
-                    editing
-                      ? date.getMonth() === month.getMonth() &&
-                        date.getDate() === selectedDay
-                      : detailDate !== undefined &&
-                        dateKey(date) === dateKey(detailDate)
-                  }
-                  date={date}
-                  editing={editing}
-                  entry={schedule[dateKey(date)]}
-                  key={dateKey(date)}
-                  onPress={() => {
-                    editing ? setSelectedDay(date.getDate()) : openDetail(date);
-                  }}
-                  outside={!weekDetail && date.getMonth() !== month.getMonth()}
-                />
-              ))}
-            </section>
-          </OffDisplayContext>
-        </div>
-        {weekDetail && (
-          <section
-            aria-label={formatDay(detailDate)}
-            className="dc-week-detail"
-          >
-            <h4 className="dc-detail-date">{formatDay(detailDate)}</h4>
-            <DayDetail
-              entry={schedule[dateKey(detailDate)]}
-              members={members}
-              onChange={(entry) => {
-                changeEntry(detailDate, entry);
-              }}
-              patternKeys={patternKeys}
-            />
-          </section>
         )}
-        {headingMode === "view" && !emptyMonth && (
-          <MonthSummary
-            daysOff={daysOff}
+        {tab === "calendar" && imagePreview && (
+          <ImagePreviewPage
             month={month}
-            onOpen={() => {
-              if (breakdownRef.current) {
-                showOverPhone(breakdownRef.current, phoneRef.current);
-              }
+            onClose={() => {
+              setImagePreview(false);
             }}
+            onOptions={setImageOptions}
+            options={imageOptions}
+            schedule={schedule}
           />
         )}
-        {headingMode === "edit" && (
-          <div className="dc-controls">
-            <ShiftInputControls
-              canSkip={selectedDay < lastDay}
-              datePicker={datePicker}
-              onEnter={enterShift}
-              onSkip={() => {
-                moveToNextDay("変更せずに進みました");
+        <div
+          className="dc-content"
+          hidden={tab !== "calendar" || imagePreview || importReview}
+        >
+          <div className="dc-heading">
+            <h3 className="dc-heading-title">
+              <span className="dc-year">{month.getFullYear()}</span>
+              <strong>
+                {month.getMonth() + 1}
+                <span>月</span>
+              </strong>
+            </h3>
+            <HeadingActions
+              atEnd={twoRows}
+              detailDate={detailDate}
+              mode={headingMode}
+              month={month}
+              onDone={finishHeading}
+              onSave={
+                twoRows
+                  ? undefined
+                  : () => {
+                      openSave(false);
+                    }
+              }
+              onStep={step}
+              onThisMonth={() => {
+                goToMonth(
+                  new Date(designToday.getFullYear(), designToday.getMonth(), 1)
+                );
               }}
-              patternKeys={patternKeys}
-              selectedShift={selectedShift}
+              onThisWeek={() => {
+                openDetail(designToday);
+              }}
             />
           </div>
-        )}
-        {headingMode === "view" && showInputBar && (
-          <div className="dc-controls">
-            <StartArea
-              label="ポチポチ入力"
-              onImport={openImport}
-              onStart={startInput}
-              stacked={twoRows && emptyMonth}
-            />
+          <div className="dc-calendar-scroll" {...swipeHandlers}>
+            <div aria-hidden="true" className="dc-weekdays">
+              {weekTools.weekdays.map((day) => (
+                <span className={day.className} key={day.day}>
+                  {day.label}
+                </span>
+              ))}
+            </div>
+            <OffDisplayContext
+              value={
+                weekDetail && offDisplay === "blank" ? "faint" : offDisplay
+              }
+            >
+              <section
+                aria-label={`${month.getFullYear()}年${month.getMonth() + 1}月のシフト`}
+                className={`dc-grid ${weekDetail ? "dc-grid-week" : ""}`}
+                style={{ "--weeks": gridDates.length / 7 } as CSSProperties}
+              >
+                {gridDates.map((date) => (
+                  <DayCell
+                    active={
+                      editing
+                        ? date.getMonth() === month.getMonth() &&
+                          date.getDate() === selectedDay
+                        : detailDate !== undefined &&
+                          dateKey(date) === dateKey(detailDate)
+                    }
+                    date={date}
+                    editing={editing}
+                    entry={schedule[dateKey(date)]}
+                    key={dateKey(date)}
+                    onPress={() => {
+                      editing
+                        ? setSelectedDay(date.getDate())
+                        : openDetail(date);
+                    }}
+                    outside={
+                      !weekDetail && date.getMonth() !== month.getMonth()
+                    }
+                  />
+                ))}
+              </section>
+            </OffDisplayContext>
           </div>
-        )}
-        {headingMode === "view" && showSaveBar && (
-          <div className="dc-controls">
-            <SaveArea
-              onCalendar={() => {
-                openSave(false, true);
-              }}
-              onImage={() => {
-                setImagePreview(true);
+          {weekDetail && (
+            <section
+              aria-label={formatDay(detailDate)}
+              className="dc-week-detail"
+            >
+              <h4 className="dc-detail-date">{formatDay(detailDate)}</h4>
+              <DayDetail
+                entry={schedule[dateKey(detailDate)]}
+                members={members}
+                onChange={(entry) => {
+                  changeEntry(detailDate, entry);
+                }}
+                patternKeys={patternKeys}
+              />
+            </section>
+          )}
+          {headingMode === "view" && !emptyMonth && (
+            <MonthSummary
+              daysOff={daysOff}
+              month={month}
+              onOpen={() => {
+                setOpenSheet("breakdown");
               }}
             />
-          </div>
-        )}
-        {headingMode === "view" && (
-          <TabBar active="calendar" onSelect={setTab} />
-        )}
-      </div>
-      <dialog
-        aria-label="今月の内訳"
-        className="dc-breakdown"
-        ref={breakdownRef}
-      >
-        <button
-          aria-label="内訳を閉じる"
-          className="dc-sheet-scrim"
-          onClick={() => breakdownRef.current?.close()}
-          tabIndex={-1}
-          type="button"
-        />
-        <section className="dc-sheet">
-          <div aria-hidden="true" className="dc-sheet-handle" />
+          )}
+          {headingMode === "edit" && (
+            <div className="dc-controls">
+              <ShiftInputControls
+                canSkip={selectedDay < lastDay}
+                datePicker={datePicker}
+                onEnter={enterShift}
+                onSkip={() => {
+                  moveToNextDay("変更せずに進みました");
+                }}
+                patternKeys={patternKeys}
+                selectedShift={selectedShift}
+              />
+            </div>
+          )}
+          {headingMode === "view" && showInputBar && (
+            <div className="dc-controls">
+              <StartArea
+                label="ポチポチ入力"
+                onImport={openImport}
+                onStart={startInput}
+                stacked={twoRows && emptyMonth}
+              />
+            </div>
+          )}
+          {headingMode === "view" && showSaveBar && (
+            <div className="dc-controls">
+              <SaveArea
+                onCalendar={() => {
+                  openSave(false, true);
+                }}
+                onImage={() => {
+                  setImagePreview(true);
+                }}
+              />
+            </div>
+          )}
+          {headingMode === "view" && (
+            <TabBar active="calendar" onSelect={setTab} />
+          )}
+        </div>
+        <Sheet
+          label="今月の内訳"
+          onOpenChange={sheetChange("breakdown")}
+          open={openSheet === "breakdown"}
+        >
           <SheetHeading
             eyebrow={`${month.getFullYear()}年${month.getMonth() + 1}月`}
-            onClose={() => breakdownRef.current?.close()}
+            onClose={() => {
+              setOpenSheet(null);
+            }}
             title="今月の内訳"
           />
           <dl className="dc-counts">
@@ -903,61 +877,64 @@ export function DesignCalendar({
             </div>
           </dl>
           <p className="dc-sheet-total">この月は全{monthDays.length}日</p>
-        </section>
-      </dialog>
-      {pendingInvite && (
-        <JoinSheet
-          name={profile.name}
-          onOpenGroup={() => {
-            setTab("group");
+        </Sheet>
+        {pendingInvite && (
+          <JoinSheet
+            name={profile.name}
+            onOpenGroup={() => {
+              setTab("group");
+            }}
+          />
+        )}
+        <SaveSheet
+          completion={saveCompletion}
+          month={month}
+          offCount={daysOff}
+          onImage={() => {
+            setImagePreview(true);
           }}
+          onOpenChange={sheetChange("save")}
+          open={openSheet === "save"}
+          toCalendar={saveToCalendar}
+          shiftCount={monthDays.length - unfilled}
         />
-      )}
-      <SaveSheet
-        completion={saveCompletion}
-        month={month}
-        offCount={daysOff}
-        onImage={() => {
-          setImagePreview(true);
-        }}
-        ref={saveSheetRef}
-        toCalendar={saveToCalendar}
-        shiftCount={monthDays.length - unfilled}
-      />
-      <GapSheet
-        choices={patternKeys
-          .filter((key) => isDayOff(key))
-          .map((key) => ({ key, label: patterns[key].label }))}
-        days={gapDays}
-        onFill={fillGaps}
-        blankOff={offDisplay === "blank"}
-        completes={unfilled === gapDays.length}
-        month={month}
-        offCount={daysOff}
-        sharing={sharing}
-        offerBlank={offerBlank}
-        onBlankOff={(blankOff) => {
-          setCalendarOptions({ blankOff });
-        }}
-        ref={gapSheetRef}
-      />
-      <ImportSheet
-        access={variants.importAccess}
-        onRead={() => {
-          setImportReview(true);
-        }}
-        onStartPochi={startInput}
-        ref={importSheetRef}
-      />
-      <p aria-live="polite" className="gr-toast" hidden={!importNote}>
-        <Check aria-hidden="true" size={16} />
-        {importNote}
-      </p>
-      <span aria-live="polite" className="dc-sr-only">
-        {announcement}
-      </span>
-      <div aria-hidden="true" className="dc-home-indicator" />
-    </div>
+        <GapSheet
+          choices={patternKeys
+            .filter((key) => isDayOff(key))
+            .map((key) => ({ key, label: patterns[key].label }))}
+          days={gapDays}
+          onFill={fillGaps}
+          blankOff={offDisplay === "blank"}
+          completes={unfilled === gapDays.length}
+          month={month}
+          offCount={daysOff}
+          sharing={sharing}
+          offerBlank={offerBlank}
+          onBlankOff={(blankOff) => {
+            setCalendarOptions({ blankOff });
+          }}
+          onOpenChange={sheetChange("gap")}
+          open={openSheet === "gap"}
+        />
+        <ImportSheet
+          access={variants.importAccess}
+          onRead={() => {
+            setImportReview(true);
+          }}
+          onOpenChange={sheetChange("import")}
+          onStartPochi={startInput}
+          open={openSheet === "import"}
+        />
+        <p aria-live="polite" className="gr-toast" hidden={!importNote}>
+          <Check aria-hidden="true" size={16} />
+          {importNote}
+        </p>
+        <span aria-live="polite" className="dc-sr-only">
+          {announcement}
+        </span>
+        <div aria-hidden="true" className="dc-home-indicator" />
+      </div>
+    </PhoneContext>
   );
 }
 
@@ -1332,68 +1309,62 @@ function ImportPhotoActions({ onPick }: { onPick: () => void }) {
 // Taking the photo. What it reads opens on its own page to check before
 // anything goes in.
 function ImportSheet({
-  ref,
+  open,
+  onOpenChange,
   access,
   onRead,
   onStartPochi,
 }: {
-  ref: RefObject<HTMLDialogElement | null>;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   access: DesignVariants["importAccess"];
   onRead: () => void;
   onStartPochi: () => void;
 }) {
-  const close = () => ref.current?.close();
+  const close = () => {
+    onOpenChange(false);
+  };
   const title =
     access === "limit" ? "少し時間をおいてください" : "勤務表を取り込む";
   return (
-    <dialog aria-label={title} className="dc-breakdown" ref={ref}>
-      <button
-        aria-label="取り込みを閉じる"
-        className="dc-sheet-scrim"
-        onClick={close}
-        tabIndex={-1}
-        type="button"
-      />
-      <section className="dc-sheet">
-        <div aria-hidden="true" className="dc-sheet-handle" />
-        <SheetHeading onClose={close} title={title} />
-        {access === "limit" && (
-          <>
-            <p className="dc-import-description">
-              短い時間にたくさん取り込んだため、いったんお休みしています。しばらくしてから、もう一度お試しください。残りは、ポチポチ入力でも入れられます。
-            </p>
-            <div>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  close();
-                  onStartPochi();
-                }}
-              >
-                <Pencil aria-hidden="true" size={16} />
-                ポチポチ入力で入れる
-              </Button>
-            </div>
-          </>
-        )}
-        {access === "normal" && (
-          <>
-            <p className="dc-import-description">
-              配られた勤務表を撮ると、あなたの行を読み取ってシフトを入れます。LINEで届いた画像やスクリーンショットも使えます。読み取った結果は、保存する前に確認できます。
-            </p>
-            <ImportPhotoActions
-              onPick={() => {
+    <Sheet label={title} onOpenChange={onOpenChange} open={open}>
+      <SheetHeading onClose={close} title={title} />
+      {access === "limit" && (
+        <>
+          <p className="dc-import-description">
+            短い時間にたくさん取り込んだため、いったんお休みしています。しばらくしてから、もう一度お試しください。残りは、ポチポチ入力でも入れられます。
+          </p>
+          <div>
+            <Button
+              variant="primary"
+              onClick={() => {
                 close();
-                onRead();
+                onStartPochi();
               }}
-            />
-            <p className="dc-sheet-total">
-              デザインの見本です。撮影の代わりに、見本の勤務表を読み取った結果を開きます。
-            </p>
-          </>
-        )}
-      </section>
-    </dialog>
+            >
+              <Pencil aria-hidden="true" size={16} />
+              ポチポチ入力で入れる
+            </Button>
+          </div>
+        </>
+      )}
+      {access === "normal" && (
+        <>
+          <p className="dc-import-description">
+            配られた勤務表を撮ると、あなたの行を読み取ってシフトを入れます。LINEで届いた画像やスクリーンショットも使えます。読み取った結果は、保存する前に確認できます。
+          </p>
+          <ImportPhotoActions
+            onPick={() => {
+              close();
+              onRead();
+            }}
+          />
+          <p className="dc-sheet-total">
+            デザインの見本です。撮影の代わりに、見本の勤務表を読み取った結果を開きます。
+          </p>
+        </>
+      )}
+    </Sheet>
   );
 }
 

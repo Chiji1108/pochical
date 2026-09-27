@@ -1,12 +1,130 @@
+import { Dialog, Portal } from "@ark-ui/react";
 import { ChevronLeft, X } from "lucide-react";
-import type { ReactNode } from "react";
-import { css, cx } from "styled-system/css";
+import { createContext, useContext, useRef } from "react";
+import type { ReactNode, RefObject } from "react";
+import { css, cva, cx } from "styled-system/css";
 
 // Sheet headings, in the two kinds the platforms' own sheets have. A sheet
 // to look at has its title and a × to close it. A sheet to decide
 // something in has キャンセル, its title and the action, as iOS and Android
 // put them. Menus and confirmations keep their own shape, with キャンセル
 // at the bottom.
+
+// The phone a sheet opens in. DesignCalendar gives it; sheets drawn by
+// its screens open over that phone rather than over the page.
+export const PhoneContext = createContext<RefObject<HTMLElement | null> | null>(
+  null
+);
+
+const sheet = {
+  backdrop: css({
+    _closed: { animation: "fadeOut 0.2s ease-in" },
+    _open: { animation: "fadeIn 0.25s ease-out" },
+    bg: "var(--scrim)",
+    inset: 0,
+    position: "absolute",
+    zIndex: 20,
+  }),
+  content: css({
+    _closed: { animation: "sheetOut 0.2s ease-in" },
+    _open: { animation: "sheetIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)" },
+    bg: "raised",
+    borderRadius: "28px 28px 0 0",
+    color: "text",
+    maxHeight: "85%",
+    outline: "none",
+    overflowY: "auto",
+    padding: "12px 24px 28px",
+    width: "100%",
+  }),
+  handle: css({
+    bg: "controlOff",
+    borderRadius: "8px",
+    height: "4px",
+    margin: "0 auto 20px",
+    width: "34px",
+  }),
+  // The platforms' alert, in the middle, as an app shows after an icon
+  // change; it brings its own look through className.
+  center: css({
+    _closed: { animation: "fadeOut 0.15s ease-in" },
+    _open: { animation: "popIn 0.2s ease-out" },
+    outline: "none",
+  }),
+};
+
+// Where the sheet sits: at the bottom, or in the middle for an alert. One
+// recipe, so the two never fight over alignItems.
+const positioner = cva({
+  base: { display: "flex", inset: 0, position: "absolute", zIndex: 21 },
+  variants: {
+    placement: {
+      bottom: { alignItems: "flex-end" },
+      center: { alignItems: "center", justifyContent: "center" },
+    },
+  },
+});
+
+// A sheet over the phone, as SwiftUI's .sheet and Compose's
+// ModalBottomSheet: it rises from the bottom over a dimmed ground, and
+// closes by its heading's ×, by the ground, or by Escape. Ark UI's Dialog
+// traps focus inside and gives it back when it closes.
+export function Sheet({
+  open,
+  onOpenChange,
+  label,
+  role = "dialog",
+  placement = "bottom",
+  className,
+  children,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  // Its name for a screen reader, usually its title.
+  label: string;
+  // An alertdialog asks something that needs an answer.
+  role?: "dialog" | "alertdialog";
+  placement?: "bottom" | "center";
+  className?: string;
+  children: ReactNode;
+}) {
+  const phone = useContext(PhoneContext);
+  // Focus lands on the sheet itself, as on the platforms, not on its first
+  // button with a ring around it.
+  const contentRef = useRef<HTMLDivElement>(null);
+  return (
+    <Dialog.Root
+      initialFocusEl={() => contentRef.current}
+      lazyMount
+      onOpenChange={(details) => {
+        onOpenChange(details.open);
+      }}
+      open={open}
+      preventScroll={false}
+      role={role}
+      unmountOnExit
+    >
+      <Portal container={phone ?? undefined}>
+        <Dialog.Backdrop className={sheet.backdrop} />
+        <Dialog.Positioner className={positioner({ placement })}>
+          <Dialog.Content
+            aria-label={label}
+            className={cx(
+              placement === "center" ? sheet.center : sheet.content,
+              className
+            )}
+            ref={contentRef}
+          >
+            {placement === "bottom" && (
+              <div aria-hidden="true" className={sheet.handle} />
+            )}
+            {children}
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Portal>
+    </Dialog.Root>
+  );
+}
 
 const heading = {
   back: css({

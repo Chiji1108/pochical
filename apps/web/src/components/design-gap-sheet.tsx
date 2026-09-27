@@ -1,10 +1,9 @@
 import { useState } from "react";
-import type { RefObject } from "react";
 import { css } from "styled-system/css";
 
 import type { Shift } from "../lib/design-patterns";
 import type { Schedule } from "./design-calendar";
-import { SheetHeading } from "./design-sheet";
+import { Sheet, SheetHeading } from "./design-sheet";
 import { Button, Chip, ChipGroup, List, SwitchRow, Tag } from "./design-ui";
 
 export type OffChoice = { key: Shift; label: string };
@@ -70,21 +69,22 @@ function titleOf(days: Date[]) {
 }
 
 export function GapSheet({
-  ref,
+  open,
+  onOpenChange,
   ...props
-}: GapSheetProps & { ref: RefObject<HTMLDialogElement | null> }) {
-  const close = () => ref.current?.close();
+}: GapSheetProps & {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   return (
-    <dialog aria-label={titleOf(props.days)} className="dc-breakdown" ref={ref}>
-      <button
-        aria-label="閉じる"
-        className="dc-sheet-scrim"
-        onClick={close}
-        tabIndex={-1}
-        type="button"
+    <Sheet label={titleOf(props.days)} onOpenChange={onOpenChange} open={open}>
+      <GapSheetBody
+        {...props}
+        onClose={() => {
+          onOpenChange(false);
+        }}
       />
-      <GapSheetBody {...props} onClose={close} />
-    </dialog>
+    </Sheet>
   );
 }
 
@@ -94,7 +94,10 @@ export function GapSheetPreview(props: GapSheetProps) {
   return (
     <div className="dc-sheet-preview">
       <div className="dc-sheet-scrim" />
-      <GapSheetBody {...props} onClose={() => undefined} />
+      <section className="dc-sheet">
+        <div aria-hidden="true" className="dc-sheet-handle" />
+        <GapSheetBody {...props} onClose={() => undefined} />
+      </section>
     </div>
   );
 }
@@ -116,8 +119,7 @@ function GapSheetBody({
   const current = choices.find(({ key }) => key === picked) ?? choices[0];
   const monthLabel = `${month.getMonth() + 1}月`;
   return (
-    <section className="dc-sheet">
-      <div aria-hidden="true" className="dc-sheet-handle" />
+    <>
       <SheetHeading onClose={close} title={titleOf(days)} />
       <p className="dc-import-description">
         {current?.label ?? "休み"}にすると、{monthLabel}のお休みが
@@ -187,6 +189,6 @@ function GapSheetBody({
       <Button variant="subtle" onClick={close}>
         あとで入れる
       </Button>
-    </section>
+    </>
   );
 }

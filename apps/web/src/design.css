@@ -576,24 +576,6 @@
     align-self: center;
     margin-left: 10px;
   }
-  .dc-breakdown {
-    position: fixed;
-    max-width: calc(100vw - 24px);
-    max-height: calc(100dvh - 24px);
-    padding: 0;
-    margin: 0;
-    overflow: hidden;
-    color: var(--text);
-    background: transparent;
-    border: 0;
-    border-radius: 46px;
-  }
-  .dc-breakdown::backdrop {
-    background: var(--scrim);
-  }
-  body:has(.dc-breakdown[open]) {
-    overflow: hidden;
-  }
   .dc-sheet-scrim {
     position: absolute;
     inset: 0;
@@ -1498,33 +1480,8 @@
   }
 
   /* Pattern editor. */
-  .st-sortable .st-pattern {
-    position: relative;
-    background: var(--fill);
-  }
-  .st-sortable .st-dragging {
-    z-index: 1;
-    box-shadow: 0 4px 14px var(--shadow-strong);
-  }
-  .design-page .st-handle {
-    display: grid;
-    place-items: center;
-    width: 36px;
-    height: 40px;
-    /* At the right edge, whatever the row holds. */
-    margin-right: -8px;
-    margin-left: auto;
-    color: var(--text-faint);
-    touch-action: none;
-    cursor: grab;
-    background: transparent;
-    border: 0;
-  }
   .st-add-icon {
     color: var(--accent);
-  }
-  .design-page button.st-pattern {
-    cursor: pointer;
   }
   .pe-preview {
     display: flex;
@@ -4119,17 +4076,14 @@
   .st-app-icon-check {
     color: var(--accent);
   }
+  /* The alert's own look; the Sheet centers it over the phone. */
   .st-system-alert {
-    position: absolute;
-    top: 50%;
-    left: 50%;
     width: 270px;
     overflow: hidden;
     color: var(--text);
     text-align: center;
     background: var(--raised);
     border-radius: 16px;
-    transform: translate(-50%, -50%);
   }
   .st-system-alert p {
     margin: 0;

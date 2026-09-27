@@ -3,13 +3,13 @@ import { useState } from "react";
 import { cx } from "styled-system/css";
 
 import type { Schedule } from "./design-calendar";
-import { SortableList } from "./design-pattern-editor";
 import {
   BackButton,
   HeaderAction,
   List,
   ListRow,
   PageHeader,
+  SortableList,
   listRow,
 } from "./design-ui";
 

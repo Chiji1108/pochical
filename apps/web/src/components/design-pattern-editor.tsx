@@ -1,6 +1,5 @@
-import { Check, GripVertical, Plus, Trash2 } from "lucide-react";
-import { useContext, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import { Check, Plus, Trash2 } from "lucide-react";
+import { useContext, useState } from "react";
 import { cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
@@ -14,9 +13,9 @@ import {
   List,
   ListRow,
   PageHeader,
+  SortableList,
   SwitchRow,
   listRow,
-  listStyle,
 } from "./design-ui";
 import {
   guessLook,
@@ -182,7 +181,6 @@ export function PatternsPage({
                   <MarkGlyph look={item} size={22} style={style} />
                 </>
               }
-              className="st-pattern"
             />
           ))}
         </List>
@@ -207,111 +205,6 @@ export function PatternsPage({
     </>
   );
 }
-
-// Rows move with the handle; arrow keys on the handle move one step. The
-// drag follows the pointer on the window, since rows swap under it.
-export function SortableList<Item extends { id: string }>({
-  items,
-  label,
-  onChange,
-  children,
-}: {
-  items: Item[];
-  // What the handle's label calls the row.
-  label: (item: Item) => string;
-  onChange: (items: Item[]) => void;
-  // The row's content, before the handle.
-  children: (item: Item) => ReactNode;
-}) {
-  const listRef = useRef<HTMLDivElement>(null);
-  const itemsRef = useRef(items);
-  itemsRef.current = items;
-  const [drag, setDrag] = useState<{ id: string; offset: number }>();
-
-  const move = (id: string, to: number) => {
-    const list = itemsRef.current;
-    const from = list.findIndex((item) => item.id === id);
-    const target = Math.max(0, Math.min(list.length - 1, to));
-    if (from === target) {
-      return;
-    }
-    const next = [...list];
-    const [item] = next.splice(from, 1);
-    next.splice(target, 0, item);
-    itemsRef.current = next;
-    onChange(next);
-  };
-
-  const startDrag = (id: string, index: number, startY: number) => {
-    const height =
-      listRef.current?.firstElementChild?.getBoundingClientRect().height ??
-      defaultRowHeight;
-    setDrag({ id, offset: 0 });
-    const follow = (event: PointerEvent) => {
-      const moved = event.clientY - startY;
-      const target = Math.max(
-        0,
-        Math.min(
-          itemsRef.current.length - 1,
-          index + Math.round(moved / height)
-        )
-      );
-      move(id, target);
-      setDrag({ id, offset: moved - (target - index) * height });
-    };
-    const stop = () => {
-      setDrag(undefined);
-      window.removeEventListener("pointermove", follow);
-      window.removeEventListener("pointerup", stop);
-      window.removeEventListener("pointercancel", stop);
-    };
-    window.addEventListener("pointermove", follow);
-    window.addEventListener("pointerup", stop);
-    window.addEventListener("pointercancel", stop);
-  };
-
-  return (
-    <div className={cx(listStyle, "st-sortable")} ref={listRef}>
-      {items.map((item, index) => (
-        <div
-          className={cx(
-            listRow.root,
-            "st-pattern",
-            drag?.id === item.id && "st-dragging"
-          )}
-          data-list-row=""
-          key={item.id}
-          style={
-            drag?.id === item.id
-              ? { transform: `translateY(${drag.offset}px)` }
-              : undefined
-          }
-        >
-          {children(item)}
-          <button
-            aria-label={`${label(item)}を並べ替え。上下の矢印キーで動かせます`}
-            className="st-handle"
-            onKeyDown={(event) => {
-              if (event.key === "ArrowUp" || event.key === "ArrowDown") {
-                event.preventDefault();
-                move(item.id, index + (event.key === "ArrowUp" ? -1 : 1));
-              }
-            }}
-            onPointerDown={(event) => {
-              event.preventDefault();
-              startDrag(item.id, index, event.clientY);
-            }}
-            type="button"
-          >
-            <GripVertical aria-hidden="true" size={18} />
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-const defaultRowHeight = 48;
 
 // Common patterns to add with one tap, leaving out ones already there.
 const suggestionKeys: Shift[] = [
@@ -377,7 +270,6 @@ function AddPatternPage({
                     size={17}
                   />
                 }
-                className="st-pattern"
               />
             ))}
           </List>

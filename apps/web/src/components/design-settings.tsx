@@ -5,7 +5,7 @@ import {
   ChevronRight,
   CloudCheck,
 } from "lucide-react";
-import { useContext, useRef, useState } from "react";
+import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { cx } from "styled-system/css";
 
@@ -29,7 +29,6 @@ import {
   nextDayShifts,
   RepeatSequenceEditor,
   repeatSchedule,
-  showOverPhone,
   TabBar,
 } from "./design-calendar";
 import type { RepeatRule, Schedule, Tab } from "./design-calendar";
@@ -39,6 +38,7 @@ import { PhotoAvatar, PhotoEditor } from "./design-group";
 import type { Profile } from "./design-group";
 import { WorkSetupSteps } from "./design-onboarding";
 import { PatternsPage } from "./design-pattern-editor";
+import { Sheet } from "./design-sheet";
 import {
   ColorSchemeContext,
   PreviewSchemeSwitch,
@@ -647,39 +647,28 @@ function ConfirmSheet({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const sheetRef = useRef<HTMLDialogElement>(null);
-  const open = (sheet: HTMLDialogElement | null) => {
-    sheetRef.current = sheet;
-    if (sheet && !sheet.open) {
-      showOverPhone(sheet, sheet.closest<HTMLElement>(".dc-phone"));
-    }
-  };
+  // Shown while asked; dismissing it is the same as キャンセル.
   return (
-    <dialog
-      aria-label={title}
-      className="dc-breakdown"
-      onClose={onCancel}
-      ref={open}
+    <Sheet
+      className="st-confirm-sheet"
+      open
+      role="alertdialog"
+      label={title}
+      onOpenChange={(open) => {
+        if (!open) {
+          onCancel();
+        }
+      }}
     >
-      <button
-        aria-label="閉じる"
-        className="dc-sheet-scrim"
-        onClick={onCancel}
-        tabIndex={-1}
-        type="button"
-      />
-      <section className="dc-sheet st-confirm-sheet">
-        <div aria-hidden="true" className="dc-sheet-handle" />
-        <h4>{title}</h4>
-        <p>{message}</p>
-        <button className="st-confirm-action" onClick={onConfirm} type="button">
-          {action}
-        </button>
-        <button className="st-photo-cancel" onClick={onCancel} type="button">
-          キャンセル
-        </button>
-      </section>
-    </dialog>
+      <h4>{title}</h4>
+      <p>{message}</p>
+      <button className="st-confirm-action" onClick={onConfirm} type="button">
+        {action}
+      </button>
+      <button className="st-photo-cancel" onClick={onCancel} type="button">
+        キャンセル
+      </button>
+    </Sheet>
   );
 }
 
@@ -1599,26 +1588,24 @@ function SystemAlert({
   title: string;
   onClose: () => void;
 }) {
-  const open = (alert: HTMLDialogElement | null) => {
-    if (alert && !alert.open) {
-      showOverPhone(alert, alert.closest<HTMLElement>(".dc-phone"));
-    }
-  };
   return (
-    <dialog
-      aria-label={title}
-      className="dc-breakdown"
-      onClose={onClose}
-      ref={open}
+    <Sheet
+      className="st-system-alert"
+      label={title}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+      open
+      placement="center"
+      role="alertdialog"
     >
-      <div className="dc-sheet-scrim" />
-      <section className="st-system-alert">
-        <p>{title}</p>
-        <button onClick={onClose} type="button">
-          OK
-        </button>
-      </section>
-    </dialog>
+      <p>{title}</p>
+      <button onClick={onClose} type="button">
+        OK
+      </button>
+    </Sheet>
   );
 }
 
