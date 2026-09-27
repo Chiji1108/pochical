@@ -260,7 +260,7 @@ export function ImportReviewPage({
               ))}
             </div>
             <button
-              className="ob-primary im-next"
+              className="ui-button ui-button-primary ob-push im-next"
               disabled={myRow === undefined}
               onClick={() => {
                 setStep("codes");
@@ -298,7 +298,7 @@ export function ImportReviewPage({
               「＋」の付いたシフトは、新しいパターンとして追加します。
             </p>
             <button
-              className="ob-primary im-next"
+              className="ui-button ui-button-primary ob-push im-next"
               onClick={() => {
                 setConfirmed(new Set(codes));
                 setStep("check");
@@ -430,7 +430,11 @@ export function ImportReviewPage({
                   日分を、読み取った内容で上書きします。
                 </p>
               )}
-              <button className="ob-primary" onClick={apply} type="button">
+              <button
+                className="ui-button ui-button-primary ob-push"
+                onClick={apply}
+                type="button"
+              >
                 カレンダーに入れる
               </button>
             </div>

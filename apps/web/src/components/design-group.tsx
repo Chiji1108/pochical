@@ -3021,7 +3021,7 @@ export function JoinSheet({
               みんなのシフトと、みんなが休みの日が見られます。
             </p>
             <button
-              className="ob-primary"
+              className="ui-button ui-button-primary ob-push"
               onClick={() => {
                 close();
                 onOpenGroup();
@@ -3030,7 +3030,11 @@ export function JoinSheet({
             >
               グループを見る
             </button>
-            <button className="ob-link" onClick={close} type="button">
+            <button
+              className="ui-button ui-button-text"
+              onClick={close}
+              type="button"
+            >
               閉じる
             </button>
           </>
@@ -3073,7 +3077,7 @@ export function JoinSheet({
               このグループの人に、この名前で表示されます。参加すると、あなたのシフトもメンバーに見えるようになります。
             </p>
             <button
-              className="ob-primary"
+              className="ui-button ui-button-primary ob-push"
               disabled={name.trim() === ""}
               onClick={() => {
                 setJoined(true);
@@ -3082,7 +3086,11 @@ export function JoinSheet({
             >
               参加する
             </button>
-            <button className="ob-link" onClick={close} type="button">
+            <button
+              className="ui-button ui-button-text"
+              onClick={close}
+              type="button"
+            >
               今はしない
             </button>
           </>
@@ -3598,11 +3606,11 @@ function InvitePage({
           この画面を相手に読み取ってもらいます
         </small>
       </div>
-      <button className="st-primary" type="button">
+      <button className="ui-button ui-button-primary" type="button">
         <Send aria-hidden="true" size={16} />
         招待リンクを送る
       </button>
-      <button className="gr-secondary" type="button">
+      <button className="ui-button ui-button-quiet" type="button">
         <Copy aria-hidden="true" size={15} />
         リンクをコピー
       </button>
@@ -3610,7 +3618,7 @@ function InvitePage({
         リンクを知っている人は、だれでも「{group.name}
         」に参加できます。送る相手に気をつけてください。
       </p>
-      <button className="st-link" type="button">
+      <button className="ui-button ui-button-text" type="button">
         招待リンクを作り直す
       </button>
     </>

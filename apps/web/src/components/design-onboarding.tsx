@@ -298,10 +298,18 @@ function WelcomeStep({
         </p>
       </div>
       <div className="ob-welcome-actions">
-        <button className="ob-primary" onClick={onStart} type="button">
+        <button
+          className="ui-button ui-button-primary ob-push"
+          onClick={onStart}
+          type="button"
+        >
           はじめる
         </button>
-        <button className="ob-link" onClick={onLogin} type="button">
+        <button
+          className="ui-button ui-button-text"
+          onClick={onLogin}
+          type="button"
+        >
           アカウントをお持ちの方はログイン
         </button>
       </div>
@@ -636,7 +644,7 @@ function CustomStep({
         sequence={sequence}
       />
       <button
-        className="ob-primary"
+        className="ui-button ui-button-primary ob-push"
         disabled={sequence.length === 0}
         onClick={() => {
           onNext(sequence);
@@ -748,7 +756,7 @@ function AnchorStep({
         </div>
       )}
       <button
-        className="ob-primary"
+        className="ui-button ui-button-primary ob-push"
         disabled={!anchor}
         onClick={() => anchor && onStart(anchor)}
         type="button"

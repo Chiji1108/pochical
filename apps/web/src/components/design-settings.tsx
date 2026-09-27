@@ -767,10 +767,18 @@ function RepeatDetails({
           onChange={onHolidaysOff}
         />
       </div>
-      <button className="st-primary" onClick={onNew} type="button">
+      <button
+        className="ui-button ui-button-primary"
+        onClick={onNew}
+        type="button"
+      >
         新しい繰り返しにする
       </button>
-      <button className="st-link" onClick={onFix} type="button">
+      <button
+        className="ui-button ui-button-text"
+        onClick={onFix}
+        type="button"
+      >
         今の繰り返しを直す
       </button>
       <p className="st-note">
@@ -911,7 +919,7 @@ function RepeatEditorPage({
         </p>
       )}
       <button
-        className="st-primary"
+        className="ui-button ui-button-primary"
         disabled={sequence.length === 0}
         onClick={() => {
           onApply(rule);
@@ -1018,7 +1026,7 @@ function JobChangePage({
         前の日までのシフトは、そのまま残ります。この日からのシフトは、新しい仕事に合わせて入れ直します。
       </p>
       <button
-        className="st-primary"
+        className="ui-button ui-button-primary"
         onClick={() => {
           setAsking(true);
         }}
@@ -1216,7 +1224,7 @@ function RosterSwitchPage({
         この日からの繰り返しのシフトは消えて、空いた状態になります。前の日までのシフトは、そのまま残ります。
       </p>
       <button
-        className="st-primary"
+        className="ui-button ui-button-primary"
         onClick={() => {
           onApply(start);
         }}

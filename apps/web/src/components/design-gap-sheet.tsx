@@ -181,7 +181,7 @@ function GapSheetBody({
         </div>
       )}
       <button
-        className="dc-import-primary"
+        className="ui-button ui-button-primary"
         onClick={() => {
           close();
           onFill(current?.key);
@@ -190,7 +190,11 @@ function GapSheetBody({
       >
         {current ? `${current.label}にする` : "休みを追加して入れる"}
       </button>
-      <button className="dc-import-later" onClick={close} type="button">
+      <button
+        className="ui-button ui-button-subtle"
+        onClick={close}
+        type="button"
+      >
         あとで入れる
       </button>
     </section>

@@ -6,7 +6,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Copy,
   Download,
   Pencil,
   UserPlus,
@@ -133,77 +132,39 @@ function Buttons() {
   return (
     <>
       <Group
-        note="5種類。どれも濃い色の角丸ボタンで、名前と細かい寸法だけ違います。"
-        title="主のボタン"
+        note="主・控えめ・文字・目立たないの4段。以前の dc-start、dc-import-primary、ob-primary、st-primary(主)、dc-start-photo、dc-save-secondary、gr-secondary(控えめ)、ob-link、st-link(文字)、dc-import-later(目立たない)をまとめたものです。"
+        title="ボタン"
       >
-        <Item name="dc-start" where="カレンダー下のポチポチ入力">
-          <button className="dc-start" type="button">
+        <Item name="ui-button-primary" where="その画面で次にすること">
+          <button className="ui-button ui-button-primary" type="button">
             <Pencil aria-hidden="true" size={18} />
             ポチポチ入力
           </button>
         </Item>
-        <Item
-          name="dc-import-primary"
-          where="シートの決定(休みにする、読み取る)"
-        >
-          <button className="dc-import-primary" type="button">
-            休みにする
-          </button>
-        </Item>
-        <Item name="dc-import-primary dc-save-add" where="保存シートの追加する">
-          <button className="dc-import-primary dc-save-add" type="button">
-            追加する
-          </button>
-        </Item>
-        <Item name="ob-primary" where="はじめての設定の、はじめる・次へ">
-          <button className="ob-primary" type="button">
-            はじめる
-          </button>
-        </Item>
-        <Item name="st-primary" where="設定の決定(招待リンクを送る など)">
-          <button className="st-primary" type="button">
-            <UserPlus aria-hidden="true" size={16} />
-            招待リンクを送る
-          </button>
-        </Item>
-      </Group>
-      <Group
-        note="3種類。薄い地に色の文字、という同じ役割です。"
-        title="控えめなボタン"
-      >
-        <Item name="dc-start-photo" where="写真から取り込む、画像で保存">
-          <button className="dc-start-photo" type="button">
+        <Item name="ui-button-quiet" where="主の横、または一段下の操作">
+          <button className="ui-button ui-button-quiet" type="button">
             <Camera aria-hidden="true" size={18} />
             写真から取り込む
           </button>
         </Item>
-        <Item name="dc-save-secondary" where="保存シートの端末カレンダーに追加">
-          <button className="dc-save-secondary" type="button">
-            <CalendarPlus aria-hidden="true" size={18} />
-            端末カレンダーに追加
-          </button>
-        </Item>
-        <Item name="gr-secondary" where="グループのリンクをコピー">
-          <button className="gr-secondary" type="button">
-            <Copy aria-hidden="true" size={15} />
-            リンクをコピー
-          </button>
-        </Item>
-      </Group>
-      <Group note="3種類。" title="文字だけのボタン">
-        <Item name="dc-import-later" where="シートのあとで入れる">
-          <button className="dc-import-later" type="button">
-            あとで入れる
-          </button>
-        </Item>
-        <Item name="ob-link" where="はじめての設定のログイン">
-          <button className="ob-link" type="button">
+        <Item name="ui-button-text" where="リンクのような選択肢">
+          <button className="ui-button ui-button-text" type="button">
             アカウントをお持ちの方はログイン
           </button>
         </Item>
-        <Item name="st-link" where="設定の中の小さなリンク">
-          <button className="st-link" type="button">
-            標準に戻す
+        <Item name="ui-button-subtle" where="あとにする、断る">
+          <button className="ui-button ui-button-subtle" type="button">
+            あとで入れる
+          </button>
+        </Item>
+        <Item name="ui-button-primary(押せない)" where="まだ選んでいないとき">
+          <button
+            className="ui-button ui-button-primary"
+            disabled
+            type="button"
+          >
+            <CalendarPlus aria-hidden="true" size={18} />
+            追加する
           </button>
         </Item>
       </Group>

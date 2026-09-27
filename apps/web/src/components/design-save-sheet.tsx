@@ -121,7 +121,7 @@ export function SaveSheet({
             </p>
             <div className="dc-save-actions">
               <button
-                className="dc-import-primary"
+                className="ui-button ui-button-primary"
                 onClick={() => {
                   close();
                   onImage();
@@ -132,7 +132,7 @@ export function SaveSheet({
                 画像で保存
               </button>
               <button
-                className="dc-save-secondary"
+                className="ui-button ui-button-quiet"
                 disabled={shiftCount === 0}
                 onClick={() => {
                   setStep("calendar");
@@ -144,7 +144,11 @@ export function SaveSheet({
               </button>
             </div>
             {completion && (
-              <button className="dc-import-later" onClick={close} type="button">
+              <button
+                className="ui-button ui-button-subtle"
+                onClick={close}
+                type="button"
+              >
                 あとで
               </button>
             )}
@@ -199,7 +203,7 @@ export function SaveSheet({
               </label>
             </div>
             <button
-              className="dc-import-primary dc-save-add"
+              className="ui-button ui-button-primary dc-save-add"
               disabled={!calendar || count === 0}
               onClick={() => {
                 setStep({
@@ -222,7 +226,11 @@ export function SaveSheet({
               />
               {step.done}
             </p>
-            <button className="dc-import-primary" onClick={close} type="button">
+            <button
+              className="ui-button ui-button-primary"
+              onClick={close}
+              type="button"
+            >
               閉じる
             </button>
           </>
@@ -368,7 +376,7 @@ export function ImagePreviewPage({
       </div>
       <div className="dc-image-actions">
         <button
-          className="dc-save-secondary"
+          className="ui-button ui-button-quiet"
           onClick={() => {
             setNote("LINEなどに送れるメニューが開きます（見本）");
           }}
@@ -378,7 +386,7 @@ export function ImagePreviewPage({
           共有
         </button>
         <button
-          className="dc-import-primary"
+          className="ui-button ui-button-primary"
           onClick={() => {
             setNote("写真に保存しました");
           }}

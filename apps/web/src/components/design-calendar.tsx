@@ -1224,7 +1224,11 @@ function StartArea({
     <div
       className={`dc-start-area dc-start-row ${stacked ? "dc-start-stack" : ""}`}
     >
-      <button className="dc-start" onClick={onStart} type="button">
+      <button
+        className="ui-button ui-button-primary"
+        onClick={onStart}
+        type="button"
+      >
         <Pencil aria-hidden="true" size={18} />
         {label}
       </button>
@@ -1232,7 +1236,7 @@ function StartArea({
           a month with days left, which is when they photograph it. */}
       <button
         aria-haspopup="dialog"
-        className="dc-start-photo"
+        className="ui-button ui-button-quiet"
         onClick={onImport}
         type="button"
       >
@@ -1255,13 +1259,17 @@ function SaveArea({
 }) {
   return (
     <div className="dc-start-area dc-start-row">
-      <button className="dc-start-photo" onClick={onImage} type="button">
+      <button
+        className="ui-button ui-button-quiet"
+        onClick={onImage}
+        type="button"
+      >
         <ImageIcon aria-hidden="true" size={18} />
         画像で保存
       </button>
       <button
         aria-haspopup="dialog"
-        className="dc-start-photo"
+        className="ui-button ui-button-quiet"
         onClick={onCalendar}
         type="button"
       >
@@ -1383,7 +1391,7 @@ function ImportSheet({
             </p>
             <div>
               <button
-                className="dc-import-primary"
+                className="ui-button ui-button-primary"
                 onClick={() => {
                   close();
                   onStartPochi();

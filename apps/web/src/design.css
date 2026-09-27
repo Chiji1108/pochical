@@ -383,19 +383,6 @@ button.dc-day:active {
 .dc-start-area {
   text-align: center;
 }
-.design-page .dc-start {
-  display: flex;
-  gap: 9px;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 52px;
-  font-size: 13px;
-  color: var(--on-accent-fill);
-  background: var(--accent-fill);
-  border: 0;
-  border-radius: 15px;
-}
 .dc-nav {
   display: flex;
   justify-content: space-around;
@@ -1066,28 +1053,12 @@ body:has(.dc-breakdown[open]) {
   display: flex;
   gap: 8px;
 }
-.design-page .dc-start-row .dc-start {
+.design-page .dc-start-row .ui-button {
   flex: 1;
   width: auto;
 }
 /* The same size as ポチポチ入力, one step quieter in color: on the same
    ground as 今月のお休み, told apart as a button by its green label. */
-.design-page .dc-start-photo {
-  display: flex;
-  flex: 1;
-  gap: 9px;
-  align-items: center;
-  justify-content: center;
-  min-height: 52px;
-  font-size: 13px;
-  color: var(--accent);
-  background: var(--fill);
-  border: 0;
-  border-radius: 15px;
-}
-.design-page .dc-start-photo:hover {
-  background: var(--fill-2);
-}
 .dc-import-description {
   margin: 0 0 18px;
   font-size: 13px;
@@ -1163,30 +1134,6 @@ body:has(.dc-breakdown[open]) {
 }
 .dc-calendar-scroll {
   position: relative;
-}
-.design-page .dc-import-later {
-  display: block;
-  min-height: 44px;
-  padding: 0 16px;
-  margin: 8px auto 0;
-  font-size: 13px;
-  color: var(--text-3);
-  background: transparent;
-  border: 0;
-}
-.design-page .dc-import-primary {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 50px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--on-accent-fill);
-  background: var(--accent-fill);
-  border: 0;
-  border-radius: 14px;
 }
 
 /* Repeating shifts. */
@@ -1339,10 +1286,6 @@ body:has(.dc-breakdown[open]) {
 .dc-repeat-day-number.dc-saturday {
   color: var(--saturday);
 }
-.design-page .dc-import-primary:disabled {
-  cursor: default;
-  opacity: 0.4;
-}
 
 /* Onboarding. */
 .ob-content {
@@ -1408,14 +1351,6 @@ body:has(.dc-breakdown[open]) {
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-.design-page .ob-link {
-  min-height: 44px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--accent);
-  background: transparent;
-  border: 0;
 }
 .ob-finished-note {
   max-width: 340px;
@@ -1535,21 +1470,6 @@ body:has(.dc-breakdown[open]) {
   font-size: 11px;
   color: var(--text-4);
   text-align: center;
-}
-.design-page .ob-primary {
-  width: 100%;
-  min-height: 52px;
-  margin-top: auto;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--on-accent-fill);
-  background: var(--accent-fill);
-  border: 0;
-  border-radius: 15px;
-}
-.design-page .ob-primary:disabled {
-  cursor: default;
-  opacity: 0.4;
 }
 .ob-month {
   display: flex;
@@ -1782,24 +1702,6 @@ button.st-row:hover {
   background: var(--surface);
   border-radius: 10px;
 }
-.design-page .st-primary {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 50px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--on-accent-fill);
-  background: var(--accent-fill);
-  border: 0;
-  border-radius: 14px;
-}
-.design-page .st-primary:disabled {
-  cursor: default;
-  opacity: 0.4;
-}
 .st-field {
   display: flex;
   align-items: center;
@@ -1823,16 +1725,6 @@ button.st-row:hover {
   background: transparent;
   border: 1px dashed var(--border-strong);
   border-radius: 14px;
-}
-.design-page .st-link {
-  align-self: center;
-  min-height: 40px;
-  padding: 0 12px;
-  font-size: 13px;
-  color: var(--accent);
-  text-decoration: underline;
-  background: transparent;
-  border: 0;
 }
 .design-page .dc-nav-item {
   background: transparent;
@@ -2686,18 +2578,6 @@ button.st-row:hover {
   font-size: 11px;
   color: var(--text-3);
 }
-.design-page .gr-secondary {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  justify-content: center;
-  min-height: 46px;
-  font-size: 14px;
-  color: var(--accent);
-  background: var(--accent-soft);
-  border: 0;
-  border-radius: 14px;
-}
 .gr-hub-icon {
   display: grid;
   flex-shrink: 0;
@@ -3040,8 +2920,7 @@ button.st-row:hover {
   line-height: 1.6;
   color: var(--text-3);
 }
-.gr-join-sheet .ob-primary,
-.gr-join-sheet .ob-link {
+.gr-join-sheet .ui-button {
   align-self: stretch;
 }
 /* An app line about the group, between the messages. */
@@ -3982,24 +3861,6 @@ button.st-row:hover {
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-.design-page .dc-save-secondary {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 50px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--accent);
-  background: var(--accent-soft);
-  border: 0;
-  border-radius: 16px;
-}
-.design-page .dc-save-secondary:disabled {
-  cursor: default;
-  opacity: 0.4;
 }
 .design-page .dc-save-back {
   margin-left: -8px;
@@ -5255,7 +5116,7 @@ button.st-row:hover {
 }
 /* ポチポチ入力 as tall as 今月のお休み, and the whole block as tall as the
    card and the button row, so the rows stay put from month to month. */
-.design-page .dc-start-stack .dc-start {
+.design-page .dc-start-stack .ui-button-primary {
   flex: none;
   min-height: 55px;
 }
@@ -5484,4 +5345,58 @@ button.st-row:hover {
 .cmp-toast.gr-toast {
   position: static;
   transform: none;
+}
+
+/* Buttons: one piece in four strengths. 主 for the step to take, 控えめ
+   beside it or for a lesser one, 文字 for a link-like choice, and 目立たない
+   for putting something off. Where a button sits, its width in a row or
+   its push to the bottom, belongs to the place, not to the button. */
+.design-page .ui-button {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 0;
+  border-radius: 15px;
+}
+.design-page .ui-button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+.design-page :is(.ui-button-primary, .ui-button-quiet) {
+  width: 100%;
+  min-height: 52px;
+}
+.design-page .ui-button-primary {
+  color: var(--on-accent-fill);
+  background: var(--accent-fill);
+}
+.design-page .ui-button-quiet {
+  color: var(--accent);
+  background: var(--fill);
+}
+.design-page .ui-button-quiet:hover:not(:disabled) {
+  background: var(--fill-2);
+}
+.design-page :is(.ui-button-text, .ui-button-subtle) {
+  align-self: center;
+  min-height: 44px;
+  padding: 0 12px;
+  background: transparent;
+}
+.design-page .ui-button-text {
+  color: var(--accent);
+}
+.design-page .ui-button-subtle {
+  margin: 8px auto 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+/* Onboarding and the join sheet keep their main step at the bottom. */
+.design-page .ob-push {
+  margin-top: auto;
 }
