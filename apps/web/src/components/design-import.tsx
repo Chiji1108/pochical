@@ -79,6 +79,7 @@ export function ImportReviewPage({
   coworkerNames,
   onCancel,
   onApply,
+  initialStep,
 }: {
   month: Date;
   run: ImportRun;
@@ -87,15 +88,17 @@ export function ImportReviewPage({
   coworkerNames: string[];
   onCancel: () => void;
   onApply: (result: ImportResult) => void;
+  // For the flow diagrams: a step to open on.
+  initialStep?: "row" | "codes" | "check";
 }) {
   const roster = rosterOf(month);
   const codes = [...new Set(roster.flatMap((row) => row.codes))];
   const guess = (code: string): Target => suggestions[code] ?? "skip";
   const [step, setStep] = useState<"row" | "codes" | "check">(
-    run === "first" ? "row" : "check"
+    initialStep ?? (run === "first" ? "row" : "check")
   );
   const [myRow, setMyRow] = useState<number | undefined>(
-    run === "first" ? undefined : MY_ROW
+    run === "first" && (initialStep ?? "row") === "row" ? undefined : MY_ROW
   );
   const [mapping, setMapping] = useState<Record<string, Target>>(() =>
     Object.fromEntries(codes.map((code) => [code, guess(code)]))

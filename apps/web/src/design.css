@@ -5067,3 +5067,147 @@ button.st-row:hover {
   font-weight: 600;
   color: var(--text-2);
 }
+
+/* /design: the documents, one card each. */
+.design-documents {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 560px);
+  margin: 0 auto 36px;
+}
+.design-documents a {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 16px 18px;
+  color: var(--text-3);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--separator);
+  border-radius: 16px;
+}
+.design-documents a:hover {
+  border-color: var(--border-strong);
+}
+.design-documents a > span {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.design-documents strong {
+  font-size: 16px;
+  color: var(--text);
+}
+
+/* /demo: one phone, the open choices beside it on wide screens. */
+.demo-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 8px 16px 48px;
+}
+.demo-phone {
+  flex: 0 0 auto;
+  width: min(390px, 100%);
+}
+.demo-layout .design-variants {
+  flex: 0 1 420px;
+  margin: 0;
+}
+@media (min-width: 900px) {
+  .demo-phone {
+    position: sticky;
+    top: 16px;
+  }
+}
+
+/* /design/flows: real screens drawn small, with arrows between. */
+.fl-flows {
+  --fl-scale: 0.42;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  max-width: 1400px;
+  padding: 0 16px 64px;
+  margin: 0 auto;
+}
+.fl-flow h2 {
+  margin: 0 0 14px 4px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+}
+.fl-row-wrap + .fl-row-wrap {
+  margin-top: 22px;
+}
+.fl-branch {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0 0 10px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+.fl-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 0 4px 8px;
+  margin: 0;
+  overflow-x: auto;
+  list-style: none;
+}
+.fl-fan {
+  gap: 18px;
+}
+.fl-arrow {
+  flex-shrink: 0;
+  align-self: center;
+  margin-top: -40px;
+  color: var(--text-4);
+}
+.fl-frame {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: calc(390px * var(--fl-scale));
+  margin: 0;
+}
+.fl-screen {
+  position: relative;
+  flex-shrink: 0;
+  width: calc(390px * var(--fl-scale));
+  height: calc(844px * var(--fl-scale));
+  overflow: hidden;
+  border-radius: calc(53px * var(--fl-scale));
+}
+.fl-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 390px;
+  pointer-events: none;
+  transform: scale(var(--fl-scale));
+  transform-origin: top left;
+}
+.fl-frame figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 2px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.fl-frame figcaption strong {
+  font-size: 13px;
+  color: var(--text);
+}
+.fl-frame figcaption small {
+  font-size: 11px;
+}

@@ -35,6 +35,7 @@ import { DesignGroup, JoinSheet } from "./design-group";
 import { ImportReviewPage } from "./design-import";
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import { DesignSettings } from "./design-settings";
+import type { SettingsPage } from "./design-settings";
 import { useThemeStyle } from "./design-theme";
 import { holidayName, holidayNameOfKey, useWeek } from "./design-week";
 import {
@@ -311,10 +312,15 @@ export function DesignCalendar({
   initialMonth = 8,
   variants,
   pendingInvite = false,
+  initialTab = "calendar",
+  initialSettingsPage,
 }: {
   initialEditing: boolean;
   initialMonth?: number;
   variants: DesignVariants;
+  // For the flow diagrams: a tab, and a settings page, to open on.
+  initialTab?: Tab;
+  initialSettingsPage?: SettingsPage;
   // A group's invitation link was opened: ask about joining over the
   // calendar.
   pendingInvite?: boolean;
@@ -349,7 +355,7 @@ export function DesignCalendar({
   const [detailDate, setDetailDate] = useState<Date>();
   const coworkerNames = useUser((state) => state.coworkers);
   const setCoworkerNames = useUser((state) => state.setCoworkers);
-  const [tab, setTab] = useState<Tab>("calendar");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const profile = useUser((state) => state.profile);
   const setProfile = useUser((state) => state.setProfile);
   const rules = useUser((state) => state.rules);
@@ -608,6 +614,7 @@ export function DesignCalendar({
       {tab === "settings" && (
         <DesignSettings
           coworkers={members}
+          initialPage={initialSettingsPage}
           onApplyRule={applyRule}
           onChangeJob={changeJob}
           onFixRule={fixRule}

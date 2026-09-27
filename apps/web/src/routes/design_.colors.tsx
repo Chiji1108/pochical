@@ -3,7 +3,6 @@ import { ArrowLeft } from "lucide-react";
 
 import { DesignColors } from "../components/design-colors";
 import { themeStyle } from "../components/design-theme";
-import { parseDesignVariants } from "../lib/design-variants";
 import { pageMeta } from "../lib/site";
 
 import designStyles from "../design.css?url";
@@ -12,8 +11,8 @@ function ColorsPage() {
   return (
     <main className="design-page" id="main" style={themeStyle("moss", "light")}>
       <div className="design-toolbar">
-        <Link search={parseDesignVariants({})} to="/design">
-          <ArrowLeft aria-hidden="true" size={16} /> デザインプレビュー
+        <Link to="/design">
+          <ArrowLeft aria-hidden="true" size={16} /> デザイン資料
         </Link>
       </div>
       <header className="design-intro">

@@ -147,9 +147,41 @@ type Stage = "welcome" | "login" | "setup";
 // First run: a welcome with a way back in for people who already have an
 // account, then the work questions. An invitation opened on the way is
 // asked about once the calendar is ready, like any other time.
-export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
+// A screen to open on, for the flow diagrams on /design/flows.
+export type OnboardingScreen =
+  | "welcome"
+  | "login"
+  | "kind"
+  | "rotation"
+  | "anchor";
+
+function stepOf(screen: OnboardingScreen): Step | undefined {
+  if (screen === "kind" || screen === "rotation") {
+    return { name: screen };
+  }
+  if (screen === "anchor") {
+    const template = rotationTemplates[1] ?? rotationTemplates[0];
+    return template
+      ? { name: "anchor", sequence: template.sequence ?? [], template }
+      : undefined;
+  }
+  return undefined;
+}
+
+export function DesignOnboarding({
+  variants,
+  initialScreen = "welcome",
+}: {
+  variants: DesignVariants;
+  initialScreen?: OnboardingScreen;
+}) {
   const themeStyle = useThemeStyle();
-  const [stage, setStage] = useState<Stage>("welcome");
+  const [stage, setStage] = useState<Stage>(() => {
+    if (initialScreen === "welcome" || initialScreen === "login") {
+      return initialScreen;
+    }
+    return "setup";
+  });
   // The person the answers make: a store of their own, with a line under
   // their calendar when there is something to say.
   const [finished, setFinished] = useState<{
@@ -220,6 +252,7 @@ export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
         {stage === "setup" && (
           <WorkSetupSteps
             finishLabel="はじめる"
+            initialStep={stepOf(initialScreen)}
             onBack={() => {
               setStage("welcome");
             }}
@@ -326,6 +359,7 @@ export function WorkSetupSteps({
   onExit,
   onBack,
   onFinish,
+  initialStep,
 }: {
   month?: Date;
   finishLabel: string;
@@ -333,8 +367,9 @@ export function WorkSetupSteps({
   // Back from the first question on the first run, to the welcome.
   onBack?: () => void;
   onFinish: (setup: WorkSetup) => void;
+  initialStep?: Step;
 }) {
-  const [step, setStep] = useState<Step>({ name: "kind" });
+  const [step, setStep] = useState<Step>(initialStep ?? { name: "kind" });
 
   function chooseRotation(template: Template) {
     if (template.custom) {

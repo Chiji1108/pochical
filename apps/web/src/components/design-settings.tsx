@@ -62,6 +62,8 @@ import {
 } from "./shift-mark";
 import type { LookSettings, ShiftMarkStyle } from "./shift-mark";
 
+export type SettingsPage = Page;
+
 type Page =
   | "top"
   | "repeat-new"
@@ -136,6 +138,7 @@ export function DesignSettings({
   onChangeJob,
   onHolidaysOff,
   onTab,
+  initialPage = "top",
 }: {
   patternKeys: Shift[];
   coworkers: Coworkers;
@@ -148,8 +151,10 @@ export function DesignSettings({
   onChangeJob: (job: { patternKeys: Shift[]; rule: RepeatRule }) => void;
   onHolidaysOff: (holidaysOff: boolean) => void;
   onTab: (tab: Tab) => void;
+  // For the flow diagrams: a page to open on.
+  initialPage?: Page;
 }) {
-  const [page, setPage] = useState<Page>("top");
+  const [page, setPage] = useState<Page>(initialPage);
   const weekTools = useWeek();
   const preview = stylePreviewOf(schedule, patternKeys, weekTools.weekDates);
   // From the week holding the 21st, so all three holidays of the 21st to

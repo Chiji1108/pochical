@@ -10,17 +10,24 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DesignRouteImport } from './routes/design'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AccountDeleteRouteImport } from './routes/account.delete'
 import { Route as DesignColorsRouteImport } from './routes/design_.colors'
+import { Route as DesignFlowsRouteImport } from './routes/design_.flows'
 import { Route as InviteInviteCodeRouteImport } from './routes/invite.$inviteCode'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DesignRoute = DesignRouteImport.update({
@@ -53,6 +60,11 @@ const DesignColorsRoute = DesignColorsRouteImport.update({
   path: '/design/colors',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DesignFlowsRoute = DesignFlowsRouteImport.update({
+  id: '/design_/flows',
+  path: '/design/flows',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InviteInviteCodeRoute = InviteInviteCodeRouteImport.update({
   id: '/invite/$inviteCode',
   path: '/invite/$inviteCode',
@@ -61,76 +73,90 @@ const InviteInviteCodeRoute = InviteInviteCodeRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/demo': typeof DemoRoute
   '/design': typeof DesignRoute
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/account/delete': typeof AccountDeleteRoute
   '/design/colors': typeof DesignColorsRoute
+  '/design/flows': typeof DesignFlowsRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/demo': typeof DemoRoute
   '/design': typeof DesignRoute
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/account/delete': typeof AccountDeleteRoute
   '/design/colors': typeof DesignColorsRoute
+  '/design/flows': typeof DesignFlowsRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/demo': typeof DemoRoute
   '/design': typeof DesignRoute
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/account/delete': typeof AccountDeleteRoute
   '/design_/colors': typeof DesignColorsRoute
+  '/design_/flows': typeof DesignFlowsRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/demo'
     | '/design'
     | '/privacy'
     | '/support'
     | '/terms'
     | '/account/delete'
     | '/design/colors'
+    | '/design/flows'
     | '/invite/$inviteCode'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/demo'
     | '/design'
     | '/privacy'
     | '/support'
     | '/terms'
     | '/account/delete'
     | '/design/colors'
+    | '/design/flows'
     | '/invite/$inviteCode'
   id:
     | '__root__'
     | '/'
+    | '/demo'
     | '/design'
     | '/privacy'
     | '/support'
     | '/terms'
     | '/account/delete'
     | '/design_/colors'
+    | '/design_/flows'
     | '/invite/$inviteCode'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DemoRoute: typeof DemoRoute
   DesignRoute: typeof DesignRoute
   PrivacyRoute: typeof PrivacyRoute
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
   AccountDeleteRoute: typeof AccountDeleteRoute
   DesignColorsRoute: typeof DesignColorsRoute
+  DesignFlowsRoute: typeof DesignFlowsRoute
   InviteInviteCodeRoute: typeof InviteInviteCodeRoute
 }
 
@@ -141,6 +167,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/design': {
@@ -185,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DesignColorsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/design_/flows': {
+      id: '/design_/flows'
+      path: '/design/flows'
+      fullPath: '/design/flows'
+      preLoaderRoute: typeof DesignFlowsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/invite/$inviteCode': {
       id: '/invite/$inviteCode'
       path: '/invite/$inviteCode'
@@ -197,12 +237,14 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DemoRoute: DemoRoute,
   DesignRoute: DesignRoute,
   PrivacyRoute: PrivacyRoute,
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
   AccountDeleteRoute: AccountDeleteRoute,
   DesignColorsRoute: DesignColorsRoute,
+  DesignFlowsRoute: DesignFlowsRoute,
   InviteInviteCodeRoute: InviteInviteCodeRoute,
 }
 export const routeTree = rootRouteImport

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Palette, RotateCcw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
 
 import { DesignAppIcon } from "../components/design-app-icon";
 import {
@@ -8,119 +8,65 @@ import {
   initialDesignSchedule,
   patternSets,
 } from "../components/design-calendar";
-import { DesignOnboarding } from "../components/design-onboarding";
 import {
-  ColorSchemeContext,
-  ThemeContext,
-  ToneContext,
-  themeOfColor,
-  themeStyle,
-} from "../components/design-theme";
-import { WeekSettingsContext } from "../components/design-week";
-import {
-  CellNamesContext,
-  IconWeightContext,
-  MonochromeContext,
-  OffDisplayContext,
-  OffHighlightContext,
-  ShiftMarkStyleContext,
-} from "../components/shift-mark";
-import { useLook, useSettings } from "../lib/design-settings-store";
-import {
-  createUserStore,
-  sampleCoworkers,
-  UserStoreContext,
-} from "../lib/design-user-store";
-import {
-  designVariantKeys,
-  designVariantOptions,
-  parseDesignVariants,
-} from "../lib/design-variants";
-import type { DesignVariants } from "../lib/design-variants";
+  DesignProviders,
+  useDesignTheme,
+} from "../components/design-providers";
+import { themeStyle } from "../components/design-theme";
+import { createUserStore, UserStoreContext } from "../lib/design-user-store";
+import { parseDesignVariants } from "../lib/design-variants";
 import { pageMeta } from "../lib/site";
-import { useDeviceScheme } from "../lib/use-device-scheme";
 
 import designStyles from "../design.css?url";
 
 export const Route = createFileRoute("/design")({
   component: DesignPage,
   head: () => ({
-    ...pageMeta(
-      "デザインプレビュー",
-      "カレンダーとシフト入力のデザイン",
-      "/design",
-      true
-    ),
+    ...pageMeta("デザイン資料", "ポチカルのデザイン資料", "/design", true),
     links: [{ href: designStyles, rel: "stylesheet" }],
   }),
-  validateSearch: parseDesignVariants,
 });
 
-const screenLinks = [
-  { id: "design-view-title", number: "01", title: "カレンダー表示" },
-  { id: "design-edit-title", number: "02", title: "シフト入力" },
-  { id: "design-six-weeks-title", number: "03", title: "6段の月 × 8パターン" },
-  { id: "design-onboarding-title", number: "04", title: "はじめての設定" },
-  { id: "design-app-icon-title", number: "05", title: "アプリアイコン" },
+// The documents; the app to touch is /demo.
+const documents = [
+  {
+    description:
+      "電話1台で、ポチカルを実際に触れます。比べる案もここで切り替えます。",
+    title: "デモ",
+    to: "/demo",
+  },
+  {
+    description: "はじめての設定、写真の取り込み、設定の画面の流れと分かれ道。",
+    title: "画面遷移図",
+    to: "/design/flows",
+  },
+  {
+    description: "役割ごとの色、トーンごとのテーマ、シフトの色の見分けやすさ。",
+    title: "カラーパレット",
+    to: "/design/colors",
+  },
+] as const;
+
+// Studies still on this page until they get pages of their own.
+const studyLinks = [
+  { id: "design-six-weeks-title", number: "01", title: "6段の月 × 8パターン" },
+  { id: "design-app-icon-title", number: "02", title: "アプリアイコン" },
 ];
 
+// Screens here take the defaults of the choices /demo can switch.
+const defaultVariants = parseDesignVariants({});
+
 function DesignPage() {
-  const variants = Route.useSearch();
-  // The person 01 and 02 show, one store for both. The 予定 variant and
-  // サンプルに戻す start them over with the sample or with nothing entered.
-  const makePerson = (
-    sample: DesignVariants["scheduleSample"],
-    members: DesignVariants["memberSample"]
-  ) =>
-    createUserStore({
-      coworkers: members === "some" ? sampleCoworkers : [],
-      schedule: sample === "empty" ? {} : initialDesignSchedule(),
-    });
-  const [person, setPerson] = useState(() =>
-    makePerson(variants.scheduleSample, variants.memberSample)
-  );
-  const [version, setVersion] = useState(0);
-  const navigate = Route.useNavigate();
-  // Settings live in a store sorted by where each would be kept (see
-  // design-settings-store.ts); the screens read them through contexts that
-  // parts of the page override, like a member's own colors.
-  const look = useLook();
-  const color = useSettings((state) => state.groupLook.color);
-  const theme = themeOfColor(color);
-  const { tone, appearance, week } = useSettings((state) => state.device);
-  // Saved device settings load once the page has hydrated.
-  useEffect(() => {
-    void useSettings.persist.rehydrate();
-  }, []);
-  // 外観 in settings follows this computer's own light or dark setting
-  // unless it keeps one.
-  const deviceScheme = useDeviceScheme();
-  const scheme = appearance === "system" ? deviceScheme : appearance;
+  const theme = useDesignTheme();
   return (
     <main className="design-page" id="main" style={themeStyle(theme, "light")}>
       <div className="design-toolbar">
         <Link to="/">
           <ArrowLeft aria-hidden="true" size={16} /> ポチカル
         </Link>
-        <div className="design-toolbar-actions">
-          <Link className="design-toolbar-link" to="/design/colors">
-            <Palette aria-hidden="true" size={14} /> カラーパレット
-          </Link>
-          <button
-            onClick={() => {
-              setPerson(
-                makePerson(variants.scheduleSample, variants.memberSample)
-              );
-              setVersion((value) => value + 1);
-            }}
-            type="button"
-          >
-            <RotateCcw aria-hidden="true" size={14} /> サンプルに戻す
-          </button>
-        </div>
       </div>
       <header className="design-intro">
-        <p>POCHICAL / DESIGN STUDY</p>
+        <p>POCHICAL / DESIGN</p>
         <h1>
           毎日のシフトに、<span>やさしい余白。</span>
         </h1>
@@ -128,166 +74,47 @@ function DesignPage() {
           見るときは、すっきり。入力は、ポチッと。
         </p>
       </header>
-      <nav aria-label="画面の一覧" className="design-index">
-        {screenLinks.map(({ id, number, title }) => (
+      <nav aria-label="デザイン資料" className="design-documents">
+        {documents.map((document) => (
+          <Link key={document.to} to={document.to}>
+            <span>
+              <strong>{document.title}</strong>
+              {document.description}
+            </span>
+            <ChevronRight aria-hidden="true" size={18} />
+          </Link>
+        ))}
+      </nav>
+      <nav aria-label="このページの検討" className="design-index">
+        {studyLinks.map(({ id, number, title }) => (
           <a href={`#${id}`} key={id}>
             <span>{number}</span>
             {title}
           </a>
         ))}
       </nav>
-      <VariantPanel
-        onChange={(key, value) => {
-          if (key === "scheduleSample") {
-            setPerson(
-              makePerson(
-                value as DesignVariants["scheduleSample"],
-                variants.memberSample
-              )
-            );
-            setVersion((previous) => previous + 1);
-          }
-          // The 一緒に働く人 sample switch starts the list over.
-          if (key === "memberSample") {
-            person.setState({
-              coworkers: value === "some" ? sampleCoworkers : [],
-            });
-          }
-          void navigate({
-            replace: true,
-            resetScroll: false,
-            search: (previous) => ({ ...previous, [key]: value }),
-          });
-        }}
-        variants={variants}
-      />
-      <WeekSettingsContext value={{ week }}>
-        <ColorSchemeContext value={scheme}>
-          <ToneContext value={tone}>
-            <ThemeContext value={{ theme }}>
-              <IconWeightContext value={look.fill ? "duotone" : "regular"}>
-                <ShiftMarkStyleContext value={look.style}>
-                  <CellNamesContext
-                    value={{
-                      names: {
-                        badge: look.names,
-                        emoji: look.names,
-                        icon: look.names,
-                      },
-                    }}
-                  >
-                    <OffHighlightContext
-                      value={{
-                        highlight: {
-                          badge: look.highlight,
-                          emoji: look.highlight,
-                          icon: look.highlight,
-                        },
-                      }}
-                    >
-                      <MonochromeContext
-                        value={{ monochrome: color !== "multi" }}
-                      >
-                        <OffDisplayContext
-                          value={look.blankOff ? "blank" : "show"}
-                        >
-                          <div className="design-screens" key={version}>
-                            <section aria-labelledby="design-view-title">
-                              <h2 id="design-view-title">
-                                <span>01</span> カレンダー表示
-                              </h2>
-                              <UserStoreContext value={person}>
-                                <DesignCalendar
-                                  initialEditing={false}
-                                  pendingInvite={
-                                    variants.inviteLink === "opened"
-                                  }
-                                  variants={variants}
-                                />
-                              </UserStoreContext>
-                              <p className="design-caption">
-                                ひと月の予定と、お休みをひと目で。
-                              </p>
-                            </section>
-                            <section aria-labelledby="design-edit-title">
-                              <h2 id="design-edit-title">
-                                <span>02</span> シフト入力
-                              </h2>
-                              <UserStoreContext value={person}>
-                                <DesignCalendar
-                                  initialEditing
-                                  variants={variants}
-                                />
-                              </UserStoreContext>
-                              <p className="design-caption">
-                                シフトを押すと翌日へ。日付をタップして修正もできます。
-                              </p>
-                            </section>
-                            <PatternStudy
-                              caption="2026年8月。8パターンを4列×2段で比較。"
-                              count={8}
-                              id="design-six-weeks-title"
-                              month={7}
-                              number="03"
-                              title="6段の月 × 8パターン"
-                              variants={variants}
-                            />
-                            <section aria-labelledby="design-onboarding-title">
-                              <h2 id="design-onboarding-title">
-                                <span>04</span> はじめての設定
-                              </h2>
-                              <DesignOnboarding variants={variants} />
-                              <p className="design-caption">
-                                はじめるか、ログインしてデータを戻すかを選びます。途中で招待リンクを開いていたら、カレンダーができたところで参加を聞きます。
-                              </p>
-                            </section>
-                            <section aria-labelledby="design-app-icon-title">
-                              <h2 id="design-app-icon-title">
-                                <span>05</span> アプリアイコン
-                              </h2>
-                              <DesignAppIcon />
-                              <p className="design-caption">
-                                「ポチ」カルのプードル。色を選ぶと、小さいサイズとホーム画面での見え方が変わります。ダークのホーム画面では、iOSのダークアイコンとして表示します。
-                              </p>
-                            </section>
-                          </div>
-                        </OffDisplayContext>
-                      </MonochromeContext>
-                    </OffHighlightContext>
-                  </CellNamesContext>
-                </ShiftMarkStyleContext>
-              </IconWeightContext>
-            </ThemeContext>
-          </ToneContext>
-        </ColorSchemeContext>
-      </WeekSettingsContext>
-      <p className="design-footnote">
-        実際にタップして試せます。01・02は連動、03は個別に操作できます。
-        <br />
-        全画面を高さ844pxに固定。架空のサンプルで、再読み込みすると元に戻ります。
-      </p>
+      <DesignProviders>
+        <div className="design-screens">
+          <PatternStudy />
+          <section aria-labelledby="design-app-icon-title">
+            <h2 id="design-app-icon-title">
+              <span>02</span> アプリアイコン
+            </h2>
+            <DesignAppIcon />
+            <p className="design-caption">
+              「ポチ」カルのプードル。色を選ぶと、小さいサイズとホーム画面での見え方が変わります。
+            </p>
+          </section>
+        </div>
+      </DesignProviders>
     </main>
   );
 }
 
-function PatternStudy({
-  count,
-  month = 8,
-  id,
-  number,
-  title,
-  caption,
-  variants,
-}: {
-  count: 8;
-  month?: number;
-  id: string;
-  number: string;
-  title: string;
-  caption: string;
-  variants: DesignVariants;
-}) {
-  // Someone else, with eight patterns of their own.
+// Someone with eight patterns, on a month six weeks tall.
+function PatternStudy() {
+  const count = 8;
+  const month = 7;
   const [person] = useState(() =>
     createUserStore({
       patternKeys: patternSets[count],
@@ -295,61 +122,18 @@ function PatternStudy({
     })
   );
   return (
-    <section aria-labelledby={id}>
-      <h2 id={id}>
-        <span>{number}</span>
-        {title}
+    <section aria-labelledby="design-six-weeks-title">
+      <h2 id="design-six-weeks-title">
+        <span>01</span> 6段の月 × 8パターン
       </h2>
       <UserStoreContext value={person}>
         <DesignCalendar
           initialEditing
           initialMonth={month}
-          variants={variants}
+          variants={defaultVariants}
         />
       </UserStoreContext>
-      <p className="design-caption">{caption}</p>
-    </section>
-  );
-}
-
-function VariantPanel({
-  variants,
-  onChange,
-}: {
-  variants: DesignVariants;
-  onChange: <K extends keyof DesignVariants>(
-    key: K,
-    value: DesignVariants[K]
-  ) => void;
-}) {
-  return (
-    <section
-      aria-labelledby="design-variants-title"
-      className="design-variants"
-    >
-      <h2 id="design-variants-title">比べる案</h2>
-      {designVariantKeys.map((key) => {
-        const { label, choices } = designVariantOptions[key];
-        return (
-          <fieldset key={key}>
-            <legend>{label}</legend>
-            <div className="design-segment">
-              {choices.map(({ value, label: choiceLabel }) => (
-                <button
-                  aria-pressed={variants[key] === value}
-                  key={value}
-                  onClick={() => {
-                    onChange(key, value);
-                  }}
-                  type="button"
-                >
-                  {choiceLabel}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-        );
-      })}
+      <p className="design-caption">2026年8月。8パターンを4列×2段で比較。</p>
     </section>
   );
 }
