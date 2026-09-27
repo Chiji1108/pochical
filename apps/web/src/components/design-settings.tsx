@@ -9,22 +9,13 @@ import {
 import { useContext, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
+import { useLook, useSettings } from "../lib/design-settings-store";
 import type { Tone, ColorScheme } from "../lib/design-tokens";
 import { markColors } from "../lib/design-tokens";
 import { toneRoles } from "../lib/tones";
-import {
-  AccountContext,
-  ProviderLogo,
-  providerNames,
-  sampleEmails,
-} from "./design-account";
+import { ProviderLogo, providerNames, sampleEmails } from "./design-account";
 import type { AccountProvider } from "./design-account";
-import {
-  AppIcon,
-  AppIconContext,
-  pickableIcons,
-  useAppIcons,
-} from "./design-app-icon";
+import { AppIcon, pickableIcons, useAppIcons } from "./design-app-icon";
 import {
   addDays,
   DayCell,
@@ -48,11 +39,8 @@ import type { Profile } from "./design-group";
 import { WorkSetupSteps } from "./design-onboarding";
 import { PatternsPage } from "./design-pattern-editor";
 import {
-  AppearanceContext,
-  ColorChoiceContext,
   ColorSchemeContext,
   PreviewSchemeSwitch,
-  SetToneContext,
   ThemeContext,
   ToneContext,
   themeColors,
@@ -61,12 +49,11 @@ import {
   themeStyle,
 } from "./design-theme";
 import type { Appearance, ColorChoice } from "./design-theme";
-import { WeekSettingsContext, useWeek, weekdayNames } from "./design-week";
+import { useWeek, weekdayNames } from "./design-week";
 import type { ColoredDay } from "./design-week";
 import {
   CellNamesContext,
   IconWeightContext,
-  LookSettingsContext,
   ShiftMark,
   ShiftMarkStyleContext,
   lookOf,
@@ -345,7 +332,7 @@ function SettingsTop({
   profile: Profile;
   onOpen: (page: Page) => void;
 }) {
-  const { look } = useContext(LookSettingsContext);
+  const look = useLook();
   const tone = useContext(ToneContext);
   return (
     <>
@@ -507,7 +494,7 @@ function Row({
 }
 
 function AccountRow({ onOpen }: { onOpen: () => void }) {
-  const { account } = useContext(AccountContext);
+  const account = useSettings((state) => state.account);
   return (
     <Row
       label="アカウント"
@@ -533,7 +520,8 @@ const signInMilliseconds = 900;
 // signed in and the ways out. Signing in is optional, so the page never
 // pushes it beyond saying what it keeps safe.
 function AccountPage({ onBack }: { onBack: () => void }) {
-  const { account, setAccount } = useContext(AccountContext);
+  const account = useSettings((state) => state.account);
+  const setAccount = useSettings((state) => state.setAccount);
   const [busy, setBusy] = useState<AccountProvider>();
   const [confirm, setConfirm] = useState<"signOut" | "delete">();
   const signIn = (provider: AccountProvider) => {
@@ -542,7 +530,7 @@ function AccountPage({ onBack }: { onBack: () => void }) {
     }
     setBusy(provider);
     setTimeout(() => {
-      setAccount?.({ email: sampleEmails[provider], provider });
+      setAccount({ email: sampleEmails[provider], provider });
       setBusy(undefined);
     }, signInMilliseconds);
   };
@@ -637,7 +625,7 @@ function AccountPage({ onBack }: { onBack: () => void }) {
           }}
           onConfirm={() => {
             setConfirm(undefined);
-            setAccount?.(undefined);
+            setAccount(undefined);
           }}
           title="ログアウトしますか？"
         />
@@ -651,7 +639,7 @@ function AccountPage({ onBack }: { onBack: () => void }) {
           }}
           onConfirm={() => {
             setConfirm(undefined);
-            setAccount?.(undefined);
+            setAccount(undefined);
           }}
           title="アカウントを削除しますか？"
         />
@@ -1375,7 +1363,8 @@ function StylePreview({ preview }: { preview: StylePreviewData }) {
 
 // The switches for the look in use, as one list.
 function ShapeChoices() {
-  const { look, updateLook } = useContext(LookSettingsContext);
+  const look = useLook();
+  const setShape = useSettings((state) => state.setShape);
   const current = shapeOf(look);
   return (
     <fieldset className="st-mark-segment">
@@ -1386,7 +1375,7 @@ function ShapeChoices() {
           key={option.name}
           onClick={() => {
             // Only icons carry their fill; for the others it is left alone.
-            updateLook?.(
+            setShape(
               option.style === "icon"
                 ? { fill: option.fill, style: option.style }
                 : { style: option.style }
@@ -1414,27 +1403,37 @@ const offLooks = [
   { blankOff: true, highlight: false, id: "blank", name: "空白" },
 ] as const;
 
+// How days off show, as the two settings that carry it.
+export type OffLook = { highlight: boolean; blankOff: boolean };
+
+function offLookId(value: OffLook) {
+  if (value.blankOff) {
+    return "blank";
+  }
+  return value.highlight ? "highlight" : "mark";
+}
+
 // Tabs like トーン's, each drawing a day off as it would look. 空白 leaves
 // days off empty on the month; they come back faint while entering and in
-// the week view.
-function OffLookChoices({ current }: { current: ShiftMarkStyle }) {
-  const { look, updateLook } = useContext(LookSettingsContext);
-  const highlightOn = useOffHighlight(current);
-  let offLook: (typeof offLooks)[number]["id"] = "mark";
-  if (look.blankOff) {
-    offLook = "blank";
-  } else if (highlightOn) {
-    offLook = "highlight";
-  }
+// the week view. Used by the style page and by the saved image, each with
+// its own values.
+export function OffLookTabs({
+  value,
+  onChange,
+}: {
+  value: OffLook;
+  onChange: (value: OffLook) => void;
+}) {
+  const picked = offLookId(value);
   return (
     <fieldset className="st-mark-segment st-off-looks">
       <legend className="dc-sr-only">休みの見せ方</legend>
       {offLooks.map((option) => (
         <button
-          aria-pressed={offLook === option.id}
+          aria-pressed={picked === option.id}
           key={option.id}
           onClick={() => {
-            updateLook?.({
+            onChange({
               blankOff: option.blankOff,
               highlight: option.highlight,
             });
@@ -1457,17 +1456,22 @@ function OffLookChoices({ current }: { current: ShiftMarkStyle }) {
 
 // Tabs like 休みの見せ方's, each drawing a working day with or without its
 // name under the mark.
-function NamesChoices({ current }: { current: ShiftMarkStyle }) {
-  const { names, setNames } = useContext(CellNamesContext);
+export function NameTabs({
+  value,
+  onChange,
+}: {
+  value: boolean;
+  onChange: (value: boolean) => void;
+}) {
   return (
     <fieldset className="st-mark-segment st-off-looks">
       <legend className="dc-sr-only">シフト名</legend>
       {[false, true].map((withName) => (
         <button
-          aria-pressed={names[current] === withName}
+          aria-pressed={value === withName}
           key={String(withName)}
           onClick={() => {
-            setNames?.({ ...names, [current]: withName });
+            onChange(withName);
           }}
           type="button"
         >
@@ -1482,6 +1486,31 @@ function NamesChoices({ current }: { current: ShiftMarkStyle }) {
         </button>
       ))}
     </fieldset>
+  );
+}
+
+function OffLookChoices({ current }: { current: ShiftMarkStyle }) {
+  const look = useLook();
+  const setCalendarOptions = useSettings((state) => state.setCalendarOptions);
+  const highlight = useOffHighlight(current);
+  return (
+    <OffLookTabs
+      onChange={setCalendarOptions}
+      value={{ blankOff: look.blankOff, highlight }}
+    />
+  );
+}
+
+function NamesChoices({ current }: { current: ShiftMarkStyle }) {
+  const { names } = useContext(CellNamesContext);
+  const setCalendarOptions = useSettings((state) => state.setCalendarOptions);
+  return (
+    <NameTabs
+      onChange={(withName) => {
+        setCalendarOptions({ names: withName });
+      }}
+      value={names[current]}
+    />
   );
 }
 
@@ -1536,7 +1565,7 @@ function toneName(tone: Tone) {
 // the current theme in it.
 function ToneChoices() {
   const tone = useContext(ToneContext);
-  const setTone = useContext(SetToneContext);
+  const setTone = useSettings((state) => state.setTone);
   const { theme } = useContext(ThemeContext);
   const scheme = useContext(ColorSchemeContext);
   return (
@@ -1546,7 +1575,9 @@ function ToneChoices() {
         <button
           aria-pressed={tone === option.tone}
           key={option.tone}
-          onClick={() => setTone?.(option.tone)}
+          onClick={() => {
+            setTone(option.tone);
+          }}
           type="button"
         >
           <span
@@ -1578,7 +1609,7 @@ function appearanceName(appearance: Appearance) {
 
 // 外観 reads like the other rows: the current choice, opening a list.
 function AppIconRow({ onOpen }: { onOpen: () => void }) {
-  const { icon } = useContext(AppIconContext);
+  const icon = useSettings((state) => state.device.appIcon);
   const icons = useAppIcons();
   const picked = pickableIcons.find((option) => option.id === icon);
   return (
@@ -1598,7 +1629,8 @@ function AppIconRow({ onOpen }: { onOpen: () => void }) {
 // The home screen icon. iOS confirms every change itself, so the page
 // shows its alert; on a dark home screen each icon turns to the dark one.
 function AppIconPage({ onBack }: { onBack: () => void }) {
-  const { icon, setIcon } = useContext(AppIconContext);
+  const icon = useSettings((state) => state.device.appIcon);
+  const setIcon = useSettings((state) => state.setAppIcon);
   const icons = useAppIcons();
   const [alerted, setAlerted] = useState(false);
   return (
@@ -1612,7 +1644,7 @@ function AppIconPage({ onBack }: { onBack: () => void }) {
             key={option.id}
             onClick={() => {
               if (icon !== option.id) {
-                setIcon?.(option.id);
+                setIcon(option.id);
                 setAlerted(true);
               }
             }}
@@ -1676,7 +1708,7 @@ function SystemAlert({
 }
 
 function AppearanceRow({ onOpen }: { onOpen: () => void }) {
-  const { appearance } = useContext(AppearanceContext);
+  const appearance = useSettings((state) => state.device.appearance);
   return (
     <Row label="外観" onOpen={onOpen} value={appearanceName(appearance)} />
   );
@@ -1684,7 +1716,8 @@ function AppearanceRow({ onOpen }: { onOpen: () => void }) {
 
 // Follow the device by default, or keep light or dark.
 function AppearancePage({ onBack }: { onBack: () => void }) {
-  const { appearance, setAppearance } = useContext(AppearanceContext);
+  const appearance = useSettings((state) => state.device.appearance);
+  const setAppearance = useSettings((state) => state.setAppearance);
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="外観" />
@@ -1695,7 +1728,9 @@ function AppearancePage({ onBack }: { onBack: () => void }) {
             aria-pressed={appearance === option.appearance}
             className="st-row"
             key={option.appearance}
-            onClick={() => setAppearance?.(option.appearance)}
+            onClick={() => {
+              setAppearance(option.appearance);
+            }}
             type="button"
           >
             <span className="st-row-label">{option.name}</span>
@@ -1725,7 +1760,7 @@ const coloredDayShortNames: Record<ColoredDay, string> = {
 };
 
 function WeekRow({ onOpen }: { onOpen: () => void }) {
-  const { week } = useContext(WeekSettingsContext);
+  const week = useSettings((state) => state.device.week);
   const colored = coloredDayOptions
     .filter((option) => week.colored[option.day])
     .map((option) => coloredDayShortNames[option.day])
@@ -1748,7 +1783,8 @@ function WeekPage({
   preview: StylePreviewData;
   onBack: () => void;
 }) {
-  const { week, setWeek } = useContext(WeekSettingsContext);
+  const week = useSettings((state) => state.device.week);
+  const setWeek = useSettings((state) => state.setWeek);
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="曜日と祝日" />
@@ -1763,7 +1799,9 @@ function WeekPage({
               aria-label={`${name}曜`}
               aria-pressed={week.weekStart === day}
               key={name}
-              onClick={() => setWeek?.({ ...week, weekStart: day })}
+              onClick={() => {
+                setWeek({ ...week, weekStart: day });
+              }}
               type="button"
             >
               {name}
@@ -1778,12 +1816,12 @@ function WeekPage({
               checked={week.colored[option.day]}
               key={option.day}
               label={option.name}
-              onChange={(checked) =>
-                setWeek?.({
+              onChange={(checked) => {
+                setWeek({
                   ...week,
                   colored: { ...week.colored, [option.day]: checked },
-                })
-              }
+                });
+              }}
               swatch={option.color}
             />
           ))}
@@ -1852,7 +1890,8 @@ const colorChoices: { color: ColorChoice; name: string }[] = [
 // color draws every shift in that one color. Seven choices, because the
 // other mixes (another theme with many shift colors) clash.
 function ColorChoices() {
-  const { color, setColor } = useContext(ColorChoiceContext);
+  const color = useSettings((state) => state.groupLook.color);
+  const setColor = useSettings((state) => state.setColor);
   return (
     <fieldset className="st-theme-grid st-theme-row">
       <legend className="dc-sr-only">カラー</legend>
@@ -1861,7 +1900,9 @@ function ColorChoices() {
           aria-label={option.name}
           aria-pressed={color === option.color}
           key={option.color}
-          onClick={() => setColor?.(option.color)}
+          onClick={() => {
+            setColor(option.color);
+          }}
           type="button"
         >
           <ColorSwatch className="st-theme-dot" color={option.color} />

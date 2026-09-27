@@ -1,4 +1,4 @@
-import { createContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 // The app icon from the poodle drawing: black lines on white. The outside
 // of the dog is found by flooding in from the edges, so the ground can take
@@ -326,12 +326,6 @@ export function useAppIcons() {
 
 // The icons someone can pick in settings, ダーク among them.
 export const pickableIcons = iconColorOptions;
-
-// The picked icon's id, from the アプリアイコン settings.
-export const AppIconContext = createContext<{
-  icon: string;
-  setIcon?: (icon: string) => void;
-}>({ icon: "moss" });
 
 // An icon as the system shows it: cut to a rounded square.
 export function AppIcon({ src, size }: { src?: string; size: number }) {

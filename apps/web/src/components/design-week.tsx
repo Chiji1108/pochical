@@ -19,7 +19,6 @@ export const defaultWeekSettings: WeekSettings = {
 
 export const WeekSettingsContext = createContext<{
   week: WeekSettings;
-  setWeek?: (week: WeekSettings) => void;
 }>({ week: defaultWeekSettings });
 
 export const weekdayNames = ["日", "月", "火", "水", "木", "金", "土"] as const;

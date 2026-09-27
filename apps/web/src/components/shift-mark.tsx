@@ -77,7 +77,6 @@ export const defaultCellNames: CellNames = {
 };
 export const CellNamesContext = createContext<{
   names: CellNames;
-  setNames?: (names: CellNames) => void;
 }>({ names: defaultCellNames });
 
 // Whether days off get a tint of their pattern color, per look. Unset means
@@ -102,40 +101,20 @@ export type LookSettings = {
   blankOff: boolean;
 };
 
-// Where each style's switches start. Letters already sit on tinted tiles
-// and are the shift's name, so they start without names and without the
-// days-off highlight behind them.
-export const lookDefaults: Record<ShiftMarkStyle, LookSettings> = {
-  badge: {
-    blankOff: false,
-    fill: true,
-    highlight: false,
-    names: false,
-    style: "badge",
-  },
-  emoji: {
-    blankOff: false,
-    fill: true,
-    highlight: true,
-    names: false,
-    style: "emoji",
-  },
-  icon: {
-    blankOff: false,
-    fill: true,
-    highlight: true,
-    names: false,
-    style: "icon",
-  },
-};
-
 // How days off show on your own month. "blank" leaves them empty while
 // viewing; entering shifts and the week view need to tell a day off from a
 // day not entered yet, so there they come back "faint".
 export type OffDisplay = "show" | "blank" | "faint";
 export const OffDisplayContext = createContext<OffDisplay>("show");
 
-export const baseLook = lookDefaults.icon;
+// A look with every switch where it starts, for the sample members.
+export const baseLook: LookSettings = {
+  blankOff: false,
+  fill: true,
+  highlight: true,
+  names: false,
+  style: "icon",
+};
 
 // Looks the sample members use, by name.
 export const sampleLooks = {
@@ -146,14 +125,8 @@ export const sampleLooks = {
   roster: { ...baseLook, highlight: false, style: "badge" },
 } satisfies Record<string, LookSettings>;
 
-export const LookSettingsContext = createContext<{
-  look: LookSettings;
-  updateLook?: (change: Partial<LookSettings>) => void;
-}>({ look: baseLook });
-
 export const OffHighlightContext = createContext<{
   highlight: OffHighlight;
-  setHighlight?: (highlight: OffHighlight) => void;
 }>({ highlight: defaultOffHighlight });
 
 // Phosphor duotone icons. "letter" draws the symbol inside a thin circle, so

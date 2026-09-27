@@ -1,43 +1,30 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Palette, RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { AccountContext } from "../components/design-account";
-import type { Account } from "../components/design-account";
-import { AppIconContext, DesignAppIcon } from "../components/design-app-icon";
+import { DesignAppIcon } from "../components/design-app-icon";
 import {
   DesignCalendar,
   initialDesignSchedule,
 } from "../components/design-calendar";
 import { DesignOnboarding } from "../components/design-onboarding";
 import {
-  AppearanceContext,
-  ColorChoiceContext,
   ColorSchemeContext,
-  SetToneContext,
   ThemeContext,
   ToneContext,
   themeOfColor,
   themeStyle,
 } from "../components/design-theme";
-import type { Appearance, ColorChoice } from "../components/design-theme";
-import {
-  defaultWeekSettings,
-  WeekSettingsContext,
-} from "../components/design-week";
+import { WeekSettingsContext } from "../components/design-week";
 import {
   CellNamesContext,
   IconWeightContext,
-  LookSettingsContext,
   MonochromeContext,
   OffDisplayContext,
   OffHighlightContext,
   ShiftMarkStyleContext,
-  baseLook,
-  lookDefaults,
 } from "../components/shift-mark";
-import type { LookSettings } from "../components/shift-mark";
-import type { Tone } from "../lib/design-tokens";
+import { useLook, useSettings } from "../lib/design-settings-store";
 import {
   designVariantKeys,
   designVariantOptions,
@@ -81,28 +68,17 @@ function DesignPage() {
   );
   const [version, setVersion] = useState(0);
   const navigate = Route.useNavigate();
-  // Each style keeps its own switches, so going back to a style finds them
-  // as they were left.
-  const [lookStyle, setLookStyle] = useState(baseLook.style);
-  const [looks, setLooks] = useState(lookDefaults);
-  const look = looks[lookStyle];
-  // Changes the given style's switches (the current one if none is given)
-  // and makes it the current style.
-  const updateLook = (change: Partial<LookSettings>) => {
-    const target = change.style ?? lookStyle;
-    setLookStyle(target);
-    setLooks((previous) => ({
-      ...previous,
-      [target]: { ...previous[target], ...change },
-    }));
-  };
-  const [color, setColor] = useState<ColorChoice>("multi");
+  // Settings live in a store sorted by where each would be kept (see
+  // design-settings-store.ts); the screens read them through contexts that
+  // parts of the page override, like a member's own colors.
+  const look = useLook();
+  const color = useSettings((state) => state.groupLook.color);
   const theme = themeOfColor(color);
-  const [tone, setTone] = useState<Tone>("deep");
-  const [appearance, setAppearance] = useState<Appearance>("system");
-  const [week, setWeek] = useState(defaultWeekSettings);
-  const [account, setAccount] = useState<Account>();
-  const [appIcon, setAppIcon] = useState("moss");
+  const { tone, appearance, week } = useSettings((state) => state.device);
+  // Saved device settings load once the page has hydrated.
+  useEffect(() => {
+    void useSettings.persist.rehydrate();
+  }, []);
   // 外観 in settings follows this computer's own light or dark setting
   // unless it keeps one.
   const deviceScheme = useDeviceScheme();
@@ -161,135 +137,104 @@ function DesignPage() {
         }}
         variants={variants}
       />
-      <AppIconContext value={{ icon: appIcon, setIcon: setAppIcon }}>
-        <AccountContext value={{ account, setAccount }}>
-          <WeekSettingsContext value={{ setWeek, week }}>
-            <AppearanceContext value={{ appearance, setAppearance }}>
-              <ColorSchemeContext value={scheme}>
-                <ToneContext value={tone}>
-                  <SetToneContext value={setTone}>
-                    <ColorChoiceContext value={{ color, setColor }}>
-                      <ThemeContext value={{ theme }}>
-                        <LookSettingsContext value={{ look, updateLook }}>
-                          <IconWeightContext
-                            value={look.fill ? "duotone" : "regular"}
-                          >
-                            <ShiftMarkStyleContext value={look.style}>
-                              <CellNamesContext
-                                value={{
-                                  names: {
-                                    badge: look.names,
-                                    emoji: look.names,
-                                    icon: look.names,
-                                  },
-                                  setNames: (names) => {
-                                    updateLook({ names: names[look.style] });
-                                  },
-                                }}
-                              >
-                                <OffHighlightContext
-                                  value={{
-                                    highlight: {
-                                      badge: look.highlight,
-                                      emoji: look.highlight,
-                                      icon: look.highlight,
-                                    },
-                                    setHighlight: (highlight) => {
-                                      updateLook({
-                                        highlight:
-                                          highlight[look.style] ??
-                                          look.highlight,
-                                      });
-                                    },
-                                  }}
-                                >
-                                  <MonochromeContext
-                                    value={{ monochrome: color !== "multi" }}
-                                  >
-                                    <OffDisplayContext
-                                      value={look.blankOff ? "blank" : "show"}
-                                    >
-                                      <div
-                                        className="design-screens"
-                                        key={version}
-                                      >
-                                        <section aria-labelledby="design-view-title">
-                                          <h2 id="design-view-title">
-                                            <span>01</span> カレンダー表示
-                                          </h2>
-                                          <DesignCalendar
-                                            initialEditing={false}
-                                            onChange={setSchedule}
-                                            pendingInvite={
-                                              variants.inviteLink === "opened"
-                                            }
-                                            schedule={schedule}
-                                            variants={variants}
-                                          />
-                                          <p className="design-caption">
-                                            ひと月の予定と、お休みをひと目で。
-                                          </p>
-                                        </section>
-                                        <section aria-labelledby="design-edit-title">
-                                          <h2 id="design-edit-title">
-                                            <span>02</span> シフト入力
-                                          </h2>
-                                          <DesignCalendar
-                                            initialEditing
-                                            onChange={setSchedule}
-                                            schedule={schedule}
-                                            variants={variants}
-                                          />
-                                          <p className="design-caption">
-                                            シフトを押すと翌日へ。日付をタップして修正もできます。
-                                          </p>
-                                        </section>
-                                        <PatternStudy
-                                          caption="2026年8月。8パターンを4列×2段で比較。"
-                                          count={8}
-                                          id="design-six-weeks-title"
-                                          month={7}
-                                          number="03"
-                                          title="6段の月 × 8パターン"
-                                          variants={variants}
-                                        />
-                                        <section aria-labelledby="design-onboarding-title">
-                                          <h2 id="design-onboarding-title">
-                                            <span>04</span> はじめての設定
-                                          </h2>
-                                          <DesignOnboarding
-                                            variants={variants}
-                                          />
-                                          <p className="design-caption">
-                                            はじめるか、ログインしてデータを戻すかを選びます。途中で招待リンクを開いていたら、カレンダーができたところで参加を聞きます。
-                                          </p>
-                                        </section>
-                                        <section aria-labelledby="design-app-icon-title">
-                                          <h2 id="design-app-icon-title">
-                                            <span>05</span> アプリアイコン
-                                          </h2>
-                                          <DesignAppIcon />
-                                          <p className="design-caption">
-                                            「ポチ」カルのプードル。色を選ぶと、小さいサイズとホーム画面での見え方が変わります。ダークのホーム画面では、iOSのダークアイコンとして表示します。
-                                          </p>
-                                        </section>
-                                      </div>
-                                    </OffDisplayContext>
-                                  </MonochromeContext>
-                                </OffHighlightContext>
-                              </CellNamesContext>
-                            </ShiftMarkStyleContext>
-                          </IconWeightContext>
-                        </LookSettingsContext>
-                      </ThemeContext>
-                    </ColorChoiceContext>
-                  </SetToneContext>
-                </ToneContext>
-              </ColorSchemeContext>
-            </AppearanceContext>
-          </WeekSettingsContext>
-        </AccountContext>
-      </AppIconContext>
+      <WeekSettingsContext value={{ week }}>
+        <ColorSchemeContext value={scheme}>
+          <ToneContext value={tone}>
+            <ThemeContext value={{ theme }}>
+              <IconWeightContext value={look.fill ? "duotone" : "regular"}>
+                <ShiftMarkStyleContext value={look.style}>
+                  <CellNamesContext
+                    value={{
+                      names: {
+                        badge: look.names,
+                        emoji: look.names,
+                        icon: look.names,
+                      },
+                    }}
+                  >
+                    <OffHighlightContext
+                      value={{
+                        highlight: {
+                          badge: look.highlight,
+                          emoji: look.highlight,
+                          icon: look.highlight,
+                        },
+                      }}
+                    >
+                      <MonochromeContext
+                        value={{ monochrome: color !== "multi" }}
+                      >
+                        <OffDisplayContext
+                          value={look.blankOff ? "blank" : "show"}
+                        >
+                          <div className="design-screens" key={version}>
+                            <section aria-labelledby="design-view-title">
+                              <h2 id="design-view-title">
+                                <span>01</span> カレンダー表示
+                              </h2>
+                              <DesignCalendar
+                                initialEditing={false}
+                                onChange={setSchedule}
+                                pendingInvite={variants.inviteLink === "opened"}
+                                schedule={schedule}
+                                variants={variants}
+                              />
+                              <p className="design-caption">
+                                ひと月の予定と、お休みをひと目で。
+                              </p>
+                            </section>
+                            <section aria-labelledby="design-edit-title">
+                              <h2 id="design-edit-title">
+                                <span>02</span> シフト入力
+                              </h2>
+                              <DesignCalendar
+                                initialEditing
+                                onChange={setSchedule}
+                                schedule={schedule}
+                                variants={variants}
+                              />
+                              <p className="design-caption">
+                                シフトを押すと翌日へ。日付をタップして修正もできます。
+                              </p>
+                            </section>
+                            <PatternStudy
+                              caption="2026年8月。8パターンを4列×2段で比較。"
+                              count={8}
+                              id="design-six-weeks-title"
+                              month={7}
+                              number="03"
+                              title="6段の月 × 8パターン"
+                              variants={variants}
+                            />
+                            <section aria-labelledby="design-onboarding-title">
+                              <h2 id="design-onboarding-title">
+                                <span>04</span> はじめての設定
+                              </h2>
+                              <DesignOnboarding variants={variants} />
+                              <p className="design-caption">
+                                はじめるか、ログインしてデータを戻すかを選びます。途中で招待リンクを開いていたら、カレンダーができたところで参加を聞きます。
+                              </p>
+                            </section>
+                            <section aria-labelledby="design-app-icon-title">
+                              <h2 id="design-app-icon-title">
+                                <span>05</span> アプリアイコン
+                              </h2>
+                              <DesignAppIcon />
+                              <p className="design-caption">
+                                「ポチ」カルのプードル。色を選ぶと、小さいサイズとホーム画面での見え方が変わります。ダークのホーム画面では、iOSのダークアイコンとして表示します。
+                              </p>
+                            </section>
+                          </div>
+                        </OffDisplayContext>
+                      </MonochromeContext>
+                    </OffHighlightContext>
+                  </CellNamesContext>
+                </ShiftMarkStyleContext>
+              </IconWeightContext>
+            </ThemeContext>
+          </ToneContext>
+        </ColorSchemeContext>
+      </WeekSettingsContext>
       <p className="design-footnote">
         実際にタップして試せます。01・02は連動、03は個別に操作できます。
         <br />

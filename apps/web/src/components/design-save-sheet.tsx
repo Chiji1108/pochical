@@ -13,6 +13,7 @@ import type { CSSProperties, RefObject } from "react";
 import type { ColorScheme } from "../lib/design-tokens";
 import { DayCell, dateKey } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
+import { NameTabs, OffLookTabs } from "./design-settings";
 import {
   ColorSchemeContext,
   PreviewSchemeSwitch,
@@ -234,10 +235,14 @@ export function SaveSheet({
 export type ImageOptions = {
   names: boolean;
   highlight: boolean;
+  // Days off left empty, as on the style page; off by default, since the
+  // people it goes to cannot tell an empty day from one not entered.
+  blankOff: boolean;
   scheme?: ColorScheme;
 };
 
 export const defaultImageOptions: ImageOptions = {
+  blankOff: false,
   highlight: true,
   names: true,
 };
@@ -308,7 +313,7 @@ export function ImagePreviewPage({
             <div className="st-preview-wrap">
               <ColorSchemeContext value={shown}>
                 {/* A picture to share shows every day as it is. */}
-                <OffDisplayContext value="show">
+                <OffDisplayContext value={options.blankOff ? "blank" : "show"}>
                   <figure
                     aria-label={`${title}の画像`}
                     className="dc-image"
@@ -352,34 +357,26 @@ export function ImagePreviewPage({
             </div>
           </OffHighlightContext>
         </CellNamesContext>
-        <div className="st-list">
-          <label className="st-row">
-            <span className="st-row-label">シフト名を表示</span>
-            <input
-              aria-checked={options.names}
-              checked={options.names}
-              className="pe-toggle"
-              onChange={(event) => {
-                onOptions({ ...options, names: event.target.checked });
-              }}
-              role="switch"
-              type="checkbox"
-            />
-          </label>
-          <label className="st-row">
-            <span className="st-row-label">休みを目立たせる</span>
-            <input
-              aria-checked={options.highlight}
-              checked={options.highlight}
-              className="pe-toggle"
-              onChange={(event) => {
-                onOptions({ ...options, highlight: event.target.checked });
-              }}
-              role="switch"
-              type="checkbox"
-            />
-          </label>
-        </div>
+        {/* The same tabs as the style page, with the picture's own values:
+            it goes to people who do not know the marks, so names start on. */}
+        <section className="st-section">
+          <h4>休みの見せ方</h4>
+          <OffLookTabs
+            onChange={(value) => {
+              onOptions({ ...options, ...value });
+            }}
+            value={options}
+          />
+        </section>
+        <section className="st-section">
+          <h4>シフト名</h4>
+          <NameTabs
+            onChange={(names) => {
+              onOptions({ ...options, names });
+            }}
+            value={options.names}
+          />
+        </section>
         <p className="st-note">
           画像にだけ使う見た目です。アプリのスタイルは変わりません。
         </p>

@@ -1,16 +1,9 @@
-import { createContext } from "react";
-
 // Signing in with Apple or Google, so the same data follows a new phone or
 // a second device. The prototype only pretends: nothing leaves the page.
 
 export type AccountProvider = "apple" | "google";
 
 export type Account = { provider: AccountProvider; email: string };
-
-export const AccountContext = createContext<{
-  account?: Account;
-  setAccount?: (account: Account | undefined) => void;
-}>({});
 
 export const providerNames: Record<AccountProvider, string> = {
   apple: "Apple",

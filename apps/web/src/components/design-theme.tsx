@@ -179,10 +179,6 @@ export function themeOf(id: ThemeId): Theme {
 // color with the moss theme it was tuned for; any single theme color also
 // draws every mark in that color. Only the viewer's screen changes.
 export type ColorChoice = "multi" | ThemeId;
-export const ColorChoiceContext = createContext<{
-  color: ColorChoice;
-  setColor?: (color: ColorChoice) => void;
-}>({ color: "multi" });
 
 export function themeOfColor(color: ColorChoice): ThemeId {
   return color === "multi" ? "moss" : color;
@@ -228,16 +224,9 @@ export function themeColors(
 // The viewer's tone (トーン), picked in the style settings. It stays
 // the viewer's even where another member's theme color is drawn.
 export const ToneContext = createContext<Tone>("deep");
-export const SetToneContext = createContext<((tone: Tone) => void) | undefined>(
-  undefined
-);
 
 // 外観 in settings: follow the device, or force light or dark.
 export type Appearance = "system" | ColorScheme;
-export const AppearanceContext = createContext<{
-  appearance: Appearance;
-  setAppearance?: (appearance: Appearance) => void;
-}>({ appearance: "system" });
 
 // The neutral grays' base chroma suits moss; themes with more (or less)
 // saturated accents tint the grays proportionally more (or less).
