@@ -43,6 +43,15 @@ export const designVariantOptions = {
     ],
     label: "一緒に働く人",
   },
+  scanResult: {
+    choices: [
+      { label: "招待", value: "invite" },
+      { label: "ほかのQR", value: "other" },
+      { label: "使えない招待", value: "expired" },
+      { label: "QRなし", value: "none" },
+    ],
+    label: "読み取るQR",
+  },
   scheduleSample: {
     choices: [
       { label: "入力済み", value: "filled" },

@@ -4,6 +4,7 @@ import {
   Camera,
   ChevronLeft,
   ChevronRight,
+  CircleAlert,
   Copy,
   Download,
   ImageIcon,
@@ -645,12 +646,15 @@ export function DesignGroup({
   profile,
   onTab,
   initialGroupId = "family",
+  scanResult = "invite",
 }: {
   schedule: Schedule;
   patternKeys: Shift[];
   profile: Profile;
   // The group to open on, like one just joined from a link.
   initialGroupId?: string;
+  // What the QR page finds, as 比べる案 sets it.
+  scanResult?: ScanResult;
 
   onTab: (tab: Tab) => void;
 }) {
@@ -699,6 +703,7 @@ export function DesignGroup({
       onClose={() => {
         setPage({ name: "hub" });
       }}
+      result={scanResult}
       onRead={() => {
         setPage({ name: "hub" });
         const invited = sampleInvite().group;
@@ -1028,12 +1033,27 @@ export function DesignGroup({
 // Reading a group's QR code, as the camera shows it. The prototype has no
 // camera: pressing the frame, or 写真から読み取る, reads the sample code.
 function ScanPage({
+  result,
   onClose,
   onRead,
 }: {
+  result: ScanResult;
   onClose: () => void;
   onRead: () => void;
 }) {
+  const [problem, setProblem] = useState<string>();
+  const read = (from: "camera" | "photo") => {
+    if (result === "invite") {
+      onRead();
+      return;
+    }
+    // The camera only reports codes it finds; with none in view it keeps
+    // looking, as camera apps do.
+    if (result === "none" && from === "camera") {
+      return;
+    }
+    setProblem(scanProblems[result]);
+  };
   return (
     <div className={cx("dc-content st-screen", scan.root)}>
       <header className={scan.header}>
@@ -1047,11 +1067,19 @@ function ScanPage({
         </button>
         <h3 className={scan.title}>QRコードで参加</h3>
       </header>
+      {problem && (
+        <p className={scan.problem} role="alert">
+          <CircleAlert aria-hidden="true" size={18} />
+          {problem}
+        </p>
+      )}
       <div className={scan.body}>
         <button
           aria-label="QRコードを読み取る（デモ）"
           className={scan.frame}
-          onClick={onRead}
+          onClick={() => {
+            read("camera");
+          }}
           type="button"
         >
           <span aria-hidden="true" className={scan.corners} />
@@ -1061,13 +1089,30 @@ function ScanPage({
         </p>
         <small className={scan.demo}>デモでは枠を押すと読み取れます</small>
       </div>
-      <button className={scan.library} onClick={onRead} type="button">
+      <button
+        className={scan.library}
+        onClick={() => {
+          read("photo");
+        }}
+        type="button"
+      >
         <ImageIcon aria-hidden="true" size={18} />
         写真から読み取る
       </button>
     </div>
   );
 }
+
+type ScanResult = "invite" | "other" | "expired" | "none";
+
+// What the QR page says when what it read is not an invitation it can use.
+const scanProblems: Record<Exclude<ScanResult, "invite">, string> = {
+  expired:
+    "この招待は使えなくなっています。招待した人に、新しいQRコードを見せてもらってください。",
+  none: "写真にQRコードが見つかりませんでした。QRコード全体が写っている写真を選んでください。",
+  other:
+    "ポチカルの招待QRコードではありません。グループの「メンバーを招待」に出るQRコードを読み取ってください。",
+};
 
 const scanCorner = "3px solid white";
 
@@ -1159,6 +1204,18 @@ const scan = {
     gap: "8px",
     marginBottom: "12px",
     padding: "12px 20px",
+  }),
+  problem: css({
+    "& svg": { color: "#ffd60a", flexShrink: 0, marginTop: "1px" },
+    alignItems: "flex-start",
+    bg: "rgba(255, 255, 255, 0.14)",
+    borderRadius: "14px",
+    display: "flex",
+    fontSize: "13px",
+    gap: "10px",
+    lineHeight: 1.5,
+    margin: "16px 0 0",
+    padding: "12px 14px",
   }),
   root: css({ bg: "black", color: "white" }),
   title: css({ fontSize: "17px", fontWeight: 600, margin: 0 }),
