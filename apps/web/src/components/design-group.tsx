@@ -8,6 +8,7 @@ import {
   Download,
   ImageIcon,
   Info,
+  MessageCircle,
   MessagesSquare,
   Plus,
   QrCode,
@@ -506,6 +507,7 @@ export const sampleChats: Record<string, Chat> = {
     ],
     unread: 0,
   },
+
   "friends:group": {
     messages: [
       {
@@ -553,7 +555,7 @@ export const sampleChats: Record<string, Chat> = {
         when: "月曜",
       },
     ],
-    unread: 0,
+    unread: 1,
   },
 };
 
@@ -572,7 +574,8 @@ type Page =
   | { name: "hub" }
   // `from` is the chat that opened it, to go back there.
   | { name: "shifts"; month?: Date; day?: Date; from?: string }
-  | { name: "chat"; chatId: string }
+  // `from` is the chat whose member picture opened it, to go back there.
+  | { name: "chat"; chatId: string; from?: string }
   | { name: "invite" }
   | { name: "new" }
   | { name: "settings" };
@@ -618,6 +621,7 @@ export function DesignGroup({
   schedule: Schedule;
   patternKeys: Shift[];
   profile: Profile;
+
   onTab: (tab: Tab) => void;
 }) {
   const groups = useUser((state) => state.groups);
@@ -628,6 +632,9 @@ export function DesignGroup({
   // The table layout each group was last seen in.
   const [layouts, setLayouts] = useState<Record<string, Layout>>({});
   const [page, setPage] = useState<Page>({ name: "hub" });
+
+  // The member whose profile sheet is open.
+  const [profileOf, setProfileOf] = useState<Member>();
   const meIn = (id: string) => {
     const found = groups.find((item) => item.id === id);
     const shown = found ? profileIn(found, profile) : profile;
@@ -653,6 +660,33 @@ export function DesignGroup({
   const group: Group = { ...summary, members: membersOf(summary.id) };
   const chatOf = (id: string, chatId: string): Chat =>
     chats[chatKey(id, chatId)] ?? { messages: [], unread: 0 };
+  const openChat = (chatId: string, from?: string) => {
+    setProfileOf(undefined);
+    setChats({
+      ...chats,
+      [chatKey(group.id, chatId)]: { ...chatOf(group.id, chatId), unread: 0 },
+    });
+    setPage({ chatId, from, name: "chat" });
+  };
+  // Tapping a member opens their profile, where a one-to-one chat starts.
+  const onMember = (member: Member) => {
+    if (!member.me) {
+      setProfileOf(member);
+    }
+  };
+  const memberSheet = (
+    <MemberSheet
+      group={group}
+      member={profileOf}
+      onClose={() => {
+        setProfileOf(undefined);
+      }}
+      onMessage={(member) => {
+        openChat(member.id, page.name === "chat" ? page.chatId : undefined);
+      }}
+    />
+  );
+
   const unreadOf = (id: string) =>
     Object.entries(chats)
       .filter(([key]) => key.startsWith(`${id}:`))
@@ -661,31 +695,38 @@ export function DesignGroup({
   if (page.name === "chat") {
     const key = chatKey(group.id, page.chatId);
     return (
-      <ChatPage
-        chat={chatOf(group.id, page.chatId)}
-        group={group}
-        onBack={() => {
-          setPage({ name: "hub" });
-        }}
-        onChange={(messages) => {
-          setChats({ ...chats, [key]: { messages, unread: 0 } });
-        }}
-        onOpenDay={(date) => {
-          setPage({
-            from: page.chatId,
-            month: new Date(date.getFullYear(), date.getMonth(), 1),
-            name: "shifts",
-          });
-        }}
-        people={
-          page.chatId === groupChat
-            ? group.members
-            : group.members.filter(
-                (member) => member.me || member.id === page.chatId
-              )
-        }
-        title={chatTitle(group, page.chatId)}
-      />
+      <>
+        <ChatPage
+          backLabel={page.from ? chatTitle(group, page.from) : group.name}
+          chat={chatOf(group.id, page.chatId)}
+          group={group}
+          onMember={onMember}
+          onBack={() => {
+            setPage(
+              page.from ? { chatId: page.from, name: "chat" } : { name: "hub" }
+            );
+          }}
+          onChange={(messages) => {
+            setChats({ ...chats, [key]: { messages, unread: 0 } });
+          }}
+          onOpenDay={(date) => {
+            setPage({
+              from: page.chatId,
+              month: new Date(date.getFullYear(), date.getMonth(), 1),
+              name: "shifts",
+            });
+          }}
+          people={
+            page.chatId === groupChat
+              ? group.members
+              : group.members.filter(
+                  (member) => member.me || member.id === page.chatId
+                )
+          }
+          title={chatTitle(group, page.chatId)}
+        />
+        {memberSheet}
+      </>
     );
   }
 
@@ -759,6 +800,7 @@ export function DesignGroup({
           {page.name === "settings" && (
             <GroupSettingsPage
               group={group}
+              onMember={onMember}
               onBack={() => {
                 setPage({ name: "hub" });
               }}
@@ -833,6 +875,7 @@ export function DesignGroup({
         </div>
       )}
       {page.name === "hub" && <TabBar active="group" onSelect={onTab} />}
+      {memberSheet}
     </div>
   );
 }
@@ -925,6 +968,11 @@ function GroupHub({
     (date) => group.members.length > 1 && everyoneOff(group.members, date)
   );
   const others = group.members.filter((member) => !member.me);
+  // Members you already have a one-to-one chat with, in this group.
+  const talking = others.filter(
+    (member) => chatOf(member.id).messages.length > 0
+  );
+  const [picking, setPicking] = useState(false);
   return (
     <>
       <header className="gr-hub-header">
@@ -1001,7 +1049,7 @@ function GroupHub({
               onChat(groupChat);
             }}
           />
-          {others.map((member) => (
+          {talking.map((member) => (
             <ChatRow
               chat={chatOf(member.id)}
               icon={<Avatar member={member} size={28} />}
@@ -1013,14 +1061,144 @@ function GroupHub({
               }}
             />
           ))}
+          {others.length > talking.length && (
+            <ListRow
+              label="個人チャットを始める"
+              leading={
+                <>
+                  <Plus aria-hidden="true" className="gr-row-icon" size={18} />
+                </>
+              }
+              onClick={() => {
+                setPicking(true);
+              }}
+            />
+          )}
         </List>
         {others.length === 0 && (
           <p className="st-note">メンバーを招待すると、1対1でも話せます。</p>
         )}
+        <Sheet
+          label="個人チャットを始める"
+          onOpenChange={setPicking}
+          open={picking}
+        >
+          <SheetHeading
+            onClose={() => {
+              setPicking(false);
+            }}
+            title="個人チャットを始める"
+          />
+          <div className={sheetBody}>
+            <section className="st-section">
+              <List>
+                {others
+                  .filter((member) => !talking.includes(member))
+                  .map((member) => (
+                    <ListRow
+                      key={member.id}
+                      label={member.name}
+                      labelClassName="gr-row-label-after-avatar"
+                      leading={
+                        <>
+                          <Avatar member={member} size={28} />
+                        </>
+                      }
+                      onClick={() => {
+                        setPicking(false);
+                        onChat(member.id);
+                      }}
+                    />
+                  ))}
+              </List>
+              <p className="st-note">
+                {group.name}での名前とアイコンで話します。
+              </p>
+            </section>
+          </div>
+        </Sheet>
       </section>
     </>
   );
 }
+
+const memberButton = css({
+  background: "transparent",
+  border: 0,
+  borderRadius: "50%",
+  display: "grid",
+  padding: 0,
+});
+
+// A member as this group knows them, and a way to talk one to one. The
+// one-to-one chat belongs to the group, so both of you keep this group's
+// names and pictures there.
+function MemberSheet({
+  member,
+  group,
+  onClose,
+  onMessage,
+}: {
+  member?: Member;
+  group: Omit<Group, "members">;
+  onClose: () => void;
+  onMessage: (member: Member) => void;
+}) {
+  return (
+    <Sheet
+      label={member?.name ?? ""}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+      open={member !== undefined}
+    >
+      {member && (
+        <>
+          <SheetHeading onClose={onClose} title="" />
+          <div className={profileStyle.root}>
+            <Avatar member={member} size={72} />
+            <h3 className={profileStyle.name}>{member.name}</h3>
+            <span className={profileStyle.where}>
+              <span aria-hidden="true" className="gr-hub-icon">
+                <GroupIcon mark={group.mark} size={14} />
+              </span>
+              {group.name}でのプロフィール
+            </span>
+            <Button
+              onClick={() => {
+                onMessage(member);
+              }}
+            >
+              <MessageCircle aria-hidden="true" size={18} />
+              メッセージを送る
+            </Button>
+          </div>
+        </>
+      )}
+    </Sheet>
+  );
+}
+
+const profileStyle = {
+  name: css({ fontSize: "20px", fontWeight: 700, margin: 0 }),
+  root: css({
+    "& > button": { alignSelf: "stretch", marginTop: "6px" },
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    padding: "0 16px 16px",
+  }),
+  where: css({
+    alignItems: "center",
+    color: "text3",
+    display: "flex",
+    fontSize: "12px",
+    gap: "6px",
+  }),
+};
 
 function lastLine(chat: Chat, members: Member[]) {
   const last = chat.messages.at(-1);
@@ -1085,9 +1263,15 @@ function ChatPage({
   onBack,
   onChange,
   onOpenDay,
+  onMember,
+  backLabel,
 }: {
   title: string;
   group: Group;
+  // Where 戻る goes: the group, or the chat a member was opened from.
+  backLabel: string;
+  // Opens a member's profile from their picture.
+  onMember?: (member: Member) => void;
   // Who a shared day shows: everyone, or the two people in a direct chat.
   people: Member[];
   chat: Chat;
@@ -1171,7 +1355,7 @@ function ChatPage({
   return (
     <div className="dc-content st-screen gr-chat">
       <header className="gr-chat-header">
-        <BackButton onClick={onBack}>{group.name}</BackButton>
+        <BackButton onClick={onBack}>{backLabel}</BackButton>
         <h3>{title}</h3>
       </header>
       <ol aria-label={`${title}のメッセージ`} className="gr-messages">
@@ -1209,9 +1393,22 @@ function ChatPage({
               <span className={`gr-message ${mine ? "gr-mine" : ""}`}>
                 {!mine && (
                   <span className="gr-message-avatar">
-                    {firstOfRun && member && (
-                      <Avatar member={member} size={chatAvatarSize} />
-                    )}
+                    {firstOfRun &&
+                      member &&
+                      (onMember ? (
+                        <button
+                          aria-label={`${member.name}のプロフィール`}
+                          className={memberButton}
+                          onClick={() => {
+                            onMember(member);
+                          }}
+                          type="button"
+                        >
+                          <Avatar member={member} size={chatAvatarSize} />
+                        </button>
+                      ) : (
+                        <Avatar member={member} size={chatAvatarSize} />
+                      ))}
                   </span>
                 )}
                 <span className="gr-message-body">
@@ -3438,9 +3635,11 @@ function GroupSettingsPage({
   onEdit,
   onInvite,
   onBack,
+  onMember,
 }: {
   group: Group;
   profile: Profile;
+  onMember?: (member: Member) => void;
   onChange: (mine: GroupProfile | undefined) => void;
   onEdit: (edit: GroupEdit) => void;
   onInvite: () => void;
@@ -3524,6 +3723,13 @@ function GroupSettingsPage({
             <ListRow
               key={member.id}
               label={<>{member.me ? `${shown.name}（自分）` : member.name}</>}
+              onClick={
+                onMember && !member.me
+                  ? () => {
+                      onMember(member);
+                    }
+                  : undefined
+              }
               leading={
                 <>
                   <Avatar member={member} />
