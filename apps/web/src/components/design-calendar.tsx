@@ -34,6 +34,7 @@ import { useSettings } from "../lib/design-settings-store";
 import { useUser } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
 import type { Coworkers } from "./design-coworkers";
+import { GapSheet } from "./design-gap-sheet";
 import { DesignGroup, JoinSheet } from "./design-group";
 import { ImportReviewPage } from "./design-import";
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
@@ -303,6 +304,13 @@ export function DesignCalendar({
   const breakdownRef = useRef<HTMLDialogElement>(null);
   const importSheetRef = useRef<HTMLDialogElement>(null);
   const saveSheetRef = useRef<HTMLDialogElement>(null);
+  const gapSheetRef = useRef<HTMLDialogElement>(null);
+  // Blank days between entered ones, asked about when entering ends.
+  const [gapDays, setGapDays] = useState<Date[]>([]);
+  // Whether the sheet offers showing days off blank: decided as it opens,
+  // so switching it on there does not take the switch away.
+  const [offerBlank, setOfferBlank] = useState(false);
+  const setCalendarOptions = useSettings((state) => state.setCalendarOptions);
   // Whether the save sheet opened because the month was just filled in.
   const [saveCompletion, setSaveCompletion] = useState(false);
   // Whether it opened straight on adding to the device calendar.
@@ -376,6 +384,7 @@ export function DesignCalendar({
   const [month, setMonth] = useState(() => new Date(2026, initialMonth, 1));
   const patternKeys = useUser((state) => state.patternKeys);
   const setPatternKeys = useUser((state) => state.setPatternKeys);
+  const sharing = useUser((state) => state.groups.length > 0);
   const [announcement, setAnnouncement] = useState("");
   const weekTools = useWeek();
   const dates = weekTools.monthDates(month);
@@ -545,8 +554,36 @@ export function DesignCalendar({
       return;
     }
     setEditing(false);
+    const lastEntered = monthDays.findLast((date) => schedule[dateKey(date)]);
+    const gaps = monthDays.filter(
+      (date) =>
+        lastEntered !== undefined &&
+        date < lastEntered &&
+        !schedule[dateKey(date)]
+    );
+    if (gaps.length > 0 && gapSheetRef.current) {
+      setGapDays(gaps);
+      setOfferBlank(offDisplay === "show");
+      showOverPhone(gapSheetRef.current, phoneRef.current);
+      return;
+    }
     // A month just filled in is worth keeping, so saving is offered then.
     if (unfilled === 0) {
+      openSave(true);
+    }
+  }
+  // Fills the blanks with the person's day off, or adds 休み back when
+  // they have none.
+  function fillGaps(key: Shift | undefined) {
+    const shift = key ?? "off";
+    if (!key) {
+      setPatternKeys((previous) => [...previous, shift]);
+    }
+    onChange((previous) => ({
+      ...previous,
+      ...Object.fromEntries(gapDays.map((date) => [dateKey(date), { shift }])),
+    }));
+    if (unfilled === gapDays.length) {
       openSave(true);
     }
   }
@@ -862,6 +899,25 @@ export function DesignCalendar({
         ref={saveSheetRef}
         toCalendar={saveToCalendar}
         shiftCount={monthDays.length - unfilled}
+      />
+      <GapSheet
+        choices={patternKeys
+          .filter((key) => isDayOff(key))
+          .map((key) => ({ key, label: patterns[key].label }))}
+        days={gapDays.map(
+          (date) => `${date.getDate()}日(${weekdays[date.getDay()]})`
+        )}
+        onFill={fillGaps}
+        blankOff={offDisplay === "blank"}
+        completes={unfilled === gapDays.length}
+        month={month}
+        offCount={daysOff}
+        sharing={sharing}
+        offerBlank={offerBlank}
+        onBlankOff={(blankOff) => {
+          setCalendarOptions({ blankOff });
+        }}
+        ref={gapSheetRef}
       />
       <ImportSheet
         access={variants.importAccess}
