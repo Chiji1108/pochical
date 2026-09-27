@@ -45,6 +45,7 @@ import { iconNames, OtherEmojiButton, withPicked } from "./design-look-editor";
 import {
   DecideHeading,
   PhoneContext,
+  PhotoViewer,
   Sheet,
   SheetHeading,
   sheetBody,
@@ -170,7 +171,8 @@ function isWeekend(date: Date) {
 
 // Sample profile pictures: Unsplash photos served by picsum.photos.
 export function samplePhoto(id: number) {
-  return `https://picsum.photos/id/${id}/192/192`;
+  // Large enough to look at on its own, not only as a small avatar.
+  return `https://picsum.photos/id/${id}/512/512`;
 }
 
 export type Profile = { name: string; photo?: string };
@@ -681,9 +683,17 @@ export function DesignGroup({
       onClose={() => {
         setProfileOf(undefined);
       }}
-      onMessage={(member) => {
-        openChat(member.id, page.name === "chat" ? page.chatId : undefined);
-      }}
+      onMessage={
+        // Already in the one-to-one chat with them: nothing to open.
+        page.name === "chat" && page.chatId === profileOf?.id
+          ? undefined
+          : (member) => {
+              openChat(
+                member.id,
+                page.name === "chat" ? page.chatId : undefined
+              );
+            }
+      }
     />
   );
 
@@ -1142,8 +1152,9 @@ function MemberSheet({
   member?: Member;
   group: Omit<Group, "members">;
   onClose: () => void;
-  onMessage: (member: Member) => void;
+  onMessage?: (member: Member) => void;
 }) {
+  const [viewing, setViewing] = useState(false);
   return (
     <Sheet
       label={member?.name ?? ""}
@@ -1158,7 +1169,20 @@ function MemberSheet({
         <>
           <SheetHeading onClose={onClose} title="" />
           <div className={profileStyle.root}>
-            <Avatar member={member} size={72} />
+            {member.photo ? (
+              <button
+                aria-label={`${member.name}の写真を大きく見る`}
+                className={memberButton}
+                onClick={() => {
+                  setViewing(true);
+                }}
+                type="button"
+              >
+                <Avatar member={member} size={72} />
+              </button>
+            ) : (
+              <Avatar member={member} size={72} />
+            )}
             <h3 className={profileStyle.name}>{member.name}</h3>
             <span className={profileStyle.where}>
               <span aria-hidden="true" className="gr-hub-icon">
@@ -1166,25 +1190,36 @@ function MemberSheet({
               </span>
               {group.name}でのプロフィール
             </span>
-            <Button
-              onClick={() => {
-                onMessage(member);
-              }}
-            >
-              <MessageCircle aria-hidden="true" size={18} />
-              メッセージを送る
-            </Button>
+            {onMessage && (
+              <Button
+                className={profileStyle.message}
+                onClick={() => {
+                  onMessage(member);
+                }}
+              >
+                <MessageCircle aria-hidden="true" size={18} />
+                メッセージを送る
+              </Button>
+            )}
           </div>
         </>
+      )}
+      {member?.photo && (
+        <PhotoViewer
+          label={`${member.name}の写真`}
+          onOpenChange={setViewing}
+          open={viewing}
+          photo={member.photo}
+        />
       )}
     </Sheet>
   );
 }
 
 const profileStyle = {
+  message: css({ alignSelf: "stretch", marginTop: "6px" }),
   name: css({ fontSize: "20px", fontWeight: 700, margin: 0 }),
   root: css({
-    "& > button": { alignSelf: "stretch", marginTop: "6px" },
     alignItems: "center",
     display: "flex",
     flexDirection: "column",

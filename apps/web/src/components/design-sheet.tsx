@@ -1,6 +1,6 @@
 import { Dialog, Portal } from "@ark-ui/react";
 import { ChevronLeft, X } from "lucide-react";
-import { createContext, useContext, useRef } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -314,5 +314,126 @@ export function DecideHeading({
         {action}
       </button>
     </header>
+  );
+}
+
+// How far a photo is pulled down before letting go closes it.
+const dismissDistance = 120;
+
+const viewer = {
+  backdrop: css({
+    _closed: { animation: "fadeOut 0.2s ease-in" },
+    _open: { animation: "fadeIn 0.2s ease-out" },
+    bg: "black",
+    inset: 0,
+    position: "absolute",
+    zIndex: 30,
+  }),
+  close: css({
+    bg: "rgba(255, 255, 255, 0.16)",
+    border: 0,
+    borderRadius: "50%",
+    color: "white",
+    display: "grid",
+    height: "action",
+    placeItems: "center",
+    position: "absolute",
+    right: "16px",
+    top: "56px",
+    width: "action",
+    zIndex: 1,
+  }),
+  content: css({
+    _closed: { animation: "fadeOut 0.2s ease-in" },
+    _open: { animation: "popIn 0.2s ease-out" },
+    alignItems: "center",
+    display: "flex",
+    height: "100%",
+    justifyContent: "center",
+    outline: "none",
+    touchAction: "none",
+    width: "100%",
+  }),
+  photo: css({
+    aspectRatio: "1",
+    objectFit: "cover",
+    userSelect: "none",
+    width: "100%",
+  }),
+  positioner: css({ inset: 0, position: "absolute", zIndex: 31 }),
+};
+
+// A photo on its own over black, as the platforms show a profile picture
+// tapped to look at it: × or a pull downward closes it, and the ground
+// fades as the photo is pulled.
+export function PhotoViewer({
+  photo,
+  label,
+  open,
+  onOpenChange,
+}: {
+  photo: string;
+  // Its name for a screen reader, like whose picture it is.
+  label: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const phone = useContext(PhoneContext);
+  const [pull, setPull] = useState<{ from: number; by: number }>();
+  const by = Math.max(pull?.by ?? 0, 0);
+  return (
+    <Dialog.Root
+      lazyMount
+      onOpenChange={(details) => {
+        onOpenChange(details.open);
+      }}
+      open={open}
+      preventScroll={false}
+      unmountOnExit
+    >
+      <Portal container={phone ?? undefined}>
+        <Dialog.Backdrop
+          className={viewer.backdrop}
+          style={{ opacity: 1 - (by / dismissDistance) * 0.5 }}
+        />
+        <Dialog.Positioner className={viewer.positioner}>
+          <Dialog.Content
+            aria-label={label}
+            className={viewer.content}
+            onPointerCancel={() => {
+              setPull(undefined);
+            }}
+            onPointerDown={(event) => {
+              setPull({ by: 0, from: event.clientY });
+            }}
+            onPointerMove={(event) => {
+              if (pull) {
+                setPull({ ...pull, by: event.clientY - pull.from });
+              }
+            }}
+            onPointerUp={() => {
+              setPull(undefined);
+              if (by > dismissDistance) {
+                onOpenChange(false);
+              }
+            }}
+          >
+            <Dialog.CloseTrigger aria-label="閉じる" className={viewer.close}>
+              <X aria-hidden="true" size={20} />
+            </Dialog.CloseTrigger>
+            <img
+              alt=""
+              className={viewer.photo}
+              draggable={false}
+              src={photo}
+              style={{
+                transform: `translateY(${by}px)`,
+                transition: pull ? "none" : "transform 0.2s ease-out",
+              }}
+            />
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Portal>
+    </Dialog.Root>
   );
 }
