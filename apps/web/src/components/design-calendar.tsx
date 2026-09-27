@@ -45,6 +45,7 @@ import { holidayName, holidayNameOfKey, useWeek } from "./design-week";
 import {
   CellNamesContext,
   lookOf,
+  OffDisplayContext,
   ShiftMark,
   ShiftMarkStyleContext,
   useDisplayColor,
@@ -340,6 +341,7 @@ export function DesignCalendar({
   // Whether the save sheet opened because the month was just filled in.
   const [saveCompletion, setSaveCompletion] = useState(false);
   const [imagePreview, setImagePreview] = useState(false);
+  const offDisplay = useContext(OffDisplayContext);
   // The check before a photographed roster goes in, and the line after.
   const [importReview, setImportReview] = useState(false);
   const [importNote, setImportNote] = useState<string>();
@@ -619,7 +621,7 @@ export function DesignCalendar({
   }
   return (
     <div
-      className={`dc-phone ${editing ? "dc-editing" : ""} ${weekDetail ? "dc-week-mode" : ""} ${showInputBar ? "" : "dc-no-input"} ${variants.actionWidth === "inset" ? "dc-start-inset" : ""}`}
+      className={`dc-phone ${editing ? "dc-editing" : ""} ${weekDetail ? "dc-week-mode" : ""} ${showInputBar ? "" : "dc-no-input"} ${variants.actionWidth === "inset" ? "dc-start-inset" : ""} ${variants.summaryPlace === "below" ? "dc-summary-follow" : ""}`}
       ref={phoneRef}
       style={themeStyle}
     >
@@ -723,31 +725,35 @@ export function DesignCalendar({
               </span>
             ))}
           </div>
-          <section
-            aria-label={`${month.getFullYear()}年${month.getMonth() + 1}月のシフト`}
-            className={`dc-grid ${weekDetail ? "dc-grid-week" : ""}`}
-            style={{ "--weeks": gridDates.length / 7 } as CSSProperties}
+          <OffDisplayContext
+            value={weekDetail && offDisplay === "blank" ? "faint" : offDisplay}
           >
-            {gridDates.map((date) => (
-              <DayCell
-                active={
-                  editing
-                    ? date.getMonth() === month.getMonth() &&
-                      date.getDate() === selectedDay
-                    : detailDate !== undefined &&
-                      dateKey(date) === dateKey(detailDate)
-                }
-                date={date}
-                editing={editing}
-                entry={schedule[dateKey(date)]}
-                key={dateKey(date)}
-                onPress={() => {
-                  editing ? setSelectedDay(date.getDate()) : openDetail(date);
-                }}
-                outside={!weekDetail && date.getMonth() !== month.getMonth()}
-              />
-            ))}
-          </section>
+            <section
+              aria-label={`${month.getFullYear()}年${month.getMonth() + 1}月のシフト`}
+              className={`dc-grid ${weekDetail ? "dc-grid-week" : ""}`}
+              style={{ "--weeks": gridDates.length / 7 } as CSSProperties}
+            >
+              {gridDates.map((date) => (
+                <DayCell
+                  active={
+                    editing
+                      ? date.getMonth() === month.getMonth() &&
+                        date.getDate() === selectedDay
+                      : detailDate !== undefined &&
+                        dateKey(date) === dateKey(detailDate)
+                  }
+                  date={date}
+                  editing={editing}
+                  entry={schedule[dateKey(date)]}
+                  key={dateKey(date)}
+                  onPress={() => {
+                    editing ? setSelectedDay(date.getDate()) : openDetail(date);
+                  }}
+                  outside={!weekDetail && date.getMonth() !== month.getMonth()}
+                />
+              ))}
+            </section>
+          </OffDisplayContext>
         </div>
         {weekDetail && (
           <section
@@ -1409,12 +1415,18 @@ export function DayCell({
   const shift = outside ? undefined : entry?.shift;
   const highlight = useOffHighlight(markStyle);
   const { tint } = useDisplayColor(lookOf(shift ?? "off").color);
-  const offStyle = dayOffStyle(shift, highlight, tint);
+  const offDisplay = useContext(OffDisplayContext);
+  const dayOff = shift !== undefined && isDayOff(shift);
+  const hideOff = dayOff && offDisplay === "blank" && !editing;
+  const faintOff =
+    dayOff && (offDisplay === "faint" || (offDisplay === "blank" && editing));
+  const offStyle =
+    hideOff || faintOff ? undefined : dayOffStyle(shift, highlight, tint);
   const today = dateKey(date) === dateKey(designToday);
   const holiday = useWeek().isColoredHoliday(date);
   const timeChanged = Boolean(entry?.start || entry?.end);
   const hasMark = !outside && (timeChanged || Boolean(entry?.note));
-  const className = `dc-day ${outside ? "dc-outside" : ""} ${offStyle ? "dc-off" : ""} ${today && !editing ? "dc-today" : ""} ${active ? "dc-active-day" : ""} ${flagged ? "dc-flagged" : ""}`;
+  const className = `dc-day ${outside ? "dc-outside" : ""} ${offStyle ? "dc-off" : ""} ${today && !editing ? "dc-today" : ""} ${active ? "dc-active-day" : ""} ${flagged ? "dc-flagged" : ""} ${faintOff ? "dc-off-faint" : ""}`;
   const content = (
     <>
       <span className={`dc-date ${holiday ? "dc-holiday" : ""}`}>
@@ -1426,7 +1438,7 @@ export function DayCell({
           className={`dc-mark ${timeChanged ? "dc-mark-time" : ""}`}
         />
       )}
-      {shift && <CellShift shift={shift} />}
+      {shift && !hideOff && <CellShift shift={shift} />}
     </>
   );
   if (outside) {

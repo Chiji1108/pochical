@@ -21,7 +21,11 @@ import {
   themeStyle,
 } from "./design-theme";
 import { useWeek } from "./design-week";
-import { CellNamesContext, OffHighlightContext } from "./shift-mark";
+import {
+  CellNamesContext,
+  OffDisplayContext,
+  OffHighlightContext,
+} from "./shift-mark";
 
 // Calendars on the device, as the system lists them.
 const deviceCalendars = [
@@ -303,38 +307,41 @@ export function ImagePreviewPage({
           >
             <div className="st-preview-wrap">
               <ColorSchemeContext value={shown}>
-                <figure
-                  aria-label={`${title}の画像`}
-                  className="dc-image"
-                  inert
-                  style={themeStyle(theme, shown, tone)}
-                >
-                  <figcaption className="dc-image-title">{title}</figcaption>
-                  <div aria-hidden="true" className="dc-weekdays">
-                    {weekTools.weekdays.map((day) => (
-                      <span className={day.className} key={day.day}>
-                        {day.label}
-                      </span>
-                    ))}
-                  </div>
-                  <div
-                    className="dc-grid"
-                    style={{ "--weeks": dates.length / 7 } as CSSProperties}
+                {/* A picture to share shows every day as it is. */}
+                <OffDisplayContext value="show">
+                  <figure
+                    aria-label={`${title}の画像`}
+                    className="dc-image"
+                    inert
+                    style={themeStyle(theme, shown, tone)}
                   >
-                    {dates.map((date) => (
-                      <DayCell
-                        active={false}
-                        date={date}
-                        editing={false}
-                        entry={schedule[dateKey(date)]}
-                        key={dateKey(date)}
-                        onPress={() => undefined}
-                        outside={date.getMonth() !== month.getMonth()}
-                      />
-                    ))}
-                  </div>
-                  <p className="dc-image-credit">ポチカル</p>
-                </figure>
+                    <figcaption className="dc-image-title">{title}</figcaption>
+                    <div aria-hidden="true" className="dc-weekdays">
+                      {weekTools.weekdays.map((day) => (
+                        <span className={day.className} key={day.day}>
+                          {day.label}
+                        </span>
+                      ))}
+                    </div>
+                    <div
+                      className="dc-grid"
+                      style={{ "--weeks": dates.length / 7 } as CSSProperties}
+                    >
+                      {dates.map((date) => (
+                        <DayCell
+                          active={false}
+                          date={date}
+                          editing={false}
+                          entry={schedule[dateKey(date)]}
+                          key={dateKey(date)}
+                          onPress={() => undefined}
+                          outside={date.getMonth() !== month.getMonth()}
+                        />
+                      ))}
+                    </div>
+                    <p className="dc-image-credit">ポチカル</p>
+                  </figure>
+                </OffDisplayContext>
               </ColorSchemeContext>
               <PreviewSchemeSwitch
                 onPick={(picked) => {

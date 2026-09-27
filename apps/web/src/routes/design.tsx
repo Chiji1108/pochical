@@ -30,6 +30,7 @@ import {
   IconWeightContext,
   LookSettingsContext,
   MonochromeContext,
+  OffDisplayContext,
   OffHighlightContext,
   ShiftMarkStyleContext,
   baseLook,
@@ -205,69 +206,75 @@ function DesignPage() {
                                   <MonochromeContext
                                     value={{ monochrome: color !== "multi" }}
                                   >
-                                    <div
-                                      className="design-screens"
-                                      key={version}
+                                    <OffDisplayContext
+                                      value={look.blankOff ? "blank" : "show"}
                                     >
-                                      <section aria-labelledby="design-view-title">
-                                        <h2 id="design-view-title">
-                                          <span>01</span> カレンダー表示
-                                        </h2>
-                                        <DesignCalendar
-                                          initialEditing={false}
-                                          onChange={setSchedule}
-                                          pendingInvite={
-                                            variants.inviteLink === "opened"
-                                          }
-                                          schedule={schedule}
+                                      <div
+                                        className="design-screens"
+                                        key={version}
+                                      >
+                                        <section aria-labelledby="design-view-title">
+                                          <h2 id="design-view-title">
+                                            <span>01</span> カレンダー表示
+                                          </h2>
+                                          <DesignCalendar
+                                            initialEditing={false}
+                                            onChange={setSchedule}
+                                            pendingInvite={
+                                              variants.inviteLink === "opened"
+                                            }
+                                            schedule={schedule}
+                                            variants={variants}
+                                          />
+                                          <p className="design-caption">
+                                            ひと月の予定と、お休みをひと目で。
+                                          </p>
+                                        </section>
+                                        <section aria-labelledby="design-edit-title">
+                                          <h2 id="design-edit-title">
+                                            <span>02</span> シフト入力
+                                          </h2>
+                                          <DesignCalendar
+                                            initialEditing
+                                            onChange={setSchedule}
+                                            schedule={schedule}
+                                            variants={variants}
+                                          />
+                                          <p className="design-caption">
+                                            シフトを押すと翌日へ。日付をタップして修正もできます。
+                                          </p>
+                                        </section>
+                                        <PatternStudy
+                                          caption="2026年8月。8パターンを4列×2段で比較。"
+                                          count={8}
+                                          id="design-six-weeks-title"
+                                          month={7}
+                                          number="03"
+                                          title="6段の月 × 8パターン"
                                           variants={variants}
                                         />
-                                        <p className="design-caption">
-                                          ひと月の予定と、お休みをひと目で。
-                                        </p>
-                                      </section>
-                                      <section aria-labelledby="design-edit-title">
-                                        <h2 id="design-edit-title">
-                                          <span>02</span> シフト入力
-                                        </h2>
-                                        <DesignCalendar
-                                          initialEditing
-                                          onChange={setSchedule}
-                                          schedule={schedule}
-                                          variants={variants}
-                                        />
-                                        <p className="design-caption">
-                                          シフトを押すと翌日へ。日付をタップして修正もできます。
-                                        </p>
-                                      </section>
-                                      <PatternStudy
-                                        caption="2026年8月。8パターンを4列×2段で比較。"
-                                        count={8}
-                                        id="design-six-weeks-title"
-                                        month={7}
-                                        number="03"
-                                        title="6段の月 × 8パターン"
-                                        variants={variants}
-                                      />
-                                      <section aria-labelledby="design-onboarding-title">
-                                        <h2 id="design-onboarding-title">
-                                          <span>04</span> はじめての設定
-                                        </h2>
-                                        <DesignOnboarding variants={variants} />
-                                        <p className="design-caption">
-                                          はじめるか、ログインしてデータを戻すかを選びます。途中で招待リンクを開いていたら、カレンダーができたところで参加を聞きます。
-                                        </p>
-                                      </section>
-                                      <section aria-labelledby="design-app-icon-title">
-                                        <h2 id="design-app-icon-title">
-                                          <span>05</span> アプリアイコン
-                                        </h2>
-                                        <DesignAppIcon />
-                                        <p className="design-caption">
-                                          「ポチ」カルのプードル。色を選ぶと、小さいサイズとホーム画面での見え方が変わります。ダークのホーム画面では、iOSのダークアイコンとして表示します。
-                                        </p>
-                                      </section>
-                                    </div>
+                                        <section aria-labelledby="design-onboarding-title">
+                                          <h2 id="design-onboarding-title">
+                                            <span>04</span> はじめての設定
+                                          </h2>
+                                          <DesignOnboarding
+                                            variants={variants}
+                                          />
+                                          <p className="design-caption">
+                                            はじめるか、ログインしてデータを戻すかを選びます。途中で招待リンクを開いていたら、カレンダーができたところで参加を聞きます。
+                                          </p>
+                                        </section>
+                                        <section aria-labelledby="design-app-icon-title">
+                                          <h2 id="design-app-icon-title">
+                                            <span>05</span> アプリアイコン
+                                          </h2>
+                                          <DesignAppIcon />
+                                          <p className="design-caption">
+                                            「ポチ」カルのプードル。色を選ぶと、小さいサイズとホーム画面での見え方が変わります。ダークのホーム画面では、iOSのダークアイコンとして表示します。
+                                          </p>
+                                        </section>
+                                      </div>
+                                    </OffDisplayContext>
                                   </MonochromeContext>
                                 </OffHighlightContext>
                               </CellNamesContext>

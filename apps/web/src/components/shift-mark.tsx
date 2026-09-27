@@ -98,16 +98,42 @@ export type LookSettings = {
   fill: boolean;
   names: boolean;
   highlight: boolean;
+  // Days off left empty on your own month, for a calm, paper-like look.
+  blankOff: boolean;
 };
 
 // Where each style's switches start. Letters already sit on tinted tiles
 // and are the shift's name, so they start without names and without the
 // days-off highlight behind them.
 export const lookDefaults: Record<ShiftMarkStyle, LookSettings> = {
-  badge: { fill: true, highlight: false, names: false, style: "badge" },
-  emoji: { fill: true, highlight: true, names: false, style: "emoji" },
-  icon: { fill: true, highlight: true, names: false, style: "icon" },
+  badge: {
+    blankOff: false,
+    fill: true,
+    highlight: false,
+    names: false,
+    style: "badge",
+  },
+  emoji: {
+    blankOff: false,
+    fill: true,
+    highlight: true,
+    names: false,
+    style: "emoji",
+  },
+  icon: {
+    blankOff: false,
+    fill: true,
+    highlight: true,
+    names: false,
+    style: "icon",
+  },
 };
+
+// How days off show on your own month. "blank" leaves them empty while
+// viewing; entering shifts and the week view need to tell a day off from a
+// day not entered yet, so there they come back "faint".
+export type OffDisplay = "show" | "blank" | "faint";
+export const OffDisplayContext = createContext<OffDisplay>("show");
 
 export const baseLook = lookDefaults.icon;
 

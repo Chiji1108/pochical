@@ -5,7 +5,7 @@ import type { CSSProperties } from "react";
 import { DayCell, dateKey, formatDay, patterns } from "./design-calendar";
 import type { Schedule, Shift } from "./design-calendar";
 import { useWeek } from "./design-week";
-import { ShiftMark } from "./shift-mark";
+import { OffDisplayContext, ShiftMark } from "./shift-mark";
 
 // Checking a photographed roster before it goes into the calendar: which
 // row is yours, what each code on the sheet means, and whether the month
@@ -543,38 +543,41 @@ function CheckCalendar({
   const grid = weekTools.monthDates(month);
   const inMonth = new Set(dates.map(dateKey));
   return (
-    <div className="im-calendar">
-      <div aria-hidden="true" className="dc-weekdays">
-        {weekTools.weekdays.map((day) => (
-          <span className={day.className} key={day.day}>
-            {day.label}
-          </span>
-        ))}
-      </div>
-      <div
-        className="dc-grid"
-        style={{ "--weeks": grid.length / 7 } as CSSProperties}
-      >
-        {grid.map((date) => (
-          <DayCell
-            active={inMonth.has(dateKey(date)) && picked === date.getDate()}
-            date={date}
-            editing={false}
-            entry={schedule[dateKey(date)]}
-            flagged={
-              unsure.includes(date.getDate()) && inMonth.has(dateKey(date))
-            }
-            key={dateKey(date)}
-            onPress={() => {
-              if (inMonth.has(dateKey(date))) {
-                onPick(date.getDate());
+    // Checking needs every day to show, days off included.
+    <OffDisplayContext value="show">
+      <div className="im-calendar">
+        <div aria-hidden="true" className="dc-weekdays">
+          {weekTools.weekdays.map((day) => (
+            <span className={day.className} key={day.day}>
+              {day.label}
+            </span>
+          ))}
+        </div>
+        <div
+          className="dc-grid"
+          style={{ "--weeks": grid.length / 7 } as CSSProperties}
+        >
+          {grid.map((date) => (
+            <DayCell
+              active={inMonth.has(dateKey(date)) && picked === date.getDate()}
+              date={date}
+              editing={false}
+              entry={schedule[dateKey(date)]}
+              flagged={
+                unsure.includes(date.getDate()) && inMonth.has(dateKey(date))
               }
-            }}
-            outside={!inMonth.has(dateKey(date))}
-          />
-        ))}
+              key={dateKey(date)}
+              onPress={() => {
+                if (inMonth.has(dateKey(date))) {
+                  onPick(date.getDate());
+                }
+              }}
+              outside={!inMonth.has(dateKey(date))}
+            />
+          ))}
+        </div>
       </div>
-    </div>
+    </OffDisplayContext>
   );
 }
 

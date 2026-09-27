@@ -50,6 +50,13 @@ export const designVariantOptions = {
     ],
     label: "予定",
   },
+  summaryPlace: {
+    choices: [
+      { label: "画面の下", value: "bottom" },
+      { label: "カレンダーの下", value: "below" },
+    ],
+    label: "今月のお休みの位置",
+  },
 } as const;
 
 type VariantKey = keyof typeof designVariantOptions;

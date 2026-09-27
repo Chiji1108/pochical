@@ -67,7 +67,6 @@ import {
   CellNamesContext,
   IconWeightContext,
   LookSettingsContext,
-  OffHighlightContext,
   ShiftMark,
   ShiftMarkStyleContext,
   lookOf,
@@ -1250,18 +1249,27 @@ function MarkPage({
       <PageHeader back="設定" onBack={onBack} title="スタイル" />
       <StylePreview preview={preview} />
       {/* Every choice shows in the preview at once, so there is nothing to
-          confirm or cancel. */}
-      <Group note="グループの人にも表示" title="シフトの見た目">
+          confirm or cancel. The page splits by who sees each choice, said
+          once above each half. */}
+      <h3 className="st-audience">グループの人にも見える</h3>
+      <Group title="シフトの見た目">
         <ShapeChoices />
       </Group>
-      <Group note="シフトの色はグループの人にも表示" title="カラー">
+      <Group title="カラー">
         <ColorChoices />
+        <p className="st-group-note">
+          グループの人に見えるのはシフトの色です。アプリの色はあなたの画面だけです。
+        </p>
       </Group>
-      <Group note="あなたの画面だけ" title="トーン">
+      <h3 className="st-audience">あなたの画面だけ</h3>
+      <Group title="トーン">
         <ToneChoices />
       </Group>
-      <Group note="あなたの画面だけ" title="自分のカレンダー">
-        <MarkOptionsList current={current} />
+      <Group title="休みの見せ方">
+        <OffLookChoices current={current} />
+      </Group>
+      <Group title="シフト名">
+        <NamesChoices current={current} />
       </Group>
     </>
   );
@@ -1400,25 +1408,80 @@ function ShapeChoices() {
 
 // How your own calendar shows the marks. Group screens decide these for
 // themselves, so members never see them.
-function MarkOptionsList({ current }: { current: ShiftMarkStyle }) {
-  const { names, setNames } = useContext(CellNamesContext);
-  const { highlight, setHighlight } = useContext(OffHighlightContext);
+const offLooks = [
+  { blankOff: false, highlight: true, id: "highlight", name: "ハイライト" },
+  { blankOff: false, highlight: false, id: "mark", name: "印だけ" },
+  { blankOff: true, highlight: false, id: "blank", name: "空白" },
+] as const;
+
+// Tabs like トーン's, each drawing a day off as it would look. 空白 leaves
+// days off empty on the month; they come back faint while entering and in
+// the week view.
+function OffLookChoices({ current }: { current: ShiftMarkStyle }) {
+  const { look, updateLook } = useContext(LookSettingsContext);
   const highlightOn = useOffHighlight(current);
+  let offLook: (typeof offLooks)[number]["id"] = "mark";
+  if (look.blankOff) {
+    offLook = "blank";
+  } else if (highlightOn) {
+    offLook = "highlight";
+  }
   return (
-    <div className="st-list">
-      <SwitchRow
-        checked={names[current]}
-        label="シフト名を表示"
-        onChange={(checked) => setNames?.({ ...names, [current]: checked })}
-      />
-      <SwitchRow
-        checked={highlightOn}
-        label="休みをハイライト"
-        onChange={(checked) =>
-          setHighlight?.({ ...highlight, [current]: checked })
-        }
-      />
-    </div>
+    <fieldset className="st-mark-segment st-off-looks">
+      <legend className="dc-sr-only">休みの見せ方</legend>
+      {offLooks.map((option) => (
+        <button
+          aria-pressed={offLook === option.id}
+          key={option.id}
+          onClick={() => {
+            updateLook?.({
+              blankOff: option.blankOff,
+              highlight: option.highlight,
+            });
+          }}
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            className={`st-off-sample ${option.highlight ? "st-off-sample-lit" : ""}`}
+          >
+            <small>5</small>
+            {option.blankOff ? null : <ShiftMark shift="off" size={18} />}
+          </span>
+          {option.name}
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
+// Tabs like 休みの見せ方's, each drawing a working day with or without its
+// name under the mark.
+function NamesChoices({ current }: { current: ShiftMarkStyle }) {
+  const { names, setNames } = useContext(CellNamesContext);
+  return (
+    <fieldset className="st-mark-segment st-off-looks">
+      <legend className="dc-sr-only">シフト名</legend>
+      {[false, true].map((withName) => (
+        <button
+          aria-pressed={names[current] === withName}
+          key={String(withName)}
+          onClick={() => {
+            setNames?.({ ...names, [current]: withName });
+          }}
+          type="button"
+        >
+          <span aria-hidden="true" className="st-off-sample">
+            <small>5</small>
+            <ShiftMark shift="day" size={withName ? 16 : 18} />
+            {withName && (
+              <small className="st-off-sample-name">{patterns.day.label}</small>
+            )}
+          </span>
+          {withName ? "あり" : "なし"}
+        </button>
+      ))}
+    </fieldset>
   );
 }
 

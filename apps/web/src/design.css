@@ -5006,3 +5006,64 @@ button.st-row:hover {
   flex: 1;
   min-width: 0;
 }
+
+/* 今月のお休みの位置: right under the month it sums up, so the spare height
+   falls between the month and the buttons and tab bar, not inside it. */
+.dc-summary-follow .dc-content > .dc-summary {
+  margin-top: 10px;
+}
+.dc-summary-follow .dc-content > .dc-summary ~ .dc-controls {
+  margin-top: auto;
+}
+.dc-summary-follow.dc-no-input .dc-summary + .dc-nav {
+  margin-top: auto;
+}
+
+/* 休みの見せ方 空白: while entering or in the week view, a day off shows
+   faintly, so it still reads apart from a day not entered yet. */
+.dc-off-faint .dc-emoji {
+  opacity: 0.35;
+}
+/* 休みの見せ方: tabs showing a day off as each choice draws it. */
+.st-off-sample {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  align-items: center;
+  width: 32px;
+  height: 40px;
+  padding-top: 3px;
+  border-radius: 8px;
+}
+.st-off-sample small {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.st-off-sample-lit {
+  background: var(--accent-mark-tint);
+}
+.design-page .st-off-looks button {
+  min-height: 76px;
+}
+/* スタイル splits by who sees each choice: a heading above each half, a
+   step above the section titles, with a rule to start the half. */
+.st-audience {
+  padding-top: 16px;
+  margin: 22px 4px 2px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  border-top: 1px solid var(--separator);
+}
+.st-group-note {
+  margin: 8px 12px 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-3);
+}
+.st-off-sample .st-off-sample-name {
+  font-size: 7px;
+  font-weight: 600;
+  color: var(--text-2);
+}
