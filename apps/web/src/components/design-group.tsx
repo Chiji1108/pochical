@@ -25,17 +25,18 @@ import {
 import { useContext, useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
+import { patterns } from "../lib/design-patterns";
+import type { Shift } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
 import {
   addDays,
   dateKey,
   formatDay,
-  patterns,
   TabBar,
   showOverPhone,
   timeRange,
 } from "./design-calendar";
-import type { Schedule, Shift, Tab } from "./design-calendar";
+import type { Schedule, Tab } from "./design-calendar";
 import { iconNames } from "./design-look-editor";
 import { ThemeContext, themeOfColor } from "./design-theme";
 import type { ColorChoice } from "./design-theme";

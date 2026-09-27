@@ -3,17 +3,14 @@ import type { SetStateAction } from "react";
 import { createStore, useStore } from "zustand";
 
 import { patternSets } from "../components/design-calendar";
-import type {
-  RepeatRule,
-  Schedule,
-  Shift,
-} from "../components/design-calendar";
+import type { RepeatRule, Schedule } from "../components/design-calendar";
 import {
   sampleChats,
   sampleGroups,
   samplePhoto,
 } from "../components/design-group";
 import type { Chat, GroupSummary, Profile } from "../components/design-group";
+import type { Shift } from "./design-patterns";
 
 // One person's data on /design, sorted by where it would live in the app.
 // Unlike the settings, /design shows several people at once (01 and 02 are

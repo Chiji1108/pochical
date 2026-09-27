@@ -9,8 +9,9 @@ import {
 import { useContext, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
-import { nextDayShifts, patterns } from "./design-calendar";
-import type { Shift } from "./design-calendar";
+import { patterns } from "../lib/design-patterns";
+import type { Shift } from "../lib/design-patterns";
+import { nextDayShifts } from "./design-calendar";
 import { LookEditorPage } from "./design-look-editor";
 import type { LookField } from "./design-look-editor";
 import {

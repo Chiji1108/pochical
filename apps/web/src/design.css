@@ -5211,3 +5211,8 @@ button.st-row:hover {
 .fl-frame figcaption small {
   font-size: 11px;
 }
+.fl-description {
+  margin: -8px 0 14px 4px;
+  font-size: 12px;
+  color: var(--text-3);
+}

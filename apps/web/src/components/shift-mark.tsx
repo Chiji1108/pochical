@@ -54,9 +54,9 @@ import {
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { createContext, useContext } from "react";
 
+import { patterns } from "../lib/design-patterns";
+import type { Shift } from "../lib/design-patterns";
 import { markColorIn, markColors } from "../lib/design-tokens";
-import { patterns } from "./design-calendar";
-import type { Shift } from "./design-calendar";
 import {
   ColorSchemeContext,
   ThemeContext,

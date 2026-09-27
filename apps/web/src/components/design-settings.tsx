@@ -9,6 +9,8 @@ import {
 import { useContext, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
+import { patterns } from "../lib/design-patterns";
+import type { Shift } from "../lib/design-patterns";
 import { useLook, useSettings } from "../lib/design-settings-store";
 import type { Tone, ColorScheme } from "../lib/design-tokens";
 import { markColors } from "../lib/design-tokens";
@@ -25,13 +27,12 @@ import {
   InputDatePicker,
   isRepeating,
   nextDayShifts,
-  patterns,
   RepeatSequenceEditor,
   repeatSchedule,
   showOverPhone,
   TabBar,
 } from "./design-calendar";
-import type { RepeatRule, Schedule, Shift, Tab } from "./design-calendar";
+import type { RepeatRule, Schedule, Tab } from "./design-calendar";
 import { CoworkersPage } from "./design-coworkers";
 import type { Coworkers } from "./design-coworkers";
 import { PhotoAvatar, PhotoEditor } from "./design-group";

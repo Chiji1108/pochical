@@ -2,8 +2,10 @@ import { Check, ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import type { CSSProperties } from "react";
 
-import { DayCell, dateKey, formatDay, patterns } from "./design-calendar";
-import type { Schedule, Shift } from "./design-calendar";
+import { patterns } from "../lib/design-patterns";
+import type { Shift } from "../lib/design-patterns";
+import { DayCell, dateKey, formatDay } from "./design-calendar";
+import type { Schedule } from "./design-calendar";
 import { useWeek } from "./design-week";
 import { OffDisplayContext, ShiftMark } from "./shift-mark";
 

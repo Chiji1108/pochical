@@ -1,20 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, ChevronRight } from "lucide-react";
-import { useState } from "react";
 
 import { DesignAppIcon } from "../components/design-app-icon";
-import {
-  DesignCalendar,
-  initialDesignSchedule,
-  patternSets,
-} from "../components/design-calendar";
 import {
   DesignProviders,
   useDesignTheme,
 } from "../components/design-providers";
 import { themeStyle } from "../components/design-theme";
-import { createUserStore, UserStoreContext } from "../lib/design-user-store";
-import { parseDesignVariants } from "../lib/design-variants";
 import { pageMeta } from "../lib/site";
 
 import designStyles from "../design.css?url";
@@ -41,6 +33,12 @@ const documents = [
     to: "/design/flows",
   },
   {
+    description:
+      "月の埋まり方、6段の月 × パターンの数、休みの見せ方、トーンとライト・ダーク。",
+    title: "状態の一覧",
+    to: "/design/states",
+  },
+  {
     description: "役割ごとの色、トーンごとのテーマ、シフトの色の見分けやすさ。",
     title: "カラーパレット",
     to: "/design/colors",
@@ -49,12 +47,8 @@ const documents = [
 
 // Studies still on this page until they get pages of their own.
 const studyLinks = [
-  { id: "design-six-weeks-title", number: "01", title: "6段の月 × 8パターン" },
-  { id: "design-app-icon-title", number: "02", title: "アプリアイコン" },
+  { id: "design-app-icon-title", number: "01", title: "アプリアイコン" },
 ];
-
-// Screens here take the defaults of the choices /demo can switch.
-const defaultVariants = parseDesignVariants({});
 
 function DesignPage() {
   const theme = useDesignTheme();
@@ -95,10 +89,9 @@ function DesignPage() {
       </nav>
       <DesignProviders>
         <div className="design-screens">
-          <PatternStudy />
           <section aria-labelledby="design-app-icon-title">
             <h2 id="design-app-icon-title">
-              <span>02</span> アプリアイコン
+              <span>01</span> アプリアイコン
             </h2>
             <DesignAppIcon />
             <p className="design-caption">
@@ -108,32 +101,5 @@ function DesignPage() {
         </div>
       </DesignProviders>
     </main>
-  );
-}
-
-// Someone with eight patterns, on a month six weeks tall.
-function PatternStudy() {
-  const count = 8;
-  const month = 7;
-  const [person] = useState(() =>
-    createUserStore({
-      patternKeys: patternSets[count],
-      schedule: initialDesignSchedule(count, month),
-    })
-  );
-  return (
-    <section aria-labelledby="design-six-weeks-title">
-      <h2 id="design-six-weeks-title">
-        <span>01</span> 6段の月 × 8パターン
-      </h2>
-      <UserStoreContext value={person}>
-        <DesignCalendar
-          initialEditing
-          initialMonth={month}
-          variants={defaultVariants}
-        />
-      </UserStoreContext>
-      <p className="design-caption">2026年8月。8パターンを4列×2段で比較。</p>
-    </section>
   );
 }

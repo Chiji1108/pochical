@@ -1,6 +1,8 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useContext, useState } from "react";
 
+import { patterns } from "../lib/design-patterns";
+import type { Shift } from "../lib/design-patterns";
 import { createUserStore, UserStoreContext } from "../lib/design-user-store";
 import type { UserStore } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
@@ -12,11 +14,10 @@ import {
   dateKey,
   formatDay,
   PhoneStatusBar,
-  patterns,
   RepeatSequenceEditor,
   repeatSchedule,
 } from "./design-calendar";
-import type { Schedule, Shift } from "./design-calendar";
+import type { Schedule } from "./design-calendar";
 import { ColorSchemeContext, useThemeStyle } from "./design-theme";
 import { useWeek } from "./design-week";
 import { ShiftMark } from "./shift-mark";
