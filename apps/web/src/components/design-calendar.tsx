@@ -24,6 +24,8 @@ import { useContext, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
+import { importSample } from "../lib/design-import-sample";
+import type { ImportKind } from "../lib/design-import-sample";
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
@@ -33,6 +35,7 @@ import type { Coworkers } from "./design-coworkers";
 import { GapSheet, gapDaysIn } from "./design-gap-sheet";
 import { DesignGroup, JoinSheet } from "./design-group";
 import { ImportReviewPage } from "./design-import";
+import { RosterPicture, ScreenPicture } from "./design-import-reading";
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import { DesignSettings } from "./design-settings";
 import type { SettingsPage } from "./design-settings";
@@ -46,6 +49,8 @@ import {
   Choice,
   ChoiceGrid,
   IconButton,
+  List,
+  ListRow,
   Pager,
 } from "./design-ui";
 import { holidayName, holidayNameOfKey, useWeek } from "./design-week";
@@ -347,7 +352,14 @@ export function DesignCalendar({
   const [imagePreview, setImagePreview] = useState(false);
   const offDisplay = useContext(OffDisplayContext);
   // The check before a photographed roster goes in, and the line after.
-  const [importReview, setImportReview] = useState(false);
+  const [importReview, setImportReview] = useState<ImportKind>();
+  // What was read last time, offered first the next.
+  const [importKind, setImportKind] = useState<ImportKind>("roster");
+  // The name the roster writes for this person, typed once before the
+  // first photo; a returning person has it already.
+  const [rosterName, setRosterName] = useState(
+    variants.importRun === "repeat" ? "小林 さくら" : ""
+  );
   const imageOptions = useSettings((state) => state.device.imageOptions);
   const setImageOptions = useSettings((state) => state.setImageOptions);
   const [detailDate, setDetailDate] = useState<Date>();
@@ -663,7 +675,9 @@ export function DesignCalendar({
           {tab === "calendar" && importReview && (
             <ImportReviewPage
               coworkerNames={coworkerNames}
+              kind={importReview}
               month={month}
+              rosterName={rosterName}
               onApply={(result) => {
                 onChange((previous) => ({ ...previous, ...result.schedule }));
                 if (result.newPatterns.length > 0) {
@@ -672,13 +686,13 @@ export function DesignCalendar({
                 if (result.newCoworkers.length > 0) {
                   setCoworkerNames([...coworkerNames, ...result.newCoworkers]);
                 }
-                setImportReview(false);
+                setImportReview(undefined);
                 toast(
                   `${month.getMonth() + 1}月のシフトを${result.days}日分入れました`
                 );
               }}
               onCancel={() => {
-                setImportReview(false);
+                setImportReview(undefined);
               }}
               patternKeys={patternKeys}
               run={variants.importRun}
@@ -698,7 +712,9 @@ export function DesignCalendar({
           )}
           <div
             className="dc-content"
-            hidden={tab !== "calendar" || imagePreview || importReview}
+            hidden={
+              tab !== "calendar" || imagePreview || importReview !== undefined
+            }
           >
             <div className="dc-heading">
               <h3 className="dc-heading-title">
@@ -941,8 +957,13 @@ export function DesignCalendar({
           />
           <ImportSheet
             access={variants.importAccess}
+            kind={importKind}
+            month={month}
+            onKind={setImportKind}
+            onRosterName={setRosterName}
+            rosterName={rosterName}
             onRead={() => {
-              setImportReview(true);
+              setImportReview(importKind);
             }}
             onOpenChange={sheetChange("import")}
             onStartPochi={startInput}
@@ -1280,18 +1301,148 @@ export function RepeatSequenceEditor({
   );
 }
 
-function ImportPhotoActions({ onPick }: { onPick: () => void }) {
+function ImportPhotoActions({
+  onPick,
+  disabled = false,
+}: {
+  onPick: () => void;
+  disabled?: boolean;
+}) {
   return (
     <div className="dc-import-actions">
-      <button onClick={onPick} type="button">
+      <button disabled={disabled} onClick={onPick} type="button">
         <Camera aria-hidden="true" size={22} />
         カメラで撮る
       </button>
-      <button onClick={onPick} type="button">
+      <button disabled={disabled} onClick={onPick} type="button">
         <ImageIcon aria-hidden="true" size={22} />
         写真を選ぶ
       </button>
     </div>
+  );
+}
+
+const importKinds = {
+  grid: css({
+    display: "grid",
+    gap: "10px",
+    gridTemplateColumns: "1fr 1fr",
+    marginBottom: "14px",
+  }),
+  tile: css({
+    "&[data-state=checked]": {
+      bg: "accentSoft",
+      boxShadow: "inset 0 0 0 2px token(colors.accent)",
+    },
+    bg: "fill",
+    borderRadius: "control",
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+    padding: "10px 10px 12px",
+  }),
+  // A corner of the picture it means, cut off at the bottom.
+  picture: css({
+    height: "64px",
+    marginBottom: "8px",
+    maskImage: "linear-gradient(to bottom, black 60%, transparent)",
+    overflow: "hidden",
+    pointerEvents: "none",
+  }),
+  name: css({ color: "text", fontSize: "14px", fontWeight: 600 }),
+  note: css({ color: "text3", fontSize: "11px", lineHeight: 1.4 }),
+};
+
+// What the photo is: a roster with everyone on it, or your own month,
+// like another shift app's screen. The first finds your row; the second
+// has only yours.
+function ImportKindChoice({
+  kind,
+  month,
+  onKind,
+}: {
+  kind: ImportKind;
+  month: Date;
+  onKind: (kind: ImportKind) => void;
+}) {
+  return (
+    <ChoiceGrid
+      className={importKinds.grid}
+      label="取り込む画像"
+      onValueChange={onKind}
+      value={kind}
+    >
+      <Choice className={importKinds.tile} value="roster">
+        <span aria-hidden="true" className={importKinds.picture}>
+          <RosterPicture
+            days={9}
+            rows={4}
+            sample={importSample("roster", month)}
+            size={8}
+          />
+        </span>
+        <span className={importKinds.name}>勤務表</span>
+        <span className={importKinds.note}>みんなのシフトが並んだ表</span>
+      </Choice>
+      <Choice className={importKinds.tile} value="mine">
+        <span aria-hidden="true" className={importKinds.picture}>
+          <ScreenPicture
+            month={month}
+            sample={importSample("mine", month)}
+            size={7}
+            weeks={2}
+          />
+        </span>
+        <span className={importKinds.name}>自分のシフト</span>
+        <span className={importKinds.note}>ほかのアプリの画面など</span>
+      </Choice>
+    </ChoiceGrid>
+  );
+}
+
+const rosterNameStyle = {
+  list: css({ marginBottom: "6px" }),
+  note: css({
+    color: "text3",
+    fontSize: "12px",
+    lineHeight: 1.5,
+    margin: "0 4px 16px",
+  }),
+};
+
+// The person's name as the roster writes it, so the reading finds their
+// row by itself: typed once, kept for the months after.
+function RosterNameField({
+  name,
+  onName,
+}: {
+  name: string;
+  onName: (name: string) => void;
+}) {
+  return (
+    <>
+      <List className={rosterNameStyle.list}>
+        <ListRow
+          label="勤務表での名前"
+          control={
+            <>
+              <input
+                aria-label="勤務表での名前"
+                className="pe-inline-input"
+                onChange={(event) => {
+                  onName(event.target.value);
+                }}
+                placeholder="例：小林 さくら"
+                value={name}
+              />
+            </>
+          }
+        />
+      </List>
+      <p className={rosterNameStyle.note}>
+        勤務表に書かれているとおりに入れると、あなたの行を探します。
+      </p>
+    </>
   );
 }
 
@@ -1301,12 +1452,22 @@ function ImportSheet({
   open,
   onOpenChange,
   access,
+  kind,
+  month,
+  onKind,
+  rosterName,
+  onRosterName,
   onRead,
   onStartPochi,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   access: DesignVariants["importAccess"];
+  kind: ImportKind;
+  month: Date;
+  onKind: (kind: ImportKind) => void;
+  rosterName: string;
+  onRosterName: (name: string) => void;
   onRead: () => void;
   onStartPochi: () => void;
 }) {
@@ -1314,7 +1475,7 @@ function ImportSheet({
     onOpenChange(false);
   };
   const title =
-    access === "limit" ? "少し時間をおいてください" : "勤務表を取り込む";
+    access === "limit" ? "少し時間をおいてください" : "写真から取り込む";
   return (
     <Sheet label={title} onOpenChange={onOpenChange} open={open}>
       <SheetHeading onClose={close} title={title} />
@@ -1339,17 +1500,23 @@ function ImportSheet({
       )}
       {access === "normal" && (
         <>
-          <p className="dc-import-description">
-            配られた勤務表を撮ると、あなたの行を読み取ってシフトを入れます。LINEで届いた画像やスクリーンショットも使えます。読み取った結果は、保存する前に確認できます。
-          </p>
+          <ImportKindChoice kind={kind} month={month} onKind={onKind} />
+          {kind === "roster" ? (
+            <RosterNameField name={rosterName} onName={onRosterName} />
+          ) : (
+            <p className={rosterNameStyle.note}>
+              アプリを月の表示にして撮ったスクリーンショットを選んでください。
+            </p>
+          )}
           <ImportPhotoActions
+            disabled={kind === "roster" && rosterName.trim() === ""}
             onPick={() => {
               close();
               onRead();
             }}
           />
           <p className="dc-sheet-total">
-            デザインの見本です。撮影の代わりに、見本の勤務表を読み取った結果を開きます。
+            見本では、撮影の代わりに見本の画像を読み取ります。
           </p>
         </>
       )}

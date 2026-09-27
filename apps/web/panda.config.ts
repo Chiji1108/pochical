@@ -27,6 +27,17 @@ export default defineConfig({
           from: { opacity: 0, transform: "scale(1.08)" },
           to: { opacity: 1, transform: "scale(1)" },
         },
+        // Reading a photo: a band of light going down it and back, the
+        // frame looking for the page's corners, and a step's spinner.
+        scanSweep: {
+          from: { transform: "translateY(-100%)" },
+          to: { transform: "translateY(500%)" },
+        },
+        searchCorners: {
+          "0%, 100%": { opacity: 0.5, transform: "scale(1.04)" },
+          "50%": { opacity: 1, transform: "scale(1)" },
+        },
+        spin: { to: { transform: "rotate(360deg)" } },
         sheetIn: {
           from: { transform: "translateY(100%)" },
           to: { transform: "translateY(0)" },

@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
+import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 
 import {
@@ -18,7 +19,8 @@ import {
 import { GapSheetPreview, gapDaysIn } from "../components/design-gap-sheet";
 import type { GapSheetProps } from "../components/design-gap-sheet";
 import { ImportReviewPage } from "../components/design-import";
-import type { ImportRun } from "../components/design-import";
+import type { ImportRun, ImportStep } from "../components/design-import";
+import { ImportReading } from "../components/design-import-reading";
 import { DesignOnboarding } from "../components/design-onboarding";
 import type { OnboardingScreen } from "../components/design-onboarding";
 import {
@@ -27,6 +29,8 @@ import {
 } from "../components/design-providers";
 import { themeStyle, useThemeStyle } from "../components/design-theme";
 import { OffDisplayContext } from "../components/shift-mark";
+import { importSample } from "../lib/design-import-sample";
+import type { ImportKind } from "../lib/design-import-sample";
 import { patterns } from "../lib/design-patterns";
 import { parseDesignVariants } from "../lib/design-variants";
 import { pageMeta } from "../lib/site";
@@ -103,16 +107,63 @@ function FlowsPage() {
               <CalendarFrame
                 label="カレンダー"
                 month={OCTOBER}
-                note="写真から取り込む"
+                note="勤務表での名前を入れて撮る"
                 person={{ schedule: {} }}
               />
-              <ImportFrame label="あなたの行" run="first" step="row" />
+              <ReadingFrame kind="roster" label="読み取り中" />
               <ImportFrame label="記号" run="first" step="codes" />
               <ImportFrame label="確かめる" run="first" step="check" />
+              <ImportFrame
+                coworkers
+                label="一緒に働く人"
+                note="入れたい人だけ選ぶ"
+                run="first"
+                scrollToEnd
+                step="check"
+              />
               <CalendarFrame
                 label="カレンダー"
                 month={OCTOBER}
                 note="1か月分が入る"
+                person={{ schedule: initialDesignSchedule(4, OCTOBER) }}
+              />
+            </FrameRow>
+            <FrameRow branch="名前が見つからないとき">
+              <ImportFrame
+                label="あなたの行"
+                note="一覧から選ぶ"
+                rosterName="佐藤 花子"
+                run="first"
+                step="row"
+              />
+              <ImportFrame
+                label="記号"
+                rosterName="佐藤 花子"
+                run="first"
+                step="codes"
+              />
+            </FrameRow>
+            <FrameRow branch="自分のシフトだけの画像">
+              <ReadingFrame
+                kind="mine"
+                label="読み取り中"
+                note="ほかのアプリの画面など"
+              />
+              <ImportFrame
+                kind="mine"
+                label="シフト名"
+                run="first"
+                step="codes"
+              />
+              <ImportFrame
+                kind="mine"
+                label="確かめる"
+                run="first"
+                step="check"
+              />
+              <CalendarFrame
+                label="カレンダー"
+                month={OCTOBER}
                 person={{ schedule: initialDesignSchedule(4, OCTOBER) }}
               />
             </FrameRow>
@@ -227,31 +278,79 @@ function OnboardingFrame({
   );
 }
 
-function ImportFrame({
+// The reading held on its last step, with what it was unsure of marked.
+function ReadingFrame({
+  kind,
   label,
   note,
-  run,
-  step,
 }: {
+  kind: ImportKind;
   label: string;
   note?: string;
-  run: ImportRun;
-  step: "row" | "codes" | "check";
 }) {
   return (
     <Frame label={label} note={note}>
       <PhoneShell>
-        <ImportReviewPage
-          coworkerNames={["田中", "鈴木", "山本", "高橋"]}
-          initialStep={step}
+        <ImportReading
+          holdAt={3}
+          kind={kind}
           month={october}
-          onApply={() => undefined}
           onCancel={() => undefined}
-          patternKeys={["day", "night", "after", "off"]}
-          run={run}
-          schedule={{}}
+          onDone={() => undefined}
+          sample={importSample(kind, october)}
         />
       </PhoneShell>
+    </Frame>
+  );
+}
+
+function ImportFrame({
+  kind,
+  label,
+  note,
+  run,
+  step,
+  coworkers,
+  scrollToEnd = false,
+  rosterName = "小林 さくら",
+}: {
+  kind?: ImportKind;
+  label: string;
+  note?: string;
+  run: ImportRun;
+  step: ImportStep;
+  coworkers?: boolean;
+  // Showing the end of the page, where 一緒に働く人 sits.
+  scrollToEnd?: boolean;
+  // The name typed before the photo; one not on the sheet asks for the row.
+  rosterName?: string;
+}) {
+  const frame = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const scroller = frame.current?.querySelector(".st-scroll");
+    if (scrollToEnd && scroller) {
+      scroller.scrollTop = scroller.scrollHeight;
+    }
+  }, [scrollToEnd]);
+  return (
+    <Frame label={label} note={note}>
+      <div ref={frame}>
+        <PhoneShell>
+          <ImportReviewPage
+            coworkerNames={["田中", "鈴木", "山本", "高橋"]}
+            initialCoworkers={coworkers}
+            initialStep={step}
+            kind={kind}
+            month={october}
+            onApply={() => undefined}
+            onCancel={() => undefined}
+            patternKeys={["day", "night", "after", "off"]}
+            rosterName={rosterName}
+            run={run}
+            schedule={{}}
+          />
+        </PhoneShell>
+      </div>
     </Frame>
   );
 }
