@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
+import { css } from "styled-system/css";
 
 import { DayCell, MonthSummary, TabBar } from "../components/design-calendar";
 import { PhotoAvatar } from "../components/design-group";
@@ -486,6 +487,9 @@ function Pochical() {
   );
 }
 
+// A day as big as on a month of five weeks.
+const sampleDay = css({ height: "56px", width: "100%" });
+
 function Cell({
   entry,
   active = false,
@@ -497,6 +501,7 @@ function Cell({
     <div className="cmp-cell">
       <DayCell
         active={active}
+        className={sampleDay}
         date={cellDate}
         editing={false}
         entry={entry}

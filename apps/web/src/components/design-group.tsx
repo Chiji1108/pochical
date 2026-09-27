@@ -30,10 +30,12 @@ import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
 import {
+  TabBar,
   addDays,
   dateKey,
+  dayCell,
+  dayParts,
   formatDay,
-  TabBar,
   showOverPhone,
   timeChangeOf,
   timeRange,
@@ -2889,16 +2891,26 @@ function PersonDay({
     me !== undefined &&
     everyoneOff([me, member], date);
   const off = item?.off === true;
-  const className = `dc-day ${outside ? "dc-outside" : ""} ${off ? "dc-off" : ""} ${withMe ? "gr-person-with-me" : ""} ${picked ? "dc-active-day" : ""}`;
+  // The calendar's own day, with a frame when you are off too.
+  const className = cx(
+    dayCell({ active: picked, off, outside }),
+    withMe && "gr-person-with-me"
+  );
   const style = off ? ({ "--off-tint": tint } as CSSProperties) : undefined;
   const content = (
     <>
-      <span className={`dc-date ${isColoredHoliday(date) ? "dc-holiday" : ""}`}>
+      <span
+        className={cx(
+          dayParts.date,
+          outside && dayParts.dateOutside,
+          isColoredHoliday(date) && dayParts.holiday
+        )}
+      >
         {date.getDate()}
       </span>
       {item && (
         <>
-          <span className="dc-emoji">
+          <span className={dayParts.mark}>
             <MemberMark
               date={date}
               look={item.look}
@@ -2906,7 +2918,7 @@ function PersonDay({
               size={21}
             />
           </span>
-          <span className="dc-shift-label">{item.name}</span>
+          <span className={dayParts.label}>{item.name}</span>
         </>
       )}
     </>
@@ -2923,6 +2935,7 @@ function PersonDay({
       aria-label={`${formatDay(date)}：${item?.name ?? "未入力"}${withMe ? "、自分も休み" : ""}。押すとその日のみんなの予定`}
       aria-pressed={picked}
       className={className}
+      data-active={picked || undefined}
       onClick={() => {
         onPick(date);
       }}

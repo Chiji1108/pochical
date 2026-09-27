@@ -23,7 +23,9 @@ const buttonStyle = cva({
     cursor: "pointer",
     display: "flex",
     fontSize: "14px",
-    fontWeight: 600,
+    // One weight for every strength, as Material and most libraries do:
+    // the ground tells them apart. Subtle alone steps down.
+    fontWeight: 500,
     gap: "8px",
     justifyContent: "center",
   },

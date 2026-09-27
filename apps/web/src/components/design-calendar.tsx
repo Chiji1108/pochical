@@ -27,7 +27,7 @@ import type {
   ReactNode,
   RefObject,
 } from "react";
-import { css } from "styled-system/css";
+import { css, cva, cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
@@ -1454,15 +1454,117 @@ function ShiftInputControls({
   );
 }
 
+// A day of a month: its date, and its shift's mark with the name under
+// it when names are shown. The group's month of one person draws its days
+// with the same parts.
+export const dayCell = cva({
+  base: {
+    "&:is(button)": { cursor: "pointer" },
+    "&:is(button):active": { transform: "scale(0.94)" },
+    "&:is(button):not([data-active]):hover": { bg: "accentSoft2" },
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    borderRadius: "10px",
+    display: "flex",
+    flexDirection: "column",
+    fontSize: "11px",
+    gap: "2px",
+    height: "64px",
+    minWidth: 0,
+    paddingBlock: "5px",
+    position: "relative",
+  },
+  variants: {
+    // Picked: the day being entered or opened.
+    active: {
+      true: {
+        outline: "2px solid token(colors.accent)",
+        outlineOffset: "-2px",
+      },
+    },
+    // A day to look at again, like one the roster reading was unsure of.
+    flagged: {
+      true: {
+        _after: {
+          bg: "#f7e7a6",
+          borderRadius: "50%",
+          color: "#6b5716",
+          content: '"?"',
+          display: "grid",
+          fontSize: "9px",
+          fontWeight: 700,
+          height: "14px",
+          placeItems: "center",
+          position: "absolute",
+          right: "3px",
+          top: "3px",
+          width: "14px",
+        },
+        boxShadow: "inset 0 0 0 1.5px #e3c65a",
+      },
+    },
+    // A day off in its own pattern's tint, set as --off-tint.
+    off: { true: { bg: "var(--off-tint, var(--accent-mark-tint))" } },
+    outside: { true: { color: "textDisabled" } },
+    today: {
+      true: {
+        outline: "1.5px solid token(colors.accentLine)",
+        outlineOffset: "-1px",
+      },
+    },
+  },
+});
+
+export const dayParts = {
+  date: css({ flexShrink: 0, fontWeight: 600, lineHeight: "14px" }),
+  dateOutside: css({ fontWeight: 400 }),
+  holiday: css({ color: "holiday" }),
+  label: css({
+    color: "text2",
+    flexShrink: 0,
+    fontSize: "9px",
+    lineHeight: "12px",
+  }),
+  mark: css({
+    display: "grid",
+    flexShrink: 0,
+    fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", sans-serif',
+    fontSize: "20px",
+    height: "24px",
+    lineHeight: 1,
+    placeItems: "center",
+  }),
+  // Without a name under it, the mark takes the room below the date.
+  markAlone: css({ flex: 1, height: "auto" }),
+  // 休みの見せ方 空白, while entering or in the week view.
+  markFaint: css({ opacity: 0.35 }),
+  // A note: a stroke under the date, as marked in a paper diary.
+  noted: css({
+    _before: {
+      bg: "var(--note-marker)",
+      borderRadius: "2px",
+      content: '""',
+      inset: "45% -3px -1px",
+      position: "absolute",
+      zIndex: -1,
+    },
+    isolation: "isolate",
+    position: "relative",
+  }),
+};
+
 // The shift's mark, with 早出 and 残業 drawn on its sides.
 function CellShift({
   shift,
   early = false,
   late = false,
+  faint = false,
 }: {
   shift: Shift;
   early?: boolean;
   late?: boolean;
+  faint?: boolean;
 }) {
   const style = useContext(ShiftMarkStyleContext);
   const { names } = useContext(CellNamesContext);
@@ -1473,11 +1575,17 @@ function CellShift({
   }
   return (
     <>
-      <span className="dc-emoji">
+      <span
+        className={cx(
+          dayParts.mark,
+          !withName && dayParts.markAlone,
+          faint && dayParts.markFaint
+        )}
+      >
         <ShiftMark early={early} late={late} shift={shift} size={size} />
       </span>
       {withName && (
-        <span className="dc-shift-label">{patterns[shift].label}</span>
+        <span className={dayParts.label}>{patterns[shift].label}</span>
       )}
     </>
   );
@@ -1518,6 +1626,8 @@ export function DayCell({
   active,
   onPress,
   flagged = false,
+  plain = false,
+  className,
 }: {
   date: Date;
   entry: DayEntry | undefined;
@@ -1527,6 +1637,9 @@ export function DayCell({
   onPress: () => void;
   // Marked for a second look, like a day the roster reading was unsure of.
   flagged?: boolean;
+  // Only the shift, for the saved image: no today frame, no note stroke.
+  plain?: boolean;
+  className?: string;
 }) {
   const markStyle = useContext(ShiftMarkStyleContext);
   const shift = outside ? undefined : entry?.shift;
@@ -1546,23 +1659,43 @@ export function DayCell({
   // stroke as in a paper diary, apart from the shift's 早出 and 残業
   // corners, and only on the person's own calendar. Other time
   // changes, a later start or an earlier end, show when the day is opened.
-  const noted = !outside && Boolean(entry?.note);
-  const className = `dc-day ${outside ? "dc-outside" : ""} ${offStyle ? "dc-off" : ""} ${today && !editing ? "dc-today" : ""} ${active ? "dc-active-day" : ""} ${flagged ? "dc-flagged" : ""} ${faintOff ? "dc-off-faint" : ""}`;
+  const noted = !(outside || plain) && Boolean(entry?.note);
+  // The picked frame wins over today's.
+  const cellClass = cx(
+    dayCell({
+      active,
+      flagged,
+      off: Boolean(offStyle),
+      outside,
+      today: today && !editing && !active && !plain,
+    }),
+    className
+  );
   const content = (
     <>
       <span
-        className={`dc-date ${holiday ? "dc-holiday" : ""} ${noted ? "dc-noted" : ""}`}
+        className={cx(
+          dayParts.date,
+          outside && dayParts.dateOutside,
+          holiday && dayParts.holiday,
+          noted && dayParts.noted
+        )}
       >
         {date.getDate()}
       </span>
       {shift && !hideOff && (
-        <CellShift early={change?.early} late={change?.late} shift={shift} />
+        <CellShift
+          early={change?.early}
+          faint={faintOff}
+          late={change?.late}
+          shift={shift}
+        />
       )}
     </>
   );
   if (outside) {
     return (
-      <div className={className} style={offStyle}>
+      <div className={cellClass} style={offStyle}>
         {content}
       </div>
     );
@@ -1573,7 +1706,8 @@ export function DayCell({
       aria-haspopup={editing ? undefined : "dialog"}
       aria-label={`${date.getMonth() + 1}月${date.getDate()}日、${details.join("、")}`}
       aria-pressed={editing ? active : undefined}
-      className={className}
+      className={cellClass}
+      data-active={active || undefined}
       onClick={onPress}
       style={offStyle}
       type="button"

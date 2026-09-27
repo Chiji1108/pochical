@@ -237,62 +237,6 @@
     grid-template-rows: repeat(var(--weeks, 6), 64px);
     gap: 4px;
   }
-  .dc-day {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    align-items: center;
-    min-width: 0;
-    height: 64px;
-    padding: 5px 0;
-    font-size: 11px;
-    background: transparent;
-    border: 0;
-    border-radius: 10px;
-  }
-  .dc-date {
-    flex-shrink: 0;
-    font-weight: 600;
-    line-height: 14px;
-  }
-  .dc-emoji {
-    display: grid;
-    flex-shrink: 0;
-    place-items: center;
-    height: 24px;
-    font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
-    font-size: 20px;
-    line-height: 1;
-  }
-  .dc-shift-label {
-    flex-shrink: 0;
-    font-size: 9px;
-    line-height: 12px;
-    color: var(--text-2);
-  }
-  .dc-off {
-    background: var(--off-tint, var(--accent-mark-tint));
-  }
-  .dc-outside {
-    color: var(--text-disabled);
-  }
-  .dc-date.dc-holiday {
-    color: var(--holiday);
-  }
-  .dc-outside .dc-date {
-    font-weight: 400;
-  }
-  .dc-today {
-    outline: 1.5px solid var(--accent-line);
-    outline-offset: -1px;
-  }
-  button.dc-day:not(.dc-active-day):hover {
-    background: var(--accent-soft-2);
-  }
-  button.dc-day:active {
-    transform: scale(0.94);
-  }
   .dc-summary {
     display: flex;
     align-items: center;
@@ -589,10 +533,6 @@
     padding-top: 14px;
     background: var(--raised);
   }
-  .dc-active-day {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
-  }
   .dc-patterns button:hover {
     background: var(--accent-soft);
     border-color: var(--accent-muted);
@@ -851,20 +791,6 @@
   }
 
   /* Day detail: time and memo for a single day. */
-  /* A note: a stroke under the date, as marked in a paper diary, in a quiet
-   gray. Laid behind the number, so the date stays where it is. */
-  .dc-noted {
-    position: relative;
-    isolation: isolate;
-  }
-  .dc-noted::before {
-    position: absolute;
-    inset: 45% -3px -1px;
-    z-index: -1;
-    content: "";
-    background: var(--note-marker);
-    border-radius: 2px;
-  }
   .dc-grid.dc-grid-week {
     grid-template-rows: 64px;
   }
@@ -1558,23 +1484,6 @@
     border: 0;
   }
 
-  /* Shift marks: emoji, letter badge or icon. */
-  .sm-emoji {
-    font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
-    line-height: 1;
-  }
-  .sm-badge {
-    display: inline-grid;
-    flex-shrink: 0;
-    place-items: center;
-    font-family: -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
-    font-weight: 700;
-    line-height: 1;
-    border-radius: 28%;
-  }
-  .sm-icon {
-    flex-shrink: 0;
-  }
   .dc-pattern-mark {
     display: grid;
     place-items: center;
@@ -1616,16 +1525,6 @@
   }
   .design-page button.st-pattern {
     cursor: pointer;
-  }
-  .sm-letter {
-    display: inline-grid;
-    flex-shrink: 0;
-    place-items: center;
-    font-family: -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
-    font-weight: 600;
-    line-height: 1;
-    border: 1.7px solid currentcolor;
-    border-radius: 50%;
   }
   .pe-preview {
     display: flex;
@@ -1716,12 +1615,6 @@
     grid-column: 1 / -1;
     width: 100%;
     margin-top: 6px;
-  }
-  /* Without a name under it, the mark sits in the middle of the space below
-   the date. */
-  .dc-day > .dc-emoji:last-child {
-    flex: 1;
-    height: auto;
   }
   /* The preview may use the other scheme's variables, so it sets its own text
    color and uses the screen's background, like the calendar it stands for. */
@@ -3617,13 +3510,6 @@
   .dc-image .dc-weekdays {
     padding-bottom: 6px;
   }
-  /* Only the shifts go out: no today frame or marks for notes. */
-  .dc-image .dc-today {
-    outline: 0;
-  }
-  .dc-image .dc-noted::before {
-    content: none;
-  }
   .dc-image-credit {
     margin: 10px 4px 0;
     font-size: 10px;
@@ -4104,11 +3990,6 @@
     outline: 1.5px solid var(--accent-muted);
     outline-offset: -1px;
   }
-  /* The picked day's frame wins over the shared-day-off one. */
-  .gr-person-with-me.dc-active-day {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
-  }
   /* みんな休み at the foot of the group shifts: the calendar tab's summary
    row, without its top margin inside the page's own gaps. */
   .gr-together-summary.dc-summary {
@@ -4465,32 +4346,7 @@
     color: var(--text-3);
     text-align: center;
   }
-  /* A day to look at again: a small ? on its corner. */
-  .dc-day.dc-flagged {
-    position: relative;
-    box-shadow: inset 0 0 0 1.5px #e3c65a;
-  }
-  .dc-day.dc-flagged::after {
-    position: absolute;
-    top: 3px;
-    right: 3px;
-    display: grid;
-    place-items: center;
-    width: 14px;
-    height: 14px;
-    font-size: 9px;
-    font-weight: 700;
-    color: #6b5716;
-    content: "?";
-    background: #f7e7a6;
-    border-radius: 50%;
-  }
 
-  /* 休みの見せ方 空白: while entering or in the week view, a day off shows
-   faintly, so it still reads apart from a day not entered yet. */
-  .dc-off-faint .dc-emoji {
-    opacity: 0.35;
-  }
   /* 休みの見せ方: tabs showing a day off as each choice draws it. */
   .st-off-sample {
     display: flex;
@@ -4789,28 +4645,6 @@
     border-radius: 46px;
   }
 
-  /* 早出 and 残業 on the shift's mark itself, so they go wherever the mark
-   does: a small triangle in its top left for 早出, its top right for 残業,
-   inside its box. */
-  .sm-timed {
-    position: relative;
-    display: inline-flex;
-  }
-  .sm-time {
-    position: absolute;
-    top: -2px;
-    width: calc(var(--sm-size) * 0.32);
-    height: calc(var(--sm-size) * 0.32);
-    background: var(--text-2);
-  }
-  .sm-time-early {
-    left: -2px;
-    clip-path: polygon(0 0, 100% 0, 0 100%);
-  }
-  .sm-time-late {
-    right: -2px;
-    clip-path: polygon(0 0, 100% 0, 100% 100%);
-  }
   .dc-detail-mark-hint {
     display: block;
     margin-top: 4px;
@@ -4901,10 +4735,6 @@
   /* A day as big as on a month of five weeks. */
   .cmp-cell {
     width: 46px;
-  }
-  .cmp-cell .dc-day {
-    width: 100%;
-    height: 56px;
   }
   /* Sheets and the toast, drawn in place instead of over a phone. */
   .cmp-sheet.dc-sheet {

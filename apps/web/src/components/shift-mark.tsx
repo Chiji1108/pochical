@@ -54,6 +54,7 @@ import {
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { createContext, useContext } from "react";
 import type { CSSProperties } from "react";
+import { css, cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
@@ -83,8 +84,54 @@ export const defaultCellNames: CellNames = {
 // left, the end at the right. Inside the mark's box, it never reaches a
 // neighbor in a narrow group table.
 function TimeSide({ side }: { side: "early" | "late" }) {
-  return <span aria-hidden="true" className={`sm-time sm-time-${side}`} />;
+  return (
+    <span
+      aria-hidden="true"
+      className={cx(glyphStyle.time, glyphStyle[side])}
+    />
+  );
 }
+
+const markFont = '-apple-system, "Hiragino Kaku Gothic ProN", sans-serif';
+
+// The mark's kinds, and 早出 and 残業 on it. `sm-icon` stays on the icon as
+// a hook: a picked pattern's pill turns its fill white.
+const glyphStyle = {
+  badge: css({
+    borderRadius: "28%",
+    display: "inline-grid",
+    flexShrink: 0,
+    fontFamily: markFont,
+    fontWeight: 700,
+    lineHeight: 1,
+    placeItems: "center",
+  }),
+  early: css({ clipPath: "polygon(0 0, 100% 0, 0 100%)", left: "-2px" }),
+  emoji: css({
+    fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", sans-serif',
+    lineHeight: 1,
+  }),
+  icon: css({ flexShrink: 0 }),
+  late: css({ clipPath: "polygon(0 0, 100% 0, 100% 100%)", right: "-2px" }),
+  letter: css({
+    border: "1.7px solid currentcolor",
+    borderRadius: "50%",
+    display: "inline-grid",
+    flexShrink: 0,
+    fontFamily: markFont,
+    fontWeight: 600,
+    lineHeight: 1,
+    placeItems: "center",
+  }),
+  time: css({
+    bg: "text2",
+    height: "calc(var(--sm-size) * 0.32)",
+    position: "absolute",
+    top: "-2px",
+    width: "calc(var(--sm-size) * 0.32)",
+  }),
+  timed: css({ display: "inline-flex", position: "relative" }),
+};
 
 export const CellNamesContext = createContext<{
   names: CellNames;
@@ -401,7 +448,7 @@ export function MarkGlyph({
   }
   return (
     <span
-      className="sm-timed"
+      className={glyphStyle.timed}
       style={{ "--sm-size": `${size}px` } as CSSProperties}
     >
       {early && <TimeSide side="early" />}
@@ -425,7 +472,7 @@ function BareGlyph({
     return (
       <span
         aria-hidden="true"
-        className="sm-badge"
+        className={glyphStyle.badge}
         style={{
           background: tint,
           color,
@@ -442,7 +489,11 @@ function BareGlyph({
     return <IconGlyph icon={look.icon} look={look} size={size} />;
   }
   return (
-    <span aria-hidden="true" className="sm-emoji" style={{ fontSize: size }}>
+    <span
+      aria-hidden="true"
+      className={glyphStyle.emoji}
+      style={{ fontSize: size }}
+    >
       {look.emoji}
     </span>
   );
@@ -464,7 +515,7 @@ function IconGlyph({
     return (
       <span
         aria-hidden="true"
-        className="sm-letter"
+        className={glyphStyle.letter}
         style={{
           color,
           fontSize: Math.round(size * (look.symbol.length > 1 ? 0.36 : 0.5)),
@@ -479,7 +530,7 @@ function IconGlyph({
   return (
     <Icon
       aria-hidden="true"
-      className="sm-icon"
+      className={cx(glyphStyle.icon, "sm-icon")}
       color={color}
       size={size}
       weight={weight}

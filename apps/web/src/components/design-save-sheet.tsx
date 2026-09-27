@@ -325,6 +325,7 @@ export function ImagePreviewPage({
                           key={dateKey(date)}
                           onPress={() => undefined}
                           outside={date.getMonth() !== month.getMonth()}
+                          plain
                         />
                       ))}
                     </div>
