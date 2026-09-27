@@ -34,7 +34,7 @@ import { useSettings } from "../lib/design-settings-store";
 import { useUser } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
 import type { Coworkers } from "./design-coworkers";
-import { GapSheet } from "./design-gap-sheet";
+import { GapSheet, gapDaysIn } from "./design-gap-sheet";
 import { DesignGroup, JoinSheet } from "./design-group";
 import { ImportReviewPage } from "./design-import";
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
@@ -227,7 +227,7 @@ export function repeatSchedule(
   return schedule;
 }
 
-function isDayOff(shift: Shift | undefined) {
+export function isDayOff(shift: Shift | undefined) {
   return shift === "off" || shift === "paid";
 }
 
@@ -554,13 +554,7 @@ export function DesignCalendar({
       return;
     }
     setEditing(false);
-    const lastEntered = monthDays.findLast((date) => schedule[dateKey(date)]);
-    const gaps = monthDays.filter(
-      (date) =>
-        lastEntered !== undefined &&
-        date < lastEntered &&
-        !schedule[dateKey(date)]
-    );
+    const gaps = gapDaysIn(schedule, month);
     if (gaps.length > 0 && gapSheetRef.current) {
       setGapDays(gaps);
       setOfferBlank(offDisplay === "show");
@@ -904,9 +898,7 @@ export function DesignCalendar({
         choices={patternKeys
           .filter((key) => isDayOff(key))
           .map((key) => ({ key, label: patterns[key].label }))}
-        days={gapDays.map(
-          (date) => `${date.getDate()}日(${weekdays[date.getDay()]})`
-        )}
+        days={gapDays}
         onFill={fillGaps}
         blankOff={offDisplay === "blank"}
         completes={unfilled === gapDays.length}

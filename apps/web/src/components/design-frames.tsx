@@ -105,10 +105,13 @@ export function CalendarFrame({
   editing = false,
   tab,
   page,
+  overlay,
 }: {
   label: string;
   note?: string;
   person?: Partial<OwnData>;
+  // A sheet drawn open over the screen.
+  overlay?: ReactNode;
   month?: number;
   editing?: boolean;
   tab?: Tab;
@@ -127,6 +130,7 @@ export function CalendarFrame({
           initialTab={tab}
           variants={variants}
         />
+        {overlay}
       </UserStoreContext>
     </Frame>
   );

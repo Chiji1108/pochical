@@ -5346,3 +5346,11 @@ button.st-row:hover {
 .dc-gap-line {
   display: block;
 }
+/* A sheet drawn open over a phone in the flow diagrams, where the dialog
+   itself would open over the whole page. */
+.dc-sheet-preview {
+  position: absolute;
+  inset: 6px;
+  overflow: hidden;
+  border-radius: 46px;
+}

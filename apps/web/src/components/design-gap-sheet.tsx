@@ -3,31 +3,42 @@ import { useState } from "react";
 import type { RefObject } from "react";
 
 import type { Shift } from "../lib/design-patterns";
+import type { Schedule } from "./design-calendar";
 
 export type OffChoice = { key: Shift; label: string };
 
+const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+
+function keyOf(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 // Many people leave days off blank, pressing 翌日へ as other apps taught
 // them. Rather than stop them while entering, 完了 asks once about the
-// blanks between entered days and fills them with a day off in one tap,
-// so friends see those days off. Blanks after the last entered day are
-// left alone: those are more likely not decided yet.
-export function GapSheet({
-  ref,
-  month,
-  days,
-  offCount,
-  sharing,
-  completes,
-  choices,
-  offerBlank,
-  blankOff,
-  onFill,
-  onBlankOff,
-}: {
-  ref: RefObject<HTMLDialogElement | null>;
+// blanks between entered days and fills them with a day off in one tap.
+// Blanks after the last entered day are left alone: those are more likely
+// not decided yet.
+export function gapDaysIn(schedule: Schedule, month: Date) {
+  const count = new Date(
+    month.getFullYear(),
+    month.getMonth() + 1,
+    0
+  ).getDate();
+  const days = Array.from(
+    { length: count },
+    (_, index) => new Date(month.getFullYear(), month.getMonth(), index + 1)
+  );
+  const lastEntered = days.findLast((date) => schedule[keyOf(date)]);
+  return days.filter(
+    (date) =>
+      lastEntered !== undefined && date < lastEntered && !schedule[keyOf(date)]
+  );
+}
+
+export type GapSheetProps = {
   month: Date;
-  // The blank days, as labels like 3日(木).
-  days: string[];
+  // The blank days to fill.
+  days: Date[];
   // Why to fill them, for everyone: the month's days off, which the
   // summary counts, grow by the blanks. Friends seeing them only matters
   // to people in a group, and filling the whole month leads on to saving.
@@ -45,16 +56,21 @@ export function GapSheet({
   blankOff: boolean;
   onFill: (key: Shift | undefined) => void;
   onBlankOff: (blankOff: boolean) => void;
-}) {
-  const [picked, setPicked] = useState<Shift>();
-  const current = choices.find(({ key }) => key === picked) ?? choices[0];
+};
+
+// The month is in the heading above, so the title leaves it out and fits
+// one line.
+function titleOf(days: Date[]) {
+  return `空いている日が${days.length}日あります`;
+}
+
+export function GapSheet({
+  ref,
+  ...props
+}: GapSheetProps & { ref: RefObject<HTMLDialogElement | null> }) {
   const close = () => ref.current?.close();
-  const monthLabel = `${month.getMonth() + 1}月`;
-  // The month is in the heading above, so the title leaves it out and
-  // fits one line.
-  const title = `空いている日が${days.length}日あります`;
   return (
-    <dialog aria-label={title} className="dc-breakdown" ref={ref}>
+    <dialog aria-label={titleOf(props.days)} className="dc-breakdown" ref={ref}>
       <button
         aria-label="閉じる"
         className="dc-sheet-scrim"
@@ -62,87 +78,121 @@ export function GapSheet({
         tabIndex={-1}
         type="button"
       />
-      <section className="dc-sheet">
-        <div aria-hidden="true" className="dc-sheet-handle" />
-        <header className="dc-sheet-heading">
-          <h4>{title}</h4>
-          <button aria-label="閉じる" onClick={close} type="button">
-            <X aria-hidden="true" size={20} />
-          </button>
-        </header>
-        <p className="dc-import-description">
-          {current?.label ?? "休み"}にすると、{monthLabel}のお休みが
-          <strong className="dc-gap-count">
-            {offCount}日 → {offCount + days.length}日
-          </strong>
-          になります。
-          {sharing && (
-            <span className="dc-gap-line">
-              グループの人にもお休みが見えます。
-            </span>
-          )}
-          {completes && (
-            <span className="dc-gap-line">
-              これで{monthLabel}が全部埋まります。
-            </span>
-          )}
-        </p>
-        <ul className="dc-gap-days">
-          {days.map((day) => (
-            <li key={day}>{day}</li>
-          ))}
-        </ul>
-        {choices.length > 1 && (
-          <fieldset className="dc-gap-choices">
-            <legend className="dc-sr-only">入れるパターン</legend>
-            {choices.map(({ key, label }) => (
-              <button
-                aria-pressed={key === current?.key}
-                key={key}
-                onClick={() => {
-                  setPicked(key);
-                }}
-                type="button"
-              >
-                {label}
-              </button>
-            ))}
-          </fieldset>
-        )}
-        {offerBlank && (
-          <div className="st-list dc-gap-blank">
-            <label className="st-row">
-              <span className="st-row-label">
-                休みの日は空白で見せる
-                <small>入力中と週表示では薄く出ます</small>
-              </span>
-              <input
-                aria-checked={blankOff}
-                checked={blankOff}
-                className="pe-toggle"
-                onChange={(event) => {
-                  onBlankOff(event.target.checked);
-                }}
-                role="switch"
-                type="checkbox"
-              />
-            </label>
-          </div>
-        )}
-        <button
-          className="dc-import-primary"
-          onClick={() => {
-            close();
-            onFill(current?.key);
-          }}
-          type="button"
-        >
-          {current ? `${current.label}にする` : "休みを追加して入れる"}
-        </button>
-        <button className="dc-import-later" onClick={close} type="button">
-          あとで入れる
-        </button>
-      </section>
+      <GapSheetBody {...props} onClose={close} />
     </dialog>
+  );
+}
+
+// The sheet as it stands open over a phone, for the flow diagrams: a
+// modal dialog would open over the whole page instead of the small frame.
+export function GapSheetPreview(props: GapSheetProps) {
+  return (
+    <div className="dc-sheet-preview">
+      <div className="dc-sheet-scrim" />
+      <GapSheetBody {...props} onClose={() => undefined} />
+    </div>
+  );
+}
+
+function GapSheetBody({
+  month,
+  days,
+  offCount,
+  sharing,
+  completes,
+  choices,
+  offerBlank,
+  blankOff,
+  onFill,
+  onBlankOff,
+  onClose: close,
+}: GapSheetProps & { onClose: () => void }) {
+  const [picked, setPicked] = useState<Shift>();
+  const current = choices.find(({ key }) => key === picked) ?? choices[0];
+  const monthLabel = `${month.getMonth() + 1}月`;
+  return (
+    <section className="dc-sheet">
+      <div aria-hidden="true" className="dc-sheet-handle" />
+      <header className="dc-sheet-heading">
+        <h4>{titleOf(days)}</h4>
+        <button aria-label="閉じる" onClick={close} type="button">
+          <X aria-hidden="true" size={20} />
+        </button>
+      </header>
+      <p className="dc-import-description">
+        {current?.label ?? "休み"}にすると、{monthLabel}のお休みが
+        <strong className="dc-gap-count">
+          {offCount}日 → {offCount + days.length}日
+        </strong>
+        になります。
+        {sharing && (
+          <span className="dc-gap-line">
+            グループの人にもお休みが見えます。
+          </span>
+        )}
+        {completes && (
+          <span className="dc-gap-line">
+            これで{monthLabel}が全部埋まります。
+          </span>
+        )}
+      </p>
+      <ul className="dc-gap-days">
+        {days.map((day) => (
+          <li key={day.getDate()}>
+            {day.getDate()}日({weekdays[day.getDay()]})
+          </li>
+        ))}
+      </ul>
+      {choices.length > 1 && (
+        <fieldset className="dc-gap-choices">
+          <legend className="dc-sr-only">入れるパターン</legend>
+          {choices.map(({ key, label }) => (
+            <button
+              aria-pressed={key === current?.key}
+              key={key}
+              onClick={() => {
+                setPicked(key);
+              }}
+              type="button"
+            >
+              {label}
+            </button>
+          ))}
+        </fieldset>
+      )}
+      {offerBlank && (
+        <div className="st-list dc-gap-blank">
+          <label className="st-row">
+            <span className="st-row-label">
+              休みの日は空白で見せる
+              <small>入力中と週表示では薄く出ます</small>
+            </span>
+            <input
+              aria-checked={blankOff}
+              checked={blankOff}
+              className="pe-toggle"
+              onChange={(event) => {
+                onBlankOff(event.target.checked);
+              }}
+              role="switch"
+              type="checkbox"
+            />
+          </label>
+        </div>
+      )}
+      <button
+        className="dc-import-primary"
+        onClick={() => {
+          close();
+          onFill(current?.key);
+        }}
+        type="button"
+      >
+        {current ? `${current.label}にする` : "休みを追加して入れる"}
+      </button>
+      <button className="dc-import-later" onClick={close} type="button">
+        あとで入れる
+      </button>
+    </section>
   );
 }
