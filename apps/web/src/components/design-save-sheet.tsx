@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
+import { cx } from "styled-system/css";
 
 import type { ImageOptions } from "../lib/design-settings-store";
 import { DayCell, dateKey } from "./design-calendar";
@@ -20,7 +21,7 @@ import {
   ToneContext,
   themeStyle,
 } from "./design-theme";
-import { Button, PageHeader } from "./design-ui";
+import { Button, List, ListRow, PageHeader, listStyle } from "./design-ui";
 import { useWeek } from "./design-week";
 import {
   CellNamesContext,
@@ -146,49 +147,62 @@ export function SaveSheet({
             <p className="dc-import-description">
               {monthLabel}のシフトを、選んだカレンダーに予定として入れます。
             </p>
-            <fieldset className="st-list dc-save-calendars">
+            <fieldset className={cx(listStyle, "dc-save-calendars")}>
               <legend className="dc-sr-only">入れるカレンダー</legend>
               {deviceCalendars.map((item) => (
-                <label className="st-row" key={item.id}>
-                  <span
-                    aria-hidden="true"
-                    className="dc-save-dot"
-                    style={{ background: item.color }}
-                  />
-                  <span className="st-row-label">{item.name}</span>
-                  <span className="st-row-value">{item.source}</span>
-                  <input
-                    checked={calendarId === item.id}
-                    className="dc-sr-only"
-                    name="device-calendar"
-                    onChange={() => {
-                      setCalendarId(item.id);
-                    }}
-                    type="radio"
-                  />
-                  <Check
-                    aria-hidden="true"
-                    className={`dc-save-check ${calendarId === item.id ? "" : "dc-save-unchecked"}`}
-                    size={18}
-                  />
-                </label>
+                <ListRow
+                  key={item.id}
+                  label={item.name}
+                  value={item.source}
+                  leading={
+                    <>
+                      <span
+                        aria-hidden="true"
+                        className="dc-save-dot"
+                        style={{ background: item.color }}
+                      />
+                    </>
+                  }
+                  control={
+                    <>
+                      <input
+                        checked={calendarId === item.id}
+                        className="dc-sr-only"
+                        name="device-calendar"
+                        onChange={() => {
+                          setCalendarId(item.id);
+                        }}
+                        type="radio"
+                      />
+                      <Check
+                        aria-hidden="true"
+                        className={`dc-save-check ${calendarId === item.id ? "" : "dc-save-unchecked"}`}
+                        size={18}
+                      />
+                    </>
+                  }
+                />
               ))}
             </fieldset>
-            <div className="st-list">
-              <label className="st-row">
-                <span className="st-row-label">休みの日も入れる</span>
-                <input
-                  aria-checked={includeOff}
-                  checked={includeOff}
-                  className="pe-toggle"
-                  onChange={(event) => {
-                    setIncludeOff(event.target.checked);
-                  }}
-                  role="switch"
-                  type="checkbox"
-                />
-              </label>
-            </div>
+            <List>
+              <ListRow
+                label="休みの日も入れる"
+                control={
+                  <>
+                    <input
+                      aria-checked={includeOff}
+                      checked={includeOff}
+                      className="pe-toggle"
+                      onChange={(event) => {
+                        setIncludeOff(event.target.checked);
+                      }}
+                      role="switch"
+                      type="checkbox"
+                    />
+                  </>
+                }
+              />
+            </List>
             <Button
               variant="primary"
               className="dc-save-add"

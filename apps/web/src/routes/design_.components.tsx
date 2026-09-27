@@ -4,7 +4,6 @@ import {
   CalendarPlus,
   Camera,
   Check,
-  ChevronRight,
   Download,
   Pencil,
   UserPlus,
@@ -26,7 +25,10 @@ import {
   Button,
   HeaderAction,
   IconButton,
+  List,
+  ListRow,
   PageHeader,
+  SwitchRow,
 } from "../components/design-ui";
 import {
   OffDisplayContext,
@@ -216,34 +218,31 @@ function Rows() {
   const [on, setOn] = useState(true);
   return (
     <Group
-      note="設定、シート、取り込みで同じ st-row を使っています。すでに一つにまとまっている例です。"
+      note="List に ListRow を並べます。ラベル、右の値、前の印、後ろの操作(スイッチや入力)を持てて、押せる行には矢印が付きます。設定の Row と SwitchRow、各画面の st-row をまとめたものです。"
       title="行"
     >
-      <Item name="st-list > st-row" where="設定の一覧" wide>
-        <div className="st-list">
-          <div className="st-row">
-            <span className="st-row-label">スタイル</span>
-            <span className="st-row-value">アイコン</span>
-            <ChevronRight
-              aria-hidden="true"
-              className="st-row-arrow"
-              size={17}
-            />
-          </div>
-          <label className="st-row">
-            <span className="st-row-label">休みの日も入れる</span>
-            <input
-              aria-checked={on}
-              checked={on}
-              className="pe-toggle"
-              onChange={(event) => {
-                setOn(event.target.checked);
-              }}
-              role="switch"
-              type="checkbox"
-            />
-          </label>
-        </div>
+      <Item name="List + ListRow" where="設定の一覧など" wide>
+        <List>
+          <ListRow
+            label="スタイル"
+            onClick={() => undefined}
+            value="アイコン"
+          />
+          <SwitchRow checked={on} label="休みの日も入れる" onChange={setOn} />
+          <ListRow
+            label={
+              <>
+                同じシフトの人も入れる
+                <small>勤務表で同じ日に同じシフトの人を入れます</small>
+              </>
+            }
+          />
+          <ListRow
+            danger
+            label="このパターンを削除"
+            onClick={() => undefined}
+          />
+        </List>
       </Item>
     </Group>
   );

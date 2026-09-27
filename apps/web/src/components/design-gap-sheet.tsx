@@ -4,7 +4,7 @@ import type { RefObject } from "react";
 import type { Shift } from "../lib/design-patterns";
 import type { Schedule } from "./design-calendar";
 import { SheetHeading } from "./design-sheet";
-import { Button } from "./design-ui";
+import { Button, List, ListRow } from "./design-ui";
 
 export type OffChoice = { key: Shift; label: string };
 
@@ -157,24 +157,30 @@ function GapSheetBody({
         </fieldset>
       )}
       {offerBlank && (
-        <div className="st-list dc-gap-blank">
-          <label className="st-row">
-            <span className="st-row-label">
-              休みの日は空白で見せる
-              <small>入力中と週表示では薄く出ます</small>
-            </span>
-            <input
-              aria-checked={blankOff}
-              checked={blankOff}
-              className="pe-toggle"
-              onChange={(event) => {
-                onBlankOff(event.target.checked);
-              }}
-              role="switch"
-              type="checkbox"
-            />
-          </label>
-        </div>
+        <List className="dc-gap-blank">
+          <ListRow
+            label={
+              <>
+                休みの日は空白で見せる
+                <small>入力中と週表示では薄く出ます</small>
+              </>
+            }
+            control={
+              <>
+                <input
+                  aria-checked={blankOff}
+                  checked={blankOff}
+                  className="pe-toggle"
+                  onChange={(event) => {
+                    onBlankOff(event.target.checked);
+                  }}
+                  role="switch"
+                  type="checkbox"
+                />
+              </>
+            }
+          />
+        </List>
       )}
       <Button
         variant="primary"

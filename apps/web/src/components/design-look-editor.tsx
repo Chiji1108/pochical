@@ -1,7 +1,7 @@
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 
-import { PageHeader } from "./design-ui";
+import { List, ListRow, PageHeader } from "./design-ui";
 import {
   MarkGlyph,
   MonochromeContext,
@@ -252,24 +252,28 @@ function LetterEditor({
   onPick: (field: LookField, value: Partial<Look>) => void;
 }) {
   return (
-    <div className="st-list">
-      <label className="st-row">
-        <span className="st-row-label">文字</span>
-        <input
-          className="pe-inline-input"
-          onChange={(event) => {
-            const symbol = lastGrapheme(event.target.value);
-            if (symbol) {
-              onPick("symbol", { symbol });
-            }
-          }}
-          onFocus={(event) => {
-            event.currentTarget.select();
-          }}
-          value={look.symbol}
-        />
-      </label>
-    </div>
+    <List>
+      <ListRow
+        label="文字"
+        control={
+          <>
+            <input
+              className="pe-inline-input"
+              onChange={(event) => {
+                const symbol = lastGrapheme(event.target.value);
+                if (symbol) {
+                  onPick("symbol", { symbol });
+                }
+              }}
+              onFocus={(event) => {
+                event.currentTarget.select();
+              }}
+              value={look.symbol}
+            />
+          </>
+        }
+      />
+    </List>
   );
 }
 

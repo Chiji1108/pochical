@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useContext, useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
+import { cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
@@ -47,7 +48,10 @@ import {
   Button,
   HeaderAction,
   IconButton,
+  List,
+  ListRow,
   PageHeader,
+  listRow,
 } from "./design-ui";
 import { holidayName, useWeek } from "./design-week";
 import {
@@ -966,7 +970,7 @@ function GroupHub({
       </section>
       <section className="st-section">
         <h4>チャット</h4>
-        <div className="st-list">
+        <List>
           <ChatRow
             chat={chatOf(groupChat)}
             icon={
@@ -992,7 +996,7 @@ function GroupHub({
               }}
             />
           ))}
-        </div>
+        </List>
         {others.length === 0 && (
           <p className="st-note">メンバーを招待すると、1対1でも話せます。</p>
         )}
@@ -1030,7 +1034,12 @@ function ChatRow({
   const preview = lastLine(chat, members);
   const last = chat.messages.at(-1);
   return (
-    <button className="st-row gr-chat-row" onClick={onOpen} type="button">
+    <button
+      className={cx(listRow.root, listRow.pressable, "gr-chat-row")}
+      data-list-row=""
+      onClick={onOpen}
+      type="button"
+    >
       {icon}
       <span className="gr-chat-row-text">
         <span className="gr-chat-row-name">{label}</span>
@@ -1986,29 +1995,19 @@ function TogetherSummary({
             />
             {/* Picking a date closes this and shows everyone that day. */}
             <div className="gr-legend-body">
-              <div className="st-list">
+              <List>
                 {days.map((date) => (
-                  <button
-                    className="st-row"
+                  <ListRow
                     key={dateKey(date)}
                     onClick={() => {
                       setOpen(false);
                       onPickDay(date);
                     }}
-                    type="button"
-                  >
-                    <span className="st-row-label">{formatDay(date)}</span>
-                    <span className="st-row-value">
-                      {holidayName(date) ?? ""}
-                    </span>
-                    <ChevronRight
-                      aria-hidden="true"
-                      className="st-row-arrow"
-                      size={17}
-                    />
-                  </button>
+                    label={formatDay(date)}
+                    value={holidayName(date) ?? ""}
+                  />
                 ))}
-              </div>
+              </List>
             </div>
           </section>
         </div>
@@ -2075,32 +2074,40 @@ function PickedDaySheet({
       <SheetHeading onClose={onClose} title={formatDay(date)}>
         {together && <span className="gr-day-card-tag">みんな休み</span>}
       </SheetHeading>
-      <div className="st-list gr-day-sheet-list">
+      <List className="gr-day-sheet-list">
         {members.map((member) => {
           const item = patternOn(member, date);
           return (
-            <div className="st-row" key={member.id}>
-              <Avatar member={member} />
-              <span className="st-row-label">{member.name}</span>
-              <span className="st-row-value gr-day-sheet-value">
-                {item && (
-                  <MemberMark
-                    date={date}
-                    look={item.look}
-                    member={member}
-                    size={18}
+            <ListRow
+              key={member.id}
+              label={member.name}
+              value={
+                <>
+                  {item && (
+                    <MemberMark
+                      date={date}
+                      look={item.look}
+                      member={member}
+                      size={18}
+                    />
+                  )}
+                  {item?.name ?? "未入力"}
+                  <DaySheetTime
+                    change={changeOn(member, date)}
+                    time={item?.time}
                   />
-                )}
-                {item?.name ?? "未入力"}
-                <DaySheetTime
-                  change={changeOn(member, date)}
-                  time={item?.time}
-                />
-              </span>
-            </div>
+                </>
+              }
+              leading={
+                <>
+                  <Avatar member={member} />
+                </>
+              }
+              valueClassName="gr-day-sheet-value"
+            />
           );
         })}
-      </div>
+      </List>
     </section>
   );
 }
@@ -2143,15 +2150,24 @@ function LegendSheet({
                   {member.me ? "自分" : member.name}
                 </h4>
               )}
-              <div className="st-list">
+              <List>
                 {member.patterns.map((item) => (
-                  <div className="st-row" key={item.id}>
-                    <MemberMark look={item.look} member={member} size={20} />
-                    <span className="st-row-label">{item.name}</span>
-                    <span className="st-row-value">{item.time ?? ""}</span>
-                  </div>
+                  <ListRow
+                    key={item.id}
+                    label={item.name}
+                    value={item.time ?? ""}
+                    leading={
+                      <>
+                        <MemberMark
+                          look={item.look}
+                          member={member}
+                          size={20}
+                        />
+                      </>
+                    }
+                  />
                 ))}
-              </div>
+              </List>
             </section>
           ))}
         </div>
@@ -3027,19 +3043,23 @@ export function JoinSheet({
               ))}
               <small>{invite.members.length}人が参加中</small>
             </div>
-            <div className="st-list gr-join-name">
-              <label className="st-row">
-                <span className="st-row-label">あなたの名前</span>
-                <input
-                  className="pe-inline-input"
-                  onChange={(event) => {
-                    setName(event.target.value);
-                  }}
-                  placeholder="例：さくら"
-                  value={name}
-                />
-              </label>
-            </div>
+            <List className="gr-join-name">
+              <ListRow
+                label="あなたの名前"
+                control={
+                  <>
+                    <input
+                      className="pe-inline-input"
+                      onChange={(event) => {
+                        setName(event.target.value);
+                      }}
+                      placeholder="例：さくら"
+                      value={name}
+                    />
+                  </>
+                }
+              />
+            </List>
             <p className="gr-join-text">
               このグループの人に、この名前で表示されます。参加すると、あなたのシフトもメンバーに見えるようになります。
             </p>
@@ -3143,50 +3163,55 @@ function PhotoPicker({
         />
         <section className="dc-sheet st-photo-sheet">
           <div aria-hidden="true" className="dc-sheet-handle" />
-          <div className="st-list">
-            <label className="st-row" htmlFor={cameraId}>
-              <Camera aria-hidden="true" className="st-row-icon" size={20} />
-              <span className="st-row-label">写真を撮る</span>
-            </label>
-            <label className="st-row" htmlFor={libraryId}>
-              <ImageIcon aria-hidden="true" className="st-row-icon" size={20} />
-              <span className="st-row-label">写真を選ぶ</span>
-            </label>
+          <List>
+            <ListRow
+              htmlFor={cameraId}
+              label="写真を撮る"
+              leading={
+                <>
+                  <Camera aria-hidden="true" size={20} />
+                </>
+              }
+            />
+            <ListRow
+              htmlFor={libraryId}
+              label="写真を選ぶ"
+              leading={
+                <>
+                  <ImageIcon aria-hidden="true" size={20} />
+                </>
+              }
+            />
             {onUsual && (
-              <button
-                className="st-row"
+              <ListRow
                 onClick={() => {
                   onUsual();
                   close();
                 }}
-                type="button"
-              >
-                <RotateCcw
-                  aria-hidden="true"
-                  className="st-row-icon"
-                  size={20}
-                />
-                <span className="st-row-label">いつもの写真に戻す</span>
-              </button>
+                label="いつもの写真に戻す"
+                leading={
+                  <>
+                    <RotateCcw aria-hidden="true" size={20} />
+                  </>
+                }
+              />
             )}
             {onRemove && (
-              <button
-                className="st-row"
+              <ListRow
                 onClick={() => {
                   onRemove();
                   close();
                 }}
-                type="button"
-              >
-                <Trash2
-                  aria-hidden="true"
-                  className="st-row-icon st-danger"
-                  size={20}
-                />
-                <span className="st-row-label st-danger">写真を削除</span>
-              </button>
+                label="写真を削除"
+                leading={
+                  <>
+                    <Trash2 aria-hidden="true" size={20} />
+                  </>
+                }
+                danger
+              />
             )}
-          </div>
+          </List>
           <button className="st-photo-cancel" onClick={close} type="button">
             キャンセル
           </button>
@@ -3273,71 +3298,72 @@ function GroupSettingsPage({
       <PageHeader back={group.name} onBack={onBack} title="グループの設定" />
       <section className="st-section">
         <h4>グループ</h4>
-        <div className="st-list">
-          <button
-            className="st-row"
+        <List>
+          <ListRow
             onClick={() => {
               setView("edit");
             }}
-            type="button"
-          >
-            <span className="gr-mark-frame-small gr-row-mark">
-              <GroupIcon mark={group.mark} size={16} />
-            </span>
-            <span className="st-row-label">{group.name}</span>
-            <span className="st-row-value">編集</span>
-            <ChevronRight
-              aria-hidden="true"
-              className="st-row-arrow"
-              size={17}
-            />
-          </button>
-        </div>
+            label={group.name}
+            value="編集"
+            leading={
+              <>
+                <span className="gr-mark-frame-small gr-row-mark">
+                  <GroupIcon mark={group.mark} size={16} />
+                </span>
+              </>
+            }
+          />
+        </List>
         <p className="st-note">
           グループ名とアイコンは、メンバー全員に表示されます。
         </p>
       </section>
       <section className="st-section">
         <h4>このグループでのあなた</h4>
-        <div className="st-list">
-          <button
-            className="st-row"
+        <List>
+          <ListRow
             onClick={() => {
               setView("profile");
             }}
-            type="button"
-          >
-            <PhotoAvatar name={shown.name} photo={shown.photo} size={28} />
-            <span className="st-row-label gr-row-label-after-avatar">
-              {shown.name}
-            </span>
-            <span className="st-row-value">
-              {group.mine ? "このグループだけ" : "いつもと同じ"}
-            </span>
-            <ChevronRight
-              aria-hidden="true"
-              className="st-row-arrow"
-              size={17}
-            />
-          </button>
-        </div>
+            label={shown.name}
+            value={group.mine ? "このグループだけ" : "いつもと同じ"}
+            leading={
+              <>
+                <PhotoAvatar name={shown.name} photo={shown.photo} size={28} />
+              </>
+            }
+            labelClassName="gr-row-label-after-avatar"
+          />
+        </List>
       </section>
       <section className="st-section">
         <h4>メンバー</h4>
-        <div className="st-list">
+        <List>
           {group.members.map((member) => (
-            <div className="st-row" key={member.id}>
-              <Avatar member={member} />
-              <span className="st-row-label">
-                {member.me ? `${shown.name}（自分）` : member.name}
-              </span>
-            </div>
+            <ListRow
+              key={member.id}
+              label={<>{member.me ? `${shown.name}（自分）` : member.name}</>}
+              leading={
+                <>
+                  <Avatar member={member} />
+                </>
+              }
+            />
           ))}
-          <button className="st-row" onClick={onInvite} type="button">
-            <UserPlus aria-hidden="true" className="gr-row-icon" size={18} />
-            <span className="st-row-label">メンバーを招待</span>
-          </button>
-        </div>
+          <ListRow
+            onClick={onInvite}
+            label="メンバーを招待"
+            leading={
+              <>
+                <UserPlus
+                  aria-hidden="true"
+                  className="gr-row-icon"
+                  size={18}
+                />
+              </>
+            }
+          />
+        </List>
       </section>
       <button className="pe-delete" type="button">
         このグループから抜ける
@@ -3424,25 +3450,29 @@ function GroupEditPage({
           <GroupIcon mark={mark} size={40} />
         </span>
       </div>
-      <div className="st-list">
-        <label className="st-row">
-          <span className="st-row-label">グループ名</span>
-          <input
-            className="pe-inline-input"
-            onChange={(event) => {
-              setName(event.target.value);
-            }}
-            placeholder="例：家族"
-            value={name}
-          />
-        </label>
+      <List>
+        <ListRow
+          label="グループ名"
+          control={
+            <>
+              <input
+                className="pe-inline-input"
+                onChange={(event) => {
+                  setName(event.target.value);
+                }}
+                placeholder="例：家族"
+                value={name}
+              />
+            </>
+          }
+        />
         <MarkRow
           mark={mark}
           onOpen={() => {
             setEditingMark(true);
           }}
         />
-      </div>
+      </List>
       <p className="st-note">
         保存すると、メンバー全員の画面に反映され、グループのチャットにもお知らせが届きます。
       </p>
@@ -3503,19 +3533,23 @@ function GroupProfilePage({
         photo={shown.photo}
         size={88}
       />
-      <div className="st-list gr-profile-list">
-        <label className="st-row">
-          <span className="st-row-label">名前</span>
-          <input
-            className="pe-inline-input"
-            onChange={(event) => {
-              update({ name: event.target.value || undefined });
-            }}
-            placeholder={profile.name}
-            value={mine.name ?? ""}
-          />
-        </label>
-      </div>
+      <List className="gr-profile-list">
+        <ListRow
+          label="名前"
+          control={
+            <>
+              <input
+                className="pe-inline-input"
+                onChange={(event) => {
+                  update({ name: event.target.value || undefined });
+                }}
+                placeholder={profile.name}
+                value={mine.name ?? ""}
+              />
+            </>
+          }
+        />
+      </List>
       <p className="st-note">
         {group.name}
         の人にだけ、この名前と写真で表示されます。名前が空欄なら「{profile.name}
@@ -3829,19 +3863,27 @@ function GroupMarkPage({
       )}
       {kind === "letter" && (
         <>
-          <div className="st-list">
-            <label className="st-row">
-              <span className="st-row-label">文字</span>
-              <input
-                className="pe-inline-input"
-                maxLength={2}
-                onChange={(event) => {
-                  onChange({ color, kind: "letter", text: event.target.value });
-                }}
-                value={letter}
-              />
-            </label>
-          </div>
+          <List>
+            <ListRow
+              label="文字"
+              control={
+                <>
+                  <input
+                    className="pe-inline-input"
+                    maxLength={2}
+                    onChange={(event) => {
+                      onChange({
+                        color,
+                        kind: "letter",
+                        text: event.target.value,
+                      });
+                    }}
+                    value={letter}
+                  />
+                </>
+              }
+            />
+          </List>
           <MarkColors
             color={color}
             onPick={(value) => {
@@ -3938,39 +3980,47 @@ function NewGroupPage({
         }
         title="グループを作る"
       />
-      <div className="st-list">
-        <label className="st-row">
-          <span className="st-row-label">グループ名</span>
-          <input
-            className="pe-inline-input"
-            onChange={(event) => {
-              setName(event.target.value);
-              if (!picked) {
-                setMark(guessGroupMark(event.target.value, color));
-              }
-            }}
-            placeholder="例：家族"
-            value={name}
-          />
-        </label>
+      <List>
+        <ListRow
+          label="グループ名"
+          control={
+            <>
+              <input
+                className="pe-inline-input"
+                onChange={(event) => {
+                  setName(event.target.value);
+                  if (!picked) {
+                    setMark(guessGroupMark(event.target.value, color));
+                  }
+                }}
+                placeholder="例：家族"
+                value={name}
+              />
+            </>
+          }
+        />
         <MarkRow
           mark={mark}
           onOpen={() => {
             setEditingMark(true);
           }}
         />
-        <label className="st-row">
-          <span className="st-row-label">このグループでの名前</span>
-          <input
-            className="pe-inline-input"
-            onChange={(event) => {
-              setMyName(event.target.value);
-            }}
-            placeholder="例：さくら"
-            value={myName}
-          />
-        </label>
-      </div>
+        <ListRow
+          label="このグループでの名前"
+          control={
+            <>
+              <input
+                className="pe-inline-input"
+                onChange={(event) => {
+                  setMyName(event.target.value);
+                }}
+                placeholder="例：さくら"
+                value={myName}
+              />
+            </>
+          }
+        />
+      </List>
       <p className="st-note">
         アイコンはグループ名から自動で入ります。このグループでの名前は、最初はいつもの名前です。写真はあとからグループの設定で変えられます。
       </p>
@@ -3980,14 +4030,17 @@ function NewGroupPage({
 
 function MarkRow({ mark, onOpen }: { mark: GroupMark; onOpen: () => void }) {
   return (
-    <button className="st-row" onClick={onOpen} type="button">
-      <span className="st-row-label">アイコン</span>
-      <span className="st-row-value pe-look-value">
-        <span className="gr-mark-frame-small">
-          <GroupIcon mark={mark} size={16} />
-        </span>
-      </span>
-      <ChevronRight aria-hidden="true" className="st-row-arrow" size={17} />
-    </button>
+    <ListRow
+      onClick={onOpen}
+      label="アイコン"
+      value={
+        <>
+          <span className="gr-mark-frame-small">
+            <GroupIcon mark={mark} size={16} />
+          </span>
+        </>
+      }
+      valueClassName="pe-look-value"
+    />
   );
 }

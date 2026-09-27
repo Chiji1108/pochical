@@ -1545,51 +1545,6 @@
     font-weight: 400;
     color: var(--text-4);
   }
-  .st-list {
-    overflow: hidden;
-    background: var(--fill);
-    border-radius: 16px;
-  }
-  .st-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    width: 100%;
-    min-height: 48px;
-    padding: 0 14px;
-    font-size: 14px;
-    color: var(--text);
-    text-align: left;
-    background: transparent;
-    border: 0;
-  }
-  .st-row + .st-row {
-    border-top: 1px solid var(--separator);
-  }
-  button.st-row:hover {
-    background: var(--fill-2);
-  }
-  .st-row-label {
-    flex-shrink: 0;
-  }
-  .st-row-value {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 13px;
-    color: var(--text-3);
-    text-align: right;
-    white-space: nowrap;
-  }
-  .st-row-arrow {
-    flex-shrink: 0;
-    margin-right: -4px;
-    color: var(--text-faint);
-  }
-  .st-danger {
-    color: var(--danger);
-  }
   .st-note {
     margin: 0 8px;
     font-size: 11px;
@@ -2017,13 +1972,6 @@
   }
   .gr-profile-list {
     margin-top: 18px;
-  }
-  .st-row-swatch {
-    flex-shrink: 0;
-    width: 10px;
-    height: 10px;
-    margin-right: 10px;
-    border-radius: 50%;
   }
   .st-week-start button {
     min-height: 40px;
@@ -3439,17 +3387,6 @@
     background: transparent;
     border: 0;
   }
-  .st-photo-sheet .st-row {
-    width: 100%;
-    cursor: pointer;
-    background: transparent;
-    border: 0;
-  }
-  .st-row-icon {
-    flex-shrink: 0;
-    margin-right: 12px;
-    color: var(--text-2);
-  }
   .design-page .st-photo-cancel {
     width: 100%;
     min-height: 48px;
@@ -3736,12 +3673,6 @@
     padding: 0;
     margin: 0 0 12px;
     border: 0;
-  }
-  .dc-save-calendars .st-row {
-    cursor: pointer;
-  }
-  .dc-save-calendars .st-row + .st-row {
-    border-top: 1px solid var(--separator);
   }
   .dc-save-dot {
     flex-shrink: 0;
@@ -4512,17 +4443,7 @@
   }
   /* Two lines each, the name over the start of the row it read. */
   .im-row,
-  .im-page label.st-row {
-    padding-top: 9px;
-    padding-bottom: 9px;
-    cursor: pointer;
-  }
   .im-row .st-row-label,
-  .im-page label.st-row .st-row-label {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
   .im-row-codes {
     font-size: 11px;
     font-weight: 400;
@@ -4711,10 +4632,6 @@
     content: "?";
     background: #f7e7a6;
     border-radius: 50%;
-  }
-  .im-page .st-row-label {
-    flex: 1;
-    min-width: 0;
   }
 
   /* 休みの見せ方 空白: while entering or in the week view, a day off shows
@@ -5013,11 +4930,6 @@
   }
   .dc-gap-blank {
     margin: 0 0 16px;
-  }
-  .dc-gap-blank .st-row-label {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
   }
   .dc-gap-blank small {
     font-size: 11px;

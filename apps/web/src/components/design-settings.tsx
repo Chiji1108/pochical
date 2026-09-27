@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useContext, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
@@ -49,7 +50,14 @@ import {
   themeStyle,
 } from "./design-theme";
 import type { Appearance, ColorChoice } from "./design-theme";
-import { Button, PageHeader } from "./design-ui";
+import {
+  Button,
+  List,
+  ListRow,
+  PageHeader,
+  SwitchRow,
+  listStyle,
+} from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
 import type { ColoredDay } from "./design-week";
 import {
@@ -343,9 +351,9 @@ function SettingsTop({
     <>
       <PageHeader title="設定" />
       <Section title="シフト">
-        <Row
+        <ListRow
           label="働き方"
-          onOpen={() => {
+          onClick={() => {
             onOpen("work");
           }}
           value={
@@ -354,9 +362,9 @@ function SettingsTop({
               : "勤務表が配られる"
           }
         />
-        <Row
+        <ListRow
           label="シフトパターン"
-          onOpen={() => {
+          onClick={() => {
             onOpen("patterns");
           }}
           value={
@@ -370,24 +378,24 @@ function SettingsTop({
             </>
           }
         />
-        <Row
+        <ListRow
           label="一緒に働く人"
-          onOpen={() => {
+          onClick={() => {
             onOpen("coworkers");
           }}
           value={`${coworkerCount}人`}
         />
-        <Row
+        <ListRow
           label="仕事が変わったとき"
-          onOpen={() => {
+          onClick={() => {
             onOpen("job");
           }}
         />
       </Section>
       <Section title="表示">
-        <Row
+        <ListRow
           label="スタイル"
-          onOpen={() => {
+          onClick={() => {
             onOpen("mark");
           }}
           value={`${shapeOf(look).name}${
@@ -411,9 +419,9 @@ function SettingsTop({
         />
       </Section>
       <Section title="アカウント">
-        <Row
+        <ListRow
           label="プロフィール"
-          onOpen={() => {
+          onClick={() => {
             onOpen("profile");
           }}
           value={
@@ -441,7 +449,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="st-section">
       <h4>{title}</h4>
-      <div className="st-list">{children}</div>
+      <List>{children}</List>
     </section>
   );
 }
@@ -468,42 +476,12 @@ function Group({
   );
 }
 
-function Row({
-  label,
-  value,
-  onOpen,
-}: {
-  label: string;
-  value?: ReactNode;
-  onOpen?: () => void;
-}) {
-  const content = (
-    <>
-      <span className="st-row-label">{label}</span>
-      {(value !== undefined || onOpen) && (
-        <span className="st-row-value">{value}</span>
-      )}
-      {onOpen && (
-        <ChevronRight aria-hidden="true" className="st-row-arrow" size={17} />
-      )}
-    </>
-  );
-  if (onOpen) {
-    return (
-      <button className="st-row" onClick={onOpen} type="button">
-        {content}
-      </button>
-    );
-  }
-  return <div className="st-row">{content}</div>;
-}
-
 function AccountRow({ onOpen }: { onOpen: () => void }) {
   const account = useSettings((state) => state.account);
   return (
-    <Row
+    <ListRow
       label="アカウント"
-      onOpen={onOpen}
+      onClick={onOpen}
       value={
         account ? (
           <span className="st-inline-value">
@@ -580,47 +558,44 @@ function AccountPage({ onBack }: { onBack: () => void }) {
     <>
       <PageHeader back="設定" onBack={onBack} title="アカウント" />
       <Group title="ログイン中">
-        <div className="st-list">
-          <div className="st-row">
-            <span className="st-account-logo">
-              <ProviderLogo provider={account.provider} size={18} />
-            </span>
-            <span className="st-row-label">
-              {providerNames[account.provider]}
-            </span>
-            <span className="st-row-value st-account-email">
-              {account.email}
-            </span>
-          </div>
-        </div>
+        <List>
+          <ListRow
+            label={providerNames[account.provider]}
+            value={account.email}
+            leading={
+              <>
+                <span className="st-account-logo">
+                  <ProviderLogo provider={account.provider} size={18} />
+                </span>
+              </>
+            }
+            valueClassName="st-account-email"
+          />
+        </List>
         <p className="st-note">
           シフトとグループはこのアカウントに保存され、ほかの端末でも同じデータを使えます。
         </p>
       </Group>
-      <div className="st-list">
+      <List>
         {/* Asks first, on the spot, so no arrow as for a page. */}
-        <button
-          className="st-row"
+        <ListRow
           onClick={() => {
             setConfirm("signOut");
           }}
-          type="button"
-        >
-          <span className="st-row-label st-danger">ログアウト</span>
-        </button>
-      </div>
-      <div className="st-list st-account-delete">
+          label="ログアウト"
+          danger
+        />
+      </List>
+      <List className="st-account-delete">
         {/* Asks first, on the spot, so no arrow as for a page. */}
-        <button
-          className="st-row"
+        <ListRow
           onClick={() => {
             setConfirm("delete");
           }}
-          type="button"
-        >
-          <span className="st-row-label st-danger">アカウントを削除</span>
-        </button>
-      </div>
+          label="アカウントを削除"
+          danger
+        />
+      </List>
       {confirm === "signOut" && (
         <ConfirmSheet
           action="ログアウト"
@@ -740,13 +715,13 @@ function RepeatDetails({
         <SequenceChips sequence={current.sequence} />
         <p className="st-card-meta">{formatDay(current.start)}から</p>
       </div>
-      <div className="st-list">
+      <List>
         <SwitchRow
           checked={current.holidaysOff ?? false}
           label="祝日は休みにする"
           onChange={onHolidaysOff}
         />
-      </div>
+      </List>
       <Button variant="primary" onClick={onNew}>
         新しい繰り返しにする
       </Button>
@@ -772,7 +747,7 @@ function RuleHistory({ rules }: { rules: RepeatRule[] }) {
                 ? `${shortDay(rule.start)}〜${shortDay(addDays(next.start, -1))}`
                 : `${shortDay(rule.start)}〜`;
               return (
-                <Row
+                <ListRow
                   key={dateKey(rule.start)}
                   label={period}
                   value={
@@ -876,13 +851,13 @@ function RepeatEditorPage({
           ? "並びの1つ目のシフトが入る日を選びます。"
           : `${text.dayLabel}が、並びの1日目になります。`}
       </p>
-      <div className="st-list">
+      <List>
         <SwitchRow
           checked={holidaysOff}
           label="祝日は休みにする"
           onChange={setHolidaysChoice}
         />
-      </div>
+      </List>
       {sequence.length > 0 && <RepeatPreview rule={rule} />}
       {fixing && (
         <p className="st-note">
@@ -1040,19 +1015,23 @@ function ProfilePage({
         photo={profile.photo}
         size={88}
       />
-      <div className="st-list">
-        <label className="st-row">
-          <span className="st-row-label">いつもの名前</span>
-          <input
-            className="pe-inline-input"
-            onChange={(event) => {
-              onChange({ ...profile, name: event.target.value });
-            }}
-            placeholder="例：さくら"
-            value={profile.name}
-          />
-        </label>
-      </div>
+      <List>
+        <ListRow
+          label="いつもの名前"
+          control={
+            <>
+              <input
+                className="pe-inline-input"
+                onChange={(event) => {
+                  onChange({ ...profile, name: event.target.value });
+                }}
+                placeholder="例：さくら"
+                value={profile.name}
+              />
+            </>
+          }
+        />
+      </List>
       <p className="st-note">
         グループを作るときや参加するときに、最初に入る名前と写真です。グループごとに違う名前や写真にしたいときは、各グループの設定で変えられます。
       </p>
@@ -1490,42 +1469,6 @@ function NamesChoices({ current }: { current: ShiftMarkStyle }) {
   );
 }
 
-function SwitchRow({
-  label,
-  checked,
-  onChange,
-  swatch,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  // A dot in the color the setting paints with.
-  swatch?: string;
-}) {
-  return (
-    <label className="st-row">
-      {swatch ? (
-        <span
-          aria-hidden="true"
-          className="st-row-swatch"
-          style={{ background: swatch }}
-        />
-      ) : null}
-      <span className="st-row-label">{label}</span>
-      <input
-        aria-checked={checked}
-        checked={checked}
-        className="pe-toggle"
-        onChange={(event) => {
-          onChange(event.target.checked);
-        }}
-        role="switch"
-        type="checkbox"
-      />
-    </label>
-  );
-}
-
 const toneOptions: { tone: Tone; name: string }[] = [
   { name: "深め", tone: "deep" },
   { name: "紙", tone: "paper" },
@@ -1589,9 +1532,9 @@ function AppIconRow({ onOpen }: { onOpen: () => void }) {
   const icons = useAppIcons();
   const picked = pickableIcons.find((option) => option.id === icon);
   return (
-    <Row
+    <ListRow
       label="アプリアイコン"
-      onOpen={onOpen}
+      onClick={onOpen}
       value={
         <span className="st-inline-value">
           <AppIcon size={22} src={icons[icon]} />
@@ -1686,7 +1629,7 @@ function SystemAlert({
 function AppearanceRow({ onOpen }: { onOpen: () => void }) {
   const appearance = useSettings((state) => state.device.appearance);
   return (
-    <Row label="外観" onOpen={onOpen} value={appearanceName(appearance)} />
+    <ListRow label="外観" onClick={onOpen} value={appearanceName(appearance)} />
   );
 }
 
@@ -1697,23 +1640,22 @@ function AppearancePage({ onBack }: { onBack: () => void }) {
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="外観" />
-      <fieldset className="st-list st-choice-list">
+      <fieldset className={cx(listStyle, "st-choice-list")}>
         <legend className="dc-sr-only">外観</legend>
         {appearanceOptions.map((option) => (
-          <button
+          <ListRow
             aria-pressed={appearance === option.appearance}
-            className="st-row"
             key={option.appearance}
             onClick={() => {
               setAppearance(option.appearance);
             }}
-            type="button"
-          >
-            <span className="st-row-label">{option.name}</span>
-            {appearance === option.appearance ? (
-              <Check aria-hidden="true" className="st-work-check" size={20} />
-            ) : null}
-          </button>
+            label={option.name}
+            control={
+              appearance === option.appearance ? (
+                <Check aria-hidden="true" className="st-work-check" size={20} />
+              ) : null
+            }
+          />
         ))}
       </fieldset>
       <p className="st-note">
@@ -1742,9 +1684,9 @@ function WeekRow({ onOpen }: { onOpen: () => void }) {
     .map((option) => coloredDayShortNames[option.day])
     .join("");
   return (
-    <Row
+    <ListRow
       label="曜日と祝日"
-      onOpen={onOpen}
+      onClick={onOpen}
       value={`${weekdayNames[week.weekStart]}曜はじまり・${colored || "色なし"}`}
     />
   );
@@ -1786,7 +1728,7 @@ function WeekPage({
         </fieldset>
       </Group>
       <Group title="色をつける日">
-        <div className="st-list">
+        <List>
           {coloredDayOptions.map((option) => (
             <SwitchRow
               checked={week.colored[option.day]}
@@ -1801,7 +1743,7 @@ function WeekPage({
               swatch={option.color}
             />
           ))}
-        </div>
+        </List>
       </Group>
       <p className="st-note">
         土曜と日曜は曜日の見出しに、祝日は日付に色がつきます。祝日は日曜と同じ赤です。グループの画面でも、この並びと色で表示されます。

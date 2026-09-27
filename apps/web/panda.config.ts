@@ -24,6 +24,7 @@ export default defineConfig({
           accentFill: { value: "var(--accent-fill)" },
           accentSoft: { value: "var(--accent-soft)" },
           accentStrong: { value: "var(--accent-strong)" },
+          danger: { value: "var(--danger)" },
           fill: { value: "var(--fill)" },
           fill2: { value: "var(--fill-2)" },
           onAccentFill: { value: "var(--on-accent-fill)" },
@@ -33,10 +34,13 @@ export default defineConfig({
           text2: { value: "var(--text-2)" },
           text3: { value: "var(--text-3)" },
           textDisabled: { value: "var(--text-disabled)" },
+          textFaint: { value: "var(--text-faint)" },
         },
         radii: {
           // Buttons and cards.
           control: { value: "15px" },
+          // Lists of rows.
+          list: { value: "16px" },
           // Small actions like icon buttons.
           action: { value: "12px" },
         },

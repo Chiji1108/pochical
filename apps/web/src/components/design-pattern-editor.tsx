@@ -1,13 +1,22 @@
-import { Check, ChevronRight, GripVertical, Plus, Trash2 } from "lucide-react";
+import { Check, GripVertical, Plus, Trash2 } from "lucide-react";
 import { useContext, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { nextDayShifts } from "./design-calendar";
 import { LookEditorPage } from "./design-look-editor";
 import type { LookField } from "./design-look-editor";
-import { BackButton, HeaderAction, PageHeader } from "./design-ui";
+import {
+  BackButton,
+  HeaderAction,
+  List,
+  ListRow,
+  PageHeader,
+  listRow,
+  listStyle,
+} from "./design-ui";
 import {
   guessLook,
   lookOf,
@@ -151,34 +160,31 @@ export function PatternsPage({
           {(item) => (
             <>
               <MarkGlyph look={item} size={22} style={style} />
-              <span className="st-row-label">{item.name}</span>
-              <span className="st-row-value">{timeText(item)}</span>
+              <span className={listRow.label}>{item.name}</span>
+              <span className={listRow.value}>{timeText(item)}</span>
             </>
           )}
         </SortableList>
       ) : (
-        <div className="st-list">
+        <List>
           {items.map((item) => (
-            <button
-              className="st-row st-pattern"
+            <ListRow
               key={item.id}
               onClick={() => {
                 setIsNew(false);
                 setEditing(item);
               }}
-              type="button"
-            >
-              <MarkGlyph look={item} size={22} style={style} />
-              <span className="st-row-label">{item.name}</span>
-              <span className="st-row-value">{timeText(item)}</span>
-              <ChevronRight
-                aria-hidden="true"
-                className="st-row-arrow"
-                size={17}
-              />
-            </button>
+              label={item.name}
+              value={timeText(item)}
+              leading={
+                <>
+                  <MarkGlyph look={item} size={22} style={style} />
+                </>
+              }
+              className="st-pattern"
+            />
           ))}
-        </div>
+        </List>
       )}
       {!sorting && (
         <button
@@ -264,10 +270,15 @@ export function SortableList<Item extends { id: string }>({
   };
 
   return (
-    <div className="st-list st-sortable" ref={listRef}>
+    <div className={cx(listStyle, "st-sortable")} ref={listRef}>
       {items.map((item, index) => (
         <div
-          className={`st-row st-pattern ${drag?.id === item.id ? "st-dragging" : ""}`}
+          className={cx(
+            listRow.root,
+            "st-pattern",
+            drag?.id === item.id && "st-dragging"
+          )}
+          data-list-row=""
           key={item.id}
           style={
             drag?.id === item.id
@@ -344,36 +355,36 @@ function AddPatternPage({
       {suggestions.length > 0 && (
         <section className="st-section">
           <h4>よく使うパターン</h4>
-          <div className="st-list">
+          <List>
             {suggestions.map((draft) => (
-              <button
-                className="st-row st-pattern"
+              <ListRow
                 key={draft.id}
                 onClick={() => {
                   onAdd(draft);
                 }}
-                type="button"
-              >
-                <MarkGlyph look={draft} size={22} style={style} />
-                <span className="st-row-label">{draft.name}</span>
-                <span className="st-row-value">{timeText(draft)}</span>
-                <Plus
-                  aria-hidden="true"
-                  className="st-row-arrow st-add-icon"
-                  size={17}
-                />
-              </button>
+                label={draft.name}
+                value={timeText(draft)}
+                leading={
+                  <>
+                    <MarkGlyph look={draft} size={22} style={style} />
+                  </>
+                }
+                arrow={
+                  <Plus
+                    aria-hidden="true"
+                    className={cx(listRow.arrow, "st-add-icon")}
+                    size={17}
+                  />
+                }
+                className="st-pattern"
+              />
             ))}
-          </div>
+          </List>
         </section>
       )}
-      <div className="st-list">
-        <button className="st-row" onClick={onCustom} type="button">
-          <span className="st-row-label">自分で作る</span>
-          <span className="st-row-value" />
-          <ChevronRight aria-hidden="true" className="st-row-arrow" size={17} />
-        </button>
-      </div>
+      <List>
+        <ListRow onClick={onCustom} label="自分で作る" value="" />
+      </List>
       <p className="st-note">名前や時間は、追加したあとで直せます。</p>
     </>
   );
@@ -486,109 +497,117 @@ function PatternEditor({
       </div>
       <section className="st-section">
         <h4>基本</h4>
-        <div className="st-list">
-          <label className="st-row">
-            <span className="st-row-label">名前</span>
-            <input
-              className="pe-inline-input"
-              onChange={(event) => {
-                rename(event.target.value);
-              }}
-              placeholder="例：日勤"
-              value={draft.name}
-            />
-          </label>
-          <label className="st-row">
-            <span className="st-row-label">時間なし</span>
-            <input
-              aria-checked={draft.allDay}
-              checked={draft.allDay}
-              className="pe-toggle"
-              onChange={(event) => {
-                setDraft({ ...draft, allDay: event.target.checked });
-              }}
-              role="switch"
-              type="checkbox"
-            />
-          </label>
+        <List>
+          <ListRow
+            label="名前"
+            control={
+              <>
+                <input
+                  className="pe-inline-input"
+                  onChange={(event) => {
+                    rename(event.target.value);
+                  }}
+                  placeholder="例：日勤"
+                  value={draft.name}
+                />
+              </>
+            }
+          />
+          <ListRow
+            label="時間なし"
+            control={
+              <>
+                <input
+                  aria-checked={draft.allDay}
+                  checked={draft.allDay}
+                  className="pe-toggle"
+                  onChange={(event) => {
+                    setDraft({ ...draft, allDay: event.target.checked });
+                  }}
+                  role="switch"
+                  type="checkbox"
+                />
+              </>
+            }
+          />
           {!draft.allDay && (
-            <div className="st-row">
-              <span className="st-row-label">時間</span>
-              <span className="pe-times">
-                <input
-                  aria-label="開始時刻"
-                  onChange={(event) => {
-                    setDraft({ ...draft, start: event.target.value });
-                  }}
-                  type="time"
-                  value={draft.start}
-                />
-                <span aria-hidden="true">–</span>
-                <input
-                  aria-label="終了時刻"
-                  onChange={(event) => {
-                    setDraft({ ...draft, end: event.target.value });
-                  }}
-                  type="time"
-                  value={draft.end}
-                />
-              </span>
-            </div>
-          )}
-          <label className="st-row">
-            <span className="st-row-label">休みとして数える</span>
-            <input
-              aria-checked={draft.countsAsOff}
-              checked={draft.countsAsOff}
-              className="pe-toggle"
-              onChange={(event) => {
-                setDraft({ ...draft, countsAsOff: event.target.checked });
-              }}
-              role="switch"
-              type="checkbox"
+            <ListRow
+              label="時間"
+              control={
+                <>
+                  <span className="pe-times">
+                    <input
+                      aria-label="開始時刻"
+                      onChange={(event) => {
+                        setDraft({ ...draft, start: event.target.value });
+                      }}
+                      type="time"
+                      value={draft.start}
+                    />
+                    <span aria-hidden="true">–</span>
+                    <input
+                      aria-label="終了時刻"
+                      onChange={(event) => {
+                        setDraft({ ...draft, end: event.target.value });
+                      }}
+                      type="time"
+                      value={draft.end}
+                    />
+                  </span>
+                </>
+              }
             />
-          </label>
-          <button
-            className="st-row"
+          )}
+          <ListRow
+            label="休みとして数える"
+            control={
+              <>
+                <input
+                  aria-checked={draft.countsAsOff}
+                  checked={draft.countsAsOff}
+                  className="pe-toggle"
+                  onChange={(event) => {
+                    setDraft({ ...draft, countsAsOff: event.target.checked });
+                  }}
+                  role="switch"
+                  type="checkbox"
+                />
+              </>
+            }
+          />
+          <ListRow
             onClick={() => {
               setSubPage("nextDay");
             }}
-            type="button"
-          >
-            <span className="st-row-label">翌日のパターン</span>
-            <span className="st-row-value pe-look-value">
-              {nextDay && <MarkGlyph look={nextDay} size={18} style={style} />}
-              {nextDay?.name ?? "なし"}
-            </span>
-            <ChevronRight
-              aria-hidden="true"
-              className="st-row-arrow"
-              size={17}
-            />
-          </button>
-        </div>
+            label="翌日のパターン"
+            value={
+              <>
+                {nextDay && (
+                  <MarkGlyph look={nextDay} size={18} style={style} />
+                )}
+                {nextDay?.name ?? "なし"}
+              </>
+            }
+            valueClassName="pe-look-value"
+          />
+        </List>
       </section>
       <section className="st-section">
         <h4>見た目</h4>
-        <div className="st-list">
-          <button
-            className="st-row"
+        <List>
+          <ListRow
             onClick={() => {
               setSubPage("look");
             }}
-            type="button"
-          >
-            <span className="st-row-label">印と色</span>
-            <span className="st-row-value pe-look-value">
-              <MarkGlyph look={draft} size={20} style={style} />
-            </span>
-            <ChevronRight
-              aria-hidden="true"
-              className="st-row-arrow"
-              size={17}
-            />
-          </button>
-        </div>
+            label="印と色"
+            value={
+              <>
+                <MarkGlyph look={draft} size={20} style={style} />
+              </>
+            }
+            valueClassName="pe-look-value"
+          />
+        </List>
       </section>
       {!isNew && (
         <button className="pe-delete" onClick={onDelete} type="button">
@@ -624,26 +643,27 @@ function NextDayPicker({
         {draft.name || "このパターン"}
         を入れると、翌日にも自動でシフトが入ります。夜勤の翌日の明けなどに使います。
       </p>
-      <div className="st-list">
+      <List>
         {choices.map((choice) => (
-          <button
+          <ListRow
             aria-pressed={draft.nextDay === choice?.id}
-            className="st-row"
             key={choice?.id ?? "none"}
             onClick={() => {
               onChange(choice?.id);
               onBack();
             }}
-            type="button"
-          >
-            {choice && <MarkGlyph look={choice} size={20} style={style} />}
-            <span className="st-row-label">{choice?.name ?? "なし"}</span>
-            {draft.nextDay === choice?.id && (
-              <Check aria-hidden="true" className="pe-check-mark" size={18} />
-            )}
-          </button>
+            label={choice?.name ?? "なし"}
+            leading={
+              choice && <MarkGlyph look={choice} size={20} style={style} />
+            }
+            control={
+              draft.nextDay === choice?.id && (
+                <Check aria-hidden="true" className="pe-check-mark" size={18} />
+              )
+            }
+          />
         ))}
-      </div>
+      </List>
     </>
   );
 }

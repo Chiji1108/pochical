@@ -1,5 +1,5 @@
-import { ChevronLeft } from "lucide-react";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import type { ButtonHTMLAttributes, ChangeEvent, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 // The shared pieces the screens are built from, each the one place its
@@ -219,3 +219,237 @@ export function PageHeader({
     </header>
   );
 }
+
+// A list of rows on one rounded ground, as a grouped list on iOS and a
+// card of list items on Android.
+export const listStyle = css({
+  bg: "fill",
+  borderRadius: "list",
+  overflow: "hidden",
+});
+
+export function List({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  return <div className={cx(listStyle, className)}>{children}</div>;
+}
+
+// One row of a list, and its parts for rows drawn by hand.
+export const listRow = {
+  arrow: css({ color: "textFaint", flexShrink: 0, marginRight: "-4px" }),
+  label: css({
+    "& small": { color: "text3", fontSize: "11px" },
+    display: "flex",
+    flexDirection: "column",
+    flexShrink: 0,
+    gap: "2px",
+  }),
+  // With nothing on the right but a control, the label takes the room.
+  labelGrow: css({ flex: 1, minWidth: 0 }),
+  leading: css({
+    color: "text2",
+    display: "flex",
+    flexShrink: 0,
+    marginRight: "2px",
+  }),
+  root: css({
+    // A line between rows, not above the first: only a row that follows
+    // another, whatever else the list holds, like a legend.
+    "[data-list-row] + &": { borderTop: "1px solid token(colors.separator)" },
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    color: "text",
+    display: "flex",
+    fontSize: "14px",
+    gap: "10px",
+    minHeight: "48px",
+    paddingInline: "14px",
+    textAlign: "left",
+    width: "100%",
+  }),
+  // Rows that do something when pressed.
+  pressable: css({
+    "&:is(button):hover": { bg: "fill2" },
+    cursor: "pointer",
+  }),
+  danger: css({ "& > *": { color: "danger" }, color: "danger" }),
+  value: css({
+    color: "text3",
+    flex: 1,
+    fontSize: "13px",
+    minWidth: 0,
+    overflow: "hidden",
+    textAlign: "right",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  }),
+};
+
+// A row: its label, a value on the right, something before the label
+// (an icon, a mark, a face), and a control after it (a switch, a field).
+// Pressed, it is a button with an arrow; holding a control, or pointing at
+// one with htmlFor, it is that control's label. `danger` is for rows that
+// remove something.
+export function ListRow({
+  label,
+  value,
+  leading,
+  control,
+  onClick,
+  arrow,
+  danger = false,
+  htmlFor,
+  disabled,
+  className,
+  labelClassName,
+  valueClassName,
+  ...rest
+}: {
+  label: ReactNode;
+  value?: ReactNode;
+  leading?: ReactNode;
+  control?: ReactNode;
+  onClick?: () => void;
+  // Shown on pressable rows unless false; a node replaces the chevron.
+  arrow?: ReactNode;
+  danger?: boolean;
+  htmlFor?: string;
+  disabled?: boolean;
+  className?: string;
+  labelClassName?: string;
+  valueClassName?: string;
+  "aria-label"?: string;
+  "aria-pressed"?: boolean;
+}) {
+  const pressable = Boolean(onClick);
+  const isLabel = !pressable && (control !== undefined || Boolean(htmlFor));
+  const shownArrow =
+    arrow === undefined || arrow === true
+      ? pressable && (
+          <ChevronRight
+            aria-hidden="true"
+            className={listRow.arrow}
+            size={17}
+          />
+        )
+      : arrow || null;
+  const content = (
+    <>
+      {leading && <span className={listRow.leading}>{leading}</span>}
+      <span
+        className={cx(
+          listRow.label,
+          value === undefined && listRow.labelGrow,
+          labelClassName
+        )}
+      >
+        {label}
+      </span>
+      {value !== undefined && (
+        <span className={cx(listRow.value, valueClassName)}>{value}</span>
+      )}
+      {control}
+      {shownArrow}
+    </>
+  );
+  const rowClass = cx(
+    listRow.root,
+    (pressable || isLabel) && listRow.pressable,
+    danger && listRow.danger,
+    className
+  );
+  if (pressable) {
+    return (
+      <button
+        className={rowClass}
+        data-list-row=""
+        disabled={disabled}
+        onClick={onClick}
+        type="button"
+        {...rest}
+      >
+        {content}
+      </button>
+    );
+  }
+  if (isLabel) {
+    return (
+      <label className={rowClass} data-list-row="" htmlFor={htmlFor} {...rest}>
+        {content}
+      </label>
+    );
+  }
+  return (
+    <div className={rowClass} data-list-row="" {...rest}>
+      {content}
+    </div>
+  );
+}
+
+// An on and off switch, drawn by the pe-toggle styles for now.
+export function Toggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  // For a switch outside a row's label.
+  label?: string;
+}) {
+  return (
+    <input
+      aria-checked={checked}
+      aria-label={label}
+      checked={checked}
+      className="pe-toggle"
+      onChange={(event: ChangeEvent<HTMLInputElement>) => {
+        onChange(event.target.checked);
+      }}
+      role="switch"
+      type="checkbox"
+    />
+  );
+}
+
+// A row whose control is an on and off switch, with a dot in the color a
+// setting paints with when it has one.
+export function SwitchRow({
+  label,
+  checked,
+  onChange,
+  swatch,
+}: {
+  label: ReactNode;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  swatch?: string;
+}) {
+  return (
+    <ListRow
+      control={<Toggle checked={checked} onChange={onChange} />}
+      label={label}
+      leading={
+        swatch ? (
+          <span
+            aria-hidden="true"
+            className={swatchStyle}
+            style={{ background: swatch }}
+          />
+        ) : undefined
+      }
+    />
+  );
+}
+
+const swatchStyle = css({
+  borderRadius: "50%",
+  flexShrink: 0,
+  height: "10px",
+  width: "10px",
+});

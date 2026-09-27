@@ -1,12 +1,13 @@
 import { Check } from "lucide-react";
 import { useState } from "react";
 import type { CSSProperties } from "react";
+import { css, cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { DayCell, dateKey, formatDay } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
-import { BackButton, Button, PageHeader } from "./design-ui";
+import { BackButton, Button, List, ListRow, PageHeader } from "./design-ui";
 import { useWeek } from "./design-week";
 import { OffDisplayContext, ShiftMark } from "./shift-mark";
 
@@ -73,6 +74,10 @@ export type ImportResult = {
   newCoworkers: string[];
   days: number;
 };
+
+// A row with a second line under its label keeps a little room above and
+// below it.
+const noteRow = css({ paddingBlock: "9px" });
 
 export function ImportReviewPage({
   month,
@@ -238,33 +243,35 @@ export function ImportReviewPage({
               勤務表から{roster.length}
               人分を読み取りました。あなたの名前を選んでください。次からは、同じ名前の行を使います。
             </p>
-            <div className="st-list">
+            <List>
               {roster.map((row, index) => (
-                <button
+                <ListRow
                   aria-pressed={myRow === index}
-                  className="st-row im-row"
                   key={row.name}
                   onClick={() => {
                     setMyRow(index);
                   }}
-                  type="button"
-                >
-                  <span className="st-row-label">
-                    {row.name}
-                    <small className="im-row-codes">
-                      {row.codes.slice(0, 10).join(" ")} …
-                    </small>
-                  </span>
-                  {myRow === index && (
-                    <Check
-                      aria-hidden="true"
-                      className="st-work-check"
-                      size={20}
-                    />
-                  )}
-                </button>
+                  label={
+                    <>
+                      {row.name}
+                      <small className="im-row-codes">
+                        {row.codes.slice(0, 10).join(" ")} …
+                      </small>
+                    </>
+                  }
+                  control={
+                    myRow === index && (
+                      <Check
+                        aria-hidden="true"
+                        className="st-work-check"
+                        size={20}
+                      />
+                    )
+                  }
+                  className="im-row"
+                />
               ))}
-            </div>
+            </List>
             <Button
               variant="primary"
               className="ob-push im-next"
@@ -283,7 +290,7 @@ export function ImportReviewPage({
             <p className="im-lead">
               勤務表の記号を、どのシフトとして入れるか決めます。読み取った内容から選んであります。次からは、新しい記号のときだけ聞きます。
             </p>
-            <div className="st-list">
+            <List>
               {codes.map((code) => (
                 <CodeRow
                   code={code}
@@ -299,7 +306,7 @@ export function ImportReviewPage({
                   target={mapping[code] ?? "skip"}
                 />
               ))}
-            </div>
+            </List>
             <p className="im-lead">
               「＋」の付いたシフトは、新しいパターンとして追加します。
             </p>
@@ -323,7 +330,7 @@ export function ImportReviewPage({
                 <p>
                   新しい記号があります。このシフトとして入れます。違うときは選び直してください。
                 </p>
-                <div className="st-list">
+                <List>
                   {unplaced.map((code) => (
                     <CodeRow
                       code={code}
@@ -337,7 +344,7 @@ export function ImportReviewPage({
                       target={mapping[code] ?? "skip"}
                     />
                   ))}
-                </div>
+                </List>
               </section>
             )}
             <ScanStrip
@@ -380,54 +387,65 @@ export function ImportReviewPage({
             )}
             <section className="st-section">
               <h4>一緒に働く人</h4>
-              <div className="st-list">
-                <label className="st-row">
-                  <span className="st-row-label">
-                    同じシフトの人も入れる
-                    <small className="im-row-codes">
-                      勤務表で同じ日に同じシフトの人を、その日に入れます
-                    </small>
-                  </span>
-                  <input
-                    aria-checked={withCoworkers}
-                    checked={withCoworkers}
-                    className="pe-toggle"
-                    onChange={(event) => {
-                      setWithCoworkers(event.target.checked);
-                    }}
-                    role="switch"
-                    type="checkbox"
-                  />
-                </label>
+              <List>
+                <ListRow
+                  className={noteRow}
+                  label={
+                    <>
+                      同じシフトの人も入れる
+                      <small className="im-row-codes">
+                        勤務表で同じ日に同じシフトの人を、その日に入れます
+                      </small>
+                    </>
+                  }
+                  control={
+                    <>
+                      <input
+                        aria-checked={withCoworkers}
+                        checked={withCoworkers}
+                        className="pe-toggle"
+                        onChange={(event) => {
+                          setWithCoworkers(event.target.checked);
+                        }}
+                        role="switch"
+                        type="checkbox"
+                      />
+                    </>
+                  }
+                />
                 {withCoworkers &&
                   others.map(({ index, row }) => {
                     const registered = coworkerNames.includes(
                       familyName(row.name)
                     );
                     return (
-                      <label className="st-row" key={row.name}>
-                        <input
-                          checked={people.has(index)}
-                          className="im-check"
-                          onChange={(event) => {
-                            const next = new Set(people);
-                            if (event.target.checked) {
-                              next.add(index);
-                            } else {
-                              next.delete(index);
-                            }
-                            setPeople(next);
-                          }}
-                          type="checkbox"
-                        />
-                        <span className="st-row-label">{row.name}</span>
-                        <span className="st-row-value">
-                          {registered ? "登録済み" : "新しく追加"}
-                        </span>
-                      </label>
+                      <ListRow
+                        className={noteRow}
+                        key={row.name}
+                        label={row.name}
+                        value={registered ? "登録済み" : "新しく追加"}
+                        leading={
+                          <>
+                            <input
+                              checked={people.has(index)}
+                              className="im-check"
+                              onChange={(event) => {
+                                const next = new Set(people);
+                                if (event.target.checked) {
+                                  next.add(index);
+                                } else {
+                                  next.delete(index);
+                                }
+                                setPeople(next);
+                              }}
+                              type="checkbox"
+                            />
+                          </>
+                        }
+                      />
                     );
                   })}
-              </div>
+              </List>
             </section>
             <div className="im-apply">
               {overwritten > 0 && (
@@ -469,28 +487,35 @@ function CodeRow({
       ? [...patternKeys, suggestion]
       : patternKeys;
   return (
-    <label className="st-row im-code">
-      <span className="im-code-chip">{code}</span>
-      <span className="st-row-label">
-        {count > 0 ? `あなたの行に${count}日` : "あなたの行にはなし"}
-      </span>
-      {target !== "skip" && <ShiftMark shift={target} size={18} />}
-      <select
-        className="im-code-select"
-        onChange={(event) => {
-          onChange(event.target.value as Target);
-        }}
-        value={target}
-      >
-        {choices.map((shift) => (
-          <option key={shift} value={shift}>
-            {patternKeys.includes(shift) ? "" : "＋"}
-            {patterns[shift].label}
-          </option>
-        ))}
-        <option value="skip">入れない</option>
-      </select>
-    </label>
+    <ListRow
+      className={cx(noteRow, "im-code")}
+      label={<>{count > 0 ? `あなたの行に${count}日` : "あなたの行にはなし"}</>}
+      leading={
+        <>
+          <span className="im-code-chip">{code}</span>
+        </>
+      }
+      control={
+        <>
+          {target !== "skip" && <ShiftMark shift={target} size={18} />}
+          <select
+            className="im-code-select"
+            onChange={(event) => {
+              onChange(event.target.value as Target);
+            }}
+            value={target}
+          >
+            {choices.map((shift) => (
+              <option key={shift} value={shift}>
+                {patternKeys.includes(shift) ? "" : "＋"}
+                {patterns[shift].label}
+              </option>
+            ))}
+            <option value="skip">入れない</option>
+          </select>
+        </>
+      }
+    />
   );
 }
 

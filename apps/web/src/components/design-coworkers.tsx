@@ -1,9 +1,17 @@
-import { ChevronRight, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState } from "react";
+import { cx } from "styled-system/css";
 
 import type { Schedule } from "./design-calendar";
 import { SortableList } from "./design-pattern-editor";
-import { BackButton, HeaderAction, PageHeader } from "./design-ui";
+import {
+  BackButton,
+  HeaderAction,
+  List,
+  ListRow,
+  PageHeader,
+  listRow,
+} from "./design-ui";
 
 // The people you note on a day, like who is on the same shift. Only names:
 // they are not app users, unlike the members of a group.
@@ -93,38 +101,31 @@ export function CoworkersPage({
             coworkers.onReorder(items.map((item) => item.id));
           }}
         >
-          {(item) => <span className="st-row-label">{item.id}</span>}
+          {(item) => <span className={listRow.label}>{item.id}</span>}
         </SortableList>
       )}
       {!sorting && names.length > 0 && (
-        <div className="st-list">
+        <List>
           {names.map((name) => (
-            <button
-              className="st-row"
+            <ListRow
               key={name}
               onClick={() => {
                 setEditing(name);
               }}
-              type="button"
-            >
-              <span className="st-row-label">{name}</span>
-              <span className="st-row-value">{daysWith(schedule, name)}日</span>
-              <ChevronRight
-                aria-hidden="true"
-                className="st-row-arrow"
-                size={17}
-              />
-            </button>
+              label={name}
+              value={<>{daysWith(schedule, name)}日</>}
+            />
           ))}
-        </div>
+        </List>
       )}
       {!sorting &&
         (adding ? (
-          <div className="st-list">
+          <List>
             <input
               aria-label="追加する人の名前"
               autoFocus
-              className="st-row st-coworker-input"
+              className={cx(listRow.root, "st-coworker-input")}
+              data-list-row=""
               onBlur={(event) => {
                 add(event.currentTarget.value);
               }}
@@ -137,7 +138,7 @@ export function CoworkersPage({
               }}
               placeholder="名前"
             />
-          </div>
+          </List>
         ) : (
           <button
             className="st-add"
@@ -197,18 +198,22 @@ function CoworkerEditor({
         }
         title={name}
       />
-      <div className="st-list">
-        <label className="st-row">
-          <span className="st-row-label">名前</span>
-          <input
-            className="pe-inline-input"
-            onChange={(event) => {
-              setDraft(event.target.value);
-            }}
-            value={draft}
-          />
-        </label>
-      </div>
+      <List>
+        <ListRow
+          label="名前"
+          control={
+            <>
+              <input
+                className="pe-inline-input"
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                }}
+                value={draft}
+              />
+            </>
+          }
+        />
+      </List>
       <p className="st-note">
         {duplicate
           ? "同じ名前の人がもういます。"
