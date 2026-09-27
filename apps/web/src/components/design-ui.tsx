@@ -17,6 +17,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import useEmblaCarousel from "embla-carousel-react";
 import {
   Check,
   ChevronDown,
@@ -24,7 +25,13 @@ import {
   ChevronRight,
   GripVertical,
 } from "lucide-react";
-import { createContext, useContext } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from "react";
 import type {
   ButtonHTMLAttributes,
   CSSProperties,
@@ -1208,6 +1215,102 @@ function SortableRow({
       >
         <GripVertical aria-hidden="true" size={18} />
       </button>
+    </div>
+  );
+}
+
+const pager = {
+  // Pages of different heights, as months of five and six weeks: the
+  // pager takes the height of the one shown.
+  container: css({
+    alignItems: "flex-start",
+    display: "flex",
+    touchAction: "pan-y pinch-zoom",
+    transition: "height 0.2s",
+  }),
+  slide: css({ flex: "0 0 100%", minWidth: 0 }),
+  viewport: css({ overflow: "hidden" }),
+};
+
+type PageOffset = -1 | 0 | 1;
+
+const pageOffsets: PageOffset[] = [-1, 0, 1];
+
+// Pages that follow the finger sideways, as SwiftUI's TabView(.page) and
+// Compose's HorizontalPager, for months or weeks without end. Only the
+// pages before and after are drawn; once a swipe settles, `onStep` moves
+// on and the pager quietly goes back to the middle, which now shows the
+// new page. Embla Carousel does the dragging, and keeps a drag from also
+// pressing what is under the finger.
+export function Pager({
+  page,
+  onStep,
+  renderPage,
+}: {
+  // Names the page shown, so the pager recenters when it changes.
+  page: string;
+  onStep: (direction: 1 | -1) => void;
+  renderPage: (offset: PageOffset) => ReactNode;
+}) {
+  const [viewportRef, api] = useEmblaCarousel({ startIndex: 1 });
+  const shownPage = useRef(page);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const middleRef = useRef<HTMLDivElement>(null);
+  // The pager is as tall as the page in the middle, whatever the pages
+  // beside it hold, and follows it as it grows or shrinks, as when the
+  // month turns into one week.
+  useEffect(() => {
+    const container = containerRef.current;
+    const middle = middleRef.current;
+    if (!(container && middle)) {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      container.style.height = `${middle.offsetHeight}px`;
+    });
+    observer.observe(middle);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+  useEffect(() => {
+    if (!api) {
+      return;
+    }
+    const settle = () => {
+      const index = api.selectedScrollSnap();
+      if (index !== 1) {
+        onStep(index === 2 ? 1 : -1);
+      }
+    };
+    api.on("settle", settle);
+    return () => {
+      api.off("settle", settle);
+    };
+  }, [api, onStep]);
+  // Before the new page paints, so the jump back to the middle is unseen.
+  useLayoutEffect(() => {
+    if (shownPage.current !== page) {
+      shownPage.current = page;
+      api?.scrollTo(1, true);
+    }
+  }, [api, page]);
+  return (
+    <div className={pager.viewport} ref={viewportRef}>
+      <div className={pager.container} ref={containerRef}>
+        {pageOffsets.map((offset) => (
+          // The pages beside the one shown are only there to be dragged in.
+          <div
+            aria-hidden={offset !== 0}
+            className={pager.slide}
+            inert={offset !== 0}
+            key={offset}
+            ref={offset === 0 ? middleRef : undefined}
+          >
+            {renderPage(offset)}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

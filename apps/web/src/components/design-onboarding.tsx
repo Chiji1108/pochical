@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useContext, useState } from "react";
 import { css } from "styled-system/css";
 
@@ -14,6 +14,7 @@ import {
   DesignCalendar,
   dateKey,
   formatDay,
+  MonthPicker,
   PhoneStatusBar,
   RepeatSequenceEditor,
   repeatSchedule,
@@ -666,7 +667,6 @@ function AnchorStep({
   onStart: (anchor: Date) => void;
 }) {
   const weekTools = useWeek();
-  const [viewMonth, setViewMonth] = useState(month);
   const [anchor, setAnchor] = useState<Date>();
   const first = patterns[sequence[0]].label;
   return (
@@ -676,59 +676,7 @@ function AnchorStep({
         onBack={onBack}
         title={`「${first}」の日を1日選んでください`}
       />
-      <div className="ob-month">
-        <button
-          aria-label="前の月"
-          onClick={() => {
-            setViewMonth(
-              new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1)
-            );
-          }}
-          type="button"
-        >
-          <ChevronLeft aria-hidden="true" size={20} />
-        </button>
-        <strong aria-live="polite">
-          {viewMonth.getFullYear()}年{viewMonth.getMonth() + 1}月
-        </strong>
-        <button
-          aria-label="次の月"
-          onClick={() => {
-            setViewMonth(
-              new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1)
-            );
-          }}
-          type="button"
-        >
-          <ChevronRight aria-hidden="true" size={20} />
-        </button>
-      </div>
-      <div className="ob-days">
-        {weekTools.weekdays.map((day) => (
-          <span aria-hidden="true" className="ob-weekday" key={day.day}>
-            {day.label}
-          </span>
-        ))}
-        {weekTools.monthDates(viewMonth).map((date) => {
-          const outside = date.getMonth() !== viewMonth.getMonth();
-          return (
-            <button
-              aria-label={`${formatDay(date)}を「${first}」の日にする`}
-              aria-pressed={
-                anchor !== undefined && dateKey(date) === dateKey(anchor)
-              }
-              className={`${outside ? "ob-outside" : ""} ${weekTools.dateClass(date)}`}
-              key={dateKey(date)}
-              onClick={() => {
-                setAnchor(date);
-              }}
-              type="button"
-            >
-              {date.getDate()}
-            </button>
-          );
-        })}
-      </div>
+      <MonthPicker month={month} onSelect={setAnchor} value={anchor} />
       {anchor && (
         <p className="ob-preview-label">{formatDay(anchor)}からの2週間</p>
       )}

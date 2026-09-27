@@ -1219,48 +1219,6 @@
     color: var(--text-4);
     text-align: center;
   }
-  .ob-month {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 14px;
-  }
-  .design-page .ob-month button {
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    color: var(--text-3);
-    background: transparent;
-    border: 0;
-    border-radius: 12px;
-  }
-  .ob-days {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 2px;
-  }
-  .design-page .ob-days button {
-    min-height: 40px;
-    font-size: 14px;
-    background: transparent;
-    border: 0;
-    border-radius: 12px;
-  }
-  .design-page .ob-days .dc-sunday {
-    color: var(--holiday);
-  }
-  .design-page .ob-days .dc-saturday {
-    color: var(--saturday);
-  }
-  .design-page .ob-days .ob-outside {
-    color: var(--text-disabled);
-  }
-  .design-page .ob-days button[aria-pressed="true"] {
-    font-weight: 600;
-    color: var(--on-accent-fill);
-    background: var(--accent-fill);
-  }
   .ob-finished {
     display: flex;
     flex-direction: column;
@@ -1275,12 +1233,6 @@
     background: transparent;
     border: 1px solid var(--border);
     border-radius: 20px;
-  }
-  .ob-weekday {
-    padding-bottom: 4px;
-    font-size: 11px;
-    color: var(--text-4);
-    text-align: center;
   }
   .ob-preview-label {
     margin: 0 0 -10px;

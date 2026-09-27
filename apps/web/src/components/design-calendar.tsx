@@ -21,7 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { useContext, useRef, useState } from "react";
-import type { CSSProperties, MouseEvent, PointerEvent, ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
@@ -46,6 +46,7 @@ import {
   Choice,
   ChoiceGrid,
   IconButton,
+  Pager,
 } from "./design-ui";
 import { holidayName, holidayNameOfKey, useWeek } from "./design-week";
 import {
@@ -101,7 +102,6 @@ export const patternSets: Record<4 | 5 | 6 | 8, Shift[]> = {
 };
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
 const designToday = new Date(2026, 8, 24);
-const swipeDistance = 50;
 const dayMilliseconds = 86_400_000;
 const leadingZeroPattern = /^0/;
 const sample: Shift[] = [
@@ -465,7 +465,6 @@ export function DesignCalendar({
     </InputDatePicker>
   );
   const weekDetail = !editing && detailDate !== undefined;
-  const gridDates = weekDetail ? weekTools.weekDates(detailDate) : dates;
   const headingMode = screenMode(editing, weekDetail);
   function openDetail(date: Date) {
     setDetailDate(date);
@@ -488,9 +487,6 @@ export function DesignCalendar({
     }
     goToMonth(new Date(month.getFullYear(), month.getMonth() + direction, 1));
   }
-  const swipeHandlers = useSwipe((direction) => {
-    step(direction);
-  });
   function startInput() {
     setSelectedDay(1);
     setEditing(true);
@@ -736,7 +732,7 @@ export function DesignCalendar({
                 }}
               />
             </div>
-            <div className="dc-calendar-scroll" {...swipeHandlers}>
+            <div className="dc-calendar-scroll">
               <div aria-hidden="true" className="dc-weekdays">
                 {weekTools.weekdays.map((day) => (
                   <span className={day.className} key={day.day}>
@@ -749,35 +745,55 @@ export function DesignCalendar({
                   weekDetail && offDisplay === "blank" ? "faint" : offDisplay
                 }
               >
-                <section
-                  aria-label={`${month.getFullYear()}年${month.getMonth() + 1}月のシフト`}
-                  className={`dc-grid ${weekDetail ? "dc-grid-week" : ""}`}
-                  style={{ "--weeks": gridDates.length / 7 } as CSSProperties}
-                >
-                  {gridDates.map((date) => (
-                    <DayCell
-                      active={
-                        editing
-                          ? date.getMonth() === month.getMonth() &&
-                            date.getDate() === selectedDay
-                          : detailDate !== undefined &&
-                            dateKey(date) === dateKey(detailDate)
-                      }
-                      date={date}
-                      editing={editing}
-                      entry={schedule[dateKey(date)]}
-                      key={dateKey(date)}
-                      onPress={() => {
-                        editing
-                          ? setSelectedDay(date.getDate())
-                          : openDetail(date);
-                      }}
-                      outside={
-                        !weekDetail && date.getMonth() !== month.getMonth()
-                      }
-                    />
-                  ))}
-                </section>
+                <Pager
+                  onStep={step}
+                  page={weekDetail ? dateKey(detailDate) : dateKey(month)}
+                  renderPage={(offset) => {
+                    const pageMonth = new Date(
+                      month.getFullYear(),
+                      month.getMonth() + offset,
+                      1
+                    );
+                    const pageDates = weekDetail
+                      ? weekTools.weekDates(addDays(detailDate, offset * 7))
+                      : weekTools.monthDates(pageMonth);
+                    return (
+                      <section
+                        aria-label={`${pageMonth.getFullYear()}年${pageMonth.getMonth() + 1}月のシフト`}
+                        className={`dc-grid ${weekDetail ? "dc-grid-week" : ""}`}
+                        style={
+                          { "--weeks": pageDates.length / 7 } as CSSProperties
+                        }
+                      >
+                        {pageDates.map((date) => (
+                          <DayCell
+                            active={
+                              offset === 0 &&
+                              (editing
+                                ? date.getMonth() === month.getMonth() &&
+                                  date.getDate() === selectedDay
+                                : detailDate !== undefined &&
+                                  dateKey(date) === dateKey(detailDate))
+                            }
+                            date={date}
+                            editing={editing}
+                            entry={schedule[dateKey(date)]}
+                            key={dateKey(date)}
+                            onPress={() => {
+                              editing
+                                ? setSelectedDay(date.getDate())
+                                : openDetail(date);
+                            }}
+                            outside={
+                              !weekDetail &&
+                              date.getMonth() !== pageMonth.getMonth()
+                            }
+                          />
+                        ))}
+                      </section>
+                    );
+                  }}
+                />
               </OffDisplayContext>
             </div>
             {weekDetail && (
@@ -1034,38 +1050,6 @@ export function MonthSummary({
       </strong>
     </button>
   );
-}
-
-// Swiping the calendar sideways moves it, like the mobile app's pager.
-function useSwipe(onSwipe: (direction: 1 | -1) => void) {
-  const start = useRef<{ x: number; y: number }>(undefined);
-  const swiped = useRef(false);
-  return {
-    onPointerDown: (event: PointerEvent) => {
-      start.current = { x: event.clientX, y: event.clientY };
-      swiped.current = false;
-    },
-    onPointerUp: (event: PointerEvent) => {
-      const origin = start.current;
-      start.current = undefined;
-      if (!origin) {
-        return;
-      }
-      const dx = event.clientX - origin.x;
-      const dy = event.clientY - origin.y;
-      if (Math.abs(dx) > swipeDistance && Math.abs(dx) > Math.abs(dy) * 1.5) {
-        swiped.current = true;
-        onSwipe(dx < 0 ? 1 : -1);
-      }
-    },
-    // Keep the day under the finger from also being tapped.
-    onClickCapture: (event: MouseEvent) => {
-      if (swiped.current) {
-        swiped.current = false;
-        event.stopPropagation();
-      }
-    },
-  };
 }
 
 // "‹ 今月 ›" sits in the middle of the heading, so it never moves with the
@@ -1916,25 +1900,6 @@ const picker = {
     padding: "18px",
     width: "min(360px, calc(100% - 24px))",
   }),
-  cell: css({
-    "&[data-outside-range]": { color: "textFaint" },
-    "&[data-selected]": { bg: "accentFill", color: "onAccentFill" },
-    _focusVisible: { outline: "2px solid token(colors.accent)" },
-    _hover: { bg: "accentSoft" },
-    alignItems: "center",
-    borderRadius: "12px",
-    cursor: "default",
-    display: "flex",
-    fontSize: "13px",
-    justifyContent: "center",
-    minHeight: "touch",
-    outline: "none",
-  }),
-  // The design's today, not the real one Ark marks.
-  today: css({
-    outline: "1.5px solid token(colors.accentLine)",
-    outlineOffset: "-1px",
-  }),
   heading: css({
     alignItems: "center",
     display: "flex",
@@ -1967,8 +1932,151 @@ const picker = {
   }),
 };
 
+// A day in the month. The picked day's fill and an outside day's fade
+// outrank the week's colors, being attribute selectors.
+const pickerCell = cva({
+  base: {
+    "&[data-outside-range]": { color: "textFaint" },
+    "&[data-selected]": {
+      bg: "accentFill",
+      color: "onAccentFill",
+      fontWeight: 600,
+    },
+    _focusVisible: { outline: "2px solid token(colors.accent)" },
+    _hover: { bg: "accentSoft" },
+    alignItems: "center",
+    borderRadius: "12px",
+    cursor: "default",
+    display: "flex",
+    fontSize: "13px",
+    justifyContent: "center",
+    minHeight: "touch",
+  },
+  variants: {
+    // The design's today, not the real one Ark marks.
+    today: {
+      false: {},
+      true: {
+        outline: "1.5px solid token(colors.accentLine)",
+        outlineOffset: "-1px",
+      },
+    },
+    tone: {
+      holiday: { color: "holiday" },
+      plain: {},
+      saturday: { color: "var(--saturday)" },
+    },
+  },
+});
+
 function toDateValue(date: Date) {
   return parseDate(dateKey(date));
+}
+
+// A month to pick one day in, as SwiftUI's graphical DatePicker and
+// Compose's DatePicker: Ark UI's DatePicker draws it and moves through it
+// by arrow keys. Sundays, holidays and Saturdays take the week's colors.
+export function MonthPicker({
+  value,
+  month,
+  onSelect,
+}: {
+  value?: Date;
+  // The month it opens on while nothing is picked.
+  month?: Date;
+  onSelect: (date: Date) => void;
+}) {
+  const weekTools = useWeek();
+  const toneOf = (date: Date) => {
+    const weekClass = weekTools.dateClass(date);
+    if (weekClass === "dc-sunday") {
+      return "holiday";
+    }
+    if (weekClass === "dc-saturday") {
+      return "saturday";
+    }
+    return "plain";
+  };
+  return (
+    <DatePicker.Root
+      defaultFocusedValue={toDateValue(value ?? month ?? designToday)}
+      inline
+      locale="ja-JP"
+      onValueChange={(details) => {
+        const [picked] = details.value;
+        if (picked) {
+          onSelect(new Date(picked.year, picked.month - 1, picked.day));
+        }
+      }}
+      outsideDaySelectable
+      startOfWeek={weekTools.weekStart}
+      value={value ? [toDateValue(value)] : []}
+    >
+      <DatePicker.View view="day">
+        <DatePicker.Context>
+          {(api) => (
+            <>
+              <DatePicker.ViewControl className={picker.month}>
+                <DatePicker.PrevTrigger
+                  aria-label="前の月"
+                  className={picker.iconButton}
+                >
+                  <ChevronLeft aria-hidden="true" size={20} />
+                </DatePicker.PrevTrigger>
+                <strong aria-live="polite">
+                  {api.focusedValue.year}年{api.focusedValue.month}月
+                </strong>
+                <DatePicker.NextTrigger
+                  aria-label="次の月"
+                  className={picker.iconButton}
+                >
+                  <ChevronRight aria-hidden="true" size={20} />
+                </DatePicker.NextTrigger>
+              </DatePicker.ViewControl>
+              <DatePicker.Table className={picker.table}>
+                <DatePicker.TableHead>
+                  <DatePicker.TableRow>
+                    {weekTools.weekdays.map((day) => (
+                      <DatePicker.TableHeader
+                        className={picker.weekday}
+                        key={day.day}
+                      >
+                        {day.label}
+                      </DatePicker.TableHeader>
+                    ))}
+                  </DatePicker.TableRow>
+                </DatePicker.TableHead>
+                <DatePicker.TableBody>
+                  {api.weeks.map((week) => (
+                    <DatePicker.TableRow key={week[0]?.toString()}>
+                      {week.map((day) => {
+                        const date = new Date(day.year, day.month - 1, day.day);
+                        return (
+                          <DatePicker.TableCell
+                            key={day.toString()}
+                            value={day}
+                          >
+                            <DatePicker.TableCellTrigger
+                              className={pickerCell({
+                                today: dateKey(date) === dateKey(designToday),
+                                tone: toneOf(date),
+                              })}
+                            >
+                              {day.day}
+                            </DatePicker.TableCellTrigger>
+                          </DatePicker.TableCell>
+                        );
+                      })}
+                    </DatePicker.TableRow>
+                  ))}
+                </DatePicker.TableBody>
+              </DatePicker.Table>
+            </>
+          )}
+        </DatePicker.Context>
+      </DatePicker.View>
+    </DatePicker.Root>
+  );
 }
 
 // Picking one day, in a dialog over the phone like Material's date picker
@@ -1990,7 +2098,6 @@ export function InputDatePicker({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const weekTools = useWeek();
   const pick = (day: Date) => {
     onSelect(day);
     setOpen(false);
@@ -2038,82 +2145,7 @@ export function InputDatePicker({
             </button>
           </div>
         </header>
-        <DatePicker.Root
-          defaultFocusedValue={toDateValue(date)}
-          inline
-          locale="ja-JP"
-          onValueChange={(details) => {
-            const [value] = details.value;
-            if (value) {
-              pick(new Date(value.year, value.month - 1, value.day));
-            }
-          }}
-          outsideDaySelectable
-          startOfWeek={weekTools.weekStart}
-          value={[toDateValue(date)]}
-        >
-          <DatePicker.View view="day">
-            <DatePicker.Context>
-              {(api) => (
-                <>
-                  <DatePicker.ViewControl className={picker.month}>
-                    <DatePicker.PrevTrigger
-                      aria-label="前の月"
-                      className={picker.iconButton}
-                    >
-                      <ChevronLeft aria-hidden="true" size={20} />
-                    </DatePicker.PrevTrigger>
-                    <strong aria-live="polite">
-                      {api.focusedValue.year}年{api.focusedValue.month}月
-                    </strong>
-                    <DatePicker.NextTrigger
-                      aria-label="次の月"
-                      className={picker.iconButton}
-                    >
-                      <ChevronRight aria-hidden="true" size={20} />
-                    </DatePicker.NextTrigger>
-                  </DatePicker.ViewControl>
-                  <DatePicker.Table className={picker.table}>
-                    <DatePicker.TableHead>
-                      <DatePicker.TableRow>
-                        {weekTools.weekdays.map((day) => (
-                          <DatePicker.TableHeader
-                            className={picker.weekday}
-                            key={day.day}
-                          >
-                            {day.label}
-                          </DatePicker.TableHeader>
-                        ))}
-                      </DatePicker.TableRow>
-                    </DatePicker.TableHead>
-                    <DatePicker.TableBody>
-                      {api.weeks.map((week) => (
-                        <DatePicker.TableRow key={week[0]?.toString()}>
-                          {week.map((day) => (
-                            <DatePicker.TableCell
-                              key={day.toString()}
-                              value={day}
-                            >
-                              <DatePicker.TableCellTrigger
-                                className={cx(
-                                  picker.cell,
-                                  day.toString() === dateKey(designToday) &&
-                                    picker.today
-                                )}
-                              >
-                                {day.day}
-                              </DatePicker.TableCellTrigger>
-                            </DatePicker.TableCell>
-                          ))}
-                        </DatePicker.TableRow>
-                      ))}
-                    </DatePicker.TableBody>
-                  </DatePicker.Table>
-                </>
-              )}
-            </DatePicker.Context>
-          </DatePicker.View>
-        </DatePicker.Root>
+        <MonthPicker onSelect={pick} value={date} />
       </Sheet>
     </>
   );
