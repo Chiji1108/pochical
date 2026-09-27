@@ -143,11 +143,11 @@ function FlowsPage() {
                 step="codes"
               />
             </FrameRow>
-            <FrameRow branch="自分のシフトだけの画像">
+            <FrameRow branch="自分のシフトだけの写真">
               <ReadingFrame
                 kind="mine"
                 label="読み取り中"
-                note="ほかのアプリの画面など"
+                note="自分の分だけの表や画面"
               />
               <ImportFrame
                 kind="mine"

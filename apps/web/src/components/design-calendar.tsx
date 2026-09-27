@@ -1354,8 +1354,8 @@ const importKinds = {
 };
 
 // What the photo is: a roster with everyone on it, or your own month,
-// like another shift app's screen. The first finds your row; the second
-// has only yours.
+// on a sheet of your own, a shift app, a message or a note. The first
+// finds your row; the second has only yours.
 function ImportKindChoice({
   kind,
   month,
@@ -1394,7 +1394,7 @@ function ImportKindChoice({
           />
         </span>
         <span className={importKinds.name}>自分のシフト</span>
-        <span className={importKinds.note}>ほかのアプリの画面など</span>
+        <span className={importKinds.note}>自分の分だけの表や画面</span>
       </Choice>
     </ChoiceGrid>
   );
@@ -1505,7 +1505,7 @@ function ImportSheet({
             <RosterNameField name={rosterName} onName={onRosterName} />
           ) : (
             <p className={rosterNameStyle.note}>
-              アプリを月の表示にして撮ったスクリーンショットを選んでください。
+              シフトアプリの画面、紙の表、LINEのメッセージなど。1か月分が写っていれば読み取れます。
             </p>
           )}
           <ImportPhotoActions

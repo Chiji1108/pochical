@@ -13,7 +13,7 @@ import { Button, PageHeader } from "./design-ui";
 
 const phaseLabels: Record<ImportKind, string[]> = {
   mine: [
-    "画面を探しています",
+    "写真を確かめています",
     "月と日付を読んでいます",
     "シフトを読んでいます",
     "読み取りを見直しています",

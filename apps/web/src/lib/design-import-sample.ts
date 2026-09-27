@@ -2,8 +2,8 @@ import type { Shift } from "./design-patterns";
 
 // What the prototype pretends a photo read. Two kinds of picture come in:
 // a roster, everyone's month on one sheet with a row each, and one
-// person's own month, like another shift app's screen or a sheet handed
-// to them alone.
+// person's own month: a sheet handed to them alone, another shift app's
+// screen, a message listing their days, a note they wrote.
 export type ImportKind = "roster" | "mine";
 
 export type ReadRow = {
