@@ -1563,8 +1563,8 @@ export function DayCell({
   const holiday = useWeek().isColoredHoliday(date);
   const change = outside ? undefined : timeChangeOf(entry);
   // A note is about the day, not the shift, so the date is marked, with a
-  // highlighter stroke as in a paper diary, apart from the shift's 早出 and
-  // 残業 corners, and only on the person's own calendar. Other time
+  // stroke as in a paper diary, apart from the shift's 早出 and 残業
+  // corners, and only on the person's own calendar. Other time
   // changes, a later start or an earlier end, show when the day is opened.
   const noted = !outside && Boolean(entry?.note);
   const className = `dc-day ${outside ? "dc-outside" : ""} ${offStyle ? "dc-off" : ""} ${today && !editing ? "dc-today" : ""} ${active ? "dc-active-day" : ""} ${flagged ? "dc-flagged" : ""} ${faintOff ? "dc-off-faint" : ""}`;

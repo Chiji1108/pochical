@@ -279,10 +279,13 @@ export function themeStyle(
     "--accent-border": colors.border,
     "--accent-fill": colors.fill,
     "--accent-line": colors.line,
-    // A highlighter stroke in the theme's hue: light and a little more
-    // vivid than the theme on paper, deep on a dark screen. Grays stay
-    // near gray.
-    "--accent-marker": `oklch(from ${colors.accent} ${scheme === "dark" ? 0.42 : 0.89} calc(min(c, 0.05) + 0.01) h)`,
+    // A note's stroke under its date: a neutral gray, so no color beyond
+    // the theme's, and apart from the green of days off. On paper a step
+    // deeper than the switches' gray, to show on a day off's pale tile.
+    "--note-marker":
+      scheme === "dark"
+        ? "var(--control-off)"
+        : "color-mix(in oklab, var(--control-off), var(--text-4) 25%)",
     "--accent-mark-tint": colors.markTint,
     "--accent-muted": colors.muted,
     "--accent-press": colors.press,
