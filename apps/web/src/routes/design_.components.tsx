@@ -278,15 +278,16 @@ function Switches() {
         where="曜日と祝日の週の始まり"
         wide
       >
-        <SegmentedControl label="週の始まり" size="compact">
+        <SegmentedControl
+          label="週の始まり"
+          onValueChange={(picked) => {
+            setDay(Number(picked));
+          }}
+          size="compact"
+          value={String(day)}
+        >
           {["日", "月", "土"].map((name, index) => (
-            <Segment
-              key={name}
-              onClick={() => {
-                setDay(index);
-              }}
-              pressed={day === index}
-            >
+            <Segment key={name} value={String(index)}>
               {name}
             </Segment>
           ))}

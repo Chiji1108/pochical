@@ -128,15 +128,13 @@ export function LookEditorPage({
       <div className="pe-preview pe-preview-center">
         <LookGlyph look={look} size={48} style={tab} />
       </div>
-      <SegmentedControl label="どの見た目の印を選ぶか">
+      <SegmentedControl
+        label="どの見た目の印を選ぶか"
+        onValueChange={setTab}
+        value={tab}
+      >
         {(["icon", "emoji", "badge"] as const).map((option) => (
-          <Segment
-            pressed={tab === option}
-            key={option}
-            onClick={() => {
-              setTab(option);
-            }}
-          >
+          <Segment key={option} value={option}>
             <LookGlyph look={look} size={20} style={option} />
             {styleNames[option]}
           </Segment>

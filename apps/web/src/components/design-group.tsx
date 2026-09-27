@@ -3801,15 +3801,13 @@ function GroupMarkPage({
           </span>
         }
       />
-      <SegmentedControl label="アイコンの種類">
+      <SegmentedControl
+        label="アイコンの種類"
+        onValueChange={setKind}
+        value={kind ?? null}
+      >
         {markKinds.map((option) => (
-          <Segment
-            pressed={kind === option.kind}
-            key={option.kind}
-            onClick={() => {
-              setKind(option.kind);
-            }}
-          >
+          <Segment key={option.kind} value={option.kind}>
             {option.label}
           </Segment>
         ))}

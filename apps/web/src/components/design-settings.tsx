@@ -1326,20 +1326,24 @@ function ShapeChoices() {
   const setShape = useSettings((state) => state.setShape);
   const current = shapeOf(look);
   return (
-    <SegmentedControl label="シフトの見た目">
+    <SegmentedControl
+      label="シフトの見た目"
+      onValueChange={(name) => {
+        const option = shapeOptions.find((item) => item.name === name);
+        if (!option) {
+          return;
+        }
+        // Only icons carry their fill; for the others it is left alone.
+        setShape(
+          option.style === "icon"
+            ? { fill: option.fill, style: option.style }
+            : { style: option.style }
+        );
+      }}
+      value={current?.name ?? ""}
+    >
       {shapeOptions.map((option) => (
-        <Segment
-          pressed={option === current}
-          key={option.name}
-          onClick={() => {
-            // Only icons carry their fill; for the others it is left alone.
-            setShape(
-              option.style === "icon"
-                ? { fill: option.fill, style: option.style }
-                : { style: option.style }
-            );
-          }}
-        >
+        <Segment key={option.name} value={option.name}>
           <ShiftMarkStyleContext value={option.style}>
             <IconWeightContext value={option.fill ? "duotone" : "regular"}>
               <ShiftMark shift="day" size={20} />
@@ -1383,18 +1387,19 @@ export function OffLookTabs({
 }) {
   const picked = offLookId(value);
   return (
-    <SegmentedControl label="休みの見せ方" size="tall">
+    <SegmentedControl
+      label="休みの見せ方"
+      onValueChange={(id) => {
+        const option = offLooks.find((item) => item.id === id);
+        if (option) {
+          onChange({ blankOff: option.blankOff, highlight: option.highlight });
+        }
+      }}
+      size="tall"
+      value={picked}
+    >
       {offLooks.map((option) => (
-        <Segment
-          pressed={picked === option.id}
-          key={option.id}
-          onClick={() => {
-            onChange({
-              blankOff: option.blankOff,
-              highlight: option.highlight,
-            });
-          }}
-        >
+        <Segment key={option.id} value={option.id}>
           <span
             aria-hidden="true"
             className={`st-off-sample ${option.highlight ? "st-off-sample-lit" : ""}`}
@@ -1419,15 +1424,16 @@ export function NameTabs({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <SegmentedControl label="シフト名" size="tall">
+    <SegmentedControl
+      label="シフト名"
+      onValueChange={(picked) => {
+        onChange(picked === "true");
+      }}
+      size="tall"
+      value={String(value)}
+    >
       {[false, true].map((withName) => (
-        <Segment
-          pressed={value === withName}
-          key={String(withName)}
-          onClick={() => {
-            onChange(withName);
-          }}
-        >
+        <Segment key={String(withName)} value={String(withName)}>
           <span aria-hidden="true" className="st-off-sample">
             <small>5</small>
             <ShiftMark shift="day" size={withName ? 16 : 18} />
@@ -1486,15 +1492,9 @@ function ToneChoices() {
   const { theme } = useContext(ThemeContext);
   const scheme = useContext(ColorSchemeContext);
   return (
-    <SegmentedControl label="トーン">
+    <SegmentedControl label="トーン" onValueChange={setTone} value={tone}>
       {toneOptions.map((option) => (
-        <Segment
-          pressed={tone === option.tone}
-          key={option.tone}
-          onClick={() => {
-            setTone(option.tone);
-          }}
-        >
+        <Segment key={option.tone} value={option.tone}>
           <span
             aria-hidden="true"
             className="st-theme-dot st-tone-dot"
@@ -1706,16 +1706,16 @@ function WeekPage({
           starts on, with a Saturday, a Sunday and three holidays in it. */}
       <StylePreview preview={preview} />
       <Group title="週の始まり">
-        <SegmentedControl label="週の始まり" size="compact">
+        <SegmentedControl
+          label="週の始まり"
+          onValueChange={(day) => {
+            setWeek({ ...week, weekStart: Number(day) });
+          }}
+          size="compact"
+          value={String(week.weekStart)}
+        >
           {weekdayNames.map((name, day) => (
-            <Segment
-              aria-label={`${name}曜`}
-              pressed={week.weekStart === day}
-              key={name}
-              onClick={() => {
-                setWeek({ ...week, weekStart: day });
-              }}
-            >
+            <Segment key={name} label={`${name}曜`} value={String(day)}>
               {name}
             </Segment>
           ))}

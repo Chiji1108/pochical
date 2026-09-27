@@ -20,6 +20,7 @@
     "prepare": "panda codegen"
   },
   "dependencies": {
+    "@ark-ui/react": "^5.39.2",
     "@auth/core": "0.41.1",
     "@convex-dev/auth": "0.0.95",
     "@holiday-jp/holiday_jp": "^2.5.2",

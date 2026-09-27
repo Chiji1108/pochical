@@ -1,6 +1,7 @@
+import { SegmentGroup, Switch } from "@ark-ui/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createContext, useContext } from "react";
-import type { ButtonHTMLAttributes, ChangeEvent, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 // The shared pieces the screens are built from, each the one place its
@@ -395,34 +396,50 @@ export function ListRow({
 }
 
 // An on and off switch, as the platforms' Toggle and Switch: a track that
-// fills with the theme when on, and a knob that slides across.
-const toggleStyle = css({
-  _before: {
+// fills with the theme when on, and a knob that slides across. Ark UI's
+// Switch does the rest: the hidden checkbox, its label and focus.
+const toggle = {
+  thumb: css({
+    _checked: { transform: "translateX(18px)" },
     bg: "var(--knob)",
     borderRadius: "50%",
     boxShadow: "0 1px 3px var(--shadow-strong)",
-    content: '""',
     display: "block",
     height: "22px",
     margin: "2px",
     transition: "transform 0.15s",
     width: "22px",
-  },
-  _checked: {
-    _before: { transform: "translateX(18px)" },
-    bg: "accentFill",
-  },
-  appearance: "none",
-  bg: "controlOff",
-  borderRadius: "13px",
-  cursor: "pointer",
-  flexShrink: 0,
-  height: "26px",
-  marginLeft: "auto",
-  transition: "background 0.15s",
-  width: "44px",
-});
+  }),
+  track: css({
+    _checked: { bg: "accentFill" },
+    _focusVisible: {
+      outline: "2px solid token(colors.accent)",
+      outlineOffset: "2px",
+    },
+    bg: "controlOff",
+    borderRadius: "13px",
+    cursor: "pointer",
+    display: "block",
+    flexShrink: 0,
+    height: "26px",
+    marginLeft: "auto",
+    transition: "background 0.15s",
+    width: "44px",
+  }),
+};
 
+function ToggleParts() {
+  return (
+    <>
+      <Switch.Control className={toggle.track}>
+        <Switch.Thumb className={toggle.thumb} />
+      </Switch.Control>
+      <Switch.HiddenInput />
+    </>
+  );
+}
+
+// A switch on its own, named for a screen reader.
 export function Toggle({
   checked,
   onChange,
@@ -430,21 +447,18 @@ export function Toggle({
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
-  // For a switch outside a row's label.
-  label?: string;
+  label: string;
 }) {
   return (
-    <input
-      aria-checked={checked}
-      aria-label={label}
+    <Switch.Root
       checked={checked}
-      className={toggleStyle}
-      onChange={(event: ChangeEvent<HTMLInputElement>) => {
-        onChange(event.target.checked);
+      onCheckedChange={(details) => {
+        onChange(details.checked);
       }}
-      role="switch"
-      type="checkbox"
-    />
+    >
+      <Switch.Label className="dc-sr-only">{label}</Switch.Label>
+      <ToggleParts />
+    </Switch.Root>
   );
 }
 
@@ -464,20 +478,28 @@ export function SwitchRow({
   className?: string;
 }) {
   return (
-    <ListRow
-      className={className}
-      control={<Toggle checked={checked} onChange={onChange} />}
-      label={label}
-      leading={
-        swatch ? (
+    <Switch.Root
+      checked={checked}
+      className={cx(listRow.root, listRow.pressable, className)}
+      data-list-row=""
+      onCheckedChange={(details) => {
+        onChange(details.checked);
+      }}
+    >
+      {swatch && (
+        <span className={listRow.leading}>
           <span
             aria-hidden="true"
             className={swatchStyle}
             style={{ background: swatch }}
           />
-        ) : undefined
-      }
-    />
+        </span>
+      )}
+      <Switch.Label className={cx(listRow.label, listRow.labelGrow)}>
+        {label}
+      </Switch.Label>
+      <ToggleParts />
+    </Switch.Root>
   );
 }
 
@@ -505,27 +527,25 @@ const segmentedStyle = css({
   gridAutoFlow: "column",
   margin: 0,
   padding: "3px",
+  position: "relative",
 });
 
 const segmentStyle = cva({
   base: {
-    "&[aria-pressed=true]": {
-      bg: "surface",
-      boxShadow: "0 1px 3px var(--shadow)",
-      color: "text",
-      fontWeight: 600,
+    _checked: { color: "text", fontWeight: 600 },
+    _focusVisible: {
+      outline: "2px solid token(colors.accent)",
+      outlineOffset: "-2px",
     },
     alignItems: "center",
-    bg: "transparent",
-    border: 0,
     borderRadius: "11px",
     color: "text2",
     cursor: "pointer",
     display: "flex",
-    flexDirection: "column",
     fontSize: "13px",
-    gap: "4px",
     justifyContent: "center",
+    position: "relative",
+    zIndex: 1,
   },
   variants: {
     size: {
@@ -536,39 +556,85 @@ const segmentStyle = cva({
   },
 });
 
-export function SegmentedControl({
+const segmentText = css({
+  alignItems: "center",
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+});
+
+// The raised ground under the picked segment, which slides to the next
+// one as it is picked; Ark UI measures where it goes.
+const segmentIndicator = css({
+  bg: "surface",
+  borderRadius: "11px",
+  boxShadow: "0 1px 3px var(--shadow)",
+  height: "var(--height)",
+  top: "var(--top)",
+  width: "var(--width)",
+});
+
+// Picks one of `value`'s kind, as SwiftUI's Picker(selection:) with a tag
+// on each choice: each Segment carries its value.
+export function SegmentedControl<Value extends string>({
   label,
+  value,
+  onValueChange,
   size = "regular",
   className,
   children,
 }: {
   // What is being picked, for a screen reader.
   label: string;
+  // Null while nothing is picked, like a group icon that is a photo.
+  value: Value | null;
+  onValueChange: (value: Value) => void;
   size?: SegmentSize;
   className?: string;
   children: ReactNode;
 }) {
   return (
-    <fieldset className={cx(segmentedStyle, className)}>
-      <legend className="dc-sr-only">{label}</legend>
+    <SegmentGroup.Root
+      className={cx(segmentedStyle, className)}
+      orientation="horizontal"
+      onValueChange={(details) => {
+        if (details.value !== null) {
+          onValueChange(details.value as Value);
+        }
+      }}
+      value={value}
+    >
+      <SegmentGroup.Label className="dc-sr-only">{label}</SegmentGroup.Label>
+      <SegmentGroup.Indicator className={segmentIndicator} />
       <SegmentSizeContext value={size}>{children}</SegmentSizeContext>
-    </fieldset>
+    </SegmentGroup.Root>
   );
 }
 
+// One choice: a sample of what it picks, a word, or both. `label` names it
+// for a screen reader when the words shown are short, like 日 for 日曜.
 export function Segment({
-  pressed,
+  value,
+  label,
   className,
-  ...props
-}: ButtonProps & { pressed: boolean }) {
+  children,
+}: {
+  value: string;
+  label?: string;
+  className?: string;
+  children: ReactNode;
+}) {
   const size = useContext(SegmentSizeContext);
   return (
-    <button
-      aria-pressed={pressed}
+    <SegmentGroup.Item
       className={cx(segmentStyle({ size }), className)}
-      type="button"
-      {...props}
-    />
+      value={value}
+    >
+      <SegmentGroup.ItemText className={segmentText}>
+        {children}
+      </SegmentGroup.ItemText>
+      <SegmentGroup.ItemHiddenInput aria-label={label} />
+    </SegmentGroup.Item>
   );
 }
 
