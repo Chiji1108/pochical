@@ -314,6 +314,28 @@ const classmates = (): Member[] =>
     style: { look: presetLook(String(preset)) },
   }));
 
+// The cousins' group the sample invitation is for; ゆうき, who sent it,
+// is the same person as in 家族.
+const cousins = (): Member[] => [
+  partner,
+  {
+    ...misaki(),
+    id: "akari",
+    name: "あかり",
+    photo: undefined,
+    shiftOn: (date: Date) =>
+      nurseOrder[(dayNumber(date) + 1) % nurseOrder.length],
+    style: { look: presetLook("pop") },
+  },
+  {
+    ...mother,
+    id: "cousin-riku",
+    name: "りく",
+    photo: undefined,
+    style: { look: presetLook("minimal") },
+  },
+];
+
 // Old school friends in all kinds of work: a group too wide for 日ごと.
 const schoolFriends = (): Member[] => [
   ...[
@@ -581,7 +603,9 @@ type Page =
   | { name: "chat"; chatId: string; from?: string }
   | { name: "invite" }
   | { name: "new" }
-  | { name: "settings" };
+  | { name: "settings" }
+  // Reading a group's QR code to join it.
+  | { name: "scan" };
 
 // A group as the list keeps it, without its members' shifts.
 export type GroupSummary = Omit<Group, "members">;
@@ -620,16 +644,19 @@ export function DesignGroup({
   patternKeys,
   profile,
   onTab,
+  initialGroupId = "family",
 }: {
   schedule: Schedule;
   patternKeys: Shift[];
   profile: Profile;
+  // The group to open on, like one just joined from a link.
+  initialGroupId?: string;
 
   onTab: (tab: Tab) => void;
 }) {
   const groups = useUser((state) => state.groups);
   const setGroups = useUser((state) => state.setGroups);
-  const [groupId, setGroupId] = useState("family");
+  const [groupId, setGroupId] = useState(initialGroupId);
   const chats = useUser((state) => state.chats);
   const setChats = useUser((state) => state.setChats);
   // The table layout each group was last seen in.
@@ -640,6 +667,8 @@ export function DesignGroup({
   const [profileOf, setProfileOf] = useState<Member>();
   // Members taken out of each group, by group id.
   const [removed, setRemoved] = useState<Record<string, string[]>>({});
+  // Each QR code read opens a fresh invitation.
+  const [scans, setScans] = useState(0);
   const toast = useContext(ToastContext);
   const meIn = (id: string) => {
     const found = groups.find((item) => item.id === id);
@@ -660,8 +689,44 @@ export function DesignGroup({
     if (id === "school") {
       return [me, ...schoolFriends()];
     }
+    if (id === invitedGroupId) {
+      return [me, ...cousins()];
+    }
     return [me];
   };
+  const scanPage = (
+    <ScanPage
+      onClose={() => {
+        setPage({ name: "hub" });
+      }}
+      onRead={() => {
+        setPage({ name: "hub" });
+        const invited = sampleInvite().group;
+        if (groups.some((item) => item.id === invitedGroupId)) {
+          setGroupId(invitedGroupId);
+          toast(`「${invited}」にはもう参加しています`);
+        } else {
+          setScans(scans + 1);
+        }
+      }}
+    />
+  );
+  const joinSheet = scans > 0 && (
+    <JoinSheet
+      afterScan
+      key={scans}
+      name={profile.name}
+      onOpenGroup={(id) => {
+        setGroupId(id);
+        setPage({ name: "hub" });
+        toast(`「${sampleInvite().group}」に参加しました`);
+      }}
+    />
+  );
+  const onScan = () => {
+    setPage({ name: "scan" });
+  };
+
   const newGroupPage = (
     <NewGroupPage
       onBack={() => {
@@ -682,6 +747,9 @@ export function DesignGroup({
   // In no group yet, or none left: what sharing looks like, and the two
   // ways in.
   if (groups.length === 0) {
+    if (page.name === "scan") {
+      return scanPage;
+    }
     return (
       <div className="dc-content st-screen">
         <div className="st-scroll">
@@ -692,10 +760,12 @@ export function DesignGroup({
               onNew={() => {
                 setPage({ name: "new" });
               }}
+              onScan={onScan}
             />
           )}
         </div>
         {page.name !== "new" && <TabBar active="group" onSelect={onTab} />}
+        {joinSheet}
       </div>
     );
   }
@@ -782,6 +852,10 @@ export function DesignGroup({
       .filter(([key]) => key.startsWith(`${id}:`))
       .reduce((total, [, chat]) => total + chat.unread, 0);
 
+  if (page.name === "scan") {
+    return scanPage;
+  }
+
   if (page.name === "chat") {
     const key = chatKey(group.id, page.chatId);
     return (
@@ -832,6 +906,7 @@ export function DesignGroup({
             onNew={() => {
               setPage({ name: "new" });
             }}
+            onScan={onScan}
             onSelect={setGroupId}
             selected={group.id}
             unreadOf={unreadOf}
@@ -945,9 +1020,149 @@ export function DesignGroup({
       )}
       {page.name === "hub" && <TabBar active="group" onSelect={onTab} />}
       {memberSheet}
+      {joinSheet}
     </div>
   );
 }
+
+// Reading a group's QR code, as the camera shows it. The prototype has no
+// camera: pressing the frame, or 写真から読み取る, reads the sample code.
+function ScanPage({
+  onClose,
+  onRead,
+}: {
+  onClose: () => void;
+  onRead: () => void;
+}) {
+  return (
+    <div className={cx("dc-content st-screen", scan.root)}>
+      <header className={scan.header}>
+        <button
+          aria-label="閉じる"
+          className={scan.close}
+          onClick={onClose}
+          type="button"
+        >
+          <X aria-hidden="true" size={20} />
+        </button>
+        <h3 className={scan.title}>QRコードで参加</h3>
+      </header>
+      <div className={scan.body}>
+        <button
+          aria-label="QRコードを読み取る（デモ）"
+          className={scan.frame}
+          onClick={onRead}
+          type="button"
+        >
+          <span aria-hidden="true" className={scan.corners} />
+        </button>
+        <p className={scan.hint}>
+          グループの招待QRコードを枠に合わせてください
+        </p>
+        <small className={scan.demo}>デモでは枠を押すと読み取れます</small>
+      </div>
+      <button className={scan.library} onClick={onRead} type="button">
+        <ImageIcon aria-hidden="true" size={18} />
+        写真から読み取る
+      </button>
+    </div>
+  );
+}
+
+const scanCorner = "3px solid white";
+
+const scan = {
+  body: css({
+    alignItems: "center",
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "20px",
+    justifyContent: "center",
+  }),
+  close: css({
+    bg: "rgba(255, 255, 255, 0.16)",
+    border: 0,
+    borderRadius: "50%",
+    color: "white",
+    display: "grid",
+    height: "action",
+    placeItems: "center",
+    width: "action",
+  }),
+  // Four corner marks, drawn by the frame's own corners.
+  corners: css({
+    _after: {
+      borderBottom: scanCorner,
+      borderLeft: scanCorner,
+      bottom: 0,
+      content: '""',
+      height: "32px",
+      left: 0,
+      position: "absolute",
+      width: "32px",
+    },
+    _before: {
+      borderLeft: scanCorner,
+      borderTop: scanCorner,
+      content: '""',
+      height: "32px",
+      left: 0,
+      position: "absolute",
+      top: 0,
+      width: "32px",
+    },
+    inset: 0,
+    position: "absolute",
+  }),
+  demo: css({ color: "rgba(255, 255, 255, 0.45)", fontSize: "11px" }),
+  frame: css({
+    _after: {
+      borderBottom: scanCorner,
+      borderRight: scanCorner,
+      bottom: 0,
+      content: '""',
+      height: "32px",
+      position: "absolute",
+      right: 0,
+      width: "32px",
+    },
+    _before: {
+      borderRight: scanCorner,
+      borderTop: scanCorner,
+      content: '""',
+      height: "32px",
+      position: "absolute",
+      right: 0,
+      top: 0,
+      width: "32px",
+    },
+    bg: "rgba(255, 255, 255, 0.06)",
+    border: 0,
+    borderRadius: "12px",
+    height: "220px",
+    position: "relative",
+    width: "220px",
+  }),
+  header: css({ alignItems: "center", display: "flex", gap: "12px" }),
+  hint: css({ fontSize: "14px", margin: 0, textAlign: "center" }),
+  library: css({
+    alignItems: "center",
+    alignSelf: "center",
+    bg: "rgba(255, 255, 255, 0.16)",
+    border: 0,
+    borderRadius: "999px",
+    color: "white",
+    display: "flex",
+    fontSize: "14px",
+    fontWeight: 600,
+    gap: "8px",
+    marginBottom: "12px",
+    padding: "12px 20px",
+  }),
+  root: css({ bg: "black", color: "white" }),
+  title: css({ fontSize: "17px", fontWeight: 600, margin: 0 }),
+};
 
 // A made-up group for the no-group screen's picture of sharing.
 const sampleGroup = (): Group => ({
@@ -959,7 +1174,13 @@ const sampleGroup = (): Group => ({
 
 // No group yet: a sample week of shared shifts, then 作成 and QR参加, as
 // the old app showed it.
-function NoGroups({ onNew }: { onNew: () => void }) {
+function NoGroups({
+  onNew,
+  onScan,
+}: {
+  onNew: () => void;
+  onScan: () => void;
+}) {
   const weekTools = useWeek();
   return (
     <div className={noGroups.root}>
@@ -984,7 +1205,7 @@ function NoGroups({ onNew }: { onNew: () => void }) {
           <Plus aria-hidden="true" size={18} />
           グループを作成
         </Button>
-        <Button variant="quiet">
+        <Button onClick={onScan} variant="quiet">
           <ScanLine aria-hidden="true" size={17} />
           QRコードで参加
         </Button>
@@ -1025,12 +1246,14 @@ function GroupRail({
   unreadOf,
   onSelect,
   onNew,
+  onScan,
 }: {
   groups: Omit<Group, "members">[];
   selected: string;
   unreadOf: (id: string) => number;
   onSelect: (id: string) => void;
   onNew: () => void;
+  onScan: () => void;
 }) {
   return (
     <nav aria-label="グループ" className="gr-rail">
@@ -1070,6 +1293,7 @@ function GroupRail({
       <button
         aria-label="QRコードで参加"
         className="gr-rail-action"
+        onClick={onScan}
         type="button"
       >
         <ScanLine aria-hidden="true" size={19} />
@@ -3534,6 +3758,9 @@ type Invite = {
   members: { name: string; photo?: string }[];
 };
 
+// The group the sample invitation joins.
+const invitedGroupId = "cousins";
+
 const sampleInvite = (): Invite => ({
   from: { name: "ゆうき", photo: samplePhoto(1005) },
   group: "いとこ会",
@@ -3553,26 +3780,38 @@ const settleMilliseconds = 400;
 export function JoinSheet({
   name: usualName,
   onOpenGroup,
+  afterScan = false,
 }: {
   name: string;
-  onOpenGroup: () => void;
+  onOpenGroup: (groupId: string) => void;
+  // Read from a QR code in the group tab: it opens at once, and joining
+  // goes straight to the group instead of a second sheet saying so.
+  afterScan?: boolean;
 }) {
   const invite = sampleInvite();
   const [name, setName] = useState(usualName);
   const [joined, setJoined] = useState(false);
   const phone = useContext(PhoneContext);
+  const groups = useUser((state) => state.groups);
+  const setGroups = useUser((state) => state.setGroups);
+  const already = groups.some((item) => item.id === invitedGroupId);
+  // Opened again for a group you are in, rather than just joined.
+  const alreadyIn = already && !joined;
   const [open, setOpen] = useState(false);
   // It opens by itself, so it waits for the page to settle, and on /design
   // brings the phone into view first.
   useEffect(() => {
-    const timer = setTimeout(() => {
-      phone?.current?.scrollIntoView({ behavior: "instant", block: "start" });
-      setOpen(true);
-    }, settleMilliseconds);
+    const timer = setTimeout(
+      () => {
+        phone?.current?.scrollIntoView({ behavior: "instant", block: "start" });
+        setOpen(true);
+      },
+      afterScan ? 0 : settleMilliseconds
+    );
     return () => {
       clearTimeout(timer);
     };
-  }, [phone]);
+  }, [phone, afterScan]);
   const close = () => {
     setOpen(false);
   };
@@ -3586,18 +3825,18 @@ export function JoinSheet({
       <span className="gr-rail-icon gr-mark-frame-large">
         <GroupIcon mark={invite.mark} size={40} />
       </span>
-      {joined ? (
+      {alreadyIn && (
         <>
-          <h4>「{invite.group}」に参加しました</h4>
+          <h4>「{invite.group}」にはもう参加しています</h4>
           <p className="gr-join-text">
-            みんなのシフトと、みんなが休みの日が見られます。
+            このリンクのグループに、もう入っています。
           </p>
           <Button
             variant="primary"
             className="ob-push"
             onClick={() => {
               close();
-              onOpenGroup();
+              onOpenGroup(invitedGroupId);
             }}
           >
             グループを見る
@@ -3606,63 +3845,104 @@ export function JoinSheet({
             閉じる
           </Button>
         </>
-      ) : (
-        <>
-          <p className="gr-join-from">
-            <PhotoAvatar
-              name={invite.from.name}
-              photo={invite.from.photo}
-              size={20}
-            />
-            {invite.from.name}からの招待
-          </p>
-          <h4>「{invite.group}」に参加しますか？</h4>
-          <div className="gr-join-members">
-            {invite.members.map((member) => (
-              <PhotoAvatar
-                key={member.name}
-                name={member.name}
-                photo={member.photo}
-                size={28}
-              />
-            ))}
-            <small>{invite.members.length}人が参加中</small>
-          </div>
-          <List className="gr-join-name">
-            <ListRow
-              label="あなたの名前"
-              control={
-                <>
-                  <input
-                    className="pe-inline-input"
-                    onChange={(event) => {
-                      setName(event.target.value);
-                    }}
-                    placeholder="例：さくら"
-                    value={name}
-                  />
-                </>
-              }
-            />
-          </List>
-          <p className="gr-join-text">
-            このグループの人に、この名前で表示されます。参加すると、あなたのシフトもメンバーに見えるようになります。
-          </p>
-          <Button
-            variant="primary"
-            className="ob-push"
-            disabled={name.trim() === ""}
-            onClick={() => {
-              setJoined(true);
-            }}
-          >
-            参加する
-          </Button>
-          <Button variant="text" onClick={close}>
-            今はしない
-          </Button>
-        </>
       )}
+      {!alreadyIn &&
+        (joined ? (
+          <>
+            <h4>「{invite.group}」に参加しました</h4>
+            <p className="gr-join-text">
+              みんなのシフトと、みんなが休みの日が見られます。
+            </p>
+            <Button
+              variant="primary"
+              className="ob-push"
+              onClick={() => {
+                close();
+                onOpenGroup(invitedGroupId);
+              }}
+            >
+              グループを見る
+            </Button>
+            <Button variant="text" onClick={close}>
+              閉じる
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className="gr-join-from">
+              <PhotoAvatar
+                name={invite.from.name}
+                photo={invite.from.photo}
+                size={20}
+              />
+              {invite.from.name}からの招待
+            </p>
+            <h4>「{invite.group}」に参加しますか？</h4>
+            <div className="gr-join-members">
+              {invite.members.map((member) => (
+                <PhotoAvatar
+                  key={member.name}
+                  name={member.name}
+                  photo={member.photo}
+                  size={28}
+                />
+              ))}
+              <small>{invite.members.length}人が参加中</small>
+            </div>
+            <List className="gr-join-name">
+              <ListRow
+                label="あなたの名前"
+                control={
+                  <>
+                    <input
+                      className="pe-inline-input"
+                      onChange={(event) => {
+                        setName(event.target.value);
+                      }}
+                      placeholder="例：さくら"
+                      value={name}
+                    />
+                  </>
+                }
+              />
+            </List>
+            <p className="gr-join-text">
+              このグループの人に、この名前で表示されます。参加すると、あなたのシフトもメンバーに見えるようになります。
+            </p>
+            <Button
+              variant="primary"
+              className="ob-push"
+              disabled={name.trim() === ""}
+              onClick={() => {
+                setJoined(true);
+                if (afterScan) {
+                  close();
+                  onOpenGroup(invitedGroupId);
+                }
+                if (!already) {
+                  setGroups([
+                    ...groups,
+                    {
+                      id: invitedGroupId,
+                      mark: invite.mark,
+                      // A name other than the usual one is this group's own.
+                      mine:
+                        name.trim() === usualName
+                          ? undefined
+                          : { name: name.trim() },
+                      name: invite.group,
+                    },
+                  ]);
+                }
+              }}
+            >
+              参加する
+            </Button>
+            <Button variant="text" onClick={close}>
+              今はしない
+            </Button>
+          </>
+        ))}
     </Sheet>
   );
 }

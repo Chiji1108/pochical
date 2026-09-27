@@ -354,6 +354,8 @@ export function DesignCalendar({
   const coworkerNames = useUser((state) => state.coworkers);
   const setCoworkerNames = useUser((state) => state.setCoworkers);
   const [tab, setTab] = useState<Tab>(initialTab);
+  // The group the group tab opens on, like one just joined from a link.
+  const [openGroup, setOpenGroup] = useState<string>();
   const profile = useUser((state) => state.profile);
   const setProfile = useUser((state) => state.setProfile);
   const rules = useUser((state) => state.rules);
@@ -650,6 +652,7 @@ export function DesignCalendar({
           )}
           {tab === "group" && (
             <DesignGroup
+              initialGroupId={openGroup}
               onTab={setTab}
               patternKeys={patternKeys}
               profile={profile}
@@ -899,7 +902,8 @@ export function DesignCalendar({
           {pendingInvite && (
             <JoinSheet
               name={profile.name}
-              onOpenGroup={() => {
+              onOpenGroup={(groupId) => {
+                setOpenGroup(groupId);
                 setTab("group");
               }}
             />
