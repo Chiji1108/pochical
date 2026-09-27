@@ -9,6 +9,7 @@ import type { UserStore } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
 import { ProviderLogo, providerNames } from "./design-account";
 import type { AccountProvider } from "./design-account";
+import { DARK_DRAWING, useAppIcons } from "./design-app-icon";
 import {
   addDays,
   DesignCalendar,
@@ -287,18 +288,30 @@ function WelcomeStep({
   onLogin: () => void;
 }) {
   const scheme = useContext(ColorSchemeContext);
+  const icons = useAppIcons();
+  // In dark, the dog as the dark home screen shows the icon: a light dog in
+  // dark lines, painted once the drawing has loaded.
+  const darkDrawing = icons[DARK_DRAWING];
   return (
     <div className="ob-welcome-screen">
       <div className="ob-intro">
         {/* The app icon's poodle, just the drawing: the one who was tapped on
             the home screen, over the name it gives. */}
-        <img
-          alt=""
-          className={`ob-poodle ob-poodle-${scheme}`}
-          height={200}
-          src="/design/poodle.png"
-          width={200}
-        />
+        {scheme === "dark" ? (
+          <span aria-hidden="true" className="ob-poodle">
+            {darkDrawing ? (
+              <img alt="" height={200} src={darkDrawing} width={200} />
+            ) : null}
+          </span>
+        ) : (
+          <img
+            alt=""
+            className="ob-poodle ob-poodle-light"
+            height={200}
+            src="/design/poodle.png"
+            width={200}
+          />
+        )}
         <h3>ポチカル</h3>
         {/* Each phrase stays whole, so the line breaks after the comma. */}
         <p>

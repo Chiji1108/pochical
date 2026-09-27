@@ -1112,9 +1112,8 @@
     filter: brightness(1.12) contrast(1.2);
     mix-blend-mode: multiply;
   }
-  .ob-poodle-dark {
-    filter: brightness(1.12) contrast(1.2) invert(1);
-    mix-blend-mode: screen;
+  span.ob-poodle {
+    display: block;
   }
   .ob-phrase {
     display: inline-block;

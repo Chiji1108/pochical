@@ -218,14 +218,20 @@ export function inkBounds(
   return { bottom, left, right, top };
 }
 
-function paintIcon(image: HTMLImageElement, colors: IconColors) {
+// The drawing in the icon's colors, at the source's size. With a clear
+// ground, only the dog and its rim are painted and the rest is see-through.
+function paintDrawing(
+  image: HTMLImageElement,
+  colors: IconColors,
+  clearGround = false
+) {
   const { naturalWidth: width, naturalHeight: height } = image;
   const source = document.createElement("canvas");
   source.width = width;
   source.height = height;
   const sourceContext = source.getContext("2d");
   if (!sourceContext) {
-    return "";
+    return;
   }
   sourceContext.drawImage(image, 0, 0);
   const pixels = sourceContext.getImageData(0, 0, width, height);
@@ -255,9 +261,11 @@ function paintIcon(image: HTMLImageElement, colors: IconColors) {
   // dark the drawing is there, so the lines keep their soft edges.
   for (let index = 0; index < lightness.length; index += 1) {
     const share = outside[index] ? rimShare(index) : 1;
+    // A clear ground fades the rim out by opacity rather than into a color.
+    const tint = clearGround ? 1 : share;
     const base = [0, 1, 2].map(
       (channel) =>
-        (ground[channel] ?? 0) * (1 - share) + (dog[channel] ?? 0) * share
+        (ground[channel] ?? 0) * (1 - tint) + (dog[channel] ?? 0) * tint
     );
     const ink = 1 - (lightness[index] ?? 255) / 255;
     const offset = index * 4;
@@ -266,10 +274,19 @@ function paintIcon(image: HTMLImageElement, colors: IconColors) {
         (base[channel] ?? 0) * (1 - ink) + (line[channel] ?? 0) * ink
       );
     }
-    pixels.data[offset + 3] = 255;
+    pixels.data[offset + 3] = clearGround ? Math.round(share * 255) : 255;
   }
   sourceContext.putImageData(pixels, 0, 0);
+  return { lightness, source };
+}
 
+function paintIcon(image: HTMLImageElement, colors: IconColors) {
+  const drawing = paintDrawing(image, colors);
+  if (!drawing) {
+    return "";
+  }
+  const { lightness, source } = drawing;
+  const { naturalWidth: width, naturalHeight: height } = image;
   const bounds = inkBounds(lightness, width, height);
   const drawn = Math.max(
     bounds.right - bounds.left,
@@ -297,6 +314,9 @@ function paintIcon(image: HTMLImageElement, colors: IconColors) {
   return icon.toDataURL("image/png");
 }
 
+// The key of the dog alone in the default icon's dark look.
+export const DARK_DRAWING = "drawing-dark";
+
 // Painted once for the whole page, since each color walks every pixel.
 let paintedIcons: Promise<Record<string, string>> | undefined;
 
@@ -304,12 +324,20 @@ async function paintAll() {
   const image = new Image();
   image.src = SOURCE;
   await image.decode();
-  return Object.fromEntries(
+  const icons: Record<string, string> = Object.fromEntries(
     [...iconColorOptions, ...darkTwins].map((colors) => [
       colors.id,
       paintIcon(image, colors),
     ])
   );
+  // The default icon's dark look without its ground, for drawing the dog
+  // straight onto a dark screen.
+  const mossDark = darkTwins.find((colors) => colors.id === "moss-dark");
+  if (mossDark) {
+    icons[DARK_DRAWING] =
+      paintDrawing(image, mossDark, true)?.source.toDataURL("image/png") ?? "";
+  }
+  return icons;
 }
 
 async function loadIcons(): Promise<Record<string, string>> {
