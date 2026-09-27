@@ -3270,8 +3270,7 @@ function GroupSettingsPage({
   }
   return (
     <>
-      <PageHeaderBack label={group.name} onBack={onBack} />
-      <h3 className="st-title">グループの設定</h3>
+      <PageHeader back={group.name} onBack={onBack} title="グループの設定" />
       <section className="st-section">
         <h4>グループ</h4>
         <div className="st-list">
@@ -3477,8 +3476,11 @@ function GroupProfilePage({
   const usualPhoto = mine.photo === undefined && !mine.noPhoto;
   return (
     <>
-      <PageHeaderBack label="グループの設定" onBack={onBack} />
-      <h3 className="st-title">このグループでのあなた</h3>
+      <PageHeader
+        back="グループの設定"
+        onBack={onBack}
+        title="このグループでのあなた"
+      />
       <PhotoEditor
         name={shown.name}
         onRemove={
@@ -3521,16 +3523,6 @@ function GroupProfilePage({
       </p>
     </>
   );
-}
-
-function PageHeaderBack({
-  label,
-  onBack,
-}: {
-  label: string;
-  onBack: () => void;
-}) {
-  return <BackButton onClick={onBack}>{label}</BackButton>;
 }
 
 // Your name and picture in a group: its own, or the usual ones.

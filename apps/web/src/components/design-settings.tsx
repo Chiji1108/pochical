@@ -341,7 +341,7 @@ function SettingsTop({
   const tone = useContext(ToneContext);
   return (
     <>
-      <h3 className="st-title">設定</h3>
+      <PageHeader title="設定" />
       <Section title="シフト">
         <Row
           label="働き方"

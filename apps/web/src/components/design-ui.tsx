@@ -1,6 +1,6 @@
 import { ChevronLeft } from "lucide-react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { cva, cx } from "styled-system/css";
+import { css, cva, cx } from "styled-system/css";
 
 // The shared pieces the screens are built from, each the one place its
 // look is decided. They map one to one onto the SwiftUI views and Compose
@@ -83,6 +83,19 @@ export function Button({
 
 // An action drawn as its icon alone, like the heading's 招待 or 保存. The
 // label is what a screen reader says.
+const iconButtonStyle = css({
+  _hover: { bg: "fill" },
+  bg: "transparent",
+  border: 0,
+  borderRadius: "action",
+  color: "accent",
+  display: "grid",
+  flexShrink: 0,
+  height: "action",
+  placeItems: "center",
+  width: "action",
+});
+
 export function IconButton({
   label,
   className,
@@ -91,7 +104,7 @@ export function IconButton({
   return (
     <button
       aria-label={label}
-      className={`ui-icon-button ${className ?? ""}`}
+      className={cx(iconButtonStyle, "ui-icon-button", className)}
       type="button"
       {...props}
     />
@@ -100,7 +113,23 @@ export function IconButton({
 
 // Back to where the page came from, named after it (設定, グループ), or
 // キャンセル without the chevron where leaving drops what was entered.
-// Without children it is the chevron alone, labelled 戻る.
+// Without children it is the chevron alone, labelled 戻る. Disabled, it
+// keeps its place but hides, as while a list is being sorted.
+const backButtonStyle = css({
+  _disabled: { visibility: "hidden" },
+  alignItems: "center",
+  alignSelf: "flex-start",
+  bg: "transparent",
+  border: 0,
+  color: "accent",
+  display: "inline-flex",
+  fontSize: "14px",
+  gap: "2px",
+  marginLeft: "-6px",
+  minHeight: "action",
+  paddingRight: "8px",
+});
+
 export function BackButton({
   chevron = true,
   className,
@@ -110,7 +139,7 @@ export function BackButton({
   return (
     <button
       aria-label={children ? undefined : "戻る"}
-      className={`st-back ${className ?? ""}`}
+      className={cx(backButtonStyle, className)}
       type="button"
       {...props}
     >
@@ -121,42 +150,72 @@ export function BackButton({
 }
 
 // The action at a page's top right: 保存, 作る, 並び替え and the like.
+const headerActionStyle = css({
+  _disabled: { color: "textDisabled", cursor: "default" },
+  bg: "transparent",
+  border: 0,
+  color: "accent",
+  fontSize: "15px",
+  fontWeight: 600,
+  minHeight: "action",
+  paddingLeft: "12px",
+  paddingRight: "4px",
+});
+
 export function HeaderAction({ className, ...props }: ButtonProps) {
   return (
-    <button className={`pe-save ${className ?? ""}`} type="button" {...props} />
+    <button
+      className={cx(headerActionStyle, className)}
+      type="button"
+      {...props}
+    />
   );
 }
 
 // A page's top, as the platforms' navigation bars have it: the way back
 // (or キャンセル) on the left, an action on the right, and the large title
 // under them. `back` and `onBack` are the usual way back; `leading` takes
-// anything else there.
+// anything else there. `children` go between the bar and the title, like
+// a step count.
+const pageHeader = {
+  bar: css({
+    alignItems: "center",
+    display: "flex",
+    justifyContent: "space-between",
+  }),
+  root: css({ display: "flex", flexDirection: "column", gap: "4px" }),
+  title: css({ fontSize: "26px", fontWeight: 600, margin: 0 }),
+};
+
 export function PageHeader({
   title,
   back,
   onBack,
   leading,
   trailing,
+  children,
 }: {
   title?: ReactNode;
   back?: string;
   onBack?: () => void;
   leading?: ReactNode;
   trailing?: ReactNode;
+  children?: ReactNode;
 }) {
   const start =
     leading ?? (onBack && <BackButton onClick={onBack}>{back}</BackButton>);
   return (
-    <header className="st-page-header">
+    <header className={pageHeader.root}>
       {trailing ? (
-        <div className="pe-topbar">
+        <div className={pageHeader.bar}>
           {start}
           {trailing}
         </div>
       ) : (
         start
       )}
-      {title && <h3 className="st-title">{title}</h3>}
+      {children}
+      {title && <h3 className={pageHeader.title}>{title}</h3>}
     </header>
   );
 }

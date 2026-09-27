@@ -6,7 +6,7 @@ import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { DayCell, dateKey, formatDay } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
-import { BackButton, Button } from "./design-ui";
+import { BackButton, Button, PageHeader } from "./design-ui";
 import { useWeek } from "./design-week";
 import { OffDisplayContext, ShiftMark } from "./shift-mark";
 
@@ -210,21 +210,27 @@ export function ImportReviewPage({
   return (
     <div className="dc-content st-screen">
       <div className="st-scroll im-page">
-        <header className="st-page-header">
-          <BackButton onClick={back}>
-            {step === "row" || run === "repeat" ? "カレンダー" : "戻る"}
-          </BackButton>
+        <PageHeader
+          leading={
+            <BackButton onClick={back}>
+              {step === "row" || run === "repeat" ? "カレンダー" : "戻る"}
+            </BackButton>
+          }
+          title={
+            <>
+              {step === "row" && "あなたの行はどれですか？"}
+              {step === "codes" && "記号をシフトに合わせます"}
+              {step === "check" &&
+                `${month.getMonth() + 1}月のシフトを確かめる`}
+            </>
+          }
+        >
           {run === "first" && (
             <p className="im-steps">
               {(["row", "codes", "check"] as const).indexOf(step) + 1} / 3
             </p>
           )}
-          <h3 className="st-title">
-            {step === "row" && "あなたの行はどれですか？"}
-            {step === "codes" && "記号をシフトに合わせます"}
-            {step === "check" && `${month.getMonth() + 1}月のシフトを確かめる`}
-          </h3>
-        </header>
+        </PageHeader>
 
         {step === "row" && (
           <>
