@@ -1610,7 +1610,7 @@ export const dayCell = cva({
         outlineOffset: "-2px",
       },
     },
-    // A day to look at again, like one the roster reading was unsure of.
+    // A day to look at again, like one two readings of a roster disagreed on.
     flagged: {
       true: {
         _after: {
@@ -1762,7 +1762,7 @@ export function DayCell({
   editing: boolean;
   active: boolean;
   onPress: () => void;
-  // Marked for a second look, like a day the roster reading was unsure of.
+  // Marked for a second look, like a day two readings of a roster disagreed on.
   flagged?: boolean;
   // Only the shift, for the saved image: no today frame, no note stroke.
   plain?: boolean;

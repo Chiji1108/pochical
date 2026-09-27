@@ -10,8 +10,6 @@ export type ReadRow = {
   // The name as the photo has it, and as the reading took it.
   printed: string;
   read: string;
-  // Whether the reading was unsure of the name.
-  unsure: boolean;
   codes: string[];
 };
 
@@ -20,8 +18,10 @@ export type ImportSample = {
   // Which row is yours, once known: a picture of your own month has only
   // yours.
   myRow: number;
-  // Days whose code the reading was unsure of, on your row.
-  unsureDays: number[];
+  // Days on your row that two readings of the photo read differently:
+  // models do not know when they misread, so the photo is read twice and
+  // the days the readings disagree on are the ones to look at.
+  splitDays: number[];
   // Codes the reading pairs with a pattern by itself.
   suggestions: Record<string, Shift>;
   // Codes a returning person has already placed.
@@ -58,9 +58,9 @@ export function importSample(kind: ImportKind, month: Date): ImportSample {
           codes: codesOf(month, mineCycle, 0, { 15: "有休" }),
           printed: "",
           read: "",
-          unsure: false,
         },
       ],
+      splitDays: [9],
       suggestions: {
         休み: "off",
         日勤: "day",
@@ -68,7 +68,6 @@ export function importSample(kind: ImportKind, month: Date): ImportSample {
         有休: "paid",
         遅番: "late",
       },
-      unsureDays: [9],
     };
   }
   const row = (
@@ -80,7 +79,6 @@ export function importSample(kind: ImportKind, month: Date): ImportSample {
     codes: codesOf(month, rosterCycle, offset, extra),
     printed,
     read,
-    unsure: read !== printed,
   });
   return {
     knownCodes: ["日", "夜", "明", "休", "有"],
@@ -89,11 +87,12 @@ export function importSample(kind: ImportKind, month: Date): ImportSample {
       row("小林 さくら", 0, { 16: "研", 29: "有" }),
       row("田中 みき", 5, {}),
       row("鈴木 ゆい", 0, { 8: "有" }),
-      // Two names the reading got wrong, and knew it was unsure of.
+      // Two names the reading got wrong.
       row("山本 あや", 1, {}, "山木 あや"),
       row("高橋 りな", 1, { 16: "研" }),
       row("中村 はるか", 5, {}, "中材 はるか"),
     ],
+    splitDays: [12, 19],
     suggestions: {
       休: "off",
       夜: "night",
@@ -102,7 +101,6 @@ export function importSample(kind: ImportKind, month: Date): ImportSample {
       有: "paid",
       研: "training",
     },
-    unsureDays: [12, 19],
   };
 }
 

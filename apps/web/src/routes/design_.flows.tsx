@@ -278,7 +278,7 @@ function OnboardingFrame({
   );
 }
 
-// The reading held on its last step, with what it was unsure of marked.
+// The reading held on its last step, the days two readings disagree on marked.
 function ReadingFrame({
   kind,
   label,

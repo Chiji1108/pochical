@@ -107,7 +107,7 @@ export function ImportReviewPage({
   rosterName?: string;
 }) {
   const sample = importSample(kind, month);
-  const { rows, suggestions, unsureDays } = sample;
+  const { rows, suggestions, splitDays } = sample;
   const roster = kind === "roster";
   const found = roster ? rowByName(rows, rosterName) : sample.myRow;
   // The steps after the reading, in order.
@@ -122,17 +122,15 @@ export function ImportReviewPage({
   const [myRow, setMyRow] = useState<number | undefined>(found);
   // Picking another row from the check, when the one found is not theirs.
   const [repicking, setRepicking] = useState(false);
-  // Names as read, fixed by hand. One the reading was unsure of and is a
-  // letter away from a registered coworker starts as that coworker; a
-  // returning person's fixes are remembered, so their roster reads right.
+  // Names as read, fixed by hand. One a letter away from a registered
+  // coworker starts as that coworker, with what was read shown beside it;
+  // a returning person's fixes are remembered, so their roster reads right.
   const [names, setNames] = useState(() =>
     rows.map((row) => {
       if (run === "repeat") {
         return row.printed;
       }
-      const near = row.unsure
-        ? nearCoworker(row.read, coworkerNames)
-        : undefined;
+      const near = nearCoworker(row.read, coworkerNames);
       const given = row.read.split(" ").slice(1).join(" ");
       if (near === undefined) {
         return row.read;
@@ -190,10 +188,9 @@ export function ImportReviewPage({
     return before !== undefined && after !== undefined && before !== after;
   }).length;
   const unplaced = codes.filter((code) => !confirmed.has(code));
-  // Days your own shift is still in doubt: nobody is put on them.
-  const doubtful = new Set(
-    unsureDays.filter((day) => fixes[day] === undefined)
-  );
+  // Days the two readings disagree on and nobody has looked at yet:
+  // nobody is put on them.
+  const doubtful = new Set(splitDays.filter((day) => fixes[day] === undefined));
   const workingOn = (day: number) => {
     const own = shiftOn(day);
     return own && own !== "off" && !doubtful.has(day) ? own : undefined;
@@ -452,7 +449,7 @@ export function ImportReviewPage({
               codes={mine.codes}
               onPick={setPicked}
               picked={picked}
-              unsureDays={unsureDays}
+              splitDays={splitDays}
             />
             <CheckCalendar
               dates={dayDates}
@@ -460,7 +457,7 @@ export function ImportReviewPage({
               onPick={setPicked}
               picked={picked}
               schedule={readSchedule}
-              unsure={unsureDays.filter((day) => fixes[day] === undefined)}
+              split={splitDays.filter((day) => fixes[day] === undefined)}
             />
             {picked !== undefined && (
               <DayFix
@@ -472,19 +469,19 @@ export function ImportReviewPage({
                 patternKeys={patternKeys}
                 shift={shiftOn(picked)}
                 source={roster ? "勤務表" : "画像"}
-                unsure={unsureDays.includes(picked)}
+                split={splitDays.includes(picked)}
               />
             )}
-            {unsureDays.some((day) => fixes[day] === undefined) && (
+            {splitDays.some((day) => fixes[day] === undefined) && (
               <p className="im-unsure">
                 <span aria-hidden="true" className="im-unsure-mark">
                   ?
                 </span>
-                {unsureDays
+                {splitDays
                   .filter((day) => fixes[day] === undefined)
                   .map((day) => `${day}日`)
                   .join("・")}
-                は読み取りに自信がありません。日付を押して確かめてください。
+                は、2回読んで結果が違いました。日付を押して確かめてください。
               </p>
             )}
             {roster && (
@@ -538,7 +535,7 @@ export function ImportReviewPage({
                 </List>
                 {withCoworkers && (
                   <p className="st-note">
-                    入れたい人だけ選んでください。名前が違うときは直せます。読み取りに自信のない日には入れません。
+                    入れたい人だけ選んでください。名前が違うときは直せます。2回読んで結果が違った日には入れません。
                   </p>
                 )}
               </section>
@@ -583,11 +580,7 @@ function CoworkerRow({
   onRename: (name: string) => void;
 }) {
   const fixed = name.trim() !== row.read;
-  const doubtful = row.unsure && !fixed;
-  let note = registered ? "登録済み" : "新しく追加";
-  if (row.unsure && fixed) {
-    note = `${note}・読み取りは「${row.read}」`;
-  }
+  const note = `${registered ? "登録済み" : "新しく追加"}${fixed ? `・読み取りは「${row.read}」` : ""}`;
   return (
     <div className={cx(listRow.root, coworkerStyles.row)} data-list-row="">
       <input
@@ -615,20 +608,7 @@ function CoworkerRow({
         ) : (
           <span>{name}</span>
         )}
-        {chosen && (
-          <small className={coworkerStyles.note}>
-            {doubtful ? (
-              <>
-                <span aria-hidden="true" className="im-unsure-mark">
-                  ?
-                </span>
-                名前の読み取りに自信がありません
-              </>
-            ) : (
-              note
-            )}
-          </small>
-        )}
+        {chosen && <small className={coworkerStyles.note}>{note}</small>}
       </div>
       <span className={coworkerStyles.together}>
         {together > 0 ? `一緒 ${together}日` : "一緒の日なし"}
@@ -697,7 +677,7 @@ const readText = {
       outlineOffset: "-2px",
     },
     // The same yellow as the "?" of a day to look at.
-    "&[data-unsure]": { bg: "#f7e7a6", color: "#4a3d10" },
+    "&[data-split]": { bg: "#f7e7a6", color: "#4a3d10" },
     alignItems: "center",
     bg: "transparent",
     border: 0,
@@ -787,13 +767,13 @@ function codeCount(kind: ImportKind, count: number) {
 function ScanStrip({
   caption,
   codes,
-  unsureDays,
+  splitDays,
   picked,
   onPick,
 }: {
   caption: string;
   codes: string[];
-  unsureDays: number[];
+  splitDays: number[];
   picked?: number;
   onPick: (day: number) => void;
 }) {
@@ -808,7 +788,7 @@ function ScanStrip({
               aria-label={`${day}日：${code}`}
               aria-pressed={picked === day}
               className={readText.day}
-              data-unsure={unsureDays.includes(day) ? "" : undefined}
+              data-split={splitDays.includes(day) ? "" : undefined}
               key={day}
               onClick={() => {
                 onPick(day);
@@ -830,15 +810,15 @@ function CheckCalendar({
   month,
   dates,
   schedule,
-  unsure,
+  split,
   picked,
   onPick,
 }: {
   month: Date;
   dates: Date[];
   schedule: Schedule;
-  // Days still to look at, marked on the calendar.
-  unsure: number[];
+  // Days the readings disagreed on, still to look at, marked.
+  split: number[];
   picked?: number;
   onPick: (day: number) => void;
 }) {
@@ -867,7 +847,7 @@ function CheckCalendar({
               editing={false}
               entry={schedule[dateKey(date)]}
               flagged={
-                unsure.includes(date.getDate()) && inMonth.has(dateKey(date))
+                split.includes(date.getDate()) && inMonth.has(dateKey(date))
               }
               key={dateKey(date)}
               onPress={() => {
@@ -889,7 +869,7 @@ function DayFix({
   date,
   code,
   shift,
-  unsure,
+  split,
   source,
   patternKeys,
   onFix,
@@ -899,7 +879,8 @@ function DayFix({
   // Where the code was read: 勤務表 or 画像.
   source: string;
   shift?: Shift;
-  unsure: boolean;
+  // Whether the two readings disagreed on this day.
+  split: boolean;
   patternKeys: Shift[];
   onFix: (shift: Shift) => void;
 }) {
@@ -907,7 +888,7 @@ function DayFix({
     <section className="im-fix">
       <p>
         <strong>{formatDay(date)}</strong>
-        {source}では「{code}」{unsure ? "（自信なし）" : ""}
+        {source}では「{code}」{split ? "（読むたびに違った日）" : ""}
       </p>
       <ChipGroup>
         {patternKeys.map((key) => (

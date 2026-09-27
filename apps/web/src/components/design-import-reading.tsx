@@ -8,15 +8,15 @@ import { Button, PageHeader } from "./design-ui";
 
 // Waiting for a photo to be read. The picture stays in view while the
 // reading finds the page, then the names and dates, then the codes, and
-// last marks what it was unsure of, so the wait shows what it is doing
-// and what the check after it will ask about.
+// last reads it again and marks the days the two readings disagree on,
+// so the wait shows what it is doing and what the check will ask about.
 
 const phaseLabels: Record<ImportKind, string[]> = {
   mine: [
     "写真を確かめています",
     "月と日付を読んでいます",
     "シフトを読んでいます",
-    "読み取りを見直しています",
+    "もう一度読んで見比べています",
   ],
   // Everyone's row is copied out, then the person's is found by the name
   // they typed and looked over: against the sheet's totals when it has
@@ -25,7 +25,7 @@ const phaseLabels: Record<ImportKind, string[]> = {
     "勤務表を探しています",
     "みんなの行を書き写しています",
     "あなたの行を探しています",
-    "読み取りを見直しています",
+    "もう一度読んで見比べています",
   ],
 };
 // How long the prototype spends on each step, and on all of them done.
@@ -39,14 +39,14 @@ const paper = {
   ground: "#fbf8f0",
   ink: "#2b2823",
   line: "#e6dfcf",
-  unsure: "#f7e7a6",
+  split: "#f7e7a6",
 };
 const lit = "color-mix(in srgb, var(--accent) 24%, transparent)";
 
 const picture = {
   cell: css({
     "&[data-lit]": { bg: lit },
-    "&[data-unsure]": { bg: paper.unsure },
+    "&[data-split]": { bg: paper.split },
     alignItems: "center",
     borderLeft: `1px solid ${paper.line}`,
     borderTop: `1px solid ${paper.line}`,
@@ -65,7 +65,7 @@ const picture = {
       transition: "background-color 0.35s ease-out",
     },
     "&[data-lit] > b": { bg: lit },
-    "&[data-unsure]": { bg: paper.unsure },
+    "&[data-split]": { bg: paper.split },
     alignItems: "center",
     borderRadius: "4px",
     display: "flex",
@@ -166,7 +166,7 @@ export function RosterPicture({
   title?: string;
 }) {
   const at = phase ?? -1;
-  const unsureRow = sample.rows[sample.myRow];
+  const myRow = sample.rows[sample.myRow];
   const table = (
     <div
       className={picture.grid}
@@ -188,7 +188,7 @@ export function RosterPicture({
           key={row.printed}
           row={row}
           rowIndex={rowIndex}
-          unsureDays={row === unsureRow ? sample.unsureDays : []}
+          splitDays={row === myRow ? sample.splitDays : []}
         />
       ))}
     </div>
@@ -222,31 +222,30 @@ function RosterLine({
   rowIndex,
   days,
   at,
-  unsureDays,
+  splitDays,
 }: {
   row: ImportSample["rows"][number];
   rowIndex: number;
   days: number;
   at: number;
-  unsureDays: number[];
+  splitDays: number[];
 }) {
   return (
     <>
       <span
         className={cx(picture.cell, picture.name)}
-        data-lit={at >= 1 && !(at >= 3 && row.unsure) ? "" : undefined}
-        data-unsure={at >= 3 && row.unsure ? "" : undefined}
+        data-lit={at >= 1 ? "" : undefined}
         style={delay(rowIndex * 140)}
       >
         {row.printed}
       </span>
       {row.codes.slice(0, days).map((code, index) => {
-        const unsure = at >= 3 && unsureDays.includes(index + 1);
+        const split = at >= 3 && splitDays.includes(index + 1);
         return (
           <span
             className={picture.cell}
-            data-lit={at >= 2 && !unsure ? "" : undefined}
-            data-unsure={unsure ? "" : undefined}
+            data-lit={at >= 2 && !split ? "" : undefined}
+            data-split={split ? "" : undefined}
             // oxlint-disable-next-line react/no-array-index-key -- a day's place in the row is the day.
             key={index}
             style={delay(index * 40 + rowIndex * 60)}
@@ -302,19 +301,19 @@ export function ScreenPicture({
             // oxlint-disable-next-line react/no-array-index-key -- the blanks before the 1st have only their place.
             return <span key={`blank-${index}`} />;
           }
-          const unsure = at >= 3 && sample.unsureDays.includes(cell.day);
+          const split = at >= 3 && sample.splitDays.includes(cell.day);
           const [ground, ink] = pillColors[cell.code] ?? ["#eeeeef", "#333"];
           return (
             <span
               className={picture.day}
               data-lit={at >= 1 ? "" : undefined}
-              data-unsure={unsure ? "" : undefined}
+              data-split={split ? "" : undefined}
               key={cell.day}
             >
               <b style={delay(cell.day * 25)}>{cell.day}</b>
               <span
                 className={picture.pill}
-                data-lit={at >= 2 && !unsure ? "" : undefined}
+                data-lit={at >= 2 && !split ? "" : undefined}
                 style={{
                   ...delay(Math.floor(index / 7) * 180 + (index % 7) * 30),
                   background: ground,
@@ -503,13 +502,12 @@ export function ImportReading({
   }, [phase, holdAt]);
 
   const days = sample.rows[sample.myRow]?.codes.length ?? 0;
-  const unsure =
-    sample.unsureDays.length + sample.rows.filter((row) => row.unsure).length;
+  const split = sample.splitDays.length;
   const details = [
     undefined,
     kind === "roster" ? `${sample.rows.length}人` : `${month.getMonth() + 1}月`,
     kind === "roster" && rowName !== undefined ? rowName : `${days}日分`,
-    unsure > 0 ? `自信のない所 ${unsure}か所` : undefined,
+    split > 0 ? `違った日 ${split}日` : undefined,
   ];
   return (
     <div className="dc-content st-screen">
