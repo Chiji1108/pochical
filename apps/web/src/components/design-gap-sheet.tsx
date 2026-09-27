@@ -5,7 +5,7 @@ import { css } from "styled-system/css";
 import type { Shift } from "../lib/design-patterns";
 import type { Schedule } from "./design-calendar";
 import { SheetHeading } from "./design-sheet";
-import { Button, Chip, ChipGroup, List, ListRow, Tag } from "./design-ui";
+import { Button, Chip, ChipGroup, List, SwitchRow, Tag } from "./design-ui";
 
 export type OffChoice = { key: Shift; label: string };
 
@@ -160,27 +160,18 @@ function GapSheetBody({
       )}
       {offerBlank && (
         <List className="dc-gap-blank">
-          <ListRow
+          <SwitchRow
             label={
               <>
                 休みの日は空白で見せる
                 <small>入力中と週表示では薄く出ます</small>
               </>
             }
-            control={
-              <>
-                <input
-                  aria-checked={blankOff}
-                  checked={blankOff}
-                  className="pe-toggle"
-                  onChange={(event) => {
-                    onBlankOff(event.target.checked);
-                  }}
-                  role="switch"
-                  type="checkbox"
-                />
-              </>
-            }
+
+            checked={blankOff}
+            onChange={(checked) => {
+              onBlankOff(checked);
+            }}
           />
         </List>
       )}

@@ -394,7 +394,35 @@ export function ListRow({
   );
 }
 
-// An on and off switch, drawn by the pe-toggle styles for now.
+// An on and off switch, as the platforms' Toggle and Switch: a track that
+// fills with the theme when on, and a knob that slides across.
+const toggleStyle = css({
+  _before: {
+    bg: "var(--knob)",
+    borderRadius: "50%",
+    boxShadow: "0 1px 3px var(--shadow-strong)",
+    content: '""',
+    display: "block",
+    height: "22px",
+    margin: "2px",
+    transition: "transform 0.15s",
+    width: "22px",
+  },
+  _checked: {
+    _before: { transform: "translateX(18px)" },
+    bg: "accentFill",
+  },
+  appearance: "none",
+  bg: "controlOff",
+  borderRadius: "13px",
+  cursor: "pointer",
+  flexShrink: 0,
+  height: "26px",
+  marginLeft: "auto",
+  transition: "background 0.15s",
+  width: "44px",
+});
+
 export function Toggle({
   checked,
   onChange,
@@ -410,7 +438,7 @@ export function Toggle({
       aria-checked={checked}
       aria-label={label}
       checked={checked}
-      className="pe-toggle"
+      className={toggleStyle}
       onChange={(event: ChangeEvent<HTMLInputElement>) => {
         onChange(event.target.checked);
       }}
@@ -427,14 +455,17 @@ export function SwitchRow({
   checked,
   onChange,
   swatch,
+  className,
 }: {
   label: ReactNode;
   checked: boolean;
   onChange: (checked: boolean) => void;
   swatch?: string;
+  className?: string;
 }) {
   return (
     <ListRow
+      className={className}
       control={<Toggle checked={checked} onChange={onChange} />}
       label={label}
       leading={

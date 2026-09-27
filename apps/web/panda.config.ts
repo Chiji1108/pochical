@@ -28,6 +28,7 @@ export default defineConfig({
           accentSoft2: { value: "var(--accent-soft-2)" },
           accentStrong: { value: "var(--accent-strong)" },
           border: { value: "var(--border)" },
+          controlOff: { value: "var(--control-off)" },
           danger: { value: "var(--danger)" },
           fill: { value: "var(--fill)" },
           fill2: { value: "var(--fill-2)" },

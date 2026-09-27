@@ -21,7 +21,14 @@ import {
   ToneContext,
   themeStyle,
 } from "./design-theme";
-import { Button, List, ListRow, PageHeader, listStyle } from "./design-ui";
+import {
+  Button,
+  List,
+  ListRow,
+  PageHeader,
+  SwitchRow,
+  listStyle,
+} from "./design-ui";
 import { useWeek } from "./design-week";
 import {
   CellNamesContext,
@@ -185,22 +192,13 @@ export function SaveSheet({
               ))}
             </fieldset>
             <List>
-              <ListRow
+              <SwitchRow
                 label="休みの日も入れる"
-                control={
-                  <>
-                    <input
-                      aria-checked={includeOff}
-                      checked={includeOff}
-                      className="pe-toggle"
-                      onChange={(event) => {
-                        setIncludeOff(event.target.checked);
-                      }}
-                      role="switch"
-                      type="checkbox"
-                    />
-                  </>
-                }
+
+                checked={includeOff}
+                onChange={(checked) => {
+                  setIncludeOff(checked);
+                }}
               />
             </List>
             <Button

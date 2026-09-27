@@ -14,6 +14,7 @@ import {
   List,
   ListRow,
   PageHeader,
+  SwitchRow,
   listRow,
   listStyle,
 } from "./design-ui";
@@ -513,22 +514,13 @@ function PatternEditor({
               </>
             }
           />
-          <ListRow
+          <SwitchRow
             label="時間なし"
-            control={
-              <>
-                <input
-                  aria-checked={draft.allDay}
-                  checked={draft.allDay}
-                  className="pe-toggle"
-                  onChange={(event) => {
-                    setDraft({ ...draft, allDay: event.target.checked });
-                  }}
-                  role="switch"
-                  type="checkbox"
-                />
-              </>
-            }
+
+            checked={draft.allDay}
+            onChange={(checked) => {
+              setDraft({ ...draft, allDay: checked });
+            }}
           />
           {!draft.allDay && (
             <ListRow
@@ -558,22 +550,13 @@ function PatternEditor({
               }
             />
           )}
-          <ListRow
+          <SwitchRow
             label="休みとして数える"
-            control={
-              <>
-                <input
-                  aria-checked={draft.countsAsOff}
-                  checked={draft.countsAsOff}
-                  className="pe-toggle"
-                  onChange={(event) => {
-                    setDraft({ ...draft, countsAsOff: event.target.checked });
-                  }}
-                  role="switch"
-                  type="checkbox"
-                />
-              </>
-            }
+
+            checked={draft.countsAsOff}
+            onChange={(checked) => {
+              setDraft({ ...draft, countsAsOff: checked });
+            }}
           />
           <ListRow
             onClick={() => {

@@ -15,6 +15,7 @@ import {
   List,
   ListRow,
   PageHeader,
+  SwitchRow,
 } from "./design-ui";
 import { useWeek } from "./design-week";
 import { OffDisplayContext, ShiftMark } from "./shift-mark";
@@ -396,7 +397,7 @@ export function ImportReviewPage({
             <section className="st-section">
               <h4>一緒に働く人</h4>
               <List>
-                <ListRow
+                <SwitchRow
                   className={noteRow}
                   label={
                     <>
@@ -406,20 +407,11 @@ export function ImportReviewPage({
                       </small>
                     </>
                   }
-                  control={
-                    <>
-                      <input
-                        aria-checked={withCoworkers}
-                        checked={withCoworkers}
-                        className="pe-toggle"
-                        onChange={(event) => {
-                          setWithCoworkers(event.target.checked);
-                        }}
-                        role="switch"
-                        type="checkbox"
-                      />
-                    </>
-                  }
+
+                  checked={withCoworkers}
+                  onChange={(checked) => {
+                    setWithCoworkers(checked);
+                  }}
                 />
                 {withCoworkers &&
                   others.map(({ index, row }) => {

@@ -1850,34 +1850,6 @@
     border: 1px solid var(--border);
     border-radius: 8px;
   }
-  .pe-toggle {
-    flex-shrink: 0;
-    width: 44px;
-    height: 26px;
-    margin: 0 0 0 auto;
-    appearance: none;
-    cursor: pointer;
-    background: var(--control-off);
-    border-radius: 13px;
-    transition: background 0.15s;
-  }
-  .pe-toggle::before {
-    display: block;
-    width: 22px;
-    height: 22px;
-    margin: 2px;
-    content: "";
-    background: var(--knob);
-    border-radius: 50%;
-    box-shadow: 0 1px 3px var(--shadow-strong);
-    transition: transform 0.15s;
-  }
-  .pe-toggle:checked {
-    background: var(--accent-fill);
-  }
-  .pe-toggle:checked::before {
-    transform: translateX(18px);
-  }
   .pe-look-value {
     display: inline-flex;
     gap: 8px;
