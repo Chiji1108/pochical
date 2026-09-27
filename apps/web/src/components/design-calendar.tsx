@@ -663,6 +663,7 @@ export function DesignCalendar({
             </strong>
           </h3>
           <HeadingActions
+            atEnd={twoRows}
             detailDate={detailDate}
             mode={headingMode}
             month={month}
@@ -1014,9 +1015,13 @@ function useSwipe(onSwipe: (direction: 1 | -1) => void) {
 
 // "‹ 今月 ›" sits in the middle of the heading, so it never moves with the
 // width of the month; 今月 (or 今日 in the week view) stays visible and is
-// disabled when there is nowhere to go back to.
+// disabled when there is nowhere to go back to. With `atEnd`, the month
+// view has the right-hand corner free, so "今月 ‹ ›" takes it, the arrows
+// together at the edge; entering drops them, as its date picker changes
+// the month, leaving 完了 alone there.
 function HeadingActions({
   mode,
+  atEnd = false,
   month,
   detailDate,
   onStep,
@@ -1026,6 +1031,7 @@ function HeadingActions({
   onSave,
 }: {
   mode: "view" | "edit" | "week";
+  atEnd?: boolean;
   month: Date;
   detailDate: Date | undefined;
   onStep: (direction: 1 | -1) => void;
@@ -1044,37 +1050,56 @@ function HeadingActions({
         .some((date) => dateKey(date) === dateKey(designToday))
     : month.getFullYear() === designToday.getFullYear() &&
       month.getMonth() === designToday.getMonth();
+  const previous = (
+    <button
+      aria-label={`前の${unit}`}
+      onClick={() => {
+        onStep(-1);
+      }}
+      type="button"
+    >
+      <ChevronLeft aria-hidden="true" size={21} />
+    </button>
+  );
+  const back = (
+    <button
+      aria-label={week ? "今日の週に戻る" : "今月に戻る"}
+      className="dc-this-month"
+      disabled={atToday}
+      onClick={week ? onToday : onThisMonth}
+      type="button"
+    >
+      {week ? "今日" : "今月"}
+    </button>
+  );
+  const next = (
+    <button
+      aria-label={`次の${unit}`}
+      onClick={() => {
+        onStep(1);
+      }}
+      type="button"
+    >
+      <ChevronRight aria-hidden="true" size={21} />
+    </button>
+  );
+  const navAtEnd = atEnd && mode === "view";
   return (
     <>
-      <div className="dc-heading-nav">
-        <button
-          aria-label={`前の${unit}`}
-          onClick={() => {
-            onStep(-1);
-          }}
-          type="button"
-        >
-          <ChevronLeft aria-hidden="true" size={21} />
-        </button>
-        <button
-          aria-label={week ? "今日の週に戻る" : "今月に戻る"}
-          className="dc-this-month"
-          disabled={atToday}
-          onClick={week ? onToday : onThisMonth}
-          type="button"
-        >
-          {week ? "今日" : "今月"}
-        </button>
-        <button
-          aria-label={`次の${unit}`}
-          onClick={() => {
-            onStep(1);
-          }}
-          type="button"
-        >
-          <ChevronRight aria-hidden="true" size={21} />
-        </button>
-      </div>
+      {navAtEnd && (
+        <div className="dc-heading-nav dc-heading-nav-end">
+          {back}
+          {previous}
+          {next}
+        </div>
+      )}
+      {!navAtEnd && !(atEnd && mode === "edit") && (
+        <div className="dc-heading-nav">
+          {previous}
+          {back}
+          {next}
+        </div>
+      )}
       {mode === "view" && onSave && (
         <button
           aria-label="この月のシフトを保存"

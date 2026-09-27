@@ -5259,3 +5259,15 @@ button.st-row:hover {
 .dc-controls:has(> .dc-start-stack) {
   min-height: 159px;
 }
+
+/* 下のボタン いつも2段: "今月 ‹ ›" at the heading's end, on the month
+   digits' line like the button that takes that corner elsewhere. */
+.dc-heading > .dc-heading-nav-end {
+  position: static;
+  align-self: flex-end;
+  margin-bottom: -1px;
+  transform: none;
+}
+.dc-heading-nav-end .dc-this-month {
+  margin-right: 4px;
+}
