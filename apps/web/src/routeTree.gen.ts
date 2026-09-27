@@ -16,6 +16,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AccountDeleteRouteImport } from './routes/account.delete'
+import { Route as DesignAssetsRouteImport } from './routes/design_.assets'
 import { Route as DesignColorsRouteImport } from './routes/design_.colors'
 import { Route as DesignFlowsRouteImport } from './routes/design_.flows'
 import { Route as DesignStatesRouteImport } from './routes/design_.states'
@@ -56,6 +57,11 @@ const AccountDeleteRoute = AccountDeleteRouteImport.update({
   path: '/account/delete',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DesignAssetsRoute = DesignAssetsRouteImport.update({
+  id: '/design_/assets',
+  path: '/design/assets',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DesignColorsRoute = DesignColorsRouteImport.update({
   id: '/design_/colors',
   path: '/design/colors',
@@ -85,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/account/delete': typeof AccountDeleteRoute
+  '/design/assets': typeof DesignAssetsRoute
   '/design/colors': typeof DesignColorsRoute
   '/design/flows': typeof DesignFlowsRoute
   '/design/states': typeof DesignStatesRoute
@@ -98,6 +105,7 @@ export interface FileRoutesByTo {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/account/delete': typeof AccountDeleteRoute
+  '/design/assets': typeof DesignAssetsRoute
   '/design/colors': typeof DesignColorsRoute
   '/design/flows': typeof DesignFlowsRoute
   '/design/states': typeof DesignStatesRoute
@@ -112,6 +120,7 @@ export interface FileRoutesById {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/account/delete': typeof AccountDeleteRoute
+  '/design_/assets': typeof DesignAssetsRoute
   '/design_/colors': typeof DesignColorsRoute
   '/design_/flows': typeof DesignFlowsRoute
   '/design_/states': typeof DesignStatesRoute
@@ -127,6 +136,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/account/delete'
+    | '/design/assets'
     | '/design/colors'
     | '/design/flows'
     | '/design/states'
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/account/delete'
+    | '/design/assets'
     | '/design/colors'
     | '/design/flows'
     | '/design/states'
@@ -153,6 +164,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/account/delete'
+    | '/design_/assets'
     | '/design_/colors'
     | '/design_/flows'
     | '/design_/states'
@@ -167,6 +179,7 @@ export interface RootRouteChildren {
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
   AccountDeleteRoute: typeof AccountDeleteRoute
+  DesignAssetsRoute: typeof DesignAssetsRoute
   DesignColorsRoute: typeof DesignColorsRoute
   DesignFlowsRoute: typeof DesignFlowsRoute
   DesignStatesRoute: typeof DesignStatesRoute
@@ -224,6 +237,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountDeleteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/design_/assets': {
+      id: '/design_/assets'
+      path: '/design/assets'
+      fullPath: '/design/assets'
+      preLoaderRoute: typeof DesignAssetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/design_/colors': {
       id: '/design_/colors'
       path: '/design/colors'
@@ -263,6 +283,7 @@ const rootRouteChildren: RootRouteChildren = {
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
   AccountDeleteRoute: AccountDeleteRoute,
+  DesignAssetsRoute: DesignAssetsRoute,
   DesignColorsRoute: DesignColorsRoute,
   DesignFlowsRoute: DesignFlowsRoute,
   DesignStatesRoute: DesignStatesRoute,

@@ -1,11 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 
-import { DesignAppIcon } from "../components/design-app-icon";
-import {
-  DesignProviders,
-  useDesignTheme,
-} from "../components/design-providers";
+import { useDesignTheme } from "../components/design-providers";
 import { themeStyle } from "../components/design-theme";
 import { pageMeta } from "../lib/site";
 
@@ -39,16 +35,16 @@ const documents = [
     to: "/design/states",
   },
   {
+    description: "アプリアイコンと、元になるプードルの絵、サイトの画像。",
+    title: "素材",
+    to: "/design/assets",
+  },
+  {
     description: "役割ごとの色、トーンごとのテーマ、シフトの色の見分けやすさ。",
     title: "カラーパレット",
     to: "/design/colors",
   },
 ] as const;
-
-// Studies still on this page until they get pages of their own.
-const studyLinks = [
-  { id: "design-app-icon-title", number: "01", title: "アプリアイコン" },
-];
 
 function DesignPage() {
   const theme = useDesignTheme();
@@ -79,27 +75,6 @@ function DesignPage() {
           </Link>
         ))}
       </nav>
-      <nav aria-label="このページの検討" className="design-index">
-        {studyLinks.map(({ id, number, title }) => (
-          <a href={`#${id}`} key={id}>
-            <span>{number}</span>
-            {title}
-          </a>
-        ))}
-      </nav>
-      <DesignProviders>
-        <div className="design-screens">
-          <section aria-labelledby="design-app-icon-title">
-            <h2 id="design-app-icon-title">
-              <span>01</span> アプリアイコン
-            </h2>
-            <DesignAppIcon />
-            <p className="design-caption">
-              「ポチ」カルのプードル。色を選ぶと、小さいサイズとホーム画面での見え方が変わります。
-            </p>
-          </section>
-        </div>
-      </DesignProviders>
     </main>
   );
 }
