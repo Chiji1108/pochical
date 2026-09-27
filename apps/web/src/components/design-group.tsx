@@ -1041,10 +1041,17 @@ function ScanPage({
   onClose: () => void;
   onRead: () => void;
 }) {
-  const [problem, setProblem] = useState<string>();
+  const [expired, setExpired] = useState(false);
+  const toast = useContext(ToastContext);
   const read = (from: "camera" | "photo") => {
     if (result === "invite") {
       onRead();
+      return;
+    }
+    // An invitation that no longer works needs a new code from whoever
+    // sent it, so that stays on screen; the rest just need another try.
+    if (result === "expired") {
+      setExpired(true);
       return;
     }
     // The camera only reports codes it finds; with none in view it keeps
@@ -1052,10 +1059,10 @@ function ScanPage({
     if (result === "none" && from === "camera") {
       return;
     }
-    setProblem(scanProblems[result]);
+    toast(scanRetries[result], "problem");
   };
   return (
-    <div className={cx("dc-content st-screen", scan.root)}>
+    <div className={cx("dc-content st-screen", scan.root)} data-toast-above="">
       <header className={scan.header}>
         <button
           aria-label="閉じる"
@@ -1067,10 +1074,10 @@ function ScanPage({
         </button>
         <h3 className={scan.title}>QRコードで参加</h3>
       </header>
-      {problem && (
+      {expired && (
         <p className={scan.problem} role="alert">
           <CircleAlert aria-hidden="true" size={18} />
-          {problem}
+          この招待は使えなくなっています。招待した人に、新しいQRコードを見せてもらってください。
         </p>
       )}
       <div className={scan.body}>
@@ -1105,13 +1112,10 @@ function ScanPage({
 
 type ScanResult = "invite" | "other" | "expired" | "none";
 
-// What the QR page says when what it read is not an invitation it can use.
-const scanProblems: Record<Exclude<ScanResult, "invite">, string> = {
-  expired:
-    "この招待は使えなくなっています。招待した人に、新しいQRコードを見せてもらってください。",
-  none: "写真にQRコードが見つかりませんでした。QRコード全体が写っている写真を選んでください。",
-  other:
-    "ポチカルの招待QRコードではありません。グループの「メンバーを招待」に出るQRコードを読み取ってください。",
+// What the QR page says, briefly, when another try is all it takes.
+const scanRetries: Record<"other" | "none", string> = {
+  none: "写真にQRコードが見つかりませんでした",
+  other: "ポチカルの招待QRコードではありません",
 };
 
 const scanCorner = "3px solid white";

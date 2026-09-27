@@ -1,16 +1,23 @@
 import { createToaster, Toast, Toaster } from "@ark-ui/react";
-import { Check } from "lucide-react";
+import { Check, CircleAlert } from "lucide-react";
 import { createContext, useState } from "react";
 import { css } from "styled-system/css";
 
 // A short line that says something was done and goes away by itself, as
-// Compose's Snackbar: saved, imported. Each phone keeps its own, so the
+// Compose's Snackbar: saved, imported. A `problem` says, just as briefly,
+// that something did not work and is simply tried again, like a QR code
+// that is not an invitation; one that needs more than a retry stays on
+// its screen instead. Each phone keeps its own, so the
 // phones side by side on /design/flows do not share their notes.
 
 const toastDuration = 2400;
 
 // Says a line on the phone the caller is in.
-export const ToastContext = createContext<(title: string) => void>(() => {
+export type ToastKind = "done" | "problem";
+
+export const ToastContext = createContext<
+  (title: string, kind?: ToastKind) => void
+>(() => {
   // Outside a phone there is nowhere to say it.
 });
 
@@ -61,10 +68,10 @@ export function usePhoneToaster() {
       placement: "bottom",
     })
   );
-  const say = (title: string) => {
+  const say = (title: string, kind: ToastKind = "done") => {
     // A new line takes the place of the one showing.
     toaster.dismiss();
-    toaster.create({ title, type: "success" });
+    toaster.create({ title, type: kind === "done" ? "success" : "warning" });
   };
   return { say, toaster };
 }
@@ -79,7 +86,11 @@ export function PhoneToasts({
     <Toaster className={toastStyle.group} toaster={toaster}>
       {(toast) => (
         <Toast.Root className={toastStyle.root} key={toast.id}>
-          <Check aria-hidden="true" size={16} />
+          {toast.type === "warning" ? (
+            <CircleAlert aria-hidden="true" size={16} />
+          ) : (
+            <Check aria-hidden="true" size={16} />
+          )}
           <Toast.Title>{toast.title}</Toast.Title>
         </Toast.Root>
       )}
