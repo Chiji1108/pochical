@@ -681,7 +681,7 @@ export function DesignCalendar({
                 new Date(designToday.getFullYear(), designToday.getMonth(), 1)
               );
             }}
-            onToday={() => {
+            onThisWeek={() => {
               openDetail(designToday);
             }}
           />
@@ -1014,7 +1014,7 @@ function useSwipe(onSwipe: (direction: 1 | -1) => void) {
 }
 
 // "‹ 今月 ›" sits in the middle of the heading, so it never moves with the
-// width of the month; 今月 (or 今日 in the week view) stays visible and is
+// width of the month; 今月 (or 今週 in the week view) stays visible and is
 // disabled when there is nowhere to go back to. With `atEnd`, the month
 // view has the right-hand corner free, so "今月 ‹ ›" takes it, the arrows
 // together at the edge; entering drops them, as its date picker changes
@@ -1026,7 +1026,7 @@ function HeadingActions({
   detailDate,
   onStep,
   onThisMonth,
-  onToday,
+  onThisWeek,
   onDone,
   onSave,
 }: {
@@ -1036,7 +1036,8 @@ function HeadingActions({
   detailDate: Date | undefined;
   onStep: (direction: 1 | -1) => void;
   onThisMonth: () => void;
-  onToday: () => void;
+  // Back to this week, opened on today.
+  onThisWeek: () => void;
   onDone: () => void;
   // Left out when saving has a row of its own at the bottom.
   onSave?: () => void;
@@ -1063,13 +1064,13 @@ function HeadingActions({
   );
   const back = (
     <button
-      aria-label={week ? "今日の週に戻る" : "今月に戻る"}
+      aria-label={week ? "今週に戻る" : "今月に戻る"}
       className="dc-this-month"
       disabled={atToday}
-      onClick={week ? onToday : onThisMonth}
+      onClick={week ? onThisWeek : onThisMonth}
       type="button"
     >
-      {week ? "今日" : "今月"}
+      {week ? "今週" : "今月"}
     </button>
   );
   const next = (
@@ -1088,7 +1089,9 @@ function HeadingActions({
     <>
       {navAtEnd && (
         <div className="dc-heading-nav dc-heading-nav-end">
-          {back}
+          {/* Shown only away from this month: the arrows sit at the edge,
+              so nothing moves, and its coming in says where you are. */}
+          {!atToday && back}
           {previous}
           {next}
         </div>

@@ -5271,3 +5271,17 @@ button.st-row:hover {
 .dc-heading-nav-end .dc-this-month {
   margin-right: 4px;
 }
+.dc-heading-nav-end .dc-this-month {
+  animation: dc-fade-in 180ms ease-out;
+}
+@keyframes dc-fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dc-heading-nav-end .dc-this-month {
+    animation: none;
+  }
+}
