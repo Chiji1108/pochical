@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 // of the dog is found by flooding in from the edges, so the ground can take
 // a color while the dog stays white.
 
-type IconColors = {
+export type IconColors = {
   id: string;
   name: string;
   ground: string;
@@ -80,10 +80,10 @@ export const darkTwinOf: Record<string, string> = {
 };
 
 const SOURCE = "/design/poodle.png";
-const ICON_SIZE = 1024;
+export const ICON_SIZE = 1024;
 // Share of the icon's width the drawing's lines take, leaving room for the
 // rounded corners the system cuts.
-const DRAWING_SHARE = 0.74;
+export const DRAWING_SHARE = 0.74;
 // Brighter than this counts as paper when finding the outside.
 const PAPER_LIGHTNESS = 128;
 // Darker than this counts as a line when measuring the drawing's bounds.
@@ -91,14 +91,18 @@ const INK_LIGHTNESS = 100;
 
 type Rgb = [number, number, number];
 
-function rgbOf(hex: string): Rgb {
+export function rgbOf(hex: string): Rgb {
   return [1, 3, 5].map((start) =>
     Number.parseInt(hex.slice(start, start + 2), 16)
   ) as Rgb;
 }
 
 // Marks every paper pixel reachable from the image's edges.
-function outsideOf(lightness: Uint8Array, width: number, height: number) {
+export function outsideOf(
+  lightness: Uint8Array,
+  width: number,
+  height: number
+) {
   const outside = new Uint8Array(width * height);
   const stack: number[] = [];
   const push = (index: number) => {
@@ -193,7 +197,11 @@ function distanceToDrawing(outside: Uint8Array, width: number, height: number) {
 }
 
 // The drawing's lines, as a box in source pixels.
-function inkBounds(lightness: Uint8Array, width: number, height: number) {
+export function inkBounds(
+  lightness: Uint8Array,
+  width: number,
+  height: number
+) {
   let [left, top, right, bottom] = [width, height, 0, 0];
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
