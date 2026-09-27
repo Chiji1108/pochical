@@ -1,7 +1,10 @@
+import { Plus } from "lucide-react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 
+import { EmojiPickerSheet } from "./design-emoji-picker";
 import {
+  Button,
   Choice,
   ChoiceGrid,
   List,
@@ -87,10 +90,6 @@ export const iconNames: Record<MarkIcon, string> = {
 };
 
 const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
-
-function firstGrapheme(value: string) {
-  return graphemes.segment(value)[Symbol.iterator]().next().value?.segment;
-}
 
 // The letter just typed, which replaces the one already there.
 function lastGrapheme(value: string) {
@@ -212,6 +211,7 @@ function EmojiGrid({
   emojis: readonly string[];
   onPick: (field: LookField, value: Partial<Look>) => void;
 }) {
+  const [picking, setPicking] = useState(false);
   return (
     <>
       <ChoiceGrid
@@ -222,25 +222,41 @@ function EmojiGrid({
         }}
         value={look.emoji ?? null}
       >
-        {emojis.map((emoji) => (
+        {withPicked(emojis, look.emoji).map((emoji) => (
           <Choice key={emoji} value={emoji}>
             <MarkGlyph look={{ ...look, emoji }} size={20} style="emoji" />
           </Choice>
         ))}
       </ChoiceGrid>
-      <input
-        aria-label="ほかの絵文字を入力"
-        className="dc-detail-note"
-        onChange={(event) => {
-          const emoji = firstGrapheme(event.target.value);
-          if (emoji) {
-            onPick("emoji", { emoji });
-          }
+      <OtherEmojiButton
+        onClick={() => {
+          setPicking(true);
         }}
-        placeholder="ほかの絵文字を入力"
-        value=""
+      />
+      <EmojiPickerSheet
+        onOpenChange={setPicking}
+        onPick={(emoji) => {
+          onPick("emoji", { emoji });
+        }}
+        open={picking}
       />
     </>
+  );
+}
+
+// An emoji picked from every emoji leads the ones offered, so it shows as
+// picked among them.
+export function withPicked(emojis: readonly string[], picked?: string) {
+  return picked && !emojis.includes(picked) ? [picked, ...emojis] : emojis;
+}
+
+// After the emoji offered, the way to every other one.
+export function OtherEmojiButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button onClick={onClick} variant="quiet">
+      <Plus aria-hidden="true" size={18} />
+      ほかの絵文字を選ぶ
+    </Button>
   );
 }
 

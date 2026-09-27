@@ -39,7 +39,8 @@ import {
   timeRange,
 } from "./design-calendar";
 import type { Schedule, Tab } from "./design-calendar";
-import { iconNames } from "./design-look-editor";
+import { EmojiPickerSheet } from "./design-emoji-picker";
+import { iconNames, OtherEmojiButton, withPicked } from "./design-look-editor";
 import {
   DecideHeading,
   PhoneContext,
@@ -1099,6 +1100,8 @@ function ChatPage({
   // The line whose actions are open, and the one being answered.
   const [selected, setSelected] = useState<string>();
   const [replyTo, setReplyTo] = useState<string>();
+  // The line whose reaction is being picked from every emoji.
+  const [pickingFor, setPickingFor] = useState<string>();
   const [flash, setFlash] = useState<string>();
   const isGroup = title === "全体チャット";
   const byId = (id?: string) =>
@@ -1147,6 +1150,10 @@ function ChatPage({
   // The props that turn a message into the opener of its actions.
   const actionsOf = (message: Message) => ({
     mine: message.from === "me",
+    onMore: () => {
+      setSelected(undefined);
+      setPickingFor(message.id);
+    },
     onOpenChange: (open: boolean) => {
       setSelected(open ? message.id : undefined);
     },
@@ -1351,6 +1358,20 @@ function ChatPage({
           <SendHorizontal aria-hidden="true" size={18} />
         </button>
       </form>
+      <EmojiPickerSheet
+        onOpenChange={(open) => {
+          if (!open) {
+            setPickingFor(undefined);
+          }
+        }}
+        onPick={(emoji) => {
+          if (pickingFor) {
+            react(pickingFor, emoji);
+          }
+        }}
+        open={pickingFor !== undefined}
+        title="リアクション"
+      />
       <DaySheet
         members={people}
         onOpenChange={setSharing}
@@ -1413,6 +1434,7 @@ const messageActions = {
     width: "100%",
   }),
   menuIcon: css({ color: "text3" }),
+  more: css({ color: "text2" }),
   reaction: css({
     _focusVisible: { outline: "2px solid token(colors.accent)" },
     _hover: { bg: "fill2" },
@@ -1452,12 +1474,15 @@ function MessageActions({
   mine,
   text,
   onReact,
+  onMore,
   onReply,
   children,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mine: boolean;
+  // Opens every emoji, for a reaction beyond the ones offered.
+  onMore: () => void;
   // What コピー copies; shared days have none.
   text?: string;
   onReact: (emoji: string) => void;
@@ -1520,6 +1545,14 @@ function MessageActions({
                   {emoji}
                 </button>
               ))}
+              <button
+                aria-label="ほかの絵文字でリアクション"
+                className={cx(messageActions.reaction, messageActions.more)}
+                onClick={onMore}
+                type="button"
+              >
+                <Plus aria-hidden="true" size={18} />
+              </button>
             </div>
             <div className={messageActions.menu}>
               <button
@@ -3886,8 +3919,6 @@ const markKinds: { kind: DrawnMarkKind; label: string }[] = [
   { kind: "letter", label: "文字" },
 ];
 
-const markGraphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
-
 // One page to pick the group's mark: a kind, then one choice of it.
 function GroupMarkPage({
   back,
@@ -3906,6 +3937,7 @@ function GroupMarkPage({
   const [kind, setKind] = useState<DrawnMarkKind | undefined>(
     mark.kind === "photo" ? undefined : mark.kind
   );
+  const [pickingEmoji, setPickingEmoji] = useState(false);
   const color = colorOfMark(mark);
   const letter = mark.kind === "letter" ? mark.text : firstLetter(name) || "グ";
   return (
@@ -3946,7 +3978,10 @@ function GroupMarkPage({
             }}
             value={mark.kind === "emoji" ? mark.emoji : null}
           >
-            {groupEmojis.map((emoji) => (
+            {withPicked(
+              groupEmojis,
+              mark.kind === "emoji" ? mark.emoji : undefined
+            ).map((emoji) => (
               <Choice
                 className="gr-mark-choice-emoji"
                 key={emoji}
@@ -3956,20 +3991,17 @@ function GroupMarkPage({
               </Choice>
             ))}
           </ChoiceGrid>
-          <input
-            aria-label="ほかの絵文字を入力"
-            className="dc-detail-note"
-            onChange={(event) => {
-              const emoji = markGraphemes
-                .segment(event.target.value)
-                [Symbol.iterator]()
-                .next().value?.segment;
-              if (emoji) {
-                onChange({ emoji, kind: "emoji" });
-              }
+          <OtherEmojiButton
+            onClick={() => {
+              setPickingEmoji(true);
             }}
-            placeholder="ほかの絵文字を入力"
-            value=""
+          />
+          <EmojiPickerSheet
+            onOpenChange={setPickingEmoji}
+            onPick={(emoji) => {
+              onChange({ emoji, kind: "emoji" });
+            }}
+            open={pickingEmoji}
           />
         </>
       )}
