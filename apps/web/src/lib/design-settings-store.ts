@@ -6,7 +6,7 @@ import type { Appearance, ColorChoice } from "../components/design-theme";
 import { defaultWeekSettings } from "../components/design-week";
 import type { WeekSettings } from "../components/design-week";
 import type { LookSettings, ShiftMarkStyle } from "../components/shift-mark";
-import type { Tone } from "./design-tokens";
+import type { ColorScheme, Tone } from "./design-tokens";
 
 // The person's settings on /design, sorted by where each would live in the
 // app. The slices are the schema: what goes with the account and reaches
@@ -30,6 +30,24 @@ export type CalendarOptions = {
   blankOff: boolean;
 };
 
+// How 画像で保存 draws the month. Names start on for the people it goes to,
+// since they do not know the person's marks. `scheme` is the picture's own
+// light or dark; until picked, it follows the screen. Device only.
+export type ImageOptions = {
+  names: boolean;
+  highlight: boolean;
+  // Days off left empty, as on the style page; off by default, since the
+  // people it goes to cannot tell an empty day from one not entered.
+  blankOff: boolean;
+  scheme?: ColorScheme;
+};
+
+const defaultImageOptions: ImageOptions = {
+  blankOff: false,
+  highlight: true,
+  names: true,
+};
+
 // The rest of the person's own screen. Device only.
 export type DeviceSettings = {
   tone: Tone;
@@ -37,6 +55,8 @@ export type DeviceSettings = {
   week: WeekSettings;
   appIcon: string;
   calendar: Record<ShiftMarkStyle, CalendarOptions>;
+  // How 画像で保存 last drew the month.
+  imageOptions: ImageOptions;
 };
 
 type SettingsState = {
@@ -51,6 +71,7 @@ type SettingsState = {
   setAppearance: (appearance: Appearance) => void;
   setWeek: (week: WeekSettings) => void;
   setAppIcon: (icon: string) => void;
+  setImageOptions: (options: ImageOptions) => void;
   // Changes the options of the shape in use.
   setCalendarOptions: (change: Partial<CalendarOptions>) => void;
 };
@@ -70,6 +91,7 @@ export const useSettings = create<SettingsState>()(
         appIcon: "moss",
         appearance: "system",
         calendar: defaultCalendar,
+        imageOptions: defaultImageOptions,
         tone: "deep",
         week: defaultWeekSettings,
       },
@@ -99,6 +121,9 @@ export const useSettings = create<SettingsState>()(
       },
       setColor: (color) => {
         set((state) => ({ groupLook: { ...state.groupLook, color } }));
+      },
+      setImageOptions: (imageOptions) => {
+        set((state) => ({ device: { ...state.device, imageOptions } }));
       },
       setShape: ({ style, fill }) => {
         set((state) => ({

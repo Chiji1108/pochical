@@ -25,6 +25,7 @@ import {
 import { useContext, useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
+import { useUser } from "../lib/design-user-store";
 import {
   addDays,
   dateKey,
@@ -78,7 +79,7 @@ type Member = {
   shiftOn: (date: Date) => string | undefined;
 };
 
-type Group = {
+export type Group = {
   id: string;
   name: string;
   mark: GroupMark;
@@ -88,7 +89,7 @@ type Group = {
 };
 
 // `noPhoto` hides the usual picture in this group without choosing another.
-type GroupProfile = { name?: string; photo?: string; noPhoto?: boolean };
+export type GroupProfile = { name?: string; photo?: string; noPhoto?: boolean };
 
 const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
 const designMonth = new Date(2026, 8, 1);
@@ -351,13 +352,13 @@ type Message = {
 
 type Reaction = { emoji: string; by: string[] };
 
-type Chat = { messages: Message[]; unread: number };
+export type Chat = { messages: Message[]; unread: number };
 
 const groupChat = "group";
 
 const reactionChoices = ["👍", "❤️", "😂", "😮", "🙏", "🎉"];
 
-const sampleChats: Record<string, Chat> = {
+export const sampleChats: Record<string, Chat> = {
   "family:group": {
     messages: [
       {
@@ -513,18 +514,12 @@ type Page =
   | { name: "new" }
   | { name: "settings" };
 
-export function DesignGroup({
-  schedule,
-  patternKeys,
-  profile,
-  onTab,
-}: {
-  schedule: Schedule;
-  patternKeys: Shift[];
-  profile: Profile;
-  onTab: (tab: Tab) => void;
-}) {
-  const [groups, setGroups] = useState<Omit<Group, "members">[]>([
+// A group as the list keeps it, without its members' shifts.
+export type GroupSummary = Omit<Group, "members">;
+
+// The groups the sample person is in.
+export function sampleGroups(): GroupSummary[] {
+  return [
     {
       id: "family",
       name: "家族",
@@ -548,9 +543,25 @@ export function DesignGroup({
       mark: { color: 3, kind: "letter", text: "高" },
       name: "高校の同級生",
     },
-  ]);
+  ];
+}
+
+export function DesignGroup({
+  schedule,
+  patternKeys,
+  profile,
+  onTab,
+}: {
+  schedule: Schedule;
+  patternKeys: Shift[];
+  profile: Profile;
+  onTab: (tab: Tab) => void;
+}) {
+  const groups = useUser((state) => state.groups);
+  const setGroups = useUser((state) => state.setGroups);
   const [groupId, setGroupId] = useState("family");
-  const [chats, setChats] = useState(sampleChats);
+  const chats = useUser((state) => state.chats);
+  const setChats = useUser((state) => state.setChats);
   // The table layout each group was last seen in.
   const [layouts, setLayouts] = useState<Record<string, Layout>>({});
   const [page, setPage] = useState<Page>({ name: "hub" });

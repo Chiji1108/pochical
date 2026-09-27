@@ -6,6 +6,7 @@ import { DesignAppIcon } from "../components/design-app-icon";
 import {
   DesignCalendar,
   initialDesignSchedule,
+  patternSets,
 } from "../components/design-calendar";
 import { DesignOnboarding } from "../components/design-onboarding";
 import {
@@ -25,6 +26,11 @@ import {
   ShiftMarkStyleContext,
 } from "../components/shift-mark";
 import { useLook, useSettings } from "../lib/design-settings-store";
+import {
+  createUserStore,
+  sampleCoworkers,
+  UserStoreContext,
+} from "../lib/design-user-store";
 import {
   designVariantKeys,
   designVariantOptions,
@@ -60,11 +66,18 @@ const screenLinks = [
 
 function DesignPage() {
   const variants = Route.useSearch();
-  // The 予定 variant starts over with the sample or with nothing entered.
-  const startSchedule = (sample: DesignVariants["scheduleSample"]) =>
-    sample === "empty" ? {} : initialDesignSchedule();
-  const [schedule, setSchedule] = useState(() =>
-    startSchedule(variants.scheduleSample)
+  // The person 01 and 02 show, one store for both. The 予定 variant and
+  // サンプルに戻す start them over with the sample or with nothing entered.
+  const makePerson = (
+    sample: DesignVariants["scheduleSample"],
+    members: DesignVariants["memberSample"]
+  ) =>
+    createUserStore({
+      coworkers: members === "some" ? sampleCoworkers : [],
+      schedule: sample === "empty" ? {} : initialDesignSchedule(),
+    });
+  const [person, setPerson] = useState(() =>
+    makePerson(variants.scheduleSample, variants.memberSample)
   );
   const [version, setVersion] = useState(0);
   const navigate = Route.useNavigate();
@@ -95,7 +108,9 @@ function DesignPage() {
           </Link>
           <button
             onClick={() => {
-              setSchedule(startSchedule(variants.scheduleSample));
+              setPerson(
+                makePerson(variants.scheduleSample, variants.memberSample)
+              );
               setVersion((value) => value + 1);
             }}
             type="button"
@@ -124,10 +139,19 @@ function DesignPage() {
       <VariantPanel
         onChange={(key, value) => {
           if (key === "scheduleSample") {
-            setSchedule(
-              startSchedule(value as DesignVariants["scheduleSample"])
+            setPerson(
+              makePerson(
+                value as DesignVariants["scheduleSample"],
+                variants.memberSample
+              )
             );
             setVersion((previous) => previous + 1);
+          }
+          // The 一緒に働く人 sample switch starts the list over.
+          if (key === "memberSample") {
+            person.setState({
+              coworkers: value === "some" ? sampleCoworkers : [],
+            });
           }
           void navigate({
             replace: true,
@@ -172,13 +196,15 @@ function DesignPage() {
                               <h2 id="design-view-title">
                                 <span>01</span> カレンダー表示
                               </h2>
-                              <DesignCalendar
-                                initialEditing={false}
-                                onChange={setSchedule}
-                                pendingInvite={variants.inviteLink === "opened"}
-                                schedule={schedule}
-                                variants={variants}
-                              />
+                              <UserStoreContext value={person}>
+                                <DesignCalendar
+                                  initialEditing={false}
+                                  pendingInvite={
+                                    variants.inviteLink === "opened"
+                                  }
+                                  variants={variants}
+                                />
+                              </UserStoreContext>
                               <p className="design-caption">
                                 ひと月の予定と、お休みをひと目で。
                               </p>
@@ -187,12 +213,12 @@ function DesignPage() {
                               <h2 id="design-edit-title">
                                 <span>02</span> シフト入力
                               </h2>
-                              <DesignCalendar
-                                initialEditing
-                                onChange={setSchedule}
-                                schedule={schedule}
-                                variants={variants}
-                              />
+                              <UserStoreContext value={person}>
+                                <DesignCalendar
+                                  initialEditing
+                                  variants={variants}
+                                />
+                              </UserStoreContext>
                               <p className="design-caption">
                                 シフトを押すと翌日へ。日付をタップして修正もできます。
                               </p>
@@ -261,8 +287,12 @@ function PatternStudy({
   caption: string;
   variants: DesignVariants;
 }) {
-  const [schedule, setSchedule] = useState(() =>
-    initialDesignSchedule(count, month)
+  // Someone else, with eight patterns of their own.
+  const [person] = useState(() =>
+    createUserStore({
+      patternKeys: patternSets[count],
+      schedule: initialDesignSchedule(count, month),
+    })
   );
   return (
     <section aria-labelledby={id}>
@@ -270,14 +300,13 @@ function PatternStudy({
         <span>{number}</span>
         {title}
       </h2>
-      <DesignCalendar
-        initialEditing
-        initialMonth={month}
-        onChange={setSchedule}
-        patternCount={count}
-        schedule={schedule}
-        variants={variants}
-      />
+      <UserStoreContext value={person}>
+        <DesignCalendar
+          initialEditing
+          initialMonth={month}
+          variants={variants}
+        />
+      </UserStoreContext>
       <p className="design-caption">{caption}</p>
     </section>
   );

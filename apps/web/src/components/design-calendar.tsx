@@ -21,24 +21,19 @@ import {
 import { useContext, useEffect, useRef, useState } from "react";
 import type {
   CSSProperties,
-  Dispatch,
   MouseEvent,
   PointerEvent,
   ReactNode,
   RefObject,
-  SetStateAction,
 } from "react";
 
+import { useSettings } from "../lib/design-settings-store";
+import { useUser } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
 import type { Coworkers } from "./design-coworkers";
-import { DesignGroup, JoinSheet, samplePhoto } from "./design-group";
-import type { Profile } from "./design-group";
+import { DesignGroup, JoinSheet } from "./design-group";
 import { ImportReviewPage } from "./design-import";
-import {
-  defaultImageOptions,
-  ImagePreviewPage,
-  SaveSheet,
-} from "./design-save-sheet";
+import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import { DesignSettings } from "./design-settings";
 import { useThemeStyle } from "./design-theme";
 import { holidayName, holidayNameOfKey, useWeek } from "./design-week";
@@ -119,7 +114,7 @@ function ruleSchedule(rule: RepeatRule, holidaysOff = false) {
     holidaysOff
   );
 }
-const patternSets: Record<4 | 5 | 6 | 8, Shift[]> = {
+export const patternSets: Record<4 | 5 | 6 | 8, Shift[]> = {
   4: ["day", "night", "after", "off"],
   5: ["early", "day", "night", "after", "off"],
   6: ["early", "day", "late", "night", "after", "off"],
@@ -186,7 +181,6 @@ export function defaultHolidaysOff(sequence: Shift[], start: Date) {
   });
 }
 
-const sampleMembers = ["佐藤", "田中", "鈴木", "山本", "高橋"];
 const sampleDetails: Record<string, Omit<DayEntry, "shift">> = {
   "2026-09-08": { end: "20:00", note: "棚卸し" },
   "2026-09-19": { members: ["田中", "山本"], start: "08:00" },
@@ -310,29 +304,23 @@ export function timeRange(entry: DayEntry) {
   return `${formatTime(start)} – ${end <= start ? "翌" : ""}${formatTime(end)}`;
 }
 
+// One person's phone. Their data comes from the nearest UserStoreContext,
+// so two phones under one store show the same person.
 export function DesignCalendar({
   initialEditing,
-  patternCount = 4,
-  patternKeys: customPatternKeys,
-  initialRule,
   initialMonth = 8,
-  schedule,
-  onChange,
   variants,
   pendingInvite = false,
 }: {
   initialEditing: boolean;
-  patternCount?: 4 | 5 | 6 | 8;
-  patternKeys?: Shift[];
-  initialRule?: RepeatRule;
   initialMonth?: number;
-  schedule: Schedule;
-  onChange: Dispatch<SetStateAction<Schedule>>;
   variants: DesignVariants;
   // A group's invitation link was opened: ask about joining over the
   // calendar.
   pendingInvite?: boolean;
 }) {
+  const schedule = useUser((state) => state.schedule);
+  const onChange = useUser((state) => state.setSchedule);
   const phoneRef = useRef<HTMLDivElement>(null);
   const themeStyle = useThemeStyle();
   const breakdownRef = useRef<HTMLDialogElement>(null);
@@ -356,24 +344,16 @@ export function DesignCalendar({
       clearTimeout(timer);
     };
   }, [importNote]);
-  const [imageOptions, setImageOptions] = useState(defaultImageOptions);
+  const imageOptions = useSettings((state) => state.device.imageOptions);
+  const setImageOptions = useSettings((state) => state.setImageOptions);
   const [detailDate, setDetailDate] = useState<Date>();
-  const sampleCoworkers = variants.memberSample === "some" ? sampleMembers : [];
-  const [coworkerNames, setCoworkerNames] = useState(sampleCoworkers);
-  // The sample switch starts the list over.
-  const [coworkersSample, setCoworkersSample] = useState(variants.memberSample);
-  if (coworkersSample !== variants.memberSample) {
-    setCoworkersSample(variants.memberSample);
-    setCoworkerNames(sampleCoworkers);
-  }
+  const coworkerNames = useUser((state) => state.coworkers);
+  const setCoworkerNames = useUser((state) => state.setCoworkers);
   const [tab, setTab] = useState<Tab>("calendar");
-  const [profile, setProfile] = useState<Profile>(() => ({
-    name: "さくら",
-    photo: samplePhoto(1011),
-  }));
-  const [rules, setRules] = useState<RepeatRule[]>(
-    initialRule ? [initialRule] : []
-  );
+  const profile = useUser((state) => state.profile);
+  const setProfile = useUser((state) => state.setProfile);
+  const rules = useUser((state) => state.rules);
+  const setRules = useUser((state) => state.setRules);
   // Repeating shifts fill every month, so the monthly input buttons go away.
   const repeating = isRepeating(rules);
   // Renaming or deleting someone changes the days they are on too.
@@ -415,9 +395,8 @@ export function DesignCalendar({
   const [editing, setEditing] = useState(initialEditing);
   const [selectedDay, setSelectedDay] = useState(1);
   const [month, setMonth] = useState(() => new Date(2026, initialMonth, 1));
-  const [patternKeys, setPatternKeys] = useState(
-    () => customPatternKeys ?? patternSets[patternCount]
-  );
+  const patternKeys = useUser((state) => state.patternKeys);
+  const setPatternKeys = useUser((state) => state.setPatternKeys);
   const [announcement, setAnnouncement] = useState("");
   const weekTools = useWeek();
   const dates = weekTools.monthDates(month);

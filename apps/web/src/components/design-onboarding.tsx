@@ -1,6 +1,8 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useContext, useState } from "react";
 
+import { createUserStore, UserStoreContext } from "../lib/design-user-store";
+import type { UserStore } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
 import { ProviderLogo, providerNames } from "./design-account";
 import type { AccountProvider } from "./design-account";
@@ -14,7 +16,7 @@ import {
   RepeatSequenceEditor,
   repeatSchedule,
 } from "./design-calendar";
-import type { RepeatRule, Schedule, Shift } from "./design-calendar";
+import type { Schedule, Shift } from "./design-calendar";
 import { ColorSchemeContext, useThemeStyle } from "./design-theme";
 import { useWeek } from "./design-week";
 import { ShiftMark } from "./shift-mark";
@@ -148,34 +150,34 @@ type Stage = "welcome" | "login" | "setup";
 export function DesignOnboarding({ variants }: { variants: DesignVariants }) {
   const themeStyle = useThemeStyle();
   const [stage, setStage] = useState<Stage>("welcome");
+  // The person the answers make: a store of their own, with a line under
+  // their calendar when there is something to say.
   const [finished, setFinished] = useState<{
-    patternKeys: Shift[];
-    rule?: RepeatRule;
+    person: UserStore;
     note?: string;
   }>();
-  const [schedule, setSchedule] = useState<Schedule>({});
 
   function finish({ patternKeys, sequence, anchor }: WorkSetup, note?: string) {
-    setSchedule(startSchedule(sequence, anchor));
     setFinished({
       note,
-      patternKeys,
-      rule: sequence && anchor ? { sequence, start: anchor } : undefined,
+      person: createUserStore({
+        patternKeys,
+        rules: sequence && anchor ? [{ sequence, start: anchor }] : [],
+        schedule: startSchedule(sequence, anchor),
+      }),
     });
   }
 
   if (finished) {
     return (
       <div className="ob-finished">
-        <DesignCalendar
-          initialEditing={false}
-          initialRule={finished.rule}
-          onChange={setSchedule}
-          patternKeys={finished.patternKeys}
-          pendingInvite={variants.inviteLink === "opened"}
-          schedule={schedule}
-          variants={variants}
-        />
+        <UserStoreContext value={finished.person}>
+          <DesignCalendar
+            initialEditing={false}
+            pendingInvite={variants.inviteLink === "opened"}
+            variants={variants}
+          />
+        </UserStoreContext>
         {finished.note && <p className="ob-finished-note">{finished.note}</p>}
         <button
           className="ob-restart"

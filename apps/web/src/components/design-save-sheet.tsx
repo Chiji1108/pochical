@@ -10,7 +10,7 @@ import {
 import { useContext, useEffect, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
 
-import type { ColorScheme } from "../lib/design-tokens";
+import type { ImageOptions } from "../lib/design-settings-store";
 import { DayCell, dateKey } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
 import { NameTabs, OffLookTabs } from "./design-settings";
@@ -227,25 +227,6 @@ export function SaveSheet({
     </dialog>
   );
 }
-
-// How the picture shows your month. It starts from what others can read,
-// since they do not know your marks, and keeps what you choose next time.
-// `scheme` is the picture's own light or dark; until picked, it follows
-// the screen.
-export type ImageOptions = {
-  names: boolean;
-  highlight: boolean;
-  // Days off left empty, as on the style page; off by default, since the
-  // people it goes to cannot tell an empty day from one not entered.
-  blankOff: boolean;
-  scheme?: ColorScheme;
-};
-
-export const defaultImageOptions: ImageOptions = {
-  blankOff: false,
-  highlight: true,
-  names: true,
-};
 
 const savedNoteTime = 2200;
 
