@@ -48,6 +48,7 @@ import {
   OffDisplayContext,
   ShiftMark,
   ShiftMarkStyleContext,
+  TimeMark,
   useDisplayColor,
   useOffHighlight,
 } from "./shift-mark";
@@ -275,6 +276,42 @@ export function timeRange(entry: DayEntry) {
   const start = entry.start ?? time[0];
   const end = entry.end ?? time[1];
   return `${formatTime(start)} – ${end <= start ? "翌" : ""}${formatTime(end)}`;
+}
+
+const minutesPerDay = 1440;
+const minutesPerHour = 60;
+const halfDay = minutesPerDay / 2;
+
+function minutesOf(time: string) {
+  const [hours = 0, minutes = 0] = time.split(":").map(Number);
+  return hours * minutesPerHour + minutes;
+}
+
+// How a day's time moved from its pattern's: starting earlier is 早出 and
+// ending later is 残業, the two people most need to see on the month.
+// Other moves, a later start or an earlier end, are only "changed". Times
+// are counted from the standard start, so a night shift's end the next
+// morning, or a start the evening before, compares the right way.
+export function timeChangeOf(entry: DayEntry | undefined) {
+  const time = entry && patterns[entry.shift].time;
+  if (!(entry && time && (entry.start || entry.end))) {
+    return;
+  }
+  const standardStart = minutesOf(time[0]);
+  const fromStart = (clock: string) => {
+    const offset = minutesOf(clock) - standardStart;
+    if (offset > halfDay) {
+      return offset - minutesPerDay;
+    }
+    return offset < -halfDay ? offset + minutesPerDay : offset;
+  };
+  const endOf = (clock: string) => {
+    const offset = minutesOf(clock) - standardStart;
+    return offset <= 0 ? offset + minutesPerDay : offset;
+  };
+  const early = entry.start !== undefined && fromStart(entry.start) < 0;
+  const late = entry.end !== undefined && endOf(entry.end) > endOf(time[1]);
+  return { early, late };
 }
 
 // One person's phone. Their data comes from the nearest UserStoreContext,
@@ -1472,11 +1509,14 @@ function dayOffStyle(
 
 // What a screen reader says after the date.
 function dayDetails(date: Date, shift: Shift | undefined, entry?: DayEntry) {
-  const timeChanged = Boolean(entry?.start || entry?.end);
+  const change = timeChangeOf(entry);
+  const moves = [change?.early ? "早出" : "", change?.late ? "残業" : ""]
+    .filter(Boolean)
+    .join("・");
   return [
     holidayName(date) ?? "",
     shift ? patterns[shift].label : "未入力",
-    timeChanged && entry ? `時間変更 ${timeRange(entry)}` : "",
+    change && entry ? `${moves || "時間変更"} ${timeRange(entry)}` : "",
     entry?.note ? "メモあり" : "",
   ].filter(Boolean);
 }
@@ -1512,18 +1552,23 @@ export function DayCell({
     hideOff || faintOff ? undefined : dayOffStyle(shift, highlight, tint);
   const today = dateKey(date) === dateKey(designToday);
   const holiday = useWeek().isColoredHoliday(date);
-  const timeChanged = Boolean(entry?.start || entry?.end);
-  const hasMark = !outside && (timeChanged || Boolean(entry?.note));
+  const change = outside ? undefined : timeChangeOf(entry);
+  // 早出 and 残業 get a badge saying which; anything else about the day, a
+  // note or another time change, is the dot.
+  const moved = change !== undefined && (change.early || change.late);
+  const otherChange = change !== undefined && !moved;
+  const hasMark = !outside && !moved && (otherChange || Boolean(entry?.note));
   const className = `dc-day ${outside ? "dc-outside" : ""} ${offStyle ? "dc-off" : ""} ${today && !editing ? "dc-today" : ""} ${active ? "dc-active-day" : ""} ${flagged ? "dc-flagged" : ""} ${faintOff ? "dc-off-faint" : ""}`;
   const content = (
     <>
       <span className={`dc-date ${holiday ? "dc-holiday" : ""}`}>
         {date.getDate()}
       </span>
+      {change && moved && <TimeMark early={change.early} late={change.late} />}
       {hasMark && (
         <span
           aria-hidden="true"
-          className={`dc-mark ${timeChanged ? "dc-mark-time" : ""}`}
+          className={`dc-mark ${otherChange ? "dc-mark-time" : ""}`}
         />
       )}
       {shift && !hideOff && <CellShift shift={shift} />}

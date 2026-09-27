@@ -888,10 +888,12 @@ body:has(.dc-breakdown[open]) {
 /* Day detail: time and memo for a single day. */
 /* Two strengths of the theme color: a changed time is strong, a memo is
    light. */
+/* A note, or a time moved some other way: bottom right, as the top
+   corners belong to 早 and 残. */
 .dc-mark {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  right: 3px;
+  bottom: 3px;
   width: 7px;
   height: 7px;
   background: var(--accent-muted);
@@ -5353,4 +5355,49 @@ button.st-row:hover {
   inset: 6px;
   overflow: hidden;
   border-radius: 46px;
+}
+
+/* 早 at the top left, 残 at the top right: the day's start and end. */
+.dc-time-mark {
+  position: absolute;
+  top: 2px;
+  padding: 1px 2px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--accent-strong);
+  background: var(--accent-soft-2);
+  border-radius: 5px;
+}
+.dc-time-mark-early {
+  left: 1px;
+}
+.dc-time-mark-late {
+  right: 1px;
+}
+.dc-time-mark-emoji {
+  padding: 0;
+  font-size: 10px;
+  background: none;
+}
+.dc-time-mark-symbol {
+  display: flex;
+  gap: 1px;
+  align-items: center;
+  padding: 2px;
+}
+/* The style page's samples: the badge at the sample day's corner, as on
+   the month. */
+.st-off-sample:has(> .dc-time-mark) {
+  position: relative;
+}
+.st-off-sample > .dc-time-mark {
+  top: -2px;
+}
+/* As far from the date as on a day of the month. */
+.st-off-sample > .dc-time-mark-early {
+  left: -6px;
+}
+.st-off-sample > .dc-time-mark-late {
+  right: -6px;
 }

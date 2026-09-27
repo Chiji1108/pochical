@@ -1,6 +1,8 @@
 import {
   AirplaneIcon as PhAirplane,
   AmbulanceIcon as PhAmbulance,
+  ArrowLeftIcon as PhArrowLeft,
+  ArrowRightIcon as PhArrowRight,
   BabyIcon as PhBaby,
   BarbellIcon as PhBarbell,
   BedIcon as PhBed,
@@ -75,6 +77,57 @@ export const defaultCellNames: CellNames = {
   emoji: false,
   icon: false,
 };
+// How a day whose time moved earlier or later is marked: 早 and 残, as
+// rosters shorten 早出 and 残業; a rabbit and a turtle, both side on so
+// they sit alike; or arrows along the day, ← for starting earlier and →
+// for running later. Arrows, since the sun and moon already stand for
+// shifts.
+export type TimeMarks = "kanji" | "emoji" | "symbol";
+export const TimeMarksContext = createContext<TimeMarks>("kanji");
+const timeMarkText = {
+  emoji: { early: "🐇", late: "🐢" },
+  kanji: { early: "早", late: "残" },
+};
+const timeMarkIconSize = 9;
+
+// The corner badges of a day with 早出, 残業 or both: the start of the day
+// at its left, the end at its right, so where a badge sits says which.
+// `marks` overrides the person's choice, for the style page's samples.
+export function TimeMark({
+  early,
+  late,
+  marks,
+}: {
+  early: boolean;
+  late: boolean;
+  marks?: TimeMarks;
+}) {
+  const chosen = useContext(TimeMarksContext);
+  const kind = marks ?? chosen;
+  const badge = (side: "early" | "late") => {
+    const className = `dc-time-mark dc-time-mark-${side} ${kind === "emoji" ? "dc-time-mark-emoji" : ""} ${kind === "symbol" ? "dc-time-mark-symbol" : ""}`;
+    if (kind === "symbol") {
+      const Arrow = side === "early" ? PhArrowLeft : PhArrowRight;
+      return (
+        <span aria-hidden="true" className={className}>
+          <Arrow size={timeMarkIconSize} weight="bold" />
+        </span>
+      );
+    }
+    return (
+      <span aria-hidden="true" className={className}>
+        {timeMarkText[kind][side]}
+      </span>
+    );
+  };
+  return (
+    <>
+      {early && badge("early")}
+      {late && badge("late")}
+    </>
+  );
+}
+
 export const CellNamesContext = createContext<{
   names: CellNames;
 }>({ names: defaultCellNames });

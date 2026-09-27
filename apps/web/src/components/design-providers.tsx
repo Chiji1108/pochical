@@ -17,6 +17,7 @@ import {
   OffDisplayContext,
   OffHighlightContext,
   ShiftMarkStyleContext,
+  TimeMarksContext,
 } from "./shift-mark";
 
 // The theme the person picked, for pages that color themselves with it.
@@ -31,7 +32,9 @@ export function useDesignTheme() {
 export function DesignProviders({ children }: { children: ReactNode }) {
   const look = useLook();
   const color = useSettings((state) => state.groupLook.color);
-  const { tone, appearance, week } = useSettings((state) => state.device);
+  const { tone, appearance, week, timeMarks } = useSettings(
+    (state) => state.device
+  );
   // Saved device settings load once the page has hydrated.
   useEffect(() => {
     void useSettings.persist.rehydrate();
@@ -70,7 +73,9 @@ export function DesignProviders({ children }: { children: ReactNode }) {
                       <OffDisplayContext
                         value={look.blankOff ? "blank" : "show"}
                       >
-                        {children}
+                        <TimeMarksContext value={timeMarks}>
+                          {children}
+                        </TimeMarksContext>
                       </OffDisplayContext>
                     </MonochromeContext>
                   </OffHighlightContext>

@@ -57,11 +57,12 @@ import {
   IconWeightContext,
   ShiftMark,
   ShiftMarkStyleContext,
+  TimeMark,
   lookOf,
   useMarkColors,
   useOffHighlight,
 } from "./shift-mark";
-import type { LookSettings, ShiftMarkStyle } from "./shift-mark";
+import type { LookSettings, ShiftMarkStyle, TimeMarks } from "./shift-mark";
 
 export type SettingsPage = Page;
 
@@ -1265,6 +1266,9 @@ function MarkPage({
       <Group title="シフト名">
         <NamesChoices current={current} />
       </Group>
+      <Group title="早出・残業">
+        <TimeMarkChoices />
+      </Group>
     </>
   );
 }
@@ -1489,6 +1493,41 @@ export function NameTabs({
             )}
           </span>
           {withName ? "あり" : "なし"}
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
+const timeMarkOptions: { value: TimeMarks; name: string }[] = [
+  { name: "漢字", value: "kanji" },
+  { name: "絵文字", value: "emoji" },
+  { name: "記号", value: "symbol" },
+];
+
+// Tabs like シフト名's, each drawing a day with both 早出 and 残業 as that
+// choice marks them.
+function TimeMarkChoices() {
+  const timeMarks = useSettings((state) => state.device.timeMarks);
+  const setTimeMarks = useSettings((state) => state.setTimeMarks);
+  return (
+    <fieldset className="st-mark-segment st-off-looks">
+      <legend className="dc-sr-only">早出・残業</legend>
+      {timeMarkOptions.map(({ value, name }) => (
+        <button
+          aria-pressed={timeMarks === value}
+          key={value}
+          onClick={() => {
+            setTimeMarks(value);
+          }}
+          type="button"
+        >
+          <span aria-hidden="true" className="st-off-sample">
+            <small>5</small>
+            <ShiftMark shift="day" size={18} />
+            <TimeMark early late marks={value} />
+          </span>
+          {name}
         </button>
       ))}
     </fieldset>
