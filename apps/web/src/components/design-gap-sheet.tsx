@@ -1,12 +1,16 @@
 import { useState } from "react";
 import type { RefObject } from "react";
+import { css } from "styled-system/css";
 
 import type { Shift } from "../lib/design-patterns";
 import type { Schedule } from "./design-calendar";
 import { SheetHeading } from "./design-sheet";
-import { Button, List, ListRow } from "./design-ui";
+import { Button, Chip, ChipGroup, List, ListRow, Tag } from "./design-ui";
 
 export type OffChoice = { key: Shift; label: string };
+
+// A group of chips with room under it before what follows.
+const spaced = css({ marginBottom: "16px" });
 
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
 
@@ -132,29 +136,27 @@ function GapSheetBody({
           </span>
         )}
       </p>
-      <ul className="dc-gap-days">
+      <ChipGroup as="ul" className={spaced}>
         {days.map((day) => (
-          <li key={day.getDate()}>
+          <Tag as="li" key={day.getDate()}>
             {day.getDate()}日({weekdays[day.getDay()]})
-          </li>
+          </Tag>
         ))}
-      </ul>
+      </ChipGroup>
       {choices.length > 1 && (
-        <fieldset className="dc-gap-choices">
-          <legend className="dc-sr-only">入れるパターン</legend>
+        <ChipGroup className={spaced} label="入れるパターン">
           {choices.map(({ key, label }) => (
-            <button
-              aria-pressed={key === current?.key}
+            <Chip
+              selected={key === current?.key}
               key={key}
               onClick={() => {
                 setPicked(key);
               }}
-              type="button"
             >
               {label}
-            </button>
+            </Chip>
           ))}
-        </fieldset>
+        </ChipGroup>
       )}
       {offerBlank && (
         <List className="dc-gap-blank">

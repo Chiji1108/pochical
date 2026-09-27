@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useContext, useState } from "react";
+import { css } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
@@ -19,7 +20,7 @@ import {
 } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
 import { ColorSchemeContext, useThemeStyle } from "./design-theme";
-import { BackButton, Button } from "./design-ui";
+import { BackButton, Button, Tag } from "./design-ui";
 import { useWeek } from "./design-week";
 import { ShiftMark } from "./shift-mark";
 
@@ -169,6 +170,14 @@ function stepOf(screen: OnboardingScreen): Step | undefined {
   }
   return undefined;
 }
+
+// The template's shifts under its title, inside the option's button.
+const templateChips = css({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "4px",
+  marginTop: "5px",
+});
 
 export function DesignOnboarding({
   variants,
@@ -580,14 +589,14 @@ function TemplateStep({
               <strong>{template.title}</strong>
               <small className="ob-option-note">{template.note}</small>
               {!template.custom && (
-                <span aria-hidden="true" className="ob-chips">
+                <span aria-hidden="true" className={templateChips}>
                   {(template.sequence ?? template.patternKeys).map(
                     (key, index) => (
                       // oxlint-disable-next-line react/no-array-index-key -- a sequence repeats the same shift, so position is its identity.
-                      <span className="ob-chip" key={index}>
+                      <Tag key={index} size="sm" tone="raised">
                         <ShiftMark shift={key} size={11} />
                         {patterns[key].label}
-                      </span>
+                      </Tag>
                     )
                   )}
                 </span>

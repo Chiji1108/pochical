@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { createContext, useContext } from "react";
 import type { ButtonHTMLAttributes, ChangeEvent, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -453,3 +454,215 @@ const swatchStyle = css({
   height: "10px",
   width: "10px",
 });
+
+// A segmented control: a few choices side by side, the picked one raised,
+// as SwiftUI's segmented Picker and Compose's SegmentedButton. Each
+// Segment brings its own content, a sample of what it picks or a word.
+// Compact for words alone, tall for large samples.
+type SegmentSize = "compact" | "regular" | "tall";
+const SegmentSizeContext = createContext<SegmentSize>("regular");
+
+const segmentedStyle = css({
+  bg: "fill2",
+  border: 0,
+  borderRadius: "14px",
+  display: "grid",
+  gap: "3px",
+  gridAutoColumns: "minmax(0, 1fr)",
+  gridAutoFlow: "column",
+  margin: 0,
+  padding: "3px",
+});
+
+const segmentStyle = cva({
+  base: {
+    "&[aria-pressed=true]": {
+      bg: "surface",
+      boxShadow: "0 1px 3px var(--shadow)",
+      color: "text",
+      fontWeight: 600,
+    },
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    borderRadius: "11px",
+    color: "text2",
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    fontSize: "13px",
+    gap: "4px",
+    justifyContent: "center",
+  },
+  variants: {
+    size: {
+      compact: { minHeight: "action" },
+      regular: { minHeight: "62px" },
+      tall: { minHeight: "76px" },
+    },
+  },
+});
+
+export function SegmentedControl({
+  label,
+  size = "regular",
+  className,
+  children,
+}: {
+  // What is being picked, for a screen reader.
+  label: string;
+  size?: SegmentSize;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <fieldset className={cx(segmentedStyle, className)}>
+      <legend className="dc-sr-only">{label}</legend>
+      <SegmentSizeContext value={size}>{children}</SegmentSizeContext>
+    </fieldset>
+  );
+}
+
+export function Segment({
+  pressed,
+  className,
+  ...props
+}: ButtonProps & { pressed: boolean }) {
+  const size = useContext(SegmentSizeContext);
+  return (
+    <button
+      aria-pressed={pressed}
+      className={cx(segmentStyle({ size }), className)}
+      type="button"
+      {...props}
+    />
+  );
+}
+
+// A chip to press: picked or not, one of several or several at once,
+// with a mark or a check before its words. `add` is the dashed chip that
+// adds another.
+const chipStyle = cva({
+  base: {
+    "&[aria-pressed=true]": {
+      bg: "accentSoft",
+      borderColor: "accentMuted",
+      color: "accent",
+      fontWeight: 600,
+    },
+    alignItems: "center",
+    bg: "surface",
+    border: "1px solid token(colors.border)",
+    borderRadius: "999px",
+    color: "text2",
+    cursor: "pointer",
+    display: "inline-flex",
+    fontSize: "12px",
+    gap: "4px",
+    minHeight: "34px",
+    paddingInline: "12px",
+  },
+  variants: {
+    variant: {
+      add: { borderStyle: "dashed", color: "text3" },
+      choice: {},
+    },
+  },
+});
+
+export function Chip({
+  selected,
+  variant = "choice",
+  className,
+  ...props
+}: ButtonProps & { selected?: boolean; variant?: "choice" | "add" }) {
+  return (
+    <button
+      aria-pressed={selected}
+      className={cx(chipStyle({ variant }), className)}
+      type="button"
+      {...props}
+    />
+  );
+}
+
+// Chips or tags in a wrapping row. With a label it is a group of choices
+// (a fieldset); as a list it is a ul or ol of tags.
+const chipGroupStyle = css({
+  border: 0,
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "6px",
+  listStyle: "none",
+  margin: 0,
+  padding: 0,
+});
+
+export function ChipGroup({
+  label,
+  as = "div",
+  className,
+  children,
+}: {
+  label?: string;
+  as?: "div" | "ul" | "ol";
+  className?: string;
+  children: ReactNode;
+}) {
+  const style = cx(chipGroupStyle, className);
+  if (label) {
+    return (
+      <fieldset className={style}>
+        <legend className="dc-sr-only">{label}</legend>
+        {children}
+      </fieldset>
+    );
+  }
+  const Element = as;
+  return <Element className={style}>{children}</Element>;
+}
+
+// A small word to show, not to press: みんな休み, a date, a shift in an
+// order. Accent for news about the group, neutral on the page, raised on
+// a card that is already filled.
+const tagStyle = cva({
+  base: {
+    alignItems: "center",
+    borderRadius: "8px",
+    display: "inline-flex",
+    gap: "3px",
+    lineHeight: 1.4,
+  },
+  variants: {
+    size: {
+      md: { fontSize: "12px", paddingBlock: "4px", paddingInline: "10px" },
+      sm: { fontSize: "10px", paddingBlock: "1px", paddingInline: "7px" },
+    },
+    tone: {
+      accent: { bg: "accentSoft", color: "accent" },
+      neutral: { bg: "fill", color: "text2" },
+      raised: { bg: "surface", color: "text" },
+    },
+  },
+});
+
+export function Tag({
+  tone = "neutral",
+  size = "md",
+  as = "span",
+  className,
+  children,
+}: {
+  tone?: "accent" | "neutral" | "raised";
+  size?: "sm" | "md";
+  as?: "span" | "li";
+  className?: string;
+  children: ReactNode;
+}) {
+  const Element = as;
+  return (
+    <Element className={cx(tagStyle({ size, tone }), className)}>
+      {children}
+    </Element>
+  );
+}

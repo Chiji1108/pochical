@@ -7,7 +7,15 @@ import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { DayCell, dateKey, formatDay } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
-import { BackButton, Button, List, ListRow, PageHeader } from "./design-ui";
+import {
+  BackButton,
+  Button,
+  Chip,
+  ChipGroup,
+  List,
+  ListRow,
+  PageHeader,
+} from "./design-ui";
 import { useWeek } from "./design-week";
 import { OffDisplayContext, ShiftMark } from "./shift-mark";
 
@@ -639,21 +647,20 @@ function DayFix({
         <strong>{formatDay(date)}</strong>
         勤務表では「{code}」{unsure ? "（自信なし）" : ""}
       </p>
-      <div className="im-fix-choices">
+      <ChipGroup>
         {patternKeys.map((key) => (
-          <button
-            aria-pressed={shift === key}
+          <Chip
+            selected={shift === key}
             key={key}
             onClick={() => {
               onFix(key);
             }}
-            type="button"
           >
             <ShiftMark shift={key} size={20} />
             {patterns[key].label}
-          </button>
+          </Chip>
         ))}
-      </div>
+      </ChipGroup>
     </section>
   );
 }

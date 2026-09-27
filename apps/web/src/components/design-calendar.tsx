@@ -43,7 +43,7 @@ import { DesignSettings } from "./design-settings";
 import type { SettingsPage } from "./design-settings";
 import { SheetHeading } from "./design-sheet";
 import { useThemeStyle } from "./design-theme";
-import { Button, IconButton } from "./design-ui";
+import { Button, Chip, ChipGroup, IconButton } from "./design-ui";
 import { holidayName, holidayNameOfKey, useWeek } from "./design-week";
 import {
   CellNamesContext,
@@ -1609,10 +1609,10 @@ function MemberField({
   return (
     <fieldset className="dc-detail-row dc-detail-members">
       <legend className="dc-detail-label">一緒に働く人</legend>
-      <div className="dc-member-chips">
+      <ChipGroup>
         {members.names.map((name) => (
-          <button
-            aria-pressed={selected.includes(name)}
+          <Chip
+            selected={selected.includes(name)}
             key={name}
             onClick={() => {
               onChange(
@@ -1621,11 +1621,10 @@ function MemberField({
                   : [...selected, name]
               );
             }}
-            type="button"
           >
             {selected.includes(name) && <Check aria-hidden="true" size={12} />}
             {name}
-          </button>
+          </Chip>
         ))}
         {adding ? (
           <input
@@ -1645,18 +1644,17 @@ function MemberField({
             placeholder="名前"
           />
         ) : (
-          <button
-            className="dc-member-add"
+          <Chip
             onClick={() => {
               setAdding(true);
             }}
-            type="button"
+            variant="add"
           >
             <Plus aria-hidden="true" size={12} />
             {members.names.length > 0 ? "追加" : "人を追加"}
-          </button>
+          </Chip>
         )}
-      </div>
+      </ChipGroup>
     </fieldset>
   );
 }

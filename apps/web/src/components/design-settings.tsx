@@ -52,10 +52,14 @@ import {
 import type { Appearance, ColorChoice } from "./design-theme";
 import {
   Button,
+  ChipGroup,
   List,
   ListRow,
   PageHeader,
+  Segment,
+  SegmentedControl,
   SwitchRow,
+  Tag,
   listStyle,
 } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
@@ -681,15 +685,15 @@ function ConfirmSheet({
 
 function SequenceChips({ sequence }: { sequence: Shift[] }) {
   return (
-    <ol className="st-sequence">
+    <ChipGroup as="ol">
       {sequence.map((shift, index) => (
         // oxlint-disable-next-line react/no-array-index-key -- a sequence repeats the same shift, so position is its identity.
-        <li key={index}>
+        <Tag as="li" key={index} tone="raised">
           <ShiftMark shift={shift} size={13} />
           {patterns[shift].label}
-        </li>
+        </Tag>
       ))}
-    </ol>
+    </ChipGroup>
   );
 }
 
@@ -1322,11 +1326,10 @@ function ShapeChoices() {
   const setShape = useSettings((state) => state.setShape);
   const current = shapeOf(look);
   return (
-    <fieldset className="st-mark-segment">
-      <legend className="dc-sr-only">シフトの見た目</legend>
+    <SegmentedControl label="シフトの見た目">
       {shapeOptions.map((option) => (
-        <button
-          aria-pressed={option === current}
+        <Segment
+          pressed={option === current}
           key={option.name}
           onClick={() => {
             // Only icons carry their fill; for the others it is left alone.
@@ -1336,7 +1339,6 @@ function ShapeChoices() {
                 : { style: option.style }
             );
           }}
-          type="button"
         >
           <ShiftMarkStyleContext value={option.style}>
             <IconWeightContext value={option.fill ? "duotone" : "regular"}>
@@ -1344,9 +1346,9 @@ function ShapeChoices() {
             </IconWeightContext>
           </ShiftMarkStyleContext>
           {option.name}
-        </button>
+        </Segment>
       ))}
-    </fieldset>
+    </SegmentedControl>
   );
 }
 
@@ -1381,11 +1383,10 @@ export function OffLookTabs({
 }) {
   const picked = offLookId(value);
   return (
-    <fieldset className="st-mark-segment st-off-looks">
-      <legend className="dc-sr-only">休みの見せ方</legend>
+    <SegmentedControl label="休みの見せ方" size="tall">
       {offLooks.map((option) => (
-        <button
-          aria-pressed={picked === option.id}
+        <Segment
+          pressed={picked === option.id}
           key={option.id}
           onClick={() => {
             onChange({
@@ -1393,7 +1394,6 @@ export function OffLookTabs({
               highlight: option.highlight,
             });
           }}
-          type="button"
         >
           <span
             aria-hidden="true"
@@ -1403,9 +1403,9 @@ export function OffLookTabs({
             {option.blankOff ? null : <ShiftMark shift="off" size={18} />}
           </span>
           {option.name}
-        </button>
+        </Segment>
       ))}
-    </fieldset>
+    </SegmentedControl>
   );
 }
 
@@ -1419,16 +1419,14 @@ export function NameTabs({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <fieldset className="st-mark-segment st-off-looks">
-      <legend className="dc-sr-only">シフト名</legend>
+    <SegmentedControl label="シフト名" size="tall">
       {[false, true].map((withName) => (
-        <button
-          aria-pressed={value === withName}
+        <Segment
+          pressed={value === withName}
           key={String(withName)}
           onClick={() => {
             onChange(withName);
           }}
-          type="button"
         >
           <span aria-hidden="true" className="st-off-sample">
             <small>5</small>
@@ -1438,9 +1436,9 @@ export function NameTabs({
             )}
           </span>
           {withName ? "あり" : "なし"}
-        </button>
+        </Segment>
       ))}
-    </fieldset>
+    </SegmentedControl>
   );
 }
 
@@ -1488,16 +1486,14 @@ function ToneChoices() {
   const { theme } = useContext(ThemeContext);
   const scheme = useContext(ColorSchemeContext);
   return (
-    <fieldset className="st-mark-segment">
-      <legend className="dc-sr-only">トーン</legend>
+    <SegmentedControl label="トーン">
       {toneOptions.map((option) => (
-        <button
-          aria-pressed={tone === option.tone}
+        <Segment
+          pressed={tone === option.tone}
           key={option.tone}
           onClick={() => {
             setTone(option.tone);
           }}
-          type="button"
         >
           <span
             aria-hidden="true"
@@ -1507,9 +1503,9 @@ function ToneChoices() {
             }}
           />
           {option.name}
-        </button>
+        </Segment>
       ))}
-    </fieldset>
+    </SegmentedControl>
   );
 }
 
@@ -1710,22 +1706,20 @@ function WeekPage({
           starts on, with a Saturday, a Sunday and three holidays in it. */}
       <StylePreview preview={preview} />
       <Group title="週の始まり">
-        <fieldset className="st-mark-segment st-week-start">
-          <legend className="dc-sr-only">週の始まり</legend>
+        <SegmentedControl label="週の始まり" size="compact">
           {weekdayNames.map((name, day) => (
-            <button
+            <Segment
               aria-label={`${name}曜`}
-              aria-pressed={week.weekStart === day}
+              pressed={week.weekStart === day}
               key={name}
               onClick={() => {
                 setWeek({ ...week, weekStart: day });
               }}
-              type="button"
             >
               {name}
-            </button>
+            </Segment>
           ))}
-        </fieldset>
+        </SegmentedControl>
       </Group>
       <Group title="色をつける日">
         <List>

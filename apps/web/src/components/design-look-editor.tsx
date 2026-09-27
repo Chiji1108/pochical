@@ -1,7 +1,13 @@
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 
-import { List, ListRow, PageHeader } from "./design-ui";
+import {
+  List,
+  ListRow,
+  PageHeader,
+  Segment,
+  SegmentedControl,
+} from "./design-ui";
 import {
   MarkGlyph,
   MonochromeContext,
@@ -122,22 +128,20 @@ export function LookEditorPage({
       <div className="pe-preview pe-preview-center">
         <LookGlyph look={look} size={48} style={tab} />
       </div>
-      <fieldset className="st-mark-segment">
-        <legend className="dc-sr-only">どの見た目の印を選ぶか</legend>
+      <SegmentedControl label="どの見た目の印を選ぶか">
         {(["icon", "emoji", "badge"] as const).map((option) => (
-          <button
-            aria-pressed={tab === option}
+          <Segment
+            pressed={tab === option}
             key={option}
             onClick={() => {
               setTab(option);
             }}
-            type="button"
           >
             <LookGlyph look={look} size={20} style={option} />
             {styleNames[option]}
-          </button>
+          </Segment>
         ))}
-      </fieldset>
+      </SegmentedControl>
       {tab === "icon" && <IconGrid icons={icons} look={look} onPick={onPick} />}
       {tab === "emoji" && (
         <EmojiGrid emojis={emojis} look={look} onPick={onPick} />

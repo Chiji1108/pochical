@@ -23,12 +23,17 @@ import { themeStyle, useThemeStyle } from "../components/design-theme";
 import {
   BackButton,
   Button,
+  Chip,
+  ChipGroup,
   HeaderAction,
   IconButton,
   List,
   ListRow,
   PageHeader,
+  Segment,
+  SegmentedControl,
   SwitchRow,
+  Tag,
 } from "../components/design-ui";
 import {
   OffDisplayContext,
@@ -251,40 +256,40 @@ function Rows() {
 function Switches() {
   const [off, setOff] = useState({ blankOff: false, highlight: true });
   const [names, setNames] = useState(false);
-  const [segment, setSegment] = useState("two");
+  const [day, setDay] = useState(0);
   return (
     <Group
-      note="見本つきのタブ(st-mark-segment)と、文字だけの切り替え(design-segment)の2系統です。"
+      note="SegmentedControl に Segment を並べます。中身は見本でも言葉だけでもよく、高さは regular(62px)、tall(大きな見本)、compact(言葉だけ)の3つ。SwiftUI の segmented Picker、Compose の SegmentedButton にあたります。比べる案の切り替え(design-segment)はアプリの外なので別です。"
       title="切り替え"
     >
       <Item
-        name="OffLookTabs(st-mark-segment)"
+        name="SegmentedControl size=tall"
         where="スタイルの休みの見せ方"
         wide
       >
         <OffLookTabs onChange={setOff} value={off} />
       </Item>
-      <Item name="NameTabs(st-mark-segment)" where="スタイルのシフト名" wide>
+      <Item name="SegmentedControl size=tall" where="スタイルのシフト名" wide>
         <NameTabs onChange={setNames} value={names} />
       </Item>
-      <Item name="design-segment" where="比べる案(アプリの外)" wide>
-        <div className="design-segment">
-          {[
-            ["two", "いつも2段"],
-            ["current", "今のまま"],
-          ].map(([value, label]) => (
-            <button
-              aria-pressed={segment === value}
-              key={value}
+      <Item
+        name="SegmentedControl size=compact"
+        where="曜日と祝日の週の始まり"
+        wide
+      >
+        <SegmentedControl label="週の始まり" size="compact">
+          {["日", "月", "土"].map((name, index) => (
+            <Segment
+              key={name}
               onClick={() => {
-                setSegment(value);
+                setDay(index);
               }}
-              type="button"
+              pressed={day === index}
             >
-              {label}
-            </button>
+              {name}
+            </Segment>
           ))}
-        </div>
+        </SegmentedControl>
       </Item>
     </Group>
   );
@@ -292,16 +297,19 @@ function Switches() {
 
 function Chips() {
   const [picked, setPicked] = useState(["田中"]);
+  const [off, setOff] = useState("off");
   return (
     <Group
-      note="4種類。押せるもの(dc-member-chips、dc-gap-choices)と、見せるだけのもの(ob-chip、dc-gap-days)があります。"
-      title="チップ"
+      note="押せる Chip と、見せるだけの Tag。どちらも ChipGroup で折り返して並べます。Tag は accent(グループの知らせ)、neutral(ページの上)、raised(塗られたカードの上)の3色と、sm・md の2つの大きさです。"
+      title="チップとタグ"
     >
-      <Item name="dc-member-chips" where="日の詳しい表示の一緒に働く人">
-        <div className="dc-member-chips">
+      <Item
+        name="Chip(いくつでも)+ Chip variant=add"
+        where="日の詳しい表示の一緒に働く人"
+      >
+        <ChipGroup>
           {["田中", "鈴木"].map((name) => (
-            <button
-              aria-pressed={picked.includes(name)}
+            <Chip
               key={name}
               onClick={() => {
                 setPicked((previous) =>
@@ -310,41 +318,53 @@ function Chips() {
                     : [...previous, name]
                 );
               }}
-              type="button"
+              selected={picked.includes(name)}
             >
               {picked.includes(name) && <Check aria-hidden="true" size={12} />}
               {name}
-            </button>
+            </Chip>
           ))}
-        </div>
+          <Chip variant="add">＋ 追加</Chip>
+        </ChipGroup>
       </Item>
-      <Item name="dc-gap-choices" where="空いた日のシートの休み・有休">
-        <fieldset className="dc-gap-choices">
-          <button aria-pressed type="button">
-            休み
-          </button>
-          <button aria-pressed={false} type="button">
-            有休
-          </button>
-        </fieldset>
+      <Item name="Chip(ひとつ)" where="空いた日の休み・有休、取り込みの直し">
+        <ChipGroup label="入れるパターン">
+          {[
+            ["off", "休み"],
+            ["paid", "有休"],
+          ].map(([value, label]) => (
+            <Chip
+              key={value}
+              onClick={() => {
+                setOff(value);
+              }}
+              selected={off === value}
+            >
+              {label}
+            </Chip>
+          ))}
+        </ChipGroup>
       </Item>
-      <Item name="ob-chip" where="はじめての設定の順番の見本">
-        <span className="ob-chips">
+      <Item name="Tag tone=raised" where="繰り返しの順番、はじめての設定の見本">
+        <ChipGroup as="ol">
           {(["day", "night", "off"] as const).map((key) => (
-            <span className="ob-chip" key={key}>
-              <ShiftMark shift={key} size={11} />
+            <Tag as="li" key={key} tone="raised">
+              <ShiftMark shift={key} size={13} />
               {{ day: "日勤", night: "夜勤", off: "休み" }[key]}
-            </span>
+            </Tag>
           ))}
-        </span>
+        </ChipGroup>
       </Item>
-      <Item name="dc-gap-days" where="空いた日のシートの日付">
-        <ul className="dc-gap-days">
-          <li>3日(土)</li>
-          <li>4日(日)</li>
-        </ul>
+      <Item name="Tag tone=neutral / accent" where="空いた日の日付、みんな休み">
+        <ChipGroup>
+          <Tag>3日(土)</Tag>
+          <Tag>4日(日)</Tag>
+          <Tag size="sm" tone="accent">
+            みんな休み
+          </Tag>
+        </ChipGroup>
       </Item>
-      <Item name="im-code-chip" where="取り込みの記号">
+      <Item name="im-code-chip" where="取り込みの記号(勤務表の紙を写した札)">
         <span className="im-code-chip">日</span>
       </Item>
     </Group>

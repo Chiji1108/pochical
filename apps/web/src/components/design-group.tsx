@@ -51,6 +51,9 @@ import {
   List,
   ListRow,
   PageHeader,
+  Segment,
+  SegmentedControl,
+  Tag,
   listRow,
 } from "./design-ui";
 import { holidayName, useWeek } from "./design-week";
@@ -1421,7 +1424,11 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
       <span className="gr-day-card">
         <span className="gr-day-card-head">
           {formatDay(first)}
-          {together && <span className="gr-day-card-tag">みんな休み</span>}
+          {together && (
+            <Tag size="sm" tone="accent">
+              みんな休み
+            </Tag>
+          )}
         </span>
         <span className="gr-day-card-people">
           {members.map((member) => (
@@ -2072,7 +2079,11 @@ function PickedDaySheet({
     <section aria-label={formatDay(date)} className="gr-day-sheet">
       <div aria-hidden="true" className="dc-sheet-handle" />
       <SheetHeading onClose={onClose} title={formatDay(date)}>
-        {together && <span className="gr-day-card-tag">みんな休み</span>}
+        {together && (
+          <Tag size="sm" tone="accent">
+            みんな休み
+          </Tag>
+        )}
       </SheetHeading>
       <List className="gr-day-sheet-list">
         {members.map((member) => {
@@ -3777,21 +3788,19 @@ function GroupMarkPage({
           </span>
         }
       />
-      <fieldset className="st-mark-segment gr-mark-kinds">
-        <legend className="dc-sr-only">アイコンの種類</legend>
+      <SegmentedControl label="アイコンの種類">
         {markKinds.map((option) => (
-          <button
-            aria-pressed={kind === option.kind}
+          <Segment
+            pressed={kind === option.kind}
             key={option.kind}
             onClick={() => {
               setKind(option.kind);
             }}
-            type="button"
           >
             {option.label}
-          </button>
+          </Segment>
         ))}
-      </fieldset>
+      </SegmentedControl>
       {kind === "emoji" && (
         <>
           <fieldset className="pe-grid">
