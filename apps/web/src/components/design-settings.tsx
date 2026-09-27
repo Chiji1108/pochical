@@ -37,7 +37,7 @@ import { PhotoAvatar, PhotoEditor } from "./design-group";
 import type { Profile } from "./design-group";
 import { WorkSetupSteps } from "./design-onboarding";
 import { PatternsPage } from "./design-pattern-editor";
-import { Sheet } from "./design-sheet";
+import { ConfirmDialog, Sheet } from "./design-sheet";
 import {
   ColorSchemeContext,
   PreviewSchemeSwitch,
@@ -603,7 +603,7 @@ function AccountPage({ onBack }: { onBack: () => void }) {
         />
       </List>
       {confirm === "signOut" && (
-        <ConfirmSheet
+        <ConfirmDialog
           action="ログアウト"
           message="この端末からデータが消えます。もう一度ログインすれば、同じデータを使えます。"
           onCancel={() => {
@@ -617,8 +617,8 @@ function AccountPage({ onBack }: { onBack: () => void }) {
         />
       )}
       {confirm === "delete" && (
-        <ConfirmSheet
-          action="アカウントを削除"
+        <ConfirmDialog
+          action="アカウントとすべてのデータを削除"
           message="シフト、グループ、チャットがすべて削除されます。元に戻せません。"
           onCancel={() => {
             setConfirm(undefined);
@@ -631,46 +631,6 @@ function AccountPage({ onBack }: { onBack: () => void }) {
         />
       )}
     </>
-  );
-}
-
-// A question before something hard to undo, over the phone like the other
-// sheets. It opens as soon as it is rendered.
-function ConfirmSheet({
-  title,
-  message,
-  action,
-  onConfirm,
-  onCancel,
-}: {
-  title: string;
-  message: string;
-  action: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  // Shown while asked; dismissing it is the same as キャンセル.
-  return (
-    <Sheet
-      className="st-confirm-sheet"
-      open
-      role="alertdialog"
-      label={title}
-      onOpenChange={(open) => {
-        if (!open) {
-          onCancel();
-        }
-      }}
-    >
-      <h4>{title}</h4>
-      <p>{message}</p>
-      <button className="st-confirm-action" onClick={onConfirm} type="button">
-        {action}
-      </button>
-      <button className="st-photo-cancel" onClick={onCancel} type="button">
-        キャンセル
-      </button>
-    </Sheet>
   );
 }
 

@@ -17,14 +17,6 @@ export const PhoneContext = createContext<RefObject<HTMLElement | null> | null>(
 );
 
 const sheet = {
-  backdrop: css({
-    _closed: { animation: "fadeOut 0.2s ease-in" },
-    _open: { animation: "fadeIn 0.25s ease-out" },
-    bg: "var(--scrim)",
-    inset: 0,
-    position: "absolute",
-    zIndex: 20,
-  }),
   handle: css({
     bg: "controlOff",
     borderRadius: "8px",
@@ -41,6 +33,21 @@ const sheet = {
   }),
 };
 
+// The dimming under a sheet; an alert's goes over any sheet already open.
+const backdrop = cva({
+  base: {
+    _closed: { animation: "fadeOut 0.2s ease-in" },
+    _open: { animation: "fadeIn 0.25s ease-out" },
+    bg: "var(--scrim)",
+    inset: 0,
+    position: "absolute",
+    zIndex: 20,
+  },
+  variants: {
+    placement: { bottom: {}, center: { zIndex: 40 } },
+  },
+});
+
 // Where the sheet sits: at the bottom, or in the middle for an alert. One
 // recipe, so the two never fight over alignItems. A sheet that leaves the
 // screen behind it live lets taps through around itself.
@@ -53,7 +60,8 @@ const positioner = cva({
     },
     placement: {
       bottom: { alignItems: "flex-end" },
-      center: { alignItems: "center", justifyContent: "center" },
+      // Alerts sit above any sheet, as they may ask over one.
+      center: { alignItems: "center", justifyContent: "center", zIndex: 41 },
     },
   },
 });
@@ -146,7 +154,7 @@ export function Sheet({
       unmountOnExit
     >
       <Portal container={phone ?? undefined}>
-        {modal && <Dialog.Backdrop className={sheet.backdrop} />}
+        {modal && <Dialog.Backdrop className={backdrop({ placement })} />}
         <Dialog.Positioner className={positioner({ modal, placement })}>
           <Dialog.Content
             aria-label={label}
@@ -435,5 +443,98 @@ export function PhotoViewer({
         </Dialog.Positioner>
       </Portal>
     </Dialog.Root>
+  );
+}
+
+const confirm = {
+  // Side by side, or stacked with the action on top when a label is too
+  // long to share the row, as both platforms stack them.
+  actions: css({
+    display: "flex",
+    flexWrap: "wrap-reverse",
+    gap: "8px",
+    marginTop: "20px",
+  }),
+  button: css({
+    border: 0,
+    borderRadius: "12px",
+    // Equal halves, but never narrower than the label.
+    flex: "1 1 0",
+    minWidth: "max-content",
+    fontSize: "15px",
+    fontWeight: 600,
+    minHeight: "touch",
+    paddingInline: "16px",
+    whiteSpace: "nowrap",
+  }),
+  // The badge red holds white text in dark mode too; --danger is a light
+  // red there, made for text.
+  action: css({ bg: "var(--badge)", color: "var(--on-badge)" }),
+  cancel: css({ bg: "fill", color: "text" }),
+  message: css({
+    color: "text3",
+    fontSize: "13px",
+    lineHeight: 1.6,
+    margin: "8px 0 0",
+  }),
+  root: css({
+    bg: "raised",
+    borderRadius: "20px",
+    color: "text",
+    padding: "22px 20px 16px",
+    textAlign: "center",
+    width: "min(300px, calc(100% - 48px))",
+  }),
+  title: css({ fontSize: "17px", fontWeight: 700, margin: 0 }),
+};
+
+// A question before something hard to undo, in the middle of the phone as
+// iOS's alert and Android's AlertDialog ask it, over a page or over a sheet
+// alike. It opens as soon as it is rendered; dismissing it is キャンセル.
+export function ConfirmDialog({
+  title,
+  message,
+  action,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  message: string;
+  action: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <Sheet
+      className={confirm.root}
+      label={title}
+      onOpenChange={(open) => {
+        if (!open) {
+          onCancel();
+        }
+      }}
+      open
+      placement="center"
+      role="alertdialog"
+    >
+      <h4 className={confirm.title}>{title}</h4>
+      <p className={confirm.message}>{message}</p>
+      <div className={confirm.actions}>
+        <button
+          className={cx(confirm.button, confirm.cancel)}
+          onClick={onCancel}
+          type="button"
+        >
+          キャンセル
+        </button>
+        <button
+          className={cx(confirm.button, confirm.action)}
+          onClick={onConfirm}
+          type="button"
+        >
+          {action}
+        </button>
+      </div>
+    </Sheet>
   );
 }

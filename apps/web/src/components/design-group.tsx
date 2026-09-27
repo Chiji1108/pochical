@@ -43,6 +43,7 @@ import type { Schedule, Tab } from "./design-calendar";
 import { EmojiPickerSheet } from "./design-emoji-picker";
 import { iconNames, OtherEmojiButton, withPicked } from "./design-look-editor";
 import {
+  ConfirmDialog,
   DecideHeading,
   PhoneContext,
   PhotoViewer,
@@ -637,6 +638,9 @@ export function DesignGroup({
 
   // The member whose profile sheet is open.
   const [profileOf, setProfileOf] = useState<Member>();
+  // Members taken out of each group, by group id.
+  const [removed, setRemoved] = useState<Record<string, string[]>>({});
+  const toast = useContext(ToastContext);
   const meIn = (id: string) => {
     const found = groups.find((item) => item.id === id);
     const shown = found ? profileIn(found, profile) : profile;
@@ -659,9 +663,46 @@ export function DesignGroup({
     return [me];
   };
   const summary = groups.find((item) => item.id === groupId) ?? groups[0];
-  const group: Group = { ...summary, members: membersOf(summary.id) };
+  const group: Group = {
+    ...summary,
+    members: membersOf(summary.id).filter(
+      (member) => !removed[summary.id]?.includes(member.id)
+    ),
+  };
   const chatOf = (id: string, chatId: string): Chat =>
     chats[chatKey(id, chatId)] ?? { messages: [], unread: 0 };
+  // A line from the app in the group chat, like a new name.
+  const addNotice = (notice: string) => {
+    const key = chatKey(group.id, groupChat);
+    const chat = chatOf(group.id, groupChat);
+    setChats({
+      ...chats,
+      [key]: {
+        ...chat,
+        messages: [
+          ...chat.messages,
+          {
+            from: "me",
+            id: `notice-${chat.messages.length}`,
+            notice,
+            time: timeNow(),
+            when: "今日",
+          },
+        ],
+      },
+    });
+  };
+  const removeMember = (member: Member) => {
+    setProfileOf(undefined);
+    setRemoved({
+      ...removed,
+      [group.id]: [...(removed[group.id] ?? []), member.id],
+    });
+    addNotice(
+      `${profileIn(group, profile).name}が${member.name}をグループから外しました`
+    );
+    toast(`${member.name}を外しました`);
+  };
   const openChat = (chatId: string, from?: string) => {
     setProfileOf(undefined);
     setChats({
@@ -683,6 +724,7 @@ export function DesignGroup({
       onClose={() => {
         setProfileOf(undefined);
       }}
+      onRemove={page.name === "settings" ? removeMember : undefined}
       onMessage={
         // Already in the one-to-one chat with them: nothing to open.
         page.name === "chat" && page.chatId === profileOf?.id
@@ -709,6 +751,9 @@ export function DesignGroup({
         <ChatPage
           backLabel={page.from ? chatTitle(group, page.from) : group.name}
           chat={chatOf(group.id, page.chatId)}
+          formerMembers={membersOf(group.id).filter((member) =>
+            removed[group.id]?.includes(member.id)
+          )}
           group={group}
           onMember={onMember}
           onBack={() => {
@@ -810,6 +855,16 @@ export function DesignGroup({
           {page.name === "settings" && (
             <GroupSettingsPage
               group={group}
+              onLeave={() => {
+                const rest = groups.filter((item) => item.id !== group.id);
+                // The sample keeps its last group, having no empty screen.
+                if (rest.length > 0) {
+                  setGroups(rest);
+                  setGroupId(rest[0].id);
+                }
+                setPage({ name: "hub" });
+                toast(`「${group.name}」から抜けました`);
+              }}
               onMember={onMember}
               onBack={() => {
                 setPage({ name: "hub" });
@@ -835,24 +890,7 @@ export function DesignGroup({
                   group,
                   edit
                 );
-                const key = chatKey(group.id, groupChat);
-                const chat = chatOf(group.id, groupChat);
-                setChats({
-                  ...chats,
-                  [key]: {
-                    ...chat,
-                    messages: [
-                      ...chat.messages,
-                      {
-                        from: "me",
-                        id: `notice-${chat.messages.length}`,
-                        notice,
-                        time: timeNow(),
-                        when: "今日",
-                      },
-                    ],
-                  },
-                });
+                addNotice(notice);
               }}
               profile={profile}
             />
@@ -1140,6 +1178,8 @@ const memberButton = css({
   padding: 0,
 });
 
+const noMembers: Member[] = [];
+
 // A member as this group knows them, and a way to talk one to one. The
 // one-to-one chat belongs to the group, so both of you keep this group's
 // names and pictures there.
@@ -1148,13 +1188,17 @@ function MemberSheet({
   group,
   onClose,
   onMessage,
+  onRemove,
 }: {
   member?: Member;
   group: Omit<Group, "members">;
   onClose: () => void;
   onMessage?: (member: Member) => void;
+  // Takes them out of the group; any member may, as in LINE's groups.
+  onRemove?: (member: Member) => void;
 }) {
   const [viewing, setViewing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   return (
     <Sheet
       label={member?.name ?? ""}
@@ -1202,7 +1246,32 @@ function MemberSheet({
               </Button>
             )}
           </div>
+          {onRemove && (
+            <button
+              className="pe-delete"
+              onClick={() => {
+                setConfirming(true);
+              }}
+              type="button"
+            >
+              このグループから外す
+            </button>
+          )}
         </>
+      )}
+      {member && onRemove && confirming && (
+        <ConfirmDialog
+          action="外す"
+          message={`${member.name}は「${group.name}」のシフトとチャットを見られなくなります。外したことは全体チャットに表示されます。`}
+          onCancel={() => {
+            setConfirming(false);
+          }}
+          onConfirm={() => {
+            setConfirming(false);
+            onRemove(member);
+          }}
+          title={`${member.name}を外しますか？`}
+        />
       )}
       {member?.photo && (
         <PhotoViewer
@@ -1300,11 +1369,14 @@ function ChatPage({
   onOpenDay,
   onMember,
   backLabel,
+  formerMembers = noMembers,
 }: {
   title: string;
   group: Group;
   // Where 戻る goes: the group, or the chat a member was opened from.
   backLabel: string;
+  // Members taken out of the group, so their past lines keep a face.
+  formerMembers?: Member[];
   // Opens a member's profile from their picture.
   onMember?: (member: Member) => void;
   // Who a shared day shows: everyone, or the two people in a direct chat.
@@ -1323,10 +1395,12 @@ function ChatPage({
   const [pickingFor, setPickingFor] = useState<string>();
   const [flash, setFlash] = useState<string>();
   const isGroup = title === "全体チャット";
+  // Who wrote a line, including members taken out since, whose lines stay.
+  const writerOf = (id?: string) =>
+    [...group.members, ...formerMembers].find((member) => member.id === id);
   const byId = (id?: string) =>
     chat.messages.find((message) => message.id === id);
-  const nameOf = (id: string) =>
-    group.members.find((member) => member.id === id)?.name ?? "";
+  const nameOf = (id: string) => writerOf(id)?.name ?? "";
   const post = (message: Omit<Message, "id" | "from" | "when" | "time">) => {
     onChange([
       ...chat.messages,
@@ -1399,7 +1473,9 @@ function ChatPage({
         )}
         {chat.messages.map((message, index) => {
           const previous = chat.messages[index - 1];
-          const member = group.members.find((item) => item.id === message.from);
+          const member = writerOf(message.from);
+          const current =
+            member !== undefined && group.members.includes(member);
           const mine = member?.me === true;
           const firstOfRun =
             previous?.from !== message.from ||
@@ -1430,7 +1506,7 @@ function ChatPage({
                   <span className="gr-message-avatar">
                     {firstOfRun &&
                       member &&
-                      (onMember ? (
+                      (onMember && current ? (
                         <button
                           aria-label={`${member.name}のプロフィール`}
                           className={memberButton}
@@ -3671,16 +3747,19 @@ function GroupSettingsPage({
   onInvite,
   onBack,
   onMember,
+  onLeave,
 }: {
   group: Group;
   profile: Profile;
   onMember?: (member: Member) => void;
+  onLeave: () => void;
   onChange: (mine: GroupProfile | undefined) => void;
   onEdit: (edit: GroupEdit) => void;
   onInvite: () => void;
   onBack: () => void;
 }) {
   const [view, setView] = useState<"settings" | "edit" | "profile">("settings");
+  const [leaving, setLeaving] = useState(false);
   const shown = profileIn(group, profile);
   if (view === "edit") {
     return (
@@ -3787,9 +3866,29 @@ function GroupSettingsPage({
           />
         </List>
       </section>
-      <button className="pe-delete" type="button">
+      <button
+        className="pe-delete"
+        onClick={() => {
+          setLeaving(true);
+        }}
+        type="button"
+      >
         このグループから抜ける
       </button>
+      {leaving && (
+        <ConfirmDialog
+          action="抜ける"
+          message={`「${group.name}」のシフトとチャットが見られなくなります。もう一度入るには、招待してもらう必要があります。`}
+          onCancel={() => {
+            setLeaving(false);
+          }}
+          onConfirm={() => {
+            setLeaving(false);
+            onLeave();
+          }}
+          title="グループから抜けますか？"
+        />
+      )}
     </>
   );
 }
@@ -3997,6 +4096,8 @@ function InvitePage({
   group: Omit<Group, "members">;
   onBack: () => void;
 }) {
+  const [confirming, setConfirming] = useState(false);
+  const toast = useContext(ToastContext);
   return (
     <>
       <PageHeader back={group.name} onBack={onBack} title="メンバーを招待" />
@@ -4018,7 +4119,28 @@ function InvitePage({
         リンクを知っている人は、だれでも「{group.name}
         」に参加できます。送る相手に気をつけてください。
       </p>
-      <Button variant="text">招待リンクを作り直す</Button>
+      <Button
+        onClick={() => {
+          setConfirming(true);
+        }}
+        variant="text"
+      >
+        招待リンクを作り直す
+      </Button>
+      {confirming && (
+        <ConfirmDialog
+          action="作り直す"
+          message="今のリンクとQRコードでは、もう参加できなくなります。今いるメンバーはそのままです。"
+          onCancel={() => {
+            setConfirming(false);
+          }}
+          onConfirm={() => {
+            setConfirming(false);
+            toast("招待リンクを作り直しました");
+          }}
+          title="招待リンクを作り直しますか？"
+        />
+      )}
     </>
   );
 }

@@ -1605,31 +1605,6 @@
   .st-account-delete {
     margin-top: 10px;
   }
-  .st-confirm-sheet h4 {
-    margin: 0 0 8px;
-    font-size: 18px;
-    font-weight: 700;
-    text-align: center;
-  }
-  .st-confirm-sheet p {
-    margin: 0 0 20px;
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--text-3);
-    text-align: center;
-  }
-  .design-page .st-confirm-action {
-    width: 100%;
-    min-height: 48px;
-    font-size: 16px;
-    font-weight: 700;
-    /* The badge red holds white text in dark mode too; --danger is a light
-     red there, made for text. */
-    color: var(--on-badge);
-    background: var(--badge);
-    border: 0;
-    border-radius: 16px;
-  }
   /* The dot before a setting that paints with a color. */
   .gr-row-mark {
     margin-right: 12px;

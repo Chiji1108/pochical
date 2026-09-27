@@ -3,6 +3,7 @@ import { useState } from "react";
 import { cx } from "styled-system/css";
 
 import type { Schedule } from "./design-calendar";
+import { ConfirmDialog } from "./design-sheet";
 import {
   BackButton,
   HeaderAction,
@@ -222,14 +223,26 @@ function CoworkerEditor({
       <button
         className="pe-delete"
         onClick={() => {
-          confirming ? onDelete() : setConfirming(true);
+          setConfirming(true);
         }}
         type="button"
       >
-        {confirming
-          ? `もう一度押すと削除します（${days}日の予定から外れます）`
-          : "この人を削除"}
+        この人を削除
       </button>
+      {confirming && (
+        <ConfirmDialog
+          action="削除"
+          message={`${days}日の予定から${name}が外れます。`}
+          onCancel={() => {
+            setConfirming(false);
+          }}
+          onConfirm={() => {
+            setConfirming(false);
+            onDelete();
+          }}
+          title={`${name}を削除しますか？`}
+        />
+      )}
     </>
   );
 }
