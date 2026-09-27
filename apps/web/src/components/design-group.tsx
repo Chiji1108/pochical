@@ -1,3 +1,4 @@
+import { Popover, Portal } from "@ark-ui/react";
 import {
   CalendarPlus,
   Camera,
@@ -21,7 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { useContext, useEffect, useId, useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { css, cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
@@ -1099,22 +1100,6 @@ function ChatPage({
   const [selected, setSelected] = useState<string>();
   const [replyTo, setReplyTo] = useState<string>();
   const [flash, setFlash] = useState<string>();
-  // A tap anywhere but the open actions or its message closes them.
-  useEffect(() => {
-    if (!selected) {
-      return;
-    }
-    const close = (event: PointerEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest(".gr-actions, .gr-message-tap")) {
-        setSelected(undefined);
-      }
-    };
-    document.addEventListener("pointerdown", close);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-    };
-  }, [selected]);
   const isGroup = title === "全体チャット";
   const byId = (id?: string) =>
     chat.messages.find((message) => message.id === id);
@@ -1159,9 +1144,22 @@ function ChatPage({
       setFlash(undefined);
     }, flashMilliseconds);
   };
-  const toggleSelected = (id: string) => {
-    setSelected(selected === id ? undefined : id);
-  };
+  // The props that turn a message into the opener of its actions.
+  const actionsOf = (message: Message) => ({
+    mine: message.from === "me",
+    onOpenChange: (open: boolean) => {
+      setSelected(open ? message.id : undefined);
+    },
+    onReact: (emoji: string) => {
+      react(message.id, emoji);
+    },
+    onReply: () => {
+      setReplyTo(message.id);
+      setSelected(undefined);
+    },
+    open: selected === message.id,
+    text: message.text,
+  });
   const replying = byId(replyTo);
   return (
     <div className="dc-content st-screen gr-chat">
@@ -1213,19 +1211,22 @@ function ChatPage({
                   {!mine && isGroup && firstOfRun && (
                     <small className="gr-message-name">{member?.name}</small>
                   )}
-                  <span className="gr-bubble-row">
+                  <span
+                    className={cx(
+                      "gr-bubble-row",
+                      selected === message.id && messageActions.lifted
+                    )}
+                  >
                     {message.days ? (
-                      <button
-                        aria-expanded={selected === message.id}
-                        aria-label={`${member?.name ?? ""}が共有した日にち。押すとリアクションと返信`}
-                        className="gr-message-tap"
-                        onClick={() => {
-                          toggleSelected(message.id);
-                        }}
-                        type="button"
-                      >
-                        <DayCard days={message.days} members={people} />
-                      </button>
+                      <MessageActions {...actionsOf(message)}>
+                        <button
+                          aria-label={`${member?.name ?? ""}が共有した日にち。押すとリアクションと返信`}
+                          className="gr-message-tap"
+                          type="button"
+                        >
+                          <DayCard days={message.days} members={people} />
+                        </button>
+                      </MessageActions>
                     ) : (
                       // Like the app: the quoted line sits inside the bubble,
                       // above a thin rule, and jumps to the original.
@@ -1251,17 +1252,15 @@ function ChatPage({
                             />
                           </button>
                         )}
-                        <button
-                          aria-expanded={selected === message.id}
-                          aria-label={`${member?.name ?? ""}のメッセージ：${message.text ?? ""}。押すとリアクションと返信`}
-                          className="gr-message-tap gr-bubble-text"
-                          onClick={() => {
-                            toggleSelected(message.id);
-                          }}
-                          type="button"
-                        >
-                          {message.text}
-                        </button>
+                        <MessageActions {...actionsOf(message)}>
+                          <button
+                            aria-label={`${member?.name ?? ""}のメッセージ：${message.text ?? ""}。押すとリアクションと返信`}
+                            className="gr-message-tap gr-bubble-text"
+                            type="button"
+                          >
+                            {message.text}
+                          </button>
+                        </MessageActions>
                       </span>
                     )}
                     <small className="gr-message-time">{message.time}</small>
@@ -1294,33 +1293,6 @@ function ChatPage({
                           </small>
                         </button>
                       ))}
-                    </span>
-                  )}
-                  {selected === message.id && (
-                    <span className="gr-actions">
-                      {reactionChoices.map((emoji) => (
-                        <button
-                          aria-label={`${emoji}でリアクション`}
-                          key={emoji}
-                          onClick={() => {
-                            react(message.id, emoji);
-                          }}
-                          type="button"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                      <button
-                        className="gr-actions-reply"
-                        onClick={() => {
-                          setReplyTo(message.id);
-                          setSelected(undefined);
-                        }}
-                        type="button"
-                      >
-                        <Reply aria-hidden="true" size={15} />
-                        返信
-                      </button>
                     </span>
                   )}
                 </span>
@@ -1393,6 +1365,198 @@ function ChatPage({
 }
 
 const flashMilliseconds = 1200;
+
+const messageActions = {
+  // The message the actions are for stays bright above the dimming.
+  lifted: css({ position: "relative", zIndex: 25 }),
+  scrim: css({
+    animation: "fadeIn 0.2s ease-out",
+    bg: "var(--scrim)",
+    inset: 0,
+    position: "absolute",
+    zIndex: 20,
+  }),
+  // The reactions and the menu, a little apart, as the platforms' context
+  // menus put them: nothing drawn around the two.
+  content: css({
+    _closed: { animation: "fadeOut 0.12s ease-in" },
+    _open: { animation: "popIn 0.15s ease-out" },
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    outline: "none",
+    zIndex: 30,
+  }),
+  menu: css({
+    bg: "raised",
+    border: "1px solid token(colors.border)",
+    borderRadius: "14px",
+    boxShadow: "0 8px 24px var(--shadow-strong)",
+    minWidth: "170px",
+    overflow: "hidden",
+  }),
+  menuItem: css({
+    "& + &": { borderTop: "1px solid token(colors.separator)" },
+    _focusVisible: {
+      outline: "2px solid token(colors.accent)",
+      outlineOffset: "-2px",
+    },
+    _hover: { bg: "fill2" },
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    color: "text",
+    display: "flex",
+    fontSize: "14px",
+    justifyContent: "space-between",
+    padding: "11px 14px",
+    width: "100%",
+  }),
+  menuIcon: css({ color: "text3" }),
+  reaction: css({
+    _focusVisible: { outline: "2px solid token(colors.accent)" },
+    _hover: { bg: "fill2" },
+    bg: "transparent",
+    border: 0,
+    borderRadius: "50%",
+    display: "grid",
+    fontSize: "19px",
+    height: "34px",
+    padding: 0,
+    placeItems: "center",
+    width: "34px",
+  }),
+  reactions: css({
+    alignItems: "center",
+    bg: "raised",
+    border: "1px solid token(colors.border)",
+    borderRadius: "22px",
+    boxShadow: "0 4px 14px var(--shadow)",
+    display: "flex",
+    gap: "2px",
+    padding: "4px",
+  }),
+  // Your own messages sit on the right, and so do their actions.
+  end: css({ alignItems: "flex-end" }),
+  start: css({ alignItems: "flex-start" }),
+};
+
+// Reactions, and a little apart the menu of 返信 and コピー, as the
+// platforms' context menus on a message in LINE and iMessage: the rest of
+// the screen dims while the message stays bright. Ark UI's
+// Popover opens it from the message, moves focus in, and closes it by a
+// tap elsewhere or Escape.
+function MessageActions({
+  open,
+  onOpenChange,
+  mine,
+  text,
+  onReact,
+  onReply,
+  children,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  mine: boolean;
+  // What コピー copies; shared days have none.
+  text?: string;
+  onReact: (emoji: string) => void;
+  onReply: () => void;
+  // The message itself, a button that opens this.
+  children: ReactElement;
+}) {
+  const phone = useContext(PhoneContext);
+  const toast = useContext(ToastContext);
+  // Focus lands on the whole, as in a sheet, not on 👍 with a ring.
+  const contentRef = useRef<HTMLDivElement>(null);
+  const copy = async () => {
+    onOpenChange(false);
+    try {
+      await navigator.clipboard.writeText(text ?? "");
+      toast("コピーしました");
+    } catch {
+      toast("コピーできませんでした");
+    }
+  };
+  return (
+    <Popover.Root
+      initialFocusEl={() => contentRef.current}
+      lazyMount
+      onOpenChange={(details) => {
+        onOpenChange(details.open);
+      }}
+      open={open}
+      positioning={{
+        gutter: 8,
+        placement: mine ? "bottom-end" : "bottom-start",
+      }}
+      unmountOnExit
+    >
+      <Popover.Trigger asChild>{children}</Popover.Trigger>
+      <Portal container={phone ?? undefined}>
+        {/* Everything but the message dims, so it is clear which one the
+            actions are for; a tap on it closes them. */}
+        {open && <div aria-hidden="true" className={messageActions.scrim} />}
+        <Popover.Positioner>
+          <Popover.Content
+            aria-label="リアクションとメニュー"
+            ref={contentRef}
+            className={cx(
+              messageActions.content,
+              mine ? messageActions.end : messageActions.start
+            )}
+          >
+            <div className={messageActions.reactions}>
+              {reactionChoices.map((emoji) => (
+                <button
+                  aria-label={`${emoji}でリアクション`}
+                  className={messageActions.reaction}
+                  key={emoji}
+                  onClick={() => {
+                    onReact(emoji);
+                  }}
+                  type="button"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+            <div className={messageActions.menu}>
+              <button
+                className={messageActions.menuItem}
+                onClick={onReply}
+                type="button"
+              >
+                返信
+                <Reply
+                  aria-hidden="true"
+                  className={messageActions.menuIcon}
+                  size={17}
+                />
+              </button>
+              {text && (
+                <button
+                  className={messageActions.menuItem}
+                  onClick={() => {
+                    copy().catch(() => undefined);
+                  }}
+                  type="button"
+                >
+                  コピー
+                  <Copy
+                    aria-hidden="true"
+                    className={messageActions.menuIcon}
+                    size={17}
+                  />
+                </button>
+              )}
+            </div>
+          </Popover.Content>
+        </Popover.Positioner>
+      </Portal>
+    </Popover.Root>
+  );
+}
 
 function summaryOf(message: Message) {
   const [first] = message.days ?? [];
