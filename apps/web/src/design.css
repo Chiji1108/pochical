@@ -730,7 +730,7 @@
     margin: 0;
     border: 0;
   }
-  .dc-detail-patterns button {
+  .dc-detail-patterns [data-part="item"] {
     display: inline-flex;
     gap: 4px;
     align-items: center;
@@ -741,7 +741,7 @@
     border: 1px solid var(--border);
     border-radius: 18px;
   }
-  .dc-detail-patterns button[aria-pressed="true"] {
+  .dc-detail-patterns [data-part="item"][data-state="checked"] {
     font-weight: 600;
     color: var(--on-accent-fill);
     background: var(--accent-fill);
@@ -1443,7 +1443,7 @@
     margin: 0;
     border: 0;
   }
-  .design-page .pe-grid button {
+  .design-page .pe-grid [data-part="item"] {
     display: grid;
     place-items: center;
     aspect-ratio: 1;
@@ -1452,7 +1452,7 @@
     border: 1.5px solid transparent;
     border-radius: 10px;
   }
-  .design-page .pe-grid button[aria-pressed="true"] {
+  .design-page .pe-grid [data-part="item"][data-state="checked"] {
     background: var(--surface);
     border-color: var(--accent);
   }
@@ -1467,13 +1467,13 @@
   }
   /* A tint circle ringed in its own text color; the chosen one gets a thick
    ring. */
-  .design-page .pe-colors button {
+  .design-page .pe-colors [data-part="item"] {
     width: 36px;
     height: 36px;
     border: 2px solid currentcolor;
     border-radius: 50%;
   }
-  .design-page .pe-colors button[aria-pressed="true"] {
+  .design-page .pe-colors [data-part="item"][data-state="checked"] {
     box-shadow:
       0 0 0 3px var(--bg),
       0 0 0 5px currentcolor;
@@ -1531,7 +1531,10 @@
     border: 1px solid var(--separator);
     border-radius: 10px;
   }
-  .design-page .st-preview-scheme button {
+  .st-preview-scheme-choices {
+    display: contents;
+  }
+  .design-page .st-preview-scheme [data-part="item"] {
     display: grid;
     place-items: center;
     width: 24px;
@@ -1542,7 +1545,7 @@
     border: 0;
     border-radius: 7px;
   }
-  .design-page .st-preview-scheme button[aria-pressed="true"] {
+  .design-page .st-preview-scheme [data-part="item"][data-state="checked"] {
     color: var(--text);
     background: var(--fill-2);
   }
@@ -1566,7 +1569,7 @@
   }
   /* A colored icon would sink into the green, so it turns white like the
    text; emoji and letters on their tile keep their own colors. */
-  .dc-detail-patterns button[aria-pressed="true"] .sm-icon {
+  .dc-detail-patterns [data-part="item"][data-state="checked"] .sm-icon {
     fill: var(--on-accent-fill);
   }
   /* アカウント before signing in: what it keeps, then the two ways in. */
@@ -1766,7 +1769,7 @@
     margin: 0;
     border: 0;
   }
-  .design-page .st-theme-grid button {
+  .design-page .st-theme-grid [data-part="item"] {
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -1778,7 +1781,7 @@
     border: 2px solid transparent;
     border-radius: 16px;
   }
-  .design-page .st-theme-grid button[aria-pressed="true"] {
+  .design-page .st-theme-grid [data-part="item"][data-state="checked"] {
     font-weight: 600;
     color: var(--text);
     background: var(--surface);
@@ -1798,12 +1801,12 @@
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 2px;
   }
-  .design-page .st-theme-row button {
+  .design-page .st-theme-row [data-part="item"] {
     padding: 5px 0;
     background: transparent;
     border-width: 0;
   }
-  .design-page .st-theme-row button[aria-pressed="true"] {
+  .design-page .st-theme-row [data-part="item"][data-state="checked"] {
     background: transparent;
   }
   .st-tone-dot.st-theme-dot {
@@ -1816,7 +1819,10 @@
     height: 30px;
     border: 0;
   }
-  .design-page .st-theme-row button[aria-pressed="true"] .st-theme-dot {
+  .design-page
+    .st-theme-row
+    [data-part="item"][data-state="checked"]
+    .st-theme-dot {
     box-shadow:
       0 0 0 3px var(--bg),
       0 0 0 5px var(--accent);
@@ -2029,7 +2035,7 @@
     scroll-padding-inline: 19px;
     border: 0;
   }
-  .design-page .gr-people button {
+  .design-page .gr-people [data-part="item"] {
     display: inline-flex;
     flex-shrink: 0;
     gap: 6px;
@@ -2042,7 +2048,7 @@
     border: 1px solid transparent;
     border-radius: 18px;
   }
-  .design-page .gr-people button[aria-pressed="true"] {
+  .design-page .gr-people [data-part="item"][data-state="checked"] {
     font-weight: 600;
     color: var(--text);
     background: var(--surface);
@@ -3660,15 +3666,6 @@
     background: var(--danger);
   }
   /* A settings list whose rows are the choices, like 外観. */
-  .st-choice-list {
-    min-width: 0;
-    padding: 0;
-    margin: 0;
-    border: 0;
-  }
-  .st-choice-list .st-work-check {
-    margin-left: auto;
-  }
   /* Phones show scroll indicators only while scrolling; hide the desktop
    browser's scrollbars inside the mockups. */
   .dc-phone,
@@ -3755,7 +3752,7 @@
     border: 1px solid transparent;
     border-radius: 20px;
   }
-  .design-page .ai-choice[aria-pressed="true"] {
+  .design-page .ai-choice[data-state="checked"] {
     color: var(--text);
     border-color: var(--border-strong);
   }
@@ -3833,7 +3830,7 @@
     margin: 8px 0 20px;
     border: 0;
   }
-  .design-page .st-app-icons button {
+  .design-page .st-app-icons [data-part="item"] {
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -3845,7 +3842,7 @@
     border: 2px solid transparent;
     border-radius: 24px;
   }
-  .design-page .st-app-icons button[aria-pressed="true"] {
+  .design-page .st-app-icons [data-part="item"][data-state="checked"] {
     color: var(--text);
     background: var(--fill);
     border-color: var(--accent-muted);
@@ -3904,8 +3901,6 @@
     color: var(--text-3);
   }
   /* Two lines each, the name over the start of the row it read. */
-  .im-row,
-  .im-row .st-row-label,
   .im-row-codes {
     font-size: 11px;
     font-weight: 400;

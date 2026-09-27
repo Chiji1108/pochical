@@ -1,4 +1,4 @@
-import { Check, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useContext, useState } from "react";
 import { cx } from "styled-system/css";
 
@@ -9,6 +9,8 @@ import { LookEditorPage } from "./design-look-editor";
 import type { LookField } from "./design-look-editor";
 import {
   BackButton,
+  ChoiceList,
+  ChoiceRow,
   HeaderAction,
   List,
   ListRow,
@@ -494,6 +496,9 @@ function PatternEditor({
   );
 }
 
+// The value of なし among the patterns' ids.
+const noNextDay = "none";
+
 function NextDayPicker({
   draft,
   others,
@@ -518,27 +523,25 @@ function NextDayPicker({
         {draft.name || "このパターン"}
         を入れると、翌日にも自動でシフトが入ります。夜勤の翌日の明けなどに使います。
       </p>
-      <List>
+      <ChoiceList
+        label="翌日のパターン"
+        onValueChange={(id) => {
+          onChange(id === noNextDay ? undefined : id);
+          onBack();
+        }}
+        value={draft.nextDay ?? noNextDay}
+      >
         {choices.map((choice) => (
-          <ListRow
-            aria-pressed={draft.nextDay === choice?.id}
-            key={choice?.id ?? "none"}
-            onClick={() => {
-              onChange(choice?.id);
-              onBack();
-            }}
+          <ChoiceRow
+            key={choice?.id ?? noNextDay}
             label={choice?.name ?? "なし"}
             leading={
               choice && <MarkGlyph look={choice} size={20} style={style} />
             }
-            control={
-              draft.nextDay === choice?.id && (
-                <Check aria-hidden="true" className="pe-check-mark" size={18} />
-              )
-            }
+            value={choice?.id ?? noNextDay}
           />
         ))}
-      </List>
+      </ChoiceList>
     </>
   );
 }

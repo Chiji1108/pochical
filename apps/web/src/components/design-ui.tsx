@@ -1,4 +1,4 @@
-import { Menu, SegmentGroup, Switch } from "@ark-ui/react";
+import { Menu, RadioGroup, SegmentGroup, Switch } from "@ark-ui/react";
 import {
   closestCenter,
   DndContext,
@@ -25,7 +25,13 @@ import {
   GripVertical,
 } from "lucide-react";
 import { createContext, useContext } from "react";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type {
+  ButtonHTMLAttributes,
+  CSSProperties,
+  LabelHTMLAttributes,
+  ReactNode,
+  Ref,
+} from "react";
 import { css, cva, cx } from "styled-system/css";
 
 // The shared pieces the screens are built from, each the one place its
@@ -659,6 +665,150 @@ export function Segment({
       </SegmentGroup.ItemText>
       <SegmentGroup.ItemHiddenInput aria-label={label} />
     </SegmentGroup.Item>
+  );
+}
+
+// One of several, laid out as the place likes: icons, colors, emoji,
+// app icons. As SwiftUI's Picker in a grid and Compose's selectable
+// tiles; Ark UI's RadioGroup makes each a radio button, so arrow keys move
+// the pick and a screen reader says which of how many it is. The look of
+// each choice, picked or not, is the place's, through className and
+// [data-state=checked].
+export function ChoiceGrid<Value extends string>({
+  label,
+  value,
+  onValueChange,
+  className,
+  labelClassName = "dc-sr-only",
+  ref,
+  children,
+}: {
+  // What is being picked; hidden unless labelClassName shows it.
+  label: string;
+  value: Value | null;
+  onValueChange: (value: Value) => void;
+  className?: string;
+  labelClassName?: string;
+  ref?: Ref<HTMLDivElement>;
+  children: ReactNode;
+}) {
+  return (
+    <RadioGroup.Root
+      className={className}
+      ref={ref}
+      onValueChange={(details) => {
+        if (details.value !== null) {
+          onValueChange(details.value as Value);
+        }
+      }}
+      value={value}
+    >
+      <RadioGroup.Label className={labelClassName}>{label}</RadioGroup.Label>
+      {children}
+    </RadioGroup.Root>
+  );
+}
+
+// The focus ring sits outside a tile, and inside a row, whose list clips.
+const choiceStyle = cva({
+  base: {
+    _focusVisible: { outline: "2px solid token(colors.accent)" },
+    cursor: "pointer",
+  },
+  variants: {
+    ring: {
+      inside: { _focusVisible: { outlineOffset: "-2px" } },
+      outside: { _focusVisible: { outlineOffset: "2px" } },
+    },
+  },
+});
+
+// One choice in a ChoiceGrid or ChoiceList. `label` names it for a screen
+// reader when it shows no words, like a color.
+export function Choice({
+  value,
+  label,
+  ring = "outside",
+  className,
+  style,
+  children,
+  ...rest
+}: {
+  value: string;
+  label?: string;
+  ring?: "inside" | "outside";
+  className?: string;
+  style?: CSSProperties;
+  children?: ReactNode;
+} & Omit<LabelHTMLAttributes<HTMLLabelElement>, "onChange">) {
+  return (
+    <RadioGroup.Item
+      className={cx(choiceStyle({ ring }), className)}
+      style={style}
+      value={value}
+      {...rest}
+    >
+      {children}
+      <RadioGroup.ItemHiddenInput aria-label={label} />
+    </RadioGroup.Item>
+  );
+}
+
+// One of several as rows with a check on the picked one, as iOS's
+// inset list picker and Android's list of radio items.
+export function ChoiceList<Value extends string>({
+  label,
+  value,
+  onValueChange,
+  children,
+}: {
+  label: string;
+  value: Value | null;
+  onValueChange: (value: Value) => void;
+  children: ReactNode;
+}) {
+  return (
+    <ChoiceGrid
+      className={listStyle}
+      label={label}
+      onValueChange={onValueChange}
+      value={value}
+    >
+      {children}
+    </ChoiceGrid>
+  );
+}
+
+const choiceRowHover = css({ _hover: { bg: "fill2" } });
+
+const choiceRowCheck = css({
+  "[data-state=checked] > &": { visibility: "visible" },
+  color: "accent",
+  flexShrink: 0,
+  marginLeft: "auto",
+  visibility: "hidden",
+});
+
+export function ChoiceRow({
+  value,
+  label,
+  leading,
+}: {
+  value: string;
+  label: ReactNode;
+  leading?: ReactNode;
+}) {
+  return (
+    <Choice
+      className={cx(listRow.root, choiceRowHover)}
+      data-list-row=""
+      ring="inside"
+      value={value}
+    >
+      {leading && <span className={listRow.leading}>{leading}</span>}
+      <span className={cx(listRow.label, listRow.labelGrow)}>{label}</span>
+      <Check aria-hidden="true" className={choiceRowCheck} size={20} />
+    </Choice>
   );
 }
 

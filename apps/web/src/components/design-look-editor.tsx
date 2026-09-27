@@ -2,6 +2,8 @@ import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 
 import {
+  Choice,
+  ChoiceGrid,
   List,
   ListRow,
   PageHeader,
@@ -184,22 +186,20 @@ function IconGrid({
   onPick: (field: LookField, value: Partial<Look>) => void;
 }) {
   return (
-    <fieldset className="pe-grid">
-      <legend className="dc-sr-only">アイコン</legend>
+    <ChoiceGrid
+      className="pe-grid"
+      label="アイコン"
+      onValueChange={(icon) => {
+        onPick("icon", { icon });
+      }}
+      value={look.icon ?? null}
+    >
       {icons.map((icon) => (
-        <button
-          aria-label={iconNames[icon]}
-          aria-pressed={look.icon === icon}
-          key={icon}
-          onClick={() => {
-            onPick("icon", { icon });
-          }}
-          type="button"
-        >
+        <Choice key={icon} label={iconNames[icon]} value={icon}>
           <MarkGlyph look={{ ...look, icon }} size={20} style="icon" />
-        </button>
+        </Choice>
       ))}
-    </fieldset>
+    </ChoiceGrid>
   );
 }
 
@@ -214,21 +214,20 @@ function EmojiGrid({
 }) {
   return (
     <>
-      <fieldset className="pe-grid">
-        <legend className="dc-sr-only">絵文字</legend>
+      <ChoiceGrid
+        className="pe-grid"
+        label="絵文字"
+        onValueChange={(emoji) => {
+          onPick("emoji", { emoji });
+        }}
+        value={look.emoji ?? null}
+      >
         {emojis.map((emoji) => (
-          <button
-            aria-pressed={look.emoji === emoji}
-            key={emoji}
-            onClick={() => {
-              onPick("emoji", { emoji });
-            }}
-            type="button"
-          >
+          <Choice key={emoji} value={emoji}>
             <MarkGlyph look={{ ...look, emoji }} size={20} style="emoji" />
-          </button>
+          </Choice>
         ))}
-      </fieldset>
+      </ChoiceGrid>
       <input
         aria-label="ほかの絵文字を入力"
         className="dc-detail-note"
@@ -290,21 +289,24 @@ function ColorPicker({
   const { monochrome } = useContext(MonochromeContext);
   return (
     <>
-      <fieldset className="pe-colors">
-        <legend className="dc-repeat-label pe-colors-label">色</legend>
+      <ChoiceGrid
+        className="pe-colors"
+        label="色"
+        labelClassName="dc-repeat-label pe-colors-label"
+        onValueChange={(value) => {
+          onPick("color", { color: Number(value) });
+        }}
+        value={String(look.color)}
+      >
         {colors.map(({ name, color, tint }, index) => (
-          <button
-            aria-label={name}
-            aria-pressed={look.color === index}
+          <Choice
             key={name}
-            onClick={() => {
-              onPick("color", { color: index });
-            }}
+            label={name}
             style={{ background: tint, color }}
-            type="button"
+            value={String(index)}
           />
         ))}
-      </fieldset>
+      </ChoiceGrid>
       {/* In a single theme color every mark takes that color, so say when
           this choice shows. */}
       {monochrome && (

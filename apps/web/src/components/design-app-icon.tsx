@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { Choice, ChoiceGrid } from "./design-ui";
+
 // The app icon from the poodle drawing: black lines on white. The outside
 // of the dog is found by flooding in from the edges, so the ground can take
 // a color while the dog stays white.
@@ -359,17 +361,14 @@ export function DesignAppIcon() {
   const src = icons[picked];
   return (
     <div className="ai-study">
-      <div className="ai-choices">
+      <ChoiceGrid
+        className="ai-choices"
+        label="アイコンの色"
+        onValueChange={setPicked}
+        value={picked}
+      >
         {pickableIcons.map((option) => (
-          <button
-            aria-pressed={picked === option.id}
-            className="ai-choice"
-            key={option.id}
-            onClick={() => {
-              setPicked(option.id);
-            }}
-            type="button"
-          >
+          <Choice className="ai-choice" key={option.id} value={option.id}>
             <AppIcon size={96} src={icons[option.id]} />
             <span>{option.name}</span>
             {/* On a home screen set to dark icons. */}
@@ -380,9 +379,9 @@ export function DesignAppIcon() {
               />
               暗い見た目
             </span>
-          </button>
+          </Choice>
         ))}
-      </div>
+      </ChoiceGrid>
       <div className="ai-sizes">
         {homeSizes.map(({ label, size }) => (
           <figure key={label}>

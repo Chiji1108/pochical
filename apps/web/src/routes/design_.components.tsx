@@ -28,6 +28,10 @@ import {
   Button,
   Chip,
   ChipGroup,
+  Choice,
+  ChoiceGrid,
+  ChoiceList,
+  ChoiceRow,
   HeaderAction,
   IconButton,
   List,
@@ -99,6 +103,7 @@ function Surface() {
       <Buttons />
       <Rows />
       <Switches />
+      <Choices />
       <Chips />
       <Sheets />
       <Pochical />
@@ -298,6 +303,55 @@ function Switches() {
             </Segment>
           ))}
         </SegmentedControl>
+      </Item>
+    </Group>
+  );
+}
+
+const sampleColors = ["#5b7a55", "#c29a4a", "#c9796a", "#7a86c4", "#9a9a94"];
+
+function Choices() {
+  const [color, setColor] = useState("0");
+  const [appearance, setAppearance] = useState("system");
+  return (
+    <Group
+      note="いくつかから1つを選ぶところ。ChoiceGrid に Choice を並べ、見た目(色の丸、アイコン、アプリアイコン)はその場所が決めます。行で選ぶときは ChoiceList と ChoiceRow で、選んだ行にチェックが付きます。Ark UI の RadioGroup なので矢印キーで選べます。SwiftUI の Picker、Compose の selectable にあたります。"
+      title="1つを選ぶ"
+    >
+      <Item
+        name="ChoiceGrid"
+        where="色、アイコン、絵文字、アプリアイコン、表示する人"
+      >
+        <ChoiceGrid
+          className="pe-colors"
+          label="色"
+          onValueChange={setColor}
+          value={color}
+        >
+          {sampleColors.map((sample, index) => (
+            <Choice
+              key={sample}
+              label={`色${index + 1}`}
+              style={{ background: sample, color: sample }}
+              value={String(index)}
+            />
+          ))}
+        </ChoiceGrid>
+      </Item>
+      <Item
+        name="ChoiceList"
+        where="外観、翌日のパターン、取り込みの自分の行"
+        wide
+      >
+        <ChoiceList
+          label="外観"
+          onValueChange={setAppearance}
+          value={appearance}
+        >
+          <ChoiceRow label="端末に合わせる" value="system" />
+          <ChoiceRow label="ライト" value="light" />
+          <ChoiceRow label="ダーク" value="dark" />
+        </ChoiceList>
       </Item>
     </Group>
   );

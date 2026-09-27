@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
-import { cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
@@ -53,6 +52,10 @@ import type { Appearance, ColorChoice } from "./design-theme";
 import {
   Button,
   ChipGroup,
+  Choice,
+  ChoiceGrid,
+  ChoiceList,
+  ChoiceRow,
   List,
   ListRow,
   PageHeader,
@@ -60,7 +63,6 @@ import {
   SegmentedControl,
   SwitchRow,
   Tag,
-  listStyle,
 } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
 import type { ColoredDay } from "./design-week";
@@ -1540,20 +1542,17 @@ function AppIconPage({ onBack }: { onBack: () => void }) {
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="アプリアイコン" />
-      <fieldset className="st-app-icons">
-        <legend className="dc-sr-only">アプリアイコン</legend>
+      <ChoiceGrid
+        className="st-app-icons"
+        label="アプリアイコン"
+        onValueChange={(id) => {
+          setIcon(id);
+          setAlerted(true);
+        }}
+        value={icon}
+      >
         {pickableIcons.map((option) => (
-          <button
-            aria-pressed={icon === option.id}
-            key={option.id}
-            onClick={() => {
-              if (icon !== option.id) {
-                setIcon(option.id);
-                setAlerted(true);
-              }
-            }}
-            type="button"
-          >
+          <Choice key={option.id} value={option.id}>
             <AppIcon size={104} src={icons[option.id]} />
             <span className="st-app-icon-name">
               {icon === option.id && (
@@ -1565,9 +1564,9 @@ function AppIconPage({ onBack }: { onBack: () => void }) {
               )}
               {option.name}
             </span>
-          </button>
+          </Choice>
         ))}
-      </fieldset>
+      </ChoiceGrid>
       {alerted && (
         <SystemAlert
           onClose={() => {
@@ -1623,24 +1622,15 @@ function AppearancePage({ onBack }: { onBack: () => void }) {
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="外観" />
-      <fieldset className={cx(listStyle, "st-choice-list")}>
-        <legend className="dc-sr-only">外観</legend>
+      <ChoiceList label="外観" onValueChange={setAppearance} value={appearance}>
         {appearanceOptions.map((option) => (
-          <ListRow
-            aria-pressed={appearance === option.appearance}
+          <ChoiceRow
             key={option.appearance}
-            onClick={() => {
-              setAppearance(option.appearance);
-            }}
             label={option.name}
-            control={
-              appearance === option.appearance ? (
-                <Check aria-hidden="true" className="st-work-check" size={20} />
-              ) : null
-            }
+            value={option.appearance}
           />
         ))}
-      </fieldset>
+      </ChoiceList>
       <p className="st-note">
         端末に合わせると、スマホの設定に合わせてライトとダークが切り替わります。
       </p>
@@ -1792,21 +1782,17 @@ function ColorChoices() {
   const color = useSettings((state) => state.groupLook.color);
   const setColor = useSettings((state) => state.setColor);
   return (
-    <fieldset className="st-theme-grid st-theme-row">
-      <legend className="dc-sr-only">カラー</legend>
+    <ChoiceGrid
+      className="st-theme-grid st-theme-row"
+      label="カラー"
+      onValueChange={setColor}
+      value={color}
+    >
       {colorChoices.map((option) => (
-        <button
-          aria-label={option.name}
-          aria-pressed={color === option.color}
-          key={option.color}
-          onClick={() => {
-            setColor(option.color);
-          }}
-          type="button"
-        >
+        <Choice key={option.color} label={option.name} value={option.color}>
           <ColorSwatch className="st-theme-dot" color={option.color} />
-        </button>
+        </Choice>
       ))}
-    </fieldset>
+    </ChoiceGrid>
   );
 }

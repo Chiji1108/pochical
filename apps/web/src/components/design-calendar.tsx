@@ -39,7 +39,14 @@ import type { SettingsPage } from "./design-settings";
 import { PhoneContext, Sheet, SheetHeading } from "./design-sheet";
 import { useThemeStyle } from "./design-theme";
 import { PhoneToasts, ToastContext, usePhoneToaster } from "./design-toast";
-import { Button, Chip, ChipGroup, IconButton } from "./design-ui";
+import {
+  Button,
+  Chip,
+  ChipGroup,
+  Choice,
+  ChoiceGrid,
+  IconButton,
+} from "./design-ui";
 import { holidayName, holidayNameOfKey, useWeek } from "./design-week";
 import {
   CellNamesContext,
@@ -1788,21 +1795,21 @@ function DayDetail({
   }
   return (
     <div className="dc-detail">
-      <fieldset aria-label="シフト" className="dc-detail-patterns">
+      <ChoiceGrid
+        className="dc-detail-patterns"
+        label="シフト"
+        onValueChange={(key) => {
+          onChange(keepDetails(entry, key));
+        }}
+        value={entry?.shift ?? null}
+      >
         {patternKeys.map((key) => (
-          <button
-            aria-pressed={entry?.shift === key}
-            key={key}
-            onClick={() => {
-              onChange(keepDetails(entry, key));
-            }}
-            type="button"
-          >
+          <Choice key={key} value={key}>
             <ShiftMark shift={key} size={14} />
             {patterns[key].label}
-          </button>
+          </Choice>
         ))}
-      </fieldset>
+      </ChoiceGrid>
       {entry ? (
         <>
           {time && (

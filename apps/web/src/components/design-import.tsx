@@ -1,4 +1,3 @@
-import { Check } from "lucide-react";
 import { useState } from "react";
 import type { CSSProperties } from "react";
 import { css, cx } from "styled-system/css";
@@ -12,6 +11,8 @@ import {
   Button,
   Chip,
   ChipGroup,
+  ChoiceList,
+  ChoiceRow,
   List,
   ListRow,
   PageHeader,
@@ -252,14 +253,16 @@ export function ImportReviewPage({
               勤務表から{roster.length}
               人分を読み取りました。あなたの名前を選んでください。次からは、同じ名前の行を使います。
             </p>
-            <List>
+            <ChoiceList
+              label="あなたの名前"
+              onValueChange={(value) => {
+                setMyRow(Number(value));
+              }}
+              value={myRow === undefined ? null : String(myRow)}
+            >
               {roster.map((row, index) => (
-                <ListRow
-                  aria-pressed={myRow === index}
+                <ChoiceRow
                   key={row.name}
-                  onClick={() => {
-                    setMyRow(index);
-                  }}
                   label={
                     <>
                       {row.name}
@@ -268,19 +271,10 @@ export function ImportReviewPage({
                       </small>
                     </>
                   }
-                  control={
-                    myRow === index && (
-                      <Check
-                        aria-hidden="true"
-                        className="st-work-check"
-                        size={20}
-                      />
-                    )
-                  }
-                  className="im-row"
+                  value={String(index)}
                 />
               ))}
-            </List>
+            </ChoiceList>
             <Button
               variant="primary"
               className="ob-push im-next"

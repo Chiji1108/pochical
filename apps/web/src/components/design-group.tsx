@@ -52,6 +52,8 @@ import { ToastContext } from "./design-toast";
 import {
   BackButton,
   Button,
+  Choice,
+  ChoiceGrid,
   HeaderAction,
   IconButton,
   List,
@@ -2748,7 +2750,7 @@ function PeoplePicker({
   picked: Member;
   onPick: (id: string) => void;
 }) {
-  const listRef = useRef<HTMLFieldSetElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   // Keep the chosen person in sight, sideways only, so the page itself does
   // not jump.
   useEffect(() => {
@@ -2768,23 +2770,20 @@ function PeoplePicker({
     }
   }, [picked.id]);
   return (
-    <fieldset className="gr-people" ref={listRef}>
-      <legend className="dc-sr-only">表示する人</legend>
+    <ChoiceGrid
+      className="gr-people"
+      label="表示する人"
+      onValueChange={onPick}
+      ref={listRef}
+      value={picked.id}
+    >
       {members.map((member) => (
-        <button
-          aria-pressed={member.id === picked.id}
-          data-member={member.id}
-          key={member.id}
-          onClick={() => {
-            onPick(member.id);
-          }}
-          type="button"
-        >
+        <Choice data-member={member.id} key={member.id} value={member.id}>
           <Avatar member={member} />
           {member.name}
-        </button>
+        </Choice>
       ))}
-    </fieldset>
+    </ChoiceGrid>
   );
 }
 
@@ -3775,22 +3774,24 @@ function GroupMarkPage({
       </SegmentedControl>
       {kind === "emoji" && (
         <>
-          <fieldset className="pe-grid">
-            <legend className="dc-sr-only">絵文字</legend>
+          <ChoiceGrid
+            className="pe-grid"
+            label="絵文字"
+            onValueChange={(emoji) => {
+              onChange({ emoji, kind: "emoji" });
+            }}
+            value={mark.kind === "emoji" ? mark.emoji : null}
+          >
             {groupEmojis.map((emoji) => (
-              <button
-                aria-pressed={mark.kind === "emoji" && mark.emoji === emoji}
+              <Choice
                 className="gr-mark-choice-emoji"
                 key={emoji}
-                onClick={() => {
-                  onChange({ emoji, kind: "emoji" });
-                }}
-                type="button"
+                value={emoji}
               >
                 {emoji}
-              </button>
+              </Choice>
             ))}
-          </fieldset>
+          </ChoiceGrid>
           <input
             aria-label="ほかの絵文字を入力"
             className="dc-detail-note"
@@ -3810,26 +3811,24 @@ function GroupMarkPage({
       )}
       {kind === "icon" && (
         <>
-          <fieldset className="pe-grid">
-            <legend className="dc-sr-only">アイコン</legend>
+          <ChoiceGrid
+            className="pe-grid"
+            label="アイコン"
+            onValueChange={(icon) => {
+              onChange({ color, icon, kind: "icon" });
+            }}
+            value={mark.kind === "icon" ? mark.icon : null}
+          >
             {groupIcons.map((icon) => (
-              <button
-                aria-label={iconNames[icon]}
-                aria-pressed={mark.kind === "icon" && mark.icon === icon}
-                key={icon}
-                onClick={() => {
-                  onChange({ color, icon, kind: "icon" });
-                }}
-                type="button"
-              >
+              <Choice key={icon} label={iconNames[icon]} value={icon}>
                 <GroupIcon
                   bare
                   mark={{ color, icon, kind: "icon" }}
                   size={22}
                 />
-              </button>
+              </Choice>
             ))}
-          </fieldset>
+          </ChoiceGrid>
           <MarkColors
             color={color}
             onPick={(value) => {
@@ -3889,21 +3888,24 @@ function MarkColors({
 }) {
   const colors = useMarkColors();
   return (
-    <fieldset className="pe-colors">
-      <legend className="dc-repeat-label pe-colors-label">色</legend>
+    <ChoiceGrid
+      className="pe-colors"
+      label="色"
+      labelClassName="dc-repeat-label pe-colors-label"
+      onValueChange={(value) => {
+        onPick(Number(value));
+      }}
+      value={String(color)}
+    >
       {colors.map((option, index) => (
-        <button
-          aria-label={option.name}
-          aria-pressed={color === index}
+        <Choice
           key={option.name}
-          onClick={() => {
-            onPick(index);
-          }}
+          label={option.name}
           style={{ background: option.tint, color: option.color }}
-          type="button"
+          value={String(index)}
         />
       ))}
-    </fieldset>
+    </ChoiceGrid>
   );
 }
 

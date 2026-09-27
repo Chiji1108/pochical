@@ -6,6 +6,7 @@ import { neutralStyle } from "../lib/design-tokens";
 import type { ColorScheme, NeutralTint, Tone } from "../lib/design-tokens";
 import { hexToOklch } from "../lib/oklch";
 import { toneNeutrals, toneRoles } from "../lib/tones";
+import { Choice, ChoiceGrid } from "./design-ui";
 
 // Accent palettes for the app. Each sets the variables design.css reads
 // inside the phone; the shift colors stay as they are. `dark` holds the same
@@ -319,21 +320,21 @@ export function PreviewSchemeSwitch({
   onPick: (scheme: ColorScheme) => void;
 }) {
   return (
-    <fieldset className="st-preview-scheme">
-      <legend className="dc-sr-only">プレビューの明るさ</legend>
-      {previewSchemes.map((option) => (
-        <button
-          aria-label={option.name}
-          aria-pressed={shown === option.scheme}
-          key={option.scheme}
-          onClick={() => {
-            onPick(option.scheme);
-          }}
-          type="button"
-        >
-          <option.Icon aria-hidden="true" size={13} />
-        </button>
-      ))}
-    </fieldset>
+    // Ark keeps the group itself relatively positioned, so a wrapper
+    // places it on the edge.
+    <div className="st-preview-scheme">
+      <ChoiceGrid
+        className="st-preview-scheme-choices"
+        label="プレビューの明るさ"
+        onValueChange={onPick}
+        value={shown}
+      >
+        {previewSchemes.map((option) => (
+          <Choice key={option.scheme} label={option.name} value={option.scheme}>
+            <option.Icon aria-hidden="true" size={13} />
+          </Choice>
+        ))}
+      </ChoiceGrid>
+    </div>
   );
 }
