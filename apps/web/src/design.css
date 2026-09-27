@@ -299,7 +299,8 @@ button.dc-day:active {
   font-size: 12px;
   color: var(--text-2);
   background: var(--fill);
-  border-radius: 13px;
+  /* The same corners as the buttons under it. */
+  border-radius: 15px;
 }
 .dc-summary strong {
   font-size: 25px;
@@ -1067,7 +1068,8 @@ body:has(.dc-breakdown[open]) {
   flex: 1;
   width: auto;
 }
-/* The same size as ポチポチ入力, one step quieter in color. */
+/* The same size as ポチポチ入力, one step quieter in color: on the same
+   ground as 今月のお休み, told apart as a button by its green label. */
 .design-page .dc-start-photo {
   display: flex;
   flex: 1;
@@ -1077,12 +1079,12 @@ body:has(.dc-breakdown[open]) {
   min-height: 52px;
   font-size: 13px;
   color: var(--accent);
-  background: var(--accent-soft);
+  background: var(--fill);
   border: 0;
   border-radius: 15px;
 }
 .design-page .dc-start-photo:hover {
-  background: var(--accent-soft-2);
+  background: var(--fill-2);
 }
 .dc-import-description {
   margin: 0 0 18px;
