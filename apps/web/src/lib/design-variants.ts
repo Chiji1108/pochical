@@ -1,19 +1,12 @@
 // Design decisions that /design lets you switch between. The first choice of
 // each entry is the current proposal and is used when the URL omits it.
 export const designVariantOptions = {
-  actionWidth: {
+  bottomRows: {
     choices: [
-      { label: "今月のお休みと揃える", value: "aligned" },
-      { label: "内側に入れる", value: "inset" },
+      { label: "いつも2段", value: "two" },
+      { label: "今のまま", value: "current" },
     ],
-    label: "入力ボタンの幅",
-  },
-  headerLayout: {
-    choices: [
-      { label: "月の横に ‹ ›", value: "title" },
-      { label: "‹ › なし（スワイプ）", value: "swipe" },
-    ],
-    label: "見出しの並び",
+    label: "下のボタン",
   },
   importAccess: {
     choices: [
@@ -49,13 +42,6 @@ export const designVariantOptions = {
       { label: "空", value: "empty" },
     ],
     label: "予定",
-  },
-  summaryPlace: {
-    choices: [
-      { label: "画面の下", value: "bottom" },
-      { label: "カレンダーの下", value: "below" },
-    ],
-    label: "今月のお休みの位置",
   },
 } as const;
 

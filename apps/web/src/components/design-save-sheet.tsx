@@ -46,6 +46,7 @@ export function SaveSheet({
   shiftCount,
   offCount,
   completion,
+  toCalendar = false,
   onImage,
 }: {
   ref: RefObject<HTMLDialogElement | null>;
@@ -54,10 +55,13 @@ export function SaveSheet({
   shiftCount: number;
   offCount: number;
   completion: boolean;
+  // Opened from カレンダーに追加: straight to choosing the calendar.
+  toCalendar?: boolean;
   // Opens the picture's preview, where it is saved or shared.
   onImage: () => void;
 }) {
-  const [step, setStep] = useState<Step>("choose");
+  const [chosenStep, setStep] = useState<Step>("choose");
+  const step = toCalendar && chosenStep === "choose" ? "calendar" : chosenStep;
   // Remembered from the last time, so adding again is a single tap.
   const [calendarId, setCalendarId] = useState<string>();
   const [includeOff, setIncludeOff] = useState(false);
@@ -92,7 +96,7 @@ export function SaveSheet({
       <section className="dc-sheet">
         <div aria-hidden="true" className="dc-sheet-handle" />
         <header className="dc-sheet-heading">
-          {step === "calendar" ? (
+          {step === "calendar" && !toCalendar ? (
             <button
               aria-label="戻る"
               className="dc-save-back"

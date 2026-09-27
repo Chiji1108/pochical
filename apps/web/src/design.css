@@ -382,10 +382,6 @@ button.dc-day:active {
 .dc-start-area {
   text-align: center;
 }
-/* The 入力ボタンの幅 variant: the buttons a little inside the card above. */
-.dc-start-inset .dc-start-area {
-  padding: 0 19px;
-}
 .design-page .dc-start {
   display: flex;
   gap: 9px;
@@ -5007,18 +5003,6 @@ button.st-row:hover {
   min-width: 0;
 }
 
-/* 今月のお休みの位置: right under the month it sums up, so the spare height
-   falls between the month and the buttons and tab bar, not inside it. */
-.dc-summary-follow .dc-content > .dc-summary {
-  margin-top: 10px;
-}
-.dc-summary-follow .dc-content > .dc-summary ~ .dc-controls {
-  margin-top: auto;
-}
-.dc-summary-follow.dc-no-input .dc-summary + .dc-nav {
-  margin-top: auto;
-}
-
 /* 休みの見せ方 空白: while entering or in the week view, a day off shows
    faintly, so it still reads apart from a day not entered yet. */
 .dc-off-faint .dc-emoji {
@@ -5256,4 +5240,20 @@ button.st-row:hover {
 .as-sources code {
   font-size: 11px;
   color: var(--text-4);
+}
+
+/* 下のボタン いつも2段: an empty month's two buttons, one above the other,
+   in the rows 今月のお休み and the buttons take on other months. */
+.dc-start-stack {
+  flex-direction: column;
+  gap: 12px;
+}
+/* ポチポチ入力 as tall as 今月のお休み, and the whole block as tall as the
+   card and the button row, so the rows stay put from month to month. */
+.design-page .dc-start-stack .dc-start {
+  flex: none;
+  min-height: 55px;
+}
+.dc-controls:has(> .dc-start-stack) {
+  min-height: 159px;
 }

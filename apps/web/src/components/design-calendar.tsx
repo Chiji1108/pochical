@@ -2,6 +2,7 @@ import {
   ArrowRight,
   BatteryFull,
   CalendarDays,
+  CalendarPlus,
   Camera,
   Check,
   ChevronDown,
@@ -304,6 +305,8 @@ export function DesignCalendar({
   const saveSheetRef = useRef<HTMLDialogElement>(null);
   // Whether the save sheet opened because the month was just filled in.
   const [saveCompletion, setSaveCompletion] = useState(false);
+  // Whether it opened straight on adding to the device calendar.
+  const [saveToCalendar, setSaveToCalendar] = useState(false);
   const [imagePreview, setImagePreview] = useState(false);
   const offDisplay = useContext(OffDisplayContext);
   // The check before a photographed roster goes in, and the line after.
@@ -393,6 +396,11 @@ export function DesignCalendar({
   // Input is offered only while the month has days to fill: a repeating
   // order fills them itself, and a filled month is fixed by tapping a day.
   const showInputBar = !repeating && unfilled > 0;
+  // The いつも2段 variant: the bottom always holds two rows, what the month
+  // is on top and what to do next under it, so the calendar keeps one
+  // height. A filled month's next step is saving it.
+  const twoRows = variants.bottomRows === "two";
+  const showSaveBar = twoRows && !showInputBar;
   const selectedDate = new Date(
     month.getFullYear(),
     month.getMonth(),
@@ -524,8 +532,9 @@ export function DesignCalendar({
       { ...rule, holidaysOff },
     ]);
   }
-  function openSave(completion: boolean) {
+  function openSave(completion: boolean, toCalendar = false) {
     setSaveCompletion(completion);
+    setSaveToCalendar(toCalendar);
     if (saveSheetRef.current) {
       showOverPhone(saveSheetRef.current, phoneRef.current);
     }
@@ -576,7 +585,7 @@ export function DesignCalendar({
   }
   return (
     <div
-      className={`dc-phone ${editing ? "dc-editing" : ""} ${weekDetail ? "dc-week-mode" : ""} ${showInputBar ? "" : "dc-no-input"} ${variants.actionWidth === "inset" ? "dc-start-inset" : ""} ${variants.summaryPlace === "below" ? "dc-summary-follow" : ""}`}
+      className={`dc-phone ${editing ? "dc-editing" : ""} ${weekDetail ? "dc-week-mode" : ""} ${showInputBar || showSaveBar ? "" : "dc-no-input"} ${twoRows ? "dc-two-rows" : ""}`}
       ref={phoneRef}
       style={themeStyle}
     >
@@ -655,13 +664,16 @@ export function DesignCalendar({
           </h3>
           <HeadingActions
             detailDate={detailDate}
-            layout={variants.headerLayout}
             mode={headingMode}
             month={month}
             onDone={finishHeading}
-            onSave={() => {
-              openSave(false);
-            }}
+            onSave={
+              twoRows
+                ? undefined
+                : () => {
+                    openSave(false);
+                  }
+            }
             onStep={step}
             onThisMonth={() => {
               goToMonth(
@@ -758,6 +770,19 @@ export function DesignCalendar({
               label="ポチポチ入力"
               onImport={openImport}
               onStart={startInput}
+              stacked={twoRows && emptyMonth}
+            />
+          </div>
+        )}
+        {headingMode === "view" && showSaveBar && (
+          <div className="dc-controls">
+            <SaveArea
+              onCalendar={() => {
+                openSave(false, true);
+              }}
+              onImage={() => {
+                setImagePreview(true);
+              }}
             />
           </div>
         )}
@@ -834,6 +859,7 @@ export function DesignCalendar({
           setImagePreview(true);
         }}
         ref={saveSheetRef}
+        toCalendar={saveToCalendar}
         shiftCount={monthDays.length - unfilled}
       />
       <ImportSheet
@@ -990,7 +1016,6 @@ function useSwipe(onSwipe: (direction: 1 | -1) => void) {
 // width of the month; 今月 (or 今日 in the week view) stays visible and is
 // disabled when there is nowhere to go back to.
 function HeadingActions({
-  layout,
   mode,
   month,
   detailDate,
@@ -1000,7 +1025,6 @@ function HeadingActions({
   onDone,
   onSave,
 }: {
-  layout: DesignVariants["headerLayout"];
   mode: "view" | "edit" | "week";
   month: Date;
   detailDate: Date | undefined;
@@ -1008,7 +1032,8 @@ function HeadingActions({
   onThisMonth: () => void;
   onToday: () => void;
   onDone: () => void;
-  onSave: () => void;
+  // Left out when saving has a row of its own at the bottom.
+  onSave?: () => void;
 }) {
   const weekTools = useWeek();
   const week = mode === "week";
@@ -1022,17 +1047,15 @@ function HeadingActions({
   return (
     <>
       <div className="dc-heading-nav">
-        {layout === "title" && (
-          <button
-            aria-label={`前の${unit}`}
-            onClick={() => {
-              onStep(-1);
-            }}
-            type="button"
-          >
-            <ChevronLeft aria-hidden="true" size={21} />
-          </button>
-        )}
+        <button
+          aria-label={`前の${unit}`}
+          onClick={() => {
+            onStep(-1);
+          }}
+          type="button"
+        >
+          <ChevronLeft aria-hidden="true" size={21} />
+        </button>
         <button
           aria-label={week ? "今日の週に戻る" : "今月に戻る"}
           className="dc-this-month"
@@ -1042,19 +1065,17 @@ function HeadingActions({
         >
           {week ? "今日" : "今月"}
         </button>
-        {layout === "title" && (
-          <button
-            aria-label={`次の${unit}`}
-            onClick={() => {
-              onStep(1);
-            }}
-            type="button"
-          >
-            <ChevronRight aria-hidden="true" size={21} />
-          </button>
-        )}
+        <button
+          aria-label={`次の${unit}`}
+          onClick={() => {
+            onStep(1);
+          }}
+          type="button"
+        >
+          <ChevronRight aria-hidden="true" size={21} />
+        </button>
       </div>
-      {mode === "view" ? (
+      {mode === "view" && onSave && (
         <button
           aria-label="この月のシフトを保存"
           className="dc-heading-icon"
@@ -1063,7 +1084,8 @@ function HeadingActions({
         >
           <Download aria-hidden="true" size={21} />
         </button>
-      ) : (
+      )}
+      {mode !== "view" && (
         <button className="dc-done" onClick={onDone} type="button">
           <Check aria-hidden="true" size={18} />
           完了
@@ -1077,13 +1099,18 @@ function StartArea({
   label,
   onStart,
   onImport,
+  stacked = false,
 }: {
   label: string;
   onStart: () => void;
   onImport: () => void;
+  // An empty month has no 今月のお休み, so the two buttons take both rows.
+  stacked?: boolean;
 }) {
   return (
-    <div className="dc-start-area dc-start-row">
+    <div
+      className={`dc-start-area dc-start-row ${stacked ? "dc-start-stack" : ""}`}
+    >
       <button className="dc-start" onClick={onStart} type="button">
         <Pencil aria-hidden="true" size={18} />
         {label}
@@ -1098,6 +1125,35 @@ function StartArea({
       >
         <Camera aria-hidden="true" size={18} />
         写真から取り込む
+      </button>
+    </div>
+  );
+}
+
+// A filled month's next step: keeping it, as a picture or in the device
+// calendar. Both quiet: a filled month is mostly looked at, and saving
+// is already offered loudly the moment it fills.
+function SaveArea({
+  onImage,
+  onCalendar,
+}: {
+  onImage: () => void;
+  onCalendar: () => void;
+}) {
+  return (
+    <div className="dc-start-area dc-start-row">
+      <button className="dc-start-photo" onClick={onImage} type="button">
+        <ImageIcon aria-hidden="true" size={18} />
+        画像で保存
+      </button>
+      <button
+        aria-haspopup="dialog"
+        className="dc-start-photo"
+        onClick={onCalendar}
+        type="button"
+      >
+        <CalendarPlus aria-hidden="true" size={18} />
+        カレンダーに追加
       </button>
     </div>
   );
