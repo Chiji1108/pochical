@@ -4835,7 +4835,8 @@ button.st-row:hover {
   font-family: "Hiragino Mincho ProN", serif;
   font-size: 17px;
   font-weight: 600;
-  color: var(--text);
+  /* A piece of the paper roster: paper and ink in the dark too. */
+  color: #2b2823;
   background: #fbf8f0;
   border: 1px solid #d9d2c2;
   border-radius: 6px;
@@ -5384,4 +5385,103 @@ button.st-row:hover {
   margin-top: 4px;
   font-size: 11px;
   color: var(--text-3);
+}
+
+/* /design/components: every piece by role, with its name in the code. */
+/* The app's own ground, light or dark as the screen is, so the pieces
+   sit on what they are drawn for. */
+.cmp-surface {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  max-width: 1100px;
+  padding: 28px 20px 40px;
+  margin: 0 auto 64px;
+  color: var(--text);
+  background: var(--bg);
+  border-radius: 24px;
+}
+.cmp-group h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+}
+.cmp-note {
+  margin: 0 0 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-3);
+}
+.cmp-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.cmp-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+.cmp-item-wide {
+  grid-column: span 2;
+}
+@media (max-width: 480px) {
+  .cmp-item-wide {
+    grid-column: auto;
+  }
+}
+.cmp-sample {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 88px;
+  padding: 16px;
+  background: var(--raised);
+  border: 1px solid var(--separator);
+  border-radius: 14px;
+}
+.cmp-sample > * {
+  max-width: 100%;
+}
+.cmp-item-wide .cmp-sample > * {
+  width: 100%;
+}
+.cmp-item figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 2px;
+}
+.cmp-item code {
+  font-size: 12px;
+  color: var(--text);
+}
+.cmp-item small {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.cmp-marks {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+/* A day as big as on a month of five weeks. */
+.cmp-cell {
+  width: 46px;
+}
+.cmp-cell .dc-day {
+  width: 100%;
+  height: 56px;
+}
+/* Sheets and the toast, drawn in place instead of over a phone. */
+.cmp-sheet.dc-sheet {
+  position: static;
+  max-height: none;
+  border-radius: 20px;
+}
+.cmp-toast.gr-toast {
+  position: static;
+  transform: none;
 }

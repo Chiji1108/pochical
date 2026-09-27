@@ -35,6 +35,12 @@ const documents = [
     to: "/design/states",
   },
   {
+    description:
+      "ボタン、行、切り替え、シートなどの部品を役割ごとに。同じ役割の重複も見えます。",
+    title: "部品の棚卸し",
+    to: "/design/components",
+  },
+  {
     description: "アプリアイコンと、元になるプードルの絵、サイトの画像。",
     title: "素材",
     to: "/design/assets",

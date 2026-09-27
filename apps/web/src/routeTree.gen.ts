@@ -18,6 +18,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AccountDeleteRouteImport } from './routes/account.delete'
 import { Route as DesignAssetsRouteImport } from './routes/design_.assets'
 import { Route as DesignColorsRouteImport } from './routes/design_.colors'
+import { Route as DesignComponentsRouteImport } from './routes/design_.components'
 import { Route as DesignFlowsRouteImport } from './routes/design_.flows'
 import { Route as DesignStatesRouteImport } from './routes/design_.states'
 import { Route as InviteInviteCodeRouteImport } from './routes/invite.$inviteCode'
@@ -67,6 +68,11 @@ const DesignColorsRoute = DesignColorsRouteImport.update({
   path: '/design/colors',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DesignComponentsRoute = DesignComponentsRouteImport.update({
+  id: '/design_/components',
+  path: '/design/components',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DesignFlowsRoute = DesignFlowsRouteImport.update({
   id: '/design_/flows',
   path: '/design/flows',
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/account/delete': typeof AccountDeleteRoute
   '/design/assets': typeof DesignAssetsRoute
   '/design/colors': typeof DesignColorsRoute
+  '/design/components': typeof DesignComponentsRoute
   '/design/flows': typeof DesignFlowsRoute
   '/design/states': typeof DesignStatesRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/account/delete': typeof AccountDeleteRoute
   '/design/assets': typeof DesignAssetsRoute
   '/design/colors': typeof DesignColorsRoute
+  '/design/components': typeof DesignComponentsRoute
   '/design/flows': typeof DesignFlowsRoute
   '/design/states': typeof DesignStatesRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/account/delete': typeof AccountDeleteRoute
   '/design_/assets': typeof DesignAssetsRoute
   '/design_/colors': typeof DesignColorsRoute
+  '/design_/components': typeof DesignComponentsRoute
   '/design_/flows': typeof DesignFlowsRoute
   '/design_/states': typeof DesignStatesRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
     | '/account/delete'
     | '/design/assets'
     | '/design/colors'
+    | '/design/components'
     | '/design/flows'
     | '/design/states'
     | '/invite/$inviteCode'
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/account/delete'
     | '/design/assets'
     | '/design/colors'
+    | '/design/components'
     | '/design/flows'
     | '/design/states'
     | '/invite/$inviteCode'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/account/delete'
     | '/design_/assets'
     | '/design_/colors'
+    | '/design_/components'
     | '/design_/flows'
     | '/design_/states'
     | '/invite/$inviteCode'
@@ -181,6 +193,7 @@ export interface RootRouteChildren {
   AccountDeleteRoute: typeof AccountDeleteRoute
   DesignAssetsRoute: typeof DesignAssetsRoute
   DesignColorsRoute: typeof DesignColorsRoute
+  DesignComponentsRoute: typeof DesignComponentsRoute
   DesignFlowsRoute: typeof DesignFlowsRoute
   DesignStatesRoute: typeof DesignStatesRoute
   InviteInviteCodeRoute: typeof InviteInviteCodeRoute
@@ -251,6 +264,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DesignColorsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/design_/components': {
+      id: '/design_/components'
+      path: '/design/components'
+      fullPath: '/design/components'
+      preLoaderRoute: typeof DesignComponentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/design_/flows': {
       id: '/design_/flows'
       path: '/design/flows'
@@ -285,6 +305,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountDeleteRoute: AccountDeleteRoute,
   DesignAssetsRoute: DesignAssetsRoute,
   DesignColorsRoute: DesignColorsRoute,
+  DesignComponentsRoute: DesignComponentsRoute,
   DesignFlowsRoute: DesignFlowsRoute,
   DesignStatesRoute: DesignStatesRoute,
   InviteInviteCodeRoute: InviteInviteCodeRoute,

@@ -1037,7 +1037,7 @@ function screenMode(editing: boolean, weekDetail: boolean) {
   return weekDetail ? "week" : "view";
 }
 
-function MonthSummary({
+export function MonthSummary({
   month,
   daysOff,
   onOpen,
