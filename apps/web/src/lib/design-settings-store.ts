@@ -5,11 +5,7 @@ import type { Account } from "../components/design-account";
 import type { Appearance, ColorChoice } from "../components/design-theme";
 import { defaultWeekSettings } from "../components/design-week";
 import type { WeekSettings } from "../components/design-week";
-import type {
-  LookSettings,
-  ShiftMarkStyle,
-  TimeMarks,
-} from "../components/shift-mark";
+import type { LookSettings, ShiftMarkStyle } from "../components/shift-mark";
 import type { ColorScheme, Tone } from "./design-tokens";
 
 // The person's settings on /design, sorted by where each would live in the
@@ -59,8 +55,6 @@ export type DeviceSettings = {
   week: WeekSettings;
   appIcon: string;
   calendar: Record<ShiftMarkStyle, CalendarOptions>;
-  // How a day with 早出 or 残業 is marked on the month.
-  timeMarks: TimeMarks;
   // How 画像で保存 last drew the month.
   imageOptions: ImageOptions;
 };
@@ -78,7 +72,6 @@ type SettingsState = {
   setWeek: (week: WeekSettings) => void;
   setAppIcon: (icon: string) => void;
   setImageOptions: (options: ImageOptions) => void;
-  setTimeMarks: (timeMarks: TimeMarks) => void;
   // Changes the options of the shape in use.
   setCalendarOptions: (change: Partial<CalendarOptions>) => void;
 };
@@ -99,7 +92,6 @@ export const useSettings = create<SettingsState>()(
         appearance: "system",
         calendar: defaultCalendar,
         imageOptions: defaultImageOptions,
-        timeMarks: "kanji",
         tone: "deep",
         week: defaultWeekSettings,
       },
@@ -141,9 +133,6 @@ export const useSettings = create<SettingsState>()(
             style,
           },
         }));
-      },
-      setTimeMarks: (timeMarks) => {
-        set((state) => ({ device: { ...state.device, timeMarks } }));
       },
       setTone: (tone) => {
         set((state) => ({ device: { ...state.device, tone } }));

@@ -34,6 +34,7 @@ import {
   formatDay,
   TabBar,
   showOverPhone,
+  timeChangeOf,
   timeRange,
 } from "./design-calendar";
 import type { Schedule, Tab } from "./design-calendar";
@@ -78,7 +79,16 @@ type Member = {
   photo?: string;
   patterns: MemberPattern[];
   shiftOn: (date: Date) => string | undefined;
+  // 早出 and 残業, shared with the group like the shift itself, with the
+  // day's actual hours.
+  changeOn?: (date: Date) => TimeChange | undefined;
 };
+
+type TimeChange = { early: boolean; late: boolean; time: string };
+
+function changeOn(member: Member, date: Date) {
+  return member.changeOn?.(date);
+}
 
 export type Group = {
   id: string;
@@ -185,6 +195,11 @@ const mother: Member = {
   photo: samplePhoto(429),
   shiftOn: (date) =>
     [1, 3, 5].includes(date.getDay()) && !holidayName(date) ? "part" : "off",
+  // Fridays run on until 17:00.
+  changeOn: (date) =>
+    date.getDay() === 5 && !holidayName(date)
+      ? { early: false, late: true, time: "10:00 – 17:00" }
+      : undefined,
   style: { look: presetLook("roster") },
 };
 
@@ -204,6 +219,19 @@ const misaki = (): Member => ({
   })),
   photo: samplePhoto(823),
   shiftOn: (date) => nurseOrder[(dayNumber(date) + 3) % nurseOrder.length],
+  // Now and then a 日勤 runs late or starts early.
+  changeOn: (date) => {
+    const shift = nurseOrder[(dayNumber(date) + 3) % nurseOrder.length];
+    if (shift !== "day") {
+      return;
+    }
+    if (dayNumber(date) % 5 === 0) {
+      return { early: false, late: true, time: "9:00 – 20:00" };
+    }
+    if (dayNumber(date) % 7 === 0) {
+      return { early: true, late: false, time: "8:00 – 18:00" };
+    }
+  },
   style: { color: "sumi", look: presetLook("minimal") },
 });
 
@@ -306,6 +334,11 @@ function meFrom(
   photo?: string
 ): Member {
   return {
+    changeOn: (date) => {
+      const entry = schedule[dateKey(date)];
+      const change = timeChangeOf(entry);
+      return change && entry && { ...change, time: timeRange(entry) ?? "" };
+    },
     id: "me",
     me: true,
     name: "自分",
@@ -2079,12 +2112,18 @@ function PickedDaySheet({
               <span className="st-row-label">{member.name}</span>
               <span className="st-row-value gr-day-sheet-value">
                 {item && (
-                  <MemberMark look={item.look} member={member} size={18} />
+                  <MemberMark
+                    date={date}
+                    look={item.look}
+                    member={member}
+                    size={18}
+                  />
                 )}
                 {item?.name ?? "未入力"}
-                {item?.time && (
-                  <small className="gr-day-sheet-time">{item.time}</small>
-                )}
+                <DaySheetTime
+                  change={changeOn(member, date)}
+                  time={item?.time}
+                />
               </span>
             </div>
           );
@@ -2279,7 +2318,7 @@ function DayRow({
             {/* The whole row picks the day, as the whole column does in
                 週ごと. */}
             <button
-              aria-label={`${formatDay(date)} ${member.name}：${item?.name ?? "未入力"}。押すとその日のみんなの予定`}
+              aria-label={`${formatDay(date)} ${member.name}：${item?.name ?? "未入力"}${changeOn(member, date) ? `、${movesOf(changeOn(member, date))}` : ""}。押すとその日のみんなの予定`}
               aria-pressed={picked}
               className="gr-rows-cell-button"
               onClick={() => {
@@ -2289,7 +2328,12 @@ function DayRow({
             >
               {item ? (
                 <span className="gr-rows-cell">
-                  <MemberMark look={item.look} member={member} size={16} />
+                  <MemberMark
+                    date={date}
+                    look={item.look}
+                    member={member}
+                    size={16}
+                  />
                   <span className={withNames ? "gr-rows-name" : "dc-sr-only"}>
                     {item.name}
                   </span>
@@ -2392,21 +2436,77 @@ function MemberMark({
   member,
   look,
   size,
+  date,
 }: {
   member: Member;
   look: Look;
   size: number;
+  // The day it stands for, which brings its 早出 and 残業 with it.
+  date?: Date;
 }) {
+  const change = date && changeOn(member, date);
   return (
     <MemberLook member={member}>
-      <ViewerMark look={look} size={size} />
+      <ViewerMark
+        early={change?.early}
+        late={change?.late}
+        look={look}
+        size={size}
+      />
     </MemberLook>
   );
 }
 
-function ViewerMark({ look, size }: { look: Look; size: number }) {
+function ViewerMark({
+  look,
+  size,
+  early,
+  late,
+}: {
+  look: Look;
+  size: number;
+  early?: boolean;
+  late?: boolean;
+}) {
   const style = useContext(ShiftMarkStyleContext);
-  return <MarkGlyph look={look} size={size} style={style} />;
+  return (
+    <MarkGlyph
+      early={early}
+      late={late}
+      look={look}
+      size={size}
+      style={style}
+    />
+  );
+}
+
+// 早出 and 残業 as words, like 早出・残業; empty when neither.
+function movesOf(change: TimeChange | undefined) {
+  if (!change) {
+    return "";
+  }
+  return [change.early ? "早出" : "", change.late ? "残業" : ""]
+    .filter(Boolean)
+    .join("・");
+}
+
+// A member's hours in the day sheet: 早出 and 残業 said in words, with
+// the day's actual hours instead of the pattern's.
+function DaySheetTime({
+  time,
+  change,
+}: {
+  time?: string;
+  change?: TimeChange;
+}) {
+  if (change) {
+    return (
+      <small className="gr-day-sheet-time">
+        <strong>{movesOf(change)}</strong> {change.time}
+      </small>
+    );
+  }
+  return time ? <small className="gr-day-sheet-time">{time}</small> : null;
 }
 
 function Avatar({ member, size }: { member: Member; size?: number }) {
@@ -2464,7 +2564,9 @@ function Mark({
   if (!item) {
     return <span aria-hidden="true" className="gr-empty" />;
   }
-  return <MemberMark look={item.look} member={member} size={size} />;
+  return (
+    <MemberMark date={date} look={item.look} member={member} size={size} />
+  );
 }
 
 // One person's day in the weekly table. With `onPick` it is a button that
@@ -2799,7 +2901,12 @@ function PersonDay({
       {item && (
         <>
           <span className="dc-emoji">
-            <MemberMark look={item.look} member={member} size={21} />
+            <MemberMark
+              date={date}
+              look={item.look}
+              member={member}
+              size={21}
+            />
           </span>
           <span className="dc-shift-label">{item.name}</span>
         </>

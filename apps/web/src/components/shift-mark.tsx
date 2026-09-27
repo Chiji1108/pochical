@@ -1,8 +1,6 @@
 import {
   AirplaneIcon as PhAirplane,
   AmbulanceIcon as PhAmbulance,
-  ArrowLeftIcon as PhArrowLeft,
-  ArrowRightIcon as PhArrowRight,
   BabyIcon as PhBaby,
   BarbellIcon as PhBarbell,
   BedIcon as PhBed,
@@ -55,6 +53,7 @@ import {
 } from "@phosphor-icons/react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { createContext, useContext } from "react";
+import type { CSSProperties } from "react";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
@@ -77,55 +76,14 @@ export const defaultCellNames: CellNames = {
   emoji: false,
   icon: false,
 };
-// How a day whose time moved earlier or later is marked: 早 and 残, as
-// rosters shorten 早出 and 残業; a rabbit and a turtle, both side on so
-// they sit alike; or arrows along the day, ← for starting earlier and →
-// for running later. Arrows, since the sun and moon already stand for
-// shifts.
-export type TimeMarks = "kanji" | "emoji" | "symbol";
-export const TimeMarksContext = createContext<TimeMarks>("kanji");
-const timeMarkText = {
-  emoji: { early: "🐇", late: "🐢" },
-  kanji: { early: "早", late: "残" },
-};
-const timeMarkIconSize = 9;
-
-// The corner badges of a day with 早出, 残業 or both: the start of the day
-// at its left, the end at its right, so where a badge sits says which.
-// `marks` overrides the person's choice, for the style page's samples.
-export function TimeMark({
-  early,
-  late,
-  marks,
-}: {
-  early: boolean;
-  late: boolean;
-  marks?: TimeMarks;
-}) {
-  const chosen = useContext(TimeMarksContext);
-  const kind = marks ?? chosen;
-  const badge = (side: "early" | "late") => {
-    const className = `dc-time-mark dc-time-mark-${side} ${kind === "emoji" ? "dc-time-mark-emoji" : ""} ${kind === "symbol" ? "dc-time-mark-symbol" : ""}`;
-    if (kind === "symbol") {
-      const Arrow = side === "early" ? PhArrowLeft : PhArrowRight;
-      return (
-        <span aria-hidden="true" className={className}>
-          <Arrow size={timeMarkIconSize} weight="bold" />
-        </span>
-      );
-    }
-    return (
-      <span aria-hidden="true" className={className}>
-        {timeMarkText[kind][side]}
-      </span>
-    );
-  };
-  return (
-    <>
-      {early && badge("early")}
-      {late && badge("late")}
-    </>
-  );
+// 早出 and 残業 belong to the shift, not to a day on one calendar: groups
+// see them too, wherever the mark is drawn and at whatever size. So they
+// are drawn on the mark itself, as a small triangle in its top corner that
+// still reads at 16px, where words would not: the start of the day at the
+// left, the end at the right. Inside the mark's box, it never reaches a
+// neighbor in a narrow group table.
+function TimeSide({ side }: { side: "early" | "late" }) {
+  return <span aria-hidden="true" className={`sm-time sm-time-${side}`} />;
 }
 
 export const CellNamesContext = createContext<{
@@ -427,6 +385,36 @@ export function MarkGlyph({
   look,
   style,
   size,
+  early = false,
+  late = false,
+}: {
+  look: Look;
+  style: ShiftMarkStyle;
+  size: number;
+  // 早出 and 残業 on this day, drawn on the mark's sides.
+  early?: boolean;
+  late?: boolean;
+}) {
+  const glyph = <BareGlyph look={look} size={size} style={style} />;
+  if (!(early || late)) {
+    return glyph;
+  }
+  return (
+    <span
+      className="sm-timed"
+      style={{ "--sm-size": `${size}px` } as CSSProperties}
+    >
+      {early && <TimeSide side="early" />}
+      {glyph}
+      {late && <TimeSide side="late" />}
+    </span>
+  );
+}
+
+function BareGlyph({
+  look,
+  style,
+  size,
 }: {
   look: Look;
   style: ShiftMarkStyle;
@@ -499,7 +487,25 @@ function IconGlyph({
   );
 }
 
-export function ShiftMark({ shift, size }: { shift: Shift; size: number }) {
+export function ShiftMark({
+  shift,
+  size,
+  early,
+  late,
+}: {
+  shift: Shift;
+  size: number;
+  early?: boolean;
+  late?: boolean;
+}) {
   const style = useContext(ShiftMarkStyleContext);
-  return <MarkGlyph look={lookOf(shift)} size={size} style={style} />;
+  return (
+    <MarkGlyph
+      early={early}
+      late={late}
+      look={lookOf(shift)}
+      size={size}
+      style={style}
+    />
+  );
 }

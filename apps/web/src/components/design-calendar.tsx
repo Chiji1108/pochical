@@ -48,7 +48,6 @@ import {
   OffDisplayContext,
   ShiftMark,
   ShiftMarkStyleContext,
-  TimeMark,
   useDisplayColor,
   useOffHighlight,
 } from "./shift-mark";
@@ -158,6 +157,7 @@ export function defaultHolidaysOff(sequence: Shift[], start: Date) {
 const sampleDetails: Record<string, Omit<DayEntry, "shift">> = {
   "2026-09-08": { end: "20:00", note: "棚卸し" },
   "2026-09-19": { members: ["田中", "山本"], start: "08:00" },
+  "2026-09-25": { end: "20:00" },
   "2026-09-26": { note: "新人さん同行" },
 };
 
@@ -1474,7 +1474,16 @@ function ShiftInputControls({
   );
 }
 
-function CellShift({ shift }: { shift: Shift }) {
+// The shift's mark, with 早出 and 残業 drawn on its sides.
+function CellShift({
+  shift,
+  early = false,
+  late = false,
+}: {
+  shift: Shift;
+  early?: boolean;
+  late?: boolean;
+}) {
   const style = useContext(ShiftMarkStyleContext);
   const { names } = useContext(CellNamesContext);
   const withName = names[style];
@@ -1485,7 +1494,7 @@ function CellShift({ shift }: { shift: Shift }) {
   return (
     <>
       <span className="dc-emoji">
-        <ShiftMark shift={shift} size={size} />
+        <ShiftMark early={early} late={late} shift={shift} size={size} />
       </span>
       {withName && (
         <span className="dc-shift-label">{patterns[shift].label}</span>
@@ -1553,25 +1562,22 @@ export function DayCell({
   const today = dateKey(date) === dateKey(designToday);
   const holiday = useWeek().isColoredHoliday(date);
   const change = outside ? undefined : timeChangeOf(entry);
-  // 早出 and 残業 get a badge saying which; anything else about the day, a
-  // note or another time change, is the dot.
-  const moved = change !== undefined && (change.early || change.late);
-  const otherChange = change !== undefined && !moved;
-  const hasMark = !outside && !moved && (otherChange || Boolean(entry?.note));
+  // A note is about the day, not the shift, so the date is marked, with a
+  // highlighter stroke as in a paper diary, apart from the shift's 早出 and
+  // 残業 corners, and only on the person's own calendar. Other time
+  // changes, a later start or an earlier end, show when the day is opened.
+  const noted = !outside && Boolean(entry?.note);
   const className = `dc-day ${outside ? "dc-outside" : ""} ${offStyle ? "dc-off" : ""} ${today && !editing ? "dc-today" : ""} ${active ? "dc-active-day" : ""} ${flagged ? "dc-flagged" : ""} ${faintOff ? "dc-off-faint" : ""}`;
   const content = (
     <>
-      <span className={`dc-date ${holiday ? "dc-holiday" : ""}`}>
+      <span
+        className={`dc-date ${holiday ? "dc-holiday" : ""} ${noted ? "dc-noted" : ""}`}
+      >
         {date.getDate()}
       </span>
-      {change && moved && <TimeMark early={change.early} late={change.late} />}
-      {hasMark && (
-        <span
-          aria-hidden="true"
-          className={`dc-mark ${otherChange ? "dc-mark-time" : ""}`}
-        />
+      {shift && !hideOff && (
+        <CellShift early={change?.early} late={change?.late} shift={shift} />
       )}
-      {shift && !hideOff && <CellShift shift={shift} />}
     </>
   );
   if (outside) {
@@ -1688,6 +1694,12 @@ function DayDetail({
 }) {
   const time = entry && patterns[entry.shift].time;
   const timeChanged = Boolean(entry?.start || entry?.end);
+  // Said in words here, where there is room: the mark only shows a shape.
+  const change = timeChangeOf(entry);
+  const moves =
+    [change?.early ? "早出" : "", change?.late ? "残業" : ""]
+      .filter(Boolean)
+      .join("・") || "変更済み";
   function changeTime(field: "start" | "end", value: string) {
     if (!(entry && time)) {
       return;
@@ -1742,7 +1754,7 @@ function DayDetail({
               <p className="dc-detail-hint">
                 {timeChanged ? (
                   <>
-                    変更済み
+                    {moves}
                     <button
                       onClick={() => {
                         onChange({
@@ -1755,6 +1767,13 @@ function DayDetail({
                     >
                       標準（{timeRange({ shift: entry.shift })}）に戻す
                     </button>
+                    {/* The mark this makes, explained as it is made, to
+                        the people who use it. */}
+                    {change && (change.early || change.late) && (
+                      <span className="dc-detail-mark-hint">
+                        カレンダーのシフトの角に印が付きます
+                      </span>
+                    )}
                   </>
                 ) : (
                   "標準の時間"

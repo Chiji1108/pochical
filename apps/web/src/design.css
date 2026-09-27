@@ -888,19 +888,19 @@ body:has(.dc-breakdown[open]) {
 /* Day detail: time and memo for a single day. */
 /* Two strengths of the theme color: a changed time is strong, a memo is
    light. */
-/* A note, or a time moved some other way: bottom right, as the top
-   corners belong to 早 and 残. */
-.dc-mark {
-  position: absolute;
-  right: 3px;
-  bottom: 3px;
-  width: 7px;
-  height: 7px;
-  background: var(--accent-muted);
-  border-radius: 50%;
+/* A note: a highlighter stroke under the date, as in a paper diary. Laid
+   behind the number, so the date stays where it is on every day. */
+.dc-noted {
+  position: relative;
+  isolation: isolate;
 }
-.dc-mark-time {
-  background: var(--accent);
+.dc-noted::before {
+  position: absolute;
+  inset: 45% -3px -1px;
+  z-index: -1;
+  content: "";
+  background: var(--accent-marker);
+  border-radius: 2px;
 }
 .dc-grid.dc-grid-week {
   grid-template-rows: 64px;
@@ -4093,8 +4093,8 @@ button.st-row:hover {
 .dc-image .dc-today {
   outline: 0;
 }
-.dc-image .dc-mark {
-  display: none;
+.dc-image .dc-noted::before {
+  content: none;
 }
 .dc-image-credit {
   margin: 10px 4px 0;
@@ -5357,47 +5357,31 @@ button.st-row:hover {
   border-radius: 46px;
 }
 
-/* 早 at the top left, 残 at the top right: the day's start and end. */
-.dc-time-mark {
-  position: absolute;
-  top: 2px;
-  padding: 1px 2px;
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--accent-strong);
-  background: var(--accent-soft-2);
-  border-radius: 5px;
-}
-.dc-time-mark-early {
-  left: 1px;
-}
-.dc-time-mark-late {
-  right: 1px;
-}
-.dc-time-mark-emoji {
-  padding: 0;
-  font-size: 10px;
-  background: none;
-}
-.dc-time-mark-symbol {
-  display: flex;
-  gap: 1px;
-  align-items: center;
-  padding: 2px;
-}
-/* The style page's samples: the badge at the sample day's corner, as on
-   the month. */
-.st-off-sample:has(> .dc-time-mark) {
+/* 早出 and 残業 on the shift's mark itself, so they go wherever the mark
+   does: a small triangle in its top left for 早出, its top right for 残業,
+   inside its box. */
+.sm-timed {
   position: relative;
+  display: inline-flex;
 }
-.st-off-sample > .dc-time-mark {
+.sm-time {
+  position: absolute;
   top: -2px;
+  width: calc(var(--sm-size) * 0.32);
+  height: calc(var(--sm-size) * 0.32);
+  background: var(--text-2);
 }
-/* As far from the date as on a day of the month. */
-.st-off-sample > .dc-time-mark-early {
-  left: -6px;
+.sm-time-early {
+  left: -2px;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
 }
-.st-off-sample > .dc-time-mark-late {
-  right: -6px;
+.sm-time-late {
+  right: -2px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+.dc-detail-mark-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-3);
 }

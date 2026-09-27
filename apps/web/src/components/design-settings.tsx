@@ -57,12 +57,11 @@ import {
   IconWeightContext,
   ShiftMark,
   ShiftMarkStyleContext,
-  TimeMark,
   lookOf,
   useMarkColors,
   useOffHighlight,
 } from "./shift-mark";
-import type { LookSettings, ShiftMarkStyle, TimeMarks } from "./shift-mark";
+import type { LookSettings, ShiftMarkStyle } from "./shift-mark";
 
 export type SettingsPage = Page;
 
@@ -158,11 +157,10 @@ export function DesignSettings({
 }) {
   const [page, setPage] = useState<Page>(initialPage);
   const weekTools = useWeek();
-  const preview = stylePreviewOf(schedule, patternKeys, weekTools.weekDates);
+  const preview = stylePreviewOf(patternKeys, weekTools.weekDates);
   // From the week holding the 21st, so all three holidays of the 21st to
   // 23rd fall in the fortnight whatever day the week starts on.
   const weekPreview = stylePreviewOf(
-    schedule,
     patternKeys,
     weekTools.weekDates,
     holidayWeekDay
@@ -1266,34 +1264,25 @@ function MarkPage({
       <Group title="シフト名">
         <NamesChoices current={current} />
       </Group>
-      <Group title="早出・残業">
-        <TimeMarkChoices />
-      </Group>
     </>
   );
 }
 
-type StylePreviewData = { dates: Date[]; schedule: Schedule; sample: boolean };
+type StylePreviewData = { dates: Date[]; schedule: Schedule };
 
-// Days worth showing before the preview uses the person's own shifts.
-const minPreviewDays = 7;
-
-// This week and next. Someone who has entered little so far sees a made-up
-// fortnight from their own patterns instead of blank days.
+// This week and next as a made-up fortnight from the person's own
+// patterns, the same whatever they have entered, so a change of style
+// shows in the same places every time. Just shifts and days off: marks
+// for 早出, 残業 or a note would mean nothing to most people here, and
+// are explained where they are made instead.
 function stylePreviewOf(
-  schedule: Schedule,
   patternKeys: Shift[],
   weekDates: (date: Date) => Date[],
   from: Date = previewToday
 ): StylePreviewData {
   const dates = [...weekDates(from), ...weekDates(addDays(from, 7))];
-  const filled = dates.filter((date) => schedule[dateKey(date)]).length;
-  if (filled >= minPreviewDays) {
-    return { dates, sample: false, schedule };
-  }
   return {
     dates,
-    sample: true,
     schedule: repeatSchedule(
       sampleSequence(patternKeys),
       dates[0],
@@ -1328,7 +1317,7 @@ function sampleSequence(patternKeys: Shift[]): Shift[] {
 // touching 外観, so a style can be judged in both.
 function StylePreview({ preview }: { preview: StylePreviewData }) {
   const weekTools = useWeek();
-  const { dates, schedule, sample } = preview;
+  const { dates, schedule } = preview;
   const scheme = useContext(ColorSchemeContext);
   const { theme } = useContext(ThemeContext);
   const tone = useContext(ToneContext);
@@ -1343,7 +1332,7 @@ function StylePreview({ preview }: { preview: StylePreviewData }) {
           inert
           style={themeStyle(theme, shown, tone)}
         >
-          {sample && <span className="st-preview-sample">見本</span>}
+          <span className="st-preview-sample">見本</span>
           <div className="dc-weekdays">
             {weekTools.weekdays.map((day) => (
               <span className={day.className} key={day.day}>
@@ -1493,41 +1482,6 @@ export function NameTabs({
             )}
           </span>
           {withName ? "あり" : "なし"}
-        </button>
-      ))}
-    </fieldset>
-  );
-}
-
-const timeMarkOptions: { value: TimeMarks; name: string }[] = [
-  { name: "漢字", value: "kanji" },
-  { name: "絵文字", value: "emoji" },
-  { name: "記号", value: "symbol" },
-];
-
-// Tabs like シフト名's, each drawing a day with both 早出 and 残業 as that
-// choice marks them.
-function TimeMarkChoices() {
-  const timeMarks = useSettings((state) => state.device.timeMarks);
-  const setTimeMarks = useSettings((state) => state.setTimeMarks);
-  return (
-    <fieldset className="st-mark-segment st-off-looks">
-      <legend className="dc-sr-only">早出・残業</legend>
-      {timeMarkOptions.map(({ value, name }) => (
-        <button
-          aria-pressed={timeMarks === value}
-          key={value}
-          onClick={() => {
-            setTimeMarks(value);
-          }}
-          type="button"
-        >
-          <span aria-hidden="true" className="st-off-sample">
-            <small>5</small>
-            <ShiftMark shift="day" size={18} />
-            <TimeMark early late marks={value} />
-          </span>
-          {name}
         </button>
       ))}
     </fieldset>
