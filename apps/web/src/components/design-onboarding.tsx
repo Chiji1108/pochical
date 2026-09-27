@@ -302,11 +302,7 @@ function WelcomeStep({
         <Button variant="primary" className="ob-push" onClick={onStart}>
           はじめる
         </Button>
-        <Button
-          variant="text"
-
-          onClick={onLogin}
-        >
+        <Button variant="text" onClick={onLogin}>
           アカウントをお持ちの方はログイン
         </Button>
       </div>

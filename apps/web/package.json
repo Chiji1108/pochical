@@ -6,17 +6,18 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "vite dev --port 3000",
+    "dev": "panda codegen && vite dev --port 3000",
     "generate-routes": "tsr generate",
     "icon:site": "bun scripts/site-icon.ts",
-    "build": "vite build",
+    "build": "panda codegen && vite build",
     "preview": "vite preview --port 3000",
     "deploy": "bun run build && wrangler deploy",
     "cf-typegen": "wrangler types",
-    "typecheck": "tsr generate && tsc --noEmit && tsc --noEmit -p tsconfig.tools.json",
+    "typecheck": "panda codegen && tsr generate && tsc --noEmit && tsc --noEmit -p tsconfig.tools.json",
     "test": "bun test",
     "check": "bun run --cwd ../.. check",
-    "fix": "bun run --cwd ../.. fix"
+    "fix": "bun run --cwd ../.. fix",
+    "prepare": "panda codegen"
   },
   "dependencies": {
     "@auth/core": "0.41.1",
@@ -33,6 +34,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.26.0",
+    "@pandacss/dev": "^1.12.1",
     "@tanstack/router-cli": "^1.132.0",
     "@types/node": "25.6.0",
     "@types/react": "~19.3.0",

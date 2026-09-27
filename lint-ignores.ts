@@ -11,5 +11,6 @@ export const ignorePatterns = [
   "**/routeTree.gen.ts",
   "**/worker-configuration.d.ts",
   "**/.tanstack",
+  "**/styled-system",
   "patches",
 ];

@@ -27,6 +27,7 @@ import type {
   ReactNode,
   RefObject,
 } from "react";
+import { css } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
@@ -1181,11 +1182,7 @@ function HeadingActions({
         </div>
       )}
       {mode === "view" && onSave && (
-        <IconButton
-          label="この月のシフトを保存"
-
-          onClick={onSave}
-        >
+        <IconButton label="この月のシフトを保存" onClick={onSave}>
           <Download aria-hidden="true" size={21} />
         </IconButton>
       )}
@@ -1198,6 +1195,10 @@ function HeadingActions({
     </>
   );
 }
+
+// On an empty month ポチポチ入力 is as tall as 今月のお休み, so the two
+// rows line up with the other months'.
+const stackedStart = css({ flex: "none", minHeight: "55px" });
 
 function StartArea({
   label,
@@ -1216,21 +1217,16 @@ function StartArea({
       className={`dc-start-area dc-start-row ${stacked ? "dc-start-stack" : ""}`}
     >
       <Button
-        variant="primary"
-
+        className={stacked ? stackedStart : undefined}
         onClick={onStart}
+        variant="primary"
       >
         <Pencil aria-hidden="true" size={18} />
         {label}
       </Button>
       {/* As wide as ポチポチ入力: only people handed a roster see these, on
           a month with days left, which is when they photograph it. */}
-      <Button
-        variant="quiet"
-        aria-haspopup="dialog"
-
-        onClick={onImport}
-      >
+      <Button variant="quiet" aria-haspopup="dialog" onClick={onImport}>
         <Camera aria-hidden="true" size={18} />
         写真から取り込む
       </Button>
@@ -1250,20 +1246,11 @@ function SaveArea({
 }) {
   return (
     <div className="dc-start-area dc-start-row">
-      <Button
-        variant="quiet"
-
-        onClick={onImage}
-      >
+      <Button variant="quiet" onClick={onImage}>
         <ImageIcon aria-hidden="true" size={18} />
         画像で保存
       </Button>
-      <Button
-        variant="quiet"
-        aria-haspopup="dialog"
-
-        onClick={onCalendar}
-      >
+      <Button variant="quiet" aria-haspopup="dialog" onClick={onCalendar}>
         <CalendarPlus aria-hidden="true" size={18} />
         カレンダーに追加
       </Button>
@@ -1378,7 +1365,6 @@ function ImportSheet({
             <div>
               <Button
                 variant="primary"
-
                 onClick={() => {
                   close();
                   onStartPochi();

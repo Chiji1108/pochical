@@ -53,3 +53,6 @@ app-example
 .tanstack/
 .dev.vars*
 !.dev.vars.example
+
+# Panda CSS output, made by `panda codegen`
+apps/web/styled-system/

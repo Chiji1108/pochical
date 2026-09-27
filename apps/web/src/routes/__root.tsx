@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 
 import { Footer, Header } from "../components/site-layout";
 
+import pandaStyles from "../panda.css?url";
 import stylesheet from "../styles.css?url";
 
 export const Route = createRootRoute({
@@ -24,6 +25,7 @@ export const Route = createRootRoute({
   head: () => ({
     links: [
       { href: stylesheet, rel: "stylesheet" },
+      { href: pandaStyles, rel: "stylesheet" },
       { href: "/icon.png", rel: "icon", type: "image/png" },
     ],
     meta: [

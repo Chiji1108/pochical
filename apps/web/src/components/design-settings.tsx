@@ -747,18 +747,10 @@ function RepeatDetails({
           onChange={onHolidaysOff}
         />
       </div>
-      <Button
-        variant="primary"
-
-        onClick={onNew}
-      >
+      <Button variant="primary" onClick={onNew}>
         新しい繰り返しにする
       </Button>
-      <Button
-        variant="text"
-
-        onClick={onFix}
-      >
+      <Button variant="text" onClick={onFix}>
         今の繰り返しを直す
       </Button>
       <p className="st-note">
@@ -900,7 +892,6 @@ function RepeatEditorPage({
       )}
       <Button
         variant="primary"
-
         disabled={sequence.length === 0}
         onClick={() => {
           onApply(rule);
@@ -1007,7 +998,6 @@ function JobChangePage({
       </p>
       <Button
         variant="primary"
-
         onClick={() => {
           setAsking(true);
         }}
@@ -1205,7 +1195,6 @@ function RosterSwitchPage({
       </p>
       <Button
         variant="primary"
-
         onClick={() => {
           onApply(start);
         }}

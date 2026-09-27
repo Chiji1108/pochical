@@ -1,5 +1,6 @@
 import { ChevronLeft } from "lucide-react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { cva, cx } from "styled-system/css";
 
 // The shared pieces the screens are built from, each the one place its
 // look is decided. They map one to one onto the SwiftUI views and Compose
@@ -10,7 +11,58 @@ type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type">;
 // A button in four strengths: primary for the step to take, quiet beside
 // it or for a lesser one, text for a link-like choice, and subtle for
 // putting something off. Where it sits, its width in a row or its push to
-// the bottom, is the place's to say, through `className`.
+// the bottom, is the place's to say, through `className`; `ui-button` and
+// `ui-button-<variant>` stay on it as hooks for the older styles.
+const buttonStyle = cva({
+  base: {
+    _disabled: { cursor: "default", opacity: 0.4 },
+    alignItems: "center",
+    border: 0,
+    borderRadius: "control",
+    cursor: "pointer",
+    display: "flex",
+    fontSize: "14px",
+    fontWeight: 600,
+    gap: "8px",
+    justifyContent: "center",
+  },
+  defaultVariants: { variant: "primary" },
+  variants: {
+    variant: {
+      primary: {
+        bg: "accentFill",
+        color: "onAccentFill",
+        minHeight: "control",
+        width: "100%",
+      },
+      quiet: {
+        "&:hover:not(:disabled)": { bg: "fill2" },
+        bg: "fill",
+        color: "accent",
+        minHeight: "control",
+        width: "100%",
+      },
+      subtle: {
+        alignSelf: "center",
+        bg: "transparent",
+        color: "text3",
+        fontSize: "13px",
+        fontWeight: 400,
+        margin: "8px auto 0",
+        minHeight: "touch",
+        paddingInline: "12px",
+      },
+      text: {
+        alignSelf: "center",
+        bg: "transparent",
+        color: "accent",
+        minHeight: "touch",
+        paddingInline: "12px",
+      },
+    },
+  },
+});
+
 export function Button({
   variant = "primary",
   className,
@@ -18,7 +70,11 @@ export function Button({
 }: ButtonProps & { variant?: "primary" | "quiet" | "text" | "subtle" }) {
   return (
     <button
-      className={`ui-button ui-button-${variant} ${className ?? ""}`}
+      className={cx(
+        buttonStyle({ variant }),
+        `ui-button ui-button-${variant}`,
+        className
+      )}
       type="button"
       {...props}
     />

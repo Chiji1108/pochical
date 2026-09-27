@@ -1,0 +1,3 @@
+/* Panda CSS's styles (panda.config.ts), above the site's and the
+   prototype's older ones: the order of the layers is set in styles.css. */
+@layer reset, base, tokens, recipes, utilities;

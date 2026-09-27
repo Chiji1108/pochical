@@ -913,18 +913,10 @@ function GroupHub({
           </span>
           <span className="gr-hub-name">{group.name}</span>
         </h3>
-        <IconButton
-          label="メンバーを招待"
-
-          onClick={onInvite}
-        >
+        <IconButton label="メンバーを招待" onClick={onInvite}>
           <UserPlus aria-hidden="true" size={18} />
         </IconButton>
-        <IconButton
-          label="グループの設定"
-
-          onClick={onSettings}
-        >
+        <IconButton label="グループの設定" onClick={onSettings}>
           <Settings2 aria-hidden="true" size={18} />
         </IconButton>
       </header>
@@ -1321,7 +1313,6 @@ function ChatPage({
           </span>
           <IconButton
             label="返信をやめる"
-
             onClick={() => {
               setReplyTo(undefined);
             }}
@@ -3010,11 +3001,7 @@ export function JoinSheet({
             >
               グループを見る
             </Button>
-            <Button
-              variant="text"
-
-              onClick={close}
-            >
+            <Button variant="text" onClick={close}>
               閉じる
             </Button>
           </>
@@ -3066,11 +3053,7 @@ export function JoinSheet({
             >
               参加する
             </Button>
-            <Button
-              variant="text"
-
-              onClick={close}
-            >
+            <Button variant="text" onClick={close}>
               今はしない
             </Button>
           </>

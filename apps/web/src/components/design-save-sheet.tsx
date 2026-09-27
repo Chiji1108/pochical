@@ -115,7 +115,6 @@ export function SaveSheet({
             <div className="dc-save-actions">
               <Button
                 variant="primary"
-
                 onClick={() => {
                   close();
                   onImage();
@@ -126,7 +125,6 @@ export function SaveSheet({
               </Button>
               <Button
                 variant="quiet"
-
                 disabled={shiftCount === 0}
                 onClick={() => {
                   setStep("calendar");
@@ -137,11 +135,7 @@ export function SaveSheet({
               </Button>
             </div>
             {completion && (
-              <Button
-                variant="subtle"
-
-                onClick={close}
-              >
+              <Button variant="subtle" onClick={close}>
                 あとで
               </Button>
             )}
@@ -219,11 +213,7 @@ export function SaveSheet({
               />
               {step.done}
             </p>
-            <Button
-              variant="primary"
-
-              onClick={close}
-            >
+            <Button variant="primary" onClick={close}>
               閉じる
             </Button>
           </>
@@ -364,7 +354,6 @@ export function ImagePreviewPage({
       <div className="dc-image-actions">
         <Button
           variant="quiet"
-
           onClick={() => {
             setNote("LINEなどに送れるメニューが開きます（見本）");
           }}
@@ -374,7 +363,6 @@ export function ImagePreviewPage({
         </Button>
         <Button
           variant="primary"
-
           onClick={() => {
             setNote("写真に保存しました");
           }}
