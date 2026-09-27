@@ -662,6 +662,44 @@ export function DesignGroup({
     }
     return [me];
   };
+  const newGroupPage = (
+    <NewGroupPage
+      onBack={() => {
+        setPage({ name: "hub" });
+      }}
+      onCreate={({ myName, ...created }) => {
+        const id = `group-${groups.length}`;
+        const mine = myName === profile.name ? undefined : { name: myName };
+        setGroups([...groups, { ...created, id, mine }]);
+        setGroupId(id);
+        setPage({ name: "invite" });
+      }}
+      profile={profile}
+      usedColors={groups.map((item) => colorOfMark(item.mark))}
+    />
+  );
+
+  // In no group yet, or none left: what sharing looks like, and the two
+  // ways in.
+  if (groups.length === 0) {
+    return (
+      <div className="dc-content st-screen">
+        <div className="st-scroll">
+          {page.name === "new" ? (
+            newGroupPage
+          ) : (
+            <NoGroups
+              onNew={() => {
+                setPage({ name: "new" });
+              }}
+            />
+          )}
+        </div>
+        {page.name !== "new" && <TabBar active="group" onSelect={onTab} />}
+      </div>
+    );
+  }
+
   const summary = groups.find((item) => item.id === groupId) ?? groups[0];
   const group: Group = {
     ...summary,
@@ -857,9 +895,8 @@ export function DesignGroup({
               group={group}
               onLeave={() => {
                 const rest = groups.filter((item) => item.id !== group.id);
-                // The sample keeps its last group, having no empty screen.
+                setGroups(rest);
                 if (rest.length > 0) {
-                  setGroups(rest);
                   setGroupId(rest[0].id);
                 }
                 setPage({ name: "hub" });
@@ -903,23 +940,7 @@ export function DesignGroup({
               }}
             />
           )}
-          {page.name === "new" && (
-            <NewGroupPage
-              onBack={() => {
-                setPage({ name: "hub" });
-              }}
-              onCreate={({ myName, ...created }) => {
-                const id = `group-${groups.length}`;
-                const mine =
-                  myName === profile.name ? undefined : { name: myName };
-                setGroups([...groups, { ...created, id, mine }]);
-                setGroupId(id);
-                setPage({ name: "invite" });
-              }}
-              profile={profile}
-              usedColors={groups.map((item) => colorOfMark(item.mark))}
-            />
-          )}
+          {page.name === "new" && newGroupPage}
         </div>
       )}
       {page.name === "hub" && <TabBar active="group" onSelect={onTab} />}
@@ -927,6 +948,74 @@ export function DesignGroup({
     </div>
   );
 }
+
+// A made-up group for the no-group screen's picture of sharing.
+const sampleGroup = (): Group => ({
+  id: "sample",
+  mark: { emoji: "🏠", kind: "emoji" },
+  members: [partner, mother, misaki()],
+  name: "サンプル",
+});
+
+// No group yet: a sample week of shared shifts, then 作成 and QR参加, as
+// the old app showed it.
+function NoGroups({ onNew }: { onNew: () => void }) {
+  const weekTools = useWeek();
+  return (
+    <div className={noGroups.root}>
+      <h3 className={noGroups.title}>グループでシフトを共有できます</h3>
+      <div
+        aria-label="サンプルの共有シフト表"
+        className="gr-week-card"
+        role="img"
+      >
+        <MemberTable
+          compact
+          dates={weekTools.weekDates(designToday)}
+          group={sampleGroup()}
+          month={designToday}
+        />
+      </div>
+      <p className={noGroups.note}>
+        家族や友達とシフトを見せ合って、休みが重なる日がすぐ分かります。
+      </p>
+      <div className={noGroups.actions}>
+        <Button onClick={onNew}>
+          <Plus aria-hidden="true" size={18} />
+          グループを作成
+        </Button>
+        <Button variant="quiet">
+          <ScanLine aria-hidden="true" size={17} />
+          QRコードで参加
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+const noGroups = {
+  actions: css({ display: "flex", flexDirection: "column", gap: "10px" }),
+  note: css({
+    color: "text3",
+    fontSize: "13px",
+    lineHeight: 1.6,
+    margin: 0,
+    textAlign: "center",
+  }),
+  root: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "20px",
+    margin: "auto 0",
+    paddingBlock: "24px",
+  }),
+  title: css({
+    fontSize: "20px",
+    fontWeight: 700,
+    margin: 0,
+    textAlign: "center",
+  }),
+};
 
 // Groups down the side, like chat apps with many rooms. The count is
 // unread messages across the group's chats.

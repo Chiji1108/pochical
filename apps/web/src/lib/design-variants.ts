@@ -8,6 +8,13 @@ export const designVariantOptions = {
     ],
     label: "下のボタン",
   },
+  groupSample: {
+    choices: [
+      { label: "参加中", value: "some" },
+      { label: "なし", value: "none" },
+    ],
+    label: "グループ",
+  },
   importAccess: {
     choices: [
       { label: "通常", value: "normal" },

@@ -6,6 +6,7 @@ import {
   DesignCalendar,
   initialDesignSchedule,
 } from "../components/design-calendar";
+import { sampleGroups } from "../components/design-group";
 import {
   DesignProviders,
   useDesignTheme,
@@ -35,10 +36,12 @@ export const Route = createFileRoute("/demo")({
 // A sample person, starting over with the sample or with nothing entered.
 function makePerson(
   sample: DesignVariants["scheduleSample"],
-  members: DesignVariants["memberSample"]
+  members: DesignVariants["memberSample"],
+  groups: DesignVariants["groupSample"]
 ) {
   return createUserStore({
     coworkers: members === "some" ? sampleCoworkers : [],
+    groups: groups === "some" ? sampleGroups() : [],
     schedule: sample === "empty" ? {} : initialDesignSchedule(),
   });
 }
@@ -50,12 +53,16 @@ function DemoPage() {
   const navigate = Route.useNavigate();
   const theme = useDesignTheme();
   const [person, setPerson] = useState(() =>
-    makePerson(variants.scheduleSample, variants.memberSample)
+    makePerson(
+      variants.scheduleSample,
+      variants.memberSample,
+      variants.groupSample
+    )
   );
   // Starting over remounts the phone, so its screens reset too.
   const [version, setVersion] = useState(0);
   const startOver = (sample: DesignVariants["scheduleSample"]) => {
-    setPerson(makePerson(sample, variants.memberSample));
+    setPerson(makePerson(sample, variants.memberSample, variants.groupSample));
     setVersion((value) => value + 1);
   };
   return (
@@ -100,6 +107,13 @@ function DemoPage() {
             onChange={(key, value) => {
               if (key === "scheduleSample") {
                 startOver(value as DesignVariants["scheduleSample"]);
+              }
+              // The グループ sample switch puts the sample groups back, or
+              // leaves you in none.
+              if (key === "groupSample") {
+                person.setState({
+                  groups: value === "some" ? sampleGroups() : [],
+                });
               }
               // The 一緒に働く人 sample switch starts the list over.
               if (key === "memberSample") {

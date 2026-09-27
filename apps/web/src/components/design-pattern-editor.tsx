@@ -4,9 +4,11 @@ import { cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
+import { useUser } from "../lib/design-user-store";
 import { nextDayShifts } from "./design-calendar";
 import { LookEditorPage } from "./design-look-editor";
 import type { LookField } from "./design-look-editor";
+import { ConfirmDialog } from "./design-sheet";
 import {
   BackButton,
   ChoiceList,
@@ -78,11 +80,17 @@ export function PatternsPage({
   const [editing, setEditing] = useState<PatternDraft>();
   const [isNew, setIsNew] = useState(false);
   const [view, setView] = useState<"list" | "sort" | "add">("list");
+  const schedule = useUser((state) => state.schedule);
+  // The days a pattern is entered on, which would go with it. This page
+  // only shows a sample, so the calendar itself keeps them.
+  const daysOf = (id: string) =>
+    Object.values(schedule).filter((entry) => entry?.shift === id).length;
 
   if (editing) {
     return (
       <PatternEditor
         initial={editing}
+        days={daysOf(editing.id)}
         isNew={isNew}
         onBack={() => {
           setEditing(undefined);
@@ -287,6 +295,7 @@ function AddPatternPage({
 
 function PatternEditor({
   initial,
+  days,
   isNew,
   others,
   onBack,
@@ -294,6 +303,8 @@ function PatternEditor({
   onDelete,
 }: {
   initial: PatternDraft;
+  // How many days use this pattern.
+  days: number;
   isNew: boolean;
   others: PatternDraft[];
   onBack: () => void;
@@ -303,6 +314,7 @@ function PatternEditor({
   const style = useContext(ShiftMarkStyleContext);
   const [draft, setDraft] = useState(initial);
   const [subPage, setSubPage] = useState<"look" | "nextDay">();
+  const [confirming, setConfirming] = useState(false);
   // Looks the person picked stay put when the name changes afterwards.
   const [picked, setPicked] = useState<LookField[]>(
     isNew ? [] : ["symbol", "icon", "emoji"]
@@ -487,10 +499,35 @@ function PatternEditor({
         </List>
       </section>
       {!isNew && (
-        <button className="pe-delete" onClick={onDelete} type="button">
+        <button
+          className="pe-delete"
+          onClick={() => {
+            // Unused, it goes at once; in use, its days go too, so ask.
+            if (days > 0) {
+              setConfirming(true);
+            } else {
+              onDelete();
+            }
+          }}
+          type="button"
+        >
           <Trash2 aria-hidden="true" size={14} />
           このパターンを削除
         </button>
+      )}
+      {confirming && (
+        <ConfirmDialog
+          action="削除"
+          message={`${days}日の予定に入っている「${initial.name}」も一緒に消えます。元に戻せません。`}
+          onCancel={() => {
+            setConfirming(false);
+          }}
+          onConfirm={() => {
+            setConfirming(false);
+            onDelete();
+          }}
+          title={`「${initial.name}」を削除しますか？`}
+        />
       )}
     </>
   );
