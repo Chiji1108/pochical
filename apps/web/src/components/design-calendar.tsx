@@ -40,6 +40,7 @@ import { ImportReviewPage } from "./design-import";
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import { DesignSettings } from "./design-settings";
 import type { SettingsPage } from "./design-settings";
+import { SheetHeading } from "./design-sheet";
 import { useThemeStyle } from "./design-theme";
 import { holidayName, holidayNameOfKey, useWeek } from "./design-week";
 import {
@@ -873,21 +874,11 @@ export function DesignCalendar({
         />
         <section className="dc-sheet">
           <div aria-hidden="true" className="dc-sheet-handle" />
-          <header className="dc-sheet-heading">
-            <div>
-              <p>
-                {month.getFullYear()}年{month.getMonth() + 1}月
-              </p>
-              <h4>今月の内訳</h4>
-            </div>
-            <button
-              aria-label="閉じる"
-              onClick={() => breakdownRef.current?.close()}
-              type="button"
-            >
-              <X aria-hidden="true" size={20} />
-            </button>
-          </header>
+          <SheetHeading
+            eyebrow={`${month.getFullYear()}年${month.getMonth() + 1}月`}
+            onClose={() => breakdownRef.current?.close()}
+            title="今月の内訳"
+          />
           <dl className="dc-counts">
             {counts.map(({ key, label, count }) => (
               <div key={key}>
@@ -1378,12 +1369,7 @@ function ImportSheet({
       />
       <section className="dc-sheet">
         <div aria-hidden="true" className="dc-sheet-handle" />
-        <header className="dc-sheet-heading">
-          <h4>{title}</h4>
-          <button aria-label="閉じる" onClick={close} type="button">
-            <X aria-hidden="true" size={20} />
-          </button>
-        </header>
+        <SheetHeading onClose={close} title={title} />
         {access === "limit" && (
           <>
             <p className="dc-import-description">

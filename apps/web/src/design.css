@@ -677,31 +677,6 @@ body:has(.dc-breakdown[open]) {
   background: var(--control-off);
   border-radius: 8px;
 }
-.dc-sheet-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-.dc-sheet-heading p {
-  margin: 0 0 4px;
-  font-size: 12px;
-  color: var(--text-3);
-}
-.dc-sheet-heading h4 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-}
-.dc-sheet-heading button {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  background: var(--accent-soft);
-  border: 0;
-  border-radius: 50%;
-}
 .dc-counts {
   margin: 0;
 }
@@ -1142,7 +1117,7 @@ body:has(.dc-breakdown[open]) {
   flex-direction: column;
   gap: 16px;
 }
-.dc-repeat-sheet > .dc-sheet-heading,
+.dc-repeat-sheet > .ui-sheet-heading,
 .dc-repeat-sheet > .dc-import-description {
   margin-bottom: 0;
 }
@@ -2298,15 +2273,6 @@ button.st-row:hover {
   box-shadow: 0 1px 3px var(--shadow);
 }
 
-.design-page .st-custom-cancel {
-  justify-self: start;
-  min-height: 40px;
-  padding: 0 12px 0 4px;
-  font-size: 15px;
-  color: var(--accent);
-  background: transparent;
-  border: 0;
-}
 /* カラー: マルチカラー and the six theme colors in one row. */
 .st-theme-row.st-theme-grid {
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -3264,19 +3230,6 @@ button.st-row:hover {
   border-radius: 22px 22px 0 0;
   box-shadow: 0 -6px 24px var(--shadow-strong);
 }
-.gr-sheet-header {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-}
-.gr-sheet-header h3 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-}
-.gr-sheet-header .pe-save {
-  justify-self: end;
-}
 .gr-sheet-suggest {
   display: flex;
   flex-wrap: wrap;
@@ -3716,14 +3669,6 @@ button.st-row:hover {
   background: transparent;
   border: 0;
 }
-.gr-legend-title {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-}
 .design-page .gr-table-cell-button {
   width: 100%;
   padding: 0;
@@ -3861,13 +3806,6 @@ button.st-row:hover {
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-.design-page .dc-save-back {
-  margin-left: -8px;
-  background: transparent;
-}
-.dc-save-back + h4 {
-  flex: 1;
 }
 .dc-save-calendars {
   padding: 0;
@@ -4406,21 +4344,6 @@ button.st-row:hover {
 .gr-day-sheet .dc-sheet-handle {
   flex-shrink: 0;
   margin-bottom: 10px;
-}
-.gr-day-sheet-header {
-  display: flex;
-  flex-shrink: 0;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 10px;
-}
-.gr-day-sheet-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-.gr-day-sheet-header .pe-save {
-  margin-left: auto;
 }
 .gr-day-sheet-list {
   min-height: 0;
@@ -5399,4 +5322,85 @@ button.st-row:hover {
 /* Onboarding and the join sheet keep their main step at the bottom. */
 .design-page .ob-push {
   margin-top: auto;
+}
+
+/* Sheet headings, in the platforms' two kinds (design-sheet.tsx). */
+.ui-sheet-heading {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.ui-sheet-title {
+  flex: 1;
+  min-width: 0;
+}
+.ui-sheet-title-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ui-sheet-title p {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.ui-sheet-title h4,
+.ui-sheet-heading-decide h4 {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.design-page .ui-sheet-close {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--text-2);
+  background: var(--fill);
+  border: 0;
+  border-radius: 50%;
+}
+.design-page .ui-sheet-back {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 32px;
+  height: 40px;
+  margin-left: -8px;
+  color: var(--text-2);
+  background: transparent;
+  border: 0;
+}
+/* キャンセル, the title in the middle, and the action. */
+.ui-sheet-heading-decide {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+}
+.ui-sheet-heading-decide h4 {
+  font-size: 16px;
+}
+.design-page :is(.ui-sheet-cancel, .ui-sheet-action) {
+  min-height: 40px;
+  padding: 0 4px;
+  font-size: 15px;
+  color: var(--accent);
+  background: transparent;
+  border: 0;
+}
+.design-page .ui-sheet-cancel {
+  justify-self: start;
+}
+.design-page .ui-sheet-action {
+  justify-self: end;
+  font-weight: 600;
+}
+.design-page .ui-sheet-action:disabled {
+  color: var(--text-disabled);
+  cursor: default;
 }

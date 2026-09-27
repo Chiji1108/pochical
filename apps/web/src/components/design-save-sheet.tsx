@@ -5,7 +5,6 @@ import {
   Download,
   Image as ImageIcon,
   Share,
-  X,
 } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
@@ -14,6 +13,7 @@ import type { ImageOptions } from "../lib/design-settings-store";
 import { DayCell, dateKey } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
 import { NameTabs, OffLookTabs } from "./design-settings";
+import { SheetHeading } from "./design-sheet";
 import {
   ColorSchemeContext,
   PreviewSchemeSwitch,
@@ -95,24 +95,17 @@ export function SaveSheet({
       />
       <section className="dc-sheet">
         <div aria-hidden="true" className="dc-sheet-handle" />
-        <header className="dc-sheet-heading">
-          {step === "calendar" && !toCalendar ? (
-            <button
-              aria-label="戻る"
-              className="dc-save-back"
-              onClick={() => {
-                setStep("choose");
-              }}
-              type="button"
-            >
-              <ChevronLeft aria-hidden="true" size={20} />
-            </button>
-          ) : null}
-          <h4>{title}</h4>
-          <button aria-label="閉じる" onClick={close} type="button">
-            <X aria-hidden="true" size={20} />
-          </button>
-        </header>
+        <SheetHeading
+          onBack={
+            step === "calendar" && !toCalendar
+              ? () => {
+                  setStep("choose");
+                }
+              : undefined
+          }
+          onClose={close}
+          title={title}
+        />
         {step === "choose" && (
           <>
             <p className="dc-import-description">

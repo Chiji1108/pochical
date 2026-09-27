@@ -1,9 +1,9 @@
-import { X } from "lucide-react";
 import { useState } from "react";
 import type { RefObject } from "react";
 
 import type { Shift } from "../lib/design-patterns";
 import type { Schedule } from "./design-calendar";
+import { SheetHeading } from "./design-sheet";
 
 export type OffChoice = { key: Shift; label: string };
 
@@ -113,12 +113,7 @@ function GapSheetBody({
   return (
     <section className="dc-sheet">
       <div aria-hidden="true" className="dc-sheet-handle" />
-      <header className="dc-sheet-heading">
-        <h4>{titleOf(days)}</h4>
-        <button aria-label="閉じる" onClick={close} type="button">
-          <X aria-hidden="true" size={20} />
-        </button>
-      </header>
+      <SheetHeading onClose={close} title={titleOf(days)} />
       <p className="dc-import-description">
         {current?.label ?? "休み"}にすると、{monthLabel}のお休みが
         <strong className="dc-gap-count">

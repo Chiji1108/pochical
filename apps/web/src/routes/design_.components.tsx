@@ -9,7 +9,6 @@ import {
   Download,
   Pencil,
   UserPlus,
-  X,
 } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -21,6 +20,7 @@ import {
   useDesignTheme,
 } from "../components/design-providers";
 import { NameTabs, OffLookTabs } from "../components/design-settings";
+import { DecideHeading, SheetHeading } from "../components/design-sheet";
 import { themeStyle, useThemeStyle } from "../components/design-theme";
 import {
   OffDisplayContext,
@@ -363,35 +363,31 @@ function Chips() {
 function Sheets() {
   return (
     <Group
-      note="見出しの作りが2通り。カレンダー側は「タイトル+×」、グループと設定の一部は「キャンセル/タイトル/保存」です。"
+      note="見るだけのシートは「タイトル+×」、決めるシートは「キャンセル/タイトル/決定」。iPhone と Android の標準のシートと同じ使い分けです。メニューと確認は見出しなしで、下にキャンセルがあります。"
       title="シートの見出し"
     >
       <Item
-        name="dc-sheet + dc-sheet-heading"
-        where="カレンダー側のシート"
+        name="SheetHeading"
+        where="見るだけのシート(内訳、空いた日、保存、日のシートなど)"
         wide
       >
         <section className="dc-sheet cmp-sheet">
           <div aria-hidden="true" className="dc-sheet-handle" />
-          <header className="dc-sheet-heading">
-            <h4>空いている日が3日あります</h4>
-            <button aria-label="閉じる" type="button">
-              <X aria-hidden="true" size={20} />
-            </button>
-          </header>
+          <SheetHeading
+            eyebrow="2026年9月"
+            onClose={() => undefined}
+            title="今月の内訳"
+          />
         </section>
       </Item>
-      <Item name="gr-sheet-header" where="グループの日にちを共有など" wide>
+      <Item name="DecideHeading" where="決めるシート(日にちを共有)" wide>
         <section className="dc-sheet cmp-sheet">
-          <header className="gr-sheet-header">
-            <button className="st-custom-cancel" type="button">
-              キャンセル
-            </button>
-            <h3>日にちを共有</h3>
-            <button className="pe-save" type="button">
-              共有
-            </button>
-          </header>
+          <DecideHeading
+            action="送る"
+            onAction={() => undefined}
+            onCancel={() => undefined}
+            title="日にちを共有"
+          />
         </section>
       </Item>
       <Item name="gr-toast" where="取り込んだあとの一言">

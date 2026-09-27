@@ -39,6 +39,7 @@ import {
 } from "./design-calendar";
 import type { Schedule, Tab } from "./design-calendar";
 import { iconNames } from "./design-look-editor";
+import { DecideHeading, SheetHeading } from "./design-sheet";
 import { ThemeContext, themeOfColor } from "./design-theme";
 import type { ColorChoice } from "./design-theme";
 import { holidayName, useWeek } from "./design-week";
@@ -1511,22 +1512,15 @@ function DaySheet({
   return (
     <div className="gr-sheet-backdrop">
       <section aria-label="日にちを共有" className="gr-sheet">
-        <header className="gr-sheet-header">
-          <button className="st-custom-cancel" onClick={onClose} type="button">
-            キャンセル
-          </button>
-          <h3>日にちを共有</h3>
-          <button
-            className="pe-save"
-            disabled={picked.length === 0}
-            onClick={() => {
-              onShare(picked);
-            }}
-            type="button"
-          >
-            送る
-          </button>
-        </header>
+        <DecideHeading
+          action="送る"
+          disabled={picked.length === 0}
+          onAction={() => {
+            onShare(picked);
+          }}
+          onCancel={onClose}
+          title="日にちを共有"
+        />
         {suggestions.length > 0 && (
           <div className="gr-sheet-suggest">
             <span className="gr-together-label">みんな休み</span>
@@ -1995,19 +1989,12 @@ function TogetherSummary({
       {open && (
         <div className="gr-sheet-backdrop">
           <section aria-label={label} className="gr-sheet gr-legend-sheet">
-            <header className="gr-sheet-header">
-              <span />
-              <h3>{label}</h3>
-              <button
-                className="pe-save"
-                onClick={() => {
-                  setOpen(false);
-                }}
-                type="button"
-              >
-                閉じる
-              </button>
-            </header>
+            <SheetHeading
+              onClose={() => {
+                setOpen(false);
+              }}
+              title={label}
+            />
             {/* Picking a date closes this and shows everyone that day. */}
             <div className="gr-legend-body">
               <div className="st-list">
@@ -2096,13 +2083,9 @@ function PickedDaySheet({
   return (
     <section aria-label={formatDay(date)} className="gr-day-sheet">
       <div aria-hidden="true" className="dc-sheet-handle" />
-      <header className="gr-day-sheet-header">
-        <h3>{formatDay(date)}</h3>
+      <SheetHeading onClose={onClose} title={formatDay(date)}>
         {together && <span className="gr-day-card-tag">みんな休み</span>}
-        <button className="pe-save" onClick={onClose} type="button">
-          閉じる
-        </button>
-      </header>
+      </SheetHeading>
       <div className="st-list gr-day-sheet-list">
         {members.map((member) => {
           const item = patternOn(member, date);
@@ -2150,18 +2133,17 @@ function LegendSheet({
         }
         className="gr-sheet gr-legend-sheet"
       >
-        <header className="gr-sheet-header">
-          <span />
-          <h3 className="gr-legend-title">
-            {single && <Avatar member={single} />}
-            {single
-              ? `${single.name}のシフトパターン`
-              : "みんなのシフトパターン"}
-          </h3>
-          <button className="pe-save" onClick={onClose} type="button">
-            閉じる
-          </button>
-        </header>
+        <SheetHeading
+          onClose={onClose}
+          title={
+            <>
+              {single && <Avatar member={single} />}
+              {single
+                ? `${single.name}のシフトパターン`
+                : "みんなのシフトパターン"}
+            </>
+          }
+        />
         {/* Only the marks scroll; the title and 閉じる stay in reach. */}
         <div className="gr-legend-body">
           {members.map((member) => (
