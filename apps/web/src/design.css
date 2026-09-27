@@ -3804,21 +3804,6 @@
   .im-code {
     gap: 10px;
   }
-  .im-code-chip {
-    display: grid;
-    flex-shrink: 0;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    font-family: "Hiragino Mincho ProN", serif;
-    font-size: 17px;
-    font-weight: 600;
-    /* A piece of the paper roster: paper and ink in the dark too. */
-    color: #2b2823;
-    background: #fbf8f0;
-    border: 1px solid #d9d2c2;
-    border-radius: 6px;
-  }
   .im-code-select {
     max-width: 132px;
     padding: 6px 8px;
@@ -3828,48 +3813,6 @@
     background: var(--fill-2);
     border: 0;
     border-radius: 10px;
-  }
-  /* The row of the sheet, as paper, to hold against the calendar. */
-  .im-scan {
-    margin: 0;
-  }
-  .im-scan figcaption {
-    margin: 0 4px 6px;
-    font-size: 11px;
-    color: var(--text-3);
-  }
-  .im-scan-row {
-    display: flex;
-    overflow-x: auto;
-    background: #fbf8f0;
-    border: 1px solid #d9d2c2;
-    border-radius: 8px;
-  }
-  .design-page .im-scan-row button {
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    align-items: center;
-    width: 30px;
-    padding: 4px 0 6px;
-    font-family: "Hiragino Mincho ProN", serif;
-    font-size: 15px;
-    color: #2b2823;
-    background: transparent;
-    border: 0;
-    border-right: 1px solid #e6dfcf;
-  }
-  .design-page .im-scan-row button small {
-    font-family: -apple-system, sans-serif;
-    font-size: 9px;
-    color: #8c8577;
-  }
-  .design-page .im-scan-row .im-scan-unsure {
-    background: #f7e7a6;
-  }
-  .design-page .im-scan-row button[aria-pressed="true"] {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
   }
   .im-calendar .dc-grid {
     --cell-height: 58px;

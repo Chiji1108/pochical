@@ -426,9 +426,6 @@ function Chips() {
           </Tag>
         </ChipGroup>
       </Item>
-      <Item name="im-code-chip" where="取り込みの記号(勤務表の紙を写した札)">
-        <span className="im-code-chip">日</span>
-      </Item>
     </Group>
   );
 }

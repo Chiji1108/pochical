@@ -429,11 +429,6 @@ export function ImportReviewPage({
                     />
                   ))}
                 </List>
-                {withCoworkers && (
-                  <p className="st-note">
-                    入れたい人だけ選んでください。名前が違うときは直せます。読み取りに自信のない日には入れません。
-                  </p>
-                )}
               </section>
             )}
             {roster && (
@@ -455,7 +450,6 @@ export function ImportReviewPage({
                 roster ? "勤務表のこの行" : `画像の${month.getMonth() + 1}月`
               }
               codes={mine.codes}
-              kind={kind}
               onPick={setPicked}
               picked={picked}
               unsureDays={unsureDays}
@@ -549,110 +543,6 @@ export function ImportReviewPage({
                 )}
               </section>
             )}
-            <ScanStrip
-              caption={
-                roster
-                  ? `勤務表の「${nameOf(myRow ?? 0)}」の行`
-                  : `画像の${month.getMonth() + 1}月`
-              }
-              codes={mine.codes}
-              kind={kind}
-              onPick={setPicked}
-              picked={picked}
-              unsureDays={unsureDays}
-            />
-            <CheckCalendar
-              dates={dayDates}
-              month={month}
-              onPick={setPicked}
-              picked={picked}
-              schedule={readSchedule}
-              unsure={unsureDays.filter((day) => fixes[day] === undefined)}
-            />
-            {picked !== undefined && (
-              <DayFix
-                code={mine.codes[picked - 1] ?? ""}
-                date={new Date(month.getFullYear(), month.getMonth(), picked)}
-                onFix={(shift) => {
-                  setFixes({ ...fixes, [picked]: shift });
-                }}
-                patternKeys={patternKeys}
-                shift={shiftOn(picked)}
-                source={roster ? "勤務表" : "画像"}
-                unsure={unsureDays.includes(picked)}
-              />
-            )}
-            {unsureDays.some((day) => fixes[day] === undefined) && (
-              <p className="im-unsure">
-                <span aria-hidden="true" className="im-unsure-mark">
-                  ?
-                </span>
-                {unsureDays
-                  .filter((day) => fixes[day] === undefined)
-                  .map((day) => `${day}日`)
-                  .join("・")}
-                は読み取りに自信がありません。日付を押して確かめてください。
-              </p>
-            )}
-            {roster && (
-              <section className="st-section">
-                <h4>一緒に働く人</h4>
-                <List>
-                  <SwitchRow
-                    className={noteRow}
-                    label={
-                      <>
-                        一緒に働く人も入れる
-                        <small className="im-row-codes">
-                          選んだ人を、勤務表で同じシフトの日に入れます
-                        </small>
-                      </>
-                    }
-                    checked={withCoworkers}
-                    onChange={(checked) => {
-                      setWithCoworkers(checked);
-                    }}
-                  />
-                  {withCoworkers &&
-                    others.map(({ index, name }) => {
-                      const registered = coworkerNames.includes(
-                        familyName(name)
-                      );
-                      return (
-                        <ListRow
-                          className={noteRow}
-                          key={index}
-                          label={name}
-                          value={registered ? "登録済み" : "新しく追加"}
-                          leading={
-                            <>
-                              <input
-                                checked={people.has(index)}
-                                className="im-check"
-                                onChange={(event) => {
-                                  const chosen = new Set(people);
-                                  if (event.target.checked) {
-                                    chosen.add(index);
-                                  } else {
-                                    chosen.delete(index);
-                                  }
-                                  setPeople(chosen);
-                                }}
-                                type="checkbox"
-                              />
-                            </>
-                          }
-                        />
-                      );
-                    })}
-                </List>
-                {withCoworkers && (
-                  <p className="st-note">
-                    入れたい人だけ選んでください。名前が違うときは直せます。読み取りに自信のない日には入れません。
-                  </p>
-                )}
-              </section>
-            )}
             <div className="im-apply">
               {overwritten > 0 && (
                 <p>
@@ -712,13 +602,6 @@ function CoworkerRow({
       <div className={coworkerStyles.body}>
         {chosen ? (
           <div className={coworkerStyles.fieldRow}>
-            <span
-              aria-hidden="true"
-              className={coworkerStyles.printed}
-              data-unsure={row.unsure ? "" : undefined}
-            >
-              {row.printed}
-            </span>
             <input
               aria-invalid={name.trim() === ""}
               aria-label={`${row.printed}の名前`}
@@ -755,8 +638,6 @@ function CoworkerRow({
 }
 
 const coworkerStyles = {
-  row: css({ alignItems: "flex-start", paddingBlock: "11px" }),
-  check: css({ marginTop: "2px" }),
   body: css({
     display: "flex",
     flex: 1,
@@ -764,24 +645,7 @@ const coworkerStyles = {
     gap: "5px",
     minWidth: 0,
   }),
-  fieldRow: css({ display: "flex", gap: "6px", marginTop: "-5px" }),
-  // The name as the photo has it, cut out of the paper, to hold against
-  // what was read.
-  printed: css({
-    "&[data-unsure]": { filter: "blur(0.5px)" },
-    bg: "#fbf8f0",
-    border: "1px solid #d9d2c2",
-    borderRadius: "6px",
-    color: "#2b2823",
-    flexShrink: 0,
-    fontFamily: '"Hiragino Mincho ProN", serif',
-    fontSize: "12px",
-    lineHeight: "28px",
-    overflow: "hidden",
-    paddingInline: "6px",
-    whiteSpace: "nowrap",
-    width: "74px",
-  }),
+  check: css({ marginTop: "2px" }),
   field: css({
     "&:focus": { outline: "2px solid token(colors.accent)" },
     "&[aria-invalid=true]": { outline: "2px solid token(colors.danger)" },
@@ -796,6 +660,7 @@ const coworkerStyles = {
     paddingInline: "8px",
     width: "100%",
   }),
+  fieldRow: css({ display: "flex", gap: "6px", marginTop: "-5px" }),
   note: css({
     alignItems: "center",
     color: "text3",
@@ -803,6 +668,7 @@ const coworkerStyles = {
     fontSize: "11px",
     gap: "6px",
   }),
+  row: css({ alignItems: "flex-start", paddingBlock: "11px" }),
   together: css({
     color: "text3",
     flexShrink: 0,
@@ -811,26 +677,51 @@ const coworkerStyles = {
   }),
 };
 
-// A shift name read off another app's screen: a word in the app's own
-// type rather than a letter on paper.
-const screenPiece = {
-  chip: css({
-    bg: "#ffffff",
-    borderColor: "#e3e3e8",
-    color: "#1c1c1e",
-    fontFamily: "-apple-system, sans-serif",
-    fontSize: "12px",
-    paddingInline: "6px",
-    width: "auto",
+// What was read, written out as text in the app's own type: codes can
+// run to two letters or more (遅②, P公, 早番), and nothing here is cut
+// from the photo.
+const readText = {
+  caption: css({ color: "text3", fontSize: "11px", margin: "0 4px 6px" }),
+  code: css({
+    color: "text",
+    flexShrink: 0,
+    fontSize: "16px",
+    fontWeight: 600,
+    minWidth: "36px",
+    whiteSpace: "nowrap",
   }),
   day: css({
-    borderRightColor: "#eeeef0",
-    color: "#1c1c1e",
-    fontFamily: "-apple-system, sans-serif",
-    fontSize: "11px",
-    width: "36px",
+    "& small": { color: "text3", fontSize: "9px", fontWeight: 400 },
+    "&[aria-pressed=true]": {
+      outline: "2px solid token(colors.accent)",
+      outlineOffset: "-2px",
+    },
+    // The same yellow as the "?" of a day to look at.
+    "&[data-unsure]": { bg: "#f7e7a6", color: "#4a3d10" },
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    borderRadius: "8px",
+    color: "text",
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    flexShrink: 0,
+    fontSize: "14px",
+    fontWeight: 600,
+    gap: "1px",
+    minWidth: "32px",
+    padding: "4px 4px 6px",
+    whiteSpace: "nowrap",
   }),
-  strip: css({ bg: "#ffffff", borderColor: "#e3e3e8" }),
+  strip: css({
+    bg: "fill",
+    borderRadius: "12px",
+    display: "flex",
+    gap: "2px",
+    overflowX: "auto",
+    padding: "4px",
+  }),
 };
 
 // One code on the sheet and the shift it goes in as.
@@ -860,15 +751,7 @@ function CodeRow({
     <ListRow
       className={cx(noteRow, "im-code")}
       label={<>{codeCount(kind, count)}</>}
-      leading={
-        <>
-          <span
-            className={cx("im-code-chip", kind === "mine" && screenPiece.chip)}
-          >
-            {code}
-          </span>
-        </>
-      }
+      leading={<span className={readText.code}>{code}</span>}
       control={
         <>
           {target !== "skip" && <ShiftMark shift={target} size={18} />}
@@ -900,37 +783,32 @@ function codeCount(kind: ImportKind, count: number) {
   return count > 0 ? `あなたの行に${count}日` : "あなたの行にはなし";
 }
 
-// Your row as the picture has it, to hold against the calendar below.
+// Your row as it was read, to hold against the calendar below.
 function ScanStrip({
-  kind,
   caption,
   codes,
   unsureDays,
   picked,
   onPick,
 }: {
-  kind: ImportKind;
   caption: string;
   codes: string[];
   unsureDays: number[];
   picked?: number;
   onPick: (day: number) => void;
 }) {
-  const screen = kind === "mine";
   return (
-    <figure className="im-scan">
-      <figcaption>{caption}</figcaption>
-      <div className={cx("im-scan-row", screen && screenPiece.strip)}>
+    <figure className={css({ margin: 0 })}>
+      <figcaption className={readText.caption}>{caption}</figcaption>
+      <div className={readText.strip}>
         {codes.map((code, index) => {
           const day = index + 1;
           return (
             <button
               aria-label={`${day}日：${code}`}
               aria-pressed={picked === day}
-              className={cx(
-                unsureDays.includes(day) && "im-scan-unsure",
-                screen && screenPiece.day
-              )}
+              className={readText.day}
+              data-unsure={unsureDays.includes(day) ? "" : undefined}
               key={day}
               onClick={() => {
                 onPick(day);
