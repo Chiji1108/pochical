@@ -5,6 +5,7 @@ import {
   Camera,
   Check,
   Download,
+  Info,
   Pencil,
   UserPlus,
 } from "lucide-react";
@@ -21,6 +22,7 @@ import {
 import { NameTabs, OffLookTabs } from "../components/design-settings";
 import { DecideHeading, SheetHeading } from "../components/design-sheet";
 import { themeStyle, useThemeStyle } from "../components/design-theme";
+import { toastLook } from "../components/design-toast";
 import {
   BackButton,
   Button,
@@ -30,7 +32,11 @@ import {
   IconButton,
   List,
   ListRow,
+  MenuItem,
+  MenuPicker,
+  MenuSeparator,
   PageHeader,
+  PullDownMenu,
   Segment,
   SegmentedControl,
   SwitchRow,
@@ -373,6 +379,30 @@ function Chips() {
   );
 }
 
+function MenuSample() {
+  const [layout, setLayout] = useState<"weeks" | "days">("days");
+  return (
+    <PullDownMenu label={layout === "days" ? "日ごと" : "週ごと"}>
+      <MenuPicker
+        onValueChange={setLayout}
+        options={[
+          { label: "週ごと", value: "weeks" },
+          { label: "日ごと", value: "days" },
+        ]}
+        value={layout}
+      />
+      <MenuSeparator />
+      <MenuItem
+        icon={<Info aria-hidden="true" size={16} />}
+        onSelect={() => undefined}
+        value="legend"
+      >
+        シフトパターン
+      </MenuItem>
+    </PullDownMenu>
+  );
+}
+
 function Sheets() {
   return (
     <Group
@@ -403,11 +433,17 @@ function Sheets() {
           />
         </section>
       </Item>
-      <Item name="gr-toast" where="取り込んだあとの一言">
-        <p className="gr-toast cmp-toast">
+      <Item name="Toast" where="取り込み・保存のあとの一言(Ark UI の Toast)">
+        <p className={toastLook}>
           <Check aria-hidden="true" size={16} />
           10月のシフトを入れました
         </p>
+      </Item>
+      <Item
+        name="PullDownMenu"
+        where="グループのシフト表(週ごと・日ごと・人ごと)"
+      >
+        <MenuSample />
       </Item>
     </Group>
   );

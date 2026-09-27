@@ -5,7 +5,7 @@ import {
   Image as ImageIcon,
   Share,
 } from "lucide-react";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import type { CSSProperties } from "react";
 import { cx } from "styled-system/css";
 
@@ -21,6 +21,7 @@ import {
   ToneContext,
   themeStyle,
 } from "./design-theme";
+import { ToastContext } from "./design-toast";
 import {
   Button,
   List,
@@ -225,8 +226,6 @@ export function SaveSheet({
   );
 }
 
-const savedNoteTime = 2200;
-
 export function ImagePreviewPage({
   month,
   schedule,
@@ -240,19 +239,7 @@ export function ImagePreviewPage({
   onOptions: (options: ImageOptions) => void;
   onClose: () => void;
 }) {
-  const [note, setNote] = useState<string>();
-  // The note after saving or sharing goes away by itself.
-  useEffect(() => {
-    if (!note) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      setNote(undefined);
-    }, savedNoteTime);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [note]);
+  const setNote = useContext(ToastContext);
   const weekTools = useWeek();
   const dates = weekTools.monthDates(month);
   const scheme = useContext(ColorSchemeContext);
@@ -354,7 +341,7 @@ export function ImagePreviewPage({
           画像にだけ使う見た目です。アプリのスタイルは変わりません。
         </p>
       </div>
-      <div className="dc-image-actions">
+      <div className="dc-image-actions" data-toast-above="">
         <Button
           variant="quiet"
           onClick={() => {
@@ -374,10 +361,6 @@ export function ImagePreviewPage({
           保存
         </Button>
       </div>
-      <p aria-live="polite" className="gr-toast" hidden={!note}>
-        <Check aria-hidden="true" size={16} />
-        {note}
-      </p>
     </div>
   );
 }

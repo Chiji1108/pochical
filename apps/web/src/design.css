@@ -686,78 +686,6 @@
   .dc-input-chevron {
     color: var(--accent);
   }
-  .dc-picker-dialog {
-    width: min(360px, calc(100vw - 24px));
-    max-height: calc(100dvh - 24px);
-    padding: 18px;
-    color: var(--text);
-    background: var(--raised);
-    border: 0;
-    border-radius: 24px;
-    box-shadow: 0 16px 60px var(--shadow-strong);
-  }
-  .dc-picker-dialog::backdrop {
-    background: var(--scrim);
-  }
-  .dc-picker-heading,
-  .dc-picker-month {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .dc-picker-heading-actions {
-    display: flex;
-    align-items: center;
-  }
-  .dc-picker-heading h4 {
-    margin: 0;
-    font-size: 17px;
-  }
-  .dc-picker-heading button,
-  .dc-picker-month button {
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    background: transparent;
-    border: 0;
-    border-radius: 12px;
-  }
-  .dc-picker-month {
-    margin: 12px 0;
-    font-size: 14px;
-  }
-  .dc-picker-days {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-  }
-  .dc-picker-dialog .dc-picker-days > span {
-    padding-bottom: 8px;
-    font-size: 11px;
-    color: var(--text-3);
-    text-align: center;
-  }
-  .dc-picker-days button {
-    min-height: 44px;
-    font-size: 13px;
-    background: transparent;
-    border: 0;
-    border-radius: 12px;
-  }
-  .dc-picker-days button:hover {
-    background: var(--accent-soft);
-  }
-  .dc-picker-days .dc-picker-today {
-    outline: 1.5px solid var(--accent-line);
-    outline-offset: -1px;
-  }
-  .dc-picker-days .dc-picker-outside {
-    color: var(--text-faint);
-  }
-  .dc-picker-days button[aria-pressed="true"] {
-    color: var(--on-accent-fill);
-    background: var(--accent-fill);
-  }
 
   .dc-patterns-eight {
     grid-template-columns: repeat(4, minmax(0, 72px));
@@ -2783,27 +2711,7 @@
     border: 0;
   }
 
-  /* Sheet for picking days to share. */
-  .gr-sheet-backdrop {
-    position: absolute;
-    inset: 0;
-    z-index: 5;
-    display: flex;
-    align-items: flex-end;
-    overflow: hidden;
-    background: var(--scrim);
-    border-radius: 47px;
-  }
-  .gr-sheet {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
-    padding: 12px 18px 34px;
-    background: var(--raised);
-    border-radius: 22px 22px 0 0;
-    box-shadow: 0 -6px 24px var(--shadow-strong);
-  }
+  /* Picking days to share. */
   .gr-sheet-suggest {
     display: flex;
     flex-wrap: wrap;
@@ -3284,19 +3192,6 @@
     background: transparent;
     border: 0;
   }
-  .gr-legend-sheet {
-    max-height: 78%;
-    padding-bottom: 0;
-  }
-  .gr-legend-body {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    min-height: 0;
-    padding: 2px 18px 34px;
-    margin: 0 -18px;
-    overflow-y: auto;
-  }
   .gr-legend-member {
     display: flex;
     gap: 6px;
@@ -3396,28 +3291,6 @@
     color: var(--accent);
   }
 
-  /* A short note that fades on its own, above the home bar. */
-  .gr-toast {
-    position: absolute;
-    bottom: 40px;
-    left: 50%;
-    z-index: 6;
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    padding: 10px 16px;
-    margin: 0;
-    font-size: 13px;
-    color: var(--on-inverse);
-    white-space: nowrap;
-    background: var(--inverse);
-    border-radius: 20px;
-    transform: translateX(-50%);
-  }
-  .gr-toast[hidden] {
-    display: none;
-  }
-
   /* The picture of a month, as it will be saved. */
   .dc-image {
     padding: 14px 10px 10px;
@@ -3451,10 +3324,6 @@
     grid-template-columns: 1fr 1fr;
     gap: 10px;
     padding: 10px 4px 20px;
-  }
-  /* Above the save and share buttons rather than on them. */
-  .dc-image-actions ~ .gr-toast {
-    bottom: 126px;
   }
 
   /* /design/colors: the palette page. Each cell sets its own light or dark
@@ -3805,93 +3674,6 @@
   .dc-phone,
   .dc-phone * {
     scrollbar-width: none;
-  }
-  /* 週ごと / 日ごと / 人ごと and the page's other actions, in one pull-down. */
-  .gr-menu-anchor {
-    position: relative;
-    flex-shrink: 0;
-  }
-  .design-page .gr-menu-button {
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-    padding: 7px 10px 7px 12px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-2);
-    background: var(--fill-2);
-    border: 0;
-    border-radius: 16px;
-  }
-  .design-page .gr-menu-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 10;
-    padding: 0;
-    background: transparent;
-    border: 0;
-  }
-  .gr-menu {
-    position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
-    z-index: 11;
-    min-width: 190px;
-    padding: 6px;
-    background: var(--raised);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    box-shadow: 0 8px 24px var(--shadow-strong);
-  }
-  .design-page .gr-menu button {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    width: 100%;
-    padding: 9px 10px;
-    font-size: 14px;
-    color: var(--text);
-    text-align: left;
-    background: transparent;
-    border: 0;
-    border-radius: 9px;
-  }
-  .design-page .gr-menu button:hover {
-    background: var(--fill-2);
-  }
-  .gr-menu hr {
-    margin: 4px 6px;
-    border: 0;
-    border-top: 1px solid var(--separator);
-  }
-  .gr-menu-check {
-    color: var(--accent);
-  }
-  .gr-menu-icon {
-    color: var(--text-3);
-  }
-  /* The picked day, as a sheet over the bottom of the table. */
-  .gr-day-sheet {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 5;
-    display: flex;
-    flex-direction: column;
-    max-height: 46%;
-    padding: 8px 18px 30px;
-    background: var(--raised);
-    border-radius: 22px 22px 0 0;
-    box-shadow: 0 -6px 24px var(--shadow-strong);
-  }
-  .gr-day-sheet .dc-sheet-handle {
-    flex-shrink: 0;
-    margin-bottom: 10px;
-  }
-  .gr-day-sheet-list {
-    min-height: 0;
-    overflow-y: auto;
   }
   .gr-day-sheet-value {
     display: inline-flex;
@@ -4667,10 +4449,6 @@
     position: static;
     max-height: none;
     border-radius: 20px;
-  }
-  .cmp-toast.gr-toast {
-    position: static;
-    transform: none;
   }
 
   /* Onboarding and the join sheet keep their main step at the bottom. */

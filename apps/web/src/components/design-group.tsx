@@ -1,8 +1,6 @@
 import {
   CalendarPlus,
   Camera,
-  Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Copy,
@@ -24,7 +22,7 @@ import {
 } from "lucide-react";
 import { useContext, useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { cx } from "styled-system/css";
+import { css, cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
@@ -46,9 +44,11 @@ import {
   PhoneContext,
   Sheet,
   SheetHeading,
+  sheetBody,
 } from "./design-sheet";
 import { ThemeContext, themeOfColor } from "./design-theme";
 import type { ColorChoice } from "./design-theme";
+import { ToastContext } from "./design-toast";
 import {
   BackButton,
   Button,
@@ -56,7 +56,11 @@ import {
   IconButton,
   List,
   ListRow,
+  MenuItem,
+  MenuPicker,
+  MenuSeparator,
   PageHeader,
+  PullDownMenu,
   Segment,
   SegmentedControl,
   Tag,
@@ -1373,18 +1377,15 @@ function ChatPage({
           <SendHorizontal aria-hidden="true" size={18} />
         </button>
       </form>
-      {sharing && (
-        <DaySheet
-          members={people}
-          onClose={() => {
-            setSharing(false);
-          }}
-          onShare={(days) => {
-            post({ days });
-            setSharing(false);
-          }}
-        />
-      )}
+      <DaySheet
+        members={people}
+        onOpenChange={setSharing}
+        onShare={(days) => {
+          post({ days });
+          setSharing(false);
+        }}
+        open={sharing}
+      />
     </div>
   );
 }
@@ -1496,6 +1497,37 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
 // Picking days to share: days everyone is off first, then any day on a
 // small calendar. Several can be picked at once.
 function DaySheet({
+  open,
+  onOpenChange,
+  members,
+  onShare,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  members: Member[];
+  onShare: (days: Date[]) => void;
+}) {
+  return (
+    <Sheet label="日にちを共有" onOpenChange={onOpenChange} open={open}>
+      <DaySheetBody
+        members={members}
+        onClose={() => {
+          onOpenChange(false);
+        }}
+        onShare={onShare}
+      />
+    </Sheet>
+  );
+}
+
+const daySheetStack = css({
+  display: "flex",
+  flexDirection: "column",
+  gap: "12px",
+});
+
+// Inside the sheet, so what was picked starts over each time it opens.
+function DaySheetBody({
   members,
   onClose,
   onShare,
@@ -1524,96 +1556,94 @@ function DaySheet({
     .filter((date) => everyoneOff(members, date))
     .slice(0, suggestionCount);
   return (
-    <div className="gr-sheet-backdrop">
-      <section aria-label="日にちを共有" className="gr-sheet">
-        <DecideHeading
-          action="送る"
-          disabled={picked.length === 0}
-          onAction={() => {
-            onShare(picked);
-          }}
-          onCancel={onClose}
-          title="日にちを共有"
-        />
-        {suggestions.length > 0 && (
-          <div className="gr-sheet-suggest">
-            <span className="gr-together-label">みんな休み</span>
-            {suggestions.map((date) => (
-              <button
-                aria-pressed={isPicked(date)}
-                key={dateKey(date)}
-                onClick={() => {
-                  toggle(date);
-                }}
-                type="button"
-              >
-                {date.getMonth() + 1}/{date.getDate()}
-                <small className="gr-small-weekday">
-                  {weekdayLabels[date.getDay()]}
-                </small>
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="gr-month">
-          <button
-            aria-label="前の月"
-            onClick={() => {
-              setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
-            }}
-            type="button"
-          >
-            <ChevronLeft aria-hidden="true" size={18} />
-          </button>
-          <strong aria-live="polite">
-            {month.getFullYear()}年{month.getMonth() + 1}月
-          </strong>
-          <button
-            aria-label="次の月"
-            onClick={() => {
-              setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
-            }}
-            type="button"
-          >
-            <ChevronRight aria-hidden="true" size={18} />
-          </button>
-        </div>
-        <div className="gr-pick-days">
-          {weekTools.weekdays.map((day) => (
-            <span
-              aria-hidden="true"
-              className={`gr-pick-weekday ${day.className}`}
-              key={day.day}
+    <div className={daySheetStack}>
+      <DecideHeading
+        action="送る"
+        disabled={picked.length === 0}
+        onAction={() => {
+          onShare(picked);
+        }}
+        onCancel={onClose}
+        title="日にちを共有"
+      />
+      {suggestions.length > 0 && (
+        <div className="gr-sheet-suggest">
+          <span className="gr-together-label">みんな休み</span>
+          {suggestions.map((date) => (
+            <button
+              aria-pressed={isPicked(date)}
+              key={dateKey(date)}
+              onClick={() => {
+                toggle(date);
+              }}
+              type="button"
             >
-              {day.label}
-            </span>
+              {date.getMonth() + 1}/{date.getDate()}
+              <small className="gr-small-weekday">
+                {weekdayLabels[date.getDay()]}
+              </small>
+            </button>
           ))}
-          {weekTools.monthDates(month).map((date) => {
-            const outside = !sameMonth(date, month);
-            const together = !outside && everyoneOff(members, date);
-            return (
-              <button
-                aria-label={`${formatDay(date)}${together ? "、みんな休み" : ""}`}
-                aria-pressed={isPicked(date)}
-                className={`gr-date ${weekTools.dateClass(date)} ${together ? "gr-together-cell" : ""}`}
-                disabled={outside}
-                key={dateKey(date)}
-                onClick={() => {
-                  toggle(date);
-                }}
-                type="button"
-              >
-                {date.getDate()}
-              </button>
-            );
-          })}
         </div>
-        <p className="st-note">
-          {picked.length > 0
-            ? `${picked.length}日分のみんなのシフトを送ります。`
-            : "日付に枠がある日は、みんな休みの日です。"}
-        </p>
-      </section>
+      )}
+      <div className="gr-month">
+        <button
+          aria-label="前の月"
+          onClick={() => {
+            setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
+          }}
+          type="button"
+        >
+          <ChevronLeft aria-hidden="true" size={18} />
+        </button>
+        <strong aria-live="polite">
+          {month.getFullYear()}年{month.getMonth() + 1}月
+        </strong>
+        <button
+          aria-label="次の月"
+          onClick={() => {
+            setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
+          }}
+          type="button"
+        >
+          <ChevronRight aria-hidden="true" size={18} />
+        </button>
+      </div>
+      <div className="gr-pick-days">
+        {weekTools.weekdays.map((day) => (
+          <span
+            aria-hidden="true"
+            className={`gr-pick-weekday ${day.className}`}
+            key={day.day}
+          >
+            {day.label}
+          </span>
+        ))}
+        {weekTools.monthDates(month).map((date) => {
+          const outside = !sameMonth(date, month);
+          const together = !outside && everyoneOff(members, date);
+          return (
+            <button
+              aria-label={`${formatDay(date)}${together ? "、みんな休み" : ""}`}
+              aria-pressed={isPicked(date)}
+              className={`gr-date ${weekTools.dateClass(date)} ${together ? "gr-together-cell" : ""}`}
+              disabled={outside}
+              key={dateKey(date)}
+              onClick={() => {
+                toggle(date);
+              }}
+              type="button"
+            >
+              {date.getDate()}
+            </button>
+          );
+        })}
+      </div>
+      <p className="st-note">
+        {picked.length > 0
+          ? `${picked.length}日分のみんなのシフトを送ります。`
+          : "日付に枠がある日は、みんな休みの日です。"}
+      </p>
     </div>
   );
 }
@@ -1647,10 +1677,10 @@ const suggestionCount = 4;
 // takes over. 人ごと shows one member at a time in a calendar like yours.
 type Layout = "weeks" | "days" | "person";
 
-const layoutOptions: { layout: Layout; name: string }[] = [
-  { layout: "weeks", name: "週ごと" },
-  { layout: "days", name: "日ごと" },
-  { layout: "person", name: "人ごと" },
+const layoutOptions: { value: Layout; label: string }[] = [
+  { label: "週ごと", value: "weeks" },
+  { label: "日ごと", value: "days" },
+  { label: "人ごと", value: "person" },
 ];
 
 function defaultLayout(count: number): Layout {
@@ -1677,22 +1707,11 @@ function ShiftsPage({
 }) {
   const weekTools = useWeek();
   const [month, setMonth] = useState(initialMonth ?? designMonth);
-  // Whose marks the legend sheet shows, when open.
-  const [legend, setLegend] = useState<Member[]>();
+  // Whose marks the legend sheet shows; kept while it closes.
+  const [legend, setLegend] = useState<Member[]>(group.members);
+  const [legendOpen, setLegendOpen] = useState(false);
   const [picked, setPicked] = useState<Date | undefined>(day);
-  const [saved, setSaved] = useState(false);
-  // The note that the picture was saved goes away by itself.
-  useEffect(() => {
-    if (!saved) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      setSaved(false);
-    }, savedNoteTime);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [saved]);
+  const toast = useContext(ToastContext);
   const dates = weekTools.monthDates(month);
   const pick = (date: Date) => {
     setPicked(picked && dateKey(picked) === dateKey(date) ? undefined : date);
@@ -1711,9 +1730,10 @@ function ShiftsPage({
             onLayout={setLayout}
             onLegend={() => {
               setLegend(group.members);
+              setLegendOpen(true);
             }}
             onSave={() => {
-              setSaved(true);
+              toast(`${month.getMonth() + 1}月のシフト表を写真に保存しました`);
             }}
           />
         }
@@ -1725,32 +1745,24 @@ function ShiftsPage({
         month={month}
         onMember={(member) => {
           setLegend([member]);
+          setLegendOpen(true);
         }}
         onMonth={setMonth}
         onPickDay={pick}
         picked={picked}
       />
-      {picked && (
-        <PickedDaySheet
-          date={picked}
-          members={group.members}
-          onClose={() => {
-            setPicked(undefined);
-          }}
-        />
-      )}
-      {legend && (
-        <LegendSheet
-          members={legend}
-          onClose={() => {
-            setLegend(undefined);
-          }}
-        />
-      )}
-      <p aria-live="polite" className="gr-toast" hidden={!saved}>
-        <Check aria-hidden="true" size={16} />
-        {month.getMonth() + 1}月のシフト表を写真に保存しました
-      </p>
+      <PickedDaySheet
+        date={picked}
+        members={group.members}
+        onClose={() => {
+          setPicked(undefined);
+        }}
+      />
+      <LegendSheet
+        members={legend}
+        onOpenChange={setLegendOpen}
+        open={legendOpen}
+      />
     </div>
   );
 }
@@ -1768,73 +1780,32 @@ function ShiftsMenu({
   onLegend: () => void;
   onSave: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const current = layoutOptions.find((option) => option.layout === layout);
-  const act = (action: () => void) => () => {
-    action();
-    setOpen(false);
-  };
+  const current = layoutOptions.find((option) => option.value === layout);
   return (
-    <span className="gr-menu-anchor">
-      <button
-        aria-expanded={open}
-        aria-haspopup="menu"
-        className="gr-menu-button"
-        onClick={() => {
-          setOpen(!open);
-        }}
-        type="button"
+    <PullDownMenu label={current?.label}>
+      <MenuPicker
+        onValueChange={onLayout}
+        options={layoutOptions}
+        value={layout}
+      />
+      <MenuSeparator />
+      <MenuItem
+        icon={<Info aria-hidden="true" size={16} />}
+        onSelect={onLegend}
+        value="legend"
       >
-        {current?.name}
-        <ChevronDown aria-hidden="true" size={15} />
-      </button>
-      {open && (
-        <>
-          <button
-            aria-label="メニューを閉じる"
-            className="gr-menu-backdrop"
-            onClick={() => {
-              setOpen(false);
-            }}
-            type="button"
-          />
-          <div className="gr-menu" role="menu">
-            {layoutOptions.map((option) => (
-              <button
-                aria-checked={layout === option.layout}
-                key={option.layout}
-                onClick={act(() => {
-                  onLayout(option.layout);
-                })}
-                role="menuitemradio"
-                type="button"
-              >
-                <Check
-                  aria-hidden="true"
-                  className="gr-menu-check"
-                  size={16}
-                  visibility={layout === option.layout ? "visible" : "hidden"}
-                />
-                {option.name}
-              </button>
-            ))}
-            <hr />
-            <button onClick={act(onLegend)} role="menuitem" type="button">
-              <Info aria-hidden="true" className="gr-menu-icon" size={16} />
-              シフトパターン
-            </button>
-            <button onClick={act(onSave)} role="menuitem" type="button">
-              <Download aria-hidden="true" className="gr-menu-icon" size={16} />
-              画像で保存
-            </button>
-          </div>
-        </>
-      )}
-    </span>
+        シフトパターン
+      </MenuItem>
+      <MenuItem
+        icon={<Download aria-hidden="true" size={16} />}
+        onSelect={onSave}
+        value="save"
+      >
+        画像で保存
+      </MenuItem>
+    </PullDownMenu>
   );
 }
-
-const savedNoteTime = 2200;
 
 function PagedShifts({
   group,
@@ -1997,34 +1968,30 @@ function TogetherSummary({
           <ChevronRight aria-hidden="true" size={17} />
         </strong>
       </button>
-      {open && (
-        <div className="gr-sheet-backdrop">
-          <section aria-label={label} className="gr-sheet gr-legend-sheet">
-            <SheetHeading
-              onClose={() => {
-                setOpen(false);
-              }}
-              title={label}
-            />
-            {/* Picking a date closes this and shows everyone that day. */}
-            <div className="gr-legend-body">
-              <List>
-                {days.map((date) => (
-                  <ListRow
-                    key={dateKey(date)}
-                    onClick={() => {
-                      setOpen(false);
-                      onPickDay(date);
-                    }}
-                    label={formatDay(date)}
-                    value={holidayName(date) ?? ""}
-                  />
-                ))}
-              </List>
-            </div>
-          </section>
+      <Sheet label={label} onOpenChange={setOpen} open={open}>
+        <SheetHeading
+          onClose={() => {
+            setOpen(false);
+          }}
+          title={label}
+        />
+        {/* Picking a date closes this and shows everyone that day. */}
+        <div className={sheetBody}>
+          <List>
+            {days.map((date) => (
+              <ListRow
+                key={dateKey(date)}
+                onClick={() => {
+                  setOpen(false);
+                  onPickDay(date);
+                }}
+                label={formatDay(date)}
+                value={holidayName(date) ?? ""}
+              />
+            ))}
+          </List>
         </div>
-      )}
+      </Sheet>
     </>
   );
 }
@@ -2072,18 +2039,31 @@ function MonthFoot({
 // table undimmed and live: the picked day stays framed above it, and
 // picking another day switches the sheet to that day.
 function PickedDaySheet({
-  date,
+  date: picked,
   members,
   onClose,
 }: {
-  date: Date;
+  date?: Date;
   members: Member[];
   onClose: () => void;
 }) {
+  // The day stays while the sheet sinks away.
+  const [date, setDate] = useState(picked ?? designToday);
+  if (picked && picked !== date) {
+    setDate(picked);
+  }
   const together = everyoneOff(members, date);
   return (
-    <section aria-label={formatDay(date)} className="gr-day-sheet">
-      <div aria-hidden="true" className="dc-sheet-handle" />
+    <Sheet
+      label={formatDay(date)}
+      modal={false}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+      open={picked !== undefined}
+    >
       <SheetHeading onClose={onClose} title={formatDay(date)}>
         {together && (
           <Tag size="sm" tone="accent">
@@ -2091,105 +2071,107 @@ function PickedDaySheet({
           </Tag>
         )}
       </SheetHeading>
-      <List className="gr-day-sheet-list">
-        {members.map((member) => {
-          const item = patternOn(member, date);
-          return (
-            <ListRow
-              key={member.id}
-              label={member.name}
-              value={
-                <>
-                  {item && (
-                    <MemberMark
-                      date={date}
-                      look={item.look}
-                      member={member}
-                      size={18}
+      <div className={sheetBody}>
+        <List>
+          {members.map((member) => {
+            const item = patternOn(member, date);
+            return (
+              <ListRow
+                key={member.id}
+                label={member.name}
+                value={
+                  <>
+                    {item && (
+                      <MemberMark
+                        date={date}
+                        look={item.look}
+                        member={member}
+                        size={18}
+                      />
+                    )}
+                    {item?.name ?? "未入力"}
+                    <DaySheetTime
+                      change={changeOn(member, date)}
+                      time={item?.time}
                     />
-                  )}
-                  {item?.name ?? "未入力"}
-                  <DaySheetTime
-                    change={changeOn(member, date)}
-                    time={item?.time}
-                  />
-                </>
-              }
-              leading={
-                <>
-                  <Avatar member={member} />
-                </>
-              }
-              valueClassName="gr-day-sheet-value"
-            />
-          );
-        })}
-      </List>
-    </section>
+                  </>
+                }
+                leading={
+                  <>
+                    <Avatar member={member} />
+                  </>
+                }
+                valueClassName="gr-day-sheet-value"
+              />
+            );
+          })}
+        </List>
+      </div>
+    </Sheet>
   );
 }
 
 // What each mark means, for one person or everyone, in their own style.
 function LegendSheet({
+  open,
+  onOpenChange,
   members,
-  onClose,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   members: Member[];
-  onClose: () => void;
 }) {
   const single = members.length === 1 ? members[0] : undefined;
+  const onClose = () => {
+    onOpenChange(false);
+  };
   return (
-    <div className="gr-sheet-backdrop">
-      <section
-        aria-label={
-          single ? `${single.name}のシフトパターン` : "みんなのシフトパターン"
+    <Sheet
+      label={
+        single ? `${single.name}のシフトパターン` : "みんなのシフトパターン"
+      }
+      onOpenChange={onOpenChange}
+      open={open}
+    >
+      <SheetHeading
+        onClose={onClose}
+        title={
+          <>
+            {single && <Avatar member={single} />}
+            {single
+              ? `${single.name}のシフトパターン`
+              : "みんなのシフトパターン"}
+          </>
         }
-        className="gr-sheet gr-legend-sheet"
-      >
-        <SheetHeading
-          onClose={onClose}
-          title={
-            <>
-              {single && <Avatar member={single} />}
-              {single
-                ? `${single.name}のシフトパターン`
-                : "みんなのシフトパターン"}
-            </>
-          }
-        />
-        {/* Only the marks scroll; the title and 閉じる stay in reach. */}
-        <div className="gr-legend-body">
-          {members.map((member) => (
-            <section className="st-section" key={member.id}>
-              {!single && (
-                <h4 className="gr-legend-member">
-                  <Avatar member={member} />
-                  {member.me ? "自分" : member.name}
-                </h4>
-              )}
-              <List>
-                {member.patterns.map((item) => (
-                  <ListRow
-                    key={item.id}
-                    label={item.name}
-                    value={item.time ?? ""}
-                    leading={
-                      <>
-                        <MemberMark
-                          look={item.look}
-                          member={member}
-                          size={20}
-                        />
-                      </>
-                    }
-                  />
-                ))}
-              </List>
-            </section>
-          ))}
-        </div>
-      </section>
-    </div>
+      />
+      {/* Only the marks scroll; the title and 閉じる stay in reach. */}
+      <div className={sheetBody}>
+        {members.map((member) => (
+          <section className="st-section" key={member.id}>
+            {!single && (
+              <h4 className="gr-legend-member">
+                <Avatar member={member} />
+                {member.me ? "自分" : member.name}
+              </h4>
+            )}
+            <List>
+              {member.patterns.map((item) => (
+                <ListRow
+                  key={item.id}
+                  label={item.name}
+                  value={item.time ?? ""}
+                  leading={
+                    <>
+                      <MemberMark look={item.look} member={member} size={20} />
+                    </>
+                  }
+                />
+              ))}
+            </List>
+          </section>
+        ))}
+      </div>
+    </Sheet>
   );
 }
 

@@ -1,4 +1,4 @@
-import { SegmentGroup, Switch } from "@ark-ui/react";
+import { Menu, SegmentGroup, Switch } from "@ark-ui/react";
 import {
   closestCenter,
   DndContext,
@@ -17,7 +17,13 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronLeft, ChevronRight, GripVertical } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  GripVertical,
+} from "lucide-react";
 import { createContext, useContext } from "react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
@@ -782,6 +788,143 @@ export function Tag({
       {children}
     </Element>
   );
+}
+
+const menu = {
+  check: css({ color: "accent", flexShrink: 0 }),
+  content: css({
+    _closed: { animation: "fadeOut 0.12s ease-in" },
+    _open: { animation: "fadeIn 0.12s ease-out" },
+    bg: "raised",
+    border: "1px solid token(colors.border)",
+    borderRadius: "14px",
+    boxShadow: "0 8px 24px var(--shadow-strong)",
+    minWidth: "190px",
+    outline: "none",
+    padding: "6px",
+    zIndex: 30,
+  }),
+  icon: css({ color: "text3", flexShrink: 0 }),
+  item: css({
+    _highlighted: { bg: "fill2" },
+    alignItems: "center",
+    borderRadius: "9px",
+    color: "text",
+    cursor: "default",
+    display: "flex",
+    fontSize: "14px",
+    gap: "10px",
+    padding: "9px 10px",
+    userSelect: "none",
+  }),
+  separator: css({
+    border: 0,
+    borderTop: "1px solid token(colors.separator)",
+    margin: "4px 6px",
+  }),
+  trigger: css({
+    alignItems: "center",
+    bg: "fill2",
+    border: 0,
+    borderRadius: "16px",
+    color: "text2",
+    display: "inline-flex",
+    flexShrink: 0,
+    fontSize: "13px",
+    fontWeight: 600,
+    gap: "4px",
+    padding: "7px 10px 7px 12px",
+  }),
+};
+
+// A pull-down for a page's secondary actions, as SwiftUI's Menu and
+// Compose's DropdownMenu: its button names what is chosen now, and the
+// choices and actions open under it. Ark UI's Menu moves through them by
+// arrow keys and closes on a pick, outside or by Escape.
+export function PullDownMenu({
+  label,
+  children,
+}: {
+  // What the button says, usually the current choice.
+  label: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <Menu.Root positioning={{ gutter: 6, placement: "bottom-end" }}>
+      <Menu.Trigger className={menu.trigger}>
+        {label}
+        <ChevronDown aria-hidden="true" size={15} />
+      </Menu.Trigger>
+      <Menu.Positioner>
+        <Menu.Content className={menu.content}>{children}</Menu.Content>
+      </Menu.Positioner>
+    </Menu.Root>
+  );
+}
+
+// One choice among several inside a menu, marked with a check, as a
+// Picker inside a SwiftUI Menu.
+export function MenuPicker<Value extends string>({
+  value,
+  onValueChange,
+  options,
+}: {
+  value: Value;
+  onValueChange: (value: Value) => void;
+  options: readonly { value: Value; label: string }[];
+}) {
+  return (
+    <Menu.RadioItemGroup
+      onValueChange={(details) => {
+        const option = options.find((item) => item.value === details.value);
+        if (option) {
+          onValueChange(option.value);
+        }
+      }}
+      value={value}
+    >
+      {options.map((option) => (
+        <Menu.RadioItem
+          className={menu.item}
+          key={option.value}
+          value={option.value}
+        >
+          <Check
+            aria-hidden="true"
+            className={menu.check}
+            size={16}
+            visibility={option.value === value ? "visible" : "hidden"}
+          />
+          <Menu.ItemText>{option.label}</Menu.ItemText>
+        </Menu.RadioItem>
+      ))}
+    </Menu.RadioItemGroup>
+  );
+}
+
+// An action in a menu, with its icon.
+export function MenuItem({
+  value,
+  icon,
+  onSelect,
+  children,
+}: {
+  // Names the item for the menu; not shown.
+  value: string;
+  icon?: ReactNode;
+  onSelect: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Menu.Item className={menu.item} onSelect={onSelect} value={value}>
+      {icon && <span className={menu.icon}>{icon}</span>}
+      {children}
+    </Menu.Item>
+  );
+}
+
+export function MenuSeparator() {
+  return <Menu.Separator className={menu.separator} />;
 }
 
 // A list to reorder by its handles, as SwiftUI's List with .onMove: drag

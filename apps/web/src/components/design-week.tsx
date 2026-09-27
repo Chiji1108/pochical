@@ -116,6 +116,7 @@ export function useWeek() {
       week.colored.holiday && holidayName(date) !== undefined,
     monthDates: (month: Date) => monthDatesFrom(month, week.weekStart),
     weekDates: (date: Date) => weekDatesFrom(date, week.weekStart),
+    weekStart: week.weekStart,
     weekdays: weekdaysFrom(week),
   };
 }

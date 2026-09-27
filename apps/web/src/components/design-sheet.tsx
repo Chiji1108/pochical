@@ -25,18 +25,6 @@ const sheet = {
     position: "absolute",
     zIndex: 20,
   }),
-  content: css({
-    _closed: { animation: "sheetOut 0.2s ease-in" },
-    _open: { animation: "sheetIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)" },
-    bg: "raised",
-    borderRadius: "28px 28px 0 0",
-    color: "text",
-    maxHeight: "85%",
-    outline: "none",
-    overflowY: "auto",
-    padding: "12px 24px 28px",
-    width: "100%",
-  }),
   handle: css({
     bg: "controlOff",
     borderRadius: "8px",
@@ -54,10 +42,15 @@ const sheet = {
 };
 
 // Where the sheet sits: at the bottom, or in the middle for an alert. One
-// recipe, so the two never fight over alignItems.
+// recipe, so the two never fight over alignItems. A sheet that leaves the
+// screen behind it live lets taps through around itself.
 const positioner = cva({
   base: { display: "flex", inset: 0, position: "absolute", zIndex: 21 },
   variants: {
+    modal: {
+      false: { "& > *": { pointerEvents: "auto" }, pointerEvents: "none" },
+      true: {},
+    },
     placement: {
       bottom: { alignItems: "flex-end" },
       center: { alignItems: "center", justifyContent: "center" },
@@ -65,16 +58,61 @@ const positioner = cva({
   },
 });
 
+// A sheet over a dimmed ground may take most of the phone. One that
+// leaves the screen live stays low, with a shadow in place of the dimming,
+// so the part it is about stays in view above it.
+const content = cva({
+  base: {
+    _closed: { animation: "sheetOut 0.2s ease-in" },
+    _open: { animation: "sheetIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)" },
+    bg: "raised",
+    borderRadius: "28px 28px 0 0",
+    color: "text",
+    // A column, so a part marked to scroll can take what is left while the
+    // heading stays in reach.
+    display: "flex",
+    flexDirection: "column",
+    outline: "none",
+    overflowY: "auto",
+    padding: "12px 24px 28px",
+    width: "100%",
+  },
+  variants: {
+    modal: {
+      false: {
+        boxShadow: "0 -6px 24px var(--shadow-strong)",
+        maxHeight: "46%",
+      },
+      true: { maxHeight: "85%" },
+    },
+  },
+});
+
+// The part of a sheet that scrolls under a heading that stays; it runs to
+// the sheet's edges so the scrolling reaches them.
+export const sheetBody = css({
+  display: "flex",
+  flexDirection: "column",
+  gap: "12px",
+  margin: "0 -24px -28px",
+  minHeight: 0,
+  overflowY: "auto",
+  padding: "2px 24px 28px",
+});
+
 // A sheet over the phone, as SwiftUI's .sheet and Compose's
 // ModalBottomSheet: it rises from the bottom over a dimmed ground, and
 // closes by its heading's ×, by the ground, or by Escape. Ark UI's Dialog
-// traps focus inside and gives it back when it closes.
+// traps focus inside and gives it back when it closes. A sheet that is not
+// modal, like a picked day's, leaves the screen behind it undimmed and
+// live, and only its × or Escape closes it.
 export function Sheet({
   open,
   onOpenChange,
   label,
   role = "dialog",
   placement = "bottom",
+  modal = true,
   className,
   children,
 }: {
@@ -85,6 +123,7 @@ export function Sheet({
   // An alertdialog asks something that needs an answer.
   role?: "dialog" | "alertdialog";
   placement?: "bottom" | "center";
+  modal?: boolean;
   className?: string;
   children: ReactNode;
 }) {
@@ -94,8 +133,10 @@ export function Sheet({
   const contentRef = useRef<HTMLDivElement>(null);
   return (
     <Dialog.Root
+      closeOnInteractOutside={modal}
       initialFocusEl={() => contentRef.current}
       lazyMount
+      modal={modal}
       onOpenChange={(details) => {
         onOpenChange(details.open);
       }}
@@ -105,12 +146,12 @@ export function Sheet({
       unmountOnExit
     >
       <Portal container={phone ?? undefined}>
-        <Dialog.Backdrop className={sheet.backdrop} />
-        <Dialog.Positioner className={positioner({ placement })}>
+        {modal && <Dialog.Backdrop className={sheet.backdrop} />}
+        <Dialog.Positioner className={positioner({ modal, placement })}>
           <Dialog.Content
             aria-label={label}
             className={cx(
-              placement === "center" ? sheet.center : sheet.content,
+              placement === "center" ? sheet.center : content({ modal }),
               className
             )}
             ref={contentRef}
