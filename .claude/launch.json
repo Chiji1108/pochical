@@ -10,6 +10,16 @@
       ],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "roster-report",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd tools/roster-eval/out && exec python3 -m http.server \"$PORT\" --bind 127.0.0.1"
+      ],
+      "port": 8765,
+      "autoPort": true
     }
   ]
 }

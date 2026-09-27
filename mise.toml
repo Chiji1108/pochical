@@ -29,3 +29,7 @@ run = "bun run --cwd apps/server test"
 [tasks."server:typecheck"]
 description = "Typecheck the server"
 run = "bun run --cwd apps/server typecheck"
+
+[tasks."roster-eval"]
+description = "Compare vision models reading the roster photos in assets/shift-schedule (costs money)"
+run = "bun tools/roster-eval/eval.ts"

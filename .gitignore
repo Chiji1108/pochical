@@ -56,3 +56,8 @@ app-example
 
 # Panda CSS output, made by `panda codegen`
 apps/web/styled-system/
+
+# Real roster photos and their answer key: coworkers' names, never commit
+assets/shift-schedule/
+# Roster reading comparison: resized images, raw replies and the report
+tools/roster-eval/out/
