@@ -13,14 +13,22 @@ export function MonthChoiceSheet({
   open,
   onOpenChange,
   month,
+  first,
+  last,
   onPick,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   // The month on screen, which the sheet opens on.
   month: Date;
+  // The months there are, when the screen's list has ends.
+  first?: Date;
+  last?: Date;
   onPick: (month: Date) => void;
 }) {
+  const outside = (target: Date) =>
+    (first !== undefined && target.getTime() < first.getTime()) ||
+    (last !== undefined && target.getTime() > last.getTime());
   const [year, setYear] = useState(month.getFullYear());
   // Each opening starts from the year on screen, however the sheet is
   // opened and wherever the months have moved since.
@@ -46,6 +54,7 @@ export function MonthChoiceSheet({
         <button
           aria-label="前の年"
           className={monthChoice.step}
+          disabled={first !== undefined && year <= first.getFullYear()}
           onClick={() => {
             setYear(year - 1);
           }}
@@ -57,6 +66,7 @@ export function MonthChoiceSheet({
         <button
           aria-label="次の年"
           className={monthChoice.step}
+          disabled={last !== undefined && year >= last.getFullYear()}
           onClick={() => {
             setYear(year + 1);
           }}
@@ -77,6 +87,7 @@ export function MonthChoiceSheet({
               aria-current={current ? "date" : undefined}
               aria-pressed={shown}
               className={monthChoice.month({ current, shown })}
+              disabled={outside(new Date(year, index, 1))}
               key={index}
               onClick={() => {
                 onPick(new Date(year, index, 1));
@@ -97,11 +108,15 @@ export function MonthChoiceSheet({
 // saying so; `children` draws the name, so each screen keeps its size.
 export function MonthTitleButton({
   month,
+  first,
+  last,
   onPick,
   twoLines = false,
   children,
 }: {
   month: Date;
+  first?: Date;
+  last?: Date;
   onPick: (month: Date) => void;
   // A name of two lines, like the year over the month, has the chevron
   // level with its second.
@@ -128,6 +143,8 @@ export function MonthTitleButton({
         />
       </button>
       <MonthChoiceSheet
+        first={first}
+        last={last}
         month={month}
         onOpenChange={setOpen}
         onPick={onPick}
@@ -167,6 +184,7 @@ const monthChoice = {
   }),
   month: cva({
     base: {
+      _disabled: { color: "textDisabled", cursor: "default" },
       bg: "fill",
       border: "1.5px solid transparent",
       borderRadius: "999px",
@@ -182,6 +200,7 @@ const monthChoice = {
     },
   }),
   step: css({
+    _disabled: { color: "textDisabled", cursor: "default" },
     bg: "transparent",
     border: 0,
     borderRadius: "999px",
