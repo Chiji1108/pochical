@@ -1383,40 +1383,16 @@ function HeadingActions({
   );
   if (!arrows) {
     return (
-      <div className={heading.corner}>
-        {mode !== "edit" && (
-          <div className={heading.arrowsOnFocus}>
-            {previous}
-            {next}
-          </div>
-        )}
-        {mode !== "edit" && !atToday && (
-          <div className={heading.backAtEnd}>{back}</div>
-        )}
-        {mode === "view" ? (
-          <IconMenu
-            icon={<Share aria-hidden="true" size={21} />}
-            label="この月のシフトを保存"
-          >
-            <MenuItem
-              icon={<ImageIcon aria-hidden="true" size={18} />}
-              onSelect={onImage}
-              value="image"
-            >
-              画像で保存
-            </MenuItem>
-            <MenuItem
-              icon={<CalendarPlus aria-hidden="true" size={18} />}
-              onSelect={onCalendar}
-              value="calendar"
-            >
-              端末カレンダーに追加
-            </MenuItem>
-          </IconMenu>
-        ) : (
-          <DoneButton onClick={onDone} />
-        )}
-      </div>
+      <SwipeCorner
+        atToday={atToday}
+        back={back}
+        mode={mode}
+        next={next}
+        onCalendar={onCalendar}
+        onDone={onDone}
+        onImage={onImage}
+        previous={previous}
+      />
     );
   }
   const navAtEnd = atEnd && mode === "view";
@@ -1452,6 +1428,66 @@ function HeadingActions({
         <DoneButton className={heading.endAction} onClick={onDone} />
       )}
     </>
+  );
+}
+
+// The heading's corner when a swipe alone turns the page: the arrows for
+// the keyboard and screen readers, 今月 while away, then the save menu or
+// 完了.
+function SwipeCorner({
+  mode,
+  atToday,
+  previous,
+  next,
+  back,
+  onImage,
+  onCalendar,
+  onDone,
+}: {
+  mode: "view" | "edit" | "week";
+  atToday: boolean;
+  previous: ReactNode;
+  next: ReactNode;
+  back: ReactNode;
+  onImage: () => void;
+  onCalendar: () => void;
+  onDone: () => void;
+}) {
+  return (
+    <div className={heading.corner}>
+      {mode !== "edit" && (
+        <div className={heading.arrowsOnFocus}>
+          {previous}
+          {next}
+        </div>
+      )}
+      {mode !== "edit" && !atToday && (
+        <div className={heading.backAtEnd}>{back}</div>
+      )}
+      {mode === "view" ? (
+        <IconMenu
+          icon={<Share aria-hidden="true" size={21} />}
+          label="この月のシフトを保存"
+        >
+          <MenuItem
+            icon={<ImageIcon aria-hidden="true" size={18} />}
+            onSelect={onImage}
+            value="image"
+          >
+            画像で保存
+          </MenuItem>
+          <MenuItem
+            icon={<CalendarPlus aria-hidden="true" size={18} />}
+            onSelect={onCalendar}
+            value="calendar"
+          >
+            端末カレンダーに追加
+          </MenuItem>
+        </IconMenu>
+      ) : (
+        <DoneButton onClick={onDone} />
+      )}
+    </div>
   );
 }
 
