@@ -1898,6 +1898,8 @@ function SortableRow({
         {...listeners}
         aria-label={`${label}を並べ替え`}
         className={sortable.handle}
+        // Dragging it moves the row, not a sheet the list is in.
+        data-no-drag=""
         ref={setActivatorNodeRef}
         type="button"
       >
