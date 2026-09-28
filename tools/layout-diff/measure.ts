@@ -179,7 +179,8 @@ export function measure(root: string): Screen {
   const rootNames = new Map<string, number>();
   const rootName = (measured: Element, index: number) => {
     const listed =
-      measured.closest(".cmp-item")?.querySelector("code")?.textContent ?? "";
+      measured.closest("[data-catalog-item]")?.querySelector("code")
+        ?.textContent ?? "";
     if (listed === "") {
       return String(index + 1);
     }

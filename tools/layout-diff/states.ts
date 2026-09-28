@@ -239,7 +239,7 @@ export const states: State[] = [
   {
     name: "design/components",
     path: "/design/components",
-    root: ".cmp-sample",
+    root: "[data-sample]",
   },
   // The pages themselves around the phones: toolbars, headings, captions,
   // the design choices beside the demo, and the design documents.

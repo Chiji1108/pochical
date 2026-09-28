@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { css } from "styled-system/css";
+import { css, cva } from "styled-system/css";
 
 import { DayCell, MonthSummary, TabBar } from "../components/design-calendar";
 import { PhotoAvatar } from "../components/design-group";
@@ -103,10 +103,84 @@ function ComponentsPage() {
   );
 }
 
+const catalog = {
+  // A day as big as on a month of five weeks.
+  cell: css({ width: "46px" }),
+  group: css({
+    "& > h2": { fontSize: "17px", fontWeight: 700, margin: "0 0 4px" },
+  }),
+  // Two across on a wide page; one on a phone.
+  item: cva({
+    base: {
+      "& > figcaption": {
+        display: "flex",
+        flexDirection: "column",
+        gap: "2px",
+        padding: "0 2px",
+      },
+      "& > figcaption > code": { color: "text", fontSize: "12px" },
+      "& > figcaption > small": { color: "text3", fontSize: "11px" },
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+      margin: 0,
+    },
+    variants: {
+      wide: {
+        true: {
+          "@media (max-width: 480px)": { gridColumn: "auto" },
+          gridColumn: "span 2",
+        },
+      },
+    },
+  }),
+  items: css({
+    display: "grid",
+    gap: "12px",
+    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+  }),
+  marks: css({ alignItems: "center", display: "flex", gap: "18px" }),
+  note: css({
+    color: "text3",
+    fontSize: "12px",
+    lineHeight: "1.6",
+    margin: "0 0 14px",
+  }),
+  // A piece keeps within its box, or fills a wide one.
+  sample: cva({
+    base: {
+      "& > *": { maxWidth: "100%" },
+      alignItems: "center",
+      bg: "raised",
+      border: "1px solid token(colors.separator)",
+      borderRadius: "14px",
+      display: "flex",
+      flex: 1,
+      justifyContent: "center",
+      minHeight: "88px",
+      padding: "16px",
+    },
+    variants: { wide: { true: { "& > *": { width: "100%" } } } },
+  }),
+  // The app's own ground, light or dark as the screen is, so the pieces
+  // sit on what they are drawn for.
+  surface: css({
+    bg: "background",
+    borderRadius: "24px",
+    color: "text",
+    display: "flex",
+    flexDirection: "column",
+    gap: "40px",
+    margin: "0 auto 64px",
+    maxWidth: "1100px",
+    padding: "28px 20px 40px",
+  }),
+};
+
 // The phone's colors, without a phone around them.
 function Surface() {
   return (
-    <div className="cmp-surface" style={useThemeStyle()}>
+    <div className={catalog.surface} style={useThemeStyle()}>
       <Buttons />
       <Rows />
       <Switches />
@@ -128,10 +202,10 @@ function Group({
   children: ReactNode;
 }) {
   return (
-    <section aria-label={title} className="cmp-group">
+    <section aria-label={title} className={catalog.group}>
       <h2>{title}</h2>
-      {note && <p className="cmp-note">{note}</p>}
-      <div className="cmp-items">{children}</div>
+      {note && <p className={catalog.note}>{note}</p>}
+      <div className={catalog.items}>{children}</div>
     </section>
   );
 }
@@ -150,8 +224,12 @@ function Item({
   children: ReactNode;
 }) {
   return (
-    <figure className={`cmp-item ${wide ? "cmp-item-wide" : ""}`}>
-      <div className="cmp-sample">{children}</div>
+    // data-catalog-item and data-sample are what tools/layout-diff measures
+    // the pieces by.
+    <figure className={catalog.item({ wide })} data-catalog-item>
+      <div className={catalog.sample({ wide })} data-sample>
+        {children}
+      </div>
       <figcaption>
         <code>{name}</code>
         <small>{where}</small>
@@ -218,7 +296,7 @@ function Buttons() {
           <BackButton />
         </Item>
         <Item name="IconButton" where="グループの見出しの招待・設定、月の保存">
-          <span className="cmp-marks">
+          <span className={catalog.marks}>
             <IconButton label="招待">
               <UserPlus aria-hidden="true" size={18} />
             </IconButton>
@@ -530,7 +608,7 @@ function Pochical() {
             where="シフトが出るところすべて"
           >
             <ShiftMarkStyleContext value={style}>
-              <span className="cmp-marks">
+              <span className={catalog.marks}>
                 <ShiftMark shift="day" size={24} />
                 <ShiftMark early shift="day" size={24} />
                 <ShiftMark late shift="day" size={24} />
@@ -583,7 +661,7 @@ function Pochical() {
           <TabBar active="calendar" onSelect={() => undefined} />
         </Item>
         <Item name="PhotoAvatar" where="グループのメンバー">
-          <span className="cmp-marks">
+          <span className={catalog.marks}>
             <PhotoAvatar name="ゆうき" />
             <PhotoAvatar me name="自分" />
           </span>
@@ -628,7 +706,7 @@ function Cell({
   active?: boolean;
 }) {
   return (
-    <div className="cmp-cell">
+    <div className={catalog.cell}>
       <DayCell
         active={active}
         className={sampleDay}
