@@ -8,6 +8,8 @@ export type State = {
   // Under the dev server, with the demo's variants in the query.
   path: string;
   steps?: (page: Page) => Promise<void>;
+  // What to measure, when not the phones.
+  root?: string;
 };
 
 const demo = (variants: string) =>
@@ -92,6 +94,23 @@ export const states: State[] = [
     steps: tapOn(/^9月1日/u),
   },
   {
+    name: "calendar/breakdown",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: tapOn(/^今月のお休み/u),
+  },
+  {
+    // 完了 with a day left blank between two entered.
+    name: "calendar/gap-sheet",
+    path: demo("bottomRows=two&scheduleSample=empty"),
+    steps: async (page) => {
+      await tap(page, "ポチポチ入力");
+      await tap(page, "日勤");
+      await tap(page, /^翌日へ/u);
+      await tap(page, "日勤");
+      await tap(page, /^完了/u);
+    },
+  },
+  {
     name: "calendar/image",
     path: demo("bottomRows=two&scheduleSample=filled"),
     steps: tapOn("画像で保存"),
@@ -152,6 +171,12 @@ export const states: State[] = [
   // and dark, and the first-run screens.
   { name: "design/states", path: "/design/states" },
   { name: "design/flows", path: "/design/flows" },
+  // Every shared piece on its own, each in its sample box.
+  {
+    name: "design/components",
+    path: "/design/components",
+    root: ".cmp-sample",
+  },
   {
     name: "settings",
     path: demo("bottomRows=two&scheduleSample=filled"),

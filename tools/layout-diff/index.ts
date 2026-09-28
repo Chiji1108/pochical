@@ -38,7 +38,7 @@ const VIEWPORT = { height: 1300, width: 800 };
 const SETTLE_MS = 300;
 const SETTLE_TRIES = 20;
 
-async function settled(page: Page) {
+async function settled(page: Page, root: string) {
   // An image still loading has no size yet, and would be left out. Lazy
   // ones out of view load only when scrolled to.
   await page.waitForFunction(() =>
@@ -46,13 +46,13 @@ async function settled(page: Page) {
       (image) => image.complete || image.loading === "lazy"
     )
   );
-  let last = JSON.stringify(await page.evaluate(measure));
+  let last = JSON.stringify(await page.evaluate(measure, root));
   for (let tries = 0; tries < SETTLE_TRIES; tries += 1) {
     // Each measure waits for the one before it.
     // oxlint-disable-next-line no-await-in-loop
     await page.waitForTimeout(SETTLE_MS);
     // oxlint-disable-next-line no-await-in-loop
-    const screen = await page.evaluate(measure);
+    const screen = await page.evaluate(measure, root);
     const now = JSON.stringify(screen);
     if (now === last) {
       return screen;
@@ -64,12 +64,13 @@ async function settled(page: Page) {
 
 async function measureState(page: Page, base: string, state: State) {
   await page.goto(new URL(state.path, base).href);
-  await page.locator(".dc-phone").first().waitFor();
-  await settled(page);
+  const root = state.root ?? ".dc-phone";
+  await page.locator(root).first().waitFor();
+  await settled(page, root);
   if (state.steps !== undefined) {
     await state.steps(page);
   }
-  return await settled(page);
+  return await settled(page, root);
 }
 
 // The installed Chrome when there is one, else Playwright's own Chromium.

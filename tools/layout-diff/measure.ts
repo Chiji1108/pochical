@@ -1,8 +1,10 @@
-// What the phones on a page show, measured in the page by Playwright: the
+// What the phones on a page show (or what else `root` names, like the
+// samples on /design/components), measured in the page by Playwright: the
 // phone itself and each element in it with text, a label, a box of its own
 // or that is a control or icon, keyed by what it says or is labelled
 // (counted when a name comes again), with where it sits in its phone and
-// how it is drawn. With more than one phone, keys start with its number.
+// how it is drawn, along with what is drawn over it from beside it. With
+// more than one phone, keys start with its number.
 
 export type Look = Record<string, number | string>;
 export type Screen = Record<string, Look>;
@@ -10,10 +12,10 @@ export type Screen = Record<string, Look>;
 // Playwright sends this function into the page as its source, so its
 // helpers have to live inside it.
 /* oxlint-disable unicorn/consistent-function-scoping */
-export function measure(): Screen {
-  const phones = [...document.querySelectorAll(".dc-phone")];
+export function measure(root: string): Screen {
+  const phones = [...document.querySelectorAll(root)];
   if (phones.length === 0) {
-    throw new Error("No .dc-phone on the page");
+    throw new Error(`No ${root} on the page`);
   }
   const transparent = "rgba(0, 0, 0, 0)";
   const drawnTags = new Set([
@@ -149,7 +151,30 @@ export function measure(): Screen {
     const origin = phone.getBoundingClientRect();
     screen[`${prefix}phone`] = lookOf(phone, getComputedStyle(phone), origin);
     const seen = new Map<string, number>();
-    for (const element of phone.querySelectorAll("*")) {
+    // What is drawn over the phone from beside it, like a sheet pictured
+    // open over it in the flow diagrams.
+    const overlays = [...(phone.parentElement?.children ?? [])].filter(
+      (sibling) => {
+        if (sibling === phone) {
+          return false;
+        }
+        const box = sibling.getBoundingClientRect();
+        return (
+          box.left < origin.right &&
+          box.right > origin.left &&
+          box.top < origin.bottom &&
+          box.bottom > origin.top
+        );
+      }
+    );
+    const elements = [
+      ...phone.querySelectorAll("*"),
+      ...overlays.flatMap((overlay) => [
+        overlay,
+        ...overlay.querySelectorAll("*"),
+      ]),
+    ];
+    for (const element of elements) {
       const style = getComputedStyle(element);
       const shown =
         element.hasAttribute("aria-label") ||
