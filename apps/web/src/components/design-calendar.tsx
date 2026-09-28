@@ -7,7 +7,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Download,
   Image as ImageIcon,
   Pencil,
   Plus,
@@ -51,7 +50,6 @@ import {
   DoneButton,
   fieldHint,
   fieldLabel,
-  IconButton,
   IconMenu,
   MenuItem,
   Pager,
@@ -380,8 +378,6 @@ export function DesignCalendar({
   const setProfile = useUser((state) => state.setProfile);
   const rules = useUser((state) => state.rules);
   const setRules = useUser((state) => state.setRules);
-  // Repeating shifts fill every month, so the monthly input buttons go away.
-  const repeating = isRepeating(rules);
   // Renaming or deleting someone changes the days they are on too.
   const updateMembersOnDays = (change: (names: string[]) => string[]) => {
     onChange((previous) =>
@@ -444,18 +440,6 @@ export function DesignCalendar({
       .length,
   }));
   const unfilled = monthDays.filter((date) => !schedule[dateKey(date)]).length;
-  // The 保存を右上 variant: saving moves to the heading's corner in place of
-  // the arrows, which a swipe already does, so the bottom always offers
-  // ポチポチ入力, filled month or not.
-  const saveTop = variants.bottomRows === "saveTop";
-  // Input is offered only while the month has days to fill: a repeating
-  // order fills them itself, and a filled month is fixed by tapping a day.
-  const showInputBar = saveTop || (!repeating && unfilled > 0);
-  // The いつも2段 variant: the bottom always holds two rows, what the month
-  // is on top and what to do next under it, so the calendar keeps one
-  // height. A filled month's next step is saving it.
-  const twoRows = variants.bottomRows === "two";
-  const showSaveBar = twoRows && !showInputBar;
   const selectedDate = new Date(
     month.getFullYear(),
     month.getMonth(),
@@ -718,8 +702,6 @@ export function DesignCalendar({
                 </strong>
               </h3>
               <HeadingActions
-                arrows={!saveTop}
-                atEnd={twoRows}
                 detailDate={detailDate}
                 mode={headingMode}
                 month={month}
@@ -730,13 +712,6 @@ export function DesignCalendar({
                 onImage={() => {
                   setImagePreview(true);
                 }}
-                onSave={
-                  twoRows || saveTop
-                    ? undefined
-                    : () => {
-                        openSave(false);
-                      }
-                }
                 onStep={step}
                 onThisMonth={() => {
                   goToMonth(
@@ -855,23 +830,11 @@ export function DesignCalendar({
                     setOpenSheet("breakdown");
                   }}
                 />
-                {showInputBar && (
-                  <div className={calendarPage.controls}>
-                    <StartArea label="ポチポチ入力" onStart={startInput} />
-                  </div>
-                )}
-                {showSaveBar && (
-                  <div className={calendarPage.controls}>
-                    <SaveArea
-                      onCalendar={() => {
-                        openSave(false, true);
-                      }}
-                      onImage={() => {
-                        setImagePreview(true);
-                      }}
-                    />
-                  </div>
-                )}
+                {/* Filled month or not: a filled month is fixed the same
+                    way, and saving is in the heading's corner. */}
+                <div className={calendarPage.controls}>
+                  <StartArea label="ポチポチ入力" onStart={startInput} />
+                </div>
                 <TabBar active="calendar" onSelect={setTab} />
               </div>
             )}
@@ -1120,33 +1083,8 @@ const heading = {
     padding: "0 8px 12px",
     position: "relative",
   }),
-  endAction: css({ alignSelf: "flex-end", marginBottom: "-4px" }),
   month: css({ fontSize: "36px", fontWeight: 600, lineHeight: 1.1 }),
   monthUnit: css({ fontSize: "14px", fontWeight: 500, marginLeft: "4px" }),
-  nav: cva({
-    base: {
-      alignItems: "center",
-      bottom: "9px",
-      display: "flex",
-      gap: "2px",
-      height: "40px",
-      left: "50%",
-      position: "absolute",
-      transform: "translateX(-50%)",
-    },
-    variants: {
-      // With the right-hand corner free, "今月 ‹ ›" takes it, on the
-      // month digits' line like the button that has that corner elsewhere.
-      atEnd: {
-        true: {
-          alignSelf: "flex-end",
-          marginBottom: "-1px",
-          position: "static",
-          transform: "none",
-        },
-      },
-    },
-  }),
   step: css({
     bg: "transparent",
     border: 0,
@@ -1313,21 +1251,16 @@ export function MonthSummary({
 // only while the keyboard is on them.
 function HeadingActions({
   mode,
-  arrows = true,
-  atEnd = false,
   month,
   detailDate,
   onStep,
   onThisMonth,
   onThisWeek,
   onDone,
-  onSave,
   onImage,
   onCalendar,
 }: {
   mode: "view" | "edit" | "week";
-  arrows?: boolean;
-  atEnd?: boolean;
   month: Date;
   detailDate: Date | undefined;
   onStep: (direction: 1 | -1) => void;
@@ -1335,9 +1268,7 @@ function HeadingActions({
   // Back to this week, opened on today.
   onThisWeek: () => void;
   onDone: () => void;
-  // Left out when saving has a row of its own at the bottom.
-  onSave?: () => void;
-  // The save menu's two ways, used without `arrows`.
+  // The save menu's two ways.
   onImage: () => void;
   onCalendar: () => void;
 }) {
@@ -1381,53 +1312,17 @@ function HeadingActions({
       <ChevronRight aria-hidden="true" size={21} />
     </button>
   );
-  if (!arrows) {
-    return (
-      <SwipeCorner
-        atToday={atToday}
-        back={back}
-        mode={mode}
-        next={next}
-        onCalendar={onCalendar}
-        onDone={onDone}
-        onImage={onImage}
-        previous={previous}
-      />
-    );
-  }
-  const navAtEnd = atEnd && mode === "view";
   return (
-    <>
-      {navAtEnd && (
-        <div className={heading.nav({ atEnd: true })}>
-          {/* Shown only away from this month: the arrows sit at the edge,
-              so nothing moves, and it simply comes and goes, as a toolbar
-              item does without withAnimation. */}
-          {!atToday && <div className={heading.backAtEnd}>{back}</div>}
-          {previous}
-          {next}
-        </div>
-      )}
-      {!navAtEnd && !(atEnd && mode === "edit") && (
-        <div className={heading.nav()}>
-          {previous}
-          {back}
-          {next}
-        </div>
-      )}
-      {mode === "view" && onSave && (
-        <IconButton
-          className={heading.endAction}
-          label="この月のシフトを保存"
-          onClick={onSave}
-        >
-          <Download aria-hidden="true" size={21} />
-        </IconButton>
-      )}
-      {mode !== "view" && (
-        <DoneButton className={heading.endAction} onClick={onDone} />
-      )}
-    </>
+    <SwipeCorner
+      atToday={atToday}
+      back={back}
+      mode={mode}
+      next={next}
+      onCalendar={onCalendar}
+      onDone={onDone}
+      onImage={onImage}
+      previous={previous}
+    />
   );
 }
 
@@ -1501,41 +1396,6 @@ function StartArea({ label, onStart }: { label: string; onStart: () => void }) {
       >
         <Pencil aria-hidden="true" size={18} />
         {label}
-      </Button>
-    </div>
-  );
-}
-
-// A filled month's next step: keeping it, as a picture or in the device
-// calendar. Both quiet: a filled month is mostly looked at, and saving
-// is already offered loudly the moment it fills.
-function SaveArea({
-  onImage,
-  onCalendar,
-}: {
-  onImage: () => void;
-  onCalendar: () => void;
-}) {
-  return (
-    <div className={shiftInput.startRow}>
-      <Button
-        className={shiftInput.startButton}
-        size="small"
-        variant="quiet"
-        onClick={onImage}
-      >
-        <ImageIcon aria-hidden="true" size={18} />
-        画像で保存
-      </Button>
-      <Button
-        aria-haspopup="dialog"
-        className={shiftInput.startButton}
-        size="small"
-        onClick={onCalendar}
-        variant="quiet"
-      >
-        <CalendarPlus aria-hidden="true" size={18} />
-        カレンダーに追加
       </Button>
     </div>
   );
