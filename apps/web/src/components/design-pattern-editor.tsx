@@ -272,11 +272,7 @@ function AddPatternPage({
                   </>
                 }
                 arrow={
-                  <Plus
-                    aria-hidden="true"
-                    className={listRow.arrow}
-                    size={17}
-                  />
+                  <Plus aria-hidden="true" className={listRow.add} size={17} />
                 }
               />
             ))}

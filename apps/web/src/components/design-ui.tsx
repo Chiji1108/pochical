@@ -575,6 +575,9 @@ export function List({
 // One row of a list, and its parts for rows drawn by hand.
 export const listRow = {
   arrow: css({ color: "textFaint", flexShrink: 0, marginRight: "-4px" }),
+  // In the arrow's place on a row that adds rather than opens: a plus in
+  // the accent, told apart from the gray arrows of rows that go on.
+  add: css({ color: "accent", flexShrink: 0, marginRight: "-4px" }),
   label: css({
     "& small": { color: "text3", fontSize: "11px" },
     display: "flex",
