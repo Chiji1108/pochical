@@ -28,6 +28,8 @@ export const Route = createRootRoute({
       { href: stylesheet, rel: "stylesheet" },
       { href: pandaStyles, rel: "stylesheet" },
       { href: "/icon.png", rel: "icon", type: "image/png" },
+      // Any page added to an iPhone's home screen, drawn by bun run icon:app.
+      { href: "/app/apple-touch-icon-180x180.png", rel: "apple-touch-icon" },
     ],
     meta: [
       { charSet: "utf-8" },

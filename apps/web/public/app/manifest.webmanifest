@@ -1,0 +1,30 @@
+{
+  "background_color": "#ffffff",
+  "description": "日勤も、夜勤も、お休みも。ポチッと入力、さっと共有。看護師の毎日に寄り添うシフトカレンダー、ポチカル。",
+  "display": "standalone",
+  "id": "/try",
+  "lang": "ja",
+  "name": "ポチカル",
+  "scope": "/try",
+  "short_name": "ポチカル",
+  "start_url": "/try",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "maskable-icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

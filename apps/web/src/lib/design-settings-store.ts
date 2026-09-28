@@ -84,6 +84,10 @@ const defaultCalendar: Record<ShiftMarkStyle, CalendarOptions> = {
   icon: { blankOff: false, highlight: true, names: false },
 };
 
+// Where the device slice is saved, which /try's head also reads to color
+// the status bar before the page draws.
+export const deviceSettingsKey = "pochical-design-device";
+
 export const useSettings = create<SettingsState>()(
   persist(
     (set) => ({
@@ -151,7 +155,7 @@ export const useSettings = create<SettingsState>()(
             ?.device,
         },
       }),
-      name: "pochical-design-device",
+      name: deviceSettingsKey,
       partialize: (state) => ({ device: state.device }),
       // The page renders on the server first; the saved settings load after
       // it hydrates, so both renders start from the defaults.

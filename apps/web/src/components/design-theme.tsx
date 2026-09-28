@@ -298,6 +298,20 @@ export function themeStyle(
   } as CSSProperties;
 }
 
+// The screen's own color, which the device's status bar and the home
+// screen app's launch images take.
+export function screenColor(id: ThemeId, scheme: ColorScheme, tone: Tone) {
+  const neutrals = neutralsFor(themeOf(id), scheme, tone) as Record<
+    string,
+    string | undefined
+  >;
+  const color = neutrals["--bg"];
+  if (color === undefined) {
+    throw new Error(`No screen color for ${id} in ${scheme} and ${tone}`);
+  }
+  return color;
+}
+
 export function useThemeStyle() {
   return themeStyle(
     useContext(ThemeContext).theme,
