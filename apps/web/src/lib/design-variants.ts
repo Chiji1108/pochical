@@ -3,9 +3,9 @@
 export const designVariantOptions = {
   bottomRows: {
     choices: [
+      { label: "保存を右上", value: "saveTop" },
       { label: "いつも2段", value: "two" },
       { label: "今のまま", value: "current" },
-      { label: "保存を右上", value: "saveTop" },
     ],
     label: "下のボタン",
   },
