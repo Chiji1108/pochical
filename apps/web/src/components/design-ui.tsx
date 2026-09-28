@@ -609,7 +609,7 @@ export function TodayButton({
   unit,
   className,
   ...props
-}: ButtonProps & { unit: "月" | "週" }) {
+}: ButtonProps & { unit: "月" | "週" | "日" }) {
   return (
     <button
       aria-label={`今${unit}に戻る`}
