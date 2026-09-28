@@ -2628,11 +2628,11 @@
     gap: 2px;
     padding: 0 2px;
   }
-  .cmp-item code {
+  .cmp-item figcaption code {
     font-size: 12px;
     color: var(--text);
   }
-  .cmp-item small {
+  .cmp-item figcaption small {
     font-size: 11px;
     color: var(--text-3);
   }
