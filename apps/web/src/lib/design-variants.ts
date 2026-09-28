@@ -32,8 +32,8 @@ export const designVariantOptions = {
   },
   monthNav: {
     choices: [
-      { label: "‹ ›", value: "arrows" },
       { label: "月名 ▾", value: "title" },
+      { label: "‹ ›", value: "arrows" },
     ],
     label: "月の移り方",
   },

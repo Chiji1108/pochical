@@ -679,7 +679,7 @@ export function DesignGroup({
   onTab,
   initialGroupId = "family",
   scanResult = "invite",
-  monthNav = "arrows",
+  monthNav = "title",
 }: {
   schedule: Schedule;
   patternKeys: Shift[];
@@ -3435,7 +3435,12 @@ const dayRows = {
       maxHeight: "520px",
       overflow: "auto",
     },
-    variants: { page: { true: { maxHeight: "none", overflow: "visible" } } },
+    variants: {
+      page: { true: { maxHeight: "none", overflow: "visible" } },
+      // A list of months has no ends to frame, so its rows stand bare, as
+      // a plain list's, their lines between them.
+      plain: { true: { border: 0, borderRadius: 0 } },
+    },
   }),
   table: css({
     borderCollapse: "separate",
@@ -5052,7 +5057,7 @@ function DayRowsTable({
   const columnWidth = withNames ? rowsMemberWidth : rowsMarkWidth;
   return (
     <div
-      className={dayRows.scroll({ page })}
+      className={dayRows.scroll({ page, plain: page && body !== undefined })}
       data-table-scroll={page ? undefined : ""}
     >
       <table
