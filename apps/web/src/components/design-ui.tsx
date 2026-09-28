@@ -681,6 +681,26 @@ export function List({
   return <div className={cx(listStyle, className)}>{children}</div>;
 }
 
+const listRowRoot = cva({
+  base: {
+    // A line between rows, not above the first: only a row that follows
+    // another, whatever else the list holds, like a legend.
+    "[data-list-row] + &": { borderTop: "1px solid token(colors.separator)" },
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    color: "text",
+    display: "flex",
+    fontSize: "14px",
+    gap: "10px",
+    minHeight: "48px",
+    paddingInline: "14px",
+    textAlign: "left",
+    width: "100%",
+  },
+  variants: { twoLine: { true: { minHeight: "58px" } } },
+});
+
 // One row of a list, and its parts for rows drawn by hand.
 export const listRow = {
   arrow: css({ color: "textFaint", flexShrink: 0, marginRight: "-4px" }),
@@ -702,22 +722,10 @@ export const listRow = {
     flexShrink: 0,
     marginRight: "2px",
   }),
-  root: css({
-    // A line between rows, not above the first: only a row that follows
-    // another, whatever else the list holds, like a legend.
-    "[data-list-row] + &": { borderTop: "1px solid token(colors.separator)" },
-    alignItems: "center",
-    bg: "transparent",
-    border: 0,
-    color: "text",
-    display: "flex",
-    fontSize: "14px",
-    gap: "10px",
-    minHeight: "48px",
-    paddingInline: "14px",
-    textAlign: "left",
-    width: "100%",
-  }),
+  root: listRowRoot(),
+  // A row of two lines, like a chat's name over its last message: taller,
+  // as the platforms' two-line list rows are.
+  twoLine: listRowRoot({ twoLine: true }),
   // Rows that do something when pressed.
   pressable: css({
     "&:is(button):hover": { bg: "fill2" },

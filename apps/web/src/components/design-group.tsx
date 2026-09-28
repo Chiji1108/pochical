@@ -2019,7 +2019,7 @@ function ChatRow({
   const last = chat.messages.at(-1);
   return (
     <button
-      className={cx(listRow.root, listRow.pressable)}
+      className={cx(listRow.twoLine, listRow.pressable)}
       data-list-row=""
       onClick={onOpen}
       type="button"
