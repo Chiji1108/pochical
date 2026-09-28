@@ -1,6 +1,6 @@
 import { Dialog, Drawer, Portal } from "@ark-ui/react";
 import { Check, ChevronLeft, X } from "lucide-react";
-import { createContext, useContext, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -200,8 +200,10 @@ export const sheetBody = css({
 // down. Ark UI's Drawer traps focus inside and gives it back when it
 // closes, and leaves a part that scrolls to scroll until it is at its top.
 // A sheet that is not modal, like a picked day's, leaves the screen behind
-// it undimmed and live, and only its ×, Escape or a swipe closes it. An
-// alert in the middle is a Dialog, and does not swipe away.
+// it undimmed and live, and only its ×, Escape or a swipe closes it. Ark UI
+// gives focus back only from a sheet that traps it, so one that is not
+// modal hands it to `finalFocusEl` itself as it closes. An alert in the
+// middle is a Dialog, and does not swipe away.
 export function Sheet({
   open,
   onOpenChange,
@@ -209,6 +211,7 @@ export function Sheet({
   role = "dialog",
   placement = "bottom",
   modal = true,
+  finalFocusEl,
   className,
   children,
 }: {
@@ -220,6 +223,9 @@ export function Sheet({
   role?: "dialog" | "alertdialog";
   placement?: "bottom" | "center";
   modal?: boolean;
+  // Where focus goes as it closes, in place of where it was before: the
+  // thing it is about, or a stand-in for an opener that is gone.
+  finalFocusEl?: () => HTMLElement | null;
   className?: string;
   children: ReactNode;
 }) {
@@ -227,8 +233,27 @@ export function Sheet({
   // Focus lands on the sheet itself, as on the platforms, not on its first
   // button with a ring around it.
   const contentRef = useRef<HTMLDivElement>(null);
+  const wasOpen = useRef(open);
+  useEffect(() => {
+    const closing = wasOpen.current && !open;
+    wasOpen.current = open;
+    if (!closing || modal) {
+      return;
+    }
+    // Only focus the sheet still holds, or lost as it went: one moved on
+    // to the screen behind, like the next day in the table, stays there.
+    const active = document.activeElement;
+    const held =
+      active === null ||
+      active === document.body ||
+      contentRef.current?.contains(active) === true;
+    if (held) {
+      finalFocusEl?.()?.focus();
+    }
+  }, [open, modal, finalFocusEl]);
   const root = {
     closeOnInteractOutside: modal,
+    finalFocusEl,
     initialFocusEl: () => contentRef.current,
     lazyMount: true,
     modal,
