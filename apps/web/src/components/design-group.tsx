@@ -4878,6 +4878,27 @@ function MonthFoot({
   );
 }
 
+// Whether an element shows within the screen's scroll, and a big group's
+// table frame, not scrolled or swiped out of them.
+function inSight(element: HTMLElement) {
+  const bounds = element.getBoundingClientRect();
+  const views = ["[data-table-scroll]", "[data-screen-scroll]"]
+    .map((selector) => element.closest(selector))
+    .filter((view) => view !== null);
+  return (
+    views.length > 0 &&
+    views.every((view) => {
+      const frame = view.getBoundingClientRect();
+      return (
+        bounds.bottom > frame.top &&
+        bounds.top < frame.bottom &&
+        bounds.right > frame.left &&
+        bounds.left < frame.right
+      );
+    })
+  );
+}
+
 // The day picked in the table, in a sheet along the bottom. It leaves the
 // table undimmed and live: the picked day stays framed above it, and
 // picking another day switches the sheet to that day.
@@ -4899,12 +4920,22 @@ function PickedDaySheet({
   const together = everyoneOff(members, date);
   return (
     <Sheet
-      // Back to the day in the table, in whichever layout shows it.
-      finalFocusEl={() =>
-        (phone?.current ?? document).querySelector<HTMLElement>(
+      // Back to the day in the table, in whichever layout shows it, while
+      // it is in sight; once scrolled or swiped away, to the month's name,
+      // which says where the table is, rather than pulling the day back.
+      finalFocusEl={() => {
+        const root = phone?.current ?? document;
+        const day = root.querySelector<HTMLElement>(
           `[data-pick-day="${dateKey(date)}"]`
-        )
-      }
+        );
+        if (day && inSight(day)) {
+          return day;
+        }
+        const title = [
+          ...root.querySelectorAll<HTMLElement>("[data-month-title]"),
+        ].find((element) => element.offsetParent !== null);
+        return title ?? day;
+      }}
       label={formatDay(date)}
       modal={false}
       onOpenChange={(open) => {

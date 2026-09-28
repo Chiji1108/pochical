@@ -130,6 +130,7 @@ export function MonthTitleButton({
         aria-haspopup="dialog"
         aria-label={`${month.getFullYear()}年${month.getMonth() + 1}月。押すと月を選べます`}
         className={monthTitle({ twoLines })}
+        data-month-title=""
         onClick={() => {
           setOpen(true);
         }}
