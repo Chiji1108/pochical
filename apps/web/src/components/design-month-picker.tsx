@@ -22,11 +22,16 @@ export function MonthChoiceSheet({
   onPick: (month: Date) => void;
 }) {
   const [year, setYear] = useState(month.getFullYear());
-  const change = (next: boolean) => {
-    // Opened again, it starts from the month on screen.
-    if (next) {
+  // Each opening starts from the year on screen, however the sheet is
+  // opened and wherever the months have moved since.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
       setYear(month.getFullYear());
     }
+  }
+  const change = (next: boolean) => {
     onOpenChange(next);
   };
   return (

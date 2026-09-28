@@ -4390,9 +4390,11 @@ function daysOf(month: Date) {
 const monthLoadMargin = 800;
 
 // The element that scrolls the months: the screen, or the table's own
-// frame when a big group's table scrolls in it.
-function scrollRootOf(element: HTMLElement | null) {
-  let parent = element?.parentElement;
+// frame when a big group's table scrolls in it, so the search starts from
+// a month's heading inside the table.
+function scrollRootOf(body: HTMLElement | null) {
+  const start = body?.querySelector("[data-month]") ?? body;
+  let parent = start?.parentElement;
   while (parent) {
     const { overflowY } = getComputedStyle(parent);
     if (overflowY === "auto" || overflowY === "scroll") {
