@@ -4,7 +4,6 @@ import {
   BatteryFull,
   CalendarDays,
   CalendarPlus,
-  Camera,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -32,7 +31,6 @@ import type { DesignVariants } from "../lib/design-variants";
 import type { Coworkers } from "./design-coworkers";
 import { GapSheet, gapDaysIn } from "./design-gap-sheet";
 import { DesignGroup, JoinSheet } from "./design-group";
-import { ImportReviewPage } from "./design-import";
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import { DesignSettings } from "./design-settings";
 import type { SettingsPage } from "./design-settings";
@@ -329,7 +327,7 @@ export function DesignCalendar({
   const themeStyle = useThemeStyle();
   // The sheet open over the phone, if any; one at a time.
   const [openSheet, setOpenSheet] = useState<
-    "breakdown" | "import" | "save" | "gap" | null
+    "breakdown" | "save" | "gap" | null
   >(null);
   const sheetChange = (name: typeof openSheet) => (open: boolean) => {
     setOpenSheet(open ? name : null);
@@ -346,8 +344,6 @@ export function DesignCalendar({
   const [saveToCalendar, setSaveToCalendar] = useState(false);
   const [imagePreview, setImagePreview] = useState(false);
   const offDisplay = useContext(OffDisplayContext);
-  // The check before a photographed roster goes in, and the line after.
-  const [importReview, setImportReview] = useState(false);
   const imageOptions = useSettings((state) => state.device.imageOptions);
   const setImageOptions = useSettings((state) => state.setImageOptions);
   const [detailDate, setDetailDate] = useState<Date>();
@@ -594,9 +590,6 @@ export function DesignCalendar({
       openSave(true);
     }
   }
-  function openImport() {
-    setOpenSheet("import");
-  }
   function closeDetail() {
     setDetailDate(undefined);
   }
@@ -660,31 +653,6 @@ export function DesignCalendar({
               schedule={schedule}
             />
           )}
-          {tab === "calendar" && importReview && (
-            <ImportReviewPage
-              coworkerNames={coworkerNames}
-              month={month}
-              onApply={(result) => {
-                onChange((previous) => ({ ...previous, ...result.schedule }));
-                if (result.newPatterns.length > 0) {
-                  setPatternKeys([...patternKeys, ...result.newPatterns]);
-                }
-                if (result.newCoworkers.length > 0) {
-                  setCoworkerNames([...coworkerNames, ...result.newCoworkers]);
-                }
-                setImportReview(false);
-                toast(
-                  `${month.getMonth() + 1}月のシフトを${result.days}日分入れました`
-                );
-              }}
-              onCancel={() => {
-                setImportReview(false);
-              }}
-              patternKeys={patternKeys}
-              run={variants.importRun}
-              schedule={schedule}
-            />
-          )}
           {tab === "calendar" && imagePreview && (
             <ImagePreviewPage
               month={month}
@@ -698,7 +666,7 @@ export function DesignCalendar({
           )}
           <div
             className="dc-content"
-            hidden={tab !== "calendar" || imagePreview || importReview}
+            hidden={tab !== "calendar" || imagePreview}
           >
             <div className="dc-heading">
               <h3 className="dc-heading-title">
@@ -843,7 +811,6 @@ export function DesignCalendar({
               <div className="dc-controls">
                 <StartArea
                   label="ポチポチ入力"
-                  onImport={openImport}
                   onStart={startInput}
                   stacked={twoRows && emptyMonth}
                 />
@@ -938,15 +905,6 @@ export function DesignCalendar({
             }}
             onOpenChange={sheetChange("gap")}
             open={openSheet === "gap"}
-          />
-          <ImportSheet
-            access={variants.importAccess}
-            onRead={() => {
-              setImportReview(true);
-            }}
-            onOpenChange={sheetChange("import")}
-            onStartPochi={startInput}
-            open={openSheet === "import"}
           />
           <span aria-live="polite" className="dc-sr-only">
             {announcement}
@@ -1162,39 +1120,24 @@ function HeadingActions({
   );
 }
 
-// On an empty month ポチポチ入力 is as tall as 今月のお休み, so the two
-// rows line up with the other months'.
-const stackedStart = css({ flex: "none", minHeight: "55px" });
-
 function StartArea({
   label,
   onStart,
-  onImport,
   stacked = false,
 }: {
   label: string;
   onStart: () => void;
-  onImport: () => void;
-  // An empty month has no 今月のお休み, so the two buttons take both rows.
+  // An empty month has no 今月のお休み, so the button keeps to the lower
+  // of the two rows.
   stacked?: boolean;
 }) {
   return (
     <div
       className={`dc-start-area dc-start-row ${stacked ? "dc-start-stack" : ""}`}
     >
-      <Button
-        className={stacked ? stackedStart : undefined}
-        onClick={onStart}
-        variant="primary"
-      >
+      <Button onClick={onStart} variant="primary">
         <Pencil aria-hidden="true" size={18} />
         {label}
-      </Button>
-      {/* As wide as ポチポチ入力: only people handed a roster see these, on
-          a month with days left, which is when they photograph it. */}
-      <Button variant="quiet" aria-haspopup="dialog" onClick={onImport}>
-        <Camera aria-hidden="true" size={18} />
-        写真から取り込む
       </Button>
     </div>
   );
@@ -1277,83 +1220,6 @@ export function RepeatSequenceEditor({
         ))}
       </div>
     </div>
-  );
-}
-
-function ImportPhotoActions({ onPick }: { onPick: () => void }) {
-  return (
-    <div className="dc-import-actions">
-      <button onClick={onPick} type="button">
-        <Camera aria-hidden="true" size={22} />
-        カメラで撮る
-      </button>
-      <button onClick={onPick} type="button">
-        <ImageIcon aria-hidden="true" size={22} />
-        写真を選ぶ
-      </button>
-    </div>
-  );
-}
-
-// Taking the photo. What it reads opens on its own page to check before
-// anything goes in.
-function ImportSheet({
-  open,
-  onOpenChange,
-  access,
-  onRead,
-  onStartPochi,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  access: DesignVariants["importAccess"];
-  onRead: () => void;
-  onStartPochi: () => void;
-}) {
-  const close = () => {
-    onOpenChange(false);
-  };
-  const title =
-    access === "limit" ? "少し時間をおいてください" : "勤務表を取り込む";
-  return (
-    <Sheet label={title} onOpenChange={onOpenChange} open={open}>
-      <SheetHeading onClose={close} title={title} />
-      {access === "limit" && (
-        <>
-          <p className="dc-import-description">
-            短い時間にたくさん取り込んだため、いったんお休みしています。しばらくしてから、もう一度お試しください。残りは、ポチポチ入力でも入れられます。
-          </p>
-          <div>
-            <Button
-              variant="primary"
-              onClick={() => {
-                close();
-                onStartPochi();
-              }}
-            >
-              <Pencil aria-hidden="true" size={16} />
-              ポチポチ入力で入れる
-            </Button>
-          </div>
-        </>
-      )}
-      {access === "normal" && (
-        <>
-          <p className="dc-import-description">
-            配られた勤務表を撮ると、あなたの行を読み取ってシフトを入れます。LINEで届いた画像やスクリーンショットも使えます。読み取った結果は、保存する前に確認できます。
-          </p>
-          <ImportPhotoActions
-            onPick={() => {
-              close();
-              onRead();
-            }}
-          />
-          <p className="dc-sheet-total">
-            デザインの見本です。撮影の代わりに、見本の勤務表を読み取った結果を開きます。
-          </p>
-        </>
-      )}
-    </Sheet>
   );
 }
 
@@ -1441,27 +1307,6 @@ export const dayCell = cva({
       true: {
         outline: "2px solid token(colors.accent)",
         outlineOffset: "-2px",
-      },
-    },
-    // A day to look at again, like one the roster reading was unsure of.
-    flagged: {
-      true: {
-        _after: {
-          bg: "#f7e7a6",
-          borderRadius: "50%",
-          color: "#6b5716",
-          content: '"?"',
-          display: "grid",
-          fontSize: "9px",
-          fontWeight: 700,
-          height: "14px",
-          placeItems: "center",
-          position: "absolute",
-          right: "3px",
-          top: "3px",
-          width: "14px",
-        },
-        boxShadow: "inset 0 0 0 1.5px #e3c65a",
       },
     },
     // A day off in its own pattern's tint, set as --off-tint.
@@ -1585,7 +1430,6 @@ export function DayCell({
   editing,
   active,
   onPress,
-  flagged = false,
   plain = false,
   className,
 }: {
@@ -1595,8 +1439,6 @@ export function DayCell({
   editing: boolean;
   active: boolean;
   onPress: () => void;
-  // Marked for a second look, like a day the roster reading was unsure of.
-  flagged?: boolean;
   // Only the shift, for the saved image: no today frame, no note stroke.
   plain?: boolean;
   className?: string;
@@ -1624,7 +1466,6 @@ export function DayCell({
   const cellClass = cx(
     dayCell({
       active,
-      flagged,
       off: Boolean(offStyle),
       outside,
       today: today && !editing && !active && !plain,

@@ -1,12 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import type { ReactNode } from "react";
 
 import {
   dateKey,
   initialDesignSchedule,
   isDayOff,
-  PhoneStatusBar,
 } from "../components/design-calendar";
 import type { Schedule } from "../components/design-calendar";
 import {
@@ -17,15 +15,13 @@ import {
 } from "../components/design-frames";
 import { GapSheetPreview, gapDaysIn } from "../components/design-gap-sheet";
 import type { GapSheetProps } from "../components/design-gap-sheet";
-import { ImportReviewPage } from "../components/design-import";
-import type { ImportRun } from "../components/design-import";
 import { DesignOnboarding } from "../components/design-onboarding";
 import type { OnboardingScreen } from "../components/design-onboarding";
 import {
   DesignProviders,
   useDesignTheme,
 } from "../components/design-providers";
-import { themeStyle, useThemeStyle } from "../components/design-theme";
+import { themeStyle } from "../components/design-theme";
 import { OffDisplayContext } from "../components/shift-mark";
 import { patterns } from "../lib/design-patterns";
 import { parseDesignVariants } from "../lib/design-variants";
@@ -95,39 +91,6 @@ function FlowsPage() {
             <FrameRow branch="アカウントがある人">
               <OnboardingFrame label="ログイン" screen="login" />
               <CalendarFrame label="カレンダー" note="前のデータが戻る" />
-            </FrameRow>
-          </FrameSection>
-
-          <FrameSection title="写真の取り込み">
-            <FrameRow branch="初めて">
-              <CalendarFrame
-                label="カレンダー"
-                month={OCTOBER}
-                note="写真から取り込む"
-                person={{ schedule: {} }}
-              />
-              <ImportFrame label="あなたの行" run="first" step="row" />
-              <ImportFrame label="記号" run="first" step="codes" />
-              <ImportFrame label="確かめる" run="first" step="check" />
-              <CalendarFrame
-                label="カレンダー"
-                month={OCTOBER}
-                note="1か月分が入る"
-                person={{ schedule: initialDesignSchedule(4, OCTOBER) }}
-              />
-            </FrameRow>
-            <FrameRow branch="2回目から">
-              <ImportFrame
-                label="確かめる"
-                note="新しい記号だけ聞く"
-                run="repeat"
-                step="check"
-              />
-              <CalendarFrame
-                label="カレンダー"
-                month={OCTOBER}
-                person={{ schedule: initialDesignSchedule(4, OCTOBER) }}
-              />
             </FrameRow>
           </FrameSection>
 
@@ -227,35 +190,6 @@ function OnboardingFrame({
   );
 }
 
-function ImportFrame({
-  label,
-  note,
-  run,
-  step,
-}: {
-  label: string;
-  note?: string;
-  run: ImportRun;
-  step: "row" | "codes" | "check";
-}) {
-  return (
-    <Frame label={label} note={note}>
-      <PhoneShell>
-        <ImportReviewPage
-          coworkerNames={["田中", "鈴木", "山本", "高橋"]}
-          initialStep={step}
-          month={october}
-          onApply={() => undefined}
-          onCancel={() => undefined}
-          patternKeys={["day", "night", "after", "off"]}
-          run={run}
-          schedule={{}}
-        />
-      </PhoneShell>
-    </Frame>
-  );
-}
-
 // October entered up to the 8th, with 3, 4 and 7 left blank by 翌日へ,
 // and the whole of October with its days off left blank.
 const partialOctober: Schedule = Object.fromEntries(
@@ -326,16 +260,5 @@ function GapFrame({
       }
       person={{ schedule }}
     />
-  );
-}
-
-// A phone around a page that does not bring its own.
-function PhoneShell({ children }: { children: ReactNode }) {
-  return (
-    <div className="dc-phone" style={useThemeStyle()}>
-      <PhoneStatusBar />
-      {children}
-      <div aria-hidden="true" className="dc-home-indicator" />
-    </div>
   );
 }

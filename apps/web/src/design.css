@@ -834,7 +834,7 @@
     border-radius: 17px;
   }
 
-  /* Photo import entry points. */
+  /* A row of equal buttons under the month. */
   .dc-start-row {
     display: flex;
     gap: 8px;
@@ -843,33 +843,6 @@
     flex: 1;
     width: auto;
   }
-  /* The same size as ポチポチ入力, one step quieter in color: on the same
-   ground as 今月のお休み, told apart as a button by its green label. */
-  .dc-import-description {
-    margin: 0 0 18px;
-    font-size: 13px;
-    line-height: 1.7;
-    color: var(--text-2);
-  }
-  .dc-import-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .design-page .dc-import-actions button {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    align-items: center;
-    justify-content: center;
-    min-height: 96px;
-    font-size: 13px;
-    color: var(--accent);
-    background: var(--accent-soft);
-    border: 0;
-    border-radius: 18px;
-  }
-
   /* Heading: navigation next to the month, the screen's main action on the right. */
   .dc-heading-title {
     flex-shrink: 0;
@@ -3773,174 +3746,6 @@
     border-top: 1px solid var(--separator);
   }
 
-  /* 取り込みの確認: the photographed roster, checked before it goes in. */
-  .im-page {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-  .im-steps {
-    margin: 2px 0 0;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-3);
-  }
-  .im-lead {
-    margin: -4px 4px 0;
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--text-3);
-  }
-  /* Two lines each, the name over the start of the row it read. */
-  .im-row-codes {
-    font-size: 11px;
-    font-weight: 400;
-    color: var(--text-3);
-    letter-spacing: 0.04em;
-  }
-  .design-page .im-next {
-    margin-top: 6px;
-  }
-  .im-code {
-    gap: 10px;
-  }
-  .im-code-chip {
-    display: grid;
-    flex-shrink: 0;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    font-family: "Hiragino Mincho ProN", serif;
-    font-size: 17px;
-    font-weight: 600;
-    /* A piece of the paper roster: paper and ink in the dark too. */
-    color: #2b2823;
-    background: #fbf8f0;
-    border: 1px solid #d9d2c2;
-    border-radius: 6px;
-  }
-  .im-code-select {
-    max-width: 132px;
-    padding: 6px 8px;
-    font: inherit;
-    font-size: 13px;
-    color: var(--accent);
-    background: var(--fill-2);
-    border: 0;
-    border-radius: 10px;
-  }
-  /* The row of the sheet, as paper, to hold against the calendar. */
-  .im-scan {
-    margin: 0;
-  }
-  .im-scan figcaption {
-    margin: 0 4px 6px;
-    font-size: 11px;
-    color: var(--text-3);
-  }
-  .im-scan-row {
-    display: flex;
-    overflow-x: auto;
-    background: #fbf8f0;
-    border: 1px solid #d9d2c2;
-    border-radius: 8px;
-  }
-  .design-page .im-scan-row button {
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    align-items: center;
-    width: 30px;
-    padding: 4px 0 6px;
-    font-family: "Hiragino Mincho ProN", serif;
-    font-size: 15px;
-    color: #2b2823;
-    background: transparent;
-    border: 0;
-    border-right: 1px solid #e6dfcf;
-  }
-  .design-page .im-scan-row button small {
-    font-family: -apple-system, sans-serif;
-    font-size: 9px;
-    color: #8c8577;
-  }
-  .design-page .im-scan-row .im-scan-unsure {
-    background: #f7e7a6;
-  }
-  .design-page .im-scan-row button[aria-pressed="true"] {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
-  }
-  .im-calendar .dc-grid {
-    --cell-height: 58px;
-  }
-  .im-fix {
-    padding: 12px 14px;
-    background: var(--fill);
-    border-radius: 16px;
-  }
-  .im-fix p {
-    margin: 0 0 10px;
-    font-size: 12px;
-    color: var(--text-3);
-  }
-  .im-fix strong {
-    margin-right: 8px;
-    font-size: 14px;
-    color: var(--text);
-  }
-  .im-unsure {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-    margin: 0 4px;
-    font-size: 12px;
-    line-height: 1.6;
-    color: var(--text-2);
-  }
-  .im-unsure-mark {
-    display: grid;
-    flex-shrink: 0;
-    place-items: center;
-    width: 18px;
-    height: 18px;
-    margin-top: 1px;
-    font-size: 11px;
-    font-weight: 700;
-    color: #6b5716;
-    background: #f7e7a6;
-    border-radius: 50%;
-  }
-  .im-notice {
-    padding: 12px;
-    background: var(--accent-soft);
-    border-radius: 16px;
-  }
-  .im-notice p {
-    margin: 0 4px 10px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text);
-  }
-  .im-check {
-    width: 18px;
-    height: 18px;
-    margin: 0 12px 0 0;
-    accent-color: var(--accent-fill);
-  }
-  .im-apply {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-bottom: 12px;
-  }
-  .im-apply p {
-    margin: 0 4px;
-    font-size: 12px;
-    color: var(--text-3);
-    text-align: center;
-  }
-
   /* 休みの見せ方: tabs showing a day off as each choice draws it. */
   .st-off-sample {
     display: flex;
@@ -4172,16 +3977,13 @@
     color: var(--text-4);
   }
 
-  /* 下のボタン いつも2段: an empty month's two buttons, one above the other,
-   in the rows 今月のお休み and the buttons take on other months. */
-  .dc-start-stack {
-    flex-direction: column;
-    gap: 12px;
-  }
-  /* The whole block as tall as the card and the button row, so the rows
-   stay put from month to month; ポチポチ入力 itself is as tall as
-   今月のお休み (StartArea). */
+  /* 下のボタン いつも2段: an empty month has no 今月のお休み, so the block
+   keeps the height of the card and the button row, and ポチポチ入力 sits
+   in the lower row, where the buttons are on other months. */
   .dc-controls:has(> .dc-start-stack) {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
     min-height: 159px;
   }
 

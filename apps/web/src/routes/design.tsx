@@ -24,7 +24,7 @@ const documents = [
     to: "/demo",
   },
   {
-    description: "はじめての設定、写真の取り込み、設定の画面の流れと分かれ道。",
+    description: "はじめての設定、空いた日の確認、設定の画面の流れと分かれ道。",
     title: "画面遷移図",
     to: "/design/flows",
   },

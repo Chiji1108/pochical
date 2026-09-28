@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
   CalendarPlus,
-  Camera,
+  Image as ImageIcon,
   Check,
   Download,
   Info,
@@ -168,8 +168,8 @@ function Buttons() {
         </Item>
         <Item name="Button variant=quiet" where="主の横、または一段下の操作">
           <Button variant="quiet">
-            <Camera aria-hidden="true" size={18} />
-            写真から取り込む
+            <ImageIcon aria-hidden="true" size={18} />
+            画像で保存
           </Button>
         </Item>
         <Item name="Button variant=text" where="リンクのような選択肢">
@@ -338,11 +338,7 @@ function Choices() {
           ))}
         </ChoiceGrid>
       </Item>
-      <Item
-        name="ChoiceList"
-        where="外観、翌日のパターン、取り込みの自分の行"
-        wide
-      >
+      <Item name="ChoiceList" where="外観、翌日のパターン" wide>
         <ChoiceList
           label="外観"
           onValueChange={setAppearance}
@@ -389,7 +385,7 @@ function Chips() {
           <Chip variant="add">＋ 追加</Chip>
         </ChipGroup>
       </Item>
-      <Item name="Chip(ひとつ)" where="空いた日の休み・有休、取り込みの直し">
+      <Item name="Chip(ひとつ)" where="空いた日の休み・有休">
         <ChipGroup label="入れるパターン">
           {[
             ["off", "休み"],
@@ -425,9 +421,6 @@ function Chips() {
             みんな休み
           </Tag>
         </ChipGroup>
-      </Item>
-      <Item name="im-code-chip" where="取り込みの記号(勤務表の紙を写した札)">
-        <span className="im-code-chip">日</span>
       </Item>
     </Group>
   );
@@ -487,7 +480,7 @@ function Sheets() {
           />
         </section>
       </Item>
-      <Item name="Toast" where="取り込み・保存のあとの一言(Ark UI の Toast)">
+      <Item name="Toast" where="入力・保存のあとの一言(Ark UI の Toast)">
         <p className={toastLook}>
           <Check aria-hidden="true" size={16} />
           10月のシフトを入れました

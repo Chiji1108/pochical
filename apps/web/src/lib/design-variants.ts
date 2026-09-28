@@ -15,20 +15,6 @@ export const designVariantOptions = {
     ],
     label: "グループ",
   },
-  importAccess: {
-    choices: [
-      { label: "通常", value: "normal" },
-      { label: "上限に到達", value: "limit" },
-    ],
-    label: "写真の取り込み",
-  },
-  importRun: {
-    choices: [
-      { label: "初めて", value: "first" },
-      { label: "2回目から", value: "repeat" },
-    ],
-    label: "取り込みの確認",
-  },
   inviteLink: {
     choices: [
       { label: "なし", value: "none" },
