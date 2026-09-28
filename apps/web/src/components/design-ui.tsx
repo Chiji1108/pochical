@@ -213,7 +213,7 @@ const screenScrollStyle = cva({
     gap: "20px",
     minHeight: 0,
     overflowY: "auto",
-    padding: "8px 4px 16px",
+    padding: "8px 0 16px",
   },
   variants: {
     // Beside a rail on its left, like the group hub's list of groups: it
@@ -244,7 +244,7 @@ export function ScreenScroll({
 export const sectionTitle = css({
   color: "text3",
   fontWeight: 600,
-  margin: "0 0 8px 12px",
+  margin: "0 0 8px 16px",
   textStyle: "footnote",
 });
 const sectionNote = css({
@@ -778,8 +778,20 @@ export function List({
 const listRowRoot = cva({
   base: {
     // A line between rows, not above the first: only a row that follows
-    // another, whatever else the list holds, like a legend.
-    "[data-list-row] + &": { borderTop: "1px solid token(colors.separator)" },
+    // another, whatever else the list holds, like a legend. As iOS draws
+    // it: from where the words start to 16px short of the right edge.
+    "[data-list-row] + &": {
+      "&::before": {
+        borderTop: "1px solid token(colors.separator)",
+        content: '""',
+        left: "16px",
+        position: "absolute",
+        right: "16px",
+        top: 0,
+      },
+      "&:has(> [data-part=leading])::before": { left: "56px" },
+      position: "relative",
+    },
     alignItems: "center",
     bg: "transparent",
     border: 0,
@@ -787,12 +799,13 @@ const listRowRoot = cva({
     display: "flex",
     textStyle: "body",
     gap: "12px",
-    minHeight: "48px",
+    // iOS 26's list rows: 52pt, and taller for two lines.
+    minHeight: "52px",
     paddingInline: "16px",
     textAlign: "left",
     width: "100%",
   },
-  variants: { twoLine: { true: { minHeight: "58px" } } },
+  variants: { twoLine: { true: { minHeight: "64px" } } },
 });
 
 // One row of a list, and its parts for rows drawn by hand.
@@ -810,11 +823,14 @@ export const listRow = {
   }),
   // With nothing on the right but a control, the label takes the room.
   labelGrow: css({ flex: 1, minWidth: 0 }),
+  // One width whatever it holds, so every row's words start at the same
+  // place, 56px in, as under iOS's icons.
   leading: css({
     color: "text2",
     display: "flex",
     flexShrink: 0,
-    marginRight: "2px",
+    justifyContent: "center",
+    width: "28px",
   }),
   root: listRowRoot(),
   // A row of two lines, like a chat's name over its last message: taller,
@@ -888,7 +904,11 @@ export function ListRow({
       : arrow || null;
   const content = (
     <>
-      {leading && <span className={listRow.leading}>{leading}</span>}
+      {leading && (
+        <span className={listRow.leading} data-part="leading">
+          {leading}
+        </span>
+      )}
       <span
         className={cx(
           listRow.label,
@@ -1361,7 +1381,11 @@ export function ChoiceRow({
       ring="inside"
       value={value}
     >
-      {leading && <span className={listRow.leading}>{leading}</span>}
+      {leading && (
+        <span className={listRow.leading} data-part="leading">
+          {leading}
+        </span>
+      )}
       <span className={cx(listRow.label, listRow.labelGrow)}>{label}</span>
       <Check aria-hidden="true" className={choiceRowCheck} size={20} />
     </Choice>

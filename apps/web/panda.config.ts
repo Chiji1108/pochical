@@ -111,8 +111,8 @@ export default defineConfig({
         radii: {
           // Buttons and cards.
           control: { value: "16px" },
-          // Lists of rows.
-          list: { value: "16px" },
+          // Lists of rows, as iOS 26's grouped lists.
+          list: { value: "24px" },
           // Small actions like icon buttons.
           action: { value: "12px" },
         },

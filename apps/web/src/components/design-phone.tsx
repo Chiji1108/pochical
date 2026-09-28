@@ -35,15 +35,15 @@ const frame = cva({
         boxShadow:
           "0 3px 0 1px var(--ws-bezel-edge), 0 28px 50px -30px var(--ws-bezel-shadow)",
         height: "844px",
-        padding: "17px 15px 18px",
+        padding: "17px 16px 18px",
         position: "relative",
         width: "100%",
       },
       true: {
         inset: 0,
         paddingBottom: "max(env(safe-area-inset-bottom), 12px)",
-        paddingLeft: "calc(env(safe-area-inset-left) + 15px)",
-        paddingRight: "calc(env(safe-area-inset-right) + 15px)",
+        paddingLeft: "calc(env(safe-area-inset-left) + 16px)",
+        paddingRight: "calc(env(safe-area-inset-right) + 16px)",
         paddingTop: "max(env(safe-area-inset-top), 12px)",
         position: "fixed",
       },
