@@ -1,0 +1,80 @@
+# Checks for pushes to main and pull requests. Deploys are not here: the
+# web site deploys with Cloudflare Workers Builds, which builds each push
+# to main and gives each pull request a preview URL.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      typescript: ${{ steps.filter.outputs.typescript }}
+      proto: ${{ steps.filter.outputs.proto }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            typescript:
+              - "apps/web/**"
+              - "apps/server/**"
+              - "tools/**"
+              - "package.json"
+              - "bun.lock"
+              - "patches/**"
+              - "*.config.ts"
+              - "lint-ignores.ts"
+              - "mise.toml"
+              - ".github/workflows/ci.yml"
+            proto:
+              - "proto/**"
+              - "mise.toml"
+              - ".github/workflows/ci.yml"
+
+  # apps/web and apps/server: lint and format, types, tests.
+  typescript:
+    needs: changes
+    if: needs.changes.outputs.typescript == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: jdx/mise-action@v3
+        with:
+          install_args: bun
+      # The reference-only Expo app's dependencies are left out.
+      - run: bun install --frozen-lockfile --filter '!@pochical/mobile-legacy'
+      - run: bun run check
+      - run: bun run typecheck
+      - run: bun run test
+
+  proto:
+    needs: changes
+    if: needs.changes.outputs.proto == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: jdx/mise-action@v3
+        with:
+          install_args: buf
+      - run: mise run proto:lint
+      # proto:breaking compares with the local main branch.
+      - if: github.event_name == 'pull_request'
+        run: |
+          git branch --force main origin/main
+          mise run proto:breaking
