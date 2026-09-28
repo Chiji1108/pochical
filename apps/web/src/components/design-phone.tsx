@@ -26,9 +26,10 @@ const frame = cva({
     fullScreen: {
       false: {
         "@media (max-width: 370px)": {
+          "--screen-left": "10px",
+          "--screen-right": "10px",
           borderRadius: "44px",
           borderWidth: "5px",
-          paddingInline: "10px",
         },
         border: "6px solid var(--ws-bezel)",
         borderRadius: "53px",
@@ -38,21 +39,27 @@ const frame = cva({
         // The foot is iOS's home indicator area, 33pt: the screens end
         // there, and the floating tab bar sits 20px off the bottom.
         "--safe-bottom": "33px",
+        // The room at the screens' sides, which a ground running to the
+        // phone's edges, like entering's, reaches back out by.
+        "--screen-left": "16px",
+        "--screen-right": "16px",
         "--tab-bar-bottom": "20px",
-        padding: "17px 16px 33px",
+        padding: "17px var(--screen-right) 33px var(--screen-left)",
         position: "relative",
         width: "100%",
       },
       true: {
         inset: 0,
         "--safe-bottom": "max(env(safe-area-inset-bottom), 12px)",
+        "--screen-left": "calc(env(safe-area-inset-left) + 16px)",
+        "--screen-right": "calc(env(safe-area-inset-right) + 16px)",
         // As iOS's: 21pt off a phone's foot, 13pt into its home indicator
         // area.
         "--tab-bar-bottom":
           "max(calc(env(safe-area-inset-bottom) - 13px), 12px)",
         paddingBottom: "max(env(safe-area-inset-bottom), 12px)",
-        paddingLeft: "calc(env(safe-area-inset-left) + 16px)",
-        paddingRight: "calc(env(safe-area-inset-right) + 16px)",
+        paddingLeft: "var(--screen-left)",
+        paddingRight: "var(--screen-right)",
         paddingTop: "max(env(safe-area-inset-top), 12px)",
         position: "fixed",
       },
