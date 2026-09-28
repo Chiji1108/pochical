@@ -48,8 +48,11 @@ import {
   DAY_ROW_HEIGHT,
   dayGrid,
   dayGridHeight,
+  DoneButton,
   IconButton,
   Pager,
+  SummaryRow,
+  TodayButton,
   WeekdayRow,
 } from "./design-ui";
 import { holidayName, holidayNameOfKey, useWeek } from "./design-week";
@@ -645,11 +648,7 @@ export function DesignCalendar({
   return (
     <PhoneContext value={phoneRef}>
       <ToastContext value={toast}>
-        <div
-          className={`dc-phone ${editing ? "dc-editing" : ""} ${showInputBar || showSaveBar ? "" : "dc-no-input"} ${twoRows ? "dc-two-rows" : ""}`}
-          ref={phoneRef}
-          style={themeStyle}
-        >
+        <div className="dc-phone" ref={phoneRef} style={themeStyle}>
           <PhoneStatusBar />
           {tab === "settings" && (
             <DesignSettings
@@ -692,12 +691,12 @@ export function DesignCalendar({
             className="dc-content"
             hidden={tab !== "calendar" || imagePreview}
           >
-            <div className="dc-heading">
-              <h3 className="dc-heading-title">
-                <span className="dc-year">{month.getFullYear()}</span>
-                <strong>
+            <div className={heading.bar}>
+              <h3 className={heading.title}>
+                <span className={heading.year}>{month.getFullYear()}</span>
+                <strong className={heading.month}>
                   {month.getMonth() + 1}
-                  <span>月</span>
+                  <span className={heading.monthUnit}>月</span>
                 </strong>
               </h3>
               <HeadingActions
@@ -819,18 +818,50 @@ export function DesignCalendar({
               </motion.section>
             )}
             {/* On an empty month too, at 0日, so the month keeps the two
-                rows of one being filled in: the card above ポチポチ入力. */}
+                rows of one being filled in: the card above ポチポチ入力.
+                Any spare height stays over it, so the summary, the input
+                or save buttons and the tab bar sit together at the bottom. */}
             {headingMode === "view" && (
-              <MonthSummary
-                daysOff={daysOff}
-                month={month}
-                onOpen={() => {
-                  setOpenSheet("breakdown");
-                }}
-              />
+              <div className={calendarPage.bottom}>
+                <MonthSummary
+                  daysOff={daysOff}
+                  month={month}
+                  onOpen={() => {
+                    setOpenSheet("breakdown");
+                  }}
+                />
+                {showInputBar && (
+                  <div className={calendarPage.controls}>
+                    <StartArea label="ポチポチ入力" onStart={startInput} />
+                  </div>
+                )}
+                {showSaveBar && (
+                  <div className={calendarPage.controls}>
+                    <SaveArea
+                      onCalendar={() => {
+                        openSave(false, true);
+                      }}
+                      onImage={() => {
+                        setImagePreview(true);
+                      }}
+                    />
+                  </div>
+                )}
+                <TabBar
+                  // The same gap over the tab bar as under the buttons, so
+                  // the summary sits at one height with them or without.
+                  className={
+                    showInputBar || showSaveBar
+                      ? undefined
+                      : calendarPage.tabsUnderSummary
+                  }
+                  active="calendar"
+                  onSelect={setTab}
+                />
+              </div>
             )}
             {headingMode === "edit" && (
-              <div className="dc-controls">
+              <div className={calendarPage.input}>
                 <ShiftInputControls
                   canSkip={selectedDay < lastDay}
                   datePicker={datePicker}
@@ -842,26 +873,6 @@ export function DesignCalendar({
                   selectedShift={selectedShift}
                 />
               </div>
-            )}
-            {headingMode === "view" && showInputBar && (
-              <div className="dc-controls">
-                <StartArea label="ポチポチ入力" onStart={startInput} />
-              </div>
-            )}
-            {headingMode === "view" && showSaveBar && (
-              <div className="dc-controls">
-                <SaveArea
-                  onCalendar={() => {
-                    openSave(false, true);
-                  }}
-                  onImage={() => {
-                    setImagePreview(true);
-                  }}
-                />
-              </div>
-            )}
-            {headingMode === "view" && (
-              <TabBar active="calendar" onSelect={setTab} />
             )}
           </div>
           <Sheet
@@ -951,48 +962,61 @@ export function DesignCalendar({
 
 export type Tab = "calendar" | "group" | "settings";
 
+// The app's three tabs, as the platforms' tab bars: an icon over its name,
+// the one shown in the accent color.
+const tabs: { tab: Tab; label: string; icon: typeof CalendarDays }[] = [
+  { icon: CalendarDays, label: "カレンダー", tab: "calendar" },
+  { icon: UsersRound, label: "グループ", tab: "group" },
+  { icon: Settings2, label: "設定", tab: "settings" },
+];
+const tabBar = {
+  bar: css({
+    color: "text4",
+    display: "flex",
+    flexShrink: 0,
+    justifyContent: "space-around",
+    paddingTop: "7px",
+  }),
+  item: cva({
+    base: {
+      alignItems: "center",
+      bg: "transparent",
+      border: 0,
+      display: "flex",
+      flexDirection: "column",
+      fontSize: "9px",
+      gap: "6px",
+    },
+    variants: { active: { true: { color: "accent" } } },
+  }),
+};
+
 export function TabBar({
   active,
   onSelect,
+  className,
 }: {
   active: Tab;
   onSelect: (tab: Tab) => void;
+  // Where it sits, as on the calendar under its summary.
+  className?: string;
 }) {
   return (
-    <nav aria-label="タブ" className="dc-nav">
-      <button
-        aria-current={active === "calendar" ? "page" : undefined}
-        className={`dc-nav-item ${active === "calendar" ? "dc-nav-active" : ""}`}
-        onClick={() => {
-          onSelect("calendar");
-        }}
-        type="button"
-      >
-        <CalendarDays aria-hidden="true" size={23} />
-        カレンダー
-      </button>
-      <button
-        aria-current={active === "group" ? "page" : undefined}
-        className={`dc-nav-item ${active === "group" ? "dc-nav-active" : ""}`}
-        onClick={() => {
-          onSelect("group");
-        }}
-        type="button"
-      >
-        <UsersRound aria-hidden="true" size={23} />
-        グループ
-      </button>
-      <button
-        aria-current={active === "settings" ? "page" : undefined}
-        className={`dc-nav-item ${active === "settings" ? "dc-nav-active" : ""}`}
-        onClick={() => {
-          onSelect("settings");
-        }}
-        type="button"
-      >
-        <Settings2 aria-hidden="true" size={23} />
-        設定
-      </button>
+    <nav aria-label="タブ" className={cx(tabBar.bar, className)}>
+      {tabs.map(({ tab, label, icon: Icon }) => (
+        <button
+          aria-current={active === tab ? "page" : undefined}
+          className={tabBar.item({ active: active === tab })}
+          key={tab}
+          onClick={() => {
+            onSelect(tab);
+          }}
+          type="button"
+        >
+          <Icon aria-hidden="true" size={23} />
+          {label}
+        </button>
+      ))}
     </nav>
   );
 }
@@ -1011,6 +1035,65 @@ export function PhoneStatusBar() {
   );
 }
 
+// The month at the top: the year over its number, "‹ 今月 ›" in the middle
+// so it never moves with the month's width, and the screen's action on the
+// right, lined up with the month digits rather than the two lines.
+const heading = {
+  backAtEnd: css({ display: "flex", marginRight: "4px" }),
+  bar: css({
+    alignItems: "center",
+    display: "flex",
+    flexShrink: 0,
+    justifyContent: "space-between",
+    padding: "0 8px 10px",
+    position: "relative",
+  }),
+  endAction: css({ alignSelf: "flex-end", marginBottom: "-3px" }),
+  month: css({ fontSize: "36px", fontWeight: 600, lineHeight: 1.1 }),
+  monthUnit: css({ fontSize: "14px", fontWeight: 500, marginLeft: "5px" }),
+  nav: cva({
+    base: {
+      alignItems: "center",
+      bottom: "9px",
+      display: "flex",
+      gap: "2px",
+      height: "40px",
+      left: "50%",
+      position: "absolute",
+      transform: "translateX(-50%)",
+    },
+    variants: {
+      // With the right-hand corner free, "今月 ‹ ›" takes it, on the
+      // month digits' line like the button that has that corner elsewhere.
+      atEnd: {
+        true: {
+          alignSelf: "flex-end",
+          marginBottom: "-1px",
+          position: "static",
+          transform: "none",
+        },
+      },
+    },
+  }),
+  step: css({
+    bg: "transparent",
+    border: 0,
+    borderRadius: "12px",
+    color: "text3",
+    display: "grid",
+    height: "40px",
+    placeItems: "center",
+    width: "36px",
+  }),
+  title: css({ flexShrink: 0, fontWeight: 400, margin: 0 }),
+  year: css({
+    color: "text3",
+    display: "block",
+    fontSize: "11px",
+    marginBottom: "3px",
+  }),
+};
+
 // The calendar tab's page: the grid scrolls on its own under the heading
 // when the phone is short, and an opened day's detail fills what is left.
 const calendarPage = {
@@ -1023,6 +1106,23 @@ const calendarPage = {
     padding: "16px 6px 12px",
   }),
   detailDate: css({ fontSize: "18px", fontWeight: 600, margin: "0 0 14px" }),
+  // Under the month: its summary, then what to do next and the tab bar.
+  bottom: css({
+    display: "flex",
+    flexDirection: "column",
+    flexShrink: 0,
+    marginTop: "auto",
+  }),
+  controls: css({ flexShrink: 0, minHeight: "92px", paddingTop: "12px" }),
+  // Entering takes the bottom for the pattern buttons, on the raised
+  // ground of a keyboard.
+  input: css({
+    bg: "raised",
+    flexShrink: 0,
+    marginTop: "auto",
+    paddingTop: "2px",
+  }),
+  tabsUnderSummary: css({ marginTop: "28px" }),
   // Room around the grid for the picked day's outline.
   scroll: css({
     minHeight: 0,
@@ -1120,19 +1220,11 @@ export function MonthSummary({
     month.getFullYear() === designToday.getFullYear() &&
     month.getMonth() === designToday.getMonth();
   return (
-    <button
-      aria-haspopup="dialog"
-      className="dc-summary"
-      onClick={onOpen}
-      type="button"
-    >
-      <span>{thisMonth ? "今月" : `${month.getMonth() + 1}月`}のお休み</span>
-      <strong>
-        {daysOff}
-        <span>日</span>
-        <ChevronRight aria-hidden="true" size={17} />
-      </strong>
-    </button>
+    <SummaryRow
+      days={daysOff}
+      label={`${thisMonth ? "今月" : `${month.getMonth() + 1}月`}のお休み`}
+      onOpen={onOpen}
+    />
   );
 }
 
@@ -1177,6 +1269,7 @@ function HeadingActions({
   const previous = (
     <button
       aria-label={`前の${unit}`}
+      className={heading.step}
       onClick={() => {
         onStep(-1);
       }}
@@ -1186,19 +1279,16 @@ function HeadingActions({
     </button>
   );
   const back = (
-    <button
-      aria-label={week ? "今週に戻る" : "今月に戻る"}
-      className="dc-this-month"
+    <TodayButton
       disabled={atToday}
       onClick={week ? onThisWeek : onThisMonth}
-      type="button"
-    >
-      {week ? "今週" : "今月"}
-    </button>
+      unit={unit}
+    />
   );
   const next = (
     <button
       aria-label={`次の${unit}`}
+      className={heading.step}
       onClick={() => {
         onStep(1);
       }}
@@ -1211,31 +1301,41 @@ function HeadingActions({
   return (
     <>
       {navAtEnd && (
-        <div className="dc-heading-nav dc-heading-nav-end">
+        <div className={heading.nav({ atEnd: true })}>
           {/* Shown only away from this month: the arrows sit at the edge,
               so nothing moves, and its coming in says where you are. */}
-          {!atToday && back}
+          {!atToday && (
+            <motion.div
+              animate={{ opacity: 1, x: 0 }}
+              className={heading.backAtEnd}
+              initial={{ opacity: 0, x: 6 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+            >
+              {back}
+            </motion.div>
+          )}
           {previous}
           {next}
         </div>
       )}
       {!navAtEnd && !(atEnd && mode === "edit") && (
-        <div className="dc-heading-nav">
+        <div className={heading.nav()}>
           {previous}
           {back}
           {next}
         </div>
       )}
       {mode === "view" && onSave && (
-        <IconButton label="この月のシフトを保存" onClick={onSave}>
+        <IconButton
+          className={heading.endAction}
+          label="この月のシフトを保存"
+          onClick={onSave}
+        >
           <Download aria-hidden="true" size={21} />
         </IconButton>
       )}
       {mode !== "view" && (
-        <button className="dc-done" onClick={onDone} type="button">
-          <Check aria-hidden="true" size={18} />
-          完了
-        </button>
+        <DoneButton className={heading.endAction} onClick={onDone} />
       )}
     </>
   );

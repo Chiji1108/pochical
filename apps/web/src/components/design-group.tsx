@@ -74,6 +74,9 @@ import {
   Tag,
   listRow,
   dayGrid,
+  SummaryRow,
+  summaryRow,
+  TodayButton,
   WeekdayRow,
 } from "./design-ui";
 import { holidayName, useWeek } from "./design-week";
@@ -2755,19 +2758,16 @@ function PagedShifts({
             <ChevronRight aria-hidden="true" size={18} />
           </button>
         </div>
-        <button
-          aria-label="今月に戻る"
-          className="dc-this-month"
+        <TodayButton
+          className={css({ justifySelf: "end" })}
           disabled={thisMonth}
           onClick={() => {
             onMonth(
               new Date(designToday.getFullYear(), designToday.getMonth(), 1)
             );
           }}
-          type="button"
-        >
-          今月
-        </button>
+          unit="月"
+        />
       </div>
       {layout === "days" && (
         <DayRowsTable
@@ -2829,7 +2829,7 @@ function TogetherSummary({
   const [open, setOpen] = useState(false);
   if (days.length === 0) {
     return (
-      <div className="dc-summary gr-together-summary">
+      <div className={summaryRow.row}>
         <span>{label}</span>
         <span className="gr-together-none">なし</span>
       </div>
@@ -2837,20 +2837,13 @@ function TogetherSummary({
   }
   return (
     <>
-      <button
-        className="dc-summary gr-together-summary"
-        onClick={() => {
+      <SummaryRow
+        days={days.length}
+        label={label}
+        onOpen={() => {
           setOpen(true);
         }}
-        type="button"
-      >
-        <span>{label}</span>
-        <strong>
-          {days.length}
-          <span>日</span>
-          <ChevronRight aria-hidden="true" size={17} />
-        </strong>
-      </button>
+      />
       <Sheet label={label} onOpenChange={setOpen} open={open}>
         <SheetHeading
           onClose={() => {

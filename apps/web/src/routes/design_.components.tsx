@@ -33,6 +33,7 @@ import {
   ChoiceList,
   ChoiceRow,
   dayGrid,
+  DoneButton,
   HeaderAction,
   IconButton,
   List,
@@ -223,11 +224,8 @@ function Buttons() {
             </IconButton>
           </span>
         </Item>
-        <Item name="dc-done" where="カレンダーの入力中・週表示の完了だけ">
-          <button className="dc-done" type="button">
-            <Check aria-hidden="true" size={18} />
-            完了
-          </button>
+        <Item name="DoneButton" where="カレンダーの入力中・週表示の完了だけ">
+          <DoneButton />
         </Item>
       </Group>
     </>

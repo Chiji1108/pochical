@@ -59,6 +59,7 @@ export default defineConfig({
           text: { value: "var(--text)" },
           text2: { value: "var(--text-2)" },
           text3: { value: "var(--text-3)" },
+          text4: { value: "var(--text-4)" },
           textDisabled: { value: "var(--text-disabled)" },
           textFaint: { value: "var(--text-faint)" },
         },

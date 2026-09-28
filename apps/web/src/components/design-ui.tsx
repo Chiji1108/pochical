@@ -155,6 +155,124 @@ export function IconButton({
   );
 }
 
+// 完了 at a screen's top right, for the mode that has to be left on
+// purpose: entering shifts, a day opened in the week.
+const doneButtonStyle = css({
+  alignItems: "center",
+  bg: "accentFill",
+  border: 0,
+  borderRadius: "24px",
+  color: "onAccentFill",
+  display: "inline-flex",
+  fontSize: "13px",
+  gap: "6px",
+  height: "44px",
+  justifyContent: "center",
+  padding: "0 18px",
+});
+
+export function DoneButton({ className, ...props }: ButtonProps) {
+  return (
+    <button className={cx(doneButtonStyle, className)} type="button" {...props}>
+      <Check aria-hidden="true" size={18} />
+      完了
+    </button>
+  );
+}
+
+// 今月 or 今週: back to the month or week that holds today, dimmed once
+// there.
+const todayButtonStyle = css({
+  _disabled: {
+    borderColor: "separator",
+    color: "textDisabled",
+    cursor: "default",
+  },
+  bg: "transparent",
+  border: "1px solid token(colors.border)",
+  borderRadius: "control",
+  color: "accent",
+  fontSize: "12px",
+  fontWeight: 600,
+  minHeight: "30px",
+  padding: "0 11px",
+});
+
+export function TodayButton({
+  unit,
+  className,
+  ...props
+}: ButtonProps & { unit: "月" | "週" }) {
+  return (
+    <button
+      aria-label={`今${unit}に戻る`}
+      className={cx(todayButtonStyle, className)}
+      type="button"
+      {...props}
+    >
+      今{unit}
+    </button>
+  );
+}
+
+// A number of days that opens what they are: 今月のお休み under the
+// calendar, みんな休み under the group's shifts. It has the corners of the
+// buttons it sits with.
+export const summaryRow = {
+  chevron: css({ alignSelf: "center", marginLeft: "10px" }),
+  count: css({
+    alignItems: "baseline",
+    color: "accentStrong",
+    display: "flex",
+    fontSize: "25px",
+  }),
+  row: css({
+    alignItems: "center",
+    bg: "fill",
+    border: 0,
+    borderRadius: "control",
+    color: "text",
+    cursor: "pointer",
+    display: "flex",
+    flexShrink: 0,
+    fontSize: "12px",
+    justifyContent: "space-between",
+    padding: "13px 16px",
+    width: "100%",
+  }),
+  unit: css({ fontSize: "12px", marginLeft: "2px" }),
+};
+
+export function SummaryRow({
+  label,
+  days,
+  onOpen,
+}: {
+  label: string;
+  days: number;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      aria-haspopup="dialog"
+      className={summaryRow.row}
+      onClick={onOpen}
+      type="button"
+    >
+      <span>{label}</span>
+      <strong className={summaryRow.count}>
+        {days}
+        <span className={summaryRow.unit}>日</span>
+        <ChevronRight
+          aria-hidden="true"
+          className={summaryRow.chevron}
+          size={17}
+        />
+      </strong>
+    </button>
+  );
+}
+
 // Back to where the page came from, named after it (設定, グループ), or
 // キャンセル without the chevron where leaving drops what was entered.
 // Without children it is the chevron alone, labelled 戻る. Disabled, it
