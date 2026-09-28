@@ -1232,12 +1232,12 @@ const scan = {
     "& svg": { color: "#ffd60a", flexShrink: 0, marginTop: "1px" },
     alignItems: "flex-start",
     bg: "rgba(255, 255, 255, 0.14)",
-    borderRadius: "14px",
+    borderRadius: "16px",
     display: "flex",
-    gap: "10px",
+    gap: "12px",
     lineHeight: 1.5,
     margin: "16px 0 0",
-    padding: "12px 14px",
+    padding: "12px 16px",
     textStyle: "subheadline",
   }),
   root: css({ bg: "black", color: "white" }),
@@ -1295,7 +1295,7 @@ function NoGroups({
 }
 
 const noGroups = {
-  actions: css({ display: "flex", flexDirection: "column", gap: "10px" }),
+  actions: css({ display: "flex", flexDirection: "column", gap: "12px" }),
   note: css({
     color: "text3",
     lineHeight: 1.6,
@@ -1351,7 +1351,7 @@ const rail = {
     "&::before": {
       _motionReduce: { transition: "none" },
       bg: "accent",
-      borderRadius: "0 3px 3px 0",
+      borderRadius: "0 4px 4px 0",
       content: '""',
       height: 0,
       left: 0,
@@ -1378,7 +1378,7 @@ const rail = {
     display: "flex",
     flexDirection: "column",
     flexShrink: 0,
-    gap: "10px",
+    gap: "12px",
     padding: "12px 0",
     width: "58px",
   }),
@@ -1407,11 +1407,11 @@ const markFrame = cva({
           "inset 0 0 0 2px var(--accent), inset 0 0 0 4px var(--surface)",
       },
       bg: "accentSoft",
-      borderRadius: "11px",
+      borderRadius: "12px",
     },
     _motionReduce: { transition: "none" },
     bg: "surface",
-    borderRadius: "14px",
+    borderRadius: "16px",
     display: "grid",
     fontFamily: EMOJI_FONT,
     fontSize: "22px",
@@ -1426,7 +1426,7 @@ const markFrame = cva({
     size: {
       large: {
         bg: "fill",
-        borderRadius: "25px",
+        borderRadius: "24px",
         height: "76px",
         width: "76px",
       },
@@ -1437,7 +1437,7 @@ const markFrame = cva({
 // The same rounded square as the rail, small, before a row's name.
 const smallMarkFrame = css({
   bg: "surface",
-  borderRadius: "9px",
+  borderRadius: "8px",
   display: "grid",
   height: "28px",
   overflow: "hidden",
@@ -1510,7 +1510,7 @@ const emptyMark = css({
 const hub = {
   chatAll: css({
     bg: "accentSoft",
-    borderRadius: "9px",
+    borderRadius: "8px",
     color: "accent",
     display: "grid",
     flexShrink: 0,
@@ -1520,7 +1520,7 @@ const hub = {
   }),
   editMark: css({
     display: "grid",
-    margin: "4px 0 18px",
+    margin: "4px 0 20px",
     placeItems: "center",
   }),
   header: css({
@@ -1545,7 +1545,7 @@ const hub = {
     display: "flex",
     flex: 1,
     gap: "8px",
-    marginLeft: "-9px",
+    marginLeft: "-8px",
     minHeight: 0,
   }),
   // A long group name gives way to the controls instead of wrapping.
@@ -1555,17 +1555,17 @@ const hub = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   }),
-  profileList: css({ marginTop: "18px" }),
+  profileList: css({ marginTop: "20px" }),
   qr: css({
     alignItems: "center",
     bg: "surface",
     border: "1px solid token(colors.separator)",
-    borderRadius: "18px",
+    borderRadius: "20px",
     color: "text",
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
-    padding: "24px 16px 18px",
+    gap: "12px",
+    padding: "24px 16px 20px",
   }),
   qrNote: css({ color: "text3", textStyle: "caption" }),
   rowIcon: css({ color: "accent", flexShrink: 0 }),
@@ -1574,7 +1574,7 @@ const hub = {
     alignItems: "center",
     display: "flex",
     justifyContent: "space-between",
-    marginBottom: "6px",
+    marginBottom: "8px",
   }),
   sectionHeadTitle: css({
     color: "text3",
@@ -1613,8 +1613,8 @@ const hub = {
     color: "text",
     display: "flex",
     flexDirection: "column",
-    gap: "6px",
-    padding: "8px 6px 10px 4px",
+    gap: "8px",
+    padding: "8px 8px 12px 4px",
     textAlign: "left",
     width: "100%",
   }),
@@ -1629,7 +1629,7 @@ const hub = {
     display: "flex",
     gap: "8px",
     marginTop: "2px",
-    padding: "10px 6px 2px 10px",
+    padding: "12px 8px 2px 12px",
     textAlign: "left",
     textStyle: "footnote",
     width: "100%",
@@ -1655,7 +1655,7 @@ const join = {
     alignItems: "center",
     color: "text2",
     display: "flex",
-    gap: "6px",
+    gap: "8px",
     margin: "12px 0 0",
     textStyle: "subheadline",
   }),
@@ -1663,10 +1663,10 @@ const join = {
     "& small": { color: "text3", marginLeft: "4px", textStyle: "footnote" },
     alignItems: "center",
     display: "flex",
-    gap: "6px",
+    gap: "8px",
     marginTop: "12px",
   }),
-  name: css({ alignSelf: "stretch", marginTop: "18px", textAlign: "left" }),
+  name: css({ alignSelf: "stretch", marginTop: "20px", textAlign: "left" }),
   sheet: css({
     alignItems: "center",
     display: "flex",
@@ -1676,10 +1676,10 @@ const join = {
   text: css({
     color: "text3",
     lineHeight: 1.6,
-    margin: "10px 0 16px",
+    margin: "12px 0 16px",
     textStyle: "footnote",
   }),
-  title: css({ fontWeight: 700, margin: "10px 0 0", textStyle: "title2" }),
+  title: css({ fontWeight: 700, margin: "12px 0 0", textStyle: "title2" }),
 };
 
 // A profile's photo with a camera badge to change it, as the platforms'
@@ -1713,7 +1713,7 @@ const photoPicker = {
     borderRadius: "16px",
     color: "text",
     fontWeight: 600,
-    marginTop: "10px",
+    marginTop: "12px",
     minHeight: "48px",
     textStyle: "callout",
     width: "100%",
@@ -2089,20 +2089,20 @@ function MemberSheet({
 }
 
 const profileStyle = {
-  message: css({ alignSelf: "stretch", marginTop: "6px" }),
+  message: css({ alignSelf: "stretch", marginTop: "8px" }),
   name: css({ fontWeight: 700, margin: 0, textStyle: "title2" }),
   root: css({
     alignItems: "center",
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
+    gap: "12px",
     padding: "0 16px 16px",
   }),
   where: css({
     alignItems: "center",
     color: "text3",
     display: "flex",
-    gap: "6px",
+    gap: "8px",
     textStyle: "footnote",
   }),
 };
@@ -2123,14 +2123,14 @@ function lastLine(chat: Chat, members: Member[]) {
 // How many are unread, on a chat's row and on the rail's group icon.
 const badge = css({
   bg: "var(--badge)",
-  borderRadius: "9px",
+  borderRadius: "999px",
   color: "var(--on-badge)",
   display: "inline-grid",
   fontSize: "10px",
   fontWeight: 700,
   height: "18px",
   minWidth: "18px",
-  padding: "0 5px",
+  padding: "0 4px",
   placeItems: "center",
 });
 
@@ -2172,7 +2172,7 @@ const chatStyle = {
     base: {
       display: "flex",
       flexDirection: "column",
-      gap: "3px",
+      gap: "4px",
       maxWidth: "84%",
       minWidth: 0,
     },
@@ -2181,7 +2181,7 @@ const chatStyle = {
   bubble: cva({
     base: {
       bg: "fill2",
-      borderRadius: "16px 16px 16px 6px",
+      borderRadius: "16px 16px 16px 8px",
       color: "text",
       display: "flex",
       flexDirection: "column",
@@ -2192,7 +2192,7 @@ const chatStyle = {
       mine: {
         true: {
           bg: "accentFill",
-          borderRadius: "16px 16px 6px",
+          borderRadius: "16px 16px 8px",
           color: "onAccentFill",
         },
       },
@@ -2225,7 +2225,7 @@ const chatStyle = {
   // The avatar sits at the top by the name, the time by the bubble, so
   // the reactions under it push neither down.
   bubbleRow: cva({
-    base: { alignItems: "flex-end", display: "flex", gap: "6px" },
+    base: { alignItems: "flex-end", display: "flex", gap: "8px" },
     variants: { mine: { true: { flexDirection: "row-reverse" } } },
   }),
   bubbleRule: css({
@@ -2251,7 +2251,7 @@ const chatStyle = {
       alignItems: "center",
       borderTop: "1px solid token(colors.separator)",
       display: "flex",
-      gap: "6px",
+      gap: "8px",
       padding: "8px 0 4px",
     },
     // The reply above it already draws the line.
@@ -2282,12 +2282,12 @@ const chatStyle = {
   composerInput: css({
     bg: "fill",
     border: 0,
-    borderRadius: "19px",
+    borderRadius: "999px",
     flex: 1,
     font: "inherit",
     height: "38px",
     minWidth: 0,
-    padding: "0 14px",
+    padding: "0 16px",
     textStyle: "body",
   }),
   dayOpen: cva({
@@ -2312,7 +2312,7 @@ const chatStyle = {
   }),
   // A message jumped to rings its bubble or shared days for a moment.
   item: cva({
-    base: { display: "flex", flexDirection: "column", gap: "6px" },
+    base: { display: "flex", flexDirection: "column", gap: "8px" },
     variants: {
       flash: {
         true: {
@@ -2325,7 +2325,7 @@ const chatStyle = {
     },
   }),
   message: cva({
-    base: { alignItems: "flex-start", display: "flex", gap: "6px" },
+    base: { alignItems: "flex-start", display: "flex", gap: "8px" },
     variants: { mine: { true: { flexDirection: "row-reverse" } } },
   }),
   // Chat apps scroll without a bar over the bubbles.
@@ -2334,7 +2334,7 @@ const chatStyle = {
     display: "flex",
     flex: 1,
     flexDirection: "column",
-    gap: "6px",
+    gap: "8px",
     listStyle: "none",
     margin: 0,
     minHeight: 0,
@@ -2347,7 +2347,7 @@ const chatStyle = {
     alignSelf: "center",
     color: "text3",
     lineHeight: 1.5,
-    margin: "6px auto",
+    margin: "8px auto",
     maxWidth: "85%",
     textAlign: "center",
     textStyle: "caption",
@@ -2366,7 +2366,7 @@ const chatStyle = {
     marginBottom: "-2px",
     maxWidth: "100%",
     minWidth: 0,
-    padding: "4px 10px",
+    padding: "4px 12px",
     textAlign: "left",
   }),
   quoteName: css({ color: "text3", fontWeight: 600, textStyle: "caption2" }),
@@ -2376,9 +2376,9 @@ const chatStyle = {
     alignItems: "center",
     bg: "surface",
     border: "1px solid token(colors.border)",
-    borderRadius: "12px",
+    borderRadius: "999px",
     display: "inline-flex",
-    gap: "3px",
+    gap: "4px",
     height: "24px",
     padding: "0 8px",
     textStyle: "subheadline",
@@ -2392,7 +2392,7 @@ const chatStyle = {
     alignItems: "center",
     borderTop: "1px solid token(colors.separator)",
     display: "flex",
-    gap: "6px",
+    gap: "8px",
     padding: "8px 0 0",
   }),
   tap: cva({
@@ -2418,10 +2418,10 @@ const chatStyle = {
   when: css({
     alignSelf: "center",
     bg: "fill2",
-    borderRadius: "9px",
+    borderRadius: "8px",
     color: "text3",
-    margin: "6px 0 2px",
-    padding: "2px 10px",
+    margin: "8px 0 2px",
+    padding: "2px 12px",
     textStyle: "caption2",
   }),
 };
@@ -2834,7 +2834,7 @@ const messageActions = {
   menu: css({
     bg: "raised",
     border: "1px solid token(colors.border)",
-    borderRadius: "14px",
+    borderRadius: "16px",
     boxShadow: "0 8px 24px var(--shadow-strong)",
     minWidth: "170px",
     overflow: "hidden",
@@ -2852,7 +2852,7 @@ const messageActions = {
     color: "text",
     display: "flex",
     justifyContent: "space-between",
-    padding: "11px 14px",
+    padding: "12px 16px",
     textStyle: "body",
     width: "100%",
   }),
@@ -2875,7 +2875,7 @@ const messageActions = {
     alignItems: "center",
     bg: "raised",
     border: "1px solid token(colors.border)",
-    borderRadius: "22px",
+    borderRadius: "999px",
     boxShadow: "0 4px 14px var(--shadow)",
     display: "flex",
     gap: "2px",
@@ -3088,7 +3088,7 @@ const weekTable = {
   dates: css({ fontSize: "11px", fontWeight: 600, textAlign: "center" }),
   name: css({ display: "grid", placeItems: "center" }),
   nameButton: css({ bg: "transparent", border: 0, padding: 0 }),
-  root: css({ display: "flex", flexDirection: "column", gap: "10px" }),
+  root: css({ display: "flex", flexDirection: "column", gap: "12px" }),
   row: cva({
     base: {
       alignItems: "center",
@@ -3109,7 +3109,7 @@ const weekTable = {
     base: {
       bg: "background",
       border: "1px solid token(colors.separator)",
-      borderRadius: "14px",
+      borderRadius: "16px",
       overflow: "hidden",
       padding: "4px 0",
     },
@@ -3125,7 +3125,7 @@ const weekTable = {
       pinned: {
         true: {
           bg: "background",
-          margin: "-8px 0 -6px",
+          margin: "-8px 0 -8px",
           padding: "8px 0 4px",
           position: "sticky",
           top: "-8px",
@@ -3145,7 +3145,7 @@ const weekCell = cva({
       css: {
         "&::before": {
           ...offTile,
-          borderRadius: "11px 11px 0 0",
+          borderRadius: "12px 12px 0 0",
           inset: "2px 2px 0",
         },
       },
@@ -3159,7 +3159,7 @@ const weekCell = cva({
     },
     {
       css: {
-        "&::before": { borderRadius: "0 0 11px 11px", inset: "0 2px 3px" },
+        "&::before": { borderRadius: "0 0 12px 12px", inset: "0 2px 3px" },
       },
       kind: "cell",
       last: true,
@@ -3168,7 +3168,7 @@ const weekCell = cva({
     // Tiles sit tighter in the small weekly table.
     {
       compact: true,
-      css: { "&::before": { borderRadius: "7px", inset: "2px 3px" } },
+      css: { "&::before": { borderRadius: "8px", inset: "2px 3px" } },
       off: true,
       together: false,
     },
@@ -3176,7 +3176,7 @@ const weekCell = cva({
     {
       css: {
         "&::after": {
-          borderRadius: "11px 11px 0 0",
+          borderRadius: "12px 12px 0 0",
           borderWidth: "1.5px 1.5px 0",
           inset: "-3px 1px 0",
         },
@@ -3192,7 +3192,7 @@ const weekCell = cva({
     {
       css: {
         "&::after": {
-          borderRadius: "0 0 11px 11px",
+          borderRadius: "0 0 12px 12px",
           borderWidth: "0 1.5px 1.5px",
           inset: "0 1px -3px",
         },
@@ -3216,7 +3216,7 @@ const weekCell = cva({
     compact: { false: {}, true: {} },
     kind: {
       cell: { display: "grid", height: "30px", placeItems: "center" },
-      date: { padding: "6px 0 4px" },
+      date: { padding: "8px 0 4px" },
     },
     last: { false: {}, true: {} },
     off: { false: {}, true: { "&::before": offTile } },
@@ -3253,7 +3253,7 @@ const dayRows = {
       {
         css: {
           "&::before": {
-            borderRadius: "0 11px 11px 0",
+            borderRadius: "0 12px 12px 0",
             inset: "3px 3px 3px 0",
           },
         },
@@ -3269,7 +3269,7 @@ const dayRows = {
       {
         css: {
           "&::after": {
-            borderRadius: "0 11px 11px 0",
+            borderRadius: "0 12px 12px 0",
             borderWidth: "1.5px 1.5px 1.5px 0",
             inset: "1px 1px 1px 0",
           },
@@ -3317,7 +3317,7 @@ const dayRows = {
       height: "36px",
       isolation: "isolate",
       left: 0,
-      padding: "0 0 0 10px",
+      padding: "0 0 0 12px",
       position: "sticky",
       textAlign: "left",
       zIndex: 2,
@@ -3328,7 +3328,7 @@ const dayRows = {
         true: {
           "&::after": {
             ...pickedFrame,
-            borderRadius: "11px 0 0 11px",
+            borderRadius: "12px 0 0 12px",
             borderWidth: "1.5px 0 1.5px 1.5px",
             inset: "1px 0 1px 1px",
           },
@@ -3339,7 +3339,7 @@ const dayRows = {
         true: {
           "&::before": {
             ...offTile,
-            borderRadius: "11px 0 0 11px",
+            borderRadius: "12px 0 0 12px",
             inset: "3px 0 3px 3px",
           },
         },
@@ -3370,8 +3370,8 @@ const dayRows = {
       zIndex: 3,
     },
     compoundVariants: [
-      { corner: true, css: { borderTopLeftRadius: "13px" }, page: true },
-      { css: { borderTopRightRadius: "13px" }, last: true, page: true },
+      { corner: true, css: { borderTopLeftRadius: "12px" }, page: true },
+      { css: { borderTopRightRadius: "12px" }, last: true, page: true },
       {
         css: {
           boxShadow:
@@ -3427,7 +3427,7 @@ const dayRows = {
     base: {
       bg: "background",
       border: "1px solid token(colors.separator)",
-      borderRadius: "14px",
+      borderRadius: "16px",
       maxHeight: "520px",
       overflow: "auto",
     },
@@ -3440,7 +3440,7 @@ const dayRows = {
     tableLayout: "fixed",
     width: "100%",
   }),
-  weekday: css({ fontSize: "9px", fontWeight: 400, marginLeft: "3px" }),
+  weekday: css({ fontSize: "9px", fontWeight: 400, marginLeft: "4px" }),
 };
 
 // Shared days in a message: one day spreads its people out; several make
@@ -3450,17 +3450,17 @@ const dayCard = {
     base: {
       bg: "surface",
       border: "1px solid token(colors.border)",
-      borderRadius: "14px",
+      borderRadius: "16px",
       display: "flex",
       flexDirection: "column",
       gap: "8px",
-      padding: "10px 12px",
+      padding: "12px 12px",
     },
-    variants: { many: { true: { gap: 0, padding: "6px 8px" } } },
+    variants: { many: { true: { gap: 0, padding: "8px 8px" } } },
   }),
   cell: cva({
     base: {
-      borderRadius: "6px",
+      borderRadius: "8px",
       display: "grid",
       height: "24px",
       placeItems: "center",
@@ -3484,18 +3484,18 @@ const dayCard = {
     display: "flex",
     fontSize: "12px",
     fontWeight: 600,
-    gap: "6px",
+    gap: "8px",
     padding: 0,
     textAlign: "left",
   }),
-  people: css({ display: "flex", gap: "10px" }),
+  people: css({ display: "flex", gap: "12px" }),
   person: css({
     alignItems: "center",
     color: "text3",
     display: "flex",
     flexDirection: "column",
     fontSize: "9px",
-    gap: "3px",
+    gap: "4px",
   }),
   row: cva({
     base: {
@@ -3522,7 +3522,7 @@ const shareDays = {
       _disabled: { visibility: "hidden" },
       bg: "transparent",
       border: 0,
-      borderRadius: "10px",
+      borderRadius: "12px",
       fontSize: "13px",
       fontWeight: 600,
       height: "36px",
@@ -3545,21 +3545,21 @@ const shareDays = {
   suggest: css({
     alignItems: "center",
     bg: "accentSoft",
-    borderRadius: "14px",
+    borderRadius: "16px",
     display: "flex",
     flexWrap: "wrap",
-    gap: "6px",
-    padding: "10px 12px",
+    gap: "8px",
+    padding: "12px 12px",
   }),
   suggestion: css({
     "&[aria-pressed=true]": { bg: "accentFill", color: "onAccentFill" },
     bg: "surface",
     border: "1.5px solid transparent",
-    borderRadius: "15px",
+    borderRadius: "999px",
     color: "accent",
     fontWeight: 600,
     minHeight: "30px",
-    padding: "0 10px",
+    padding: "0 12px",
     textStyle: "footnote",
   }),
   togetherLabel: css({
@@ -3578,7 +3578,7 @@ const monthSwitch = {
       "& button": {
         bg: "transparent",
         border: 0,
-        borderRadius: "10px",
+        borderRadius: "12px",
         color: "accent",
         display: "grid",
         height: "32px",
@@ -3590,7 +3590,7 @@ const monthSwitch = {
       display: "flex",
       gap: "8px",
       justifyContent: "center",
-      marginTop: "-6px",
+      marginTop: "-8px",
     },
     // In the shifts page's row, beside 今月.
     // A longhand, so it outranks the base's marginTop.
@@ -3605,7 +3605,7 @@ const monthSwitch = {
     alignItems: "center",
     bg: "transparent",
     border: "1px solid token(colors.border)",
-    borderRadius: "17px",
+    borderRadius: "999px",
     color: "accent",
     display: "inline-flex",
     fontWeight: 600,
@@ -3627,14 +3627,14 @@ const shiftsPage = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   }),
-  legendMember: css({ alignItems: "center", display: "flex", gap: "6px" }),
+  legendMember: css({ alignItems: "center", display: "flex", gap: "8px" }),
   month: css({
     alignItems: "center",
     display: "grid",
     gridTemplateColumns: "1fr auto 1fr",
   }),
   root: cva({
-    base: { display: "flex", flexDirection: "column", gap: "14px" },
+    base: { display: "flex", flexDirection: "column", gap: "16px" },
     // Room to scroll the last weeks out from under the sheet.
     variants: { withSheet: { true: { paddingBottom: "300px" } } },
   }),
@@ -3657,23 +3657,23 @@ const people = {
     alignItems: "center",
     bg: "fill",
     border: "1px solid transparent",
-    borderRadius: "18px",
+    borderRadius: "999px",
     color: "text2",
     display: "inline-flex",
     flexShrink: 0,
-    gap: "6px",
+    gap: "8px",
     minHeight: "36px",
-    padding: "0 12px 0 6px",
+    padding: "0 12px 0 8px",
     textStyle: "subheadline",
   }),
   list: css({
     border: 0,
     display: "flex",
-    gap: "6px",
-    margin: "-6px -19px 0",
+    gap: "8px",
+    margin: "-8px -20px 0",
     minWidth: 0,
     overflowX: "auto",
-    padding: "0 19px",
+    padding: "0 20px",
     position: "relative",
     scrollPaddingInline: "19px",
   }),

@@ -180,7 +180,7 @@ const templateChips = css({
   display: "flex",
   flexWrap: "wrap",
   gap: "4px",
-  marginTop: "5px",
+  marginTop: "4px",
 });
 
 // The first run, in the phone: a welcome with the app's poodle, then a
@@ -193,10 +193,10 @@ const onboarding = {
     display: "flex",
     flex: 1,
     flexDirection: "column",
-    gap: "18px",
+    gap: "20px",
     minHeight: 0,
     overflowY: "auto",
-    padding: "20px 6px 12px",
+    padding: "20px 8px 12px",
   }),
   description: css({
     color: "text3",
@@ -229,9 +229,9 @@ const onboarding = {
     display: "flex",
     flex: 1,
     flexDirection: "column",
-    gap: "10px",
+    gap: "12px",
     justifyContent: "center",
-    padding: "0 10px",
+    padding: "0 12px",
     textAlign: "center",
   }),
   lead: css({
@@ -244,7 +244,7 @@ const onboarding = {
     fontSize: "24px",
     fontWeight: 700,
     lineHeight: 1.4,
-    margin: "6px 0 0",
+    margin: "8px 0 0",
   }),
   // Each phrase stays whole, so the line breaks after the comma.
   phrase: css({ display: "inline-block" }),
@@ -253,7 +253,7 @@ const onboarding = {
   // and no square shows around the dog. In dark, the dark home screen's
   // dog is drawn into a box of its own.
   poodle: cva({
-    base: { height: "200px", margin: "-24px 0 -18px", width: "200px" },
+    base: { height: "200px", margin: "-24px 0 -20px", width: "200px" },
     defaultVariants: { dark: false },
     variants: {
       dark: {
@@ -267,17 +267,17 @@ const onboarding = {
   }),
   previewLabel: css({
     color: "text3",
-    margin: "0 0 -10px",
+    margin: "0 0 -12px",
     textStyle: "caption",
   }),
   restart: css({
     bg: "transparent",
     border: "1px solid token(colors.border)",
-    borderRadius: "20px",
+    borderRadius: "999px",
     color: "accent",
-    marginTop: "10px",
+    marginTop: "12px",
     minHeight: "40px",
-    padding: "0 14px",
+    padding: "0 16px",
     textStyle: "footnote",
   }),
   title: css({

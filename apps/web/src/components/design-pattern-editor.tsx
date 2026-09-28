@@ -84,7 +84,7 @@ const editor = {
       borderRadius: "8px",
       color: "text",
       font: "inherit",
-      padding: "4px 6px",
+      padding: "4px 8px",
       textStyle: "body",
     },
     alignItems: "center",
