@@ -371,6 +371,34 @@ export const states: State[] = [
     },
   },
   {
+    // A message tapped: its reactions and menu over the chat.
+    name: "group/chat-actions",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^全体チャット/u);
+      await tap(page, /のメッセージ：/u);
+    },
+  },
+  {
+    name: "group/chat-replying",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^全体チャット/u);
+      await tap(page, /のメッセージ：/u);
+      await tap(page, "返信");
+    },
+  },
+  {
+    name: "group/chat-one",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^ゆうき/u);
+    },
+  },
+  {
     name: "settings",
     path: demo("bottomRows=two&scheduleSample=filled"),
     steps: tapOn("設定"),
