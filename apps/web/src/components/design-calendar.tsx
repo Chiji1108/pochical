@@ -12,6 +12,7 @@ import {
   Pencil,
   Plus,
   Settings2,
+  Share,
   Trash2,
   UsersRound,
   X,
@@ -51,6 +52,8 @@ import {
   fieldHint,
   fieldLabel,
   IconButton,
+  IconMenu,
+  MenuItem,
   Pager,
   Screen,
   srOnly,
@@ -417,6 +420,10 @@ export function DesignCalendar({
   };
   const [editing, setEditing] = useState(initialEditing);
   const [selectedDay, setSelectedDay] = useState(1);
+  // Whether the month being entered had blank days when it came up, as
+  // only then can 完了 have just filled it. A filled month can be entered
+  // too, with ポチポチ入力 always offered in the 保存を右上 variant.
+  const [enteredBlank, setEnteredBlank] = useState(true);
   const [month, setMonth] = useState(() => new Date(2026, initialMonth, 1));
   const patternKeys = useUser((state) => state.patternKeys);
   const setPatternKeys = useUser((state) => state.setPatternKeys);
@@ -437,9 +444,13 @@ export function DesignCalendar({
       .length,
   }));
   const unfilled = monthDays.filter((date) => !schedule[dateKey(date)]).length;
+  // The 保存を右上 variant: saving moves to the heading's corner in place of
+  // the arrows, which a swipe already does, so the bottom always offers
+  // ポチポチ入力, filled month or not.
+  const saveTop = variants.bottomRows === "saveTop";
   // Input is offered only while the month has days to fill: a repeating
   // order fills them itself, and a filled month is fixed by tapping a day.
-  const showInputBar = !repeating && unfilled > 0;
+  const showInputBar = saveTop || (!repeating && unfilled > 0);
   // The いつも2段 variant: the bottom always holds two rows, what the month
   // is on top and what to do next under it, so the calendar keeps one
   // height. A filled month's next step is saving it.
@@ -464,9 +475,11 @@ export function DesignCalendar({
       ariaLabel={`入力する日付：${month.getMonth() + 1}月${selectedDay}日(${weekdays[selectedDate.getDay()]})。タップで変更`}
       date={selectedDate}
       onSelect={(date) => {
+        const target = new Date(date.getFullYear(), date.getMonth(), 1);
         setSelectedDay(date.getDate());
         setPageTurn((turn) => turn + 1);
-        setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+        setMonth(target);
+        setEnteredBlank(hasBlanks(schedule, target));
         setAnnouncement(
           `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日を選択中`
         );
@@ -502,6 +515,7 @@ export function DesignCalendar({
     setMonth(target);
     if (editing) {
       setSelectedDay(1);
+      setEnteredBlank(hasBlanks(schedule, target));
       setAnnouncement(
         `${target.getFullYear()}年${target.getMonth() + 1}月1日を選択中`
       );
@@ -518,6 +532,7 @@ export function DesignCalendar({
   }
   function startInput() {
     setSelectedDay(1);
+    setEnteredBlank(unfilled > 0);
     setEditing(true);
   }
   // From the switch day on, the new order replaces what the old one wrote.
@@ -602,7 +617,7 @@ export function DesignCalendar({
       return;
     }
     // A month just filled in is worth keeping, so saving is offered then.
-    if (unfilled === 0) {
+    if (unfilled === 0 && enteredBlank) {
       openSave(true);
     }
   }
@@ -703,13 +718,20 @@ export function DesignCalendar({
                 </strong>
               </h3>
               <HeadingActions
+                arrows={!saveTop}
                 atEnd={twoRows}
                 detailDate={detailDate}
                 mode={headingMode}
                 month={month}
                 onDone={finishHeading}
+                onCalendar={() => {
+                  openSave(false, true);
+                }}
+                onImage={() => {
+                  setImagePreview(true);
+                }}
                 onSave={
-                  twoRows
+                  twoRows || saveTop
                     ? undefined
                     : () => {
                         openSave(false);
@@ -1068,7 +1090,28 @@ const breakdown = {
 // so it never moves with the month's width, and the screen's action on the
 // right, lined up with the month digits rather than the two lines.
 const heading = {
+  // The arrows kept for screen readers and the keyboard, as a skip link
+  // is: out of sight until one of them has focus.
+  arrowsOnFocus: css({
+    "&:not(:focus-within)": {
+      clipPath: "inset(50%)",
+      height: "1px",
+      overflow: "hidden",
+      position: "absolute",
+      whiteSpace: "nowrap",
+      width: "1px",
+    },
+    display: "flex",
+  }),
   backAtEnd: css({ display: "flex", marginRight: "4px" }),
+  // Without the arrows: 今月 and the screen's action, together on the
+  // month digits' line.
+  corner: css({
+    alignItems: "center",
+    alignSelf: "flex-end",
+    display: "flex",
+    marginBottom: "-4px",
+  }),
   bar: css({
     alignItems: "center",
     display: "flex",
@@ -1263,9 +1306,14 @@ export function MonthSummary({
 // disabled when there is nowhere to go back to. With `atEnd`, the month
 // view has the right-hand corner free, so "今月 ‹ ›" takes it, the arrows
 // together at the edge; entering drops them, as its date picker changes
-// the month, leaving 完了 alone there.
+// the month, leaving 完了 alone there. Without `arrows`, a swipe alone
+// turns the page, as in the platforms' calendars: the corner holds 今月
+// while away from it, then the save menu or 完了, and the arrows stay for
+// screen readers, as a native calendar's accessibility actions, showing
+// only while the keyboard is on them.
 function HeadingActions({
   mode,
+  arrows = true,
   atEnd = false,
   month,
   detailDate,
@@ -1274,8 +1322,11 @@ function HeadingActions({
   onThisWeek,
   onDone,
   onSave,
+  onImage,
+  onCalendar,
 }: {
   mode: "view" | "edit" | "week";
+  arrows?: boolean;
   atEnd?: boolean;
   month: Date;
   detailDate: Date | undefined;
@@ -1286,6 +1337,9 @@ function HeadingActions({
   onDone: () => void;
   // Left out when saving has a row of its own at the bottom.
   onSave?: () => void;
+  // The save menu's two ways, used without `arrows`.
+  onImage: () => void;
+  onCalendar: () => void;
 }) {
   const weekTools = useWeek();
   const week = mode === "week";
@@ -1327,23 +1381,29 @@ function HeadingActions({
       <ChevronRight aria-hidden="true" size={21} />
     </button>
   );
+  if (!arrows) {
+    return (
+      <SwipeCorner
+        atToday={atToday}
+        back={back}
+        mode={mode}
+        next={next}
+        onCalendar={onCalendar}
+        onDone={onDone}
+        onImage={onImage}
+        previous={previous}
+      />
+    );
+  }
   const navAtEnd = atEnd && mode === "view";
   return (
     <>
       {navAtEnd && (
         <div className={heading.nav({ atEnd: true })}>
           {/* Shown only away from this month: the arrows sit at the edge,
-              so nothing moves, and its coming in says where you are. */}
-          {!atToday && (
-            <motion.div
-              animate={{ opacity: 1, x: 0 }}
-              className={heading.backAtEnd}
-              initial={{ opacity: 0, x: 6 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-            >
-              {back}
-            </motion.div>
-          )}
+              so nothing moves, and it simply comes and goes, as a toolbar
+              item does without withAnimation. */}
+          {!atToday && <div className={heading.backAtEnd}>{back}</div>}
           {previous}
           {next}
         </div>
@@ -1368,6 +1428,66 @@ function HeadingActions({
         <DoneButton className={heading.endAction} onClick={onDone} />
       )}
     </>
+  );
+}
+
+// The heading's corner when a swipe alone turns the page: the arrows for
+// the keyboard and screen readers, 今月 while away, then the save menu or
+// 完了.
+function SwipeCorner({
+  mode,
+  atToday,
+  previous,
+  next,
+  back,
+  onImage,
+  onCalendar,
+  onDone,
+}: {
+  mode: "view" | "edit" | "week";
+  atToday: boolean;
+  previous: ReactNode;
+  next: ReactNode;
+  back: ReactNode;
+  onImage: () => void;
+  onCalendar: () => void;
+  onDone: () => void;
+}) {
+  return (
+    <div className={heading.corner}>
+      {mode !== "edit" && (
+        <div className={heading.arrowsOnFocus}>
+          {previous}
+          {next}
+        </div>
+      )}
+      {mode !== "edit" && !atToday && (
+        <div className={heading.backAtEnd}>{back}</div>
+      )}
+      {mode === "view" ? (
+        <IconMenu
+          icon={<Share aria-hidden="true" size={21} />}
+          label="この月のシフトを保存"
+        >
+          <MenuItem
+            icon={<ImageIcon aria-hidden="true" size={18} />}
+            onSelect={onImage}
+            value="image"
+          >
+            画像で保存
+          </MenuItem>
+          <MenuItem
+            icon={<CalendarPlus aria-hidden="true" size={18} />}
+            onSelect={onCalendar}
+            value="calendar"
+          >
+            端末カレンダーに追加
+          </MenuItem>
+        </IconMenu>
+      ) : (
+        <DoneButton onClick={onDone} />
+      )}
+    </div>
   );
 }
 
@@ -1419,6 +1539,19 @@ function SaveArea({
       </Button>
     </div>
   );
+}
+
+// Whether any day of the month has nothing entered.
+function hasBlanks(schedule: Schedule, month: Date) {
+  const count = new Date(
+    month.getFullYear(),
+    month.getMonth() + 1,
+    0
+  ).getDate();
+  return Array.from(
+    { length: count },
+    (_, index) => new Date(month.getFullYear(), month.getMonth(), index + 1)
+  ).some((date) => !schedule[dateKey(date)]);
 }
 
 // Emoji marks draw in the system's emoji font wherever they sit.

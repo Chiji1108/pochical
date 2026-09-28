@@ -1586,37 +1586,49 @@ export function Tag({
   );
 }
 
+// Every menu has iOS 26's look, a pull-down or a message's 返信 and
+// コピー alike: the icon or check leading in the text's own color, rows
+// apart without lines, a line only between groups, and round corners.
 const menu = {
-  check: css({ color: "accent", flexShrink: 0 }),
+  check: css({ color: "text", flexShrink: 0 }),
   content: css({
     _closed: { animation: "fadeOut 0.12s ease-in" },
     _open: { animation: "fadeIn 0.12s ease-out" },
     bg: "raised",
     border: "1px solid token(colors.border)",
-    borderRadius: "16px",
+    borderRadius: "24px",
     boxShadow: "0 8px 24px var(--shadow-strong)",
-    minWidth: "190px",
+    minWidth: "200px",
     outline: "none",
     padding: "8px",
     zIndex: 30,
   }),
-  icon: css({ color: "text3", flexShrink: 0 }),
+  icon: css({ color: "text", display: "flex", flexShrink: 0 }),
   item: css({
+    _focusVisible: {
+      outline: "2px solid token(colors.accent)",
+      outlineOffset: "-2px",
+    },
     _highlighted: { bg: "fill2" },
+    _hover: { bg: "fill2" },
     alignItems: "center",
-    borderRadius: "8px",
+    bg: "transparent",
+    border: 0,
+    borderRadius: "16px",
     color: "text",
     cursor: "default",
     display: "flex",
     gap: "12px",
-    padding: "8px 12px",
+    padding: "12px",
+    textAlign: "start",
     textStyle: "body",
     userSelect: "none",
+    width: "100%",
   }),
   separator: css({
     border: 0,
     borderTop: "1px solid token(colors.separator)",
-    margin: "4px 8px",
+    margin: "4px 12px",
   }),
   trigger: css({
     alignItems: "center",
@@ -1631,6 +1643,14 @@ const menu = {
     padding: "8px 12px 8px 12px",
     textStyle: "subheadline",
   }),
+};
+
+// The menu's look, for a menu Ark UI's Menu cannot hold, as a message's
+// under its reactions.
+export const menuStyle = {
+  content: menu.content,
+  icon: menu.icon,
+  item: menu.item,
 };
 
 // A pull-down for a page's secondary actions, as SwiftUI's Menu and
@@ -1650,6 +1670,35 @@ export function PullDownMenu({
       <Menu.Trigger className={menu.trigger}>
         {label}
         <ChevronDown aria-hidden="true" size={15} />
+      </Menu.Trigger>
+      <Menu.Positioner>
+        <Menu.Content className={menu.content}>{children}</Menu.Content>
+      </Menu.Positioner>
+    </Menu.Root>
+  );
+}
+
+// The same menu opened from an icon alone, as a toolbar's Menu in SwiftUI
+// or an IconButton with a DropdownMenu in Compose. The label is what a
+// screen reader says.
+export function IconMenu({
+  label,
+  icon,
+  className,
+  children,
+}: {
+  label: string;
+  icon: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Menu.Root positioning={{ gutter: 6, placement: "bottom-end" }}>
+      <Menu.Trigger
+        aria-label={label}
+        className={cx(iconButtonStyle, "ui-icon-button", className)}
+      >
+        {icon}
       </Menu.Trigger>
       <Menu.Positioner>
         <Menu.Content className={menu.content}>{children}</Menu.Content>
@@ -1688,7 +1737,7 @@ export function MenuPicker<Value extends string>({
           <Check
             aria-hidden="true"
             className={menu.check}
-            size={16}
+            size={18}
             visibility={option.value === value ? "visible" : "hidden"}
           />
           <Menu.ItemText>{option.label}</Menu.ItemText>

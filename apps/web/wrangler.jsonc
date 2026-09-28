@@ -5,5 +5,8 @@
   "compatibility_date": "2026-09-24",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
+  // Branches other than main are uploaded as Worker Previews by Workers
+  // Builds (`wrangler preview`), which needs this block, even empty.
+  "previews": {},
   "vars": { "POCHICAL_CONVEX_HTTP_URL": "" },
 }
