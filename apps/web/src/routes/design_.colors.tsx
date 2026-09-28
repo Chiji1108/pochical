@@ -1,7 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 
 import { DesignColors } from "../components/design-colors";
+import {
+  DesignIntro,
+  DesignPage,
+  DesignToolbar,
+} from "../components/design-page";
 import { themeStyle } from "../components/design-theme";
 import { pageMeta } from "../lib/site";
 
@@ -9,21 +13,13 @@ import designStyles from "../design.css?url";
 
 function ColorsPage() {
   return (
-    <main className="design-page" id="main" style={themeStyle("moss", "light")}>
-      <div className="design-toolbar">
-        <Link to="/design">
-          <ArrowLeft aria-hidden="true" size={16} /> デザイン資料
-        </Link>
-      </div>
-      <header className="design-intro">
-        <p>POCHICAL / COLOR PALETTE</p>
-        <h1>カラーパレット</h1>
-        <p className="design-description">
-          画面の色はすべて、ここにある役割の名前で決まります。ライトとダークを並べています。
-        </p>
-      </header>
+    <DesignPage style={themeStyle("moss", "light")}>
+      <DesignToolbar back="documents" />
+      <DesignIntro eyebrow="POCHICAL / COLOR PALETTE" title="カラーパレット">
+        画面の色はすべて、ここにある役割の名前で決まります。ライトとダークを並べています。
+      </DesignIntro>
       <DesignColors />
-    </main>
+    </DesignPage>
   );
 }
 

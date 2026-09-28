@@ -113,11 +113,7 @@ const variants = parseDesignVariants({});
 
 // The phone's screens fill the page, with nothing of the page to scroll
 // or bounce behind them.
-const page = css({
-  minHeight: "auto",
-  overscrollBehavior: "none",
-  padding: 0,
-});
+const page = css({ overscrollBehavior: "none" });
 
 // Ends launchScript's wait, showing the page.
 function showPage() {

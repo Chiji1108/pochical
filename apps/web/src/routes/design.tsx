@@ -1,6 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { css } from "styled-system/css";
 
+import {
+  DesignIntro,
+  DesignPage,
+  DesignToolbar,
+} from "../components/design-page";
 import { useDesignTheme } from "../components/design-providers";
 import { themeStyle } from "../components/design-theme";
 import { pageMeta } from "../lib/site";
@@ -8,7 +14,7 @@ import { pageMeta } from "../lib/site";
 import designStyles from "../design.css?url";
 
 export const Route = createFileRoute("/design")({
-  component: DesignPage,
+  component: DocumentsPage,
   head: () => ({
     ...pageMeta("デザイン資料", "ポチカルのデザイン資料", "/design", true),
     links: [{ href: designStyles, rel: "stylesheet" }],
@@ -52,25 +58,51 @@ const documents = [
   },
 ] as const;
 
-function DesignPage() {
+// One card each.
+const documentList = css({
+  "& a": {
+    _hover: { borderColor: "var(--border-strong)" },
+    alignItems: "center",
+    bg: "surface",
+    border: "1px solid token(colors.separator)",
+    borderRadius: "16px",
+    color: "text3",
+    display: "flex",
+    gap: "12px",
+    padding: "16px 18px",
+    textDecoration: "none",
+  },
+  "& a > span": {
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    fontSize: "13px",
+    gap: "4px",
+    lineHeight: "1.6",
+  },
+  "& strong": { color: "text", fontSize: "16px" },
+  display: "grid",
+  gap: "10px",
+  margin: "0 auto 36px",
+  width: "min(100%, 560px)",
+});
+
+function DocumentsPage() {
   const theme = useDesignTheme();
   return (
-    <main className="design-page" id="main" style={themeStyle(theme, "light")}>
-      <div className="design-toolbar">
-        <Link to="/">
-          <ArrowLeft aria-hidden="true" size={16} /> ポチカル
-        </Link>
-      </div>
-      <header className="design-intro">
-        <p>POCHICAL / DESIGN</p>
-        <h1>
-          毎日のシフトに、<span>やさしい余白。</span>
-        </h1>
-        <p className="design-description">
-          見るときは、すっきり。入力は、ポチッと。
-        </p>
-      </header>
-      <nav aria-label="デザイン資料" className="design-documents">
+    <DesignPage style={themeStyle(theme, "light")}>
+      <DesignToolbar back="site" />
+      <DesignIntro
+        eyebrow="POCHICAL / DESIGN"
+        title={
+          <>
+            毎日のシフトに、<span>やさしい余白。</span>
+          </>
+        }
+      >
+        見るときは、すっきり。入力は、ポチッと。
+      </DesignIntro>
+      <nav aria-label="デザイン資料" className={documentList}>
         {documents.map((document) => (
           <Link key={document.to} to={document.to}>
             <span>
@@ -81,6 +113,6 @@ function DesignPage() {
           </Link>
         ))}
       </nav>
-    </main>
+    </DesignPage>
   );
 }

@@ -1,6 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
-  ArrowLeft,
   CalendarPlus,
   Image as ImageIcon,
   Check,
@@ -15,6 +14,11 @@ import { css } from "styled-system/css";
 
 import { DayCell, MonthSummary, TabBar } from "../components/design-calendar";
 import { PhotoAvatar } from "../components/design-group";
+import {
+  DesignIntro,
+  DesignPage,
+  DesignToolbar,
+} from "../components/design-page";
 import {
   DesignProviders,
   useDesignTheme,
@@ -87,23 +91,15 @@ export const Route = createFileRoute("/design_/components")({
 function ComponentsPage() {
   const theme = useDesignTheme();
   return (
-    <main className="design-page" id="main" style={themeStyle(theme, "light")}>
-      <div className="design-toolbar">
-        <Link to="/design">
-          <ArrowLeft aria-hidden="true" size={16} /> デザイン資料
-        </Link>
-      </div>
-      <header className="design-intro">
-        <p>POCHICAL / COMPONENTS</p>
-        <h1>部品の棚卸し</h1>
-        <p className="design-description">
-          今ある部品を役割ごとに並べています。同じ役割で名前が違うものは、まとめる候補です。
-        </p>
-      </header>
+    <DesignPage style={themeStyle(theme, "light")}>
+      <DesignToolbar back="documents" />
+      <DesignIntro eyebrow="POCHICAL / COMPONENTS" title="部品の棚卸し">
+        今ある部品を役割ごとに並べています。同じ役割で名前が違うものは、まとめる候補です。
+      </DesignIntro>
       <DesignProviders>
         <Surface />
       </DesignProviders>
-    </main>
+    </DesignPage>
   );
 }
 

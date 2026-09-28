@@ -1,5 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import {
@@ -11,6 +10,11 @@ import {
   FrameRow,
   FrameSection,
 } from "../components/design-frames";
+import {
+  DesignIntro,
+  DesignPage,
+  DesignToolbar,
+} from "../components/design-page";
 import {
   DesignProviders,
   useDesignTheme,
@@ -82,19 +86,11 @@ const schemes: { scheme: ColorScheme; label: string }[] = [
 function StatesPage() {
   const theme = useDesignTheme();
   return (
-    <main className="design-page" id="main" style={themeStyle(theme, "light")}>
-      <div className="design-toolbar">
-        <Link to="/design">
-          <ArrowLeft aria-hidden="true" size={16} /> デザイン資料
-        </Link>
-      </div>
-      <header className="design-intro">
-        <p>POCHICAL / STATES</p>
-        <h1>状態の一覧</h1>
-        <p className="design-description">
-          カレンダーがなりうる状態を並べています。直したら、ここで全部を見比べます。
-        </p>
-      </header>
+    <DesignPage style={themeStyle(theme, "light")}>
+      <DesignToolbar back="documents" />
+      <DesignIntro eyebrow="POCHICAL / STATES" title="状態の一覧">
+        カレンダーがなりうる状態を並べています。直したら、ここで全部を見比べます。
+      </DesignIntro>
       <DesignProviders>
         <div className="fl-flows">
           <FrameSection title="月の埋まり方">
@@ -172,7 +168,7 @@ function StatesPage() {
           </FrameSection>
         </div>
       </DesignProviders>
-    </main>
+    </DesignPage>
   );
 }
 

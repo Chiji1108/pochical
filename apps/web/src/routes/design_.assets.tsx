@@ -1,7 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 
 import { DesignAppIcon } from "../components/design-app-icon";
+import {
+  designCaption,
+  DesignIntro,
+  DesignPage,
+  designScreens,
+  DesignToolbar,
+} from "../components/design-page";
 import {
   DesignProviders,
   useDesignTheme,
@@ -45,27 +51,19 @@ const sources = [
 function AssetsPage() {
   const theme = useDesignTheme();
   return (
-    <main className="design-page" id="main" style={themeStyle(theme, "light")}>
-      <div className="design-toolbar">
-        <Link to="/design">
-          <ArrowLeft aria-hidden="true" size={16} /> デザイン資料
-        </Link>
-      </div>
-      <header className="design-intro">
-        <p>POCHICAL / ASSETS</p>
-        <h1>素材</h1>
-        <p className="design-description">
-          アプリやサイトで使う画像と、その元になる絵。
-        </p>
-      </header>
+    <DesignPage style={themeStyle(theme, "light")}>
+      <DesignToolbar back="documents" />
+      <DesignIntro eyebrow="POCHICAL / ASSETS" title="素材">
+        アプリやサイトで使う画像と、その元になる絵。
+      </DesignIntro>
       <DesignProviders>
-        <div className="design-screens">
+        <div className={designScreens}>
           <section aria-labelledby="assets-app-icon-title">
             <h2 id="assets-app-icon-title">
               <span>01</span> アプリアイコン
             </h2>
             <DesignAppIcon />
-            <p className="design-caption">
+            <p className={designCaption}>
               「ポチ」カルのプードル。色を選ぶと、小さいサイズとホーム画面での見え方が変わります。
             </p>
           </section>
@@ -93,6 +91,6 @@ function AssetsPage() {
           </section>
         </div>
       </DesignProviders>
-    </main>
+    </DesignPage>
   );
 }

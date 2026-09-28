@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { css } from "styled-system/css";
 
 import type { ColorScheme, ColorToken, Tone } from "../lib/design-tokens";
 import {
@@ -474,10 +475,28 @@ function DistinctTokens() {
   );
 }
 
+// The page's sections, as pills to jump to.
+const contents = css({
+  "& a": {
+    _hover: { bg: "accentSoft2" },
+    border: "1px solid token(colors.border)",
+    borderRadius: "24px",
+    color: "accent",
+    fontSize: "12px",
+    padding: "10px 16px",
+  },
+  "& a > span": { color: "text4", fontSize: "10px", marginRight: "8px" },
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "10px",
+  justifyContent: "center",
+  margin: "-20px auto 44px",
+});
+
 export function DesignColors() {
   return (
     <>
-      <nav aria-label="このページの内容" className="design-index">
+      <nav aria-label="このページの内容" className={contents}>
         {[
           { href: "#cp-neutral", number: "01", title: "基本色" },
           { href: "#cp-themes", number: "02", title: "テーマ（深め）" },

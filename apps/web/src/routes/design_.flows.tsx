@@ -1,5 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 
 import {
   dateKey,
@@ -17,6 +16,11 @@ import { GapSheetPreview, gapDaysIn } from "../components/design-gap-sheet";
 import type { GapSheetProps } from "../components/design-gap-sheet";
 import { DesignOnboarding } from "../components/design-onboarding";
 import type { OnboardingScreen } from "../components/design-onboarding";
+import {
+  DesignIntro,
+  DesignPage,
+  DesignToolbar,
+} from "../components/design-page";
 import {
   DesignProviders,
   useDesignTheme,
@@ -50,19 +54,11 @@ const OCTOBER_DAYS = 31;
 function FlowsPage() {
   const theme = useDesignTheme();
   return (
-    <main className="design-page" id="main" style={themeStyle(theme, "light")}>
-      <div className="design-toolbar">
-        <Link to="/design">
-          <ArrowLeft aria-hidden="true" size={16} /> デザイン資料
-        </Link>
-      </div>
-      <header className="design-intro">
-        <p>POCHICAL / FLOWS</p>
-        <h1>画面遷移図</h1>
-        <p className="design-description">
-          実際の画面を小さく並べています。触って試すときは、デモから。
-        </p>
-      </header>
+    <DesignPage style={themeStyle(theme, "light")}>
+      <DesignToolbar back="documents" />
+      <DesignIntro eyebrow="POCHICAL / FLOWS" title="画面遷移図">
+        実際の画面を小さく並べています。触って試すときは、デモから。
+      </DesignIntro>
       <DesignProviders>
         <div className="fl-flows">
           <FrameSection title="はじめての設定">
@@ -170,7 +166,7 @@ function FlowsPage() {
           </FrameSection>
         </div>
       </DesignProviders>
-    </main>
+    </DesignPage>
   );
 }
 

@@ -241,6 +241,17 @@ export const states: State[] = [
     path: "/design/components",
     root: ".cmp-sample",
   },
+  // The pages themselves around the phones: toolbars, headings, captions,
+  // the design choices beside the demo, and the design documents.
+  ...[
+    ["demo", demo("bottomRows=two&scheduleSample=filled")],
+    ["design", "/design"],
+    ["design/states", "/design/states"],
+    ["design/flows", "/design/flows"],
+    ["design/components", "/design/components"],
+    ["design/colors", "/design/colors"],
+    ["design/assets", "/design/assets"],
+  ].map(([name, path]) => ({ name: `page/${name}`, path, root: "main" })),
   {
     name: "group/legend-all",
     path: demo("bottomRows=two&scheduleSample=filled"),

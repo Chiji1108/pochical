@@ -1,12 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, BookOpen, RotateCcw } from "lucide-react";
+import { BookOpen, RotateCcw } from "lucide-react";
 import { useState } from "react";
+import { css } from "styled-system/css";
 
 import {
   DesignCalendar,
   initialDesignSchedule,
 } from "../components/design-calendar";
 import { sampleGroups } from "../components/design-group";
+import {
+  designCaption,
+  DesignPage,
+  DesignToolbar,
+  toolbarAction,
+} from "../components/design-page";
 import {
   DesignProviders,
   useDesignTheme,
@@ -46,6 +53,24 @@ function makePerson(
   });
 }
 
+// One phone, the open choices beside it on wide screens, where the phone
+// stays in view as the page scrolls.
+const demo = {
+  layout: css({
+    alignItems: "flex-start",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "32px",
+    justifyContent: "center",
+    padding: "8px 16px 48px",
+  }),
+  phone: css({
+    "@media (min-width: 900px)": { position: "sticky", top: "16px" },
+    flex: "0 0 auto",
+    width: "min(390px, 100%)",
+  }),
+};
+
 // The app to touch: one phone, one person, with the open design choices
 // beside it. The design documents live under /design.
 function DemoPage() {
@@ -66,32 +91,24 @@ function DemoPage() {
     setVersion((value) => value + 1);
   };
   return (
-    <main
-      className="design-page demo-page"
-      id="main"
-      style={themeStyle(theme, "light")}
-    >
-      <div className="design-toolbar">
-        <Link to="/">
-          <ArrowLeft aria-hidden="true" size={16} /> ポチカル
+    <DesignPage style={themeStyle(theme, "light")}>
+      <DesignToolbar back="site">
+        <Link className={toolbarAction} to="/design">
+          <BookOpen aria-hidden="true" size={14} /> デザイン資料
         </Link>
-        <div className="design-toolbar-actions">
-          <Link className="design-toolbar-link" to="/design">
-            <BookOpen aria-hidden="true" size={14} /> デザイン資料
-          </Link>
-          <button
-            onClick={() => {
-              startOver(variants.scheduleSample);
-            }}
-            type="button"
-          >
-            <RotateCcw aria-hidden="true" size={14} /> サンプルに戻す
-          </button>
-        </div>
-      </div>
+        <button
+          className={toolbarAction}
+          onClick={() => {
+            startOver(variants.scheduleSample);
+          }}
+          type="button"
+        >
+          <RotateCcw aria-hidden="true" size={14} /> サンプルに戻す
+        </button>
+      </DesignToolbar>
       <DesignProviders>
-        <div className="demo-layout">
-          <div className="demo-phone" key={version}>
+        <div className={demo.layout}>
+          <div className={demo.phone} key={version}>
             <UserStoreContext value={person}>
               <DesignCalendar
                 initialEditing={false}
@@ -99,7 +116,7 @@ function DemoPage() {
                 variants={variants}
               />
             </UserStoreContext>
-            <p className="design-caption">
+            <p className={designCaption}>
               実際にタップして試せます。架空のサンプルで、再読み込みすると元に戻ります。
             </p>
           </div>
@@ -131,6 +148,6 @@ function DemoPage() {
           />
         </div>
       </DesignProviders>
-    </main>
+    </DesignPage>
   );
 }
