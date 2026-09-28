@@ -23,6 +23,11 @@ export default defineConfig({
       keyframes: {
         fadeIn: { from: { opacity: 0 }, to: { opacity: 1 } },
         fadeOut: { from: { opacity: 1 }, to: { opacity: 0 } },
+        // A message jumped to from a reply: ringed, then the ring fades.
+        flash: {
+          "0%, 40%": { boxShadow: "0 0 0 3px var(--accent-muted)" },
+          "100%": { boxShadow: "0 0 0 0 transparent" },
+        },
         popIn: {
           from: { opacity: 0, transform: "scale(1.08)" },
           to: { opacity: 1, transform: "scale(1)" },

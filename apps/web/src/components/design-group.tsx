@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { useContext, useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties, ReactElement, ReactNode } from "react";
-import { css, cx } from "styled-system/css";
+import { css, cva, cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
@@ -1347,7 +1347,7 @@ function GroupRail({
               <GroupIcon mark={group.mark} size={24} />
             </span>
             {unread > 0 && (
-              <span aria-hidden="true" className="gr-badge gr-rail-badge">
+              <span aria-hidden="true" className={cx(badge, "gr-rail-badge")}>
                 {unread}
               </span>
             )}
@@ -1700,6 +1700,308 @@ function lastLine(chat: Chat, members: Member[]) {
   return who?.me ? `自分：${text}` : text;
 }
 
+// How many are unread, on a chat's row and on the rail's group icon.
+const badge = css({
+  bg: "var(--badge)",
+  borderRadius: "9px",
+  color: "var(--on-badge)",
+  display: "inline-grid",
+  fontSize: "10px",
+  fontWeight: 700,
+  height: "18px",
+  minWidth: "18px",
+  padding: "0 5px",
+  placeItems: "center",
+});
+
+// A chat in the hub's list: its name and last line, with the time and
+// what is unread at the end.
+const chatRow = {
+  meta: css({
+    alignItems: "flex-end",
+    display: "flex",
+    flexDirection: "column",
+    flexShrink: 0,
+    gap: "4px",
+  }),
+  name: css({ fontSize: "14px" }),
+  preview: css({
+    color: "text4",
+    fontSize: "11px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  }),
+  text: css({
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "2px",
+    minWidth: 0,
+  }),
+  time: css({ color: "textFaint", fontSize: "10px" }),
+};
+
+// A chat as the messaging apps draw one: others' bubbles on the left with
+// their avatar and name at the start of a run, yours on the right in the
+// accent; the day between runs, the time by the bubble, reactions under
+// it, and the reply being written above the composer.
+const chatStyle = {
+  avatar: css({ flexShrink: 0, width: "32px" }),
+  body: cva({
+    base: {
+      display: "flex",
+      flexDirection: "column",
+      gap: "3px",
+      maxWidth: "84%",
+      minWidth: 0,
+    },
+    variants: { mine: { true: { alignItems: "flex-end" } } },
+  }),
+  bubble: cva({
+    base: {
+      bg: "fill2",
+      borderRadius: "16px 16px 16px 6px",
+      color: "text",
+      display: "flex",
+      flexDirection: "column",
+      minWidth: 0,
+      overflow: "hidden",
+    },
+    variants: {
+      mine: {
+        true: {
+          bg: "accentFill",
+          borderRadius: "16px 16px 6px",
+          color: "onAccentFill",
+        },
+      },
+    },
+  }),
+  // A reply's quote inside the bubble, over a thin rule, in the bubble's
+  // own text color.
+  bubbleQuote: css({
+    bg: "transparent",
+    border: 0,
+    color: "inherit",
+    display: "flex",
+    flexDirection: "column",
+    font: "inherit",
+    gap: "2px",
+    padding: "8px 12px 0",
+    textAlign: "left",
+  }),
+  bubbleQuoteName: css({ fontSize: "11px", fontWeight: 600, opacity: 0.85 }),
+  bubbleQuoteText: css({
+    fontSize: "12px",
+    lineClamp: 2,
+    lineHeight: 1.45,
+    opacity: 0.8,
+  }),
+  // The avatar sits at the top by the name, the time by the bubble, so
+  // the reactions under it push neither down.
+  bubbleRow: cva({
+    base: { alignItems: "flex-end", display: "flex", gap: "6px" },
+    variants: { mine: { true: { flexDirection: "row-reverse" } } },
+  }),
+  bubbleRule: css({
+    bg: "currentcolor",
+    height: "1px",
+    margin: "8px -12px 0",
+    opacity: 0.25,
+  }),
+  bubbleText: css({
+    bg: "transparent",
+    border: 0,
+    color: "inherit",
+    display: "block",
+    font: "inherit",
+    fontSize: "13px",
+    lineHeight: 1.5,
+    maxWidth: "100%",
+    padding: "8px 12px",
+    textAlign: "left",
+  }),
+  composer: cva({
+    base: {
+      alignItems: "center",
+      borderTop: "1px solid token(colors.separator)",
+      display: "flex",
+      gap: "6px",
+      padding: "8px 0 4px",
+    },
+    // The reply above it already draws the line.
+    variants: { replying: { true: { borderTop: 0 } } },
+  }),
+  composerButton: cva({
+    base: {
+      bg: "transparent",
+      border: 0,
+      borderRadius: "50%",
+      color: "accent",
+      display: "grid",
+      flexShrink: 0,
+      height: "38px",
+      placeItems: "center",
+      width: "38px",
+    },
+    variants: {
+      send: {
+        true: {
+          _disabled: { bg: "controlOff" },
+          bg: "accentFill",
+          color: "onAccentFill",
+        },
+      },
+    },
+  }),
+  composerInput: css({
+    bg: "fill",
+    border: 0,
+    borderRadius: "19px",
+    flex: 1,
+    font: "inherit",
+    fontSize: "14px",
+    height: "38px",
+    minWidth: 0,
+    padding: "0 14px",
+  }),
+  dayOpen: cva({
+    base: {
+      alignSelf: "flex-start",
+      bg: "transparent",
+      border: 0,
+      color: "accent",
+      fontSize: "11px",
+      padding: "0 4px",
+      textDecoration: "underline",
+    },
+    variants: { mine: { true: { alignSelf: "flex-end" } } },
+  }),
+  empty: css({ color: "text4", fontSize: "12px", margin: "auto" }),
+  header: css({
+    alignItems: "center",
+    borderBottom: "1px solid token(colors.separator)",
+    display: "grid",
+    gridTemplateColumns: "1fr auto 1fr",
+    padding: "4px 0 8px",
+  }),
+  // A message jumped to rings its bubble or shared days for a moment.
+  item: cva({
+    base: { display: "flex", flexDirection: "column", gap: "6px" },
+    variants: {
+      flash: {
+        true: {
+          "& :is([data-part=bubble], .gr-day-card)": {
+            _motionReduce: { animation: "none" },
+            animation: "flash 1.2s ease-out",
+          },
+        },
+      },
+    },
+  }),
+  message: cva({
+    base: { alignItems: "flex-start", display: "flex", gap: "6px" },
+    variants: { mine: { true: { flexDirection: "row-reverse" } } },
+  }),
+  // Chat apps scroll without a bar over the bubbles.
+  messages: css({
+    "&::-webkit-scrollbar": { display: "none" },
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "6px",
+    listStyle: "none",
+    margin: 0,
+    minHeight: 0,
+    overflowY: "auto",
+    padding: "12px 2px",
+    scrollbarWidth: "none",
+  }),
+  name: css({ color: "text3", fontSize: "10px", paddingLeft: "4px" }),
+  notice: css({
+    alignSelf: "center",
+    color: "text3",
+    fontSize: "11px",
+    lineHeight: 1.5,
+    margin: "6px auto",
+    maxWidth: "85%",
+    textAlign: "center",
+  }),
+  // The message being answered, marked by the accent line at its start.
+  quote: css({
+    bg: "transparent",
+    border: 0,
+    borderColor: "accent",
+    borderLeft: "3px solid token(colors.accent)",
+    borderRadius: "2px",
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "1px",
+    marginBottom: "-2px",
+    maxWidth: "100%",
+    minWidth: 0,
+    padding: "4px 10px",
+    textAlign: "left",
+  }),
+  quoteName: css({ color: "text3", fontSize: "10px", fontWeight: 600 }),
+  quoteText: css({ color: "text4", fontSize: "11px", lineClamp: 1 }),
+  reaction: css({
+    "&[aria-pressed=true]": { bg: "accentSoft", borderColor: "accent" },
+    alignItems: "center",
+    bg: "surface",
+    border: "1px solid token(colors.border)",
+    borderRadius: "12px",
+    display: "inline-flex",
+    fontSize: "13px",
+    gap: "3px",
+    height: "24px",
+    padding: "0 8px",
+  }),
+  reactionCount: css({ color: "text3", fontSize: "11px" }),
+  reactions: cva({
+    base: { display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "-1px" },
+    variants: { mine: { true: { justifyContent: "flex-end" } } },
+  }),
+  replying: css({
+    alignItems: "center",
+    borderTop: "1px solid token(colors.separator)",
+    display: "flex",
+    gap: "6px",
+    padding: "8px 0 0",
+  }),
+  tap: cva({
+    base: {
+      bg: "transparent",
+      border: 0,
+      color: "inherit",
+      display: "flex",
+      font: "inherit",
+      maxWidth: "100%",
+      padding: 0,
+      textAlign: "left",
+    },
+    variants: { mine: { true: { justifyContent: "flex-end" } } },
+  }),
+  time: css({
+    color: "textFaint",
+    flexShrink: 0,
+    fontSize: "9px",
+    paddingBottom: "2px",
+  }),
+  title: css({ fontSize: "15px", fontWeight: 600, margin: 0 }),
+  when: css({
+    alignSelf: "center",
+    bg: "fill2",
+    borderRadius: "9px",
+    color: "text3",
+    fontSize: "10px",
+    margin: "6px 0 2px",
+    padding: "2px 10px",
+  }),
+};
+
 function ChatRow({
   label,
   icon,
@@ -1717,22 +2019,22 @@ function ChatRow({
   const last = chat.messages.at(-1);
   return (
     <button
-      className={cx(listRow.root, listRow.pressable, "gr-chat-row")}
+      className={cx(listRow.root, listRow.pressable)}
       data-list-row=""
       onClick={onOpen}
       type="button"
     >
       {icon}
-      <span className="gr-chat-row-text">
-        <span className="gr-chat-row-name">{label}</span>
-        <small className="gr-chat-row-preview">
+      <span className={chatRow.text}>
+        <span className={chatRow.name}>{label}</span>
+        <small className={chatRow.preview}>
           {preview ?? "まだメッセージはありません"}
         </small>
       </span>
-      <span className="gr-chat-row-meta">
-        {last && <small className="gr-chat-row-time">{last.time}</small>}
+      <span className={chatRow.meta}>
+        {last && <small className={chatRow.time}>{last.time}</small>}
         {chat.unread > 0 && (
-          <span className="gr-badge" role="status">
+          <span className={badge} role="status">
             {chat.unread}
             <span className="dc-sr-only">件の未読</span>
           </span>
@@ -1845,14 +2147,14 @@ function ChatPage({
   });
   const replying = byId(replyTo);
   return (
-    <Screen className="gr-chat">
-      <header className="gr-chat-header">
+    <Screen>
+      <header className={chatStyle.header}>
         <BackButton onClick={onBack}>{backLabel}</BackButton>
-        <h3>{title}</h3>
+        <h3 className={chatStyle.title}>{title}</h3>
       </header>
-      <ol aria-label={`${title}のメッセージ`} className="gr-messages">
+      <ol aria-label={`${title}のメッセージ`} className={chatStyle.messages}>
         {chat.messages.length === 0 && (
-          <li className="gr-messages-empty">まだメッセージはありません</li>
+          <li className={chatStyle.empty}>まだメッセージはありません</li>
         )}
         {chat.messages.map((message, index) => {
           const previous = chat.messages[index - 1];
@@ -1867,26 +2169,26 @@ function ChatPage({
           const quoted = byId(message.replyTo);
           if (message.notice) {
             return (
-              <li className="gr-message-item" key={message.id}>
+              <li className={chatStyle.item()} key={message.id}>
                 {previous?.when !== message.when && (
-                  <span className="gr-when">{message.when}</span>
+                  <span className={chatStyle.when}>{message.when}</span>
                 )}
-                <p className="gr-notice">{message.notice}</p>
+                <p className={chatStyle.notice}>{message.notice}</p>
               </li>
             );
           }
           return (
             <li
-              className={`gr-message-item ${flash === message.id ? "gr-flash" : ""}`}
+              className={chatStyle.item({ flash: flash === message.id })}
               id={`message-${message.id}`}
               key={message.id}
             >
               {previous?.when !== message.when && (
-                <span className="gr-when">{message.when}</span>
+                <span className={chatStyle.when}>{message.when}</span>
               )}
-              <span className={`gr-message ${mine ? "gr-mine" : ""}`}>
+              <span className={chatStyle.message({ mine })}>
                 {!mine && (
-                  <span className="gr-message-avatar">
+                  <span className={chatStyle.avatar}>
                     {firstOfRun &&
                       member &&
                       (onMember && current ? (
@@ -1905,13 +2207,13 @@ function ChatPage({
                       ))}
                   </span>
                 )}
-                <span className="gr-message-body">
+                <span className={chatStyle.body({ mine })}>
                   {!mine && isGroup && firstOfRun && (
-                    <small className="gr-message-name">{member?.name}</small>
+                    <small className={chatStyle.name}>{member?.name}</small>
                   )}
                   <span
                     className={cx(
-                      "gr-bubble-row",
+                      chatStyle.bubbleRow({ mine }),
                       selected === message.id && messageActions.lifted
                     )}
                   >
@@ -1919,7 +2221,7 @@ function ChatPage({
                       <MessageActions {...actionsOf(message)}>
                         <button
                           aria-label={`${member?.name ?? ""}が共有した日にち。押すとリアクションと返信`}
-                          className="gr-message-tap"
+                          className={chatStyle.tap({ mine })}
                           type="button"
                         >
                           <DayCard days={message.days} members={people} />
@@ -1928,32 +2230,35 @@ function ChatPage({
                     ) : (
                       // Like the app: the quoted line sits inside the bubble,
                       // above a thin rule, and jumps to the original.
-                      <span className="gr-bubble">
+                      <span
+                        className={chatStyle.bubble({ mine })}
+                        data-part="bubble"
+                      >
                         {quoted && (
                           <button
                             aria-label={`${nameOf(quoted.from)}への返信。返信元を表示`}
-                            className="gr-bubble-quote"
+                            className={chatStyle.bubbleQuote}
                             onClick={() => {
                               jumpTo(quoted.id);
                             }}
                             type="button"
                           >
-                            <span className="gr-bubble-quote-name">
+                            <span className={chatStyle.bubbleQuoteName}>
                               {nameOf(quoted.from)}
                             </span>
-                            <span className="gr-bubble-quote-text">
+                            <span className={chatStyle.bubbleQuoteText}>
                               {summaryOf(quoted)}
                             </span>
                             <span
                               aria-hidden="true"
-                              className="gr-bubble-rule"
+                              className={chatStyle.bubbleRule}
                             />
                           </button>
                         )}
                         <MessageActions {...actionsOf(message)}>
                           <button
                             aria-label={`${member?.name ?? ""}のメッセージ：${message.text ?? ""}。押すとリアクションと返信`}
-                            className="gr-message-tap gr-bubble-text"
+                            className={chatStyle.bubbleText}
                             type="button"
                           >
                             {message.text}
@@ -1961,11 +2266,11 @@ function ChatPage({
                         </MessageActions>
                       </span>
                     )}
-                    <small className="gr-message-time">{message.time}</small>
+                    <small className={chatStyle.time}>{message.time}</small>
                   </span>
                   {message.days && (
                     <button
-                      className="gr-day-open"
+                      className={chatStyle.dayOpen({ mine })}
                       onClick={() => message.days && onOpenDay(message.days[0])}
                       type="button"
                     >
@@ -1973,12 +2278,12 @@ function ChatPage({
                     </button>
                   )}
                   {message.reactions && message.reactions.length > 0 && (
-                    <span className="gr-reactions">
+                    <span className={chatStyle.reactions({ mine })}>
                       {message.reactions.map((reaction) => (
                         <button
                           aria-label={`${reaction.emoji} ${reaction.by.map(nameOf).join("、")}`}
                           aria-pressed={reaction.by.includes("me")}
-                          className="gr-reaction"
+                          className={chatStyle.reaction}
                           key={reaction.emoji}
                           onClick={() => {
                             react(message.id, reaction.emoji);
@@ -1986,7 +2291,7 @@ function ChatPage({
                           type="button"
                         >
                           {reaction.emoji}
-                          <small className="gr-reaction-count">
+                          <small className={chatStyle.reactionCount}>
                             {reaction.by.length}
                           </small>
                         </button>
@@ -2000,10 +2305,12 @@ function ChatPage({
         })}
       </ol>
       {replying && (
-        <div className="gr-replying">
-          <span className="gr-quote gr-replying-quote">
-            <span className="gr-quote-name">{nameOf(replying.from)}に返信</span>
-            <span className="gr-quote-text">{summaryOf(replying)}</span>
+        <div className={chatStyle.replying}>
+          <span className={chatStyle.quote}>
+            <span className={chatStyle.quoteName}>
+              {nameOf(replying.from)}に返信
+            </span>
+            <span className={chatStyle.quoteText}>{summaryOf(replying)}</span>
           </span>
           <IconButton
             label="返信をやめる"
@@ -2016,7 +2323,7 @@ function ChatPage({
         </div>
       )}
       <form
-        className="gr-composer"
+        className={chatStyle.composer({ replying: replying !== undefined })}
         onSubmit={(event) => {
           event.preventDefault();
           send();
@@ -2024,7 +2331,7 @@ function ChatPage({
       >
         <button
           aria-label="日にちを共有"
-          className="gr-composer-day"
+          className={chatStyle.composerButton()}
           onClick={() => {
             setSharing(true);
           }}
@@ -2034,6 +2341,7 @@ function ChatPage({
         </button>
         <input
           aria-label="メッセージ"
+          className={chatStyle.composerInput}
           onChange={(event) => {
             setDraft(event.target.value);
           }}
@@ -2042,7 +2350,7 @@ function ChatPage({
         />
         <button
           aria-label="送る"
-          className="gr-composer-send"
+          className={chatStyle.composerButton({ send: true })}
           disabled={draft.trim() === ""}
           type="submit"
         >
