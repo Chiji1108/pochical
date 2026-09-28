@@ -1,7 +1,8 @@
-// What the phone shows, measured in the page by Playwright: each element
-// with text, a label, a box of its own or that is a control or icon, keyed
-// by what it says or is labelled (counted when a name comes again), with
-// where it sits in the phone and how it is drawn.
+// What the phones on a page show, measured in the page by Playwright: the
+// phone itself and each element in it with text, a label, a box of its own
+// or that is a control or icon, keyed by what it says or is labelled
+// (counted when a name comes again), with where it sits in its phone and
+// how it is drawn. With more than one phone, keys start with its number.
 
 export type Look = Record<string, number | string>;
 export type Screen = Record<string, Look>;
@@ -10,11 +11,10 @@ export type Screen = Record<string, Look>;
 // helpers have to live inside it.
 /* oxlint-disable unicorn/consistent-function-scoping */
 export function measure(): Screen {
-  const phone = document.querySelector(".dc-phone");
-  if (phone === null) {
+  const phones = [...document.querySelectorAll(".dc-phone")];
+  if (phones.length === 0) {
     throw new Error("No .dc-phone on the page");
   }
-  const origin = phone.getBoundingClientRect();
   const transparent = "rgba(0, 0, 0, 0)";
   const drawnTags = new Set([
     "a",
@@ -46,7 +46,11 @@ export function measure(): Screen {
     );
   // Off the phone or cut off by a box that clips, like the pager's pages
   // beside the one shown, or not drawn at all.
-  const unseen = (element: Element, style: CSSStyleDeclaration) => {
+  const unseen = (
+    element: Element,
+    style: CSSStyleDeclaration,
+    phone: Element
+  ) => {
     const rect = element.getBoundingClientRect();
     let [left, top, right, bottom] = [
       rect.left,
@@ -112,7 +116,11 @@ export function measure(): Screen {
     }
     return `${tag} (${clean(element.textContent, 20)})${placeOf(element)}`;
   };
-  const lookOf = (element: Element, style: CSSStyleDeclaration): Look => {
+  const lookOf = (
+    element: Element,
+    style: CSSStyleDeclaration,
+    origin: DOMRect
+  ): Look => {
     const rect = element.getBoundingClientRect();
     const borders = [...new Set(bordersOf(style))];
     return {
@@ -135,22 +143,28 @@ export function measure(): Screen {
     };
   };
 
-  const seen = new Map<string, number>();
   const screen: Screen = {};
-  for (const element of phone.querySelectorAll("*")) {
-    const style = getComputedStyle(element);
-    const shown =
-      element.hasAttribute("aria-label") ||
-      ownText(element) !== "" ||
-      drawnTags.has(element.tagName.toLowerCase()) ||
-      hasBox(style);
-    if (unseen(element, style) || !shown) {
-      continue;
+  for (const [index, phone] of phones.entries()) {
+    const prefix = phones.length > 1 ? `${index + 1} › ` : "";
+    const origin = phone.getBoundingClientRect();
+    screen[`${prefix}phone`] = lookOf(phone, getComputedStyle(phone), origin);
+    const seen = new Map<string, number>();
+    for (const element of phone.querySelectorAll("*")) {
+      const style = getComputedStyle(element);
+      const shown =
+        element.hasAttribute("aria-label") ||
+        ownText(element) !== "" ||
+        drawnTags.has(element.tagName.toLowerCase()) ||
+        hasBox(style);
+      if (unseen(element, style, phone) || !shown) {
+        continue;
+      }
+      const name = nameOf(element);
+      const count = (seen.get(name) ?? 0) + 1;
+      seen.set(name, count);
+      const key = `${prefix}${count > 1 ? `${name} #${count}` : name}`;
+      screen[key] = lookOf(element, style, origin);
     }
-    const name = nameOf(element);
-    const count = (seen.get(name) ?? 0) + 1;
-    seen.set(name, count);
-    screen[count > 1 ? `${name} #${count}` : name] = lookOf(element, style);
   }
   return screen;
 }

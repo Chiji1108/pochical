@@ -10,7 +10,8 @@
 //   bun tools/layout-diff check before   (measures again and compares)
 //
 // --url is the dev server (http://localhost:3000), --only keeps the states
-// whose names contain it, --dark measures in dark mode. Runs are kept in
+// whose names contain it, --dark measures in dark mode, --width sets the
+// window's width (800). Runs are kept in
 // tools/layout-diff/out. It drives the installed Google Chrome, or without
 // one Playwright's Chromium: bunx playwright-core install --only-shell chromium
 
@@ -28,8 +29,9 @@ import type { State } from "./states";
 type Run = Record<string, Screen>;
 
 const outDir = new URL("out/", import.meta.url);
-// The width of the design pages' phone column, tall enough for the phone.
-const viewport = { height: 1300, width: 800 };
+// Wide enough for the design pages' phone column, tall enough for the
+// phone; --width narrows it, as for the frame's small-screen rules.
+const VIEWPORT = { height: 1300, width: 800 };
 // How often the screen is measured until two measures in a row agree:
 // the first load compiles the page, and springs and the pager take time
 // to come to rest.
@@ -37,6 +39,10 @@ const SETTLE_MS = 300;
 const SETTLE_TRIES = 20;
 
 async function settled(page: Page) {
+  // An image still loading has no size yet, and would be left out.
+  await page.waitForFunction(() =>
+    [...document.images].every((image) => image.complete)
+  );
   let last = JSON.stringify(await page.evaluate(measure));
   for (let tries = 0; tries < SETTLE_TRIES; tries += 1) {
     // Each measure waits for the one before it.
@@ -55,7 +61,7 @@ async function settled(page: Page) {
 
 async function measureState(page: Page, base: string, state: State) {
   await page.goto(new URL(state.path, base).href);
-  await page.locator(".dc-phone h3").first().waitFor();
+  await page.locator(".dc-phone").first().waitFor();
   await settled(page);
   if (state.steps !== undefined) {
     await state.steps(page);
@@ -76,13 +82,14 @@ async function measureAll(options: {
   url: string;
   only: string | undefined;
   dark: boolean;
+  width: number;
 }) {
   const browser = await launch();
   const context = await browser.newContext({
     colorScheme: options.dark ? "dark" : "light",
     deviceScaleFactor: 1,
     reducedMotion: "reduce",
-    viewport,
+    viewport: { ...VIEWPORT, width: options.width },
   });
   const page = await context.newPage();
   const { only } = options;
@@ -92,6 +99,12 @@ async function measureAll(options: {
       : states.filter((state) => state.name.includes(only));
   const run: Run = {};
   try {
+    // A first load, not kept: a dev server just started compiles the page
+    // then, and the pager can come up on the month before.
+    const [first] = chosen;
+    if (first !== undefined) {
+      await measureState(page, options.url, first);
+    }
     for (const state of chosen) {
       // One screen at a time, each from a fresh load of the page.
       // oxlint-disable-next-line no-await-in-loop
@@ -158,6 +171,7 @@ async function main() {
       dark: { default: false, type: "boolean" },
       only: { type: "string" },
       url: { default: "http://localhost:3000", type: "string" },
+      width: { default: String(VIEWPORT.width), type: "string" },
     },
   });
   const [command, label] = positionals;
@@ -166,11 +180,14 @@ async function main() {
       "Usage: layout-diff save <name> | check <name> [--url] [--only] [--dark]"
     );
   }
-  const file = new URL(`${label}${values.dark ? "-dark" : ""}.json`, outDir);
+  const width = Number(values.width);
+  const suffix = `${values.dark ? "-dark" : ""}${width === VIEWPORT.width ? "" : `-${width}`}`;
+  const file = new URL(`${label}${suffix}.json`, outDir);
   const run = await measureAll({
     dark: values.dark,
     only: values.only,
     url: values.url,
+    width,
   });
   if (command === "save") {
     await mkdir(outDir, { recursive: true });

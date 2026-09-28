@@ -103,6 +103,10 @@ export const states: State[] = [
       await tap(page, /^全体チャット/u);
     },
   },
+  // Every phone of the design pages: the calendar in its states, light
+  // and dark, and the first-run screens.
+  { name: "design/states", path: "/design/states" },
+  { name: "design/flows", path: "/design/flows" },
   {
     name: "settings",
     path: demo("bottomRows=two&scheduleSample=filled"),
