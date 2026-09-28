@@ -228,103 +228,6 @@
     }
   }
 
-  /* Repeating shifts. */
-  .dc-repeat-label {
-    display: flex;
-    gap: 8px;
-    align-items: baseline;
-    padding: 0;
-    margin: 0 0 8px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text);
-  }
-  .dc-repeat-hint {
-    font-size: 11px;
-    font-weight: 400;
-    color: var(--text-3);
-  }
-  .dc-repeat-sequence {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    min-height: 58px;
-    padding: 8px;
-    margin: 0 0 8px;
-    list-style: none;
-    background: var(--fill);
-    border-radius: 14px;
-  }
-  .design-page .dc-repeat-sequence button {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    align-items: center;
-    justify-content: center;
-    width: 38px;
-    height: 58px;
-    font-size: 9px;
-    color: var(--text-2);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-  }
-  .dc-repeat-sequence button > small {
-    font-size: 8px;
-    color: var(--text-faint);
-  }
-  .dc-repeat-sequence button > span {
-    font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
-    font-size: 18px;
-    line-height: 1.2;
-  }
-  .dc-repeat-palette {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .design-page .dc-repeat-palette button {
-    display: inline-flex;
-    gap: 3px;
-    align-items: center;
-    min-height: 32px;
-    padding: 0 10px;
-    font-size: 11px;
-    color: var(--accent);
-    background: transparent;
-    border: 1px dashed var(--border-strong);
-    border-radius: 16px;
-  }
-  .dc-repeat-preview {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 4px;
-    font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
-    font-size: 16px;
-    text-align: center;
-  }
-  .dc-repeat-day {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    align-items: center;
-    padding: 4px 0;
-    background: var(--fill);
-    border-radius: 8px;
-  }
-  .dc-repeat-day-number {
-    font-family: -apple-system, sans-serif;
-    font-size: 9px;
-    color: var(--text-3);
-  }
-  .dc-repeat-day-number.dc-sunday {
-    color: var(--holiday);
-  }
-  .dc-repeat-day-number.dc-saturday {
-    color: var(--saturday);
-  }
-
   /* Onboarding. */
   .ob-content {
     display: flex;
@@ -562,9 +465,6 @@
     align-items: center;
     justify-content: space-between;
   }
-  .st-field > .dc-repeat-label {
-    margin: 0;
-  }
   .design-page .st-add {
     display: flex;
     gap: 6px;
@@ -669,12 +569,6 @@
     color: var(--danger);
     background: transparent;
     border: 0;
-  }
-  .pe-colors-label {
-    float: left;
-    grid-column: 1 / -1;
-    width: 100%;
-    margin-top: 6px;
   }
   /* The preview may use the other scheme's variables, so it sets its own text
    color and uses the screen's background, like the calendar it stands for. */

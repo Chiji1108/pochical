@@ -23,6 +23,7 @@ import {
   RepeatSequenceEditor,
   repeatSchedule,
   TabBar,
+  ShiftPreview,
 } from "./design-calendar";
 import type { RepeatRule, Schedule, Tab } from "./design-calendar";
 import { CoworkersPage } from "./design-coworkers";
@@ -60,6 +61,7 @@ import {
   dayGrid,
   WeekdayRow,
   Screen,
+  fieldLabel,
 } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
 import type { ColoredDay } from "./design-week";
@@ -777,7 +779,7 @@ function RepeatEditorPage({
     <>
       <PageHeader back={text.back} onBack={onBack} title={text.title} />
       <div className="st-field">
-        <span className="dc-repeat-label">{text.dayLabel}</span>
+        <span className={fieldLabel({ place: "row" })}>{text.dayLabel}</span>
         <InputDatePicker
           ariaLabel={`${text.dayLabel}：${formatDay(day)}。タップで変更`}
           look="field"
@@ -829,7 +831,6 @@ function RepeatEditorPage({
 
 // The first two weeks of a rule, from its start.
 function RepeatPreview({ rule }: { rule: RepeatRule }) {
-  const weekTools = useWeek();
   const { sequence, start, holidaysOff } = rule;
   const planned = repeatSchedule(
     sequence,
@@ -839,22 +840,13 @@ function RepeatPreview({ rule }: { rule: RepeatRule }) {
     holidaysOff
   );
   return (
-    <div aria-label="はじめの2週間" className="dc-repeat-preview" role="img">
-      {Array.from({ length: previewDays }, (_, index) => {
+    <ShiftPreview
+      days={Array.from({ length: previewDays }, (_, index) => {
         const date = addDays(start, index);
-        const shift = planned[dateKey(date)]?.shift;
-        return (
-          <span className="dc-repeat-day" key={dateKey(date)}>
-            <small
-              className={`dc-repeat-day-number ${weekTools.dateClass(date)}`}
-            >
-              {date.getDate()}
-            </small>
-            {shift && <ShiftMark shift={shift} size={16} />}
-          </span>
-        );
+        return { date, shift: planned[dateKey(date)]?.shift };
       })}
-    </div>
+      label="はじめの2週間"
+    />
   );
 }
 
@@ -899,7 +891,7 @@ function JobChangePage({
         新しい仕事の働き方とシフトパターンを、はじめの設定と同じ質問で選び直します。
       </p>
       <div className="st-field">
-        <span className="dc-repeat-label">新しい仕事の初日</span>
+        <span className={fieldLabel({ place: "row" })}>新しい仕事の初日</span>
         <InputDatePicker
           ariaLabel={`新しい仕事の初日：${formatDay(start)}。タップで変更`}
           look="field"
@@ -1095,7 +1087,7 @@ function RosterSwitchPage({
     <>
       <PageHeader back="働き方" onBack={onBack} title="勤務表に切り替え" />
       <div className="st-field">
-        <span className="dc-repeat-label">切り替える日</span>
+        <span className={fieldLabel({ place: "row" })}>切り替える日</span>
         <InputDatePicker
           ariaLabel={`切り替える日：${formatDay(start)}。タップで変更`}
           look="field"

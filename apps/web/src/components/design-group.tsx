@@ -79,6 +79,7 @@ import {
   TodayButton,
   WeekdayRow,
   Screen,
+  fieldLabel,
 } from "./design-ui";
 import { holidayName, useWeek } from "./design-week";
 import {
@@ -4866,7 +4867,7 @@ function MarkColors({
     <ChoiceGrid
       className="pe-colors"
       label="色"
-      labelClassName="dc-repeat-label pe-colors-label"
+      labelClassName={fieldLabel({ place: "grid" })}
       onValueChange={(value) => {
         onPick(Number(value));
       }}

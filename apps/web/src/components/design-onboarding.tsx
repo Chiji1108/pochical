@@ -13,17 +13,16 @@ import { DARK_DRAWING, useAppIcons } from "./design-app-icon";
 import {
   addDays,
   DesignCalendar,
-  dateKey,
   formatDay,
   MonthPicker,
   RepeatSequenceEditor,
   repeatSchedule,
+  ShiftPreview,
 } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
 import { Phone } from "./design-phone";
 import { ColorSchemeContext, useThemeStyle } from "./design-theme";
 import { BackButton, Button, Tag } from "./design-ui";
-import { useWeek } from "./design-week";
 import { ShiftMark } from "./shift-mark";
 
 type Template = {
@@ -677,7 +676,6 @@ function AnchorStep({
   onBack: () => void;
   onStart: (anchor: Date) => void;
 }) {
-  const weekTools = useWeek();
   const [anchor, setAnchor] = useState<Date>();
   const first = patterns[sequence[0]].label;
   return (
@@ -692,22 +690,13 @@ function AnchorStep({
         <p className="ob-preview-label">{formatDay(anchor)}からの2週間</p>
       )}
       {anchor && (
-        <div aria-label="最初の2週間" className="dc-repeat-preview" role="img">
-          {Array.from({ length: 14 }, (_, index) => {
-            const date = addDays(anchor, index);
-            const shift = sequence[index % sequence.length];
-            return (
-              <span className="dc-repeat-day" key={dateKey(date)}>
-                <small
-                  className={`dc-repeat-day-number ${weekTools.dateClass(date)}`}
-                >
-                  {date.getDate()}
-                </small>
-                <ShiftMark shift={shift} size={16} />
-              </span>
-            );
-          })}
-        </div>
+        <ShiftPreview
+          days={Array.from({ length: 14 }, (_, index) => ({
+            date: addDays(anchor, index),
+            shift: sequence[index % sequence.length],
+          }))}
+          label="最初の2週間"
+        />
       )}
       <Button
         variant="primary"

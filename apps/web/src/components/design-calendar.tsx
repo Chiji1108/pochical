@@ -47,6 +47,8 @@ import {
   dayGrid,
   dayGridHeight,
   DoneButton,
+  fieldHint,
+  fieldLabel,
   IconButton,
   Pager,
   Screen,
@@ -1401,6 +1403,117 @@ function SaveArea({
   );
 }
 
+// Emoji marks draw in the system's emoji font wherever they sit.
+const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+
+// A repeating order being put together: the days so far as tiles, each
+// taken out by a tap, over the patterns to add, dashed like the
+// platforms' add buttons.
+const repeatEditor = {
+  add: css({
+    alignItems: "center",
+    bg: "transparent",
+    border: "1px dashed var(--border-strong)",
+    borderRadius: "16px",
+    color: "accent",
+    display: "inline-flex",
+    fontSize: "11px",
+    gap: "3px",
+    minHeight: "32px",
+    padding: "0 10px",
+  }),
+  day: css({
+    "& > small": { color: "textFaint", fontSize: "8px" },
+    "& > span": { fontFamily: EMOJI_FONT, fontSize: "18px", lineHeight: 1.2 },
+    alignItems: "center",
+    bg: "surface",
+    border: "1px solid token(colors.border)",
+    borderRadius: "10px",
+    color: "text2",
+    display: "flex",
+    flexDirection: "column",
+    fontSize: "9px",
+    gap: "1px",
+    height: "58px",
+    justifyContent: "center",
+    position: "relative",
+    width: "38px",
+  }),
+  palette: css({ display: "flex", flexWrap: "wrap", gap: "6px" }),
+  sequence: css({
+    bg: "fill",
+    borderRadius: "14px",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "5px",
+    listStyle: "none",
+    margin: "0 0 8px",
+    minHeight: "58px",
+    padding: "8px",
+  }),
+};
+
+// Days with the shift each gets, as a strip of small tiles a week wide:
+// the first two weeks of an order being set up, in the first run and in
+// settings alike.
+const shiftPreview = {
+  day: css({
+    alignItems: "center",
+    bg: "fill",
+    borderRadius: "8px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "1px",
+    padding: "4px 0",
+  }),
+  number: cva({
+    base: {
+      color: "text3",
+      fontFamily: "-apple-system, sans-serif",
+      fontSize: "9px",
+    },
+    variants: {
+      tone: {
+        holiday: { color: "holiday" },
+        plain: {},
+        saturday: { color: "saturday" },
+      },
+    },
+  }),
+  strip: css({
+    display: "grid",
+    fontFamily: EMOJI_FONT,
+    fontSize: "16px",
+    gap: "4px",
+    gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+    textAlign: "center",
+  }),
+};
+
+export function ShiftPreview({
+  label,
+  days,
+}: {
+  label: string;
+  days: { date: Date; shift: Shift | undefined }[];
+}) {
+  const weekTools = useWeek();
+  return (
+    <div aria-label={label} className={shiftPreview.strip} role="img">
+      {days.map(({ date, shift }) => (
+        <span className={shiftPreview.day} key={dateKey(date)}>
+          <small
+            className={shiftPreview.number({ tone: weekTools.dateTone(date) })}
+          >
+            {date.getDate()}
+          </small>
+          {shift && <ShiftMark shift={shift} size={16} />}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function RepeatSequenceEditor({
   sequence,
   patternKeys,
@@ -1411,21 +1524,22 @@ export function RepeatSequenceEditor({
   onChange: (sequence: Shift[]) => void;
 }) {
   return (
-    <div className="dc-repeat-editor">
-      <p className="dc-repeat-label">
+    <div>
+      <p className={fieldLabel()}>
         並び
-        <span className="dc-repeat-hint">
+        <span className={fieldHint}>
           {sequence.length > 0
             ? `${sequence.length}日ごとに繰り返し`
             : "下から順番に追加してください"}
         </span>
       </p>
-      <ol className="dc-repeat-sequence">
+      <ol className={repeatEditor.sequence}>
         {sequence.map((shift, index) => (
           // oxlint-disable-next-line react/no-array-index-key -- the same shift repeats, so its position is its identity.
           <li key={index}>
             <button
               aria-label={`${index + 1}日目、${patterns[shift].label}。タップで外す`}
+              className={repeatEditor.day}
               onClick={() => {
                 onChange(sequence.filter((_, position) => position !== index));
               }}
@@ -1438,9 +1552,10 @@ export function RepeatSequenceEditor({
           </li>
         ))}
       </ol>
-      <div className="dc-repeat-palette">
+      <div className={repeatEditor.palette}>
         {patternKeys.map((key) => (
           <button
+            className={repeatEditor.add}
             key={key}
             onClick={() => {
               onChange([...sequence, key]);
@@ -1487,7 +1602,7 @@ const shiftInput = {
   mark: css({
     display: "grid",
     flexShrink: 0,
-    fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", sans-serif',
+    fontFamily: EMOJI_FONT,
     fontSize: "24px",
     height: "28px",
     lineHeight: 1,
@@ -1682,7 +1797,7 @@ export const dayParts = {
   mark: css({
     display: "grid",
     flexShrink: 0,
-    fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", sans-serif',
+    fontFamily: EMOJI_FONT,
     fontSize: "20px",
     height: "24px",
     lineHeight: 1,

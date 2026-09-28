@@ -175,6 +175,41 @@ export function Screen({
   return <div className={cx(screenStyle, className)} {...props} />;
 }
 
+// A field's name, and a hint after it in lighter words: over what it names,
+// at the start of a row whose value sits at the end, or across a grid of
+// choices like the colors to pick.
+export const fieldLabel = cva({
+  base: {
+    alignItems: "baseline",
+    color: "text",
+    display: "flex",
+    fontSize: "12px",
+    fontWeight: 600,
+    gap: "8px",
+    marginInline: 0,
+    padding: 0,
+  },
+  defaultVariants: { place: "above" },
+  variants: {
+    place: {
+      above: { marginBottom: "8px", marginTop: 0 },
+      grid: {
+        float: "left",
+        gridColumn: "1 / -1",
+        marginBottom: "8px",
+        marginTop: "6px",
+        width: "100%",
+      },
+      row: { marginBlock: 0 },
+    },
+  },
+});
+export const fieldHint = css({
+  color: "text3",
+  fontSize: "11px",
+  fontWeight: 400,
+});
+
 // 完了 at a screen's top right, for the mode that has to be left on
 // purpose: entering shifts, a day opened in the week.
 const doneButtonStyle = css({

@@ -12,6 +12,7 @@ import {
   PageHeader,
   Segment,
   SegmentedControl,
+  fieldLabel,
 } from "./design-ui";
 import {
   MarkGlyph,
@@ -308,7 +309,7 @@ function ColorPicker({
       <ChoiceGrid
         className="pe-colors"
         label="色"
-        labelClassName="dc-repeat-label pe-colors-label"
+        labelClassName={fieldLabel({ place: "grid" })}
         onValueChange={(value) => {
           onPick("color", { color: Number(value) });
         }}
