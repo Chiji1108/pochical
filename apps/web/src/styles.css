@@ -828,7 +828,7 @@
     color: var(--muted);
   }
   .deletion-explanation p.warning-text {
-    color: var(--danger-default);
+    color: var(--danger);
   }
   .deletion-panel {
     padding: 35px;
@@ -913,14 +913,14 @@
     accent-color: var(--green);
   }
   .button-danger {
-    background: var(--danger-default);
+    background: var(--danger);
   }
   .button-danger:hover:not(:disabled) {
     background: #812e2b;
   }
   .deletion-panel p[role="alert"] {
     margin-top: 18px;
-    color: var(--danger-default);
+    color: var(--danger);
   }
   .receipt {
     text-align: center;
