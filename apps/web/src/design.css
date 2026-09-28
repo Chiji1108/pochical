@@ -294,125 +294,6 @@
     }
   }
 
-  /* Day detail: time and memo for a single day. */
-  .dc-detail {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-  }
-  .dc-detail-patterns {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 0;
-    margin: 0;
-    border: 0;
-  }
-  .dc-detail-patterns [data-part="item"] {
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-    min-height: 36px;
-    padding: 0 12px;
-    font-size: 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-  }
-  .dc-detail-patterns [data-part="item"][data-state="checked"] {
-    font-weight: 600;
-    color: var(--on-accent-fill);
-    background: var(--accent-fill);
-    border-color: var(--accent);
-  }
-  /* Each part's name sits above it, so a long one like 一緒に働く人 fits. */
-  .dc-detail-row {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .dc-detail-label {
-    font-size: 12px;
-    color: var(--text-3);
-  }
-  .dc-detail-time {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    color: var(--text-3);
-  }
-  .dc-detail-time input,
-  .dc-detail-note {
-    min-width: 0;
-    min-height: 40px;
-    padding: 0 10px;
-    font: inherit;
-    font-size: 15px;
-    color: var(--text);
-    background: var(--fill);
-    border: 1px solid transparent;
-    border-radius: 10px;
-  }
-  .dc-detail-time input:focus,
-  .dc-detail-note:focus {
-    outline: none;
-    background: var(--surface);
-    border-color: var(--accent-line);
-  }
-  .dc-detail-hint {
-    margin: 0;
-    font-size: 11px;
-    color: var(--text-4);
-  }
-  .design-page .dc-detail-hint button {
-    padding: 4px 6px;
-    margin-left: 6px;
-    font-size: 11px;
-    color: var(--accent);
-    text-decoration: underline;
-    background: transparent;
-    border: 0;
-  }
-  .design-page .dc-detail-delete {
-    display: flex;
-    gap: 5px;
-    align-items: center;
-    align-self: center;
-    min-height: 44px;
-    padding: 0 14px;
-    font-size: 11px;
-    color: var(--danger);
-    background: transparent;
-    border: 0;
-    border-radius: 15px;
-  }
-  .dc-detail-empty {
-    margin: 0;
-    font-size: 12px;
-    color: var(--text-4);
-  }
-  .dc-detail-members {
-    padding: 0;
-    margin: 0;
-    border: 0;
-  }
-  .dc-detail-members > legend {
-    float: left;
-    width: 100%;
-    padding: 0 0 6px;
-  }
-  .dc-member-input {
-    width: 88px;
-    min-height: 34px;
-    padding: 0 11px;
-    font: inherit;
-    font-size: 12px;
-    outline: none;
-    border: 1px solid var(--accent-line);
-    border-radius: 17px;
-  }
-
-  /* A row of equal buttons under the month. */
   /* Repeating shifts. */
   .dc-repeat-label {
     display: flex;
@@ -920,11 +801,6 @@
     background: var(--bg);
     border: 1px solid var(--separator);
     border-radius: 8px;
-  }
-  /* A colored icon would sink into the green, so it turns white like the
-   text; emoji and letters on their tile keep their own colors. */
-  .dc-detail-patterns [data-part="item"][data-state="checked"] .sm-icon {
-    fill: var(--on-accent-fill);
   }
   /* アカウント before signing in: what it keeps, then the two ways in. */
   .st-account-hero {
@@ -3367,13 +3243,6 @@
     inset: 6px;
     overflow: hidden;
     border-radius: 46px;
-  }
-
-  .dc-detail-mark-hint {
-    display: block;
-    margin-top: 4px;
-    font-size: 11px;
-    color: var(--text-3);
   }
 
   /* /design/components: every piece by role, with its name in the code. */

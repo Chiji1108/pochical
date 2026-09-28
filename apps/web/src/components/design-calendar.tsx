@@ -1835,6 +1835,109 @@ export function DayCell({
   );
 }
 
+// A day opened in the week: its shift as chips, then its time, the people
+// working it and a memo, each a labelled row, and a way to clear it.
+const dayDetail = {
+  delete: css({
+    alignItems: "center",
+    alignSelf: "center",
+    bg: "transparent",
+    border: 0,
+    borderRadius: "control",
+    color: "danger",
+    display: "flex",
+    fontSize: "11px",
+    gap: "5px",
+    minHeight: "touch",
+    padding: "0 14px",
+  }),
+  empty: css({ color: "text4", fontSize: "12px", margin: 0 }),
+  // The time and the memo, as the platforms' filled text fields.
+  field: css({
+    _focus: {
+      bg: "surface",
+      borderColor: "accentLine",
+      outline: "none",
+    },
+    bg: "fill",
+    border: "1px solid transparent",
+    borderRadius: "10px",
+    color: "text",
+    font: "inherit",
+    fontSize: "15px",
+    minHeight: "40px",
+    minWidth: 0,
+    padding: "0 10px",
+  }),
+  hint: css({ color: "text4", fontSize: "11px", margin: 0 }),
+  label: css({ color: "text3", fontSize: "12px" }),
+  // The legend floats, so the fieldset lays it out like the other rows'
+  // labels.
+  legend: css({ float: "left", padding: "0 0 6px", width: "100%" }),
+  markHint: css({
+    color: "text3",
+    display: "block",
+    fontSize: "11px",
+    marginTop: "4px",
+  }),
+  memberInput: css({
+    border: "1px solid token(colors.accentLine)",
+    borderRadius: "17px",
+    font: "inherit",
+    fontSize: "12px",
+    minHeight: "34px",
+    outline: "none",
+    padding: "0 11px",
+    width: "88px",
+  }),
+  members: css({ border: 0, margin: 0, padding: 0 }),
+  pattern: css({
+    _checked: {
+      // A colored icon would sink into the green, so it turns white like
+      // the text; emoji and letters on their tile keep their own colors.
+      "& .sm-icon": { fill: "onAccentFill" },
+      bg: "accentFill",
+      borderColor: "accent",
+      color: "onAccentFill",
+      fontWeight: 600,
+    },
+    alignItems: "center",
+    bg: "surface",
+    border: "1px solid token(colors.border)",
+    borderRadius: "18px",
+    display: "inline-flex",
+    fontSize: "12px",
+    gap: "4px",
+    minHeight: "36px",
+    padding: "0 12px",
+  }),
+  patterns: css({
+    border: 0,
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px",
+    margin: 0,
+    padding: 0,
+  }),
+  reset: css({
+    bg: "transparent",
+    border: 0,
+    color: "accent",
+    fontSize: "11px",
+    marginLeft: "6px",
+    padding: "4px 6px",
+    textDecoration: "underline",
+  }),
+  root: css({ display: "flex", flexDirection: "column", gap: "18px" }),
+  row: css({ display: "flex", flexDirection: "column", gap: "6px" }),
+  time: css({
+    alignItems: "center",
+    color: "text3",
+    display: "flex",
+    gap: "6px",
+  }),
+};
+
 function MemberField({
   members,
   selected,
@@ -1859,8 +1962,10 @@ function MemberField({
     }
   }
   return (
-    <fieldset className="dc-detail-row dc-detail-members">
-      <legend className="dc-detail-label">一緒に働く人</legend>
+    <fieldset className={cx(dayDetail.row, dayDetail.members)}>
+      <legend className={cx(dayDetail.label, dayDetail.legend)}>
+        一緒に働く人
+      </legend>
       <ChipGroup>
         {members.names.map((name) => (
           <Chip
@@ -1882,7 +1987,7 @@ function MemberField({
           <input
             aria-label="追加する人の名前"
             autoFocus
-            className="dc-member-input"
+            className={dayDetail.memberInput}
             onBlur={(event) => {
               add(event.currentTarget.value);
             }}
@@ -1941,9 +2046,9 @@ function DayDetail({
     });
   }
   return (
-    <div className="dc-detail">
+    <div className={dayDetail.root}>
       <ChoiceGrid
-        className="dc-detail-patterns"
+        className={dayDetail.patterns}
         label="シフト"
         onValueChange={(key) => {
           onChange(keepDetails(entry, key));
@@ -1951,7 +2056,7 @@ function DayDetail({
         value={entry?.shift ?? null}
       >
         {patternKeys.map((key) => (
-          <Choice key={key} value={key}>
+          <Choice className={dayDetail.pattern} key={key} value={key}>
             <ShiftMark shift={key} size={14} />
             {patterns[key].label}
           </Choice>
@@ -1960,11 +2065,12 @@ function DayDetail({
       {entry ? (
         <>
           {time && (
-            <div className="dc-detail-row">
-              <span className="dc-detail-label">時間</span>
-              <div className="dc-detail-time">
+            <div className={dayDetail.row}>
+              <span className={dayDetail.label}>時間</span>
+              <div className={dayDetail.time}>
                 <input
                   aria-label="開始時刻"
+                  className={dayDetail.field}
                   onChange={(event) => {
                     changeTime("start", event.target.value);
                   }}
@@ -1974,6 +2080,7 @@ function DayDetail({
                 <span aria-hidden="true">–</span>
                 <input
                   aria-label="終了時刻"
+                  className={dayDetail.field}
                   onChange={(event) => {
                     changeTime("end", event.target.value);
                   }}
@@ -1981,11 +2088,12 @@ function DayDetail({
                   value={entry.end ?? time[1]}
                 />
               </div>
-              <p className="dc-detail-hint">
+              <p className={dayDetail.hint}>
                 {timeChanged ? (
                   <>
                     {moves}
                     <button
+                      className={dayDetail.reset}
                       onClick={() => {
                         onChange({
                           ...entry,
@@ -2000,7 +2108,7 @@ function DayDetail({
                     {/* The mark this makes, explained as it is made, to
                         the people who use it. */}
                     {change && (change.early || change.late) && (
-                      <span className="dc-detail-mark-hint">
+                      <span className={dayDetail.markHint}>
                         カレンダーのシフトの角に印が付きます
                       </span>
                     )}
@@ -2023,10 +2131,10 @@ function DayDetail({
               selected={entry.members ?? []}
             />
           )}
-          <label className="dc-detail-row">
-            <span className="dc-detail-label">メモ</span>
+          <label className={dayDetail.row}>
+            <span className={dayDetail.label}>メモ</span>
             <input
-              className="dc-detail-note"
+              className={dayDetail.field}
               onChange={(event) => {
                 onChange({ ...entry, note: event.target.value || undefined });
               }}
@@ -2035,7 +2143,7 @@ function DayDetail({
             />
           </label>
           <button
-            className="dc-detail-delete"
+            className={dayDetail.delete}
             onClick={() => {
               onChange(undefined);
             }}
@@ -2046,7 +2154,7 @@ function DayDetail({
           </button>
         </>
       ) : (
-        <p className="dc-detail-empty">
+        <p className={dayDetail.empty}>
           シフトを選ぶと、時間やメモを入力できます。
         </p>
       )}
