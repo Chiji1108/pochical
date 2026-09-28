@@ -61,3 +61,5 @@ apps/web/styled-system/
 assets/shift-schedule/
 # The roster reading comparison lives on the branch roster-import-flow
 tools/roster-eval/
+# layout-diff's measured runs, remade whenever they are needed
+tools/layout-diff/out/

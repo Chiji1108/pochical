@@ -29,3 +29,7 @@ run = "bun run --cwd apps/server test"
 [tasks."server:typecheck"]
 description = "Typecheck the server"
 run = "bun run --cwd apps/server typecheck"
+
+[tasks."web:layout"]
+description = "Measure the /design demo's screens, or compare them with a saved run: save <name> | check <name> (needs the web dev server)"
+run = "bun tools/layout-diff/index.ts"
