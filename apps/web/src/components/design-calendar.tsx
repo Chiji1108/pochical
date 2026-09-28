@@ -320,8 +320,11 @@ export function DesignCalendar({
   pendingInvite = false,
   initialTab = "calendar",
   initialSettingsPage,
+  fullScreen = false,
 }: {
   initialEditing: boolean;
+  // On /try: filling a real phone's screen rather than a pictured one.
+  fullScreen?: boolean;
   initialMonth?: number;
   variants: DesignVariants;
   // For the flow diagrams: a tab, and a settings page, to open on.
@@ -651,7 +654,7 @@ export function DesignCalendar({
   return (
     <PhoneContext value={phoneRef}>
       <ToastContext value={toast}>
-        <Phone ref={phoneRef} style={themeStyle}>
+        <Phone fullScreen={fullScreen} ref={phoneRef} style={themeStyle}>
           {tab === "settings" && (
             <DesignSettings
               coworkers={members}
@@ -1580,8 +1583,8 @@ export function RepeatSequenceEditor({
 // save buttons that stand in its place share its edges.
 const shiftInput = {
   action: css({
-    "&:hover:not(:disabled)": { bg: "accentSoft" },
     _disabled: { color: "textDisabled", cursor: "default" },
+    _hover: { "&:not(:disabled)": { bg: "accentSoft" } },
     alignItems: "center",
     bg: "transparent",
     border: 0,
@@ -1751,7 +1754,7 @@ export const dayCell = cva({
   base: {
     "&:is(button)": { cursor: "pointer" },
     "&:is(button):active": { transform: "scale(0.94)" },
-    "&:is(button):not([data-active]):hover": { bg: "accentSoft2" },
+    _hover: { "&:is(button):not([data-active])": { bg: "accentSoft2" } },
     alignItems: "center",
     bg: "transparent",
     border: 0,

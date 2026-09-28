@@ -15,6 +15,7 @@ import { Route as DesignRouteImport } from './routes/design'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as TryRouteImport } from './routes/try'
 import { Route as AccountDeleteRouteImport } from './routes/account.delete'
 import { Route as DesignAssetsRouteImport } from './routes/design_.assets'
 import { Route as DesignColorsRouteImport } from './routes/design_.colors'
@@ -51,6 +52,11 @@ const SupportRoute = SupportRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TryRoute = TryRouteImport.update({
+  id: '/try',
+  path: '/try',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountDeleteRoute = AccountDeleteRouteImport.update({
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
+  '/try': typeof TryRoute
   '/account/delete': typeof AccountDeleteRoute
   '/design/assets': typeof DesignAssetsRoute
   '/design/colors': typeof DesignColorsRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
+  '/try': typeof TryRoute
   '/account/delete': typeof AccountDeleteRoute
   '/design/assets': typeof DesignAssetsRoute
   '/design/colors': typeof DesignColorsRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
+  '/try': typeof TryRoute
   '/account/delete': typeof AccountDeleteRoute
   '/design_/assets': typeof DesignAssetsRoute
   '/design_/colors': typeof DesignColorsRoute
@@ -144,6 +153,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/support'
     | '/terms'
+    | '/try'
     | '/account/delete'
     | '/design/assets'
     | '/design/colors'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/support'
     | '/terms'
+    | '/try'
     | '/account/delete'
     | '/design/assets'
     | '/design/colors'
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/support'
     | '/terms'
+    | '/try'
     | '/account/delete'
     | '/design_/assets'
     | '/design_/colors'
@@ -190,6 +202,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
+  TryRoute: typeof TryRoute
   AccountDeleteRoute: typeof AccountDeleteRoute
   DesignAssetsRoute: typeof DesignAssetsRoute
   DesignColorsRoute: typeof DesignColorsRoute
@@ -241,6 +254,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/try': {
+      id: '/try'
+      path: '/try'
+      fullPath: '/try'
+      preLoaderRoute: typeof TryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/delete': {
@@ -302,6 +322,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
+  TryRoute: TryRoute,
   AccountDeleteRoute: AccountDeleteRoute,
   DesignAssetsRoute: DesignAssetsRoute,
   DesignColorsRoute: DesignColorsRoute,

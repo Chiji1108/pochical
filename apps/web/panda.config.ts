@@ -14,6 +14,13 @@ export default defineConfig({
   // each phone and preview, not on the page: declared again wherever a
   // theme is set, they resolve against that theme rather than the page's.
   cssVarRoot: ':where(:root, [style*="--accent"])',
+  // Hover only where there is a pointer to hover with: on a touch screen
+  // the last button tapped would otherwise keep its hover color.
+  conditions: {
+    extend: {
+      hover: ["@media (hover: hover)", "&:is(:hover, [data-hover])"],
+    },
+  },
   // The site and the prototype bring their own base styles.
   preflight: false,
   theme: {

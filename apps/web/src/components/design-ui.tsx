@@ -84,7 +84,7 @@ const buttonStyle = cva({
         width: "100%",
       },
       quiet: {
-        "&:hover:not(:disabled)": { bg: "fill2" },
+        _hover: { "&:not(:disabled)": { bg: "fill2" } },
         bg: "fill",
         color: "accent",
         minHeight: "control",
@@ -730,7 +730,7 @@ export const listRow = {
   twoLine: listRowRoot({ twoLine: true }),
   // Rows that do something when pressed.
   pressable: css({
-    "&:is(button):hover": { bg: "fill2" },
+    _hover: { "&:is(button)": { bg: "fill2" } },
     cursor: "pointer",
   }),
   danger: css({ "& > *": { color: "danger" }, color: "danger" }),
