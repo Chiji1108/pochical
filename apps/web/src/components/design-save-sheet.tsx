@@ -61,11 +61,11 @@ const save = {
   // The picked calendar's check; the others keep its room, so the rows
   // line up.
   check: cva({
-    base: { color: "accent", flexShrink: 0 },
+    base: { color: "accent.default", flexShrink: 0 },
     variants: { picked: { false: { visibility: "hidden" } } },
   }),
   done: css({ alignItems: "flex-start", display: "flex", gap: "8px" }),
-  doneIcon: css({ color: "accent", flexShrink: 0, marginTop: "4px" }),
+  doneIcon: css({ color: "accent.default", flexShrink: 0, marginTop: "4px" }),
   // A calendar's own color, as the system lists them.
   dot: css({
     borderRadius: "50%",
@@ -87,17 +87,17 @@ const picture = {
     padding: "12px 4px 20px",
   }),
   credit: css({
-    color: "textFaint",
+    color: "text.quaternary",
     fontSize: "10px",
     margin: "12px 4px 0",
     textAlign: "right",
   }),
   frame: css({
-    bg: "background",
+    bg: "background.base",
     border: "1px solid token(colors.separator)",
     borderRadius: "20px",
-    boxShadow: "0 6px 18px var(--shadow-faint)",
-    color: "text",
+    boxShadow: "0 6px 18px var(--shadow-small)",
+    color: "text.primary",
     margin: 0,
     padding: "16px 12px 12px",
     pointerEvents: "none",

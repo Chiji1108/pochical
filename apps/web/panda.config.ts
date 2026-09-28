@@ -25,7 +25,7 @@ export default defineConfig({
   // color and focus ring around them unless a piece sets its own.
   globalCss: {
     ".design-page :is(button, a):focus-visible": {
-      outline: "3px solid var(--accent-line)",
+      outline: "3px solid var(--accent-focus)",
       outlineOffset: "4px",
     },
     ".design-page button": { color: "inherit" },
@@ -63,7 +63,7 @@ export default defineConfig({
         fadeOut: { from: { opacity: 1 }, to: { opacity: 0 } },
         // A message jumped to from a reply: ringed, then the ring fades.
         flash: {
-          "0%, 40%": { boxShadow: "0 0 0 3px var(--accent-muted)" },
+          "0%, 40%": { boxShadow: "0 0 0 3px var(--accent-border)" },
           "100%": { boxShadow: "0 0 0 0 transparent" },
         },
         popIn: {
@@ -80,33 +80,69 @@ export default defineConfig({
         scrimOut: { to: { opacity: 0 } },
       },
       tokens: {
+        // Colors by role, grouped by kind, their levels named as iOS names
+        // its label and fill levels (primary to quaternary). Each points at
+        // a CSS variable that themeStyle() and design-tokens.ts set.
         colors: {
-          accent: { value: "var(--accent)" },
-          accentFill: { value: "var(--accent-fill)" },
-          accentLine: { value: "var(--accent-line)" },
-          accentMuted: { value: "var(--accent-muted)" },
-          accentSoft: { value: "var(--accent-soft)" },
-          accentSoft2: { value: "var(--accent-soft-2)" },
-          accentStrong: { value: "var(--accent-strong)" },
-          // The screen's own ground.
-          background: { value: "var(--bg)" },
-          border: { value: "var(--border)" },
-          controlOff: { value: "var(--control-off)" },
-          danger: { value: "var(--danger)" },
-          fill: { value: "var(--fill)" },
-          fill2: { value: "var(--fill-2)" },
-          holiday: { value: "var(--holiday)" },
-          onAccentFill: { value: "var(--on-accent-fill)" },
-          raised: { value: "var(--raised)" },
-          saturday: { value: "var(--saturday)" },
+          accent: {
+            border: { value: "var(--accent-border)" },
+            container: { value: "var(--accent-container)" },
+            default: { value: "var(--accent-default)" },
+            fill: { value: "var(--accent-fill)" },
+            focus: { value: "var(--accent-focus)" },
+            // Hovered and pressed: the accent laid over whatever is under,
+            // as Material's state layers, rather than more colors for a
+            // theme to set.
+            hover: {
+              value:
+                "color-mix(in srgb, var(--accent-default) 12%, transparent)",
+            },
+            onFill: { value: "var(--accent-on-fill)" },
+            pressed: {
+              value:
+                "color-mix(in srgb, var(--accent-default) 16%, transparent)",
+            },
+          },
+          background: {
+            // The screen's own ground, a card's, and a sheet's.
+            base: { value: "var(--background-base)" },
+            card: { value: "var(--background-card)" },
+            elevated: { value: "var(--background-elevated)" },
+          },
+          border: {
+            default: { value: "var(--border-default)" },
+            strong: { value: "var(--border-strong)" },
+          },
+          calendar: {
+            holiday: { value: "var(--calendar-holiday)" },
+            noteMarker: { value: "var(--calendar-note-marker)" },
+            offTint: { value: "var(--calendar-off-tint)" },
+            saturday: { value: "var(--calendar-saturday)" },
+          },
+          control: { knob: { value: "var(--control-knob)" } },
+          danger: {
+            default: { value: "var(--danger-default)" },
+            fill: { value: "var(--danger-fill)" },
+            onFill: { value: "var(--danger-on-fill)" },
+          },
+          fill: {
+            primary: { value: "var(--fill-primary)" },
+            quaternary: { value: "var(--fill-quaternary)" },
+            secondary: { value: "var(--fill-secondary)" },
+            tertiary: { value: "var(--fill-tertiary)" },
+          },
+          inverse: {
+            background: { value: "var(--inverse-background)" },
+            text: { value: "var(--inverse-text)" },
+          },
           separator: { value: "var(--separator)" },
-          surface: { value: "var(--surface)" },
-          text: { value: "var(--text)" },
-          text2: { value: "var(--text-2)" },
-          text3: { value: "var(--text-3)" },
-          text4: { value: "var(--text-4)" },
-          textDisabled: { value: "var(--text-disabled)" },
-          textFaint: { value: "var(--text-faint)" },
+          text: {
+            disabled: { value: "var(--text-disabled)" },
+            primary: { value: "var(--text-primary)" },
+            quaternary: { value: "var(--text-quaternary)" },
+            secondary: { value: "var(--text-secondary)" },
+            tertiary: { value: "var(--text-tertiary)" },
+          },
         },
         radii: {
           // Buttons and cards.

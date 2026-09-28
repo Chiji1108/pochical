@@ -51,7 +51,7 @@ const toolbar = {
       gap: "8px",
     },
     alignItems: "center",
-    color: "text3",
+    color: "text.tertiary",
     display: "flex",
     fontSize: "12px",
     justifyContent: "space-between",
@@ -63,7 +63,7 @@ const toolbar = {
 // A toolbar action, link or button, drawn as a pill.
 export const toolbarAction = css({
   bg: "transparent",
-  border: "1px solid token(colors.border)",
+  border: "1px solid token(colors.border.default)",
   borderRadius: "22px",
   padding: "10px 14px",
 });
@@ -89,9 +89,9 @@ export function DesignToolbar({
 }
 
 const intro = {
-  description: css({ color: "text3", fontSize: "13px" }),
+  description: css({ color: "text.tertiary", fontSize: "13px" }),
   eyebrow: css({
-    color: "accentLine",
+    color: "accent.focus",
     fontSize: "10px",
     letterSpacing: "0.2em",
   }),
@@ -139,13 +139,13 @@ export const designScreens = css({
     width: "390px",
   },
   "& > section > h2": {
-    color: "accent",
+    color: "accent.default",
     fontSize: "13px",
     fontWeight: 500,
     margin: "0 0 20px 8px",
   },
   "& > section > h2 > span": {
-    color: "text4",
+    color: "text.quaternary",
     fontSize: "10px",
     marginRight: "13px",
   },
@@ -161,7 +161,7 @@ export const designScreens = css({
 
 // A note under a screen.
 export const designCaption = css({
-  color: "text3",
+  color: "text.tertiary",
   fontSize: "11px",
   lineHeight: "1.9",
   marginTop: "22px",

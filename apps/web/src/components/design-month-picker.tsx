@@ -172,7 +172,7 @@ const monthTitle = cva({
 });
 
 const monthChevron = cva({
-  base: { color: "text3", flexShrink: 0 },
+  base: { color: "text.tertiary", flexShrink: 0 },
   variants: { twoLines: { true: { marginBottom: "12px" } } },
 });
 
@@ -185,27 +185,29 @@ const monthChoice = {
   }),
   month: cva({
     base: {
-      _disabled: { color: "textDisabled", cursor: "default" },
-      bg: "fill",
+      _disabled: { color: "text.disabled", cursor: "default" },
+      bg: "fill.quaternary",
       border: "1.5px solid transparent",
       borderRadius: "999px",
-      color: "text",
+      color: "text.primary",
       cursor: "pointer",
       fontWeight: 600,
       minHeight: "touch",
       textStyle: "body",
     },
     variants: {
-      current: { true: { borderColor: "accent", color: "accent" } },
-      shown: { true: { bg: "accentFill", color: "onAccentFill" } },
+      current: {
+        true: { borderColor: "accent.default", color: "accent.default" },
+      },
+      shown: { true: { bg: "accent.fill", color: "accent.onFill" } },
     },
   }),
   step: css({
-    _disabled: { color: "textDisabled", cursor: "default" },
+    _disabled: { color: "text.disabled", cursor: "default" },
     bg: "transparent",
     border: 0,
     borderRadius: "999px",
-    color: "accent",
+    color: "accent.default",
     display: "grid",
     height: "touch",
     placeItems: "center",

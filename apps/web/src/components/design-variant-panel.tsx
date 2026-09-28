@@ -11,9 +11,9 @@ import type { DesignVariants } from "../lib/design-variants";
 const panel = {
   choice: css({
     "&[aria-pressed=true]": {
-      bg: "surface",
-      boxShadow: "0 1px 3px var(--shadow)",
-      color: "accent",
+      bg: "background.card",
+      boxShadow: "0 1px 3px var(--shadow-medium)",
+      color: "accent.default",
       fontWeight: 600,
     },
     bg: "transparent",
@@ -24,7 +24,7 @@ const panel = {
     padding: "0 11px",
   }),
   choices: css({
-    bg: "fill2",
+    bg: "fill.tertiary",
     borderRadius: "12px",
     display: "flex",
     padding: "2px",
@@ -38,7 +38,12 @@ const panel = {
     margin: 0,
     padding: 0,
   }),
-  label: css({ color: "text3", float: "left", fontSize: "11px", padding: 0 }),
+  label: css({
+    color: "text.tertiary",
+    float: "left",
+    fontSize: "11px",
+    padding: 0,
+  }),
   root: css({
     "@media (max-width: 760px)": { flexDirection: "column" },
     "@media (min-width: 1100px)": {
@@ -49,7 +54,7 @@ const panel = {
     alignItems: "center",
     backdropFilter: "blur(8px)",
     bg: "var(--ws-bg-translucent)",
-    border: "1px solid token(colors.border)",
+    border: "1px solid token(colors.border.default)",
     borderRadius: "20px",
     display: "flex",
     flex: "0 1 420px",
@@ -61,7 +66,7 @@ const panel = {
     padding: "12px 18px",
   }),
   title: css({
-    color: "accentLine",
+    color: "accent.focus",
     fontSize: "11px",
     fontWeight: 600,
     letterSpacing: "0.1em",
