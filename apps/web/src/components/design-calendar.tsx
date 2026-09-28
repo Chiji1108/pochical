@@ -850,17 +850,7 @@ export function DesignCalendar({
                     />
                   </div>
                 )}
-                <TabBar
-                  // The same gap over the tab bar as under the buttons, so
-                  // the summary sits at one height with them or without.
-                  className={
-                    showInputBar || showSaveBar
-                      ? undefined
-                      : calendarPage.tabsUnderSummary
-                  }
-                  active="calendar"
-                  onSelect={setTab}
-                />
+                <TabBar active="calendar" onSelect={setTab} />
               </div>
             )}
             {headingMode === "edit" && (
@@ -971,20 +961,25 @@ const tabs: { tab: Tab; label: string; icon: typeof CalendarDays }[] = [
   { icon: UsersRound, label: "グループ", tab: "group" },
   { icon: Settings2, label: "設定", tab: "settings" },
 ];
-// As iOS 26's: a round-ended bar held off the screen's sides, the picked
+// As iOS 26's: a round-ended bar floating over the screen's foot, held
+// off its sides, see-through and blurring what runs under it, the picked
 // tab on a round ground of its own. Its words keep a fixed size, as the
-// system's tab bars do.
+// system's tab bars do. The screen leaves room for it: see Screen.
 const tabBar = {
   bar: css({
-    bg: "fill2",
+    backdropFilter: "blur(16px) saturate(1.4)",
+    bg: "color-mix(in srgb, var(--fill-2) 80%, transparent)",
     borderRadius: "999px",
+    bottom: "var(--tab-bar-bottom)",
+    boxShadow: "0 4px 20px var(--shadow)",
     color: "text3",
     display: "flex",
-    flexShrink: 0,
     height: "64px",
-    marginInline: "4px",
-    marginTop: "8px",
+    left: "20px",
     padding: "4px",
+    position: "absolute",
+    right: "20px",
+    zIndex: 10,
   }),
   item: cva({
     base: {
@@ -1009,15 +1004,12 @@ const tabBar = {
 export function TabBar({
   active,
   onSelect,
-  className,
 }: {
   active: Tab;
   onSelect: (tab: Tab) => void;
-  // Where it sits, as on the calendar under its summary.
-  className?: string;
 }) {
   return (
-    <nav aria-label="タブ" className={cx(tabBar.bar, className)}>
+    <nav aria-label="タブ" className={tabBar.bar} data-tab-bar="">
       {tabs.map(({ tab, label, icon: Icon }) => (
         <button
           aria-current={active === tab ? "page" : undefined}
@@ -1144,11 +1136,13 @@ const calendarPage = {
   }),
   detailDate: css({ fontWeight: 600, margin: "0 0 16px", textStyle: "title3" }),
   // Under the month: its summary, then what to do next and the tab bar.
+  // Room at the foot for the tab bar floating over it, 16px clear.
   bottom: css({
     display: "flex",
     flexDirection: "column",
     flexShrink: 0,
     marginTop: "auto",
+    paddingBottom: "calc(var(--tab-bar-bottom) + 80px - var(--safe-bottom))",
   }),
   controls: css({ flexShrink: 0, minHeight: "92px", paddingTop: "12px" }),
   // Entering takes the bottom for the pattern buttons, on the raised
@@ -1159,7 +1153,6 @@ const calendarPage = {
     marginTop: "auto",
     paddingTop: "2px",
   }),
-  tabsUnderSummary: css({ marginTop: "28px" }),
   // Room around the grid for the picked day's outline.
   scroll: css({
     minHeight: 0,

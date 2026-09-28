@@ -186,6 +186,12 @@ export function IconButton({
 // so the part that scrolls and what is pinned to its foot share the
 // height. Hidden, it keeps its state and takes no room.
 const screenStyle = css({
+  // Under a floating tab bar the part that scrolls runs on to the screen's
+  // foot, ending 16px clear of the bar, so what scrolls passes under it.
+  "&:has(> [data-tab-bar]) [data-screen-scroll]": {
+    marginBottom: "calc(-1 * var(--safe-bottom))",
+    paddingBottom: "calc(var(--tab-bar-bottom) + 80px)",
+  },
   "&[hidden]": { display: "none" },
   display: "flex",
   flex: 1,
