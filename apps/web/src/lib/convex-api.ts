@@ -1,29 +1,39 @@
 import { makeFunctionReference } from "convex/server";
-import type { FunctionArgs, FunctionReturnType } from "convex/server";
 
-import type { api as mobileApi } from "../../../mobile-legacy/convex/_generated/api";
+// The legacy Convex backend's functions this site calls, typed by hand
+// after apps/mobile-legacy/convex so the site neither imports nor
+// typechecks the reference-only Expo project. Keep them in step with
+// accountDeletion.ts, accounts.ts and deleteAccount.ts there.
 
-// Reuse the backend's generated types without importing the Expo project at runtime.
+type CurrentAccount = {
+  name: string | null;
+  email: string | null;
+  deletionPending: boolean;
+  canRevokeApple: boolean;
+  authUserId: string;
+  userId: string;
+  isAnonymous: boolean;
+  providers: string[];
+} | null;
+
 export const api = {
   accountDeletion: {
-    pending: makeFunctionReference<
-      "query",
-      FunctionArgs<typeof mobileApi.accountDeletion.pending>,
-      FunctionReturnType<typeof mobileApi.accountDeletion.pending>
-    >("accountDeletion:pending"),
+    pending: makeFunctionReference<"query", { receipt: string }, boolean>(
+      "accountDeletion:pending"
+    ),
   },
   accounts: {
     current: makeFunctionReference<
       "query",
-      FunctionArgs<typeof mobileApi.accounts.current>,
-      FunctionReturnType<typeof mobileApi.accounts.current>
+      Record<string, never>,
+      CurrentAccount
     >("accounts:current"),
   },
   deleteAccount: {
     request: makeFunctionReference<
       "action",
-      FunctionArgs<typeof mobileApi.deleteAccount.request>,
-      FunctionReturnType<typeof mobileApi.deleteAccount.request>
+      { appleAuthorizationCode?: string },
+      string
     >("deleteAccount:request"),
   },
 };
