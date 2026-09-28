@@ -1373,14 +1373,18 @@ const rail = {
     position: "relative",
     width: "58px",
   }),
+  // Beside the page and like it, it runs on to the screen's foot and
+  // scrolls when the groups outgrow it, so only its top is rounded.
   root: css({
+    "& > *": { flexShrink: 0 },
     alignItems: "center",
     bg: "fill",
-    borderRadius: "0 20px 20px 0",
+    borderRadius: "0 20px 0 0",
     display: "flex",
     flexDirection: "column",
     flexShrink: 0,
     gap: "12px",
+    overflowY: "auto",
     padding: "12px 0",
     width: "58px",
   }),
@@ -1751,7 +1755,7 @@ function GroupRail({
   onScan: () => void;
 }) {
   return (
-    <nav aria-label="グループ" className={rail.root}>
+    <nav aria-label="グループ" className={rail.root} data-screen-rail="">
       {groups.map((group) => {
         const unread = unreadOf(group.id);
         return (
