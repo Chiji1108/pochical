@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useContext, useState } from "react";
 import { css } from "styled-system/css";
 
@@ -532,7 +532,6 @@ function PatternEditor({
             }
           }}
         >
-          <Trash2 aria-hidden="true" size={14} />
           このパターンを削除
         </DestructiveButton>
       )}

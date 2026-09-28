@@ -3635,7 +3635,8 @@ const shiftsPage = {
     variants: { withSheet: { true: { paddingBottom: "300px" } } },
   }),
   sheetTime: css({ color: "text4", fontSize: "11px" }),
-  sheetValue: css({ alignItems: "center", display: "inline-flex", gap: "6px" }),
+  // A mark and its name, as markValue sets them apart in a row's value.
+  sheetValue: css({ alignItems: "center", display: "inline-flex", gap: "8px" }),
   togetherNone: css({ color: "text3", fontSize: "15px", fontWeight: 600 }),
 };
 

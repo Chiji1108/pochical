@@ -450,7 +450,8 @@ export function AddButton({
 }
 
 // Removing or leaving at the foot of an editing page: quiet red words,
-// centered under the lists, as the platforms' destructive text buttons.
+// no icon, centered under the lists, as the platforms' destructive text
+// buttons.
 const destructiveButtonStyle = css({
   alignItems: "center",
   alignSelf: "center",
@@ -459,7 +460,6 @@ const destructiveButtonStyle = css({
   color: "danger",
   display: "flex",
   fontSize: "12px",
-  gap: "6px",
   minHeight: "44px",
   padding: "0 14px",
 });
