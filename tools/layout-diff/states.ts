@@ -236,6 +236,73 @@ export const states: State[] = [
     root: ".cmp-sample",
   },
   {
+    name: "group/legend-all",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await toGroupMonth(page);
+      await tap(page, "日ごと");
+      await page.getByRole("menuitem", { name: "シフトパターン" }).click();
+    },
+  },
+  {
+    name: "group/legend-one",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await toGroupMonth(page);
+      await tap(page, "ゆうきのシフトパターン");
+    },
+  },
+  {
+    name: "group/new-chat",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, "個人チャットを始める");
+    },
+  },
+  {
+    name: "group/settings",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, "グループの設定");
+    },
+  },
+  {
+    name: "settings/patterns",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^シフトパターン/u);
+    },
+  },
+  {
+    name: "settings/pattern-editor",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^シフトパターン/u);
+      await tap(page, /^日勤/u);
+    },
+  },
+  {
+    name: "settings/pattern-add",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^シフトパターン/u);
+      await tap(page, "パターンを追加");
+    },
+  },
+  {
+    name: "settings/coworkers",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^一緒に働く人/u);
+    },
+  },
+  {
     name: "settings",
     path: demo("bottomRows=two&scheduleSample=filled"),
     steps: tapOn("設定"),

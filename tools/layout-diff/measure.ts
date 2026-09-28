@@ -150,8 +150,21 @@ export function measure(root: string): Screen {
   };
 
   const screen: Screen = {};
+  // A sample on /design/components goes by the name it is listed under,
+  // so adding one does not renumber the rest; phones go by their place.
+  const rootNames = new Map<string, number>();
+  const rootName = (measured: Element, index: number) => {
+    const listed =
+      measured.closest(".cmp-item")?.querySelector("code")?.textContent ?? "";
+    if (listed === "") {
+      return String(index + 1);
+    }
+    const count = (rootNames.get(listed) ?? 0) + 1;
+    rootNames.set(listed, count);
+    return count > 1 ? `${listed} #${count}` : listed;
+  };
   for (const [index, phone] of phones.entries()) {
-    const prefix = phones.length > 1 ? `${index + 1} › ` : "";
+    const prefix = phones.length > 1 ? `${rootName(phone, index)} › ` : "";
     const origin = phone.getBoundingClientRect();
     screen[`${prefix}phone`] = lookOf(phone, getComputedStyle(phone), origin);
     const seen = new Map<string, number>();
