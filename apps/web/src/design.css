@@ -96,8 +96,7 @@
     font-size: 10px;
     color: var(--text-4);
   }
-  .design-caption,
-  .design-footnote {
+  .design-caption {
     font-size: 11px;
     line-height: 1.9;
     color: var(--text-3);
@@ -105,20 +104,6 @@
   }
   .design-caption {
     margin-top: 22px;
-  }
-  .design-footnote {
-    margin: 40px 0 0;
-  }
-  .design-page .dc-today-button {
-    width: auto;
-    padding: 0 10px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--accent);
-  }
-  .design-page .dc-today-button:disabled {
-    color: var(--text-disabled);
-    cursor: default;
   }
   .dc-patterns {
     display: flex;
@@ -152,11 +137,6 @@
     font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
     font-size: 24px;
     line-height: 1;
-  }
-  .dc-patterns .dc-selected {
-    background: var(--accent-soft);
-    border-color: var(--accent-muted);
-    box-shadow: 0 0 0 0.5px var(--accent-muted);
   }
   .dc-day-actions {
     display: flex;
@@ -575,11 +555,6 @@
     width: auto;
   }
   /* Repeating shifts. */
-  .dc-repeat-sheet {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
   .dc-repeat-label {
     display: flex;
     gap: 8px;
@@ -594,39 +569,6 @@
     font-size: 11px;
     font-weight: 400;
     color: var(--text-3);
-  }
-  .dc-repeat-presets {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 0;
-    margin: 0;
-    border: 0;
-  }
-  .dc-repeat-presets > legend {
-    float: left;
-    width: 100%;
-  }
-  .design-page .dc-repeat-presets button {
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-    min-height: 36px;
-    padding: 0 12px;
-    font-size: 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-  }
-  .dc-repeat-presets button > span {
-    font-size: 10px;
-    color: var(--text-4);
-  }
-  .design-page .dc-repeat-presets button[aria-pressed="true"] {
-    font-weight: 600;
-    color: var(--accent);
-    background: var(--accent-soft-2);
-    border-color: var(--accent-muted);
   }
   .dc-repeat-sequence {
     display: flex;
@@ -679,18 +621,6 @@
     background: transparent;
     border: 1px dashed var(--border-strong);
     border-radius: 16px;
-  }
-  .dc-repeat-anchor {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .dc-repeat-anchor > .dc-repeat-label {
-    margin: 0;
-  }
-  .design-page .dc-repeat-anchor .dc-input-date {
-    margin: 0;
-    font-size: 15px;
   }
   .dc-repeat-preview {
     display: grid;
@@ -1015,10 +945,6 @@
     font-size: 12px;
     color: var(--text-3);
   }
-  .pe-field {
-    display: flex;
-    flex-direction: column;
-  }
   .pe-grid {
     display: grid;
     grid-template-columns: repeat(8, minmax(0, 1fr));
@@ -1286,11 +1212,6 @@
     justify-content: center;
     min-height: 84px;
   }
-  .pe-check-mark {
-    flex-shrink: 0;
-    margin-left: auto;
-    color: var(--accent);
-  }
 
   /* Theme color and app icon settings. */
   .st-inline-value {
@@ -1388,16 +1309,6 @@
     background: transparent;
     border: 0;
     border-radius: 10px;
-  }
-  .gr-together {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
-    padding: 10px 12px;
-    margin-top: -6px;
-    background: var(--accent-soft);
-    border-radius: 14px;
   }
   .gr-together-label {
     margin-right: 4px;
@@ -2486,18 +2397,6 @@
     gap: 12px;
     align-items: center;
   }
-  /* The picture and name of one group's you, spaced like the rows around. */
-  .st-profile-section {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .st-profile-section > h4 {
-    margin-bottom: 0;
-  }
-  .st-profile-section > .st-note {
-    margin-top: -4px;
-  }
   .design-page .st-photo-edit {
     position: relative;
     padding: 0;
@@ -2704,12 +2603,6 @@
   .gr-legend-member {
     display: flex;
     gap: 6px;
-    align-items: center;
-  }
-  .gr-shifts-actions {
-    display: flex;
-    flex-shrink: 0;
-    gap: 2px;
     align-items: center;
   }
   /* A long group name gives way to the controls instead of wrapping. */
