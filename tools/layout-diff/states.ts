@@ -59,6 +59,31 @@ export const states: State[] = [
     path: demo("bottomRows=current&scheduleSample=filled"),
     steps: tapOn("次の月"),
   },
+  // The current proposal, 保存を右上: no arrows but for the keyboard, the
+  // save menu at the top right, and ポチポチ入力 always at the foot.
+  {
+    name: "calendar/save-top",
+    path: demo("bottomRows=saveTop&scheduleSample=filled"),
+  },
+  {
+    name: "calendar/save-top-empty",
+    path: demo("bottomRows=saveTop&scheduleSample=empty"),
+  },
+  {
+    // The arrows show only while the keyboard is on them, so the step goes
+    // there by the keyboard, as a person without a finger to swipe would.
+    name: "calendar/save-top-next-month",
+    path: demo("bottomRows=saveTop&scheduleSample=filled"),
+    steps: async (page) => {
+      await page.getByRole("button", { exact: true, name: "次の月" }).focus();
+      await page.keyboard.press("Enter");
+    },
+  },
+  {
+    name: "calendar/save-top-menu",
+    path: demo("bottomRows=saveTop&scheduleSample=filled"),
+    steps: tapOn("この月のシフトを保存"),
+  },
   {
     name: "calendar/entering",
     path: demo("bottomRows=two&scheduleSample=empty"),
