@@ -96,6 +96,59 @@ const content = cva({
   },
 });
 
+// A sheet drawn in place rather than opened, for pictures of one: the flow
+// diagrams' sheet standing open over a phone, where a dialog would open
+// over the whole page instead of the small frame, and the samples on
+// /design/components. It has the open sheet's look.
+const picture = {
+  // Over the phone's screen, inside its bezel, and kept below the page's
+  // own layers.
+  over: css({
+    borderRadius: "46px",
+    inset: "6px",
+    isolation: "isolate",
+    overflow: "hidden",
+    position: "absolute",
+  }),
+};
+
+export function SheetPicture({
+  over = false,
+  handle = true,
+  children,
+}: {
+  over?: boolean;
+  handle?: boolean;
+  children: ReactNode;
+}) {
+  // Alone it has round corners all around and its whole height. The
+  // styles are merged rather than joined: two classes for one property
+  // would leave the winner to the stylesheet's order.
+  const look = over
+    ? content({ modal: true })
+    : css(content.raw({ modal: true }), {
+        borderRadius: "20px",
+        maxHeight: "none",
+      });
+  const drawn = (
+    <section className={look}>
+      {handle && <div aria-hidden="true" className={sheet.handle} />}
+      {children}
+    </section>
+  );
+  if (!over) {
+    return drawn;
+  }
+  return (
+    <div className={picture.over}>
+      <div className={backdrop({ placement: "bottom" })} />
+      <div className={positioner({ modal: true, placement: "bottom" })}>
+        {drawn}
+      </div>
+    </div>
+  );
+}
+
 // The part of a sheet that scrolls under a heading that stays; it runs to
 // the sheet's edges so the scrolling reaches them.
 export const sheetBody = css({

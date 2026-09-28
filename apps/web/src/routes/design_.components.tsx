@@ -20,7 +20,11 @@ import {
   useDesignTheme,
 } from "../components/design-providers";
 import { NameTabs, OffLookTabs } from "../components/design-settings";
-import { DecideHeading, SheetHeading } from "../components/design-sheet";
+import {
+  DecideHeading,
+  SheetHeading,
+  SheetPicture,
+} from "../components/design-sheet";
 import { themeStyle, useThemeStyle } from "../components/design-theme";
 import { toastLook } from "../components/design-toast";
 import {
@@ -462,24 +466,23 @@ function Sheets() {
         where="見るだけのシート(内訳、空いた日、保存、日のシートなど)"
         wide
       >
-        <section className="dc-sheet cmp-sheet">
-          <div aria-hidden="true" className="dc-sheet-handle" />
+        <SheetPicture>
           <SheetHeading
             eyebrow="2026年9月"
             onClose={() => undefined}
             title="今月の内訳"
           />
-        </section>
+        </SheetPicture>
       </Item>
       <Item name="DecideHeading" where="決めるシート(日にちを共有)" wide>
-        <section className="dc-sheet cmp-sheet">
+        <SheetPicture handle={false}>
           <DecideHeading
             action="送る"
             onAction={() => undefined}
             onCancel={() => undefined}
             title="日にちを共有"
           />
-        </section>
+        </SheetPicture>
       </Item>
       <Item name="Toast" where="入力・保存のあとの一言(Ark UI の Toast)">
         <p className={toastLook}>

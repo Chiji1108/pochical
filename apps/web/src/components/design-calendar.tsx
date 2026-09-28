@@ -883,28 +883,28 @@ export function DesignCalendar({
               }}
               title="今月の内訳"
             />
-            <dl className="dc-counts">
+            <dl className={breakdown.list}>
               {counts.map(({ key, label, count }) => (
-                <div key={key}>
-                  <dt>
+                <div className={breakdown.row()} key={key}>
+                  <dt className={breakdown.name}>
                     <ShiftMark shift={key} size={18} />
                     {label}
                   </dt>
-                  <dd>
+                  <dd className={breakdown.count}>
                     {count}
-                    <span>日</span>
+                    <span className={breakdown.unit}>日</span>
                   </dd>
                 </div>
               ))}
-              <div className="dc-unfilled">
-                <dt>未入力</dt>
-                <dd>
+              <div className={breakdown.row({ unfilled: true })}>
+                <dt className={breakdown.name}>未入力</dt>
+                <dd className={breakdown.count}>
                   {unfilled}
-                  <span>日</span>
+                  <span className={breakdown.unit}>日</span>
                 </dd>
               </div>
             </dl>
-            <p className="dc-sheet-total">この月は全{monthDays.length}日</p>
+            <p className={breakdown.total}>この月は全{monthDays.length}日</p>
           </Sheet>
           {pendingInvite && (
             <JoinSheet
@@ -1015,6 +1015,37 @@ export function TabBar({
     </nav>
   );
 }
+
+// 今月の内訳: a row for each pattern and one for the days still blank,
+// with the month's length under them.
+const breakdown = {
+  count: css({ color: "accent", fontSize: "21px", fontWeight: 600, margin: 0 }),
+  list: css({ margin: 0 }),
+  name: css({
+    "& > span": { fontSize: "24px" },
+    alignItems: "center",
+    display: "flex",
+    fontSize: "14px",
+    gap: "12px",
+  }),
+  row: cva({
+    base: {
+      alignItems: "center",
+      borderBottom: "1px solid var(--separator-faint)",
+      display: "flex",
+      justifyContent: "space-between",
+      minHeight: "52px",
+    },
+    variants: { unfilled: { true: { color: "text3" } } },
+  }),
+  total: css({
+    color: "text3",
+    fontSize: "12px",
+    margin: "18px 0 0",
+    textAlign: "center",
+  }),
+  unit: css({ fontSize: "12px", fontWeight: 400, marginLeft: "7px" }),
+};
 
 // The month at the top: the year over its number, "‹ 今月 ›" in the middle
 // so it never moves with the month's width, and the screen's action on the

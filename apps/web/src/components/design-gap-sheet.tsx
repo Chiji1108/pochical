@@ -3,13 +3,28 @@ import { css } from "styled-system/css";
 
 import type { Shift } from "../lib/design-patterns";
 import type { Schedule } from "./design-calendar";
-import { Sheet, SheetHeading } from "./design-sheet";
+import { Sheet, SheetHeading, SheetPicture } from "./design-sheet";
 import { Button, Chip, ChipGroup, List, SwitchRow, Tag } from "./design-ui";
 
 export type OffChoice = { key: Shift; label: string };
 
 // A group of chips with room under it before what follows.
 const spaced = css({ marginBottom: "16px" });
+const gap = {
+  // The offer to show days off blank, under the chips.
+  blank: css({
+    "& small": { color: "text3", fontSize: "11px" },
+    margin: "0 0 16px",
+  }),
+  // How the month's days off change, kept on one line.
+  count: css({
+    color: "accentStrong",
+    fontWeight: 700,
+    margin: "0 2px",
+    whiteSpace: "nowrap",
+  }),
+  line: css({ display: "block" }),
+};
 
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
 
@@ -92,13 +107,9 @@ export function GapSheet({
 // modal dialog would open over the whole page instead of the small frame.
 export function GapSheetPreview(props: GapSheetProps) {
   return (
-    <div className="dc-sheet-preview">
-      <div className="dc-sheet-scrim" />
-      <section className="dc-sheet">
-        <div aria-hidden="true" className="dc-sheet-handle" />
-        <GapSheetBody {...props} onClose={() => undefined} />
-      </section>
-    </div>
+    <SheetPicture over>
+      <GapSheetBody {...props} onClose={() => undefined} />
+    </SheetPicture>
   );
 }
 
@@ -121,21 +132,17 @@ function GapSheetBody({
   return (
     <>
       <SheetHeading onClose={close} title={titleOf(days)} />
-      <p className="dc-import-description">
+      <p>
         {current?.label ?? "休み"}にすると、{monthLabel}のお休みが
-        <strong className="dc-gap-count">
+        <strong className={gap.count}>
           {offCount}日 → {offCount + days.length}日
         </strong>
         になります。
         {sharing && (
-          <span className="dc-gap-line">
-            グループの人にもお休みが見えます。
-          </span>
+          <span className={gap.line}>グループの人にもお休みが見えます。</span>
         )}
         {completes && (
-          <span className="dc-gap-line">
-            これで{monthLabel}が全部埋まります。
-          </span>
+          <span className={gap.line}>これで{monthLabel}が全部埋まります。</span>
         )}
       </p>
       <ChipGroup as="ul" className={spaced}>
@@ -161,7 +168,7 @@ function GapSheetBody({
         </ChipGroup>
       )}
       {offerBlank && (
-        <List className="dc-gap-blank">
+        <List className={gap.blank}>
           <SwitchRow
             label={
               <>
