@@ -1090,6 +1090,19 @@ const breakdown = {
 // so it never moves with the month's width, and the screen's action on the
 // right, lined up with the month digits rather than the two lines.
 const heading = {
+  // The arrows kept for screen readers and the keyboard, as a skip link
+  // is: out of sight until one of them has focus.
+  arrowsOnFocus: css({
+    "&:not(:focus-within)": {
+      clipPath: "inset(50%)",
+      height: "1px",
+      overflow: "hidden",
+      position: "absolute",
+      whiteSpace: "nowrap",
+      width: "1px",
+    },
+    display: "flex",
+  }),
   backAtEnd: css({ display: "flex", marginRight: "4px" }),
   // Without the arrows: 今月 and the screen's action, together on the
   // month digits' line.
@@ -1296,7 +1309,8 @@ export function MonthSummary({
 // the month, leaving 完了 alone there. Without `arrows`, a swipe alone
 // turns the page, as in the platforms' calendars: the corner holds 今月
 // while away from it, then the save menu or 完了, and the arrows stay for
-// screen readers only, as a native calendar's accessibility actions.
+// screen readers, as a native calendar's accessibility actions, showing
+// only while the keyboard is on them.
 function HeadingActions({
   mode,
   arrows = true,
@@ -1371,7 +1385,7 @@ function HeadingActions({
     return (
       <div className={heading.corner}>
         {mode !== "edit" && (
-          <div className={srOnly}>
+          <div className={heading.arrowsOnFocus}>
             {previous}
             {next}
           </div>
