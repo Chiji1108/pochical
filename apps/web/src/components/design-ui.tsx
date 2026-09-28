@@ -890,6 +890,8 @@ export const listRow = {
   // One width whatever it holds, so every row's words start at the same
   // place, 56px in, as under iOS's icons.
   leading: css({
+    // What it holds keeps its own size rather than squeezing to fit.
+    "& > *": { flexShrink: 0 },
     color: "text2",
     display: "flex",
     flexShrink: 0,
