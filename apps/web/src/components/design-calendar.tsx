@@ -675,7 +675,6 @@ export function DesignCalendar({
           {tab === "group" && (
             <DesignGroup
               initialGroupId={openGroup}
-              monthNav={variants.monthNav}
               scanResult={variants.scanResult}
               onTab={setTab}
               patternKeys={patternKeys}
@@ -699,7 +698,6 @@ export function DesignCalendar({
               <MonthHeading
                 mode={headingMode}
                 month={month}
-                monthNav={variants.monthNav}
                 onPick={goToMonth}
               />
               <HeadingActions
@@ -1245,17 +1243,15 @@ export function MonthSummary({
   );
 }
 
-// The year over the month. In the 月名 ▾ variant its name opens a choice
-// of months, a way on that shows, beside the swipe that does not.
+// The year over the month. Looking at months, its name opens a choice of
+// months, a way on that shows, beside the swipe that does not.
 function MonthHeading({
   month,
   mode,
-  monthNav,
   onPick,
 }: {
   month: Date;
   mode: "view" | "edit" | "week";
-  monthNav: DesignVariants["monthNav"];
   onPick: (month: Date) => void;
 }) {
   const name = (
@@ -1269,7 +1265,7 @@ function MonthHeading({
   );
   return (
     <h3 className={heading.title}>
-      {monthNav === "title" && mode === "view" ? (
+      {mode === "view" ? (
         <MonthTitleButton month={month} onPick={onPick} twoLines>
           <span>{name}</span>
         </MonthTitleButton>

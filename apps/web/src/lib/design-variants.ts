@@ -22,13 +22,6 @@ export const designVariantOptions = {
     ],
     label: "一緒に働く人",
   },
-  monthNav: {
-    choices: [
-      { label: "月名 ▾", value: "title" },
-      { label: "‹ ›", value: "arrows" },
-    ],
-    label: "月の移り方",
-  },
   scanResult: {
     choices: [
       { label: "招待", value: "invite" },
