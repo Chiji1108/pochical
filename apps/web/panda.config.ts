@@ -74,10 +74,10 @@ export default defineConfig({
           from: { transform: "translateY(100%)" },
           to: { transform: "translateY(0)" },
         },
-        sheetOut: {
-          from: { transform: "translateY(0)" },
-          to: { transform: "translateY(100%)" },
-        },
+        // From wherever a swipe let go of the sheet, or from rest.
+        sheetOut: { to: { transform: "translateY(100%)" } },
+        // The dimming under it, from however far a swipe has faded it.
+        scrimOut: { to: { opacity: 0 } },
       },
       tokens: {
         colors: {

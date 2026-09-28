@@ -7,11 +7,11 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Download,
   Image as ImageIcon,
   Pencil,
   Plus,
   Settings2,
-  Share,
   Trash2,
   UsersRound,
   X,
@@ -1366,7 +1366,7 @@ function SwipeCorner({
       )}
       {mode === "view" ? (
         <IconMenu
-          icon={<Share aria-hidden="true" size={21} />}
+          icon={<Download aria-hidden="true" size={21} />}
           label="この月のシフトを保存"
         >
           <MenuItem
