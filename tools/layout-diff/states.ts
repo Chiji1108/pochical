@@ -103,6 +103,31 @@ export const states: State[] = [
       await tap(page, /^全体チャット/u);
     },
   },
+  {
+    name: "calendar/date-picker",
+    path: demo("bottomRows=two&scheduleSample=empty"),
+    steps: async (page) => {
+      await tap(page, "ポチポチ入力");
+      await tap(page, /^入力する日付/u);
+    },
+  },
+  {
+    name: "settings/repeat-new",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^働き方/u);
+      await tap(page, /決まった順番で回っている/u);
+    },
+  },
+  {
+    name: "settings/job",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^仕事が変わったとき/u);
+    },
+  },
   // Every phone of the design pages: the calendar in its states, light
   // and dark, and the first-run screens.
   { name: "design/states", path: "/design/states" },
