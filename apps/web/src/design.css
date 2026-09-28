@@ -562,20 +562,6 @@
     align-items: center;
     width: min(100%, 520px);
   }
-  .ai-icon {
-    display: inline-block;
-    flex-shrink: 0;
-    overflow: hidden;
-    background: var(--fill-2);
-    /* Close to the system's continuous corner at icon sizes. */
-    border-radius: 22.5%;
-    box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.12);
-  }
-  .ai-icon img {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
   .ai-choices {
     display: flex;
     flex-wrap: wrap;

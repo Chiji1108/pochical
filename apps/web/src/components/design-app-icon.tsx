@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { css } from "styled-system/css";
 
 import { Choice, ChoiceGrid } from "./design-ui";
 
@@ -365,10 +366,21 @@ export function useAppIcons() {
 // The icons someone can pick in settings, ダーク among them.
 export const pickableIcons = iconColorOptions;
 
-// An icon as the system shows it: cut to a rounded square.
+// An icon as the system shows it: cut to a rounded square, close to the
+// system's continuous corner at icon sizes.
+const appIcon = css({
+  "& img": { display: "block", height: "100%", width: "100%" },
+  bg: "fill2",
+  borderRadius: "22.5%",
+  boxShadow: "0 0 0 0.5px rgb(0 0 0 / 0.12)",
+  display: "inline-block",
+  flexShrink: 0,
+  overflow: "hidden",
+});
+
 export function AppIcon({ src, size }: { src?: string; size: number }) {
   return (
-    <span className="ai-icon" style={{ height: size, width: size }}>
+    <span className={appIcon} style={{ height: size, width: size }}>
       {src ? <img alt="" height={size} src={src} width={size} /> : null}
     </span>
   );
