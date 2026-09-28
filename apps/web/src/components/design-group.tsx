@@ -3369,8 +3369,6 @@ const dayRows = {
       zIndex: 3,
     },
     compoundVariants: [
-      { corner: true, css: { borderTopLeftRadius: "12px" }, page: true },
-      { css: { borderTopRightRadius: "12px" }, last: true, page: true },
       {
         css: {
           boxShadow:
@@ -3382,7 +3380,6 @@ const dayRows = {
     ],
     variants: {
       corner: { true: { left: 0, width: "46px", zIndex: 4 } },
-      last: { true: {} },
       me: { true: { left: "46px", zIndex: 4 } },
       // Under the page's own pinned rows, when it has any.
       page: { true: { top: "var(--pinned-top, -8px)" } },
@@ -4930,10 +4927,9 @@ function DayRowsTable({
             >
               <span className={srOnly}>日付</span>
             </th>
-            {group.members.map((member, column) => (
+            {group.members.map((member) => (
               <th
                 className={dayRows.head({
-                  last: column === group.members.length - 1,
                   me: member.me === true,
                   page,
                   scrolls,
