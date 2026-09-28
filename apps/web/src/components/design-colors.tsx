@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { css } from "styled-system/css";
+import { css, cva, cx } from "styled-system/css";
 
 import type { ColorScheme, ColorToken, Tone } from "../lib/design-tokens";
 import {
@@ -94,10 +94,314 @@ function contrastGrade(ratio: number) {
   return "—";
 }
 
-function ContrastBadge({ ratio }: { ratio: number }) {
+// /design/colors: the palette page. Each cell sets its own light or dark
+// variables, so the samples sit on the real screen's ground.
+const palette = {
+  block: css({
+    border: "1px solid token(colors.separator)",
+    borderRadius: "10px",
+    display: "inline-grid",
+    flexShrink: 0,
+    fontSize: "11px",
+    fontWeight: 600,
+    height: "36px",
+    placeItems: "center",
+    width: "64px",
+  }),
+  cell: css({
+    "& > code": { color: "text3", fontSize: "11px" },
+    alignItems: "center",
+    bg: "background",
+    borderTop: "1px solid token(colors.separator)",
+    color: "text",
+    display: "flex",
+    gap: "12px",
+    height: "100%",
+    minHeight: "64px",
+    padding: "12px 16px",
+  }),
+  distinct: css({
+    display: "grid",
+    gap: "16px",
+    gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+  }),
+  distinctCard: css({
+    "& > ul": {
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+      listStyle: "none",
+      marginTop: "12px",
+      padding: 0,
+    },
+    "& li": {
+      alignItems: "center",
+      display: "flex",
+      fontSize: "12px",
+      gap: "6px",
+    },
+    bg: "background",
+    border: "1px solid token(colors.separator)",
+    borderRadius: "16px",
+    color: "text",
+    padding: "16px",
+  }),
+  distinctNames: css({ color: "text2", marginLeft: "4px" }),
+  // How far apart two marks are, badged green, gray when close and red
+  // when hard to tell apart.
+  distinctValue: css({
+    "& > small": {
+      bg: "accentSoft",
+      borderRadius: "6px",
+      color: "accent",
+      fontSize: "9px",
+      fontWeight: 600,
+      padding: "1px 6px",
+    },
+    '&[data-level="見分けにくい"] > small': {
+      bg: "danger",
+      color: "var(--on-badge)",
+    },
+    '&[data-level="近い"] > small': { bg: "fill2", color: "text2" },
+    alignItems: "baseline",
+    color: "text3",
+    display: "inline-flex",
+    fontSize: "11px",
+    fontVariantNumeric: "tabular-nums",
+    gap: "6px",
+    marginLeft: "auto",
+  }),
+  grays: css({
+    "& > ul": {
+      border: "1px solid token(colors.separator)",
+      borderRadius: "8px",
+      display: "flex",
+      height: "28px",
+      listStyle: "none",
+      overflow: "hidden",
+      padding: 0,
+    },
+    "& li": { flex: 1 },
+    display: "flex",
+    flexDirection: "column",
+    gap: "3px",
+    marginTop: "12px",
+  }),
+  group: css({ "& + &": { marginTop: "36px" } }),
+  lineSample: css({
+    borderTopWidth: "2px",
+    flexShrink: 0,
+    height: 0,
+    width: "64px",
+  }),
+  markChip: css({ alignItems: "center", display: "flex", gap: "12px" }),
+  marks: css({
+    display: "grid",
+    gap: "28px 20px",
+    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+  }),
+  markTile: cva({
+    base: {
+      display: "grid",
+      flexShrink: 0,
+      fontWeight: 700,
+      placeItems: "center",
+    },
+    variants: {
+      size: {
+        large: {
+          borderRadius: "11px",
+          fontSize: "17px",
+          height: "40px",
+          width: "40px",
+        },
+        small: {
+          borderRadius: "8px",
+          fontSize: "13px",
+          height: "30px",
+          width: "30px",
+        },
+      },
+    },
+  }),
+  markValues: css({
+    "& > code": { color: "text3", fontSize: "11px" },
+    "& > small": { color: "text4", fontSize: "10px" },
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+  }),
+  roleList: css({
+    "& code": { color: "text", marginRight: "6px" },
+    color: "text3",
+    display: "flex",
+    flexWrap: "wrap",
+    fontSize: "11px",
+    gap: "6px 16px",
+    marginBottom: "20px",
+  }),
+  section: css({
+    "& > h2": { fontSize: "20px", fontWeight: 500, letterSpacing: "0.04em" },
+    margin: "72px auto 0",
+    maxWidth: "1100px",
+  }),
+  sectionDescription: css({
+    color: "text3",
+    fontSize: "13px",
+    lineHeight: "1.8",
+    margin: "8px 0 28px",
+    maxWidth: "640px",
+  }),
+  // Cards stacked into one, light over dark: rounded only at the ends.
+  stacked: css({
+    "& + &": { borderTop: 0 },
+    "&:first-of-type": { borderRadius: "16px 16px 0 0" },
+    "&:last-of-type": { borderRadius: "0 0 16px 16px" },
+    bg: "background",
+    border: "1px solid token(colors.separator)",
+    color: "text",
+    padding: "16px",
+  }),
+  // A group's, a theme's or a mark's name over its samples.
+  subheading: css({
+    color: "text2",
+    fontSize: "13px",
+    fontWeight: 600,
+    marginBottom: "12px",
+  }),
+  swatch: css({
+    border: "1px solid token(colors.separator)",
+    borderRadius: "8px",
+    height: "28px",
+  }),
+  swatchLabel: css({ color: "text2", fontSize: "10px" }),
+  swatches: css({
+    "& > li": { display: "flex", flexDirection: "column", gap: "3px" },
+    "& code": { color: "text3", fontSize: "11px" },
+    display: "grid",
+    gap: "10px 8px",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    listStyle: "none",
+    padding: 0,
+  }),
+  // The neutral tokens' table: each row's name, then the token in light
+  // and in dark, each cell filling its row.
+  table: css({
+    // A nominal height lets a cell fill the row with height: 100%.
+    "& th, & td": {
+      height: "1px",
+      padding: 0,
+      textAlign: "left",
+      verticalAlign: "middle",
+    },
+    "& tbody th": {
+      bg: "var(--ws-bg)",
+      borderTop: "1px solid token(colors.separator)",
+      color: "text3",
+      fontSize: "12px",
+      fontWeight: 400,
+      padding: "14px 16px",
+    },
+    "& tbody th code": {
+      color: "text",
+      display: "block",
+      fontSize: "13px",
+      marginBottom: "4px",
+    },
+    "& thead th": {
+      bg: "fill",
+      color: "text4",
+      fontSize: "11px",
+      fontWeight: 400,
+      letterSpacing: "0.08em",
+      padding: "10px 16px",
+      width: "36%",
+    },
+    "& thead th:first-child": { width: "28%" },
+    border: "1px solid token(colors.border)",
+    borderRadius: "16px",
+    borderSpacing: 0,
+    overflow: "hidden",
+    width: "100%",
+  }),
+  textSample: css({
+    flexShrink: 0,
+    fontSize: "15px",
+    fontWeight: 600,
+    width: "64px",
+  }),
+  themeButton: css({
+    bg: "accentFill",
+    borderRadius: "18px",
+    color: "onAccentFill",
+    padding: "8px 14px",
+  }),
+  themeChip: css({
+    bg: "accentSoft",
+    border: "1px solid token(colors.accentMuted)",
+    borderRadius: "10px",
+    color: "accent",
+    padding: "7px 12px",
+  }),
+  themeContrast: css({
+    alignItems: "center",
+    color: "text3",
+    display: "flex",
+    flexWrap: "wrap",
+    fontSize: "11px",
+    gap: "4px 10px",
+    marginTop: "14px",
+  }),
+  themeLink: css({ color: "accentLine" }),
+  themePreview: css({
+    alignItems: "center",
+    display: "flex",
+    fontSize: "12px",
+    fontWeight: 600,
+    gap: "10px",
+    marginBottom: "14px",
+  }),
+  themes: css({
+    display: "grid",
+    gap: "28px 20px",
+    gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+  }),
+};
+
+// A contrast ratio and its grade, green when it passes; at the end of its
+// row, or inline in a sentence.
+const contrastBadge = cva({
+  base: {
+    "& > small": {
+      bg: "fill2",
+      borderRadius: "6px",
+      color: "text4",
+      fontSize: "9px",
+      fontWeight: 600,
+      padding: "1px 5px",
+    },
+    "&[data-pass=true] > small": { bg: "accentSoft", color: "accent" },
+    alignItems: "baseline",
+    color: "text3",
+    display: "inline-flex",
+    fontSize: "11px",
+    fontVariantNumeric: "tabular-nums",
+    gap: "4px",
+    marginLeft: "auto",
+  },
+  variants: { inline: { true: { marginLeft: 0 } } },
+});
+
+function ContrastBadge({
+  ratio,
+  inline = false,
+}: {
+  ratio: number;
+  inline?: boolean;
+}) {
   const grade = contrastGrade(ratio);
   return (
-    <span className="cp-contrast" data-pass={grade !== "—"}>
+    <span className={contrastBadge({ inline })} data-pass={grade !== "—"}>
       {ratio.toFixed(1)}
       <small>{grade}</small>
     </span>
@@ -116,7 +420,7 @@ function TokenSample({ token }: { token: ColorToken }) {
   const color = `var(--${token.name})`;
   if (textTokens.has(token.name)) {
     return (
-      <span className="cp-text-sample" style={{ color }}>
+      <span className={palette.textSample} style={{ color }}>
         Aa あ 12
       </span>
     );
@@ -124,7 +428,7 @@ function TokenSample({ token }: { token: ColorToken }) {
   if (lineTokens.has(token.name)) {
     return (
       <span
-        className="cp-line-sample"
+        className={palette.lineSample}
         style={{
           borderColor: color,
           borderStyle: token.name === "border-strong" ? "dashed" : "solid",
@@ -138,17 +442,20 @@ function TokenSample({ token }: { token: ColorToken }) {
       "on-inverse": "var(--inverse)",
     }[token.name];
     return (
-      <span className="cp-block" style={{ background: ground, color }}>
+      <span className={palette.block} style={{ background: ground, color }}>
         完了
       </span>
     );
   }
   if (token.name.startsWith("shadow")) {
     return (
-      <span className="cp-block" style={{ boxShadow: `0 6px 16px ${color}` }} />
+      <span
+        className={palette.block}
+        style={{ boxShadow: `0 6px 16px ${color}` }}
+      />
     );
   }
-  return <span className="cp-block" style={{ background: color }} />;
+  return <span className={palette.block} style={{ background: color }} />;
 }
 
 function TokenCell({
@@ -161,7 +468,7 @@ function TokenCell({
   const value = token[scheme];
   const ground = valueOf(scheme, "bg");
   return (
-    <div className="cp-cell" style={themeStyle("moss", scheme)}>
+    <div className={palette.cell} style={themeStyle("moss", scheme)}>
       <TokenSample token={token} />
       <code>{value}</code>
       {textTokens.has(token.name) ? (
@@ -183,9 +490,9 @@ function Section({
   title: string;
 }) {
   return (
-    <section aria-labelledby={id} className="cp-section">
+    <section aria-labelledby={id} className={palette.section}>
       <h2 id={id}>{title}</h2>
-      <p className="cp-section-description">{description}</p>
+      <p className={palette.sectionDescription}>{description}</p>
       {children}
     </section>
   );
@@ -199,9 +506,9 @@ function NeutralTokens() {
       title="基本色"
     >
       {neutralTokenGroups.map((group) => (
-        <div className="cp-group" key={group.label}>
-          <h3>{group.label}</h3>
-          <table className="cp-table">
+        <div className={palette.group} key={group.label}>
+          <h3 className={palette.subheading}>{group.label}</h3>
+          <table className={palette.table}>
             <thead>
               <tr>
                 <th scope="col">名前</th>
@@ -212,7 +519,7 @@ function NeutralTokens() {
             <tbody>
               {group.tokens.map((token) => (
                 <tr key={token.name}>
-                  <th className="cp-name" scope="row">
+                  <th scope="row">
                     <code>--{token.name}</code>
                     {token.label}
                   </th>
@@ -243,27 +550,27 @@ function ThemePalette({
 }) {
   const colors = themeColors(theme, scheme, tone);
   return (
-    <div className="cp-theme-scheme" style={themeStyle(theme.id, scheme, tone)}>
-      <div className="cp-theme-preview">
-        <span className="cp-theme-button">完了</span>
-        <span className="cp-theme-chip">選択中</span>
-        <span className="cp-theme-link">月で見る</span>
+    <div className={palette.stacked} style={themeStyle(theme.id, scheme, tone)}>
+      <div className={palette.themePreview}>
+        <span className={palette.themeButton}>完了</span>
+        <span className={palette.themeChip}>選択中</span>
+        <span className={palette.themeLink}>月で見る</span>
       </div>
-      <ul className="cp-swatches">
+      <ul className={palette.swatches}>
         {themeRoles.map((role) => (
           <li key={role.key}>
             <span
               aria-hidden="true"
-              className="cp-swatch"
+              className={palette.swatch}
               style={{ background: colors[role.key] }}
             />
-            <span className="cp-swatch-label">{role.label}</span>
+            <span className={palette.swatchLabel}>{role.label}</span>
             <code>{colors[role.key]}</code>
           </li>
         ))}
       </ul>
-      <div className="cp-grays">
-        <span className="cp-swatch-label">グレー</span>
+      <div className={palette.grays}>
+        <span className={palette.swatchLabel}>グレー</span>
         <ul>
           {grayRoles.map((name) => (
             <li
@@ -274,11 +581,14 @@ function ThemePalette({
           ))}
         </ul>
       </div>
-      <p className="cp-theme-contrast">
+      <p className={palette.themeContrast}>
         文字と背景の比{" "}
-        <ContrastBadge ratio={contrast(colors.accent, valueOf(scheme, "bg"))} />
+        <ContrastBadge
+          inline
+          ratio={contrast(colors.accent, valueOf(scheme, "bg"))}
+        />
         塗りと文字の比{" "}
-        <ContrastBadge ratio={contrast(colors.onFill, colors.fill)} />
+        <ContrastBadge inline ratio={contrast(colors.onFill, colors.fill)} />
       </p>
     </div>
   );
@@ -306,7 +616,7 @@ function ThemeTokens({ tone, id }: { tone: Tone; id: string }) {
       title={`テーマカラー（${toneLabels[tone]}）`}
     >
       {tone === "deep" ? (
-        <p className="cp-role-list">
+        <p className={palette.roleList}>
           {themeRoles.map((role) => (
             <span key={role.key}>
               <code>--{role.name}</code>
@@ -315,10 +625,10 @@ function ThemeTokens({ tone, id }: { tone: Tone; id: string }) {
           ))}
         </p>
       ) : null}
-      <div className="cp-themes">
+      <div className={palette.themes}>
         {themes.map((theme) => (
-          <article className="cp-theme" key={theme.id}>
-            <h3>{theme.name}</h3>
+          <article key={theme.id}>
+            <h3 className={palette.subheading}>{theme.name}</h3>
             <ThemePalette tone={tone} scheme="light" theme={theme} />
             <ThemePalette tone={tone} scheme="dark" theme={theme} />
           </article>
@@ -339,11 +649,17 @@ function MarkChip({
 }) {
   const { color, tint } = markColorIn(option, scheme, tone);
   return (
-    <div className="cp-mark" style={themeStyle("moss", scheme, tone)}>
-      <span className="cp-mark-tile" style={{ background: tint, color }}>
+    <div
+      className={cx(palette.stacked, palette.markChip)}
+      style={themeStyle("moss", scheme, tone)}
+    >
+      <span
+        className={palette.markTile({ size: "large" })}
+        style={{ background: tint, color }}
+      >
         {option.name.slice(0, 1)}
       </span>
-      <span className="cp-mark-values">
+      <span className={palette.markValues}>
         <small>
           {toneLabels[tone]}・{schemeLabels[scheme]}
         </small>
@@ -362,10 +678,10 @@ function MarkTokens() {
       id="cp-marks"
       title="シフトの色"
     >
-      <div className="cp-marks">
+      <div className={palette.marks}>
         {markColors.map((option) => (
-          <article className="cp-mark-card" key={option.name}>
-            <h3>{option.name}</h3>
+          <article key={option.name}>
+            <h3 className={palette.subheading}>{option.name}</h3>
             {tones.map((tone) =>
               colorSchemes.map((scheme) => (
                 <MarkChip
@@ -429,11 +745,11 @@ function DistinctTokens() {
       id="cp-distinct"
       title="見分けやすさ"
     >
-      <div className="cp-distinct">
+      <div className={palette.distinct}>
         {tones.map((tone) =>
           colorSchemes.map((scheme) => (
             <article
-              className="cp-distinct-card"
+              className={palette.distinctCard}
               key={`${tone}-${scheme}`}
               style={themeStyle("moss", scheme, tone)}
             >
@@ -443,23 +759,23 @@ function DistinctTokens() {
               <ul>
                 {closestPairs(tone, scheme).map(
                   ({ distance, first, second }) => (
-                    <li
-                      data-level={distanceLabel(distance)}
-                      key={`${first.name}-${second.name}`}
-                    >
+                    <li key={`${first.name}-${second.name}`}>
                       {[first, second].map((mark) => (
                         <span
-                          className="cp-mark-tile"
+                          className={palette.markTile({ size: "small" })}
                           key={mark.name}
                           style={{ background: mark.tint, color: mark.color }}
                         >
                           {mark.name.slice(0, 1)}
                         </span>
                       ))}
-                      <span className="cp-distinct-names">
+                      <span className={palette.distinctNames}>
                         {first.name}と{second.name}
                       </span>
-                      <span className="cp-distinct-value">
+                      <span
+                        className={palette.distinctValue}
+                        data-level={distanceLabel(distance)}
+                      >
                         {distance.toFixed(3)}
                         <small>{distanceLabel(distance)}</small>
                       </span>
