@@ -30,6 +30,7 @@ import {
   listStyle,
   dayGrid,
   WeekdayRow,
+  Screen,
 } from "./design-ui";
 import { useWeek } from "./design-week";
 import {
@@ -249,7 +250,7 @@ export function ImagePreviewPage({
   const shown = options.scheme ?? scheme;
   const title = `${month.getFullYear()}年${month.getMonth() + 1}月のシフト`;
   return (
-    <div className="dc-content st-screen">
+    <Screen>
       <div className="st-scroll">
         <PageHeader back="カレンダー" onBack={onClose} title="画像で保存" />
         <CellNamesContext
@@ -353,6 +354,6 @@ export function ImagePreviewPage({
           保存
         </Button>
       </div>
-    </div>
+    </Screen>
   );
 }

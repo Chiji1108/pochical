@@ -78,6 +78,7 @@ import {
   summaryRow,
   TodayButton,
   WeekdayRow,
+  Screen,
 } from "./design-ui";
 import { holidayName, useWeek } from "./design-week";
 import {
@@ -761,7 +762,7 @@ export function DesignGroup({
       return scanPage;
     }
     return (
-      <div className="dc-content st-screen">
+      <Screen>
         <div className="st-scroll">
           {page.name === "new" ? (
             newGroupPage
@@ -776,7 +777,7 @@ export function DesignGroup({
         </div>
         {page.name !== "new" && <TabBar active="group" onSelect={onTab} />}
         {joinSheet}
-      </div>
+      </Screen>
     );
   }
 
@@ -908,7 +909,7 @@ export function DesignGroup({
   }
 
   return (
-    <div className="dc-content st-screen">
+    <Screen>
       {page.name === "hub" ? (
         <div className="gr-layout">
           <GroupRail
@@ -1031,7 +1032,7 @@ export function DesignGroup({
       {page.name === "hub" && <TabBar active="group" onSelect={onTab} />}
       {memberSheet}
       {joinSheet}
-    </div>
+    </Screen>
   );
 }
 
@@ -1067,7 +1068,7 @@ function ScanPage({
     toast(scanRetries[result], "problem");
   };
   return (
-    <div className={cx("dc-content st-screen", scan.root)} data-toast-above="">
+    <Screen className={scan.root} data-toast-above="">
       <header className={scan.header}>
         <button
           aria-label="閉じる"
@@ -1111,7 +1112,7 @@ function ScanPage({
         <ImageIcon aria-hidden="true" size={18} />
         写真から読み取る
       </button>
-    </div>
+    </Screen>
   );
 }
 
@@ -1841,7 +1842,7 @@ function ChatPage({
   });
   const replying = byId(replyTo);
   return (
-    <div className="dc-content st-screen gr-chat">
+    <Screen className="gr-chat">
       <header className="gr-chat-header">
         <BackButton onClick={onBack}>{backLabel}</BackButton>
         <h3>{title}</h3>
@@ -2068,7 +2069,7 @@ function ChatPage({
         }}
         open={sharing}
       />
-    </div>
+    </Screen>
   );
 }
 

@@ -45,6 +45,8 @@ export default defineConfig({
           accentSoft: { value: "var(--accent-soft)" },
           accentSoft2: { value: "var(--accent-soft-2)" },
           accentStrong: { value: "var(--accent-strong)" },
+          // The screen's own ground.
+          background: { value: "var(--bg)" },
           border: { value: "var(--border)" },
           controlOff: { value: "var(--control-off)" },
           danger: { value: "var(--danger)" },

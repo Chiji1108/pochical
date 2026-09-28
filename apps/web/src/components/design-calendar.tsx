@@ -1,7 +1,6 @@
 import { DatePicker, parseDate } from "@ark-ui/react";
 import {
   ArrowRight,
-  BatteryFull,
   CalendarDays,
   CalendarPlus,
   Check,
@@ -13,10 +12,8 @@ import {
   Pencil,
   Plus,
   Settings2,
-  Signal,
   Trash2,
   UsersRound,
-  Wifi,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -32,6 +29,7 @@ import type { DesignVariants } from "../lib/design-variants";
 import type { Coworkers } from "./design-coworkers";
 import { GapSheet, gapDaysIn } from "./design-gap-sheet";
 import { DesignGroup, JoinSheet } from "./design-group";
+import { Phone } from "./design-phone";
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import { DesignSettings } from "./design-settings";
 import type { SettingsPage } from "./design-settings";
@@ -51,6 +49,7 @@ import {
   DoneButton,
   IconButton,
   Pager,
+  Screen,
   SummaryRow,
   TodayButton,
   WeekdayRow,
@@ -648,8 +647,7 @@ export function DesignCalendar({
   return (
     <PhoneContext value={phoneRef}>
       <ToastContext value={toast}>
-        <div className="dc-phone" ref={phoneRef} style={themeStyle}>
-          <PhoneStatusBar />
+        <Phone ref={phoneRef} style={themeStyle}>
           {tab === "settings" && (
             <DesignSettings
               coworkers={members}
@@ -687,10 +685,7 @@ export function DesignCalendar({
               schedule={schedule}
             />
           )}
-          <div
-            className="dc-content"
-            hidden={tab !== "calendar" || imagePreview}
-          >
+          <Screen hidden={tab !== "calendar" || imagePreview}>
             <div className={heading.bar}>
               <h3 className={heading.title}>
                 <span className={heading.year}>{month.getFullYear()}</span>
@@ -874,7 +869,7 @@ export function DesignCalendar({
                 />
               </div>
             )}
-          </div>
+          </Screen>
           <Sheet
             label="今月の内訳"
             onOpenChange={sheetChange("breakdown")}
@@ -952,9 +947,8 @@ export function DesignCalendar({
           <span aria-live="polite" className="dc-sr-only">
             {announcement}
           </span>
-          <div aria-hidden="true" className="dc-home-indicator" />
           <PhoneToasts toaster={toaster} />
-        </div>
+        </Phone>
       </ToastContext>
     </PhoneContext>
   );
@@ -1018,20 +1012,6 @@ export function TabBar({
         </button>
       ))}
     </nav>
-  );
-}
-
-export function PhoneStatusBar() {
-  return (
-    <div aria-hidden="true" className="dc-status">
-      <span>9:41</span>
-      <span className="dc-island" />
-      <span className="dc-status-icons">
-        <Signal size={17} strokeWidth={2.6} />
-        <Wifi size={18} strokeWidth={2.5} />
-        <BatteryFull size={25} strokeWidth={1.8} />
-      </span>
-    </div>
   );
 }
 

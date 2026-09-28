@@ -35,6 +35,7 @@ import {
 import type {
   ButtonHTMLAttributes,
   CSSProperties,
+  HTMLAttributes,
   LabelHTMLAttributes,
   ReactNode,
   Ref,
@@ -153,6 +154,25 @@ export function IconButton({
       {...props}
     />
   );
+}
+
+// A screen under the phone's status bar: a column that fills the phone,
+// so the part that scrolls and what is pinned to its foot share the
+// height. Hidden, it keeps its state and takes no room.
+const screenStyle = css({
+  "&[hidden]": { display: "none" },
+  display: "flex",
+  flex: 1,
+  flexDirection: "column",
+  minHeight: 0,
+  paddingTop: "12px",
+});
+
+export function Screen({
+  className,
+  ...props
+}: HTMLAttributes<HTMLDivElement> & { "data-toast-above"?: string }) {
+  return <div className={cx(screenStyle, className)} {...props} />;
 }
 
 // 完了 at a screen's top right, for the mode that has to be left on

@@ -109,62 +109,6 @@
   .design-footnote {
     margin: 40px 0 0;
   }
-  .dc-phone {
-    position: relative;
-    width: 100%;
-    padding: 17px 15px 18px;
-    color: var(--text);
-    background: var(--bg);
-    border: 6px solid var(--ws-bezel);
-    border-radius: 53px;
-    box-shadow:
-      0 3px 0 1px var(--ws-bezel-edge),
-      0 28px 50px -30px var(--ws-bezel-shadow);
-  }
-  .dc-status {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 28px;
-    padding: 0 14px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .dc-island {
-    position: absolute;
-    left: 50%;
-    width: 92px;
-    height: 27px;
-    background: var(--ws-island);
-    border-radius: 20px;
-    transform: translateX(-50%);
-  }
-  .dc-status-icons {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-  }
-  .dc-content {
-    padding-top: 28px;
-  }
-  .dc-month-actions {
-    display: flex;
-    gap: 0;
-    color: var(--text-3);
-  }
-  .dc-month-actions button {
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 44px;
-    background: transparent;
-    border: 0;
-    border-radius: 12px;
-  }
-  .dc-month-actions button:hover:not(:disabled) {
-    background: var(--accent-soft);
-  }
   .design-page .dc-today-button {
     width: auto;
     padding: 0 10px;
@@ -245,13 +189,6 @@
   .dc-start-area {
     text-align: center;
   }
-  .dc-home-indicator {
-    width: 114px;
-    height: 5px;
-    margin: 18px auto 0;
-    background: var(--home-indicator);
-    border-radius: 4px;
-  }
   .dc-sr-only {
     position: absolute;
     width: 1px;
@@ -285,22 +222,6 @@
     }
     .design-screens > section {
       width: min(390px, 100%);
-    }
-  }
-  @media (max-width: 370px) {
-    .dc-phone {
-      padding-inline: 10px;
-      border-width: 5px;
-      border-radius: 44px;
-    }
-    .dc-status {
-      padding-inline: 6px;
-    }
-    .dc-island {
-      width: 76px;
-    }
-    .dc-month-actions button {
-      width: 34px;
     }
   }
 
@@ -391,24 +312,6 @@
     width: 100%;
   }
 
-  /* Keep input controls visible inside a fixed device frame. */
-  .dc-phone {
-    display: flex;
-    flex-direction: column;
-    height: 844px;
-    overflow: hidden;
-  }
-  .dc-status,
-  .dc-home-indicator {
-    flex-shrink: 0;
-  }
-  .dc-content {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    min-height: 0;
-    padding-top: 20px;
-  }
   .dc-patterns button:hover {
     background: var(--accent-soft);
     border-color: var(--accent-muted);
@@ -416,12 +319,6 @@
   .dc-patterns button:active {
     background: var(--accent-press);
     transform: scale(0.97);
-  }
-  .dc-content {
-    padding-top: 12px;
-  }
-  .dc-home-indicator {
-    margin-top: 10px;
   }
   .dc-patterns-two-rows button {
     height: 64px;
@@ -1004,14 +901,6 @@
     color: var(--text-3);
   }
   /* Settings. */
-  .dc-content[hidden] {
-    display: none;
-  }
-  .st-screen {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
   .st-scroll {
     display: flex;
     flex: 1;
@@ -3274,12 +3163,6 @@
     background: var(--danger);
   }
   /* A settings list whose rows are the choices, like 外観. */
-  /* Phones show scroll indicators only while scrolling; hide the desktop
-   browser's scrollbars inside the mockups. */
-  .dc-phone,
-  .dc-phone * {
-    scrollbar-width: none;
-  }
   .gr-day-sheet-value {
     display: inline-flex;
     gap: 6px;

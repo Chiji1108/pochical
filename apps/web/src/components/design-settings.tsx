@@ -65,6 +65,7 @@ import {
   Tag,
   dayGrid,
   WeekdayRow,
+  Screen,
 } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
 import type { ColoredDay } from "./design-week";
@@ -188,7 +189,7 @@ export function DesignSettings({
     [...rules].reverse().find((rule) => rule.sequence.length > 0)?.sequence ??
     [];
   return (
-    <div className="dc-content st-screen">
+    <Screen>
       <div className="st-scroll">
         {page === "top" && (
           <SettingsTop
@@ -336,7 +337,7 @@ export function DesignSettings({
         )}
       </div>
       <TabBar active="settings" onSelect={onTab} />
-    </div>
+    </Screen>
   );
 }
 

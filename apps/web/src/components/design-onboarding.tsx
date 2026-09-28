@@ -16,11 +16,11 @@ import {
   dateKey,
   formatDay,
   MonthPicker,
-  PhoneStatusBar,
   RepeatSequenceEditor,
   repeatSchedule,
 } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
+import { Phone } from "./design-phone";
 import { ColorSchemeContext, useThemeStyle } from "./design-theme";
 import { BackButton, Button, Tag } from "./design-ui";
 import { useWeek } from "./design-week";
@@ -239,8 +239,7 @@ export function DesignOnboarding({
   }
 
   return (
-    <div className="dc-phone ob-phone" style={themeStyle}>
-      <PhoneStatusBar />
+    <Phone style={themeStyle}>
       <div className="ob-content">
         {stage === "welcome" && (
           <WelcomeStep
@@ -275,8 +274,7 @@ export function DesignOnboarding({
           />
         )}
       </div>
-      <div aria-hidden="true" className="dc-home-indicator" />
-    </div>
+    </Phone>
   );
 }
 
