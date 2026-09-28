@@ -175,6 +175,92 @@ export function Screen({
   return <div className={cx(screenStyle, className)} {...props} />;
 }
 
+// The part of a screen that scrolls under the status bar, heading and all,
+// as the platforms' large-title pages: its parts in a column with room
+// between, each keeping its height, so a long page scrolls rather than
+// squeezing its lists, which hide what overflows them.
+const screenScrollStyle = cva({
+  base: {
+    "& > *": { flexShrink: 0 },
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "18px",
+    minHeight: 0,
+    overflowY: "auto",
+    padding: "8px 4px 16px",
+  },
+  variants: {
+    // Beside a rail on its left, like the group hub's list of groups: it
+    // takes the rest of the width and runs to the right edge.
+    beside: { true: { minWidth: 0, paddingRight: 0 } },
+  },
+});
+
+// Marked, so a control inside can scroll it back to the top.
+export function ScreenScroll({
+  beside = false,
+  children,
+}: {
+  beside?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className={screenScrollStyle({ beside })} data-screen-scroll="">
+      {children}
+    </div>
+  );
+}
+
+// A titled part of a screen, its name small over it as over the
+// platforms' grouped lists, with an aside after the name when it needs
+// one. A section drawing its own heading styles a direct h4 with
+// sectionTitle.
+export const sectionTitle = css({
+  color: "text3",
+  fontSize: "12px",
+  fontWeight: 600,
+  margin: "0 0 6px 12px",
+});
+const sectionNote = css({
+  color: "text4",
+  fontSize: "11px",
+  fontWeight: 400,
+  marginLeft: "8px",
+});
+
+export function Section({
+  title,
+  note,
+  children,
+}: {
+  title: string;
+  note?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section>
+      <h4 className={sectionTitle}>
+        {title}
+        {note && <small className={sectionNote}>{note}</small>}
+      </h4>
+      {children}
+    </section>
+  );
+}
+
+// A quiet line of explanation under what it explains.
+const noteStyle = css({
+  color: "text4",
+  fontSize: "11px",
+  lineHeight: 1.6,
+  margin: "0 8px",
+});
+
+export function Note({ children }: { children: ReactNode }) {
+  return <p className={noteStyle}>{children}</p>;
+}
+
 // A field's name, and a hint after it in lighter words: over what it names,
 // at the start of a row whose value sits at the end, or across a grid of
 // choices like the colors to pick.

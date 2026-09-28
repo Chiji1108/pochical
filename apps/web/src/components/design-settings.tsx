@@ -1,6 +1,7 @@
 import { ArrowRight, Check, ChevronRight, CloudCheck } from "lucide-react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
+import { css } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
@@ -62,6 +63,9 @@ import {
   WeekdayRow,
   Screen,
   fieldLabel,
+  Note,
+  ScreenScroll,
+  Section,
 } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
 import type { ColoredDay } from "./design-week";
@@ -186,7 +190,7 @@ export function DesignSettings({
     [];
   return (
     <Screen>
-      <div className="st-scroll">
+      <ScreenScroll>
         {page === "top" && (
           <SettingsTop
             coworkerCount={coworkers.names.length}
@@ -331,7 +335,7 @@ export function DesignSettings({
             patternKeys={patternKeys}
           />
         )}
-      </div>
+      </ScreenScroll>
       <TabBar active="settings" onSelect={onTab} />
     </Screen>
   );
@@ -355,7 +359,7 @@ function SettingsTop({
   return (
     <>
       <PageHeader title="設定" />
-      <Section title="シフト">
+      <ListSection title="シフト">
         <ListRow
           label="働き方"
           onClick={() => {
@@ -396,8 +400,8 @@ function SettingsTop({
             onOpen("job");
           }}
         />
-      </Section>
-      <Section title="表示">
+      </ListSection>
+      <ListSection title="表示">
         <ListRow
           label="スタイル"
           onClick={() => {
@@ -422,15 +426,15 @@ function SettingsTop({
             onOpen("week");
           }}
         />
-      </Section>
-      <Section title="アカウント">
+      </ListSection>
+      <ListSection title="アカウント">
         <ListRow
           label="プロフィール"
           onClick={() => {
             onOpen("profile");
           }}
           value={
-            <span className="st-inline-value">
+            <span className={settingsParts.inlineValue}>
               <PhotoAvatar
                 name={profile.name}
                 photo={profile.photo}
@@ -445,39 +449,40 @@ function SettingsTop({
             onOpen("account");
           }}
         />
-      </Section>
+      </ListSection>
     </>
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="st-section">
-      <h4>{title}</h4>
-      <List>{children}</List>
-    </section>
-  );
-}
+const settingsParts = {
+  // A form's row: what is set on the left, its value on the right.
+  field: css({
+    alignItems: "center",
+    display: "flex",
+    justifyContent: "space-between",
+  }),
+  // A row's value with an icon before it, like the account's provider.
+  inlineValue: css({
+    alignItems: "center",
+    display: "inline-flex",
+    gap: "8px",
+    justifyContent: "flex-end",
+  }),
+};
 
-// A titled block whose content brings its own background.
-function Group({
+// A titled list of rows. A section whose content brings its own ground
+// is a Section.
+function ListSection({
   title,
-  note,
   children,
 }: {
   title: string;
-  // A short aside after the title, like who a setting reaches.
-  note?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="st-section">
-      <h4>
-        {title}
-        {note && <small className="st-section-note">{note}</small>}
-      </h4>
-      {children}
-    </section>
+    <Section title={title}>
+      <List>{children}</List>
+    </Section>
   );
 }
 
@@ -489,7 +494,7 @@ function AccountRow({ onOpen }: { onOpen: () => void }) {
       onClick={onOpen}
       value={
         account ? (
-          <span className="st-inline-value">
+          <span className={settingsParts.inlineValue}>
             <ProviderLogo provider={account.provider} size={15} />
             {providerNames[account.provider]}
           </span>
@@ -553,16 +558,16 @@ function AccountPage({ onBack }: { onBack: () => void }) {
             </button>
           ))}
         </div>
-        <p className="st-note">
+        <Note>
           はじめてなら、この端末のデータがそのまま引き継がれます。すでにアカウントがあれば、そのデータを開きます。ログインしなくても、この端末ではそのまま使えます。
-        </p>
+        </Note>
       </>
     );
   }
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="アカウント" />
-      <Group title="ログイン中">
+      <Section title="ログイン中">
         <List>
           <ListRow
             label={providerNames[account.provider]}
@@ -577,10 +582,10 @@ function AccountPage({ onBack }: { onBack: () => void }) {
             valueClassName="st-account-email"
           />
         </List>
-        <p className="st-note">
+        <Note>
           シフトとグループはこのアカウントに保存され、ほかの端末でも同じデータを使えます。
-        </p>
-      </Group>
+        </Note>
+      </Section>
       <List>
         {/* Asks first, on the spot, so no arrow as for a page. */}
         <ListRow
@@ -682,9 +687,9 @@ function RepeatDetails({
       <Button variant="text" onClick={onFix}>
         今の繰り返しを直す
       </Button>
-      <p className="st-note">
+      <Note>
         異動などで順番が変わるときは、切り替える日を選んで新しい繰り返しにします。それより前のシフトは、そのまま残ります。
-      </p>
+      </Note>
     </>
   );
 }
@@ -693,7 +698,7 @@ function RuleHistory({ rules }: { rules: RepeatRule[] }) {
   return (
     <>
       {rules.length > 1 && (
-        <Section title="これまで">
+        <ListSection title="これまで">
           {rules
             .map((rule, index) => {
               const next = rules[index + 1];
@@ -713,7 +718,7 @@ function RuleHistory({ rules }: { rules: RepeatRule[] }) {
               );
             })
             .reverse()}
-        </Section>
+        </ListSection>
       )}
     </>
   );
@@ -778,7 +783,7 @@ function RepeatEditorPage({
   return (
     <>
       <PageHeader back={text.back} onBack={onBack} title={text.title} />
-      <div className="st-field">
+      <div className={settingsParts.field}>
         <span className={fieldLabel({ place: "row" })}>{text.dayLabel}</span>
         <InputDatePicker
           ariaLabel={`${text.dayLabel}：${formatDay(day)}。タップで変更`}
@@ -795,11 +800,11 @@ function RepeatEditorPage({
         patternKeys={patternKeys}
         sequence={sequence}
       />
-      <p className="st-note">
+      <Note>
         {fixing
           ? "並びの1つ目のシフトが入る日を選びます。"
           : `${text.dayLabel}が、並びの1日目になります。`}
-      </p>
+      </Note>
       <List>
         <SwitchRow
           checked={holidaysOff}
@@ -809,10 +814,10 @@ function RepeatEditorPage({
       </List>
       {sequence.length > 0 && <RepeatPreview rule={rule} />}
       {fixing && (
-        <p className="st-note">
+        <Note>
           {formatDay(start)}
           からのシフトを入れ直します。その間に自分で直した日も、並びのとおりに戻ります。
-        </p>
+        </Note>
       )}
       <Button
         variant="primary"
@@ -887,10 +892,10 @@ function JobChangePage({
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="仕事が変わったとき" />
-      <p className="st-note">
+      <Note>
         新しい仕事の働き方とシフトパターンを、はじめの設定と同じ質問で選び直します。
-      </p>
-      <div className="st-field">
+      </Note>
+      <div className={settingsParts.field}>
         <span className={fieldLabel({ place: "row" })}>新しい仕事の初日</span>
         <InputDatePicker
           ariaLabel={`新しい仕事の初日：${formatDay(start)}。タップで変更`}
@@ -902,9 +907,9 @@ function JobChangePage({
           <span>{formatDay(start)}</span>
         </InputDatePicker>
       </div>
-      <p className="st-note">
+      <Note>
         前の日までのシフトは、そのまま残ります。この日からのシフトは、新しい仕事に合わせて入れ直します。
-      </p>
+      </Note>
       <Button
         variant="primary"
         onClick={() => {
@@ -966,9 +971,9 @@ function ProfilePage({
           }
         />
       </List>
-      <p className="st-note">
+      <Note>
         グループを作るときや参加するときに、最初に入る名前と写真です。グループごとに違う名前や写真にしたいときは、各グループの設定で変えられます。
-      </p>
+      </Note>
     </>
   );
 }
@@ -1065,9 +1070,9 @@ function WorkStylePage({
           onNew={onNew}
         />
       ) : (
-        <p className="st-note">
+        <Note>
           順番を決めると、先の月までシフトが自動で入ります。月ごとの入力はいらなくなります。
-        </p>
+        </Note>
       )}
       <RuleHistory rules={rules} />
     </>
@@ -1086,7 +1091,7 @@ function RosterSwitchPage({
   return (
     <>
       <PageHeader back="働き方" onBack={onBack} title="勤務表に切り替え" />
-      <div className="st-field">
+      <div className={settingsParts.field}>
         <span className={fieldLabel({ place: "row" })}>切り替える日</span>
         <InputDatePicker
           ariaLabel={`切り替える日：${formatDay(start)}。タップで変更`}
@@ -1098,9 +1103,9 @@ function RosterSwitchPage({
           <span>{formatDay(start)}</span>
         </InputDatePicker>
       </div>
-      <p className="st-note">
+      <Note>
         この日からの繰り返しのシフトは消えて、空いた状態になります。前の日までのシフトは、そのまま残ります。
-      </p>
+      </Note>
       <Button
         variant="primary"
         onClick={() => {
@@ -1130,25 +1135,25 @@ function MarkPage({
           confirm or cancel. The page splits by who sees each choice, said
           once above each half. */}
       <h3 className="st-audience">グループの人にも見える</h3>
-      <Group title="シフトの見た目">
+      <Section title="シフトの見た目">
         <ShapeChoices />
-      </Group>
-      <Group title="カラー">
+      </Section>
+      <Section title="カラー">
         <ColorChoices />
         <p className="st-group-note">
           グループの人に見えるのはシフトの色です。アプリの色はあなたの画面だけです。
         </p>
-      </Group>
+      </Section>
       <h3 className="st-audience">あなたの画面だけ</h3>
-      <Group title="トーン">
+      <Section title="トーン">
         <ToneChoices />
-      </Group>
-      <Group title="休みの見せ方">
+      </Section>
+      <Section title="休みの見せ方">
         <OffLookChoices current={current} />
-      </Group>
-      <Group title="シフト名">
+      </Section>
+      <Section title="シフト名">
         <NamesChoices current={current} />
-      </Group>
+      </Section>
     </>
   );
 }
@@ -1450,7 +1455,7 @@ function AppIconRow({ onOpen }: { onOpen: () => void }) {
       label="アプリアイコン"
       onClick={onOpen}
       value={
-        <span className="st-inline-value">
+        <span className={settingsParts.inlineValue}>
           <AppIcon size={22} src={icons[icon]} />
           {picked?.name}
         </span>
@@ -1558,9 +1563,9 @@ function AppearancePage({ onBack }: { onBack: () => void }) {
           />
         ))}
       </ChoiceList>
-      <p className="st-note">
+      <Note>
         端末に合わせると、スマホの設定に合わせてライトとダークが切り替わります。
-      </p>
+      </Note>
     </>
   );
 }
@@ -1609,7 +1614,7 @@ function WeekPage({
       {/* The style page's preview, two rows high whatever day the week
           starts on, with a Saturday, a Sunday and three holidays in it. */}
       <StylePreview preview={preview} />
-      <Group title="週の始まり">
+      <Section title="週の始まり">
         <SegmentedControl
           label="週の始まり"
           onValueChange={(day) => {
@@ -1624,8 +1629,8 @@ function WeekPage({
             </Segment>
           ))}
         </SegmentedControl>
-      </Group>
-      <Group title="色をつける日">
+      </Section>
+      <Section title="色をつける日">
         <List>
           {coloredDayOptions.map((option) => (
             <SwitchRow
@@ -1642,10 +1647,10 @@ function WeekPage({
             />
           ))}
         </List>
-      </Group>
-      <p className="st-note">
+      </Section>
+      <Note>
         土曜と日曜は曜日の見出しに、祝日は日付に色がつきます。祝日は日曜と同じ赤です。グループの画面でも、この並びと色で表示されます。
-      </p>
+      </Note>
     </>
   );
 }

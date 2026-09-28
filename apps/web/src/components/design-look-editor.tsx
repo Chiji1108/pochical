@@ -13,6 +13,7 @@ import {
   Segment,
   SegmentedControl,
   fieldLabel,
+  Note,
 } from "./design-ui";
 import {
   MarkGlyph,
@@ -149,10 +150,10 @@ export function LookEditorPage({
       {tab === "badge" && <LetterEditor look={look} onPick={onPick} />}
       {tab !== "emoji" && <ColorPicker look={look} onPick={onPick} />}
       {children}
-      <p className="st-note">
+      <Note>
         今の見た目は「{styleNames[style]}
         」です。ほかの見た目は、その見た目を選んだ人にこう表示されます。
-      </p>
+      </Note>
     </>
   );
 }
@@ -327,9 +328,9 @@ function ColorPicker({
       {/* In a single theme color every mark takes that color, so say when
           this choice shows. */}
       {monochrome && (
-        <p className="st-note">
+        <Note>
           スタイルのカラーをマルチカラーにすると、この色で表示されます。
-        </p>
+        </Note>
       )}
     </>
   );

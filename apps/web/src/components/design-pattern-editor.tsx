@@ -20,6 +20,8 @@ import {
   SortableList,
   SwitchRow,
   listRow,
+  Note,
+  Section,
 } from "./design-ui";
 import {
   guessLook,
@@ -207,11 +209,11 @@ export function PatternsPage({
           パターンを追加
         </button>
       )}
-      <p className="st-note">
+      <Note>
         {sorting
           ? "つまみを上下に動かして並べ替えます。ポチポチ入力のボタンも、この順に並びます。"
           : "ポチポチ入力のシフトのボタンを長押ししても、その場で直せます。ここでの変更は、この画面の中だけの見本です。"}
-      </p>
+      </Note>
     </>
   );
 }
@@ -257,8 +259,7 @@ function AddPatternPage({
         title="パターンを追加"
       />
       {suggestions.length > 0 && (
-        <section className="st-section">
-          <h4>よく使うパターン</h4>
+        <Section title="よく使うパターン">
           <List>
             {suggestions.map((draft) => (
               <ListRow
@@ -283,12 +284,12 @@ function AddPatternPage({
               />
             ))}
           </List>
-        </section>
+        </Section>
       )}
       <List>
         <ListRow onClick={onCustom} label="自分で作る" value="" />
       </List>
-      <p className="st-note">名前や時間は、追加したあとで直せます。</p>
+      <Note>名前や時間は、追加したあとで直せます。</Note>
     </>
   );
 }
@@ -402,8 +403,7 @@ function PatternEditor({
           <small className="pe-preview-time">{timeText(draft)}</small>
         </span>
       </div>
-      <section className="st-section">
-        <h4>基本</h4>
+      <Section title="基本">
         <List>
           <ListRow
             label="名前"
@@ -480,9 +480,8 @@ function PatternEditor({
             valueClassName="pe-look-value"
           />
         </List>
-      </section>
-      <section className="st-section">
-        <h4>見た目</h4>
+      </Section>
+      <Section title="見た目">
         <List>
           <ListRow
             onClick={() => {
@@ -497,7 +496,7 @@ function PatternEditor({
             valueClassName="pe-look-value"
           />
         </List>
-      </section>
+      </Section>
       {!isNew && (
         <button
           className="pe-delete"
@@ -556,10 +555,10 @@ function NextDayPicker({
         onBack={onBack}
         title="翌日のパターン"
       />
-      <p className="st-note">
+      <Note>
         {draft.name || "このパターン"}
         を入れると、翌日にも自動でシフトが入ります。夜勤の翌日の明けなどに使います。
-      </p>
+      </Note>
       <ChoiceList
         label="翌日のパターン"
         onValueChange={(id) => {

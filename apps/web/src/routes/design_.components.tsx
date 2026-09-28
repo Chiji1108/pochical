@@ -42,12 +42,14 @@ import {
   IconButton,
   List,
   ListRow,
+  Note,
   MenuItem,
   MenuPicker,
   MenuSeparator,
   PageHeader,
   PullDownMenu,
   Segment,
+  Section,
   SegmentedControl,
   SwitchRow,
   Tag,
@@ -265,6 +267,18 @@ function Rows() {
             onClick={() => undefined}
           />
         </List>
+      </Item>
+      <Item
+        name="Section + Note"
+        where="設定・グループ・保存の各画面の区切りと補足"
+        wide
+      >
+        <Section note="グループの人にも見えます" title="シフト">
+          <List>
+            <ListRow label="働き方" onClick={() => undefined} value="勤務表" />
+          </List>
+        </Section>
+        <Note>ポチポチ入力のボタンを長押ししても、その場で直せます。</Note>
       </Item>
     </Group>
   );

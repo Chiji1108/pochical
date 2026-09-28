@@ -31,6 +31,9 @@ import {
   dayGrid,
   WeekdayRow,
   Screen,
+  Note,
+  ScreenScroll,
+  Section,
 } from "./design-ui";
 import { useWeek } from "./design-week";
 import {
@@ -303,7 +306,7 @@ export function ImagePreviewPage({
   const title = `${month.getFullYear()}年${month.getMonth() + 1}月のシフト`;
   return (
     <Screen>
-      <div className="st-scroll">
+      <ScreenScroll>
         <PageHeader back="カレンダー" onBack={onClose} title="画像で保存" />
         <CellNamesContext
           value={{
@@ -364,28 +367,24 @@ export function ImagePreviewPage({
         </CellNamesContext>
         {/* The same tabs as the style page, with the picture's own values:
             it goes to people who do not know the marks, so names start on. */}
-        <section className="st-section">
-          <h4>休みの見せ方</h4>
+        <Section title="休みの見せ方">
           <OffLookTabs
             onChange={(value) => {
               onOptions({ ...options, ...value });
             }}
             value={options}
           />
-        </section>
-        <section className="st-section">
-          <h4>シフト名</h4>
+        </Section>
+        <Section title="シフト名">
           <NameTabs
             onChange={(names) => {
               onOptions({ ...options, names });
             }}
             value={options.names}
           />
-        </section>
-        <p className="st-note">
-          画像にだけ使う見た目です。アプリのスタイルは変わりません。
-        </p>
-      </div>
+        </Section>
+        <Note>画像にだけ使う見た目です。アプリのスタイルは変わりません。</Note>
+      </ScreenScroll>
       <div className={picture.actions} data-toast-above="">
         <Button
           variant="quiet"

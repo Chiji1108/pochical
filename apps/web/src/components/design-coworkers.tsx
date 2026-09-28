@@ -12,6 +12,7 @@ import {
   PageHeader,
   SortableList,
   listRow,
+  Note,
 } from "./design-ui";
 
 // The people you note on a day, like who is on the same shift. Only names:
@@ -152,11 +153,11 @@ export function CoworkersPage({
             人を追加
           </button>
         ))}
-      <p className="st-note">
+      <Note>
         {sorting
           ? "つまみを上下に動かして並べ替えます。日付の詳細でも、この順に並びます。"
           : "同じシフトに入る人などを、日付の詳細でその日にメモできます。ここで直した名前は、入れてある日にも反映されます。"}
-      </p>
+      </Note>
     </>
   );
 }
@@ -215,11 +216,11 @@ function CoworkerEditor({
           }
         />
       </List>
-      <p className="st-note">
+      <Note>
         {duplicate
           ? "同じ名前の人がもういます。"
           : `${days}日の予定に入っています。名前を変えると、その日の表示も変わります。`}
-      </p>
+      </Note>
       <button
         className="pe-delete"
         onClick={() => {

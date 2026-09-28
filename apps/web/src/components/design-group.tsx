@@ -80,6 +80,10 @@ import {
   WeekdayRow,
   Screen,
   fieldLabel,
+  Note,
+  ScreenScroll,
+  Section,
+  sectionTitle,
 } from "./design-ui";
 import { holidayName, useWeek } from "./design-week";
 import {
@@ -764,7 +768,7 @@ export function DesignGroup({
     }
     return (
       <Screen>
-        <div className="st-scroll">
+        <ScreenScroll>
           {page.name === "new" ? (
             newGroupPage
           ) : (
@@ -775,7 +779,7 @@ export function DesignGroup({
               onScan={onScan}
             />
           )}
-        </div>
+        </ScreenScroll>
         {page.name !== "new" && <TabBar active="group" onSelect={onTab} />}
         {joinSheet}
       </Screen>
@@ -923,7 +927,7 @@ export function DesignGroup({
             selected={group.id}
             unreadOf={unreadOf}
           />
-          <div className="st-scroll gr-hub">
+          <ScreenScroll beside>
             <GroupHub
               chatOf={(chatId) => chatOf(group.id, chatId)}
               group={group}
@@ -954,10 +958,10 @@ export function DesignGroup({
                 });
               }}
             />
-          </div>
+          </ScreenScroll>
         </div>
       ) : (
-        <div className="st-scroll">
+        <ScreenScroll>
           {page.name === "shifts" && (
             <ShiftsPage
               backLabel={page.from ? chatTitle(group, page.from) : group.name}
@@ -1028,7 +1032,7 @@ export function DesignGroup({
             />
           )}
           {page.name === "new" && newGroupPage}
-        </div>
+        </ScreenScroll>
       )}
       {page.name === "hub" && <TabBar active="group" onSelect={onTab} />}
       {memberSheet}
@@ -1418,7 +1422,7 @@ function GroupHub({
           <Settings2 aria-hidden="true" size={18} />
         </IconButton>
       </header>
-      <section className="st-section">
+      <section>
         <div className="gr-section-head">
           <h4>シフト</h4>
           <button className="gr-section-link" onClick={onShifts} type="button">
@@ -1462,8 +1466,7 @@ function GroupHub({
           )}
         </div>
       </section>
-      <section className="st-section">
-        <h4>チャット</h4>
+      <Section title="チャット">
         <List>
           <ChatRow
             chat={chatOf(groupChat)}
@@ -1505,7 +1508,7 @@ function GroupHub({
           )}
         </List>
         {others.length === 0 && (
-          <p className="st-note">メンバーを招待すると、1対1でも話せます。</p>
+          <Note>メンバーを招待すると、1対1でも話せます。</Note>
         )}
         <Sheet
           label="個人チャットを始める"
@@ -1519,7 +1522,7 @@ function GroupHub({
             title="個人チャットを始める"
           />
           <div className={sheetBody}>
-            <section className="st-section">
+            <section>
               <List>
                 {others
                   .filter((member) => !talking.includes(member))
@@ -1540,13 +1543,11 @@ function GroupHub({
                     />
                   ))}
               </List>
-              <p className="st-note">
-                {group.name}での名前とアイコンで話します。
-              </p>
+              <Note>{group.name}での名前とアイコンで話します。</Note>
             </section>
           </div>
         </Sheet>
-      </section>
+      </Section>
     </>
   );
 }
@@ -2527,11 +2528,11 @@ function DaySheetBody({
           );
         })}
       </div>
-      <p className="st-note">
+      <Note>
         {picked.length > 0
           ? `${picked.length}日分のみんなのシフトを送ります。`
           : "日付に枠がある日は、みんな休みの日です。"}
-      </p>
+      </Note>
     </div>
   );
 }
@@ -2811,9 +2812,9 @@ function PagedShifts({
         onPickDay={onPickDay}
       />
       {layout !== "person" && (
-        <p className="st-note">
+        <Note>
           アイコンを押すとその人のシフトパターン、マスを押すとその日のみんなの予定が見られます。
-        </p>
+        </Note>
       )}
     </>
   );
@@ -2887,7 +2888,7 @@ function MonthFoot({
   const next = new Date(month.getFullYear(), month.getMonth() + 1, 1);
   const go = (target: Date, button: HTMLElement) => {
     onMonth(target);
-    button.closest(".st-scroll")?.scrollTo({ top: 0 });
+    button.closest("[data-screen-scroll]")?.scrollTo({ top: 0 });
   };
   return (
     <div className="gr-month-foot">
@@ -3025,9 +3026,9 @@ function LegendSheet({
       {/* Only the marks scroll; the title and 閉じる stay in reach. */}
       <div className={sheetBody}>
         {members.map((member) => (
-          <section className="st-section" key={member.id}>
+          <section key={member.id}>
             {!single && (
-              <h4 className="gr-legend-member">
+              <h4 className={cx(sectionTitle, "gr-legend-member")}>
                 <Avatar member={member} />
                 {member.me ? "自分" : member.name}
               </h4>
@@ -3707,10 +3708,10 @@ function PersonCalendar({
           </MemberLook>
         </div>
       </div>
-      <p className="st-note">
+      <Note>
         {member.me ? "" : "薄い枠の日は、自分も休みの日です。"}
         日付を押すと、その日のみんなの予定が見られます。
-      </p>
+      </Note>
     </>
   );
 }
@@ -4207,8 +4208,7 @@ function GroupSettingsPage({
   return (
     <>
       <PageHeader back={group.name} onBack={onBack} title="グループの設定" />
-      <section className="st-section">
-        <h4>グループ</h4>
+      <Section title="グループ">
         <List>
           <ListRow
             onClick={() => {
@@ -4225,12 +4225,9 @@ function GroupSettingsPage({
             }
           />
         </List>
-        <p className="st-note">
-          グループ名とアイコンは、メンバー全員に表示されます。
-        </p>
-      </section>
-      <section className="st-section">
-        <h4>このグループでのあなた</h4>
+        <Note>グループ名とアイコンは、メンバー全員に表示されます。</Note>
+      </Section>
+      <Section title="このグループでのあなた">
         <List>
           <ListRow
             onClick={() => {
@@ -4246,9 +4243,8 @@ function GroupSettingsPage({
             labelClassName="gr-row-label-after-avatar"
           />
         </List>
-      </section>
-      <section className="st-section">
-        <h4>メンバー</h4>
+      </Section>
+      <Section title="メンバー">
         <List>
           {group.members.map((member) => (
             <ListRow
@@ -4282,7 +4278,7 @@ function GroupSettingsPage({
             }
           />
         </List>
-      </section>
+      </Section>
       <button
         className="pe-delete"
         onClick={() => {
@@ -4411,9 +4407,9 @@ function GroupEditPage({
           }}
         />
       </List>
-      <p className="st-note">
+      <Note>
         保存すると、メンバー全員の画面に反映され、グループのチャットにもお知らせが届きます。
-      </p>
+      </Note>
     </>
   );
 }
@@ -4488,11 +4484,11 @@ function GroupProfilePage({
           }
         />
       </List>
-      <p className="st-note">
+      <Note>
         {group.name}
         の人にだけ、この名前と写真で表示されます。名前が空欄なら「{profile.name}
         」、写真を入れなければいつもの写真のままです。
-      </p>
+      </Note>
     </>
   );
 }
@@ -4532,10 +4528,10 @@ function InvitePage({
         <Copy aria-hidden="true" size={15} />
         リンクをコピー
       </Button>
-      <p className="st-note">
+      <Note>
         リンクを知っている人は、だれでも「{group.name}
         」に参加できます。送る相手に気をつけてください。
-      </p>
+      </Note>
       <Button
         onClick={() => {
           setConfirming(true);
@@ -4848,9 +4844,9 @@ function GroupMarkPage({
           />
         </>
       )}
-      <p className="st-note">
+      <Note>
         メンバー全員に、このアイコンがそのまま表示されます。シフトの見た目のスタイルには左右されません。
-      </p>
+      </Note>
     </>
   );
 }
@@ -4980,9 +4976,9 @@ function NewGroupPage({
           }
         />
       </List>
-      <p className="st-note">
+      <Note>
         アイコンはグループ名から自動で入ります。このグループでの名前は、最初はいつもの名前です。写真はあとからグループの設定で変えられます。
-      </p>
+      </Note>
     </>
   );
 }
