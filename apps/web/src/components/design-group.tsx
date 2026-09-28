@@ -4267,9 +4267,16 @@ function PickedDaySheet({
   if (picked && picked !== date) {
     setDate(picked);
   }
+  const phone = useContext(PhoneContext);
   const together = everyoneOff(members, date);
   return (
     <Sheet
+      // Back to the day in the table, in whichever layout shows it.
+      finalFocusEl={() =>
+        (phone?.current ?? document).querySelector<HTMLElement>(
+          `[data-pick-day="${dateKey(date)}"]`
+        )
+      }
       label={formatDay(date)}
       modal={false}
       onOpenChange={(open) => {
@@ -4599,6 +4606,7 @@ function RowDate({
       aria-label={`${formatDay(date)}の予定を見る`}
       aria-pressed={picked}
       className={dayRows.dateButton}
+      data-pick-day={dateKey(date)}
       onClick={onPick}
       type="button"
     >
@@ -4825,6 +4833,7 @@ function WeekDate({
       aria-label={`${formatDay(date)}の予定を見る`}
       aria-pressed={picked}
       className={weekCell({ ...look, button: true })}
+      data-pick-day={dateKey(date)}
       onClick={() => {
         onPick(date);
       }}
@@ -5185,6 +5194,7 @@ function PersonDay({
       aria-pressed={picked}
       className={className}
       data-active={picked || undefined}
+      data-pick-day={dateKey(date)}
       onClick={() => {
         onPick(date);
       }}
