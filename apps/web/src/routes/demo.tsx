@@ -29,13 +29,10 @@ import { parseDesignVariants } from "../lib/design-variants";
 import type { DesignVariants } from "../lib/design-variants";
 import { pageMeta } from "../lib/site";
 
-import designStyles from "../design.css?url";
-
 export const Route = createFileRoute("/demo")({
   component: DemoPage,
   head: () => ({
     ...pageMeta("デモ", "ブラウザで触れるポチカルの試作", "/demo", true),
-    links: [{ href: designStyles, rel: "stylesheet" }],
   }),
   validateSearch: parseDesignVariants,
 });

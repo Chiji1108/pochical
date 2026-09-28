@@ -501,7 +501,7 @@ function Section({
 function NeutralTokens() {
   return (
     <Section
-      description="役割ごとの色です。design.css はこの名前の変数だけを使います。文字の色には、画面の背景に対するコントラスト比を添えています。"
+      description="役割ごとの色です。画面はこの名前の変数だけを使います。文字の色には、画面の背景に対するコントラスト比を添えています。"
       id="cp-neutral"
       title="基本色"
     >

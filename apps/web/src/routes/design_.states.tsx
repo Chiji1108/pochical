@@ -34,8 +34,6 @@ import type { OffDisplay, ShiftMarkStyle } from "../components/shift-mark";
 import type { ColorScheme, Tone } from "../lib/design-tokens";
 import { pageMeta } from "../lib/site";
 
-import designStyles from "../design.css?url";
-
 export const Route = createFileRoute("/design_/states")({
   component: StatesPage,
   head: () => ({
@@ -45,7 +43,6 @@ export const Route = createFileRoute("/design_/states")({
       "/design/states",
       true
     ),
-    links: [{ href: designStyles, rel: "stylesheet" }],
   }),
 });
 

@@ -3,8 +3,7 @@ import { defineConfig } from "@pandacss/dev";
 // Panda CSS for the /design prototype's pieces. The colors stay the CSS
 // variables that themeStyle() sets per theme, tone and light or dark, so
 // the tokens here only name them; the values live in design-tokens.ts.
-// Older styles sit in design.css (layer legacy) and styles.css (layer
-// site), both below Panda's layers, until each piece moves over.
+// The site's own styles sit in styles.css (layer site), below Panda's.
 export default defineConfig({
   exclude: [],
   include: ["./src/**/*.{ts,tsx}"],
@@ -19,6 +18,19 @@ export default defineConfig({
   conditions: {
     extend: {
       hover: ["@media (hover: hover)", "&:is(:hover, [data-hover])"],
+    },
+  },
+  // The design pages, /demo and /try (marked .design-page): the site's
+  // header and footer give way to the phone, and buttons take the text
+  // color and focus ring around them unless a piece sets its own.
+  globalCss: {
+    ".design-page :is(button, a):focus-visible": {
+      outline: "3px solid var(--accent-line)",
+      outlineOffset: "4px",
+    },
+    ".design-page button": { color: "inherit" },
+    "body:has(.design-page) > :is(.site-header, .site-footer)": {
+      display: "none",
     },
   },
   // The site and the prototype bring their own base styles.

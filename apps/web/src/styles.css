@@ -1,7 +1,6 @@
-/* The order of every layer on the site: the site's own styles, then the
-   /design prototype's older ones (design.css), then Panda CSS's
-   (src/panda.css), each above the one before. */
-@layer site, legacy, reset, base, tokens, recipes, utilities;
+/* The order of every layer on the site: the site's own styles, then Panda
+   CSS's (src/panda.css), each above the one before. */
+@layer site, reset, base, tokens, recipes, utilities;
 
 @layer site {
   :root {

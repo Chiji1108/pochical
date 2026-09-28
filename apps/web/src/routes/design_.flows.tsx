@@ -32,8 +32,6 @@ import { patterns } from "../lib/design-patterns";
 import { parseDesignVariants } from "../lib/design-variants";
 import { pageMeta } from "../lib/site";
 
-import designStyles from "../design.css?url";
-
 export const Route = createFileRoute("/design_/flows")({
   component: FlowsPage,
   head: () => ({
@@ -43,7 +41,6 @@ export const Route = createFileRoute("/design_/flows")({
       "/design/flows",
       true
     ),
-    links: [{ href: designStyles, rel: "stylesheet" }],
   }),
 });
 

@@ -69,8 +69,6 @@ import {
 import type { ShiftMarkStyle } from "../components/shift-mark";
 import { pageMeta } from "../lib/site";
 
-import designStyles from "../design.css?url";
-
 export const Route = createFileRoute("/design_/components")({
   component: ComponentsPage,
   head: () => ({
@@ -80,7 +78,6 @@ export const Route = createFileRoute("/design_/components")({
       "/design/components",
       true
     ),
-    links: [{ href: designStyles, rel: "stylesheet" }],
   }),
 });
 

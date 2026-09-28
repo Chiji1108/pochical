@@ -9,8 +9,6 @@ import {
 import { themeStyle } from "../components/design-theme";
 import { pageMeta } from "../lib/site";
 
-import designStyles from "../design.css?url";
-
 function ColorsPage() {
   return (
     <DesignPage style={themeStyle("moss", "light")}>
@@ -32,6 +30,5 @@ export const Route = createFileRoute("/design_/colors")({
       "/design/colors",
       true
     ),
-    links: [{ href: designStyles, rel: "stylesheet" }],
   }),
 });

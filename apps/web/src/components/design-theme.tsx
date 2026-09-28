@@ -9,7 +9,7 @@ import { hexToOklch } from "../lib/oklch";
 import { toneNeutrals, toneRoles } from "../lib/tones";
 import { Choice, ChoiceGrid } from "./design-ui";
 
-// Accent palettes for the app. Each sets the variables design.css reads
+// Accent palettes for the app. Each sets the variables the screens read
 // inside the phone; the shift colors stay as they are. `dark` holds the same
 // roles for dark mode, lighter so they read on the dark background.
 export const themes = [
@@ -267,7 +267,7 @@ function neutralsFor(
   } as CSSProperties;
 }
 
-// Every color variable design.css reads: the neutral roles plus the theme.
+// Every color variable the screens read: the neutral roles plus the theme.
 export function themeStyle(
   id: ThemeId,
   scheme: ColorScheme = "light",

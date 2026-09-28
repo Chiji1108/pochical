@@ -11,13 +11,10 @@ import { useDesignTheme } from "../components/design-providers";
 import { themeStyle } from "../components/design-theme";
 import { pageMeta } from "../lib/site";
 
-import designStyles from "../design.css?url";
-
 export const Route = createFileRoute("/design")({
   component: DocumentsPage,
   head: () => ({
     ...pageMeta("デザイン資料", "ポチカルのデザイン資料", "/design", true),
-    links: [{ href: designStyles, rel: "stylesheet" }],
   }),
 });
 

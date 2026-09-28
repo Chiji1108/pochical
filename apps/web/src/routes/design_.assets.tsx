@@ -16,8 +16,6 @@ import {
 import { themeStyle } from "../components/design-theme";
 import { pageMeta } from "../lib/site";
 
-import designStyles from "../design.css?url";
-
 export const Route = createFileRoute("/design_/assets")({
   component: AssetsPage,
   head: () => ({
@@ -27,7 +25,6 @@ export const Route = createFileRoute("/design_/assets")({
       "/design/assets",
       true
     ),
-    links: [{ href: designStyles, rel: "stylesheet" }],
   }),
 });
 

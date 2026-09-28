@@ -3,8 +3,8 @@ import type { CSSProperties } from "react";
 import { hexToOklch, oklchToHex } from "./oklch";
 import { toneMarkColor, generatedTones } from "./tones";
 
-// The app's neutral colors by role, for light and dark. design.css reads them
-// as CSS variables (`--bg`, `--text-3`, ...); /design/colors lists them, and
+// The app's neutral colors by role, for light and dark. The screens read
+// them as CSS variables (`--bg`, `--text-3`, ...); /design/colors lists them, and
 // the native apps will export the same values. Dark values keep each light
 // color's hue and flip its lightness in OKLCH, on a soft gray ground about as
 // light as Discord's rather than near-black.

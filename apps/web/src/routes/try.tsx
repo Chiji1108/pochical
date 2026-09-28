@@ -20,8 +20,6 @@ import {
 import { parseDesignVariants } from "../lib/design-variants";
 import { pageMeta } from "../lib/site";
 
-import designStyles from "../design.css?url";
-
 const title = "ポチカル";
 
 // The screen's color in each tone, light and dark, before the saved
@@ -74,7 +72,6 @@ export const Route = createFileRoute("/try")({
     return {
       ...meta,
       links: [
-        { href: designStyles, rel: "stylesheet" },
         // Its name, icons and launch images on the home screen.
         { href: "/app/manifest.webmanifest", rel: "manifest" },
         ...appSplashScreens,
