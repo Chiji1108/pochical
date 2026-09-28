@@ -1,6 +1,7 @@
 import { ArrowRight, CornerDownRight } from "lucide-react";
 import { Fragment, useState } from "react";
 import type { ReactNode } from "react";
+import { css, cva } from "styled-system/css";
 
 import { createUserStore, UserStoreContext } from "../lib/design-user-store";
 import type { OwnData } from "../lib/design-user-store";
@@ -14,6 +15,99 @@ import type { SettingsPage } from "./design-settings";
 // on their screen through the components' initial props.
 const variants = parseDesignVariants({});
 
+// The sections down the page, their frames drawn at this share of a
+// phone's size.
+export const frameSections = css({
+  "--frame-scale": "0.42",
+  display: "flex",
+  flexDirection: "column",
+  gap: "48px",
+  margin: "0 auto",
+  maxWidth: "1400px",
+  padding: "0 16px 64px",
+});
+
+const frameStyle = {
+  // Pointing on to the next frame, level with the screens' middles.
+  arrow: css({
+    alignSelf: "center",
+    color: "text4",
+    flexShrink: 0,
+    marginTop: "-40px",
+  }),
+  branch: css({
+    alignItems: "center",
+    color: "text3",
+    display: "flex",
+    fontSize: "12px",
+    fontWeight: 600,
+    gap: "6px",
+    margin: "0 0 10px 4px",
+  }),
+  description: css({
+    color: "text3",
+    fontSize: "12px",
+    margin: "-8px 0 14px 4px",
+  }),
+  frame: css({
+    "& > figcaption": {
+      color: "text3",
+      display: "flex",
+      flexDirection: "column",
+      fontSize: "12px",
+      gap: "2px",
+      padding: "0 2px",
+    },
+    "& > figcaption > small": { fontSize: "11px" },
+    "& > figcaption > strong": { color: "text", fontSize: "13px" },
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    margin: 0,
+    width: "calc(390px * var(--frame-scale))",
+  }),
+  // The phone at its full size, scaled down into the frame.
+  inner: css({
+    left: 0,
+    pointerEvents: "none",
+    position: "absolute",
+    top: 0,
+    transform: "scale(var(--frame-scale))",
+    transformOrigin: "top left",
+    width: "390px",
+  }),
+  // Frames in a row scroll sideways when they outrun the page.
+  row: cva({
+    base: {
+      alignItems: "flex-start",
+      display: "flex",
+      gap: "10px",
+      listStyle: "none",
+      margin: 0,
+      overflowX: "auto",
+      padding: "0 4px 8px",
+    },
+    variants: { fan: { true: { gap: "18px" } } },
+  }),
+  rows: css({ "& + &": { marginTop: "22px" } }),
+  screen: css({
+    borderRadius: "calc(53px * var(--frame-scale))",
+    flexShrink: 0,
+    height: "calc(844px * var(--frame-scale))",
+    overflow: "hidden",
+    position: "relative",
+    width: "calc(390px * var(--frame-scale))",
+  }),
+  section: css({
+    "& > h2": {
+      color: "text",
+      fontSize: "17px",
+      fontWeight: 700,
+      margin: "0 0 14px 4px",
+    },
+  }),
+};
+
 export function FrameSection({
   title,
   description,
@@ -24,9 +118,9 @@ export function FrameSection({
   children: ReactNode;
 }) {
   return (
-    <section aria-label={title} className="fl-flow">
+    <section aria-label={title} className={frameStyle.section}>
       <h2>{title}</h2>
-      {description && <p className="fl-description">{description}</p>}
+      {description && <p className={frameStyle.description}>{description}</p>}
       {children}
     </section>
   );
@@ -45,19 +139,19 @@ export function FrameRow({
 }) {
   const frames = Array.isArray(children) ? children : [children];
   return (
-    <div className="fl-row-wrap">
+    <div className={frameStyle.rows}>
       {branch && (
-        <p className="fl-branch">
+        <p className={frameStyle.branch}>
           <CornerDownRight aria-hidden="true" size={14} />
           {branch}
         </p>
       )}
-      <ol className={`fl-row ${fan ? "fl-fan" : ""}`}>
+      <ol className={frameStyle.row({ fan })}>
         {frames.map((frame, index) => (
           // oxlint-disable-next-line react/no-array-index-key -- frames never move
           <Fragment key={index}>
             {index > 0 && !fan && (
-              <li aria-hidden="true" className="fl-arrow">
+              <li aria-hidden="true" className={frameStyle.arrow}>
                 <ArrowRight size={18} />
               </li>
             )}
@@ -80,9 +174,9 @@ export function Frame({
   children: ReactNode;
 }) {
   return (
-    <figure className="fl-frame">
-      <div className="fl-screen">
-        <div className="fl-inner" inert>
+    <figure className={frameStyle.frame}>
+      <div className={frameStyle.screen}>
+        <div className={frameStyle.inner} inert>
           {children}
         </div>
       </div>

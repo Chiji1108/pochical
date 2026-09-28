@@ -11,6 +11,7 @@ import {
   Frame,
   FrameRow,
   FrameSection,
+  frameSections,
 } from "../components/design-frames";
 import { GapSheetPreview, gapDaysIn } from "../components/design-gap-sheet";
 import type { GapSheetProps } from "../components/design-gap-sheet";
@@ -60,7 +61,7 @@ function FlowsPage() {
         実際の画面を小さく並べています。触って試すときは、デモから。
       </DesignIntro>
       <DesignProviders>
-        <div className="fl-flows">
+        <div className={frameSections}>
           <FrameSection title="はじめての設定">
             <FrameRow>
               <OnboardingFrame label="最初の画面" screen="welcome" />

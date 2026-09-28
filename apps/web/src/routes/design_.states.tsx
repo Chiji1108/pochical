@@ -9,6 +9,7 @@ import {
   CalendarFrame,
   FrameRow,
   FrameSection,
+  frameSections,
 } from "../components/design-frames";
 import {
   DesignIntro,
@@ -92,7 +93,7 @@ function StatesPage() {
         カレンダーがなりうる状態を並べています。直したら、ここで全部を見比べます。
       </DesignIntro>
       <DesignProviders>
-        <div className="fl-flows">
+        <div className={frameSections}>
           <FrameSection title="月の埋まり方">
             <FrameRow fan>
               <CalendarFrame label="何もない月" person={emptyPerson} />
