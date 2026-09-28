@@ -2,12 +2,14 @@
 // one person's row, and where each sits in the photo.
 //
 //   bun tools/roster-eval/eval.ts [--models a,b] [--provider vercel] [--images x,y]
-//     [--slim | --all-rows] [--effort low]
+//     [--slim | --all-rows] [--twice | --pair a:effort,b:effort]
+//     [--effort low] [--concurrency 1]
 //     [--rescore]
 //
 // Reads assets/shift-schedule/*.jpg and answers.json beside them, writes
 // tools/roster-eval/out/report.html. Keys come from a .env at the repo root
-// (bun loads it): AI_GATEWAY_API_KEY for the models on Vercel AI Gateway,
+// (bun loads it): ANTHROPIC_API_KEY for Claude straight from Anthropic,
+// AI_GATEWAY_API_KEY for the models on Vercel AI Gateway,
 // and for Cloudflare's own Workers AI models CF_ACCOUNT_ID, CF_GATEWAY_ID,
 // CF_AIG_TOKEN and a token allowed to run Workers AI (CF_API_TOKEN, or
 // CF_AIG_TOKEN when that one has the permission too).
@@ -15,9 +17,10 @@
 import { mkdir, readdir } from "node:fs/promises";
 import path from "node:path";
 
+import Anthropic from "@anthropic-ai/sdk";
 import sharp from "sharp";
 
-type Provider = "vercel" | "workers-ai";
+type Provider = "anthropic" | "vercel" | "workers-ai";
 
 type Model = {
   id: string;
@@ -27,9 +30,16 @@ type Model = {
   // For models without structured output: the schema goes in the prompt
   // and the JSON is picked out of the reply.
   schemaInPrompt?: boolean;
+  // How much this model thinks, over --effort.
+  effort?: string;
+  // Two models reading the same photo at once, checked against each
+  // other: the first's reading is the one kept.
+  pair?: [Model, Model];
 };
 
 const models: Model[] = [
+  // Straight to Anthropic, the way production would call it.
+  { id: "claude-opus-5-5", price: [4, 20], provider: "anthropic" },
   {
     id: "anthropic/claude-opus-5.5",
     price: [4, 20],
@@ -89,9 +99,25 @@ const slim = process.argv.includes("--slim");
 // codes and nothing else, and picks the person's row here, by the name
 // closest to the one they typed.
 const allRows = process.argv.includes("--all-rows");
+// --twice reads each photo twice at once and marks the days the readings
+// disagree on, to see whether those catch the misread days.
+const twice = process.argv.includes("--twice");
 const effortIndex = process.argv.indexOf("--effort");
 const effort = effortIndex === -1 ? undefined : process.argv[effortIndex + 1];
-const variant = [slim ? "slim" : "", allRows ? "rows" : "", effort ?? ""]
+// --pair a:effort,b:effort has two models read each photo at once, and
+// marks the days they disagree on: models misread in their own ways, so
+// what one gets wrong the other tends to read differently.
+const pairIndex = process.argv.indexOf("--pair");
+const pairSpec = pairIndex === -1 ? undefined : process.argv[pairIndex + 1];
+const variant = [
+  slim ? "slim" : "",
+  allRows ? "rows" : "",
+  twice ? "twice" : "",
+  pairSpec === undefined
+    ? ""
+    : `pair-${pairSpec.replaceAll(/[^\w.-]+/gu, "-")}`,
+  effort ?? "",
+]
   .filter(Boolean)
   .join("-");
 const out = path.join(
@@ -100,7 +126,11 @@ const out = path.join(
 );
 // Long edge sent to every model, so they all see the same pixels.
 const LONG_EDGE = 2000;
-const CONCURRENCY = 4;
+// Photos read at once; --concurrency lowers it for models that turn
+// away requests sent together.
+const concurrencyIndex = process.argv.indexOf("--concurrency");
+const CONCURRENCY =
+  concurrencyIndex === -1 ? 4 : Number(process.argv[concurrencyIndex + 1]);
 const TIMEOUT_MS = 15 * 60 * 1000;
 
 // [x_min, y_min, x_max, y_max], the photo's top left 0,0, bottom right
@@ -324,7 +354,9 @@ function chatBody(model: Model, image: string, text: string) {
   ];
   return {
     max_tokens: 32_000,
-    ...(effort === undefined ? {} : { reasoning_effort: effort }),
+    ...((model.effort ?? effort) === undefined
+      ? {}
+      : { reasoning_effort: model.effort ?? effort }),
     messages: [{ content, role: "user" }],
     model: model.id,
     ...(model.schemaInPrompt === true
@@ -382,7 +414,60 @@ function jsonIn(text: string): unknown {
   }
 }
 
+const efforts = ["low", "medium", "high", "xhigh", "max"] as const;
+type Effort = (typeof efforts)[number];
+const isEffort = (value: string | undefined): value is Effort =>
+  efforts.some((level) => level === value);
+
+let anthropic: Anthropic | undefined;
+
+// Claude through Anthropic's SDK, the way the app's server would call it:
+// the schema enforced by structured outputs, the reply streamed so a long
+// one does not time out. No refusal fallback here, so the scores are this
+// model's own.
+async function callAnthropic(
+  model: Model,
+  image: string,
+  text: string
+): Promise<Call> {
+  anthropic ??= new Anthropic({ timeout: TIMEOUT_MS });
+  const level = model.effort ?? effort;
+  const message = await anthropic.messages
+    .stream({
+      max_tokens: 32_000,
+      messages: [
+        {
+          content: [
+            {
+              source: { data: image, media_type: "image/jpeg", type: "base64" },
+              type: "image",
+            },
+            { text, type: "text" },
+          ],
+          role: "user",
+        },
+      ],
+      model: model.id,
+      output_config: {
+        ...(isEffort(level) ? { effort: level } : {}),
+        format: { schema: replySchema, type: "json_schema" },
+      },
+    })
+    .finalMessage();
+  if (message.stop_reason !== "end_turn") {
+    throw new Error(`stop_reason ${message.stop_reason ?? "(none)"}`);
+  }
+  return {
+    inputTokens: message.usage.input_tokens,
+    outputTokens: message.usage.output_tokens,
+    text: message.content
+      .map((block) => (block.type === "text" ? block.text : ""))
+      .join(""),
+  };
+}
+
 const callers = {
+  anthropic: callAnthropic,
   vercel: callVercel,
   "workers-ai": callWorkersAI,
 };
@@ -439,10 +524,19 @@ function score(reading: Reading, answer: Answer) {
   };
 }
 
+// How the days two readings disagreed on line up with the misread days.
+type Split = {
+  days: number[];
+  caught: number;
+  missed: number;
+  falseAlarms: number;
+};
+
 type Result = {
   image: string;
   model: Model;
   ms: number;
+  split?: Split;
   cost?: number;
   call?: Call;
   reading?: Reading;
@@ -590,11 +684,19 @@ function readingOf(value: unknown): Reading {
 // Replies saved before timings were kept are the bare text.
 type Saved = { call: Call; ms: number };
 
-const rawFile = (image: string, model: Model) =>
-  path.join(out, "raw", `${image}__${model.id.replaceAll("/", "_")}.json`);
+const rawFile = (image: string, model: Model, attempt = 1) =>
+  path.join(
+    out,
+    "raw",
+    `${image}__${model.id.replaceAll("/", "_")}${attempt === 1 ? "" : `__${attempt}`}.json`
+  );
 
-async function savedReply(image: string, model: Model): Promise<Saved> {
-  const text = await Bun.file(rawFile(image, model)).text();
+async function savedReply(
+  image: string,
+  model: Model,
+  attempt: number
+): Promise<Saved> {
+  const text = await Bun.file(rawFile(image, model, attempt)).text();
   const saved = jsonIn(text);
   if (typeof saved === "object" && saved !== null && "call" in saved) {
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- written by this script.
@@ -607,7 +709,8 @@ async function askModel(
   image: string,
   data: string,
   answer: Answer,
-  model: Model
+  model: Model,
+  attempt: number
 ): Promise<Saved> {
   const started = performance.now();
   const call = await callers[model.provider](
@@ -616,7 +719,7 @@ async function askModel(
     prompt(answer.target)
   );
   const saved = { call, ms: performance.now() - started };
-  await Bun.write(rawFile(image, model), JSON.stringify(saved));
+  await Bun.write(rawFile(image, model, attempt), JSON.stringify(saved));
   return saved;
 }
 
@@ -629,15 +732,50 @@ async function run(
 ): Promise<Result> {
   const started = performance.now();
   try {
-    const { call, ms } = rescore
-      ? await savedReply(image, model)
-      : await askModel(image, data, answer, model);
-    const reading = allRows
-      ? rowOf(jsonIn(call.text), answer.target)
-      : readingOf(jsonIn(call.text));
-    const cost =
-      (call.inputTokens * model.price[0] + call.outputTokens * model.price[1]) /
-      1_000_000;
+    const readWith = async (reader: Model, attempt: number) =>
+      rescore
+        ? await savedReply(image, reader, attempt)
+        : await askModel(image, data, answer, reader, attempt);
+    // Readings go out at once, so the wait is the slowest one's.
+    const readers: [Model, number][] = model.pair
+      ? [
+          [model.pair[0], 1],
+          [model.pair[1], 1],
+        ]
+      : [[model, 1], ...(twice ? [[model, 2] as [Model, number]] : [])];
+    const replies = await Promise.all(
+      readers.map(async ([reader, attempt]) => {
+        const reply = await readWith(reader, attempt);
+        return reply;
+      })
+    );
+    const readings = replies.map(({ call: reply }) =>
+      allRows
+        ? rowOf(jsonIn(reply.text), answer.target)
+        : readingOf(jsonIn(reply.text))
+    );
+    const [first] = replies;
+    const [reading, second] = readings;
+    if (first === undefined || reading === undefined) {
+      throw new Error("no reply");
+    }
+    const call = {
+      inputTokens: replies.reduce((sum, { call: r }) => sum + r.inputTokens, 0),
+      outputTokens: replies.reduce(
+        (sum, { call: r }) => sum + r.outputTokens,
+        0
+      ),
+      text: first.call.text,
+    };
+    const ms = Math.max(...replies.map((reply) => reply.ms));
+    let cost = 0;
+    for (const [index, { call: reply }] of replies.entries()) {
+      const price = readers[index]?.[0].price ?? model.price;
+      cost +=
+        (reply.inputTokens * price[0] + reply.outputTokens * price[1]) /
+        1_000_000;
+    }
+    const scored = score(reading, answer);
     return {
       call,
       cost,
@@ -645,7 +783,9 @@ async function run(
       model,
       ms,
       reading,
-      score: score(reading, answer),
+      score: scored,
+      split:
+        second === undefined ? undefined : splitOf(reading, second, scored),
     };
   } catch (error) {
     return {
@@ -655,6 +795,29 @@ async function run(
       ms: performance.now() - started,
     };
   }
+}
+
+// The days two readings of the same row disagree on, against the days
+// the first reading got wrong.
+function splitOf(
+  first: Reading,
+  second: Reading,
+  scored: ReturnType<typeof score>
+): Split {
+  const codeOn = (reading: Reading, day: number) =>
+    plainCode(reading.target.days.find((item) => item.day === day)?.code ?? "");
+  const count = Math.max(first.target.days.length, second.target.days.length);
+  const days = Array.from({ length: count }, (_, index) => index + 1).filter(
+    (day) => codeOn(first, day) !== codeOn(second, day)
+  );
+  const wrong = new Set(scored.dayErrors.map((error) => error.day));
+  const caught = days.filter((day) => wrong.has(day)).length;
+  return {
+    caught,
+    days,
+    falseAlarms: days.length - caught,
+    missed: wrong.size - caught,
+  };
 }
 
 async function pool<T>(tasks: (() => Promise<T>)[], size: number) {
@@ -701,6 +864,9 @@ function shapesOf(reading: Reading, wrong: Set<number>) {
   ].join("");
 }
 
+const splitLine = (split: Split) =>
+  `違った日 ${split.days.length}日（間違いを拾えた ${split.caught} · 見逃し ${split.missed} · 空振り ${split.falseAlarms}）`;
+
 function scoreLines(s: ReturnType<typeof score>) {
   const days =
     s.days === undefined
@@ -731,6 +897,9 @@ function card(result: Result, imagePath: string) {
       ? [
           `<p>${(result.ms / 1000).toFixed(1)}秒 · 入力${call?.inputTokens} / 出力${call?.outputTokens}トークン${cents}</p>`,
           ...(s ? scoreLines(s) : []),
+          result.split === undefined
+            ? ""
+            : `<p>${escape(splitLine(result.split))}</p>`,
         ]
       : [`<p class="error">${escape(error)}</p>`];
   return `<article><h3>${escape(model.id)}</h3>
@@ -789,6 +958,32 @@ async function keepEarlier(fresh: Result[]) {
   ].toSorted((a, b) => a.image.localeCompare(b.image) || order(a) - order(b));
 }
 
+// "claude-opus-5-5:medium,gpt-6-luna:none": two models, each with how
+// much it thinks, the first's reading kept.
+function pairOf(spec: string | undefined): Model | undefined {
+  if (spec === undefined) {
+    return undefined;
+  }
+  const members = spec.split(",").map((part) => {
+    const [name = "", level] = part.split(":");
+    const found = models.find((model) => model.id.includes(name));
+    if (found === undefined) {
+      throw new Error(`no model matches ${name}`);
+    }
+    return { ...found, effort: level };
+  });
+  const [first, second] = members;
+  if (first === undefined || second === undefined || members.length !== 2) {
+    throw new Error("--pair takes two models");
+  }
+  return {
+    id: `${first.id}+${second.id}`,
+    pair: [first, second],
+    price: first.price,
+    provider: first.provider,
+  };
+}
+
 async function main() {
   const answersFile = Bun.file(path.join(photos, "answers.json"));
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- our own answer key, written by hand.
@@ -813,12 +1008,16 @@ async function main() {
           onlyImages.some((part) => name.includes(part)))
     );
   const images = cases.map(({ name }) => name);
-  const chosen = models.filter(
-    (model) =>
-      (onlyModels === undefined ||
-        onlyModels.some((part) => model.id.includes(part))) &&
-      (onlyProviders === undefined || onlyProviders.includes(model.provider))
-  );
+  const pair = pairOf(pairSpec);
+  const chosen = pair
+    ? [pair]
+    : models.filter(
+        (model) =>
+          (onlyModels === undefined ||
+            onlyModels.some((part) => model.id.includes(part))) &&
+          (onlyProviders === undefined ||
+            onlyProviders.includes(model.provider))
+      );
   await mkdir(path.join(out, "images"), { recursive: true });
   await mkdir(path.join(out, "raw"), { recursive: true });
 
@@ -833,22 +1032,28 @@ async function main() {
       )),
     }))
   );
-  const pairs = prepared.flatMap((photo) =>
+  const jobs = prepared.flatMap((photo) =>
     chosen.map((model) => ({ ...photo, model }))
   );
   // Rescoring takes only the pairs that have a saved reply.
   const saved = await Promise.all(
-    pairs.map(async (pair) => {
-      const exists = await Bun.file(rawFile(pair.image, pair.model)).exists();
-      return exists;
+    jobs.map(async (job) => {
+      const readers = job.model.pair ?? [job.model];
+      const found = await Promise.all(
+        readers.map(async (reader) => {
+          const exists = await Bun.file(rawFile(job.image, reader)).exists();
+          return exists;
+        })
+      );
+      return found.every(Boolean);
     })
   );
-  const tasks = pairs
+  const tasks = jobs
     .filter((_, index) => !rescore || saved[index] === true)
     .map(({ answer, base64, image, model }) => async () => {
       const result = await run(image, base64, answer, model, rescore);
       console.log(
-        `${image} ${model.id}: ${result.error ?? `名前 ${result.score?.names}/${result.score?.namesTotal}${result.score?.days === undefined ? "" : ` 日 ${result.score.days}/${result.score.daysTotal}`} ${(result.ms / 1000).toFixed(0)}s`}`
+        `${image} ${model.id}: ${result.error ?? `名前 ${result.score?.names}/${result.score?.namesTotal}${result.score?.days === undefined ? "" : ` 日 ${result.score.days}/${result.score.daysTotal}`} ${(result.ms / 1000).toFixed(0)}s${result.split === undefined ? "" : ` ${splitLine(result.split)}`}`}`
       );
       return result;
     });

@@ -19,6 +19,7 @@
     "server": "bun run --cwd apps/server dev"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
     "lefthook": "^2.1.6",
     "oxfmt": "^0.70.0",
     "oxlint": "^1.85.0",
