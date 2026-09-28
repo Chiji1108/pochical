@@ -42,6 +42,7 @@ import {
   ChipGroup,
   Choice,
   ChoiceGrid,
+  chipStyle,
   DAY_ROW_GAP,
   DAY_ROW_HEIGHT,
   dayGrid,
@@ -2037,26 +2038,6 @@ const dayDetail = {
     width: "88px",
   }),
   members: css({ border: 0, margin: 0, padding: 0 }),
-  pattern: css({
-    _checked: {
-      // A colored icon would sink into the green, so it turns white like
-      // the text; emoji and letters on their tile keep their own colors.
-      "& .sm-icon": { fill: "onAccentFill" },
-      bg: "accentFill",
-      borderColor: "accent",
-      color: "onAccentFill",
-      fontWeight: 600,
-    },
-    alignItems: "center",
-    bg: "surface",
-    border: "1px solid token(colors.border)",
-    borderRadius: "18px",
-    display: "inline-flex",
-    fontSize: "12px",
-    gap: "4px",
-    minHeight: "36px",
-    padding: "0 12px",
-  }),
   patterns: css({
     border: 0,
     display: "flex",
@@ -2202,7 +2183,7 @@ function DayDetail({
         value={entry?.shift ?? null}
       >
         {patternKeys.map((key) => (
-          <Choice className={dayDetail.pattern} key={key} value={key}>
+          <Choice className={chipStyle()} key={key} value={key}>
             <ShiftMark shift={key} size={14} />
             {patterns[key].label}
           </Choice>

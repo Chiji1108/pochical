@@ -998,9 +998,10 @@ export function ChoiceRow({
 // A chip to press: picked or not, one of several or several at once,
 // with a mark or a check before its words. `add` is the dashed chip that
 // adds another.
-const chipStyle = cva({
+export const chipStyle = cva({
   base: {
-    "&[aria-pressed=true]": {
+    // Picked: a chip that toggles, or one choice of a ChoiceGrid.
+    "&:is([aria-pressed=true], [data-state=checked])": {
       bg: "accentSoft",
       borderColor: "accentMuted",
       color: "accent",
