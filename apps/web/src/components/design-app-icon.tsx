@@ -370,7 +370,7 @@ export const pickableIcons = iconColorOptions;
 // system's continuous corner at icon sizes.
 const appIcon = css({
   "& img": { display: "block", height: "100%", width: "100%" },
-  bg: "fill2",
+  bg: "fill.tertiary",
   borderRadius: "22.5%",
   boxShadow: "0 0 0 0.5px rgb(0 0 0 / 0.12)",
   display: "inline-block",
@@ -413,12 +413,12 @@ const study = {
     gap: "5px",
   }),
   choice: css({
-    _checked: { borderColor: "var(--border-strong)", color: "text" },
+    _checked: { borderColor: "var(--border-strong)", color: "text.primary" },
     alignItems: "center",
     bg: "transparent",
     border: "1px solid transparent",
     borderRadius: "20px",
-    color: "text2",
+    color: "text.secondary",
     display: "flex",
     flexDirection: "column",
     fontSize: "12px",
@@ -469,7 +469,7 @@ const study = {
     },
     "& > figure > figcaption": {
       alignItems: "center",
-      color: "text3",
+      color: "text.tertiary",
       display: "flex",
       flexDirection: "column",
       fontSize: "11px",
@@ -480,7 +480,7 @@ const study = {
   }),
   twin: css({
     alignItems: "center",
-    color: "text3",
+    color: "text.tertiary",
     display: "flex",
     fontSize: "10px",
     gap: "6px",

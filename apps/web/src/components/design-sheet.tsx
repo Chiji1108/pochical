@@ -29,7 +29,7 @@ const sheet = {
     padding: "12px 24px 20px",
   }),
   handle: css({
-    bg: "controlOff",
+    bg: "fill.primary",
     borderRadius: "8px",
     height: "4px",
     margin: "0 auto",
@@ -97,10 +97,10 @@ const content = cva({
       animation: "sheetOut 0.2s ease-in",
     },
     _open: { animation: "sheetIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)" },
-    bg: "raised",
+    bg: "background.elevated",
     // Floating off the screen's sides and foot, as iOS 26's sheets.
     borderRadius: "32px",
-    color: "text",
+    color: "text.primary",
     // A column, so a part marked to scroll can take what is left while the
     // heading stays in reach.
     display: "flex",
@@ -117,7 +117,7 @@ const content = cva({
   variants: {
     modal: {
       false: {
-        boxShadow: "0 -6px 24px var(--shadow-strong)",
+        boxShadow: "0 -6px 24px var(--shadow-large)",
         maxHeight: "46%",
       },
       true: { maxHeight: "85%" },
@@ -308,7 +308,7 @@ const heading = {
   back: css({
     bg: "transparent",
     border: 0,
-    color: "text2",
+    color: "text.secondary",
     display: "grid",
     flexShrink: 0,
     height: "action",
@@ -317,17 +317,21 @@ const heading = {
     width: "32px",
   }),
   close: css({
-    bg: "fill",
+    bg: "fill.quaternary",
     border: 0,
     borderRadius: "50%",
-    color: "text2",
+    color: "text.secondary",
     display: "grid",
     flexShrink: 0,
     height: "touch",
     placeItems: "center",
     width: "touch",
   }),
-  eyebrow: css({ color: "text3", margin: "0 0 4px", textStyle: "footnote" }),
+  eyebrow: css({
+    color: "text.tertiary",
+    margin: "0 0 4px",
+    textStyle: "footnote",
+  }),
   root: css({
     alignItems: "center",
     display: "flex",
@@ -361,11 +365,19 @@ const decide = {
     },
     variants: {
       confirm: {
-        false: { bg: "fill", color: "text", justifySelf: "start" },
+        false: {
+          bg: "fill.quaternary",
+          color: "text.primary",
+          justifySelf: "start",
+        },
         true: {
-          _disabled: { bg: "fill", color: "textDisabled", cursor: "default" },
-          bg: "accentFill",
-          color: "onAccentFill",
+          _disabled: {
+            bg: "fill.quaternary",
+            color: "text.disabled",
+            cursor: "default",
+          },
+          bg: "accent.fill",
+          color: "accent.onFill",
           justifySelf: "end",
         },
       },
@@ -609,18 +621,18 @@ const confirm = {
   }),
   // The badge red holds white text in dark mode too; --danger is a light
   // red there, made for text.
-  action: css({ bg: "var(--badge)", color: "var(--on-badge)" }),
-  cancel: css({ bg: "fill", color: "text" }),
+  action: css({ bg: "var(--danger-fill)", color: "var(--danger-on-fill)" }),
+  cancel: css({ bg: "fill.quaternary", color: "text.primary" }),
   message: css({
-    color: "text3",
+    color: "text.tertiary",
     lineHeight: 1.6,
     margin: "8px 0 0",
     textStyle: "subheadline",
   }),
   root: css({
-    bg: "raised",
+    bg: "background.elevated",
     borderRadius: "20px",
-    color: "text",
+    color: "text.primary",
     padding: "24px 20px 16px",
     textAlign: "center",
     width: "min(300px, calc(100% - 48px))",

@@ -124,7 +124,7 @@ const glyphStyle = {
     placeItems: "center",
   }),
   time: css({
-    bg: "text2",
+    bg: "text.secondary",
     height: "calc(var(--sm-size) * 0.32)",
     position: "absolute",
     top: "-2px",

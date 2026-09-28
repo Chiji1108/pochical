@@ -952,11 +952,11 @@ const tabs: { tab: Tab; label: string; icon: typeof CalendarDays }[] = [
 const tabBar = {
   bar: css({
     backdropFilter: "blur(16px) saturate(1.4)",
-    bg: "color-mix(in srgb, var(--fill-2) 80%, transparent)",
+    bg: "color-mix(in srgb, var(--fill-tertiary) 80%, transparent)",
     borderRadius: "999px",
     bottom: "var(--tab-bar-bottom)",
-    boxShadow: "0 4px 20px var(--shadow)",
-    color: "text3",
+    boxShadow: "0 4px 20px var(--shadow-medium)",
+    color: "text.tertiary",
     display: "flex",
     height: "64px",
     left: "20px",
@@ -980,7 +980,9 @@ const tabBar = {
       justifyContent: "center",
     },
     variants: {
-      active: { true: { bg: "var(--fill-3)", color: "accent" } },
+      active: {
+        true: { bg: "var(--fill-secondary)", color: "accent.default" },
+      },
     },
   }),
 };
@@ -1016,7 +1018,7 @@ export function TabBar({
 // with the month's length under them.
 const breakdown = {
   count: css({
-    color: "accent",
+    color: "accent.default",
     fontWeight: 600,
     margin: 0,
     textStyle: "title3",
@@ -1037,10 +1039,10 @@ const breakdown = {
       justifyContent: "space-between",
       minHeight: "52px",
     },
-    variants: { unfilled: { true: { color: "text3" } } },
+    variants: { unfilled: { true: { color: "text.tertiary" } } },
   }),
   total: css({
-    color: "text3",
+    color: "text.tertiary",
     margin: "20px 0 0",
     textAlign: "center",
     textStyle: "footnote",
@@ -1089,7 +1091,7 @@ const heading = {
     bg: "transparent",
     border: 0,
     borderRadius: "12px",
-    color: "text3",
+    color: "text.tertiary",
     display: "grid",
     height: "40px",
     placeItems: "center",
@@ -1097,7 +1099,7 @@ const heading = {
   }),
   title: css({ flexShrink: 0, fontWeight: 400, margin: 0 }),
   year: css({
-    color: "text3",
+    color: "text.tertiary",
     display: "block",
     fontSize: "11px",
     marginBottom: "4px",
@@ -1130,7 +1132,7 @@ const calendarPage = {
   // ground of a keyboard: out to the phone's sides and down under the
   // home indicator, its content kept where the screen's would be.
   input: css({
-    bg: "raised",
+    bg: "background.elevated",
     flexShrink: 0,
     marginBottom: "calc(-1 * var(--safe-bottom))",
     marginInline:
@@ -1463,7 +1465,7 @@ const repeatEditor = {
     bg: "transparent",
     border: "1px dashed var(--border-strong)",
     borderRadius: "999px",
-    color: "accent",
+    color: "accent.default",
     display: "inline-flex",
     gap: "4px",
     minHeight: "32px",
@@ -1471,13 +1473,13 @@ const repeatEditor = {
     textStyle: "caption",
   }),
   day: css({
-    "& > small": { color: "text4", fontSize: "8px" },
+    "& > small": { color: "text.quaternary", fontSize: "8px" },
     "& > span": { fontFamily: EMOJI_FONT, fontSize: "18px", lineHeight: 1.2 },
     alignItems: "center",
-    bg: "surface",
-    border: "1px solid token(colors.border)",
+    bg: "background.card",
+    border: "1px solid token(colors.border.default)",
     borderRadius: "12px",
-    color: "text2",
+    color: "text.secondary",
     display: "flex",
     flexDirection: "column",
     fontSize: "9px",
@@ -1489,7 +1491,7 @@ const repeatEditor = {
   }),
   palette: css({ display: "flex", flexWrap: "wrap", gap: "8px" }),
   sequence: css({
-    bg: "fill",
+    bg: "fill.quaternary",
     borderRadius: "16px",
     display: "flex",
     flexWrap: "wrap",
@@ -1507,7 +1509,7 @@ const repeatEditor = {
 const shiftPreview = {
   day: css({
     alignItems: "center",
-    bg: "fill",
+    bg: "fill.quaternary",
     borderRadius: "8px",
     display: "flex",
     flexDirection: "column",
@@ -1516,15 +1518,15 @@ const shiftPreview = {
   }),
   number: cva({
     base: {
-      color: "text3",
+      color: "text.tertiary",
       fontFamily: "-apple-system, sans-serif",
       fontSize: "9px",
     },
     variants: {
       tone: {
-        holiday: { color: "holiday" },
+        holiday: { color: "calendar.holiday" },
         plain: {},
-        saturday: { color: "saturday" },
+        saturday: { color: "calendar.saturday" },
       },
     },
   }),
@@ -1627,13 +1629,13 @@ export function RepeatSequenceEditor({
 // save buttons that stand in its place share its edges.
 const shiftInput = {
   action: css({
-    _disabled: { color: "textDisabled", cursor: "default" },
-    _hover: { "&:not(:disabled)": { bg: "accentSoft" } },
+    _disabled: { color: "text.disabled", cursor: "default" },
+    _hover: { "&:not(:disabled)": { bg: "accent.container" } },
     alignItems: "center",
     bg: "transparent",
     border: 0,
     borderRadius: "control",
-    color: "text3",
+    color: "text.tertiary",
     display: "flex",
     gap: "4px",
     minHeight: "touch",
@@ -1658,11 +1660,11 @@ const shiftInput = {
   }),
   pattern: cva({
     base: {
-      _active: { bg: "accentPressed", transform: "scale(0.97)" },
-      _hover: { bg: "accentSoft", borderColor: "accentMuted" },
+      _active: { bg: "accent.pressed", transform: "scale(0.97)" },
+      _hover: { bg: "accent.container", borderColor: "accent.border" },
       alignItems: "center",
-      bg: "surface",
-      border: "1px solid token(colors.border)",
+      bg: "background.card",
+      border: "1px solid token(colors.border.default)",
       borderRadius: "control",
       display: "flex",
       flexDirection: "column",
@@ -1704,16 +1706,16 @@ const shiftInput = {
   startRow: css({ display: "flex", gap: "8px", textAlign: "center" }),
   weekday: cva({
     base: {
-      color: "text3",
+      color: "text.tertiary",
       fontSize: "14px",
       fontWeight: 400,
       marginLeft: "2px",
     },
     variants: {
       tone: {
-        holiday: { color: "holiday" },
+        holiday: { color: "calendar.holiday" },
         plain: {},
-        saturday: { color: "saturday" },
+        saturday: { color: "calendar.saturday" },
       },
     },
   }),
@@ -1798,7 +1800,7 @@ export const dayCell = cva({
   base: {
     "&:is(button)": { cursor: "pointer" },
     "&:is(button):active": { transform: "scale(0.94)" },
-    _hover: { "&:is(button):not([data-active])": { bg: "accentHover" } },
+    _hover: { "&:is(button):not([data-active])": { bg: "accent.hover" } },
     alignItems: "center",
     bg: "transparent",
     border: 0,
@@ -1816,16 +1818,16 @@ export const dayCell = cva({
     // Picked: the day being entered or opened.
     active: {
       true: {
-        outline: "2px solid token(colors.accent)",
+        outline: "2px solid token(colors.accent.default)",
         outlineOffset: "-2px",
       },
     },
     // A day off in its own pattern's tint, set as --off-tint.
-    off: { true: { bg: "var(--off-tint, var(--accent-mark-tint))" } },
-    outside: { true: { color: "textDisabled" } },
+    off: { true: { bg: "var(--off-tint, var(--calendar-off-tint))" } },
+    outside: { true: { color: "text.disabled" } },
     today: {
       true: {
-        outline: "1.5px solid token(colors.accentLine)",
+        outline: "1.5px solid token(colors.accent.focus)",
         outlineOffset: "-1px",
       },
     },
@@ -1835,9 +1837,9 @@ export const dayCell = cva({
 export const dayParts = {
   date: css({ flexShrink: 0, fontWeight: 600, lineHeight: "14px" }),
   dateOutside: css({ fontWeight: 400 }),
-  holiday: css({ color: "holiday" }),
+  holiday: css({ color: "calendar.holiday" }),
   label: css({
-    color: "text2",
+    color: "text.secondary",
     flexShrink: 0,
     fontSize: "9px",
     lineHeight: "12px",
@@ -1858,7 +1860,7 @@ export const dayParts = {
   // A note: a stroke under the date, as marked in a paper diary.
   noted: css({
     _before: {
-      bg: "var(--note-marker)",
+      bg: "var(--calendar-note-marker)",
       borderRadius: "2px",
       content: '""',
       inset: "45% -3px -1px",
@@ -2038,44 +2040,44 @@ const dayDetail = {
     bg: "transparent",
     border: 0,
     borderRadius: "control",
-    color: "danger",
+    color: "danger.default",
     display: "flex",
     gap: "4px",
     minHeight: "touch",
     padding: "0 16px",
     textStyle: "caption",
   }),
-  empty: css({ color: "text4", margin: 0, textStyle: "footnote" }),
+  empty: css({ color: "text.quaternary", margin: 0, textStyle: "footnote" }),
   // The time and the memo, as the platforms' filled text fields.
   field: css({
     _focus: {
-      bg: "surface",
-      borderColor: "accentLine",
+      bg: "background.card",
+      borderColor: "accent.focus",
       outline: "none",
     },
-    bg: "fill",
+    bg: "fill.quaternary",
     border: "1px solid transparent",
     borderRadius: "12px",
-    color: "text",
+    color: "text.primary",
     font: "inherit",
     minHeight: "40px",
     minWidth: 0,
     padding: "0 12px",
     textStyle: "body",
   }),
-  hint: css({ color: "text4", margin: 0, textStyle: "caption" }),
-  label: css({ color: "text3", textStyle: "footnote" }),
+  hint: css({ color: "text.quaternary", margin: 0, textStyle: "caption" }),
+  label: css({ color: "text.tertiary", textStyle: "footnote" }),
   // The legend floats, so the fieldset lays it out like the other rows'
   // labels.
   legend: css({ float: "left", padding: "0 0 8px", width: "100%" }),
   markHint: css({
-    color: "text3",
+    color: "text.tertiary",
     display: "block",
     marginTop: "4px",
     textStyle: "caption",
   }),
   memberInput: css({
-    border: "1px solid token(colors.accentLine)",
+    border: "1px solid token(colors.accent.focus)",
     borderRadius: "999px",
     font: "inherit",
     minHeight: "34px",
@@ -2096,7 +2098,7 @@ const dayDetail = {
   reset: css({
     bg: "transparent",
     border: 0,
-    color: "accent",
+    color: "accent.default",
     marginLeft: "8px",
     padding: "4px 8px",
     textDecoration: "underline",
@@ -2106,7 +2108,7 @@ const dayDetail = {
   row: css({ display: "flex", flexDirection: "column", gap: "8px" }),
   time: css({
     alignItems: "center",
-    color: "text3",
+    color: "text.tertiary",
     display: "flex",
     gap: "8px",
   }),
@@ -2338,10 +2340,10 @@ function DayDetail({
 
 const picker = {
   card: css({
-    bg: "raised",
+    bg: "background.elevated",
     borderRadius: "24px",
-    boxShadow: "0 16px 60px var(--shadow-strong)",
-    color: "text",
+    boxShadow: "0 16px 60px var(--shadow-large)",
+    color: "text.primary",
     padding: "20px",
     width: "min(360px, calc(100% - 24px))",
   }),
@@ -2354,7 +2356,7 @@ const picker = {
     bg: "transparent",
     border: 0,
     borderRadius: "12px",
-    color: "text",
+    color: "text.primary",
     display: "grid",
     height: "touch",
     placeItems: "center",
@@ -2370,7 +2372,7 @@ const picker = {
   table: css({ borderCollapse: "collapse", width: "100%" }),
   title: css({ margin: 0, textStyle: "body" }),
   weekday: css({
-    color: "text3",
+    color: "text.tertiary",
     fontWeight: 400,
     paddingBottom: "8px",
     textStyle: "caption",
@@ -2381,14 +2383,14 @@ const picker = {
 // outrank the week's colors, being attribute selectors.
 const pickerCell = cva({
   base: {
-    "&[data-outside-range]": { color: "text4" },
+    "&[data-outside-range]": { color: "text.quaternary" },
     "&[data-selected]": {
-      bg: "accentFill",
-      color: "onAccentFill",
+      bg: "accent.fill",
+      color: "accent.onFill",
       fontWeight: 600,
     },
-    _focusVisible: { outline: "2px solid token(colors.accent)" },
-    _hover: { bg: "accentSoft" },
+    _focusVisible: { outline: "2px solid token(colors.accent.default)" },
+    _hover: { bg: "accent.container" },
     alignItems: "center",
     borderRadius: "12px",
     cursor: "default",
@@ -2402,14 +2404,14 @@ const pickerCell = cva({
     today: {
       false: {},
       true: {
-        outline: "1.5px solid token(colors.accentLine)",
+        outline: "1.5px solid token(colors.accent.focus)",
         outlineOffset: "-1px",
       },
     },
     tone: {
-      holiday: { color: "holiday" },
+      holiday: { color: "calendar.holiday" },
       plain: {},
-      saturday: { color: "saturday" },
+      saturday: { color: "calendar.saturday" },
     },
   },
 });
@@ -2523,13 +2525,13 @@ const dateButton = {
   button: cva({
     base: {
       _focusVisible: {
-        outline: "2px solid token(colors.accentLine)",
+        outline: "2px solid token(colors.accent.focus)",
         outlineOffset: "2px",
       },
       alignItems: "center",
       border: 0,
       borderRadius: "action",
-      color: "text",
+      color: "text.primary",
       cursor: "pointer",
       display: "flex",
       fontWeight: 600,
@@ -2541,21 +2543,21 @@ const dateButton = {
     variants: {
       look: {
         field: {
-          _hover: { bg: "accentHover", borderColor: "accentMuted" },
-          bg: "accentSoft",
-          border: "1px solid token(colors.accentMuted)",
+          _hover: { bg: "accent.hover", borderColor: "accent.border" },
+          bg: "accent.container",
+          border: "1px solid token(colors.accent.border)",
           margin: 0,
           textStyle: "body",
         },
         inline: {
-          _hover: { bg: "accentSoft" },
+          _hover: { bg: "accent.container" },
           bg: "transparent",
           margin: "0 auto 8px",
         },
       },
     },
   }),
-  chevron: css({ color: "accent" }),
+  chevron: css({ color: "accent.default" }),
 };
 
 export function InputDatePicker({

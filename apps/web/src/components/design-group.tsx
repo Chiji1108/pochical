@@ -1310,7 +1310,7 @@ function NoGroups({
 const noGroups = {
   actions: css({ display: "flex", flexDirection: "column", gap: "12px" }),
   note: css({
-    color: "text3",
+    color: "text.tertiary",
     lineHeight: 1.6,
     margin: 0,
     textAlign: "center",
@@ -1338,10 +1338,10 @@ const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", sans-serif';
 // start or join one.
 const rail = {
   action: css({
-    bg: "surface",
+    bg: "background.card",
     border: 0,
     borderRadius: "50%",
-    color: "accent",
+    color: "accent.default",
     display: "grid",
     height: "42px",
     placeItems: "center",
@@ -1349,12 +1349,12 @@ const rail = {
   }),
   badge: css({
     bottom: 0,
-    boxShadow: "0 0 0 2px var(--fill)",
+    boxShadow: "0 0 0 2px var(--fill-quaternary)",
     position: "absolute",
     right: "3px",
   }),
   divider: css({
-    bg: "border",
+    bg: "border.default",
     borderRadius: "1px",
     height: "2px",
     width: "28px",
@@ -1363,7 +1363,7 @@ const rail = {
   item: css({
     "&::before": {
       _motionReduce: { transition: "none" },
-      bg: "accent",
+      bg: "accent.default",
       borderRadius: "0 4px 4px 0",
       content: '""',
       height: 0,
@@ -1389,7 +1389,7 @@ const rail = {
   root: css({
     "& > *": { flexShrink: 0 },
     alignItems: "center",
-    bg: "fill",
+    bg: "fill.quaternary",
     borderRadius: "0 20px 0 0",
     display: "flex",
     flexDirection: "column",
@@ -1421,13 +1421,13 @@ const markFrame = cva({
       // A thin gap keeps the ring clear of a photo's own colors.
       "&::after": {
         boxShadow:
-          "inset 0 0 0 2px var(--accent), inset 0 0 0 4px var(--surface)",
+          "inset 0 0 0 2px var(--accent-default), inset 0 0 0 4px var(--background-card)",
       },
-      bg: "accentSoft",
+      bg: "accent.container",
       borderRadius: "12px",
     },
     _motionReduce: { transition: "none" },
-    bg: "surface",
+    bg: "background.card",
     borderRadius: "16px",
     display: "grid",
     fontFamily: EMOJI_FONT,
@@ -1442,7 +1442,7 @@ const markFrame = cva({
   variants: {
     size: {
       large: {
-        bg: "fill",
+        bg: "fill.quaternary",
         borderRadius: "24px",
         height: "76px",
         width: "76px",
@@ -1453,7 +1453,7 @@ const markFrame = cva({
 
 // The same rounded square as the rail, small, before a row's name.
 const smallMarkFrame = css({
-  bg: "surface",
+  bg: "background.card",
   borderRadius: "8px",
   display: "grid",
   height: "28px",
@@ -1500,9 +1500,9 @@ const avatar = cva({
       objectFit: "cover",
       width: "100%",
     },
-    bg: "var(--fill-3)",
+    bg: "var(--fill-secondary)",
     borderRadius: "50%",
-    color: "text2",
+    color: "text.secondary",
     display: "grid",
     flexShrink: 0,
     fontSize: "11px",
@@ -1511,12 +1511,12 @@ const avatar = cva({
     placeItems: "center",
     width: "24px",
   },
-  variants: { me: { true: { bg: "accentFill", color: "onAccentFill" } } },
+  variants: { me: { true: { bg: "accent.fill", color: "accent.onFill" } } },
 });
 
 // A day with no shift, as a small dot.
 const emptyMark = css({
-  bg: "var(--fill-3)",
+  bg: "var(--fill-secondary)",
   borderRadius: "50%",
   height: "6px",
   width: "6px",
@@ -1526,9 +1526,9 @@ const emptyMark = css({
 // next day all are off, then its chats and the rows of its settings.
 const hub = {
   chatAll: css({
-    bg: "accentSoft",
+    bg: "accent.container",
     borderRadius: "8px",
-    color: "accent",
+    color: "accent.default",
     display: "grid",
     flexShrink: 0,
     height: "28px",
@@ -1547,7 +1547,7 @@ const hub = {
     paddingTop: "4px",
   }),
   icon: css({
-    bg: "fill",
+    bg: "fill.quaternary",
     borderRadius: "8px",
     display: "grid",
     flexShrink: 0,
@@ -1574,17 +1574,17 @@ const hub = {
   profileList: css({ marginTop: "20px" }),
   qr: css({
     alignItems: "center",
-    bg: "surface",
+    bg: "background.card",
     border: "1px solid token(colors.separator)",
     borderRadius: "20px",
-    color: "text",
+    color: "text.primary",
     display: "flex",
     flexDirection: "column",
     gap: "12px",
     padding: "24px 16px 20px",
   }),
-  qrNote: css({ color: "text3", textStyle: "caption" }),
-  rowIcon: css({ color: "accent", flexShrink: 0 }),
+  qrNote: css({ color: "text.tertiary", textStyle: "caption" }),
+  rowIcon: css({ color: "accent.default", flexShrink: 0 }),
   sectionHead: css({
     alignItems: "center",
     display: "flex",
@@ -1592,7 +1592,7 @@ const hub = {
     marginBottom: "8px",
   }),
   sectionHeadTitle: css({
-    color: "text3",
+    color: "text.tertiary",
     fontWeight: 600,
     margin: "0 0 0 12px",
     textStyle: "footnote",
@@ -1601,7 +1601,7 @@ const hub = {
     alignItems: "center",
     bg: "transparent",
     border: 0,
-    color: "accent",
+    color: "accent.default",
     display: "inline-flex",
     fontWeight: 600,
     gap: "1px",
@@ -1622,10 +1622,10 @@ const hub = {
   // like the screen's in light mode but lifted in dark, where the card
   // would float.
   weekCard: css({
-    bg: "background",
+    bg: "background.base",
     border: "1px solid token(colors.separator)",
     borderRadius: "16px",
-    color: "text",
+    color: "text.primary",
     display: "flex",
     flexDirection: "column",
     gap: "8px",
@@ -1635,12 +1635,12 @@ const hub = {
   }),
   // 次にみんな休み: a row under the week, laid out like 今月のみんな休み.
   weekCardNext: css({
-    "& svg": { color: "text4" },
+    "& svg": { color: "text.quaternary" },
     alignItems: "center",
     bg: "transparent",
     border: 0,
     borderTop: "1px solid token(colors.separator)",
-    color: "text2",
+    color: "text.secondary",
     display: "flex",
     gap: "8px",
     marginTop: "2px",
@@ -1650,7 +1650,7 @@ const hub = {
     width: "100%",
   }),
   weekCardNextValue: css({
-    color: "accent",
+    color: "accent.default",
     fontWeight: 600,
     marginLeft: "auto",
   }),
@@ -1668,14 +1668,18 @@ const hub = {
 const join = {
   from: css({
     alignItems: "center",
-    color: "text2",
+    color: "text.secondary",
     display: "flex",
     gap: "8px",
     margin: "12px 0 0",
     textStyle: "subheadline",
   }),
   members: css({
-    "& small": { color: "text3", marginLeft: "4px", textStyle: "footnote" },
+    "& small": {
+      color: "text.tertiary",
+      marginLeft: "4px",
+      textStyle: "footnote",
+    },
     alignItems: "center",
     display: "flex",
     gap: "8px",
@@ -1689,7 +1693,7 @@ const join = {
     textAlign: "center",
   }),
   text: css({
-    color: "text3",
+    color: "text.tertiary",
     lineHeight: 1.6,
     margin: "12px 0 16px",
     textStyle: "footnote",
@@ -1703,18 +1707,18 @@ const photoPicker = {
   action: css({
     bg: "transparent",
     border: 0,
-    color: "accent",
+    color: "accent.default",
     cursor: "pointer",
     fontWeight: 600,
     padding: 0,
     textStyle: "body",
   }),
   badge: css({
-    bg: "surface",
+    bg: "background.card",
     borderRadius: "50%",
     bottom: "-2px",
-    boxShadow: "0 1px 4px var(--shadow-strong)",
-    color: "accent",
+    boxShadow: "0 1px 4px var(--shadow-large)",
+    color: "accent.default",
     display: "grid",
     height: "26px",
     placeItems: "center",
@@ -1723,10 +1727,10 @@ const photoPicker = {
     width: "26px",
   }),
   cancel: css({
-    bg: "fill",
+    bg: "fill.quaternary",
     border: 0,
     borderRadius: "16px",
-    color: "text",
+    color: "text.primary",
     fontWeight: 600,
     marginTop: "12px",
     minHeight: "48px",
@@ -2116,7 +2120,7 @@ const profileStyle = {
   }),
   where: css({
     alignItems: "center",
-    color: "text3",
+    color: "text.tertiary",
     display: "flex",
     gap: "8px",
     textStyle: "footnote",
@@ -2138,9 +2142,9 @@ function lastLine(chat: Chat, members: Member[]) {
 
 // How many are unread, on a chat's row and on the rail's group icon.
 const badge = css({
-  bg: "var(--badge)",
+  bg: "var(--danger-fill)",
   borderRadius: "999px",
-  color: "var(--on-badge)",
+  color: "var(--danger-on-fill)",
   display: "inline-grid",
   fontSize: "10px",
   fontWeight: 700,
@@ -2162,7 +2166,7 @@ const chatRow = {
   }),
   name: css({ textStyle: "body" }),
   preview: css({
-    color: "text4",
+    color: "text.quaternary",
     overflow: "hidden",
     textOverflow: "ellipsis",
     textStyle: "caption",
@@ -2175,7 +2179,7 @@ const chatRow = {
     gap: "2px",
     minWidth: 0,
   }),
-  time: css({ color: "text4", textStyle: "caption2" }),
+  time: css({ color: "text.quaternary", textStyle: "caption2" }),
 };
 
 // A chat as the messaging apps draw one: others' bubbles on the left with
@@ -2196,9 +2200,9 @@ const chatStyle = {
   }),
   bubble: cva({
     base: {
-      bg: "fill2",
+      bg: "fill.tertiary",
       borderRadius: "16px 16px 16px 8px",
-      color: "text",
+      color: "text.primary",
       display: "flex",
       flexDirection: "column",
       minWidth: 0,
@@ -2207,9 +2211,9 @@ const chatStyle = {
     variants: {
       mine: {
         true: {
-          bg: "accentFill",
+          bg: "accent.fill",
           borderRadius: "16px 16px 8px",
-          color: "onAccentFill",
+          color: "accent.onFill",
         },
       },
     },
@@ -2278,7 +2282,7 @@ const chatStyle = {
       bg: "transparent",
       border: 0,
       borderRadius: "50%",
-      color: "accent",
+      color: "accent.default",
       display: "grid",
       flexShrink: 0,
       height: "38px",
@@ -2288,15 +2292,15 @@ const chatStyle = {
     variants: {
       send: {
         true: {
-          _disabled: { bg: "controlOff" },
-          bg: "accentFill",
-          color: "onAccentFill",
+          _disabled: { bg: "fill.primary" },
+          bg: "accent.fill",
+          color: "accent.onFill",
         },
       },
     },
   }),
   composerInput: css({
-    bg: "fill",
+    bg: "fill.quaternary",
     border: 0,
     borderRadius: "999px",
     flex: 1,
@@ -2311,14 +2315,18 @@ const chatStyle = {
       alignSelf: "flex-start",
       bg: "transparent",
       border: 0,
-      color: "accent",
+      color: "accent.default",
       padding: "0 4px",
       textDecoration: "underline",
       textStyle: "caption",
     },
     variants: { mine: { true: { alignSelf: "flex-end" } } },
   }),
-  empty: css({ color: "text4", margin: "auto", textStyle: "footnote" }),
+  empty: css({
+    color: "text.quaternary",
+    margin: "auto",
+    textStyle: "footnote",
+  }),
   header: css({
     alignItems: "center",
     borderBottom: "1px solid token(colors.separator)",
@@ -2358,10 +2366,14 @@ const chatStyle = {
     padding: "12px 2px",
     scrollbarWidth: "none",
   }),
-  name: css({ color: "text3", paddingLeft: "4px", textStyle: "caption2" }),
+  name: css({
+    color: "text.tertiary",
+    paddingLeft: "4px",
+    textStyle: "caption2",
+  }),
   notice: css({
     alignSelf: "center",
-    color: "text3",
+    color: "text.tertiary",
     lineHeight: 1.5,
     margin: "8px auto",
     maxWidth: "85%",
@@ -2372,8 +2384,8 @@ const chatStyle = {
   quote: css({
     bg: "transparent",
     border: 0,
-    borderColor: "accent",
-    borderLeft: "3px solid token(colors.accent)",
+    borderColor: "accent.default",
+    borderLeft: "3px solid token(colors.accent.default)",
     borderRadius: "2px",
     display: "flex",
     flex: 1,
@@ -2385,13 +2397,24 @@ const chatStyle = {
     padding: "4px 12px",
     textAlign: "left",
   }),
-  quoteName: css({ color: "text3", fontWeight: 600, textStyle: "caption2" }),
-  quoteText: css({ color: "text4", lineClamp: 1, textStyle: "caption" }),
+  quoteName: css({
+    color: "text.tertiary",
+    fontWeight: 600,
+    textStyle: "caption2",
+  }),
+  quoteText: css({
+    color: "text.quaternary",
+    lineClamp: 1,
+    textStyle: "caption",
+  }),
   reaction: css({
-    "&[aria-pressed=true]": { bg: "accentSoft", borderColor: "accent" },
+    "&[aria-pressed=true]": {
+      bg: "accent.container",
+      borderColor: "accent.default",
+    },
     alignItems: "center",
-    bg: "surface",
-    border: "1px solid token(colors.border)",
+    bg: "background.card",
+    border: "1px solid token(colors.border.default)",
     borderRadius: "999px",
     display: "inline-flex",
     gap: "4px",
@@ -2399,7 +2422,7 @@ const chatStyle = {
     padding: "0 8px",
     textStyle: "subheadline",
   }),
-  reactionCount: css({ color: "text3", textStyle: "caption" }),
+  reactionCount: css({ color: "text.tertiary", textStyle: "caption" }),
   reactions: cva({
     base: { display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "-1px" },
     variants: { mine: { true: { justifyContent: "flex-end" } } },
@@ -2425,7 +2448,7 @@ const chatStyle = {
     variants: { mine: { true: { justifyContent: "flex-end" } } },
   }),
   time: css({
-    color: "text4",
+    color: "text.quaternary",
     flexShrink: 0,
     paddingBottom: "2px",
     textStyle: "caption2",
@@ -2433,9 +2456,9 @@ const chatStyle = {
   title: css({ fontWeight: 600, margin: 0, textStyle: "headline" }),
   when: css({
     alignSelf: "center",
-    bg: "fill2",
+    bg: "fill.tertiary",
     borderRadius: "8px",
-    color: "text3",
+    color: "text.tertiary",
     margin: "8px 0 2px",
     padding: "2px 12px",
     textStyle: "caption2",
@@ -2848,10 +2871,10 @@ const messageActions = {
     outline: "none",
     zIndex: 30,
   }),
-  more: css({ color: "text2" }),
+  more: css({ color: "text.secondary" }),
   reaction: css({
-    _focusVisible: { outline: "2px solid token(colors.accent)" },
-    _hover: { bg: "fill2" },
+    _focusVisible: { outline: "2px solid token(colors.accent.default)" },
+    _hover: { bg: "fill.tertiary" },
     bg: "transparent",
     border: 0,
     borderRadius: "50%",
@@ -2864,10 +2887,10 @@ const messageActions = {
   }),
   reactions: css({
     alignItems: "center",
-    bg: "raised",
-    border: "1px solid token(colors.border)",
+    bg: "background.elevated",
+    border: "1px solid token(colors.border.default)",
     borderRadius: "999px",
-    boxShadow: "0 4px 14px var(--shadow)",
+    boxShadow: "0 4px 14px var(--shadow-medium)",
     display: "flex",
     gap: "2px",
     padding: "4px",
@@ -3032,13 +3055,17 @@ function toggleReaction(message: Message, emoji: string): Message {
 // A date colored as the week's settings say: Sundays and holidays red,
 // Saturdays blue.
 const toneColor: Record<DayTone, string | undefined> = {
-  holiday: css({ color: "holiday" }),
+  holiday: css({ color: "calendar.holiday" }),
   plain: undefined,
-  saturday: css({ color: "saturday" }),
+  saturday: css({ color: "calendar.saturday" }),
 };
 
 // The month in the corner where the dates and names meet.
-const cornerMonth = css({ color: "text3", fontSize: "11px", fontWeight: 600 });
+const cornerMonth = css({
+  color: "text.tertiary",
+  fontSize: "11px",
+  fontWeight: 600,
+});
 
 const smallWeekday = css({
   fontSize: "9px",
@@ -3053,7 +3080,7 @@ const smallWeekday = css({
 // piece, its ends reaching into the week's padding to clear the date and
 // marks.
 const offTile = {
-  bg: "accentSoft",
+  bg: "accent.container",
   borderRadius: "8px",
   content: '""',
   inset: "3px",
@@ -3061,7 +3088,7 @@ const offTile = {
   zIndex: -1,
 } as const;
 const pickedFrame = {
-  border: "0 solid token(colors.accent)",
+  border: "0 solid token(colors.accent.default)",
   content: '""',
   pointerEvents: "none",
   position: "absolute",
@@ -3094,7 +3121,7 @@ const weekTable = {
   // in it in dark mode.
   week: cva({
     base: {
-      bg: "background",
+      bg: "background.base",
       border: "1px solid token(colors.separator)",
       borderRadius: "16px",
       overflow: "hidden",
@@ -3116,11 +3143,11 @@ const weekTable = {
     padding: "8px 0 8px 4px",
   }),
   weekdays: cva({
-    base: { color: "text4", fontSize: "10px", textAlign: "center" },
+    base: { color: "text.quaternary", fontSize: "10px", textAlign: "center" },
     variants: {
       pinned: {
         true: {
-          bg: "background",
+          bg: "background.base",
           margin: "-8px 0 -8px",
           padding: "8px 0 4px",
           position: "sticky",
@@ -3220,9 +3247,9 @@ const weekCell = cva({
     picked: { true: { "&::after": pickedFrame } },
     together: { false: {}, true: {} },
     tone: {
-      holiday: { color: "holiday" },
+      holiday: { color: "calendar.holiday" },
       plain: {},
-      saturday: { color: "saturday" },
+      saturday: { color: "calendar.saturday" },
     },
   },
 });
@@ -3283,7 +3310,12 @@ const dayRows = {
     variants: {
       end: { false: {}, true: {} },
       me: {
-        true: { bg: "background", left: "46px", position: "sticky", zIndex: 2 },
+        true: {
+          bg: "background.base",
+          left: "46px",
+          position: "sticky",
+          zIndex: 2,
+        },
       },
       off: { true: { "&::before": offTile } },
       picked: { true: { "&::after": pickedFrame } },
@@ -3305,7 +3337,7 @@ const dayRows = {
   }),
   date: cva({
     base: {
-      bg: "background",
+      bg: "background.base",
       borderBottom: "1px solid token(colors.separator)",
       borderLeft: "3px solid transparent",
       fontWeight: 600,
@@ -3328,7 +3360,7 @@ const dayRows = {
           },
         },
       },
-      today: { true: { borderLeftColor: "accent" } },
+      today: { true: { borderLeftColor: "accent.default" } },
       together: {
         true: {
           "&::before": {
@@ -3357,14 +3389,14 @@ const dayRows = {
     borderBottom: "1px solid token(colors.separator)",
     padding: "20px 0 8px 12px",
   }),
-  empty: css({ color: "textDisabled", fontSize: "10px" }),
+  empty: css({ color: "text.disabled", fontSize: "10px" }),
   // Stands for the rows of a list of months not drawn yet.
   spacer: css({ border: 0, padding: 0 }),
   // The header stays on top as the rows scroll; a border would scroll away
   // with collapsed borders, so a shadow draws its line.
   head: cva({
     base: {
-      bg: "background",
+      bg: "background.base",
       boxShadow: "0 1px 0 token(colors.separator)",
       fontWeight: 600,
       padding: "8px 4px",
@@ -3418,7 +3450,7 @@ const dayRows = {
     },
   }),
   name: css({
-    color: "text",
+    color: "text.primary",
     fontSize: "11px",
     overflow: "hidden",
     textOverflow: "ellipsis",
@@ -3426,7 +3458,7 @@ const dayRows = {
   }),
   scroll: cva({
     base: {
-      bg: "background",
+      bg: "background.base",
       border: "1px solid token(colors.separator)",
       borderRadius: "16px",
       maxHeight: "520px",
@@ -3460,8 +3492,8 @@ const dayRows = {
 const dayCard = {
   card: cva({
     base: {
-      bg: "surface",
-      border: "1px solid token(colors.border)",
+      bg: "background.card",
+      border: "1px solid token(colors.border.default)",
       borderRadius: "16px",
       display: "flex",
       flexDirection: "column",
@@ -3478,7 +3510,9 @@ const dayCard = {
       placeItems: "center",
       width: "100%",
     },
-    variants: { off: { true: { "&::before": offTile, bg: "accentSoft" } } },
+    variants: {
+      off: { true: { "&::before": offTile, bg: "accent.container" } },
+    },
   }),
   date: css({
     bg: "transparent",
@@ -3492,7 +3526,7 @@ const dayCard = {
     alignItems: "center",
     bg: "transparent",
     border: 0,
-    color: "text",
+    color: "text.primary",
     display: "flex",
     fontSize: "12px",
     fontWeight: 600,
@@ -3503,7 +3537,7 @@ const dayCard = {
   people: css({ display: "flex", gap: "12px" }),
   person: css({
     alignItems: "center",
-    color: "text3",
+    color: "text.tertiary",
     display: "flex",
     flexDirection: "column",
     fontSize: "9px",
@@ -3520,7 +3554,7 @@ const dayCard = {
     },
     variants: {
       names: { true: { minHeight: "30px" } },
-      together: { true: { bg: "accentSoft" } },
+      together: { true: { bg: "accent.container" } },
     },
   }),
 };
@@ -3530,7 +3564,7 @@ const dayCard = {
 const shareDays = {
   day: cva({
     base: {
-      "&[aria-pressed=true]": { bg: "accentFill", color: "onAccentFill" },
+      "&[aria-pressed=true]": { bg: "accent.fill", color: "accent.onFill" },
       _disabled: { visibility: "hidden" },
       bg: "transparent",
       border: 0,
@@ -3541,11 +3575,11 @@ const shareDays = {
       padding: 0,
     },
     variants: {
-      together: { true: { bg: "accentSoft" } },
+      together: { true: { bg: "accent.container" } },
       tone: {
-        holiday: { color: "holiday" },
+        holiday: { color: "calendar.holiday" },
         plain: {},
-        saturday: { color: "saturday" },
+        saturday: { color: "calendar.saturday" },
       },
     },
   }),
@@ -3556,7 +3590,7 @@ const shareDays = {
   }),
   suggest: css({
     alignItems: "center",
-    bg: "accentSoft",
+    bg: "accent.container",
     borderRadius: "16px",
     display: "flex",
     flexWrap: "wrap",
@@ -3564,23 +3598,27 @@ const shareDays = {
     padding: "12px 12px",
   }),
   suggestion: css({
-    "&[aria-pressed=true]": { bg: "accentFill", color: "onAccentFill" },
-    bg: "surface",
+    "&[aria-pressed=true]": { bg: "accent.fill", color: "accent.onFill" },
+    bg: "background.card",
     border: "1.5px solid transparent",
     borderRadius: "999px",
-    color: "accent",
+    color: "accent.default",
     fontWeight: 600,
     minHeight: "30px",
     padding: "0 12px",
     textStyle: "footnote",
   }),
   togetherLabel: css({
-    color: "accent",
+    color: "accent.default",
     fontWeight: 600,
     marginRight: "4px",
     textStyle: "footnote",
   }),
-  weekday: css({ color: "text4", fontSize: "10px", textAlign: "center" }),
+  weekday: css({
+    color: "text.quaternary",
+    fontSize: "10px",
+    textAlign: "center",
+  }),
 };
 
 // ‹ 2026年9月 › over the month of a picker of days, as the platforms'
@@ -3590,7 +3628,7 @@ const monthSwitch = css({
     bg: "transparent",
     border: 0,
     borderRadius: "12px",
-    color: "accent",
+    color: "accent.default",
     display: "grid",
     height: "32px",
     placeItems: "center",
@@ -3624,7 +3662,7 @@ const shiftsPage = {
   // Over a list of months, the page's header and the month row stay on
   // top, spanning the screen so the rows pass under them.
   bar: css({
-    bg: "background",
+    bg: "background.base",
     display: "flex",
     flexDirection: "column",
     gap: "4px",
@@ -3635,10 +3673,14 @@ const shiftsPage = {
     zIndex: 6,
   }),
   scrolling: css({ display: "flex", flexDirection: "column", gap: "16px" }),
-  sheetTime: css({ color: "text4", textStyle: "caption" }),
+  sheetTime: css({ color: "text.quaternary", textStyle: "caption" }),
   // A mark and its name, as markValue sets them apart in a row's value.
   sheetValue: css({ alignItems: "center", display: "inline-flex", gap: "8px" }),
-  togetherNone: css({ color: "text3", fontWeight: 600, textStyle: "headline" }),
+  togetherNone: css({
+    color: "text.tertiary",
+    fontWeight: 600,
+    textStyle: "headline",
+  }),
 };
 
 // 人ごと: who to show, a row of chips that scrolls sideways out to the
@@ -3646,16 +3688,16 @@ const shiftsPage = {
 const people = {
   choice: css({
     _checked: {
-      bg: "surface",
-      borderColor: "accent",
-      color: "text",
+      bg: "background.card",
+      borderColor: "accent.default",
+      color: "text.primary",
       fontWeight: 600,
     },
     alignItems: "center",
-    bg: "fill",
+    bg: "fill.quaternary",
     border: "1px solid transparent",
     borderRadius: "999px",
-    color: "text2",
+    color: "text.secondary",
     display: "inline-flex",
     flexShrink: 0,
     gap: "8px",
@@ -4604,13 +4646,13 @@ function ScrollingShifts({
 
 const monthDivider = {
   name: css({ fontWeight: 600, margin: 0, textStyle: "headline" }),
-  none: css({ color: "text3", textStyle: "subheadline" }),
+  none: css({ color: "text.tertiary", textStyle: "subheadline" }),
   root: css({ alignItems: "baseline", display: "flex", gap: "12px" }),
   together: css({
     alignItems: "center",
     bg: "transparent",
     border: 0,
-    color: "accent",
+    color: "accent.default",
     display: "inline-flex",
     fontWeight: 600,
     gap: "2px",
@@ -5699,7 +5741,7 @@ function PersonDay({
   const className = css(
     dayCell.raw({ active: picked, off, outside }),
     withMe && !picked
-      ? { outline: "1.5px solid var(--accent-muted)", outlineOffset: "-1px" }
+      ? { outline: "1.5px solid var(--accent-border)", outlineOffset: "-1px" }
       : {}
   );
   const style = off ? ({ "--off-tint": tint } as CSSProperties) : undefined;

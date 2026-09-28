@@ -97,22 +97,22 @@ const buttonStyle = cva({
     size: { regular: {}, small: { textStyle: "subheadline" } },
     variant: {
       primary: {
-        bg: "accentFill",
-        color: "onAccentFill",
+        bg: "accent.fill",
+        color: "accent.onFill",
         minHeight: "control",
         width: "100%",
       },
       quiet: {
-        _hover: { "&:not(:disabled)": { bg: "fill2" } },
-        bg: "fill",
-        color: "accent",
+        _hover: { "&:not(:disabled)": { bg: "fill.tertiary" } },
+        bg: "fill.quaternary",
+        color: "accent.default",
         minHeight: "control",
         width: "100%",
       },
       subtle: {
         alignSelf: "center",
         bg: "transparent",
-        color: "text3",
+        color: "text.tertiary",
         fontWeight: 400,
         margin: "8px auto 0",
         minHeight: "touch",
@@ -122,7 +122,7 @@ const buttonStyle = cva({
       text: {
         alignSelf: "center",
         bg: "transparent",
-        color: "accent",
+        color: "accent.default",
         minHeight: "touch",
         paddingInline: "12px",
       },
@@ -170,8 +170,12 @@ const iconButtonStyle = cva({
   defaultVariants: { glass: true },
   variants: {
     glass: {
-      false: { _hover: { bg: "fill" }, bg: "transparent", color: "accent" },
-      true: { bg: "fill", color: "text" },
+      false: {
+        _hover: { bg: "fill.quaternary" },
+        bg: "transparent",
+        color: "accent.default",
+      },
+      true: { bg: "fill.quaternary", color: "text.primary" },
     },
   },
 });
@@ -198,7 +202,7 @@ export function IconButton({
 // Photos' filter and 選択 do.
 const barGroupStyle = css({
   "& > *": { bg: "transparent" },
-  bg: "fill",
+  bg: "fill.quaternary",
   borderRadius: "999px",
   display: "flex",
   flexShrink: 0,
@@ -276,13 +280,13 @@ export function ScreenScroll({
 // one. A section drawing its own heading styles a direct h4 with
 // sectionTitle.
 export const sectionTitle = css({
-  color: "text3",
+  color: "text.tertiary",
   fontWeight: 600,
   margin: "0 0 8px 16px",
   textStyle: "subheadline",
 });
 const sectionNote = css({
-  color: "text4",
+  color: "text.quaternary",
   fontWeight: 400,
   marginLeft: "8px",
   textStyle: "caption",
@@ -310,7 +314,7 @@ export function Section({
 
 // A quiet line of explanation under what it explains.
 const noteStyle = css({
-  color: "text4",
+  color: "text.quaternary",
   lineHeight: 1.6,
   margin: "0 8px",
   textStyle: "caption",
@@ -326,7 +330,7 @@ export function Note({ children }: { children: ReactNode }) {
 export const fieldLabel = cva({
   base: {
     alignItems: "baseline",
-    color: "text",
+    color: "text.primary",
     display: "flex",
     fontWeight: 600,
     gap: "8px",
@@ -350,7 +354,7 @@ export const fieldLabel = cva({
   },
 });
 export const fieldHint = css({
-  color: "text3",
+  color: "text.tertiary",
   fontWeight: 400,
   textStyle: "caption",
 });
@@ -359,15 +363,15 @@ export const fieldHint = css({
 // each worth a line of its own: an emoji, the answer and a note under it,
 // and an arrow to go on, or a check on the one in use.
 const optionCard = {
-  arrow: css({ color: "text4", flexShrink: 0 }),
+  arrow: css({ color: "text.quaternary", flexShrink: 0 }),
   card: cva({
     base: {
-      _hover: { bg: "fill", borderColor: "accentMuted" },
+      _hover: { bg: "fill.quaternary", borderColor: "accent.border" },
       alignItems: "center",
-      bg: "surface",
-      border: "1px solid token(colors.border)",
+      bg: "background.card",
+      border: "1px solid token(colors.border.default)",
       borderRadius: "20px",
-      color: "text",
+      color: "text.primary",
       display: "flex",
       gap: "12px",
       minHeight: "72px",
@@ -378,14 +382,14 @@ const optionCard = {
     variants: {
       picked: {
         true: {
-          _hover: { bg: "surface", borderColor: "accent" },
-          border: "2px solid token(colors.accent)",
+          _hover: { bg: "background.card", borderColor: "accent.default" },
+          border: "2px solid token(colors.accent.default)",
           cursor: "default",
         },
       },
     },
   }),
-  check: css({ color: "accent", flexShrink: 0 }),
+  check: css({ color: "accent.default", flexShrink: 0 }),
   icon: css({
     flexShrink: 0,
     fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", sans-serif',
@@ -399,7 +403,7 @@ const optionCard = {
     margin: 0,
     padding: 0,
   }),
-  note: css({ color: "text3", textStyle: "caption" }),
+  note: css({ color: "text.tertiary", textStyle: "caption" }),
   text: css({
     display: "flex",
     flex: 1,
@@ -471,7 +475,7 @@ const addButtonStyle = css({
   bg: "transparent",
   border: "1px dashed var(--border-strong)",
   borderRadius: "16px",
-  color: "accent",
+  color: "accent.default",
   display: "flex",
   gap: "8px",
   justifyContent: "center",
@@ -502,7 +506,7 @@ const destructiveButtonStyle = css({
   alignSelf: "center",
   bg: "transparent",
   border: 0,
-  color: "danger",
+  color: "danger.default",
   display: "flex",
   minHeight: "44px",
   padding: "0 16px",
@@ -528,7 +532,7 @@ export function DestructiveButton({
 export const inlineInput = css({
   bg: "transparent",
   border: 0,
-  color: "text",
+  color: "text.primary",
   flex: 1,
   font: "inherit",
   minWidth: 0,
@@ -553,7 +557,7 @@ export const markPreview = cva({
   base: {
     "& strong": { textStyle: "body" },
     alignItems: "center",
-    bg: "fill",
+    bg: "fill.quaternary",
     borderRadius: "20px",
     display: "flex",
     gap: "16px",
@@ -568,10 +572,10 @@ export const markPreview = cva({
 // purpose: entering shifts, a day opened in the week.
 const doneButtonStyle = css({
   alignItems: "center",
-  bg: "accentFill",
+  bg: "accent.fill",
   border: 0,
   borderRadius: "24px",
-  color: "onAccentFill",
+  color: "accent.onFill",
   display: "inline-flex",
   gap: "8px",
   height: "44px",
@@ -594,11 +598,11 @@ export function DoneButton({ className, ...props }: ButtonProps) {
 // As iOS 26's bar buttons with words, like the calendar's 今日: the word
 // in a round-ended piece of glass.
 const todayButtonStyle = css({
-  _disabled: { color: "textDisabled", cursor: "default" },
-  bg: "fill",
+  _disabled: { color: "text.disabled", cursor: "default" },
+  bg: "fill.quaternary",
   border: 0,
   borderRadius: "999px",
-  color: "text",
+  color: "text.primary",
   flexShrink: 0,
   height: "touch",
   paddingInline: "16px",
@@ -629,16 +633,16 @@ export const summaryRow = {
   chevron: css({ alignSelf: "center", marginLeft: "12px" }),
   count: css({
     alignItems: "baseline",
-    color: "accent",
+    color: "accent.default",
     display: "flex",
     fontSize: "25px",
   }),
   row: css({
     alignItems: "center",
-    bg: "fill",
+    bg: "fill.quaternary",
     border: 0,
     borderRadius: "control",
-    color: "text",
+    color: "text.primary",
     cursor: "pointer",
     display: "flex",
     flexShrink: 0,
@@ -690,10 +694,10 @@ const backButtonStyle = css({
   _disabled: { visibility: "hidden" },
   alignItems: "center",
   alignSelf: "flex-start",
-  bg: "fill",
+  bg: "fill.quaternary",
   border: 0,
   borderRadius: "999px",
-  color: "text",
+  color: "text.primary",
   display: "inline-flex",
   flexShrink: 0,
   height: "touch",
@@ -727,7 +731,11 @@ export function BackButton({
 // glass while it cannot yet.
 const headerActionStyle = cva({
   base: {
-    _disabled: { bg: "fill", color: "textDisabled", cursor: "default" },
+    _disabled: {
+      bg: "fill.quaternary",
+      color: "text.disabled",
+      cursor: "default",
+    },
     alignItems: "center",
     border: 0,
     borderRadius: "999px",
@@ -740,8 +748,8 @@ const headerActionStyle = cva({
   defaultVariants: { prominent: false },
   variants: {
     prominent: {
-      false: { bg: "fill", color: "text" },
-      true: { bg: "accentFill", color: "onAccentFill", fontWeight: 600 },
+      false: { bg: "fill.quaternary", color: "text.primary" },
+      true: { bg: "accent.fill", color: "accent.onFill", fontWeight: 600 },
     },
   },
 });
@@ -835,7 +843,7 @@ export function PageHeader({
 // A list of rows on one rounded ground, as a grouped list on iOS and a
 // card of list items on Android.
 export const listStyle = css({
-  bg: "fill",
+  bg: "fill.quaternary",
   borderRadius: "list",
   overflow: "hidden",
 });
@@ -870,7 +878,7 @@ const listRowRoot = cva({
     alignItems: "center",
     bg: "transparent",
     border: 0,
-    color: "text",
+    color: "text.primary",
     display: "flex",
     textStyle: "body",
     gap: "12px",
@@ -885,12 +893,12 @@ const listRowRoot = cva({
 
 // One row of a list, and its parts for rows drawn by hand.
 export const listRow = {
-  arrow: css({ color: "text4", flexShrink: 0, marginRight: "-4px" }),
+  arrow: css({ color: "text.quaternary", flexShrink: 0, marginRight: "-4px" }),
   // In the arrow's place on a row that adds rather than opens: a plus in
   // the accent, told apart from the gray arrows of rows that go on.
-  add: css({ color: "accent", flexShrink: 0, marginRight: "-4px" }),
+  add: css({ color: "accent.default", flexShrink: 0, marginRight: "-4px" }),
   label: css({
-    "& small": { color: "text3", textStyle: "caption" },
+    "& small": { color: "text.tertiary", textStyle: "caption" },
     display: "flex",
     flexDirection: "column",
     flexShrink: 0,
@@ -903,7 +911,7 @@ export const listRow = {
   leading: css({
     // What it holds keeps its own size rather than squeezing to fit.
     "& > *": { flexShrink: 0 },
-    color: "text2",
+    color: "text.secondary",
     display: "flex",
     flexShrink: 0,
     justifyContent: "center",
@@ -915,12 +923,15 @@ export const listRow = {
   twoLine: listRowRoot({ twoLine: true }),
   // Rows that do something when pressed.
   pressable: css({
-    _hover: { "&:is(button)": { bg: "fill2" } },
+    _hover: { "&:is(button)": { bg: "fill.tertiary" } },
     cursor: "pointer",
   }),
-  danger: css({ "& > *": { color: "danger" }, color: "danger" }),
+  danger: css({
+    "& > *": { color: "danger.default" },
+    color: "danger.default",
+  }),
   value: css({
-    color: "text3",
+    color: "text.tertiary",
     flex: 1,
     minWidth: 0,
     overflow: "hidden",
@@ -1042,9 +1053,9 @@ export function ListRow({
 const toggle = {
   thumb: css({
     _checked: { transform: "translateX(18px)" },
-    bg: "var(--knob)",
+    bg: "var(--control-knob)",
     borderRadius: "50%",
-    boxShadow: "0 1px 3px var(--shadow-strong)",
+    boxShadow: "0 1px 3px var(--shadow-large)",
     display: "block",
     height: "22px",
     margin: "2px",
@@ -1052,12 +1063,12 @@ const toggle = {
     width: "22px",
   }),
   track: css({
-    _checked: { bg: "accentFill" },
+    _checked: { bg: "accent.fill" },
     _focusVisible: {
-      outline: "2px solid token(colors.accent)",
+      outline: "2px solid token(colors.accent.default)",
       outlineOffset: "2px",
     },
-    bg: "controlOff",
+    bg: "fill.primary",
     borderRadius: "999px",
     cursor: "pointer",
     display: "block",
@@ -1160,7 +1171,7 @@ const SegmentSizeContext = createContext<SegmentSize>("regular");
 
 // Round-ended, track and picked segment alike, as iOS 26's.
 const segmentedStyle = css({
-  bg: "fill2",
+  bg: "fill.tertiary",
   border: 0,
   borderRadius: "999px",
   display: "grid",
@@ -1174,14 +1185,14 @@ const segmentedStyle = css({
 
 const segmentStyle = cva({
   base: {
-    _checked: { color: "text", fontWeight: 600 },
+    _checked: { color: "text.primary", fontWeight: 600 },
     _focusVisible: {
-      outline: "2px solid token(colors.accent)",
+      outline: "2px solid token(colors.accent.default)",
       outlineOffset: "-2px",
     },
     alignItems: "center",
     borderRadius: "999px",
-    color: "text2",
+    color: "text.secondary",
     cursor: "pointer",
     display: "flex",
     justifyContent: "center",
@@ -1208,9 +1219,9 @@ const segmentText = css({
 // The raised ground under the picked segment, which slides to the next
 // one as it is picked; Ark UI measures where it goes.
 const segmentIndicator = css({
-  bg: "surface",
+  bg: "background.card",
   borderRadius: "999px",
-  boxShadow: "0 1px 3px var(--shadow)",
+  boxShadow: "0 1px 3px var(--shadow-medium)",
   height: "var(--height)",
   top: "var(--top)",
   width: "var(--width)",
@@ -1325,9 +1336,12 @@ export function ChoiceGrid<Value extends string>({
 // fill, the picked one on the surface inside an accent edge.
 export const markGrid = css({
   "& [data-part=item]": {
-    "&[data-state=checked]": { bg: "surface", borderColor: "accent" },
+    "&[data-state=checked]": {
+      bg: "background.card",
+      borderColor: "accent.default",
+    },
     aspectRatio: 1,
-    bg: "fill",
+    bg: "fill.quaternary",
     border: "1.5px solid transparent",
     borderRadius: "12px",
     display: "grid",
@@ -1347,7 +1361,7 @@ export const markGrid = css({
 export const colorGrid = css({
   "& [data-part=item]": {
     "&[data-state=checked]": {
-      boxShadow: "0 0 0 3px var(--bg), 0 0 0 5px currentcolor",
+      boxShadow: "0 0 0 3px var(--background-base), 0 0 0 5px currentcolor",
     },
     border: "2px solid currentcolor",
     borderRadius: "50%",
@@ -1366,7 +1380,7 @@ export const colorGrid = css({
 // The focus ring sits outside a tile, and inside a row, whose list clips.
 const choiceStyle = cva({
   base: {
-    _focusVisible: { outline: "2px solid token(colors.accent)" },
+    _focusVisible: { outline: "2px solid token(colors.accent.default)" },
     cursor: "pointer",
   },
   variants: {
@@ -1433,11 +1447,11 @@ export function ChoiceList<Value extends string>({
   );
 }
 
-const choiceRowHover = css({ _hover: { bg: "fill2" } });
+const choiceRowHover = css({ _hover: { bg: "fill.tertiary" } });
 
 const choiceRowCheck = css({
   "[data-state=checked] > &": { visibility: "visible" },
-  color: "accent",
+  color: "accent.default",
   flexShrink: 0,
   marginLeft: "auto",
   visibility: "hidden",
@@ -1477,16 +1491,16 @@ export const chipStyle = cva({
   base: {
     // Picked: a chip that toggles, or one choice of a ChoiceGrid.
     "&:is([aria-pressed=true], [data-state=checked])": {
-      bg: "accentSoft",
-      borderColor: "accentMuted",
-      color: "accent",
+      bg: "accent.container",
+      borderColor: "accent.border",
+      color: "accent.default",
       fontWeight: 600,
     },
     alignItems: "center",
-    bg: "surface",
-    border: "1px solid token(colors.border)",
+    bg: "background.card",
+    border: "1px solid token(colors.border.default)",
     borderRadius: "999px",
-    color: "text2",
+    color: "text.secondary",
     cursor: "pointer",
     display: "inline-flex",
     textStyle: "footnote",
@@ -1496,7 +1510,7 @@ export const chipStyle = cva({
   },
   variants: {
     variant: {
-      add: { borderStyle: "dashed", color: "text3" },
+      add: { borderStyle: "dashed", color: "text.tertiary" },
       choice: {},
     },
   },
@@ -1571,9 +1585,9 @@ const tagStyle = cva({
       sm: { paddingBlock: "1px", paddingInline: "8px", textStyle: "caption2" },
     },
     tone: {
-      accent: { bg: "accentSoft", color: "accent" },
-      neutral: { bg: "fill", color: "text2" },
-      raised: { bg: "surface", color: "text" },
+      accent: { bg: "accent.container", color: "accent.default" },
+      neutral: { bg: "fill.quaternary", color: "text.secondary" },
+      raised: { bg: "background.card", color: "text.primary" },
     },
   },
 });
@@ -1603,32 +1617,32 @@ export function Tag({
 // コピー alike: the icon or check leading in the text's own color, rows
 // apart without lines, a line only between groups, and round corners.
 const menu = {
-  check: css({ color: "text", flexShrink: 0 }),
+  check: css({ color: "text.primary", flexShrink: 0 }),
   content: css({
     _closed: { animation: "fadeOut 0.12s ease-in" },
     _open: { animation: "fadeIn 0.12s ease-out" },
-    bg: "raised",
-    border: "1px solid token(colors.border)",
+    bg: "background.elevated",
+    border: "1px solid token(colors.border.default)",
     borderRadius: "24px",
-    boxShadow: "0 8px 24px var(--shadow-strong)",
+    boxShadow: "0 8px 24px var(--shadow-large)",
     minWidth: "200px",
     outline: "none",
     padding: "8px",
     zIndex: 30,
   }),
-  icon: css({ color: "text", display: "flex", flexShrink: 0 }),
+  icon: css({ color: "text.primary", display: "flex", flexShrink: 0 }),
   item: css({
     _focusVisible: {
-      outline: "2px solid token(colors.accent)",
+      outline: "2px solid token(colors.accent.default)",
       outlineOffset: "-2px",
     },
-    _highlighted: { bg: "fill2" },
-    _hover: { bg: "fill2" },
+    _highlighted: { bg: "fill.tertiary" },
+    _hover: { bg: "fill.tertiary" },
     alignItems: "center",
     bg: "transparent",
     border: 0,
     borderRadius: "16px",
-    color: "text",
+    color: "text.primary",
     cursor: "default",
     display: "flex",
     gap: "12px",
@@ -1645,10 +1659,10 @@ const menu = {
   }),
   trigger: css({
     alignItems: "center",
-    bg: "fill2",
+    bg: "fill.tertiary",
     border: 0,
     borderRadius: "16px",
-    color: "text2",
+    color: "text.secondary",
     display: "inline-flex",
     flexShrink: 0,
     fontWeight: 600,
@@ -1856,19 +1870,19 @@ export function SortableList<Item extends { id: string }>({
 
 const sortable = {
   dragging: css({
-    bg: "fill",
-    boxShadow: "0 4px 14px var(--shadow-strong)",
+    bg: "fill.quaternary",
+    boxShadow: "0 4px 14px var(--shadow-large)",
     position: "relative",
     zIndex: 1,
   }),
   handle: css({
     _focusVisible: {
-      outline: "2px solid token(colors.accent)",
+      outline: "2px solid token(colors.accent.default)",
       outlineOffset: "-2px",
     },
     bg: "transparent",
     border: 0,
-    color: "text4",
+    color: "text.quaternary",
     cursor: "grab",
     display: "grid",
     height: "action",
@@ -1941,7 +1955,7 @@ export function dayGridHeight(weeks: number) {
 
 const weekdayRow = cva({
   base: {
-    color: "text3",
+    color: "text.tertiary",
     display: "grid",
     fontSize: "11px",
     gridTemplateColumns: weekColumns,
@@ -1954,9 +1968,9 @@ const weekdayRow = cva({
   },
 });
 const weekdayTone: Record<DayTone, string | undefined> = {
-  holiday: css({ color: "holiday" }),
+  holiday: css({ color: "calendar.holiday" }),
   plain: undefined,
-  saturday: css({ color: "saturday" }),
+  saturday: css({ color: "calendar.saturday" }),
 };
 
 // The weekday names over a DayGrid, from the viewer's week start, Sundays

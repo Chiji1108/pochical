@@ -18,14 +18,14 @@ const emojiColumns = 8;
 
 const picker = {
   categoryHeader: css({
-    bg: "raised",
-    color: "text3",
+    bg: "background.elevated",
+    color: "text.tertiary",
     fontWeight: 600,
     padding: "12px 4px 8px",
     textStyle: "footnote",
   }),
   emoji: css({
-    "&[data-active]": { bg: "fill2" },
+    "&[data-active]": { bg: "fill.tertiary" },
     alignItems: "center",
     aspectRatio: "1",
     bg: "transparent",
@@ -38,7 +38,7 @@ const picker = {
     padding: 0,
   }),
   note: css({
-    color: "text3",
+    color: "text.tertiary",
     padding: "24px 0",
     textAlign: "center",
     textStyle: "subheadline",
@@ -51,12 +51,12 @@ const picker = {
   }),
   row: css({ display: "flex", paddingInline: "2px" }),
   search: css({
-    _focusVisible: { outline: "2px solid token(colors.accent)" },
-    _placeholder: { color: "text3" },
-    bg: "fill",
+    _focusVisible: { outline: "2px solid token(colors.accent.default)" },
+    _placeholder: { color: "text.tertiary" },
+    bg: "fill.quaternary",
     border: 0,
     borderRadius: "action",
-    color: "text",
+    color: "text.primary",
     font: "inherit",
     height: "action",
     paddingInline: "16px",

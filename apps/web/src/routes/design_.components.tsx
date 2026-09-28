@@ -116,8 +116,8 @@ const catalog = {
         gap: "2px",
         padding: "0 2px",
       },
-      "& > figcaption > code": { color: "text", fontSize: "12px" },
-      "& > figcaption > small": { color: "text3", fontSize: "11px" },
+      "& > figcaption > code": { color: "text.primary", fontSize: "12px" },
+      "& > figcaption > small": { color: "text.tertiary", fontSize: "11px" },
       display: "flex",
       flexDirection: "column",
       gap: "8px",
@@ -139,7 +139,7 @@ const catalog = {
   }),
   marks: css({ alignItems: "center", display: "flex", gap: "18px" }),
   note: css({
-    color: "text3",
+    color: "text.tertiary",
     fontSize: "12px",
     lineHeight: "1.6",
     margin: "0 0 14px",
@@ -149,7 +149,7 @@ const catalog = {
     base: {
       "& > *": { maxWidth: "100%" },
       alignItems: "center",
-      bg: "raised",
+      bg: "background.elevated",
       border: "1px solid token(colors.separator)",
       borderRadius: "14px",
       display: "flex",
@@ -170,9 +170,9 @@ const catalog = {
   // The app's own ground, light or dark as the screen is, so the pieces
   // sit on what they are drawn for.
   surface: css({
-    bg: "background",
+    bg: "background.base",
     borderRadius: "24px",
-    color: "text",
+    color: "text.primary",
     display: "flex",
     flexDirection: "column",
     gap: "40px",

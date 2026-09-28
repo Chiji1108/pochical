@@ -31,13 +31,13 @@ const frameStyle = {
   // Pointing on to the next frame, level with the screens' middles.
   arrow: css({
     alignSelf: "center",
-    color: "text4",
+    color: "text.quaternary",
     flexShrink: 0,
     marginTop: "-40px",
   }),
   branch: css({
     alignItems: "center",
-    color: "text3",
+    color: "text.tertiary",
     display: "flex",
     fontSize: "12px",
     fontWeight: 600,
@@ -45,13 +45,13 @@ const frameStyle = {
     margin: "0 0 10px 4px",
   }),
   description: css({
-    color: "text3",
+    color: "text.tertiary",
     fontSize: "12px",
     margin: "-8px 0 14px 4px",
   }),
   frame: css({
     "& > figcaption": {
-      color: "text3",
+      color: "text.tertiary",
       display: "flex",
       flexDirection: "column",
       fontSize: "12px",
@@ -59,7 +59,7 @@ const frameStyle = {
       padding: "0 2px",
     },
     "& > figcaption > small": { fontSize: "11px" },
-    "& > figcaption > strong": { color: "text", fontSize: "13px" },
+    "& > figcaption > strong": { color: "text.primary", fontSize: "13px" },
     display: "flex",
     flexDirection: "column",
     gap: "8px",
@@ -100,7 +100,7 @@ const frameStyle = {
   }),
   section: css({
     "& > h2": {
-      color: "text",
+      color: "text.primary",
       fontSize: "17px",
       fontWeight: 700,
       margin: "0 0 14px 4px",

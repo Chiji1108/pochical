@@ -199,7 +199,7 @@ const onboarding = {
     padding: "20px 8px 12px",
   }),
   description: css({
-    color: "text3",
+    color: "text.tertiary",
     margin: "8px 0 0",
     textStyle: "subheadline",
   }),
@@ -211,7 +211,7 @@ const onboarding = {
     flexDirection: "column",
   }),
   finishedNote: css({
-    color: "text3",
+    color: "text.tertiary",
     lineHeight: 1.6,
     margin: "12px 0 0",
     maxWidth: "340px",
@@ -219,7 +219,7 @@ const onboarding = {
     textStyle: "footnote",
   }),
   footnote: css({
-    color: "text4",
+    color: "text.quaternary",
     margin: "auto 0 0",
     textAlign: "center",
     textStyle: "caption",
@@ -235,7 +235,7 @@ const onboarding = {
     textAlign: "center",
   }),
   lead: css({
-    color: "text3",
+    color: "text.tertiary",
     lineHeight: 1.7,
     margin: 0,
     textStyle: "body",
@@ -266,15 +266,15 @@ const onboarding = {
     },
   }),
   previewLabel: css({
-    color: "text3",
+    color: "text.tertiary",
     margin: "0 0 -12px",
     textStyle: "caption",
   }),
   restart: css({
     bg: "transparent",
-    border: "1px solid token(colors.border)",
+    border: "1px solid token(colors.border.default)",
     borderRadius: "999px",
-    color: "accent",
+    color: "accent.default",
     marginTop: "12px",
     minHeight: "40px",
     padding: "0 16px",

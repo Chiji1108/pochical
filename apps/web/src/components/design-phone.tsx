@@ -12,8 +12,8 @@ const frame = cva({
     // Phones show scroll indicators only while scrolling, so the desktop
     // browser's scrollbars stay hidden inside.
     "& *": { scrollbarWidth: "none" },
-    bg: "background",
-    color: "text",
+    bg: "background.base",
+    color: "text.primary",
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",

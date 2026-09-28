@@ -48,9 +48,9 @@ const sources = [
 
 // The drawings and images, each on a card with its file and what it is for.
 const sourceList = css({
-  "& code": { color: "text4", fontSize: "11px" },
+  "& code": { color: "text.quaternary", fontSize: "11px" },
   "& figcaption": {
-    color: "text3",
+    color: "text.tertiary",
     display: "flex",
     flexDirection: "column",
     fontSize: "12px",
@@ -58,7 +58,7 @@ const sourceList = css({
     lineHeight: "1.6",
   },
   "& figure": {
-    bg: "surface",
+    bg: "background.card",
     border: "1px solid token(colors.separator)",
     borderRadius: "16px",
     display: "flex",
@@ -75,7 +75,7 @@ const sourceList = css({
     objectFit: "contain",
     width: "100%",
   },
-  "& strong": { color: "text", fontSize: "14px" },
+  "& strong": { color: "text.primary", fontSize: "14px" },
   display: "grid",
   gap: "16px",
   gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
