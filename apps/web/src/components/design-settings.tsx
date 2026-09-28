@@ -6,9 +6,7 @@ import { css, cva } from "styled-system/css";
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useLook, useSettings } from "../lib/design-settings-store";
-import type { Tone, ColorScheme } from "../lib/design-tokens";
-import { markColors } from "../lib/design-tokens";
-import { toneRoles } from "../lib/tones";
+import type { ColorScheme } from "../lib/design-tokens";
 import {
   ProviderButtons,
   ProviderLogo,
@@ -39,19 +37,19 @@ import { PhotoAvatar, PhotoEditor } from "./design-group";
 import type { Profile } from "./design-group";
 import { WorkSetupSteps } from "./design-onboarding";
 import { PatternsPage } from "./design-pattern-editor";
+import { PresetContexts } from "./design-providers";
 import { ConfirmDialog, Sheet } from "./design-sheet";
 import {
   ColorSchemeContext,
   PreviewSchemeSwitch,
   ThemeContext,
+  presetOf,
+  presets,
   ToneContext,
-  themeColors,
-  themeOf,
-  themes,
   themeStyle,
   previewWrap,
 } from "./design-theme";
-import type { Appearance, ColorChoice } from "./design-theme";
+import type { Appearance } from "./design-theme";
 import {
   Button,
   ChipGroup,
@@ -85,8 +83,6 @@ import {
   IconWeightContext,
   ShiftMark,
   ShiftMarkStyleContext,
-  lookOf,
-  useMarkColors,
   useOffHighlight,
 } from "./shift-mark";
 import type { LookSettings, ShiftMarkStyle } from "./shift-mark";
@@ -366,7 +362,7 @@ function SettingsTop({
   onOpen: (page: Page) => void;
 }) {
   const look = useLook();
-  const tone = useContext(ToneContext);
+  const preset = presetOf(useSettings((state) => state.device.preset));
   return (
     <>
       <PageHeader title="設定" />
@@ -418,9 +414,7 @@ function SettingsTop({
           onClick={() => {
             onOpen("mark");
           }}
-          value={`${shapeOf(look).name}${
-            tone === "deep" ? "" : `・${toneName(tone)}`
-          }`}
+          value={`${shapeOf(look).name}・${preset.name}`}
         />
         <AppearanceRow
           onOpen={() => {
@@ -527,41 +521,57 @@ const systemAlert = {
   }),
 };
 
-// The app's colors in a row of seven dots, the one in use ringed.
-const colorRow = {
+// The テーマ cards, three across: the colorful row, then the one-color
+// ones.
+const themeCard = {
+  accent: css({
+    bg: "accent.fill",
+    borderRadius: "999px",
+    height: "4px",
+    width: "32px",
+  }),
   choice: css({
-    _checked: { color: "text.primary", fontWeight: 600 },
-    alignItems: "center",
+    _checked: {
+      bg: "fill.quaternary",
+      borderColor: "accent.border",
+      color: "text.primary",
+      fontWeight: 600,
+    },
     bg: "transparent",
-    border: "0 solid transparent",
-    borderRadius: "16px",
+    border: "2px solid transparent",
+    borderRadius: "20px",
     color: "text.secondary",
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
-    padding: "4px 0",
+    gap: "4px",
+    padding: "4px 4px 8px",
+    textAlign: "center",
     textStyle: "footnote",
-  }),
-  dot: css({
-    // Ringed in the accent, apart from the ground, once picked.
-    "[data-state=checked] > &": {
-      boxShadow:
-        "0 0 0 3px var(--background-base), 0 0 0 5px token(colors.accent.default)",
-    },
-    border: 0,
-    borderRadius: "50%",
-    display: "grid",
-    height: "30px",
-    placeItems: "center",
-    width: "30px",
   }),
   grid: css({
     border: 0,
     display: "grid",
-    gap: "2px",
-    gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+    gap: "8px",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
     margin: 0,
     padding: 0,
+  }),
+  marks: css({
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "4px",
+    justifyContent: "center",
+  }),
+  // The theme's own screen, in the current light or dark.
+  sample: css({
+    alignItems: "center",
+    bg: "background.base",
+    border: "1px solid token(colors.separator)",
+    borderRadius: "16px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    padding: "12px 8px",
   }),
 };
 
@@ -646,14 +656,6 @@ const settingsParts = {
     position: "absolute",
     right: "12px",
     top: "-8px",
-  }),
-  toneDot: css({
-    border: 0,
-    borderRadius: "50%",
-    display: "grid",
-    height: "22px",
-    placeItems: "center",
-    width: "22px",
   }),
   // A form's row: what is set on the left, its value on the right.
   field: css({
@@ -1349,15 +1351,12 @@ function MarkPage({
       <Section title="シフトの見た目">
         <ShapeChoices />
       </Section>
-      <Section title="カラー">
-        <ColorChoices />
-        <p className={settingsParts.groupNote}>
-          グループの人に見えるのはシフトの色です。アプリの色はあなたの画面だけです。
-        </p>
-      </Section>
       <h3 className={settingsParts.audience}>あなたの画面だけ</h3>
-      <Section title="トーン">
-        <ToneChoices />
+      <Section title="テーマ">
+        <ThemeChoices />
+        <p className={settingsParts.groupNote}>
+          グループの人のシフトも、このテーマの色で表示されます。
+        </p>
       </Section>
       <Section title="休みの見せ方">
         <OffLookChoices current={current} />
@@ -1605,42 +1604,6 @@ function NamesChoices({ current }: { current: ShiftMarkStyle }) {
   );
 }
 
-const toneOptions: { tone: Tone; name: string }[] = [
-  { name: "深め", tone: "deep" },
-  { name: "紙", tone: "paper" },
-  { name: "くすみ", tone: "dusty" },
-];
-
-function toneName(tone: Tone) {
-  return toneOptions.find((option) => option.tone === tone)?.name ?? tone;
-}
-
-// The color tone: one choice changes every theme color, the grays and
-// the shift colors together, on the viewer's screen only. Each option shows
-// the current theme in it.
-function ToneChoices() {
-  const tone = useContext(ToneContext);
-  const setTone = useSettings((state) => state.setTone);
-  const { theme } = useContext(ThemeContext);
-  const scheme = useContext(ColorSchemeContext);
-  return (
-    <SegmentedControl label="トーン" onValueChange={setTone} value={tone}>
-      {toneOptions.map((option) => (
-        <Segment key={option.tone} value={option.tone}>
-          <span
-            aria-hidden="true"
-            className={settingsParts.toneDot}
-            style={{
-              background: themeColors(themeOf(theme), scheme, option.tone).fill,
-            }}
-          />
-          {option.name}
-        </Segment>
-      ))}
-    </SegmentedControl>
-  );
-}
-
 const appearanceOptions: { appearance: Appearance; name: string }[] = [
   { appearance: "system", name: "端末に合わせる" },
   { appearance: "light", name: "ライト" },
@@ -1864,79 +1827,41 @@ function WeekPage({
   );
 }
 
-// The shift patterns' own colors, for the マルチカラー swatch.
-const multiSwatchShifts: Shift[] = ["day", "night", "after", "off"];
+// The shifts on a テーマ's card, as they might follow each other in a week.
+const presetSampleShifts: Shift[] = ["day", "night", "after", "off"];
 
-// A round swatch of a カラー choice: the theme color, or a pie of the shift
-// colors for マルチカラー.
-function ColorSwatch({
-  color,
-  className,
-}: {
-  color: ColorChoice;
-  className: string;
-}) {
+// Each テーマ as a card: its screen's ground with shifts on it in its
+// colors, so the colorful ones and the one-color ones tell apart at a
+// glance, and a stroke of its accent, as its buttons take it. The one in
+// use sits on a gray card, as app icons do.
+function ThemeChoices() {
+  const current = useSettings((state) => state.device.preset);
+  const setPreset = useSettings((state) => state.setPreset);
   const scheme = useContext(ColorSchemeContext);
-  const tone = useContext(ToneContext);
-  const shiftColors = useMarkColors();
-  if (color !== "multi") {
-    return (
-      <span
-        aria-hidden="true"
-        className={className}
-        style={{ background: themeColors(themeOf(color), scheme, tone).fill }}
-      />
-    );
-  }
-  // Each shift color as this tone would fill with it, so the slices sit at
-  // the same depth as the theme swatches beside them.
-  const slices = multiSwatchShifts.map((shift) => {
-    const option = markColors[lookOf(shift).color] ?? markColors[0];
-    return tone === "deep"
-      ? (shiftColors[lookOf(shift).color]?.color ?? option.color)
-      : toneRoles(tone, option.color, scheme).fill;
-  });
-  const quarter = 100 / slices.length;
-  const stops = slices
-    .map(
-      (slice, index) => `${slice} ${index * quarter}% ${(index + 1) * quarter}%`
-    )
-    .join(", ");
-  return (
-    <span
-      aria-hidden="true"
-      className={className}
-      style={{ background: `conic-gradient(${stops})` }}
-    />
-  );
-}
-
-const colorChoices: { color: ColorChoice; name: string }[] = [
-  { color: "multi", name: "マルチカラー" },
-  ...themes.map((theme) => ({ color: theme.id, name: theme.name })),
-];
-
-// マルチカラー keeps each shift's own color with the moss theme; a theme
-// color draws every shift in that one color. Seven choices, because the
-// other mixes (another theme with many shift colors) clash.
-function ColorChoices() {
-  const color = useSettings((state) => state.groupLook.color);
-  const setColor = useSettings((state) => state.setColor);
   return (
     <ChoiceGrid
-      className={colorRow.grid}
-      label="カラー"
-      onValueChange={setColor}
-      value={color}
+      className={themeCard.grid}
+      label="テーマ"
+      onValueChange={setPreset}
+      value={current}
     >
-      {colorChoices.map((option) => (
-        <Choice
-          className={colorRow.choice}
-          key={option.color}
-          label={option.name}
-          value={option.color}
-        >
-          <ColorSwatch className={colorRow.dot} color={option.color} />
+      {presets.map((preset) => (
+        <Choice className={themeCard.choice} key={preset.id} value={preset.id}>
+          <span
+            aria-hidden="true"
+            className={themeCard.sample}
+            style={themeStyle(preset.theme, scheme, preset.tone)}
+          >
+            <PresetContexts preset={preset}>
+              <span className={themeCard.marks}>
+                {presetSampleShifts.map((shift) => (
+                  <ShiftMark key={shift} shift={shift} size={16} />
+                ))}
+              </span>
+            </PresetContexts>
+            <span className={themeCard.accent} />
+          </span>
+          {preset.name}
         </Choice>
       ))}
     </ChoiceGrid>

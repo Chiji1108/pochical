@@ -8,10 +8,9 @@ import {
 } from "../components/design-calendar";
 import { sampleGroups } from "../components/design-group";
 import { DesignProviders } from "../components/design-providers";
-import { screenColor } from "../components/design-theme";
+import { presets, screenColor } from "../components/design-theme";
 import { appSplashScreens } from "../lib/app-splash-screens";
 import { deviceSettingsKey } from "../lib/design-settings-store";
-import { tones } from "../lib/design-tokens";
 import {
   createUserStore,
   sampleCoworkers,
@@ -22,15 +21,14 @@ import { pageMeta } from "../lib/site";
 
 const title = "ポチカル";
 
-// The screen's color in each tone, light and dark, before the saved
-// settings load. The demo starts over on each visit, so the theme is
-// always モス.
+// The screen's color in each テーマ, light and dark, before the saved
+// settings load.
 const screenColors = Object.fromEntries(
-  tones.map((tone) => [
-    tone,
+  presets.map(({ id, theme, tone }) => [
+    id,
     {
-      dark: screenColor("moss", "dark", tone),
-      light: screenColor("moss", "light", tone),
+      dark: screenColor(theme, "dark", tone),
+      light: screenColor(theme, "light", tone),
     },
   ])
 );
@@ -43,7 +41,7 @@ const LAUNCH_TIMEOUT = "3s";
 
 // The server draws the screen in light, and iOS colors the status bar from
 // the page it first draws. Before that first paint, this finds the screen's
-// color from the saved 外観 and トーン, or the device's light or dark, and
+// color from the saved 外観 and テーマ, or the device's light or dark, and
 // gives it to the bar. On a page load, not a move within the site, it also
 // hides the page on that color, so a dark screen does not flash light.
 const launchScript = `(() => {
@@ -55,7 +53,7 @@ const launchScript = `(() => {
   const scheme = device.appearance === "light" || device.appearance === "dark"
     ? device.appearance
     : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  const color = (colors[device.tone] ?? colors.deep)[scheme];
+  const color = (colors[device.preset] ?? colors[device.tone] ?? colors.standard)[scheme];
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = color;
   if (document.readyState !== "loading") return;
