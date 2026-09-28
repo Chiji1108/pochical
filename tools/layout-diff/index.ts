@@ -11,7 +11,7 @@
 //
 // --url is the dev server (http://localhost:3000), --only keeps the states
 // whose names contain it, --dark measures in dark mode, --width sets the
-// window's width (800). Runs are kept in
+// window's width (800), --workers how many screens load at once (4). Runs are kept in
 // tools/layout-diff/out. It drives the installed Google Chrome, or without
 // one Playwright's Chromium: bunx playwright-core install --only-shell chromium
 
@@ -36,6 +36,8 @@ const VIEWPORT = { height: 1300, width: 800 };
 // the first load compiles the page, and springs and the pager take time
 // to come to rest.
 const SETTLE_MS = 300;
+// Screens measured at once, each in its own tab.
+const WORKERS = 4;
 const SETTLE_TRIES = 20;
 
 async function settled(page: Page, root: string) {
@@ -90,36 +92,56 @@ async function measureAll(options: {
   only: string | undefined;
   dark: boolean;
   width: number;
+  workers: number;
 }) {
   const browser = await launch();
-  const context = await browser.newContext({
-    colorScheme: options.dark ? "dark" : "light",
-    deviceScaleFactor: 1,
-    reducedMotion: "reduce",
-    viewport: { ...VIEWPORT, width: options.width },
-  });
-  const page = await context.newPage();
+  // Each worker its own context, so nothing a screen stores reaches
+  // another.
+  const newPage = async () => {
+    const context = await browser.newContext({
+      colorScheme: options.dark ? "dark" : "light",
+      deviceScaleFactor: 1,
+      reducedMotion: "reduce",
+      viewport: { ...VIEWPORT, width: options.width },
+    });
+    return await context.newPage();
+  };
   const { only } = options;
   const chosen =
     only === undefined
       ? states
       : states.filter((state) => state.name.includes(only));
-  const run: Run = {};
+  const measured = new Map<string, Screen>();
   try {
-    // A first load, not kept: a dev server just started compiles the page
-    // then, and the pager can come up on the month before.
+    // The workers take the screens in turn, each from a fresh load.
+    const queue = [...chosen];
     const [first] = chosen;
-    if (first !== undefined) {
-      await measureState(page, options.url, first);
-    }
-    for (const state of chosen) {
-      // One screen at a time, each from a fresh load of the page.
-      // oxlint-disable-next-line no-await-in-loop
-      run[state.name] = await measureState(page, options.url, state);
-      process.stdout.write(`measured ${state.name}\n`);
-    }
+    const work = async () => {
+      const page = await newPage();
+      // A first load, not kept: until a tab has the page's styles cached
+      // they can come in after the calendar, which then brings its pager
+      // up on the month before.
+      if (first !== undefined) {
+        await measureState(page, options.url, first);
+      }
+      for (let state = queue.shift(); state; state = queue.shift()) {
+        // oxlint-disable-next-line no-await-in-loop
+        measured.set(state.name, await measureState(page, options.url, state));
+        process.stdout.write(`measured ${state.name}\n`);
+      }
+    };
+    const count = Math.max(1, Math.min(options.workers, chosen.length));
+    await Promise.all(Array.from({ length: count }, work));
   } finally {
     await browser.close();
+  }
+  // In the order of states.ts, whichever finished first.
+  const run: Run = {};
+  for (const state of chosen) {
+    const screen = measured.get(state.name);
+    if (screen) {
+      run[state.name] = screen;
+    }
   }
   return run;
 }
@@ -179,6 +201,7 @@ async function main() {
       only: { type: "string" },
       url: { default: "http://localhost:3000", type: "string" },
       width: { default: String(VIEWPORT.width), type: "string" },
+      workers: { default: String(WORKERS), type: "string" },
     },
   });
   const [command, label] = positionals;
@@ -195,6 +218,7 @@ async function main() {
     only: values.only,
     url: values.url,
     width,
+    workers: Number(values.workers),
   });
   if (command === "save") {
     await mkdir(outDir, { recursive: true });
