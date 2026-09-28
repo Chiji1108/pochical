@@ -12,6 +12,7 @@ import {
   Pencil,
   Plus,
   Settings2,
+  Share,
   Trash2,
   UsersRound,
   X,
@@ -51,6 +52,8 @@ import {
   fieldHint,
   fieldLabel,
   IconButton,
+  IconMenu,
+  MenuItem,
   Pager,
   Screen,
   srOnly,
@@ -437,9 +440,13 @@ export function DesignCalendar({
       .length,
   }));
   const unfilled = monthDays.filter((date) => !schedule[dateKey(date)]).length;
+  // The 保存を右上 variant: saving moves to the heading's corner in place of
+  // the arrows, which a swipe already does, so the bottom always offers
+  // ポチポチ入力, filled month or not.
+  const saveTop = variants.bottomRows === "saveTop";
   // Input is offered only while the month has days to fill: a repeating
   // order fills them itself, and a filled month is fixed by tapping a day.
-  const showInputBar = !repeating && unfilled > 0;
+  const showInputBar = saveTop || (!repeating && unfilled > 0);
   // The いつも2段 variant: the bottom always holds two rows, what the month
   // is on top and what to do next under it, so the calendar keeps one
   // height. A filled month's next step is saving it.
@@ -703,13 +710,20 @@ export function DesignCalendar({
                 </strong>
               </h3>
               <HeadingActions
+                arrows={!saveTop}
                 atEnd={twoRows}
                 detailDate={detailDate}
                 mode={headingMode}
                 month={month}
                 onDone={finishHeading}
+                onCalendar={() => {
+                  openSave(false, true);
+                }}
+                onImage={() => {
+                  setImagePreview(true);
+                }}
                 onSave={
-                  twoRows
+                  twoRows || saveTop
                     ? undefined
                     : () => {
                         openSave(false);
@@ -1064,6 +1078,14 @@ const breakdown = {
 // right, lined up with the month digits rather than the two lines.
 const heading = {
   backAtEnd: css({ display: "flex", marginRight: "4px" }),
+  // Without the arrows: 今月 and the screen's action, together on the
+  // month digits' line.
+  corner: css({
+    alignItems: "center",
+    alignSelf: "flex-end",
+    display: "flex",
+    marginBottom: "-3px",
+  }),
   bar: css({
     alignItems: "center",
     display: "flex",
@@ -1257,9 +1279,13 @@ export function MonthSummary({
 // disabled when there is nowhere to go back to. With `atEnd`, the month
 // view has the right-hand corner free, so "今月 ‹ ›" takes it, the arrows
 // together at the edge; entering drops them, as its date picker changes
-// the month, leaving 完了 alone there.
+// the month, leaving 完了 alone there. Without `arrows`, a swipe alone
+// turns the page, as in the platforms' calendars: the corner holds 今月
+// while away from it, then the save menu or 完了, and the arrows stay for
+// screen readers only, as a native calendar's accessibility actions.
 function HeadingActions({
   mode,
+  arrows = true,
   atEnd = false,
   month,
   detailDate,
@@ -1268,8 +1294,11 @@ function HeadingActions({
   onThisWeek,
   onDone,
   onSave,
+  onImage,
+  onCalendar,
 }: {
   mode: "view" | "edit" | "week";
+  arrows?: boolean;
   atEnd?: boolean;
   month: Date;
   detailDate: Date | undefined;
@@ -1280,6 +1309,9 @@ function HeadingActions({
   onDone: () => void;
   // Left out when saving has a row of its own at the bottom.
   onSave?: () => void;
+  // The save menu's two ways, used without `arrows`.
+  onImage: () => void;
+  onCalendar: () => void;
 }) {
   const weekTools = useWeek();
   const week = mode === "week";
@@ -1321,6 +1353,52 @@ function HeadingActions({
       <ChevronRight aria-hidden="true" size={21} />
     </button>
   );
+  if (!arrows) {
+    return (
+      <div className={heading.corner}>
+        {mode !== "edit" && (
+          <div className={srOnly}>
+            {previous}
+            {next}
+          </div>
+        )}
+        {mode !== "edit" && !atToday && (
+          <motion.div
+            animate={{ opacity: 1, x: 0 }}
+            className={heading.backAtEnd}
+            initial={{ opacity: 0, x: 6 }}
+            key={unit}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+          >
+            {back}
+          </motion.div>
+        )}
+        {mode === "view" ? (
+          <IconMenu
+            icon={<Share aria-hidden="true" size={21} />}
+            label="この月のシフトを保存"
+          >
+            <MenuItem
+              icon={<ImageIcon aria-hidden="true" size={16} />}
+              onSelect={onImage}
+              value="image"
+            >
+              画像で保存
+            </MenuItem>
+            <MenuItem
+              icon={<CalendarPlus aria-hidden="true" size={16} />}
+              onSelect={onCalendar}
+              value="calendar"
+            >
+              カレンダーに追加
+            </MenuItem>
+          </IconMenu>
+        ) : (
+          <DoneButton onClick={onDone} />
+        )}
+      </div>
+    );
+  }
   const navAtEnd = atEnd && mode === "view";
   return (
     <>

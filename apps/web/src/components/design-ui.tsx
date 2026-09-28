@@ -1569,6 +1569,35 @@ export function PullDownMenu({
   );
 }
 
+// The same menu opened from an icon alone, as a toolbar's Menu in SwiftUI
+// or an IconButton with a DropdownMenu in Compose. The label is what a
+// screen reader says.
+export function IconMenu({
+  label,
+  icon,
+  className,
+  children,
+}: {
+  label: string;
+  icon: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Menu.Root positioning={{ gutter: 6, placement: "bottom-end" }}>
+      <Menu.Trigger
+        aria-label={label}
+        className={cx(iconButtonStyle, "ui-icon-button", className)}
+      >
+        {icon}
+      </Menu.Trigger>
+      <Menu.Positioner>
+        <Menu.Content className={menu.content}>{children}</Menu.Content>
+      </Menu.Positioner>
+    </Menu.Root>
+  );
+}
+
 // One choice among several inside a menu, marked with a check, as a
 // Picker inside a SwiftUI Menu.
 export function MenuPicker<Value extends string>({
