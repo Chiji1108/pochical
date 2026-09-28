@@ -420,6 +420,10 @@ export function DesignCalendar({
   };
   const [editing, setEditing] = useState(initialEditing);
   const [selectedDay, setSelectedDay] = useState(1);
+  // Whether the month being entered had blank days when it came up, as
+  // only then can 完了 have just filled it. A filled month can be entered
+  // too, with ポチポチ入力 always offered in the 保存を右上 variant.
+  const [enteredBlank, setEnteredBlank] = useState(true);
   const [month, setMonth] = useState(() => new Date(2026, initialMonth, 1));
   const patternKeys = useUser((state) => state.patternKeys);
   const setPatternKeys = useUser((state) => state.setPatternKeys);
@@ -471,9 +475,11 @@ export function DesignCalendar({
       ariaLabel={`入力する日付：${month.getMonth() + 1}月${selectedDay}日(${weekdays[selectedDate.getDay()]})。タップで変更`}
       date={selectedDate}
       onSelect={(date) => {
+        const target = new Date(date.getFullYear(), date.getMonth(), 1);
         setSelectedDay(date.getDate());
         setPageTurn((turn) => turn + 1);
-        setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+        setMonth(target);
+        setEnteredBlank(hasBlanks(schedule, target));
         setAnnouncement(
           `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日を選択中`
         );
@@ -509,6 +515,7 @@ export function DesignCalendar({
     setMonth(target);
     if (editing) {
       setSelectedDay(1);
+      setEnteredBlank(hasBlanks(schedule, target));
       setAnnouncement(
         `${target.getFullYear()}年${target.getMonth() + 1}月1日を選択中`
       );
@@ -525,6 +532,7 @@ export function DesignCalendar({
   }
   function startInput() {
     setSelectedDay(1);
+    setEnteredBlank(unfilled > 0);
     setEditing(true);
   }
   // From the switch day on, the new order replaces what the old one wrote.
@@ -609,7 +617,7 @@ export function DesignCalendar({
       return;
     }
     // A month just filled in is worth keeping, so saving is offered then.
-    if (unfilled === 0) {
+    if (unfilled === 0 && enteredBlank) {
       openSave(true);
     }
   }
@@ -1084,7 +1092,7 @@ const heading = {
     alignItems: "center",
     alignSelf: "flex-end",
     display: "flex",
-    marginBottom: "-3px",
+    marginBottom: "-4px",
   }),
   bar: css({
     alignItems: "center",
@@ -1491,6 +1499,19 @@ function SaveArea({
       </Button>
     </div>
   );
+}
+
+// Whether any day of the month has nothing entered.
+function hasBlanks(schedule: Schedule, month: Date) {
+  const count = new Date(
+    month.getFullYear(),
+    month.getMonth() + 1,
+    0
+  ).getDate();
+  return Array.from(
+    { length: count },
+    (_, index) => new Date(month.getFullYear(), month.getMonth(), index + 1)
+  ).some((date) => !schedule[dateKey(date)]);
 }
 
 // Emoji marks draw in the system's emoji font wherever they sit.
