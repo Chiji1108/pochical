@@ -6,13 +6,15 @@ import { ConfirmDialog } from "./design-sheet";
 import {
   AddButton,
   BackButton,
+  DestructiveButton,
   HeaderAction,
+  inlineInput,
   List,
   ListRow,
-  PageHeader,
-  SortableList,
   listRow,
   Note,
+  PageHeader,
+  SortableList,
 } from "./design-ui";
 
 // The people you note on a day, like who is on the same shift. Only names:
@@ -203,7 +205,7 @@ function CoworkerEditor({
           control={
             <>
               <input
-                className="pe-inline-input"
+                className={inlineInput}
                 onChange={(event) => {
                   setDraft(event.target.value);
                 }}
@@ -218,15 +220,13 @@ function CoworkerEditor({
           ? "同じ名前の人がもういます。"
           : `${days}日の予定に入っています。名前を変えると、その日の表示も変わります。`}
       </Note>
-      <button
-        className="pe-delete"
+      <DestructiveButton
         onClick={() => {
           setConfirming(true);
         }}
-        type="button"
       >
         この人を削除
-      </button>
+      </DestructiveButton>
       {confirming && (
         <ConfirmDialog
           action="削除"

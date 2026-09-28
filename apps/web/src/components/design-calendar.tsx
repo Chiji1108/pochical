@@ -40,9 +40,9 @@ import {
   Button,
   Chip,
   ChipGroup,
+  chipStyle,
   Choice,
   ChoiceGrid,
-  chipStyle,
   DAY_ROW_GAP,
   DAY_ROW_HEIGHT,
   dayGrid,
@@ -53,6 +53,7 @@ import {
   IconButton,
   Pager,
   Screen,
+  srOnly,
   SummaryRow,
   TodayButton,
   WeekdayRow,
@@ -951,7 +952,7 @@ export function DesignCalendar({
             onOpenChange={sheetChange("gap")}
             open={openSheet === "gap"}
           />
-          <span aria-live="polite" className="dc-sr-only">
+          <span aria-live="polite" className={srOnly}>
             {announcement}
           </span>
           <PhoneToasts toaster={toaster} />

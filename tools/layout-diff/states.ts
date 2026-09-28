@@ -267,6 +267,15 @@ export const states: State[] = [
     },
   },
   {
+    name: "group/member",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, "グループの設定");
+      await tap(page, /^ゆうき/u);
+    },
+  },
+  {
     name: "group/settings",
     path: demo("bottomRows=two&scheduleSample=filled"),
     steps: async (page) => {
@@ -292,6 +301,16 @@ export const states: State[] = [
     },
   },
   {
+    name: "settings/pattern-look",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^シフトパターン/u);
+      await tap(page, /^日勤/u);
+      await tap(page, /^印と色/u);
+    },
+  },
+  {
     name: "settings/pattern-add",
     path: demo("bottomRows=two&scheduleSample=filled"),
     steps: async (page) => {
@@ -306,6 +325,15 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^一緒に働く人/u);
+    },
+  },
+  {
+    name: "settings/coworker",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^一緒に働く人/u);
+      await tap(page, /^田中/u);
     },
   },
   {

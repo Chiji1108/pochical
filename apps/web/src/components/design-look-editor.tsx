@@ -7,13 +7,17 @@ import {
   Button,
   Choice,
   ChoiceGrid,
+  colorGrid,
+  fieldLabel,
+  inlineInput,
   List,
   ListRow,
+  markGrid,
+  markPreview,
+  Note,
   PageHeader,
   Segment,
   SegmentedControl,
-  fieldLabel,
-  Note,
 } from "./design-ui";
 import {
   MarkGlyph,
@@ -128,7 +132,7 @@ export function LookEditorPage({
   return (
     <>
       <PageHeader back={back} onBack={onBack} title={title} />
-      <div className="pe-preview pe-preview-center">
+      <div className={markPreview({ alone: true })}>
         <LookGlyph look={look} size={48} style={tab} />
       </div>
       <SegmentedControl
@@ -188,7 +192,7 @@ function IconGrid({
 }) {
   return (
     <ChoiceGrid
-      className="pe-grid"
+      className={markGrid}
       label="アイコン"
       onValueChange={(icon) => {
         onPick("icon", { icon });
@@ -217,7 +221,7 @@ function EmojiGrid({
   return (
     <>
       <ChoiceGrid
-        className="pe-grid"
+        className={markGrid}
         label="絵文字"
         onValueChange={(emoji) => {
           onPick("emoji", { emoji });
@@ -277,7 +281,7 @@ function LetterEditor({
         control={
           <>
             <input
-              className="pe-inline-input"
+              className={inlineInput}
               onChange={(event) => {
                 const symbol = lastGrapheme(event.target.value);
                 if (symbol) {
@@ -308,7 +312,7 @@ function ColorPicker({
   return (
     <>
       <ChoiceGrid
-        className="pe-colors"
+        className={colorGrid}
         label="色"
         labelClassName={fieldLabel({ place: "grid" })}
         onValueChange={(value) => {

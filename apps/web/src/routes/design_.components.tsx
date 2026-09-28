@@ -36,20 +36,21 @@ import {
   ChoiceGrid,
   ChoiceList,
   ChoiceRow,
+  colorGrid,
   dayGrid,
   DoneButton,
   HeaderAction,
   IconButton,
   List,
   ListRow,
-  Note,
   MenuItem,
   MenuPicker,
   MenuSeparator,
+  Note,
   PageHeader,
   PullDownMenu,
-  Segment,
   Section,
+  Segment,
   SegmentedControl,
   SwitchRow,
   Tag,
@@ -342,7 +343,7 @@ function Choices() {
         where="色、アイコン、絵文字、アプリアイコン、表示する人"
       >
         <ChoiceGrid
-          className="pe-colors"
+          className={colorGrid}
           label="色"
           onValueChange={setColor}
           value={color}

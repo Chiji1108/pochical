@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useContext, useState } from "react";
+import { css } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
@@ -13,15 +14,19 @@ import {
   BackButton,
   ChoiceList,
   ChoiceRow,
+  DestructiveButton,
   HeaderAction,
+  inlineInput,
   List,
   ListRow,
+  listRow,
+  markPreview,
+  markValue,
+  Note,
   PageHeader,
+  Section,
   SortableList,
   SwitchRow,
-  listRow,
-  Note,
-  Section,
 } from "./design-ui";
 import {
   guessLook,
@@ -60,6 +65,32 @@ function draftOf(key: Shift): PatternDraft {
     start: time?.[0] ?? "09:00",
   };
 }
+
+const editor = {
+  // A lookalike's warning under the look page's choices.
+  lookalike: css({ color: "danger", fontSize: "11px", margin: "-8px 4px 0" }),
+  // The name over the time, beside the mark at the top.
+  name: css({ display: "flex", flexDirection: "column", gap: "2px" }),
+  time: css({ color: "text3", fontSize: "12px" }),
+  // Start and end, side by side at the row's right.
+  times: css({
+    "& > input": {
+      bg: "surface",
+      border: "1px solid token(colors.border)",
+      borderRadius: "8px",
+      color: "text",
+      font: "inherit",
+      fontSize: "14px",
+      padding: "4px 6px",
+    },
+    alignItems: "center",
+    color: "text3",
+    display: "flex",
+    flex: 1,
+    gap: "4px",
+    justifyContent: "flex-end",
+  }),
+};
 
 function timeText(draft: PatternDraft) {
   if (draft.allDay) {
@@ -349,7 +380,7 @@ function PatternEditor({
         title="印と色"
       >
         {lookalike && (
-          <p className="pe-warning">
+          <p className={editor.lookalike}>
             「{lookalike.name}
             」と同じ文字と色です。色か文字を変えると見分けやすくなります。
           </p>
@@ -389,11 +420,11 @@ function PatternEditor({
         }
         title={isNew ? "パターンを追加" : "パターンを編集"}
       />
-      <div className="pe-preview">
+      <div className={markPreview()}>
         <MarkGlyph look={draft} size={44} style={style} />
-        <span className="pe-preview-text">
+        <span className={editor.name}>
           <strong>{draft.name || "名前を入力"}</strong>
-          <small className="pe-preview-time">{timeText(draft)}</small>
+          <small className={editor.time}>{timeText(draft)}</small>
         </span>
       </div>
       <Section title="基本">
@@ -403,7 +434,7 @@ function PatternEditor({
             control={
               <>
                 <input
-                  className="pe-inline-input"
+                  className={inlineInput}
                   onChange={(event) => {
                     rename(event.target.value);
                   }}
@@ -426,7 +457,7 @@ function PatternEditor({
               label="時間"
               control={
                 <>
-                  <span className="pe-times">
+                  <span className={editor.times}>
                     <input
                       aria-label="開始時刻"
                       onChange={(event) => {
@@ -470,7 +501,7 @@ function PatternEditor({
                 {nextDay?.name ?? "なし"}
               </>
             }
-            valueClassName="pe-look-value"
+            valueClassName={markValue}
           />
         </List>
       </Section>
@@ -486,13 +517,12 @@ function PatternEditor({
                 <MarkGlyph look={draft} size={20} style={style} />
               </>
             }
-            valueClassName="pe-look-value"
+            valueClassName={markValue}
           />
         </List>
       </Section>
       {!isNew && (
-        <button
-          className="pe-delete"
+        <DestructiveButton
           onClick={() => {
             // Unused, it goes at once; in use, its days go too, so ask.
             if (days > 0) {
@@ -501,11 +531,10 @@ function PatternEditor({
               onDelete();
             }
           }}
-          type="button"
         >
           <Trash2 aria-hidden="true" size={14} />
           このパターンを削除
-        </button>
+        </DestructiveButton>
       )}
       {confirming && (
         <ConfirmDialog

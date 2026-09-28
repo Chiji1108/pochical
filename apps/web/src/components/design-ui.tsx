@@ -52,6 +52,17 @@ import type { DayTone } from "./design-week";
 // look is decided. They map one to one onto the SwiftUI views and Compose
 // composables of the native apps; /design/components shows them all.
 
+// Out of sight but read out, like a switch's label beside a row that
+// already says it; as accessibilityLabel and contentDescription.
+export const srOnly = css({
+  clipPath: "inset(50%)",
+  height: "1px",
+  overflow: "hidden",
+  position: "absolute",
+  whiteSpace: "nowrap",
+  width: "1px",
+});
+
 type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type">;
 
 // A button in four strengths: primary for the step to take, quiet beside
@@ -437,6 +448,76 @@ export function AddButton({
     </button>
   );
 }
+
+// Removing or leaving at the foot of an editing page: quiet red words,
+// centered under the lists, as the platforms' destructive text buttons.
+const destructiveButtonStyle = css({
+  alignItems: "center",
+  alignSelf: "center",
+  bg: "transparent",
+  border: 0,
+  color: "danger",
+  display: "flex",
+  fontSize: "12px",
+  gap: "6px",
+  minHeight: "44px",
+  padding: "0 14px",
+});
+
+export function DestructiveButton({
+  children,
+  onClick,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button className={destructiveButtonStyle} onClick={onClick} type="button">
+      {children}
+    </button>
+  );
+}
+
+// A field that is a row's control, like a pattern's name: no box of its
+// own, its words at the row's right.
+export const inlineInput = css({
+  bg: "transparent",
+  border: 0,
+  color: "text",
+  flex: 1,
+  font: "inherit",
+  fontSize: "14px",
+  minWidth: 0,
+  outline: "none",
+  padding: 0,
+  textAlign: "right",
+});
+
+// A row's value that is a mark with words, or a mark alone: side by side,
+// at the right.
+export const markValue = css({
+  alignItems: "center",
+  display: "inline-flex",
+  gap: "8px",
+  justifyContent: "flex-end",
+});
+
+// A mark shown large at the top of the page that edits it, with its name
+// and time beside it, or alone in the middle.
+export const markPreview = cva({
+  base: {
+    "& strong": { fontSize: "17px" },
+    alignItems: "center",
+    bg: "fill",
+    borderRadius: "18px",
+    display: "flex",
+    gap: "14px",
+    padding: "16px",
+  },
+  variants: {
+    alone: { true: { justifyContent: "center", minHeight: "84px" } },
+  },
+});
 
 // 完了 at a screen's top right, for the mode that has to be left on
 // purpose: entering shifts, a day opened in the week.
@@ -908,7 +989,7 @@ export function Toggle({
         onChange(details.checked);
       }}
     >
-      <Switch.Label className="dc-sr-only">{label}</Switch.Label>
+      <Switch.Label className={srOnly}>{label}</Switch.Label>
       <ToggleParts />
     </Switch.Root>
   );
@@ -1056,7 +1137,7 @@ export function SegmentedControl<Value extends string>({
       }}
       value={value}
     >
-      <SegmentGroup.Label className="dc-sr-only">{label}</SegmentGroup.Label>
+      <SegmentGroup.Label className={srOnly}>{label}</SegmentGroup.Label>
       <SegmentGroup.Indicator className={segmentIndicator} />
       <SegmentSizeContext value={size}>{children}</SegmentSizeContext>
     </SegmentGroup.Root>
@@ -1101,7 +1182,7 @@ export function ChoiceGrid<Value extends string>({
   value,
   onValueChange,
   className,
-  labelClassName = "dc-sr-only",
+  labelClassName = srOnly,
   ref,
   children,
 }: {
@@ -1130,6 +1211,48 @@ export function ChoiceGrid<Value extends string>({
     </RadioGroup.Root>
   );
 }
+
+// A ChoiceGrid of marks, icons or emoji, eight to a row: tiles on the
+// fill, the picked one on the surface inside an accent edge.
+export const markGrid = css({
+  "& [data-part=item]": {
+    "&[data-state=checked]": { bg: "surface", borderColor: "accent" },
+    aspectRatio: 1,
+    bg: "fill",
+    border: "1.5px solid transparent",
+    borderRadius: "10px",
+    display: "grid",
+    fontSize: "20px",
+    placeItems: "center",
+  },
+  border: 0,
+  display: "grid",
+  gap: "4px",
+  gridTemplateColumns: "repeat(8, minmax(0, 1fr))",
+  margin: 0,
+  padding: 0,
+});
+
+// A ChoiceGrid of a mark's colors, six to a row: each a circle edged in
+// its color (set on the choice), the picked one ringed apart from it.
+export const colorGrid = css({
+  "& [data-part=item]": {
+    "&[data-state=checked]": {
+      boxShadow: "0 0 0 3px var(--bg), 0 0 0 5px currentcolor",
+    },
+    border: "2px solid currentcolor",
+    borderRadius: "50%",
+    height: "36px",
+    width: "36px",
+  },
+  border: 0,
+  display: "grid",
+  gap: "10px",
+  gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+  justifyItems: "center",
+  margin: 0,
+  padding: 0,
+});
 
 // The focus ring sits outside a tile, and inside a row, whose list clips.
 const choiceStyle = cva({
@@ -1309,7 +1432,7 @@ export function ChipGroup({
   if (label) {
     return (
       <fieldset className={style}>
-        <legend className="dc-sr-only">{label}</legend>
+        <legend className={srOnly}>{label}</legend>
         {children}
       </fieldset>
     );

@@ -24,17 +24,18 @@ import {
 import { ToastContext } from "./design-toast";
 import {
   Button,
+  dayGrid,
   List,
   ListRow,
-  PageHeader,
-  SwitchRow,
   listStyle,
-  dayGrid,
-  WeekdayRow,
-  Screen,
   Note,
+  PageHeader,
+  Screen,
   ScreenScroll,
   Section,
+  srOnly,
+  SwitchRow,
+  WeekdayRow,
 } from "./design-ui";
 import { useWeek } from "./design-week";
 import {
@@ -207,7 +208,7 @@ export function SaveSheet({
         <>
           <p>{monthLabel}のシフトを、選んだカレンダーに予定として入れます。</p>
           <fieldset className={cx(listStyle, save.calendars)}>
-            <legend className="dc-sr-only">入れるカレンダー</legend>
+            <legend className={srOnly}>入れるカレンダー</legend>
             {deviceCalendars.map((item) => (
               <ListRow
                 key={item.id}
@@ -226,7 +227,7 @@ export function SaveSheet({
                   <>
                     <input
                       checked={calendarId === item.id}
-                      className="dc-sr-only"
+                      className={srOnly}
                       name="device-calendar"
                       onChange={() => {
                         setCalendarId(item.id);

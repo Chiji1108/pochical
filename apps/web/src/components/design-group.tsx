@@ -60,31 +60,37 @@ import {
   Button,
   Choice,
   ChoiceGrid,
+  colorGrid,
+  dayGrid,
+  DestructiveButton,
+  fieldLabel,
   HeaderAction,
   IconButton,
+  inlineInput,
   List,
   ListRow,
+  listRow,
+  markGrid,
+  markValue,
   MenuItem,
   MenuPicker,
   MenuSeparator,
+  Note,
   PageHeader,
   PullDownMenu,
-  Segment,
-  SegmentedControl,
-  Tag,
-  listRow,
-  dayGrid,
-  SummaryRow,
-  summaryRow,
-  TodayButton,
-  WeekdayRow,
+  pushToBottom,
   Screen,
-  fieldLabel,
-  Note,
   ScreenScroll,
   Section,
   sectionTitle,
-  pushToBottom,
+  Segment,
+  SegmentedControl,
+  srOnly,
+  SummaryRow,
+  summaryRow,
+  Tag,
+  TodayButton,
+  WeekdayRow,
 } from "./design-ui";
 import { holidayName, useWeek } from "./design-week";
 import type { DayTone } from "./design-week";
@@ -2046,15 +2052,13 @@ function MemberSheet({
             )}
           </div>
           {onRemove && (
-            <button
-              className="pe-delete"
+            <DestructiveButton
               onClick={() => {
                 setConfirming(true);
               }}
-              type="button"
             >
               このグループから外す
-            </button>
+            </DestructiveButton>
           )}
         </>
       )}
@@ -2452,7 +2456,7 @@ function ChatRow({
         {chat.unread > 0 && (
           <span className={badge} role="status">
             {chat.unread}
-            <span className="dc-sr-only">件の未読</span>
+            <span className={srOnly}>件の未読</span>
           </span>
         )}
       </span>
@@ -3709,7 +3713,7 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
         {members.map((member) => (
           <span key={member.id}>
             <Avatar member={member} />
-            <span className="dc-sr-only">{member.name}</span>
+            <span className={srOnly}>{member.name}</span>
           </span>
         ))}
       </span>
@@ -3735,7 +3739,7 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
               key={member.id}
             >
               <Mark date={date} member={member} size={15} />
-              <span className="dc-sr-only">
+              <span className={srOnly}>
                 {member.name}：{patternOn(member, date)?.name ?? "未入力"}
               </span>
             </span>
@@ -4463,7 +4467,7 @@ function DayRowsTable({
           minWidth: rowsDateWidth + group.members.length * columnWidth,
         }}
       >
-        <caption className="dc-sr-only">みんなのシフト</caption>
+        <caption className={srOnly}>みんなのシフト</caption>
         <thead>
           <tr>
             <th className={dayRows.head({ corner: true, page })} scope="col">
@@ -4471,7 +4475,7 @@ function DayRowsTable({
               <span aria-hidden="true" className={cornerMonth}>
                 {days[0].getMonth() + 1}月
               </span>
-              <span className="dc-sr-only">日付</span>
+              <span className={srOnly}>日付</span>
             </th>
             {group.members.map((member, column) => (
               <th
@@ -4551,7 +4555,7 @@ function DayRow({
           }}
           picked={picked}
         />
-        {together && <span className="dc-sr-only">みんな休み</span>}
+        {together && <span className={srOnly}>みんな休み</span>}
       </th>
       {members.map((member, column) => {
         const item = patternOn(member, date);
@@ -4587,7 +4591,7 @@ function DayRow({
                     member={member}
                     size={16}
                   />
-                  <span className={withNames ? dayRows.name : "dc-sr-only"}>
+                  <span className={withNames ? dayRows.name : srOnly}>
                     {item.name}
                   </span>
                 </span>
@@ -5003,7 +5007,7 @@ function MemberTable({
               ) : (
                 <span className={weekTable.name}>
                   <Avatar member={member} size={avatarSize} />
-                  <span className="dc-sr-only">{member.name}</span>
+                  <span className={srOnly}>{member.name}</span>
                 </span>
               )}
               {week.map((date) => (
@@ -5372,7 +5376,7 @@ export function JoinSheet({
                 control={
                   <>
                     <input
-                      className="pe-inline-input"
+                      className={inlineInput}
                       onChange={(event) => {
                         setName(event.target.value);
                       }}
@@ -5463,7 +5467,7 @@ function PhotoPicker({
       <input
         accept="image/*"
         capture="user"
-        className="dc-sr-only"
+        className={srOnly}
         id={cameraId}
         onChange={(event) => {
           choose(event.target.files);
@@ -5472,7 +5476,7 @@ function PhotoPicker({
       />
       <input
         accept="image/*"
-        className="dc-sr-only"
+        className={srOnly}
         id={libraryId}
         onChange={(event) => {
           choose(event.target.files);
@@ -5702,15 +5706,13 @@ function GroupSettingsPage({
           />
         </List>
       </Section>
-      <button
-        className="pe-delete"
+      <DestructiveButton
         onClick={() => {
           setLeaving(true);
         }}
-        type="button"
       >
         このグループから抜ける
-      </button>
+      </DestructiveButton>
       {leaving && (
         <ConfirmDialog
           action="抜ける"
@@ -5813,7 +5815,7 @@ function GroupEditPage({
           control={
             <>
               <input
-                className="pe-inline-input"
+                className={inlineInput}
                 onChange={(event) => {
                   setName(event.target.value);
                 }}
@@ -5896,7 +5898,7 @@ function GroupProfilePage({
           control={
             <>
               <input
-                className="pe-inline-input"
+                className={inlineInput}
                 onChange={(event) => {
                   update({ name: event.target.value || undefined });
                 }}
@@ -6170,7 +6172,7 @@ function GroupMarkPage({
       {kind === "emoji" && (
         <>
           <ChoiceGrid
-            className="pe-grid"
+            className={markGrid}
             label="絵文字"
             onValueChange={(emoji) => {
               onChange({ emoji, kind: "emoji" });
@@ -6207,7 +6209,7 @@ function GroupMarkPage({
       {kind === "icon" && (
         <>
           <ChoiceGrid
-            className="pe-grid"
+            className={markGrid}
             label="アイコン"
             onValueChange={(icon) => {
               onChange({ color, icon, kind: "icon" });
@@ -6244,7 +6246,7 @@ function GroupMarkPage({
               control={
                 <>
                   <input
-                    className="pe-inline-input"
+                    className={inlineInput}
                     maxLength={2}
                     onChange={(event) => {
                       onChange({
@@ -6284,7 +6286,7 @@ function MarkColors({
   const colors = useMarkColors();
   return (
     <ChoiceGrid
-      className="pe-colors"
+      className={colorGrid}
       label="色"
       labelClassName={fieldLabel({ place: "grid" })}
       onValueChange={(value) => {
@@ -6364,7 +6366,7 @@ function NewGroupPage({
           control={
             <>
               <input
-                className="pe-inline-input"
+                className={inlineInput}
                 onChange={(event) => {
                   setName(event.target.value);
                   if (!picked) {
@@ -6388,7 +6390,7 @@ function NewGroupPage({
           control={
             <>
               <input
-                className="pe-inline-input"
+                className={inlineInput}
                 onChange={(event) => {
                   setMyName(event.target.value);
                 }}
@@ -6418,7 +6420,7 @@ function MarkRow({ mark, onOpen }: { mark: GroupMark; onOpen: () => void }) {
           </span>
         </>
       }
-      valueClassName="pe-look-value"
+      valueClassName={markValue}
     />
   );
 }

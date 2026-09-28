@@ -59,22 +59,24 @@ import {
   ChoiceGrid,
   ChoiceList,
   ChoiceRow,
+  dayGrid,
+  fieldLabel,
+  inlineInput,
   List,
   ListRow,
-  PageHeader,
-  Segment,
-  SegmentedControl,
-  SwitchRow,
-  Tag,
-  dayGrid,
-  WeekdayRow,
-  Screen,
-  fieldLabel,
   Note,
-  ScreenScroll,
-  Section,
   OptionCard,
   optionList,
+  PageHeader,
+  Screen,
+  ScreenScroll,
+  Section,
+  Segment,
+  SegmentedControl,
+  srOnly,
+  SwitchRow,
+  Tag,
+  WeekdayRow,
 } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
 import type { ColoredDay } from "./design-week";
@@ -1171,7 +1173,7 @@ function ProfilePage({
           control={
             <>
               <input
-                className="pe-inline-input"
+                className={inlineInput}
                 onChange={(event) => {
                   onChange({ ...profile, name: event.target.value });
                 }}
@@ -1233,7 +1235,7 @@ function WorkStylePage({
     <>
       <PageHeader back="設定" onBack={onBack} title="働き方" />
       <fieldset className={optionList}>
-        <legend className="dc-sr-only">働き方</legend>
+        <legend className={srOnly}>働き方</legend>
         {workStyles.map((style) => {
           const selected = style.repeating === repeating;
           return (
