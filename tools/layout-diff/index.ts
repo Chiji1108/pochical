@@ -36,9 +36,12 @@ const VIEWPORT = { height: 1300, width: 800 };
 // the first load compiles the page, and springs and the pager take time
 // to come to rest.
 const SETTLE_MS = 300;
+const SETTLE_TRIES = 20;
+// Measures in a row that must agree: a picture drawn later, like the app
+// icon painted on a canvas, can take longer than one pause to come in.
+const SETTLE_AGREEING = 3;
 // Screens measured at once, each in its own tab.
 const WORKERS = 4;
-const SETTLE_TRIES = 20;
 
 async function settled(page: Page, root: string) {
   // An image still loading has no size yet, and would be left out; lazy
@@ -52,6 +55,7 @@ async function settled(page: Page, root: string) {
     [...document.images].every((image) => image.complete)
   );
   let last = JSON.stringify(await page.evaluate(measure, root));
+  let agreeing = 1;
   for (let tries = 0; tries < SETTLE_TRIES; tries += 1) {
     // Each measure waits for the one before it.
     // oxlint-disable-next-line no-await-in-loop
@@ -59,7 +63,8 @@ async function settled(page: Page, root: string) {
     // oxlint-disable-next-line no-await-in-loop
     const screen = await page.evaluate(measure, root);
     const now = JSON.stringify(screen);
-    if (now === last) {
+    agreeing = now === last ? agreeing + 1 : 1;
+    if (agreeing === SETTLE_AGREEING) {
       return screen;
     }
     last = now;
@@ -71,6 +76,15 @@ async function measureState(page: Page, base: string, state: State) {
   await page.goto(new URL(state.path, base).href);
   const root = state.root ?? ".dc-phone";
   await page.locator(root).first().waitFor();
+  // The page comes drawn from the server and looks the same before React
+  // takes it over, but a tap before then does nothing.
+  await page.waitForFunction(
+    (selector) =>
+      [...document.querySelectorAll(selector)].every((element) =>
+        Object.keys(element).some((key) => key.startsWith("__reactFiber"))
+      ),
+    root
+  );
   await settled(page, root);
   if (state.steps !== undefined) {
     await state.steps(page);

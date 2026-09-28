@@ -190,10 +190,45 @@ export const states: State[] = [
       await tap(page, /^仕事が変わったとき/u);
     },
   },
+  {
+    // An order of three, with the first two weeks it makes.
+    name: "settings/repeat-sequence",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^働き方/u);
+      await tap(page, /決まった順番で回っている/u);
+      await tap(page, "日勤");
+      await tap(page, "日勤");
+      await tap(page, "休み");
+    },
+  },
+  {
+    name: "settings/look-colors",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^シフトパターン/u);
+      await tap(page, /^日勤/u);
+      await tap(page, /^印と色/u);
+    },
+  },
   // Every phone of the design pages: the calendar in its states, light
   // and dark, and the first-run screens.
   { name: "design/states", path: "/design/states" },
   { name: "design/flows", path: "/design/flows" },
+  {
+    // The first-run day picked, with the two weeks it starts. The flow
+    // page covers its frames against taps, so the click goes to the day.
+    name: "design/flows-anchor",
+    path: "/design/flows",
+    steps: async (page) => {
+      await page
+        .locator(".dc-phone", { hasText: "の日を1日選んでください" })
+        .getByRole("button", { name: /2026年9月10日/u })
+        .dispatchEvent("click");
+    },
+  },
   // Every shared piece on its own, each in its sample box.
   {
     name: "design/components",
