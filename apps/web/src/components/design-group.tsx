@@ -84,6 +84,7 @@ import {
   ScreenScroll,
   Section,
   sectionTitle,
+  pushToBottom,
 } from "./design-ui";
 import { holidayName, useWeek } from "./design-week";
 import {
@@ -3882,7 +3883,7 @@ export function JoinSheet({
           </p>
           <Button
             variant="primary"
-            className="ob-push"
+            className={pushToBottom}
             onClick={() => {
               close();
               onOpenGroup(invitedGroupId);
@@ -3904,7 +3905,7 @@ export function JoinSheet({
             </p>
             <Button
               variant="primary"
-              className="ob-push"
+              className={pushToBottom}
               onClick={() => {
                 close();
                 onOpenGroup(invitedGroupId);
@@ -3960,7 +3961,7 @@ export function JoinSheet({
             </p>
             <Button
               variant="primary"
-              className="ob-push"
+              className={pushToBottom}
               disabled={name.trim() === ""}
               onClick={() => {
                 setJoined(true);

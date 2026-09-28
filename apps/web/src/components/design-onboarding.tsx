@@ -1,6 +1,5 @@
-import { ChevronRight } from "lucide-react";
 import { useContext, useState } from "react";
-import { css } from "styled-system/css";
+import { css, cva } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
@@ -22,7 +21,14 @@ import {
 import type { Schedule } from "./design-calendar";
 import { Phone } from "./design-phone";
 import { ColorSchemeContext, useThemeStyle } from "./design-theme";
-import { BackButton, Button, Tag } from "./design-ui";
+import {
+  BackButton,
+  Button,
+  OptionCard,
+  optionList,
+  pushToBottom,
+  Tag,
+} from "./design-ui";
 import { ShiftMark } from "./shift-mark";
 
 type Template = {
@@ -177,6 +183,113 @@ const templateChips = css({
   marginTop: "5px",
 });
 
+// The first run, in the phone: a welcome with the app's poodle, then a
+// step at a time, each a heading with what it asks, its answers, and its
+// main button at the foot.
+const onboarding = {
+  actions: css({ display: "flex", flexDirection: "column", gap: "4px" }),
+  back: css({ marginBottom: "8px" }),
+  content: css({
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "18px",
+    minHeight: 0,
+    overflowY: "auto",
+    padding: "20px 6px 12px",
+  }),
+  description: css({ color: "text3", fontSize: "13px", margin: "8px 0 0" }),
+  // Once started, the page shows the calendar it made, with a way back to
+  // the start under it.
+  finished: css({
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+  }),
+  finishedNote: css({
+    color: "text3",
+    fontSize: "12px",
+    lineHeight: 1.6,
+    margin: "12px 0 0",
+    maxWidth: "340px",
+    textAlign: "center",
+  }),
+  footnote: css({
+    color: "text4",
+    fontSize: "11px",
+    margin: "auto 0 0",
+    textAlign: "center",
+  }),
+  intro: css({
+    alignItems: "center",
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "10px",
+    justifyContent: "center",
+    padding: "0 10px",
+    textAlign: "center",
+  }),
+  lead: css({
+    color: "text3",
+    fontSize: "14px",
+    lineHeight: 1.7,
+    margin: 0,
+  }),
+  name: css({
+    fontSize: "24px",
+    fontWeight: 700,
+    lineHeight: 1.4,
+    margin: "6px 0 0",
+  }),
+  // Each phrase stays whole, so the line breaks after the comma.
+  phrase: css({ display: "inline-block" }),
+  // In light, the scan's black lines on white paper are multiplied into
+  // the ground, brightened first so its slightly gray paper turns white
+  // and no square shows around the dog. In dark, the dark home screen's
+  // dog is drawn into a box of its own.
+  poodle: cva({
+    base: { height: "200px", margin: "-24px 0 -18px", width: "200px" },
+    defaultVariants: { dark: false },
+    variants: {
+      dark: {
+        false: {
+          filter: "brightness(1.12) contrast(1.2)",
+          mixBlendMode: "multiply",
+        },
+        true: { display: "block" },
+      },
+    },
+  }),
+  previewLabel: css({
+    color: "text3",
+    fontSize: "11px",
+    margin: "0 0 -10px",
+  }),
+  restart: css({
+    bg: "transparent",
+    border: "1px solid token(colors.border)",
+    borderRadius: "20px",
+    color: "accent",
+    fontSize: "12px",
+    marginTop: "10px",
+    minHeight: "40px",
+    padding: "0 14px",
+  }),
+  title: css({
+    fontSize: "22px",
+    fontWeight: 600,
+    lineHeight: 1.45,
+    margin: 0,
+  }),
+  welcome: css({
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    justifyContent: "space-between",
+  }),
+};
+
 export function DesignOnboarding({
   variants,
   initialScreen = "welcome",
@@ -211,7 +324,7 @@ export function DesignOnboarding({
 
   if (finished) {
     return (
-      <div className="ob-finished">
+      <div className={onboarding.finished}>
         <UserStoreContext value={finished.person}>
           <DesignCalendar
             initialEditing={false}
@@ -219,9 +332,11 @@ export function DesignOnboarding({
             variants={variants}
           />
         </UserStoreContext>
-        {finished.note && <p className="ob-finished-note">{finished.note}</p>}
+        {finished.note && (
+          <p className={onboarding.finishedNote}>{finished.note}</p>
+        )}
         <button
-          className="ob-restart"
+          className={onboarding.restart}
           onClick={() => {
             setFinished(undefined);
             setStage("welcome");
@@ -236,7 +351,7 @@ export function DesignOnboarding({
 
   return (
     <Phone style={themeStyle}>
-      <div className="ob-content">
+      <div className={onboarding.content}>
         {stage === "welcome" && (
           <WelcomeStep
             onLogin={() => {
@@ -287,12 +402,15 @@ function WelcomeStep({
   // dark lines, painted once the drawing has loaded.
   const darkDrawing = icons[DARK_DRAWING];
   return (
-    <div className="ob-welcome-screen">
-      <div className="ob-intro">
+    <div className={onboarding.welcome}>
+      <div className={onboarding.intro}>
         {/* The app icon's poodle, just the drawing: the one who was tapped on
             the home screen, over the name it gives. */}
         {scheme === "dark" ? (
-          <span aria-hidden="true" className="ob-poodle">
+          <span
+            aria-hidden="true"
+            className={onboarding.poodle({ dark: true })}
+          >
             {darkDrawing ? (
               <img alt="" height={200} src={darkDrawing} width={200} />
             ) : null}
@@ -300,23 +418,23 @@ function WelcomeStep({
         ) : (
           <img
             alt=""
-            className="ob-poodle ob-poodle-light"
+            className={onboarding.poodle()}
             height={200}
             src="/design/poodle.png"
             width={200}
           />
         )}
-        <h3>ポチカル</h3>
+        <h3 className={onboarding.name}>ポチカル</h3>
         {/* Each phrase stays whole, so the line breaks after the comma. */}
-        <p>
-          <span className="ob-phrase">シフトをポチッと入れて、</span>
-          <span className="ob-phrase">
+        <p className={onboarding.lead}>
+          <span className={onboarding.phrase}>シフトをポチッと入れて、</span>
+          <span className={onboarding.phrase}>
             家族や友達と見せ合えるカレンダーです。
           </span>
         </p>
       </div>
-      <div className="ob-welcome-actions">
-        <Button variant="primary" className="ob-push" onClick={onStart}>
+      <div className={onboarding.actions}>
+        <Button variant="primary" className={pushToBottom} onClick={onStart}>
           はじめる
         </Button>
         <Button variant="text" onClick={onLogin}>
@@ -351,7 +469,7 @@ function LoginStep({
           setTimeout(onRestore, signInMilliseconds);
         }}
       />
-      <p className="ob-footnote">
+      <p className={onboarding.footnote}>
         はじめて使うときは、戻って「はじめる」から始めてください。
       </p>
     </>
@@ -480,12 +598,16 @@ function StepHeader({
   description?: string;
 }) {
   return (
-    <header className="ob-header">
+    <header>
       {onBack && (
-        <BackButton aria-label="戻る" className="ob-back" onClick={onBack} />
+        <BackButton
+          aria-label="戻る"
+          className={onboarding.back}
+          onClick={onBack}
+        />
       )}
-      <h3>{title}</h3>
-      {description && <p>{description}</p>}
+      <h3 className={onboarding.title}>{title}</h3>
+      {description && <p className={onboarding.description}>{description}</p>}
     </header>
   );
 }
@@ -516,39 +638,23 @@ function KindStep({
             : "新しい仕事のシフトはどう決まりますか？"
         }
       />
-      <div className="ob-options">
-        <button className="ob-option" onClick={onRoster} type="button">
-          <span aria-hidden="true" className="ob-option-icon">
-            📋
-          </span>
-          <span className="ob-option-text">
-            <strong>毎月、勤務表が配られる</strong>
-            <small className="ob-option-note">看護・介護・飲食など</small>
-          </span>
-          <ChevronRight
-            aria-hidden="true"
-            className="ob-option-arrow"
-            size={18}
-          />
-        </button>
-        <button className="ob-option" onClick={onRotation} type="button">
-          <span aria-hidden="true" className="ob-option-icon">
-            🔁
-          </span>
-          <span className="ob-option-text">
-            <strong>決まった順番で回っている</strong>
-            <small className="ob-option-note">
-              消防・工場の交代勤務・曜日で固定など
-            </small>
-          </span>
-          <ChevronRight
-            aria-hidden="true"
-            className="ob-option-arrow"
-            size={18}
-          />
-        </button>
+      <div className={optionList}>
+        <OptionCard
+          icon="📋"
+          note="看護・介護・飲食など"
+          onClick={onRoster}
+          title="毎月、勤務表が配られる"
+        />
+        <OptionCard
+          icon="🔁"
+          note="消防・工場の交代勤務・曜日で固定など"
+          onClick={onRotation}
+          title="決まった順番で回っている"
+        />
       </div>
-      {first && <p className="ob-footnote">あとから設定で変えられます</p>}
+      {first && (
+        <p className={onboarding.footnote}>あとから設定で変えられます</p>
+      )}
     </>
   );
 }
@@ -571,39 +677,30 @@ function TemplateStep({
         onBack={onBack}
         title={title}
       />
-      <div className="ob-options">
+      <div className={optionList}>
         {templates.map((template) => (
-          <button
-            className="ob-option"
+          <OptionCard
             key={template.id}
+            note={template.note}
             onClick={() => {
               onChoose(template);
             }}
-            type="button"
+            title={template.title}
           >
-            <span className="ob-option-text">
-              <strong>{template.title}</strong>
-              <small className="ob-option-note">{template.note}</small>
-              {!template.custom && (
-                <span aria-hidden="true" className={templateChips}>
-                  {(template.sequence ?? template.patternKeys).map(
-                    (key, index) => (
-                      // oxlint-disable-next-line react/no-array-index-key -- a sequence repeats the same shift, so position is its identity.
-                      <Tag key={index} size="sm" tone="raised">
-                        <ShiftMark shift={key} size={11} />
-                        {patterns[key].label}
-                      </Tag>
-                    )
-                  )}
-                </span>
-              )}
-            </span>
-            <ChevronRight
-              aria-hidden="true"
-              className="ob-option-arrow"
-              size={18}
-            />
-          </button>
+            {!template.custom && (
+              <span aria-hidden="true" className={templateChips}>
+                {(template.sequence ?? template.patternKeys).map(
+                  (key, index) => (
+                    // oxlint-disable-next-line react/no-array-index-key -- a sequence repeats the same shift, so position is its identity.
+                    <Tag key={index} size="sm" tone="raised">
+                      <ShiftMark shift={key} size={11} />
+                      {patterns[key].label}
+                    </Tag>
+                  )
+                )}
+              </span>
+            )}
+          </OptionCard>
         ))}
       </div>
     </>
@@ -636,7 +733,7 @@ function CustomStep({
       />
       <Button
         variant="primary"
-        className="ob-push"
+        className={pushToBottom}
         disabled={sequence.length === 0}
         onClick={() => {
           onNext(sequence);
@@ -672,7 +769,9 @@ function AnchorStep({
       />
       <MonthPicker month={month} onSelect={setAnchor} value={anchor} />
       {anchor && (
-        <p className="ob-preview-label">{formatDay(anchor)}からの2週間</p>
+        <p className={onboarding.previewLabel}>
+          {formatDay(anchor)}からの2週間
+        </p>
       )}
       {anchor && (
         <ShiftPreview
@@ -685,7 +784,7 @@ function AnchorStep({
       )}
       <Button
         variant="primary"
-        className="ob-push"
+        className={pushToBottom}
         disabled={!anchor}
         onClick={() => anchor && onStart(anchor)}
       >

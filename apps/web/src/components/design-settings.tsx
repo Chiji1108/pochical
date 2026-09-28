@@ -1,4 +1,4 @@
-import { ArrowRight, Check, ChevronRight, CloudCheck } from "lucide-react";
+import { ArrowRight, Check, CloudCheck } from "lucide-react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
@@ -73,6 +73,8 @@ import {
   Note,
   ScreenScroll,
   Section,
+  OptionCard,
+  optionList,
 } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
 import type { ColoredDay } from "./design-week";
@@ -1230,15 +1232,15 @@ function WorkStylePage({
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="働き方" />
-      <fieldset className="ob-options st-work-options">
+      <fieldset className={optionList}>
         <legend className="dc-sr-only">働き方</legend>
         {workStyles.map((style) => {
           const selected = style.repeating === repeating;
           return (
-            <button
-              aria-pressed={selected}
-              className="ob-option"
+            <OptionCard
+              icon={style.icon}
               key={style.name}
+              note={style.note}
               onClick={() => {
                 if (selected) {
                   return;
@@ -1249,25 +1251,9 @@ function WorkStylePage({
                   onRoster();
                 }
               }}
-              type="button"
-            >
-              <span aria-hidden="true" className="ob-option-icon">
-                {style.icon}
-              </span>
-              <span className="ob-option-text">
-                <strong>{style.name}</strong>
-                <small className="ob-option-note">{style.note}</small>
-              </span>
-              {selected ? (
-                <Check aria-hidden="true" className="st-work-check" size={20} />
-              ) : (
-                <ChevronRight
-                  aria-hidden="true"
-                  className="ob-option-arrow"
-                  size={18}
-                />
-              )}
-            </button>
+              picked={selected}
+              title={style.name}
+            />
           );
         })}
       </fieldset>

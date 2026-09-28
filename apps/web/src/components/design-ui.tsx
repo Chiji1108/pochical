@@ -297,6 +297,115 @@ export const fieldHint = css({
   fontWeight: 400,
 });
 
+// A choice that takes the whole row, for a question with a few answers
+// each worth a line of its own: an emoji, the answer and a note under it,
+// and an arrow to go on, or a check on the one in use.
+const optionCard = {
+  arrow: css({ color: "textFaint", flexShrink: 0 }),
+  card: cva({
+    base: {
+      _hover: { bg: "fill", borderColor: "accentMuted" },
+      alignItems: "center",
+      bg: "surface",
+      border: "1px solid token(colors.border)",
+      borderRadius: "18px",
+      color: "text",
+      display: "flex",
+      gap: "12px",
+      minHeight: "72px",
+      padding: "14px 14px 14px 16px",
+      textAlign: "left",
+      width: "100%",
+    },
+    variants: {
+      picked: {
+        true: {
+          _hover: { bg: "surface", borderColor: "accent" },
+          border: "2px solid token(colors.accent)",
+          cursor: "default",
+        },
+      },
+    },
+  }),
+  check: css({ color: "accent", flexShrink: 0 }),
+  icon: css({
+    flexShrink: 0,
+    fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", sans-serif',
+    fontSize: "28px",
+  }),
+  list: css({
+    border: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    margin: 0,
+    padding: 0,
+  }),
+  note: css({ color: "text3", fontSize: "11px" }),
+  text: css({
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "3px",
+    minWidth: 0,
+  }),
+  title: css({ fontSize: "15px", fontWeight: 600 }),
+};
+
+// OptionCards one over another.
+export const optionList = optionCard.list;
+
+export function OptionCard({
+  icon,
+  title,
+  note,
+  picked,
+  onClick,
+  children,
+}: {
+  icon?: string;
+  title: string;
+  note: string;
+  // Set where one of the answers is the one in use, as in settings.
+  picked?: boolean;
+  onClick: () => void;
+  // More under the note, like the patterns a template brings.
+  children?: ReactNode;
+}) {
+  return (
+    <button
+      aria-pressed={picked}
+      className={optionCard.card({ picked })}
+      onClick={onClick}
+      type="button"
+    >
+      {icon !== undefined && (
+        <span aria-hidden="true" className={optionCard.icon}>
+          {icon}
+        </span>
+      )}
+      <span className={optionCard.text}>
+        <strong className={optionCard.title}>{title}</strong>
+        <small className={optionCard.note}>{note}</small>
+        {children}
+      </span>
+      {picked === true ? (
+        <Check aria-hidden="true" className={optionCard.check} size={20} />
+      ) : (
+        <ChevronRight
+          aria-hidden="true"
+          className={optionCard.arrow}
+          size={18}
+        />
+      )}
+    </button>
+  );
+}
+
+// A step's main button at the foot of its column, as the platforms' flows
+// keep it in reach of the thumb.
+export const pushToBottom = css({ marginTop: "auto" });
+
 // Adding one more to the list above: a dashed, full-width button, as the
 // platforms' "add" rows are.
 const addButtonStyle = css({
