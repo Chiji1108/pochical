@@ -1371,15 +1371,7 @@ function HeadingActions({
           </div>
         )}
         {mode !== "edit" && !atToday && (
-          <motion.div
-            animate={{ opacity: 1, x: 0 }}
-            className={heading.backAtEnd}
-            initial={{ opacity: 0, x: 6 }}
-            key={unit}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-          >
-            {back}
-          </motion.div>
+          <div className={heading.backAtEnd}>{back}</div>
         )}
         {mode === "view" ? (
           <IconMenu
@@ -1387,18 +1379,18 @@ function HeadingActions({
             label="この月のシフトを保存"
           >
             <MenuItem
-              icon={<ImageIcon aria-hidden="true" size={16} />}
+              icon={<ImageIcon aria-hidden="true" size={18} />}
               onSelect={onImage}
               value="image"
             >
               画像で保存
             </MenuItem>
             <MenuItem
-              icon={<CalendarPlus aria-hidden="true" size={16} />}
+              icon={<CalendarPlus aria-hidden="true" size={18} />}
               onSelect={onCalendar}
               value="calendar"
             >
-              カレンダーに追加
+              端末カレンダーに追加
             </MenuItem>
           </IconMenu>
         ) : (
@@ -1413,17 +1405,9 @@ function HeadingActions({
       {navAtEnd && (
         <div className={heading.nav({ atEnd: true })}>
           {/* Shown only away from this month: the arrows sit at the edge,
-              so nothing moves, and its coming in says where you are. */}
-          {!atToday && (
-            <motion.div
-              animate={{ opacity: 1, x: 0 }}
-              className={heading.backAtEnd}
-              initial={{ opacity: 0, x: 6 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-            >
-              {back}
-            </motion.div>
-          )}
+              so nothing moves, and it simply comes and goes, as a toolbar
+              item does without withAnimation. */}
+          {!atToday && <div className={heading.backAtEnd}>{back}</div>}
           {previous}
           {next}
         </div>

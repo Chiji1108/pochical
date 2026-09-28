@@ -75,6 +75,7 @@ import {
   MenuItem,
   MenuPicker,
   MenuSeparator,
+  menuStyle,
   Note,
   PageHeader,
   PullDownMenu,
@@ -2831,32 +2832,6 @@ const messageActions = {
     outline: "none",
     zIndex: 30,
   }),
-  menu: css({
-    bg: "raised",
-    border: "1px solid token(colors.border)",
-    borderRadius: "16px",
-    boxShadow: "0 8px 24px var(--shadow-strong)",
-    minWidth: "170px",
-    overflow: "hidden",
-  }),
-  menuItem: css({
-    "& + &": { borderTop: "1px solid token(colors.separator)" },
-    _focusVisible: {
-      outline: "2px solid token(colors.accent)",
-      outlineOffset: "-2px",
-    },
-    _hover: { bg: "fill2" },
-    alignItems: "center",
-    bg: "transparent",
-    border: 0,
-    color: "text",
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "12px 16px",
-    textStyle: "body",
-    width: "100%",
-  }),
-  menuIcon: css({ color: "text3" }),
   more: css({ color: "text2" }),
   reaction: css({
     _focusVisible: { outline: "2px solid token(colors.accent)" },
@@ -2977,33 +2952,29 @@ function MessageActions({
                 <Plus aria-hidden="true" size={18} />
               </button>
             </div>
-            <div className={messageActions.menu}>
+            <div className={menuStyle.content}>
               <button
-                className={messageActions.menuItem}
+                className={menuStyle.item}
                 onClick={onReply}
                 type="button"
               >
+                <span className={menuStyle.icon}>
+                  <Reply aria-hidden="true" size={18} />
+                </span>
                 返信
-                <Reply
-                  aria-hidden="true"
-                  className={messageActions.menuIcon}
-                  size={17}
-                />
               </button>
               {text && (
                 <button
-                  className={messageActions.menuItem}
+                  className={menuStyle.item}
                   onClick={() => {
                     copy().catch(() => undefined);
                   }}
                   type="button"
                 >
+                  <span className={menuStyle.icon}>
+                    <Copy aria-hidden="true" size={18} />
+                  </span>
                   コピー
-                  <Copy
-                    aria-hidden="true"
-                    className={messageActions.menuIcon}
-                    size={17}
-                  />
                 </button>
               )}
             </div>
@@ -4051,14 +4022,14 @@ function ShiftsMenu({
       />
       <MenuSeparator />
       <MenuItem
-        icon={<Info aria-hidden="true" size={16} />}
+        icon={<Info aria-hidden="true" size={18} />}
         onSelect={onLegend}
         value="legend"
       >
         シフトパターン
       </MenuItem>
       <MenuItem
-        icon={<Download aria-hidden="true" size={16} />}
+        icon={<Download aria-hidden="true" size={18} />}
         onSelect={onSave}
         value="save"
       >
