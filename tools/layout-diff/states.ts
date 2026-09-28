@@ -24,6 +24,12 @@ const tapOn = (name: string | RegExp) => async (page: Page) => {
   await tap(page, name);
 };
 
+const toGroupEdit = async (page: Page) => {
+  await tap(page, "グループ");
+  await tap(page, "グループの設定");
+  await tap(page, /編集$/u);
+};
+
 const toGroupMonth = async (page: Page) => {
   await tap(page, "グループ");
   await tap(page, "月で見る");
@@ -396,6 +402,66 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^ゆうき/u);
+    },
+  },
+  {
+    name: "group/none",
+    path: "/demo?groupSample=none&inviteLink=none&memberSample=some&scanResult=invite&bottomRows=two&scheduleSample=filled",
+    steps: tapOn("グループ"),
+  },
+  {
+    // Opened from an invitation link: the join sheet over the calendar.
+    name: "group/join",
+    path: "/demo?groupSample=some&inviteLink=opened&memberSample=some&scanResult=invite&bottomRows=two&scheduleSample=filled",
+  },
+  {
+    name: "group/invite",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, "メンバーを招待");
+    },
+  },
+  {
+    name: "group/profile",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, "グループの設定");
+      await tap(page, /^さくら/u);
+    },
+  },
+  {
+    name: "group/edit",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: toGroupEdit,
+  },
+  {
+    name: "group/mark-photo",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await toGroupEdit(page);
+      await tap(page, "アイコン");
+    },
+  },
+  ...(["絵文字", "アイコン", "文字"] as const).map((kind) => ({
+    name: `group/mark-${kind}`,
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page: Page) => {
+      await toGroupEdit(page);
+      await tap(page, "アイコン");
+      await page
+        .locator("[data-part=item]", { hasText: new RegExp(`^${kind}$`, "u") })
+        .click();
+    },
+  })),
+  {
+    name: "settings/profile-photo",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^プロフィール/u);
+      await page.getByRole("button", { name: "写真を編集" }).last().click();
     },
   },
   {
