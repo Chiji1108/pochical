@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { css } from "styled-system/css";
+import { css, cva, cx } from "styled-system/css";
 
 import { Choice, ChoiceGrid } from "./design-ui";
 
@@ -395,24 +395,116 @@ const homeSizes = [
 // Neighbors on the home screen, so the icon is judged among others.
 const neighbors = ["#f2b233", "#4c8ef7", "#34c759", "#ff5b5b", "#8e8e93"];
 
+// The colors to pick from, each with its dark twin; the icon at the
+// system's sizes; and two home screens, light and dark, with neighbors.
+const study = {
+  // A neighbor's icon: a plain color in the icon's shape, a little faded
+  // so the icon stands out.
+  neighbor: css({ height: "60px", opacity: 0.85, width: "60px" }),
+  app: css({
+    "& > small": {
+      color: "#ffffff",
+      fontSize: "10px",
+      textShadow: "0 1px 2px rgb(0 0 0 / 0.35)",
+    },
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "5px",
+  }),
+  choice: css({
+    _checked: { borderColor: "var(--border-strong)", color: "text" },
+    alignItems: "center",
+    bg: "transparent",
+    border: "1px solid transparent",
+    borderRadius: "20px",
+    color: "text2",
+    display: "flex",
+    flexDirection: "column",
+    fontSize: "12px",
+    gap: "8px",
+    padding: "10px",
+  }),
+  choices: css({
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "14px",
+    justifyContent: "center",
+  }),
+  home: cva({
+    base: {
+      borderRadius: "28px",
+      display: "grid",
+      gap: "18px 22px",
+      gridTemplateColumns: "repeat(3, 60px)",
+      padding: "26px 24px",
+    },
+    variants: {
+      scheme: {
+        dark: { background: "linear-gradient(160deg, #1b2230, #2d2420)" },
+        light: { background: "linear-gradient(160deg, #7f9cc0, #c49a80)" },
+      },
+    },
+  }),
+  homes: css({
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "16px",
+    justifyContent: "center",
+  }),
+  root: css({
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "28px",
+    width: "min(100%, 520px)",
+  }),
+  sizes: css({
+    "& > figure": {
+      alignItems: "center",
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px",
+      margin: 0,
+    },
+    "& > figure > figcaption": {
+      alignItems: "center",
+      color: "text3",
+      display: "flex",
+      flexDirection: "column",
+      fontSize: "11px",
+    },
+    alignItems: "flex-end",
+    display: "flex",
+    gap: "28px",
+  }),
+  twin: css({
+    alignItems: "center",
+    color: "text3",
+    display: "flex",
+    fontSize: "10px",
+    gap: "6px",
+  }),
+};
+
 export function DesignAppIcon() {
   const icons = useAppIcons();
   const [picked, setPicked] = useState(iconColorOptions[0]?.id ?? "moss");
   const src = icons[picked];
   return (
-    <div className="ai-study">
+    <div className={study.root}>
       <ChoiceGrid
-        className="ai-choices"
+        className={study.choices}
         label="アイコンの色"
         onValueChange={setPicked}
         value={picked}
       >
         {pickableIcons.map((option) => (
-          <Choice className="ai-choice" key={option.id} value={option.id}>
+          <Choice className={study.choice} key={option.id} value={option.id}>
             <AppIcon size={96} src={icons[option.id]} />
             <span>{option.name}</span>
             {/* On a home screen set to dark icons. */}
-            <span className="ai-twin">
+            <span className={study.twin}>
               <AppIcon
                 size={32}
                 src={icons[darkTwinOf[option.id] ?? option.id]}
@@ -422,7 +514,7 @@ export function DesignAppIcon() {
           </Choice>
         ))}
       </ChoiceGrid>
-      <div className="ai-sizes">
+      <div className={study.sizes}>
         {homeSizes.map(({ label, size }) => (
           <figure key={label}>
             <AppIcon size={size} src={src} />
@@ -433,20 +525,20 @@ export function DesignAppIcon() {
           </figure>
         ))}
       </div>
-      <div className="ai-homes">
+      <div className={study.homes}>
         {(["light", "dark"] as const).map((scheme) => (
-          <div className={`ai-home ai-home-${scheme}`} key={scheme}>
+          <div className={study.home({ scheme })} key={scheme}>
             {neighbors.map((color, index) => (
-              <span className="ai-app" key={color}>
+              <span className={study.app} key={color}>
                 <span
                   aria-hidden="true"
-                  className="ai-icon ai-neighbor"
+                  className={cx(appIcon, study.neighbor)}
                   style={{ background: color }}
                 />
                 <small>アプリ{index + 1}</small>
               </span>
             ))}
-            <span className="ai-app">
+            <span className={study.app}>
               <AppIcon
                 size={60}
                 src={

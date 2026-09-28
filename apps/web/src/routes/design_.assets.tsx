@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { css } from "styled-system/css";
 
 import { DesignAppIcon } from "../components/design-app-icon";
 import {
@@ -48,6 +49,41 @@ const sources = [
   },
 ] as const;
 
+// The drawings and images, each on a card with its file and what it is for.
+const sourceList = css({
+  "& code": { color: "text4", fontSize: "11px" },
+  "& figcaption": {
+    color: "text3",
+    display: "flex",
+    flexDirection: "column",
+    fontSize: "12px",
+    gap: "4px",
+    lineHeight: "1.6",
+  },
+  "& figure": {
+    bg: "surface",
+    border: "1px solid token(colors.separator)",
+    borderRadius: "16px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    margin: 0,
+    padding: "16px",
+  },
+  "& img": {
+    aspectRatio: 1,
+    bg: "#fff",
+    borderRadius: "10px",
+    height: "auto",
+    objectFit: "contain",
+    width: "100%",
+  },
+  "& strong": { color: "text", fontSize: "14px" },
+  display: "grid",
+  gap: "16px",
+  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+});
+
 function AssetsPage() {
   const theme = useDesignTheme();
   return (
@@ -71,7 +107,7 @@ function AssetsPage() {
             <h2 id="assets-sources-title">
               <span>02</span> 元の絵とサイトの画像
             </h2>
-            <div className="as-sources">
+            <div className={sourceList}>
               {sources.map((source) => (
                 <figure key={source.path}>
                   <img
