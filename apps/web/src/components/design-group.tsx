@@ -87,6 +87,7 @@ import {
   pushToBottom,
 } from "./design-ui";
 import { holidayName, useWeek } from "./design-week";
+import type { DayTone } from "./design-week";
 import {
   guessLook,
   IconWeightContext,
@@ -2307,7 +2308,7 @@ const chatStyle = {
     variants: {
       flash: {
         true: {
-          "& :is([data-part=bubble], .gr-day-card)": {
+          "& :is([data-part=bubble], [data-part=day-card])": {
             _motionReduce: { animation: "none" },
             animation: "flash 1.2s ease-out",
           },
@@ -3033,6 +3034,642 @@ function toggleReaction(message: Message, emoji: string): Message {
   };
 }
 
+// A date colored as the week's settings say: Sundays and holidays red,
+// Saturdays blue.
+const toneColor: Record<DayTone, string | undefined> = {
+  holiday: css({ color: "holiday" }),
+  plain: undefined,
+  saturday: css({ color: "saturday" }),
+};
+
+// The month in the corner where the dates and names meet.
+const cornerMonth = css({ color: "text3", fontSize: "11px", fontWeight: 600 });
+
+const smallWeekday = css({
+  fontSize: "9px",
+  fontWeight: 400,
+  marginLeft: "2px",
+});
+
+// A day off is a light tile behind its mark, with a little room around
+// it, in the same color whatever the person's pattern; a day everyone is
+// off joins the tiles into one band, down a date's column in 週ごと, along
+// a day's row in 日ごと. The picked day is framed the same way, as one
+// piece, its ends reaching into the week's padding to clear the date and
+// marks.
+const offTile = {
+  bg: "accentSoft",
+  borderRadius: "8px",
+  content: '""',
+  inset: "3px",
+  position: "absolute",
+  zIndex: -1,
+} as const;
+const pickedFrame = {
+  border: "0 solid token(colors.accent)",
+  content: '""',
+  pointerEvents: "none",
+  position: "absolute",
+  zIndex: 1,
+} as const;
+
+// 週ごと: a block per week, dates across and a row per person, the
+// weekdays pinned above while the page scrolls. Compact, it is the single
+// week inside the hub's card, without its own frame.
+const weekTable = {
+  dates: css({ fontSize: "11px", fontWeight: 600, textAlign: "center" }),
+  name: css({ display: "grid", placeItems: "center" }),
+  nameButton: css({ bg: "transparent", border: 0, padding: 0 }),
+  root: css({ display: "flex", flexDirection: "column", gap: "10px" }),
+  row: cva({
+    base: {
+      alignItems: "center",
+      display: "grid",
+      gridTemplateColumns: "34px repeat(7, minmax(0, 1fr))",
+    },
+    variants: {
+      compact: {
+        true: { gridTemplateColumns: "28px repeat(7, minmax(0, 1fr))" },
+      },
+    },
+  }),
+  // Room above the dates and below the last person, so the picked day's
+  // frame and the shared days off stay clear of the edge. Inside the
+  // hub's card it takes the card's ground: the screen's would cut a hole
+  // in it in dark mode.
+  week: cva({
+    base: {
+      bg: "background",
+      border: "1px solid token(colors.separator)",
+      borderRadius: "14px",
+      overflow: "hidden",
+      padding: "4px 0",
+    },
+    variants: {
+      compact: {
+        true: { bg: "transparent", border: 0, borderRadius: 0, padding: 0 },
+      },
+    },
+  }),
+  weekdays: cva({
+    base: { color: "text4", fontSize: "10px", textAlign: "center" },
+    variants: {
+      pinned: {
+        true: {
+          bg: "background",
+          margin: "-8px 0 -6px",
+          padding: "8px 0 4px",
+          position: "sticky",
+          top: "-8px",
+          zIndex: 5,
+        },
+      },
+    },
+  }),
+};
+
+// A date or a person's day in 週ごと.
+const weekCell = cva({
+  base: { isolation: "isolate", position: "relative" },
+  compoundVariants: [
+    { button: true, css: { padding: 0 }, kind: "date" },
+    {
+      css: {
+        "&::before": {
+          ...offTile,
+          borderRadius: "11px 11px 0 0",
+          inset: "2px 2px 0",
+        },
+      },
+      kind: "date",
+      together: true,
+    },
+    {
+      css: { "&::before": { borderRadius: 0, inset: "0 2px" } },
+      kind: "cell",
+      together: true,
+    },
+    {
+      css: {
+        "&::before": { borderRadius: "0 0 11px 11px", inset: "0 2px 3px" },
+      },
+      kind: "cell",
+      last: true,
+      together: true,
+    },
+    // Tiles sit tighter in the small weekly table.
+    {
+      compact: true,
+      css: { "&::before": { borderRadius: "7px", inset: "2px 3px" } },
+      off: true,
+      together: false,
+    },
+    { compact: true, css: { height: "26px" }, kind: "cell" },
+    {
+      css: {
+        "&::after": {
+          borderRadius: "11px 11px 0 0",
+          borderWidth: "1.5px 1.5px 0",
+          inset: "-3px 1px 0",
+        },
+      },
+      kind: "date",
+      picked: true,
+    },
+    {
+      css: { "&::after": { borderWidth: "0 1.5px", inset: "0 1px" } },
+      kind: "cell",
+      picked: true,
+    },
+    {
+      css: {
+        "&::after": {
+          borderRadius: "0 0 11px 11px",
+          borderWidth: "0 1.5px 1.5px",
+          inset: "0 1px -3px",
+        },
+      },
+      kind: "cell",
+      last: true,
+      picked: true,
+    },
+  ],
+  defaultVariants: { compact: false, last: false, off: false, together: false },
+  variants: {
+    button: {
+      true: {
+        bg: "transparent",
+        border: 0,
+        font: "inherit",
+        padding: 0,
+        width: "100%",
+      },
+    },
+    compact: { false: {}, true: {} },
+    kind: {
+      cell: { display: "grid", height: "30px", placeItems: "center" },
+      date: { padding: "6px 0 4px" },
+    },
+    last: { false: {}, true: {} },
+    off: { false: {}, true: { "&::before": offTile } },
+    outside: { true: { opacity: 0.35 } },
+    picked: { true: { "&::after": pickedFrame } },
+    together: { false: {}, true: {} },
+    tone: {
+      holiday: { color: "holiday" },
+      plain: {},
+      saturday: { color: "saturday" },
+    },
+  },
+});
+
+// 日ごと: a row per day and a column per person, like a printed roster.
+// Up to seven people the page scrolls and the frame shows whole, one
+// scroll only; more scroll sideways inside it, the dates and your own
+// column pinned, over the cells' tiles, with an edge only then.
+const dayRows = {
+  cell: cva({
+    base: {
+      borderBottom: "1px solid var(--separator-faint)",
+      isolation: "isolate",
+      padding: "0 4px",
+      position: "relative",
+      textAlign: "center",
+    },
+    compoundVariants: [
+      {
+        css: { "&::before": { borderRadius: 0, inset: "3px 0" } },
+        off: true,
+        together: true,
+      },
+      {
+        css: {
+          "&::before": {
+            borderRadius: "0 11px 11px 0",
+            inset: "3px 3px 3px 0",
+          },
+        },
+        end: true,
+        off: true,
+        together: true,
+      },
+      {
+        css: { "&::after": { borderWidth: "1.5px 0", inset: "1px 0" } },
+        end: false,
+        picked: true,
+      },
+      {
+        css: {
+          "&::after": {
+            borderRadius: "0 11px 11px 0",
+            borderWidth: "1.5px 1.5px 1.5px 0",
+            inset: "1px 1px 1px 0",
+          },
+        },
+        end: true,
+        picked: true,
+      },
+      {
+        css: { boxShadow: "1px 0 0 token(colors.separator)" },
+        me: true,
+        scrolls: true,
+      },
+    ],
+    defaultVariants: { end: false },
+    variants: {
+      end: { false: {}, true: {} },
+      last: { true: { borderBottom: 0 } },
+      me: {
+        true: { bg: "background", left: "46px", position: "sticky", zIndex: 2 },
+      },
+      off: { true: { "&::before": offTile } },
+      picked: { true: { "&::after": pickedFrame } },
+      scrolls: { true: {} },
+      together: { true: {} },
+    },
+  }),
+  cellButton: css({
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    color: "inherit",
+    display: "flex",
+    font: "inherit",
+    justifyContent: "center",
+    minHeight: "36px",
+    padding: 0,
+    width: "100%",
+  }),
+  date: cva({
+    base: {
+      bg: "background",
+      borderBottom: "1px solid var(--separator-faint)",
+      borderLeft: "3px solid transparent",
+      fontWeight: 600,
+      height: "36px",
+      isolation: "isolate",
+      left: 0,
+      padding: "0 0 0 10px",
+      position: "sticky",
+      textAlign: "left",
+      zIndex: 2,
+    },
+    variants: {
+      last: { true: { borderBottom: 0 } },
+      picked: {
+        true: {
+          "&::after": {
+            ...pickedFrame,
+            borderRadius: "11px 0 0 11px",
+            borderWidth: "1.5px 0 1.5px 1.5px",
+            inset: "1px 0 1px 1px",
+          },
+        },
+      },
+      today: { true: { borderLeftColor: "accent" } },
+      together: {
+        true: {
+          "&::before": {
+            ...offTile,
+            borderRadius: "11px 0 0 11px",
+            inset: "3px 0 3px 3px",
+          },
+        },
+      },
+    },
+  }),
+  dateButton: css({
+    bg: "transparent",
+    border: 0,
+    color: "inherit",
+    display: "block",
+    font: "inherit",
+    padding: 0,
+    textAlign: "left",
+    width: "100%",
+  }),
+  empty: css({ color: "textDisabled", fontSize: "10px" }),
+  // The header stays on top as the rows scroll; a border would scroll away
+  // with collapsed borders, so a shadow draws its line.
+  head: cva({
+    base: {
+      bg: "background",
+      boxShadow: "0 1px 0 token(colors.separator)",
+      fontWeight: 600,
+      padding: "8px 4px",
+      position: "sticky",
+      top: 0,
+      zIndex: 3,
+    },
+    compoundVariants: [
+      { corner: true, css: { borderTopLeftRadius: "13px" }, page: true },
+      { css: { borderTopRightRadius: "13px" }, last: true, page: true },
+      {
+        css: {
+          boxShadow:
+            "0 1px 0 token(colors.separator), 1px 0 0 token(colors.separator)",
+        },
+        me: true,
+        scrolls: true,
+      },
+    ],
+    variants: {
+      corner: { true: { left: 0, width: "46px", zIndex: 4 } },
+      last: { true: {} },
+      me: { true: { left: "46px", zIndex: 4 } },
+      page: { true: { top: "-8px" } },
+      scrolls: { true: {} },
+    },
+  }),
+  mark: css({
+    alignItems: "center",
+    display: "flex",
+    gap: "4px",
+    justifyContent: "center",
+    minWidth: 0,
+  }),
+  // A face with its name, or the face alone, centered, once names do not
+  // fit.
+  member: cva({
+    base: {
+      alignItems: "center",
+      bg: "transparent",
+      border: 0,
+      color: "inherit",
+      display: "inline-flex",
+      font: "inherit",
+      gap: "4px",
+      maxWidth: "100%",
+      overflow: "hidden",
+      padding: 0,
+      whiteSpace: "nowrap",
+    },
+    variants: {
+      centered: { true: { justifyContent: "center", width: "100%" } },
+    },
+  }),
+  name: css({
+    color: "text",
+    fontSize: "11px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  }),
+  scroll: cva({
+    base: {
+      bg: "background",
+      border: "1px solid token(colors.separator)",
+      borderRadius: "14px",
+      maxHeight: "520px",
+      overflow: "auto",
+    },
+    variants: { page: { true: { maxHeight: "none", overflow: "visible" } } },
+  }),
+  table: css({
+    borderCollapse: "separate",
+    borderSpacing: 0,
+    fontSize: "12px",
+    tableLayout: "fixed",
+    width: "100%",
+  }),
+  weekday: css({ fontSize: "9px", fontWeight: 400, marginLeft: "3px" }),
+};
+
+// Shared days in a message: one day spreads its people out; several make
+// a small table, a row per day.
+const dayCard = {
+  card: cva({
+    base: {
+      bg: "surface",
+      border: "1px solid token(colors.border)",
+      borderRadius: "14px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+      padding: "10px 12px",
+    },
+    variants: { many: { true: { gap: 0, padding: "6px 8px" } } },
+  }),
+  cell: cva({
+    base: {
+      borderRadius: "6px",
+      display: "grid",
+      height: "24px",
+      placeItems: "center",
+      width: "100%",
+    },
+    variants: { off: { true: { "&::before": offTile, bg: "accentSoft" } } },
+  }),
+  date: css({
+    bg: "transparent",
+    border: 0,
+    fontSize: "11px",
+    fontWeight: 600,
+    justifySelf: "start",
+    padding: "0 0 0 4px",
+  }),
+  head: css({
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    color: "text",
+    display: "flex",
+    fontSize: "12px",
+    fontWeight: 600,
+    gap: "6px",
+    padding: 0,
+    textAlign: "left",
+  }),
+  people: css({ display: "flex", gap: "10px" }),
+  person: css({
+    alignItems: "center",
+    color: "text3",
+    display: "flex",
+    flexDirection: "column",
+    fontSize: "9px",
+    gap: "3px",
+  }),
+  row: cva({
+    base: {
+      alignItems: "center",
+      borderRadius: "8px",
+      display: "grid",
+      gap: "4px",
+      justifyItems: "center",
+      minHeight: "28px",
+    },
+    variants: {
+      names: { true: { minHeight: "30px" } },
+      together: { true: { bg: "accentSoft" } },
+    },
+  }),
+};
+
+// Picking days to share: everyone's days off to take at once, then the
+// month to tap days in.
+const shareDays = {
+  day: cva({
+    base: {
+      "&[aria-pressed=true]": { bg: "accentFill", color: "onAccentFill" },
+      _disabled: { visibility: "hidden" },
+      bg: "transparent",
+      border: 0,
+      borderRadius: "10px",
+      fontSize: "13px",
+      fontWeight: 600,
+      height: "36px",
+      padding: 0,
+    },
+    variants: {
+      together: { true: { bg: "accentSoft" } },
+      tone: {
+        holiday: { color: "holiday" },
+        plain: {},
+        saturday: { color: "saturday" },
+      },
+    },
+  }),
+  days: css({
+    display: "grid",
+    gap: "4px",
+    gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+  }),
+  suggest: css({
+    alignItems: "center",
+    bg: "accentSoft",
+    borderRadius: "14px",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px",
+    padding: "10px 12px",
+  }),
+  suggestion: css({
+    "&[aria-pressed=true]": { bg: "accentFill", color: "onAccentFill" },
+    bg: "surface",
+    border: "1.5px solid transparent",
+    borderRadius: "15px",
+    color: "accent",
+    fontSize: "12px",
+    fontWeight: 600,
+    minHeight: "30px",
+    padding: "0 10px",
+  }),
+  togetherLabel: css({
+    color: "accent",
+    fontSize: "12px",
+    fontWeight: 600,
+    marginRight: "4px",
+  }),
+  weekday: css({ color: "text4", fontSize: "10px", textAlign: "center" }),
+};
+
+// ‹ 2026年9月 › over a month, and ‹ 8月 · 10月 › under its table.
+const monthSwitch = {
+  bar: cva({
+    base: {
+      "& button": {
+        bg: "transparent",
+        border: 0,
+        borderRadius: "10px",
+        color: "accent",
+        display: "grid",
+        height: "32px",
+        placeItems: "center",
+        width: "32px",
+      },
+      "& strong": { fontSize: "15px", minWidth: "96px", textAlign: "center" },
+      alignItems: "center",
+      display: "flex",
+      gap: "8px",
+      justifyContent: "center",
+      marginTop: "-6px",
+    },
+    // In the shifts page's row, beside 今月.
+    // A longhand, so it outranks the base's marginTop.
+    variants: { inRow: { true: { marginTop: 0 } } },
+  }),
+  foot: css({
+    display: "flex",
+    justifyContent: "space-between",
+    marginTop: "-4px",
+  }),
+  footButton: css({
+    alignItems: "center",
+    bg: "transparent",
+    border: "1px solid token(colors.border)",
+    borderRadius: "17px",
+    color: "accent",
+    display: "inline-flex",
+    fontSize: "13px",
+    fontWeight: 600,
+    gap: "2px",
+    minHeight: "34px",
+    padding: "0 12px",
+  }),
+};
+
+// The group's shifts page: the month in the middle, 今月 at the right
+// edge, the table under it, and room at the foot for the picked day's
+// sheet to cover.
+const shiftsPage = {
+  // A long group name gives way to the controls instead of wrapping.
+  back: css({ flexShrink: 1, minWidth: 0 }),
+  backLabel: css({
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  }),
+  legendMember: css({ alignItems: "center", display: "flex", gap: "6px" }),
+  month: css({
+    alignItems: "center",
+    display: "grid",
+    gridTemplateColumns: "1fr auto 1fr",
+  }),
+  root: cva({
+    base: { display: "flex", flexDirection: "column", gap: "14px" },
+    // Room to scroll the last weeks out from under the sheet.
+    variants: { withSheet: { true: { paddingBottom: "300px" } } },
+  }),
+  sheetTime: css({ color: "text4", fontSize: "11px" }),
+  sheetValue: css({ alignItems: "center", display: "inline-flex", gap: "6px" }),
+  togetherNone: css({ color: "text3", fontSize: "15px", fontWeight: 600 }),
+};
+
+// 人ごと: who to show, a row of chips that scrolls sideways out to the
+// screen's edges, so a half-shown name says there are more.
+const people = {
+  choice: css({
+    _checked: {
+      bg: "surface",
+      borderColor: "accent",
+      color: "text",
+      fontWeight: 600,
+    },
+    alignItems: "center",
+    bg: "fill",
+    border: "1px solid transparent",
+    borderRadius: "18px",
+    color: "text2",
+    display: "inline-flex",
+    flexShrink: 0,
+    fontSize: "13px",
+    gap: "6px",
+    minHeight: "36px",
+    padding: "0 12px 0 6px",
+  }),
+  list: css({
+    border: 0,
+    display: "flex",
+    gap: "6px",
+    margin: "-6px -19px 0",
+    minWidth: 0,
+    overflowX: "auto",
+    padding: "0 19px",
+    position: "relative",
+    scrollPaddingInline: "19px",
+  }),
+};
+
 // Shared dates with each person's shift. One day spreads out; several
 // become a small table, a row per day.
 function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
@@ -3041,8 +3678,8 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
   if (days.length === 1 && first) {
     const together = everyoneOff(members, first);
     return (
-      <span className="gr-day-card">
-        <span className="gr-day-card-head">
+      <span className={dayCard.card()} data-part="day-card">
+        <span className={dayCard.head}>
           {formatDay(first)}
           {together && (
             <Tag size="sm" tone="accent">
@@ -3050,9 +3687,9 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
             </Tag>
           )}
         </span>
-        <span className="gr-day-card-people">
+        <span className={dayCard.people}>
           {members.map((member) => (
-            <span className="gr-day-card-person" key={member.id}>
+            <span className={dayCard.person} key={member.id}>
               <Avatar member={member} />
               <Mark date={first} member={member} size={16} />
               <small>{patternOn(member, first)?.name ?? "未入力"}</small>
@@ -3066,8 +3703,8 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
     gridTemplateColumns: `44px repeat(${members.length}, 26px)`,
   };
   return (
-    <span className="gr-day-card gr-day-card-many">
-      <span className="gr-day-card-row gr-day-card-names" style={columns}>
+    <span className={dayCard.card({ many: true })} data-part="day-card">
+      <span className={dayCard.row({ names: true })} style={columns}>
         <span />
         {members.map((member) => (
           <span key={member.id}>
@@ -3078,21 +3715,23 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
       </span>
       {days.map((date) => (
         <span
-          className={`gr-day-card-row ${everyoneOff(members, date) ? "gr-together-cell" : ""}`}
+          className={dayCard.row({ together: everyoneOff(members, date) })}
           key={dateKey(date)}
           style={columns}
         >
           <span
-            className={`gr-day-card-date gr-date ${weekTools.dateClass(date)}`}
+            className={cx(dayCard.date, toneColor[weekTools.dateTone(date)])}
           >
             {date.getMonth() + 1}/{date.getDate()}
-            <small className="gr-small-weekday">
+            <small className={smallWeekday}>
               {weekdayLabels[date.getDay()]}
             </small>
           </span>
           {members.map((member) => (
             <span
-              className={`gr-day-card-cell ${patternOn(member, date)?.off ? "gr-off-cell" : ""}`}
+              className={dayCard.cell({
+                off: patternOn(member, date)?.off === true,
+              })}
               key={member.id}
             >
               <Mark date={date} member={member} size={15} />
@@ -3180,11 +3819,12 @@ function DaySheetBody({
         title="日にちを共有"
       />
       {suggestions.length > 0 && (
-        <div className="gr-sheet-suggest">
-          <span className="gr-together-label">みんな休み</span>
+        <div className={shareDays.suggest}>
+          <span className={shareDays.togetherLabel}>みんな休み</span>
           {suggestions.map((date) => (
             <button
               aria-pressed={isPicked(date)}
+              className={shareDays.suggestion}
               key={dateKey(date)}
               onClick={() => {
                 toggle(date);
@@ -3192,14 +3832,14 @@ function DaySheetBody({
               type="button"
             >
               {date.getMonth() + 1}/{date.getDate()}
-              <small className="gr-small-weekday">
+              <small className={smallWeekday}>
                 {weekdayLabels[date.getDay()]}
               </small>
             </button>
           ))}
         </div>
       )}
-      <div className="gr-month">
+      <div className={monthSwitch.bar()}>
         <button
           aria-label="前の月"
           onClick={() => {
@@ -3222,13 +3862,9 @@ function DaySheetBody({
           <ChevronRight aria-hidden="true" size={18} />
         </button>
       </div>
-      <div className="gr-pick-days">
+      <div className={shareDays.days}>
         {weekTools.weekdays.map((day) => (
-          <span
-            aria-hidden="true"
-            className={`gr-pick-weekday ${day.className}`}
-            key={day.day}
-          >
+          <span aria-hidden="true" className={shareDays.weekday} key={day.day}>
             {day.label}
           </span>
         ))}
@@ -3239,7 +3875,10 @@ function DaySheetBody({
             <button
               aria-label={`${formatDay(date)}${together ? "、みんな休み" : ""}`}
               aria-pressed={isPicked(date)}
-              className={`gr-date ${weekTools.dateClass(date)} ${together ? "gr-together-cell" : ""}`}
+              className={shareDays.day({
+                together,
+                tone: weekTools.dateTone(date),
+              })}
               disabled={outside}
               key={dateKey(date)}
               onClick={() => {
@@ -3330,11 +3969,11 @@ function ShiftsPage({
     setPicked(picked && dateKey(picked) === dateKey(date) ? undefined : date);
   };
   return (
-    <div className={`gr-shifts ${picked ? "gr-shifts-with-sheet" : ""}`}>
+    <div className={shiftsPage.root({ withSheet: picked !== undefined })}>
       <PageHeader
         leading={
-          <BackButton className="gr-shifts-back" onClick={onBack}>
-            <span className="gr-shifts-back-label">{backLabel}</span>
+          <BackButton className={shiftsPage.back} onClick={onBack}>
+            <span className={shiftsPage.backLabel}>{backLabel}</span>
           </BackButton>
         }
         trailing={
@@ -3460,9 +4099,9 @@ function PagedShifts({
           picked={person}
         />
       )}
-      <div className="gr-shifts-month">
+      <div className={shiftsPage.month}>
         <span />
-        <div className="gr-month">
+        <div className={monthSwitch.bar({ inRow: true })}>
           <button
             aria-label="前の月"
             onClick={() => {
@@ -3558,7 +4197,7 @@ function TogetherSummary({
     return (
       <div className={summaryRow.row}>
         <span>{label}</span>
-        <span className="gr-together-none">なし</span>
+        <span className={shiftsPage.togetherNone}>なし</span>
       </div>
     );
   }
@@ -3615,8 +4254,9 @@ function MonthFoot({
     button.closest("[data-screen-scroll]")?.scrollTo({ top: 0 });
   };
   return (
-    <div className="gr-month-foot">
+    <div className={monthSwitch.foot}>
       <button
+        className={monthSwitch.footButton}
         onClick={(event) => {
           go(previous, event.currentTarget);
         }}
@@ -3626,6 +4266,7 @@ function MonthFoot({
         {previous.getMonth() + 1}月
       </button>
       <button
+        className={monthSwitch.footButton}
         onClick={(event) => {
           go(next, event.currentTarget);
         }}
@@ -3704,7 +4345,7 @@ function PickedDaySheet({
                     <Avatar member={member} />
                   </>
                 }
-                valueClassName="gr-day-sheet-value"
+                valueClassName={shiftsPage.sheetValue}
               />
             );
           })}
@@ -3752,7 +4393,7 @@ function LegendSheet({
         {members.map((member) => (
           <section key={member.id}>
             {!single && (
-              <h4 className={cx(sectionTitle, "gr-legend-member")}>
+              <h4 className={cx(sectionTitle, shiftsPage.legendMember)}>
                 <Avatar member={member} />
                 {member.me ? "自分" : member.name}
               </h4>
@@ -3809,13 +4450,15 @@ function DayRowsTable({
 }) {
   const density = densityOf(group.members.length);
   const withNames = density === "names";
+  // Up to seven the page scrolls; more scroll sideways in their frame,
+  // the names and dates pinned.
+  const page = density !== "scroll";
+  const scrolls = density === "scroll";
   const columnWidth = withNames ? rowsMemberWidth : rowsMarkWidth;
   return (
-    <div
-      className={`gr-rows-scroll ${density === "scroll" ? "" : "gr-rows-page"}`}
-    >
+    <div className={dayRows.scroll({ page })}>
       <table
-        className={`gr-rows gr-density-${density}`}
+        className={dayRows.table}
         style={{
           minWidth: rowsDateWidth + group.members.length * columnWidth,
         }}
@@ -3823,22 +4466,27 @@ function DayRowsTable({
         <caption className="dc-sr-only">みんなのシフト</caption>
         <thead>
           <tr>
-            <th className="gr-rows-corner" scope="col">
+            <th className={dayRows.head({ corner: true, page })} scope="col">
               {/* Pinned with the names, so the month stays in sight. */}
-              <span aria-hidden="true" className="gr-corner-month">
+              <span aria-hidden="true" className={cornerMonth}>
                 {days[0].getMonth() + 1}月
               </span>
               <span className="dc-sr-only">日付</span>
             </th>
-            {group.members.map((member) => (
+            {group.members.map((member, column) => (
               <th
-                className={member.me ? "gr-rows-me" : ""}
+                className={dayRows.head({
+                  last: column === group.members.length - 1,
+                  me: member.me === true,
+                  page,
+                  scrolls,
+                })}
                 key={member.id}
                 scope="col"
               >
                 <button
                   aria-label={`${member.name}のシフトパターン`}
-                  className="gr-rows-member gr-rows-member-button"
+                  className={dayRows.member({ centered: !withNames })}
                   onClick={() => {
                     onMember(member);
                   }}
@@ -3852,11 +4500,13 @@ function DayRowsTable({
           </tr>
         </thead>
         <tbody>
-          {days.map((date) => (
+          {days.map((date, row) => (
             <DayRow
               date={date}
               key={dateKey(date)}
+              last={row === days.length - 1}
               members={group.members}
+              scrolls={scrolls}
               onPick={onPickDay}
               picked={picked !== undefined && dateKey(picked) === dateKey(date)}
               withNames={withNames}
@@ -3873,21 +4523,27 @@ function DayRow({
   members,
   withNames,
   picked,
+  last,
+  scrolls,
   onPick,
 }: {
   date: Date;
   members: Member[];
   withNames: boolean;
   picked: boolean;
+  // The month's last day, whose cells drop the line under them.
+  last: boolean;
+  scrolls: boolean;
   onPick: (date: Date) => void;
 }) {
   const together = everyoneOff(members, date);
   const today = dateKey(date) === dateKey(designToday);
   return (
-    <tr
-      className={`${together ? "gr-together-cell" : ""} ${today ? "gr-rows-today" : ""} ${picked ? "gr-rows-picked" : ""}`}
-    >
-      <th className="gr-rows-date" scope="row">
+    <tr>
+      <th
+        className={dayRows.date({ last, picked, today, together })}
+        scope="row"
+      >
         <RowDate
           date={date}
           onPick={() => {
@@ -3897,11 +4553,19 @@ function DayRow({
         />
         {together && <span className="dc-sr-only">みんな休み</span>}
       </th>
-      {members.map((member) => {
+      {members.map((member, column) => {
         const item = patternOn(member, date);
         return (
           <td
-            className={`${member.me ? "gr-rows-me" : ""} ${item?.off ? "gr-off-cell" : ""}`}
+            className={dayRows.cell({
+              end: column === members.length - 1,
+              last,
+              me: member.me === true,
+              off: item?.off === true,
+              picked,
+              scrolls,
+              together,
+            })}
             key={member.id}
           >
             {/* The whole row picks the day, as the whole column does in
@@ -3909,26 +4573,26 @@ function DayRow({
             <button
               aria-label={`${formatDay(date)} ${member.name}：${item?.name ?? "未入力"}${changeOn(member, date) ? `、${movesOf(changeOn(member, date))}` : ""}。押すとその日のみんなの予定`}
               aria-pressed={picked}
-              className="gr-rows-cell-button"
+              className={dayRows.cellButton}
               onClick={() => {
                 onPick(date);
               }}
               type="button"
             >
               {item ? (
-                <span className="gr-rows-cell">
+                <span className={dayRows.mark}>
                   <MemberMark
                     date={date}
                     look={item.look}
                     member={member}
                     size={16}
                   />
-                  <span className={withNames ? "gr-rows-name" : "dc-sr-only"}>
+                  <span className={withNames ? dayRows.name : "dc-sr-only"}>
                     {item.name}
                   </span>
                 </span>
               ) : (
-                <span className="gr-rows-empty">
+                <span className={dayRows.empty}>
                   {withNames ? "未入力" : "・"}
                 </span>
               )}
@@ -3951,9 +4615,9 @@ function RowDate({
 }) {
   const weekTools = useWeek();
   const label = (
-    <span className={`gr-date ${weekTools.dateClass(date)}`}>
+    <span className={toneColor[weekTools.dateTone(date)]}>
       {date.getDate()}
-      <small className="gr-rows-weekday">{weekdayLabels[date.getDay()]}</small>
+      <small className={dayRows.weekday}>{weekdayLabels[date.getDay()]}</small>
     </span>
   );
   if (!onPick) {
@@ -3963,7 +4627,7 @@ function RowDate({
     <button
       aria-label={`${formatDay(date)}の予定を見る`}
       aria-pressed={picked}
-      className="gr-rows-date-button"
+      className={dayRows.dateButton}
       onClick={onPick}
       type="button"
     >
@@ -4090,12 +4754,12 @@ function DaySheetTime({
 }) {
   if (change) {
     return (
-      <small className="gr-day-sheet-time">
+      <small className={shiftsPage.sheetTime}>
         <strong>{movesOf(change)}</strong> {change.time}
       </small>
     );
   }
-  return time ? <small className="gr-day-sheet-time">{time}</small> : null;
+  return time ? <small className={shiftsPage.sheetTime}>{time}</small> : null;
 }
 
 function Avatar({ member, size }: { member: Member; size?: number }) {
@@ -4175,15 +4839,21 @@ function WeekDate({
   onPick?: (date: Date) => void;
 }) {
   const weekTools = useWeek();
-  const className = `gr-table-date gr-date ${weekTools.dateClass(date)} ${!month || sameMonth(date, month) ? "" : "gr-outside"} ${everyoneOff(members, date) ? "gr-together-cell" : ""} ${picked ? "gr-picked-cell" : ""}`;
+  const look = {
+    kind: "date",
+    outside: !(!month || sameMonth(date, month)),
+    picked,
+    together: everyoneOff(members, date),
+    tone: weekTools.dateTone(date),
+  } as const;
   if (!onPick) {
-    return <span className={className}>{date.getDate()}</span>;
+    return <span className={weekCell(look)}>{date.getDate()}</span>;
   }
   return (
     <button
       aria-label={`${formatDay(date)}の予定を見る`}
       aria-pressed={picked}
-      className={`${className} gr-table-cell-button`}
+      className={weekCell({ ...look, button: true })}
       onClick={() => {
         onPick(date);
       }}
@@ -4200,6 +4870,8 @@ function WeekCell({
   members,
   month,
   picked,
+  compact,
+  last,
   onPick,
 }: {
   date: Date;
@@ -4207,10 +4879,22 @@ function WeekCell({
   members: Member[];
   month?: Date;
   picked: boolean;
+  compact: boolean;
+  // The week's last person, where a shared day off and the frame end.
+  last: boolean;
   onPick?: (date: Date) => void;
 }) {
   const item = patternOn(member, date);
-  const className = `gr-table-cell ${!month || sameMonth(date, month) ? "" : "gr-outside"} ${item?.off ? "gr-off-cell" : ""} ${everyoneOff(members, date) ? "gr-together-cell" : ""} ${picked ? "gr-picked-cell" : ""}`;
+  const look = {
+    compact,
+    kind: "cell",
+    last,
+    off: item?.off === true,
+    outside: !(!month || sameMonth(date, month)),
+    picked,
+    together: everyoneOff(members, date),
+  } as const;
+  const className = weekCell(look);
   const label = `${formatDay(date)} ${member.name}：${item?.name ?? "未入力"}`;
   if (!onPick) {
     return (
@@ -4223,7 +4907,7 @@ function WeekCell({
     <button
       aria-label={`${label}。押すとその日のみんなの予定`}
       aria-pressed={picked}
-      className={`${className} gr-table-cell-button`}
+      className={weekCell({ ...look, button: true })}
       onClick={() => {
         onPick(date);
       }}
@@ -4264,14 +4948,20 @@ function MemberTable({
     dates.slice(row * weekLength, (row + 1) * weekLength)
   );
   return (
-    <div className={`gr-table ${compact ? "gr-table-compact" : ""}`}>
-      <div aria-hidden="true" className="gr-table-row gr-table-weekdays">
+    <div className={weekTable.root}>
+      <div
+        aria-hidden="true"
+        className={cx(
+          weekTable.row({ compact }),
+          weekTable.weekdays({ pinned: !compact })
+        )}
+      >
         {/* Pinned above the weeks, so the month stays in sight. */}
-        <span className="gr-corner-month">
+        <span className={cornerMonth}>
           {month && !compact ? `${month.getMonth() + 1}月` : ""}
         </span>
         {weekTools.weekdays.map((day) => (
-          <span className={day.className} key={day.day}>
+          <span className={toneColor[day.tone]} key={day.day}>
             {day.label}
           </span>
         ))}
@@ -4279,10 +4969,10 @@ function MemberTable({
       {weeks.map((week) => (
         <section
           aria-label={`${formatDay(week[0])}からの週`}
-          className="gr-week"
+          className={weekTable.week({ compact })}
           key={dateKey(week[0])}
         >
-          <div className="gr-table-row gr-table-dates">
+          <div className={cx(weekTable.row({ compact }), weekTable.dates)}>
             <span />
             {week.map((date) => (
               <WeekDate
@@ -4297,12 +4987,12 @@ function MemberTable({
               />
             ))}
           </div>
-          {group.members.map((member) => (
-            <div className="gr-table-row" key={member.id}>
+          {group.members.map((member, row) => (
+            <div className={weekTable.row({ compact })} key={member.id}>
               {onMember ? (
                 <button
                   aria-label={`${member.name}のシフトパターン`}
-                  className="gr-table-name gr-table-name-button"
+                  className={cx(weekTable.name, weekTable.nameButton)}
                   onClick={() => {
                     onMember(member);
                   }}
@@ -4311,15 +5001,17 @@ function MemberTable({
                   <Avatar member={member} size={avatarSize} />
                 </button>
               ) : (
-                <span className="gr-table-name">
+                <span className={weekTable.name}>
                   <Avatar member={member} size={avatarSize} />
                   <span className="dc-sr-only">{member.name}</span>
                 </span>
               )}
               {week.map((date) => (
                 <WeekCell
+                  compact={compact}
                   date={date}
                   key={dateKey(date)}
+                  last={row === group.members.length - 1}
                   member={member}
                   members={group.members}
                   month={month}
@@ -4337,7 +5029,7 @@ function MemberTable({
   );
 }
 
-// Matches the side padding of .gr-people, so a scrolled-to person keeps
+// Matches the side padding of the people list, so a scrolled-to person keeps
 // the same gap from the screen's edge as the first one.
 const peopleEdge = 19;
 
@@ -4372,14 +5064,19 @@ function PeoplePicker({
   }, [picked.id]);
   return (
     <ChoiceGrid
-      className="gr-people"
+      className={people.list}
       label="表示する人"
       onValueChange={onPick}
       ref={listRef}
       value={picked.id}
     >
       {members.map((member) => (
-        <Choice data-member={member.id} key={member.id} value={member.id}>
+        <Choice
+          className={people.choice}
+          data-member={member.id}
+          key={member.id}
+          value={member.id}
+        >
           <Avatar member={member} />
           {member.name}
         </Choice>
@@ -4468,9 +5165,14 @@ function PersonDay({
     everyoneOff([me, member], date);
   const off = item?.off === true;
   // The calendar's own day, with a frame when you are off too.
-  const className = cx(
-    dayCell({ active: picked, off, outside }),
-    withMe && "gr-person-with-me"
+  // Framed when you are off too, unless the picked day's own frame is on
+  // it: the styles are merged, as two classes for one property would leave
+  // the winner to the stylesheet's order.
+  const className = css(
+    dayCell.raw({ active: picked, off, outside }),
+    withMe && !picked
+      ? { outline: "1.5px solid var(--accent-muted)", outlineOffset: "-1px" }
+      : {}
   );
   const style = off ? ({ "--off-tint": tint } as CSSProperties) : undefined;
   const content = (
