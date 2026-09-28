@@ -110,6 +110,10 @@ export function measure(root: string): Screen {
     if (text !== "") {
       return `${tag} "${text}"${placeOf(element)}`;
     }
+    if (tag === "img") {
+      const file = (element.getAttribute("src") ?? "").split("/").pop() ?? "";
+      return `img ${file.slice(0, 40)}${placeOf(element)}`;
+    }
     if (tag === "svg") {
       const icon =
         [...element.classList].find((item) => item.startsWith("lucide-")) ??

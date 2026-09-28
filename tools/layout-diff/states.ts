@@ -111,6 +111,29 @@ export const states: State[] = [
     },
   },
   {
+    name: "calendar/save",
+    path: demo("bottomRows=current&scheduleSample=filled"),
+    steps: tapOn("この月のシフトを保存"),
+  },
+  {
+    // Straight to the device's calendars, one picked.
+    name: "calendar/save-calendar",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "カレンダーに追加");
+      await page.getByText("ホーム", { exact: true }).click();
+    },
+  },
+  {
+    name: "calendar/save-done",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "カレンダーに追加");
+      await page.getByText("ホーム", { exact: true }).click();
+      await tap(page, /件を追加$/u);
+    },
+  },
+  {
     name: "calendar/image",
     path: demo("bottomRows=two&scheduleSample=filled"),
     steps: tapOn("画像で保存"),

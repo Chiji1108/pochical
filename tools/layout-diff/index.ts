@@ -39,12 +39,15 @@ const SETTLE_MS = 300;
 const SETTLE_TRIES = 20;
 
 async function settled(page: Page, root: string) {
-  // An image still loading has no size yet, and would be left out. Lazy
-  // ones out of view load only when scrolled to.
+  // An image still loading has no size yet, and would be left out; lazy
+  // ones would load only when scrolled to, so all load now.
+  await page.evaluate(() => {
+    for (const image of document.images) {
+      image.loading = "eager";
+    }
+  });
   await page.waitForFunction(() =>
-    [...document.images].every(
-      (image) => image.complete || image.loading === "lazy"
-    )
+    [...document.images].every((image) => image.complete)
   );
   let last = JSON.stringify(await page.evaluate(measure, root));
   for (let tries = 0; tries < SETTLE_TRIES; tries += 1) {
