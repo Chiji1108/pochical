@@ -17,7 +17,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import useEmblaCarousel from "embla-carousel-react";
+import EmblaCarousel from "embla-carousel";
+import type { EmblaCarouselType } from "embla-carousel";
 import {
   Check,
   ChevronDown,
@@ -32,6 +33,7 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
+  useState,
 } from "react";
 import type {
   ButtonHTMLAttributes,
@@ -1689,7 +1691,11 @@ export function WeekdayRow({ compact = false }: { compact?: boolean }) {
 const pager = {
   // Pages of different heights, as a month and a week: the pager takes the
   // height of the one shown, which animates itself.
+  // Drawn on the middle page from the start: until the script takes the
+  // page over, as on a slow network, the server's page would otherwise show
+  // the one before. Embla takes over from this once it runs.
   container: css({
+    "&:not([data-pager-ready])": { transform: "translateX(-100%)" },
     alignItems: "flex-start",
     display: "flex",
     touchAction: "pan-y pinch-zoom",
@@ -1723,17 +1729,34 @@ export function Pager({
   onStep: (direction: 1 | -1) => void;
   renderPage: (offset: PageOffset) => ReactNode;
 }) {
-  // Keeps all three pages as places to stop even while they have no width
-  // yet, as before the stylesheet comes in; otherwise Embla folds them into
-  // one and keeps showing the page before once they widen.
-  const [viewportRef, api] = useEmblaCarousel({
-    containScroll: "keepSnaps",
-    startIndex: 1,
-  });
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [api, setApi] = useState<EmblaCarouselType>();
+  // Before the first paint, so the pages never show out of place: the
+  // server's offset gives way and Embla measures and places them in the
+  // same moment. keepSnaps keeps all three pages as places to stop even
+  // while they have no width yet; otherwise Embla folds them into one and
+  // keeps showing the page before once they widen.
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    const container = containerRef.current;
+    if (!(viewport && container)) {
+      return;
+    }
+    container.dataset.pagerReady = "";
+    const embla = EmblaCarousel(viewport, {
+      containScroll: "keepSnaps",
+      startIndex: 1,
+    });
+    setApi(embla);
+    return () => {
+      embla.destroy();
+      delete container.dataset.pagerReady;
+    };
+  }, []);
   const shownPage = useRef(page);
   // Stepped already, until the new page is in the middle.
   const stepped = useRef(false);
-  const containerRef = useRef<HTMLDivElement>(null);
   const middleRef = useRef<HTMLDivElement>(null);
   // The pager is as tall as the page in the middle, whatever the pages
   // beside it hold, and follows it as it grows or shrinks, as when the
