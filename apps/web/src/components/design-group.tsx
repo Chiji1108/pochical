@@ -57,6 +57,7 @@ import type { ColorChoice } from "./design-theme";
 import { ToastContext } from "./design-toast";
 import {
   BackButton,
+  BarGroup,
   Button,
   Choice,
   ChoiceGrid,
@@ -1837,12 +1838,14 @@ function GroupHub({
           </span>
           <span className={hub.name}>{group.name}</span>
         </h3>
-        <IconButton label="メンバーを招待" onClick={onInvite}>
-          <UserPlus aria-hidden="true" size={18} />
-        </IconButton>
-        <IconButton label="グループの設定" onClick={onSettings}>
-          <Settings2 aria-hidden="true" size={18} />
-        </IconButton>
+        <BarGroup>
+          <IconButton label="メンバーを招待" onClick={onInvite}>
+            <UserPlus aria-hidden="true" size={18} />
+          </IconButton>
+          <IconButton label="グループの設定" onClick={onSettings}>
+            <Settings2 aria-hidden="true" size={18} />
+          </IconButton>
+        </BarGroup>
       </header>
       <section>
         <div className={hub.sectionHead}>

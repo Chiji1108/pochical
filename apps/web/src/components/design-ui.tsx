@@ -192,6 +192,22 @@ export function IconButton({
   );
 }
 
+// Bar buttons that go together share one round-ended piece of glass, as
+// iOS 26 groups a toolbar's neighbors, like a group's 招待 and 設定.
+// Buttons of different kinds stand apart instead, 12px between, as
+// Photos' filter and 選択 do.
+const barGroupStyle = css({
+  "& > *": { bg: "transparent" },
+  bg: "fill",
+  borderRadius: "999px",
+  display: "flex",
+  flexShrink: 0,
+});
+
+export function BarGroup({ children }: { children: ReactNode }) {
+  return <div className={barGroupStyle}>{children}</div>;
+}
+
 // A screen under the phone's status bar: a column that fills the phone,
 // so the part that scrolls and what is pinned to its foot share the
 // height. Hidden, it keeps its state and takes no room.
