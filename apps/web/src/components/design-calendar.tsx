@@ -1128,12 +1128,16 @@ const calendarPage = {
   }),
   controls: css({ flexShrink: 0, minHeight: "92px", paddingTop: "12px" }),
   // Entering takes the bottom for the pattern buttons, on the raised
-  // ground of a keyboard.
+  // ground of a keyboard: out to the phone's sides and down under the
+  // home indicator, its content kept where the screen's would be.
   input: css({
     bg: "raised",
     flexShrink: 0,
+    marginBottom: "calc(-1 * var(--safe-bottom))",
+    marginInline:
+      "calc(-1 * var(--screen-left)) calc(-1 * var(--screen-right))",
     marginTop: "auto",
-    paddingTop: "2px",
+    padding: "2px var(--screen-right) var(--safe-bottom) var(--screen-left)",
   }),
   // Room around the grid for the picked day's outline.
   scroll: css({
