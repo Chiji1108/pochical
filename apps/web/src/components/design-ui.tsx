@@ -210,7 +210,7 @@ const screenScrollStyle = cva({
     display: "flex",
     flex: 1,
     flexDirection: "column",
-    gap: "20px",
+    gap: "24px",
     minHeight: 0,
     overflowY: "auto",
     padding: "8px 0 16px",
@@ -245,7 +245,7 @@ export const sectionTitle = css({
   color: "text3",
   fontWeight: 600,
   margin: "0 0 8px 16px",
-  textStyle: "footnote",
+  textStyle: "subheadline",
 });
 const sectionNote = css({
   color: "text4",
@@ -799,13 +799,13 @@ const listRowRoot = cva({
     display: "flex",
     textStyle: "body",
     gap: "12px",
-    // iOS 26's list rows: 52pt, and taller for two lines.
+    // iOS 26's list rows: 52pt, and 72pt for two lines.
     minHeight: "52px",
     paddingInline: "16px",
     textAlign: "left",
     width: "100%",
   },
-  variants: { twoLine: { true: { minHeight: "64px" } } },
+  variants: { twoLine: { true: { minHeight: "72px" } } },
 });
 
 // One row of a list, and its parts for rows drawn by hand.
