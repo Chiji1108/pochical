@@ -303,6 +303,74 @@ export const states: State[] = [
     },
   },
   {
+    name: "settings/work",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^働き方/u);
+    },
+  },
+  {
+    name: "settings/appearance",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^外観/u);
+    },
+  },
+  {
+    name: "settings/app-icon",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^アプリアイコン/u);
+    },
+  },
+  {
+    name: "settings/app-icon-alert",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^アプリアイコン/u);
+      await page.getByText("紙", { exact: true }).click();
+    },
+  },
+  {
+    name: "settings/style",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^スタイル/u);
+    },
+  },
+  {
+    name: "settings/profile",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^プロフィール/u);
+    },
+  },
+  {
+    name: "settings/account",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^アカウント/u);
+    },
+  },
+  {
+    name: "settings/account-in",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^アカウント/u);
+      await tap(page, "Appleで続ける");
+      // Signing in takes a moment, as it would with Apple.
+      await page.getByRole("button", { name: "ログアウト" }).waitFor();
+    },
+  },
+  {
     name: "settings",
     path: demo("bottomRows=two&scheduleSample=filled"),
     steps: tapOn("設定"),
