@@ -79,7 +79,8 @@ const buttonStyle = cva({
     _disabled: { cursor: "default", opacity: 0.4 },
     alignItems: "center",
     border: 0,
-    borderRadius: "control",
+    // Round-ended, as iOS 26's buttons are by default.
+    borderRadius: "999px",
     cursor: "pointer",
     display: "flex",
     textStyle: "body",
@@ -157,13 +158,13 @@ const iconButtonStyle = css({
   _hover: { bg: "fill" },
   bg: "transparent",
   border: 0,
-  borderRadius: "action",
+  borderRadius: "999px",
   color: "accent",
   display: "grid",
   flexShrink: 0,
-  height: "action",
+  height: "touch",
   placeItems: "center",
-  width: "action",
+  width: "touch",
 });
 
 export function IconButton({
@@ -1138,10 +1139,11 @@ const swatchStyle = css({
 type SegmentSize = "compact" | "regular" | "tall";
 const SegmentSizeContext = createContext<SegmentSize>("regular");
 
+// Round-ended, track and picked segment alike, as iOS 26's.
 const segmentedStyle = css({
   bg: "fill2",
   border: 0,
-  borderRadius: "16px",
+  borderRadius: "999px",
   display: "grid",
   gap: "4px",
   gridAutoColumns: "minmax(0, 1fr)",
@@ -1159,7 +1161,7 @@ const segmentStyle = cva({
       outlineOffset: "-2px",
     },
     alignItems: "center",
-    borderRadius: "12px",
+    borderRadius: "999px",
     color: "text2",
     cursor: "pointer",
     display: "flex",
@@ -1188,7 +1190,7 @@ const segmentText = css({
 // one as it is picked; Ark UI measures where it goes.
 const segmentIndicator = css({
   bg: "surface",
-  borderRadius: "12px",
+  borderRadius: "999px",
   boxShadow: "0 1px 3px var(--shadow)",
   height: "var(--height)",
   top: "var(--top)",

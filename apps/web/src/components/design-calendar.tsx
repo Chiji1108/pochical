@@ -971,25 +971,38 @@ const tabs: { tab: Tab; label: string; icon: typeof CalendarDays }[] = [
   { icon: UsersRound, label: "グループ", tab: "group" },
   { icon: Settings2, label: "設定", tab: "settings" },
 ];
+// As iOS 26's: a round-ended bar held off the screen's sides, the picked
+// tab on a round ground of its own. Its words keep a fixed size, as the
+// system's tab bars do.
 const tabBar = {
   bar: css({
-    color: "text4",
+    bg: "fill2",
+    borderRadius: "999px",
+    color: "text3",
     display: "flex",
     flexShrink: 0,
-    justifyContent: "space-around",
-    paddingTop: "8px",
+    height: "64px",
+    marginInline: "4px",
+    marginTop: "8px",
+    padding: "4px",
   }),
   item: cva({
     base: {
       alignItems: "center",
       bg: "transparent",
       border: 0,
+      borderRadius: "999px",
       display: "flex",
+      flex: 1,
       flexDirection: "column",
-      fontSize: "9px",
-      gap: "8px",
+      fontSize: "10px",
+      fontWeight: 500,
+      gap: "4px",
+      justifyContent: "center",
     },
-    variants: { active: { true: { color: "accent" } } },
+    variants: {
+      active: { true: { bg: "var(--fill-3)", color: "accent" } },
+    },
   }),
 };
 
@@ -1015,7 +1028,7 @@ export function TabBar({
           }}
           type="button"
         >
-          <Icon aria-hidden="true" size={23} />
+          <Icon aria-hidden="true" size={24} />
           {label}
         </button>
       ))}
