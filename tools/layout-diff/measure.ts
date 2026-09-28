@@ -88,6 +88,30 @@ export function measure(root: string): Screen {
       style.visibility === "hidden"
     );
   };
+  // A ::before or ::after that draws something, like a day-off tile or a
+  // picked day's frame, as how it is drawn: it has no box to measure, but
+  // its insets, ground, edge and shadow say where and how it sits.
+  const pseudoLook = (element: Element, which: "::before" | "::after") => {
+    const style = getComputedStyle(element, which);
+    if (style.content === "none" || style.content === "normal") {
+      return null;
+    }
+    const look: Look = {
+      background: style.backgroundColor,
+      border: [...new Set(bordersOf(style))].join(" / "),
+      content: style.content,
+      height: style.height,
+      inset: `${style.top} ${style.right} ${style.bottom} ${style.left}`,
+      opacity: style.opacity,
+      position: style.position,
+      radius: style.borderRadius,
+      shadow: style.boxShadow,
+      transform: style.transform,
+      width: style.width,
+      zIndex: style.zIndex,
+    };
+    return look;
+  };
   const hasBox = (style: CSSStyleDeclaration) =>
     style.backgroundColor !== transparent ||
     style.backgroundImage !== "none" ||
@@ -193,7 +217,11 @@ export function measure(root: string): Screen {
     ];
     for (const element of elements) {
       const style = getComputedStyle(element);
+      const pseudos = (["::before", "::after"] as const)
+        .map((which) => [which, pseudoLook(element, which)] as const)
+        .filter(([, look]) => look !== null);
       const shown =
+        pseudos.length > 0 ||
         element.hasAttribute("aria-label") ||
         ownText(element) !== "" ||
         drawnTags.has(element.tagName.toLowerCase()) ||
@@ -206,6 +234,11 @@ export function measure(root: string): Screen {
       seen.set(name, count);
       const key = `${prefix}${count > 1 ? `${name} #${count}` : name}`;
       screen[key] = lookOf(element, style, origin);
+      for (const [which, look] of pseudos) {
+        if (look) {
+          screen[`${key}${which}`] = look;
+        }
+      }
     }
   }
   return screen;

@@ -118,6 +118,12 @@ async function measureAll(options: {
       reducedMotion: "reduce",
       viewport: { ...VIEWPORT, width: options.width },
     });
+    // Every load starts from nothing stored, so a choice one screen saves,
+    // like the app icon, does not reach the next screen measured.
+    await context.addInitScript(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
     return await context.newPage();
   };
   const { only } = options;
@@ -140,7 +146,13 @@ async function measureAll(options: {
       }
       for (let state = queue.shift(); state; state = queue.shift()) {
         // oxlint-disable-next-line no-await-in-loop
-        measured.set(state.name, await measureState(page, options.url, state));
+        try {
+          // oxlint-disable-next-line no-await-in-loop
+          const screen = await measureState(page, options.url, state);
+          measured.set(state.name, screen);
+        } catch (error) {
+          throw new Error(`${state.name}: ${String(error)}`, { cause: error });
+        }
         process.stdout.write(`measured ${state.name}\n`);
       }
     };

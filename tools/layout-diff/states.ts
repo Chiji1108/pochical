@@ -465,6 +465,64 @@ export const states: State[] = [
     },
   },
   {
+    name: "group/month-week",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await toGroupMonth(page);
+      await tap(page, "日ごと");
+      await page.getByRole("menuitemradio", { name: "週ごと" }).click();
+    },
+  },
+  {
+    // A day picked in the week table: its frame and the day's sheet.
+    name: "group/month-week-picked",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await toGroupMonth(page);
+      await tap(page, "日ごと");
+      await page.getByRole("menuitemradio", { name: "週ごと" }).click();
+      await tap(page, /^9月23日.*押すと/u);
+    },
+  },
+  {
+    name: "group/month-days-picked",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await toGroupMonth(page);
+      await tap(page, /^9月23日.*押すと/u);
+    },
+  },
+  {
+    // Six people: marks alone in 日ごと.
+    name: "group/month-days-marks",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^3階東病棟/u);
+      await tap(page, "月で見る");
+    },
+  },
+  {
+    name: "group/share-days",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^全体チャット/u);
+      await tap(page, "日にちを共有");
+    },
+  },
+  {
+    name: "group/share-days-picked",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^全体チャット/u);
+      await tap(page, "日にちを共有");
+      await tap(page, /^9\/27/u);
+      await tap(page, "9月29日(火)");
+    },
+  },
+  {
     name: "settings",
     path: demo("bottomRows=two&scheduleSample=filled"),
     steps: tapOn("設定"),
