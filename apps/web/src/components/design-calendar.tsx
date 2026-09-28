@@ -468,12 +468,13 @@ export function DesignCalendar({
       <span>
         {`${month.getMonth() + 1}月${selectedDay}日`}
         <span
-          className={`dc-input-weekday ${weekTools.dateClass(selectedDate)}`}
+          className={shiftInput.weekday({
+            tone: weekTools.dateTone(selectedDate),
+          })}
         >
           ({weekdays[selectedDate.getDay()]})
         </span>
       </span>
-      <ChevronDown aria-hidden="true" className="dc-input-chevron" size={15} />
     </InputDatePicker>
   );
   const weekDetail = !editing && detailDate !== undefined;
@@ -1323,8 +1324,12 @@ function HeadingActions({
 
 function StartArea({ label, onStart }: { label: string; onStart: () => void }) {
   return (
-    <div className="dc-start-area dc-start-row">
-      <Button onClick={onStart} variant="primary">
+    <div className={shiftInput.startRow}>
+      <Button
+        className={shiftInput.startButton}
+        onClick={onStart}
+        variant="primary"
+      >
         <Pencil aria-hidden="true" size={18} />
         {label}
       </Button>
@@ -1343,12 +1348,21 @@ function SaveArea({
   onCalendar: () => void;
 }) {
   return (
-    <div className="dc-start-area dc-start-row">
-      <Button variant="quiet" onClick={onImage}>
+    <div className={shiftInput.startRow}>
+      <Button
+        className={shiftInput.startButton}
+        variant="quiet"
+        onClick={onImage}
+      >
         <ImageIcon aria-hidden="true" size={18} />
         画像で保存
       </Button>
-      <Button variant="quiet" aria-haspopup="dialog" onClick={onCalendar}>
+      <Button
+        aria-haspopup="dialog"
+        className={shiftInput.startButton}
+        onClick={onCalendar}
+        variant="quiet"
+      >
         <CalendarPlus aria-hidden="true" size={18} />
         カレンダーに追加
       </Button>
@@ -1412,6 +1426,112 @@ export function RepeatSequenceEditor({
   );
 }
 
+// Entering a month: the day's date, a button for each pattern, and 消す
+// and 翌日へ. Up to four patterns sit in one row; more wrap in rows of
+// three, or of four for eight, each keeping the 72px of the one row and
+// shrinking only when the screen is too narrow. ポチポチ入力 and the
+// save buttons that stand in its place share its edges.
+const shiftInput = {
+  action: css({
+    "&:hover:not(:disabled)": { bg: "accentSoft" },
+    _disabled: { color: "textDisabled", cursor: "default" },
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    borderRadius: "control",
+    color: "text3",
+    display: "flex",
+    fontSize: "11px",
+    gap: "5px",
+    minHeight: "touch",
+    padding: "4px 14px",
+  }),
+  actions: css({
+    display: "flex",
+    gap: "8px",
+    justifyContent: "center",
+    marginTop: "5px",
+  }),
+  // The mark's own emoji font, so an emoji mark draws the same everywhere.
+  mark: css({
+    display: "grid",
+    flexShrink: 0,
+    fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", sans-serif',
+    fontSize: "24px",
+    height: "28px",
+    lineHeight: 1,
+    placeItems: "center",
+  }),
+  pattern: cva({
+    base: {
+      _active: { bg: "var(--accent-press)", transform: "scale(0.97)" },
+      _hover: { bg: "accentSoft", borderColor: "accentMuted" },
+      alignItems: "center",
+      bg: "surface",
+      border: "1px solid token(colors.border)",
+      borderRadius: "control",
+      display: "flex",
+      flexDirection: "column",
+      fontSize: "11px",
+      gap: "6px",
+      height: "77px",
+      justifyContent: "center",
+      lineHeight: "14px",
+      padding: "7px 0",
+      width: "72px",
+    },
+    variants: { rows: { true: { height: "64px", width: "100%" } } },
+  }),
+  patterns: cva({
+    base: {
+      border: 0,
+      display: "flex",
+      gap: "8px",
+      justifyContent: "center",
+      margin: 0,
+      minWidth: 0,
+      padding: 0,
+    },
+    variants: {
+      columns: {
+        four: {
+          display: "grid",
+          gridTemplateColumns: "repeat(4, minmax(0, 72px))",
+        },
+        one: {},
+        three: {
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0, 72px))",
+        },
+      },
+    },
+  }),
+  startButton: css({ flex: 1 }),
+  startRow: css({ display: "flex", gap: "8px", textAlign: "center" }),
+  weekday: cva({
+    base: {
+      color: "text3",
+      fontSize: "14px",
+      fontWeight: 400,
+      marginLeft: "2px",
+    },
+    variants: {
+      tone: {
+        holiday: { color: "holiday" },
+        plain: {},
+        saturday: { color: "saturday" },
+      },
+    },
+  }),
+};
+
+function columnsFor(patternKeys: Shift[]) {
+  if (patternKeys.length === 8) {
+    return "four";
+  }
+  return patternKeys.length > 4 ? "three" : "one";
+}
+
 function ShiftInputControls({
   datePicker,
   patternKeys,
@@ -1427,30 +1547,33 @@ function ShiftInputControls({
   onEnter: (shift: Shift | undefined) => void;
   onSkip: () => void;
 }) {
+  const rows = patternKeys.length > 4;
   return (
     <>
       {datePicker}
       <fieldset
         aria-label="入力するシフト"
-        className={`dc-patterns ${patternKeys.length > 4 ? "dc-patterns-two-rows" : ""} ${patternKeys.length === 8 ? "dc-patterns-eight" : ""}`}
+        className={shiftInput.patterns({ columns: columnsFor(patternKeys) })}
       >
         {patternKeys.map((key) => (
           <button
+            className={shiftInput.pattern({ rows })}
             key={key}
             onClick={() => {
               onEnter(key);
             }}
             type="button"
           >
-            <span className="dc-pattern-mark">
+            <span className={shiftInput.mark}>
               <ShiftMark shift={key} size={26} />
             </span>
             <span>{patterns[key].label}</span>
           </button>
         ))}
       </fieldset>
-      <div className="dc-day-actions">
+      <div className={shiftInput.actions}>
         <button
+          className={shiftInput.action}
           disabled={!selectedShift}
           onClick={() => {
             onEnter(undefined);
@@ -1460,7 +1583,12 @@ function ShiftInputControls({
           <Trash2 aria-hidden="true" size={14} />
           消す
         </button>
-        <button disabled={!canSkip} onClick={onSkip} type="button">
+        <button
+          className={shiftInput.action}
+          disabled={!canSkip}
+          onClick={onSkip}
+          type="button"
+        >
           翌日へ
           <ArrowRight aria-hidden="true" size={14} />
         </button>
@@ -2107,17 +2235,58 @@ export function MonthPicker({
 // Picking one day, in a dialog over the phone like Material's date picker
 // and SwiftUI's graphical DatePicker. Ark UI's DatePicker draws the month
 // and moves through it by arrow keys; 今日 jumps back to today.
+// The button that shows the day and opens the picker: plain over the
+// pattern buttons while entering, filled like a field in a form.
+const dateButton = {
+  button: cva({
+    base: {
+      _focusVisible: {
+        outline: "2px solid token(colors.accentLine)",
+        outlineOffset: "2px",
+      },
+      alignItems: "center",
+      border: 0,
+      borderRadius: "action",
+      color: "text",
+      cursor: "pointer",
+      display: "flex",
+      fontSize: "17px",
+      fontWeight: 600,
+      gap: "4px",
+      minHeight: "touch",
+      padding: "0 10px 0 14px",
+    },
+    variants: {
+      look: {
+        field: {
+          _hover: { bg: "accentSoft2", borderColor: "accentMuted" },
+          bg: "accentSoft",
+          border: "1px solid var(--accent-border)",
+          fontSize: "15px",
+          margin: 0,
+        },
+        inline: {
+          _hover: { bg: "accentSoft" },
+          bg: "transparent",
+          margin: "0 auto 6px",
+        },
+      },
+    },
+  }),
+  chevron: css({ color: "accent" }),
+};
+
 export function InputDatePicker({
   title = "入力する日付",
   ariaLabel,
-  className = "",
+  look = "inline",
   date,
   onSelect,
   children,
 }: {
   title?: string;
   ariaLabel: string;
-  className?: string;
+  look?: "inline" | "field";
   date: Date;
   onSelect: (date: Date) => void;
   children: ReactNode;
@@ -2132,13 +2301,18 @@ export function InputDatePicker({
       <button
         aria-haspopup="dialog"
         aria-label={ariaLabel}
-        className={`dc-input-date ${className}`}
+        className={dateButton.button({ look })}
         onClick={() => {
           setOpen(true);
         }}
         type="button"
       >
         {children}
+        <ChevronDown
+          aria-hidden="true"
+          className={dateButton.chevron}
+          size={15}
+        />
       </button>
       <Sheet
         className={picker.card}

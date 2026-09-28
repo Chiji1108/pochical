@@ -105,70 +105,6 @@
   .design-caption {
     margin-top: 22px;
   }
-  .dc-patterns {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    min-width: 0;
-    padding: 0;
-    margin: 0;
-    border: 0;
-  }
-  .dc-patterns button {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    align-items: center;
-    justify-content: center;
-    width: 72px;
-    height: 77px;
-    padding: 7px 0;
-    font-size: 11px;
-    line-height: 14px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 15px;
-  }
-  .dc-patterns button > :first-child {
-    display: grid;
-    flex-shrink: 0;
-    place-items: center;
-    height: 28px;
-    font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
-    font-size: 24px;
-    line-height: 1;
-  }
-  .dc-day-actions {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    margin-top: 5px;
-  }
-  .dc-day-actions button {
-    display: flex;
-    gap: 5px;
-    align-items: center;
-    min-height: 44px;
-    padding: 4px 14px;
-    font-size: 11px;
-    background: transparent;
-    border: 0;
-    border-radius: 15px;
-  }
-  .design-page .dc-day-actions button {
-    color: var(--text-3);
-  }
-  .dc-day-actions button:hover:not(:disabled) {
-    background: var(--accent-soft);
-  }
-  .design-page .dc-day-actions button:disabled {
-    color: var(--text-disabled);
-    cursor: default;
-  }
-  /* The same edges as 今月のお休み above, so the two stack as one column. */
-  .dc-start-area {
-    text-align: center;
-  }
   .dc-sr-only {
     position: absolute;
     width: 1px;
@@ -282,27 +218,7 @@
   .design-index a:hover {
     background: var(--accent-soft-2);
   }
-  /* Buttons keep the 72px width of the one-row layout and shrink only when the
-   screen is too narrow. */
-  .dc-patterns-two-rows {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 72px));
-  }
-  .dc-patterns-two-rows button {
-    width: 100%;
-  }
 
-  .dc-patterns button:hover {
-    background: var(--accent-soft);
-    border-color: var(--accent-muted);
-  }
-  .dc-patterns button:active {
-    background: var(--accent-press);
-    transform: scale(0.97);
-  }
-  .dc-patterns-two-rows button {
-    height: 64px;
-  }
   .dc-sheet-scrim {
     position: absolute;
     inset: 0;
@@ -367,55 +283,6 @@
     font-size: 12px;
     color: var(--text-3);
     text-align: center;
-  }
-  .design-page .dc-input-date {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    min-height: 44px;
-    padding: 0 10px 0 14px;
-    margin: 0 auto 6px;
-    font-size: 17px;
-    font-weight: 600;
-    color: var(--text);
-    cursor: pointer;
-    background: transparent;
-    border: 0;
-    border-radius: 12px;
-  }
-  .design-page .dc-input-date:hover {
-    background: var(--accent-soft);
-  }
-  .design-page .dc-input-date-filled {
-    background: var(--accent-soft);
-    border: 1px solid var(--accent-border);
-  }
-  .design-page .dc-input-date-filled:hover {
-    background: var(--accent-soft-2);
-    border-color: var(--accent-muted);
-  }
-  .design-page .dc-input-date:focus-visible {
-    outline: 2px solid var(--accent-line);
-    outline-offset: 2px;
-  }
-  .dc-input-weekday {
-    margin-left: 2px;
-    font-size: 14px;
-    font-weight: 400;
-    color: var(--text-3);
-  }
-  .dc-input-weekday.dc-sunday {
-    color: var(--holiday);
-  }
-  .dc-input-weekday.dc-saturday {
-    color: var(--saturday);
-  }
-  .dc-input-chevron {
-    color: var(--accent);
-  }
-
-  .dc-patterns-eight {
-    grid-template-columns: repeat(4, minmax(0, 72px));
   }
 
   /* Keep the switcher in view only where it fits on one line. */
@@ -546,14 +413,6 @@
   }
 
   /* A row of equal buttons under the month. */
-  .dc-start-row {
-    display: flex;
-    gap: 8px;
-  }
-  .design-page .dc-start-row .ui-button {
-    flex: 1;
-    width: auto;
-  }
   /* Repeating shifts. */
   .dc-repeat-label {
     display: flex;
@@ -891,10 +750,6 @@
   .st-field > .dc-repeat-label {
     margin: 0;
   }
-  .design-page .st-field .dc-input-date {
-    margin: 0;
-    font-size: 15px;
-  }
   .design-page .st-add {
     display: flex;
     gap: 6px;
@@ -908,11 +763,6 @@
     border-radius: 14px;
   }
 
-  .dc-pattern-mark {
-    display: grid;
-    place-items: center;
-    height: 28px;
-  }
   .st-marks {
     display: inline-flex;
     gap: 4px;

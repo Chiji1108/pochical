@@ -1,10 +1,4 @@
-import {
-  ArrowRight,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  CloudCheck,
-} from "lucide-react";
+import { ArrowRight, Check, ChevronRight, CloudCheck } from "lucide-react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -786,17 +780,12 @@ function RepeatEditorPage({
         <span className="dc-repeat-label">{text.dayLabel}</span>
         <InputDatePicker
           ariaLabel={`${text.dayLabel}：${formatDay(day)}。タップで変更`}
-          className="dc-input-date-filled"
+          look="field"
           date={day}
           onSelect={setDay}
           title={text.dayLabel}
         >
           <span>{formatDay(day)}</span>
-          <ChevronDown
-            aria-hidden="true"
-            className="dc-input-chevron"
-            size={15}
-          />
         </InputDatePicker>
       </div>
       <RepeatSequenceEditor
@@ -913,17 +902,12 @@ function JobChangePage({
         <span className="dc-repeat-label">新しい仕事の初日</span>
         <InputDatePicker
           ariaLabel={`新しい仕事の初日：${formatDay(start)}。タップで変更`}
-          className="dc-input-date-filled"
+          look="field"
           date={start}
           onSelect={setStart}
           title="新しい仕事の初日"
         >
           <span>{formatDay(start)}</span>
-          <ChevronDown
-            aria-hidden="true"
-            className="dc-input-chevron"
-            size={15}
-          />
         </InputDatePicker>
       </div>
       <p className="st-note">
@@ -1114,17 +1098,12 @@ function RosterSwitchPage({
         <span className="dc-repeat-label">切り替える日</span>
         <InputDatePicker
           ariaLabel={`切り替える日：${formatDay(start)}。タップで変更`}
-          className="dc-input-date-filled"
+          look="field"
           date={start}
           onSelect={setStart}
           title="切り替える日"
         >
           <span>{formatDay(start)}</span>
-          <ChevronDown
-            aria-hidden="true"
-            className="dc-input-chevron"
-            size={15}
-          />
         </InputDatePicker>
       </div>
       <p className="st-note">
