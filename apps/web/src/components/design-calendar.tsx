@@ -1066,7 +1066,8 @@ const heading = {
     },
     display: "flex",
   }),
-  backAtEnd: css({ display: "flex", marginRight: "4px" }),
+  // 今月 and the save menu are of different kinds, so they stand apart.
+  backAtEnd: css({ display: "flex", marginRight: "12px" }),
   // Without the arrows: 今月 and the screen's action, together on the
   // month digits' line.
   corner: css({
