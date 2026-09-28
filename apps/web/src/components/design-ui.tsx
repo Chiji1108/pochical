@@ -1870,6 +1870,10 @@ export function Pager({
     const embla = EmblaCarousel(viewport, {
       containScroll: "keepSnaps",
       startIndex: 1,
+      // Hidden, as behind another tab, the pages have no width, and
+      // measured then Embla loses which one is shown; they come back as
+      // wide as they went, so there is nothing to measure again.
+      watchResize: () => viewport.offsetWidth > 0,
     });
     setApi(embla);
     return () => {
