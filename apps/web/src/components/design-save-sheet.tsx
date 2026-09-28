@@ -87,7 +87,7 @@ const picture = {
     padding: "12px 4px 20px",
   }),
   credit: css({
-    color: "textFaint",
+    color: "text4",
     fontSize: "10px",
     margin: "12px 4px 0",
     textAlign: "right",

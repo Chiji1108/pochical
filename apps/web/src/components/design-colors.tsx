@@ -23,18 +23,12 @@ const textTokens = new Set([
   "text-2",
   "text-3",
   "text-4",
-  "text-faint",
   "text-disabled",
   "holiday",
   "saturday",
   "danger",
 ]);
-const lineTokens = new Set([
-  "border",
-  "separator",
-  "separator-faint",
-  "border-strong",
-]);
+const lineTokens = new Set(["border", "separator", "border-strong"]);
 
 // The grays a theme tints, from the screen down to the darkest text.
 const grayRoles = [
@@ -53,12 +47,8 @@ const themeRoles = [
   { key: "accent", label: "文字・線", name: "accent" },
   { key: "fill", label: "塗り", name: "accent-fill" },
   { key: "onFill", label: "塗りの上の文字", name: "on-accent-fill" },
-  { key: "strong", label: "押したとき", name: "accent-strong" },
   { key: "line", label: "フォーカス・見出し", name: "accent-line" },
   { key: "muted", label: "選択中の枠", name: "accent-muted" },
-  { key: "border", label: "薄い枠", name: "accent-border" },
-  { key: "press", label: "押したときの背景", name: "accent-press" },
-  { key: "soft2", label: "薄い背景2", name: "accent-soft-2" },
   { key: "soft", label: "薄い背景", name: "accent-soft" },
   { key: "markTint", label: "休みの地", name: "accent-mark-tint" },
 ] as const;
@@ -794,7 +784,7 @@ function DistinctTokens() {
 // The page's sections, as pills to jump to.
 const contents = css({
   "& a": {
-    _hover: { bg: "accentSoft2" },
+    _hover: { bg: "accentHover" },
     border: "1px solid token(colors.border)",
     borderRadius: "24px",
     color: "accent",

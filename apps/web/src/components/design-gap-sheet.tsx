@@ -18,7 +18,7 @@ const gap = {
   }),
   // How the month's days off change, kept on one line.
   count: css({
-    color: "accentStrong",
+    color: "accent",
     fontWeight: 700,
     margin: "0 2px",
     whiteSpace: "nowrap",

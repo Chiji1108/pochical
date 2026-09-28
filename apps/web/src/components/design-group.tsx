@@ -1635,7 +1635,7 @@ const hub = {
   }),
   // 次にみんな休み: a row under the week, laid out like 今月のみんな休み.
   weekCardNext: css({
-    "& svg": { color: "textFaint" },
+    "& svg": { color: "text4" },
     alignItems: "center",
     bg: "transparent",
     border: 0,
@@ -1650,7 +1650,7 @@ const hub = {
     width: "100%",
   }),
   weekCardNextValue: css({
-    color: "accentStrong",
+    color: "accent",
     fontWeight: 600,
     marginLeft: "auto",
   }),
@@ -2175,7 +2175,7 @@ const chatRow = {
     gap: "2px",
     minWidth: 0,
   }),
-  time: css({ color: "textFaint", textStyle: "caption2" }),
+  time: css({ color: "text4", textStyle: "caption2" }),
 };
 
 // A chat as the messaging apps draw one: others' bubbles on the left with
@@ -2425,7 +2425,7 @@ const chatStyle = {
     variants: { mine: { true: { justifyContent: "flex-end" } } },
   }),
   time: css({
-    color: "textFaint",
+    color: "text4",
     flexShrink: 0,
     paddingBottom: "2px",
     textStyle: "caption2",
@@ -3234,7 +3234,7 @@ const weekCell = cva({
 const dayRows = {
   cell: cva({
     base: {
-      borderBottom: "1px solid var(--separator-faint)",
+      borderBottom: "1px solid token(colors.separator)",
       isolation: "isolate",
       padding: "0 4px",
       position: "relative",
@@ -3306,7 +3306,7 @@ const dayRows = {
   date: cva({
     base: {
       bg: "background",
-      borderBottom: "1px solid var(--separator-faint)",
+      borderBottom: "1px solid token(colors.separator)",
       borderLeft: "3px solid transparent",
       fontWeight: 600,
       height: "36px",

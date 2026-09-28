@@ -83,11 +83,17 @@ export default defineConfig({
         colors: {
           accent: { value: "var(--accent)" },
           accentFill: { value: "var(--accent-fill)" },
+          // Hovered and pressed: the accent laid over whatever is under, as
+          // Material's state layers, rather than more colors for a theme to set.
+          accentHover: {
+            value: "color-mix(in srgb, var(--accent) 12%, transparent)",
+          },
+          accentPressed: {
+            value: "color-mix(in srgb, var(--accent) 16%, transparent)",
+          },
           accentLine: { value: "var(--accent-line)" },
           accentMuted: { value: "var(--accent-muted)" },
           accentSoft: { value: "var(--accent-soft)" },
-          accentSoft2: { value: "var(--accent-soft-2)" },
-          accentStrong: { value: "var(--accent-strong)" },
           // The screen's own ground.
           background: { value: "var(--bg)" },
           border: { value: "var(--border)" },
@@ -106,7 +112,6 @@ export default defineConfig({
           text3: { value: "var(--text-3)" },
           text4: { value: "var(--text-4)" },
           textDisabled: { value: "var(--text-disabled)" },
-          textFaint: { value: "var(--text-faint)" },
         },
         radii: {
           // Buttons and cards.

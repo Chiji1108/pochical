@@ -359,7 +359,7 @@ export const fieldHint = css({
 // each worth a line of its own: an emoji, the answer and a note under it,
 // and an arrow to go on, or a check on the one in use.
 const optionCard = {
-  arrow: css({ color: "textFaint", flexShrink: 0 }),
+  arrow: css({ color: "text4", flexShrink: 0 }),
   card: cva({
     base: {
       _hover: { bg: "fill", borderColor: "accentMuted" },
@@ -629,7 +629,7 @@ export const summaryRow = {
   chevron: css({ alignSelf: "center", marginLeft: "12px" }),
   count: css({
     alignItems: "baseline",
-    color: "accentStrong",
+    color: "accent",
     display: "flex",
     fontSize: "25px",
   }),
@@ -885,7 +885,7 @@ const listRowRoot = cva({
 
 // One row of a list, and its parts for rows drawn by hand.
 export const listRow = {
-  arrow: css({ color: "textFaint", flexShrink: 0, marginRight: "-4px" }),
+  arrow: css({ color: "text4", flexShrink: 0, marginRight: "-4px" }),
   // In the arrow's place on a row that adds rather than opens: a plus in
   // the accent, told apart from the gray arrows of rows that go on.
   add: css({ color: "accent", flexShrink: 0, marginRight: "-4px" }),
@@ -1868,7 +1868,7 @@ const sortable = {
     },
     bg: "transparent",
     border: 0,
-    color: "textFaint",
+    color: "text4",
     cursor: "grab",
     display: "grid",
     height: "action",
