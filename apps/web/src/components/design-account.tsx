@@ -1,6 +1,8 @@
 // Signing in with Apple or Google, so the same data follows a new phone or
 // a second device. The prototype only pretends: nothing leaves the page.
 
+import { css, cva } from "styled-system/css";
+
 export type AccountProvider = "apple" | "google";
 
 export type Account = { provider: AccountProvider; email: string };
@@ -65,5 +67,77 @@ export function ProviderLogo({
     <AppleLogo size={size} />
   ) : (
     <GoogleLogo size={size} />
+  );
+}
+
+// The two ways in, in each provider's own colors as their guidelines ask:
+// Apple's black (white in dark mode), Google's white with an outline.
+const providerButton = {
+  button: cva({
+    base: {
+      _disabled: { opacity: 0.6 },
+      alignItems: "center",
+      borderRadius: "14px",
+      display: "flex",
+      fontSize: "16px",
+      fontWeight: 600,
+      gap: "10px",
+      justifyContent: "center",
+      minHeight: "50px",
+      width: "100%",
+    },
+    variants: {
+      provider: {
+        apple: {
+          bg: "light-dark(#000000, #ffffff)",
+          border: 0,
+          color: "light-dark(#ffffff, #000000)",
+        },
+        google: {
+          bg: "light-dark(#ffffff, #131314)",
+          border: "1px solid light-dark(#747775, #8e918f)",
+          color: "light-dark(#1f1f1f, #e3e3e3)",
+        },
+      },
+    },
+  }),
+  column: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    marginBottom: "14px",
+  }),
+};
+
+// How long the prototype pretends the provider's sign-in takes.
+export const signInMilliseconds = 900;
+
+// Apple, then Google, each saying ログイン中… while its sign-in runs.
+export function ProviderButtons({
+  busy,
+  onPick,
+}: {
+  busy: AccountProvider | undefined;
+  onPick: (provider: AccountProvider) => void;
+}) {
+  return (
+    <div className={providerButton.column}>
+      {(["apple", "google"] as const).map((provider) => (
+        <button
+          className={providerButton.button({ provider })}
+          disabled={busy !== undefined}
+          key={provider}
+          onClick={() => {
+            onPick(provider);
+          }}
+          type="button"
+        >
+          <ProviderLogo provider={provider} size={19} />
+          {busy === provider
+            ? "ログイン中…"
+            : `${providerNames[provider]}で続ける`}
+        </button>
+      ))}
+    </div>
   );
 }

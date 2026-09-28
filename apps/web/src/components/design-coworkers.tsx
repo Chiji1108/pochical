@@ -1,10 +1,10 @@
-import { Plus } from "lucide-react";
 import { useState } from "react";
 import { cx } from "styled-system/css";
 
 import type { Schedule } from "./design-calendar";
 import { ConfirmDialog } from "./design-sheet";
 import {
+  AddButton,
   BackButton,
   HeaderAction,
   List,
@@ -142,16 +142,13 @@ export function CoworkersPage({
             />
           </List>
         ) : (
-          <button
-            className="st-add"
+          <AddButton
             onClick={() => {
               setAdding(true);
             }}
-            type="button"
           >
-            <Plus aria-hidden="true" size={14} />
             人を追加
-          </button>
+          </AddButton>
         ))}
       <Note>
         {sorting

@@ -7,7 +7,7 @@ import type { Shift } from "../lib/design-patterns";
 import { createUserStore, UserStoreContext } from "../lib/design-user-store";
 import type { UserStore } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
-import { ProviderLogo, providerNames } from "./design-account";
+import { ProviderButtons, signInMilliseconds } from "./design-account";
 import type { AccountProvider } from "./design-account";
 import { DARK_DRAWING, useAppIcons } from "./design-app-icon";
 import {
@@ -142,9 +142,6 @@ const restoredSetup: WorkSetup = {
   patternKeys: ["day", "night", "after", "off"],
   sequence: ["day", "day", "night", "after", "off", "off"],
 };
-
-// How long the prototype pretends the provider's sign-in takes.
-const signInMilliseconds = 900;
 
 type Stage = "welcome" | "login" | "setup";
 
@@ -347,25 +344,13 @@ function LoginStep({
         onBack={onBack}
         title="アカウントでログイン"
       />
-      <div className="st-account-buttons">
-        {(["apple", "google"] as const).map((provider) => (
-          <button
-            className={`st-provider st-provider-${provider}`}
-            disabled={busy !== undefined}
-            key={provider}
-            onClick={() => {
-              setBusy(provider);
-              setTimeout(onRestore, signInMilliseconds);
-            }}
-            type="button"
-          >
-            <ProviderLogo provider={provider} size={19} />
-            {busy === provider
-              ? "ログイン中…"
-              : `${providerNames[provider]}で続ける`}
-          </button>
-        ))}
-      </div>
+      <ProviderButtons
+        busy={busy}
+        onPick={(provider) => {
+          setBusy(provider);
+          setTimeout(onRestore, signInMilliseconds);
+        }}
+      />
       <p className="ob-footnote">
         はじめて使うときは、戻って「はじめる」から始めてください。
       </p>

@@ -1,6 +1,7 @@
 import { Moon, Sun } from "lucide-react";
 import { createContext, useContext } from "react";
 import type { CSSProperties } from "react";
+import { css } from "styled-system/css";
 
 import { neutralStyle } from "../lib/design-tokens";
 import type { ColorScheme, NeutralTint, Tone } from "../lib/design-tokens";
@@ -311,7 +312,37 @@ const previewSchemes = [
 ] as const;
 
 // ☀︎ / ☾ on a preview's top edge, to see it in the other of light and dark
-// without changing 外観. Sits inside a `.st-preview-wrap`.
+// without changing 外観. Sits inside a previewWrap, with the preview.
+export const previewWrap = css({ position: "relative" });
+const schemeSwitch = {
+  choice: css({
+    _checked: { bg: "fill2", color: "text" },
+    bg: "transparent",
+    border: 0,
+    borderRadius: "7px",
+    color: "text4",
+    display: "grid",
+    height: "18px",
+    padding: 0,
+    placeItems: "center",
+    width: "24px",
+  }),
+  // Ark keeps the group itself relatively positioned, so the choices
+  // flow into the wrapper that sits on the edge.
+  choices: css({ display: "contents" }),
+  edge: css({
+    bg: "surface",
+    border: "1px solid token(colors.separator)",
+    borderRadius: "10px",
+    display: "flex",
+    gap: "2px",
+    left: "12px",
+    margin: 0,
+    padding: "2px",
+    position: "absolute",
+    top: "-10px",
+  }),
+};
 export function PreviewSchemeSwitch({
   shown,
   onPick,
@@ -322,15 +353,20 @@ export function PreviewSchemeSwitch({
   return (
     // Ark keeps the group itself relatively positioned, so a wrapper
     // places it on the edge.
-    <div className="st-preview-scheme">
+    <div className={schemeSwitch.edge}>
       <ChoiceGrid
-        className="st-preview-scheme-choices"
+        className={schemeSwitch.choices}
         label="プレビューの明るさ"
         onValueChange={onPick}
         value={shown}
       >
         {previewSchemes.map((option) => (
-          <Choice key={option.scheme} label={option.name} value={option.scheme}>
+          <Choice
+            className={schemeSwitch.choice}
+            key={option.scheme}
+            label={option.name}
+            value={option.scheme}
+          >
             <option.Icon aria-hidden="true" size={13} />
           </Choice>
         ))}

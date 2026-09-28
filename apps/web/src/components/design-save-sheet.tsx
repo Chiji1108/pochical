@@ -19,6 +19,7 @@ import {
   ThemeContext,
   ToneContext,
   themeStyle,
+  previewWrap,
 } from "./design-theme";
 import { ToastContext } from "./design-toast";
 import {
@@ -326,7 +327,7 @@ export function ImagePreviewPage({
               },
             }}
           >
-            <div className="st-preview-wrap">
+            <div className={previewWrap}>
               <ColorSchemeContext value={shown}>
                 {/* A picture to share shows every day as it is. */}
                 <OffDisplayContext value={options.blankOff ? "blank" : "show"}>

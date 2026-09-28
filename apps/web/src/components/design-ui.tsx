@@ -24,6 +24,7 @@ import {
   ChevronLeft,
   ChevronRight,
   GripVertical,
+  Plus,
 } from "lucide-react";
 import {
   createContext,
@@ -295,6 +296,36 @@ export const fieldHint = css({
   fontSize: "11px",
   fontWeight: 400,
 });
+
+// Adding one more to the list above: a dashed, full-width button, as the
+// platforms' "add" rows are.
+const addButtonStyle = css({
+  alignItems: "center",
+  bg: "transparent",
+  border: "1px dashed var(--border-strong)",
+  borderRadius: "14px",
+  color: "accent",
+  display: "flex",
+  fontSize: "13px",
+  gap: "6px",
+  justifyContent: "center",
+  minHeight: "46px",
+});
+
+export function AddButton({
+  children,
+  onClick,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button className={addButtonStyle} onClick={onClick} type="button">
+      <Plus aria-hidden="true" size={14} />
+      {children}
+    </button>
+  );
+}
 
 // 完了 at a screen's top right, for the mode that has to be left on
 // purpose: entering shifts, a day opened in the week.

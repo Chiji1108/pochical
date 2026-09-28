@@ -1,7 +1,7 @@
 import { ArrowRight, Check, ChevronRight, CloudCheck } from "lucide-react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
-import { css } from "styled-system/css";
+import { css, cva } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
@@ -9,7 +9,13 @@ import { useLook, useSettings } from "../lib/design-settings-store";
 import type { Tone, ColorScheme } from "../lib/design-tokens";
 import { markColors } from "../lib/design-tokens";
 import { toneRoles } from "../lib/tones";
-import { ProviderLogo, providerNames, sampleEmails } from "./design-account";
+import {
+  ProviderButtons,
+  ProviderLogo,
+  providerNames,
+  sampleEmails,
+  signInMilliseconds,
+} from "./design-account";
 import type { AccountProvider } from "./design-account";
 import { AppIcon, pickableIcons, useAppIcons } from "./design-app-icon";
 import {
@@ -43,6 +49,7 @@ import {
   themeOf,
   themes,
   themeStyle,
+  previewWrap,
 } from "./design-theme";
 import type { Appearance, ColorChoice } from "./design-theme";
 import {
@@ -378,7 +385,7 @@ function SettingsTop({
           }}
           value={
             <>
-              <span className="st-marks">
+              <span className={settingsParts.marks}>
                 {patternKeys.map((key) => (
                   <ShiftMark key={key} shift={key} size={14} />
                 ))}
@@ -454,7 +461,187 @@ function SettingsTop({
   );
 }
 
+// The app icons, two across, the one in use outlined; iOS then says in
+// its own alert that the icon changed. Two across shows four icons at a
+// size where their grounds and the dark one's rim read; seasonal ones
+// later may need three.
+const appIcons = {
+  check: css({ color: "accent" }),
+  choice: css({
+    _checked: { bg: "fill", borderColor: "accentMuted", color: "text" },
+    alignItems: "center",
+    bg: "transparent",
+    border: "2px solid transparent",
+    borderRadius: "24px",
+    color: "text2",
+    display: "flex",
+    flexDirection: "column",
+    fontSize: "14px",
+    gap: "8px",
+    padding: "18px 0 14px",
+  }),
+  grid: css({
+    border: 0,
+    display: "grid",
+    gap: "12px",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    margin: "8px 0 20px",
+    padding: 0,
+  }),
+  name: css({ alignItems: "center", display: "flex", gap: "3px" }),
+};
+const systemAlert = {
+  box: css({
+    bg: "raised",
+    borderRadius: "16px",
+    color: "text",
+    overflow: "hidden",
+    textAlign: "center",
+    width: "270px",
+  }),
+  // iOS's own blue, as the system draws its alerts in any app.
+  button: css({
+    bg: "transparent",
+    border: 0,
+    borderTop: "1px solid token(colors.separator)",
+    color: "#0a84ff",
+    fontSize: "16px",
+    fontWeight: 600,
+    minHeight: "touch",
+    width: "100%",
+  }),
+  title: css({
+    fontSize: "15px",
+    fontWeight: 600,
+    lineHeight: 1.4,
+    margin: 0,
+    padding: "20px 16px 18px",
+  }),
+};
+
+// The app's colors in a row of seven dots, the one in use ringed.
+const colorRow = {
+  choice: css({
+    _checked: { color: "text", fontWeight: 600 },
+    alignItems: "center",
+    bg: "transparent",
+    border: "0 solid transparent",
+    borderRadius: "16px",
+    color: "text2",
+    display: "flex",
+    flexDirection: "column",
+    fontSize: "12px",
+    gap: "8px",
+    padding: "5px 0",
+  }),
+  dot: css({
+    // Ringed in the accent, apart from the ground, once picked.
+    "[data-state=checked] > &": {
+      boxShadow: "0 0 0 3px var(--bg), 0 0 0 5px token(colors.accent)",
+    },
+    border: 0,
+    borderRadius: "50%",
+    display: "grid",
+    height: "30px",
+    placeItems: "center",
+    width: "30px",
+  }),
+  grid: css({
+    border: 0,
+    display: "grid",
+    gap: "2px",
+    gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+    margin: 0,
+    padding: 0,
+  }),
+};
+
+// 休みの見せ方 and シフト名 drawn as a day in small: its date, and the mark
+// lit or not, with the name under it or not.
+const offSample = cva({
+  base: {
+    "& small": { color: "text2", fontSize: "9px", fontWeight: 600 },
+    // The shift's name under the mark, smaller than the date.
+    "& small[data-part=name]": { fontSize: "7px" },
+    alignItems: "center",
+    borderRadius: "8px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "1px",
+    height: "40px",
+    paddingTop: "3px",
+    width: "32px",
+  },
+  variants: { lit: { true: { bg: "var(--accent-mark-tint)" } } },
+});
+
 const settingsParts = {
+  // スタイル splits by who sees each choice: a heading over each half, a
+  // step above the section titles, with a rule to start the half.
+  audience: css({
+    borderTop: "1px solid token(colors.separator)",
+    color: "text",
+    fontSize: "15px",
+    fontWeight: 700,
+    margin: "22px 4px 2px",
+    paddingTop: "16px",
+  }),
+  card: css({ bg: "fill", borderRadius: "18px", padding: "16px" }),
+  cardCount: css({ color: "text3", fontWeight: 400 }),
+  cardLabel: css({
+    display: "flex",
+    fontSize: "12px",
+    fontWeight: 600,
+    justifyContent: "space-between",
+    margin: "0 0 10px",
+  }),
+  cardMeta: css({ color: "text3", fontSize: "12px", margin: "10px 0 0" }),
+  groupNote: css({
+    color: "text3",
+    fontSize: "11px",
+    lineHeight: 1.5,
+    margin: "8px 12px 0",
+  }),
+  job: css({ display: "flex", flexDirection: "column", gap: "14px" }),
+  marks: css({
+    alignItems: "center",
+    display: "inline-flex",
+    gap: "4px",
+    marginRight: "6px",
+    verticalAlign: "middle",
+  }),
+  // The calendar as seen, on the screen's own ground, with 見本 on its
+  // top edge. It may be drawn in the other of light and dark, so it sets
+  // its own text color.
+  preview: css({
+    bg: "background",
+    border: "1px solid token(colors.separator)",
+    borderRadius: "18px",
+    color: "text",
+    padding: "18px 8px 8px",
+    pointerEvents: "none",
+    position: "relative",
+  }),
+  previewSample: css({
+    bg: "background",
+    border: "1px solid token(colors.separator)",
+    borderRadius: "8px",
+    color: "text3",
+    fontSize: "10px",
+    fontWeight: 600,
+    padding: "1px 8px",
+    position: "absolute",
+    right: "12px",
+    top: "-8px",
+  }),
+  toneDot: css({
+    border: 0,
+    borderRadius: "50%",
+    display: "grid",
+    height: "22px",
+    placeItems: "center",
+    width: "22px",
+  }),
   // A form's row: what is set on the left, its value on the right.
   field: css({
     alignItems: "center",
@@ -506,12 +693,50 @@ function AccountRow({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-// How long the prototype pretends the provider's sign-in takes.
-const signInMilliseconds = 900;
-
 // Before signing in, what it is for and the two ways in; after, who is
 // signed in and the ways out. Signing in is optional, so the page never
 // pushes it beyond saying what it keeps safe.
+// Signed out, it says what signing in keeps and offers the two ways in;
+// signed in, which account it is, and leaving or deleting it.
+const accountPage = {
+  delete: css({ marginTop: "10px" }),
+  hero: css({
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    padding: "8px 12px 22px",
+    textAlign: "center",
+  }),
+  icon: css({
+    bg: "accentSoft",
+    borderRadius: "50%",
+    color: "accent",
+    display: "grid",
+    height: "56px",
+    marginBottom: "6px",
+    placeItems: "center",
+    width: "56px",
+  }),
+  lead: css({
+    color: "text3",
+    fontSize: "13px",
+    lineHeight: 1.6,
+    margin: 0,
+  }),
+  logo: css({
+    bg: "surface",
+    borderRadius: "50%",
+    color: "text",
+    display: "grid",
+    height: "30px",
+    marginRight: "12px",
+    placeItems: "center",
+    width: "30px",
+  }),
+  title: css({ color: "text", fontSize: "18px", fontWeight: 700, margin: 0 }),
+};
+
 function AccountPage({ onBack }: { onBack: () => void }) {
   const account = useSettings((state) => state.account);
   const setAccount = useSettings((state) => state.setAccount);
@@ -531,33 +756,16 @@ function AccountPage({ onBack }: { onBack: () => void }) {
     return (
       <>
         <PageHeader back="設定" onBack={onBack} title="アカウント" />
-        <div className="st-account-hero">
-          <span aria-hidden="true" className="st-account-icon">
+        <div className={accountPage.hero}>
+          <span aria-hidden="true" className={accountPage.icon}>
             <CloudCheck size={28} />
           </span>
-          <h4>ログインして、データを守る</h4>
-          <p>
+          <h4 className={accountPage.title}>ログインして、データを守る</h4>
+          <p className={accountPage.lead}>
             機種変更しても、スマホとタブレットでも、同じシフトとグループを使えます。
           </p>
         </div>
-        <div className="st-account-buttons">
-          {(["apple", "google"] as const).map((provider) => (
-            <button
-              className={`st-provider st-provider-${provider}`}
-              disabled={busy !== undefined}
-              key={provider}
-              onClick={() => {
-                signIn(provider);
-              }}
-              type="button"
-            >
-              <ProviderLogo provider={provider} size={19} />
-              {busy === provider
-                ? "ログイン中…"
-                : `${providerNames[provider]}で続ける`}
-            </button>
-          ))}
-        </div>
+        <ProviderButtons busy={busy} onPick={signIn} />
         <Note>
           はじめてなら、この端末のデータがそのまま引き継がれます。すでにアカウントがあれば、そのデータを開きます。ログインしなくても、この端末ではそのまま使えます。
         </Note>
@@ -574,12 +782,11 @@ function AccountPage({ onBack }: { onBack: () => void }) {
             value={account.email}
             leading={
               <>
-                <span className="st-account-logo">
+                <span className={accountPage.logo}>
                   <ProviderLogo provider={account.provider} size={18} />
                 </span>
               </>
             }
-            valueClassName="st-account-email"
           />
         </List>
         <Note>
@@ -596,7 +803,7 @@ function AccountPage({ onBack }: { onBack: () => void }) {
           danger
         />
       </List>
-      <List className="st-account-delete">
+      <List className={accountPage.delete}>
         {/* Asks first, on the spot, so no arrow as for a page. */}
         <ListRow
           onClick={() => {
@@ -666,13 +873,15 @@ function RepeatDetails({
 }) {
   return (
     <>
-      <div className="st-card">
-        <p className="st-card-label">
+      <div className={settingsParts.card}>
+        <p className={settingsParts.cardLabel}>
           今の繰り返し
-          <span className="st-card-count">{current.sequence.length}日ごと</span>
+          <span className={settingsParts.cardCount}>
+            {current.sequence.length}日ごと
+          </span>
         </p>
         <SequenceChips sequence={current.sequence} />
-        <p className="st-card-meta">{formatDay(current.start)}から</p>
+        <p className={settingsParts.cardMeta}>{formatDay(current.start)}から</p>
       </div>
       <List>
         <SwitchRow
@@ -868,7 +1077,7 @@ function JobChangePage({
   const [asking, setAsking] = useState(false);
   if (asking) {
     return (
-      <div className="st-job">
+      <div className={settingsParts.job}>
         <WorkSetupSteps
           finishLabel={`${shortDay(start)}から切り替える`}
           month={start}
@@ -1134,17 +1343,17 @@ function MarkPage({
       {/* Every choice shows in the preview at once, so there is nothing to
           confirm or cancel. The page splits by who sees each choice, said
           once above each half. */}
-      <h3 className="st-audience">グループの人にも見える</h3>
+      <h3 className={settingsParts.audience}>グループの人にも見える</h3>
       <Section title="シフトの見た目">
         <ShapeChoices />
       </Section>
       <Section title="カラー">
         <ColorChoices />
-        <p className="st-group-note">
+        <p className={settingsParts.groupNote}>
           グループの人に見えるのはシフトの色です。アプリの色はあなたの画面だけです。
         </p>
       </Section>
-      <h3 className="st-audience">あなたの画面だけ</h3>
+      <h3 className={settingsParts.audience}>あなたの画面だけ</h3>
       <Section title="トーン">
         <ToneChoices />
       </Section>
@@ -1213,15 +1422,15 @@ function StylePreview({ preview }: { preview: StylePreviewData }) {
   const [picked, setPicked] = useState<ColorScheme>();
   const shown = picked ?? scheme;
   return (
-    <div className="st-preview-wrap">
+    <div className={previewWrap}>
       <ColorSchemeContext value={shown}>
         <div
           aria-hidden="true"
-          className="st-preview"
+          className={settingsParts.preview}
           inert
           style={themeStyle(theme, shown, tone)}
         >
-          <span className="st-preview-sample">見本</span>
+          <span className={settingsParts.previewSample}>見本</span>
           <WeekdayRow compact />
           <div className={dayGrid}>
             {dates.map((date) => (
@@ -1325,7 +1534,7 @@ export function OffLookTabs({
         <Segment key={option.id} value={option.id}>
           <span
             aria-hidden="true"
-            className={`st-off-sample ${option.highlight ? "st-off-sample-lit" : ""}`}
+            className={offSample({ lit: option.highlight })}
           >
             <small>5</small>
             {option.blankOff ? null : <ShiftMark shift="off" size={18} />}
@@ -1357,12 +1566,10 @@ export function NameTabs({
     >
       {[false, true].map((withName) => (
         <Segment key={String(withName)} value={String(withName)}>
-          <span aria-hidden="true" className="st-off-sample">
+          <span aria-hidden="true" className={offSample()}>
             <small>5</small>
             <ShiftMark shift="day" size={withName ? 16 : 18} />
-            {withName && (
-              <small className="st-off-sample-name">{patterns.day.label}</small>
-            )}
+            {withName && <small data-part="name">{patterns.day.label}</small>}
           </span>
           {withName ? "あり" : "なし"}
         </Segment>
@@ -1420,7 +1627,7 @@ function ToneChoices() {
         <Segment key={option.tone} value={option.tone}>
           <span
             aria-hidden="true"
-            className="st-theme-dot st-tone-dot"
+            className={settingsParts.toneDot}
             style={{
               background: themeColors(themeOf(theme), scheme, option.tone).fill,
             }}
@@ -1475,7 +1682,7 @@ function AppIconPage({ onBack }: { onBack: () => void }) {
     <>
       <PageHeader back="設定" onBack={onBack} title="アプリアイコン" />
       <ChoiceGrid
-        className="st-app-icons"
+        className={appIcons.grid}
         label="アプリアイコン"
         onValueChange={(id) => {
           setIcon(id);
@@ -1484,13 +1691,13 @@ function AppIconPage({ onBack }: { onBack: () => void }) {
         value={icon}
       >
         {pickableIcons.map((option) => (
-          <Choice key={option.id} value={option.id}>
+          <Choice className={appIcons.choice} key={option.id} value={option.id}>
             <AppIcon size={104} src={icons[option.id]} />
-            <span className="st-app-icon-name">
+            <span className={appIcons.name}>
               {icon === option.id && (
                 <Check
                   aria-hidden="true"
-                  className="st-app-icon-check"
+                  className={appIcons.check}
                   size={14}
                 />
               )}
@@ -1521,7 +1728,7 @@ function SystemAlert({
 }) {
   return (
     <Sheet
-      className="st-system-alert"
+      className={systemAlert.box}
       label={title}
       onOpenChange={(open) => {
         if (!open) {
@@ -1532,8 +1739,8 @@ function SystemAlert({
       placement="center"
       role="alertdialog"
     >
-      <p>{title}</p>
-      <button onClick={onClose} type="button">
+      <p className={systemAlert.title}>{title}</p>
+      <button className={systemAlert.button} onClick={onClose} type="button">
         OK
       </button>
     </Sheet>
@@ -1715,14 +1922,19 @@ function ColorChoices() {
   const setColor = useSettings((state) => state.setColor);
   return (
     <ChoiceGrid
-      className="st-theme-grid st-theme-row"
+      className={colorRow.grid}
       label="カラー"
       onValueChange={setColor}
       value={color}
     >
       {colorChoices.map((option) => (
-        <Choice key={option.color} label={option.name} value={option.color}>
-          <ColorSwatch className="st-theme-dot" color={option.color} />
+        <Choice
+          className={colorRow.choice}
+          key={option.color}
+          label={option.name}
+          value={option.color}
+        >
+          <ColorSwatch className={colorRow.dot} color={option.color} />
         </Choice>
       ))}
     </ChoiceGrid>

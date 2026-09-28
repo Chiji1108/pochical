@@ -1,6 +1,5 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useContext, useState } from "react";
-import { cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
@@ -10,6 +9,7 @@ import { LookEditorPage } from "./design-look-editor";
 import type { LookField } from "./design-look-editor";
 import { ConfirmDialog } from "./design-sheet";
 import {
+  AddButton,
   BackButton,
   ChoiceList,
   ChoiceRow,
@@ -198,16 +198,13 @@ export function PatternsPage({
         </List>
       )}
       {!sorting && (
-        <button
-          className="st-add"
+        <AddButton
           onClick={() => {
             setView("add");
           }}
-          type="button"
         >
-          <Plus aria-hidden="true" size={14} />
           パターンを追加
-        </button>
+        </AddButton>
       )}
       <Note>
         {sorting
@@ -277,7 +274,7 @@ function AddPatternPage({
                 arrow={
                   <Plus
                     aria-hidden="true"
-                    className={cx(listRow.arrow, "st-add-icon")}
+                    className={listRow.arrow}
                     size={17}
                   />
                 }
