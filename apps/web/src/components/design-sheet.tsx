@@ -1,6 +1,6 @@
-import { Dialog, Portal } from "@ark-ui/react";
+import { Dialog, Drawer, Portal } from "@ark-ui/react";
 import { Check, ChevronLeft, X } from "lucide-react";
-import { createContext, useContext, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -16,12 +16,23 @@ export const PhoneContext = createContext<RefObject<HTMLElement | null> | null>(
   null
 );
 
+// How a let-go sheet settles back into place, as it rises.
+const settle = "0.3s cubic-bezier(0.2, 0.8, 0.2, 1)";
+
 const sheet = {
+  // The strip along the sheet's top that holds the handle: taller than the
+  // handle so it is easy to take hold of, and it starts a swipe even over
+  // a part that scrolls.
+  grabber: css({
+    flexShrink: 0,
+    margin: "-12px -24px 0",
+    padding: "12px 24px 20px",
+  }),
   handle: css({
     bg: "controlOff",
     borderRadius: "8px",
     height: "4px",
-    margin: "0 auto 20px",
+    margin: "0 auto",
     width: "34px",
   }),
   // The platforms' alert, in the middle, as an app shows after an icon
@@ -34,9 +45,9 @@ const sheet = {
 };
 
 // The dimming under a sheet; an alert's goes over any sheet already open.
+// A sheet's lightens as it is swiped down, and closes from there.
 const backdrop = cva({
   base: {
-    _closed: { animation: "fadeOut 0.2s ease-in" },
     _open: { animation: "fadeIn 0.25s ease-out" },
     bg: "var(--scrim)",
     inset: 0,
@@ -44,7 +55,15 @@ const backdrop = cva({
     zIndex: 20,
   },
   variants: {
-    placement: { bottom: {}, center: { zIndex: 40 } },
+    placement: {
+      bottom: {
+        "&[data-swiping]": { transition: "none" },
+        _closed: { animation: "scrimOut 0.2s ease-in" },
+        opacity: "calc(1 - var(--drawer-swipe-progress, 0))",
+        transition: `opacity ${settle}`,
+      },
+      center: { _closed: { animation: "fadeOut 0.2s ease-in" }, zIndex: 40 },
+    },
   },
 });
 
@@ -71,7 +90,12 @@ const positioner = cva({
 // so the part it is about stays in view above it.
 const content = cva({
   base: {
-    _closed: { animation: "sheetOut 0.2s ease-in" },
+    // Let go far or fast enough, it carries on down at the pace it had
+    // rather than setting off again.
+    _closed: {
+      "&[data-swiping]": { animationTimingFunction: "ease-out" },
+      animation: "sheetOut 0.2s ease-in",
+    },
     _open: { animation: "sheetIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)" },
     bg: "raised",
     // Floating off the screen's sides and foot, as iOS 26's sheets.
@@ -85,6 +109,9 @@ const content = cva({
     overflowY: "auto",
     margin: "0 8px 8px",
     padding: "12px 24px 28px",
+    // Back into place when a swipe lets go short; while the finger is on
+    // it, Ark UI turns this off so the sheet follows it.
+    transition: `transform ${settle}`,
     width: "calc(100% - 16px)",
   },
   variants: {
@@ -134,7 +161,11 @@ export function SheetPicture({
       });
   const drawn = (
     <section className={look}>
-      {handle && <div aria-hidden="true" className={sheet.handle} />}
+      {handle && (
+        <div aria-hidden="true" className={sheet.grabber}>
+          <div className={sheet.handle} />
+        </div>
+      )}
       {children}
     </section>
   );
@@ -165,10 +196,14 @@ export const sheetBody = css({
 
 // A sheet over the phone, as SwiftUI's .sheet and Compose's
 // ModalBottomSheet: it rises from the bottom over a dimmed ground, and
-// closes by its heading's ×, by the ground, or by Escape. Ark UI's Dialog
-// traps focus inside and gives it back when it closes. A sheet that is not
-// modal, like a picked day's, leaves the screen behind it undimmed and
-// live, and only its × or Escape closes it.
+// closes by its heading's ×, by the ground, by Escape, or by swiping it
+// down. Ark UI's Drawer traps focus inside and gives it back when it
+// closes, and leaves a part that scrolls to scroll until it is at its top.
+// A sheet that is not modal, like a picked day's, leaves the screen behind
+// it undimmed and live, and only its ×, Escape or a swipe closes it. Ark UI
+// gives focus back only from a sheet that traps it, so one that is not
+// modal hands it to `finalFocusEl` itself as it closes. An alert in the
+// middle is a Dialog, and does not swipe away.
 export function Sheet({
   open,
   onOpenChange,
@@ -176,6 +211,7 @@ export function Sheet({
   role = "dialog",
   placement = "bottom",
   modal = true,
+  finalFocusEl,
   className,
   children,
 }: {
@@ -187,6 +223,9 @@ export function Sheet({
   role?: "dialog" | "alertdialog";
   placement?: "bottom" | "center";
   modal?: boolean;
+  // Where focus goes as it closes, in place of where it was before: the
+  // thing it is about, or a stand-in for an opener that is gone.
+  finalFocusEl?: () => HTMLElement | null;
   className?: string;
   children: ReactNode;
 }) {
@@ -194,39 +233,74 @@ export function Sheet({
   // Focus lands on the sheet itself, as on the platforms, not on its first
   // button with a ring around it.
   const contentRef = useRef<HTMLDivElement>(null);
+  const wasOpen = useRef(open);
+  useEffect(() => {
+    const closing = wasOpen.current && !open;
+    wasOpen.current = open;
+    if (!closing || modal) {
+      return;
+    }
+    // Only focus the sheet still holds, or lost as it went: one moved on
+    // to the screen behind, like the next day in the table, stays there.
+    const active = document.activeElement;
+    const held =
+      active === null ||
+      active === document.body ||
+      contentRef.current?.contains(active) === true;
+    if (held) {
+      finalFocusEl?.()?.focus();
+    }
+  }, [open, modal, finalFocusEl]);
+  const root = {
+    closeOnInteractOutside: modal,
+    finalFocusEl,
+    initialFocusEl: () => contentRef.current,
+    lazyMount: true,
+    modal,
+    onOpenChange: (details: { open: boolean }) => {
+      onOpenChange(details.open);
+    },
+    open,
+    preventScroll: false,
+    role,
+    unmountOnExit: true,
+  };
+  if (placement === "center") {
+    return (
+      <Dialog.Root {...root}>
+        <Portal container={phone ?? undefined}>
+          {modal && <Dialog.Backdrop className={backdrop({ placement })} />}
+          <Dialog.Positioner className={positioner({ modal, placement })}>
+            <Dialog.Content
+              aria-label={label}
+              className={cx(sheet.center, className)}
+              ref={contentRef}
+            >
+              {children}
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
+    );
+  }
   return (
-    <Dialog.Root
-      closeOnInteractOutside={modal}
-      initialFocusEl={() => contentRef.current}
-      lazyMount
-      modal={modal}
-      onOpenChange={(details) => {
-        onOpenChange(details.open);
-      }}
-      open={open}
-      preventScroll={false}
-      role={role}
-      unmountOnExit
-    >
+    <Drawer.Root {...root}>
       <Portal container={phone ?? undefined}>
-        {modal && <Dialog.Backdrop className={backdrop({ placement })} />}
-        <Dialog.Positioner className={positioner({ modal, placement })}>
-          <Dialog.Content
+        {modal && <Drawer.Backdrop className={backdrop({ placement })} />}
+        <Drawer.Positioner className={positioner({ modal, placement })}>
+          <Drawer.Content
             aria-label={label}
-            className={cx(
-              placement === "center" ? sheet.center : content({ modal }),
-              className
-            )}
+            className={cx(content({ modal }), className)}
             ref={contentRef}
           >
-            {placement === "bottom" && (
-              <div aria-hidden="true" className={sheet.handle} />
-            )}
+            <Drawer.Grabber aria-hidden="true" className={sheet.grabber}>
+              <Drawer.GrabberIndicator className={sheet.handle} />
+            </Drawer.Grabber>
             {children}
-          </Dialog.Content>
-        </Dialog.Positioner>
+          </Drawer.Content>
+        </Drawer.Positioner>
       </Portal>
-    </Dialog.Root>
+    </Drawer.Root>
   );
 }
 

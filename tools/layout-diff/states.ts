@@ -24,6 +24,12 @@ const tapOn = (name: string | RegExp) => async (page: Page) => {
   await tap(page, name);
 };
 
+// One of the save menu's ways, from the calendar's top right.
+const fromSaveMenu = async (page: Page, item: string) => {
+  await tap(page, "この月のシフトを保存");
+  await page.getByRole("menuitem", { name: item }).click();
+};
+
 const toGroupEdit = async (page: Page) => {
   await tap(page, "グループ");
   await tap(page, "グループの設定");
@@ -38,82 +44,44 @@ const toGroupMonth = async (page: Page) => {
 export const states: State[] = [
   {
     name: "calendar/filled",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
   },
-  {
-    name: "calendar/filled-current",
-    path: demo("bottomRows=current&scheduleSample=filled"),
-  },
-  { name: "calendar/empty", path: demo("bottomRows=two&scheduleSample=empty") },
-  {
-    name: "calendar/empty-current",
-    path: demo("bottomRows=current&scheduleSample=empty"),
-  },
-  {
-    name: "calendar/next-month",
-    path: demo("bottomRows=two&scheduleSample=filled"),
-    steps: tapOn("次の月"),
-  },
-  {
-    name: "calendar/next-month-current",
-    path: demo("bottomRows=current&scheduleSample=filled"),
-    steps: tapOn("次の月"),
-  },
-  // The current proposal, 保存を右上: no arrows but for the keyboard, the
-  // save menu at the top right, and ポチポチ入力 always at the foot.
-  {
-    name: "calendar/save-top",
-    path: demo("bottomRows=saveTop&scheduleSample=filled"),
-  },
-  {
-    name: "calendar/save-top-empty",
-    path: demo("bottomRows=saveTop&scheduleSample=empty"),
-  },
+  { name: "calendar/empty", path: demo("scheduleSample=empty") },
   {
     // The arrows show only while the keyboard is on them, so the step goes
     // there by the keyboard, as a person without a finger to swipe would.
-    name: "calendar/save-top-next-month",
-    path: demo("bottomRows=saveTop&scheduleSample=filled"),
+    name: "calendar/next-month",
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await page.getByRole("button", { exact: true, name: "次の月" }).focus();
       await page.keyboard.press("Enter");
     },
   },
   {
-    name: "calendar/save-top-menu",
-    path: demo("bottomRows=saveTop&scheduleSample=filled"),
+    name: "calendar/save-menu",
+    path: demo("scheduleSample=filled"),
     steps: tapOn("この月のシフトを保存"),
   },
   {
     name: "calendar/entering",
-    path: demo("bottomRows=two&scheduleSample=empty"),
-    steps: tapOn("ポチポチ入力"),
-  },
-  {
-    name: "calendar/entering-current",
-    path: demo("bottomRows=current&scheduleSample=empty"),
+    path: demo("scheduleSample=empty"),
     steps: tapOn("ポチポチ入力"),
   },
   {
     name: "calendar/week",
-    path: demo("bottomRows=two&scheduleSample=filled"),
-    steps: tapOn(/^9月24日/u),
-  },
-  {
-    name: "calendar/week-current",
-    path: demo("bottomRows=current&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: tapOn(/^9月24日/u),
   },
   {
     // A day with its time moved and a memo: the time, its hint and the
     // people with it.
     name: "calendar/day-changed",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: tapOn(/^9月8日/u),
   },
   {
     name: "calendar/day-adding-member",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, /^9月8日/u);
       await tap(page, "追加");
@@ -121,18 +89,18 @@ export const states: State[] = [
   },
   {
     name: "calendar/day-empty",
-    path: demo("bottomRows=two&scheduleSample=empty"),
+    path: demo("scheduleSample=empty"),
     steps: tapOn(/^9月1日/u),
   },
   {
     name: "calendar/breakdown",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: tapOn(/^今月のお休み/u),
   },
   {
     // 完了 with a day left blank between two entered.
     name: "calendar/gap-sheet",
-    path: demo("bottomRows=two&scheduleSample=empty"),
+    path: demo("scheduleSample=empty"),
     steps: async (page) => {
       await tap(page, "ポチポチ入力");
       await tap(page, "日勤");
@@ -142,46 +110,57 @@ export const states: State[] = [
     },
   },
   {
+    // An empty month entered to its end: the save sheet, congratulating.
+    // Each pick moves on to the next day.
     name: "calendar/save",
-    path: demo("bottomRows=current&scheduleSample=filled"),
-    steps: tapOn("この月のシフトを保存"),
+    path: demo("scheduleSample=empty"),
+    steps: async (page) => {
+      await tap(page, "ポチポチ入力");
+      for (let day = 1; day <= 30; day += 1) {
+        // oxlint-disable-next-line no-await-in-loop
+        await page.getByRole("button", { exact: true, name: "日勤" }).click();
+      }
+      await tap(page, /^完了/u);
+    },
   },
   {
     // Straight to the device's calendars, one picked.
     name: "calendar/save-calendar",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
-      await tap(page, "カレンダーに追加");
+      await fromSaveMenu(page, "端末カレンダーに追加");
       await page.getByText("ホーム", { exact: true }).click();
     },
   },
   {
     name: "calendar/save-done",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
-      await tap(page, "カレンダーに追加");
+      await fromSaveMenu(page, "端末カレンダーに追加");
       await page.getByText("ホーム", { exact: true }).click();
       await tap(page, /件を追加$/u);
     },
   },
   {
     name: "calendar/image",
-    path: demo("bottomRows=two&scheduleSample=filled"),
-    steps: tapOn("画像で保存"),
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await fromSaveMenu(page, "画像で保存");
+    },
   },
   {
     name: "group/hub",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: tapOn("グループ"),
   },
   {
     name: "group/month-days",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: toGroupMonth,
   },
   {
     name: "group/month-person",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await toGroupMonth(page);
       await tap(page, "日ごと");
@@ -190,7 +169,7 @@ export const states: State[] = [
   },
   {
     name: "group/chat",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
@@ -198,7 +177,7 @@ export const states: State[] = [
   },
   {
     name: "calendar/date-picker",
-    path: demo("bottomRows=two&scheduleSample=empty"),
+    path: demo("scheduleSample=empty"),
     steps: async (page) => {
       await tap(page, "ポチポチ入力");
       await tap(page, /^入力する日付/u);
@@ -206,7 +185,7 @@ export const states: State[] = [
   },
   {
     name: "settings/repeat-new",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^働き方/u);
@@ -215,7 +194,7 @@ export const states: State[] = [
   },
   {
     name: "settings/job",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^仕事が変わったとき/u);
@@ -224,7 +203,7 @@ export const states: State[] = [
   {
     // An order of three, with the first two weeks it makes.
     name: "settings/repeat-sequence",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^働き方/u);
@@ -236,7 +215,7 @@ export const states: State[] = [
   },
   {
     name: "settings/look-colors",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^シフトパターン/u);
@@ -269,7 +248,7 @@ export const states: State[] = [
   // The pages themselves around the phones: toolbars, headings, captions,
   // the design choices beside the demo, and the design documents.
   ...[
-    ["demo", demo("bottomRows=two&scheduleSample=filled")],
+    ["demo", demo("scheduleSample=filled")],
     ["design", "/design"],
     ["design/states", "/design/states"],
     ["design/flows", "/design/flows"],
@@ -279,7 +258,7 @@ export const states: State[] = [
   ].map(([name, path]) => ({ name: `page/${name}`, path, root: "main" })),
   {
     name: "group/legend-all",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await toGroupMonth(page);
       await tap(page, "日ごと");
@@ -288,7 +267,7 @@ export const states: State[] = [
   },
   {
     name: "group/legend-one",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await toGroupMonth(page);
       await tap(page, "ゆうきのシフトパターン");
@@ -296,7 +275,7 @@ export const states: State[] = [
   },
   {
     name: "group/new-chat",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, "個人チャットを始める");
@@ -304,7 +283,7 @@ export const states: State[] = [
   },
   {
     name: "group/member",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, "グループの設定");
@@ -313,7 +292,7 @@ export const states: State[] = [
   },
   {
     name: "group/settings",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, "グループの設定");
@@ -321,7 +300,7 @@ export const states: State[] = [
   },
   {
     name: "settings/patterns",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^シフトパターン/u);
@@ -329,7 +308,7 @@ export const states: State[] = [
   },
   {
     name: "settings/pattern-editor",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^シフトパターン/u);
@@ -338,7 +317,7 @@ export const states: State[] = [
   },
   {
     name: "settings/pattern-look",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^シフトパターン/u);
@@ -348,7 +327,7 @@ export const states: State[] = [
   },
   {
     name: "settings/pattern-add",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^シフトパターン/u);
@@ -357,7 +336,7 @@ export const states: State[] = [
   },
   {
     name: "settings/coworkers",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^一緒に働く人/u);
@@ -365,7 +344,7 @@ export const states: State[] = [
   },
   {
     name: "settings/coworker",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^一緒に働く人/u);
@@ -374,7 +353,7 @@ export const states: State[] = [
   },
   {
     name: "settings/work",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^働き方/u);
@@ -382,7 +361,7 @@ export const states: State[] = [
   },
   {
     name: "settings/appearance",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^外観/u);
@@ -390,7 +369,7 @@ export const states: State[] = [
   },
   {
     name: "settings/app-icon",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^アプリアイコン/u);
@@ -398,7 +377,7 @@ export const states: State[] = [
   },
   {
     name: "settings/app-icon-alert",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^アプリアイコン/u);
@@ -407,7 +386,7 @@ export const states: State[] = [
   },
   {
     name: "settings/style",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^スタイル/u);
@@ -415,7 +394,7 @@ export const states: State[] = [
   },
   {
     name: "settings/profile",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^プロフィール/u);
@@ -423,7 +402,7 @@ export const states: State[] = [
   },
   {
     name: "settings/account",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^アカウント/u);
@@ -431,7 +410,7 @@ export const states: State[] = [
   },
   {
     name: "settings/account-in",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^アカウント/u);
@@ -443,7 +422,7 @@ export const states: State[] = [
   {
     // A message tapped: its reactions and menu over the chat.
     name: "group/chat-actions",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
@@ -452,7 +431,7 @@ export const states: State[] = [
   },
   {
     name: "group/chat-replying",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
@@ -462,7 +441,7 @@ export const states: State[] = [
   },
   {
     name: "group/chat-one",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^ゆうき/u);
@@ -470,17 +449,17 @@ export const states: State[] = [
   },
   {
     name: "group/none",
-    path: "/demo?groupSample=none&inviteLink=none&memberSample=some&scanResult=invite&bottomRows=two&scheduleSample=filled",
+    path: "/demo?groupSample=none&inviteLink=none&memberSample=some&scanResult=invite&scheduleSample=filled",
     steps: tapOn("グループ"),
   },
   {
     // Opened from an invitation link: the join sheet over the calendar.
     name: "group/join",
-    path: "/demo?groupSample=some&inviteLink=opened&memberSample=some&scanResult=invite&bottomRows=two&scheduleSample=filled",
+    path: "/demo?groupSample=some&inviteLink=opened&memberSample=some&scanResult=invite&scheduleSample=filled",
   },
   {
     name: "group/invite",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, "メンバーを招待");
@@ -488,7 +467,7 @@ export const states: State[] = [
   },
   {
     name: "group/profile",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, "グループの設定");
@@ -497,12 +476,12 @@ export const states: State[] = [
   },
   {
     name: "group/edit",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: toGroupEdit,
   },
   {
     name: "group/mark-photo",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await toGroupEdit(page);
       await tap(page, "アイコン");
@@ -510,7 +489,7 @@ export const states: State[] = [
   },
   ...(["絵文字", "アイコン", "文字"] as const).map((kind) => ({
     name: `group/mark-${kind}`,
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page: Page) => {
       await toGroupEdit(page);
       await tap(page, "アイコン");
@@ -521,7 +500,7 @@ export const states: State[] = [
   })),
   {
     name: "settings/profile-photo",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^プロフィール/u);
@@ -530,7 +509,7 @@ export const states: State[] = [
   },
   {
     name: "group/month-week",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await toGroupMonth(page);
       await tap(page, "日ごと");
@@ -540,7 +519,7 @@ export const states: State[] = [
   {
     // A day picked in the week table: its frame and the day's sheet.
     name: "group/month-week-picked",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await toGroupMonth(page);
       await tap(page, "日ごと");
@@ -550,7 +529,7 @@ export const states: State[] = [
   },
   {
     name: "group/month-days-picked",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await toGroupMonth(page);
       await tap(page, /^9月23日.*押すと/u);
@@ -559,7 +538,7 @@ export const states: State[] = [
   {
     // Six people: marks alone in 日ごと.
     name: "group/month-days-marks",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^3階東病棟/u);
@@ -568,7 +547,7 @@ export const states: State[] = [
   },
   {
     name: "group/share-days",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
@@ -577,7 +556,7 @@ export const states: State[] = [
   },
   {
     name: "group/share-days-picked",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
@@ -588,7 +567,7 @@ export const states: State[] = [
   },
   {
     name: "settings",
-    path: demo("bottomRows=two&scheduleSample=filled"),
+    path: demo("scheduleSample=filled"),
     steps: tapOn("設定"),
   },
 ];

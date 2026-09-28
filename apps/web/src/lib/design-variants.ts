@@ -1,14 +1,6 @@
 // Design decisions that /design lets you switch between. The first choice of
 // each entry is the current proposal and is used when the URL omits it.
 export const designVariantOptions = {
-  bottomRows: {
-    choices: [
-      { label: "保存を右上", value: "saveTop" },
-      { label: "いつも2段", value: "two" },
-      { label: "今のまま", value: "current" },
-    ],
-    label: "下のボタン",
-  },
   groupSample: {
     choices: [
       { label: "参加中", value: "some" },

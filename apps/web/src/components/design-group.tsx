@@ -69,6 +69,7 @@ import type { ColorChoice } from "./design-theme";
 import { ToastContext } from "./design-toast";
 import {
   BackButton,
+  BarGroup,
   Button,
   Choice,
   ChoiceGrid,
@@ -1853,12 +1854,14 @@ function GroupHub({
           </span>
           <span className={hub.name}>{group.name}</span>
         </h3>
-        <IconButton label="メンバーを招待" onClick={onInvite}>
-          <UserPlus aria-hidden="true" size={18} />
-        </IconButton>
-        <IconButton label="グループの設定" onClick={onSettings}>
-          <Settings2 aria-hidden="true" size={18} />
-        </IconButton>
+        <BarGroup>
+          <IconButton label="メンバーを招待" onClick={onInvite}>
+            <UserPlus aria-hidden="true" size={18} />
+          </IconButton>
+          <IconButton label="グループの設定" onClick={onSettings}>
+            <Settings2 aria-hidden="true" size={18} />
+          </IconButton>
+        </BarGroup>
       </header>
       <section>
         <div className={hub.sectionHead}>
@@ -4892,9 +4895,16 @@ function PickedDaySheet({
   if (picked && picked !== date) {
     setDate(picked);
   }
+  const phone = useContext(PhoneContext);
   const together = everyoneOff(members, date);
   return (
     <Sheet
+      // Back to the day in the table, in whichever layout shows it.
+      finalFocusEl={() =>
+        (phone?.current ?? document).querySelector<HTMLElement>(
+          `[data-pick-day="${dateKey(date)}"]`
+        )
+      }
       label={formatDay(date)}
       modal={false}
       onOpenChange={(open) => {
@@ -5246,6 +5256,7 @@ function RowDate({
       aria-label={`${formatDay(date)}の予定を見る`}
       aria-pressed={picked}
       className={dayRows.dateButton}
+      data-pick-day={dateKey(date)}
       onClick={onPick}
       type="button"
     >
@@ -5478,6 +5489,7 @@ function WeekDate({
       aria-label={`${formatDay(date)}の予定を見る`}
       aria-pressed={picked}
       className={weekCell({ ...look, button: true })}
+      data-pick-day={dateKey(date)}
       onClick={() => {
         onPick(date);
       }}
@@ -5952,6 +5964,7 @@ function PersonDay({
       aria-pressed={picked}
       className={className}
       data-active={picked || undefined}
+      data-pick-day={dateKey(date)}
       onClick={() => {
         onPick(date);
       }}
