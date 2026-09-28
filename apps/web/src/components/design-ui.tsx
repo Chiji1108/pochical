@@ -17,8 +17,6 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import EmblaCarousel from "embla-carousel";
-import type { EmblaCarouselType } from "embla-carousel";
 import {
   Check,
   ChevronDown,
@@ -27,6 +25,12 @@ import {
   GripVertical,
   Plus,
 } from "lucide-react";
+import {
+  animate,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+} from "motion/react";
 import {
   createContext,
   useContext,
@@ -1813,16 +1817,18 @@ export function WeekdayRow({ compact = false }: { compact?: boolean }) {
 
 const pager = {
   // Pages of different heights, as a month and a week: the pager takes the
-  // height of the one shown, which animates itself.
-  // Drawn on the middle page from the start: until the script takes the
-  // page over, as on a slow network, the server's page would otherwise show
-  // the one before. Embla takes over from this once it runs.
+  // height of the one shown, which animates itself. At rest the track sits
+  // a page to the left in CSS, so the middle page shows whatever the width
+  // and before the script runs; the finger's offset goes on the layer
+  // around it, and is nothing again once a swipe has landed.
   container: css({
-    "&:not([data-pager-ready])": { transform: "translateX(-100%)" },
     alignItems: "flex-start",
     display: "flex",
-    touchAction: "pan-y pinch-zoom",
+    transform: "translateX(-100%)",
   }),
+  // Motion writes touch-action: pan-y on what it drags, which leaves the
+  // page only to scroll up and down; pinching to zoom stays the browser's.
+  drag: css({ touchAction: "pan-y pinch-zoom !important" }),
   slide: css({ flex: "0 0 100%", minWidth: 0 }),
   // clip rather than hidden: a hidden box can still be scrolled, as the
   // browser keeping its place while the grid folds, which slid the pages.
@@ -1833,15 +1839,19 @@ type PageOffset = -1 | 0 | 1;
 
 const pageOffsets: PageOffset[] = [-1, 0, 1];
 
-// How close, in pixels, a swiped page is to its place when it counts as there.
-const LANDED_DISTANCE = 0.5;
+// A swipe turns the page when let go past a quarter of it, or flicked
+// faster than this many pixels a second, and turns one page at most.
+const TURN_SHARE = 0.25;
+const FLICK_SPEED = 400;
+// How far a flick carries on, in seconds of its speed, when judging where
+// it would come to rest.
+const FLICK_CARRY = 0.2;
 
 // Pages that follow the finger sideways, as SwiftUI's TabView(.page) and
 // Compose's HorizontalPager, for months or weeks without end. Only the
-// pages before and after are drawn; once a swipe settles, `onStep` moves
-// on and the pager quietly goes back to the middle, which now shows the
-// new page. Embla Carousel does the dragging, and keeps a drag from also
-// pressing what is under the finger.
+// pages before and after are drawn; once a swipe lands, `onStep` moves on
+// and the pager quietly goes back to the middle, which now shows the new
+// page. Motion does the dragging.
 export function Pager({
   page,
   onStep,
@@ -1854,109 +1864,120 @@ export function Pager({
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [api, setApi] = useState<EmblaCarouselType>();
-  // Before the first paint, so the pages never show out of place: the
-  // server's offset gives way and Embla measures and places them in the
-  // same moment. keepSnaps keeps all three pages as places to stop even
-  // while they have no width yet; otherwise Embla folds them into one and
-  // keeps showing the page before once they widen.
-  useLayoutEffect(() => {
-    const viewport = viewportRef.current;
-    const container = containerRef.current;
-    if (!(viewport && container)) {
-      return;
-    }
-    container.dataset.pagerReady = "";
-    const embla = EmblaCarousel(viewport, {
-      containScroll: "keepSnaps",
-      startIndex: 1,
-      // Hidden, as behind another tab, the pages have no width, and
-      // measured then Embla loses which one is shown; they come back as
-      // wide as they went, so there is nothing to measure again.
-      watchResize: () => viewport.offsetWidth > 0,
-    });
-    setApi(embla);
-    return () => {
-      embla.destroy();
-      delete container.dataset.pagerReady;
-    };
-  }, []);
-  const shownPage = useRef(page);
-  // Stepped already, until the new page is in the middle.
-  const stepped = useRef(false);
   const middleRef = useRef<HTMLDivElement>(null);
+  const x = useMotionValue(0);
+  const reduceMotion = useReducedMotion() ?? false;
+  // A page's width, only to keep a drag within the pages beside; the
+  // pages are placed without it.
+  const [width, setWidth] = useState(0);
+  // Dragged since the finger went down, so letting go presses nothing.
+  const dragged = useRef(false);
   // The pager is as tall as the page in the middle, whatever the pages
   // beside it hold, and follows it as it grows or shrinks, as when the
   // month turns into one week.
   useEffect(() => {
+    const viewport = viewportRef.current;
     const container = containerRef.current;
     const middle = middleRef.current;
-    if (!(container && middle)) {
+    if (!(viewport && container && middle)) {
       return;
     }
     const observer = new ResizeObserver(() => {
       container.style.height = `${middle.offsetHeight}px`;
+      // Hidden, as behind another tab, it has no width to go by.
+      if (viewport.offsetWidth > 0) {
+        setWidth(viewport.offsetWidth);
+      }
     });
     observer.observe(middle);
+    observer.observe(viewport);
     return () => {
       observer.disconnect();
     };
   }, []);
-  useEffect(() => {
-    if (!api) {
-      return;
-    }
-    // Embla's own "settle" waits for the spring to come within a
-    // thousandth of a pixel, seconds after it looks still. Step as soon as
-    // the page is within half a pixel of its place and barely moving, not
-    // passing through it on the bounce.
-    const land = () => {
-      const index = api.selectedScrollSnap();
-      const { dragHandler, location, previousLocation, target } =
-        api.internalEngine();
-      const resting =
-        !dragHandler.pointerDown() &&
-        Math.abs(target.get() - location.get()) < LANDED_DISTANCE &&
-        Math.abs(location.get() - previousLocation.get()) < LANDED_DISTANCE;
-      if (index === 1 || stepped.current || !resting) {
-        return;
-      }
-      stepped.current = true;
-      onStep(index === 2 ? 1 : -1);
-    };
-    api.on("scroll", land);
-    api.on("settle", land);
-    return () => {
-      api.off("scroll", land);
-      api.off("settle", land);
-    };
-  }, [api, onStep]);
-  // Before the new page paints, so the jump back to the middle is unseen.
+  // Before the new page paints, so the jump back to the middle is unseen;
+  // also when the page changes otherwise, as by the arrows, mid-swipe.
+  const shownPage = useRef(page);
   useLayoutEffect(() => {
     if (shownPage.current !== page) {
       shownPage.current = page;
-      api?.scrollTo(1, true);
-      // Only after the jump: Embla tells of it before it names the middle
-      // page as the one shown.
-      stepped.current = false;
+      x.jump(0);
     }
-  }, [api, page]);
+  }, [page, x]);
+  const land = (velocity: number) => {
+    const pageWidth = viewportRef.current?.offsetWidth ?? 0;
+    if (pageWidth === 0) {
+      x.jump(0);
+      return;
+    }
+    const at = x.get();
+    const flicked = Math.abs(velocity) > FLICK_SPEED;
+    const rest = flicked ? at + velocity * FLICK_CARRY : at;
+    const turned = Math.abs(rest) > pageWidth * TURN_SHARE;
+    let direction: -1 | 0 | 1 = 0;
+    if (turned) {
+      direction = rest < 0 ? 1 : -1;
+    }
+    const settle = () => {
+      if (direction !== 0) {
+        onStep(direction);
+      }
+    };
+    const target = -direction * pageWidth;
+    if (reduceMotion) {
+      x.jump(target);
+      settle();
+      return;
+    }
+    animate(x, target, {
+      bounce: 0,
+      onComplete: settle,
+      type: "spring",
+      velocity,
+      visualDuration: 0.3,
+    });
+  };
   return (
     <div className={pager.viewport} ref={viewportRef}>
-      <div className={pager.container} ref={containerRef}>
-        {pageOffsets.map((offset) => (
-          // The pages beside the one shown are only there to be dragged in.
-          <div
-            aria-hidden={offset !== 0}
-            className={pager.slide}
-            inert={offset !== 0}
-            key={offset}
-            ref={offset === 0 ? middleRef : undefined}
-          >
-            {renderPage(offset)}
-          </div>
-        ))}
-      </div>
+      <motion.div
+        className={pager.drag}
+        drag="x"
+        dragConstraints={{ left: -width, right: width }}
+        dragDirectionLock
+        dragElastic={0.1}
+        dragMomentum={false}
+        onClickCapture={(event) => {
+          if (dragged.current) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }}
+        onDragEnd={(_event, info) => {
+          land(info.velocity.x);
+        }}
+        onDragStart={() => {
+          dragged.current = true;
+        }}
+        onPointerDownCapture={() => {
+          dragged.current = false;
+        }}
+        style={{ x }}
+      >
+        <div className={pager.container} ref={containerRef}>
+          {pageOffsets.map((offset) => (
+            // The pages beside the one shown are only there to be dragged in.
+            <div
+              aria-hidden={offset !== 0}
+              className={pager.slide}
+              inert={offset !== 0}
+              key={offset}
+              ref={offset === 0 ? middleRef : undefined}
+            >
+              {renderPage(offset)}
+            </div>
+          ))}
+        </div>
+      </motion.div>
     </div>
   );
 }
