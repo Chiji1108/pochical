@@ -20,9 +20,9 @@ const picker = {
   categoryHeader: css({
     bg: "raised",
     color: "text3",
-    fontSize: "12px",
     fontWeight: 600,
     padding: "10px 4px 6px",
+    textStyle: "footnote",
   }),
   emoji: css({
     "&[data-active]": { bg: "fill2" },
@@ -39,9 +39,9 @@ const picker = {
   }),
   note: css({
     color: "text3",
-    fontSize: "13px",
     padding: "24px 0",
     textAlign: "center",
+    textStyle: "subheadline",
   }),
   root: css({
     display: "flex",
@@ -58,9 +58,9 @@ const picker = {
     borderRadius: "action",
     color: "text",
     font: "inherit",
-    fontSize: "15px",
     height: "action",
     paddingInline: "14px",
+    textStyle: "body",
     width: "100%",
   }),
   viewport: css({

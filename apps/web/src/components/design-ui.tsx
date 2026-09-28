@@ -82,15 +82,18 @@ const buttonStyle = cva({
     borderRadius: "control",
     cursor: "pointer",
     display: "flex",
-    fontSize: "14px",
+    textStyle: "body",
     // One weight for every strength, as Material and most libraries do:
     // the ground tells them apart. Subtle alone steps down.
     fontWeight: 500,
     gap: "8px",
     justifyContent: "center",
   },
-  defaultVariants: { variant: "primary" },
+  defaultVariants: { size: "regular", variant: "primary" },
   variants: {
+    // Small, as SwiftUI's .controlSize(.small): for two side by side,
+    // whose words would not fit a half width at body size.
+    size: { regular: {}, small: { textStyle: "subheadline" } },
     variant: {
       primary: {
         bg: "accentFill",
@@ -109,11 +112,11 @@ const buttonStyle = cva({
         alignSelf: "center",
         bg: "transparent",
         color: "text3",
-        fontSize: "13px",
         fontWeight: 400,
         margin: "8px auto 0",
         minHeight: "touch",
         paddingInline: "12px",
+        textStyle: "subheadline",
       },
       text: {
         alignSelf: "center",
@@ -128,13 +131,17 @@ const buttonStyle = cva({
 
 export function Button({
   variant = "primary",
+  size = "regular",
   className,
   ...props
-}: ButtonProps & { variant?: "primary" | "quiet" | "text" | "subtle" }) {
+}: ButtonProps & {
+  variant?: "primary" | "quiet" | "text" | "subtle";
+  size?: "regular" | "small";
+}) {
   return (
     <button
       className={cx(
-        buttonStyle({ variant }),
+        buttonStyle({ size, variant }),
         `ui-button ui-button-${variant}`,
         className
       )}
@@ -236,15 +243,15 @@ export function ScreenScroll({
 // sectionTitle.
 export const sectionTitle = css({
   color: "text3",
-  fontSize: "12px",
   fontWeight: 600,
   margin: "0 0 6px 12px",
+  textStyle: "footnote",
 });
 const sectionNote = css({
   color: "text4",
-  fontSize: "11px",
   fontWeight: 400,
   marginLeft: "8px",
+  textStyle: "caption",
 });
 
 export function Section({
@@ -270,9 +277,9 @@ export function Section({
 // A quiet line of explanation under what it explains.
 const noteStyle = css({
   color: "text4",
-  fontSize: "11px",
   lineHeight: 1.6,
   margin: "0 8px",
+  textStyle: "caption",
 });
 
 export function Note({ children }: { children: ReactNode }) {
@@ -287,11 +294,11 @@ export const fieldLabel = cva({
     alignItems: "baseline",
     color: "text",
     display: "flex",
-    fontSize: "12px",
     fontWeight: 600,
     gap: "8px",
     marginInline: 0,
     padding: 0,
+    textStyle: "footnote",
   },
   defaultVariants: { place: "above" },
   variants: {
@@ -310,8 +317,8 @@ export const fieldLabel = cva({
 });
 export const fieldHint = css({
   color: "text3",
-  fontSize: "11px",
   fontWeight: 400,
+  textStyle: "caption",
 });
 
 // A choice that takes the whole row, for a question with a few answers
@@ -358,7 +365,7 @@ const optionCard = {
     margin: 0,
     padding: 0,
   }),
-  note: css({ color: "text3", fontSize: "11px" }),
+  note: css({ color: "text3", textStyle: "caption" }),
   text: css({
     display: "flex",
     flex: 1,
@@ -366,7 +373,7 @@ const optionCard = {
     gap: "3px",
     minWidth: 0,
   }),
-  title: css({ fontSize: "15px", fontWeight: 600 }),
+  title: css({ fontWeight: 600, textStyle: "headline" }),
 };
 
 // OptionCards one over another.
@@ -432,10 +439,10 @@ const addButtonStyle = css({
   borderRadius: "14px",
   color: "accent",
   display: "flex",
-  fontSize: "13px",
   gap: "6px",
   justifyContent: "center",
   minHeight: "46px",
+  textStyle: "subheadline",
 });
 
 export function AddButton({
@@ -463,9 +470,9 @@ const destructiveButtonStyle = css({
   border: 0,
   color: "danger",
   display: "flex",
-  fontSize: "12px",
   minHeight: "44px",
   padding: "0 14px",
+  textStyle: "footnote",
 });
 
 export function DestructiveButton({
@@ -490,11 +497,11 @@ export const inlineInput = css({
   color: "text",
   flex: 1,
   font: "inherit",
-  fontSize: "14px",
   minWidth: 0,
   outline: "none",
   padding: 0,
   textAlign: "right",
+  textStyle: "body",
 });
 
 // A row's value that is a mark with words, or a mark alone: side by side,
@@ -510,7 +517,7 @@ export const markValue = css({
 // and time beside it, or alone in the middle.
 export const markPreview = cva({
   base: {
-    "& strong": { fontSize: "17px" },
+    "& strong": { textStyle: "body" },
     alignItems: "center",
     bg: "fill",
     borderRadius: "18px",
@@ -532,11 +539,11 @@ const doneButtonStyle = css({
   borderRadius: "24px",
   color: "onAccentFill",
   display: "inline-flex",
-  fontSize: "13px",
   gap: "6px",
   height: "44px",
   justifyContent: "center",
   padding: "0 18px",
+  textStyle: "subheadline",
 });
 
 export function DoneButton({ className, ...props }: ButtonProps) {
@@ -560,10 +567,10 @@ const todayButtonStyle = css({
   border: "1px solid token(colors.border)",
   borderRadius: "control",
   color: "accent",
-  fontSize: "12px",
   fontWeight: 600,
   minHeight: "30px",
   padding: "0 11px",
+  textStyle: "footnote",
 });
 
 export function TodayButton({
@@ -603,12 +610,12 @@ export const summaryRow = {
     cursor: "pointer",
     display: "flex",
     flexShrink: 0,
-    fontSize: "12px",
     justifyContent: "space-between",
     padding: "13px 16px",
+    textStyle: "footnote",
     width: "100%",
   }),
-  unit: css({ fontSize: "12px", marginLeft: "2px" }),
+  unit: css({ marginLeft: "2px", textStyle: "footnote" }),
 };
 
 export function SummaryRow({
@@ -653,11 +660,11 @@ const backButtonStyle = css({
   border: 0,
   color: "accent",
   display: "inline-flex",
-  fontSize: "14px",
   gap: "2px",
   marginLeft: "-6px",
   minHeight: "action",
   paddingRight: "8px",
+  textStyle: "body",
 });
 
 export function BackButton({
@@ -685,11 +692,11 @@ const headerActionStyle = css({
   bg: "transparent",
   border: 0,
   color: "accent",
-  fontSize: "15px",
   fontWeight: 600,
   minHeight: "action",
   paddingLeft: "12px",
   paddingRight: "4px",
+  textStyle: "headline",
 });
 
 export function HeaderAction({ className, ...props }: ButtonProps) {
@@ -714,7 +721,7 @@ const pageHeader = {
     justifyContent: "space-between",
   }),
   root: css({ display: "flex", flexDirection: "column", gap: "4px" }),
-  title: css({ fontSize: "26px", fontWeight: 600, margin: 0 }),
+  title: css({ fontWeight: 600, margin: 0, textStyle: "largeTitle" }),
 };
 
 export function PageHeader({
@@ -778,7 +785,7 @@ const listRowRoot = cva({
     border: 0,
     color: "text",
     display: "flex",
-    fontSize: "14px",
+    textStyle: "body",
     gap: "10px",
     minHeight: "48px",
     paddingInline: "14px",
@@ -795,7 +802,7 @@ export const listRow = {
   // the accent, told apart from the gray arrows of rows that go on.
   add: css({ color: "accent", flexShrink: 0, marginRight: "-4px" }),
   label: css({
-    "& small": { color: "text3", fontSize: "11px" },
+    "& small": { color: "text3", textStyle: "caption" },
     display: "flex",
     flexDirection: "column",
     flexShrink: 0,
@@ -822,11 +829,11 @@ export const listRow = {
   value: css({
     color: "text3",
     flex: 1,
-    fontSize: "13px",
     minWidth: 0,
     overflow: "hidden",
     textAlign: "right",
     textOverflow: "ellipsis",
+    textStyle: "subheadline",
     whiteSpace: "nowrap",
   }),
 };
@@ -1079,9 +1086,9 @@ const segmentStyle = cva({
     color: "text2",
     cursor: "pointer",
     display: "flex",
-    fontSize: "13px",
     justifyContent: "center",
     position: "relative",
+    textStyle: "subheadline",
     zIndex: 1,
   },
   variants: {
@@ -1380,7 +1387,7 @@ export const chipStyle = cva({
     color: "text2",
     cursor: "pointer",
     display: "inline-flex",
-    fontSize: "12px",
+    textStyle: "footnote",
     gap: "4px",
     minHeight: "34px",
     paddingInline: "12px",
@@ -1458,8 +1465,8 @@ const tagStyle = cva({
   },
   variants: {
     size: {
-      md: { fontSize: "12px", paddingBlock: "4px", paddingInline: "10px" },
-      sm: { fontSize: "10px", paddingBlock: "1px", paddingInline: "7px" },
+      md: { paddingBlock: "4px", paddingInline: "10px", textStyle: "footnote" },
+      sm: { paddingBlock: "1px", paddingInline: "7px", textStyle: "caption2" },
     },
     tone: {
       accent: { bg: "accentSoft", color: "accent" },
@@ -1512,9 +1519,9 @@ const menu = {
     color: "text",
     cursor: "default",
     display: "flex",
-    fontSize: "14px",
     gap: "10px",
     padding: "9px 10px",
+    textStyle: "body",
     userSelect: "none",
   }),
   separator: css({
@@ -1530,10 +1537,10 @@ const menu = {
     color: "text2",
     display: "inline-flex",
     flexShrink: 0,
-    fontSize: "13px",
     fontWeight: 600,
     gap: "4px",
     padding: "7px 10px 7px 12px",
+    textStyle: "subheadline",
   }),
 };
 

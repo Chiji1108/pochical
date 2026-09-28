@@ -1183,7 +1183,7 @@ const scan = {
     inset: 0,
     position: "absolute",
   }),
-  demo: css({ color: "rgba(255, 255, 255, 0.45)", fontSize: "11px" }),
+  demo: css({ color: "rgba(255, 255, 255, 0.45)", textStyle: "caption" }),
   frame: css({
     _after: {
       borderBottom: scanCorner,
@@ -1213,7 +1213,7 @@ const scan = {
     width: "220px",
   }),
   header: css({ alignItems: "center", display: "flex", gap: "12px" }),
-  hint: css({ fontSize: "14px", margin: 0, textAlign: "center" }),
+  hint: css({ margin: 0, textAlign: "center", textStyle: "body" }),
   library: css({
     alignItems: "center",
     alignSelf: "center",
@@ -1222,11 +1222,11 @@ const scan = {
     borderRadius: "999px",
     color: "white",
     display: "flex",
-    fontSize: "14px",
     fontWeight: 600,
     gap: "8px",
     marginBottom: "12px",
     padding: "12px 20px",
+    textStyle: "body",
   }),
   problem: css({
     "& svg": { color: "#ffd60a", flexShrink: 0, marginTop: "1px" },
@@ -1234,14 +1234,14 @@ const scan = {
     bg: "rgba(255, 255, 255, 0.14)",
     borderRadius: "14px",
     display: "flex",
-    fontSize: "13px",
     gap: "10px",
     lineHeight: 1.5,
     margin: "16px 0 0",
     padding: "12px 14px",
+    textStyle: "subheadline",
   }),
   root: css({ bg: "black", color: "white" }),
-  title: css({ fontSize: "17px", fontWeight: 600, margin: 0 }),
+  title: css({ fontWeight: 600, margin: 0, textStyle: "headline" }),
 };
 
 // A made-up group for the no-group screen's picture of sharing.
@@ -1298,10 +1298,10 @@ const noGroups = {
   actions: css({ display: "flex", flexDirection: "column", gap: "10px" }),
   note: css({
     color: "text3",
-    fontSize: "13px",
     lineHeight: 1.6,
     margin: 0,
     textAlign: "center",
+    textStyle: "subheadline",
   }),
   root: css({
     display: "flex",
@@ -1311,10 +1311,10 @@ const noGroups = {
     paddingBlock: "24px",
   }),
   title: css({
-    fontSize: "20px",
     fontWeight: 700,
     margin: 0,
     textAlign: "center",
+    textStyle: "title2",
   }),
 };
 
@@ -1567,7 +1567,7 @@ const hub = {
     gap: "10px",
     padding: "24px 16px 18px",
   }),
-  qrNote: css({ color: "text3", fontSize: "11px" }),
+  qrNote: css({ color: "text3", textStyle: "caption" }),
   rowIcon: css({ color: "accent", flexShrink: 0 }),
   rowMark: css({ marginRight: "12px" }),
   sectionHead: css({
@@ -1578,9 +1578,9 @@ const hub = {
   }),
   sectionHeadTitle: css({
     color: "text3",
-    fontSize: "12px",
     fontWeight: 600,
     margin: "0 0 0 12px",
+    textStyle: "footnote",
   }),
   sectionLink: css({
     alignItems: "center",
@@ -1588,20 +1588,20 @@ const hub = {
     border: 0,
     color: "accent",
     display: "inline-flex",
-    fontSize: "12px",
     fontWeight: 600,
     gap: "1px",
     padding: "0 2px 0 8px",
+    textStyle: "footnote",
   }),
   title: css({
     alignItems: "center",
     display: "flex",
     flex: 1,
-    fontSize: "19px",
     fontWeight: 700,
     gap: "8px",
     margin: 0,
     minWidth: 0,
+    textStyle: "title2",
   }),
   // Only a frame on the screen's own color: the raised ground is white
   // like the screen's in light mode but lifted in dark, where the card
@@ -1627,11 +1627,11 @@ const hub = {
     borderTop: "1px solid token(colors.separator)",
     color: "text2",
     display: "flex",
-    fontSize: "12px",
     gap: "8px",
     marginTop: "2px",
     padding: "10px 6px 2px 10px",
     textAlign: "left",
+    textStyle: "footnote",
     width: "100%",
   }),
   weekCardNextValue: css({
@@ -1655,12 +1655,12 @@ const join = {
     alignItems: "center",
     color: "text2",
     display: "flex",
-    fontSize: "13px",
     gap: "6px",
     margin: "12px 0 0",
+    textStyle: "subheadline",
   }),
   members: css({
-    "& small": { color: "text3", fontSize: "12px", marginLeft: "4px" },
+    "& small": { color: "text3", marginLeft: "4px", textStyle: "footnote" },
     alignItems: "center",
     display: "flex",
     gap: "6px",
@@ -1675,11 +1675,11 @@ const join = {
   }),
   text: css({
     color: "text3",
-    fontSize: "12px",
     lineHeight: 1.6,
     margin: "10px 0 16px",
+    textStyle: "footnote",
   }),
-  title: css({ fontSize: "19px", fontWeight: 700, margin: "10px 0 0" }),
+  title: css({ fontWeight: 700, margin: "10px 0 0", textStyle: "title2" }),
 };
 
 // A profile's photo with a camera badge to change it, as the platforms'
@@ -1690,9 +1690,9 @@ const photoPicker = {
     border: 0,
     color: "accent",
     cursor: "pointer",
-    fontSize: "14px",
     fontWeight: 600,
     padding: 0,
+    textStyle: "body",
   }),
   badge: css({
     bg: "surface",
@@ -1712,10 +1712,10 @@ const photoPicker = {
     border: 0,
     borderRadius: "16px",
     color: "text",
-    fontSize: "16px",
     fontWeight: 600,
     marginTop: "10px",
     minHeight: "48px",
+    textStyle: "callout",
     width: "100%",
   }),
   edit: css({
@@ -2090,7 +2090,7 @@ function MemberSheet({
 
 const profileStyle = {
   message: css({ alignSelf: "stretch", marginTop: "6px" }),
-  name: css({ fontSize: "20px", fontWeight: 700, margin: 0 }),
+  name: css({ fontWeight: 700, margin: 0, textStyle: "title2" }),
   root: css({
     alignItems: "center",
     display: "flex",
@@ -2102,8 +2102,8 @@ const profileStyle = {
     alignItems: "center",
     color: "text3",
     display: "flex",
-    fontSize: "12px",
     gap: "6px",
+    textStyle: "footnote",
   }),
 };
 
@@ -2144,12 +2144,12 @@ const chatRow = {
     flexShrink: 0,
     gap: "4px",
   }),
-  name: css({ fontSize: "14px" }),
+  name: css({ textStyle: "body" }),
   preview: css({
     color: "text4",
-    fontSize: "11px",
     overflow: "hidden",
     textOverflow: "ellipsis",
+    textStyle: "caption",
     whiteSpace: "nowrap",
   }),
   text: css({
@@ -2159,7 +2159,7 @@ const chatRow = {
     gap: "2px",
     minWidth: 0,
   }),
-  time: css({ color: "textFaint", fontSize: "10px" }),
+  time: css({ color: "textFaint", textStyle: "caption2" }),
 };
 
 // A chat as the messaging apps draw one: others' bubbles on the left with
@@ -2211,12 +2211,16 @@ const chatStyle = {
     padding: "8px 12px 0",
     textAlign: "left",
   }),
-  bubbleQuoteName: css({ fontSize: "11px", fontWeight: 600, opacity: 0.85 }),
+  bubbleQuoteName: css({
+    fontWeight: 600,
+    opacity: 0.85,
+    textStyle: "caption",
+  }),
   bubbleQuoteText: css({
-    fontSize: "12px",
     lineClamp: 2,
     lineHeight: 1.45,
     opacity: 0.8,
+    textStyle: "footnote",
   }),
   // The avatar sits at the top by the name, the time by the bubble, so
   // the reactions under it push neither down.
@@ -2236,11 +2240,11 @@ const chatStyle = {
     color: "inherit",
     display: "block",
     font: "inherit",
-    fontSize: "13px",
     lineHeight: 1.5,
     maxWidth: "100%",
     padding: "8px 12px",
     textAlign: "left",
+    textStyle: "subheadline",
   }),
   composer: cva({
     base: {
@@ -2281,10 +2285,10 @@ const chatStyle = {
     borderRadius: "19px",
     flex: 1,
     font: "inherit",
-    fontSize: "14px",
     height: "38px",
     minWidth: 0,
     padding: "0 14px",
+    textStyle: "body",
   }),
   dayOpen: cva({
     base: {
@@ -2292,13 +2296,13 @@ const chatStyle = {
       bg: "transparent",
       border: 0,
       color: "accent",
-      fontSize: "11px",
       padding: "0 4px",
       textDecoration: "underline",
+      textStyle: "caption",
     },
     variants: { mine: { true: { alignSelf: "flex-end" } } },
   }),
-  empty: css({ color: "text4", fontSize: "12px", margin: "auto" }),
+  empty: css({ color: "text4", margin: "auto", textStyle: "footnote" }),
   header: css({
     alignItems: "center",
     borderBottom: "1px solid token(colors.separator)",
@@ -2338,15 +2342,15 @@ const chatStyle = {
     padding: "12px 2px",
     scrollbarWidth: "none",
   }),
-  name: css({ color: "text3", fontSize: "10px", paddingLeft: "4px" }),
+  name: css({ color: "text3", paddingLeft: "4px", textStyle: "caption2" }),
   notice: css({
     alignSelf: "center",
     color: "text3",
-    fontSize: "11px",
     lineHeight: 1.5,
     margin: "6px auto",
     maxWidth: "85%",
     textAlign: "center",
+    textStyle: "caption",
   }),
   // The message being answered, marked by the accent line at its start.
   quote: css({
@@ -2365,8 +2369,8 @@ const chatStyle = {
     padding: "4px 10px",
     textAlign: "left",
   }),
-  quoteName: css({ color: "text3", fontSize: "10px", fontWeight: 600 }),
-  quoteText: css({ color: "text4", fontSize: "11px", lineClamp: 1 }),
+  quoteName: css({ color: "text3", fontWeight: 600, textStyle: "caption2" }),
+  quoteText: css({ color: "text4", lineClamp: 1, textStyle: "caption" }),
   reaction: css({
     "&[aria-pressed=true]": { bg: "accentSoft", borderColor: "accent" },
     alignItems: "center",
@@ -2374,12 +2378,12 @@ const chatStyle = {
     border: "1px solid token(colors.border)",
     borderRadius: "12px",
     display: "inline-flex",
-    fontSize: "13px",
     gap: "3px",
     height: "24px",
     padding: "0 8px",
+    textStyle: "subheadline",
   }),
-  reactionCount: css({ color: "text3", fontSize: "11px" }),
+  reactionCount: css({ color: "text3", textStyle: "caption" }),
   reactions: cva({
     base: { display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "-1px" },
     variants: { mine: { true: { justifyContent: "flex-end" } } },
@@ -2407,18 +2411,18 @@ const chatStyle = {
   time: css({
     color: "textFaint",
     flexShrink: 0,
-    fontSize: "9px",
     paddingBottom: "2px",
+    textStyle: "caption2",
   }),
-  title: css({ fontSize: "15px", fontWeight: 600, margin: 0 }),
+  title: css({ fontWeight: 600, margin: 0, textStyle: "headline" }),
   when: css({
     alignSelf: "center",
     bg: "fill2",
     borderRadius: "9px",
     color: "text3",
-    fontSize: "10px",
     margin: "6px 0 2px",
     padding: "2px 10px",
+    textStyle: "caption2",
   }),
 };
 
@@ -2847,9 +2851,9 @@ const messageActions = {
     border: 0,
     color: "text",
     display: "flex",
-    fontSize: "14px",
     justifyContent: "space-between",
     padding: "11px 14px",
+    textStyle: "body",
     width: "100%",
   }),
   menuIcon: css({ color: "text3" }),
@@ -2861,10 +2865,10 @@ const messageActions = {
     border: 0,
     borderRadius: "50%",
     display: "grid",
-    fontSize: "19px",
     height: "34px",
     padding: 0,
     placeItems: "center",
+    textStyle: "title2",
     width: "34px",
   }),
   reactions: css({
@@ -3553,16 +3557,16 @@ const shareDays = {
     border: "1.5px solid transparent",
     borderRadius: "15px",
     color: "accent",
-    fontSize: "12px",
     fontWeight: 600,
     minHeight: "30px",
     padding: "0 10px",
+    textStyle: "footnote",
   }),
   togetherLabel: css({
     color: "accent",
-    fontSize: "12px",
     fontWeight: 600,
     marginRight: "4px",
+    textStyle: "footnote",
   }),
   weekday: css({ color: "text4", fontSize: "10px", textAlign: "center" }),
 };
@@ -3581,7 +3585,7 @@ const monthSwitch = {
         placeItems: "center",
         width: "32px",
       },
-      "& strong": { fontSize: "15px", minWidth: "96px", textAlign: "center" },
+      "& strong": { minWidth: "96px", textAlign: "center", textStyle: "body" },
       alignItems: "center",
       display: "flex",
       gap: "8px",
@@ -3604,11 +3608,11 @@ const monthSwitch = {
     borderRadius: "17px",
     color: "accent",
     display: "inline-flex",
-    fontSize: "13px",
     fontWeight: 600,
     gap: "2px",
     minHeight: "34px",
     padding: "0 12px",
+    textStyle: "subheadline",
   }),
 };
 
@@ -3634,10 +3638,10 @@ const shiftsPage = {
     // Room to scroll the last weeks out from under the sheet.
     variants: { withSheet: { true: { paddingBottom: "300px" } } },
   }),
-  sheetTime: css({ color: "text4", fontSize: "11px" }),
+  sheetTime: css({ color: "text4", textStyle: "caption" }),
   // A mark and its name, as markValue sets them apart in a row's value.
   sheetValue: css({ alignItems: "center", display: "inline-flex", gap: "8px" }),
-  togetherNone: css({ color: "text3", fontSize: "15px", fontWeight: 600 }),
+  togetherNone: css({ color: "text3", fontWeight: 600, textStyle: "headline" }),
 };
 
 // 人ごと: who to show, a row of chips that scrolls sideways out to the
@@ -3657,10 +3661,10 @@ const people = {
     color: "text2",
     display: "inline-flex",
     flexShrink: 0,
-    fontSize: "13px",
     gap: "6px",
     minHeight: "36px",
     padding: "0 12px 0 6px",
+    textStyle: "subheadline",
   }),
   list: css({
     border: 0,
@@ -5869,7 +5873,7 @@ function GroupProfilePage({
       <PageHeader
         back="グループの設定"
         onBack={onBack}
-        title="このグループでのあなた"
+        title="グループでのあなた"
       />
       <PhotoEditor
         name={shown.name}

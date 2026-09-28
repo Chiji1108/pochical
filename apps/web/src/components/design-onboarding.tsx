@@ -198,7 +198,11 @@ const onboarding = {
     overflowY: "auto",
     padding: "20px 6px 12px",
   }),
-  description: css({ color: "text3", fontSize: "13px", margin: "8px 0 0" }),
+  description: css({
+    color: "text3",
+    margin: "8px 0 0",
+    textStyle: "subheadline",
+  }),
   // Once started, the page shows the calendar it made, with a way back to
   // the start under it.
   finished: css({
@@ -208,17 +212,17 @@ const onboarding = {
   }),
   finishedNote: css({
     color: "text3",
-    fontSize: "12px",
     lineHeight: 1.6,
     margin: "12px 0 0",
     maxWidth: "340px",
     textAlign: "center",
+    textStyle: "footnote",
   }),
   footnote: css({
     color: "text4",
-    fontSize: "11px",
     margin: "auto 0 0",
     textAlign: "center",
+    textStyle: "caption",
   }),
   intro: css({
     alignItems: "center",
@@ -232,9 +236,9 @@ const onboarding = {
   }),
   lead: css({
     color: "text3",
-    fontSize: "14px",
     lineHeight: 1.7,
     margin: 0,
+    textStyle: "body",
   }),
   name: css({
     fontSize: "24px",
@@ -263,24 +267,24 @@ const onboarding = {
   }),
   previewLabel: css({
     color: "text3",
-    fontSize: "11px",
     margin: "0 0 -10px",
+    textStyle: "caption",
   }),
   restart: css({
     bg: "transparent",
     border: "1px solid token(colors.border)",
     borderRadius: "20px",
     color: "accent",
-    fontSize: "12px",
     marginTop: "10px",
     minHeight: "40px",
     padding: "0 14px",
+    textStyle: "footnote",
   }),
   title: css({
-    fontSize: "22px",
     fontWeight: 600,
     lineHeight: 1.45,
     margin: 0,
+    textStyle: "title2",
   }),
   welcome: css({
     display: "flex",

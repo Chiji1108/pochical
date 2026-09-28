@@ -480,9 +480,9 @@ const appIcons = {
     color: "text2",
     display: "flex",
     flexDirection: "column",
-    fontSize: "14px",
     gap: "8px",
     padding: "18px 0 14px",
+    textStyle: "body",
   }),
   grid: css({
     border: 0,
@@ -509,17 +509,17 @@ const systemAlert = {
     border: 0,
     borderTop: "1px solid token(colors.separator)",
     color: "#0a84ff",
-    fontSize: "16px",
     fontWeight: 600,
     minHeight: "touch",
+    textStyle: "callout",
     width: "100%",
   }),
   title: css({
-    fontSize: "15px",
     fontWeight: 600,
     lineHeight: 1.4,
     margin: 0,
     padding: "20px 16px 18px",
+    textStyle: "headline",
   }),
 };
 
@@ -534,9 +534,9 @@ const colorRow = {
     color: "text2",
     display: "flex",
     flexDirection: "column",
-    fontSize: "12px",
     gap: "8px",
     padding: "5px 0",
+    textStyle: "footnote",
   }),
   dot: css({
     // Ringed in the accent, apart from the ground, once picked.
@@ -585,26 +585,26 @@ const settingsParts = {
   audience: css({
     borderTop: "1px solid token(colors.separator)",
     color: "text",
-    fontSize: "15px",
     fontWeight: 700,
     margin: "22px 4px 2px",
     paddingTop: "16px",
+    textStyle: "headline",
   }),
   card: css({ bg: "fill", borderRadius: "18px", padding: "16px" }),
   cardCount: css({ color: "text3", fontWeight: 400 }),
   cardLabel: css({
     display: "flex",
-    fontSize: "12px",
     fontWeight: 600,
     justifyContent: "space-between",
     margin: "0 0 10px",
+    textStyle: "footnote",
   }),
-  cardMeta: css({ color: "text3", fontSize: "12px", margin: "10px 0 0" }),
+  cardMeta: css({ color: "text3", margin: "10px 0 0", textStyle: "footnote" }),
   groupNote: css({
     color: "text3",
-    fontSize: "11px",
     lineHeight: 1.5,
     margin: "8px 12px 0",
+    textStyle: "caption",
   }),
   job: css({ display: "flex", flexDirection: "column", gap: "14px" }),
   marks: css({
@@ -724,9 +724,9 @@ const accountPage = {
   }),
   lead: css({
     color: "text3",
-    fontSize: "13px",
     lineHeight: 1.6,
     margin: 0,
+    textStyle: "subheadline",
   }),
   logo: css({
     bg: "surface",
@@ -738,7 +738,12 @@ const accountPage = {
     placeItems: "center",
     width: "30px",
   }),
-  title: css({ color: "text", fontSize: "18px", fontWeight: 700, margin: 0 }),
+  title: css({
+    color: "text",
+    fontWeight: 700,
+    margin: 0,
+    textStyle: "title3",
+  }),
 };
 
 function AccountPage({ onBack }: { onBack: () => void }) {

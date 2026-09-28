@@ -39,6 +39,25 @@ export default defineConfig({
     extend: {
       // A sheet rises from the bottom of the phone and sinks back; the
       // dimmed ground behind it fades.
+      // iOS's text styles at their default size, which the native apps
+      // take as .font(.body) and so on and grow with the reader's text
+      // size; Compose maps each onto its type scale. Each sets a size, and
+      // headline its weight; a piece may still set a weight of its own, as
+      // iOS's emphasized styles do. What is drawn to a fixed size, like a
+      // day in the month or a mark, keeps its own px instead.
+      textStyles: {
+        body: { value: { fontSize: "17px" } },
+        callout: { value: { fontSize: "16px" } },
+        caption: { value: { fontSize: "12px" } },
+        caption2: { value: { fontSize: "11px" } },
+        footnote: { value: { fontSize: "13px" } },
+        headline: { value: { fontSize: "17px", fontWeight: 600 } },
+        largeTitle: { value: { fontSize: "34px" } },
+        subheadline: { value: { fontSize: "15px" } },
+        title1: { value: { fontSize: "28px" } },
+        title2: { value: { fontSize: "22px" } },
+        title3: { value: { fontSize: "20px" } },
+      },
       keyframes: {
         fadeIn: { from: { opacity: 0 }, to: { opacity: 1 } },
         fadeOut: { from: { opacity: 1 }, to: { opacity: 0 } },

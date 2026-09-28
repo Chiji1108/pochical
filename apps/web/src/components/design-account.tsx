@@ -79,11 +79,11 @@ const providerButton = {
       alignItems: "center",
       borderRadius: "14px",
       display: "flex",
-      fontSize: "16px",
       fontWeight: 600,
       gap: "10px",
       justifyContent: "center",
       minHeight: "50px",
+      textStyle: "callout",
       width: "100%",
     },
     variants: {

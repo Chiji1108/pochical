@@ -251,7 +251,7 @@ const heading = {
     placeItems: "center",
     width: "action",
   }),
-  eyebrow: css({ color: "text3", fontSize: "12px", margin: "0 0 4px" }),
+  eyebrow: css({ color: "text3", margin: "0 0 4px", textStyle: "footnote" }),
   root: css({
     alignItems: "center",
     display: "flex",
@@ -262,10 +262,10 @@ const heading = {
   title: css({
     alignItems: "center",
     display: "flex",
-    fontSize: "18px",
     fontWeight: 600,
     gap: "6px",
     margin: 0,
+    textStyle: "title3",
   }),
   titleBlock: css({ flex: 1, minWidth: 0 }),
   titleRow: css({ alignItems: "center", display: "flex", gap: "8px" }),
@@ -281,9 +281,9 @@ const decide = {
     bg: "transparent",
     border: 0,
     color: "accent",
-    fontSize: "15px",
     minHeight: "action",
     paddingInline: "4px",
+    textStyle: "body",
   }),
   cancel: css({ justifySelf: "start" }),
   root: css({
@@ -293,7 +293,7 @@ const decide = {
     gridTemplateColumns: "1fr auto 1fr",
     marginBottom: "16px",
   }),
-  title: css({ fontSize: "16px", fontWeight: 600, margin: 0 }),
+  title: css({ fontWeight: 600, margin: 0, textStyle: "callout" }),
 };
 
 export function SheetHeading({
@@ -514,7 +514,7 @@ const confirm = {
     // Equal halves, but never narrower than the label.
     flex: "1 1 0",
     minWidth: "max-content",
-    fontSize: "15px",
+    textStyle: "headline",
     fontWeight: 600,
     minHeight: "touch",
     paddingInline: "16px",
@@ -526,9 +526,9 @@ const confirm = {
   cancel: css({ bg: "fill", color: "text" }),
   message: css({
     color: "text3",
-    fontSize: "13px",
     lineHeight: 1.6,
     margin: "8px 0 0",
+    textStyle: "subheadline",
   }),
   root: css({
     bg: "raised",
@@ -538,7 +538,7 @@ const confirm = {
     textAlign: "center",
     width: "min(300px, calc(100% - 48px))",
   }),
-  title: css({ fontSize: "17px", fontWeight: 700, margin: 0 }),
+  title: css({ fontWeight: 700, margin: 0, textStyle: "headline" }),
 };
 
 // A question before something hard to undo, in the middle of the phone as

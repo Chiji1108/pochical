@@ -13,7 +13,7 @@ const spaced = css({ marginBottom: "16px" });
 const gap = {
   // The offer to show days off blank, under the chips.
   blank: css({
-    "& small": { color: "text3", fontSize: "11px" },
+    "& small": { color: "text3", textStyle: "caption" },
     margin: "0 0 16px",
   }),
   // How the month's days off change, kept on one line.

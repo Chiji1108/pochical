@@ -1026,14 +1026,19 @@ export function TabBar({
 // 今月の内訳: a row for each pattern and one for the days still blank,
 // with the month's length under them.
 const breakdown = {
-  count: css({ color: "accent", fontSize: "21px", fontWeight: 600, margin: 0 }),
+  count: css({
+    color: "accent",
+    fontWeight: 600,
+    margin: 0,
+    textStyle: "title3",
+  }),
   list: css({ margin: 0 }),
   name: css({
     "& > span": { fontSize: "24px" },
     alignItems: "center",
     display: "flex",
-    fontSize: "14px",
     gap: "12px",
+    textStyle: "body",
   }),
   row: cva({
     base: {
@@ -1047,11 +1052,11 @@ const breakdown = {
   }),
   total: css({
     color: "text3",
-    fontSize: "12px",
     margin: "18px 0 0",
     textAlign: "center",
+    textStyle: "footnote",
   }),
-  unit: css({ fontSize: "12px", fontWeight: 400, marginLeft: "7px" }),
+  unit: css({ fontWeight: 400, marginLeft: "7px", textStyle: "footnote" }),
 };
 
 // The month at the top: the year over its number, "‹ 今月 ›" in the middle
@@ -1124,7 +1129,7 @@ const calendarPage = {
     overflowY: "auto",
     padding: "16px 6px 12px",
   }),
-  detailDate: css({ fontSize: "18px", fontWeight: 600, margin: "0 0 14px" }),
+  detailDate: css({ fontWeight: 600, margin: "0 0 14px", textStyle: "title3" }),
   // Under the month: its summary, then what to do next and the tab bar.
   bottom: css({
     display: "flex",
@@ -1389,6 +1394,7 @@ function SaveArea({
     <div className={shiftInput.startRow}>
       <Button
         className={shiftInput.startButton}
+        size="small"
         variant="quiet"
         onClick={onImage}
       >
@@ -1398,6 +1404,7 @@ function SaveArea({
       <Button
         aria-haspopup="dialog"
         className={shiftInput.startButton}
+        size="small"
         onClick={onCalendar}
         variant="quiet"
       >
@@ -1422,10 +1429,10 @@ const repeatEditor = {
     borderRadius: "16px",
     color: "accent",
     display: "inline-flex",
-    fontSize: "11px",
     gap: "3px",
     minHeight: "32px",
     padding: "0 10px",
+    textStyle: "caption",
   }),
   day: css({
     "& > small": { color: "textFaint", fontSize: "8px" },
@@ -1592,10 +1599,10 @@ const shiftInput = {
     borderRadius: "control",
     color: "text3",
     display: "flex",
-    fontSize: "11px",
     gap: "5px",
     minHeight: "touch",
     padding: "4px 14px",
+    textStyle: "caption",
   }),
   actions: css({
     display: "flex",
@@ -1623,12 +1630,12 @@ const shiftInput = {
       borderRadius: "control",
       display: "flex",
       flexDirection: "column",
-      fontSize: "11px",
       gap: "6px",
       height: "77px",
       justifyContent: "center",
       lineHeight: "14px",
       padding: "7px 0",
+      textStyle: "caption",
       width: "72px",
     },
     variants: { rows: { true: { height: "64px", width: "100%" } } },
@@ -1997,12 +2004,12 @@ const dayDetail = {
     borderRadius: "control",
     color: "danger",
     display: "flex",
-    fontSize: "11px",
     gap: "5px",
     minHeight: "touch",
     padding: "0 14px",
+    textStyle: "caption",
   }),
-  empty: css({ color: "text4", fontSize: "12px", margin: 0 }),
+  empty: css({ color: "text4", margin: 0, textStyle: "footnote" }),
   // The time and the memo, as the platforms' filled text fields.
   field: css({
     _focus: {
@@ -2015,30 +2022,30 @@ const dayDetail = {
     borderRadius: "10px",
     color: "text",
     font: "inherit",
-    fontSize: "15px",
     minHeight: "40px",
     minWidth: 0,
     padding: "0 10px",
+    textStyle: "body",
   }),
-  hint: css({ color: "text4", fontSize: "11px", margin: 0 }),
-  label: css({ color: "text3", fontSize: "12px" }),
+  hint: css({ color: "text4", margin: 0, textStyle: "caption" }),
+  label: css({ color: "text3", textStyle: "footnote" }),
   // The legend floats, so the fieldset lays it out like the other rows'
   // labels.
   legend: css({ float: "left", padding: "0 0 6px", width: "100%" }),
   markHint: css({
     color: "text3",
     display: "block",
-    fontSize: "11px",
     marginTop: "4px",
+    textStyle: "caption",
   }),
   memberInput: css({
     border: "1px solid token(colors.accentLine)",
     borderRadius: "17px",
     font: "inherit",
-    fontSize: "12px",
     minHeight: "34px",
     outline: "none",
     padding: "0 11px",
+    textStyle: "footnote",
     width: "88px",
   }),
   members: css({ border: 0, margin: 0, padding: 0 }),
@@ -2054,10 +2061,10 @@ const dayDetail = {
     bg: "transparent",
     border: 0,
     color: "accent",
-    fontSize: "11px",
     marginLeft: "6px",
     padding: "4px 6px",
     textDecoration: "underline",
+    textStyle: "caption",
   }),
   root: css({ display: "flex", flexDirection: "column", gap: "18px" }),
   row: css({ display: "flex", flexDirection: "column", gap: "6px" }),
@@ -2320,17 +2327,17 @@ const picker = {
   month: css({
     alignItems: "center",
     display: "flex",
-    fontSize: "14px",
     justifyContent: "space-between",
     margin: "12px 0",
+    textStyle: "body",
   }),
   table: css({ borderCollapse: "collapse", width: "100%" }),
-  title: css({ fontSize: "17px", margin: 0 }),
+  title: css({ margin: 0, textStyle: "body" }),
   weekday: css({
     color: "text3",
-    fontSize: "11px",
     fontWeight: 400,
     paddingBottom: "8px",
+    textStyle: "caption",
   }),
 };
 
@@ -2350,9 +2357,9 @@ const pickerCell = cva({
     borderRadius: "12px",
     cursor: "default",
     display: "flex",
-    fontSize: "13px",
     justifyContent: "center",
     minHeight: "touch",
+    textStyle: "subheadline",
   },
   variants: {
     // The design's today, not the real one Ark marks.
@@ -2489,11 +2496,11 @@ const dateButton = {
       color: "text",
       cursor: "pointer",
       display: "flex",
-      fontSize: "17px",
       fontWeight: 600,
       gap: "4px",
       minHeight: "touch",
       padding: "0 10px 0 14px",
+      textStyle: "headline",
     },
     variants: {
       look: {
@@ -2501,8 +2508,8 @@ const dateButton = {
           _hover: { bg: "accentSoft2", borderColor: "accentMuted" },
           bg: "accentSoft",
           border: "1px solid var(--accent-border)",
-          fontSize: "15px",
           margin: 0,
+          textStyle: "body",
         },
         inline: {
           _hover: { bg: "accentSoft" },
