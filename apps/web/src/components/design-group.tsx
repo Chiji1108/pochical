@@ -917,7 +917,7 @@ export function DesignGroup({
   return (
     <Screen>
       {page.name === "hub" ? (
-        <div className="gr-layout">
+        <div className={hub.layout}>
           <GroupRail
             groups={groups}
             onNew={() => {
@@ -1260,7 +1260,7 @@ function NoGroups({
       <h3 className={noGroups.title}>グループでシフトを共有できます</h3>
       <div
         aria-label="サンプルの共有シフト表"
-        className="gr-week-card"
+        className={hub.weekCard}
         role="img"
       >
         <MemberTable
@@ -1311,6 +1311,421 @@ const noGroups = {
   }),
 };
 
+const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+
+// The groups down the left edge, as the messaging apps' server rails: a
+// mark each, the open one ringed and flagged at the edge, then the ways to
+// start or join one.
+const rail = {
+  action: css({
+    bg: "surface",
+    border: 0,
+    borderRadius: "50%",
+    color: "accent",
+    display: "grid",
+    height: "42px",
+    placeItems: "center",
+    width: "42px",
+  }),
+  badge: css({
+    bottom: 0,
+    boxShadow: "0 0 0 2px var(--fill)",
+    position: "absolute",
+    right: "3px",
+  }),
+  divider: css({
+    bg: "border",
+    borderRadius: "1px",
+    height: "2px",
+    width: "28px",
+  }),
+  // The flag at the edge grows by the open group.
+  item: css({
+    "&::before": {
+      _motionReduce: { transition: "none" },
+      bg: "accent",
+      borderRadius: "0 3px 3px 0",
+      content: '""',
+      height: 0,
+      left: 0,
+      position: "absolute",
+      top: "50%",
+      transform: "translateY(-50%)",
+      transition: "height 0.15s",
+      width: "4px",
+    },
+    "&[aria-current=page]::before": { height: "30px" },
+    bg: "transparent",
+    border: 0,
+    display: "grid",
+    height: "46px",
+    padding: 0,
+    placeItems: "center",
+    position: "relative",
+    width: "58px",
+  }),
+  root: css({
+    alignItems: "center",
+    bg: "fill",
+    borderRadius: "0 20px 20px 0",
+    display: "flex",
+    flexDirection: "column",
+    flexShrink: 0,
+    gap: "10px",
+    padding: "12px 0",
+    width: "58px",
+  }),
+};
+
+// A group's mark in its frame: groups are rounded squares, people circles.
+// On the rail the open one's ring sits on top of the mark, inside its
+// edge, so a photo does not hide it and it keeps clear of the flag and
+// badge. Larger for the join sheet and the mark's own pages, so a photo
+// is cropped there as members see it.
+const markFrame = cva({
+  base: {
+    "&::after": {
+      borderRadius: "inherit",
+      boxShadow: "inset 0 0 0 2px transparent, inset 0 0 0 4px transparent",
+      content: '""',
+      inset: 0,
+      pointerEvents: "none",
+      position: "absolute",
+      transition: "box-shadow 0.15s",
+    },
+    "[aria-current=page] > &": {
+      // A thin gap keeps the ring clear of a photo's own colors.
+      "&::after": {
+        boxShadow:
+          "inset 0 0 0 2px var(--accent), inset 0 0 0 4px var(--surface)",
+      },
+      bg: "accentSoft",
+      borderRadius: "11px",
+    },
+    _motionReduce: { transition: "none" },
+    bg: "surface",
+    borderRadius: "14px",
+    display: "grid",
+    fontFamily: EMOJI_FONT,
+    fontSize: "22px",
+    height: "42px",
+    overflow: "hidden",
+    placeItems: "center",
+    position: "relative",
+    transition: "border-radius 0.15s",
+    width: "42px",
+  },
+  variants: {
+    size: {
+      large: {
+        bg: "fill",
+        borderRadius: "25px",
+        height: "76px",
+        width: "76px",
+      },
+    },
+  },
+});
+
+// The same rounded square as the rail, small, before a row's name.
+const smallMarkFrame = css({
+  bg: "surface",
+  borderRadius: "9px",
+  display: "grid",
+  height: "28px",
+  overflow: "hidden",
+  placeItems: "center",
+  width: "28px",
+});
+
+// A group mark fills its frame, the same for every member: a photo, an
+// emoji, a letter or an icon.
+const markPart = {
+  choiceEmoji: css({ fontFamily: EMOJI_FONT, fontSize: "20px" }),
+  emoji: css({ fontFamily: EMOJI_FONT, lineHeight: 1 }),
+  icon: css({
+    display: "grid",
+    height: "100%",
+    placeItems: "center",
+    width: "100%",
+  }),
+  iconBare: css({ display: "grid", placeItems: "center" }),
+  letter: css({
+    display: "grid",
+    fontWeight: 700,
+    height: "100%",
+    lineHeight: 1,
+    placeItems: "center",
+    width: "100%",
+  }),
+  photo: css({
+    display: "grid",
+    height: "100%",
+    objectFit: "cover",
+    placeItems: "center",
+    width: "100%",
+  }),
+};
+
+// A person's round picture, yours in the accent.
+const avatar = cva({
+  base: {
+    "& img": {
+      borderRadius: "50%",
+      height: "100%",
+      objectFit: "cover",
+      width: "100%",
+    },
+    bg: "var(--fill-3)",
+    borderRadius: "50%",
+    color: "text2",
+    display: "grid",
+    flexShrink: 0,
+    fontSize: "11px",
+    fontWeight: 600,
+    height: "24px",
+    placeItems: "center",
+    width: "24px",
+  },
+  variants: { me: { true: { bg: "accentFill", color: "onAccentFill" } } },
+});
+
+// A day with no shift, as a small dot.
+const emptyMark = css({
+  bg: "var(--fill-3)",
+  borderRadius: "50%",
+  height: "6px",
+  width: "6px",
+});
+
+// The group's page: its name, the week everyone works as a card with the
+// next day all are off, then its chats and the rows of its settings.
+const hub = {
+  chatAll: css({
+    bg: "accentSoft",
+    borderRadius: "9px",
+    color: "accent",
+    display: "grid",
+    flexShrink: 0,
+    height: "28px",
+    placeItems: "center",
+    width: "28px",
+  }),
+  editMark: css({
+    display: "grid",
+    margin: "4px 0 18px",
+    placeItems: "center",
+  }),
+  header: css({
+    alignItems: "center",
+    display: "flex",
+    gap: "2px",
+    paddingTop: "4px",
+  }),
+  icon: css({
+    bg: "fill",
+    borderRadius: "8px",
+    display: "grid",
+    flexShrink: 0,
+    height: "26px",
+    overflow: "hidden",
+    placeItems: "center",
+    width: "26px",
+  }),
+  labelAfterAvatar: css({ marginLeft: "12px" }),
+  // The rail at the phone's left edge, the page beside it.
+  layout: css({
+    display: "flex",
+    flex: 1,
+    gap: "8px",
+    marginLeft: "-9px",
+    minHeight: 0,
+  }),
+  // A long group name gives way to the controls instead of wrapping.
+  name: css({
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  }),
+  profileList: css({ marginTop: "18px" }),
+  qr: css({
+    alignItems: "center",
+    bg: "surface",
+    border: "1px solid token(colors.separator)",
+    borderRadius: "18px",
+    color: "text",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    padding: "24px 16px 18px",
+  }),
+  qrNote: css({ color: "text3", fontSize: "11px" }),
+  rowIcon: css({ color: "accent", flexShrink: 0 }),
+  rowMark: css({ marginRight: "12px" }),
+  sectionHead: css({
+    alignItems: "center",
+    display: "flex",
+    justifyContent: "space-between",
+    marginBottom: "6px",
+  }),
+  sectionHeadTitle: css({
+    color: "text3",
+    fontSize: "12px",
+    fontWeight: 600,
+    margin: "0 0 0 12px",
+  }),
+  sectionLink: css({
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    color: "accent",
+    display: "inline-flex",
+    fontSize: "12px",
+    fontWeight: 600,
+    gap: "1px",
+    padding: "0 2px 0 8px",
+  }),
+  title: css({
+    alignItems: "center",
+    display: "flex",
+    flex: 1,
+    fontSize: "19px",
+    fontWeight: 700,
+    gap: "8px",
+    margin: 0,
+    minWidth: 0,
+  }),
+  // Only a frame on the screen's own color: the raised ground is white
+  // like the screen's in light mode but lifted in dark, where the card
+  // would float.
+  weekCard: css({
+    bg: "background",
+    border: "1px solid token(colors.separator)",
+    borderRadius: "16px",
+    color: "text",
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+    padding: "8px 6px 10px 4px",
+    textAlign: "left",
+    width: "100%",
+  }),
+  // 次にみんな休み: a row under the week, laid out like 今月のみんな休み.
+  weekCardNext: css({
+    "& svg": { color: "textFaint" },
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    borderTop: "1px solid token(colors.separator)",
+    color: "text2",
+    display: "flex",
+    fontSize: "12px",
+    gap: "8px",
+    marginTop: "2px",
+    padding: "10px 6px 2px 10px",
+    textAlign: "left",
+    width: "100%",
+  }),
+  weekCardNextValue: css({
+    color: "accentStrong",
+    fontWeight: 600,
+    marginLeft: "auto",
+  }),
+  weekCardTable: css({
+    bg: "transparent",
+    border: 0,
+    color: "inherit",
+    padding: 0,
+    textAlign: "left",
+    width: "100%",
+  }),
+};
+
+// 参加の確認, over the calendar when an invitation link is opened.
+const join = {
+  from: css({
+    alignItems: "center",
+    color: "text2",
+    display: "flex",
+    fontSize: "13px",
+    gap: "6px",
+    margin: "12px 0 0",
+  }),
+  members: css({
+    "& small": { color: "text3", fontSize: "12px", marginLeft: "4px" },
+    alignItems: "center",
+    display: "flex",
+    gap: "6px",
+    marginTop: "12px",
+  }),
+  name: css({ alignSelf: "stretch", marginTop: "18px", textAlign: "left" }),
+  sheet: css({
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    textAlign: "center",
+  }),
+  text: css({
+    color: "text3",
+    fontSize: "12px",
+    lineHeight: 1.6,
+    margin: "10px 0 16px",
+  }),
+  title: css({ fontSize: "19px", fontWeight: 700, margin: "10px 0 0" }),
+};
+
+// A profile's photo with a camera badge to change it, as the platforms'
+// contact cards have it; the choices open in a sheet.
+const photoPicker = {
+  action: css({
+    bg: "transparent",
+    border: 0,
+    color: "accent",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: 600,
+    padding: 0,
+  }),
+  badge: css({
+    bg: "surface",
+    borderRadius: "50%",
+    bottom: "-2px",
+    boxShadow: "0 1px 4px var(--shadow-strong)",
+    color: "accent",
+    display: "grid",
+    height: "26px",
+    placeItems: "center",
+    position: "absolute",
+    right: "-2px",
+    width: "26px",
+  }),
+  cancel: css({
+    bg: "fill",
+    border: 0,
+    borderRadius: "16px",
+    color: "text",
+    fontSize: "16px",
+    fontWeight: 600,
+    marginTop: "10px",
+    minHeight: "48px",
+    width: "100%",
+  }),
+  edit: css({
+    bg: "transparent",
+    border: 0,
+    cursor: "pointer",
+    padding: 0,
+    position: "relative",
+  }),
+  root: css({
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+  }),
+};
+
 // Groups down the side, like chat apps with many rooms. The count is
 // unread messages across the group's chats.
 function GroupRail({
@@ -1329,35 +1744,35 @@ function GroupRail({
   onScan: () => void;
 }) {
   return (
-    <nav aria-label="グループ" className="gr-rail">
+    <nav aria-label="グループ" className={rail.root}>
       {groups.map((group) => {
         const unread = unreadOf(group.id);
         return (
           <button
             aria-current={group.id === selected ? "page" : undefined}
             aria-label={`${group.name}${unread > 0 ? `、未読${unread}件` : ""}`}
-            className="gr-rail-item"
+            className={rail.item}
             key={group.id}
             onClick={() => {
               onSelect(group.id);
             }}
             type="button"
           >
-            <span aria-hidden="true" className="gr-rail-icon">
+            <span aria-hidden="true" className={markFrame()}>
               <GroupIcon mark={group.mark} size={24} />
             </span>
             {unread > 0 && (
-              <span aria-hidden="true" className={cx(badge, "gr-rail-badge")}>
+              <span aria-hidden="true" className={cx(badge, rail.badge)}>
                 {unread}
               </span>
             )}
           </button>
         );
       })}
-      <span aria-hidden="true" className="gr-rail-divider" />
+      <span aria-hidden="true" className={rail.divider} />
       <button
         aria-label="グループを作る"
-        className="gr-rail-action"
+        className={rail.action}
         onClick={onNew}
         type="button"
       >
@@ -1365,7 +1780,7 @@ function GroupRail({
       </button>
       <button
         aria-label="QRコードで参加"
-        className="gr-rail-action"
+        className={rail.action}
         onClick={onScan}
         type="button"
       >
@@ -1409,12 +1824,12 @@ function GroupHub({
   const [picking, setPicking] = useState(false);
   return (
     <>
-      <header className="gr-hub-header">
-        <h3>
-          <span aria-hidden="true" className="gr-hub-icon">
+      <header className={hub.header}>
+        <h3 className={hub.title}>
+          <span aria-hidden="true" className={hub.icon}>
             <GroupIcon mark={group.mark} size={16} />
           </span>
-          <span className="gr-hub-name">{group.name}</span>
+          <span className={hub.name}>{group.name}</span>
         </h3>
         <IconButton label="メンバーを招待" onClick={onInvite}>
           <UserPlus aria-hidden="true" size={18} />
@@ -1424,17 +1839,17 @@ function GroupHub({
         </IconButton>
       </header>
       <section>
-        <div className="gr-section-head">
-          <h4>シフト</h4>
-          <button className="gr-section-link" onClick={onShifts} type="button">
+        <div className={hub.sectionHead}>
+          <h4 className={hub.sectionHeadTitle}>シフト</h4>
+          <button className={hub.sectionLink} onClick={onShifts} type="button">
             月で見る
             <ChevronRight aria-hidden="true" size={15} />
           </button>
         </div>
-        <div className="gr-week-card">
+        <div className={hub.weekCard}>
           <button
             aria-label="今週のみんなのシフト。押すと月で見られます"
-            className="gr-week-card-table"
+            className={hub.weekCardTable}
             onClick={onShifts}
             type="button"
           >
@@ -1447,22 +1862,22 @@ function GroupHub({
           </button>
           {nextOff ? (
             <button
-              className="gr-week-card-next"
+              className={hub.weekCardNext}
               onClick={() => {
                 onShiftsDay(nextOff);
               }}
               type="button"
             >
-              <span className="gr-week-card-next-label">次にみんな休み</span>
-              <span className="gr-week-card-next-value">
+              <span>次にみんな休み</span>
+              <span className={hub.weekCardNextValue}>
                 {formatDay(nextOff)}・{daysFromToday(nextOff)}
               </span>
               <ChevronRight aria-hidden="true" size={15} />
             </button>
           ) : (
-            <div className="gr-week-card-next">
-              <span className="gr-week-card-next-label">次にみんな休み</span>
-              <span className="gr-week-card-next-value">なし</span>
+            <div className={hub.weekCardNext}>
+              <span>次にみんな休み</span>
+              <span className={hub.weekCardNextValue}>なし</span>
             </div>
           )}
         </div>
@@ -1472,7 +1887,7 @@ function GroupHub({
           <ChatRow
             chat={chatOf(groupChat)}
             icon={
-              <span className="gr-chat-all">
+              <span className={hub.chatAll}>
                 <MessagesSquare aria-hidden="true" size={15} />
               </span>
             }
@@ -1499,7 +1914,7 @@ function GroupHub({
               label="個人チャットを始める"
               leading={
                 <>
-                  <Plus aria-hidden="true" className="gr-row-icon" size={18} />
+                  <Plus aria-hidden="true" className={hub.rowIcon} size={18} />
                 </>
               }
               onClick={() => {
@@ -1531,7 +1946,7 @@ function GroupHub({
                     <ListRow
                       key={member.id}
                       label={member.name}
-                      labelClassName="gr-row-label-after-avatar"
+                      labelClassName={hub.labelAfterAvatar}
                       leading={
                         <>
                           <Avatar member={member} size={28} />
@@ -1612,7 +2027,7 @@ function MemberSheet({
             )}
             <h3 className={profileStyle.name}>{member.name}</h3>
             <span className={profileStyle.where}>
-              <span aria-hidden="true" className="gr-hub-icon">
+              <span aria-hidden="true" className={hub.icon}>
                 <GroupIcon mark={group.mark} size={14} />
               </span>
               {group.name}でのプロフィール
@@ -3709,7 +4124,7 @@ export function PhotoAvatar({
   return (
     <span
       aria-hidden="true"
-      className={`gr-avatar ${me ? "gr-avatar-me" : ""}`}
+      className={avatar({ me })}
       style={{ fontSize: Math.round(size * 0.45), height: size, width: size }}
     >
       {photo ? (
@@ -3736,7 +4151,7 @@ function Mark({
 }) {
   const item = patternOn(member, date);
   if (!item) {
-    return <span aria-hidden="true" className="gr-empty" />;
+    return <span aria-hidden="true" className={emptyMark} />;
   }
   return (
     <MemberMark date={date} look={item.look} member={member} size={size} />
@@ -4175,18 +4590,20 @@ export function JoinSheet({
   };
   return (
     <Sheet
-      className="gr-join-sheet"
+      className={join.sheet}
       label={`「${invite.group}」への招待`}
       onOpenChange={setOpen}
       open={open}
     >
-      <span className="gr-rail-icon gr-mark-frame-large">
+      <span className={markFrame({ size: "large" })}>
         <GroupIcon mark={invite.mark} size={40} />
       </span>
       {alreadyIn && (
         <>
-          <h4>「{invite.group}」にはもう参加しています</h4>
-          <p className="gr-join-text">
+          <h4 className={join.title}>
+            「{invite.group}」にはもう参加しています
+          </h4>
+          <p className={join.text}>
             このリンクのグループに、もう入っています。
           </p>
           <Button
@@ -4207,8 +4624,8 @@ export function JoinSheet({
       {!alreadyIn &&
         (joined ? (
           <>
-            <h4>「{invite.group}」に参加しました</h4>
-            <p className="gr-join-text">
+            <h4 className={join.title}>「{invite.group}」に参加しました</h4>
+            <p className={join.text}>
               みんなのシフトと、みんなが休みの日が見られます。
             </p>
             <Button
@@ -4227,7 +4644,7 @@ export function JoinSheet({
           </>
         ) : (
           <>
-            <p className="gr-join-from">
+            <p className={join.from}>
               <PhotoAvatar
                 name={invite.from.name}
                 photo={invite.from.photo}
@@ -4235,8 +4652,8 @@ export function JoinSheet({
               />
               {invite.from.name}からの招待
             </p>
-            <h4>「{invite.group}」に参加しますか？</h4>
-            <div className="gr-join-members">
+            <h4 className={join.title}>「{invite.group}」に参加しますか？</h4>
+            <div className={join.members}>
               {invite.members.map((member) => (
                 <PhotoAvatar
                   key={member.name}
@@ -4247,7 +4664,7 @@ export function JoinSheet({
               ))}
               <small>{invite.members.length}人が参加中</small>
             </div>
-            <List className="gr-join-name">
+            <List className={join.name}>
               <ListRow
                 label="あなたの名前"
                 control={
@@ -4264,7 +4681,7 @@ export function JoinSheet({
                 }
               />
             </List>
-            <p className="gr-join-text">
+            <p className={join.text}>
               このグループの人に、この名前で表示されます。参加すると、あなたのシフトもメンバーに見えるようになります。
             </p>
             <Button
@@ -4340,7 +4757,7 @@ function PhotoPicker({
     close();
   };
   return (
-    <div className="st-profile-photo">
+    <div className={photoPicker.root}>
       <input
         accept="image/*"
         capture="user"
@@ -4362,24 +4779,19 @@ function PhotoPicker({
       />
       <button
         aria-label={label}
-        className="st-photo-edit"
+        className={photoPicker.edit}
         onClick={open}
         type="button"
       >
         {picture}
-        <span aria-hidden="true" className="st-photo-badge">
+        <span aria-hidden="true" className={photoPicker.badge}>
           <Camera size={14} />
         </span>
       </button>
-      <button className="st-photo-action" onClick={open} type="button">
+      <button className={photoPicker.action} onClick={open} type="button">
         {label}
       </button>
-      <Sheet
-        className="st-photo-sheet"
-        label={label}
-        onOpenChange={setSheetOpen}
-        open={sheetOpen}
-      >
+      <Sheet label={label} onOpenChange={setSheetOpen} open={sheetOpen}>
         <List>
           <ListRow
             htmlFor={cameraId}
@@ -4429,7 +4841,7 @@ function PhotoPicker({
             />
           )}
         </List>
-        <button className="st-photo-cancel" onClick={close} type="button">
+        <button className={photoPicker.cancel} onClick={close} type="button">
           キャンセル
         </button>
       </Sheet>
@@ -4527,7 +4939,7 @@ function GroupSettingsPage({
             value="編集"
             leading={
               <>
-                <span className="gr-mark-frame-small gr-row-mark">
+                <span className={cx(smallMarkFrame, hub.rowMark)}>
                   <GroupIcon mark={group.mark} size={16} />
                 </span>
               </>
@@ -4549,7 +4961,7 @@ function GroupSettingsPage({
                 <PhotoAvatar name={shown.name} photo={shown.photo} size={28} />
               </>
             }
-            labelClassName="gr-row-label-after-avatar"
+            labelClassName={hub.labelAfterAvatar}
           />
         </List>
       </Section>
@@ -4580,7 +4992,7 @@ function GroupSettingsPage({
               <>
                 <UserPlus
                   aria-hidden="true"
-                  className="gr-row-icon"
+                  className={hub.rowIcon}
                   size={18}
                 />
               </>
@@ -4688,8 +5100,8 @@ function GroupEditPage({
         }
         title="グループを編集"
       />
-      <div className="gr-edit-mark">
-        <span className="gr-rail-icon gr-mark-frame-large">
+      <div className={hub.editMark}>
+        <span className={markFrame({ size: "large" })}>
           <GroupIcon mark={mark} size={40} />
         </span>
       </div>
@@ -4776,7 +5188,7 @@ function GroupProfilePage({
         photo={shown.photo}
         size={88}
       />
-      <List className="gr-profile-list">
+      <List className={hub.profileList}>
         <ListRow
           label="名前"
           control={
@@ -4823,9 +5235,9 @@ function InvitePage({
   return (
     <>
       <PageHeader back={group.name} onBack={onBack} title="メンバーを招待" />
-      <div className="gr-qr">
+      <div className={hub.qr}>
         <QrCode aria-hidden="true" size={132} strokeWidth={1.2} />
-        <small className="gr-qr-note">
+        <small className={hub.qrNote}>
           この画面を相手に読み取ってもらいます
         </small>
       </div>
@@ -4921,7 +5333,7 @@ export function GroupIcon({
     return (
       <img
         alt=""
-        className="gr-mark-photo"
+        className={markPart.photo}
         height={size}
         loading="lazy"
         src={mark.photo}
@@ -4931,7 +5343,7 @@ export function GroupIcon({
   }
   if (mark.kind === "emoji") {
     return (
-      <span className="gr-mark-emoji" style={{ fontSize: size }}>
+      <span className={markPart.emoji} style={{ fontSize: size }}>
         {mark.emoji}
       </span>
     );
@@ -4939,7 +5351,7 @@ export function GroupIcon({
   if (mark.kind === "letter") {
     return (
       <span
-        className="gr-mark-letter"
+        className={markPart.letter}
         style={{ background: tint, color, fontSize: Math.round(size * 0.6) }}
       >
         {mark.text}
@@ -4952,7 +5364,7 @@ export function GroupIcon({
   }
   return (
     <span
-      className={bare ? "gr-mark-icon-bare" : "gr-mark-icon"}
+      className={bare ? markPart.iconBare : markPart.icon}
       style={{ background: bare ? undefined : tint, color }}
     >
       <Icon size={size} weight="duotone" />
@@ -5037,7 +5449,7 @@ function GroupMarkPage({
           setKind(undefined);
         }}
         picture={
-          <span className="gr-rail-icon gr-mark-frame-large">
+          <span className={markFrame({ size: "large" })}>
             <GroupIcon mark={mark} size={40} />
           </span>
         }
@@ -5068,7 +5480,7 @@ function GroupMarkPage({
               mark.kind === "emoji" ? mark.emoji : undefined
             ).map((emoji) => (
               <Choice
-                className="gr-mark-choice-emoji"
+                className={markPart.choiceEmoji}
                 key={emoji}
                 value={emoji}
               >
@@ -5299,7 +5711,7 @@ function MarkRow({ mark, onOpen }: { mark: GroupMark; onOpen: () => void }) {
       label="アイコン"
       value={
         <>
-          <span className="gr-mark-frame-small">
+          <span className={smallMarkFrame}>
             <GroupIcon mark={mark} size={16} />
           </span>
         </>
