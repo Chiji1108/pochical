@@ -6,7 +6,7 @@ import {
   Share,
 } from "lucide-react";
 import { useContext, useState } from "react";
-import { cx } from "styled-system/css";
+import { css, cva, cx } from "styled-system/css";
 
 import type { ImageOptions } from "../lib/design-settings-store";
 import { DayCell, dateKey } from "./design-calendar";
@@ -47,6 +47,58 @@ const deviceCalendars = [
 ];
 
 type Step = "choose" | "calendar" | { done: string };
+
+const save = {
+  // 画像で保存 over 端末カレンダーに追加.
+  actions: css({ display: "flex", flexDirection: "column", gap: "10px" }),
+  add: css({ marginTop: "18px" }),
+  calendars: css({ border: 0, margin: "0 0 12px", padding: 0 }),
+  // The picked calendar's check; the others keep its room, so the rows
+  // line up.
+  check: cva({
+    base: { color: "accent", flexShrink: 0 },
+    variants: { picked: { false: { visibility: "hidden" } } },
+  }),
+  done: css({ alignItems: "flex-start", display: "flex", gap: "8px" }),
+  doneIcon: css({ color: "accent", flexShrink: 0, marginTop: "3px" }),
+  // A calendar's own color, as the system lists them.
+  dot: css({
+    borderRadius: "50%",
+    flexShrink: 0,
+    height: "10px",
+    width: "10px",
+  }),
+};
+
+// The picture as it will be saved: the month in the calendar screen's own
+// ground, so it is the calendar as seen (the raised ground would lift it
+// in dark mode), and 共有 and 保存 under the page.
+const picture = {
+  actions: css({
+    display: "grid",
+    flexShrink: 0,
+    gap: "10px",
+    gridTemplateColumns: "1fr 1fr",
+    padding: "10px 4px 20px",
+  }),
+  credit: css({
+    color: "textFaint",
+    fontSize: "10px",
+    margin: "10px 4px 0",
+    textAlign: "right",
+  }),
+  frame: css({
+    bg: "background",
+    border: "1px solid token(colors.separator)",
+    borderRadius: "18px",
+    boxShadow: "0 6px 18px var(--shadow-faint)",
+    color: "text",
+    margin: 0,
+    padding: "14px 10px 10px",
+    pointerEvents: "none",
+  }),
+  title: css({ fontSize: "15px", fontWeight: 600, margin: "0 4px 12px" }),
+};
 
 // Saving a month: as a picture to show, or into the device calendar. It
 // also opens by itself when a month has just been filled in, the moment
@@ -114,11 +166,11 @@ export function SaveSheet({
       />
       {step === "choose" && (
         <>
-          <p className="dc-import-description">
+          <p>
             {completion ? "お疲れさまでした。" : ""}
             画像にして見せたり、端末のカレンダーにまとめて入れたりできます。
           </p>
-          <div className="dc-save-actions">
+          <div className={save.actions}>
             <Button
               variant="primary"
               onClick={() => {
@@ -149,10 +201,8 @@ export function SaveSheet({
       )}
       {step === "calendar" && (
         <>
-          <p className="dc-import-description">
-            {monthLabel}のシフトを、選んだカレンダーに予定として入れます。
-          </p>
-          <fieldset className={cx(listStyle, "dc-save-calendars")}>
+          <p>{monthLabel}のシフトを、選んだカレンダーに予定として入れます。</p>
+          <fieldset className={cx(listStyle, save.calendars)}>
             <legend className="dc-sr-only">入れるカレンダー</legend>
             {deviceCalendars.map((item) => (
               <ListRow
@@ -163,7 +213,7 @@ export function SaveSheet({
                   <>
                     <span
                       aria-hidden="true"
-                      className="dc-save-dot"
+                      className={save.dot}
                       style={{ background: item.color }}
                     />
                   </>
@@ -181,7 +231,9 @@ export function SaveSheet({
                     />
                     <Check
                       aria-hidden="true"
-                      className={`dc-save-check ${calendarId === item.id ? "" : "dc-save-unchecked"}`}
+                      className={save.check({
+                        picked: calendarId === item.id,
+                      })}
                       size={18}
                     />
                   </>
@@ -201,7 +253,7 @@ export function SaveSheet({
           </List>
           <Button
             variant="primary"
-            className="dc-save-add"
+            className={save.add}
             disabled={!calendar || count === 0}
             onClick={() => {
               setStep({
@@ -215,8 +267,8 @@ export function SaveSheet({
       )}
       {typeof step === "object" && (
         <>
-          <p className="dc-import-description dc-save-done">
-            <Check aria-hidden="true" className="dc-save-done-icon" size={18} />
+          <p className={save.done}>
+            <Check aria-hidden="true" className={save.doneIcon} size={18} />
             {step.done}
           </p>
           <Button variant="primary" onClick={close}>
@@ -277,11 +329,11 @@ export function ImagePreviewPage({
                 <OffDisplayContext value={options.blankOff ? "blank" : "show"}>
                   <figure
                     aria-label={`${title}の画像`}
-                    className="dc-image"
+                    className={picture.frame}
                     inert
                     style={themeStyle(theme, shown, tone)}
                   >
-                    <figcaption className="dc-image-title">{title}</figcaption>
+                    <figcaption className={picture.title}>{title}</figcaption>
                     <WeekdayRow compact />
                     <div className={dayGrid}>
                       {dates.map((date) => (
@@ -297,7 +349,7 @@ export function ImagePreviewPage({
                         />
                       ))}
                     </div>
-                    <p className="dc-image-credit">ポチカル</p>
+                    <p className={picture.credit}>ポチカル</p>
                   </figure>
                 </OffDisplayContext>
               </ColorSchemeContext>
@@ -334,7 +386,7 @@ export function ImagePreviewPage({
           画像にだけ使う見た目です。アプリのスタイルは変わりません。
         </p>
       </div>
-      <div className="dc-image-actions" data-toast-above="">
+      <div className={picture.actions} data-toast-above="">
         <Button
           variant="quiet"
           onClick={() => {
