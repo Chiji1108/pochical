@@ -72,6 +72,26 @@ export const states: State[] = [
     steps: tapOn(/^9月24日/u),
   },
   {
+    // A day with its time moved and a memo: the time, its hint and the
+    // people with it.
+    name: "calendar/day-changed",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: tapOn(/^9月8日/u),
+  },
+  {
+    name: "calendar/day-adding-member",
+    path: demo("bottomRows=two&scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, /^9月8日/u);
+      await tap(page, "追加");
+    },
+  },
+  {
+    name: "calendar/day-empty",
+    path: demo("bottomRows=two&scheduleSample=empty"),
+    steps: tapOn(/^9月1日/u),
+  },
+  {
     name: "calendar/image",
     path: demo("bottomRows=two&scheduleSample=filled"),
     steps: tapOn("画像で保存"),
