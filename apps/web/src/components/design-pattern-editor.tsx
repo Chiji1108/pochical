@@ -189,6 +189,7 @@ export function PatternsPage({
         }
         trailing={
           <HeaderAction
+            prominent={sorting}
             onClick={() => {
               setView(sorting ? "list" : "sort");
             }}
@@ -415,6 +416,7 @@ function PatternEditor({
         trailing={
           <HeaderAction
             disabled={!canSave}
+            prominent
             onClick={() => {
               onSave({ ...draft, name: draft.name.trim() });
             }}

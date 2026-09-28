@@ -2735,6 +2735,7 @@ function ChatPage({
             <span className={chatStyle.quoteText}>{summaryOf(replying)}</span>
           </span>
           <IconButton
+            glass={false}
             label="返信をやめる"
             onClick={() => {
               setReplyTo(undefined);
@@ -5750,13 +5751,14 @@ function GroupEditPage({
     <>
       <PageHeader
         leading={
-          <BackButton chevron={false} onClick={onCancel}>
-            キャンセル
-          </BackButton>
+          <IconButton label="キャンセル" onClick={onCancel}>
+            <X aria-hidden="true" size={22} />
+          </IconButton>
         }
         trailing={
           <HeaderAction
             disabled={!canSave}
+            prominent
             onClick={() => {
               onSave(draft);
             }}
@@ -6313,6 +6315,7 @@ function NewGroupPage({
         trailing={
           <HeaderAction
             disabled={!canCreate}
+            prominent
             onClick={() => {
               onCreate({ mark, myName: myName.trim(), name: name.trim() });
             }}

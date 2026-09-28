@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   CalendarPlus,
-  Image as ImageIcon,
   Check,
   Download,
+  Image as ImageIcon,
   Info,
   Pencil,
   UserPlus,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -290,13 +291,15 @@ function Buttons() {
             back="シフトパターン"
             onBack={() => undefined}
             title="パターンを編集"
-            trailing={<HeaderAction>保存</HeaderAction>}
+            trailing={<HeaderAction prominent>保存</HeaderAction>}
           />
         </Item>
-        <Item name="BackButton chevron=false" where="入力を捨てて戻るとき">
-          <BackButton chevron={false}>キャンセル</BackButton>
+        <Item name="IconButton(✕)" where="入力を捨てて戻るとき">
+          <IconButton label="キャンセル">
+            <X aria-hidden="true" size={22} />
+          </IconButton>
         </Item>
-        <Item name="BackButton(記号だけ)" where="はじめての設定">
+        <Item name="BackButton" where="前の画面へ戻るとき">
           <BackButton />
         </Item>
         <Item name="IconButton" where="グループの見出しの招待・設定、月の保存">

@@ -1,5 +1,5 @@
 import { Dialog, Portal } from "@ark-ui/react";
-import { ChevronLeft, X } from "lucide-react";
+import { Check, ChevronLeft, X } from "lucide-react";
 import { createContext, useContext, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import { css, cva, cx } from "styled-system/css";
@@ -273,21 +273,30 @@ const heading = {
   titleRow: css({ alignItems: "center", display: "flex", gap: "8px" }),
 };
 
+// As iOS 26's sheets: ✕ in gray glass on the left, ✓ on the right filled
+// with the accent once it can confirm, and the title between them.
 const decide = {
-  action: css({
-    _disabled: { color: "textDisabled", cursor: "default" },
-    fontWeight: 600,
-    justifySelf: "end",
+  button: cva({
+    base: {
+      border: 0,
+      borderRadius: "999px",
+      display: "grid",
+      height: "touch",
+      placeItems: "center",
+      width: "touch",
+    },
+    variants: {
+      confirm: {
+        false: { bg: "fill", color: "text", justifySelf: "start" },
+        true: {
+          _disabled: { bg: "fill", color: "textDisabled", cursor: "default" },
+          bg: "accentFill",
+          color: "onAccentFill",
+          justifySelf: "end",
+        },
+      },
+    },
   }),
-  button: css({
-    bg: "transparent",
-    border: 0,
-    color: "accent",
-    minHeight: "action",
-    paddingInline: "4px",
-    textStyle: "body",
-  }),
-  cancel: css({ justifySelf: "start" }),
   root: css({
     alignItems: "center",
     display: "grid",
@@ -295,7 +304,7 @@ const decide = {
     gridTemplateColumns: "1fr auto 1fr",
     marginBottom: "16px",
   }),
-  title: css({ fontWeight: 600, margin: 0, textStyle: "callout" }),
+  title: css({ fontWeight: 600, margin: 0, textStyle: "headline" }),
 };
 
 export function SheetHeading({
@@ -361,20 +370,22 @@ export function DecideHeading({
   return (
     <header className={decide.root}>
       <button
-        className={cx(decide.button, decide.cancel)}
+        aria-label="キャンセル"
+        className={decide.button({ confirm: false })}
         onClick={onCancel}
         type="button"
       >
-        キャンセル
+        <X aria-hidden="true" size={22} />
       </button>
       <h4 className={decide.title}>{title}</h4>
       <button
-        className={cx(decide.button, decide.action)}
+        aria-label={action}
+        className={decide.button({ confirm: true })}
         disabled={disabled}
         onClick={onAction}
         type="button"
       >
-        {action}
+        <Check aria-hidden="true" size={22} />
       </button>
     </header>
   );

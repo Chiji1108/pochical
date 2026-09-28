@@ -154,28 +154,38 @@ export function Button({
 
 // An action drawn as its icon alone, like the heading's 招待 or 保存. The
 // label is what a screen reader says.
-const iconButtonStyle = css({
-  _hover: { bg: "fill" },
-  bg: "transparent",
-  border: 0,
-  borderRadius: "999px",
-  color: "accent",
-  display: "grid",
-  flexShrink: 0,
-  height: "touch",
-  placeItems: "center",
-  width: "touch",
+// As iOS 26's bar buttons: an icon in a round of glass, in the text color.
+// With glass={false} it is the icon alone, in the accent, for a button
+// inside something else, like a reply's way out.
+const iconButtonStyle = cva({
+  base: {
+    border: 0,
+    borderRadius: "999px",
+    display: "grid",
+    flexShrink: 0,
+    height: "touch",
+    placeItems: "center",
+    width: "touch",
+  },
+  defaultVariants: { glass: true },
+  variants: {
+    glass: {
+      false: { _hover: { bg: "fill" }, bg: "transparent", color: "accent" },
+      true: { bg: "fill", color: "text" },
+    },
+  },
 });
 
 export function IconButton({
   label,
+  glass = true,
   className,
   ...props
-}: ButtonProps & { label: string }) {
+}: ButtonProps & { label: string; glass?: boolean }) {
   return (
     <button
       aria-label={label}
-      className={cx(iconButtonStyle, "ui-icon-button", className)}
+      className={cx(iconButtonStyle({ glass }), "ui-icon-button", className)}
       type="button"
       {...props}
     />
@@ -564,20 +574,18 @@ export function DoneButton({ className, ...props }: ButtonProps) {
 
 // 今月 or 今週: back to the month or week that holds today, dimmed once
 // there.
+// As iOS 26's bar buttons with words, like the calendar's 今日: the word
+// in a round-ended piece of glass.
 const todayButtonStyle = css({
-  _disabled: {
-    borderColor: "separator",
-    color: "textDisabled",
-    cursor: "default",
-  },
-  bg: "transparent",
-  border: "1px solid token(colors.border)",
-  borderRadius: "control",
-  color: "accent",
-  fontWeight: 600,
-  minHeight: "30px",
-  padding: "0 12px",
-  textStyle: "footnote",
+  _disabled: { color: "textDisabled", cursor: "default" },
+  bg: "fill",
+  border: 0,
+  borderRadius: "999px",
+  color: "text",
+  flexShrink: 0,
+  height: "touch",
+  paddingInline: "16px",
+  textStyle: "body",
 });
 
 export function TodayButton({
@@ -660,64 +668,34 @@ export function SummaryRow({
 // Without children it is the chevron alone, labelled 戻る. Disabled, it
 // keeps its place but hides, as while a list is being sorted.
 // The way back, as iOS 26 and Android draw it: an arrow alone, here in
-// iOS's round button, naming where it goes only to a screen reader. With
-// chevron={false} it is words instead, like キャンセル.
-const backButtonStyle = cva({
-  base: {
-    _disabled: { visibility: "hidden" },
-    alignItems: "center",
-    alignSelf: "flex-start",
-    border: 0,
-    display: "inline-flex",
-    flexShrink: 0,
-    minHeight: "action",
-    textStyle: "body",
-  },
-  variants: {
-    icon: {
-      false: {
-        bg: "transparent",
-        color: "accent",
-        marginLeft: "-8px",
-        paddingInline: "8px",
-      },
-      true: {
-        bg: "fill",
-        borderRadius: "999px",
-        color: "text",
-        height: "touch",
-        justifyContent: "center",
-        width: "touch",
-      },
-    },
-  },
+// iOS's round of glass, naming where it goes only to a screen reader.
+const backButtonStyle = css({
+  _disabled: { visibility: "hidden" },
+  alignItems: "center",
+  alignSelf: "flex-start",
+  bg: "fill",
+  border: 0,
+  borderRadius: "999px",
+  color: "text",
+  display: "inline-flex",
+  flexShrink: 0,
+  height: "touch",
+  justifyContent: "center",
+  width: "touch",
 });
 
 export function BackButton({
-  chevron = true,
   className,
   children,
   "aria-label": ariaLabel,
   ...props
-}: ButtonProps & { chevron?: boolean }) {
-  if (!chevron) {
-    return (
-      <button
-        aria-label={ariaLabel}
-        className={cx(backButtonStyle({ icon: false }), className)}
-        type="button"
-        {...props}
-      >
-        {children}
-      </button>
-    );
-  }
+}: ButtonProps) {
   const name =
     ariaLabel ?? (typeof children === "string" ? `${children}に戻る` : "戻る");
   return (
     <button
       aria-label={name}
-      className={cx(backButtonStyle({ icon: true }), className)}
+      className={cx(backButtonStyle, className)}
       type="button"
       {...props}
     >
@@ -727,22 +705,38 @@ export function BackButton({
 }
 
 // The action at a page's top right: 保存, 作る, 並び替え and the like.
-const headerActionStyle = css({
-  _disabled: { color: "textDisabled", cursor: "default" },
-  bg: "transparent",
-  border: 0,
-  color: "accent",
-  fontWeight: 600,
-  minHeight: "action",
-  paddingLeft: "12px",
-  paddingRight: "4px",
-  textStyle: "headline",
+// As iOS 26's bar buttons with words: in a round-ended piece of glass,
+// and filled with the accent when it confirms, like 保存 or 追加; gray
+// glass while it cannot yet.
+const headerActionStyle = cva({
+  base: {
+    _disabled: { bg: "fill", color: "textDisabled", cursor: "default" },
+    alignItems: "center",
+    border: 0,
+    borderRadius: "999px",
+    display: "inline-flex",
+    flexShrink: 0,
+    height: "touch",
+    paddingInline: "16px",
+    textStyle: "body",
+  },
+  defaultVariants: { prominent: false },
+  variants: {
+    prominent: {
+      false: { bg: "fill", color: "text" },
+      true: { bg: "accentFill", color: "onAccentFill", fontWeight: 600 },
+    },
+  },
 });
 
-export function HeaderAction({ className, ...props }: ButtonProps) {
+export function HeaderAction({
+  prominent = false,
+  className,
+  ...props
+}: ButtonProps & { prominent?: boolean }) {
   return (
     <button
-      className={cx(headerActionStyle, className)}
+      className={cx(headerActionStyle({ prominent }), className)}
       type="button"
       {...props}
     />
@@ -1698,7 +1692,7 @@ export function IconMenu({
     <Menu.Root positioning={{ gutter: 6, placement: "bottom-end" }}>
       <Menu.Trigger
         aria-label={label}
-        className={cx(iconButtonStyle, "ui-icon-button", className)}
+        className={cx(iconButtonStyle(), "ui-icon-button", className)}
       >
         {icon}
       </Menu.Trigger>
