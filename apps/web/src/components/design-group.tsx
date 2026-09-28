@@ -23,13 +23,23 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
-import { useContext, useEffect, useId, useRef, useState } from "react";
+import {
+  useContext,
+  useEffect,
+  useEffectEvent,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
+import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
+import type { DesignVariants } from "../lib/design-variants";
 import {
   TabBar,
   addDays,
@@ -43,6 +53,7 @@ import {
 import type { Schedule, Tab } from "./design-calendar";
 import { EmojiPickerSheet } from "./design-emoji-picker";
 import { iconNames, OtherEmojiButton, withPicked } from "./design-look-editor";
+import { MonthTitleButton } from "./design-month-picker";
 import {
   ConfirmDialog,
   DecideHeading,
@@ -78,6 +89,7 @@ import {
   menuStyle,
   Note,
   PageHeader,
+  Pager,
   PullDownMenu,
   pushToBottom,
   Screen,
@@ -157,7 +169,6 @@ export type GroupProfile = { name?: string; photo?: string; noPhoto?: boolean };
 
 const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
 const designMonth = new Date(2026, 8, 1);
-const designToday = new Date(2026, 8, 24);
 const weekLength = 7;
 
 function pattern(
@@ -667,6 +678,7 @@ export function DesignGroup({
   onTab,
   initialGroupId = "family",
   scanResult = "invite",
+  monthNav = "arrows",
 }: {
   schedule: Schedule;
   patternKeys: Shift[];
@@ -675,6 +687,8 @@ export function DesignGroup({
   initialGroupId?: string;
   // What the QR page finds, as 比べる案 sets it.
   scanResult?: ScanResult;
+  // How the shift table moves between months, as 比べる案 sets it.
+  monthNav?: MonthNav;
 
   onTab: (tab: Tab) => void;
 }) {
@@ -978,6 +992,7 @@ export function DesignGroup({
               layout={layouts[group.id] ?? defaultLayout(group.members.length)}
               day={page.day}
               month={page.month}
+              monthNav={monthNav}
               onBack={() => {
                 setPage(
                   page.from
@@ -3090,6 +3105,11 @@ const weekTable = {
       },
     },
   }),
+  // A month's heading between the weeks of a list of months.
+  divider: css({
+    borderBottom: "1px solid token(colors.separator)",
+    padding: "8px 0 8px 4px",
+  }),
   weekdays: cva({
     base: { color: "text4", fontSize: "10px", textAlign: "center" },
     variants: {
@@ -3099,7 +3119,7 @@ const weekTable = {
           margin: "-8px 0 -8px",
           padding: "8px 0 4px",
           position: "sticky",
-          top: "-8px",
+          top: "var(--pinned-top, -8px)",
           zIndex: 5,
         },
       },
@@ -3327,6 +3347,13 @@ const dayRows = {
     textAlign: "left",
     width: "100%",
   }),
+  // A month's heading between the months: kept at the left edge when the
+  // table scrolls sideways.
+  divider: css({
+    "& > *": { left: 0, position: "sticky" },
+    borderBottom: "1px solid token(colors.separator)",
+    padding: "20px 0 8px 12px",
+  }),
   empty: css({ color: "textDisabled", fontSize: "10px" }),
   // The header stays on top as the rows scroll; a border would scroll away
   // with collapsed borders, so a shadow draws its line.
@@ -3356,7 +3383,8 @@ const dayRows = {
       corner: { true: { left: 0, width: "46px", zIndex: 4 } },
       last: { true: {} },
       me: { true: { left: "46px", zIndex: 4 } },
-      page: { true: { top: "-8px" } },
+      // Under the page's own pinned rows, when it has any.
+      page: { true: { top: "var(--pinned-top, -8px)" } },
       scrolls: { true: {} },
     },
   }),
@@ -3592,6 +3620,14 @@ const monthSwitch = {
 // sheet to cover.
 const shiftsPage = {
   legendMember: css({ alignItems: "center", display: "flex", gap: "8px" }),
+  monthName: css({ fontWeight: 600, textStyle: "headline" }),
+  // The month's name and 今日 or 今月.
+  monthRow: css({
+    alignItems: "center",
+    display: "flex",
+    height: "48px",
+    justifyContent: "space-between",
+  }),
   month: css({
     alignItems: "center",
     display: "grid",
@@ -3602,6 +3638,20 @@ const shiftsPage = {
     // Room to scroll the last weeks out from under the sheet.
     variants: { withSheet: { true: { paddingBottom: "300px" } } },
   }),
+  // Over a list of months, the page's header and the month row stay on
+  // top, spanning the screen so the rows pass under them.
+  bar: css({
+    bg: "background",
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    margin: "-8px -20px 0",
+    padding: "8px 20px 0",
+    position: "sticky",
+    top: "-8px",
+    zIndex: 6,
+  }),
+  scrolling: css({ display: "flex", flexDirection: "column", gap: "16px" }),
   sheetTime: css({ color: "text4", textStyle: "caption" }),
   // A mark and its name, as markValue sets them apart in a row's value.
   sheetValue: css({ alignItems: "center", display: "inline-flex", gap: "8px" }),
@@ -3917,6 +3967,7 @@ function ShiftsPage({
   backLabel,
   day,
   month: initialMonth,
+  monthNav,
   layout,
   onLayout: setLayout,
   onBack,
@@ -3926,6 +3977,7 @@ function ShiftsPage({
   // A day to open picked, from 次にみんな休み.
   day?: Date;
   month?: Date;
+  monthNav: MonthNav;
   layout: Layout;
   onLayout: (layout: Layout) => void;
   onBack: () => void;
@@ -3941,30 +3993,37 @@ function ShiftsPage({
   const pick = (date: Date) => {
     setPicked(picked && dateKey(picked) === dateKey(date) ? undefined : date);
   };
+  // A list of months pins the page's header over it, with the month row.
+  const scrolling = monthNav === "title" && layout !== "person";
+  const header = (
+    <PageHeader
+      inlineTitle={group.name}
+      leading={<BackButton onClick={onBack}>{backLabel}</BackButton>}
+      trailing={
+        <ShiftsMenu
+          layout={layout}
+          onLayout={setLayout}
+          onLegend={() => {
+            setLegend(group.members);
+            setLegendOpen(true);
+          }}
+          onSave={() => {
+            toast(`${month.getMonth() + 1}月のシフト表を写真に保存しました`);
+          }}
+        />
+      }
+    />
+  );
   return (
     <div className={shiftsPage.root({ withSheet: picked !== undefined })}>
-      <PageHeader
-        inlineTitle={group.name}
-        leading={<BackButton onClick={onBack}>{backLabel}</BackButton>}
-        trailing={
-          <ShiftsMenu
-            layout={layout}
-            onLayout={setLayout}
-            onLegend={() => {
-              setLegend(group.members);
-              setLegendOpen(true);
-            }}
-            onSave={() => {
-              toast(`${month.getMonth() + 1}月のシフト表を写真に保存しました`);
-            }}
-          />
-        }
-      />
+      {!scrolling && header}
       <PagedShifts
         dates={dates}
         group={group}
+        header={header}
         layout={layout}
         month={month}
+        monthNav={monthNav}
         onMember={(member) => {
           setLegend([member]);
           setLegendOpen(true);
@@ -4031,8 +4090,10 @@ function ShiftsMenu({
 
 function PagedShifts({
   group,
+  header,
   layout,
   month,
+  monthNav,
   dates,
   picked,
   onMonth,
@@ -4040,8 +4101,11 @@ function PagedShifts({
   onMember,
 }: {
   group: Group;
+  // The page's header, pinned with the month over a list of months.
+  header: ReactNode;
   layout: Layout;
   month: Date;
+  monthNav: MonthNav;
   dates: Date[];
   picked?: Date;
   onMonth: (month: Date) => void;
@@ -4060,6 +4124,58 @@ function PagedShifts({
   const thisMonth =
     sameMonth(month, designToday) &&
     month.getFullYear() === designToday.getFullYear();
+  if (monthNav === "title" && layout !== "person") {
+    // Remounted per layout, so each opens where the other left off.
+    return (
+      <ScrollingShifts
+        group={group}
+        header={header}
+        key={layout}
+        layout={layout}
+        month={month}
+        onMember={onMember}
+        onMonth={onMonth}
+        onPickDay={onPickDay}
+        picked={picked}
+      />
+    );
+  }
+  if (monthNav === "title") {
+    return (
+      <>
+        <PeoplePicker
+          members={group.members}
+          onPick={setPersonId}
+          picked={person}
+        />
+        <MonthRow
+          month={month}
+          onPick={onMonth}
+          onToday={
+            thisMonth
+              ? undefined
+              : () => {
+                  onMonth(monthAfter(designToday, 0));
+                }
+          }
+          unit="月"
+        />
+        <PersonPager
+          group={group}
+          member={person}
+          month={month}
+          onMonth={onMonth}
+          onPickDay={onPickDay}
+          picked={picked}
+        />
+        <TogetherSummary
+          days={offDays}
+          label={`${thisMonth ? "今月" : `${month.getMonth() + 1}月`}のみんな休み`}
+          onPickDay={onPickDay}
+        />
+      </>
+    );
+  }
   return (
     <>
       {layout === "person" && (
@@ -4180,31 +4296,481 @@ function TogetherSummary({
           setOpen(true);
         }}
       />
-      <Sheet label={label} onOpenChange={setOpen} open={open}>
-        <SheetHeading
-          onClose={() => {
-            setOpen(false);
-          }}
-          title={label}
-        />
-        {/* Picking a date closes this and shows everyone that day. */}
-        <div className={sheetBody}>
-          <List>
-            {days.map((date) => (
-              <ListRow
-                key={dateKey(date)}
-                onClick={() => {
-                  setOpen(false);
-                  onPickDay(date);
-                }}
-                label={formatDay(date)}
-                value={holidayName(date) ?? ""}
-              />
-            ))}
-          </List>
-        </div>
-      </Sheet>
+      <TogetherSheet
+        days={days}
+        label={label}
+        onOpenChange={setOpen}
+        onPickDay={onPickDay}
+        open={open}
+      />
     </>
+  );
+}
+
+// The days everyone is off in a month, a date to a row.
+function TogetherSheet({
+  label,
+  days,
+  open,
+  onOpenChange,
+  onPickDay,
+}: {
+  label: string;
+  days: Date[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onPickDay: (date: Date) => void;
+}) {
+  return (
+    <Sheet label={label} onOpenChange={onOpenChange} open={open}>
+      <SheetHeading
+        onClose={() => {
+          onOpenChange(false);
+        }}
+        title={label}
+      />
+      {/* Picking a date closes this and shows everyone that day. */}
+      <div className={sheetBody}>
+        <List>
+          {days.map((date) => (
+            <ListRow
+              key={dateKey(date)}
+              onClick={() => {
+                onOpenChange(false);
+                onPickDay(date);
+              }}
+              label={formatDay(date)}
+              value={holidayName(date) ?? ""}
+            />
+          ))}
+        </List>
+      </div>
+    </Sheet>
+  );
+}
+
+type MonthNav = DesignVariants["monthNav"];
+
+// A month in a table of months one after another, under its heading.
+type MonthSection = { month: Date; days: Date[]; header: ReactNode };
+
+function monthKey(month: Date) {
+  return `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// The 1st of the month `count` months on from the date's.
+function monthAfter(date: Date, count: number) {
+  return new Date(date.getFullYear(), date.getMonth() + count, 1);
+}
+
+function monthsFrom(first: Date, last: Date) {
+  const months: Date[] = [];
+  for (
+    let month = first;
+    month.getTime() <= last.getTime();
+    month = monthAfter(month, 1)
+  ) {
+    months.push(month);
+  }
+  return months;
+}
+
+function daysOf(month: Date) {
+  const count = new Date(
+    month.getFullYear(),
+    month.getMonth() + 1,
+    0
+  ).getDate();
+  return Array.from(
+    { length: count },
+    (_, index) => new Date(month.getFullYear(), month.getMonth(), index + 1)
+  );
+}
+
+// How near an end of the months a scroll comes before another month is
+// drawn there, in pixels.
+const monthLoadMargin = 800;
+
+// The element that scrolls the months: the screen, or the table's own
+// frame when a big group's table scrolls in it.
+function scrollRootOf(element: HTMLElement | null) {
+  let parent = element?.parentElement;
+  while (parent) {
+    const { overflowY } = getComputedStyle(parent);
+    if (overflowY === "auto" || overflowY === "scroll") {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return undefined;
+}
+
+// A computed length in pixels, as "40px"; 0 for one like "auto".
+function pixels(length: string) {
+  return Number(length.replace("px", "")) || 0;
+}
+
+// Where the rows pinned at the top of the scroll end, once pinned.
+function pinnedBottom(root: HTMLElement) {
+  const { top } = root.getBoundingClientRect();
+  const padding = pixels(getComputedStyle(root).paddingTop);
+  let bottom = top;
+  for (const pinned of root.querySelectorAll<HTMLElement>("[data-pinned]")) {
+    const offset = pixels(getComputedStyle(pinned).top);
+    bottom = Math.max(bottom, top + padding + offset + pinned.offsetHeight);
+  }
+  return bottom;
+}
+
+function scrollUnderPinned(
+  root: HTMLElement,
+  target: Element,
+  smooth: boolean
+) {
+  root.scrollBy({
+    behavior: smooth ? "smooth" : "instant",
+    top: target.getBoundingClientRect().top - pinnedBottom(root),
+  });
+}
+
+const dayTarget = (date: Date) => `[data-days~="${dateKey(date)}"]`;
+const monthTarget = (month: Date) => `[data-month="${monthKey(month)}"]`;
+
+// What to do once more months are drawn: go to a day or month, or keep
+// the rows where they were when months come in above them.
+type MonthsPending =
+  | { target: string; smooth: boolean }
+  | { fromBottom: number };
+
+// 日ごと and 週ごと as one list of months, as the platforms' calendar lists
+// scroll: each month under its heading with its みんな休み, more months
+// coming in at either end. The month in sight names itself in the row
+// pinned on top, whose name opens a choice of months, and 今日 comes back
+// to today when it is out of sight. It opens on the day asked for, or on
+// today, or on the month.
+function ScrollingShifts({
+  group,
+  header,
+  layout,
+  month,
+  picked,
+  onMonth,
+  onPickDay,
+  onMember,
+}: {
+  group: Group;
+  header: ReactNode;
+  layout: Layout;
+  month: Date;
+  picked?: Date;
+  onMonth: (month: Date) => void;
+  onPickDay: (date: Date) => void;
+  onMember: (member: Member) => void;
+}) {
+  const weekTools = useWeek();
+  const barRef = useRef<HTMLDivElement>(null);
+  const [range, setRange] = useState(() => ({
+    first: monthAfter(month, -1),
+    last: monthAfter(month, 2),
+  }));
+  const [shown, setShown] = useState(month);
+  const [todayInSight, setTodayInSight] = useState(true);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const loading = useRef(false);
+  const pending = useRef<MonthsPending | undefined>({
+    smooth: false,
+    target: (() => {
+      if (picked) {
+        return dayTarget(picked);
+      }
+      return sameMonth(month, designToday) &&
+        month.getFullYear() === designToday.getFullYear()
+        ? dayTarget(designToday)
+        : monthTarget(month);
+    })(),
+  });
+  // A week belongs to the month it ends in, so a month's heading comes
+  // before the week of its 1st.
+  const weeksEndingIn = (item: Date) => {
+    const days: Date[] = [];
+    let week = weekTools.weekDates(item);
+    while (sameMonth(week[weekLength - 1], item)) {
+      days.push(...week);
+      const after = week[weekLength - 1];
+      week = weekTools.weekDates(
+        new Date(after.getFullYear(), after.getMonth(), after.getDate() + 1)
+      );
+    }
+    return days;
+  };
+  const sections: MonthSection[] = monthsFrom(range.first, range.last).map(
+    (item) => ({
+      days: layout === "weeks" ? weeksEndingIn(item) : daysOf(item),
+      header: (
+        <MonthDivider
+          days={daysOf(item).filter((date) => everyoneOff(group.members, date))}
+          month={item}
+          onPickDay={onPickDay}
+        />
+      ),
+      month: item,
+    })
+  );
+  // Reads where the scroll is: the month in sight, whether today shows,
+  // and whether another month is wanted at an end.
+  const measure = useEffectEvent((root: HTMLElement) => {
+    const line = pinnedBottom(root) + 1;
+    const headings = [...root.querySelectorAll<HTMLElement>("[data-month]")];
+    let inSight = headings[0]?.dataset.month;
+    for (const heading of headings) {
+      if (heading.getBoundingClientRect().top > line) {
+        break;
+      }
+      inSight = heading.dataset.month;
+    }
+    if (inSight && inSight !== monthKey(shown)) {
+      const [year, number] = inSight.split("-").map(Number);
+      const next = new Date(year, number - 1, 1);
+      setShown(next);
+      onMonth(next);
+    }
+    const today = root.querySelector(dayTarget(designToday));
+    const bounds = today?.getBoundingClientRect();
+    setTodayInSight(
+      bounds !== undefined &&
+        bounds.bottom > line &&
+        bounds.top < root.getBoundingClientRect().bottom
+    );
+    if (loading.current) {
+      return;
+    }
+    if (root.scrollTop < monthLoadMargin) {
+      loading.current = true;
+      pending.current = { fromBottom: root.scrollHeight - root.scrollTop };
+      setRange((previous) => ({
+        ...previous,
+        first: monthAfter(previous.first, -1),
+      }));
+    } else if (
+      root.scrollHeight - root.scrollTop - root.clientHeight <
+      monthLoadMargin
+    ) {
+      loading.current = true;
+      setRange((previous) => ({
+        ...previous,
+        last: monthAfter(previous.last, 1),
+      }));
+    }
+  });
+  // The tables' own pinned rows go under the bar, however tall it is.
+  useLayoutEffect(() => {
+    const body = bodyRef.current;
+    const bar = barRef.current;
+    if (!(body && bar)) {
+      return;
+    }
+    const place = () => {
+      body.style.setProperty("--pinned-top", `${bar.offsetHeight - 8}px`);
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(bar);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+  // Once other months are drawn: where to go, or where to stay.
+  const drawn = useRef<typeof range>(undefined);
+  useLayoutEffect(() => {
+    const root = scrollRootOf(bodyRef.current);
+    if (!root || drawn.current === range) {
+      return;
+    }
+    drawn.current = range;
+    const next = pending.current;
+    pending.current = undefined;
+    if (next && "fromBottom" in next) {
+      root.scrollTop = root.scrollHeight - next.fromBottom;
+    }
+    if (next && "target" in next) {
+      const target = root.querySelector(next.target);
+      if (target) {
+        scrollUnderPinned(root, target, next.smooth);
+      }
+    }
+    loading.current = false;
+    measure(root);
+  });
+  useEffect(() => {
+    const root = scrollRootOf(bodyRef.current);
+    if (!root) {
+      return;
+    }
+    let frame = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        measure(root);
+      });
+    };
+    root.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      root.removeEventListener("scroll", onScroll);
+    };
+  }, []);
+  // Goes to a day or month, drawing the months up to it first if needed.
+  const go = (target: Date, selector: string) => {
+    const root = scrollRootOf(bodyRef.current);
+    const found = root?.querySelector(selector);
+    if (root && found) {
+      scrollUnderPinned(root, found, true);
+      return;
+    }
+    loading.current = true;
+    pending.current = { smooth: false, target: selector };
+    setRange((previous) => ({
+      first:
+        target.getTime() < previous.first.getTime()
+          ? monthAfter(target, -1)
+          : previous.first,
+      last:
+        target.getTime() > previous.last.getTime()
+          ? monthAfter(target, 1)
+          : previous.last,
+    }));
+  };
+  return (
+    <div className={shiftsPage.scrolling} ref={bodyRef}>
+      <div className={shiftsPage.bar} data-pinned="" ref={barRef}>
+        {header}
+        <MonthRow
+          month={shown}
+          onPick={(item) => {
+            go(item, monthTarget(item));
+          }}
+          onToday={
+            todayInSight
+              ? undefined
+              : () => {
+                  go(monthAfter(designToday, 0), dayTarget(designToday));
+                }
+          }
+          unit="日"
+        />
+      </div>
+      {layout === "days" ? (
+        <DayRowsTable
+          days={sections[0].days}
+          group={group}
+          onMember={onMember}
+          onPickDay={onPickDay}
+          picked={picked}
+          sections={sections}
+        />
+      ) : (
+        <MemberTable
+          dates={sections[0].days}
+          group={group}
+          onMember={onMember}
+          onPickDay={onPickDay}
+          picked={picked}
+          sections={sections}
+        />
+      )}
+    </div>
+  );
+}
+
+const monthDivider = {
+  name: css({ fontWeight: 600, margin: 0, textStyle: "headline" }),
+  none: css({ color: "text3", textStyle: "subheadline" }),
+  root: css({ alignItems: "baseline", display: "flex", gap: "12px" }),
+  together: css({
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    color: "accent",
+    display: "inline-flex",
+    fontWeight: 600,
+    gap: "2px",
+    padding: 0,
+    textStyle: "subheadline",
+  }),
+};
+
+// The month's heading in the list of months, with its days everyone is
+// off: how many, and the dates in a sheet.
+function MonthDivider({
+  month,
+  days,
+  onPickDay,
+}: {
+  month: Date;
+  days: Date[];
+  onPickDay: (date: Date) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const thisYear = month.getFullYear() === designToday.getFullYear();
+  const name = thisYear
+    ? `${month.getMonth() + 1}月`
+    : `${month.getFullYear()}年${month.getMonth() + 1}月`;
+  const label = `${
+    thisYear && month.getMonth() === designToday.getMonth() ? "今月" : name
+  }のみんな休み`;
+  return (
+    <div className={monthDivider.root}>
+      <h4 className={monthDivider.name}>{name}</h4>
+      {days.length === 0 ? (
+        <span className={monthDivider.none}>みんな休み なし</span>
+      ) : (
+        <button
+          aria-haspopup="dialog"
+          className={monthDivider.together}
+          onClick={() => {
+            setOpen(true);
+          }}
+          type="button"
+        >
+          みんな休み {days.length}日
+          <ChevronRight aria-hidden="true" size={14} />
+        </button>
+      )}
+      <TogetherSheet
+        days={days}
+        label={label}
+        onOpenChange={setOpen}
+        onPickDay={onPickDay}
+        open={open}
+      />
+    </div>
+  );
+}
+
+// The shift table's month: its name, which opens a choice of months, and
+// the way back to today's day or month while it is out of sight. Over a
+// list of months, it names the month in sight.
+function MonthRow({
+  month,
+  unit,
+  onPick,
+  onToday,
+}: {
+  month: Date;
+  unit: "日" | "月";
+  onPick: (month: Date) => void;
+  // Left out while today's day or month is in sight.
+  onToday?: () => void;
+}) {
+  return (
+    <div className={shiftsPage.monthRow}>
+      <MonthTitleButton month={month} onPick={onPick}>
+        <strong className={shiftsPage.monthName}>
+          {month.getFullYear()}年{month.getMonth() + 1}月
+        </strong>
+      </MonthTitleButton>
+      {onToday && <TodayButton onClick={onToday} unit={unit} />}
+    </div>
   );
 }
 
@@ -4407,12 +4973,16 @@ const marksUpTo = 7;
 function DayRowsTable({
   group,
   days,
+  sections,
   picked,
   onMember,
   onPickDay,
 }: {
   group: Group;
   days: Date[];
+  // Months one after another, each under its own heading, instead of
+  // one month's days.
+  sections?: MonthSection[];
   picked?: Date;
   // Opens a member's legend from their face or name, as in 週ごと.
   onMember: (member: Member) => void;
@@ -4436,11 +5006,18 @@ function DayRowsTable({
         <caption className={srOnly}>みんなのシフト</caption>
         <thead>
           <tr>
-            <th className={dayRows.head({ corner: true, page })} scope="col">
-              {/* Pinned with the names, so the month stays in sight. */}
-              <span aria-hidden="true" className={cornerMonth}>
-                {days[0].getMonth() + 1}月
-              </span>
+            <th
+              className={dayRows.head({ corner: true, page })}
+              data-pinned=""
+              scope="col"
+            >
+              {/* Pinned with the names, so the month stays in sight; the
+                  months one after another name theirs in their headings. */}
+              {!sections && (
+                <span aria-hidden="true" className={cornerMonth}>
+                  {days[0].getMonth() + 1}月
+                </span>
+              )}
               <span className={srOnly}>日付</span>
             </th>
             {group.members.map((member, column) => (
@@ -4469,20 +5046,38 @@ function DayRowsTable({
             ))}
           </tr>
         </thead>
-        <tbody>
-          {days.map((date, row) => (
-            <DayRow
-              date={date}
-              key={dateKey(date)}
-              last={row === days.length - 1}
-              members={group.members}
-              scrolls={scrolls}
-              onPick={onPickDay}
-              picked={picked !== undefined && dateKey(picked) === dateKey(date)}
-              withNames={withNames}
-            />
-          ))}
-        </tbody>
+        {(sections ?? [{ days, header: null, month: days[0] }]).map(
+          (section, index, all) => (
+            <tbody key={monthKey(section.month)}>
+              {section.header && (
+                <tr data-month={monthKey(section.month)}>
+                  <td
+                    className={dayRows.divider}
+                    colSpan={group.members.length + 1}
+                  >
+                    {section.header}
+                  </td>
+                </tr>
+              )}
+              {section.days.map((date, row) => (
+                <DayRow
+                  date={date}
+                  key={dateKey(date)}
+                  last={
+                    index === all.length - 1 && row === section.days.length - 1
+                  }
+                  members={group.members}
+                  scrolls={scrolls}
+                  onPick={onPickDay}
+                  picked={
+                    picked !== undefined && dateKey(picked) === dateKey(date)
+                  }
+                  withNames={withNames}
+                />
+              ))}
+            </tbody>
+          )
+        )}
       </table>
     </div>
   );
@@ -4509,7 +5104,7 @@ function DayRow({
   const together = everyoneOff(members, date);
   const today = dateKey(date) === dateKey(designToday);
   return (
-    <tr>
+    <tr data-days={dateKey(date)}>
       <th
         className={dayRows.date({ last, picked, today, together })}
         scope="row"
@@ -4816,8 +5411,14 @@ function WeekDate({
     together: everyoneOff(members, date),
     tone: weekTools.dateTone(date),
   } as const;
+  // Without a month dimming the days around it, the 1st names its month,
+  // as where one week runs into the next month.
+  const label =
+    !month && date.getDate() === 1
+      ? `${date.getMonth() + 1}/1`
+      : date.getDate();
   if (!onPick) {
-    return <span className={weekCell(look)}>{date.getDate()}</span>;
+    return <span className={weekCell(look)}>{label}</span>;
   }
   return (
     <button
@@ -4829,7 +5430,7 @@ function WeekDate({
       }}
       type="button"
     >
-      {date.getDate()}
+      {label}
     </button>
   );
 }
@@ -4892,6 +5493,7 @@ function WeekCell({
 function MemberTable({
   group,
   dates,
+  sections,
   month,
   compact = false,
   onMember,
@@ -4900,6 +5502,9 @@ function MemberTable({
 }: {
   group: Group;
   dates: Date[];
+  // Months one after another, each under its own heading; a week belongs
+  // to the month it ends in, so the heading comes before its 1st.
+  sections?: MonthSection[];
   // The month shown; days outside it are dimmed.
   month?: Date;
   // A single week inside a card, without its own frame.
@@ -4914,9 +5519,11 @@ function MemberTable({
   // Short rows in the card: smaller faces keep a gap between them, the
   // height of the day-off tiles beside them.
   const avatarSize = compact ? compactAvatarSize : undefined;
-  const weeks = Array.from({ length: dates.length / weekLength }, (_, row) =>
-    dates.slice(row * weekLength, (row + 1) * weekLength)
-  );
+  const weeksOf = (days: Date[]) =>
+    Array.from({ length: days.length / weekLength }, (_, row) =>
+      days.slice(row * weekLength, (row + 1) * weekLength)
+    );
+  const parts = sections ?? [{ days: dates, header: null, month: dates[0] }];
   return (
     <div className={weekTable.root}>
       <div
@@ -4925,6 +5532,7 @@ function MemberTable({
           weekTable.row({ compact }),
           weekTable.weekdays({ pinned: !compact })
         )}
+        data-pinned={compact ? undefined : ""}
       >
         {/* Pinned above the weeks, so the month stays in sight. */}
         <span className={cornerMonth}>
@@ -4936,53 +5544,29 @@ function MemberTable({
           </span>
         ))}
       </div>
-      {weeks.map((week) => (
-        <section
-          aria-label={`${formatDay(week[0])}からの週`}
-          className={weekTable.week({ compact })}
-          key={dateKey(week[0])}
-        >
-          <div className={cx(weekTable.row({ compact }), weekTable.dates)}>
-            <span />
-            {week.map((date) => (
-              <WeekDate
-                date={date}
-                key={dateKey(date)}
-                members={group.members}
-                month={month}
-                onPick={onPickDay}
-                picked={
-                  picked !== undefined && dateKey(picked) === dateKey(date)
-                }
-              />
-            ))}
+      {parts.flatMap((part) => [
+        part.header && (
+          <div
+            className={weekTable.divider}
+            data-month={monthKey(part.month)}
+            key={monthKey(part.month)}
+          >
+            {part.header}
           </div>
-          {group.members.map((member, row) => (
-            <div className={weekTable.row({ compact })} key={member.id}>
-              {onMember ? (
-                <button
-                  aria-label={`${member.name}のシフトパターン`}
-                  className={cx(weekTable.name, weekTable.nameButton)}
-                  onClick={() => {
-                    onMember(member);
-                  }}
-                  type="button"
-                >
-                  <Avatar member={member} size={avatarSize} />
-                </button>
-              ) : (
-                <span className={weekTable.name}>
-                  <Avatar member={member} size={avatarSize} />
-                  <span className={srOnly}>{member.name}</span>
-                </span>
-              )}
+        ),
+        ...weeksOf(part.days).map((week) => (
+          <section
+            aria-label={`${formatDay(week[0])}からの週`}
+            className={weekTable.week({ compact })}
+            data-days={week.map(dateKey).join(" ")}
+            key={dateKey(week[0])}
+          >
+            <div className={cx(weekTable.row({ compact }), weekTable.dates)}>
+              <span />
               {week.map((date) => (
-                <WeekCell
-                  compact={compact}
+                <WeekDate
                   date={date}
                   key={dateKey(date)}
-                  last={row === group.members.length - 1}
-                  member={member}
                   members={group.members}
                   month={month}
                   onPick={onPickDay}
@@ -4992,9 +5576,45 @@ function MemberTable({
                 />
               ))}
             </div>
-          ))}
-        </section>
-      ))}
+            {group.members.map((member, row) => (
+              <div className={weekTable.row({ compact })} key={member.id}>
+                {onMember ? (
+                  <button
+                    aria-label={`${member.name}のシフトパターン`}
+                    className={cx(weekTable.name, weekTable.nameButton)}
+                    onClick={() => {
+                      onMember(member);
+                    }}
+                    type="button"
+                  >
+                    <Avatar member={member} size={avatarSize} />
+                  </button>
+                ) : (
+                  <span className={weekTable.name}>
+                    <Avatar member={member} size={avatarSize} />
+                    <span className={srOnly}>{member.name}</span>
+                  </span>
+                )}
+                {week.map((date) => (
+                  <WeekCell
+                    compact={compact}
+                    date={date}
+                    key={dateKey(date)}
+                    last={row === group.members.length - 1}
+                    member={member}
+                    members={group.members}
+                    month={month}
+                    onPick={onPickDay}
+                    picked={
+                      picked !== undefined && dateKey(picked) === dateKey(date)
+                    }
+                  />
+                ))}
+              </div>
+            ))}
+          </section>
+        )),
+      ])}
     </div>
   );
 }
@@ -5074,36 +5694,114 @@ function PersonCalendar({
   // Picks a day to list everyone's shifts, as in 週ごと and 日ごと.
   onPickDay: (date: Date) => void;
 }) {
-  const me = group.members.find((item) => item.me);
   return (
     <>
       {/* The same grid and cells as your own calendar, so the two read
           alike; one wrapper keeps the page's gap from splitting them. */}
       <div>
         <WeekdayRow />
-        <div className={dayGrid}>
-          <MemberLook member={member}>
-            {dates.map((date) => (
-              <PersonDay
-                date={date}
-                key={dateKey(date)}
-                me={me}
-                member={member}
-                onPick={onPickDay}
-                outside={!sameMonth(date, month)}
-                picked={
-                  picked !== undefined && dateKey(picked) === dateKey(date)
-                }
-              />
-            ))}
-          </MemberLook>
-        </div>
+        <PersonGrid
+          dates={dates}
+          group={group}
+          member={member}
+          month={month}
+          onPickDay={onPickDay}
+          picked={picked}
+        />
       </div>
-      <Note>
-        {member.me ? "" : "薄い枠の日は、自分も休みの日です。"}
-        日付を押すと、その日のみんなの予定が見られます。
-      </Note>
+      <PersonNote member={member} />
     </>
+  );
+}
+
+// 人ごと that a swipe turns, as the calendar tab: the weekdays stay and
+// the months go by under them.
+function PersonPager({
+  group,
+  member,
+  month,
+  picked,
+  onMonth,
+  onPickDay,
+}: {
+  group: Group;
+  member: Member;
+  month: Date;
+  picked?: Date;
+  onMonth: (month: Date) => void;
+  onPickDay: (date: Date) => void;
+}) {
+  const weekTools = useWeek();
+  return (
+    <>
+      <div>
+        <WeekdayRow />
+        <Pager
+          onStep={(direction) => {
+            onMonth(monthAfter(month, direction));
+          }}
+          page={monthKey(month)}
+          renderPage={(offset) => {
+            const shown = monthAfter(month, offset);
+            return (
+              <PersonGrid
+                dates={weekTools.monthDates(shown)}
+                group={group}
+                member={member}
+                month={shown}
+                onPickDay={onPickDay}
+                picked={picked}
+              />
+            );
+          }}
+        />
+      </div>
+      <PersonNote member={member} />
+    </>
+  );
+}
+
+function PersonGrid({
+  group,
+  member,
+  dates,
+  month,
+  picked,
+  onPickDay,
+}: {
+  group: Group;
+  member: Member;
+  dates: Date[];
+  month: Date;
+  picked?: Date;
+  onPickDay: (date: Date) => void;
+}) {
+  const me = group.members.find((item) => item.me);
+  return (
+    <div className={dayGrid}>
+      <MemberLook member={member}>
+        {dates.map((date) => (
+          <PersonDay
+            date={date}
+            key={dateKey(date)}
+            me={me}
+            member={member}
+            onPick={onPickDay}
+            outside={!sameMonth(date, month)}
+            picked={picked !== undefined && dateKey(picked) === dateKey(date)}
+          />
+        ))}
+      </MemberLook>
+    </div>
+  );
+}
+
+function PersonNote({ member }: { member: Member }) {
+  return (
+    <Note>
+      {member.me ? "" : "薄い枠の日は、自分も休みの日です。"}
+      日付を押すと、その日のみんなの予定が見られます。
+    </Note>
   );
 }
 

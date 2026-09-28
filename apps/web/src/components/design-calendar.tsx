@@ -25,11 +25,13 @@ import { css, cva, cx } from "styled-system/css";
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
+import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
 import type { Coworkers } from "./design-coworkers";
 import { GapSheet, gapDaysIn } from "./design-gap-sheet";
 import { DesignGroup, JoinSheet } from "./design-group";
+import { MonthTitleButton } from "./design-month-picker";
 import { Phone } from "./design-phone";
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import { DesignSettings } from "./design-settings";
@@ -114,7 +116,6 @@ export const patternSets: Record<4 | 5 | 6 | 8, Shift[]> = {
   8: ["early", "day", "late", "night", "after", "off", "training", "paid"],
 };
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
-const designToday = new Date(2026, 8, 24);
 const dayMilliseconds = 86_400_000;
 const leadingZeroPattern = /^0/;
 const sample: Shift[] = [
@@ -690,6 +691,7 @@ export function DesignCalendar({
           {tab === "group" && (
             <DesignGroup
               initialGroupId={openGroup}
+              monthNav={variants.monthNav}
               scanResult={variants.scanResult}
               onTab={setTab}
               patternKeys={patternKeys}
@@ -710,13 +712,12 @@ export function DesignCalendar({
           )}
           <Screen hidden={tab !== "calendar" || imagePreview}>
             <div className={heading.bar}>
-              <h3 className={heading.title}>
-                <span className={heading.year}>{month.getFullYear()}</span>
-                <strong className={heading.month}>
-                  {month.getMonth() + 1}
-                  <span className={heading.monthUnit}>月</span>
-                </strong>
-              </h3>
+              <MonthHeading
+                mode={headingMode}
+                month={month}
+                monthNav={variants.monthNav}
+                onPick={goToMonth}
+              />
               <HeadingActions
                 arrows={!saveTop}
                 atEnd={twoRows}
@@ -1298,6 +1299,41 @@ export function MonthSummary({
       label={`${thisMonth ? "今月" : `${month.getMonth() + 1}月`}のお休み`}
       onOpen={onOpen}
     />
+  );
+}
+
+// The year over the month. In the 月名 ▾ variant its name opens a choice
+// of months, a way on that shows, beside the swipe that does not.
+function MonthHeading({
+  month,
+  mode,
+  monthNav,
+  onPick,
+}: {
+  month: Date;
+  mode: "view" | "edit" | "week";
+  monthNav: DesignVariants["monthNav"];
+  onPick: (month: Date) => void;
+}) {
+  const name = (
+    <>
+      <span className={heading.year}>{month.getFullYear()}</span>
+      <strong className={heading.month}>
+        {month.getMonth() + 1}
+        <span className={heading.monthUnit}>月</span>
+      </strong>
+    </>
+  );
+  return (
+    <h3 className={heading.title}>
+      {monthNav === "title" && mode === "view" ? (
+        <MonthTitleButton month={month} onPick={onPick} twoLines>
+          <span>{name}</span>
+        </MonthTitleButton>
+      ) : (
+        name
+      )}
+    </h3>
   );
 }
 
