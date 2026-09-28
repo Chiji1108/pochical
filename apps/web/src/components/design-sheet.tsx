@@ -74,7 +74,8 @@ const content = cva({
     _closed: { animation: "sheetOut 0.2s ease-in" },
     _open: { animation: "sheetIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)" },
     bg: "raised",
-    borderRadius: "28px 28px 0 0",
+    // Floating off the screen's sides and foot, as iOS 26's sheets.
+    borderRadius: "32px",
     color: "text",
     // A column, so a part marked to scroll can take what is left while the
     // heading stays in reach.
@@ -82,8 +83,9 @@ const content = cva({
     flexDirection: "column",
     outline: "none",
     overflowY: "auto",
+    margin: "0 8px 8px",
     padding: "12px 24px 28px",
-    width: "100%",
+    width: "calc(100% - 16px)",
   },
   variants: {
     modal: {
@@ -247,9 +249,9 @@ const heading = {
     color: "text2",
     display: "grid",
     flexShrink: 0,
-    height: "action",
+    height: "touch",
     placeItems: "center",
-    width: "action",
+    width: "touch",
   }),
   eyebrow: css({ color: "text3", margin: "0 0 4px", textStyle: "footnote" }),
   root: css({

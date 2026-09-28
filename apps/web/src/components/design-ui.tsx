@@ -79,7 +79,8 @@ const buttonStyle = cva({
     _disabled: { cursor: "default", opacity: 0.4 },
     alignItems: "center",
     border: 0,
-    borderRadius: "control",
+    // Round-ended, as iOS 26's buttons are by default.
+    borderRadius: "999px",
     cursor: "pointer",
     display: "flex",
     textStyle: "body",
@@ -157,13 +158,13 @@ const iconButtonStyle = css({
   _hover: { bg: "fill" },
   bg: "transparent",
   border: 0,
-  borderRadius: "action",
+  borderRadius: "999px",
   color: "accent",
   display: "grid",
   flexShrink: 0,
-  height: "action",
+  height: "touch",
   placeItems: "center",
-  width: "action",
+  width: "touch",
 });
 
 export function IconButton({
@@ -185,6 +186,12 @@ export function IconButton({
 // so the part that scrolls and what is pinned to its foot share the
 // height. Hidden, it keeps its state and takes no room.
 const screenStyle = css({
+  // Under a floating tab bar the part that scrolls runs on to the screen's
+  // foot, ending 16px clear of the bar, so what scrolls passes under it.
+  "&:has(> [data-tab-bar]) [data-screen-scroll]": {
+    marginBottom: "calc(-1 * var(--safe-bottom))",
+    paddingBottom: "calc(var(--tab-bar-bottom) + 80px)",
+  },
   "&[hidden]": { display: "none" },
   display: "flex",
   flex: 1,
@@ -210,10 +217,10 @@ const screenScrollStyle = cva({
     display: "flex",
     flex: 1,
     flexDirection: "column",
-    gap: "20px",
+    gap: "24px",
     minHeight: 0,
     overflowY: "auto",
-    padding: "8px 4px 16px",
+    padding: "8px 0 16px",
   },
   variants: {
     // Beside a rail on its left, like the group hub's list of groups: it
@@ -244,8 +251,8 @@ export function ScreenScroll({
 export const sectionTitle = css({
   color: "text3",
   fontWeight: 600,
-  margin: "0 0 8px 12px",
-  textStyle: "footnote",
+  margin: "0 0 8px 16px",
+  textStyle: "subheadline",
 });
 const sectionNote = css({
   color: "text4",
@@ -652,36 +659,69 @@ export function SummaryRow({
 // キャンセル without the chevron where leaving drops what was entered.
 // Without children it is the chevron alone, labelled 戻る. Disabled, it
 // keeps its place but hides, as while a list is being sorted.
-const backButtonStyle = css({
-  _disabled: { visibility: "hidden" },
-  alignItems: "center",
-  alignSelf: "flex-start",
-  bg: "transparent",
-  border: 0,
-  color: "accent",
-  display: "inline-flex",
-  gap: "2px",
-  marginLeft: "-8px",
-  minHeight: "action",
-  paddingRight: "8px",
-  textStyle: "body",
+// The way back, as iOS 26 and Android draw it: an arrow alone, here in
+// iOS's round button, naming where it goes only to a screen reader. With
+// chevron={false} it is words instead, like キャンセル.
+const backButtonStyle = cva({
+  base: {
+    _disabled: { visibility: "hidden" },
+    alignItems: "center",
+    alignSelf: "flex-start",
+    border: 0,
+    display: "inline-flex",
+    flexShrink: 0,
+    minHeight: "action",
+    textStyle: "body",
+  },
+  variants: {
+    icon: {
+      false: {
+        bg: "transparent",
+        color: "accent",
+        marginLeft: "-8px",
+        paddingInline: "8px",
+      },
+      true: {
+        bg: "fill",
+        borderRadius: "999px",
+        color: "text",
+        height: "touch",
+        justifyContent: "center",
+        width: "touch",
+      },
+    },
+  },
 });
 
 export function BackButton({
   chevron = true,
   className,
   children,
+  "aria-label": ariaLabel,
   ...props
 }: ButtonProps & { chevron?: boolean }) {
+  if (!chevron) {
+    return (
+      <button
+        aria-label={ariaLabel}
+        className={cx(backButtonStyle({ icon: false }), className)}
+        type="button"
+        {...props}
+      >
+        {children}
+      </button>
+    );
+  }
+  const name =
+    ariaLabel ?? (typeof children === "string" ? `${children}に戻る` : "戻る");
   return (
     <button
-      aria-label={children ? undefined : "戻る"}
-      className={cx(backButtonStyle, className)}
+      aria-label={name}
+      className={cx(backButtonStyle({ icon: true }), className)}
       type="button"
       {...props}
     >
-      {chevron && <ChevronLeft aria-hidden="true" size={20} />}
-      {children}
+      <ChevronLeft aria-hidden="true" size={24} />
     </button>
   );
 }
@@ -717,9 +757,26 @@ export function HeaderAction({ className, ...props }: ButtonProps) {
 const pageHeader = {
   bar: css({
     alignItems: "center",
-    display: "flex",
-    justifyContent: "space-between",
+    display: "grid",
+    gap: "8px",
+    // The ends keep their buttons whole; a long title in the middle gives
+    // way, cut short, and stays centered while the ends allow.
+    gridTemplateColumns:
+      "minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr)",
   }),
+  // A page with no large title names itself small in the bar's middle,
+  // as the platforms' inline titles.
+  inlineTitle: css({
+    fontWeight: 600,
+    margin: 0,
+    minWidth: 0,
+    overflow: "hidden",
+    textAlign: "center",
+    textOverflow: "ellipsis",
+    textStyle: "body",
+    whiteSpace: "nowrap",
+  }),
+  trailing: css({ display: "flex", justifyContent: "flex-end" }),
   root: css({ display: "flex", flexDirection: "column", gap: "4px" }),
   title: css({ fontWeight: 600, margin: 0, textStyle: "largeTitle" }),
 };
@@ -730,6 +787,7 @@ export function PageHeader({
   onBack,
   leading,
   trailing,
+  inlineTitle,
   children,
 }: {
   title?: ReactNode;
@@ -737,16 +795,22 @@ export function PageHeader({
   onBack?: () => void;
   leading?: ReactNode;
   trailing?: ReactNode;
+  inlineTitle?: ReactNode;
   children?: ReactNode;
 }) {
   const start =
     leading ?? (onBack && <BackButton onClick={onBack}>{back}</BackButton>);
   return (
     <header className={pageHeader.root}>
-      {trailing ? (
+      {trailing || inlineTitle ? (
         <div className={pageHeader.bar}>
-          {start}
-          {trailing}
+          <div>{start}</div>
+          {inlineTitle ? (
+            <h3 className={pageHeader.inlineTitle}>{inlineTitle}</h3>
+          ) : (
+            <span />
+          )}
+          <div className={pageHeader.trailing}>{trailing}</div>
         </div>
       ) : (
         start
@@ -778,8 +842,20 @@ export function List({
 const listRowRoot = cva({
   base: {
     // A line between rows, not above the first: only a row that follows
-    // another, whatever else the list holds, like a legend.
-    "[data-list-row] + &": { borderTop: "1px solid token(colors.separator)" },
+    // another, whatever else the list holds, like a legend. As iOS draws
+    // it: from where the words start to 16px short of the right edge.
+    "[data-list-row] + &": {
+      "&::before": {
+        borderTop: "1px solid token(colors.separator)",
+        content: '""',
+        left: "16px",
+        position: "absolute",
+        right: "16px",
+        top: 0,
+      },
+      "&:has(> [data-part=leading])::before": { left: "56px" },
+      position: "relative",
+    },
     alignItems: "center",
     bg: "transparent",
     border: 0,
@@ -787,12 +863,13 @@ const listRowRoot = cva({
     display: "flex",
     textStyle: "body",
     gap: "12px",
-    minHeight: "48px",
+    // iOS 26's list rows: 52pt, and about 67pt with a subtitle.
+    minHeight: "52px",
     paddingInline: "16px",
     textAlign: "left",
     width: "100%",
   },
-  variants: { twoLine: { true: { minHeight: "58px" } } },
+  variants: { twoLine: { true: { minHeight: "68px" } } },
 });
 
 // One row of a list, and its parts for rows drawn by hand.
@@ -810,11 +887,14 @@ export const listRow = {
   }),
   // With nothing on the right but a control, the label takes the room.
   labelGrow: css({ flex: 1, minWidth: 0 }),
+  // One width whatever it holds, so every row's words start at the same
+  // place, 56px in, as under iOS's icons.
   leading: css({
     color: "text2",
     display: "flex",
     flexShrink: 0,
-    marginRight: "2px",
+    justifyContent: "center",
+    width: "28px",
   }),
   root: listRowRoot(),
   // A row of two lines, like a chat's name over its last message: taller,
@@ -888,7 +968,11 @@ export function ListRow({
       : arrow || null;
   const content = (
     <>
-      {leading && <span className={listRow.leading}>{leading}</span>}
+      {leading && (
+        <span className={listRow.leading} data-part="leading">
+          {leading}
+        </span>
+      )}
       <span
         className={cx(
           listRow.label,
@@ -1061,10 +1145,11 @@ const swatchStyle = css({
 type SegmentSize = "compact" | "regular" | "tall";
 const SegmentSizeContext = createContext<SegmentSize>("regular");
 
+// Round-ended, track and picked segment alike, as iOS 26's.
 const segmentedStyle = css({
   bg: "fill2",
   border: 0,
-  borderRadius: "16px",
+  borderRadius: "999px",
   display: "grid",
   gap: "4px",
   gridAutoColumns: "minmax(0, 1fr)",
@@ -1082,7 +1167,7 @@ const segmentStyle = cva({
       outlineOffset: "-2px",
     },
     alignItems: "center",
-    borderRadius: "12px",
+    borderRadius: "999px",
     color: "text2",
     cursor: "pointer",
     display: "flex",
@@ -1111,7 +1196,7 @@ const segmentText = css({
 // one as it is picked; Ark UI measures where it goes.
 const segmentIndicator = css({
   bg: "surface",
-  borderRadius: "12px",
+  borderRadius: "999px",
   boxShadow: "0 1px 3px var(--shadow)",
   height: "var(--height)",
   top: "var(--top)",
@@ -1361,7 +1446,11 @@ export function ChoiceRow({
       ring="inside"
       value={value}
     >
-      {leading && <span className={listRow.leading}>{leading}</span>}
+      {leading && (
+        <span className={listRow.leading} data-part="leading">
+          {leading}
+        </span>
+      )}
       <span className={cx(listRow.label, listRow.labelGrow)}>{label}</span>
       <Check aria-hidden="true" className={choiceRowCheck} size={20} />
     </Choice>

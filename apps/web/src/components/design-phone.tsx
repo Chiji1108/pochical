@@ -35,15 +35,24 @@ const frame = cva({
         boxShadow:
           "0 3px 0 1px var(--ws-bezel-edge), 0 28px 50px -30px var(--ws-bezel-shadow)",
         height: "844px",
-        padding: "17px 15px 18px",
+        // The foot is iOS's home indicator area, 33pt: the screens end
+        // there, and the floating tab bar sits 20px off the bottom.
+        "--safe-bottom": "33px",
+        "--tab-bar-bottom": "20px",
+        padding: "17px 16px 33px",
         position: "relative",
         width: "100%",
       },
       true: {
         inset: 0,
+        "--safe-bottom": "max(env(safe-area-inset-bottom), 12px)",
+        // As iOS's: 21pt off a phone's foot, 13pt into its home indicator
+        // area.
+        "--tab-bar-bottom":
+          "max(calc(env(safe-area-inset-bottom) - 13px), 12px)",
         paddingBottom: "max(env(safe-area-inset-bottom), 12px)",
-        paddingLeft: "calc(env(safe-area-inset-left) + 15px)",
-        paddingRight: "calc(env(safe-area-inset-right) + 15px)",
+        paddingLeft: "calc(env(safe-area-inset-left) + 16px)",
+        paddingRight: "calc(env(safe-area-inset-right) + 16px)",
         paddingTop: "max(env(safe-area-inset-top), 12px)",
         position: "fixed",
       },
@@ -52,13 +61,17 @@ const frame = cva({
 });
 
 const phone = {
+  // Where iOS draws it, 8pt off the foot, over whatever runs under it.
   homeIndicator: css({
     bg: "var(--home-indicator)",
     borderRadius: "4px",
-    flexShrink: 0,
+    bottom: "8px",
     height: "5px",
-    margin: "10px auto 0",
+    left: "50%",
+    position: "absolute",
+    transform: "translateX(-50%)",
     width: "114px",
+    zIndex: 12,
   }),
   island: css({
     "@media (max-width: 370px)": { width: "76px" },

@@ -159,6 +159,13 @@ const catalog = {
     },
     variants: { wide: { true: { "& > *": { width: "100%" } } } },
   }),
+  // The tab bar floats over a phone's foot; here it floats in a strip.
+  tabBarStage: css({
+    "--tab-bar-bottom": "4px",
+    height: "72px",
+    position: "relative",
+    width: "100%",
+  }),
   // The app's own ground, light or dark as the screen is, so the pieces
   // sit on what they are drawn for.
   surface: css({
@@ -655,7 +662,9 @@ function Pochical() {
           />
         </Item>
         <Item name="TabBar" where="画面の一番下" wide>
-          <TabBar active="calendar" onSelect={() => undefined} />
+          <div className={catalog.tabBarStage}>
+            <TabBar active="calendar" onSelect={() => undefined} />
+          </div>
         </Item>
         <Item name="PhotoAvatar" where="グループのメンバー">
           <span className={catalog.marks}>
