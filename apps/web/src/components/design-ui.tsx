@@ -652,36 +652,69 @@ export function SummaryRow({
 // キャンセル without the chevron where leaving drops what was entered.
 // Without children it is the chevron alone, labelled 戻る. Disabled, it
 // keeps its place but hides, as while a list is being sorted.
-const backButtonStyle = css({
-  _disabled: { visibility: "hidden" },
-  alignItems: "center",
-  alignSelf: "flex-start",
-  bg: "transparent",
-  border: 0,
-  color: "accent",
-  display: "inline-flex",
-  gap: "2px",
-  marginLeft: "-8px",
-  minHeight: "action",
-  paddingRight: "8px",
-  textStyle: "body",
+// The way back, as iOS 26 and Android draw it: an arrow alone, here in
+// iOS's round button, naming where it goes only to a screen reader. With
+// chevron={false} it is words instead, like キャンセル.
+const backButtonStyle = cva({
+  base: {
+    _disabled: { visibility: "hidden" },
+    alignItems: "center",
+    alignSelf: "flex-start",
+    border: 0,
+    display: "inline-flex",
+    flexShrink: 0,
+    minHeight: "action",
+    textStyle: "body",
+  },
+  variants: {
+    icon: {
+      false: {
+        bg: "transparent",
+        color: "accent",
+        marginLeft: "-8px",
+        paddingInline: "8px",
+      },
+      true: {
+        bg: "fill",
+        borderRadius: "999px",
+        color: "text",
+        height: "touch",
+        justifyContent: "center",
+        width: "touch",
+      },
+    },
+  },
 });
 
 export function BackButton({
   chevron = true,
   className,
   children,
+  "aria-label": ariaLabel,
   ...props
 }: ButtonProps & { chevron?: boolean }) {
+  if (!chevron) {
+    return (
+      <button
+        aria-label={ariaLabel}
+        className={cx(backButtonStyle({ icon: false }), className)}
+        type="button"
+        {...props}
+      >
+        {children}
+      </button>
+    );
+  }
+  const name =
+    ariaLabel ?? (typeof children === "string" ? `${children}に戻る` : "戻る");
   return (
     <button
-      aria-label={children ? undefined : "戻る"}
-      className={cx(backButtonStyle, className)}
+      aria-label={name}
+      className={cx(backButtonStyle({ icon: true }), className)}
       type="button"
       {...props}
     >
-      {chevron && <ChevronLeft aria-hidden="true" size={20} />}
-      {children}
+      <ChevronLeft aria-hidden="true" size={24} />
     </button>
   );
 }
@@ -717,9 +750,26 @@ export function HeaderAction({ className, ...props }: ButtonProps) {
 const pageHeader = {
   bar: css({
     alignItems: "center",
-    display: "flex",
-    justifyContent: "space-between",
+    display: "grid",
+    gap: "8px",
+    // The ends keep their buttons whole; a long title in the middle gives
+    // way, cut short, and stays centered while the ends allow.
+    gridTemplateColumns:
+      "minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr)",
   }),
+  // A page with no large title names itself small in the bar's middle,
+  // as the platforms' inline titles.
+  inlineTitle: css({
+    fontWeight: 600,
+    margin: 0,
+    minWidth: 0,
+    overflow: "hidden",
+    textAlign: "center",
+    textOverflow: "ellipsis",
+    textStyle: "body",
+    whiteSpace: "nowrap",
+  }),
+  trailing: css({ display: "flex", justifyContent: "flex-end" }),
   root: css({ display: "flex", flexDirection: "column", gap: "4px" }),
   title: css({ fontWeight: 600, margin: 0, textStyle: "largeTitle" }),
 };
@@ -730,6 +780,7 @@ export function PageHeader({
   onBack,
   leading,
   trailing,
+  inlineTitle,
   children,
 }: {
   title?: ReactNode;
@@ -737,16 +788,22 @@ export function PageHeader({
   onBack?: () => void;
   leading?: ReactNode;
   trailing?: ReactNode;
+  inlineTitle?: ReactNode;
   children?: ReactNode;
 }) {
   const start =
     leading ?? (onBack && <BackButton onClick={onBack}>{back}</BackButton>);
   return (
     <header className={pageHeader.root}>
-      {trailing ? (
+      {trailing || inlineTitle ? (
         <div className={pageHeader.bar}>
-          {start}
-          {trailing}
+          <div>{start}</div>
+          {inlineTitle ? (
+            <h3 className={pageHeader.inlineTitle}>{inlineTitle}</h3>
+          ) : (
+            <span />
+          )}
+          <div className={pageHeader.trailing}>{trailing}</div>
         </div>
       ) : (
         start
@@ -799,13 +856,13 @@ const listRowRoot = cva({
     display: "flex",
     textStyle: "body",
     gap: "12px",
-    // iOS 26's list rows: 52pt, and 72pt for two lines.
+    // iOS 26's list rows: 52pt, and about 67pt with a subtitle.
     minHeight: "52px",
     paddingInline: "16px",
     textAlign: "left",
     width: "100%",
   },
-  variants: { twoLine: { true: { minHeight: "72px" } } },
+  variants: { twoLine: { true: { minHeight: "68px" } } },
 });
 
 // One row of a list, and its parts for rows drawn by hand.

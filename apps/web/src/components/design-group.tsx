@@ -3620,13 +3620,6 @@ const monthSwitch = {
 // edge, the table under it, and room at the foot for the picked day's
 // sheet to cover.
 const shiftsPage = {
-  // A long group name gives way to the controls instead of wrapping.
-  back: css({ flexShrink: 1, minWidth: 0 }),
-  backLabel: css({
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  }),
   legendMember: css({ alignItems: "center", display: "flex", gap: "8px" }),
   month: css({
     alignItems: "center",
@@ -3980,11 +3973,8 @@ function ShiftsPage({
   return (
     <div className={shiftsPage.root({ withSheet: picked !== undefined })}>
       <PageHeader
-        leading={
-          <BackButton className={shiftsPage.back} onClick={onBack}>
-            <span className={shiftsPage.backLabel}>{backLabel}</span>
-          </BackButton>
-        }
+        inlineTitle={group.name}
+        leading={<BackButton onClick={onBack}>{backLabel}</BackButton>}
         trailing={
           <ShiftsMenu
             layout={layout}
