@@ -1555,7 +1555,6 @@ const hub = {
     placeItems: "center",
     width: "26px",
   }),
-  labelAfterAvatar: css({ marginLeft: "12px" }),
   // The rail at the phone's left edge, the page beside it.
   layout: css({
     display: "flex",
@@ -1585,7 +1584,6 @@ const hub = {
   }),
   qrNote: css({ color: "text3", textStyle: "caption" }),
   rowIcon: css({ color: "accent", flexShrink: 0 }),
-  rowMark: css({ marginRight: "12px" }),
   sectionHead: css({
     alignItems: "center",
     display: "flex",
@@ -1969,7 +1967,6 @@ function GroupHub({
                     <ListRow
                       key={member.id}
                       label={member.name}
-                      labelClassName={hub.labelAfterAvatar}
                       leading={
                         <>
                           <Avatar member={member} size={28} />
@@ -2753,6 +2750,7 @@ function ChatPage({
             <span className={chatStyle.quoteText}>{summaryOf(replying)}</span>
           </span>
           <IconButton
+            glass={false}
             label="返信をやめる"
             onClick={() => {
               setReplyTo(undefined);
@@ -6309,7 +6307,7 @@ function GroupSettingsPage({
             value="編集"
             leading={
               <>
-                <span className={cx(smallMarkFrame, hub.rowMark)}>
+                <span className={smallMarkFrame}>
                   <GroupIcon mark={group.mark} size={16} />
                 </span>
               </>
@@ -6331,7 +6329,6 @@ function GroupSettingsPage({
                 <PhotoAvatar name={shown.name} photo={shown.photo} size={28} />
               </>
             }
-            labelClassName={hub.labelAfterAvatar}
           />
         </List>
       </Section>
@@ -6452,13 +6449,14 @@ function GroupEditPage({
     <>
       <PageHeader
         leading={
-          <BackButton chevron={false} onClick={onCancel}>
-            キャンセル
-          </BackButton>
+          <IconButton label="キャンセル" onClick={onCancel}>
+            <X aria-hidden="true" size={22} />
+          </IconButton>
         }
         trailing={
           <HeaderAction
             disabled={!canSave}
+            prominent
             onClick={() => {
               onSave(draft);
             }}
@@ -7015,6 +7013,7 @@ function NewGroupPage({
         trailing={
           <HeaderAction
             disabled={!canCreate}
+            prominent
             onClick={() => {
               onCreate({ mark, myName: myName.trim(), name: name.trim() });
             }}

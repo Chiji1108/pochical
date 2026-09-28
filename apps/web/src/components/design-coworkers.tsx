@@ -87,6 +87,7 @@ export function CoworkersPage({
         trailing={
           names.length > 1 && (
             <HeaderAction
+              prominent={sorting}
               onClick={() => {
                 setView(sorting ? "list" : "sort");
               }}
