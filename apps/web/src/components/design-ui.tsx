@@ -41,6 +41,9 @@ import type {
 } from "react";
 import { css, cva, cx } from "styled-system/css";
 
+import { useWeek } from "./design-week";
+import type { DayTone } from "./design-week";
+
 // The shared pieces the screens are built from, each the one place its
 // look is decided. They map one to one onto the SwiftUI views and Compose
 // composables of the native apps; /design/components shows them all.
@@ -1215,6 +1218,59 @@ function SortableRow({
       >
         <GripVertical aria-hidden="true" size={18} />
       </button>
+    </div>
+  );
+}
+
+// A month's days, a week to a row, as the calendar, a member's month, the
+// saved image and the look preview draw them; as many rows as the days
+// given make. The sizes are numbers too, for a grid that animates its
+// height.
+export const DAY_ROW_HEIGHT = 64;
+export const DAY_ROW_GAP = 4;
+const weekColumns = "repeat(7, minmax(0, 1fr))";
+export const dayGrid = css({
+  display: "grid",
+  gap: `${DAY_ROW_GAP}px`,
+  gridAutoRows: `${DAY_ROW_HEIGHT}px`,
+  gridTemplateColumns: weekColumns,
+});
+export function dayGridHeight(weeks: number) {
+  return weeks * DAY_ROW_HEIGHT + (weeks - 1) * DAY_ROW_GAP;
+}
+
+const weekdayRow = cva({
+  base: {
+    color: "text3",
+    display: "grid",
+    fontSize: "11px",
+    gridTemplateColumns: weekColumns,
+    paddingBottom: "11px",
+    textAlign: "center",
+  },
+  variants: {
+    // Tighter over a small picture of the calendar.
+    compact: { true: { paddingBottom: "6px" } },
+  },
+});
+const weekdayTone: Record<DayTone, string | undefined> = {
+  holiday: css({ color: "holiday" }),
+  plain: undefined,
+  saturday: css({ color: "saturday" }),
+};
+
+// The weekday names over a DayGrid, from the viewer's week start, Sundays
+// and Saturdays in their colors while those are on. Screen readers hear
+// each day's own label instead.
+export function WeekdayRow({ compact = false }: { compact?: boolean }) {
+  const { weekdays } = useWeek();
+  return (
+    <div aria-hidden="true" className={weekdayRow({ compact })}>
+      {weekdays.map((day) => (
+        <span className={weekdayTone[day.tone]} key={day.day}>
+          {day.label}
+        </span>
+      ))}
     </div>
   );
 }

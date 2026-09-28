@@ -215,28 +215,6 @@
     border: 0;
     border-radius: 24px;
   }
-  .dc-weekdays,
-  .dc-grid {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-  }
-  .dc-weekdays {
-    padding-bottom: 11px;
-    font-size: 11px;
-    color: var(--text-3);
-    text-align: center;
-  }
-  /* Colored by day, not position, since the week can start on any day. */
-  .dc-weekdays .dc-sunday {
-    color: var(--holiday);
-  }
-  .dc-weekdays .dc-saturday {
-    color: var(--saturday);
-  }
-  .dc-grid {
-    grid-template-rows: repeat(var(--weeks, 6), 64px);
-    gap: 4px;
-  }
   .dc-summary {
     display: flex;
     align-items: center;
@@ -519,12 +497,6 @@
   .dc-heading {
     padding-bottom: 14px;
   }
-  .dc-calendar-scroll {
-    min-height: 0;
-    padding: 3px;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
   .dc-controls {
     margin-top: auto;
   }
@@ -701,22 +673,6 @@
   }
 
   /* Day detail: time and memo for a single day. */
-  .dc-grid.dc-grid-week {
-    grid-template-rows: 64px;
-  }
-  .dc-week-detail {
-    flex: 1;
-    min-height: 0;
-    padding: 16px 6px 12px;
-    margin-top: 12px;
-    overflow-y: auto;
-    border-top: 1px solid var(--separator);
-  }
-  .dc-detail-date {
-    margin: 0 0 14px;
-    font-size: 18px;
-    font-weight: 600;
-  }
   .dc-detail {
     display: flex;
     flex-direction: column;
@@ -877,12 +833,6 @@
     background: transparent;
     border: 1px solid var(--border);
     border-radius: 15px;
-  }
-  .dc-calendar-scroll {
-    touch-action: pan-y;
-  }
-  .dc-calendar-scroll {
-    position: relative;
   }
 
   /* Repeating shifts. */
@@ -1484,12 +1434,6 @@
     background: var(--bg);
     border: 1px solid var(--separator);
     border-radius: 8px;
-  }
-  .st-preview .dc-weekdays {
-    padding-bottom: 6px;
-  }
-  .st-preview-grid.dc-grid {
-    grid-template-rows: repeat(2, 64px);
   }
   /* A colored icon would sink into the green, so it turns white like the
    text; emoji and letters on their tile keep their own colors. */
@@ -3178,9 +3122,6 @@
     margin: 0 4px 12px;
     font-size: 15px;
     font-weight: 600;
-  }
-  .dc-image .dc-weekdays {
-    padding-bottom: 6px;
   }
   .dc-image-credit {
     margin: 10px 4px 0;

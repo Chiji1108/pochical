@@ -32,6 +32,7 @@ import {
   ChoiceGrid,
   ChoiceList,
   ChoiceRow,
+  dayGrid,
   HeaderAction,
   IconButton,
   List,
@@ -45,7 +46,9 @@ import {
   SegmentedControl,
   SwitchRow,
   Tag,
+  WeekdayRow,
 } from "../components/design-ui";
+import { useWeek } from "../components/design-week";
 import {
   OffDisplayContext,
   ShiftMark,
@@ -548,6 +551,13 @@ function Pochical() {
         <Item name="DayCell" where="未入力">
           <Cell />
         </Item>
+        <Item
+          name="WeekdayRow + dayGrid"
+          where="カレンダー・メンバーの月・保存する画像・見た目の見本"
+          wide
+        >
+          <WeekSample />
+        </Item>
       </Group>
       <Group title="画面の下と見出し(ポチカル独自)">
         <Item name="MonthSummary" where="カレンダー下の今月のお休み" wide>
@@ -568,6 +578,30 @@ function Pochical() {
         </Item>
       </Group>
     </>
+  );
+}
+
+// The week of the sample day, under the weekday names, as every month
+// grid lays out its days.
+function WeekSample() {
+  const { weekDates } = useWeek();
+  return (
+    <div>
+      <WeekdayRow />
+      <div className={dayGrid}>
+        {weekDates(cellDate).map((date) => (
+          <DayCell
+            active={false}
+            date={date}
+            editing={false}
+            entry={{ shift: date.getDay() === 0 ? "off" : "day" }}
+            key={date.getDate()}
+            onPress={() => undefined}
+            outside={false}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 

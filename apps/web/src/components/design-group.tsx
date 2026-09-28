@@ -73,6 +73,8 @@ import {
   SegmentedControl,
   Tag,
   listRow,
+  dayGrid,
+  WeekdayRow,
 } from "./design-ui";
 import { holidayName, useWeek } from "./design-week";
 import {
@@ -3685,24 +3687,14 @@ function PersonCalendar({
   // Picks a day to list everyone's shifts, as in 週ごと and 日ごと.
   onPickDay: (date: Date) => void;
 }) {
-  const weekTools = useWeek();
   const me = group.members.find((item) => item.me);
   return (
     <>
       {/* The same grid and cells as your own calendar, so the two read
           alike; one wrapper keeps the page's gap from splitting them. */}
       <div>
-        <div aria-hidden="true" className="dc-weekdays">
-          {weekTools.weekdays.map((day) => (
-            <span className={day.className} key={day.day}>
-              {day.label}
-            </span>
-          ))}
-        </div>
-        <div
-          className="dc-grid"
-          style={{ "--weeks": dates.length / weekLength } as CSSProperties}
-        >
+        <WeekdayRow />
+        <div className={dayGrid}>
           <MemberLook member={member}>
             {dates.map((date) => (
               <PersonDay

@@ -54,6 +54,20 @@ function weekdayClass(day: number, colored: WeekSettings["colored"]) {
   return "";
 }
 
+// How a day's name or number is colored, for styles that take it as a
+// variant rather than the class.
+export type DayTone = "holiday" | "saturday" | "plain";
+
+function toneOf(className: string): DayTone {
+  if (className === "dc-sunday") {
+    return "holiday";
+  }
+  if (className === "dc-saturday") {
+    return "saturday";
+  }
+  return "plain";
+}
+
 // A national holiday takes Sunday's red, whatever day it falls on.
 function dateClass(date: Date, colored: WeekSettings["colored"]) {
   if (colored.holiday && holidayName(date)) {
@@ -99,10 +113,12 @@ export function monthDatesFrom(month: Date, weekStart: number) {
 export function weekdaysFrom(week: WeekSettings) {
   return Array.from({ length: WEEK_LENGTH }, (_, index) => {
     const day = (week.weekStart + index) % WEEK_LENGTH;
+    const className = weekdayClass(day, week.colored);
     return {
-      className: weekdayClass(day, week.colored),
+      className,
       day,
       label: weekdayNames[day] ?? "",
+      tone: toneOf(className),
     };
   });
 }
@@ -111,6 +127,7 @@ export function useWeek() {
   const { week } = useContext(WeekSettingsContext);
   return {
     dateClass: (date: Date) => dateClass(date, week.colored),
+    dateTone: (date: Date) => toneOf(dateClass(date, week.colored)),
     // Whether a date's number shows as a holiday.
     isColoredHoliday: (date: Date) =>
       week.colored.holiday && holidayName(date) !== undefined,

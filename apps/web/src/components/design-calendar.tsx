@@ -44,8 +44,13 @@ import {
   ChipGroup,
   Choice,
   ChoiceGrid,
+  DAY_ROW_GAP,
+  DAY_ROW_HEIGHT,
+  dayGrid,
+  dayGridHeight,
   IconButton,
   Pager,
+  WeekdayRow,
 } from "./design-ui";
 import { holidayName, holidayNameOfKey, useWeek } from "./design-week";
 import {
@@ -641,7 +646,7 @@ export function DesignCalendar({
     <PhoneContext value={phoneRef}>
       <ToastContext value={toast}>
         <div
-          className={`dc-phone ${editing ? "dc-editing" : ""} ${weekDetail ? "dc-week-mode" : ""} ${showInputBar || showSaveBar ? "" : "dc-no-input"} ${twoRows ? "dc-two-rows" : ""}`}
+          className={`dc-phone ${editing ? "dc-editing" : ""} ${showInputBar || showSaveBar ? "" : "dc-no-input"} ${twoRows ? "dc-two-rows" : ""}`}
           ref={phoneRef}
           style={themeStyle}
         >
@@ -724,14 +729,8 @@ export function DesignCalendar({
                 }}
               />
             </div>
-            <div className="dc-calendar-scroll">
-              <div aria-hidden="true" className="dc-weekdays">
-                {weekTools.weekdays.map((day) => (
-                  <span className={day.className} key={day.day}>
-                    {day.label}
-                  </span>
-                ))}
-              </div>
+            <div className={calendarPage.scroll}>
+              <WeekdayRow />
               <OffDisplayContext
                 value={
                   weekDetail && offDisplay === "blank" ? "faint" : offDisplay
@@ -775,13 +774,11 @@ export function DesignCalendar({
                       />
                     );
                     const label = `${pageMonth.getFullYear()}年${pageMonth.getMonth() + 1}月のシフト`;
-                    const gridClass = `dc-grid ${weekDetail ? "dc-grid-week" : ""}`;
                     // Only the page shown folds; the ones beside it are
                     // there to be dragged in.
                     if (offset === 0) {
                       return (
                         <FoldingGrid
-                          className={gridClass}
                           dates={pageDates}
                           key={pageTurn}
                           label={label}
@@ -792,13 +789,7 @@ export function DesignCalendar({
                       );
                     }
                     return (
-                      <section
-                        aria-label={label}
-                        className={gridClass}
-                        style={
-                          { "--weeks": pageDates.length / 7 } as CSSProperties
-                        }
-                      >
+                      <section aria-label={label} className={dayGrid}>
                         {pageDates.map(renderCell)}
                       </section>
                     );
@@ -810,11 +801,13 @@ export function DesignCalendar({
               <motion.section
                 animate={{ opacity: 1 }}
                 aria-label={formatDay(detailDate)}
-                className="dc-week-detail"
+                className={calendarPage.detail}
                 initial={{ opacity: 0 }}
                 transition={fold}
               >
-                <h4 className="dc-detail-date">{formatDay(detailDate)}</h4>
+                <h4 className={calendarPage.detailDate}>
+                  {formatDay(detailDate)}
+                </h4>
                 <DayDetail
                   entry={schedule[dateKey(detailDate)]}
                   members={members}
@@ -1018,9 +1011,31 @@ export function PhoneStatusBar() {
   );
 }
 
-// A 64px row of days and the 4px gap under it, as .dc-grid in design.css.
-const ROW_STEP = 68;
-const ROW_GAP = 4;
+// The calendar tab's page: the grid scrolls on its own under the heading
+// when the phone is short, and an opened day's detail fills what is left.
+const calendarPage = {
+  detail: css({
+    borderTop: "1px solid token(colors.separator)",
+    flex: 1,
+    marginTop: "12px",
+    minHeight: 0,
+    overflowY: "auto",
+    padding: "16px 6px 12px",
+  }),
+  detailDate: css({ fontSize: "18px", fontWeight: 600, margin: "0 0 14px" }),
+  // Room around the grid for the picked day's outline.
+  scroll: css({
+    minHeight: 0,
+    overflowY: "auto",
+    overscrollBehavior: "contain",
+    padding: "3px",
+    position: "relative",
+    touchAction: "pan-y",
+  }),
+};
+
+// From one row of days to the next.
+const ROW_STEP = DAY_ROW_HEIGHT + DAY_ROW_GAP;
 // A month keeps room for six weeks, the most one spans, so a month of six
 // comes in whole when swiped to from one of four or five.
 const MONTH_WEEKS = 6;
@@ -1040,14 +1055,12 @@ const folding = {
 // so what is under it moves too. `shift` is how far the month moves up to
 // bring the week to the top.
 function FoldingGrid({
-  className,
   dates,
   label,
   renderCell,
   shift,
   weekDetail,
 }: {
-  className: string;
   dates: Date[];
   label: string;
   renderCell: (date: Date) => ReactNode;
@@ -1058,11 +1071,10 @@ function FoldingGrid({
   const room = weekDetail ? weeks : Math.max(weeks, MONTH_WEEKS);
   return (
     <motion.section
-      animate={{ height: room * ROW_STEP - ROW_GAP }}
+      animate={{ height: dayGridHeight(room) }}
       aria-label={label}
-      className={cx(className, folding.grid)}
+      className={cx(dayGrid, folding.grid)}
       initial={false}
-      style={{ "--weeks": weeks } as CSSProperties}
       transition={fold}
     >
       {/* The shift out is the one as the days leave, passed as custom. */}
@@ -1907,7 +1919,7 @@ const pickerCell = cva({
     tone: {
       holiday: { color: "holiday" },
       plain: {},
-      saturday: { color: "var(--saturday)" },
+      saturday: { color: "saturday" },
     },
   },
 });
@@ -1930,16 +1942,6 @@ export function MonthPicker({
   onSelect: (date: Date) => void;
 }) {
   const weekTools = useWeek();
-  const toneOf = (date: Date) => {
-    const weekClass = weekTools.dateClass(date);
-    if (weekClass === "dc-sunday") {
-      return "holiday";
-    }
-    if (weekClass === "dc-saturday") {
-      return "saturday";
-    }
-    return "plain";
-  };
   return (
     <DatePicker.Root
       defaultFocusedValue={toDateValue(value ?? month ?? designToday)}
@@ -2002,7 +2004,7 @@ export function MonthPicker({
                             <DatePicker.TableCellTrigger
                               className={pickerCell({
                                 today: dateKey(date) === dateKey(designToday),
-                                tone: toneOf(date),
+                                tone: weekTools.dateTone(date),
                               })}
                             >
                               {day.day}

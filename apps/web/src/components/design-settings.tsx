@@ -63,6 +63,8 @@ import {
   SegmentedControl,
   SwitchRow,
   Tag,
+  dayGrid,
+  WeekdayRow,
 } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
 import type { ColoredDay } from "./design-week";
@@ -1227,7 +1229,6 @@ function sampleSequence(patternKeys: Shift[]): Shift[] {
 // The preview can show the other of light and dark on its own, without
 // touching 外観, so a style can be judged in both.
 function StylePreview({ preview }: { preview: StylePreviewData }) {
-  const weekTools = useWeek();
   const { dates, schedule } = preview;
   const scheme = useContext(ColorSchemeContext);
   const { theme } = useContext(ThemeContext);
@@ -1244,14 +1245,8 @@ function StylePreview({ preview }: { preview: StylePreviewData }) {
           style={themeStyle(theme, shown, tone)}
         >
           <span className="st-preview-sample">見本</span>
-          <div className="dc-weekdays">
-            {weekTools.weekdays.map((day) => (
-              <span className={day.className} key={day.day}>
-                {day.label}
-              </span>
-            ))}
-          </div>
-          <div className="dc-grid st-preview-grid">
+          <WeekdayRow compact />
+          <div className={dayGrid}>
             {dates.map((date) => (
               <DayCell
                 active={false}

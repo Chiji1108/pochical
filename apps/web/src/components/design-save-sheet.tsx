@@ -6,7 +6,6 @@ import {
   Share,
 } from "lucide-react";
 import { useContext, useState } from "react";
-import type { CSSProperties } from "react";
 import { cx } from "styled-system/css";
 
 import type { ImageOptions } from "../lib/design-settings-store";
@@ -29,6 +28,8 @@ import {
   PageHeader,
   SwitchRow,
   listStyle,
+  dayGrid,
+  WeekdayRow,
 } from "./design-ui";
 import { useWeek } from "./design-week";
 import {
@@ -280,17 +281,8 @@ export function ImagePreviewPage({
                     style={themeStyle(theme, shown, tone)}
                   >
                     <figcaption className="dc-image-title">{title}</figcaption>
-                    <div aria-hidden="true" className="dc-weekdays">
-                      {weekTools.weekdays.map((day) => (
-                        <span className={day.className} key={day.day}>
-                          {day.label}
-                        </span>
-                      ))}
-                    </div>
-                    <div
-                      className="dc-grid"
-                      style={{ "--weeks": dates.length / 7 } as CSSProperties}
-                    >
+                    <WeekdayRow compact />
+                    <div className={dayGrid}>
                       {dates.map((date) => (
                         <DayCell
                           active={false}

@@ -53,6 +53,7 @@ export default defineConfig({
           holiday: { value: "var(--holiday)" },
           onAccentFill: { value: "var(--on-accent-fill)" },
           raised: { value: "var(--raised)" },
+          saturday: { value: "var(--saturday)" },
           separator: { value: "var(--separator)" },
           surface: { value: "var(--surface)" },
           text: { value: "var(--text)" },
