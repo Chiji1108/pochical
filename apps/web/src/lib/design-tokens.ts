@@ -80,12 +80,6 @@ export const neutralTokenGroups: ColorTokenGroup[] = [
         name: "text-4",
       },
       {
-        dark: "#80857e",
-        label: "時刻・矢印",
-        light: "#a7ada1",
-        name: "text-faint",
-      },
-      {
         dark: "#666a65",
         label: "無効・月の外の日",
         light: "#b9beb4",
@@ -107,12 +101,6 @@ export const neutralTokenGroups: ColorTokenGroup[] = [
         label: "区切り線",
         light: "#eceee8",
         name: "separator",
-      },
-      {
-        dark: "#373a36",
-        label: "表の罫線",
-        light: "#f0f1ec",
-        name: "separator-faint",
       },
       {
         dark: "#696e66",

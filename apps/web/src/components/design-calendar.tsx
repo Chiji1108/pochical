@@ -1033,7 +1033,7 @@ const breakdown = {
   row: cva({
     base: {
       alignItems: "center",
-      borderBottom: "1px solid var(--separator-faint)",
+      borderBottom: "1px solid token(colors.separator)",
       display: "flex",
       justifyContent: "space-between",
       minHeight: "52px",
@@ -1435,7 +1435,7 @@ const repeatEditor = {
     textStyle: "caption",
   }),
   day: css({
-    "& > small": { color: "textFaint", fontSize: "8px" },
+    "& > small": { color: "text4", fontSize: "8px" },
     "& > span": { fontFamily: EMOJI_FONT, fontSize: "18px", lineHeight: 1.2 },
     alignItems: "center",
     bg: "surface",
@@ -1622,7 +1622,7 @@ const shiftInput = {
   }),
   pattern: cva({
     base: {
-      _active: { bg: "var(--accent-press)", transform: "scale(0.97)" },
+      _active: { bg: "accentPressed", transform: "scale(0.97)" },
       _hover: { bg: "accentSoft", borderColor: "accentMuted" },
       alignItems: "center",
       bg: "surface",
@@ -1762,7 +1762,7 @@ export const dayCell = cva({
   base: {
     "&:is(button)": { cursor: "pointer" },
     "&:is(button):active": { transform: "scale(0.94)" },
-    _hover: { "&:is(button):not([data-active])": { bg: "accentSoft2" } },
+    _hover: { "&:is(button):not([data-active])": { bg: "accentHover" } },
     alignItems: "center",
     bg: "transparent",
     border: 0,
@@ -2345,7 +2345,7 @@ const picker = {
 // outrank the week's colors, being attribute selectors.
 const pickerCell = cva({
   base: {
-    "&[data-outside-range]": { color: "textFaint" },
+    "&[data-outside-range]": { color: "text4" },
     "&[data-selected]": {
       bg: "accentFill",
       color: "onAccentFill",
@@ -2505,9 +2505,9 @@ const dateButton = {
     variants: {
       look: {
         field: {
-          _hover: { bg: "accentSoft2", borderColor: "accentMuted" },
+          _hover: { bg: "accentHover", borderColor: "accentMuted" },
           bg: "accentSoft",
-          border: "1px solid var(--accent-border)",
+          border: "1px solid token(colors.accentMuted)",
           margin: 0,
           textStyle: "body",
         },

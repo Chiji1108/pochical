@@ -10,16 +10,12 @@ export type GeneratedTone = (typeof generatedTones)[number];
 
 export type AccentRole =
   | "accent"
-  | "border"
   | "fill"
   | "line"
   | "markTint"
   | "muted"
   | "onFill"
-  | "press"
-  | "soft"
-  | "soft2"
-  | "strong";
+  | "soft";
 
 // `chroma` is the source color's chroma; `k` fades fixed tints for
 // near-gray sources such as 墨.
@@ -54,29 +50,21 @@ const roleSpecs: Record<
   paper: {
     dark: {
       accent: at(0.8, scaled(ink, 0.8)),
-      border: at(0.45, fixed(0.022)),
       fill: at(0.76, scaled(ink, 0.8)),
       line: at(0.68, scaled(ink, 0.7)),
       markTint: at(0.4, fixed(0.03)),
       muted: at(0.53, fixed(0.035)),
       onFill: at(0.26, fixed(0.015)),
-      press: at(0.42, fixed(0.025)),
       soft: at(0.35, fixed(0.016)),
-      soft2: at(0.375, fixed(0.02)),
-      strong: at(0.74, scaled(ink, 0.8)),
     },
     light: {
       accent: at(0.44, ink),
-      border: at(0.88, fixed(0.022)),
       fill: at(0.46, ink),
       line: at(0.56, scaled(ink, 0.8)),
       markTint: at(0.91, fixed(0.028)),
       muted: at(0.77, fixed(0.04)),
       onFill: at(1, () => 0),
-      press: at(0.895, fixed(0.024)),
       soft: at(0.95, fixed(0.013)),
-      soft2: at(0.93, fixed(0.018)),
-      strong: at(0.38, ink),
     },
   },
   // Grayed, low-chroma colors on grays of the same hue; mid-tone fills keep
@@ -84,29 +72,21 @@ const roleSpecs: Record<
   dusty: {
     dark: {
       accent: at(0.78, scaled(dust, 0.9)),
-      border: at(0.45, fixed(0.018)),
       fill: at(0.74, scaled(dust, 0.9)),
       line: at(0.68, scaled(dust, 0.8)),
       markTint: at(0.4, fixed(0.024)),
       muted: at(0.52, fixed(0.028)),
       onFill: at(0.26, fixed(0.01)),
-      press: at(0.42, fixed(0.02)),
       soft: at(0.35, fixed(0.013)),
-      soft2: at(0.375, fixed(0.016)),
-      strong: at(0.72, scaled(dust, 0.9)),
     },
     light: {
       accent: at(0.48, dust),
-      border: at(0.89, fixed(0.016)),
       fill: at(0.56, dust),
       line: at(0.6, scaled(dust, 0.8)),
       markTint: at(0.915, fixed(0.022)),
       muted: at(0.78, fixed(0.03)),
       onFill: at(1, () => 0),
-      press: at(0.9, fixed(0.02)),
       soft: at(0.955, fixed(0.011)),
-      soft2: at(0.935, fixed(0.015)),
-      strong: at(0.43, dust),
     },
   },
 };
