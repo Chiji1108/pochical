@@ -3977,16 +3977,6 @@
     color: var(--text-4);
   }
 
-  /* 下のボタン いつも2段: an empty month has no 今月のお休み, so the block
-   keeps the height of the card and the button row, and ポチポチ入力 sits
-   in the lower row, where the buttons are on other months. */
-  .dc-controls:has(> .dc-start-stack) {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    min-height: 159px;
-  }
-
   /* 下のボタン いつも2段: "今月 ‹ ›" at the heading's end, on the month
    digits' line like the button that takes that corner elsewhere. */
   .dc-heading > .dc-heading-nav-end {

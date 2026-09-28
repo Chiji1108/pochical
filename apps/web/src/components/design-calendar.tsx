@@ -416,7 +416,6 @@ export function DesignCalendar({
       .length,
   }));
   const unfilled = monthDays.filter((date) => !schedule[dateKey(date)]).length;
-  const emptyMonth = unfilled === monthDays.length;
   // Input is offered only while the month has days to fill: a repeating
   // order fills them itself, and a filled month is fixed by tapping a day.
   const showInputBar = !repeating && unfilled > 0;
@@ -784,7 +783,9 @@ export function DesignCalendar({
                 />
               </section>
             )}
-            {headingMode === "view" && !emptyMonth && (
+            {/* On an empty month too, at 0日, so the month keeps the two
+                rows of one being filled in: the card above ポチポチ入力. */}
+            {headingMode === "view" && (
               <MonthSummary
                 daysOff={daysOff}
                 month={month}
@@ -809,11 +810,7 @@ export function DesignCalendar({
             )}
             {headingMode === "view" && showInputBar && (
               <div className="dc-controls">
-                <StartArea
-                  label="ポチポチ入力"
-                  onStart={startInput}
-                  stacked={twoRows && emptyMonth}
-                />
+                <StartArea label="ポチポチ入力" onStart={startInput} />
               </div>
             )}
             {headingMode === "view" && showSaveBar && (
@@ -1120,21 +1117,9 @@ function HeadingActions({
   );
 }
 
-function StartArea({
-  label,
-  onStart,
-  stacked = false,
-}: {
-  label: string;
-  onStart: () => void;
-  // An empty month has no 今月のお休み, so the button keeps to the lower
-  // of the two rows.
-  stacked?: boolean;
-}) {
+function StartArea({ label, onStart }: { label: string; onStart: () => void }) {
   return (
-    <div
-      className={`dc-start-area dc-start-row ${stacked ? "dc-start-stack" : ""}`}
-    >
+    <div className="dc-start-area dc-start-row">
       <Button onClick={onStart} variant="primary">
         <Pencil aria-hidden="true" size={18} />
         {label}
