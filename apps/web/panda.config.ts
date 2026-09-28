@@ -110,7 +110,7 @@ export default defineConfig({
         },
         radii: {
           // Buttons and cards.
-          control: { value: "15px" },
+          control: { value: "16px" },
           // Lists of rows.
           list: { value: "16px" },
           // Small actions like icon buttons.

@@ -481,7 +481,7 @@ const appIcons = {
     display: "flex",
     flexDirection: "column",
     gap: "8px",
-    padding: "18px 0 14px",
+    padding: "20px 0 16px",
     textStyle: "body",
   }),
   grid: css({
@@ -492,7 +492,7 @@ const appIcons = {
     margin: "8px 0 20px",
     padding: 0,
   }),
-  name: css({ alignItems: "center", display: "flex", gap: "3px" }),
+  name: css({ alignItems: "center", display: "flex", gap: "4px" }),
 };
 const systemAlert = {
   box: css({
@@ -518,7 +518,7 @@ const systemAlert = {
     fontWeight: 600,
     lineHeight: 1.4,
     margin: 0,
-    padding: "20px 16px 18px",
+    padding: "20px 16px 20px",
     textStyle: "headline",
   }),
 };
@@ -535,7 +535,7 @@ const colorRow = {
     display: "flex",
     flexDirection: "column",
     gap: "8px",
-    padding: "5px 0",
+    padding: "4px 0",
     textStyle: "footnote",
   }),
   dot: css({
@@ -573,7 +573,7 @@ const offSample = cva({
     flexDirection: "column",
     gap: "1px",
     height: "40px",
-    paddingTop: "3px",
+    paddingTop: "4px",
     width: "32px",
   },
   variants: { lit: { true: { bg: "var(--accent-mark-tint)" } } },
@@ -586,32 +586,32 @@ const settingsParts = {
     borderTop: "1px solid token(colors.separator)",
     color: "text",
     fontWeight: 700,
-    margin: "22px 4px 2px",
+    margin: "24px 4px 2px",
     paddingTop: "16px",
     textStyle: "headline",
   }),
-  card: css({ bg: "fill", borderRadius: "18px", padding: "16px" }),
+  card: css({ bg: "fill", borderRadius: "20px", padding: "16px" }),
   cardCount: css({ color: "text3", fontWeight: 400 }),
   cardLabel: css({
     display: "flex",
     fontWeight: 600,
     justifyContent: "space-between",
-    margin: "0 0 10px",
+    margin: "0 0 12px",
     textStyle: "footnote",
   }),
-  cardMeta: css({ color: "text3", margin: "10px 0 0", textStyle: "footnote" }),
+  cardMeta: css({ color: "text3", margin: "12px 0 0", textStyle: "footnote" }),
   groupNote: css({
     color: "text3",
     lineHeight: 1.5,
     margin: "8px 12px 0",
     textStyle: "caption",
   }),
-  job: css({ display: "flex", flexDirection: "column", gap: "14px" }),
+  job: css({ display: "flex", flexDirection: "column", gap: "16px" }),
   marks: css({
     alignItems: "center",
     display: "inline-flex",
     gap: "4px",
-    marginRight: "6px",
+    marginRight: "8px",
     verticalAlign: "middle",
   }),
   // The calendar as seen, on the screen's own ground, with 見本 on its
@@ -620,9 +620,9 @@ const settingsParts = {
   preview: css({
     bg: "background",
     border: "1px solid token(colors.separator)",
-    borderRadius: "18px",
+    borderRadius: "20px",
     color: "text",
-    padding: "18px 8px 8px",
+    padding: "20px 8px 8px",
     pointerEvents: "none",
     position: "relative",
   }),
@@ -703,13 +703,13 @@ function AccountRow({ onOpen }: { onOpen: () => void }) {
 // Signed out, it says what signing in keeps and offers the two ways in;
 // signed in, which account it is, and leaving or deleting it.
 const accountPage = {
-  delete: css({ marginTop: "10px" }),
+  delete: css({ marginTop: "12px" }),
   hero: css({
     alignItems: "center",
     display: "flex",
     flexDirection: "column",
     gap: "8px",
-    padding: "8px 12px 22px",
+    padding: "8px 12px 24px",
     textAlign: "center",
   }),
   icon: css({
@@ -718,7 +718,7 @@ const accountPage = {
     color: "accent",
     display: "grid",
     height: "56px",
-    marginBottom: "6px",
+    marginBottom: "8px",
     placeItems: "center",
     width: "56px",
   }),

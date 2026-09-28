@@ -55,8 +55,8 @@ type Step = "choose" | "calendar" | { done: string };
 
 const save = {
   // 画像で保存 over 端末カレンダーに追加.
-  actions: css({ display: "flex", flexDirection: "column", gap: "10px" }),
-  add: css({ marginTop: "18px" }),
+  actions: css({ display: "flex", flexDirection: "column", gap: "12px" }),
+  add: css({ marginTop: "20px" }),
   calendars: css({ border: 0, margin: "0 0 12px", padding: 0 }),
   // The picked calendar's check; the others keep its room, so the rows
   // line up.
@@ -65,7 +65,7 @@ const save = {
     variants: { picked: { false: { visibility: "hidden" } } },
   }),
   done: css({ alignItems: "flex-start", display: "flex", gap: "8px" }),
-  doneIcon: css({ color: "accent", flexShrink: 0, marginTop: "3px" }),
+  doneIcon: css({ color: "accent", flexShrink: 0, marginTop: "4px" }),
   // A calendar's own color, as the system lists them.
   dot: css({
     borderRadius: "50%",
@@ -82,24 +82,24 @@ const picture = {
   actions: css({
     display: "grid",
     flexShrink: 0,
-    gap: "10px",
+    gap: "12px",
     gridTemplateColumns: "1fr 1fr",
-    padding: "10px 4px 20px",
+    padding: "12px 4px 20px",
   }),
   credit: css({
     color: "textFaint",
     fontSize: "10px",
-    margin: "10px 4px 0",
+    margin: "12px 4px 0",
     textAlign: "right",
   }),
   frame: css({
     bg: "background",
     border: "1px solid token(colors.separator)",
-    borderRadius: "18px",
+    borderRadius: "20px",
     boxShadow: "0 6px 18px var(--shadow-faint)",
     color: "text",
     margin: 0,
-    padding: "14px 10px 10px",
+    padding: "16px 12px 12px",
     pointerEvents: "none",
   }),
   title: css({ fontSize: "15px", fontWeight: 600, margin: "0 4px 12px" }),

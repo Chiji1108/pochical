@@ -333,7 +333,7 @@ const schemeSwitch = {
     _checked: { bg: "fill2", color: "text" },
     bg: "transparent",
     border: 0,
-    borderRadius: "7px",
+    borderRadius: "8px",
     color: "text4",
     display: "grid",
     height: "18px",
@@ -347,7 +347,7 @@ const schemeSwitch = {
   edge: css({
     bg: "surface",
     border: "1px solid token(colors.separator)",
-    borderRadius: "10px",
+    borderRadius: "12px",
     display: "flex",
     gap: "2px",
     left: "12px",

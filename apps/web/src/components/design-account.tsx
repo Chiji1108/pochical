@@ -77,10 +77,10 @@ const providerButton = {
     base: {
       _disabled: { opacity: 0.6 },
       alignItems: "center",
-      borderRadius: "14px",
+      borderRadius: "16px",
       display: "flex",
       fontWeight: 600,
-      gap: "10px",
+      gap: "12px",
       justifyContent: "center",
       minHeight: "50px",
       textStyle: "callout",
@@ -104,8 +104,8 @@ const providerButton = {
   column: css({
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
-    marginBottom: "14px",
+    gap: "12px",
+    marginBottom: "16px",
   }),
 };
 
