@@ -209,9 +209,9 @@ function neutralsFor(
   // deep, so a tinted screen does not leave them floating pure white.
   return {
     ...style,
-    "--bg": bg,
-    "--raised": bg,
-    "--surface": bg,
+    "--background-base": bg,
+    "--background-card": bg,
+    "--background-elevated": bg,
   } as CSSProperties;
 }
 
@@ -225,20 +225,20 @@ export function themeStyle(
   const colors = themeColors(theme, scheme, tone);
   return {
     ...neutralsFor(theme, scheme, tone),
-    "--accent": colors.accent,
+    "--accent-default": colors.accent,
     "--accent-fill": colors.fill,
-    "--accent-line": colors.line,
+    "--accent-focus": colors.line,
     // A note's stroke under its date: a neutral gray, so no color beyond
     // the theme's, and apart from the green of days off. On paper a step
     // deeper than the switches' gray, to show on a day off's pale tile.
-    "--note-marker":
+    "--calendar-note-marker":
       scheme === "dark"
-        ? "var(--control-off)"
-        : "color-mix(in oklab, var(--control-off), var(--text-4) 25%)",
-    "--accent-mark-tint": colors.markTint,
-    "--accent-muted": colors.muted,
-    "--accent-soft": colors.soft,
-    "--on-accent-fill": colors.onFill,
+        ? "var(--fill-primary)"
+        : "color-mix(in oklab, var(--fill-primary), var(--text-quaternary) 25%)",
+    "--calendar-off-tint": colors.markTint,
+    "--accent-border": colors.muted,
+    "--accent-container": colors.soft,
+    "--accent-on-fill": colors.onFill,
   } as CSSProperties;
 }
 
@@ -249,7 +249,7 @@ export function screenColor(id: ThemeId, scheme: ColorScheme, tone: Tone) {
     string,
     string | undefined
   >;
-  const color = neutrals["--bg"];
+  const color = neutrals["--background-base"];
   if (color === undefined) {
     throw new Error(`No screen color for ${id} in ${scheme} and ${tone}`);
   }
@@ -274,11 +274,11 @@ const previewSchemes = [
 export const previewWrap = css({ position: "relative" });
 const schemeSwitch = {
   choice: css({
-    _checked: { bg: "fill2", color: "text" },
+    _checked: { bg: "fill.tertiary", color: "text.primary" },
     bg: "transparent",
     border: 0,
     borderRadius: "8px",
-    color: "text4",
+    color: "text.quaternary",
     display: "grid",
     height: "18px",
     padding: 0,
@@ -289,7 +289,7 @@ const schemeSwitch = {
   // flow into the wrapper that sits on the edge.
   choices: css({ display: "contents" }),
   edge: css({
-    bg: "surface",
+    bg: "background.card",
     border: "1px solid token(colors.separator)",
     borderRadius: "12px",
     display: "flex",

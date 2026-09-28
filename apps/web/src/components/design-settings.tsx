@@ -470,14 +470,18 @@ function SettingsTop({
 // size where their grounds and the dark one's rim read; seasonal ones
 // later may need three.
 const appIcons = {
-  check: css({ color: "accent" }),
+  check: css({ color: "accent.default" }),
   choice: css({
-    _checked: { bg: "fill", borderColor: "accentMuted", color: "text" },
+    _checked: {
+      bg: "fill.quaternary",
+      borderColor: "accent.border",
+      color: "text.primary",
+    },
     alignItems: "center",
     bg: "transparent",
     border: "2px solid transparent",
     borderRadius: "24px",
-    color: "text2",
+    color: "text.secondary",
     display: "flex",
     flexDirection: "column",
     gap: "8px",
@@ -496,9 +500,9 @@ const appIcons = {
 };
 const systemAlert = {
   box: css({
-    bg: "raised",
+    bg: "background.elevated",
     borderRadius: "16px",
-    color: "text",
+    color: "text.primary",
     overflow: "hidden",
     textAlign: "center",
     width: "270px",
@@ -526,12 +530,12 @@ const systemAlert = {
 // The app's colors in a row of seven dots, the one in use ringed.
 const colorRow = {
   choice: css({
-    _checked: { color: "text", fontWeight: 600 },
+    _checked: { color: "text.primary", fontWeight: 600 },
     alignItems: "center",
     bg: "transparent",
     border: "0 solid transparent",
     borderRadius: "16px",
-    color: "text2",
+    color: "text.secondary",
     display: "flex",
     flexDirection: "column",
     gap: "8px",
@@ -541,7 +545,8 @@ const colorRow = {
   dot: css({
     // Ringed in the accent, apart from the ground, once picked.
     "[data-state=checked] > &": {
-      boxShadow: "0 0 0 3px var(--bg), 0 0 0 5px token(colors.accent)",
+      boxShadow:
+        "0 0 0 3px var(--background-base), 0 0 0 5px token(colors.accent.default)",
     },
     border: 0,
     borderRadius: "50%",
@@ -564,7 +569,7 @@ const colorRow = {
 // lit or not, with the name under it or not.
 const offSample = cva({
   base: {
-    "& small": { color: "text2", fontSize: "9px", fontWeight: 600 },
+    "& small": { color: "text.secondary", fontSize: "9px", fontWeight: 600 },
     // The shift's name under the mark, smaller than the date.
     "& small[data-part=name]": { fontSize: "7px" },
     alignItems: "center",
@@ -576,7 +581,7 @@ const offSample = cva({
     paddingTop: "4px",
     width: "32px",
   },
-  variants: { lit: { true: { bg: "var(--accent-mark-tint)" } } },
+  variants: { lit: { true: { bg: "var(--calendar-off-tint)" } } },
 });
 
 const settingsParts = {
@@ -584,14 +589,14 @@ const settingsParts = {
   // step above the section titles, with a rule to start the half.
   audience: css({
     borderTop: "1px solid token(colors.separator)",
-    color: "text",
+    color: "text.primary",
     fontWeight: 700,
     margin: "24px 4px 2px",
     paddingTop: "16px",
     textStyle: "headline",
   }),
-  card: css({ bg: "fill", borderRadius: "20px", padding: "16px" }),
-  cardCount: css({ color: "text3", fontWeight: 400 }),
+  card: css({ bg: "fill.quaternary", borderRadius: "20px", padding: "16px" }),
+  cardCount: css({ color: "text.tertiary", fontWeight: 400 }),
   cardLabel: css({
     display: "flex",
     fontWeight: 600,
@@ -599,9 +604,13 @@ const settingsParts = {
     margin: "0 0 12px",
     textStyle: "footnote",
   }),
-  cardMeta: css({ color: "text3", margin: "12px 0 0", textStyle: "footnote" }),
+  cardMeta: css({
+    color: "text.tertiary",
+    margin: "12px 0 0",
+    textStyle: "footnote",
+  }),
   groupNote: css({
-    color: "text3",
+    color: "text.tertiary",
     lineHeight: 1.5,
     margin: "8px 12px 0",
     textStyle: "caption",
@@ -618,19 +627,19 @@ const settingsParts = {
   // top edge. It may be drawn in the other of light and dark, so it sets
   // its own text color.
   preview: css({
-    bg: "background",
+    bg: "background.base",
     border: "1px solid token(colors.separator)",
     borderRadius: "20px",
-    color: "text",
+    color: "text.primary",
     padding: "20px 8px 8px",
     pointerEvents: "none",
     position: "relative",
   }),
   previewSample: css({
-    bg: "background",
+    bg: "background.base",
     border: "1px solid token(colors.separator)",
     borderRadius: "8px",
-    color: "text3",
+    color: "text.tertiary",
     fontSize: "10px",
     fontWeight: 600,
     padding: "1px 8px",
@@ -713,9 +722,9 @@ const accountPage = {
     textAlign: "center",
   }),
   icon: css({
-    bg: "accentSoft",
+    bg: "accent.container",
     borderRadius: "50%",
-    color: "accent",
+    color: "accent.default",
     display: "grid",
     height: "56px",
     marginBottom: "8px",
@@ -723,15 +732,15 @@ const accountPage = {
     width: "56px",
   }),
   lead: css({
-    color: "text3",
+    color: "text.tertiary",
     lineHeight: 1.6,
     margin: 0,
     textStyle: "subheadline",
   }),
   logo: css({
-    bg: "surface",
+    bg: "background.card",
     borderRadius: "50%",
-    color: "text",
+    color: "text.primary",
     display: "grid",
     height: "30px",
     marginRight: "12px",
@@ -739,7 +748,7 @@ const accountPage = {
     width: "30px",
   }),
   title: css({
-    color: "text",
+    color: "text.primary",
     fontWeight: 700,
     margin: 0,
     textStyle: "title3",
@@ -1771,9 +1780,9 @@ function AppearancePage({ onBack }: { onBack: () => void }) {
 }
 
 const coloredDayOptions: { day: ColoredDay; name: string; color: string }[] = [
-  { color: "var(--saturday)", day: "saturday", name: "土曜" },
-  { color: "var(--holiday)", day: "sunday", name: "日曜" },
-  { color: "var(--holiday)", day: "holiday", name: "祝日" },
+  { color: "var(--calendar-saturday)", day: "saturday", name: "土曜" },
+  { color: "var(--calendar-holiday)", day: "sunday", name: "日曜" },
+  { color: "var(--calendar-holiday)", day: "holiday", name: "祝日" },
 ];
 
 const coloredDayShortNames: Record<ColoredDay, string> = {

@@ -69,26 +69,26 @@ function draftOf(key: Shift): PatternDraft {
 const editor = {
   // A lookalike's warning under the look page's choices.
   lookalike: css({
-    color: "danger",
+    color: "danger.default",
     margin: "-8px 4px 0",
     textStyle: "caption",
   }),
   // The name over the time, beside the mark at the top.
   name: css({ display: "flex", flexDirection: "column", gap: "2px" }),
-  time: css({ color: "text3", textStyle: "footnote" }),
+  time: css({ color: "text.tertiary", textStyle: "footnote" }),
   // Start and end, side by side at the row's right.
   times: css({
     "& > input": {
-      bg: "surface",
-      border: "1px solid token(colors.border)",
+      bg: "background.card",
+      border: "1px solid token(colors.border.default)",
       borderRadius: "8px",
-      color: "text",
+      color: "text.primary",
       font: "inherit",
       padding: "4px 8px",
       textStyle: "body",
     },
     alignItems: "center",
-    color: "text3",
+    color: "text.tertiary",
     display: "flex",
     flex: 1,
     gap: "4px",

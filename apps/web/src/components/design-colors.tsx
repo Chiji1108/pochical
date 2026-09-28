@@ -19,38 +19,38 @@ const schemeLabels: Record<ColorScheme, string> = {
 };
 
 const textTokens = new Set([
-  "text",
-  "text-2",
-  "text-3",
-  "text-4",
+  "text-primary",
+  "text-secondary",
+  "text-tertiary",
+  "text-quaternary",
   "text-disabled",
-  "holiday",
-  "saturday",
-  "danger",
+  "calendar-holiday",
+  "calendar-saturday",
+  "danger-default",
 ]);
-const lineTokens = new Set(["border", "separator", "border-strong"]);
+const lineTokens = new Set(["border-default", "separator", "border-strong"]);
 
 // The grays a theme tints, from the screen down to the darkest text.
 const grayRoles = [
-  "bg",
-  "fill",
-  "fill-2",
-  "fill-3",
-  "control-off",
+  "background-base",
+  "fill-quaternary",
+  "fill-tertiary",
+  "fill-secondary",
+  "fill-primary",
   "border-strong",
-  "text-3",
-  "text",
+  "text-tertiary",
+  "text-primary",
 ];
 
 // The accent roles of a theme, in the order a screen uses them.
 const themeRoles = [
-  { key: "accent", label: "文字・線", name: "accent" },
+  { key: "accent", label: "文字・線", name: "accent-default" },
   { key: "fill", label: "塗り", name: "accent-fill" },
-  { key: "onFill", label: "塗りの上の文字", name: "on-accent-fill" },
-  { key: "line", label: "フォーカス・見出し", name: "accent-line" },
-  { key: "muted", label: "選択中の枠", name: "accent-muted" },
-  { key: "soft", label: "薄い背景", name: "accent-soft" },
-  { key: "markTint", label: "休みの地", name: "accent-mark-tint" },
+  { key: "onFill", label: "塗りの上の文字", name: "accent-on-fill" },
+  { key: "line", label: "フォーカス・見出し", name: "accent-focus" },
+  { key: "muted", label: "選択中の枠", name: "accent-border" },
+  { key: "soft", label: "薄い背景", name: "accent-container" },
+  { key: "markTint", label: "休みの地", name: "calendar-off-tint" },
 ] as const;
 
 // Relative luminance of a #rrggbb color, per WCAG 2.
@@ -99,11 +99,11 @@ const palette = {
     width: "64px",
   }),
   cell: css({
-    "& > code": { color: "text3", fontSize: "11px" },
+    "& > code": { color: "text.tertiary", fontSize: "11px" },
     alignItems: "center",
-    bg: "background",
+    bg: "background.base",
     borderTop: "1px solid token(colors.separator)",
-    color: "text",
+    color: "text.primary",
     display: "flex",
     gap: "12px",
     height: "100%",
@@ -130,31 +130,34 @@ const palette = {
       fontSize: "12px",
       gap: "6px",
     },
-    bg: "background",
+    bg: "background.base",
     border: "1px solid token(colors.separator)",
     borderRadius: "16px",
-    color: "text",
+    color: "text.primary",
     padding: "16px",
   }),
-  distinctNames: css({ color: "text2", marginLeft: "4px" }),
+  distinctNames: css({ color: "text.secondary", marginLeft: "4px" }),
   // How far apart two marks are, badged green, gray when close and red
   // when hard to tell apart.
   distinctValue: css({
     "& > small": {
-      bg: "accentSoft",
+      bg: "accent.container",
       borderRadius: "6px",
-      color: "accent",
+      color: "accent.default",
       fontSize: "9px",
       fontWeight: 600,
       padding: "1px 6px",
     },
     '&[data-level="見分けにくい"] > small': {
-      bg: "danger",
-      color: "var(--on-badge)",
+      bg: "danger.default",
+      color: "var(--danger-on-fill)",
     },
-    '&[data-level="近い"] > small': { bg: "fill2", color: "text2" },
+    '&[data-level="近い"] > small': {
+      bg: "fill.tertiary",
+      color: "text.secondary",
+    },
     alignItems: "baseline",
-    color: "text3",
+    color: "text.tertiary",
     display: "inline-flex",
     fontSize: "11px",
     fontVariantNumeric: "tabular-nums",
@@ -215,15 +218,15 @@ const palette = {
     },
   }),
   markValues: css({
-    "& > code": { color: "text3", fontSize: "11px" },
-    "& > small": { color: "text4", fontSize: "10px" },
+    "& > code": { color: "text.tertiary", fontSize: "11px" },
+    "& > small": { color: "text.quaternary", fontSize: "10px" },
     display: "flex",
     flexDirection: "column",
     gap: "2px",
   }),
   roleList: css({
-    "& code": { color: "text", marginRight: "6px" },
-    color: "text3",
+    "& code": { color: "text.primary", marginRight: "6px" },
+    color: "text.tertiary",
     display: "flex",
     flexWrap: "wrap",
     fontSize: "11px",
@@ -236,7 +239,7 @@ const palette = {
     maxWidth: "1100px",
   }),
   sectionDescription: css({
-    color: "text3",
+    color: "text.tertiary",
     fontSize: "13px",
     lineHeight: "1.8",
     margin: "8px 0 28px",
@@ -247,14 +250,14 @@ const palette = {
     "& + &": { borderTop: 0 },
     "&:first-of-type": { borderRadius: "16px 16px 0 0" },
     "&:last-of-type": { borderRadius: "0 0 16px 16px" },
-    bg: "background",
+    bg: "background.base",
     border: "1px solid token(colors.separator)",
-    color: "text",
+    color: "text.primary",
     padding: "16px",
   }),
   // A group's, a theme's or a mark's name over its samples.
   subheading: css({
-    color: "text2",
+    color: "text.secondary",
     fontSize: "13px",
     fontWeight: 600,
     marginBottom: "12px",
@@ -264,10 +267,10 @@ const palette = {
     borderRadius: "8px",
     height: "28px",
   }),
-  swatchLabel: css({ color: "text2", fontSize: "10px" }),
+  swatchLabel: css({ color: "text.secondary", fontSize: "10px" }),
   swatches: css({
     "& > li": { display: "flex", flexDirection: "column", gap: "3px" },
-    "& code": { color: "text3", fontSize: "11px" },
+    "& code": { color: "text.tertiary", fontSize: "11px" },
     display: "grid",
     gap: "10px 8px",
     gridTemplateColumns: "repeat(3, 1fr)",
@@ -287,20 +290,20 @@ const palette = {
     "& tbody th": {
       bg: "var(--ws-bg)",
       borderTop: "1px solid token(colors.separator)",
-      color: "text3",
+      color: "text.tertiary",
       fontSize: "12px",
       fontWeight: 400,
       padding: "14px 16px",
     },
     "& tbody th code": {
-      color: "text",
+      color: "text.primary",
       display: "block",
       fontSize: "13px",
       marginBottom: "4px",
     },
     "& thead th": {
-      bg: "fill",
-      color: "text4",
+      bg: "fill.quaternary",
+      color: "text.quaternary",
       fontSize: "11px",
       fontWeight: 400,
       letterSpacing: "0.08em",
@@ -308,7 +311,7 @@ const palette = {
       width: "36%",
     },
     "& thead th:first-child": { width: "28%" },
-    border: "1px solid token(colors.border)",
+    border: "1px solid token(colors.border.default)",
     borderRadius: "16px",
     borderSpacing: 0,
     overflow: "hidden",
@@ -321,28 +324,28 @@ const palette = {
     width: "64px",
   }),
   themeButton: css({
-    bg: "accentFill",
+    bg: "accent.fill",
     borderRadius: "18px",
-    color: "onAccentFill",
+    color: "accent.onFill",
     padding: "8px 14px",
   }),
   themeChip: css({
-    bg: "accentSoft",
-    border: "1px solid token(colors.accentMuted)",
+    bg: "accent.container",
+    border: "1px solid token(colors.accent.border)",
     borderRadius: "10px",
-    color: "accent",
+    color: "accent.default",
     padding: "7px 12px",
   }),
   themeContrast: css({
     alignItems: "center",
-    color: "text3",
+    color: "text.tertiary",
     display: "flex",
     flexWrap: "wrap",
     fontSize: "11px",
     gap: "4px 10px",
     marginTop: "14px",
   }),
-  themeLink: css({ color: "accentLine" }),
+  themeLink: css({ color: "accent.focus" }),
   themePreview: css({
     alignItems: "center",
     display: "flex",
@@ -363,16 +366,19 @@ const palette = {
 const contrastBadge = cva({
   base: {
     "& > small": {
-      bg: "fill2",
+      bg: "fill.tertiary",
       borderRadius: "6px",
-      color: "text4",
+      color: "text.quaternary",
       fontSize: "9px",
       fontWeight: 600,
       padding: "1px 5px",
     },
-    "&[data-pass=true] > small": { bg: "accentSoft", color: "accent" },
+    "&[data-pass=true] > small": {
+      bg: "accent.container",
+      color: "accent.default",
+    },
     alignItems: "baseline",
-    color: "text3",
+    color: "text.tertiary",
     display: "inline-flex",
     fontSize: "11px",
     fontVariantNumeric: "tabular-nums",
@@ -426,11 +432,12 @@ function TokenSample({ token }: { token: ColorToken }) {
       />
     );
   }
-  if (token.name.startsWith("on-")) {
-    const ground = {
-      "on-badge": "var(--badge)",
-      "on-inverse": "var(--inverse)",
-    }[token.name];
+  // Words on a filled ground, shown on that ground.
+  const ground = {
+    "danger-on-fill": "var(--danger-fill)",
+    "inverse-text": "var(--inverse-background)",
+  }[token.name];
+  if (ground !== undefined) {
     return (
       <span className={palette.block} style={{ background: ground, color }}>
         完了
@@ -456,7 +463,7 @@ function TokenCell({
   token: ColorToken;
 }) {
   const value = token[scheme];
-  const ground = valueOf(scheme, "bg");
+  const ground = valueOf(scheme, "background-base");
   return (
     <div className={palette.cell} style={themeStyle("moss", scheme)}>
       <TokenSample token={token} />
@@ -575,7 +582,7 @@ function ThemePalette({
         文字と背景の比{" "}
         <ContrastBadge
           inline
-          ratio={contrast(colors.accent, valueOf(scheme, "bg"))}
+          ratio={contrast(colors.accent, valueOf(scheme, "background-base"))}
         />
         塗りと文字の比{" "}
         <ContrastBadge inline ratio={contrast(colors.onFill, colors.fill)} />
@@ -784,14 +791,18 @@ function DistinctTokens() {
 // The page's sections, as pills to jump to.
 const contents = css({
   "& a": {
-    _hover: { bg: "accentHover" },
-    border: "1px solid token(colors.border)",
+    _hover: { bg: "accent.hover" },
+    border: "1px solid token(colors.border.default)",
     borderRadius: "24px",
-    color: "accent",
+    color: "accent.default",
     fontSize: "12px",
     padding: "10px 16px",
   },
-  "& a > span": { color: "text4", fontSize: "10px", marginRight: "8px" },
+  "& a > span": {
+    color: "text.quaternary",
+    fontSize: "10px",
+    marginRight: "8px",
+  },
   display: "flex",
   flexWrap: "wrap",
   gap: "10px",
