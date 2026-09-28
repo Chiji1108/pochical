@@ -1220,16 +1220,17 @@ function SortableRow({
 }
 
 const pager = {
-  // Pages of different heights, as months of five and six weeks: the
-  // pager takes the height of the one shown.
+  // Pages of different heights, as a month and a week: the pager takes the
+  // height of the one shown, which animates itself.
   container: css({
     alignItems: "flex-start",
     display: "flex",
     touchAction: "pan-y pinch-zoom",
-    transition: "height 0.2s",
   }),
   slide: css({ flex: "0 0 100%", minWidth: 0 }),
-  viewport: css({ overflow: "hidden" }),
+  // clip rather than hidden: a hidden box can still be scrolled, as the
+  // browser keeping its place while the grid folds, which slid the pages.
+  viewport: css({ overflow: "clip" }),
 };
 
 type PageOffset = -1 | 0 | 1;

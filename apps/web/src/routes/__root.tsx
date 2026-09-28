@@ -4,6 +4,7 @@ import {
   Link,
   Scripts,
 } from "@tanstack/react-router";
+import { MotionConfig } from "motion/react";
 import type { ReactNode } from "react";
 
 import { Footer, Header } from "../components/site-layout";
@@ -58,7 +59,8 @@ function RootDocument({ children }: { children: ReactNode }) {
           本文へスキップ
         </a>
         <Header />
-        {children}
+        {/* Movement follows the device's 視差効果を減らす setting. */}
+        <MotionConfig reducedMotion="user">{children}</MotionConfig>
         <Footer />
         <Scripts />
       </body>

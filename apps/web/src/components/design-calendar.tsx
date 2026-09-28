@@ -19,6 +19,7 @@ import {
   Wifi,
   X,
 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useContext, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
@@ -347,6 +348,12 @@ export function DesignCalendar({
   const imageOptions = useSettings((state) => state.device.imageOptions);
   const setImageOptions = useSettings((state) => state.setImageOptions);
   const [detailDate, setDetailDate] = useState<Date>();
+  // The row of the month the opened week is on, for the month to fold up
+  // into it and unfold back around it.
+  const [foldRow, setFoldRow] = useState(0);
+  // Counts the turns to another month or week, as against folding the one
+  // shown: a turned page is drawn afresh, so only folding animates.
+  const [pageTurn, setPageTurn] = useState(0);
   const coworkerNames = useUser((state) => state.coworkers);
   const setCoworkerNames = useUser((state) => state.setCoworkers);
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -444,6 +451,7 @@ export function DesignCalendar({
       date={selectedDate}
       onSelect={(date) => {
         setSelectedDay(date.getDate());
+        setPageTurn((turn) => turn + 1);
         setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
         setAnnouncement(
           `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日を選択中`
@@ -463,11 +471,19 @@ export function DesignCalendar({
   );
   const weekDetail = !editing && detailDate !== undefined;
   const headingMode = screenMode(editing, weekDetail);
+  function rowOf(date: Date) {
+    const index = dates.findIndex((day) => dateKey(day) === dateKey(date));
+    return Math.max(0, Math.floor(index / 7));
+  }
   function openDetail(date: Date) {
+    if (!weekDetail) {
+      setFoldRow(rowOf(date));
+    }
     setDetailDate(date);
     setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
   }
   function goToMonth(target: Date) {
+    setPageTurn((turn) => turn + 1);
     setMonth(target);
     if (editing) {
       setSelectedDay(1);
@@ -479,6 +495,7 @@ export function DesignCalendar({
   // Move by what is on screen: a week in the week detail, otherwise a month.
   function step(direction: 1 | -1) {
     if (weekDetail) {
+      setPageTurn((turn) => turn + 1);
       openDetail(addDays(detailDate, direction * 7));
       return;
     }
@@ -590,6 +607,9 @@ export function DesignCalendar({
     }
   }
   function closeDetail() {
+    if (detailDate) {
+      setFoldRow(rowOf(detailDate));
+    }
     setDetailDate(undefined);
   }
   function changeEntry(date: Date, entry: DayEntry | undefined) {
@@ -699,6 +719,7 @@ export function DesignCalendar({
                   );
                 }}
                 onThisWeek={() => {
+                  setPageTurn((turn) => turn + 1);
                   openDetail(designToday);
                 }}
               />
@@ -728,39 +749,57 @@ export function DesignCalendar({
                     const pageDates = weekDetail
                       ? weekTools.weekDates(addDays(detailDate, offset * 7))
                       : weekTools.monthDates(pageMonth);
+                    const renderCell = (date: Date) => (
+                      <DayCell
+                        active={
+                          offset === 0 &&
+                          (editing
+                            ? date.getMonth() === month.getMonth() &&
+                              date.getDate() === selectedDay
+                            : detailDate !== undefined &&
+                              dateKey(date) === dateKey(detailDate))
+                        }
+                        date={date}
+                        editing={editing}
+                        entry={schedule[dateKey(date)]}
+                        key={dateKey(date)}
+                        onPress={() => {
+                          editing
+                            ? setSelectedDay(date.getDate())
+                            : openDetail(date);
+                        }}
+                        outside={
+                          !weekDetail &&
+                          date.getMonth() !== pageMonth.getMonth()
+                        }
+                      />
+                    );
+                    const label = `${pageMonth.getFullYear()}年${pageMonth.getMonth() + 1}月のシフト`;
+                    const gridClass = `dc-grid ${weekDetail ? "dc-grid-week" : ""}`;
+                    // Only the page shown folds; the ones beside it are
+                    // there to be dragged in.
+                    if (offset === 0) {
+                      return (
+                        <FoldingGrid
+                          className={gridClass}
+                          dates={pageDates}
+                          key={pageTurn}
+                          label={label}
+                          renderCell={renderCell}
+                          shift={-foldRow * ROW_STEP}
+                          weekDetail={weekDetail}
+                        />
+                      );
+                    }
                     return (
                       <section
-                        aria-label={`${pageMonth.getFullYear()}年${pageMonth.getMonth() + 1}月のシフト`}
-                        className={`dc-grid ${weekDetail ? "dc-grid-week" : ""}`}
+                        aria-label={label}
+                        className={gridClass}
                         style={
                           { "--weeks": pageDates.length / 7 } as CSSProperties
                         }
                       >
-                        {pageDates.map((date) => (
-                          <DayCell
-                            active={
-                              offset === 0 &&
-                              (editing
-                                ? date.getMonth() === month.getMonth() &&
-                                  date.getDate() === selectedDay
-                                : detailDate !== undefined &&
-                                  dateKey(date) === dateKey(detailDate))
-                            }
-                            date={date}
-                            editing={editing}
-                            entry={schedule[dateKey(date)]}
-                            key={dateKey(date)}
-                            onPress={() => {
-                              editing
-                                ? setSelectedDay(date.getDate())
-                                : openDetail(date);
-                            }}
-                            outside={
-                              !weekDetail &&
-                              date.getMonth() !== pageMonth.getMonth()
-                            }
-                          />
-                        ))}
+                        {pageDates.map(renderCell)}
                       </section>
                     );
                   }}
@@ -768,9 +807,12 @@ export function DesignCalendar({
               </OffDisplayContext>
             </div>
             {weekDetail && (
-              <section
+              <motion.section
+                animate={{ opacity: 1 }}
                 aria-label={formatDay(detailDate)}
                 className="dc-week-detail"
+                initial={{ opacity: 0 }}
+                transition={fold}
               >
                 <h4 className="dc-detail-date">{formatDay(detailDate)}</h4>
                 <DayDetail
@@ -781,7 +823,7 @@ export function DesignCalendar({
                   }}
                   patternKeys={patternKeys}
                 />
-              </section>
+              </motion.section>
             )}
             {/* On an empty month too, at 0日, so the month keeps the two
                 rows of one being filled in: the card above ポチポチ入力. */}
@@ -973,6 +1015,76 @@ export function PhoneStatusBar() {
         <BatteryFull size={25} strokeWidth={1.8} />
       </span>
     </div>
+  );
+}
+
+// A 64px row of days and the 4px gap under it, as .dc-grid in design.css.
+const ROW_STEP = 68;
+const ROW_GAP = 4;
+// A month keeps room for six weeks, the most one spans, so a month of six
+// comes in whole when swiped to from one of four or five.
+const MONTH_WEEKS = 6;
+// How the month folds into a week and back: one spring without bounce,
+// the same as SwiftUI's .spring(duration: 0.3, bounce: 0) for the apps.
+const fold = { bounce: 0, type: "spring", visualDuration: 0.3 } as const;
+const folding = {
+  cell: css({ display: "grid", minWidth: 0 }),
+  // Days on their way out are laid over the grid where they were.
+  grid: css({ position: "relative" }),
+};
+
+// The page shown, folding as the month turns into one of its weeks and
+// back, like the Calendar apps: the week's days move to the row they go
+// to, the other days slide along with the rest of the month as one piece,
+// in and out of sight at the pager's edges, and the page's height follows
+// so what is under it moves too. `shift` is how far the month moves up to
+// bring the week to the top.
+function FoldingGrid({
+  className,
+  dates,
+  label,
+  renderCell,
+  shift,
+  weekDetail,
+}: {
+  className: string;
+  dates: Date[];
+  label: string;
+  renderCell: (date: Date) => ReactNode;
+  shift: number;
+  weekDetail: boolean;
+}) {
+  const weeks = dates.length / 7;
+  const room = weekDetail ? weeks : Math.max(weeks, MONTH_WEEKS);
+  return (
+    <motion.section
+      animate={{ height: room * ROW_STEP - ROW_GAP }}
+      aria-label={label}
+      className={cx(className, folding.grid)}
+      initial={false}
+      style={{ "--weeks": weeks } as CSSProperties}
+      transition={fold}
+    >
+      {/* The shift out is the one as the days leave, passed as custom. */}
+      <AnimatePresence custom={shift} initial={false} mode="popLayout">
+        {dates.map((date) => (
+          <motion.div
+            animate={{ y: 0 }}
+            className={folding.cell}
+            exit="away"
+            initial={{ y: shift }}
+            key={dateKey(date)}
+            // Measured only when folding, not as pages turn.
+            layout
+            layoutDependency={weekDetail}
+            transition={fold}
+            variants={{ away: (by: number) => ({ y: by }) }}
+          >
+            {renderCell(date)}
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </motion.section>
   );
 }
 
