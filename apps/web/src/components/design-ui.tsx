@@ -218,7 +218,8 @@ export function BarGroup({ children }: { children: ReactNode }) {
 const screenStyle = css({
   // Under a floating tab bar the part that scrolls runs on to the screen's
   // foot, ending 16px clear of the bar, so what scrolls passes under it.
-  "&:has(> [data-tab-bar]) [data-screen-scroll]": {
+  // A rail beside it runs on with it.
+  "&:has(> [data-tab-bar]) :is([data-screen-scroll], [data-screen-rail])": {
     marginBottom: "calc(-1 * var(--safe-bottom))",
     paddingBottom: "calc(var(--tab-bar-bottom) + 80px)",
   },
@@ -612,7 +613,7 @@ export function TodayButton({
   unit,
   className,
   ...props
-}: ButtonProps & { unit: "月" | "週" }) {
+}: ButtonProps & { unit: "月" | "週" | "日" }) {
   return (
     <button
       aria-label={`今${unit}に戻る`}
