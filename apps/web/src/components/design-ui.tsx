@@ -2104,14 +2104,15 @@ export function Pager({
   // Safari scrolls the page under a sideways drag when the finger drifts
   // up or down, and takes the finger for it; Motion then ends the drag as
   // if let go, which turned the page halfway through a slow swipe. Once
-  // the drag is sideways, the page stays put.
+  // the drag is sideways, the page stays put. Two fingers still pinch to
+  // zoom.
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) {
       return;
     }
     const hold = (event: TouchEvent) => {
-      if (sideways.current && event.cancelable) {
+      if (sideways.current && event.touches.length === 1 && event.cancelable) {
         event.preventDefault();
       }
     };
