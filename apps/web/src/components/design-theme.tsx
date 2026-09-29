@@ -31,9 +31,11 @@ export type Preset = {
   // Text in a color of its own rather than gray: the body text's chroma
   // and hue. Lighter text takes less of it.
   ink?: { chroma: number; hue: number };
-  // Drawn dark whatever 外観 says, on its own `ground` if it has one
-  // rather than the dark gray: a テーマ whose character is its night.
+  // Drawn dark whatever 外観 says: a テーマ whose character is its night.
   scheme?: "dark";
+  // A screen of its own color instead of white, or instead of the dark
+  // gray for an always-dark テーマ. A light テーマ's dark mode keeps the
+  // dark gray.
   ground?: { chroma: number; hue: number; lightness: number };
   // The share of each shift color's chroma kept when shifts are colored,
   // 1 as tuned; the soft テーマ lower theirs to sit with them.
@@ -48,11 +50,12 @@ export const presets = [
     id: "pochical",
     name: "ポチカル",
   },
-  // The same moss grayed toward sage, lighter and quieter, the shifts
-  // softened with it.
+  // The same moss softened to sage on a screen a breath off white toward
+  // cream, the grays warmed with it and the shifts softened.
   {
-    accent: { chroma: 0.036, hue: 150, lightness: 0.5 },
-    grays: { hue: 145, strength: 0.8 },
+    accent: { chroma: 0.04, hue: 132, lightness: 0.5 },
+    grays: { hue: 90, strength: 1.3 },
+    ground: { chroma: 0.009, hue: 92, lightness: 0.99 },
     id: "sage",
     name: "セージ",
     vividness: 0.75,
@@ -219,19 +222,26 @@ function inkStyle(preset: Preset, scheme: ColorScheme) {
   );
 }
 
-// The grays leaning the テーマ's way, its text's ink, and an always-dark
-// テーマ's own ground.
+// The grays leaning the テーマ's way, its text's ink, and its ground.
 function neutralsFor(preset: Preset, scheme: ColorScheme): CSSProperties {
   const style = {
     ...neutralStyle(scheme, preset.grays),
     ...inkStyle(preset, scheme),
   };
-  if (!preset.ground) {
+  if (!preset.ground || scheme !== (preset.scheme ?? "light")) {
     return style;
   }
+  const ground = oklchToHex(preset.ground);
+  if (scheme === "dark") {
+    return { ...style, "--background-base": ground } as CSSProperties;
+  }
+  // Cards and sheets share a light screen's color, as white on white
+  // does, so a tinted screen does not leave them floating pure white.
   return {
     ...style,
-    "--background-base": oklchToHex(preset.ground),
+    "--background-base": ground,
+    "--background-card": ground,
+    "--background-elevated": ground,
   } as CSSProperties;
 }
 
