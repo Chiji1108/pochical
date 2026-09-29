@@ -2432,22 +2432,32 @@ const chatStyle = {
     lineClamp: 1,
     textStyle: "caption",
   }),
+  // A reaction says who, as the members are few: their faces after the
+  // emoji, and only past a handful a number, as Telegram does.
   reaction: css({
+    "&:has(> small)": { paddingInlineEnd: "8px" },
     "&[aria-pressed=true]": {
-      bg: "accent.container",
+      "--reaction-bg": "token(colors.accent.container)",
       borderColor: "accent.default",
     },
+    "--reaction-bg": "token(colors.background.card)",
     alignItems: "center",
-    bg: "background.card",
+    bg: "var(--reaction-bg)",
     border: "1px solid token(colors.border.default)",
     borderRadius: "999px",
     display: "inline-flex",
     gap: "4px",
     height: "24px",
-    padding: "0 8px",
+    padding: "0 3px 0 8px",
     textStyle: "subheadline",
   }),
   reactionCount: css({ color: "text.tertiary", textStyle: "caption" }),
+  // The faces overlap a little, each ringed in the pill's own color.
+  reactionFaces: css({
+    "& > *": { boxShadow: "0 0 0 1.5px var(--reaction-bg)" },
+    "& > * + *": { marginInlineStart: "-4px" },
+    display: "flex",
+  }),
   reactions: cva({
     base: { display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "-1px" },
     variants: { mine: { true: { justifyContent: "flex-end" } } },
@@ -2779,9 +2789,26 @@ function ChatPage({
                           type="button"
                         >
                           {reaction.emoji}
-                          <small className={chatStyle.reactionCount}>
-                            {reaction.by.length}
-                          </small>
+                          {reaction.by.length > maxReactionFaces ? (
+                            <small className={chatStyle.reactionCount}>
+                              {reaction.by.length}
+                            </small>
+                          ) : (
+                            <span className={chatStyle.reactionFaces}>
+                              {reaction.by.map((id) => {
+                                const reactor = writerOf(id);
+                                return (
+                                  reactor && (
+                                    <Avatar
+                                      key={id}
+                                      member={reactor}
+                                      size={reactionFaceSize}
+                                    />
+                                  )
+                                );
+                              })}
+                            </span>
+                          )}
                         </button>
                       ))}
                     </span>
@@ -5355,6 +5382,9 @@ export function PhotoAvatar({
 const defaultAvatarSize = 24;
 const chatAvatarSize = 32;
 const compactAvatarSize = 20;
+const reactionFaceSize = 16;
+// Past this many, a reaction shows its count instead of the faces.
+const maxReactionFaces = 3;
 
 function Mark({
   member,
