@@ -1484,7 +1484,10 @@ function StylePreview({
           </div>
         </div>
       </ColorSchemeContext>
-      <PreviewSchemeSwitch onPick={onPick} shown={shown} />
+      {/* An always-dark テーマ has no light to switch to. */}
+      {presetOf(theme).scheme === undefined && (
+        <PreviewSchemeSwitch onPick={onPick} shown={shown} />
+      )}
     </div>
   );
 }
@@ -1748,17 +1751,33 @@ function SystemAlert({
   );
 }
 
+// The テーマ in use when it is always dark, which 外観 then gives way to.
+function useAlwaysDarkTheme() {
+  const preset = presetOf(useSettings((state) => state.device.preset));
+  return preset.scheme === undefined ? undefined : preset;
+}
+
 function AppearanceRow({ onOpen }: { onOpen: () => void }) {
   const appearance = useSettings((state) => state.device.appearance);
+  const alwaysDark = useAlwaysDarkTheme();
   return (
-    <ListRow label="外観" onClick={onOpen} value={appearanceName(appearance)} />
+    <ListRow
+      label="外観"
+      onClick={onOpen}
+      value={
+        alwaysDark ? `ダーク（${alwaysDark.name}）` : appearanceName(appearance)
+      }
+    />
   );
 }
 
-// Follow the device by default, or keep light or dark.
+// Follow the device by default, or keep light or dark. The choice stays
+// open under an always-dark テーマ, which says so, since it takes effect
+// again once the テーマ changes.
 function AppearancePage({ onBack }: { onBack: () => void }) {
   const appearance = useSettings((state) => state.device.appearance);
   const setAppearance = useSettings((state) => state.setAppearance);
+  const alwaysDark = useAlwaysDarkTheme();
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="外観" />
@@ -1772,7 +1791,9 @@ function AppearancePage({ onBack }: { onBack: () => void }) {
         ))}
       </ChoiceList>
       <Note>
-        端末に合わせると、スマホの設定に合わせてライトとダークが切り替わります。
+        {alwaysDark
+          ? `テーマの「${alwaysDark.name}」はいつもダークで表示されます。ほかのテーマにすると、ここでの設定に戻ります。`
+          : "端末に合わせると、スマホの設定に合わせてライトとダークが切り替わります。"}
       </Note>
     </>
   );
