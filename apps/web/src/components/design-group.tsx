@@ -3189,7 +3189,7 @@ const reactionPill = {
   }),
   more: css({
     color: "text.tertiary",
-    paddingInlineEnd: "5px",
+    paddingInlineEnd: "4px",
     textStyle: "caption",
   }),
   people: css({ listStyle: "none", margin: 0, padding: 0 }),
