@@ -485,6 +485,7 @@ export function DesignCalendar({
       return;
     }
     const target = new Date(date.getFullYear(), date.getMonth(), 1);
+    setSwipedTo(undefined);
     setPageTurn((turn) => turn + 1);
     setMonth(target);
     setEnteredBlank(hasBlanks(schedule, target));
@@ -1312,11 +1313,12 @@ function MonthHeading({
   progress: MotionValue<number>;
   swiped: boolean;
 }) {
-  // Only the month's pages turn months; the week view's turn weeks.
+  // The pages turn months, looking or entering; the week view's turn
+  // weeks.
   const name = (
     <MonthName
       month={month}
-      progress={mode === "view" ? progress : undefined}
+      progress={mode === "week" ? undefined : progress}
       swiped={swiped}
     />
   );
