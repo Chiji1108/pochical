@@ -511,8 +511,9 @@ export function OptionCard({
 export const pushToBottom = css({ marginTop: "auto" });
 
 // Adding one more to the list above: a dashed, full-width button, as the
-// platforms' "add" rows are.
+// platforms' "add" rows are. Grayed out when the list is full.
 const addButtonStyle = css({
+  _disabled: { color: "text.disabled", cursor: "default" },
   alignItems: "center",
   bg: "transparent",
   border: "1px dashed var(--border-strong)",
@@ -527,13 +528,20 @@ const addButtonStyle = css({
 
 export function AddButton({
   children,
+  disabled = false,
   onClick,
 }: {
   children: ReactNode;
+  disabled?: boolean;
   onClick: () => void;
 }) {
   return (
-    <button className={addButtonStyle} onClick={onClick} type="button">
+    <button
+      className={addButtonStyle}
+      disabled={disabled}
+      onClick={onClick}
+      type="button"
+    >
       <Plus aria-hidden="true" size={14} />
       {children}
     </button>
