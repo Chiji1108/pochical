@@ -7,9 +7,10 @@ import { oklchToHex } from "../lib/oklch";
 import { ColorSchemeContext } from "./design-theme";
 
 // おたのしみ, the other choice for the calendar's month name: a sky of pale
-// light at the top of the calendar, fading into the ground below it, and
-// each tap on the name drifts it to other colors, kept until the next
-// tap, so a sky someone likes can be screenshotted. Plain gradients, which
+// light at the top of the calendar, fading into the ground below it. It
+// first comes with a tap on the name, never before (not even in the
+// settings' preview), and each tap drifts it to other colors, kept until
+// the next tap, so a sky someone likes can be screenshotted. Plain gradients, which
 // SwiftUI's MeshGradient and Compose's brushes draw the same.
 
 // Three hues, warm to cool across the top: the left corner's, the middle's
@@ -29,8 +30,8 @@ export const skies: Sky[] = [
 
 // Pale and airy in light mode; deep, like jewels in shade, in dark mode.
 const tones = {
-  dark: { chroma: 0.07, lightness: 0.34 },
-  light: { chroma: 0.06, lightness: 0.93 },
+  dark: { chroma: 0.055, lightness: 0.31 },
+  light: { chroma: 0.045, lightness: 0.945 },
 } as const;
 
 // Light spreading from both top corners and the middle, fading down.
@@ -91,11 +92,11 @@ export function useSurprise() {
     );
     setSky(others[Math.floor(Math.random() * others.length)] ?? 0);
   }
-  const sky = skies[index] ?? skies[0];
+  const sky = skies[index];
   const layer = (
     <div aria-hidden="true" className={surpriseStyles.layer}>
       <AnimatePresence initial={false}>
-        {on && sky ? <SkyLight key={index} sky={sky} /> : null}
+        {on && sky !== undefined ? <SkyLight key={index} sky={sky} /> : null}
       </AnimatePresence>
     </div>
   );

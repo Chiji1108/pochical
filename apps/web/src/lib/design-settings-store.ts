@@ -65,7 +65,8 @@ export type DeviceSettings = {
   // 月の表示: the calendar's heading as 9月, or as sep.
   monthName: MonthName;
   monthTap: MonthTap;
-  // Which of おたのしみ's skies is up, kept until the next tap.
+  // Which of おたのしみ's skies is up, kept until the next tap; none (-1)
+  // until the month name is first tapped, so nothing gives it away.
   sky: number;
   appIcon: string;
   calendar: Record<ShiftMarkStyle, CalendarOptions>;
@@ -117,7 +118,7 @@ export const useSettings = create<SettingsState>()(
         monthTap: "pick",
         preset: "pochical",
         shiftColors: true,
-        sky: 0,
+        sky: -1,
         week: defaultWeekSettings,
       },
       groupLook: { fill: true, style: "icon" },
