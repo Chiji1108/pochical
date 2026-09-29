@@ -45,7 +45,6 @@ import {
   ThemeContext,
   presetOf,
   presets,
-  ToneContext,
   themeStyle,
   previewWrap,
 } from "./design-theme";
@@ -1432,7 +1431,6 @@ function StylePreview({
   const shown = shared?.shown ?? picked ?? scheme;
   const onPick = shared?.onPick ?? setPicked;
   const { theme } = useContext(ThemeContext);
-  const tone = useContext(ToneContext);
   return (
     <div className={previewWrap}>
       <ColorSchemeContext value={shown}>
@@ -1440,7 +1438,7 @@ function StylePreview({
           aria-hidden="true"
           className={settingsParts.preview}
           inert
-          style={themeStyle(theme, shown, tone)}
+          style={themeStyle(theme, shown)}
         >
           <span className={settingsParts.previewSample}>見本</span>
           <WeekdayRow compact />
@@ -1518,7 +1516,7 @@ function offLookId(value: OffLook) {
   return value.highlight ? "highlight" : "mark";
 }
 
-// Tabs like トーン's, each drawing a day off as it would look. 空白 leaves
+// Segments each drawing a day off as it would look. 空白 leaves
 // days off empty on the month; they come back faint while entering and in
 // the week view. Used by the style page and by the saved image, each with
 // its own values.
@@ -1860,10 +1858,10 @@ function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
           <span
             aria-hidden="true"
             className={themeCard.sample}
-            style={themeStyle(preset.theme, scheme, preset.tone)}
+            style={themeStyle(preset.id, scheme)}
           >
             <ColorSchemeContext value={scheme}>
-              <PresetContexts preset={preset}>
+              <PresetContexts id={preset.id}>
                 <span className={themeCard.marks}>
                   {presetSampleShifts.map((shift) => (
                     <ShiftMark key={shift} shift={shift} size={16} />

@@ -61,10 +61,9 @@ import type { Shift } from "../lib/design-patterns";
 import { markColorIn, markColors } from "../lib/design-tokens";
 import {
   ColorSchemeContext,
+  presetOf,
   ThemeContext,
-  ToneContext,
   themeColors,
-  themeOf,
 } from "./design-theme";
 
 export type ShiftMarkStyle = "icon" | "emoji" | "badge";
@@ -386,34 +385,33 @@ const THEME_SLOT = 0;
 // All shift colors for the current light or dark mode, in picker order.
 export function useMarkColors() {
   const scheme = useContext(ColorSchemeContext);
-  const tone = useContext(ToneContext);
+  const { vividness } = presetOf(useContext(ThemeContext).theme);
   const theme = useThemeMarkColor();
   return markColors.map((option, index) =>
-    index === THEME_SLOT ? theme : markColorIn(option, scheme, tone)
+    index === THEME_SLOT ? theme : markColorIn(option, scheme, vividness)
   );
 }
 
 export function useMarkColor(markColor: MarkColor) {
   const scheme = useContext(ColorSchemeContext);
-  const tone = useContext(ToneContext);
+  const { vividness } = presetOf(useContext(ThemeContext).theme);
   const theme = useThemeMarkColor();
   const option = markColors[markColor];
   return markColor === THEME_SLOT || !option
     ? theme
-    : markColorIn(option, scheme, tone);
+    : markColorIn(option, scheme, vividness);
 }
 
 // The theme's own color, for its slot and for marks drawn all in one color.
 function useThemeMarkColor() {
   const { accent, markTint } = themeColors(
-    themeOf(useContext(ThemeContext).theme),
-    useContext(ColorSchemeContext),
-    useContext(ToneContext)
+    presetOf(useContext(ThemeContext).theme),
+    useContext(ColorSchemeContext)
   );
   return { color: accent, name: "テーマカラー", tint: markTint };
 }
 
-// On when the viewer's カラー is a single theme color rather than マルチカラー:
+// On when the viewer's テーマ draws every shift in its one color:
 // icons and letters, everyone's alike, take the theme color instead of each
 // pattern's own. Emoji keep their colors, so it does not apply to them.
 export const MonochromeContext = createContext<{ monochrome: boolean }>({

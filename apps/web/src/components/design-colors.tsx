@@ -1,17 +1,16 @@
 import type { ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import type { ColorScheme, ColorToken, Tone } from "../lib/design-tokens";
+import type { ColorScheme, ColorToken } from "../lib/design-tokens";
 import {
   colorSchemes,
   markColorIn,
   markColors,
   neutralTokenGroups,
-  tones,
 } from "../lib/design-tokens";
 import { hexToOklch } from "../lib/oklch";
-import { themeColors, themes, themeStyle } from "./design-theme";
-import type { Theme } from "./design-theme";
+import { presets, themeColors, themeStyle } from "./design-theme";
+import type { Preset } from "./design-theme";
 
 const schemeLabels: Record<ColorScheme, string> = {
   dark: "ダーク",
@@ -465,7 +464,7 @@ function TokenCell({
   const value = token[scheme];
   const ground = valueOf(scheme, "background-base");
   return (
-    <div className={palette.cell} style={themeStyle("moss", scheme)}>
+    <div className={palette.cell} style={themeStyle("pochical", scheme)}>
       <TokenSample token={token} />
       <code>{value}</code>
       {textTokens.has(token.name) ? (
@@ -537,17 +536,15 @@ function NeutralTokens() {
 }
 
 function ThemePalette({
-  tone,
   scheme,
-  theme,
+  preset,
 }: {
-  tone: Tone;
   scheme: ColorScheme;
-  theme: Theme;
+  preset: (typeof presets)[number];
 }) {
-  const colors = themeColors(theme, scheme, tone);
+  const colors = themeColors(preset, scheme);
   return (
-    <div className={palette.stacked} style={themeStyle(theme.id, scheme, tone)}>
+    <div className={palette.stacked} style={themeStyle(preset.id, scheme)}>
       <div className={palette.themePreview}>
         <span className={palette.themeButton}>完了</span>
         <span className={palette.themeChip}>選択中</span>
@@ -591,43 +588,40 @@ function ThemePalette({
   );
 }
 
-const toneLabels: Record<Tone, string> = {
-  deep: "深め",
-  dusty: "くすみ",
-  paper: "紙",
-};
+// How a テーマ's shifts are drawn, as the palette page names it.
+function marksLabel(preset: Preset) {
+  if (preset.marks === "mono") {
+    return "シフトは1色";
+  }
+  return (preset.vividness ?? 1) === 1
+    ? "シフトは色分け"
+    : "シフトは色分け（やわらか）";
+}
 
-const toneDescriptions: Record<Tone, string> = {
-  deep: "設定で選べる6色です。どのテーマでも同じ役割の変数（--accent など）に入り、画面の組み方は変わりません。深めのトーンは、塗りと文字に同じ色を使います。",
-  dusty:
-    "同じ6色の色相から、彩度を落として灰色を混ぜたくすみ色です。背景とグレーは、カラーの色相からクリーム色の側へ最大75°寄せます。クリームから90°より遠いカラー（藍・ラベンダー）は寄せず、反対側の色が混ざらないようにします。塗りは白い文字が読める中くらいの濃さにします。",
-  paper:
-    "同じ6色の色相から作った、インクのように濃い色です。地は生成りの紙の色で、グレーもカラーに関係なく紙の色相にそろえます。色は紙よりずっと暗いので、反対側の色相の藍でも濁りません。",
-};
-
-function ThemeTokens({ tone, id }: { tone: Tone; id: string }) {
+function ThemeTokens() {
   return (
     <Section
-      description={toneDescriptions[tone]}
-      id={id}
-      title={`テーマカラー（${toneLabels[tone]}）`}
+      description="設定で選べる9つのテーマです。それぞれ、テーマの色（色相・鮮やかさ・明るさ）とグレーの寄せ方、地の色、シフトの描き方だけを持ち、残りの色はすべて同じ段で作ります。ライトは明るさの段差と鮮やかさの割合、ダークはどのテーマも同じ明るさです。どのテーマでも同じ役割の変数（--accent-default など）に入り、画面の組み方は変わりません。"
+      id="cp-themes"
+      title="テーマ"
     >
-      {tone === "deep" ? (
-        <p className={palette.roleList}>
-          {themeRoles.map((role) => (
-            <span key={role.key}>
-              <code>--{role.name}</code>
-              {role.label}
-            </span>
-          ))}
-        </p>
-      ) : null}
+      <p className={palette.roleList}>
+        {themeRoles.map((role) => (
+          <span key={role.key}>
+            <code>--{role.name}</code>
+            {role.label}
+          </span>
+        ))}
+      </p>
       <div className={palette.themes}>
-        {themes.map((theme) => (
-          <article key={theme.id}>
-            <h3 className={palette.subheading}>{theme.name}</h3>
-            <ThemePalette tone={tone} scheme="light" theme={theme} />
-            <ThemePalette tone={tone} scheme="dark" theme={theme} />
+        {presets.map((preset) => (
+          <article key={preset.id}>
+            <h3 className={palette.subheading}>
+              {preset.name}
+              <small>{marksLabel(preset)}</small>
+            </h3>
+            <ThemePalette preset={preset} scheme="light" />
+            <ThemePalette preset={preset} scheme="dark" />
           </article>
         ))}
       </div>
@@ -635,20 +629,38 @@ function ThemeTokens({ tone, id }: { tone: Tone; id: string }) {
   );
 }
 
+// The shift colors as the colorful テーマ draw them: as tuned, or softened.
+const markLevels = [
+  ...new Set(
+    presets.flatMap((preset: Preset) =>
+      preset.marks === "multi" ? [preset.vividness ?? 1] : []
+    )
+  ),
+].map((vividness) => ({
+  label: presets
+    .filter(
+      (preset: Preset) =>
+        preset.marks === "multi" && (preset.vividness ?? 1) === vividness
+    )
+    .map((preset) => preset.name)
+    .join("・"),
+  vividness,
+}));
+
 function MarkChip({
-  tone,
+  level,
   option,
   scheme,
 }: {
-  tone: Tone;
+  level: (typeof markLevels)[number];
   option: (typeof markColors)[number];
   scheme: ColorScheme;
 }) {
-  const { color, tint } = markColorIn(option, scheme, tone);
+  const { color, tint } = markColorIn(option, scheme, level.vividness);
   return (
     <div
       className={cx(palette.stacked, palette.markChip)}
-      style={themeStyle("moss", scheme, tone)}
+      style={themeStyle("pochical", scheme)}
     >
       <span
         className={palette.markTile({ size: "large" })}
@@ -658,7 +670,7 @@ function MarkChip({
       </span>
       <span className={palette.markValues}>
         <small>
-          {toneLabels[tone]}・{schemeLabels[scheme]}
+          {level.label}・{schemeLabels[scheme]}
         </small>
         <code>{color}</code>
         <code>{tint}</code>
@@ -671,7 +683,7 @@ function MarkChip({
 function MarkTokens() {
   return (
     <Section
-      description="シフトごとに選べる12色です。濃い色は記号と文字、薄い色はその地に使います。比は記号の色と地の色のコントラストです。紙とくすみは同じ色相から作ります。"
+      description="シフトごとに選べる12色です。濃い色は記号と文字、薄い色はその地に使います。比は記号の色と地の色のコントラストです。1番目はテーマの色で、テーマごとに変わります。やわらかなテーマは、明るさを保ったまま鮮やかさを落とします。"
       id="cp-marks"
       title="シフトの色"
     >
@@ -679,11 +691,11 @@ function MarkTokens() {
         {markColors.map((option) => (
           <article key={option.name}>
             <h3 className={palette.subheading}>{option.name}</h3>
-            {tones.map((tone) =>
+            {markLevels.map((level) =>
               colorSchemes.map((scheme) => (
                 <MarkChip
-                  tone={tone}
-                  key={`${tone}-${scheme}`}
+                  key={`${level.vividness}-${scheme}`}
+                  level={level}
                   option={option}
                   scheme={scheme}
                 />
@@ -711,8 +723,10 @@ const BLURRED_DISTANCE = 0.02;
 const CLOSE_DISTANCE = 0.03;
 const SHOWN_PAIRS = 5;
 
-function closestPairs(tone: Tone, scheme: ColorScheme) {
-  const colors = markColors.map((option) => markColorIn(option, scheme, tone));
+function closestPairs(vividness: number, scheme: ColorScheme) {
+  const colors = markColors.map((option) =>
+    markColorIn(option, scheme, vividness)
+  );
   const pairs = colors.flatMap((first, index) =>
     colors.slice(index + 1).map((second) => ({
       distance: colorDistance(first.color, second.color),
@@ -743,18 +757,18 @@ function DistinctTokens() {
       title="見分けやすさ"
     >
       <div className={palette.distinct}>
-        {tones.map((tone) =>
+        {markLevels.map((level) =>
           colorSchemes.map((scheme) => (
             <article
               className={palette.distinctCard}
-              key={`${tone}-${scheme}`}
-              style={themeStyle("moss", scheme, tone)}
+              key={`${level.vividness}-${scheme}`}
+              style={themeStyle("pochical", scheme)}
             >
               <h3>
-                {toneLabels[tone]}・{schemeLabels[scheme]}
+                {level.label}・{schemeLabels[scheme]}
               </h3>
               <ul>
-                {closestPairs(tone, scheme).map(
+                {closestPairs(level.vividness, scheme).map(
                   ({ distance, first, second }) => (
                     <li key={`${first.name}-${second.name}`}>
                       {[first, second].map((mark) => (
@@ -816,11 +830,9 @@ export function DesignColors() {
       <nav aria-label="このページの内容" className={contents}>
         {[
           { href: "#cp-neutral", number: "01", title: "基本色" },
-          { href: "#cp-themes", number: "02", title: "テーマ（深め）" },
-          { href: "#cp-paper", number: "03", title: "テーマ（紙）" },
-          { href: "#cp-dusty", number: "04", title: "テーマ（くすみ）" },
-          { href: "#cp-marks", number: "05", title: "シフトの色" },
-          { href: "#cp-distinct", number: "06", title: "見分けやすさ" },
+          { href: "#cp-themes", number: "02", title: "テーマ" },
+          { href: "#cp-marks", number: "03", title: "シフトの色" },
+          { href: "#cp-distinct", number: "04", title: "見分けやすさ" },
         ].map(({ href, number, title }) => (
           <a href={href} key={href}>
             <span>{number}</span>
@@ -829,9 +841,7 @@ export function DesignColors() {
         ))}
       </nav>
       <NeutralTokens />
-      <ThemeTokens tone="deep" id="cp-themes" />
-      <ThemeTokens tone="paper" id="cp-paper" />
-      <ThemeTokens tone="dusty" id="cp-dusty" />
+      <ThemeTokens />
       <MarkTokens />
       <DistinctTokens />
     </>

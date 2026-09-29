@@ -11,7 +11,7 @@ import { pageMeta } from "../lib/site";
 
 function ColorsPage() {
   return (
-    <DesignPage style={themeStyle("moss", "light")}>
+    <DesignPage style={themeStyle("pochical", "light")}>
       <DesignToolbar back="documents" />
       <DesignIntro eyebrow="POCHICAL / COLOR PALETTE" title="カラーパレット">
         画面の色はすべて、ここにある役割の名前で決まります。ライトとダークを並べています。

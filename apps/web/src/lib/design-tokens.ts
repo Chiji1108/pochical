@@ -1,7 +1,6 @@
 import type { CSSProperties } from "react";
 
 import { hexToOklch, oklchToHex } from "./oklch";
-import { toneMarkColor, generatedTones } from "./tones";
 
 // The app's neutral colors by role, for light and dark. The screens read
 // them as CSS variables (`--bg`, `--text-3`, ...); /design/colors lists them, and
@@ -342,54 +341,21 @@ export const markColors = [
   },
 ] as const;
 
-// Theme tones: `deep` is the muted, hand-tuned palette; the others are
-// generated from the same hues (see tones.ts).
-export const tones = ["deep", ...generatedTones] as const;
-export type Tone = (typeof tones)[number];
-
-// The deep shift colors' average lightness; generated tones keep each
-// color's offset from it.
-const MARK_MEAN_LIGHTNESS =
-  markColors.reduce(
-    (sum, option) => sum + hexToOklch(option.color).lightness,
-    0
-  ) / markColors.length;
-
-// The generated tones crowd the warm hues together (dusty by lowering
-// chroma, paper by printing them on its yellow), so both spread them a
-// little (degrees of OKLCH hue) to keep テラコッタ and 赤 apart. Each still
-// reads as the same color name.
-const warmHueSpread = {
-  からし: 8,
-  オレンジ: 10,
-  テラコッタ: 2,
-  ローズ: -12,
-  赤: -8,
-} as const;
-
-const toneHueShifts: Partial<
-  Record<Tone, Partial<Record<(typeof markColors)[number]["name"], number>>>
-> = {
-  dusty: warmHueSpread,
-  paper: warmHueSpread,
-};
-
-// A shift color as drawn in light or dark mode and the given tone.
+// A shift color as drawn in light or dark mode, its chroma scaled by the
+// テーマ's vividness and its lightness kept, so a softer テーマ grays its
+// shifts without lightening or darkening them.
 export function markColorIn(
   option: (typeof markColors)[number],
   scheme: ColorScheme,
-  tone: Tone = "deep"
+  vividness = 1
 ) {
-  const deep = scheme === "dark" ? option.dark : option;
-  const { color, tint } =
-    tone === "deep"
-      ? deep
-      : toneMarkColor(
-          tone,
-          option.color,
-          scheme,
-          hexToOklch(option.color).lightness - MARK_MEAN_LIGHTNESS,
-          toneHueShifts[tone]?.[option.name]
-        );
-  return { color, name: option.name, tint };
+  const { color, tint } = scheme === "dark" ? option.dark : option;
+  const soften = (hex: string) => {
+    if (vividness === 1) {
+      return hex;
+    }
+    const oklch = hexToOklch(hex);
+    return oklchToHex({ ...oklch, chroma: oklch.chroma * vividness });
+  };
+  return { color: soften(color), name: option.name, tint: soften(tint) };
 }

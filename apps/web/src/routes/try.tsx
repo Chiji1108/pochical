@@ -24,12 +24,9 @@ const title = "ポチカル";
 // The screen's color in each テーマ, light and dark, before the saved
 // settings load.
 const screenColors = Object.fromEntries(
-  presets.map(({ id, theme, tone }) => [
+  presets.map(({ id }) => [
     id,
-    {
-      dark: screenColor(theme, "dark", tone),
-      light: screenColor(theme, "light", tone),
-    },
+    { dark: screenColor(id, "dark"), light: screenColor(id, "light") },
   ])
 );
 
