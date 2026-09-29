@@ -24,6 +24,8 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
+import { useMotionValue, useReducedMotion } from "motion/react";
+import type { MotionValue } from "motion/react";
 import {
   useContext,
   useEffect,
@@ -60,6 +62,12 @@ import type { Schedule, Tab } from "./design-calendar";
 import { EmojiPickerSheet } from "./design-emoji-picker";
 import { iconNames, OtherEmojiButton, withPicked } from "./design-look-editor";
 import { MonthTitleButton } from "./design-month-picker";
+import {
+  monthIndex,
+  RollingName,
+  TodayCorner,
+  useTurn,
+} from "./design-rolling";
 import {
   ConfirmDialog,
   DecideHeading,
@@ -4403,6 +4411,14 @@ function PagedShifts({
   onMember: (member: Member) => void;
 }) {
   const { weekStart } = useWeek();
+  // How far 人ごと's pages are dragged, which the month row follows, and
+  // the month a swipe last landed on, whose name the drag brought in.
+  const pageDrag = useMotionValue(0);
+  const [swipedTo, setSwipedTo] = useState<number>();
+  const goTo = (target: Date) => {
+    setSwipedTo(undefined);
+    onMonth(target);
+  };
   // Whom 人ごと shows; chosen above the month, like a filter.
   const [personId, setPersonId] = useState(
     group.members.find((member) => !member.me)?.id ?? group.members[0].id
@@ -4442,21 +4458,27 @@ function PagedShifts({
       />
       <MonthRow
         month={month}
-        onPick={onMonth}
+        onPick={goTo}
         onToday={
           thisMonth
             ? undefined
             : () => {
-                onMonth(monthAfter(designToday, 0));
+                goTo(monthAfter(designToday, 0));
               }
         }
+        progress={pageDrag}
+        swiped={swipedTo === monthIndex(month)}
         unit="月"
       />
       <PersonPager
         group={group}
         member={person}
         month={month}
-        onMonth={onMonth}
+        onMonth={(target) => {
+          onMonth(target);
+          setSwipedTo(monthIndex(target));
+        }}
+        progress={pageDrag}
         onPickDay={onPickDay}
         picked={picked}
       />
@@ -5001,7 +5023,9 @@ function MonthDivider({
 
 // The shift table's month: its name, which opens a choice of months, and
 // the way back to today's day or month while it is out of sight. Over a
-// list of months, it names the month in sight.
+// list of months, it names the month in sight, rolling to the next as the
+// list scrolls on, the way it went. Over 人ごと's pages (`progress`), the
+// name and 今月 follow the drag, as over the calendar.
 function MonthRow({
   month,
   unit,
@@ -5009,6 +5033,8 @@ function MonthRow({
   last,
   onPick,
   onToday,
+  progress,
+  swiped = false,
 }: {
   month: Date;
   unit: "日" | "月";
@@ -5018,15 +5044,49 @@ function MonthRow({
   onPick: (month: Date) => void;
   // Left out while today's day or month is in sight.
   onToday?: () => void;
+  progress?: MotionValue<number>;
+  // Turned by a swipe, which has already brought the new name in.
+  swiped?: boolean;
 }) {
+  const reduceMotion = useReducedMotion() ?? false;
+  const turn = useTurn(monthIndex(month), swiped);
+  const next = monthAfter(month, 1);
+  const previous = monthAfter(month, -1);
+  const isThisMonth = (date: Date) =>
+    monthIndex(date) === monthIndex(designToday);
+  const rolled = (of: (date: Date) => number) => ({
+    ...(progress
+      ? { next: String(of(next)), previous: String(of(previous)) }
+      : {}),
+    progress,
+    still: reduceMotion,
+    text: String(of(month)),
+    turn,
+  });
   return (
     <div className={shiftsPage.monthRow}>
       <MonthTitleButton first={first} last={last} month={month} onPick={onPick}>
         <strong className={shiftsPage.monthName}>
-          {month.getFullYear()}年{month.getMonth() + 1}月
+          <span aria-hidden="true">
+            <RollingName {...rolled((date) => date.getFullYear())} />年
+            <RollingName {...rolled((date) => date.getMonth() + 1)} />月
+          </span>
         </strong>
       </MonthTitleButton>
-      {onToday && <TodayButton onClick={onToday} unit={unit} />}
+      <TodayCorner
+        atToday={onToday === undefined}
+        nextIsToday={progress !== undefined && isThisMonth(next)}
+        previousIsToday={progress !== undefined && isThisMonth(previous)}
+        progress={progress}
+        swiped={swiped}
+      >
+        <TodayButton
+          onClick={() => {
+            onToday?.();
+          }}
+          unit={unit}
+        />
+      </TodayCorner>
     </div>
   );
 }
@@ -5907,12 +5967,16 @@ function PersonPager({
   picked,
   onMonth,
   onPickDay,
+  progress,
 }: {
   group: Group;
   member: Member;
   month: Date;
   picked?: Date;
+  // Called as a swipe lands on the month before or after.
   onMonth: (month: Date) => void;
+  // Set to how far the pages are dragged, for the month row.
+  progress: MotionValue<number>;
   onPickDay: (date: Date) => void;
 }) {
   const weekTools = useWeek();
@@ -5924,6 +5988,7 @@ function PersonPager({
           onStep={(direction) => {
             onMonth(monthAfter(month, direction));
           }}
+          progress={progress}
           page={monthKey(month)}
           renderPage={(offset) => {
             const shown = monthAfter(month, offset);
