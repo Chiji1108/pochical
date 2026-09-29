@@ -4238,20 +4238,8 @@ function PagedShifts({
   );
 }
 
-// A day in the row of a month's みんな休み, written as the table's dates:
-// "5 土".
-const togetherDay = {
-  root: css({ fontWeight: 600, textStyle: "subheadline" }),
-  weekday: css({
-    color: "text.secondary",
-    fontSize: "11px",
-    fontWeight: 400,
-    marginLeft: "2px",
-  }),
-};
-
-// A month's days everyone is off: how many, which, and the dates in a
-// sheet to go to. None, it says so, or that days not entered yet leave it
+// A month's days everyone is off: how many, and the dates in a sheet to
+// go to. None, it says so, or that days not entered yet leave it
 // open.
 function TogetherSummary({
   label,
@@ -4280,14 +4268,6 @@ function TogetherSummary({
     <>
       <SummaryRow
         days={days.length}
-        detail={days.map((date) => (
-          <span className={togetherDay.root} key={dateKey(date)}>
-            {date.getDate()}
-            <span className={togetherDay.weekday}>
-              {weekdayLabels[date.getDay()]}
-            </span>
-          </span>
-        ))}
         label={label}
         onOpen={() => {
           setOpen(true);
@@ -4391,7 +4371,7 @@ const monthSpan = 24;
 // measuring rows above the sight does not move the list.
 // A month's heading, over the row of its みんな休み when it has any; the
 // list of months sets it apart by more room above in 日ごと.
-const headingEstimate = 141;
+const headingEstimate = 120;
 const quietHeadingEstimate = 54;
 const dayHeadingRoom = 24;
 const dayRowEstimate = 37;

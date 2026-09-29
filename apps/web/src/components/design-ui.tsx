@@ -637,17 +637,6 @@ export const summaryRow = {
     display: "flex",
     fontSize: "25px",
   }),
-  // Which days, on a line of their own under the label and the count,
-  // where the screen does not show them.
-  detail: css({
-    columnGap: "12px",
-    display: "flex",
-    flexBasis: "100%",
-    flexWrap: "wrap",
-    marginTop: "2px",
-    rowGap: "2px",
-    textAlign: "left",
-  }),
   row: css({
     alignItems: "center",
     bg: "fill.quaternary",
@@ -657,7 +646,6 @@ export const summaryRow = {
     cursor: "pointer",
     display: "flex",
     flexShrink: 0,
-    flexWrap: "wrap",
     justifyContent: "space-between",
     padding: "12px 16px",
     textStyle: "footnote",
@@ -669,12 +657,10 @@ export const summaryRow = {
 export function SummaryRow({
   label,
   days,
-  detail,
   onOpen,
 }: {
   label: string;
   days: number;
-  detail?: ReactNode;
   onOpen: () => void;
 }) {
   return (
@@ -694,9 +680,6 @@ export function SummaryRow({
           size={17}
         />
       </strong>
-      {detail !== undefined && (
-        <span className={summaryRow.detail}>{detail}</span>
-      )}
     </button>
   );
 }
