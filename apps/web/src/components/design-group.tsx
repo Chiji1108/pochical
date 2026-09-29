@@ -5924,16 +5924,20 @@ function WeekDate({
   members,
   month,
   picked,
+  compact,
   onPick,
 }: {
   date: Date;
   members: Member[];
   month?: Date;
   picked: boolean;
+  // In the hub card's small week, as its cells are.
+  compact: boolean;
   onPick?: (date: Date) => void;
 }) {
   const weekTools = useWeek();
   const look = {
+    compact,
     kind: "date",
     outside: !(!month || sameMonth(date, month)),
     picked,
@@ -6125,6 +6129,7 @@ function WeekBlock({
         <span />
         {week.map((date) => (
           <WeekDate
+            compact={compact}
             date={date}
             key={dateKey(date)}
             members={group.members}
