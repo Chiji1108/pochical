@@ -58,7 +58,9 @@ export const neutralTokenGroups: ColorTokenGroup[] = [
         name: "fill-tertiary",
       },
       {
-        dark: "#434641",
+        // Lighter than a card (#424540) in the dark, as the light one is
+        // darker than a white card, so a letter's round shows on either.
+        dark: "#50544e",
         label: "アバター・空の枠",
         light: "#e6e8e1",
         name: "fill-secondary",
