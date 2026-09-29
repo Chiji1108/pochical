@@ -54,8 +54,8 @@ export const presets = [
   // cream, the grays warmed with it and the shifts softened.
   {
     accent: { chroma: 0.04, hue: 132, lightness: 0.5 },
-    grays: { hue: 90, strength: 1.3 },
-    ground: { chroma: 0.009, hue: 92, lightness: 0.99 },
+    grays: { hue: 90, strength: 1.1 },
+    ground: { chroma: 0.005, hue: 92, lightness: 0.993 },
     id: "sage",
     name: "セージ",
     vividness: 0.75,
