@@ -83,10 +83,10 @@ const splash = await instructions(
   imageAssets(rounded, {
     apple: none,
     appleSplashScreens: createAppleSplashScreens({
-      darkResizeOptions: { background: screenColor("moss", "dark", "deep") },
+      darkResizeOptions: { background: screenColor("pochical", "dark") },
       linkMediaOptions: { basePath: BASE_PATH, log: false },
       padding: SPLASH_PADDING,
-      resizeOptions: { background: screenColor("moss", "light", "deep") },
+      resizeOptions: { background: screenColor("pochical", "light") },
     }),
     maskable: none,
     transparent: none,
@@ -96,7 +96,7 @@ const splash = await instructions(
 await generateAssets(icons, true, FOLDER);
 await generateAssets(splash, true, FOLDER);
 
-const light = screenColor("moss", "light", "deep");
+const light = screenColor("pochical", "light");
 const manifest = {
   background_color: light,
   description: site.description,
