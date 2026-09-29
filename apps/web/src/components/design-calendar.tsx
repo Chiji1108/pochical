@@ -676,6 +676,7 @@ export function DesignCalendar({
           {tab === "group" && (
             <DesignGroup
               initialGroupId={openGroup}
+              railStyle={variants.groupRail}
               scanResult={variants.scanResult}
               onTab={setTab}
               patternKeys={patternKeys}

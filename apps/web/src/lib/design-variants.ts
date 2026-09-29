@@ -8,6 +8,20 @@ export const designVariantOptions = {
     ],
     label: "グループ",
   },
+  // How the group rail stands beside the hub: on its own ground against
+  // the phone's left edge, fading out under the tab bar (the proposal);
+  // on the screen's ground with a line between; Discord's way round, the
+  // hub raised as a pane beside a rail on the ground; or as it was, held
+  // 8px off the edge.
+  groupRail: {
+    choices: [
+      { label: "端に付ける", value: "edge" },
+      { label: "線で区切る", value: "line" },
+      { label: "本文を面に", value: "pane" },
+      { label: "端を空ける", value: "inset" },
+    ],
+    label: "グループの列",
+  },
   inviteLink: {
     choices: [
       { label: "なし", value: "none" },
