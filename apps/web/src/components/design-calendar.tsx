@@ -2390,17 +2390,20 @@ export const dayCell = cva({
 // day's frame and the frame of a day you are off together. As wide as
 // the date needs, and taking no more room than the date does, so rows and
 // columns of dates keep their place.
+// Its height is set and the date centered in it, rather than a line
+// height, which the date's own class sets too.
 export const todayRound = css({
+  alignItems: "center",
   bg: "accent.fill",
   borderRadius: "999px",
   color: "accent.onFill",
-  display: "inline-block",
-  lineHeight: "20px",
+  display: "inline-flex",
+  height: "20px",
+  justifyContent: "center",
   marginBlock: "calc((14px - 20px) / 2)",
   marginInline: "-4px",
   minWidth: "20px",
   paddingInline: "4px",
-  textAlign: "center",
 });
 
 // A note's stroke, one either side of its date.
