@@ -51,14 +51,15 @@ export const presets = [
     id: "pochical",
     name: "ポチカル",
   },
-  // The same moss softened to sage on a screen a breath off white toward
-  // cream, the grays warmed with it and the shifts softened.
+  // A temple's moss garden: the moss softened to sage on a screen a breath
+  // off white toward shoji paper, the grays warmed with it and the shifts
+  // quieted.
   {
     accent: { chroma: 0.04, hue: 132, lightness: 0.5 },
     grays: { hue: 90, strength: 1.1 },
     ground: { chroma: 0.005, hue: 92, lightness: 0.993 },
-    id: "sage",
-    name: "セージ",
+    id: "zen",
+    name: "禅",
     vividness: 0.75,
   },
   // Ink alone, in black.
