@@ -1129,18 +1129,10 @@ const calendarPage = {
     paddingBottom: "calc(var(--tab-bar-bottom) + 80px - var(--safe-bottom))",
   }),
   controls: css({ flexShrink: 0, minHeight: "92px", paddingTop: "12px" }),
-  // Entering takes the bottom for the pattern buttons, on the raised
-  // ground of a keyboard: out to the phone's sides and down under the
-  // home indicator, its content kept where the screen's would be.
-  input: css({
-    bg: "background.elevated",
-    flexShrink: 0,
-    marginBottom: "calc(-1 * var(--safe-bottom))",
-    marginInline:
-      "calc(-1 * var(--screen-left)) calc(-1 * var(--screen-right))",
-    marginTop: "auto",
-    padding: "2px var(--screen-right) var(--safe-bottom) var(--screen-left)",
-  }),
+  // Entering takes the bottom for the pattern buttons, on the screen's
+  // own ground: a raised one would show only in dark, where the sheets'
+  // color parts from the screen's.
+  input: css({ flexShrink: 0, marginTop: "auto", paddingTop: "2px" }),
   // Room around the grid for the picked day's outline.
   scroll: css({
     minHeight: 0,
