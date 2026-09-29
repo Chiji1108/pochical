@@ -1170,6 +1170,16 @@ const ROW_STEP = DAY_ROW_HEIGHT + DAY_ROW_GAP;
 // How the month folds into a week and back: one spring without bounce,
 // the same as SwiftUI's .spring(duration: 0.3, bounce: 0) for the apps.
 const fold = { bounce: 0, type: "spring", visualDuration: 0.3 } as const;
+// How a day leaves as the month folds, moving by `by`. Folding into the
+// top row, the month stays put, so its days wait out the fold, cut off as
+// the grid shrinks, rather than going at once, as a move to where they
+// already are would end at once.
+function leave(by: number) {
+  if (by === 0) {
+    return { transition: { delay: fold.visualDuration }, y: [null, 0] };
+  }
+  return { y: by };
+}
 const folding = {
   cell: css({ display: "grid", minWidth: 0 }),
   // Days on their way out are laid over the grid where they were.
@@ -1218,7 +1228,7 @@ function FoldingGrid({
             layout
             layoutDependency={weekDetail}
             transition={fold}
-            variants={{ away: (by: number) => ({ y: by }) }}
+            variants={{ away: leave }}
           >
             {renderCell(date)}
           </motion.div>
