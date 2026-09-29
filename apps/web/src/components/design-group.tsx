@@ -20,6 +20,7 @@ import {
   Send,
   SendHorizontal,
   Settings2,
+  Share,
   Trash2,
   UserPlus,
   X,
@@ -711,8 +712,10 @@ type Page =
   | { name: "hub" }
   // `from` is the chat that opened it, to go back there.
   | { name: "shifts"; month?: Date; day?: Date; from?: string }
-  // `from` is the chat whose member picture opened it, to go back there.
-  | { name: "chat"; chatId: string; from?: string }
+  // `from` is the chat whose member picture opened it, to go back there;
+  // `attach` is days brought from the shift table to share, set above
+  // the composer until sent.
+  | { name: "chat"; chatId: string; from?: string; attach?: Date[] }
   | { name: "invite" }
   | { name: "new" }
   | { name: "settings" }
@@ -916,28 +919,16 @@ export function DesignGroup({
       },
     });
   };
-  // A day shared from the shift table goes to the group chat, which
-  // opens on it, as sharing from a chat app's own view does.
+  // A day shared from the shift table opens the group chat with the day
+  // set above the composer, as sharing into a chat app does: nothing
+  // reaches everyone until you send it, with a word if you like.
   const shareDay = (date: Date) => {
     const key = chatKey(group.id, groupChat);
-    const chat = chatOf(group.id, groupChat);
     setChats({
       ...chats,
-      [key]: {
-        messages: [
-          ...chat.messages,
-          {
-            days: [date],
-            from: "me",
-            id: `sent-${chat.messages.length}`,
-            time: timeNow(),
-            when: "今日",
-          },
-        ],
-        unread: 0,
-      },
+      [key]: { ...chatOf(group.id, groupChat), unread: 0 },
     });
-    setPage({ chatId: groupChat, name: "chat" });
+    setPage({ attach: [date], chatId: groupChat, name: "chat" });
   };
   const removeMember = (member: Member) => {
     setProfileOf(undefined);
@@ -1000,6 +991,7 @@ export function DesignGroup({
     return (
       <>
         <ChatPage
+          attach={page.attach}
           backLabel={page.from ? chatTitle(group, page.from) : group.name}
           chat={chatOf(group.id, page.chatId)}
           formerMembers={membersOf(group.id).filter((member) =>
@@ -2610,9 +2602,12 @@ function ChatPage({
   onMember,
   backLabel,
   formerMembers = noMembers,
+  attach,
 }: {
   title: string;
   group: Group;
+  // Days brought from the shift table, waiting above the composer.
+  attach?: Date[];
   // Where 戻る goes: the group, or the chat a member was opened from.
   backLabel: string;
   // Members taken out of the group, so their past lines keep a face.
@@ -2627,6 +2622,7 @@ function ChatPage({
   onOpenDay: (date: Date) => void;
 }) {
   const [draft, setDraft] = useState("");
+  const [attached, setAttached] = useState(attach);
   const [sharing, setSharing] = useState(false);
   // The line whose actions are open, and the one being answered.
   const [selected, setSelected] = useState<string>();
@@ -2651,27 +2647,34 @@ function ChatPage({
   const byId = (id?: string) =>
     chat.messages.find((message) => message.id === id);
   const nameOf = (id: string) => writerOf(id)?.name ?? "";
-  const post = (message: Omit<Message, "id" | "from" | "when" | "time">) => {
+  // Sends one line or several at once, the first answering the line
+  // being replied to.
+  const post = (...lines: Omit<Message, "id" | "from" | "when" | "time">[]) => {
     onChange([
       ...chat.messages,
-      {
-        ...message,
+      ...lines.map((line, index) => ({
+        ...line,
         from: "me",
-        id: `sent-${chat.messages.length}`,
-        replyTo,
+        id: `sent-${chat.messages.length + index}`,
+        replyTo: index === 0 ? replyTo : undefined,
         time: "10:10",
         when: "今日",
-      },
+      })),
     ]);
     setReplyTo(undefined);
   };
+  // The attached days go first, then what was written, if anything.
   const send = () => {
     const text = draft.trim();
-    if (!text) {
+    if (!text && !attached) {
       return;
     }
-    post({ text });
+    post(
+      ...(attached ? [{ days: attached }] : []),
+      ...(text ? [{ text }] : [])
+    );
     setDraft("");
+    setAttached(undefined);
   };
   const react = (id: string, emoji: string) => {
     onChange(
@@ -2887,8 +2890,27 @@ function ChatPage({
           </IconButton>
         </div>
       )}
+      {attached && (
+        <div className={chatStyle.replying}>
+          <span className={chatStyle.quote}>
+            <span className={chatStyle.quoteName}>共有する日</span>
+            <span className={chatStyle.quoteText}>{daysSummary(attached)}</span>
+          </span>
+          <IconButton
+            glass={false}
+            label="共有をやめる"
+            onClick={() => {
+              setAttached(undefined);
+            }}
+          >
+            <X aria-hidden="true" size={16} />
+          </IconButton>
+        </div>
+      )}
       <form
-        className={chatStyle.composer({ replying: replying !== undefined })}
+        className={chatStyle.composer({
+          replying: replying !== undefined || attached !== undefined,
+        })}
         onSubmit={(event) => {
           event.preventDefault();
           send();
@@ -2916,7 +2938,7 @@ function ChatPage({
         <button
           aria-label="送る"
           className={chatStyle.composerButton({ send: true })}
-          disabled={draft.trim() === ""}
+          disabled={draft.trim() === "" && !attached}
           type="submit"
         >
           <SendHorizontal aria-hidden="true" size={18} />
@@ -3126,12 +3148,13 @@ function MessageActions({
 }
 
 function summaryOf(message: Message) {
-  const [first] = message.days ?? [];
-  if (first) {
-    const more = (message.days?.length ?? 0) > 1 ? "ほか" : "";
-    return `📅 ${formatDay(first)}${more}`;
-  }
-  return message.text ?? "";
+  return message.days ? daysSummary(message.days) : (message.text ?? "");
+}
+
+function daysSummary(days: Date[]) {
+  const [first] = days;
+  const more = days.length > 1 ? "ほか" : "";
+  return first ? `📅 ${formatDay(first)}${more}` : "";
 }
 
 // A reaction under a message: the emoji and who chose it, as the members
@@ -5200,7 +5223,7 @@ function PickedDaySheet({
     >
       <SheetHeading
         action={{
-          icon: <Send aria-hidden="true" size={18} />,
+          icon: <Share aria-hidden="true" size={18} />,
           label: "全体チャットで共有",
           onClick: () => {
             onShare(date);
