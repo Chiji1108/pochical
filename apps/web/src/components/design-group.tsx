@@ -5803,11 +5803,12 @@ function PersonDay({
   // The calendar's own day, with a frame when you are off too.
   // Framed when you are off too, unless the picked day's own frame is on
   // it: the styles are merged, as two classes for one property would leave
-  // the winner to the stylesheet's order.
+  // the winner to the stylesheet's order. The frame stays inside the day,
+  // or it would show at the edge of the month beside.
   const className = css(
     dayCell.raw({ active: picked, off, outside }),
     withMe && !picked
-      ? { outline: "1.5px solid var(--accent-border)", outlineOffset: "-1px" }
+      ? { outline: "1.5px solid var(--accent-border)", outlineOffset: "-1.5px" }
       : {}
   );
   const style = off ? ({ "--off-tint": tint } as CSSProperties) : undefined;
