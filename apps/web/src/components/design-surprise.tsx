@@ -30,8 +30,8 @@ export const skies: Sky[] = [
 
 // Pale and airy in light mode; deep, like jewels in shade, in dark mode.
 const tones = {
-  dark: { chroma: 0.055, lightness: 0.31 },
-  light: { chroma: 0.045, lightness: 0.945 },
+  dark: { chroma: 0.05, lightness: 0.29 },
+  light: { chroma: 0.04, lightness: 0.95 },
 } as const;
 
 // Light spreading from both top corners and the middle, fading down.
@@ -120,12 +120,12 @@ export const surpriseStyles = {
     position: "absolute",
     transformOrigin: "50% 0",
   }),
-  // Over the top half, faded out toward the middle of the screen.
   screen: css({ isolation: "isolate" }),
+  // Over the heading only, gone by the calendar's first weeks.
   sky: css({
-    height: "62%",
+    height: "34%",
     insetInline: 0,
-    maskImage: "linear-gradient(to bottom, black 35%, transparent)",
+    maskImage: "linear-gradient(to bottom, black 30%, transparent)",
     position: "absolute",
     top: 0,
   }),
