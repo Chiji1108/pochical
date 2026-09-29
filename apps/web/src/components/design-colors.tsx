@@ -588,7 +588,7 @@ function ThemePalette({
   );
 }
 
-// How a テーマ draws shifts when シフトを色分けする is on.
+// How a テーマ draws shifts when シフトの色 is 色分け.
 function marksLabel(preset: Preset) {
   return (preset.vividness ?? 1) === 1
     ? "シフトの色はそのまま"

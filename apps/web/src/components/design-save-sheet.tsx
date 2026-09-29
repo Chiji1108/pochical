@@ -17,6 +17,7 @@ import { Sheet, SheetHeading } from "./design-sheet";
 import {
   ColorSchemeContext,
   PreviewSchemeSwitch,
+  presetOf,
   ThemeContext,
   themeStyle,
   previewWrap,
@@ -369,12 +370,15 @@ export function ImagePreviewPage({
                   </figure>
                 </OffDisplayContext>
               </ColorSchemeContext>
-              <PreviewSchemeSwitch
-                onPick={(picked) => {
-                  onOptions({ ...options, scheme: picked });
-                }}
-                shown={shown}
-              />
+              {/* An always-dark テーマ saves its dark. */}
+              {presetOf(theme).scheme === undefined && (
+                <PreviewSchemeSwitch
+                  onPick={(picked) => {
+                    onOptions({ ...options, scheme: picked });
+                  }}
+                  shown={shown}
+                />
+              )}
             </div>
           </OffHighlightContext>
         </CellNamesContext>

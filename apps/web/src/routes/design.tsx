@@ -8,7 +8,7 @@ import {
   DesignToolbar,
 } from "../components/design-page";
 import { useDesignTheme } from "../components/design-providers";
-import { themeStyle } from "../components/design-theme";
+import { pageStyle } from "../components/design-theme";
 import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/design")({
@@ -87,7 +87,7 @@ const documentList = css({
 function DocumentsPage() {
   const theme = useDesignTheme();
   return (
-    <DesignPage style={themeStyle(theme, "light")}>
+    <DesignPage style={pageStyle(theme)}>
       <DesignToolbar back="site" />
       <DesignIntro
         eyebrow="POCHICAL / DESIGN"
