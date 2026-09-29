@@ -2075,6 +2075,9 @@ export function Pager({
   const [width, setWidth] = useState(0);
   // Dragged since the finger went down, so letting go presses nothing.
   const dragged = useRef(false);
+  // Going sideways, locked so by the drag: the page may not take the
+  // finger to scroll.
+  const sideways = useRef(false);
   // The pager is as tall as the page in the middle, whatever the pages
   // beside it hold, and follows it as it grows or shrinks, as when the
   // month turns into one week.
@@ -2098,6 +2101,25 @@ export function Pager({
       observer.disconnect();
     };
   }, []);
+  // Safari scrolls the page under a sideways drag when the finger drifts
+  // up or down, and takes the finger for it; Motion then ends the drag as
+  // if let go, which turned the page halfway through a slow swipe. Once
+  // the drag is sideways, the page stays put.
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      return;
+    }
+    const hold = (event: TouchEvent) => {
+      if (sideways.current && event.cancelable) {
+        event.preventDefault();
+      }
+    };
+    viewport.addEventListener("touchmove", hold, { passive: false });
+    return () => {
+      viewport.removeEventListener("touchmove", hold);
+    };
+  }, []);
   // Before the new page paints, so the jump back to the middle is unseen;
   // also when the page changes otherwise, as by the arrows, mid-swipe.
   const shownPage = useRef(page);
@@ -2107,7 +2129,9 @@ export function Pager({
       x.jump(0);
     }
   }, [page, x]);
-  const land = (velocity: number) => {
+  // Taken from the finger, as by a call or the system, it goes back rather
+  // than turning.
+  const land = (velocity: number, taken: boolean) => {
     const pageWidth = viewportRef.current?.offsetWidth ?? 0;
     if (pageWidth === 0) {
       x.jump(0);
@@ -2116,7 +2140,7 @@ export function Pager({
     const at = x.get();
     const flicked = Math.abs(velocity) > FLICK_SPEED;
     const rest = flicked ? at + velocity * FLICK_CARRY : at;
-    const turned = Math.abs(rest) > pageWidth * TURN_SHARE;
+    const turned = !taken && Math.abs(rest) > pageWidth * TURN_SHARE;
     let direction: -1 | 0 | 1 = 0;
     if (turned) {
       direction = rest < 0 ? 1 : -1;
@@ -2155,14 +2179,19 @@ export function Pager({
             event.stopPropagation();
           }
         }}
-        onDragEnd={(_event, info) => {
-          land(info.velocity.x);
+        onDirectionLock={(axis) => {
+          sideways.current = axis === "x";
+        }}
+        onDragEnd={(event, info) => {
+          sideways.current = false;
+          land(info.velocity.x, event.type === "pointercancel");
         }}
         onDragStart={() => {
           dragged.current = true;
         }}
         onPointerDownCapture={() => {
           dragged.current = false;
+          sideways.current = false;
         }}
         style={{ x }}
       >
