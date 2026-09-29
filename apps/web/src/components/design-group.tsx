@@ -3869,8 +3869,10 @@ const dayCard = {
     padding: 0,
     textAlign: "left",
   }),
-  // Many people wrap onto more lines rather than widen the card.
-  people: css({ display: "flex", flexWrap: "wrap", rowGap: "8px" }),
+  // The people share the card's width in even columns, a few spread
+  // across it; many wrap onto more lines in the same columns rather than
+  // widen the card.
+  people: css({ display: "grid", rowGap: "8px" }),
   person: css({
     alignItems: "center",
     color: "text.tertiary",
@@ -3878,7 +3880,6 @@ const dayCard = {
     flexDirection: "column",
     fontSize: "9px",
     gap: "4px",
-    width: "36px",
   }),
   rest: css({
     color: "text.tertiary",
@@ -4088,7 +4089,12 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
             </Tag>
           )}
         </span>
-        <span className={dayCard.people}>
+        <span
+          className={dayCard.people}
+          style={{
+            gridTemplateColumns: `repeat(${Math.min(members.length, maxCardColumns)}, minmax(36px, 1fr))`,
+          }}
+        >
           {members.map((member) => (
             <span className={dayCard.person} key={member.id}>
               <Avatar member={member} />
