@@ -2303,7 +2303,7 @@ const chatStyle = {
     },
   }),
   // A reply's quote inside the bubble, over a thin rule, in the bubble's
-  // own text color.
+  // own text color; one line, so it never outweighs the answer.
   bubbleQuote: css({
     bg: "transparent",
     border: 0,
@@ -2321,7 +2321,7 @@ const chatStyle = {
     textStyle: "caption",
   }),
   bubbleQuoteText: css({
-    lineClamp: 2,
+    lineClamp: 1,
     lineHeight: 1.45,
     opacity: 0.8,
     textStyle: "footnote",
@@ -2767,7 +2767,7 @@ function ChatPage({
                       >
                         {quoted && (
                           <button
-                            aria-label={`${nameOf(quoted.from)}への返信。返信元を表示`}
+                            aria-label={`${nameOf(quoted.from)}「${summaryOf(quoted)}」への返信。返信元を表示`}
                             className={chatStyle.bubbleQuote}
                             onClick={() => {
                               jumpTo(quoted.id);
