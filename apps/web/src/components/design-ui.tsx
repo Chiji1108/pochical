@@ -29,8 +29,10 @@ import {
   animate,
   motion,
   useMotionValue,
+  useMotionValueEvent,
   useReducedMotion,
 } from "motion/react";
+import type { MotionValue } from "motion/react";
 import {
   createContext,
   useContext,
@@ -2081,16 +2083,25 @@ export function Pager({
   page,
   onStep,
   renderPage,
+  progress,
 }: {
   // Names the page shown, so the pager recenters when it changes.
   page: string;
   onStep: (direction: 1 | -1) => void;
   renderPage: (offset: PageOffset) => ReactNode;
+  // Set to how far the pages are dragged, -1 to 1 toward the next, for
+  // what follows the drag, like the month's name over the calendar.
+  progress?: MotionValue<number>;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const middleRef = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
+  useMotionValueEvent(x, "change", (at) => {
+    const pageWidth = viewportRef.current?.offsetWidth ?? 0;
+    const share = pageWidth > 0 ? -at / pageWidth : 0;
+    progress?.set(Math.min(Math.max(share, -1), 1));
+  });
   const reduceMotion = useReducedMotion() ?? false;
   // A page's width, only to keep a drag within the pages beside; the
   // pages are placed without it.
