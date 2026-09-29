@@ -8,14 +8,15 @@ import type { ColorScheme } from "../lib/design-tokens";
 import { hexToOklch, oklchToHex } from "../lib/oklch";
 import { Choice, ChoiceGrid } from "./design-ui";
 
-// テーマ in the style settings: six, each keeping one color on the
-// screen at about the shifts' own strength, so none clashes with them.
-// Three are light: the app's moss, the same moss grayed, and black ink.
-// Three are always dark, their character a night: a coffee shop, a
-// moonlit night, a blackboard. Whether shifts keep their own colors is a
-// switch of its own, シフトを色分けする, since it carries meaning rather
-// than taste. Only the viewer's screen changes; a shift's color slot is
-// what syncs.
+// テーマ in the style settings: nine, three to a row, each keeping one
+// color on the screen at about the shifts' own strength, so none clashes
+// with them. The first row is the basics: the app's moss, the same moss
+// softened on cream, and black ink. The second is colors the others lack:
+// blue, pink and violet. The third is always dark, its character a night:
+// a coffee shop, a moonlit night, a blackboard. Whether shifts keep their
+// own colors is a switch of its own, シフトを色分けする, since it carries
+// meaning rather than taste. Only the viewer's screen changes; a shift's
+// color slot is what syncs.
 type Oklch = { lightness: number; chroma: number; hue: number };
 
 export type Preset = {
@@ -66,6 +67,28 @@ export const presets = [
     grays: { hue: 138, strength: 0.3 },
     id: "sumi",
     name: "墨",
+  },
+  // Fresh: a clear blue-green on cool grays.
+  {
+    accent: { chroma: 0.072, hue: 205, lightness: 0.48 },
+    grays: { hue: 205, strength: 0.8 },
+    id: "soda",
+    name: "ソーダ",
+  },
+  // Sweet: a grayed pink, the shifts softened with it.
+  {
+    accent: { chroma: 0.075, hue: 6, lightness: 0.5 },
+    grays: { hue: 10, strength: 0.9 },
+    id: "sakura",
+    name: "さくら",
+    vividness: 0.75,
+  },
+  // A deep violet.
+  {
+    accent: { chroma: 0.083, hue: 294, lightness: 0.474 },
+    grays: { hue: 294, strength: 0.8 },
+    id: "sumire",
+    name: "すみれ",
   },
   // An old coffee shop after dark: grays warmed toward roast, text with a
   // breath of brown, and the vermilion of its sign; the shifts softened
