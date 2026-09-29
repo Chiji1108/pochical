@@ -3633,6 +3633,9 @@ const dayRows = {
       textAlign: "center",
     },
     compoundVariants: [
+      // The band is the day's tiles joined along the row, as far in and
+      // with their corners; the picked frame has the same shape, so
+      // picking the day only draws the frame round it, as in 週ごと.
       {
         css: { "&::before": { borderRadius: 0, inset: "3px 0" } },
         off: true,
@@ -3641,7 +3644,7 @@ const dayRows = {
       {
         css: {
           "&::before": {
-            borderRadius: "0 12px 12px 0",
+            borderRadius: "0 8px 8px 0",
             inset: "3px 3px 3px 0",
           },
         },
@@ -3650,16 +3653,16 @@ const dayRows = {
         together: true,
       },
       {
-        css: { "&::after": { borderWidth: "1.5px 0", inset: "1px 0" } },
+        css: { "&::after": { borderWidth: "1.5px 0", inset: "3px 0" } },
         end: false,
         picked: true,
       },
       {
         css: {
           "&::after": {
-            borderRadius: "0 12px 12px 0",
+            borderRadius: "0 8px 8px 0",
             borderWidth: "1.5px 1.5px 1.5px 0",
-            inset: "1px 1px 1px 0",
+            inset: "3px 3px 3px 0",
           },
         },
         end: true,
@@ -3719,9 +3722,9 @@ const dayRows = {
         true: {
           "&::after": {
             ...pickedFrame,
-            borderRadius: "12px 0 0 12px",
+            borderRadius: "8px 0 0 8px",
             borderWidth: "1.5px 0 1.5px 1.5px",
-            inset: "1px 0 1px 1px",
+            inset: "3px 0 3px 3px",
           },
         },
       },
@@ -3732,7 +3735,7 @@ const dayRows = {
         true: {
           "&::before": {
             ...offTile,
-            borderRadius: "12px 0 0 12px",
+            borderRadius: "8px 0 0 8px",
             inset: "3px 0 3px 3px",
           },
         },
