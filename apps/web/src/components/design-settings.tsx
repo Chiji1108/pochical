@@ -127,6 +127,7 @@ function shapeOf(look: LookSettings) {
 
 const previewDays = 14;
 const previewToday = new Date(2026, 8, 24);
+const WEEK_DAYS = 7;
 const holidayWeekDay = new Date(2026, 8, 21);
 
 // Shortens runs of the same shift, e.g. 日勤×2・夕勤×2.
@@ -1433,11 +1434,14 @@ function StylePreview({
 }: {
   preview: StylePreviewData;
   shared?: { shown: ColorScheme; onPick: (scheme: ColorScheme) => void };
-  // With the month's heading over the days, as the カレンダー page shows
-  // its 月の表示.
+  // With the month's heading over one week of days, as the カレンダー
+  // page shows its 月の表示.
   heading?: boolean;
 }) {
   const { dates, schedule } = preview;
+  // Under the month's heading, drawn at the calendar's own size, one week
+  // is enough to show the days' colors, and keeps the preview short.
+  const shownDates = heading ? dates.slice(0, WEEK_DAYS) : dates;
   const scheme = useContext(ColorSchemeContext);
   const [picked, setPicked] = useState<ColorScheme>();
   const shown = shared?.shown ?? picked ?? scheme;
@@ -1455,12 +1459,12 @@ function StylePreview({
           <span className={settingsParts.previewSample}>見本</span>
           {heading && (
             <div className={settingsParts.previewHeading}>
-              <MonthName compact month={dates[0] ?? previewToday} />
+              <MonthName month={dates[0] ?? previewToday} />
             </div>
           )}
           <WeekdayRow compact />
           <div className={dayGrid}>
-            {dates.map((date) => (
+            {shownDates.map((date) => (
               <DayCell
                 active={false}
                 date={date}
@@ -1807,8 +1811,9 @@ function WeekPage({
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="カレンダー" />
-      {/* The style page's preview, two rows high whatever day the week
-          starts on, with a Saturday, a Sunday and three holidays in it. */}
+      {/* The style page's preview cut to this week under the month's
+          heading: whatever day the week starts on, it has a Saturday and a
+          Sunday, and for most starts 秋分's holidays too. */}
       <StylePreview heading preview={preview} />
       <Section title="月の表示">
         <SegmentedControl

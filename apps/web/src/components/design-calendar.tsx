@@ -1312,23 +1312,16 @@ export function englishMonthOf(month: Date) {
 
 // The year over the month's name, as the calendar's heading draws it:
 // 9月, or sep. as the カレンダー page's 月の表示 asks, said as 9月 to
-// screen readers either way. Compact, it is the size of that page's
-// preview.
-export function MonthName({
-  month,
-  compact = false,
-}: {
-  month: Date;
-  compact?: boolean;
-}) {
+// screen readers either way. The カレンダー page's preview draws it too.
+export function MonthName({ month }: { month: Date }) {
   const style = useSettings((state) => state.device.monthName);
   const number = month.getMonth() + 1;
   return (
     <>
-      <span className={monthName.year({ compact, lower: style === "english" })}>
+      <span className={monthName.year({ lower: style === "english" })}>
         {month.getFullYear()}
       </span>
-      <strong className={monthName.month({ compact })}>
+      <strong className={monthName.month}>
         {style === "english" ? (
           <>
             <span aria-hidden="true">{englishMonthOf(month)}</span>
@@ -1337,7 +1330,7 @@ export function MonthName({
         ) : (
           <>
             {number}
-            <span className={monthName.unit({ compact })}>月</span>
+            <span className={monthName.unit}>月</span>
           </>
         )}
       </strong>
@@ -1346,17 +1339,12 @@ export function MonthName({
 }
 
 const monthName = {
-  month: cva({
-    base: { fontSize: "36px", fontWeight: 600, lineHeight: 1.1 },
-    variants: { compact: { true: { fontSize: "22px" } } },
-  }),
-  unit: cva({
-    base: { fontSize: "14px", fontWeight: 500, marginLeft: "4px" },
-    variants: { compact: { true: { fontSize: "11px", marginLeft: "2px" } } },
-  }),
+  month: css({ fontSize: "36px", fontWeight: 600, lineHeight: 1.1 }),
+  unit: css({ fontSize: "14px", fontWeight: 500, marginLeft: "4px" }),
   // Lower case stands about 0.2em shorter than the digits, 7px at 36px,
-  // so the year comes that much nearer, leaving the same room over the
-  // letters as over 9月.
+  // so the year comes down that much, leaving the same room over the
+  // letters as over 9月. Moved only where it is drawn, so the heading
+  // keeps its height and nothing under it moves with the choice.
   year: cva({
     base: {
       color: "text.tertiary",
@@ -1364,13 +1352,7 @@ const monthName = {
       fontSize: "11px",
       marginBottom: "4px",
     },
-    compoundVariants: [
-      { compact: true, css: { marginBottom: "calc(2px - 4px)" }, lower: true },
-    ],
-    variants: {
-      compact: { true: { fontSize: "9px", marginBottom: "2px" } },
-      lower: { true: { marginBottom: "calc(4px - 7px)" } },
-    },
+    variants: { lower: { true: { position: "relative", top: "7px" } } },
   }),
 };
 
