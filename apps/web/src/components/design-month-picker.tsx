@@ -111,16 +111,16 @@ export function MonthTitleButton({
   first,
   last,
   onPick,
-  twoLines = false,
+  chevron = true,
   children,
 }: {
   month: Date;
   first?: Date;
   last?: Date;
   onPick: (month: Date) => void;
-  // A name of two lines, like the year over the month, has the chevron
-  // level with its second.
-  twoLines?: boolean;
+  // Without it the name is left plain, a shortcut for those who try it,
+  // where the screen has other ways to other months.
+  chevron?: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -129,7 +129,7 @@ export function MonthTitleButton({
       <button
         aria-haspopup="dialog"
         aria-label={`${month.getFullYear()}年${month.getMonth() + 1}月。押すと月を選べます`}
-        className={monthTitle({ twoLines })}
+        className={monthTitle}
         data-month-title=""
         onClick={() => {
           setOpen(true);
@@ -137,11 +137,9 @@ export function MonthTitleButton({
         type="button"
       >
         {children}
-        <ChevronDown
-          aria-hidden="true"
-          className={monthChevron({ twoLines })}
-          size={16}
-        />
+        {chevron ? (
+          <ChevronDown aria-hidden="true" className={monthChevron} size={16} />
+        ) : null}
       </button>
       <MonthChoiceSheet
         first={first}
@@ -155,26 +153,20 @@ export function MonthTitleButton({
   );
 }
 
-const monthTitle = cva({
-  base: {
-    alignItems: "center",
-    bg: "transparent",
-    border: 0,
-    color: "inherit",
-    cursor: "pointer",
-    display: "inline-flex",
-    font: "inherit",
-    gap: "4px",
-    padding: 0,
-    textAlign: "left",
-  },
-  variants: { twoLines: { true: { alignItems: "flex-end" } } },
+const monthTitle = css({
+  alignItems: "center",
+  bg: "transparent",
+  border: 0,
+  color: "inherit",
+  cursor: "pointer",
+  display: "inline-flex",
+  font: "inherit",
+  gap: "4px",
+  padding: 0,
+  textAlign: "left",
 });
 
-const monthChevron = cva({
-  base: { color: "text.tertiary", flexShrink: 0 },
-  variants: { twoLines: { true: { marginBottom: "12px" } } },
-});
+const monthChevron = css({ color: "text.tertiary", flexShrink: 0 });
 
 const monthChoice = {
   grid: css({
