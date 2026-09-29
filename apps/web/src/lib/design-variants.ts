@@ -22,14 +22,17 @@ export const designVariantOptions = {
     ],
     label: "一緒に働く人",
   },
-  // Where the calendar's heading names the year: beside the month and
-  // only away from this year, over the month as before, or nowhere, as
-  // minical's heading.
+  // Where the calendar names the year: beside the month and only away
+  // from this year, over the month as before, nowhere, as minical's
+  // heading, or away from this year in the labels under the heading
+  // (N月のお休み, the week's day, the input's date), as minical names it
+  // in the picked day.
   yearLabel: {
     choices: [
       { label: "今年以外だけ横に", value: "otherYears" },
       { label: "月の上に小さく", value: "above" },
       { label: "なし", value: "none" },
+      { label: "お休みの行に", value: "summary" },
     ],
     label: "年の表示",
   },

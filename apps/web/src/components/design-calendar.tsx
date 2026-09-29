@@ -448,6 +448,13 @@ export function DesignCalendar({
     selectedDay
   );
   const lastDay = monthDays.length;
+  // With the year left out of the heading, the labels under it name it
+  // away from this year.
+  const yearOf = (date: Date) =>
+    variants.yearLabel === "summary" &&
+    date.getFullYear() !== designToday.getFullYear()
+      ? `${date.getFullYear()}年`
+      : "";
   const selectedShift = schedule[dateKey(selectedDate)]?.shift;
   function moveToNextDay(result: string, days = 1) {
     const nextDay = Math.min(selectedDay + days, lastDay);
@@ -472,7 +479,7 @@ export function DesignCalendar({
       }}
     >
       <span>
-        {`${month.getMonth() + 1}月${selectedDay}日`}
+        {`${yearOf(month)}${month.getMonth() + 1}月${selectedDay}日`}
         <span
           className={shiftInput.weekday({
             tone: weekTools.dateTone(selectedDate),
@@ -806,6 +813,7 @@ export function DesignCalendar({
                 transition={fold}
               >
                 <h4 className={calendarPage.detailDate}>
+                  {yearOf(detailDate)}
                   {formatDay(detailDate)}
                 </h4>
                 <DayDetail
@@ -827,6 +835,7 @@ export function DesignCalendar({
                 <MonthSummary
                   daysOff={daysOff}
                   month={month}
+                  year={yearOf(month)}
                   onOpen={() => {
                     setOpenSheet("breakdown");
                   }}
@@ -1226,10 +1235,13 @@ export function MonthSummary({
   month,
   daysOff,
   onOpen,
+  year = "",
 }: {
   month: Date;
   daysOff: number;
   onOpen: () => void;
+  // The year before the month, as 2027年, when the heading leaves it out.
+  year?: string;
 }) {
   const thisMonth =
     month.getFullYear() === designToday.getFullYear() &&
@@ -1237,7 +1249,7 @@ export function MonthSummary({
   return (
     <SummaryRow
       days={daysOff}
-      label={`${thisMonth ? "今月" : `${month.getMonth() + 1}月`}のお休み`}
+      label={`${thisMonth ? "今月" : `${year}${month.getMonth() + 1}月`}のお休み`}
       onOpen={onOpen}
     />
   );
