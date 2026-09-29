@@ -78,7 +78,7 @@ export const Route = createFileRoute("/try")({
         // launchScript picks the color before the first paint, so the one
         // rendered here is only where it starts.
         {
-          content: screenColors.deep?.light,
+          content: screenColors.standard?.light,
           name: "theme-color",
           suppressHydrationWarning: true,
         },
