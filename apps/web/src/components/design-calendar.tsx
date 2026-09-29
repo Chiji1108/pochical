@@ -41,7 +41,7 @@ import { DesignGroup, JoinSheet } from "./design-group";
 import { MonthTitleButton, monthTitle } from "./design-month-picker";
 import { Phone } from "./design-phone";
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
-import { useSeasons } from "./design-season";
+import { seasonStyles, useSeasons } from "./design-season";
 import { DesignSettings } from "./design-settings";
 import type { SettingsPage } from "./design-settings";
 import { PhoneContext, Sheet, SheetHeading } from "./design-sheet";
@@ -397,7 +397,7 @@ export function DesignCalendar({
   const coworkerNames = useUser((state) => state.coworkers);
   const setCoworkerNames = useUser((state) => state.setCoworkers);
   const [tab, setTab] = useState<Tab>(initialTab);
-  const seasons = useSeasons();
+  const seasons = useSeasons(variants.seasonLook);
   // The group the group tab opens on, like one just joined from a link.
   const [openGroup, setOpenGroup] = useState<string>();
   const profile = useUser((state) => state.profile);
@@ -763,7 +763,10 @@ export function DesignCalendar({
               schedule={schedule}
             />
           )}
-          <Screen hidden={tab !== "calendar" || imagePreview}>
+          <Screen
+            className={seasonStyles.screen}
+            hidden={tab !== "calendar" || imagePreview}
+          >
             {seasons.layer}
             <div className={heading.bar}>
               <MonthHeading
@@ -2609,6 +2612,7 @@ export function DayCell({
       aria-pressed={editing ? active : undefined}
       className={cellClass}
       data-active={active || undefined}
+      data-day-cell=""
       onClick={onPress}
       style={offStyle}
       type="button"
