@@ -47,6 +47,8 @@ const defaultImageOptions: ImageOptions = {
   names: true,
 };
 
+export type MonthName = "number" | "english";
+
 // The rest of the person's own screen. Device only.
 export type DeviceSettings = {
   preset: PresetId;
@@ -55,6 +57,8 @@ export type DeviceSettings = {
   shiftColors: boolean;
   appearance: Appearance;
   week: WeekSettings;
+  // 月の表示: the calendar's heading as 9月, or as sep.
+  monthName: MonthName;
   appIcon: string;
   calendar: Record<ShiftMarkStyle, CalendarOptions>;
   // How 画像で保存 last drew the month.
@@ -72,6 +76,7 @@ type SettingsState = {
   setShiftColors: (shiftColors: boolean) => void;
   setAppearance: (appearance: Appearance) => void;
   setWeek: (week: WeekSettings) => void;
+  setMonthName: (monthName: MonthName) => void;
   setAppIcon: (icon: string) => void;
   setImageOptions: (options: ImageOptions) => void;
   // Changes the options of the shape in use.
@@ -98,6 +103,7 @@ export const useSettings = create<SettingsState>()(
         appearance: "system",
         calendar: defaultCalendar,
         imageOptions: defaultImageOptions,
+        monthName: "number",
         preset: "pochical",
         shiftColors: true,
         week: defaultWeekSettings,
@@ -128,6 +134,9 @@ export const useSettings = create<SettingsState>()(
       },
       setImageOptions: (imageOptions) => {
         set((state) => ({ device: { ...state.device, imageOptions } }));
+      },
+      setMonthName: (monthName) => {
+        set((state) => ({ device: { ...state.device, monthName } }));
       },
       setPreset: (preset) => {
         set((state) => ({ device: { ...state.device, preset } }));

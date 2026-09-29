@@ -1107,8 +1107,6 @@ const heading = {
     padding: "0 8px 12px",
     position: "relative",
   }),
-  month: css({ fontSize: "36px", fontWeight: 600, lineHeight: 1.1 }),
-  monthUnit: css({ fontSize: "14px", fontWeight: 500, marginLeft: "4px" }),
   step: css({
     bg: "transparent",
     border: 0,
@@ -1120,12 +1118,6 @@ const heading = {
     width: "36px",
   }),
   title: css({ flexShrink: 0, fontWeight: 400, margin: 0 }),
-  year: css({
-    color: "text.tertiary",
-    display: "block",
-    fontSize: "11px",
-    marginBottom: "4px",
-  }),
 };
 
 // The calendar tab's page: the grid scrolls on its own under the heading
@@ -1283,15 +1275,7 @@ function MonthHeading({
   mode: "view" | "edit" | "week";
   onPick: (month: Date) => void;
 }) {
-  const name = (
-    <>
-      <span className={heading.year}>{month.getFullYear()}</span>
-      <strong className={heading.month}>
-        {month.getMonth() + 1}
-        <span className={heading.monthUnit}>月</span>
-      </strong>
-    </>
-  );
+  const name = <MonthName month={month} />;
   return (
     <h3 className={heading.title}>
       {mode === "view" ? (
@@ -1304,6 +1288,82 @@ function MonthHeading({
     </h3>
   );
 }
+
+// The months as the heading writes them in English, lower case and cut
+// short like a diary's.
+const englishMonths = [
+  "jan.",
+  "feb.",
+  "mar.",
+  "apr.",
+  "may",
+  "jun.",
+  "jul.",
+  "aug.",
+  "sep.",
+  "oct.",
+  "nov.",
+  "dec.",
+] as const;
+
+export function englishMonthOf(month: Date) {
+  return englishMonths[month.getMonth()];
+}
+
+// The year over the month's name, as the calendar's heading draws it:
+// 9月, or sep. as the カレンダー page's 月の表示 asks, said as 9月 to
+// screen readers either way. Compact, it is the size of that page's
+// preview.
+export function MonthName({
+  month,
+  compact = false,
+}: {
+  month: Date;
+  compact?: boolean;
+}) {
+  const style = useSettings((state) => state.device.monthName);
+  const number = month.getMonth() + 1;
+  return (
+    <>
+      <span className={monthName.year({ compact })}>{month.getFullYear()}</span>
+      <strong className={monthName.month({ compact })}>
+        {style === "english" ? (
+          <>
+            <span aria-hidden="true">{englishMonthOf(month)}</span>
+            <span className={srOnly}>{number}月</span>
+          </>
+        ) : (
+          <>
+            {number}
+            <span className={monthName.unit({ compact })}>月</span>
+          </>
+        )}
+      </strong>
+    </>
+  );
+}
+
+const monthName = {
+  month: cva({
+    base: { fontSize: "36px", fontWeight: 600, lineHeight: 1.1 },
+    variants: { compact: { true: { fontSize: "22px" } } },
+  }),
+  unit: cva({
+    base: { fontSize: "14px", fontWeight: 500, marginLeft: "4px" },
+    variants: { compact: { true: { fontSize: "11px", marginLeft: "2px" } } },
+  }),
+  year: cva({
+    base: {
+      color: "text.tertiary",
+      display: "block",
+      fontSize: "11px",
+      marginBottom: "4px",
+    },
+    variants: {
+      compact: { true: { fontSize: "9px", marginBottom: "2px" } },
+    },
+  }),
+};
 
 // "‹ 今月 ›" sits in the middle of the heading, so it never moves with the
 // width of the month; 今月 (or 今週 in the week view) stays visible and is

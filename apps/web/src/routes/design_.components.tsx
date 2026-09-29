@@ -387,7 +387,7 @@ function Switches() {
       </Item>
       <Item
         name="SegmentedControl size=compact"
-        where="曜日と祝日の週の始まり"
+        where="カレンダーの週の始まり"
         wide
       >
         <SegmentedControl
