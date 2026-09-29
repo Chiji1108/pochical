@@ -5633,11 +5633,14 @@ function PeoplePicker({
       ref={listRef}
       value={picked.id}
     >
+      {/* The row scrolls, so it clips anything drawn outside a chip: the
+          focus ring goes inside. */}
       {members.map((member) => (
         <Choice
           className={people.choice}
           data-member={member.id}
           key={member.id}
+          ring="inside"
           value={member.id}
         >
           <Avatar member={member} />
