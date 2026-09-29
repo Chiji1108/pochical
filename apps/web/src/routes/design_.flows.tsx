@@ -158,7 +158,7 @@ function FlowsPage() {
                 page="appIcon"
                 tab="settings"
               />
-              <CalendarFrame label="曜日と祝日" page="week" tab="settings" />
+              <CalendarFrame label="カレンダー" page="week" tab="settings" />
               <CalendarFrame label="アカウント" page="account" tab="settings" />
             </FrameRow>
           </FrameSection>

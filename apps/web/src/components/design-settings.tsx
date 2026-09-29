@@ -20,6 +20,8 @@ import {
   addDays,
   DayCell,
   dateKey,
+  englishMonthOf,
+  MonthName,
   defaultHolidaysOff,
   formatDay,
   InputDatePicker,
@@ -637,6 +639,7 @@ const settingsParts = {
     pointerEvents: "none",
     position: "relative",
   }),
+  previewHeading: css({ padding: "0 8px 8px" }),
   previewSample: css({
     bg: "background.base",
     border: "1px solid token(colors.separator)",
@@ -1426,9 +1429,13 @@ function sampleSequence(patternKeys: Shift[]): Shift[] {
 function StylePreview({
   preview,
   shared,
+  heading = false,
 }: {
   preview: StylePreviewData;
   shared?: { shown: ColorScheme; onPick: (scheme: ColorScheme) => void };
+  // With the month's heading over the days, as the カレンダー page shows
+  // its 月の表示.
+  heading?: boolean;
 }) {
   const { dates, schedule } = preview;
   const scheme = useContext(ColorSchemeContext);
@@ -1446,6 +1453,11 @@ function StylePreview({
           style={themeStyle(theme, shown)}
         >
           <span className={settingsParts.previewSample}>見本</span>
+          {heading && (
+            <div className={settingsParts.previewHeading}>
+              <MonthName compact month={dates[0] ?? previewToday} />
+            </div>
+          )}
           <WeekdayRow compact />
           <div className={dayGrid}>
             {dates.map((date) => (
@@ -1762,29 +1774,25 @@ const coloredDayOptions: { day: ColoredDay; name: string; color: string }[] = [
   { color: "var(--calendar-holiday)", day: "holiday", name: "祝日" },
 ];
 
-const coloredDayShortNames: Record<ColoredDay, string> = {
-  holiday: "祝",
-  saturday: "土",
-  sunday: "日",
-};
-
 function WeekRow({ onOpen }: { onOpen: () => void }) {
   const week = useSettings((state) => state.device.week);
-  const colored = coloredDayOptions
-    .filter((option) => week.colored[option.day])
-    .map((option) => coloredDayShortNames[option.day])
-    .join("");
+  const monthName = useSettings((state) => state.device.monthName);
+  const month =
+    monthName === "english"
+      ? englishMonthOf(previewToday)
+      : `${previewToday.getMonth() + 1}月`;
   return (
     <ListRow
-      label="曜日と祝日"
+      label="カレンダー"
       onClick={onOpen}
-      value={`${weekdayNames[week.weekStart]}曜はじまり・${colored || "色なし"}`}
+      value={`${weekdayNames[week.weekStart]}曜はじまり・${month}`}
     />
   );
 }
 
-// 週の始まり and 色をつける日, seen on the same preview as the style page.
-// Only the viewer's screen changes.
+// The calendar's frame: 月の表示, 週の始まり and 色をつける日, seen on
+// the style page's preview with the month's heading over it, in the order
+// they come down it. Only the viewer's screen changes.
 function WeekPage({
   preview,
   onBack,
@@ -1794,12 +1802,30 @@ function WeekPage({
 }) {
   const week = useSettings((state) => state.device.week);
   const setWeek = useSettings((state) => state.setWeek);
+  const monthName = useSettings((state) => state.device.monthName);
+  const setMonthName = useSettings((state) => state.setMonthName);
   return (
     <>
-      <PageHeader back="設定" onBack={onBack} title="曜日と祝日" />
+      <PageHeader back="設定" onBack={onBack} title="カレンダー" />
       {/* The style page's preview, two rows high whatever day the week
           starts on, with a Saturday, a Sunday and three holidays in it. */}
-      <StylePreview preview={preview} />
+      <StylePreview heading preview={preview} />
+      <Section title="月の表示">
+        <SegmentedControl
+          label="月の表示"
+          onValueChange={(value) => {
+            setMonthName(value === "english" ? "english" : "number");
+          }}
+          value={monthName}
+        >
+          <Segment label={`${previewToday.getMonth() + 1}月`} value="number">
+            {previewToday.getMonth() + 1}月
+          </Segment>
+          <Segment label="英語" value="english">
+            {englishMonthOf(previewToday)}
+          </Segment>
+        </SegmentedControl>
+      </Section>
       <Section title="週の始まり">
         <SegmentedControl
           label="週の始まり"
