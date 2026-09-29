@@ -6,7 +6,7 @@ import { css, cva } from "styled-system/css";
 import { neutralStyle } from "../lib/design-tokens";
 import type { ColorScheme, NeutralTint, Tone } from "../lib/design-tokens";
 import { hexToOklch } from "../lib/oklch";
-import { toneNeutrals, toneRoles } from "../lib/tones";
+import { onPaper, toneNeutrals, toneRoles } from "../lib/tones";
 import { Choice, ChoiceGrid } from "./design-ui";
 
 // Accent palettes for the app. Each sets the variables the screens read
@@ -235,8 +235,22 @@ function neutralsFor(
   if (tone === "deep") {
     return neutralStyle(scheme, neutralTintOf(theme));
   }
-  const { bg, tint } = toneNeutrals(tone, theme.accent, scheme);
+  const { bg, paper, tint } = toneNeutrals(tone, theme.accent, scheme);
   const style = neutralStyle(scheme, tint);
+  if (paper) {
+    // Every gray printed on the paper, white becoming the paper itself;
+    // a switch's knob stays white, as the system draws it on any ground.
+    return Object.fromEntries(
+      Object.entries(style).map(([name, value]) => [
+        name,
+        typeof value === "string" &&
+        value.startsWith("#") &&
+        name !== "--control-knob"
+          ? onPaper(value, paper)
+          : value,
+      ])
+    ) as CSSProperties;
+  }
   if (!bg) {
     return style;
   }
