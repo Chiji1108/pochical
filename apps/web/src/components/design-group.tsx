@@ -3315,8 +3315,7 @@ const smallWeekday = css({
 // it, in the same color whatever the person's pattern; a day everyone is
 // off joins the tiles into one band, down a date's column in 週ごと, along
 // a day's row in 日ごと. The picked day is framed the same way, as one
-// piece, its ends reaching into the week's padding to clear the date and
-// marks.
+// piece.
 const offTile = {
   bg: "accent.container",
   borderRadius: "8px",
@@ -3400,28 +3399,29 @@ const weekCell = cva({
   base: { isolation: "isolate", position: "relative" },
   compoundVariants: [
     { button: true, css: { padding: 0 }, kind: "date" },
-    // The band takes the picked frame's shape, reaching into the week's
-    // padding at its ends, so picking the day only draws the frame round
-    // it.
+    // The band is the day's tiles joined down the column: as far in from
+    // its sides, with their corners, its ends 3px clear of the week's
+    // edge. The picked frame has the same shape, so picking the day only
+    // draws the frame round it.
     {
       css: {
         "&::before": {
           ...offTile,
-          borderRadius: "12px 12px 0 0",
-          inset: "-3px 1px 0",
+          borderRadius: "8px 8px 0 0",
+          inset: "-1px 3px 0",
         },
       },
       kind: "date",
       together: true,
     },
     {
-      css: { "&::before": { borderRadius: 0, inset: "0 1px" } },
+      css: { "&::before": { borderRadius: 0, inset: "0 3px" } },
       kind: "cell",
       together: true,
     },
     {
       css: {
-        "&::before": { borderRadius: "0 0 12px 12px", inset: "0 1px -3px" },
+        "&::before": { borderRadius: "0 0 8px 8px", inset: "0 3px -1px" },
       },
       kind: "cell",
       last: true,
@@ -3452,25 +3452,25 @@ const weekCell = cva({
     {
       css: {
         "&::after": {
-          borderRadius: "12px 12px 0 0",
+          borderRadius: "8px 8px 0 0",
           borderWidth: "1.5px 1.5px 0",
-          inset: "-3px 1px 0",
+          inset: "-1px 3px 0",
         },
       },
       kind: "date",
       picked: true,
     },
     {
-      css: { "&::after": { borderWidth: "0 1.5px", inset: "0 1px" } },
+      css: { "&::after": { borderWidth: "0 1.5px", inset: "0 3px" } },
       kind: "cell",
       picked: true,
     },
     {
       css: {
         "&::after": {
-          borderRadius: "0 0 12px 12px",
+          borderRadius: "0 0 8px 8px",
           borderWidth: "0 1.5px 1.5px",
-          inset: "0 1px -3px",
+          inset: "0 3px -1px",
         },
       },
       kind: "cell",
