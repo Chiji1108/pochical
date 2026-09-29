@@ -50,8 +50,8 @@ const defaultImageOptions: ImageOptions = {
 export type MonthName = "number" | "english";
 
 // What a tap on the calendar's month name does: open the month sheet, or
-// おたのしみ, the month's season scattered over the calendar.
-export type MonthTap = "pick" | "season";
+// おたのしみ, color flooding the screen behind the calendar.
+export type MonthTap = "pick" | "surprise";
 
 // The rest of the person's own screen. Device only.
 export type DeviceSettings = {

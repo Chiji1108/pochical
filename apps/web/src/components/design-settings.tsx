@@ -1838,14 +1838,14 @@ function WeekPage({
         <SegmentedControl
           label="月名をタップしたとき"
           onValueChange={(value) => {
-            setMonthTap(value === "season" ? "season" : "pick");
+            setMonthTap(value === "surprise" ? "surprise" : "pick");
           }}
           value={monthTap}
         >
           <Segment label="月を選ぶ" value="pick">
             月を選ぶ
           </Segment>
-          <Segment label="おたのしみ" value="season">
+          <Segment label="おたのしみ" value="surprise">
             おたのしみ
           </Segment>
         </SegmentedControl>
