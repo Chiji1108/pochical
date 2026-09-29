@@ -23,7 +23,7 @@ import {
   useReducedMotion,
 } from "motion/react";
 import type { MotionValue } from "motion/react";
-import { createContext, Fragment, useContext, useRef, useState } from "react";
+import { Fragment, useContext, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -727,302 +727,300 @@ export function DesignCalendar({
   return (
     <PhoneContext value={phoneRef}>
       <ToastContext value={toast}>
-        <TodayMarkContext value={variants.todayMark}>
-          <Phone fullScreen={fullScreen} ref={phoneRef} style={themeStyle}>
-            {tab === "settings" && (
-              <DesignSettings
-                coworkers={members}
-                initialPage={initialSettingsPage}
-                onApplyRule={applyRule}
-                onChangeJob={changeJob}
-                onFixRule={fixRule}
-                onHolidaysOff={setHolidaysOff}
-                onProfile={setProfile}
-                onTab={setTab}
-                patternKeys={patternKeys}
-                profile={profile}
-                rules={rules}
-                schedule={schedule}
-              />
-            )}
-            {tab === "group" && (
-              <DesignGroup
-                initialGroupId={openGroup}
-                scanResult={variants.scanResult}
-                onTab={setTab}
-                patternKeys={patternKeys}
-                profile={profile}
-                schedule={schedule}
-              />
-            )}
-            {tab === "calendar" && imagePreview && (
-              <ImagePreviewPage
+        <Phone fullScreen={fullScreen} ref={phoneRef} style={themeStyle}>
+          {tab === "settings" && (
+            <DesignSettings
+              coworkers={members}
+              initialPage={initialSettingsPage}
+              onApplyRule={applyRule}
+              onChangeJob={changeJob}
+              onFixRule={fixRule}
+              onHolidaysOff={setHolidaysOff}
+              onProfile={setProfile}
+              onTab={setTab}
+              patternKeys={patternKeys}
+              profile={profile}
+              rules={rules}
+              schedule={schedule}
+            />
+          )}
+          {tab === "group" && (
+            <DesignGroup
+              initialGroupId={openGroup}
+              scanResult={variants.scanResult}
+              onTab={setTab}
+              patternKeys={patternKeys}
+              profile={profile}
+              schedule={schedule}
+            />
+          )}
+          {tab === "calendar" && imagePreview && (
+            <ImagePreviewPage
+              month={month}
+              onClose={() => {
+                setImagePreview(false);
+              }}
+              onOptions={setImageOptions}
+              options={imageOptions}
+              schedule={schedule}
+            />
+          )}
+          <Screen hidden={tab !== "calendar" || imagePreview}>
+            <div className={heading.bar}>
+              <MonthHeading
+                beside={besideMonths}
+                mode={headingMode}
                 month={month}
-                onClose={() => {
-                  setImagePreview(false);
-                }}
-                onOptions={setImageOptions}
-                options={imageOptions}
-                schedule={schedule}
+                onPick={goToMonth}
+                progress={pageDrag}
+                swiped={swipedTo === dateKey(month)}
               />
-            )}
-            <Screen hidden={tab !== "calendar" || imagePreview}>
-              <div className={heading.bar}>
-                <MonthHeading
-                  beside={besideMonths}
-                  mode={headingMode}
-                  month={month}
-                  onPick={goToMonth}
-                  progress={pageDrag}
-                  swiped={swipedTo === dateKey(month)}
-                />
-                <HeadingActions
-                  detailDate={detailDate}
-                  mode={headingMode}
-                  month={month}
-                  onDone={finishHeading}
-                  onCalendar={() => {
-                    openSave(false, true);
-                  }}
-                  onImage={() => {
-                    setImagePreview(true);
-                  }}
-                  onStep={step}
-                  onThisMonth={() => {
-                    goToMonth(
-                      new Date(
-                        designToday.getFullYear(),
-                        designToday.getMonth(),
-                        1
+              <HeadingActions
+                detailDate={detailDate}
+                mode={headingMode}
+                month={month}
+                onDone={finishHeading}
+                onCalendar={() => {
+                  openSave(false, true);
+                }}
+                onImage={() => {
+                  setImagePreview(true);
+                }}
+                onStep={step}
+                onThisMonth={() => {
+                  goToMonth(
+                    new Date(
+                      designToday.getFullYear(),
+                      designToday.getMonth(),
+                      1
+                    )
+                  );
+                }}
+                onThisWeek={() => {
+                  setPageTurn((turn) => turn + 1);
+                  openDetail(designToday);
+                }}
+                progress={pageDrag}
+                swiped={swipedTo === dateKey(month)}
+              />
+            </div>
+            <div className={calendarPage.scroll}>
+              <WeekdayRow />
+              <OffDisplayContext
+                value={
+                  weekDetail && offDisplay === "blank" ? "faint" : offDisplay
+                }
+              >
+                <Pager
+                  onStep={(direction) => {
+                    step(direction);
+                    // After step, which clears it.
+                    setSwipedTo(
+                      dateKey(
+                        weekDetail
+                          ? monthOpening(addDays(detailDate, direction * 7))
+                          : new Date(
+                              month.getFullYear(),
+                              month.getMonth() + direction,
+                              1
+                            )
                       )
                     );
                   }}
-                  onThisWeek={() => {
-                    setPageTurn((turn) => turn + 1);
-                    openDetail(designToday);
-                  }}
                   progress={pageDrag}
-                  swiped={swipedTo === dateKey(month)}
-                />
-              </div>
-              <div className={calendarPage.scroll}>
-                <WeekdayRow />
-                <OffDisplayContext
-                  value={
-                    weekDetail && offDisplay === "blank" ? "faint" : offDisplay
-                  }
-                >
-                  <Pager
-                    onStep={(direction) => {
-                      step(direction);
-                      // After step, which clears it.
-                      setSwipedTo(
-                        dateKey(
-                          weekDetail
-                            ? monthOpening(addDays(detailDate, direction * 7))
-                            : new Date(
-                                month.getFullYear(),
-                                month.getMonth() + direction,
-                                1
-                              )
-                        )
-                      );
-                    }}
-                    progress={pageDrag}
-                    page={weekDetail ? dateKey(detailDate) : dateKey(month)}
-                    renderPage={(offset) => {
-                      const pageMonth = new Date(
-                        month.getFullYear(),
-                        month.getMonth() + offset,
-                        1
-                      );
-                      const pageDates = weekDetail
-                        ? weekTools.weekDates(addDays(detailDate, offset * 7))
-                        : weekTools.monthDates(pageMonth);
-                      const renderCell = (date: Date) => (
-                        <DayCell
-                          active={
-                            offset === 0 &&
-                            (editing
-                              ? date.getMonth() === month.getMonth() &&
-                                date.getDate() === selectedDay
-                              : detailDate !== undefined &&
-                                dateKey(date) === dateKey(detailDate))
-                          }
-                          date={date}
-                          editing={editing}
-                          entry={schedule[dateKey(date)]}
-                          key={dateKey(date)}
-                          onPress={() => {
-                            editing ? enterFrom(date) : openDetail(date);
-                          }}
-                          outside={
-                            !weekDetail &&
-                            date.getMonth() !== pageMonth.getMonth()
-                          }
+                  page={weekDetail ? dateKey(detailDate) : dateKey(month)}
+                  renderPage={(offset) => {
+                    const pageMonth = new Date(
+                      month.getFullYear(),
+                      month.getMonth() + offset,
+                      1
+                    );
+                    const pageDates = weekDetail
+                      ? weekTools.weekDates(addDays(detailDate, offset * 7))
+                      : weekTools.monthDates(pageMonth);
+                    const renderCell = (date: Date) => (
+                      <DayCell
+                        active={
+                          offset === 0 &&
+                          (editing
+                            ? date.getMonth() === month.getMonth() &&
+                              date.getDate() === selectedDay
+                            : detailDate !== undefined &&
+                              dateKey(date) === dateKey(detailDate))
+                        }
+                        date={date}
+                        editing={editing}
+                        entry={schedule[dateKey(date)]}
+                        key={dateKey(date)}
+                        onPress={() => {
+                          editing ? enterFrom(date) : openDetail(date);
+                        }}
+                        outside={
+                          !weekDetail &&
+                          date.getMonth() !== pageMonth.getMonth()
+                        }
+                      />
+                    );
+                    const label = `${pageMonth.getFullYear()}年${pageMonth.getMonth() + 1}月のシフト`;
+                    // Only the page shown folds; the ones beside it are
+                    // there to be dragged in.
+                    if (offset === 0) {
+                      return (
+                        <FoldingGrid
+                          dates={pageDates}
+                          key={pageTurn}
+                          label={label}
+                          renderCell={renderCell}
+                          shift={-foldRow * ROW_STEP}
+                          weekDetail={weekDetail}
                         />
                       );
-                      const label = `${pageMonth.getFullYear()}年${pageMonth.getMonth() + 1}月のシフト`;
-                      // Only the page shown folds; the ones beside it are
-                      // there to be dragged in.
-                      if (offset === 0) {
-                        return (
-                          <FoldingGrid
-                            dates={pageDates}
-                            key={pageTurn}
-                            label={label}
-                            renderCell={renderCell}
-                            shift={-foldRow * ROW_STEP}
-                            weekDetail={weekDetail}
-                          />
-                        );
-                      }
-                      return (
-                        <section aria-label={label} className={dayGrid}>
-                          {pageDates.map(renderCell)}
-                        </section>
-                      );
-                    }}
-                  />
-                </OffDisplayContext>
-              </div>
-              {weekDetail && (
-                <motion.section
-                  animate={{ opacity: 1 }}
-                  aria-label={formatDay(detailDate)}
-                  className={calendarPage.detail}
-                  initial={{ opacity: 0 }}
-                  transition={fold}
-                >
-                  <h4 className={calendarPage.detailDate}>
-                    {formatDay(detailDate)}
-                  </h4>
-                  <DayDetail
-                    entry={schedule[dateKey(detailDate)]}
-                    members={members}
-                    onChange={(entry) => {
-                      changeEntry(detailDate, entry);
-                    }}
-                    patternKeys={patternKeys}
-                  />
-                </motion.section>
-              )}
-              {/* On an empty month too, at 0日, so the month keeps the two
+                    }
+                    return (
+                      <section aria-label={label} className={dayGrid}>
+                        {pageDates.map(renderCell)}
+                      </section>
+                    );
+                  }}
+                />
+              </OffDisplayContext>
+            </div>
+            {weekDetail && (
+              <motion.section
+                animate={{ opacity: 1 }}
+                aria-label={formatDay(detailDate)}
+                className={calendarPage.detail}
+                initial={{ opacity: 0 }}
+                transition={fold}
+              >
+                <h4 className={calendarPage.detailDate}>
+                  {formatDay(detailDate)}
+                </h4>
+                <DayDetail
+                  entry={schedule[dateKey(detailDate)]}
+                  members={members}
+                  onChange={(entry) => {
+                    changeEntry(detailDate, entry);
+                  }}
+                  patternKeys={patternKeys}
+                />
+              </motion.section>
+            )}
+            {/* On an empty month too, at 0日, so the month keeps the two
                 rows of one being filled in: the card above ポチポチ入力.
                 Any spare height stays over it, so the summary, the input
                 or save buttons and the tab bar sit together at the bottom. */}
-              {headingMode === "view" && (
-                <div className={calendarPage.bottom}>
-                  <MonthSummary
-                    daysOff={daysOff}
-                    month={month}
-                    onOpen={() => {
-                      setOpenSheet("breakdown");
-                    }}
-                  />
-                  {/* Filled month or not: a filled month is fixed the same
+            {headingMode === "view" && (
+              <div className={calendarPage.bottom}>
+                <MonthSummary
+                  daysOff={daysOff}
+                  month={month}
+                  onOpen={() => {
+                    setOpenSheet("breakdown");
+                  }}
+                />
+                {/* Filled month or not: a filled month is fixed the same
                     way, and saving is in the heading's corner. */}
-                  <div className={calendarPage.controls}>
-                    <StartArea label="ポチポチ入力" onStart={startInput} />
-                  </div>
-                  <TabBar active="calendar" onSelect={setTab} />
+                <div className={calendarPage.controls}>
+                  <StartArea label="ポチポチ入力" onStart={startInput} />
                 </div>
-              )}
-              {headingMode === "edit" && (
-                <div className={calendarPage.input}>
-                  <ShiftInputControls
-                    canSkip={selectedDay < lastDay}
-                    datePicker={datePicker}
-                    onEnter={enterShift}
-                    onSkip={() => {
-                      moveToNextDay("変更せずに進みました");
-                    }}
-                    patternKeys={patternKeys}
-                    selectedShift={selectedShift}
-                  />
-                </div>
-              )}
-            </Screen>
-            <Sheet
-              label="今月の内訳"
-              onOpenChange={sheetChange("breakdown")}
-              open={openSheet === "breakdown"}
-            >
-              <SheetHeading
-                eyebrow={`${month.getFullYear()}年${month.getMonth() + 1}月`}
-                onClose={() => {
-                  setOpenSheet(null);
-                }}
-                title="今月の内訳"
-              />
-              <dl className={breakdown.list}>
-                {counts.map(({ key, label, count }) => (
-                  <div className={breakdown.row()} key={key}>
-                    <dt className={breakdown.name}>
-                      <ShiftMark shift={key} size={18} />
-                      {label}
-                    </dt>
-                    <dd className={breakdown.count}>
-                      {count}
-                      <span className={breakdown.unit}>日</span>
-                    </dd>
-                  </div>
-                ))}
-                <div className={breakdown.row({ unfilled: true })}>
-                  <dt className={breakdown.name}>未入力</dt>
+                <TabBar active="calendar" onSelect={setTab} />
+              </div>
+            )}
+            {headingMode === "edit" && (
+              <div className={calendarPage.input}>
+                <ShiftInputControls
+                  canSkip={selectedDay < lastDay}
+                  datePicker={datePicker}
+                  onEnter={enterShift}
+                  onSkip={() => {
+                    moveToNextDay("変更せずに進みました");
+                  }}
+                  patternKeys={patternKeys}
+                  selectedShift={selectedShift}
+                />
+              </div>
+            )}
+          </Screen>
+          <Sheet
+            label="今月の内訳"
+            onOpenChange={sheetChange("breakdown")}
+            open={openSheet === "breakdown"}
+          >
+            <SheetHeading
+              eyebrow={`${month.getFullYear()}年${month.getMonth() + 1}月`}
+              onClose={() => {
+                setOpenSheet(null);
+              }}
+              title="今月の内訳"
+            />
+            <dl className={breakdown.list}>
+              {counts.map(({ key, label, count }) => (
+                <div className={breakdown.row()} key={key}>
+                  <dt className={breakdown.name}>
+                    <ShiftMark shift={key} size={18} />
+                    {label}
+                  </dt>
                   <dd className={breakdown.count}>
-                    {unfilled}
+                    {count}
                     <span className={breakdown.unit}>日</span>
                   </dd>
                 </div>
-              </dl>
-              <p className={breakdown.total}>この月は全{monthDays.length}日</p>
-            </Sheet>
-            {pendingInvite && (
-              <JoinSheet
-                name={profile.name}
-                onOpenGroup={(groupId) => {
-                  setOpenGroup(groupId);
-                  setTab("group");
-                }}
-              />
-            )}
-            <SaveSheet
-              completion={saveCompletion}
-              month={month}
-              offCount={daysOff}
-              onImage={() => {
-                setImagePreview(true);
+              ))}
+              <div className={breakdown.row({ unfilled: true })}>
+                <dt className={breakdown.name}>未入力</dt>
+                <dd className={breakdown.count}>
+                  {unfilled}
+                  <span className={breakdown.unit}>日</span>
+                </dd>
+              </div>
+            </dl>
+            <p className={breakdown.total}>この月は全{monthDays.length}日</p>
+          </Sheet>
+          {pendingInvite && (
+            <JoinSheet
+              name={profile.name}
+              onOpenGroup={(groupId) => {
+                setOpenGroup(groupId);
+                setTab("group");
               }}
-              onOpenChange={sheetChange("save")}
-              open={openSheet === "save"}
-              toCalendar={saveToCalendar}
-              shiftCount={monthDays.length - unfilled}
             />
-            <GapSheet
-              choices={patternKeys
-                .filter((key) => isDayOff(key))
-                .map((key) => ({ key, label: patterns[key].label }))}
-              days={gapDays}
-              onFill={fillGaps}
-              blankOff={offDisplay === "blank"}
-              completes={unfilled === gapDays.length}
-              month={month}
-              offCount={daysOff}
-              sharing={sharing}
-              offerBlank={offerBlank}
-              onBlankOff={(blankOff) => {
-                setCalendarOptions({ blankOff });
-              }}
-              onOpenChange={sheetChange("gap")}
-              open={openSheet === "gap"}
-            />
-            <span aria-live="polite" className={srOnly}>
-              {announcement}
-            </span>
-            <PhoneToasts toaster={toaster} />
-          </Phone>
-        </TodayMarkContext>
+          )}
+          <SaveSheet
+            completion={saveCompletion}
+            month={month}
+            offCount={daysOff}
+            onImage={() => {
+              setImagePreview(true);
+            }}
+            onOpenChange={sheetChange("save")}
+            open={openSheet === "save"}
+            toCalendar={saveToCalendar}
+            shiftCount={monthDays.length - unfilled}
+          />
+          <GapSheet
+            choices={patternKeys
+              .filter((key) => isDayOff(key))
+              .map((key) => ({ key, label: patterns[key].label }))}
+            days={gapDays}
+            onFill={fillGaps}
+            blankOff={offDisplay === "blank"}
+            completes={unfilled === gapDays.length}
+            month={month}
+            offCount={daysOff}
+            sharing={sharing}
+            offerBlank={offerBlank}
+            onBlankOff={(blankOff) => {
+              setCalendarOptions({ blankOff });
+            }}
+            onOpenChange={sheetChange("gap")}
+            open={openSheet === "gap"}
+          />
+          <span aria-live="polite" className={srOnly}>
+            {announcement}
+          </span>
+          <PhoneToasts toaster={toaster} />
+        </Phone>
       </ToastContext>
     </PhoneContext>
   );
@@ -2066,70 +2064,12 @@ export const dayCell = cva({
   },
 });
 
-// Today, wherever a date is shown, as the 今日の印 variant draws it: kept
-// apart from the picked day's frame and the frame of a day you are off
-// together. Each is set on a span holding just the date, and drawn behind
-// it, centred and taking no room, so nothing around the date moves; at
-// most 20px tall on the dates' 14px line, it stays within the day's
-// padding. --mark-half is how far the mark reaches from the date's middle,
-// for a memo's strokes to clear it.
-const todayShape = {
-  borderRadius: "999px",
-  content: '""',
-  left: "50%",
-  position: "absolute",
-  top: "50%",
-  transform: "translate(-50%, -50%)",
-  zIndex: -1,
-} as const;
-const onDate = { isolation: "isolate", position: "relative" } as const;
-const todayMarks = {
-  // Round, as wide as the date needs.
-  round: css({
-    ...onDate,
-    "--mark-half": "max(10px, 50% + 4px)",
-    _before: {
-      ...todayShape,
-      bg: "accent.fill",
-      height: "20px",
-      width: "max(20px, 100% + 8px)",
-    },
-    color: "accent.onFill",
-  }),
-  // A slimmer capsule, wider than the date, so it reads as a label.
-  pill: css({
-    ...onDate,
-    "--mark-half": "max(13px, 50% + 8px)",
-    _before: {
-      ...todayShape,
-      bg: "accent.fill",
-      height: "18px",
-      width: "max(26px, 100% + 16px)",
-    },
-    color: "accent.onFill",
-  }),
-  // An outline in the accent round the date, the date in the accent too.
-  ring: css({
-    ...onDate,
-    "--mark-half": "max(9px, 50% + 2px)",
-    _before: {
-      ...todayShape,
-      border: "1.5px solid token(colors.accent.default)",
-      height: "18px",
-      width: "max(18px, 100% + 4px)",
-    },
-    color: "accent.default",
-  }),
-  // The date alone in the accent, heavier, to show on a day off's tile.
-  text: css({ color: "accent.default", fontWeight: 800 }),
-};
-
-export type TodayMark = DesignVariants["todayMark"];
-export const TodayMarkContext = createContext<TodayMark>("ring");
-
-export function useTodayMark() {
-  return todayMarks[useContext(TodayMarkContext)];
-}
+// Today, wherever a date is shown: the date in the accent, heavier, so
+// it shows on a day off's tile too. Only its color and weight change,
+// so nothing around it moves or is covered, as the weekday beside the
+// date in 日ごと would be by a shape. Kept apart from the picked day's
+// frame and the frame of a day you are off together.
+export const todayMark = css({ color: "accent.default", fontWeight: 800 });
 
 export const dayParts = {
   date: css({ flexShrink: 0, fontWeight: 600, lineHeight: "14px" }),
@@ -2155,12 +2095,10 @@ export const dayParts = {
   // 休みの見せ方 空白, while entering or in the week view.
   markFaint: css({ opacity: 0.35 }),
   // A note: a stroke either side of the date, -6-, as a paper diary
-  // marks a day, clear of today's mark (--mark-half); both drawn as one
-  // piece behind the date, taking no room.
+  // marks a day; both drawn as one piece behind the date, taking no room.
   noted: css({
-    ...onDate,
     _after: {
-      "--stroke-reach": "calc(var(--mark-half, 50%) + 2px + 5px)",
+      "--stroke-reach": "calc(50% + 2px + 5px)",
       background:
         "linear-gradient(to right, token(colors.calendar.noteMarker) 5px, transparent 5px calc(100% - 5px), token(colors.calendar.noteMarker) calc(100% - 5px))",
       content: '""',
@@ -2170,6 +2108,8 @@ export const dayParts = {
       top: "calc(50% - 1px)",
       width: "calc(2 * var(--stroke-reach))",
     },
+    isolation: "isolate",
+    position: "relative",
   }),
 };
 
@@ -2285,7 +2225,6 @@ export function DayCell({
   );
   // Today's mark, but not in a saved picture, which is for any day.
   const onToday = today && !plain;
-  const todayMark = useTodayMark();
   const content = (
     <>
       <span

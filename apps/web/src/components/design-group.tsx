@@ -54,7 +54,7 @@ import {
   dateKey,
   dayCell,
   dayParts,
-  useTodayMark,
+  todayMark,
   formatDay,
   timeChangeOf,
   timeRange,
@@ -5442,7 +5442,6 @@ function RowDate({
   onPick?: () => void;
 }) {
   const weekTools = useWeek();
-  const todayMark = useTodayMark();
   const label = (
     <span className={toneColor[weekTools.dateTone(date)]}>
       {dateKey(date) === dateKey(designToday) ? (
@@ -5666,7 +5665,6 @@ function WeekDate({
   onPick?: (date: Date) => void;
 }) {
   const weekTools = useWeek();
-  const todayMark = useTodayMark();
   const look = {
     kind: "date",
     outside: !(!month || sameMonth(date, month)),
@@ -6079,7 +6077,6 @@ function PersonDay({
   onPick: (date: Date) => void;
 }) {
   const { isColoredHoliday } = useWeek();
-  const todayMark = useTodayMark();
   const today = dateKey(date) === dateKey(designToday);
   const item = outside ? undefined : patternOn(member, date);
   // In their カラー, like their marks.
