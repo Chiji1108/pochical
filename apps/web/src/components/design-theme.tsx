@@ -8,34 +8,33 @@ import type { ColorScheme } from "../lib/design-tokens";
 import { hexToOklch, oklchToHex } from "../lib/oklch";
 import { Choice, ChoiceGrid } from "./design-ui";
 
-// テーマ in the style settings: moods each drawing every color from one
-// hue, so none clashes with the shifts' own colors, and a few characters
-// that go further with where color goes: a cream screen with its own ink,
-// or a night that is always dark. None is a pairing that clashes.
-// Whether shifts keep their own colors is a switch of its own,
-// シフトを色分けする, since it carries meaning rather than taste. Only
-// the viewer's screen changes; a shift's color slot is what syncs.
+// テーマ in the style settings: six, each keeping one color on the
+// screen at about the shifts' own strength, so none clashes with them.
+// Three are light: the app's moss, the same moss grayed, and black ink.
+// Three are always dark, their character a night: a coffee shop, a
+// moonlit night, a blackboard. Whether shifts keep their own colors is a
+// switch of its own, シフトを色分けする, since it carries meaning rather
+// than taste. Only the viewer's screen changes; a shift's color slot is
+// what syncs.
 type Oklch = { lightness: number; chroma: number; hue: number };
 
 export type Preset = {
   id: string;
   name: string;
   // The theme color as drawn on the テーマ's own screen: text, icons and
-  // lines. Every other role, and dark mode's, follows from it by the steps
-  // in roleSteps.
+  // lines. Every other role, and a light テーマ's dark mode, follows from
+  // it by the steps in roleSteps.
   accent: Oklch;
   // The hue the grays lean toward, and how far: 1 leans as far as moss's
   // grays do, 0 is plain gray.
   grays: { hue: number; strength: number };
   // Text in a color of its own rather than gray: the body text's chroma
-  // and hue, and, if set, its lightness on a light screen. Lighter text
-  // keeps its lightness and takes less of the color.
-  ink?: { chroma: number; hue: number; lightness?: number };
-  // A colored screen instead of white (or, for an always-dark テーマ,
-  // instead of the dark gray). Cards and sheets share its color.
-  ground?: { chroma: number; hue: number; lightness: number };
-  // Drawn dark whatever 外観 says: a テーマ whose character is its night.
+  // and hue. Lighter text takes less of it.
+  ink?: { chroma: number; hue: number };
+  // Drawn dark whatever 外観 says, on its own `ground` if it has one
+  // rather than the dark gray: a テーマ whose character is its night.
   scheme?: "dark";
+  ground?: { chroma: number; hue: number; lightness: number };
   // The share of each shift color's chroma kept when shifts are colored,
   // 1 as tuned; the soft テーマ lower theirs to sit with them.
   vividness?: number;
@@ -49,29 +48,13 @@ export const presets = [
     id: "pochical",
     name: "ポチカル",
   },
-  // Soft and warm: a milky caramel on a faintly warm screen, the shifts
-  // softened to sit with it. Yellower than ココア, which leans red.
+  // The same moss grayed toward sage, lighter and quieter, the shifts
+  // softened with it.
   {
-    accent: { chroma: 0.052, hue: 72, lightness: 0.52 },
-    grays: { hue: 68, strength: 1.3 },
-    ground: { chroma: 0.005, hue: 75, lightness: 0.992 },
-    id: "milktea",
-    name: "ミルクティー",
-    vividness: 0.75,
-  },
-  // Fresh: a clear blue-green on cool grays.
-  {
-    accent: { chroma: 0.072, hue: 205, lightness: 0.48 },
-    grays: { hue: 205, strength: 0.8 },
-    id: "soda",
-    name: "ソーダ",
-  },
-  // Sweet: a grayed pink, the shifts softened with it.
-  {
-    accent: { chroma: 0.075, hue: 6, lightness: 0.5 },
-    grays: { hue: 10, strength: 0.9 },
-    id: "sakura",
-    name: "さくら",
+    accent: { chroma: 0.036, hue: 150, lightness: 0.5 },
+    grays: { hue: 145, strength: 0.8 },
+    id: "sage",
+    name: "セージ",
     vividness: 0.75,
   },
   // Ink alone, in black.
@@ -81,51 +64,19 @@ export const presets = [
     id: "sumi",
     name: "墨",
   },
-  // Indigo on unbleached cotton: a deep indigo, the screen only a breath
-  // off white toward the cotton's warmth.
+  // An old coffee shop after dark: grays warmed toward roast, text with a
+  // breath of brown, and the vermilion of its sign; the shifts softened
+  // as if printed.
   {
-    accent: { chroma: 0.075, hue: 258, lightness: 0.43 },
-    grays: { hue: 80, strength: 0.7 },
-    ground: { chroma: 0.006, hue: 85, lightness: 0.992 },
-    id: "aizome",
-    name: "藍染め",
-    vividness: 0.75,
-  },
-  // An olive yellow-green, as the tea.
-  {
-    accent: { chroma: 0.095, hue: 116, lightness: 0.5 },
-    grays: { hue: 110, strength: 1 },
-    id: "matcha",
-    name: "抹茶",
-    vividness: 0.75,
-  },
-  // A deep chocolate brown, leaning red.
-  {
-    accent: { chroma: 0.045, hue: 40, lightness: 0.38 },
-    grays: { hue: 45, strength: 1 },
-    id: "cocoa",
-    name: "ココア",
-    vividness: 0.75,
-  },
-  // A deep violet.
-  {
-    accent: { chroma: 0.083, hue: 294, lightness: 0.474 },
-    grays: { hue: 294, strength: 0.8 },
-    id: "sumire",
-    name: "すみれ",
-  },
-  // An old coffee shop: a cream screen, text in dark roast brown, and
-  // the vermilion of its sign; the shifts softened as if printed.
-  {
-    accent: { chroma: 0.14, hue: 35, lightness: 0.53 },
+    accent: { chroma: 0.133, hue: 35, lightness: 0.78 },
     grays: { hue: 65, strength: 1.8 },
-    ground: { chroma: 0.02, hue: 85, lightness: 0.972 },
     id: "kissa",
-    ink: { chroma: 0.035, hue: 50, lightness: 0.3 },
+    ink: { chroma: 0.021, hue: 50 },
     name: "喫茶",
+    scheme: "dark",
     vividness: 0.75,
   },
-  // A moonlit night, always: a deep navy screen and a moon yellow.
+  // A moonlit night: a deep navy screen and a moon yellow.
   {
     accent: { chroma: 0.11, hue: 95, lightness: 0.87 },
     grays: { hue: 265, strength: 3 },
@@ -135,8 +86,8 @@ export const presets = [
     scheme: "dark",
     vividness: 0.85,
   },
-  // A school blackboard, always: dark green, chalk white, and the shifts
-  // in chalk colors.
+  // A school blackboard: dark green, chalk white, and the shifts in chalk
+  // colors.
   {
     accent: { chroma: 0.012, hue: 165, lightness: 0.94 },
     grays: { hue: 165, strength: 3 },
@@ -245,9 +196,9 @@ const inkShares: Record<string, number> = {
   "text-secondary": 0.85,
   "text-tertiary": 0.7,
 };
-// Ink is fainter on a dark screen, where color reads stronger.
-const DARK_INK_SHARE = 0.6;
 
+// Each text role keeps its lightness and takes the ink's hue at its share
+// of the ink's chroma.
 function inkStyle(preset: Preset, scheme: ColorScheme) {
   const { ink } = preset;
   if (!ink) {
@@ -258,46 +209,29 @@ function inkStyle(preset: Preset, scheme: ColorScheme) {
       .filter((token) => token.name in inkShares)
       .map((token) => {
         const value = token[scheme];
-        const share =
-          (inkShares[token.name] ?? 1) *
-          (scheme === "dark" ? DARK_INK_SHARE : 1);
-        const body =
-          token.name === "text-primary" || token.name === "inverse-background";
-        const lightness =
-          scheme === "light" && body && ink.lightness !== undefined
-            ? ink.lightness
-            : hexToOklch(value.slice(0, 7)).lightness;
+        const { lightness } = hexToOklch(value.slice(0, 7));
+        const chroma = ink.chroma * (inkShares[token.name] ?? 1);
         return [
           `--${token.name}`,
-          `${oklchToHex({ chroma: ink.chroma * share, hue: ink.hue, lightness })}${value.slice(7)}`,
+          `${oklchToHex({ chroma, hue: ink.hue, lightness })}${value.slice(7)}`,
         ];
       })
   );
 }
 
-// The grays leaning the テーマ's way, its text's ink, and its ground.
+// The grays leaning the テーマ's way, its text's ink, and an always-dark
+// テーマ's own ground.
 function neutralsFor(preset: Preset, scheme: ColorScheme): CSSProperties {
   const style = {
     ...neutralStyle(scheme, preset.grays),
     ...inkStyle(preset, scheme),
   };
-  // A light テーマ's ground is its light screen's; in dark mode it takes
-  // the dark gray like the rest.
-  const ownScheme = preset.scheme ?? "light";
-  if (!preset.ground || scheme !== ownScheme) {
+  if (!preset.ground) {
     return style;
   }
-  const ground = oklchToHex(preset.ground);
-  if (scheme === "dark") {
-    return { ...style, "--background-base": ground } as CSSProperties;
-  }
-  // Cards and sheets share the screen's color, as white on white does, so
-  // a tinted screen does not leave them floating pure white.
   return {
     ...style,
-    "--background-base": ground,
-    "--background-card": ground,
-    "--background-elevated": ground,
+    "--background-base": oklchToHex(preset.ground),
   } as CSSProperties;
 }
 
