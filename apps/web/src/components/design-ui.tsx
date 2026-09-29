@@ -29,8 +29,10 @@ import {
   animate,
   motion,
   useMotionValue,
+  useMotionValueEvent,
   useReducedMotion,
 } from "motion/react";
+import type { MotionValue } from "motion/react";
 import {
   createContext,
   useContext,
@@ -509,8 +511,9 @@ export function OptionCard({
 export const pushToBottom = css({ marginTop: "auto" });
 
 // Adding one more to the list above: a dashed, full-width button, as the
-// platforms' "add" rows are.
+// platforms' "add" rows are. Grayed out when the list is full.
 const addButtonStyle = css({
+  _disabled: { color: "text.disabled", cursor: "default" },
   alignItems: "center",
   bg: "transparent",
   border: "1px dashed var(--border-strong)",
@@ -525,13 +528,20 @@ const addButtonStyle = css({
 
 export function AddButton({
   children,
+  disabled = false,
   onClick,
 }: {
   children: ReactNode;
+  disabled?: boolean;
   onClick: () => void;
 }) {
   return (
-    <button className={addButtonStyle} onClick={onClick} type="button">
+    <button
+      className={addButtonStyle}
+      disabled={disabled}
+      onClick={onClick}
+      type="button"
+    >
       <Plus aria-hidden="true" size={14} />
       {children}
     </button>
@@ -920,7 +930,6 @@ const listRowRoot = cva({
         top: 0,
       },
       "&:has(> [data-part=leading])::before": { left: "56px" },
-      position: "relative",
     },
     alignItems: "center",
     bg: "transparent",
@@ -932,6 +941,11 @@ const listRowRoot = cva({
     // iOS 26's list rows: 52pt, and about 67pt with a subtitle.
     minHeight: "52px",
     paddingInline: "16px",
+    // Every row, the first too: its separator hangs from it, and so does
+    // a switch's hidden checkbox. Left to a box outside the scrolling
+    // list, the checkbox stays where the row was before the list scrolled,
+    // and iOS Safari scrolls the whole page to it when a tap focuses it.
+    position: "relative",
     textAlign: "left",
     width: "100%",
   },
@@ -2081,16 +2095,25 @@ export function Pager({
   page,
   onStep,
   renderPage,
+  progress,
 }: {
   // Names the page shown, so the pager recenters when it changes.
   page: string;
   onStep: (direction: 1 | -1) => void;
   renderPage: (offset: PageOffset) => ReactNode;
+  // Set to how far the pages are dragged, -1 to 1 toward the next, for
+  // what follows the drag, like the month's name over the calendar.
+  progress?: MotionValue<number>;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const middleRef = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
+  useMotionValueEvent(x, "change", (at) => {
+    const pageWidth = viewportRef.current?.offsetWidth ?? 0;
+    const share = pageWidth > 0 ? -at / pageWidth : 0;
+    progress?.set(Math.min(Math.max(share, -1), 1));
+  });
   const reduceMotion = useReducedMotion() ?? false;
   // A page's width, only to keep a drag within the pages beside; the
   // pages are placed without it.

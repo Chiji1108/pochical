@@ -32,3 +32,7 @@ export const patterns: Record<
   training: { emoji: "📚", label: "研修", time: ["09:30", "17:30"] },
 };
 export type Shift = keyof typeof patterns;
+
+// As many patterns as the input buttons can hold in two rows of five, so
+// they fit under a month six weeks tall.
+export const MAX_PATTERNS = 10;
