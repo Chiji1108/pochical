@@ -2094,19 +2094,15 @@ export const dayParts = {
   markAlone: css({ flex: 1, height: "auto" }),
   // 休みの見せ方 空白, while entering or in the week view.
   markFaint: css({ opacity: 0.35 }),
-  // A note: a stroke either side of the date, -6-, as a paper diary
-  // marks a day; both drawn as one piece behind the date, taking no room.
+  // A note: a stroke under the date, as marked in a paper diary.
   noted: css({
-    _after: {
-      "--stroke-reach": "calc(50% + 2px + 5px)",
-      background:
-        "linear-gradient(to right, token(colors.calendar.noteMarker) 5px, transparent 5px calc(100% - 5px), token(colors.calendar.noteMarker) calc(100% - 5px))",
+    _before: {
+      bg: "var(--calendar-note-marker)",
+      borderRadius: "2px",
       content: '""',
-      height: "1.5px",
-      left: "calc(50% - var(--stroke-reach))",
+      inset: "45% -3px -1px",
       position: "absolute",
-      top: "calc(50% - 1px)",
-      width: "calc(2 * var(--stroke-reach))",
+      zIndex: -1,
     },
     isolation: "isolate",
     position: "relative",
@@ -2214,8 +2210,8 @@ export function DayCell({
   const today = dateKey(date) === dateKey(designToday);
   const holiday = useWeek().isColoredHoliday(date);
   const change = blank ? undefined : timeChangeOf(entry);
-  // A note is about the day, not the shift, so the date is marked, with
-  // strokes as in a paper diary, apart from the shift's 早出 and 残業
+  // A note is about the day, not the shift, so the date is marked, with a
+  // stroke as in a paper diary, apart from the shift's 早出 and 残業
   // corners, and only on the person's own calendar. Other time
   // changes, a later start or an earlier end, show when the day is opened.
   const noted = !plain && Boolean(entry?.note);
