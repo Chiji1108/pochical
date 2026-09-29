@@ -2061,14 +2061,26 @@ export const dayCell = cva({
     // A day of the month before or after: the same day, faded whole, as on
     // the group's calendar.
     outside: { true: { opacity: 0.35 } },
+    // Today, on the calendar, also has the day framed, as a grid of days
+    // shows it; lighter than the picked day's frame, which wins when both
+    // are on it. Drawn wholly inside the day: a frame reaching past it
+    // showed as a hairline at the edge of the page beside, the pages lying
+    // edge to edge.
+    today: {
+      true: {
+        outline: "1.5px solid token(colors.accent.focus)",
+        outlineOffset: "-1.5px",
+      },
+    },
   },
 });
 
 // Today, wherever a date is shown: the date in the accent, heavier, so
 // it shows on a day off's tile too. Only its color and weight change,
 // so nothing around it moves or is covered, as the weekday beside the
-// date in 日ごと would be by a shape. Kept apart from the picked day's
-// frame and the frame of a day you are off together.
+// date in 日ごと would be by a shape. The accent is what says today on
+// every screen; each layout may add what suits it, as the calendar's
+// frame round the day and 日ごと's bar at the row's start.
 export const todayMark = css({ color: "accent.default", fontWeight: 800 });
 
 export const dayParts = {
@@ -2215,8 +2227,14 @@ export function DayCell({
   // corners, and only on the person's own calendar. Other time
   // changes, a later start or an earlier end, show when the day is opened.
   const noted = !plain && Boolean(entry?.note);
+  // The picked frame wins over today's.
   const cellClass = cx(
-    dayCell({ active, off: Boolean(offStyle), outside }),
+    dayCell({
+      active,
+      off: Boolean(offStyle),
+      outside,
+      today: today && !editing && !active && !plain,
+    }),
     className
   );
   // Today's mark, but not in a saved picture, which is for any day.

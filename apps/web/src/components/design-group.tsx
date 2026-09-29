@@ -3704,6 +3704,7 @@ const dayRows = {
     base: {
       bg: "background.base",
       borderBottom: "1px solid token(colors.separator)",
+      borderLeft: "3px solid transparent",
       fontWeight: 600,
       height: "36px",
       isolation: "isolate",
@@ -3724,6 +3725,9 @@ const dayRows = {
           },
         },
       },
+      // Today's row also has a bar at its start, beside its date in the
+      // accent.
+      today: { true: { borderLeftColor: "accent.default" } },
       together: {
         true: {
           "&::before": {
@@ -5609,9 +5613,10 @@ function DayRow({
   rowRef?: Ref<HTMLTableRowElement>;
 }) {
   const together = everyoneOff(members, date);
+  const today = dateKey(date) === dateKey(designToday);
   return (
     <tr data-index={index} ref={rowRef}>
-      <th className={dayRows.date({ picked, together })} scope="row">
+      <th className={dayRows.date({ picked, today, together })} scope="row">
         <RowDate
           date={date}
           onPick={() => {
