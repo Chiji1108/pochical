@@ -21,7 +21,7 @@ import { useContext, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import { patterns } from "../lib/design-patterns";
+import { MAX_PATTERNS, patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
@@ -108,11 +108,25 @@ function ruleSchedule(rule: RepeatRule, holidaysOff = false) {
     holidaysOff
   );
 }
-export const patternSets: Record<4 | 5 | 6 | 8, Shift[]> = {
+export type PatternCount = 4 | 5 | 6 | 7 | 8 | 9 | 10;
+const eight: Shift[] = [
+  "early",
+  "day",
+  "late",
+  "night",
+  "after",
+  "off",
+  "training",
+  "paid",
+];
+export const patternSets: Record<PatternCount, Shift[]> = {
+  10: [...eight, "junya", "midnight"],
   4: ["day", "night", "after", "off"],
   5: ["early", "day", "night", "after", "off"],
   6: ["early", "day", "late", "night", "after", "off"],
-  8: ["early", "day", "late", "night", "after", "off", "training", "paid"],
+  7: eight.slice(0, 7),
+  8: eight,
+  9: [...eight, "junya"],
 };
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
 const dayMilliseconds = 86_400_000;
@@ -179,9 +193,9 @@ const sampleDetails: Record<string, Omit<DayEntry, "shift">> = {
   "2026-09-26": { note: "新人さん同行" },
 };
 
-function sampleShift(patternCount: 4 | 5 | 6 | 8, index: number): Shift {
-  if (patternCount === 8) {
-    return patternSets[8][index % 8];
+function sampleShift(patternCount: PatternCount, index: number): Shift {
+  if (patternCount >= 7) {
+    return patternSets[patternCount][index % patternCount];
   }
   const shift = sample[index % sample.length];
   if (shift === "day" && patternCount > 4 && index % 2 === 0) {
@@ -194,7 +208,7 @@ function sampleShift(patternCount: 4 | 5 | 6 | 8, index: number): Shift {
 }
 
 export function initialDesignSchedule(
-  patternCount: 4 | 5 | 6 | 8 = 4,
+  patternCount: PatternCount = 4,
   month = 8,
   year = 2026
 ): Schedule {
@@ -631,10 +645,10 @@ export function DesignCalendar({
     }
   }
   // Fills the blanks with the person's day off, or adds 休み back when
-  // they have none.
+  // they have none and there is room for it.
   function fillGaps(key: Shift | undefined) {
     const shift = key ?? "off";
-    if (!key) {
+    if (!key && patternKeys.length < MAX_PATTERNS) {
       setPatternKeys((previous) => [...previous, shift]);
     }
     onChange((previous) => ({
@@ -1701,10 +1715,12 @@ export function RepeatSequenceEditor({
 }
 
 // Entering a month: the day's date, a button for each pattern, and 消す
-// and 翌日へ. Up to four patterns sit in one row; more wrap in rows of
-// three, or of four for eight, each keeping the 72px of the one row and
-// shrinking only when the screen is too narrow. ポチポチ入力 and the
-// save buttons that stand in its place share its edges.
+// and 翌日へ. Up to four patterns sit in one row; more take two rows, of
+// three for five or six, four for seven or eight, and five for nine or
+// ten, so the buttons never push a month six weeks tall off the screen.
+// Each keeps the 72px of the one row, shrinking only when the screen is
+// too narrow. ポチポチ入力 and the save buttons that stand in its place
+// share its edges.
 const shiftInput = {
   action: css({
     _disabled: { color: "text.disabled", cursor: "default" },
@@ -1768,6 +1784,10 @@ const shiftInput = {
     },
     variants: {
       columns: {
+        five: {
+          display: "grid",
+          gridTemplateColumns: "repeat(5, minmax(0, 72px))",
+        },
         four: {
           display: "grid",
           gridTemplateColumns: "repeat(4, minmax(0, 72px))",
@@ -1800,10 +1820,14 @@ const shiftInput = {
 };
 
 function columnsFor(patternKeys: Shift[]) {
-  if (patternKeys.length === 8) {
+  const count = patternKeys.length;
+  if (count > 8) {
+    return "five";
+  }
+  if (count > 6) {
     return "four";
   }
-  return patternKeys.length > 4 ? "three" : "one";
+  return count > 4 ? "three" : "one";
 }
 
 function ShiftInputControls({

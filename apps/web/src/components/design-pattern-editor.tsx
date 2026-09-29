@@ -2,7 +2,7 @@ import { Plus } from "lucide-react";
 import { useContext, useState } from "react";
 import { css } from "styled-system/css";
 
-import { patterns } from "../lib/design-patterns";
+import { MAX_PATTERNS, patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
 import { nextDayShifts } from "./design-calendar";
@@ -179,6 +179,7 @@ export function PatternsPage({
   }
 
   const sorting = view === "sort";
+  const full = items.length >= MAX_PATTERNS;
   return (
     <>
       <PageHeader
@@ -235,12 +236,18 @@ export function PatternsPage({
       )}
       {!sorting && (
         <AddButton
+          disabled={full}
           onClick={() => {
             setView("add");
           }}
         >
           パターンを追加
         </AddButton>
+      )}
+      {full && !sorting && (
+        <Note>
+          {`パターンは${MAX_PATTERNS}個までです。増やすときは、使わないものを消してください。`}
+        </Note>
       )}
       <Note>
         {sorting
