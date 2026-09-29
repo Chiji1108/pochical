@@ -4,166 +4,106 @@ import type { CSSProperties } from "react";
 import { css, cva } from "styled-system/css";
 
 import { neutralStyle } from "../lib/design-tokens";
-import type { ColorScheme, NeutralTint, Tone } from "../lib/design-tokens";
-import { hexToOklch } from "../lib/oklch";
-import { toneNeutrals, toneRoles } from "../lib/tones";
+import type { ColorScheme } from "../lib/design-tokens";
+import { oklchToHex } from "../lib/oklch";
 import { Choice, ChoiceGrid } from "./design-ui";
 
-// Accent palettes for the app. Each sets the variables the screens read
-// inside the phone; the shift colors stay as they are. `dark` holds the same
-// roles for dark mode, lighter so they read on the dark background.
-export const themes = [
-  {
-    id: "moss",
-    name: "モス",
-    accent: "#486444",
-    line: "#698367",
-    muted: "#a1af8f",
-    soft: "#f0f4ed",
-    // Light tint for shifts that use the theme color, like 休み.
-    markTint: "#e4ecdf",
-    dark: {
-      accent: "#a4c19f",
-      line: "#8ea68b",
-      markTint: "#3b4a39",
-      muted: "#697a66",
-      soft: "#333c32",
-    },
-  },
-  {
-    id: "indigo",
-    name: "藍",
-    accent: "#3f5a7a",
-    line: "#5f7a99",
-    muted: "#9fb0c4",
-    soft: "#edf1f5",
-    // Light tint for shifts that use the theme color, like 休み.
-    markTint: "#dfe5ee",
-    dark: {
-      accent: "#9dbadd",
-      line: "#89a1bd",
-      markTint: "#384657",
-      muted: "#65768a",
-      soft: "#313a44",
-    },
-  },
-  {
-    id: "rose",
-    name: "ローズ",
-    accent: "#8a4f5c",
-    line: "#a8707c",
-    muted: "#c9a3ab",
-    soft: "#f7eef0",
-    // Light tint for shifts that use the theme color, like 休み.
-    markTint: "#f2e0e4",
-    dark: {
-      accent: "#e3a3b0",
-      line: "#c28e98",
-      markTint: "#563d42",
-      muted: "#8e6970",
-      soft: "#443537",
-    },
-  },
-  {
-    id: "terracotta",
-    name: "テラコッタ",
-    accent: "#93583a",
-    line: "#b07a5c",
-    muted: "#cfaa92",
-    soft: "#f7efe9",
-    // Light tint for shifts that use the theme color, like 休み.
-    markTint: "#f3e3d8",
-    dark: {
-      accent: "#e5a789",
-      line: "#c49178",
-      markTint: "#563f34",
-      muted: "#8f6b59",
-      soft: "#433630",
-    },
-  },
-  {
-    id: "lavender",
-    name: "ラベンダー",
-    accent: "#5f5286",
-    line: "#7f73a3",
-    muted: "#b1a9cc",
-    soft: "#f1eff6",
-    // Light tint for shifts that use the theme color, like 休み.
-    markTint: "#e6e2f0",
-    dark: {
-      accent: "#baaee6",
-      line: "#a197c4",
-      markTint: "#464157",
-      muted: "#766f8f",
-      soft: "#3a3744",
-    },
-  },
-  {
-    id: "sumi",
-    name: "墨",
-    accent: "#3c3f3b",
-    line: "#62665f",
-    muted: "#a9aca5",
-    soft: "#f2f2ef",
-    // Light tint for shifts that use the theme color, like 休み.
-    markTint: "#e4e5e1",
-    dark: {
-      accent: "#b5b8b4",
-      line: "#9c9f9c",
-      markTint: "#444643",
-      muted: "#737572",
-      soft: "#383938",
-    },
-  },
-] as const;
+// テーマ in the style settings: nine moods, each drawing every color it
+// has from a few numbers, so a テーマ is designed as a whole and none is a
+// pairing that clashes. Whether shifts keep their own colors is a switch
+// of its own, シフトを色分けする, since it carries meaning rather than
+// taste. Only the viewer's screen changes; a shift's color slot is what
+// syncs.
+type Oklch = { lightness: number; chroma: number; hue: number };
 
-export type ThemeId = (typeof themes)[number]["id"];
-export type Theme = (typeof themes)[number];
-
-export const ThemeContext = createContext<{
-  theme: ThemeId;
-  setTheme?: (theme: ThemeId) => void;
-}>({ theme: "moss" });
-
-export function themeOf(id: ThemeId): Theme {
-  return themes.find((theme) => theme.id === id) ?? themes[0];
-}
-
-// テーマ in the style settings: named presets, each a theme color in a tone
-// with the shifts either in their own colors or all in the theme's ink.
-// Only the pairs that work are offered: shift colors were tuned beside
-// モス, so the colorful ones keep it, and the one-color ones stay deep.
-// Only the viewer's screen changes; a shift's color slot is what syncs.
 export type Preset = {
   id: string;
   name: string;
-  theme: ThemeId;
-  tone: Tone;
-  // "mono" draws icons and letters in the theme color; emoji keep theirs.
-  marks: "multi" | "mono";
+  // The theme color as drawn on a light screen. Every other role, and
+  // dark mode's, follows from it by the steps in accentRoles.
+  accent: Oklch;
+  // The hue the grays lean toward, and how far: 1 leans as far as moss's
+  // grays do, 0 is plain gray.
+  grays: { hue: number; strength: number };
+  // A faintly colored screen instead of white, in light only.
+  ground?: { chroma: number; hue: number };
+  // The share of each shift color's chroma kept when shifts are colored,
+  // 1 as tuned; the muted テーマ soften theirs to sit with them.
+  vividness?: number;
 };
 
 export const presets = [
-  { id: "standard", marks: "multi", name: "標準", theme: "moss", tone: "deep" },
-  { id: "dusty", marks: "multi", name: "くすみ", theme: "moss", tone: "dusty" },
-  { id: "paper", marks: "multi", name: "紙", theme: "moss", tone: "paper" },
-  { id: "sumi", marks: "mono", name: "墨", theme: "sumi", tone: "deep" },
-  { id: "indigo", marks: "mono", name: "藍", theme: "indigo", tone: "deep" },
-  { id: "moss", marks: "mono", name: "モス", theme: "moss", tone: "deep" },
-  { id: "rose", marks: "mono", name: "ローズ", theme: "rose", tone: "deep" },
+  // The app's own: moss, as its icon.
   {
-    id: "terracotta",
-    marks: "mono",
-    name: "テラコッタ",
-    theme: "terracotta",
-    tone: "deep",
+    accent: { chroma: 0.06, hue: 141, lightness: 0.472 },
+    grays: { hue: 141, strength: 1 },
+    id: "pochical",
+    name: "ポチカル",
   },
+  // Soft and warm: a milky caramel on a faintly warm screen, the shifts
+  // softened to sit with it. Yellower than ココア, which leans red.
   {
-    id: "lavender",
-    marks: "mono",
-    name: "ラベンダー",
-    theme: "lavender",
-    tone: "deep",
+    accent: { chroma: 0.052, hue: 72, lightness: 0.52 },
+    grays: { hue: 68, strength: 1.3 },
+    ground: { chroma: 0.005, hue: 75 },
+    id: "milktea",
+    name: "ミルクティー",
+    vividness: 0.75,
+  },
+  // Fresh: a clear blue-green on cool grays.
+  {
+    accent: { chroma: 0.072, hue: 205, lightness: 0.48 },
+    grays: { hue: 205, strength: 0.8 },
+    id: "soda",
+    name: "ソーダ",
+  },
+  // Sweet: a grayed pink, the shifts softened with it.
+  {
+    accent: { chroma: 0.075, hue: 6, lightness: 0.5 },
+    grays: { hue: 10, strength: 0.9 },
+    id: "sakura",
+    name: "さくら",
+    vividness: 0.75,
+  },
+  // Ink alone, in black.
+  {
+    accent: { chroma: 0.008, hue: 138, lightness: 0.363 },
+    grays: { hue: 138, strength: 0.3 },
+    id: "sumi",
+    name: "墨",
+  },
+  // Indigo on unbleached cotton: a deep indigo, the screen only a breath
+  // off white toward the cotton's warmth.
+  {
+    accent: { chroma: 0.075, hue: 258, lightness: 0.43 },
+    grays: { hue: 80, strength: 0.7 },
+    ground: { chroma: 0.006, hue: 85 },
+    id: "aizome",
+    name: "藍染め",
+    vividness: 0.75,
+  },
+  // An olive yellow-green, as the tea.
+  {
+    accent: { chroma: 0.095, hue: 116, lightness: 0.5 },
+    grays: { hue: 110, strength: 1 },
+    id: "matcha",
+    name: "抹茶",
+    vividness: 0.75,
+  },
+  // A deep chocolate brown, leaning red.
+  {
+    accent: { chroma: 0.045, hue: 40, lightness: 0.38 },
+    grays: { hue: 45, strength: 1 },
+    id: "cocoa",
+    name: "ココア",
+    vividness: 0.75,
+  },
+  // A deep violet.
+  {
+    accent: { chroma: 0.083, hue: 294, lightness: 0.474 },
+    grays: { hue: 294, strength: 0.8 },
+    id: "sumire",
+    name: "すみれ",
   },
 ] as const satisfies readonly Preset[];
 
@@ -173,8 +113,39 @@ export function presetOf(id: PresetId): Preset {
   return presets.find((preset) => preset.id === id) ?? presets[0];
 }
 
+// The テーマ drawn: the person's own, or another's where a card or the
+// states page shows one.
+export const ThemeContext = createContext<{ theme: PresetId }>({
+  theme: "pochical",
+});
+
 // The scheme in effect: the device's unless 外観 in settings keeps one.
 export const ColorSchemeContext = createContext<ColorScheme>("light");
+
+// 外観 in settings: follow the device, or force light or dark.
+export type Appearance = "system" | ColorScheme;
+
+// Each role as a step from the theme color: a lightness of its own (in
+// light, the accent's lightness plus a step for `line`) and a share of the
+// accent's chroma. Dark mode sets every theme at the same lightness, so
+// they read alike on the dark ground. `accent` draws text, icons and lines;
+// `fill` is solid grounds with `onFill` text on top; `soft` is a selected
+// ground, `markTint` a day off's tile and `muted` a border.
+const roleSteps = {
+  dark: {
+    accent: { chroma: 0.95, lightness: 0.78 },
+    line: { chroma: 0.8, lightness: 0.7 },
+    markTint: { chroma: 0.44, lightness: 0.39 },
+    muted: { chroma: 0.6, lightness: 0.56 },
+    soft: { chroma: 0.27, lightness: 0.345 },
+  },
+  light: {
+    line: { chroma: 0.9, lightness: 0.11 },
+    markTint: { chroma: 0.27, lightness: 0.925 },
+    muted: { chroma: 0.62, lightness: 0.75 },
+    soft: { chroma: 0.14, lightness: 0.958 },
+  },
+} as const;
 
 // Text on a solid accent fill: white on the deep light accents, dark on the
 // light accents of dark mode.
@@ -183,86 +154,71 @@ const onFillByScheme: Record<ColorScheme, string> = {
   light: "#ffffff",
 };
 
-// A theme's accent roles in light or dark. `accent` draws text, icons and
-// lines; `fill` is for solid backgrounds with `onFill` text on top. The deep
-// themes fill with the accent itself; generated tones set their own.
-export function themeColors(
-  theme: Theme,
-  scheme: ColorScheme,
-  tone: Tone = "deep"
-) {
-  if (tone !== "deep") {
-    return toneRoles(tone, theme.accent, scheme);
-  }
-  const colors = scheme === "dark" ? theme.dark : theme;
+export function themeColors(preset: Preset, scheme: ColorScheme) {
+  const { chroma, hue, lightness } = preset.accent;
+  const paint = (step: { chroma: number; lightness: number }) =>
+    oklchToHex({
+      chroma: chroma * step.chroma,
+      hue,
+      lightness: step.lightness,
+    });
+  const { light } = roleSteps;
+  const { dark } = roleSteps;
+  const accent =
+    scheme === "dark" ? paint(dark.accent) : oklchToHex(preset.accent);
   return {
-    accent: colors.accent,
-    fill: colors.accent,
-    line: colors.line,
-    markTint: colors.markTint,
-    muted: colors.muted,
+    accent,
+    fill: accent,
+    line:
+      scheme === "dark"
+        ? paint(dark.line)
+        : paint({
+            chroma: light.line.chroma,
+            lightness: lightness + light.line.lightness,
+          }),
+    markTint: paint(roleSteps[scheme].markTint),
+    muted: paint(roleSteps[scheme].muted),
     onFill: onFillByScheme[scheme],
-    soft: colors.soft,
+    soft: paint(roleSteps[scheme].soft),
   };
 }
 
-// The viewer's tone (トーン), picked in the style settings. It stays
-// the viewer's even where another member's theme color is drawn.
-export const ToneContext = createContext<Tone>("deep");
+// A light screen off white: nearly white, only tinted.
+const GROUND_LIGHTNESS = 0.992;
 
-// 外観 in settings: follow the device, or force light or dark.
-export type Appearance = "system" | ColorScheme;
-
-// The neutral grays' base chroma suits moss; themes with more (or less)
-// saturated accents tint the grays proportionally more (or less).
-const MOSS_CHROMA = hexToOklch(themes[0].accent).chroma;
-const MAX_TINT_STRENGTH = 1.3;
-
-export function neutralTintOf(theme: Theme): NeutralTint {
-  const { chroma, hue } = hexToOklch(theme.accent);
-  return {
-    hue,
-    strength: Math.min(MAX_TINT_STRENGTH, chroma / MOSS_CHROMA),
-  };
-}
-
-// The grays lean toward the theme's hue; generated tones bring their own.
-function neutralsFor(
-  theme: Theme,
-  scheme: ColorScheme,
-  tone: Tone
-): CSSProperties {
-  if (tone === "deep") {
-    return neutralStyle(scheme, neutralTintOf(theme));
-  }
-  const { bg, tint } = toneNeutrals(tone, theme.accent, scheme);
-  const style = neutralStyle(scheme, tint);
-  if (!bg) {
+// The grays leaning the テーマ's way, and its ground in light.
+function neutralsFor(preset: Preset, scheme: ColorScheme): CSSProperties {
+  const style = neutralStyle(scheme, preset.grays);
+  if (!preset.ground || scheme === "dark") {
     return style;
   }
-  // Cards and sheets share the screen's color, as white on white does in
-  // deep, so a tinted screen does not leave them floating pure white.
+  // Cards and sheets share the screen's color, as white on white does, so
+  // a tinted screen does not leave them floating pure white.
+  const ground = oklchToHex({
+    ...preset.ground,
+    lightness: GROUND_LIGHTNESS,
+  });
   return {
     ...style,
-    "--background-base": bg,
-    "--background-card": bg,
-    "--background-elevated": bg,
+    "--background-base": ground,
+    "--background-card": ground,
+    "--background-elevated": ground,
   } as CSSProperties;
 }
 
 // Every color variable the screens read: the neutral roles plus the theme.
-export function themeStyle(
-  id: ThemeId,
-  scheme: ColorScheme = "light",
-  tone: Tone = "deep"
-) {
-  const theme = themeOf(id);
-  const colors = themeColors(theme, scheme, tone);
+export function themeStyle(id: PresetId, scheme: ColorScheme = "light") {
+  const preset = presetOf(id);
+  const colors = themeColors(preset, scheme);
   return {
-    ...neutralsFor(theme, scheme, tone),
+    ...neutralsFor(preset, scheme),
+    "--accent-border": colors.muted,
+    "--accent-container": colors.soft,
     "--accent-default": colors.accent,
     "--accent-fill": colors.fill,
     "--accent-focus": colors.line,
+    "--accent-on-fill": colors.onFill,
+    "--calendar-off-tint": colors.markTint,
     // A note's stroke under its date: a neutral gray, so no color beyond
     // the theme's, and apart from the green of days off. On paper a step
     // deeper than the switches' gray, to show on a day off's pale tile.
@@ -270,23 +226,19 @@ export function themeStyle(
       scheme === "dark"
         ? "var(--fill-primary)"
         : "color-mix(in oklab, var(--fill-primary), var(--text-quaternary) 25%)",
-    "--calendar-off-tint": colors.markTint,
-    "--accent-border": colors.muted,
-    "--accent-container": colors.soft,
-    "--accent-on-fill": colors.onFill,
   } as CSSProperties;
 }
 
 // The screen's own color, which the device's status bar and the home
 // screen app's launch images take.
-export function screenColor(id: ThemeId, scheme: ColorScheme, tone: Tone) {
-  const neutrals = neutralsFor(themeOf(id), scheme, tone) as Record<
+export function screenColor(id: PresetId, scheme: ColorScheme) {
+  const neutrals = neutralsFor(presetOf(id), scheme) as Record<
     string,
     string | undefined
   >;
   const color = neutrals["--background-base"];
   if (color === undefined) {
-    throw new Error(`No screen color for ${id} in ${scheme} and ${tone}`);
+    throw new Error(`No screen color for ${id} in ${scheme}`);
   }
   return color;
 }
@@ -294,8 +246,7 @@ export function screenColor(id: ThemeId, scheme: ColorScheme, tone: Tone) {
 export function useThemeStyle() {
   return themeStyle(
     useContext(ThemeContext).theme,
-    useContext(ColorSchemeContext),
-    useContext(ToneContext)
+    useContext(ColorSchemeContext)
   );
 }
 

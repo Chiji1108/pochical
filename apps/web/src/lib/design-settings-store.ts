@@ -50,6 +50,9 @@ const defaultImageOptions: ImageOptions = {
 // The rest of the person's own screen. Device only.
 export type DeviceSettings = {
   preset: PresetId;
+  // シフトを色分けする: each shift in its own color, or all of them in the
+  // テーマ's.
+  shiftColors: boolean;
   appearance: Appearance;
   week: WeekSettings;
   appIcon: string;
@@ -66,6 +69,7 @@ type SettingsState = {
   setShape: (shape: { style: ShiftMarkStyle; fill?: boolean }) => void;
   setAccount: (account: Account | undefined) => void;
   setPreset: (preset: PresetId) => void;
+  setShiftColors: (shiftColors: boolean) => void;
   setAppearance: (appearance: Appearance) => void;
   setWeek: (week: WeekSettings) => void;
   setAppIcon: (icon: string) => void;
@@ -94,7 +98,8 @@ export const useSettings = create<SettingsState>()(
         appearance: "system",
         calendar: defaultCalendar,
         imageOptions: defaultImageOptions,
-        preset: "standard",
+        preset: "pochical",
+        shiftColors: true,
         week: defaultWeekSettings,
       },
       groupLook: { fill: true, style: "icon" },
@@ -135,6 +140,9 @@ export const useSettings = create<SettingsState>()(
             style,
           },
         }));
+      },
+      setShiftColors: (shiftColors) => {
+        set((state) => ({ device: { ...state.device, shiftColors } }));
       },
       setWeek: (week) => {
         set((state) => ({ device: { ...state.device, week } }));

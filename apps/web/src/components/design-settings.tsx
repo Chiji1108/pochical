@@ -45,7 +45,6 @@ import {
   ThemeContext,
   presetOf,
   presets,
-  ToneContext,
   themeStyle,
   previewWrap,
 } from "./design-theme";
@@ -595,6 +594,8 @@ const offSample = cva({
 });
 
 const settingsParts = {
+  // The テーマ cards and the switch under them.
+  themeGroup: css({ display: "flex", flexDirection: "column", gap: "16px" }),
   // A section's footer, as iOS sets explanation under a group of rows.
   footer: css({
     color: "text.tertiary",
@@ -1359,7 +1360,10 @@ function MarkPage({
           />
         }
       >
-        <ThemeChoices scheme={shown} />
+        <div className={settingsParts.themeGroup}>
+          <ThemeChoices scheme={shown} />
+          <ShiftColorsSwitch />
+        </div>
       </Section>
       <Section title="休みの見せ方">
         <OffLookChoices current={current} />
@@ -1432,7 +1436,6 @@ function StylePreview({
   const shown = shared?.shown ?? picked ?? scheme;
   const onPick = shared?.onPick ?? setPicked;
   const { theme } = useContext(ThemeContext);
-  const tone = useContext(ToneContext);
   return (
     <div className={previewWrap}>
       <ColorSchemeContext value={shown}>
@@ -1440,7 +1443,7 @@ function StylePreview({
           aria-hidden="true"
           className={settingsParts.preview}
           inert
-          style={themeStyle(theme, shown, tone)}
+          style={themeStyle(theme, shown)}
         >
           <span className={settingsParts.previewSample}>見本</span>
           <WeekdayRow compact />
@@ -1518,7 +1521,7 @@ function offLookId(value: OffLook) {
   return value.highlight ? "highlight" : "mark";
 }
 
-// Tabs like トーン's, each drawing a day off as it would look. 空白 leaves
+// Segments each drawing a day off as it would look. 空白 leaves
 // days off empty on the month; they come back faint while entering and in
 // the week view. Used by the style page and by the saved image, each with
 // its own values.
@@ -1838,6 +1841,24 @@ function WeekPage({
   );
 }
 
+// シフトを色分けする: each shift in its own color, or every shift in the
+// テーマ's. It carries meaning, telling shifts apart at a glance, so it
+// is a choice of its own rather than part of a テーマ; the cards above
+// follow it.
+function ShiftColorsSwitch() {
+  const shiftColors = useSettings((state) => state.device.shiftColors);
+  const setShiftColors = useSettings((state) => state.setShiftColors);
+  return (
+    <List>
+      <SwitchRow
+        checked={shiftColors}
+        label="シフトを色分けする"
+        onChange={setShiftColors}
+      />
+    </List>
+  );
+}
+
 // The shifts on a テーマ's card, as they might follow each other in a week.
 const presetSampleShifts: Shift[] = ["day", "night", "after", "off"];
 
@@ -1860,10 +1881,10 @@ function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
           <span
             aria-hidden="true"
             className={themeCard.sample}
-            style={themeStyle(preset.theme, scheme, preset.tone)}
+            style={themeStyle(preset.id, scheme)}
           >
             <ColorSchemeContext value={scheme}>
-              <PresetContexts preset={preset}>
+              <PresetContexts id={preset.id}>
                 <span className={themeCard.marks}>
                   {presetSampleShifts.map((shift) => (
                     <ShiftMark key={shift} shift={shift} size={16} />

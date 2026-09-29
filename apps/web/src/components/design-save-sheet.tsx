@@ -18,7 +18,6 @@ import {
   ColorSchemeContext,
   PreviewSchemeSwitch,
   ThemeContext,
-  ToneContext,
   themeStyle,
   previewWrap,
 } from "./design-theme";
@@ -313,7 +312,6 @@ export function ImagePreviewPage({
   const dates = weekTools.monthDates(month);
   const scheme = useContext(ColorSchemeContext);
   const { theme } = useContext(ThemeContext);
-  const tone = useContext(ToneContext);
   const shown = options.scheme ?? scheme;
   const title = `${month.getFullYear()}年${month.getMonth() + 1}月のシフト`;
   return (
@@ -346,7 +344,7 @@ export function ImagePreviewPage({
                     aria-label={`${title}の画像`}
                     className={picture.frame}
                     inert
-                    style={themeStyle(theme, shown, tone)}
+                    style={themeStyle(theme, shown)}
                   >
                     <figcaption className={picture.title}>{title}</figcaption>
                     <WeekdayRow compact />

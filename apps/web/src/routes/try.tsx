@@ -24,12 +24,9 @@ const title = "ポチカル";
 // The screen's color in each テーマ, light and dark, before the saved
 // settings load.
 const screenColors = Object.fromEntries(
-  presets.map(({ id, theme, tone }) => [
+  presets.map(({ id }) => [
     id,
-    {
-      dark: screenColor(theme, "dark", tone),
-      light: screenColor(theme, "light", tone),
-    },
+    { dark: screenColor(id, "dark"), light: screenColor(id, "light") },
   ])
 );
 
@@ -53,7 +50,7 @@ const launchScript = `(() => {
   const scheme = device.appearance === "light" || device.appearance === "dark"
     ? device.appearance
     : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  const color = (colors[device.preset] ?? colors.standard)[scheme];
+  const color = (colors[device.preset] ?? colors.pochical)[scheme];
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = color;
   if (document.readyState !== "loading") return;
@@ -78,7 +75,7 @@ export const Route = createFileRoute("/try")({
         // launchScript picks the color before the first paint, so the one
         // rendered here is only where it starts.
         {
-          content: screenColors.standard?.light,
+          content: screenColors.pochical?.light,
           name: "theme-color",
           suppressHydrationWarning: true,
         },

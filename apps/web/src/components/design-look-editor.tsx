@@ -329,11 +329,11 @@ function ColorPicker({
           />
         ))}
       </ChoiceGrid>
-      {/* In a one-color テーマ every mark takes the theme color, so say
-          when this choice shows. */}
+      {/* With シフトを色分けする off every mark takes the theme color, so
+          say when this choice shows. */}
       {monochrome && (
         <Note>
-          テーマを色分けのもの（標準・くすみ・紙）にすると、この色で表示されます。
+          スタイルの「シフトを色分けする」をオンにすると、この色で表示されます。
         </Note>
       )}
     </>

@@ -26,7 +26,7 @@ import {
   presets,
   themeStyle,
 } from "../components/design-theme";
-import type { Preset } from "../components/design-theme";
+import type { PresetId } from "../components/design-theme";
 import {
   OffDisplayContext,
   OffHighlightContext,
@@ -154,7 +154,7 @@ function StatesPage() {
             {schemes.map(({ scheme, label: schemeLabel }) => (
               <FrameRow branch={schemeLabel} fan key={scheme}>
                 {presets.map((preset) => (
-                  <Scheme key={preset.id} preset={preset} scheme={scheme}>
+                  <Scheme key={preset.id} preset={preset.id} scheme={scheme}>
                     <CalendarFrame label={preset.name} />
                   </Scheme>
                 ))}
@@ -197,12 +197,12 @@ function Scheme({
   children,
 }: {
   scheme: ColorScheme;
-  preset: Preset;
+  preset: PresetId;
   children: ReactNode;
 }) {
   return (
     <ColorSchemeContext value={scheme}>
-      <PresetContexts preset={preset}>{children}</PresetContexts>
+      <PresetContexts id={preset}>{children}</PresetContexts>
     </ColorSchemeContext>
   );
 }

@@ -3,13 +3,8 @@ import type { ReactNode } from "react";
 
 import { useLook, useSettings } from "../lib/design-settings-store";
 import { useDeviceScheme } from "../lib/use-device-scheme";
-import {
-  ColorSchemeContext,
-  ThemeContext,
-  presetOf,
-  ToneContext,
-} from "./design-theme";
-import type { Preset } from "./design-theme";
+import { ColorSchemeContext, ThemeContext } from "./design-theme";
+import type { PresetId } from "./design-theme";
 import { WeekSettingsContext } from "./design-week";
 import {
   CellNamesContext,
@@ -20,30 +15,21 @@ import {
   ShiftMarkStyleContext,
 } from "./shift-mark";
 
-// The theme color of the person's テーマ, for pages that color themselves
-// with it.
+// The person's テーマ, for pages that color themselves with it.
 export function useDesignTheme() {
-  return presetOf(useSettings((state) => state.device.preset)).theme;
+  return useSettings((state) => state.device.preset);
 }
 
 // A テーマ other than the person's, for what shows one: its card in the
 // settings, or the states page.
 export function PresetContexts({
-  preset,
+  id,
   children,
 }: {
-  preset: Preset;
+  id: PresetId;
   children: ReactNode;
 }) {
-  return (
-    <ToneContext value={preset.tone}>
-      <ThemeContext value={{ theme: preset.theme }}>
-        <MonochromeContext value={{ monochrome: preset.marks === "mono" }}>
-          {children}
-        </MonochromeContext>
-      </ThemeContext>
-    </ToneContext>
-  );
+  return <ThemeContext value={{ theme: id }}>{children}</ThemeContext>;
 }
 
 // The settings store as the contexts the screens read. Parts of a page
@@ -52,8 +38,9 @@ export function PresetContexts({
 // by /demo and the /design pages alike.
 export function DesignProviders({ children }: { children: ReactNode }) {
   const look = useLook();
-  const { preset, appearance, week } = useSettings((state) => state.device);
-  const { theme, tone, marks } = presetOf(preset);
+  const { preset, appearance, week, shiftColors } = useSettings(
+    (state) => state.device
+  );
   // Saved device settings load once the page has hydrated.
   useEffect(() => {
     void useSettings.persist.rehydrate();
@@ -64,41 +51,37 @@ export function DesignProviders({ children }: { children: ReactNode }) {
   return (
     <WeekSettingsContext value={{ week }}>
       <ColorSchemeContext value={scheme}>
-        <ToneContext value={tone}>
-          <ThemeContext value={{ theme }}>
-            <IconWeightContext value={look.fill ? "duotone" : "regular"}>
-              <ShiftMarkStyleContext value={look.style}>
-                <CellNamesContext
+        <ThemeContext value={{ theme: preset }}>
+          <IconWeightContext value={look.fill ? "duotone" : "regular"}>
+            <ShiftMarkStyleContext value={look.style}>
+              <CellNamesContext
+                value={{
+                  names: {
+                    badge: look.names,
+                    emoji: look.names,
+                    icon: look.names,
+                  },
+                }}
+              >
+                <OffHighlightContext
                   value={{
-                    names: {
-                      badge: look.names,
-                      emoji: look.names,
-                      icon: look.names,
+                    highlight: {
+                      badge: look.highlight,
+                      emoji: look.highlight,
+                      icon: look.highlight,
                     },
                   }}
                 >
-                  <OffHighlightContext
-                    value={{
-                      highlight: {
-                        badge: look.highlight,
-                        emoji: look.highlight,
-                        icon: look.highlight,
-                      },
-                    }}
-                  >
-                    <MonochromeContext value={{ monochrome: marks === "mono" }}>
-                      <OffDisplayContext
-                        value={look.blankOff ? "blank" : "show"}
-                      >
-                        {children}
-                      </OffDisplayContext>
-                    </MonochromeContext>
-                  </OffHighlightContext>
-                </CellNamesContext>
-              </ShiftMarkStyleContext>
-            </IconWeightContext>
-          </ThemeContext>
-        </ToneContext>
+                  <MonochromeContext value={{ monochrome: !shiftColors }}>
+                    <OffDisplayContext value={look.blankOff ? "blank" : "show"}>
+                      {children}
+                    </OffDisplayContext>
+                  </MonochromeContext>
+                </OffHighlightContext>
+              </CellNamesContext>
+            </ShiftMarkStyleContext>
+          </IconWeightContext>
+        </ThemeContext>
       </ColorSchemeContext>
     </WeekSettingsContext>
   );
