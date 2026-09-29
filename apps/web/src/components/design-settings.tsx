@@ -1794,7 +1794,8 @@ function WeekRow({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-// The calendar's frame: 月の表示, 週の始まり and 色をつける日, seen on
+// The calendar's frame: 月の表示, what a tap on the month name does,
+// 週の始まり and 色をつける日, seen on
 // the style page's preview with the month's heading over it, in the order
 // they come down it. Only the viewer's screen changes.
 function WeekPage({
@@ -1808,6 +1809,8 @@ function WeekPage({
   const setWeek = useSettings((state) => state.setWeek);
   const monthName = useSettings((state) => state.device.monthName);
   const setMonthName = useSettings((state) => state.setMonthName);
+  const monthTap = useSettings((state) => state.device.monthTap);
+  const setMonthTap = useSettings((state) => state.setMonthTap);
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="カレンダー" />
@@ -1828,6 +1831,22 @@ function WeekPage({
           </Segment>
           <Segment label="英語" value="english">
             {englishMonthOf(previewToday)}
+          </Segment>
+        </SegmentedControl>
+      </Section>
+      <Section title="月名をタップしたとき">
+        <SegmentedControl
+          label="月名をタップしたとき"
+          onValueChange={(value) => {
+            setMonthTap(value === "season" ? "season" : "pick");
+          }}
+          value={monthTap}
+        >
+          <Segment label="月を選ぶ" value="pick">
+            月を選ぶ
+          </Segment>
+          <Segment label="おたのしみ" value="season">
+            おたのしみ
           </Segment>
         </SegmentedControl>
       </Section>

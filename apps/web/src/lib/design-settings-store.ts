@@ -49,6 +49,10 @@ const defaultImageOptions: ImageOptions = {
 
 export type MonthName = "number" | "english";
 
+// What a tap on the calendar's month name does: open the month sheet, or
+// おたのしみ, the month's season scattered over the calendar.
+export type MonthTap = "pick" | "season";
+
 // The rest of the person's own screen. Device only.
 export type DeviceSettings = {
   preset: PresetId;
@@ -59,6 +63,7 @@ export type DeviceSettings = {
   week: WeekSettings;
   // 月の表示: the calendar's heading as 9月, or as sep.
   monthName: MonthName;
+  monthTap: MonthTap;
   appIcon: string;
   calendar: Record<ShiftMarkStyle, CalendarOptions>;
   // How 画像で保存 last drew the month.
@@ -77,6 +82,7 @@ type SettingsState = {
   setAppearance: (appearance: Appearance) => void;
   setWeek: (week: WeekSettings) => void;
   setMonthName: (monthName: MonthName) => void;
+  setMonthTap: (monthTap: MonthTap) => void;
   setAppIcon: (icon: string) => void;
   setImageOptions: (options: ImageOptions) => void;
   // Changes the options of the shape in use.
@@ -104,6 +110,7 @@ export const useSettings = create<SettingsState>()(
         calendar: defaultCalendar,
         imageOptions: defaultImageOptions,
         monthName: "number",
+        monthTap: "pick",
         preset: "pochical",
         shiftColors: true,
         week: defaultWeekSettings,
@@ -137,6 +144,9 @@ export const useSettings = create<SettingsState>()(
       },
       setMonthName: (monthName) => {
         set((state) => ({ device: { ...state.device, monthName } }));
+      },
+      setMonthTap: (monthTap) => {
+        set((state) => ({ device: { ...state.device, monthTap } }));
       },
       setPreset: (preset) => {
         set((state) => ({ device: { ...state.device, preset } }));
