@@ -3815,10 +3815,15 @@ const dayCard = {
       gap: "8px",
       // Never wider than its bubble, so the time beside it stays in view.
       maxWidth: "100%",
-      minWidth: 0,
+      // One day's card is as wide with みんな休み as without, and for any
+      // date: room for 12月27日(日) and the tag, so shared days stacked
+      // in a chat line up. More people than that holds widen it.
+      minWidth: "184px",
       padding: "12px 12px",
     },
-    variants: { many: { true: { gap: 0, padding: "8px 8px" } } },
+    variants: {
+      many: { true: { gap: 0, minWidth: 0, padding: "8px 8px" } },
+    },
   }),
   cell: cva({
     base: {
