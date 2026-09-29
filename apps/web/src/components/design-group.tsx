@@ -55,6 +55,7 @@ import {
   dateKey,
   dayCell,
   dayParts,
+  todayMark,
   formatDay,
   timeChangeOf,
   timeRange,
@@ -3724,6 +3725,8 @@ const dayRows = {
           },
         },
       },
+      // Today's row also has a bar at its start, beside its date in the
+      // accent.
       today: { true: { borderLeftColor: "accent.default" } },
       together: {
         true: {
@@ -5685,7 +5688,11 @@ function RowDate({
   const weekTools = useWeek();
   const label = (
     <span className={toneColor[weekTools.dateTone(date)]}>
-      {date.getDate()}
+      {dateKey(date) === dateKey(designToday) ? (
+        <span className={todayMark}>{date.getDate()}</span>
+      ) : (
+        date.getDate()
+      )}
       <small className={dayRows.weekday}>{weekdayLabels[date.getDay()]}</small>
     </span>
   );
@@ -5911,10 +5918,16 @@ function WeekDate({
   } as const;
   // Without a month dimming the days around it, the 1st names its month,
   // as where one week runs into the next month.
-  const label =
+  const name =
     !month && date.getDate() === 1
       ? `${date.getMonth() + 1}/1`
       : date.getDate();
+  const label =
+    dateKey(date) === dateKey(designToday) ? (
+      <span className={todayMark}>{name}</span>
+    ) : (
+      name
+    );
   if (!onPick) {
     return <span className={weekCell(look)}>{label}</span>;
   }
@@ -6308,6 +6321,7 @@ function PersonDay({
   onPick: (date: Date) => void;
 }) {
   const { isColoredHoliday } = useWeek();
+  const today = dateKey(date) === dateKey(designToday);
   const item = outside ? undefined : patternOn(member, date);
   // In their カラー, like their marks.
   const { tint } = useDisplayColor(item?.look.color ?? 0);
@@ -6334,10 +6348,10 @@ function PersonDay({
         className={cx(
           dayParts.date,
           outside && dayParts.dateOutside,
-          isColoredHoliday(date) && dayParts.holiday
+          isColoredHoliday(date) && !today && dayParts.holiday
         )}
       >
-        {date.getDate()}
+        <span className={today ? todayMark : undefined}>{date.getDate()}</span>
       </span>
       {item && (
         <>
