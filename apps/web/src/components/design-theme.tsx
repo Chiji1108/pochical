@@ -12,7 +12,7 @@ import { Choice, ChoiceGrid } from "./design-ui";
 // more rows than nine did and the settings below stay near. Each keeps one
 // color on the screen at about the shifts' own strength, so none clashes
 // with them. The first row is light basics: the app's moss, the same moss
-// softened on cream, black ink, and milk tea. The second is colors: blue,
+// softened on cream, black ink, and mocha. The second is colors: blue,
 // indigo, pink and violet. The third is deep: matcha and cocoa, and two
 // always dark, their character a night: a moonlit night, a blackboard.
 // Whether shifts keep their
@@ -74,15 +74,15 @@ export const presets = [
     id: "sumi",
     name: "墨",
   },
-  // Soft and warm: a milky caramel on a screen a breath off white toward
-  // warmth, the shifts softened to sit with it. Yellower than ココア, which
-  // leans red.
+  // Mocha, as a soft milky brown: on a screen a breath off white toward
+  // warmth, the shifts softened to sit with it. Lighter and less red than
+  // ココア.
   {
-    accent: { chroma: 0.052, hue: 72, lightness: 0.52 },
-    grays: { hue: 68, strength: 1.3 },
-    ground: { chroma: 0.005, hue: 75, lightness: 0.993 },
-    id: "milktea",
-    name: "ミルクティー",
+    accent: { chroma: 0.048, hue: 65, lightness: 0.5 },
+    grays: { hue: 65, strength: 1.3 },
+    ground: { chroma: 0.005, hue: 72, lightness: 0.993 },
+    id: "mocha",
+    name: "モカ",
     vividness: 0.75,
   },
   // Fresh: a clear blue-green on cool grays.

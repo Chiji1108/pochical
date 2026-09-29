@@ -552,8 +552,7 @@ const themeCard = {
     gap: "4px",
     padding: "4px 2px 8px",
     textAlign: "center",
-    // Small enough that ミルクティー keeps to one line four across.
-    textStyle: "caption",
+    textStyle: "footnote",
     whiteSpace: "nowrap",
   }),
   grid: css({
