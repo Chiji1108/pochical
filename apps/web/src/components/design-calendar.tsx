@@ -524,15 +524,30 @@ export function DesignCalendar({
   // The month stays while the week opened is one of its rows, as every row
   // holds a day of it: a day of the month before, opened from the top row,
   // folds back into that row. Only a week off the month takes its month.
+  // The month shown once a date's week is opened.
+  function monthOpening(date: Date) {
+    return onMonth(date)
+      ? month
+      : new Date(date.getFullYear(), date.getMonth(), 1);
+  }
   function openDetail(date: Date) {
     if (!weekDetail) {
       setFoldRow(rowOf(date));
     }
+    setSwipedTo(undefined);
     setDetailDate(date);
     if (!onMonth(date)) {
-      setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+      setMonth(monthOpening(date));
     }
   }
+  // The months the pages beside lead to: the months before and after, or
+  // in the week view the months the weeks before and after are shown in.
+  const besideMonths = weekDetail
+    ? {
+        next: monthOpening(addDays(detailDate, 7)),
+        previous: monthOpening(addDays(detailDate, -7)),
+      }
+    : undefined;
   function goToMonth(target: Date) {
     setSwipedTo(undefined);
     setPageTurn((turn) => turn + 1);
@@ -735,6 +750,7 @@ export function DesignCalendar({
           <Screen hidden={tab !== "calendar" || imagePreview}>
             <div className={heading.bar}>
               <MonthHeading
+                beside={besideMonths}
                 mode={headingMode}
                 month={month}
                 onPick={goToMonth}
@@ -780,17 +796,18 @@ export function DesignCalendar({
                 <Pager
                   onStep={(direction) => {
                     step(direction);
-                    if (!weekDetail) {
-                      setSwipedTo(
-                        dateKey(
-                          new Date(
-                            month.getFullYear(),
-                            month.getMonth() + direction,
-                            1
-                          )
-                        )
-                      );
-                    }
+                    // After step, which clears it.
+                    setSwipedTo(
+                      dateKey(
+                        weekDetail
+                          ? monthOpening(addDays(detailDate, direction * 7))
+                          : new Date(
+                              month.getFullYear(),
+                              month.getMonth() + direction,
+                              1
+                            )
+                      )
+                    );
                   }}
                   progress={pageDrag}
                   page={weekDetail ? dateKey(detailDate) : dateKey(month)}
@@ -1305,20 +1322,22 @@ function MonthHeading({
   onPick,
   progress,
   swiped,
+  beside,
 }: {
   month: Date;
   mode: "view" | "edit" | "week";
   onPick: (month: Date) => void;
-  // The months' pages being dragged, which the name follows.
+  // The pages being dragged, which the name follows to the month the page
+  // coming in shows.
   progress: MotionValue<number>;
   swiped: boolean;
+  beside?: { previous: Date; next: Date };
 }) {
-  // The pages turn months, looking or entering; the week view's turn
-  // weeks.
   const name = (
     <MonthName
+      beside={beside}
       month={month}
-      progress={mode === "week" ? undefined : progress}
+      progress={progress}
       swiped={swiped}
     />
   );
@@ -1369,11 +1388,15 @@ export function MonthName({
   month,
   progress,
   swiped = false,
+  beside: besideMonths,
 }: {
   month: Date;
   progress?: MotionValue<number>;
   // Turned by a swipe, which has already brought the new name in.
   swiped?: boolean;
+  // What the pages beside show, when not the months before and after, as
+  // the week view's weeks.
+  beside?: { previous: Date; next: Date };
 }) {
   const style = useSettings((state) => state.device.monthName);
   const reduceMotion = useReducedMotion() ?? false;
@@ -1384,8 +1407,12 @@ export function MonthName({
     setTurn({ direction: key > turn.key ? 1 : -1, instant: swiped, key });
   }
   const english = style === "english";
-  const previous = new Date(month.getFullYear(), month.getMonth() - 1, 1);
-  const next = new Date(month.getFullYear(), month.getMonth() + 1, 1);
+  const previous =
+    besideMonths?.previous ??
+    new Date(month.getFullYear(), month.getMonth() - 1, 1);
+  const next =
+    besideMonths?.next ??
+    new Date(month.getFullYear(), month.getMonth() + 1, 1);
   const nameOf = (date: Date) =>
     english ? englishMonthOf(date) : String(date.getMonth() + 1);
   const yearOf = (date: Date) => String(date.getFullYear());
@@ -1768,6 +1795,10 @@ function HeadingActions({
   const back = (
     <TodayButton onClick={week ? onThisWeek : onThisMonth} unit={unit} />
   );
+  const isThisWeek = (days: number) =>
+    weekTools
+      .weekDates(addDays(detailDate ?? designToday, days))
+      .some((date) => dateKey(date) === dateKey(designToday));
   const isThisMonth = (by: number) => {
     const beside = new Date(month.getFullYear(), month.getMonth() + by, 1);
     return (
@@ -1792,9 +1823,9 @@ function HeadingActions({
       back={
         <TodayCorner
           atToday={atToday}
-          nextIsToday={!week && isThisMonth(1)}
-          previousIsToday={!week && isThisMonth(-1)}
-          progress={mode === "view" ? progress : undefined}
+          nextIsToday={week ? isThisWeek(7) : isThisMonth(1)}
+          previousIsToday={week ? isThisWeek(-7) : isThisMonth(-1)}
+          progress={mode === "edit" ? undefined : progress}
           swiped={swiped}
         >
           {back}
