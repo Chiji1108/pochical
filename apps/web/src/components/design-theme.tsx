@@ -309,7 +309,19 @@ const previewSchemes = [
 // inline at the end of a section's title for what the section shows.
 export const previewWrap = css({ position: "relative" });
 const schemeSwitch = {
+  // Drawn small, but each side takes its half of the whole switch and a
+  // 44px height to tap, so a tap anywhere on it picks the side it lands on.
   choice: css({
+    "&[data-scheme=dark]::after": { right: "-3px" },
+    "&[data-scheme=light]::after": { left: "-3px" },
+    _after: {
+      bottom: "-13px",
+      content: '""',
+      left: "-1px",
+      position: "absolute",
+      right: "-1px",
+      top: "-13px",
+    },
     _checked: { bg: "fill.tertiary", color: "text.primary" },
     bg: "transparent",
     border: 0,
@@ -319,6 +331,7 @@ const schemeSwitch = {
     height: "18px",
     padding: 0,
     placeItems: "center",
+    position: "relative",
     width: "24px",
   }),
   // Ark keeps the group itself relatively positioned, so the choices
@@ -364,6 +377,7 @@ export function PreviewSchemeSwitch({
         {previewSchemes.map((option) => (
           <Choice
             className={schemeSwitch.choice}
+            data-scheme={option.scheme}
             key={option.scheme}
             label={option.name}
             value={option.scheme}
