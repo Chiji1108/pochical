@@ -16,6 +16,8 @@ export type IconColors = {
   // A band of the dog's color around the whole drawing, in source pixels,
   // for grounds as dark as the lines.
   rim?: number;
+  // Part of ポチカル Pro.
+  pro?: true;
 };
 
 export const iconColorOptions: IconColors[] = [
@@ -48,6 +50,42 @@ export const iconColorOptions: IconColors[] = [
     id: "dark",
     line: "#1f231e",
     name: "ダーク",
+    rim: 17,
+  },
+  // Pro, one for each Pro テーマ: the lighter two with white dogs, the
+  // deeper two with cream dogs on a rim.
+  {
+    dog: "#fffaf1",
+    ground: "#d8c2a4",
+    id: "milktea",
+    line: "#3a2f24",
+    name: "ミルクティー",
+    pro: true,
+  },
+  {
+    dog: "#f3eee4",
+    ground: "#2f3e6e",
+    id: "aizome",
+    line: "#1a2140",
+    name: "藍染め",
+    pro: true,
+    rim: 17,
+  },
+  {
+    dog: "#fbf9ef",
+    ground: "#7d8c45",
+    id: "matcha",
+    line: "#242a14",
+    name: "抹茶",
+    pro: true,
+  },
+  {
+    dog: "#efe3d6",
+    ground: "#4f3329",
+    id: "cocoa",
+    line: "#231611",
+    name: "ココア",
+    pro: true,
     rim: 17,
   },
 ];

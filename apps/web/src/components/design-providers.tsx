@@ -15,9 +15,10 @@ import {
   ShiftMarkStyleContext,
 } from "./shift-mark";
 
-// The person's テーマ, for pages that color themselves with it.
+// The person's テーマ, for pages that color themselves with it: a Pro one
+// being tried on while it is.
 export function useDesignTheme() {
-  return useSettings((state) => state.device.preset);
+  return useSettings((state) => state.tryOn ?? state.device.preset);
 }
 
 // A テーマ other than the person's, for what shows one: its card in the
@@ -45,9 +46,10 @@ export function PresetContexts({
 // by /demo and the /design pages alike.
 export function DesignProviders({ children }: { children: ReactNode }) {
   const look = useLook();
-  const { preset, appearance, week, shiftColors } = useSettings(
+  const { appearance, week, shiftColors } = useSettings(
     (state) => state.device
   );
+  const preset = useDesignTheme();
   // Saved device settings load once the page has hydrated.
   useEffect(() => {
     void useSettings.persist.rehydrate();

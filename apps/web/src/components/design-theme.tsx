@@ -13,7 +13,8 @@ import { Choice, ChoiceGrid } from "./design-ui";
 // with them. The first row is the basics: the app's moss, the same moss
 // softened on cream, and black ink. The second is colors the others lack:
 // blue, pink and violet. The third is always dark, its character a night:
-// a coffee shop, a moonlit night, a blackboard. Whether shifts keep their
+// a coffee shop, a moonlit night, a blackboard. More come with ポチカル
+// Pro, on a shelf of their own under the nine. Whether shifts keep their
 // own colors is a choice of its own, シフトの色, since it carries
 // meaning rather than taste. Only the viewer's screen changes; a shift's
 // color slot is what syncs.
@@ -44,6 +45,9 @@ export type Preset = {
   // The share of each shift color's chroma kept when shifts are colored,
   // 1 as tuned; the soft テーマ lower theirs to sit with them.
   vividness?: number;
+  // Part of ポチカル Pro: shown on a shelf of its own under the free nine,
+  // tried on before buying.
+  pro?: true;
 };
 
 export const presets = [
@@ -130,6 +134,46 @@ export const presets = [
     scheme: "dark",
     tint: { chroma: 0.1, hue: 162 },
     vividness: 0.8,
+  },
+  // Pro. Soft and warm: a milky caramel on a faintly warm screen, the
+  // shifts softened to sit with it. Yellower than ココア, which leans red.
+  {
+    accent: { chroma: 0.052, hue: 72, lightness: 0.52 },
+    grays: { hue: 68, strength: 1.3 },
+    ground: { chroma: 0.005, hue: 75, lightness: 0.993 },
+    id: "milktea",
+    name: "ミルクティー",
+    pro: true,
+    vividness: 0.75,
+  },
+  // Pro. Indigo on unbleached cotton: a deep indigo, the screen only a
+  // breath off white toward the cotton's warmth.
+  {
+    accent: { chroma: 0.075, hue: 258, lightness: 0.43 },
+    grays: { hue: 80, strength: 0.7 },
+    ground: { chroma: 0.006, hue: 85, lightness: 0.993 },
+    id: "aizome",
+    name: "藍染め",
+    pro: true,
+    vividness: 0.75,
+  },
+  // Pro. An olive yellow-green, as the tea.
+  {
+    accent: { chroma: 0.095, hue: 116, lightness: 0.5 },
+    grays: { hue: 110, strength: 1 },
+    id: "matcha",
+    name: "抹茶",
+    pro: true,
+    vividness: 0.75,
+  },
+  // Pro. A deep chocolate brown, leaning red.
+  {
+    accent: { chroma: 0.045, hue: 40, lightness: 0.38 },
+    grays: { hue: 45, strength: 1 },
+    id: "cocoa",
+    name: "ココア",
+    pro: true,
+    vividness: 0.75,
   },
 ] as const satisfies readonly Preset[];
 

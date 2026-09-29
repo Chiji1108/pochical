@@ -80,6 +80,14 @@ type SettingsState = {
   // Signed in with Apple or Google, if at all.
   account?: Account;
   device: DeviceSettings;
+  // ポチカル Pro, bought once. The prototype keeps it for the visit only,
+  // so buying can be tried again; the apps ask the store.
+  pro: boolean;
+  // A Pro テーマ being tried on before buying: the whole app shows it
+  // until it is bought or put back.
+  tryOn?: PresetId;
+  setPro: (pro: boolean) => void;
+  setTryOn: (tryOn: PresetId | undefined) => void;
   setShape: (shape: { style: ShiftMarkStyle; fill?: boolean }) => void;
   setAccount: (account: Account | undefined) => void;
   setPreset: (preset: PresetId) => void;
@@ -122,6 +130,13 @@ export const useSettings = create<SettingsState>()(
         week: defaultWeekSettings,
       },
       groupLook: { fill: true, style: "icon" },
+      pro: false,
+      setPro: (pro) => {
+        set({ pro });
+      },
+      setTryOn: (tryOn) => {
+        set({ tryOn });
+      },
       setAccount: (account) => {
         set({ account });
       },
@@ -154,8 +169,12 @@ export const useSettings = create<SettingsState>()(
       setMonthTap: (monthTap) => {
         set((state) => ({ device: { ...state.device, monthTap } }));
       },
+      // Picking a テーマ puts back one being tried on.
       setPreset: (preset) => {
-        set((state) => ({ device: { ...state.device, preset } }));
+        set((state) => ({
+          device: { ...state.device, preset },
+          tryOn: undefined,
+        }));
       },
       setShape: ({ style, fill }) => {
         set((state) => ({

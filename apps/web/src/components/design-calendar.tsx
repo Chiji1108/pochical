@@ -38,6 +38,7 @@ import { GapSheet, gapDaysIn } from "./design-gap-sheet";
 import { DesignGroup, JoinSheet } from "./design-group";
 import { MonthTitleButton, monthTitle } from "./design-month-picker";
 import { Phone } from "./design-phone";
+import { ProSheet, TryOnBar } from "./design-pro";
 import {
   monthIndex,
   RollingName,
@@ -1028,6 +1029,8 @@ export function DesignCalendar({
           <span aria-live="polite" className={srOnly}>
             {announcement}
           </span>
+          <TryOnBar />
+          <ProSheet />
           <PhoneToasts toaster={toaster} />
         </Phone>
       </ToastContext>

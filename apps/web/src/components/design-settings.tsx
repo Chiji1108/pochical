@@ -39,6 +39,7 @@ import { PhotoAvatar, PhotoEditor } from "./design-group";
 import type { Profile } from "./design-group";
 import { WorkSetupSteps } from "./design-onboarding";
 import { PatternsPage } from "./design-pattern-editor";
+import { openProSheet, PRO_PRICE, proPresets, ProTag } from "./design-pro";
 import { PresetContexts } from "./design-providers";
 import { ConfirmDialog, Sheet } from "./design-sheet";
 import {
@@ -50,7 +51,7 @@ import {
   themeStyle,
   previewWrap,
 } from "./design-theme";
-import type { Appearance } from "./design-theme";
+import type { Appearance, PresetId } from "./design-theme";
 import {
   Button,
   ChipGroup,
@@ -351,6 +352,26 @@ export function DesignSettings({
   );
 }
 
+// ポチカル Pro at the settings' top, as apps put their membership: what it
+// costs, or that it is bought.
+function ProRow() {
+  const bought = useSettings((state) => state.pro);
+  return (
+    <List>
+      <ListRow
+        label={
+          <span className={settingsParts.inlineValue}>
+            ポチカル Pro
+            <ProTag />
+          </span>
+        }
+        onClick={openProSheet}
+        value={bought ? "購入済み" : `${PRO_PRICE}・買い切り`}
+      />
+    </List>
+  );
+}
+
 function SettingsTop({
   current,
   patternKeys,
@@ -369,6 +390,7 @@ function SettingsTop({
   return (
     <>
       <PageHeader title="設定" />
+      <ProRow />
       <ListSection title="シフト">
         <ListRow
           label="働き方"
@@ -561,6 +583,16 @@ const themeCard = {
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
     margin: 0,
     padding: 0,
+  }),
+  // The Pro テーマ's heading, over their own grid.
+  shelf: css({
+    alignItems: "center",
+    color: "text.secondary",
+    display: "flex",
+    fontWeight: 600,
+    gap: "8px",
+    margin: "20px 4px 8px",
+    textStyle: "subheadline",
   }),
   // The theme's own screen, in the current light or dark.
   sample: css({
@@ -1682,35 +1714,49 @@ function AppIconRow({ onOpen }: { onOpen: () => void }) {
 function AppIconPage({ onBack }: { onBack: () => void }) {
   const icon = useSettings((state) => state.device.appIcon);
   const setIcon = useSettings((state) => state.setAppIcon);
+  const bought = useSettings((state) => state.pro);
   const icons = useAppIcons();
   const [alerted, setAlerted] = useState(false);
+  const pick = (id: string) => {
+    setIcon(id);
+    setAlerted(true);
+  };
+  const choices = (options: typeof pickableIcons) =>
+    options.map((option) => (
+      <Choice className={appIcons.choice} key={option.id} value={option.id}>
+        <AppIcon size={104} src={icons[option.id]} />
+        <span className={appIcons.name}>
+          {icon === option.id && (
+            <Check aria-hidden="true" className={appIcons.check} size={14} />
+          )}
+          {option.name}
+        </span>
+      </Choice>
+    ));
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="アプリアイコン" />
       <ChoiceGrid
         className={appIcons.grid}
         label="アプリアイコン"
-        onValueChange={(id) => {
-          setIcon(id);
-          setAlerted(true);
-        }}
+        onValueChange={pick}
         value={icon}
       >
-        {pickableIcons.map((option) => (
-          <Choice className={appIcons.choice} key={option.id} value={option.id}>
-            <AppIcon size={104} src={icons[option.id]} />
-            <span className={appIcons.name}>
-              {icon === option.id && (
-                <Check
-                  aria-hidden="true"
-                  className={appIcons.check}
-                  size={14}
-                />
-              )}
-              {option.name}
-            </span>
-          </Choice>
-        ))}
+        {choices(pickableIcons.filter((option) => option.pro !== true))}
+      </ChoiceGrid>
+      <h5 className={themeCard.shelf}>
+        ポチカル Pro
+        <ProTag />
+      </h5>
+      {/* A home screen icon cannot be tried on, so before buying a tap
+          tells what Pro is. */}
+      <ChoiceGrid
+        className={appIcons.grid}
+        label="ポチカル Pro のアイコン"
+        onValueChange={bought ? pick : openProSheet}
+        value={icon}
+      >
+        {choices(pickableIcons.filter((option) => option.pro === true))}
       </ChoiceGrid>
       {alerted && (
         <SystemAlert
@@ -1974,37 +2020,78 @@ const presetSampleShifts: Shift[] = ["day", "night", "after", "off"];
 function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
   const current = useSettings((state) => state.device.preset);
   const setPreset = useSettings((state) => state.setPreset);
+  const bought = useSettings((state) => state.pro);
+  const tryOn = useSettings((state) => state.tryOn);
+  const setTryOn = useSettings((state) => state.setTryOn);
   return (
-    <ChoiceGrid
-      className={themeCard.grid}
-      label="テーマ"
-      onValueChange={setPreset}
-      value={current}
-    >
-      {presets.map((preset) => (
-        <Choice className={themeCard.choice} key={preset.id} value={preset.id}>
-          <span
-            aria-hidden="true"
-            className={themeCard.sample}
-            style={themeStyle(preset.id, scheme)}
-          >
-            <ColorSchemeContext value={scheme}>
-              <PresetContexts id={preset.id}>
-                <span className={themeCard.card}>
-                  {presetSampleShifts.map((shift) => (
-                    <ShiftMark key={shift} shift={shift} size={14} />
-                  ))}
-                </span>
-              </PresetContexts>
-            </ColorSchemeContext>
-            <span className={themeCard.strokes}>
-              <span />
-              <span />
+    <>
+      <ChoiceGrid
+        className={themeCard.grid}
+        label="テーマ"
+        onValueChange={setPreset}
+        value={tryOn ? null : current}
+      >
+        {freePresets.map((preset) => (
+          <ThemeCard id={preset.id} key={preset.id} scheme={scheme} />
+        ))}
+      </ChoiceGrid>
+      <h5 className={themeCard.shelf}>
+        ポチカル Pro
+        <ProTag />
+      </h5>
+      {/* Not yet bought, a テーマ here is tried on rather than chosen. */}
+      <ChoiceGrid
+        className={themeCard.grid}
+        label="ポチカル Pro のテーマ"
+        onValueChange={(id) => {
+          if (bought) {
+            setPreset(id);
+          } else {
+            setTryOn(id);
+          }
+        }}
+        value={tryOn ?? current}
+      >
+        {proPresets.map((preset) => (
+          <ThemeCard id={preset.id} key={preset.id} scheme={scheme} />
+        ))}
+      </ChoiceGrid>
+      {!bought && (
+        <p className={settingsParts.footer}>
+          タップすると試着できます。気に入ったら、ポチカル Pro で使えます。
+        </p>
+      )}
+    </>
+  );
+}
+
+const freePresets = presets.filter((preset) => !("pro" in preset));
+
+// A テーマ as its card: its screen's ground with shifts on a card in its
+// colors, and strokes of its text and accent.
+function ThemeCard({ id, scheme }: { id: PresetId; scheme: ColorScheme }) {
+  return (
+    <Choice className={themeCard.choice} value={id}>
+      <span
+        aria-hidden="true"
+        className={themeCard.sample}
+        style={themeStyle(id, scheme)}
+      >
+        <ColorSchemeContext value={scheme}>
+          <PresetContexts id={id}>
+            <span className={themeCard.card}>
+              {presetSampleShifts.map((shift) => (
+                <ShiftMark key={shift} shift={shift} size={14} />
+              ))}
             </span>
-          </span>
-          {preset.name}
-        </Choice>
-      ))}
-    </ChoiceGrid>
+          </PresetContexts>
+        </ColorSchemeContext>
+        <span className={themeCard.strokes}>
+          <span />
+          <span />
+        </span>
+      </span>
+      {presetOf(id).name}
+    </Choice>
   );
 }
