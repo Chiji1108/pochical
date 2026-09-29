@@ -223,6 +223,12 @@ const screenStyle = css({
     marginBottom: "calc(-1 * var(--safe-bottom))",
     paddingBottom: "calc(var(--tab-bar-bottom) + 80px)",
   },
+  // The part that scrolls takes that room as its end piece instead; see
+  // screenScrollStyle.
+  "&:has(> [data-tab-bar]) [data-screen-scroll]": {
+    "&::after": { height: "calc(var(--tab-bar-bottom) + 80px)" },
+    paddingBottom: 0,
+  },
   "&[hidden]": { display: "none" },
   display: "flex",
   flex: 1,
@@ -242,16 +248,28 @@ export function Screen({
 // as the platforms' large-title pages: its parts in a column with room
 // between, each keeping its height, so a long page scrolls rather than
 // squeezing its lists, which hide what overflows them.
+// The room at its foot is a last piece rather than padding: WebKit leaves
+// a scrolling flex column's end padding out of what it scrolls, so on an
+// iPhone the foot never cleared the tab bar, and in a home screen app,
+// where everything else fits, the page did not scroll at all. The piece
+// takes back the gap before it.
+const SCREEN_SCROLL_GAP = "24px";
 const screenScrollStyle = cva({
   base: {
     "& > *": { flexShrink: 0 },
+    "&::after": {
+      content: '""',
+      flexShrink: 0,
+      height: "16px",
+      marginTop: `calc(-1 * ${SCREEN_SCROLL_GAP})`,
+    },
     display: "flex",
     flex: 1,
     flexDirection: "column",
-    gap: "24px",
+    gap: SCREEN_SCROLL_GAP,
     minHeight: 0,
     overflowY: "auto",
-    padding: "8px 0 16px",
+    padding: "8px 0 0",
   },
   variants: {
     // Beside a rail on its left, like the group hub's list of groups: it
