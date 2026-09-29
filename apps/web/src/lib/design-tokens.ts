@@ -100,7 +100,7 @@ export const neutralTokenGroups: ColorTokenGroup[] = [
       },
       {
         dark: "#666a65",
-        label: "無効・月の外の日",
+        label: "無効",
         light: "#b9beb4",
         name: "text-disabled",
       },
