@@ -4,18 +4,21 @@ import { css } from "styled-system/css";
 
 import { useSettings } from "../lib/design-settings-store";
 import { oklchToHex } from "../lib/oklch";
-import { ColorSchemeContext } from "./design-theme";
+import { ColorSchemeContext, ThemeContext } from "./design-theme";
+import type { PresetId } from "./design-theme";
 
 // おたのしみ, the other choice for the calendar's month name: a sky of pale
 // light at the top of the calendar, fading into the ground below it. It
 // first comes with a tap on the name, never before (not even in the
 // settings' preview), and each tap drifts it to other colors, kept until
-// the next tap, so a sky someone likes can be screenshotted. Plain gradients, which
-// SwiftUI's MeshGradient and Compose's brushes draw the same.
+// the next tap, so a sky someone likes can be screenshotted. The first is
+// the テーマ's own sky; the rest come at random, the テーマ's among them.
+// Plain gradients, which SwiftUI's MeshGradient and Compose's brushes
+// draw the same.
 
 // Three hues, warm to cool across the top: the left corner's, the middle's
-// and the right corner's.
-type Sky = { name: string; hues: [number, number, number] };
+// and the right corner's; `vivid` scales the tones' chroma.
+type Sky = { name: string; hues: [number, number, number]; vivid?: number };
 
 export const skies: Sky[] = [
   { hues: [55, 235, 300], name: "朝焼け" },
@@ -28,6 +31,23 @@ export const skies: Sky[] = [
   { hues: [215, 280, 180], name: "氷" },
 ];
 
+// Each テーマ's own sky, picked to its mood rather than drawn from its
+// accent alone: 墨's nearly a silver haze.
+const themeSkies: Record<PresetId, Sky> = {
+  aizome: { hues: [265, 225, 85], name: "藍染め" },
+  cocoa: { hues: [45, 75, 10], name: "ココア", vivid: 0.8 },
+  matcha: { hues: [120, 90, 350], name: "抹茶" },
+  milktea: { hues: [55, 80, 20], name: "ミルクティー", vivid: 0.8 },
+  pochical: { hues: [100, 150, 225], name: "ポチカル" },
+  sakura: { hues: [35, 355, 300], name: "さくら" },
+  soda: { hues: [170, 215, 100], name: "ソーダ" },
+  sumi: { hues: [250, 90, 300], name: "墨", vivid: 0.4 },
+  sumire: { hues: [310, 280, 20], name: "すみれ" },
+};
+
+// Where the テーマ's sky sits among the choices, after the fixed ones.
+const THEME_SKY = skies.length;
+
 // Pale and airy in light mode; deep, like jewels in shade, in dark mode.
 const tones = {
   dark: { chroma: 0.05, lightness: 0.29 },
@@ -38,7 +58,7 @@ const tones = {
 function skyBackground(sky: Sky, scheme: "light" | "dark") {
   const { chroma, lightness } = tones[scheme];
   const [left, middle, right] = sky.hues.map((hue) =>
-    oklchToHex({ chroma, hue, lightness })
+    oklchToHex({ chroma: chroma * (sky.vivid ?? 1), hue, lightness })
   );
   return [
     `radial-gradient(90% 80% at 0% 0%, ${left} 0%, transparent 70%)`,
@@ -86,13 +106,18 @@ export function useSurprise() {
   const on = useSettings((state) => state.device.monthTap === "surprise");
   const index = useSettings((state) => state.device.sky);
   const setSky = useSettings((state) => state.setSky);
+  const { theme } = useContext(ThemeContext);
   function play() {
-    const others = skies.flatMap((_, other) =>
-      other === index ? [] : [other]
+    if (index < 0) {
+      setSky(THEME_SKY);
+      return;
+    }
+    const others = [...skies.keys(), THEME_SKY].filter(
+      (other) => other !== index
     );
-    setSky(others[Math.floor(Math.random() * others.length)] ?? 0);
+    setSky(others[Math.floor(Math.random() * others.length)] ?? THEME_SKY);
   }
-  const sky = skies[index];
+  const sky = index === THEME_SKY ? themeSkies[theme] : skies[index];
   const layer = (
     <div aria-hidden="true" className={surpriseStyles.layer}>
       <AnimatePresence initial={false}>

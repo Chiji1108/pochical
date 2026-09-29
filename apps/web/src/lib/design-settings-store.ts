@@ -66,7 +66,8 @@ export type DeviceSettings = {
   monthName: MonthName;
   monthTap: MonthTap;
   // Which of おたのしみ's skies is up, kept until the next tap; none (-1)
-  // until the month name is first tapped, so nothing gives it away.
+  // until the month name is first tapped, so nothing gives it away, and
+  // then the テーマ's own (the one after the fixed skies).
   sky: number;
   appIcon: string;
   calendar: Record<ShiftMarkStyle, CalendarOptions>;
