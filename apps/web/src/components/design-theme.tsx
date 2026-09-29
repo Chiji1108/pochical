@@ -1,7 +1,7 @@
 import { Moon, Sun } from "lucide-react";
 import { createContext, useContext } from "react";
 import type { CSSProperties } from "react";
-import { css } from "styled-system/css";
+import { css, cva } from "styled-system/css";
 
 import { neutralStyle } from "../lib/design-tokens";
 import type { ColorScheme, NeutralTint, Tone } from "../lib/design-tokens";
@@ -129,13 +129,48 @@ export function themeOf(id: ThemeId): Theme {
   return themes.find((theme) => theme.id === id) ?? themes[0];
 }
 
-// カラー in the style settings: マルチカラー keeps each shift pattern's own
-// color with the moss theme it was tuned for; any single theme color also
-// draws every mark in that color. Only the viewer's screen changes.
-export type ColorChoice = "multi" | ThemeId;
+// テーマ in the style settings: named presets, each a theme color in a tone
+// with the shifts either in their own colors or all in the theme's ink.
+// Only the pairs that work are offered: shift colors were tuned beside
+// モス, so the colorful ones keep it, and the one-color ones stay deep.
+// Only the viewer's screen changes; a shift's color slot is what syncs.
+export type Preset = {
+  id: string;
+  name: string;
+  theme: ThemeId;
+  tone: Tone;
+  // "mono" draws icons and letters in the theme color; emoji keep theirs.
+  marks: "multi" | "mono";
+};
 
-export function themeOfColor(color: ColorChoice): ThemeId {
-  return color === "multi" ? "moss" : color;
+export const presets = [
+  { id: "standard", marks: "multi", name: "標準", theme: "moss", tone: "deep" },
+  { id: "dusty", marks: "multi", name: "くすみ", theme: "moss", tone: "dusty" },
+  { id: "paper", marks: "multi", name: "紙", theme: "moss", tone: "paper" },
+  { id: "sumi", marks: "mono", name: "墨", theme: "sumi", tone: "deep" },
+  { id: "indigo", marks: "mono", name: "藍", theme: "indigo", tone: "deep" },
+  { id: "moss", marks: "mono", name: "モス", theme: "moss", tone: "deep" },
+  { id: "rose", marks: "mono", name: "ローズ", theme: "rose", tone: "deep" },
+  {
+    id: "terracotta",
+    marks: "mono",
+    name: "テラコッタ",
+    theme: "terracotta",
+    tone: "deep",
+  },
+  {
+    id: "lavender",
+    marks: "mono",
+    name: "ラベンダー",
+    theme: "lavender",
+    tone: "deep",
+  },
+] as const satisfies readonly Preset[];
+
+export type PresetId = (typeof presets)[number]["id"];
+
+export function presetOf(id: PresetId): Preset {
+  return presets.find((preset) => preset.id === id) ?? presets[0];
 }
 
 // The scheme in effect: the device's unless 外観 in settings keeps one.
@@ -270,10 +305,23 @@ const previewSchemes = [
 ] as const;
 
 // ☀︎ / ☾ on a preview's top edge, to see it in the other of light and dark
-// without changing 外観. Sits inside a previewWrap, with the preview.
+// without changing 外観. Sits inside a previewWrap, with the preview, or
+// inline at the end of a section's title for what the section shows.
 export const previewWrap = css({ position: "relative" });
 const schemeSwitch = {
+  // Drawn small, but each side takes its half of the whole switch and a
+  // 44px height to tap, so a tap anywhere on it picks the side it lands on.
   choice: css({
+    "&[data-scheme=dark]::after": { right: "-3px" },
+    "&[data-scheme=light]::after": { left: "-3px" },
+    _after: {
+      bottom: "-13px",
+      content: '""',
+      left: "-1px",
+      position: "absolute",
+      right: "-1px",
+      top: "-13px",
+    },
     _checked: { bg: "fill.tertiary", color: "text.primary" },
     bg: "transparent",
     border: 0,
@@ -283,35 +331,43 @@ const schemeSwitch = {
     height: "18px",
     padding: 0,
     placeItems: "center",
+    position: "relative",
     width: "24px",
   }),
   // Ark keeps the group itself relatively positioned, so the choices
   // flow into the wrapper that sits on the edge.
   choices: css({ display: "contents" }),
-  edge: css({
-    bg: "background.card",
-    border: "1px solid token(colors.separator)",
-    borderRadius: "12px",
-    display: "flex",
-    gap: "2px",
-    left: "12px",
-    margin: 0,
-    padding: "2px",
-    position: "absolute",
-    top: "-10px",
+  frame: cva({
+    base: {
+      bg: "background.card",
+      border: "1px solid token(colors.separator)",
+      borderRadius: "12px",
+      display: "flex",
+      gap: "2px",
+      margin: 0,
+      padding: "2px",
+    },
+    variants: {
+      placement: {
+        edge: { left: "12px", position: "absolute", top: "-10px" },
+        inline: {},
+      },
+    },
   }),
 };
 export function PreviewSchemeSwitch({
   shown,
   onPick,
+  placement = "edge",
 }: {
   shown: ColorScheme;
   onPick: (scheme: ColorScheme) => void;
+  placement?: "edge" | "inline";
 }) {
   return (
     // Ark keeps the group itself relatively positioned, so a wrapper
     // places it on the edge.
-    <div className={schemeSwitch.edge}>
+    <div className={schemeSwitch.frame({ placement })}>
       <ChoiceGrid
         className={schemeSwitch.choices}
         label="プレビューの明るさ"
@@ -321,6 +377,7 @@ export function PreviewSchemeSwitch({
         {previewSchemes.map((option) => (
           <Choice
             className={schemeSwitch.choice}
+            data-scheme={option.scheme}
             key={option.scheme}
             label={option.name}
             value={option.scheme}

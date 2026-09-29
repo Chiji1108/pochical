@@ -2,24 +2,23 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import type { Account } from "../components/design-account";
-import type { Appearance, ColorChoice } from "../components/design-theme";
+import type { Appearance, PresetId } from "../components/design-theme";
 import { defaultWeekSettings } from "../components/design-week";
 import type { WeekSettings } from "../components/design-week";
 import type { LookSettings, ShiftMarkStyle } from "../components/shift-mark";
-import type { ColorScheme, Tone } from "./design-tokens";
+import type { ColorScheme } from "./design-tokens";
 
 // The person's settings on /design, sorted by where each would live in the
 // app. The slices are the schema: what goes with the account and reaches
 // the group, what the account alone keeps, and what stays on the device.
 // Only the device slice is saved here, as the app would keep it locally.
 
-// Seen by everyone in the person's groups: their marks' shape and color.
-// Synced with the account.
+// Seen by everyone in the person's groups: their marks' shape. Synced
+// with the account. Colors are not: each viewer's テーマ draws them.
 export type GroupLook = {
   style: ShiftMarkStyle;
   // Filled or outline; only icons have the choice.
   fill: boolean;
-  color: ColorChoice;
 };
 
 // How the person's own month draws days, kept per shape so each finds its
@@ -50,7 +49,7 @@ const defaultImageOptions: ImageOptions = {
 
 // The rest of the person's own screen. Device only.
 export type DeviceSettings = {
-  tone: Tone;
+  preset: PresetId;
   appearance: Appearance;
   week: WeekSettings;
   appIcon: string;
@@ -65,9 +64,8 @@ type SettingsState = {
   account?: Account;
   device: DeviceSettings;
   setShape: (shape: { style: ShiftMarkStyle; fill?: boolean }) => void;
-  setColor: (color: ColorChoice) => void;
   setAccount: (account: Account | undefined) => void;
-  setTone: (tone: Tone) => void;
+  setPreset: (preset: PresetId) => void;
   setAppearance: (appearance: Appearance) => void;
   setWeek: (week: WeekSettings) => void;
   setAppIcon: (icon: string) => void;
@@ -96,10 +94,10 @@ export const useSettings = create<SettingsState>()(
         appearance: "system",
         calendar: defaultCalendar,
         imageOptions: defaultImageOptions,
-        tone: "deep",
+        preset: "standard",
         week: defaultWeekSettings,
       },
-      groupLook: { color: "multi", fill: true, style: "icon" },
+      groupLook: { fill: true, style: "icon" },
       setAccount: (account) => {
         set({ account });
       },
@@ -123,11 +121,11 @@ export const useSettings = create<SettingsState>()(
           };
         });
       },
-      setColor: (color) => {
-        set((state) => ({ groupLook: { ...state.groupLook, color } }));
-      },
       setImageOptions: (imageOptions) => {
         set((state) => ({ device: { ...state.device, imageOptions } }));
+      },
+      setPreset: (preset) => {
+        set((state) => ({ device: { ...state.device, preset } }));
       },
       setShape: ({ style, fill }) => {
         set((state) => ({
@@ -137,9 +135,6 @@ export const useSettings = create<SettingsState>()(
             style,
           },
         }));
-      },
-      setTone: (tone) => {
-        set((state) => ({ device: { ...state.device, tone } }));
       },
       setWeek: (week) => {
         set((state) => ({ device: { ...state.device, week } }));

@@ -18,20 +18,22 @@ import {
 } from "../components/design-page";
 import {
   DesignProviders,
+  PresetContexts,
   useDesignTheme,
 } from "../components/design-providers";
 import {
   ColorSchemeContext,
+  presets,
   themeStyle,
-  ToneContext,
 } from "../components/design-theme";
+import type { Preset } from "../components/design-theme";
 import {
   OffDisplayContext,
   OffHighlightContext,
   ShiftMarkStyleContext,
 } from "../components/shift-mark";
 import type { OffDisplay, ShiftMarkStyle } from "../components/shift-mark";
-import type { ColorScheme, Tone } from "../lib/design-tokens";
+import type { ColorScheme } from "../lib/design-tokens";
 import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/design_/states")({
@@ -67,11 +69,6 @@ const markStyles: { style: ShiftMarkStyle; label: string }[] = [
   { label: "アイコン", style: "icon" },
   { label: "絵文字", style: "emoji" },
   { label: "文字", style: "badge" },
-];
-const toneLabels: { tone: Tone; label: string }[] = [
-  { label: "深め", tone: "deep" },
-  { label: "紙", tone: "paper" },
-  { label: "くすみ", tone: "dusty" },
 ];
 const schemes: { scheme: ColorScheme; label: string }[] = [
   { label: "ライト", scheme: "light" },
@@ -153,12 +150,12 @@ function StatesPage() {
             </FrameRow>
           </FrameSection>
 
-          <FrameSection title="トーンとライト・ダーク">
+          <FrameSection title="テーマとライト・ダーク">
             {schemes.map(({ scheme, label: schemeLabel }) => (
               <FrameRow branch={schemeLabel} fan key={scheme}>
-                {toneLabels.map(({ tone, label }) => (
-                  <Scheme key={tone} scheme={scheme} tone={tone}>
-                    <CalendarFrame label={label} />
+                {presets.map((preset) => (
+                  <Scheme key={preset.id} preset={preset} scheme={scheme}>
+                    <CalendarFrame label={preset.name} />
                   </Scheme>
                 ))}
               </FrameRow>
@@ -196,16 +193,16 @@ function OffLook({
 
 function Scheme({
   scheme,
-  tone,
+  preset,
   children,
 }: {
   scheme: ColorScheme;
-  tone: Tone;
+  preset: Preset;
   children: ReactNode;
 }) {
   return (
     <ColorSchemeContext value={scheme}>
-      <ToneContext value={tone}>{children}</ToneContext>
+      <PresetContexts preset={preset}>{children}</PresetContexts>
     </ColorSchemeContext>
   );
 }

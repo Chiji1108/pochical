@@ -292,21 +292,43 @@ const sectionNote = css({
   textStyle: "caption",
 });
 
+// A title row with a control at its end, as iOS sets one on the right of
+// a section's header; the control lines up with the rows' right inset.
+const sectionHead = css({
+  "& > h4": { margin: 0 },
+  alignItems: "center",
+  display: "flex",
+  justifyContent: "space-between",
+  margin: "0 16px 8px",
+});
+
 export function Section({
   title,
   note,
+  trailing,
   children,
 }: {
   title: string;
   note?: string;
+  trailing?: ReactNode;
   children: ReactNode;
 }) {
+  const heading = (
+    <h4 className={sectionTitle}>
+      {title}
+      {note && <small className={sectionNote}>{note}</small>}
+    </h4>
+  );
   return (
     <section>
-      <h4 className={sectionTitle}>
-        {title}
-        {note && <small className={sectionNote}>{note}</small>}
-      </h4>
+      {trailing ? (
+        <div className={sectionHead}>
+          {heading}
+          {trailing}
+        </div>
+      ) : (
+        heading
+      )}
       {children}
     </section>
   );
