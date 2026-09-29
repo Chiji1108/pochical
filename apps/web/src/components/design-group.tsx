@@ -72,6 +72,7 @@ import {
   ChoiceGrid,
   colorGrid,
   dayGrid,
+  dayGridHeight,
   DestructiveButton,
   fieldLabel,
   HeaderAction,
@@ -86,6 +87,7 @@ import {
   MenuPicker,
   MenuSeparator,
   menuStyle,
+  MONTH_WEEKS,
   Note,
   PageHeader,
   Pager,
@@ -5739,7 +5741,7 @@ function PersonGrid({
 }) {
   const me = group.members.find((item) => item.me);
   return (
-    <div className={dayGrid}>
+    <div className={dayGrid} style={{ minHeight: dayGridHeight(MONTH_WEEKS) }}>
       <MemberLook member={member}>
         {dates.map((date) => (
           <PersonDay
