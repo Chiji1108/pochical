@@ -1405,7 +1405,9 @@ const rail = {
     width: "58px",
   }),
   // Beside the page and like it, it runs on to the screen's foot and
-  // scrolls when the groups outgrow it, so only its top is rounded.
+  // scrolls when the groups outgrow it, so only its top is rounded. It
+  // fades out just over the tab bar, as Discord's rail does over its own
+  // panel, and what scrolls fades with it.
   root: css({
     "& > *": { flexShrink: 0 },
     alignItems: "center",
@@ -1415,6 +1417,8 @@ const rail = {
     flexDirection: "column",
     flexShrink: 0,
     gap: "12px",
+    maskImage:
+      "linear-gradient(to bottom, #000 calc(100% - var(--tab-bar-bottom) - 128px), transparent calc(100% - var(--tab-bar-bottom) - 56px))",
     overflowY: "auto",
     padding: "12px 0",
     width: "58px",
@@ -1576,12 +1580,13 @@ const hub = {
     placeItems: "center",
     width: "26px",
   }),
-  // The rail at the phone's left edge, the page beside it.
+  // The rail against the phone's left edge, the flag of the open group at
+  // the edge as the chat apps' rails have it, the page beside it.
   layout: css({
     display: "flex",
     flex: 1,
     gap: "8px",
-    marginLeft: "-8px",
+    marginLeft: "calc(-1 * var(--screen-left))",
     minHeight: 0,
   }),
   // A long group name gives way to the controls instead of wrapping.
