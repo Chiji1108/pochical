@@ -1325,7 +1325,9 @@ export function MonthName({
   const number = month.getMonth() + 1;
   return (
     <>
-      <span className={monthName.year({ compact })}>{month.getFullYear()}</span>
+      <span className={monthName.year({ compact, lower: style === "english" })}>
+        {month.getFullYear()}
+      </span>
       <strong className={monthName.month({ compact })}>
         {style === "english" ? (
           <>
@@ -1352,6 +1354,9 @@ const monthName = {
     base: { fontSize: "14px", fontWeight: 500, marginLeft: "4px" },
     variants: { compact: { true: { fontSize: "11px", marginLeft: "2px" } } },
   }),
+  // Lower case stands about 0.2em shorter than the digits, 7px at 36px,
+  // so the year comes that much nearer, leaving the same room over the
+  // letters as over 9月.
   year: cva({
     base: {
       color: "text.tertiary",
@@ -1359,8 +1364,12 @@ const monthName = {
       fontSize: "11px",
       marginBottom: "4px",
     },
+    compoundVariants: [
+      { compact: true, css: { marginBottom: "calc(2px - 4px)" }, lower: true },
+    ],
     variants: {
       compact: { true: { fontSize: "9px", marginBottom: "2px" } },
+      lower: { true: { marginBottom: "calc(4px - 7px)" } },
     },
   }),
 };
