@@ -226,6 +226,20 @@ export function neutralTintOf(theme: Theme): NeutralTint {
   };
 }
 
+// The color halfway between two, channel by channel.
+function halfway(from: string, to: string) {
+  const channels = (hex: string) =>
+    [1, 3, 5].map((start) => Number.parseInt(hex.slice(start, start + 2), 16));
+  const other = channels(to);
+  return `#${channels(from)
+    .map((channel, index) =>
+      Math.round((channel + (other[index] ?? channel)) / 2)
+        .toString(16)
+        .padStart(2, "0")
+    )
+    .join("")}`;
+}
+
 // The grays lean toward the theme's hue; generated tones bring their own.
 function neutralsFor(
   theme: Theme,
@@ -238,18 +252,23 @@ function neutralsFor(
   const { bg, paper, tint } = toneNeutrals(tone, theme.accent, scheme);
   const style = neutralStyle(scheme, tint);
   if (paper) {
-    // Every gray printed on the paper, white becoming the paper itself;
-    // a switch's knob stays white, as the system draws it on any ground.
-    return Object.fromEntries(
-      Object.entries(style).map(([name, value]) => [
-        name,
-        typeof value === "string" &&
-        value.startsWith("#") &&
-        name !== "--control-knob"
-          ? onPaper(value, paper)
-          : value,
-      ])
-    ) as CSSProperties;
+    // The screen and sheets are the paper; lists, cards, inputs and glass
+    // sit on it in white, as iOS sets white groups on its gray. Tracks
+    // and bars (a segmented control's, the tab bar) sit halfway, so a
+    // white pick still stands out on them. Deeper fills, like a switch
+    // turned off, are printed on the paper, a step below it.
+    const grays = style as Record<string, string>;
+    const deeper = (name: string) => onPaper(grays[name] ?? "#ffffff", paper);
+    return {
+      ...style,
+      "--background-base": paper,
+      "--background-card": "#ffffff",
+      "--background-elevated": paper,
+      "--fill-primary": deeper("--fill-primary"),
+      "--fill-quaternary": "#ffffff",
+      "--fill-secondary": deeper("--fill-secondary"),
+      "--fill-tertiary": halfway("#ffffff", paper),
+    } as CSSProperties;
   }
   if (!bg) {
     return style;

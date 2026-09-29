@@ -127,8 +127,7 @@ const markSpecs: Record<
 // the accent's own chroma, so 墨 stays neutral. Paper instead takes one
 // fixed hue for every カラー, since its ground is a material, not a tint.
 // Its dark ground is only faintly warm: tiles there are nearly as dark as
-// the ground, so lightness no longer keeps a blue apart from a brown. In
-// light, paper's grays stay plain: printing them on the paper warms them.
+// the ground, so lightness no longer keeps a blue apart from a brown.
 // `bg` lifts the light background off pure white; it must stay lighter and
 // less tinted than --fill, or lists and the group rail sink into it.
 type NeutralSpec = { strength: number } & (
@@ -140,7 +139,7 @@ const PAPER_HUE = 85;
 
 const neutralSpecs: Record<GeneratedTone, NeutralSpec> = {
   dusty: { bg: at(0.994, fixed(0.004)), strength: 1.3, warmth: 75 },
-  paper: { darkStrength: 0.5, hue: PAPER_HUE, strength: 0 },
+  paper: { darkStrength: 0.5, hue: PAPER_HUE, strength: 1.8 },
 };
 
 const CREAM_HUE = 70;
@@ -166,16 +165,25 @@ function paint(spec: Spec, hex: string, hueOverride?: number) {
   });
 }
 
-// Light paper's ground: the beige of the 紙 app icon.
+// Light paper's ground: the beige of the 紙 app icon. Lists, cards and
+// inputs sit on it in white, as the icon's white dog does.
 export const PAPER_GROUND = "#efe4cf";
+
+// The paper color washes are multiplied with: much yellower than the
+// ground shown, so pale washes are paper faintly dyed, keeping only a hint
+// of their own hue. Each wash then gets its own lightness back, so colors
+// keep their depth rather than darkening with the paper.
+const PRINT_PAPER = oklchToHex({
+  chroma: 0.035,
+  hue: PAPER_HUE,
+  lightness: 0.95,
+});
 
 const channels = (hex: string) =>
   [1, 3, 5].map((start) => Number.parseInt(hex.slice(start, start + 2), 16));
 
-// A color printed on paper: multiplied with it, as ink on paper. White
-// becomes the paper, pale washes and grays pick up its beige and sit in it
-// at the same steps from the ground they had from white, and dark ink
-// barely changes. Any alpha after the six digits is kept.
+// Multiplied with paper, as ink printed on it. Any alpha after the six
+// digits is kept.
 export function onPaper(hex: string, paper = PAPER_GROUND) {
   const ground = channels(paper);
   return `#${channels(hex)
@@ -187,8 +195,16 @@ export function onPaper(hex: string, paper = PAPER_GROUND) {
     .join("")}${hex.slice(7)}`;
 }
 
+// Colors on light paper pick up its yellow and sit in it instead of
+// floating on top as a separate cool color, at their own lightness.
 function printed(tone: GeneratedTone, scheme: ColorScheme, hex: string) {
-  return tone === "paper" && scheme === "light" ? onPaper(hex) : hex;
+  if (tone !== "paper" || scheme === "dark") {
+    return hex;
+  }
+  return oklchToHex({
+    ...hexToOklch(onPaper(hex, PRINT_PAPER)),
+    lightness: hexToOklch(hex).lightness,
+  });
 }
 
 export function toneRoles(
@@ -262,7 +278,7 @@ export function toneNeutrals(
   if (scheme === "dark") {
     return { tint };
   }
-  // Paper prints every gray on its ground instead of lifting the white.
+  // Paper sets its own ground instead of lifting the white.
   if (!("bg" in spec)) {
     return { paper: PAPER_GROUND, tint };
   }
