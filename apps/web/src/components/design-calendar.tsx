@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import {
+  animate,
   AnimatePresence,
   motion,
   useMotionValue,
@@ -764,6 +765,8 @@ export function DesignCalendar({
                   setPageTurn((turn) => turn + 1);
                   openDetail(designToday);
                 }}
+                progress={pageDrag}
+                swiped={swipedTo === dateKey(month)}
               />
             </div>
             <div className={calendarPage.scroll}>
@@ -1719,10 +1722,15 @@ function HeadingActions({
   onDone,
   onImage,
   onCalendar,
+  progress,
+  swiped,
 }: {
   mode: "view" | "edit" | "week";
   month: Date;
   detailDate: Date | undefined;
+  // The months' pages being dragged, which 今月 follows.
+  progress: MotionValue<number>;
+  swiped: boolean;
   onStep: (direction: 1 | -1) => void;
   onThisMonth: () => void;
   // Back to this week, opened on today.
@@ -1753,13 +1761,18 @@ function HeadingActions({
       <ChevronLeft aria-hidden="true" size={21} />
     </button>
   );
+  // Seen only while away from this month or week, or coming into sight
+  // as the pages leave it, so never dimmed.
   const back = (
-    <TodayButton
-      disabled={atToday}
-      onClick={week ? onThisWeek : onThisMonth}
-      unit={unit}
-    />
+    <TodayButton onClick={week ? onThisWeek : onThisMonth} unit={unit} />
   );
+  const isThisMonth = (by: number) => {
+    const beside = new Date(month.getFullYear(), month.getMonth() + by, 1);
+    return (
+      beside.getFullYear() === designToday.getFullYear() &&
+      beside.getMonth() === designToday.getMonth()
+    );
+  };
   const next = (
     <button
       aria-label={`次の${unit}`}
@@ -1774,8 +1787,17 @@ function HeadingActions({
   );
   return (
     <SwipeCorner
-      atToday={atToday}
-      back={back}
+      back={
+        <TodayCorner
+          atToday={atToday}
+          nextIsToday={!week && isThisMonth(1)}
+          previousIsToday={!week && isThisMonth(-1)}
+          progress={mode === "view" ? progress : undefined}
+          swiped={swiped}
+        >
+          {back}
+        </TodayCorner>
+      }
       mode={mode}
       next={next}
       onCalendar={onCalendar}
@@ -1791,7 +1813,6 @@ function HeadingActions({
 // 完了.
 function SwipeCorner({
   mode,
-  atToday,
   previous,
   next,
   back,
@@ -1800,7 +1821,6 @@ function SwipeCorner({
   onDone,
 }: {
   mode: "view" | "edit" | "week";
-  atToday: boolean;
   previous: ReactNode;
   next: ReactNode;
   back: ReactNode;
@@ -1816,21 +1836,7 @@ function SwipeCorner({
           {next}
         </div>
       )}
-      {/* 今月 fades in and out, as iOS's bar buttons do, so it comes and
-          goes with the month's name rolling beside it. */}
-      <AnimatePresence initial={false}>
-        {mode !== "edit" && !atToday && (
-          <motion.div
-            animate={{ opacity: 1 }}
-            className={heading.backAtEnd}
-            exit={{ opacity: 0 }}
-            initial={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            {back}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {mode !== "edit" && back}
       {mode === "view" ? (
         <IconMenu
           icon={<Download aria-hidden="true" size={21} />}
@@ -1855,6 +1861,65 @@ function SwipeCorner({
         <DoneButton onClick={onDone} />
       )}
     </div>
+  );
+}
+
+// 今月 (or 今週), there while away from it. It follows a drag of the
+// months' pages, coming into sight as the page leaves this month and
+// going as it comes back, so it is already right as the page lands.
+// Otherwise, as when it is pressed or a month is picked, it fades in or
+// out on its own, as iOS's bar buttons do.
+function TodayCorner({
+  atToday,
+  nextIsToday,
+  previousIsToday,
+  progress,
+  swiped,
+  children,
+}: {
+  atToday: boolean;
+  // Whether the month beside is this one, for a drag toward it.
+  nextIsToday: boolean;
+  previousIsToday: boolean;
+  progress?: MotionValue<number>;
+  // Turned by a swipe, which has already brought it where it belongs.
+  swiped: boolean;
+  children: ReactNode;
+}) {
+  const reduceMotion = useReducedMotion() ?? false;
+  const rest = useMotionValue(0);
+  const drag = progress ?? rest;
+  // Where it is by what is shown, apart from any drag.
+  const shown = useMotionValue(atToday ? 0 : 1);
+  useLayoutEffect(() => {
+    const target = atToday ? 0 : 1;
+    if (swiped || reduceMotion) {
+      shown.jump(target);
+      return;
+    }
+    const fading = animate(shown, target, { duration: 0.2 });
+    return () => {
+      fading.stop();
+    };
+  }, [atToday, swiped, reduceMotion, shown]);
+  const opacity = useTransform([shown, drag], ([state, at]: number[]) => {
+    const share = Math.min(Math.abs(at ?? 0), 1);
+    if (atToday) {
+      return Math.max(state ?? 0, share);
+    }
+    const going = at ?? 0;
+    const towardToday =
+      (going > 0 && nextIsToday) || (going < 0 && previousIsToday);
+    return Math.min(state ?? 0, towardToday ? 1 - share : 1);
+  });
+  // Out of sight, it is out of reach too.
+  const visibility = useTransform(opacity, (value) =>
+    value > 0 ? "visible" : "hidden"
+  );
+  return (
+    <motion.div className={heading.backAtEnd} style={{ opacity, visibility }}>
+      {children}
+    </motion.div>
   );
 }
 
