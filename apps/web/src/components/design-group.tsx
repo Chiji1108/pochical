@@ -3196,10 +3196,10 @@ const weekCell = cva({
       kind: "cell",
       together: true,
     },
+    // The band ends at the cell's foot, as much room below the last mark
+    // as each mark has inside it.
     {
-      css: {
-        "&::before": { borderRadius: "0 0 12px 12px", inset: "0 2px 3px" },
-      },
+      css: { "&::before": { borderRadius: "0 0 12px 12px" } },
       kind: "cell",
       last: true,
       together: true,
@@ -3239,6 +3239,27 @@ const weekCell = cva({
       kind: "cell",
       last: true,
       picked: true,
+    },
+    // A picked shared day off fills its frame, so the frame outlines the
+    // band evenly all round.
+    {
+      css: { "&::before": { inset: "-3px 1px 0" } },
+      kind: "date",
+      picked: true,
+      together: true,
+    },
+    {
+      css: { "&::before": { inset: "0 1px" } },
+      kind: "cell",
+      picked: true,
+      together: true,
+    },
+    {
+      css: { "&::before": { inset: "0 1px -3px" } },
+      kind: "cell",
+      last: true,
+      picked: true,
+      together: true,
     },
   ],
   defaultVariants: { compact: false, last: false, off: false, together: false },
