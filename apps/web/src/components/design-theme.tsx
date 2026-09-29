@@ -8,11 +8,10 @@ import type { ColorScheme } from "../lib/design-tokens";
 import { hexToOklch, oklchToHex } from "../lib/oklch";
 import { Choice, ChoiceGrid } from "./design-ui";
 
-// テーマ in the style settings: nine characters, each deciding not only
-// its color but where color goes: a white screen or a tinted one with
-// white cards floating on it, text in plain gray or in a color of its own,
-// one color or a second one to point with, light or always dark. So the
-// cards tell apart at a glance, and none is a pairing that clashes.
+// テーマ in the style settings: moods each drawing every color from one
+// hue, so none clashes with the shifts' own colors, and a few characters
+// that go further with where color goes: a cream screen with its own ink,
+// or a night that is always dark. None is a pairing that clashes.
 // Whether shifts keep their own colors is a switch of its own,
 // シフトを色分けする, since it carries meaning rather than taste. Only
 // the viewer's screen changes; a shift's color slot is what syncs.
@@ -25,9 +24,6 @@ export type Preset = {
   // lines. Every other role, and dark mode's, follows from it by the steps
   // in roleSteps.
   accent: Oklch;
-  // A second color for solid grounds (buttons, today, what is picked),
-  // when the テーマ points with a color other than its text's.
-  fill?: Oklch;
   // The hue the grays lean toward, and how far: 1 leans as far as moss's
   // grays do, 0 is plain gray.
   grays: { hue: number; strength: number };
@@ -36,24 +32,47 @@ export type Preset = {
   // keeps its lightness and takes less of the color.
   ink?: { chroma: number; hue: number; lightness?: number };
   // A colored screen instead of white (or, for an always-dark テーマ,
-  // instead of the dark gray). `float` keeps cards, sheets and lists
-  // white on it, as iOS's grouped lists sit on gray; otherwise they share
-  // the screen's color.
-  ground?: { chroma: number; hue: number; lightness: number; float?: true };
+  // instead of the dark gray). Cards and sheets share its color.
+  ground?: { chroma: number; hue: number; lightness: number };
   // Drawn dark whatever 外観 says: a テーマ whose character is its night.
   scheme?: "dark";
   // The share of each shift color's chroma kept when shifts are colored,
-  // 1 as tuned; soft テーマ lower it, a vivid one raises it.
+  // 1 as tuned; the soft テーマ lower theirs to sit with them.
   vividness?: number;
 };
 
 export const presets = [
-  // The app's own: moss, as its icon, on white.
+  // The app's own: moss, as its icon.
   {
     accent: { chroma: 0.06, hue: 141, lightness: 0.472 },
     grays: { hue: 141, strength: 1 },
     id: "pochical",
     name: "ポチカル",
+  },
+  // Soft and warm: a milky caramel on a faintly warm screen, the shifts
+  // softened to sit with it. Yellower than ココア, which leans red.
+  {
+    accent: { chroma: 0.052, hue: 72, lightness: 0.52 },
+    grays: { hue: 68, strength: 1.3 },
+    ground: { chroma: 0.005, hue: 75, lightness: 0.992 },
+    id: "milktea",
+    name: "ミルクティー",
+    vividness: 0.75,
+  },
+  // Fresh: a clear blue-green on cool grays.
+  {
+    accent: { chroma: 0.072, hue: 205, lightness: 0.48 },
+    grays: { hue: 205, strength: 0.8 },
+    id: "soda",
+    name: "ソーダ",
+  },
+  // Sweet: a grayed pink, the shifts softened with it.
+  {
+    accent: { chroma: 0.075, hue: 6, lightness: 0.5 },
+    grays: { hue: 10, strength: 0.9 },
+    id: "sakura",
+    name: "さくら",
+    vividness: 0.75,
   },
   // Ink alone, in black.
   {
@@ -62,46 +81,38 @@ export const presets = [
     id: "sumi",
     name: "墨",
   },
-  // Bright and awake: a juicy orange whose buttons carry dark text, the
-  // shifts turned up, on plain white with near-black text.
+  // Indigo on unbleached cotton: a deep indigo, the screen only a breath
+  // off white toward the cotton's warmth.
   {
-    accent: { chroma: 0.16, hue: 45, lightness: 0.56 },
-    fill: { chroma: 0.17, hue: 60, lightness: 0.78 },
-    grays: { hue: 60, strength: 0.3 },
-    id: "vitamin",
-    name: "ビタミン",
-    vividness: 1.3,
+    accent: { chroma: 0.075, hue: 258, lightness: 0.43 },
+    grays: { hue: 80, strength: 0.7 },
+    ground: { chroma: 0.006, hue: 85, lightness: 0.992 },
+    id: "aizome",
+    name: "藍染め",
+    vividness: 0.75,
   },
-  // A bottle of ramune: a pale aqua screen, white cards floating on it
-  // like ice, and a clear glass blue.
+  // An olive yellow-green, as the tea.
   {
-    accent: { chroma: 0.12, hue: 245, lightness: 0.52 },
-    grays: { hue: 225, strength: 1.4 },
-    ground: { chroma: 0.022, float: true, hue: 215, lightness: 0.955 },
-    id: "ramune",
-    name: "ラムネ",
+    accent: { chroma: 0.095, hue: 116, lightness: 0.5 },
+    grays: { hue: 110, strength: 1 },
+    id: "matcha",
+    name: "抹茶",
+    vividness: 0.75,
   },
-  // Stripes by the sea: text itself in navy, and a signal red to point
-  // with, on white.
+  // A deep chocolate brown, leaning red.
   {
-    accent: { chroma: 0.09, hue: 262, lightness: 0.4 },
-    fill: { chroma: 0.17, hue: 25, lightness: 0.56 },
-    grays: { hue: 262, strength: 1.5 },
-    id: "marine",
-    ink: { chroma: 0.06, hue: 265, lightness: 0.3 },
-    name: "マリン",
+    accent: { chroma: 0.045, hue: 40, lightness: 0.38 },
+    grays: { hue: 45, strength: 1 },
+    id: "cocoa",
+    name: "ココア",
+    vividness: 0.75,
   },
-  // Cotton candy: a faintly pink screen, lilac text, and a sugar-pink
-  // fill with dark text on it; the shifts softened to sit with it.
+  // A deep violet.
   {
-    accent: { chroma: 0.11, hue: 330, lightness: 0.55 },
-    fill: { chroma: 0.085, hue: 350, lightness: 0.84 },
-    grays: { hue: 330, strength: 1.5 },
-    ground: { chroma: 0.012, hue: 350, lightness: 0.985 },
-    id: "wataame",
-    ink: { chroma: 0.035, hue: 320 },
-    name: "わたあめ",
-    vividness: 0.7,
+    accent: { chroma: 0.083, hue: 294, lightness: 0.474 },
+    grays: { hue: 294, strength: 0.8 },
+    id: "sumire",
+    name: "すみれ",
   },
   // An old coffee shop: a cream screen, text in dark roast brown, and
   // the vermilion of its sign; the shifts softened as if printed.
@@ -207,17 +218,9 @@ export function themeColors(preset: Preset, scheme: ColorScheme) {
   // a light one's dark mode follows from its light colors.
   const own = scheme === "light" || preset.scheme === "dark";
   const accent = own ? oklchToHex(preset.accent) : paint(dark.accent);
-  const fillColor = preset.fill ?? preset.accent;
-  const fill = own
-    ? oklchToHex(fillColor)
-    : oklchToHex({
-        chroma: fillColor.chroma * dark.accent.chroma,
-        hue: fillColor.hue,
-        lightness: dark.accent.lightness,
-      });
   return {
     accent,
-    fill,
+    fill: accent,
     line:
       scheme === "dark"
         ? paint(dark.line)
@@ -227,7 +230,7 @@ export function themeColors(preset: Preset, scheme: ColorScheme) {
           }),
     markTint: paint(roleSteps[scheme].markTint),
     muted: paint(roleSteps[scheme].muted),
-    onFill: onFillOf(fill),
+    onFill: onFillOf(accent),
     soft: paint(roleSteps[scheme].soft),
   };
 }
@@ -285,15 +288,6 @@ function neutralsFor(preset: Preset, scheme: ColorScheme): CSSProperties {
     return style;
   }
   const ground = oklchToHex(preset.ground);
-  if (preset.ground.float) {
-    return {
-      ...style,
-      "--background-base": ground,
-      "--background-card": "#ffffff",
-      "--background-elevated": "#ffffff",
-      "--fill-quaternary": "#ffffff",
-    } as CSSProperties;
-  }
   if (scheme === "dark") {
     return { ...style, "--background-base": ground } as CSSProperties;
   }

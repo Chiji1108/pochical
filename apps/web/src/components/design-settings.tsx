@@ -525,8 +525,7 @@ const systemAlert = {
 
 // The テーマ cards, three across.
 const themeCard = {
-  // A card on the screen, as the テーマ's lists and sheets sit on it:
-  // white floating on a tinted screen, or the screen's own color.
+  // A card on the screen, as the テーマ's lists and sheets sit on it.
   card: css({
     bg: "background.card",
     border: "1px solid token(colors.separator)",
@@ -572,8 +571,8 @@ const themeCard = {
     gap: "8px",
     padding: "8px 8px 12px",
   }),
-  // The テーマ's text and its fill side by side, so a navy text with a
-  // red fill shows as two colors.
+  // The テーマ's text and its fill side by side, so a colored ink, as
+  // 喫茶's, shows beside its accent.
   strokes: css({
     "& span": { borderRadius: "999px", height: "4px" },
     "& span:first-child": { bg: "text.primary", width: "20px" },
