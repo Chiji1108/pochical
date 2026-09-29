@@ -41,7 +41,7 @@ const themeSkies: Record<PresetId, Sky> = {
   cocoa: { hues: [45, 75, 10], name: "ココア", vivid: 0.8 },
   kokuban: { hues: [165, 215, 345], name: "黒板", vivid: 0.8 },
   matcha: { hues: [120, 90, 350], name: "抹茶" },
-  mocha: { hues: [55, 80, 20], name: "モカ", vivid: 0.8 },
+  milktea: { hues: [55, 80, 20], name: "ミルクティー", vivid: 0.8 },
   pochical: { hues: [100, 150, 225], name: "ポチカル" },
   sakura: { hues: [35, 355, 300], name: "さくら" },
   soda: { hues: [170, 215, 100], name: "ソーダ" },

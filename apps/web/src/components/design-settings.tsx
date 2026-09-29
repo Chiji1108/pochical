@@ -524,7 +524,7 @@ const systemAlert = {
   }),
 };
 
-// The テーマ cards, four across, so twelve take three rows.
+// The テーマ cards, three across.
 const themeCard = {
   // A card on the screen, as the テーマ's lists and sheets sit on it.
   card: css({
@@ -550,16 +550,15 @@ const themeCard = {
     display: "flex",
     flexDirection: "column",
     gap: "4px",
-    padding: "4px 2px 8px",
+    padding: "4px 4px 8px",
     textAlign: "center",
     textStyle: "footnote",
-    whiteSpace: "nowrap",
   }),
   grid: css({
     border: 0,
     display: "grid",
     gap: "8px",
-    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
     margin: 0,
     padding: 0,
   }),
@@ -571,7 +570,7 @@ const themeCard = {
     display: "flex",
     flexDirection: "column",
     gap: "8px",
-    padding: "8px 4px",
+    padding: "8px 8px 12px",
   }),
   // The テーマ's text and its fill side by side, so a colored ink shows
   // beside its accent.
