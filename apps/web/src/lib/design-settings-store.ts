@@ -142,26 +142,14 @@ export const useSettings = create<SettingsState>()(
     }),
     {
       // Settings added later keep their defaults when an older save loads.
-      // A save from before テーマ has a トーン instead; 紙 and くすみ carry
-      // over to the presets of the same name.
-      merge: (persisted, current) => {
-        const { tone, ...saved } =
-          (
-            persisted as
-              | { device?: Partial<DeviceSettings> & { tone?: string } }
-              | undefined
-          )?.device ?? {};
-        const fromTone =
-          tone === "paper" || tone === "dusty" ? tone : undefined;
-        return {
-          ...current,
-          device: {
-            ...current.device,
-            ...(fromTone ? { preset: fromTone } : {}),
-            ...saved,
-          },
-        };
-      },
+      merge: (persisted, current) => ({
+        ...current,
+        device: {
+          ...current.device,
+          ...(persisted as { device?: Partial<DeviceSettings> } | undefined)
+            ?.device,
+        },
+      }),
       name: deviceSettingsKey,
       partialize: (state) => ({ device: state.device }),
       // The page renders on the server first; the saved settings load after
