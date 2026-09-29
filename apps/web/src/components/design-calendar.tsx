@@ -2061,10 +2061,13 @@ export const dayCell = cva({
     // A day of the month before or after: the same day, faded whole, as on
     // the group's calendar.
     outside: { true: { opacity: 0.35 } },
+    // Drawn wholly inside the day, as the picked frame is: a frame reaching
+    // past it showed as a hairline at the edge of the page beside, the
+    // pages lying edge to edge.
     today: {
       true: {
         outline: "1.5px solid token(colors.accent.focus)",
-        outlineOffset: "-1px",
+        outlineOffset: "-1.5px",
       },
     },
   },
@@ -2644,7 +2647,7 @@ const pickerCell = cva({
       false: {},
       true: {
         outline: "1.5px solid token(colors.accent.focus)",
-        outlineOffset: "-1px",
+        outlineOffset: "-1.5px",
       },
     },
     tone: {
