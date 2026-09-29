@@ -619,12 +619,6 @@ const settingsParts = {
     margin: "12px 0 0",
     textStyle: "footnote",
   }),
-  groupNote: css({
-    color: "text.tertiary",
-    lineHeight: 1.5,
-    margin: "8px 12px 0",
-    textStyle: "caption",
-  }),
   job: css({ display: "flex", flexDirection: "column", gap: "16px" }),
   marks: css({
     alignItems: "center",
@@ -1354,9 +1348,6 @@ function MarkPage({
       <h3 className={settingsParts.audience}>あなたの画面だけ</h3>
       <Section title="テーマ">
         <ThemeChoices />
-        <p className={settingsParts.groupNote}>
-          グループの人のシフトも、このテーマの色で表示されます。
-        </p>
       </Section>
       <Section title="休みの見せ方">
         <OffLookChoices current={current} />
