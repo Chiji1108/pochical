@@ -31,6 +31,17 @@ export const designVariantOptions = {
     ],
     label: "読み取るQR",
   },
+  // How a date says it is today, on the calendar and the group's tables.
+  todayMark: {
+    choices: [
+      { label: "細い輪", value: "ring" },
+      { label: "塗りの丸", value: "round" },
+      { label: "丸を直す", value: "roundFixed" },
+      { label: "ピル", value: "pill" },
+      { label: "数字の色", value: "text" },
+    ],
+    label: "今日の印",
+  },
   scheduleSample: {
     choices: [
       { label: "入力済み", value: "filled" },
