@@ -774,8 +774,8 @@ export function DesignCalendar({
                 mode={headingMode}
                 month={month}
                 onPick={goToMonth}
-                onSurprise={(element) => {
-                  surprise.play(element);
+                onSurprise={() => {
+                  surprise.play();
                 }}
                 progress={pageDrag}
                 swiped={swipedTo === dateKey(month)}
@@ -1339,8 +1339,8 @@ export function MonthSummary({
 // The year over the month. Looking at months, its name opens a choice of
 // months, left plain like minical's so the heading stays a picture: the
 // swipe and the input's date picker are the ways that show. With the
-// カレンダー page's おたのしみ it floods the screen with color instead,
-// unless motion is reduced.
+// カレンダー page's おたのしみ it changes the sky over the calendar
+// instead.
 function MonthHeading({
   month,
   mode,
@@ -1353,7 +1353,7 @@ function MonthHeading({
   month: Date;
   mode: "view" | "edit" | "week";
   onPick: (month: Date) => void;
-  onSurprise: (from: Element) => void;
+  onSurprise: () => void;
   // The pages being dragged, which the name follows to the month the page
   // coming in shows.
   progress: MotionValue<number>;
@@ -1361,7 +1361,6 @@ function MonthHeading({
   beside?: { previous: Date; next: Date };
 }) {
   const tap = useSettings((state) => state.device.monthTap);
-  const reduceMotion = useReducedMotion() ?? false;
   const name = (
     <MonthName
       beside={beside}
@@ -1373,15 +1372,13 @@ function MonthHeading({
   if (mode !== "view") {
     return <h3 className={heading.title}>{name}</h3>;
   }
-  if (tap === "surprise" && !reduceMotion) {
+  if (tap === "surprise") {
     return (
       <h3 className={heading.title}>
         <button
           className={monthTitle}
           data-month-title=""
-          onClick={(event) => {
-            onSurprise(event.currentTarget);
-          }}
+          onClick={onSurprise}
           type="button"
         >
           <span>{name}</span>

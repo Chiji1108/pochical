@@ -50,7 +50,8 @@ const defaultImageOptions: ImageOptions = {
 export type MonthName = "number" | "english";
 
 // What a tap on the calendar's month name does: open the month sheet, or
-// おたのしみ, color flooding the screen behind the calendar.
+// おたのしみ, which lights a sky at the calendar's top and changes its
+// colors on each tap.
 export type MonthTap = "pick" | "surprise";
 
 // The rest of the person's own screen. Device only.
@@ -64,6 +65,8 @@ export type DeviceSettings = {
   // 月の表示: the calendar's heading as 9月, or as sep.
   monthName: MonthName;
   monthTap: MonthTap;
+  // Which of おたのしみ's skies is up, kept until the next tap.
+  sky: number;
   appIcon: string;
   calendar: Record<ShiftMarkStyle, CalendarOptions>;
   // How 画像で保存 last drew the month.
@@ -83,6 +86,7 @@ type SettingsState = {
   setWeek: (week: WeekSettings) => void;
   setMonthName: (monthName: MonthName) => void;
   setMonthTap: (monthTap: MonthTap) => void;
+  setSky: (sky: number) => void;
   setAppIcon: (icon: string) => void;
   setImageOptions: (options: ImageOptions) => void;
   // Changes the options of the shape in use.
@@ -113,6 +117,7 @@ export const useSettings = create<SettingsState>()(
         monthTap: "pick",
         preset: "pochical",
         shiftColors: true,
+        sky: 0,
         week: defaultWeekSettings,
       },
       groupLook: { fill: true, style: "icon" },
@@ -162,6 +167,9 @@ export const useSettings = create<SettingsState>()(
       },
       setShiftColors: (shiftColors) => {
         set((state) => ({ device: { ...state.device, shiftColors } }));
+      },
+      setSky: (sky) => {
+        set((state) => ({ device: { ...state.device, sky } }));
       },
       setWeek: (week) => {
         set((state) => ({ device: { ...state.device, week } }));
