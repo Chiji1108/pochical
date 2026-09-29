@@ -5198,14 +5198,24 @@ function PickedDaySheet({
       }}
       open={picked !== undefined}
     >
-      <SheetHeading onClose={onClose} title={formatDay(date)}>
+      <SheetHeading
+        action={{
+          icon: <Send aria-hidden="true" size={18} />,
+          label: "全体チャットで共有",
+          onClick: () => {
+            onShare(date);
+          },
+        }}
+        onClose={onClose}
+        title={formatDay(date)}
+      >
         {together && (
           <Tag size="sm" tone="accent">
             みんな休み
           </Tag>
         )}
       </SheetHeading>
-      <div className={pickedDay.people}>
+      <div className={sheetBody}>
         <List>
           {members.map((member) => {
             const item = patternOn(member, date);
@@ -5241,32 +5251,9 @@ function PickedDaySheet({
           })}
         </List>
       </div>
-      <Button
-        className={pickedDay.share}
-        onClick={() => {
-          onShare(date);
-        }}
-        variant="quiet"
-      >
-        <MessageCircle aria-hidden="true" size={18} />
-        全体チャットで共有
-      </Button>
     </Sheet>
   );
 }
-
-// A picked day's people scroll between its heading and 全体チャットで共有,
-// which stays at the foot however many there are.
-const pickedDay = {
-  people: css({
-    "& > *": { flexShrink: 0 },
-    margin: "0 -24px",
-    minHeight: 0,
-    overflowY: "auto",
-    padding: "2px 24px 4px",
-  }),
-  share: css({ flexShrink: 0, marginTop: "12px" }),
-};
 
 // What each mark means, for one person or everyone, in their own style.
 function LegendSheet({

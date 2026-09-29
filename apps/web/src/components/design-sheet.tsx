@@ -308,6 +308,18 @@ export function Sheet({
 }
 
 const heading = {
+  // The round of ×, with its icon in the accent, as it does something.
+  action: css({
+    bg: "fill.quaternary",
+    border: 0,
+    borderRadius: "50%",
+    color: "accent.default",
+    display: "grid",
+    flexShrink: 0,
+    height: "touch",
+    placeItems: "center",
+    width: "touch",
+  }),
   back: css({
     bg: "transparent",
     border: 0,
@@ -401,6 +413,7 @@ export function SheetHeading({
   eyebrow,
   onClose,
   onBack,
+  action,
   children,
 }: {
   title: ReactNode;
@@ -409,6 +422,9 @@ export function SheetHeading({
   onClose: () => void;
   // A step back inside the sheet, when it has more than one.
   onBack?: () => void;
+  // The sheet's own action, a round beside ×, as Apple Maps puts share
+  // beside a place's close: it takes no room from what the sheet shows.
+  action?: { label: string; icon: ReactNode; onClick: () => void };
   // Beside the title, like a tag.
   children?: ReactNode;
 }) {
@@ -431,6 +447,18 @@ export function SheetHeading({
           {children}
         </div>
       </div>
+      {action && (
+        <button
+          aria-label={action.label}
+          className={heading.action}
+          onClick={() => {
+            action.onClick();
+          }}
+          type="button"
+        >
+          {action.icon}
+        </button>
+      )}
       <button
         aria-label="閉じる"
         className={heading.close}
