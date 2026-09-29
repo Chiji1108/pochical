@@ -3688,14 +3688,16 @@ const shiftsPage = {
     variants: { withSheet: { true: { paddingBottom: "300px" } } },
   }),
   // Over a list of months, the page's header and the month row stay on
-  // top, spanning the screen so the rows pass under them.
+  // top, spanning the screen so the rows pass under them. The scroller is
+  // already the screen's width, so it bleeds only up over the scroller's
+  // top padding: bleeding sideways would let the page scroll sideways.
   bar: css({
     bg: "background.base",
     display: "flex",
     flexDirection: "column",
     gap: "4px",
-    margin: "-8px -20px 0",
-    padding: "8px 20px 0",
+    margin: "-8px 0 0",
+    padding: "8px 0 0",
     position: "sticky",
     top: "-8px",
     zIndex: 6,
@@ -3745,12 +3747,11 @@ const people = {
     border: 0,
     display: "flex",
     gap: "8px",
-    margin: "-8px -20px 0",
+    margin: "-8px 0 0",
     minWidth: 0,
     overflowX: "auto",
-    padding: "0 20px",
+    padding: 0,
     position: "relative",
-    scrollPaddingInline: "19px",
   }),
 };
 
@@ -5595,10 +5596,6 @@ function WeekBlock({
   );
 }
 
-// Matches the side padding of the people list, so a scrolled-to person keeps
-// the same gap from the screen's edge as the first one.
-const peopleEdge = 19;
-
 // 人ごと: who to show, above the month.
 function PeoplePicker({
   members,
@@ -5620,8 +5617,8 @@ function PeoplePicker({
     if (!(list && button)) {
       return;
     }
-    const start = button.offsetLeft - peopleEdge;
-    const end = button.offsetLeft + button.offsetWidth + peopleEdge;
+    const start = button.offsetLeft;
+    const end = button.offsetLeft + button.offsetWidth;
     if (start < list.scrollLeft) {
       list.scrollTo({ behavior: "smooth", left: start });
     } else if (end > list.scrollLeft + list.clientWidth) {
