@@ -14,7 +14,7 @@ import { Choice, ChoiceGrid } from "./design-ui";
 // softened on cream, and black ink. The second is colors the others lack:
 // blue, pink and violet. The third is always dark, its character a night:
 // a coffee shop, a moonlit night, a blackboard. Whether shifts keep their
-// own colors is a switch of its own, シフトを色分けする, since it carries
+// own colors is a choice of its own, シフトの色, since it carries
 // meaning rather than taste. Only the viewer's screen changes; a shift's
 // color slot is what syncs.
 type Oklch = { lightness: number; chroma: number; hue: number };
