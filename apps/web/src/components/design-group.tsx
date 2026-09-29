@@ -453,6 +453,27 @@ function everyoneOff(members: Member[], date: Date) {
   return members.every((member) => patternOn(member, date)?.off === true);
 }
 
+// A day everyone may yet be off: no one who has entered it works, but
+// someone has not entered it.
+function mayAllBeOff(members: Member[], date: Date) {
+  const items = members.map((member) => patternOn(member, date));
+  return (
+    items.includes(undefined) &&
+    items.every((item) => item === undefined || item.off)
+  );
+}
+
+// A month's days everyone is off, and whether days not entered yet may
+// add to them, so that "none" is said only when it is known.
+type Together = { days: Date[]; unsure: boolean };
+
+function togetherIn(members: Member[], dates: Date[]): Together {
+  return {
+    days: dates.filter((date) => everyoneOff(members, date)),
+    unsure: dates.some((date) => mayAllBeOff(members, date)),
+  };
+}
+
 function sameMonth(date: Date, month: Date) {
   return date.getMonth() === month.getMonth();
 }
@@ -4157,8 +4178,9 @@ function PagedShifts({
   );
   const person =
     group.members.find((member) => member.id === personId) ?? group.members[0];
-  const offDays = dates.filter(
-    (date) => sameMonth(date, month) && everyoneOff(group.members, date)
+  const together = togetherIn(
+    group.members,
+    dates.filter((date) => sameMonth(date, month))
   );
   const thisMonth =
     sameMonth(month, designToday) &&
@@ -4208,24 +4230,39 @@ function PagedShifts({
         picked={picked}
       />
       <TogetherSummary
-        days={offDays}
         label={`${thisMonth ? "今月" : `${month.getMonth() + 1}月`}のみんな休み`}
         onPickDay={onPickDay}
+        together={together}
       />
     </>
   );
 }
 
+// A day in the row of a month's みんな休み, written as the table's dates:
+// "5 土".
+const togetherDay = {
+  root: css({ fontWeight: 600, textStyle: "subheadline" }),
+  weekday: css({
+    color: "text.secondary",
+    fontSize: "11px",
+    fontWeight: 400,
+    marginLeft: "2px",
+  }),
+};
+
+// A month's days everyone is off: how many, which, and the dates in a
+// sheet to go to. None, it says so, or that days not entered yet leave it
+// open.
 function TogetherSummary({
   label,
   title = label,
-  days,
+  together: { days, unsure },
   onPickDay,
 }: {
   label: string;
   // The sheet's title, when the row leaves the month to its heading.
   title?: string;
-  days: Date[];
+  together: Together;
   onPickDay: (date: Date) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -4233,7 +4270,9 @@ function TogetherSummary({
     return (
       <div className={summaryRow.row}>
         <span>{label}</span>
-        <span className={shiftsPage.togetherNone}>なし</span>
+        <span className={shiftsPage.togetherNone}>
+          {unsure ? "未入力あり" : "なし"}
+        </span>
       </div>
     );
   }
@@ -4241,6 +4280,14 @@ function TogetherSummary({
     <>
       <SummaryRow
         days={days.length}
+        detail={days.map((date) => (
+          <span className={togetherDay.root} key={dateKey(date)}>
+            {date.getDate()}
+            <span className={togetherDay.weekday}>
+              {weekdayLabels[date.getDay()]}
+            </span>
+          </span>
+        ))}
         label={label}
         onOpen={() => {
           setOpen(true);
@@ -4342,8 +4389,11 @@ function pinnedBottom(root: HTMLElement) {
 const monthSpan = 24;
 // Heights until a row is drawn and measured, as they come out, so that
 // measuring rows above the sight does not move the list.
-const dayHeadingEstimate = 140;
-const weekHeadingEstimate = 116;
+// A month's heading, over the row of its みんな休み when it has any; the
+// list of months sets it apart by more room above in 日ごと.
+const headingEstimate = 141;
+const quietHeadingEstimate = 54;
+const dayHeadingRoom = 24;
 const dayRowEstimate = 37;
 // A week's frame and dates, and a row per person.
 const weekDatesEstimate = 23;
@@ -4353,19 +4403,25 @@ const weekGap = 12;
 // A row of the list of months: a month's heading, or its days, one day
 // for 日ごと and a week for 週ごと.
 type MonthListRow =
-  | { kind: "heading"; key: string; month: Date }
+  | { kind: "heading"; key: string; month: Date; together: Together }
   | { kind: "days"; key: string; month: Date; days: Date[] };
 
 // Every month of the span under its heading. A week belongs to the month
 // it ends in, so a month's heading comes before the week of its 1st.
 function monthListRows(
   layout: Layout,
+  members: Member[],
   weekDates: (date: Date) => Date[]
 ): MonthListRow[] {
   const rows: MonthListRow[] = [];
   for (let offset = -monthSpan; offset <= monthSpan; offset += 1) {
     const month = monthAfter(designToday, offset);
-    rows.push({ key: monthKey(month), kind: "heading", month });
+    rows.push({
+      key: monthKey(month),
+      kind: "heading",
+      month,
+      together: togetherIn(members, daysOf(month)),
+    });
     if (layout === "days") {
       for (const date of daysOf(month)) {
         rows.push({ days: [date], key: dateKey(date), kind: "days", month });
@@ -4415,7 +4471,9 @@ function ScrollingShifts({
   const barRef = useRef<HTMLDivElement>(null);
   // Where the rows start: the list's first element.
   const listRef = useRef<HTMLElement>(null);
-  const [rows] = useState(() => monthListRows(layout, weekTools.weekDates));
+  const [rows] = useState(() =>
+    monthListRows(layout, group.members, weekTools.weekDates)
+  );
   const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null);
   // Where the list starts in the scroll, and how much is pinned over it.
   const [offsets, setOffsets] = useState({ margin: 0, pinned: 0 });
@@ -4444,13 +4502,14 @@ function ScrollingShifts({
   const virtualizer = useVirtualizer({
     count: rows.length,
     estimateSize: (index) => {
-      if (layout === "days") {
-        return rows[index].kind === "heading"
-          ? dayHeadingEstimate
-          : dayRowEstimate;
+      const row = rows[index];
+      if (row.kind === "heading") {
+        const height =
+          row.together.days.length > 0 ? headingEstimate : quietHeadingEstimate;
+        return layout === "days" ? height + dayHeadingRoom : height;
       }
-      return rows[index].kind === "heading"
-        ? weekHeadingEstimate
+      return layout === "days"
+        ? dayRowEstimate
         : weekDatesEstimate + group.members.length * weekPersonEstimate;
     },
     gap: layout === "weeks" ? weekGap : 0,
@@ -4540,13 +4599,11 @@ function ScrollingShifts({
     items.length > 0 ? total - ((items.at(-1)?.end ?? 0) - offsets.margin) : 0;
   const isPicked = (date: Date) =>
     picked !== undefined && dateKey(picked) === dateKey(date);
-  const heading = (row: MonthListRow) => (
+  const heading = (row: MonthListRow & { kind: "heading" }) => (
     <MonthDivider
-      days={daysOf(row.month).filter((date) =>
-        everyoneOff(group.members, date)
-      )}
       month={row.month}
       onPickDay={onPickDay}
+      together={row.together}
     />
   );
   const columns = group.members.length + 1;
@@ -4676,19 +4733,29 @@ function ScrollingShifts({
 
 const monthDivider = {
   name: css({ fontWeight: 700, margin: 0, textStyle: "title3" }),
-  root: css({ display: "flex", flexDirection: "column", gap: "12px" }),
+  // Without みんな休み, a note on the name's line.
+  note: css({ color: "text.tertiary", textStyle: "subheadline" }),
+  root: cva({
+    base: { display: "flex", flexDirection: "column", gap: "12px" },
+    variants: {
+      quiet: {
+        true: { alignItems: "baseline", flexDirection: "row", gap: "12px" },
+      },
+    },
+  }),
 };
 
-// The month's heading in the list of months, over its days everyone is
-// off: the row 人ごと has under its month, the whole width to press, and
-// the dates in a sheet.
+// The month's heading in the list of months, over the row of its days
+// everyone is off, the row 人ごと has under its month, the whole width to
+// press. Without any, a note beside the name says there are none, or that
+// days not entered yet leave it open: no row that cannot be pressed.
 function MonthDivider({
   month,
-  days,
+  together,
   onPickDay,
 }: {
   month: Date;
-  days: Date[];
+  together: Together;
   onPickDay: (date: Date) => void;
 }) {
   const thisYear = month.getFullYear() === designToday.getFullYear();
@@ -4698,14 +4765,24 @@ function MonthDivider({
   const title = `${
     thisYear && month.getMonth() === designToday.getMonth() ? "今月" : name
   }のみんな休み`;
+  if (together.days.length === 0) {
+    return (
+      <div className={monthDivider.root({ quiet: true })}>
+        <h4 className={monthDivider.name}>{name}</h4>
+        <span className={monthDivider.note}>
+          {together.unsure ? "未入力の日あり" : "みんな休みなし"}
+        </span>
+      </div>
+    );
+  }
   return (
-    <div className={monthDivider.root}>
+    <div className={monthDivider.root()}>
       <h4 className={monthDivider.name}>{name}</h4>
       <TogetherSummary
-        days={days}
         label="みんな休み"
         onPickDay={onPickDay}
         title={title}
+        together={together}
       />
     </div>
   );
