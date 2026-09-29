@@ -916,6 +916,29 @@ export function DesignGroup({
       },
     });
   };
+  // A day shared from the shift table goes to the group chat, which
+  // opens on it, as sharing from a chat app's own view does.
+  const shareDay = (date: Date) => {
+    const key = chatKey(group.id, groupChat);
+    const chat = chatOf(group.id, groupChat);
+    setChats({
+      ...chats,
+      [key]: {
+        messages: [
+          ...chat.messages,
+          {
+            days: [date],
+            from: "me",
+            id: `sent-${chat.messages.length}`,
+            time: timeNow(),
+            when: "今日",
+          },
+        ],
+        unread: 0,
+      },
+    });
+    setPage({ chatId: groupChat, name: "chat" });
+  };
   const removeMember = (member: Member) => {
     setProfileOf(undefined);
     setRemoved({
@@ -1079,6 +1102,7 @@ export function DesignGroup({
               onLayout={(layout) => {
                 setLayouts({ ...layouts, [group.id]: layout });
               }}
+              onShareDay={shareDay}
             />
           )}
           {page.name === "settings" && (
@@ -2610,6 +2634,16 @@ function ChatPage({
   // The line whose reaction is being picked from every emoji.
   const [pickingFor, setPickingFor] = useState<string>();
   const [flash, setFlash] = useState<string>();
+  // As chat apps do, a chat opens on its latest line and follows each
+  // new one, like a day just shared from the shift table.
+  const listRef = useRef<HTMLOListElement>(null);
+  const lineCount = chat.messages.length;
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (list && lineCount > 0) {
+      list.scrollTop = list.scrollHeight;
+    }
+  }, [lineCount]);
   const isGroup = title === "全体チャット";
   // Who wrote a line, including members taken out since, whose lines stay.
   const writerOf = (id?: string) =>
@@ -2683,7 +2717,11 @@ function ChatPage({
         <BackButton onClick={onBack}>{backLabel}</BackButton>
         <h3 className={chatStyle.title}>{title}</h3>
       </header>
-      <ol aria-label={`${title}のメッセージ`} className={chatStyle.messages}>
+      <ol
+        aria-label={`${title}のメッセージ`}
+        className={chatStyle.messages}
+        ref={listRef}
+      >
         {chat.messages.length === 0 && (
           <li className={chatStyle.empty}>まだメッセージはありません</li>
         )}
@@ -4269,6 +4307,7 @@ function ShiftsPage({
   layout,
   onLayout: setLayout,
   onBack,
+  onShareDay,
 }: {
   group: Group;
   backLabel: string;
@@ -4278,6 +4317,7 @@ function ShiftsPage({
   layout: Layout;
   onLayout: (layout: Layout) => void;
   onBack: () => void;
+  onShareDay: (date: Date) => void;
 }) {
   const weekTools = useWeek();
   const [month, setMonth] = useState(initialMonth ?? designMonth);
@@ -4334,6 +4374,7 @@ function ShiftsPage({
         onClose={() => {
           setPicked(undefined);
         }}
+        onShare={onShareDay}
       />
       <LegendSheet
         members={legend}
@@ -5115,10 +5156,13 @@ function PickedDaySheet({
   date: picked,
   members,
   onClose,
+  onShare,
 }: {
   date?: Date;
   members: Member[];
   onClose: () => void;
+  // Sends the day, everyone's shifts on it, to the group chat.
+  onShare: (date: Date) => void;
 }) {
   // The day stays while the sheet sinks away.
   const [date, setDate] = useState(picked ?? designToday);
@@ -5196,6 +5240,15 @@ function PickedDaySheet({
             );
           })}
         </List>
+        <Button
+          onClick={() => {
+            onShare(date);
+          }}
+          variant="quiet"
+        >
+          <MessageCircle aria-hidden="true" size={18} />
+          全体チャットで共有
+        </Button>
       </div>
     </Sheet>
   );
