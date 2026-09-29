@@ -36,7 +36,6 @@ export const designVariantOptions = {
     choices: [
       { label: "細い輪", value: "ring" },
       { label: "塗りの丸", value: "round" },
-      { label: "丸を直す", value: "roundFixed" },
       { label: "ピル", value: "pill" },
       { label: "数字の色", value: "text" },
     ],

@@ -6107,11 +6107,10 @@ function PersonDay({
         className={cx(
           dayParts.date,
           outside && dayParts.dateOutside,
-          isColoredHoliday(date) && !today && dayParts.holiday,
-          today && todayMark
+          isColoredHoliday(date) && !today && dayParts.holiday
         )}
       >
-        {date.getDate()}
+        <span className={today ? todayMark : undefined}>{date.getDate()}</span>
       </span>
       {item && (
         <>

@@ -2068,57 +2068,60 @@ export const dayCell = cva({
 
 // Today, wherever a date is shown, as the 今日の印 variant draws it: kept
 // apart from the picked day's frame and the frame of a day you are off
-// together. Each is sized by its height, the date centered in it, rather
-// than by a line height, which the date's own class sets too.
+// together. Each is set on a span holding just the date, and drawn behind
+// it, centred and taking no room, so nothing around the date moves; at
+// most 20px tall on the dates' 14px line, it stays within the day's
+// padding. --mark-half is how far the mark reaches from the date's middle,
+// for a memo's strokes to clear it.
 const todayShape = {
-  alignItems: "center",
   borderRadius: "999px",
-  display: "inline-flex",
-  justifyContent: "center",
+  content: '""',
+  left: "50%",
+  position: "absolute",
+  top: "50%",
+  transform: "translate(-50%, -50%)",
+  zIndex: -1,
 } as const;
+const onDate = { isolation: "isolate", position: "relative" } as const;
 const todayMarks = {
-  // Round, as wide as the date needs, taking no more room than the date.
+  // Round, as wide as the date needs.
   round: css({
-    ...todayShape,
-    bg: "accent.fill",
+    ...onDate,
+    "--mark-half": "max(10px, 50% + 4px)",
+    _before: {
+      ...todayShape,
+      bg: "accent.fill",
+      height: "20px",
+      width: "max(20px, 100% + 8px)",
+    },
     color: "accent.onFill",
-    height: "20px",
-    marginBlock: "calc((14px - 20px) / 2)",
-    marginInline: "-4px",
-    minWidth: "20px",
-    paddingInline: "4px",
-  }),
-  // A true circle, a little bigger, growing down from the day's top rather
-  // than up into its edge.
-  roundFixed: css({
-    ...todayShape,
-    bg: "accent.fill",
-    color: "accent.onFill",
-    height: "22px",
-    marginTop: "-2px",
-    width: "22px",
   }),
   // A slimmer capsule, wider than the date, so it reads as a label.
   pill: css({
-    ...todayShape,
-    bg: "accent.fill",
+    ...onDate,
+    "--mark-half": "max(13px, 50% + 8px)",
+    _before: {
+      ...todayShape,
+      bg: "accent.fill",
+      height: "18px",
+      width: "max(26px, 100% + 16px)",
+    },
     color: "accent.onFill",
-    height: "18px",
-    marginBlock: "calc((14px - 18px) / 2)",
-    marginInline: "-8px",
-    paddingInline: "8px",
   }),
-  // The true circle's outline in the accent, the date in the accent too.
+  // An outline in the accent round the date, the date in the accent too.
   ring: css({
-    ...todayShape,
-    border: "1.5px solid token(colors.accent.default)",
+    ...onDate,
+    "--mark-half": "max(9px, 50% + 2px)",
+    _before: {
+      ...todayShape,
+      border: "1.5px solid token(colors.accent.default)",
+      height: "18px",
+      width: "max(18px, 100% + 4px)",
+    },
     color: "accent.default",
-    height: "22px",
-    marginTop: "-2px",
-    width: "22px",
   }),
-  // The date alone in the accent.
-  text: css({ color: "accent.default" }),
+  // The date alone in the accent, heavier, to show on a day off's tile.
+  text: css({ color: "accent.default", fontWeight: 800 }),
 };
 
 export type TodayMark = DesignVariants["todayMark"];
@@ -2127,18 +2130,6 @@ export const TodayMarkContext = createContext<TodayMark>("ring");
 export function useTodayMark() {
   return todayMarks[useContext(TodayMarkContext)];
 }
-
-// A note's stroke, one either side of its date.
-const noteStroke = {
-  bg: "calendar.noteMarker",
-  borderRadius: "1px",
-  content: '""',
-  height: "1.5px",
-  marginTop: "-1px",
-  position: "absolute",
-  top: "50%",
-  width: "5px",
-} as const;
 
 export const dayParts = {
   date: css({ flexShrink: 0, fontWeight: 600, lineHeight: "14px" }),
@@ -2164,11 +2155,21 @@ export const dayParts = {
   // 休みの見せ方 空白, while entering or in the week view.
   markFaint: css({ opacity: 0.35 }),
   // A note: a stroke either side of the date, -6-, as a paper diary
-  // marks a day, clear of today's round.
+  // marks a day, clear of today's mark (--mark-half); both drawn as one
+  // piece behind the date, taking no room.
   noted: css({
-    _after: { ...noteStroke, left: "calc(100% + 2px)" },
-    _before: { ...noteStroke, right: "calc(100% + 2px)" },
-    position: "relative",
+    ...onDate,
+    _after: {
+      "--stroke-reach": "calc(var(--mark-half, 50%) + 2px + 5px)",
+      background:
+        "linear-gradient(to right, token(colors.calendar.noteMarker) 5px, transparent 5px calc(100% - 5px), token(colors.calendar.noteMarker) calc(100% - 5px))",
+      content: '""',
+      height: "1.5px",
+      left: "calc(50% - var(--stroke-reach))",
+      position: "absolute",
+      top: "calc(50% - 1px)",
+      width: "calc(2 * var(--stroke-reach))",
+    },
   }),
 };
 
@@ -2291,12 +2292,12 @@ export function DayCell({
         className={cx(
           dayParts.date,
           outside && dayParts.dateOutside,
-          holiday && !onToday && dayParts.holiday,
-          onToday && todayMark,
-          noted && dayParts.noted
+          holiday && !onToday && dayParts.holiday
         )}
       >
-        {date.getDate()}
+        <span className={cx(onToday && todayMark, noted && dayParts.noted)}>
+          {date.getDate()}
+        </span>
       </span>
       {shift && !hideOff && (
         <CellShift
