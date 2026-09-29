@@ -2759,7 +2759,7 @@ function ChatPage({
                       >
                         {quoted && (
                           <button
-                            aria-label={`${nameOf(quoted.from)}への返信。返信元を表示`}
+                            aria-label={`${nameOf(quoted.from)}「${summaryOf(quoted)}」への返信。返信元を表示`}
                             className={chatStyle.bubbleQuote}
                             onClick={() => {
                               jumpTo(quoted.id);
