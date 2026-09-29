@@ -20,6 +20,7 @@ import {
   Send,
   SendHorizontal,
   Settings2,
+  Share,
   Trash2,
   UserPlus,
   X,
@@ -638,6 +639,54 @@ export const sampleChats: Record<string, Chat> = {
     ],
     unread: 3,
   },
+  // Nine in all, so shared days have to fit more people than a bubble
+  // holds across.
+  "school:group": {
+    messages: [
+      {
+        from: "kana",
+        id: "s1",
+        text: "10月に一回集まりたいね！",
+        time: "20:14",
+        when: "昨日",
+      },
+      {
+        days: [new Date(2026, 9, 3)],
+        from: "kana",
+        id: "s2",
+        time: "20:15",
+        when: "昨日",
+      },
+      {
+        days: [
+          new Date(2026, 9, 10),
+          new Date(2026, 9, 11),
+          new Date(2026, 9, 12),
+        ],
+        from: "me",
+        id: "s3",
+        time: "21:02",
+        when: "昨日",
+      },
+      {
+        days: [
+          new Date(2026, 9, 18),
+          new Date(2026, 9, 24),
+          new Date(2026, 9, 25),
+          new Date(2026, 9, 31),
+          new Date(2026, 10, 1),
+          new Date(2026, 10, 7),
+          new Date(2026, 10, 8),
+          new Date(2026, 10, 14),
+        ],
+        from: "riku",
+        id: "s4",
+        time: "8:40",
+        when: "今日",
+      },
+    ],
+    unread: 1,
+  },
   // Six in all, so reactions run from one face to a count.
   "ward:group": {
     messages: [
@@ -712,8 +761,10 @@ type Page =
   | { name: "hub" }
   // `from` is the chat that opened it, to go back there.
   | { name: "shifts"; month?: Date; day?: Date; from?: string }
-  // `from` is the chat whose member picture opened it, to go back there.
-  | { name: "chat"; chatId: string; from?: string }
+  // `from` is the chat whose member picture opened it, to go back there;
+  // `attach` is days brought from the shift table to share, set above
+  // the composer until sent.
+  | { name: "chat"; chatId: string; from?: string; attach?: Date[] }
   | { name: "invite" }
   | { name: "new" }
   | { name: "settings" }
@@ -917,6 +968,17 @@ export function DesignGroup({
       },
     });
   };
+  // A day shared from the shift table opens the group chat with the day
+  // set above the composer, as sharing into a chat app does: nothing
+  // reaches everyone until you send it, with a word if you like.
+  const shareDay = (date: Date) => {
+    const key = chatKey(group.id, groupChat);
+    setChats({
+      ...chats,
+      [key]: { ...chatOf(group.id, groupChat), unread: 0 },
+    });
+    setPage({ attach: [date], chatId: groupChat, name: "chat" });
+  };
   const removeMember = (member: Member) => {
     setProfileOf(undefined);
     setRemoved({
@@ -978,6 +1040,7 @@ export function DesignGroup({
     return (
       <>
         <ChatPage
+          attach={page.attach}
           backLabel={page.from ? chatTitle(group, page.from) : group.name}
           chat={chatOf(group.id, page.chatId)}
           formerMembers={membersOf(group.id).filter((member) =>
@@ -1080,6 +1143,7 @@ export function DesignGroup({
               onLayout={(layout) => {
                 setLayouts({ ...layouts, [group.id]: layout });
               }}
+              onShareDay={shareDay}
             />
           )}
           {page.name === "settings" && (
@@ -2511,6 +2575,8 @@ const chatStyle = {
       display: "flex",
       font: "inherit",
       maxWidth: "100%",
+      // Lets the shared days' card shrink to the bubble's width.
+      minWidth: 0,
       padding: 0,
       textAlign: "left",
     },
@@ -2587,9 +2653,12 @@ function ChatPage({
   onMember,
   backLabel,
   formerMembers = noMembers,
+  attach,
 }: {
   title: string;
   group: Group;
+  // Days brought from the shift table, waiting above the composer.
+  attach?: Date[];
   // Where 戻る goes: the group, or the chat a member was opened from.
   backLabel: string;
   // Members taken out of the group, so their past lines keep a face.
@@ -2604,6 +2673,7 @@ function ChatPage({
   onOpenDay: (date: Date) => void;
 }) {
   const [draft, setDraft] = useState("");
+  const [attached, setAttached] = useState(attach);
   const [sharing, setSharing] = useState(false);
   // The line whose actions are open, and the one being answered.
   const [selected, setSelected] = useState<string>();
@@ -2611,6 +2681,16 @@ function ChatPage({
   // The line whose reaction is being picked from every emoji.
   const [pickingFor, setPickingFor] = useState<string>();
   const [flash, setFlash] = useState<string>();
+  // As chat apps do, a chat opens on its latest line and follows each
+  // new one, like a day just shared from the shift table.
+  const listRef = useRef<HTMLOListElement>(null);
+  const lineCount = chat.messages.length;
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (list && lineCount > 0) {
+      list.scrollTop = list.scrollHeight;
+    }
+  }, [lineCount]);
   const isGroup = title === "全体チャット";
   // Who wrote a line, including members taken out since, whose lines stay.
   const writerOf = (id?: string) =>
@@ -2618,27 +2698,34 @@ function ChatPage({
   const byId = (id?: string) =>
     chat.messages.find((message) => message.id === id);
   const nameOf = (id: string) => writerOf(id)?.name ?? "";
-  const post = (message: Omit<Message, "id" | "from" | "when" | "time">) => {
+  // Sends one line or several at once, the first answering the line
+  // being replied to.
+  const post = (...lines: Omit<Message, "id" | "from" | "when" | "time">[]) => {
     onChange([
       ...chat.messages,
-      {
-        ...message,
+      ...lines.map((line, index) => ({
+        ...line,
         from: "me",
-        id: `sent-${chat.messages.length}`,
-        replyTo,
+        id: `sent-${chat.messages.length + index}`,
+        replyTo: index === 0 ? replyTo : undefined,
         time: "10:10",
         when: "今日",
-      },
+      })),
     ]);
     setReplyTo(undefined);
   };
+  // The attached days go first, then what was written, if anything.
   const send = () => {
     const text = draft.trim();
-    if (!text) {
+    if (!text && !attached) {
       return;
     }
-    post({ text });
+    post(
+      ...(attached ? [{ days: attached }] : []),
+      ...(text ? [{ text }] : [])
+    );
     setDraft("");
+    setAttached(undefined);
   };
   const react = (id: string, emoji: string) => {
     onChange(
@@ -2684,7 +2771,11 @@ function ChatPage({
         <BackButton onClick={onBack}>{backLabel}</BackButton>
         <h3 className={chatStyle.title}>{title}</h3>
       </header>
-      <ol aria-label={`${title}のメッセージ`} className={chatStyle.messages}>
+      <ol
+        aria-label={`${title}のメッセージ`}
+        className={chatStyle.messages}
+        ref={listRef}
+      >
         {chat.messages.length === 0 && (
           <li className={chatStyle.empty}>まだメッセージはありません</li>
         )}
@@ -2850,8 +2941,27 @@ function ChatPage({
           </IconButton>
         </div>
       )}
+      {attached && (
+        <div className={chatStyle.replying}>
+          <span className={chatStyle.quote}>
+            <span className={chatStyle.quoteName}>共有する日</span>
+            <span className={chatStyle.quoteText}>{daysSummary(attached)}</span>
+          </span>
+          <IconButton
+            glass={false}
+            label="共有をやめる"
+            onClick={() => {
+              setAttached(undefined);
+            }}
+          >
+            <X aria-hidden="true" size={16} />
+          </IconButton>
+        </div>
+      )}
       <form
-        className={chatStyle.composer({ replying: replying !== undefined })}
+        className={chatStyle.composer({
+          replying: replying !== undefined || attached !== undefined,
+        })}
         onSubmit={(event) => {
           event.preventDefault();
           send();
@@ -2879,7 +2989,7 @@ function ChatPage({
         <button
           aria-label="送る"
           className={chatStyle.composerButton({ send: true })}
-          disabled={draft.trim() === ""}
+          disabled={draft.trim() === "" && !attached}
           type="submit"
         >
           <SendHorizontal aria-hidden="true" size={18} />
@@ -3089,12 +3199,13 @@ function MessageActions({
 }
 
 function summaryOf(message: Message) {
-  const [first] = message.days ?? [];
-  if (first) {
-    const more = (message.days?.length ?? 0) > 1 ? "ほか" : "";
-    return `📅 ${formatDay(first)}${more}`;
-  }
-  return message.text ?? "";
+  return message.days ? daysSummary(message.days) : (message.text ?? "");
+}
+
+function daysSummary(days: Date[]) {
+  const [first] = days;
+  const more = days.length > 1 ? "ほか" : "";
+  return first ? `📅 ${formatDay(first)}${more}` : "";
 }
 
 // A reaction under a message: the emoji and who chose it, as the members
@@ -3316,8 +3427,7 @@ const smallWeekday = css({
 // it, in the same color whatever the person's pattern; a day everyone is
 // off joins the tiles into one band, down a date's column in 週ごと, along
 // a day's row in 日ごと. The picked day is framed the same way, as one
-// piece, its ends reaching into the week's padding to clear the date and
-// marks.
+// piece.
 const offTile = {
   bg: "accent.container",
   borderRadius: "8px",
@@ -3401,28 +3511,29 @@ const weekCell = cva({
   base: { isolation: "isolate", position: "relative" },
   compoundVariants: [
     { button: true, css: { padding: 0 }, kind: "date" },
-    // The band takes the picked frame's shape, reaching into the week's
-    // padding at its ends, so picking the day only draws the frame round
-    // it.
+    // The band is the day's tiles joined down the column: as far in from
+    // its sides, with their corners, its ends 3px clear of the week's
+    // edge. The picked frame has the same shape, so picking the day only
+    // draws the frame round it.
     {
       css: {
         "&::before": {
           ...offTile,
-          borderRadius: "12px 12px 0 0",
-          inset: "-3px 1px 0",
+          borderRadius: "8px 8px 0 0",
+          inset: "-1px 3px 0",
         },
       },
       kind: "date",
       together: true,
     },
     {
-      css: { "&::before": { borderRadius: 0, inset: "0 1px" } },
+      css: { "&::before": { borderRadius: 0, inset: "0 3px" } },
       kind: "cell",
       together: true,
     },
     {
       css: {
-        "&::before": { borderRadius: "0 0 12px 12px", inset: "0 1px -3px" },
+        "&::before": { borderRadius: "0 0 8px 8px", inset: "0 3px -1px" },
       },
       kind: "cell",
       last: true,
@@ -3453,25 +3564,25 @@ const weekCell = cva({
     {
       css: {
         "&::after": {
-          borderRadius: "12px 12px 0 0",
+          borderRadius: "8px 8px 0 0",
           borderWidth: "1.5px 1.5px 0",
-          inset: "-3px 1px 0",
+          inset: "-1px 3px 0",
         },
       },
       kind: "date",
       picked: true,
     },
     {
-      css: { "&::after": { borderWidth: "0 1.5px", inset: "0 1px" } },
+      css: { "&::after": { borderWidth: "0 1.5px", inset: "0 3px" } },
       kind: "cell",
       picked: true,
     },
     {
       css: {
         "&::after": {
-          borderRadius: "0 0 12px 12px",
+          borderRadius: "0 0 8px 8px",
           borderWidth: "0 1.5px 1.5px",
-          inset: "0 1px -3px",
+          inset: "0 3px -1px",
         },
       },
       kind: "cell",
@@ -3762,9 +3873,17 @@ const dayCard = {
       display: "flex",
       flexDirection: "column",
       gap: "8px",
+      // Never wider than its bubble, so the time beside it stays in view.
+      maxWidth: "100%",
+      // One day's card is as wide with みんな休み as without, and for any
+      // date: room for 12月27日(日) and the tag, so shared days stacked
+      // in a chat line up. More people than that holds widen it.
+      minWidth: "184px",
       padding: "12px 12px",
     },
-    variants: { many: { true: { gap: 0, padding: "8px 8px" } } },
+    variants: {
+      many: { true: { gap: 0, minWidth: 0, padding: "8px 8px" } },
+    },
   }),
   cell: cva({
     base: {
@@ -3774,9 +3893,9 @@ const dayCard = {
       placeItems: "center",
       width: "100%",
     },
-    variants: {
-      off: { true: { "&::before": offTile, bg: "accent.container" } },
-    },
+    // The cell itself is the tile; the tables' inset tile, positioned
+    // against the whole screen here, washed it all in the tile's color.
+    variants: { off: { true: { bg: "accent.container" } } },
   }),
   date: css({
     bg: "transparent",
@@ -3786,6 +3905,23 @@ const dayCard = {
     justifySelf: "start",
     padding: "0 0 0 4px",
   }),
+  // A day over its column when the table turns; the weekday under it,
+  // and a day everyone is off on the band's color.
+  dayHead: cva({
+    base: {
+      alignItems: "center",
+      borderRadius: "8px",
+      display: "flex",
+      flexDirection: "column",
+      fontSize: "11px",
+      fontWeight: 600,
+      lineHeight: 1.2,
+      padding: "2px 0",
+      width: "100%",
+    },
+    variants: { together: { true: { bg: "accent.container" } } },
+  }),
+  dayHeadWeekday: css({ fontSize: "9px", fontWeight: 400 }),
   head: css({
     alignItems: "center",
     bg: "transparent",
@@ -3798,7 +3934,10 @@ const dayCard = {
     padding: 0,
     textAlign: "left",
   }),
-  people: css({ display: "flex", gap: "12px" }),
+  // The people share the card's width in even columns, a few spread
+  // across it; many wrap onto more lines in the same columns rather than
+  // widen the card.
+  people: css({ display: "grid", rowGap: "8px" }),
   person: css({
     alignItems: "center",
     color: "text.tertiary",
@@ -3806,6 +3945,12 @@ const dayCard = {
     flexDirection: "column",
     fontSize: "9px",
     gap: "4px",
+  }),
+  rest: css({
+    color: "text.tertiary",
+    padding: "4px 4px 0",
+    textAlign: "end",
+    textStyle: "caption2",
   }),
   row: cva({
     base: {
@@ -3991,8 +4136,9 @@ const people = {
   }),
 };
 
-// Shared dates with each person's shift. One day spreads out; several
-// become a small table, a row per day.
+// Shared dates with each person's shift. One day spreads out, wrapping
+// when the people are many; several become a small table, a row per day,
+// or a row per person when the people don't fit across.
 function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
   const weekTools = useWeek();
   const [first] = days;
@@ -4008,7 +4154,12 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
             </Tag>
           )}
         </span>
-        <span className={dayCard.people}>
+        <span
+          className={dayCard.people}
+          style={{
+            gridTemplateColumns: `repeat(${Math.min(members.length, maxCardColumns)}, minmax(36px, 1fr))`,
+          }}
+        >
           {members.map((member) => (
             <span className={dayCard.person} key={member.id}>
               <Avatar member={member} />
@@ -4019,6 +4170,9 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
         </span>
       </span>
     );
+  }
+  if (members.length > maxCardColumns) {
+    return <DayCardByPerson days={days} members={members} />;
   }
   const columns = {
     gridTemplateColumns: `44px repeat(${members.length}, 26px)`,
@@ -4063,6 +4217,75 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
           ))}
         </span>
       ))}
+    </span>
+  );
+}
+
+// A card fits this many columns of people or days in a bubble on the
+// narrowest phone.
+const maxCardColumns = 6;
+
+// Several days for more people than fit across: the table turns, a row
+// per person and a column per day, as the people can't be fewer but the
+// days can. Days past what fits are left to シフト表で見る.
+function DayCardByPerson({
+  days,
+  members,
+}: {
+  days: Date[];
+  members: Member[];
+}) {
+  const weekTools = useWeek();
+  const shown = days.slice(0, maxCardColumns);
+  const rest = days.length - shown.length;
+  const columns = {
+    gridTemplateColumns: `26px repeat(${shown.length}, 28px)`,
+  };
+  return (
+    <span className={dayCard.card({ many: true })} data-part="day-card">
+      <span className={dayCard.row({ names: true })} style={columns}>
+        {/* As in the shift table, the month once in the corner and the
+            days by number, with a new month's where it turns. */}
+        <span className={cornerMonth}>{(shown[0]?.getMonth() ?? 0) + 1}月</span>
+        {shown.map((date, index) => (
+          <span
+            className={cx(
+              dayCard.dayHead({ together: everyoneOff(members, date) }),
+              toneColor[weekTools.dateTone(date)]
+            )}
+            key={dateKey(date)}
+          >
+            {index > 0 && date.getMonth() !== shown[index - 1]?.getMonth()
+              ? `${date.getMonth() + 1}/${date.getDate()}`
+              : date.getDate()}
+            <small className={dayCard.dayHeadWeekday}>
+              {weekdayLabels[date.getDay()]}
+            </small>
+          </span>
+        ))}
+      </span>
+      {members.map((member) => (
+        <span className={dayCard.row()} key={member.id} style={columns}>
+          <span>
+            <Avatar member={member} />
+            <span className={srOnly}>{member.name}</span>
+          </span>
+          {shown.map((date) => (
+            <span
+              className={dayCard.cell({
+                off: patternOn(member, date)?.off === true,
+              })}
+              key={dateKey(date)}
+            >
+              <Mark date={date} member={member} size={15} />
+              <span className={srOnly}>
+                {formatDay(date)}：{patternOn(member, date)?.name ?? "未入力"}
+              </span>
+            </span>
+          ))}
+        </span>
+      ))}
+      {rest > 0 && <small className={dayCard.rest}>ほか{rest}日</small>}
     </span>
   );
 }
@@ -4268,6 +4491,7 @@ function ShiftsPage({
   layout,
   onLayout: setLayout,
   onBack,
+  onShareDay,
 }: {
   group: Group;
   backLabel: string;
@@ -4277,6 +4501,7 @@ function ShiftsPage({
   layout: Layout;
   onLayout: (layout: Layout) => void;
   onBack: () => void;
+  onShareDay: (date: Date) => void;
 }) {
   const weekTools = useWeek();
   const [month, setMonth] = useState(initialMonth ?? designMonth);
@@ -4333,6 +4558,7 @@ function ShiftsPage({
         onClose={() => {
           setPicked(undefined);
         }}
+        onShare={onShareDay}
       />
       <LegendSheet
         members={legend}
@@ -5114,10 +5340,13 @@ function PickedDaySheet({
   date: picked,
   members,
   onClose,
+  onShare,
 }: {
   date?: Date;
   members: Member[];
   onClose: () => void;
+  // Sends the day, everyone's shifts on it, to the group chat.
+  onShare: (date: Date) => void;
 }) {
   // The day stays while the sheet sinks away.
   const [date, setDate] = useState(picked ?? designToday);
@@ -5153,7 +5382,17 @@ function PickedDaySheet({
       }}
       open={picked !== undefined}
     >
-      <SheetHeading onClose={onClose} title={formatDay(date)}>
+      <SheetHeading
+        action={{
+          icon: <Share aria-hidden="true" size={18} />,
+          label: "全体チャットで共有",
+          onClick: () => {
+            onShare(date);
+          },
+        }}
+        onClose={onClose}
+        title={formatDay(date)}
+      >
         {together && (
           <Tag size="sm" tone="accent">
             みんな休み
