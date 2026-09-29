@@ -3167,10 +3167,18 @@ function ReactionPill({
 }
 
 const reactionPill = {
-  // The faces overlap a little, each ringed in the pill's own color.
+  // The faces overlap a little, each ringed in the pill's own color. A
+  // letter in place of a photo is inked dark with the letter cut out in
+  // the pill's color, so its round shows on the pill as a photo would.
   faces: css({
     "& > *": { boxShadow: "0 0 0 1.5px var(--reaction-bg)" },
-    "& > * + *": { marginInlineStart: "-4px" },
+    "& > [data-letter]": {
+      bg: "text.tertiary",
+      color: "var(--reaction-bg)",
+      fontWeight: 700,
+    },
+    // Just enough to read as one group without cutting into a letter.
+    "& > * + *": { marginInlineStart: "-2px" },
     display: "flex",
   }),
   list: css({ minWidth: "160px", padding: "8px 8px 4px" }),
@@ -3205,7 +3213,7 @@ const reactionPill = {
     display: "inline-flex",
     gap: "4px",
     height: "24px",
-    padding: "0 3px 0 8px",
+    padding: "0 2px 0 8px",
     textStyle: "subheadline",
     // A long press opens the list, not the phone's own callout or a
     // text selection.
@@ -5538,7 +5546,13 @@ export function PhotoAvatar({
     <span
       aria-hidden="true"
       className={avatar({ me })}
-      style={{ fontSize: Math.round(size * 0.45), height: size, width: size }}
+      // Marks a letter drawn for someone else, for places that ink it.
+      data-letter={photo || me ? undefined : ""}
+      style={{
+        fontSize: Math.max(minLetterSize, Math.round(size * 0.45)),
+        height: size,
+        width: size,
+      }}
     >
       {photo ? (
         <img alt="" height={size} loading="lazy" src={photo} width={size} />
@@ -5552,7 +5566,9 @@ export function PhotoAvatar({
 const defaultAvatarSize = 24;
 const chatAvatarSize = 32;
 const compactAvatarSize = 20;
-const reactionFaceSize = 16;
+const reactionFaceSize = 18;
+// A letter in place of a photo never gets smaller than this.
+const minLetterSize = 9;
 // Past this many, a reaction shows two faces and "+N".
 const maxReactionFaces = 3;
 
