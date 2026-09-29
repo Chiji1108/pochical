@@ -3539,18 +3539,25 @@ const weekCell = cva({
       last: true,
       together: true,
     },
-    // The small weekly table has no frame to follow, nor padding to reach
-    // into: its band stays inside the week, ending at the last cell's foot.
+    // In the small weekly table the tiles sit tighter, 2px above and
+    // below, and the band is those tiles joined, as in the big one.
     {
       compact: true,
-      css: { "&::before": { inset: "2px 2px 0" } },
+      css: { "&::before": { inset: "2px 3px 0" } },
       kind: "date",
       together: true,
     },
     {
       compact: true,
-      css: { "&::before": { inset: "0 2px" } },
+      css: { "&::before": { inset: "0 3px" } },
       kind: "cell",
+      together: true,
+    },
+    {
+      compact: true,
+      css: { "&::before": { inset: "0 3px 2px" } },
+      kind: "cell",
+      last: true,
       together: true,
     },
     // Tiles sit tighter in the small weekly table.
@@ -3585,6 +3592,20 @@ const weekCell = cva({
           inset: "0 3px -1px",
         },
       },
+      kind: "cell",
+      last: true,
+      picked: true,
+    },
+    // The small table's frame follows its band.
+    {
+      compact: true,
+      css: { "&::after": { inset: "2px 3px 0" } },
+      kind: "date",
+      picked: true,
+    },
+    {
+      compact: true,
+      css: { "&::after": { inset: "0 3px 2px" } },
       kind: "cell",
       last: true,
       picked: true,
