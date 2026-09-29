@@ -65,23 +65,6 @@ export const themes = [
     },
   },
   {
-    id: "terracotta",
-    name: "テラコッタ",
-    accent: "#93583a",
-    line: "#b07a5c",
-    muted: "#cfaa92",
-    soft: "#f7efe9",
-    // Light tint for shifts that use the theme color, like 休み.
-    markTint: "#f3e3d8",
-    dark: {
-      accent: "#e5a789",
-      line: "#c49178",
-      markTint: "#563f34",
-      muted: "#8f6b59",
-      soft: "#433630",
-    },
-  },
-  {
     id: "lavender",
     name: "ラベンダー",
     accent: "#5f5286",
@@ -115,6 +98,72 @@ export const themes = [
       soft: "#383938",
     },
   },
+  // The four below follow the ones above role by role in OKLCH: the same
+  // lightness steps, each role's chroma the same share of the accent's.
+  {
+    accent: "#1d6971",
+    dark: {
+      accent: "#82c5cc",
+      line: "#73a9af",
+      markTint: "#304a4d",
+      muted: "#567c81",
+      soft: "#2e3c3e",
+    },
+    id: "soda",
+    line: "#4b8990",
+    markTint: "#d8eaec",
+    muted: "#8db7bb",
+    name: "ソーダ",
+    soft: "#eaf3f4",
+  },
+  {
+    accent: "#7e634b",
+    dark: {
+      accent: "#ceb199",
+      line: "#b19985",
+      markTint: "#4e4339",
+      muted: "#827163",
+      soft: "#3f3832",
+    },
+    id: "milktea",
+    line: "#9e846e",
+    markTint: "#ede4dd",
+    muted: "#bdaa9a",
+    name: "ミルクティー",
+    soft: "#f5f0ec",
+  },
+  {
+    accent: "#6c762a",
+    dark: {
+      accent: "#b4bf78",
+      line: "#9ca56b",
+      markTint: "#44482c",
+      muted: "#727950",
+      soft: "#383b2b",
+    },
+    id: "matcha",
+    line: "#8c9654",
+    markTint: "#e5e9d5",
+    muted: "#abb386",
+    name: "抹茶",
+    soft: "#f0f2e8",
+  },
+  {
+    accent: "#604738",
+    dark: {
+      accent: "#cdb1a1",
+      line: "#b0998c",
+      markTint: "#4d423c",
+      muted: "#817167",
+      soft: "#3e3834",
+    },
+    id: "cocoa",
+    line: "#7e6658",
+    markTint: "#ede4df",
+    muted: "#bcaa9f",
+    name: "ココア",
+    soft: "#f4f0ee",
+  },
 ] as const;
 
 export type ThemeId = (typeof themes)[number]["id"];
@@ -131,9 +180,9 @@ export function themeOf(id: ThemeId): Theme {
 
 // テーマ in the style settings: named presets, each a theme color in a tone
 // with the shifts either in their own colors or all in the theme's ink.
-// Only the pairs that work are offered: shift colors were tuned beside
-// モス, so the colorful ones keep it, and the one-color ones stay deep.
-// Only the viewer's screen changes; a shift's color slot is what syncs.
+// Each is a mood rather than a free pairing, so no pair clashes; four keep
+// each shift's color, five draw every shift in one ink. Only the viewer's
+// screen changes; a shift's color slot is what syncs.
 export type Preset = {
   id: string;
   name: string;
@@ -144,24 +193,51 @@ export type Preset = {
 };
 
 export const presets = [
-  { id: "standard", marks: "multi", name: "標準", theme: "moss", tone: "deep" },
-  { id: "dusty", marks: "multi", name: "くすみ", theme: "moss", tone: "dusty" },
-  { id: "paper", marks: "multi", name: "紙", theme: "moss", tone: "paper" },
-  { id: "sumi", marks: "mono", name: "墨", theme: "sumi", tone: "deep" },
-  { id: "indigo", marks: "mono", name: "藍", theme: "indigo", tone: "deep" },
-  { id: "moss", marks: "mono", name: "モス", theme: "moss", tone: "deep" },
-  { id: "rose", marks: "mono", name: "ローズ", theme: "rose", tone: "deep" },
+  // The app's own: moss, as its icon.
   {
-    id: "terracotta",
-    marks: "mono",
-    name: "テラコッタ",
-    theme: "terracotta",
+    id: "pochical",
+    marks: "multi",
+    name: "ポチカル",
+    theme: "moss",
     tone: "deep",
   },
+  // Soft and warm: a milky brown, grayed.
   {
-    id: "lavender",
+    id: "milktea",
+    marks: "multi",
+    name: "ミルクティー",
+    theme: "milktea",
+    tone: "dusty",
+  },
+  // Fresh: a clear blue-green, deep.
+  { id: "soda", marks: "multi", name: "ソーダ", theme: "soda", tone: "deep" },
+  // Sweet: a grayed pink.
+  {
+    id: "sakura",
+    marks: "multi",
+    name: "さくら",
+    theme: "rose",
+    tone: "dusty",
+  },
+  // Ink alone, in black.
+  { id: "sumi", marks: "mono", name: "墨", theme: "sumi", tone: "deep" },
+  // Indigo ink on cream paper, as dyed cotton.
+  {
+    id: "aizome",
     marks: "mono",
-    name: "ラベンダー",
+    name: "藍染め",
+    theme: "indigo",
+    tone: "paper",
+  },
+  // A grayed yellow-green, as the tea.
+  { id: "matcha", marks: "mono", name: "抹茶", theme: "matcha", tone: "dusty" },
+  // A deep brown.
+  { id: "cocoa", marks: "mono", name: "ココア", theme: "cocoa", tone: "deep" },
+  // A deep violet.
+  {
+    id: "sumire",
+    marks: "mono",
+    name: "すみれ",
     theme: "lavender",
     tone: "deep",
   },

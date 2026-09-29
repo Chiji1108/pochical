@@ -378,20 +378,32 @@ export function guessLook(name: string): Omit<Look, "color"> {
   };
 }
 
+// The first shift color is the theme's own, as 休み takes it: モス in
+// ポチカル, and whatever color another テーマ is, so its days off are
+// its color rather than a green beside it.
+const THEME_SLOT = 0;
+
 // All shift colors for the current light or dark mode, in picker order.
 export function useMarkColors() {
   const scheme = useContext(ColorSchemeContext);
   const tone = useContext(ToneContext);
-  return markColors.map((option) => markColorIn(option, scheme, tone));
+  const theme = useThemeMarkColor();
+  return markColors.map((option, index) =>
+    index === THEME_SLOT ? theme : markColorIn(option, scheme, tone)
+  );
 }
 
 export function useMarkColor(markColor: MarkColor) {
   const scheme = useContext(ColorSchemeContext);
   const tone = useContext(ToneContext);
-  return markColorIn(markColors[markColor] ?? markColors[0], scheme, tone);
+  const theme = useThemeMarkColor();
+  const option = markColors[markColor];
+  return markColor === THEME_SLOT || !option
+    ? theme
+    : markColorIn(option, scheme, tone);
 }
 
-// The theme's own color, for marks drawn all in one color.
+// The theme's own color, for its slot and for marks drawn all in one color.
 function useThemeMarkColor() {
   const { accent, markTint } = themeColors(
     themeOf(useContext(ThemeContext).theme),

@@ -94,7 +94,7 @@ export const useSettings = create<SettingsState>()(
         appearance: "system",
         calendar: defaultCalendar,
         imageOptions: defaultImageOptions,
-        preset: "standard",
+        preset: "pochical",
         week: defaultWeekSettings,
       },
       groupLook: { fill: true, style: "icon" },
