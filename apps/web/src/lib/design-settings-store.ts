@@ -52,7 +52,7 @@ export type MonthName = "number" | "english";
 // The rest of the person's own screen. Device only.
 export type DeviceSettings = {
   preset: PresetId;
-  // シフトを色分けする: each shift in its own color, or all of them in the
+  // シフトの色: each shift in its own color (色分け), or all of them in the
   // テーマ's.
   shiftColors: boolean;
   appearance: Appearance;

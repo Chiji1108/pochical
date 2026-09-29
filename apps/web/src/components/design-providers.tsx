@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { useLook, useSettings } from "../lib/design-settings-store";
 import { useDeviceScheme } from "../lib/use-device-scheme";
-import { ColorSchemeContext, ThemeContext } from "./design-theme";
+import { ColorSchemeContext, presetOf, ThemeContext } from "./design-theme";
 import type { PresetId } from "./design-theme";
 import { WeekSettingsContext } from "./design-week";
 import {
@@ -29,7 +29,14 @@ export function PresetContexts({
   id: PresetId;
   children: ReactNode;
 }) {
-  return <ThemeContext value={{ theme: id }}>{children}</ThemeContext>;
+  const { scheme } = presetOf(id);
+  const themed = <ThemeContext value={{ theme: id }}>{children}</ThemeContext>;
+  // An always-dark テーマ draws its marks for its own dark screen.
+  return scheme ? (
+    <ColorSchemeContext value={scheme}>{themed}</ColorSchemeContext>
+  ) : (
+    themed
+  );
 }
 
 // The settings store as the contexts the screens read. Parts of a page
@@ -47,7 +54,10 @@ export function DesignProviders({ children }: { children: ReactNode }) {
   }, []);
   // 外観 follows this computer's own light or dark unless it keeps one.
   const deviceScheme = useDeviceScheme();
-  const scheme = appearance === "system" ? deviceScheme : appearance;
+  // An always-dark テーマ keeps its dark whatever 外観 says.
+  const scheme =
+    presetOf(preset).scheme ??
+    (appearance === "system" ? deviceScheme : appearance);
   return (
     <WeekSettingsContext value={{ week }}>
       <ColorSchemeContext value={scheme}>

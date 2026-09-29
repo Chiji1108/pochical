@@ -60,10 +60,10 @@ import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { markColorIn, markColors } from "../lib/design-tokens";
 import {
-  ColorSchemeContext,
   presetOf,
   ThemeContext,
   themeColors,
+  useColorScheme,
 } from "./design-theme";
 
 export type ShiftMarkStyle = "icon" | "emoji" | "badge";
@@ -384,7 +384,7 @@ const THEME_SLOT = 0;
 
 // All shift colors for the current light or dark mode, in picker order.
 export function useMarkColors() {
-  const scheme = useContext(ColorSchemeContext);
+  const scheme = useColorScheme();
   const { vividness } = presetOf(useContext(ThemeContext).theme);
   const theme = useThemeMarkColor();
   return markColors.map((option, index) =>
@@ -393,7 +393,7 @@ export function useMarkColors() {
 }
 
 export function useMarkColor(markColor: MarkColor) {
-  const scheme = useContext(ColorSchemeContext);
+  const scheme = useColorScheme();
   const { vividness } = presetOf(useContext(ThemeContext).theme);
   const theme = useThemeMarkColor();
   const option = markColors[markColor];
@@ -406,7 +406,7 @@ export function useMarkColor(markColor: MarkColor) {
 function useThemeMarkColor() {
   const { accent, markTint } = themeColors(
     presetOf(useContext(ThemeContext).theme),
-    useContext(ColorSchemeContext)
+    useColorScheme()
   );
   return { color: accent, name: "テーマカラー", tint: markTint };
 }

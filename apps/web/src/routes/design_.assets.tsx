@@ -13,7 +13,7 @@ import {
   DesignProviders,
   useDesignTheme,
 } from "../components/design-providers";
-import { themeStyle } from "../components/design-theme";
+import { pageStyle } from "../components/design-theme";
 import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/design_/assets")({
@@ -84,7 +84,7 @@ const sourceList = css({
 function AssetsPage() {
   const theme = useDesignTheme();
   return (
-    <DesignPage style={themeStyle(theme, "light")}>
+    <DesignPage style={pageStyle(theme)}>
       <DesignToolbar back="documents" />
       <DesignIntro eyebrow="POCHICAL / ASSETS" title="素材">
         アプリやサイトで使う画像と、その元になる絵。
