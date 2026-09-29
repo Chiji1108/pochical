@@ -54,6 +54,7 @@ import {
   fieldLabel,
   IconMenu,
   MenuItem,
+  MONTH_WEEKS,
   Pager,
   Screen,
   srOnly,
@@ -1153,9 +1154,6 @@ const calendarPage = {
 
 // From one row of days to the next.
 const ROW_STEP = DAY_ROW_HEIGHT + DAY_ROW_GAP;
-// A month keeps room for six weeks, the most one spans, so a month of six
-// comes in whole when swiped to from one of four or five.
-const MONTH_WEEKS = 6;
 // How the month folds into a week and back: one spring without bounce,
 // the same as SwiftUI's .spring(duration: 0.3, bounce: 0) for the apps.
 const fold = { bounce: 0, type: "spring", visualDuration: 0.3 } as const;

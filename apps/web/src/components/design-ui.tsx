@@ -1981,6 +1981,10 @@ export const dayGrid = css({
 export function dayGridHeight(weeks: number) {
   return weeks * DAY_ROW_HEIGHT + (weeks - 1) * DAY_ROW_GAP;
 }
+// A month keeps room for six weeks, the most one spans, so a month of six
+// comes in whole when swiped to from one of four or five, and what is
+// under it stays put as the months turn.
+export const MONTH_WEEKS = 6;
 
 const weekdayRow = cva({
   base: {
