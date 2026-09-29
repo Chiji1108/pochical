@@ -1374,7 +1374,7 @@ function MarkPage({
       <Section title="シフトの色">
         <ShiftColorsChoices />
         <p className={settingsParts.footer}>
-          ひと色にすると、テーマの色だけで静かにまとまります。シフトは形で見分けます。
+          ワントーンにすると、テーマの色だけで静かにまとまります。
         </p>
       </Section>
       <Section title="休みの見せ方">
@@ -1905,11 +1905,11 @@ function WeekPage({
 // one. It carries meaning, telling shifts apart at a glance, so it is a
 // choice of its own rather than part of a テーマ. Tabs like 休みの見せ方's
 // rather than a switch, so each side shows its look in the テーマ in use:
-// ひと色 under 墨 is the shifts in ink, which a switch's words could not
+// ワントーン under 墨 is the shifts in ink, which a switch's words could not
 // show. The テーマ cards follow it too.
 const shiftColorOptions = [
   { colored: true, name: "色分け" },
-  { colored: false, name: "ひと色" },
+  { colored: false, name: "ワントーン" },
 ] as const;
 const shiftColorSample = css({
   alignItems: "center",

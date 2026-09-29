@@ -329,7 +329,7 @@ function ColorPicker({
           />
         ))}
       </ChoiceGrid>
-      {/* With シフトの色 at ひと色 every mark takes the theme color, so
+      {/* With シフトの色 at ワントーン every mark takes the theme color, so
           say when this choice shows. */}
       {monochrome && (
         <Note>
