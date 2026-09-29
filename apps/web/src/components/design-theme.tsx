@@ -95,15 +95,17 @@ export const presets = [
     name: "すみれ",
   },
   // An old coffee shop after dark: grays warmed toward roast, text with a
-  // breath of brown, and the vermilion of its sign; the shifts softened
-  // as if printed.
+  // breath of brown, the amber of its lamps, and days off in coffee; the
+  // shifts softened as if printed. Amber rather than red keeps it apart
+  // from Sundays and holidays, and oranger than 月夜's moon.
   {
-    accent: { chroma: 0.133, hue: 35, lightness: 0.78 },
+    accent: { chroma: 0.115, hue: 68, lightness: 0.8 },
     grays: { hue: 65, strength: 1.8 },
     id: "kissa",
     ink: { chroma: 0.021, hue: 50 },
     name: "喫茶",
     scheme: "dark",
+    tint: { chroma: 0.085, hue: 55 },
     vividness: 0.75,
   },
   // A moonlit night: a deep navy screen and a moon yellow.
