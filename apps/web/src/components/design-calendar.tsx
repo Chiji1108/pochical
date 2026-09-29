@@ -36,7 +36,7 @@ import type { DesignVariants } from "../lib/design-variants";
 import type { Coworkers } from "./design-coworkers";
 import { GapSheet, gapDaysIn } from "./design-gap-sheet";
 import { DesignGroup, JoinSheet } from "./design-group";
-import { MonthTitleButton } from "./design-month-picker";
+import { MonthTitleButton, monthTitle } from "./design-month-picker";
 import { Phone } from "./design-phone";
 import {
   monthIndex,
@@ -48,6 +48,7 @@ import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import { DesignSettings } from "./design-settings";
 import type { SettingsPage } from "./design-settings";
 import { PhoneContext, Sheet, SheetHeading } from "./design-sheet";
+import { surpriseStyles, useSurprise } from "./design-surprise";
 import { useThemeStyle } from "./design-theme";
 import { PhoneToasts, ToastContext, usePhoneToaster } from "./design-toast";
 import {
@@ -400,6 +401,7 @@ export function DesignCalendar({
   const coworkerNames = useUser((state) => state.coworkers);
   const setCoworkerNames = useUser((state) => state.setCoworkers);
   const [tab, setTab] = useState<Tab>(initialTab);
+  const surprise = useSurprise();
   // The group the group tab opens on, like one just joined from a link.
   const [openGroup, setOpenGroup] = useState<string>();
   const profile = useUser((state) => state.profile);
@@ -765,13 +767,20 @@ export function DesignCalendar({
               schedule={schedule}
             />
           )}
-          <Screen hidden={tab !== "calendar" || imagePreview}>
+          <Screen
+            className={surpriseStyles.screen}
+            hidden={tab !== "calendar" || imagePreview}
+          >
+            {surprise.layer}
             <div className={heading.bar}>
               <MonthHeading
                 beside={besideMonths}
                 mode={headingMode}
                 month={month}
                 onPick={goToMonth}
+                onSurprise={() => {
+                  surprise.play();
+                }}
                 progress={pageDrag}
                 swiped={swipedTo === dateKey(month)}
               />
@@ -1333,11 +1342,14 @@ export function MonthSummary({
 
 // The year over the month. Looking at months, its name opens a choice of
 // months, left plain like minical's so the heading stays a picture: the
-// swipe and the input's date picker are the ways that show.
+// swipe and the input's date picker are the ways that show. With the
+// カレンダー page's おたのしみ it changes the sky over the calendar
+// instead.
 function MonthHeading({
   month,
   mode,
   onPick,
+  onSurprise,
   progress,
   swiped,
   beside,
@@ -1345,12 +1357,14 @@ function MonthHeading({
   month: Date;
   mode: "view" | "edit" | "week";
   onPick: (month: Date) => void;
+  onSurprise: () => void;
   // The pages being dragged, which the name follows to the month the page
   // coming in shows.
   progress: MotionValue<number>;
   swiped: boolean;
   beside?: { previous: Date; next: Date };
 }) {
+  const tap = useSettings((state) => state.device.monthTap);
   const name = (
     <MonthName
       beside={beside}
@@ -1359,15 +1373,28 @@ function MonthHeading({
       swiped={swiped}
     />
   );
+  if (mode !== "view") {
+    return <h3 className={heading.title}>{name}</h3>;
+  }
+  if (tap === "surprise") {
+    return (
+      <h3 className={heading.title}>
+        <button
+          className={monthTitle}
+          data-month-title=""
+          onClick={onSurprise}
+          type="button"
+        >
+          <span>{name}</span>
+        </button>
+      </h3>
+    );
+  }
   return (
     <h3 className={heading.title}>
-      {mode === "view" ? (
-        <MonthTitleButton chevron={false} month={month} onPick={onPick}>
-          <span>{name}</span>
-        </MonthTitleButton>
-      ) : (
-        name
-      )}
+      <MonthTitleButton chevron={false} month={month} onPick={onPick}>
+        <span>{name}</span>
+      </MonthTitleButton>
     </h3>
   );
 }

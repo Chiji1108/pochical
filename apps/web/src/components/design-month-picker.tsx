@@ -153,7 +153,8 @@ export function MonthTitleButton({
   );
 }
 
-const monthTitle = css({
+// Also the month name's button when it plays おたのしみ instead.
+export const monthTitle = css({
   alignItems: "center",
   bg: "transparent",
   border: 0,

@@ -49,6 +49,11 @@ const defaultImageOptions: ImageOptions = {
 
 export type MonthName = "number" | "english";
 
+// What a tap on the calendar's month name does: open the month sheet, or
+// おたのしみ, which lights a sky at the calendar's top and changes its
+// colors on each tap.
+export type MonthTap = "pick" | "surprise";
+
 // The rest of the person's own screen. Device only.
 export type DeviceSettings = {
   preset: PresetId;
@@ -59,6 +64,11 @@ export type DeviceSettings = {
   week: WeekSettings;
   // 月の表示: the calendar's heading as 9月, or as sep.
   monthName: MonthName;
+  monthTap: MonthTap;
+  // Which of おたのしみ's skies is up, kept until the next tap; none until
+  // the month name is first tapped, so nothing gives it away, and then
+  // the テーマ's own.
+  sky?: string;
   appIcon: string;
   calendar: Record<ShiftMarkStyle, CalendarOptions>;
   // How 画像で保存 last drew the month.
@@ -77,6 +87,8 @@ type SettingsState = {
   setAppearance: (appearance: Appearance) => void;
   setWeek: (week: WeekSettings) => void;
   setMonthName: (monthName: MonthName) => void;
+  setMonthTap: (monthTap: MonthTap) => void;
+  setSky: (sky: string) => void;
   setAppIcon: (icon: string) => void;
   setImageOptions: (options: ImageOptions) => void;
   // Changes the options of the shape in use.
@@ -104,6 +116,7 @@ export const useSettings = create<SettingsState>()(
         calendar: defaultCalendar,
         imageOptions: defaultImageOptions,
         monthName: "number",
+        monthTap: "pick",
         preset: "pochical",
         shiftColors: true,
         week: defaultWeekSettings,
@@ -138,6 +151,9 @@ export const useSettings = create<SettingsState>()(
       setMonthName: (monthName) => {
         set((state) => ({ device: { ...state.device, monthName } }));
       },
+      setMonthTap: (monthTap) => {
+        set((state) => ({ device: { ...state.device, monthTap } }));
+      },
       setPreset: (preset) => {
         set((state) => ({ device: { ...state.device, preset } }));
       },
@@ -152,6 +168,9 @@ export const useSettings = create<SettingsState>()(
       },
       setShiftColors: (shiftColors) => {
         set((state) => ({ device: { ...state.device, shiftColors } }));
+      },
+      setSky: (sky) => {
+        set((state) => ({ device: { ...state.device, sky } }));
       },
       setWeek: (week) => {
         set((state) => ({ device: { ...state.device, week } }));
