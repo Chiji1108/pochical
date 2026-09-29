@@ -595,15 +595,12 @@ const offSample = cva({
 });
 
 const settingsParts = {
-  // スタイル splits by who sees each choice: a heading over each half, a
-  // step above the section titles, with a rule to start the half.
-  audience: css({
-    borderTop: "1px solid token(colors.separator)",
-    color: "text.primary",
-    fontWeight: 700,
-    margin: "24px 4px 2px",
-    paddingTop: "16px",
-    textStyle: "headline",
+  // A section's footer, as iOS sets explanation under a group of rows.
+  footer: css({
+    color: "text.tertiary",
+    lineHeight: 1.5,
+    margin: "8px 16px 0",
+    textStyle: "footnote",
   }),
   card: css({ bg: "fill.quaternary", borderRadius: "20px", padding: "16px" }),
   cardCount: css({ color: "text.tertiary", fontWeight: 400 }),
@@ -1339,13 +1336,14 @@ function MarkPage({
       <PageHeader back="設定" onBack={onBack} title="スタイル" />
       <StylePreview preview={preview} />
       {/* Every choice shows in the preview at once, so there is nothing to
-          confirm or cancel. The page splits by who sees each choice, said
-          once above each half. */}
-      <h3 className={settingsParts.audience}>グループの人にも見える</h3>
+          confirm or cancel. Only the shape reaches the group, so it alone
+          says so, under it as iOS puts a section's footer. */}
       <Section title="シフトの見た目">
         <ShapeChoices />
+        <p className={settingsParts.footer}>
+          グループの人にも、この見た目で表示されます。
+        </p>
       </Section>
-      <h3 className={settingsParts.audience}>あなたの画面だけ</h3>
       <Section title="テーマ">
         <ThemeChoices />
       </Section>
