@@ -1373,9 +1373,6 @@ function MarkPage({
       </Section>
       <Section title="シフトの色">
         <ShiftColorsChoices />
-        <p className={settingsParts.footer}>
-          ワントーンにすると、テーマの色だけで静かにまとまります。
-        </p>
       </Section>
       <Section title="休みの見せ方">
         <OffLookChoices current={current} />
