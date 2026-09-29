@@ -65,10 +65,10 @@ export type DeviceSettings = {
   // 月の表示: the calendar's heading as 9月, or as sep.
   monthName: MonthName;
   monthTap: MonthTap;
-  // Which of おたのしみ's skies is up, kept until the next tap; none (-1)
-  // until the month name is first tapped, so nothing gives it away, and
-  // then the テーマ's own (the one after the fixed skies).
-  sky: number;
+  // Which of おたのしみ's skies is up, kept until the next tap; none until
+  // the month name is first tapped, so nothing gives it away, and then
+  // the テーマ's own.
+  sky?: string;
   appIcon: string;
   calendar: Record<ShiftMarkStyle, CalendarOptions>;
   // How 画像で保存 last drew the month.
@@ -88,7 +88,7 @@ type SettingsState = {
   setWeek: (week: WeekSettings) => void;
   setMonthName: (monthName: MonthName) => void;
   setMonthTap: (monthTap: MonthTap) => void;
-  setSky: (sky: number) => void;
+  setSky: (sky: string) => void;
   setAppIcon: (icon: string) => void;
   setImageOptions: (options: ImageOptions) => void;
   // Changes the options of the shape in use.
@@ -119,7 +119,6 @@ export const useSettings = create<SettingsState>()(
         monthTap: "pick",
         preset: "pochical",
         shiftColors: true,
-        sky: -1,
         week: defaultWeekSettings,
       },
       groupLook: { fill: true, style: "icon" },

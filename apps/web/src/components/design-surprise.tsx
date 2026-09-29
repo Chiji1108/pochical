@@ -13,6 +13,7 @@ import type { PresetId } from "./design-theme";
 // settings' preview), and each tap drifts it to other colors, kept until
 // the next tap, so a sky someone likes can be screenshotted. The first is
 // the テーマ's own sky; the rest come at random, the テーマ's among them.
+// Only a tap changes it: a テーマ's sky stays after the テーマ changes.
 // Plain gradients, which SwiftUI's MeshGradient and Compose's brushes
 // draw the same.
 
@@ -20,16 +21,17 @@ import type { PresetId } from "./design-theme";
 // and the right corner's; `vivid` scales the tones' chroma.
 type Sky = { name: string; hues: [number, number, number]; vivid?: number };
 
-export const skies: Sky[] = [
-  { hues: [55, 235, 300], name: "朝焼け" },
-  { hues: [165, 105, 215], name: "ソーダ" },
-  { hues: [10, 65, 320], name: "桃" },
-  { hues: [35, 350, 275], name: "夕凪" },
-  { hues: [130, 95, 195], name: "若草" },
-  { hues: [290, 250, 15], name: "薄明" },
-  { hues: [75, 100, 5], name: "蜜柑" },
-  { hues: [215, 280, 180], name: "氷" },
-];
+// The skies anyone may get, by the id the device settings keep.
+const skies: Record<string, Sky> = {
+  asayake: { hues: [55, 235, 300], name: "朝焼け" },
+  hakumei: { hues: [290, 250, 15], name: "薄明" },
+  koori: { hues: [215, 280, 180], name: "氷" },
+  mikan: { hues: [75, 100, 5], name: "蜜柑" },
+  momo: { hues: [10, 65, 320], name: "桃" },
+  ramune: { hues: [165, 105, 215], name: "ラムネ" },
+  wakakusa: { hues: [130, 95, 195], name: "若草" },
+  yunagi: { hues: [35, 350, 275], name: "夕凪" },
+};
 
 // Each テーマ's own sky, picked to its mood rather than drawn from its
 // accent alone: 墨's nearly a silver haze, 喫茶's its lamps' amber, 月夜's
@@ -46,8 +48,16 @@ const themeSkies: Record<PresetId, Sky> = {
   zen: { hues: [110, 90, 150], name: "禅", vivid: 0.6 },
 };
 
-// Where the テーマ's sky sits among the choices, after the fixed ones.
-const THEME_SKY = skies.length;
+// A テーマ's sky is kept as its own id, so it stays when the テーマ changes.
+const themeSkyId = (theme: PresetId) => `theme-${theme}`;
+
+// Every sky by its id, the テーマ's among them.
+const allSkies: Record<string, Sky | undefined> = {
+  ...skies,
+  ...Object.fromEntries(
+    Object.entries(themeSkies).map(([theme, sky]) => [`theme-${theme}`, sky])
+  ),
+};
 
 // Pale and airy in light mode; deep, like jewels in shade, in dark mode,
 // a step lighter than the screen, whose ground a night テーマ colors (月夜's
@@ -117,24 +127,23 @@ function SkyLight({ sky }: { sky: Sky }) {
 // another sky.
 export function useSurprise() {
   const on = useSettings((state) => state.device.monthTap === "surprise");
-  const index = useSettings((state) => state.device.sky);
+  const id = useSettings((state) => state.device.sky);
   const setSky = useSettings((state) => state.setSky);
   const { theme } = useContext(ThemeContext);
   function play() {
-    if (index < 0) {
-      setSky(THEME_SKY);
+    const own = themeSkyId(theme);
+    if (id === undefined) {
+      setSky(own);
       return;
     }
-    const others = [...skies.keys(), THEME_SKY].filter(
-      (other) => other !== index
-    );
-    setSky(others[Math.floor(Math.random() * others.length)] ?? THEME_SKY);
+    const others = [...Object.keys(skies), own].filter((other) => other !== id);
+    setSky(others[Math.floor(Math.random() * others.length)] ?? own);
   }
-  const sky = index === THEME_SKY ? themeSkies[theme] : skies[index];
+  const sky = id === undefined ? undefined : allSkies[id];
   const layer = (
     <div aria-hidden="true" className={surpriseStyles.layer}>
       <AnimatePresence initial={false}>
-        {on && sky !== undefined ? <SkyLight key={index} sky={sky} /> : null}
+        {on && sky !== undefined ? <SkyLight key={id} sky={sky} /> : null}
       </AnimatePresence>
     </div>
   );
