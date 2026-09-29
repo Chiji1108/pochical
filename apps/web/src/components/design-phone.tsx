@@ -101,6 +101,8 @@ const phone = {
     justifyContent: "space-between",
     padding: "0 14px",
     position: "relative",
+    // Over a screen's own layers that run up under it, as おたのしみ's.
+    zIndex: 1,
   }),
   statusIcons: css({ alignItems: "center", display: "flex", gap: "4px" }),
 };

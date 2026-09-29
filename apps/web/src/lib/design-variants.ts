@@ -38,13 +38,6 @@ export const designVariantOptions = {
     ],
     label: "予定",
   },
-  seasonLook: {
-    choices: [
-      { label: "空気", value: "air" },
-      { label: "マス", value: "cells" },
-    ],
-    label: "おたのしみ",
-  },
 } as const;
 
 type VariantKey = keyof typeof designVariantOptions;

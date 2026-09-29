@@ -397,7 +397,7 @@ export function DesignCalendar({
   const coworkerNames = useUser((state) => state.coworkers);
   const setCoworkerNames = useUser((state) => state.setCoworkers);
   const [tab, setTab] = useState<Tab>(initialTab);
-  const seasons = useSeasons(variants.seasonLook);
+  const seasons = useSeasons();
   // The group the group tab opens on, like one just joined from a link.
   const [openGroup, setOpenGroup] = useState<string>();
   const profile = useUser((state) => state.profile);
@@ -2612,7 +2612,6 @@ export function DayCell({
       aria-pressed={editing ? active : undefined}
       className={cellClass}
       data-active={active || undefined}
-      data-day-cell=""
       onClick={onPress}
       style={offStyle}
       type="button"
