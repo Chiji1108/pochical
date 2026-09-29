@@ -164,6 +164,10 @@ const monthTitle = css({
   gap: "4px",
   padding: 0,
   textAlign: "left",
+  // Set in a line, as in the calendar's heading, it would sit on the
+  // heading's own text by its first line, the small year, and stand a few
+  // pixels lower than the same name left plain.
+  verticalAlign: "top",
 });
 
 const monthChevron = css({ color: "text.tertiary", flexShrink: 0 });
