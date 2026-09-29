@@ -282,17 +282,12 @@ const screenScrollStyle = cva({
 export function ScreenScroll({
   beside = false,
   children,
-  className,
 }: {
   beside?: boolean;
   children: ReactNode;
-  className?: string;
 }) {
   return (
-    <div
-      className={cx(screenScrollStyle({ beside }), className)}
-      data-screen-scroll=""
-    >
+    <div className={screenScrollStyle({ beside })} data-screen-scroll="">
       {children}
     </div>
   );

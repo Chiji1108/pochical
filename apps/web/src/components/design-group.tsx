@@ -40,7 +40,6 @@ import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
-import type { DesignVariants } from "../lib/design-variants";
 import {
   TabBar,
   addDays,
@@ -699,7 +698,6 @@ export function DesignGroup({
   profile,
   onTab,
   initialGroupId = "family",
-  railStyle = "edge",
   scanResult = "invite",
 }: {
   schedule: Schedule;
@@ -709,8 +707,6 @@ export function DesignGroup({
   initialGroupId?: string;
   // What the QR page finds, as 比べる案 sets it.
   scanResult?: ScanResult;
-  // How the rail stands beside the hub, as 比べる案 sets it.
-  railStyle?: RailStyle;
 
   onTab: (tab: Tab) => void;
 }) {
@@ -959,13 +955,9 @@ export function DesignGroup({
   }
 
   return (
-    <Screen
-      className={
-        page.name === "hub" && railStyle === "pane" ? hub.ground : undefined
-      }
-    >
+    <Screen>
       {page.name === "hub" ? (
-        <div className={hub.layout({ rail: railStyle })}>
+        <div className={hub.layout}>
           <GroupRail
             groups={groups}
             onNew={() => {
@@ -974,13 +966,9 @@ export function DesignGroup({
             onScan={onScan}
             onSelect={setGroupId}
             selected={group.id}
-            style={railStyle}
             unreadOf={unreadOf}
           />
-          <ScreenScroll
-            beside={railStyle !== "pane"}
-            className={railStyle === "pane" ? hub.pane : undefined}
-          >
+          <ScreenScroll beside>
             <GroupHub
               chatOf={(chatId) => chatOf(group.id, chatId)}
               group={group}
@@ -1381,7 +1369,7 @@ const rail = {
   }),
   badge: css({
     bottom: 0,
-    boxShadow: "0 0 0 2px var(--rail-ground)",
+    boxShadow: "0 0 0 2px var(--fill-quaternary)",
     position: "absolute",
     right: "3px",
   }),
@@ -1417,47 +1405,25 @@ const rail = {
     width: "58px",
   }),
   // Beside the page and like it, it runs on to the screen's foot and
-  // scrolls when the groups outgrow it, so only its top is rounded. Off
-  // the edge it stops square under the tab bar; against it, it fades out
-  // just over the bar, as Discord's rail does over its own panel, and
-  // what scrolls fades with it.
-  root: cva({
-    base: {
-      "& > *": { flexShrink: 0 },
-      // What a badge's ring cuts out of.
-      "--rail-ground": "var(--background-base)",
-      alignItems: "center",
-      display: "flex",
-      flexDirection: "column",
-      flexShrink: 0,
-      gap: "12px",
-      maskImage:
-        "linear-gradient(to bottom, #000 calc(100% - var(--tab-bar-bottom) - 128px), transparent calc(100% - var(--tab-bar-bottom) - 56px))",
-      overflowY: "auto",
-      padding: "12px 0",
-      width: "58px",
-    },
-    variants: {
-      style: {
-        edge: {
-          "--rail-ground": "var(--fill-quaternary)",
-          bg: "fill.quaternary",
-          borderRadius: "0 20px 0 0",
-        },
-        inset: {
-          "--rail-ground": "var(--fill-quaternary)",
-          bg: "fill.quaternary",
-          borderRadius: "0 20px 0 0",
-          maskImage: "none",
-        },
-        line: { borderRight: "1px solid token(colors.separator)" },
-        pane: { "--rail-ground": "var(--hub-ground)" },
-      },
-    },
+  // scrolls when the groups outgrow it, so only its top is rounded. It
+  // fades out just over the tab bar, as Discord's rail does over its own
+  // panel, and what scrolls fades with it.
+  root: css({
+    "& > *": { flexShrink: 0 },
+    alignItems: "center",
+    bg: "fill.quaternary",
+    borderRadius: "0 20px 0 0",
+    display: "flex",
+    flexDirection: "column",
+    flexShrink: 0,
+    gap: "12px",
+    maskImage:
+      "linear-gradient(to bottom, #000 calc(100% - var(--tab-bar-bottom) - 128px), transparent calc(100% - var(--tab-bar-bottom) - 56px))",
+    overflowY: "auto",
+    padding: "12px 0",
+    width: "58px",
   }),
 };
-
-type RailStyle = DesignVariants["groupRail"];
 
 // A group's mark in its frame: groups are rounded squares, people circles.
 // On the rail the open one's ring sits on top of the mark, inside its
@@ -1614,46 +1580,14 @@ const hub = {
     placeItems: "center",
     width: "26px",
   }),
-  // The rail at the phone's left edge, the page beside it. Held 8px off
-  // the edge, or against it, the flag of the open group at the edge as
-  // the chat apps' rails have it; as a raised pane the page runs on to
-  // the right edge too.
-  layout: cva({
-    base: {
-      display: "flex",
-      flex: 1,
-      gap: "8px",
-      marginLeft: "calc(-1 * var(--screen-left))",
-      minHeight: 0,
-    },
-    variants: {
-      rail: {
-        edge: {},
-        inset: { marginLeft: "-8px" },
-        line: { gap: "12px" },
-        pane: { marginRight: "calc(-1 * var(--screen-right))" },
-      },
-    },
-  }),
-  // Discord's way round: the page on a pane of the screen's own ground,
-  // its top left corner rounded, the rail on a ground a step darker that
-  // fills the rest of the screen. The pane keeps the other tabs' ground,
-  // so its cards stand on it as they do there.
-  ground: css({
-    "--hub-ground": "oklch(from var(--background-base) calc(l - 0.06) c h)",
-    bg: "var(--hub-ground)",
-    // The screen sits inside the phone's margins, under its status bar;
-    // the ground reaches out to its edges, which cut it off.
-    boxShadow: "0 0 0 100vmax var(--hub-ground)",
-  }),
-  pane: css({
-    bg: "background.base",
-    borderLeft: "1px solid token(colors.separator)",
-    borderTop: "1px solid token(colors.separator)",
-    borderTopLeftRadius: "20px",
-    minWidth: 0,
-    paddingLeft: "12px",
-    paddingRight: "var(--screen-right)",
+  // The rail against the phone's left edge, the flag of the open group at
+  // the edge as the chat apps' rails have it, the page beside it.
+  layout: css({
+    display: "flex",
+    flex: 1,
+    gap: "8px",
+    marginLeft: "calc(-1 * var(--screen-left))",
+    minHeight: 0,
   }),
   // A long group name gives way to the controls instead of wrapping.
   name: css({
@@ -1852,22 +1786,16 @@ function GroupRail({
   onSelect,
   onNew,
   onScan,
-  style,
 }: {
   groups: Omit<Group, "members">[];
   selected: string;
-  style: RailStyle;
   unreadOf: (id: string) => number;
   onSelect: (id: string) => void;
   onNew: () => void;
   onScan: () => void;
 }) {
   return (
-    <nav
-      aria-label="グループ"
-      className={rail.root({ style })}
-      data-screen-rail=""
-    >
+    <nav aria-label="グループ" className={rail.root} data-screen-rail="">
       {groups.map((group) => {
         const unread = unreadOf(group.id);
         return (
