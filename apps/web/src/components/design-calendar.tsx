@@ -709,45 +709,43 @@ export function DesignCalendar({
             />
           )}
           <Screen hidden={tab !== "calendar" || imagePreview || yearPage}>
-            <CalendarHeading
-              choice={variants.monthChoice}
-              mode={headingMode}
-              month={month}
-              onPick={goToMonth}
-              onYear={() => {
-                setYearPage(true);
-              }}
-            >
-              {(placement) => (
-                <HeadingActions
-                  detailDate={detailDate}
-                  mode={headingMode}
-                  month={month}
-                  onDone={finishHeading}
-                  onCalendar={() => {
-                    openSave(false, true);
-                  }}
-                  onImage={() => {
-                    setImagePreview(true);
-                  }}
-                  onStep={step}
-                  onThisMonth={() => {
-                    goToMonth(
-                      new Date(
-                        designToday.getFullYear(),
-                        designToday.getMonth(),
-                        1
-                      )
-                    );
-                  }}
-                  onThisWeek={() => {
-                    setPageTurn((turn) => turn + 1);
-                    openDetail(designToday);
-                  }}
-                  placement={placement}
-                />
-              )}
-            </CalendarHeading>
+            <div className={heading.bar}>
+              <MonthHeading
+                choice={variants.monthChoice}
+                mode={headingMode}
+                month={month}
+                onPick={goToMonth}
+                onYear={() => {
+                  setYearPage(true);
+                }}
+              />
+              <HeadingActions
+                detailDate={detailDate}
+                mode={headingMode}
+                month={month}
+                onDone={finishHeading}
+                onCalendar={() => {
+                  openSave(false, true);
+                }}
+                onImage={() => {
+                  setImagePreview(true);
+                }}
+                onStep={step}
+                onThisMonth={() => {
+                  goToMonth(
+                    new Date(
+                      designToday.getFullYear(),
+                      designToday.getMonth(),
+                      1
+                    )
+                  );
+                }}
+                onThisWeek={() => {
+                  setPageTurn((turn) => turn + 1);
+                  openDetail(designToday);
+                }}
+              />
+            </div>
             <div className={calendarPage.scroll}>
               <WeekdayRow />
               <OffDisplayContext
@@ -1091,15 +1089,12 @@ const heading = {
   // 今月 and the save menu are of different kinds, so they stand apart.
   backAtEnd: css({ display: "flex", marginRight: "12px" }),
   // Without the arrows: 今月 and the screen's action, together on the
-  // month digits' line, or level with the "‹ 2026年" beside them.
-  corner: cva({
-    base: { alignItems: "center", display: "flex" },
-    variants: {
-      placement: {
-        bar: {},
-        month: { alignSelf: "flex-end", marginBottom: "-4px" },
-      },
-    },
+  // month digits' line.
+  corner: css({
+    alignItems: "center",
+    alignSelf: "flex-end",
+    display: "flex",
+    marginBottom: "-4px",
   }),
   bar: css({
     alignItems: "center",
@@ -1110,14 +1105,6 @@ const heading = {
     position: "relative",
   }),
   month: css({ fontSize: "36px", fontWeight: 600, lineHeight: 1.1 }),
-  // The year's button over the month, the corner's buttons beside it.
-  stack: css({
-    display: "flex",
-    flexDirection: "column",
-    flexShrink: 0,
-    gap: "12px",
-    padding: "0 8px 12px",
-  }),
   monthUnit: css({ fontSize: "14px", fontWeight: 500, marginLeft: "4px" }),
   step: css({
     bg: "transparent",
@@ -1142,27 +1129,6 @@ const heading = {
     font: "inherit",
     padding: 0,
     textAlign: "left",
-  }),
-  topRow: css({
-    alignItems: "center",
-    display: "flex",
-    justifyContent: "space-between",
-  }),
-  // iOS Calendar's way up to the year: its chevron and name in a
-  // round-ended piece of glass, as the bar buttons with words.
-  yearButton: css({
-    alignItems: "center",
-    bg: "fill.quaternary",
-    border: 0,
-    borderRadius: "999px",
-    color: "text.primary",
-    cursor: "pointer",
-    display: "inline-flex",
-    flexShrink: 0,
-    gap: "2px",
-    height: "touch",
-    paddingInline: "8px 16px",
-    textStyle: "body",
   }),
   year: css({
     color: "text.tertiary",
@@ -1300,63 +1266,6 @@ export function MonthSummary({
   );
 }
 
-// The calendar's heading: the month's name, and the corner's actions
-// beside it. Looking at months, it leads to other months as the
-// 月の選び方 variant says. With "yearButton", iOS Calendar's way: the year
-// goes up into a "‹ 2026年" button over the month, the corner beside it.
-function CalendarHeading({
-  choice,
-  mode,
-  month,
-  onPick,
-  onYear,
-  children,
-}: {
-  choice: DesignVariants["monthChoice"];
-  mode: "view" | "edit" | "week";
-  month: Date;
-  onPick: (month: Date) => void;
-  onYear: () => void;
-  children: (placement: "month" | "bar") => ReactNode;
-}) {
-  if (choice === "yearButton" && mode === "view") {
-    return (
-      <div className={heading.stack}>
-        <div className={heading.topRow}>
-          <button
-            aria-label={`${month.getFullYear()}年の一覧に戻る`}
-            className={heading.yearButton}
-            onClick={onYear}
-            type="button"
-          >
-            <ChevronLeft aria-hidden="true" size={22} />
-            {month.getFullYear()}年
-          </button>
-          {children("bar")}
-        </div>
-        <h3 className={heading.title}>
-          <strong className={heading.month}>
-            {month.getMonth() + 1}
-            <span className={heading.monthUnit}>月</span>
-          </strong>
-        </h3>
-      </div>
-    );
-  }
-  return (
-    <div className={heading.bar}>
-      <MonthHeading
-        choice={choice}
-        mode={mode}
-        month={month}
-        onPick={onPick}
-        onYear={onYear}
-      />
-      {children("month")}
-    </div>
-  );
-}
-
 // The year over the month. Looking at months, its name is a way on, left
 // plain like minical's so the heading stays a picture: the swipe and the
 // input's date picker are the ways that show. It opens the year of mini
@@ -1426,13 +1335,10 @@ function HeadingActions({
   onDone,
   onImage,
   onCalendar,
-  placement,
 }: {
   mode: "view" | "edit" | "week";
   month: Date;
   detailDate: Date | undefined;
-  // On the month digits' line, or in a bar of buttons over the month.
-  placement: "month" | "bar";
   onStep: (direction: 1 | -1) => void;
   onThisMonth: () => void;
   // Back to this week, opened on today.
@@ -1491,7 +1397,6 @@ function HeadingActions({
       onCalendar={onCalendar}
       onDone={onDone}
       onImage={onImage}
-      placement={placement}
       previous={previous}
     />
   );
@@ -1509,10 +1414,8 @@ function SwipeCorner({
   onImage,
   onCalendar,
   onDone,
-  placement,
 }: {
   mode: "view" | "edit" | "week";
-  placement: "month" | "bar";
   atToday: boolean;
   previous: ReactNode;
   next: ReactNode;
@@ -1522,7 +1425,7 @@ function SwipeCorner({
   onDone: () => void;
 }) {
   return (
-    <div className={heading.corner({ placement })}>
+    <div className={heading.corner}>
       {mode !== "edit" && (
         <div className={heading.arrowsOnFocus}>
           {previous}

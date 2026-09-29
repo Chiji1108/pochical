@@ -15,13 +15,11 @@ export const designVariantOptions = {
     ],
     label: "招待リンク",
   },
-  // How the calendar's heading leads to other months: its name opening a
-  // year of mini months (A), iOS Calendar's "‹ 2026年" going up to that
-  // year (B), or its name opening the 月を選ぶ sheet, as before.
+  // What the calendar's heading opens: a year of mini months, or the
+  // 月を選ぶ sheet, as before.
   monthChoice: {
     choices: [
-      { label: "A 見出しで1年", value: "title" },
-      { label: "B ‹ 年ボタン", value: "yearButton" },
+      { label: "1年の画面", value: "year" },
       { label: "月シート", value: "sheet" },
     ],
     label: "月の選び方",
