@@ -183,8 +183,11 @@ export function SheetPicture({
 }
 
 // The part of a sheet that scrolls under a heading that stays; it runs to
-// the sheet's edges so the scrolling reaches them.
+// the sheet's edges so the scrolling reaches them. What is in it keeps
+// its height, so a long list scrolls rather than being squeezed and cut
+// off inside its own rounded box.
 export const sheetBody = css({
+  "& > *": { flexShrink: 0 },
   display: "flex",
   flexDirection: "column",
   gap: "12px",
