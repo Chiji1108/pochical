@@ -33,7 +33,13 @@ import {
   useRef,
   useState,
 } from "react";
-import type { CSSProperties, ReactElement, ReactNode, Ref } from "react";
+import type {
+  CSSProperties,
+  MouseEvent,
+  ReactElement,
+  ReactNode,
+  Ref,
+} from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
@@ -498,7 +504,7 @@ export type Chat = { messages: Message[]; unread: number };
 
 const groupChat = "group";
 
-const reactionChoices = ["👍", "❤️", "😂", "😮", "🙏", "🎉"];
+const reactionChoices = ["👍", "❤️", "😂", "👀", "🙏", "🎉"];
 
 export const sampleChats: Record<string, Chat> = {
   "family:group": {
@@ -622,6 +628,51 @@ export const sampleChats: Record<string, Chat> = {
       },
     ],
     unread: 3,
+  },
+  // Six in all, so reactions run from one face to a count.
+  "ward:group": {
+    messages: [
+      {
+        from: "haruka",
+        id: "w1",
+        reactions: [{ by: ["ren", "mei", "sota", "yui"], emoji: "👀" }],
+        text: "来月の勤務表出たね！",
+        time: "17:30",
+        when: "昨日",
+      },
+      {
+        from: "ren",
+        id: "w2",
+        reactions: [{ by: ["haruka"], emoji: "🥲" }],
+        text: "12日の夜勤、誰か代わってくれる人いないかな…",
+        time: "17:42",
+        when: "昨日",
+      },
+      {
+        from: "me",
+        id: "w3",
+        reactions: [
+          { by: ["ren"], emoji: "❤️" },
+          { by: ["haruka", "yui", "mei"], emoji: "🙏" },
+        ],
+        replyTo: "w2",
+        text: "わたし代われるよ！",
+        time: "18:05",
+        when: "昨日",
+      },
+      {
+        from: "sota",
+        id: "w4",
+        reactions: [
+          { by: ["haruka", "ren", "mei", "yui", "me"], emoji: "🎉" },
+          { by: ["ren", "mei"], emoji: "🍻" },
+        ],
+        text: "久しぶりに同期会しよう！",
+        time: "12:10",
+        when: "今日",
+      },
+    ],
+    unread: 1,
   },
   "friends:misaki": {
     messages: [
@@ -2432,22 +2483,6 @@ const chatStyle = {
     lineClamp: 1,
     textStyle: "caption",
   }),
-  reaction: css({
-    "&[aria-pressed=true]": {
-      bg: "accent.container",
-      borderColor: "accent.default",
-    },
-    alignItems: "center",
-    bg: "background.card",
-    border: "1px solid token(colors.border.default)",
-    borderRadius: "999px",
-    display: "inline-flex",
-    gap: "4px",
-    height: "24px",
-    padding: "0 8px",
-    textStyle: "subheadline",
-  }),
-  reactionCount: css({ color: "text.tertiary", textStyle: "caption" }),
   reactions: cva({
     base: { display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "-1px" },
     variants: { mine: { true: { justifyContent: "flex-end" } } },
@@ -2768,21 +2803,16 @@ function ChatPage({
                   {message.reactions && message.reactions.length > 0 && (
                     <span className={chatStyle.reactions({ mine })}>
                       {message.reactions.map((reaction) => (
-                        <button
-                          aria-label={`${reaction.emoji} ${reaction.by.map(nameOf).join("、")}`}
-                          aria-pressed={reaction.by.includes("me")}
-                          className={chatStyle.reaction}
+                        <ReactionPill
                           key={reaction.emoji}
-                          onClick={() => {
+                          onToggle={() => {
                             react(message.id, reaction.emoji);
                           }}
-                          type="button"
-                        >
-                          {reaction.emoji}
-                          <small className={chatStyle.reactionCount}>
-                            {reaction.by.length}
-                          </small>
-                        </button>
+                          people={reaction.by.flatMap(
+                            (id) => writerOf(id) ?? []
+                          )}
+                          reaction={reaction}
+                        />
                       ))}
                     </span>
                   )}
@@ -3056,6 +3086,181 @@ function summaryOf(message: Message) {
     return `📅 ${formatDay(first)}${more}`;
   }
   return message.text ?? "";
+}
+
+// A reaction under a message: the emoji and who chose it, as the members
+// are few; past a handful two faces and "+N", as avatar groups in MUI
+// and Slack do. A tap adds yours or takes it back, a long press (or a
+// right click) lists everyone who chose it.
+function ReactionPill({
+  reaction,
+  people,
+  onToggle,
+}: {
+  reaction: Reaction;
+  people: Member[];
+  onToggle: () => void;
+}) {
+  const phone = useContext(PhoneContext);
+  const [open, setOpen] = useState(false);
+  const press = useLongPress(() => {
+    setOpen(true);
+  });
+  const crowded = people.length > maxReactionFaces;
+  const faces = crowded ? people.slice(0, maxReactionFaces - 1) : people;
+  return (
+    <Popover.Root
+      lazyMount
+      onOpenChange={(details) => {
+        setOpen(details.open);
+      }}
+      open={open}
+      positioning={{ gutter: 6, placement: "top" }}
+      unmountOnExit
+    >
+      <Popover.Anchor asChild>
+        <button
+          aria-label={`${reaction.emoji} ${people.map((person) => person.name).join("、")}`}
+          aria-pressed={reaction.by.includes("me")}
+          className={reactionPill.pill}
+          onClick={() => {
+            if (!press.consumeLongPress()) {
+              onToggle();
+            }
+          }}
+          type="button"
+          {...press.handlers}
+        >
+          {reaction.emoji}
+          <span className={reactionPill.faces}>
+            {faces.map((person) => (
+              <Avatar key={person.id} member={person} size={reactionFaceSize} />
+            ))}
+          </span>
+          {crowded && (
+            <small className={reactionPill.more}>
+              +{people.length - faces.length}
+            </small>
+          )}
+        </button>
+      </Popover.Anchor>
+      <Portal container={phone ?? undefined}>
+        <Popover.Positioner>
+          <Popover.Content
+            aria-label={`${reaction.emoji}を付けた人`}
+            className={cx(menuStyle.content, reactionPill.list)}
+          >
+            <span className={reactionPill.listEmoji}>{reaction.emoji}</span>
+            <ul className={reactionPill.people}>
+              {people.map((person) => (
+                <li className={reactionPill.person} key={person.id}>
+                  <Avatar member={person} size={chatAvatarSize} />
+                  {person.name}
+                </li>
+              ))}
+            </ul>
+          </Popover.Content>
+        </Popover.Positioner>
+      </Portal>
+    </Popover.Root>
+  );
+}
+
+const reactionPill = {
+  // The faces overlap a little, each ringed in the pill's own color. A
+  // letter in place of a photo is inked dark with the letter cut out in
+  // the pill's color, so its round shows on the pill as a photo would.
+  faces: css({
+    "& > *": { boxShadow: "0 0 0 1.5px var(--reaction-bg)" },
+    "& > [data-letter]": {
+      bg: "text.tertiary",
+      color: "var(--reaction-bg)",
+      fontWeight: 700,
+    },
+    // Just enough to read as one group without cutting into a letter.
+    "& > * + *": { marginInlineStart: "-2px" },
+    display: "flex",
+  }),
+  list: css({ minWidth: "160px", padding: "8px 8px 4px" }),
+  listEmoji: css({
+    display: "block",
+    padding: "4px 12px",
+    textStyle: "title2",
+  }),
+  more: css({
+    color: "text.tertiary",
+    paddingInlineEnd: "4px",
+    textStyle: "caption",
+  }),
+  people: css({ listStyle: "none", margin: 0, padding: 0 }),
+  person: css({
+    alignItems: "center",
+    display: "flex",
+    gap: "12px",
+    padding: "8px 12px",
+    textStyle: "body",
+  }),
+  pill: css({
+    "&[aria-pressed=true]": {
+      "--reaction-bg": "token(colors.accent.container)",
+      borderColor: "accent.default",
+    },
+    "--reaction-bg": "token(colors.background.card)",
+    alignItems: "center",
+    bg: "var(--reaction-bg)",
+    border: "1px solid token(colors.border.default)",
+    borderRadius: "999px",
+    display: "inline-flex",
+    gap: "4px",
+    height: "24px",
+    padding: "0 2px 0 8px",
+    textStyle: "subheadline",
+    // A long press opens the list, not the phone's own callout or a
+    // text selection.
+    userSelect: "none",
+    WebkitTouchCallout: "none",
+  }),
+};
+
+// Held this long, a press counts as a long press.
+const longPressMs = 500;
+
+// A long press on the web, which has no event for one: a timer from the
+// finger going down, dropped when it lifts, leaves or turns into a
+// scroll; a right click (and Android's own long press) opens it too. The
+// click that follows a long press is swallowed by `consumeLongPress`.
+function useLongPress(onLongPress: () => void) {
+  const timer = useRef<number>(undefined);
+  const fired = useRef(false);
+  const cancel = () => {
+    window.clearTimeout(timer.current);
+  };
+  const fire = () => {
+    cancel();
+    fired.current = true;
+    onLongPress();
+  };
+  return {
+    consumeLongPress: () => {
+      const was = fired.current;
+      fired.current = false;
+      return was;
+    },
+    handlers: {
+      onContextMenu: (event: MouseEvent) => {
+        event.preventDefault();
+        fire();
+      },
+      onPointerCancel: cancel,
+      onPointerDown: () => {
+        fired.current = false;
+        cancel();
+        timer.current = window.setTimeout(fire, longPressMs);
+      },
+      onPointerLeave: cancel,
+      onPointerUp: cancel,
+    },
+  };
 }
 
 // Adds your reaction, or takes it back if it was already yours.
@@ -5341,7 +5546,13 @@ export function PhotoAvatar({
     <span
       aria-hidden="true"
       className={avatar({ me })}
-      style={{ fontSize: Math.round(size * 0.45), height: size, width: size }}
+      // Marks a letter drawn for someone else, for places that ink it.
+      data-letter={photo || me ? undefined : ""}
+      style={{
+        fontSize: Math.max(minLetterSize, Math.round(size * 0.45)),
+        height: size,
+        width: size,
+      }}
     >
       {photo ? (
         <img alt="" height={size} loading="lazy" src={photo} width={size} />
@@ -5355,6 +5566,11 @@ export function PhotoAvatar({
 const defaultAvatarSize = 24;
 const chatAvatarSize = 32;
 const compactAvatarSize = 20;
+const reactionFaceSize = 18;
+// A letter in place of a photo never gets smaller than this.
+const minLetterSize = 9;
+// Past this many, a reaction shows two faces and "+N".
+const maxReactionFaces = 3;
 
 function Mark({
   member,
