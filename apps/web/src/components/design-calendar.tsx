@@ -700,6 +700,7 @@ export function DesignCalendar({
                 mode={headingMode}
                 month={month}
                 onPick={goToMonth}
+                yearLabel={variants.yearLabel}
               />
               <HeadingActions
                 detailDate={detailDate}
@@ -1105,6 +1106,13 @@ const heading = {
     fontSize: "11px",
     marginBottom: "4px",
   }),
+  // Before the month on its line, the size of its 月.
+  yearBeside: css({
+    color: "text.tertiary",
+    fontSize: "14px",
+    fontWeight: 500,
+    marginRight: "4px",
+  }),
 };
 
 // The calendar tab's page: the grid scrolls on its own under the heading
@@ -1235,21 +1243,36 @@ export function MonthSummary({
   );
 }
 
-// The year over the month. Looking at months, its name opens a choice of
-// months, left plain like minical's so the heading stays a picture: the
-// swipe and the input's date picker are the ways that show.
+// The month, with its year as the 年の表示 variant says: beside it small,
+// only away from this year, so the heading keeps its height across the
+// new year; over it; or said only to screen readers. Looking at months,
+// its name opens a choice of months, left plain like minical's so the
+// heading stays a picture: the swipe and the input's date picker are the
+// ways that show.
 function MonthHeading({
   month,
   mode,
   onPick,
+  yearLabel,
 }: {
   month: Date;
   mode: "view" | "edit" | "week";
   onPick: (month: Date) => void;
+  yearLabel: DesignVariants["yearLabel"];
 }) {
+  const year = month.getFullYear();
+  const beside =
+    yearLabel === "otherYears" && year !== designToday.getFullYear();
+  let yearName = <span className={srOnly}>{year}年</span>;
+  if (yearLabel === "above") {
+    yearName = <span className={heading.year}>{year}</span>;
+  }
+  if (beside) {
+    yearName = <span className={heading.yearBeside}>{year}年</span>;
+  }
   const name = (
     <>
-      <span className={heading.year}>{month.getFullYear()}</span>
+      {yearName}
       <strong className={heading.month}>
         {month.getMonth() + 1}
         <span className={heading.monthUnit}>月</span>

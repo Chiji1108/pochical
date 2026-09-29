@@ -22,6 +22,17 @@ export const designVariantOptions = {
     ],
     label: "一緒に働く人",
   },
+  // Where the calendar's heading names the year: beside the month and
+  // only away from this year, over the month as before, or nowhere, as
+  // minical's heading.
+  yearLabel: {
+    choices: [
+      { label: "今年以外だけ横に", value: "otherYears" },
+      { label: "月の上に小さく", value: "above" },
+      { label: "なし", value: "none" },
+    ],
+    label: "年の表示",
+  },
   scanResult: {
     choices: [
       { label: "招待", value: "invite" },
