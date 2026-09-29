@@ -2382,14 +2382,38 @@ export const dayCell = cva({
     // A day of the month before or after: the same day, faded whole, as on
     // the group's calendar.
     outside: { true: { opacity: 0.35 } },
-    today: {
-      true: {
-        outline: "1.5px solid token(colors.accent.focus)",
-        outlineOffset: "-1px",
-      },
-    },
   },
 });
+
+// Today, wherever a date is shown: the date on a round of the accent, as
+// the platforms' calendars mark it, so it stays apart from the picked
+// day's frame and the frame of a day you are off together. As wide as
+// the date needs, and taking no more room than the date does, so rows and
+// columns of dates keep their place.
+export const todayRound = css({
+  bg: "accent.fill",
+  borderRadius: "999px",
+  color: "accent.onFill",
+  display: "inline-block",
+  lineHeight: "20px",
+  marginBlock: "calc((14px - 20px) / 2)",
+  marginInline: "-4px",
+  minWidth: "20px",
+  paddingInline: "4px",
+  textAlign: "center",
+});
+
+// A note's stroke, one either side of its date.
+const noteStroke = {
+  bg: "calendar.noteMarker",
+  borderRadius: "1px",
+  content: '""',
+  height: "1.5px",
+  marginTop: "-1px",
+  position: "absolute",
+  top: "50%",
+  width: "5px",
+} as const;
 
 export const dayParts = {
   date: css({ flexShrink: 0, fontWeight: 600, lineHeight: "14px" }),
@@ -2414,19 +2438,14 @@ export const dayParts = {
   markAlone: css({ flex: 1, height: "auto" }),
   // 休みの見せ方 空白, while entering or in the week view.
   markFaint: css({ opacity: 0.35 }),
-  // A note: a stroke under the date, as marked in a paper diary.
+  // A note: a stroke either side of the date, -6-, as a paper diary
+  // marks a day, clear of today's round.
   noted: css({
-    _before: {
-      bg: "var(--calendar-note-marker)",
-      borderRadius: "2px",
-      content: '""',
-      inset: "45% -3px -1px",
-      position: "absolute",
-      zIndex: -1,
-    },
-    isolation: "isolate",
+    _after: { ...noteStroke, left: "calc(100% + 2px)" },
+    _before: { ...noteStroke, right: "calc(100% + 2px)" },
     position: "relative",
   }),
+  today: todayRound,
 };
 
 // The shift's mark, with 早出 and 残業 drawn on its sides.
@@ -2530,28 +2549,25 @@ export function DayCell({
   const today = dateKey(date) === dateKey(designToday);
   const holiday = useWeek().isColoredHoliday(date);
   const change = blank ? undefined : timeChangeOf(entry);
-  // A note is about the day, not the shift, so the date is marked, with a
-  // stroke as in a paper diary, apart from the shift's 早出 and 残業
+  // A note is about the day, not the shift, so the date is marked, with
+  // strokes as in a paper diary, apart from the shift's 早出 and 残業
   // corners, and only on the person's own calendar. Other time
   // changes, a later start or an earlier end, show when the day is opened.
   const noted = !plain && Boolean(entry?.note);
-  // The picked frame wins over today's.
   const cellClass = cx(
-    dayCell({
-      active,
-      off: Boolean(offStyle),
-      outside,
-      today: today && !editing && !active && !plain,
-    }),
+    dayCell({ active, off: Boolean(offStyle), outside }),
     className
   );
+  // Today's round, but not in a saved picture, which is for any day.
+  const onToday = today && !plain;
   const content = (
     <>
       <span
         className={cx(
           dayParts.date,
           outside && dayParts.dateOutside,
-          holiday && dayParts.holiday,
+          holiday && !onToday && dayParts.holiday,
+          onToday && dayParts.today,
           noted && dayParts.noted
         )}
       >

@@ -298,13 +298,10 @@ export function themeStyle(id: PresetId, requested: ColorScheme = "light") {
     "--accent-focus": colors.line,
     "--accent-on-fill": colors.onFill,
     "--calendar-off-tint": colors.markTint,
-    // A note's stroke under its date: a neutral gray, so no color beyond
-    // the theme's, and apart from the green of days off. On paper a step
-    // deeper than the switches' gray, to show on a day off's pale tile.
-    "--calendar-note-marker":
-      scheme === "dark"
-        ? "var(--fill-primary)"
-        : "color-mix(in oklab, var(--fill-primary), var(--text-quaternary) 25%)",
+    // A note's strokes either side of its date: a neutral gray, so no
+    // color beyond the theme's, and apart from the green of days off; as
+    // thin lines, as deep as quiet text, to show on a day off's tile too.
+    "--calendar-note-marker": "var(--text-tertiary)",
   } as CSSProperties;
 }
 

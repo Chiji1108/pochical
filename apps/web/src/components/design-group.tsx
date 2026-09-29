@@ -52,6 +52,7 @@ import {
   dateKey,
   dayCell,
   dayParts,
+  todayRound,
   formatDay,
   timeChangeOf,
   timeRange,
@@ -3588,7 +3589,6 @@ const dayRows = {
     base: {
       bg: "background.base",
       borderBottom: "1px solid token(colors.separator)",
-      borderLeft: "3px solid transparent",
       fontWeight: 600,
       height: "36px",
       isolation: "isolate",
@@ -3609,7 +3609,6 @@ const dayRows = {
           },
         },
       },
-      today: { true: { borderLeftColor: "accent.default" } },
       together: {
         true: {
           "&::before": {
@@ -5315,10 +5314,9 @@ function DayRow({
   rowRef?: Ref<HTMLTableRowElement>;
 }) {
   const together = everyoneOff(members, date);
-  const today = dateKey(date) === dateKey(designToday);
   return (
     <tr data-index={index} ref={rowRef}>
-      <th className={dayRows.date({ picked, today, together })} scope="row">
+      <th className={dayRows.date({ picked, together })} scope="row">
         <RowDate
           date={date}
           onPick={() => {
@@ -5390,7 +5388,11 @@ function RowDate({
   const weekTools = useWeek();
   const label = (
     <span className={toneColor[weekTools.dateTone(date)]}>
-      {date.getDate()}
+      {dateKey(date) === dateKey(designToday) ? (
+        <span className={todayRound}>{date.getDate()}</span>
+      ) : (
+        date.getDate()
+      )}
       <small className={dayRows.weekday}>{weekdayLabels[date.getDay()]}</small>
     </span>
   );
@@ -5616,10 +5618,16 @@ function WeekDate({
   } as const;
   // Without a month dimming the days around it, the 1st names its month,
   // as where one week runs into the next month.
-  const label =
+  const name =
     !month && date.getDate() === 1
       ? `${date.getMonth() + 1}/1`
       : date.getDate();
+  const label =
+    dateKey(date) === dateKey(designToday) ? (
+      <span className={todayRound}>{name}</span>
+    ) : (
+      name
+    );
   if (!onPick) {
     return <span className={weekCell(look)}>{label}</span>;
   }
@@ -6008,6 +6016,7 @@ function PersonDay({
   onPick: (date: Date) => void;
 }) {
   const { isColoredHoliday } = useWeek();
+  const today = dateKey(date) === dateKey(designToday);
   const item = outside ? undefined : patternOn(member, date);
   // In their カラー, like their marks.
   const { tint } = useDisplayColor(item?.look.color ?? 0);
@@ -6033,7 +6042,8 @@ function PersonDay({
         className={cx(
           dayParts.date,
           outside && dayParts.dateOutside,
-          isColoredHoliday(date) && dayParts.holiday
+          isColoredHoliday(date) && !today && dayParts.holiday,
+          today && dayParts.today
         )}
       >
         {date.getDate()}
