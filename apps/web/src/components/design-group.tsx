@@ -637,6 +637,54 @@ export const sampleChats: Record<string, Chat> = {
     ],
     unread: 3,
   },
+  // Nine in all, so shared days have to fit more people than a bubble
+  // holds across.
+  "school:group": {
+    messages: [
+      {
+        from: "kana",
+        id: "s1",
+        text: "10月に一回集まりたいね！",
+        time: "20:14",
+        when: "昨日",
+      },
+      {
+        days: [new Date(2026, 9, 3)],
+        from: "kana",
+        id: "s2",
+        time: "20:15",
+        when: "昨日",
+      },
+      {
+        days: [
+          new Date(2026, 9, 10),
+          new Date(2026, 9, 11),
+          new Date(2026, 9, 12),
+        ],
+        from: "me",
+        id: "s3",
+        time: "21:02",
+        when: "昨日",
+      },
+      {
+        days: [
+          new Date(2026, 9, 18),
+          new Date(2026, 9, 24),
+          new Date(2026, 9, 25),
+          new Date(2026, 9, 31),
+          new Date(2026, 10, 1),
+          new Date(2026, 10, 7),
+          new Date(2026, 10, 8),
+          new Date(2026, 10, 14),
+        ],
+        from: "riku",
+        id: "s4",
+        time: "8:40",
+        when: "今日",
+      },
+    ],
+    unread: 1,
+  },
   // Six in all, so reactions run from one face to a count.
   "ward:group": {
     messages: [
@@ -2510,6 +2558,8 @@ const chatStyle = {
       display: "flex",
       font: "inherit",
       maxWidth: "100%",
+      // Lets the shared days' card shrink to the bubble's width.
+      minWidth: 0,
       padding: 0,
       textAlign: "left",
     },
@@ -3763,6 +3813,9 @@ const dayCard = {
       display: "flex",
       flexDirection: "column",
       gap: "8px",
+      // Never wider than its bubble, so the time beside it stays in view.
+      maxWidth: "100%",
+      minWidth: 0,
       padding: "12px 12px",
     },
     variants: { many: { true: { gap: 0, padding: "8px 8px" } } },
@@ -3775,9 +3828,9 @@ const dayCard = {
       placeItems: "center",
       width: "100%",
     },
-    variants: {
-      off: { true: { "&::before": offTile, bg: "accent.container" } },
-    },
+    // The cell itself is the tile; the tables' inset tile, positioned
+    // against the whole screen here, washed it all in the tile's color.
+    variants: { off: { true: { bg: "accent.container" } } },
   }),
   date: css({
     bg: "transparent",
@@ -3787,6 +3840,23 @@ const dayCard = {
     justifySelf: "start",
     padding: "0 0 0 4px",
   }),
+  // A day over its column when the table turns; the weekday under it,
+  // and a day everyone is off on the band's color.
+  dayHead: cva({
+    base: {
+      alignItems: "center",
+      borderRadius: "8px",
+      display: "flex",
+      flexDirection: "column",
+      fontSize: "11px",
+      fontWeight: 600,
+      lineHeight: 1.2,
+      padding: "2px 0",
+      width: "100%",
+    },
+    variants: { together: { true: { bg: "accent.container" } } },
+  }),
+  dayHeadWeekday: css({ fontSize: "9px", fontWeight: 400 }),
   head: css({
     alignItems: "center",
     bg: "transparent",
@@ -3799,7 +3869,8 @@ const dayCard = {
     padding: 0,
     textAlign: "left",
   }),
-  people: css({ display: "flex", gap: "12px" }),
+  // Many people wrap onto more lines rather than widen the card.
+  people: css({ display: "flex", flexWrap: "wrap", rowGap: "8px" }),
   person: css({
     alignItems: "center",
     color: "text.tertiary",
@@ -3807,6 +3878,13 @@ const dayCard = {
     flexDirection: "column",
     fontSize: "9px",
     gap: "4px",
+    width: "36px",
+  }),
+  rest: css({
+    color: "text.tertiary",
+    padding: "4px 4px 0",
+    textAlign: "end",
+    textStyle: "caption2",
   }),
   row: cva({
     base: {
@@ -3992,8 +4070,9 @@ const people = {
   }),
 };
 
-// Shared dates with each person's shift. One day spreads out; several
-// become a small table, a row per day.
+// Shared dates with each person's shift. One day spreads out, wrapping
+// when the people are many; several become a small table, a row per day,
+// or a row per person when the people don't fit across.
 function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
   const weekTools = useWeek();
   const [first] = days;
@@ -4020,6 +4099,9 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
         </span>
       </span>
     );
+  }
+  if (members.length > maxCardColumns) {
+    return <DayCardByPerson days={days} members={members} />;
   }
   const columns = {
     gridTemplateColumns: `44px repeat(${members.length}, 26px)`,
@@ -4064,6 +4146,75 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
           ))}
         </span>
       ))}
+    </span>
+  );
+}
+
+// A card fits this many columns of people or days in a bubble on the
+// narrowest phone.
+const maxCardColumns = 6;
+
+// Several days for more people than fit across: the table turns, a row
+// per person and a column per day, as the people can't be fewer but the
+// days can. Days past what fits are left to シフト表で見る.
+function DayCardByPerson({
+  days,
+  members,
+}: {
+  days: Date[];
+  members: Member[];
+}) {
+  const weekTools = useWeek();
+  const shown = days.slice(0, maxCardColumns);
+  const rest = days.length - shown.length;
+  const columns = {
+    gridTemplateColumns: `26px repeat(${shown.length}, 28px)`,
+  };
+  return (
+    <span className={dayCard.card({ many: true })} data-part="day-card">
+      <span className={dayCard.row({ names: true })} style={columns}>
+        {/* As in the shift table, the month once in the corner and the
+            days by number, with a new month's where it turns. */}
+        <span className={cornerMonth}>{(shown[0]?.getMonth() ?? 0) + 1}月</span>
+        {shown.map((date, index) => (
+          <span
+            className={cx(
+              dayCard.dayHead({ together: everyoneOff(members, date) }),
+              toneColor[weekTools.dateTone(date)]
+            )}
+            key={dateKey(date)}
+          >
+            {index > 0 && date.getMonth() !== shown[index - 1]?.getMonth()
+              ? `${date.getMonth() + 1}/${date.getDate()}`
+              : date.getDate()}
+            <small className={dayCard.dayHeadWeekday}>
+              {weekdayLabels[date.getDay()]}
+            </small>
+          </span>
+        ))}
+      </span>
+      {members.map((member) => (
+        <span className={dayCard.row()} key={member.id} style={columns}>
+          <span>
+            <Avatar member={member} />
+            <span className={srOnly}>{member.name}</span>
+          </span>
+          {shown.map((date) => (
+            <span
+              className={dayCard.cell({
+                off: patternOn(member, date)?.off === true,
+              })}
+              key={dateKey(date)}
+            >
+              <Mark date={date} member={member} size={15} />
+              <span className={srOnly}>
+                {formatDay(date)}：{patternOn(member, date)?.name ?? "未入力"}
+              </span>
+            </span>
+          ))}
+        </span>
+      ))}
+      {rest > 0 && <small className={dayCard.rest}>ほか{rest}日</small>}
     </span>
   );
 }
