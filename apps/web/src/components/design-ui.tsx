@@ -930,7 +930,6 @@ const listRowRoot = cva({
         top: 0,
       },
       "&:has(> [data-part=leading])::before": { left: "56px" },
-      position: "relative",
     },
     alignItems: "center",
     bg: "transparent",
@@ -942,6 +941,11 @@ const listRowRoot = cva({
     // iOS 26's list rows: 52pt, and about 67pt with a subtitle.
     minHeight: "52px",
     paddingInline: "16px",
+    // Every row, the first too: its separator hangs from it, and so does
+    // a switch's hidden checkbox. Left to a box outside the scrolling
+    // list, the checkbox stays where the row was before the list scrolled,
+    // and iOS Safari scrolls the whole page to it when a tap focuses it.
+    position: "relative",
     textAlign: "left",
     width: "100%",
   },

@@ -26,7 +26,7 @@ import {
   DesignProviders,
   useDesignTheme,
 } from "../components/design-providers";
-import { themeStyle } from "../components/design-theme";
+import { pageStyle } from "../components/design-theme";
 import { OffDisplayContext } from "../components/shift-mark";
 import { patterns } from "../lib/design-patterns";
 import { parseDesignVariants } from "../lib/design-variants";
@@ -52,7 +52,7 @@ const OCTOBER_DAYS = 31;
 function FlowsPage() {
   const theme = useDesignTheme();
   return (
-    <DesignPage style={themeStyle(theme, "light")}>
+    <DesignPage style={pageStyle(theme)}>
       <DesignToolbar back="documents" />
       <DesignIntro eyebrow="POCHICAL / FLOWS" title="画面遷移図">
         実際の画面を小さく並べています。触って試すときは、デモから。
