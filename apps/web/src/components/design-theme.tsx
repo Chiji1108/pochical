@@ -8,12 +8,14 @@ import type { ColorScheme } from "../lib/design-tokens";
 import { hexToOklch, oklchToHex } from "../lib/oklch";
 import { Choice, ChoiceGrid } from "./design-ui";
 
-// テーマ in the style settings: nine, three to a row, each keeping one
+// テーマ in the style settings: twelve, four to a row, so they take no
+// more rows than nine did and the settings below stay near. Each keeps one
 // color on the screen at about the shifts' own strength, so none clashes
-// with them. The first row is the basics: the app's moss, the same moss
-// softened on cream, and black ink. The second is colors the others lack:
-// blue, pink and violet. The third is always dark, its character a night:
-// a coffee shop, a moonlit night, a blackboard. Whether shifts keep their
+// with them. The first row is light basics: the app's moss, the same moss
+// softened on cream, black ink, and milk tea. The second is colors: blue,
+// indigo, pink and violet. The third is deep: matcha and cocoa, and two
+// always dark, their character a night: a moonlit night, a blackboard.
+// Whether shifts keep their
 // own colors is a choice of its own, シフトの色, since it carries
 // meaning rather than taste. Only the viewer's screen changes; a shift's
 // color slot is what syncs.
@@ -72,12 +74,33 @@ export const presets = [
     id: "sumi",
     name: "墨",
   },
+  // Soft and warm: a milky caramel on a screen a breath off white toward
+  // warmth, the shifts softened to sit with it. Yellower than ココア, which
+  // leans red.
+  {
+    accent: { chroma: 0.052, hue: 72, lightness: 0.52 },
+    grays: { hue: 68, strength: 1.3 },
+    ground: { chroma: 0.005, hue: 75, lightness: 0.993 },
+    id: "milktea",
+    name: "ミルクティー",
+    vividness: 0.75,
+  },
   // Fresh: a clear blue-green on cool grays.
   {
     accent: { chroma: 0.072, hue: 205, lightness: 0.48 },
     grays: { hue: 205, strength: 0.8 },
     id: "soda",
     name: "ソーダ",
+  },
+  // Indigo on unbleached cotton: a deep indigo, the screen only a breath
+  // off white toward the cotton's warmth.
+  {
+    accent: { chroma: 0.075, hue: 258, lightness: 0.43 },
+    grays: { hue: 80, strength: 0.7 },
+    ground: { chroma: 0.006, hue: 85, lightness: 0.993 },
+    id: "aizome",
+    name: "藍染め",
+    vividness: 0.75,
   },
   // Sweet: a grayed pink, the shifts softened with it.
   {
@@ -94,18 +117,20 @@ export const presets = [
     id: "sumire",
     name: "すみれ",
   },
-  // An old coffee shop after dark: grays warmed toward roast, text with a
-  // breath of brown, the amber of its lamps, and days off in coffee; the
-  // shifts softened as if printed. Amber rather than red keeps it apart
-  // from Sundays and holidays, and oranger than 月夜's moon.
+  // An olive yellow-green, as the tea.
   {
-    accent: { chroma: 0.115, hue: 68, lightness: 0.8 },
-    grays: { hue: 65, strength: 1.8 },
-    id: "kissa",
-    ink: { chroma: 0.021, hue: 50 },
-    name: "喫茶",
-    scheme: "dark",
-    tint: { chroma: 0.085, hue: 55 },
+    accent: { chroma: 0.095, hue: 116, lightness: 0.5 },
+    grays: { hue: 110, strength: 1 },
+    id: "matcha",
+    name: "抹茶",
+    vividness: 0.75,
+  },
+  // A deep chocolate brown, leaning red.
+  {
+    accent: { chroma: 0.045, hue: 40, lightness: 0.38 },
+    grays: { hue: 45, strength: 1 },
+    id: "cocoa",
+    name: "ココア",
     vividness: 0.75,
   },
   // A moonlit night: a deep navy screen and a moon yellow.
