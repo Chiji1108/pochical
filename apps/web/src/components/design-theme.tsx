@@ -26,6 +26,9 @@ export type Preset = {
   // lines. Every other role, and a light テーマ's dark mode, follows from
   // it by the steps in roleSteps.
   accent: Oklch;
+  // The color of tinted grounds (a day off's tile, what is picked) when
+  // the accent is too pale to lend them one, as chalk white is.
+  tint?: { chroma: number; hue: number };
   // The hue the grays lean toward, and how far: 1 leans as far as moss's
   // grays do, 0 is plain gray.
   grays: { hue: number; strength: number };
@@ -114,7 +117,8 @@ export const presets = [
     vividness: 0.85,
   },
   // A school blackboard: dark green, chalk white, and the shifts in chalk
-  // colors.
+  // colors. Days off sit on the board's own green, a shade lighter, as
+  // chalk rubbed out leaves it.
   {
     accent: { chroma: 0.012, hue: 165, lightness: 0.94 },
     grays: { hue: 165, strength: 3 },
@@ -122,6 +126,7 @@ export const presets = [
     id: "kokuban",
     name: "黒板",
     scheme: "dark",
+    tint: { chroma: 0.1, hue: 162 },
     vividness: 0.8,
   },
 ] as const satisfies readonly Preset[];
@@ -196,6 +201,14 @@ export function themeColors(preset: Preset, scheme: ColorScheme) {
   // a light one's dark mode follows from its light colors.
   const own = scheme === "light" || preset.scheme === "dark";
   const accent = own ? oklchToHex(preset.accent) : paint(dark.accent);
+  // Tinted grounds take `tint` when the テーマ has one.
+  const tint = preset.tint ?? { chroma, hue };
+  const paintTint = (step: { chroma: number; lightness: number }) =>
+    oklchToHex({
+      chroma: tint.chroma * step.chroma,
+      hue: tint.hue,
+      lightness: step.lightness,
+    });
   return {
     accent,
     fill: accent,
@@ -206,10 +219,10 @@ export function themeColors(preset: Preset, scheme: ColorScheme) {
             chroma: light.line.chroma,
             lightness: lightness + light.line.lightness,
           }),
-    markTint: paint(roleSteps[scheme].markTint),
+    markTint: paintTint(roleSteps[scheme].markTint),
     muted: paint(roleSteps[scheme].muted),
     onFill: onFillOf(accent),
-    soft: paint(roleSteps[scheme].soft),
+    soft: paintTint(roleSteps[scheme].soft),
   };
 }
 
