@@ -2294,41 +2294,11 @@ const chatStyle = {
       },
     },
   }),
-  // A reply's quote inside the bubble, over a thin rule, in the bubble's
-  // own text color.
-  bubbleQuote: css({
-    bg: "transparent",
-    border: 0,
-    color: "inherit",
-    display: "flex",
-    flexDirection: "column",
-    font: "inherit",
-    gap: "2px",
-    padding: "8px 12px 0",
-    textAlign: "left",
-  }),
-  bubbleQuoteName: css({
-    fontWeight: 600,
-    opacity: 0.85,
-    textStyle: "caption",
-  }),
-  bubbleQuoteText: css({
-    lineClamp: 2,
-    lineHeight: 1.45,
-    opacity: 0.8,
-    textStyle: "footnote",
-  }),
   // The avatar sits at the top by the name, the time by the bubble, so
   // the reactions under it push neither down.
   bubbleRow: cva({
     base: { alignItems: "flex-end", display: "flex", gap: "8px" },
     variants: { mine: { true: { flexDirection: "row-reverse" } } },
-  }),
-  bubbleRule: css({
-    bg: "currentcolor",
-    height: "1px",
-    margin: "8px -12px 0",
-    opacity: 0.25,
   }),
   bubbleText: css({
     bg: "transparent",
@@ -2486,6 +2456,54 @@ const chatStyle = {
   reactions: cva({
     base: { display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "-1px" },
     variants: { mine: { true: { justifyContent: "flex-end" } } },
+  }),
+  // The line a reply answers, set in from the bubble's edge; a curve
+  // from its middle bends down to meet the bubble's top by the corner.
+  replyTo: cva({
+    base: {
+      "&::before": {
+        borderBlockEndWidth: 0,
+        borderBlockStartWidth: "1.5px",
+        borderColor: "text.quaternary",
+        borderInlineEndWidth: 0,
+        borderInlineStartWidth: "1.5px",
+        borderStartStartRadius: "8px",
+        borderStyle: "solid",
+        bottom: "-4px",
+        content: '""',
+        insetInlineStart: "12px",
+        position: "absolute",
+        top: "50%",
+        width: "12px",
+      },
+      bg: "transparent",
+      border: 0,
+      display: "flex",
+      maxWidth: "100%",
+      minWidth: 0,
+      padding: 0,
+      paddingInlineStart: "24px",
+      position: "relative",
+    },
+    // Yours sit on the right, so the curve comes from the right.
+    variants: { mine: { true: { direction: "rtl" } } },
+  }),
+  replyToBubble: css({
+    bg: "fill.quaternary",
+    borderRadius: "12px",
+    color: "text.tertiary",
+    direction: "ltr",
+    overflow: "hidden",
+    padding: "4px 12px",
+    textAlign: "left",
+    textOverflow: "ellipsis",
+    textStyle: "footnote",
+    whiteSpace: "nowrap",
+  }),
+  replyToName: css({
+    color: "text.secondary",
+    fontWeight: 600,
+    marginInlineEnd: "8px",
   }),
   replying: css({
     alignItems: "center",
@@ -2734,6 +2752,26 @@ function ChatPage({
                   {!mine && isGroup && firstOfRun && (
                     <small className={chatStyle.name}>{member?.name}</small>
                   )}
+                  {quoted && (
+                    // As iMessage draws a reply: the line answered, small
+                    // and faint above, tied to the bubble by a thin curve;
+                    // a tap jumps to it.
+                    <button
+                      aria-label={`${nameOf(quoted.from)}への返信。返信元を表示`}
+                      className={chatStyle.replyTo({ mine })}
+                      onClick={() => {
+                        jumpTo(quoted.id);
+                      }}
+                      type="button"
+                    >
+                      <span className={chatStyle.replyToBubble}>
+                        <span className={chatStyle.replyToName}>
+                          {nameOf(quoted.from)}
+                        </span>
+                        {summaryOf(quoted)}
+                      </span>
+                    </button>
+                  )}
                   <span
                     className={cx(
                       chatStyle.bubbleRow({ mine }),
@@ -2751,33 +2789,10 @@ function ChatPage({
                         </button>
                       </MessageActions>
                     ) : (
-                      // Like the app: the quoted line sits inside the bubble,
-                      // above a thin rule, and jumps to the original.
                       <span
                         className={chatStyle.bubble({ mine })}
                         data-part="bubble"
                       >
-                        {quoted && (
-                          <button
-                            aria-label={`${nameOf(quoted.from)}への返信。返信元を表示`}
-                            className={chatStyle.bubbleQuote}
-                            onClick={() => {
-                              jumpTo(quoted.id);
-                            }}
-                            type="button"
-                          >
-                            <span className={chatStyle.bubbleQuoteName}>
-                              {nameOf(quoted.from)}
-                            </span>
-                            <span className={chatStyle.bubbleQuoteText}>
-                              {summaryOf(quoted)}
-                            </span>
-                            <span
-                              aria-hidden="true"
-                              className={chatStyle.bubbleRule}
-                            />
-                          </button>
-                        )}
                         <MessageActions {...actionsOf(message)}>
                           <button
                             aria-label={`${member?.name ?? ""}のメッセージ：${message.text ?? ""}。押すとリアクションと返信`}
