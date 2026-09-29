@@ -16,7 +16,7 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useContext, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
@@ -1311,25 +1311,50 @@ export function englishMonthOf(month: Date) {
 }
 
 // The year over the month's name, as the calendar's heading draws it:
-// 9月, or sep. as the カレンダー page's 月の表示 asks, said as 9月 to
+// 9月, or sep. as the カレンダー page's 月の表示 asks, said as 2026年9月 to
 // screen readers either way. The カレンダー page's preview draws it too.
+// As the month turns, its name rolls the way the pages went: the digits
+// as iOS's numericText rolls them, English letters one after another.
+// The year rolls only when it changes. With reduced motion it just
+// changes.
 export function MonthName({ month }: { month: Date }) {
   const style = useSettings((state) => state.device.monthName);
+  const reduceMotion = useReducedMotion() ?? false;
+  const key = month.getFullYear() * MONTHS_IN_YEAR + month.getMonth();
+  // Which way the last turn went, kept from the render before.
+  const [turn, setTurn] = useState({ direction: 1, key });
+  if (turn.key !== key) {
+    setTurn({ direction: key > turn.key ? 1 : -1, key });
+  }
   const number = month.getMonth() + 1;
+  const english = style === "english";
   return (
     <>
-      <span className={monthName.year({ lower: style === "english" })}>
-        {month.getFullYear()}
+      <span className={srOnly}>
+        {month.getFullYear()}年{number}月
       </span>
-      <strong className={monthName.month}>
-        {style === "english" ? (
-          <>
-            <span aria-hidden="true">{englishMonthOf(month)}</span>
-            <span className={srOnly}>{number}月</span>
-          </>
+      <span aria-hidden="true" className={monthName.year({ lower: english })}>
+        <Rolling
+          direction={turn.direction}
+          still={reduceMotion}
+          text={String(month.getFullYear())}
+        />
+      </span>
+      <strong aria-hidden="true" className={monthName.month}>
+        {english ? (
+          <Rolling
+            direction={turn.direction}
+            letters
+            still={reduceMotion}
+            text={englishMonthOf(month)}
+          />
         ) : (
           <>
-            {number}
+            <Rolling
+              direction={turn.direction}
+              still={reduceMotion}
+              text={String(number)}
+            />
             <span className={monthName.unit}>月</span>
           </>
         )}
@@ -1338,8 +1363,79 @@ export function MonthName({ month }: { month: Date }) {
   );
 }
 
+const MONTHS_IN_YEAR = 12;
+// Short, and without bounce, done with the pages' own slide.
+const roll = { bounce: 0, type: "spring", visualDuration: 0.25 } as const;
+const LETTER_DELAY = 0.03;
+// The most letters an English month has, as sep.
+const LONGEST_MONTH = 4;
+const rollSteps = {
+  coming: (by: number) => ({ opacity: 0, y: `${by * 60}%` }),
+  gone: (by: number) => ({ opacity: 0, y: `${by * -60}%` }),
+  shown: { opacity: 1, y: 0 },
+};
+
+// Text that rolls to its next value: up and out as the next comes up from
+// under it when going forward, the other way going back. `letters` rolls
+// each letter a moment after the one before, as English month names do.
+// Each letter keeps a place of its own, so the way out follows the latest
+// turn, and a letter repeated from the month before still rolls.
+function Rolling({
+  text,
+  direction,
+  letters = false,
+  still,
+}: {
+  text: string;
+  direction: number;
+  letters?: boolean;
+  still: boolean;
+}) {
+  if (still) {
+    return <>{text}</>;
+  }
+  const parts = letters ? [...text] : [text];
+  const places = letters ? Math.max(parts.length, LONGEST_MONTH) : 1;
+  return (
+    <>
+      {Array.from({ length: places }, (_, index) => {
+        const part = parts[index];
+        return (
+          // The place is what stays; what is in it changes.
+          // oxlint-disable-next-line react/no-array-index-key
+          <span className={monthName.place} key={index}>
+            <AnimatePresence
+              custom={direction}
+              initial={false}
+              mode="popLayout"
+            >
+              {part !== undefined && (
+                <motion.span
+                  animate="shown"
+                  className={monthName.part}
+                  custom={direction}
+                  exit="gone"
+                  initial="coming"
+                  key={`${text}-${index}`}
+                  transition={{ ...roll, delay: index * LETTER_DELAY }}
+                  variants={rollSteps}
+                >
+                  {part}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
 const monthName = {
   month: css({ fontSize: "36px", fontWeight: 600, lineHeight: 1.1 }),
+  part: css({ display: "inline-block", whiteSpace: "pre" }),
+  // Where a rolling part is, the one on its way out laid over the next.
+  place: css({ display: "inline-block", position: "relative" }),
   unit: css({ fontSize: "14px", fontWeight: 500, marginLeft: "4px" }),
   // Lower case stands about 0.2em shorter than the digits, 7px at 36px,
   // so the year comes down that much, leaving the same room over the
@@ -1473,9 +1569,21 @@ function SwipeCorner({
           {next}
         </div>
       )}
-      {mode !== "edit" && !atToday && (
-        <div className={heading.backAtEnd}>{back}</div>
-      )}
+      {/* 今月 fades in and out, as iOS's bar buttons do, so it comes and
+          goes with the month's name rolling beside it. */}
+      <AnimatePresence initial={false}>
+        {mode !== "edit" && !atToday && (
+          <motion.div
+            animate={{ opacity: 1 }}
+            className={heading.backAtEnd}
+            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {back}
+          </motion.div>
+        )}
+      </AnimatePresence>
       {mode === "view" ? (
         <IconMenu
           icon={<Download aria-hidden="true" size={21} />}
