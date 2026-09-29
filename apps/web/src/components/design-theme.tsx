@@ -10,9 +10,10 @@ import { Choice, ChoiceGrid } from "./design-ui";
 
 // テーマ in the style settings: nine moods, each drawing every color it
 // has from a few numbers, so a テーマ is designed as a whole and none is a
-// pairing that clashes. Four keep each shift's own color, five draw every
-// shift in the theme's ink. Only the viewer's screen changes; a shift's
-// color slot is what syncs.
+// pairing that clashes. Whether shifts keep their own colors is a switch
+// of its own, シフトを色分けする, since it carries meaning rather than
+// taste. Only the viewer's screen changes; a shift's color slot is what
+// syncs.
 type Oklch = { lightness: number; chroma: number; hue: number };
 
 export type Preset = {
@@ -26,9 +27,8 @@ export type Preset = {
   grays: { hue: number; strength: number };
   // A faintly colored screen instead of white, in light only.
   ground?: { chroma: number; hue: number };
-  // "mono" draws icons and letters in the theme color; emoji keep theirs.
-  marks: "multi" | "mono";
-  // For "multi": the share of each shift color's chroma kept, 1 as tuned.
+  // The share of each shift color's chroma kept when shifts are colored,
+  // 1 as tuned; the muted テーマ soften theirs to sit with them.
   vividness?: number;
 };
 
@@ -38,7 +38,6 @@ export const presets = [
     accent: { chroma: 0.06, hue: 141, lightness: 0.472 },
     grays: { hue: 141, strength: 1 },
     id: "pochical",
-    marks: "multi",
     name: "ポチカル",
   },
   // Soft and warm: a milky caramel on a faintly warm screen, the shifts
@@ -48,7 +47,6 @@ export const presets = [
     grays: { hue: 68, strength: 1.3 },
     ground: { chroma: 0.005, hue: 75 },
     id: "milktea",
-    marks: "multi",
     name: "ミルクティー",
     vividness: 0.75,
   },
@@ -57,7 +55,6 @@ export const presets = [
     accent: { chroma: 0.072, hue: 205, lightness: 0.48 },
     grays: { hue: 205, strength: 0.8 },
     id: "soda",
-    marks: "multi",
     name: "ソーダ",
   },
   // Sweet: a grayed pink, the shifts softened with it.
@@ -65,7 +62,6 @@ export const presets = [
     accent: { chroma: 0.075, hue: 6, lightness: 0.5 },
     grays: { hue: 10, strength: 0.9 },
     id: "sakura",
-    marks: "multi",
     name: "さくら",
     vividness: 0.75,
   },
@@ -74,7 +70,6 @@ export const presets = [
     accent: { chroma: 0.008, hue: 138, lightness: 0.363 },
     grays: { hue: 138, strength: 0.3 },
     id: "sumi",
-    marks: "mono",
     name: "墨",
   },
   // Indigo on unbleached cotton: a deep indigo, the screen only a breath
@@ -84,31 +79,30 @@ export const presets = [
     grays: { hue: 80, strength: 0.7 },
     ground: { chroma: 0.006, hue: 85 },
     id: "aizome",
-    marks: "mono",
     name: "藍染め",
+    vividness: 0.75,
   },
   // An olive yellow-green, as the tea.
   {
     accent: { chroma: 0.095, hue: 116, lightness: 0.5 },
     grays: { hue: 110, strength: 1 },
     id: "matcha",
-    marks: "mono",
     name: "抹茶",
+    vividness: 0.75,
   },
   // A deep chocolate brown, leaning red.
   {
     accent: { chroma: 0.045, hue: 40, lightness: 0.38 },
     grays: { hue: 45, strength: 1 },
     id: "cocoa",
-    marks: "mono",
     name: "ココア",
+    vividness: 0.75,
   },
   // A deep violet.
   {
     accent: { chroma: 0.083, hue: 294, lightness: 0.474 },
     grays: { hue: 294, strength: 0.8 },
     id: "sumire",
-    marks: "mono",
     name: "すみれ",
   },
 ] as const satisfies readonly Preset[];

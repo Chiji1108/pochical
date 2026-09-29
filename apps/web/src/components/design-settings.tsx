@@ -594,6 +594,8 @@ const offSample = cva({
 });
 
 const settingsParts = {
+  // The テーマ cards and the switch under them.
+  themeGroup: css({ display: "flex", flexDirection: "column", gap: "16px" }),
   // A section's footer, as iOS sets explanation under a group of rows.
   footer: css({
     color: "text.tertiary",
@@ -1358,7 +1360,10 @@ function MarkPage({
           />
         }
       >
-        <ThemeChoices scheme={shown} />
+        <div className={settingsParts.themeGroup}>
+          <ThemeChoices scheme={shown} />
+          <ShiftColorsSwitch />
+        </div>
       </Section>
       <Section title="休みの見せ方">
         <OffLookChoices current={current} />
@@ -1833,6 +1838,24 @@ function WeekPage({
         土曜と日曜は曜日の見出しに、祝日は日付に色がつきます。祝日は日曜と同じ赤です。グループの画面でも、この並びと色で表示されます。
       </Note>
     </>
+  );
+}
+
+// シフトを色分けする: each shift in its own color, or every shift in the
+// テーマ's. It carries meaning, telling shifts apart at a glance, so it
+// is a choice of its own rather than part of a テーマ; the cards above
+// follow it.
+function ShiftColorsSwitch() {
+  const shiftColors = useSettings((state) => state.device.shiftColors);
+  const setShiftColors = useSettings((state) => state.setShiftColors);
+  return (
+    <List>
+      <SwitchRow
+        checked={shiftColors}
+        label="シフトを色分けする"
+        onChange={setShiftColors}
+      />
+    </List>
   );
 }
 

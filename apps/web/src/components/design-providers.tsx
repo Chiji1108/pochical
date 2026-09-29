@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { useLook, useSettings } from "../lib/design-settings-store";
 import { useDeviceScheme } from "../lib/use-device-scheme";
-import { ColorSchemeContext, ThemeContext, presetOf } from "./design-theme";
+import { ColorSchemeContext, ThemeContext } from "./design-theme";
 import type { PresetId } from "./design-theme";
 import { WeekSettingsContext } from "./design-week";
 import {
@@ -29,13 +29,7 @@ export function PresetContexts({
   id: PresetId;
   children: ReactNode;
 }) {
-  return (
-    <ThemeContext value={{ theme: id }}>
-      <MonochromeContext value={{ monochrome: presetOf(id).marks === "mono" }}>
-        {children}
-      </MonochromeContext>
-    </ThemeContext>
-  );
+  return <ThemeContext value={{ theme: id }}>{children}</ThemeContext>;
 }
 
 // The settings store as the contexts the screens read. Parts of a page
@@ -44,8 +38,9 @@ export function PresetContexts({
 // by /demo and the /design pages alike.
 export function DesignProviders({ children }: { children: ReactNode }) {
   const look = useLook();
-  const { preset, appearance, week } = useSettings((state) => state.device);
-  const { marks } = presetOf(preset);
+  const { preset, appearance, week, shiftColors } = useSettings(
+    (state) => state.device
+  );
   // Saved device settings load once the page has hydrated.
   useEffect(() => {
     void useSettings.persist.rehydrate();
@@ -77,7 +72,7 @@ export function DesignProviders({ children }: { children: ReactNode }) {
                     },
                   }}
                 >
-                  <MonochromeContext value={{ monochrome: marks === "mono" }}>
+                  <MonochromeContext value={{ monochrome: !shiftColors }}>
                     <OffDisplayContext value={look.blankOff ? "blank" : "show"}>
                       {children}
                     </OffDisplayContext>

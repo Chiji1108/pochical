@@ -588,14 +588,11 @@ function ThemePalette({
   );
 }
 
-// How a テーマ's shifts are drawn, as the palette page names it.
+// How a テーマ draws shifts when シフトを色分けする is on.
 function marksLabel(preset: Preset) {
-  if (preset.marks === "mono") {
-    return "シフトは1色";
-  }
   return (preset.vividness ?? 1) === 1
-    ? "シフトは色分け"
-    : "シフトは色分け（やわらか）";
+    ? "シフトの色はそのまま"
+    : "シフトの色はやわらか";
 }
 
 function ThemeTokens() {
@@ -631,17 +628,10 @@ function ThemeTokens() {
 
 // The shift colors as the colorful テーマ draw them: as tuned, or softened.
 const markLevels = [
-  ...new Set(
-    presets.flatMap((preset: Preset) =>
-      preset.marks === "multi" ? [preset.vividness ?? 1] : []
-    )
-  ),
+  ...new Set(presets.map((preset: Preset) => preset.vividness ?? 1)),
 ].map((vividness) => ({
   label: presets
-    .filter(
-      (preset: Preset) =>
-        preset.marks === "multi" && (preset.vividness ?? 1) === vividness
-    )
+    .filter((preset: Preset) => (preset.vividness ?? 1) === vividness)
     .map((preset) => preset.name)
     .join("・"),
   vividness,
