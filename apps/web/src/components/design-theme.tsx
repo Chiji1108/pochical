@@ -8,15 +8,16 @@ import type { ColorScheme } from "../lib/design-tokens";
 import { hexToOklch, oklchToHex } from "../lib/oklch";
 import { Choice, ChoiceGrid } from "./design-ui";
 
-// テーマ in the style settings: nine, three to a row, each keeping one
+// テーマ in the style settings: twelve, three to a row, each keeping one
 // color on the screen at about the shifts' own strength, so none clashes
 // with them. The first row is the basics: the app's moss, the same moss
-// softened on cream, and black ink. The second is colors the others lack:
-// blue, pink and violet. The third is always dark, its character a night:
-// a coffee shop, a moonlit night, a blackboard. Whether shifts keep their
-// own colors is a choice of its own, シフトの色, since it carries
-// meaning rather than taste. Only the viewer's screen changes; a shift's
-// color slot is what syncs.
+// softened on cream, and black ink. The second is warm, earthy ones:
+// milk tea, matcha and cocoa. The third is colors: blue, pink and violet.
+// The fourth is always dark, its character a night: a coffee shop, a
+// moonlit night, a blackboard. Whether shifts keep their own colors is a
+// choice of its own, シフトの色, since it carries meaning rather than
+// taste. Only the viewer's screen changes; a shift's color slot is what
+// syncs.
 type Oklch = { lightness: number; chroma: number; hue: number };
 
 export type Preset = {
@@ -71,6 +72,33 @@ export const presets = [
     grays: { hue: 138, strength: 0.3 },
     id: "sumi",
     name: "墨",
+  },
+  // Soft and warm: a milky caramel on a screen a breath off white toward
+  // warmth, the shifts softened to sit with it. Yellower than ココア, which
+  // leans red.
+  {
+    accent: { chroma: 0.052, hue: 72, lightness: 0.52 },
+    grays: { hue: 68, strength: 1.3 },
+    ground: { chroma: 0.005, hue: 75, lightness: 0.993 },
+    id: "milktea",
+    name: "ミルクティー",
+    vividness: 0.75,
+  },
+  // An olive yellow-green, as the tea.
+  {
+    accent: { chroma: 0.095, hue: 116, lightness: 0.5 },
+    grays: { hue: 110, strength: 1 },
+    id: "matcha",
+    name: "抹茶",
+    vividness: 0.75,
+  },
+  // A deep chocolate brown, leaning red.
+  {
+    accent: { chroma: 0.045, hue: 40, lightness: 0.38 },
+    grays: { hue: 45, strength: 1 },
+    id: "cocoa",
+    name: "ココア",
+    vividness: 0.75,
   },
   // Fresh: a clear blue-green on cool grays.
   {
