@@ -456,19 +456,34 @@ export function DesignCalendar({
       `${month.getMonth() + 1}月${selectedDay}日、${result}。${selectedDay === lastDay ? "月末です。入力が終わったら完了を押してください" : `${nextDay}日を選択中`}`
     );
   }
+  function announcePicked(date: Date) {
+    setAnnouncement(
+      `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日を選択中`
+    );
+  }
+  // The day to enter, in its own month: a day of the month before or after,
+  // tapped on the calendar or picked from the date, turns to that month.
+  function enterFrom(date: Date) {
+    setSelectedDay(date.getDate());
+    if (
+      date.getFullYear() === month.getFullYear() &&
+      date.getMonth() === month.getMonth()
+    ) {
+      return;
+    }
+    const target = new Date(date.getFullYear(), date.getMonth(), 1);
+    setPageTurn((turn) => turn + 1);
+    setMonth(target);
+    setEnteredBlank(hasBlanks(schedule, target));
+    announcePicked(date);
+  }
   const datePicker = (
     <InputDatePicker
       ariaLabel={`入力する日付：${month.getMonth() + 1}月${selectedDay}日(${weekdays[selectedDate.getDay()]})。タップで変更`}
       date={selectedDate}
       onSelect={(date) => {
-        const target = new Date(date.getFullYear(), date.getMonth(), 1);
-        setSelectedDay(date.getDate());
-        setPageTurn((turn) => turn + 1);
-        setMonth(target);
-        setEnteredBlank(hasBlanks(schedule, target));
-        setAnnouncement(
-          `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日を選択中`
-        );
+        enterFrom(date);
+        announcePicked(date);
       }}
     >
       <span>
@@ -489,12 +504,20 @@ export function DesignCalendar({
     const index = dates.findIndex((day) => dateKey(day) === dateKey(date));
     return Math.max(0, Math.floor(index / 7));
   }
+  function onMonth(date: Date) {
+    return dates.some((day) => dateKey(day) === dateKey(date));
+  }
+  // The month stays while the week opened is one of its rows, as every row
+  // holds a day of it: a day of the month before, opened from the top row,
+  // folds back into that row. Only a week off the month takes its month.
   function openDetail(date: Date) {
     if (!weekDetail) {
       setFoldRow(rowOf(date));
     }
     setDetailDate(date);
-    setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+    if (!onMonth(date)) {
+      setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+    }
   }
   function goToMonth(target: Date) {
     setPageTurn((turn) => turn + 1);
@@ -762,9 +785,7 @@ export function DesignCalendar({
                         entry={schedule[dateKey(date)]}
                         key={dateKey(date)}
                         onPress={() => {
-                          editing
-                            ? setSelectedDay(date.getDate())
-                            : openDetail(date);
+                          editing ? enterFrom(date) : openDetail(date);
                         }}
                         outside={
                           !weekDetail &&
@@ -1815,7 +1836,9 @@ export const dayCell = cva({
     },
     // A day off in its own pattern's tint, set as --off-tint.
     off: { true: { bg: "var(--off-tint, var(--calendar-off-tint))" } },
-    outside: { true: { color: "text.disabled" } },
+    // A day of the month before or after: the same day, faded whole, as on
+    // the group's calendar.
+    outside: { true: { opacity: 0.35 } },
     today: {
       true: {
         outline: "1.5px solid token(colors.accent.focus)",
@@ -1948,7 +1971,10 @@ export function DayCell({
   className?: string;
 }) {
   const markStyle = useContext(ShiftMarkStyleContext);
-  const shift = outside ? undefined : entry?.shift;
+  // A picture of the month keeps to the month; on screen the days around it
+  // show what they hold, faded, and open like any other day.
+  const blank = outside && plain;
+  const shift = blank ? undefined : entry?.shift;
   const highlight = useOffHighlight(markStyle);
   const { tint } = useDisplayColor(lookOf(shift ?? "off").color);
   const offDisplay = useContext(OffDisplayContext);
@@ -1960,12 +1986,12 @@ export function DayCell({
     hideOff || faintOff ? undefined : dayOffStyle(shift, highlight, tint);
   const today = dateKey(date) === dateKey(designToday);
   const holiday = useWeek().isColoredHoliday(date);
-  const change = outside ? undefined : timeChangeOf(entry);
+  const change = blank ? undefined : timeChangeOf(entry);
   // A note is about the day, not the shift, so the date is marked, with a
   // stroke as in a paper diary, apart from the shift's 早出 and 残業
   // corners, and only on the person's own calendar. Other time
   // changes, a later start or an earlier end, show when the day is opened.
-  const noted = !(outside || plain) && Boolean(entry?.note);
+  const noted = !plain && Boolean(entry?.note);
   // The picked frame wins over today's.
   const cellClass = cx(
     dayCell({
@@ -1998,7 +2024,7 @@ export function DayCell({
       )}
     </>
   );
-  if (outside) {
+  if (blank) {
     return (
       <div className={cellClass} style={offStyle}>
         {content}

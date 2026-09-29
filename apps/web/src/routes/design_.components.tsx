@@ -648,6 +648,9 @@ function Pochical() {
         <Item name="DayCell" where="未入力">
           <Cell />
         </Item>
+        <Item name="DayCell" where="前後の月">
+          <Cell entry={{ note: "棚卸し", shift: "day" }} outside />
+        </Item>
         <Item
           name="WeekdayRow + dayGrid"
           where="カレンダー・メンバーの月・保存する画像・見た目の見本"
@@ -710,9 +713,11 @@ const sampleDay = css({ height: "56px", width: "100%" });
 function Cell({
   entry,
   active = false,
+  outside = false,
 }: {
   entry?: Parameters<typeof DayCell>[0]["entry"];
   active?: boolean;
+  outside?: boolean;
 }) {
   return (
     <div className={catalog.cell}>
@@ -723,7 +728,7 @@ function Cell({
         editing={false}
         entry={entry}
         onPress={() => undefined}
-        outside={false}
+        outside={outside}
       />
     </div>
   );
