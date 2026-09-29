@@ -9,6 +9,7 @@ import { useContext, useState } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import type { ImageOptions } from "../lib/design-settings-store";
+import { AppIcon, darkTwinOf, useAppIcons } from "./design-app-icon";
 import { DayCell, dateKey } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
 import { NameTabs, OffLookTabs } from "./design-settings";
@@ -86,11 +87,16 @@ const picture = {
     gridTemplateColumns: "1fr 1fr",
     padding: "12px 4px 20px",
   }),
+  // The app's name with its icon, so someone who gets the picture can
+  // find the app in the store by the same dog.
   credit: css({
+    alignItems: "center",
     color: "text.quaternary",
-    fontSize: "10px",
+    display: "flex",
+    fontSize: "11px",
+    gap: "6px",
+    justifyContent: "flex-end",
     margin: "12px 4px 0",
-    textAlign: "right",
   }),
   frame: css({
     bg: "background.base",
@@ -305,6 +311,9 @@ export function ImagePreviewPage({
   const { theme } = useContext(ThemeContext);
   const tone = useContext(ToneContext);
   const shown = options.scheme ?? scheme;
+  const icons = useAppIcons();
+  // The store shows the default icon, whichever one this device picked.
+  const creditIcon = shown === "dark" ? darkTwinOf.moss : "moss";
   const title = `${month.getFullYear()}年${month.getMonth() + 1}月のシフト`;
   return (
     <Screen>
@@ -354,7 +363,10 @@ export function ImagePreviewPage({
                         />
                       ))}
                     </div>
-                    <p className={picture.credit}>ポチカル</p>
+                    <p className={picture.credit}>
+                      <AppIcon size={16} src={icons[creditIcon]} />
+                      ポチカル
+                    </p>
                   </figure>
                 </OffDisplayContext>
               </ColorSchemeContext>
