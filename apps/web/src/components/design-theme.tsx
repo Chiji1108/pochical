@@ -1,7 +1,7 @@
 import { Moon, Sun } from "lucide-react";
 import { createContext, useContext } from "react";
 import type { CSSProperties } from "react";
-import { css } from "styled-system/css";
+import { css, cva } from "styled-system/css";
 
 import { neutralStyle } from "../lib/design-tokens";
 import type { ColorScheme, NeutralTint, Tone } from "../lib/design-tokens";
@@ -305,7 +305,8 @@ const previewSchemes = [
 ] as const;
 
 // ☀︎ / ☾ on a preview's top edge, to see it in the other of light and dark
-// without changing 外観. Sits inside a previewWrap, with the preview.
+// without changing 外観. Sits inside a previewWrap, with the preview, or
+// inline at the end of a section's title for what the section shows.
 export const previewWrap = css({ position: "relative" });
 const schemeSwitch = {
   choice: css({
@@ -323,30 +324,37 @@ const schemeSwitch = {
   // Ark keeps the group itself relatively positioned, so the choices
   // flow into the wrapper that sits on the edge.
   choices: css({ display: "contents" }),
-  edge: css({
-    bg: "background.card",
-    border: "1px solid token(colors.separator)",
-    borderRadius: "12px",
-    display: "flex",
-    gap: "2px",
-    left: "12px",
-    margin: 0,
-    padding: "2px",
-    position: "absolute",
-    top: "-10px",
+  frame: cva({
+    base: {
+      bg: "background.card",
+      border: "1px solid token(colors.separator)",
+      borderRadius: "12px",
+      display: "flex",
+      gap: "2px",
+      margin: 0,
+      padding: "2px",
+    },
+    variants: {
+      placement: {
+        edge: { left: "12px", position: "absolute", top: "-10px" },
+        inline: {},
+      },
+    },
   }),
 };
 export function PreviewSchemeSwitch({
   shown,
   onPick,
+  placement = "edge",
 }: {
   shown: ColorScheme;
   onPick: (scheme: ColorScheme) => void;
+  placement?: "edge" | "inline";
 }) {
   return (
     // Ark keeps the group itself relatively positioned, so a wrapper
     // places it on the edge.
-    <div className={schemeSwitch.edge}>
+    <div className={schemeSwitch.frame({ placement })}>
       <ChoiceGrid
         className={schemeSwitch.choices}
         label="プレビューの明るさ"

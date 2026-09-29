@@ -1331,10 +1331,15 @@ function MarkPage({
   onBack: () => void;
 }) {
   const current = useContext(ShiftMarkStyleContext);
+  // The preview and the テーマ cards show in the other of light and dark
+  // together, from either one's ☀︎ / ☾, without touching 外観.
+  const scheme = useContext(ColorSchemeContext);
+  const [picked, setPicked] = useState<ColorScheme>();
+  const shown = picked ?? scheme;
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="スタイル" />
-      <StylePreview preview={preview} />
+      <StylePreview preview={preview} shared={{ onPick: setPicked, shown }} />
       {/* Every choice shows in the preview at once, so there is nothing to
           confirm or cancel. Only the shape reaches the group, so it alone
           says so, under it as iOS puts a section's footer. */}
@@ -1344,8 +1349,17 @@ function MarkPage({
           グループの人にも、この見た目で表示されます。
         </p>
       </Section>
-      <Section title="テーマ">
-        <ThemeChoices />
+      <Section
+        title="テーマ"
+        trailing={
+          <PreviewSchemeSwitch
+            onPick={setPicked}
+            placement="inline"
+            shown={shown}
+          />
+        }
+      >
+        <ThemeChoices scheme={shown} />
       </Section>
       <Section title="休みの見せ方">
         <OffLookChoices current={current} />
@@ -1403,14 +1417,22 @@ function sampleSequence(patternKeys: Shift[]): Shift[] {
 }
 
 // The preview can show the other of light and dark on its own, without
-// touching 外観, so a style can be judged in both.
-function StylePreview({ preview }: { preview: StylePreviewData }) {
+// touching 外観, so a style can be judged in both. A page that shows more
+// in the same light or dark passes it in.
+function StylePreview({
+  preview,
+  shared,
+}: {
+  preview: StylePreviewData;
+  shared?: { shown: ColorScheme; onPick: (scheme: ColorScheme) => void };
+}) {
   const { dates, schedule } = preview;
   const scheme = useContext(ColorSchemeContext);
+  const [picked, setPicked] = useState<ColorScheme>();
+  const shown = shared?.shown ?? picked ?? scheme;
+  const onPick = shared?.onPick ?? setPicked;
   const { theme } = useContext(ThemeContext);
   const tone = useContext(ToneContext);
-  const [picked, setPicked] = useState<ColorScheme>();
-  const shown = picked ?? scheme;
   return (
     <div className={previewWrap}>
       <ColorSchemeContext value={shown}>
@@ -1437,7 +1459,7 @@ function StylePreview({ preview }: { preview: StylePreviewData }) {
           </div>
         </div>
       </ColorSchemeContext>
-      <PreviewSchemeSwitch onPick={setPicked} shown={shown} />
+      <PreviewSchemeSwitch onPick={onPick} shown={shown} />
     </div>
   );
 }
@@ -1823,10 +1845,9 @@ const presetSampleShifts: Shift[] = ["day", "night", "after", "off"];
 // colors, so the colorful ones and the one-color ones tell apart at a
 // glance, and a stroke of its accent, as its buttons take it. The one in
 // use sits on a gray card, as app icons do.
-function ThemeChoices() {
+function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
   const current = useSettings((state) => state.device.preset);
   const setPreset = useSettings((state) => state.setPreset);
-  const scheme = useContext(ColorSchemeContext);
   return (
     <ChoiceGrid
       className={themeCard.grid}
@@ -1841,13 +1862,15 @@ function ThemeChoices() {
             className={themeCard.sample}
             style={themeStyle(preset.theme, scheme, preset.tone)}
           >
-            <PresetContexts preset={preset}>
-              <span className={themeCard.marks}>
-                {presetSampleShifts.map((shift) => (
-                  <ShiftMark key={shift} shift={shift} size={16} />
-                ))}
-              </span>
-            </PresetContexts>
+            <ColorSchemeContext value={scheme}>
+              <PresetContexts preset={preset}>
+                <span className={themeCard.marks}>
+                  {presetSampleShifts.map((shift) => (
+                    <ShiftMark key={shift} shift={shift} size={16} />
+                  ))}
+                </span>
+              </PresetContexts>
+            </ColorSchemeContext>
             <span className={themeCard.accent} />
           </span>
           {preset.name}
