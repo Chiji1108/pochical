@@ -1506,7 +1506,10 @@ function RollingBox({
     return `${measured.current + (toward - measured.current) * share}px`;
   });
   return (
-    <motion.span className={monthName.box} style={{ width }}>
+    <motion.span
+      className={monthName.box({ lower: letters })}
+      style={{ width }}
+    >
       <span className={monthName.current} ref={currentRef}>
         {Array.from({ length: places }, (_, index) => (
           <RollingPlace
@@ -1659,17 +1662,21 @@ function ComingPart({
 
 const monthName = {
   month: css({ fontSize: "36px", fontWeight: 600, lineHeight: 1.1 }),
-  // Shows only its own line, with room for the letters' tops and tails;
-  // sideways the name may run on while the box's width catches up.
-  box: css({
-    display: "inline-block",
-    marginBlock: "-4px",
-    overflowX: "visible",
-    overflowY: "clip",
-    paddingBlock: "4px",
-    position: "relative",
-    verticalAlign: "baseline",
-    whiteSpace: "nowrap",
+  // Shows only its own line, with room for the letters' tails, from
+  // right under the year; sideways the name may run on while the box's
+  // width catches up. Over lower case the year sits 7px lower (see year
+  // below), so what is shown starts that much lower too.
+  box: cva({
+    base: {
+      clipPath: "inset(0 -100px)",
+      display: "inline-block",
+      marginBlock: "-4px",
+      paddingBlock: "4px",
+      position: "relative",
+      verticalAlign: "baseline",
+      whiteSpace: "nowrap",
+    },
+    variants: { lower: { true: { clipPath: "inset(7px -100px 0)" } } },
   }),
   coming: css({ left: 0, position: "absolute", top: "4px" }),
   current: css({ display: "inline-block" }),
