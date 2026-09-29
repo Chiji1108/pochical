@@ -572,8 +572,8 @@ const themeCard = {
     gap: "8px",
     padding: "8px 8px 12px",
   }),
-  // The テーマ's text and its fill side by side, so a colored ink shows
-  // beside its accent.
+  // The テーマ's text and its fill side by side, so a colored ink, as
+  // 喫茶's, shows beside its accent.
   strokes: css({
     "& span": { borderRadius: "999px", height: "4px" },
     "& span:first-child": { bg: "text.primary", width: "20px" },

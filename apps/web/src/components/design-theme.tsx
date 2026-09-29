@@ -12,13 +12,12 @@ import { Choice, ChoiceGrid } from "./design-ui";
 // color on the screen at about the shifts' own strength, so none clashes
 // with them. The first row is the basics: the app's moss, the same moss
 // softened on cream, and black ink. The second is warm, earthy ones:
-// milk tea, matcha and cocoa. The third is colors: blue, pink and violet. The
-// fourth is deep: indigo, and two always dark, their character a night: a
-// moonlit night, a blackboard.
-// Whether shifts keep their
-// own colors is a choice of its own, シフトの色, since it carries
-// meaning rather than taste. Only the viewer's screen changes; a shift's
-// color slot is what syncs.
+// milk tea, matcha and cocoa. The third is colors: blue, pink and violet.
+// The fourth is always dark, its character a night: a coffee shop, a
+// moonlit night, a blackboard. Whether shifts keep their own colors is a
+// choice of its own, シフトの色, since it carries meaning rather than
+// taste. Only the viewer's screen changes; a shift's color slot is what
+// syncs.
 type Oklch = { lightness: number; chroma: number; hue: number };
 
 export type Preset = {
@@ -123,14 +122,18 @@ export const presets = [
     id: "sumire",
     name: "すみれ",
   },
-  // Indigo on unbleached cotton: a deep indigo, the screen only a breath
-  // off white toward the cotton's warmth.
+  // An old coffee shop after dark: grays warmed toward roast, text with a
+  // breath of brown, the amber of its lamps, and days off in coffee; the
+  // shifts softened as if printed. Amber rather than red keeps it apart
+  // from Sundays and holidays, and oranger than 月夜's moon.
   {
-    accent: { chroma: 0.075, hue: 258, lightness: 0.43 },
-    grays: { hue: 80, strength: 0.7 },
-    ground: { chroma: 0.006, hue: 85, lightness: 0.993 },
-    id: "aizome",
-    name: "藍染め",
+    accent: { chroma: 0.115, hue: 68, lightness: 0.8 },
+    grays: { hue: 65, strength: 1.8 },
+    id: "kissa",
+    ink: { chroma: 0.021, hue: 50 },
+    name: "喫茶",
+    scheme: "dark",
+    tint: { chroma: 0.085, hue: 55 },
     vividness: 0.75,
   },
   // A moonlit night: a deep navy screen and a moon yellow.

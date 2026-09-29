@@ -35,10 +35,11 @@ const skies: Record<string, Sky> = {
 
 // Each テーマ's own sky, picked to its mood rather than drawn from its
 // accent alone: 墨's nearly a silver haze, 抹茶's with a sakura sweet's
-// pink, 月夜's the night's blues (its accent is the moon), 黒板's chalk.
+// pink, 喫茶's its lamps' amber, 月夜's the night's blues (its accent is
+// the moon), 黒板's chalk.
 const themeSkies: Record<PresetId, Sky> = {
-  aizome: { hues: [265, 225, 85], name: "藍染め" },
   cocoa: { hues: [45, 75, 10], name: "ココア", vivid: 0.8 },
+  kissa: { hues: [60, 35, 85], name: "喫茶" },
   kokuban: { hues: [165, 215, 345], name: "黒板", vivid: 0.8 },
   matcha: { hues: [120, 90, 350], name: "抹茶" },
   milktea: { hues: [55, 80, 20], name: "ミルクティー", vivid: 0.8 },
