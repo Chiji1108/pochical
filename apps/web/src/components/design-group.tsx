@@ -24,6 +24,8 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
+import { useMotionValue, useReducedMotion } from "motion/react";
+import type { MotionValue } from "motion/react";
 import {
   useContext,
   useEffect,
@@ -61,6 +63,12 @@ import type { Schedule, Tab } from "./design-calendar";
 import { EmojiPickerSheet } from "./design-emoji-picker";
 import { iconNames, OtherEmojiButton, withPicked } from "./design-look-editor";
 import { MonthTitleButton } from "./design-month-picker";
+import {
+  monthIndex,
+  RollingName,
+  TodayCorner,
+  useTurn,
+} from "./design-rolling";
 import {
   ConfirmDialog,
   DecideHeading,
@@ -2296,7 +2304,7 @@ const chatStyle = {
     },
   }),
   // A reply's quote inside the bubble, over a thin rule, in the bubble's
-  // own text color.
+  // own text color; one line, so it never outweighs the answer.
   bubbleQuote: css({
     bg: "transparent",
     border: 0,
@@ -2314,7 +2322,7 @@ const chatStyle = {
     textStyle: "caption",
   }),
   bubbleQuoteText: css({
-    lineClamp: 2,
+    lineClamp: 1,
     lineHeight: 1.45,
     opacity: 0.8,
     textStyle: "footnote",
@@ -2760,7 +2768,7 @@ function ChatPage({
                       >
                         {quoted && (
                           <button
-                            aria-label={`${nameOf(quoted.from)}への返信。返信元を表示`}
+                            aria-label={`${nameOf(quoted.from)}「${summaryOf(quoted)}」への返信。返信元を表示`}
                             className={chatStyle.bubbleQuote}
                             onClick={() => {
                               jumpTo(quoted.id);
@@ -3393,28 +3401,45 @@ const weekCell = cva({
   base: { isolation: "isolate", position: "relative" },
   compoundVariants: [
     { button: true, css: { padding: 0 }, kind: "date" },
+    // The band takes the picked frame's shape, reaching into the week's
+    // padding at its ends, so picking the day only draws the frame round
+    // it.
     {
       css: {
         "&::before": {
           ...offTile,
           borderRadius: "12px 12px 0 0",
-          inset: "2px 2px 0",
+          inset: "-3px 1px 0",
         },
       },
       kind: "date",
       together: true,
     },
     {
-      css: { "&::before": { borderRadius: 0, inset: "0 2px" } },
+      css: { "&::before": { borderRadius: 0, inset: "0 1px" } },
       kind: "cell",
       together: true,
     },
-    // The band ends at the cell's foot, as much room below the last mark
-    // as each mark has inside it.
     {
-      css: { "&::before": { borderRadius: "0 0 12px 12px" } },
+      css: {
+        "&::before": { borderRadius: "0 0 12px 12px", inset: "0 1px -3px" },
+      },
       kind: "cell",
       last: true,
+      together: true,
+    },
+    // The small weekly table has no frame to follow, nor padding to reach
+    // into: its band stays inside the week, ending at the last cell's foot.
+    {
+      compact: true,
+      css: { "&::before": { inset: "2px 2px 0" } },
+      kind: "date",
+      together: true,
+    },
+    {
+      compact: true,
+      css: { "&::before": { inset: "0 2px" } },
+      kind: "cell",
       together: true,
     },
     // Tiles sit tighter in the small weekly table.
@@ -3452,27 +3477,6 @@ const weekCell = cva({
       kind: "cell",
       last: true,
       picked: true,
-    },
-    // A picked shared day off fills its frame, so the frame outlines the
-    // band evenly all round.
-    {
-      css: { "&::before": { inset: "-3px 1px 0" } },
-      kind: "date",
-      picked: true,
-      together: true,
-    },
-    {
-      css: { "&::before": { inset: "0 1px" } },
-      kind: "cell",
-      picked: true,
-      together: true,
-    },
-    {
-      css: { "&::before": { inset: "0 1px -3px" } },
-      kind: "cell",
-      last: true,
-      picked: true,
-      together: true,
     },
   ],
   defaultVariants: { compact: false, last: false, off: false, together: false },
@@ -4402,6 +4406,14 @@ function PagedShifts({
   onMember: (member: Member) => void;
 }) {
   const { weekStart } = useWeek();
+  // How far 人ごと's pages are dragged, which the month row follows, and
+  // the month a swipe last landed on, whose name the drag brought in.
+  const pageDrag = useMotionValue(0);
+  const [swipedTo, setSwipedTo] = useState<number>();
+  const goTo = (target: Date) => {
+    setSwipedTo(undefined);
+    onMonth(target);
+  };
   // Whom 人ごと shows; chosen above the month, like a filter.
   const [personId, setPersonId] = useState(
     group.members.find((member) => !member.me)?.id ?? group.members[0].id
@@ -4441,21 +4453,27 @@ function PagedShifts({
       />
       <MonthRow
         month={month}
-        onPick={onMonth}
+        onPick={goTo}
         onToday={
           thisMonth
             ? undefined
             : () => {
-                onMonth(monthAfter(designToday, 0));
+                goTo(monthAfter(designToday, 0));
               }
         }
+        progress={pageDrag}
+        swiped={swipedTo === monthIndex(month)}
         unit="月"
       />
       <PersonPager
         group={group}
         member={person}
         month={month}
-        onMonth={onMonth}
+        onMonth={(target) => {
+          onMonth(target);
+          setSwipedTo(monthIndex(target));
+        }}
+        progress={pageDrag}
         onPickDay={onPickDay}
         picked={picked}
       />
@@ -5000,7 +5018,9 @@ function MonthDivider({
 
 // The shift table's month: its name, which opens a choice of months, and
 // the way back to today's day or month while it is out of sight. Over a
-// list of months, it names the month in sight.
+// list of months, it names the month in sight, rolling to the next as the
+// list scrolls on, the way it went. Over 人ごと's pages (`progress`), the
+// name and 今月 follow the drag, as over the calendar.
 function MonthRow({
   month,
   unit,
@@ -5008,6 +5028,8 @@ function MonthRow({
   last,
   onPick,
   onToday,
+  progress,
+  swiped = false,
 }: {
   month: Date;
   unit: "日" | "月";
@@ -5017,15 +5039,49 @@ function MonthRow({
   onPick: (month: Date) => void;
   // Left out while today's day or month is in sight.
   onToday?: () => void;
+  progress?: MotionValue<number>;
+  // Turned by a swipe, which has already brought the new name in.
+  swiped?: boolean;
 }) {
+  const reduceMotion = useReducedMotion() ?? false;
+  const turn = useTurn(monthIndex(month), swiped);
+  const next = monthAfter(month, 1);
+  const previous = monthAfter(month, -1);
+  const isThisMonth = (date: Date) =>
+    monthIndex(date) === monthIndex(designToday);
+  const rolled = (of: (date: Date) => number) => ({
+    ...(progress
+      ? { next: String(of(next)), previous: String(of(previous)) }
+      : {}),
+    progress,
+    still: reduceMotion,
+    text: String(of(month)),
+    turn,
+  });
   return (
     <div className={shiftsPage.monthRow}>
       <MonthTitleButton first={first} last={last} month={month} onPick={onPick}>
         <strong className={shiftsPage.monthName}>
-          {month.getFullYear()}年{month.getMonth() + 1}月
+          <span aria-hidden="true">
+            <RollingName {...rolled((date) => date.getFullYear())} />年
+            <RollingName {...rolled((date) => date.getMonth() + 1)} />月
+          </span>
         </strong>
       </MonthTitleButton>
-      {onToday && <TodayButton onClick={onToday} unit={unit} />}
+      <TodayCorner
+        atToday={onToday === undefined}
+        nextIsToday={progress !== undefined && isThisMonth(next)}
+        previousIsToday={progress !== undefined && isThisMonth(previous)}
+        progress={progress}
+        swiped={swiped}
+      >
+        <TodayButton
+          onClick={() => {
+            onToday?.();
+          }}
+          unit={unit}
+        />
+      </TodayCorner>
     </div>
   );
 }
@@ -5915,12 +5971,16 @@ function PersonPager({
   picked,
   onMonth,
   onPickDay,
+  progress,
 }: {
   group: Group;
   member: Member;
   month: Date;
   picked?: Date;
+  // Called as a swipe lands on the month before or after.
   onMonth: (month: Date) => void;
+  // Set to how far the pages are dragged, for the month row.
+  progress: MotionValue<number>;
   onPickDay: (date: Date) => void;
 }) {
   const weekTools = useWeek();
@@ -5932,6 +5992,7 @@ function PersonPager({
           onStep={(direction) => {
             onMonth(monthAfter(month, direction));
           }}
+          progress={progress}
           page={monthKey(month)}
           renderPage={(offset) => {
             const shown = monthAfter(month, offset);
@@ -6028,11 +6089,12 @@ function PersonDay({
   // The calendar's own day, with a frame when you are off too.
   // Framed when you are off too, unless the picked day's own frame is on
   // it: the styles are merged, as two classes for one property would leave
-  // the winner to the stylesheet's order.
+  // the winner to the stylesheet's order. The frame stays inside the day,
+  // or it would show at the edge of the month beside.
   const className = css(
     dayCell.raw({ active: picked, off, outside }),
     withMe && !picked
-      ? { outline: "1.5px solid var(--accent-border)", outlineOffset: "-1px" }
+      ? { outline: "1.5px solid var(--accent-border)", outlineOffset: "-1.5px" }
       : {}
   );
   const style = off ? ({ "--off-tint": tint } as CSSProperties) : undefined;
