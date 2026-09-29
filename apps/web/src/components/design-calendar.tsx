@@ -1236,7 +1236,8 @@ export function MonthSummary({
 }
 
 // The year over the month. Looking at months, its name opens a choice of
-// months, a way on that shows, beside the swipe that does not.
+// months, left plain like minical's so the heading stays a picture: the
+// swipe and the input's date picker are the ways that show.
 function MonthHeading({
   month,
   mode,
@@ -1258,7 +1259,7 @@ function MonthHeading({
   return (
     <h3 className={heading.title}>
       {mode === "view" ? (
-        <MonthTitleButton month={month} onPick={onPick} twoLines>
+        <MonthTitleButton chevron={false} month={month} onPick={onPick}>
           <span>{name}</span>
         </MonthTitleButton>
       ) : (
