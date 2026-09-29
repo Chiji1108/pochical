@@ -9,6 +9,7 @@ import { useContext, useState } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import type { ImageOptions } from "../lib/design-settings-store";
+import { AppIcon } from "./design-app-icon";
 import { DayCell, dateKey } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
 import { NameTabs, OffLookTabs } from "./design-settings";
@@ -75,6 +76,10 @@ const save = {
   }),
 };
 
+// The icon the store shows, in light and dark alike, whichever one this
+// device picked: the one someone who gets the picture will look for.
+const STORE_ICON = "/app/pwa-192x192.png";
+
 // The picture as it will be saved: the month in the calendar screen's own
 // ground, so it is the calendar as seen (the raised ground would lift it
 // in dark mode), and 共有 and 保存 under the page.
@@ -86,11 +91,16 @@ const picture = {
     gridTemplateColumns: "1fr 1fr",
     padding: "12px 4px 20px",
   }),
+  // The app's name with its icon, so someone who gets the picture can
+  // find the app in the store by the same dog.
   credit: css({
+    alignItems: "center",
     color: "text.quaternary",
-    fontSize: "10px",
+    display: "flex",
+    fontSize: "11px",
+    gap: "4px",
+    justifyContent: "flex-end",
     margin: "12px 4px 0",
-    textAlign: "right",
   }),
   frame: css({
     bg: "background.base",
@@ -354,7 +364,10 @@ export function ImagePreviewPage({
                         />
                       ))}
                     </div>
-                    <p className={picture.credit}>ポチカル</p>
+                    <p className={picture.credit}>
+                      <AppIcon size={16} src={STORE_ICON} />
+                      ポチカル
+                    </p>
                   </figure>
                 </OffDisplayContext>
               </ColorSchemeContext>
