@@ -30,7 +30,7 @@ import {
   SheetHeading,
   SheetPicture,
 } from "../components/design-sheet";
-import { themeStyle, useThemeStyle } from "../components/design-theme";
+import { pageStyle, useThemeStyle } from "../components/design-theme";
 import { toastLook } from "../components/design-toast";
 import {
   BackButton,
@@ -89,7 +89,7 @@ export const Route = createFileRoute("/design_/components")({
 function ComponentsPage() {
   const theme = useDesignTheme();
   return (
-    <DesignPage style={themeStyle(theme, "light")}>
+    <DesignPage style={pageStyle(theme)}>
       <DesignToolbar back="documents" />
       <DesignIntro eyebrow="POCHICAL / COMPONENTS" title="部品の棚卸し">
         今ある部品を役割ごとに並べています。同じ役割で名前が違うものは、まとめる候補です。

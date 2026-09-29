@@ -24,7 +24,7 @@ import {
 import {
   ColorSchemeContext,
   presets,
-  themeStyle,
+  pageStyle,
 } from "../components/design-theme";
 import type { PresetId } from "../components/design-theme";
 import {
@@ -81,7 +81,7 @@ const schemes: { scheme: ColorScheme; label: string }[] = [
 function StatesPage() {
   const theme = useDesignTheme();
   return (
-    <DesignPage style={themeStyle(theme, "light")}>
+    <DesignPage style={pageStyle(theme)}>
       <DesignToolbar back="documents" />
       <DesignIntro eyebrow="POCHICAL / STATES" title="状態の一覧">
         カレンダーがなりうる状態を並べています。直したら、ここで全部を見比べます。

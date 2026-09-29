@@ -18,7 +18,7 @@ import {
   DesignProviders,
   useDesignTheme,
 } from "../components/design-providers";
-import { themeStyle } from "../components/design-theme";
+import { pageStyle } from "../components/design-theme";
 import { VariantPanel } from "../components/design-variant-panel";
 import {
   createUserStore,
@@ -88,7 +88,7 @@ function DemoPage() {
     setVersion((value) => value + 1);
   };
   return (
-    <DesignPage style={themeStyle(theme, "light")}>
+    <DesignPage style={pageStyle(theme)}>
       <DesignToolbar back="site">
         <Link className={toolbarAction} to="/design">
           <BookOpen aria-hidden="true" size={14} /> デザイン資料

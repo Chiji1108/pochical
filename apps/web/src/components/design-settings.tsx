@@ -523,14 +523,18 @@ const systemAlert = {
   }),
 };
 
-// The テーマ cards, three across: the colorful row, then the one-color
-// ones.
+// The テーマ cards, three across.
 const themeCard = {
-  accent: css({
-    bg: "accent.fill",
-    borderRadius: "999px",
-    height: "4px",
-    width: "32px",
+  // A card on the screen, as the テーマ's lists and sheets sit on it:
+  // white floating on a tinted screen, or the screen's own color.
+  card: css({
+    bg: "background.card",
+    border: "1px solid token(colors.separator)",
+    borderRadius: "8px",
+    display: "flex",
+    gap: "2px",
+    justifyContent: "center",
+    padding: "8px 2px",
   }),
   choice: css({
     _checked: {
@@ -558,22 +562,25 @@ const themeCard = {
     margin: 0,
     padding: 0,
   }),
-  marks: css({
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "4px",
-    justifyContent: "center",
-  }),
   // The theme's own screen, in the current light or dark.
   sample: css({
-    alignItems: "center",
     bg: "background.base",
     border: "1px solid token(colors.separator)",
     borderRadius: "16px",
     display: "flex",
     flexDirection: "column",
     gap: "8px",
-    padding: "12px 8px",
+    padding: "8px 8px 12px",
+  }),
+  // The テーマ's text and its fill side by side, so a navy text with a
+  // red fill shows as two colors.
+  strokes: css({
+    "& span": { borderRadius: "999px", height: "4px" },
+    "& span:first-child": { bg: "text.primary", width: "20px" },
+    "& span:last-child": { bg: "accent.fill", width: "28px" },
+    display: "flex",
+    gap: "4px",
+    justifyContent: "center",
   }),
 };
 
@@ -1893,10 +1900,10 @@ function ShiftColorsSwitch() {
 // The shifts on a テーマ's card, as they might follow each other in a week.
 const presetSampleShifts: Shift[] = ["day", "night", "after", "off"];
 
-// Each テーマ as a card: its screen's ground with shifts on it in its
-// colors, so the colorful ones and the one-color ones tell apart at a
-// glance, and a stroke of its accent, as its buttons take it. The one in
-// use sits on a gray card, as app icons do.
+// Each テーマ as a small screen: its ground, a card on it with shifts in
+// its colors, and strokes of its text and its fill, so where each テーマ
+// puts color tells apart at a glance. The one in use sits on a gray card,
+// as app icons do.
 function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
   const current = useSettings((state) => state.device.preset);
   const setPreset = useSettings((state) => state.setPreset);
@@ -1916,14 +1923,17 @@ function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
           >
             <ColorSchemeContext value={scheme}>
               <PresetContexts id={preset.id}>
-                <span className={themeCard.marks}>
+                <span className={themeCard.card}>
                   {presetSampleShifts.map((shift) => (
-                    <ShiftMark key={shift} shift={shift} size={16} />
+                    <ShiftMark key={shift} shift={shift} size={14} />
                   ))}
                 </span>
               </PresetContexts>
             </ColorSchemeContext>
-            <span className={themeCard.accent} />
+            <span className={themeCard.strokes}>
+              <span />
+              <span />
+            </span>
           </span>
           {preset.name}
         </Choice>
