@@ -623,6 +623,51 @@ export const sampleChats: Record<string, Chat> = {
     ],
     unread: 3,
   },
+  // Six in all, so reactions run from one face to a count.
+  "ward:group": {
+    messages: [
+      {
+        from: "haruka",
+        id: "w1",
+        reactions: [{ by: ["ren", "mei", "sota", "yui"], emoji: "👀" }],
+        text: "来月の勤務表出たね！",
+        time: "17:30",
+        when: "昨日",
+      },
+      {
+        from: "ren",
+        id: "w2",
+        reactions: [{ by: ["haruka"], emoji: "🥲" }],
+        text: "12日の夜勤、誰か代わってくれる人いないかな…",
+        time: "17:42",
+        when: "昨日",
+      },
+      {
+        from: "me",
+        id: "w3",
+        reactions: [
+          { by: ["ren"], emoji: "❤️" },
+          { by: ["haruka", "yui", "mei"], emoji: "🙏" },
+        ],
+        replyTo: "w2",
+        text: "わたし代われるよ！",
+        time: "18:05",
+        when: "昨日",
+      },
+      {
+        from: "sota",
+        id: "w4",
+        reactions: [
+          { by: ["haruka", "ren", "mei", "yui", "me"], emoji: "🎉" },
+          { by: ["ren", "mei"], emoji: "🍻" },
+        ],
+        text: "久しぶりに同期会しよう！",
+        time: "12:10",
+        when: "今日",
+      },
+    ],
+    unread: 1,
+  },
   "friends:misaki": {
     messages: [
       {
