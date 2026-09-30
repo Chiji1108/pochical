@@ -36,6 +36,7 @@ import {
 import type { MotionValue } from "motion/react";
 import {
   createContext,
+  Fragment,
   useContext,
   useEffect,
   useLayoutEffect,
@@ -922,6 +923,24 @@ export function List({
   children: ReactNode;
 }) {
   return <div className={cx(listStyle, className)}>{children}</div>;
+}
+
+// A quiet line inside a list, where its rows go on as something else, as
+// where the patterns' buttons go on to their next page. Not a row, so the
+// row after it draws no line of its own.
+const listDividerStyle = css({
+  borderTop: "1px solid token(colors.separator)",
+  color: "text.tertiary",
+  padding: "12px 16px 4px",
+  textStyle: "caption",
+});
+
+export function ListDivider({ children }: { children: ReactNode }) {
+  return (
+    <div className={listDividerStyle} role="separator">
+      {children}
+    </div>
+  );
 }
 
 const listRowRoot = cva({
@@ -2011,6 +2030,7 @@ export function SortableList<Item extends { id: string }>({
   label,
   onChange,
   children,
+  divider,
 }: {
   items: Item[];
   // What the handle and the announcements call the row.
@@ -2018,6 +2038,8 @@ export function SortableList<Item extends { id: string }>({
   onChange: (items: Item[]) => void;
   // The row's content, before the handle.
   children: (item: Item) => ReactNode;
+  // A ListDivider to go before the row at this place, if any.
+  divider?: (index: number) => ReactNode;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -2061,10 +2083,13 @@ export function SortableList<Item extends { id: string }>({
     >
       <SortableContext items={items} strategy={verticalListSortingStrategy}>
         <div className={listStyle}>
-          {items.map((item) => (
-            <SortableRow id={item.id} key={item.id} label={label(item)}>
-              {children(item)}
-            </SortableRow>
+          {items.map((item, index) => (
+            <Fragment key={item.id}>
+              {divider?.(index)}
+              <SortableRow id={item.id} label={label(item)}>
+                {children(item)}
+              </SortableRow>
+            </Fragment>
           ))}
         </div>
       </SortableContext>
