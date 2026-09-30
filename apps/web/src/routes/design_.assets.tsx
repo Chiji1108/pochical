@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { css } from "styled-system/css";
 
+import { CalendarPreview } from "../components/calendar-preview";
 import { DesignAppIcon } from "../components/design-app-icon";
 import {
   designCaption,
@@ -81,6 +82,17 @@ const sourceList = css({
   gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
 });
 
+// The site's first phone, drawn before the app's screens were designed, on the
+// site's own paper so it reads as it did on the top page.
+const keyVisual = css({
+  bg: "var(--paper)",
+  border: "1px solid token(colors.separator)",
+  borderRadius: "16px",
+  color: "var(--ink)",
+  isolation: "isolate",
+  overflow: "hidden",
+});
+
 function AssetsPage() {
   const theme = useDesignTheme();
   return (
@@ -121,6 +133,20 @@ function AssetsPage() {
                 </figure>
               ))}
             </div>
+          </section>
+          <section
+            aria-labelledby="assets-key-visual-title"
+            style={{ width: "min(1080px, 100%)" }}
+          >
+            <h2 id="assets-key-visual-title">
+              <span>03</span> 最初のキービジュアル
+            </h2>
+            <div className={keyVisual}>
+              <CalendarPreview />
+            </div>
+            <p className={designCaption}>
+              アプリの画面を作る前に、サイトのトップに置いた完成予想図。ここから画面を作ってきました。今のアプリとは違います。
+            </p>
           </section>
         </div>
       </DesignProviders>
