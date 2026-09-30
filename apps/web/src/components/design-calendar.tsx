@@ -2337,8 +2337,8 @@ export const dayCell = cva({
     height: "64px",
     minWidth: 0,
     paddingBlock: "4px",
-    // None at the sides, a button's own included: a shift's name takes
-    // the day's whole width.
+    // None at the sides, a button's own included, which browsers set
+    // apart: a shift's name is centered in the same room everywhere.
     paddingInline: 0,
     position: "relative",
   },
