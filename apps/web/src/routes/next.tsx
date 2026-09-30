@@ -25,7 +25,6 @@ import {
 } from "../components/shift-mark";
 import type { ShiftMarkStyle } from "../components/shift-mark";
 import { StoreLinks } from "../components/store-links";
-import type { ColorScheme } from "../lib/design-tokens";
 import {
   createUserStore,
   sampleCoworkers,
@@ -444,12 +443,11 @@ function GroupGallery() {
 }
 
 // The calendar in a few looks, each set as someone might set theirs:
-// 墨 with outlined marks in its one tone, ミルクティー in dark, and letters
+// 墨 with outlined marks in its one tone, さくら with emoji, and letters
 // with their names under them and days off left plain.
 type GalleryLook = {
   id: string;
   preset: PresetId;
-  scheme?: ColorScheme;
   style: ShiftMarkStyle;
   fill: boolean;
   monochrome: boolean;
@@ -469,12 +467,11 @@ const galleryLooks: GalleryLook[] = [
   {
     fill: true,
     highlight: true,
-    id: "milktea-dark",
+    id: "sakura-emoji",
     monochrome: false,
     names: false,
-    preset: "milktea",
-    scheme: "dark",
-    style: "icon",
+    preset: "sakura",
+    style: "emoji",
   },
   {
     fill: true,
@@ -521,11 +518,7 @@ function LookContexts({
       </IconWeightContext>
     </PresetContexts>
   );
-  return (
-    <ColorSchemeContext value={look.scheme ?? "light"}>
-      {themed}
-    </ColorSchemeContext>
-  );
+  return <ColorSchemeContext value="light">{themed}</ColorSchemeContext>;
 }
 
 function ThemeGallery() {
