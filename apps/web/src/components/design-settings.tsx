@@ -64,6 +64,7 @@ import {
   List,
   ListRow,
   Note,
+  PageDots,
   OptionCard,
   optionList,
   PageHeader,
@@ -524,11 +525,13 @@ const systemAlert = {
   }),
 };
 
-// The テーマ cards, one row that scrolls sideways under the preview, as
-// Telegram's 外観 lays out its themes: every テーマ is a flick away and the
-// preview stays in sight while trying them, where a grid of four rows
-// pushed the rest of スタイル down. The next card peeks in at the edge to
-// show there are more.
+// Between pages, wider than between cards, so a swipe shows where one ends.
+const THEME_PAGE_GAP = 16;
+
+// The テーマ cards, three to a page of a pager with dots under it, as
+// Telegram's 外観 shows its themes: the preview stays in sight while
+// trying them, where a grid of four rows pushed the rest of スタイル
+// down, and the dots tell there are more to the side.
 const themeCard = {
   // A card on the screen, as the テーマ's lists and sheets sit on it.
   card: css({
@@ -552,22 +555,26 @@ const themeCard = {
     borderRadius: "20px",
     color: "text.secondary",
     display: "flex",
-    flex: "none",
     flexDirection: "column",
     gap: "4px",
     padding: "4px 4px 8px",
-    scrollSnapAlign: "start",
     textAlign: "center",
     textStyle: "footnote",
   }),
-  // The rows of three the grid had (the basics, the soft ones, the
-  // colors, the nights) stay apart by a wider gap.
-  grid: css({
-    "& [data-row-start]": { marginLeft: "8px" },
+  // One page: three across, as the grid had them.
+  page: css({
+    display: "grid",
+    flex: "0 0 100%",
+    gap: "8px",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    scrollSnapAlign: "start",
+    scrollSnapStop: "always",
+  }),
+  pager: css({
     "&::-webkit-scrollbar": { display: "none" },
     border: 0,
     display: "flex",
-    gap: "8px",
+    gap: `${THEME_PAGE_GAP}px`,
     margin: 0,
     overflowX: "auto",
     padding: 0,
@@ -1974,6 +1981,13 @@ function ShiftColorsChoices() {
   );
 }
 
+// The テーマ in rows of three, each row a page: the basics, the soft ones,
+// the colors, the nights.
+const themePages = Array.from(
+  { length: Math.ceil(presets.length / 3) },
+  (_, page) => presets.slice(page * 3, page * 3 + 3)
+);
+
 // The shifts on a テーマ's card, as they might follow each other in a week.
 const presetSampleShifts: Shift[] = ["day", "night", "after", "off"];
 
@@ -1984,56 +1998,90 @@ const presetSampleShifts: Shift[] = ["day", "night", "after", "off"];
 function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
   const current = useSettings((state) => state.device.preset);
   const setPreset = useSettings((state) => state.setPreset);
-  const row = useRef<HTMLDivElement>(null);
-  // Opens on the three the テーマ in use belongs to. Only on opening: a
-  // tap keeps the row where the finger left it.
+  const pager = useRef<HTMLDivElement>(null);
+  const [page, setPage] = useState(() =>
+    themePages.findIndex((themes) =>
+      themes.some((preset) => preset.id === current)
+    )
+  );
+  // Opens on the page of the テーマ in use.
   useLayoutEffect(() => {
-    const items = [
-      ...(row.current?.querySelectorAll<HTMLElement>("[data-part=item]") ?? []),
-    ];
-    const picked = items.findIndex((item) => item.dataset.state === "checked");
-    const first = items[picked - (picked % 3)];
-    if (row.current && first) {
-      row.current.scrollLeft = first.offsetLeft;
+    const picked = pager.current
+      ?.querySelector("[data-state=checked]")
+      ?.closest<HTMLElement>("[data-page]");
+    if (pager.current && picked) {
+      pager.current.scrollLeft = picked.offsetLeft;
     }
   }, []);
   return (
-    <ChoiceGrid
-      className={themeCard.grid}
-      label="テーマ"
-      onValueChange={setPreset}
-      ref={row}
-      value={current}
-    >
-      {presets.map((preset, index) => (
-        <Choice
-          className={themeCard.choice}
-          data-row-start={index > 0 && index % 3 === 0 ? "" : undefined}
-          key={preset.id}
-          value={preset.id}
-        >
-          <span
-            aria-hidden="true"
-            className={themeCard.sample}
-            style={themeStyle(preset.id, scheme)}
-          >
-            <ColorSchemeContext value={scheme}>
-              <PresetContexts id={preset.id}>
-                <span className={themeCard.card}>
-                  {presetSampleShifts.map((shift) => (
-                    <ShiftMark key={shift} shift={shift} size={14} />
-                  ))}
-                </span>
-              </PresetContexts>
-            </ColorSchemeContext>
-            <span className={themeCard.strokes}>
-              <span />
-              <span />
+    <>
+      <ChoiceGrid
+        className={themeCard.pager}
+        label="テーマ"
+        onValueChange={setPreset}
+        onScroll={(event) => {
+          const { scrollLeft, clientWidth } = event.currentTarget;
+          setPage(Math.round(scrollLeft / (clientWidth + THEME_PAGE_GAP)));
+        }}
+        ref={pager}
+        value={current}
+      >
+        {themePages.map((themes) => (
+          <div className={themeCard.page} data-page="" key={themes[0]?.id}>
+            {themes.map((preset) => (
+              <ThemeChoice key={preset.id} preset={preset} scheme={scheme} />
+            ))}
+          </div>
+        ))}
+      </ChoiceGrid>
+      <PageDots
+        count={themePages.length}
+        current={page}
+        label="テーマのページ"
+        onPick={(picked) => {
+          const target =
+            pager.current?.querySelectorAll<HTMLElement>("[data-page]")[picked];
+          if (target) {
+            pager.current?.scrollTo({
+              behavior: "smooth",
+              left: target.offsetLeft,
+            });
+          }
+        }}
+      />
+    </>
+  );
+}
+
+function ThemeChoice({
+  preset,
+  scheme,
+}: {
+  preset: (typeof presets)[number];
+  scheme: ColorScheme;
+}) {
+  return (
+    <Choice className={themeCard.choice} value={preset.id}>
+      <span
+        aria-hidden="true"
+        className={themeCard.sample}
+        style={themeStyle(preset.id, scheme)}
+      >
+        <ColorSchemeContext value={scheme}>
+          <PresetContexts id={preset.id}>
+            <span className={themeCard.card}>
+              {presetSampleShifts.map((shift) => (
+                <ShiftMark key={shift} shift={shift} size={14} />
+              ))}
             </span>
-          </span>
-          {preset.name}
-        </Choice>
-      ))}
-    </ChoiceGrid>
+          </PresetContexts>
+        </ColorSchemeContext>
+        <span className={themeCard.strokes}>
+          <span />
+          <span />
+        </span>
+      </span>
+      {preset.name}
+    </Choice>
   );
 }

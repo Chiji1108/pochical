@@ -48,6 +48,7 @@ import type {
   LabelHTMLAttributes,
   ReactNode,
   Ref,
+  UIEventHandler,
 } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -1365,6 +1366,7 @@ export function ChoiceGrid<Value extends string>({
   className,
   labelClassName = srOnly,
   ref,
+  onScroll,
   children,
 }: {
   // What is being picked; hidden unless labelClassName shows it.
@@ -1374,11 +1376,14 @@ export function ChoiceGrid<Value extends string>({
   className?: string;
   labelClassName?: string;
   ref?: Ref<HTMLDivElement>;
+  // For a grid that scrolls, like the テーマ's pager.
+  onScroll?: UIEventHandler<HTMLDivElement>;
   children: ReactNode;
 }) {
   return (
     <RadioGroup.Root
       className={className}
+      onScroll={onScroll}
       ref={ref}
       onValueChange={(details) => {
         if (details.value !== null) {
@@ -1437,6 +1442,71 @@ export const colorGrid = css({
   margin: 0,
   padding: 0,
 });
+
+// Dots under a pager, one for each page and the one shown filled, as
+// iOS's page control and the indicator under Compose's HorizontalPager,
+// so pages to the side are not missed. A dot takes to its page.
+const pageDots = css({
+  "& button": {
+    "&::before": {
+      bg: "text.quaternary",
+      borderRadius: "999px",
+      content: '""',
+      height: "8px",
+      transition: "background 0.2s",
+      width: "8px",
+    },
+    "&[aria-current=true]::before": { bg: "text.primary" },
+    _focusVisible: {
+      outline: "2px solid token(colors.accent.default)",
+      outlineOffset: "-2px",
+    },
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    borderRadius: "999px",
+    cursor: "pointer",
+    display: "flex",
+    height: "24px",
+    justifyContent: "center",
+    padding: 0,
+    width: "16px",
+  },
+  border: 0,
+  display: "flex",
+  justifyContent: "center",
+  margin: 0,
+  padding: 0,
+});
+
+export function PageDots({
+  count,
+  current,
+  label,
+  onPick,
+}: {
+  count: number;
+  current: number;
+  // What the pages hold, for a screen reader.
+  label: string;
+  onPick: (page: number) => void;
+}) {
+  return (
+    <fieldset aria-label={label} className={pageDots}>
+      {Array.from({ length: count }, (_, page) => (
+        <button
+          aria-current={page === current}
+          aria-label={`${page + 1}ページ目`}
+          key={page}
+          onClick={() => {
+            onPick(page);
+          }}
+          type="button"
+        />
+      ))}
+    </fieldset>
+  );
+}
 
 // The focus ring sits outside a tile, and inside a row, whose list clips.
 const choiceStyle = cva({

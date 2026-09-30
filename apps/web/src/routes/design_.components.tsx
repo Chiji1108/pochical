@@ -52,6 +52,7 @@ import {
   MenuPicker,
   MenuSeparator,
   Note,
+  PageDots,
   PageHeader,
   PullDownMenu,
   Section,
@@ -414,6 +415,7 @@ const sampleColors = ["#5b7a55", "#c29a4a", "#c9796a", "#7a86c4", "#9a9a94"];
 function Choices() {
   const [color, setColor] = useState("0");
   const [appearance, setAppearance] = useState("system");
+  const [page, setPage] = useState(0);
   return (
     <Group
       note="いくつかから1つを選ぶところ。ChoiceGrid に Choice を並べ、見た目(色の丸、アイコン、アプリアイコン)はその場所が決めます。行で選ぶときは ChoiceList と ChoiceRow で、選んだ行にチェックが付きます。Ark UI の RadioGroup なので矢印キーで選べます。SwiftUI の Picker、Compose の selectable にあたります。"
@@ -438,6 +440,9 @@ function Choices() {
             />
           ))}
         </ChoiceGrid>
+      </Item>
+      <Item name="PageDots" where="横にめくる選択肢(スタイルのテーマ)">
+        <PageDots count={4} current={page} label="ページ" onPick={setPage} />
       </Item>
       <Item name="ChoiceList" where="外観、翌日のパターン" wide>
         <ChoiceList
