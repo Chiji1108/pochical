@@ -33,10 +33,12 @@ export type WidgetDay = {
   name?: string;
   // A day off (休み, 有休), which the smallest month shows alone.
   off: boolean;
-  // "9:00 – 18:00", when the shift has a time, and its start alone for
-  // the smallest places.
+  // "9:00 – 18:00", when the shift has a time. Read aloud, not shown:
+  // a shift's hours are the same day after day.
   time?: string;
-  start?: string;
+  // What is shown instead, and only on a day whose hours differ from its
+  // pattern's: "早出 7:00〜", "残業 〜20:00", both, or the new hours.
+  change?: string;
   // 早出 and 残業, drawn on the mark's sides as in the calendar.
   early: boolean;
   late: boolean;
@@ -78,24 +80,43 @@ function toneOf(date: Date, colored: WeekSettings["colored"]): DayTone {
   return colored.saturday && day === SATURDAY ? "saturday" : "plain";
 }
 
+// A day's changed hours, in words, from its time and how it moved:
+// timeChangeOf says whether it moved at all, and which way.
+function changeOf(
+  time: string | undefined,
+  moved: { early: boolean; late: boolean } | undefined
+) {
+  if (time === undefined || moved === undefined) {
+    return;
+  }
+  const [start = "", end = ""] = time.split(" – ");
+  if (moved.early && moved.late) {
+    return `早出・残業 ${start}〜${end}`;
+  }
+  if (moved.early) {
+    return `早出 ${start}〜`;
+  }
+  return moved.late ? `残業 〜${end}` : `${start}〜${end}`;
+}
+
 function widgetDay(
   date: Date,
   schedule: Schedule,
   week: WeekSettings
 ): WidgetDay {
   const entry = schedule[dateKey(date)];
-  const change = timeChangeOf(entry);
+  const moved = timeChangeOf(entry);
   const time = entry && timeRange(entry);
   return {
+    change: changeOf(time, moved),
     date,
-    early: change?.early ?? false,
-    late: change?.late ?? false,
+    early: moved?.early ?? false,
+    late: moved?.late ?? false,
     members: entry?.members ?? [],
     name: entry && patterns[entry.shift].label,
     note: entry?.note,
     off: isDayOff(entry?.shift),
     shift: entry?.shift,
-    start: time?.split(" – ")[0],
     time,
     tone: toneOf(date, week.colored),
     weekday: weekdayNames[date.getDay()] ?? "",

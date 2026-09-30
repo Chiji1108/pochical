@@ -47,19 +47,24 @@ function monthDay(date: Date) {
   return `${date.getMonth() + MONTH_NUMBER}月${date.getDate()}日`;
 }
 
-// What a day's words say: its time, or its name when it has none.
-function headline(day: WidgetDay) {
-  return day.time ?? day.name ?? NOTHING;
+// The words beside a day's mark: nothing on an ordinary day, since the
+// mark says which shift and its hours are the same every time; the
+// changed hours on a day of 早出 or 残業; 予定なし with nothing entered.
+function changeWords(day: WidgetDay) {
+  return day.shift ? day.change : NOTHING;
 }
 
-// A day's words, with its name for screen readers when the words are its
-// time.
-function Headline({ day, className }: { day: WidgetDay; className: string }) {
-  const spokenName = day.time === undefined ? undefined : day.name;
+// Those words, with the shift's name and hours for screen readers.
+function Change({ day, className }: { day: WidgetDay; className: string }) {
+  const words = changeWords(day);
+  const time = day.time ? ` ${day.time}` : "";
   return (
     <strong className={className}>
-      {spokenName && <span className={srOnly}>{spokenName} </span>}
-      {headline(day)}
+      <span className={srOnly}>
+        {day.name ?? NOTHING}
+        {time}
+      </span>
+      {words && <span aria-hidden="true">{words}</span>}
     </strong>
   );
 }
@@ -166,15 +171,15 @@ const today = {
   }),
 };
 
-// Today large: the date, its mark and its time.
+// Today large: the date, its mark and any change to its hours.
 function TodayBlock({ day }: { day: WidgetDay }) {
   return (
     <div className={today.root}>
       <span className={today.date}>
         {monthDay(day.date)}({day.weekday})
       </span>
-      <DayMark day={day} size={44} />
-      <Headline className={today.headline} day={day} />
+      <DayMark day={day} size={48} />
+      <Change className={today.headline} day={day} />
     </div>
   );
 }
@@ -198,8 +203,8 @@ const upcoming = {
     gap: "4px",
     height: "100%",
   }),
-  // The mark over its time: side by side, a time with 翌 runs out of
-  // the square.
+  // The mark over any change to its hours: side by side, a change with
+  // 翌 runs out of the square.
   today: css({
     alignItems: "flex-start",
     display: "flex",
@@ -237,8 +242,8 @@ export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
         {monthDay(day.date)}({day.weekday})
       </span>
       <div className={upcoming.today}>
-        <DayMark day={day} size={32} />
-        <Headline className={today.headline} day={day} />
+        <DayMark day={day} size={40} />
+        <Change className={today.headline} day={day} />
       </div>
       <ol className={`${list} ${upcoming.next}`}>
         {entry.upcoming.slice(1, 4).map((next) => (
@@ -478,7 +483,7 @@ export function CalendarMedium({ entry }: { entry: WidgetEntry }) {
             <DayMark day={day} size={20} />
             <span className={agenda.text}>
               <span className={agenda.label}>{relativeDay(day, index)}</span>
-              <Headline className={agenda.time} day={day} />
+              <Change className={agenda.time} day={day} />
             </span>
           </li>
         ))}
@@ -548,7 +553,9 @@ export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
     <div className={month.root}>
       <div className={month.header}>
         <span className={month.title}>{first.getMonth() + MONTH_NUMBER}月</span>
-        <span className={month.summary}>今日 {headline(entry.today)}</span>
+        {entry.today.change && (
+          <span className={month.summary}>今日 {entry.today.change}</span>
+        )}
       </div>
       <div aria-hidden="true" className={month.weekdays}>
         {weekdays.map((day) => (
@@ -747,7 +754,7 @@ export function DetailSmall({ entry }: { entry: WidgetEntry }) {
         </span>
         <DayMark day={day} size={roomy ? 32 : 28} />
       </div>
-      <Headline className={detail.headline} day={day} />
+      <Change className={detail.headline} day={day} />
       <DayExtras day={day} lines={roomy ? 4 : 2} pinMembers />
     </div>
   );
@@ -784,20 +791,36 @@ const circular = {
     height: "100%",
     justifyContent: "center",
   }),
-  start: css({
-    fontVariantNumeric: "tabular-nums",
-    fontWeight: 600,
-    textStyle: "caption2",
-  }),
+  word: css({ fontWeight: 600, textStyle: "caption2" }),
 };
 
-// Today's mark and when it starts, in the round one.
+// 早出 and 残業 alone, all a round face this small has room to say.
+function movedWord(day: WidgetDay) {
+  if (day.early && day.late) {
+    return "早出・残業";
+  }
+  if (day.early) {
+    return "早出";
+  }
+  return day.late ? "残業" : undefined;
+}
+
+// Today's mark in the round one, with 早出 or 残業 under it on such a day.
 export function TodayCircular({ entry }: { entry: WidgetEntry }) {
   const day = entry.today;
+  const word = day.shift ? movedWord(day) : "なし";
   return (
     <div className={circular.root}>
-      <DayMark day={day} size={28} />
-      <span className={circular.start}>{day.start ?? day.name ?? "なし"}</span>
+      <span className={srOnly}>
+        {day.name ?? NOTHING}
+        {day.time ? ` ${day.time}` : ""}
+      </span>
+      <DayMark day={day} size={word ? 28 : 36} />
+      {word && (
+        <span aria-hidden="true" className={circular.word}>
+          {word}
+        </span>
+      )}
     </div>
   );
 }
@@ -831,7 +854,7 @@ export function UpcomingRectangular({ entry }: { entry: WidgetEntry }) {
         <li className={rectangular.line} key={day.date.getTime()}>
           <span className={rectangular.label}>{relativeDay(day, index)}</span>
           <DayMark day={day} size={16} />
-          <Headline className={rectangular.time} day={day} />
+          <Change className={rectangular.time} day={day} />
         </li>
       ))}
     </ol>
@@ -849,15 +872,17 @@ const inline = css({
   whiteSpace: "nowrap",
 });
 
-const inlineText = css({ fontWeight: 400 });
-
-// One line over the clock: today's mark and time.
+// One line over the clock: today's mark and name, and any change to its
+// hours. A line of text, it names the shift where the others let the
+// mark say it.
 export function TodayInline({ entry }: { entry: WidgetEntry }) {
   const day = entry.today;
+  const words = [day.name ?? NOTHING, day.change].filter(Boolean).join(" ");
   return (
     <div className={inline}>
       <DayMark day={day} size={14} />
-      <Headline className={inlineText} day={day} />
+      {words}
+      <span className={srOnly}>{day.time}</span>
     </div>
   );
 }

@@ -106,7 +106,7 @@ const kinds: {
     ],
   },
   {
-    description: "今日の時間と、メモ、一緒に働く人。",
+    description: "今日のマークと早出・残業、メモ、一緒に働く人。",
     name: "今日の詳細",
     sizes: [
       { View: DetailSmall, size: "small" },
@@ -197,7 +197,7 @@ function WidgetsPage() {
       <DesignToolbar back="documents" />
       <DesignIntro eyebrow="POCHICAL / WIDGETS" title="ウィジェット">
         iPhone（390×844pt）と Pixel 9a
-        での実寸です。マークがシフトを表すので、横の文字は時間です。名前は時間のないシフトにだけ出します。
+        での実寸です。シフトはマークで表し、時間は毎日同じなので出しません。早出・残業の日だけ、変わった時間を出します。
       </DesignIntro>
       <DesignProviders>
         <div className={frameSections}>

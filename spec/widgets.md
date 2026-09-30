@@ -19,7 +19,8 @@ Each day in an entry has:
 | `tone` | `holiday` when it is a national holiday of Japan and 祝日 coloring is on, or a Sunday and Sunday coloring is on; else `saturday` when it is a Saturday and Saturday coloring is on; else `plain`. |
 | `shift` | The pattern entered on that day, if any. |
 | `name` | That pattern's name, as the person named it. |
-| `time` | The shift's time range, for patterns with a time: the day's own start and end when set, else the pattern's. It is written as `9:00 – 18:00`, dropping a leading zero from the hour. An end at or before the start reads `翌` before it (`16:30 – 翌9:30`). |
+| `time` | The shift's time range (read aloud, not shown), for patterns with a time: the day's own start and end when set, else the pattern's. It is written as `9:00 – 18:00`, dropping a leading zero from the hour. An end at or before the start reads `翌` before it (`16:30 – 翌9:30`). |
+| `change` | The changed hours in words, on a day whose hours differ from its pattern's: `早出 {start}〜` when it starts earlier, `残業 〜{end}` when it ends later, `早出・残業 {start}〜{end}` for both, else `{start}〜{end}`. Absent on an ordinary day. |
 | `early`, `late` | 早出 and 残業: the day starts before or ends after the pattern's standard time, counted as the calendar does. |
 | `note` | The day's note, if any. |
 
@@ -43,13 +44,13 @@ The widgets are views of one entry. They hold no state and open the app when tap
 
 | Kind | Small (iPhone systemSmall, Android 2×2) | Medium (systemMedium, 4×2) | Large (systemLarge, 4×4) |
 | --- | --- | --- | --- |
-| これから | today (date, mark, time) and the next three days' marks | `twoWeeks`: this week and the next, seven across from the week start, with days already gone faint and today as its accent date | – |
-| カレンダー | the month with days off only, as the calendar's day-off tiles | that month beside today, 明日 and the day after, each with its mark and time | the month with every day's mark, and today's time |
-| 今日の詳細 | today's time, mark, note (two lines) and 一緒に働く人 | today large, beside its note (three lines) and 一緒に働く人 | – |
+| これから | today (date, mark, any change) and the next three days' marks | `twoWeeks`: this week and the next, seven across from the week start, with days already gone faint and today as its accent date | – |
+| カレンダー | the month with days off only, as the calendar's day-off tiles | that month beside today, 明日 and the day after, each with its mark and any change | the month with every day's mark, and today's change if it has one |
+| 今日の詳細 | today's mark, any change, note and 一緒に働く人 | today large, beside its note (three lines) and 一緒に働く人 | – |
 
-On the iPhone lock screen: circular (today's mark and start time), rectangular (today and 明日, each with mark and time) and inline (today's mark and time).
+On the iPhone lock screen: circular (today's mark, and 早出 or 残業 on such a day), rectangular (today and 明日, each with its mark and any change) and inline (today's mark, name and any change).
 
-- **Words next to a mark are the time.** The mark already says which shift it is. A shift's name appears only when it has no time (休み, 明け, 有休), or 予定なし when nothing is entered.
+- **The mark says the shift, and its hours go unsaid.** A shift's hours are the same every time it comes, so an ordinary day shows its mark alone. Only a day whose hours differ from its pattern's shows words, from the entry's `change`: 早出 7:00〜, 残業 〜20:00, 早出・残業 7:00〜20:00, or the new hours (9:00〜17:00) for other changes. A day with nothing entered says 予定なし. The lock screen's inline widget is a line of text, so it names the shift (日勤, then any change), and the round one says 早出 or 残業 under the mark on such a day. Screen readers always hear the name and the hours.
 - **Room differs by platform.** The same size is taller on Android's launcher (4×2 is 341×170dp inside) than on the iPhone (306×126pt). Views read their own size (SwiftUI's widget family, Glance's `LocalSize`) and spend extra height on their own spacing instead of stretching: the two weeks stay centered with larger marks and more space between the weeks, and the large month's marks grow.
 - **Long memos and many people.** A memo is cut at a number of lines: two in the small 今日の詳細 and three in the medium, or four and five where there is room (Android). 一緒に働く人 take one line, written the longest way that fits: every name joined with ・, then fewer names with ほか and how many more (田中・山本 ほか4人), then the count alone (6人). This is SwiftUI's `ViewThatFits`; on Android, measure the text. Screen readers hear every name.
 - **Today's date** is the accent color and heavier, as everywhere in the app. Sunday and holiday dates are red, and Saturday dates are blue, following the person's settings.
