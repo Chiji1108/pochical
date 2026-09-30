@@ -1,6 +1,7 @@
 import { css, cva, cx } from "styled-system/css";
 
 import type { WidgetDay, WidgetEntry } from "../lib/design-widgets";
+import { srOnly } from "./design-ui";
 import { ShiftMark } from "./shift-mark";
 
 // The widgets themselves: views of one WidgetEntry, as the native apps'
@@ -11,9 +12,22 @@ import { ShiftMark } from "./shift-mark";
 // stands in for the rest.
 
 const MONTH_NUMBER = 1;
+const NOTHING = "予定なし";
 
 function monthDay(date: Date) {
   return `${date.getMonth() + MONTH_NUMBER}月${date.getDate()}日`;
+}
+
+// A day as read aloud, for the cells whose marks are pictures only.
+function SpokenDay({ day }: { day: WidgetDay }) {
+  const shift = day.name ?? NOTHING;
+  const time = day.time ? ` ${day.time}` : "";
+  return (
+    <span className={srOnly}>
+      {monthDay(day.date)}({day.weekday}) {shift}
+      {time}
+    </span>
+  );
 }
 
 // A day's mark, or a quiet dash when nothing is entered.
@@ -54,8 +68,6 @@ const toneText = cva({
     },
   },
 });
-
-const NOTHING = "予定なし";
 
 // ── Home screen ─────────────────────────────────────────────────────────
 
@@ -128,12 +140,15 @@ export function WeekWidget({ entry }: { entry: WidgetEntry }) {
       <ol className={week.days}>
         {entry.upcoming.slice(1).map((day) => (
           <li className={week.column} key={day.date.getTime()}>
-            <span className={week.weekday}>
+            <SpokenDay day={day} />
+            <span aria-hidden="true" className={week.weekday}>
               <span className={toneText({ tone: day.tone })}>
                 {day.weekday}
               </span>
             </span>
-            <span className={week.date}>{day.date.getDate()}</span>
+            <span aria-hidden="true" className={week.date}>
+              {day.date.getDate()}
+            </span>
             <DayMark day={day} size={24} />
           </li>
         ))}
@@ -213,10 +228,16 @@ export function MonthWidget({ entry }: { entry: WidgetEntry }) {
       </div>
       <ol className={month.grid}>
         {days.map((day) => (
-          <li className={month.cell} key={day.date.getTime()}>
+          <li
+            aria-hidden={!day.inMonth}
+            className={month.cell}
+            key={day.date.getTime()}
+          >
             {day.inMonth && (
               <>
+                <SpokenDay day={day} />
                 <span
+                  aria-hidden="true"
                   className={month.date({
                     today: day.date.getTime() === todayTime,
                   })}
