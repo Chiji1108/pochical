@@ -3,7 +3,13 @@ import { css } from "styled-system/css";
 
 import type { Shift } from "../lib/design-patterns";
 import type { Schedule } from "./design-calendar";
-import { Sheet, SheetHeading, SheetPicture, sheetBody } from "./design-sheet";
+import {
+  Sheet,
+  SheetHeading,
+  SheetPicture,
+  sheetBody,
+  sheetLead,
+} from "./design-sheet";
 import { Button, Chip, ChipGroup, List, SwitchRow, Tag } from "./design-ui";
 
 export type OffChoice = { key: Shift; label: string };
@@ -138,7 +144,7 @@ function GapSheetBody({
       <SheetHeading onClose={close} title={titleOf(days)} />
       <div className={sheetBody}>
         <div className={gap.body}>
-          <p>
+          <p className={sheetLead}>
             {current?.label ?? "休み"}にすると、{monthLabel}のお休みが
             <strong className={gap.count}>
               {offCount}日 → {offCount + days.length}日
