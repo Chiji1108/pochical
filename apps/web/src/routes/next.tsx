@@ -434,8 +434,9 @@ function useSamplePerson() {
 }
 
 // The calendar in a few looks, each set as someone might set theirs:
-// 墨 with outlined marks in its one tone, さくら with emoji, and letters
-// with their names under them and days off left plain.
+// 墨 with outlined marks in its one tone and days off left plain, さくら
+// with emoji, and ソーダ with letters, their names under them and days
+// off left plain.
 type GalleryLook = {
   id: string;
   preset: PresetId;
@@ -448,7 +449,7 @@ type GalleryLook = {
 const galleryLooks: GalleryLook[] = [
   {
     fill: false,
-    highlight: true,
+    highlight: false,
     id: "sumi",
     monochrome: true,
     names: false,
@@ -470,7 +471,7 @@ const galleryLooks: GalleryLook[] = [
     id: "letters",
     monochrome: false,
     names: true,
-    preset: "pochical",
+    preset: "soda",
     style: "badge",
   },
 ];
