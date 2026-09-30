@@ -49,7 +49,16 @@ export function PresetContexts({
 // override some of them, like a member's own colors or a preview's light
 // or dark, which is why they stay contexts rather than store reads. Used
 // by /demo and the /design pages alike.
-export function DesignProviders({ children }: { children: ReactNode }) {
+// `fresh` starts from the default settings in light, whatever this
+// browser saved or the device's light or dark, as the top page shows the
+// app; changes made in its phones still apply.
+export function DesignProviders({
+  children,
+  fresh = false,
+}: {
+  children: ReactNode;
+  fresh?: boolean;
+}) {
   const look = useLook();
   const {
     preset: picked,
@@ -63,14 +72,17 @@ export function DesignProviders({ children }: { children: ReactNode }) {
     picked === DEVICE_COLORS && platform !== "android" ? "pochical" : picked;
   // Saved device settings load once the page has hydrated.
   useEffect(() => {
-    void useSettings.persist.rehydrate();
-  }, []);
+    if (!fresh) {
+      void useSettings.persist.rehydrate();
+    }
+  }, [fresh]);
   // 外観 follows this computer's own light or dark unless it keeps one.
   const deviceScheme = useDeviceScheme();
+  const systemScheme = fresh ? "light" : deviceScheme;
   // An always-dark テーマ keeps its dark whatever 外観 says.
   const scheme =
     presetOf(preset).scheme ??
-    (appearance === "system" ? deviceScheme : appearance);
+    (appearance === "system" ? systemScheme : appearance);
   return (
     <WeekSettingsContext value={{ week }}>
       <ColorSchemeContext value={scheme}>
