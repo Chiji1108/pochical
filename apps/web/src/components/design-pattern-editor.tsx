@@ -357,12 +357,14 @@ function AddPatternPage({
               />
             ))}
           </List>
+          {/* For whoever pauses at + over a time unlike their own: it
+              belongs to these, not to 自分で作る below. */}
+          <Note>名前や時間は、追加したあとで直せます。</Note>
         </Section>
       )}
       <List>
         <ListRow onClick={onCustom} label="自分で作る" value="" />
       </List>
-      <Note>名前や時間は、追加したあとで直せます。</Note>
     </>
   );
 }
