@@ -36,38 +36,7 @@ const neighbors = ["#f2b233", "#4c8ef7", "#34c759", "#ff7a6b", "#8e8e93"];
 const IOS_WIDTH = 346;
 const ANDROID_WIDTH = 373;
 
-// A home screen laid out across `width`, drawn smaller where the phone
-// has less room, since widgets keep their real sizes.
-function Fit({ width, children }: { width: number; children: ReactNode }) {
-  const box = useRef<HTMLDivElement>(null);
-  const [room, setRoom] = useState(IOS_WIDTH);
-  useLayoutEffect(() => {
-    const element = box.current;
-    if (!element) {
-      return;
-    }
-    // Measured at once, then again as the page's width changes.
-    setRoom(element.clientWidth);
-    const observer = new ResizeObserver(([change]) => {
-      setRoom(change?.contentRect.width ?? IOS_WIDTH);
-    });
-    observer.observe(element);
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-  return (
-    <div className={home.fit} ref={box}>
-      <div className={home.fitted} style={{ zoom: Math.min(1, room / width) }}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
 const home = {
-  fit: css({ display: "flex", flex: 1, minHeight: 0 }),
-  fitted: css({ display: "flex", flex: 1, flexDirection: "column" }),
   android: css({
     display: "flex",
     flex: 1,
@@ -75,16 +44,24 @@ const home = {
     gap: "16px",
     padding: "16px 0 8px",
   }),
-  appLabel: css({
-    fontSize: "11px",
-    fontWeight: 500,
-    minHeight: "14px",
+  androidDock: css({
+    display: "grid",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    justifyItems: "center",
+    marginTop: "auto",
+    padding: "8px 0",
   }),
+  androidRow: css({ display: "flex", gap: "16px", justifyContent: "center" }),
   app: css({
     alignItems: "center",
     display: "flex",
     flexDirection: "column",
     gap: "4px",
+  }),
+  appLabel: css({
+    fontSize: "11px",
+    fontWeight: 500,
+    minHeight: "14px",
   }),
   apps: css({
     display: "grid",
@@ -105,6 +82,8 @@ const home = {
     padding: "16px 8px",
     width: "100%",
   }),
+  fit: css({ display: "flex", flex: 1, minHeight: 0 }),
+  fitted: css({ display: "flex", flex: 1, flexDirection: "column" }),
   // At a Glance, Android's line over the home screen: the date.
   glance: css({
     fontSize: "22px",
@@ -128,15 +107,36 @@ const home = {
     overflow: "hidden",
   }),
   row: css({ display: "flex", gap: "20px", justifyContent: "center" }),
-  androidRow: css({ display: "flex", gap: "16px", justifyContent: "center" }),
-  androidDock: css({
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    justifyItems: "center",
-    marginTop: "auto",
-    padding: "8px 0",
-  }),
 };
+
+// A home screen laid out across `width`, drawn smaller where the phone
+// has less room, since widgets keep their real sizes.
+function Fit({ width, children }: { width: number; children: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [room, setRoom] = useState(IOS_WIDTH);
+  useLayoutEffect(() => {
+    const element = box.current;
+    if (!element) {
+      return undefined;
+    }
+    // Measured at once, then again as the page's width changes.
+    setRoom(element.clientWidth);
+    const observer = new ResizeObserver(([change]) => {
+      setRoom(change?.contentRect.width ?? IOS_WIDTH);
+    });
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+  return (
+    <div className={home.fit} ref={box}>
+      <div className={home.fitted} style={{ zoom: Math.min(1, room / width) }}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function Neighbor({ index, round }: { index: number; round: boolean }) {
   const color = neighbors[index % neighbors.length];
