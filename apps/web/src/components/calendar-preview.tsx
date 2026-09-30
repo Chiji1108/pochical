@@ -1,10 +1,13 @@
 import {
+  BatteryFull,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
   Download,
   Settings2,
+  Signal,
   UsersRound,
+  Wifi,
 } from "lucide-react";
 
 const shifts = [
@@ -80,7 +83,11 @@ export function CalendarPreview() {
           <div className="phone-status">
             <span>9:41</span>
             <span className="camera-island" />
-            <span>▮▮▮ ▰</span>
+            <span className="status-icons">
+              <Signal size={13} strokeWidth={2.6} />
+              <Wifi size={14} strokeWidth={2.5} />
+              <BatteryFull size={20} strokeWidth={1.8} />
+            </span>
           </div>
           <div className="phone-content">
             <div className="calendar-heading">
