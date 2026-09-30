@@ -6333,13 +6333,13 @@ function PersonGrid({
   );
 }
 
+// Only what the look cannot tell: that a pressed date opens the day goes
+// without saying, as on your own calendar.
 function PersonNote({ member }: { member: Member }) {
-  return (
-    <Note>
-      {member.me ? "" : "薄い枠の日は、自分も休みの日です。"}
-      日付を押すと、その日のみんなの予定が見られます。
-    </Note>
-  );
+  if (member.me) {
+    return null;
+  }
+  return <Note>薄い枠の日は、自分も休みの日です。</Note>;
 }
 
 // One day of 人ごと, drawn like a day of your own calendar: the shift name
