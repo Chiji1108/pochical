@@ -1896,7 +1896,7 @@ const hub = {
 
 // 参加の画面: who it is from on top, then the group, its mark and name
 // together with room around them, and who is in it; then how you will
-// appear in it, and 参加する kept at the foot.
+// appear in it, and at the foot what joining shares over 参加する.
 const joinScreen = {
   // The faces overlap, each ringed in the screen's color, as the
   // reactions' do.
@@ -1904,6 +1904,18 @@ const joinScreen = {
     "& > *": { boxShadow: "0 0 0 2px token(colors.background.base)" },
     "& > * + *": { marginInlineStart: "-8px" },
     display: "flex",
+  }),
+  // What joining shares, right over 参加する, read as it is pressed.
+  consent: css({
+    color: "text.tertiary",
+    lineHeight: 1.6,
+    margin: "0 8px 12px",
+    textAlign: "center",
+    textStyle: "footnote",
+    // Broken between phrases and evened out, as the site's headings; a
+    // name is not a phrase it knows, so it is kept whole.
+    textWrap: "balance",
+    wordBreak: "auto-phrase",
   }),
   foot: css({ display: "flex", flexDirection: "column", paddingTop: "12px" }),
   from: css({
@@ -1941,6 +1953,7 @@ const joinScreen = {
     flexDirection: "column",
     gap: "8px",
   }),
+  name: css({ whiteSpace: "nowrap" }),
   membersButton: css({
     bg: "transparent",
     border: 0,
@@ -7344,13 +7357,14 @@ export function JoinScreen({
               profile={profile}
             />
           </List>
-          <Note>
-            参加すると、あなたのシフトも{invite.group}
-            のメンバーに見えるようになります。
-          </Note>
         </Section>
       </ScreenScroll>
       <div className={joinScreen.foot}>
+        <p className={joinScreen.consent}>
+          参加すると、あなたのシフトも
+          <span className={joinScreen.name}>{invite.group}</span>
+          のメンバーに見えるようになります。
+        </p>
         <Button
           onClick={() => {
             onJoin(group);
