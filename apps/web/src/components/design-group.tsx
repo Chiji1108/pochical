@@ -4152,14 +4152,21 @@ const people = {
     padding: "0 12px 0 8px",
     textStyle: "subheadline",
   }),
+  // Out to the screen's edges, the first chip in line with the page.
   list: css({
     border: 0,
     display: "flex",
     gap: "8px",
-    margin: "-8px 0 0",
+    marginBottom: 0,
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    marginTop: "-8px",
     minWidth: 0,
     overflowX: "auto",
-    padding: 0,
+    paddingBottom: 0,
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: 0,
     position: "relative",
   }),
 };
@@ -6198,8 +6205,12 @@ function PeoplePicker({
     if (!(list && button)) {
       return;
     }
-    const start = button.offsetLeft;
-    const end = button.offsetLeft + button.offsetWidth;
+    // Clear of the room at the row's ends, where the page's edge is, as
+    // wide as the first chip is in.
+    const inset =
+      list.querySelector<HTMLElement>("[data-member]")?.offsetLeft ?? 0;
+    const start = button.offsetLeft - inset;
+    const end = button.offsetLeft + button.offsetWidth + inset;
     if (start < list.scrollLeft) {
       list.scrollTo({ behavior: "smooth", left: start });
     } else if (end > list.scrollLeft + list.clientWidth) {

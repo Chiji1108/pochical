@@ -270,14 +270,22 @@ const screenScrollStyle = cva({
     flex: 1,
     flexDirection: "column",
     gap: SCREEN_SCROLL_GAP,
+    // It spans the phone from edge to edge, its parts kept off the sides
+    // by its padding, so a row that scrolls sideways, like 人ごと's
+    // people, can run out to the edges rather than be cut off short of
+    // them.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
     minHeight: 0,
     overflowY: "auto",
-    padding: "8px 0 0",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "8px",
   },
   variants: {
     // Beside a rail on its left, like the group hub's list of groups: it
     // takes the rest of the width and runs to the right edge.
-    beside: { true: { minWidth: 0, paddingRight: 0 } },
+    beside: { true: { marginLeft: 0, minWidth: 0, paddingLeft: 0 } },
   },
 });
 
