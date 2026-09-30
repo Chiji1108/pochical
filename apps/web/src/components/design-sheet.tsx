@@ -30,7 +30,7 @@ const sheet = {
   }),
   handle: css({
     bg: "fill.primary",
-    borderRadius: "8px",
+    borderRadius: "sm",
     height: "4px",
     margin: "0 auto",
     width: "34px",
@@ -99,7 +99,7 @@ const content = cva({
     _open: { animation: "sheetIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)" },
     bg: "background.elevated",
     // Floating off the screen's sides and foot, as iOS 26's sheets.
-    borderRadius: "32px",
+    borderRadius: "4xl",
     color: "text.primary",
     // A column, so a part marked to scroll can take what is left while the
     // heading stays in reach.
@@ -156,7 +156,7 @@ export function SheetPicture({
   const look = over
     ? content({ modal: true })
     : css(content.raw({ modal: true }), {
-        borderRadius: "20px",
+        borderRadius: "xl",
         maxHeight: "none",
       });
   const drawn = (
@@ -317,7 +317,7 @@ const heading = {
   action: css({
     bg: "fill.quaternary",
     border: 0,
-    borderRadius: "50%",
+    borderRadius: "circle",
     color: "accent.default",
     display: "grid",
     flexShrink: 0,
@@ -339,7 +339,7 @@ const heading = {
   close: css({
     bg: "fill.quaternary",
     border: 0,
-    borderRadius: "50%",
+    borderRadius: "circle",
     color: "text.secondary",
     display: "grid",
     flexShrink: 0,
@@ -377,7 +377,7 @@ const decide = {
   button: cva({
     base: {
       border: 0,
-      borderRadius: "999px",
+      borderRadius: "full",
       display: "grid",
       height: "touch",
       placeItems: "center",
@@ -531,7 +531,7 @@ const viewer = {
     base: {
       bg: "rgba(255, 255, 255, 0.16)",
       border: 0,
-      borderRadius: "50%",
+      borderRadius: "circle",
       color: "white",
       display: "grid",
       height: "action",
@@ -682,7 +682,7 @@ const confirm = {
   }),
   button: css({
     border: 0,
-    borderRadius: "12px",
+    borderRadius: "md",
     // Equal halves, but never narrower than the label.
     flex: "1 1 0",
     minWidth: "max-content",
@@ -704,7 +704,7 @@ const confirm = {
   }),
   root: css({
     bg: "background.elevated",
-    borderRadius: "20px",
+    borderRadius: "xl",
     color: "text.primary",
     padding: "24px 20px 16px",
     textAlign: "center",

@@ -1245,6 +1245,26 @@ public enum Metrics {
   public static let pressedOpacity: Double = 0.16
 }
 
+/// The corners by size; `full` is a Capsule's.
+public enum Radius {
+  public static let xxs: CGFloat = 2
+  public static let xs: CGFloat = 4
+  public static let sm: CGFloat = 8
+  public static let md: CGFloat = 12
+  public static let lg: CGFloat = 16
+  public static let xl: CGFloat = 20
+  public static let xxl: CGFloat = 24
+  public static let xxxl: CGFloat = 28
+  public static let xxxxl: CGFloat = 32
+  public static let full: CGFloat = 999
+}
+
+/// Pochical's own motion, for withAnimation.
+public enum Springs {
+  public static let quick: Animation = .spring(duration: 0.25, bounce: 0)
+  public static let standard: Animation = .spring(duration: 0.3, bounce: 0)
+}
+
 extension Color {
   fileprivate init(hex: UInt32, alpha: UInt32 = 0xFF) {
     self.init(

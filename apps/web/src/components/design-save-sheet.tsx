@@ -85,7 +85,7 @@ const save = {
   doneIcon: css({ color: "accent.default", flexShrink: 0, marginTop: "4px" }),
   // A calendar's own color, as the system lists them.
   dot: css({
-    borderRadius: "50%",
+    borderRadius: "circle",
     flexShrink: 0,
     height: "10px",
     width: "10px",
@@ -93,7 +93,7 @@ const save = {
   picker: css({ display: "flex", flexDirection: "column", gap: "24px" }),
   // The dot before the picked calendar's name, in the row's value.
   valueDot: css({
-    borderRadius: "50%",
+    borderRadius: "circle",
     display: "inline-block",
     height: "10px",
     marginRight: "8px",
@@ -131,7 +131,7 @@ const picture = {
   frame: css({
     bg: "background.base",
     border: "1px solid token(colors.separator)",
-    borderRadius: "20px",
+    borderRadius: "xl",
     boxShadow: "0 6px 18px var(--shadow-small)",
     color: "text.primary",
     margin: 0,

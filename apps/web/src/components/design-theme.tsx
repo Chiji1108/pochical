@@ -150,7 +150,7 @@ const schemeSwitch = {
     _disabled: { color: "text.disabled", cursor: "default" },
     bg: "transparent",
     border: 0,
-    borderRadius: "8px",
+    borderRadius: "sm",
     color: "text.quaternary",
     display: "grid",
     height: "18px",
@@ -166,7 +166,7 @@ const schemeSwitch = {
     base: {
       bg: "background.card",
       border: "1px solid token(colors.separator)",
-      borderRadius: "12px",
+      borderRadius: "md",
       display: "flex",
       gap: "2px",
       margin: 0,

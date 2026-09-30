@@ -1,5 +1,5 @@
 import { defineConfig } from "@pandacss/dev";
-import { sizes, stateLayers } from "@pochical/design/metrics";
+import { radii, sizes, stateLayers } from "@pochical/design/metrics";
 import { textStyles } from "@pochical/design/type";
 
 // Panda CSS for the /design prototype's pieces. The colors stay the CSS
@@ -152,13 +152,16 @@ export default defineConfig({
             tertiary: { value: "var(--text-tertiary)" },
           },
         },
+        // The corners by size (design/src/metrics.ts), and a circle for
+        // round avatars and dots.
         radii: {
-          // Buttons and cards.
-          control: { value: "16px" },
-          // Lists of rows, as iOS 26's grouped lists.
-          list: { value: "24px" },
-          // Small actions like icon buttons.
-          action: { value: "12px" },
+          ...Object.fromEntries(
+            Object.entries(radii).map(([name, radius]) => [
+              name,
+              { value: `${radius}px` },
+            ])
+          ),
+          circle: { value: "50%" },
         },
         sizes: Object.fromEntries(
           Object.entries(sizes).map(([name, size]) => [

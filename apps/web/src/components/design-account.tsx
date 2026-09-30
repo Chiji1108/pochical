@@ -77,7 +77,7 @@ const providerButton = {
     base: {
       _disabled: { opacity: 0.6 },
       alignItems: "center",
-      borderRadius: "16px",
+      borderRadius: "lg",
       display: "flex",
       fontWeight: 600,
       gap: "12px",
