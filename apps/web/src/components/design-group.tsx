@@ -56,6 +56,7 @@ import { sampleRosterPhoto } from "../lib/design-sample-photos";
 import type { Photo } from "../lib/design-sample-photos";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
+import { spring } from "../lib/motion";
 import { dayName } from "../lib/text-limits";
 import {
   TabBar,
@@ -1392,7 +1393,7 @@ const scan = {
   close: css({
     bg: "rgba(255, 255, 255, 0.16)",
     border: 0,
-    borderRadius: "50%",
+    borderRadius: "circle",
     color: "white",
     display: "grid",
     height: "action",
@@ -1448,7 +1449,7 @@ const scan = {
     },
     bg: "rgba(255, 255, 255, 0.06)",
     border: 0,
-    borderRadius: "12px",
+    borderRadius: "md",
     height: "220px",
     position: "relative",
     width: "220px",
@@ -1460,7 +1461,7 @@ const scan = {
     alignSelf: "center",
     bg: "rgba(255, 255, 255, 0.16)",
     border: 0,
-    borderRadius: "999px",
+    borderRadius: "full",
     color: "white",
     display: "flex",
     fontWeight: 600,
@@ -1473,7 +1474,7 @@ const scan = {
     "& svg": { color: "#ffd60a", flexShrink: 0, marginTop: "1px" },
     alignItems: "flex-start",
     bg: "rgba(255, 255, 255, 0.14)",
-    borderRadius: "16px",
+    borderRadius: "lg",
     display: "flex",
     gap: "12px",
     lineHeight: 1.5,
@@ -1568,7 +1569,7 @@ const rail = {
   action: css({
     bg: "background.card",
     border: 0,
-    borderRadius: "50%",
+    borderRadius: "circle",
     color: "accent.default",
     display: "grid",
     height: "42px",
@@ -1583,7 +1584,7 @@ const rail = {
   }),
   divider: css({
     bg: "border.default",
-    borderRadius: "1px",
+    borderRadius: "full",
     height: "2px",
     width: "28px",
   }),
@@ -1592,7 +1593,7 @@ const rail = {
     "&::before": {
       _motionReduce: { transition: "none" },
       bg: "accent.default",
-      borderRadius: "0 4px 4px 0",
+      borderRadius: "0 token(radii.xs) token(radii.xs) 0",
       content: '""',
       height: 0,
       left: 0,
@@ -1620,7 +1621,7 @@ const rail = {
     "& > *": { flexShrink: 0 },
     alignItems: "center",
     bg: "fill.quaternary",
-    borderRadius: "0 20px 0 0",
+    borderRadius: "0 token(radii.xl) 0 0",
     display: "flex",
     flexDirection: "column",
     flexShrink: 0,
@@ -1656,11 +1657,11 @@ const markFrame = cva({
           "inset 0 0 0 2px var(--accent-default), inset 0 0 0 4px var(--background-card)",
       },
       bg: "accent.container",
-      borderRadius: "12px",
+      borderRadius: "md",
     },
     _motionReduce: { transition: "none" },
     bg: "background.card",
-    borderRadius: "16px",
+    borderRadius: "lg",
     display: "grid",
     fontFamily: EMOJI_FONT,
     fontSize: "22px",
@@ -1675,7 +1676,7 @@ const markFrame = cva({
     size: {
       large: {
         bg: "fill.quaternary",
-        borderRadius: "24px",
+        borderRadius: "2xl",
         height: "76px",
         width: "76px",
       },
@@ -1686,7 +1687,7 @@ const markFrame = cva({
 // The same rounded square as the rail, small, before a row's name.
 const smallMarkFrame = css({
   bg: "background.card",
-  borderRadius: "8px",
+  borderRadius: "sm",
   display: "grid",
   height: "28px",
   overflow: "hidden",
@@ -1727,13 +1728,13 @@ const markPart = {
 const avatar = cva({
   base: {
     "& img": {
-      borderRadius: "50%",
+      borderRadius: "circle",
       height: "100%",
       objectFit: "cover",
       width: "100%",
     },
     bg: "var(--fill-secondary)",
-    borderRadius: "50%",
+    borderRadius: "circle",
     color: "text.secondary",
     display: "grid",
     flexShrink: 0,
@@ -1749,7 +1750,7 @@ const avatar = cva({
 // A day with no shift, as a small dot.
 const emptyMark = css({
   bg: "var(--fill-secondary)",
-  borderRadius: "50%",
+  borderRadius: "circle",
   height: "6px",
   width: "6px",
 });
@@ -1759,7 +1760,7 @@ const emptyMark = css({
 const hub = {
   chatAll: css({
     bg: "accent.container",
-    borderRadius: "8px",
+    borderRadius: "sm",
     color: "accent.default",
     display: "grid",
     flexShrink: 0,
@@ -1780,7 +1781,7 @@ const hub = {
   }),
   icon: css({
     bg: "fill.quaternary",
-    borderRadius: "8px",
+    borderRadius: "sm",
     display: "grid",
     flexShrink: 0,
     height: "26px",
@@ -1809,7 +1810,7 @@ const hub = {
     alignItems: "center",
     bg: "background.card",
     border: "1px solid token(colors.separator)",
-    borderRadius: "20px",
+    borderRadius: "2xl",
     color: "text.primary",
     display: "flex",
     flexDirection: "column",
@@ -1857,7 +1858,7 @@ const hub = {
   weekCard: css({
     bg: "background.base",
     border: "1px solid token(colors.separator)",
-    borderRadius: "16px",
+    borderRadius: "2xl",
     color: "text.primary",
     display: "flex",
     flexDirection: "column",
@@ -2018,9 +2019,9 @@ const photoPicker = {
   }),
   badge: css({
     bg: "background.card",
-    borderRadius: "50%",
+    borderRadius: "circle",
     bottom: "-2px",
-    boxShadow: "0 1px 4px var(--shadow-large)",
+    boxShadow: "sm",
     color: "accent.default",
     display: "grid",
     height: "26px",
@@ -2032,7 +2033,7 @@ const photoPicker = {
   cancel: css({
     bg: "fill.quaternary",
     border: 0,
-    borderRadius: "16px",
+    borderRadius: "lg",
     color: "text.primary",
     fontWeight: 600,
     marginTop: "12px",
@@ -2302,7 +2303,7 @@ function GroupHub({
 const memberButton = css({
   background: "transparent",
   border: 0,
-  borderRadius: "50%",
+  borderRadius: "circle",
   display: "grid",
   padding: 0,
 });
@@ -2452,7 +2453,7 @@ function lastLine(chat: Chat, members: Member[]) {
 // How many are unread, on a chat's row and on the rail's group icon.
 const badge = css({
   bg: "var(--danger-fill)",
-  borderRadius: "999px",
+  borderRadius: "full",
   color: "var(--danger-on-fill)",
   display: "inline-grid",
   fontSize: "10px",
@@ -2510,7 +2511,8 @@ const chatStyle = {
   bubble: cva({
     base: {
       bg: "fill.tertiary",
-      borderRadius: "16px 16px 16px 8px",
+      borderRadius:
+        "token(radii.lg) token(radii.lg) token(radii.lg) token(radii.sm)",
       color: "text.primary",
       display: "flex",
       flexDirection: "column",
@@ -2521,7 +2523,7 @@ const chatStyle = {
       mine: {
         true: {
           bg: "accent.fill",
-          borderRadius: "16px 16px 8px",
+          borderRadius: "token(radii.lg) token(radii.lg) token(radii.sm)",
           color: "accent.onFill",
         },
       },
@@ -2601,7 +2603,7 @@ const chatStyle = {
     base: {
       bg: "transparent",
       border: 0,
-      borderRadius: "50%",
+      borderRadius: "circle",
       color: "accent.default",
       display: "grid",
       flexShrink: 0,
@@ -2622,7 +2624,7 @@ const chatStyle = {
       },
       // The tools at the start sit close together, as LINE's row of
       // icons does, leaving the room to the field.
-      tool: { true: { borderRadius: "8px", width: "32px" } },
+      tool: { true: { borderRadius: "sm", width: "32px" } },
     },
   }),
   composerToolRow: css({ display: "flex" }),
@@ -2634,14 +2636,14 @@ const chatStyle = {
     position: "relative",
   }),
   // One line to start with, nearly as round-ended as the buttons beside
-  // it (the nearest of the corner radii); it grows with the lines
+  // it (xl, the radius nearest half its height); it grows with the lines
   // written, up to five, and then scrolls.
   composerInput: css({
     "--lines": "5",
     "--pad-x": "16px",
     "--pad-y": "8px",
     bg: "fill.quaternary",
-    borderRadius: "20px",
+    borderRadius: "xl",
     color: "text.primary",
     flex: 1,
     lineHeight: "22px",
@@ -2724,7 +2726,7 @@ const chatStyle = {
     border: 0,
     borderColor: "accent.default",
     borderLeft: "3px solid token(colors.accent.default)",
-    borderRadius: "2px",
+    borderRadius: "2xs",
     display: "flex",
     flex: 1,
     flexDirection: "column",
@@ -2747,7 +2749,7 @@ const chatStyle = {
   }),
   // A quoted photo, small beside the quote's words.
   quoteThumb: css({
-    borderRadius: "4px",
+    borderRadius: "xs",
     flexShrink: 0,
     height: "32px",
     objectFit: "cover",
@@ -2762,7 +2764,7 @@ const chatStyle = {
     border: 0,
     position: "relative",
     // The focus ring follows the photo's corners.
-    borderRadius: "16px",
+    borderRadius: "lg",
     display: "block",
     padding: 0,
     // A long press opens the actions, not the phone's own callout.
@@ -2781,7 +2783,7 @@ const chatStyle = {
       quoted: {
         // A pale photo, like a paper roster, keeps its edge on the ground.
         false: {
-          borderRadius: "16px",
+          borderRadius: "lg",
           outline: "1px solid token(colors.border.default)",
           outlineOffset: "-1px",
         },
@@ -2795,7 +2797,7 @@ const chatStyle = {
   uploading: css({
     alignItems: "center",
     bg: "rgba(0, 0, 0, 0.32)",
-    borderRadius: "16px",
+    borderRadius: "lg",
     display: "flex",
     inset: 0,
     justifyContent: "center",
@@ -2851,7 +2853,7 @@ const chatStyle = {
     variants: { below: { true: { borderTop: 0, paddingTop: "8px" } } },
   }),
   trayImage: css({
-    borderRadius: "12px",
+    borderRadius: "md",
     display: "block",
     height: "64px",
     objectFit: "cover",
@@ -2864,7 +2866,7 @@ const chatStyle = {
     alignItems: "center",
     bg: "rgba(0, 0, 0, 0.6)",
     border: "2px solid token(colors.background.base)",
-    borderRadius: "50%",
+    borderRadius: "circle",
     color: "white",
     display: "flex",
     height: "24px",
@@ -2911,7 +2913,7 @@ const chatStyle = {
   when: css({
     alignSelf: "center",
     bg: "fill.tertiary",
-    borderRadius: "8px",
+    borderRadius: "sm",
     color: "text.tertiary",
     margin: "8px 0 2px",
     padding: "2px 12px",
@@ -3649,7 +3651,7 @@ const flashMilliseconds = 1200;
 // into a › and back, as quick as the calendar's own fold.
 const toolWidth = 32;
 const toolCount = 2;
-const toolFold = { bounce: 0, type: "spring", visualDuration: 0.25 } as const;
+const toolFold = spring("quick");
 
 // A photo of yours on its way up, or one that could not be sent.
 type Upload = "sending" | "failed";
@@ -3841,7 +3843,7 @@ const messageActions = {
     _hover: { bg: "fill.tertiary" },
     bg: "transparent",
     border: 0,
-    borderRadius: "50%",
+    borderRadius: "circle",
     display: "grid",
     height: "34px",
     padding: 0,
@@ -3853,8 +3855,8 @@ const messageActions = {
     alignItems: "center",
     bg: "background.elevated",
     border: "1px solid token(colors.border.default)",
-    borderRadius: "999px",
-    boxShadow: "0 4px 14px var(--shadow-medium)",
+    borderRadius: "full",
+    boxShadow: "md",
     display: "flex",
     gap: "2px",
     padding: "4px",
@@ -4148,7 +4150,7 @@ const reactionPill = {
     alignItems: "center",
     bg: "var(--reaction-bg)",
     border: "1px solid token(colors.border.default)",
-    borderRadius: "999px",
+    borderRadius: "full",
     display: "inline-flex",
     gap: "4px",
     height: "24px",
@@ -4249,7 +4251,7 @@ const smallWeekday = css({
 // piece.
 const offTile = {
   bg: "accent.container",
-  borderRadius: "8px",
+  borderRadius: "sm",
   content: '""',
   inset: "3px",
   position: "absolute",
@@ -4291,7 +4293,7 @@ const weekTable = {
     base: {
       bg: "background.base",
       border: "1px solid token(colors.separator)",
-      borderRadius: "16px",
+      borderRadius: "2xl",
       overflow: "hidden",
       padding: "4px 0",
     },
@@ -4338,7 +4340,7 @@ const weekCell = cva({
       css: {
         "&::before": {
           ...offTile,
-          borderRadius: "8px 8px 0 0",
+          borderRadius: "token(radii.sm) token(radii.sm) 0 0",
           inset: "-1px 3px 0",
         },
       },
@@ -4352,7 +4354,10 @@ const weekCell = cva({
     },
     {
       css: {
-        "&::before": { borderRadius: "0 0 8px 8px", inset: "0 3px -1px" },
+        "&::before": {
+          borderRadius: "0 0 token(radii.sm) token(radii.sm)",
+          inset: "0 3px -1px",
+        },
       },
       kind: "cell",
       last: true,
@@ -4382,7 +4387,7 @@ const weekCell = cva({
     // Tiles sit tighter in the small weekly table.
     {
       compact: true,
-      css: { "&::before": { borderRadius: "8px", inset: "2px 3px" } },
+      css: { "&::before": { borderRadius: "sm", inset: "2px 3px" } },
       off: true,
       together: false,
     },
@@ -4390,7 +4395,7 @@ const weekCell = cva({
     {
       css: {
         "&::after": {
-          borderRadius: "8px 8px 0 0",
+          borderRadius: "token(radii.sm) token(radii.sm) 0 0",
           borderWidth: "1.5px 1.5px 0",
           inset: "-1px 3px 0",
         },
@@ -4406,7 +4411,7 @@ const weekCell = cva({
     {
       css: {
         "&::after": {
-          borderRadius: "0 0 8px 8px",
+          borderRadius: "0 0 token(radii.sm) token(radii.sm)",
           borderWidth: "0 1.5px 1.5px",
           inset: "0 3px -1px",
         },
@@ -4484,7 +4489,7 @@ const dayRows = {
       {
         css: {
           "&::before": {
-            borderRadius: "0 8px 8px 0",
+            borderRadius: "0 token(radii.sm) token(radii.sm) 0",
             inset: "3px 3px 3px 0",
           },
         },
@@ -4500,7 +4505,7 @@ const dayRows = {
       {
         css: {
           "&::after": {
-            borderRadius: "0 8px 8px 0",
+            borderRadius: "0 token(radii.sm) token(radii.sm) 0",
             borderWidth: "1.5px 1.5px 1.5px 0",
             inset: "3px 3px 3px 0",
           },
@@ -4562,7 +4567,7 @@ const dayRows = {
         true: {
           "&::after": {
             ...pickedFrame,
-            borderRadius: "8px 0 0 8px",
+            borderRadius: "token(radii.sm) 0 0 token(radii.sm)",
             borderWidth: "1.5px 0 1.5px 1.5px",
             inset: "3px 0 3px 3px",
           },
@@ -4575,7 +4580,7 @@ const dayRows = {
         true: {
           "&::before": {
             ...offTile,
-            borderRadius: "8px 0 0 8px",
+            borderRadius: "token(radii.sm) 0 0 token(radii.sm)",
             inset: "3px 0 3px 3px",
           },
         },
@@ -4680,7 +4685,7 @@ const dayRows = {
     base: {
       bg: "background.base",
       border: "1px solid token(colors.separator)",
-      borderRadius: "16px",
+      borderRadius: "2xl",
       containerType: "inline-size",
       maxHeight: "520px",
       overflow: "auto",
@@ -4716,7 +4721,7 @@ const dayCard = {
     base: {
       bg: "background.card",
       border: "1px solid token(colors.border.default)",
-      borderRadius: "16px",
+      borderRadius: "lg",
       display: "flex",
       flexDirection: "column",
       gap: "8px",
@@ -4734,7 +4739,7 @@ const dayCard = {
   }),
   cell: cva({
     base: {
-      borderRadius: "8px",
+      borderRadius: "sm",
       display: "grid",
       height: "24px",
       placeItems: "center",
@@ -4757,7 +4762,7 @@ const dayCard = {
   dayHead: cva({
     base: {
       alignItems: "center",
-      borderRadius: "8px",
+      borderRadius: "sm",
       display: "flex",
       flexDirection: "column",
       fontSize: "11px",
@@ -4802,7 +4807,7 @@ const dayCard = {
   row: cva({
     base: {
       alignItems: "center",
-      borderRadius: "8px",
+      borderRadius: "sm",
       display: "grid",
       gap: "4px",
       justifyItems: "center",
@@ -4824,7 +4829,7 @@ const shareDays = {
       _disabled: { visibility: "hidden" },
       bg: "transparent",
       border: 0,
-      borderRadius: "12px",
+      borderRadius: "md",
       fontSize: "13px",
       fontWeight: 600,
       height: "36px",
@@ -4847,7 +4852,7 @@ const shareDays = {
   suggest: css({
     alignItems: "center",
     bg: "accent.container",
-    borderRadius: "16px",
+    borderRadius: "2xl",
     display: "flex",
     flexWrap: "wrap",
     gap: "8px",
@@ -4857,7 +4862,7 @@ const shareDays = {
     "&[aria-pressed=true]": { bg: "accent.fill", color: "accent.onFill" },
     bg: "background.card",
     border: "1.5px solid transparent",
-    borderRadius: "999px",
+    borderRadius: "full",
     color: "accent.default",
     fontWeight: 600,
     minHeight: "30px",
@@ -4883,7 +4888,7 @@ const monthSwitch = css({
   "& button": {
     bg: "transparent",
     border: 0,
-    borderRadius: "12px",
+    borderRadius: "md",
     color: "accent.default",
     display: "grid",
     height: "32px",
@@ -4998,7 +5003,7 @@ const people = {
     alignItems: "center",
     bg: "fill.quaternary",
     border: "1px solid transparent",
-    borderRadius: "999px",
+    borderRadius: "full",
     color: "text.secondary",
     display: "inline-flex",
     flexShrink: 0,

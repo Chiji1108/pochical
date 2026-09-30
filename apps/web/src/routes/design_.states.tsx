@@ -1,3 +1,5 @@
+import type { ColorScheme } from "@pochical/design/colors";
+import { presets } from "@pochical/design/themes";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
@@ -21,11 +23,7 @@ import {
   PresetContexts,
   useDesignTheme,
 } from "../components/design-providers";
-import {
-  ColorSchemeContext,
-  presets,
-  pageStyle,
-} from "../components/design-theme";
+import { ColorSchemeContext, pageStyle } from "../components/design-theme";
 import type { PresetId } from "../components/design-theme";
 import {
   OffDisplayContext,
@@ -34,7 +32,6 @@ import {
 } from "../components/shift-mark";
 import type { OffDisplay, ShiftMarkStyle } from "../components/shift-mark";
 import { presetList } from "../lib/design-patterns";
-import type { ColorScheme } from "../lib/design-tokens";
 import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/design_/states")({

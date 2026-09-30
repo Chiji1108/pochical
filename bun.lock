@@ -126,6 +126,7 @@
         "@holiday-jp/holiday_jp": "^2.5.2",
         "@material/material-color-utilities": "^0.4.0",
         "@phosphor-icons/react": "^2.1.10",
+        "@pochical/design": "workspace:*",
         "@tanstack/react-router": "1.170.39",
         "@tanstack/react-start": "1.168.58",
         "@tanstack/react-virtual": "^3.14.13",
@@ -152,6 +153,13 @@
         "typescript": "~6.0.3",
         "vite": "^8.0.0",
         "wrangler": "^4.137.0",
+      },
+    },
+    "design": {
+      "name": "@pochical/design",
+      "devDependencies": {
+        "@types/bun": "^1.4.2",
+        "typescript": "~6.0.3",
       },
     },
   },
@@ -795,6 +803,8 @@
     "@panva/hkdf": ["@panva/hkdf@1.2.1", "", {}, "sha512-6oclG6Y3PiDFcoyk8srjLfVKyMfVCKJ27JwNPViuXziFpmdz+MZnZN/aKY0JGXgYuO/VghU0jcOAZgWXZ1Dmrw=="],
 
     "@phosphor-icons/react": ["@phosphor-icons/react@2.1.10", "", { "peerDependencies": { "react": ">= 16.8", "react-dom": ">= 16.8" } }, "sha512-vt8Tvq8GLjheAZZYa+YG/pW7HDbov8El/MANW8pOAz4eGxrwhnbfrQZq0Cp4q8zBEu8NIhHdnr+r8thnfRSNYA=="],
+
+    "@pochical/design": ["@pochical/design@workspace:design"],
 
     "@pochical/mobile-legacy": ["@pochical/mobile-legacy@workspace:apps/mobile-legacy"],
 

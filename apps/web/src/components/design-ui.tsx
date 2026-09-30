@@ -58,6 +58,7 @@ import type {
 } from "react";
 import { css, cva, cx } from "styled-system/css";
 
+import { spring } from "../lib/motion";
 import {
   characterCount,
   countShown,
@@ -96,7 +97,7 @@ const buttonStyle = cva({
     alignItems: "center",
     border: 0,
     // Round-ended, as iOS 26's buttons are by default.
-    borderRadius: "999px",
+    borderRadius: "full",
     cursor: "pointer",
     display: "flex",
     textStyle: "body",
@@ -176,7 +177,7 @@ export function Button({
 const iconButtonStyle = cva({
   base: {
     border: 0,
-    borderRadius: "999px",
+    borderRadius: "full",
     display: "grid",
     flexShrink: 0,
     height: "touch",
@@ -219,7 +220,7 @@ export function IconButton({
 const barGroupStyle = css({
   "& > *": { bg: "transparent" },
   bg: "fill.quaternary",
-  borderRadius: "999px",
+  borderRadius: "full",
   display: "flex",
   flexShrink: 0,
 });
@@ -434,7 +435,7 @@ const optionCard = {
       alignItems: "center",
       bg: "background.card",
       border: "1px solid token(colors.border.default)",
-      borderRadius: "20px",
+      borderRadius: "2xl",
       color: "text.primary",
       display: "flex",
       gap: "12px",
@@ -539,7 +540,7 @@ const addButtonStyle = css({
   alignItems: "center",
   bg: "transparent",
   border: "1px dashed var(--border-strong)",
-  borderRadius: "16px",
+  borderRadius: "2xl",
   color: "accent.default",
   display: "flex",
   gap: "8px",
@@ -807,7 +808,7 @@ export const markPreview = cva({
     "& strong": { textStyle: "body" },
     alignItems: "center",
     bg: "fill.quaternary",
-    borderRadius: "20px",
+    borderRadius: "2xl",
     display: "flex",
     gap: "16px",
     padding: "16px",
@@ -823,7 +824,7 @@ const doneButtonStyle = css({
   alignItems: "center",
   bg: "accent.fill",
   border: 0,
-  borderRadius: "24px",
+  borderRadius: "2xl",
   color: "accent.onFill",
   display: "inline-flex",
   gap: "8px",
@@ -850,7 +851,7 @@ const todayButtonStyle = css({
   _disabled: { color: "text.disabled", cursor: "default" },
   bg: "fill.quaternary",
   border: 0,
-  borderRadius: "999px",
+  borderRadius: "full",
   color: "text.primary",
   flexShrink: 0,
   height: "touch",
@@ -897,7 +898,7 @@ export const summaryRow = {
     alignItems: "center",
     bg: "fill.quaternary",
     border: 0,
-    borderRadius: "control",
+    borderRadius: "2xl",
     color: "text.secondary",
     cursor: "pointer",
     display: "flex",
@@ -954,7 +955,7 @@ const backButtonStyle = css({
   alignSelf: "flex-start",
   bg: "fill.quaternary",
   border: 0,
-  borderRadius: "999px",
+  borderRadius: "full",
   color: "text.primary",
   display: "inline-flex",
   flexShrink: 0,
@@ -996,7 +997,7 @@ const headerActionStyle = cva({
     },
     alignItems: "center",
     border: 0,
-    borderRadius: "999px",
+    borderRadius: "full",
     display: "inline-flex",
     flexShrink: 0,
     height: "touch",
@@ -1102,7 +1103,7 @@ export function PageHeader({
 // card of list items on Android.
 export const listStyle = css({
   bg: "fill.quaternary",
-  borderRadius: "list",
+  borderRadius: "2xl",
   overflow: "hidden",
 });
 
@@ -1353,8 +1354,8 @@ const toggle = {
   thumb: css({
     _checked: { transform: "translateX(18px)" },
     bg: "var(--control-knob)",
-    borderRadius: "50%",
-    boxShadow: "0 1px 3px var(--shadow-large)",
+    borderRadius: "circle",
+    boxShadow: "sm",
     display: "block",
     height: "22px",
     margin: "2px",
@@ -1368,7 +1369,7 @@ const toggle = {
       outlineOffset: "2px",
     },
     bg: "fill.primary",
-    borderRadius: "999px",
+    borderRadius: "full",
     cursor: "pointer",
     display: "block",
     flexShrink: 0,
@@ -1455,7 +1456,7 @@ export function SwitchRow({
 }
 
 const swatchStyle = css({
-  borderRadius: "50%",
+  borderRadius: "circle",
   flexShrink: 0,
   height: "10px",
   width: "10px",
@@ -1472,7 +1473,7 @@ const SegmentSizeContext = createContext<SegmentSize>("regular");
 const segmentedStyle = css({
   bg: "fill.tertiary",
   border: 0,
-  borderRadius: "999px",
+  borderRadius: "full",
   display: "grid",
   gap: "4px",
   gridAutoColumns: "minmax(0, 1fr)",
@@ -1490,7 +1491,7 @@ const segmentStyle = cva({
       outlineOffset: "-2px",
     },
     alignItems: "center",
-    borderRadius: "999px",
+    borderRadius: "full",
     color: "text.secondary",
     cursor: "pointer",
     display: "flex",
@@ -1519,8 +1520,8 @@ const segmentText = css({
 // one as it is picked; Ark UI measures where it goes.
 const segmentIndicator = css({
   bg: "background.card",
-  borderRadius: "999px",
-  boxShadow: "0 1px 3px var(--shadow-medium)",
+  borderRadius: "full",
+  boxShadow: "sm",
   height: "var(--height)",
   top: "var(--top)",
   width: "var(--width)",
@@ -1645,7 +1646,7 @@ export const markGrid = css({
     aspectRatio: 1,
     bg: "fill.quaternary",
     border: "1.5px solid transparent",
-    borderRadius: "12px",
+    borderRadius: "md",
     display: "grid",
     fontSize: "20px",
     placeItems: "center",
@@ -1666,7 +1667,7 @@ export const colorGrid = css({
       boxShadow: "0 0 0 3px var(--background-base), 0 0 0 5px currentcolor",
     },
     border: "2px solid currentcolor",
-    borderRadius: "50%",
+    borderRadius: "circle",
     height: "36px",
     width: "36px",
   },
@@ -1687,7 +1688,7 @@ export const colorGrid = css({
 const pageDots = {
   bar: css({
     bg: "text.quaternary",
-    borderRadius: "999px",
+    borderRadius: "full",
     height: "8px",
     overflow: "hidden",
     position: "relative",
@@ -1700,7 +1701,7 @@ const pageDots = {
     alignItems: "center",
     bg: "transparent",
     border: 0,
-    borderRadius: "999px",
+    borderRadius: "full",
     cursor: "pointer",
     display: "flex",
     height: "24px",
@@ -1760,11 +1761,7 @@ export function PageDots({
     if (landed.current || reduceMotion) {
       position.set(current);
     } else {
-      animate(position, current, {
-        bounce: 0,
-        type: "spring",
-        visualDuration: 0.3,
-      });
+      animate(position, current, spring("standard"));
     }
     landed.current = false;
   }, [current, position, reduceMotion]);
@@ -1932,7 +1929,7 @@ export const chipStyle = cva({
     alignItems: "center",
     bg: "background.card",
     border: "1px solid token(colors.border.default)",
-    borderRadius: "999px",
+    borderRadius: "full",
     color: "text.secondary",
     cursor: "pointer",
     display: "inline-flex",
@@ -2007,7 +2004,7 @@ export function ChipGroup({
 const tagStyle = cva({
   base: {
     alignItems: "center",
-    borderRadius: "8px",
+    borderRadius: "sm",
     display: "inline-flex",
     gap: "4px",
     lineHeight: 1.4,
@@ -2056,8 +2053,8 @@ const menu = {
     _open: { animation: "fadeIn 0.12s ease-out" },
     bg: "background.elevated",
     border: "1px solid token(colors.border.default)",
-    borderRadius: "24px",
-    boxShadow: "0 8px 24px var(--shadow-large)",
+    borderRadius: "2xl",
+    boxShadow: "lg",
     minWidth: "200px",
     outline: "none",
     padding: "8px",
@@ -2074,7 +2071,7 @@ const menu = {
     alignItems: "center",
     bg: "transparent",
     border: 0,
-    borderRadius: "16px",
+    borderRadius: "lg",
     color: "text.primary",
     cursor: "default",
     display: "flex",
@@ -2094,7 +2091,7 @@ const menu = {
     alignItems: "center",
     bg: "fill.tertiary",
     border: 0,
-    borderRadius: "16px",
+    borderRadius: "lg",
     color: "text.secondary",
     display: "inline-flex",
     flexShrink: 0,
@@ -2310,7 +2307,7 @@ export function SortableList<Item extends { id: string }>({
 const sortable = {
   dragging: css({
     bg: "fill.quaternary",
-    boxShadow: "0 4px 14px var(--shadow-large)",
+    boxShadow: "md",
     position: "relative",
     zIndex: 1,
   }),
@@ -2603,11 +2600,9 @@ export function Pager({
       return;
     }
     animate(x, target, {
-      bounce: 0,
+      ...spring("standard"),
       onComplete: settle,
-      type: "spring",
       velocity,
-      visualDuration: 0.3,
     });
   };
   const landRef = useRef(land);

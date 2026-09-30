@@ -278,7 +278,7 @@ const onboarding = {
   restart: css({
     bg: "transparent",
     border: "1px solid token(colors.border.default)",
-    borderRadius: "999px",
+    borderRadius: "full",
     color: "accent.default",
     marginTop: "12px",
     minHeight: "40px",

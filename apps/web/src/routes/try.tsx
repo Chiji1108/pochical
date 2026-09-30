@@ -1,3 +1,4 @@
+import { presets } from "@pochical/design/themes";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { css, cx } from "styled-system/css";
@@ -8,7 +9,7 @@ import {
 } from "../components/design-calendar";
 import { sampleGroups } from "../components/design-group";
 import { DesignProviders } from "../components/design-providers";
-import { presets, screenColor } from "../components/design-theme";
+import { screenColor } from "../components/design-theme";
 import { appSplashScreens } from "../lib/app-splash-screens";
 import { deviceSettingsKey } from "../lib/design-settings-store";
 import {

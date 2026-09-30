@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { css } from "styled-system/css";
 
+import { composing, limitText, textLimits } from "../lib/text-limits";
 import type { Schedule } from "./design-calendar";
 import { ConfirmDialog } from "./design-sheet";
 import {
@@ -82,8 +83,10 @@ export function CoworkersPage({
     );
   }
 
+  // Held to the limit here too: a name confirmed and added in one go may
+  // not have been cut to it yet.
   const add = (value: string) => {
-    const name = value.trim();
+    const name = limitText(value.trim(), textLimits.personName);
     setAdding(false);
     if (name && !names.includes(name)) {
       coworkers.onAdd(name);
@@ -151,7 +154,7 @@ export function CoworkersPage({
                   add(event.currentTarget.value);
                 }}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter") {
+                  if (event.key === "Enter" && !composing(event)) {
                     add(event.currentTarget.value);
                   } else if (event.key === "Escape") {
                     setAdding(false);

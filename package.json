@@ -4,11 +4,12 @@
   "workspaces": [
     "apps/mobile-legacy",
     "apps/server",
-    "apps/web"
+    "apps/web",
+    "design"
   ],
   "type": "module",
   "scripts": {
-    "typecheck": "bun run --cwd apps/web typecheck && bun run --cwd apps/server typecheck",
+    "typecheck": "bun run --cwd design typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/server typecheck",
     "test": "bun run --cwd apps/web test && bun run --cwd apps/server test",
     "check": "ultracite check",
     "fix": "ultracite fix",

@@ -1,9 +1,9 @@
+import { oklchToHex } from "@pochical/design/oklch";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useContext } from "react";
 import { css } from "styled-system/css";
 
 import { useSettings } from "../lib/design-settings-store";
-import { oklchToHex } from "../lib/oklch";
 import {
   ColorSchemeContext,
   ThemeContext,
@@ -67,7 +67,7 @@ function wallpaperSky(hue: number): Sky {
 }
 
 // A テーマ's sky is kept as its own id, so it stays when the テーマ changes.
-const themeSkyId = (theme: PresetId) => `theme-${theme}`;
+export const themeSkyId = (theme: PresetId) => `theme-${theme}`;
 
 // Every sky by its id, the テーマ's among them.
 const allSkies: Record<string, Sky | undefined> = {
@@ -87,14 +87,26 @@ const tones = {
 // The dark gray screen (background-base) in OKLCH lightness.
 const DARK_GROUND = 0.28;
 
-// Light spreading from both top corners and the middle, fading down.
-function skyBackground(sky: Sky, scheme: "light" | "dark", ground: number) {
+// A sky's three lights, left, middle and right.
+function lightsOf(sky: Sky, scheme: "light" | "dark", ground: number) {
   const { chroma } = tones[scheme];
   const lightness =
     scheme === "light" ? tones.light.lightness : ground + tones.dark.lift;
-  const [left, middle, right] = sky.hues.map((hue) =>
+  return sky.hues.map((hue) =>
     oklchToHex({ chroma: chroma * (sky.vivid ?? 1), hue, lightness })
   );
+}
+
+// A sky's lights in light mode, by its id, for the site's own sky (the
+// ground only matters in dark mode).
+export function paleSkyLights(id: string) {
+  const sky = allSkies[id];
+  return sky === undefined ? undefined : lightsOf(sky, "light", DARK_GROUND);
+}
+
+// Light spreading from both top corners and the middle, fading down.
+function skyBackground(sky: Sky, scheme: "light" | "dark", ground: number) {
+  const [left, middle, right] = lightsOf(sky, scheme, ground);
   return [
     `radial-gradient(90% 80% at 0% 0%, ${left} 0%, transparent 70%)`,
     `radial-gradient(90% 80% at 100% 0%, ${right} 0%, transparent 70%)`,
@@ -104,8 +116,8 @@ function skyBackground(sky: Sky, scheme: "light" | "dark", ground: number) {
 
 // How long one sky takes to drift into the next, and how slowly the light
 // breathes while it stays.
-const CHANGE_SECONDS = 1.6;
-const BREATH_SECONDS = 9;
+export const CHANGE_SECONDS = 1.6;
+export const BREATH_SECONDS = 9;
 
 function SkyLight({ sky }: { sky: Sky }) {
   const scheme = useContext(ColorSchemeContext);
@@ -140,6 +152,14 @@ function SkyLight({ sky }: { sky: Sky }) {
   );
 }
 
+// Another sky than the one up, at random: one anyone may get, or the
+// テーマ's own.
+export function nextSkyId(id: string, theme: PresetId) {
+  const own = themeSkyId(theme);
+  const others = [...Object.keys(skies), own].filter((other) => other !== id);
+  return others[Math.floor(Math.random() * others.length)] ?? own;
+}
+
 // A sky by its id; 端末の色's follows Android's color.
 function skyOf(id: string | undefined, wallpaperHue: number | undefined) {
   if (id === themeSkyId(DEVICE_COLORS) && wallpaperHue !== undefined) {
@@ -157,13 +177,7 @@ export function useSurprise() {
   const setSky = useSettings((state) => state.setSky);
   const { theme, wallpaperHue } = useContext(ThemeContext);
   function play() {
-    const own = themeSkyId(theme);
-    if (id === undefined) {
-      setSky(own);
-      return;
-    }
-    const others = [...Object.keys(skies), own].filter((other) => other !== id);
-    setSky(others[Math.floor(Math.random() * others.length)] ?? own);
+    setSky(id === undefined ? themeSkyId(theme) : nextSkyId(id, theme));
   }
   const sky = skyOf(id, wallpaperHue);
   const layer = (

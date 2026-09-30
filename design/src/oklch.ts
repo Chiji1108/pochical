@@ -9,7 +9,9 @@ const toLinear = (channel: number) =>
 const fromLinear = (channel: number) =>
   channel <= 0.0031308 ? 12.92 * channel : 1.055 * channel ** (1 / 2.4) - 0.055;
 
-export function hexToOklch(hex: string): Oklch {
+type Oklab = { lightness: number; a: number; b: number };
+
+function hexToOklab(hex: string): Oklab {
   const [red, green, blue] = [1, 3, 5].map((start) =>
     toLinear(Number.parseInt(hex.slice(start, start + 2), 16) / 255)
   );
@@ -25,11 +27,21 @@ export function hexToOklch(hex: string): Oklch {
   const a = 1.9779984951 * long - 2.428592205 * medium + 0.4505937099 * short;
   const b = 0.0259040371 * long + 0.7827717662 * medium - 0.808675766 * short;
   return {
-    chroma: Math.hypot(a, b),
-    hue: ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360,
+    a,
+    b,
     lightness:
       0.2104542553 * long + 0.793617785 * medium - 0.0040720468 * short,
   };
+}
+
+const oklabToOklch = ({ lightness, a, b }: Oklab): Oklch => ({
+  chroma: Math.hypot(a, b),
+  hue: ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360,
+  lightness,
+});
+
+export function hexToOklch(hex: string): Oklch {
+  return oklabToOklch(hexToOklab(hex));
 }
 
 function oklchToLinear({ lightness, chroma, hue }: Oklch) {
@@ -69,4 +81,19 @@ export function oklchToHex(color: Oklch): string {
         .padStart(2, "0")
     )
     .join("")}`;
+}
+
+// Two colors mixed in OKLab, `share` of the second, as CSS's
+// color-mix(in oklab, first, second share) does.
+export function mixOklab(first: string, second: string, share: number) {
+  const from = hexToOklab(first);
+  const to = hexToOklab(second);
+  const mix = (start: number, end: number) => start + (end - start) * share;
+  return oklchToHex(
+    oklabToOklch({
+      a: mix(from.a, to.a),
+      b: mix(from.b, to.b),
+      lightness: mix(from.lightness, to.lightness),
+    })
+  );
 }

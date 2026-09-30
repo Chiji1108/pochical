@@ -1,12 +1,11 @@
-import type { CSSProperties } from "react";
-
 import { hexToOklch, oklchToHex } from "./oklch";
 
-// The app's neutral colors by role, for light and dark. The screens read
-// them as CSS variables (`--bg`, `--text-3`, ...); /design/colors lists them, and
-// the native apps will export the same values. Dark values keep each light
-// color's hue and flip its lightness in OKLCH, on a soft gray ground about as
-// light as Discord's rather than near-black.
+// The app's neutral colors by role, for light and dark, before a テーマ
+// leans them its way (themes.ts). The web reads each role as a CSS
+// variable of its name (`--text-secondary`), the native apps as generated
+// code; /design/colors lists them. Dark values keep each light color's hue
+// and flip its lightness in OKLCH, on a soft gray ground about as light as
+// Discord's rather than near-black.
 
 export const colorSchemes = ["light", "dark"] as const;
 export type ColorScheme = (typeof colorSchemes)[number];
@@ -223,7 +222,7 @@ export const neutralTokens = neutralTokenGroups.flatMap(({ tokens }) => tokens);
 export type NeutralTint = { hue: number; strength: number };
 
 // Colors that carry their own meaning and stay put whatever the theme.
-const untintedTokens = new Set([
+export const untintedTokens = new Set([
   "calendar-holiday",
   "calendar-saturday",
   "danger-default",
@@ -250,19 +249,16 @@ export function neutralValue(
   return `${tinted}${value.slice(7)}`;
 }
 
-export function neutralStyle(
+export function neutralRoles(
   scheme: ColorScheme,
   tint?: NeutralTint
-): CSSProperties {
-  return {
-    ...Object.fromEntries(
-      neutralTokens.map((token) => [
-        `--${token.name}`,
-        neutralValue(token, scheme, tint),
-      ])
-    ),
-    colorScheme: scheme,
-  };
+): Record<string, string> {
+  return Object.fromEntries(
+    neutralTokens.map((token) => [
+      token.name,
+      neutralValue(token, scheme, tint),
+    ])
+  );
 }
 
 // Twelve muted colors a shift pattern can take, chosen to sit with the moss

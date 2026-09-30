@@ -350,7 +350,7 @@ const mini = {
   date: cva({
     base: {
       alignItems: "center",
-      borderRadius: "4px",
+      borderRadius: "xs",
       display: "flex",
       fontSize: "11px",
       fontVariantNumeric: "tabular-nums",
@@ -784,7 +784,7 @@ const circular = {
     alignItems: "center",
     // The lock screen's own round ground: AccessoryWidgetBackground.
     bg: "rgb(255 255 255 / 0.16)",
-    borderRadius: "999px",
+    borderRadius: "full",
     display: "flex",
     flexDirection: "column",
     gap: "2px",

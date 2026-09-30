@@ -36,7 +36,7 @@ const toastStyle = {
     },
     alignItems: "center",
     bg: "var(--inverse-background)",
-    borderRadius: "20px",
+    borderRadius: "xl",
     color: "var(--inverse-text)",
     display: "flex",
     gap: "8px",
