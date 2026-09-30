@@ -1,5 +1,5 @@
 import { ArrowRight, Check, CloudCheck } from "lucide-react";
-import { useContext, useLayoutEffect, useRef, useState } from "react";
+import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
@@ -65,6 +65,7 @@ import {
   ListRow,
   Note,
   PageDots,
+  Pager,
   OptionCard,
   optionList,
   PageHeader,
@@ -76,7 +77,6 @@ import {
   srOnly,
   SwitchRow,
   Tag,
-  useMouseSwipe,
   WeekdayRow,
 } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
@@ -565,24 +565,10 @@ const themeCard = {
   // One page: three across, as the grid had them.
   page: css({
     display: "grid",
-    flex: "0 0 100%",
     gap: "8px",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    scrollSnapAlign: "start",
-    scrollSnapStop: "always",
   }),
-  pager: css({
-    "&::-webkit-scrollbar": { display: "none" },
-    border: 0,
-    display: "flex",
-    gap: `${THEME_PAGE_GAP}px`,
-    margin: 0,
-    overflowX: "auto",
-    padding: 0,
-    position: "relative",
-    scrollSnapType: "x mandatory",
-    scrollbarWidth: "none",
-  }),
+  pager: css({ border: 0, margin: 0, minWidth: 0, padding: 0 }),
   // The theme's own screen, in the current light or dark.
   sample: css({
     bg: "background.base",
@@ -1999,57 +1985,53 @@ const presetSampleShifts: Shift[] = ["day", "night", "after", "off"];
 function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
   const current = useSettings((state) => state.device.preset);
   const setPreset = useSettings((state) => state.setPreset);
-  const pager = useRef<HTMLDivElement>(null);
+  // Opens on the page of the テーマ in use.
   const [page, setPage] = useState(() =>
-    themePages.findIndex((themes) =>
-      themes.some((preset) => preset.id === current)
+    Math.max(
+      themePages.findIndex((themes) =>
+        themes.some((preset) => preset.id === current)
+      ),
+      0
     )
   );
-  useMouseSwipe(pager, "[data-page]");
-  // Opens on the page of the テーマ in use.
-  useLayoutEffect(() => {
-    const picked = pager.current
-      ?.querySelector("[data-state=checked]")
-      ?.closest<HTMLElement>("[data-page]");
-    if (pager.current && picked) {
-      pager.current.scrollLeft = picked.offsetLeft;
-    }
-  }, []);
   return (
     <>
       <ChoiceGrid
         className={themeCard.pager}
         label="テーマ"
         onValueChange={setPreset}
-        onScroll={(event) => {
-          const { scrollLeft, clientWidth } = event.currentTarget;
-          setPage(Math.round(scrollLeft / (clientWidth + THEME_PAGE_GAP)));
-        }}
-        ref={pager}
         value={current}
       >
-        {themePages.map((themes) => (
-          <div className={themeCard.page} data-page="" key={themes[0]?.id}>
-            {themes.map((preset) => (
-              <ThemeChoice key={preset.id} preset={preset} scheme={scheme} />
-            ))}
-          </div>
-        ))}
+        <Pager
+          ends={{ back: page > 0, forward: page < themePages.length - 1 }}
+          gap={THEME_PAGE_GAP}
+          onStep={(direction) => {
+            setPage((shown) => shown + direction);
+          }}
+          page={String(page)}
+          renderPage={(offset) => {
+            const themes = themePages[page + offset];
+            return (
+              themes && (
+                <div className={themeCard.page}>
+                  {themes.map((preset) => (
+                    <ThemeChoice
+                      key={preset.id}
+                      preset={preset}
+                      scheme={scheme}
+                    />
+                  ))}
+                </div>
+              )
+            );
+          }}
+        />
       </ChoiceGrid>
       <PageDots
         count={themePages.length}
         current={page}
         label="テーマのページ"
-        onPick={(picked) => {
-          const target =
-            pager.current?.querySelectorAll<HTMLElement>("[data-page]")[picked];
-          if (target) {
-            pager.current?.scrollTo({
-              behavior: "smooth",
-              left: target.offsetLeft,
-            });
-          }
-        }}
+        onPick={setPage}
       />
     </>
   );

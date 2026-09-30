@@ -48,8 +48,6 @@ import type {
   LabelHTMLAttributes,
   ReactNode,
   Ref,
-  RefObject,
-  UIEventHandler,
 } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -1367,7 +1365,6 @@ export function ChoiceGrid<Value extends string>({
   className,
   labelClassName = srOnly,
   ref,
-  onScroll,
   children,
 }: {
   // What is being picked; hidden unless labelClassName shows it.
@@ -1377,14 +1374,11 @@ export function ChoiceGrid<Value extends string>({
   className?: string;
   labelClassName?: string;
   ref?: Ref<HTMLDivElement>;
-  // For a grid that scrolls, like the テーマ's pager.
-  onScroll?: UIEventHandler<HTMLDivElement>;
   children: ReactNode;
 }) {
   return (
     <RadioGroup.Root
       className={className}
-      onScroll={onScroll}
       ref={ref}
       onValueChange={(details) => {
         if (details.value !== null) {
@@ -1480,101 +1474,6 @@ const pageDots = css({
   margin: 0,
   padding: 0,
 });
-
-// Past this, a mouse's press on a pager is a drag rather than a click.
-const MOUSE_DRAG_SLOP = 4;
-// A drag this far turns the page, however short of halfway.
-const MOUSE_TURN_DISTANCE = 40;
-
-// Lets a mouse drag a scroll-snapping pager as a finger swipes it. Scroll
-// snapping only follows touch, trackpads and wheels, so on a computer, as
-// in /try, a drag did nothing. The drag turns at most one page, as a swipe
-// does, and the click that ends it picks nothing.
-export function useMouseSwipe(
-  ref: RefObject<HTMLElement | null>,
-  pageSelector: string
-) {
-  useEffect(() => {
-    const scroller = ref.current;
-    if (!scroller) {
-      return;
-    }
-    let start: { left: number; x: number } | undefined;
-    let dragging = false;
-    const pageLefts = () =>
-      [...scroller.querySelectorAll<HTMLElement>(pageSelector)].map(
-        (page) => page.offsetLeft
-      );
-    const down = (event: PointerEvent) => {
-      if (event.pointerType === "mouse" && event.button === 0) {
-        start = { left: scroller.scrollLeft, x: event.clientX };
-        dragging = false;
-      }
-    };
-    const move = (event: PointerEvent) => {
-      if (!start) {
-        return;
-      }
-      const moved = event.clientX - start.x;
-      if (!dragging && Math.abs(moved) < MOUSE_DRAG_SLOP) {
-        return;
-      }
-      if (!dragging) {
-        dragging = true;
-        scroller.setPointerCapture(event.pointerId);
-        scroller.style.scrollSnapType = "none";
-      }
-      scroller.scrollLeft = start.left - moved;
-    };
-    const up = (event: PointerEvent) => {
-      if (!(start && dragging)) {
-        start = undefined;
-        return;
-      }
-      const lefts = pageLefts();
-      const { left: startLeft } = start;
-      // The page the drag began on.
-      let from = 0;
-      for (const [index, left] of lefts.entries()) {
-        if (
-          Math.abs(left - startLeft) < Math.abs((lefts[from] ?? 0) - startLeft)
-        ) {
-          from = index;
-        }
-      }
-      const moved = event.clientX - start.x;
-      let to = from;
-      if (Math.abs(moved) > MOUSE_TURN_DISTANCE) {
-        to = moved < 0 ? from + 1 : from - 1;
-      }
-      to = Math.min(Math.max(to, 0), lefts.length - 1);
-      start = undefined;
-      scroller.style.scrollSnapType = "";
-      scroller.scrollTo({ behavior: "smooth", left: lefts[to] ?? 0 });
-    };
-    // The click after a drag lands on the pager, not on a choice; it is
-    // stopped all the same.
-    const click = (event: MouseEvent) => {
-      if (dragging) {
-        dragging = false;
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
-    scroller.addEventListener("pointerdown", down);
-    scroller.addEventListener("pointermove", move);
-    scroller.addEventListener("pointerup", up);
-    scroller.addEventListener("pointercancel", up);
-    scroller.addEventListener("click", click, true);
-    return () => {
-      scroller.removeEventListener("pointerdown", down);
-      scroller.removeEventListener("pointermove", move);
-      scroller.removeEventListener("pointerup", up);
-      scroller.removeEventListener("pointercancel", up);
-      scroller.removeEventListener("click", click, true);
-    };
-  }, [ref, pageSelector]);
-}
 
 export function PageDots({
   count,
@@ -2253,16 +2152,26 @@ const FLICK_SPEED = 400;
 // it would come to rest.
 const FLICK_CARRY = 0.2;
 
+// Months and weeks run on both ways.
+const endless = { back: true, forward: true };
+
+// A trackpad's sideways swipe arrives as wheel events with no letting go;
+// it has ended once none has come for this long.
+const WHEEL_END_MS = 120;
+
 // Pages that follow the finger sideways, as SwiftUI's TabView(.page) and
-// Compose's HorizontalPager, for months or weeks without end. Only the
-// pages before and after are drawn; once a swipe lands, `onStep` moves on
-// and the pager quietly goes back to the middle, which now shows the new
-// page. Motion does the dragging.
+// Compose's HorizontalPager: months or weeks without end, or a few pages
+// with ends, as the テーマ. Only the pages before and after are drawn;
+// once a swipe lands, `onStep` moves on and the pager quietly goes back
+// to the middle, which now shows the new page. Motion does the dragging,
+// by finger or mouse; a trackpad's two-finger swipe turns it too.
 export function Pager({
   page,
   onStep,
   renderPage,
   progress,
+  ends = endless,
+  gap = 0,
 }: {
   // Names the page shown, so the pager recenters when it changes.
   page: string;
@@ -2271,6 +2180,11 @@ export function Pager({
   // Set to how far the pages are dragged, -1 to 1 toward the next, for
   // what follows the drag, like the month's name over the calendar.
   progress?: MotionValue<number>;
+  // Whether there is a page back and a page forward. At an end the drag
+  // only gives a little, and the pager does not turn.
+  ends?: { back: boolean; forward: boolean };
+  // Room between pages, seen while they are dragged, in pixels.
+  gap?: number;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -2278,7 +2192,7 @@ export function Pager({
   const x = useMotionValue(0);
   useMotionValueEvent(x, "change", (at) => {
     const pageWidth = viewportRef.current?.offsetWidth ?? 0;
-    const share = pageWidth > 0 ? -at / pageWidth : 0;
+    const share = pageWidth > 0 ? -at / (pageWidth + gap) : 0;
     progress?.set(Math.min(Math.max(share, -1), 1));
   });
   const reduceMotion = useReducedMotion() ?? false;
@@ -2346,6 +2260,7 @@ export function Pager({
   // than turning.
   const land = (velocity: number, taken: boolean) => {
     const pageWidth = viewportRef.current?.offsetWidth ?? 0;
+    const stride = pageWidth + gap;
     if (pageWidth === 0) {
       x.jump(0);
       return;
@@ -2358,12 +2273,18 @@ export function Pager({
     if (turned) {
       direction = rest < 0 ? 1 : -1;
     }
+    if (
+      (direction === 1 && !ends.forward) ||
+      (direction === -1 && !ends.back)
+    ) {
+      direction = 0;
+    }
     const settle = () => {
       if (direction !== 0) {
         onStep(direction);
       }
     };
-    const target = -direction * pageWidth;
+    const target = -direction * stride;
     if (reduceMotion) {
       x.jump(target);
       settle();
@@ -2377,12 +2298,63 @@ export function Pager({
       visualDuration: 0.3,
     });
   };
+  const landRef = useRef(land);
+  landRef.current = land;
+  const reach = useRef({ back: 0, forward: 0 });
+  reach.current = {
+    back: ends.back ? width + gap : 0,
+    forward: ends.forward ? width + gap : 0,
+  };
+  // A trackpad's sideways swipe moves the pages as a finger would. Past a
+  // quarter it turns them there and then, and the rest of the swipe, which
+  // runs on as the trackpad coasts, is let pass; stopped short, the pages
+  // go back. Scrolling up and down is left to the page.
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      return;
+    }
+    let ended: ReturnType<typeof setTimeout> | undefined;
+    let turned = false;
+    const wheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) {
+        return;
+      }
+      event.preventDefault();
+      clearTimeout(ended);
+      ended = setTimeout(() => {
+        if (!turned) {
+          landRef.current(0, false);
+        }
+        turned = false;
+      }, WHEEL_END_MS);
+      if (turned) {
+        return;
+      }
+      const { back, forward } = reach.current;
+      const at = Math.min(Math.max(x.get() - event.deltaX, -forward), back);
+      x.set(at);
+      const pageWidth = viewport.offsetWidth;
+      if (Math.abs(at) > pageWidth * TURN_SHARE) {
+        turned = true;
+        landRef.current(0, false);
+      }
+    };
+    viewport.addEventListener("wheel", wheel, { passive: false });
+    return () => {
+      clearTimeout(ended);
+      viewport.removeEventListener("wheel", wheel);
+    };
+  }, [x]);
   return (
     <div className={pager.viewport} ref={viewportRef}>
       <motion.div
         className={pager.drag}
         drag="x"
-        dragConstraints={{ left: -width, right: width }}
+        dragConstraints={{
+          left: ends.forward ? -(width + gap) : 0,
+          right: ends.back ? width + gap : 0,
+        }}
         dragDirectionLock
         dragElastic={0.1}
         dragMomentum={false}
@@ -2408,7 +2380,15 @@ export function Pager({
         }}
         style={{ x }}
       >
-        <div className={pager.container} ref={containerRef}>
+        <div
+          className={pager.container}
+          ref={containerRef}
+          style={
+            gap > 0
+              ? { gap, transform: `translateX(calc(-100% - ${gap}px))` }
+              : undefined
+          }
+        >
           {pageOffsets.map((offset) => (
             // The pages beside the one shown are only there to be dragged in.
             <div
