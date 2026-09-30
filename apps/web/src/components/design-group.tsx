@@ -764,7 +764,14 @@ type Page =
   // `from` is the chat whose member picture opened it, to go back there;
   // `attach` is days brought from the shift table to share, set above
   // the composer until sent.
-  | { name: "chat"; chatId: string; from?: string; attach?: Date[] }
+  // `sharedFirst` opens it on its last shared day rather than its latest line.
+  | {
+      name: "chat";
+      chatId: string;
+      from?: string;
+      attach?: Date[];
+      sharedFirst?: boolean;
+    }
   | { name: "invite" }
   | { name: "new" }
   | { name: "settings" }
@@ -809,6 +816,7 @@ export function DesignGroup({
   profile,
   onTab,
   initialGroupId = "family",
+  initialPage = "hub",
   scanResult = "invite",
 }: {
   schedule: Schedule;
@@ -816,6 +824,9 @@ export function DesignGroup({
   profile: Profile;
   // The group to open on, like one just joined from a link.
   initialGroupId?: string;
+  // Its hub, or straight on its shift table or its group chat, as the top
+  // page shows them.
+  initialPage?: "hub" | "shifts" | "chat";
   // What the QR page finds, as 比べる案 sets it.
   scanResult?: ScanResult;
 
@@ -828,7 +839,12 @@ export function DesignGroup({
   const setChats = useUser((state) => state.setChats);
   // The table layout each group was last seen in.
   const [layouts, setLayouts] = useState<Record<string, Layout>>({});
-  const [page, setPage] = useState<Page>({ name: "hub" });
+  const [page, setPage] = useState<Page>(() => {
+    if (initialPage === "chat") {
+      return { chatId: groupChat, name: "chat", sharedFirst: true };
+    }
+    return { name: initialPage };
+  });
 
   // The member whose profile sheet is open.
   const [profileOf, setProfileOf] = useState<Member>();
@@ -1041,6 +1057,7 @@ export function DesignGroup({
       <>
         <ChatPage
           attach={page.attach}
+          sharedFirst={page.sharedFirst}
           backLabel={page.from ? chatTitle(group, page.from) : group.name}
           chat={chatOf(group.id, page.chatId)}
           formerMembers={membersOf(group.id).filter((member) =>
@@ -2642,6 +2659,9 @@ function ChatRow({
   );
 }
 
+// The room kept above a shared day a chat opens on.
+const sharedRoom = 12;
+
 function ChatPage({
   title,
   group,
@@ -2654,9 +2674,13 @@ function ChatPage({
   backLabel,
   formerMembers = noMembers,
   attach,
+  sharedFirst = false,
 }: {
   title: string;
   group: Group;
+  // Opens on the last day shared rather than the latest line, as the top
+  // page shows it.
+  sharedFirst?: boolean;
   // Days brought from the shift table, waiting above the composer.
   attach?: Date[];
   // Where 戻る goes: the group, or the chat a member was opened from.
@@ -2685,12 +2709,29 @@ function ChatPage({
   // new one, like a day just shared from the shift table.
   const listRef = useRef<HTMLOListElement>(null);
   const lineCount = chat.messages.length;
+  const [sharedId] = useState(() =>
+    sharedFirst
+      ? chat.messages.findLast((message) => message.days)?.id
+      : undefined
+  );
+  // Until a line is added, it stays on the shared day.
+  const [openedLines] = useState(lineCount);
   useLayoutEffect(() => {
     const list = listRef.current;
-    if (list && lineCount > 0) {
-      list.scrollTop = list.scrollHeight;
+    if (!list || lineCount === 0) {
+      return;
     }
-  }, [lineCount]);
+    const shared =
+      sharedId === undefined || lineCount !== openedLines
+        ? null
+        : list.querySelector<HTMLElement>(`#message-${sharedId}`);
+    list.scrollTop = shared
+      ? shared.getBoundingClientRect().top -
+        list.getBoundingClientRect().top +
+        list.scrollTop -
+        sharedRoom
+      : list.scrollHeight;
+  }, [lineCount, openedLines, sharedId]);
   const isGroup = title === "全体チャット";
   // Who wrote a line, including members taken out since, whose lines stay.
   const writerOf = (id?: string) =>

@@ -350,14 +350,18 @@ export function timeChangeOf(entry: DayEntry | undefined) {
 // so two phones under one store show the same person.
 export function DesignCalendar({
   initialEditing,
+  initialDay = 1,
   initialMonth = 8,
   variants,
   pendingInvite = false,
   initialTab = "calendar",
   initialSettingsPage,
+  initialGroupPage,
   fullScreen = false,
 }: {
   initialEditing: boolean;
+  // The day entering starts on, as the top page opens on its first blank.
+  initialDay?: number;
   // On /try: filling a real phone's screen rather than a pictured one.
   fullScreen?: boolean;
   initialMonth?: number;
@@ -365,6 +369,8 @@ export function DesignCalendar({
   // For the flow diagrams: a tab, and a settings page, to open on.
   initialTab?: Tab;
   initialSettingsPage?: SettingsPage;
+  // And the group tab's page: its hub, the shift table or the group chat.
+  initialGroupPage?: "hub" | "shifts" | "chat";
   // A group's invitation link was opened: ask about joining over the
   // calendar.
   pendingInvite?: boolean;
@@ -449,7 +455,7 @@ export function DesignCalendar({
     onReorder: setCoworkerNames,
   };
   const [editing, setEditing] = useState(initialEditing);
-  const [selectedDay, setSelectedDay] = useState(1);
+  const [selectedDay, setSelectedDay] = useState(initialDay);
   // Whether the month being entered had blank days when it came up, as
   // only then can 完了 have just filled it. A filled month can be entered
   // too, with ポチポチ入力 always offered in the 保存を右上 variant.
@@ -750,6 +756,7 @@ export function DesignCalendar({
           {tab === "group" && (
             <DesignGroup
               initialGroupId={openGroup}
+              initialPage={initialGroupPage}
               scanResult={variants.scanResult}
               onTab={setTab}
               patternKeys={patternKeys}
