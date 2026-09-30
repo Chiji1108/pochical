@@ -16,6 +16,7 @@ import type { Pattern, PatternBook, Shift } from "../lib/design-patterns";
 import { useLook, useSettings } from "../lib/design-settings-store";
 import type { ColorScheme } from "../lib/design-tokens";
 import { useUser } from "../lib/design-user-store";
+import { dayName } from "../lib/text-limits";
 import {
   ProviderButtons,
   ProviderLogo,
@@ -1685,7 +1686,7 @@ export function NameTabs({
           <span aria-hidden="true" className={offSample()}>
             <small>5</small>
             <ShiftMark shift={work.id} size={withName ? 16 : 18} />
-            {withName && <small data-part="name">{work.name}</small>}
+            {withName && <small data-part="name">{dayName(work.name)}</small>}
           </span>
           {withName ? "あり" : "なし"}
         </Segment>

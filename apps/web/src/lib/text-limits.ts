@@ -27,6 +27,18 @@ export function limitText(text: string, limit: number) {
   return kept.map(({ segment }) => segment).join("");
 }
 
+// A day of the calendar has room for four characters of a shift's name.
+// A longer name shows its first three and …, the same on every platform,
+// rather than however many a width happens to fit.
+const DAY_NAME_LENGTH = 4;
+
+export function dayName(name: string) {
+  if (characterCount(name) <= DAY_NAME_LENGTH) {
+    return name;
+  }
+  return `${limitText(name, DAY_NAME_LENGTH - 1)}…`;
+}
+
 // Whether the count shows while the field is in use: all the while for
 // a short one, like a name, and near the end for a long one.
 export function countShown(count: number, limit: number) {

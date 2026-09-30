@@ -31,7 +31,9 @@ A limit counts characters as a reader sees them: grapheme clusters, the same as 
 
 A value within its limit can still be wider than where it is shown.
 
-- A shift's name in a day of the calendar (with シフト名 on) and in the entering tray's buttons is one line, cut short with `…`. A day's row has room for one line under the mark; about three characters fit in a day, five in a tray button.
+- A shift's name in a day (the calendar with シフト名 on, a member's month in a group, the saved image and the style samples) is its **day name**: the name itself up to 4 characters, else its first 3 characters and `…` (日勤リーダー → 日勤リ…). A day's row has room for one line under the mark, and a day's whole width for 4 full-width characters. The limit and the day name are separate on purpose: a name up to the limit shows whole in lists, the editor and messages, and only a day shortens it.
+- While a pattern's name is longer than its day name, the editor's preview of the pattern says how a day shows it (カレンダーでは「日勤リ…」), so it is not first found cut short on the calendar.
+- In the entering tray's buttons a shift's name is one line, cut short with `…` where it does not fit (about five characters do).
 - A person's name in a list row is cut short with `…` so the row's value and arrow stay whole.
 - Elsewhere text wraps.
 
