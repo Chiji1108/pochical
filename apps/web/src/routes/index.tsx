@@ -183,12 +183,26 @@ const heroSchedule = Object.fromEntries(
 
 // Pressed once, like a button, a moment after the page first shows:
 // sinking a little and springing back, then still. A CSS animation, so it
-// comes at the same moment however long the app takes to load.
+// comes at the same moment however long the app takes to load. Since it
+// looks pressable, it presses too: down while held, springing back on
+// release, with the same depth and spring as the animation.
 const pressed = css({
-  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
-  animation: "press 0.42s 0.7s both",
+  "&:active": {
+    transform: "translateY(3px) scale(0.92)",
+    transition: "transform 0.12s ease-in",
+  },
+  "@media (prefers-reduced-motion: reduce)": {
+    animation: "none",
+    transition: "none",
+  },
+  // Not held after it ends, so a press can move it.
+  animation: "press 0.42s 0.7s backwards",
   display: "inline-block",
+  touchAction: "manipulation",
   transformOrigin: "50% 100%",
+  transition: "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+  userSelect: "none",
+  WebkitTapHighlightColor: "transparent",
 });
 
 function Pressed({ children }: { children: ReactNode }) {
