@@ -1270,6 +1270,7 @@ export const listRow = {
 // Pressed, it is a button with an arrow; holding a control, or pointing at
 // one with htmlFor, it is that control's label. `danger` is for rows that
 // remove something, and `truncate` for a label that is a typed name.
+// `detail` is a line under the label, and makes it a two-line row.
 export function ListRow({
   label,
   value,
@@ -1279,6 +1280,7 @@ export function ListRow({
   arrow,
   danger = false,
   truncate = false,
+  detail,
   htmlFor,
   disabled,
   className,
@@ -1295,6 +1297,7 @@ export function ListRow({
   arrow?: ReactNode;
   danger?: boolean;
   truncate?: boolean;
+  detail?: ReactNode;
   htmlFor?: string;
   disabled?: boolean;
   className?: string;
@@ -1330,6 +1333,7 @@ export function ListRow({
         )}
       >
         {truncate ? <span className={listRow.labelText}>{label}</span> : label}
+        {detail !== undefined && <small>{detail}</small>}
       </span>
       {value !== undefined && (
         <span
@@ -1347,7 +1351,7 @@ export function ListRow({
     </>
   );
   const rowClass = cx(
-    listRow.root,
+    detail === undefined ? listRow.root : listRow.twoLine,
     (pressable || isLabel) && listRow.pressable,
     danger && listRow.danger,
     className

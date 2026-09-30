@@ -269,10 +269,10 @@ export function DesignSettings({
           <JobChangePage
             onApply={(job) => {
               onChangeJob(job);
-              setPage("top");
+              setPage("work");
             }}
             onBack={() => {
-              setPage("top");
+              setPage("work");
             }}
           />
         )}
@@ -285,6 +285,9 @@ export function DesignSettings({
               setPage("repeat-fix");
             }}
             onHolidaysOff={onHolidaysOff}
+            onJob={() => {
+              setPage("job");
+            }}
             onNew={() => {
               setPage("repeat-new");
             }}
@@ -416,12 +419,6 @@ function SettingsTop({
             onOpen("coworkers");
           }}
           value={`${coworkerCount}人`}
-        />
-        <ListRow
-          label="仕事が変わったとき"
-          onClick={() => {
-            onOpen("job");
-          }}
         />
       </ListSection>
       <ListSection title="表示">
@@ -1159,7 +1156,7 @@ function JobChangePage({
   }
   return (
     <>
-      <PageHeader back="設定" onBack={onBack} title="仕事が変わったとき" />
+      <PageHeader back="働き方" onBack={onBack} title="新しい仕事にする" />
       <Note>
         新しい仕事の働き方とシフトパターンを、はじめの設定と同じ質問で選び直します。
       </Note>
@@ -1256,15 +1253,17 @@ const workStyles = {
   roster: { icon: "📋", name: "毎月、勤務表が配られる" },
 };
 
-// The work style in use, then the one way to the other. Unlike onboarding's
-// two answers side by side, the one in use is not a choice to press again:
-// it is shown as it is, and changing it goes on to set the order, or the
-// day the roster takes over, each with what that does.
+// The work style in use, then the ways to change it, each saying whether
+// the shift patterns stay: the other style keeps them, a new job asks for
+// them again as onboarding does. Unlike onboarding's two answers side by
+// side, the one in use is not a choice to press again: it is shown as it
+// is.
 function WorkStylePage({
   rules,
   onBack,
   onRepeat,
   onRoster,
+  onJob,
   onNew,
   onFix,
   onHolidaysOff,
@@ -1273,6 +1272,7 @@ function WorkStylePage({
   onBack: () => void;
   onRepeat: () => void;
   onRoster: () => void;
+  onJob: () => void;
   onNew: () => void;
   onFix: () => void;
   onHolidaysOff: (holidaysOff: boolean) => void;
@@ -1281,20 +1281,18 @@ function WorkStylePage({
   const current = rules.at(-1);
   const now = repeating ? workStyles.repeating : workStyles.roster;
   const other = repeating ? workStyles.roster : workStyles.repeating;
+  const icon = (emoji: string) => (
+    <>
+      <span aria-hidden="true" className={settingsParts.styleIcon}>
+        {emoji}
+      </span>
+    </>
+  );
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="働き方" />
       <ListSection title="今の働き方">
-        <ListRow
-          label={now.name}
-          leading={
-            <>
-              <span aria-hidden="true" className={settingsParts.styleIcon}>
-                {now.icon}
-              </span>
-            </>
-          }
-        />
+        <ListRow label={now.name} leading={icon(now.icon)} />
       </ListSection>
       {repeating && current && (
         <RepeatDetails
@@ -1304,30 +1302,24 @@ function WorkStylePage({
           onNew={onNew}
         />
       )}
-      <section>
-        <List>
-          <ListRow
-            label={
-              repeating
-                ? "毎月の勤務表に切り替える"
-                : "決まった順番で回すようにする"
-            }
-            leading={
-              <>
-                <span aria-hidden="true" className={settingsParts.styleIcon}>
-                  {other.icon}
-                </span>
-              </>
-            }
-            onClick={repeating ? onRoster : onRepeat}
-          />
-        </List>
-        <Note>
-          {repeating
-            ? "選んだ日から、順番で入るのをやめます。それまでのシフトはそのままです。"
-            : "順番を決めると、この先のシフトが自動で入ります。毎月の入力はいりません。"}
-        </Note>
-      </section>
+      <ListSection title="働き方を変える">
+        <ListRow
+          detail="シフトパターンはそのまま"
+          label={
+            repeating
+              ? "毎月の勤務表に切り替える"
+              : "決まった順番で回すようにする"
+          }
+          leading={icon(other.icon)}
+          onClick={repeating ? onRoster : onRepeat}
+        />
+        <ListRow
+          detail="シフトパターンも選び直す"
+          label="新しい仕事にする"
+          leading={icon("💼")}
+          onClick={onJob}
+        />
+      </ListSection>
       <RuleHistory rules={rules} />
     </>
   );
