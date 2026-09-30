@@ -2533,12 +2533,6 @@ const dayDetail = {
   // The legend floats, so the fieldset lays it out like the other rows'
   // labels.
   legend: css({ float: "left", padding: "0 0 8px", width: "100%" }),
-  markHint: css({
-    color: "text.tertiary",
-    display: "block",
-    marginTop: "4px",
-    textStyle: "caption",
-  }),
   memberInput: css({
     border: "1px solid token(colors.accent.focus)",
     borderRadius: "999px",
@@ -2746,13 +2740,6 @@ function DayDetail({
                     >
                       標準（{timeRange({ shift: entry.shift }, pattern)}）に戻す
                     </button>
-                    {/* The mark this makes, explained as it is made, to
-                        the people who use it. */}
-                    {change && (change.early || change.late) && (
-                      <span className={dayDetail.markHint}>
-                        カレンダーのシフトの角に印が付きます
-                      </span>
-                    )}
                   </>
                 ) : (
                   "標準の時間"
