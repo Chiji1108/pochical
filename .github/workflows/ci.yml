@@ -66,6 +66,9 @@ jobs:
       - run: bun run check
       - run: bun run typecheck
       - run: bun run test
+      # What each web page loads before it first shows, against its budget.
+      - run: bun run --cwd apps/web build
+      - run: bun run --cwd apps/web bundle:budget
       # The tokens the native apps are generated from design/.
       - run: bun design/scripts/gen.ts --check
 
