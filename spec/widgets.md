@@ -43,7 +43,7 @@ The widgets are views of one entry. They hold no state and open the app when tap
 
 | Kind | Small (iPhone systemSmall, Android 2×2) | Medium (systemMedium, 4×2) | Large (systemLarge, 4×4) |
 | --- | --- | --- | --- |
-| これから | today (date, mark, time) and the next three days' marks | today's date, mark and time over `twoWeeks`: this week and the next, seven across from the week start, with days already gone faint | – |
+| これから | today (date, mark, time) and the next three days' marks | `twoWeeks`: this week and the next, seven across from the week start, with days already gone faint and today as its accent date | – |
 | カレンダー | the month with days off only, as the calendar's day-off tiles | that month beside today, 明日 and the day after, each with its mark and time | the month with every day's mark, and today's time |
 | 今日の詳細 | today's time, mark, note (two lines) and 一緒に働く人 | today large, beside its note (three lines) and 一緒に働く人 | – |
 

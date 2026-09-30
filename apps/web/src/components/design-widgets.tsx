@@ -298,19 +298,12 @@ const twoWeeks = {
 };
 
 // This week and the next, seven across from the week start as the
-// calendar lays them, under today's date, mark and time.
+// calendar lays them. Today is its accent date among them, as in the
+// calendar; its time is for the other kinds.
 export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
-  const day = entry.today;
-  const todayTime = day.date.getTime();
+  const todayTime = entry.today.date.getTime();
   return (
     <div className={twoWeeks.root}>
-      <div className={twoWeeks.header}>
-        <span className={today.date}>
-          {monthDay(day.date)}({day.weekday})
-        </span>
-        <DayMark day={day} size={16} />
-        <Headline className={twoWeeks.time} day={day} />
-      </div>
       <div aria-hidden="true" className={twoWeeks.weekdays}>
         {entry.month.weekdays.map((weekday) => (
           <span
@@ -333,7 +326,7 @@ export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
               >
                 {shown.date.getDate()}
               </span>
-              <DayMark day={shown} size={20} />
+              <DayMark day={shown} size={28} />
             </li>
           );
         })}
