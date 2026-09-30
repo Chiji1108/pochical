@@ -1,3 +1,6 @@
+import type { ColorScheme } from "@pochical/design/colors";
+import { presets } from "@pochical/design/themes";
+import type { Preset } from "@pochical/design/themes";
 import { ArrowRight, Check, CloudCheck } from "lucide-react";
 import { useMotionValue } from "motion/react";
 import { useContext, useState } from "react";
@@ -14,7 +17,6 @@ import {
 } from "../lib/design-patterns";
 import type { Pattern, PatternBook, Shift } from "../lib/design-patterns";
 import { useLook, useSettings } from "../lib/design-settings-store";
-import type { ColorScheme } from "../lib/design-tokens";
 import { useUser } from "../lib/design-user-store";
 import {
   ProviderButtons,
@@ -55,12 +57,11 @@ import {
   PreviewSchemeSwitch,
   ThemeContext,
   presetOf,
-  presets,
   themeStyle,
   previewWrap,
   deviceColorsPreset,
 } from "./design-theme";
-import type { Appearance, Preset, PresetId } from "./design-theme";
+import type { Appearance, PresetId } from "./design-theme";
 import {
   Button,
   ChipGroup,

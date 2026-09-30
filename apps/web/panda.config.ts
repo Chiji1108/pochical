@@ -1,9 +1,18 @@
 import { defineConfig } from "@pandacss/dev";
+import { sizes, stateLayers } from "@pochical/design/metrics";
+import { textStyles } from "@pochical/design/type";
 
 // Panda CSS for the /design prototype's pieces. The colors stay the CSS
-// variables that themeStyle() sets per theme, tone and light or dark, so
-// the tokens here only name them; the values live in design-tokens.ts.
+// variables that themeStyle() sets per テーマ and light or dark, so the
+// tokens here only name them; the values, and the text styles and sizes,
+// come from design/, which the native apps are generated from too.
 // The site's own styles sit in styles.css (layer site), below Panda's.
+const REGULAR = 400;
+const PERCENT = 100;
+
+const stateLayer = (opacity: number) =>
+  `color-mix(in srgb, var(--accent-default) ${Math.round(opacity * PERCENT)}%, transparent)`;
+
 export default defineConfig({
   exclude: [],
   include: ["./src/**/*.{ts,tsx}"],
@@ -38,27 +47,21 @@ export default defineConfig({
   preflight: false,
   theme: {
     extend: {
+      // iOS's text styles (design/src/type.ts): each sets a size, and
+      // headline its weight.
+      textStyles: Object.fromEntries(
+        Object.entries(textStyles).map(([name, { size, weight }]) => [
+          name,
+          {
+            value:
+              weight === REGULAR
+                ? { fontSize: `${size}px` }
+                : { fontSize: `${size}px`, fontWeight: weight },
+          },
+        ])
+      ),
       // A sheet rises from the bottom of the phone and sinks back; the
       // dimmed ground behind it fades.
-      // iOS's text styles at their default size, which the native apps
-      // take as .font(.body) and so on and grow with the reader's text
-      // size; Compose maps each onto its type scale. Each sets a size, and
-      // headline its weight; a piece may still set a weight of its own, as
-      // iOS's emphasized styles do. What is drawn to a fixed size, like a
-      // day in the month or a mark, keeps its own px instead.
-      textStyles: {
-        body: { value: { fontSize: "17px" } },
-        callout: { value: { fontSize: "16px" } },
-        caption: { value: { fontSize: "12px" } },
-        caption2: { value: { fontSize: "11px" } },
-        footnote: { value: { fontSize: "13px" } },
-        headline: { value: { fontSize: "17px", fontWeight: 600 } },
-        largeTitle: { value: { fontSize: "34px" } },
-        subheadline: { value: { fontSize: "15px" } },
-        title1: { value: { fontSize: "28px" } },
-        title2: { value: { fontSize: "22px" } },
-        title3: { value: { fontSize: "20px" } },
-      },
       keyframes: {
         fadeIn: { from: { opacity: 0 }, to: { opacity: 1 } },
         fadeOut: { from: { opacity: 1 }, to: { opacity: 0 } },
@@ -94,7 +97,7 @@ export default defineConfig({
       tokens: {
         // Colors by role, grouped by kind, their levels named as iOS names
         // its label and fill levels (primary to quaternary). Each points at
-        // a CSS variable that themeStyle() and design-tokens.ts set.
+        // a CSS variable that themeStyle() sets from design/.
         colors: {
           accent: {
             border: { value: "var(--accent-border)" },
@@ -102,18 +105,11 @@ export default defineConfig({
             default: { value: "var(--accent-default)" },
             fill: { value: "var(--accent-fill)" },
             focus: { value: "var(--accent-focus)" },
-            // Hovered and pressed: the accent laid over whatever is under,
-            // as Material's state layers, rather than more colors for a
-            // theme to set.
-            hover: {
-              value:
-                "color-mix(in srgb, var(--accent-default) 12%, transparent)",
-            },
+            // Hovered and pressed: the accent laid over whatever is under
+            // (design/src/metrics.ts).
+            hover: { value: stateLayer(stateLayers.hover) },
             onFill: { value: "var(--accent-on-fill)" },
-            pressed: {
-              value:
-                "color-mix(in srgb, var(--accent-default) 16%, transparent)",
-            },
+            pressed: { value: stateLayer(stateLayers.pressed) },
           },
           background: {
             // The screen's own ground, a card's, and a sheet's.
@@ -164,12 +160,12 @@ export default defineConfig({
           // Small actions like icon buttons.
           action: { value: "12px" },
         },
-        sizes: {
-          // A button's height, and a smaller action's.
-          control: { value: "52px" },
-          action: { value: "40px" },
-          touch: { value: "44px" },
-        },
+        sizes: Object.fromEntries(
+          Object.entries(sizes).map(([name, size]) => [
+            name,
+            { value: `${size}px` },
+          ])
+        ),
       },
     },
   },

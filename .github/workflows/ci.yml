@@ -30,6 +30,10 @@ jobs:
             typescript:
               - "apps/web/**"
               - "apps/server/**"
+              - "design/**"
+              - "spec/design-tokens.json"
+              - "apps/ios/Packages/PochicalDesign/**"
+              - "apps/android/design/**"
               - "tools/**"
               - "package.json"
               - "bun.lock"
@@ -59,6 +63,8 @@ jobs:
       - run: bun run check
       - run: bun run typecheck
       - run: bun run test
+      # The tokens the native apps are generated from design/.
+      - run: bun design/scripts/gen.ts --check
 
   proto:
     needs: changes
