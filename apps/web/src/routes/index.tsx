@@ -217,7 +217,7 @@ function HeroDemo() {
   );
   return (
     <div className={hero.demo}>
-      <DesignProviders>
+      <DesignProviders fresh>
         <UserStoreContext value={person}>
           <DesignCalendar
             initialDay={HERO_FIRST_BLANK}
@@ -556,7 +556,7 @@ function ThemeGallery() {
 
 function Features() {
   return (
-    <DesignProviders>
+    <DesignProviders fresh>
       <ol aria-label="ポチカルでできること" className={feature.list}>
         {features.map((item) => (
           <li className={feature.row} key={item.id}>
