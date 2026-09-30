@@ -14,8 +14,18 @@ import {
   DesignProviders,
   PresetContexts,
 } from "../components/design-providers";
+import { ColorSchemeContext } from "../components/design-theme";
 import type { PresetId } from "../components/design-theme";
+import {
+  CellNamesContext,
+  IconWeightContext,
+  MonochromeContext,
+  OffHighlightContext,
+  ShiftMarkStyleContext,
+} from "../components/shift-mark";
+import type { ShiftMarkStyle } from "../components/shift-mark";
 import { StoreLinks } from "../components/store-links";
+import type { ColorScheme } from "../lib/design-tokens";
 import {
   createUserStore,
   sampleCoworkers,
@@ -433,20 +443,102 @@ function GroupGallery() {
   );
 }
 
-// The calendar in a few テーマ, light and dark.
-const galleryThemes: PresetId[] = ["sakura", "soda", "tsukiyo"];
+// The calendar in a few looks, each set as someone might set theirs:
+// 墨 with outlined marks in its one tone, ミルクティー in dark, and letters
+// with their names under them and days off left plain.
+type GalleryLook = {
+  id: string;
+  preset: PresetId;
+  scheme?: ColorScheme;
+  style: ShiftMarkStyle;
+  fill: boolean;
+  monochrome: boolean;
+  names: boolean;
+  highlight: boolean;
+};
+const galleryLooks: GalleryLook[] = [
+  {
+    fill: false,
+    highlight: true,
+    id: "sumi",
+    monochrome: true,
+    names: false,
+    preset: "sumi",
+    style: "icon",
+  },
+  {
+    fill: true,
+    highlight: true,
+    id: "milktea-dark",
+    monochrome: false,
+    names: false,
+    preset: "milktea",
+    scheme: "dark",
+    style: "icon",
+  },
+  {
+    fill: true,
+    highlight: false,
+    id: "letters",
+    monochrome: false,
+    names: true,
+    preset: "pochical",
+    style: "badge",
+  },
+];
+
+function LookContexts({
+  look,
+  children,
+}: {
+  look: GalleryLook;
+  children: ReactNode;
+}) {
+  const themed = (
+    <PresetContexts id={look.preset}>
+      <IconWeightContext value={look.fill ? "duotone" : "regular"}>
+        <ShiftMarkStyleContext value={look.style}>
+          <CellNamesContext
+            value={{
+              names: { badge: look.names, emoji: look.names, icon: look.names },
+            }}
+          >
+            <OffHighlightContext
+              value={{
+                highlight: {
+                  badge: look.highlight,
+                  emoji: look.highlight,
+                  icon: look.highlight,
+                },
+              }}
+            >
+              <MonochromeContext value={{ monochrome: look.monochrome }}>
+                {children}
+              </MonochromeContext>
+            </OffHighlightContext>
+          </CellNamesContext>
+        </ShiftMarkStyleContext>
+      </IconWeightContext>
+    </PresetContexts>
+  );
+  return (
+    <ColorSchemeContext value={look.scheme ?? "light"}>
+      {themed}
+    </ColorSchemeContext>
+  );
+}
 
 function ThemeGallery() {
   const person = useSamplePerson();
   return (
     <UserStoreContext value={person}>
       <PhoneGallery
-        phones={galleryThemes.map((id) => ({
-          key: id,
+        phones={galleryLooks.map((look) => ({
+          key: look.id,
           screen: (
-            <PresetContexts id={id}>
+            <LookContexts look={look}>
               <DesignCalendar initialEditing={false} variants={variants} />
-            </PresetContexts>
+            </LookContexts>
           ),
         }))}
       />
