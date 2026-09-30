@@ -84,9 +84,8 @@ function DemoPage() {
         wallpaperSamples.find(({ id }) => id === variants.wallpaper) ??
         wallpaperSamples[0]
       ).hue,
-      wallpaperThemePlace: variants.wallpaperTheme,
     });
-  }, [variants.platform, variants.wallpaper, variants.wallpaperTheme]);
+  }, [variants.platform, variants.wallpaper]);
   const [person, setPerson] = useState(() =>
     makePerson(
       variants.scheduleSample,

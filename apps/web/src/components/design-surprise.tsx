@@ -7,7 +7,7 @@ import { oklchToHex } from "../lib/oklch";
 import {
   ColorSchemeContext,
   ThemeContext,
-  WALLPAPER,
+  DEVICE_COLORS,
   presetOf,
 } from "./design-theme";
 import type { PresetId } from "./design-theme";
@@ -42,7 +42,7 @@ const skies: Record<string, Sky> = {
 // accent alone: 墨's nearly a silver haze, 抹茶's with a sakura sweet's
 // pink, 喫茶's its lamps' amber, 月夜's the night's blues (its accent is
 // the moon), 黒板's chalk.
-const themeSkies: Record<Exclude<PresetId, typeof WALLPAPER>, Sky> = {
+const themeSkies: Record<Exclude<PresetId, typeof DEVICE_COLORS>, Sky> = {
   cocoa: { hues: [45, 75, 10], name: "ココア", vivid: 0.8 },
   kissa: { hues: [60, 35, 85], name: "喫茶" },
   kokuban: { hues: [165, 215, 345], name: "黒板", vivid: 0.8 },
@@ -57,12 +57,12 @@ const themeSkies: Record<Exclude<PresetId, typeof WALLPAPER>, Sky> = {
   zen: { hues: [110, 90, 150], name: "禅", vivid: 0.6 },
 };
 
-// 壁紙の色's sky: the wallpaper's hue, and two steps cooler across.
+// 端末の色's sky: Android's color, and two steps cooler across.
 const WALLPAPER_SKY_STEP = 30;
 function wallpaperSky(hue: number): Sky {
   return {
     hues: [hue, hue + WALLPAPER_SKY_STEP, hue + 2 * WALLPAPER_SKY_STEP],
-    name: "壁紙の色",
+    name: "端末の色",
   };
 }
 
@@ -140,9 +140,9 @@ function SkyLight({ sky }: { sky: Sky }) {
   );
 }
 
-// A sky by its id; 壁紙の色's follows the wallpaper.
+// A sky by its id; 端末の色's follows Android's color.
 function skyOf(id: string | undefined, wallpaperHue: number | undefined) {
-  if (id === themeSkyId(WALLPAPER) && wallpaperHue !== undefined) {
+  if (id === themeSkyId(DEVICE_COLORS) && wallpaperHue !== undefined) {
     return wallpaperSky(wallpaperHue);
   }
   return id === undefined ? undefined : allSkies[id];

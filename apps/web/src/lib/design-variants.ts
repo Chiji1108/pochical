@@ -53,14 +53,6 @@ export const designVariantOptions = {
     ],
     label: "Android の壁紙",
   },
-  wallpaperTheme: {
-    choices: [
-      { label: "上に別の行", value: "row" },
-      { label: "最初のページ", value: "first" },
-      { label: "最後のページ", value: "last" },
-    ],
-    label: "壁紙の色の置き場所",
-  },
 } as const;
 
 type VariantKey = keyof typeof designVariantOptions;

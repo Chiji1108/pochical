@@ -8,7 +8,7 @@ import {
   ColorSchemeContext,
   presetOf,
   ThemeContext,
-  WALLPAPER,
+  DEVICE_COLORS,
 } from "./design-theme";
 import type { PresetId } from "./design-theme";
 import { WeekSettingsContext } from "./design-week";
@@ -57,10 +57,10 @@ export function DesignProviders({ children }: { children: ReactNode }) {
     week,
     shiftColors,
   } = useSettings((state) => state.device);
-  // 壁紙の色 exists only on Android; elsewhere the app's own stands in.
+  // 端末の色 exists only on Android; elsewhere the app's own stands in.
   const { platform, wallpaperHue } = useDevice();
   const preset =
-    picked === WALLPAPER && platform !== "android" ? "pochical" : picked;
+    picked === DEVICE_COLORS && platform !== "android" ? "pochical" : picked;
   // Saved device settings load once the page has hydrated.
   useEffect(() => {
     void useSettings.persist.rehydrate();

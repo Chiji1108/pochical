@@ -163,19 +163,20 @@ export const presets = [
   },
 ] as const satisfies readonly Preset[];
 
-// 壁紙の色, on Android only: the テーマ taken from the phone's wallpaper,
-// as Android hands apps its Material You colors. Its accent is the
-// wallpaper's primary color as Android draws it (tone 40), and the grays
-// lean to the wallpaper's neutral hue; every other role follows by the
-// same steps as the others', so it sits with the shifts as they do. The
-// screen stays white, as the widgets' ground does: a tinted one would
-// muddy the shift colors.
-export const WALLPAPER = "wallpaper" as const;
+// 端末の色, on Android only: the colors Android is set to (Material You's
+// dynamic color), which come from the wallpaper or from a color the person
+// picked in Android's own settings. Its accent is their primary as Android
+// draws it (tone 40), and the grays lean to their neutral hue; every other
+// role follows by the same steps as the others', so it sits with the
+// shifts as they do. The screen stays white, as the widgets' ground does:
+// a tinted one would muddy the shift colors. The prototype stands in for
+// Android's colors with a sample wallpaper's (lib/design-device.ts).
+export const DEVICE_COLORS = "device" as const;
 const WALLPAPER_ACCENT_TONE = 40;
 const WALLPAPER_GRAY_TONE = 50;
 const WALLPAPER_GRAY_STRENGTH = 0.8;
 
-export function wallpaperPreset(hue: number) {
+export function deviceColorsPreset(hue: number) {
   const palettes = palettesOf(hue);
   return {
     accent: hexToOklch(palettes.primary(WALLPAPER_ACCENT_TONE)),
@@ -183,18 +184,18 @@ export function wallpaperPreset(hue: number) {
       hue: hexToOklch(palettes.neutral(WALLPAPER_GRAY_TONE)).hue,
       strength: WALLPAPER_GRAY_STRENGTH,
     },
-    id: WALLPAPER,
-    name: "壁紙の色",
+    id: DEVICE_COLORS,
+    name: "端末の色",
   } satisfies Preset;
 }
 
-export type PresetId = (typeof presets)[number]["id"] | typeof WALLPAPER;
+export type PresetId = (typeof presets)[number]["id"] | typeof DEVICE_COLORS;
 
-// The device's wallpaper decides 壁紙の色, so it is read from the device
-// rather than kept here.
+// Android decides 端末の色, so it is read from the device rather than
+// kept here.
 export function presetOf(id: PresetId): Preset {
-  if (id === WALLPAPER) {
-    return wallpaperPreset(useDevice.getState().wallpaperHue);
+  if (id === DEVICE_COLORS) {
+    return deviceColorsPreset(useDevice.getState().wallpaperHue);
   }
   return presets.find((preset) => preset.id === id) ?? presets[0];
 }
@@ -208,7 +209,7 @@ export function schemeOf(id: PresetId, scheme: ColorScheme): ColorScheme {
 // The テーマ drawn: the person's own, or another's where a card or the
 // states page shows one.
 // `wallpaperHue` changes with the device's wallpaper, so what is drawn in
-// 壁紙の色 redraws when it does.
+// 端末の色 redraws when it does.
 export const ThemeContext = createContext<{
   theme: PresetId;
   wallpaperHue?: number;
