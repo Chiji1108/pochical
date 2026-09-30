@@ -51,9 +51,9 @@ const patterns = {
 };
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
 
-// The top page's phone, the site's first picture of the app. /design/assets
-// keeps it as the key visual the screens grew from, so it stays when the top
-// page stops showing it (move its styles out of styles.css then).
+// The old top page's phone, the site's first picture of the app, kept on
+// /design/assets as the key visual the screens grew from. Its styles are
+// in calendar-preview.css, which that page loads.
 export function CalendarPreview() {
   return (
     <figure className="preview-figure">
