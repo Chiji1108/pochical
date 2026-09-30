@@ -4,6 +4,7 @@ import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
+import { useDevice } from "../lib/design-device";
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useLook, useSettings } from "../lib/design-settings-store";
@@ -50,8 +51,9 @@ import {
   presets,
   themeStyle,
   previewWrap,
+  wallpaperPreset,
 } from "./design-theme";
-import type { Appearance } from "./design-theme";
+import type { Appearance, Preset, PresetId } from "./design-theme";
 import {
   Button,
   ChipGroup,
@@ -570,6 +572,25 @@ const themeCard = {
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
   }),
   pager: css({ border: 0, margin: 0, minWidth: 0, padding: 0 }),
+  // 壁紙の色 on Android, over the others as Pixel's 壁紙とスタイル keeps
+  // wallpaper colors apart from the basic ones: its card in the first of
+  // the three columns, and what it is beside it.
+  wallpaperNote: css({
+    alignSelf: "center",
+    color: "text.tertiary",
+    gridColumn: "span 2",
+    lineHeight: 1.5,
+    margin: 0,
+    textStyle: "footnote",
+  }),
+  wallpaperRow: css({
+    borderBottom: "1px solid token(colors.separator)",
+    display: "grid",
+    gap: "8px",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    marginBottom: "12px",
+    paddingBottom: "12px",
+  }),
   // The theme's own screen, in the current light or dark.
   sample: css({
     bg: "background.base",
@@ -1349,6 +1370,9 @@ function MarkPage({
   onBack: () => void;
 }) {
   const current = useContext(ShiftMarkStyleContext);
+  const themeLayout = useDevice(
+    (state) => `${state.platform}-${state.wallpaperThemePlace}`
+  );
   // The preview and the テーマ cards show in the other of light and dark
   // together, from either one's ☀︎ / ☾, without touching 外観.
   const scheme = useContext(ColorSchemeContext);
@@ -1377,7 +1401,8 @@ function MarkPage({
           />
         }
       >
-        <ThemeChoices scheme={shown} />
+        {/* Opened again on the テーマ in use when /demo moves 壁紙の色. */}
+        <ThemeChoices key={themeLayout} scheme={shown} />
       </Section>
       <Section title="シフトの色">
         <ShiftColorsChoices />
@@ -1969,12 +1994,36 @@ function ShiftColorsChoices() {
   );
 }
 
+type ThemeOption = Preset & { id: PresetId };
+
 // The テーマ in rows of three, each row a page: the basics, the soft ones,
 // the colors, the nights.
-const themePages = Array.from(
+const themePages: ThemeOption[][] = Array.from(
   { length: Math.ceil(presets.length / 3) },
   (_, page) => presets.slice(page * 3, page * 3 + 3)
 );
+
+// On Android, 壁紙の色 joins them: in a row of its own over the pages, or
+// on a page of its own at either end, as /demo's design choice says.
+function useThemePages(): {
+  pages: ThemeOption[][];
+  wallpaperRow?: ThemeOption;
+} {
+  const { platform, wallpaperHue, wallpaperThemePlace } = useDevice();
+  if (platform !== "android") {
+    return { pages: themePages };
+  }
+  const wallpaper = wallpaperPreset(wallpaperHue);
+  if (wallpaperThemePlace === "row") {
+    return { pages: themePages, wallpaperRow: wallpaper };
+  }
+  return {
+    pages:
+      wallpaperThemePlace === "first"
+        ? [[wallpaper], ...themePages]
+        : [...themePages, [wallpaper]],
+  };
+}
 
 // The shifts on a テーマ's card, as they might follow each other in a week.
 const presetSampleShifts: Shift[] = ["day", "night", "after", "off"];
@@ -1986,10 +2035,11 @@ const presetSampleShifts: Shift[] = ["day", "night", "after", "off"];
 function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
   const current = useSettings((state) => state.device.preset);
   const setPreset = useSettings((state) => state.setPreset);
+  const { pages, wallpaperRow } = useThemePages();
   // Opens on the page of the テーマ in use.
   const [page, setPage] = useState(() =>
     Math.max(
-      themePages.findIndex((themes) =>
+      pages.findIndex((themes) =>
         themes.some((preset) => preset.id === current)
       ),
       0
@@ -2004,8 +2054,16 @@ function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
         onValueChange={setPreset}
         value={current}
       >
+        {wallpaperRow && (
+          <div className={themeCard.wallpaperRow}>
+            <ThemeChoice preset={wallpaperRow} scheme={scheme} />
+            <p className={themeCard.wallpaperNote}>
+              壁紙から取った色です。壁紙を変えると、この色も変わります。
+            </p>
+          </div>
+        )}
         <Pager
-          ends={{ back: page > 0, forward: page < themePages.length - 1 }}
+          ends={{ back: page > 0, forward: page < pages.length - 1 }}
           gap={THEME_PAGE_GAP}
           onStep={(direction) => {
             setPage((shown) => shown + direction);
@@ -2013,7 +2071,7 @@ function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
           page={String(page)}
           progress={progress}
           renderPage={(offset) => {
-            const themes = themePages[page + offset];
+            const themes = pages[page + offset];
             return (
               themes && (
                 <div className={themeCard.page}>
@@ -2031,7 +2089,7 @@ function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
         />
       </ChoiceGrid>
       <PageDots
-        count={themePages.length}
+        count={pages.length}
         current={page}
         label="テーマのページ"
         onPick={setPage}
@@ -2045,7 +2103,7 @@ function ThemeChoice({
   preset,
   scheme,
 }: {
-  preset: (typeof presets)[number];
+  preset: ThemeOption;
   scheme: ColorScheme;
 }) {
   return (

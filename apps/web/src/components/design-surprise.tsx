@@ -4,7 +4,12 @@ import { css } from "styled-system/css";
 
 import { useSettings } from "../lib/design-settings-store";
 import { oklchToHex } from "../lib/oklch";
-import { ColorSchemeContext, ThemeContext, presetOf } from "./design-theme";
+import {
+  ColorSchemeContext,
+  ThemeContext,
+  WALLPAPER,
+  presetOf,
+} from "./design-theme";
 import type { PresetId } from "./design-theme";
 
 // おたのしみ, the other choice for the calendar's month name: a sky of pale
@@ -37,7 +42,7 @@ const skies: Record<string, Sky> = {
 // accent alone: 墨's nearly a silver haze, 抹茶's with a sakura sweet's
 // pink, 喫茶's its lamps' amber, 月夜's the night's blues (its accent is
 // the moon), 黒板's chalk.
-const themeSkies: Record<PresetId, Sky> = {
+const themeSkies: Record<Exclude<PresetId, typeof WALLPAPER>, Sky> = {
   cocoa: { hues: [45, 75, 10], name: "ココア", vivid: 0.8 },
   kissa: { hues: [60, 35, 85], name: "喫茶" },
   kokuban: { hues: [165, 215, 345], name: "黒板", vivid: 0.8 },
@@ -51,6 +56,15 @@ const themeSkies: Record<PresetId, Sky> = {
   tsukiyo: { hues: [290, 250, 215], name: "月夜" },
   zen: { hues: [110, 90, 150], name: "禅", vivid: 0.6 },
 };
+
+// 壁紙の色's sky: the wallpaper's hue, and two steps cooler across.
+const WALLPAPER_SKY_STEP = 30;
+function wallpaperSky(hue: number): Sky {
+  return {
+    hues: [hue, hue + WALLPAPER_SKY_STEP, hue + 2 * WALLPAPER_SKY_STEP],
+    name: "壁紙の色",
+  };
+}
 
 // A テーマ's sky is kept as its own id, so it stays when the テーマ changes.
 const themeSkyId = (theme: PresetId) => `theme-${theme}`;
@@ -126,6 +140,14 @@ function SkyLight({ sky }: { sky: Sky }) {
   );
 }
 
+// A sky by its id; 壁紙の色's follows the wallpaper.
+function skyOf(id: string | undefined, wallpaperHue: number | undefined) {
+  if (id === themeSkyId(WALLPAPER) && wallpaperHue !== undefined) {
+    return wallpaperSky(wallpaperHue);
+  }
+  return id === undefined ? undefined : allSkies[id];
+}
+
 // The sky behind the calendar's content while おたのしみ is chosen (its
 // Screen takes `surpriseStyles.screen`), and `play`, which drifts it to
 // another sky.
@@ -133,7 +155,7 @@ export function useSurprise() {
   const on = useSettings((state) => state.device.monthTap === "surprise");
   const id = useSettings((state) => state.device.sky);
   const setSky = useSettings((state) => state.setSky);
-  const { theme } = useContext(ThemeContext);
+  const { theme, wallpaperHue } = useContext(ThemeContext);
   function play() {
     const own = themeSkyId(theme);
     if (id === undefined) {
@@ -143,7 +165,7 @@ export function useSurprise() {
     const others = [...Object.keys(skies), own].filter((other) => other !== id);
     setSky(others[Math.floor(Math.random() * others.length)] ?? own);
   }
-  const sky = id === undefined ? undefined : allSkies[id];
+  const sky = skyOf(id, wallpaperHue);
   const layer = (
     <div aria-hidden="true" className={surpriseStyles.layer}>
       <AnimatePresence initial={false}>

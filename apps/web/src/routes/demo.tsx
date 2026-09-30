@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BookOpen, RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 
 import {
@@ -20,6 +20,7 @@ import {
 } from "../components/design-providers";
 import { pageStyle } from "../components/design-theme";
 import { VariantPanel } from "../components/design-variant-panel";
+import { useDevice } from "../lib/design-device";
 import {
   createUserStore,
   sampleCoworkers,
@@ -27,6 +28,7 @@ import {
 } from "../lib/design-user-store";
 import { parseDesignVariants } from "../lib/design-variants";
 import type { DesignVariants } from "../lib/design-variants";
+import { wallpaperSamples } from "../lib/material-you";
 import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/demo")({
@@ -74,6 +76,17 @@ function DemoPage() {
   const variants = Route.useSearch();
   const navigate = Route.useNavigate();
   const theme = useDesignTheme();
+  // The phone stood in for: its platform and wallpaper.
+  useEffect(() => {
+    useDevice.setState({
+      platform: variants.platform,
+      wallpaperHue: (
+        wallpaperSamples.find(({ id }) => id === variants.wallpaper) ??
+        wallpaperSamples[0]
+      ).hue,
+      wallpaperThemePlace: variants.wallpaperTheme,
+    });
+  }, [variants.platform, variants.wallpaper, variants.wallpaperTheme]);
   const [person, setPerson] = useState(() =>
     makePerson(
       variants.scheduleSample,
