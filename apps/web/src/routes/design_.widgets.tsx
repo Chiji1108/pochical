@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import type { ComponentType } from "react";
 import { css } from "styled-system/css";
 
-import { initialDesignSchedule } from "../components/design-calendar";
+import { dateKey, initialDesignSchedule } from "../components/design-calendar";
 import { FrameSection, frameSections } from "../components/design-frames";
 import {
   DesignIntro,
@@ -18,14 +19,21 @@ import {
   LabelledWidget,
   Wallpaper,
 } from "../components/design-widget-frame";
-import type { HomeAppearance } from "../components/design-widget-frame";
+import type {
+  HomeAppearance,
+  WidgetFamily,
+} from "../components/design-widget-frame";
 import {
-  MonthWidget,
+  CalendarLarge,
+  CalendarMedium,
+  CalendarSmall,
+  DetailMedium,
+  DetailSmall,
   TodayCircular,
   TodayInline,
-  TodayWidget,
+  UpcomingMedium,
   UpcomingRectangular,
-  WeekWidget,
+  UpcomingSmall,
 } from "../components/design-widgets";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
@@ -46,78 +54,118 @@ export const Route = createFileRoute("/design_/widgets")({
   }),
 });
 
-const sampleSchedule = initialDesignSchedule();
+// The sample month, with today a work day that has a memo and people
+// with it, so every widget has something to show.
+const sampleSchedule = {
+  ...initialDesignSchedule(),
+  [dateKey(designToday)]: {
+    end: "20:00",
+    members: ["田中", "山本"],
+    note: "新人さん同行。17時から棚卸しの打ち合わせ",
+    shift: "day" as const,
+  },
+};
 
-const rows = css({ display: "flex", flexDirection: "column", gap: "16px" });
+type Size = "small" | "medium" | "large";
+type WidgetView = ComponentType<{ entry: WidgetEntry }>;
 
-// Android's launcher has light and dark.
-const androidAppearances = homeAppearances.filter(
-  ({ appearance }) => appearance === "light" || appearance === "dark"
+// The kinds a person picks from the widget gallery, each in its sizes.
+const kinds: {
+  name: string;
+  description: string;
+  sizes: { size: Size; View: WidgetView }[];
+}[] = [
+  {
+    description: "今日と、この先の数日。いちばん置かれる想定の基本の形です。",
+    name: "これから",
+    sizes: [
+      { View: UpcomingSmall, size: "small" },
+      { View: UpcomingMedium, size: "medium" },
+    ],
+  },
+  {
+    description:
+      "小は休みの日だけをタイルで。中は月の横に今日から3日分、大は毎日のマークまで。",
+    name: "カレンダー",
+    sizes: [
+      { View: CalendarSmall, size: "small" },
+      { View: CalendarMedium, size: "medium" },
+      { View: CalendarLarge, size: "large" },
+    ],
+  },
+  {
+    description: "今日の時間と、メモ、一緒に働く人。",
+    name: "今日の詳細",
+    sizes: [
+      { View: DetailSmall, size: "small" },
+      { View: DetailMedium, size: "medium" },
+    ],
+  },
+];
+
+const iosFamilies: Record<Size, WidgetFamily> = {
+  large: "systemLarge",
+  medium: "systemMedium",
+  small: "systemSmall",
+};
+const androidFamilies: Record<Size, WidgetFamily> = {
+  large: "android4x4",
+  medium: "android4x2",
+  small: "android2x2",
+};
+
+const everyWidget = kinds.flatMap(({ name, sizes }) =>
+  sizes.map((widget) => ({ ...widget, kind: name }))
 );
 
+const rows = css({ display: "flex", flexDirection: "column", gap: "16px" });
 const rowLabel = css({
   color: "text.tertiary",
   fontSize: "12px",
   margin: "0 0 8px 4px",
 });
 
-// Android's sizes on a sample wallpaper, whose colors the widgets take.
-// The large one is shown on the first wallpaper only, to keep the page
-// short.
-function AndroidRow({
-  appearance,
-  entry,
+// Light and dark, which the home screen and the launcher both have; then
+// the looks the iPhone recolors itself.
+const fullColor = homeAppearances.filter(
+  ({ appearance }) => appearance === "light" || appearance === "dark"
+);
+const systemColored = homeAppearances.filter(
+  ({ appearance }) => appearance === "tinted" || appearance === "clear"
+);
+
+// Widgets on one stretch of wallpaper, under a label.
+function WidgetRow({
   label,
-  large,
+  appearance,
   wallpaperHue,
+  families,
+  widgets,
+  entry,
 }: {
-  appearance: HomeAppearance;
-  entry: WidgetEntry;
   label: string;
-  large: boolean;
-  wallpaperHue: number;
+  appearance: HomeAppearance;
+  wallpaperHue?: number;
+  families: Record<Size, WidgetFamily>;
+  widgets: { size: Size; View: WidgetView; kind?: string }[];
+  entry: WidgetEntry;
 }) {
   const placement = { appearance, wallpaperHue };
   return (
     <section aria-label={label}>
       <p className={rowLabel}>{label}</p>
       <Wallpaper {...placement}>
-        <LabelledWidget {...placement} family="android2x2">
-          <TodayWidget entry={entry} />
-        </LabelledWidget>
-        <LabelledWidget {...placement} family="android4x2">
-          <WeekWidget entry={entry} />
-        </LabelledWidget>
-        {large && (
-          <LabelledWidget {...placement} family="android4x4">
-            <MonthWidget entry={entry} />
+        {widgets.map(({ size, View, kind }) => (
+          <LabelledWidget
+            {...placement}
+            family={families[size]}
+            key={`${kind ?? ""}-${size}`}
+          >
+            <View entry={entry} />
           </LabelledWidget>
-        )}
+        ))}
       </Wallpaper>
     </section>
-  );
-}
-
-// The home screen's three sizes, on one stretch of wallpaper.
-function HomeRow({
-  appearance,
-  entry,
-}: {
-  appearance: HomeAppearance;
-  entry: WidgetEntry;
-}) {
-  return (
-    <Wallpaper appearance={appearance}>
-      <LabelledWidget appearance={appearance} family="systemSmall">
-        <TodayWidget entry={entry} />
-      </LabelledWidget>
-      <LabelledWidget appearance={appearance} family="systemMedium">
-        <WeekWidget entry={entry} />
-      </LabelledWidget>
-      <LabelledWidget appearance={appearance} family="systemLarge">
-        <MonthWidget entry={entry} />
-      </LabelledWidget>
-    </Wallpaper>
   );
 }
 
@@ -134,19 +182,41 @@ function WidgetsPage() {
       <DesignToolbar back="documents" />
       <DesignIntro eyebrow="POCHICAL / WIDGETS" title="ウィジェット">
         iPhone（390×844pt）と Pixel 9a
-        での実寸です。色合いとクリアは、システムが白一色にする見え方の再現です。
+        での実寸です。マークがシフトを表すので、横の文字は時間です。名前は時間のないシフトにだけ出します。
       </DesignIntro>
       <DesignProviders>
         <div className={frameSections}>
+          {kinds.map(({ name, description, sizes }) => (
+            <FrameSection description={description} key={name} title={name}>
+              <div className={rows}>
+                {fullColor.map(({ appearance, label }) => (
+                  <WidgetRow
+                    appearance={appearance}
+                    entry={entry}
+                    families={iosFamilies}
+                    key={appearance}
+                    label={label}
+                    widgets={sizes}
+                  />
+                ))}
+              </div>
+            </FrameSection>
+          ))}
+
           <FrameSection
-            description="ライト・ダークはそのままの色。色合い・クリアでは背景が差し替わり、中身は白一色の濃淡になります。"
-            title="ホーム画面"
+            description="iPhone の色合いとクリアでは、背景が差し替わり、中身は白一色の濃淡になります。"
+            title="色合い・クリア"
           >
             <div className={rows}>
-              {homeAppearances.map(({ appearance, label }) => (
-                <section aria-label={label} key={appearance}>
-                  <HomeRow appearance={appearance} entry={entry} />
-                </section>
+              {systemColored.map(({ appearance, label }) => (
+                <WidgetRow
+                  appearance={appearance}
+                  entry={entry}
+                  families={iosFamilies}
+                  key={appearance}
+                  label={label}
+                  widgets={everyWidget}
+                />
               ))}
             </div>
           </FrameSection>
@@ -169,19 +239,24 @@ function WidgetsPage() {
           </FrameSection>
 
           <FrameSection
-            description="Pixel 9a のランチャーのマス目で。地と文字は壁紙から取った色（Material You）、シフトのマークはテーマの色のままです。"
+            description="Pixel 9a のランチャーのマス目で。地はほぼ白、文字は壁紙から取った色（Material You）、シフトのマークはテーマの色のままです。"
             title="Android のホーム画面"
           >
             <div className={rows}>
               {wallpaperSamples.flatMap((sample, index) =>
-                androidAppearances.map(({ appearance, label }) => (
-                  <AndroidRow
+                fullColor.map(({ appearance, label }) => (
+                  <WidgetRow
                     appearance={appearance}
                     entry={entry}
+                    families={androidFamilies}
                     key={`${sample.hue}-${appearance}`}
                     label={`${sample.name}の壁紙・${label}`}
-                    large={index === 0}
                     wallpaperHue={sample.hue}
+                    // The large one on the first wallpaper only, to keep
+                    // the page short.
+                    widgets={everyWidget.filter(
+                      ({ size }) => index === 0 || size !== "large"
+                    )}
                   />
                 ))
               )}
@@ -189,7 +264,13 @@ function WidgetsPage() {
           </FrameSection>
 
           <FrameSection title="予定が入っていないとき">
-            <HomeRow appearance="light" entry={empty} />
+            <WidgetRow
+              appearance="light"
+              entry={empty}
+              families={iosFamilies}
+              label="ライト"
+              widgets={everyWidget}
+            />
           </FrameSection>
         </div>
       </DesignProviders>
