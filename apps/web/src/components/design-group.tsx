@@ -120,7 +120,6 @@ import {
   Screen,
   ScreenScroll,
   Section,
-  sectionTitle,
   Segment,
   SegmentedControl,
   srOnly,
@@ -4783,7 +4782,41 @@ const monthSwitch = css({
 // The group's shifts page: the month row, the table under it, and room at
 // the foot for the picked day's sheet to cover.
 const shiftsPage = {
-  legendMember: css({ alignItems: "center", display: "flex", gap: "8px" }),
+  // As tall as the longest list, up to what the sheet has room for, so it
+  // keeps its height from one person to the next.
+  legendBody: css({
+    margin: "0 -24px -28px",
+    minHeight: 0,
+    overflow: "hidden",
+    position: "relative",
+  }),
+  // Over the legend's list, the chips running out to the sheet's edges as
+  // they do to the screen's in 1人ずつ.
+  legendPeople: css({
+    "--screen-left": "24px",
+    "--screen-right": "24px",
+    flexShrink: 0,
+    marginBottom: "16px",
+    paddingTop: "8px",
+  }),
+  // Over the sizing lists, the one person's, scrolling only when it is
+  // longer than the room.
+  legendScroll: css({
+    "& > *": { flexShrink: 0 },
+    display: "flex",
+    flexDirection: "column",
+    inset: 0,
+    overflowY: "auto",
+    padding: "2px 24px 28px",
+    position: "absolute",
+  }),
+  // Everyone's lists in one place, unseen, giving the body its height.
+  legendSizer: css({
+    "& > *": { gridArea: "1 / 1", minWidth: 0 },
+    display: "grid",
+    padding: "2px 24px 28px",
+    visibility: "hidden",
+  }),
   monthName: css({ fontWeight: 600, textStyle: "headline" }),
   // The month's name and 今日 or 今月.
   monthRow: css({
@@ -5251,8 +5284,12 @@ function ShiftsPage({
 }) {
   const weekTools = useWeek();
   const [month, setMonth] = useState(initialMonth ?? designMonth);
+  // Whom 1人ずつ shows; chosen above the month, like a filter.
+  const [personId, setPersonId] = useState(
+    group.members.find((member) => !member.me)?.id ?? group.members[0].id
+  );
   // Whose marks the legend sheet shows; kept while it closes.
-  const [legend, setLegend] = useState<Member[]>(group.members);
+  const [legendOf, setLegendOf] = useState(personId);
   const [legendOpen, setLegendOpen] = useState(false);
   const [picked, setPicked] = useState<Date | undefined>(day);
   const toast = useContext(ToastContext);
@@ -5271,7 +5308,7 @@ function ShiftsPage({
           layout={layout}
           onLayout={setLayout}
           onLegend={() => {
-            setLegend(group.members);
+            setLegendOf(personId);
             setLegendOpen(true);
           }}
           onSave={() => {
@@ -5291,11 +5328,13 @@ function ShiftsPage({
         layout={layout}
         month={month}
         onMember={(member) => {
-          setLegend([member]);
+          setLegendOf(member.id);
           setLegendOpen(true);
         }}
         onMonth={setMonth}
+        onPerson={setPersonId}
         onPickDay={pick}
+        personId={personId}
         picked={picked}
       />
       <PickedDaySheet
@@ -5307,9 +5346,11 @@ function ShiftsPage({
         onShare={onShareDay}
       />
       <LegendSheet
-        members={legend}
+        members={group.members}
         onOpenChange={setLegendOpen}
+        onPick={setLegendOf}
         open={legendOpen}
+        picked={legendOf}
       />
     </div>
   );
@@ -5365,6 +5406,8 @@ function PagedShifts({
   onMonth,
   onPickDay,
   onMember,
+  personId,
+  onPerson,
 }: {
   group: Group;
   // The page's header, pinned with the month over a list of months.
@@ -5376,6 +5419,9 @@ function PagedShifts({
   onMonth: (month: Date) => void;
   onPickDay: (date: Date) => void;
   onMember: (member: Member) => void;
+  // Whom 1人ずつ shows, which シフトパターン opens on too.
+  personId: string;
+  onPerson: (id: string) => void;
 }) {
   const { weekStart } = useWeek();
   // How far 1人ずつ's pages are dragged, which the month row follows, and
@@ -5386,10 +5432,6 @@ function PagedShifts({
     setSwipedTo(undefined);
     onMonth(target);
   };
-  // Whom 1人ずつ shows; chosen above the month, like a filter.
-  const [personId, setPersonId] = useState(
-    group.members.find((member) => !member.me)?.id ?? group.members[0].id
-  );
   const person =
     group.members.find((member) => member.id === personId) ?? group.members[0];
   const together = togetherIn(
@@ -5418,11 +5460,7 @@ function PagedShifts({
   }
   return (
     <>
-      <PeoplePicker
-        members={group.members}
-        onPick={setPersonId}
-        picked={person}
-      />
+      <PeoplePicker members={group.members} onPick={onPerson} picked={person} />
       <MonthRow
         month={month}
         onPick={goTo}
@@ -6307,67 +6345,67 @@ function PickedDaySheet({
   );
 }
 
-// What each mark means, for one person or everyone, in their own style.
+// What each mark means, one person at a time in their own style, chosen
+// by the chips over the list as 1人ずつ chooses whom to show. It opens on
+// the face pressed in the table, or from the menu on whom 1人ずつ shows,
+// so it is as long as one person's patterns however big the group.
 function LegendSheet({
   open,
   onOpenChange,
   members,
+  picked,
+  onPick,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   members: Member[];
+  picked: string;
+  onPick: (id: string) => void;
 }) {
-  const single = members.length === 1 ? members[0] : undefined;
-  const onClose = () => {
-    onOpenChange(false);
-  };
+  const member =
+    members.find((candidate) => candidate.id === picked) ?? members[0];
   return (
-    <Sheet
-      label={
-        single ? `${single.name}のシフトパターン` : "みんなのシフトパターン"
-      }
-      onOpenChange={onOpenChange}
-      open={open}
-    >
+    <Sheet label="シフトパターン" onOpenChange={onOpenChange} open={open}>
       <SheetHeading
-        onClose={onClose}
-        title={
-          <>
-            {single && <Avatar member={single} />}
-            {single
-              ? `${single.name}のシフトパターン`
-              : "みんなのシフトパターン"}
-          </>
-        }
+        onClose={() => {
+          onOpenChange(false);
+        }}
+        title="シフトパターン"
       />
-      {/* Only the marks scroll; the title and 閉じる stay in reach. */}
-      <div className={sheetBody}>
-        {members.map((member) => (
-          <section key={member.id}>
-            {!single && (
-              <h4 className={cx(sectionTitle, shiftsPage.legendMember)}>
-                <Avatar member={member} />
-                {member.me ? "自分" : member.name}
-              </h4>
-            )}
-            <List>
-              {member.patterns.map((item) => (
-                <ListRow
-                  key={item.id}
-                  label={item.name}
-                  value={item.time ?? ""}
-                  leading={
-                    <>
-                      <MemberMark look={item.look} member={member} size={20} />
-                    </>
-                  }
-                />
-              ))}
-            </List>
-          </section>
-        ))}
+      {/* The chips stay in reach; only the marks scroll. */}
+      <div className={shiftsPage.legendPeople}>
+        <PeoplePicker members={members} onPick={onPick} picked={member} />
+      </div>
+      {/* Everyone's lists lie unseen under the one shown, so the sheet
+          stays as tall as the longest, up to its limit, and the chips
+          stay under the finger from one person to the next. Only a list
+          longer than the room scrolls. */}
+      <div className={shiftsPage.legendBody}>
+        <div aria-hidden="true" className={shiftsPage.legendSizer} inert>
+          {members.map((candidate) => (
+            <PatternList key={candidate.id} member={candidate} />
+          ))}
+        </div>
+        <div className={shiftsPage.legendScroll}>
+          <PatternList member={member} />
+        </div>
       </div>
     </Sheet>
+  );
+}
+
+function PatternList({ member }: { member: Member }) {
+  return (
+    <List>
+      {member.patterns.map((item) => (
+        <ListRow
+          key={item.id}
+          label={item.name}
+          leading={<MemberMark look={item.look} member={member} size={20} />}
+          value={item.time ?? ""}
+        />
+      ))}
+    </List>
   );
 }
 
