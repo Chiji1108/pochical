@@ -22,6 +22,13 @@ export const designVariantOptions = {
     ],
     label: "一緒に働く人",
   },
+  photoSend: {
+    choices: [
+      { label: "届く", value: "ok" },
+      { label: "失敗する", value: "fails" },
+    ],
+    label: "写真の送信",
+  },
   scanResult: {
     choices: [
       { label: "招待", value: "invite" },

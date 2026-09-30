@@ -746,6 +746,7 @@ export function DesignCalendar({
           {tab === "group" && (
             <DesignGroup
               initialGroupId={openGroup}
+              photoSend={variants.photoSend}
               scanResult={variants.scanResult}
               onTab={setTab}
               patternKeys={patternKeys}

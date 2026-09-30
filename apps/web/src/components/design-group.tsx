@@ -827,6 +827,7 @@ export function DesignGroup({
   onTab,
   initialGroupId = "family",
   scanResult = "invite",
+  photoSend = "ok",
 }: {
   schedule: Schedule;
   patternKeys: Shift[];
@@ -835,6 +836,8 @@ export function DesignGroup({
   initialGroupId?: string;
   // What the QR page finds, as 比べる案 sets it.
   scanResult?: ScanResult;
+  // Whether a photo's upload goes through, as 比べる案 sets it.
+  photoSend?: PhotoSend;
 
   onTab: (tab: Tab) => void;
 }) {
@@ -1058,6 +1061,7 @@ export function DesignGroup({
       <>
         <ChatPage
           attach={page.attach}
+          photoSend={photoSend}
           backLabel={page.from ? chatTitle(group, page.from) : group.name}
           chat={chatOf(group.id, page.chatId)}
           formerMembers={membersOf(group.id).filter((member) =>
@@ -1304,6 +1308,8 @@ function ScanPage({
 }
 
 type ScanResult = "invite" | "other" | "expired" | "none";
+
+type PhotoSend = "ok" | "fails";
 
 // What the QR page says, briefly, when another try is all it takes.
 const scanRetries: Record<"other" | "none", string> = {
@@ -2597,8 +2603,10 @@ const chatStyle = {
   // card.
   photo: css({ display: "flex", maxWidth: "100%" }),
   photoButton: css({
+    "&:has([role=status])": { cursor: "progress" },
     bg: "transparent",
     border: 0,
+    position: "relative",
     // The focus ring follows the photo's corners.
     borderRadius: "16px",
     display: "block",
@@ -2627,6 +2635,53 @@ const chatStyle = {
         true: {},
       },
     },
+  }),
+  // A photo going up: dimmed, with a ring filling as it goes, as LINE
+  // draws one.
+  uploading: css({
+    alignItems: "center",
+    bg: "rgba(0, 0, 0, 0.32)",
+    borderRadius: "16px",
+    display: "flex",
+    inset: 0,
+    justifyContent: "center",
+    position: "absolute",
+  }),
+  uploadRing: css({
+    "& circle": {
+      fill: "none",
+      stroke: "white",
+      strokeWidth: 3,
+    },
+    "& circle:first-of-type": { opacity: 0.35 },
+    "& circle:last-of-type": {
+      animation: "uploadRing linear forwards",
+      strokeDasharray: 100,
+      strokeDashoffset: 100,
+      strokeLinecap: "round",
+    },
+    height: "36px",
+    transform: "rotate(-90deg)",
+    width: "36px",
+  }),
+  // A photo that could not be sent: a red ! where its time would be, and
+  // a note under it, as Messages marks one.
+  failed: css({
+    bg: "transparent",
+    border: 0,
+    color: "danger.default",
+    display: "grid",
+    flexShrink: 0,
+    height: "32px",
+    padding: 0,
+    placeItems: "center",
+    width: "32px",
+  }),
+  failedNote: css({
+    alignSelf: "flex-end",
+    color: "danger.default",
+    paddingRight: "40px",
+    textStyle: "caption2",
   }),
   // Photos chosen to send, in a row above the composer, each with its ×.
   tray: cva({
@@ -2764,9 +2819,12 @@ function ChatPage({
   backLabel,
   formerMembers = noMembers,
   attach,
+  photoSend = "ok",
 }: {
   title: string;
   group: Group;
+  // Whether photos' uploads go through or fail.
+  photoSend?: PhotoSend;
   // Days brought from the shift table, waiting above the composer.
   attach?: Date[];
   // Where 戻る goes: the group, or the chat a member was opened from.
@@ -2789,6 +2847,37 @@ function ChatPage({
   const [photos, setPhotos] = useState<Photo[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const toast = useContext(ToastContext);
+  // Photos of yours still uploading, or that could not be sent, by line.
+  // Only this phone knows them, as the apps keep them in their outbox;
+  // the group sees a photo once it is up.
+  const [uploads, setUploads] = useState<Record<string, Upload>>({});
+  const [failedOpen, setFailedOpen] = useState<string>();
+  const uploadTimers = useRef<number[]>([]);
+  useEffect(
+    () => () => {
+      for (const timer of uploadTimers.current) {
+        window.clearTimeout(timer);
+      }
+    },
+    []
+  );
+  const upload = (ids: string[]) => {
+    const set = (status?: Upload) => {
+      setUploads((before) => {
+        const others = Object.entries(before).filter(
+          ([id]) => !ids.includes(id)
+        );
+        const these = status ? ids.map((id) => [id, status] as const) : [];
+        return Object.fromEntries([...others, ...these]);
+      });
+    };
+    set("sending");
+    uploadTimers.current.push(
+      window.setTimeout(() => {
+        set(photoSend === "fails" ? "failed" : undefined);
+      }, uploadMilliseconds)
+    );
+  };
   const [sharing, setSharing] = useState(false);
   // The line whose actions are open, and the one being answered.
   const [selected, setSelected] = useState<string>();
@@ -2797,15 +2886,39 @@ function ChatPage({
   const [pickingFor, setPickingFor] = useState<string>();
   const [flash, setFlash] = useState<string>();
   // As chat apps do, a chat opens on its latest line and follows each
-  // new one, like a day just shared from the shift table.
+  // new one, like a day just shared from the shift table, and a photo's
+  // failure note under the lines just sent.
   const listRef = useRef<HTMLOListElement>(null);
   const lineCount = chat.messages.length;
+  const failedCount = Object.values(uploads).filter(
+    (status) => status === "failed"
+  ).length;
   useLayoutEffect(() => {
     const list = listRef.current;
-    if (list && lineCount > 0) {
+    if (list && lineCount + failedCount > 0) {
       list.scrollTop = list.scrollHeight;
     }
-  }, [lineCount]);
+  }, [lineCount, failedCount]);
+  // When what sits over the composer (a reply, days, photos) takes room,
+  // the lines keep their bottom edge, as in the chat apps, so the latest
+  // line is not hidden under it. When it goes, the room shows more below.
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) {
+      return;
+    }
+    let height = list.clientHeight;
+    const observer = new ResizeObserver(() => {
+      if (list.clientHeight < height) {
+        list.scrollTop += height - list.clientHeight;
+      }
+      height = list.clientHeight;
+    });
+    observer.observe(list);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
   const isGroup = title === "全体チャット";
   // Who wrote a line, including members taken out since, whose lines stay.
   const writerOf = (id?: string) =>
@@ -2816,18 +2929,20 @@ function ChatPage({
   // Sends one line or several at once, the first answering the line
   // being replied to.
   const post = (...lines: Omit<Message, "id" | "from" | "when" | "time">[]) => {
-    onChange([
-      ...chat.messages,
-      ...lines.map((line, index) => ({
-        ...line,
-        from: "me",
-        id: `sent-${chat.messages.length + index}`,
-        replyTo: index === 0 ? replyTo : undefined,
-        time: "10:10",
-        when: "今日",
-      })),
-    ]);
+    const sent = lines.map((line, index) => ({
+      ...line,
+      from: "me",
+      id: `sent-${chat.messages.length + index}`,
+      replyTo: index === 0 ? replyTo : undefined,
+      time: "10:10",
+      when: "今日",
+    }));
+    onChange([...chat.messages, ...sent]);
     setReplyTo(undefined);
+    const photoIds = sent.flatMap((line) => (line.photo ? [line.id] : []));
+    if (photoIds.length > 0) {
+      upload(photoIds);
+    }
   };
   // The attached days go first, then each photo as a line of its own,
   // then what was written, if anything.
@@ -2982,6 +3097,7 @@ function ChatPage({
                     {message.photo && (
                       <PhotoLine
                         actions={actionsOf(message)}
+                        upload={uploads[message.id]}
                         label={`${member?.name ?? ""}が送った写真`}
                         onSave={() => {
                           toast("写真を保存しました");
@@ -3020,8 +3136,27 @@ function ChatPage({
                         </MessageActions>
                       </span>
                     )}
-                    <small className={chatStyle.time}>{message.time}</small>
+                    {uploads[message.id] === "failed" && (
+                      <button
+                        aria-label="送れませんでした。押すと再送か削除"
+                        className={chatStyle.failed}
+                        onClick={() => {
+                          setFailedOpen(message.id);
+                        }}
+                        type="button"
+                      >
+                        <CircleAlert aria-hidden="true" size={22} />
+                      </button>
+                    )}
+                    {uploads[message.id] === undefined && (
+                      <small className={chatStyle.time}>{message.time}</small>
+                    )}
                   </span>
+                  {uploads[message.id] === "failed" && (
+                    <small className={chatStyle.failedNote}>
+                      送れませんでした
+                    </small>
+                  )}
                   {message.days && (
                     <button
                       className={chatStyle.dayOpen({ mine })}
@@ -3201,6 +3336,48 @@ function ChatPage({
         open={pickingFor !== undefined}
         title="リアクション"
       />
+      <Sheet
+        label="送れなかった写真"
+        onOpenChange={(open) => {
+          if (!open) {
+            setFailedOpen(undefined);
+          }
+        }}
+        open={failedOpen !== undefined}
+      >
+        <List>
+          <ListRow
+            label="もう一度送る"
+            leading={<RotateCcw aria-hidden="true" size={20} />}
+            onClick={() => {
+              if (failedOpen) {
+                upload([failedOpen]);
+              }
+              setFailedOpen(undefined);
+            }}
+          />
+          <ListRow
+            danger
+            label="削除"
+            leading={<Trash2 aria-hidden="true" size={20} />}
+            onClick={() => {
+              onChange(
+                chat.messages.filter((message) => message.id !== failedOpen)
+              );
+              setFailedOpen(undefined);
+            }}
+          />
+        </List>
+        <button
+          className={photoPicker.cancel}
+          onClick={() => {
+            setFailedOpen(undefined);
+          }}
+          type="button"
+        >
+          キャンセル
+        </button>
+      </Sheet>
       <DaySheet
         members={people}
         onOpenChange={setSharing}
@@ -3215,6 +3392,12 @@ function ChatPage({
 }
 
 const flashMilliseconds = 1200;
+
+// A photo of yours on its way up, or one that could not be sent.
+type Upload = "sending" | "failed";
+
+// How long a photo takes to go up in the prototype.
+const uploadMilliseconds = 1600;
 
 // How many photos go in one send: a roster is a page or two, and more
 // would flood a small group's chat.
@@ -3287,8 +3470,11 @@ function PhotoLine({
   quote,
   actions,
   onSave,
+  upload,
 }: {
   photo: Photo;
+  // Still going up, or not sent; neither takes reactions yet.
+  upload?: Upload;
   // Whose photo it is, for a screen reader and the large view.
   label: string;
   quote?: ReactNode;
@@ -3300,7 +3486,9 @@ function PhotoLine({
 }) {
   const [viewing, setViewing] = useState(false);
   const press = useLongPress(() => {
-    actions.onOpenChange(true);
+    if (!upload) {
+      actions.onOpenChange(true);
+    }
   });
   const size = photoSize(photo);
   const quoted = quote !== undefined;
@@ -3334,6 +3522,25 @@ function PhotoLine({
               src={photo.src}
               width={size.width}
             />
+            {upload === "sending" && (
+              <span className={chatStyle.uploading} role="status">
+                <svg
+                  aria-hidden="true"
+                  className={chatStyle.uploadRing}
+                  viewBox="0 0 36 36"
+                >
+                  <circle cx="18" cy="18" r="15" />
+                  <circle
+                    cx="18"
+                    cy="18"
+                    pathLength="100"
+                    r="15"
+                    style={{ animationDuration: `${uploadMilliseconds}ms` }}
+                  />
+                </svg>
+                <span className={srOnly}>送信中</span>
+              </span>
+            )}
           </button>
         </MessageActions>
       </span>

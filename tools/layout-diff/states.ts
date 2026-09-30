@@ -492,6 +492,19 @@ export const states: State[] = [
     },
   },
   {
+    // A photo whose upload failed: the red ! and its note.
+    name: "group/chat-photo-failed",
+    path: demo("photoSend=fails&scheduleSample=filled"),
+    steps: async (page) => {
+      await choosePhotos(page);
+      await tap(page, "送る");
+      await page
+        .getByRole("button", { name: /^送れませんでした/u })
+        .first()
+        .waitFor();
+    },
+  },
+  {
     name: "group/chat-one",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
