@@ -721,13 +721,15 @@ export const summaryRow = {
   unit: css({ marginLeft: "2px", textStyle: "footnote" }),
 };
 
+// The label and the number may be names that roll, as the calendar's
+// do with the month.
 export function SummaryRow({
   label,
   days,
   onOpen,
 }: {
-  label: string;
-  days: number;
+  label: ReactNode;
+  days: ReactNode;
   onOpen: () => void;
 }) {
   return (
