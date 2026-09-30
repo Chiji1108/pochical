@@ -41,6 +41,9 @@ const frame = cva({
         // The foot is iOS's home indicator area, 33pt: the screens end
         // there, and the floating tab bar sits 20px off the bottom.
         "--safe-bottom": "33px",
+        // The top, down to where the screens start: the room above the
+        // status bar and the bar itself.
+        "--safe-top": "45px",
         // The room at the screens' sides, which a ground running to the
         // phone's edges, like entering's, reaches back out by.
         "--screen-left": "16px",
@@ -53,6 +56,7 @@ const frame = cva({
       true: {
         inset: 0,
         "--safe-bottom": "max(env(safe-area-inset-bottom), 12px)",
+        "--safe-top": "max(env(safe-area-inset-top), 12px)",
         "--screen-left": "calc(env(safe-area-inset-left) + 16px)",
         "--screen-right": "calc(env(safe-area-inset-right) + 16px)",
         // As iOS's: 21pt off a phone's foot, 13pt into its home indicator
@@ -72,7 +76,10 @@ const frame = cva({
 const phone = {
   // Where iOS draws it, 8pt off the foot, over whatever runs under it.
   homeIndicator: css({
-    bg: "var(--home-indicator)",
+    ".dc-phone:has([data-status-bar=light]:not([hidden])) &": {
+      bg: "media.text",
+    },
+    bg: "home.indicator",
     borderRadius: "4px",
     bottom: "8px",
     height: "5px",
@@ -94,6 +101,10 @@ const phone = {
   }),
   statusBar: css({
     "@media (max-width: 370px)": { paddingInline: "6px" },
+    // Light over a screen that asks for it, like the camera's.
+    ".dc-phone:has([data-status-bar=light]:not([hidden])) &": {
+      color: "media.text",
+    },
     alignItems: "center",
     display: "flex",
     flexShrink: 0,

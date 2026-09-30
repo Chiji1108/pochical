@@ -1307,7 +1307,12 @@ function ScanPage({
     toast(scanRetries[result], "problem");
   };
   return (
-    <Screen className={scan.root} data-toast-above="">
+    <Screen
+      className={scan.root}
+      data-toast-above=""
+      fullBleed
+      statusBar="light"
+    >
       <header className={scan.header}>
         <button
           aria-label="閉じる"
@@ -1441,7 +1446,12 @@ const scan = {
     width: "220px",
   }),
   header: css({ alignItems: "center", display: "flex", gap: "12px" }),
-  hint: css({ margin: 0, textAlign: "center", textStyle: "body" }),
+  hint: css({
+    margin: 0,
+    textAlign: "center",
+    textStyle: "body",
+    textWrap: "balance",
+  }),
   library: css({
     alignItems: "center",
     alignSelf: "center",
