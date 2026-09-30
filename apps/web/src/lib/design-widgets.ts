@@ -1,7 +1,6 @@
 import {
   addDays,
   dateKey,
-  isDayOff,
   timeChangeOf,
   timeRange,
 } from "../components/design-calendar";
@@ -14,8 +13,8 @@ import {
   weekdaysFrom,
 } from "../components/design-week";
 import type { DayTone, WeekSettings } from "../components/design-week";
-import { patterns } from "./design-patterns";
-import type { Shift } from "./design-patterns";
+import { isDayOff } from "./design-patterns";
+import type { PatternBook, Shift } from "./design-patterns";
 
 // What the home and lock screen widgets show, worked out ahead of time: the
 // native apps' WidgetKit TimelineEntry and Glance state. The widget views
@@ -102,20 +101,22 @@ function changeOf(
 function widgetDay(
   date: Date,
   schedule: Schedule,
-  week: WeekSettings
+  week: WeekSettings,
+  book: PatternBook
 ): WidgetDay {
   const entry = schedule[dateKey(date)];
-  const moved = timeChangeOf(entry);
-  const time = entry && timeRange(entry);
+  const pattern = entry && book[entry.shift];
+  const moved = timeChangeOf(entry, pattern);
+  const time = entry && timeRange(entry, pattern);
   return {
     change: changeOf(time, moved),
     date,
     early: moved?.early ?? false,
     late: moved?.late ?? false,
     members: entry?.members ?? [],
-    name: entry && patterns[entry.shift].label,
+    name: pattern?.name,
     note: entry?.note,
-    off: isDayOff(entry?.shift),
+    off: isDayOff(pattern),
     shift: entry?.shift,
     time,
     tone: toneOf(date, week.colored),
@@ -123,32 +124,34 @@ function widgetDay(
   };
 }
 
+// `book` is the person's patterns, which name and mark each day's shift.
 export function widgetEntry(
   schedule: Schedule,
   week: WeekSettings,
-  now: Date
+  now: Date,
+  book: PatternBook
 ): WidgetEntry {
   const date = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const upcoming = Array.from({ length: UPCOMING_DAYS }, (_, index) =>
-    widgetDay(addDays(date, index), schedule, week)
+    widgetDay(addDays(date, index), schedule, week, book)
   );
   const first = new Date(date.getFullYear(), date.getMonth(), 1);
   const thisWeek = weekDatesFrom(date, week.weekStart);
   const twoWeeks = [
     ...thisWeek,
     ...thisWeek.map((day) => addDays(day, WEEK_LENGTH)),
-  ].map((day) => widgetDay(day, schedule, week));
+  ].map((day) => widgetDay(day, schedule, week, book));
   return {
     date,
     month: {
       days: monthDatesFrom(first, week.weekStart).map((day) => ({
-        ...widgetDay(day, schedule, week),
+        ...widgetDay(day, schedule, week, book),
         inMonth: day.getMonth() === first.getMonth(),
       })),
       first,
       weekdays: weekdaysFrom(week).map(({ label, tone }) => ({ label, tone })),
     },
-    today: upcoming[0] ?? widgetDay(date, schedule, week),
+    today: upcoming[0] ?? widgetDay(date, schedule, week, book),
     twoWeeks,
     upcoming,
   };
