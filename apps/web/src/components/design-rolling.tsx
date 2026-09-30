@@ -11,6 +11,8 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode, Ref } from "react";
 import { css, cva, cx } from "styled-system/css";
 
+import { spring } from "../lib/motion";
+
 // Names that roll as what they name turns, like a month's over the
 // calendar or the group's shift table, and the way back to today that
 // comes and goes with them. Each rolls within its own line, following a
@@ -35,7 +37,7 @@ export function useTurn(key: number, swiped: boolean): Turn {
 }
 
 // Short, and without bounce, done with the pages' own slide.
-const roll = { bounce: 0, type: "spring", visualDuration: 0.25 } as const;
+const roll = spring("quick");
 const LETTER_DELAY = 0.03;
 // How much later in a drag each English letter starts to roll.
 const LETTER_LAG = 0.08;

@@ -2578,26 +2578,51 @@
   },
   "metrics": {
     "hairlineMax": 2,
-    "radii": [
-      0,
-      1,
-      2,
-      4,
-      8,
-      12,
-      16,
-      20,
-      24,
-      28,
-      32,
-      999
-    ],
+    "radii": {
+      "2xl": 24,
+      "2xs": 2,
+      "3xl": 28,
+      "4xl": 32,
+      "full": 999,
+      "lg": 16,
+      "md": 12,
+      "sm": 8,
+      "xl": 20,
+      "xs": 4
+    },
+    "shadows": {
+      "lg": {
+        "blur": 24,
+        "color": "shadow-large",
+        "y": 8
+      },
+      "md": {
+        "blur": 14,
+        "color": "shadow-medium",
+        "y": 4
+      },
+      "sm": {
+        "blur": 3,
+        "color": "shadow-large",
+        "y": 1
+      }
+    },
     "sizes": {
       "action": 40,
       "control": 52,
       "touch": 44
     },
     "spacingStep": 4,
+    "springs": {
+      "quick": {
+        "bounce": 0,
+        "duration": 0.25
+      },
+      "standard": {
+        "bounce": 0,
+        "duration": 0.3
+      }
+    },
     "stateLayers": {
       "hover": 0.12,
       "pressed": 0.16

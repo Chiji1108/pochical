@@ -1245,6 +1245,38 @@ public enum Metrics {
   public static let pressedOpacity: Double = 0.16
 }
 
+/// The corners by size; `full` is a Capsule's.
+public enum Radius {
+  public static let xxs: CGFloat = 2
+  public static let xs: CGFloat = 4
+  public static let sm: CGFloat = 8
+  public static let md: CGFloat = 12
+  public static let lg: CGFloat = 16
+  public static let xl: CGFloat = 20
+  public static let xxl: CGFloat = 24
+  public static let xxxl: CGFloat = 28
+  public static let xxxxl: CGFloat = 32
+  public static let full: CGFloat = 999
+}
+
+/// A shadow by how far a piece floats: `.shadow(color:radius:x:y:)` with
+/// radius about half the blur, in the テーマ's color of that name.
+public struct Shadow: Sendable {
+  public let y: CGFloat
+  public let blur: CGFloat
+  public let color: any KeyPath<ThemeColors, Color> & Sendable
+
+  public static let lg = Shadow(y: 8, blur: 24, color: \.shadowLarge)
+  public static let md = Shadow(y: 4, blur: 14, color: \.shadowMedium)
+  public static let sm = Shadow(y: 1, blur: 3, color: \.shadowLarge)
+}
+
+/// Pochical's own motion, for withAnimation.
+public enum Springs {
+  public static let quick: Animation = .spring(duration: 0.25, bounce: 0)
+  public static let standard: Animation = .spring(duration: 0.3, bounce: 0)
+}
+
 extension Color {
   fileprivate init(hex: UInt32, alpha: UInt32 = 0xFF) {
     self.init(

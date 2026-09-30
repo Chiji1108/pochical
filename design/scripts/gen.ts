@@ -16,8 +16,10 @@ import type { ColorScheme } from "../src/colors";
 import {
   HAIRLINE_MAX,
   radii,
+  shadows,
   SPACING_STEP,
   sizes,
+  springs,
   stateLayers,
 } from "../src/metrics";
 import {
@@ -48,6 +50,22 @@ const drawn = (preset: Preset, scheme: ColorScheme) => ({
   })),
   roles: themeRoles(preset, scheme),
 });
+
+// The radii from the smallest up.
+const radiusScale = Object.entries(radii).toSorted(
+  ([, first], [, second]) => first - second
+);
+
+// A radius's name as code can spell it: 2xl as xxl.
+const radiusName = (name: string) =>
+  name.replace(/^(?<times>\d)x/u, (_, times: string) =>
+    "x".repeat(Number(times))
+  );
+
+// A spring without bounce as Compose has it: SwiftUI's duration is
+// 2π / √stiffness, and its bounce 1 - the damping ratio.
+const stiffnessOf = (duration: number) =>
+  Math.round(((2 * Math.PI) / duration) ** 2 * 100) / 100;
 
 const camel = (name: string) =>
   name.replaceAll(/-(?<letter>[a-z])/gu, (_, letter: string) =>
@@ -118,8 +136,10 @@ function json() {
     metrics: {
       hairlineMax: HAIRLINE_MAX,
       radii,
+      shadows,
       sizes,
       spacingStep: SPACING_STEP,
+      springs,
       stateLayers,
     },
     textStyles,
@@ -214,6 +234,35 @@ function swift() {
     ),
     "}",
     "",
+    "/// The corners by size; `full` is a Capsule's.",
+    "public enum Radius {",
+    ...radiusScale.map(
+      ([name, value]) =>
+        `  public static let ${radiusName(name)}: CGFloat = ${value}`
+    ),
+    "}",
+    "",
+    "/// A shadow by how far a piece floats: `.shadow(color:radius:x:y:)` with",
+    "/// radius about half the blur, in the テーマ's color of that name.",
+    "public struct Shadow: Sendable {",
+    "  public let y: CGFloat",
+    "  public let blur: CGFloat",
+    "  public let color: any KeyPath<ThemeColors, Color> & Sendable",
+    "",
+    ...Object.entries(shadows).map(
+      ([name, { blur, color, y }]) =>
+        `  public static let ${name} = Shadow(y: ${y}, blur: ${blur}, color: \\.${camel(color)})`
+    ),
+    "}",
+    "",
+    "/// Pochical's own motion, for withAnimation.",
+    "public enum Springs {",
+    ...Object.entries(springs).map(
+      ([name, { bounce, duration }]) =>
+        `  public static let ${name}: Animation = .spring(duration: ${duration}, bounce: ${bounce})`
+    ),
+    "}",
+    "",
     "extension Color {",
     "  fileprivate init(hex: UInt32, alpha: UInt32 = 0xFF) {",
     "    self.init(",
@@ -263,9 +312,12 @@ function kotlin() {
     "",
     "package tech.chiji.pochical.design",
     "",
+    "import androidx.compose.animation.core.SpringSpec",
+    "import androidx.compose.animation.core.spring",
     "import androidx.compose.ui.graphics.Color",
     "import androidx.compose.ui.text.TextStyle",
     "import androidx.compose.ui.text.font.FontWeight",
+    "import androidx.compose.ui.unit.Dp",
     "import androidx.compose.ui.unit.dp",
     "import androidx.compose.ui.unit.sp",
     "",
@@ -312,6 +364,31 @@ function kotlin() {
     ),
     ...Object.entries(stateLayers).map(
       ([name, value]) => `  const val ${name.toUpperCase()}_OPACITY = ${value}f`
+    ),
+    "}",
+    "",
+    "/** The corners by size; `full` is a pill's, as CircleShape. */",
+    "object Radius {",
+    ...radiusScale.map(
+      ([name, value]) => `  val ${radiusName(name)} = ${value}.dp`
+    ),
+    "}",
+    "",
+    "/** A shadow by how far a piece floats, in the テーマ's color of that name. */",
+    "data class Shadow(val y: Dp, val blur: Dp, val color: (ThemeColors) -> Color) {",
+    "  companion object {",
+    ...Object.entries(shadows).map(
+      ([name, { blur, color, y }]) =>
+        `    val ${name} = Shadow(${y}.dp, ${blur}.dp, ThemeColors::${camel(color)})`
+    ),
+    "  }",
+    "}",
+    "",
+    "/** Pochical's own motion, as SwiftUI's .spring(duration:bounce:). */",
+    "object Springs {",
+    ...Object.entries(springs).map(
+      ([name, { bounce, duration }]) =>
+        `  fun <T> ${name}(): SpringSpec<T> = spring(dampingRatio = ${1 - bounce}f, stiffness = ${stiffnessOf(duration)}f)`
     ),
     "}",
     "",

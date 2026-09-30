@@ -489,7 +489,7 @@ const appIcons = {
     alignItems: "center",
     bg: "transparent",
     border: "2px solid transparent",
-    borderRadius: "24px",
+    borderRadius: "2xl",
     color: "text.secondary",
     display: "flex",
     flexDirection: "column",
@@ -510,7 +510,7 @@ const appIcons = {
 const systemAlert = {
   box: css({
     bg: "background.elevated",
-    borderRadius: "16px",
+    borderRadius: "lg",
     color: "text.primary",
     overflow: "hidden",
     textAlign: "center",
@@ -548,7 +548,7 @@ const themeCard = {
   card: css({
     bg: "background.card",
     border: "1px solid token(colors.separator)",
-    borderRadius: "8px",
+    borderRadius: "sm",
     display: "flex",
     gap: "2px",
     justifyContent: "center",
@@ -563,7 +563,7 @@ const themeCard = {
     },
     bg: "transparent",
     border: "2px solid transparent",
-    borderRadius: "20px",
+    borderRadius: "xl",
     color: "text.secondary",
     display: "flex",
     flexDirection: "column",
@@ -601,7 +601,7 @@ const themeCard = {
   sample: css({
     bg: "background.base",
     border: "1px solid token(colors.separator)",
-    borderRadius: "16px",
+    borderRadius: "lg",
     display: "flex",
     flexDirection: "column",
     gap: "8px",
@@ -610,7 +610,7 @@ const themeCard = {
   // The テーマ's text and its fill side by side, so a colored ink, as
   // 喫茶's, shows beside its accent.
   strokes: css({
-    "& span": { borderRadius: "999px", height: "4px" },
+    "& span": { borderRadius: "full", height: "4px" },
     "& span:first-child": { bg: "text.primary", width: "20px" },
     "& span:last-child": { bg: "accent.fill", width: "28px" },
     display: "flex",
@@ -627,7 +627,7 @@ const offSample = cva({
     // The shift's name under the mark, smaller than the date.
     "& small[data-part=name]": { fontSize: "7px" },
     alignItems: "center",
-    borderRadius: "8px",
+    borderRadius: "sm",
     display: "flex",
     flexDirection: "column",
     gap: "1px",
@@ -646,7 +646,7 @@ const settingsParts = {
     margin: "8px 16px 0",
     textStyle: "footnote",
   }),
-  card: css({ bg: "fill.quaternary", borderRadius: "20px", padding: "16px" }),
+  card: css({ bg: "fill.quaternary", borderRadius: "2xl", padding: "16px" }),
   cardCount: css({ color: "text.tertiary", fontWeight: 400 }),
   cardLabel: css({
     display: "flex",
@@ -674,7 +674,7 @@ const settingsParts = {
   preview: css({
     bg: "background.base",
     border: "1px solid token(colors.separator)",
-    borderRadius: "20px",
+    borderRadius: "2xl",
     color: "text.primary",
     padding: "20px 8px 8px",
     pointerEvents: "none",
@@ -684,7 +684,7 @@ const settingsParts = {
   previewSample: css({
     bg: "background.base",
     border: "1px solid token(colors.separator)",
-    borderRadius: "8px",
+    borderRadius: "sm",
     color: "text.tertiary",
     fontSize: "10px",
     fontWeight: 600,
@@ -761,7 +761,7 @@ const accountPage = {
   }),
   icon: css({
     bg: "accent.container",
-    borderRadius: "50%",
+    borderRadius: "circle",
     color: "accent.default",
     display: "grid",
     height: "56px",
@@ -777,7 +777,7 @@ const accountPage = {
   }),
   logo: css({
     bg: "background.card",
-    borderRadius: "50%",
+    borderRadius: "circle",
     color: "text.primary",
     display: "grid",
     height: "30px",
