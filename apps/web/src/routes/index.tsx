@@ -1,77 +1,42 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  AnimatePresence,
-  motion,
-  useInView,
-  useReducedMotion,
-} from "motion/react";
-import { useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import { lazy, Suspense, useState } from "react";
+import type { ReactNode } from "react";
 import { css } from "styled-system/css";
 
-import { DesignCalendar } from "../components/design-calendar";
-import { sampleGroups } from "../components/design-group-data";
-import {
-  DesignProviders,
-  PresetContexts,
-} from "../components/design-providers";
-import {
-  BREATH_SECONDS,
-  nextSkyId,
-  paleSkyLights,
-  SKY_CHANGE,
-  themeSkyId,
-} from "../components/design-surprise";
-import type { Tab } from "../components/design-tab-bar";
-import { ColorSchemeContext } from "../components/design-theme";
-import type { PresetId } from "../components/design-theme";
-import {
-  CellNamesContext,
-  IconWeightContext,
-  MonochromeContext,
-  OffHighlightContext,
-  ShiftMarkStyleContext,
-} from "../components/shift-mark";
-import type { ShiftMarkStyle } from "../components/shift-mark";
 import { StoreLinks } from "../components/store-links";
-import { WhenNear } from "../components/when-near";
-import { initialDesignSchedule } from "../lib/design-days";
-import {
-  createUserStore,
-  sampleCoworkers,
-  UserStoreContext,
-} from "../lib/design-user-store";
-import { parseDesignVariants } from "../lib/design-variants";
-import { pageMeta, site } from "../lib/site";
+import { pageMeta, site, WIDE } from "../lib/site";
 
 export const Route = createFileRoute("/")({
   component: Home,
   head: () => pageMeta("シフトを、ポチッと。", site.description, "/"),
 });
 
-// The current proposal for each open design choice, as on /try.
-const variants = parseDesignVariants({});
-
-// The app's own ポチカル sky (おたのしみ): its three pale lights, drawn as
-// a soft glow that fades into the paper on every side, so it never meets
-// the browser's bars. It sits behind the hero's words only, and as in the
-// app, pressing ポチッと。 drifts it to another of the app's skies.
-const HERO_SKY = themeSkyId("pochical");
-function skyBackground(id: string) {
-  const [left, middle, right] = paleSkyLights(id) ?? [];
-  return [
-    `radial-gradient(45% 55% at 25% 40%, ${left} 0%, transparent 70%)`,
-    `radial-gradient(45% 55% at 75% 45%, ${right} 0%, transparent 70%)`,
-    `radial-gradient(50% 60% at 50% 62%, ${middle} 0%, transparent 75%)`,
-  ].join(", ");
-}
+// What the app's own code draws, its sky and its phones, loads after the
+// page's words first show; until then the server's drawing stands (React
+// hydrates each once its code arrives). Keep the app out of this file's
+// imports, or the page waits for all of it again: scripts/bundle-budget.ts
+// checks.
+const screens = import("../components/lp-screens");
+const Sky = lazy(async () => {
+  const { Sky: component } = await screens;
+  return { default: component };
+});
+const HeroPhone = lazy(async () => {
+  const { HeroPhone: component } = await screens;
+  return { default: component };
+});
+const FeatureScreen = lazy(async () => {
+  const { FeatureScreen: component } = await screens;
+  return { default: component };
+});
+const ThemeGallery = lazy(async () => {
+  const { ThemeGallery: component } = await screens;
+  return { default: component };
+});
 
 // The site's muted gray, a step darker: over the sky it keeps above 5:1,
 // where the site's own falls short of 4.5:1.
 const ON_SKY_TEXT = "#5c6159";
-
-// Where the copy and the phone stand side by side.
-const WIDE = "@media (min-width: 960px)";
 
 // The /design phone's frame colors, as the workspace gives them.
 const page = css({
@@ -147,85 +112,17 @@ const hero = {
   }),
 };
 
-const sky = {
-  // A little beyond the hero's words, which keep it behind them, faded
-  // out to nothing at its edges.
-  root: css({
-    inset: "-120px -140px",
-    maskImage: "radial-gradient(closest-side, black 45%, transparent)",
-    // The breathing light reaches past it; the page's width must not.
-    overflow: "hidden",
-    pointerEvents: "none",
-    position: "absolute",
-    zIndex: -1,
-  }),
-  // One sky, fading in over the one before.
-  layer: css({ inset: 0, position: "absolute" }),
-  light: css({ inset: "-6%", position: "absolute" }),
-};
-
-// The sky, breathing as slowly as the app's, and giving way to the next
-// as the app's does. None yet, until a press brings the first.
-function Sky({ id }: { id: string | undefined }) {
-  const still = useReducedMotion() ?? false;
-  return (
-    <div aria-hidden="true" className={sky.root}>
-      <AnimatePresence initial={false}>
-        {id === undefined ? null : (
-          <motion.div
-            animate={{ opacity: 1 }}
-            className={sky.layer}
-            exit={{ opacity: 0 }}
-            initial={{ opacity: 0 }}
-            key={id}
-            transition={SKY_CHANGE}
-          >
-            <motion.div
-              animate={still ? undefined : { scale: 1.08, x: "2%" }}
-              className={sky.light}
-              initial={{ scale: 1, x: "-2%" }}
-              style={{ background: skyBackground(id) }}
-              transition={{
-                duration: BREATH_SECONDS,
-                ease: "easeInOut",
-                repeat: Number.POSITIVE_INFINITY,
-                repeatType: "mirror",
-              }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-// The hero's month is entered up to the 19th: its first weeks show the
-// look, and its last two are left to fill in, from the 20th.
-const HERO_FIRST_BLANK = 20;
-const heroSchedule = Object.fromEntries(
-  Object.entries(initialDesignSchedule()).filter(
-    ([key]) => Number(key.slice(-2)) < HERO_FIRST_BLANK
-  )
-);
-
-// Pressed once, like a button, a moment after it first shows: sinking a
-// little and springing back, then still. The hero's is a CSS animation, so
-// it comes at the same moment however long the app takes to load; the
-// closing's waits until it is scrolled to. Since it looks pressable, it
-// presses too: down while held, springing back on release, with the same
-// depth and spring as the animation. A button, though it keeps the
-// heading's look.
+// ポチッと。 is a button, though it keeps the heading's look: pressed, it
+// sinks a little and springs back, and drifts the sky behind it. Nothing
+// hints at it; it is there for whoever tries. The press itself is CSS, so
+// it answers even before the app's code arrives.
 const pressed = css({
   "&:active": {
     transform: "translateY(3px) scale(0.92)",
     transition: "transform 0.12s ease-in",
   },
-  "@media (prefers-reduced-motion: reduce)": {
-    animation: "none",
-    transition: "none",
-  },
-  // Not held after it ends, so a press can move it.
-  "&[data-cue]": { animation: "press 0.42s 0.7s backwards" },
+  "@media (prefers-reduced-motion: reduce)": { transition: "none" },
+  WebkitTapHighlightColor: "transparent",
   bg: "transparent",
   border: 0,
   color: "inherit",
@@ -237,60 +134,19 @@ const pressed = css({
   transformOrigin: "50% 100%",
   transition: "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
   userSelect: "none",
-  WebkitTapHighlightColor: "transparent",
 });
 
 function Pressed({
   children,
   onPress,
-  whenSeen = false,
 }: {
   children: ReactNode;
   onPress: () => void;
-  whenSeen?: boolean;
 }) {
-  const ref = useRef<HTMLButtonElement>(null);
-  const seen = useInView(ref, { amount: "all", once: true });
-  const cue = !whenSeen || seen;
   return (
-    <button
-      className={pressed}
-      data-cue={cue ? "" : undefined}
-      onClick={onPress}
-      ref={ref}
-      type="button"
-    >
+    <button className={pressed} onClick={onPress} type="button">
       {children}
     </button>
-  );
-}
-
-// The app itself, the same one /try runs, to tap right on the page.
-function HeroDemo() {
-  const [person] = useState(() =>
-    createUserStore({
-      coworkers: sampleCoworkers,
-      groups: sampleGroups(),
-      schedule: heroSchedule,
-    })
-  );
-  return (
-    <div className={hero.demo}>
-      <DesignProviders fresh>
-        <UserStoreContext value={person}>
-          <DesignCalendar
-            initialDay={HERO_FIRST_BLANK}
-            initialEditing
-            variants={variants}
-          />
-        </UserStoreContext>
-      </DesignProviders>
-      <p className={hero.hint}>
-        そのまま触れます。勤務を選んで、日付をポチッ。
-        <br />
-        左右にスワイプすると、月が変わります。
-      </p>
-    </div>
   );
 }
 
@@ -362,9 +218,6 @@ const features: {
   },
 ];
 
-// How much of a feature's phone shows, from its top.
-const SCREEN_SHOWN = 600;
-
 const feature = {
   body: css({
     color: "var(--muted)",
@@ -408,16 +261,6 @@ const feature = {
     flexDirection: "column",
     gap: "36px",
   }),
-  // The phone at the hero's size, only its top shown, fading out: a
-  // scaled one would throw off the lists that measure themselves.
-  screen: css({
-    flexShrink: 0,
-    height: `${SCREEN_SHOWN}px`,
-    maskImage: "linear-gradient(to bottom, black 70%, transparent)",
-    overflow: "hidden",
-    pointerEvents: "none",
-    width: "min(390px, 100%)",
-  }),
   title: css({
     fontSize: "clamp(26px, 3vw, 34px)",
     fontWeight: 700,
@@ -426,199 +269,8 @@ const feature = {
   }),
 };
 
-function FeatureScreen({
-  tab,
-  groupPage,
-}: {
-  tab: Tab;
-  groupPage?: "shifts" | "chat";
-}) {
-  const person = useSamplePerson();
-  return (
-    <WhenNear aria-hidden="true" className={feature.screen} inert>
-      <DesignProviders fresh>
-        <UserStoreContext value={person}>
-          <DesignCalendar
-            initialEditing={false}
-            initialGroupPage={groupPage}
-            initialTab={tab}
-            variants={variants}
-          />
-        </UserStoreContext>
-      </DesignProviders>
-    </WhenNear>
-  );
-}
-
-// A few real screens drawn small, side by side, each stepping down and in
-// front of the one before. Only screens that do not measure themselves
-// scale well, like the calendar.
-const gallery = {
-  inner: css({
-    left: 0,
-    position: "absolute",
-    top: 0,
-    transform: "scale(var(--gallery-scale))",
-    transformOrigin: "top left",
-    width: "390px",
-  }),
-  phone: css({
-    borderRadius: "calc(53px * var(--gallery-scale))",
-    height: "calc(844px * var(--gallery-scale))",
-    left: "calc(var(--index) * var(--gallery-step))",
-    overflow: "hidden",
-    position: "absolute",
-    top: "calc(var(--index) * var(--gallery-drop))",
-    width: "calc(390px * var(--gallery-scale))",
-  }),
-  root: css({
-    "--gallery-drop": "36px",
-    "--gallery-scale": "0.44",
-    // `--gallery-last` is the last phone's index.
-    "--gallery-step":
-      "calc((min(100vw - 32px, 520px) - 390px * var(--gallery-scale)) / var(--gallery-last))",
-    [WIDE]: { "--gallery-drop": "48px", "--gallery-scale": "0.6" },
-    flexShrink: 0,
-    height:
-      "calc(844px * var(--gallery-scale) + var(--gallery-last) * var(--gallery-drop))",
-    pointerEvents: "none",
-    position: "relative",
-    width:
-      "calc(390px * var(--gallery-scale) + var(--gallery-last) * var(--gallery-step))",
-  }),
-};
-
-function PhoneGallery({
-  phones,
-}: {
-  phones: { key: string; screen: ReactNode }[];
-}) {
-  return (
-    <WhenNear
-      aria-hidden="true"
-      className={gallery.root}
-      inert
-      style={{ "--gallery-last": phones.length - 1 } as CSSProperties}
-    >
-      <DesignProviders fresh>
-        {phones.map(({ key, screen }, index) => (
-          <div
-            className={gallery.phone}
-            key={key}
-            style={{ "--index": index } as CSSProperties}
-          >
-            <div className={gallery.inner}>{screen}</div>
-          </div>
-        ))}
-      </DesignProviders>
-    </WhenNear>
-  );
-}
-
-// The sample person, for a feature's screens to share.
-function useSamplePerson() {
-  const [person] = useState(() =>
-    createUserStore({
-      coworkers: sampleCoworkers,
-      groups: sampleGroups(),
-      schedule: initialDesignSchedule(),
-    })
-  );
-  return person;
-}
-
-// The calendar in a few looks, each set as someone might set theirs:
-// 墨 with outlined marks in its one tone, さくら with emoji, and ソーダ
-// with letters and their names under them; days off left plain in all
-// three, so nothing competes with the marks.
-type GalleryLook = {
-  id: string;
-  preset: PresetId;
-  style: ShiftMarkStyle;
-  fill: boolean;
-  monochrome: boolean;
-  names: boolean;
-};
-const galleryLooks: GalleryLook[] = [
-  {
-    fill: false,
-    id: "sumi",
-    monochrome: true,
-    names: false,
-    preset: "sumi",
-    style: "icon",
-  },
-  {
-    fill: true,
-    id: "sakura-emoji",
-    monochrome: false,
-    names: false,
-    preset: "sakura",
-    style: "emoji",
-  },
-  {
-    fill: true,
-    id: "letters",
-    monochrome: false,
-    names: true,
-    preset: "soda",
-    style: "badge",
-  },
-];
-
-const plainDaysOff = {
-  highlight: { badge: false, emoji: false, icon: false },
-};
-
-function LookContexts({
-  look,
-  children,
-}: {
-  look: GalleryLook;
-  children: ReactNode;
-}) {
-  const themed = (
-    <PresetContexts id={look.preset}>
-      <IconWeightContext value={look.fill ? "duotone" : "regular"}>
-        <ShiftMarkStyleContext value={look.style}>
-          <CellNamesContext
-            value={{
-              names: { badge: look.names, emoji: look.names, icon: look.names },
-            }}
-          >
-            <OffHighlightContext value={plainDaysOff}>
-              <MonochromeContext value={{ monochrome: look.monochrome }}>
-                {children}
-              </MonochromeContext>
-            </OffHighlightContext>
-          </CellNamesContext>
-        </ShiftMarkStyleContext>
-      </IconWeightContext>
-    </PresetContexts>
-  );
-  return <ColorSchemeContext value="light">{themed}</ColorSchemeContext>;
-}
-
-function ThemeGallery() {
-  const person = useSamplePerson();
-  return (
-    <UserStoreContext value={person}>
-      <PhoneGallery
-        phones={galleryLooks.map((look) => ({
-          key: look.id,
-          screen: (
-            <LookContexts look={look}>
-              <DesignCalendar initialEditing={false} variants={variants} />
-            </LookContexts>
-          ),
-        }))}
-      />
-    </UserStoreContext>
-  );
-}
-
-// Each phone brings its own providers inside WhenNear: settings changing
-// above one that is still held would make React draw it afresh, empty.
+// The screens bring their own providers (lp-screens.tsx): none sit up
+// here, where a change could reach a screen still waiting to hydrate.
 function Features() {
   return (
     <ol aria-label="ポチカルでできること" className={feature.list}>
@@ -629,7 +281,7 @@ function Features() {
             <h2 className={feature.title}>{item.title}</h2>
             <p className={feature.body}>{item.body}</p>
           </div>
-          {item.screen}
+          <Suspense>{item.screen}</Suspense>
         </li>
       ))}
     </ol>
@@ -669,11 +321,13 @@ const closing = {
 };
 
 function Closing() {
-  const [skyId, setSkyId] = useState<string>();
+  const [presses, setPresses] = useState(0);
   return (
     <section aria-labelledby="closing-title" className={closing.root}>
       <div className={closing.content}>
-        <Sky id={skyId} />
+        <Suspense>
+          <Sky bare presses={presses} />
+        </Suspense>
         <img
           alt=""
           className={closing.icon}
@@ -686,11 +340,8 @@ function Closing() {
           <br />
           <Pressed
             onPress={() => {
-              setSkyId((id) =>
-                id === undefined ? HERO_SKY : nextSkyId(id, "pochical")
-              );
+              setPresses((count) => count + 1);
             }}
-            whenSeen
           >
             ポチッと。
           </Pressed>
@@ -708,17 +359,19 @@ function Closing() {
 // component, so a press redraws only these and not the phones below,
 // which WhenNear may still be holding as the server drew them.
 function HeroCopy() {
-  const [skyId, setSkyId] = useState(HERO_SKY);
+  const [presses, setPresses] = useState(0);
   return (
     <div className={hero.copy}>
-      <Sky id={skyId} />
+      <Suspense>
+        <Sky presses={presses} />
+      </Suspense>
       <p className={hero.eyebrow}>シフトカレンダー</p>
       <h1 className={hero.title}>
         シフトを、
         <br />
         <Pressed
           onPress={() => {
-            setSkyId((id) => nextSkyId(id, "pochical"));
+            setPresses((count) => count + 1);
           }}
         >
           ポチッと。
@@ -744,7 +397,16 @@ function Home() {
     <main className={page} id="main">
       <section className={hero.root}>
         <HeroCopy />
-        <HeroDemo />
+        <div className={hero.demo}>
+          <Suspense>
+            <HeroPhone />
+          </Suspense>
+          <p className={hero.hint}>
+            そのまま触れます。勤務を選んで、日付をポチッ。
+            <br />
+            左右にスワイプすると、月が変わります。
+          </p>
+        </div>
       </section>
       <Features />
       <Closing />
