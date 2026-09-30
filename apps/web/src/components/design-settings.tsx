@@ -1,7 +1,7 @@
 import type { ColorScheme } from "@pochical/design/colors";
 import { presets } from "@pochical/design/themes";
 import type { Preset } from "@pochical/design/themes";
-import { ArrowRight, Check, CloudCheck } from "lucide-react";
+import { ArrowRight, CloudCheck } from "lucide-react";
 import { useMotionValue } from "motion/react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
@@ -67,13 +67,12 @@ import type { Appearance, PresetId } from "./design-theme";
 import {
   Button,
   ChipGroup,
-  Choice,
   ChoiceGrid,
+  ChoiceTile,
   ChoiceList,
   ChoiceRow,
   dayGrid,
   fieldLabel,
-  inlineInput,
   LimitedInput,
   List,
   ListRow,
@@ -483,24 +482,6 @@ function SettingsTop({
 // size where their grounds and the dark one's rim read; seasonal ones
 // later may need three.
 const appIcons = {
-  check: css({ color: "accent.default" }),
-  choice: css({
-    _checked: {
-      bg: "fill.quaternary",
-      borderColor: "accent.border",
-      color: "text.primary",
-    },
-    alignItems: "center",
-    bg: "transparent",
-    border: "2px solid transparent",
-    borderRadius: "2xl",
-    color: "text.secondary",
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-    padding: "20px 0 16px",
-    textStyle: "body",
-  }),
   grid: css({
     border: 0,
     display: "grid",
@@ -509,7 +490,6 @@ const appIcons = {
     margin: "8px 0 20px",
     padding: 0,
   }),
-  name: css({ alignItems: "center", display: "flex", gap: "4px" }),
 };
 const systemAlert = {
   box: css({
@@ -557,24 +537,6 @@ const themeCard = {
     gap: "2px",
     justifyContent: "center",
     padding: "8px 2px",
-  }),
-  choice: css({
-    _checked: {
-      bg: "fill.quaternary",
-      borderColor: "accent.border",
-      color: "text.primary",
-      fontWeight: 600,
-    },
-    bg: "transparent",
-    border: "2px solid transparent",
-    borderRadius: "xl",
-    color: "text.secondary",
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    padding: "4px 4px 8px",
-    textAlign: "center",
-    textStyle: "footnote",
   }),
   // 端末の色 on Android, in a row of its own over the others: its card in
   // the first of the three columns, and what it is beside it.
@@ -1226,7 +1188,8 @@ function ProfilePage({
           control={
             <>
               <LimitedInput
-                className={inlineInput}
+                align="end"
+                look="inline"
                 kind="personName"
                 onValueChange={(name) => {
                   onChange({ ...profile, name });
@@ -1793,19 +1756,10 @@ function AppIconPage({ onBack }: { onBack: () => void }) {
         value={icon}
       >
         {pickableIcons.map((option) => (
-          <Choice className={appIcons.choice} key={option.id} value={option.id}>
+          <ChoiceTile key={option.id} size="large" value={option.id}>
             <AppIcon size={104} src={icons[option.id]} />
-            <span className={appIcons.name}>
-              {icon === option.id && (
-                <Check
-                  aria-hidden="true"
-                  className={appIcons.check}
-                  size={14}
-                />
-              )}
-              {option.name}
-            </span>
-          </Choice>
+            {option.name}
+          </ChoiceTile>
         ))}
       </ChoiceGrid>
       {alerted && (
@@ -2159,7 +2113,7 @@ function ThemeChoice({
 }) {
   const { week } = useOwnSamples();
   return (
-    <Choice className={themeCard.choice} value={preset.id}>
+    <ChoiceTile size="small" value={preset.id}>
       <span
         aria-hidden="true"
         className={themeCard.sample}
@@ -2180,6 +2134,6 @@ function ThemeChoice({
         </span>
       </span>
       {preset.name}
-    </Choice>
+    </ChoiceTile>
   );
 }

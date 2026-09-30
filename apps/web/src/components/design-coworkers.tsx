@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { css } from "styled-system/css";
 
 import { composing, limitText, textLimits } from "../lib/text-limits";
 import type { Schedule } from "./design-calendar";
@@ -9,7 +8,6 @@ import {
   BackButton,
   DestructiveButton,
   HeaderAction,
-  inlineInput,
   LimitedInput,
   List,
   ListRow,
@@ -34,19 +32,6 @@ function daysWith(schedule: Schedule, name: string) {
     entry?.members?.includes(name)
   ).length;
 }
-
-// The name being added, typed where the next row goes, from its start.
-const coworkerInput = css({
-  bg: "transparent",
-  border: 0,
-  color: "text.primary",
-  flex: 1,
-  font: "inherit",
-  minWidth: 0,
-  outline: "none",
-  padding: 0,
-  textStyle: "body",
-});
 
 export function CoworkersPage({
   coworkers,
@@ -148,7 +133,7 @@ export function CoworkersPage({
               <LimitedInput
                 aria-label="追加する人の名前"
                 autoFocus
-                className={coworkerInput}
+                look="inline"
                 kind="personName"
                 onBlur={(event) => {
                   add(event.currentTarget.value);
@@ -226,7 +211,8 @@ function CoworkerEditor({
           control={
             <>
               <LimitedInput
-                className={inlineInput}
+                align="end"
+                look="inline"
                 kind="personName"
                 onValueChange={setDraft}
                 value={draft}

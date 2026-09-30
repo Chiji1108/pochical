@@ -71,9 +71,8 @@ import {
   Button,
   Chip,
   ChipGroup,
-  chipStyle,
-  Choice,
   ChoiceGrid,
+  ChoiceChip,
   DAY_ROW_GAP,
   DAY_ROW_HEIGHT,
   dayGrid,
@@ -2610,38 +2609,12 @@ const dayDetail = {
     textStyle: "caption",
   }),
   empty: css({ color: "text.quaternary", margin: 0, textStyle: "footnote" }),
-  // The memo, as the platforms' filled text fields.
-  field: css({
-    _focus: {
-      bg: "background.card",
-      borderColor: "accent.focus",
-      outline: "none",
-    },
-    bg: "fill.quaternary",
-    border: "1px solid transparent",
-    borderRadius: "md",
-    color: "text.primary",
-    font: "inherit",
-    minHeight: "40px",
-    minWidth: 0,
-    padding: "0 12px",
-    textStyle: "body",
-  }),
   hint: css({ color: "text.quaternary", margin: 0, textStyle: "caption" }),
   label: css({ color: "text.tertiary", textStyle: "footnote" }),
   // The legend floats, so the fieldset lays it out like the other rows'
   // labels.
   legend: css({ float: "left", padding: "0 0 8px", width: "100%" }),
-  memberInput: css({
-    border: "1px solid token(colors.accent.focus)",
-    borderRadius: "full",
-    font: "inherit",
-    minHeight: "34px",
-    outline: "none",
-    padding: "0 12px",
-    textStyle: "footnote",
-    width: "88px",
-  }),
+  memberInput: css({ width: "88px" }),
   members: css({ border: 0, margin: 0, padding: 0 }),
   patterns: css({
     border: 0,
@@ -2716,6 +2689,7 @@ function MemberField({
             aria-label="追加する人の名前"
             autoFocus
             className={dayDetail.memberInput}
+            look="chip"
             counter={false}
             kind="personName"
             onBlur={(event) => {
@@ -2789,10 +2763,10 @@ function DayDetail({
         value={entry?.shift ?? null}
       >
         {patternKeys.map((key) => (
-          <Choice className={chipStyle()} key={key} value={key}>
+          <ChoiceChip key={key} value={key}>
             <ShiftMark shift={key} size={14} />
             {book[key]?.name}
-          </Choice>
+          </ChoiceChip>
         ))}
       </ChoiceGrid>
       {entry ? (
@@ -2844,7 +2818,7 @@ function DayDetail({
           <label className={dayDetail.row} htmlFor={noteId}>
             <span className={dayDetail.label}>メモ</span>
             <LimitedInput
-              className={dayDetail.field}
+              look="box"
               id={noteId}
               kind="dayNote"
               onValueChange={(note) => {

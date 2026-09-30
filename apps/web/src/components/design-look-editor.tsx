@@ -9,7 +9,7 @@ import {
   ChoiceGrid,
   colorGrid,
   fieldLabel,
-  inlineInput,
+  fieldStyle,
   List,
   ListRow,
   markGrid,
@@ -283,7 +283,7 @@ function LetterEditor({
         control={
           <>
             <input
-              className={inlineInput}
+              className={fieldStyle({ align: "end", look: "inline" })}
               onChange={(event) => {
                 const symbol = lastGrapheme(event.target.value);
                 if (symbol) {

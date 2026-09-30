@@ -47,6 +47,7 @@ import {
 } from "react";
 import type {
   ButtonHTMLAttributes,
+  ComponentProps,
   CSSProperties,
   HTMLAttributes,
   ChangeEvent,
@@ -240,33 +241,66 @@ export function BarGroup({ children }: { children: ReactNode }) {
 // A screen under the phone's status bar: a column that fills the phone,
 // so the part that scrolls and what is pinned to its foot share the
 // height. Hidden, it keeps its state and takes no room.
-const screenStyle = css({
-  // Under a floating tab bar the part that scrolls runs on to the screen's
-  // foot, ending 16px clear of the bar, so what scrolls passes under it.
-  // A rail beside it runs on with it.
-  "&:has(> [data-tab-bar]) :is([data-screen-scroll], [data-screen-rail])": {
-    marginBottom: "calc(-1 * var(--safe-bottom))",
-    paddingBottom: "calc(var(--tab-bar-bottom) + 80px)",
+const screenStyle = cva({
+  base: {
+    // Under a floating tab bar the part that scrolls runs on to the screen's
+    // foot, ending 16px clear of the bar, so what scrolls passes under it.
+    // A rail beside it runs on with it.
+    "&:has(> [data-tab-bar]) :is([data-screen-scroll], [data-screen-rail])": {
+      marginBottom: "calc(-1 * var(--safe-bottom))",
+      paddingBottom: "calc(var(--tab-bar-bottom) + 80px)",
+    },
+    // The part that scrolls takes that room as its end piece instead; see
+    // screenScrollStyle.
+    "&:has(> [data-tab-bar]) [data-screen-scroll]": {
+      "&::after": { height: "calc(var(--tab-bar-bottom) + 80px)" },
+      paddingBottom: 0,
+    },
+    "&[hidden]": { display: "none" },
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    minHeight: 0,
+    paddingTop: "12px",
   },
-  // The part that scrolls takes that room as its end piece instead; see
-  // screenScrollStyle.
-  "&:has(> [data-tab-bar]) [data-screen-scroll]": {
-    "&::after": { height: "calc(var(--tab-bar-bottom) + 80px)" },
-    paddingBottom: 0,
+  variants: {
+    // Its ground runs out to the phone's edges, up under the status bar
+    // and down under the home indicator, as a camera's does: SwiftUI's
+    // .ignoresSafeArea() on the ground. What is on it keeps clear of them.
+    fullBleed: {
+      true: {
+        marginBottom: "calc(-1 * var(--safe-bottom))",
+        marginLeft: "calc(-1 * var(--screen-left))",
+        marginRight: "calc(-1 * var(--screen-right))",
+        marginTop: "calc(-1 * var(--safe-top))",
+        paddingBottom: "var(--safe-bottom)",
+        paddingLeft: "var(--screen-left)",
+        paddingRight: "var(--screen-right)",
+        paddingTop: "calc(var(--safe-top) + 12px)",
+      },
+    },
   },
-  "&[hidden]": { display: "none" },
-  display: "flex",
-  flex: 1,
-  flexDirection: "column",
-  minHeight: 0,
-  paddingTop: "12px",
 });
 
 export function Screen({
   className,
+  fullBleed = false,
+  statusBar,
   ...props
-}: HTMLAttributes<HTMLDivElement> & { "data-toast-above"?: string }) {
-  return <div className={cx(screenStyle, className)} {...props} />;
+}: HTMLAttributes<HTMLDivElement> & {
+  "data-toast-above"?: string;
+  fullBleed?: boolean;
+  // Light for a dark ground, as the status bar and home indicator turn
+  // over a camera.
+  statusBar?: "light";
+}) {
+  return (
+    <div
+      className={cx(screenStyle({ fullBleed }), className)}
+      data-status-bar={statusBar}
+      {...props}
+    />
+  );
 }
 
 // The part of a screen that scrolls under the status bar, heading and all,
@@ -608,19 +642,46 @@ export function DestructiveButton({
   );
 }
 
-// A field that is a row's control, like a pattern's name: no box of its
-// own, its words at the row's right.
-export const inlineInput = css({
-  bg: "transparent",
-  border: 0,
-  color: "text.primary",
-  flex: 1,
-  font: "inherit",
-  minWidth: 0,
-  outline: "none",
-  padding: 0,
-  textAlign: "right",
-  textStyle: "body",
+// How a text field looks, for LimitedInput and a plain input alike.
+// inline is a row's control with no box of its own, like a pattern's
+// name: its words at the row's right, or from its start when it is the
+// row itself, like a name being added. box stands on its own ground, as
+// a day's memo. chip sits among chips as one more being added.
+export const fieldStyle = cva({
+  base: { font: "inherit", outline: "none" },
+  defaultVariants: { align: "start" },
+  variants: {
+    align: { end: { textAlign: "right" }, start: {} },
+    look: {
+      box: {
+        _focus: { bg: "background.card", borderColor: "accent.focus" },
+        bg: "fill.quaternary",
+        border: "1px solid transparent",
+        borderRadius: "md",
+        color: "text.primary",
+        minHeight: "40px",
+        minWidth: 0,
+        padding: "0 12px",
+        textStyle: "body",
+      },
+      chip: {
+        border: "1px solid token(colors.accent.focus)",
+        borderRadius: "full",
+        minHeight: "34px",
+        padding: "0 12px",
+        textStyle: "footnote",
+      },
+      inline: {
+        bg: "transparent",
+        border: 0,
+        color: "text.primary",
+        flex: 1,
+        minWidth: 0,
+        padding: 0,
+        textStyle: "body",
+      },
+    },
+  },
 });
 
 // A time of day as the platforms' compact time pickers show it: a filled
@@ -830,8 +891,15 @@ export function LimitedInput({
   counter,
   onFocus,
   onBlur,
+  look,
+  align,
+  className,
   ...props
-}: Omit<InputHTMLAttributes<HTMLInputElement>, Unlimited> & LimitedTextProps) {
+}: Omit<InputHTMLAttributes<HTMLInputElement>, Unlimited> &
+  LimitedTextProps & {
+    look: "inline" | "box" | "chip";
+    align?: "start" | "end";
+  }) {
   const { countNode, handlers } = useLimitedText<HTMLInputElement>({
     counter,
     kind,
@@ -842,7 +910,11 @@ export function LimitedInput({
   });
   return (
     <>
-      <input {...props} {...handlers} />
+      <input
+        className={cx(fieldStyle({ align, look }), className)}
+        {...props}
+        {...handlers}
+      />
       {countNode}
     </>
   );
@@ -1567,15 +1639,19 @@ export function Toggle({
 }
 
 // A row whose control is an on and off switch, with a dot in the color a
-// setting paints with when it has one.
+// setting paints with when it has one. `detail` is a line under the label
+// saying what switching it changes; the row is then a two-line row's
+// height, as the platforms' switches with a subtitle.
 export function SwitchRow({
   label,
+  detail,
   checked,
   onChange,
   swatch,
   className,
 }: {
   label: ReactNode;
+  detail?: ReactNode;
   checked: boolean;
   onChange: (checked: boolean) => void;
   swatch?: string;
@@ -1584,7 +1660,11 @@ export function SwitchRow({
   return (
     <Switch.Root
       checked={checked}
-      className={cx(listRow.root, listRow.pressable, className)}
+      className={cx(
+        detail === undefined ? listRow.root : listRow.twoLine,
+        listRow.pressable,
+        className
+      )}
       data-list-row=""
       onCheckedChange={(details) => {
         onChange(details.checked);
@@ -1601,6 +1681,7 @@ export function SwitchRow({
       )}
       <Switch.Label className={cx(listRow.label, listRow.labelGrow)}>
         {label}
+        {detail !== undefined && <small>{detail}</small>}
       </Switch.Label>
       <ToggleParts />
     </Switch.Root>
@@ -2092,12 +2173,71 @@ export const chipStyle = cva({
     paddingInline: "12px",
   },
   variants: {
+    // A face at its start, as Material's input chips: the chip's end
+    // comes in close around it.
+    avatar: { true: { gap: "8px", paddingLeft: "4px" } },
     variant: {
       add: { borderStyle: "dashed", color: "text.tertiary" },
       choice: {},
     },
   },
 });
+
+// One of a ChoiceGrid as a chip, like a day's shift or a person to show.
+export function ChoiceChip({
+  avatar = false,
+  className,
+  ...props
+}: ComponentProps<typeof Choice> & { avatar?: boolean }) {
+  return <Choice className={cx(chipStyle({ avatar }), className)} {...props} />;
+}
+
+// One of a ChoiceGrid as a tile: a picture over its name, framed on a
+// ground and its name in bold when picked. large for a few big pictures two to a row, like the
+// app icons; small for three to a row, like the テーマ.
+const choiceTileStyle = cva({
+  base: {
+    _checked: {
+      bg: "fill.quaternary",
+      borderColor: "accent.border",
+      color: "text.primary",
+      fontWeight: 600,
+    },
+    bg: "transparent",
+    border: "2px solid transparent",
+    color: "text.secondary",
+    display: "flex",
+    flexDirection: "column",
+  },
+  variants: {
+    size: {
+      large: {
+        alignItems: "center",
+        borderRadius: "2xl",
+        gap: "8px",
+        padding: "20px 0 16px",
+        textStyle: "body",
+      },
+      small: {
+        borderRadius: "xl",
+        gap: "4px",
+        padding: "4px 4px 8px",
+        textAlign: "center",
+        textStyle: "footnote",
+      },
+    },
+  },
+});
+
+export function ChoiceTile({
+  size,
+  className,
+  ...props
+}: ComponentProps<typeof Choice> & { size: "large" | "small" }) {
+  return (
+    <Choice className={cx(choiceTileStyle({ size }), className)} {...props} />
+  );
+}
 
 export function Chip({
   selected,
