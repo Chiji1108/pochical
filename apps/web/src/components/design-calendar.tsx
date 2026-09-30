@@ -755,6 +755,8 @@ export function DesignCalendar({
   }
   function enterShift(shift: Shift | undefined) {
     const key = dateKey(selectedDate);
+    // One day only: the next day's own next day is not followed, so
+    // patterns naming each other never run on (spec/shift-patterns.md).
     const following = shift && book[shift]?.nextDay;
     const followingKey = dateKey(addDays(selectedDate, 1));
     onChange((previous) => ({
