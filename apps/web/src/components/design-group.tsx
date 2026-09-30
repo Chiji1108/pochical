@@ -2845,8 +2845,10 @@ function ChatRow({
   );
 }
 
-// The room kept above a shared day a chat opens on.
-const sharedRoom = 12;
+// The room kept above a shared day a chat opens on: the lines' gap, so
+// the line before it sits just out of view instead of peeking in as a
+// sliver under the header.
+const sharedRoom = 8;
 
 function ChatPage({
   title,
