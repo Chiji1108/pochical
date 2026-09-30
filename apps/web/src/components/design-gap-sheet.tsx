@@ -16,6 +16,10 @@ const gap = {
     "& small": { color: "text.tertiary", textStyle: "caption" },
     margin: "0 0 16px",
   }),
+  // Under the heading, scrolling when a month of blanks is too long for
+  // the sheet. One piece, so the scrolling part's gap stays out of the
+  // spacing below.
+  body: css({ display: "flex", flexDirection: "column" }),
   // How the month's days off change, kept on one line.
   count: css({
     color: "accent.default",
@@ -24,10 +28,6 @@ const gap = {
     whiteSpace: "nowrap",
   }),
   line: css({ display: "block" }),
-  // Under the heading, scrolling when a month of blanks is too long for
-  // the sheet. One piece, so the scrolling part's gap stays out of the
-  // spacing below.
-  body: css({ display: "flex", flexDirection: "column" }),
 };
 
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
