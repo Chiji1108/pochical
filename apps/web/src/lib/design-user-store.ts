@@ -8,8 +8,12 @@ import {
   sampleChats,
   sampleGroups,
   samplePhoto,
-} from "../components/design-group";
-import type { Chat, GroupSummary, Profile } from "../components/design-group";
+} from "../components/design-group-data";
+import type {
+  Chat,
+  GroupSummary,
+  Profile,
+} from "../components/design-group-data";
 import { presetList } from "./design-patterns";
 import type { Pattern } from "./design-patterns";
 

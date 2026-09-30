@@ -9,7 +9,7 @@ import {
   initialDesignSchedule,
 } from "../components/design-calendar";
 import type { Tab } from "../components/design-calendar";
-import { sampleGroups } from "../components/design-group";
+import { sampleGroups } from "../components/design-group-data";
 import {
   DesignProviders,
   PresetContexts,

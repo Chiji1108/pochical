@@ -14,7 +14,7 @@ import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
 import { DayCell, MonthSummary, TabBar } from "../components/design-calendar";
-import { PhotoAvatar } from "../components/design-group";
+import { PhotoAvatar } from "../components/design-group-parts";
 import {
   DesignIntro,
   DesignPage,

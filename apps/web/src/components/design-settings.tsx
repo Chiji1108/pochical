@@ -48,8 +48,8 @@ import {
 import type { RepeatRule, Schedule, Tab } from "./design-calendar";
 import { CoworkersPage } from "./design-coworkers";
 import type { Coworkers } from "./design-coworkers";
-import { PhotoAvatar, PhotoEditor } from "./design-group";
-import type { Profile } from "./design-group";
+import type { Profile } from "./design-group-data";
+import { PhotoAvatar, PhotoEditor } from "./design-group-parts";
 import { WorkSetupSteps } from "./design-onboarding";
 import { PatternsPage } from "./design-pattern-editor";
 import { PresetContexts } from "./design-providers";
