@@ -3,7 +3,7 @@ import { useState } from "react";
 import { css } from "styled-system/css";
 
 import { DesignCalendar } from "../components/design-calendar";
-import { sampleGroups } from "../components/design-group";
+import { sampleGroups } from "../components/design-group-data";
 import { DesignProviders } from "../components/design-providers";
 import { paleSkyLights, themeSkyId } from "../components/design-surprise";
 import { initialDesignSchedule } from "../lib/design-days";

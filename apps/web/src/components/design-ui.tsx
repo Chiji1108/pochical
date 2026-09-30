@@ -663,17 +663,20 @@ export const fieldStyle = cva({
 // tap and set by typing digits or with ↑↓ (React Aria's TimeField, which
 // HeroUI's is built on). 24-hour, as Japanese schedules write it.
 const timeField = {
-  // A shade deeper than a text field's fill, as iOS's pill, so it shows
-  // on a list's card too.
+  // As iOS's compact DatePicker (measured on the iOS 27 simulator): a
+  // capsule about 35pt tall in a shade deeper than a text field's fill, so
+  // it shows on a list's card too; while it is being set its time turns
+  // the accent color.
   field: css({
+    "&[data-focus-within]": { color: "accent.default" },
     alignItems: "center",
     bg: "fill.tertiary",
-    borderRadius: "md",
+    borderRadius: "full",
     color: "text.primary",
     cursor: "text",
     display: "inline-flex",
     fontVariantNumeric: "tabular-nums",
-    minHeight: "action",
+    minHeight: "36px",
     padding: "0 12px",
     textStyle: "body",
   }),
