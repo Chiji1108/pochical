@@ -1956,9 +1956,14 @@ const joinScreen = {
 const namedMembers = 3;
 const shownFaces = 5;
 
+// It opens the list of them, so with every name there it gives the count
+// too, and nobody wonders whether the list holds more.
 function memberLine(names: string[]) {
+  if (names.length === 1) {
+    return `${names[0]}が参加中`;
+  }
   if (names.length <= namedMembers) {
-    return `${names.join("、")}が参加中`;
+    return `${names.join("、")}の${names.length}人が参加中`;
   }
   const rest = names.length - (namedMembers - 1);
   return `${names.slice(0, namedMembers - 1).join("、")}ほか${rest}人が参加中`;
@@ -7249,9 +7254,9 @@ export function JoinScreen({
   const [editing, setEditing] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
   const names = invite.members.map((member) => member.name);
-  // When not every name fits, the line opens them all. Only names and
-  // faces: shifts are seen once both are in the group.
-  const shortened = names.length > namedMembers;
+  // The line opens everyone, each face beside its name, however many
+  // there are. Only names and faces: shifts are seen once both are in the
+  // group.
   const members = (
     <>
       <span className={joinScreen.faces}>
@@ -7266,7 +7271,7 @@ export function JoinScreen({
       </span>
       <small className={joinScreen.memberLine}>
         {memberLine(names)}
-        {shortened && <ChevronRight aria-hidden="true" size={14} />}
+        <ChevronRight aria-hidden="true" size={14} />
       </small>
     </>
   );
@@ -7319,19 +7324,15 @@ export function JoinScreen({
             </span>
             <h3 className={joinScreen.title}>{invite.group}</h3>
           </div>
-          {shortened ? (
-            <button
-              className={cx(joinScreen.members, joinScreen.membersButton)}
-              onClick={() => {
-                setMembersOpen(true);
-              }}
-              type="button"
-            >
-              {members}
-            </button>
-          ) : (
-            <div className={joinScreen.members}>{members}</div>
-          )}
+          <button
+            className={cx(joinScreen.members, joinScreen.membersButton)}
+            onClick={() => {
+              setMembersOpen(true);
+            }}
+            type="button"
+          >
+            {members}
+          </button>
         </div>
         <Section title="このグループでのあなた">
           <List>
