@@ -1474,15 +1474,19 @@ export function Toggle({
 }
 
 // A row whose control is an on and off switch, with a dot in the color a
-// setting paints with when it has one.
+// setting paints with when it has one. `detail` is a line under the label
+// saying what switching it changes; the row is then a two-line row's
+// height, as the platforms' switches with a subtitle.
 export function SwitchRow({
   label,
+  detail,
   checked,
   onChange,
   swatch,
   className,
 }: {
   label: ReactNode;
+  detail?: ReactNode;
   checked: boolean;
   onChange: (checked: boolean) => void;
   swatch?: string;
@@ -1491,7 +1495,11 @@ export function SwitchRow({
   return (
     <Switch.Root
       checked={checked}
-      className={cx(listRow.root, listRow.pressable, className)}
+      className={cx(
+        detail === undefined ? listRow.root : listRow.twoLine,
+        listRow.pressable,
+        className
+      )}
       data-list-row=""
       onCheckedChange={(details) => {
         onChange(details.checked);
@@ -1508,6 +1516,7 @@ export function SwitchRow({
       )}
       <Switch.Label className={cx(listRow.label, listRow.labelGrow)}>
         {label}
+        {detail !== undefined && <small>{detail}</small>}
       </Switch.Label>
       <ToggleParts />
     </Switch.Root>
