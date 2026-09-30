@@ -76,7 +76,8 @@ const kinds: {
   sizes: { size: Size; View: WidgetView }[];
 }[] = [
   {
-    description: "今日と、この先の数日。いちばん置かれる想定の基本の形です。",
+    description:
+      "今日と、この先の日。小は続く3日、中は今週と来週の2週間を曜日の列に揃えて。",
     name: "これから",
     sizes: [
       { View: UpcomingSmall, size: "small" },

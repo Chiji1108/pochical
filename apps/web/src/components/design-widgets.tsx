@@ -238,43 +238,105 @@ export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
 }
 
 const week = {
-  date: css({ fontVariantNumeric: "tabular-nums", textStyle: "footnote" }),
-  days: css({
-    alignContent: "center",
-    display: "grid",
-    flex: 1,
-    gridTemplateColumns: "repeat(6, 1fr)",
-    rowGap: "4px",
-  }),
-  root: css({ display: "flex", gap: "16px", height: "100%" }),
   rule: css({ bg: "separator", flexShrink: 0, width: "1px" }),
   today: css({ flexShrink: 0, width: "112px" }),
 };
 
-// Today large, and the six days after it beside.
+const twoWeeks = {
+  date: cva({
+    base: { fontVariantNumeric: "tabular-nums", textStyle: "caption2" },
+    variants: {
+      today: {
+        false: {},
+        true: { color: "accent.default", fontWeight: 800 },
+      },
+    },
+  }),
+  day: cva({
+    base: {
+      alignItems: "center",
+      display: "flex",
+      flexDirection: "column",
+      gap: "2px",
+    },
+    // Days already gone this week stay, faint, so the weeks keep their
+    // shape.
+    variants: { past: { false: {}, true: { opacity: 0.4 } } },
+  }),
+  grid: css({
+    display: "grid",
+    flex: 1,
+    gridTemplateColumns: "repeat(7, 1fr)",
+    rowGap: "4px",
+  }),
+  header: css({
+    alignItems: "center",
+    display: "flex",
+    gap: "8px",
+    minWidth: 0,
+  }),
+  root: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    height: "100%",
+  }),
+  time: css({
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 600,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    textStyle: "subheadline",
+    whiteSpace: "nowrap",
+  }),
+  weekdays: css({
+    display: "grid",
+    gridTemplateColumns: "repeat(7, 1fr)",
+    textAlign: "center",
+    textStyle: "caption2",
+  }),
+};
+
+// This week and the next, seven across from the week start as the
+// calendar lays them, under today's date, mark and time.
 export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
+  const day = entry.today;
+  const todayTime = day.date.getTime();
   return (
-    <div className={week.root}>
-      <div className={week.today}>
-        <TodayBlock day={entry.today} />
+    <div className={twoWeeks.root}>
+      <div className={twoWeeks.header}>
+        <span className={today.date}>
+          {monthDay(day.date)}({day.weekday})
+        </span>
+        <DayMark day={day} size={16} />
+        <Headline className={twoWeeks.time} day={day} />
       </div>
-      <span aria-hidden="true" className={week.rule} />
-      <ol className={`${list} ${week.days}`}>
-        {entry.upcoming.slice(1).map((day) => (
-          <li className={upcoming.day} key={day.date.getTime()}>
-            <SpokenDay day={day} />
-            <span
-              aria-hidden="true"
-              className={`${upcoming.weekday} ${toneText({ tone: day.tone })}`}
-            >
-              {day.weekday}
-            </span>
-            <span aria-hidden="true" className={week.date}>
-              {day.date.getDate()}
-            </span>
-            <DayMark day={day} size={24} />
-          </li>
+      <div aria-hidden="true" className={twoWeeks.weekdays}>
+        {entry.month.weekdays.map((weekday) => (
+          <span
+            className={toneText({ tone: weekday.tone })}
+            key={weekday.label}
+          >
+            {weekday.label}
+          </span>
         ))}
+      </div>
+      <ol className={`${list} ${twoWeeks.grid}`}>
+        {entry.twoWeeks.map((shown) => {
+          const time = shown.date.getTime();
+          return (
+            <li className={twoWeeks.day({ past: time < todayTime })} key={time}>
+              <SpokenDay day={shown} />
+              <span
+                aria-hidden="true"
+                className={`${twoWeeks.date({ today: time === todayTime })} ${dateTone(shown, todayTime)}`}
+              >
+                {shown.date.getDate()}
+              </span>
+              <DayMark day={shown} size={20} />
+            </li>
+          );
+        })}
       </ol>
     </div>
   );

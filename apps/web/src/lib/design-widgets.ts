@@ -9,6 +9,7 @@ import type { Schedule } from "../components/design-calendar";
 import {
   holidayName,
   monthDatesFrom,
+  weekDatesFrom,
   weekdayNames,
   weekdaysFrom,
 } from "../components/design-week";
@@ -50,6 +51,8 @@ export type WidgetEntry = {
   today: WidgetDay;
   // Today and the six days after it.
   upcoming: WidgetDay[];
+  // This week and the next, from the person's week start.
+  twoWeeks: WidgetDay[];
   // Whole weeks covering today's month, from the person's week start.
   month: {
     first: Date;
@@ -59,6 +62,7 @@ export type WidgetEntry = {
 };
 
 const UPCOMING_DAYS = 7;
+const WEEK_LENGTH = 7;
 const SUNDAY = 0;
 const SATURDAY = 6;
 
@@ -108,6 +112,11 @@ export function widgetEntry(
     widgetDay(addDays(date, index), schedule, week)
   );
   const first = new Date(date.getFullYear(), date.getMonth(), 1);
+  const thisWeek = weekDatesFrom(date, week.weekStart);
+  const twoWeeks = [
+    ...thisWeek,
+    ...thisWeek.map((day) => addDays(day, WEEK_LENGTH)),
+  ].map((day) => widgetDay(day, schedule, week));
   return {
     date,
     month: {
@@ -119,6 +128,7 @@ export function widgetEntry(
       weekdays: weekdaysFrom(week).map(({ label, tone }) => ({ label, tone })),
     },
     today: upcoming[0] ?? widgetDay(date, schedule, week),
+    twoWeeks,
     upcoming,
   };
 }
