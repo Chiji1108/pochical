@@ -3,7 +3,7 @@ import { css } from "styled-system/css";
 
 import type { Shift } from "../lib/design-patterns";
 import type { Schedule } from "./design-calendar";
-import { Sheet, SheetHeading, SheetPicture } from "./design-sheet";
+import { Sheet, SheetHeading, SheetPicture, sheetBody } from "./design-sheet";
 import { Button, Chip, ChipGroup, List, SwitchRow, Tag } from "./design-ui";
 
 export type OffChoice = { key: Shift; label: string };
@@ -24,6 +24,10 @@ const gap = {
     whiteSpace: "nowrap",
   }),
   line: css({ display: "block" }),
+  // Under the heading, scrolling when a month of blanks is too long for
+  // the sheet. One piece, so the scrolling part's gap stays out of the
+  // spacing below.
+  body: css({ display: "flex", flexDirection: "column" }),
 };
 
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
@@ -132,70 +136,78 @@ function GapSheetBody({
   return (
     <>
       <SheetHeading onClose={close} title={titleOf(days)} />
-      <p>
-        {current?.label ?? "休み"}にすると、{monthLabel}のお休みが
-        <strong className={gap.count}>
-          {offCount}日 → {offCount + days.length}日
-        </strong>
-        になります。
-        {sharing && (
-          <span className={gap.line}>グループの人にもお休みが見えます。</span>
-        )}
-        {completes && (
-          <span className={gap.line}>これで{monthLabel}が全部埋まります。</span>
-        )}
-      </p>
-      <ChipGroup as="ul" className={spaced}>
-        {days.map((day) => (
-          <Tag as="li" key={day.getDate()}>
-            {day.getDate()}日({weekdays[day.getDay()]})
-          </Tag>
-        ))}
-      </ChipGroup>
-      {choices.length > 1 && (
-        <ChipGroup className={spaced} label="入れるパターン">
-          {choices.map(({ key, label }) => (
-            <Chip
-              selected={key === current?.key}
-              key={key}
-              onClick={() => {
-                setPicked(key);
-              }}
-            >
-              {label}
-            </Chip>
-          ))}
-        </ChipGroup>
-      )}
-      {offerBlank && (
-        <List className={gap.blank}>
-          <SwitchRow
-            label={
-              <>
-                休みの日は空白で見せる
-                <small>入力中と週表示では薄く出ます</small>
-              </>
-            }
+      <div className={sheetBody}>
+        <div className={gap.body}>
+          <p>
+            {current?.label ?? "休み"}にすると、{monthLabel}のお休みが
+            <strong className={gap.count}>
+              {offCount}日 → {offCount + days.length}日
+            </strong>
+            になります。
+            {sharing && (
+              <span className={gap.line}>
+                グループの人にもお休みが見えます。
+              </span>
+            )}
+            {completes && (
+              <span className={gap.line}>
+                これで{monthLabel}が全部埋まります。
+              </span>
+            )}
+          </p>
+          <ChipGroup as="ul" className={spaced}>
+            {days.map((day) => (
+              <Tag as="li" key={day.getDate()}>
+                {day.getDate()}日({weekdays[day.getDay()]})
+              </Tag>
+            ))}
+          </ChipGroup>
+          {choices.length > 1 && (
+            <ChipGroup className={spaced} label="入れるパターン">
+              {choices.map(({ key, label }) => (
+                <Chip
+                  selected={key === current?.key}
+                  key={key}
+                  onClick={() => {
+                    setPicked(key);
+                  }}
+                >
+                  {label}
+                </Chip>
+              ))}
+            </ChipGroup>
+          )}
+          {offerBlank && (
+            <List className={gap.blank}>
+              <SwitchRow
+                label={
+                  <>
+                    休みの日は空白で見せる
+                    <small>入力中と週表示では薄く出ます</small>
+                  </>
+                }
 
-            checked={blankOff}
-            onChange={(checked) => {
-              onBlankOff(checked);
+                checked={blankOff}
+                onChange={(checked) => {
+                  onBlankOff(checked);
+                }}
+              />
+            </List>
+          )}
+          <Button
+            variant="primary"
+            onClick={() => {
+              close();
+              onFill(current?.key);
             }}
-          />
-        </List>
-      )}
-      <Button
-        variant="primary"
-        onClick={() => {
-          close();
-          onFill(current?.key);
-        }}
-      >
-        {current ? `${current.label}にする` : "休みを追加して入れる"}
-      </Button>
-      <Button variant="subtle" onClick={close}>
-        あとで入れる
-      </Button>
+          >
+            {current ? `${current.label}にする` : "休みを追加して入れる"}
+          </Button>
+          <Button variant="subtle" onClick={close}>
+            あとで入れる
+          </Button>
+        </div>
+      </div>
     </>
   );
 }
