@@ -6,16 +6,12 @@ import { css, cva } from "styled-system/css";
 
 import {
   isDayOff,
+  OwnPatternsContext,
   presetList,
   presetPatterns,
   usePatterns,
 } from "../lib/design-patterns";
-import type {
-  Pattern,
-  PatternBook,
-  PresetShift,
-  Shift,
-} from "../lib/design-patterns";
+import type { Pattern, PatternBook, Shift } from "../lib/design-patterns";
 import { useLook, useSettings } from "../lib/design-settings-store";
 import type { ColorScheme } from "../lib/design-tokens";
 import { useUser } from "../lib/design-user-store";
@@ -1436,7 +1432,7 @@ function stylePreviewOf(
 
 // Each working pattern with what follows it, like 明け after 夜勤, and a day
 // off after every second one.
-function sampleSequence(patterns: Pattern[]): Shift[] {
+function sampleSequence(patterns: readonly Pattern[]): Shift[] {
   const ids = new Set(patterns.map((pattern) => pattern.id));
   const followers = new Set(patterns.map((pattern) => pattern.nextDay));
   const off = holidayShiftOf(patterns) ?? presetPatterns.off.id;
@@ -1455,6 +1451,26 @@ function sampleSequence(patterns: Pattern[]): Shift[] {
     }
   }
   return sequence.at(-1) === off ? sequence : [...sequence, off];
+}
+
+// How many shifts the テーマ and color samples show in a row.
+const WEEK_SAMPLE = 4;
+
+// The marks beside each choice on the style pages are the person's own,
+// as is the preview over them: a choice shows how their calendar would
+// look. A working pattern, a day off, and a few as they follow each other.
+// Ready-made ones stand in only for what they have none of.
+function useOwnSamples() {
+  const patterns = useContext(OwnPatternsContext);
+  const work =
+    patterns.find((pattern) => !isDayOff(pattern)) ?? presetPatterns.day;
+  const off =
+    patterns.find((pattern) => isDayOff(pattern)) ?? presetPatterns.off;
+  return {
+    off: off.id,
+    week: [...new Set(sampleSequence(patterns))].slice(0, WEEK_SAMPLE),
+    work,
+  };
 }
 
 // The preview can show the other of light and dark on its own, without
@@ -1524,6 +1540,7 @@ function StylePreview({
 
 // The switches for the look in use, as one list.
 function ShapeChoices() {
+  const { work } = useOwnSamples();
   const look = useLook();
   const setShape = useSettings((state) => state.setShape);
   const current = shapeOf(look);
@@ -1548,7 +1565,7 @@ function ShapeChoices() {
         <Segment key={option.name} value={option.name}>
           <ShiftMarkStyleContext value={option.style}>
             <IconWeightContext value={option.fill ? "duotone" : "regular"}>
-              <ShiftMark shift="day" size={20} />
+              <ShiftMark shift={work.id} size={20} />
             </IconWeightContext>
           </ShiftMarkStyleContext>
           {option.name}
@@ -1587,6 +1604,7 @@ export function OffLookTabs({
   value: OffLook;
   onChange: (value: OffLook) => void;
 }) {
+  const { off } = useOwnSamples();
   const picked = offLookId(value);
   return (
     <SegmentedControl
@@ -1607,7 +1625,7 @@ export function OffLookTabs({
             className={offSample({ lit: option.highlight })}
           >
             <small>5</small>
-            {option.blankOff ? null : <ShiftMark shift="off" size={18} />}
+            {option.blankOff ? null : <ShiftMark shift={off} size={18} />}
           </span>
           {option.name}
         </Segment>
@@ -1625,6 +1643,7 @@ export function NameTabs({
   value: boolean;
   onChange: (value: boolean) => void;
 }) {
+  const { work } = useOwnSamples();
   return (
     <SegmentedControl
       label="シフト名"
@@ -1638,10 +1657,8 @@ export function NameTabs({
         <Segment key={String(withName)} value={String(withName)}>
           <span aria-hidden="true" className={offSample()}>
             <small>5</small>
-            <ShiftMark shift="day" size={withName ? 16 : 18} />
-            {withName && (
-              <small data-part="name">{presetPatterns.day.name}</small>
-            )}
+            <ShiftMark shift={work.id} size={withName ? 16 : 18} />
+            {withName && <small data-part="name">{work.name}</small>}
           </span>
           {withName ? "あり" : "なし"}
         </Segment>
@@ -1997,6 +2014,7 @@ const shiftColorSample = css({
   height: "40px",
 });
 function ShiftColorsChoices() {
+  const { week } = useOwnSamples();
   const shiftColors = useSettings((state) => state.device.shiftColors);
   const setShiftColors = useSettings((state) => state.setShiftColors);
   return (
@@ -2012,7 +2030,7 @@ function ShiftColorsChoices() {
         <Segment key={option.name} value={String(option.colored)}>
           <span aria-hidden="true" className={shiftColorSample}>
             <MonochromeContext value={{ monochrome: !option.colored }}>
-              {presetSampleShifts.map((shift) => (
+              {week.map((shift) => (
                 <ShiftMark key={shift} shift={shift} size={18} />
               ))}
             </MonochromeContext>
@@ -2030,9 +2048,6 @@ const themePages = Array.from(
   { length: Math.ceil(presets.length / 3) },
   (_, page) => presets.slice(page * 3, page * 3 + 3)
 );
-
-// The shifts on a テーマ's card, as they might follow each other in a week.
-const presetSampleShifts: PresetShift[] = ["day", "night", "after", "off"];
 
 // Each テーマ as a small screen: its ground, a card on it with shifts in
 // its colors, and strokes of its text and its fill, so where each テーマ
@@ -2103,6 +2118,7 @@ function ThemeChoice({
   preset: (typeof presets)[number];
   scheme: ColorScheme;
 }) {
+  const { week } = useOwnSamples();
   return (
     <Choice className={themeCard.choice} value={preset.id}>
       <span
@@ -2113,7 +2129,7 @@ function ThemeChoice({
         <ColorSchemeContext value={scheme}>
           <PresetContexts id={preset.id}>
             <span className={themeCard.card}>
-              {presetSampleShifts.map((shift) => (
+              {week.map((shift) => (
                 <ShiftMark key={shift} shift={shift} size={14} />
               ))}
             </span>

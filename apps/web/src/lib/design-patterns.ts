@@ -148,6 +148,12 @@ export function usePatterns() {
   return useContext(PatternsContext);
 }
 
+// The person's own patterns in their order, for samples of how their
+// calendar would look. A page with no one in view shows ready-made ones.
+export const OwnPatternsContext = createContext<readonly Pattern[]>(
+  presetList(["day", "night", "after", "off"])
+);
+
 export function isDayOff(pattern: Pattern | undefined) {
   return pattern?.countsAsOff === true;
 }
