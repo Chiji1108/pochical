@@ -225,16 +225,21 @@ const grounds: Record<HomeAppearance | "lock", string> = {
     "linear-gradient(135deg, oklch(0.26 0.03 70), oklch(0.2 0.03 40) 60%, oklch(0.24 0.04 20))",
 };
 
+// The wallpaper for a look: the sample ones, or on Android one of the
+// hue its colors come from.
+export function wallpaperFor({ appearance, wallpaperHue }: Placement) {
+  return wallpaperHue === undefined
+    ? grounds[appearance]
+    : wallpaperOf(wallpaperHue, schemeOf(appearance));
+}
+
 // A stretch of wallpaper the widgets sit on, in a look.
 export function Wallpaper({
   appearance,
   wallpaperHue,
   children,
 }: Placement & { children: ReactNode }) {
-  const background =
-    wallpaperHue === undefined
-      ? grounds[appearance]
-      : wallpaperOf(wallpaperHue, schemeOf(appearance));
+  const background = wallpaperFor({ appearance, wallpaperHue });
   return (
     <div className={wallpaper} style={{ background }}>
       {children}

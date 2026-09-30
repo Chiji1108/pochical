@@ -9,6 +9,7 @@ import {
   patternSets,
 } from "../components/design-calendar";
 import { sampleGroups } from "../components/design-group";
+import { HomeScreen } from "../components/design-home-screen";
 import {
   designCaption,
   DesignPage,
@@ -61,8 +62,9 @@ function makePerson(
   });
 }
 
-// One phone, the open choices beside it on wide screens, where the phone
-// stays in view as the page scrolls.
+// The app's phone and the home screen's side by side, the open choices
+// beside them on wide screens, where the phones stay in view as the page
+// scrolls.
 const demo = {
   layout: css({
     alignItems: "flex-start",
@@ -79,8 +81,8 @@ const demo = {
   }),
 };
 
-// The app to touch: one phone, one person, with the open design choices
-// beside it. The design documents live under /design.
+// The app to touch: one person on a phone, their home screen beside it,
+// and the open design choices. The design documents live under /design.
 function DemoPage() {
   const variants = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -144,6 +146,14 @@ function DemoPage() {
             </UserStoreContext>
             <p className={designCaption}>
               実際にタップして試せます。架空のサンプルで、再読み込みすると元に戻ります。
+            </p>
+          </div>
+          <div className={demo.phone}>
+            <UserStoreContext value={person}>
+              <HomeScreen />
+            </UserStoreContext>
+            <p className={designCaption}>
+              ホーム画面のウィジェット。アプリで入力すると、すぐに変わります。
             </p>
           </div>
           <VariantPanel
