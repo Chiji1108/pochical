@@ -1,9 +1,4 @@
-import { EmojiPicker } from "frimousse";
-import type {
-  EmojiPickerListCategoryHeaderProps,
-  EmojiPickerListEmojiProps,
-  EmojiPickerListRowProps,
-} from "frimousse";
+import { lazy, Suspense } from "react";
 import { css } from "styled-system/css";
 
 import { Sheet, SheetHeading } from "./design-sheet";
@@ -14,95 +9,14 @@ import { Sheet, SheetHeading } from "./design-sheet";
 // EmojiPickerView on Android, so the prototype only stands in for them.
 // Frimousse draws the list, searchable in Japanese, and the look is ours.
 
-const emojiColumns = 8;
+const EmojiList = lazy(async () => await import("./design-emoji-list"));
 
-const picker = {
-  categoryHeader: css({
-    bg: "background.elevated",
-    color: "text.tertiary",
-    fontWeight: 600,
-    padding: "12px 4px 8px",
-    textStyle: "footnote",
-  }),
-  emoji: css({
-    "&[data-active]": { bg: "fill.tertiary" },
-    alignItems: "center",
-    aspectRatio: "1",
-    bg: "transparent",
-    border: 0,
-    borderRadius: "md",
-    display: "flex",
-    flex: 1,
-    fontSize: "24px",
-    justifyContent: "center",
-    padding: 0,
-  }),
-  note: css({
-    color: "text.tertiary",
-    padding: "24px 0",
-    textAlign: "center",
-    textStyle: "subheadline",
-  }),
-  root: css({
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    minHeight: 0,
-  }),
-  row: css({ display: "flex", paddingInline: "2px" }),
-  search: css({
-    _focusVisible: { outline: "2px solid token(colors.accent.default)" },
-    _placeholder: { color: "text.tertiary" },
-    bg: "fill.quaternary",
-    border: 0,
-    borderRadius: "md",
-    color: "text.primary",
-    font: "inherit",
-    height: "action",
-    paddingInline: "16px",
-    textStyle: "body",
-    width: "100%",
-  }),
-  viewport: css({
-    height: "340px",
-    marginInline: "-4px",
-    overflowY: "auto",
-    position: "relative",
-  }),
-};
-
-function CategoryHeader({
-  category,
-  ...props
-}: EmojiPickerListCategoryHeaderProps) {
-  return (
-    <div className={picker.categoryHeader} {...props}>
-      {category.label}
-    </div>
-  );
-}
-
-function Row({ children, ...props }: EmojiPickerListRowProps) {
-  return (
-    <div className={picker.row} {...props}>
-      {children}
-    </div>
-  );
-}
-
-function EmojiButton({ emoji, ...props }: EmojiPickerListEmojiProps) {
-  return (
-    <button
-      aria-label={emoji.label}
-      className={picker.emoji}
-      data-active={emoji.isActive ? "" : undefined}
-      {...props}
-      type="button"
-    >
-      {emoji.emoji}
-    </button>
-  );
-}
+const note = css({
+  color: "text.tertiary",
+  padding: "24px 0",
+  textAlign: "center",
+  textStyle: "subheadline",
+});
 
 // The picker in a sheet over the phone; picking closes it.
 export function EmojiPickerSheet({
@@ -124,34 +38,15 @@ export function EmojiPickerSheet({
         }}
         title={title}
       />
-      <EmojiPicker.Root
-        className={picker.root}
-        columns={emojiColumns}
-        locale="ja"
-        onEmojiSelect={({ emoji }) => {
-          onPick(emoji);
-          onOpenChange(false);
-        }}
-      >
-        <EmojiPicker.Search
-          aria-label="絵文字を検索"
-          className={picker.search}
-          // The names are Unicode's Japanese ones, in kanji and katakana,
-          // so a word in hiragana alone finds little.
-          placeholder="検索（例：猫、ハート）"
+      <Suspense fallback={<p className={note}>読み込んでいます</p>}>
+        <EmojiList
+          noteClassName={note}
+          onPick={(emoji) => {
+            onPick(emoji);
+            onOpenChange(false);
+          }}
         />
-        <EmojiPicker.Viewport className={picker.viewport}>
-          <EmojiPicker.Loading className={picker.note}>
-            読み込んでいます
-          </EmojiPicker.Loading>
-          <EmojiPicker.Empty className={picker.note}>
-            見つかりませんでした
-          </EmojiPicker.Empty>
-          <EmojiPicker.List
-            components={{ CategoryHeader, Emoji: EmojiButton, Row }}
-          />
-        </EmojiPicker.Viewport>
-      </EmojiPicker.Root>
+      </Suspense>
     </Sheet>
   );
 }
