@@ -13,7 +13,7 @@ import { AppIcon } from "./design-app-icon";
 import { DayCell, dateKey } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
 import { NameTabs, OffLookTabs } from "./design-settings";
-import { Sheet, SheetHeading, sheetLead } from "./design-sheet";
+import { Sheet, SheetHeading, sheetBody, sheetLead } from "./design-sheet";
 import {
   ColorSchemeContext,
   PreviewSchemeSwitch,
@@ -28,13 +28,11 @@ import {
   dayGrid,
   List,
   ListRow,
-  listStyle,
   Note,
   PageHeader,
   Screen,
   ScreenScroll,
   Section,
-  srOnly,
   SwitchRow,
   WeekdayRow,
 } from "./design-ui";
@@ -45,20 +43,38 @@ import {
   OffHighlightContext,
 } from "./shift-mark";
 
-// Calendars on the device, as the system lists them.
+// The calendars on the device that take new events, as the system lists
+// them: by account, under the name the account has there (iOS calls a
+// Google account "Gmail"; Android names it by its address). Read-only ones,
+// like holidays and birthdays, are left out. A Google account's own
+// calendar is named by its address.
 const deviceCalendars = [
   { color: "#5b8def", id: "icloud-home", name: "ホーム", source: "iCloud" },
   { color: "#e0894a", id: "icloud-work", name: "仕事", source: "iCloud" },
-  { color: "#4f9d69", id: "google", name: "さくらの予定", source: "Google" },
+  { color: "#c46fd6", id: "icloud-family", name: "家族", source: "iCloud" },
+  {
+    color: "#4f9d69",
+    id: "google",
+    name: "sakura.sato@gmail.com",
+    source: "Gmail",
+  },
+  { color: "#d9534f", id: "google-job", name: "バイト", source: "Gmail" },
+  { color: "#8a8f98", id: "google-gym", name: "ジム", source: "Gmail" },
 ];
+// The one the system adds new events to, picked before anything else.
+const DEFAULT_CALENDAR_ID = "icloud-home";
 
-type Step = "choose" | "calendar" | { done: string };
+// The calendars under their accounts, in the system's order.
+const calendarSources = Object.entries(
+  Object.groupBy(deviceCalendars, (item) => item.source)
+);
+
+type Step = "choose" | "calendar" | "pick" | { done: string };
 
 const save = {
   // 画像で保存 over 端末カレンダーに追加.
   actions: css({ display: "flex", flexDirection: "column", gap: "12px" }),
   add: css({ marginTop: "20px" }),
-  calendars: css({ border: 0, margin: "0 0 12px", padding: 0 }),
   // The picked calendar's check; the others keep its room, so the rows
   // line up.
   check: cva({
@@ -72,6 +88,16 @@ const save = {
     borderRadius: "50%",
     flexShrink: 0,
     height: "10px",
+    width: "10px",
+  }),
+  picker: css({ display: "flex", flexDirection: "column", gap: "24px" }),
+  // The dot before the picked calendar's name, in the row's value.
+  valueDot: css({
+    borderRadius: "50%",
+    display: "inline-block",
+    height: "10px",
+    marginRight: "8px",
+    verticalAlign: "1px",
     width: "10px",
   }),
 };
@@ -115,6 +141,21 @@ const picture = {
   title: css({ fontSize: "15px", fontWeight: 600, margin: "0 4px 12px" }),
 };
 
+function stepTitle(step: Step, completion: boolean, monthLabel: string) {
+  if (step === "calendar") {
+    return "端末カレンダーに追加";
+  }
+  if (step === "pick") {
+    return "追加先";
+  }
+  if (typeof step === "object") {
+    return "保存しました";
+  }
+  return completion
+    ? `${monthLabel}のシフトが揃いました`
+    : `${monthLabel}のシフトを保存`;
+}
+
 // Saving a month: as a picture to show, or into the device calendar. It
 // also opens by itself when a month has just been filled in, the moment
 // people most want to keep it.
@@ -142,8 +183,9 @@ export function SaveSheet({
 }) {
   const [chosenStep, setStep] = useState<Step>("choose");
   const step = toCalendar && chosenStep === "choose" ? "calendar" : chosenStep;
-  // Remembered from the last time, so adding again is a single tap.
-  const [calendarId, setCalendarId] = useState<string>();
+  // The system's default at first, then remembered from the last time,
+  // so adding is a single tap.
+  const [calendarId, setCalendarId] = useState(DEFAULT_CALENDAR_ID);
   const [includeOff, setIncludeOff] = useState(false);
   // Closed, it starts from the choice again next time.
   const change = (next: boolean) => {
@@ -158,21 +200,14 @@ export function SaveSheet({
   const monthLabel = `${month.getMonth() + 1}月`;
   const count = includeOff ? shiftCount : shiftCount - offCount;
   const calendar = deviceCalendars.find((item) => item.id === calendarId);
-  let title = completion
-    ? `${monthLabel}のシフトが揃いました`
-    : `${monthLabel}のシフトを保存`;
-  if (step === "calendar") {
-    title = "端末カレンダーに追加";
-  } else if (typeof step === "object") {
-    title = "保存しました";
-  }
+  const title = stepTitle(step, completion, monthLabel);
   return (
     <Sheet label={title} onOpenChange={change} open={open}>
       <SheetHeading
         onBack={
-          step === "calendar" && !toCalendar
+          (step === "calendar" && !toCalendar) || step === "pick"
             ? () => {
-                setStep("choose");
+                setStep(step === "pick" ? "calendar" : "choose");
               }
             : undefined
         }
@@ -217,51 +252,27 @@ export function SaveSheet({
       {step === "calendar" && (
         <>
           <p className={sheetLead}>
-            {monthLabel}のシフトを、選んだカレンダーに予定として入れます。
+            {monthLabel}のシフトを、1日ずつ予定として入れます。
           </p>
-          <fieldset className={cx(listStyle, save.calendars)}>
-            <legend className={srOnly}>入れるカレンダー</legend>
-            {deviceCalendars.map((item) => (
-              <ListRow
-                key={item.id}
-                label={item.name}
-                value={item.source}
-                leading={
-                  <>
-                    <span
-                      aria-hidden="true"
-                      className={save.dot}
-                      style={{ background: item.color }}
-                    />
-                  </>
-                }
-                control={
-                  <>
-                    <input
-                      checked={calendarId === item.id}
-                      className={srOnly}
-                      name="device-calendar"
-                      onChange={() => {
-                        setCalendarId(item.id);
-                      }}
-                      type="radio"
-                    />
-                    <Check
-                      aria-hidden="true"
-                      className={save.check({
-                        picked: calendarId === item.id,
-                      })}
-                      size={18}
-                    />
-                  </>
-                }
-              />
-            ))}
-          </fieldset>
           <List>
+            <ListRow
+              label="追加先"
+              onClick={() => {
+                setStep("pick");
+              }}
+              value={
+                <>
+                  <span
+                    aria-hidden="true"
+                    className={save.valueDot}
+                    style={{ background: calendar?.color }}
+                  />
+                  {calendar?.name}
+                </>
+              }
+            />
             <SwitchRow
               label="休みの日も入れる"
-
               checked={includeOff}
               onChange={(checked) => {
                 setIncludeOff(checked);
@@ -281,6 +292,45 @@ export function SaveSheet({
             {count}件を追加
           </Button>
         </>
+      )}
+      {step === "pick" && (
+        <div className={cx(sheetBody, save.picker)}>
+          {calendarSources.map(([source, items]) => (
+            <Section key={source} title={source}>
+              <List>
+                {items?.map((item) => (
+                  <ListRow
+                    aria-pressed={calendarId === item.id}
+                    arrow={
+                      <Check
+                        aria-hidden="true"
+                        className={save.check({
+                          picked: calendarId === item.id,
+                        })}
+                        size={18}
+                      />
+                    }
+                    key={item.id}
+                    label={item.name}
+                    leading={
+                      <>
+                        <span
+                          aria-hidden="true"
+                          className={save.dot}
+                          style={{ background: item.color }}
+                        />
+                      </>
+                    }
+                    onClick={() => {
+                      setCalendarId(item.id);
+                      setStep("calendar");
+                    }}
+                  />
+                ))}
+              </List>
+            </Section>
+          ))}
+        </div>
       )}
       {typeof step === "object" && (
         <>

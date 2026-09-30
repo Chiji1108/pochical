@@ -146,12 +146,20 @@ export const states: State[] = [
     },
   },
   {
-    // Straight to the device's calendars, one picked.
+    // Straight to adding, the device's default calendar picked.
     name: "calendar/save-calendar",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await fromSaveMenu(page, "端末カレンダーに追加");
-      await page.getByText("ホーム", { exact: true }).click();
+    },
+  },
+  {
+    // The device's calendars under their accounts.
+    name: "calendar/save-calendar-pick",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await fromSaveMenu(page, "端末カレンダーに追加");
+      await tap(page, /^追加先/u);
     },
   },
   {
@@ -159,7 +167,6 @@ export const states: State[] = [
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await fromSaveMenu(page, "端末カレンダーに追加");
-      await page.getByText("ホーム", { exact: true }).click();
       await tap(page, /件を追加$/u);
     },
   },

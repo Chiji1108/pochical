@@ -27,7 +27,7 @@ import { Fragment, useContext, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import { MAX_PATTERNS, patterns } from "../lib/design-patterns";
+import { PATTERNS_PER_PAGE, patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
@@ -68,6 +68,7 @@ import {
   IconMenu,
   MenuItem,
   MONTH_WEEKS,
+  PageDots,
   Pager,
   Screen,
   srOnly,
@@ -121,7 +122,7 @@ function ruleSchedule(rule: RepeatRule, holidaysOff = false) {
     holidaysOff
   );
 }
-export type PatternCount = 4 | 5 | 6 | 7 | 8 | 9 | 10;
+export type PatternCount = 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13;
 const eight: Shift[] = [
   "early",
   "day",
@@ -134,6 +135,9 @@ const eight: Shift[] = [
 ];
 export const patternSets: Record<PatternCount, Shift[]> = {
   10: [...eight, "junya", "midnight"],
+  11: [...eight, "junya", "midnight", "offDuty"],
+  12: [...eight, "junya", "midnight", "offDuty", "evening"],
+  13: [...eight, "junya", "midnight", "offDuty", "evening", "duty"],
   4: ["day", "night", "after", "off"],
   5: ["early", "day", "night", "after", "off"],
   6: ["early", "day", "late", "night", "after", "off"],
@@ -681,10 +685,10 @@ export function DesignCalendar({
     }
   }
   // Fills the blanks with the person's day off, or adds 休み back when
-  // they have none and there is room for it.
+  // they have none.
   function fillGaps(key: Shift | undefined) {
     const shift = key ?? "off";
-    if (!key && patternKeys.length < MAX_PATTERNS) {
+    if (!key) {
       setPatternKeys((previous) => [...previous, shift]);
     }
     onChange((previous) => ({
@@ -1877,9 +1881,11 @@ export function RepeatSequenceEditor({
 // and 翌日へ. Up to four patterns sit in one row; more take two rows, of
 // three for five or six, four for seven or eight, and five for nine or
 // ten, so the buttons never push a month six weeks tall off the screen.
-// Each keeps the 72px of the one row, shrinking only when the screen is
-// too narrow. ポチポチ入力 and the save buttons that stand in its place
-// share its edges.
+// Past ten they go on to pages of ten, swiped sideways, their dots
+// between 消す and 翌日へ so the pages take no more height. Each keeps the
+// 72px of the one row, shrinking only when the screen is too narrow.
+// ポチポチ入力 and the save buttons that stand in its place share its
+// edges.
 const shiftInput = {
   action: css({
     _disabled: { color: "text.disabled", cursor: "default" },
@@ -1896,6 +1902,7 @@ const shiftInput = {
     textStyle: "caption",
   }),
   actions: css({
+    alignItems: "center",
     display: "flex",
     gap: "8px",
     justifyContent: "center",
@@ -1947,6 +1954,15 @@ const shiftInput = {
           display: "grid",
           gridTemplateColumns: "repeat(5, minmax(0, 72px))",
         },
+        // A page of ten: its two rows kept however few are on it, so the
+        // last page neither shrinks the tray nor moves a button from where
+        // it would be on a full one.
+        paged: {
+          alignContent: "start",
+          display: "grid",
+          gridTemplateColumns: "repeat(5, minmax(0, 72px))",
+          gridTemplateRows: "repeat(2, 64px)",
+        },
         four: {
           display: "grid",
           gridTemplateColumns: "repeat(4, minmax(0, 72px))",
@@ -1959,6 +1975,8 @@ const shiftInput = {
       },
     },
   }),
+  // The pages of patterns, past ten: the pager and nothing around it.
+  patternPages: css({ border: 0, margin: 0, minWidth: 0, padding: 0 }),
   startButton: css({ flex: 1 }),
   startRow: css({ display: "flex", gap: "8px", textAlign: "center" }),
   weekday: cva({
@@ -1989,6 +2007,9 @@ function columnsFor(patternKeys: Shift[]) {
   return count > 4 ? "three" : "one";
 }
 
+// Room between the pages of patterns, seen while they are swiped.
+const PATTERN_PAGE_GAP = 16;
+
 function ShiftInputControls({
   datePicker,
   patternKeys,
@@ -2004,30 +2025,74 @@ function ShiftInputControls({
   onEnter: (shift: Shift | undefined) => void;
   onSkip: () => void;
 }) {
-  const rows = patternKeys.length > 4;
+  const pages = Array.from(
+    { length: Math.ceil(patternKeys.length / PATTERNS_PER_PAGE) },
+    (_, index) =>
+      patternKeys.slice(
+        index * PATTERNS_PER_PAGE,
+        (index + 1) * PATTERNS_PER_PAGE
+      )
+  );
+  // The page stays where the person swiped it: moving on to the next day
+  // does not turn it, even to that day's shift.
+  const [page, setPage] = useState(0);
+  const progress = useMotionValue(0);
+  const shown = Math.min(page, pages.length - 1);
+  const paged = pages.length > 1;
+  const buttons = (keys: Shift[]) =>
+    keys.map((key) => (
+      <button
+        className={shiftInput.pattern({ rows: keys.length > 4 || paged })}
+        key={key}
+        onClick={() => {
+          onEnter(key);
+        }}
+        type="button"
+      >
+        <span className={shiftInput.mark}>
+          <ShiftMark shift={key} size={26} />
+        </span>
+        <span>{patterns[key].label}</span>
+      </button>
+    ));
   return (
     <>
       {datePicker}
-      <fieldset
-        aria-label="入力するシフト"
-        className={shiftInput.patterns({ columns: columnsFor(patternKeys) })}
-      >
-        {patternKeys.map((key) => (
-          <button
-            className={shiftInput.pattern({ rows })}
-            key={key}
-            onClick={() => {
-              onEnter(key);
+      {paged ? (
+        <fieldset
+          aria-label="入力するシフト"
+          className={shiftInput.patternPages}
+        >
+          <Pager
+            ends={{ back: shown > 0, forward: shown < pages.length - 1 }}
+            gap={PATTERN_PAGE_GAP}
+            onStep={(direction) => {
+              setPage(shown + direction);
             }}
-            type="button"
-          >
-            <span className={shiftInput.mark}>
-              <ShiftMark shift={key} size={26} />
-            </span>
-            <span>{patterns[key].label}</span>
-          </button>
-        ))}
-      </fieldset>
+            page={String(shown)}
+            progress={progress}
+            renderPage={(offset) => {
+              const keys = pages[shown + offset];
+              return (
+                keys && (
+                  <div className={shiftInput.patterns({ columns: "paged" })}>
+                    {buttons(keys)}
+                  </div>
+                )
+              );
+            }}
+          />
+        </fieldset>
+      ) : (
+        <fieldset
+          aria-label="入力するシフト"
+          className={shiftInput.patterns({
+            columns: columnsFor(patternKeys),
+          })}
+        >
+          {buttons(patternKeys)}
+        </fieldset>
+      )}
       <div className={shiftInput.actions}>
         <button
           className={shiftInput.action}
@@ -2040,6 +2105,15 @@ function ShiftInputControls({
           <Trash2 aria-hidden="true" size={14} />
           消す
         </button>
+        {paged && (
+          <PageDots
+            count={pages.length}
+            current={shown}
+            label="シフトのページ"
+            onPick={setPage}
+            progress={progress}
+          />
+        )}
         <button
           className={shiftInput.action}
           disabled={!canSkip}
