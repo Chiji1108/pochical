@@ -16,7 +16,6 @@ import {
   ChoiceRow,
   DestructiveButton,
   HeaderAction,
-  inlineInput,
   LimitedInput,
   List,
   ListDivider,
@@ -494,7 +493,8 @@ function PatternEditor({
             control={
               <>
                 <LimitedInput
-                  className={inlineInput}
+                  align="end"
+                  look="inline"
                   kind="shiftName"
                   onValueChange={rename}
                   placeholder="例：日勤"

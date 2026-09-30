@@ -103,7 +103,7 @@ import {
   fieldLabel,
   HeaderAction,
   IconButton,
-  inlineInput,
+  fieldStyle,
   LimitedInput,
   LimitedTextArea,
   List,
@@ -8004,7 +8004,8 @@ function GroupEditPage({
           control={
             <>
               <LimitedInput
-                className={inlineInput}
+                align="end"
+                look="inline"
                 kind="groupName"
                 onValueChange={setName}
                 placeholder="例：家族"
@@ -8114,7 +8115,8 @@ function GroupProfilePage({
           control={
             <>
               <LimitedInput
-                className={inlineInput}
+                align="end"
+                look="inline"
                 kind="personName"
                 onValueChange={(name) => {
                   update({ name: name || undefined });
@@ -8464,7 +8466,7 @@ function GroupMarkPage({
               control={
                 <>
                   <input
-                    className={inlineInput}
+                    className={fieldStyle({ align: "end", look: "inline" })}
                     maxLength={2}
                     onChange={(event) => {
                       onChange({
@@ -8585,7 +8587,8 @@ function NewGroupPage({
           control={
             <>
               <LimitedInput
-                className={inlineInput}
+                align="end"
+                look="inline"
                 kind="groupName"
                 onValueChange={(next) => {
                   setName(next);
@@ -8610,7 +8613,8 @@ function NewGroupPage({
           control={
             <>
               <LimitedInput
-                className={inlineInput}
+                align="end"
+                look="inline"
                 kind="personName"
                 onValueChange={setMyName}
                 placeholder="例：さくら"
