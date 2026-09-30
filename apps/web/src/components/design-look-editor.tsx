@@ -16,6 +16,7 @@ import {
   markPreview,
   Note,
   PageHeader,
+  SampleTag,
   Segment,
   SegmentedControl,
 } from "./design-ui";
@@ -133,6 +134,7 @@ export function LookEditorPage({
     <>
       <PageHeader back={back} onBack={onBack} title={title} />
       <div className={markPreview({ alone: true })}>
+        <SampleTag />
         <LookGlyph look={look} size={48} style={tab} />
       </div>
       <SegmentedControl
