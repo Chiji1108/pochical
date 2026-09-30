@@ -934,7 +934,11 @@ export function DesignCalendar({
                 <div className={calendarPage.controls}>
                   <StartArea label="ポチポチ入力" onStart={startInput} />
                 </div>
-                <TabBar active="calendar" onSelect={setTab} />
+                <TabBar
+                  active="calendar"
+                  onSelect={setTab}
+                  shown={tab === "calendar"}
+                />
               </div>
             )}
             {headingMode === "edit" && (
@@ -1051,6 +1055,9 @@ const tabs: { tab: Tab; label: string; icon: typeof CalendarDays }[] = [
 // off its sides, see-through and blurring what runs under it, the picked
 // tab on a round ground of its own. Its words keep a fixed size, as the
 // system's tab bars do. The screen leaves room for it: see Screen.
+// Each tab's screen draws its own bar, so the ground is one shared
+// element that slides from the tab left to the one picked, as iOS's does,
+// while the screens themselves change at once.
 const tabBar = {
   bar: css({
     backdropFilter: "blur(16px) saturate(1.4)",
@@ -1080,22 +1087,38 @@ const tabBar = {
       fontWeight: 500,
       gap: "4px",
       justifyContent: "center",
+      position: "relative",
     },
     variants: {
-      active: {
-        true: { bg: "var(--fill-secondary)", color: "accent.default" },
-      },
+      active: { true: { color: "accent.default" } },
     },
   }),
+  // Under every tab's icon and name, the bar's own layer being the
+  // nearest: sliding, it passes under the tabs between.
+  selection: css({
+    bg: "var(--fill-secondary)",
+    borderRadius: "999px",
+    inset: 0,
+    position: "absolute",
+    zIndex: -1,
+  }),
 };
+// Quick with a touch of give, as the system's selection moves.
+const tabSlide = { bounce: 0.2, type: "spring", visualDuration: 0.35 } as const;
 
+// `shown` is false while another tab is on screen and this bar's screen
+// stays mounted under it, as the calendar's does: only the bar on screen
+// holds the selection, so the selection slides from it to the next.
 export function TabBar({
   active,
   onSelect,
+  shown = true,
 }: {
   active: Tab;
   onSelect: (tab: Tab) => void;
+  shown?: boolean;
 }) {
+  const reduceMotion = useReducedMotion() ?? false;
   return (
     <nav aria-label="タブ" className={tabBar.bar} data-tab-bar="">
       {tabs.map(({ tab, label, icon: Icon }) => (
@@ -1108,6 +1131,13 @@ export function TabBar({
           }}
           type="button"
         >
+          {shown && active === tab && (
+            <motion.span
+              className={tabBar.selection}
+              layoutId="tab-bar-selection"
+              transition={reduceMotion ? { duration: 0 } : tabSlide}
+            />
+          )}
           <Icon aria-hidden="true" size={24} />
           {label}
         </button>

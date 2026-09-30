@@ -1,6 +1,6 @@
 import { BatteryFull, Signal, Wifi } from "lucide-react";
-import { animate } from "motion/react";
-import { useEffect, useRef } from "react";
+import { LayoutGroup, animate } from "motion/react";
+import { useEffect, useId, useRef } from "react";
 import type { CSSProperties, ReactNode, Ref, RefObject } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -272,7 +272,9 @@ function useMouseAsFinger(phoneRef: RefObject<HTMLDivElement | null>) {
 }
 
 // The screens go between the status bar and the home indicator; the
-// theme comes in through `style`.
+// theme comes in through `style`. Elements shared between its screens,
+// like the tab bar's selection, match only within the one phone, as a
+// page like /design/states shows several side by side.
 export function Phone({
   children,
   fullScreen = false,
@@ -285,6 +287,7 @@ export function Phone({
   style?: CSSProperties;
 }) {
   const phoneRef = useRef<HTMLDivElement>(null);
+  const layoutGroup = useId();
   useMouseAsFinger(phoneRef);
   return (
     <div
@@ -301,7 +304,7 @@ export function Phone({
       style={style}
     >
       {!fullScreen && <PhoneStatusBar />}
-      {children}
+      <LayoutGroup id={layoutGroup}>{children}</LayoutGroup>
       {!fullScreen && (
         <div aria-hidden="true" className={phone.homeIndicator} />
       )}
