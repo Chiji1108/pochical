@@ -30,6 +30,7 @@ import {
   Section,
   SortableList,
   SwitchRow,
+  TimeRange,
 } from "./design-ui";
 import {
   guessLook,
@@ -82,24 +83,6 @@ const editor = {
   name: css({ display: "flex", flexDirection: "column", gap: "2px" }),
   time: css({ color: "text.tertiary", textStyle: "footnote" }),
   unnamed: css({ color: "text.tertiary" }),
-  // Start and end, side by side at the row's right.
-  times: css({
-    "& > input": {
-      bg: "background.card",
-      border: "1px solid token(colors.border.default)",
-      borderRadius: "sm",
-      color: "text.primary",
-      font: "inherit",
-      padding: "4px 8px",
-      textStyle: "body",
-    },
-    alignItems: "center",
-    color: "text.tertiary",
-    display: "flex",
-    flex: 1,
-    gap: "4px",
-    justifyContent: "flex-end",
-  }),
 };
 
 // Where the ポチポチ入力's buttons go on to their next page, over the
@@ -515,27 +498,13 @@ function PatternEditor({
             <ListRow
               label="時間"
               control={
-                <>
-                  <span className={editor.times}>
-                    <input
-                      aria-label="開始時刻"
-                      onChange={(event) => {
-                        setDraft({ ...draft, start: event.target.value });
-                      }}
-                      type="time"
-                      value={draft.start}
-                    />
-                    <span aria-hidden="true">–</span>
-                    <input
-                      aria-label="終了時刻"
-                      onChange={(event) => {
-                        setDraft({ ...draft, end: event.target.value });
-                      }}
-                      type="time"
-                      value={draft.end}
-                    />
-                  </span>
-                </>
+                <TimeRange
+                  end={draft.end}
+                  onChange={(field, value) => {
+                    setDraft({ ...draft, [field]: value });
+                  }}
+                  start={draft.start}
+                />
               }
             />
           )}

@@ -17,6 +17,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Time } from "@internationalized/date";
 import {
   Check,
   ChevronDown,
@@ -40,6 +41,7 @@ import {
   useContext,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -56,6 +58,12 @@ import type {
   Ref,
   TextareaHTMLAttributes,
 } from "react";
+import {
+  DateInput,
+  DateSegment,
+  I18nProvider,
+  TimeField as AriaTimeField,
+} from "react-aria-components";
 import { css, cva, cx } from "styled-system/css";
 
 import { spring } from "../lib/motion";
@@ -613,6 +621,124 @@ export const inlineInput = css({
   padding: 0,
   textAlign: "right",
   textStyle: "body",
+});
+
+// A time of day as the platforms' compact time pickers show it: a filled
+// pill with the hour and the minute as their own parts, each picked by a
+// tap and set by typing digits or with ↑↓ (React Aria's TimeField, which
+// HeroUI's is built on). 24-hour, as Japanese schedules write it.
+const timeField = {
+  // A shade deeper than a text field's fill, as iOS's pill, so it shows
+  // on a list's card too.
+  field: css({
+    alignItems: "center",
+    bg: "fill.tertiary",
+    borderRadius: "md",
+    color: "text.primary",
+    cursor: "text",
+    display: "inline-flex",
+    fontVariantNumeric: "tabular-nums",
+    minHeight: "action",
+    padding: "0 12px",
+    textStyle: "body",
+  }),
+  segment: css({
+    "&[data-placeholder]": { color: "text.tertiary" },
+    "&[data-type=literal]": { padding: 0 },
+    _focus: { bg: "accent.fill", color: "accent.onFill" },
+    borderRadius: "xs",
+    outline: "none",
+    padding: "0 2px",
+  }),
+};
+
+// "9:00" as React Aria's Time, and back.
+function timeOf(text: string) {
+  const [hour = 0, minute = 0] = text.split(":").map(Number);
+  return new Time(hour, minute);
+}
+function timeText(time: Time) {
+  return `${String(time.hour).padStart(2, "0")}:${String(time.minute).padStart(2, "0")}`;
+}
+
+export function TimeField({
+  label,
+  value,
+  onValueChange,
+}: {
+  // For screen readers; the row names the time on screen.
+  label: string;
+  // "HH:MM".
+  value: string;
+  onValueChange: (value: string) => void;
+}) {
+  // A part cleared while being retyped leaves the time as it was (React
+  // Aria sends only whole times); left unfinished, the field shows that
+  // time again.
+  const [shown, setShown] = useState(0);
+  const time = useMemo(() => timeOf(value), [value]);
+  return (
+    <I18nProvider locale="ja-JP">
+      <AriaTimeField
+        aria-label={label}
+        hourCycle={24}
+        key={shown}
+        onBlur={() => {
+          setShown(shown + 1);
+        }}
+        onChange={(next) => {
+          if (next) {
+            onValueChange(timeText(next));
+          }
+        }}
+        value={time}
+      >
+        <DateInput className={timeField.field}>
+          {(segment) => (
+            <DateSegment className={timeField.segment} segment={segment} />
+          )}
+        </DateInput>
+      </AriaTimeField>
+    </I18nProvider>
+  );
+}
+
+// A shift's start and end, side by side.
+export function TimeRange({
+  start,
+  end,
+  onChange,
+}: {
+  start: string;
+  end: string;
+  onChange: (field: "start" | "end", value: string) => void;
+}) {
+  return (
+    <span className={timeRange}>
+      <TimeField
+        label="開始時刻"
+        onValueChange={(value) => {
+          onChange("start", value);
+        }}
+        value={start}
+      />
+      <span aria-hidden="true">–</span>
+      <TimeField
+        label="終了時刻"
+        onValueChange={(value) => {
+          onChange("end", value);
+        }}
+        value={end}
+      />
+    </span>
+  );
+}
+
+const timeRange = css({
+  alignItems: "center",
+  color: "text.tertiary",
+  display: "inline-flex",
+  gap: "8px",
 });
 
 // How much of a field's limit is used, after the field while it is in use.
