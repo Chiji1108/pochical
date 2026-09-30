@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { css } from "styled-system/css";
+import { css, cva } from "styled-system/css";
 
 import {
   DesignCalendar,
@@ -44,16 +44,25 @@ export const Route = createFileRoute("/next")({
 // The current proposal for each open design choice, as on /try.
 const variants = parseDesignVariants({});
 
-// The app's own ポチカル sky (おたのしみ): pale light from both top corners
-// and the middle, fading down into the paper.
+// The app's own ポチカル sky (おたのしみ): pale light from both corners of
+// one edge and the middle, fading into the paper. The page opens under it
+// and closes over it.
 const [skyLeft, skyMiddle, skyRight] = [100, 150, 225].map((hue) =>
   oklchToHex({ chroma: 0.04, hue, lightness: 0.95 })
 );
-const skyBackground = [
-  `radial-gradient(60% 80% at 0% 0%, ${skyLeft} 0%, transparent 70%)`,
-  `radial-gradient(60% 80% at 100% 0%, ${skyRight} 0%, transparent 70%)`,
-  `radial-gradient(50% 70% at 50% 20%, ${skyMiddle} 0%, transparent 75%)`,
-].join(", ");
+type SkyEdge = "top" | "bottom";
+const skyBackgrounds: Record<SkyEdge, string> = {
+  bottom: [
+    `radial-gradient(60% 80% at 0% 100%, ${skyLeft} 0%, transparent 70%)`,
+    `radial-gradient(60% 80% at 100% 100%, ${skyRight} 0%, transparent 70%)`,
+    `radial-gradient(50% 70% at 50% 80%, ${skyMiddle} 0%, transparent 75%)`,
+  ].join(", "),
+  top: [
+    `radial-gradient(60% 80% at 0% 0%, ${skyLeft} 0%, transparent 70%)`,
+    `radial-gradient(60% 80% at 100% 0%, ${skyRight} 0%, transparent 70%)`,
+    `radial-gradient(50% 70% at 50% 20%, ${skyMiddle} 0%, transparent 75%)`,
+  ].join(", "),
+};
 const BREATH_SECONDS = 9;
 
 // Where the copy and the phone stand side by side.
@@ -117,20 +126,6 @@ const hero = {
   }),
   // From the very top of the page, under the header too: nothing above it
   // is positioned, so it sits on the page's own ground.
-  sky: css({
-    height: "min(860px, 100vh)",
-    inset: "0 0 auto",
-    maskImage: "linear-gradient(to bottom, black 40%, transparent)",
-    overflow: "hidden",
-    pointerEvents: "none",
-    position: "absolute",
-    zIndex: -1,
-  }),
-  skyLight: css({
-    inset: "-10% -10% 0",
-    position: "absolute",
-    transformOrigin: "50% 0",
-  }),
   store: css({
     "& .store-links": { [WIDE]: { justifyContent: "flex-start" } },
     display: "flex",
@@ -145,16 +140,54 @@ const hero = {
   }),
 };
 
-// The sky over the top of the page, breathing as slowly as the app's.
-function Sky() {
+const sky = {
+  // At the page's top, under the header too: nothing above it is
+  // positioned, so it sits on the page's own ground. At its end, in the
+  // closing section, which keeps it behind its content.
+  root: cva({
+    base: {
+      overflow: "hidden",
+      pointerEvents: "none",
+      position: "absolute",
+      zIndex: -1,
+    },
+    variants: {
+      edge: {
+        // Fading out below too, into the paper before the footer.
+        bottom: {
+          inset: 0,
+          maskImage:
+            "linear-gradient(to top, transparent, black 25%, black 45%, transparent)",
+        },
+        top: {
+          height: "min(860px, 100vh)",
+          inset: "0 0 auto",
+          maskImage: "linear-gradient(to bottom, black 40%, transparent)",
+        },
+      },
+    },
+  }),
+  light: cva({
+    base: { position: "absolute" },
+    variants: {
+      edge: {
+        bottom: { inset: "0 -10% -10%", transformOrigin: "50% 100%" },
+        top: { inset: "-10% -10% 0", transformOrigin: "50% 0" },
+      },
+    },
+  }),
+};
+
+// The sky, breathing as slowly as the app's.
+function Sky({ edge }: { edge: SkyEdge }) {
   const still = useReducedMotion() ?? false;
   return (
-    <div aria-hidden="true" className={hero.sky}>
+    <div aria-hidden="true" className={sky.root({ edge })}>
       <motion.div
         animate={still ? undefined : { scale: 1.08, x: "2%" }}
-        className={hero.skyLight}
+        className={sky.light({ edge })}
         initial={{ scale: 1, x: "-2%" }}
-        style={{ background: skyBackground }}
+        style={{ background: skyBackgrounds[edge] }}
         transition={{
           duration: BREATH_SECONDS,
           ease: "easeInOut",
@@ -542,10 +575,58 @@ function Features() {
   );
 }
 
+// The page's end: the store links again for those who read this far, over
+// the sky the page opened under.
+const closing = {
+  icon: css({ borderRadius: "14px" }),
+  release: css({ color: "var(--muted)", fontSize: "11px" }),
+  root: css({
+    [WIDE]: { padding: "120px 48px 160px" },
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "24px",
+    isolation: "isolate",
+    padding: "96px 16px 120px",
+    position: "relative",
+    textAlign: "center",
+  }),
+  title: css({
+    fontSize: "clamp(26px, 3vw, 34px)",
+    fontWeight: 700,
+    letterSpacing: "0.01em",
+    lineHeight: 1.5,
+  }),
+};
+
+function Closing() {
+  return (
+    <section aria-labelledby="closing-title" className={closing.root}>
+      <Sky edge="bottom" />
+      <img
+        alt=""
+        className={closing.icon}
+        height={64}
+        src="/icon.png"
+        width={64}
+      />
+      <h2 className={closing.title} id="closing-title">
+        今月のシフトから、
+        <br />
+        ポチッと。
+      </h2>
+      <StoreLinks />
+      <p className={closing.release}>
+        iPhone・Android 向けに、ただいま準備中。
+      </p>
+    </section>
+  );
+}
+
 function NextHome() {
   return (
     <main className={page} id="main">
-      <Sky />
+      <Sky edge="top" />
       <section className={hero.root}>
         <div className={hero.copy}>
           <p className={hero.eyebrow}>シフトカレンダー</p>
@@ -561,7 +642,7 @@ function NextHome() {
             <br />
             家族や友だちとも、そのまま共有。
           </p>
-          <div className={hero.store}>
+          <div className={hero.store} id="download">
             <StoreLinks />
             <p className={hero.release}>
               iPhone・Android 向けに、ただいま準備中。
@@ -571,6 +652,7 @@ function NextHome() {
         <HeroDemo />
       </section>
       <Features />
+      <Closing />
     </main>
   );
 }
