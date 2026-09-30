@@ -1,5 +1,11 @@
 import { Users } from "lucide-react";
-import { createContext, useContext } from "react";
+import {
+  createContext,
+  useContext,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { css, cva } from "styled-system/css";
 
 import type { WidgetDay, WidgetEntry } from "../lib/design-widgets";
@@ -585,6 +591,10 @@ export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
 
 // ── 今日の詳細 ───────────────────────────────────────────────────────────
 
+// Where there is room, as on Android's 2×2 and 4×2, the memo gets more
+// lines; 一緒に働く人 keep to the foot either way.
+const DETAIL_ROOMY = 150;
+
 const detail = {
   headline: css({
     fontVariantNumeric: "tabular-nums",
@@ -596,15 +606,39 @@ const detail = {
     color: "text.secondary",
     display: "flex",
     gap: "4px",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
+    minWidth: 0,
     textStyle: "footnote",
+  }),
+  // The names, the longest way that fits the line.
+  names: css({
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+    position: "relative",
+    textOverflow: "ellipsis",
     whiteSpace: "nowrap",
+  }),
+  // Every way of writing the names, laid out unseen to be measured.
+  namesProbe: css({
+    "& > span": { display: "block", width: "max-content" },
+    left: 0,
+    position: "absolute",
+    top: 0,
+    visibility: "hidden",
   }),
   note: cva({
     base: { margin: 0, textStyle: "footnote" },
-    variants: { lines: { 2: { lineClamp: 2 }, 3: { lineClamp: 3 } } },
+    variants: {
+      lines: {
+        2: { lineClamp: 2 },
+        3: { lineClamp: 3 },
+        4: { lineClamp: 4 },
+        5: { lineClamp: 5 },
+      },
+    },
   }),
+  // In the small one, 一緒に働く人 sit at the foot.
+  pinned: css({ marginTop: "auto" }),
   root: css({
     display: "flex",
     flexDirection: "column",
@@ -627,15 +661,74 @@ const detail = {
   wide: css({ display: "flex", gap: "16px", height: "100%" }),
 };
 
+// The ways to write 一緒に働く人, longest first: everyone, then fewer
+// names with ほか and how many more, then the count alone.
+function memberLines(names: string[]) {
+  const shortened = Array.from(
+    { length: names.length - 1 },
+    (_, index) => names.length - 1 - index
+  ).map(
+    (kept) => `${names.slice(0, kept).join("・")} ほか${names.length - kept}人`
+  );
+  return [names.join("・"), ...shortened, `${names.length}人`];
+}
+
+// The longest of those that fits the line, as SwiftUI's ViewThatFits
+// picks; the count alone, cut short, if even that does not.
+function MemberNames({ names }: { names: string[] }) {
+  const lines = memberLines(names);
+  const box = useRef<HTMLSpanElement>(null);
+  const probes = useRef<(HTMLSpanElement | null)[]>([]);
+  const [shown, setShown] = useState(0);
+  // A widget's size is fixed, so the names are measured once; a new set
+  // of people comes in as a new MemberNames (keyed by them).
+  const last = lines.length - 1;
+  useLayoutEffect(() => {
+    const room = box.current?.clientWidth ?? 0;
+    const fits = probes.current.findIndex(
+      (probe) => probe !== null && probe.offsetWidth <= room
+    );
+    setShown(fits === -1 ? last : fits);
+  }, [last]);
+  return (
+    <span aria-hidden="true" className={detail.names} ref={box}>
+      {lines[shown]}
+      <span aria-hidden="true" className={detail.namesProbe}>
+        {lines.map((line, index) => (
+          <span
+            key={line}
+            ref={(probe) => {
+              probes.current[index] = probe;
+            }}
+          >
+            {line}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
 // The memo and 一緒に働く人 of a day, as far as it has them.
-function DayExtras({ day, lines }: { day: WidgetDay; lines: 2 | 3 }) {
+function DayExtras({
+  day,
+  lines,
+  pinMembers = false,
+}: {
+  day: WidgetDay;
+  lines: 2 | 3 | 4 | 5;
+  pinMembers?: boolean;
+}) {
   return (
     <>
       {day.note && <p className={detail.note({ lines })}>{day.note}</p>}
       {day.members.length > 0 && (
-        <span className={detail.members}>
-          <Users aria-label="一緒に働く人" size={14} />
-          {day.members.join("・")}
+        <span
+          className={`${detail.members} ${pinMembers ? detail.pinned : ""}`}
+        >
+          <span className={srOnly}>一緒に働く人 {day.members.join("、")}</span>
+          <Users aria-hidden="true" size={14} />
+          <MemberNames key={day.members.join("・")} names={day.members} />
         </span>
       )}
     </>
@@ -644,6 +737,7 @@ function DayExtras({ day, lines }: { day: WidgetDay; lines: 2 | 3 }) {
 
 // Today's time with its memo and 一緒に働く人.
 export function DetailSmall({ entry }: { entry: WidgetEntry }) {
+  const roomy = useContext(WidgetSizeContext).height >= DETAIL_ROOMY;
   const day = entry.today;
   return (
     <div className={detail.root}>
@@ -651,16 +745,17 @@ export function DetailSmall({ entry }: { entry: WidgetEntry }) {
         <span className={today.date}>
           {monthDay(day.date)}({day.weekday})
         </span>
-        <DayMark day={day} size={28} />
+        <DayMark day={day} size={roomy ? 32 : 28} />
       </div>
       <Headline className={detail.headline} day={day} />
-      <DayExtras day={day} lines={2} />
+      <DayExtras day={day} lines={roomy ? 4 : 2} pinMembers />
     </div>
   );
 }
 
 // Today large on the left, its memo and 一緒に働く人 beside.
 export function DetailMedium({ entry }: { entry: WidgetEntry }) {
+  const roomy = useContext(WidgetSizeContext).height >= DETAIL_ROOMY;
   const day = entry.today;
   return (
     <div className={detail.wide}>
@@ -669,7 +764,7 @@ export function DetailMedium({ entry }: { entry: WidgetEntry }) {
       </div>
       <span aria-hidden="true" className={week.rule} />
       <div className={detail.side}>
-        <DayExtras day={day} lines={3} />
+        <DayExtras day={day} lines={roomy ? 5 : 3} />
       </div>
     </div>
   );
