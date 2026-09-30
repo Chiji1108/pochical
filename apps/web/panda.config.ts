@@ -20,15 +20,16 @@ export default defineConfig({
       hover: ["@media (hover: hover)", "&:is(:hover, [data-hover])"],
     },
   },
-  // The design pages, /demo and /try (marked .design-page): the site's
-  // header and footer give way to the phone, and buttons take the text
-  // color and focus ring around them unless a piece sets its own.
+  // The design pages, /demo and /try (marked .design-page), and the phone
+  // wherever it is shown, as on the top page (.dc-phone): buttons take the
+  // text color and focus ring around them unless a piece sets its own. On
+  // the design pages, the site's header and footer give way to the phone.
   globalCss: {
-    ".design-page :is(button, a):focus-visible": {
+    ":is(.design-page, .dc-phone) :is(button, a):focus-visible": {
       outline: "3px solid var(--accent-focus)",
       outlineOffset: "4px",
     },
-    ".design-page button": { color: "inherit" },
+    ":is(.design-page, .dc-phone) button": { color: "inherit" },
     "body:has(.design-page) > :is(.site-header, .site-footer)": {
       display: "none",
     },

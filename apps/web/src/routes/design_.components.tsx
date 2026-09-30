@@ -529,14 +529,14 @@ function Chips() {
 }
 
 function MenuSample() {
-  const [layout, setLayout] = useState<"weeks" | "days">("days");
+  const [layout, setLayout] = useState<"days" | "weeks">("days");
   return (
-    <PullDownMenu label={layout === "days" ? "日ごと" : "週ごと"}>
+    <PullDownMenu label={layout === "days" ? "一覧" : "週ごと"}>
       <MenuPicker
         onValueChange={setLayout}
         options={[
+          { label: "一覧", value: "days" },
           { label: "週ごと", value: "weeks" },
-          { label: "日ごと", value: "days" },
         ]}
         value={layout}
       />
@@ -589,7 +589,7 @@ function Sheets() {
       </Item>
       <Item
         name="PullDownMenu"
-        where="グループのシフト表(週ごと・日ごと・人ごと)"
+        where="グループのシフト表(一覧・週ごと・1人ずつ)"
       >
         <MenuSample />
       </Item>

@@ -149,7 +149,7 @@ function sidewaysScroller(from: Element, device: HTMLElement) {
 }
 
 // A mouse drags what scrolls sideways, as a finger would on the phone, so
-// rows like 人ごと's people can be reached from a computer without a
+// rows like 1人ずつ's people can be reached from a computer without a
 // trackpad. Only the stand-in phone needs it: on the device, and in the
 // native apps, the finger does this already. Pagers drag themselves;
 // fields and text are left to the mouse.
