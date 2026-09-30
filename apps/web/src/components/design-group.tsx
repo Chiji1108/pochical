@@ -384,7 +384,7 @@ const cousins = (): Member[] => [
   },
 ];
 
-// Old school friends in all kinds of work: a group too wide for 日ごと.
+// Old school friends in all kinds of work: a group too wide for 一覧.
 const schoolFriends = (): Member[] => [
   ...[
     ["kana", "かな", 0, 1027, "natural"],
@@ -3426,7 +3426,7 @@ const smallWeekday = css({
 // A day off is a light tile behind its mark, with a little room around
 // it, in the same color whatever the person's pattern; a day everyone is
 // off joins the tiles into one band, down a date's column in 週ごと, along
-// a day's row in 日ごと. The picked day is framed the same way, as one
+// a day's row in 一覧. The picked day is framed the same way, as one
 // piece.
 const offTile = {
   bg: "accent.container",
@@ -3640,7 +3640,7 @@ const weekCell = cva({
   },
 });
 
-// 日ごと: a row per day and a column per person, like a printed roster.
+// 一覧: a row per day and a column per person, like a printed roster.
 // Up to seven people the page scrolls and the frame shows whole, one
 // scroll only; more scroll sideways inside it, the dates and your own
 // column pinned, over the cells' tiles, with an edge only then.
@@ -4130,7 +4130,7 @@ const shiftsPage = {
   }),
 };
 
-// 人ごと: who to show, a row of chips that scrolls sideways out to the
+// 1人ずつ: who to show, a row of chips that scrolls sideways out to the
 // screen's edges, so a half-shown name says there are more.
 const people = {
   choice: css({
@@ -4511,15 +4511,15 @@ function daysFromToday(date: Date) {
 
 const suggestionCount = 4;
 
-// 日ごと reads most easily, so it comes first while everyone fits across;
+// 一覧 reads most easily, so it comes first while everyone fits across;
 // past that it scrolls sideways, and 週ごと, which grows only downwards,
-// takes over. 人ごと shows one member at a time in a calendar like yours.
-type Layout = "weeks" | "days" | "person";
+// takes over. 1人ずつ shows one member at a time in a calendar like yours.
+type Layout = "days" | "weeks" | "person";
 
 const layoutOptions: { value: Layout; label: string }[] = [
+  { label: "一覧", value: "days" },
   { label: "週ごと", value: "weeks" },
-  { label: "日ごと", value: "days" },
-  { label: "人ごと", value: "person" },
+  { label: "1人ずつ", value: "person" },
 ];
 
 function defaultLayout(count: number): Layout {
@@ -4675,7 +4675,7 @@ function PagedShifts({
   onMember: (member: Member) => void;
 }) {
   const { weekStart } = useWeek();
-  // How far 人ごと's pages are dragged, which the month row follows, and
+  // How far 1人ずつ's pages are dragged, which the month row follows, and
   // the month a swipe last landed on, whose name the drag brought in.
   const pageDrag = useMotionValue(0);
   const [swipedTo, setSwipedTo] = useState<number>();
@@ -4683,7 +4683,7 @@ function PagedShifts({
     setSwipedTo(undefined);
     onMonth(target);
   };
-  // Whom 人ごと shows; chosen above the month, like a filter.
+  // Whom 1人ずつ shows; chosen above the month, like a filter.
   const [personId, setPersonId] = useState(
     group.members.find((member) => !member.me)?.id ?? group.members[0].id
   );
@@ -4887,7 +4887,7 @@ const monthSpan = 24;
 // Heights until a row is drawn and measured, as they come out, so that
 // measuring rows above the sight does not move the list.
 // A month's heading, over the row of its みんな休み when it has any; the
-// list of months sets it apart by more room above in 日ごと.
+// list of months sets it apart by more room above in 一覧.
 const headingEstimate = 120;
 const quietHeadingEstimate = 54;
 const dayHeadingRoom = 24;
@@ -4898,7 +4898,7 @@ const weekPersonEstimate = 30;
 const weekGap = 12;
 
 // A row of the list of months: a month's heading, or its days, one day
-// for 日ごと and a week for 週ごと.
+// for 一覧 and a week for 週ごと.
 type MonthListRow =
   | { kind: "heading"; key: string; month: Date; together: Together }
   | { kind: "days"; key: string; month: Date; days: Date[] };
@@ -4937,7 +4937,7 @@ function monthListRows(
   return rows;
 }
 
-// 日ごと and 週ごと as one list of months, as the platforms' calendar lists
+// 一覧 and 週ごと as one list of months, as the platforms' calendar lists
 // scroll: each month under its heading with its みんな休み, two years
 // either side of today, only the rows in sight drawn (TanStack Virtual, as
 // LazyVStack and LazyColumn). The month in sight names itself in the row
@@ -5243,7 +5243,7 @@ const monthDivider = {
 };
 
 // The month's heading in the list of months, over the row of its days
-// everyone is off, the row 人ごと has under its month, the whole width to
+// everyone is off, the row 1人ずつ has under its month, the whole width to
 // press. Without any, a note beside the name says there are none, or that
 // days not entered yet leave it open: no row that cannot be pressed.
 function MonthDivider({
@@ -5288,7 +5288,7 @@ function MonthDivider({
 // The shift table's month: its name, which opens a choice of months, and
 // the way back to today's day or month while it is out of sight. Over a
 // list of months, it names the month in sight, rolling to the next as the
-// list scrolls on, the way it went. Over 人ごと's pages (`progress`), the
+// list scrolls on, the way it went. Over 1人ずつ's pages (`progress`), the
 // name and 今月 follow the drag, as over the calendar.
 function MonthRow({
   month,
@@ -6192,7 +6192,7 @@ function WeekBlock({
   );
 }
 
-// 人ごと: who to show, above the month.
+// 1人ずつ: who to show, above the month.
 function PeoplePicker({
   members,
   picked,
@@ -6251,7 +6251,7 @@ function PeoplePicker({
   );
 }
 
-// 人ごと: one member at a time, in the same kind of calendar as your own.
+// 1人ずつ: one member at a time, in the same kind of calendar as your own.
 // Shift names always show under the marks and days off are always lit,
 // whatever the member's style, so no separate list of their patterns is
 // needed. A swipe turns it, as the calendar tab: the weekdays stay and
@@ -6350,7 +6350,7 @@ function PersonNote({ member }: { member: Member }) {
   return <Note>薄い枠の日は、自分も休みの日です。</Note>;
 }
 
-// One day of 人ごと, drawn like a day of your own calendar: the shift name
+// One day of 1人ずつ, drawn like a day of your own calendar: the shift name
 // always shows, a day off takes its pattern's tint, and a day you are both
 // off is framed. Pressing it opens everyone's shifts that day.
 function PersonDay({

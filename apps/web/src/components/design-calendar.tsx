@@ -2178,9 +2178,9 @@ export const dayCell = cva({
 // Today, wherever a date is shown: the date in the accent, heavier, so
 // it shows on a day off's tile too. Only its color and weight change,
 // so nothing around it moves or is covered, as the weekday beside the
-// date in 日ごと would be by a shape. The accent is what says today on
+// date in 一覧 would be by a shape. The accent is what says today on
 // every screen; each layout may add what suits it, as the calendar's
-// frame round the day and 日ごと's bar at the row's start.
+// frame round the day and 一覧's bar at the row's start.
 export const todayMark = css({ color: "accent.default", fontWeight: 800 });
 
 export const dayParts = {
