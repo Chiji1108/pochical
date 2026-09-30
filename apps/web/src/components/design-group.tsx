@@ -25,7 +25,12 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
-import { useMotionValue, useReducedMotion } from "motion/react";
+import {
+  AnimatePresence,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+} from "motion/react";
 import type { MotionValue } from "motion/react";
 import {
   useContext,
@@ -2486,7 +2491,14 @@ const chatStyle = {
       tool: { true: { borderRadius: "8px", width: "32px" } },
     },
   }),
-  composerTools: css({ display: "flex", flexShrink: 0 }),
+  composerToolRow: css({ display: "flex" }),
+  composerTools: css({
+    display: "flex",
+    flexShrink: 0,
+    // The folding tools stay inside while they narrow.
+    overflow: "hidden",
+    position: "relative",
+  }),
   composerInput: css({
     bg: "fill.quaternary",
     border: 0,
@@ -3301,43 +3313,66 @@ function ChatPage({
           tabIndex={-1}
           type="file"
         />
-        <span className={chatStyle.composerTools}>
-          {toolsFolded ? (
-            <button
-              aria-label="写真と日にちのボタンを表示"
-              className={chatStyle.composerButton({ tool: true })}
-              onClick={() => {
-                setToolsOpen(true);
-              }}
-              type="button"
-            >
-              <ChevronRight aria-hidden="true" size={22} />
-            </button>
-          ) : (
-            <>
-              <button
-                aria-label="写真を送る"
+        {/* The tools narrow into a › and widen back, the field following
+            them, while the icons and the › fade one into the other. */}
+        <motion.span
+          animate={{
+            width: toolsFolded ? toolWidth : toolWidth * toolCount,
+          }}
+          className={chatStyle.composerTools}
+          initial={false}
+          transition={toolFold}
+        >
+          <AnimatePresence initial={false} mode="popLayout">
+            {toolsFolded ? (
+              <motion.button
+                animate={{ opacity: 1, scale: 1 }}
+                aria-label="写真と日にちのボタンを表示"
                 className={chatStyle.composerButton({ tool: true })}
+                exit={{ opacity: 0, scale: 0.6 }}
+                initial={{ opacity: 0, scale: 0.6 }}
+                key="more"
                 onClick={() => {
-                  photoInputRef.current?.click();
+                  setToolsOpen(true);
                 }}
+                transition={toolFold}
                 type="button"
               >
-                <ImageIcon aria-hidden="true" size={20} />
-              </button>
-              <button
-                aria-label="日にちを共有"
-                className={chatStyle.composerButton({ tool: true })}
-                onClick={() => {
-                  setSharing(true);
-                }}
-                type="button"
+                <ChevronRight aria-hidden="true" size={22} />
+              </motion.button>
+            ) : (
+              <motion.span
+                animate={{ opacity: 1, x: 0 }}
+                className={chatStyle.composerToolRow}
+                exit={{ opacity: 0, x: -toolWidth }}
+                initial={{ opacity: 0, x: -toolWidth }}
+                key="tools"
+                transition={toolFold}
               >
-                <CalendarPlus aria-hidden="true" size={20} />
-              </button>
-            </>
-          )}
-        </span>
+                <button
+                  aria-label="写真を送る"
+                  className={chatStyle.composerButton({ tool: true })}
+                  onClick={() => {
+                    photoInputRef.current?.click();
+                  }}
+                  type="button"
+                >
+                  <ImageIcon aria-hidden="true" size={20} />
+                </button>
+                <button
+                  aria-label="日にちを共有"
+                  className={chatStyle.composerButton({ tool: true })}
+                  onClick={() => {
+                    setSharing(true);
+                  }}
+                  type="button"
+                >
+                  <CalendarPlus aria-hidden="true" size={20} />
+                </button>
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.span>
         <input
           aria-label="メッセージ"
           className={chatStyle.composerInput}
@@ -3430,6 +3465,12 @@ function ChatPage({
 }
 
 const flashMilliseconds = 1200;
+
+// The composer's tools: each one's width, how many, and how they fold
+// into a › and back, as quick as the calendar's own fold.
+const toolWidth = 32;
+const toolCount = 2;
+const toolFold = { bounce: 0, type: "spring", visualDuration: 0.25 } as const;
 
 // A photo of yours on its way up, or one that could not be sent.
 type Upload = "sending" | "failed";
