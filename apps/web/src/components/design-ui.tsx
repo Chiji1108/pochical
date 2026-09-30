@@ -31,6 +31,7 @@ import {
   useMotionValue,
   useMotionValueEvent,
   useReducedMotion,
+  useTransform,
 } from "motion/react";
 import type { MotionValue } from "motion/react";
 import {
@@ -1438,6 +1439,137 @@ export const colorGrid = css({
   padding: 0,
 });
 
+// Dots under a pager, one for each page, the one shown stretched into a
+// short bar, so pages to the side are not missed. It tells the page by
+// its shape as well as its shade. The bar follows the swipe, shrinking
+// back to a dot as the next one grows, as the month's name follows the
+// calendar's swipe: moving only once the page has landed felt late.
+const pageDots = {
+  bar: css({
+    bg: "text.quaternary",
+    borderRadius: "999px",
+    height: "8px",
+    overflow: "hidden",
+    position: "relative",
+  }),
+  button: css({
+    _focusVisible: {
+      outline: "2px solid token(colors.accent.default)",
+      outlineOffset: "-2px",
+    },
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    borderRadius: "999px",
+    cursor: "pointer",
+    display: "flex",
+    height: "24px",
+    justifyContent: "center",
+    padding: "0 4px",
+  }),
+  // The shown page's shade, over the dot as much as the page shows.
+  fill: css({ bg: "text.primary", inset: 0, position: "absolute" }),
+  group: css({
+    border: 0,
+    display: "flex",
+    justifyContent: "center",
+    margin: 0,
+    padding: 0,
+  }),
+};
+const DOT_SIZE = 8;
+const BAR_LENGTH = 20;
+
+export function PageDots({
+  count,
+  current,
+  label,
+  onPick,
+  progress,
+}: {
+  count: number;
+  current: number;
+  // What the pages hold, for a screen reader.
+  label: string;
+  onPick: (page: number) => void;
+  // The pager's own, how far it is swiped toward the next page.
+  progress?: MotionValue<number>;
+}) {
+  const reduceMotion = useReducedMotion() ?? false;
+  const still = useMotionValue(0);
+  const swipe = progress ?? still;
+  // Where the bar is, in pages: the page shown, plus how far it is
+  // swiped.
+  const position = useMotionValue(current);
+  const base = useRef(current);
+  // Landed by a swipe, the bar is already on the new page; turned by a
+  // dot, it slides there.
+  const landed = useRef(false);
+  useMotionValueEvent(swipe, "change", (share) => {
+    if (Math.abs(share) === 1) {
+      landed.current = true;
+    }
+    position.stop();
+    position.set(base.current + share);
+  });
+  useLayoutEffect(() => {
+    if (base.current === current) {
+      return;
+    }
+    base.current = current;
+    if (landed.current || reduceMotion) {
+      position.set(current);
+    } else {
+      animate(position, current, {
+        bounce: 0,
+        type: "spring",
+        visualDuration: 0.3,
+      });
+    }
+    landed.current = false;
+  }, [current, position, reduceMotion]);
+  return (
+    <fieldset aria-label={label} className={pageDots.group}>
+      {Array.from({ length: count }, (_, page) => (
+        <button
+          aria-current={page === current}
+          aria-label={`${page + 1}ページ目`}
+          className={pageDots.button}
+          key={page}
+          onClick={() => {
+            onPick(page);
+          }}
+          type="button"
+        >
+          <PageDot page={page} position={position} />
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
+// One dot, as long and as dark as the bar is on it.
+function PageDot({
+  page,
+  position,
+}: {
+  page: number;
+  position: MotionValue<number>;
+}) {
+  const share = useTransform(position, (at) =>
+    Math.max(0, 1 - Math.abs(at - page))
+  );
+  const width = useTransform(
+    share,
+    (on) => DOT_SIZE + (BAR_LENGTH - DOT_SIZE) * on
+  );
+  return (
+    <motion.span className={pageDots.bar} style={{ width }}>
+      <motion.span className={pageDots.fill} style={{ opacity: share }} />
+    </motion.span>
+  );
+}
+
 // The focus ring sits outside a tile, and inside a row, whose list clips.
 const choiceStyle = cva({
   base: {
@@ -2086,16 +2218,26 @@ const FLICK_SPEED = 400;
 // it would come to rest.
 const FLICK_CARRY = 0.2;
 
+// Months and weeks run on both ways.
+const endless = { back: true, forward: true };
+
+// A trackpad's sideways swipe arrives as wheel events with no letting go;
+// it has ended once none has come for this long.
+const WHEEL_END_MS = 120;
+
 // Pages that follow the finger sideways, as SwiftUI's TabView(.page) and
-// Compose's HorizontalPager, for months or weeks without end. Only the
-// pages before and after are drawn; once a swipe lands, `onStep` moves on
-// and the pager quietly goes back to the middle, which now shows the new
-// page. Motion does the dragging.
+// Compose's HorizontalPager: months or weeks without end, or a few pages
+// with ends, as the テーマ. Only the pages before and after are drawn;
+// once a swipe lands, `onStep` moves on and the pager quietly goes back
+// to the middle, which now shows the new page. Motion does the dragging,
+// by finger or mouse; a trackpad's two-finger swipe turns it too.
 export function Pager({
   page,
   onStep,
   renderPage,
   progress,
+  ends = endless,
+  gap = 0,
 }: {
   // Names the page shown, so the pager recenters when it changes.
   page: string;
@@ -2104,6 +2246,11 @@ export function Pager({
   // Set to how far the pages are dragged, -1 to 1 toward the next, for
   // what follows the drag, like the month's name over the calendar.
   progress?: MotionValue<number>;
+  // Whether there is a page back and a page forward. At an end the drag
+  // only gives a little, and the pager does not turn.
+  ends?: { back: boolean; forward: boolean };
+  // Room between pages, seen while they are dragged, in pixels.
+  gap?: number;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -2111,7 +2258,7 @@ export function Pager({
   const x = useMotionValue(0);
   useMotionValueEvent(x, "change", (at) => {
     const pageWidth = viewportRef.current?.offsetWidth ?? 0;
-    const share = pageWidth > 0 ? -at / pageWidth : 0;
+    const share = pageWidth > 0 ? -at / (pageWidth + gap) : 0;
     progress?.set(Math.min(Math.max(share, -1), 1));
   });
   const reduceMotion = useReducedMotion() ?? false;
@@ -2179,6 +2326,7 @@ export function Pager({
   // than turning.
   const land = (velocity: number, taken: boolean) => {
     const pageWidth = viewportRef.current?.offsetWidth ?? 0;
+    const stride = pageWidth + gap;
     if (pageWidth === 0) {
       x.jump(0);
       return;
@@ -2191,12 +2339,18 @@ export function Pager({
     if (turned) {
       direction = rest < 0 ? 1 : -1;
     }
+    if (
+      (direction === 1 && !ends.forward) ||
+      (direction === -1 && !ends.back)
+    ) {
+      direction = 0;
+    }
     const settle = () => {
       if (direction !== 0) {
         onStep(direction);
       }
     };
-    const target = -direction * pageWidth;
+    const target = -direction * stride;
     if (reduceMotion) {
       x.jump(target);
       settle();
@@ -2210,12 +2364,63 @@ export function Pager({
       visualDuration: 0.3,
     });
   };
+  const landRef = useRef(land);
+  landRef.current = land;
+  const reach = useRef({ back: 0, forward: 0 });
+  reach.current = {
+    back: ends.back ? width + gap : 0,
+    forward: ends.forward ? width + gap : 0,
+  };
+  // A trackpad's sideways swipe moves the pages as a finger would. Past a
+  // quarter it turns them there and then, and the rest of the swipe, which
+  // runs on as the trackpad coasts, is let pass; stopped short, the pages
+  // go back. Scrolling up and down is left to the page.
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      return;
+    }
+    let ended: ReturnType<typeof setTimeout> | undefined;
+    let turned = false;
+    const wheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) {
+        return;
+      }
+      event.preventDefault();
+      clearTimeout(ended);
+      ended = setTimeout(() => {
+        if (!turned) {
+          landRef.current(0, false);
+        }
+        turned = false;
+      }, WHEEL_END_MS);
+      if (turned) {
+        return;
+      }
+      const { back, forward } = reach.current;
+      const at = Math.min(Math.max(x.get() - event.deltaX, -forward), back);
+      x.set(at);
+      const pageWidth = viewport.offsetWidth;
+      if (Math.abs(at) > pageWidth * TURN_SHARE) {
+        turned = true;
+        landRef.current(0, false);
+      }
+    };
+    viewport.addEventListener("wheel", wheel, { passive: false });
+    return () => {
+      clearTimeout(ended);
+      viewport.removeEventListener("wheel", wheel);
+    };
+  }, [x]);
   return (
     <div className={pager.viewport} ref={viewportRef}>
       <motion.div
         className={pager.drag}
         drag="x"
-        dragConstraints={{ left: -width, right: width }}
+        dragConstraints={{
+          left: ends.forward ? -(width + gap) : 0,
+          right: ends.back ? width + gap : 0,
+        }}
         dragDirectionLock
         dragElastic={0.1}
         dragMomentum={false}
@@ -2241,7 +2446,15 @@ export function Pager({
         }}
         style={{ x }}
       >
-        <div className={pager.container} ref={containerRef}>
+        <div
+          className={pager.container}
+          ref={containerRef}
+          style={
+            gap > 0
+              ? { gap, transform: `translateX(calc(-100% - ${gap}px))` }
+              : undefined
+          }
+        >
           {pageOffsets.map((offset) => (
             // The pages beside the one shown are only there to be dragged in.
             <div

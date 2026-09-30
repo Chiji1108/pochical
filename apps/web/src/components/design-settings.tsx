@@ -1,4 +1,5 @@
 import { ArrowRight, Check, CloudCheck } from "lucide-react";
+import { useMotionValue } from "motion/react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
@@ -64,6 +65,8 @@ import {
   List,
   ListRow,
   Note,
+  PageDots,
+  Pager,
   OptionCard,
   optionList,
   PageHeader,
@@ -524,7 +527,13 @@ const systemAlert = {
   }),
 };
 
-// The テーマ cards, three across.
+// Between pages, wider than between cards, so a swipe shows where one ends.
+const THEME_PAGE_GAP = 16;
+
+// The テーマ cards, three to a page of a pager with dots under it, as
+// Telegram's 外観 shows its themes: the preview stays in sight while
+// trying them, where a grid of four rows pushed the rest of スタイル
+// down, and the dots tell there are more to the side.
 const themeCard = {
   // A card on the screen, as the テーマ's lists and sheets sit on it.
   card: css({
@@ -554,14 +563,13 @@ const themeCard = {
     textAlign: "center",
     textStyle: "footnote",
   }),
-  grid: css({
-    border: 0,
+  // One page: three across, as the grid had them.
+  page: css({
     display: "grid",
     gap: "8px",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    margin: 0,
-    padding: 0,
   }),
+  pager: css({ border: 0, margin: 0, minWidth: 0, padding: 0 }),
   // The theme's own screen, in the current light or dark.
   sample: css({
     bg: "background.base",
@@ -1961,6 +1969,13 @@ function ShiftColorsChoices() {
   );
 }
 
+// The テーマ in rows of three, each row a page: the basics, the soft ones,
+// the colors, the nights.
+const themePages = Array.from(
+  { length: Math.ceil(presets.length / 3) },
+  (_, page) => presets.slice(page * 3, page * 3 + 3)
+);
+
 // The shifts on a テーマ's card, as they might follow each other in a week.
 const presetSampleShifts: Shift[] = ["day", "night", "after", "off"];
 
@@ -1971,37 +1986,90 @@ const presetSampleShifts: Shift[] = ["day", "night", "after", "off"];
 function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
   const current = useSettings((state) => state.device.preset);
   const setPreset = useSettings((state) => state.setPreset);
+  // Opens on the page of the テーマ in use.
+  const [page, setPage] = useState(() =>
+    Math.max(
+      themePages.findIndex((themes) =>
+        themes.some((preset) => preset.id === current)
+      ),
+      0
+    )
+  );
+  const progress = useMotionValue(0);
   return (
-    <ChoiceGrid
-      className={themeCard.grid}
-      label="テーマ"
-      onValueChange={setPreset}
-      value={current}
-    >
-      {presets.map((preset) => (
-        <Choice className={themeCard.choice} key={preset.id} value={preset.id}>
-          <span
-            aria-hidden="true"
-            className={themeCard.sample}
-            style={themeStyle(preset.id, scheme)}
-          >
-            <ColorSchemeContext value={scheme}>
-              <PresetContexts id={preset.id}>
-                <span className={themeCard.card}>
-                  {presetSampleShifts.map((shift) => (
-                    <ShiftMark key={shift} shift={shift} size={14} />
+    <>
+      <ChoiceGrid
+        className={themeCard.pager}
+        label="テーマ"
+        onValueChange={setPreset}
+        value={current}
+      >
+        <Pager
+          ends={{ back: page > 0, forward: page < themePages.length - 1 }}
+          gap={THEME_PAGE_GAP}
+          onStep={(direction) => {
+            setPage((shown) => shown + direction);
+          }}
+          page={String(page)}
+          progress={progress}
+          renderPage={(offset) => {
+            const themes = themePages[page + offset];
+            return (
+              themes && (
+                <div className={themeCard.page}>
+                  {themes.map((preset) => (
+                    <ThemeChoice
+                      key={preset.id}
+                      preset={preset}
+                      scheme={scheme}
+                    />
                   ))}
-                </span>
-              </PresetContexts>
-            </ColorSchemeContext>
-            <span className={themeCard.strokes}>
-              <span />
-              <span />
+                </div>
+              )
+            );
+          }}
+        />
+      </ChoiceGrid>
+      <PageDots
+        count={themePages.length}
+        current={page}
+        label="テーマのページ"
+        onPick={setPage}
+        progress={progress}
+      />
+    </>
+  );
+}
+
+function ThemeChoice({
+  preset,
+  scheme,
+}: {
+  preset: (typeof presets)[number];
+  scheme: ColorScheme;
+}) {
+  return (
+    <Choice className={themeCard.choice} value={preset.id}>
+      <span
+        aria-hidden="true"
+        className={themeCard.sample}
+        style={themeStyle(preset.id, scheme)}
+      >
+        <ColorSchemeContext value={scheme}>
+          <PresetContexts id={preset.id}>
+            <span className={themeCard.card}>
+              {presetSampleShifts.map((shift) => (
+                <ShiftMark key={shift} shift={shift} size={14} />
+              ))}
             </span>
-          </span>
-          {preset.name}
-        </Choice>
-      ))}
-    </ChoiceGrid>
+          </PresetContexts>
+        </ColorSchemeContext>
+        <span className={themeCard.strokes}>
+          <span />
+          <span />
+        </span>
+      </span>
+      {preset.name}
+    </Choice>
   );
 }
