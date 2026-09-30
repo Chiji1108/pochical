@@ -477,17 +477,7 @@ const optionCard = {
       textAlign: "left",
       width: "100%",
     },
-    variants: {
-      picked: {
-        true: {
-          _hover: { bg: "background.card", borderColor: "accent.default" },
-          border: "2px solid token(colors.accent.default)",
-          cursor: "default",
-        },
-      },
-    },
   }),
-  check: css({ color: "accent.default", flexShrink: 0 }),
   icon: css({
     flexShrink: 0,
     fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", sans-serif',
@@ -519,26 +509,18 @@ export function OptionCard({
   icon,
   title,
   note,
-  picked,
   onClick,
   children,
 }: {
   icon?: string;
   title: string;
   note: string;
-  // Set where one of the answers is the one in use, as in settings.
-  picked?: boolean;
   onClick: () => void;
   // More under the note, like the patterns a template brings.
   children?: ReactNode;
 }) {
   return (
-    <button
-      aria-pressed={picked}
-      className={optionCard.card({ picked })}
-      onClick={onClick}
-      type="button"
-    >
+    <button className={optionCard.card()} onClick={onClick} type="button">
       {icon !== undefined && (
         <span aria-hidden="true" className={optionCard.icon}>
           {icon}
@@ -549,15 +531,7 @@ export function OptionCard({
         <small className={optionCard.note}>{note}</small>
         {children}
       </span>
-      {picked === true ? (
-        <Check aria-hidden="true" className={optionCard.check} size={20} />
-      ) : (
-        <ChevronRight
-          aria-hidden="true"
-          className={optionCard.arrow}
-          size={18}
-        />
-      )}
+      <ChevronRight aria-hidden="true" className={optionCard.arrow} size={18} />
     </button>
   );
 }

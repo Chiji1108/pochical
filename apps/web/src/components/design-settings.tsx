@@ -78,8 +78,6 @@ import {
   List,
   ListRow,
   Note,
-  OptionCard,
-  optionList,
   PageDots,
   PageHeader,
   Pager,
@@ -648,6 +646,12 @@ const offSample = cva({
 });
 
 const settingsParts = {
+  // A work style's emoji before its name, the size of a row's icon.
+  styleIcon: css({
+    fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", sans-serif',
+    fontSize: "20px",
+    lineHeight: 1,
+  }),
   // A section's footer, as iOS sets explanation under a group of rows.
   footer: css({
     color: "text.tertiary",
@@ -1249,23 +1253,15 @@ function nextMonthStart() {
   return new Date(previewToday.getFullYear(), previewToday.getMonth() + 1, 1);
 }
 
-const workStyles = [
-  {
-    icon: "📋",
-    name: "毎月、勤務表が配られる",
-    note: "看護・介護・飲食など",
-    repeating: false,
-  },
-  {
-    icon: "🔁",
-    name: "決まった順番で回っている",
-    note: "消防・工場の交代勤務・曜日で固定など",
-    repeating: true,
-  },
-];
+const workStyles = {
+  repeating: { icon: "🔁", name: "決まった順番で回っている" },
+  roster: { icon: "📋", name: "毎月、勤務表が配られる" },
+};
 
-// The same two choices as onboarding. Picking the other one goes on to set
-// the order, or the day the roster takes over.
+// The work style in use, then the one way to the other. Unlike onboarding's
+// two answers side by side, the one in use is not a choice to press again:
+// it is shown as it is, and changing it goes on to set the order, or the
+// day the roster takes over, each with what that does.
 function WorkStylePage({
   rules,
   onBack,
@@ -1285,46 +1281,55 @@ function WorkStylePage({
 }) {
   const repeating = isRepeating(rules);
   const current = rules.at(-1);
+  const now = repeating ? workStyles.repeating : workStyles.roster;
+  const other = repeating ? workStyles.roster : workStyles.repeating;
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="働き方" />
-      <fieldset className={optionList}>
-        <legend className={srOnly}>働き方</legend>
-        {workStyles.map((style) => {
-          const selected = style.repeating === repeating;
-          return (
-            <OptionCard
-              icon={style.icon}
-              key={style.name}
-              note={style.note}
-              onClick={() => {
-                if (selected) {
-                  return;
-                }
-                if (style.repeating) {
-                  onRepeat();
-                } else {
-                  onRoster();
-                }
-              }}
-              picked={selected}
-              title={style.name}
-            />
-          );
-        })}
-      </fieldset>
-      {repeating && current ? (
+      <ListSection title="今の働き方">
+        <ListRow
+          label={now.name}
+          leading={
+            <>
+              <span aria-hidden="true" className={settingsParts.styleIcon}>
+                {now.icon}
+              </span>
+            </>
+          }
+        />
+      </ListSection>
+      {repeating && current && (
         <RepeatDetails
           current={current}
           onFix={onFix}
           onHolidaysOff={onHolidaysOff}
           onNew={onNew}
         />
-      ) : (
-        <Note>
-          順番を決めると、先の月までシフトが自動で入ります。月ごとの入力はいらなくなります。
-        </Note>
       )}
+      <section>
+        <List>
+          <ListRow
+            label={
+              repeating
+                ? "毎月の勤務表に切り替える"
+                : "決まった順番で回すようにする"
+            }
+            leading={
+              <>
+                <span aria-hidden="true" className={settingsParts.styleIcon}>
+                  {other.icon}
+                </span>
+              </>
+            }
+            onClick={repeating ? onRoster : onRepeat}
+          />
+        </List>
+        <Note>
+          {repeating
+            ? "選んだ日から、順番で入るのをやめます。それまでのシフトはそのままです。"
+            : "順番を決めると、この先のシフトが自動で入ります。毎月の入力はいりません。"}
+        </Note>
+      </section>
       <RuleHistory rules={rules} />
     </>
   );
