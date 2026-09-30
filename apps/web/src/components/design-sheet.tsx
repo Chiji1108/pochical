@@ -550,27 +550,35 @@ const viewer = {
     touchAction: "none",
     width: "100%",
   }),
-  photo: css({
-    aspectRatio: "1",
-    objectFit: "cover",
-    userSelect: "none",
-    width: "100%",
+  // A profile picture fills a square; a photo sent in a chat shows whole,
+  // in its own shape.
+  photo: cva({
+    base: { userSelect: "none", width: "100%" },
+    variants: {
+      whole: {
+        false: { aspectRatio: "1", objectFit: "cover" },
+        true: { maxHeight: "100%", objectFit: "contain" },
+      },
+    },
   }),
   positioner: css({ inset: 0, position: "absolute", zIndex: 31 }),
 };
 
 // A photo on its own over black, as the platforms show a profile picture
-// tapped to look at it: × or a pull downward closes it, and the ground
-// fades as the photo is pulled.
+// or a chat's photo tapped to look at it: × or a pull downward closes it,
+// and the ground fades as the photo is pulled.
 export function PhotoViewer({
   photo,
   label,
+  whole = false,
   open,
   onOpenChange,
 }: {
   photo: string;
   // Its name for a screen reader, like whose picture it is.
   label: string;
+  // Shows the whole photo in its own shape, not cut to a square.
+  whole?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -619,7 +627,7 @@ export function PhotoViewer({
             </Dialog.CloseTrigger>
             <img
               alt=""
-              className={viewer.photo}
+              className={viewer.photo({ whole })}
               draggable={false}
               src={photo}
               style={{

@@ -47,6 +47,8 @@ import { css, cva, cx } from "styled-system/css";
 
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
+import { sampleRosterPhoto } from "../lib/design-sample-photos";
+import type { Photo } from "../lib/design-sample-photos";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
 import {
@@ -494,7 +496,7 @@ function sameMonth(date: Date, month: Date) {
 }
 
 // A chat line. `days` shares dates, drawn with everyone's shifts;
-// `replyTo` quotes an earlier line; `notice` is a line from the app about
+// `photo` is a picture, one per line; `replyTo` quotes an earlier line; `notice` is a line from the app about
 // the group, such as a new name, shown between the messages.
 type Message = {
   id: string;
@@ -504,6 +506,7 @@ type Message = {
   text?: string;
   notice?: string;
   days?: Date[];
+  photo?: Photo;
   replyTo?: string;
   reactions?: Reaction[];
 };
@@ -577,8 +580,22 @@ export const sampleChats: Record<string, Chat> = {
         time: "10:03",
         when: "今日",
       },
+      {
+        from: "yuki",
+        id: "f8",
+        photo: sampleRosterPhoto(),
+        time: "10:20",
+        when: "今日",
+      },
+      {
+        from: "yuki",
+        id: "f9",
+        text: "10月の勤務表出た！マーカーのとこが私",
+        time: "10:20",
+        when: "今日",
+      },
     ],
-    unread: 2,
+    unread: 4,
   },
   "family:yuki": {
     messages: [
@@ -2285,7 +2302,12 @@ function lastLine(chat: Chat, members: Member[]) {
   if (last.notice) {
     return last.notice;
   }
-  const text = last.days ? `${summaryOf(last)}を共有しました` : last.text;
+  let { text } = last;
+  if (last.days) {
+    text = `${summaryOf(last)}を共有しました`;
+  } else if (last.photo) {
+    text = "写真を送りました";
+  }
   return who?.me ? `自分：${text}` : text;
 }
 
@@ -2367,8 +2389,7 @@ const chatStyle = {
       },
     },
   }),
-  // A reply's quote inside the bubble, over a thin rule, in the bubble's
-  // own text color; one line, so it never outweighs the answer.
+  // A reply's quote inside the bubble (BubbleQuote).
   bubbleQuote: css({
     bg: "transparent",
     border: 0,
@@ -2379,6 +2400,14 @@ const chatStyle = {
     gap: "2px",
     padding: "8px 12px 0",
     textAlign: "left",
+  }),
+  bubbleQuoteLine: css({ alignItems: "center", display: "flex", gap: "8px" }),
+  bubbleQuoteWords: css({
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "2px",
+    minWidth: 0,
   }),
   bubbleQuoteName: css({
     fontWeight: 600,
@@ -2556,6 +2585,87 @@ const chatStyle = {
     lineClamp: 1,
     textStyle: "caption",
   }),
+  // A quoted photo, small beside the quote's words.
+  quoteThumb: css({
+    borderRadius: "4px",
+    flexShrink: 0,
+    height: "32px",
+    objectFit: "cover",
+    width: "32px",
+  }),
+  // A photo line on its own; the photo is rounded like the shared days'
+  // card.
+  photo: css({ display: "flex", maxWidth: "100%" }),
+  photoButton: css({
+    bg: "transparent",
+    border: 0,
+    // The focus ring follows the photo's corners.
+    borderRadius: "16px",
+    display: "block",
+    padding: 0,
+    // A long press opens the actions, not the phone's own callout.
+    userSelect: "none",
+    WebkitTouchCallout: "none",
+  }),
+  photoImage: cva({
+    base: {
+      bg: "fill.tertiary",
+      display: "block",
+      height: "auto",
+      maxWidth: "100%",
+      objectFit: "cover",
+    },
+    variants: {
+      quoted: {
+        // A pale photo, like a paper roster, keeps its edge on the ground.
+        false: {
+          borderRadius: "16px",
+          outline: "1px solid token(colors.border.default)",
+          outlineOffset: "-1px",
+        },
+        // Inside a reply's bubble, below the quote's rule, edge to edge.
+        true: {},
+      },
+    },
+  }),
+  // Photos chosen to send, in a row above the composer, each with its ×.
+  tray: cva({
+    base: {
+      borderTop: "1px solid token(colors.separator)",
+      display: "flex",
+      gap: "8px",
+      listStyle: "none",
+      margin: 0,
+      padding: "12px 0 4px",
+    },
+    // The reply or the days above already draw the line.
+    variants: { below: { true: { borderTop: 0, paddingTop: "8px" } } },
+  }),
+  trayImage: css({
+    borderRadius: "12px",
+    display: "block",
+    height: "64px",
+    objectFit: "cover",
+    outline: "1px solid token(colors.border.default)",
+    outlineOffset: "-1px",
+    width: "64px",
+  }),
+  trayItem: css({ flexShrink: 0, position: "relative" }),
+  trayRemove: css({
+    alignItems: "center",
+    bg: "rgba(0, 0, 0, 0.6)",
+    border: "2px solid token(colors.background.base)",
+    borderRadius: "50%",
+    color: "white",
+    display: "flex",
+    height: "24px",
+    justifyContent: "center",
+    padding: 0,
+    position: "absolute",
+    right: "-6px",
+    top: "-6px",
+    width: "24px",
+  }),
   reactions: cva({
     base: { display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "-1px" },
     variants: { mine: { true: { justifyContent: "flex-end" } } },
@@ -2674,6 +2784,11 @@ function ChatPage({
 }) {
   const [draft, setDraft] = useState("");
   const [attached, setAttached] = useState(attach);
+  // Photos chosen to go with the next send, as the chat apps hold them
+  // above the composer: nothing is sent on choosing.
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const toast = useContext(ToastContext);
   const [sharing, setSharing] = useState(false);
   // The line whose actions are open, and the one being answered.
   const [selected, setSelected] = useState<string>();
@@ -2714,18 +2829,33 @@ function ChatPage({
     ]);
     setReplyTo(undefined);
   };
-  // The attached days go first, then what was written, if anything.
+  // The attached days go first, then each photo as a line of its own,
+  // then what was written, if anything.
   const send = () => {
     const text = draft.trim();
-    if (!text && !attached) {
+    if (!text && !attached && photos.length === 0) {
       return;
     }
     post(
       ...(attached ? [{ days: attached }] : []),
+      ...photos.map((photo) => ({ photo })),
       ...(text ? [{ text }] : [])
     );
     setDraft("");
     setAttached(undefined);
+    setPhotos([]);
+  };
+  const choosePhotos = async (files: File[]) => {
+    const room = maxPhotos - photos.length;
+    if (files.length > room) {
+      toast(`写真は一度に${maxPhotos}枚まで送れます`);
+    }
+    try {
+      const chosen = await Promise.all(files.slice(0, room).map(photoOf));
+      setPhotos((before) => [...before, ...chosen].slice(0, maxPhotos));
+    } catch {
+      toast("この写真は開けませんでした");
+    }
   };
   const react = (id: string, emoji: string) => {
     onChange(
@@ -2790,6 +2920,15 @@ function ChatPage({
             previous.notice !== undefined ||
             message.replyTo !== undefined;
           const quoted = byId(message.replyTo);
+          const quote = quoted && (
+            <BubbleQuote
+              name={nameOf(quoted.from)}
+              onJump={() => {
+                jumpTo(quoted.id);
+              }}
+              quoted={quoted}
+            />
+          );
           if (message.notice) {
             return (
               <li className={chatStyle.item()} key={message.id}>
@@ -2840,7 +2979,18 @@ function ChatPage({
                       selected === message.id && messageActions.lifted
                     )}
                   >
-                    {message.days ? (
+                    {message.photo && (
+                      <PhotoLine
+                        actions={actionsOf(message)}
+                        label={`${member?.name ?? ""}が送った写真`}
+                        onSave={() => {
+                          toast("写真を保存しました");
+                        }}
+                        photo={message.photo}
+                        quote={quote}
+                      />
+                    )}
+                    {!message.photo && message.days && (
                       <MessageActions {...actionsOf(message)}>
                         <button
                           aria-label={`${member?.name ?? ""}が共有した日にち。押すとリアクションと返信`}
@@ -2850,34 +3000,15 @@ function ChatPage({
                           <DayCard days={message.days} members={people} />
                         </button>
                       </MessageActions>
-                    ) : (
+                    )}
+                    {!message.photo && !message.days && (
                       // Like the app: the quoted line sits inside the bubble,
                       // above a thin rule, and jumps to the original.
                       <span
                         className={chatStyle.bubble({ mine })}
                         data-part="bubble"
                       >
-                        {quoted && (
-                          <button
-                            aria-label={`${nameOf(quoted.from)}「${summaryOf(quoted)}」への返信。返信元を表示`}
-                            className={chatStyle.bubbleQuote}
-                            onClick={() => {
-                              jumpTo(quoted.id);
-                            }}
-                            type="button"
-                          >
-                            <span className={chatStyle.bubbleQuoteName}>
-                              {nameOf(quoted.from)}
-                            </span>
-                            <span className={chatStyle.bubbleQuoteText}>
-                              {summaryOf(quoted)}
-                            </span>
-                            <span
-                              aria-hidden="true"
-                              className={chatStyle.bubbleRule}
-                            />
-                          </button>
-                        )}
+                        {quote}
                         <MessageActions {...actionsOf(message)}>
                           <button
                             aria-label={`${member?.name ?? ""}のメッセージ：${message.text ?? ""}。押すとリアクションと返信`}
@@ -2930,6 +3061,13 @@ function ChatPage({
             </span>
             <span className={chatStyle.quoteText}>{summaryOf(replying)}</span>
           </span>
+          {replying.photo && (
+            <img
+              alt=""
+              className={chatStyle.quoteThumb}
+              src={replying.photo.src}
+            />
+          )}
           <IconButton
             glass={false}
             label="返信をやめる"
@@ -2958,15 +3096,69 @@ function ChatPage({
           </IconButton>
         </div>
       )}
+      {photos.length > 0 && (
+        <ul
+          aria-label="送る写真"
+          className={chatStyle.tray({
+            below: replying !== undefined || attached !== undefined,
+          })}
+        >
+          {photos.map((photo, index) => (
+            <li className={chatStyle.trayItem} key={photo.src}>
+              <img alt="" className={chatStyle.trayImage} src={photo.src} />
+              <button
+                aria-label={`${index + 1}枚目の写真を外す`}
+                className={chatStyle.trayRemove}
+                onClick={() => {
+                  setPhotos((before) =>
+                    before.filter((other) => other !== photo)
+                  );
+                }}
+                type="button"
+              >
+                <X aria-hidden="true" size={12} strokeWidth={3} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       <form
         className={chatStyle.composer({
-          replying: replying !== undefined || attached !== undefined,
+          replying:
+            replying !== undefined ||
+            attached !== undefined ||
+            photos.length > 0,
         })}
         onSubmit={(event) => {
           event.preventDefault();
           send();
         }}
       >
+        {/* The system's photo picker, as the apps open PHPicker and
+            Android's photo picker; the camera is left to the camera. */}
+        <input
+          accept="image/*"
+          className={srOnly}
+          multiple
+          onChange={(event) => {
+            const files = [...(event.target.files ?? [])];
+            event.target.value = "";
+            choosePhotos(files).catch(() => undefined);
+          }}
+          ref={photoInputRef}
+          tabIndex={-1}
+          type="file"
+        />
+        <button
+          aria-label="写真を送る"
+          className={chatStyle.composerButton()}
+          onClick={() => {
+            photoInputRef.current?.click();
+          }}
+          type="button"
+        >
+          <ImageIcon aria-hidden="true" size={20} />
+        </button>
         <button
           aria-label="日にちを共有"
           className={chatStyle.composerButton()}
@@ -2989,7 +3181,7 @@ function ChatPage({
         <button
           aria-label="送る"
           className={chatStyle.composerButton({ send: true })}
-          disabled={draft.trim() === "" && !attached}
+          disabled={draft.trim() === "" && !attached && photos.length === 0}
           type="submit"
         >
           <SendHorizontal aria-hidden="true" size={18} />
@@ -3023,6 +3215,138 @@ function ChatPage({
 }
 
 const flashMilliseconds = 1200;
+
+// How many photos go in one send: a roster is a page or two, and more
+// would flood a small group's chat.
+const maxPhotos = 4;
+
+// A chosen photo with its size, read before it is shown so its line
+// keeps its place; the apps read it while shrinking the photo to send.
+async function photoOf(file: File): Promise<Photo> {
+  const src = URL.createObjectURL(file);
+  const image = new Image();
+  image.src = src;
+  await image.decode();
+  return { height: image.naturalHeight, src, width: image.naturalWidth };
+}
+
+// The box a photo fits in, and how far from square it may be before its
+// ends are cut, as LINE crops a panorama in the chat.
+const photoBox = { height: 260, width: 220 };
+const photoAspect = { max: 2, min: 1 / 2 };
+
+function photoSize(photo: Photo) {
+  const aspect = Math.min(
+    Math.max(photo.width / photo.height, photoAspect.min),
+    photoAspect.max
+  );
+  const width = Math.min(photoBox.width, photoBox.height * aspect);
+  return { height: Math.round(width / aspect), width: Math.round(width) };
+}
+
+// The line a reply answers, inside the bubble over a thin rule, in the
+// bubble's own text color; one line, so it never outweighs the answer.
+// A photo shows small beside it, to tell which one of several.
+function BubbleQuote({
+  quoted,
+  name,
+  onJump,
+}: {
+  quoted: Message;
+  name: string;
+  onJump: () => void;
+}) {
+  return (
+    <button
+      aria-label={`${name}「${summaryOf(quoted)}」への返信。返信元を表示`}
+      className={chatStyle.bubbleQuote}
+      onClick={onJump}
+      type="button"
+    >
+      <span className={chatStyle.bubbleQuoteLine}>
+        <span className={chatStyle.bubbleQuoteWords}>
+          <span className={chatStyle.bubbleQuoteName}>{name}</span>
+          <span className={chatStyle.bubbleQuoteText}>{summaryOf(quoted)}</span>
+        </span>
+        {quoted.photo && (
+          <img alt="" className={chatStyle.quoteThumb} src={quoted.photo.src} />
+        )}
+      </span>
+      <span aria-hidden="true" className={chatStyle.bubbleRule} />
+    </button>
+  );
+}
+
+// A photo in a chat, as the messaging apps show one: in its own shape
+// with no bubble, unless it answers a line, when the quote's bubble holds
+// it. A tap opens it large; its reactions and menu (with 保存) open from
+// a long press, as on a photo in LINE.
+function PhotoLine({
+  photo,
+  label,
+  quote,
+  actions,
+  onSave,
+}: {
+  photo: Photo;
+  // Whose photo it is, for a screen reader and the large view.
+  label: string;
+  quote?: ReactNode;
+  actions: Omit<
+    Parameters<typeof MessageActions>[0],
+    "children" | "onSave" | "pressToOpen"
+  >;
+  onSave: () => void;
+}) {
+  const [viewing, setViewing] = useState(false);
+  const press = useLongPress(() => {
+    actions.onOpenChange(true);
+  });
+  const size = photoSize(photo);
+  const quoted = quote !== undefined;
+  return (
+    <>
+      <span
+        className={
+          quoted ? chatStyle.bubble({ mine: actions.mine }) : chatStyle.photo
+        }
+        data-part="bubble"
+        style={{ width: size.width }}
+      >
+        {quote}
+        <MessageActions {...actions} onSave={onSave} pressToOpen>
+          <button
+            aria-label={`${label}。押すと大きく表示、長押しでリアクションと返信`}
+            className={chatStyle.photoButton}
+            onClick={() => {
+              if (!press.consumeLongPress()) {
+                setViewing(true);
+              }
+            }}
+            type="button"
+            {...press.handlers}
+          >
+            <img
+              alt=""
+              className={chatStyle.photoImage({ quoted })}
+              draggable={false}
+              height={size.height}
+              src={photo.src}
+              width={size.width}
+            />
+          </button>
+        </MessageActions>
+      </span>
+      <PhotoViewer
+        label={label}
+        onOpenChange={setViewing}
+        open={viewing}
+        photo={photo.src}
+        whole
+      />
+    </>
+  );
+}
 
 const messageActions = {
   // The message the actions are for stays bright above the dimming.
@@ -3087,6 +3411,8 @@ function MessageActions({
   onReact,
   onMore,
   onReply,
+  onSave,
+  pressToOpen = false,
   children,
 }: {
   open: boolean;
@@ -3098,6 +3424,11 @@ function MessageActions({
   text?: string;
   onReact: (emoji: string) => void;
   onReply: () => void;
+  // 保存, for a photo.
+  onSave?: () => void;
+  // The message's own tap does something else, like a photo opening
+  // large, so these open from its long press instead.
+  pressToOpen?: boolean;
   // The message itself, a button that opens this.
   children: ReactElement;
 }) {
@@ -3128,7 +3459,11 @@ function MessageActions({
       }}
       unmountOnExit
     >
-      <Popover.Trigger asChild>{children}</Popover.Trigger>
+      {pressToOpen ? (
+        <Popover.Anchor asChild>{children}</Popover.Anchor>
+      ) : (
+        <Popover.Trigger asChild>{children}</Popover.Trigger>
+      )}
       <Portal container={phone ?? undefined}>
         {/* Everything but the message dims, so it is clear which one the
             actions are for; a tap on it closes them. */}
@@ -3190,6 +3525,21 @@ function MessageActions({
                   コピー
                 </button>
               )}
+              {onSave && (
+                <button
+                  className={menuStyle.item}
+                  onClick={() => {
+                    onOpenChange(false);
+                    onSave();
+                  }}
+                  type="button"
+                >
+                  <span className={menuStyle.icon}>
+                    <Download aria-hidden="true" size={18} />
+                  </span>
+                  保存
+                </button>
+              )}
             </div>
           </Popover.Content>
         </Popover.Positioner>
@@ -3199,6 +3549,9 @@ function MessageActions({
 }
 
 function summaryOf(message: Message) {
+  if (message.photo) {
+    return "📷 写真";
+  }
   return message.days ? daysSummary(message.days) : (message.text ?? "");
 }
 
