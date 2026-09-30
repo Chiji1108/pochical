@@ -49,7 +49,7 @@ import { useUser } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
 import type { Coworkers } from "./design-coworkers";
 import { GapSheet, gapDaysIn } from "./design-gap-sheet";
-import { DesignGroup, JoinSheet } from "./design-group";
+import { DesignGroup, JoinScreen } from "./design-group";
 import { MonthTitleButton, monthTitle } from "./design-month-picker";
 import { Phone } from "./design-phone";
 import {
@@ -396,8 +396,8 @@ export function DesignCalendar({
   initialSettingsPage?: SettingsPage;
   // And the group tab's page: its hub, the shift table or the group chat.
   initialGroupPage?: "hub" | "shifts" | "chat";
-  // A group's invitation link was opened: ask about joining over the
-  // calendar.
+  // A group's invitation link was opened: ask about joining, in a screen
+  // over the calendar.
   pendingInvite?: boolean;
 }) {
   const schedule = useUser((state) => state.schedule);
@@ -423,6 +423,9 @@ export function DesignCalendar({
   // Whether it opened straight on adding to the device calendar.
   const [saveToCalendar, setSaveToCalendar] = useState(false);
   const [imagePreview, setImagePreview] = useState(false);
+  const [joining, setJoining] = useState(pendingInvite);
+  const groups = useUser((state) => state.groups);
+  const setGroups = useUser((state) => state.setGroups);
   const offDisplay = useContext(OffDisplayContext);
   const imageOptions = useSettings((state) => state.device.imageOptions);
   const setImageOptions = useSettings((state) => state.setImageOptions);
@@ -854,6 +857,21 @@ export function DesignCalendar({
                   schedule={schedule}
                 />
               )}
+              {joining && (
+                <JoinScreen
+                  onClose={() => {
+                    setJoining(false);
+                  }}
+                  onJoin={(joined) => {
+                    setGroups([...groups, joined]);
+                    setJoining(false);
+                    setOpenGroup(joined.id);
+                    setTab("group");
+                    toast(`「${joined.name}」に参加しました`);
+                  }}
+                  profile={profile}
+                />
+              )}
               {tab === "calendar" && imagePreview && (
                 <ImagePreviewPage
                   month={month}
@@ -867,7 +885,7 @@ export function DesignCalendar({
               )}
               <Screen
                 className={surpriseStyles.screen}
-                hidden={tab !== "calendar" || imagePreview}
+                hidden={tab !== "calendar" || imagePreview || joining}
               >
                 {surprise.layer}
                 <div className={heading.bar}>
@@ -1090,15 +1108,6 @@ export function DesignCalendar({
                   </p>
                 </div>
               </Sheet>
-              {pendingInvite && (
-                <JoinSheet
-                  name={profile.name}
-                  onOpenGroup={(groupId) => {
-                    setOpenGroup(groupId);
-                    setTab("group");
-                  }}
-                />
-              )}
               <SaveSheet
                 completion={saveCompletion}
                 month={month}

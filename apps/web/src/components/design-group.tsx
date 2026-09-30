@@ -115,7 +115,6 @@ import {
   PageHeader,
   Pager,
   PullDownMenu,
-  pushToBottom,
   Screen,
   ScreenScroll,
   Section,
@@ -800,7 +799,9 @@ type Page =
   | { name: "new" }
   | { name: "settings" }
   // Reading a group's QR code to join it.
-  | { name: "scan" };
+  | { name: "scan" }
+  // And the invitation it read, to join.
+  | { name: "join" };
 
 // A group as the list keeps it, without its members' shifts.
 export type GroupSummary = Omit<Group, "members">;
@@ -877,8 +878,6 @@ export function DesignGroup({
   const [profileOf, setProfileOf] = useState<Member>();
   // Members taken out of each group, by group id.
   const [removed, setRemoved] = useState<Record<string, string[]>>({});
-  // Each QR code read opens a fresh invitation.
-  const [scans, setScans] = useState(0);
   const toast = useContext(ToastContext);
   const meIn = (id: string) => {
     const found = groups.find((item) => item.id === id);
@@ -917,21 +916,24 @@ export function DesignGroup({
           setGroupId(invitedGroupId);
           toast(`「${invited}」にはもう参加しています`);
         } else {
-          setScans(scans + 1);
+          setPage({ name: "join" });
         }
       }}
     />
   );
-  const joinSheet = scans > 0 && (
-    <JoinSheet
-      afterScan
-      key={scans}
-      name={profile.name}
-      onOpenGroup={(id) => {
-        setGroupId(id);
+  // It takes the scanner's place, as LINE goes on from a read code.
+  const joinPage = (
+    <JoinScreen
+      onClose={() => {
         setPage({ name: "hub" });
-        toast(`「${sampleInvite().group}」に参加しました`);
       }}
+      onJoin={(joined) => {
+        setGroups([...groups, joined]);
+        setGroupId(joined.id);
+        setPage({ name: "hub" });
+        toast(`「${joined.name}」に参加しました`);
+      }}
+      profile={profile}
     />
   );
   const onScan = () => {
@@ -961,6 +963,9 @@ export function DesignGroup({
     if (page.name === "scan") {
       return scanPage;
     }
+    if (page.name === "join") {
+      return joinPage;
+    }
     return (
       <Screen>
         <ScreenScroll>
@@ -976,7 +981,6 @@ export function DesignGroup({
           )}
         </ScreenScroll>
         {page.name !== "new" && <TabBar active="group" onSelect={onTab} />}
-        {joinSheet}
       </Screen>
     );
   }
@@ -1076,6 +1080,10 @@ export function DesignGroup({
 
   if (page.name === "scan") {
     return scanPage;
+  }
+
+  if (page.name === "join") {
+    return joinPage;
   }
 
   if (page.name === "chat") {
@@ -1246,7 +1254,6 @@ export function DesignGroup({
       )}
       {page.name === "hub" && <TabBar active="group" onSelect={onTab} />}
       {memberSheet}
-      {joinSheet}
     </Screen>
   );
 }
@@ -1860,16 +1867,25 @@ const hub = {
   }),
 };
 
-// 参加の確認, over the calendar when an invitation link is opened.
-const join = {
+// 参加の画面: the group it invites to in the middle, then how you will
+// appear in it, and 参加する kept at the foot, above the keyboard.
+const joinScreen = {
+  foot: css({ display: "flex", flexDirection: "column", paddingTop: "12px" }),
   from: css({
     alignItems: "center",
     color: "text.secondary",
     display: "flex",
     gap: "8px",
-    margin: "12px 0 0",
+    margin: "16px 0 0",
     textStyle: "subheadline",
   }),
+  group: css({
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    textAlign: "center",
+  }),
+  me: css({ alignItems: "stretch", display: "flex", flexDirection: "column" }),
   members: css({
     "& small": {
       color: "text.tertiary",
@@ -1881,20 +1897,8 @@ const join = {
     gap: "8px",
     marginTop: "12px",
   }),
-  name: css({ alignSelf: "stretch", marginTop: "20px", textAlign: "left" }),
-  sheet: css({
-    alignItems: "center",
-    display: "flex",
-    flexDirection: "column",
-    textAlign: "center",
-  }),
-  text: css({
-    color: "text.tertiary",
-    lineHeight: 1.6,
-    margin: "12px 0 16px",
-    textStyle: "footnote",
-  }),
-  title: css({ fontWeight: 700, margin: "12px 0 0", textStyle: "title2" }),
+  name: css({ marginTop: "20px" }),
+  title: css({ fontWeight: 700, margin: "4px 0 0", textStyle: "title1" }),
 };
 
 // A profile's photo with a camera badge to change it, as the platforms'
@@ -7163,128 +7167,105 @@ const sampleInvite = (): Invite => ({
   ],
 });
 
-const settleMilliseconds = 400;
-
-// Asked whenever an invitation link is opened, and right after the first
-// setup if one was opened during it: the one place anyone joins from a
-// link. The name starts as the usual one and is what the group will see.
-export function JoinSheet({
-  name: usualName,
-  onOpenGroup,
-  afterScan = false,
+// Opened by an invitation link over the calendar, right after the first
+// setup if one was opened during it, and by a QR code read in the group
+// tab: the one place anyone joins from. A screen of its own rather than a
+// sheet, as LINE's invitations are: it asks how you will appear, and a
+// sheet with fields would be hidden by the keyboard or swiped away with
+// what was typed. Only ✕ turns it down. The name and photo start as the
+// usual ones.
+export function JoinScreen({
+  profile,
+  onJoin,
+  onClose,
 }: {
-  name: string;
-  onOpenGroup: (groupId: string) => void;
-  // Read from a QR code in the group tab: it opens at once, and joining
-  // goes straight to the group instead of a second sheet saying so.
-  afterScan?: boolean;
+  profile: Profile;
+  onJoin: (group: GroupSummary) => void;
+  onClose: () => void;
 }) {
   const invite = sampleInvite();
-  const [name, setName] = useState(usualName);
-  const [joined, setJoined] = useState(false);
-  const phone = useContext(PhoneContext);
-  const groups = useUser((state) => state.groups);
-  const setGroups = useUser((state) => state.setGroups);
-  const already = groups.some((item) => item.id === invitedGroupId);
-  // Opened again for a group you are in, rather than just joined.
-  const alreadyIn = already && !joined;
-  const [open, setOpen] = useState(false);
-  // It opens by itself, so it waits for the page to settle, and on /design
-  // brings the phone into view first.
-  useEffect(() => {
-    const timer = setTimeout(
-      () => {
-        phone?.current?.scrollIntoView({ behavior: "instant", block: "start" });
-        setOpen(true);
-      },
-      afterScan ? 0 : settleMilliseconds
-    );
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [phone, afterScan]);
-  const close = () => {
-    setOpen(false);
+  const [name, setName] = useState(profile.name);
+  const [photo, setPhoto] = useState(profile.photo);
+  const join = () => {
+    const trimmed = name.trim();
+    // Only what differs from the usual profile is this group's own.
+    const mine: GroupProfile = {};
+    if (trimmed !== profile.name) {
+      mine.name = trimmed;
+    }
+    if (photo && photo !== profile.photo) {
+      mine.photo = photo;
+    }
+    if (!photo && profile.photo) {
+      mine.noPhoto = true;
+    }
+    onJoin({
+      id: invitedGroupId,
+      mark: invite.mark,
+      mine: Object.keys(mine).length > 0 ? mine : undefined,
+      name: invite.group,
+    });
   };
   return (
-    <Sheet
-      className={join.sheet}
-      label={`「${invite.group}」への招待`}
-      onOpenChange={setOpen}
-      open={open}
-    >
-      <span className={markFrame({ size: "large" })}>
-        <GroupIcon mark={invite.mark} size={40} />
-      </span>
-      {alreadyIn && (
-        <>
-          <h4 className={join.title}>
-            「{invite.group}」にはもう参加しています
-          </h4>
-          <p className={join.text}>
-            このリンクのグループに、もう入っています。
+    <Screen>
+      <ScreenScroll>
+        <PageHeader
+          leading={
+            <IconButton label="閉じる" onClick={onClose}>
+              <X aria-hidden="true" size={20} />
+            </IconButton>
+          }
+        />
+        <div className={joinScreen.group}>
+          <span className={markFrame({ size: "large" })}>
+            <GroupIcon mark={invite.mark} size={40} />
+          </span>
+          <p className={joinScreen.from}>
+            <PhotoAvatar
+              name={invite.from.name}
+              photo={invite.from.photo}
+              size={20}
+            />
+            {invite.from.name}からの招待
           </p>
-          <Button
-            variant="primary"
-            className={pushToBottom}
-            onClick={() => {
-              close();
-              onOpenGroup(invitedGroupId);
-            }}
-          >
-            グループを見る
-          </Button>
-          <Button variant="subtle" onClick={close}>
-            閉じる
-          </Button>
-        </>
-      )}
-      {!alreadyIn &&
-        (joined ? (
-          <>
-            <h4 className={join.title}>「{invite.group}」に参加しました</h4>
-            <p className={join.text}>
-              みんなのシフトと、みんなが休みの日が見られます。
-            </p>
-            <Button
-              variant="primary"
-              className={pushToBottom}
-              onClick={() => {
-                close();
-                onOpenGroup(invitedGroupId);
-              }}
-            >
-              グループを見る
-            </Button>
-            <Button variant="subtle" onClick={close}>
-              閉じる
-            </Button>
-          </>
-        ) : (
-          <>
-            <p className={join.from}>
+          <h3 className={joinScreen.title}>{invite.group}</h3>
+          <div className={joinScreen.members}>
+            {invite.members.map((member) => (
               <PhotoAvatar
-                name={invite.from.name}
-                photo={invite.from.photo}
-                size={20}
+                key={member.name}
+                name={member.name}
+                photo={member.photo}
+                size={28}
               />
-              {invite.from.name}からの招待
-            </p>
-            <h4 className={join.title}>「{invite.group}」に参加しますか？</h4>
-            <div className={join.members}>
-              {invite.members.map((member) => (
-                <PhotoAvatar
-                  key={member.name}
-                  name={member.name}
-                  photo={member.photo}
-                  size={28}
-                />
-              ))}
-              <small>{invite.members.length}人が参加中</small>
-            </div>
-            <List className={join.name}>
+            ))}
+            <small>{invite.members.length}人が参加中</small>
+          </div>
+        </div>
+        <Section title="このグループでのあなた">
+          <div className={joinScreen.me}>
+            <PhotoEditor
+              name={name.trim() || profile.name}
+              onRemove={
+                photo
+                  ? () => {
+                      setPhoto(undefined);
+                    }
+                  : undefined
+              }
+              onUpload={setPhoto}
+              onUsual={
+                profile.photo && photo !== profile.photo
+                  ? () => {
+                      setPhoto(profile.photo);
+                    }
+                  : undefined
+              }
+              photo={photo}
+              size={72}
+            />
+            <List className={joinScreen.name}>
               <ListRow
-                label="あなたの名前"
+                label="名前"
                 control={
                   <>
                     <input
@@ -7299,44 +7280,19 @@ export function JoinSheet({
                 }
               />
             </List>
-            <p className={join.text}>
-              このグループの人に、この名前で表示されます。参加すると、あなたのシフトもメンバーに見えるようになります。
-            </p>
-            <Button
-              variant="primary"
-              className={pushToBottom}
-              disabled={name.trim() === ""}
-              onClick={() => {
-                setJoined(true);
-                if (afterScan) {
-                  close();
-                  onOpenGroup(invitedGroupId);
-                }
-                if (!already) {
-                  setGroups([
-                    ...groups,
-                    {
-                      id: invitedGroupId,
-                      mark: invite.mark,
-                      // A name other than the usual one is this group's own.
-                      mine:
-                        name.trim() === usualName
-                          ? undefined
-                          : { name: name.trim() },
-                      name: invite.group,
-                    },
-                  ]);
-                }
-              }}
-            >
-              参加する
-            </Button>
-            <Button variant="subtle" onClick={close}>
-              今はしない
-            </Button>
-          </>
-        ))}
-    </Sheet>
+          </div>
+        </Section>
+        <Note>
+          {invite.group}
+          の人に、この名前と写真で表示されます。参加すると、あなたのシフトもメンバーに見えるようになります。
+        </Note>
+      </ScreenScroll>
+      <div className={joinScreen.foot}>
+        <Button disabled={name.trim() === ""} onClick={join} variant="primary">
+          参加する
+        </Button>
+      </div>
+    </Screen>
   );
 }
 
