@@ -1867,37 +1867,60 @@ const hub = {
   }),
 };
 
-// 参加の画面: the group it invites to in the middle, then how you will
+// 参加の画面: who it is from on top, then the group, its mark and name
+// together with room around them, and who is in it; then how you will
 // appear in it, and 参加する kept at the foot.
 const joinScreen = {
+  // The faces overlap, each ringed in the screen's color, as the
+  // reactions' do.
+  faces: css({
+    "& > *": { boxShadow: "0 0 0 2px token(colors.background.base)" },
+    "& > * + *": { marginInlineStart: "-8px" },
+    display: "flex",
+  }),
   foot: css({ display: "flex", flexDirection: "column", paddingTop: "12px" }),
   from: css({
     alignItems: "center",
     color: "text.secondary",
     display: "flex",
     gap: "8px",
-    margin: "16px 0 0",
+    margin: 0,
     textStyle: "subheadline",
   }),
   group: css({
     alignItems: "center",
     display: "flex",
     flexDirection: "column",
+    gap: "12px",
+    marginBlock: "32px 24px",
+  }),
+  head: css({
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    paddingBottom: "12px",
     textAlign: "center",
   }),
   members: css({
-    "& small": {
-      color: "text.tertiary",
-      marginLeft: "4px",
-      textStyle: "footnote",
-    },
+    "& small": { color: "text.tertiary", textStyle: "footnote" },
     alignItems: "center",
     display: "flex",
+    flexDirection: "column",
     gap: "8px",
-    marginTop: "12px",
   }),
-  title: css({ fontWeight: 700, margin: "4px 0 0", textStyle: "title1" }),
+  title: css({ fontWeight: 700, margin: 0, textStyle: "title1" }),
 };
+
+// Who is in a group, by name while that stays short.
+const namedMembers = 3;
+
+function memberLine(names: string[]) {
+  if (names.length <= namedMembers) {
+    return `${names.join("、")}が参加中`;
+  }
+  const rest = names.length - (namedMembers - 1);
+  return `${names.slice(0, namedMembers - 1).join("、")}ほか${rest}人が参加中`;
+}
 
 // A profile's photo with a camera badge to change it, as the platforms'
 // contact cards have it; the choices open in a sheet.
@@ -7218,10 +7241,7 @@ export function JoinScreen({
             </IconButton>
           }
         />
-        <div className={joinScreen.group}>
-          <span className={markFrame({ size: "large" })}>
-            <GroupIcon mark={invite.mark} size={40} />
-          </span>
+        <div className={joinScreen.head}>
           <p className={joinScreen.from}>
             <PhotoAvatar
               name={invite.from.name}
@@ -7230,17 +7250,26 @@ export function JoinScreen({
             />
             {invite.from.name}からの招待
           </p>
-          <h3 className={joinScreen.title}>{invite.group}</h3>
+          <div className={joinScreen.group}>
+            <span className={markFrame({ size: "large" })}>
+              <GroupIcon mark={invite.mark} size={40} />
+            </span>
+            <h3 className={joinScreen.title}>{invite.group}</h3>
+          </div>
           <div className={joinScreen.members}>
-            {invite.members.map((member) => (
-              <PhotoAvatar
-                key={member.name}
-                name={member.name}
-                photo={member.photo}
-                size={28}
-              />
-            ))}
-            <small>{invite.members.length}人が参加中</small>
+            <span className={joinScreen.faces}>
+              {invite.members.map((member) => (
+                <PhotoAvatar
+                  key={member.name}
+                  name={member.name}
+                  photo={member.photo}
+                  size={32}
+                />
+              ))}
+            </span>
+            <small>
+              {memberLine(invite.members.map((member) => member.name))}
+            </small>
           </div>
         </div>
         <Section title="このグループでのあなた">
@@ -7275,7 +7304,8 @@ export function JoinScreen({
 
 // A picture with one way in, as in other apps: tapping it or the link
 // under it opens a sheet to take or pick a photo, and to go back to the
-// usual one or delete it when that applies.
+// usual one or delete it when that applies. Its rows act rather than go
+// on, so none has an arrow.
 function PhotoPicker({
   picture,
   label,
@@ -7364,6 +7394,7 @@ function PhotoPicker({
           />
           {onUsual && (
             <ListRow
+              arrow={false}
               onClick={() => {
                 onUsual();
                 close();
@@ -7378,6 +7409,7 @@ function PhotoPicker({
           )}
           {onRemove && (
             <ListRow
+              arrow={false}
               onClick={() => {
                 onRemove();
                 close();
