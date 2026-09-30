@@ -13,7 +13,7 @@ import type { Preset } from "@vite-pwa/assets-generator/config";
 import sharp from "sharp";
 
 import { iconColorOptions } from "../src/components/design-app-icon";
-import { screenColor } from "../src/components/design-theme";
+import { screenColor } from "../src/lib/screen-color";
 import { site } from "../src/lib/site";
 
 const SOURCE = new URL("../public/icon.png", import.meta.url).pathname;

@@ -7,6 +7,7 @@ import type { Appearance, PresetId } from "../components/design-theme";
 import { defaultWeekSettings } from "../components/design-week";
 import type { WeekSettings } from "../components/design-week";
 import type { LookSettings, ShiftMarkStyle } from "../components/shift-mark";
+import { deviceSettingsKey } from "./design-settings-key";
 
 // The person's settings on /design, sorted by where each would live in the
 // app. The slices are the schema: what goes with the account and reaches
@@ -104,10 +105,6 @@ const defaultCalendar: Record<ShiftMarkStyle, CalendarOptions> = {
   emoji: { blankOff: false, highlight: false, names: false },
   icon: { blankOff: false, highlight: true, names: false },
 };
-
-// Where the device slice is saved, which /try's head also reads to color
-// the status bar before the page draws.
-export const deviceSettingsKey = "pochical-design-device";
 
 export const useSettings = create<SettingsState>()(
   persist(
