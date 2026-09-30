@@ -34,6 +34,7 @@ import {
   OwnPatternsContext,
   PatternsContext,
   presetPatterns,
+  samePattern,
   usePatterns,
 } from "../lib/design-patterns";
 import type {
@@ -119,6 +120,9 @@ export type RepeatRule = {
   start: Date;
   anchor?: Date;
   holidaysOff?: boolean;
+  // The pattern it put on holidays, so turning them back finds those days
+  // even after the person's patterns have changed.
+  holidayShift?: Shift;
 };
 
 // What a rule fills in from its start, a year ahead, with holidays on
@@ -652,7 +656,9 @@ export function DesignCalendar({
       ),
       ...(rule.sequence.length > 0 ? ruleSchedule(rule, holidayShift) : {}),
     }));
-    return rule.sequence.length > 0 ? { ...rule, holidaysOff } : rule;
+    return rule.sequence.length > 0
+      ? { ...rule, holidayShift, holidaysOff }
+      : rule;
   }
   function applyRule(rule: RepeatRule, patterns?: Pattern[]) {
     const filled = fillRule(rule, patterns);
@@ -664,19 +670,39 @@ export function DesignCalendar({
     setRules((previous) => [...previous.slice(0, -1), filled]);
   }
   // The new job's patterns take over, keeping any old one still on a day
-  // before the switch so those days keep their marks.
+  // before the switch so those days keep their marks. A ready-made one the
+  // person has changed, still on those days, stays theirs; the new job's
+  // comes in under an id of its own, and its order uses that.
   function changeJob(job: { patterns: Pattern[]; rule: RepeatRule }) {
     const from = dateKey(job.rule.start);
+    const usedBefore = (id: string) =>
+      Object.entries(schedule).some(
+        ([key, entry]) => key < from && entry?.shift === id
+      );
+    const renamed = new Map<string, string>();
+    for (const pattern of job.patterns) {
+      const own = ownPatterns.find((item) => item.id === pattern.id);
+      if (own && usedBefore(own.id) && !samePattern(own, pattern)) {
+        renamed.set(pattern.id, crypto.randomUUID());
+      }
+    }
+    const renameOf = (id: string) => renamed.get(id) ?? id;
+    const incoming = job.patterns.map((pattern) => ({
+      ...pattern,
+      id: renameOf(pattern.id),
+      nextDay: pattern.nextDay && renameOf(pattern.nextDay),
+    }));
     const kept = ownPatterns.filter(
       (pattern) =>
-        !job.patterns.some((next) => next.id === pattern.id) &&
-        Object.entries(schedule).some(
-          ([key, entry]) => key < from && entry?.shift === pattern.id
-        )
+        !incoming.some((next) => next.id === pattern.id) &&
+        usedBefore(pattern.id)
     );
-    const patterns = [...job.patterns, ...kept];
+    const patterns = [...incoming, ...kept];
     setPatterns(patterns);
-    applyRule(job.rule, patterns);
+    applyRule(
+      { ...job.rule, sequence: job.rule.sequence.map(renameOf) },
+      patterns
+    );
   }
   // Only holidays still showing what the rule put there change, so days
   // the person edited stay as they are.
@@ -685,13 +711,19 @@ export function DesignCalendar({
     if (!rule) {
       return;
     }
-    const holidayShift = holidayShiftOf(ownPatterns);
-    if (!holidayShift) {
+    // On, with the day off now first; back, from the one the rule used.
+    const holidayShift = holidaysOff
+      ? holidayShiftOf(ownPatterns)
+      : rule.holidayShift;
+    if (holidaysOff && !holidayShift) {
       return;
     }
     const planned = ruleSchedule(rule);
     onChange((previous) => {
       const next = { ...previous };
+      if (!holidayShift) {
+        return next;
+      }
       for (const [key, entry] of Object.entries(planned)) {
         const plannedShift = entry?.shift;
         const current = previous[key];
@@ -712,7 +744,11 @@ export function DesignCalendar({
     });
     setRules((previous) => [
       ...previous.slice(0, -1),
-      { ...rule, holidaysOff },
+      {
+        ...rule,
+        holidayShift: holidaysOff ? holidayShift : undefined,
+        holidaysOff,
+      },
     ]);
   }
   function openSave(completion: boolean, toCalendar = false) {

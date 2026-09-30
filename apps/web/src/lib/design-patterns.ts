@@ -154,6 +154,21 @@ export const OwnPatternsContext = createContext<readonly Pattern[]>(
   presetList(["day", "night", "after", "off"])
 );
 
+// Whether two patterns would show and count a day the same way.
+export function samePattern(a: Pattern, b: Pattern) {
+  return (
+    a.name === b.name &&
+    a.emoji === b.emoji &&
+    a.symbol === b.symbol &&
+    a.icon === b.icon &&
+    a.color === b.color &&
+    a.countsAsOff === b.countsAsOff &&
+    a.nextDay === b.nextDay &&
+    a.time?.[0] === b.time?.[0] &&
+    a.time?.[1] === b.time?.[1]
+  );
+}
+
 export function isDayOff(pattern: Pattern | undefined) {
   return pattern?.countsAsOff === true;
 }

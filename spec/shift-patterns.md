@@ -33,8 +33,10 @@ Any pattern may name any other pattern except itself. Clearing a day does not cl
 
 ## Holidays
 
-When a repeating order has 祝日は休みにする on, holidays get the person's first pattern with `countsAsOff`.
+When a repeating order has 祝日は休みにする on, holidays get the person's first pattern with `countsAsOff`. The order records which pattern that was. Turning the switch off puts back only holidays still showing that recorded pattern, whatever the person's patterns are by then; turning it on uses whichever day-off pattern is first at that moment. With no day-off pattern it cannot be turned on, but it can always be turned off.
 
 ## Changing jobs
 
 The new job's patterns replace the list. An old pattern still on a day before the switch stays in the list, so those days keep their marks.
+
+A new job's ready-made pattern can share an id with one the person already has. If theirs differs (they renamed it, changed its time or mark…) and is still on a day before the switch, theirs keeps the id and the new job's gets a fresh one; the new order and any `nextDay` links use the fresh id. Past days never change meaning because of a job change.
