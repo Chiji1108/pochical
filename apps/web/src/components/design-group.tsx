@@ -4782,19 +4782,40 @@ const monthSwitch = css({
 // The group's shifts page: the month row, the table under it, and room at
 // the foot for the picked day's sheet to cover.
 const shiftsPage = {
+  // As tall as the longest list, up to what the sheet has room for, so it
+  // keeps its height from one person to the next.
+  legendBody: css({
+    margin: "0 -24px -28px",
+    minHeight: 0,
+    overflow: "hidden",
+    position: "relative",
+  }),
   // Over the legend's list, the chips running out to the sheet's edges as
   // they do to the screen's in 1人ずつ.
-  legendList: cva({
-    base: { gridArea: "1 / 1", minWidth: 0 },
-    variants: { shown: { false: { visibility: "hidden" } } },
-  }),
-  legendLists: css({ display: "grid" }),
   legendPeople: css({
     "--screen-left": "24px",
     "--screen-right": "24px",
     flexShrink: 0,
     marginBottom: "16px",
     paddingTop: "8px",
+  }),
+  // Over the sizing lists, the one person's, scrolling only when it is
+  // longer than the room.
+  legendScroll: css({
+    "& > *": { flexShrink: 0 },
+    display: "flex",
+    flexDirection: "column",
+    inset: 0,
+    overflowY: "auto",
+    padding: "2px 24px 28px",
+    position: "absolute",
+  }),
+  // Everyone's lists in one place, unseen, giving the body its height.
+  legendSizer: css({
+    "& > *": { gridArea: "1 / 1", minWidth: 0 },
+    display: "grid",
+    padding: "2px 24px 28px",
+    visibility: "hidden",
   }),
   monthName: css({ fontWeight: 600, textStyle: "headline" }),
   // The month's name and 今日 or 今月.
@@ -6355,39 +6376,36 @@ function LegendSheet({
       <div className={shiftsPage.legendPeople}>
         <PeoplePicker members={members} onPick={onPick} picked={member} />
       </div>
-      {/* Everyone's lists lie in one place, the others hidden, so the
-          sheet stays as tall as the longest and the chips stay under the
-          finger from one person to the next. */}
-      <div className={sheetBody}>
-        <div className={shiftsPage.legendLists}>
+      {/* Everyone's lists lie unseen under the one shown, so the sheet
+          stays as tall as the longest, up to its limit, and the chips
+          stay under the finger from one person to the next. Only a list
+          longer than the room scrolls. */}
+      <div className={shiftsPage.legendBody}>
+        <div aria-hidden="true" className={shiftsPage.legendSizer} inert>
           {members.map((candidate) => (
-            <div
-              className={shiftsPage.legendList({
-                shown: candidate.id === member.id,
-              })}
-              key={candidate.id}
-            >
-              <List>
-                {candidate.patterns.map((item) => (
-                  <ListRow
-                    key={item.id}
-                    label={item.name}
-                    leading={
-                      <MemberMark
-                        look={item.look}
-                        member={candidate}
-                        size={20}
-                      />
-                    }
-                    value={item.time ?? ""}
-                  />
-                ))}
-              </List>
-            </div>
+            <PatternList key={candidate.id} member={candidate} />
           ))}
+        </div>
+        <div className={shiftsPage.legendScroll}>
+          <PatternList member={member} />
         </div>
       </div>
     </Sheet>
+  );
+}
+
+function PatternList({ member }: { member: Member }) {
+  return (
+    <List>
+      {member.patterns.map((item) => (
+        <ListRow
+          key={item.id}
+          label={item.name}
+          leading={<MemberMark look={item.look} member={member} size={20} />}
+          value={item.time ?? ""}
+        />
+      ))}
+    </List>
   );
 }
 
