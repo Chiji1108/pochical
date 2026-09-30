@@ -393,7 +393,7 @@ export function DesignCalendar({
   const setImageOptions = useSettings((state) => state.setImageOptions);
   const [detailDate, setDetailDate] = useState<Date>();
   // The row of the month the opened week is on, for the month to fold up
-  // into it and unfold back around it.
+  // into it and unfold back around it. It follows the week as it turns.
   const [foldRow, setFoldRow] = useState(0);
   // Counts the turns to another month or week, as against folding the one
   // shown: a turned page is drawn afresh, so only folding animates.
@@ -534,8 +534,10 @@ export function DesignCalendar({
   );
   const weekDetail = !editing && detailDate !== undefined;
   const headingMode = screenMode(editing, weekDetail);
-  function rowOf(date: Date) {
-    const index = dates.findIndex((day) => dateKey(day) === dateKey(date));
+  function rowOf(date: Date, inMonth: Date) {
+    const index = weekTools
+      .monthDates(inMonth)
+      .findIndex((day) => dateKey(day) === dateKey(date));
     return Math.max(0, Math.floor(index / 7));
   }
   function onMonth(date: Date) {
@@ -551,9 +553,7 @@ export function DesignCalendar({
       : new Date(date.getFullYear(), date.getMonth(), 1);
   }
   function openDetail(date: Date) {
-    if (!weekDetail) {
-      setFoldRow(rowOf(date));
-    }
+    setFoldRow(rowOf(date, monthOpening(date)));
     setSwipedTo(undefined);
     setDetailDate(date);
     if (!onMonth(date)) {
@@ -696,9 +696,6 @@ export function DesignCalendar({
     }
   }
   function closeDetail() {
-    if (detailDate) {
-      setFoldRow(rowOf(detailDate));
-    }
     setDetailDate(undefined);
   }
   function changeEntry(date: Date, entry: DayEntry | undefined) {
@@ -880,7 +877,7 @@ export function DesignCalendar({
                           key={pageTurn}
                           label={label}
                           renderCell={renderCell}
-                          shift={-foldRow * ROW_STEP}
+                          row={foldRow}
                           weekDetail={weekDetail}
                         />
                       );
@@ -1240,78 +1237,76 @@ const calendarPage = {
 
 // From one row of days to the next.
 const ROW_STEP = DAY_ROW_HEIGHT + DAY_ROW_GAP;
-// How the month folds into a week and back: one spring without bounce,
-// the same as SwiftUI's .spring(duration: 0.3, bounce: 0) for the apps.
+// How the month folds into a week and back: one spring without bounce
+// for all of it, the moving, the height and the fading, the same as one
+// withAnimation(.spring(duration: 0.3, bounce: 0)) in the apps.
 const fold = { bounce: 0, type: "spring", visualDuration: 0.3 } as const;
-// The days other than the week fade as they go, in the fold's second
-// half, so they are seen moving first and no row shows cut off at the
-// grid's edges; coming back, they are there from its first half. The
-// week itself stays, as what the month folds into.
-const fadeOut = { delay: 0.1, duration: 0.2, ease: "easeIn" } as const;
-const fadeIn = { duration: 0.2, ease: "easeOut" } as const;
-// How a day leaves as the month folds, moving by `by`. Into the top row
-// the month stays put, and the fade alone carries the days out.
-function leave(by: number) {
-  return {
-    opacity: 0,
-    transition: { default: fold, opacity: fadeOut },
-    y: by,
-  };
-}
 const folding = {
   cell: css({ display: "grid", minWidth: 0 }),
-  // Days on their way out are laid over the grid where they were.
-  grid: css({ position: "relative" }),
+  // Clips nothing: the rows moving out of it fade on the way, and the
+  // pager's edges take them out of sight.
+  page: css({ position: "relative" }),
 };
 
 // The page shown, folding as the month turns into one of its weeks and
-// back, like the Calendar apps: the week's days move to the row they go
-// to, the other days slide along with the rest of the month as one piece,
-// in and out of sight at the pager's edges, and the page's height follows
-// so what is under it moves too. `shift` is how far the month moves up to
-// bring the week to the top.
+// back, like the Calendar apps. The days lie on one sheet, each in its
+// row of the month, the week's days too while it is open; the sheet
+// moves up by `row` rows to bring the week to the top, the other days
+// fade out and in on it, and the page's height follows so what is under
+// it moves too. As one thing moving, the week can't move apart from the
+// rest of the month.
 function FoldingGrid({
   dates,
   label,
   renderCell,
-  shift,
+  row,
   weekDetail,
 }: {
   dates: Date[];
   label: string;
   renderCell: (date: Date) => ReactNode;
-  shift: number;
+  row: number;
   weekDetail: boolean;
 }) {
   const weeks = dates.length / 7;
   const room = weekDetail ? weeks : Math.max(weeks, MONTH_WEEKS);
+  // The sheet's row the dates start on: the open week keeps its own.
+  const firstRow = weekDetail ? row : 0;
   return (
     <motion.section
       animate={{ height: dayGridHeight(room) }}
       aria-label={label}
-      className={cx(dayGrid, folding.grid)}
+      className={folding.page}
       initial={false}
       transition={fold}
     >
-      {/* The shift out is the one as the days leave, passed as custom. */}
-      <AnimatePresence custom={shift} initial={false} mode="popLayout">
-        {dates.map((date) => (
-          <motion.div
-            animate={{ opacity: 1, y: 0 }}
-            className={folding.cell}
-            exit="away"
-            initial={{ opacity: 0, y: shift }}
-            key={dateKey(date)}
-            // Measured only when folding, not as pages turn.
-            layout
-            layoutDependency={weekDetail}
-            transition={{ default: fold, opacity: fadeIn }}
-            variants={{ away: leave }}
-          >
-            {renderCell(date)}
-          </motion.div>
-        ))}
-      </AnimatePresence>
+      <motion.div
+        animate={{ y: weekDetail ? -row * ROW_STEP : 0 }}
+        className={dayGrid}
+        initial={false}
+        transition={fold}
+      >
+        <AnimatePresence initial={false}>
+          {dates.map((date, index) => (
+            <motion.div
+              animate={{ opacity: 1 }}
+              className={folding.cell}
+              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }}
+              key={dateKey(date)}
+              // Placed by the sheet's row, so a day keeps its place as
+              // the days around it come and go.
+              style={{
+                gridColumn: (index % 7) + 1,
+                gridRow: firstRow + Math.floor(index / 7) + 1,
+              }}
+              transition={fold}
+            >
+              {renderCell(date)}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </motion.div>
     </motion.section>
   );
 }
