@@ -52,11 +52,11 @@ The widgets are views of one entry. They hold no state and open the app when tap
 ## Colors
 
 - **iPhone**: the widgets use the person's テーマ in the system's light or dark. In the 色合い (tinted) and クリア (clear) looks, the system recolors them itself.
-- **Android**: the ground and words use the wallpaper's colors (Material You), as Glance's default colors do, whatever テーマ the app is in. This matches the widgets around them on the home screen.
+- **Android**: the ground and words use the wallpaper's colors (Material You), as Glance's default colors do, whatever テーマ the app is in. This matches the widgets around them on the home screen. The ground is `surface`, not Glance's tinted `widgetBackground`: it is nearly white with a faint tint of the wallpaper, like Google's own Digital Wellbeing widget, so the shift colors and the Sunday and Saturday colors stay easy to read on any wallpaper.
 
   | Role | Light | Dark |
   | --- | --- | --- |
-  | Ground (`widgetBackground`) | secondary 95 | secondary 20 |
+  | Ground (`surface`) | neutral 99 | neutral 10 |
   | Words (`onSurface`) | neutral 10 | neutral 90 |
   | Secondary words (`onSurfaceVariant`) | neutral variant 30 | neutral variant 80 |
   | Today's date (`primary`) | primary 40 | primary 80 |
