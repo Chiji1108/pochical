@@ -8,6 +8,16 @@ import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 import { token } from "styled-system/tokens";
 
+import {
+  addDays,
+  dateKey,
+  defaultHolidaysOff,
+  formatDay,
+  isRepeating,
+  holidayShiftOf,
+  repeatSchedule,
+} from "../lib/design-days";
+import type { RepeatRule, Schedule } from "../lib/design-days";
 import { useDevice } from "../lib/design-device";
 import {
   isDayOff,
@@ -29,31 +39,19 @@ import {
 } from "./design-account";
 import type { AccountProvider } from "./design-account";
 import { AppIcon, pickableIcons, useAppIcons } from "./design-app-icon";
-import {
-  addDays,
-  DayCell,
-  dateKey,
-  englishMonthOf,
-  MonthName,
-  defaultHolidaysOff,
-  formatDay,
-  InputDatePicker,
-  isRepeating,
-  holidayShiftOf,
-  RepeatSequenceEditor,
-  repeatSchedule,
-  TabBar,
-  ShiftPreview,
-} from "./design-calendar";
-import type { RepeatRule, Schedule, Tab } from "./design-calendar";
 import { CoworkersPage } from "./design-coworkers";
 import type { Coworkers } from "./design-coworkers";
+import { InputDatePicker } from "./design-date-picker";
+import { DayCell } from "./design-day-cell";
 import type { Profile } from "./design-group-data";
 import { PhotoAvatar, PhotoEditor } from "./design-group-parts";
-import { WorkSetupSteps } from "./design-onboarding";
+import { englishMonthOf, MonthName } from "./design-month-name";
 import { PatternsPage } from "./design-pattern-editor";
 import { PresetContexts } from "./design-providers";
+import { RepeatSequenceEditor, ShiftPreview } from "./design-repeat-editor";
 import { ConfirmDialog, Sheet } from "./design-sheet";
+import { TabBar } from "./design-tab-bar";
+import type { Tab } from "./design-tab-bar";
 import {
   ColorSchemeContext,
   PreviewSchemeSwitch,
@@ -93,6 +91,7 @@ import {
 } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
 import type { ColoredDay } from "./design-week";
+import { WorkSetupSteps } from "./design-work-setup";
 import {
   CellNamesContext,
   IconWeightContext,

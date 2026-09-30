@@ -10,8 +10,8 @@ import {
 import { useState } from "react";
 import { css, cx } from "styled-system/css";
 
+import { addDays, formatDay } from "../lib/design-days";
 import { designToday } from "../lib/design-today";
-import { addDays, formatDay } from "./design-calendar";
 import { ChatRow } from "./design-group-chat";
 import {
   everyoneOff,

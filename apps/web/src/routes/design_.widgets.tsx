@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ComponentType } from "react";
 import { css } from "styled-system/css";
 
-import { dateKey, initialDesignSchedule } from "../components/design-calendar";
 import { FrameSection, frameSections } from "../components/design-frames";
 import {
   DesignIntro,
@@ -35,6 +34,7 @@ import {
   UpcomingRectangular,
   UpcomingSmall,
 } from "../components/design-widgets";
+import { dateKey, initialDesignSchedule } from "../lib/design-days";
 import { presetPatterns } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";

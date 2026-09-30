@@ -3,12 +3,13 @@ import { Fragment, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
+import { initialDesignSchedule } from "../lib/design-days";
 import { createUserStore, UserStoreContext } from "../lib/design-user-store";
 import type { OwnData } from "../lib/design-user-store";
 import { parseDesignVariants } from "../lib/design-variants";
-import { DesignCalendar, initialDesignSchedule } from "./design-calendar";
-import type { Tab } from "./design-calendar";
+import { DesignCalendar } from "./design-calendar";
 import type { SettingsPage } from "./design-settings";
+import type { Tab } from "./design-tab-bar";
 
 // Real screens drawn small and not touchable, for /design/flows and
 // /design/states, so the documents never drift from the app. Frames open

@@ -1,7 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { dateKey, initialDesignSchedule } from "../components/design-calendar";
-import type { Schedule } from "../components/design-calendar";
 import {
   CalendarFrame,
   Frame,
@@ -24,6 +22,8 @@ import {
 } from "../components/design-providers";
 import { pageStyle } from "../components/design-theme";
 import { OffDisplayContext } from "../components/shift-mark";
+import { dateKey, initialDesignSchedule } from "../lib/design-days";
+import type { Schedule } from "../lib/design-days";
 import { isDayOff, presetPatterns } from "../lib/design-patterns";
 import type { PatternBook } from "../lib/design-patterns";
 import { parseDesignVariants } from "../lib/design-variants";

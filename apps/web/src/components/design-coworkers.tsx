@@ -1,7 +1,7 @@
 import { useState } from "react";
 
+import type { Schedule } from "../lib/design-days";
 import { composing, limitText, textLimits } from "../lib/text-limits";
-import type { Schedule } from "./design-calendar";
 import { ConfirmDialog } from "./design-sheet";
 import {
   AddButton,

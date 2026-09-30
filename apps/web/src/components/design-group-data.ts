@@ -1,9 +1,9 @@
+import { dateKey, timeChangeOf, timeRange } from "../lib/design-days";
+import type { Schedule } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
 import type { Pattern } from "../lib/design-patterns";
 import { sampleRosterPhoto } from "../lib/design-sample-photos";
 import type { Photo } from "../lib/design-sample-photos";
-import { dateKey, timeChangeOf, timeRange } from "./design-calendar";
-import type { Schedule } from "./design-calendar";
 import { holidayName } from "./design-week";
 import { guessLook, sampleLooks } from "./shift-mark";
 import type { Look, LookSettings, MarkIcon } from "./shift-mark";

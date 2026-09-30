@@ -2,13 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
 
-import {
-  DesignCalendar,
-  initialDesignSchedule,
-} from "../components/design-calendar";
+import { DesignCalendar } from "../components/design-calendar";
 import { sampleGroups } from "../components/design-group-data";
 import { DesignProviders } from "../components/design-providers";
 import { paleSkyLights, themeSkyId } from "../components/design-surprise";
+import { initialDesignSchedule } from "../lib/design-days";
 import {
   createUserStore,
   sampleCoworkers,

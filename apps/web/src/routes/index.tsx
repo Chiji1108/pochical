@@ -4,11 +4,7 @@ import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { css } from "styled-system/css";
 
-import {
-  DesignCalendar,
-  initialDesignSchedule,
-} from "../components/design-calendar";
-import type { Tab } from "../components/design-calendar";
+import { DesignCalendar } from "../components/design-calendar";
 import { sampleGroups } from "../components/design-group-data";
 import {
   DesignProviders,
@@ -21,6 +17,7 @@ import {
   SKY_CHANGE,
   themeSkyId,
 } from "../components/design-surprise";
+import type { Tab } from "../components/design-tab-bar";
 import { ColorSchemeContext } from "../components/design-theme";
 import type { PresetId } from "../components/design-theme";
 import {
@@ -32,6 +29,7 @@ import {
 } from "../components/shift-mark";
 import type { ShiftMarkStyle } from "../components/shift-mark";
 import { StoreLinks } from "../components/store-links";
+import { initialDesignSchedule } from "../lib/design-days";
 import {
   createUserStore,
   sampleCoworkers,

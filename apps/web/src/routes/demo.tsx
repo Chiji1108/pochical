@@ -3,11 +3,7 @@ import { BookOpen, RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 
-import {
-  DesignCalendar,
-  initialDesignSchedule,
-  patternSets,
-} from "../components/design-calendar";
+import { DesignCalendar } from "../components/design-calendar";
 import { sampleGroups } from "../components/design-group-data";
 import { HomeScreen } from "../components/design-home-screen";
 import {
@@ -22,6 +18,7 @@ import {
 } from "../components/design-providers";
 import { pageStyle } from "../components/design-theme";
 import { VariantPanel } from "../components/design-variant-panel";
+import { initialDesignSchedule, patternSets } from "../lib/design-days";
 import { useDevice } from "../lib/design-device";
 import { presetList } from "../lib/design-patterns";
 import {

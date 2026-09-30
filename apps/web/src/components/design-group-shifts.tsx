@@ -13,16 +13,10 @@ import {
 import type { CSSProperties, ReactNode, Ref } from "react";
 import { css, cva, cx } from "styled-system/css";
 
+import { addDays, dateKey, formatDay } from "../lib/design-days";
 import { designToday } from "../lib/design-today";
 import { dayName } from "../lib/text-limits";
-import {
-  addDays,
-  dateKey,
-  dayCell,
-  dayParts,
-  todayMark,
-  formatDay,
-} from "./design-calendar";
+import { dayCell, dayParts, todayMark } from "./design-day-cell";
 import {
   changeOn,
   designMonth,

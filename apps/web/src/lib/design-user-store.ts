@@ -2,8 +2,6 @@ import { createContext, useContext } from "react";
 import type { SetStateAction } from "react";
 import { createStore, useStore } from "zustand";
 
-import { patternSets } from "../components/design-calendar";
-import type { RepeatRule, Schedule } from "../components/design-calendar";
 import {
   sampleChats,
   sampleGroups,
@@ -14,6 +12,8 @@ import type {
   GroupSummary,
   Profile,
 } from "../components/design-group-data";
+import { patternSets } from "./design-days";
+import type { RepeatRule, Schedule } from "./design-days";
 import { presetList } from "./design-patterns";
 import type { Pattern } from "./design-patterns";
 
