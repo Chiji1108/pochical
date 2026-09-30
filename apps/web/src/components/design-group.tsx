@@ -4514,11 +4514,11 @@ const suggestionCount = 4;
 // 一覧 reads most easily, so it comes first while everyone fits across;
 // past that it scrolls sideways, and 週ごと, which grows only downwards,
 // takes over. 1人ずつ shows one member at a time in a calendar like yours.
-type Layout = "weeks" | "days" | "person";
+type Layout = "days" | "weeks" | "person";
 
 const layoutOptions: { value: Layout; label: string }[] = [
-  { label: "週ごと", value: "weeks" },
   { label: "一覧", value: "days" },
+  { label: "週ごと", value: "weeks" },
   { label: "1人ずつ", value: "person" },
 ];
 
