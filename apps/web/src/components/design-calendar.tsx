@@ -849,6 +849,7 @@ export function DesignCalendar({
                 <DesignGroup
                   initialGroupId={openGroup}
                   initialPage={initialGroupPage}
+                  inviteSize={variants.inviteSize}
                   photoSend={variants.photoSend}
                   scanResult={variants.scanResult}
                   onTab={setTab}
@@ -859,6 +860,7 @@ export function DesignCalendar({
               )}
               {joining && (
                 <JoinScreen
+                  inviteSize={variants.inviteSize}
                   onClose={() => {
                     setJoining(false);
                   }}

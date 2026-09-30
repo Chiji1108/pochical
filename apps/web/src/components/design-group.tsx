@@ -363,7 +363,13 @@ const classmates = (): Member[] =>
 
 // The cousins' group the sample invitation is for; ゆうき, who sent it,
 // is the same person as in 家族.
-const cousins = (): Member[] => [
+// How many are in the group the sample invitation is to, as 比べる案
+// sets it: a few, all named on it, or more than its names fit.
+export type InviteSize = "few" | "many";
+
+// ゆうき's cousins, and at 8人 more of them, for an invitation with more
+// people than its names fit.
+const cousins = (size: InviteSize = "few"): Member[] => [
   partner,
   {
     ...misaki(),
@@ -381,7 +387,25 @@ const cousins = (): Member[] => [
     photo: undefined,
     style: { look: presetLook("minimal") },
   },
+  ...(size === "many" ? moreCousins() : []),
 ];
+
+const moreCousins = (): Member[] =>
+  [
+    ["cousin-sota", "そうた", 2, 1012, "pop"],
+    ["cousin-yui", "ゆい", 5, 0, "minimal"],
+    ["cousin-haruto", "はると", 1, 1084, "roster"],
+    ["cousin-mei", "めい", 4, 64, "natural"],
+    ["cousin-kenji", "けんじ", 6, 0, "pop"],
+  ].map(([id, name, offset, photo, preset]) => ({
+    ...misaki(),
+    id: String(id),
+    name: String(name),
+    photo: photo ? samplePhoto(Number(photo)) : undefined,
+    shiftOn: (date: Date) =>
+      nurseOrder[(dayNumber(date) + Number(offset)) % nurseOrder.length],
+    style: { look: presetLook(String(preset)) },
+  }));
 
 // Old school friends in all kinds of work: a group too wide for 一覧.
 const schoolFriends = (): Member[] => [
@@ -844,6 +868,7 @@ export function DesignGroup({
   initialPage = "hub",
   scanResult = "invite",
   photoSend = "ok",
+  inviteSize = "few",
 }: {
   schedule: Schedule;
   patterns: Pattern[];
@@ -857,6 +882,7 @@ export function DesignGroup({
   scanResult?: ScanResult;
   // Whether a photo's upload goes through, as 比べる案 sets it.
   photoSend?: PhotoSend;
+  inviteSize?: InviteSize;
 
   onTab: (tab: Tab) => void;
 }) {
@@ -899,7 +925,7 @@ export function DesignGroup({
       return [me, ...schoolFriends()];
     }
     if (id === invitedGroupId) {
-      return [me, ...cousins()];
+      return [me, ...cousins(inviteSize)];
     }
     return [me];
   };
@@ -924,6 +950,7 @@ export function DesignGroup({
   // It takes the scanner's place, as LINE goes on from a read code.
   const joinPage = (
     <JoinScreen
+      inviteSize={inviteSize}
       onClose={() => {
         setPage({ name: "hub" });
       }}
@@ -1901,18 +1928,33 @@ const joinScreen = {
     paddingBottom: "12px",
     textAlign: "center",
   }),
+  memberLine: css({
+    alignItems: "center",
+    color: "text.tertiary",
+    display: "inline-flex",
+    gap: "2px",
+    textStyle: "footnote",
+  }),
   members: css({
-    "& small": { color: "text.tertiary", textStyle: "footnote" },
     alignItems: "center",
     display: "flex",
     flexDirection: "column",
     gap: "8px",
   }),
+  membersButton: css({
+    bg: "transparent",
+    border: 0,
+    color: "inherit",
+    cursor: "pointer",
+    padding: 0,
+  }),
   title: css({ fontWeight: 700, margin: 0, textStyle: "title1" }),
 };
 
-// Who is in a group, by name while that stays short.
+// Who is in a group, by name while that stays short, and by as many
+// faces as sit side by side without crowding.
 const namedMembers = 3;
+const shownFaces = 5;
 
 function memberLine(names: string[]) {
   if (names.length <= namedMembers) {
@@ -7177,15 +7219,11 @@ type Invite = {
 // The group the sample invitation joins.
 const invitedGroupId = "cousins";
 
-const sampleInvite = (): Invite => ({
-  from: { name: "ゆうき", photo: samplePhoto(1005) },
+const sampleInvite = (size: InviteSize = "few"): Invite => ({
+  from: { name: partner.name, photo: partner.photo },
   group: "いとこ会",
   mark: { emoji: "🍉", kind: "emoji" },
-  members: [
-    { name: "ゆうき", photo: samplePhoto(1005) },
-    { name: "あかり" },
-    { name: "りく" },
-  ],
+  members: cousins(size).map(({ name, photo }) => ({ name, photo })),
 });
 
 // Opened by an invitation link over the calendar, right after the first
@@ -7197,16 +7235,41 @@ const sampleInvite = (): Invite => ({
 // turns it down.
 export function JoinScreen({
   profile,
+  inviteSize = "few",
   onJoin,
   onClose,
 }: {
   profile: Profile;
+  inviteSize?: InviteSize;
   onJoin: (group: GroupSummary) => void;
   onClose: () => void;
 }) {
-  const invite = sampleInvite();
+  const invite = sampleInvite(inviteSize);
   const [mine, setMine] = useState<GroupProfile>();
   const [editing, setEditing] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
+  const names = invite.members.map((member) => member.name);
+  // When not every name fits, the line opens them all. Only names and
+  // faces: shifts are seen once both are in the group.
+  const shortened = names.length > namedMembers;
+  const members = (
+    <>
+      <span className={joinScreen.faces}>
+        {invite.members.slice(0, shownFaces).map((member) => (
+          <PhotoAvatar
+            key={member.name}
+            name={member.name}
+            photo={member.photo}
+            size={32}
+          />
+        ))}
+      </span>
+      <small className={joinScreen.memberLine}>
+        {memberLine(names)}
+        {shortened && <ChevronRight aria-hidden="true" size={14} />}
+      </small>
+    </>
+  );
   const group: GroupSummary = {
     id: invitedGroupId,
     mark: invite.mark,
@@ -7256,21 +7319,19 @@ export function JoinScreen({
             </span>
             <h3 className={joinScreen.title}>{invite.group}</h3>
           </div>
-          <div className={joinScreen.members}>
-            <span className={joinScreen.faces}>
-              {invite.members.map((member) => (
-                <PhotoAvatar
-                  key={member.name}
-                  name={member.name}
-                  photo={member.photo}
-                  size={32}
-                />
-              ))}
-            </span>
-            <small>
-              {memberLine(invite.members.map((member) => member.name))}
-            </small>
-          </div>
+          {shortened ? (
+            <button
+              className={cx(joinScreen.members, joinScreen.membersButton)}
+              onClick={() => {
+                setMembersOpen(true);
+              }}
+              type="button"
+            >
+              {members}
+            </button>
+          ) : (
+            <div className={joinScreen.members}>{members}</div>
+          )}
         </div>
         <Section title="このグループでのあなた">
           <List>
@@ -7298,6 +7359,38 @@ export function JoinScreen({
           参加する
         </Button>
       </div>
+      <Sheet
+        label={`${invite.group}のメンバー`}
+        onOpenChange={setMembersOpen}
+        open={membersOpen}
+      >
+        <SheetHeading
+          eyebrow={invite.group}
+          onClose={() => {
+            setMembersOpen(false);
+          }}
+          title={`${invite.members.length}人のメンバー`}
+        />
+        <div className={sheetBody}>
+          <List>
+            {invite.members.map((member) => (
+              <ListRow
+                key={member.name}
+                label={member.name}
+                leading={
+                  <>
+                    <PhotoAvatar
+                      name={member.name}
+                      photo={member.photo}
+                      size={28}
+                    />
+                  </>
+                }
+              />
+            ))}
+          </List>
+        </div>
+      </Sheet>
     </Screen>
   );
 }
