@@ -61,10 +61,20 @@ function draftOf({ time, ...pattern }: Pattern): PatternDraft {
   };
 }
 
-function patternOf({ allDay, start, end, ...draft }: PatternDraft): Pattern {
+// Runs on past midnight, like 夜勤 or a 24-hour 当番: only such a pattern
+// fills the next day, and only with one that has no time, like 明け. One
+// with no time never runs on, so a next day never has a next day of its
+// own and entering a shift cannot go round in a circle.
+function runsOvernight({ allDay, start, end }: PatternDraft) {
+  return !allDay && end <= start;
+}
+
+function patternOf(draft: PatternDraft): Pattern {
+  const { allDay, start, end, ...rest } = draft;
   return {
-    ...draft,
-    name: draft.name.trim(),
+    ...rest,
+    name: rest.name.trim(),
+    nextDay: runsOvernight(draft) ? rest.nextDay : undefined,
     time: allDay ? undefined : [start, end],
   };
 }
@@ -169,13 +179,21 @@ export function PatternsPage({ onBack }: { onBack: () => void }) {
         }}
         onSave={(draft) => {
           const pattern = patternOf(draft);
-          setItems((previous) =>
-            isNew
+          setItems((previous) => {
+            const saved = isNew
               ? [...previous, pattern]
               : previous.map((item) =>
                   item.id === pattern.id ? pattern : item
+                );
+            // Given a time, it can no longer follow on from another.
+            return pattern.time
+              ? saved.map((item) =>
+                  item.nextDay === pattern.id
+                    ? { ...item, nextDay: undefined }
+                    : item
                 )
-          );
+              : saved;
+          });
           setEditing(undefined);
         }}
         others={items.filter((item) => item.id !== editing.id)}
@@ -538,21 +556,23 @@ function PatternEditor({
               setDraft({ ...draft, countsAsOff: checked });
             }}
           />
-          <ListRow
-            onClick={() => {
-              setSubPage("nextDay");
-            }}
-            label="翌日のパターン"
-            value={
-              <>
-                {nextDay && (
-                  <MarkGlyph look={nextDay} size={18} style={style} />
-                )}
-                {nextDay?.name ?? "なし"}
-              </>
-            }
-            valueClassName={markValue}
-          />
+          {runsOvernight(draft) && (
+            <ListRow
+              onClick={() => {
+                setSubPage("nextDay");
+              }}
+              label="翌日のパターン"
+              value={
+                <>
+                  {nextDay && (
+                    <MarkGlyph look={nextDay} size={18} style={style} />
+                  )}
+                  {nextDay?.name ?? "なし"}
+                </>
+              }
+              valueClassName={markValue}
+            />
+          )}
         </List>
       </Section>
       <Section title="見た目">
@@ -623,7 +643,7 @@ function NextDayPicker({
   onChange: (id: string | undefined) => void;
 }) {
   const style = useContext(ShiftMarkStyleContext);
-  const choices = [undefined, ...others];
+  const choices = [undefined, ...others.filter((other) => !other.time)];
   return (
     <>
       <PageHeader
@@ -633,7 +653,7 @@ function NextDayPicker({
       />
       <Note>
         {draft.name || "このパターン"}
-        を入れると、翌日にも自動でシフトが入ります。夜勤の翌日の明けなどに使います。
+        を入れると、翌日にも自動でシフトが入ります。夜勤の翌日の明けなどに使います。選べるのは、時間なしのパターンです。
       </Note>
       <ChoiceList
         label="翌日のパターン"
