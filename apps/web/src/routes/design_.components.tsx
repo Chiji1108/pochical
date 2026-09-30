@@ -356,7 +356,11 @@ function Rows() {
       >
         <Section note="グループの人にも見えます" title="シフト">
           <List>
-            <ListRow label="働き方" onClick={() => undefined} value="勤務表" />
+            <ListRow
+              label="働き方"
+              onClick={() => undefined}
+              value="繰り返しなし"
+            />
           </List>
         </Section>
         <Note>ポチポチ入力のボタンを長押ししても、その場で直せます。</Note>
