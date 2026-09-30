@@ -9,15 +9,40 @@ import { ColorSchemeContext, useThemeStyle } from "./design-theme";
 // Like design-phone, they stand in for the device, so the native apps have
 // no counterpart; WidgetKit and Glance draw these themselves.
 
-// Sizes in pt for a 390 × 844 iPhone, the phone the /design screens are
-// drawn at, from Apple's Human Interface Guidelines (Widgets).
+// Home screen widgets' corners, as a plain circle that matches the
+// system's: measured from an iPhone 16 Pro (about 26pt at 402pt wide,
+// scaled to 390) and a Pixel 9a (about 21dp).
+const IOS_RADIUS = 25;
+const ANDROID_RADIUS = 21;
+// The margins the system keeps around a home screen widget's content
+// (16pt on iPhone, measured as well; Material's 16dp on Android). The lock
+// screen's widgets have none.
+const HOME_MARGIN = 16;
+
+const iosHome = { margin: HOME_MARGIN, radius: IOS_RADIUS };
+const iosLock = { margin: 0, radius: 0 };
+const androidHome = { margin: HOME_MARGIN, radius: ANDROID_RADIUS };
+
+// iPhone sizes in pt for a 390 × 844 phone, the one the /design screens
+// are drawn at, from Apple's Human Interface Guidelines (Widgets); an
+// iPhone 16 Pro's measure the same once scaled from 402 to 390.
+// Android sizes in dp as a Pixel 9a's launcher gives them: its cells
+// are 97dp wide and 107dp tall, less the room between them.
 export const widgetFamilies = {
-  accessoryCircular: { height: 72, label: "円形", width: 72 },
-  accessoryInline: { height: 26, label: "1行", width: 234 },
-  accessoryRectangular: { height: 72, label: "長方形", width: 160 },
-  systemLarge: { height: 354, label: "大", width: 338 },
-  systemMedium: { height: 158, label: "中", width: 338 },
-  systemSmall: { height: 158, label: "小", width: 158 },
+  accessoryCircular: { ...iosLock, height: 72, label: "円形", width: 72 },
+  accessoryInline: { ...iosLock, height: 26, label: "1行", width: 234 },
+  accessoryRectangular: {
+    ...iosLock,
+    height: 72,
+    label: "長方形",
+    width: 160,
+  },
+  android2x2: { ...androidHome, height: 202, label: "2×2", width: 179 },
+  android4x2: { ...androidHome, height: 202, label: "4×2", width: 373 },
+  android4x4: { ...androidHome, height: 415, label: "4×4", width: 373 },
+  systemLarge: { ...iosHome, height: 354, label: "大", width: 338 },
+  systemMedium: { ...iosHome, height: 158, label: "中", width: 338 },
+  systemSmall: { ...iosHome, height: 158, label: "小", width: 158 },
 } as const;
 export type WidgetFamily = keyof typeof widgetFamilies;
 
@@ -45,12 +70,6 @@ const flatText = {
   "--text-secondary": "rgb(255 255 255 / 0.6)",
   "--text-tertiary": "rgb(255 255 255 / 0.4)",
 };
-
-// The widget's corner, measured by eye; to be checked against a home
-// screen screenshot of the real OS.
-const WIDGET_RADIUS = 22;
-// The system's margins around a home screen widget's content.
-const WIDGET_MARGIN = 16;
 
 const frame = cva({
   base: {
@@ -138,15 +157,14 @@ function ThemedFrame({
   children: ReactNode;
 }) {
   const theme = useThemeStyle();
-  const { width, height } = widgetFamilies[family];
+  const { width, height, margin, radius } = widgetFamilies[family];
   const rendering = renderingOf(appearance);
-  const onHome = family.startsWith("system");
   const style = {
     ...theme,
     ...(rendering === "fullColor" ? {} : flatText),
-    borderRadius: onHome ? WIDGET_RADIUS : 0,
+    borderRadius: radius,
     height,
-    padding: onHome ? WIDGET_MARGIN : 0,
+    padding: margin,
     width,
   } as CSSProperties;
   return (
@@ -220,13 +238,15 @@ export function LabelledWidget({
   children: ReactNode;
 }) {
   const { width, height, label } = widgetFamilies[family];
+  const unit = family.startsWith("android") ? "dp" : "pt";
   return (
     <figure className={labelled} data-ground={appearance}>
       <WidgetFrame appearance={appearance} family={family}>
         {children}
       </WidgetFrame>
       <figcaption>
-        {label} {width}×{height}pt
+        {label} {width}×{height}
+        {unit}
       </figcaption>
     </figure>
   );

@@ -49,6 +49,11 @@ const sampleSchedule = initialDesignSchedule();
 
 const rows = css({ display: "flex", flexDirection: "column", gap: "16px" });
 
+// Android's launcher has light and dark; the widget keeps its own colors.
+const androidAppearances = homeAppearances.filter(
+  ({ appearance }) => appearance === "light" || appearance === "dark"
+);
+
 // The home screen's three sizes, on one stretch of wallpaper.
 function HomeRow({
   appearance,
@@ -84,7 +89,8 @@ function WidgetsPage() {
     <DesignPage style={pageStyle(theme)}>
       <DesignToolbar back="documents" />
       <DesignIntro eyebrow="POCHICAL / WIDGETS" title="ウィジェット">
-        iPhone（390×844pt）での実寸です。色合いとクリアは、システムが白一色にする見え方の再現です。
+        iPhone（390×844pt）と Pixel 9a
+        での実寸です。色合いとクリアは、システムが白一色にする見え方の再現です。
       </DesignIntro>
       <DesignProviders>
         <div className={frameSections}>
@@ -116,6 +122,29 @@ function WidgetsPage() {
                 <TodayInline entry={entry} />
               </LabelledWidget>
             </Wallpaper>
+          </FrameSection>
+
+          <FrameSection
+            description="Pixel 9a のランチャーのマス目で。サイズを変えると、近い大きさの見た目に切り替わります。"
+            title="Android のホーム画面"
+          >
+            <div className={rows}>
+              {androidAppearances.map(({ appearance, label }) => (
+                <section aria-label={label} key={appearance}>
+                  <Wallpaper appearance={appearance}>
+                    <LabelledWidget appearance={appearance} family="android2x2">
+                      <TodayWidget entry={entry} />
+                    </LabelledWidget>
+                    <LabelledWidget appearance={appearance} family="android4x2">
+                      <WeekWidget entry={entry} />
+                    </LabelledWidget>
+                    <LabelledWidget appearance={appearance} family="android4x4">
+                      <MonthWidget entry={entry} />
+                    </LabelledWidget>
+                  </Wallpaper>
+                </section>
+              ))}
+            </div>
           </FrameSection>
 
           <FrameSection title="予定が入っていないとき">
