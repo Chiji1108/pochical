@@ -504,10 +504,21 @@ export function DesignCalendar({
   const monthDays = dates.filter(
     (date) => date.getMonth() === month.getMonth()
   );
-  const daysOff = monthDays.filter((date) => {
-    const shift = schedule[dateKey(date)]?.shift;
-    return shift !== undefined && isDayOff(book[shift]);
-  }).length;
+  const daysOffIn = (days: Date[]) =>
+    days.filter((date) => {
+      const shift = schedule[dateKey(date)]?.shift;
+      return shift !== undefined && isDayOff(book[shift]);
+    }).length;
+  const daysOff = daysOffIn(monthDays);
+  // The months beside, for 今月のお休み to follow a drag of the pages.
+  const daysOffBy = (by: number) => {
+    const beside = new Date(month.getFullYear(), month.getMonth() + by, 1);
+    return daysOffIn(
+      weekTools
+        .monthDates(beside)
+        .filter((date) => date.getMonth() === beside.getMonth())
+    );
+  };
   const counts = ownPatterns.map((pattern) => ({
     count: monthDays.filter(
       (date) => schedule[dateKey(date)]?.shift === pattern.id
@@ -1022,11 +1033,14 @@ export function DesignCalendar({
                 {headingMode === "view" && (
                   <div className={calendarPage.bottom}>
                     <MonthSummary
+                      beside={{ next: daysOffBy(1), previous: daysOffBy(-1) }}
                       daysOff={daysOff}
                       month={month}
                       onOpen={() => {
                         setOpenSheet("breakdown");
                       }}
+                      progress={pageDrag}
+                      swiped={swipedTo === dateKey(month)}
                     />
                     {/* Filled month or not: a filled month is fixed the same
                     way, and saving is in the heading's corner. */}
@@ -1425,22 +1439,70 @@ function screenMode(editing: boolean, weekDetail: boolean) {
   return weekDetail ? "week" : "view";
 }
 
+// 今月のお休み, or 10月のお休み away from this month. The month and the
+// number roll as the heading's name does, following a drag of the pages
+// to the month coming in, so the row is already right as the page
+// lands; the words around them stay put.
 export function MonthSummary({
   month,
   daysOff,
   onOpen,
+  progress,
+  swiped = false,
+  beside,
 }: {
   month: Date;
   daysOff: number;
   onOpen: () => void;
+  progress?: MotionValue<number>;
+  swiped?: boolean;
+  // The days off in the months before and after, while the pages can be
+  // dragged.
+  beside?: { previous: number; next: number };
 }) {
-  const thisMonth =
-    month.getFullYear() === designToday.getFullYear() &&
-    month.getMonth() === designToday.getMonth();
+  const reduceMotion = useReducedMotion() ?? false;
+  const turn = useTurn(monthIndex(month), swiped);
+  const monthOf = (by: number) => {
+    const date = new Date(month.getFullYear(), month.getMonth() + by, 1);
+    const thisMonth =
+      date.getFullYear() === designToday.getFullYear() &&
+      date.getMonth() === designToday.getMonth();
+    return thisMonth ? "今月" : `${date.getMonth() + 1}月`;
+  };
+  const dragged = progress && beside;
   return (
     <SummaryRow
-      days={daysOff}
-      label={`${thisMonth ? "今月" : `${month.getMonth() + 1}月`}のお休み`}
+      days={
+        <>
+          <span className={srOnly}>{daysOff}</span>
+          <span aria-hidden="true">
+            <RollingName
+              next={dragged ? String(beside.next) : undefined}
+              previous={dragged ? String(beside.previous) : undefined}
+              progress={progress}
+              still={reduceMotion}
+              text={String(daysOff)}
+              turn={turn}
+            />
+          </span>
+        </>
+      }
+      label={
+        <>
+          <span className={srOnly}>{monthOf(0)}のお休み</span>
+          <span aria-hidden="true">
+            <RollingName
+              next={dragged ? monthOf(1) : undefined}
+              previous={dragged ? monthOf(-1) : undefined}
+              progress={progress}
+              still={reduceMotion}
+              text={monthOf(0)}
+              turn={turn}
+            />
+            のお休み
+          </span>
+        </>
+      }
       onOpen={onOpen}
     />
   );
