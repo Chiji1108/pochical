@@ -12,6 +12,7 @@ const outside = new Set([
   "design-app-icon.tsx",
   "design-colors.tsx",
   "design-frames.tsx",
+  "design-home-screen.tsx",
   "design-page.tsx",
   "design-phone.tsx",
   "design-variant-panel.tsx",
