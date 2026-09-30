@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { css } from "styled-system/css";
+import { css, cva } from "styled-system/css";
 
 import {
   DesignCalendar,
@@ -133,23 +133,33 @@ const hero = {
 };
 
 const sky = {
-  // A little beyond what it sits behind, which keeps it behind its
-  // content, and faded out toward every edge.
-  root: css({
-    inset: "-120px -140px",
-    maskImage: "radial-gradient(closest-side, black 45%, transparent)",
-    pointerEvents: "none",
-    position: "absolute",
-    zIndex: -1,
+  // Behind what it sits in, which keeps it behind its content, faded out
+  // to nothing at its edges: reaching a little beyond the hero's words,
+  // or within the closing section, which ends on the footer.
+  root: cva({
+    base: {
+      maskImage: "radial-gradient(closest-side, black 45%, transparent)",
+      // The breathing light reaches past it; the page's width must not.
+      overflow: "hidden",
+      pointerEvents: "none",
+      position: "absolute",
+      zIndex: -1,
+    },
+    variants: {
+      reach: {
+        beyond: { inset: "-120px -140px" },
+        within: { inset: 0 },
+      },
+    },
   }),
   light: css({ inset: "-6%", position: "absolute" }),
 };
 
 // The sky, breathing as slowly as the app's.
-function Sky() {
+function Sky({ reach }: { reach: "beyond" | "within" }) {
   const still = useReducedMotion() ?? false;
   return (
-    <div aria-hidden="true" className={sky.root}>
+    <div aria-hidden="true" className={sky.root({ reach })}>
       <motion.div
         animate={still ? undefined : { scale: 1.08, x: "2%" }}
         className={sky.light}
@@ -568,8 +578,6 @@ const closing = {
     flexDirection: "column",
     gap: "24px",
     isolation: "isolate",
-    // Its sky stays within it, off the footer below.
-    overflow: "clip",
     padding: "96px 16px 120px",
     position: "relative",
     textAlign: "center",
@@ -585,7 +593,7 @@ const closing = {
 function Closing() {
   return (
     <section aria-labelledby="closing-title" className={closing.root}>
-      <Sky />
+      <Sky reach="within" />
       <img
         alt=""
         className={closing.icon}
@@ -611,7 +619,7 @@ function Home() {
     <main className={page} id="main">
       <section className={hero.root}>
         <div className={hero.copy}>
-          <Sky />
+          <Sky reach="beyond" />
           <p className={hero.eyebrow}>シフトカレンダー</p>
           <h1 className={hero.title}>
             シフトを、
