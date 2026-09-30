@@ -79,7 +79,6 @@ import {
   dayGrid,
   dayGridHeight,
   DoneButton,
-  fieldStyle,
   fieldHint,
   fieldLabel,
   IconMenu,
@@ -91,6 +90,7 @@ import {
   Screen,
   srOnly,
   SummaryRow,
+  TimeRange,
   TodayButton,
   WeekdayRow,
 } from "./design-ui";
@@ -2610,7 +2610,6 @@ const dayDetail = {
     textStyle: "caption",
   }),
   empty: css({ color: "text.quaternary", margin: 0, textStyle: "footnote" }),
-  // The time and the memo, as the platforms' filled text fields.
   hint: css({ color: "text.quaternary", margin: 0, textStyle: "caption" }),
   label: css({ color: "text.tertiary", textStyle: "footnote" }),
   // The legend floats, so the fieldset lays it out like the other rows'
@@ -2637,12 +2636,6 @@ const dayDetail = {
   }),
   root: css({ display: "flex", flexDirection: "column", gap: "20px" }),
   row: css({ display: "flex", flexDirection: "column", gap: "8px" }),
-  time: css({
-    alignItems: "center",
-    color: "text.tertiary",
-    display: "flex",
-    gap: "8px",
-  }),
 };
 
 function MemberField({
@@ -2782,27 +2775,11 @@ function DayDetail({
           {time && (
             <div className={dayDetail.row}>
               <span className={dayDetail.label}>時間</span>
-              <div className={dayDetail.time}>
-                <input
-                  aria-label="開始時刻"
-                  className={fieldStyle({ look: "box" })}
-                  onChange={(event) => {
-                    changeTime("start", event.target.value);
-                  }}
-                  type="time"
-                  value={entry.start ?? time[0]}
-                />
-                <span aria-hidden="true">–</span>
-                <input
-                  aria-label="終了時刻"
-                  className={fieldStyle({ look: "box" })}
-                  onChange={(event) => {
-                    changeTime("end", event.target.value);
-                  }}
-                  type="time"
-                  value={entry.end ?? time[1]}
-                />
-              </div>
+              <TimeRange
+                end={entry.end ?? time[1]}
+                onChange={changeTime}
+                start={entry.start ?? time[0]}
+              />
               <p className={dayDetail.hint}>
                 {timeChanged ? (
                   <>

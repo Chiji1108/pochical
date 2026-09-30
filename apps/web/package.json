@@ -29,6 +29,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@holiday-jp/holiday_jp": "^2.5.2",
+    "@internationalized/date": "^3.12.4",
     "@material/material-color-utilities": "^0.4.0",
     "@phosphor-icons/react": "^2.1.10",
     "@pochical/design": "workspace:*",
@@ -40,6 +41,7 @@
     "lucide-react": "^0.577.0",
     "motion": "^13.4.4",
     "react": "19.3.0",
+    "react-aria-components": "^1.21.1",
     "react-dom": "19.3.0",
     "zustand": "^5.0.15"
   },
