@@ -166,20 +166,33 @@ function Sky() {
   );
 }
 
+// The hero's month is entered up to the 19th: its first weeks show the
+// look, and its last two are left to fill in, from the 20th.
+const HERO_FIRST_BLANK = 20;
+const heroSchedule = Object.fromEntries(
+  Object.entries(initialDesignSchedule()).filter(
+    ([key]) => Number(key.slice(-2)) < HERO_FIRST_BLANK
+  )
+);
+
 // The app itself, the same one /try runs, to tap right on the page.
 function HeroDemo() {
   const [person] = useState(() =>
     createUserStore({
       coworkers: sampleCoworkers,
       groups: sampleGroups(),
-      schedule: initialDesignSchedule(),
+      schedule: heroSchedule,
     })
   );
   return (
     <div className={hero.demo}>
       <DesignProviders>
         <UserStoreContext value={person}>
-          <DesignCalendar initialEditing variants={variants} />
+          <DesignCalendar
+            initialDay={HERO_FIRST_BLANK}
+            initialEditing
+            variants={variants}
+          />
         </UserStoreContext>
       </DesignProviders>
       <p className={hero.hint}>
