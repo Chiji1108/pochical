@@ -95,6 +95,7 @@ import {
   BarGroup,
   Button,
   Choice,
+  ChoiceChip,
   ChoiceGrid,
   colorGrid,
   dayGrid,
@@ -103,7 +104,7 @@ import {
   fieldLabel,
   HeaderAction,
   IconButton,
-  inlineInput,
+  fieldStyle,
   LimitedInput,
   LimitedTextArea,
   List,
@@ -4989,25 +4990,8 @@ const shiftsPage = {
 // 1人ずつ: who to show, a row of chips that scrolls sideways out to the
 // screen's edges, so a half-shown name says there are more.
 const people = {
-  choice: css({
-    _checked: {
-      bg: "background.card",
-      borderColor: "accent.default",
-      color: "text.primary",
-      fontWeight: 600,
-    },
-    alignItems: "center",
-    bg: "fill.quaternary",
-    border: "1px solid transparent",
-    borderRadius: "full",
-    color: "text.secondary",
-    display: "inline-flex",
-    flexShrink: 0,
-    gap: "8px",
-    minHeight: "36px",
-    padding: "0 12px 0 8px",
-    textStyle: "subheadline",
-  }),
+  // Kept whole in the row that scrolls.
+  choice: css({ flexShrink: 0 }),
   // Out to the screen's edges, the first chip in line with the page.
   list: css({
     border: 0,
@@ -7220,7 +7204,8 @@ function PeoplePicker({
       {/* The row scrolls, so it clips anything drawn outside a chip: the
           focus ring goes inside. */}
       {members.map((member) => (
-        <Choice
+        <ChoiceChip
+          avatar
           className={people.choice}
           data-member={member.id}
           key={member.id}
@@ -7229,7 +7214,7 @@ function PeoplePicker({
         >
           <Avatar member={member} />
           {member.name}
-        </Choice>
+        </ChoiceChip>
       ))}
     </ChoiceGrid>
   );
@@ -8004,7 +7989,8 @@ function GroupEditPage({
           control={
             <>
               <LimitedInput
-                className={inlineInput}
+                align="end"
+                look="inline"
                 kind="groupName"
                 onValueChange={setName}
                 placeholder="例：家族"
@@ -8114,7 +8100,8 @@ function GroupProfilePage({
           control={
             <>
               <LimitedInput
-                className={inlineInput}
+                align="end"
+                look="inline"
                 kind="personName"
                 onValueChange={(name) => {
                   update({ name: name || undefined });
@@ -8464,7 +8451,7 @@ function GroupMarkPage({
               control={
                 <>
                   <input
-                    className={inlineInput}
+                    className={fieldStyle({ align: "end", look: "inline" })}
                     maxLength={2}
                     onChange={(event) => {
                       onChange({
@@ -8585,7 +8572,8 @@ function NewGroupPage({
           control={
             <>
               <LimitedInput
-                className={inlineInput}
+                align="end"
+                look="inline"
                 kind="groupName"
                 onValueChange={(next) => {
                   setName(next);
@@ -8610,7 +8598,8 @@ function NewGroupPage({
           control={
             <>
               <LimitedInput
-                className={inlineInput}
+                align="end"
+                look="inline"
                 kind="personName"
                 onValueChange={setMyName}
                 placeholder="例：さくら"

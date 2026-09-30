@@ -45,6 +45,7 @@ import {
 } from "react";
 import type {
   ButtonHTMLAttributes,
+  ComponentProps,
   CSSProperties,
   HTMLAttributes,
   ChangeEvent,
@@ -633,19 +634,46 @@ export function DestructiveButton({
   );
 }
 
-// A field that is a row's control, like a pattern's name: no box of its
-// own, its words at the row's right.
-export const inlineInput = css({
-  bg: "transparent",
-  border: 0,
-  color: "text.primary",
-  flex: 1,
-  font: "inherit",
-  minWidth: 0,
-  outline: "none",
-  padding: 0,
-  textAlign: "right",
-  textStyle: "body",
+// How a text field looks, for LimitedInput and a plain input alike.
+// inline is a row's control with no box of its own, like a pattern's
+// name: its words at the row's right, or from its start when it is the
+// row itself, like a name being added. box stands on its own ground, as
+// a day's memo or times. chip sits among chips as one more being added.
+export const fieldStyle = cva({
+  base: { font: "inherit", outline: "none" },
+  defaultVariants: { align: "start" },
+  variants: {
+    align: { end: { textAlign: "right" }, start: {} },
+    look: {
+      box: {
+        _focus: { bg: "background.card", borderColor: "accent.focus" },
+        bg: "fill.quaternary",
+        border: "1px solid transparent",
+        borderRadius: "md",
+        color: "text.primary",
+        minHeight: "40px",
+        minWidth: 0,
+        padding: "0 12px",
+        textStyle: "body",
+      },
+      chip: {
+        border: "1px solid token(colors.accent.focus)",
+        borderRadius: "full",
+        minHeight: "34px",
+        padding: "0 12px",
+        textStyle: "footnote",
+      },
+      inline: {
+        bg: "transparent",
+        border: 0,
+        color: "text.primary",
+        flex: 1,
+        minWidth: 0,
+        padding: 0,
+        textStyle: "body",
+      },
+    },
+  },
 });
 
 // How much of a field's limit is used, after the field while it is in use.
@@ -737,8 +765,15 @@ export function LimitedInput({
   counter,
   onFocus,
   onBlur,
+  look,
+  align,
+  className,
   ...props
-}: Omit<InputHTMLAttributes<HTMLInputElement>, Unlimited> & LimitedTextProps) {
+}: Omit<InputHTMLAttributes<HTMLInputElement>, Unlimited> &
+  LimitedTextProps & {
+    look: "inline" | "box" | "chip";
+    align?: "start" | "end";
+  }) {
   const { countNode, handlers } = useLimitedText<HTMLInputElement>({
     counter,
     kind,
@@ -749,7 +784,11 @@ export function LimitedInput({
   });
   return (
     <>
-      <input {...props} {...handlers} />
+      <input
+        className={cx(fieldStyle({ align, look }), className)}
+        {...props}
+        {...handlers}
+      />
       {countNode}
     </>
   );
@@ -2008,12 +2047,71 @@ export const chipStyle = cva({
     paddingInline: "12px",
   },
   variants: {
+    // A face at its start, as Material's input chips: the chip's end
+    // comes in close around it.
+    avatar: { true: { gap: "8px", paddingLeft: "4px" } },
     variant: {
       add: { borderStyle: "dashed", color: "text.tertiary" },
       choice: {},
     },
   },
 });
+
+// One of a ChoiceGrid as a chip, like a day's shift or a person to show.
+export function ChoiceChip({
+  avatar = false,
+  className,
+  ...props
+}: ComponentProps<typeof Choice> & { avatar?: boolean }) {
+  return <Choice className={cx(chipStyle({ avatar }), className)} {...props} />;
+}
+
+// One of a ChoiceGrid as a tile: a picture over its name, framed on a
+// ground and its name in bold when picked. large for a few big pictures two to a row, like the
+// app icons; small for three to a row, like the テーマ.
+const choiceTileStyle = cva({
+  base: {
+    _checked: {
+      bg: "fill.quaternary",
+      borderColor: "accent.border",
+      color: "text.primary",
+      fontWeight: 600,
+    },
+    bg: "transparent",
+    border: "2px solid transparent",
+    color: "text.secondary",
+    display: "flex",
+    flexDirection: "column",
+  },
+  variants: {
+    size: {
+      large: {
+        alignItems: "center",
+        borderRadius: "2xl",
+        gap: "8px",
+        padding: "20px 0 16px",
+        textStyle: "body",
+      },
+      small: {
+        borderRadius: "xl",
+        gap: "4px",
+        padding: "4px 4px 8px",
+        textAlign: "center",
+        textStyle: "footnote",
+      },
+    },
+  },
+});
+
+export function ChoiceTile({
+  size,
+  className,
+  ...props
+}: ComponentProps<typeof Choice> & { size: "large" | "small" }) {
+  return (
+    <Choice className={cx(choiceTileStyle({ size }), className)} {...props} />
+  );
+}
 
 export function Chip({
   selected,
