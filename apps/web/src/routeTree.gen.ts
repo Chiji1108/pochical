@@ -22,6 +22,7 @@ import { Route as DesignColorsRouteImport } from './routes/design_.colors'
 import { Route as DesignComponentsRouteImport } from './routes/design_.components'
 import { Route as DesignFlowsRouteImport } from './routes/design_.flows'
 import { Route as DesignStatesRouteImport } from './routes/design_.states'
+import { Route as DesignWidgetsRouteImport } from './routes/design_.widgets'
 import { Route as InviteInviteCodeRouteImport } from './routes/invite.$inviteCode'
 
 const IndexRoute = IndexRouteImport.update({
@@ -89,6 +90,11 @@ const DesignStatesRoute = DesignStatesRouteImport.update({
   path: '/design/states',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DesignWidgetsRoute = DesignWidgetsRouteImport.update({
+  id: '/design_/widgets',
+  path: '/design/widgets',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InviteInviteCodeRoute = InviteInviteCodeRouteImport.update({
   id: '/invite/$inviteCode',
   path: '/invite/$inviteCode',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/design/components': typeof DesignComponentsRoute
   '/design/flows': typeof DesignFlowsRoute
   '/design/states': typeof DesignStatesRoute
+  '/design/widgets': typeof DesignWidgetsRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
 }
 export interface FileRoutesByTo {
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/design/components': typeof DesignComponentsRoute
   '/design/flows': typeof DesignFlowsRoute
   '/design/states': typeof DesignStatesRoute
+  '/design/widgets': typeof DesignWidgetsRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
 }
 export interface FileRoutesById {
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/design_/components': typeof DesignComponentsRoute
   '/design_/flows': typeof DesignFlowsRoute
   '/design_/states': typeof DesignStatesRoute
+  '/design_/widgets': typeof DesignWidgetsRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
 }
 export interface FileRouteTypes {
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/design/components'
     | '/design/flows'
     | '/design/states'
+    | '/design/widgets'
     | '/invite/$inviteCode'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/design/components'
     | '/design/flows'
     | '/design/states'
+    | '/design/widgets'
     | '/invite/$inviteCode'
   id:
     | '__root__'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/design_/components'
     | '/design_/flows'
     | '/design_/states'
+    | '/design_/widgets'
     | '/invite/$inviteCode'
   fileRoutesById: FileRoutesById
 }
@@ -209,6 +221,7 @@ export interface RootRouteChildren {
   DesignComponentsRoute: typeof DesignComponentsRoute
   DesignFlowsRoute: typeof DesignFlowsRoute
   DesignStatesRoute: typeof DesignStatesRoute
+  DesignWidgetsRoute: typeof DesignWidgetsRoute
   InviteInviteCodeRoute: typeof InviteInviteCodeRoute
 }
 
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DesignStatesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/design_/widgets': {
+      id: '/design_/widgets'
+      path: '/design/widgets'
+      fullPath: '/design/widgets'
+      preLoaderRoute: typeof DesignWidgetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/invite/$inviteCode': {
       id: '/invite/$inviteCode'
       path: '/invite/$inviteCode'
@@ -329,6 +349,7 @@ const rootRouteChildren: RootRouteChildren = {
   DesignComponentsRoute: DesignComponentsRoute,
   DesignFlowsRoute: DesignFlowsRoute,
   DesignStatesRoute: DesignStatesRoute,
+  DesignWidgetsRoute: DesignWidgetsRoute,
   InviteInviteCodeRoute: InviteInviteCodeRoute,
 }
 export const routeTree = rootRouteImport

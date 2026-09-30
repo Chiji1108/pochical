@@ -262,6 +262,7 @@ export const states: State[] = [
     ["design/components", "/design/components"],
     ["design/colors", "/design/colors"],
     ["design/assets", "/design/assets"],
+    ["design/widgets", "/design/widgets"],
   ].map(([name, path]) => ({ name: `page/${name}`, path, root: "main" })),
   {
     name: "group/legend-all",
