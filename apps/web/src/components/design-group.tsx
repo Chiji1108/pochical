@@ -56,6 +56,7 @@ import { sampleRosterPhoto } from "../lib/design-sample-photos";
 import type { Photo } from "../lib/design-sample-photos";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
+import { dayName } from "../lib/text-limits";
 import {
   TabBar,
   addDays,
@@ -7393,7 +7394,7 @@ function PersonDay({
               size={21}
             />
           </span>
-          <span className={dayParts.label}>{item.name}</span>
+          <span className={dayParts.label}>{dayName(item.name)}</span>
         </>
       )}
     </>

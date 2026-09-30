@@ -5,6 +5,7 @@ import { css } from "styled-system/css";
 import { PATTERNS_PER_PAGE, presetList } from "../lib/design-patterns";
 import type { Pattern, PresetShift } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
+import { dayName } from "../lib/text-limits";
 import { isRepeating } from "./design-calendar";
 import { LookEditorPage } from "./design-look-editor";
 import type { LookField } from "./design-look-editor";
@@ -476,6 +477,13 @@ function PatternEditor({
         <span className={editor.name}>
           <strong>{draft.name || "名前を入力"}</strong>
           <small className={editor.time}>{timeText(patternOf(draft))}</small>
+          {/* A name longer than a day fits: how the calendar shows it, in
+              the pattern's preview, before it is found cut short there. */}
+          {dayName(draft.name) !== draft.name && (
+            <small className={editor.time}>
+              カレンダーでは「{dayName(draft.name)}」
+            </small>
+          )}
         </span>
       </div>
       <Section title="基本">

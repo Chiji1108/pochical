@@ -47,6 +47,7 @@ import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
+import { dayName } from "../lib/text-limits";
 import type { Coworkers } from "./design-coworkers";
 import { GapSheet, gapDaysIn } from "./design-gap-sheet";
 import { DesignGroup, JoinScreen } from "./design-group";
@@ -2335,6 +2336,9 @@ export const dayCell = cva({
     height: "64px",
     minWidth: 0,
     paddingBlock: "4px",
+    // None at the sides, a button's own included: a shift's name takes
+    // the day's whole width.
+    paddingInline: 0,
     position: "relative",
   },
   variants: {
@@ -2377,8 +2381,8 @@ export const dayParts = {
   dateOutside: css({ fontWeight: 400 }),
   holiday: css({ color: "calendar.holiday" }),
   // A shift's name under its mark, on one line: a day's row has room for
-  // no more, and a longer one is cut short rather than running into the
-  // week below.
+  // no more. It comes shortened by dayName; the … here is only for a
+  // name of wide letters.
   label: css({
     color: "text.secondary",
     flexShrink: 0,
@@ -2448,7 +2452,11 @@ function CellShift({
       >
         <ShiftMark early={early} late={late} shift={shift} size={size} />
       </span>
-      {withName && <span className={dayParts.label}>{book[shift]?.name}</span>}
+      {withName && (
+        <span className={dayParts.label}>
+          {dayName(book[shift]?.name ?? "")}
+        </span>
+      )}
     </>
   );
 }
