@@ -15,9 +15,6 @@ export function Header() {
         <Link to="/support">
           サポート <ArrowUpRight aria-hidden="true" size={14} />
         </Link>
-        <a className="header-cta" href="/#download">
-          アプリについて
-        </a>
       </nav>
     </header>
   );
