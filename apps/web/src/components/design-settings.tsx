@@ -18,6 +18,7 @@ import {
 import type { Pattern, PatternBook, Shift } from "../lib/design-patterns";
 import { useLook, useSettings } from "../lib/design-settings-store";
 import { useUser } from "../lib/design-user-store";
+import { dayName } from "../lib/text-limits";
 import {
   ProviderButtons,
   ProviderLogo,
@@ -72,6 +73,7 @@ import {
   dayGrid,
   fieldLabel,
   inlineInput,
+  LimitedInput,
   List,
   ListRow,
   Note,
@@ -625,7 +627,12 @@ const offSample = cva({
   base: {
     "& small": { color: "text.secondary", fontSize: "9px", fontWeight: 600 },
     // The shift's name under the mark, smaller than the date.
-    "& small[data-part=name]": { fontSize: "7px" },
+    "& small[data-part=name]": {
+      fontSize: "7px",
+      lineClamp: 1,
+      maxWidth: "100%",
+      overflowWrap: "anywhere",
+    },
     alignItems: "center",
     borderRadius: "sm",
     display: "flex",
@@ -1228,10 +1235,11 @@ function ProfilePage({
           label="いつもの名前"
           control={
             <>
-              <input
+              <LimitedInput
                 className={inlineInput}
-                onChange={(event) => {
-                  onChange({ ...profile, name: event.target.value });
+                kind="personName"
+                onValueChange={(name) => {
+                  onChange({ ...profile, name });
                 }}
                 placeholder="例：さくら"
                 value={profile.name}
@@ -1679,7 +1687,7 @@ export function NameTabs({
           <span aria-hidden="true" className={offSample()}>
             <small>5</small>
             <ShiftMark shift={work.id} size={withName ? 16 : 18} />
-            {withName && <small data-part="name">{work.name}</small>}
+            {withName && <small data-part="name">{dayName(work.name)}</small>}
           </span>
           {withName ? "あり" : "なし"}
         </Segment>

@@ -47,6 +47,7 @@ import type {
   ButtonHTMLAttributes,
   CSSProperties,
   HTMLAttributes,
+  InputHTMLAttributes,
   LabelHTMLAttributes,
   ReactNode,
   Ref,
@@ -54,6 +55,13 @@ import type {
 import { css, cva, cx } from "styled-system/css";
 
 import { spring } from "../lib/motion";
+import {
+  characterCount,
+  countShown,
+  limitText,
+  textLimits,
+} from "../lib/text-limits";
+import type { TextKind } from "../lib/text-limits";
 import { useWeek } from "./design-week";
 import type { DayTone } from "./design-week";
 
@@ -603,6 +611,91 @@ export const inlineInput = css({
   textStyle: "body",
 });
 
+// How much of a field's limit is used, after the field while it is in use.
+const limitCount = cva({
+  base: {
+    color: "text.tertiary",
+    flexShrink: 0,
+    fontVariantNumeric: "tabular-nums",
+    textStyle: "caption",
+  },
+  // Only while a word is still being converted can it run past.
+  variants: { over: { true: { color: "danger.default" } } },
+});
+
+// Free text held to its limit (spec/text-limits.md): typing stops there,
+// and while the field is in use a count after it shows how much is used.
+// A word still being converted with a Japanese keyboard may run past the
+// limit until it is confirmed, and is cut to it then, so a conversion is
+// never broken off halfway. Without `value` it keeps its own, for fields
+// read as they are left, like adding a name.
+export function LimitedInput({
+  kind,
+  value,
+  onValueChange,
+  counter = true,
+  className,
+  onFocus,
+  onBlur,
+  ...props
+}: Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  "value" | "defaultValue" | "onChange" | "maxLength"
+> & {
+  kind: TextKind;
+  value?: string;
+  onValueChange?: (value: string) => void;
+  // False where the field is too small to show it, like a chip.
+  counter?: boolean;
+}) {
+  const limit = textLimits[kind];
+  const [own, setOwn] = useState("");
+  const [focused, setFocused] = useState(false);
+  const composing = useRef(false);
+  const text = value ?? own;
+  const change = (next: string) => {
+    setOwn(next);
+    onValueChange?.(next);
+  };
+  const count = characterCount(text);
+  return (
+    <>
+      <input
+        className={className}
+        onBlur={(event) => {
+          setFocused(false);
+          onBlur?.(event);
+        }}
+        onChange={(event) => {
+          const next = event.target.value;
+          change(composing.current ? next : limitText(next, limit));
+        }}
+        onCompositionEnd={(event) => {
+          composing.current = false;
+          change(limitText(event.currentTarget.value, limit));
+        }}
+        onCompositionStart={() => {
+          composing.current = true;
+        }}
+        onFocus={(event) => {
+          setFocused(true);
+          onFocus?.(event);
+        }}
+        value={text}
+        {...props}
+      />
+      {counter && focused && countShown(count, limit) && (
+        <span
+          aria-hidden="true"
+          className={limitCount({ over: count > limit })}
+        >
+          {count}/{limit}
+        </span>
+      )}
+    </>
+  );
+}
+
 // A row's value that is a mark with words, or a mark alone: side by side,
 // at the right.
 export const markValue = css({
@@ -998,6 +1091,15 @@ export const listRow = {
   }),
   // With nothing on the right but a control, the label takes the room.
   labelGrow: css({ flex: 1, minWidth: 0 }),
+  // A name someone typed, on one line: cut short with … so the value and
+  // arrow after it stay whole (spec/text-limits.md).
+  labelText: css({
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  }),
+  valueWhole: css({ flex: "none" }),
   // One width whatever it holds, so every row's words start at the same
   // place, 56px in, as under iOS's icons.
   leading: css({
@@ -1038,7 +1140,7 @@ export const listRow = {
 // (an icon, a mark, a face), and a control after it (a switch, a field).
 // Pressed, it is a button with an arrow; holding a control, or pointing at
 // one with htmlFor, it is that control's label. `danger` is for rows that
-// remove something.
+// remove something, and `truncate` for a label that is a typed name.
 export function ListRow({
   label,
   value,
@@ -1047,6 +1149,7 @@ export function ListRow({
   onClick,
   arrow,
   danger = false,
+  truncate = false,
   htmlFor,
   disabled,
   className,
@@ -1062,6 +1165,7 @@ export function ListRow({
   // Shown on pressable rows unless false; a node replaces the chevron.
   arrow?: ReactNode;
   danger?: boolean;
+  truncate?: boolean;
   htmlFor?: string;
   disabled?: boolean;
   className?: string;
@@ -1092,14 +1196,22 @@ export function ListRow({
       <span
         className={cx(
           listRow.label,
-          value === undefined && listRow.labelGrow,
+          (value === undefined || truncate) && listRow.labelGrow,
           labelClassName
         )}
       >
-        {label}
+        {truncate ? <span className={listRow.labelText}>{label}</span> : label}
       </span>
       {value !== undefined && (
-        <span className={cx(listRow.value, valueClassName)}>{value}</span>
+        <span
+          className={cx(
+            listRow.value,
+            truncate && listRow.valueWhole,
+            valueClassName
+          )}
+        >
+          {value}
+        </span>
       )}
       {control}
       {shownArrow}

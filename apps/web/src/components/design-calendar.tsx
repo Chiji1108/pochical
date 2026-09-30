@@ -23,7 +23,7 @@ import {
   useReducedMotion,
 } from "motion/react";
 import type { MotionValue } from "motion/react";
-import { Fragment, useContext, useRef, useState } from "react";
+import { Fragment, useContext, useId, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -48,6 +48,7 @@ import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
 import { spring } from "../lib/motion";
+import { composing, dayName, limitText, textLimits } from "../lib/text-limits";
 import type { Coworkers } from "./design-coworkers";
 import { GapSheet, gapDaysIn } from "./design-gap-sheet";
 import { DesignGroup, JoinScreen } from "./design-group";
@@ -81,6 +82,7 @@ import {
   fieldHint,
   fieldLabel,
   IconMenu,
+  LimitedInput,
   MenuItem,
   MONTH_WEEKS,
   PageDots,
@@ -2094,6 +2096,15 @@ const shiftInput = {
     lineHeight: 1,
     placeItems: "center",
   }),
+  // The name under a button's mark, on one line: the buttons are too low
+  // for two, and a longer one is cut short.
+  name: css({
+    maxWidth: "100%",
+    overflow: "hidden",
+    paddingInline: "4px",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  }),
   pattern: cva({
     base: {
       _active: { bg: "accent.pressed", transform: "scale(0.97)" },
@@ -2229,7 +2240,7 @@ function ShiftInputControls({
         <span className={shiftInput.mark}>
           <ShiftMark shift={key} size={26} />
         </span>
-        <span>{book[key]?.name}</span>
+        <span className={shiftInput.name}>{book[key]?.name}</span>
       </button>
     ));
   return (
@@ -2324,6 +2335,9 @@ export const dayCell = cva({
     height: "64px",
     minWidth: 0,
     paddingBlock: "4px",
+    // None at the sides, a button's own included, which browsers set
+    // apart: a shift's name is centered in the same room everywhere.
+    paddingInline: 0,
     position: "relative",
   },
   variants: {
@@ -2365,11 +2379,18 @@ export const dayParts = {
   date: css({ flexShrink: 0, fontWeight: 600, lineHeight: "14px" }),
   dateOutside: css({ fontWeight: 400 }),
   holiday: css({ color: "calendar.holiday" }),
+  // A shift's name under its mark, on one line: a day's row has room for
+  // no more. It comes shortened by dayName; the … here is only for a
+  // name of wide letters.
   label: css({
     color: "text.secondary",
     flexShrink: 0,
     fontSize: "9px",
     lineHeight: "12px",
+    maxWidth: "100%",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   }),
   mark: css({
     display: "grid",
@@ -2430,7 +2451,11 @@ function CellShift({
       >
         <ShiftMark early={early} late={late} shift={shift} size={size} />
       </span>
-      {withName && <span className={dayParts.label}>{book[shift]?.name}</span>}
+      {withName && (
+        <span className={dayParts.label}>
+          {dayName(book[shift]?.name ?? "")}
+        </span>
+      )}
     </>
   );
 }
@@ -2654,8 +2679,10 @@ function MemberField({
   onChange: (selected: string[]) => void;
 }) {
   const [adding, setAdding] = useState(false);
+  // Held to the limit here too: a name confirmed and added in one go may
+  // not have been cut to it yet.
   function add(name: string) {
-    const trimmed = name.trim();
+    const trimmed = limitText(name.trim(), textLimits.personName);
     setAdding(false);
     if (!trimmed) {
       return;
@@ -2690,15 +2717,17 @@ function MemberField({
           </Chip>
         ))}
         {adding ? (
-          <input
+          <LimitedInput
             aria-label="追加する人の名前"
             autoFocus
             className={dayDetail.memberInput}
+            counter={false}
+            kind="personName"
             onBlur={(event) => {
               add(event.currentTarget.value);
             }}
             onKeyDown={(event) => {
-              if (event.key === "Enter") {
+              if (event.key === "Enter" && !composing(event)) {
                 add(event.currentTarget.value);
               } else if (event.key === "Escape") {
                 setAdding(false);
@@ -2733,6 +2762,7 @@ function DayDetail({
   members: MemberOptions;
   onChange: (entry: DayEntry | undefined) => void;
 }) {
+  const noteId = useId();
   const book = usePatterns();
   const pattern = entry && book[entry.shift];
   const time = pattern?.time;
@@ -2832,12 +2862,14 @@ function DayDetail({
               selected={entry.members ?? []}
             />
           )}
-          <label className={dayDetail.row}>
+          <label className={dayDetail.row} htmlFor={noteId}>
             <span className={dayDetail.label}>メモ</span>
-            <input
+            <LimitedInput
               className={dayDetail.field}
-              onChange={(event) => {
-                onChange({ ...entry, note: event.target.value || undefined });
+              id={noteId}
+              kind="dayNote"
+              onValueChange={(note) => {
+                onChange({ ...entry, note: note || undefined });
               }}
               placeholder="メモを入力"
               value={entry.note ?? ""}

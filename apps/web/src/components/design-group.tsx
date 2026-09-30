@@ -57,6 +57,7 @@ import type { Photo } from "../lib/design-sample-photos";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
 import { spring } from "../lib/motion";
+import { dayName } from "../lib/text-limits";
 import {
   TabBar,
   addDays,
@@ -103,6 +104,7 @@ import {
   HeaderAction,
   IconButton,
   inlineInput,
+  LimitedInput,
   List,
   ListRow,
   listRow,
@@ -2261,6 +2263,7 @@ function GroupHub({
                     <ListRow
                       key={member.id}
                       label={member.name}
+                      truncate
                       leading={
                         <>
                           <Avatar member={member} size={28} />
@@ -3520,14 +3523,15 @@ function ChatPage({
             )}
           </AnimatePresence>
         </motion.span>
-        <input
+        <LimitedInput
           aria-label="メッセージ"
           className={chatStyle.composerInput}
+          kind="chatMessage"
           onBlur={() => {
             setWriting(false);
           }}
-          onChange={(event) => {
-            setDraft(event.target.value);
+          onValueChange={(text) => {
+            setDraft(text);
             setToolsOpen(false);
           }}
           onFocus={() => {
@@ -6410,6 +6414,7 @@ function PickedDaySheet({
               <ListRow
                 key={member.id}
                 label={member.name}
+                truncate
                 value={
                   <>
                     {item && (
@@ -7371,7 +7376,7 @@ function PersonDay({
               size={21}
             />
           </span>
-          <span className={dayParts.label}>{item.name}</span>
+          <span className={dayParts.label}>{dayName(item.name)}</span>
         </>
       )}
     </>
@@ -7570,6 +7575,7 @@ export function JoinScreen({
               <ListRow
                 key={member.name}
                 label={member.name}
+                truncate
                 leading={
                   <>
                     <PhotoAvatar
@@ -7806,6 +7812,7 @@ function GroupSettingsPage({
               setView("edit");
             }}
             label={group.name}
+            truncate
             value="編集"
             leading={
               <>
@@ -7835,6 +7842,7 @@ function GroupSettingsPage({
             <ListRow
               key={member.id}
               label={<>{member.me ? `${shown.name}（自分）` : member.name}</>}
+              truncate
               onClick={
                 onMember && !member.me
                   ? () => {
@@ -7973,11 +7981,10 @@ function GroupEditPage({
           label="グループ名"
           control={
             <>
-              <input
+              <LimitedInput
                 className={inlineInput}
-                onChange={(event) => {
-                  setName(event.target.value);
-                }}
+                kind="groupName"
+                onValueChange={setName}
                 placeholder="例：家族"
                 value={name}
               />
@@ -7998,11 +8005,6 @@ function GroupEditPage({
   );
 }
 
-const profileRow = {
-  label: css({ flex: 1, minWidth: 0 }),
-  value: css({ flex: "none" }),
-};
-
 // How you appear in a group, as a row that opens GroupProfilePage: the
 // same in the group's settings and on the invitation to join it.
 function GroupProfileRow({
@@ -8015,14 +8017,12 @@ function GroupProfileRow({
   onOpen: () => void;
 }) {
   const shown = profileIn(group, profile);
-  // A long name is cut short rather than pushing the value out of the row.
   return (
     <ListRow
       onClick={onOpen}
-      label={<span className={ellipsisStyle}>{shown.name}</span>}
-      labelClassName={profileRow.label}
+      label={shown.name}
+      truncate
       value={group.mine ? "このグループだけ" : "いつもと同じ"}
-      valueClassName={profileRow.value}
       leading={
         <>
           <PhotoAvatar name={shown.name} photo={shown.photo} size={28} />
@@ -8091,10 +8091,11 @@ function GroupProfilePage({
           label="名前"
           control={
             <>
-              <input
+              <LimitedInput
                 className={inlineInput}
-                onChange={(event) => {
-                  update({ name: event.target.value || undefined });
+                kind="personName"
+                onValueChange={(name) => {
+                  update({ name: name || undefined });
                 }}
                 placeholder={profile.name}
                 value={mine.name ?? ""}
@@ -8561,12 +8562,13 @@ function NewGroupPage({
           label="グループ名"
           control={
             <>
-              <input
+              <LimitedInput
                 className={inlineInput}
-                onChange={(event) => {
-                  setName(event.target.value);
+                kind="groupName"
+                onValueChange={(next) => {
+                  setName(next);
                   if (!picked) {
-                    setMark(guessGroupMark(event.target.value, color));
+                    setMark(guessGroupMark(next, color));
                   }
                 }}
                 placeholder="例：家族"
@@ -8585,11 +8587,10 @@ function NewGroupPage({
           label="このグループでの名前"
           control={
             <>
-              <input
+              <LimitedInput
                 className={inlineInput}
-                onChange={(event) => {
-                  setMyName(event.target.value);
-                }}
+                kind="personName"
+                onValueChange={setMyName}
                 placeholder="例：さくら"
                 value={myName}
               />
