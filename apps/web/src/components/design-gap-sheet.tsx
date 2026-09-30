@@ -186,12 +186,8 @@ function GapSheetBody({
           {offerBlank && (
             <List className={gap.blank}>
               <SwitchRow
-                label={
-                  <>
-                    休みの日は空白で見せる
-                    <small>入力中と週表示では薄く出ます</small>
-                  </>
-                }
+                detail="入力中と週表示では薄く出ます"
+                label="休みの日は空白で見せる"
 
                 checked={blankOff}
                 onChange={(checked) => {
