@@ -77,11 +77,12 @@ import {
   List,
   ListRow,
   Note,
-  PageDots,
-  Pager,
   OptionCard,
   optionList,
+  PageDots,
   PageHeader,
+  Pager,
+  SampleTag,
   Screen,
   ScreenScroll,
   Section,
@@ -688,18 +689,6 @@ const settingsParts = {
     position: "relative",
   }),
   previewHeading: css({ padding: "0 8px 8px" }),
-  previewSample: css({
-    bg: "background.base",
-    border: "1px solid token(colors.separator)",
-    borderRadius: "sm",
-    color: "text.tertiary",
-    fontSize: "10px",
-    fontWeight: 600,
-    padding: "1px 8px",
-    position: "absolute",
-    right: "12px",
-    top: "-8px",
-  }),
   // A form's row: what is set on the left, its value on the right.
   field: css({
     alignItems: "center",
@@ -1535,7 +1524,7 @@ function StylePreview({
           inert
           style={themeStyle(theme, shown)}
         >
-          <span className={settingsParts.previewSample}>見本</span>
+          <SampleTag />
           {heading && (
             <div className={settingsParts.previewHeading}>
               <MonthName month={dates[0] ?? previewToday} />
@@ -1607,7 +1596,7 @@ function ShapeChoices() {
 // How your own calendar shows the marks. Group screens decide these for
 // themselves, so members never see them.
 const offLooks = [
-  { blankOff: false, highlight: true, id: "highlight", name: "ハイライト" },
+  { blankOff: false, highlight: true, id: "highlight", name: "強調" },
   { blankOff: false, highlight: false, id: "mark", name: "印だけ" },
   { blankOff: true, highlight: false, id: "blank", name: "空白" },
 ] as const;

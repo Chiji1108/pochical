@@ -801,8 +801,33 @@ export const markValue = css({
   justifyContent: "flex-end",
 });
 
+// 見本 on a preview's top edge at the right, as the style page's calendar
+// has it: what is under it shows how something looks, and is not a row
+// to press. The preview is positioned.
+const sampleTagStyle = css({
+  bg: "background.base",
+  border: "1px solid token(colors.separator)",
+  borderRadius: "sm",
+  color: "text.tertiary",
+  fontSize: "10px",
+  fontWeight: 600,
+  padding: "1px 8px",
+  position: "absolute",
+  right: "12px",
+  top: "-8px",
+});
+
+export function SampleTag() {
+  return (
+    <span aria-hidden="true" className={sampleTagStyle}>
+      見本
+    </span>
+  );
+}
+
 // A mark shown large at the top of the page that edits it, with its name
-// and time beside it, or alone in the middle.
+// and time beside it, or alone in the middle; marked 見本, as it looks
+// like a list's row but is not one.
 export const markPreview = cva({
   base: {
     "& strong": { textStyle: "body" },
@@ -812,6 +837,7 @@ export const markPreview = cva({
     display: "flex",
     gap: "16px",
     padding: "16px",
+    position: "relative",
   },
   variants: {
     alone: { true: { justifyContent: "center", minHeight: "84px" } },
