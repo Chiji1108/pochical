@@ -6,7 +6,7 @@ import {
   DesignCalendar,
   initialDesignSchedule,
 } from "../components/design-calendar";
-import { sampleGroups } from "../components/design-group";
+import { sampleGroups } from "../components/design-group-data";
 import { DesignProviders } from "../components/design-providers";
 import { paleSkyLights, themeSkyId } from "../components/design-surprise";
 import {
