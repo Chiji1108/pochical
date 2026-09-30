@@ -396,6 +396,7 @@ const schemeSwitch = {
       top: "-13px",
     },
     _checked: { bg: "fill.tertiary", color: "text.primary" },
+    _disabled: { color: "text.disabled", cursor: "default" },
     bg: "transparent",
     border: 0,
     borderRadius: "8px",
@@ -432,10 +433,14 @@ export function PreviewSchemeSwitch({
   shown,
   onPick,
   placement = "edge",
+  disabled,
 }: {
   shown: ColorScheme;
   onPick: (scheme: ColorScheme) => void;
   placement?: "edge" | "inline";
+  // For what has only one of them, like an always-dark テーマ: the switch
+  // stays in its place, showing that one, and cannot be turned.
+  disabled?: boolean;
 }) {
   return (
     // Ark keeps the group itself relatively positioned, so a wrapper
@@ -443,6 +448,7 @@ export function PreviewSchemeSwitch({
     <div className={schemeSwitch.frame({ placement })}>
       <ChoiceGrid
         className={schemeSwitch.choices}
+        disabled={disabled}
         label="プレビューの明るさ"
         onValueChange={onPick}
         value={shown}

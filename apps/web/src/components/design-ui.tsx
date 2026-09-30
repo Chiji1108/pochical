@@ -1373,6 +1373,7 @@ export function ChoiceGrid<Value extends string>({
   onValueChange,
   className,
   labelClassName = srOnly,
+  disabled,
   ref,
   children,
 }: {
@@ -1382,12 +1383,14 @@ export function ChoiceGrid<Value extends string>({
   onValueChange: (value: Value) => void;
   className?: string;
   labelClassName?: string;
+  disabled?: boolean;
   ref?: Ref<HTMLDivElement>;
   children: ReactNode;
 }) {
   return (
     <RadioGroup.Root
       className={className}
+      disabled={disabled}
       ref={ref}
       onValueChange={(details) => {
         if (details.value !== null) {

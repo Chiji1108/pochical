@@ -314,6 +314,7 @@ export function ImagePreviewPage({
   const scheme = useContext(ColorSchemeContext);
   const { theme } = useContext(ThemeContext);
   const shown = options.scheme ?? scheme;
+  const alwaysDark = presetOf(theme).scheme === "dark";
   const title = `${month.getFullYear()}年${month.getMonth() + 1}月のシフト`;
   return (
     <Screen>
@@ -370,15 +371,14 @@ export function ImagePreviewPage({
                   </figure>
                 </OffDisplayContext>
               </ColorSchemeContext>
-              {/* An always-dark テーマ saves its dark. */}
-              {presetOf(theme).scheme === undefined && (
-                <PreviewSchemeSwitch
-                  onPick={(picked) => {
-                    onOptions({ ...options, scheme: picked });
-                  }}
-                  shown={shown}
-                />
-              )}
+              {/* An always-dark テーマ saves its dark: its ☾ stays on. */}
+              <PreviewSchemeSwitch
+                disabled={alwaysDark}
+                onPick={(picked) => {
+                  onOptions({ ...options, scheme: picked });
+                }}
+                shown={alwaysDark ? "dark" : shown}
+              />
             </div>
           </OffHighlightContext>
         </CellNamesContext>

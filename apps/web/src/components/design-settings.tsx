@@ -1460,6 +1460,7 @@ function StylePreview({
   const shown = shared?.shown ?? picked ?? scheme;
   const onPick = shared?.onPick ?? setPicked;
   const { theme } = useContext(ThemeContext);
+  const alwaysDark = presetOf(theme).scheme === "dark";
   return (
     <div className={previewWrap}>
       <ColorSchemeContext value={shown}>
@@ -1491,10 +1492,12 @@ function StylePreview({
           </div>
         </div>
       </ColorSchemeContext>
-      {/* An always-dark テーマ has no light to switch to. */}
-      {presetOf(theme).scheme === undefined && (
-        <PreviewSchemeSwitch onPick={onPick} shown={shown} />
-      )}
+      {/* An always-dark テーマ has no light to switch to: its ☾ stays on. */}
+      <PreviewSchemeSwitch
+        disabled={alwaysDark}
+        onPick={onPick}
+        shown={alwaysDark ? "dark" : shown}
+      />
     </div>
   );
 }
