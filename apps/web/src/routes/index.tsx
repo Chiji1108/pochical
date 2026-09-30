@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { css, cva } from "styled-system/css";
+import { css } from "styled-system/css";
 
 import {
   DesignCalendar,
@@ -44,7 +44,7 @@ const variants = parseDesignVariants({});
 
 // The app's own ポチカル sky (おたのしみ): its three pale lights, drawn as
 // a soft glow that fades into the paper on every side, so it never meets
-// the browser's bars. It sits behind the hero's words and the closing's.
+// the browser's bars. It sits behind the hero's words only.
 const [skyLeft, skyMiddle, skyRight] = [100, 150, 225].map((hue) =>
   oklchToHex({ chroma: 0.04, hue, lightness: 0.95 })
 );
@@ -54,6 +54,10 @@ const skyBackground = [
   `radial-gradient(50% 60% at 50% 62%, ${skyMiddle} 0%, transparent 75%)`,
 ].join(", ");
 const BREATH_SECONDS = 9;
+
+// The site's muted gray, a step darker: over the sky it keeps above 5:1,
+// where the site's own falls short of 4.5:1.
+const ON_SKY_TEXT = "#5c6159";
 
 // Where the copy and the phone stand side by side.
 const WIDE = "@media (min-width: 960px)";
@@ -84,7 +88,7 @@ const hero = {
     width: "min(390px, 100%)",
   }),
   description: css({
-    color: "var(--muted)",
+    color: ON_SKY_TEXT,
     fontSize: "15px",
     letterSpacing: "0.035em",
     lineHeight: 2.1,
@@ -101,7 +105,7 @@ const hero = {
     lineHeight: 1.9,
     textAlign: "center",
   }),
-  release: css({ color: "var(--muted)", fontSize: "11px" }),
+  release: css({ color: ON_SKY_TEXT, fontSize: "11px" }),
   root: css({
     [WIDE]: {
       alignItems: "flex-start",
@@ -133,33 +137,25 @@ const hero = {
 };
 
 const sky = {
-  // Behind what it sits in, which keeps it behind its content, faded out
-  // to nothing at its edges: reaching a little beyond the hero's words,
-  // or within the closing section, which ends on the footer.
-  root: cva({
-    base: {
-      maskImage: "radial-gradient(closest-side, black 45%, transparent)",
-      // The breathing light reaches past it; the page's width must not.
-      overflow: "hidden",
-      pointerEvents: "none",
-      position: "absolute",
-      zIndex: -1,
-    },
-    variants: {
-      reach: {
-        beyond: { inset: "-120px -140px" },
-        within: { inset: 0 },
-      },
-    },
+  // A little beyond the hero's words, which keep it behind them, faded
+  // out to nothing at its edges.
+  root: css({
+    inset: "-120px -140px",
+    maskImage: "radial-gradient(closest-side, black 45%, transparent)",
+    // The breathing light reaches past it; the page's width must not.
+    overflow: "hidden",
+    pointerEvents: "none",
+    position: "absolute",
+    zIndex: -1,
   }),
   light: css({ inset: "-6%", position: "absolute" }),
 };
 
 // The sky, breathing as slowly as the app's.
-function Sky({ reach }: { reach: "beyond" | "within" }) {
+function Sky() {
   const still = useReducedMotion() ?? false;
   return (
-    <div aria-hidden="true" className={sky.root({ reach })}>
+    <div aria-hidden="true" className={sky.root}>
       <motion.div
         animate={still ? undefined : { scale: 1.08, x: "2%" }}
         className={sky.light}
@@ -566,8 +562,8 @@ function Features() {
   );
 }
 
-// The page's end: the store links again for those who read this far, over
-// the sky the page opened under.
+// The page's end: the store links again for those who read this far, on
+// the plain paper.
 const closing = {
   icon: css({ borderRadius: "14px" }),
   release: css({ color: "var(--muted)", fontSize: "11px" }),
@@ -577,9 +573,7 @@ const closing = {
     display: "flex",
     flexDirection: "column",
     gap: "24px",
-    isolation: "isolate",
     padding: "96px 16px 120px",
-    position: "relative",
     textAlign: "center",
   }),
   title: css({
@@ -593,7 +587,6 @@ const closing = {
 function Closing() {
   return (
     <section aria-labelledby="closing-title" className={closing.root}>
-      <Sky reach="within" />
       <img
         alt=""
         className={closing.icon}
@@ -619,7 +612,7 @@ function Home() {
     <main className={page} id="main">
       <section className={hero.root}>
         <div className={hero.copy}>
-          <Sky reach="beyond" />
+          <Sky />
           <p className={hero.eyebrow}>シフトカレンダー</p>
           <h1 className={hero.title}>
             シフトを、
