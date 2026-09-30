@@ -191,7 +191,6 @@ export function PatternsPage({
   }
 
   const sorting = view === "sort";
-  const paged = items.length > PATTERNS_PER_PAGE;
   return (
     <>
       <PageHeader
@@ -257,11 +256,6 @@ export function PatternsPage({
         >
           パターンを追加
         </AddButton>
-      )}
-      {paged && !sorting && (
-        <Note>
-          {`ポチポチ入力のボタンは${PATTERNS_PER_PAGE}個ずつのページに分かれます。よく使うものを上に並べると、1ページ目で選べます。`}
-        </Note>
       )}
       <Note>
         {sorting
