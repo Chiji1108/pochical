@@ -63,7 +63,7 @@ function DeleteAccount() {
           削除について問い合わせる →
         </a>
         <p className="small-note">
-          パスワードや患者さんの情報は送らないでください。
+          パスワードや、勤務先で扱う個人情報は送らないでください。
         </p>
         <Link to="/privacy">データの取り扱いについて</Link>
       </section>

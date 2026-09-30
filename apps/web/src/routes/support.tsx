@@ -75,7 +75,7 @@ function Support() {
           <ArrowUpRight aria-hidden="true" size={17} />
         </a>
         <p className="small-note">
-          パスワードや患者さんの情報は送らないでください。
+          パスワードや、勤務先で扱う個人情報は送らないでください。
         </p>
       </section>
       <Link className="text-link" to="/account/delete">

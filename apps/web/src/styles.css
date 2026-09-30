@@ -242,10 +242,6 @@
     padding: 60px 28px 65px;
     margin: auto;
   }
-  .back-link {
-    font-size: 11px;
-    color: var(--muted);
-  }
   .page-heading {
     padding: 45px 0 46px;
     margin-bottom: 40px;
