@@ -540,6 +540,9 @@ function PatternEditor({
             />
           )}
           <SwitchRow
+            // What it changes that every calendar shows; groups and
+            // widgets follow from it being a day off.
+            detail="今月のお休みの日数に入ります"
             label="休みとして数える"
 
             checked={draft.countsAsOff}
