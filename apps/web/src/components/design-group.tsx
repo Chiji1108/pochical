@@ -3474,8 +3474,8 @@ function BubbleQuote({
 
 // A photo in a chat, as the messaging apps show one: in its own shape
 // with no bubble, unless it answers a line, when the quote's bubble holds
-// it. A tap opens it large; its reactions and menu (with 保存) open from
-// a long press, as on a photo in LINE.
+// it. A tap opens it large, with 保存; its reactions and menu (with 保存
+// too) open from a long press, as on a photo in LINE.
 function PhotoLine({
   photo,
   label,
@@ -3559,6 +3559,7 @@ function PhotoLine({
       <PhotoViewer
         label={label}
         onOpenChange={setViewing}
+        onSave={onSave}
         open={viewing}
         photo={photo.src}
         whole

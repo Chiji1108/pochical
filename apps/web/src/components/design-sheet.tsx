@@ -1,5 +1,5 @@
 import { Dialog, Drawer, Portal } from "@ark-ui/react";
-import { Check, ChevronLeft, X } from "lucide-react";
+import { Check, ChevronLeft, Download, X } from "lucide-react";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import { css, cva, cx } from "styled-system/css";
@@ -525,19 +525,28 @@ const viewer = {
     position: "absolute",
     zIndex: 30,
   }),
-  close: css({
-    bg: "rgba(255, 255, 255, 0.16)",
-    border: 0,
-    borderRadius: "50%",
-    color: "white",
-    display: "grid",
-    height: "action",
-    placeItems: "center",
-    position: "absolute",
-    right: "16px",
-    top: "56px",
-    width: "action",
-    zIndex: 1,
+  // × at the top right, and 保存 at the bottom right as in LINE's photo
+  // view, both round on the black.
+  button: cva({
+    base: {
+      bg: "rgba(255, 255, 255, 0.16)",
+      border: 0,
+      borderRadius: "50%",
+      color: "white",
+      display: "grid",
+      height: "action",
+      placeItems: "center",
+      position: "absolute",
+      right: "16px",
+      width: "action",
+      zIndex: 1,
+    },
+    variants: {
+      at: {
+        bottom: { bottom: "calc(var(--safe-bottom) + 12px)" },
+        top: { top: "56px" },
+      },
+    },
   }),
   content: css({
     _closed: { animation: "fadeOut 0.2s ease-in" },
@@ -573,12 +582,15 @@ export function PhotoViewer({
   whole = false,
   open,
   onOpenChange,
+  onSave,
 }: {
   photo: string;
   // Its name for a screen reader, like whose picture it is.
   label: string;
   // Shows the whole photo in its own shape, not cut to a square.
   whole?: boolean;
+  // Offers 保存, for a photo sent in a chat.
+  onSave?: () => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -622,9 +634,26 @@ export function PhotoViewer({
               }
             }}
           >
-            <Dialog.CloseTrigger aria-label="閉じる" className={viewer.close}>
+            <Dialog.CloseTrigger
+              aria-label="閉じる"
+              className={viewer.button({ at: "top" })}
+            >
               <X aria-hidden="true" size={20} />
             </Dialog.CloseTrigger>
+            {onSave && (
+              <button
+                aria-label="保存"
+                className={viewer.button({ at: "bottom" })}
+                onClick={onSave}
+                // Not the start of a pull to close.
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                }}
+                type="button"
+              >
+                <Download aria-hidden="true" size={20} />
+              </button>
+            )}
             <img
               alt=""
               className={viewer.photo({ whole })}
