@@ -127,8 +127,13 @@ function useBarColor() {
     }
     const root = document.documentElement;
     const before = { background: root.style.background, meta: meta.content };
+    // A screen whose ground runs up under the bar, like the camera's,
+    // lends it that ground instead.
     const follow = () => {
-      const color = getComputedStyle(phone).backgroundColor;
+      const under = phone.querySelector<HTMLElement>(
+        "[data-status-bar]:not([hidden])"
+      );
+      const color = getComputedStyle(under ?? phone).backgroundColor;
       meta.content = color;
       root.style.background = color;
     };
@@ -140,7 +145,11 @@ function useBarColor() {
       showPage();
     });
     const observer = new MutationObserver(follow);
-    observer.observe(phone, { attributeFilter: ["style"] });
+    observer.observe(phone, {
+      attributeFilter: ["style", "hidden"],
+      childList: true,
+      subtree: true,
+    });
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();

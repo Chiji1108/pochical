@@ -232,33 +232,66 @@ export function BarGroup({ children }: { children: ReactNode }) {
 // A screen under the phone's status bar: a column that fills the phone,
 // so the part that scrolls and what is pinned to its foot share the
 // height. Hidden, it keeps its state and takes no room.
-const screenStyle = css({
-  // Under a floating tab bar the part that scrolls runs on to the screen's
-  // foot, ending 16px clear of the bar, so what scrolls passes under it.
-  // A rail beside it runs on with it.
-  "&:has(> [data-tab-bar]) :is([data-screen-scroll], [data-screen-rail])": {
-    marginBottom: "calc(-1 * var(--safe-bottom))",
-    paddingBottom: "calc(var(--tab-bar-bottom) + 80px)",
+const screenStyle = cva({
+  base: {
+    // Under a floating tab bar the part that scrolls runs on to the screen's
+    // foot, ending 16px clear of the bar, so what scrolls passes under it.
+    // A rail beside it runs on with it.
+    "&:has(> [data-tab-bar]) :is([data-screen-scroll], [data-screen-rail])": {
+      marginBottom: "calc(-1 * var(--safe-bottom))",
+      paddingBottom: "calc(var(--tab-bar-bottom) + 80px)",
+    },
+    // The part that scrolls takes that room as its end piece instead; see
+    // screenScrollStyle.
+    "&:has(> [data-tab-bar]) [data-screen-scroll]": {
+      "&::after": { height: "calc(var(--tab-bar-bottom) + 80px)" },
+      paddingBottom: 0,
+    },
+    "&[hidden]": { display: "none" },
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    minHeight: 0,
+    paddingTop: "12px",
   },
-  // The part that scrolls takes that room as its end piece instead; see
-  // screenScrollStyle.
-  "&:has(> [data-tab-bar]) [data-screen-scroll]": {
-    "&::after": { height: "calc(var(--tab-bar-bottom) + 80px)" },
-    paddingBottom: 0,
+  variants: {
+    // Its ground runs out to the phone's edges, up under the status bar
+    // and down under the home indicator, as a camera's does: SwiftUI's
+    // .ignoresSafeArea() on the ground. What is on it keeps clear of them.
+    fullBleed: {
+      true: {
+        marginBottom: "calc(-1 * var(--safe-bottom))",
+        marginLeft: "calc(-1 * var(--screen-left))",
+        marginRight: "calc(-1 * var(--screen-right))",
+        marginTop: "calc(-1 * var(--safe-top))",
+        paddingBottom: "var(--safe-bottom)",
+        paddingLeft: "var(--screen-left)",
+        paddingRight: "var(--screen-right)",
+        paddingTop: "calc(var(--safe-top) + 12px)",
+      },
+    },
   },
-  "&[hidden]": { display: "none" },
-  display: "flex",
-  flex: 1,
-  flexDirection: "column",
-  minHeight: 0,
-  paddingTop: "12px",
 });
 
 export function Screen({
   className,
+  fullBleed = false,
+  statusBar,
   ...props
-}: HTMLAttributes<HTMLDivElement> & { "data-toast-above"?: string }) {
-  return <div className={cx(screenStyle, className)} {...props} />;
+}: HTMLAttributes<HTMLDivElement> & {
+  "data-toast-above"?: string;
+  fullBleed?: boolean;
+  // Light for a dark ground, as the status bar and home indicator turn
+  // over a camera.
+  statusBar?: "light";
+}) {
+  return (
+    <div
+      className={cx(screenStyle({ fullBleed }), className)}
+      data-status-bar={statusBar}
+      {...props}
+    />
+  );
 }
 
 // The part of a screen that scrolls under the status bar, heading and all,
