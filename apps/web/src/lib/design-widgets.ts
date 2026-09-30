@@ -87,7 +87,7 @@ function changeOf(
   moved: { early: boolean; late: boolean } | undefined
 ) {
   if (time === undefined || moved === undefined) {
-    return;
+    return undefined;
   }
   const [start = "", end = ""] = time.split(" – ");
   if (moved.early && moved.late) {
