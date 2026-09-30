@@ -1894,6 +1894,14 @@ const hub = {
   }),
 };
 
+// Cut short with … on one line.
+const ellipsisStyle = css({
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+});
+
 // 参加の画面: who it is from on top, then the group, its mark and name
 // together with room around them, and who is in it; then how you will
 // appear in it, and at the foot what joining shares over 参加する.
@@ -1912,8 +1920,9 @@ const joinScreen = {
     margin: "0 8px 12px",
     textAlign: "center",
     textStyle: "footnote",
-    // Broken between phrases and evened out, as the site's headings; a
-    // name is not a phrase it knows, so it is kept whole.
+    // Broken between phrases and evened out, as the site's headings. It
+    // leaves the group's name to the screen above, so a long one cannot
+    // stretch it.
     textWrap: "balance",
     wordBreak: "auto-phrase",
   }),
@@ -1922,10 +1931,14 @@ const joinScreen = {
     alignItems: "center",
     color: "text.secondary",
     display: "flex",
-    gap: "8px",
     margin: 0,
+    maxWidth: "100%",
     textStyle: "subheadline",
   }),
+  // A long name is cut short, and からの招待 stays whole after it.
+  fromName: ellipsisStyle,
+  fromAvatar: css({ display: "flex", flexShrink: 0, marginRight: "8px" }),
+  fromRest: css({ flexShrink: 0 }),
   group: css({
     alignItems: "center",
     display: "flex",
@@ -1940,11 +1953,14 @@ const joinScreen = {
     paddingBottom: "12px",
     textAlign: "center",
   }),
+  // One line: long names are cut short, and the whole list is a tap
+  // away.
   memberLine: css({
     alignItems: "center",
     color: "text.tertiary",
-    display: "inline-flex",
+    display: "flex",
     gap: "2px",
+    maxWidth: "100%",
     textStyle: "footnote",
   }),
   members: css({
@@ -1953,15 +1969,18 @@ const joinScreen = {
     flexDirection: "column",
     gap: "8px",
   }),
-  name: css({ whiteSpace: "nowrap" }),
   membersButton: css({
     bg: "transparent",
     border: 0,
     color: "inherit",
     cursor: "pointer",
+    maxWidth: "100%",
     padding: 0,
   }),
-  title: css({ fontWeight: 700, margin: 0, textStyle: "title1" }),
+  arrow: css({ flexShrink: 0 }),
+  // The whole name, as the one place it is read before joining; a name
+  // longer than three lines is cut short.
+  title: css({ fontWeight: 700, lineClamp: 3, margin: 0, textStyle: "title1" }),
 };
 
 // Who is in a group, by name while that stays short, and by as many
@@ -7283,8 +7302,12 @@ export function JoinScreen({
         ))}
       </span>
       <small className={joinScreen.memberLine}>
-        {memberLine(names)}
-        <ChevronRight aria-hidden="true" size={14} />
+        <span className={ellipsisStyle}>{memberLine(names)}</span>
+        <ChevronRight
+          aria-hidden="true"
+          className={joinScreen.arrow}
+          size={14}
+        />
       </small>
     </>
   );
@@ -7324,12 +7347,15 @@ export function JoinScreen({
         />
         <div className={joinScreen.head}>
           <p className={joinScreen.from}>
-            <PhotoAvatar
-              name={invite.from.name}
-              photo={invite.from.photo}
-              size={20}
-            />
-            {invite.from.name}からの招待
+            <span className={joinScreen.fromAvatar}>
+              <PhotoAvatar
+                name={invite.from.name}
+                photo={invite.from.photo}
+                size={20}
+              />
+            </span>
+            <span className={joinScreen.fromName}>{invite.from.name}</span>
+            <span className={joinScreen.fromRest}>からの招待</span>
           </p>
           <div className={joinScreen.group}>
             <span className={markFrame({ size: "large" })}>
@@ -7361,9 +7387,7 @@ export function JoinScreen({
       </ScreenScroll>
       <div className={joinScreen.foot}>
         <p className={joinScreen.consent}>
-          参加すると、あなたのシフトも
-          <span className={joinScreen.name}>{invite.group}</span>
-          のメンバーに見えるようになります。
+          参加すると、あなたのシフトもメンバーに見えるようになります。
         </p>
         <Button
           onClick={() => {
@@ -7820,6 +7844,11 @@ function GroupEditPage({
   );
 }
 
+const profileRow = {
+  label: css({ flex: 1, minWidth: 0 }),
+  value: css({ flex: "none" }),
+};
+
 // How you appear in a group, as a row that opens GroupProfilePage: the
 // same in the group's settings and on the invitation to join it.
 function GroupProfileRow({
@@ -7832,11 +7861,14 @@ function GroupProfileRow({
   onOpen: () => void;
 }) {
   const shown = profileIn(group, profile);
+  // A long name is cut short rather than pushing the value out of the row.
   return (
     <ListRow
       onClick={onOpen}
-      label={shown.name}
+      label={<span className={ellipsisStyle}>{shown.name}</span>}
+      labelClassName={profileRow.label}
       value={group.mine ? "このグループだけ" : "いつもと同じ"}
+      valueClassName={profileRow.value}
       leading={
         <>
           <PhotoAvatar name={shown.name} photo={shown.photo} size={28} />
