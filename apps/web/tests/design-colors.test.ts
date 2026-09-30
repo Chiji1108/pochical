@@ -45,7 +45,7 @@ const allowed = new Set([
   // iOS's own alert, drawn in its blue.
   "design-settings.tsx #0a84ff",
   // A fade's mask, which reads only how opaque it is.
-  "design-group.tsx #000",
+  "design-group-hub.tsx #000",
   // What the OS draws a widget in when it renders it in one color.
   "design-widgets.tsx rgb(255 255 255 / 0.24)",
   "design-widgets.tsx rgb(255 255 255 / 0.16)",

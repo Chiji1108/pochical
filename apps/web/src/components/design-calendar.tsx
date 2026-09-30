@@ -51,7 +51,8 @@ import { spring } from "../lib/motion";
 import { composing, dayName, limitText, textLimits } from "../lib/text-limits";
 import type { Coworkers } from "./design-coworkers";
 import { GapSheet, gapDaysIn } from "./design-gap-sheet";
-import { DesignGroup, JoinScreen } from "./design-group";
+import { DesignGroup } from "./design-group";
+import { JoinScreen } from "./design-group-join";
 import { MonthTitleButton, monthTitle } from "./design-month-picker";
 import { Phone } from "./design-phone";
 import {

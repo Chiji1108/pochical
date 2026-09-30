@@ -7,7 +7,7 @@ import {
   DesignCalendar,
   initialDesignSchedule,
 } from "../components/design-calendar";
-import { sampleGroups } from "../components/design-group";
+import { sampleGroups } from "../components/design-group-data";
 import { DesignProviders } from "../components/design-providers";
 import { screenColor } from "../components/design-theme";
 import { appSplashScreens } from "../lib/app-splash-screens";

@@ -8,7 +8,7 @@ import {
   initialDesignSchedule,
   patternSets,
 } from "../components/design-calendar";
-import { sampleGroups } from "../components/design-group";
+import { sampleGroups } from "../components/design-group-data";
 import { HomeScreen } from "../components/design-home-screen";
 import {
   designCaption,
