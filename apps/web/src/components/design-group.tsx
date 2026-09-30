@@ -2864,10 +2864,12 @@ function ChatPage({
   // Photos chosen but still being read; sending waits for them, so none
   // lands in the composer after the message has gone.
   const [reading, setReading] = useState(0);
-  // While words are being written, the tools fold into a ›, as in LINE,
-  // giving the field their room; › opens them until the next letter.
+  // While the field is in use, the tools fold into a ›, as in LINE,
+  // giving it their room: from the moment it is tapped, and while words
+  // wait in it. › opens them until the next letter.
+  const [writing, setWriting] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
-  const toolsFolded = draft !== "" && !toolsOpen;
+  const toolsFolded = (writing || draft !== "") && !toolsOpen;
   const photoInputRef = useRef<HTMLInputElement>(null);
   const toast = useContext(ToastContext);
   // Photos of yours still uploading, or that could not be sent, by line.
@@ -3335,6 +3337,11 @@ function ChatPage({
                 onClick={() => {
                   setToolsOpen(true);
                 }}
+                // The field keeps focus (and the keyboard stays up), so
+                // the tools do not open under the finger as it leaves.
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                }}
                 transition={toolFold}
                 type="button"
               >
@@ -3376,8 +3383,15 @@ function ChatPage({
         <input
           aria-label="メッセージ"
           className={chatStyle.composerInput}
+          onBlur={() => {
+            setWriting(false);
+          }}
           onChange={(event) => {
             setDraft(event.target.value);
+            setToolsOpen(false);
+          }}
+          onFocus={() => {
+            setWriting(true);
             setToolsOpen(false);
           }}
           placeholder="メッセージ"
