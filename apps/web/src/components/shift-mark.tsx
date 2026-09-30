@@ -137,14 +137,14 @@ export const CellNamesContext = createContext<{
 }>({ names: defaultCellNames });
 
 // Whether days off get a tint of their pattern color, per look. Unset means
-// automatic: on, except letters on a tinted tile, which carry the color
-// already.
+// on, except for emoji, which bring their own colors; each look's own
+// starting value is in the settings store.
 export type OffHighlight = Partial<Record<ShiftMarkStyle, boolean>>;
 export const defaultOffHighlight: OffHighlight = {};
 
 export function useOffHighlight(style: ShiftMarkStyle) {
   const { highlight } = useContext(OffHighlightContext);
-  return highlight[style] ?? true;
+  return highlight[style] ?? style !== "emoji";
 }
 
 // Every look setting at once: the style and its switches. `fill` only
@@ -178,7 +178,7 @@ export const sampleLooks = {
   friendly: { ...baseLook, names: true, style: "badge" },
   minimal: { ...baseLook, fill: false, highlight: false },
   natural: baseLook,
-  pop: { ...baseLook, style: "emoji" },
+  pop: { ...baseLook, highlight: false, style: "emoji" },
   roster: { ...baseLook, highlight: false, style: "badge" },
 } satisfies Record<string, LookSettings>;
 
