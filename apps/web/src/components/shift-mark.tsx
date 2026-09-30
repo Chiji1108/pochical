@@ -1,57 +1,3 @@
-import {
-  AirplaneIcon as PhAirplane,
-  AmbulanceIcon as PhAmbulance,
-  BabyIcon as PhBaby,
-  BarbellIcon as PhBarbell,
-  BedIcon as PhBed,
-  BookOpenIcon as PhBookOpen,
-  BriefcaseIcon as PhBriefcase,
-  BuildingsIcon as PhBuildings,
-  BusIcon as PhBus,
-  CalendarCheckIcon as PhCalendarCheck,
-  CarIcon as PhCar,
-  CatIcon as PhCat,
-  ClockIcon as PhClock,
-  CloudMoonIcon as PhCloudMoon,
-  CloudSunIcon as PhCloudSun,
-  CoffeeIcon as PhCoffee,
-  ConfettiIcon as PhConfetti,
-  CouchIcon as PhCouch,
-  DogIcon as PhDog,
-  DropIcon as PhDrop,
-  FireIcon as PhFire,
-  FishIcon as PhFish,
-  FlowerIcon as PhFlower,
-  FlowerLotusIcon as PhFlowerLotus,
-  FlowerTulipIcon as PhFlowerTulip,
-  ForkKnifeIcon as PhForkKnife,
-  GraduationCapIcon as PhGraduationCap,
-  HeartIcon as PhHeart,
-  HospitalIcon as PhHospital,
-  HouseIcon as PhHouse,
-  LaptopIcon as PhLaptop,
-  LeafIcon as PhLeaf,
-  MoonIcon as PhMoon,
-  MoonStarsIcon as PhMoonStars,
-  MusicNoteIcon as PhMusicNote,
-  PhoneIcon as PhPhone,
-  ShieldIcon as PhShield,
-  ShoppingBagIcon as PhShoppingBag,
-  SirenIcon as PhSiren,
-  SparkleIcon as PhSparkle,
-  StarIcon as PhStar,
-  StethoscopeIcon as PhStethoscope,
-  SunIcon as PhSun,
-  SunDimIcon as PhSunDim,
-  SunHorizonIcon as PhSunHorizon,
-  SyringeIcon as PhSyringe,
-  TrainIcon as PhTrain,
-  TreePalmIcon as PhTreePalm,
-  UmbrellaIcon as PhUmbrella,
-  UsersIcon as PhUsers,
-  WavesIcon as PhWaves,
-} from "@phosphor-icons/react";
-import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { markColorIn, markColors } from "@pochical/design/colors";
 import {
   markPalette,
@@ -59,11 +5,13 @@ import {
   themeMarkColor,
 } from "@pochical/design/themes";
 import { createContext, useContext } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { css, cx } from "styled-system/css";
 
 import { usePatterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
+import { markIconPaths } from "../lib/mark-icon-paths";
+import type { MarkIconName } from "../lib/mark-icon-paths";
 import { presetOf, ThemeContext, useColorScheme } from "./design-theme";
 
 export type ShiftMarkStyle = "icon" | "emoji" | "badge";
@@ -186,64 +134,98 @@ export const OffHighlightContext = createContext<{
   highlight: OffHighlight;
 }>({ highlight: defaultOffHighlight });
 
+type MarkIconComponent = (props: {
+  className?: string;
+  color?: string;
+  size: number;
+  weight?: IconWeight;
+}) => ReactNode;
+
+// A Phosphor icon drawn from its paths in lib/mark-icon-paths.ts, as
+// Phosphor's own component would draw it.
+function phosphorIcon(name: MarkIconName): MarkIconComponent {
+  return function PhosphorIcon({
+    className,
+    color = "currentColor",
+    size,
+    weight = "regular",
+  }) {
+    return (
+      <svg
+        aria-hidden="true"
+        className={className}
+        fill={color}
+        height={size}
+        viewBox="0 0 256 256"
+        width={size}
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {markIconPaths[name][weight].map(({ d, opacity }) => (
+          <path d={d} key={d} opacity={opacity} />
+        ))}
+      </svg>
+    );
+  };
+}
+
 // Phosphor duotone icons. "letter" draws the symbol inside a thin circle, so
 // any shift has an icon. Phosphor has one sun-on-the-horizon icon, so sunrise
 // and dusk share it and the sunset uses a dim sun.
 export const markIcons = {
-  ambulance: PhAmbulance,
-  baby: PhBaby,
-  bed: PhBed,
-  book: PhBookOpen,
-  briefcase: PhBriefcase,
-  building: PhBuildings,
-  bus: PhBus,
-  calendarCheck: PhCalendarCheck,
-  car: PhCar,
-  cat: PhCat,
-  clock: PhClock,
-  cloudMoon: PhCloudMoon,
-  cloudSun: PhCloudSun,
-  coffee: PhCoffee,
-  couch: PhCouch,
-  dog: PhDog,
-  drop: PhDrop,
-  dumbbell: PhBarbell,
-  fish: PhFish,
-  flame: PhFire,
-  flower: PhFlower,
-  graduationCap: PhGraduationCap,
-  heart: PhHeart,
-  hospital: PhHospital,
-  house: PhHouse,
-  laptop: PhLaptop,
-  leaf: PhLeaf,
+  ambulance: phosphorIcon("Ambulance"),
+  baby: phosphorIcon("Baby"),
+  bed: phosphorIcon("Bed"),
+  book: phosphorIcon("BookOpen"),
+  briefcase: phosphorIcon("Briefcase"),
+  building: phosphorIcon("Buildings"),
+  bus: phosphorIcon("Bus"),
+  calendarCheck: phosphorIcon("CalendarCheck"),
+  car: phosphorIcon("Car"),
+  cat: phosphorIcon("Cat"),
+  clock: phosphorIcon("Clock"),
+  cloudMoon: phosphorIcon("CloudMoon"),
+  cloudSun: phosphorIcon("CloudSun"),
+  coffee: phosphorIcon("Coffee"),
+  couch: phosphorIcon("Couch"),
+  dog: phosphorIcon("Dog"),
+  drop: phosphorIcon("Drop"),
+  dumbbell: phosphorIcon("Barbell"),
+  fish: phosphorIcon("Fish"),
+  flame: phosphorIcon("Fire"),
+  flower: phosphorIcon("Flower"),
+  graduationCap: phosphorIcon("GraduationCap"),
+  heart: phosphorIcon("Heart"),
+  hospital: phosphorIcon("Hospital"),
+  house: phosphorIcon("House"),
+  laptop: phosphorIcon("Laptop"),
+  leaf: phosphorIcon("Leaf"),
   letter: undefined,
-  lotus: PhFlowerLotus,
-  moon: PhMoon,
-  moonStar: PhMoonStars,
-  music: PhMusicNote,
-  partyPopper: PhConfetti,
-  phone: PhPhone,
-  plane: PhAirplane,
-  shield: PhShield,
-  shoppingBag: PhShoppingBag,
-  siren: PhSiren,
-  sparkles: PhSparkle,
-  star: PhStar,
-  stethoscope: PhStethoscope,
-  sun: PhSun,
-  sunMoon: PhSunHorizon,
-  sunrise: PhSunHorizon,
-  sunset: PhSunDim,
-  syringe: PhSyringe,
-  train: PhTrain,
-  treePalm: PhTreePalm,
-  tulip: PhFlowerTulip,
-  umbrella: PhUmbrella,
-  users: PhUsers,
-  utensils: PhForkKnife,
-  waves: PhWaves,
-} satisfies Record<string, PhosphorIcon | undefined>;
+  lotus: phosphorIcon("FlowerLotus"),
+  moon: phosphorIcon("Moon"),
+  moonStar: phosphorIcon("MoonStars"),
+  music: phosphorIcon("MusicNote"),
+  partyPopper: phosphorIcon("Confetti"),
+  phone: phosphorIcon("Phone"),
+  plane: phosphorIcon("Airplane"),
+  shield: phosphorIcon("Shield"),
+  shoppingBag: phosphorIcon("ShoppingBag"),
+  siren: phosphorIcon("Siren"),
+  sparkles: phosphorIcon("Sparkle"),
+  star: phosphorIcon("Star"),
+  stethoscope: phosphorIcon("Stethoscope"),
+  sun: phosphorIcon("Sun"),
+  sunMoon: phosphorIcon("SunHorizon"),
+  sunrise: phosphorIcon("SunHorizon"),
+  sunset: phosphorIcon("SunDim"),
+  syringe: phosphorIcon("Syringe"),
+  train: phosphorIcon("Train"),
+  treePalm: phosphorIcon("TreePalm"),
+  tulip: phosphorIcon("FlowerTulip"),
+  umbrella: phosphorIcon("Umbrella"),
+  users: phosphorIcon("Users"),
+  utensils: phosphorIcon("ForkKnife"),
+  waves: phosphorIcon("Waves"),
+} satisfies Record<string, MarkIconComponent | undefined>;
 export type MarkIcon = keyof typeof markIcons;
 
 export const markEmojis = [
@@ -508,7 +490,6 @@ function IconGlyph({
   }
   return (
     <Icon
-      aria-hidden="true"
       className={cx(glyphStyle.icon, "sm-icon")}
       color={color}
       size={size}

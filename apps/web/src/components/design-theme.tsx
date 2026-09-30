@@ -89,18 +89,6 @@ export function themeStyle(id: PresetId, requested: ColorScheme = "light") {
   } as CSSProperties;
 }
 
-// The screen's own color, which the device's status bar and the home
-// screen app's launch images take.
-export function screenColor(id: PresetId, scheme: ColorScheme) {
-  const color = themeRoles(presetOf(id), schemeOf(id, scheme))[
-    "background-base"
-  ];
-  if (color === undefined) {
-    throw new Error(`No screen color for ${id} in ${scheme}`);
-  }
-  return color;
-}
-
 export function useThemeStyle() {
   return themeStyle(
     useContext(ThemeContext).theme,

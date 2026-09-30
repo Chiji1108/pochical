@@ -17,7 +17,6 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Time } from "@internationalized/date";
 import {
   Check,
   ChevronDown,
@@ -38,11 +37,12 @@ import type { MotionValue } from "motion/react";
 import {
   createContext,
   Fragment,
+  lazy,
+  Suspense,
   useContext,
   useEffect,
   useId,
   useLayoutEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -60,12 +60,6 @@ import type {
   Ref,
   TextareaHTMLAttributes,
 } from "react";
-import {
-  DateInput,
-  DateSegment,
-  I18nProvider,
-  TimeField as AriaTimeField,
-} from "react-aria-components";
 import { css, cva, cx } from "styled-system/css";
 
 import { spring } from "../lib/motion";
@@ -691,14 +685,7 @@ const timeField = {
   }),
 };
 
-// "9:00" as React Aria's Time, and back.
-function timeOf(text: string) {
-  const [hour = 0, minute = 0] = text.split(":").map(Number);
-  return new Time(hour, minute);
-}
-function timeText(time: Time) {
-  return `${String(time.hour).padStart(2, "0")}:${String(time.minute).padStart(2, "0")}`;
-}
+const AriaTimeInput = lazy(async () => await import("./design-time-field"));
 
 export function TimeField({
   label,
@@ -711,34 +698,17 @@ export function TimeField({
   value: string;
   onValueChange: (value: string) => void;
 }) {
-  // A part cleared while being retyped leaves the time as it was (React
-  // Aria sends only whole times); left unfinished, the field shows that
-  // time again.
-  const [shown, setShown] = useState(0);
-  const time = useMemo(() => timeOf(value), [value]);
+  // Until React Aria arrives, the same pill with the time as plain text.
   return (
-    <I18nProvider locale="ja-JP">
-      <AriaTimeField
-        aria-label={label}
-        hourCycle={24}
-        key={shown}
-        onBlur={() => {
-          setShown(shown + 1);
-        }}
-        onChange={(next) => {
-          if (next) {
-            onValueChange(timeText(next));
-          }
-        }}
-        value={time}
-      >
-        <DateInput className={timeField.field}>
-          {(segment) => (
-            <DateSegment className={timeField.segment} segment={segment} />
-          )}
-        </DateInput>
-      </AriaTimeField>
-    </I18nProvider>
+    <Suspense fallback={<span className={timeField.field}>{value}</span>}>
+      <AriaTimeInput
+        fieldClassName={timeField.field}
+        label={label}
+        onValueChange={onValueChange}
+        segmentClassName={timeField.segment}
+        value={value}
+      />
+    </Suspense>
   );
 }
 

@@ -6,16 +6,16 @@ import { css, cx } from "styled-system/css";
 import { DesignCalendar } from "../components/design-calendar";
 import { sampleGroups } from "../components/design-group-data";
 import { DesignProviders } from "../components/design-providers";
-import { screenColor } from "../components/design-theme";
 import { appSplashScreens } from "../lib/app-splash-screens";
 import { initialDesignSchedule } from "../lib/design-days";
-import { deviceSettingsKey } from "../lib/design-settings-store";
+import { deviceSettingsKey } from "../lib/design-settings-key";
 import {
   createUserStore,
   sampleCoworkers,
   UserStoreContext,
 } from "../lib/design-user-store";
 import { parseDesignVariants } from "../lib/design-variants";
+import { screenColor } from "../lib/screen-color";
 import { pageMeta } from "../lib/site";
 
 const title = "ポチカル";
