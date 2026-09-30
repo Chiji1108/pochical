@@ -487,17 +487,7 @@ const optionCard = {
       textAlign: "left",
       width: "100%",
     },
-    variants: {
-      picked: {
-        true: {
-          _hover: { bg: "background.card", borderColor: "accent.default" },
-          border: "2px solid token(colors.accent.default)",
-          cursor: "default",
-        },
-      },
-    },
   }),
-  check: css({ color: "accent.default", flexShrink: 0 }),
   icon: css({
     flexShrink: 0,
     fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", sans-serif',
@@ -529,26 +519,18 @@ export function OptionCard({
   icon,
   title,
   note,
-  picked,
   onClick,
   children,
 }: {
   icon?: string;
   title: string;
   note: string;
-  // Set where one of the answers is the one in use, as in settings.
-  picked?: boolean;
   onClick: () => void;
   // More under the note, like the patterns a template brings.
   children?: ReactNode;
 }) {
   return (
-    <button
-      aria-pressed={picked}
-      className={optionCard.card({ picked })}
-      onClick={onClick}
-      type="button"
-    >
+    <button className={optionCard.card()} onClick={onClick} type="button">
       {icon !== undefined && (
         <span aria-hidden="true" className={optionCard.icon}>
           {icon}
@@ -559,15 +541,7 @@ export function OptionCard({
         <small className={optionCard.note}>{note}</small>
         {children}
       </span>
-      {picked === true ? (
-        <Check aria-hidden="true" className={optionCard.check} size={20} />
-      ) : (
-        <ChevronRight
-          aria-hidden="true"
-          className={optionCard.arrow}
-          size={18}
-        />
-      )}
+      <ChevronRight aria-hidden="true" className={optionCard.arrow} size={18} />
     </button>
   );
 }
@@ -690,17 +664,20 @@ export const fieldStyle = cva({
 // tap and set by typing digits or with ↑↓ (React Aria's TimeField, which
 // HeroUI's is built on). 24-hour, as Japanese schedules write it.
 const timeField = {
-  // A shade deeper than a text field's fill, as iOS's pill, so it shows
-  // on a list's card too.
+  // As iOS's compact DatePicker (measured on the iOS 27 simulator): a
+  // capsule about 35pt tall in a shade deeper than a text field's fill, so
+  // it shows on a list's card too; while it is being set its time turns
+  // the accent color.
   field: css({
+    "&[data-focus-within]": { color: "accent.default" },
     alignItems: "center",
     bg: "fill.tertiary",
-    borderRadius: "md",
+    borderRadius: "full",
     color: "text.primary",
     cursor: "text",
     display: "inline-flex",
     fontVariantNumeric: "tabular-nums",
-    minHeight: "action",
+    minHeight: "36px",
     padding: "0 12px",
     textStyle: "body",
   }),
@@ -1462,6 +1439,7 @@ export const listRow = {
 // Pressed, it is a button with an arrow; holding a control, or pointing at
 // one with htmlFor, it is that control's label. `danger` is for rows that
 // remove something, and `truncate` for a label that is a typed name.
+// `detail` is a line under the label, and makes it a two-line row.
 export function ListRow({
   label,
   value,
@@ -1471,6 +1449,7 @@ export function ListRow({
   arrow,
   danger = false,
   truncate = false,
+  detail,
   htmlFor,
   disabled,
   className,
@@ -1487,6 +1466,7 @@ export function ListRow({
   arrow?: ReactNode;
   danger?: boolean;
   truncate?: boolean;
+  detail?: ReactNode;
   htmlFor?: string;
   disabled?: boolean;
   className?: string;
@@ -1522,6 +1502,7 @@ export function ListRow({
         )}
       >
         {truncate ? <span className={listRow.labelText}>{label}</span> : label}
+        {detail !== undefined && <small>{detail}</small>}
       </span>
       {value !== undefined && (
         <span
@@ -1539,7 +1520,7 @@ export function ListRow({
     </>
   );
   const rowClass = cx(
-    listRow.root,
+    detail === undefined ? listRow.root : listRow.twoLine,
     (pressable || isLabel) && listRow.pressable,
     danger && listRow.danger,
     className
