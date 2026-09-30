@@ -17,6 +17,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Time } from "@internationalized/date";
 import {
   Check,
   ChevronDown,
@@ -40,6 +41,7 @@ import {
   useContext,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -57,6 +59,12 @@ import type {
   Ref,
   TextareaHTMLAttributes,
 } from "react";
+import {
+  DateInput,
+  DateSegment,
+  I18nProvider,
+  TimeField as AriaTimeField,
+} from "react-aria-components";
 import { css, cva, cx } from "styled-system/css";
 
 import { spring } from "../lib/motion";
@@ -478,17 +486,7 @@ const optionCard = {
       textAlign: "left",
       width: "100%",
     },
-    variants: {
-      picked: {
-        true: {
-          _hover: { bg: "background.card", borderColor: "accent.default" },
-          border: "2px solid token(colors.accent.default)",
-          cursor: "default",
-        },
-      },
-    },
   }),
-  check: css({ color: "accent.default", flexShrink: 0 }),
   icon: css({
     flexShrink: 0,
     fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", sans-serif',
@@ -520,26 +518,18 @@ export function OptionCard({
   icon,
   title,
   note,
-  picked,
   onClick,
   children,
 }: {
   icon?: string;
   title: string;
   note: string;
-  // Set where one of the answers is the one in use, as in settings.
-  picked?: boolean;
   onClick: () => void;
   // More under the note, like the patterns a template brings.
   children?: ReactNode;
 }) {
   return (
-    <button
-      aria-pressed={picked}
-      className={optionCard.card({ picked })}
-      onClick={onClick}
-      type="button"
-    >
+    <button className={optionCard.card()} onClick={onClick} type="button">
       {icon !== undefined && (
         <span aria-hidden="true" className={optionCard.icon}>
           {icon}
@@ -550,15 +540,7 @@ export function OptionCard({
         <small className={optionCard.note}>{note}</small>
         {children}
       </span>
-      {picked === true ? (
-        <Check aria-hidden="true" className={optionCard.check} size={20} />
-      ) : (
-        <ChevronRight
-          aria-hidden="true"
-          className={optionCard.arrow}
-          size={18}
-        />
-      )}
+      <ChevronRight aria-hidden="true" className={optionCard.arrow} size={18} />
     </button>
   );
 }
@@ -638,7 +620,7 @@ export function DestructiveButton({
 // inline is a row's control with no box of its own, like a pattern's
 // name: its words at the row's right, or from its start when it is the
 // row itself, like a name being added. box stands on its own ground, as
-// a day's memo or times. chip sits among chips as one more being added.
+// a day's memo. chip sits among chips as one more being added.
 export const fieldStyle = cva({
   base: { font: "inherit", outline: "none" },
   defaultVariants: { align: "start" },
@@ -674,6 +656,124 @@ export const fieldStyle = cva({
       },
     },
   },
+});
+
+// A time of day as the platforms' compact time pickers show it: a filled
+// pill with the hour and the minute as their own parts, each picked by a
+// tap and set by typing digits or with ↑↓ (React Aria's TimeField, which
+// HeroUI's is built on). 24-hour, as Japanese schedules write it.
+const timeField = {
+  // A shade deeper than a text field's fill, as iOS's pill, so it shows
+  // on a list's card too.
+  field: css({
+    alignItems: "center",
+    bg: "fill.tertiary",
+    borderRadius: "md",
+    color: "text.primary",
+    cursor: "text",
+    display: "inline-flex",
+    fontVariantNumeric: "tabular-nums",
+    minHeight: "action",
+    padding: "0 12px",
+    textStyle: "body",
+  }),
+  segment: css({
+    "&[data-placeholder]": { color: "text.tertiary" },
+    "&[data-type=literal]": { padding: 0 },
+    _focus: { bg: "accent.fill", color: "accent.onFill" },
+    borderRadius: "xs",
+    outline: "none",
+    padding: "0 2px",
+  }),
+};
+
+// "9:00" as React Aria's Time, and back.
+function timeOf(text: string) {
+  const [hour = 0, minute = 0] = text.split(":").map(Number);
+  return new Time(hour, minute);
+}
+function timeText(time: Time) {
+  return `${String(time.hour).padStart(2, "0")}:${String(time.minute).padStart(2, "0")}`;
+}
+
+export function TimeField({
+  label,
+  value,
+  onValueChange,
+}: {
+  // For screen readers; the row names the time on screen.
+  label: string;
+  // "HH:MM".
+  value: string;
+  onValueChange: (value: string) => void;
+}) {
+  // A part cleared while being retyped leaves the time as it was (React
+  // Aria sends only whole times); left unfinished, the field shows that
+  // time again.
+  const [shown, setShown] = useState(0);
+  const time = useMemo(() => timeOf(value), [value]);
+  return (
+    <I18nProvider locale="ja-JP">
+      <AriaTimeField
+        aria-label={label}
+        hourCycle={24}
+        key={shown}
+        onBlur={() => {
+          setShown(shown + 1);
+        }}
+        onChange={(next) => {
+          if (next) {
+            onValueChange(timeText(next));
+          }
+        }}
+        value={time}
+      >
+        <DateInput className={timeField.field}>
+          {(segment) => (
+            <DateSegment className={timeField.segment} segment={segment} />
+          )}
+        </DateInput>
+      </AriaTimeField>
+    </I18nProvider>
+  );
+}
+
+// A shift's start and end, side by side.
+export function TimeRange({
+  start,
+  end,
+  onChange,
+}: {
+  start: string;
+  end: string;
+  onChange: (field: "start" | "end", value: string) => void;
+}) {
+  return (
+    <span className={timeRange}>
+      <TimeField
+        label="開始時刻"
+        onValueChange={(value) => {
+          onChange("start", value);
+        }}
+        value={start}
+      />
+      <span aria-hidden="true">–</span>
+      <TimeField
+        label="終了時刻"
+        onValueChange={(value) => {
+          onChange("end", value);
+        }}
+        value={end}
+      />
+    </span>
+  );
+}
+
+const timeRange = css({
+  alignItems: "center",
+  color: "text.tertiary",
+  display: "inline-flex",
+  gap: "8px",
 });
 
 // How much of a field's limit is used, after the field while it is in use.
@@ -1335,6 +1435,7 @@ export const listRow = {
 // Pressed, it is a button with an arrow; holding a control, or pointing at
 // one with htmlFor, it is that control's label. `danger` is for rows that
 // remove something, and `truncate` for a label that is a typed name.
+// `detail` is a line under the label, and makes it a two-line row.
 export function ListRow({
   label,
   value,
@@ -1344,6 +1445,7 @@ export function ListRow({
   arrow,
   danger = false,
   truncate = false,
+  detail,
   htmlFor,
   disabled,
   className,
@@ -1360,6 +1462,7 @@ export function ListRow({
   arrow?: ReactNode;
   danger?: boolean;
   truncate?: boolean;
+  detail?: ReactNode;
   htmlFor?: string;
   disabled?: boolean;
   className?: string;
@@ -1395,6 +1498,7 @@ export function ListRow({
         )}
       >
         {truncate ? <span className={listRow.labelText}>{label}</span> : label}
+        {detail !== undefined && <small>{detail}</small>}
       </span>
       {value !== undefined && (
         <span
@@ -1412,7 +1516,7 @@ export function ListRow({
     </>
   );
   const rowClass = cx(
-    listRow.root,
+    detail === undefined ? listRow.root : listRow.twoLine,
     (pressable || isLabel) && listRow.pressable,
     danger && listRow.danger,
     className

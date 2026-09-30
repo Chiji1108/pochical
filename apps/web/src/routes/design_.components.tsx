@@ -62,6 +62,7 @@ import {
   SegmentedControl,
   SwitchRow,
   Tag,
+  TimeRange,
   WeekdayRow,
 } from "../components/design-ui";
 import { useWeek } from "../components/design-week";
@@ -192,6 +193,7 @@ function Surface() {
       <Buttons />
       <Rows />
       <Switches />
+      <Times />
       <Choices />
       <Chips />
       <Sheets />
@@ -356,7 +358,11 @@ function Rows() {
       >
         <Section note="グループの人にも見えます" title="シフト">
           <List>
-            <ListRow label="働き方" onClick={() => undefined} value="勤務表" />
+            <ListRow
+              label="働き方"
+              onClick={() => undefined}
+              value="繰り返しなし"
+            />
           </List>
         </Section>
         <Note>ポチポチ入力のボタンを長押ししても、その場で直せます。</Note>
@@ -403,6 +409,26 @@ function Switches() {
             </Segment>
           ))}
         </SegmentedControl>
+      </Item>
+    </Group>
+  );
+}
+
+function Times() {
+  const [times, setTimes] = useState({ end: "18:00", start: "9:00" });
+  return (
+    <Group
+      note="TimeField は時と分を別々に選んで、数字を打つか ↑↓ で変えます。24時間表記。React Aria の TimeField(HeroUI のもの)で、SwiftUI の DatePicker(.compact, .hourAndMinute)、Compose の TimeInput にあたります。シフトの開始と終了は TimeRange で並べます。"
+      title="時間"
+    >
+      <Item name="TimeRange" where="日の詳細、パターンの編集">
+        <TimeRange
+          end={times.end}
+          onChange={(field, value) => {
+            setTimes({ ...times, [field]: value });
+          }}
+          start={times.start}
+        />
       </Item>
     </Group>
   );
