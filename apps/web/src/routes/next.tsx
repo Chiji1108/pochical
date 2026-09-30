@@ -434,9 +434,9 @@ function useSamplePerson() {
 }
 
 // The calendar in a few looks, each set as someone might set theirs:
-// 墨 with outlined marks in its one tone and days off left plain, さくら
-// with emoji, and ソーダ with letters, their names under them and days
-// off left plain.
+// 墨 with outlined marks in its one tone, さくら with emoji, and ソーダ
+// with letters and their names under them; days off left plain in all
+// three, so nothing competes with the marks.
 type GalleryLook = {
   id: string;
   preset: PresetId;
@@ -444,12 +444,10 @@ type GalleryLook = {
   fill: boolean;
   monochrome: boolean;
   names: boolean;
-  highlight: boolean;
 };
 const galleryLooks: GalleryLook[] = [
   {
     fill: false,
-    highlight: false,
     id: "sumi",
     monochrome: true,
     names: false,
@@ -458,7 +456,6 @@ const galleryLooks: GalleryLook[] = [
   },
   {
     fill: true,
-    highlight: true,
     id: "sakura-emoji",
     monochrome: false,
     names: false,
@@ -467,7 +464,6 @@ const galleryLooks: GalleryLook[] = [
   },
   {
     fill: true,
-    highlight: false,
     id: "letters",
     monochrome: false,
     names: true,
@@ -475,6 +471,10 @@ const galleryLooks: GalleryLook[] = [
     style: "badge",
   },
 ];
+
+const plainDaysOff = {
+  highlight: { badge: false, emoji: false, icon: false },
+};
 
 function LookContexts({
   look,
@@ -492,15 +492,7 @@ function LookContexts({
               names: { badge: look.names, emoji: look.names, icon: look.names },
             }}
           >
-            <OffHighlightContext
-              value={{
-                highlight: {
-                  badge: look.highlight,
-                  emoji: look.highlight,
-                  icon: look.highlight,
-                },
-              }}
-            >
+            <OffHighlightContext value={plainDaysOff}>
               <MonochromeContext value={{ monochrome: look.monochrome }}>
                 {children}
               </MonochromeContext>
