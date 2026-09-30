@@ -47,10 +47,14 @@ import type {
   ButtonHTMLAttributes,
   CSSProperties,
   HTMLAttributes,
+  ChangeEvent,
+  CompositionEvent,
+  FocusEvent,
   InputHTMLAttributes,
   LabelHTMLAttributes,
   ReactNode,
   Ref,
+  TextareaHTMLAttributes,
 } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -629,24 +633,26 @@ const limitCount = cva({
 // limit until it is confirmed, and is cut to it then, so a conversion is
 // never broken off halfway. Without `value` it keeps its own, for fields
 // read as they are left, like adding a name.
-export function LimitedInput({
-  kind,
-  value,
-  onValueChange,
-  counter = true,
-  className,
-  onFocus,
-  onBlur,
-  ...props
-}: Omit<
-  InputHTMLAttributes<HTMLInputElement>,
-  "value" | "defaultValue" | "onChange" | "maxLength"
-> & {
+type LimitedTextProps = {
   kind: TextKind;
   value?: string;
   onValueChange?: (value: string) => void;
   // False where the field is too small to show it, like a chip.
   counter?: boolean;
+};
+
+// What LimitedInput and LimitedTextArea share: the text held to its
+// limit, the handlers that hold it there, and the count to show.
+function useLimitedText<Field extends HTMLInputElement | HTMLTextAreaElement>({
+  kind,
+  value,
+  onValueChange,
+  counter = true,
+  onFocus,
+  onBlur,
+}: LimitedTextProps & {
+  onFocus?: (event: FocusEvent<Field>) => void;
+  onBlur?: (event: FocusEvent<Field>) => void;
 }) {
   const limit = textLimits[kind];
   const [own, setOwn] = useState("");
@@ -658,40 +664,130 @@ export function LimitedInput({
     onValueChange?.(next);
   };
   const count = characterCount(text);
+  const handlers = {
+    onBlur: (event: FocusEvent<Field>) => {
+      setFocused(false);
+      onBlur?.(event);
+    },
+    onChange: (event: ChangeEvent<Field>) => {
+      const next = event.target.value;
+      change(composing.current ? next : limitText(next, limit));
+    },
+    onCompositionEnd: (event: CompositionEvent<Field>) => {
+      composing.current = false;
+      change(limitText(event.currentTarget.value, limit));
+    },
+    onCompositionStart: () => {
+      composing.current = true;
+    },
+    onFocus: (event: FocusEvent<Field>) => {
+      setFocused(true);
+      onFocus?.(event);
+    },
+    value: text,
+  };
+  const shown = counter && focused && countShown(count, limit);
+  const countNode = shown && (
+    <span aria-hidden="true" className={limitCount({ over: count > limit })}>
+      {count}/{limit}
+    </span>
+  );
+  return { countNode, handlers, text };
+}
+
+type Unlimited = "value" | "defaultValue" | "onChange" | "maxLength";
+
+export function LimitedInput({
+  kind,
+  value,
+  onValueChange,
+  counter,
+  onFocus,
+  onBlur,
+  ...props
+}: Omit<InputHTMLAttributes<HTMLInputElement>, Unlimited> & LimitedTextProps) {
+  const { countNode, handlers } = useLimitedText<HTMLInputElement>({
+    counter,
+    kind,
+    onBlur,
+    onFocus,
+    onValueChange,
+    value,
+  });
   return (
     <>
-      <input
-        className={className}
-        onBlur={(event) => {
-          setFocused(false);
-          onBlur?.(event);
-        }}
-        onChange={(event) => {
-          const next = event.target.value;
-          change(composing.current ? next : limitText(next, limit));
-        }}
-        onCompositionEnd={(event) => {
-          composing.current = false;
-          change(limitText(event.currentTarget.value, limit));
-        }}
-        onCompositionStart={() => {
-          composing.current = true;
-        }}
-        onFocus={(event) => {
-          setFocused(true);
-          onFocus?.(event);
-        }}
-        value={text}
-        {...props}
-      />
-      {counter && focused && countShown(count, limit) && (
-        <span
-          aria-hidden="true"
-          className={limitCount({ over: count > limit })}
-        >
-          {count}/{limit}
-        </span>
-      )}
+      <input {...props} {...handlers} />
+      {countNode}
+    </>
+  );
+}
+
+// A field over as many lines as it is written in, as a message is. The
+// field and an unseen copy of its text share one grid cell, and the copy
+// sizes the cell: the field grows with its lines, up to `--lines` of them
+// (5 unless its class says), then scrolls. It is never shrunk to measure
+// itself, which on iPhone Safari pulled the chat above it down a line with
+// every letter typed on a second line. Its class gives the box; the
+// padding comes as `--pad-y` and `--pad-x`, shared by field and copy.
+const growing = {
+  box: css({
+    "&::after": {
+      content: "attr(data-value) ' '",
+      gridArea: "1 / 1",
+      maxHeight: "calc(var(--lines, 5) * 1lh + 2 * var(--pad-y, 0px))",
+      overflow: "hidden",
+      overflowWrap: "anywhere",
+      padding: "var(--pad-y, 0px) var(--pad-x, 0px)",
+      visibility: "hidden",
+      whiteSpace: "pre-wrap",
+    },
+    display: "grid",
+  }),
+  field: css({
+    bg: "transparent",
+    border: 0,
+    color: "inherit",
+    font: "inherit",
+    gridArea: "1 / 1",
+    lineHeight: "inherit",
+    minWidth: 0,
+    outline: "none",
+    overflowWrap: "anywhere",
+    overflowY: "auto",
+    padding: "var(--pad-y, 0px) var(--pad-x, 0px)",
+    resize: "none",
+    whiteSpace: "pre-wrap",
+    width: "100%",
+  }),
+};
+
+// LimitedInput over several lines: Return starts a new one, as in the
+// messaging apps on a phone.
+export function LimitedTextArea({
+  kind,
+  value,
+  onValueChange,
+  counter,
+  onFocus,
+  onBlur,
+  className,
+  ...props
+}: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, Unlimited | "rows"> &
+  LimitedTextProps) {
+  const { countNode, handlers, text } = useLimitedText<HTMLTextAreaElement>({
+    counter,
+    kind,
+    onBlur,
+    onFocus,
+    onValueChange,
+    value,
+  });
+  return (
+    <>
+      <span className={cx(growing.box, className)} data-value={text}>
+        <textarea {...props} {...handlers} className={growing.field} rows={1} />
+      </span>
+      {countNode}
     </>
   );
 }
