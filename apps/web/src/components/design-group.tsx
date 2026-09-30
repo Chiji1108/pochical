@@ -1868,7 +1868,7 @@ const hub = {
 };
 
 // 参加の画面: the group it invites to in the middle, then how you will
-// appear in it, and 参加する kept at the foot, above the keyboard.
+// appear in it, and 参加する kept at the foot.
 const joinScreen = {
   foot: css({ display: "flex", flexDirection: "column", paddingTop: "12px" }),
   from: css({
@@ -1885,7 +1885,6 @@ const joinScreen = {
     flexDirection: "column",
     textAlign: "center",
   }),
-  me: css({ alignItems: "stretch", display: "flex", flexDirection: "column" }),
   members: css({
     "& small": {
       color: "text.tertiary",
@@ -1897,7 +1896,6 @@ const joinScreen = {
     gap: "8px",
     marginTop: "12px",
   }),
-  name: css({ marginTop: "20px" }),
   title: css({ fontWeight: 700, margin: "4px 0 0", textStyle: "title1" }),
 };
 
@@ -7170,10 +7168,10 @@ const sampleInvite = (): Invite => ({
 // Opened by an invitation link over the calendar, right after the first
 // setup if one was opened during it, and by a QR code read in the group
 // tab: the one place anyone joins from. A screen of its own rather than a
-// sheet, as LINE's invitations are: it asks how you will appear, and a
-// sheet with fields would be hidden by the keyboard or swiped away with
-// what was typed. Only ✕ turns it down. The name and photo start as the
-// usual ones.
+// sheet, as LINE's invitations are, so how you will appear can open its
+// own page from it. That starts as the usual profile, shown in one row as
+// in the group's settings: most join as they are, with one tap. Only ✕
+// turns it down.
 export function JoinScreen({
   profile,
   onJoin,
@@ -7184,28 +7182,32 @@ export function JoinScreen({
   onClose: () => void;
 }) {
   const invite = sampleInvite();
-  const [name, setName] = useState(profile.name);
-  const [photo, setPhoto] = useState(profile.photo);
-  const join = () => {
-    const trimmed = name.trim();
-    // Only what differs from the usual profile is this group's own.
-    const mine: GroupProfile = {};
-    if (trimmed !== profile.name) {
-      mine.name = trimmed;
-    }
-    if (photo && photo !== profile.photo) {
-      mine.photo = photo;
-    }
-    if (!photo && profile.photo) {
-      mine.noPhoto = true;
-    }
-    onJoin({
-      id: invitedGroupId,
-      mark: invite.mark,
-      mine: Object.keys(mine).length > 0 ? mine : undefined,
-      name: invite.group,
-    });
+  const [mine, setMine] = useState<GroupProfile>();
+  const [editing, setEditing] = useState(false);
+  const group: GroupSummary = {
+    id: invitedGroupId,
+    mark: invite.mark,
+    mine,
+    name: invite.group,
   };
+  if (editing) {
+    return (
+      <Screen>
+        <ScreenScroll>
+          <GroupProfilePage
+            back={invite.group}
+            group={group}
+            joining
+            onBack={() => {
+              setEditing(false);
+            }}
+            onChange={setMine}
+            profile={profile}
+          />
+        </ScreenScroll>
+      </Screen>
+    );
+  }
   return (
     <Screen>
       <ScreenScroll>
@@ -7242,53 +7244,28 @@ export function JoinScreen({
           </div>
         </div>
         <Section title="このグループでのあなた">
-          <div className={joinScreen.me}>
-            <PhotoEditor
-              name={name.trim() || profile.name}
-              onRemove={
-                photo
-                  ? () => {
-                      setPhoto(undefined);
-                    }
-                  : undefined
-              }
-              onUpload={setPhoto}
-              onUsual={
-                profile.photo && photo !== profile.photo
-                  ? () => {
-                      setPhoto(profile.photo);
-                    }
-                  : undefined
-              }
-              photo={photo}
-              size={72}
+          <List>
+            <GroupProfileRow
+              group={group}
+              onOpen={() => {
+                setEditing(true);
+              }}
+              profile={profile}
             />
-            <List className={joinScreen.name}>
-              <ListRow
-                label="名前"
-                control={
-                  <>
-                    <input
-                      className={inlineInput}
-                      onChange={(event) => {
-                        setName(event.target.value);
-                      }}
-                      placeholder="例：さくら"
-                      value={name}
-                    />
-                  </>
-                }
-              />
-            </List>
-          </div>
+          </List>
+          <Note>
+            参加すると、あなたのシフトも{invite.group}
+            のメンバーに見えるようになります。
+          </Note>
         </Section>
-        <Note>
-          {invite.group}
-          の人に、この名前と写真で表示されます。参加すると、あなたのシフトもメンバーに見えるようになります。
-        </Note>
       </ScreenScroll>
       <div className={joinScreen.foot}>
-        <Button disabled={name.trim() === ""} onClick={join} variant="primary">
+        <Button
+          onClick={() => {
+            onJoin(group);
+          }}
+          variant="primary"
+        >
           参加する
         </Button>
       </div>
@@ -7491,6 +7468,7 @@ function GroupSettingsPage({
   if (view === "profile") {
     return (
       <GroupProfilePage
+        back="グループの設定"
         group={group}
         onBack={() => {
           setView("settings");
@@ -7524,17 +7502,12 @@ function GroupSettingsPage({
       </Section>
       <Section title="このグループでのあなた">
         <List>
-          <ListRow
-            onClick={() => {
+          <GroupProfileRow
+            group={group}
+            onOpen={() => {
               setView("profile");
             }}
-            label={shown.name}
-            value={group.mine ? "このグループだけ" : "いつもと同じ"}
-            leading={
-              <>
-                <PhotoAvatar name={shown.name} photo={shown.photo} size={28} />
-              </>
-            }
+            profile={profile}
           />
         </List>
       </Section>
@@ -7707,16 +7680,47 @@ function GroupEditPage({
   );
 }
 
+// How you appear in a group, as a row that opens GroupProfilePage: the
+// same in the group's settings and on the invitation to join it.
+function GroupProfileRow({
+  group,
+  profile,
+  onOpen,
+}: {
+  group: GroupSummary;
+  profile: Profile;
+  onOpen: () => void;
+}) {
+  const shown = profileIn(group, profile);
+  return (
+    <ListRow
+      onClick={onOpen}
+      label={shown.name}
+      value={group.mine ? "このグループだけ" : "いつもと同じ"}
+      leading={
+        <>
+          <PhotoAvatar name={shown.name} photo={shown.photo} size={28} />
+        </>
+      }
+    />
+  );
+}
+
 // How you appear in this group. It is yours, so changes apply at once. An
 // empty name or no photo of its own means the usual ones from settings.
+// Before joining, it changes what the invitation will join with.
 function GroupProfilePage({
   group,
   profile,
+  back,
+  joining = false,
   onChange,
   onBack,
 }: {
-  group: Group;
+  group: GroupSummary;
   profile: Profile;
+  back: string;
+  joining?: boolean;
   onChange: (mine: GroupProfile | undefined) => void;
   onBack: () => void;
 }) {
@@ -7733,11 +7737,7 @@ function GroupProfilePage({
   const usualPhoto = mine.photo === undefined && !mine.noPhoto;
   return (
     <>
-      <PageHeader
-        back="グループの設定"
-        onBack={onBack}
-        title="グループでのあなた"
-      />
+      <PageHeader back={back} onBack={onBack} title="グループでのあなた" />
       <PhotoEditor
         name={shown.name}
         onRemove={
@@ -7778,6 +7778,7 @@ function GroupProfilePage({
         />
       </List>
       <Note>
+        {joining && "参加すると、"}
         {group.name}
         の人にだけ、この名前と写真で表示されます。名前が空欄なら「{profile.name}
         」、写真を入れなければいつもの写真のままです。
