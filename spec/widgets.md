@@ -50,6 +50,7 @@ The widgets are views of one entry. They hold no state and open the app when tap
 On the iPhone lock screen: circular (today's mark and start time), rectangular (today and 明日, each with mark and time) and inline (today's mark and time).
 
 - **Words next to a mark are the time.** The mark already says which shift it is. A shift's name appears only when it has no time (休み, 明け, 有休), or 予定なし when nothing is entered.
+- **Room differs by platform.** The same size is taller on Android's launcher (4×2 is 341×170dp inside) than on the iPhone (306×126pt). Views read their own size (SwiftUI's widget family, Glance's `LocalSize`) and spend extra height on their own spacing instead of stretching: the two weeks stay centered with larger marks and more space between the weeks, and the large month's marks grow.
 - **Today's date** is the accent color and heavier, as everywhere in the app. Sunday and holiday dates are red, and Saturday dates are blue, following the person's settings.
 - **The system's one-color looks.** When the system draws the widget in one color (iPhone 色合い and クリア, and the lock screen), filled shapes become solid blocks. In those looks, day-off tiles are drawn faint instead (SwiftUI: `widgetRenderingMode` other than `fullColor`).
 

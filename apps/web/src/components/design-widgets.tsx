@@ -28,6 +28,12 @@ export type WidgetRenderingMode = "fullColor" | "accented" | "vibrant";
 export const WidgetRenderingModeContext =
   createContext<WidgetRenderingMode>("fullColor");
 
+// The room the widget's content has, in pt (dp on Android), as SwiftUI's
+// widget family and Glance's LocalSize tell a view: the same kind is
+// taller on Android's launcher than on the iPhone, and a view spends the
+// extra room on its own spacing rather than stretching.
+export const WidgetSizeContext = createContext({ height: 0, width: 0 });
+
 const MONTH_NUMBER = 1;
 const NOTHING = "予定なし";
 
@@ -242,9 +248,13 @@ const week = {
   today: css({ flexShrink: 0, width: "112px" }),
 };
 
+// Two weeks keep to themselves in the middle; where there is room, as on
+// Android's 4×2, their marks grow and the weeks stand further apart.
+const TWO_WEEKS_ROOMY = 150;
+
 const twoWeeks = {
   date: cva({
-    base: { fontVariantNumeric: "tabular-nums", textStyle: "caption2" },
+    base: { fontVariantNumeric: "tabular-nums", textStyle: "footnote" },
     variants: {
       today: {
         false: {},
@@ -263,31 +273,18 @@ const twoWeeks = {
     // shape.
     variants: { past: { false: {}, true: { opacity: 0.4 } } },
   }),
-  grid: css({
-    display: "grid",
-    flex: 1,
-    gridTemplateColumns: "repeat(7, 1fr)",
-    rowGap: "4px",
-  }),
-  header: css({
-    alignItems: "center",
-    display: "flex",
-    gap: "8px",
-    minWidth: 0,
+  grid: cva({
+    base: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)" },
+    variants: {
+      roomy: { false: { rowGap: "8px" }, true: { rowGap: "16px" } },
+    },
   }),
   root: css({
     display: "flex",
     flexDirection: "column",
     gap: "4px",
     height: "100%",
-  }),
-  time: css({
-    fontVariantNumeric: "tabular-nums",
-    fontWeight: 600,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    textStyle: "subheadline",
-    whiteSpace: "nowrap",
+    justifyContent: "center",
   }),
   weekdays: css({
     display: "grid",
@@ -301,6 +298,7 @@ const twoWeeks = {
 // calendar lays them. Today is its accent date among them, as in the
 // calendar; its time is for the other kinds.
 export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
+  const roomy = useContext(WidgetSizeContext).height >= TWO_WEEKS_ROOMY;
   const todayTime = entry.today.date.getTime();
   return (
     <div className={twoWeeks.root}>
@@ -314,7 +312,7 @@ export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
           </span>
         ))}
       </div>
-      <ol className={`${list} ${twoWeeks.grid}`}>
+      <ol className={`${list} ${twoWeeks.grid({ roomy })}`}>
         {entry.twoWeeks.map((shown) => {
           const time = shown.date.getTime();
           return (
@@ -326,7 +324,7 @@ export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
               >
                 {shown.date.getDate()}
               </span>
-              <DayMark day={shown} size={28} />
+              <DayMark day={shown} size={roomy ? 32 : 28} />
             </li>
           );
         })}
@@ -484,8 +482,6 @@ export function CalendarMedium({ entry }: { entry: WidgetEntry }) {
 }
 
 const month = {
-  // A day with nothing entered stays empty, keeping the rows even.
-  blank: css({ height: "20px" }),
   cell: css({
     alignItems: "center",
     display: "flex",
@@ -533,8 +529,13 @@ const month = {
   }),
 };
 
+// Where the month has room, as on Android's 4×4, its marks grow.
+const MONTH_ROOMY = 360;
+
 // The month with every day's mark, and today's time over it.
 export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
+  const markSize =
+    useContext(WidgetSizeContext).height >= MONTH_ROOMY ? 24 : 20;
   const { first, days, weekdays } = entry.month;
   const todayTime = entry.today.date.getTime();
   return (
@@ -569,9 +570,9 @@ export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
                   {day.date.getDate()}
                 </span>
                 {day.shift ? (
-                  <DayMark day={day} size={20} />
+                  <DayMark day={day} size={markSize} />
                 ) : (
-                  <span className={month.blank} />
+                  <span style={{ height: markSize }} />
                 )}
               </>
             )}
