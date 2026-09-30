@@ -182,6 +182,11 @@ export function SheetPicture({
   );
 }
 
+// The text under a sheet's heading that says what the sheet is for, with
+// room under it before the buttons, list or chips it leads to, as the
+// alerts leave before theirs.
+export const sheetLead = css({ marginBottom: "20px" });
+
 // The part of a sheet that scrolls under a heading that stays; it runs to
 // the sheet's edges so the scrolling reaches them. What is in it keeps
 // its height, so a long list scrolls rather than being squeezed and cut

@@ -47,7 +47,7 @@ import {
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import { DesignSettings } from "./design-settings";
 import type { SettingsPage } from "./design-settings";
-import { PhoneContext, Sheet, SheetHeading } from "./design-sheet";
+import { PhoneContext, Sheet, SheetHeading, sheetBody } from "./design-sheet";
 import { surpriseStyles, useSurprise } from "./design-surprise";
 import { useThemeStyle } from "./design-theme";
 import { PhoneToasts, ToastContext, usePhoneToaster } from "./design-toast";
@@ -963,28 +963,30 @@ export function DesignCalendar({
               }}
               title="今月の内訳"
             />
-            <dl className={breakdown.list}>
-              {counts.map(({ key, label, count }) => (
-                <div className={breakdown.row()} key={key}>
-                  <dt className={breakdown.name}>
-                    <ShiftMark shift={key} size={18} />
-                    {label}
-                  </dt>
+            <div className={sheetBody}>
+              <dl className={breakdown.list}>
+                {counts.map(({ key, label, count }) => (
+                  <div className={breakdown.row()} key={key}>
+                    <dt className={breakdown.name}>
+                      <ShiftMark shift={key} size={18} />
+                      {label}
+                    </dt>
+                    <dd className={breakdown.count}>
+                      {count}
+                      <span className={breakdown.unit}>日</span>
+                    </dd>
+                  </div>
+                ))}
+                <div className={breakdown.row({ unfilled: true })}>
+                  <dt className={breakdown.name}>未入力</dt>
                   <dd className={breakdown.count}>
-                    {count}
+                    {unfilled}
                     <span className={breakdown.unit}>日</span>
                   </dd>
                 </div>
-              ))}
-              <div className={breakdown.row({ unfilled: true })}>
-                <dt className={breakdown.name}>未入力</dt>
-                <dd className={breakdown.count}>
-                  {unfilled}
-                  <span className={breakdown.unit}>日</span>
-                </dd>
-              </div>
-            </dl>
-            <p className={breakdown.total}>この月は全{monthDays.length}日</p>
+              </dl>
+              <p className={breakdown.total}>この月は全{monthDays.length}日</p>
+            </div>
           </Sheet>
           {pendingInvite && (
             <JoinSheet
@@ -1114,7 +1116,8 @@ export function TabBar({
 }
 
 // 今月の内訳: a row for each pattern and one for the days still blank,
-// with the month's length under them.
+// with the month's length under them. With many patterns they scroll
+// under the heading, which stays with its ×.
 const breakdown = {
   count: css({
     color: "accent.default",
@@ -1142,7 +1145,8 @@ const breakdown = {
   }),
   total: css({
     color: "text.tertiary",
-    margin: "20px 0 0",
+    // 20px under the list, with the scrolling part's 12px gap.
+    margin: "8px 0 0",
     textAlign: "center",
     textStyle: "footnote",
   }),

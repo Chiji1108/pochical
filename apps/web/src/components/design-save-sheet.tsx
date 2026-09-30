@@ -13,7 +13,7 @@ import { AppIcon } from "./design-app-icon";
 import { DayCell, dateKey } from "./design-calendar";
 import type { Schedule } from "./design-calendar";
 import { NameTabs, OffLookTabs } from "./design-settings";
-import { Sheet, SheetHeading } from "./design-sheet";
+import { Sheet, SheetHeading, sheetLead } from "./design-sheet";
 import {
   ColorSchemeContext,
   PreviewSchemeSwitch,
@@ -181,7 +181,7 @@ export function SaveSheet({
       />
       {step === "choose" && (
         <>
-          <p>
+          <p className={sheetLead}>
             {completion ? "お疲れさまでした。" : ""}
             画像にして見せたり、端末のカレンダーにまとめて入れたりできます。
           </p>
@@ -216,7 +216,9 @@ export function SaveSheet({
       )}
       {step === "calendar" && (
         <>
-          <p>{monthLabel}のシフトを、選んだカレンダーに予定として入れます。</p>
+          <p className={sheetLead}>
+            {monthLabel}のシフトを、選んだカレンダーに予定として入れます。
+          </p>
           <fieldset className={cx(listStyle, save.calendars)}>
             <legend className={srOnly}>入れるカレンダー</legend>
             {deviceCalendars.map((item) => (
@@ -282,7 +284,7 @@ export function SaveSheet({
       )}
       {typeof step === "object" && (
         <>
-          <p className={save.done}>
+          <p className={cx(sheetLead, save.done)}>
             <Check aria-hidden="true" className={save.doneIcon} size={18} />
             {step.done}
           </p>
