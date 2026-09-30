@@ -218,7 +218,7 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^働き方/u);
-      await tap(page, /決まった順番で回っている/u);
+      await tap(page, /決まった順番で回すようにする/u);
     },
   },
   {
@@ -226,7 +226,8 @@ export const states: State[] = [
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, "設定");
-      await tap(page, /^仕事が変わったとき/u);
+      await tap(page, /^働き方/u);
+      await tap(page, /新しい仕事にする/u);
     },
   },
   {
@@ -236,7 +237,7 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "設定");
       await tap(page, /^働き方/u);
-      await tap(page, /決まった順番で回っている/u);
+      await tap(page, /決まった順番で回すようにする/u);
       await tap(page, "日勤");
       await tap(page, "日勤");
       await tap(page, "休み");
