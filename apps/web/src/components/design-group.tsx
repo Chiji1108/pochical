@@ -2496,11 +2496,14 @@ const chatStyle = {
       width: "38px",
     },
     variants: {
+      // Lights up softly once there is something to send, and dims back
+      // the same way.
       send: {
         true: {
           _disabled: { bg: "fill.primary" },
           bg: "accent.fill",
           color: "accent.onFill",
+          transition: "background-color 0.15s ease-out, color 0.15s ease-out",
         },
       },
       // The tools at the start sit close together, as LINE's row of
