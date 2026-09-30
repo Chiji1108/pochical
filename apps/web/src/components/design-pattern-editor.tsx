@@ -26,6 +26,7 @@ import {
   markValue,
   Note,
   PageHeader,
+  SampleTag,
   Section,
   SortableList,
   SwitchRow,
@@ -80,6 +81,7 @@ const editor = {
   // The name over the time, beside the mark at the top.
   name: css({ display: "flex", flexDirection: "column", gap: "2px" }),
   time: css({ color: "text.tertiary", textStyle: "footnote" }),
+  unnamed: css({ color: "text.tertiary" }),
   // Start and end, side by side at the row's right.
   times: css({
     "& > input": {
@@ -355,12 +357,14 @@ function AddPatternPage({
               />
             ))}
           </List>
+          {/* For whoever pauses at + over a time unlike their own: it
+              belongs to these, not to 自分で作る below. */}
+          <Note>名前や時間は、追加したあとで直せます。</Note>
         </Section>
       )}
       <List>
         <ListRow onClick={onCustom} label="自分で作る" value="" />
       </List>
-      <Note>名前や時間は、追加したあとで直せます。</Note>
     </>
   );
 }
@@ -472,9 +476,14 @@ function PatternEditor({
         title={isNew ? "パターンを追加" : "パターンを編集"}
       />
       <div className={markPreview()}>
+        <SampleTag />
         <MarkGlyph look={draft} size={44} style={style} />
         <span className={editor.name}>
-          <strong>{draft.name || "名前を入力"}</strong>
+          {/* Until it is named, what it is, faint: not 名前を入力, which
+              read as a field to press. */}
+          <strong className={draft.name ? undefined : editor.unnamed}>
+            {draft.name || "新しいパターン"}
+          </strong>
           <small className={editor.time}>{timeText(patternOf(draft))}</small>
         </span>
       </div>
