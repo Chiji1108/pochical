@@ -351,6 +351,7 @@ export function DesignCalendar({
   pendingInvite = false,
   initialTab = "calendar",
   initialSettingsPage,
+  initialGroupPage,
   fullScreen = false,
 }: {
   initialEditing: boolean;
@@ -361,6 +362,8 @@ export function DesignCalendar({
   // For the flow diagrams: a tab, and a settings page, to open on.
   initialTab?: Tab;
   initialSettingsPage?: SettingsPage;
+  // And the group tab's page: its hub, or the shift table.
+  initialGroupPage?: "hub" | "shifts";
   // A group's invitation link was opened: ask about joining over the
   // calendar.
   pendingInvite?: boolean;
@@ -749,6 +752,7 @@ export function DesignCalendar({
           {tab === "group" && (
             <DesignGroup
               initialGroupId={openGroup}
+              initialPage={initialGroupPage}
               scanResult={variants.scanResult}
               onTab={setTab}
               patternKeys={patternKeys}

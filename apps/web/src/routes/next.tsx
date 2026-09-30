@@ -1,14 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { css } from "styled-system/css";
 
 import {
   DesignCalendar,
   initialDesignSchedule,
 } from "../components/design-calendar";
+import type { Tab } from "../components/design-calendar";
 import { sampleGroups } from "../components/design-group";
-import { DesignProviders } from "../components/design-providers";
+import {
+  DesignProviders,
+  PresetContexts,
+} from "../components/design-providers";
+import type { PresetId } from "../components/design-theme";
 import { StoreLinks } from "../components/store-links";
 import {
   createUserStore,
@@ -43,6 +49,14 @@ const BREATH_SECONDS = 9;
 
 // Where the copy and the phone stand side by side.
 const WIDE = "@media (min-width: 960px)";
+
+// The /design phone's frame colors, as the workspace gives them.
+const page = css({
+  "--ws-bezel": "#333631",
+  "--ws-bezel-edge": "#b9bdb6",
+  "--ws-bezel-shadow": "#30392f35",
+  "--ws-island": "#242724",
+});
 
 const hero = {
   copy: css({
@@ -79,11 +93,6 @@ const hero = {
   }),
   release: css({ color: "var(--muted)", fontSize: "11px" }),
   root: css({
-    // The /design phone's frame colors, as the workspace gives them.
-    "--ws-bezel": "#333631",
-    "--ws-bezel-edge": "#b9bdb6",
-    "--ws-bezel-shadow": "#30392f35",
-    "--ws-island": "#242724",
     [WIDE]: {
       alignItems: "flex-start",
       flexDirection: "row",
@@ -173,9 +182,250 @@ function HeroDemo() {
   );
 }
 
+// What else the app does, each beside its own screen: the real one, not
+// touchable, so the page never drifts from the app.
+const features: {
+  id: string;
+  label: string;
+  title: ReactNode;
+  body: ReactNode;
+  screen: ReactNode;
+}[] = [
+  {
+    body: (
+      <>
+        家族や友だちのシフトを、日ごとに並べて。
+        <br />
+        みんなが休みの日は、ひと目でわかります。
+      </>
+    ),
+    id: "share",
+    label: "SHARE",
+    screen: <FeatureScreen groupPage="shifts" tab="group" />,
+    title: (
+      <>
+        「いつ休み？」が、
+        <br />
+        ひと目で。
+      </>
+    ),
+  },
+  {
+    body: (
+      <>
+        シフト表から日付を持って、チャットへ。
+        <br />
+        家族、友だち、同期。グループごとに
+        <br />
+        名前と写真を変えられます。
+      </>
+    ),
+    id: "group",
+    label: "GROUP",
+    screen: <FeatureScreen tab="group" />,
+    title: (
+      <>
+        グループで、
+        <br />
+        そのまま相談。
+      </>
+    ),
+  },
+  {
+    body: (
+      <>
+        テーマは12種類。シフトの印も、
+        <br />
+        塗り、線、絵文字、文字から選べます。
+      </>
+    ),
+    id: "style",
+    label: "STYLE",
+    screen: <ThemeGallery />,
+    title: (
+      <>
+        見た目も、
+        <br />
+        自分らしく。
+      </>
+    ),
+  },
+];
+
+// How much of a feature's phone shows, from its top.
+const SCREEN_SHOWN = 600;
+
+const feature = {
+  body: css({
+    color: "var(--muted)",
+    fontSize: "14px",
+    letterSpacing: "0.035em",
+    lineHeight: 2.1,
+  }),
+  copy: css({
+    [WIDE]: { textAlign: "left" },
+    display: "flex",
+    flexDirection: "column",
+    gap: "18px",
+    maxWidth: "400px",
+    textAlign: "center",
+  }),
+  label: css({
+    color: "var(--green)",
+    fontSize: "11px",
+    fontWeight: 650,
+    letterSpacing: "0.17em",
+  }),
+  list: css({
+    [WIDE]: { gap: "140px", padding: "80px 48px 140px" },
+    display: "flex",
+    flexDirection: "column",
+    gap: "96px",
+    listStyle: "none",
+    margin: "0 auto",
+    maxWidth: "1080px",
+    padding: "40px 16px 96px",
+  }),
+  row: css({
+    [WIDE]: {
+      "&:nth-child(even)": { flexDirection: "row-reverse" },
+      flexDirection: "row",
+      gap: "120px",
+      justifyContent: "center",
+    },
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "36px",
+  }),
+  // The phone at the hero's size, only its top shown, fading out: a
+  // scaled one would throw off the lists that measure themselves.
+  screen: css({
+    flexShrink: 0,
+    height: `${SCREEN_SHOWN}px`,
+    maskImage: "linear-gradient(to bottom, black 70%, transparent)",
+    overflow: "hidden",
+    pointerEvents: "none",
+    width: "min(390px, 100%)",
+  }),
+  title: css({
+    fontSize: "clamp(26px, 3vw, 34px)",
+    fontWeight: 700,
+    letterSpacing: "0.01em",
+    lineHeight: 1.5,
+  }),
+};
+
+function FeatureScreen({
+  tab,
+  groupPage,
+}: {
+  tab: Tab;
+  groupPage?: "hub" | "shifts";
+}) {
+  const [person] = useState(() =>
+    createUserStore({
+      coworkers: sampleCoworkers,
+      groups: sampleGroups(),
+      schedule: initialDesignSchedule(),
+    })
+  );
+  return (
+    <div aria-hidden="true" className={feature.screen} inert>
+      <UserStoreContext value={person}>
+        <DesignCalendar
+          initialEditing={false}
+          initialGroupPage={groupPage}
+          initialTab={tab}
+          variants={variants}
+        />
+      </UserStoreContext>
+    </div>
+  );
+}
+
+// A few テーマ side by side, each the real calendar drawn small, stepping
+// down and in front of the one before.
+const galleryThemes: PresetId[] = ["sakura", "soda", "tsukiyo"];
+const gallery = {
+  inner: css({
+    left: 0,
+    position: "absolute",
+    top: 0,
+    transform: "scale(var(--gallery-scale))",
+    transformOrigin: "top left",
+    width: "390px",
+  }),
+  phone: css({
+    borderRadius: "calc(53px * var(--gallery-scale))",
+    height: "calc(844px * var(--gallery-scale))",
+    left: "calc(var(--index) * var(--gallery-step))",
+    overflow: "hidden",
+    position: "absolute",
+    top: "calc(var(--index) * var(--gallery-drop))",
+    width: "calc(390px * var(--gallery-scale))",
+  }),
+  root: css({
+    "--gallery-drop": "36px",
+    "--gallery-scale": "0.44",
+    "--gallery-step":
+      "calc((min(100vw - 32px, 520px) - 390px * var(--gallery-scale)) / 2)",
+    [WIDE]: { "--gallery-drop": "48px", "--gallery-scale": "0.6" },
+    flexShrink: 0,
+    height: "calc(844px * var(--gallery-scale) + 2 * var(--gallery-drop))",
+    pointerEvents: "none",
+    position: "relative",
+    width: "calc(390px * var(--gallery-scale) + 2 * var(--gallery-step))",
+  }),
+};
+
+function ThemeGallery() {
+  const [person] = useState(() =>
+    createUserStore({ schedule: initialDesignSchedule() })
+  );
+  return (
+    <div aria-hidden="true" className={gallery.root} inert>
+      <UserStoreContext value={person}>
+        {galleryThemes.map((id, index) => (
+          <div
+            className={gallery.phone}
+            key={id}
+            style={{ "--index": index } as CSSProperties}
+          >
+            <div className={gallery.inner}>
+              <PresetContexts id={id}>
+                <DesignCalendar initialEditing={false} variants={variants} />
+              </PresetContexts>
+            </div>
+          </div>
+        ))}
+      </UserStoreContext>
+    </div>
+  );
+}
+
+function Features() {
+  return (
+    <DesignProviders>
+      <ol aria-label="ポチカルでできること" className={feature.list}>
+        {features.map((item) => (
+          <li className={feature.row} key={item.id}>
+            <div className={feature.copy}>
+              <p className={feature.label}>{item.label}</p>
+              <h2 className={feature.title}>{item.title}</h2>
+              <p className={feature.body}>{item.body}</p>
+            </div>
+            {item.screen}
+          </li>
+        ))}
+      </ol>
+    </DesignProviders>
+  );
+}
+
 function NextHome() {
   return (
-    <main id="main">
+    <main className={page} id="main">
       <Sky />
       <section className={hero.root}>
         <div className={hero.copy}>
@@ -201,6 +451,7 @@ function NextHome() {
         </div>
         <HeroDemo />
       </section>
+      <Features />
     </main>
   );
 }
