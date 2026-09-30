@@ -1,6 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useState } from "react";
+import {
+  AnimatePresence,
+  motion,
+  useInView,
+  useReducedMotion,
+} from "motion/react";
+import { useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { css } from "styled-system/css";
 
@@ -161,33 +166,35 @@ const sky = {
 };
 
 // The sky, breathing as slowly as the app's, and giving way to the next
-// as the app's does.
-function Sky({ id }: { id: string }) {
+// as the app's does. None yet, until a press brings the first.
+function Sky({ id }: { id: string | undefined }) {
   const still = useReducedMotion() ?? false;
   return (
     <div aria-hidden="true" className={sky.root}>
       <AnimatePresence initial={false}>
-        <motion.div
-          animate={{ opacity: 1 }}
-          className={sky.layer}
-          exit={{ opacity: 0 }}
-          initial={{ opacity: 0 }}
-          key={id}
-          transition={SKY_CHANGE}
-        >
+        {id === undefined ? null : (
           <motion.div
-            animate={still ? undefined : { scale: 1.08, x: "2%" }}
-            className={sky.light}
-            initial={{ scale: 1, x: "-2%" }}
-            style={{ background: skyBackground(id) }}
-            transition={{
-              duration: BREATH_SECONDS,
-              ease: "easeInOut",
-              repeat: Number.POSITIVE_INFINITY,
-              repeatType: "mirror",
-            }}
-          />
-        </motion.div>
+            animate={{ opacity: 1 }}
+            className={sky.layer}
+            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            key={id}
+            transition={SKY_CHANGE}
+          >
+            <motion.div
+              animate={still ? undefined : { scale: 1.08, x: "2%" }}
+              className={sky.light}
+              initial={{ scale: 1, x: "-2%" }}
+              style={{ background: skyBackground(id) }}
+              transition={{
+                duration: BREATH_SECONDS,
+                ease: "easeInOut",
+                repeat: Number.POSITIVE_INFINITY,
+                repeatType: "mirror",
+              }}
+            />
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );
@@ -202,12 +209,13 @@ const heroSchedule = Object.fromEntries(
   )
 );
 
-// Pressed once, like a button, a moment after the page first shows:
-// sinking a little and springing back, then still. A CSS animation, so it
-// comes at the same moment however long the app takes to load. Since it
-// looks pressable, it presses too: down while held, springing back on
-// release, with the same depth and spring as the animation. A button,
-// though it keeps the heading's look.
+// Pressed once, like a button, a moment after it first shows: sinking a
+// little and springing back, then still. The hero's is a CSS animation, so
+// it comes at the same moment however long the app takes to load; the
+// closing's waits until it is scrolled to. Since it looks pressable, it
+// presses too: down while held, springing back on release, with the same
+// depth and spring as the animation. A button, though it keeps the
+// heading's look.
 const pressed = css({
   "&:active": {
     transform: "translateY(3px) scale(0.92)",
@@ -218,7 +226,7 @@ const pressed = css({
     transition: "none",
   },
   // Not held after it ends, so a press can move it.
-  animation: "press 0.42s 0.7s backwards",
+  "&[data-cue]": { animation: "press 0.42s 0.7s backwards" },
   bg: "transparent",
   border: 0,
   color: "inherit",
@@ -236,12 +244,23 @@ const pressed = css({
 function Pressed({
   children,
   onPress,
+  whenSeen = false,
 }: {
   children: ReactNode;
   onPress: () => void;
+  whenSeen?: boolean;
 }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const seen = useInView(ref, { amount: "all", once: true });
+  const cue = !whenSeen || seen;
   return (
-    <button className={pressed} onClick={onPress} type="button">
+    <button
+      className={pressed}
+      data-cue={cue ? "" : undefined}
+      onClick={onPress}
+      ref={ref}
+      type="button"
+    >
       {children}
     </button>
   );
@@ -615,16 +634,26 @@ function Features() {
 }
 
 // The page's end: the store links again for those who read this far, on
-// the plain paper.
+// the plain paper. Its ポチッと。 presses like the hero's, and as in the
+// app, where おたのしみ has no sky until the first tap, its first press
+// brings one up behind it.
 const closing = {
-  icon: css({ borderRadius: "14px" }),
-  release: css({ color: "var(--muted)", fontSize: "11px" }),
-  root: css({
-    [WIDE]: { padding: "120px 48px 160px" },
+  content: css({
     alignItems: "center",
     display: "flex",
     flexDirection: "column",
     gap: "24px",
+    isolation: "isolate",
+    position: "relative",
+  }),
+  icon: css({ borderRadius: "14px" }),
+  release: css({ color: ON_SKY_TEXT, fontSize: "11px" }),
+  root: css({
+    [WIDE]: { padding: "120px 48px 160px" },
+    display: "flex",
+    justifyContent: "center",
+    // The sky reaches past the screen's sides.
+    overflowX: "clip",
     padding: "96px 16px 120px",
     textAlign: "center",
   }),
@@ -637,24 +666,37 @@ const closing = {
 };
 
 function Closing() {
+  const [skyId, setSkyId] = useState<string>();
   return (
     <section aria-labelledby="closing-title" className={closing.root}>
-      <img
-        alt=""
-        className={closing.icon}
-        height={64}
-        src="/icon.png"
-        width={64}
-      />
-      <h2 className={closing.title} id="closing-title">
-        今月のシフトから、
-        <br />
-        ポチッと。
-      </h2>
-      <StoreLinks />
-      <p className={closing.release}>
-        iPhone・Android 向けに、ただいま準備中。
-      </p>
+      <div className={closing.content}>
+        <Sky id={skyId} />
+        <img
+          alt=""
+          className={closing.icon}
+          height={64}
+          src="/icon.png"
+          width={64}
+        />
+        <h2 className={closing.title} id="closing-title">
+          今月のシフトから、
+          <br />
+          <Pressed
+            onPress={() => {
+              setSkyId((id) =>
+                id === undefined ? HERO_SKY : nextSkyId(id, "pochical")
+              );
+            }}
+            whenSeen
+          >
+            ポチッと。
+          </Pressed>
+        </h2>
+        <StoreLinks />
+        <p className={closing.release}>
+          iPhone・Android 向けに、ただいま準備中。
+        </p>
+      </div>
     </section>
   );
 }
