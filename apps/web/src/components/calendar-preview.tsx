@@ -1,10 +1,13 @@
 import {
+  BatteryFull,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
   Download,
   Settings2,
+  Signal,
   UsersRound,
+  Wifi,
 } from "lucide-react";
 
 const shifts = [
@@ -48,6 +51,9 @@ const patterns = {
 };
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
 
+// The top page's phone, the site's first picture of the app. /design/assets
+// keeps it as the key visual the screens grew from, so it stays when the top
+// page stops showing it (move its styles out of styles.css then).
 export function CalendarPreview() {
   return (
     <figure className="preview-figure">
@@ -77,7 +83,11 @@ export function CalendarPreview() {
           <div className="phone-status">
             <span>9:41</span>
             <span className="camera-island" />
-            <span>▮▮▮ ▰</span>
+            <span className="status-icons">
+              <Signal size={13} strokeWidth={2.6} />
+              <Wifi size={14} strokeWidth={2.5} />
+              <BatteryFull size={20} strokeWidth={1.8} />
+            </span>
           </div>
           <div className="phone-content">
             <div className="calendar-heading">
