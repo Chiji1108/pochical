@@ -1,8 +1,8 @@
 import { Plus } from "lucide-react";
-import { useContext, useState } from "react";
+import { Fragment, useContext, useState } from "react";
 import { css } from "styled-system/css";
 
-import { MAX_PATTERNS, patterns } from "../lib/design-patterns";
+import { PATTERNS_PER_PAGE, patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
 import { nextDayShifts } from "./design-calendar";
@@ -18,6 +18,7 @@ import {
   HeaderAction,
   inlineInput,
   List,
+  ListDivider,
   ListRow,
   listRow,
   markPreview,
@@ -95,6 +96,17 @@ const editor = {
     justifyContent: "flex-end",
   }),
 };
+
+// Where the ポチポチ入力's buttons go on to their next page, over the
+// first pattern of that page.
+function pageDivider(index: number) {
+  if (index === 0 || index % PATTERNS_PER_PAGE !== 0) {
+    return null;
+  }
+  return (
+    <ListDivider>{`ポチポチ入力の${index / PATTERNS_PER_PAGE + 1}ページ目`}</ListDivider>
+  );
+}
 
 function timeText(draft: PatternDraft) {
   if (draft.allDay) {
@@ -179,7 +191,7 @@ export function PatternsPage({
   }
 
   const sorting = view === "sort";
-  const full = items.length >= MAX_PATTERNS;
+  const paged = items.length > PATTERNS_PER_PAGE;
   return (
     <>
       <PageHeader
@@ -202,6 +214,7 @@ export function PatternsPage({
       />
       {sorting ? (
         <SortableList
+          divider={pageDivider}
           items={items}
           label={(item) => item.name}
           onChange={setItems}
@@ -216,27 +229,28 @@ export function PatternsPage({
         </SortableList>
       ) : (
         <List>
-          {items.map((item) => (
-            <ListRow
-              key={item.id}
-              onClick={() => {
-                setIsNew(false);
-                setEditing(item);
-              }}
-              label={item.name}
-              value={timeText(item)}
-              leading={
-                <>
-                  <MarkGlyph look={item} size={22} style={style} />
-                </>
-              }
-            />
+          {items.map((item, index) => (
+            <Fragment key={item.id}>
+              {pageDivider(index)}
+              <ListRow
+                onClick={() => {
+                  setIsNew(false);
+                  setEditing(item);
+                }}
+                label={item.name}
+                value={timeText(item)}
+                leading={
+                  <>
+                    <MarkGlyph look={item} size={22} style={style} />
+                  </>
+                }
+              />
+            </Fragment>
           ))}
         </List>
       )}
       {!sorting && (
         <AddButton
-          disabled={full}
           onClick={() => {
             setView("add");
           }}
@@ -244,9 +258,9 @@ export function PatternsPage({
           パターンを追加
         </AddButton>
       )}
-      {full && !sorting && (
+      {paged && !sorting && (
         <Note>
-          {`パターンは${MAX_PATTERNS}個までです。増やすときは、使わないものを消してください。`}
+          {`ポチポチ入力のボタンは${PATTERNS_PER_PAGE}個ずつのページに分かれます。よく使うものを上に並べると、1ページ目で選べます。`}
         </Note>
       )}
       <Note>
