@@ -330,11 +330,7 @@ function Rows() {
     >
       <Item name="List + ListRow" where="設定の一覧など" wide>
         <List>
-          <ListRow
-            label="スタイル"
-            onClick={() => undefined}
-            value="アイコン"
-          />
+          <ListRow label="スタイル" onClick={() => undefined} value="塗り" />
           <SwitchRow checked={on} label="休みの日も入れる" onChange={setOn} />
           <ListRow
             label={

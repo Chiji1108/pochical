@@ -110,10 +110,10 @@ type Page =
   | "account"
   | "profile";
 
-// The four shapes members see. Icons come filled or as outlines; letters
-// always sit on their tile, and emoji have no fill.
+// The four shapes members see. Icons come filled (塗り) or as outlines (線);
+// letters always sit on their tile, and emoji have no fill.
 const shapeOptions: { name: string; style: ShiftMarkStyle; fill: boolean }[] = [
-  { fill: true, name: "アイコン", style: "icon" },
+  { fill: true, name: "塗り", style: "icon" },
   { fill: false, name: "線", style: "icon" },
   { fill: true, name: "絵文字", style: "emoji" },
   { fill: true, name: "文字", style: "badge" },
@@ -367,8 +367,6 @@ function SettingsTop({
   profile: Profile;
   onOpen: (page: Page) => void;
 }) {
-  const look = useLook();
-  const preset = presetOf(useSettings((state) => state.device.preset));
   return (
     <>
       <PageHeader title="設定" />
@@ -415,12 +413,11 @@ function SettingsTop({
         />
       </ListSection>
       <ListSection title="表示">
-        <ListRow
-          label="スタイル"
-          onClick={() => {
+        <StyleRow
+          onOpen={() => {
             onOpen("mark");
           }}
-          value={`${shapeOf(look).name}・${preset.name}`}
+          patternKeys={patternKeys}
         />
         <AppearanceRow
           onOpen={() => {
@@ -1379,9 +1376,13 @@ function MarkPage({
       >
         <ThemeChoices scheme={shown} />
       </Section>
-      <Section title="シフトの色">
-        <ShiftColorsChoices />
-      </Section>
+      {/* Emoji keep their own colors, so シフトの色 would change nothing;
+          it comes back as it was with any other shape. */}
+      {current !== "emoji" && (
+        <Section title="シフトの色">
+          <ShiftColorsChoices />
+        </Section>
+      )}
       <Section title="休みの見せ方">
         <OffLookChoices current={current} />
       </Section>
@@ -1663,6 +1664,35 @@ function appearanceName(appearance: Appearance) {
   return (
     appearanceOptions.find((option) => option.appearance === appearance)
       ?.name ?? appearance
+  );
+}
+
+// Like アプリアイコン's row, a look is shown rather than named: one of
+// your own marks in the shape and テーマ in use, then the テーマ's name.
+// Only the mark tells the shape, so it is spelled out for screen readers.
+function StyleRow({
+  patternKeys,
+  onOpen,
+}: {
+  patternKeys: Shift[];
+  onOpen: () => void;
+}) {
+  const look = useLook();
+  const preset = presetOf(useSettings((state) => state.device.preset));
+  const shift =
+    patternKeys.find((key) => key !== "off" && key !== "paid") ?? "day";
+  return (
+    <ListRow
+      label="スタイル"
+      onClick={onOpen}
+      value={
+        <span className={settingsParts.inlineValue}>
+          <ShiftMark shift={shift} size={20} />
+          <span className={srOnly}>{shapeOf(look).name}・</span>
+          {preset.name}
+        </span>
+      }
+    />
   );
 }
 
