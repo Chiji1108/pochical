@@ -721,9 +721,47 @@ export function LimitedInput({
   );
 }
 
-// The same, over as many lines as it is written in, as a message is: it
-// grows with them up to the max-height its class gives, then scrolls.
-// Return starts a new line, as in the messaging apps on a phone.
+// A field over as many lines as it is written in, as a message is. The
+// field and an unseen copy of its text share one grid cell, and the copy
+// sizes the cell: the field grows with its lines, up to `--lines` of them
+// (5 unless its class says), then scrolls. It is never shrunk to measure
+// itself, which on iPhone Safari pulled the chat above it down a line with
+// every letter typed on a second line. Its class gives the box; the
+// padding comes as `--pad-y` and `--pad-x`, shared by field and copy.
+const growing = {
+  box: css({
+    "&::after": {
+      content: "attr(data-value) ' '",
+      gridArea: "1 / 1",
+      maxHeight: "calc(var(--lines, 5) * 1lh + 2 * var(--pad-y, 0px))",
+      overflow: "hidden",
+      overflowWrap: "anywhere",
+      padding: "var(--pad-y, 0px) var(--pad-x, 0px)",
+      visibility: "hidden",
+      whiteSpace: "pre-wrap",
+    },
+    display: "grid",
+  }),
+  field: css({
+    bg: "transparent",
+    border: 0,
+    color: "inherit",
+    font: "inherit",
+    gridArea: "1 / 1",
+    lineHeight: "inherit",
+    minWidth: 0,
+    outline: "none",
+    overflowWrap: "anywhere",
+    overflowY: "auto",
+    padding: "var(--pad-y, 0px) var(--pad-x, 0px)",
+    resize: "none",
+    whiteSpace: "pre-wrap",
+    width: "100%",
+  }),
+};
+
+// LimitedInput over several lines: Return starts a new one, as in the
+// messaging apps on a phone.
 export function LimitedTextArea({
   kind,
   value,
@@ -731,11 +769,11 @@ export function LimitedTextArea({
   counter,
   onFocus,
   onBlur,
+  className,
   ...props
 }: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, Unlimited | "rows"> &
   LimitedTextProps) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-  const { countNode, handlers } = useLimitedText<HTMLTextAreaElement>({
+  const { countNode, handlers, text } = useLimitedText<HTMLTextAreaElement>({
     counter,
     kind,
     onBlur,
@@ -743,20 +781,11 @@ export function LimitedTextArea({
     onValueChange,
     value,
   });
-  // Its height follows its lines, measured afresh on every render.
-  useLayoutEffect(() => {
-    const field = ref.current;
-    if (!field) {
-      return;
-    }
-    field.style.height = "auto";
-    field.style.height = `${field.scrollHeight}px`;
-    field.style.overflowY =
-      field.scrollHeight > field.clientHeight ? "auto" : "hidden";
-  });
   return (
     <>
-      <textarea {...props} {...handlers} ref={ref} rows={1} />
+      <span className={cx(growing.box, className)} data-value={text}>
+        <textarea {...props} {...handlers} className={growing.field} rows={1} />
+      </span>
       {countNode}
     </>
   );

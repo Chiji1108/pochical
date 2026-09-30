@@ -2635,20 +2635,15 @@ const chatStyle = {
   // One line to start with, as round-ended as the buttons beside it; it
   // grows with the lines written, up to five, and then scrolls.
   composerInput: css({
+    "--lines": "5",
+    "--pad-x": "16px",
+    "--pad-y": "8px",
     bg: "fill.quaternary",
-    border: 0,
     borderRadius: "19px",
     color: "text.primary",
     flex: 1,
-    font: "inherit",
     lineHeight: "22px",
-    // Five lines and the padding.
-    maxHeight: "126px",
-    minHeight: "38px",
     minWidth: 0,
-    outline: "none",
-    padding: "8px 16px",
-    resize: "none",
     textStyle: "body",
   }),
   dayOpen: cva({
