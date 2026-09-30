@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DesignRouteImport } from './routes/design'
-import { Route as NextRouteImport } from './routes/next'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TermsRouteImport } from './routes/terms'
@@ -38,11 +37,6 @@ const DemoRoute = DemoRouteImport.update({
 const DesignRoute = DesignRouteImport.update({
   id: '/design',
   path: '/design',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NextRoute = NextRouteImport.update({
-  id: '/next',
-  path: '/next',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -105,7 +99,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/demo': typeof DemoRoute
   '/design': typeof DesignRoute
-  '/next': typeof NextRoute
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
@@ -122,7 +115,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/demo': typeof DemoRoute
   '/design': typeof DesignRoute
-  '/next': typeof NextRoute
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
@@ -140,7 +132,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/demo': typeof DemoRoute
   '/design': typeof DesignRoute
-  '/next': typeof NextRoute
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
@@ -159,7 +150,6 @@ export interface FileRouteTypes {
     | '/'
     | '/demo'
     | '/design'
-    | '/next'
     | '/privacy'
     | '/support'
     | '/terms'
@@ -176,7 +166,6 @@ export interface FileRouteTypes {
     | '/'
     | '/demo'
     | '/design'
-    | '/next'
     | '/privacy'
     | '/support'
     | '/terms'
@@ -193,7 +182,6 @@ export interface FileRouteTypes {
     | '/'
     | '/demo'
     | '/design'
-    | '/next'
     | '/privacy'
     | '/support'
     | '/terms'
@@ -211,7 +199,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DemoRoute: typeof DemoRoute
   DesignRoute: typeof DesignRoute
-  NextRoute: typeof NextRoute
   PrivacyRoute: typeof PrivacyRoute
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
@@ -246,13 +233,6 @@ declare module '@tanstack/react-router' {
       path: '/design'
       fullPath: '/design'
       preLoaderRoute: typeof DesignRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/next': {
-      id: '/next'
-      path: '/next'
-      fullPath: '/next'
-      preLoaderRoute: typeof NextRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -339,7 +319,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DemoRoute: DemoRoute,
   DesignRoute: DesignRoute,
-  NextRoute: NextRoute,
   PrivacyRoute: PrivacyRoute,
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
