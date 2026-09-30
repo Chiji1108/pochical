@@ -40,6 +40,7 @@ import {
   Fragment,
   useContext,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -2541,6 +2542,9 @@ export function SortableList<Item extends { id: string }>({
   // A ListDivider to go before the row at this place, if any.
   divider?: (index: number) => ReactNode;
 }) {
+  // dnd kit numbers its screen reader notes itself, which counts apart on
+  // the server and in the browser; React's id is the same on both.
+  const dndId = useId();
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -2569,6 +2573,7 @@ export function SortableList<Item extends { id: string }>({
   };
   return (
     <DndContext
+      id={dndId}
       accessibility={{
         announcements,
         screenReaderInstructions: {
