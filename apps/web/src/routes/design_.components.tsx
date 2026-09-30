@@ -858,7 +858,6 @@ function Cards() {
           icon="📋"
           note="看護・介護・飲食など"
           onClick={() => undefined}
-          picked
           title="毎月、勤務表が配られる"
         />
       </Item>
