@@ -1,5 +1,6 @@
 import { defineConfig } from "@pandacss/dev";
 import { radii, shadows, sizes, stateLayers } from "@pochical/design/metrics";
+import { colorRoleNames } from "@pochical/design/themes";
 import { textStyles } from "@pochical/design/type";
 
 // Panda CSS for the /design prototype's pieces. The colors stay the CSS
@@ -9,6 +10,25 @@ import { textStyles } from "@pochical/design/type";
 // The site's own styles sit in styles.css (layer site), below Panda's.
 const REGULAR = 400;
 const PERCENT = 100;
+
+type ColorTokens = Record<string, Record<string, { value: string }>>;
+
+// Each color role as a token: its first word the kind, the rest the level.
+const colorTokens: ColorTokens = {};
+for (const name of colorRoleNames) {
+  const [kind = name, ...level] = name.split("-");
+  const token = { value: `var(--${name})` };
+  if (level.length === 0) {
+    Object.assign(colorTokens, { [kind]: token });
+  } else {
+    const key = level
+      .map((word, index) =>
+        index === 0 ? word : `${word.charAt(0).toUpperCase()}${word.slice(1)}`
+      )
+      .join("");
+    colorTokens[kind] = { ...colorTokens[kind], [key]: token };
+  }
+}
 
 const stateLayer = (opacity: number) =>
   `color-mix(in srgb, var(--accent-default) ${Math.round(opacity * PERCENT)}%, transparent)`;
@@ -96,60 +116,17 @@ export default defineConfig({
       },
       tokens: {
         // Colors by role, grouped by kind, their levels named as iOS names
-        // its label and fill levels (primary to quaternary). Each points at
-        // a CSS variable that themeStyle() sets from design/.
+        // its label and fill levels (primary to quaternary): each role of
+        // design/ (text-secondary as text.secondary), pointing at the CSS
+        // variable of its name that themeStyle() sets.
         colors: {
+          ...colorTokens,
           accent: {
-            border: { value: "var(--accent-border)" },
-            container: { value: "var(--accent-container)" },
-            default: { value: "var(--accent-default)" },
-            fill: { value: "var(--accent-fill)" },
-            focus: { value: "var(--accent-focus)" },
+            ...colorTokens.accent,
             // Hovered and pressed: the accent laid over whatever is under
             // (design/src/metrics.ts).
             hover: { value: stateLayer(stateLayers.hover) },
-            onFill: { value: "var(--accent-on-fill)" },
             pressed: { value: stateLayer(stateLayers.pressed) },
-          },
-          background: {
-            // The screen's own ground, a card's, and a sheet's.
-            base: { value: "var(--background-base)" },
-            card: { value: "var(--background-card)" },
-            elevated: { value: "var(--background-elevated)" },
-          },
-          border: {
-            default: { value: "var(--border-default)" },
-            strong: { value: "var(--border-strong)" },
-          },
-          calendar: {
-            holiday: { value: "var(--calendar-holiday)" },
-            noteMarker: { value: "var(--calendar-note-marker)" },
-            offTint: { value: "var(--calendar-off-tint)" },
-            saturday: { value: "var(--calendar-saturday)" },
-          },
-          control: { knob: { value: "var(--control-knob)" } },
-          danger: {
-            default: { value: "var(--danger-default)" },
-            fill: { value: "var(--danger-fill)" },
-            onFill: { value: "var(--danger-on-fill)" },
-          },
-          fill: {
-            primary: { value: "var(--fill-primary)" },
-            quaternary: { value: "var(--fill-quaternary)" },
-            secondary: { value: "var(--fill-secondary)" },
-            tertiary: { value: "var(--fill-tertiary)" },
-          },
-          inverse: {
-            background: { value: "var(--inverse-background)" },
-            text: { value: "var(--inverse-text)" },
-          },
-          separator: { value: "var(--separator)" },
-          text: {
-            disabled: { value: "var(--text-disabled)" },
-            primary: { value: "var(--text-primary)" },
-            quaternary: { value: "var(--text-quaternary)" },
-            secondary: { value: "var(--text-secondary)" },
-            tertiary: { value: "var(--text-tertiary)" },
           },
         },
         // The corners by size (design/src/metrics.ts), and a circle for

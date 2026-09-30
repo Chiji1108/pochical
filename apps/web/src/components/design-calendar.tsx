@@ -1183,7 +1183,7 @@ const tabs: { tab: Tab; label: string; icon: typeof CalendarDays }[] = [
 const tabBar = {
   bar: css({
     backdropFilter: "blur(16px) saturate(1.4)",
-    bg: "color-mix(in srgb, var(--fill-tertiary) 80%, transparent)",
+    bg: "color-mix(in srgb, token(colors.fill.tertiary) 80%, transparent)",
     borderRadius: "full",
     bottom: "var(--tab-bar-bottom)",
     boxShadow: "md",
@@ -1212,7 +1212,7 @@ const tabBar = {
     },
     variants: {
       active: {
-        true: { bg: "var(--fill-secondary)", color: "accent.default" },
+        true: { bg: "fill.secondary", color: "accent.default" },
       },
     },
   }),
@@ -1895,7 +1895,7 @@ const repeatEditor = {
   add: css({
     alignItems: "center",
     bg: "transparent",
-    border: "1px dashed var(--border-strong)",
+    border: "1px dashed token(colors.border.strong)",
     borderRadius: "full",
     color: "accent.default",
     display: "inline-flex",
@@ -2337,7 +2337,7 @@ export const dayCell = cva({
       },
     },
     // A day off in its own pattern's tint, set as --off-tint.
-    off: { true: { bg: "var(--off-tint, var(--calendar-off-tint))" } },
+    off: { true: { bg: "var(--off-tint, token(colors.calendar.offTint))" } },
     // A day of the month before or after: the same day, faded whole, as on
     // the group's calendar.
     outside: { true: { opacity: 0.35 } },
@@ -2389,7 +2389,7 @@ export const dayParts = {
   // A note: a stroke under the date, as marked in a paper diary.
   noted: css({
     _before: {
-      bg: "var(--calendar-note-marker)",
+      bg: "calendar.noteMarker",
       borderRadius: "2xs",
       content: '""',
       inset: "45% -3px -1px",

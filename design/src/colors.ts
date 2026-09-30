@@ -213,6 +213,62 @@ export const neutralTokenGroups: ColorTokenGroup[] = [
       },
     ],
   },
+  {
+    // Over a photo or the camera, whose black stays black whatever the
+    // テーマ and light or dark: white words and buttons on it, and black
+    // laid over a photo to dim it or hold a button.
+    label: "写真・カメラの上",
+    tokens: [
+      {
+        dark: "#000000",
+        label: "カメラ・写真の地",
+        light: "#000000",
+        name: "media-background",
+      },
+      {
+        dark: "#ffffff",
+        label: "文字・アイコン",
+        light: "#ffffff",
+        name: "media-text",
+      },
+      {
+        dark: "#ffffff73",
+        label: "補足",
+        light: "#ffffff73",
+        name: "media-text-secondary",
+      },
+      {
+        dark: "#ffffff29",
+        label: "ボタン・メモ",
+        light: "#ffffff29",
+        name: "media-fill",
+      },
+      {
+        dark: "#ffffff0f",
+        label: "読み取る枠",
+        light: "#ffffff0f",
+        name: "media-fill-faint",
+      },
+      {
+        dark: "#00000052",
+        label: "送信中の写真",
+        light: "#00000052",
+        name: "media-dim",
+      },
+      {
+        dark: "#00000099",
+        label: "写真の上のボタン",
+        light: "#00000099",
+        name: "media-shade",
+      },
+      {
+        dark: "#ffd60a",
+        label: "注意",
+        light: "#ffd60a",
+        name: "media-warning",
+      },
+    ],
+  },
 ];
 
 export const neutralTokens = neutralTokenGroups.flatMap(({ tokens }) => tokens);
@@ -229,6 +285,14 @@ export const untintedTokens = new Set([
   "danger-fill",
   "danger-on-fill",
   "control-knob",
+  "media-background",
+  "media-text",
+  "media-text-secondary",
+  "media-fill",
+  "media-fill-faint",
+  "media-dim",
+  "media-shade",
+  "media-warning",
 ]);
 
 export function neutralValue(
