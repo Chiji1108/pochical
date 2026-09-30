@@ -11,14 +11,6 @@ export function Header() {
         <img alt="" height={36} src="/icon.png" width={36} />
         <span>ポチカル</span>
       </Link>
-      <nav aria-label="メインナビゲーション">
-        <Link to="/support">
-          サポート <ArrowUpRight aria-hidden="true" size={14} />
-        </Link>
-        <a className="header-cta" href="/#download">
-          アプリについて
-        </a>
-      </nav>
     </header>
   );
 }

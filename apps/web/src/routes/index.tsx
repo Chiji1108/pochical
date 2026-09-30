@@ -640,7 +640,7 @@ function Home() {
             <br />
             家族や友だちとも、そのまま共有。
           </p>
-          <div className={hero.store} id="download">
+          <div className={hero.store}>
             <StoreLinks />
             <p className={hero.release}>
               iPhone・Android 向けに、ただいま準備中。

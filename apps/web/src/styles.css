@@ -114,26 +114,6 @@
   .brand img {
     border-radius: 9px;
   }
-  .site-header nav {
-    display: flex;
-    gap: 32px;
-    align-items: center;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .site-header nav a {
-    display: inline-flex;
-    gap: 7px;
-    align-items: center;
-  }
-  .header-cta {
-    padding: 12px 20px;
-    border: 1px solid var(--line);
-    border-radius: 100px;
-  }
-  .header-cta:hover {
-    background: var(--soft-green);
-  }
   .eyebrow {
     font-size: 11px;
     font-weight: 650;
@@ -561,13 +541,6 @@
     .site-header {
       padding: 22px 24px;
     }
-    .site-header nav {
-      gap: 18px;
-      font-size: 11px;
-    }
-    .header-cta {
-      padding: 10px 14px;
-    }
     .brand {
       font-size: 17px;
     }
@@ -582,9 +555,6 @@
   @media (max-width: 540px) {
     .site-header {
       padding: 19px 20px;
-    }
-    .site-header .header-cta {
-      display: none;
     }
     .store-links {
       gap: 8px;
