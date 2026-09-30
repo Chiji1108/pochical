@@ -48,7 +48,17 @@ async function check(browser: Awaited<ReturnType<typeof chromium.launch>>) {
     await page.waitForTimeout(800);
   }
   const result = await page.evaluate(() => {
-    const heading = document.querySelector(".dc-phone h3")?.textContent ?? "";
+    // The month the heading names, as a screen reader reads it: the
+    // rolling digits and letters beside it, the months either side, are
+    // hidden.
+    const title = document.querySelector(".dc-phone h3")?.cloneNode(true);
+    let heading = "";
+    if (title instanceof Element) {
+      for (const hidden of title.querySelectorAll('[aria-hidden="true"]')) {
+        hidden.remove();
+      }
+      heading = title.textContent ?? "";
+    }
     const phone = document.querySelector(".dc-phone")?.getBoundingClientRect();
     const shown = [
       ...document.querySelectorAll('section[aria-label$="のシフト"]'),
@@ -72,11 +82,8 @@ for (let run = 0; run < runs; run += 1) {
   // One load after another, each in a fresh tab with nothing cached.
   // oxlint-disable-next-line no-await-in-loop
   const { heading, shown } = await check(browser);
-  const month = heading.replace(
-    /^(?<year>\d{4})(?<month>\d+)月$/u,
-    "$<year>年$<month>月"
-  );
-  const ok = shown.startsWith(month);
+  // 2026年9月 over the section for 2026年9月のシフト.
+  const ok = heading !== "" && shown === `${heading}のシフト`;
   if (!ok) {
     wrong += 1;
   }

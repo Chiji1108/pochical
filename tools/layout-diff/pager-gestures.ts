@@ -2,7 +2,8 @@
 // finger, and checks where each gesture lands: a short drag goes back, a
 // drag past a quarter or a quick flick turns one page, a long drag turns
 // only one, letting go over a day opens nothing, a tap still opens it, and
-// scrolling up and down leaves the month.
+// scrolling up and down leaves the month. A trackpad's sideways swipe,
+// coasting on well past a page, turns one month too.
 // bun tools/layout-diff/pager-gestures.ts [url]
 
 import { setTimeout as wait } from "node:timers/promises";
@@ -17,8 +18,22 @@ const STEP_MS = 16;
 
 type Box = { x: number; y: number; width: number; height: number };
 
+// The month the heading names, as a screen reader reads it: the rolling
+// digits and letters beside it, the months either side, are hidden.
 const heading = async (page: Page) =>
-  (await page.locator(".dc-phone h3").first().textContent()) ?? "";
+  await page
+    .locator(".dc-phone h3")
+    .first()
+    .evaluate((title) => {
+      const read = title.cloneNode(true);
+      if (!(read instanceof Element)) {
+        return "";
+      }
+      for (const hidden of read.querySelectorAll('[aria-hidden="true"]')) {
+        hidden.remove();
+      }
+      return read.textContent ?? "";
+    });
 
 const daysOpened = async (page: Page) =>
   await page.getByRole("button", { name: "完了" }).count();
@@ -138,16 +153,16 @@ async function withMouse(browser: Browser) {
   const y = box.y + 90;
   const right = box.x + box.width;
   await drag(page, [right - 40, y], -box.width / 6, 10, 30);
-  expect("short drag goes back", await heading(page), "20269月");
+  expect("short drag goes back", await heading(page), "2026年9月");
   expect("letting go opens no day", String(await daysOpened(page)), "0");
   await drag(page, [box.x + 40, y], box.width * 0.4, 12, 30);
-  expect("drag past a quarter", await heading(page), "20268月");
+  expect("drag past a quarter", await heading(page), "2026年8月");
   await flick(page, [right - 40, y], -60);
-  expect("quick flick", await heading(page), "20269月");
+  expect("quick flick", await heading(page), "2026年9月");
   // From the right edge to the left one, the most a finger can: past a
   // page, and staying on the screen.
   await drag(page, [right - 5, y], 10 - right, 20, STEP_MS);
-  expect("long drag turns one page", await heading(page), "202610月");
+  expect("long drag turns one page", await heading(page), "2026年10月");
   await page
     .getByRole("button", { name: /^10月1日/u })
     .first()
@@ -191,15 +206,46 @@ async function withFinger(browser: Browser) {
     await page.waitForTimeout(LAND_MS);
   };
   await swipe(box, box.width - 30, 90, -box.width * 0.6, 0);
-  expect("finger swipe", await heading(page), "202610月");
+  expect("finger swipe", await heading(page), "2026年10月");
   await swipe(box, box.width / 2, 200, 8, -150);
-  expect("scrolling keeps the month", await heading(page), "202610月");
+  expect("scrolling keeps the month", await heading(page), "2026年10月");
   expect("a swipe opens no day", String(await daysOpened(page)), "0");
+  await context.close();
+}
+
+// A trackpad's two-finger swipe: wheel events a frame apart, strong at
+// first and dying away as the trackpad coasts on, `dx` and `dy` pixels in
+// all. No letting go comes, only a lull.
+async function wheel(page: Page, dx: number, dy: number) {
+  const frames = 40;
+  const fade = 0.9;
+  const share = (1 - fade) / (1 - fade ** frames);
+  await moveAlong(frames, STEP_MS, async (step) => {
+    const part = share * fade ** (step - 1);
+    await page.mouse.wheel(dx * part, dy * part);
+  });
+  await page.waitForTimeout(LAND_MS);
+}
+
+async function withTrackpad(browser: Browser) {
+  const { page, box, context } = await open(browser, false);
+  await page.mouse.move(box.x + box.width / 2, box.y + 90);
+  // Two pages' worth, which still turns only one.
+  await wheel(page, box.width * 2, 0);
+  expect("trackpad swipe turns one page", await heading(page), "2026年10月");
+  await wheel(page, box.width / 10, 0);
+  expect("short trackpad swipe goes back", await heading(page), "2026年10月");
+  await wheel(page, -box.width * 2, 0);
+  expect("trackpad swipe back", await heading(page), "2026年9月");
+  await wheel(page, 30, 400);
+  expect("trackpad scroll keeps the month", await heading(page), "2026年9月");
+  expect("a trackpad swipe opens no day", String(await daysOpened(page)), "0");
   await context.close();
 }
 
 const browser = await chromium.launch({ channel: "chrome" });
 await withMouse(browser);
 await withFinger(browser);
+await withTrackpad(browser);
 await browser.close();
 process.exitCode = failed > 0 ? 1 : 0;
