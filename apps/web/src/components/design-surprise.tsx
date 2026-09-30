@@ -114,9 +114,10 @@ function skyBackground(sky: Sky, scheme: "light" | "dark", ground: number) {
   ].join(", ");
 }
 
-// How long one sky takes to drift into the next, and how slowly the light
+// How one sky gives way to the next: at once from the tap, so the tap is
+// seen to change it, and settling softly. And how slowly the light
 // breathes while it stays.
-export const CHANGE_SECONDS = 1.6;
+export const SKY_CHANGE = { duration: 0.9, ease: "easeOut" } as const;
 export const BREATH_SECONDS = 9;
 
 function SkyLight({ sky }: { sky: Sky }) {
@@ -134,7 +135,7 @@ function SkyLight({ sky }: { sky: Sky }) {
       className={surpriseStyles.sky}
       exit={{ opacity: 0 }}
       initial={{ opacity: 0 }}
-      transition={{ duration: CHANGE_SECONDS, ease: "easeInOut" }}
+      transition={SKY_CHANGE}
     >
       <motion.div
         animate={still ? undefined : { scale: 1.08, x: "2%" }}
