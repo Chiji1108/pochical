@@ -10,7 +10,8 @@ import {
   samplePhoto,
 } from "../components/design-group";
 import type { Chat, GroupSummary, Profile } from "../components/design-group";
-import type { Shift } from "./design-patterns";
+import { presetList } from "./design-patterns";
+import type { Pattern } from "./design-patterns";
 
 // One person's data on /design, sorted by where it would live in the app.
 // Unlike the settings, /design shows several people at once (01 and 02 are
@@ -21,7 +22,8 @@ import type { Shift } from "./design-patterns";
 // devices. Groups see only what the User DO projects to them.
 export type OwnData = {
   schedule: Schedule;
-  patternKeys: Shift[];
+  // Their shift patterns, in their order, which ポチポチ入力 follows.
+  patterns: Pattern[];
   // Repeating orders, each taking over from the one before on its start.
   rules: RepeatRule[];
   profile: Profile;
@@ -42,7 +44,7 @@ type Setter<T> = (next: SetStateAction<T>) => void;
 export type UserState = OwnData &
   GroupData & {
     setSchedule: Setter<Schedule>;
-    setPatternKeys: Setter<Shift[]>;
+    setPatterns: Setter<Pattern[]>;
     setRules: Setter<RepeatRule[]>;
     setProfile: Setter<Profile>;
     setCoworkers: Setter<string[]>;
@@ -67,7 +69,7 @@ export function createUserStore(initial: Partial<OwnData & GroupData> = {}) {
       chats: sampleChats,
       coworkers: sampleCoworkers,
       groups: sampleGroups(),
-      patternKeys: patternSets[4],
+      patterns: presetList(patternSets[4]),
       profile: { name: "さくら", photo: samplePhoto(1011) },
       rules: [],
       schedule: {},
@@ -75,7 +77,7 @@ export function createUserStore(initial: Partial<OwnData & GroupData> = {}) {
       setChats: setter("chats"),
       setCoworkers: setter("coworkers"),
       setGroups: setter("groups"),
-      setPatternKeys: setter("patternKeys"),
+      setPatterns: setter("patterns"),
       setProfile: setter("profile"),
       setRules: setter("rules"),
       setSchedule: setter("schedule"),

@@ -50,8 +50,8 @@ import type {
 } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import { patterns } from "../lib/design-patterns";
-import type { Shift } from "../lib/design-patterns";
+import { presetList } from "../lib/design-patterns";
+import type { Pattern } from "../lib/design-patterns";
 import { sampleRosterPhoto } from "../lib/design-sample-photos";
 import type { Photo } from "../lib/design-sample-photos";
 import { designToday } from "../lib/design-today";
@@ -134,7 +134,6 @@ import type { DayTone } from "./design-week";
 import {
   guessLook,
   IconWeightContext,
-  lookOf,
   MarkGlyph,
   useDisplayColor,
   useMarkColor,
@@ -298,13 +297,7 @@ const nurseOrder = ["day", "day", "night", "after", "off", "off"] as const;
 const misaki = (): Member => ({
   id: "misaki",
   name: "みさき",
-  patterns: (["day", "night", "after", "off"] as Shift[]).map((key) => ({
-    id: key,
-    look: lookOf(key),
-    name: patterns[key].label,
-    off: key === "off",
-    time: timeRange({ shift: key }),
-  })),
+  patterns: presetList(["day", "night", "after", "off"]).map(memberPatternOf),
   photo: samplePhoto(823),
   shiftOn: (date) => nurseOrder[(dayNumber(date) + 3) % nurseOrder.length],
   // Now and then a 日勤 runs late or starts early.
@@ -438,27 +431,36 @@ const schoolFriends = (): Member[] => [
   },
 ];
 
+// A pattern as the group sees it: its standard time spelled out.
+function memberPatternOf(own: Pattern): MemberPattern {
+  return {
+    id: own.id,
+    look: own,
+    name: own.name,
+    off: own.countsAsOff,
+    time: timeRange({ shift: own.id }, own),
+  };
+}
+
 function meFrom(
   schedule: Schedule,
-  patternKeys: Shift[],
+  patterns: Pattern[],
   photo?: string
 ): Member {
+  const book = new Map(patterns.map((own) => [own.id, own]));
   return {
     changeOn: (date) => {
       const entry = schedule[dateKey(date)];
-      const change = timeChangeOf(entry);
-      return change && entry && { ...change, time: timeRange(entry) ?? "" };
+      const own = entry && book.get(entry.shift);
+      const change = timeChangeOf(entry, own);
+      return (
+        change && entry && { ...change, time: timeRange(entry, own) ?? "" }
+      );
     },
     id: "me",
     me: true,
     name: "自分",
-    patterns: patternKeys.map((key) => ({
-      id: key,
-      look: lookOf(key),
-      name: patterns[key].label,
-      off: key === "off" || key === "paid",
-      time: timeRange({ shift: key }),
-    })),
+    patterns: patterns.map(memberPatternOf),
     photo,
     shiftOn: (date) => schedule[dateKey(date)]?.shift,
   };
@@ -834,7 +836,7 @@ export function sampleGroups(): GroupSummary[] {
 
 export function DesignGroup({
   schedule,
-  patternKeys,
+  patterns,
   profile,
   onTab,
   initialGroupId = "family",
@@ -843,7 +845,7 @@ export function DesignGroup({
   photoSend = "ok",
 }: {
   schedule: Schedule;
-  patternKeys: Shift[];
+  patterns: Pattern[];
   profile: Profile;
   // The group to open on, like one just joined from a link.
   initialGroupId?: string;
@@ -881,7 +883,7 @@ export function DesignGroup({
   const meIn = (id: string) => {
     const found = groups.find((item) => item.id === id);
     const shown = found ? profileIn(found, profile) : profile;
-    return meFrom(schedule, patternKeys, shown.photo);
+    return meFrom(schedule, patterns, shown.photo);
   };
   const membersOf = (id: string): Member[] => {
     const me = meIn(id);

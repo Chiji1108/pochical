@@ -35,6 +35,7 @@ import {
   UpcomingRectangular,
   UpcomingSmall,
 } from "../components/design-widgets";
+import { presetPatterns } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
 import { widgetEntry } from "../lib/design-widgets";
@@ -187,9 +188,14 @@ function WidgetRow({
 function WidgetsPage() {
   const theme = useDesignTheme();
   const week = useSettings((state) => state.device.week);
-  const entry = widgetEntry(sampleSchedule, week, designToday);
-  const empty = widgetEntry({}, week, designToday);
-  const crowded = widgetEntry(crowdedSchedule, week, designToday);
+  const entry = widgetEntry(sampleSchedule, week, designToday, presetPatterns);
+  const empty = widgetEntry({}, week, designToday, presetPatterns);
+  const crowded = widgetEntry(
+    crowdedSchedule,
+    week,
+    designToday,
+    presetPatterns
+  );
   const detailSizes =
     kinds.find(({ name }) => name === "今日の詳細")?.sizes ?? [];
   return (

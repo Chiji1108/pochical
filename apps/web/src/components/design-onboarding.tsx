@@ -1,8 +1,13 @@
 import { useContext, useState } from "react";
 import { css, cva } from "styled-system/css";
 
-import { patterns } from "../lib/design-patterns";
-import type { Shift } from "../lib/design-patterns";
+import {
+  PatternsContext,
+  presetList,
+  presetPatterns,
+  usePatterns,
+} from "../lib/design-patterns";
+import type { PresetShift, Shift } from "../lib/design-patterns";
 import { createUserStore, UserStoreContext } from "../lib/design-user-store";
 import type { UserStore } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
@@ -35,9 +40,9 @@ type Template = {
   id: string;
   title: string;
   note: string;
-  patternKeys: Shift[];
+  patternKeys: PresetShift[];
   // Present only for work that repeats in a fixed order.
-  sequence?: Shift[];
+  sequence?: PresetShift[];
   // The sequence starts on Sunday, so the first day comes from the weekday.
   weekly?: boolean;
   custom?: boolean;
@@ -137,7 +142,7 @@ function startSchedule(sequence?: Shift[], anchor?: Date): Schedule {
 // What the setup questions end with: the patterns to use, and for work
 // that repeats, the order and a day that falls on its first shift.
 export type WorkSetup = {
-  patternKeys: Shift[];
+  patternKeys: PresetShift[];
   sequence?: Shift[];
   anchor?: Date;
 };
@@ -319,7 +324,7 @@ export function DesignOnboarding({
     setFinished({
       note,
       person: createUserStore({
-        patternKeys,
+        patterns: presetList(patternKeys),
         rules: sequence && anchor ? [{ sequence, start: anchor }] : [],
         schedule: startSchedule(sequence, anchor),
       }),
@@ -500,6 +505,8 @@ export function WorkSetupSteps({
 }) {
   const [step, setStep] = useState<Step>(initialStep ?? { name: "kind" });
 
+  // The templates' patterns are ready-made ones, drawn as they come even
+  // when the person has their own under the same ids.
   function chooseRotation(template: Template) {
     if (template.custom) {
       setStep({ name: "custom", sequence: [], template });
@@ -516,7 +523,7 @@ export function WorkSetupSteps({
   }
 
   return (
-    <>
+    <PatternsContext value={presetPatterns}>
       {step.name === "kind" && (
         <KindStep
           first={!onExit}
@@ -588,7 +595,7 @@ export function WorkSetupSteps({
           sequence={step.sequence}
         />
       )}
-    </>
+    </PatternsContext>
   );
 }
 
@@ -698,7 +705,7 @@ function TemplateStep({
                     // oxlint-disable-next-line react/no-array-index-key -- a sequence repeats the same shift, so position is its identity.
                     <Tag key={index} size="sm" tone="raised">
                       <ShiftMark shift={key} size={11} />
-                      {patterns[key].label}
+                      {presetPatterns[key].name}
                     </Tag>
                   )
                 )}
@@ -763,7 +770,7 @@ function AnchorStep({
   onStart: (anchor: Date) => void;
 }) {
   const [anchor, setAnchor] = useState<Date>();
-  const first = patterns[sequence[0]].label;
+  const first = usePatterns()[sequence[0]]?.name;
   return (
     <>
       <StepHeader
