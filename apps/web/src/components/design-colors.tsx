@@ -28,6 +28,7 @@ const textTokens = new Set([
   "calendar-saturday",
   "danger-default",
 ]);
+const onMediaBlack = new Set(["media-fill", "media-fill-faint"]);
 const lineTokens = new Set(["border-default", "separator", "border-strong"]);
 
 // The grays a theme tints, from the screen down to the darkest text.
@@ -425,12 +426,27 @@ function TokenSample({ token }: { token: ColorToken }) {
   const ground = {
     "danger-on-fill": "var(--danger-fill)",
     "inverse-text": "var(--inverse-background)",
+    "media-text": "var(--media-background)",
+    "media-text-secondary": "var(--media-background)",
+    "media-warning": "var(--media-background)",
   }[token.name];
   if (ground !== undefined) {
     return (
       <span className={palette.block} style={{ background: ground, color }}>
         完了
       </span>
+    );
+  }
+  // White laid over the camera's black, shown on that black; the black
+  // laid over a photo shows on the page's own ground.
+  if (onMediaBlack.has(token.name)) {
+    return (
+      <span
+        className={palette.block}
+        style={{
+          background: `linear-gradient(${color}, ${color}), var(--media-background)`,
+        }}
+      />
     );
   }
   if (token.name.startsWith("shadow")) {

@@ -49,7 +49,7 @@ const sheet = {
 const backdrop = cva({
   base: {
     _open: { animation: "fadeIn 0.25s ease-out" },
-    bg: "var(--scrim)",
+    bg: "scrim",
     inset: 0,
     position: "absolute",
     zIndex: 20,
@@ -118,7 +118,7 @@ const content = cva({
     modal: {
       false: {
         // The lg shadow, cast upward as the sheet rises from below.
-        boxShadow: "0 -8px 24px var(--shadow-large)",
+        boxShadow: "0 -8px 24px token(colors.shadow.large)",
         maxHeight: "46%",
       },
       true: { maxHeight: "85%" },
@@ -521,7 +521,7 @@ const viewer = {
   backdrop: css({
     _closed: { animation: "fadeOut 0.2s ease-in" },
     _open: { animation: "fadeIn 0.2s ease-out" },
-    bg: "black",
+    bg: "media.background",
     inset: 0,
     position: "absolute",
     zIndex: 30,
@@ -530,10 +530,10 @@ const viewer = {
   // view, both round on the black.
   button: cva({
     base: {
-      bg: "rgba(255, 255, 255, 0.16)",
+      bg: "media.fill",
       border: 0,
       borderRadius: "circle",
-      color: "white",
+      color: "media.text",
       display: "grid",
       height: "action",
       placeItems: "center",
@@ -695,7 +695,7 @@ const confirm = {
   }),
   // The badge red holds white text in dark mode too; --danger is a light
   // red there, made for text.
-  action: css({ bg: "var(--danger-fill)", color: "var(--danger-on-fill)" }),
+  action: css({ bg: "danger.fill", color: "danger.onFill" }),
   cancel: css({ bg: "fill.quaternary", color: "text.primary" }),
   message: css({
     color: "text.tertiary",

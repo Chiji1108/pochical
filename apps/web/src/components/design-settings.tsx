@@ -6,6 +6,7 @@ import { useMotionValue } from "motion/react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
+import { token } from "styled-system/tokens";
 
 import { useDevice } from "../lib/design-device";
 import {
@@ -642,7 +643,7 @@ const offSample = cva({
     paddingTop: "4px",
     width: "32px",
   },
-  variants: { lit: { true: { bg: "var(--calendar-off-tint)" } } },
+  variants: { lit: { true: { bg: "calendar.offTint" } } },
 });
 
 const settingsParts = {
@@ -1908,9 +1909,13 @@ function AppearancePage({ onBack }: { onBack: () => void }) {
 }
 
 const coloredDayOptions: { day: ColoredDay; name: string; color: string }[] = [
-  { color: "var(--calendar-saturday)", day: "saturday", name: "土曜" },
-  { color: "var(--calendar-holiday)", day: "sunday", name: "日曜" },
-  { color: "var(--calendar-holiday)", day: "holiday", name: "祝日" },
+  {
+    color: token.var("colors.calendar.saturday"),
+    day: "saturday",
+    name: "土曜",
+  },
+  { color: token.var("colors.calendar.holiday"), day: "sunday", name: "日曜" },
+  { color: token.var("colors.calendar.holiday"), day: "holiday", name: "祝日" },
 ];
 
 function WeekRow({ onOpen }: { onOpen: () => void }) {

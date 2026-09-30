@@ -539,7 +539,7 @@ const addButtonStyle = css({
   _disabled: { color: "text.disabled", cursor: "default" },
   alignItems: "center",
   bg: "transparent",
-  border: "1px dashed var(--border-strong)",
+  border: "1px dashed token(colors.border.strong)",
   borderRadius: "2xl",
   color: "accent.default",
   display: "flex",
@@ -1353,7 +1353,7 @@ export function ListRow({
 const toggle = {
   thumb: css({
     _checked: { transform: "translateX(18px)" },
-    bg: "var(--control-knob)",
+    bg: "control.knob",
     borderRadius: "circle",
     boxShadow: "sm",
     display: "block",
@@ -1664,7 +1664,8 @@ export const markGrid = css({
 export const colorGrid = css({
   "& [data-part=item]": {
     "&[data-state=checked]": {
-      boxShadow: "0 0 0 3px var(--background-base), 0 0 0 5px currentcolor",
+      boxShadow:
+        "0 0 0 3px token(colors.background.base), 0 0 0 5px currentcolor",
     },
     border: "2px solid currentcolor",
     borderRadius: "circle",

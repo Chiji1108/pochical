@@ -1377,10 +1377,10 @@ const scan = {
     justifyContent: "center",
   }),
   close: css({
-    bg: "rgba(255, 255, 255, 0.16)",
+    bg: "media.fill",
     border: 0,
     borderRadius: "circle",
-    color: "white",
+    color: "media.text",
     display: "grid",
     height: "action",
     placeItems: "center",
@@ -1411,7 +1411,7 @@ const scan = {
     inset: 0,
     position: "absolute",
   }),
-  demo: css({ color: "rgba(255, 255, 255, 0.45)", textStyle: "caption" }),
+  demo: css({ color: "media.textSecondary", textStyle: "caption" }),
   frame: css({
     _after: {
       borderBottom: scanCorner,
@@ -1433,7 +1433,7 @@ const scan = {
       top: 0,
       width: "32px",
     },
-    bg: "rgba(255, 255, 255, 0.06)",
+    bg: "media.fillFaint",
     border: 0,
     borderRadius: "md",
     height: "220px",
@@ -1445,10 +1445,10 @@ const scan = {
   library: css({
     alignItems: "center",
     alignSelf: "center",
-    bg: "rgba(255, 255, 255, 0.16)",
+    bg: "media.fill",
     border: 0,
     borderRadius: "full",
-    color: "white",
+    color: "media.text",
     display: "flex",
     fontWeight: 600,
     gap: "8px",
@@ -1457,9 +1457,9 @@ const scan = {
     textStyle: "body",
   }),
   problem: css({
-    "& svg": { color: "#ffd60a", flexShrink: 0, marginTop: "1px" },
+    "& svg": { color: "media.warning", flexShrink: 0, marginTop: "1px" },
     alignItems: "flex-start",
-    bg: "rgba(255, 255, 255, 0.14)",
+    bg: "media.fill",
     borderRadius: "lg",
     display: "flex",
     gap: "12px",
@@ -1468,7 +1468,7 @@ const scan = {
     padding: "12px 16px",
     textStyle: "subheadline",
   }),
-  root: css({ bg: "black", color: "white" }),
+  root: css({ bg: "media.background", color: "media.text" }),
   title: css({ fontWeight: 600, margin: 0, textStyle: "headline" }),
 };
 
@@ -1564,7 +1564,7 @@ const rail = {
   }),
   badge: css({
     bottom: 0,
-    boxShadow: "0 0 0 2px var(--fill-quaternary)",
+    boxShadow: "0 0 0 2px token(colors.fill.quaternary)",
     position: "absolute",
     right: "3px",
   }),
@@ -1640,7 +1640,7 @@ const markFrame = cva({
       // A thin gap keeps the ring clear of a photo's own colors.
       "&::after": {
         boxShadow:
-          "inset 0 0 0 2px var(--accent-default), inset 0 0 0 4px var(--background-card)",
+          "inset 0 0 0 2px token(colors.accent.default), inset 0 0 0 4px token(colors.background.card)",
       },
       bg: "accent.container",
       borderRadius: "md",
@@ -1719,7 +1719,7 @@ const avatar = cva({
       objectFit: "cover",
       width: "100%",
     },
-    bg: "var(--fill-secondary)",
+    bg: "fill.secondary",
     borderRadius: "circle",
     color: "text.secondary",
     display: "grid",
@@ -1735,7 +1735,7 @@ const avatar = cva({
 
 // A day with no shift, as a small dot.
 const emptyMark = css({
-  bg: "var(--fill-secondary)",
+  bg: "fill.secondary",
   borderRadius: "circle",
   height: "6px",
   width: "6px",
@@ -2438,9 +2438,9 @@ function lastLine(chat: Chat, members: Member[]) {
 
 // How many are unread, on a chat's row and on the rail's group icon.
 const badge = css({
-  bg: "var(--danger-fill)",
+  bg: "danger.fill",
   borderRadius: "full",
-  color: "var(--danger-on-fill)",
+  color: "danger.onFill",
   display: "inline-grid",
   fontSize: "10px",
   fontWeight: 700,
@@ -2782,7 +2782,7 @@ const chatStyle = {
   // draws one.
   uploading: css({
     alignItems: "center",
-    bg: "rgba(0, 0, 0, 0.32)",
+    bg: "media.dim",
     borderRadius: "lg",
     display: "flex",
     inset: 0,
@@ -2792,7 +2792,7 @@ const chatStyle = {
   uploadRing: css({
     "& circle": {
       fill: "none",
-      stroke: "white",
+      stroke: "media.text",
       strokeWidth: 3,
     },
     "& circle:first-of-type": { opacity: 0.35 },
@@ -2850,10 +2850,10 @@ const chatStyle = {
   trayItem: css({ flexShrink: 0, position: "relative" }),
   trayRemove: css({
     alignItems: "center",
-    bg: "rgba(0, 0, 0, 0.6)",
+    bg: "media.shade",
     border: "2px solid token(colors.background.base)",
     borderRadius: "circle",
-    color: "white",
+    color: "media.text",
     display: "flex",
     height: "24px",
     justifyContent: "center",
@@ -3807,7 +3807,7 @@ const messageActions = {
   lifted: css({ position: "relative", zIndex: 25 }),
   scrim: css({
     animation: "fadeIn 0.2s ease-out",
-    bg: "var(--scrim)",
+    bg: "scrim",
     inset: 0,
     position: "absolute",
     zIndex: 20,
@@ -7360,7 +7360,10 @@ function PersonDay({
   const className = css(
     dayCell.raw({ active: picked, off, outside }),
     withMe && !picked
-      ? { outline: "1.5px solid var(--accent-border)", outlineOffset: "-1.5px" }
+      ? {
+          outline: "1.5px solid token(colors.accent.border)",
+          outlineOffset: "-1.5px",
+        }
       : {}
   );
   const style = off ? ({ "--off-tint": tint } as CSSProperties) : undefined;
