@@ -7,6 +7,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -1281,6 +1282,15 @@ object Radius {
   val xxxl = 28.dp
   val xxxxl = 32.dp
   val full = 999.dp
+}
+
+/** A shadow by how far a piece floats, in the テーマ's color of that name. */
+data class Shadow(val y: Dp, val blur: Dp, val color: (ThemeColors) -> Color) {
+  companion object {
+    val lg = Shadow(8.dp, 24.dp, ThemeColors::shadowLarge)
+    val md = Shadow(4.dp, 14.dp, ThemeColors::shadowMedium)
+    val sm = Shadow(1.dp, 3.dp, ThemeColors::shadowLarge)
+  }
 }
 
 /** Pochical's own motion, as SwiftUI's .spring(duration:bounce:). */

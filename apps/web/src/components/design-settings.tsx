@@ -646,7 +646,7 @@ const settingsParts = {
     margin: "8px 16px 0",
     textStyle: "footnote",
   }),
-  card: css({ bg: "fill.quaternary", borderRadius: "xl", padding: "16px" }),
+  card: css({ bg: "fill.quaternary", borderRadius: "2xl", padding: "16px" }),
   cardCount: css({ color: "text.tertiary", fontWeight: 400 }),
   cardLabel: css({
     display: "flex",
@@ -674,7 +674,7 @@ const settingsParts = {
   preview: css({
     bg: "background.base",
     border: "1px solid token(colors.separator)",
-    borderRadius: "xl",
+    borderRadius: "2xl",
     color: "text.primary",
     padding: "20px 8px 8px",
     pointerEvents: "none",

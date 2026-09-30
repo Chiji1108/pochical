@@ -5,10 +5,12 @@
 export const SPACING_STEP = 4;
 export const HAIRLINE_MAX = 2;
 
-// The corners a piece may take, by size. A piece picks one for its role
-// (a list is 2xl, a sheet 4xl, a button full); `full` ends a bar or
-// button in half circles, as SwiftUI's Capsule and Compose's CircleShape
-// do, and `circle` rounds a square into one.
+// The corners a piece may take, by size. A list, a card or a table laid
+// on a screen or a sheet takes 2xl, as iOS's grouped lists; a piece set
+// inside another near its corner takes the outer's radius less the room
+// between them, so the two curves run side by side (iOS 26's concentric
+// corners). `full` ends a bar or button in half circles, as SwiftUI's
+// Capsule and Compose's CircleShape do, and `circle` rounds a square.
 export const radii = {
   "2xl": 24,
   "2xs": 2,
@@ -29,6 +31,18 @@ export const sizes = {
   control: 52,
   // The least a tap target takes, as iOS's 44pt.
   touch: 44,
+} as const;
+
+// Shadows by how far a piece floats: its offset down and blur in points,
+// and the shadow color role it takes. sm lifts a control's knob, md
+// something picked up or laid over the screen (a row being dragged, the
+// reactions), lg a card floating free (a menu, the month picker). A tight
+// shadow takes a deeper color to show at all. SwiftUI's shadow radius is
+// about half the blur.
+export const shadows = {
+  lg: { blur: 24, color: "shadow-large", y: 8 },
+  md: { blur: 14, color: "shadow-medium", y: 4 },
+  sm: { blur: 3, color: "shadow-large", y: 1 },
 } as const;
 
 // Hovered and pressed: the accent laid over whatever is under at these

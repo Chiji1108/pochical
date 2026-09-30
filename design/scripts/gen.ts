@@ -16,6 +16,7 @@ import type { ColorScheme } from "../src/colors";
 import {
   HAIRLINE_MAX,
   radii,
+  shadows,
   SPACING_STEP,
   sizes,
   springs,
@@ -135,6 +136,7 @@ function json() {
     metrics: {
       hairlineMax: HAIRLINE_MAX,
       radii,
+      shadows,
       sizes,
       spacingStep: SPACING_STEP,
       springs,
@@ -240,6 +242,19 @@ function swift() {
     ),
     "}",
     "",
+    "/// A shadow by how far a piece floats: `.shadow(color:radius:x:y:)` with",
+    "/// radius about half the blur, in the テーマ's color of that name.",
+    "public struct Shadow: Sendable {",
+    "  public let y: CGFloat",
+    "  public let blur: CGFloat",
+    "  public let color: any KeyPath<ThemeColors, Color> & Sendable",
+    "",
+    ...Object.entries(shadows).map(
+      ([name, { blur, color, y }]) =>
+        `  public static let ${name} = Shadow(y: ${y}, blur: ${blur}, color: \\.${camel(color)})`
+    ),
+    "}",
+    "",
     "/// Pochical's own motion, for withAnimation.",
     "public enum Springs {",
     ...Object.entries(springs).map(
@@ -302,6 +317,7 @@ function kotlin() {
     "import androidx.compose.ui.graphics.Color",
     "import androidx.compose.ui.text.TextStyle",
     "import androidx.compose.ui.text.font.FontWeight",
+    "import androidx.compose.ui.unit.Dp",
     "import androidx.compose.ui.unit.dp",
     "import androidx.compose.ui.unit.sp",
     "",
@@ -356,6 +372,16 @@ function kotlin() {
     ...radiusScale.map(
       ([name, value]) => `  val ${radiusName(name)} = ${value}.dp`
     ),
+    "}",
+    "",
+    "/** A shadow by how far a piece floats, in the テーマ's color of that name. */",
+    "data class Shadow(val y: Dp, val blur: Dp, val color: (ThemeColors) -> Color) {",
+    "  companion object {",
+    ...Object.entries(shadows).map(
+      ([name, { blur, color, y }]) =>
+        `    val ${name} = Shadow(${y}.dp, ${blur}.dp, ThemeColors::${camel(color)})`
+    ),
+    "  }",
     "}",
     "",
     "/** Pochical's own motion, as SwiftUI's .spring(duration:bounce:). */",

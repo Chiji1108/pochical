@@ -1,5 +1,5 @@
 import { defineConfig } from "@pandacss/dev";
-import { radii, sizes, stateLayers } from "@pochical/design/metrics";
+import { radii, shadows, sizes, stateLayers } from "@pochical/design/metrics";
 import { textStyles } from "@pochical/design/type";
 
 // Panda CSS for the /design prototype's pieces. The colors stay the CSS
@@ -163,6 +163,13 @@ export default defineConfig({
           ),
           circle: { value: "50%" },
         },
+        // Shadows by how far a piece floats (design/src/metrics.ts).
+        shadows: Object.fromEntries(
+          Object.entries(shadows).map(([name, { blur, color, y }]) => [
+            name,
+            { value: `0 ${y}px ${blur}px var(--${color})` },
+          ])
+        ),
         sizes: Object.fromEntries(
           Object.entries(sizes).map(([name, size]) => [
             name,

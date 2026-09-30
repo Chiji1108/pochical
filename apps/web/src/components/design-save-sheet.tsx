@@ -131,8 +131,8 @@ const picture = {
   frame: css({
     bg: "background.base",
     border: "1px solid token(colors.separator)",
-    borderRadius: "xl",
-    boxShadow: "0 6px 18px var(--shadow-small)",
+    borderRadius: "2xl",
+    boxShadow: "md",
     color: "text.primary",
     margin: 0,
     padding: "16px 12px 12px",

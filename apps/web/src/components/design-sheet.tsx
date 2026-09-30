@@ -117,7 +117,8 @@ const content = cva({
   variants: {
     modal: {
       false: {
-        boxShadow: "0 -6px 24px var(--shadow-large)",
+        // The lg shadow, cast upward as the sheet rises from below.
+        boxShadow: "0 -8px 24px var(--shadow-large)",
         maxHeight: "46%",
       },
       true: { maxHeight: "85%" },

@@ -1259,6 +1259,18 @@ public enum Radius {
   public static let full: CGFloat = 999
 }
 
+/// A shadow by how far a piece floats: `.shadow(color:radius:x:y:)` with
+/// radius about half the blur, in the テーマ's color of that name.
+public struct Shadow: Sendable {
+  public let y: CGFloat
+  public let blur: CGFloat
+  public let color: any KeyPath<ThemeColors, Color> & Sendable
+
+  public static let lg = Shadow(y: 8, blur: 24, color: \.shadowLarge)
+  public static let md = Shadow(y: 4, blur: 14, color: \.shadowMedium)
+  public static let sm = Shadow(y: 1, blur: 3, color: \.shadowLarge)
+}
+
 /// Pochical's own motion, for withAnimation.
 public enum Springs {
   public static let quick: Animation = .spring(duration: 0.25, bounce: 0)
