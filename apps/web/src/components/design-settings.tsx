@@ -1,4 +1,5 @@
 import { ArrowRight, Check, CloudCheck } from "lucide-react";
+import { useMotionValue } from "motion/react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
@@ -1994,6 +1995,7 @@ function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
       0
     )
   );
+  const progress = useMotionValue(0);
   return (
     <>
       <ChoiceGrid
@@ -2009,6 +2011,7 @@ function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
             setPage((shown) => shown + direction);
           }}
           page={String(page)}
+          progress={progress}
           renderPage={(offset) => {
             const themes = themePages[page + offset];
             return (
@@ -2032,6 +2035,7 @@ function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
         current={page}
         label="テーマのページ"
         onPick={setPage}
+        progress={progress}
       />
     </>
   );

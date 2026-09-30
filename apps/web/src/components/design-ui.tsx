@@ -31,6 +31,7 @@ import {
   useMotionValue,
   useMotionValueEvent,
   useReducedMotion,
+  useTransform,
 } from "motion/react";
 import type { MotionValue } from "motion/react";
 import {
@@ -1440,24 +1441,22 @@ export const colorGrid = css({
 
 // Dots under a pager, one for each page, the one shown stretched into a
 // short bar, so pages to the side are not missed. It tells the page by
-// its shape as well as its shade, and the bar grows and shrinks as the
-// page turns. A dot takes to its page.
-const pageDots = css({
-  "& button": {
-    "&::before": {
-      bg: "text.quaternary",
-      borderRadius: "999px",
-      content: '""',
-      height: "8px",
-      transition: "width 0.25s, background 0.25s",
-      width: "8px",
-    },
-    "&[aria-current=true]::before": { bg: "text.primary", width: "20px" },
+// its shape as well as its shade. The bar follows the swipe, shrinking
+// back to a dot as the next one grows, as the month's name follows the
+// calendar's swipe: moving only once the page has landed felt late.
+const pageDots = {
+  bar: css({
+    bg: "text.quaternary",
+    borderRadius: "999px",
+    height: "8px",
+    overflow: "hidden",
+    position: "relative",
+  }),
+  button: css({
     _focusVisible: {
       outline: "2px solid token(colors.accent.default)",
       outlineOffset: "-2px",
     },
-    _motionReduce: { "&::before": { transition: "none" } },
     alignItems: "center",
     bg: "transparent",
     border: 0,
@@ -1467,40 +1466,107 @@ const pageDots = css({
     height: "24px",
     justifyContent: "center",
     padding: "0 4px",
-  },
-  border: 0,
-  display: "flex",
-  justifyContent: "center",
-  margin: 0,
-  padding: 0,
-});
+  }),
+  // The shown page's shade, over the dot as much as the page shows.
+  fill: css({ bg: "text.primary", inset: 0, position: "absolute" }),
+  group: css({
+    border: 0,
+    display: "flex",
+    justifyContent: "center",
+    margin: 0,
+    padding: 0,
+  }),
+};
+const DOT_SIZE = 8;
+const BAR_LENGTH = 20;
 
 export function PageDots({
   count,
   current,
   label,
   onPick,
+  progress,
 }: {
   count: number;
   current: number;
   // What the pages hold, for a screen reader.
   label: string;
   onPick: (page: number) => void;
+  // The pager's own, how far it is swiped toward the next page.
+  progress?: MotionValue<number>;
 }) {
+  const reduceMotion = useReducedMotion() ?? false;
+  const still = useMotionValue(0);
+  const swipe = progress ?? still;
+  // Where the bar is, in pages: the page shown, plus how far it is
+  // swiped.
+  const position = useMotionValue(current);
+  const base = useRef(current);
+  // Landed by a swipe, the bar is already on the new page; turned by a
+  // dot, it slides there.
+  const landed = useRef(false);
+  useMotionValueEvent(swipe, "change", (share) => {
+    if (Math.abs(share) === 1) {
+      landed.current = true;
+    }
+    position.stop();
+    position.set(base.current + share);
+  });
+  useLayoutEffect(() => {
+    if (base.current === current) {
+      return;
+    }
+    base.current = current;
+    if (landed.current || reduceMotion) {
+      position.set(current);
+    } else {
+      animate(position, current, {
+        bounce: 0,
+        type: "spring",
+        visualDuration: 0.3,
+      });
+    }
+    landed.current = false;
+  }, [current, position, reduceMotion]);
   return (
-    <fieldset aria-label={label} className={pageDots}>
+    <fieldset aria-label={label} className={pageDots.group}>
       {Array.from({ length: count }, (_, page) => (
         <button
           aria-current={page === current}
           aria-label={`${page + 1}ページ目`}
+          className={pageDots.button}
           key={page}
           onClick={() => {
             onPick(page);
           }}
           type="button"
-        />
+        >
+          <PageDot page={page} position={position} />
+        </button>
       ))}
     </fieldset>
+  );
+}
+
+// One dot, as long and as dark as the bar is on it.
+function PageDot({
+  page,
+  position,
+}: {
+  page: number;
+  position: MotionValue<number>;
+}) {
+  const share = useTransform(position, (at) =>
+    Math.max(0, 1 - Math.abs(at - page))
+  );
+  const width = useTransform(
+    share,
+    (on) => DOT_SIZE + (BAR_LENGTH - DOT_SIZE) * on
+  );
+  return (
+    <motion.span className={pageDots.bar} style={{ width }}>
+      <motion.span className={pageDots.fill} style={{ opacity: share }} />
+    </motion.span>
   );
 }
 
