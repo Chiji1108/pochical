@@ -27,7 +27,7 @@ import { Fragment, useContext, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import { MAX_PATTERNS, patterns } from "../lib/design-patterns";
+import { PATTERNS_PER_PAGE, patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
@@ -47,7 +47,7 @@ import {
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import { DesignSettings } from "./design-settings";
 import type { SettingsPage } from "./design-settings";
-import { PhoneContext, Sheet, SheetHeading } from "./design-sheet";
+import { PhoneContext, Sheet, SheetHeading, sheetBody } from "./design-sheet";
 import { surpriseStyles, useSurprise } from "./design-surprise";
 import { useThemeStyle } from "./design-theme";
 import { PhoneToasts, ToastContext, usePhoneToaster } from "./design-toast";
@@ -68,6 +68,7 @@ import {
   IconMenu,
   MenuItem,
   MONTH_WEEKS,
+  PageDots,
   Pager,
   Screen,
   srOnly,
@@ -121,7 +122,7 @@ function ruleSchedule(rule: RepeatRule, holidaysOff = false) {
     holidaysOff
   );
 }
-export type PatternCount = 4 | 5 | 6 | 7 | 8 | 9 | 10;
+export type PatternCount = 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13;
 const eight: Shift[] = [
   "early",
   "day",
@@ -134,6 +135,9 @@ const eight: Shift[] = [
 ];
 export const patternSets: Record<PatternCount, Shift[]> = {
   10: [...eight, "junya", "midnight"],
+  11: [...eight, "junya", "midnight", "offDuty"],
+  12: [...eight, "junya", "midnight", "offDuty", "evening"],
+  13: [...eight, "junya", "midnight", "offDuty", "evening", "duty"],
   4: ["day", "night", "after", "off"],
   5: ["early", "day", "night", "after", "off"],
   6: ["early", "day", "late", "night", "after", "off"],
@@ -393,7 +397,7 @@ export function DesignCalendar({
   const setImageOptions = useSettings((state) => state.setImageOptions);
   const [detailDate, setDetailDate] = useState<Date>();
   // The row of the month the opened week is on, for the month to fold up
-  // into it and unfold back around it.
+  // into it and unfold back around it. It follows the week as it turns.
   const [foldRow, setFoldRow] = useState(0);
   // Counts the turns to another month or week, as against folding the one
   // shown: a turned page is drawn afresh, so only folding animates.
@@ -534,8 +538,10 @@ export function DesignCalendar({
   );
   const weekDetail = !editing && detailDate !== undefined;
   const headingMode = screenMode(editing, weekDetail);
-  function rowOf(date: Date) {
-    const index = dates.findIndex((day) => dateKey(day) === dateKey(date));
+  function rowOf(date: Date, inMonth: Date) {
+    const index = weekTools
+      .monthDates(inMonth)
+      .findIndex((day) => dateKey(day) === dateKey(date));
     return Math.max(0, Math.floor(index / 7));
   }
   function onMonth(date: Date) {
@@ -551,9 +557,7 @@ export function DesignCalendar({
       : new Date(date.getFullYear(), date.getMonth(), 1);
   }
   function openDetail(date: Date) {
-    if (!weekDetail) {
-      setFoldRow(rowOf(date));
-    }
+    setFoldRow(rowOf(date, monthOpening(date)));
     setSwipedTo(undefined);
     setDetailDate(date);
     if (!onMonth(date)) {
@@ -681,10 +685,10 @@ export function DesignCalendar({
     }
   }
   // Fills the blanks with the person's day off, or adds 休み back when
-  // they have none and there is room for it.
+  // they have none.
   function fillGaps(key: Shift | undefined) {
     const shift = key ?? "off";
-    if (!key && patternKeys.length < MAX_PATTERNS) {
+    if (!key) {
       setPatternKeys((previous) => [...previous, shift]);
     }
     onChange((previous) => ({
@@ -696,9 +700,6 @@ export function DesignCalendar({
     }
   }
   function closeDetail() {
-    if (detailDate) {
-      setFoldRow(rowOf(detailDate));
-    }
     setDetailDate(undefined);
   }
   function changeEntry(date: Date, entry: DayEntry | undefined) {
@@ -880,7 +881,7 @@ export function DesignCalendar({
                           key={pageTurn}
                           label={label}
                           renderCell={renderCell}
-                          shift={-foldRow * ROW_STEP}
+                          row={foldRow}
                           weekDetail={weekDetail}
                         />
                       );
@@ -963,28 +964,30 @@ export function DesignCalendar({
               }}
               title="今月の内訳"
             />
-            <dl className={breakdown.list}>
-              {counts.map(({ key, label, count }) => (
-                <div className={breakdown.row()} key={key}>
-                  <dt className={breakdown.name}>
-                    <ShiftMark shift={key} size={18} />
-                    {label}
-                  </dt>
+            <div className={sheetBody}>
+              <dl className={breakdown.list}>
+                {counts.map(({ key, label, count }) => (
+                  <div className={breakdown.row()} key={key}>
+                    <dt className={breakdown.name}>
+                      <ShiftMark shift={key} size={18} />
+                      {label}
+                    </dt>
+                    <dd className={breakdown.count}>
+                      {count}
+                      <span className={breakdown.unit}>日</span>
+                    </dd>
+                  </div>
+                ))}
+                <div className={breakdown.row({ unfilled: true })}>
+                  <dt className={breakdown.name}>未入力</dt>
                   <dd className={breakdown.count}>
-                    {count}
+                    {unfilled}
                     <span className={breakdown.unit}>日</span>
                   </dd>
                 </div>
-              ))}
-              <div className={breakdown.row({ unfilled: true })}>
-                <dt className={breakdown.name}>未入力</dt>
-                <dd className={breakdown.count}>
-                  {unfilled}
-                  <span className={breakdown.unit}>日</span>
-                </dd>
-              </div>
-            </dl>
-            <p className={breakdown.total}>この月は全{monthDays.length}日</p>
+              </dl>
+              <p className={breakdown.total}>この月は全{monthDays.length}日</p>
+            </div>
           </Sheet>
           {pendingInvite && (
             <JoinSheet
@@ -1114,7 +1117,8 @@ export function TabBar({
 }
 
 // 今月の内訳: a row for each pattern and one for the days still blank,
-// with the month's length under them.
+// with the month's length under them. With many patterns they scroll
+// under the heading, which stays with its ×.
 const breakdown = {
   count: css({
     color: "accent.default",
@@ -1142,7 +1146,8 @@ const breakdown = {
   }),
   total: css({
     color: "text.tertiary",
-    margin: "20px 0 0",
+    // 20px under the list, with the scrolling part's 12px gap.
+    margin: "8px 0 0",
     textAlign: "center",
     textStyle: "footnote",
   }),
@@ -1236,78 +1241,76 @@ const calendarPage = {
 
 // From one row of days to the next.
 const ROW_STEP = DAY_ROW_HEIGHT + DAY_ROW_GAP;
-// How the month folds into a week and back: one spring without bounce,
-// the same as SwiftUI's .spring(duration: 0.3, bounce: 0) for the apps.
+// How the month folds into a week and back: one spring without bounce
+// for all of it, the moving, the height and the fading, the same as one
+// withAnimation(.spring(duration: 0.3, bounce: 0)) in the apps.
 const fold = { bounce: 0, type: "spring", visualDuration: 0.3 } as const;
-// The days other than the week fade as they go, in the fold's second
-// half, so they are seen moving first and no row shows cut off at the
-// grid's edges; coming back, they are there from its first half. The
-// week itself stays, as what the month folds into.
-const fadeOut = { delay: 0.1, duration: 0.2, ease: "easeIn" } as const;
-const fadeIn = { duration: 0.2, ease: "easeOut" } as const;
-// How a day leaves as the month folds, moving by `by`. Into the top row
-// the month stays put, and the fade alone carries the days out.
-function leave(by: number) {
-  return {
-    opacity: 0,
-    transition: { default: fold, opacity: fadeOut },
-    y: by,
-  };
-}
 const folding = {
   cell: css({ display: "grid", minWidth: 0 }),
-  // Days on their way out are laid over the grid where they were.
-  grid: css({ position: "relative" }),
+  // Clips nothing: the rows moving out of it fade on the way, and the
+  // pager's edges take them out of sight.
+  page: css({ position: "relative" }),
 };
 
 // The page shown, folding as the month turns into one of its weeks and
-// back, like the Calendar apps: the week's days move to the row they go
-// to, the other days slide along with the rest of the month as one piece,
-// in and out of sight at the pager's edges, and the page's height follows
-// so what is under it moves too. `shift` is how far the month moves up to
-// bring the week to the top.
+// back, like the Calendar apps. The days lie on one sheet, each in its
+// row of the month, the week's days too while it is open; the sheet
+// moves up by `row` rows to bring the week to the top, the other days
+// fade out and in on it, and the page's height follows so what is under
+// it moves too. As one thing moving, the week can't move apart from the
+// rest of the month.
 function FoldingGrid({
   dates,
   label,
   renderCell,
-  shift,
+  row,
   weekDetail,
 }: {
   dates: Date[];
   label: string;
   renderCell: (date: Date) => ReactNode;
-  shift: number;
+  row: number;
   weekDetail: boolean;
 }) {
   const weeks = dates.length / 7;
   const room = weekDetail ? weeks : Math.max(weeks, MONTH_WEEKS);
+  // The sheet's row the dates start on: the open week keeps its own.
+  const firstRow = weekDetail ? row : 0;
   return (
     <motion.section
       animate={{ height: dayGridHeight(room) }}
       aria-label={label}
-      className={cx(dayGrid, folding.grid)}
+      className={folding.page}
       initial={false}
       transition={fold}
     >
-      {/* The shift out is the one as the days leave, passed as custom. */}
-      <AnimatePresence custom={shift} initial={false} mode="popLayout">
-        {dates.map((date) => (
-          <motion.div
-            animate={{ opacity: 1, y: 0 }}
-            className={folding.cell}
-            exit="away"
-            initial={{ opacity: 0, y: shift }}
-            key={dateKey(date)}
-            // Measured only when folding, not as pages turn.
-            layout
-            layoutDependency={weekDetail}
-            transition={{ default: fold, opacity: fadeIn }}
-            variants={{ away: leave }}
-          >
-            {renderCell(date)}
-          </motion.div>
-        ))}
-      </AnimatePresence>
+      <motion.div
+        animate={{ y: weekDetail ? -row * ROW_STEP : 0 }}
+        className={dayGrid}
+        initial={false}
+        transition={fold}
+      >
+        <AnimatePresence initial={false}>
+          {dates.map((date, index) => (
+            <motion.div
+              animate={{ opacity: 1 }}
+              className={folding.cell}
+              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }}
+              key={dateKey(date)}
+              // Placed by the sheet's row, so a day keeps its place as
+              // the days around it come and go.
+              style={{
+                gridColumn: (index % 7) + 1,
+                gridRow: firstRow + Math.floor(index / 7) + 1,
+              }}
+              transition={fold}
+            >
+              {renderCell(date)}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </motion.div>
     </motion.section>
   );
 }
@@ -1877,9 +1880,11 @@ export function RepeatSequenceEditor({
 // and 翌日へ. Up to four patterns sit in one row; more take two rows, of
 // three for five or six, four for seven or eight, and five for nine or
 // ten, so the buttons never push a month six weeks tall off the screen.
-// Each keeps the 72px of the one row, shrinking only when the screen is
-// too narrow. ポチポチ入力 and the save buttons that stand in its place
-// share its edges.
+// Past ten they go on to pages of ten, swiped sideways, their dots
+// between 消す and 翌日へ so the pages take no more height. Each keeps the
+// 72px of the one row, shrinking only when the screen is too narrow.
+// ポチポチ入力 and the save buttons that stand in its place share its
+// edges.
 const shiftInput = {
   action: css({
     _disabled: { color: "text.disabled", cursor: "default" },
@@ -1896,6 +1901,7 @@ const shiftInput = {
     textStyle: "caption",
   }),
   actions: css({
+    alignItems: "center",
     display: "flex",
     gap: "8px",
     justifyContent: "center",
@@ -1947,6 +1953,15 @@ const shiftInput = {
           display: "grid",
           gridTemplateColumns: "repeat(5, minmax(0, 72px))",
         },
+        // A page of ten: its two rows kept however few are on it, so the
+        // last page neither shrinks the tray nor moves a button from where
+        // it would be on a full one.
+        paged: {
+          alignContent: "start",
+          display: "grid",
+          gridTemplateColumns: "repeat(5, minmax(0, 72px))",
+          gridTemplateRows: "repeat(2, 64px)",
+        },
         four: {
           display: "grid",
           gridTemplateColumns: "repeat(4, minmax(0, 72px))",
@@ -1959,6 +1974,8 @@ const shiftInput = {
       },
     },
   }),
+  // The pages of patterns, past ten: the pager and nothing around it.
+  patternPages: css({ border: 0, margin: 0, minWidth: 0, padding: 0 }),
   startButton: css({ flex: 1 }),
   startRow: css({ display: "flex", gap: "8px", textAlign: "center" }),
   weekday: cva({
@@ -1989,6 +2006,9 @@ function columnsFor(patternKeys: Shift[]) {
   return count > 4 ? "three" : "one";
 }
 
+// Room between the pages of patterns, seen while they are swiped.
+const PATTERN_PAGE_GAP = 16;
+
 function ShiftInputControls({
   datePicker,
   patternKeys,
@@ -2004,30 +2024,74 @@ function ShiftInputControls({
   onEnter: (shift: Shift | undefined) => void;
   onSkip: () => void;
 }) {
-  const rows = patternKeys.length > 4;
+  const pages = Array.from(
+    { length: Math.ceil(patternKeys.length / PATTERNS_PER_PAGE) },
+    (_, index) =>
+      patternKeys.slice(
+        index * PATTERNS_PER_PAGE,
+        (index + 1) * PATTERNS_PER_PAGE
+      )
+  );
+  // The page stays where the person swiped it: moving on to the next day
+  // does not turn it, even to that day's shift.
+  const [page, setPage] = useState(0);
+  const progress = useMotionValue(0);
+  const shown = Math.min(page, pages.length - 1);
+  const paged = pages.length > 1;
+  const buttons = (keys: Shift[]) =>
+    keys.map((key) => (
+      <button
+        className={shiftInput.pattern({ rows: keys.length > 4 || paged })}
+        key={key}
+        onClick={() => {
+          onEnter(key);
+        }}
+        type="button"
+      >
+        <span className={shiftInput.mark}>
+          <ShiftMark shift={key} size={26} />
+        </span>
+        <span>{patterns[key].label}</span>
+      </button>
+    ));
   return (
     <>
       {datePicker}
-      <fieldset
-        aria-label="入力するシフト"
-        className={shiftInput.patterns({ columns: columnsFor(patternKeys) })}
-      >
-        {patternKeys.map((key) => (
-          <button
-            className={shiftInput.pattern({ rows })}
-            key={key}
-            onClick={() => {
-              onEnter(key);
+      {paged ? (
+        <fieldset
+          aria-label="入力するシフト"
+          className={shiftInput.patternPages}
+        >
+          <Pager
+            ends={{ back: shown > 0, forward: shown < pages.length - 1 }}
+            gap={PATTERN_PAGE_GAP}
+            onStep={(direction) => {
+              setPage(shown + direction);
             }}
-            type="button"
-          >
-            <span className={shiftInput.mark}>
-              <ShiftMark shift={key} size={26} />
-            </span>
-            <span>{patterns[key].label}</span>
-          </button>
-        ))}
-      </fieldset>
+            page={String(shown)}
+            progress={progress}
+            renderPage={(offset) => {
+              const keys = pages[shown + offset];
+              return (
+                keys && (
+                  <div className={shiftInput.patterns({ columns: "paged" })}>
+                    {buttons(keys)}
+                  </div>
+                )
+              );
+            }}
+          />
+        </fieldset>
+      ) : (
+        <fieldset
+          aria-label="入力するシフト"
+          className={shiftInput.patterns({
+            columns: columnsFor(patternKeys),
+          })}
+        >
+          {buttons(patternKeys)}
+        </fieldset>
+      )}
       <div className={shiftInput.actions}>
         <button
           className={shiftInput.action}
@@ -2040,6 +2104,15 @@ function ShiftInputControls({
           <Trash2 aria-hidden="true" size={14} />
           消す
         </button>
+        {paged && (
+          <PageDots
+            count={pages.length}
+            current={shown}
+            label="シフトのページ"
+            onPick={setPage}
+            progress={progress}
+          />
+        )}
         <button
           className={shiftInput.action}
           disabled={!canSkip}

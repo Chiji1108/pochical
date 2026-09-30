@@ -33,6 +33,7 @@ export const patterns: Record<
 };
 export type Shift = keyof typeof patterns;
 
-// As many patterns as the input buttons can hold in two rows of five, so
-// they fit under a month six weeks tall.
-export const MAX_PATTERNS = 10;
+// As many patterns as the input buttons hold on one page, in two rows of
+// five, so they fit under a month six weeks tall. More go on to further
+// pages, in the order the person puts them.
+export const PATTERNS_PER_PAGE = 10;

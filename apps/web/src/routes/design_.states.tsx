@@ -64,7 +64,7 @@ const noHighlight = {
   highlight: { badge: false, emoji: false, icon: false },
 };
 
-const patternCounts = [4, 5, 6, 7, 8, 9, 10] as const;
+const patternCounts = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13] as const;
 const markStyles: { style: ShiftMarkStyle; label: string }[] = [
   { label: "アイコン", style: "icon" },
   { label: "絵文字", style: "emoji" },

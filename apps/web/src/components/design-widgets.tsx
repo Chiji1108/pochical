@@ -1,5 +1,11 @@
 import { Users } from "lucide-react";
-import { createContext, useContext } from "react";
+import {
+  createContext,
+  useContext,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { css, cva } from "styled-system/css";
 
 import type { WidgetDay, WidgetEntry } from "../lib/design-widgets";
@@ -28,6 +34,12 @@ export type WidgetRenderingMode = "fullColor" | "accented" | "vibrant";
 export const WidgetRenderingModeContext =
   createContext<WidgetRenderingMode>("fullColor");
 
+// The room the widget's content has, in pt (dp on Android), as SwiftUI's
+// widget family and Glance's LocalSize tell a view: the same kind is
+// taller on Android's launcher than on the iPhone, and a view spends the
+// extra room on its own spacing rather than stretching.
+export const WidgetSizeContext = createContext({ height: 0, width: 0 });
+
 const MONTH_NUMBER = 1;
 const NOTHING = "予定なし";
 
@@ -35,19 +47,24 @@ function monthDay(date: Date) {
   return `${date.getMonth() + MONTH_NUMBER}月${date.getDate()}日`;
 }
 
-// What a day's words say: its time, or its name when it has none.
-function headline(day: WidgetDay) {
-  return day.time ?? day.name ?? NOTHING;
+// The words beside a day's mark: nothing on an ordinary day, since the
+// mark says which shift and its hours are the same every time; the
+// changed hours on a day of 早出 or 残業; 予定なし with nothing entered.
+function changeWords(day: WidgetDay) {
+  return day.shift ? day.change : NOTHING;
 }
 
-// A day's words, with its name for screen readers when the words are its
-// time.
-function Headline({ day, className }: { day: WidgetDay; className: string }) {
-  const spokenName = day.time === undefined ? undefined : day.name;
+// Those words, with the shift's name and hours for screen readers.
+function Change({ day, className }: { day: WidgetDay; className: string }) {
+  const words = changeWords(day);
+  const time = day.time ? ` ${day.time}` : "";
   return (
     <strong className={className}>
-      {spokenName && <span className={srOnly}>{spokenName} </span>}
-      {headline(day)}
+      <span className={srOnly}>
+        {day.name ?? NOTHING}
+        {time}
+      </span>
+      {words && <span aria-hidden="true">{words}</span>}
     </strong>
   );
 }
@@ -154,15 +171,15 @@ const today = {
   }),
 };
 
-// Today large: the date, its mark and its time.
+// Today large: the date, its mark and any change to its hours.
 function TodayBlock({ day }: { day: WidgetDay }) {
   return (
     <div className={today.root}>
       <span className={today.date}>
         {monthDay(day.date)}({day.weekday})
       </span>
-      <DayMark day={day} size={44} />
-      <Headline className={today.headline} day={day} />
+      <DayMark day={day} size={48} />
+      <Change className={today.headline} day={day} />
     </div>
   );
 }
@@ -186,8 +203,8 @@ const upcoming = {
     gap: "4px",
     height: "100%",
   }),
-  // The mark over its time: side by side, a time with 翌 runs out of
-  // the square.
+  // The mark over any change to its hours: side by side, a change with
+  // 翌 runs out of the square.
   today: css({
     alignItems: "flex-start",
     display: "flex",
@@ -225,8 +242,8 @@ export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
         {monthDay(day.date)}({day.weekday})
       </span>
       <div className={upcoming.today}>
-        <DayMark day={day} size={32} />
-        <Headline className={today.headline} day={day} />
+        <DayMark day={day} size={40} />
+        <Change className={today.headline} day={day} />
       </div>
       <ol className={`${list} ${upcoming.next}`}>
         {entry.upcoming.slice(1, 4).map((next) => (
@@ -238,43 +255,90 @@ export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
 }
 
 const week = {
-  date: css({ fontVariantNumeric: "tabular-nums", textStyle: "footnote" }),
-  days: css({
-    alignContent: "center",
-    display: "grid",
-    flex: 1,
-    gridTemplateColumns: "repeat(6, 1fr)",
-    rowGap: "4px",
-  }),
-  root: css({ display: "flex", gap: "16px", height: "100%" }),
   rule: css({ bg: "separator", flexShrink: 0, width: "1px" }),
   today: css({ flexShrink: 0, width: "112px" }),
 };
 
-// Today large, and the six days after it beside.
+// Two weeks keep to themselves in the middle; where there is room, as on
+// Android's 4×2, their marks grow and the weeks stand further apart.
+const TWO_WEEKS_ROOMY = 150;
+
+const twoWeeks = {
+  date: cva({
+    base: { fontVariantNumeric: "tabular-nums", textStyle: "footnote" },
+    variants: {
+      today: {
+        false: {},
+        true: { color: "accent.default", fontWeight: 800 },
+      },
+    },
+  }),
+  day: cva({
+    base: {
+      alignItems: "center",
+      display: "flex",
+      flexDirection: "column",
+      gap: "2px",
+    },
+    // Days already gone this week stay, faint, so the weeks keep their
+    // shape.
+    variants: { past: { false: {}, true: { opacity: 0.4 } } },
+  }),
+  grid: cva({
+    base: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)" },
+    variants: {
+      roomy: { false: { rowGap: "8px" }, true: { rowGap: "16px" } },
+    },
+  }),
+  root: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    height: "100%",
+    justifyContent: "center",
+  }),
+  weekdays: css({
+    display: "grid",
+    gridTemplateColumns: "repeat(7, 1fr)",
+    textAlign: "center",
+    textStyle: "caption2",
+  }),
+};
+
+// This week and the next, seven across from the week start as the
+// calendar lays them. Today is its accent date among them, as in the
+// calendar; its time is for the other kinds.
 export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
+  const roomy = useContext(WidgetSizeContext).height >= TWO_WEEKS_ROOMY;
+  const todayTime = entry.today.date.getTime();
   return (
-    <div className={week.root}>
-      <div className={week.today}>
-        <TodayBlock day={entry.today} />
-      </div>
-      <span aria-hidden="true" className={week.rule} />
-      <ol className={`${list} ${week.days}`}>
-        {entry.upcoming.slice(1).map((day) => (
-          <li className={upcoming.day} key={day.date.getTime()}>
-            <SpokenDay day={day} />
-            <span
-              aria-hidden="true"
-              className={`${upcoming.weekday} ${toneText({ tone: day.tone })}`}
-            >
-              {day.weekday}
-            </span>
-            <span aria-hidden="true" className={week.date}>
-              {day.date.getDate()}
-            </span>
-            <DayMark day={day} size={24} />
-          </li>
+    <div className={twoWeeks.root}>
+      <div aria-hidden="true" className={twoWeeks.weekdays}>
+        {entry.month.weekdays.map((weekday) => (
+          <span
+            className={toneText({ tone: weekday.tone })}
+            key={weekday.label}
+          >
+            {weekday.label}
+          </span>
         ))}
+      </div>
+      <ol className={`${list} ${twoWeeks.grid({ roomy })}`}>
+        {entry.twoWeeks.map((shown) => {
+          const time = shown.date.getTime();
+          return (
+            <li className={twoWeeks.day({ past: time < todayTime })} key={time}>
+              <SpokenDay day={shown} />
+              <span
+                aria-hidden="true"
+                className={`${twoWeeks.date({ today: time === todayTime })} ${dateTone(shown, todayTime)}`}
+              >
+                {shown.date.getDate()}
+              </span>
+              <DayMark day={shown} size={roomy ? 32 : 28} />
+            </li>
+          );
+        })}
       </ol>
     </div>
   );
@@ -419,7 +483,7 @@ export function CalendarMedium({ entry }: { entry: WidgetEntry }) {
             <DayMark day={day} size={20} />
             <span className={agenda.text}>
               <span className={agenda.label}>{relativeDay(day, index)}</span>
-              <Headline className={agenda.time} day={day} />
+              <Change className={agenda.time} day={day} />
             </span>
           </li>
         ))}
@@ -429,8 +493,6 @@ export function CalendarMedium({ entry }: { entry: WidgetEntry }) {
 }
 
 const month = {
-  // A day with nothing entered stays empty, keeping the rows even.
-  blank: css({ height: "20px" }),
   cell: css({
     alignItems: "center",
     display: "flex",
@@ -478,15 +540,22 @@ const month = {
   }),
 };
 
+// Where the month has room, as on Android's 4×4, its marks grow.
+const MONTH_ROOMY = 360;
+
 // The month with every day's mark, and today's time over it.
 export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
+  const markSize =
+    useContext(WidgetSizeContext).height >= MONTH_ROOMY ? 24 : 20;
   const { first, days, weekdays } = entry.month;
   const todayTime = entry.today.date.getTime();
   return (
     <div className={month.root}>
       <div className={month.header}>
         <span className={month.title}>{first.getMonth() + MONTH_NUMBER}月</span>
-        <span className={month.summary}>今日 {headline(entry.today)}</span>
+        {entry.today.change && (
+          <span className={month.summary}>今日 {entry.today.change}</span>
+        )}
       </div>
       <div aria-hidden="true" className={month.weekdays}>
         {weekdays.map((day) => (
@@ -514,9 +583,9 @@ export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
                   {day.date.getDate()}
                 </span>
                 {day.shift ? (
-                  <DayMark day={day} size={20} />
+                  <DayMark day={day} size={markSize} />
                 ) : (
-                  <span className={month.blank} />
+                  <span style={{ height: markSize }} />
                 )}
               </>
             )}
@@ -529,6 +598,10 @@ export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
 
 // ── 今日の詳細 ───────────────────────────────────────────────────────────
 
+// Where there is room, as on Android's 2×2 and 4×2, the memo gets more
+// lines; 一緒に働く人 keep to the foot either way.
+const DETAIL_ROOMY = 150;
+
 const detail = {
   headline: css({
     fontVariantNumeric: "tabular-nums",
@@ -540,15 +613,39 @@ const detail = {
     color: "text.secondary",
     display: "flex",
     gap: "4px",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
+    minWidth: 0,
     textStyle: "footnote",
+  }),
+  // The names, the longest way that fits the line.
+  names: css({
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+    position: "relative",
+    textOverflow: "ellipsis",
     whiteSpace: "nowrap",
+  }),
+  // Every way of writing the names, laid out unseen to be measured.
+  namesProbe: css({
+    "& > span": { display: "block", width: "max-content" },
+    left: 0,
+    position: "absolute",
+    top: 0,
+    visibility: "hidden",
   }),
   note: cva({
     base: { margin: 0, textStyle: "footnote" },
-    variants: { lines: { 2: { lineClamp: 2 }, 3: { lineClamp: 3 } } },
+    variants: {
+      lines: {
+        2: { lineClamp: 2 },
+        3: { lineClamp: 3 },
+        4: { lineClamp: 4 },
+        5: { lineClamp: 5 },
+      },
+    },
   }),
+  // In the small one, 一緒に働く人 sit at the foot.
+  pinned: css({ marginTop: "auto" }),
   root: css({
     display: "flex",
     flexDirection: "column",
@@ -571,15 +668,74 @@ const detail = {
   wide: css({ display: "flex", gap: "16px", height: "100%" }),
 };
 
+// The ways to write 一緒に働く人, longest first: everyone, then fewer
+// names with ほか and how many more, then the count alone.
+function memberLines(names: string[]) {
+  const shortened = Array.from(
+    { length: names.length - 1 },
+    (_, index) => names.length - 1 - index
+  ).map(
+    (kept) => `${names.slice(0, kept).join("・")} ほか${names.length - kept}人`
+  );
+  return [names.join("・"), ...shortened, `${names.length}人`];
+}
+
+// The longest of those that fits the line, as SwiftUI's ViewThatFits
+// picks; the count alone, cut short, if even that does not.
+function MemberNames({ names }: { names: string[] }) {
+  const lines = memberLines(names);
+  const box = useRef<HTMLSpanElement>(null);
+  const probes = useRef<(HTMLSpanElement | null)[]>([]);
+  const [shown, setShown] = useState(0);
+  // A widget's size is fixed, so the names are measured once; a new set
+  // of people comes in as a new MemberNames (keyed by them).
+  const last = lines.length - 1;
+  useLayoutEffect(() => {
+    const room = box.current?.clientWidth ?? 0;
+    const fits = probes.current.findIndex(
+      (probe) => probe !== null && probe.offsetWidth <= room
+    );
+    setShown(fits === -1 ? last : fits);
+  }, [last]);
+  return (
+    <span aria-hidden="true" className={detail.names} ref={box}>
+      {lines[shown]}
+      <span aria-hidden="true" className={detail.namesProbe}>
+        {lines.map((line, index) => (
+          <span
+            key={line}
+            ref={(probe) => {
+              probes.current[index] = probe;
+            }}
+          >
+            {line}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
 // The memo and 一緒に働く人 of a day, as far as it has them.
-function DayExtras({ day, lines }: { day: WidgetDay; lines: 2 | 3 }) {
+function DayExtras({
+  day,
+  lines,
+  pinMembers = false,
+}: {
+  day: WidgetDay;
+  lines: 2 | 3 | 4 | 5;
+  pinMembers?: boolean;
+}) {
   return (
     <>
       {day.note && <p className={detail.note({ lines })}>{day.note}</p>}
       {day.members.length > 0 && (
-        <span className={detail.members}>
-          <Users aria-label="一緒に働く人" size={14} />
-          {day.members.join("・")}
+        <span
+          className={`${detail.members} ${pinMembers ? detail.pinned : ""}`}
+        >
+          <span className={srOnly}>一緒に働く人 {day.members.join("、")}</span>
+          <Users aria-hidden="true" size={14} />
+          <MemberNames key={day.members.join("・")} names={day.members} />
         </span>
       )}
     </>
@@ -588,6 +744,7 @@ function DayExtras({ day, lines }: { day: WidgetDay; lines: 2 | 3 }) {
 
 // Today's time with its memo and 一緒に働く人.
 export function DetailSmall({ entry }: { entry: WidgetEntry }) {
+  const roomy = useContext(WidgetSizeContext).height >= DETAIL_ROOMY;
   const day = entry.today;
   return (
     <div className={detail.root}>
@@ -595,16 +752,17 @@ export function DetailSmall({ entry }: { entry: WidgetEntry }) {
         <span className={today.date}>
           {monthDay(day.date)}({day.weekday})
         </span>
-        <DayMark day={day} size={28} />
+        <DayMark day={day} size={roomy ? 32 : 28} />
       </div>
-      <Headline className={detail.headline} day={day} />
-      <DayExtras day={day} lines={2} />
+      <Change className={detail.headline} day={day} />
+      <DayExtras day={day} lines={roomy ? 4 : 2} pinMembers />
     </div>
   );
 }
 
 // Today large on the left, its memo and 一緒に働く人 beside.
 export function DetailMedium({ entry }: { entry: WidgetEntry }) {
+  const roomy = useContext(WidgetSizeContext).height >= DETAIL_ROOMY;
   const day = entry.today;
   return (
     <div className={detail.wide}>
@@ -613,7 +771,7 @@ export function DetailMedium({ entry }: { entry: WidgetEntry }) {
       </div>
       <span aria-hidden="true" className={week.rule} />
       <div className={detail.side}>
-        <DayExtras day={day} lines={3} />
+        <DayExtras day={day} lines={roomy ? 5 : 3} />
       </div>
     </div>
   );
@@ -633,20 +791,36 @@ const circular = {
     height: "100%",
     justifyContent: "center",
   }),
-  start: css({
-    fontVariantNumeric: "tabular-nums",
-    fontWeight: 600,
-    textStyle: "caption2",
-  }),
+  word: css({ fontWeight: 600, textStyle: "caption2" }),
 };
 
-// Today's mark and when it starts, in the round one.
+// 早出 and 残業 alone, all a round face this small has room to say.
+function movedWord(day: WidgetDay) {
+  if (day.early && day.late) {
+    return "早出・残業";
+  }
+  if (day.early) {
+    return "早出";
+  }
+  return day.late ? "残業" : undefined;
+}
+
+// Today's mark in the round one, with 早出 or 残業 under it on such a day.
 export function TodayCircular({ entry }: { entry: WidgetEntry }) {
   const day = entry.today;
+  const word = day.shift ? movedWord(day) : "なし";
   return (
     <div className={circular.root}>
-      <DayMark day={day} size={28} />
-      <span className={circular.start}>{day.start ?? day.name ?? "なし"}</span>
+      <span className={srOnly}>
+        {day.name ?? NOTHING}
+        {day.time ? ` ${day.time}` : ""}
+      </span>
+      <DayMark day={day} size={word ? 28 : 36} />
+      {word && (
+        <span aria-hidden="true" className={circular.word}>
+          {word}
+        </span>
+      )}
     </div>
   );
 }
@@ -680,7 +854,7 @@ export function UpcomingRectangular({ entry }: { entry: WidgetEntry }) {
         <li className={rectangular.line} key={day.date.getTime()}>
           <span className={rectangular.label}>{relativeDay(day, index)}</span>
           <DayMark day={day} size={16} />
-          <Headline className={rectangular.time} day={day} />
+          <Change className={rectangular.time} day={day} />
         </li>
       ))}
     </ol>
@@ -698,15 +872,17 @@ const inline = css({
   whiteSpace: "nowrap",
 });
 
-const inlineText = css({ fontWeight: 400 });
-
-// One line over the clock: today's mark and time.
+// One line over the clock: today's mark and name, and any change to its
+// hours. A line of text, it names the shift where the others let the
+// mark say it.
 export function TodayInline({ entry }: { entry: WidgetEntry }) {
   const day = entry.today;
+  const words = [day.name ?? NOTHING, day.change].filter(Boolean).join(" ");
   return (
     <div className={inline}>
       <DayMark day={day} size={14} />
-      <Headline className={inlineText} day={day} />
+      {words}
+      <span className={srOnly}>{day.time}</span>
     </div>
   );
 }

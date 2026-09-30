@@ -36,6 +36,7 @@ import {
 import type { MotionValue } from "motion/react";
 import {
   createContext,
+  Fragment,
   useContext,
   useEffect,
   useLayoutEffect,
@@ -270,14 +271,22 @@ const screenScrollStyle = cva({
     flex: 1,
     flexDirection: "column",
     gap: SCREEN_SCROLL_GAP,
+    // It spans the phone from edge to edge, its parts kept off the sides
+    // by its padding, so a row that scrolls sideways, like 人ごと's
+    // people, can run out to the edges rather than be cut off short of
+    // them.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
     minHeight: 0,
     overflowY: "auto",
-    padding: "8px 0 0",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "8px",
   },
   variants: {
     // Beside a rail on its left, like the group hub's list of groups: it
     // takes the rest of the width and runs to the right edge.
-    beside: { true: { minWidth: 0, paddingRight: 0 } },
+    beside: { true: { marginLeft: 0, minWidth: 0, paddingLeft: 0 } },
   },
 });
 
@@ -916,6 +925,24 @@ export function List({
   return <div className={cx(listStyle, className)}>{children}</div>;
 }
 
+// A quiet line inside a list, where its rows go on as something else, as
+// where the patterns' buttons go on to their next page. Not a row, so the
+// row after it draws no line of its own.
+const listDividerStyle = css({
+  borderTop: "1px solid token(colors.separator)",
+  color: "text.tertiary",
+  padding: "12px 16px 4px",
+  textStyle: "caption",
+});
+
+export function ListDivider({ children }: { children: ReactNode }) {
+  return (
+    <div className={listDividerStyle} role="separator">
+      {children}
+    </div>
+  );
+}
+
 const listRowRoot = cva({
   base: {
     // A line between rows, not above the first: only a row that follows
@@ -1365,6 +1392,7 @@ export function ChoiceGrid<Value extends string>({
   onValueChange,
   className,
   labelClassName = srOnly,
+  disabled,
   ref,
   children,
 }: {
@@ -1374,12 +1402,14 @@ export function ChoiceGrid<Value extends string>({
   onValueChange: (value: Value) => void;
   className?: string;
   labelClassName?: string;
+  disabled?: boolean;
   ref?: Ref<HTMLDivElement>;
   children: ReactNode;
 }) {
   return (
     <RadioGroup.Root
       className={className}
+      disabled={disabled}
       ref={ref}
       onValueChange={(details) => {
         if (details.value !== null) {
@@ -2000,6 +2030,7 @@ export function SortableList<Item extends { id: string }>({
   label,
   onChange,
   children,
+  divider,
 }: {
   items: Item[];
   // What the handle and the announcements call the row.
@@ -2007,6 +2038,8 @@ export function SortableList<Item extends { id: string }>({
   onChange: (items: Item[]) => void;
   // The row's content, before the handle.
   children: (item: Item) => ReactNode;
+  // A ListDivider to go before the row at this place, if any.
+  divider?: (index: number) => ReactNode;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -2050,10 +2083,13 @@ export function SortableList<Item extends { id: string }>({
     >
       <SortableContext items={items} strategy={verticalListSortingStrategy}>
         <div className={listStyle}>
-          {items.map((item) => (
-            <SortableRow id={item.id} key={item.id} label={label(item)}>
-              {children(item)}
-            </SortableRow>
+          {items.map((item, index) => (
+            <Fragment key={item.id}>
+              {divider?.(index)}
+              <SortableRow id={item.id} label={label(item)}>
+                {children(item)}
+              </SortableRow>
+            </Fragment>
           ))}
         </div>
       </SortableContext>

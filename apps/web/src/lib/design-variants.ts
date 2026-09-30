@@ -22,6 +22,13 @@ export const designVariantOptions = {
     ],
     label: "一緒に働く人",
   },
+  patternSample: {
+    choices: [
+      { label: "4個", value: "few" },
+      { label: "13個", value: "many" },
+    ],
+    label: "パターン",
+  },
   platform: {
     choices: [
       { label: "iPhone", value: "ios" },

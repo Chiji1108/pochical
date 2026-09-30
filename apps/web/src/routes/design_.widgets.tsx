@@ -66,6 +66,17 @@ const sampleSchedule = {
   },
 };
 
+// Today with a long memo and six people, to see how both give way.
+const crowdedSchedule = {
+  ...sampleSchedule,
+  [dateKey(designToday)]: {
+    end: "20:00",
+    members: ["田中", "山本", "佐藤", "鈴木", "高橋", "伊藤"],
+    note: "新人さん同行。17時から棚卸しの打ち合わせ。帰りに備品の発注を確認して、明日の申し送りに書いておく",
+    shift: "day" as const,
+  },
+};
+
 type Size = "small" | "medium" | "large";
 type WidgetView = ComponentType<{ entry: WidgetEntry }>;
 
@@ -76,7 +87,8 @@ const kinds: {
   sizes: { size: Size; View: WidgetView }[];
 }[] = [
   {
-    description: "今日と、この先の数日。いちばん置かれる想定の基本の形です。",
+    description:
+      "今日と、この先の日。小は続く3日、中は今週と来週の2週間を曜日の列に揃えて。",
     name: "これから",
     sizes: [
       { View: UpcomingSmall, size: "small" },
@@ -94,7 +106,7 @@ const kinds: {
     ],
   },
   {
-    description: "今日の時間と、メモ、一緒に働く人。",
+    description: "今日のマークと早出・残業、メモ、一緒に働く人。",
     name: "今日の詳細",
     sizes: [
       { View: DetailSmall, size: "small" },
@@ -177,12 +189,15 @@ function WidgetsPage() {
   const week = useSettings((state) => state.device.week);
   const entry = widgetEntry(sampleSchedule, week, designToday);
   const empty = widgetEntry({}, week, designToday);
+  const crowded = widgetEntry(crowdedSchedule, week, designToday);
+  const detailSizes =
+    kinds.find(({ name }) => name === "今日の詳細")?.sizes ?? [];
   return (
     <DesignPage style={pageStyle(theme)}>
       <DesignToolbar back="documents" />
       <DesignIntro eyebrow="POCHICAL / WIDGETS" title="ウィジェット">
         iPhone（390×844pt）と Pixel 9a
-        での実寸です。マークがシフトを表すので、横の文字は時間です。名前は時間のないシフトにだけ出します。
+        での実寸です。シフトはマークで表し、時間は毎日同じなので出しません。早出・残業の日だけ、変わった時間を出します。
       </DesignIntro>
       <DesignProviders>
         <div className={frameSections}>
@@ -260,6 +275,29 @@ function WidgetsPage() {
                   />
                 ))
               )}
+            </div>
+          </FrameSection>
+
+          <FrameSection
+            description="長いメモは行数で切り、一緒に働く人は入るだけの名前と「ほか◯人」に。"
+            title="メモが長く、一緒に働く人が多いとき"
+          >
+            <div className={rows}>
+              <WidgetRow
+                appearance="light"
+                entry={crowded}
+                families={iosFamilies}
+                label="iPhone"
+                widgets={detailSizes}
+              />
+              <WidgetRow
+                appearance="light"
+                entry={crowded}
+                families={androidFamilies}
+                label="Android"
+                wallpaperHue={wallpaperSamples[0].hue}
+                widgets={detailSizes}
+              />
             </div>
           </FrameSection>
 

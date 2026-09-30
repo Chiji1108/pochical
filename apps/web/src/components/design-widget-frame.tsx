@@ -4,7 +4,10 @@ import { css, cva } from "styled-system/css";
 import type { ColorScheme } from "../lib/design-tokens";
 import { wallpaperOf, widgetColors } from "../lib/material-you";
 import { ColorSchemeContext, useThemeStyle } from "./design-theme";
-import { WidgetRenderingModeContext } from "./design-widgets";
+import {
+  WidgetRenderingModeContext,
+  WidgetSizeContext,
+} from "./design-widgets";
 
 // Stand-ins for where the widgets are shown: the home screen's wallpaper,
 // the widget's own frame at its size, and the looks the system gives it.
@@ -186,7 +189,11 @@ function ThemedFrame({
     <div className={frame({ look: lookOf(appearance) })} style={style}>
       <div className={content({ rendering })}>
         <WidgetRenderingModeContext value={rendering}>
-          {children}
+          <WidgetSizeContext
+            value={{ height: height - 2 * margin, width: width - 2 * margin }}
+          >
+            {children}
+          </WidgetSizeContext>
         </WidgetRenderingModeContext>
       </div>
     </div>

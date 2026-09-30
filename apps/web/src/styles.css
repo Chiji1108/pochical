@@ -284,10 +284,18 @@
     font-weight: 700;
   }
   .camera-island {
+    position: absolute;
+    left: 50%;
     width: 77px;
     height: 23px;
     background: #242724;
     border-radius: 20px;
+    transform: translateX(-50%);
+  }
+  .status-icons {
+    display: flex;
+    gap: 3px;
+    align-items: center;
   }
   .phone-content {
     padding-top: 22px;
