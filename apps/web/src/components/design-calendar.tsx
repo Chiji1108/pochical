@@ -362,8 +362,8 @@ export function DesignCalendar({
   // For the flow diagrams: a tab, and a settings page, to open on.
   initialTab?: Tab;
   initialSettingsPage?: SettingsPage;
-  // And the group tab's page: its hub, or the shift table.
-  initialGroupPage?: "hub" | "shifts";
+  // And the group tab's page: its hub, the shift table or the group chat.
+  initialGroupPage?: "hub" | "shifts" | "chat";
   // A group's invitation link was opened: ask about joining over the
   // calendar.
   pendingInvite?: boolean;

@@ -817,8 +817,9 @@ export function DesignGroup({
   profile: Profile;
   // The group to open on, like one just joined from a link.
   initialGroupId?: string;
-  // Its hub, or straight on its shift table, as the top page shows it.
-  initialPage?: "hub" | "shifts";
+  // Its hub, or straight on its shift table or its group chat, as the top
+  // page shows them.
+  initialPage?: "hub" | "shifts" | "chat";
   // What the QR page finds, as 比べる案 sets it.
   scanResult?: ScanResult;
 
@@ -831,9 +832,12 @@ export function DesignGroup({
   const setChats = useUser((state) => state.setChats);
   // The table layout each group was last seen in.
   const [layouts, setLayouts] = useState<Record<string, Layout>>({});
-  const [page, setPage] = useState<Page>(
-    initialPage === "shifts" ? { name: "shifts" } : { name: "hub" }
-  );
+  const [page, setPage] = useState<Page>(() => {
+    if (initialPage === "chat") {
+      return { chatId: groupChat, name: "chat" };
+    }
+    return { name: initialPage };
+  });
 
   // The member whose profile sheet is open.
   const [profileOf, setProfileOf] = useState<Member>();

@@ -215,14 +215,12 @@ const features: {
       <>
         シフト表から日付を持って、チャットへ。
         <br />
-        家族、友だち、同期。グループごとに
-        <br />
-        名前と写真を変えられます。
+        「この日どう？」が、そのまま話せます。
       </>
     ),
     id: "group",
     label: "GROUP",
-    screen: <FeatureScreen tab="group" />,
+    screen: <GroupGallery />,
     title: (
       <>
         グループで、
@@ -323,13 +321,7 @@ function FeatureScreen({
   tab: Tab;
   groupPage?: "hub" | "shifts";
 }) {
-  const [person] = useState(() =>
-    createUserStore({
-      coworkers: sampleCoworkers,
-      groups: sampleGroups(),
-      schedule: initialDesignSchedule(),
-    })
-  );
+  const person = useSamplePerson();
   return (
     <div aria-hidden="true" className={feature.screen} inert>
       <UserStoreContext value={person}>
@@ -344,9 +336,9 @@ function FeatureScreen({
   );
 }
 
-// A few テーマ side by side, each the real calendar drawn small, stepping
-// down and in front of the one before.
-const galleryThemes: PresetId[] = ["sakura", "soda", "tsukiyo"];
+// A few real screens drawn small, side by side, each stepping down and in
+// front of the one before. Only screens that do not measure themselves
+// scale well: the calendar, the group hub and chat.
 const gallery = {
   inner: css({
     left: 0,
@@ -368,39 +360,97 @@ const gallery = {
   root: css({
     "--gallery-drop": "36px",
     "--gallery-scale": "0.44",
+    // `--gallery-last` is the last phone's index.
     "--gallery-step":
-      "calc((min(100vw - 32px, 520px) - 390px * var(--gallery-scale)) / 2)",
+      "calc((min(100vw - 32px, 520px) - 390px * var(--gallery-scale)) / var(--gallery-last))",
     [WIDE]: { "--gallery-drop": "48px", "--gallery-scale": "0.6" },
     flexShrink: 0,
-    height: "calc(844px * var(--gallery-scale) + 2 * var(--gallery-drop))",
+    height:
+      "calc(844px * var(--gallery-scale) + var(--gallery-last) * var(--gallery-drop))",
     pointerEvents: "none",
     position: "relative",
-    width: "calc(390px * var(--gallery-scale) + 2 * var(--gallery-step))",
+    width:
+      "calc(390px * var(--gallery-scale) + var(--gallery-last) * var(--gallery-step))",
   }),
 };
 
-function ThemeGallery() {
-  const [person] = useState(() =>
-    createUserStore({ schedule: initialDesignSchedule() })
-  );
+function PhoneGallery({
+  phones,
+}: {
+  phones: { key: string; screen: ReactNode }[];
+}) {
   return (
-    <div aria-hidden="true" className={gallery.root} inert>
-      <UserStoreContext value={person}>
-        {galleryThemes.map((id, index) => (
-          <div
-            className={gallery.phone}
-            key={id}
-            style={{ "--index": index } as CSSProperties}
-          >
-            <div className={gallery.inner}>
-              <PresetContexts id={id}>
-                <DesignCalendar initialEditing={false} variants={variants} />
-              </PresetContexts>
-            </div>
-          </div>
-        ))}
-      </UserStoreContext>
+    <div
+      aria-hidden="true"
+      className={gallery.root}
+      inert
+      style={{ "--gallery-last": phones.length - 1 } as CSSProperties}
+    >
+      {phones.map(({ key, screen }, index) => (
+        <div
+          className={gallery.phone}
+          key={key}
+          style={{ "--index": index } as CSSProperties}
+        >
+          <div className={gallery.inner}>{screen}</div>
+        </div>
+      ))}
     </div>
+  );
+}
+
+// The sample person, for a feature's screens to share.
+function useSamplePerson() {
+  const [person] = useState(() =>
+    createUserStore({
+      coworkers: sampleCoworkers,
+      groups: sampleGroups(),
+      schedule: initialDesignSchedule(),
+    })
+  );
+  return person;
+}
+
+// The family's hub, and its chat, where a day off was shared.
+function GroupGallery() {
+  const person = useSamplePerson();
+  return (
+    <UserStoreContext value={person}>
+      <PhoneGallery
+        phones={(["hub", "chat"] as const).map((groupPage) => ({
+          key: groupPage,
+          screen: (
+            <DesignCalendar
+              initialEditing={false}
+              initialGroupPage={groupPage}
+              initialTab="group"
+              variants={variants}
+            />
+          ),
+        }))}
+      />
+    </UserStoreContext>
+  );
+}
+
+// The calendar in a few テーマ, light and dark.
+const galleryThemes: PresetId[] = ["sakura", "soda", "tsukiyo"];
+
+function ThemeGallery() {
+  const person = useSamplePerson();
+  return (
+    <UserStoreContext value={person}>
+      <PhoneGallery
+        phones={galleryThemes.map((id) => ({
+          key: id,
+          screen: (
+            <PresetContexts id={id}>
+              <DesignCalendar initialEditing={false} variants={variants} />
+            </PresetContexts>
+          ),
+        }))}
+      />
+    </UserStoreContext>
   );
 }
 
