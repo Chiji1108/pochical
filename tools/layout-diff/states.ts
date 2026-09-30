@@ -36,6 +36,28 @@ const toGroupEdit = async (page: Page) => {
   await tap(page, /編集$/u);
 };
 
+// A plain picture of a given size, as a photo chosen from the phone.
+const pictureFile = (name: string, width: number, height: number) => ({
+  buffer: Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="#9cc"/></svg>`
+  ),
+  mimeType: "image/svg+xml",
+  name,
+});
+
+// Photos chosen in the group chat, held above the composer.
+const choosePhotos = async (page: Page) => {
+  await tap(page, "グループ");
+  await tap(page, /^全体チャット/u);
+  await page
+    .locator("input[type=file][multiple]")
+    .setInputFiles([
+      pictureFile("tall.svg", 600, 800),
+      pictureFile("wide.svg", 1200, 600),
+    ]);
+  await page.getByRole("list", { name: "送る写真" }).waitFor();
+};
+
 const toGroupMonth = async (page: Page) => {
   await tap(page, "グループ");
   await tap(page, "月で見る");
@@ -445,6 +467,49 @@ export const states: State[] = [
       await tap(page, /^全体チャット/u);
       await tap(page, /のメッセージ：/u);
       await tap(page, "返信");
+    },
+  },
+  {
+    // A photo in the chat, long pressed: its reactions and menu.
+    name: "group/chat-photo-actions",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^全体チャット/u);
+      await page
+        .getByRole("button", { name: /が送った写真/u })
+        .first()
+        .click({ button: "right" });
+      await page
+        .getByRole("dialog", { name: "リアクションとメニュー" })
+        .waitFor();
+    },
+  },
+  {
+    name: "group/chat-photos",
+    path: demo("scheduleSample=filled"),
+    steps: choosePhotos,
+  },
+  {
+    // Sent: each photo a line of its own.
+    name: "group/chat-photos-sent",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await choosePhotos(page);
+      await tap(page, "送る");
+    },
+  },
+  {
+    // A photo whose upload failed: the red ! and its note.
+    name: "group/chat-photo-failed",
+    path: demo("photoSend=fails&scheduleSample=filled"),
+    steps: async (page) => {
+      await choosePhotos(page);
+      await tap(page, "送る");
+      await page
+        .getByRole("button", { name: /^送れませんでした/u })
+        .first()
+        .waitFor();
     },
   },
   {
