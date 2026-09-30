@@ -21,6 +21,7 @@ import {
 } from "../components/design-providers";
 import { pageStyle } from "../components/design-theme";
 import { VariantPanel } from "../components/design-variant-panel";
+import { presetList } from "../lib/design-patterns";
 import {
   createUserStore,
   sampleCoworkers,
@@ -40,7 +41,7 @@ export const Route = createFileRoute("/demo")({
 
 // The sample patterns: a few, or more than ポチポチ入力 shows on one page.
 function samplePatterns(count: DesignVariants["patternSample"]) {
-  return patternSets[count === "many" ? 13 : 4];
+  return presetList(patternSets[count === "many" ? 13 : 4]);
 }
 
 // A sample person, starting over with the sample or with nothing entered.
@@ -53,7 +54,7 @@ function makePerson(
   return createUserStore({
     coworkers: members === "some" ? sampleCoworkers : [],
     groups: groups === "some" ? sampleGroups() : [],
-    patternKeys: samplePatterns(patterns),
+    patterns: samplePatterns(patterns),
     schedule: sample === "empty" ? {} : initialDesignSchedule(),
   });
 }
@@ -147,7 +148,7 @@ function DemoPage() {
               }
               if (key === "patternSample") {
                 person.setState({
-                  patternKeys: samplePatterns(
+                  patterns: samplePatterns(
                     value as DesignVariants["patternSample"]
                   ),
                 });

@@ -2,10 +2,10 @@ import { Plus } from "lucide-react";
 import { Fragment, useContext, useState } from "react";
 import { css } from "styled-system/css";
 
-import { PATTERNS_PER_PAGE, patterns } from "../lib/design-patterns";
-import type { Shift } from "../lib/design-patterns";
+import { PATTERNS_PER_PAGE, presetList } from "../lib/design-patterns";
+import type { Pattern, PresetShift } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
-import { nextDayShifts } from "./design-calendar";
+import { isRepeating } from "./design-calendar";
 import { LookEditorPage } from "./design-look-editor";
 import type { LookField } from "./design-look-editor";
 import { ConfirmDialog } from "./design-sheet";
@@ -31,7 +31,6 @@ import {
 } from "./design-ui";
 import {
   guessLook,
-  lookOf,
   MarkGlyph,
   nextColor,
   ShiftMarkStyleContext,
@@ -53,17 +52,20 @@ type PatternDraft = Look & {
 
 const leadingZeroPattern = /^0/;
 
-function draftOf(key: Shift): PatternDraft {
-  const { time } = patterns[key];
+function draftOf({ time, ...pattern }: Pattern): PatternDraft {
   return {
-    ...lookOf(key),
+    ...pattern,
     allDay: !time,
-    countsAsOff: key === "off" || key === "paid",
     end: time?.[1] ?? "18:00",
-    id: key,
-    name: patterns[key].label,
-    nextDay: nextDayShifts[key],
     start: time?.[0] ?? "09:00",
+  };
+}
+
+function patternOf({ allDay, start, end, ...draft }: PatternDraft): Pattern {
+  return {
+    ...draft,
+    name: draft.name.trim(),
+    time: allDay ? undefined : [start, end],
   };
 }
 
@@ -108,51 +110,71 @@ function pageDivider(index: number) {
   );
 }
 
-function timeText(draft: PatternDraft) {
-  if (draft.allDay) {
+function timeText({ time }: Pattern) {
+  if (!time) {
     return "時間なし";
   }
-  const start = draft.start.replace(leadingZeroPattern, "");
-  const end = draft.end.replace(leadingZeroPattern, "");
-  return `${start} – ${draft.end <= draft.start ? "翌" : ""}${end}`;
+  const start = time[0].replace(leadingZeroPattern, "");
+  const end = time[1].replace(leadingZeroPattern, "");
+  return `${start} – ${time[1] <= time[0] ? "翌" : ""}${end}`;
 }
 
-export function PatternsPage({
-  patternKeys,
-  onBack,
-}: {
-  patternKeys: Shift[];
-  onBack: () => void;
-}) {
+// The person's patterns: what ポチポチ入力, the calendar and their groups
+// show. A change here is theirs at once.
+export function PatternsPage({ onBack }: { onBack: () => void }) {
   const style = useContext(ShiftMarkStyleContext);
-  const [items, setItems] = useState(() => patternKeys.map(draftOf));
+  const items = useUser((state) => state.patterns);
+  const setItems = useUser((state) => state.setPatterns);
+  const schedule = useUser((state) => state.schedule);
+  const setSchedule = useUser((state) => state.setSchedule);
+  const rules = useUser((state) => state.rules);
   const [editing, setEditing] = useState<PatternDraft>();
   const [isNew, setIsNew] = useState(false);
   const [view, setView] = useState<"list" | "sort" | "add">("list");
-  const schedule = useUser((state) => state.schedule);
-  // The days a pattern is entered on, which would go with it. This page
-  // only shows a sample, so the calendar itself keeps them.
+  // The days a pattern is entered on, which go with it.
   const daysOf = (id: string) =>
     Object.values(schedule).filter((entry) => entry?.shift === id).length;
+  // The repeating order in use still needs it.
+  const inOrder = (id: string) =>
+    isRepeating(rules) && (rules.at(-1)?.sequence.includes(id) ?? false);
+  // Gone with its days, and from any pattern that followed on with it.
+  const remove = (id: string) => {
+    setItems((previous) =>
+      previous
+        .filter((item) => item.id !== id)
+        .map((item) =>
+          item.nextDay === id ? { ...item, nextDay: undefined } : item
+        )
+    );
+    setSchedule((previous) =>
+      Object.fromEntries(
+        Object.entries(previous).filter(([, entry]) => entry?.shift !== id)
+      )
+    );
+  };
 
   if (editing) {
     return (
       <PatternEditor
         initial={editing}
         days={daysOf(editing.id)}
+        inOrder={inOrder(editing.id)}
         isNew={isNew}
         onBack={() => {
           setEditing(undefined);
         }}
         onDelete={() => {
-          setItems(items.filter((item) => item.id !== editing.id));
+          remove(editing.id);
           setEditing(undefined);
         }}
         onSave={(draft) => {
-          setItems(
+          const pattern = patternOf(draft);
+          setItems((previous) =>
             isNew
-              ? [...items, draft]
-              : items.map((item) => (item.id === draft.id ? draft : item))
+              ? [...previous, pattern]
+              : previous.map((item) =>
+                  item.id === pattern.id ? pattern : item
+                )
           );
           setEditing(undefined);
         }}
@@ -165,8 +187,8 @@ export function PatternsPage({
     return (
       <AddPatternPage
         items={items}
-        onAdd={(draft) => {
-          setItems([...items, draft]);
+        onAdd={(pattern) => {
+          setItems((previous) => [...previous, pattern]);
           setView("list");
         }}
         onBack={() => {
@@ -181,7 +203,7 @@ export function PatternsPage({
             color: nextColor(items.map((item) => item.color)),
             countsAsOff: false,
             end: "18:00",
-            id: `custom-${items.length}`,
+            id: crypto.randomUUID(),
             name: "",
             start: "09:00",
           });
@@ -234,7 +256,7 @@ export function PatternsPage({
               <ListRow
                 onClick={() => {
                   setIsNew(false);
-                  setEditing(item);
+                  setEditing(draftOf(item));
                 }}
                 label={item.name}
                 value={timeText(item)}
@@ -257,17 +279,17 @@ export function PatternsPage({
           パターンを追加
         </AddButton>
       )}
-      <Note>
-        {sorting
-          ? "つまみを上下に動かして並べ替えます。ポチポチ入力のボタンも、この順に並びます。"
-          : "ここでの変更は、この画面の中だけの見本です。"}
-      </Note>
+      {sorting && (
+        <Note>
+          つまみを上下に動かして並べ替えます。ポチポチ入力のボタンも、この順に並びます。
+        </Note>
+      )}
     </>
   );
 }
 
 // Common patterns to add with one tap, leaving out ones already there.
-const suggestionKeys: Shift[] = [
+const suggestionKeys: PresetShift[] = [
   "early",
   "day",
   "late",
@@ -289,16 +311,16 @@ function AddPatternPage({
   onAdd,
   onCustom,
 }: {
-  items: PatternDraft[];
+  items: Pattern[];
   onBack: () => void;
-  onAdd: (draft: PatternDraft) => void;
+  onAdd: (pattern: Pattern) => void;
   onCustom: () => void;
 }) {
   const style = useContext(ShiftMarkStyleContext);
   const taken = new Set(items.flatMap((item) => [item.id, item.name]));
-  const suggestions = suggestionKeys
-    .filter((key) => !(taken.has(key) || taken.has(patterns[key].label)))
-    .map(draftOf);
+  const suggestions = presetList(suggestionKeys).filter(
+    (preset) => !(taken.has(preset.id) || taken.has(preset.name))
+  );
   return (
     <>
       <PageHeader
@@ -309,17 +331,21 @@ function AddPatternPage({
       {suggestions.length > 0 && (
         <Section title="よく使うパターン">
           <List>
-            {suggestions.map((draft) => (
+            {suggestions.map((preset) => (
               <ListRow
-                key={draft.id}
+                key={preset.id}
                 onClick={() => {
-                  onAdd(draft);
+                  // A 夜勤 brings its 明け only when that is there too.
+                  const follows =
+                    preset.nextDay &&
+                    items.some((item) => item.id === preset.nextDay);
+                  onAdd(follows ? preset : { ...preset, nextDay: undefined });
                 }}
-                label={draft.name}
-                value={timeText(draft)}
+                label={preset.name}
+                value={timeText(preset)}
                 leading={
                   <>
-                    <MarkGlyph look={draft} size={22} style={style} />
+                    <MarkGlyph look={preset} size={22} style={style} />
                   </>
                 }
                 arrow={
@@ -341,6 +367,7 @@ function AddPatternPage({
 function PatternEditor({
   initial,
   days,
+  inOrder,
   isNew,
   others,
   onBack,
@@ -350,8 +377,10 @@ function PatternEditor({
   initial: PatternDraft;
   // How many days use this pattern.
   days: number;
+  // In the repeating order in use, which would break without it.
+  inOrder: boolean;
   isNew: boolean;
-  others: PatternDraft[];
+  others: Pattern[];
   onBack: () => void;
   onSave: (draft: PatternDraft) => void;
   onDelete: () => void;
@@ -445,7 +474,7 @@ function PatternEditor({
         <MarkGlyph look={draft} size={44} style={style} />
         <span className={editor.name}>
           <strong>{draft.name || "名前を入力"}</strong>
-          <small className={editor.time}>{timeText(draft)}</small>
+          <small className={editor.time}>{timeText(patternOf(draft))}</small>
         </span>
       </div>
       <Section title="基本">
@@ -542,7 +571,12 @@ function PatternEditor({
           />
         </List>
       </Section>
-      {!isNew && (
+      {!isNew && inOrder && (
+        <Note>
+          繰り返しの並びに入っているので、削除できません。先に「働き方」で並びを変えてください。
+        </Note>
+      )}
+      {!(isNew || inOrder) && (
         <DestructiveButton
           onClick={() => {
             // Unused, it goes at once; in use, its days go too, so ask.
@@ -584,7 +618,7 @@ function NextDayPicker({
   onChange,
 }: {
   draft: PatternDraft;
-  others: PatternDraft[];
+  others: Pattern[];
   onBack: () => void;
   onChange: (id: string | undefined) => void;
 }) {
