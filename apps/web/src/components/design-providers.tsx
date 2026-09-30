@@ -1,9 +1,15 @@
 import { useEffect } from "react";
 import type { ReactNode } from "react";
 
+import { useDevice } from "../lib/design-device";
 import { useLook, useSettings } from "../lib/design-settings-store";
 import { useDeviceScheme } from "../lib/use-device-scheme";
-import { ColorSchemeContext, presetOf, ThemeContext } from "./design-theme";
+import {
+  ColorSchemeContext,
+  presetOf,
+  ThemeContext,
+  DEVICE_COLORS,
+} from "./design-theme";
 import type { PresetId } from "./design-theme";
 import { WeekSettingsContext } from "./design-week";
 import {
@@ -45,9 +51,16 @@ export function PresetContexts({
 // by /demo and the /design pages alike.
 export function DesignProviders({ children }: { children: ReactNode }) {
   const look = useLook();
-  const { preset, appearance, week, shiftColors } = useSettings(
-    (state) => state.device
-  );
+  const {
+    preset: picked,
+    appearance,
+    week,
+    shiftColors,
+  } = useSettings((state) => state.device);
+  // 端末の色 exists only on Android; elsewhere the app's own stands in.
+  const { platform, wallpaperHue } = useDevice();
+  const preset =
+    picked === DEVICE_COLORS && platform !== "android" ? "pochical" : picked;
   // Saved device settings load once the page has hydrated.
   useEffect(() => {
     void useSettings.persist.rehydrate();
@@ -61,7 +74,7 @@ export function DesignProviders({ children }: { children: ReactNode }) {
   return (
     <WeekSettingsContext value={{ week }}>
       <ColorSchemeContext value={scheme}>
-        <ThemeContext value={{ theme: preset }}>
+        <ThemeContext value={{ theme: preset, wallpaperHue }}>
           <IconWeightContext value={look.fill ? "duotone" : "regular"}>
             <ShiftMarkStyleContext value={look.style}>
               <CellNamesContext

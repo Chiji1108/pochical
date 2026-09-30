@@ -16,9 +16,9 @@ import type { ColorScheme } from "./design-tokens";
 // one on the Pixel 9a the widgets were measured on: its tinted widgets
 // (#daf7f2) are this hue's secondary tone 95 (#dbf7f0).
 export const wallpaperSamples = [
-  { hue: 186, name: "青緑" },
-  { hue: 20, name: "桃" },
-  { hue: 85, name: "山吹" },
+  { hue: 186, id: "teal", name: "青緑" },
+  { hue: 20, id: "peach", name: "桃" },
+  { hue: 85, id: "yamabuki", name: "山吹" },
 ] as const;
 
 // Any chroma does; Tonal Spot sets its own for each palette.
@@ -28,7 +28,8 @@ const SEED_TONE = 50;
 const tone = (palette: { tone: (t: number) => number }, t: number) =>
   hexFromArgb(palette.tone(t));
 
-function palettesOf(hue: number) {
+// The five tonal palettes Android builds from the wallpaper.
+export function palettesOf(hue: number) {
   const scheme = new SchemeTonalSpot(
     Hct.from(hue, SEED_CHROMA, SEED_TONE),
     false,
