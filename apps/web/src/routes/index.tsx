@@ -29,6 +29,7 @@ import {
 } from "../components/shift-mark";
 import type { ShiftMarkStyle } from "../components/shift-mark";
 import { StoreLinks } from "../components/store-links";
+import { WhenNear } from "../components/when-near";
 import { initialDesignSchedule } from "../lib/design-days";
 import {
   createUserStore,
@@ -415,16 +416,18 @@ function FeatureScreen({
 }) {
   const person = useSamplePerson();
   return (
-    <div aria-hidden="true" className={feature.screen} inert>
-      <UserStoreContext value={person}>
-        <DesignCalendar
-          initialEditing={false}
-          initialGroupPage={groupPage}
-          initialTab={tab}
-          variants={variants}
-        />
-      </UserStoreContext>
-    </div>
+    <WhenNear aria-hidden="true" className={feature.screen} inert>
+      <DesignProviders fresh>
+        <UserStoreContext value={person}>
+          <DesignCalendar
+            initialEditing={false}
+            initialGroupPage={groupPage}
+            initialTab={tab}
+            variants={variants}
+          />
+        </UserStoreContext>
+      </DesignProviders>
+    </WhenNear>
   );
 }
 
@@ -472,22 +475,24 @@ function PhoneGallery({
   phones: { key: string; screen: ReactNode }[];
 }) {
   return (
-    <div
+    <WhenNear
       aria-hidden="true"
       className={gallery.root}
       inert
       style={{ "--gallery-last": phones.length - 1 } as CSSProperties}
     >
-      {phones.map(({ key, screen }, index) => (
-        <div
-          className={gallery.phone}
-          key={key}
-          style={{ "--index": index } as CSSProperties}
-        >
-          <div className={gallery.inner}>{screen}</div>
-        </div>
-      ))}
-    </div>
+      <DesignProviders fresh>
+        {phones.map(({ key, screen }, index) => (
+          <div
+            className={gallery.phone}
+            key={key}
+            style={{ "--index": index } as CSSProperties}
+          >
+            <div className={gallery.inner}>{screen}</div>
+          </div>
+        ))}
+      </DesignProviders>
+    </WhenNear>
   );
 }
 
@@ -593,22 +598,22 @@ function ThemeGallery() {
   );
 }
 
+// Each phone brings its own providers inside WhenNear: settings changing
+// above one that is still held would make React draw it afresh, empty.
 function Features() {
   return (
-    <DesignProviders fresh>
-      <ol aria-label="ポチカルでできること" className={feature.list}>
-        {features.map((item) => (
-          <li className={feature.row} key={item.id}>
-            <div className={feature.copy}>
-              <p className={feature.label}>{item.label}</p>
-              <h2 className={feature.title}>{item.title}</h2>
-              <p className={feature.body}>{item.body}</p>
-            </div>
-            {item.screen}
-          </li>
-        ))}
-      </ol>
-    </DesignProviders>
+    <ol aria-label="ポチカルでできること" className={feature.list}>
+      {features.map((item) => (
+        <li className={feature.row} key={item.id}>
+          <div className={feature.copy}>
+            <p className={feature.label}>{item.label}</p>
+            <h2 className={feature.title}>{item.title}</h2>
+            <p className={feature.body}>{item.body}</p>
+          </div>
+          {item.screen}
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -657,39 +662,46 @@ function Closing() {
   );
 }
 
-function Home() {
+// The hero's words over its sky, which ポチッと。 changes. Its own
+// component, so a press redraws only these and not the phones below,
+// which WhenNear may still be holding as the server drew them.
+function HeroCopy() {
   const [skyId, setSkyId] = useState(HERO_SKY);
+  return (
+    <div className={hero.copy}>
+      <Sky id={skyId} />
+      <p className={hero.eyebrow}>シフトカレンダー</p>
+      <h1 className={hero.title}>
+        シフトを、
+        <br />
+        <Pressed
+          onPress={() => {
+            setSkyId((id) => nextSkyId(id, "pochical"));
+          }}
+        >
+          ポチッと。
+        </Pressed>
+      </h1>
+      <p className={hero.description}>
+        勤務を選んで、日付をポチポチ。
+        <br />
+        ひと月ぶんが、すぐ埋まります。
+        <br />
+        家族や友だちとも、そのまま共有。
+      </p>
+      <div className={hero.store}>
+        <StoreLinks />
+        <p className={hero.release}>iPhone・Android 向けに、ただいま準備中。</p>
+      </div>
+    </div>
+  );
+}
+
+function Home() {
   return (
     <main className={page} id="main">
       <section className={hero.root}>
-        <div className={hero.copy}>
-          <Sky id={skyId} />
-          <p className={hero.eyebrow}>シフトカレンダー</p>
-          <h1 className={hero.title}>
-            シフトを、
-            <br />
-            <Pressed
-              onPress={() => {
-                setSkyId((id) => nextSkyId(id, "pochical"));
-              }}
-            >
-              ポチッと。
-            </Pressed>
-          </h1>
-          <p className={hero.description}>
-            勤務を選んで、日付をポチポチ。
-            <br />
-            ひと月ぶんが、すぐ埋まります。
-            <br />
-            家族や友だちとも、そのまま共有。
-          </p>
-          <div className={hero.store}>
-            <StoreLinks />
-            <p className={hero.release}>
-              iPhone・Android 向けに、ただいま準備中。
-            </p>
-          </div>
-        </div>
+        <HeroCopy />
         <HeroDemo />
       </section>
       <Features />
