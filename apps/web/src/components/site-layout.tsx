@@ -56,9 +56,6 @@ export function Page({
 }) {
   return (
     <main className="document-page" id="main">
-      <Link className="back-link" to="/">
-        ← ポチカルについて
-      </Link>
       <header className="page-heading">
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>

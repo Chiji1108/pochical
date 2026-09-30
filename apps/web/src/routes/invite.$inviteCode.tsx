@@ -95,7 +95,7 @@ function Invite() {
         <h2>アプリをまだお持ちでない方へ</h2>
         <StoreLinks />
         <Link className="text-link" to="/">
-          ポチカルについて <ArrowUpRight aria-hidden="true" size={15} />
+          ポチカルについて →
         </Link>
       </div>
     </main>

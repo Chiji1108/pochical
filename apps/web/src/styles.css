@@ -83,6 +83,11 @@
   h3 {
     font-feature-settings: "palt";
     overflow-wrap: anywhere;
+    /* Lines broken between phrases and evened out, so no lone 「ん。」
+       is left on a line of its own. Browsers without phrase breaking
+       fall back to their own; short headings mark theirs with <wbr>. */
+    word-break: auto-phrase;
+    text-wrap: balance;
   }
   .skip-link {
     position: fixed;
@@ -216,10 +221,6 @@
     min-height: 60vh;
     padding: 60px 28px 65px;
     margin: auto;
-  }
-  .back-link {
-    font-size: 11px;
-    color: var(--muted);
   }
   .page-heading {
     padding: 45px 0 46px;
@@ -531,6 +532,7 @@
   }
   .state-page h1 {
     font-size: 30px;
+    word-break: keep-all;
   }
   .state-page p {
     font-size: 13px;
