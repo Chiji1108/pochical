@@ -15,6 +15,7 @@ const outside = new Set([
   "design-page.tsx",
   "design-phone.tsx",
   "design-variant-panel.tsx",
+  "design-widget-frame.tsx",
   "shift-mark.tsx",
 ]);
 // A sheet pictured over the phone follows its screen's corner.

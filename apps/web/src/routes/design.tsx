@@ -44,6 +44,12 @@ const documents = [
     to: "/design/components",
   },
   {
+    description:
+      "ホーム画面とロック画面のウィジェット。サイズごとに、ライト・ダーク・色合い・クリアで。",
+    title: "ウィジェット",
+    to: "/design/widgets",
+  },
+  {
     description: "アプリアイコンと、元になるプードルの絵、サイトの画像。",
     title: "素材",
     to: "/design/assets",
