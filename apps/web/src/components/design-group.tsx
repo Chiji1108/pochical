@@ -4152,14 +4152,21 @@ const people = {
     padding: "0 12px 0 8px",
     textStyle: "subheadline",
   }),
+  // Out to the screen's edges, the first chip in line with the page.
   list: css({
     border: 0,
     display: "flex",
     gap: "8px",
-    margin: "-8px 0 0",
+    marginBottom: 0,
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    marginTop: "-8px",
     minWidth: 0,
     overflowX: "auto",
-    padding: 0,
+    paddingBottom: 0,
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: 0,
     position: "relative",
   }),
 };
@@ -4344,6 +4351,8 @@ function DaySheet({
   );
 }
 
+// What is under the share sheet's heading, 12px apart; the heading keeps
+// its own 16px, as on the other sheets.
 const daySheetStack = css({
   display: "flex",
   flexDirection: "column",
@@ -4380,7 +4389,7 @@ function DaySheetBody({
     .filter((date) => everyoneOff(members, date))
     .slice(0, suggestionCount);
   return (
-    <div className={daySheetStack}>
+    <>
       <DecideHeading
         action="送る"
         disabled={picked.length === 0}
@@ -4390,85 +4399,91 @@ function DaySheetBody({
         onCancel={onClose}
         title="日にちを共有"
       />
-      {suggestions.length > 0 && (
-        <div className={shareDays.suggest}>
-          <span className={shareDays.togetherLabel}>みんな休み</span>
-          {suggestions.map((date) => (
-            <button
-              aria-pressed={isPicked(date)}
-              className={shareDays.suggestion}
-              key={dateKey(date)}
-              onClick={() => {
-                toggle(date);
-              }}
-              type="button"
-            >
-              {date.getMonth() + 1}/{date.getDate()}
-              <small className={smallWeekday}>
-                {weekdayLabels[date.getDay()]}
-              </small>
-            </button>
-          ))}
+      <div className={daySheetStack}>
+        {suggestions.length > 0 && (
+          <div className={shareDays.suggest}>
+            <span className={shareDays.togetherLabel}>みんな休み</span>
+            {suggestions.map((date) => (
+              <button
+                aria-pressed={isPicked(date)}
+                className={shareDays.suggestion}
+                key={dateKey(date)}
+                onClick={() => {
+                  toggle(date);
+                }}
+                type="button"
+              >
+                {date.getMonth() + 1}/{date.getDate()}
+                <small className={smallWeekday}>
+                  {weekdayLabels[date.getDay()]}
+                </small>
+              </button>
+            ))}
+          </div>
+        )}
+        <div className={monthSwitch}>
+          <button
+            aria-label="前の月"
+            onClick={() => {
+              setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
+            }}
+            type="button"
+          >
+            <ChevronLeft aria-hidden="true" size={18} />
+          </button>
+          <strong aria-live="polite">
+            {month.getFullYear()}年{month.getMonth() + 1}月
+          </strong>
+          <button
+            aria-label="次の月"
+            onClick={() => {
+              setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
+            }}
+            type="button"
+          >
+            <ChevronRight aria-hidden="true" size={18} />
+          </button>
         </div>
-      )}
-      <div className={monthSwitch}>
-        <button
-          aria-label="前の月"
-          onClick={() => {
-            setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
-          }}
-          type="button"
-        >
-          <ChevronLeft aria-hidden="true" size={18} />
-        </button>
-        <strong aria-live="polite">
-          {month.getFullYear()}年{month.getMonth() + 1}月
-        </strong>
-        <button
-          aria-label="次の月"
-          onClick={() => {
-            setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
-          }}
-          type="button"
-        >
-          <ChevronRight aria-hidden="true" size={18} />
-        </button>
-      </div>
-      <div className={shareDays.days}>
-        {weekTools.weekdays.map((day) => (
-          <span aria-hidden="true" className={shareDays.weekday} key={day.day}>
-            {day.label}
-          </span>
-        ))}
-        {weekTools.monthDates(month).map((date) => {
-          const outside = !sameMonth(date, month);
-          const together = !outside && everyoneOff(members, date);
-          return (
-            <button
-              aria-label={`${formatDay(date)}${together ? "、みんな休み" : ""}`}
-              aria-pressed={isPicked(date)}
-              className={shareDays.day({
-                together,
-                tone: weekTools.dateTone(date),
-              })}
-              disabled={outside}
-              key={dateKey(date)}
-              onClick={() => {
-                toggle(date);
-              }}
-              type="button"
+        <div className={shareDays.days}>
+          {weekTools.weekdays.map((day) => (
+            <span
+              aria-hidden="true"
+              className={shareDays.weekday}
+              key={day.day}
             >
-              {date.getDate()}
-            </button>
-          );
-        })}
+              {day.label}
+            </span>
+          ))}
+          {weekTools.monthDates(month).map((date) => {
+            const outside = !sameMonth(date, month);
+            const together = !outside && everyoneOff(members, date);
+            return (
+              <button
+                aria-label={`${formatDay(date)}${together ? "、みんな休み" : ""}`}
+                aria-pressed={isPicked(date)}
+                className={shareDays.day({
+                  together,
+                  tone: weekTools.dateTone(date),
+                })}
+                disabled={outside}
+                key={dateKey(date)}
+                onClick={() => {
+                  toggle(date);
+                }}
+                type="button"
+              >
+                {date.getDate()}
+              </button>
+            );
+          })}
+        </div>
+        <Note>
+          {picked.length > 0
+            ? `${picked.length}日分のみんなのシフトを送ります。`
+            : "日付に枠がある日は、みんな休みの日です。"}
+        </Note>
       </div>
-      <Note>
-        {picked.length > 0
-          ? `${picked.length}日分のみんなのシフトを送ります。`
-          : "日付に枠がある日は、みんな休みの日です。"}
-      </Note>
-    </div>
+    </>
   );
 }
 
@@ -6198,8 +6213,12 @@ function PeoplePicker({
     if (!(list && button)) {
       return;
     }
-    const start = button.offsetLeft;
-    const end = button.offsetLeft + button.offsetWidth;
+    // Clear of the room at the row's ends, where the page's edge is, as
+    // wide as the first chip is in.
+    const inset =
+      list.querySelector<HTMLElement>("[data-member]")?.offsetLeft ?? 0;
+    const start = button.offsetLeft - inset;
+    const end = button.offsetLeft + button.offsetWidth + inset;
     if (start < list.scrollLeft) {
       list.scrollTo({ behavior: "smooth", left: start });
     } else if (end > list.scrollLeft + list.clientWidth) {
@@ -6322,13 +6341,13 @@ function PersonGrid({
   );
 }
 
+// Only what the look cannot tell: that a pressed date opens the day goes
+// without saying, as on your own calendar.
 function PersonNote({ member }: { member: Member }) {
-  return (
-    <Note>
-      {member.me ? "" : "薄い枠の日は、自分も休みの日です。"}
-      日付を押すと、その日のみんなの予定が見られます。
-    </Note>
-  );
+  if (member.me) {
+    return null;
+  }
+  return <Note>薄い枠の日は、自分も休みの日です。</Note>;
 }
 
 // One day of 人ごと, drawn like a day of your own calendar: the shift name
@@ -6515,7 +6534,7 @@ export function JoinSheet({
           >
             グループを見る
           </Button>
-          <Button variant="text" onClick={close}>
+          <Button variant="subtle" onClick={close}>
             閉じる
           </Button>
         </>
@@ -6537,7 +6556,7 @@ export function JoinSheet({
             >
               グループを見る
             </Button>
-            <Button variant="text" onClick={close}>
+            <Button variant="subtle" onClick={close}>
               閉じる
             </Button>
           </>
@@ -6612,7 +6631,7 @@ export function JoinSheet({
             >
               参加する
             </Button>
-            <Button variant="text" onClick={close}>
+            <Button variant="subtle" onClick={close}>
               今はしない
             </Button>
           </>

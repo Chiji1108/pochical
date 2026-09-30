@@ -6,6 +6,7 @@ import { css } from "styled-system/css";
 import {
   DesignCalendar,
   initialDesignSchedule,
+  patternSets,
 } from "../components/design-calendar";
 import { sampleGroups } from "../components/design-group";
 import {
@@ -37,15 +38,22 @@ export const Route = createFileRoute("/demo")({
   validateSearch: parseDesignVariants,
 });
 
+// The sample patterns: a few, or more than ポチポチ入力 shows on one page.
+function samplePatterns(count: DesignVariants["patternSample"]) {
+  return patternSets[count === "many" ? 13 : 4];
+}
+
 // A sample person, starting over with the sample or with nothing entered.
 function makePerson(
   sample: DesignVariants["scheduleSample"],
   members: DesignVariants["memberSample"],
-  groups: DesignVariants["groupSample"]
+  groups: DesignVariants["groupSample"],
+  patterns: DesignVariants["patternSample"]
 ) {
   return createUserStore({
     coworkers: members === "some" ? sampleCoworkers : [],
     groups: groups === "some" ? sampleGroups() : [],
+    patternKeys: samplePatterns(patterns),
     schedule: sample === "empty" ? {} : initialDesignSchedule(),
   });
 }
@@ -78,13 +86,21 @@ function DemoPage() {
     makePerson(
       variants.scheduleSample,
       variants.memberSample,
-      variants.groupSample
+      variants.groupSample,
+      variants.patternSample
     )
   );
   // Starting over remounts the phone, so its screens reset too.
   const [version, setVersion] = useState(0);
   const startOver = (sample: DesignVariants["scheduleSample"]) => {
-    setPerson(makePerson(sample, variants.memberSample, variants.groupSample));
+    setPerson(
+      makePerson(
+        sample,
+        variants.memberSample,
+        variants.groupSample,
+        variants.patternSample
+      )
+    );
     setVersion((value) => value + 1);
   };
   return (
@@ -127,6 +143,13 @@ function DemoPage() {
               if (key === "groupSample") {
                 person.setState({
                   groups: value === "some" ? sampleGroups() : [],
+                });
+              }
+              if (key === "patternSample") {
+                person.setState({
+                  patternKeys: samplePatterns(
+                    value as DesignVariants["patternSample"]
+                  ),
                 });
               }
               // The 一緒に働く人 sample switch starts the list over.
