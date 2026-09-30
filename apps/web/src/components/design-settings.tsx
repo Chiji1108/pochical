@@ -572,25 +572,6 @@ const themeCard = {
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
   }),
   pager: css({ border: 0, margin: 0, minWidth: 0, padding: 0 }),
-  // 壁紙の色 on Android, over the others as Pixel's 壁紙とスタイル keeps
-  // wallpaper colors apart from the basic ones: its card in the first of
-  // the three columns, and what it is beside it.
-  wallpaperNote: css({
-    alignSelf: "center",
-    color: "text.tertiary",
-    gridColumn: "span 2",
-    lineHeight: 1.5,
-    margin: 0,
-    textStyle: "footnote",
-  }),
-  wallpaperRow: css({
-    borderBottom: "1px solid token(colors.separator)",
-    display: "grid",
-    gap: "8px",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    marginBottom: "12px",
-    paddingBottom: "12px",
-  }),
   // The theme's own screen, in the current light or dark.
   sample: css({
     bg: "background.base",
@@ -610,6 +591,25 @@ const themeCard = {
     display: "flex",
     gap: "4px",
     justifyContent: "center",
+  }),
+  // 壁紙の色 on Android, over the others as Pixel's 壁紙とスタイル keeps
+  // wallpaper colors apart from the basic ones: its card in the first of
+  // the three columns, and what it is beside it.
+  wallpaperNote: css({
+    alignSelf: "center",
+    color: "text.tertiary",
+    gridColumn: "span 2",
+    lineHeight: 1.5,
+    margin: 0,
+    textStyle: "footnote",
+  }),
+  wallpaperRow: css({
+    borderBottom: "1px solid token(colors.separator)",
+    display: "grid",
+    gap: "8px",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    marginBottom: "12px",
+    paddingBottom: "12px",
   }),
 };
 
