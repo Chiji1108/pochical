@@ -652,9 +652,9 @@ function KindStep({
       <div className={optionList}>
         <OptionCard
           icon="📋"
-          note="看護・介護・飲食など"
+          note="勤務表・シフト表・店長からの連絡など"
           onClick={onRoster}
-          title="毎月、勤務表が配られる"
+          title="シフトがその都度決まる"
         />
         <OptionCard
           icon="🔁"

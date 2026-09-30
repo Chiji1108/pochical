@@ -394,7 +394,9 @@ function SettingsTop({
           }}
           // Which style, in short: the order itself is on the page.
           value={
-            current ? `${current.sequence.length}日ごとの繰り返し` : "勤務表"
+            current
+              ? `${current.sequence.length}日ごとの繰り返し`
+              : "繰り返しなし"
           }
         />
         <ListRow
@@ -975,7 +977,7 @@ function RuleHistory({ rules }: { rules: RepeatRule[] }) {
                   value={
                     rule.sequence.length > 0
                       ? sequenceLabel(rule.sequence, book)
-                      : "勤務表"
+                      : "繰り返しなし"
                   }
                 />
               );
@@ -1250,7 +1252,9 @@ function nextMonthStart() {
 
 const workStyles = {
   repeating: { icon: "🔁", name: "決まった順番で回っている" },
-  roster: { icon: "📋", name: "毎月、勤務表が配られる" },
+  // Not 毎月、勤務表が配られる: rosters come every three months, or
+  // whenever the manager posts them, and all of them are this.
+  roster: { icon: "📋", name: "シフトがその都度決まる" },
 };
 
 // The work style in use, then the ways to change it, each saying whether
@@ -1307,7 +1311,7 @@ function WorkStylePage({
           detail="シフトパターンはそのまま"
           label={
             repeating
-              ? "毎月の勤務表に切り替える"
+              ? "順番で入れるのをやめる"
               : "決まった順番で回すようにする"
           }
           leading={icon(other.icon)}
@@ -1336,15 +1340,15 @@ function RosterSwitchPage({
   const [start, setStart] = useState(nextMonthStart);
   return (
     <>
-      <PageHeader back="働き方" onBack={onBack} title="勤務表に切り替え" />
+      <PageHeader back="働き方" onBack={onBack} title="順番をやめる" />
       <div className={settingsParts.field}>
-        <span className={fieldLabel({ place: "row" })}>切り替える日</span>
+        <span className={fieldLabel({ place: "row" })}>やめる日</span>
         <InputDatePicker
-          ariaLabel={`切り替える日：${formatDay(start)}。タップで変更`}
+          ariaLabel={`やめる日：${formatDay(start)}。タップで変更`}
           look="field"
           date={start}
           onSelect={setStart}
-          title="切り替える日"
+          title="やめる日"
         >
           <span>{formatDay(start)}</span>
         </InputDatePicker>
@@ -1358,7 +1362,7 @@ function RosterSwitchPage({
           onApply(start);
         }}
       >
-        {shortDay(start)}から勤務表にする
+        {shortDay(start)}から順番をやめる
         <ArrowRight aria-hidden="true" size={16} />
       </Button>
     </>
