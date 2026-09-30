@@ -170,8 +170,8 @@ export const states: State[] = [
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await toGroupMonth(page);
-      await tap(page, "日ごと");
-      await page.getByRole("menuitemradio", { name: "人ごと" }).click();
+      await tap(page, "一覧");
+      await page.getByRole("menuitemradio", { name: "1人ずつ" }).click();
     },
   },
   {
@@ -268,7 +268,7 @@ export const states: State[] = [
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await toGroupMonth(page);
-      await tap(page, "日ごと");
+      await tap(page, "一覧");
       await page.getByRole("menuitem", { name: "シフトパターン" }).click();
     },
   },
@@ -519,7 +519,7 @@ export const states: State[] = [
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await toGroupMonth(page);
-      await tap(page, "日ごと");
+      await tap(page, "一覧");
       await page.getByRole("menuitemradio", { name: "週ごと" }).click();
     },
   },
@@ -529,7 +529,7 @@ export const states: State[] = [
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await toGroupMonth(page);
-      await tap(page, "日ごと");
+      await tap(page, "一覧");
       await page.getByRole("menuitemradio", { name: "週ごと" }).click();
       await tap(page, /^9月23日.*押すと/u);
     },
@@ -543,7 +543,7 @@ export const states: State[] = [
     },
   },
   {
-    // Six people: marks alone in 日ごと.
+    // Six people: marks alone in 一覧.
     name: "group/month-days-marks",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
