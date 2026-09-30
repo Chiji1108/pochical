@@ -2,10 +2,10 @@ import { Plus } from "lucide-react";
 import { Fragment, useContext, useState } from "react";
 import { css } from "styled-system/css";
 
+import { isRepeating } from "../lib/design-days";
 import { PATTERNS_PER_PAGE, presetList } from "../lib/design-patterns";
 import type { Pattern, PresetShift } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
-import { isRepeating } from "./design-calendar";
 import { LookEditorPage } from "./design-look-editor";
 import type { LookField } from "./design-look-editor";
 import { ConfirmDialog } from "./design-sheet";

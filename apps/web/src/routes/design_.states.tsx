@@ -4,10 +4,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import {
-  initialDesignSchedule,
-  patternSets,
-} from "../components/design-calendar";
-import {
   CalendarFrame,
   FrameRow,
   FrameSection,
@@ -31,6 +27,7 @@ import {
   ShiftMarkStyleContext,
 } from "../components/shift-mark";
 import type { OffDisplay, ShiftMarkStyle } from "../components/shift-mark";
+import { initialDesignSchedule, patternSets } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
 import { pageMeta } from "../lib/site";
 

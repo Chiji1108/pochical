@@ -8,10 +8,11 @@ import {
 import { useContext, useState } from "react";
 import { css, cva, cx } from "styled-system/css";
 
+import { dateKey } from "../lib/design-days";
+import type { Schedule } from "../lib/design-days";
 import type { ImageOptions } from "../lib/design-settings-store";
 import { AppIcon } from "./design-app-icon";
-import { DayCell, dateKey } from "./design-calendar";
-import type { Schedule } from "./design-calendar";
+import { DayCell } from "./design-day-cell";
 import { NameTabs, OffLookTabs } from "./design-settings";
 import { Sheet, SheetHeading, sheetBody, sheetLead } from "./design-sheet";
 import {

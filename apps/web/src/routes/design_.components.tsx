@@ -13,7 +13,8 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
-import { DayCell, MonthSummary, TabBar } from "../components/design-calendar";
+import { MonthSummary } from "../components/design-calendar";
+import { DayCell } from "../components/design-day-cell";
 import { PhotoAvatar } from "../components/design-group-parts";
 import {
   DesignIntro,
@@ -30,6 +31,7 @@ import {
   SheetHeading,
   SheetPicture,
 } from "../components/design-sheet";
+import { TabBar } from "../components/design-tab-bar";
 import { pageStyle, useThemeStyle } from "../components/design-theme";
 import { toastLook } from "../components/design-toast";
 import {

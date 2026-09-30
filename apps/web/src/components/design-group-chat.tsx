@@ -24,9 +24,9 @@ import {
 import type { MouseEvent, ReactElement, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
+import { dateKey, formatDay } from "../lib/design-days";
 import type { Photo } from "../lib/design-sample-photos";
 import { spring } from "../lib/motion";
-import { dateKey, formatDay } from "./design-calendar";
 import { EmojiPickerSheet } from "./design-emoji-picker";
 import {
   everyoneOff,

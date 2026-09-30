@@ -1,11 +1,4 @@
 import {
-  addDays,
-  dateKey,
-  timeChangeOf,
-  timeRange,
-} from "../components/design-calendar";
-import type { Schedule } from "../components/design-calendar";
-import {
   holidayName,
   monthDatesFrom,
   weekDatesFrom,
@@ -13,6 +6,8 @@ import {
   weekdaysFrom,
 } from "../components/design-week";
 import type { DayTone, WeekSettings } from "../components/design-week";
+import { addDays, dateKey, timeChangeOf, timeRange } from "./design-days";
+import type { Schedule } from "./design-days";
 import { isDayOff } from "./design-patterns";
 import type { PatternBook, Shift } from "./design-patterns";
 

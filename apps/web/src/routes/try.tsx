@@ -3,14 +3,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { css, cx } from "styled-system/css";
 
-import {
-  DesignCalendar,
-  initialDesignSchedule,
-} from "../components/design-calendar";
+import { DesignCalendar } from "../components/design-calendar";
 import { sampleGroups } from "../components/design-group-data";
 import { DesignProviders } from "../components/design-providers";
 import { screenColor } from "../components/design-theme";
 import { appSplashScreens } from "../lib/app-splash-screens";
+import { initialDesignSchedule } from "../lib/design-days";
 import { deviceSettingsKey } from "../lib/design-settings-store";
 import {
   createUserStore,

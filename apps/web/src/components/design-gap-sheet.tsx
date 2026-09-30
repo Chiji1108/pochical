@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { css } from "styled-system/css";
 
+import type { Schedule } from "../lib/design-days";
 import type { Shift } from "../lib/design-patterns";
-import type { Schedule } from "./design-calendar";
 import {
   Sheet,
   SheetHeading,

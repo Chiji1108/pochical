@@ -1,9 +1,8 @@
 import { useContext, useState } from "react";
 
+import type { Schedule } from "../lib/design-days";
 import type { Pattern } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
-import { TabBar } from "./design-calendar";
-import type { Schedule, Tab } from "./design-calendar";
 import { ChatPage } from "./design-group-chat";
 import type { PhotoSend } from "./design-group-chat";
 import {
@@ -39,6 +38,8 @@ import {
 import type { GroupEdit } from "./design-group-settings";
 import { ShiftsPage, marksUpTo } from "./design-group-shifts";
 import type { Layout } from "./design-group-shifts";
+import { TabBar } from "./design-tab-bar";
+import type { Tab } from "./design-tab-bar";
 import { ToastContext } from "./design-toast";
 import { Screen, ScreenScroll } from "./design-ui";
 
