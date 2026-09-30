@@ -1,5 +1,6 @@
 import {
   addDays,
+  changeWords,
   dateKey,
   isDayOff,
   timeChangeOf,
@@ -80,23 +81,14 @@ function toneOf(date: Date, colored: WeekSettings["colored"]): DayTone {
   return colored.saturday && day === SATURDAY ? "saturday" : "plain";
 }
 
-// A day's changed hours, in words, from its time and how it moved:
-// timeChangeOf says whether it moved at all, and which way.
+// A day's changed hours, in words, when its hours moved.
 function changeOf(
   time: string | undefined,
   moved: { early: boolean; late: boolean } | undefined
 ) {
-  if (time === undefined || moved === undefined) {
-    return undefined;
-  }
-  const [start = "", end = ""] = time.split(" – ");
-  if (moved.early && moved.late) {
-    return `早出・残業 ${start}〜${end}`;
-  }
-  if (moved.early) {
-    return `早出 ${start}〜`;
-  }
-  return moved.late ? `残業 〜${end}` : `${start}〜${end}`;
+  return time === undefined || moved === undefined
+    ? undefined
+    : changeWords(time, moved);
 }
 
 function widgetDay(

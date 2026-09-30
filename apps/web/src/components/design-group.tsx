@@ -52,6 +52,7 @@ import { useUser } from "../lib/design-user-store";
 import {
   TabBar,
   addDays,
+  changeWords,
   dateKey,
   dayCell,
   dayParts,
@@ -4120,7 +4121,14 @@ const shiftsPage = {
     gap: "16px",
     overflowAnchor: "none",
   }),
-  sheetTime: css({ color: "text.quaternary", textStyle: "caption" }),
+  // Shown only when a member's hours moved, so it is news: said as
+  // plainly as the name beside it.
+  sheetTime: css({
+    color: "text.secondary",
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 600,
+    textStyle: "caption",
+  }),
   // A mark and its name, as markValue sets them apart in a row's value.
   sheetValue: css({ alignItems: "center", display: "inline-flex", gap: "8px" }),
   togetherNone: css({
@@ -5446,10 +5454,7 @@ function PickedDaySheet({
                       />
                     )}
                     {item?.name ?? "未入力"}
-                    <DaySheetTime
-                      change={changeOn(member, date)}
-                      time={item?.time}
-                    />
+                    <DaySheetTime change={changeOn(member, date)} />
                   </>
                 }
                 leading={
@@ -5826,23 +5831,19 @@ function movesOf(change: TimeChange | undefined) {
     .join("・");
 }
 
-// A member's hours in the day sheet: 早出 and 残業 said in words, with
-// the day's actual hours instead of the pattern's.
-function DaySheetTime({
-  time,
-  change,
-}: {
-  time?: string;
-  change?: TimeChange;
-}) {
-  if (change) {
-    return (
-      <small className={shiftsPage.sheetTime}>
-        <strong>{movesOf(change)}</strong> {change.time}
-      </small>
-    );
+// A member's hours in the day sheet, only on a day they moved: 早出 and
+// 残業 said in words with the part that moved, as the widgets say it. A
+// pattern's usual hours are the same every time; みんなのシフトパターン
+// lists them.
+function DaySheetTime({ change }: { change?: TimeChange }) {
+  if (!change) {
+    return null;
   }
-  return time ? <small className={shiftsPage.sheetTime}>{time}</small> : null;
+  return (
+    <small className={shiftsPage.sheetTime}>
+      {changeWords(change.time, change)}
+    </small>
+  );
 }
 
 function Avatar({ member, size }: { member: Member; size?: number }) {

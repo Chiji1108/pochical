@@ -342,6 +342,24 @@ export function timeChangeOf(entry: DayEntry | undefined) {
   return { early, late };
 }
 
+// A day's changed hours in words, from its hours as timeRange writes them
+// and how they moved: only the part that moved, since a shift's usual
+// hours are the same every time and go unsaid. The widgets and the group
+// day sheet say it alike.
+export function changeWords(
+  time: string,
+  moved: { early: boolean; late: boolean }
+) {
+  const [start = "", end = ""] = time.split(" – ");
+  if (moved.early && moved.late) {
+    return `早出・残業 ${start}〜${end}`;
+  }
+  if (moved.early) {
+    return `早出 ${start}〜`;
+  }
+  return moved.late ? `残業 〜${end}` : `${start}〜${end}`;
+}
+
 // One person's phone. Their data comes from the nearest UserStoreContext,
 // so two phones under one store show the same person.
 export function DesignCalendar({
