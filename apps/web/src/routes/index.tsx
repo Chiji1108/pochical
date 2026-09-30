@@ -206,6 +206,29 @@ const heroSchedule = Object.fromEntries(
   )
 );
 
+// Pressed once, like a button, a moment after the page opens: sinking a
+// little and springing back, then still.
+const PRESS_DELAY_SECONDS = 0.7;
+const pressed = css({ display: "inline-block", transformOrigin: "50% 100%" });
+
+function Pressed({ children }: { children: ReactNode }) {
+  const still = useReducedMotion() ?? false;
+  return (
+    <motion.span
+      animate={still ? undefined : { scale: [1, 0.92, 1], y: [0, 3, 0] }}
+      className={pressed}
+      transition={{
+        delay: PRESS_DELAY_SECONDS,
+        duration: 0.42,
+        ease: ["easeIn", "backOut"],
+        times: [0, 0.3, 1],
+      }}
+    >
+      {children}
+    </motion.span>
+  );
+}
+
 // The app itself, the same one /try runs, to tap right on the page.
 function HeroDemo() {
   const [person] = useState(() =>
@@ -631,7 +654,7 @@ function Home() {
           <h1 className={hero.title}>
             シフトを、
             <br />
-            ポチッと。
+            <Pressed>ポチッと。</Pressed>
           </h1>
           <p className={hero.description}>
             勤務を選んで、日付をポチポチ。
