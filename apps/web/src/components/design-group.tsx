@@ -2481,8 +2481,12 @@ const chatStyle = {
           color: "accent.onFill",
         },
       },
+      // The tools at the start sit close together, as LINE's row of
+      // icons does, leaving the room to the field.
+      tool: { true: { borderRadius: "8px", width: "32px" } },
     },
   }),
+  composerTools: css({ display: "flex", flexShrink: 0 }),
   composerInput: css({
     bg: "fill.quaternary",
     border: 0,
@@ -2848,6 +2852,10 @@ function ChatPage({
   // Photos chosen but still being read; sending waits for them, so none
   // lands in the composer after the message has gone.
   const [reading, setReading] = useState(0);
+  // While words are being written, the tools fold into a ›, as in LINE,
+  // giving the field their room; › opens them until the next letter.
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const toolsFolded = draft !== "" && !toolsOpen;
   const photoInputRef = useRef<HTMLInputElement>(null);
   const toast = useContext(ToastContext);
   // Photos of yours still uploading, or that could not be sent, by line.
@@ -3293,31 +3301,49 @@ function ChatPage({
           tabIndex={-1}
           type="file"
         />
-        <button
-          aria-label="写真を送る"
-          className={chatStyle.composerButton()}
-          onClick={() => {
-            photoInputRef.current?.click();
-          }}
-          type="button"
-        >
-          <ImageIcon aria-hidden="true" size={20} />
-        </button>
-        <button
-          aria-label="日にちを共有"
-          className={chatStyle.composerButton()}
-          onClick={() => {
-            setSharing(true);
-          }}
-          type="button"
-        >
-          <CalendarPlus aria-hidden="true" size={20} />
-        </button>
+        <span className={chatStyle.composerTools}>
+          {toolsFolded ? (
+            <button
+              aria-label="写真と日にちのボタンを表示"
+              className={chatStyle.composerButton({ tool: true })}
+              onClick={() => {
+                setToolsOpen(true);
+              }}
+              type="button"
+            >
+              <ChevronRight aria-hidden="true" size={22} />
+            </button>
+          ) : (
+            <>
+              <button
+                aria-label="写真を送る"
+                className={chatStyle.composerButton({ tool: true })}
+                onClick={() => {
+                  photoInputRef.current?.click();
+                }}
+                type="button"
+              >
+                <ImageIcon aria-hidden="true" size={20} />
+              </button>
+              <button
+                aria-label="日にちを共有"
+                className={chatStyle.composerButton({ tool: true })}
+                onClick={() => {
+                  setSharing(true);
+                }}
+                type="button"
+              >
+                <CalendarPlus aria-hidden="true" size={20} />
+              </button>
+            </>
+          )}
+        </span>
         <input
           aria-label="メッセージ"
           className={chatStyle.composerInput}
           onChange={(event) => {
             setDraft(event.target.value);
+            setToolsOpen(false);
           }}
           placeholder="メッセージ"
           value={draft}
