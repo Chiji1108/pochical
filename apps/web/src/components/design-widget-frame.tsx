@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
 import type { ColorScheme } from "../lib/design-tokens";
+import { wallpaperOf, widgetColors } from "../lib/material-you";
 import { ColorSchemeContext, useThemeStyle } from "./design-theme";
 
 // Stand-ins for where the widgets are shown: the home screen's wallpaper,
@@ -127,40 +128,53 @@ function renderingOf(appearance: HomeAppearance | "lock") {
     : "accented";
 }
 
+function schemeOf(appearance: HomeAppearance | "lock"): ColorScheme {
+  return appearance === "light" ? "light" : "dark";
+}
+
+// Where a widget sits: its look, and on Android the hue of the wallpaper
+// its colors come from.
+type Placement = {
+  appearance: HomeAppearance | "lock";
+  wallpaperHue?: number;
+};
+
 // One widget at its size, in a look.
 export function WidgetFrame({
   family,
   appearance,
+  wallpaperHue,
   children,
-}: {
-  family: WidgetFamily;
-  appearance: HomeAppearance | "lock";
-  children: ReactNode;
-}) {
-  const scheme: ColorScheme = appearance === "light" ? "light" : "dark";
+}: Placement & { family: WidgetFamily; children: ReactNode }) {
   return (
-    <ColorSchemeContext value={scheme}>
-      <ThemedFrame appearance={appearance} family={family}>
+    <ColorSchemeContext value={schemeOf(appearance)}>
+      <ThemedFrame
+        appearance={appearance}
+        family={family}
+        wallpaperHue={wallpaperHue}
+      >
         {children}
       </ThemedFrame>
     </ColorSchemeContext>
   );
 }
 
+// On Android the ground and words take the wallpaper's colors, as Glance
+// draws them; the shift marks keep the テーマ's.
 function ThemedFrame({
   family,
   appearance,
+  wallpaperHue,
   children,
-}: {
-  family: WidgetFamily;
-  appearance: HomeAppearance | "lock";
-  children: ReactNode;
-}) {
+}: Placement & { family: WidgetFamily; children: ReactNode }) {
   const theme = useThemeStyle();
   const { width, height, margin, radius } = widgetFamilies[family];
   const rendering = renderingOf(appearance);
   const style = {
     ...theme,
+    ...(wallpaperHue === undefined
+      ? {}
+      : widgetColors(wallpaperHue, schemeOf(appearance))),
     ...(rendering === "fullColor" ? {} : flatText),
     borderRadius: radius,
     height,
@@ -202,13 +216,15 @@ const grounds: Record<HomeAppearance | "lock", string> = {
 // A stretch of wallpaper the widgets sit on, in a look.
 export function Wallpaper({
   appearance,
+  wallpaperHue,
   children,
-}: {
-  appearance: HomeAppearance | "lock";
-  children: ReactNode;
-}) {
+}: Placement & { children: ReactNode }) {
+  const background =
+    wallpaperHue === undefined
+      ? grounds[appearance]
+      : wallpaperOf(wallpaperHue, schemeOf(appearance));
   return (
-    <div className={wallpaper} style={{ background: grounds[appearance] }}>
+    <div className={wallpaper} style={{ background }}>
       {children}
     </div>
   );
@@ -231,17 +247,18 @@ const labelled = css({
 export function LabelledWidget({
   family,
   appearance,
+  wallpaperHue,
   children,
-}: {
-  family: WidgetFamily;
-  appearance: HomeAppearance | "lock";
-  children: ReactNode;
-}) {
+}: Placement & { family: WidgetFamily; children: ReactNode }) {
   const { width, height, label } = widgetFamilies[family];
   const unit = family.startsWith("android") ? "dp" : "pt";
   return (
     <figure className={labelled} data-ground={appearance}>
-      <WidgetFrame appearance={appearance} family={family}>
+      <WidgetFrame
+        appearance={appearance}
+        family={family}
+        wallpaperHue={wallpaperHue}
+      >
         {children}
       </WidgetFrame>
       <figcaption>

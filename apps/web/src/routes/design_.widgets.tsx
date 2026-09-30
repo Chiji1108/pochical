@@ -31,6 +31,7 @@ import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
 import { widgetEntry } from "../lib/design-widgets";
 import type { WidgetEntry } from "../lib/design-widgets";
+import { wallpaperSamples } from "../lib/material-you";
 import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/design_/widgets")({
@@ -49,10 +50,53 @@ const sampleSchedule = initialDesignSchedule();
 
 const rows = css({ display: "flex", flexDirection: "column", gap: "16px" });
 
-// Android's launcher has light and dark; the widget keeps its own colors.
+// Android's launcher has light and dark.
 const androidAppearances = homeAppearances.filter(
   ({ appearance }) => appearance === "light" || appearance === "dark"
 );
+
+const rowLabel = css({
+  color: "text.tertiary",
+  fontSize: "12px",
+  margin: "0 0 8px 4px",
+});
+
+// Android's sizes on a sample wallpaper, whose colors the widgets take.
+// The large one is shown on the first wallpaper only, to keep the page
+// short.
+function AndroidRow({
+  appearance,
+  entry,
+  label,
+  large,
+  wallpaperHue,
+}: {
+  appearance: HomeAppearance;
+  entry: WidgetEntry;
+  label: string;
+  large: boolean;
+  wallpaperHue: number;
+}) {
+  const placement = { appearance, wallpaperHue };
+  return (
+    <section aria-label={label}>
+      <p className={rowLabel}>{label}</p>
+      <Wallpaper {...placement}>
+        <LabelledWidget {...placement} family="android2x2">
+          <TodayWidget entry={entry} />
+        </LabelledWidget>
+        <LabelledWidget {...placement} family="android4x2">
+          <WeekWidget entry={entry} />
+        </LabelledWidget>
+        {large && (
+          <LabelledWidget {...placement} family="android4x4">
+            <MonthWidget entry={entry} />
+          </LabelledWidget>
+        )}
+      </Wallpaper>
+    </section>
+  );
+}
 
 // The home screen's three sizes, on one stretch of wallpaper.
 function HomeRow({
@@ -125,25 +169,22 @@ function WidgetsPage() {
           </FrameSection>
 
           <FrameSection
-            description="Pixel 9a のランチャーのマス目で。サイズを変えると、近い大きさの見た目に切り替わります。"
+            description="Pixel 9a のランチャーのマス目で。地と文字は壁紙から取った色（Material You）、シフトのマークはテーマの色のままです。"
             title="Android のホーム画面"
           >
             <div className={rows}>
-              {androidAppearances.map(({ appearance, label }) => (
-                <section aria-label={label} key={appearance}>
-                  <Wallpaper appearance={appearance}>
-                    <LabelledWidget appearance={appearance} family="android2x2">
-                      <TodayWidget entry={entry} />
-                    </LabelledWidget>
-                    <LabelledWidget appearance={appearance} family="android4x2">
-                      <WeekWidget entry={entry} />
-                    </LabelledWidget>
-                    <LabelledWidget appearance={appearance} family="android4x4">
-                      <MonthWidget entry={entry} />
-                    </LabelledWidget>
-                  </Wallpaper>
-                </section>
-              ))}
+              {wallpaperSamples.flatMap((sample, index) =>
+                androidAppearances.map(({ appearance, label }) => (
+                  <AndroidRow
+                    appearance={appearance}
+                    entry={entry}
+                    key={`${sample.hue}-${appearance}`}
+                    label={`${sample.name}の壁紙・${label}`}
+                    large={index === 0}
+                    wallpaperHue={sample.hue}
+                  />
+                ))
+              )}
             </div>
           </FrameSection>
 

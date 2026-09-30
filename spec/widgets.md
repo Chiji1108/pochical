@@ -49,4 +49,19 @@ The widgets are views of one entry. They hold no state and open the app when tap
 | Lock screen | accessoryRectangular | – | today's name and time, and tomorrow's name |
 | Lock screen | accessoryInline | – | today's name and time on one line |
 
+## Colors
+
+- **iPhone**: the widgets use the person's テーマ in the system's light or dark. In the 色合い (tinted) and クリア (clear) looks, the system recolors them itself.
+- **Android**: the ground and words use the wallpaper's colors (Material You), as Glance's default colors do, whatever テーマ the app is in. This matches the widgets around them on the home screen.
+
+  | Role | Light | Dark |
+  | --- | --- | --- |
+  | Ground (`widgetBackground`) | secondary 95 | secondary 20 |
+  | Words (`onSurface`) | neutral 10 | neutral 90 |
+  | Secondary words (`onSurfaceVariant`) | neutral variant 30 | neutral variant 80 |
+  | Today's date (`primary`) | primary 40 | primary 80 |
+  | Lines (`outlineVariant`) | neutral variant 80 | neutral variant 30 |
+
+- On both platforms, the shift marks keep the テーマ's colors and the person's シフトの色 setting, because a mark's color carries its meaning.
+
 Screen readers read every day in the medium and large widgets as its date, weekday, shift name (or 予定なし) and time. The marks alone are pictures.
