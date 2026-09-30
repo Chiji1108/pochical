@@ -71,6 +71,7 @@ import {
   dayGrid,
   fieldLabel,
   inlineInput,
+  LimitedInput,
   List,
   ListRow,
   Note,
@@ -624,7 +625,12 @@ const offSample = cva({
   base: {
     "& small": { color: "text.secondary", fontSize: "9px", fontWeight: 600 },
     // The shift's name under the mark, smaller than the date.
-    "& small[data-part=name]": { fontSize: "7px" },
+    "& small[data-part=name]": {
+      fontSize: "7px",
+      lineClamp: 1,
+      maxWidth: "100%",
+      overflowWrap: "anywhere",
+    },
     alignItems: "center",
     borderRadius: "8px",
     display: "flex",
@@ -1227,10 +1233,11 @@ function ProfilePage({
           label="いつもの名前"
           control={
             <>
-              <input
+              <LimitedInput
                 className={inlineInput}
-                onChange={(event) => {
-                  onChange({ ...profile, name: event.target.value });
+                kind="personName"
+                onValueChange={(name) => {
+                  onChange({ ...profile, name });
                 }}
                 placeholder="例：さくら"
                 value={profile.name}

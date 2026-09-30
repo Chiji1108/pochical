@@ -23,7 +23,7 @@ import {
   useReducedMotion,
 } from "motion/react";
 import type { MotionValue } from "motion/react";
-import { Fragment, useContext, useRef, useState } from "react";
+import { Fragment, useContext, useId, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -80,6 +80,7 @@ import {
   fieldHint,
   fieldLabel,
   IconMenu,
+  LimitedInput,
   MenuItem,
   MONTH_WEEKS,
   PageDots,
@@ -2095,6 +2096,15 @@ const shiftInput = {
     lineHeight: 1,
     placeItems: "center",
   }),
+  // The name under a button's mark, on one line: the buttons are too low
+  // for two, and a longer one is cut short.
+  name: css({
+    maxWidth: "100%",
+    overflow: "hidden",
+    paddingInline: "4px",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  }),
   pattern: cva({
     base: {
       _active: { bg: "accent.pressed", transform: "scale(0.97)" },
@@ -2230,7 +2240,7 @@ function ShiftInputControls({
         <span className={shiftInput.mark}>
           <ShiftMark shift={key} size={26} />
         </span>
-        <span>{book[key]?.name}</span>
+        <span className={shiftInput.name}>{book[key]?.name}</span>
       </button>
     ));
   return (
@@ -2366,11 +2376,18 @@ export const dayParts = {
   date: css({ flexShrink: 0, fontWeight: 600, lineHeight: "14px" }),
   dateOutside: css({ fontWeight: 400 }),
   holiday: css({ color: "calendar.holiday" }),
+  // A shift's name under its mark, on one line: a day's row has room for
+  // no more, and a longer one is cut short rather than running into the
+  // week below.
   label: css({
     color: "text.secondary",
     flexShrink: 0,
     fontSize: "9px",
     lineHeight: "12px",
+    maxWidth: "100%",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   }),
   mark: css({
     display: "grid",
@@ -2691,10 +2708,12 @@ function MemberField({
           </Chip>
         ))}
         {adding ? (
-          <input
+          <LimitedInput
             aria-label="追加する人の名前"
             autoFocus
             className={dayDetail.memberInput}
+            counter={false}
+            kind="personName"
             onBlur={(event) => {
               add(event.currentTarget.value);
             }}
@@ -2734,6 +2753,7 @@ function DayDetail({
   members: MemberOptions;
   onChange: (entry: DayEntry | undefined) => void;
 }) {
+  const noteId = useId();
   const book = usePatterns();
   const pattern = entry && book[entry.shift];
   const time = pattern?.time;
@@ -2833,12 +2853,14 @@ function DayDetail({
               selected={entry.members ?? []}
             />
           )}
-          <label className={dayDetail.row}>
+          <label className={dayDetail.row} htmlFor={noteId}>
             <span className={dayDetail.label}>メモ</span>
-            <input
+            <LimitedInput
               className={dayDetail.field}
-              onChange={(event) => {
-                onChange({ ...entry, note: event.target.value || undefined });
+              id={noteId}
+              kind="dayNote"
+              onValueChange={(note) => {
+                onChange({ ...entry, note: note || undefined });
               }}
               placeholder="メモを入力"
               value={entry.note ?? ""}

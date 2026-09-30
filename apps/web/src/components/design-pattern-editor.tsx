@@ -17,6 +17,7 @@ import {
   DestructiveButton,
   HeaderAction,
   inlineInput,
+  LimitedInput,
   List,
   ListDivider,
   ListRow,
@@ -483,11 +484,10 @@ function PatternEditor({
             label="名前"
             control={
               <>
-                <input
+                <LimitedInput
                   className={inlineInput}
-                  onChange={(event) => {
-                    rename(event.target.value);
-                  }}
+                  kind="shiftName"
+                  onValueChange={rename}
                   placeholder="例：日勤"
                   value={draft.name}
                 />

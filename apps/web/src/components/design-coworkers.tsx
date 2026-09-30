@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { cx } from "styled-system/css";
+import { css } from "styled-system/css";
 
 import type { Schedule } from "./design-calendar";
 import { ConfirmDialog } from "./design-sheet";
@@ -9,6 +9,7 @@ import {
   DestructiveButton,
   HeaderAction,
   inlineInput,
+  LimitedInput,
   List,
   ListRow,
   listRow,
@@ -32,6 +33,19 @@ function daysWith(schedule: Schedule, name: string) {
     entry?.members?.includes(name)
   ).length;
 }
+
+// The name being added, typed where the next row goes, from its start.
+const coworkerInput = css({
+  bg: "transparent",
+  border: 0,
+  color: "text.primary",
+  flex: 1,
+  font: "inherit",
+  minWidth: 0,
+  outline: "none",
+  padding: 0,
+  textStyle: "body",
+});
 
 export function CoworkersPage({
   coworkers,
@@ -118,6 +132,7 @@ export function CoworkersPage({
                 setEditing(name);
               }}
               label={name}
+              truncate
               value={<>{daysWith(schedule, name)}日</>}
             />
           ))}
@@ -126,23 +141,25 @@ export function CoworkersPage({
       {!sorting &&
         (adding ? (
           <List>
-            <input
-              aria-label="追加する人の名前"
-              autoFocus
-              className={cx(listRow.root, "st-coworker-input")}
-              data-list-row=""
-              onBlur={(event) => {
-                add(event.currentTarget.value);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
+            <div className={listRow.root} data-list-row="">
+              <LimitedInput
+                aria-label="追加する人の名前"
+                autoFocus
+                className={coworkerInput}
+                kind="personName"
+                onBlur={(event) => {
                   add(event.currentTarget.value);
-                } else if (event.key === "Escape") {
-                  setAdding(false);
-                }
-              }}
-              placeholder="名前"
-            />
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    add(event.currentTarget.value);
+                  } else if (event.key === "Escape") {
+                    setAdding(false);
+                  }
+                }}
+                placeholder="名前"
+              />
+            </div>
           </List>
         ) : (
           <AddButton
@@ -205,11 +222,10 @@ function CoworkerEditor({
           label="名前"
           control={
             <>
-              <input
+              <LimitedInput
                 className={inlineInput}
-                onChange={(event) => {
-                  setDraft(event.target.value);
-                }}
+                kind="personName"
+                onValueChange={setDraft}
                 value={draft}
               />
             </>
