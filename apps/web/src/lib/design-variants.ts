@@ -15,13 +15,6 @@ export const designVariantOptions = {
     ],
     label: "招待リンク",
   },
-  inviteSize: {
-    choices: [
-      { label: "3人", value: "few" },
-      { label: "8人", value: "many" },
-    ],
-    label: "招待のグループ",
-  },
   memberSample: {
     choices: [
       { label: "5人", value: "some" },

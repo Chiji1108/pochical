@@ -362,14 +362,9 @@ const classmates = (): Member[] =>
   }));
 
 // The cousins' group the sample invitation is for; ゆうき, who sent it,
-// is the same person as in 家族.
-// How many are in the group the sample invitation is to, as 比べる案
-// sets it: a few, all named on it, or more than its names fit.
-export type InviteSize = "few" | "many";
-
-// ゆうき's cousins, and at 8人 more of them, for an invitation with more
-// people than its names fit.
-const cousins = (size: InviteSize = "few"): Member[] => [
+// is the same person as in 家族. Five, more than the invitation names, so
+// it shows ほか◯人 as a family's group usually would.
+const cousins = (): Member[] => [
   partner,
   {
     ...misaki(),
@@ -387,16 +382,9 @@ const cousins = (size: InviteSize = "few"): Member[] => [
     photo: undefined,
     style: { look: presetLook("minimal") },
   },
-  ...(size === "many" ? moreCousins() : []),
-];
-
-const moreCousins = (): Member[] =>
-  [
+  ...[
     ["cousin-sota", "そうた", 2, 1012, "pop"],
-    ["cousin-yui", "ゆい", 5, 0, "minimal"],
-    ["cousin-haruto", "はると", 1, 1084, "roster"],
-    ["cousin-mei", "めい", 4, 64, "natural"],
-    ["cousin-kenji", "けんじ", 6, 0, "pop"],
+    ["cousin-yui", "ゆい", 5, 0, "natural"],
   ].map(([id, name, offset, photo, preset]) => ({
     ...misaki(),
     id: String(id),
@@ -405,7 +393,8 @@ const moreCousins = (): Member[] =>
     shiftOn: (date: Date) =>
       nurseOrder[(dayNumber(date) + Number(offset)) % nurseOrder.length],
     style: { look: presetLook(String(preset)) },
-  }));
+  })),
+];
 
 // Old school friends in all kinds of work: a group too wide for 一覧.
 const schoolFriends = (): Member[] => [
@@ -868,7 +857,6 @@ export function DesignGroup({
   initialPage = "hub",
   scanResult = "invite",
   photoSend = "ok",
-  inviteSize = "few",
 }: {
   schedule: Schedule;
   patterns: Pattern[];
@@ -882,7 +870,6 @@ export function DesignGroup({
   scanResult?: ScanResult;
   // Whether a photo's upload goes through, as 比べる案 sets it.
   photoSend?: PhotoSend;
-  inviteSize?: InviteSize;
 
   onTab: (tab: Tab) => void;
 }) {
@@ -925,7 +912,7 @@ export function DesignGroup({
       return [me, ...schoolFriends()];
     }
     if (id === invitedGroupId) {
-      return [me, ...cousins(inviteSize)];
+      return [me, ...cousins()];
     }
     return [me];
   };
@@ -950,7 +937,6 @@ export function DesignGroup({
   // It takes the scanner's place, as LINE goes on from a read code.
   const joinPage = (
     <JoinScreen
-      inviteSize={inviteSize}
       onClose={() => {
         setPage({ name: "hub" });
       }}
@@ -7421,11 +7407,11 @@ type Invite = {
 // The group the sample invitation joins.
 const invitedGroupId = "cousins";
 
-const sampleInvite = (size: InviteSize = "few"): Invite => ({
+const sampleInvite = (): Invite => ({
   from: { name: partner.name, photo: partner.photo },
   group: "いとこ会",
   mark: { emoji: "🍉", kind: "emoji" },
-  members: cousins(size).map(({ name, photo }) => ({ name, photo })),
+  members: cousins().map(({ name, photo }) => ({ name, photo })),
 });
 
 // Opened by an invitation link over the calendar, right after the first
@@ -7437,16 +7423,14 @@ const sampleInvite = (size: InviteSize = "few"): Invite => ({
 // turns it down.
 export function JoinScreen({
   profile,
-  inviteSize = "few",
   onJoin,
   onClose,
 }: {
   profile: Profile;
-  inviteSize?: InviteSize;
   onJoin: (group: GroupSummary) => void;
   onClose: () => void;
 }) {
-  const invite = sampleInvite(inviteSize);
+  const invite = sampleInvite();
   const [mine, setMine] = useState<GroupProfile>();
   const [editing, setEditing] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
