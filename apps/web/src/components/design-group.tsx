@@ -74,6 +74,7 @@ import { MonthTitleButton } from "./design-month-picker";
 import {
   monthIndex,
   RollingName,
+  ShownWithPages,
   TodayCorner,
   useTurn,
 } from "./design-rolling";
@@ -4823,6 +4824,8 @@ const shiftsPage = {
   sheetTime: css({ color: "text.quaternary", textStyle: "caption" }),
   // A mark and its name, as markValue sets them apart in a row's value.
   sheetValue: css({ alignItems: "center", display: "inline-flex", gap: "8px" }),
+  // Centered on the row, as SummaryRow's chevron.
+  togetherChevron: css({ alignSelf: "center" }),
   togetherNone: css({
     color: "text.tertiary",
     fontWeight: 600,
@@ -5446,10 +5449,132 @@ function PagedShifts({
         onPickDay={onPickDay}
         picked={picked}
       />
-      <TogetherSummary
-        label={`${thisMonth ? "今月" : `${month.getMonth() + 1}月`}のみんな休み`}
+      <PagedTogether
+        beside={{
+          next: togetherIn(group.members, daysOf(monthAfter(month, 1))),
+          previous: togetherIn(group.members, daysOf(monthAfter(month, -1))),
+        }}
+        month={month}
         onPickDay={onPickDay}
+        progress={pageDrag}
+        swiped={swipedTo === monthIndex(month)}
         together={together}
+      />
+    </>
+  );
+}
+
+const COUNT = /^\d+$/u;
+
+// What a month's みんな休み says: the number of days, or none.
+function togetherValue({ days, unsure }: Together) {
+  if (days.length > 0) {
+    return String(days.length);
+  }
+  return unsure ? "未入力あり" : "なし";
+}
+
+// 1人ずつ's みんな休み, whose month turns with the pages: the month in its
+// label and what it counts roll with a drag, as 今月のお休み does under
+// the calendar, and a count's 日 and chevron leave with it toward a month
+// of なし, which has nothing to open.
+function PagedTogether({
+  month,
+  together,
+  beside,
+  progress,
+  swiped,
+  onPickDay,
+}: {
+  month: Date;
+  together: Together;
+  beside: { previous: Together; next: Together };
+  progress: MotionValue<number>;
+  swiped: boolean;
+  onPickDay: (date: Date) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const reduceMotion = useReducedMotion() ?? false;
+  const turn = useTurn(monthIndex(month), swiped);
+  const monthOf = (by: number) => {
+    const date = monthAfter(month, by);
+    return monthIndex(date) === monthIndex(designToday)
+      ? "今月"
+      : `${date.getMonth() + 1}月`;
+  };
+  const label = `${monthOf(0)}のみんな休み`;
+  const value = togetherValue(together);
+  const counted = together.days.length > 0;
+  const rolled = { progress, still: reduceMotion, turn };
+  const withCount = {
+    nextShown: beside.next.days.length > 0,
+    previousShown: beside.previous.days.length > 0,
+    progress,
+    shown: counted,
+    swiped,
+  };
+  const contents = (
+    <>
+      <span className={srOnly}>{label}</span>
+      <span aria-hidden="true">
+        <RollingName
+          {...rolled}
+          next={monthOf(1)}
+          previous={monthOf(-1)}
+          text={monthOf(0)}
+        />
+        のみんな休み
+      </span>
+      <span className={srOnly}>{counted ? `${value}日` : value}</span>
+      <strong aria-hidden="true" className={summaryRow.count}>
+        <RollingName
+          {...rolled}
+          end
+          next={togetherValue(beside.next)}
+          previous={togetherValue(beside.previous)}
+          render={(text) =>
+            COUNT.test(text) ? (
+              text
+            ) : (
+              <span className={shiftsPage.togetherNone}>{text}</span>
+            )
+          }
+          text={value}
+        />
+        <ShownWithPages {...withCount}>
+          <span className={summaryRow.unit}>日</span>
+        </ShownWithPages>
+        <ShownWithPages {...withCount} className={shiftsPage.togetherChevron}>
+          <ChevronRight
+            aria-hidden="true"
+            className={summaryRow.chevron}
+            size={17}
+          />
+        </ShownWithPages>
+      </strong>
+    </>
+  );
+  if (!counted) {
+    return <div className={summaryRow.row}>{contents}</div>;
+  }
+  return (
+    <>
+      <button
+        aria-haspopup="dialog"
+        className={summaryRow.row}
+        onClick={() => {
+          setOpen(true);
+        }}
+        type="button"
+      >
+        {contents}
+      </button>
+      <TogetherSheet
+        days={together.days}
+        label={label}
+        onOpenChange={setOpen}
+        onPickDay={onPickDay}
+        open={open}
       />
     </>
   );

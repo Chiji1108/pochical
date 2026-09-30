@@ -9,7 +9,7 @@ import {
 import type { MotionValue } from "motion/react";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode, Ref } from "react";
-import { css, cva } from "styled-system/css";
+import { css, cva, cx } from "styled-system/css";
 
 // Names that roll as what they name turns, like a month's over the
 // calendar or the group's shift table, and the way back to today that
@@ -42,6 +42,8 @@ const LETTER_LAG = 0.08;
 // The most letters an English month has, as sep.
 const LONGEST_MONTH = 4;
 export type Turn = { direction: number; instant: boolean };
+// A name drawn as its text.
+const asIs = (text: string): ReactNode => text;
 const rollSteps = {
   coming: ({ direction, instant }: Turn) =>
     instant ? { opacity: 1, y: 0 } : { opacity: 0, y: `${direction * 100}%` },
@@ -58,6 +60,12 @@ type Rolled = {
   previous?: string;
   next?: string;
   letters?: boolean;
+  // Kept to its right edge, as a value at the end of a row, so a longer
+  // name coming in grows to the left.
+  end?: boolean;
+  // Draws a name, when names differ in more than their text, as a number
+  // of days and なし.
+  render?: (text: string) => ReactNode;
   progress?: MotionValue<number>;
   still: boolean;
   turn: Turn;
@@ -65,7 +73,7 @@ type Rolled = {
 
 export function RollingName({ still, text, ...rest }: Rolled) {
   if (still) {
-    return <>{text}</>;
+    return <>{(rest.render ?? asIs)(text)}</>;
   }
   return <RollingBox still={still} text={text} {...rest} />;
 }
@@ -87,6 +95,8 @@ function RollingBox({
   previous,
   next,
   letters = false,
+  end = false,
+  render,
   progress,
   turn,
 }: Rolled) {
@@ -120,7 +130,10 @@ function RollingBox({
     return `${measured.current + (toward - measured.current) * share}px`;
   });
   return (
-    <motion.span className={rolling.box({ lower: letters })} style={{ width }}>
+    <motion.span
+      className={rolling.box({ end, lower: letters })}
+      style={{ width }}
+    >
       <span className={rolling.current} ref={currentRef}>
         {Array.from({ length: places }, (_, index) => (
           <RollingPlace
@@ -133,6 +146,7 @@ function RollingBox({
             // oxlint-disable-next-line react/no-array-index-key
             key={index}
             part={parts[index]}
+            render={render}
             text={text}
             turn={turn}
           />
@@ -141,8 +155,10 @@ function RollingBox({
       {coming.next !== undefined && (
         <ComingName
           drag={drag}
+          end={end}
           letters={letters}
           ref={nextRef}
+          render={render}
           side={1}
           text={coming.next}
         />
@@ -150,8 +166,10 @@ function RollingBox({
       {coming.previous !== undefined && (
         <ComingName
           drag={drag}
+          end={end}
           letters={letters}
           ref={previousRef}
+          render={render}
           side={-1}
           text={coming.previous}
         />
@@ -169,6 +187,7 @@ function RollingPlace({
   drag,
   hasNext,
   hasPrevious,
+  render = asIs,
 }: {
   part: string | undefined;
   index: number;
@@ -178,6 +197,7 @@ function RollingPlace({
   drag: MotionValue<number>;
   hasNext: boolean;
   hasPrevious: boolean;
+  render?: (text: string) => ReactNode;
 }) {
   // Going out the way the drag goes, when a name is coming that way.
   const out = (value: number) => {
@@ -203,7 +223,7 @@ function RollingPlace({
             transition={{ ...roll, delay: index * LETTER_DELAY }}
             variants={rollSteps}
           >
-            {part}
+            {render(part)}
           </motion.span>
         )}
       </AnimatePresence>
@@ -217,18 +237,22 @@ function ComingName({
   text,
   side,
   letters,
+  end,
   drag,
   ref,
+  render,
 }: {
   text: string;
+  end: boolean;
   side: 1 | -1;
   letters: boolean;
   drag: MotionValue<number>;
   ref: Ref<HTMLSpanElement>;
+  render?: (text: string) => ReactNode;
 }) {
   const parts = letters ? [...text] : [text];
   return (
-    <span className={rolling.coming} ref={ref}>
+    <span className={rolling.coming({ end })} ref={ref}>
       {parts.map((part, index) => (
         <ComingPart
           count={parts.length}
@@ -237,6 +261,7 @@ function ComingName({
           // oxlint-disable-next-line react/no-array-index-key
           key={index}
           part={part}
+          render={render}
           side={side}
         />
       ))}
@@ -250,12 +275,14 @@ function ComingPart({
   count,
   side,
   drag,
+  render = asIs,
 }: {
   part: string;
   index: number;
   count: number;
   side: 1 | -1;
   drag: MotionValue<number>;
+  render?: (text: string) => ReactNode;
 }) {
   const share = (value: number) =>
     Math.sign(value) === side ? letterShare(Math.abs(value), index, count) : 0;
@@ -266,7 +293,7 @@ function ComingPart({
   const opacity = useTransform(drag, share);
   return (
     <motion.span className={rolling.part} style={{ opacity, y }}>
-      {part}
+      {render(part)}
     </motion.span>
   );
 }
@@ -332,6 +359,73 @@ export function TodayCorner({
   );
 }
 
+// What one month has and another leaves out, as the 日 and chevron after
+// a number of days where a month has なし. It fades and gives up its
+// width as the pages are dragged toward a month without it, and comes
+// back toward one with it, so the words beside it close up as the page
+// lands. Otherwise it fades in or out on its own.
+export function ShownWithPages({
+  shown,
+  nextShown,
+  previousShown,
+  progress,
+  swiped,
+  className,
+  children,
+}: {
+  shown: boolean;
+  // Whether the months beside have it, for a drag toward them.
+  nextShown: boolean;
+  previousShown: boolean;
+  progress?: MotionValue<number>;
+  // Turned by a swipe, which has already brought it where it belongs.
+  swiped: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  const reduceMotion = useReducedMotion() ?? false;
+  const rest = useMotionValue(0);
+  const drag = progress ?? rest;
+  // How much is there by what is shown, apart from any drag.
+  const there = useMotionValue(shown ? 1 : 0);
+  useLayoutEffect(() => {
+    const target = shown ? 1 : 0;
+    if (swiped || reduceMotion) {
+      there.jump(target);
+      return;
+    }
+    const fading = animate(there, target, { duration: 0.2 });
+    return () => {
+      fading.stop();
+    };
+  }, [shown, swiped, reduceMotion, there]);
+  const innerRef = useRef<HTMLSpanElement>(null);
+  const fullWidth = useRef(0);
+  useLayoutEffect(() => {
+    fullWidth.current = innerRef.current?.offsetWidth ?? 0;
+  });
+  const amount = useTransform([there, drag], ([now, at]: number[]) => {
+    const from = now ?? 0;
+    const going = at ?? 0;
+    const toward = going > 0 ? nextShown : previousShown;
+    const share = Math.min(Math.abs(going), 1);
+    return from + ((toward ? 1 : 0) - from) * share;
+  });
+  const width = useTransform(amount, (value) =>
+    value >= 1 ? "auto" : `${value * fullWidth.current}px`
+  );
+  return (
+    <motion.span
+      className={cx(rolling.shown, className)}
+      style={{ opacity: amount, width }}
+    >
+      <span className={rolling.shownInner} ref={innerRef}>
+        {children}
+      </span>
+    </motion.span>
+  );
+}
+
 const rolling = {
   // Shows only its own line, with room for the letters' tails, from
   // right under what is over it; sideways the name may run on while the
@@ -347,11 +441,27 @@ const rolling = {
       verticalAlign: "baseline",
       whiteSpace: "nowrap",
     },
-    variants: { lower: { true: { clipPath: "inset(7px -100px 0)" } } },
+    variants: {
+      end: {
+        true: { display: "inline-flex", justifyContent: "flex-end" },
+      },
+      lower: { true: { clipPath: "inset(7px -100px 0)" } },
+    },
   }),
-  coming: css({ left: 0, position: "absolute", top: "4px" }),
+  coming: cva({
+    base: { left: 0, position: "absolute", top: "4px" },
+    variants: { end: { true: { left: "auto", right: 0 } } },
+  }),
   current: css({ display: "inline-block" }),
   part: css({ display: "inline-block", whiteSpace: "pre" }),
   // Where a rolling part is, the one on its way out laid over the next.
   place: css({ display: "inline-block", position: "relative" }),
+  // Cut to the width it is given, sideways only.
+  shown: css({
+    clipPath: "inset(-50px 0)",
+    display: "inline-flex",
+    flexShrink: 0,
+    whiteSpace: "nowrap",
+  }),
+  shownInner: css({ alignItems: "baseline", display: "inline-flex" }),
 };

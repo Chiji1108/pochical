@@ -1477,6 +1477,7 @@ export function MonthSummary({
           <span className={srOnly}>{daysOff}</span>
           <span aria-hidden="true">
             <RollingName
+              end
               next={dragged ? String(beside.next) : undefined}
               previous={dragged ? String(beside.previous) : undefined}
               progress={progress}
