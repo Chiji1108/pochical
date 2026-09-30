@@ -103,6 +103,7 @@ import {
   IconButton,
   inlineInput,
   LimitedInput,
+  LimitedTextArea,
   List,
   ListRow,
   listRow,
@@ -2568,6 +2569,7 @@ const chatStyle = {
     margin: "8px -12px 0",
     opacity: 0.25,
   }),
+  // A message keeps the lines it was written in.
   bubbleText: css({
     bg: "transparent",
     border: 0,
@@ -2576,13 +2578,16 @@ const chatStyle = {
     font: "inherit",
     lineHeight: 1.5,
     maxWidth: "100%",
+    overflowWrap: "anywhere",
     padding: "8px 12px",
     textAlign: "left",
     textStyle: "subheadline",
+    whiteSpace: "pre-wrap",
   }),
+  // Its buttons stay at the foot as the message grows, as in Messages.
   composer: cva({
     base: {
-      alignItems: "center",
+      alignItems: "flex-end",
       borderTop: "1px solid token(colors.separator)",
       display: "flex",
       gap: "8px",
@@ -2627,15 +2632,23 @@ const chatStyle = {
     overflow: "hidden",
     position: "relative",
   }),
+  // One line to start with, as round-ended as the buttons beside it; it
+  // grows with the lines written, up to five, and then scrolls.
   composerInput: css({
     bg: "fill.quaternary",
     border: 0,
-    borderRadius: "999px",
+    borderRadius: "19px",
+    color: "text.primary",
     flex: 1,
     font: "inherit",
-    height: "38px",
+    lineHeight: "22px",
+    // Five lines and the padding.
+    maxHeight: "126px",
+    minHeight: "38px",
     minWidth: 0,
-    padding: "0 16px",
+    outline: "none",
+    padding: "8px 16px",
+    resize: "none",
     textStyle: "body",
   }),
   dayOpen: cva({
@@ -3534,7 +3547,7 @@ function ChatPage({
             )}
           </AnimatePresence>
         </motion.span>
-        <LimitedInput
+        <LimitedTextArea
           aria-label="メッセージ"
           className={chatStyle.composerInput}
           kind="chatMessage"
