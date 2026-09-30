@@ -16,9 +16,9 @@ import {
 } from "../components/design-providers";
 import {
   BREATH_SECONDS,
-  CHANGE_SECONDS,
   nextSkyId,
   paleSkyLights,
+  SKY_CHANGE,
   themeSkyId,
 } from "../components/design-surprise";
 import { ColorSchemeContext } from "../components/design-theme";
@@ -160,8 +160,8 @@ const sky = {
   light: css({ inset: "-6%", position: "absolute" }),
 };
 
-// The sky, breathing as slowly as the app's, and drifting into the next
-// as slowly as the app's too.
+// The sky, breathing as slowly as the app's, and giving way to the next
+// as the app's does.
 function Sky({ id }: { id: string }) {
   const still = useReducedMotion() ?? false;
   return (
@@ -173,7 +173,7 @@ function Sky({ id }: { id: string }) {
           exit={{ opacity: 0 }}
           initial={{ opacity: 0 }}
           key={id}
-          transition={{ duration: CHANGE_SECONDS, ease: "easeInOut" }}
+          transition={SKY_CHANGE}
         >
           <motion.div
             animate={still ? undefined : { scale: 1.08, x: "2%" }}
