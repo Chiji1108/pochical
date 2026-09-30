@@ -76,6 +76,7 @@ import {
   srOnly,
   SwitchRow,
   Tag,
+  useMouseSwipe,
   WeekdayRow,
 } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
@@ -2004,6 +2005,7 @@ function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
       themes.some((preset) => preset.id === current)
     )
   );
+  useMouseSwipe(pager, "[data-page]");
   // Opens on the page of the テーマ in use.
   useLayoutEffect(() => {
     const picked = pager.current

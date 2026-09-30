@@ -48,6 +48,7 @@ import type {
   LabelHTMLAttributes,
   ReactNode,
   Ref,
+  RefObject,
   UIEventHandler,
 } from "react";
 import { css, cva, cx } from "styled-system/css";
@@ -1443,9 +1444,10 @@ export const colorGrid = css({
   padding: 0,
 });
 
-// Dots under a pager, one for each page and the one shown filled, as
-// iOS's page control and the indicator under Compose's HorizontalPager,
-// so pages to the side are not missed. A dot takes to its page.
+// Dots under a pager, one for each page, the one shown stretched into a
+// short bar, so pages to the side are not missed. It tells the page by
+// its shape as well as its shade, and the bar grows and shrinks as the
+// page turns. A dot takes to its page.
 const pageDots = css({
   "& button": {
     "&::before": {
@@ -1453,14 +1455,15 @@ const pageDots = css({
       borderRadius: "999px",
       content: '""',
       height: "8px",
-      transition: "background 0.2s",
+      transition: "width 0.25s, background 0.25s",
       width: "8px",
     },
-    "&[aria-current=true]::before": { bg: "text.primary" },
+    "&[aria-current=true]::before": { bg: "text.primary", width: "20px" },
     _focusVisible: {
       outline: "2px solid token(colors.accent.default)",
       outlineOffset: "-2px",
     },
+    _motionReduce: { "&::before": { transition: "none" } },
     alignItems: "center",
     bg: "transparent",
     border: 0,
@@ -1469,8 +1472,7 @@ const pageDots = css({
     display: "flex",
     height: "24px",
     justifyContent: "center",
-    padding: 0,
-    width: "16px",
+    padding: "0 4px",
   },
   border: 0,
   display: "flex",
@@ -1478,6 +1480,101 @@ const pageDots = css({
   margin: 0,
   padding: 0,
 });
+
+// Past this, a mouse's press on a pager is a drag rather than a click.
+const MOUSE_DRAG_SLOP = 4;
+// A drag this far turns the page, however short of halfway.
+const MOUSE_TURN_DISTANCE = 40;
+
+// Lets a mouse drag a scroll-snapping pager as a finger swipes it. Scroll
+// snapping only follows touch, trackpads and wheels, so on a computer, as
+// in /try, a drag did nothing. The drag turns at most one page, as a swipe
+// does, and the click that ends it picks nothing.
+export function useMouseSwipe(
+  ref: RefObject<HTMLElement | null>,
+  pageSelector: string
+) {
+  useEffect(() => {
+    const scroller = ref.current;
+    if (!scroller) {
+      return;
+    }
+    let start: { left: number; x: number } | undefined;
+    let dragging = false;
+    const pageLefts = () =>
+      [...scroller.querySelectorAll<HTMLElement>(pageSelector)].map(
+        (page) => page.offsetLeft
+      );
+    const down = (event: PointerEvent) => {
+      if (event.pointerType === "mouse" && event.button === 0) {
+        start = { left: scroller.scrollLeft, x: event.clientX };
+        dragging = false;
+      }
+    };
+    const move = (event: PointerEvent) => {
+      if (!start) {
+        return;
+      }
+      const moved = event.clientX - start.x;
+      if (!dragging && Math.abs(moved) < MOUSE_DRAG_SLOP) {
+        return;
+      }
+      if (!dragging) {
+        dragging = true;
+        scroller.setPointerCapture(event.pointerId);
+        scroller.style.scrollSnapType = "none";
+      }
+      scroller.scrollLeft = start.left - moved;
+    };
+    const up = (event: PointerEvent) => {
+      if (!(start && dragging)) {
+        start = undefined;
+        return;
+      }
+      const lefts = pageLefts();
+      const { left: startLeft } = start;
+      // The page the drag began on.
+      let from = 0;
+      for (const [index, left] of lefts.entries()) {
+        if (
+          Math.abs(left - startLeft) < Math.abs((lefts[from] ?? 0) - startLeft)
+        ) {
+          from = index;
+        }
+      }
+      const moved = event.clientX - start.x;
+      let to = from;
+      if (Math.abs(moved) > MOUSE_TURN_DISTANCE) {
+        to = moved < 0 ? from + 1 : from - 1;
+      }
+      to = Math.min(Math.max(to, 0), lefts.length - 1);
+      start = undefined;
+      scroller.style.scrollSnapType = "";
+      scroller.scrollTo({ behavior: "smooth", left: lefts[to] ?? 0 });
+    };
+    // The click after a drag lands on the pager, not on a choice; it is
+    // stopped all the same.
+    const click = (event: MouseEvent) => {
+      if (dragging) {
+        dragging = false;
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    scroller.addEventListener("pointerdown", down);
+    scroller.addEventListener("pointermove", move);
+    scroller.addEventListener("pointerup", up);
+    scroller.addEventListener("pointercancel", up);
+    scroller.addEventListener("click", click, true);
+    return () => {
+      scroller.removeEventListener("pointerdown", down);
+      scroller.removeEventListener("pointermove", move);
+      scroller.removeEventListener("pointerup", up);
+      scroller.removeEventListener("pointercancel", up);
+      scroller.removeEventListener("click", click, true);
+    };
+  }, [ref, pageSelector]);
+}
 
 export function PageDots({
   count,
