@@ -52,19 +52,19 @@ import {
   WavesIcon as PhWaves,
 } from "@phosphor-icons/react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
+import { markColorIn, markColors } from "@pochical/design/colors";
+import {
+  markPalette,
+  THEME_SLOT,
+  themeMarkColor,
+} from "@pochical/design/themes";
 import { createContext, useContext } from "react";
 import type { CSSProperties } from "react";
 import { css, cx } from "styled-system/css";
 
 import { usePatterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
-import { markColorIn, markColors } from "../lib/design-tokens";
-import {
-  presetOf,
-  ThemeContext,
-  themeColors,
-  useColorScheme,
-} from "./design-theme";
+import { presetOf, ThemeContext, useColorScheme } from "./design-theme";
 
 export type ShiftMarkStyle = "icon" | "emoji" | "badge";
 export const ShiftMarkStyleContext = createContext<ShiftMarkStyle>("icon");
@@ -354,38 +354,30 @@ export function guessLook(name: string): Omit<Look, "color"> {
   };
 }
 
-// The first shift color is the theme's own, as 休み takes it: モス in
-// ポチカル, and whatever color another テーマ is, so its days off are
-// its color rather than a green beside it.
-const THEME_SLOT = 0;
-
-// All shift colors for the current light or dark mode, in picker order.
+// All shift colors for the current light or dark mode, in picker order;
+// the first is the テーマ's own (THEME_SLOT).
 export function useMarkColors() {
-  const scheme = useColorScheme();
-  const { vividness } = presetOf(useContext(ThemeContext).theme);
-  const theme = useThemeMarkColor();
-  return markColors.map((option, index) =>
-    index === THEME_SLOT ? theme : markColorIn(option, scheme, vividness)
+  return markPalette(
+    presetOf(useContext(ThemeContext).theme),
+    useColorScheme()
   );
 }
 
 export function useMarkColor(markColor: MarkColor) {
   const scheme = useColorScheme();
-  const { vividness } = presetOf(useContext(ThemeContext).theme);
-  const theme = useThemeMarkColor();
+  const preset = presetOf(useContext(ThemeContext).theme);
   const option = markColors[markColor];
   return markColor === THEME_SLOT || !option
-    ? theme
-    : markColorIn(option, scheme, vividness);
+    ? themeMarkColor(preset, scheme)
+    : markColorIn(option, scheme, preset.vividness);
 }
 
 // The theme's own color, for its slot and for marks drawn all in one color.
 function useThemeMarkColor() {
-  const { accent, markTint } = themeColors(
+  return themeMarkColor(
     presetOf(useContext(ThemeContext).theme),
     useColorScheme()
   );
-  return { color: accent, name: "テーマカラー", tint: markTint };
 }
 
 // On when the viewer's テーマ draws every shift in its one color:

@@ -1,3 +1,4 @@
+import type { ColorScheme } from "@pochical/design/colors";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -6,7 +7,6 @@ import type { Appearance, PresetId } from "../components/design-theme";
 import { defaultWeekSettings } from "../components/design-week";
 import type { WeekSettings } from "../components/design-week";
 import type { LookSettings, ShiftMarkStyle } from "../components/shift-mark";
-import type { ColorScheme } from "./design-tokens";
 
 // The person's settings on /design, sorted by where each would live in the
 // app. The slices are the schema: what goes with the account and reaches

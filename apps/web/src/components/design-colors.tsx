@@ -1,16 +1,17 @@
-import type { ReactNode } from "react";
-import { css, cva, cx } from "styled-system/css";
-
-import type { ColorScheme, ColorToken } from "../lib/design-tokens";
+import type { ColorScheme, ColorToken } from "@pochical/design/colors";
 import {
   colorSchemes,
   markColorIn,
   markColors,
   neutralTokenGroups,
-} from "../lib/design-tokens";
-import { hexToOklch } from "../lib/oklch";
-import { presets, themeColors, themeStyle } from "./design-theme";
-import type { Preset } from "./design-theme";
+} from "@pochical/design/colors";
+import { hexToOklch } from "@pochical/design/oklch";
+import { presets, themeColors, themeRoleTokens } from "@pochical/design/themes";
+import type { Preset } from "@pochical/design/themes";
+import type { ReactNode } from "react";
+import { css, cva, cx } from "styled-system/css";
+
+import { themeStyle } from "./design-theme";
 
 const schemeLabels: Record<ColorScheme, string> = {
   dark: "ダーク",
@@ -40,17 +41,6 @@ const grayRoles = [
   "text-tertiary",
   "text-primary",
 ];
-
-// The accent roles of a theme, in the order a screen uses them.
-const themeRoles = [
-  { key: "accent", label: "文字・線", name: "accent-default" },
-  { key: "fill", label: "塗り", name: "accent-fill" },
-  { key: "onFill", label: "塗りの上の文字", name: "accent-on-fill" },
-  { key: "line", label: "フォーカス・見出し", name: "accent-focus" },
-  { key: "muted", label: "選択中の枠", name: "accent-border" },
-  { key: "soft", label: "薄い背景", name: "accent-container" },
-  { key: "markTint", label: "休みの地", name: "calendar-off-tint" },
-] as const;
 
 // Relative luminance of a #rrggbb color, per WCAG 2.
 function luminance(hex: string) {
@@ -551,7 +541,7 @@ function ThemePalette({
         <span className={palette.themeLink}>月で見る</span>
       </div>
       <ul className={palette.swatches}>
-        {themeRoles.map((role) => (
+        {themeRoleTokens.map((role) => (
           <li key={role.key}>
             <span
               aria-hidden="true"
@@ -603,7 +593,7 @@ function ThemeTokens() {
       title="テーマ"
     >
       <p className={palette.roleList}>
-        {themeRoles.map((role) => (
+        {themeRoleTokens.map((role) => (
           <span key={role.key}>
             <code>--{role.name}</code>
             {role.label}

@@ -12,7 +12,7 @@ import { css, cx } from "styled-system/css";
 const NARROW = "@media (max-width: 760px)";
 
 // The workspace's own colors around the phones; the app's come from
-// lib/design-tokens.ts and design-theme.tsx as CSS variables. `design-page`
+// design/ through design-theme.tsx as CSS variables. `design-page`
 // stays on it as the hook the site's header and footer hide by.
 const page = css({
   "--ws-bezel": "#333631",

@@ -3,8 +3,7 @@ import {
   hexFromArgb,
   SchemeTonalSpot,
 } from "@material/material-color-utilities";
-
-import type { ColorScheme } from "./design-tokens";
+import type { ColorScheme } from "@pochical/design/colors";
 
 // Android's colors from the wallpaper (Material You), worked out the way
 // Android does: Material's own library builds the Tonal Spot scheme, the

@@ -1,9 +1,9 @@
+import { oklchToHex } from "@pochical/design/oklch";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useContext } from "react";
 import { css } from "styled-system/css";
 
 import { useSettings } from "../lib/design-settings-store";
-import { oklchToHex } from "../lib/oklch";
 import {
   ColorSchemeContext,
   ThemeContext,
