@@ -229,7 +229,7 @@ const features: {
     ),
     id: "group",
     label: "GROUP",
-    screen: <GroupGallery />,
+    screen: <FeatureScreen groupPage="chat" tab="group" />,
     title: (
       <>
         グループで、
@@ -328,7 +328,7 @@ function FeatureScreen({
   groupPage,
 }: {
   tab: Tab;
-  groupPage?: "hub" | "shifts";
+  groupPage?: "shifts" | "chat";
 }) {
   const person = useSamplePerson();
   return (
@@ -347,7 +347,7 @@ function FeatureScreen({
 
 // A few real screens drawn small, side by side, each stepping down and in
 // front of the one before. Only screens that do not measure themselves
-// scale well: the calendar, the group hub and chat.
+// scale well, like the calendar.
 const gallery = {
   inner: css({
     left: 0,
@@ -418,28 +418,6 @@ function useSamplePerson() {
     })
   );
   return person;
-}
-
-// The family's hub, and its chat, where a day off was shared.
-function GroupGallery() {
-  const person = useSamplePerson();
-  return (
-    <UserStoreContext value={person}>
-      <PhoneGallery
-        phones={(["hub", "chat"] as const).map((groupPage) => ({
-          key: groupPage,
-          screen: (
-            <DesignCalendar
-              initialEditing={false}
-              initialGroupPage={groupPage}
-              initialTab="group"
-              variants={variants}
-            />
-          ),
-        }))}
-      />
-    </UserStoreContext>
-  );
 }
 
 // The calendar in a few looks, each set as someone might set theirs:
