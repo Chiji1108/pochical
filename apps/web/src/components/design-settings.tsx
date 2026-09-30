@@ -1,7 +1,7 @@
 import type { ColorScheme } from "@pochical/design/colors";
 import { presets } from "@pochical/design/themes";
 import type { Preset } from "@pochical/design/themes";
-import { ArrowRight, Check, CloudCheck } from "lucide-react";
+import { ArrowRight, CloudCheck } from "lucide-react";
 import { useMotionValue } from "motion/react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
@@ -482,7 +482,6 @@ function SettingsTop({
 // size where their grounds and the dark one's rim read; seasonal ones
 // later may need three.
 const appIcons = {
-  check: css({ color: "accent.default" }),
   grid: css({
     border: 0,
     display: "grid",
@@ -491,7 +490,6 @@ const appIcons = {
     margin: "8px 0 20px",
     padding: 0,
   }),
-  name: css({ alignItems: "center", display: "flex", gap: "4px" }),
 };
 const systemAlert = {
   box: css({
@@ -1760,16 +1758,7 @@ function AppIconPage({ onBack }: { onBack: () => void }) {
         {pickableIcons.map((option) => (
           <ChoiceTile key={option.id} size="large" value={option.id}>
             <AppIcon size={104} src={icons[option.id]} />
-            <span className={appIcons.name}>
-              {icon === option.id && (
-                <Check
-                  aria-hidden="true"
-                  className={appIcons.check}
-                  size={14}
-                />
-              )}
-              {option.name}
-            </span>
+            {option.name}
           </ChoiceTile>
         ))}
       </ChoiceGrid>

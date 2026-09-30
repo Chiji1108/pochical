@@ -2058,7 +2058,7 @@ export function ChoiceChip({
 }
 
 // One of a ChoiceGrid as a tile: a picture over its name, framed on a
-// ground when picked. large for a few big pictures two to a row, like the
+// ground and its name in bold when picked. large for a few big pictures two to a row, like the
 // app icons; small for three to a row, like the テーマ.
 const choiceTileStyle = cva({
   base: {
@@ -2066,6 +2066,7 @@ const choiceTileStyle = cva({
       bg: "fill.quaternary",
       borderColor: "accent.border",
       color: "text.primary",
+      fontWeight: 600,
     },
     bg: "transparent",
     border: "2px solid transparent",
@@ -2083,7 +2084,6 @@ const choiceTileStyle = cva({
         textStyle: "body",
       },
       small: {
-        _checked: { fontWeight: 600 },
         borderRadius: "xl",
         gap: "4px",
         padding: "4px 4px 8px",
