@@ -10,6 +10,7 @@
     "generate-routes": "tsr generate",
     "icon:site": "bun scripts/site-icon.ts",
     "icon:app": "bun scripts/app-assets.ts",
+    "image:share": "bun scripts/share-image.ts",
     "build": "panda codegen && vite build",
     "preview": "vite preview --port 3000",
     "deploy": "bun run build && wrangler deploy",

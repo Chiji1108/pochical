@@ -21,6 +21,7 @@ import { Route as DesignAssetsRouteImport } from './routes/design_.assets'
 import { Route as DesignColorsRouteImport } from './routes/design_.colors'
 import { Route as DesignComponentsRouteImport } from './routes/design_.components'
 import { Route as DesignFlowsRouteImport } from './routes/design_.flows'
+import { Route as DesignShareImageRouteImport } from './routes/design_.share-image'
 import { Route as DesignStatesRouteImport } from './routes/design_.states'
 import { Route as DesignWidgetsRouteImport } from './routes/design_.widgets'
 import { Route as InviteInviteCodeRouteImport } from './routes/invite.$inviteCode'
@@ -85,6 +86,11 @@ const DesignFlowsRoute = DesignFlowsRouteImport.update({
   path: '/design/flows',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DesignShareImageRoute = DesignShareImageRouteImport.update({
+  id: '/design_/share-image',
+  path: '/design/share-image',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DesignStatesRoute = DesignStatesRouteImport.update({
   id: '/design_/states',
   path: '/design/states',
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/design/colors': typeof DesignColorsRoute
   '/design/components': typeof DesignComponentsRoute
   '/design/flows': typeof DesignFlowsRoute
+  '/design/share-image': typeof DesignShareImageRoute
   '/design/states': typeof DesignStatesRoute
   '/design/widgets': typeof DesignWidgetsRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/design/colors': typeof DesignColorsRoute
   '/design/components': typeof DesignComponentsRoute
   '/design/flows': typeof DesignFlowsRoute
+  '/design/share-image': typeof DesignShareImageRoute
   '/design/states': typeof DesignStatesRoute
   '/design/widgets': typeof DesignWidgetsRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/design_/colors': typeof DesignColorsRoute
   '/design_/components': typeof DesignComponentsRoute
   '/design_/flows': typeof DesignFlowsRoute
+  '/design_/share-image': typeof DesignShareImageRoute
   '/design_/states': typeof DesignStatesRoute
   '/design_/widgets': typeof DesignWidgetsRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/design/colors'
     | '/design/components'
     | '/design/flows'
+    | '/design/share-image'
     | '/design/states'
     | '/design/widgets'
     | '/invite/$inviteCode'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/design/colors'
     | '/design/components'
     | '/design/flows'
+    | '/design/share-image'
     | '/design/states'
     | '/design/widgets'
     | '/invite/$inviteCode'
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | '/design_/colors'
     | '/design_/components'
     | '/design_/flows'
+    | '/design_/share-image'
     | '/design_/states'
     | '/design_/widgets'
     | '/invite/$inviteCode'
@@ -220,6 +232,7 @@ export interface RootRouteChildren {
   DesignColorsRoute: typeof DesignColorsRoute
   DesignComponentsRoute: typeof DesignComponentsRoute
   DesignFlowsRoute: typeof DesignFlowsRoute
+  DesignShareImageRoute: typeof DesignShareImageRoute
   DesignStatesRoute: typeof DesignStatesRoute
   DesignWidgetsRoute: typeof DesignWidgetsRoute
   InviteInviteCodeRoute: typeof InviteInviteCodeRoute
@@ -311,6 +324,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DesignFlowsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/design_/share-image': {
+      id: '/design_/share-image'
+      path: '/design/share-image'
+      fullPath: '/design/share-image'
+      preLoaderRoute: typeof DesignShareImageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/design_/states': {
       id: '/design_/states'
       path: '/design/states'
@@ -348,6 +368,7 @@ const rootRouteChildren: RootRouteChildren = {
   DesignColorsRoute: DesignColorsRoute,
   DesignComponentsRoute: DesignComponentsRoute,
   DesignFlowsRoute: DesignFlowsRoute,
+  DesignShareImageRoute: DesignShareImageRoute,
   DesignStatesRoute: DesignStatesRoute,
   DesignWidgetsRoute: DesignWidgetsRoute,
   InviteInviteCodeRoute: InviteInviteCodeRoute,

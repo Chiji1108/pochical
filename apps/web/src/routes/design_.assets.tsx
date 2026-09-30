@@ -44,13 +44,23 @@ const sources = [
     path: "public/design/poodle.png",
     src: "/design/poodle.png",
     title: "プードルの絵",
+    wide: false,
   },
   {
     alt: "モスの地に白いプードルのアイコン",
-    note: "ファビコン、共有したときの画像、サイトのヘッダーで使っています。アプリアイコンのモスと同じ絵です。",
+    note: "ファビコンとサイトのヘッダーで使っています。アプリアイコンのモスと同じ絵です。",
     path: "public/icon.png",
     src: "/icon.png",
     title: "サイトのアイコン",
+    wide: false,
+  },
+  {
+    alt: "ポチカルのロゴと「シフトを、ポチッと。」、カレンダーの画面",
+    note: "リンクを共有したときの画像、1200×630。/design/share-image を bun run image:share で撮っています。",
+    path: "public/share.png",
+    src: "/share.png",
+    title: "共有したときの画像",
+    wide: true,
   },
 ] as const;
 
@@ -75,6 +85,9 @@ const sourceList = css({
     margin: 0,
     padding: "16px",
   },
+  // A wide picture takes the whole row, at its own shape.
+  "& figure[data-wide]": { gridColumn: "1 / -1" },
+  "& figure[data-wide] img": { aspectRatio: "1200 / 630" },
   "& img": {
     aspectRatio: 1,
     bg: "#fff",
@@ -125,7 +138,7 @@ function AssetsPage() {
             </h2>
             <div className={sourceList}>
               {sources.map((source) => (
-                <figure key={source.path}>
+                <figure data-wide={source.wide || undefined} key={source.path}>
                   <img
                     alt={source.alt}
                     height={160}
