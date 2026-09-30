@@ -56,7 +56,7 @@ import { createContext, useContext } from "react";
 import type { CSSProperties } from "react";
 import { css, cx } from "styled-system/css";
 
-import { patterns } from "../lib/design-patterns";
+import { usePatterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { markColorIn, markColors } from "../lib/design-tokens";
 import {
@@ -137,14 +137,14 @@ export const CellNamesContext = createContext<{
 }>({ names: defaultCellNames });
 
 // Whether days off get a tint of their pattern color, per look. Unset means
-// automatic: on, except letters on a tinted tile, which carry the color
-// already.
+// on, except for emoji, which bring their own colors; each look's own
+// starting value is in the settings store.
 export type OffHighlight = Partial<Record<ShiftMarkStyle, boolean>>;
 export const defaultOffHighlight: OffHighlight = {};
 
 export function useOffHighlight(style: ShiftMarkStyle) {
   const { highlight } = useContext(OffHighlightContext);
-  return highlight[style] ?? true;
+  return highlight[style] ?? style !== "emoji";
 }
 
 // Every look setting at once: the style and its switches. `fill` only
@@ -178,7 +178,7 @@ export const sampleLooks = {
   friendly: { ...baseLook, names: true, style: "badge" },
   minimal: { ...baseLook, fill: false, highlight: false },
   natural: baseLook,
-  pop: { ...baseLook, style: "emoji" },
+  pop: { ...baseLook, highlight: false, style: "emoji" },
   roster: { ...baseLook, highlight: false, style: "badge" },
 } satisfies Record<string, LookSettings>;
 
@@ -308,22 +308,6 @@ export type Look = {
 // An index into the palette below.
 export type MarkColor = number;
 
-const shiftLooks: Record<Shift, Omit<Look, "emoji">> = {
-  after: { color: 3, icon: "sunrise", symbol: "明" },
-  day: { color: 1, icon: "sun", symbol: "日" },
-  duty: { color: 4, icon: "siren", symbol: "当" },
-  early: { color: 2, icon: "cloudSun", symbol: "早" },
-  evening: { color: 2, icon: "sunMoon", symbol: "夕" },
-  junya: { color: 7, icon: "cloudMoon", symbol: "準" },
-  late: { color: 4, icon: "cloudMoon", symbol: "遅" },
-  midnight: { color: 9, icon: "moonStar", symbol: "深" },
-  night: { color: 8, icon: "moon", symbol: "夜" },
-  off: { color: 0, icon: "leaf", symbol: "休" },
-  offDuty: { color: 11, icon: "bed", symbol: "非" },
-  paid: { color: 5, icon: "flower", symbol: "有" },
-  training: { color: 10, icon: "book", symbol: "研" },
-};
-
 const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
 
 function firstLetter(name: string) {
@@ -331,13 +315,6 @@ function firstLetter(name: string) {
     graphemes.segment(name.trim())[Symbol.iterator]().next().value?.segment ??
     ""
   );
-}
-
-export function lookOf(shift: Shift): Look {
-  return {
-    ...shiftLooks[shift],
-    emoji: patterns[shift].emoji,
-  };
 }
 
 // Longer words first, so 待機 wins over a single-letter match.
@@ -560,11 +537,15 @@ export function ShiftMark({
   late?: boolean;
 }) {
   const style = useContext(ShiftMarkStyleContext);
+  const pattern = usePatterns()[shift];
+  if (!pattern) {
+    return null;
+  }
   return (
     <MarkGlyph
       early={early}
       late={late}
-      look={lookOf(shift)}
+      look={pattern}
       size={size}
       style={style}
     />

@@ -29,6 +29,20 @@ export const designVariantOptions = {
     ],
     label: "パターン",
   },
+  photoSend: {
+    choices: [
+      { label: "届く", value: "ok" },
+      { label: "失敗する", value: "fails" },
+    ],
+    label: "写真の送信",
+  },
+  platform: {
+    choices: [
+      { label: "iPhone", value: "ios" },
+      { label: "Android", value: "android" },
+    ],
+    label: "端末",
+  },
   scanResult: {
     choices: [
       { label: "招待", value: "invite" },
@@ -44,6 +58,14 @@ export const designVariantOptions = {
       { label: "空", value: "empty" },
     ],
     label: "予定",
+  },
+  wallpaper: {
+    choices: [
+      { label: "青緑", value: "teal" },
+      { label: "桃", value: "peach" },
+      { label: "山吹", value: "yamabuki" },
+    ],
+    label: "Android の壁紙",
   },
 } as const;
 

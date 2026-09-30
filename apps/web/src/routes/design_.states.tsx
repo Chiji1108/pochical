@@ -33,6 +33,7 @@ import {
   ShiftMarkStyleContext,
 } from "../components/shift-mark";
 import type { OffDisplay, ShiftMarkStyle } from "../components/shift-mark";
+import { presetList } from "../lib/design-patterns";
 import type { ColorScheme } from "../lib/design-tokens";
 import { pageMeta } from "../lib/site";
 
@@ -118,7 +119,7 @@ function StatesPage() {
                   label={`${count}パターン`}
                   month={AUGUST}
                   person={{
-                    patternKeys: patternSets[count],
+                    patterns: presetList(patternSets[count]),
                     schedule: initialDesignSchedule(count, AUGUST),
                   }}
                 />

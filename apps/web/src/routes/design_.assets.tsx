@@ -17,16 +17,23 @@ import {
 import { pageStyle } from "../components/design-theme";
 import { pageMeta } from "../lib/site";
 
+import previewStyles from "../calendar-preview.css?url";
+
 export const Route = createFileRoute("/design_/assets")({
   component: AssetsPage,
-  head: () => ({
-    ...pageMeta(
+  head: () => {
+    const meta = pageMeta(
       "素材",
       "ポチカルのアプリアイコンと、元になる絵",
       "/design/assets",
       true
-    ),
-  }),
+    );
+    // The first key visual's own styles, needed on this page only.
+    return {
+      ...meta,
+      links: [...meta.links, { href: previewStyles, rel: "stylesheet" }],
+    };
+  },
 });
 
 // Images the apps and the site ship, and the drawings they come from.

@@ -27,8 +27,22 @@ import { Fragment, useContext, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import { PATTERNS_PER_PAGE, patterns } from "../lib/design-patterns";
-import type { Shift } from "../lib/design-patterns";
+import {
+  bookOf,
+  isDayOff,
+  PATTERNS_PER_PAGE,
+  OwnPatternsContext,
+  PatternsContext,
+  presetPatterns,
+  samePattern,
+  usePatterns,
+} from "../lib/design-patterns";
+import type {
+  Pattern,
+  PatternBook,
+  PresetShift,
+  Shift,
+} from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
@@ -79,7 +93,6 @@ import {
 import { holidayName, holidayNameOfKey, useWeek } from "./design-week";
 import {
   CellNamesContext,
-  lookOf,
   OffDisplayContext,
   ShiftMark,
   ShiftMarkStyleContext,
@@ -87,8 +100,6 @@ import {
   useOffHighlight,
 } from "./shift-mark";
 
-// Entering one of these also fills the next day, like 夜勤 then 明け.
-export const nextDayShifts: Partial<Record<Shift, Shift>> = { night: "after" };
 type DayEntry = {
   shift: Shift;
   // Set only when the time differs from the pattern's standard time.
@@ -109,21 +120,25 @@ export type RepeatRule = {
   start: Date;
   anchor?: Date;
   holidaysOff?: boolean;
+  // The pattern it put on holidays, so turning them back finds those days
+  // even after the person's patterns have changed.
+  holidayShift?: Shift;
 };
 
-// What a rule fills in from its start, a year ahead.
-function ruleSchedule(rule: RepeatRule, holidaysOff = false) {
+// What a rule fills in from its start, a year ahead, with holidays on
+// `holidayShift` when there is one.
+function ruleSchedule(rule: RepeatRule, holidayShift?: Shift) {
   const { sequence, start } = rule;
   return repeatSchedule(
     sequence,
     rule.anchor ?? start,
     start,
     ruleEnd(start),
-    holidaysOff
+    holidayShift
   );
 }
 export type PatternCount = 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13;
-const eight: Shift[] = [
+const eight: PresetShift[] = [
   "early",
   "day",
   "late",
@@ -133,7 +148,7 @@ const eight: Shift[] = [
   "training",
   "paid",
 ];
-export const patternSets: Record<PatternCount, Shift[]> = {
+export const patternSets: Record<PatternCount, PresetShift[]> = {
   10: [...eight, "junya", "midnight"],
   11: [...eight, "junya", "midnight", "offDuty"],
   12: [...eight, "junya", "midnight", "offDuty", "evening"],
@@ -148,7 +163,7 @@ export const patternSets: Record<PatternCount, Shift[]> = {
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
 const dayMilliseconds = 86_400_000;
 const leadingZeroPattern = /^0/;
-const sample: Shift[] = [
+const sample: PresetShift[] = [
   "day",
   "day",
   "night",
@@ -192,15 +207,25 @@ export function dateKey(date: Date) {
 
 // A week with 休み on a weekend day reads as office hours, which usually
 // have national holidays off too.
-export function defaultHolidaysOff(sequence: Shift[], start: Date) {
+export function defaultHolidaysOff(
+  sequence: Shift[],
+  start: Date,
+  book: PatternBook
+) {
   const weekLength = 7;
   if (sequence.length !== weekLength) {
     return false;
   }
   return sequence.some((shift, index) => {
     const day = addDays(start, index).getDay();
-    return shift === "off" && (day === 0 || day === 6);
+    return isDayOff(book[shift]) && (day === 0 || day === 6);
   });
+}
+
+// What a holiday becomes for someone off on them: their first pattern
+// that counts as a day off, which is 休み unless they put another first.
+export function holidayShiftOf(patterns: readonly Pattern[]) {
+  return patterns.find((pattern) => pattern.countsAsOff)?.id;
 }
 
 const sampleDetails: Record<string, Omit<DayEntry, "shift">> = {
@@ -210,7 +235,7 @@ const sampleDetails: Record<string, Omit<DayEntry, "shift">> = {
   "2026-09-26": { note: "新人さん同行" },
 };
 
-function sampleShift(patternCount: PatternCount, index: number): Shift {
+function sampleShift(patternCount: PatternCount, index: number): PresetShift {
   if (patternCount >= 7) {
     return patternSets[patternCount][index % patternCount];
   }
@@ -253,7 +278,7 @@ export function repeatSchedule(
   anchor: Date,
   from: Date,
   to: Date,
-  holidaysOff = false
+  holidayShift?: Shift
 ): Schedule {
   const schedule: Schedule = {};
   const anchorTime = Date.UTC(
@@ -271,14 +296,10 @@ export function repeatSchedule(
       ((offset % sequence.length) + sequence.length) % sequence.length;
     const shift = sequence[index];
     schedule[dateKey(date)] = {
-      shift: holidaysOff && holidayName(date) ? "off" : shift,
+      shift: holidayShift && holidayName(date) ? holidayShift : shift,
     };
   }
   return schedule;
-}
-
-export function isDayOff(shift: Shift | undefined) {
-  return shift === "off" || shift === "paid";
 }
 
 function keepDetails(entry: DayEntry | undefined, shift: Shift): DayEntry {
@@ -300,8 +321,9 @@ function formatTime(time: string) {
   return time.replace(leadingZeroPattern, "");
 }
 
-export function timeRange(entry: DayEntry) {
-  const { time } = patterns[entry.shift];
+// The day's time, its own where it was changed, or its pattern's.
+export function timeRange(entry: DayEntry, pattern: Pattern | undefined) {
+  const time = pattern?.time;
   if (!time) {
     return;
   }
@@ -324,8 +346,11 @@ function minutesOf(time: string) {
 // Other moves, a later start or an earlier end, are only "changed". Times
 // are counted from the standard start, so a night shift's end the next
 // morning, or a start the evening before, compares the right way.
-export function timeChangeOf(entry: DayEntry | undefined) {
-  const time = entry && patterns[entry.shift].time;
+export function timeChangeOf(
+  entry: DayEntry | undefined,
+  pattern: Pattern | undefined
+) {
+  const time = entry && pattern?.time;
   if (!(entry && time && (entry.start || entry.end))) {
     return;
   }
@@ -350,14 +375,18 @@ export function timeChangeOf(entry: DayEntry | undefined) {
 // so two phones under one store show the same person.
 export function DesignCalendar({
   initialEditing,
+  initialDay = 1,
   initialMonth = 8,
   variants,
   pendingInvite = false,
   initialTab = "calendar",
   initialSettingsPage,
+  initialGroupPage,
   fullScreen = false,
 }: {
   initialEditing: boolean;
+  // The day entering starts on, as the top page opens on its first blank.
+  initialDay?: number;
   // On /try: filling a real phone's screen rather than a pictured one.
   fullScreen?: boolean;
   initialMonth?: number;
@@ -365,6 +394,8 @@ export function DesignCalendar({
   // For the flow diagrams: a tab, and a settings page, to open on.
   initialTab?: Tab;
   initialSettingsPage?: SettingsPage;
+  // And the group tab's page: its hub, the shift table or the group chat.
+  initialGroupPage?: "hub" | "shifts" | "chat";
   // A group's invitation link was opened: ask about joining over the
   // calendar.
   pendingInvite?: boolean;
@@ -449,7 +480,7 @@ export function DesignCalendar({
     onReorder: setCoworkerNames,
   };
   const [editing, setEditing] = useState(initialEditing);
-  const [selectedDay, setSelectedDay] = useState(1);
+  const [selectedDay, setSelectedDay] = useState(initialDay);
   // Whether the month being entered had blank days when it came up, as
   // only then can 完了 have just filled it. A filled month can be entered
   // too, with ポチポチ入力 always offered in the 保存を右上 variant.
@@ -460,8 +491,12 @@ export function DesignCalendar({
   // the drag has already brought in.
   const pageDrag = useMotionValue(0);
   const [swipedTo, setSwipedTo] = useState<string>();
-  const patternKeys = useUser((state) => state.patternKeys);
-  const setPatternKeys = useUser((state) => state.setPatternKeys);
+  const ownPatterns = useUser((state) => state.patterns);
+  const setPatterns = useUser((state) => state.setPatterns);
+  const patternKeys = ownPatterns.map((pattern) => pattern.id);
+  // The person's own patterns, over the ready-made ones that templates
+  // and samples name.
+  const book: PatternBook = { ...presetPatterns, ...bookOf(ownPatterns) };
   const sharing = useUser((state) => state.groups.length > 0);
   const [announcement, setAnnouncement] = useState("");
   const weekTools = useWeek();
@@ -469,14 +504,16 @@ export function DesignCalendar({
   const monthDays = dates.filter(
     (date) => date.getMonth() === month.getMonth()
   );
-  const daysOff = monthDays.filter((date) =>
-    isDayOff(schedule[dateKey(date)]?.shift)
-  ).length;
-  const counts = patternKeys.map((key) => ({
-    key,
-    ...patterns[key],
-    count: monthDays.filter((date) => schedule[dateKey(date)]?.shift === key)
-      .length,
+  const daysOff = monthDays.filter((date) => {
+    const shift = schedule[dateKey(date)]?.shift;
+    return shift !== undefined && isDayOff(book[shift]);
+  }).length;
+  const counts = ownPatterns.map((pattern) => ({
+    count: monthDays.filter(
+      (date) => schedule[dateKey(date)]?.shift === pattern.id
+    ).length,
+    key: pattern.id,
+    label: pattern.name,
   }));
   const unfilled = monthDays.filter((date) => !schedule[dateKey(date)]).length;
   const selectedDate = new Date(
@@ -601,22 +638,30 @@ export function DesignCalendar({
   // From the switch day on, the new order replaces what the old one wrote.
   // Fills the schedule from the rule's start. Everything from that day on
   // is replaced, so an empty sequence leaves a roster to fill in.
-  function fillRule(rule: RepeatRule) {
+  // A new job brings its own patterns, so it passes them in.
+  function fillRule(rule: RepeatRule, patterns = ownPatterns) {
     const from = dateKey(rule.start);
     const holidaysOff =
       rule.sequence.length > 0 &&
       (rule.holidaysOff ??
-        defaultHolidaysOff(rule.sequence, rule.anchor ?? rule.start));
+        defaultHolidaysOff(
+          rule.sequence,
+          rule.anchor ?? rule.start,
+          bookOf(patterns)
+        ));
+    const holidayShift = holidaysOff ? holidayShiftOf(patterns) : undefined;
     onChange((previous) => ({
       ...Object.fromEntries(
         Object.entries(previous).filter(([key]) => key < from)
       ),
-      ...(rule.sequence.length > 0 ? ruleSchedule(rule, holidaysOff) : {}),
+      ...(rule.sequence.length > 0 ? ruleSchedule(rule, holidayShift) : {}),
     }));
-    return rule.sequence.length > 0 ? { ...rule, holidaysOff } : rule;
+    return rule.sequence.length > 0
+      ? { ...rule, holidayShift, holidaysOff }
+      : rule;
   }
-  function applyRule(rule: RepeatRule) {
-    const filled = fillRule(rule);
+  function applyRule(rule: RepeatRule, patterns?: Pattern[]) {
+    const filled = fillRule(rule, patterns);
     setRules((previous) => [...previous, filled]);
   }
   // Corrects the rule in use from its own start, rather than adding one.
@@ -624,9 +669,40 @@ export function DesignCalendar({
     const filled = fillRule(rule);
     setRules((previous) => [...previous.slice(0, -1), filled]);
   }
-  function changeJob(job: { patternKeys: Shift[]; rule: RepeatRule }) {
-    setPatternKeys(job.patternKeys);
-    applyRule(job.rule);
+  // The new job's patterns take over, keeping any old one still on a day
+  // before the switch so those days keep their marks. A ready-made one the
+  // person has changed, still on those days, stays theirs; the new job's
+  // comes in under an id of its own, and its order uses that.
+  function changeJob(job: { patterns: Pattern[]; rule: RepeatRule }) {
+    const from = dateKey(job.rule.start);
+    const usedBefore = (id: string) =>
+      Object.entries(schedule).some(
+        ([key, entry]) => key < from && entry?.shift === id
+      );
+    const renamed = new Map<string, string>();
+    for (const pattern of job.patterns) {
+      const own = ownPatterns.find((item) => item.id === pattern.id);
+      if (own && usedBefore(own.id) && !samePattern(own, pattern)) {
+        renamed.set(pattern.id, crypto.randomUUID());
+      }
+    }
+    const renameOf = (id: string) => renamed.get(id) ?? id;
+    const incoming = job.patterns.map((pattern) => ({
+      ...pattern,
+      id: renameOf(pattern.id),
+      nextDay: pattern.nextDay && renameOf(pattern.nextDay),
+    }));
+    const kept = ownPatterns.filter(
+      (pattern) =>
+        !incoming.some((next) => next.id === pattern.id) &&
+        usedBefore(pattern.id)
+    );
+    const patterns = [...incoming, ...kept];
+    setPatterns(patterns);
+    applyRule(
+      { ...job.rule, sequence: job.rule.sequence.map(renameOf) },
+      patterns
+    );
   }
   // Only holidays still showing what the rule put there change, so days
   // the person edited stay as they are.
@@ -635,22 +711,32 @@ export function DesignCalendar({
     if (!rule) {
       return;
     }
+    // On, with the day off now first; back, from the one the rule used.
+    const holidayShift = holidaysOff
+      ? holidayShiftOf(ownPatterns)
+      : rule.holidayShift;
+    if (holidaysOff && !holidayShift) {
+      return;
+    }
     const planned = ruleSchedule(rule);
     onChange((previous) => {
       const next = { ...previous };
+      if (!holidayShift) {
+        return next;
+      }
       for (const [key, entry] of Object.entries(planned)) {
         const plannedShift = entry?.shift;
         const current = previous[key];
         if (
           !(holidayNameOfKey(key) && plannedShift) ||
-          plannedShift === "off"
+          plannedShift === holidayShift
         ) {
           continue;
         }
         if (holidaysOff && current?.shift === plannedShift) {
-          next[key] = { ...current, shift: "off" };
+          next[key] = { ...current, shift: holidayShift };
         }
-        if (!holidaysOff && current?.shift === "off") {
+        if (!holidaysOff && current?.shift === holidayShift) {
           next[key] = { ...current, shift: plannedShift };
         }
       }
@@ -658,7 +744,11 @@ export function DesignCalendar({
     });
     setRules((previous) => [
       ...previous.slice(0, -1),
-      { ...rule, holidaysOff },
+      {
+        ...rule,
+        holidayShift: holidaysOff ? holidayShift : undefined,
+        holidaysOff,
+      },
     ]);
   }
   function openSave(completion: boolean, toCalendar = false) {
@@ -687,9 +777,9 @@ export function DesignCalendar({
   // Fills the blanks with the person's day off, or adds 休み back when
   // they have none.
   function fillGaps(key: Shift | undefined) {
-    const shift = key ?? "off";
+    const shift = key ?? presetPatterns.off.id;
     if (!key) {
-      setPatternKeys((previous) => [...previous, shift]);
+      setPatterns((previous) => [...previous, presetPatterns.off]);
     }
     onChange((previous) => ({
       ...previous,
@@ -707,11 +797,14 @@ export function DesignCalendar({
   }
   function enterShift(shift: Shift | undefined) {
     const key = dateKey(selectedDate);
-    const following = shift && nextDayShifts[shift];
+    // One day only: the next day's own next day is not followed, so
+    // patterns naming each other never run on (spec/shift-patterns.md).
+    const following = shift && book[shift]?.nextDay;
     const followingKey = dateKey(addDays(selectedDate, 1));
     onChange((previous) => ({
       ...previous,
-      [key]: shift && keepDetails(previous[key], shift),
+      [key]:
+        shift === undefined ? undefined : keepDetails(previous[key], shift),
       ...(following && {
         [followingKey]: keepDetails(previous[followingKey], following),
       }),
@@ -722,323 +815,333 @@ export function DesignCalendar({
     }
     moveToNextDay(
       following
-        ? `${patterns[shift].label}を入力しました。翌日は${patterns[following].label}です`
-        : `${patterns[shift].label}を入力しました`,
+        ? `${book[shift]?.name}を入力しました。翌日は${book[following]?.name}です`
+        : `${book[shift]?.name}を入力しました`,
       following ? 2 : 1
     );
   }
   return (
-    <PhoneContext value={phoneRef}>
-      <ToastContext value={toast}>
-        <Phone fullScreen={fullScreen} ref={phoneRef} style={themeStyle}>
-          {tab === "settings" && (
-            <DesignSettings
-              coworkers={members}
-              initialPage={initialSettingsPage}
-              onApplyRule={applyRule}
-              onChangeJob={changeJob}
-              onFixRule={fixRule}
-              onHolidaysOff={setHolidaysOff}
-              onProfile={setProfile}
-              onTab={setTab}
-              patternKeys={patternKeys}
-              profile={profile}
-              rules={rules}
-              schedule={schedule}
-            />
-          )}
-          {tab === "group" && (
-            <DesignGroup
-              initialGroupId={openGroup}
-              scanResult={variants.scanResult}
-              onTab={setTab}
-              patternKeys={patternKeys}
-              profile={profile}
-              schedule={schedule}
-            />
-          )}
-          {tab === "calendar" && imagePreview && (
-            <ImagePreviewPage
-              month={month}
-              onClose={() => {
-                setImagePreview(false);
-              }}
-              onOptions={setImageOptions}
-              options={imageOptions}
-              schedule={schedule}
-            />
-          )}
-          <Screen
-            className={surpriseStyles.screen}
-            hidden={tab !== "calendar" || imagePreview}
-          >
-            {surprise.layer}
-            <div className={heading.bar}>
-              <MonthHeading
-                beside={besideMonths}
-                mode={headingMode}
-                month={month}
-                onPick={goToMonth}
-                onSurprise={() => {
-                  surprise.play();
-                }}
-                progress={pageDrag}
-                swiped={swipedTo === dateKey(month)}
-              />
-              <HeadingActions
-                detailDate={detailDate}
-                mode={headingMode}
-                month={month}
-                onDone={finishHeading}
-                onCalendar={() => {
-                  openSave(false, true);
-                }}
-                onImage={() => {
-                  setImagePreview(true);
-                }}
-                onStep={step}
-                onThisMonth={() => {
-                  goToMonth(
-                    new Date(
-                      designToday.getFullYear(),
-                      designToday.getMonth(),
-                      1
-                    )
-                  );
-                }}
-                onThisWeek={() => {
-                  setPageTurn((turn) => turn + 1);
-                  openDetail(designToday);
-                }}
-                progress={pageDrag}
-                swiped={swipedTo === dateKey(month)}
-              />
-            </div>
-            <div className={calendarPage.scroll}>
-              <WeekdayRow />
-              <OffDisplayContext
-                value={
-                  weekDetail && offDisplay === "blank" ? "faint" : offDisplay
-                }
-              >
-                <Pager
-                  onStep={(direction) => {
-                    step(direction);
-                    // After step, which clears it.
-                    setSwipedTo(
-                      dateKey(
-                        weekDetail
-                          ? monthOpening(addDays(detailDate, direction * 7))
-                          : new Date(
-                              month.getFullYear(),
-                              month.getMonth() + direction,
-                              1
-                            )
-                      )
-                    );
+    <PatternsContext value={book}>
+      <OwnPatternsContext value={ownPatterns}>
+        <PhoneContext value={phoneRef}>
+          <ToastContext value={toast}>
+            <Phone fullScreen={fullScreen} ref={phoneRef} style={themeStyle}>
+              {tab === "settings" && (
+                <DesignSettings
+                  coworkers={members}
+                  initialPage={initialSettingsPage}
+                  onApplyRule={applyRule}
+                  onChangeJob={changeJob}
+                  onFixRule={fixRule}
+                  onHolidaysOff={setHolidaysOff}
+                  onProfile={setProfile}
+                  onTab={setTab}
+                  patterns={ownPatterns}
+                  profile={profile}
+                  rules={rules}
+                  schedule={schedule}
+                />
+              )}
+              {tab === "group" && (
+                <DesignGroup
+                  initialGroupId={openGroup}
+                  initialPage={initialGroupPage}
+                  photoSend={variants.photoSend}
+                  scanResult={variants.scanResult}
+                  onTab={setTab}
+                  patterns={ownPatterns}
+                  profile={profile}
+                  schedule={schedule}
+                />
+              )}
+              {tab === "calendar" && imagePreview && (
+                <ImagePreviewPage
+                  month={month}
+                  onClose={() => {
+                    setImagePreview(false);
                   }}
-                  progress={pageDrag}
-                  page={weekDetail ? dateKey(detailDate) : dateKey(month)}
-                  renderPage={(offset) => {
-                    const pageMonth = new Date(
-                      month.getFullYear(),
-                      month.getMonth() + offset,
-                      1
-                    );
-                    const pageDates = weekDetail
-                      ? weekTools.weekDates(addDays(detailDate, offset * 7))
-                      : weekTools.monthDates(pageMonth);
-                    const renderCell = (date: Date) => (
-                      <DayCell
-                        active={
-                          offset === 0 &&
-                          (editing
-                            ? date.getMonth() === month.getMonth() &&
-                              date.getDate() === selectedDay
-                            : detailDate !== undefined &&
-                              dateKey(date) === dateKey(detailDate))
-                        }
-                        date={date}
-                        editing={editing}
-                        entry={schedule[dateKey(date)]}
-                        key={dateKey(date)}
-                        onPress={() => {
-                          editing ? enterFrom(date) : openDetail(date);
-                        }}
-                        outside={
-                          !weekDetail &&
-                          date.getMonth() !== pageMonth.getMonth()
-                        }
-                      />
-                    );
-                    const label = `${pageMonth.getFullYear()}年${pageMonth.getMonth() + 1}月のシフト`;
-                    // Only the page shown folds; the ones beside it are
-                    // there to be dragged in.
-                    if (offset === 0) {
-                      return (
-                        <FoldingGrid
-                          dates={pageDates}
-                          key={pageTurn}
-                          label={label}
-                          renderCell={renderCell}
-                          row={foldRow}
-                          weekDetail={weekDetail}
-                        />
+                  onOptions={setImageOptions}
+                  options={imageOptions}
+                  schedule={schedule}
+                />
+              )}
+              <Screen
+                className={surpriseStyles.screen}
+                hidden={tab !== "calendar" || imagePreview}
+              >
+                {surprise.layer}
+                <div className={heading.bar}>
+                  <MonthHeading
+                    beside={besideMonths}
+                    mode={headingMode}
+                    month={month}
+                    onPick={goToMonth}
+                    onSurprise={() => {
+                      surprise.play();
+                    }}
+                    progress={pageDrag}
+                    swiped={swipedTo === dateKey(month)}
+                  />
+                  <HeadingActions
+                    detailDate={detailDate}
+                    mode={headingMode}
+                    month={month}
+                    onDone={finishHeading}
+                    onCalendar={() => {
+                      openSave(false, true);
+                    }}
+                    onImage={() => {
+                      setImagePreview(true);
+                    }}
+                    onStep={step}
+                    onThisMonth={() => {
+                      goToMonth(
+                        new Date(
+                          designToday.getFullYear(),
+                          designToday.getMonth(),
+                          1
+                        )
                       );
+                    }}
+                    onThisWeek={() => {
+                      setPageTurn((turn) => turn + 1);
+                      openDetail(designToday);
+                    }}
+                    progress={pageDrag}
+                    swiped={swipedTo === dateKey(month)}
+                  />
+                </div>
+                <div className={calendarPage.scroll}>
+                  <WeekdayRow />
+                  <OffDisplayContext
+                    value={
+                      weekDetail && offDisplay === "blank"
+                        ? "faint"
+                        : offDisplay
                     }
-                    return (
-                      <section aria-label={label} className={dayGrid}>
-                        {pageDates.map(renderCell)}
-                      </section>
-                    );
-                  }}
-                />
-              </OffDisplayContext>
-            </div>
-            {weekDetail && (
-              <motion.section
-                animate={{ opacity: 1 }}
-                aria-label={formatDay(detailDate)}
-                className={calendarPage.detail}
-                initial={{ opacity: 0 }}
-                transition={fold}
-              >
-                <h4 className={calendarPage.detailDate}>
-                  {formatDay(detailDate)}
-                </h4>
-                <DayDetail
-                  entry={schedule[dateKey(detailDate)]}
-                  members={members}
-                  onChange={(entry) => {
-                    changeEntry(detailDate, entry);
-                  }}
-                  patternKeys={patternKeys}
-                />
-              </motion.section>
-            )}
-            {/* On an empty month too, at 0日, so the month keeps the two
+                  >
+                    <Pager
+                      onStep={(direction) => {
+                        step(direction);
+                        // After step, which clears it.
+                        setSwipedTo(
+                          dateKey(
+                            weekDetail
+                              ? monthOpening(addDays(detailDate, direction * 7))
+                              : new Date(
+                                  month.getFullYear(),
+                                  month.getMonth() + direction,
+                                  1
+                                )
+                          )
+                        );
+                      }}
+                      progress={pageDrag}
+                      page={weekDetail ? dateKey(detailDate) : dateKey(month)}
+                      renderPage={(offset) => {
+                        const pageMonth = new Date(
+                          month.getFullYear(),
+                          month.getMonth() + offset,
+                          1
+                        );
+                        const pageDates = weekDetail
+                          ? weekTools.weekDates(addDays(detailDate, offset * 7))
+                          : weekTools.monthDates(pageMonth);
+                        const renderCell = (date: Date) => (
+                          <DayCell
+                            active={
+                              offset === 0 &&
+                              (editing
+                                ? date.getMonth() === month.getMonth() &&
+                                  date.getDate() === selectedDay
+                                : detailDate !== undefined &&
+                                  dateKey(date) === dateKey(detailDate))
+                            }
+                            date={date}
+                            editing={editing}
+                            entry={schedule[dateKey(date)]}
+                            key={dateKey(date)}
+                            onPress={() => {
+                              editing ? enterFrom(date) : openDetail(date);
+                            }}
+                            outside={
+                              !weekDetail &&
+                              date.getMonth() !== pageMonth.getMonth()
+                            }
+                          />
+                        );
+                        const label = `${pageMonth.getFullYear()}年${pageMonth.getMonth() + 1}月のシフト`;
+                        // Only the page shown folds; the ones beside it are
+                        // there to be dragged in.
+                        if (offset === 0) {
+                          return (
+                            <FoldingGrid
+                              dates={pageDates}
+                              key={pageTurn}
+                              label={label}
+                              renderCell={renderCell}
+                              row={foldRow}
+                              weekDetail={weekDetail}
+                            />
+                          );
+                        }
+                        return (
+                          <section aria-label={label} className={dayGrid}>
+                            {pageDates.map(renderCell)}
+                          </section>
+                        );
+                      }}
+                    />
+                  </OffDisplayContext>
+                </div>
+                {weekDetail && (
+                  <motion.section
+                    animate={{ opacity: 1 }}
+                    aria-label={formatDay(detailDate)}
+                    className={calendarPage.detail}
+                    initial={{ opacity: 0 }}
+                    transition={fold}
+                  >
+                    <h4 className={calendarPage.detailDate}>
+                      {formatDay(detailDate)}
+                    </h4>
+                    <DayDetail
+                      entry={schedule[dateKey(detailDate)]}
+                      members={members}
+                      onChange={(entry) => {
+                        changeEntry(detailDate, entry);
+                      }}
+                      patternKeys={patternKeys}
+                    />
+                  </motion.section>
+                )}
+                {/* On an empty month too, at 0日, so the month keeps the two
                 rows of one being filled in: the card above ポチポチ入力.
                 Any spare height stays over it, so the summary, the input
                 or save buttons and the tab bar sit together at the bottom. */}
-            {headingMode === "view" && (
-              <div className={calendarPage.bottom}>
-                <MonthSummary
-                  daysOff={daysOff}
-                  month={month}
-                  onOpen={() => {
-                    setOpenSheet("breakdown");
-                  }}
-                />
-                {/* Filled month or not: a filled month is fixed the same
+                {headingMode === "view" && (
+                  <div className={calendarPage.bottom}>
+                    <MonthSummary
+                      daysOff={daysOff}
+                      month={month}
+                      onOpen={() => {
+                        setOpenSheet("breakdown");
+                      }}
+                    />
+                    {/* Filled month or not: a filled month is fixed the same
                     way, and saving is in the heading's corner. */}
-                <div className={calendarPage.controls}>
-                  <StartArea label="ポチポチ入力" onStart={startInput} />
-                </div>
-                <TabBar
-                  active="calendar"
-                  onSelect={setTab}
-                  shown={tab === "calendar"}
-                />
-              </div>
-            )}
-            {headingMode === "edit" && (
-              <div className={calendarPage.input}>
-                <ShiftInputControls
-                  canSkip={selectedDay < lastDay}
-                  datePicker={datePicker}
-                  onEnter={enterShift}
-                  onSkip={() => {
-                    moveToNextDay("変更せずに進みました");
-                  }}
-                  patternKeys={patternKeys}
-                  selectedShift={selectedShift}
-                />
-              </div>
-            )}
-          </Screen>
-          <Sheet
-            label="今月の内訳"
-            onOpenChange={sheetChange("breakdown")}
-            open={openSheet === "breakdown"}
-          >
-            <SheetHeading
-              eyebrow={`${month.getFullYear()}年${month.getMonth() + 1}月`}
-              onClose={() => {
-                setOpenSheet(null);
-              }}
-              title="今月の内訳"
-            />
-            <div className={sheetBody}>
-              <dl className={breakdown.list}>
-                {counts.map(({ key, label, count }) => (
-                  <div className={breakdown.row()} key={key}>
-                    <dt className={breakdown.name}>
-                      <ShiftMark shift={key} size={18} />
-                      {label}
-                    </dt>
-                    <dd className={breakdown.count}>
-                      {count}
-                      <span className={breakdown.unit}>日</span>
-                    </dd>
+                    <div className={calendarPage.controls}>
+                      <StartArea label="ポチポチ入力" onStart={startInput} />
+                    </div>
+                    <TabBar
+                      active="calendar"
+                      onSelect={setTab}
+                      shown={tab === "calendar"}
+                    />
                   </div>
-                ))}
-                <div className={breakdown.row({ unfilled: true })}>
-                  <dt className={breakdown.name}>未入力</dt>
-                  <dd className={breakdown.count}>
-                    {unfilled}
-                    <span className={breakdown.unit}>日</span>
-                  </dd>
+                )}
+                {headingMode === "edit" && (
+                  <div className={calendarPage.input}>
+                    <ShiftInputControls
+                      canSkip={selectedDay < lastDay}
+                      datePicker={datePicker}
+                      onEnter={enterShift}
+                      onSkip={() => {
+                        moveToNextDay("変更せずに進みました");
+                      }}
+                      patternKeys={patternKeys}
+                      selectedShift={selectedShift}
+                    />
+                  </div>
+                )}
+              </Screen>
+              <Sheet
+                label="今月の内訳"
+                onOpenChange={sheetChange("breakdown")}
+                open={openSheet === "breakdown"}
+              >
+                <SheetHeading
+                  eyebrow={`${month.getFullYear()}年${month.getMonth() + 1}月`}
+                  onClose={() => {
+                    setOpenSheet(null);
+                  }}
+                  title="今月の内訳"
+                />
+                <div className={sheetBody}>
+                  <dl className={breakdown.list}>
+                    {counts.map(({ key, label, count }) => (
+                      <div className={breakdown.row()} key={key}>
+                        <dt className={breakdown.name}>
+                          <ShiftMark shift={key} size={18} />
+                          {label}
+                        </dt>
+                        <dd className={breakdown.count}>
+                          {count}
+                          <span className={breakdown.unit}>日</span>
+                        </dd>
+                      </div>
+                    ))}
+                    <div className={breakdown.row({ unfilled: true })}>
+                      <dt className={breakdown.name}>未入力</dt>
+                      <dd className={breakdown.count}>
+                        {unfilled}
+                        <span className={breakdown.unit}>日</span>
+                      </dd>
+                    </div>
+                  </dl>
+                  <p className={breakdown.total}>
+                    この月は全{monthDays.length}日
+                  </p>
                 </div>
-              </dl>
-              <p className={breakdown.total}>この月は全{monthDays.length}日</p>
-            </div>
-          </Sheet>
-          {pendingInvite && (
-            <JoinSheet
-              name={profile.name}
-              onOpenGroup={(groupId) => {
-                setOpenGroup(groupId);
-                setTab("group");
-              }}
-            />
-          )}
-          <SaveSheet
-            completion={saveCompletion}
-            month={month}
-            offCount={daysOff}
-            onImage={() => {
-              setImagePreview(true);
-            }}
-            onOpenChange={sheetChange("save")}
-            open={openSheet === "save"}
-            toCalendar={saveToCalendar}
-            shiftCount={monthDays.length - unfilled}
-          />
-          <GapSheet
-            choices={patternKeys
-              .filter((key) => isDayOff(key))
-              .map((key) => ({ key, label: patterns[key].label }))}
-            days={gapDays}
-            onFill={fillGaps}
-            blankOff={offDisplay === "blank"}
-            completes={unfilled === gapDays.length}
-            month={month}
-            offCount={daysOff}
-            sharing={sharing}
-            offerBlank={offerBlank}
-            onBlankOff={(blankOff) => {
-              setCalendarOptions({ blankOff });
-            }}
-            onOpenChange={sheetChange("gap")}
-            open={openSheet === "gap"}
-          />
-          <span aria-live="polite" className={srOnly}>
-            {announcement}
-          </span>
-          <PhoneToasts toaster={toaster} />
-        </Phone>
-      </ToastContext>
-    </PhoneContext>
+              </Sheet>
+              {pendingInvite && (
+                <JoinSheet
+                  name={profile.name}
+                  onOpenGroup={(groupId) => {
+                    setOpenGroup(groupId);
+                    setTab("group");
+                  }}
+                />
+              )}
+              <SaveSheet
+                completion={saveCompletion}
+                month={month}
+                offCount={daysOff}
+                onImage={() => {
+                  setImagePreview(true);
+                }}
+                onOpenChange={sheetChange("save")}
+                open={openSheet === "save"}
+                toCalendar={saveToCalendar}
+                shiftCount={monthDays.length - unfilled}
+              />
+              <GapSheet
+                choices={ownPatterns
+                  .filter((pattern) => isDayOff(pattern))
+                  .map((pattern) => ({ key: pattern.id, label: pattern.name }))}
+                days={gapDays}
+                onFill={fillGaps}
+                blankOff={offDisplay === "blank"}
+                completes={unfilled === gapDays.length}
+                month={month}
+                offCount={daysOff}
+                sharing={sharing}
+                offerBlank={offerBlank}
+                onBlankOff={(blankOff) => {
+                  setCalendarOptions({ blankOff });
+                }}
+                onOpenChange={sheetChange("gap")}
+                open={openSheet === "gap"}
+              />
+              <span aria-live="polite" className={srOnly}>
+                {announcement}
+              </span>
+              <PhoneToasts toaster={toaster} />
+            </Phone>
+          </ToastContext>
+        </PhoneContext>
+      </OwnPatternsContext>
+    </PatternsContext>
   );
 }
 
@@ -1857,6 +1960,7 @@ export function RepeatSequenceEditor({
   patternKeys: Shift[];
   onChange: (sequence: Shift[]) => void;
 }) {
+  const book = usePatterns();
   return (
     <div>
       <p className={fieldLabel()}>
@@ -1872,7 +1976,7 @@ export function RepeatSequenceEditor({
           // oxlint-disable-next-line react/no-array-index-key -- the same shift repeats, so its position is its identity.
           <li key={index}>
             <button
-              aria-label={`${index + 1}日目、${patterns[shift].label}。タップで外す`}
+              aria-label={`${index + 1}日目、${book[shift]?.name}。タップで外す`}
               className={repeatEditor.day}
               onClick={() => {
                 onChange(sequence.filter((_, position) => position !== index));
@@ -1881,7 +1985,7 @@ export function RepeatSequenceEditor({
             >
               <small>{index + 1}</small>
               <ShiftMark shift={shift} size={18} />
-              {patterns[shift].label}
+              {book[shift]?.name}
             </button>
           </li>
         ))}
@@ -1898,7 +2002,7 @@ export function RepeatSequenceEditor({
           >
             <Plus aria-hidden="true" size={11} />
             <ShiftMark shift={key} size={13} />
-            {patterns[key].label}
+            {book[key]?.name}
           </button>
         ))}
       </div>
@@ -2054,6 +2158,7 @@ function ShiftInputControls({
   onEnter: (shift: Shift | undefined) => void;
   onSkip: () => void;
 }) {
+  const book = usePatterns();
   const pages = Array.from(
     { length: Math.ceil(patternKeys.length / PATTERNS_PER_PAGE) },
     (_, index) =>
@@ -2081,7 +2186,7 @@ function ShiftInputControls({
         <span className={shiftInput.mark}>
           <ShiftMark shift={key} size={26} />
         </span>
-        <span>{patterns[key].label}</span>
+        <span>{book[key]?.name}</span>
       </button>
     ));
   return (
@@ -2208,9 +2313,9 @@ export const dayCell = cva({
 // Today, wherever a date is shown: the date in the accent, heavier, so
 // it shows on a day off's tile too. Only its color and weight change,
 // so nothing around it moves or is covered, as the weekday beside the
-// date in 日ごと would be by a shape. The accent is what says today on
+// date in 一覧 would be by a shape. The accent is what says today on
 // every screen; each layout may add what suits it, as the calendar's
-// frame round the day and 日ごと's bar at the row's start.
+// frame round the day and 一覧's bar at the row's start.
 export const todayMark = css({ color: "accent.default", fontWeight: 800 });
 
 export const dayParts = {
@@ -2263,6 +2368,7 @@ function CellShift({
   late?: boolean;
   faint?: boolean;
 }) {
+  const book = usePatterns();
   const style = useContext(ShiftMarkStyleContext);
   const { names } = useContext(CellNamesContext);
   const withName = names[style];
@@ -2281,36 +2387,36 @@ function CellShift({
       >
         <ShiftMark early={early} late={late} shift={shift} size={size} />
       </span>
-      {withName && (
-        <span className={dayParts.label}>{patterns[shift].label}</span>
-      )}
+      {withName && <span className={dayParts.label}>{book[shift]?.name}</span>}
     </>
   );
 }
 
 // Days off take a light tint of their own pattern color, not the theme,
 // when the setting for the current look asks for it.
-function dayOffStyle(
-  shift: Shift | undefined,
-  highlight: boolean,
-  tint: string
-) {
-  if (!(highlight && shift && isDayOff(shift))) {
+function dayOffStyle(dayOff: boolean, highlight: boolean, tint: string) {
+  if (!(highlight && dayOff)) {
     return;
   }
   return { "--off-tint": tint } as CSSProperties;
 }
 
 // What a screen reader says after the date.
-function dayDetails(date: Date, shift: Shift | undefined, entry?: DayEntry) {
-  const change = timeChangeOf(entry);
+function dayDetails(
+  date: Date,
+  pattern: Pattern | undefined,
+  entry?: DayEntry
+) {
+  const change = timeChangeOf(entry, pattern);
   const moves = [change?.early ? "早出" : "", change?.late ? "残業" : ""]
     .filter(Boolean)
     .join("・");
   return [
     holidayName(date) ?? "",
-    shift ? patterns[shift].label : "未入力",
-    change && entry ? `${moves || "時間変更"} ${timeRange(entry)}` : "",
+    pattern?.name ?? "未入力",
+    change && entry
+      ? `${moves || "時間変更"} ${timeRange(entry, pattern)}`
+      : "",
     entry?.note ? "メモあり" : "",
   ].filter(Boolean);
 }
@@ -2340,18 +2446,20 @@ export function DayCell({
   // show what they hold, faded, and open like any other day.
   const blank = outside && plain;
   const shift = blank ? undefined : entry?.shift;
+  const book = usePatterns();
+  const pattern = shift === undefined ? undefined : book[shift];
   const highlight = useOffHighlight(markStyle);
-  const { tint } = useDisplayColor(lookOf(shift ?? "off").color);
+  const { tint } = useDisplayColor(pattern?.color ?? presetPatterns.off.color);
   const offDisplay = useContext(OffDisplayContext);
-  const dayOff = shift !== undefined && isDayOff(shift);
+  const dayOff = isDayOff(pattern);
   const hideOff = dayOff && offDisplay === "blank" && !editing;
   const faintOff =
     dayOff && (offDisplay === "faint" || (offDisplay === "blank" && editing));
   const offStyle =
-    hideOff || faintOff ? undefined : dayOffStyle(shift, highlight, tint);
+    hideOff || faintOff ? undefined : dayOffStyle(dayOff, highlight, tint);
   const today = dateKey(date) === dateKey(designToday);
   const holiday = useWeek().isColoredHoliday(date);
-  const change = blank ? undefined : timeChangeOf(entry);
+  const change = blank ? undefined : timeChangeOf(entry, pattern);
   // A note is about the day, not the shift, so the date is marked, with a
   // stroke as in a paper diary, apart from the shift's 早出 and 残業
   // corners, and only on the person's own calendar. Other time
@@ -2399,7 +2507,7 @@ export function DayCell({
       </div>
     );
   }
-  const details = dayDetails(date, shift, entry);
+  const details = dayDetails(date, pattern, entry);
   return (
     <button
       aria-haspopup={editing ? undefined : "dialog"}
@@ -2588,10 +2696,12 @@ function DayDetail({
   members: MemberOptions;
   onChange: (entry: DayEntry | undefined) => void;
 }) {
-  const time = entry && patterns[entry.shift].time;
+  const book = usePatterns();
+  const pattern = entry && book[entry.shift];
+  const time = pattern?.time;
   const timeChanged = Boolean(entry?.start || entry?.end);
   // Said in words here, where there is room: the mark only shows a shape.
-  const change = timeChangeOf(entry);
+  const change = timeChangeOf(entry, pattern);
   const moves =
     [change?.early ? "早出" : "", change?.late ? "残業" : ""]
       .filter(Boolean)
@@ -2619,7 +2729,7 @@ function DayDetail({
         {patternKeys.map((key) => (
           <Choice className={chipStyle()} key={key} value={key}>
             <ShiftMark shift={key} size={14} />
-            {patterns[key].label}
+            {book[key]?.name}
           </Choice>
         ))}
       </ChoiceGrid>
@@ -2664,7 +2774,7 @@ function DayDetail({
                       }}
                       type="button"
                     >
-                      標準（{timeRange({ shift: entry.shift })}）に戻す
+                      標準（{timeRange({ shift: entry.shift }, pattern)}）に戻す
                     </button>
                     {/* The mark this makes, explained as it is made, to
                         the people who use it. */}

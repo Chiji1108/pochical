@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BookOpen, RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 
 import {
@@ -21,6 +21,8 @@ import {
 } from "../components/design-providers";
 import { pageStyle } from "../components/design-theme";
 import { VariantPanel } from "../components/design-variant-panel";
+import { useDevice } from "../lib/design-device";
+import { presetList } from "../lib/design-patterns";
 import {
   createUserStore,
   sampleCoworkers,
@@ -28,6 +30,7 @@ import {
 } from "../lib/design-user-store";
 import { parseDesignVariants } from "../lib/design-variants";
 import type { DesignVariants } from "../lib/design-variants";
+import { wallpaperSamples } from "../lib/material-you";
 import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/demo")({
@@ -40,7 +43,7 @@ export const Route = createFileRoute("/demo")({
 
 // The sample patterns: a few, or more than ポチポチ入力 shows on one page.
 function samplePatterns(count: DesignVariants["patternSample"]) {
-  return patternSets[count === "many" ? 13 : 4];
+  return presetList(patternSets[count === "many" ? 13 : 4]);
 }
 
 // A sample person, starting over with the sample or with nothing entered.
@@ -53,7 +56,7 @@ function makePerson(
   return createUserStore({
     coworkers: members === "some" ? sampleCoworkers : [],
     groups: groups === "some" ? sampleGroups() : [],
-    patternKeys: samplePatterns(patterns),
+    patterns: samplePatterns(patterns),
     schedule: sample === "empty" ? {} : initialDesignSchedule(),
   });
 }
@@ -82,6 +85,16 @@ function DemoPage() {
   const variants = Route.useSearch();
   const navigate = Route.useNavigate();
   const theme = useDesignTheme();
+  // The phone stood in for: its platform and wallpaper.
+  useEffect(() => {
+    useDevice.setState({
+      platform: variants.platform,
+      wallpaperHue: (
+        wallpaperSamples.find(({ id }) => id === variants.wallpaper) ??
+        wallpaperSamples[0]
+      ).hue,
+    });
+  }, [variants.platform, variants.wallpaper]);
   const [person, setPerson] = useState(() =>
     makePerson(
       variants.scheduleSample,
@@ -147,7 +160,7 @@ function DemoPage() {
               }
               if (key === "patternSample") {
                 person.setState({
-                  patternKeys: samplePatterns(
+                  patterns: samplePatterns(
                     value as DesignVariants["patternSample"]
                   ),
                 });

@@ -4,10 +4,18 @@ import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
-import { patterns } from "../lib/design-patterns";
-import type { Shift } from "../lib/design-patterns";
+import { useDevice } from "../lib/design-device";
+import {
+  isDayOff,
+  OwnPatternsContext,
+  presetList,
+  presetPatterns,
+  usePatterns,
+} from "../lib/design-patterns";
+import type { Pattern, PatternBook, Shift } from "../lib/design-patterns";
 import { useLook, useSettings } from "../lib/design-settings-store";
 import type { ColorScheme } from "../lib/design-tokens";
+import { useUser } from "../lib/design-user-store";
 import {
   ProviderButtons,
   ProviderLogo,
@@ -27,7 +35,7 @@ import {
   formatDay,
   InputDatePicker,
   isRepeating,
-  nextDayShifts,
+  holidayShiftOf,
   RepeatSequenceEditor,
   repeatSchedule,
   TabBar,
@@ -50,8 +58,9 @@ import {
   presets,
   themeStyle,
   previewWrap,
+  deviceColorsPreset,
 } from "./design-theme";
-import type { Appearance } from "./design-theme";
+import type { Appearance, Preset, PresetId } from "./design-theme";
 import {
   Button,
   ChipGroup,
@@ -134,8 +143,9 @@ const previewToday = new Date(2026, 8, 24);
 const WEEK_DAYS = 7;
 const holidayWeekDay = new Date(2026, 8, 21);
 
-// Shortens runs of the same shift, e.g. 日勤×2・夕勤×2.
-function sequenceLabel(sequence: Shift[]) {
+// Shortens runs of the same shift, e.g. 日勤×2・夕勤×2. An order from
+// before may name a pattern deleted since.
+function sequenceLabel(sequence: Shift[], book: PatternBook) {
   const runs: { shift: Shift; count: number }[] = [];
   for (const shift of sequence) {
     const last = runs.at(-1);
@@ -148,7 +158,7 @@ function sequenceLabel(sequence: Shift[]) {
   return runs
     .map(
       ({ shift, count }) =>
-        `${patterns[shift].label}${count > 1 ? `×${count}` : ""}`
+        `${book[shift]?.name ?? "削除したパターン"}${count > 1 ? `×${count}` : ""}`
     )
     .join("・");
 }
@@ -158,7 +168,7 @@ function shortDay(date: Date) {
 }
 
 export function DesignSettings({
-  patternKeys,
+  patterns,
   coworkers,
   rules,
   schedule,
@@ -171,7 +181,7 @@ export function DesignSettings({
   onTab,
   initialPage = "top",
 }: {
-  patternKeys: Shift[];
+  patterns: Pattern[];
   coworkers: Coworkers;
   rules: RepeatRule[];
   schedule: Schedule;
@@ -179,7 +189,7 @@ export function DesignSettings({
   onProfile: (profile: Profile) => void;
   onApplyRule: (rule: RepeatRule) => void;
   onFixRule: (rule: RepeatRule) => void;
-  onChangeJob: (job: { patternKeys: Shift[]; rule: RepeatRule }) => void;
+  onChangeJob: (job: { patterns: Pattern[]; rule: RepeatRule }) => void;
   onHolidaysOff: (holidaysOff: boolean) => void;
   onTab: (tab: Tab) => void;
   // For the flow diagrams: a page to open on.
@@ -187,11 +197,12 @@ export function DesignSettings({
 }) {
   const [page, setPage] = useState<Page>(initialPage);
   const weekTools = useWeek();
-  const preview = stylePreviewOf(patternKeys, weekTools.weekDates);
+  const patternKeys = patterns.map((pattern) => pattern.id);
+  const preview = stylePreviewOf(patterns, weekTools.weekDates);
   // From the week holding the 21st, so all three holidays of the 21st to
   // 23rd fall in the fortnight whatever day the week starts on.
   const weekPreview = stylePreviewOf(
-    patternKeys,
+    patterns,
     weekTools.weekDates,
     holidayWeekDay
   );
@@ -345,7 +356,6 @@ export function DesignSettings({
             onBack={() => {
               setPage("top");
             }}
-            patternKeys={patternKeys}
           />
         )}
       </ScreenScroll>
@@ -367,6 +377,7 @@ function SettingsTop({
   profile: Profile;
   onOpen: (page: Page) => void;
 }) {
+  const book = usePatterns();
   return (
     <>
       <PageHeader title="設定" />
@@ -378,7 +389,7 @@ function SettingsTop({
           }}
           value={
             current
-              ? `${sequenceLabel(current.sequence)}（${current.sequence.length}日ごと）`
+              ? `${sequenceLabel(current.sequence, book)}（${current.sequence.length}日ごと）`
               : "勤務表が配られる"
           }
         />
@@ -559,6 +570,24 @@ const themeCard = {
     padding: "4px 4px 8px",
     textAlign: "center",
     textStyle: "footnote",
+  }),
+  // 端末の色 on Android, in a row of its own over the others: its card in
+  // the first of the three columns, and what it is beside it.
+  deviceNote: css({
+    alignSelf: "center",
+    color: "text.tertiary",
+    gridColumn: "span 2",
+    lineHeight: 1.5,
+    margin: 0,
+    textStyle: "footnote",
+  }),
+  deviceRow: css({
+    borderBottom: "1px solid token(colors.separator)",
+    display: "grid",
+    gap: "8px",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    marginBottom: "12px",
+    paddingBottom: "12px",
   }),
   // One page: three across, as the grid had them.
   page: css({
@@ -872,13 +901,14 @@ function AccountPage({ onBack }: { onBack: () => void }) {
 }
 
 function SequenceChips({ sequence }: { sequence: Shift[] }) {
+  const book = usePatterns();
   return (
     <ChipGroup as="ol">
       {sequence.map((shift, index) => (
         // oxlint-disable-next-line react/no-array-index-key -- a sequence repeats the same shift, so position is its identity.
         <Tag as="li" key={index} tone="raised">
           <ShiftMark shift={shift} size={13} />
-          {patterns[shift].label}
+          {book[shift]?.name}
         </Tag>
       ))}
     </ChipGroup>
@@ -930,6 +960,7 @@ function RepeatDetails({
 }
 
 function RuleHistory({ rules }: { rules: RepeatRule[] }) {
+  const book = usePatterns();
   return (
     <>
       {rules.length > 1 && (
@@ -946,7 +977,7 @@ function RuleHistory({ rules }: { rules: RepeatRule[] }) {
                   label={period}
                   value={
                     rule.sequence.length > 0
-                      ? sequenceLabel(rule.sequence)
+                      ? sequenceLabel(rule.sequence, book)
                       : "勤務表"
                   }
                 />
@@ -1002,6 +1033,7 @@ function RepeatEditorPage({
   onBack: () => void;
   onApply: (rule: RepeatRule) => void;
 }) {
+  const book = usePatterns();
   const fixing = mode === "fix" && current !== undefined;
   const text = repeatModes[mode];
   const [sequence, setSequence] = useState(initialSequence);
@@ -1013,7 +1045,7 @@ function RepeatEditorPage({
   const [holidaysChoice, setHolidaysChoice] = useState(
     fixing ? current.holidaysOff : undefined
   );
-  const holidaysOff = holidaysChoice ?? defaultHolidaysOff(sequence, day);
+  const holidaysOff = holidaysChoice ?? defaultHolidaysOff(sequence, day, book);
   const rule: RepeatRule = { anchor: day, holidaysOff, sequence, start };
   return (
     <>
@@ -1072,12 +1104,13 @@ function RepeatEditorPage({
 // The first two weeks of a rule, from its start.
 function RepeatPreview({ rule }: { rule: RepeatRule }) {
   const { sequence, start, holidaysOff } = rule;
+  const patterns = useUser((state) => state.patterns);
   const planned = repeatSchedule(
     sequence,
     rule.anchor ?? start,
     start,
     addDays(start, previewDays - 1),
-    holidaysOff
+    holidaysOff ? holidayShiftOf(patterns) : undefined
   );
   return (
     <ShiftPreview
@@ -1097,7 +1130,7 @@ function JobChangePage({
   onApply,
 }: {
   onBack: () => void;
-  onApply: (job: { patternKeys: Shift[]; rule: RepeatRule }) => void;
+  onApply: (job: { patterns: Pattern[]; rule: RepeatRule }) => void;
 }) {
   const [start, setStart] = useState(nextMonthStart);
   const [asking, setAsking] = useState(false);
@@ -1112,7 +1145,7 @@ function JobChangePage({
           }}
           onFinish={({ patternKeys, sequence, anchor }) => {
             onApply({
-              patternKeys,
+              patterns: presetList(patternKeys),
               rule: {
                 anchor,
                 sequence: sequence ?? [],
@@ -1401,7 +1434,7 @@ type StylePreviewData = { dates: Date[]; schedule: Schedule };
 // for 早出, 残業 or a note would mean nothing to most people here, and
 // are explained where they are made instead.
 function stylePreviewOf(
-  patternKeys: Shift[],
+  patterns: Pattern[],
   weekDates: (date: Date) => Date[],
   from: Date = previewToday
 ): StylePreviewData {
@@ -1409,7 +1442,7 @@ function stylePreviewOf(
   return {
     dates,
     schedule: repeatSchedule(
-      sampleSequence(patternKeys),
+      sampleSequence(patterns),
       dates[0],
       dates[0],
       dates.at(-1) ?? dates[0]
@@ -1419,23 +1452,45 @@ function stylePreviewOf(
 
 // Each working pattern with what follows it, like 明け after 夜勤, and a day
 // off after every second one.
-function sampleSequence(patternKeys: Shift[]): Shift[] {
-  const followers = new Set(Object.values(nextDayShifts));
-  const working = patternKeys.filter(
-    (key) => key !== "off" && key !== "paid" && !followers.has(key)
+function sampleSequence(patterns: readonly Pattern[]): Shift[] {
+  const ids = new Set(patterns.map((pattern) => pattern.id));
+  const followers = new Set(patterns.map((pattern) => pattern.nextDay));
+  const off = holidayShiftOf(patterns) ?? presetPatterns.off.id;
+  const working = patterns.filter(
+    (pattern) => !(isDayOff(pattern) || followers.has(pattern.id))
   );
   const sequence: Shift[] = [];
-  for (const [index, key] of working.entries()) {
-    sequence.push(key);
-    const next = nextDayShifts[key];
-    if (next && patternKeys.includes(next)) {
+  for (const [index, pattern] of working.entries()) {
+    sequence.push(pattern.id);
+    const next = pattern.nextDay;
+    if (next && ids.has(next)) {
       sequence.push(next);
     }
     if (index % 2 === 1 || next) {
-      sequence.push("off");
+      sequence.push(off);
     }
   }
-  return sequence.at(-1) === "off" ? sequence : [...sequence, "off"];
+  return sequence.at(-1) === off ? sequence : [...sequence, off];
+}
+
+// How many shifts the テーマ and color samples show in a row.
+const WEEK_SAMPLE = 4;
+
+// The marks beside each choice on the style pages are the person's own,
+// as is the preview over them: a choice shows how their calendar would
+// look. A working pattern, a day off, and a few as they follow each other.
+// Ready-made ones stand in only for what they have none of.
+function useOwnSamples() {
+  const patterns = useContext(OwnPatternsContext);
+  const work =
+    patterns.find((pattern) => !isDayOff(pattern)) ?? presetPatterns.day;
+  const off =
+    patterns.find((pattern) => isDayOff(pattern)) ?? presetPatterns.off;
+  return {
+    off: off.id,
+    week: [...new Set(sampleSequence(patterns))].slice(0, WEEK_SAMPLE),
+    work,
+  };
 }
 
 // The preview can show the other of light and dark on its own, without
@@ -1505,6 +1560,7 @@ function StylePreview({
 
 // The switches for the look in use, as one list.
 function ShapeChoices() {
+  const { work } = useOwnSamples();
   const look = useLook();
   const setShape = useSettings((state) => state.setShape);
   const current = shapeOf(look);
@@ -1529,7 +1585,7 @@ function ShapeChoices() {
         <Segment key={option.name} value={option.name}>
           <ShiftMarkStyleContext value={option.style}>
             <IconWeightContext value={option.fill ? "duotone" : "regular"}>
-              <ShiftMark shift="day" size={20} />
+              <ShiftMark shift={work.id} size={20} />
             </IconWeightContext>
           </ShiftMarkStyleContext>
           {option.name}
@@ -1568,6 +1624,7 @@ export function OffLookTabs({
   value: OffLook;
   onChange: (value: OffLook) => void;
 }) {
+  const { off } = useOwnSamples();
   const picked = offLookId(value);
   return (
     <SegmentedControl
@@ -1588,7 +1645,7 @@ export function OffLookTabs({
             className={offSample({ lit: option.highlight })}
           >
             <small>5</small>
-            {option.blankOff ? null : <ShiftMark shift="off" size={18} />}
+            {option.blankOff ? null : <ShiftMark shift={off} size={18} />}
           </span>
           {option.name}
         </Segment>
@@ -1606,6 +1663,7 @@ export function NameTabs({
   value: boolean;
   onChange: (value: boolean) => void;
 }) {
+  const { work } = useOwnSamples();
   return (
     <SegmentedControl
       label="シフト名"
@@ -1619,8 +1677,8 @@ export function NameTabs({
         <Segment key={String(withName)} value={String(withName)}>
           <span aria-hidden="true" className={offSample()}>
             <small>5</small>
-            <ShiftMark shift="day" size={withName ? 16 : 18} />
-            {withName && <small data-part="name">{patterns.day.label}</small>}
+            <ShiftMark shift={work.id} size={withName ? 16 : 18} />
+            {withName && <small data-part="name">{work.name}</small>}
           </span>
           {withName ? "あり" : "なし"}
         </Segment>
@@ -1678,9 +1736,10 @@ function StyleRow({
   onOpen: () => void;
 }) {
   const look = useLook();
+  const book = usePatterns();
   const preset = presetOf(useSettings((state) => state.device.preset));
   const shift =
-    patternKeys.find((key) => key !== "off" && key !== "paid") ?? "day";
+    patternKeys.find((key) => !isDayOff(book[key])) ?? presetPatterns.day.id;
   return (
     <ListRow
       label="スタイル"
@@ -1975,6 +2034,7 @@ const shiftColorSample = css({
   height: "40px",
 });
 function ShiftColorsChoices() {
+  const { week } = useOwnSamples();
   const shiftColors = useSettings((state) => state.device.shiftColors);
   const setShiftColors = useSettings((state) => state.setShiftColors);
   return (
@@ -1990,7 +2050,7 @@ function ShiftColorsChoices() {
         <Segment key={option.name} value={String(option.colored)}>
           <span aria-hidden="true" className={shiftColorSample}>
             <MonochromeContext value={{ monochrome: !option.colored }}>
-              {presetSampleShifts.map((shift) => (
+              {week.map((shift) => (
                 <ShiftMark key={shift} shift={shift} size={18} />
               ))}
             </MonochromeContext>
@@ -2002,15 +2062,14 @@ function ShiftColorsChoices() {
   );
 }
 
+type ThemeOption = Preset & { id: PresetId };
+
 // The テーマ in rows of three, each row a page: the basics, the soft ones,
 // the colors, the nights.
-const themePages = Array.from(
+const themePages: ThemeOption[][] = Array.from(
   { length: Math.ceil(presets.length / 3) },
   (_, page) => presets.slice(page * 3, page * 3 + 3)
 );
-
-// The shifts on a テーマ's card, as they might follow each other in a week.
-const presetSampleShifts: Shift[] = ["day", "night", "after", "off"];
 
 // Each テーマ as a small screen: its ground, a card on it with shifts in
 // its colors, and strokes of its text and its fill, so where each テーマ
@@ -2019,6 +2078,12 @@ const presetSampleShifts: Shift[] = ["day", "night", "after", "off"];
 function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
   const current = useSettings((state) => state.device.preset);
   const setPreset = useSettings((state) => state.setPreset);
+  // On Android, 端末の色 sits in a row of its own over the pages, as
+  // Android's own color settings keep the colors it takes from the
+  // wallpaper apart from the basic ones.
+  const { platform, wallpaperHue } = useDevice();
+  const deviceColors =
+    platform === "android" ? deviceColorsPreset(wallpaperHue) : undefined;
   // Opens on the page of the テーマ in use.
   const [page, setPage] = useState(() =>
     Math.max(
@@ -2037,6 +2102,14 @@ function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
         onValueChange={setPreset}
         value={current}
       >
+        {deviceColors && (
+          <div className={themeCard.deviceRow}>
+            <ThemeChoice preset={deviceColors} scheme={scheme} />
+            <p className={themeCard.deviceNote}>
+              Android で設定されている色に合わせます。
+            </p>
+          </div>
+        )}
         <Pager
           ends={{ back: page > 0, forward: page < themePages.length - 1 }}
           gap={THEME_PAGE_GAP}
@@ -2078,9 +2151,10 @@ function ThemeChoice({
   preset,
   scheme,
 }: {
-  preset: (typeof presets)[number];
+  preset: ThemeOption;
   scheme: ColorScheme;
 }) {
+  const { week } = useOwnSamples();
   return (
     <Choice className={themeCard.choice} value={preset.id}>
       <span
@@ -2091,7 +2165,7 @@ function ThemeChoice({
         <ColorSchemeContext value={scheme}>
           <PresetContexts id={preset.id}>
             <span className={themeCard.card}>
-              {presetSampleShifts.map((shift) => (
+              {week.map((shift) => (
                 <ShiftMark key={shift} shift={shift} size={14} />
               ))}
             </span>

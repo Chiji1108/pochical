@@ -1,10 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import {
-  dateKey,
-  initialDesignSchedule,
-  isDayOff,
-} from "../components/design-calendar";
+import { dateKey, initialDesignSchedule } from "../components/design-calendar";
 import type { Schedule } from "../components/design-calendar";
 import {
   CalendarFrame,
@@ -28,7 +24,8 @@ import {
 } from "../components/design-providers";
 import { pageStyle } from "../components/design-theme";
 import { OffDisplayContext } from "../components/shift-mark";
-import { patterns } from "../lib/design-patterns";
+import { isDayOff, presetPatterns } from "../lib/design-patterns";
+import type { PatternBook } from "../lib/design-patterns";
 import { parseDesignVariants } from "../lib/design-variants";
 import { pageMeta } from "../lib/site";
 
@@ -132,8 +129,8 @@ function FlowsPage() {
               </OffDisplayContext>
               <GapFrame
                 choices={[
-                  { key: "off", label: patterns.off.label },
-                  { key: "paid", label: patterns.paid.label },
+                  { key: "off", label: presetPatterns.off.name },
+                  { key: "paid", label: presetPatterns.paid.name },
                 ]}
                 label="休みと有休がある人"
                 note="入れるパターンを選べる"
@@ -197,9 +194,11 @@ const partialOctober: Schedule = Object.fromEntries(
     ] as const
   ).map(([day, shift]) => [dateKey(new Date(2026, OCTOBER, day)), { shift }])
 );
+// The samples' patterns are the ready-made ones.
+const samplePatterns: PatternBook = presetPatterns;
 const fullOctober: Schedule = Object.fromEntries(
   Object.entries(initialDesignSchedule(4, OCTOBER)).filter(
-    ([, entry]) => entry && !isDayOff(entry.shift)
+    ([, entry]) => entry && !isDayOff(samplePatterns[entry.shift])
   )
 );
 
@@ -229,7 +228,7 @@ function GapFrame({
 } & Partial<GapSheetProps>) {
   const days = gapDaysIn(schedule, october);
   const offCount = Object.values(schedule).filter(
-    (entry) => entry && isDayOff(entry.shift)
+    (entry) => entry && isDayOff(samplePatterns[entry.shift])
   ).length;
   const filled = Object.keys(schedule).length;
   return (
@@ -240,7 +239,7 @@ function GapFrame({
       overlay={
         <GapSheetPreview
           blankOff={false}
-          choices={[{ key: "off", label: patterns.off.label }]}
+          choices={[{ key: "off", label: presetPatterns.off.name }]}
           completes={filled + days.length === OCTOBER_DAYS}
           days={days}
           month={october}
