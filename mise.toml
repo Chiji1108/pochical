@@ -33,3 +33,7 @@ run = "bun run --cwd apps/server typecheck"
 [tasks."web:layout"]
 description = "Measure the /design demo's screens, or compare them with a saved run: save <name> | check <name> (needs the web dev server)"
 run = "bun tools/layout-diff/index.ts"
+
+[tasks."roster-eval"]
+description = "Compare vision models reading the roster photos in assets/shift-schedule (costs money)"
+run = "bun tools/roster-eval/eval.ts"
