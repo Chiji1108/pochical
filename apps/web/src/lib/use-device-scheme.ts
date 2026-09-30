@@ -1,6 +1,5 @@
+import type { ColorScheme } from "@pochical/design/colors";
 import { useSyncExternalStore } from "react";
-
-import type { ColorScheme } from "./design-tokens";
 
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 

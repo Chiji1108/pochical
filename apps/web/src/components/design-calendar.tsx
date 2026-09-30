@@ -47,7 +47,8 @@ import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
-import { dayName } from "../lib/text-limits";
+import { spring } from "../lib/motion";
+import { composing, dayName, limitText, textLimits } from "../lib/text-limits";
 import type { Coworkers } from "./design-coworkers";
 import { GapSheet, gapDaysIn } from "./design-gap-sheet";
 import { DesignGroup, JoinScreen } from "./design-group";
@@ -1185,9 +1186,9 @@ const tabBar = {
   bar: css({
     backdropFilter: "blur(16px) saturate(1.4)",
     bg: "color-mix(in srgb, var(--fill-tertiary) 80%, transparent)",
-    borderRadius: "999px",
+    borderRadius: "full",
     bottom: "var(--tab-bar-bottom)",
-    boxShadow: "0 4px 20px var(--shadow-medium)",
+    boxShadow: "md",
     color: "text.tertiary",
     display: "flex",
     height: "64px",
@@ -1202,7 +1203,7 @@ const tabBar = {
       alignItems: "center",
       bg: "transparent",
       border: 0,
-      borderRadius: "999px",
+      borderRadius: "full",
       display: "flex",
       flex: 1,
       flexDirection: "column",
@@ -1322,7 +1323,7 @@ const heading = {
   step: css({
     bg: "transparent",
     border: 0,
-    borderRadius: "12px",
+    borderRadius: "md",
     color: "text.tertiary",
     display: "grid",
     height: "40px",
@@ -1371,10 +1372,10 @@ const calendarPage = {
 
 // From one row of days to the next.
 const ROW_STEP = DAY_ROW_HEIGHT + DAY_ROW_GAP;
-// How the month folds into a week and back: one spring without bounce
-// for all of it, the moving, the height and the fading, the same as one
-// withAnimation(.spring(duration: 0.3, bounce: 0)) in the apps.
-const fold = { bounce: 0, type: "spring", visualDuration: 0.3 } as const;
+// How the month folds into a week and back: one spring for all of it,
+// the moving, the height and the fading, the same as one withAnimation
+// of the standard spring in the apps.
+const fold = spring("standard");
 const folding = {
   cell: css({ display: "grid", minWidth: 0 }),
   // Clips nothing: the rows moving out of it fade on the way, and the
@@ -1897,7 +1898,7 @@ const repeatEditor = {
     alignItems: "center",
     bg: "transparent",
     border: "1px dashed var(--border-strong)",
-    borderRadius: "999px",
+    borderRadius: "full",
     color: "accent.default",
     display: "inline-flex",
     gap: "4px",
@@ -1911,7 +1912,7 @@ const repeatEditor = {
     alignItems: "center",
     bg: "background.card",
     border: "1px solid token(colors.border.default)",
-    borderRadius: "12px",
+    borderRadius: "lg",
     color: "text.secondary",
     display: "flex",
     flexDirection: "column",
@@ -1925,7 +1926,7 @@ const repeatEditor = {
   palette: css({ display: "flex", flexWrap: "wrap", gap: "8px" }),
   sequence: css({
     bg: "fill.quaternary",
-    borderRadius: "16px",
+    borderRadius: "2xl",
     display: "flex",
     flexWrap: "wrap",
     gap: "4px",
@@ -1943,7 +1944,7 @@ const shiftPreview = {
   day: css({
     alignItems: "center",
     bg: "fill.quaternary",
-    borderRadius: "8px",
+    borderRadius: "sm",
     display: "flex",
     flexDirection: "column",
     gap: "1px",
@@ -2072,7 +2073,7 @@ const shiftInput = {
     alignItems: "center",
     bg: "transparent",
     border: 0,
-    borderRadius: "control",
+    borderRadius: "lg",
     color: "text.tertiary",
     display: "flex",
     gap: "4px",
@@ -2113,7 +2114,7 @@ const shiftInput = {
       alignItems: "center",
       bg: "background.card",
       border: "1px solid token(colors.border.default)",
-      borderRadius: "control",
+      borderRadius: "lg",
       display: "flex",
       flexDirection: "column",
       gap: "8px",
@@ -2328,7 +2329,7 @@ export const dayCell = cva({
     alignItems: "center",
     bg: "transparent",
     border: 0,
-    borderRadius: "12px",
+    borderRadius: "md",
     display: "flex",
     flexDirection: "column",
     fontSize: "11px",
@@ -2410,7 +2411,7 @@ export const dayParts = {
   noted: css({
     _before: {
       bg: "var(--calendar-note-marker)",
-      borderRadius: "2px",
+      borderRadius: "2xs",
       content: '""',
       inset: "45% -3px -1px",
       position: "absolute",
@@ -2601,7 +2602,7 @@ const dayDetail = {
     alignSelf: "center",
     bg: "transparent",
     border: 0,
-    borderRadius: "control",
+    borderRadius: "lg",
     color: "danger.default",
     display: "flex",
     gap: "4px",
@@ -2619,7 +2620,7 @@ const dayDetail = {
     },
     bg: "fill.quaternary",
     border: "1px solid transparent",
-    borderRadius: "12px",
+    borderRadius: "md",
     color: "text.primary",
     font: "inherit",
     minHeight: "40px",
@@ -2634,7 +2635,7 @@ const dayDetail = {
   legend: css({ float: "left", padding: "0 0 8px", width: "100%" }),
   memberInput: css({
     border: "1px solid token(colors.accent.focus)",
-    borderRadius: "999px",
+    borderRadius: "full",
     font: "inherit",
     minHeight: "34px",
     outline: "none",
@@ -2680,8 +2681,10 @@ function MemberField({
   onChange: (selected: string[]) => void;
 }) {
   const [adding, setAdding] = useState(false);
+  // Held to the limit here too: a name confirmed and added in one go may
+  // not have been cut to it yet.
   function add(name: string) {
-    const trimmed = name.trim();
+    const trimmed = limitText(name.trim(), textLimits.personName);
     setAdding(false);
     if (!trimmed) {
       return;
@@ -2726,7 +2729,7 @@ function MemberField({
               add(event.currentTarget.value);
             }}
             onKeyDown={(event) => {
-              if (event.key === "Enter") {
+              if (event.key === "Enter" && !composing(event)) {
                 add(event.currentTarget.value);
               } else if (event.key === "Escape") {
                 setAdding(false);
@@ -2897,8 +2900,8 @@ function DayDetail({
 const picker = {
   card: css({
     bg: "background.elevated",
-    borderRadius: "24px",
-    boxShadow: "0 16px 60px var(--shadow-large)",
+    borderRadius: "2xl",
+    boxShadow: "lg",
     color: "text.primary",
     padding: "20px",
     width: "min(360px, calc(100% - 24px))",
@@ -2911,7 +2914,7 @@ const picker = {
   iconButton: css({
     bg: "transparent",
     border: 0,
-    borderRadius: "12px",
+    borderRadius: "md",
     color: "text.primary",
     display: "grid",
     height: "touch",
@@ -2948,7 +2951,7 @@ const pickerCell = cva({
     _focusVisible: { outline: "2px solid token(colors.accent.default)" },
     _hover: { bg: "accent.container" },
     alignItems: "center",
-    borderRadius: "12px",
+    borderRadius: "md",
     cursor: "default",
     display: "flex",
     justifyContent: "center",
@@ -3086,7 +3089,7 @@ const dateButton = {
       },
       alignItems: "center",
       border: 0,
-      borderRadius: "action",
+      borderRadius: "md",
       color: "text.primary",
       cursor: "pointer",
       display: "flex",

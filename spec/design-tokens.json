@@ -1,0 +1,2677 @@
+{
+  "$comment": "Code generated from design/ by `mise run gen`. Do not edit.",
+  "colors": {
+    "marks": [
+      "テーマカラー",
+      "からし",
+      "オレンジ",
+      "テラコッタ",
+      "赤",
+      "ローズ",
+      "すみれ",
+      "ラベンダー",
+      "藍",
+      "紺",
+      "青緑",
+      "グレー"
+    ],
+    "roles": [
+      "background-base",
+      "background-card",
+      "background-elevated",
+      "fill-quaternary",
+      "fill-tertiary",
+      "fill-secondary",
+      "fill-primary",
+      "text-primary",
+      "text-secondary",
+      "text-tertiary",
+      "text-quaternary",
+      "text-disabled",
+      "border-default",
+      "separator",
+      "border-strong",
+      "calendar-holiday",
+      "calendar-saturday",
+      "danger-default",
+      "danger-fill",
+      "danger-on-fill",
+      "inverse-background",
+      "inverse-text",
+      "control-knob",
+      "home-indicator",
+      "scrim",
+      "shadow-small",
+      "shadow-medium",
+      "shadow-large",
+      "accent-default",
+      "accent-fill",
+      "accent-on-fill",
+      "accent-focus",
+      "accent-border",
+      "accent-container",
+      "calendar-off-tint",
+      "calendar-note-marker"
+    ],
+    "themes": [
+      {
+        "alwaysDark": false,
+        "id": "pochical",
+        "input": {
+          "accent": {
+            "chroma": 0.06,
+            "hue": 141,
+            "lightness": 0.472
+          },
+          "grays": {
+            "hue": 141,
+            "strength": 1
+          },
+          "id": "pochical",
+          "name": "ポチカル"
+        },
+        "name": "ポチカル",
+        "schemes": {
+          "light": {
+            "marks": [
+              {
+                "color": "#496444",
+                "tint": "#e1e9df"
+              },
+              {
+                "color": "#8a6d1a",
+                "tint": "#f3ead0"
+              },
+              {
+                "color": "#95602e",
+                "tint": "#f5e4d2"
+              },
+              {
+                "color": "#93503a",
+                "tint": "#f3dfd6"
+              },
+              {
+                "color": "#9b3f35",
+                "tint": "#f4dcd8"
+              },
+              {
+                "color": "#8d4a5a",
+                "tint": "#f2e0e4"
+              },
+              {
+                "color": "#75497a",
+                "tint": "#eee1ef"
+              },
+              {
+                "color": "#5f4f86",
+                "tint": "#e8e2f0"
+              },
+              {
+                "color": "#4a5388",
+                "tint": "#e3e6f2"
+              },
+              {
+                "color": "#3d4a73",
+                "tint": "#dde2ee"
+              },
+              {
+                "color": "#36706c",
+                "tint": "#dcebea"
+              },
+              {
+                "color": "#56636d",
+                "tint": "#e3e7ea"
+              }
+            ],
+            "roles": {
+              "background-base": "#ffffff",
+              "background-card": "#ffffff",
+              "background-elevated": "#ffffff",
+              "fill-quaternary": "#f5f7f4",
+              "fill-tertiary": "#eef2ed",
+              "fill-secondary": "#e4e9e3",
+              "fill-primary": "#d2dad1",
+              "text-primary": "#30332f",
+              "text-secondary": "#555e53",
+              "text-tertiary": "#71796f",
+              "text-quaternary": "#899087",
+              "text-disabled": "#b7bfb6",
+              "border-default": "#dee4dd",
+              "separator": "#eaefe9",
+              "border-strong": "#b6c3b4",
+              "calendar-holiday": "#a96561",
+              "calendar-saturday": "#6682a0",
+              "danger-default": "#b0564f",
+              "danger-fill": "#b0564f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#30332f",
+              "inverse-text": "#ffffff",
+              "control-knob": "#ffffff",
+              "home-indicator": "#353a34",
+              "scrim": "#30332f35",
+              "shadow-small": "#30332f14",
+              "shadow-medium": "#30332f1f",
+              "shadow-large": "#30332f2e",
+              "accent-default": "#496444",
+              "accent-fill": "#496444",
+              "accent-on-fill": "#ffffff",
+              "accent-focus": "#6a8365",
+              "accent-border": "#a2b49e",
+              "accent-container": "#eef3ed",
+              "calendar-off-tint": "#e1e9df",
+              "calendar-note-marker": "#bfc7be"
+            }
+          },
+          "dark": {
+            "marks": [
+              {
+                "color": "#a4c19f",
+                "tint": "#3d493b"
+              },
+              {
+                "color": "#d6bb77",
+                "tint": "#4d432a"
+              },
+              {
+                "color": "#e6b285",
+                "tint": "#533f2d"
+              },
+              {
+                "color": "#efab95",
+                "tint": "#573c34"
+              },
+              {
+                "color": "#fea194",
+                "tint": "#573c37"
+              },
+              {
+                "color": "#eda8b6",
+                "tint": "#563b40"
+              },
+              {
+                "color": "#d8acdd",
+                "tint": "#4e3d50"
+              },
+              {
+                "color": "#c2b4ec",
+                "tint": "#453f57"
+              },
+              {
+                "color": "#afbaf1",
+                "tint": "#3d4259"
+              },
+              {
+                "color": "#c0d0fc",
+                "tint": "#3d4355"
+              },
+              {
+                "color": "#95cac5",
+                "tint": "#334947"
+              },
+              {
+                "color": "#b3c0ca",
+                "tint": "#3f4449"
+              }
+            ],
+            "roles": {
+              "background-base": "#2a2c29",
+              "background-card": "#414541",
+              "background-elevated": "#333633",
+              "fill-quaternary": "#323531",
+              "fill-tertiary": "#393d39",
+              "fill-secondary": "#4f544f",
+              "fill-primary": "#575c57",
+              "text-primary": "#dcdfdb",
+              "text-secondary": "#bdc3bc",
+              "text-tertiary": "#a7ada5",
+              "text-quaternary": "#949a93",
+              "text-disabled": "#666a65",
+              "border-default": "#4d514c",
+              "separator": "#3e423e",
+              "border-strong": "#686e67",
+              "calendar-holiday": "#dd9f9a",
+              "calendar-saturday": "#98b4d4",
+              "danger-default": "#e58c83",
+              "danger-fill": "#c4675f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#dcdfdb",
+              "inverse-text": "#2a2c29",
+              "control-knob": "#ffffff",
+              "home-indicator": "#cfd2ce",
+              "scrim": "#0000008c",
+              "shadow-small": "#00000040",
+              "shadow-medium": "#00000059",
+              "shadow-large": "#00000080",
+              "accent-default": "#a4c19f",
+              "accent-fill": "#a4c19f",
+              "accent-on-fill": "#20291f",
+              "accent-focus": "#8fa68a",
+              "accent-border": "#697a66",
+              "accent-container": "#353b34",
+              "calendar-off-tint": "#3d493b",
+              "calendar-note-marker": "#575c57"
+            }
+          }
+        }
+      },
+      {
+        "alwaysDark": false,
+        "id": "zen",
+        "input": {
+          "accent": {
+            "chroma": 0.04,
+            "hue": 132,
+            "lightness": 0.5
+          },
+          "grays": {
+            "hue": 90,
+            "strength": 1.1
+          },
+          "ground": {
+            "chroma": 0.005,
+            "hue": 92,
+            "lightness": 0.993
+          },
+          "id": "zen",
+          "name": "禅",
+          "vividness": 0.75
+        },
+        "name": "禅",
+        "schemes": {
+          "light": {
+            "marks": [
+              {
+                "color": "#5b6851",
+                "tint": "#e3e8e0"
+              },
+              {
+                "color": "#846f39",
+                "tint": "#f1ead7"
+              },
+              {
+                "color": "#8c6441",
+                "tint": "#f2e5d7"
+              },
+              {
+                "color": "#895646",
+                "tint": "#efe0d9"
+              },
+              {
+                "color": "#8e4a41",
+                "tint": "#f0dedb"
+              },
+              {
+                "color": "#83515c",
+                "tint": "#efe1e4"
+              },
+              {
+                "color": "#6f4f73",
+                "tint": "#ece2ed"
+              },
+              {
+                "color": "#5e527b",
+                "tint": "#e7e3ed"
+              },
+              {
+                "color": "#4d557c",
+                "tint": "#e4e6ef"
+              },
+              {
+                "color": "#414b6a",
+                "tint": "#dee2eb"
+              },
+              {
+                "color": "#456d6a",
+                "tint": "#dfeae9"
+              },
+              {
+                "color": "#59636a",
+                "tint": "#e4e7e9"
+              }
+            ],
+            "roles": {
+              "background-base": "#fefdf9",
+              "background-card": "#fefdf9",
+              "background-elevated": "#fefdf9",
+              "fill-quaternary": "#f8f6f2",
+              "fill-tertiary": "#f2f0eb",
+              "fill-secondary": "#eae7df",
+              "fill-primary": "#dbd7cc",
+              "text-primary": "#34322d",
+              "text-secondary": "#605b4c",
+              "text-tertiary": "#7b7669",
+              "text-quaternary": "#928e82",
+              "text-disabled": "#c0bcb0",
+              "border-default": "#e5e1d9",
+              "separator": "#efede6",
+              "border-strong": "#c5beab",
+              "calendar-holiday": "#a96561",
+              "calendar-saturday": "#6682a0",
+              "danger-default": "#b0564f",
+              "danger-fill": "#b0564f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#34322d",
+              "inverse-text": "#ffffff",
+              "control-knob": "#ffffff",
+              "home-indicator": "#3b3830",
+              "scrim": "#34322d35",
+              "shadow-small": "#34322d14",
+              "shadow-medium": "#34322d1f",
+              "shadow-large": "#34322d2e",
+              "accent-default": "#5b6851",
+              "accent-fill": "#5b6851",
+              "accent-on-fill": "#ffffff",
+              "accent-focus": "#7b8872",
+              "accent-border": "#a8b2a1",
+              "accent-container": "#f0f2ee",
+              "calendar-off-tint": "#e3e8e0",
+              "calendar-note-marker": "#c8c4b9"
+            }
+          },
+          "dark": {
+            "marks": [
+              {
+                "color": "#aebda4",
+                "tint": "#42473d"
+              },
+              {
+                "color": "#d0bc8b",
+                "tint": "#4b4331"
+              },
+              {
+                "color": "#dcb594",
+                "tint": "#4f4033"
+              },
+              {
+                "color": "#e4b0a0",
+                "tint": "#523e38"
+              },
+              {
+                "color": "#efa99f",
+                "tint": "#533e3a"
+              },
+              {
+                "color": "#e2aeb8",
+                "tint": "#523d41"
+              },
+              {
+                "color": "#d2b1d5",
+                "tint": "#4c3f4d"
+              },
+              {
+                "color": "#c1b7e1",
+                "tint": "#444052"
+              },
+              {
+                "color": "#b2bbe4",
+                "tint": "#3f4254"
+              },
+              {
+                "color": "#c4d0f1",
+                "tint": "#3f4351"
+              },
+              {
+                "color": "#a0c7c3",
+                "tint": "#384846"
+              },
+              {
+                "color": "#b6bfc7",
+                "tint": "#404448"
+              }
+            ],
+            "roles": {
+              "background-base": "#2d2b28",
+              "background-card": "#46443e",
+              "background-elevated": "#373531",
+              "fill-quaternary": "#36342f",
+              "fill-tertiary": "#3e3c36",
+              "fill-secondary": "#55524b",
+              "fill-primary": "#5d5a53",
+              "text-primary": "#e0ded9",
+              "text-secondary": "#c4c1b9",
+              "text-tertiary": "#aeaba1",
+              "text-quaternary": "#9b988f",
+              "text-disabled": "#6b6962",
+              "border-default": "#525049",
+              "separator": "#43413b",
+              "border-strong": "#6f6c63",
+              "calendar-holiday": "#dd9f9a",
+              "calendar-saturday": "#98b4d4",
+              "danger-default": "#e58c83",
+              "danger-fill": "#c4675f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#e0ded9",
+              "inverse-text": "#2d2b28",
+              "control-knob": "#ffffff",
+              "home-indicator": "#d3d1cc",
+              "scrim": "#0000008c",
+              "shadow-small": "#00000040",
+              "shadow-medium": "#00000059",
+              "shadow-large": "#00000080",
+              "accent-default": "#aebda4",
+              "accent-fill": "#aebda4",
+              "accent-on-fill": "#242820",
+              "accent-focus": "#97a38f",
+              "accent-border": "#6f7869",
+              "accent-container": "#373a35",
+              "calendar-off-tint": "#42473d",
+              "calendar-note-marker": "#5d5a53"
+            }
+          }
+        }
+      },
+      {
+        "alwaysDark": false,
+        "id": "sumi",
+        "input": {
+          "accent": {
+            "chroma": 0.008,
+            "hue": 138,
+            "lightness": 0.363
+          },
+          "grays": {
+            "hue": 138,
+            "strength": 0.3
+          },
+          "id": "sumi",
+          "name": "墨"
+        },
+        "name": "墨",
+        "schemes": {
+          "light": {
+            "marks": [
+              {
+                "color": "#3c3f3b",
+                "tint": "#e5e6e5"
+              },
+              {
+                "color": "#8a6d1a",
+                "tint": "#f3ead0"
+              },
+              {
+                "color": "#95602e",
+                "tint": "#f5e4d2"
+              },
+              {
+                "color": "#93503a",
+                "tint": "#f3dfd6"
+              },
+              {
+                "color": "#9b3f35",
+                "tint": "#f4dcd8"
+              },
+              {
+                "color": "#8d4a5a",
+                "tint": "#f2e0e4"
+              },
+              {
+                "color": "#75497a",
+                "tint": "#eee1ef"
+              },
+              {
+                "color": "#5f4f86",
+                "tint": "#e8e2f0"
+              },
+              {
+                "color": "#4a5388",
+                "tint": "#e3e6f2"
+              },
+              {
+                "color": "#3d4a73",
+                "tint": "#dde2ee"
+              },
+              {
+                "color": "#36706c",
+                "tint": "#dcebea"
+              },
+              {
+                "color": "#56636d",
+                "tint": "#e3e7ea"
+              }
+            ],
+            "roles": {
+              "background-base": "#ffffff",
+              "background-card": "#ffffff",
+              "background-elevated": "#ffffff",
+              "fill-quaternary": "#f6f7f6",
+              "fill-tertiary": "#f0f1ef",
+              "fill-secondary": "#e6e7e6",
+              "fill-primary": "#d6d8d5",
+              "text-primary": "#313231",
+              "text-secondary": "#595c58",
+              "text-tertiary": "#757774",
+              "text-quaternary": "#8c8e8c",
+              "text-disabled": "#bbbdba",
+              "border-default": "#e0e2e0",
+              "separator": "#ecedec",
+              "border-strong": "#bcc0bb",
+              "calendar-holiday": "#a96561",
+              "calendar-saturday": "#6682a0",
+              "danger-default": "#b0564f",
+              "danger-fill": "#b0564f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#313231",
+              "inverse-text": "#ffffff",
+              "control-knob": "#ffffff",
+              "home-indicator": "#373937",
+              "scrim": "#31323135",
+              "shadow-small": "#31323114",
+              "shadow-medium": "#3132311f",
+              "shadow-large": "#3132312e",
+              "accent-default": "#3c3f3b",
+              "accent-fill": "#3c3f3b",
+              "accent-on-fill": "#ffffff",
+              "accent-focus": "#5a5d59",
+              "accent-border": "#acafac",
+              "accent-container": "#f1f1f0",
+              "calendar-off-tint": "#e5e6e5",
+              "calendar-note-marker": "#c3c5c2"
+            }
+          },
+          "dark": {
+            "marks": [
+              {
+                "color": "#b5b9b4",
+                "tint": "#444544"
+              },
+              {
+                "color": "#d6bb77",
+                "tint": "#4d432a"
+              },
+              {
+                "color": "#e6b285",
+                "tint": "#533f2d"
+              },
+              {
+                "color": "#efab95",
+                "tint": "#573c34"
+              },
+              {
+                "color": "#fea194",
+                "tint": "#573c37"
+              },
+              {
+                "color": "#eda8b6",
+                "tint": "#563b40"
+              },
+              {
+                "color": "#d8acdd",
+                "tint": "#4e3d50"
+              },
+              {
+                "color": "#c2b4ec",
+                "tint": "#453f57"
+              },
+              {
+                "color": "#afbaf1",
+                "tint": "#3d4259"
+              },
+              {
+                "color": "#c0d0fc",
+                "tint": "#3d4355"
+              },
+              {
+                "color": "#95cac5",
+                "tint": "#334947"
+              },
+              {
+                "color": "#b3c0ca",
+                "tint": "#3f4449"
+              }
+            ],
+            "roles": {
+              "background-base": "#2b2b2b",
+              "background-card": "#434443",
+              "background-elevated": "#353534",
+              "fill-quaternary": "#333433",
+              "fill-tertiary": "#3b3c3b",
+              "fill-secondary": "#525351",
+              "fill-primary": "#5a5b59",
+              "text-primary": "#dddedd",
+              "text-secondary": "#c0c2c0",
+              "text-tertiary": "#aaaba9",
+              "text-quaternary": "#979996",
+              "text-disabled": "#686967",
+              "border-default": "#4f504e",
+              "separator": "#404140",
+              "border-strong": "#6b6d6a",
+              "calendar-holiday": "#dd9f9a",
+              "calendar-saturday": "#98b4d4",
+              "danger-default": "#e58c83",
+              "danger-fill": "#c4675f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#dddedd",
+              "inverse-text": "#2b2b2b",
+              "control-knob": "#ffffff",
+              "home-indicator": "#d0d1d0",
+              "scrim": "#0000008c",
+              "shadow-small": "#00000040",
+              "shadow-medium": "#00000059",
+              "shadow-large": "#00000080",
+              "accent-default": "#b5b9b4",
+              "accent-fill": "#b5b9b4",
+              "accent-on-fill": "#262725",
+              "accent-focus": "#9c9f9b",
+              "accent-border": "#737572",
+              "accent-container": "#393938",
+              "calendar-off-tint": "#444544",
+              "calendar-note-marker": "#5a5b59"
+            }
+          }
+        }
+      },
+      {
+        "alwaysDark": false,
+        "id": "milktea",
+        "input": {
+          "accent": {
+            "chroma": 0.052,
+            "hue": 72,
+            "lightness": 0.52
+          },
+          "grays": {
+            "hue": 68,
+            "strength": 1.3
+          },
+          "ground": {
+            "chroma": 0.005,
+            "hue": 75,
+            "lightness": 0.993
+          },
+          "id": "milktea",
+          "name": "ミルクティー",
+          "vividness": 0.75
+        },
+        "name": "ミルクティー",
+        "schemes": {
+          "light": {
+            "marks": [
+              {
+                "color": "#7c6447",
+                "tint": "#ece5dc"
+              },
+              {
+                "color": "#846f39",
+                "tint": "#f1ead7"
+              },
+              {
+                "color": "#8c6441",
+                "tint": "#f2e5d7"
+              },
+              {
+                "color": "#895646",
+                "tint": "#efe0d9"
+              },
+              {
+                "color": "#8e4a41",
+                "tint": "#f0dedb"
+              },
+              {
+                "color": "#83515c",
+                "tint": "#efe1e4"
+              },
+              {
+                "color": "#6f4f73",
+                "tint": "#ece2ed"
+              },
+              {
+                "color": "#5e527b",
+                "tint": "#e7e3ed"
+              },
+              {
+                "color": "#4d557c",
+                "tint": "#e4e6ef"
+              },
+              {
+                "color": "#414b6a",
+                "tint": "#dee2eb"
+              },
+              {
+                "color": "#456d6a",
+                "tint": "#dfeae9"
+              },
+              {
+                "color": "#59636a",
+                "tint": "#e4e7e9"
+              }
+            ],
+            "roles": {
+              "background-base": "#fffcf9",
+              "background-card": "#fffcf9",
+              "background-elevated": "#fffcf9",
+              "fill-quaternary": "#faf6f2",
+              "fill-tertiary": "#f5efea",
+              "fill-secondary": "#ede6de",
+              "fill-primary": "#e0d5cb",
+              "text-primary": "#36312c",
+              "text-secondary": "#66584b",
+              "text-tertiary": "#807468",
+              "text-quaternary": "#978c80",
+              "text-disabled": "#c5baaf",
+              "border-default": "#e8e0d8",
+              "separator": "#f2ece6",
+              "border-strong": "#cdbba8",
+              "calendar-holiday": "#a96561",
+              "calendar-saturday": "#6682a0",
+              "danger-default": "#b0564f",
+              "danger-fill": "#b0564f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#36312c",
+              "inverse-text": "#ffffff",
+              "control-knob": "#ffffff",
+              "home-indicator": "#3f372f",
+              "scrim": "#36312c35",
+              "shadow-small": "#36312c14",
+              "shadow-medium": "#36312c1f",
+              "shadow-large": "#36312c2e",
+              "accent-default": "#7c6447",
+              "accent-fill": "#7c6447",
+              "accent-on-fill": "#ffffff",
+              "accent-focus": "#9b856a",
+              "accent-border": "#bbab98",
+              "accent-container": "#f4f0ec",
+              "calendar-off-tint": "#ece5dc",
+              "calendar-note-marker": "#cdc2b8"
+            }
+          },
+          "dark": {
+            "marks": [
+              {
+                "color": "#ccb395",
+                "tint": "#4d4338"
+              },
+              {
+                "color": "#d0bc8b",
+                "tint": "#4b4331"
+              },
+              {
+                "color": "#dcb594",
+                "tint": "#4f4033"
+              },
+              {
+                "color": "#e4b0a0",
+                "tint": "#523e38"
+              },
+              {
+                "color": "#efa99f",
+                "tint": "#533e3a"
+              },
+              {
+                "color": "#e2aeb8",
+                "tint": "#523d41"
+              },
+              {
+                "color": "#d2b1d5",
+                "tint": "#4c3f4d"
+              },
+              {
+                "color": "#c1b7e1",
+                "tint": "#444052"
+              },
+              {
+                "color": "#b2bbe4",
+                "tint": "#3f4254"
+              },
+              {
+                "color": "#c4d0f1",
+                "tint": "#3f4351"
+              },
+              {
+                "color": "#a0c7c3",
+                "tint": "#384846"
+              },
+              {
+                "color": "#b6bfc7",
+                "tint": "#404448"
+              }
+            ],
+            "roles": {
+              "background-base": "#2e2b27",
+              "background-card": "#48433d",
+              "background-elevated": "#393430",
+              "fill-quaternary": "#38332e",
+              "fill-tertiary": "#403b35",
+              "fill-secondary": "#58514a",
+              "fill-primary": "#605952",
+              "text-primary": "#e2ddd8",
+              "text-secondary": "#c8c0b8",
+              "text-tertiary": "#b2a9a0",
+              "text-quaternary": "#9f968d",
+              "text-disabled": "#6d6862",
+              "border-default": "#544f49",
+              "separator": "#45403a",
+              "border-strong": "#736a61",
+              "calendar-holiday": "#dd9f9a",
+              "calendar-saturday": "#98b4d4",
+              "danger-default": "#e58c83",
+              "danger-fill": "#c4675f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#e2ddd8",
+              "inverse-text": "#2e2b27",
+              "control-knob": "#ffffff",
+              "home-indicator": "#d5d0cb",
+              "scrim": "#0000008c",
+              "shadow-small": "#00000040",
+              "shadow-medium": "#00000059",
+              "shadow-large": "#00000080",
+              "accent-default": "#ccb395",
+              "accent-fill": "#ccb395",
+              "accent-on-fill": "#2d251c",
+              "accent-focus": "#af9b83",
+              "accent-border": "#807261",
+              "accent-container": "#3e3831",
+              "calendar-off-tint": "#4d4338",
+              "calendar-note-marker": "#605952"
+            }
+          }
+        }
+      },
+      {
+        "alwaysDark": false,
+        "id": "matcha",
+        "input": {
+          "accent": {
+            "chroma": 0.095,
+            "hue": 116,
+            "lightness": 0.5
+          },
+          "grays": {
+            "hue": 110,
+            "strength": 1
+          },
+          "id": "matcha",
+          "name": "抹茶",
+          "vividness": 0.75
+        },
+        "name": "抹茶",
+        "schemes": {
+          "light": {
+            "marks": [
+              {
+                "color": "#616a22",
+                "tint": "#e5e9d6"
+              },
+              {
+                "color": "#846f39",
+                "tint": "#f1ead7"
+              },
+              {
+                "color": "#8c6441",
+                "tint": "#f2e5d7"
+              },
+              {
+                "color": "#895646",
+                "tint": "#efe0d9"
+              },
+              {
+                "color": "#8e4a41",
+                "tint": "#f0dedb"
+              },
+              {
+                "color": "#83515c",
+                "tint": "#efe1e4"
+              },
+              {
+                "color": "#6f4f73",
+                "tint": "#ece2ed"
+              },
+              {
+                "color": "#5e527b",
+                "tint": "#e7e3ed"
+              },
+              {
+                "color": "#4d557c",
+                "tint": "#e4e6ef"
+              },
+              {
+                "color": "#414b6a",
+                "tint": "#dee2eb"
+              },
+              {
+                "color": "#456d6a",
+                "tint": "#dfeae9"
+              },
+              {
+                "color": "#59636a",
+                "tint": "#e4e7e9"
+              }
+            ],
+            "roles": {
+              "background-base": "#ffffff",
+              "background-card": "#ffffff",
+              "background-elevated": "#ffffff",
+              "fill-quaternary": "#f7f7f3",
+              "fill-tertiary": "#f0f1ec",
+              "fill-secondary": "#e7e8e0",
+              "fill-primary": "#d7d8ce",
+              "text-primary": "#32322e",
+              "text-secondary": "#5c5c4f",
+              "text-tertiary": "#77786b",
+              "text-quaternary": "#8e8f84",
+              "text-disabled": "#bcbdb2",
+              "border-default": "#e2e2da",
+              "separator": "#edeee7",
+              "border-strong": "#bfc0ae",
+              "calendar-holiday": "#a96561",
+              "calendar-saturday": "#6682a0",
+              "danger-default": "#b0564f",
+              "danger-fill": "#b0564f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#32322e",
+              "inverse-text": "#ffffff",
+              "control-knob": "#ffffff",
+              "home-indicator": "#393931",
+              "scrim": "#32322e35",
+              "shadow-small": "#32322e14",
+              "shadow-medium": "#32322e1f",
+              "shadow-large": "#32322e2e",
+              "accent-default": "#616a22",
+              "accent-fill": "#616a22",
+              "accent-on-fill": "#ffffff",
+              "accent-focus": "#808a4c",
+              "accent-border": "#acb389",
+              "accent-container": "#f0f2e8",
+              "calendar-off-tint": "#e5e9d6",
+              "calendar-note-marker": "#c4c5bb"
+            }
+          },
+          "dark": {
+            "marks": [
+              {
+                "color": "#b4bf7b",
+                "tint": "#44482e"
+              },
+              {
+                "color": "#d0bc8b",
+                "tint": "#4b4331"
+              },
+              {
+                "color": "#dcb594",
+                "tint": "#4f4033"
+              },
+              {
+                "color": "#e4b0a0",
+                "tint": "#523e38"
+              },
+              {
+                "color": "#efa99f",
+                "tint": "#533e3a"
+              },
+              {
+                "color": "#e2aeb8",
+                "tint": "#523d41"
+              },
+              {
+                "color": "#d2b1d5",
+                "tint": "#4c3f4d"
+              },
+              {
+                "color": "#c1b7e1",
+                "tint": "#444052"
+              },
+              {
+                "color": "#b2bbe4",
+                "tint": "#3f4254"
+              },
+              {
+                "color": "#c4d0f1",
+                "tint": "#3f4351"
+              },
+              {
+                "color": "#a0c7c3",
+                "tint": "#384846"
+              },
+              {
+                "color": "#b6bfc7",
+                "tint": "#404448"
+              }
+            ],
+            "roles": {
+              "background-base": "#2b2c28",
+              "background-card": "#44443f",
+              "background-elevated": "#353631",
+              "fill-quaternary": "#343430",
+              "fill-tertiary": "#3c3c37",
+              "fill-secondary": "#53534c",
+              "fill-primary": "#5b5b54",
+              "text-primary": "#dededa",
+              "text-secondary": "#c1c2ba",
+              "text-tertiary": "#abaca2",
+              "text-quaternary": "#989990",
+              "text-disabled": "#696963",
+              "border-default": "#50504a",
+              "separator": "#41413c",
+              "border-strong": "#6c6d64",
+              "calendar-holiday": "#dd9f9a",
+              "calendar-saturday": "#98b4d4",
+              "danger-default": "#e58c83",
+              "danger-fill": "#c4675f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#dededa",
+              "inverse-text": "#2b2c28",
+              "control-knob": "#ffffff",
+              "home-indicator": "#d1d1cd",
+              "scrim": "#0000008c",
+              "shadow-small": "#00000040",
+              "shadow-medium": "#00000059",
+              "shadow-large": "#00000080",
+              "accent-default": "#b4bf7b",
+              "accent-fill": "#b4bf7b",
+              "accent-on-fill": "#252913",
+              "accent-focus": "#9ca56e",
+              "accent-border": "#727952",
+              "accent-container": "#383b2c",
+              "calendar-off-tint": "#44482e",
+              "calendar-note-marker": "#5b5b54"
+            }
+          }
+        }
+      },
+      {
+        "alwaysDark": false,
+        "id": "cocoa",
+        "input": {
+          "accent": {
+            "chroma": 0.045,
+            "hue": 40,
+            "lightness": 0.38
+          },
+          "grays": {
+            "hue": 45,
+            "strength": 1
+          },
+          "id": "cocoa",
+          "name": "ココア",
+          "vividness": 0.75
+        },
+        "name": "ココア",
+        "schemes": {
+          "light": {
+            "marks": [
+              {
+                "color": "#573a30",
+                "tint": "#eee4e0"
+              },
+              {
+                "color": "#846f39",
+                "tint": "#f1ead7"
+              },
+              {
+                "color": "#8c6441",
+                "tint": "#f2e5d7"
+              },
+              {
+                "color": "#895646",
+                "tint": "#efe0d9"
+              },
+              {
+                "color": "#8e4a41",
+                "tint": "#f0dedb"
+              },
+              {
+                "color": "#83515c",
+                "tint": "#efe1e4"
+              },
+              {
+                "color": "#6f4f73",
+                "tint": "#ece2ed"
+              },
+              {
+                "color": "#5e527b",
+                "tint": "#e7e3ed"
+              },
+              {
+                "color": "#4d557c",
+                "tint": "#e4e6ef"
+              },
+              {
+                "color": "#414b6a",
+                "tint": "#dee2eb"
+              },
+              {
+                "color": "#456d6a",
+                "tint": "#dfeae9"
+              },
+              {
+                "color": "#59636a",
+                "tint": "#e4e7e9"
+              }
+            ],
+            "roles": {
+              "background-base": "#ffffff",
+              "background-card": "#ffffff",
+              "background-elevated": "#ffffff",
+              "fill-quaternary": "#faf5f4",
+              "fill-tertiary": "#f5efed",
+              "fill-secondary": "#ede5e2",
+              "fill-primary": "#e0d5d0",
+              "text-primary": "#36312f",
+              "text-secondary": "#665851",
+              "text-tertiary": "#80736e",
+              "text-quaternary": "#978b86",
+              "text-disabled": "#c5b9b4",
+              "border-default": "#e9e0dc",
+              "separator": "#f2ebe9",
+              "border-strong": "#cdbab1",
+              "calendar-holiday": "#a96561",
+              "calendar-saturday": "#6682a0",
+              "danger-default": "#b0564f",
+              "danger-fill": "#b0564f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#36312f",
+              "inverse-text": "#ffffff",
+              "control-knob": "#ffffff",
+              "home-indicator": "#3f3633",
+              "scrim": "#36312f35",
+              "shadow-small": "#36312f14",
+              "shadow-medium": "#36312f1f",
+              "shadow-large": "#36312f2e",
+              "accent-default": "#573a30",
+              "accent-fill": "#573a30",
+              "accent-on-fill": "#ffffff",
+              "accent-focus": "#75594f",
+              "accent-border": "#bea8a1",
+              "accent-container": "#f5f0ee",
+              "calendar-off-tint": "#eee4e0",
+              "calendar-note-marker": "#cdc2bd"
+            }
+          },
+          "dark": {
+            "marks": [
+              {
+                "color": "#d1afa3",
+                "tint": "#4f423d"
+              },
+              {
+                "color": "#d0bc8b",
+                "tint": "#4b4331"
+              },
+              {
+                "color": "#dcb594",
+                "tint": "#4f4033"
+              },
+              {
+                "color": "#e4b0a0",
+                "tint": "#523e38"
+              },
+              {
+                "color": "#efa99f",
+                "tint": "#533e3a"
+              },
+              {
+                "color": "#e2aeb8",
+                "tint": "#523d41"
+              },
+              {
+                "color": "#d2b1d5",
+                "tint": "#4c3f4d"
+              },
+              {
+                "color": "#c1b7e1",
+                "tint": "#444052"
+              },
+              {
+                "color": "#b2bbe4",
+                "tint": "#3f4254"
+              },
+              {
+                "color": "#c4d0f1",
+                "tint": "#3f4351"
+              },
+              {
+                "color": "#a0c7c3",
+                "tint": "#384846"
+              },
+              {
+                "color": "#b6bfc7",
+                "tint": "#404448"
+              }
+            ],
+            "roles": {
+              "background-base": "#2e2a29",
+              "background-card": "#484240",
+              "background-elevated": "#393432",
+              "fill-quaternary": "#383331",
+              "fill-tertiary": "#403a38",
+              "fill-secondary": "#58514e",
+              "fill-primary": "#605956",
+              "text-primary": "#e2dddb",
+              "text-secondary": "#c8bfbb",
+              "text-tertiary": "#b3a9a4",
+              "text-quaternary": "#9f9692",
+              "text-disabled": "#6d6764",
+              "border-default": "#544e4b",
+              "separator": "#453f3d",
+              "border-strong": "#736a66",
+              "calendar-holiday": "#dd9f9a",
+              "calendar-saturday": "#98b4d4",
+              "danger-default": "#e58c83",
+              "danger-fill": "#c4675f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#e2dddb",
+              "inverse-text": "#2e2a29",
+              "control-knob": "#ffffff",
+              "home-indicator": "#d5d0ce",
+              "scrim": "#0000008c",
+              "shadow-small": "#00000040",
+              "shadow-medium": "#00000059",
+              "shadow-large": "#00000080",
+              "accent-default": "#d1afa3",
+              "accent-fill": "#d1afa3",
+              "accent-on-fill": "#2e2420",
+              "accent-focus": "#b3978e",
+              "accent-border": "#836f69",
+              "accent-container": "#3f3735",
+              "calendar-off-tint": "#4f423d",
+              "calendar-note-marker": "#605956"
+            }
+          }
+        }
+      },
+      {
+        "alwaysDark": false,
+        "id": "soda",
+        "input": {
+          "accent": {
+            "chroma": 0.072,
+            "hue": 205,
+            "lightness": 0.48
+          },
+          "grays": {
+            "hue": 205,
+            "strength": 0.8
+          },
+          "id": "soda",
+          "name": "ソーダ"
+        },
+        "name": "ソーダ",
+        "schemes": {
+          "light": {
+            "marks": [
+              {
+                "color": "#1d6971",
+                "tint": "#d8eaec"
+              },
+              {
+                "color": "#8a6d1a",
+                "tint": "#f3ead0"
+              },
+              {
+                "color": "#95602e",
+                "tint": "#f5e4d2"
+              },
+              {
+                "color": "#93503a",
+                "tint": "#f3dfd6"
+              },
+              {
+                "color": "#9b3f35",
+                "tint": "#f4dcd8"
+              },
+              {
+                "color": "#8d4a5a",
+                "tint": "#f2e0e4"
+              },
+              {
+                "color": "#75497a",
+                "tint": "#eee1ef"
+              },
+              {
+                "color": "#5f4f86",
+                "tint": "#e8e2f0"
+              },
+              {
+                "color": "#4a5388",
+                "tint": "#e3e6f2"
+              },
+              {
+                "color": "#3d4a73",
+                "tint": "#dde2ee"
+              },
+              {
+                "color": "#36706c",
+                "tint": "#dcebea"
+              },
+              {
+                "color": "#56636d",
+                "tint": "#e3e7ea"
+              }
+            ],
+            "roles": {
+              "background-base": "#ffffff",
+              "background-card": "#ffffff",
+              "background-elevated": "#ffffff",
+              "fill-quaternary": "#f3f7f8",
+              "fill-tertiary": "#edf1f2",
+              "fill-secondary": "#e1e9e9",
+              "fill-primary": "#cfdadb",
+              "text-primary": "#2e3334",
+              "text-secondary": "#505e60",
+              "text-tertiary": "#6d797b",
+              "text-quaternary": "#859091",
+              "text-disabled": "#b4bec0",
+              "border-default": "#dbe3e4",
+              "separator": "#e8eeef",
+              "border-strong": "#b0c3c5",
+              "calendar-holiday": "#a96561",
+              "calendar-saturday": "#6682a0",
+              "danger-default": "#b0564f",
+              "danger-fill": "#b0564f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#2e3334",
+              "inverse-text": "#ffffff",
+              "control-knob": "#ffffff",
+              "home-indicator": "#323a3b",
+              "scrim": "#2e333435",
+              "shadow-small": "#2e333414",
+              "shadow-medium": "#2e33341f",
+              "shadow-large": "#2e33342e",
+              "accent-default": "#1d6971",
+              "accent-fill": "#1d6971",
+              "accent-on-fill": "#ffffff",
+              "accent-focus": "#4b8990",
+              "accent-border": "#8db7bb",
+              "accent-container": "#eaf3f4",
+              "calendar-off-tint": "#d8eaec",
+              "calendar-note-marker": "#bcc7c8"
+            }
+          },
+          "dark": {
+            "marks": [
+              {
+                "color": "#82c5cc",
+                "tint": "#304a4d"
+              },
+              {
+                "color": "#d6bb77",
+                "tint": "#4d432a"
+              },
+              {
+                "color": "#e6b285",
+                "tint": "#533f2d"
+              },
+              {
+                "color": "#efab95",
+                "tint": "#573c34"
+              },
+              {
+                "color": "#fea194",
+                "tint": "#573c37"
+              },
+              {
+                "color": "#eda8b6",
+                "tint": "#563b40"
+              },
+              {
+                "color": "#d8acdd",
+                "tint": "#4e3d50"
+              },
+              {
+                "color": "#c2b4ec",
+                "tint": "#453f57"
+              },
+              {
+                "color": "#afbaf1",
+                "tint": "#3d4259"
+              },
+              {
+                "color": "#c0d0fc",
+                "tint": "#3d4355"
+              },
+              {
+                "color": "#95cac5",
+                "tint": "#334947"
+              },
+              {
+                "color": "#b3c0ca",
+                "tint": "#3f4449"
+              }
+            ],
+            "roles": {
+              "background-base": "#292c2c",
+              "background-card": "#404546",
+              "background-elevated": "#323637",
+              "fill-quaternary": "#303536",
+              "fill-tertiary": "#383d3e",
+              "fill-secondary": "#4d5455",
+              "fill-primary": "#555c5d",
+              "text-primary": "#dadfdf",
+              "text-secondary": "#bbc3c4",
+              "text-tertiary": "#a4adae",
+              "text-quaternary": "#919a9b",
+              "text-disabled": "#646a6b",
+              "border-default": "#4b5152",
+              "separator": "#3d4243",
+              "border-strong": "#656e6f",
+              "calendar-holiday": "#dd9f9a",
+              "calendar-saturday": "#98b4d4",
+              "danger-default": "#e58c83",
+              "danger-fill": "#c4675f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#dadfdf",
+              "inverse-text": "#292c2c",
+              "control-knob": "#ffffff",
+              "home-indicator": "#cdd2d2",
+              "scrim": "#0000008c",
+              "shadow-small": "#00000040",
+              "shadow-medium": "#00000059",
+              "shadow-large": "#00000080",
+              "accent-default": "#82c5cc",
+              "accent-fill": "#82c5cc",
+              "accent-on-fill": "#152a2d",
+              "accent-focus": "#73a9af",
+              "accent-border": "#567c81",
+              "accent-container": "#2e3c3e",
+              "calendar-off-tint": "#304a4d",
+              "calendar-note-marker": "#555c5d"
+            }
+          }
+        }
+      },
+      {
+        "alwaysDark": false,
+        "id": "sakura",
+        "input": {
+          "accent": {
+            "chroma": 0.075,
+            "hue": 6,
+            "lightness": 0.5
+          },
+          "grays": {
+            "hue": 10,
+            "strength": 0.9
+          },
+          "id": "sakura",
+          "name": "さくら",
+          "vividness": 0.75
+        },
+        "name": "さくら",
+        "schemes": {
+          "light": {
+            "marks": [
+              {
+                "color": "#88515d",
+                "tint": "#f3e1e4"
+              },
+              {
+                "color": "#846f39",
+                "tint": "#f1ead7"
+              },
+              {
+                "color": "#8c6441",
+                "tint": "#f2e5d7"
+              },
+              {
+                "color": "#895646",
+                "tint": "#efe0d9"
+              },
+              {
+                "color": "#8e4a41",
+                "tint": "#f0dedb"
+              },
+              {
+                "color": "#83515c",
+                "tint": "#efe1e4"
+              },
+              {
+                "color": "#6f4f73",
+                "tint": "#ece2ed"
+              },
+              {
+                "color": "#5e527b",
+                "tint": "#e7e3ed"
+              },
+              {
+                "color": "#4d557c",
+                "tint": "#e4e6ef"
+              },
+              {
+                "color": "#414b6a",
+                "tint": "#dee2eb"
+              },
+              {
+                "color": "#456d6a",
+                "tint": "#dfeae9"
+              },
+              {
+                "color": "#59636a",
+                "tint": "#e4e7e9"
+              }
+            ],
+            "roles": {
+              "background-base": "#ffffff",
+              "background-card": "#ffffff",
+              "background-elevated": "#ffffff",
+              "fill-quaternary": "#faf5f6",
+              "fill-tertiary": "#f4efef",
+              "fill-secondary": "#ede5e6",
+              "fill-primary": "#dfd4d5",
+              "text-primary": "#363031",
+              "text-secondary": "#655759",
+              "text-tertiary": "#807374",
+              "text-quaternary": "#968a8c",
+              "text-disabled": "#c4b9ba",
+              "border-default": "#e8dfe0",
+              "separator": "#f2ebec",
+              "border-strong": "#cdb9bb",
+              "calendar-holiday": "#a96561",
+              "calendar-saturday": "#6682a0",
+              "danger-default": "#b0564f",
+              "danger-fill": "#b0564f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#363031",
+              "inverse-text": "#ffffff",
+              "control-knob": "#ffffff",
+              "home-indicator": "#3e3637",
+              "scrim": "#36303135",
+              "shadow-small": "#36303114",
+              "shadow-medium": "#3630311f",
+              "shadow-large": "#3630312e",
+              "accent-default": "#88515d",
+              "accent-fill": "#88515d",
+              "accent-on-fill": "#ffffff",
+              "accent-focus": "#a7727d",
+              "accent-border": "#c9a2a9",
+              "accent-container": "#f8eef0",
+              "calendar-off-tint": "#f3e1e4",
+              "calendar-note-marker": "#ccc1c2"
+            }
+          },
+          "dark": {
+            "marks": [
+              {
+                "color": "#e0a5b0",
+                "tint": "#553e42"
+              },
+              {
+                "color": "#d0bc8b",
+                "tint": "#4b4331"
+              },
+              {
+                "color": "#dcb594",
+                "tint": "#4f4033"
+              },
+              {
+                "color": "#e4b0a0",
+                "tint": "#523e38"
+              },
+              {
+                "color": "#efa99f",
+                "tint": "#533e3a"
+              },
+              {
+                "color": "#e2aeb8",
+                "tint": "#523d41"
+              },
+              {
+                "color": "#d2b1d5",
+                "tint": "#4c3f4d"
+              },
+              {
+                "color": "#c1b7e1",
+                "tint": "#444052"
+              },
+              {
+                "color": "#b2bbe4",
+                "tint": "#3f4254"
+              },
+              {
+                "color": "#c4d0f1",
+                "tint": "#3f4351"
+              },
+              {
+                "color": "#a0c7c3",
+                "tint": "#384846"
+              },
+              {
+                "color": "#b6bfc7",
+                "tint": "#404448"
+              }
+            ],
+            "roles": {
+              "background-base": "#2e2a2b",
+              "background-card": "#484243",
+              "background-elevated": "#393434",
+              "fill-quaternary": "#383233",
+              "fill-tertiary": "#403a3b",
+              "fill-secondary": "#585051",
+              "fill-primary": "#605859",
+              "text-primary": "#e2dddd",
+              "text-secondary": "#c8bfc0",
+              "text-tertiary": "#b2a8a9",
+              "text-quaternary": "#9f9596",
+              "text-disabled": "#6d6767",
+              "border-default": "#544e4e",
+              "separator": "#453f40",
+              "border-strong": "#73696a",
+              "calendar-holiday": "#dd9f9a",
+              "calendar-saturday": "#98b4d4",
+              "danger-default": "#e58c83",
+              "danger-fill": "#c4675f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#e2dddd",
+              "inverse-text": "#2e2a2b",
+              "control-knob": "#ffffff",
+              "home-indicator": "#d5d0d0",
+              "scrim": "#0000008c",
+              "shadow-small": "#00000040",
+              "shadow-medium": "#00000059",
+              "shadow-large": "#00000080",
+              "accent-default": "#e0a5b0",
+              "accent-fill": "#e0a5b0",
+              "accent-on-fill": "#332124",
+              "accent-focus": "#c08f99",
+              "accent-border": "#8c6a70",
+              "accent-container": "#433538",
+              "calendar-off-tint": "#553e42",
+              "calendar-note-marker": "#605859"
+            }
+          }
+        }
+      },
+      {
+        "alwaysDark": false,
+        "id": "sumire",
+        "input": {
+          "accent": {
+            "chroma": 0.083,
+            "hue": 294,
+            "lightness": 0.474
+          },
+          "grays": {
+            "hue": 294,
+            "strength": 0.8
+          },
+          "id": "sumire",
+          "name": "すみれ"
+        },
+        "name": "すみれ",
+        "schemes": {
+          "light": {
+            "marks": [
+              {
+                "color": "#5f5286",
+                "tint": "#e7e4f4"
+              },
+              {
+                "color": "#8a6d1a",
+                "tint": "#f3ead0"
+              },
+              {
+                "color": "#95602e",
+                "tint": "#f5e4d2"
+              },
+              {
+                "color": "#93503a",
+                "tint": "#f3dfd6"
+              },
+              {
+                "color": "#9b3f35",
+                "tint": "#f4dcd8"
+              },
+              {
+                "color": "#8d4a5a",
+                "tint": "#f2e0e4"
+              },
+              {
+                "color": "#75497a",
+                "tint": "#eee1ef"
+              },
+              {
+                "color": "#5f4f86",
+                "tint": "#e8e2f0"
+              },
+              {
+                "color": "#4a5388",
+                "tint": "#e3e6f2"
+              },
+              {
+                "color": "#3d4a73",
+                "tint": "#dde2ee"
+              },
+              {
+                "color": "#36706c",
+                "tint": "#dcebea"
+              },
+              {
+                "color": "#56636d",
+                "tint": "#e3e7ea"
+              }
+            ],
+            "roles": {
+              "background-base": "#ffffff",
+              "background-card": "#ffffff",
+              "background-elevated": "#ffffff",
+              "fill-quaternary": "#f6f6f9",
+              "fill-tertiary": "#f0f0f4",
+              "fill-secondary": "#e7e6ec",
+              "fill-primary": "#d7d6de",
+              "text-primary": "#323135",
+              "text-secondary": "#5b5964",
+              "text-tertiary": "#77757f",
+              "text-quaternary": "#8e8c95",
+              "text-disabled": "#bcbbc3",
+              "border-default": "#e2e1e7",
+              "separator": "#edecf1",
+              "border-strong": "#bfbccb",
+              "calendar-holiday": "#a96561",
+              "calendar-saturday": "#6682a0",
+              "danger-default": "#b0564f",
+              "danger-fill": "#b0564f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#323135",
+              "inverse-text": "#ffffff",
+              "control-knob": "#ffffff",
+              "home-indicator": "#39383e",
+              "scrim": "#32313535",
+              "shadow-small": "#32313514",
+              "shadow-medium": "#3231351f",
+              "shadow-large": "#3231352e",
+              "accent-default": "#5f5286",
+              "accent-fill": "#5f5286",
+              "accent-on-fill": "#ffffff",
+              "accent-focus": "#7e73a4",
+              "accent-border": "#afa8cc",
+              "accent-container": "#f1f0f8",
+              "calendar-off-tint": "#e7e4f4",
+              "calendar-note-marker": "#c4c3cb"
+            }
+          },
+          "dark": {
+            "marks": [
+              {
+                "color": "#baaee6",
+                "tint": "#464157"
+              },
+              {
+                "color": "#d6bb77",
+                "tint": "#4d432a"
+              },
+              {
+                "color": "#e6b285",
+                "tint": "#533f2d"
+              },
+              {
+                "color": "#efab95",
+                "tint": "#573c34"
+              },
+              {
+                "color": "#fea194",
+                "tint": "#573c37"
+              },
+              {
+                "color": "#eda8b6",
+                "tint": "#563b40"
+              },
+              {
+                "color": "#d8acdd",
+                "tint": "#4e3d50"
+              },
+              {
+                "color": "#c2b4ec",
+                "tint": "#453f57"
+              },
+              {
+                "color": "#afbaf1",
+                "tint": "#3d4259"
+              },
+              {
+                "color": "#c0d0fc",
+                "tint": "#3d4355"
+              },
+              {
+                "color": "#95cac5",
+                "tint": "#334947"
+              },
+              {
+                "color": "#b3c0ca",
+                "tint": "#3f4449"
+              }
+            ],
+            "roles": {
+              "background-base": "#2b2b2e",
+              "background-card": "#444348",
+              "background-elevated": "#353538",
+              "fill-quaternary": "#343337",
+              "fill-tertiary": "#3c3b40",
+              "fill-secondary": "#535257",
+              "fill-primary": "#5b5a5f",
+              "text-primary": "#dedde1",
+              "text-secondary": "#c1c0c7",
+              "text-tertiary": "#abaab1",
+              "text-quaternary": "#98979e",
+              "text-disabled": "#69686d",
+              "border-default": "#504f54",
+              "separator": "#414045",
+              "border-strong": "#6c6b72",
+              "calendar-holiday": "#dd9f9a",
+              "calendar-saturday": "#98b4d4",
+              "danger-default": "#e58c83",
+              "danger-fill": "#c4675f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#dedde1",
+              "inverse-text": "#2b2b2e",
+              "control-knob": "#ffffff",
+              "home-indicator": "#d1d0d4",
+              "scrim": "#0000008c",
+              "shadow-small": "#00000040",
+              "shadow-medium": "#00000059",
+              "shadow-large": "#00000080",
+              "accent-default": "#baaee6",
+              "accent-fill": "#baaee6",
+              "accent-on-fill": "#272335",
+              "accent-focus": "#a097c4",
+              "accent-border": "#766f8f",
+              "accent-container": "#3a3744",
+              "calendar-off-tint": "#464157",
+              "calendar-note-marker": "#5b5a5f"
+            }
+          }
+        }
+      },
+      {
+        "alwaysDark": true,
+        "id": "kissa",
+        "input": {
+          "accent": {
+            "chroma": 0.115,
+            "hue": 68,
+            "lightness": 0.8
+          },
+          "grays": {
+            "hue": 65,
+            "strength": 1.8
+          },
+          "id": "kissa",
+          "ink": {
+            "chroma": 0.021,
+            "hue": 50
+          },
+          "name": "喫茶",
+          "scheme": "dark",
+          "tint": {
+            "chroma": 0.085,
+            "hue": 55
+          },
+          "vividness": 0.75
+        },
+        "name": "喫茶",
+        "schemes": {
+          "dark": {
+            "marks": [
+              {
+                "color": "#efaf69",
+                "tint": "#554032"
+              },
+              {
+                "color": "#d0bc8b",
+                "tint": "#4b4331"
+              },
+              {
+                "color": "#dcb594",
+                "tint": "#4f4033"
+              },
+              {
+                "color": "#e4b0a0",
+                "tint": "#523e38"
+              },
+              {
+                "color": "#efa99f",
+                "tint": "#533e3a"
+              },
+              {
+                "color": "#e2aeb8",
+                "tint": "#523d41"
+              },
+              {
+                "color": "#d2b1d5",
+                "tint": "#4c3f4d"
+              },
+              {
+                "color": "#c1b7e1",
+                "tint": "#444052"
+              },
+              {
+                "color": "#b2bbe4",
+                "tint": "#3f4254"
+              },
+              {
+                "color": "#c4d0f1",
+                "tint": "#3f4351"
+              },
+              {
+                "color": "#a0c7c3",
+                "tint": "#384846"
+              },
+              {
+                "color": "#b6bfc7",
+                "tint": "#404448"
+              }
+            ],
+            "roles": {
+              "background-base": "#2f2a26",
+              "background-card": "#4a423b",
+              "background-elevated": "#3a342e",
+              "fill-quaternary": "#39332c",
+              "fill-tertiary": "#423a33",
+              "fill-secondary": "#5a5147",
+              "fill-primary": "#62594f",
+              "text-primary": "#eadad2",
+              "text-secondary": "#cbbeb7",
+              "text-tertiary": "#b3a8a3",
+              "text-quaternary": "#9f9691",
+              "text-disabled": "#6d6764",
+              "border-default": "#574e46",
+              "separator": "#473f38",
+              "border-strong": "#776a5e",
+              "calendar-holiday": "#dd9f9a",
+              "calendar-saturday": "#98b4d4",
+              "danger-default": "#e58c83",
+              "danger-fill": "#c4675f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#eadad2",
+              "inverse-text": "#2f2a26",
+              "control-knob": "#ffffff",
+              "home-indicator": "#ddcdc5",
+              "scrim": "#0000008c",
+              "shadow-small": "#00000040",
+              "shadow-medium": "#00000059",
+              "shadow-large": "#00000080",
+              "accent-default": "#efaf69",
+              "accent-fill": "#efaf69",
+              "accent-on-fill": "#35220b",
+              "accent-focus": "#c4945e",
+              "accent-border": "#906d47",
+              "accent-container": "#43362e",
+              "calendar-off-tint": "#554032",
+              "calendar-note-marker": "#62594f"
+            }
+          }
+        }
+      },
+      {
+        "alwaysDark": true,
+        "id": "tsukiyo",
+        "input": {
+          "accent": {
+            "chroma": 0.11,
+            "hue": 95,
+            "lightness": 0.87
+          },
+          "grays": {
+            "hue": 265,
+            "strength": 3
+          },
+          "ground": {
+            "chroma": 0.035,
+            "hue": 268,
+            "lightness": 0.21
+          },
+          "id": "tsukiyo",
+          "name": "月夜",
+          "scheme": "dark",
+          "vividness": 0.85
+        },
+        "name": "月夜",
+        "schemes": {
+          "dark": {
+            "marks": [
+              {
+                "color": "#ebd47d",
+                "tint": "#4d4526"
+              },
+              {
+                "color": "#d2bc83",
+                "tint": "#4c432e"
+              },
+              {
+                "color": "#e0b48e",
+                "tint": "#514031"
+              },
+              {
+                "color": "#e8ae9b",
+                "tint": "#543d36"
+              },
+              {
+                "color": "#f5a69a",
+                "tint": "#543d39"
+              },
+              {
+                "color": "#e7acb7",
+                "tint": "#533c41"
+              },
+              {
+                "color": "#d4afd8",
+                "tint": "#4d3e4e"
+              },
+              {
+                "color": "#c1b6e5",
+                "tint": "#454054"
+              },
+              {
+                "color": "#b1bbe9",
+                "tint": "#3e4256"
+              },
+              {
+                "color": "#c3d0f6",
+                "tint": "#3e4352"
+              },
+              {
+                "color": "#9cc8c4",
+                "tint": "#364847"
+              },
+              {
+                "color": "#b5c0c8",
+                "tint": "#404448"
+              }
+            ],
+            "roles": {
+              "background-base": "#111828",
+              "background-card": "#3d4453",
+              "background-elevated": "#303541",
+              "fill-quaternary": "#2e3441",
+              "fill-tertiary": "#353c4b",
+              "fill-secondary": "#4a5365",
+              "fill-primary": "#525b6d",
+              "text-primary": "#d8deeb",
+              "text-secondary": "#b7c2d8",
+              "text-tertiary": "#9fabc5",
+              "text-quaternary": "#8d98b1",
+              "text-disabled": "#616979",
+              "border-default": "#485060",
+              "separator": "#3a4150",
+              "border-strong": "#616c85",
+              "calendar-holiday": "#dd9f9a",
+              "calendar-saturday": "#98b4d4",
+              "danger-default": "#e58c83",
+              "danger-fill": "#c4675f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#d8deeb",
+              "inverse-text": "#272b35",
+              "control-knob": "#ffffff",
+              "home-indicator": "#cbd1de",
+              "scrim": "#0000008c",
+              "shadow-small": "#00000040",
+              "shadow-medium": "#00000059",
+              "shadow-large": "#00000080",
+              "accent-default": "#ebd47d",
+              "accent-fill": "#ebd47d",
+              "accent-on-fill": "#2d260a",
+              "accent-focus": "#af9e5d",
+              "accent-border": "#807446",
+              "accent-container": "#3e3928",
+              "calendar-off-tint": "#4d4526",
+              "calendar-note-marker": "#525b6d"
+            }
+          }
+        }
+      },
+      {
+        "alwaysDark": true,
+        "id": "kokuban",
+        "input": {
+          "accent": {
+            "chroma": 0.012,
+            "hue": 165,
+            "lightness": 0.94
+          },
+          "grays": {
+            "hue": 165,
+            "strength": 3
+          },
+          "ground": {
+            "chroma": 0.04,
+            "hue": 168,
+            "lightness": 0.3
+          },
+          "id": "kokuban",
+          "name": "黒板",
+          "scheme": "dark",
+          "tint": {
+            "chroma": 0.1,
+            "hue": 162
+          },
+          "vividness": 0.8
+        },
+        "name": "黒板",
+        "schemes": {
+          "dark": {
+            "marks": [
+              {
+                "color": "#e4eee9",
+                "tint": "#2f4d3e"
+              },
+              {
+                "color": "#d1bc87",
+                "tint": "#4b4330"
+              },
+              {
+                "color": "#deb591",
+                "tint": "#504032"
+              },
+              {
+                "color": "#e6af9d",
+                "tint": "#533e37"
+              },
+              {
+                "color": "#f2a89d",
+                "tint": "#533e3a"
+              },
+              {
+                "color": "#e4adb8",
+                "tint": "#533d41"
+              },
+              {
+                "color": "#d3b0d7",
+                "tint": "#4c3e4e"
+              },
+              {
+                "color": "#c1b6e3",
+                "tint": "#454053"
+              },
+              {
+                "color": "#b2bbe7",
+                "tint": "#3e4255"
+              },
+              {
+                "color": "#c3d0f4",
+                "tint": "#3e4352"
+              },
+              {
+                "color": "#9ec8c4",
+                "tint": "#374846"
+              },
+              {
+                "color": "#b5c0c8",
+                "tint": "#404448"
+              }
+            ],
+            "roles": {
+              "background-base": "#18342a",
+              "background-card": "#364940",
+              "background-elevated": "#2b3932",
+              "fill-quaternary": "#283831",
+              "fill-tertiary": "#2e4138",
+              "fill-secondary": "#42594e",
+              "fill-primary": "#4a6156",
+              "text-primary": "#d3e2db",
+              "text-secondary": "#aec9bc",
+              "text-tertiary": "#95b3a5",
+              "text-quaternary": "#83a092",
+              "text-disabled": "#5a6e65",
+              "border-default": "#41554c",
+              "separator": "#33463d",
+              "border-strong": "#567466",
+              "calendar-holiday": "#dd9f9a",
+              "calendar-saturday": "#98b4d4",
+              "danger-default": "#e58c83",
+              "danger-fill": "#c4675f",
+              "danger-on-fill": "#ffffff",
+              "inverse-background": "#d3e2db",
+              "inverse-text": "#232e29",
+              "control-knob": "#ffffff",
+              "home-indicator": "#c6d5ce",
+              "scrim": "#0000008c",
+              "shadow-small": "#00000040",
+              "shadow-medium": "#00000059",
+              "shadow-large": "#00000080",
+              "accent-default": "#e4eee9",
+              "accent-fill": "#e4eee9",
+              "accent-on-fill": "#242726",
+              "accent-focus": "#99a09d",
+              "accent-border": "#717673",
+              "accent-container": "#2d3e35",
+              "calendar-off-tint": "#2f4d3e",
+              "calendar-note-marker": "#4a6156"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "derivation": {
+    "inkShares": {
+      "home-indicator": 1,
+      "inverse-background": 1,
+      "text-disabled": 0.45,
+      "text-primary": 1,
+      "text-quaternary": 0.6,
+      "text-secondary": 0.85,
+      "text-tertiary": 0.7
+    },
+    "lightFill": 0.7,
+    "markColors": [
+      {
+        "dark": {
+          "color": "#abc7a7",
+          "tint": "#3c483a"
+        },
+        "light": {
+          "color": "#486444",
+          "tint": "#e4ecdf"
+        }
+      },
+      {
+        "dark": {
+          "color": "#d6bb77",
+          "tint": "#4d432a"
+        },
+        "light": {
+          "color": "#8a6d1a",
+          "tint": "#f3ead0"
+        }
+      },
+      {
+        "dark": {
+          "color": "#e6b285",
+          "tint": "#533f2d"
+        },
+        "light": {
+          "color": "#95602e",
+          "tint": "#f5e4d2"
+        }
+      },
+      {
+        "dark": {
+          "color": "#efab95",
+          "tint": "#573c34"
+        },
+        "light": {
+          "color": "#93503a",
+          "tint": "#f3dfd6"
+        }
+      },
+      {
+        "dark": {
+          "color": "#fea194",
+          "tint": "#573c37"
+        },
+        "light": {
+          "color": "#9b3f35",
+          "tint": "#f4dcd8"
+        }
+      },
+      {
+        "dark": {
+          "color": "#eda8b6",
+          "tint": "#563b40"
+        },
+        "light": {
+          "color": "#8d4a5a",
+          "tint": "#f2e0e4"
+        }
+      },
+      {
+        "dark": {
+          "color": "#d8acdd",
+          "tint": "#4e3d50"
+        },
+        "light": {
+          "color": "#75497a",
+          "tint": "#eee1ef"
+        }
+      },
+      {
+        "dark": {
+          "color": "#c2b4ec",
+          "tint": "#453f57"
+        },
+        "light": {
+          "color": "#5f4f86",
+          "tint": "#e8e2f0"
+        }
+      },
+      {
+        "dark": {
+          "color": "#afbaf1",
+          "tint": "#3d4259"
+        },
+        "light": {
+          "color": "#4a5388",
+          "tint": "#e3e6f2"
+        }
+      },
+      {
+        "dark": {
+          "color": "#c0d0fc",
+          "tint": "#3d4355"
+        },
+        "light": {
+          "color": "#3d4a73",
+          "tint": "#dde2ee"
+        }
+      },
+      {
+        "dark": {
+          "color": "#95cac5",
+          "tint": "#334947"
+        },
+        "light": {
+          "color": "#36706c",
+          "tint": "#dcebea"
+        }
+      },
+      {
+        "dark": {
+          "color": "#b3c0ca",
+          "tint": "#3f4449"
+        },
+        "light": {
+          "color": "#56636d",
+          "tint": "#e3e7ea"
+        }
+      }
+    ],
+    "neutrals": [
+      {
+        "dark": "#2a2c29",
+        "light": "#ffffff",
+        "name": "background-base",
+        "tinted": true
+      },
+      {
+        "dark": "#424540",
+        "light": "#ffffff",
+        "name": "background-card",
+        "tinted": true
+      },
+      {
+        "dark": "#343632",
+        "light": "#ffffff",
+        "name": "background-elevated",
+        "tinted": true
+      },
+      {
+        "dark": "#323531",
+        "light": "#f6f7f3",
+        "name": "fill-quaternary",
+        "tinted": true
+      },
+      {
+        "dark": "#3a3d38",
+        "light": "#f0f1ec",
+        "name": "fill-tertiary",
+        "tinted": true
+      },
+      {
+        "dark": "#50544e",
+        "light": "#e6e8e1",
+        "name": "fill-secondary",
+        "tinted": true
+      },
+      {
+        "dark": "#585c56",
+        "light": "#d5d9cf",
+        "name": "fill-primary",
+        "tinted": true
+      },
+      {
+        "dark": "#dcdfdb",
+        "light": "#30332f",
+        "name": "text-primary",
+        "tinted": true
+      },
+      {
+        "dark": "#bec3bc",
+        "light": "#565e52",
+        "name": "text-secondary",
+        "tinted": true
+      },
+      {
+        "dark": "#a7ada5",
+        "light": "#72796e",
+        "name": "text-tertiary",
+        "tinted": true
+      },
+      {
+        "dark": "#959a92",
+        "light": "#8a9086",
+        "name": "text-quaternary",
+        "tinted": true
+      },
+      {
+        "dark": "#666a65",
+        "light": "#b9beb4",
+        "name": "text-disabled",
+        "tinted": true
+      },
+      {
+        "dark": "#4d514c",
+        "light": "#e0e3db",
+        "name": "border-default",
+        "tinted": true
+      },
+      {
+        "dark": "#3f423d",
+        "light": "#eceee8",
+        "name": "separator",
+        "tinted": true
+      },
+      {
+        "dark": "#696e66",
+        "light": "#b9c2b1",
+        "name": "border-strong",
+        "tinted": true
+      },
+      {
+        "dark": "#dd9f9a",
+        "light": "#a96561",
+        "name": "calendar-holiday",
+        "tinted": false
+      },
+      {
+        "dark": "#98b4d4",
+        "light": "#6682a0",
+        "name": "calendar-saturday",
+        "tinted": false
+      },
+      {
+        "dark": "#e58c83",
+        "light": "#b0564f",
+        "name": "danger-default",
+        "tinted": false
+      },
+      {
+        "dark": "#c4675f",
+        "light": "#b0564f",
+        "name": "danger-fill",
+        "tinted": false
+      },
+      {
+        "dark": "#ffffff",
+        "light": "#ffffff",
+        "name": "danger-on-fill",
+        "tinted": false
+      },
+      {
+        "dark": "#dcdfdb",
+        "light": "#30332f",
+        "name": "inverse-background",
+        "tinted": true
+      },
+      {
+        "dark": "#2a2c29",
+        "light": "#ffffff",
+        "name": "inverse-text",
+        "tinted": true
+      },
+      {
+        "dark": "#ffffff",
+        "light": "#ffffff",
+        "name": "control-knob",
+        "tinted": false
+      },
+      {
+        "dark": "#cfd2ce",
+        "light": "#363a33",
+        "name": "home-indicator",
+        "tinted": true
+      },
+      {
+        "dark": "#0000008c",
+        "light": "#30332f35",
+        "name": "scrim",
+        "tinted": true
+      },
+      {
+        "dark": "#00000040",
+        "light": "#30332f14",
+        "name": "shadow-small",
+        "tinted": true
+      },
+      {
+        "dark": "#00000059",
+        "light": "#30332f1f",
+        "name": "shadow-medium",
+        "tinted": true
+      },
+      {
+        "dark": "#00000080",
+        "light": "#30332f2e",
+        "name": "shadow-large",
+        "tinted": true
+      }
+    ],
+    "noteMarkerDepth": 0.25,
+    "roleSteps": {
+      "dark": {
+        "accent": {
+          "chroma": 0.95,
+          "lightness": 0.78
+        },
+        "line": {
+          "chroma": 0.8,
+          "lightness": 0.7
+        },
+        "markTint": {
+          "chroma": 0.44,
+          "lightness": 0.39
+        },
+        "muted": {
+          "chroma": 0.6,
+          "lightness": 0.56
+        },
+        "soft": {
+          "chroma": 0.27,
+          "lightness": 0.345
+        }
+      },
+      "light": {
+        "line": {
+          "chroma": 0.9,
+          "lightness": 0.11
+        },
+        "markTint": {
+          "chroma": 0.27,
+          "lightness": 0.925
+        },
+        "muted": {
+          "chroma": 0.62,
+          "lightness": 0.75
+        },
+        "soft": {
+          "chroma": 0.14,
+          "lightness": 0.958
+        }
+      }
+    }
+  },
+  "metrics": {
+    "hairlineMax": 2,
+    "radii": {
+      "2xl": 24,
+      "2xs": 2,
+      "3xl": 28,
+      "4xl": 32,
+      "full": 999,
+      "lg": 16,
+      "md": 12,
+      "sm": 8,
+      "xl": 20,
+      "xs": 4
+    },
+    "shadows": {
+      "lg": {
+        "blur": 24,
+        "color": "shadow-large",
+        "y": 8
+      },
+      "md": {
+        "blur": 14,
+        "color": "shadow-medium",
+        "y": 4
+      },
+      "sm": {
+        "blur": 3,
+        "color": "shadow-large",
+        "y": 1
+      }
+    },
+    "sizes": {
+      "action": 40,
+      "control": 52,
+      "touch": 44
+    },
+    "spacingStep": 4,
+    "springs": {
+      "quick": {
+        "bounce": 0,
+        "duration": 0.25
+      },
+      "standard": {
+        "bounce": 0,
+        "duration": 0.3
+      }
+    },
+    "stateLayers": {
+      "hover": 0.12,
+      "pressed": 0.16
+    }
+  },
+  "textStyles": {
+    "body": {
+      "size": 17,
+      "weight": 400
+    },
+    "callout": {
+      "size": 16,
+      "weight": 400
+    },
+    "caption": {
+      "size": 12,
+      "weight": 400
+    },
+    "caption2": {
+      "size": 11,
+      "weight": 400
+    },
+    "footnote": {
+      "size": 13,
+      "weight": 400
+    },
+    "headline": {
+      "size": 17,
+      "weight": 600
+    },
+    "largeTitle": {
+      "size": 34,
+      "weight": 400
+    },
+    "subheadline": {
+      "size": 15,
+      "weight": 400
+    },
+    "title1": {
+      "size": 28,
+      "weight": 400
+    },
+    "title2": {
+      "size": 22,
+      "weight": 400
+    },
+    "title3": {
+      "size": 20,
+      "weight": 400
+    }
+  }
+}

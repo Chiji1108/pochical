@@ -1,7 +1,7 @@
+import type { ColorScheme } from "@pochical/design/colors";
 import type { CSSProperties, ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
-import type { ColorScheme } from "../lib/design-tokens";
 import { wallpaperOf, widgetColors } from "../lib/material-you";
 import { ColorSchemeContext, useThemeStyle } from "./design-theme";
 import {

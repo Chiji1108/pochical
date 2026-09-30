@@ -44,3 +44,15 @@ export function dayName(name: string) {
 export function countShown(count: number, limit: number) {
   return limit <= SHORT_LIMIT || limit - count <= COUNT_WHEN_LEFT;
 }
+
+// Whether a key is confirming a Japanese conversion rather than meant as
+// itself: Enter then chooses the word, and must not also add or send.
+// Safari reports it only by the key code IMEs use.
+const IME_KEY_CODE = 229;
+
+export function composing(event: {
+  keyCode: number;
+  nativeEvent: { isComposing: boolean };
+}) {
+  return event.nativeEvent.isComposing || event.keyCode === IME_KEY_CODE;
+}

@@ -2,9 +2,11 @@ import { expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-// The app's spacing sits on a 4px grid and its corners on a few radii, so
-// pieces line up and the native apps can share the same steps. 1 and 2px
-// are left for hairlines and nudges.
+import { HAIRLINE_MAX, SPACING_STEP } from "@pochical/design/metrics";
+
+// The app's spacing sits on a 4px grid and its corners take the radius
+// tokens (design/src/metrics.ts), so pieces line up and the native apps
+// share the same steps. 1 and 2px are left for hairlines and nudges.
 const components = path.join(import.meta.dir, "../src/components");
 
 // The design pages and the device's stand-ins draw to their own measure.
@@ -26,7 +28,6 @@ const spacingProperty =
   /\b(?:gap|rowGap|columnGap|padding\w*|margin\w*):\s*"(?<value>[^"]+)"/gu;
 const radiusProperty = /\bborder\w*Radius:\s*"(?<value>[^"]+)"/gu;
 const pixels = /(?<number>-?\d+(?:\.\d+)?)px/gu;
-const radii = new Set([0, 1, 2, 4, 8, 12, 16, 20, 24, 28, 32, 999]);
 
 const offGrid = (property: RegExp, allowed: (px: number) => boolean) =>
   readdirSync(components)
@@ -52,10 +53,14 @@ const offGrid = (property: RegExp, allowed: (px: number) => boolean) =>
 
 test("spacing is on the 4px grid", () => {
   expect(
-    offGrid(spacingProperty, (px) => Math.abs(px) <= 2 || px % 4 === 0)
+    offGrid(
+      spacingProperty,
+      (px) => Math.abs(px) <= HAIRLINE_MAX || px % SPACING_STEP === 0
+    )
   ).toEqual([]);
 });
 
-test("corners are one of the radii", () => {
-  expect(offGrid(radiusProperty, (px) => radii.has(px))).toEqual([]);
+// A corner names its size ("lg", "full"), never a number of px.
+test("corners take the radius tokens", () => {
+  expect(offGrid(radiusProperty, () => false)).toEqual([]);
 });

@@ -4,6 +4,7 @@ Pochical is a multi-language monorepo: native SwiftUI (`apps/ios`) and Jetpack C
 
 - Tool versions and tasks live in `mise.toml` (`mise run gen`, `mise run server:test`, ...).
 - Wire types live in `proto/`. Never edit generated code (`apps/server/src/gen`, `apps/ios/Packages/PochicalProto/Sources`, `apps/android/proto/src/main`); change the `.proto` files and run `mise run gen`.
+- Design tokens (colors and テーマ, text styles, sizes) live in `design/` (TypeScript). apps/web imports them directly; `mise run gen` writes them out to `spec/design-tokens.json`, `apps/ios/Packages/PochicalDesign/Sources` and `apps/android/design/src/main`, which are never edited by hand. Components are not generated: each platform builds its own, with apps/web's /design as the reference.
 - Behavior shared across platforms is specified in `spec/`.
 
 # TypeScript: Ultracite Code Standards

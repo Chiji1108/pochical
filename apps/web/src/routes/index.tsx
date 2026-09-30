@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { css } from "styled-system/css";
@@ -14,6 +14,13 @@ import {
   DesignProviders,
   PresetContexts,
 } from "../components/design-providers";
+import {
+  BREATH_SECONDS,
+  CHANGE_SECONDS,
+  nextSkyId,
+  paleSkyLights,
+  themeSkyId,
+} from "../components/design-surprise";
 import { ColorSchemeContext } from "../components/design-theme";
 import type { PresetId } from "../components/design-theme";
 import {
@@ -31,7 +38,6 @@ import {
   UserStoreContext,
 } from "../lib/design-user-store";
 import { parseDesignVariants } from "../lib/design-variants";
-import { oklchToHex } from "../lib/oklch";
 import { pageMeta, site } from "../lib/site";
 
 export const Route = createFileRoute("/")({
@@ -44,16 +50,17 @@ const variants = parseDesignVariants({});
 
 // The app's own ポチカル sky (おたのしみ): its three pale lights, drawn as
 // a soft glow that fades into the paper on every side, so it never meets
-// the browser's bars. It sits behind the hero's words only.
-const [skyLeft, skyMiddle, skyRight] = [100, 150, 225].map((hue) =>
-  oklchToHex({ chroma: 0.04, hue, lightness: 0.95 })
-);
-const skyBackground = [
-  `radial-gradient(45% 55% at 25% 40%, ${skyLeft} 0%, transparent 70%)`,
-  `radial-gradient(45% 55% at 75% 45%, ${skyRight} 0%, transparent 70%)`,
-  `radial-gradient(50% 60% at 50% 62%, ${skyMiddle} 0%, transparent 75%)`,
-].join(", ");
-const BREATH_SECONDS = 9;
+// the browser's bars. It sits behind the hero's words only, and as in the
+// app, pressing ポチッと。 drifts it to another of the app's skies.
+const HERO_SKY = themeSkyId("pochical");
+function skyBackground(id: string) {
+  const [left, middle, right] = paleSkyLights(id) ?? [];
+  return [
+    `radial-gradient(45% 55% at 25% 40%, ${left} 0%, transparent 70%)`,
+    `radial-gradient(45% 55% at 75% 45%, ${right} 0%, transparent 70%)`,
+    `radial-gradient(50% 60% at 50% 62%, ${middle} 0%, transparent 75%)`,
+  ].join(", ");
+}
 
 // The site's muted gray, a step darker: over the sky it keeps above 5:1,
 // where the site's own falls short of 4.5:1.
@@ -148,26 +155,40 @@ const sky = {
     position: "absolute",
     zIndex: -1,
   }),
+  // One sky, fading in over the one before.
+  layer: css({ inset: 0, position: "absolute" }),
   light: css({ inset: "-6%", position: "absolute" }),
 };
 
-// The sky, breathing as slowly as the app's.
-function Sky() {
+// The sky, breathing as slowly as the app's, and drifting into the next
+// as slowly as the app's too.
+function Sky({ id }: { id: string }) {
   const still = useReducedMotion() ?? false;
   return (
     <div aria-hidden="true" className={sky.root}>
-      <motion.div
-        animate={still ? undefined : { scale: 1.08, x: "2%" }}
-        className={sky.light}
-        initial={{ scale: 1, x: "-2%" }}
-        style={{ background: skyBackground }}
-        transition={{
-          duration: BREATH_SECONDS,
-          ease: "easeInOut",
-          repeat: Number.POSITIVE_INFINITY,
-          repeatType: "mirror",
-        }}
-      />
+      <AnimatePresence initial={false}>
+        <motion.div
+          animate={{ opacity: 1 }}
+          className={sky.layer}
+          exit={{ opacity: 0 }}
+          initial={{ opacity: 0 }}
+          key={id}
+          transition={{ duration: CHANGE_SECONDS, ease: "easeInOut" }}
+        >
+          <motion.div
+            animate={still ? undefined : { scale: 1.08, x: "2%" }}
+            className={sky.light}
+            initial={{ scale: 1, x: "-2%" }}
+            style={{ background: skyBackground(id) }}
+            transition={{
+              duration: BREATH_SECONDS,
+              ease: "easeInOut",
+              repeat: Number.POSITIVE_INFINITY,
+              repeatType: "mirror",
+            }}
+          />
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
@@ -183,16 +204,47 @@ const heroSchedule = Object.fromEntries(
 
 // Pressed once, like a button, a moment after the page first shows:
 // sinking a little and springing back, then still. A CSS animation, so it
-// comes at the same moment however long the app takes to load.
+// comes at the same moment however long the app takes to load. Since it
+// looks pressable, it presses too: down while held, springing back on
+// release, with the same depth and spring as the animation. A button,
+// though it keeps the heading's look.
 const pressed = css({
-  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
-  animation: "press 0.42s 0.7s both",
+  "&:active": {
+    transform: "translateY(3px) scale(0.92)",
+    transition: "transform 0.12s ease-in",
+  },
+  "@media (prefers-reduced-motion: reduce)": {
+    animation: "none",
+    transition: "none",
+  },
+  // Not held after it ends, so a press can move it.
+  animation: "press 0.42s 0.7s backwards",
+  bg: "transparent",
+  border: 0,
+  color: "inherit",
   display: "inline-block",
+  font: "inherit",
+  letterSpacing: "inherit",
+  padding: 0,
+  touchAction: "manipulation",
   transformOrigin: "50% 100%",
+  transition: "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+  userSelect: "none",
+  WebkitTapHighlightColor: "transparent",
 });
 
-function Pressed({ children }: { children: ReactNode }) {
-  return <span className={pressed}>{children}</span>;
+function Pressed({
+  children,
+  onPress,
+}: {
+  children: ReactNode;
+  onPress: () => void;
+}) {
+  return (
+    <button className={pressed} onClick={onPress} type="button">
+      {children}
+    </button>
+  );
 }
 
 // The app itself, the same one /try runs, to tap right on the page.
@@ -608,16 +660,23 @@ function Closing() {
 }
 
 function Home() {
+  const [skyId, setSkyId] = useState(HERO_SKY);
   return (
     <main className={page} id="main">
       <section className={hero.root}>
         <div className={hero.copy}>
-          <Sky />
+          <Sky id={skyId} />
           <p className={hero.eyebrow}>シフトカレンダー</p>
           <h1 className={hero.title}>
             シフトを、
             <br />
-            <Pressed>ポチッと。</Pressed>
+            <Pressed
+              onPress={() => {
+                setSkyId((id) => nextSkyId(id, "pochical"));
+              }}
+            >
+              ポチッと。
+            </Pressed>
           </h1>
           <p className={hero.description}>
             勤務を選んで、日付をポチポチ。

@@ -86,7 +86,7 @@ const editor = {
     "& > input": {
       bg: "background.card",
       border: "1px solid token(colors.border.default)",
-      borderRadius: "8px",
+      borderRadius: "sm",
       color: "text.primary",
       font: "inherit",
       padding: "4px 8px",
