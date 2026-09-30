@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { css, cva } from "styled-system/css";
+import { css } from "styled-system/css";
 
 import {
   DesignCalendar,
@@ -42,25 +42,17 @@ export const Route = createFileRoute("/")({
 // The current proposal for each open design choice, as on /try.
 const variants = parseDesignVariants({});
 
-// The app's own ポチカル sky (おたのしみ): pale light from both corners of
-// one edge and the middle, fading into the paper. The page opens under it
-// and closes over it.
+// The app's own ポチカル sky (おたのしみ): its three pale lights, drawn as
+// a soft glow that fades into the paper on every side, so it never meets
+// the browser's bars. It sits behind the hero's words and the closing's.
 const [skyLeft, skyMiddle, skyRight] = [100, 150, 225].map((hue) =>
   oklchToHex({ chroma: 0.04, hue, lightness: 0.95 })
 );
-type SkyEdge = "top" | "bottom";
-const skyBackgrounds: Record<SkyEdge, string> = {
-  bottom: [
-    `radial-gradient(60% 80% at 0% 100%, ${skyLeft} 0%, transparent 70%)`,
-    `radial-gradient(60% 80% at 100% 100%, ${skyRight} 0%, transparent 70%)`,
-    `radial-gradient(50% 70% at 50% 80%, ${skyMiddle} 0%, transparent 75%)`,
-  ].join(", "),
-  top: [
-    `radial-gradient(60% 80% at 0% 0%, ${skyLeft} 0%, transparent 70%)`,
-    `radial-gradient(60% 80% at 100% 0%, ${skyRight} 0%, transparent 70%)`,
-    `radial-gradient(50% 70% at 50% 20%, ${skyMiddle} 0%, transparent 75%)`,
-  ].join(", "),
-};
+const skyBackground = [
+  `radial-gradient(45% 55% at 25% 40%, ${skyLeft} 0%, transparent 70%)`,
+  `radial-gradient(45% 55% at 75% 45%, ${skyRight} 0%, transparent 70%)`,
+  `radial-gradient(50% 60% at 50% 62%, ${skyMiddle} 0%, transparent 75%)`,
+].join(", ");
 const BREATH_SECONDS = 9;
 
 // Where the copy and the phone stand side by side.
@@ -80,7 +72,9 @@ const hero = {
     display: "flex",
     flexDirection: "column",
     gap: "24px",
+    isolation: "isolate",
     maxWidth: "460px",
+    position: "relative",
     textAlign: "center",
   }),
   demo: css({
@@ -120,10 +114,10 @@ const hero = {
     display: "flex",
     flexDirection: "column",
     gap: "48px",
+    // The sky behind the words reaches past the screen's sides.
+    overflowX: "clip",
     padding: "40px 16px 72px",
   }),
-  // From the very top of the page, under the header too: nothing above it
-  // is positioned, so it sits on the page's own ground.
   store: css({
     "& .store-links": { [WIDE]: { justifyContent: "flex-start" } },
     display: "flex",
@@ -139,53 +133,28 @@ const hero = {
 };
 
 const sky = {
-  // At the page's top, under the header too: nothing above it is
-  // positioned, so it sits on the page's own ground. At its end, in the
-  // closing section, which keeps it behind its content.
-  root: cva({
-    base: {
-      overflow: "hidden",
-      pointerEvents: "none",
-      position: "absolute",
-      zIndex: -1,
-    },
-    variants: {
-      edge: {
-        // Fading out below too, into the paper before the footer.
-        bottom: {
-          inset: 0,
-          maskImage:
-            "linear-gradient(to top, transparent, black 25%, black 45%, transparent)",
-        },
-        top: {
-          height: "min(860px, 100vh)",
-          inset: "0 0 auto",
-          maskImage: "linear-gradient(to bottom, black 40%, transparent)",
-        },
-      },
-    },
+  // A little beyond what it sits behind, which keeps it behind its
+  // content, and faded out toward every edge.
+  root: css({
+    inset: "-120px -140px",
+    maskImage: "radial-gradient(closest-side, black 45%, transparent)",
+    pointerEvents: "none",
+    position: "absolute",
+    zIndex: -1,
   }),
-  light: cva({
-    base: { position: "absolute" },
-    variants: {
-      edge: {
-        bottom: { inset: "0 -10% -10%", transformOrigin: "50% 100%" },
-        top: { inset: "-10% -10% 0", transformOrigin: "50% 0" },
-      },
-    },
-  }),
+  light: css({ inset: "-6%", position: "absolute" }),
 };
 
 // The sky, breathing as slowly as the app's.
-function Sky({ edge }: { edge: SkyEdge }) {
+function Sky() {
   const still = useReducedMotion() ?? false;
   return (
-    <div aria-hidden="true" className={sky.root({ edge })}>
+    <div aria-hidden="true" className={sky.root}>
       <motion.div
         animate={still ? undefined : { scale: 1.08, x: "2%" }}
-        className={sky.light({ edge })}
+        className={sky.light}
         initial={{ scale: 1, x: "-2%" }}
-        style={{ background: skyBackgrounds[edge] }}
+        style={{ background: skyBackground }}
         transition={{
           duration: BREATH_SECONDS,
           ease: "easeInOut",
@@ -206,27 +175,18 @@ const heroSchedule = Object.fromEntries(
   )
 );
 
-// Pressed once, like a button, a moment after the page opens: sinking a
-// little and springing back, then still.
-const PRESS_DELAY_SECONDS = 0.7;
-const pressed = css({ display: "inline-block", transformOrigin: "50% 100%" });
+// Pressed once, like a button, a moment after the page first shows:
+// sinking a little and springing back, then still. A CSS animation, so it
+// comes at the same moment however long the app takes to load.
+const pressed = css({
+  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+  animation: "press 0.42s 0.7s both",
+  display: "inline-block",
+  transformOrigin: "50% 100%",
+});
 
 function Pressed({ children }: { children: ReactNode }) {
-  const still = useReducedMotion() ?? false;
-  return (
-    <motion.span
-      animate={still ? undefined : { scale: [1, 0.92, 1], y: [0, 3, 0] }}
-      className={pressed}
-      transition={{
-        delay: PRESS_DELAY_SECONDS,
-        duration: 0.42,
-        ease: ["easeIn", "backOut"],
-        times: [0, 0.3, 1],
-      }}
-    >
-      {children}
-    </motion.span>
-  );
+  return <span className={pressed}>{children}</span>;
 }
 
 // The app itself, the same one /try runs, to tap right on the page.
@@ -608,6 +568,8 @@ const closing = {
     flexDirection: "column",
     gap: "24px",
     isolation: "isolate",
+    // Its sky stays within it, off the footer below.
+    overflow: "clip",
     padding: "96px 16px 120px",
     position: "relative",
     textAlign: "center",
@@ -623,7 +585,7 @@ const closing = {
 function Closing() {
   return (
     <section aria-labelledby="closing-title" className={closing.root}>
-      <Sky edge="bottom" />
+      <Sky />
       <img
         alt=""
         className={closing.icon}
@@ -647,9 +609,9 @@ function Closing() {
 function Home() {
   return (
     <main className={page} id="main">
-      <Sky edge="top" />
       <section className={hero.root}>
         <div className={hero.copy}>
+          <Sky />
           <p className={hero.eyebrow}>シフトカレンダー</p>
           <h1 className={hero.title}>
             シフトを、

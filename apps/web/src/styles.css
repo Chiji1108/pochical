@@ -101,6 +101,9 @@
     top: 10px;
   }
   .site-header {
+    /* Over the glow the top page draws behind its words. */
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
     justify-content: space-between;
