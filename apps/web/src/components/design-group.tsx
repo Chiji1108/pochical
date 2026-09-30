@@ -2845,6 +2845,9 @@ function ChatPage({
   // Photos chosen to go with the next send, as the chat apps hold them
   // above the composer: nothing is sent on choosing.
   const [photos, setPhotos] = useState<Photo[]>([]);
+  // Photos chosen but still being read; sending waits for them, so none
+  // lands in the composer after the message has gone.
+  const [reading, setReading] = useState(0);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const toast = useContext(ToastContext);
   // Photos of yours still uploading, or that could not be sent, by line.
@@ -2948,7 +2951,7 @@ function ChatPage({
   // then what was written, if anything.
   const send = () => {
     const text = draft.trim();
-    if (!text && !attached && photos.length === 0) {
+    if (reading > 0 || (!text && !attached && photos.length === 0)) {
       return;
     }
     post(
@@ -2965,11 +2968,17 @@ function ChatPage({
     if (files.length > room) {
       toast(`写真は一度に${maxPhotos}枚まで送れます`);
     }
-    try {
-      const chosen = await Promise.all(files.slice(0, room).map(photoOf));
-      setPhotos((before) => [...before, ...chosen].slice(0, maxPhotos));
-    } catch {
-      toast("この写真は開けませんでした");
+    const taken = files.slice(0, room);
+    setReading((count) => count + taken.length);
+    // One photo that cannot be opened leaves the others chosen.
+    const results = await Promise.allSettled(taken.map(photoOf));
+    setReading((count) => count - taken.length);
+    const chosen = results.flatMap((result) =>
+      result.status === "fulfilled" ? [result.value] : []
+    );
+    setPhotos((before) => [...before, ...chosen].slice(0, maxPhotos));
+    if (chosen.length < taken.length) {
+      toast("開けない写真がありました");
     }
   };
   const react = (id: string, emoji: string) => {
@@ -3316,7 +3325,10 @@ function ChatPage({
         <button
           aria-label="送る"
           className={chatStyle.composerButton({ send: true })}
-          disabled={draft.trim() === "" && !attached && photos.length === 0}
+          disabled={
+            reading > 0 ||
+            (draft.trim() === "" && !attached && photos.length === 0)
+          }
           type="submit"
         >
           <SendHorizontal aria-hidden="true" size={18} />
