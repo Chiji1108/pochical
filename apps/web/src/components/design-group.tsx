@@ -25,7 +25,12 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
-import { useMotionValue, useReducedMotion } from "motion/react";
+import {
+  AnimatePresence,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+} from "motion/react";
 import type { MotionValue } from "motion/react";
 import {
   useContext,
@@ -47,6 +52,8 @@ import { css, cva, cx } from "styled-system/css";
 
 import { presetList } from "../lib/design-patterns";
 import type { Pattern } from "../lib/design-patterns";
+import { sampleRosterPhoto } from "../lib/design-sample-photos";
+import type { Photo } from "../lib/design-sample-photos";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
 import {
@@ -496,7 +503,7 @@ function sameMonth(date: Date, month: Date) {
 }
 
 // A chat line. `days` shares dates, drawn with everyone's shifts;
-// `replyTo` quotes an earlier line; `notice` is a line from the app about
+// `photo` is a picture, one per line; `replyTo` quotes an earlier line; `notice` is a line from the app about
 // the group, such as a new name, shown between the messages.
 type Message = {
   id: string;
@@ -506,6 +513,7 @@ type Message = {
   text?: string;
   notice?: string;
   days?: Date[];
+  photo?: Photo;
   replyTo?: string;
   reactions?: Reaction[];
 };
@@ -579,8 +587,22 @@ export const sampleChats: Record<string, Chat> = {
         time: "10:03",
         when: "今日",
       },
+      {
+        from: "yuki",
+        id: "f8",
+        photo: sampleRosterPhoto(),
+        time: "10:20",
+        when: "今日",
+      },
+      {
+        from: "yuki",
+        id: "f9",
+        text: "10月の勤務表出た！マーカーのとこが私",
+        time: "10:20",
+        when: "今日",
+      },
     ],
-    unread: 2,
+    unread: 4,
   },
   "family:yuki": {
     messages: [
@@ -820,6 +842,7 @@ export function DesignGroup({
   initialGroupId = "family",
   initialPage = "hub",
   scanResult = "invite",
+  photoSend = "ok",
 }: {
   schedule: Schedule;
   patterns: Pattern[];
@@ -831,6 +854,8 @@ export function DesignGroup({
   initialPage?: "hub" | "shifts" | "chat";
   // What the QR page finds, as 比べる案 sets it.
   scanResult?: ScanResult;
+  // Whether a photo's upload goes through, as 比べる案 sets it.
+  photoSend?: PhotoSend;
 
   onTab: (tab: Tab) => void;
 }) {
@@ -1059,6 +1084,7 @@ export function DesignGroup({
       <>
         <ChatPage
           attach={page.attach}
+          photoSend={photoSend}
           sharedFirst={page.sharedFirst}
           backLabel={page.from ? chatTitle(group, page.from) : group.name}
           chat={chatOf(group.id, page.chatId)}
@@ -1306,6 +1332,8 @@ function ScanPage({
 }
 
 type ScanResult = "invite" | "other" | "expired" | "none";
+
+type PhotoSend = "ok" | "fails";
 
 // What the QR page says, briefly, when another try is all it takes.
 const scanRetries: Record<"other" | "none", string> = {
@@ -2304,7 +2332,12 @@ function lastLine(chat: Chat, members: Member[]) {
   if (last.notice) {
     return last.notice;
   }
-  const text = last.days ? `${summaryOf(last)}を共有しました` : last.text;
+  let { text } = last;
+  if (last.days) {
+    text = `${summaryOf(last)}を共有しました`;
+  } else if (last.photo) {
+    text = "写真を送りました";
+  }
   return who?.me ? `自分：${text}` : text;
 }
 
@@ -2386,8 +2419,7 @@ const chatStyle = {
       },
     },
   }),
-  // A reply's quote inside the bubble, over a thin rule, in the bubble's
-  // own text color; one line, so it never outweighs the answer.
+  // A reply's quote inside the bubble (BubbleQuote).
   bubbleQuote: css({
     bg: "transparent",
     border: 0,
@@ -2398,6 +2430,14 @@ const chatStyle = {
     gap: "2px",
     padding: "8px 12px 0",
     textAlign: "left",
+  }),
+  bubbleQuoteLine: css({ alignItems: "center", display: "flex", gap: "8px" }),
+  bubbleQuoteWords: css({
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "2px",
+    minWidth: 0,
   }),
   bubbleQuoteName: css({
     fontWeight: 600,
@@ -2458,14 +2498,28 @@ const chatStyle = {
       width: "38px",
     },
     variants: {
+      // Lights up softly once there is something to send, and dims back
+      // the same way.
       send: {
         true: {
           _disabled: { bg: "fill.primary" },
           bg: "accent.fill",
           color: "accent.onFill",
+          transition: "background-color 0.15s ease-out, color 0.15s ease-out",
         },
       },
+      // The tools at the start sit close together, as LINE's row of
+      // icons does, leaving the room to the field.
+      tool: { true: { borderRadius: "8px", width: "32px" } },
     },
+  }),
+  composerToolRow: css({ display: "flex" }),
+  composerTools: css({
+    display: "flex",
+    flexShrink: 0,
+    // The folding tools stay inside while they narrow.
+    overflow: "hidden",
+    position: "relative",
   }),
   composerInput: css({
     bg: "fill.quaternary",
@@ -2575,6 +2629,136 @@ const chatStyle = {
     lineClamp: 1,
     textStyle: "caption",
   }),
+  // A quoted photo, small beside the quote's words.
+  quoteThumb: css({
+    borderRadius: "4px",
+    flexShrink: 0,
+    height: "32px",
+    objectFit: "cover",
+    width: "32px",
+  }),
+  // A photo line on its own; the photo is rounded like the shared days'
+  // card.
+  photo: css({ display: "flex", maxWidth: "100%" }),
+  photoButton: css({
+    "&:has([role=status])": { cursor: "progress" },
+    bg: "transparent",
+    border: 0,
+    position: "relative",
+    // The focus ring follows the photo's corners.
+    borderRadius: "16px",
+    display: "block",
+    padding: 0,
+    // A long press opens the actions, not the phone's own callout.
+    userSelect: "none",
+    WebkitTouchCallout: "none",
+  }),
+  photoImage: cva({
+    base: {
+      bg: "fill.tertiary",
+      display: "block",
+      height: "auto",
+      maxWidth: "100%",
+      objectFit: "cover",
+    },
+    variants: {
+      quoted: {
+        // A pale photo, like a paper roster, keeps its edge on the ground.
+        false: {
+          borderRadius: "16px",
+          outline: "1px solid token(colors.border.default)",
+          outlineOffset: "-1px",
+        },
+        // Inside a reply's bubble, below the quote's rule, edge to edge.
+        true: {},
+      },
+    },
+  }),
+  // A photo going up: dimmed, with a ring filling as it goes, as LINE
+  // draws one.
+  uploading: css({
+    alignItems: "center",
+    bg: "rgba(0, 0, 0, 0.32)",
+    borderRadius: "16px",
+    display: "flex",
+    inset: 0,
+    justifyContent: "center",
+    position: "absolute",
+  }),
+  uploadRing: css({
+    "& circle": {
+      fill: "none",
+      stroke: "white",
+      strokeWidth: 3,
+    },
+    "& circle:first-of-type": { opacity: 0.35 },
+    "& circle:last-of-type": {
+      animation: "uploadRing linear forwards",
+      strokeDasharray: 100,
+      strokeDashoffset: 100,
+      strokeLinecap: "round",
+    },
+    height: "36px",
+    transform: "rotate(-90deg)",
+    width: "36px",
+  }),
+  // A photo that could not be sent: a red ! where its time would be, and
+  // a note under it, as Messages marks one.
+  failed: css({
+    bg: "transparent",
+    border: 0,
+    color: "danger.default",
+    display: "grid",
+    flexShrink: 0,
+    height: "32px",
+    padding: 0,
+    placeItems: "center",
+    width: "32px",
+  }),
+  failedNote: css({
+    alignSelf: "flex-end",
+    color: "danger.default",
+    paddingRight: "40px",
+    textStyle: "caption2",
+  }),
+  // Photos chosen to send, in a row above the composer, each with its ×.
+  tray: cva({
+    base: {
+      borderTop: "1px solid token(colors.separator)",
+      display: "flex",
+      gap: "8px",
+      listStyle: "none",
+      margin: 0,
+      padding: "12px 0 4px",
+    },
+    // The reply or the days above already draw the line.
+    variants: { below: { true: { borderTop: 0, paddingTop: "8px" } } },
+  }),
+  trayImage: css({
+    borderRadius: "12px",
+    display: "block",
+    height: "64px",
+    objectFit: "cover",
+    outline: "1px solid token(colors.border.default)",
+    outlineOffset: "-1px",
+    width: "64px",
+  }),
+  trayItem: css({ flexShrink: 0, position: "relative" }),
+  trayRemove: css({
+    alignItems: "center",
+    bg: "rgba(0, 0, 0, 0.6)",
+    border: "2px solid token(colors.background.base)",
+    borderRadius: "50%",
+    color: "white",
+    display: "flex",
+    height: "24px",
+    justifyContent: "center",
+    padding: 0,
+    position: "absolute",
+    right: "-6px",
+    top: "-6px",
+    width: "24px",
+  }),
   reactions: cva({
     base: { display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "-1px" },
     variants: { mine: { true: { justifyContent: "flex-end" } } },
@@ -2676,10 +2860,13 @@ function ChatPage({
   backLabel,
   formerMembers = noMembers,
   attach,
+  photoSend = "ok",
   sharedFirst = false,
 }: {
   title: string;
   group: Group;
+  // Whether photos' uploads go through or fail.
+  photoSend?: PhotoSend;
   // Opens on the last day shared rather than the latest line, as the top
   // page shows it.
   sharedFirst?: boolean;
@@ -2700,6 +2887,51 @@ function ChatPage({
 }) {
   const [draft, setDraft] = useState("");
   const [attached, setAttached] = useState(attach);
+  // Photos chosen to go with the next send, as the chat apps hold them
+  // above the composer: nothing is sent on choosing.
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  // Photos chosen but still being read; sending waits for them, so none
+  // lands in the composer after the message has gone.
+  const [reading, setReading] = useState(0);
+  // While the field is in use, the tools fold into a ›, as in LINE,
+  // giving it their room: from the moment it is tapped, and while words
+  // wait in it. › opens them until the next letter.
+  const [writing, setWriting] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const toolsFolded = (writing || draft !== "") && !toolsOpen;
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const toast = useContext(ToastContext);
+  // Photos of yours still uploading, or that could not be sent, by line.
+  // Only this phone knows them, as the apps keep them in their outbox;
+  // the group sees a photo once it is up.
+  const [uploads, setUploads] = useState<Record<string, Upload>>({});
+  const [failedOpen, setFailedOpen] = useState<string>();
+  const uploadTimers = useRef<number[]>([]);
+  useEffect(
+    () => () => {
+      for (const timer of uploadTimers.current) {
+        window.clearTimeout(timer);
+      }
+    },
+    []
+  );
+  const upload = (ids: string[]) => {
+    const set = (status?: Upload) => {
+      setUploads((before) => {
+        const others = Object.entries(before).filter(
+          ([id]) => !ids.includes(id)
+        );
+        const these = status ? ids.map((id) => [id, status] as const) : [];
+        return Object.fromEntries([...others, ...these]);
+      });
+    };
+    set("sending");
+    uploadTimers.current.push(
+      window.setTimeout(() => {
+        set(photoSend === "fails" ? "failed" : undefined);
+      }, uploadMilliseconds)
+    );
+  };
   const [sharing, setSharing] = useState(false);
   // The line whose actions are open, and the one being answered.
   const [selected, setSelected] = useState<string>();
@@ -2708,7 +2940,8 @@ function ChatPage({
   const [pickingFor, setPickingFor] = useState<string>();
   const [flash, setFlash] = useState<string>();
   // As chat apps do, a chat opens on its latest line and follows each
-  // new one, like a day just shared from the shift table.
+  // new one, like a day just shared from the shift table, and a photo's
+  // failure note under the lines just sent.
   const listRef = useRef<HTMLOListElement>(null);
   const lineCount = chat.messages.length;
   const [sharedId] = useState(() =>
@@ -2718,9 +2951,12 @@ function ChatPage({
   );
   // Until a line is added, it stays on the shared day.
   const [openedLines] = useState(lineCount);
+  const failedCount = Object.values(uploads).filter(
+    (status) => status === "failed"
+  ).length;
   useLayoutEffect(() => {
     const list = listRef.current;
-    if (!list || lineCount === 0) {
+    if (!list || lineCount + failedCount === 0) {
       return;
     }
     const shared =
@@ -2733,7 +2969,27 @@ function ChatPage({
         list.scrollTop -
         sharedRoom
       : list.scrollHeight;
-  }, [lineCount, openedLines, sharedId]);
+  }, [lineCount, failedCount, openedLines, sharedId]);
+  // When what sits over the composer (a reply, days, photos) takes room,
+  // the lines keep their bottom edge, as in the chat apps, so the latest
+  // line is not hidden under it. When it goes, the room shows more below.
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) {
+      return;
+    }
+    let height = list.clientHeight;
+    const observer = new ResizeObserver(() => {
+      if (list.clientHeight < height) {
+        list.scrollTop += height - list.clientHeight;
+      }
+      height = list.clientHeight;
+    });
+    observer.observe(list);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
   const isGroup = title === "全体チャット";
   // Who wrote a line, including members taken out since, whose lines stay.
   const writerOf = (id?: string) =>
@@ -2744,31 +3000,54 @@ function ChatPage({
   // Sends one line or several at once, the first answering the line
   // being replied to.
   const post = (...lines: Omit<Message, "id" | "from" | "when" | "time">[]) => {
-    onChange([
-      ...chat.messages,
-      ...lines.map((line, index) => ({
-        ...line,
-        from: "me",
-        id: `sent-${chat.messages.length + index}`,
-        replyTo: index === 0 ? replyTo : undefined,
-        time: "10:10",
-        when: "今日",
-      })),
-    ]);
+    const sent = lines.map((line, index) => ({
+      ...line,
+      from: "me",
+      id: `sent-${chat.messages.length + index}`,
+      replyTo: index === 0 ? replyTo : undefined,
+      time: "10:10",
+      when: "今日",
+    }));
+    onChange([...chat.messages, ...sent]);
     setReplyTo(undefined);
+    const photoIds = sent.flatMap((line) => (line.photo ? [line.id] : []));
+    if (photoIds.length > 0) {
+      upload(photoIds);
+    }
   };
-  // The attached days go first, then what was written, if anything.
+  // The attached days go first, then each photo as a line of its own,
+  // then what was written, if anything.
   const send = () => {
     const text = draft.trim();
-    if (!text && !attached) {
+    if (reading > 0 || (!text && !attached && photos.length === 0)) {
       return;
     }
     post(
       ...(attached ? [{ days: attached }] : []),
+      ...photos.map((photo) => ({ photo })),
       ...(text ? [{ text }] : [])
     );
     setDraft("");
     setAttached(undefined);
+    setPhotos([]);
+  };
+  const choosePhotos = async (files: File[]) => {
+    const room = maxPhotos - photos.length;
+    if (files.length > room) {
+      toast(`写真は一度に${maxPhotos}枚まで送れます`);
+    }
+    const taken = files.slice(0, room);
+    setReading((count) => count + taken.length);
+    // One photo that cannot be opened leaves the others chosen.
+    const results = await Promise.allSettled(taken.map(photoOf));
+    setReading((count) => count - taken.length);
+    const chosen = results.flatMap((result) =>
+      result.status === "fulfilled" ? [result.value] : []
+    );
+    setPhotos((before) => [...before, ...chosen].slice(0, maxPhotos));
+    if (chosen.length < taken.length) {
+      toast("開けない写真がありました");
+    }
   };
   const react = (id: string, emoji: string) => {
     onChange(
@@ -2833,6 +3112,15 @@ function ChatPage({
             previous.notice !== undefined ||
             message.replyTo !== undefined;
           const quoted = byId(message.replyTo);
+          const quote = quoted && (
+            <BubbleQuote
+              name={nameOf(quoted.from)}
+              onJump={() => {
+                jumpTo(quoted.id);
+              }}
+              quoted={quoted}
+            />
+          );
           if (message.notice) {
             return (
               <li className={chatStyle.item()} key={message.id}>
@@ -2883,7 +3171,19 @@ function ChatPage({
                       selected === message.id && messageActions.lifted
                     )}
                   >
-                    {message.days ? (
+                    {message.photo && (
+                      <PhotoLine
+                        actions={actionsOf(message)}
+                        upload={uploads[message.id]}
+                        label={`${member?.name ?? ""}が送った写真`}
+                        onSave={() => {
+                          toast("写真を保存しました");
+                        }}
+                        photo={message.photo}
+                        quote={quote}
+                      />
+                    )}
+                    {!message.photo && message.days && (
                       <MessageActions {...actionsOf(message)}>
                         <button
                           aria-label={`${member?.name ?? ""}が共有した日にち。押すとリアクションと返信`}
@@ -2893,34 +3193,15 @@ function ChatPage({
                           <DayCard days={message.days} members={people} />
                         </button>
                       </MessageActions>
-                    ) : (
+                    )}
+                    {!message.photo && !message.days && (
                       // Like the app: the quoted line sits inside the bubble,
                       // above a thin rule, and jumps to the original.
                       <span
                         className={chatStyle.bubble({ mine })}
                         data-part="bubble"
                       >
-                        {quoted && (
-                          <button
-                            aria-label={`${nameOf(quoted.from)}「${summaryOf(quoted)}」への返信。返信元を表示`}
-                            className={chatStyle.bubbleQuote}
-                            onClick={() => {
-                              jumpTo(quoted.id);
-                            }}
-                            type="button"
-                          >
-                            <span className={chatStyle.bubbleQuoteName}>
-                              {nameOf(quoted.from)}
-                            </span>
-                            <span className={chatStyle.bubbleQuoteText}>
-                              {summaryOf(quoted)}
-                            </span>
-                            <span
-                              aria-hidden="true"
-                              className={chatStyle.bubbleRule}
-                            />
-                          </button>
-                        )}
+                        {quote}
                         <MessageActions {...actionsOf(message)}>
                           <button
                             aria-label={`${member?.name ?? ""}のメッセージ：${message.text ?? ""}。押すとリアクションと返信`}
@@ -2932,8 +3213,27 @@ function ChatPage({
                         </MessageActions>
                       </span>
                     )}
-                    <small className={chatStyle.time}>{message.time}</small>
+                    {uploads[message.id] === "failed" && (
+                      <button
+                        aria-label="送れませんでした。押すと再送か削除"
+                        className={chatStyle.failed}
+                        onClick={() => {
+                          setFailedOpen(message.id);
+                        }}
+                        type="button"
+                      >
+                        <CircleAlert aria-hidden="true" size={22} />
+                      </button>
+                    )}
+                    {uploads[message.id] === undefined && (
+                      <small className={chatStyle.time}>{message.time}</small>
+                    )}
                   </span>
+                  {uploads[message.id] === "failed" && (
+                    <small className={chatStyle.failedNote}>
+                      送れませんでした
+                    </small>
+                  )}
                   {message.days && (
                     <button
                       className={chatStyle.dayOpen({ mine })}
@@ -2973,6 +3273,13 @@ function ChatPage({
             </span>
             <span className={chatStyle.quoteText}>{summaryOf(replying)}</span>
           </span>
+          {replying.photo && (
+            <img
+              alt=""
+              className={chatStyle.quoteThumb}
+              src={replying.photo.src}
+            />
+          )}
           <IconButton
             glass={false}
             label="返信をやめる"
@@ -3001,30 +3308,137 @@ function ChatPage({
           </IconButton>
         </div>
       )}
+      {photos.length > 0 && (
+        <ul
+          aria-label="送る写真"
+          className={chatStyle.tray({
+            below: replying !== undefined || attached !== undefined,
+          })}
+        >
+          {photos.map((photo, index) => (
+            <li className={chatStyle.trayItem} key={photo.src}>
+              <img alt="" className={chatStyle.trayImage} src={photo.src} />
+              <button
+                aria-label={`${index + 1}枚目の写真を外す`}
+                className={chatStyle.trayRemove}
+                onClick={() => {
+                  setPhotos((before) =>
+                    before.filter((other) => other !== photo)
+                  );
+                }}
+                type="button"
+              >
+                <X aria-hidden="true" size={12} strokeWidth={3} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       <form
         className={chatStyle.composer({
-          replying: replying !== undefined || attached !== undefined,
+          replying:
+            replying !== undefined ||
+            attached !== undefined ||
+            photos.length > 0,
         })}
         onSubmit={(event) => {
           event.preventDefault();
           send();
         }}
       >
-        <button
-          aria-label="日にちを共有"
-          className={chatStyle.composerButton()}
-          onClick={() => {
-            setSharing(true);
+        {/* The system's photo picker, as the apps open PHPicker and
+            Android's photo picker; the camera is left to the camera. */}
+        <input
+          accept="image/*"
+          className={srOnly}
+          multiple
+          onChange={(event) => {
+            const files = [...(event.target.files ?? [])];
+            event.target.value = "";
+            choosePhotos(files).catch(() => undefined);
           }}
-          type="button"
+          ref={photoInputRef}
+          tabIndex={-1}
+          type="file"
+        />
+        {/* The tools narrow into a › and widen back, the field following
+            them, while the icons and the › fade one into the other. */}
+        <motion.span
+          animate={{
+            width: toolsFolded ? toolWidth : toolWidth * toolCount,
+          }}
+          className={chatStyle.composerTools}
+          initial={false}
+          transition={toolFold}
         >
-          <CalendarPlus aria-hidden="true" size={20} />
-        </button>
+          <AnimatePresence initial={false} mode="popLayout">
+            {toolsFolded ? (
+              <motion.button
+                animate={{ opacity: 1, scale: 1 }}
+                aria-label="写真と日にちのボタンを表示"
+                className={chatStyle.composerButton({ tool: true })}
+                exit={{ opacity: 0, scale: 0.6 }}
+                initial={{ opacity: 0, scale: 0.6 }}
+                key="more"
+                onClick={() => {
+                  setToolsOpen(true);
+                }}
+                // The field keeps focus (and the keyboard stays up), so
+                // the tools do not open under the finger as it leaves.
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                }}
+                transition={toolFold}
+                type="button"
+              >
+                <ChevronRight aria-hidden="true" size={22} />
+              </motion.button>
+            ) : (
+              <motion.span
+                animate={{ opacity: 1, x: 0 }}
+                className={chatStyle.composerToolRow}
+                exit={{ opacity: 0, x: -toolWidth }}
+                initial={{ opacity: 0, x: -toolWidth }}
+                key="tools"
+                transition={toolFold}
+              >
+                <button
+                  aria-label="写真を送る"
+                  className={chatStyle.composerButton({ tool: true })}
+                  onClick={() => {
+                    photoInputRef.current?.click();
+                  }}
+                  type="button"
+                >
+                  <ImageIcon aria-hidden="true" size={20} />
+                </button>
+                <button
+                  aria-label="日にちを共有"
+                  className={chatStyle.composerButton({ tool: true })}
+                  onClick={() => {
+                    setSharing(true);
+                  }}
+                  type="button"
+                >
+                  <CalendarPlus aria-hidden="true" size={20} />
+                </button>
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.span>
         <input
           aria-label="メッセージ"
           className={chatStyle.composerInput}
+          onBlur={() => {
+            setWriting(false);
+          }}
           onChange={(event) => {
             setDraft(event.target.value);
+            setToolsOpen(false);
+          }}
+          onFocus={() => {
+            setWriting(true);
+            setToolsOpen(false);
           }}
           placeholder="メッセージ"
           value={draft}
@@ -3032,7 +3446,10 @@ function ChatPage({
         <button
           aria-label="送る"
           className={chatStyle.composerButton({ send: true })}
-          disabled={draft.trim() === "" && !attached}
+          disabled={
+            reading > 0 ||
+            (draft.trim() === "" && !attached && photos.length === 0)
+          }
           type="submit"
         >
           <SendHorizontal aria-hidden="true" size={18} />
@@ -3052,6 +3469,48 @@ function ChatPage({
         open={pickingFor !== undefined}
         title="リアクション"
       />
+      <Sheet
+        label="送れなかった写真"
+        onOpenChange={(open) => {
+          if (!open) {
+            setFailedOpen(undefined);
+          }
+        }}
+        open={failedOpen !== undefined}
+      >
+        <List>
+          <ListRow
+            label="もう一度送る"
+            leading={<RotateCcw aria-hidden="true" size={20} />}
+            onClick={() => {
+              if (failedOpen) {
+                upload([failedOpen]);
+              }
+              setFailedOpen(undefined);
+            }}
+          />
+          <ListRow
+            danger
+            label="削除"
+            leading={<Trash2 aria-hidden="true" size={20} />}
+            onClick={() => {
+              onChange(
+                chat.messages.filter((message) => message.id !== failedOpen)
+              );
+              setFailedOpen(undefined);
+            }}
+          />
+        </List>
+        <button
+          className={photoPicker.cancel}
+          onClick={() => {
+            setFailedOpen(undefined);
+          }}
+          type="button"
+        >
+          キャンセル
+        </button>
+      </Sheet>
       <DaySheet
         members={people}
         onOpenChange={setSharing}
@@ -3066,6 +3525,175 @@ function ChatPage({
 }
 
 const flashMilliseconds = 1200;
+
+// The composer's tools: each one's width, how many, and how they fold
+// into a › and back, as quick as the calendar's own fold.
+const toolWidth = 32;
+const toolCount = 2;
+const toolFold = { bounce: 0, type: "spring", visualDuration: 0.25 } as const;
+
+// A photo of yours on its way up, or one that could not be sent.
+type Upload = "sending" | "failed";
+
+// How long a photo takes to go up in the prototype.
+const uploadMilliseconds = 1600;
+
+// How many photos go in one send: a roster is a page or two, and more
+// would flood a small group's chat.
+const maxPhotos = 4;
+
+// A chosen photo with its size, read before it is shown so its line
+// keeps its place; the apps read it while shrinking the photo to send.
+async function photoOf(file: File): Promise<Photo> {
+  const src = URL.createObjectURL(file);
+  const image = new Image();
+  image.src = src;
+  await image.decode();
+  return { height: image.naturalHeight, src, width: image.naturalWidth };
+}
+
+// The box a photo fits in, and how far from square it may be before its
+// ends are cut, as LINE crops a panorama in the chat.
+const photoBox = { height: 260, width: 220 };
+const photoAspect = { max: 2, min: 1 / 2 };
+
+function photoSize(photo: Photo) {
+  const aspect = Math.min(
+    Math.max(photo.width / photo.height, photoAspect.min),
+    photoAspect.max
+  );
+  const width = Math.min(photoBox.width, photoBox.height * aspect);
+  return { height: Math.round(width / aspect), width: Math.round(width) };
+}
+
+// The line a reply answers, inside the bubble over a thin rule, in the
+// bubble's own text color; one line, so it never outweighs the answer.
+// A photo shows small beside it, to tell which one of several.
+function BubbleQuote({
+  quoted,
+  name,
+  onJump,
+}: {
+  quoted: Message;
+  name: string;
+  onJump: () => void;
+}) {
+  return (
+    <button
+      aria-label={`${name}「${summaryOf(quoted)}」への返信。返信元を表示`}
+      className={chatStyle.bubbleQuote}
+      onClick={onJump}
+      type="button"
+    >
+      <span className={chatStyle.bubbleQuoteLine}>
+        <span className={chatStyle.bubbleQuoteWords}>
+          <span className={chatStyle.bubbleQuoteName}>{name}</span>
+          <span className={chatStyle.bubbleQuoteText}>{summaryOf(quoted)}</span>
+        </span>
+        {quoted.photo && (
+          <img alt="" className={chatStyle.quoteThumb} src={quoted.photo.src} />
+        )}
+      </span>
+      <span aria-hidden="true" className={chatStyle.bubbleRule} />
+    </button>
+  );
+}
+
+// A photo in a chat, as the messaging apps show one: in its own shape
+// with no bubble, unless it answers a line, when the quote's bubble holds
+// it. A tap opens it large, with 保存; its reactions and menu (with 保存
+// too) open from a long press, as on a photo in LINE.
+function PhotoLine({
+  photo,
+  label,
+  quote,
+  actions,
+  onSave,
+  upload,
+}: {
+  photo: Photo;
+  // Still going up, or not sent; neither takes reactions yet.
+  upload?: Upload;
+  // Whose photo it is, for a screen reader and the large view.
+  label: string;
+  quote?: ReactNode;
+  actions: Omit<
+    Parameters<typeof MessageActions>[0],
+    "children" | "onSave" | "pressToOpen"
+  >;
+  onSave: () => void;
+}) {
+  const [viewing, setViewing] = useState(false);
+  const press = useLongPress(() => {
+    if (!upload) {
+      actions.onOpenChange(true);
+    }
+  });
+  const size = photoSize(photo);
+  const quoted = quote !== undefined;
+  return (
+    <>
+      <span
+        className={
+          quoted ? chatStyle.bubble({ mine: actions.mine }) : chatStyle.photo
+        }
+        data-part="bubble"
+        style={{ width: size.width }}
+      >
+        {quote}
+        <MessageActions {...actions} onSave={onSave} pressToOpen>
+          <button
+            aria-label={`${label}。押すと大きく表示、長押しでリアクションと返信`}
+            className={chatStyle.photoButton}
+            onClick={() => {
+              if (!press.consumeLongPress()) {
+                setViewing(true);
+              }
+            }}
+            type="button"
+            {...press.handlers}
+          >
+            <img
+              alt=""
+              className={chatStyle.photoImage({ quoted })}
+              draggable={false}
+              height={size.height}
+              src={photo.src}
+              width={size.width}
+            />
+            {upload === "sending" && (
+              <span className={chatStyle.uploading} role="status">
+                <svg
+                  aria-hidden="true"
+                  className={chatStyle.uploadRing}
+                  viewBox="0 0 36 36"
+                >
+                  <circle cx="18" cy="18" r="15" />
+                  <circle
+                    cx="18"
+                    cy="18"
+                    pathLength="100"
+                    r="15"
+                    style={{ animationDuration: `${uploadMilliseconds}ms` }}
+                  />
+                </svg>
+                <span className={srOnly}>送信中</span>
+              </span>
+            )}
+          </button>
+        </MessageActions>
+      </span>
+      <PhotoViewer
+        label={label}
+        onOpenChange={setViewing}
+        onSave={onSave}
+        open={viewing}
+        photo={photo.src}
+        whole
+      />
+    </>
+  );
+}
 
 const messageActions = {
   // The message the actions are for stays bright above the dimming.
@@ -3130,6 +3758,8 @@ function MessageActions({
   onReact,
   onMore,
   onReply,
+  onSave,
+  pressToOpen = false,
   children,
 }: {
   open: boolean;
@@ -3141,6 +3771,11 @@ function MessageActions({
   text?: string;
   onReact: (emoji: string) => void;
   onReply: () => void;
+  // 保存, for a photo.
+  onSave?: () => void;
+  // The message's own tap does something else, like a photo opening
+  // large, so these open from its long press instead.
+  pressToOpen?: boolean;
   // The message itself, a button that opens this.
   children: ReactElement;
 }) {
@@ -3171,7 +3806,11 @@ function MessageActions({
       }}
       unmountOnExit
     >
-      <Popover.Trigger asChild>{children}</Popover.Trigger>
+      {pressToOpen ? (
+        <Popover.Anchor asChild>{children}</Popover.Anchor>
+      ) : (
+        <Popover.Trigger asChild>{children}</Popover.Trigger>
+      )}
       <Portal container={phone ?? undefined}>
         {/* Everything but the message dims, so it is clear which one the
             actions are for; a tap on it closes them. */}
@@ -3233,6 +3872,21 @@ function MessageActions({
                   コピー
                 </button>
               )}
+              {onSave && (
+                <button
+                  className={menuStyle.item}
+                  onClick={() => {
+                    onOpenChange(false);
+                    onSave();
+                  }}
+                  type="button"
+                >
+                  <span className={menuStyle.icon}>
+                    <Download aria-hidden="true" size={18} />
+                  </span>
+                  保存
+                </button>
+              )}
             </div>
           </Popover.Content>
         </Popover.Positioner>
@@ -3242,6 +3896,9 @@ function MessageActions({
 }
 
 function summaryOf(message: Message) {
+  if (message.photo) {
+    return "📷 写真";
+  }
   return message.days ? daysSummary(message.days) : (message.text ?? "");
 }
 

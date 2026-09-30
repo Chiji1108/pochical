@@ -29,6 +29,13 @@ export const designVariantOptions = {
     ],
     label: "パターン",
   },
+  photoSend: {
+    choices: [
+      { label: "届く", value: "ok" },
+      { label: "失敗する", value: "fails" },
+    ],
+    label: "写真の送信",
+  },
   platform: {
     choices: [
       { label: "iPhone", value: "ios" },
