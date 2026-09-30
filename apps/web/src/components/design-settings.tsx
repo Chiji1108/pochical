@@ -380,7 +380,6 @@ function SettingsTop({
   profile: Profile;
   onOpen: (page: Page) => void;
 }) {
-  const book = usePatterns();
   return (
     <>
       <PageHeader title="設定" />
@@ -390,10 +389,9 @@ function SettingsTop({
           onClick={() => {
             onOpen("work");
           }}
+          // Which style, in short: the order itself is on the page.
           value={
-            current
-              ? `${sequenceLabel(current.sequence, book)}（${current.sequence.length}日ごと）`
-              : "勤務表が配られる"
+            current ? `${current.sequence.length}日ごとの繰り返し` : "勤務表"
           }
         />
         <ListRow
