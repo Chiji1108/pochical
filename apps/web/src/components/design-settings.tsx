@@ -1,5 +1,5 @@
 import { ArrowRight, Check, CloudCheck } from "lucide-react";
-import { useContext, useState } from "react";
+import { useContext, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
@@ -524,7 +524,11 @@ const systemAlert = {
   }),
 };
 
-// The テーマ cards, three across.
+// The テーマ cards, one row that scrolls sideways under the preview, as
+// Telegram's 外観 lays out its themes: every テーマ is a flick away and the
+// preview stays in sight while trying them, where a grid of four rows
+// pushed the rest of スタイル down. The next card peeks in at the edge to
+// show there are more.
 const themeCard = {
   // A card on the screen, as the テーマ's lists and sheets sit on it.
   card: css({
@@ -548,19 +552,28 @@ const themeCard = {
     borderRadius: "20px",
     color: "text.secondary",
     display: "flex",
+    flex: "none",
     flexDirection: "column",
     gap: "4px",
     padding: "4px 4px 8px",
+    scrollSnapAlign: "start",
     textAlign: "center",
     textStyle: "footnote",
   }),
+  // The rows of three the grid had (the basics, the soft ones, the
+  // colors, the nights) stay apart by a wider gap.
   grid: css({
+    "& [data-row-start]": { marginLeft: "8px" },
+    "&::-webkit-scrollbar": { display: "none" },
     border: 0,
-    display: "grid",
+    display: "flex",
     gap: "8px",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
     margin: 0,
+    overflowX: "auto",
     padding: 0,
+    position: "relative",
+    scrollSnapType: "x mandatory",
+    scrollbarWidth: "none",
   }),
   // The theme's own screen, in the current light or dark.
   sample: css({
@@ -1971,15 +1984,34 @@ const presetSampleShifts: Shift[] = ["day", "night", "after", "off"];
 function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
   const current = useSettings((state) => state.device.preset);
   const setPreset = useSettings((state) => state.setPreset);
+  const row = useRef<HTMLDivElement>(null);
+  // Opens on the three the テーマ in use belongs to. Only on opening: a
+  // tap keeps the row where the finger left it.
+  useLayoutEffect(() => {
+    const items = [
+      ...(row.current?.querySelectorAll<HTMLElement>("[data-part=item]") ?? []),
+    ];
+    const picked = items.findIndex((item) => item.dataset.state === "checked");
+    const first = items[picked - (picked % 3)];
+    if (row.current && first) {
+      row.current.scrollLeft = first.offsetLeft;
+    }
+  }, []);
   return (
     <ChoiceGrid
       className={themeCard.grid}
       label="テーマ"
       onValueChange={setPreset}
+      ref={row}
       value={current}
     >
-      {presets.map((preset) => (
-        <Choice className={themeCard.choice} key={preset.id} value={preset.id}>
+      {presets.map((preset, index) => (
+        <Choice
+          className={themeCard.choice}
+          data-row-start={index > 0 && index % 3 === 0 ? "" : undefined}
+          key={preset.id}
+          value={preset.id}
+        >
           <span
             aria-hidden="true"
             className={themeCard.sample}
