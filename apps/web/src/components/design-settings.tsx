@@ -4,6 +4,7 @@ import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
+import { useDevice } from "../lib/design-device";
 import { patterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useLook, useSettings } from "../lib/design-settings-store";
@@ -50,8 +51,9 @@ import {
   presets,
   themeStyle,
   previewWrap,
+  deviceColorsPreset,
 } from "./design-theme";
-import type { Appearance } from "./design-theme";
+import type { Appearance, Preset, PresetId } from "./design-theme";
 import {
   Button,
   ChipGroup,
@@ -559,6 +561,24 @@ const themeCard = {
     padding: "4px 4px 8px",
     textAlign: "center",
     textStyle: "footnote",
+  }),
+  // 端末の色 on Android, in a row of its own over the others: its card in
+  // the first of the three columns, and what it is beside it.
+  deviceNote: css({
+    alignSelf: "center",
+    color: "text.tertiary",
+    gridColumn: "span 2",
+    lineHeight: 1.5,
+    margin: 0,
+    textStyle: "footnote",
+  }),
+  deviceRow: css({
+    borderBottom: "1px solid token(colors.separator)",
+    display: "grid",
+    gap: "8px",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    marginBottom: "12px",
+    paddingBottom: "12px",
   }),
   // One page: three across, as the grid had them.
   page: css({
@@ -2002,9 +2022,11 @@ function ShiftColorsChoices() {
   );
 }
 
+type ThemeOption = Preset & { id: PresetId };
+
 // The テーマ in rows of three, each row a page: the basics, the soft ones,
 // the colors, the nights.
-const themePages = Array.from(
+const themePages: ThemeOption[][] = Array.from(
   { length: Math.ceil(presets.length / 3) },
   (_, page) => presets.slice(page * 3, page * 3 + 3)
 );
@@ -2019,6 +2041,12 @@ const presetSampleShifts: Shift[] = ["day", "night", "after", "off"];
 function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
   const current = useSettings((state) => state.device.preset);
   const setPreset = useSettings((state) => state.setPreset);
+  // On Android, 端末の色 sits in a row of its own over the pages, as
+  // Android's own color settings keep the colors it takes from the
+  // wallpaper apart from the basic ones.
+  const { platform, wallpaperHue } = useDevice();
+  const deviceColors =
+    platform === "android" ? deviceColorsPreset(wallpaperHue) : undefined;
   // Opens on the page of the テーマ in use.
   const [page, setPage] = useState(() =>
     Math.max(
@@ -2037,6 +2065,14 @@ function ThemeChoices({ scheme }: { scheme: ColorScheme }) {
         onValueChange={setPreset}
         value={current}
       >
+        {deviceColors && (
+          <div className={themeCard.deviceRow}>
+            <ThemeChoice preset={deviceColors} scheme={scheme} />
+            <p className={themeCard.deviceNote}>
+              Android で設定されている色に合わせます。
+            </p>
+          </div>
+        )}
         <Pager
           ends={{ back: page > 0, forward: page < themePages.length - 1 }}
           gap={THEME_PAGE_GAP}
@@ -2078,7 +2114,7 @@ function ThemeChoice({
   preset,
   scheme,
 }: {
-  preset: (typeof presets)[number];
+  preset: ThemeOption;
   scheme: ColorScheme;
 }) {
   return (

@@ -97,9 +97,11 @@ type SettingsState = {
 
 // Letters already sit on tinted tiles and are the shift's name, so they
 // start without names and without the days-off highlight behind them.
+// Emoji bring their own colors, which a tint behind them fights with, so
+// they start without the highlight too.
 const defaultCalendar: Record<ShiftMarkStyle, CalendarOptions> = {
   badge: { blankOff: false, highlight: false, names: false },
-  emoji: { blankOff: false, highlight: true, names: false },
+  emoji: { blankOff: false, highlight: false, names: false },
   icon: { blankOff: false, highlight: true, names: false },
 };
 
