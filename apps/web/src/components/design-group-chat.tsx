@@ -86,6 +86,7 @@ import {
 } from "./design-group-parts";
 import { profileIn } from "./design-group-settings";
 import { DaySheet } from "./design-group-shifts";
+import { monthNameOf } from "./design-month-name";
 import { BlockOffer, offersBlock, ReportSheet } from "./design-report";
 import {
   ConfirmDialog,
@@ -4445,7 +4446,9 @@ function DayCardByPerson({
       <span className={dayCard.row({ names: true })} style={columns}>
         {/* As in the shift table, the month once in the corner and the
             days by number, with a new month's where it turns. */}
-        <span className={cornerMonth}>{(shown[0]?.getMonth() ?? 0) + 1}月</span>
+        <span className={cornerMonth}>
+          {shown[0] ? monthNameOf(shown[0], weekTools.english) : ""}
+        </span>
         {shown.map((date, index) => (
           <span
             className={cx(

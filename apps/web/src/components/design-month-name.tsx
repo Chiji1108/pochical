@@ -28,6 +28,19 @@ export function englishMonthOf(month: Date) {
   return englishMonths[month.getMonth()];
 }
 
+// A month named in a line, as the カレンダー page's 月と曜日 asks: 9月, or
+// sep. in English.
+export function monthNameOf(month: Date, english = false) {
+  return english ? englishMonthOf(month) : `${month.getMonth() + 1}月`;
+}
+
+// The same with its year: 2026年9月, or sep. 2026.
+export function monthWithYearOf(month: Date, english = false) {
+  return english
+    ? `${englishMonthOf(month)} ${month.getFullYear()}`
+    : `${month.getFullYear()}年${month.getMonth() + 1}月`;
+}
+
 // The year over the month's name, as the calendar's heading draws it:
 // 9月, or sep. as the カレンダー page's 月と曜日 asks, said as 2026年9月 to
 // screen readers either way. The カレンダー page's preview draws it too.

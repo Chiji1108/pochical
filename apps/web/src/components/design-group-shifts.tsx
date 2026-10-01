@@ -37,7 +37,11 @@ import {
   smallWeekday,
   toneColor,
 } from "./design-group-parts";
-import { englishMonthOf } from "./design-month-name";
+import {
+  englishMonthOf,
+  monthNameOf,
+  monthWithYearOf,
+} from "./design-month-name";
 import { MonthTitleButton } from "./design-month-picker";
 import {
   monthIndex,
@@ -889,7 +893,10 @@ function DaySheetBody({
             <ChevronLeft aria-hidden="true" size={18} />
           </button>
           <strong aria-live="polite">
-            {month.getFullYear()}年{month.getMonth() + 1}月
+            <span className={srOnly}>{monthWithYearOf(month)}</span>
+            <span aria-hidden="true">
+              {monthWithYearOf(month, weekTools.english)}
+            </span>
           </strong>
           <button
             aria-label="次の月"
@@ -1840,9 +1847,7 @@ function MonthDivider({
     <h4 className={monthDivider.name}>
       <span className={srOnly}>{name}</span>
       <span aria-hidden="true">
-        {thisYear
-          ? englishMonthOf(month)
-          : `${englishMonthOf(month)} ${month.getFullYear()}`}
+        {thisYear ? monthNameOf(month, true) : monthWithYearOf(month, true)}
       </span>
     </h4>
   ) : (
@@ -2532,7 +2537,9 @@ export function MemberTable({
         {/* Pinned above the weeks, so the month stays in sight; a list of
             months names its months in their headings. */}
         <span className={cornerMonth}>
-          {month && !compact && !body ? `${month.getMonth() + 1}月` : ""}
+          {month && !compact && !body
+            ? monthNameOf(month, weekTools.english)
+            : ""}
         </span>
         {weekTools.weekdays.map((day) => (
           <span className={toneColor[day.tone]} key={day.day}>
