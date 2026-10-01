@@ -6,7 +6,7 @@ import { css } from "styled-system/css";
 // Its types only: the code itself loads after the page shows (below).
 import type * as LpScreens from "../components/lp-screens";
 import { StoreLinks } from "../components/store-links";
-import { pageMeta, site, WIDE } from "../lib/site";
+import { pageMeta, site } from "../lib/site";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -70,7 +70,7 @@ const page = css({
 
 const hero = {
   copy: css({
-    [WIDE]: { paddingTop: "120px", textAlign: "left" },
+    _wide: { paddingTop: "120px", textAlign: "left" },
     display: "flex",
     flexDirection: "column",
     gap: "24px",
@@ -103,7 +103,7 @@ const hero = {
   }),
   release: css({ color: ON_SKY_TEXT, fontSize: "11px" }),
   root: css({
-    [WIDE]: {
+    _wide: {
       alignItems: "flex-start",
       flexDirection: "row",
       gap: "96px",
@@ -117,7 +117,7 @@ const hero = {
     padding: "40px 16px 72px",
   }),
   store: css({
-    "& .store-links": { [WIDE]: { justifyContent: "flex-start" } },
+    "& .store-links": { _wide: { justifyContent: "flex-start" } },
     display: "flex",
     flexDirection: "column",
     gap: "12px",
@@ -244,7 +244,7 @@ const feature = {
     lineHeight: 2.1,
   }),
   copy: css({
-    [WIDE]: { textAlign: "left" },
+    _wide: { textAlign: "left" },
     display: "flex",
     flexDirection: "column",
     gap: "18px",
@@ -258,7 +258,7 @@ const feature = {
     letterSpacing: "0.17em",
   }),
   list: css({
-    [WIDE]: { gap: "140px", padding: "80px 48px 140px" },
+    _wide: { gap: "140px", padding: "80px 48px 140px" },
     display: "flex",
     flexDirection: "column",
     gap: "96px",
@@ -268,7 +268,7 @@ const feature = {
     padding: "40px 16px 96px",
   }),
   row: css({
-    [WIDE]: {
+    _wide: {
       "&:nth-child(even)": { flexDirection: "row-reverse" },
       flexDirection: "row",
       gap: "120px",
@@ -320,7 +320,7 @@ const closing = {
   icon: css({ borderRadius: "14px" }),
   release: css({ color: ON_SKY_TEXT, fontSize: "11px" }),
   root: css({
-    [WIDE]: { padding: "120px 48px 160px" },
+    _wide: { padding: "120px 48px 160px" },
     display: "flex",
     isolation: "isolate",
     justifyContent: "center",

@@ -10,7 +10,6 @@ import {
   UserStoreContext,
 } from "../lib/design-user-store";
 import { parseDesignVariants } from "../lib/design-variants";
-import { WIDE } from "../lib/site";
 import { DesignCalendar } from "./design-calendar";
 import { sampleGroups } from "./design-group-data";
 import { DesignProviders, PresetContexts } from "./design-providers";
@@ -254,7 +253,7 @@ const gallery = {
     // `--gallery-last` is the last phone's index.
     "--gallery-step":
       "calc((min(100vw - 32px, 520px) - 390px * var(--gallery-scale)) / var(--gallery-last))",
-    [WIDE]: { "--gallery-drop": "48px", "--gallery-scale": "0.6" },
+    _wide: { "--gallery-drop": "48px", "--gallery-scale": "0.6" },
     flexShrink: 0,
     height:
       "calc(844px * var(--gallery-scale) + var(--gallery-last) * var(--gallery-drop))",
