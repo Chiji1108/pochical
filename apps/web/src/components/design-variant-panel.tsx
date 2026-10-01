@@ -21,11 +21,14 @@ const panel = {
     fontSize: "11px",
     minHeight: "32px",
     padding: "0 11px",
+    whiteSpace: "nowrap",
   }),
+  // Choices that run past their room go on to the next line whole.
   choices: css({
     bg: "fill.tertiary",
     borderRadius: "12px",
     display: "flex",
+    flexWrap: "wrap",
     padding: "2px",
   }),
   decision: css({
@@ -42,6 +45,7 @@ const panel = {
     float: "left",
     fontSize: "11px",
     padding: 0,
+    whiteSpace: "nowrap",
   }),
   root: css({
     "@media (max-width: 760px)": { flexDirection: "column" },

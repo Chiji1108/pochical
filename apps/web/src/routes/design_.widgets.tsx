@@ -97,7 +97,10 @@ const crowdedSchedule = {
 // large カレンダー at its fullest.
 const AUGUST = 7;
 const augustDay = new Date(2026, AUGUST, 24);
-const augustSchedule = initialDesignSchedule(4, AUGUST);
+const augustSchedule = {
+  ...initialDesignSchedule(4, AUGUST),
+  ...initialDesignSchedule(4, AUGUST + 1),
+};
 
 // Days off without their tint, as when 休みを塗る is off.
 const noHighlight = {
