@@ -62,10 +62,13 @@ const card = {
     margin: "0 0 8px",
     textStyle: "footnote",
   }),
+  // Floating on its own ground, as a notification lies over the lock
+  // screen, so it is not taken for one more of the rows above it.
   root: css({
     alignItems: "flex-start",
-    bg: "fill.quaternary",
+    bg: "background.card",
     borderRadius: "2xl",
+    boxShadow: "md",
     display: "flex",
     gap: "12px",
     padding: "16px",
@@ -556,10 +559,13 @@ const banner = {
     justifyContent: "space-between",
     textStyle: "caption",
   }),
+  // Floating on its own ground, as a notification lies over the lock
+  // screen, so it is not taken for one more of the rows above it.
   root: css({
     alignItems: "flex-start",
-    bg: "fill.quaternary",
+    bg: "background.card",
     borderRadius: "2xl",
+    boxShadow: "md",
     display: "flex",
     gap: "12px",
     padding: "12px 16px",
