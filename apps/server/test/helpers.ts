@@ -62,3 +62,18 @@ export const openSocket = async (
   socket.accept();
   return socket;
 };
+
+/** A Connect JSON call, as the apps make one, with the session token. */
+export const call = async (
+  method: string,
+  body: Record<string, unknown>,
+  token?: string
+): Promise<Response> =>
+  await exports.default.fetch(`${ORIGIN}/pochical.v1.${method}`, {
+    body: JSON.stringify(body),
+    headers: {
+      "Content-Type": "application/json",
+      ...(token === undefined ? {} : { Authorization: `Bearer ${token}` }),
+    },
+    method: "POST",
+  });
