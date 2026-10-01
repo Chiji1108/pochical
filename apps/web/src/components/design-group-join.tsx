@@ -365,6 +365,10 @@ type Invite = {
 // The group the sample invitation joins.
 export const invitedGroupId = "cousins";
 
+// The code in the sample invitation's link. Any other code is a link that
+// no longer works: remade since, or its group deleted.
+export const sampleInviteCode = "Toko2345";
+
 export const sampleInvite = (): Invite => ({
   from: { name: partner.name, photo: partner.photo },
   group: "いとこ会",

@@ -23,6 +23,15 @@ A message carries at most one preview, for its first link. It is made while the 
 - A message sent before its preview arrives goes without one. If the server finds no page, nothing is shown above the composer.
 - In the chat, the preview sits inside the message's bubble, under its words: the picture (cropped to 1.91:1), the title (two lines at most) and the site's name. A tap opens the link; a long press opens the message's reactions and menu.
 
+## Pochical's invitation links
+
+A link to `https://pochical.app/invite/{code}` (the host in any case, an optional trailing `/`, query and fragment ignored; `inviteCodeOf` in `apps/web/src/lib/chat-text.ts`) is one of Pochical's own invitations. The chat treats it as part of the app, not as a page:
+
+- A tap on it, in the words or on its card, opens the group's join screen in the app, as reading its QR code does; when you are in the group already, it opens the group. Nothing opens in the browser, and nothing joins until you confirm on the join screen.
+- Its card shows the group instead of a page: the group's mark at the hub's size on a tint, its name, and グループへの招待・{n}人 (参加中のグループ once you are in it). A long press opens the message's actions, as on a page's card.
+- The card is not made while writing or sent with the message. Each app asks the server's `InviteService.GetInvitePreview` as the message shows, so a link that was remade or whose group was deleted turns into この招待は使えません for everyone, and a renamed group shows its new name. That card opens nothing; a tap on the link's words says the link cannot be used.
+- Nothing is shown above the composer for it, and it takes the place of the message's one preview: a message whose first link is an invitation shows no page for later links.
+
 ## Reading a page
 
 The server reads the page, so that people's addresses are not sent to the sites, and so both apps get the same result.

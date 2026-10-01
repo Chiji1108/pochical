@@ -467,6 +467,14 @@ export const reactionChoices = ["👍", "❤️", "😂", "👀", "🙏", "🎉"
 export const sampleChats: Record<string, Chat> = {
   "family:group": {
     messages: [
+      // An invitation whose link was remade since, so it no longer works.
+      {
+        from: "yuki",
+        id: "f0",
+        text: "いとこ会のグループ作ったよ！\nhttps://pochical.app/invite/Toko2ab9",
+        time: "18:40",
+        when: "昨日",
+      },
       {
         from: "mother",
         id: "f1",
@@ -537,6 +545,13 @@ export const sampleChats: Record<string, Chat> = {
         id: "f9",
         text: "10月の勤務表出た！マーカーのとこが私",
         time: "10:20",
+        when: "今日",
+      },
+      {
+        from: "yuki",
+        id: "f10",
+        text: "いとこ会のリンク作り直したから、こっちから入って〜\nhttps://pochical.app/invite/Toko2345",
+        time: "10:24",
         when: "今日",
       },
     ],

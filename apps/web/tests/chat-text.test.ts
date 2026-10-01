@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 
 import {
   firstLink,
+  inviteCodeOf,
   mentionsOf,
   plainText,
   siteOf,
@@ -87,4 +88,21 @@ test("keeps only the picked members' names as mentions", () => {
       { id: "yu", name: "ゆう" },
     ])
   ).toBe("<@aya> @あやか 21日どう？<@yu>");
+});
+
+test("knows Pochical's invitation links", () => {
+  expect(inviteCodeOf("https://pochical.app/invite/Toko2345")).toBe("Toko2345");
+  expect(inviteCodeOf("https://POCHICAL.app/invite/Toko2345/?from=line")).toBe(
+    "Toko2345"
+  );
+  for (const url of [
+    "http://pochical.app/invite/Toko2345",
+    "https://pochical.app/invite/Toko",
+    "https://pochical.app/invite/Toko2345/more",
+    "https://pochical.app/support",
+    "https://evil.example/invite/Toko2345",
+    "https://pochical.app.evil.example/invite/Toko2345",
+  ]) {
+    expect(inviteCodeOf(url)).toBeUndefined();
+  }
 });

@@ -4,7 +4,7 @@ import type { Schedule } from "../lib/design-days";
 import type { Pattern } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
 import { ChatPage } from "./design-group-chat";
-import type { PhotoSend } from "./design-group-chat";
+import type { PhotoSend, InviteLook } from "./design-group-chat";
 import {
   chatKey,
   chatTitle,
@@ -23,6 +23,7 @@ import {
   ScanPage,
   invitedGroupId,
   sampleInvite,
+  sampleInviteCode,
 } from "./design-group-join";
 import type { ScanResult } from "./design-group-join";
 import { hub } from "./design-group-parts";
@@ -66,8 +67,9 @@ type Page =
   | { name: "settings" }
   // Reading a group's QR code to join it.
   | { name: "scan" }
-  // And the invitation it read, to join.
-  | { name: "join" };
+  // And the invitation it read, to join, or one tapped in a chat; closing
+  // it goes `back` there.
+  | { name: "join"; back?: Page };
 
 export type GroupStart = "hub" | "shifts" | "chat" | "message";
 
@@ -152,7 +154,7 @@ export function DesignGroup({
   const joinPage = (
     <JoinScreen
       onClose={() => {
-        setPage({ name: "hub" });
+        setPage((page.name === "join" && page.back) || { name: "hub" });
       }}
       onJoin={(joined) => {
         setGroups([...groups, joined]);
@@ -165,6 +167,35 @@ export function DesignGroup({
   );
   const onScan = () => {
     setPage({ name: "scan" });
+  };
+  // What an invitation link in a chat opens, as the server would answer:
+  // the sample invitation, or nothing for a link that no longer works.
+  const inviteOf = (code: string): InviteLook | undefined => {
+    if (code !== sampleInviteCode) {
+      return;
+    }
+    const invite = sampleInvite();
+    return {
+      joined: groups.some((item) => item.id === invitedGroupId),
+      mark: invite.mark,
+      members: invite.members.length,
+      name: invite.group,
+    };
+  };
+  // An invitation tapped in a chat opens in the app, as a read QR code
+  // does: its join screen, or the group once you are in it.
+  const openInvite = (code: string) => {
+    const invite = inviteOf(code);
+    if (!invite) {
+      toast("この招待リンクは使えません", "problem");
+      return;
+    }
+    if (invite.joined) {
+      setGroupId(invitedGroupId);
+      setPage({ name: "hub" });
+      return;
+    }
+    setPage({ back: page, name: "join" });
   };
 
   const newGroupPage = (
@@ -304,6 +335,8 @@ export function DesignGroup({
     return (
       <>
         <ChatPage
+          inviteOf={inviteOf}
+          onInvite={openInvite}
           attach={page.attach}
           photoSend={photoSend}
           sharedFirst={page.sharedFirst}
