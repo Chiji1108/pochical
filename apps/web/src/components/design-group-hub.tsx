@@ -534,6 +534,7 @@ export function MemberSheet({
           <List>
             {isBlocked ? (
               <ListRow
+                arrow={false}
                 label="ブロックを解除"
                 leading={<Ban aria-hidden="true" size={20} />}
                 onClick={() => {
@@ -543,6 +544,7 @@ export function MemberSheet({
               />
             ) : (
               <ListRow
+                arrow={false}
                 danger
                 label="ブロック"
                 leading={<Ban aria-hidden="true" size={20} />}
@@ -553,6 +555,7 @@ export function MemberSheet({
             )}
             {onReport && (
               <ListRow
+                arrow={false}
                 danger
                 label="通報"
                 leading={<Flag aria-hidden="true" size={20} />}
