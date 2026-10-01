@@ -164,6 +164,7 @@ export function GroupSettingsPage({
             }}
           />
         </List>
+        <Note>オフにしても、自分へのメンションは通知されます。</Note>
       </Section>
       <Section title="メンバー">
         <List>

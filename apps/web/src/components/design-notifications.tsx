@@ -707,7 +707,8 @@ const sampleTitle = css({
 });
 
 // The chats of each group, on or off. The same switch is in the group's own
-// settings; off, its group chat and one-to-one chats alike stay quiet.
+// settings; off, its group chat and one-to-one chats alike stay quiet, but
+// for a line that mentions you, as in LINE and Slack: it is meant for you.
 export function ChatNotificationsPage({ onBack }: { onBack: () => void }) {
   const groups = useUser((state) => state.groups);
   const setGroups = useUser((state) => state.setGroups);
@@ -758,6 +759,7 @@ export function ChatNotificationsPage({ onBack }: { onBack: () => void }) {
               />
             ))}
           </List>
+          <Note>オフにしても、自分へのメンションは通知されます。</Note>
         </Section>
         {/* Only those turned off: each is turned off in its own chat's
             menu, and found again here. */}

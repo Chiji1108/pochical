@@ -125,4 +125,4 @@ Presence means "has this thread open on screen", not "online in the app": mobile
 - Snapshot format for resets and how long each DO keeps its change log
 - Wire messages for shift changes, outbox acknowledgements, chat pages and resets
 - Presence and "last seen": whether to show them at all. Pochical is for family and friends, where visible presence and read markers can feel like pressure; typing alone may be enough. "Last seen" would also need storing in the User DO.
-- Read state options: whether members see read markers (and whether users can turn them off), "mark as unread" (it moves the watermark back, so `max` would become a per-thread LWW register), mention counts, and muted threads left out of badge totals
+- Read state options: whether members see read markers (and whether users can turn them off), "mark as unread" (it moves the watermark back, so `max` would become a per-thread LWW register), and muted threads left out of badge totals (mentions: spec/chat-text.md)
