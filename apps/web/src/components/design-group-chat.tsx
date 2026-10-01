@@ -11,6 +11,7 @@ import {
   Ellipsis,
   ImageIcon,
   Link,
+  Link2Off,
   Plus,
   Reply,
   RotateCcw,
@@ -30,7 +31,7 @@ import {
 import type { MouseEvent, ReactElement, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import { firstLink, siteOf, textParts } from "../lib/chat-links";
+import { firstLink, inviteCodeOf, siteOf, textParts } from "../lib/chat-links";
 import { dateKey, formatDay } from "../lib/design-days";
 import type { Photo } from "../lib/design-sample-photos";
 import { spring } from "../lib/motion";
@@ -45,6 +46,7 @@ import {
 import type {
   Chat,
   Group,
+  GroupMark,
   LinkPreview,
   Member,
   Message,
@@ -52,6 +54,7 @@ import type {
 } from "./design-group-data";
 import {
   Avatar,
+  GroupIcon,
   Mark,
   badge,
   cornerMonth,
@@ -646,7 +649,18 @@ export function ChatRow({
 // sliver under the header.
 const sharedRoom = 8;
 
+// The group an invitation link in a message opens, as the server's
+// InviteService gives it, and whether you are in it already.
+export type InviteLook = {
+  name: string;
+  mark: GroupMark;
+  members: number;
+  joined: boolean;
+};
+
 export function ChatPage({
+  inviteOf,
+  onInvite,
   title,
   group,
   people,
@@ -664,6 +678,13 @@ export function ChatPage({
   onMuted,
   onShifts,
 }: {
+  // What an invitation link's code opens; undefined once it no longer
+  // works. Asked as a message shows, not sent with it, so a remade link's
+  // card turns unusable for everyone (spec/chat-links.md).
+  inviteOf: (code: string) => InviteLook | undefined;
+  // Opens an invitation link in the app: its group's join screen, or the
+  // group itself when you are in it.
+  onInvite: (code: string) => void;
   // The group chat's menu opens everyone's shifts, to look up a day while
   // talking it over.
   onShifts?: () => void;
@@ -960,6 +981,10 @@ export function ChatPage({
             previous?.from !== message.from ||
             previous.notice !== undefined ||
             message.replyTo !== undefined;
+          // A message whose first link is an invitation shows its group
+          // instead of a page.
+          const firstUrl = message.text ? firstLink(message.text) : undefined;
+          const inviteCode = firstUrl ? inviteCodeOf(firstUrl) : undefined;
           const quoted = byId(message.replyTo);
           const quote = quoted && (
             <BubbleQuote
@@ -1049,7 +1074,7 @@ export function ChatPage({
                       <span
                         className={cx(
                           chatStyle.bubble({ mine }),
-                          message.link && chatStyle.linked
+                          (inviteCode || message.link) && chatStyle.linked
                         )}
                         data-part="bubble"
                       >
@@ -1062,8 +1087,14 @@ export function ChatPage({
                             // actions, as in the chat apps.
                             onClickCapture={(event) => {
                               const url = linkAt(event.target);
-                              if (url) {
-                                event.preventDefault();
+                              if (!url) {
+                                return;
+                              }
+                              event.preventDefault();
+                              const code = inviteCodeOf(url);
+                              if (code) {
+                                onInvite(code);
+                              } else {
                                 openLink(url);
                               }
                             }}
@@ -1072,7 +1103,18 @@ export function ChatPage({
                             <MessageText mine={mine} text={message.text} />
                           </button>
                         </MessageActions>
-                        {message.link && (
+                        {inviteCode && (
+                          <InviteCard
+                            invite={inviteOf(inviteCode)}
+                            onLongPress={() => {
+                              setSelected(message.id);
+                            }}
+                            onOpen={() => {
+                              onInvite(inviteCode);
+                            }}
+                          />
+                        )}
+                        {!inviteCode && message.link && (
                           <LinkCard
                             onLongPress={() => {
                               setSelected(message.id);
@@ -1617,6 +1659,107 @@ function LinkCard({
   );
 }
 
+const inviteCard = {
+  // The link card's ground and edge, laid out in a row: the group's mark
+  // as the hub shows it, then its name.
+  card: css({
+    WebkitTouchCallout: "none",
+    alignItems: "center",
+    bg: "background.card",
+    border: 0,
+    borderRadius: "md",
+    color: "text.primary",
+    display: "flex",
+    gap: "12px",
+    margin: "0 4px 4px",
+    outline: "1px solid token(colors.border.default)",
+    outlineOffset: "-1px",
+    padding: "8px 12px",
+    textAlign: "start",
+    userSelect: "none",
+    width: "calc(100% - 8px)",
+  }),
+  // The group's mark at the hub's size, on a tint so it stands off the
+  // card; a broken link sits in the same frame once the link no longer
+  // works.
+  mark: css({
+    bg: "fill.quaternary",
+    borderRadius: "lg",
+    color: "text.tertiary",
+    display: "grid",
+    flexShrink: 0,
+    height: "42px",
+    overflow: "hidden",
+    placeItems: "center",
+    width: "42px",
+  }),
+  words: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+    minWidth: 0,
+  }),
+  name: css({
+    fontWeight: 600,
+    lineClamp: 1,
+    textStyle: "footnote",
+  }),
+  note: css({ color: "text.tertiary", textStyle: "caption2" }),
+};
+
+// An invitation link's group, under the message's words where a page's
+// card would be, as LINE and Discord show their own invitations. A tap
+// opens it in the app; a long press opens the message's actions. Once the
+// link no longer works it says so and opens nothing.
+function InviteCard({
+  invite,
+  onOpen,
+  onLongPress,
+}: {
+  invite: InviteLook | undefined;
+  onOpen: () => void;
+  onLongPress: () => void;
+}) {
+  const press = useLongPress(onLongPress);
+  if (!invite) {
+    return (
+      <span className={inviteCard.card} {...press.handlers}>
+        <span aria-hidden="true" className={inviteCard.mark}>
+          <Link2Off size={20} />
+        </span>
+        <span className={inviteCard.words}>
+          <span className={inviteCard.name}>この招待は使えません</span>
+          <small className={inviteCard.note}>グループへの招待</small>
+        </span>
+      </span>
+    );
+  }
+  return (
+    <button
+      className={inviteCard.card}
+      onClick={() => {
+        if (!press.consumeLongPress()) {
+          onOpen();
+        }
+      }}
+      type="button"
+      {...press.handlers}
+    >
+      <span aria-hidden="true" className={inviteCard.mark}>
+        <GroupIcon mark={invite.mark} size={24} />
+      </span>
+      <span className={inviteCard.words}>
+        <span className={inviteCard.name}>{invite.name}</span>
+        <small className={inviteCard.note}>
+          {invite.joined
+            ? "参加中のグループ"
+            : `グループへの招待・${invite.members}人`}
+        </small>
+      </span>
+    </button>
+  );
+}
+
 // How long a link must stay as written before its page is read, so one
 // typed by hand is not read at every letter; a pasted one is read at once
 // after.
@@ -1630,7 +1773,10 @@ const readMs = 700;
 // the composer, and sent with the message unless taken off with ×. A
 // message sent before it is read goes without one.
 function useLinkPreview(draft: string) {
-  const link = firstLink(draft);
+  const first = firstLink(draft);
+  // An invitation's card comes from its group as the message shows, so
+  // nothing is read or held above the composer for it.
+  const link = first && !inviteCodeOf(first) ? first : undefined;
   const [settled, setSettled] = useState<string>();
   const [skipped, setSkipped] = useState<string>();
   const [pages, setPages] = useState<Record<string, LinkPreview>>({});

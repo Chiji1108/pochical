@@ -59,3 +59,20 @@ export function firstLink(text: string) {
 export function siteOf(url: string) {
   return new URL(url).hostname.replace(/^www\./u, "");
 }
+
+// Pochical's own invitation links, https://pochical.app/invite/{code}:
+// the chat opens them in the app, on the group's join screen, rather than
+// in the browser.
+const INVITE_PATH = /^\/invite\/(?<code>[A-HJ-NP-Za-km-z2-9]{8})\/?$/u;
+
+// The invite code a link carries, if it is one of Pochical's.
+export function inviteCodeOf(url: string) {
+  if (!URL.canParse(url)) {
+    return;
+  }
+  const { protocol, hostname, pathname } = new URL(url);
+  if (protocol !== "https:" || hostname !== "pochical.app") {
+    return;
+  }
+  return INVITE_PATH.exec(pathname)?.groups?.code;
+}

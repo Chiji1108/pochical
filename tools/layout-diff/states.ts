@@ -570,6 +570,27 @@ export const states: State[] = [
     },
   },
   {
+    // The family chat ends on an invitation: its group under the words.
+    name: "group/chat-invite",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^全体チャット/u);
+      await page.getByRole("button", { name: /^いとこ会/u }).waitFor();
+    },
+  },
+  {
+    // An invitation tapped in the chat opens its join screen in the app.
+    name: "group/chat-invite-join",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^全体チャット/u);
+      await tap(page, /^いとこ会/u);
+      await page.getByRole("button", { name: "参加する" }).waitFor();
+    },
+  },
+  {
     name: "group/chat-one",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {

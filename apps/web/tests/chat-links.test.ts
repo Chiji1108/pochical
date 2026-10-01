@@ -1,6 +1,11 @@
 import { expect, test } from "bun:test";
 
-import { firstLink, siteOf, textParts } from "../src/lib/chat-links";
+import {
+  firstLink,
+  inviteCodeOf,
+  siteOf,
+  textParts,
+} from "../src/lib/chat-links";
 
 test("leaves a message without links whole", () => {
   expect(textParts("21日にしよ！")).toEqual([{ text: "21日にしよ！" }]);
@@ -54,4 +59,21 @@ test("needs the scheme and a host", () => {
 
 test("names a site by its host", () => {
   expect(siteOf("https://www.cafe.example/menu")).toBe("cafe.example");
+});
+
+test("knows Pochical's invitation links", () => {
+  expect(inviteCodeOf("https://pochical.app/invite/Toko2345")).toBe("Toko2345");
+  expect(inviteCodeOf("https://POCHICAL.app/invite/Toko2345/?from=line")).toBe(
+    "Toko2345"
+  );
+  for (const url of [
+    "http://pochical.app/invite/Toko2345",
+    "https://pochical.app/invite/Toko",
+    "https://pochical.app/invite/Toko2345/more",
+    "https://pochical.app/support",
+    "https://evil.example/invite/Toko2345",
+    "https://pochical.app.evil.example/invite/Toko2345",
+  ]) {
+    expect(inviteCodeOf(url)).toBeUndefined();
+  }
 });
