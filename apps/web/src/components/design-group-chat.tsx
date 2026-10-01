@@ -806,13 +806,31 @@ const chatStyle = {
     variants: { mine: { false: {}, true: { justifyContent: "flex-end" } } },
   }),
   title: css({
-    alignItems: "center",
     display: "flex",
+    flexDirection: "column",
     fontWeight: 600,
-    gap: "4px",
     margin: 0,
     minWidth: 0,
     textStyle: "headline",
+  }),
+  titleButton: css({
+    _active: { opacity: 0.6 },
+    bg: "transparent",
+    border: 0,
+    color: "inherit",
+    display: "flex",
+    flexDirection: "column",
+    font: "inherit",
+    minWidth: 0,
+    padding: 0,
+  }),
+  // The name and the mute mark on one line, the count under it.
+  titleLine: css({
+    alignItems: "center",
+    display: "flex",
+    gap: "4px",
+    justifyContent: "center",
+    minWidth: 0,
   }),
   titleName: css({
     overflow: "hidden",
@@ -820,10 +838,10 @@ const chatStyle = {
     whiteSpace: "nowrap",
   }),
   titleCount: css({
-    color: "text.secondary",
-    flexShrink: 0,
+    color: "text.tertiary",
     fontWeight: 400,
-    marginLeft: "-4px",
+    textAlign: "center",
+    textStyle: "caption2",
   }),
   menu: css({ justifySelf: "end" }),
   when: css({
@@ -836,6 +854,30 @@ const chatStyle = {
     textStyle: "caption2",
   }),
 };
+
+// A chat's title in its header: the name, the mute mark, and for a group
+// the count under them.
+function ChatTitle({
+  title,
+  count,
+  muted,
+}: {
+  title: string;
+  count?: number;
+  muted: boolean;
+}) {
+  return (
+    <>
+      <span className={chatStyle.titleLine}>
+        <span className={chatStyle.titleName}>{title}</span>
+        {muted && <MutedMark />}
+      </span>
+      {count !== undefined && (
+        <small className={chatStyle.titleCount}>{count}人</small>
+      )}
+    </>
+  );
+}
 
 // A chat whose notifications are off, after its name in the list and in
 // its own header, as chat apps mark a muted room.
@@ -930,6 +972,7 @@ export function ChatPage({
   onInvite,
   title,
   isGroup = false,
+  onTitle,
   group,
   people,
   chat,
@@ -961,6 +1004,8 @@ export function ChatPage({
   title: string;
   // The group chat, where everyone talks; else a one-to-one chat.
   isGroup?: boolean;
+  // A tap on the title: the group's settings and members.
+  onTitle?: () => void;
   // Its notifications turned off, from the menu at its top right, as
   // LINE's rooms have it.
   muted?: boolean;
@@ -1830,17 +1875,31 @@ export function ChatPage({
     <Screen>
       <header className={chatStyle.header}>
         <BackButton onClick={onBack}>{backLabel}</BackButton>
-        {/* The group's name and how many are in it, as LINE heads a
-            group's chat, so it is clear which group this is; a long name
-            is cut short, the count and the mute mark stay. */}
+        {/* The group's name, and under it how many are in it, as
+            Telegram and Messages head a group: clear which group this is,
+            without a count in brackets. A long name is cut short, the mute
+            mark stays. A tap opens the group's settings and members. */}
         <h3 className={chatStyle.title}>
-          <span className={chatStyle.titleName}>{title}</span>
-          {isGroup && (
-            <span className={chatStyle.titleCount}>
-              （{group.members.length}）
-            </span>
+          {onTitle ? (
+            <button
+              aria-label={`${title}、${group.members.length}人。押すとグループの設定`}
+              className={chatStyle.titleButton}
+              onClick={onTitle}
+              type="button"
+            >
+              <ChatTitle
+                count={isGroup ? group.members.length : undefined}
+                muted={muted}
+                title={title}
+              />
+            </button>
+          ) : (
+            <ChatTitle
+              count={isGroup ? group.members.length : undefined}
+              muted={muted}
+              title={title}
+            />
           )}
-          {muted && <MutedMark />}
         </h3>
         {onMuted && (
           <IconMenu

@@ -67,7 +67,8 @@ type Page =
     }
   | { name: "invite" }
   | { name: "new" }
-  | { name: "settings" }
+  // `from` is the chat whose title opened it, to go back there.
+  | { name: "settings"; from?: string }
   // Reading a group's QR code to join it.
   | { name: "scan" }
   // And the invitation it read, to join, or one tapped in a chat; closing
@@ -412,6 +413,13 @@ export function DesignGroup({
                 )
           }
           isGroup={page.chatId === groupChat}
+          onTitle={
+            page.chatId === groupChat
+              ? () => {
+                  setPage({ from: page.chatId, name: "settings" });
+                }
+              : undefined
+          }
           title={
             page.chatId === groupChat
               ? group.name
@@ -511,7 +519,11 @@ export function DesignGroup({
               }}
               onMember={onMember}
               onBack={() => {
-                setPage({ name: "hub" });
+                setPage(
+                  page.from
+                    ? { chatId: page.from, name: "chat" }
+                    : { name: "hub" }
+                );
               }}
               onChange={(mine) => {
                 setGroups(
