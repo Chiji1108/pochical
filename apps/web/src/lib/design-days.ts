@@ -219,7 +219,7 @@ export function plannedShifts(
   known: ReadonlySet<Shift>,
   through: Date
 ): Record<string, Shift> {
-  const ordered = [...rules].sort(
+  const ordered = rules.toSorted(
     (a, b) => a.start.getTime() - b.start.getTime()
   );
   const planned: Record<string, Shift> = {};
