@@ -691,6 +691,17 @@ export const states: State[] = [
     },
   },
   {
+    // A poll on days, in the ward cohort's chat.
+    name: "group/chat-poll",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^3階東病棟/u);
+      await tap(page, /^全体チャット/u);
+      await page.getByText("日にちの投票").first().waitFor();
+    },
+  },
+  {
     name: "group/chat-one",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {

@@ -3,6 +3,7 @@ import {
   Bell,
   BellOff,
   CalendarDays,
+  CalendarCheck,
   CalendarPlus,
   ChevronDown,
   ChevronRight,
@@ -67,6 +68,7 @@ import type {
   LinkPreview,
   Member,
   Message,
+  Poll,
   Reaction,
 } from "./design-group-data";
 import {
@@ -85,6 +87,7 @@ import { DaySheet } from "./design-group-shifts";
 import { ReportSheet } from "./design-report";
 import {
   ConfirmDialog,
+  DecideHeading,
   PhoneContext,
   PhotoViewer,
   Sheet,
@@ -92,6 +95,8 @@ import {
 import { ToastContext } from "./design-toast";
 import {
   BackButton,
+  ChoiceList,
+  ChoiceRow,
   IconButton,
   IconMenu,
   LimitedTextArea,
@@ -150,7 +155,7 @@ function lastLine(
     return blockedLine;
   }
   let text = summaryOf(last, nameIn(members, yours));
-  if (last.days) {
+  if (last.days || (last.poll && !last.poll.decided)) {
     text = `${text}を共有しました`;
   } else if (last.photo) {
     text = "写真を送りました";
@@ -1202,6 +1207,49 @@ export function ChatPage({
       toast(pinned ? "ピン留めしました" : "ピン留めを外しました");
     }
   };
+  // Your 行ける on a day of a poll, or taking it back.
+  const vote = (id: string, key: string) => {
+    onChange(
+      chat.messages.map((message) => {
+        if (message.id !== id || !message.poll) {
+          return message;
+        }
+        const voters = message.poll.votes[key] ?? [];
+        const next = voters.includes("me")
+          ? voters.filter((voter) => voter !== "me")
+          : [...voters, "me"];
+        return {
+          ...message,
+          poll: {
+            ...message.poll,
+            votes: { ...message.poll.votes, [key]: next },
+          },
+        };
+      })
+    );
+  };
+  // The poll being settled by its writer, and settling it: the voting
+  // ends and the poll is pinned over the chat, where the day stays found.
+  const [deciding, setDeciding] = useState<string>();
+  const decide = (id: string, key: string) => {
+    const order = Math.max(0, ...pins.map((line) => line.pinned ?? 0)) + 1;
+    onChange(
+      chat.messages.map((message) =>
+        message.id === id && message.poll
+          ? {
+              ...message,
+              pinned: order,
+              poll: { ...message.poll, decided: key },
+            }
+          : message
+      )
+    );
+    setDeciding(undefined);
+    const day = byId(id)?.poll?.days.find((date) => dateKey(date) === key);
+    if (day) {
+      toast(`${formatDay(day)}に決めました`);
+    }
+  };
   const unsend = (id: string) => {
     onChange(
       chat.messages.map((message) =>
@@ -1460,7 +1508,23 @@ export function ChatPage({
                   </button>
                 </MessageActions>
               )}
-              {!message.photo && !message.days && (
+              {message.poll && (
+                <PollCard
+                  actions={actionsOf(message)}
+                  label={`${member?.name ?? ""}の日にちの投票`}
+                  members={people}
+                  mine={mine}
+                  onDecide={() => {
+                    setDeciding(message.id);
+                  }}
+                  onVote={(key) => {
+                    vote(message.id, key);
+                  }}
+                  poll={message.poll}
+                  writerOf={writerOf}
+                />
+              )}
+              {!message.photo && !message.days && !message.poll && (
                 // Like the app: the quoted line sits inside the bubble,
                 // above a thin rule, and jumps to the original.
                 <span
@@ -2065,11 +2129,23 @@ export function ChatPage({
       <DaySheet
         members={people}
         onOpenChange={setSharing}
-        onShare={(days) => {
-          post({ days });
+        onShare={(days, poll) => {
+          post(poll ? { poll: { days, votes: {} } } : { days });
           setSharing(false);
         }}
         open={sharing}
+        pollable={isGroup}
+      />
+      <DecidePollSheet
+        onClose={() => {
+          setDeciding(undefined);
+        }}
+        onDecide={(key) => {
+          if (deciding) {
+            decide(deciding, key);
+          }
+        }}
+        poll={byId(deciding)?.poll}
       />
     </Screen>
   );
@@ -2903,6 +2979,303 @@ function MessageActions({
   );
 }
 
+const pollCard = {
+  card: css({
+    bg: "background.card",
+    border: "1px solid token(colors.border.default)",
+    borderRadius: "lg",
+    display: "flex",
+    flexDirection: "column",
+    maxWidth: "100%",
+    minWidth: "min(264px, 100%)",
+    overflow: "hidden",
+  }),
+  // The card's head opens its reactions and menu, as a shared day's card
+  // does; the rows below are for voting.
+  head: css({
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    borderBottom: "1px solid token(colors.separator)",
+    color: "text.primary",
+    display: "flex",
+    gap: "8px",
+    padding: "12px",
+    textAlign: "left",
+    userSelect: "none",
+    width: "100%",
+  }),
+  headIcon: css({ color: "accent.default", flexShrink: 0 }),
+  headWords: css({ display: "flex", flexDirection: "column", gap: "2px" }),
+  title: css({ fontWeight: 600, textStyle: "subheadline" }),
+  sub: css({ color: "text.tertiary", textStyle: "caption2" }),
+  rows: css({ listStyle: "none", margin: 0, padding: "4px 0" }),
+  row: cva({
+    base: {
+      alignItems: "center",
+      display: "flex",
+      gap: "8px",
+      minHeight: "48px",
+      padding: "4px 12px",
+    },
+    variants: {
+      decided: { true: { bg: "accent.container" } },
+      // Days not chosen, once one is.
+      passed: { true: { opacity: 0.45 } },
+    },
+  }),
+  date: css({
+    display: "flex",
+    flexDirection: "column",
+    flexShrink: 0,
+    fontSize: "13px",
+    fontWeight: 600,
+    width: "60px",
+  }),
+  together: css({ color: "accent.default", fontSize: "10px", fontWeight: 600 }),
+  faces: css({
+    "& > *": { boxShadow: "0 0 0 1.5px token(colors.background.card)" },
+    "& > * + *": { marginInlineStart: "-4px" },
+    alignItems: "center",
+    display: "flex",
+    flex: 1,
+    minWidth: 0,
+  }),
+  count: css({
+    color: "text.tertiary",
+    paddingInlineStart: "8px",
+    textStyle: "caption",
+  }),
+  vote: cva({
+    base: {
+      alignItems: "center",
+      bg: "background.card",
+      border: "1px solid token(colors.border.strong)",
+      borderRadius: "full",
+      color: "text.secondary",
+      display: "inline-flex",
+      flexShrink: 0,
+      fontWeight: 600,
+      gap: "4px",
+      height: "32px",
+      padding: "0 12px",
+      textStyle: "footnote",
+    },
+    variants: {
+      on: {
+        true: {
+          bg: "accent.fill",
+          borderColor: "accent.fill",
+          color: "accent.onFill",
+        },
+      },
+    },
+  }),
+  decidedMark: css({
+    alignItems: "center",
+    color: "accent.default",
+    display: "inline-flex",
+    flexShrink: 0,
+    fontWeight: 600,
+    gap: "4px",
+    textStyle: "footnote",
+  }),
+  foot: css({
+    bg: "transparent",
+    border: 0,
+    borderTop: "1px solid token(colors.separator)",
+    color: "accent.default",
+    fontWeight: 600,
+    padding: "12px",
+    textStyle: "subheadline",
+  }),
+};
+
+// How many voters' faces a day's row shows before +N.
+const maxVoteFaces = 3;
+
+// Days put to the vote, as LINE's 日程調整 in a card: each day with
+// みんな休み when the shifts allow it, who can come, and your 行ける. Its
+// writer settles it with 日にちを決める; the day stays marked, the rest
+// fade, and the poll is pinned over the chat.
+function PollCard({
+  poll,
+  members,
+  mine,
+  label,
+  actions,
+  writerOf,
+  onVote,
+  onDecide,
+}: {
+  poll: Poll;
+  members: Member[];
+  mine: boolean;
+  // Whose poll it is, for a screen reader.
+  label: string;
+  actions: Omit<Parameters<typeof MessageActions>[0], "children">;
+  writerOf: (id?: string) => Member | undefined;
+  onVote: (key: string) => void;
+  onDecide: () => void;
+}) {
+  const weekTools = useWeek();
+  const voters = new Set(Object.values(poll.votes).flat());
+  const decided = poll.days.find((day) => dateKey(day) === poll.decided);
+  return (
+    <span className={pollCard.card} data-part="bubble">
+      <MessageActions {...actions}>
+        <button
+          aria-label={`${label}。押すとリアクションと返信`}
+          className={pollCard.head}
+          type="button"
+        >
+          <CalendarCheck
+            aria-hidden="true"
+            className={pollCard.headIcon}
+            size={20}
+          />
+          <span className={pollCard.headWords}>
+            <span className={pollCard.title}>日にちの投票</span>
+            <small className={pollCard.sub}>
+              {decided
+                ? `${formatDay(decided)}に決定`
+                : `${voters.size}人が投票`}
+            </small>
+          </span>
+        </button>
+      </MessageActions>
+      <ul className={pollCard.rows}>
+        {poll.days.map((day) => {
+          const key = dateKey(day);
+          const people = (poll.votes[key] ?? []).flatMap(
+            (id) => writerOf(id) ?? []
+          );
+          const yours = poll.votes[key]?.includes("me") ?? false;
+          const isDecided = key === poll.decided;
+          const faces =
+            people.length > maxVoteFaces
+              ? people.slice(0, maxVoteFaces - 1)
+              : people;
+          return (
+            <li
+              className={pollCard.row({
+                decided: isDecided,
+                passed: decided !== undefined && !isDecided,
+              })}
+              key={key}
+            >
+              <span className={pollCard.date}>
+                <span className={toneColor[weekTools.dateTone(day)]}>
+                  {day.getMonth() + 1}/{day.getDate()}
+                  <small className={smallWeekday}>
+                    {weekdayLabels[day.getDay()]}
+                  </small>
+                </span>
+                {everyoneOff(members, day) && (
+                  <span className={pollCard.together}>みんな休み</span>
+                )}
+              </span>
+              <span
+                aria-label={`行ける：${people.map((person) => person.name).join("、") || "まだいません"}`}
+                className={pollCard.faces}
+                role="img"
+              >
+                {faces.map((person) => (
+                  <Avatar key={person.id} member={person} size={22} />
+                ))}
+                {people.length > 0 && (
+                  <small className={pollCard.count}>
+                    {people.length > faces.length
+                      ? `+${people.length - faces.length}`
+                      : `${people.length}人`}
+                  </small>
+                )}
+              </span>
+              {isDecided && (
+                <span className={pollCard.decidedMark}>
+                  <Check aria-hidden="true" size={16} />
+                  決定
+                </span>
+              )}
+              {decided === undefined && (
+                <button
+                  aria-label={`${formatDay(day)}に行ける`}
+                  aria-pressed={yours}
+                  className={pollCard.vote({ on: yours })}
+                  onClick={() => {
+                    onVote(key);
+                  }}
+                  type="button"
+                >
+                  {yours && <Check aria-hidden="true" size={14} />}
+                  行ける
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {mine && decided === undefined && (
+        <button className={pollCard.foot} onClick={onDecide} type="button">
+          日にちを決める
+        </button>
+      )}
+    </span>
+  );
+}
+
+// Its writer picking the day a poll settles on, with how many can come.
+function DecidePollSheet({
+  poll,
+  onClose,
+  onDecide,
+}: {
+  poll?: Poll;
+  onClose: () => void;
+  onDecide: (key: string) => void;
+}) {
+  const [picked, setPicked] = useState<string | null>(null);
+  const close = () => {
+    setPicked(null);
+    onClose();
+  };
+  return (
+    <Sheet
+      label="日にちを決める"
+      onOpenChange={(open) => {
+        if (!open) {
+          close();
+        }
+      }}
+      open={poll !== undefined}
+    >
+      <DecideHeading
+        action="決める"
+        disabled={picked === null}
+        onAction={() => {
+          if (picked) {
+            onDecide(picked);
+            setPicked(null);
+          }
+        }}
+        onCancel={close}
+        title="日にちを決める"
+      />
+      {poll && (
+        <ChoiceList label="決める日" onValueChange={setPicked} value={picked}>
+          {poll.days.map((day) => (
+            <ChoiceRow
+              key={dateKey(day)}
+              label={`${formatDay(day)}・${poll.votes[dateKey(day)]?.length ?? 0}人が行ける`}
+              value={dateKey(day)}
+            />
+          ))}
+        </ChoiceList>
+      )}
+    </Sheet>
+  );
+}
+
 const pinBar = {
   // Under the header, the latest pinned line, as LINE shows its
   // announcement: the pin, whose words, and a tap jumps to it.
@@ -3053,9 +3426,20 @@ function summaryOf(message: Message, nameOf: (id: string) => string) {
   if (message.photo) {
     return "📷 写真";
   }
+  if (message.poll) {
+    return pollSummary(message.poll);
+  }
   return message.days
     ? daysSummary(message.days)
     : plainText(message.text ?? "", nameOf);
+}
+
+// A poll in a line of words: what was settled, or that it is open.
+function pollSummary(poll: Poll) {
+  const decided = poll.days.find((day) => dateKey(day) === poll.decided);
+  return decided
+    ? `📅 ${formatDay(decided)}に決定`
+    : `📅 日にちの投票：${daysSummary(poll.days).replace("📅 ", "")}`;
 }
 
 function daysSummary(days: Date[]) {
