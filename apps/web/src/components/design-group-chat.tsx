@@ -1014,8 +1014,8 @@ export function ChatPage({
   group: Group;
   // Whether photos' uploads go through or fail.
   photoSend?: PhotoSend;
-  // Opens on the last day shared rather than the latest line, as the top
-  // page shows it.
+  // Opens on the last days shared or put to the vote rather than the
+  // latest line, as the top page shows it.
   sharedFirst?: boolean;
   // How many lines were unread as it opened: it opens on the first of
   // them, under ここから新着.
@@ -1123,7 +1123,7 @@ export function ChatPage({
   const lineCount = chat.messages.length;
   const [sharedId] = useState(() =>
     sharedFirst
-      ? chat.messages.findLast((message) => message.days)?.id
+      ? chat.messages.findLast((message) => message.days || message.poll)?.id
       : undefined
   );
   // The first line unread as it opened: the others' lines, counted back
