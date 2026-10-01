@@ -40,36 +40,26 @@ function Invite() {
   };
   return (
     <main className="invite-page" id="main">
-      <img
-        alt="ポチカル"
-        className="invite-logo"
-        height={80}
-        src="/icon.png"
-        width={80}
-      />
       {invite.status === "valid" ? (
         <>
-          <p className="eyebrow">YOU'RE INVITED</p>
+          {/* The group is what the page is about, so its mark leads, in a
+              frame like the app's join screen; the header says ポチカル. */}
           {invite.groupEmoji === "" ? null : (
-            <p className="group-emoji">{invite.groupEmoji}</p>
+            <span aria-hidden="true" className="invite-mark">
+              {invite.groupEmoji}
+            </span>
           )}
+          <p className="eyebrow">YOU'RE INVITED</p>
           <h1>{invite.groupName}</h1>
-          <p>
-            グループへの招待が届いています。
-            <br />
-            アプリを開いて、シフトを共有しましょう。
-          </p>
+          {invite.memberCount > 0 && (
+            <p className="invite-members">メンバー {invite.memberCount}人</p>
+          )}
           <a
             className="button"
             href={`pochical://invite/${encodeURIComponent(inviteCode)}`}
           >
             アプリで開く <ArrowUpRight aria-hidden="true" size={18} />
           </a>
-          <p className="small-note">
-            参加はアプリで表示名を確認してから。
-            <br />
-            このページを開くだけでは参加しません。
-          </p>
         </>
       ) : (
         <>

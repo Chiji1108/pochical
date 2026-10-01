@@ -341,24 +341,27 @@
     margin: auto;
     text-align: center;
   }
-  .invite-logo {
-    margin: 0 auto 38px;
+  .invite-mark {
+    display: grid;
+    place-items: center;
+    width: 76px;
+    height: 76px;
+    margin: 0 auto 28px;
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
+    font-size: 40px;
+    line-height: 1;
+    background: var(--soft-green);
     border-radius: 22px;
-    box-shadow: 0 6px 24px #30332f0d;
   }
   .invite-page h1 {
-    margin: 17px 0;
+    margin: 12px 0 4px;
     font-size: 30px;
     line-height: 1.6;
   }
-  .invite-page > p:not(.eyebrow, .group-emoji) {
+  .invite-page > p:not(.eyebrow) {
     font-size: 13px;
     line-height: 2;
     color: var(--muted);
-  }
-  .invite-page .group-emoji {
-    margin-top: 25px;
-    font-size: 42px;
   }
   .button {
     display: inline-flex;
