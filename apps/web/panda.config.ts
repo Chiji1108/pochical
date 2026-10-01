@@ -90,15 +90,6 @@ export default defineConfig({
           "0%, 40%": { boxShadow: "0 0 0 3px var(--accent-border)" },
           "100%": { boxShadow: "0 0 0 0 transparent" },
         },
-        // The top page's ポチッと。, pressed once like a button.
-        press: {
-          "0%": { animationTimingFunction: "ease-in", transform: "none" },
-          "100%": { transform: "none" },
-          "30%": {
-            animationTimingFunction: "cubic-bezier(0.34, 1.56, 0.64, 1)",
-            transform: "translateY(3px) scale(0.92)",
-          },
-        },
         popIn: {
           from: { opacity: 0, transform: "scale(1.08)" },
           to: { opacity: 1, transform: "scale(1)" },
