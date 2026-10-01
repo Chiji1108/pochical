@@ -77,3 +77,32 @@ export const call = async (
     },
     method: "POST",
   });
+
+// The limiters (wrangler.jsonc's `ratelimits`) count in windows of `period`
+// seconds, and miniflare lines its windows up with the clock: a run of
+// requests that crosses into the next minute is counted in two windows and
+// may never reach the limit.
+const LIMIT_PERIOD_MS = 60_000;
+const LIMIT_ROUNDS = 3;
+
+/**
+ * Runs `run` until one round of it falls inside a single limiter window, and
+ * returns that round's result. A round that crossed a window's end counts for
+ * nothing, so the next round starts over; `run` is given the round's number
+ * to make fresh keys from, untouched by the rounds before.
+ */
+export const inOneLimitWindow = async <T>(
+  run: (round: number) => Promise<T>
+): Promise<T> => {
+  for (let round = 0; round < LIMIT_ROUNDS; round += 1) {
+    // Before the first request is sent and after the last answer arrives,
+    // so every count the limiter made falls between the two.
+    const window = Math.floor(Date.now() / LIMIT_PERIOD_MS);
+    // oxlint-disable-next-line no-await-in-loop -- a round at a time
+    const result = await run(round);
+    if (Math.floor(Date.now() / LIMIT_PERIOD_MS) === window) {
+      return result;
+    }
+  }
+  throw new Error(`No round of ${LIMIT_ROUNDS} fell inside one limit window`);
+};

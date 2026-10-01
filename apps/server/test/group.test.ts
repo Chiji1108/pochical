@@ -2,7 +2,12 @@ import { GROUP_MAX_MEMBERS } from "@pochical/design/limits";
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
-import { call, openSocket, signInAnonymously } from "./helpers";
+import {
+  call,
+  inOneLimitWindow,
+  openSocket,
+  signInAnonymously,
+} from "./helpers";
 
 type Created = { groupId: string; inviteCode: string };
 
@@ -216,17 +221,20 @@ describe("GroupService", () => {
   });
 
   it("holds back one user making many groups at once", async () => {
-    const maker = await signInAnonymously();
-    const statuses: number[] = [];
-    for (let attempt = 0; attempt < 6; attempt += 1) {
-      // oxlint-disable-next-line no-await-in-loop -- counted in order
-      const response = await call(
-        "GroupService/CreateGroup",
-        { displayName: "さくら", emoji: "🍉", name: `グループ${attempt}` },
-        maker
-      );
-      statuses.push(response.status);
-    }
+    const statuses = await inOneLimitWindow(async () => {
+      const maker = await signInAnonymously();
+      const counted: number[] = [];
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        // oxlint-disable-next-line no-await-in-loop -- counted in order
+        const response = await call(
+          "GroupService/CreateGroup",
+          { displayName: "さくら", emoji: "🍉", name: `グループ${attempt}` },
+          maker
+        );
+        counted.push(response.status);
+      }
+      return counted;
+    });
     expect(statuses).toStrictEqual([200, 200, 200, 200, 200, 429]);
   });
 });

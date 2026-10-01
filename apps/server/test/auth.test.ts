@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { session } from "../src/db/auth-schema";
 import {
+  inOneLimitWindow,
   memberOf,
   openSocket,
   ORIGIN,
@@ -135,12 +136,16 @@ const signInFrom = async (address: string): Promise<Response> =>
 
 describe("rate limits", () => {
   it("holds back anonymous sign-ins from one address", async () => {
-    const statuses: number[] = [];
-    for (let attempt = 0; attempt < 21; attempt += 1) {
-      // oxlint-disable-next-line no-await-in-loop -- counted in order
-      const { status } = await signInFrom("203.0.113.2");
-      statuses.push(status);
-    }
+    const statuses = await inOneLimitWindow(async (round) => {
+      const address = `198.51.100.${round + 1}`;
+      const counted: number[] = [];
+      for (let attempt = 0; attempt < 21; attempt += 1) {
+        // oxlint-disable-next-line no-await-in-loop -- counted in order
+        const { status } = await signInFrom(address);
+        counted.push(status);
+      }
+      return counted;
+    });
     expect(statuses).toStrictEqual([
       ...Array.from({ length: 20 }, () => 200),
       429,
