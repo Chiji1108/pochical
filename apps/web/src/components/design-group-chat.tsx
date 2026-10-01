@@ -1591,8 +1591,9 @@ export function ChatPage({
                       onClickCapture={(event) => {
                         // The click after a link's long press does nothing
                         // more: its menu is already open.
+                        // (The flag stays up until the next press, so the
+                        // message's menu, deciding after this, stays shut.)
                         if (linkPress.current.fired) {
-                          linkPress.current.fired = false;
                           event.preventDefault();
                           return;
                         }
