@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import {
   animate,
+  frame,
   motion,
   useMotionValue,
   useMotionValueEvent,
@@ -2810,10 +2811,18 @@ export function Pager({
   const containerRef = useRef<HTMLDivElement>(null);
   const middleRef = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
-  useMotionValueEvent(x, "change", (at) => {
+  const follow = () => {
     const pageWidth = viewportRef.current?.offsetWidth ?? 0;
-    const share = pageWidth > 0 ? -at / (pageWidth + gap) : 0;
+    const share = pageWidth > 0 ? -x.get() / (pageWidth + gap) : 0;
     progress?.set(Math.min(Math.max(share, -1), 1));
+  };
+  // Going back to the middle as the new page comes, which `progress` hears
+  // later.
+  const recentering = useRef(false);
+  useMotionValueEvent(x, "change", () => {
+    if (!recentering.current) {
+      follow();
+    }
   });
   const reduceMotion = useReducedMotion() ?? false;
   // A page's width, only to keep a drag within the pages beside; the
@@ -2869,13 +2878,21 @@ export function Pager({
   }, []);
   // Before the new page paints, so the jump back to the middle is unseen;
   // also when the page changes otherwise, as by the arrows, mid-swipe.
+  // What follows `progress` hears of it in the frame that draws the jump,
+  // once the rest of this render's layout effects have run: Motion's
+  // values take their sources up again in their own, dropping an update
+  // made before, so what comes after the pager, as the month's summary
+  // under it, kept showing the page beside.
   const shownPage = useRef(page);
   useLayoutEffect(() => {
     if (shownPage.current !== page) {
       shownPage.current = page;
+      recentering.current = true;
       x.jump(0);
+      recentering.current = false;
+      frame.preRender(follow);
     }
-  }, [page, x]);
+  });
   // Taken from the finger, as by a call or the system, it goes back rather
   // than turning.
   const land = (velocity: number, taken: boolean) => {
