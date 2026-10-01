@@ -27,6 +27,7 @@ public  final class ClientFrame extends
     HELLO(1),
     PING(2),
     DAY_EDITS(3),
+    PATTERN_EDITS(4),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -45,6 +46,7 @@ public  final class ClientFrame extends
         case 1: return HELLO;
         case 2: return PING;
         case 3: return DAY_EDITS;
+        case 4: return PATTERN_EDITS;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -231,6 +233,76 @@ public  final class ClientFrame extends
    */
   private void clearDayEdits() {
     if (kindCase_ == 3) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int PATTERN_EDITS_FIELD_NUMBER = 4;
+  /**
+   * <pre>
+   * The owner's pattern edits, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PatternEdits pattern_edits = 4 [json_name = "patternEdits"];</code>
+   */
+  @java.lang.Override
+  public boolean hasPatternEdits() {
+    return kindCase_ == 4;
+  }
+  /**
+   * <pre>
+   * The owner's pattern edits, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PatternEdits pattern_edits = 4 [json_name = "patternEdits"];</code>
+   */
+  @java.lang.Override
+  public tech.chiji.pochical.v1.PatternEdits getPatternEdits() {
+    if (kindCase_ == 4) {
+       return (tech.chiji.pochical.v1.PatternEdits) kind_;
+    }
+    return tech.chiji.pochical.v1.PatternEdits.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * The owner's pattern edits, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PatternEdits pattern_edits = 4 [json_name = "patternEdits"];</code>
+   */
+  private void setPatternEdits(tech.chiji.pochical.v1.PatternEdits value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 4;
+  }
+  /**
+   * <pre>
+   * The owner's pattern edits, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PatternEdits pattern_edits = 4 [json_name = "patternEdits"];</code>
+   */
+  private void mergePatternEdits(tech.chiji.pochical.v1.PatternEdits value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 4 &&
+        kind_ != tech.chiji.pochical.v1.PatternEdits.getDefaultInstance()) {
+      kind_ = tech.chiji.pochical.v1.PatternEdits.newBuilder((tech.chiji.pochical.v1.PatternEdits) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 4;
+  }
+  /**
+   * <pre>
+   * The owner's pattern edits, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PatternEdits pattern_edits = 4 [json_name = "patternEdits"];</code>
+   */
+  private void clearPatternEdits() {
+    if (kindCase_ == 4) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -517,6 +589,78 @@ public  final class ClientFrame extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The owner's pattern edits, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PatternEdits pattern_edits = 4 [json_name = "patternEdits"];</code>
+     */
+    @java.lang.Override
+    public boolean hasPatternEdits() {
+      return instance.hasPatternEdits();
+    }
+    /**
+     * <pre>
+     * The owner's pattern edits, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PatternEdits pattern_edits = 4 [json_name = "patternEdits"];</code>
+     */
+    @java.lang.Override
+    public tech.chiji.pochical.v1.PatternEdits getPatternEdits() {
+      return instance.getPatternEdits();
+    }
+    /**
+     * <pre>
+     * The owner's pattern edits, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PatternEdits pattern_edits = 4 [json_name = "patternEdits"];</code>
+     */
+    public Builder setPatternEdits(tech.chiji.pochical.v1.PatternEdits value) {
+      copyOnWrite();
+      instance.setPatternEdits(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The owner's pattern edits, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PatternEdits pattern_edits = 4 [json_name = "patternEdits"];</code>
+     */
+    public Builder setPatternEdits(
+        tech.chiji.pochical.v1.PatternEdits.Builder builderForValue) {
+      copyOnWrite();
+      instance.setPatternEdits(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The owner's pattern edits, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PatternEdits pattern_edits = 4 [json_name = "patternEdits"];</code>
+     */
+    public Builder mergePatternEdits(tech.chiji.pochical.v1.PatternEdits value) {
+      copyOnWrite();
+      instance.mergePatternEdits(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The owner's pattern edits, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PatternEdits pattern_edits = 4 [json_name = "patternEdits"];</code>
+     */
+    public Builder clearPatternEdits() {
+      copyOnWrite();
+      instance.clearPatternEdits();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ClientFrame)
   }
   @java.lang.Override
@@ -538,10 +682,11 @@ public  final class ClientFrame extends
             tech.chiji.pochical.v1.Hello.class,
             tech.chiji.pochical.v1.Ping.class,
             tech.chiji.pochical.v1.DayEdits.class,
+            tech.chiji.pochical.v1.PatternEdits.class,
           };
           java.lang.String info =
-              "\u0000\u0003\u0001\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001<\u0000\u0002<" +
-              "\u0000\u0003<\u0000";
+              "\u0000\u0004\u0001\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u0003<\u0000\u0004<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

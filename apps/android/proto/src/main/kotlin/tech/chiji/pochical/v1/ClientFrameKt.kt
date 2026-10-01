@@ -116,6 +116,42 @@ public object ClientFrameKt {
     public fun hasDayEdits(): kotlin.Boolean {
       return _builder.hasDayEdits()
     }
+
+    /**
+     * ```
+     * The owner's pattern edits, from the same outbox; User DO socket only.
+     * ```
+     *
+     * `.pochical.v1.PatternEdits pattern_edits = 4 [json_name = "patternEdits"];`
+     */
+    public var patternEdits: tech.chiji.pochical.v1.PatternEdits
+      @kotlin.jvm.JvmName("getPatternEdits")
+        get() = _builder.patternEdits
+      @kotlin.jvm.JvmName("setPatternEdits")
+        set(value) {
+        _builder.patternEdits = value
+      }
+    /**
+     * ```
+     * The owner's pattern edits, from the same outbox; User DO socket only.
+     * ```
+     *
+     * `.pochical.v1.PatternEdits pattern_edits = 4 [json_name = "patternEdits"];`
+     */
+    public fun clearPatternEdits() {
+      _builder.clearPatternEdits()
+    }
+    /**
+     * ```
+     * The owner's pattern edits, from the same outbox; User DO socket only.
+     * ```
+     *
+     * `.pochical.v1.PatternEdits pattern_edits = 4 [json_name = "patternEdits"];`
+     * @return Whether the patternEdits field is set.
+     */
+    public fun hasPatternEdits(): kotlin.Boolean {
+      return _builder.hasPatternEdits()
+    }
     public val kindCase: tech.chiji.pochical.v1.ClientFrame.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -136,4 +172,7 @@ public val tech.chiji.pochical.v1.ClientFrameOrBuilder.pingOrNull: tech.chiji.po
 
 public val tech.chiji.pochical.v1.ClientFrameOrBuilder.dayEditsOrNull: tech.chiji.pochical.v1.DayEdits?
   get() = if (hasDayEdits()) getDayEdits() else null
+
+public val tech.chiji.pochical.v1.ClientFrameOrBuilder.patternEditsOrNull: tech.chiji.pochical.v1.PatternEdits?
+  get() = if (hasPatternEdits()) getPatternEdits() else null
 

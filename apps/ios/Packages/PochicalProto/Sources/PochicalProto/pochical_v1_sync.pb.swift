@@ -107,6 +107,15 @@ public nonisolated struct Pochical_V1_ClientFrame: Sendable {
     set {kind = .dayEdits(newValue)}
   }
 
+  /// The owner's pattern edits, from the same outbox; User DO socket only.
+  public var patternEdits: Pochical_V1_PatternEdits {
+    get {
+      if case .patternEdits(let v)? = kind {return v}
+      return Pochical_V1_PatternEdits()
+    }
+    set {kind = .patternEdits(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Kind: Equatable, Sendable {
@@ -114,6 +123,8 @@ public nonisolated struct Pochical_V1_ClientFrame: Sendable {
     case ping(Pochical_V1_Ping)
     /// The owner's own day edits, from their outbox; User DO socket only.
     case dayEdits(Pochical_V1_DayEdits)
+    /// The owner's pattern edits, from the same outbox; User DO socket only.
+    case patternEdits(Pochical_V1_PatternEdits)
 
   }
 
@@ -162,8 +173,8 @@ public nonisolated struct Pochical_V1_ServerFrame: Sendable {
     set {kind = .changes(newValue)}
   }
 
-  /// The edits of a DayEdits the server has taken; the client deletes
-  /// them from its outbox.
+  /// The edits of a DayEdits or PatternEdits the server has taken; the
+  /// client deletes them from its outbox.
   public var acked: Pochical_V1_Acked {
     get {
       if case .acked(let v)? = kind {return v}
@@ -191,8 +202,8 @@ public nonisolated struct Pochical_V1_ServerFrame: Sendable {
     /// Changes to the DO's data in cursor order, after Welcome and as they
     /// happen.
     case changes(Pochical_V1_Changes)
-    /// The edits of a DayEdits the server has taken; the client deletes
-    /// them from its outbox.
+    /// The edits of a DayEdits or PatternEdits the server has taken; the
+    /// client deletes them from its outbox.
     case acked(Pochical_V1_Acked)
     /// The client's cursor is ahead of the server's: drop this DO's cache.
     /// A Changes with everything the DO holds follows.
@@ -450,10 +461,200 @@ public nonisolated struct Pochical_V1_Change: Sendable {
     set {kind = .day(newValue)}
   }
 
+  public var pattern: Pochical_V1_PatternValue {
+    get {
+      if case .pattern(let v)? = kind {return v}
+      return Pochical_V1_PatternValue()
+    }
+    set {kind = .pattern(newValue)}
+  }
+
+  public var patternOrder: Pochical_V1_PatternOrder {
+    get {
+      if case .patternOrder(let v)? = kind {return v}
+      return Pochical_V1_PatternOrder()
+    }
+    set {kind = .patternOrder(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Kind: Equatable, Sendable {
     case day(Pochical_V1_DayValue)
+    case pattern(Pochical_V1_PatternValue)
+    case patternOrder(Pochical_V1_PatternOrder)
+
+  }
+
+  public init() {}
+}
+
+/// A shift pattern, as spec/shift-patterns.md has it.
+public nonisolated struct Pochical_V1_Pattern: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// shiftName characters at most (design/src/limits.ts).
+  public var name: String = String()
+
+  /// The mark in each look: an emoji, a letter (shiftMark characters) and
+  /// an icon by the apps' own name for it.
+  public var emoji: String = String()
+
+  public var symbol: String = String()
+
+  public var icon: String = String()
+
+  /// The mark's color slot, an index into the mark palette.
+  public var color: UInt32 = 0
+
+  /// The standard time, "HH:MM", both or neither; none is all-day. An end
+  /// at or before the start runs past midnight.
+  public var start: String {
+    get {_start ?? String()}
+    set {_start = newValue}
+  }
+  /// Returns true if `start` has been explicitly set.
+  public var hasStart: Bool {self._start != nil}
+  /// Clears the value of `start`. Subsequent reads from it will return its default value.
+  public mutating func clearStart() {self._start = nil}
+
+  public var end: String {
+    get {_end ?? String()}
+    set {_end = newValue}
+  }
+  /// Returns true if `end` has been explicitly set.
+  public var hasEnd: Bool {self._end != nil}
+  /// Clears the value of `end`. Subsequent reads from it will return its default value.
+  public mutating func clearEnd() {self._end = nil}
+
+  /// Counted among the month's days off, and marked as one.
+  public var countsAsOff: Bool = false
+
+  /// Another pattern's id, entered on the following day too.
+  public var nextDay: String {
+    get {_nextDay ?? String()}
+    set {_nextDay = newValue}
+  }
+  /// Returns true if `nextDay` has been explicitly set.
+  public var hasNextDay: Bool {self._nextDay != nil}
+  /// Clears the value of `nextDay`. Subsequent reads from it will return its default value.
+  public mutating func clearNextDay() {self._nextDay = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _start: String? = nil
+  fileprivate var _end: String? = nil
+  fileprivate var _nextDay: String? = nil
+}
+
+/// One of the owner's patterns as a device set it, whole: each is one
+/// last-writer-wins value.
+public nonisolated struct Pochical_V1_PatternValue: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var id: String = String()
+
+  /// Unset: the pattern was deleted.
+  public var pattern: Pochical_V1_Pattern {
+    get {_pattern ?? Pochical_V1_Pattern()}
+    set {_pattern = newValue}
+  }
+  /// Returns true if `pattern` has been explicitly set.
+  public var hasPattern: Bool {self._pattern != nil}
+  /// Clears the value of `pattern`. Subsequent reads from it will return its default value.
+  public mutating func clearPattern() {self._pattern = nil}
+
+  public var hlc: Pochical_V1_Hlc {
+    get {_hlc ?? Pochical_V1_Hlc()}
+    set {_hlc = newValue}
+  }
+  /// Returns true if `hlc` has been explicitly set.
+  public var hasHlc: Bool {self._hlc != nil}
+  /// Clears the value of `hlc`. Subsequent reads from it will return its default value.
+  public mutating func clearHlc() {self._hlc = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _pattern: Pochical_V1_Pattern? = nil
+  fileprivate var _hlc: Pochical_V1_Hlc? = nil
+}
+
+/// The order the owner's patterns are shown in, ポチポチ入力's buttons: one
+/// last-writer-wins value.
+public nonisolated struct Pochical_V1_PatternOrder: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var ids: [String] = []
+
+  public var hlc: Pochical_V1_Hlc {
+    get {_hlc ?? Pochical_V1_Hlc()}
+    set {_hlc = newValue}
+  }
+  /// Returns true if `hlc` has been explicitly set.
+  public var hasHlc: Bool {self._hlc != nil}
+  /// Clears the value of `hlc`. Subsequent reads from it will return its default value.
+  public mutating func clearHlc() {self._hlc = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _hlc: Pochical_V1_Hlc? = nil
+}
+
+public nonisolated struct Pochical_V1_PatternEdits: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var edits: [Pochical_V1_PatternEdit] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Pochical_V1_PatternEdit: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Unique per edit, as a DayEdit's.
+  public var opID: String = String()
+
+  public var kind: Pochical_V1_PatternEdit.OneOf_Kind? = nil
+
+  public var pattern: Pochical_V1_PatternValue {
+    get {
+      if case .pattern(let v)? = kind {return v}
+      return Pochical_V1_PatternValue()
+    }
+    set {kind = .pattern(newValue)}
+  }
+
+  public var order: Pochical_V1_PatternOrder {
+    get {
+      if case .order(let v)? = kind {return v}
+      return Pochical_V1_PatternOrder()
+    }
+    set {kind = .order(newValue)}
+  }
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public nonisolated enum OneOf_Kind: Equatable, Sendable {
+    case pattern(Pochical_V1_PatternValue)
+    case order(Pochical_V1_PatternOrder)
 
   }
 
@@ -480,7 +681,7 @@ nonisolated extension Pochical_V1_DayField: SwiftProtobuf._ProtoNameProviding {
 
 nonisolated extension Pochical_V1_ClientFrame: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClientFrame"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}hello\0\u{1}ping\0\u{3}day_edits\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}hello\0\u{1}ping\0\u{3}day_edits\0\u{3}pattern_edits\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -527,6 +728,19 @@ nonisolated extension Pochical_V1_ClientFrame: SwiftProtobuf.Message, SwiftProto
           self.kind = .dayEdits(v)
         }
       }()
+      case 4: try {
+        var v: Pochical_V1_PatternEdits?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .patternEdits(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .patternEdits(v)
+        }
+      }()
       default: break
       }
     }
@@ -549,6 +763,10 @@ nonisolated extension Pochical_V1_ClientFrame: SwiftProtobuf.Message, SwiftProto
     case .dayEdits?: try {
       guard case .dayEdits(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    }()
+    case .patternEdits?: try {
+      guard case .patternEdits(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
     }()
     case nil: break
     }
@@ -1081,7 +1299,7 @@ nonisolated extension Pochical_V1_Changes: SwiftProtobuf.Message, SwiftProtobuf.
 
 nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Change"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cursor\0\u{1}day\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cursor\0\u{1}day\0\u{1}pattern\0\u{3}pattern_order\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1103,6 +1321,32 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
           self.kind = .day(v)
         }
       }()
+      case 3: try {
+        var v: Pochical_V1_PatternValue?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .pattern(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .pattern(v)
+        }
+      }()
+      case 4: try {
+        var v: Pochical_V1_PatternOrder?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .patternOrder(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .patternOrder(v)
+        }
+      }()
       default: break
       }
     }
@@ -1116,14 +1360,285 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
     if self.cursor != 0 {
       try visitor.visitSingularUInt64Field(value: self.cursor, fieldNumber: 1)
     }
-    try { if case .day(let v)? = self.kind {
+    switch self.kind {
+    case .day?: try {
+      guard case .day(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
+    }()
+    case .pattern?: try {
+      guard case .pattern(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    }()
+    case .patternOrder?: try {
+      guard case .patternOrder(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case nil: break
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_Change, rhs: Pochical_V1_Change) -> Bool {
     if lhs.cursor != rhs.cursor {return false}
+    if lhs.kind != rhs.kind {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_Pattern: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Pattern"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}emoji\0\u{1}symbol\0\u{1}icon\0\u{1}color\0\u{1}start\0\u{1}end\0\u{3}counts_as_off\0\u{3}next_day\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.emoji) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.symbol) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.icon) }()
+      case 5: try { try decoder.decodeSingularUInt32Field(value: &self.color) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self._start) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self._end) }()
+      case 8: try { try decoder.decodeSingularBoolField(value: &self.countsAsOff) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self._nextDay) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
+    }
+    if !self.emoji.isEmpty {
+      try visitor.visitSingularStringField(value: self.emoji, fieldNumber: 2)
+    }
+    if !self.symbol.isEmpty {
+      try visitor.visitSingularStringField(value: self.symbol, fieldNumber: 3)
+    }
+    if !self.icon.isEmpty {
+      try visitor.visitSingularStringField(value: self.icon, fieldNumber: 4)
+    }
+    if self.color != 0 {
+      try visitor.visitSingularUInt32Field(value: self.color, fieldNumber: 5)
+    }
+    try { if let v = self._start {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 6)
+    } }()
+    try { if let v = self._end {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 7)
+    } }()
+    if self.countsAsOff != false {
+      try visitor.visitSingularBoolField(value: self.countsAsOff, fieldNumber: 8)
+    }
+    try { if let v = self._nextDay {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 9)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_Pattern, rhs: Pochical_V1_Pattern) -> Bool {
+    if lhs.name != rhs.name {return false}
+    if lhs.emoji != rhs.emoji {return false}
+    if lhs.symbol != rhs.symbol {return false}
+    if lhs.icon != rhs.icon {return false}
+    if lhs.color != rhs.color {return false}
+    if lhs._start != rhs._start {return false}
+    if lhs._end != rhs._end {return false}
+    if lhs.countsAsOff != rhs.countsAsOff {return false}
+    if lhs._nextDay != rhs._nextDay {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_PatternValue: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".PatternValue"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}pattern\0\u{1}hlc\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._pattern) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._hlc) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    }
+    try { if let v = self._pattern {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try { if let v = self._hlc {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_PatternValue, rhs: Pochical_V1_PatternValue) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs._pattern != rhs._pattern {return false}
+    if lhs._hlc != rhs._hlc {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_PatternOrder: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".PatternOrder"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ids\0\u{1}hlc\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedStringField(value: &self.ids) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._hlc) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.ids.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.ids, fieldNumber: 1)
+    }
+    try { if let v = self._hlc {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_PatternOrder, rhs: Pochical_V1_PatternOrder) -> Bool {
+    if lhs.ids != rhs.ids {return false}
+    if lhs._hlc != rhs._hlc {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_PatternEdits: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".PatternEdits"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}edits\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.edits) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.edits.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.edits, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_PatternEdits, rhs: Pochical_V1_PatternEdits) -> Bool {
+    if lhs.edits != rhs.edits {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_PatternEdit: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".PatternEdit"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}op_id\0\u{1}pattern\0\u{1}order\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.opID) }()
+      case 2: try {
+        var v: Pochical_V1_PatternValue?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .pattern(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .pattern(v)
+        }
+      }()
+      case 3: try {
+        var v: Pochical_V1_PatternOrder?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .order(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .order(v)
+        }
+      }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.opID.isEmpty {
+      try visitor.visitSingularStringField(value: self.opID, fieldNumber: 1)
+    }
+    switch self.kind {
+    case .pattern?: try {
+      guard case .pattern(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case .order?: try {
+      guard case .order(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    }()
+    case nil: break
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_PatternEdit, rhs: Pochical_V1_PatternEdit) -> Bool {
+    if lhs.opID != rhs.opID {return false}
     if lhs.kind != rhs.kind {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

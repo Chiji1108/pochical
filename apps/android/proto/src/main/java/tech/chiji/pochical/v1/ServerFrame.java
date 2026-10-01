@@ -300,8 +300,8 @@ public  final class ServerFrame extends
   public static final int ACKED_FIELD_NUMBER = 5;
   /**
    * <pre>
-   * The edits of a DayEdits the server has taken; the client deletes
-   * them from its outbox.
+   * The edits of a DayEdits or PatternEdits the server has taken; the
+   * client deletes them from its outbox.
    * </pre>
    *
    * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -312,8 +312,8 @@ public  final class ServerFrame extends
   }
   /**
    * <pre>
-   * The edits of a DayEdits the server has taken; the client deletes
-   * them from its outbox.
+   * The edits of a DayEdits or PatternEdits the server has taken; the
+   * client deletes them from its outbox.
    * </pre>
    *
    * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -327,8 +327,8 @@ public  final class ServerFrame extends
   }
   /**
    * <pre>
-   * The edits of a DayEdits the server has taken; the client deletes
-   * them from its outbox.
+   * The edits of a DayEdits or PatternEdits the server has taken; the
+   * client deletes them from its outbox.
    * </pre>
    *
    * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -340,8 +340,8 @@ public  final class ServerFrame extends
   }
   /**
    * <pre>
-   * The edits of a DayEdits the server has taken; the client deletes
-   * them from its outbox.
+   * The edits of a DayEdits or PatternEdits the server has taken; the
+   * client deletes them from its outbox.
    * </pre>
    *
    * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -359,8 +359,8 @@ public  final class ServerFrame extends
   }
   /**
    * <pre>
-   * The edits of a DayEdits the server has taken; the client deletes
-   * them from its outbox.
+   * The edits of a DayEdits or PatternEdits the server has taken; the
+   * client deletes them from its outbox.
    * </pre>
    *
    * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -784,8 +784,8 @@ public  final class ServerFrame extends
 
     /**
      * <pre>
-     * The edits of a DayEdits the server has taken; the client deletes
-     * them from its outbox.
+     * The edits of a DayEdits or PatternEdits the server has taken; the
+     * client deletes them from its outbox.
      * </pre>
      *
      * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -796,8 +796,8 @@ public  final class ServerFrame extends
     }
     /**
      * <pre>
-     * The edits of a DayEdits the server has taken; the client deletes
-     * them from its outbox.
+     * The edits of a DayEdits or PatternEdits the server has taken; the
+     * client deletes them from its outbox.
      * </pre>
      *
      * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -808,8 +808,8 @@ public  final class ServerFrame extends
     }
     /**
      * <pre>
-     * The edits of a DayEdits the server has taken; the client deletes
-     * them from its outbox.
+     * The edits of a DayEdits or PatternEdits the server has taken; the
+     * client deletes them from its outbox.
      * </pre>
      *
      * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -821,8 +821,8 @@ public  final class ServerFrame extends
     }
     /**
      * <pre>
-     * The edits of a DayEdits the server has taken; the client deletes
-     * them from its outbox.
+     * The edits of a DayEdits or PatternEdits the server has taken; the
+     * client deletes them from its outbox.
      * </pre>
      *
      * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -835,8 +835,8 @@ public  final class ServerFrame extends
     }
     /**
      * <pre>
-     * The edits of a DayEdits the server has taken; the client deletes
-     * them from its outbox.
+     * The edits of a DayEdits or PatternEdits the server has taken; the
+     * client deletes them from its outbox.
      * </pre>
      *
      * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -848,8 +848,8 @@ public  final class ServerFrame extends
     }
     /**
      * <pre>
-     * The edits of a DayEdits the server has taken; the client deletes
-     * them from its outbox.
+     * The edits of a DayEdits or PatternEdits the server has taken; the
+     * client deletes them from its outbox.
      * </pre>
      *
      * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>

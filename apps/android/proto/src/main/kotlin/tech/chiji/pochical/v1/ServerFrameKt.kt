@@ -146,8 +146,8 @@ public object ServerFrameKt {
 
     /**
      * ```
-     * The edits of a DayEdits the server has taken; the client deletes
-     * them from its outbox.
+     * The edits of a DayEdits or PatternEdits the server has taken; the
+     * client deletes them from its outbox.
      * ```
      *
      * `.pochical.v1.Acked acked = 5 [json_name = "acked"];`
@@ -161,8 +161,8 @@ public object ServerFrameKt {
       }
     /**
      * ```
-     * The edits of a DayEdits the server has taken; the client deletes
-     * them from its outbox.
+     * The edits of a DayEdits or PatternEdits the server has taken; the
+     * client deletes them from its outbox.
      * ```
      *
      * `.pochical.v1.Acked acked = 5 [json_name = "acked"];`
@@ -172,8 +172,8 @@ public object ServerFrameKt {
     }
     /**
      * ```
-     * The edits of a DayEdits the server has taken; the client deletes
-     * them from its outbox.
+     * The edits of a DayEdits or PatternEdits the server has taken; the
+     * client deletes them from its outbox.
      * ```
      *
      * `.pochical.v1.Acked acked = 5 [json_name = "acked"];`

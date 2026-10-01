@@ -1,4 +1,3 @@
-import { create } from "@bufbuild/protobuf";
 import { DurableObject } from "cloudflare:workers";
 import { and, asc, eq, gt, max } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
@@ -6,14 +5,18 @@ import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
 import { fitsField, hasKey } from "./day-values";
-import {
-  ChangeSchema,
-  DayValueSchema,
-  ServerError_Code,
+import { ServerError_Code } from "./gen/pochical/v1/sync_pb";
+import type {
+  Change,
+  DayEdits,
+  DayValue,
+  PatternEdits,
+  PatternOrder,
+  PatternValue,
 } from "./gen/pochical/v1/sync_pb";
-import type { Change, DayEdits, DayValue } from "./gen/pochical/v1/sync_pb";
 import { clockAfter, compareClocks } from "./hlc";
 import type { Clock } from "./hlc";
+import { fitsOrder, fitsPattern, isId } from "./pattern-values";
 import {
   acceptSyncSocket,
   handleSyncMessage,
@@ -22,55 +25,50 @@ import {
   send,
 } from "./sync-socket";
 import migrations from "./user-do-migrations/migrations.js";
-import { dayFields, memberships } from "./user-do-schema";
-
-type DayRow = typeof dayFields.$inferSelect;
+import {
+  dayFields,
+  memberships,
+  patternOrder,
+  patterns,
+} from "./user-do-schema";
+import {
+  clockColumns,
+  clockOfHlc,
+  clockOfRow,
+  dayChange,
+  encodePattern,
+  orderChange,
+  parseIds,
+  patternChange,
+} from "./user-do-values";
+import type { DayRow, OrderRow, PatternRow } from "./user-do-values";
 
 // A frame of changes stays well under a WebSocket message's size.
 const CHANGES_PER_FRAME = 500;
 // Edits in one frame; an outbox sends more as several.
 const MAX_EDITS_PER_FRAME = 500;
 
-const clockOf = (row: DayRow): Clock => ({
-  counter: row.hlcCounter,
-  device: row.hlcDevice,
-  ms: row.hlcMs,
-});
-
-const changeOf = (row: DayRow): Change =>
-  create(ChangeSchema, {
-    cursor: BigInt(row.cursor),
-    kind: {
-      case: "day",
-      value: create(DayValueSchema, {
-        date: row.date,
-        field: row.field,
-        hlc: {
-          counter: row.hlcCounter,
-          deviceId: row.hlcDevice,
-          physicalMs: BigInt(row.hlcMs),
-        },
-        value: row.value ?? undefined,
-      }),
-    },
-  });
-
-const sendChanges = (ws: WebSocket, rows: DayRow[]): void => {
-  for (let at = 0; at < rows.length; at += CHANGES_PER_FRAME) {
+const sendChanges = (ws: WebSocket, changes: Change[]): void => {
+  for (let at = 0; at < changes.length; at += CHANGES_PER_FRAME) {
     send(ws, {
       case: "changes",
-      value: {
-        changes: rows.slice(at, at + CHANGES_PER_FRAME).map(changeOf),
-      },
+      value: { changes: changes.slice(at, at + CHANGES_PER_FRAME) },
     });
   }
 };
 
 /**
+ * The clock a value is written with: the edit's own when the value fits,
+ * else one just past it, so the device that made it takes the correction.
+ */
+const writtenClock = (clock: Clock, fits: boolean): Clock =>
+  fits ? clock : clockAfter(clock, Date.now());
+
+/**
  * One Durable Object per signed-in user, named by their better-auth user
- * id. It owns their days, synced between their own devices over their
- * socket (spec/sync-protocol.md, Shifts), and knows which groups they are
- * in.
+ * id. It owns their days and their patterns, synced between their own
+ * devices over their socket (spec/sync-protocol.md, Shifts), and knows
+ * which groups they are in.
  */
 export class UserDO extends DurableObject<Env> {
   private readonly db: DrizzleSqliteDODatabase;
@@ -114,29 +112,57 @@ export class UserDO extends DurableObject<Env> {
       dayEdits: (socket, edits) => {
         this.takeDayEdits(socket, edits);
       },
+      patternEdits: (socket, edits) => {
+        this.takePatternEdits(socket, edits);
+      },
       welcome: (socket, cursor) => {
         this.welcome(socket, cursor);
       },
     });
   }
 
-  /** The newest cursor, 0 before anything was written. */
+  /** The newest cursor across days and patterns, 0 before any. */
   private head(): number {
-    return (
+    const heads = [
       this.db
         .select({ head: max(dayFields.cursor) })
         .from(dayFields)
-        .get()?.head ?? 0
-    );
+        .get(),
+      this.db
+        .select({ head: max(patterns.cursor) })
+        .from(patterns)
+        .get(),
+      this.db
+        .select({ head: max(patternOrder.cursor) })
+        .from(patternOrder)
+        .get(),
+    ];
+    return Math.max(0, ...heads.map((row) => row?.head ?? 0));
   }
 
-  private rowsAfter(cursor: number): DayRow[] {
-    return this.db
+  /** Every value changed after `cursor`, in cursor order. */
+  private changesAfter(cursor: number): Change[] {
+    const days = this.db
       .select()
       .from(dayFields)
       .where(gt(dayFields.cursor, cursor))
       .orderBy(asc(dayFields.cursor))
       .all();
+    const kept = this.db
+      .select()
+      .from(patterns)
+      .where(gt(patterns.cursor, cursor))
+      .all();
+    const order = this.db
+      .select()
+      .from(patternOrder)
+      .where(gt(patternOrder.cursor, cursor))
+      .all();
+    return [
+      ...days.map(dayChange),
+      ...kept.map(patternChange),
+      ...order.map(orderChange),
+    ].toSorted((a, b) => (a.cursor < b.cursor ? -1 : 1));
   }
 
   /**
@@ -150,20 +176,22 @@ export class UserDO extends DurableObject<Env> {
     send(ws, { case: "welcome", value: { cursor: BigInt(head) } });
     if (cursor > BigInt(head)) {
       send(ws, { case: "reset", value: {} });
-      sendChanges(ws, this.rowsAfter(0));
+      sendChanges(ws, this.changesAfter(0));
       return;
     }
-    sendChanges(ws, this.rowsAfter(Number(cursor)));
+    sendChanges(ws, this.changesAfter(Number(cursor)));
   }
 
   /**
-   * The owner's edits: each field taken when its clock is newer than the
-   * one stored. An edit whose value does not fit its field is answered
-   * with the stored value under a newer clock, so the device that made it
-   * is corrected. All are acknowledged, and what changed goes to every
-   * device of the user.
+   * Takes a frame of edits in one transaction, each given the next cursor
+   * when it changes anything; acknowledges every edit and sends what
+   * changed to every device of the user.
    */
-  private takeDayEdits(ws: WebSocket, { edits }: DayEdits): void {
+  private takeEdits<Edit extends { opId: string }>(
+    ws: WebSocket,
+    edits: Edit[],
+    apply: (edit: Edit, cursor: number) => Change | undefined
+  ): void {
     if (edits.length > MAX_EDITS_PER_FRAME) {
       rejectAndClose(
         ws,
@@ -174,15 +202,15 @@ export class UserDO extends DurableObject<Env> {
     }
     const changed = this.ctx.storage.transactionSync(() => {
       let cursor = this.head();
-      const rows: DayRow[] = [];
-      for (const { value } of edits) {
-        const row = hasKey(value) ? this.apply(value, cursor + 1) : undefined;
-        if (row) {
-          ({ cursor } = row);
-          rows.push(row);
+      const changes: Change[] = [];
+      for (const edit of edits) {
+        const change = apply(edit, cursor + 1);
+        if (change) {
+          cursor = Number(change.cursor);
+          changes.push(change);
         }
       }
-      return rows;
+      return changes;
     });
     send(ws, {
       case: "acked",
@@ -195,30 +223,47 @@ export class UserDO extends DurableObject<Env> {
     }
   }
 
-  /** One edit, written at `cursor` when it changes anything. */
-  private apply(edit: DayValue, cursor: number): DayRow | undefined {
+  /**
+   * The owner's day edits: each field taken when its clock is newer than
+   * the one stored. An edit whose value does not fit its field is answered
+   * with the stored value under a newer clock, so the device that made it
+   * is corrected; one for no real day or field is only acknowledged.
+   */
+  private takeDayEdits(ws: WebSocket, { edits }: DayEdits): void {
+    this.takeEdits(ws, edits, ({ value }, cursor) =>
+      hasKey(value) ? this.applyDay(value, cursor) : undefined
+    );
+  }
+
+  /** The owner's pattern edits, taken as their days are. */
+  private takePatternEdits(ws: WebSocket, { edits }: PatternEdits): void {
+    this.takeEdits(ws, edits, ({ kind }, cursor) => {
+      if (kind.case === "pattern") {
+        return this.applyPattern(kind.value, cursor);
+      }
+      if (kind.case === "order") {
+        return this.applyOrder(kind.value, cursor);
+      }
+      return undefined;
+    });
+  }
+
+  private applyDay(edit: DayValue, cursor: number): Change | undefined {
     const key = and(
       eq(dayFields.date, edit.date),
       eq(dayFields.field, edit.field)
     );
     const stored = this.db.select().from(dayFields).where(key).get();
-    const clock: Clock = {
-      counter: edit.hlc?.counter ?? 0,
-      device: edit.hlc?.deviceId ?? "",
-      ms: Number(edit.hlc?.physicalMs ?? 0n),
-    };
-    if (stored && compareClocks(clock, clockOf(stored)) <= 0) {
+    const clock = clockOfHlc(edit.hlc);
+    if (stored && compareClocks(clock, clockOfRow(stored)) <= 0) {
       return undefined;
     }
     const fits = fitsField(edit.field, edit.value);
-    const written = fits ? clock : clockAfter(clock, Date.now());
     const row: DayRow = {
+      ...clockColumns(writtenClock(clock, fits)),
       cursor,
       date: edit.date,
       field: edit.field,
-      hlcCounter: written.counter,
-      hlcDevice: written.device,
-      hlcMs: written.ms,
       // A value that does not fit leaves what was stored (or nothing).
       value: fits ? (edit.value ?? null) : (stored?.value ?? null),
     };
@@ -230,6 +275,64 @@ export class UserDO extends DurableObject<Env> {
         target: [dayFields.date, dayFields.field],
       })
       .run();
-    return row;
+    return dayChange(row);
+  }
+
+  private applyPattern(edit: PatternValue, cursor: number): Change | undefined {
+    if (!(isId(edit.id) && edit.hlc && isId(edit.hlc.deviceId))) {
+      return undefined;
+    }
+    const stored = this.db
+      .select()
+      .from(patterns)
+      .where(eq(patterns.id, edit.id))
+      .get();
+    const clock = clockOfHlc(edit.hlc);
+    if (stored && compareClocks(clock, clockOfRow(stored)) <= 0) {
+      return undefined;
+    }
+    const fits =
+      edit.pattern === undefined || fitsPattern(edit.id, edit.pattern);
+    let data = stored?.data ?? null;
+    if (fits) {
+      data = edit.pattern === undefined ? null : encodePattern(edit.pattern);
+    }
+    const row: PatternRow = {
+      ...clockColumns(writtenClock(clock, fits)),
+      cursor,
+      data,
+      id: edit.id,
+    };
+    this.db
+      .insert(patterns)
+      .values(row)
+      .onConflictDoUpdate({ set: row, target: patterns.id })
+      .run();
+    return patternChange(row);
+  }
+
+  private applyOrder(edit: PatternOrder, cursor: number): Change | undefined {
+    if (!(edit.hlc && isId(edit.hlc.deviceId))) {
+      return undefined;
+    }
+    const stored = this.db.select().from(patternOrder).get();
+    const clock = clockOfHlc(edit.hlc);
+    if (stored && compareClocks(clock, clockOfRow(stored)) <= 0) {
+      return undefined;
+    }
+    const fits = fitsOrder(edit.ids);
+    const ids = fits ? edit.ids : parseIds(stored?.ids ?? "[]");
+    const row: OrderRow = {
+      ...clockColumns(writtenClock(clock, fits)),
+      cursor,
+      id: 1,
+      ids: JSON.stringify(ids),
+    };
+    this.db
+      .insert(patternOrder)
+      .values(row)
+      .onConflictDoUpdate({ set: row, target: patternOrder.id })
+      .run();
+    return orderChange(row);
   }
 }
