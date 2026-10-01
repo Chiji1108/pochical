@@ -559,19 +559,6 @@ const chatStyle = {
     textStyle: "headline",
   }),
   menu: css({ justifySelf: "end" }),
-  titleArrow: css({ color: "text.tertiary", flexShrink: 0 }),
-  // The name as a button, looking as the title does.
-  titleButton: css({
-    alignItems: "center",
-    bg: "transparent",
-    border: 0,
-    color: "inherit",
-    display: "flex",
-    font: "inherit",
-    gap: "2px",
-    minHeight: "touch",
-    padding: 0,
-  }),
   when: css({
     alignSelf: "center",
     bg: "fill.tertiary",
@@ -662,13 +649,10 @@ export function ChatPage({
   muted = false,
   onMuted,
   onShifts,
-  onProfile,
 }: {
   // The group chat's menu opens everyone's shifts, to look up a day while
-  // talking it over; a one-to-one chat's name opens the person's profile,
-  // as Messages opens the contact from the name at its top.
+  // talking it over.
   onShifts?: () => void;
-  onProfile?: () => void;
   title: string;
   // Its notifications turned off, from the menu at its top right, as
   // LINE's rooms have it.
@@ -902,23 +886,7 @@ export function ChatPage({
       <header className={chatStyle.header}>
         <BackButton onClick={onBack}>{backLabel}</BackButton>
         <h3 className={chatStyle.title}>
-          {onProfile ? (
-            <button
-              aria-label={`${title}のプロフィール`}
-              className={chatStyle.titleButton}
-              onClick={onProfile}
-              type="button"
-            >
-              {title}
-              <ChevronRight
-                aria-hidden="true"
-                className={chatStyle.titleArrow}
-                size={15}
-              />
-            </button>
-          ) : (
-            title
-          )}
+          {title}
           {muted && <MutedMark />}
         </h3>
         {onMuted && (
