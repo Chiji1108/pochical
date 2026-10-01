@@ -8,6 +8,7 @@ export const ignorePatterns = [
   "apps/ios",
   "apps/android",
   "apps/server/src/gen",
+  "apps/web/src/gen",
   "spec/design-tokens.json",
   "**/routeTree.gen.ts",
   "**/worker-configuration.d.ts",

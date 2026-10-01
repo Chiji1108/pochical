@@ -1,0 +1,78 @@
+import { env, exports } from "cloudflare:workers";
+import { describe, expect, it } from "vitest";
+
+const ORIGIN = "https://server.test";
+
+const getInvitePreview = async (inviteCode: string): Promise<Response> =>
+  await exports.default.fetch(
+    `${ORIGIN}/pochical.v1.InviteService/GetInvitePreview`,
+    {
+      body: JSON.stringify({ inviteCode }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    }
+  );
+
+const addGroup = async (
+  groupId: string,
+  inviteCode: string,
+  emoji: string | null
+): Promise<void> => {
+  await env.GROUP_ROOM.getByName(groupId).setProfile({ emoji, name: "同期" });
+  await env.DB.prepare("INSERT INTO invites (code, group_id) VALUES (?, ?)")
+    .bind(inviteCode, groupId)
+    .run();
+};
+
+describe("InviteService.GetInvitePreview", () => {
+  it("names the group a live code opens", async () => {
+    await addGroup("dokis", "Abcd2345", "🌿");
+
+    const response = await getInvitePreview("Abcd2345");
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toStrictEqual({
+      groupEmoji: "🌿",
+      groupName: "同期",
+    });
+  });
+
+  it("leaves the emoji out for other marks", async () => {
+    await addGroup("photo-mark", "Photo234", null);
+
+    const response = await getInvitePreview("Photo234");
+    await expect(response.json()).resolves.toStrictEqual({ groupName: "同期" });
+  });
+
+  it("answers NOT_FOUND once the code is replaced", async () => {
+    await addGroup("remade", "Before23", "🌿");
+    await env.DB.prepare("UPDATE invites SET code = ? WHERE group_id = ?")
+      .bind("After234", "remade")
+      .run();
+
+    const response = await getInvitePreview("Before23");
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toMatchObject({ code: "not_found" });
+  });
+
+  it("answers NOT_FOUND for a code whose group has no profile", async () => {
+    await env.DB.prepare("INSERT INTO invites (code, group_id) VALUES (?, ?)")
+      .bind("Empty234", "never-set-up")
+      .run();
+
+    const response = await getInvitePreview("Empty234");
+    expect(response.status).toBe(404);
+  });
+
+  it("rejects malformed codes", async () => {
+    const responses = await Promise.all(
+      ["", "short", "Abcd234O", "../../etc"].map(getInvitePreview)
+    );
+    for (const response of responses) {
+      expect(response.status).toBe(400);
+    }
+    const [first] = responses;
+    await expect(first?.json()).resolves.toMatchObject({
+      code: "invalid_argument",
+    });
+  });
+});

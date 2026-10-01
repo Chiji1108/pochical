@@ -1,6 +1,7 @@
 import { createConnectRouter } from "@connectrpc/connect";
 import { createFetchHandler } from "@connectrpc/connect/protocol";
 
+import { registerInviteService } from "./invite-service";
 import { registerSystemService } from "./system-service";
 
 // Workers only binds Durable Object classes exported from the entry module.
@@ -8,6 +9,7 @@ export { GroupRoom } from "./group-room";
 
 const router = createConnectRouter({ grpc: false, grpcWeb: false });
 registerSystemService(router);
+registerInviteService(router);
 
 const rpcHandlers = new Map(
   router.handlers.map((handler) => [

@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package pochical.v1;
+
+// Invitation links, https://pochical.app/invite/{invite_code}. A group has
+// one live code at a time; remaking the link replaces it.
+service InviteService {
+  // What a link invites to, for the invite page and the preview card chat
+  // apps show for the link. Anyone holding the code may ask: the link
+  // itself lets them join. Fails with NOT_FOUND when no group uses the
+  // code (never issued, replaced, or the group was deleted) and
+  // INVALID_ARGUMENT when the code is malformed.
+  rpc GetInvitePreview(GetInvitePreviewRequest) returns (GetInvitePreviewResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+message GetInvitePreviewRequest {
+  // 8 characters from A-Z, a-z and 2-9 without the look-alikes I, O, l.
+  string invite_code = 1;
+}
+
+message GetInvitePreviewResponse {
+  string group_name = 1;
+  // The group's mark when it is an emoji; empty for other marks.
+  string group_emoji = 2;
+}

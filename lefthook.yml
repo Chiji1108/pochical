@@ -19,6 +19,7 @@ pre-commit:
         - "apps/ios/**"
         - "apps/android/**"
         - "apps/server/src/gen/**"
+        - "apps/web/src/gen/**"
       stage_fixed: true
     - name: buf format and lint
       root: proto/

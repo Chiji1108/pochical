@@ -8,14 +8,20 @@ import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/invite/$inviteCode")({
   component: Invite,
-  head: () =>
+  // Chat apps build the link's preview card from these tags, so it names
+  // the group as the page does.
+  head: ({ loaderData, params }) =>
     pageMeta(
-      "グループへの招待",
+      loaderData?.status === "valid"
+        ? `${loaderData.groupEmoji}「${loaderData.groupName}」への招待`
+        : "グループへの招待",
       "ポチカルでシフトを共有しましょう。",
-      "/invite",
+      `/invite/${encodeURIComponent(params.inviteCode)}`,
       true
     ),
-  loader: async ({ params }) => await getInvite({ data: params.inviteCode }),
+  // Typed by hand so head, which comes first, can read its result.
+  loader: async ({ params }: { params: { inviteCode: string } }) =>
+    await getInvite({ data: params.inviteCode }),
   preload: false,
   staleTime: 0,
 });
@@ -44,7 +50,9 @@ function Invite() {
       {invite.status === "valid" ? (
         <>
           <p className="eyebrow">YOU'RE INVITED</p>
-          <p className="group-emoji">{invite.groupEmoji}</p>
+          {invite.groupEmoji === "" ? null : (
+            <p className="group-emoji">{invite.groupEmoji}</p>
+          )}
           <h1>{invite.groupName}</h1>
           <p>
             グループへの招待が届いています。
