@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
-import { css } from "styled-system/css";
 
+import { pickerStyle } from "./design-picker-style";
 import { Sheet, SheetHeading } from "./design-sheet";
 
 // Any emoji, beyond the few offered first: the 「＋」 after the reactions,
@@ -10,13 +10,6 @@ import { Sheet, SheetHeading } from "./design-sheet";
 // Frimousse draws the list, searchable in Japanese, and the look is ours.
 
 const EmojiList = lazy(async () => await import("./design-emoji-list"));
-
-const note = css({
-  color: "text.tertiary",
-  padding: "24px 0",
-  textAlign: "center",
-  textStyle: "subheadline",
-});
 
 // The picker in a sheet over the phone; picking closes it.
 export function EmojiPickerSheet({
@@ -38,9 +31,9 @@ export function EmojiPickerSheet({
         }}
         title={title}
       />
-      <Suspense fallback={<p className={note}>読み込んでいます</p>}>
+      <Suspense fallback={<p className={pickerStyle.note}>読み込んでいます</p>}>
         <EmojiList
-          noteClassName={note}
+          noteClassName={pickerStyle.note}
           onPick={(emoji) => {
             onPick(emoji);
             onOpenChange(false);
