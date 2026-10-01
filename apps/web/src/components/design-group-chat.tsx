@@ -327,10 +327,19 @@ const chatStyle = {
     display: "flex",
     flexDirection: "column",
     listStyle: "none",
-    margin: 0,
+    marginBottom: 0,
+    // Out to the screen's edges, so its line runs from edge to edge as a
+    // bar's does on iOS and Android (a list's lines stay inset); its
+    // contents stay where they were.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    marginTop: 0,
     maxHeight: "180px",
     overflowY: "auto",
-    padding: "4px 0",
+    paddingBottom: "4px",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "4px",
   }),
   mentionPick: css({
     _hover: { bg: "fill.tertiary" },
@@ -358,7 +367,15 @@ const chatStyle = {
       borderTop: "1px solid token(colors.separator)",
       display: "flex",
       gap: "8px",
-      padding: "8px 0 4px",
+      // Out to the screen's edges, so its line runs from edge to edge as a
+      // bar's does on iOS and Android (a list's lines stay inset); its
+      // contents stay where they were.
+      marginLeft: "calc(-1 * var(--screen-left))",
+      marginRight: "calc(-1 * var(--screen-right))",
+      paddingBottom: "4px",
+      paddingLeft: "var(--screen-left)",
+      paddingRight: "var(--screen-right)",
+      paddingTop: "8px",
     },
     // The reply above it already draws the line.
     variants: { replying: { true: { borderTop: 0 } } },
@@ -436,7 +453,15 @@ const chatStyle = {
     borderBottom: "1px solid token(colors.separator)",
     display: "grid",
     gridTemplateColumns: "1fr auto 1fr",
-    padding: "4px 0 8px",
+    // Out to the screen's edges, so its line runs from edge to edge as a
+    // bar's does on iOS and Android (a list's lines stay inset); its
+    // contents stay where they were.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    paddingBottom: "8px",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "4px",
   }),
   // A message jumped to rings its bubble or shared days for a moment.
   item: cva({
@@ -658,8 +683,17 @@ const chatStyle = {
       display: "flex",
       gap: "8px",
       listStyle: "none",
-      margin: 0,
-      padding: "12px 0 4px",
+      marginBottom: 0,
+      // Out to the screen's edges, so its line runs from edge to edge as a
+      // bar's does on iOS and Android (a list's lines stay inset); its
+      // contents stay where they were.
+      marginLeft: "calc(-1 * var(--screen-left))",
+      marginRight: "calc(-1 * var(--screen-right))",
+      marginTop: 0,
+      paddingBottom: "4px",
+      paddingLeft: "var(--screen-left)",
+      paddingRight: "var(--screen-right)",
+      paddingTop: "12px",
     },
     // The reply or the days above already draw the line.
     variants: { below: { true: { borderTop: 0, paddingTop: "8px" } } },
@@ -698,7 +732,14 @@ const chatStyle = {
     borderTop: "1px solid token(colors.separator)",
     display: "flex",
     gap: "8px",
-    padding: "8px 0 0",
+    // Out to the screen's edges, so its line runs from edge to edge as a
+    // bar's does on iOS and Android (a list's lines stay inset); its
+    // contents stay where they were.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "8px",
   }),
   tap: cva({
     base: {
@@ -3573,7 +3614,15 @@ const pinBar = {
     borderBottom: "1px solid token(colors.separator)",
     display: "flex",
     gap: "4px",
-    padding: "4px 0",
+    // Out to the screen's edges, so its line runs from edge to edge as a
+    // bar's does on iOS and Android (a list's lines stay inset); its
+    // contents stay where they were.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    paddingBottom: "4px",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "4px",
   }),
   jump: css({
     alignItems: "center",
@@ -3614,8 +3663,17 @@ const pinBar = {
   list: css({
     borderBottom: "1px solid token(colors.separator)",
     listStyle: "none",
-    margin: 0,
-    padding: "4px 0",
+    marginBottom: 0,
+    // Out to the screen's edges, so its line runs from edge to edge as a
+    // bar's does on iOS and Android (a list's lines stay inset); its
+    // contents stay where they were.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    marginTop: 0,
+    paddingBottom: "4px",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "4px",
   }),
 };
 
