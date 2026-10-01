@@ -88,4 +88,5 @@ The stores require a way to report what people post and to block someone (App St
 - Any member can pin a line (words, a photo, shared days) from its menu, in a group chat or a one-to-one chat, and anyone can take a pin off (ピン留めを外す). It is the same for everyone in the chat. No line from the app says who pinned it.
 - At most 5 lines are pinned at once, as LINE keeps five announcements; a sixth takes the place of the oldest, and the app says so.
 - Under the header, a bar shows the latest pinned line: a pin, ピン留め (ピン留め・N件 with more than one) and its words on one line. A tap jumps to the line and rings it. With more than one, ▾ opens all of them under the bar, the latest first, each with who wrote it.
+- A long press (or a right click) on the bar, or on a line of its list, offers ピン留めを外す, as a line's long press opens its menu. There is no × on the bar: a pin is everyone's, so taking it off is not left a stray tap away.
 - A pinned line has a small pin by its time. Taking a line back (送信取消) takes its pin off too.
