@@ -2,6 +2,8 @@
 
 How chat messages behave beyond sync (spec/sync-protocol.md): which words are links and mentions, how a link's preview is made, when a mention notifies, editing and unsending, and reporting and blocking. Both native apps and the server follow it. The web prototype's `textParts` in `apps/web/src/lib/chat-text.ts` (tested in `apps/web/tests/chat-text.test.ts`) and the chat in `/design` follow this spec.
 
+The numbers named `chatRules.*` here are in `design/src/chat.ts`, the one place they are written; `mise run gen` gives the apps the same values.
+
 ## Opening a message's menu
 
 A long press on a message (the system's context-menu press: `.contextMenu` on iOS, `combinedClickable`'s long click on Android; a right click on the web) opens its reactions and menu, as LINE and iMessage do. A tap is the message's own: a link or a mention opens, a photo opens large, a shared day or a poll's head does nothing. So scrolling past a line never opens its menu by accident. A long press on a link opens the link's menu instead. With a keyboard or a screen reader, activating the message opens its menu (a photo's activation opens it large; its menu is in the screen reader's actions).
@@ -23,9 +25,9 @@ A long press on a message (the system's context-menu press: `.contextMenu` on iO
 
 A message carries at most one preview, for its first link. It is made while the message is written and sent with it, so everyone sees the same preview and receivers never fetch the page.
 
-- While writing, once the first link has stayed the same for 0.4 seconds, the app asks the server for its preview and shows it above the composer: the site's name, the title (読み込み中… until it arrives) and the picture small at the end, with × to send without it. × holds for that link until the message is sent or the link changes.
+- While writing, once the first link has stayed the same for `chatRules.linkPreviewSettleMs`, the app asks the server for its preview and shows it above the composer: the site's name, the title (読み込み中… until it arrives) and the picture small at the end, with × to send without it. × holds for that link until the message is sent or the link changes.
 - A message sent before its preview arrives goes without one. If the server finds no page, nothing is shown above the composer.
-- In the chat, the preview sits inside the message's bubble, under its words: the picture (cropped to 1.91:1), the title (two lines at most) and the site's name. A tap opens the link; a long press opens the message's reactions and menu.
+- In the chat, the preview sits inside the message's bubble, under its words: the picture (cropped to `chatRules.linkPreviewAspect`, width over height), the title (two lines at most) and the site's name. A tap opens the link; a long press opens the message's reactions and menu.
 
 ## Pochical's invitation links
 
@@ -90,7 +92,7 @@ The stores require a way to report what people post and to block someone (App St
 ## Pins
 
 - Any member can pin a line (words, a photo, shared days) from its menu, in a group chat or a one-to-one chat, and anyone can take a pin off (ピン留めを外す). It is the same for everyone in the chat. No line from the app says who pinned it.
-- At most 5 lines are pinned at once, as LINE keeps five announcements; a sixth takes the place of the oldest, and the app says so.
+- At most `chatRules.maxPins` lines are pinned at once, as LINE keeps five announcements; one more takes the place of the oldest, and the app says so.
 - Under the header, a bar shows the latest pinned line: a pin, ピン留め (ピン留め・N件 with more than one) and its words on one line. A tap jumps to the line and rings it. With more than one, ▾ opens all of them under the bar, the latest first, each with who wrote it.
 - A long press (or a right click) on the bar, or on a line of its list, offers ピン留めを外す, as a line's long press opens its menu. There is no × on the bar: a pin is everyone's, so taking it off is not left a stray tap away.
 - A pinned line has a small pin by its time. Taking a line back (送信取消) takes its pin off too.
@@ -109,6 +111,6 @@ A group chat can put days to the vote, as LINE's 日程調整 does, for the step
 
 A message may be as long as `textLimits.chatMessage` and share up to `SHARED_DAYS_MAX` days (`design/src/limits.ts`), but the chat keeps either from filling the screen.
 
-- A message's words longer than 10 lines are cut at the tenth with `…`, and 続きを読む under them, in the color the bubble's links take, opens the rest in place, as LINE's 全文表示 does. Whether words run past 10 lines is measured as they are laid out, not guessed from their length. Opened stays opened while the chat is open.
-- A card of shared days shows a week of them, 7 rows (or 6 columns when its people do not fit across, as it turns), and ほか{n}日 under them; シフト表で見る under the card shows them all.
+- A message's words longer than `chatRules.foldLines` lines are cut at the last with `…`, and 続きを読む under them, in the color the bubble's links take, opens the rest in place, as LINE's 全文表示 does. Whether words run past it is measured as they are laid out, not guessed from their length. Opened stays opened while the chat is open.
+- A card of shared days shows `chatRules.dayCardRows` of them, a week, in rows (or `chatRules.dayCardColumns` across when its people do not fit across, as it turns), and ほか{n}日 under them; シフト表で見る under the card shows them all.
 - Choosing days to share stops at `SHARED_DAYS_MAX`: a day past it stays unpicked and a problem toast says 一度に送れるのは{n}日までです. The server refuses a message with more.

@@ -135,8 +135,8 @@ Presence means "has this thread open on screen", not "online in the app": mobile
 
 ### Typing
 
-- While composing, the client sends a typing frame at most every 3 seconds, and a stop frame when it sends the message or the field becomes empty.
-- Receivers show the indicator for about 5 seconds unless it is refreshed, so a lost stop frame cannot leave it stuck.
+- While composing, the client sends a typing frame at most every `chatRules.typingSendMs` (`design/src/chat.ts`), and a stop frame when it sends the message or the field becomes empty.
+- Receivers show the indicator for `chatRules.typingShowMs` unless it is refreshed, so a lost stop frame cannot leave it stuck.
 
 ## Not yet specified
 

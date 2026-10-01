@@ -1,15 +1,14 @@
+import { inviteRules } from "@pochical/design/invite";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { invites } from "./db/schema";
 
-// 8 characters without the look-alikes I, O, l, 0 and 1: 57^8, about
-// 10^14 codes, so guessing a live one is hopeless.
-const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-const CODE_LENGTH = 8;
+// What a code is made of is design/src/invite.ts, shared with the apps.
+const ALPHABET = inviteRules.codeAlphabet;
+const CODE_LENGTH = inviteRules.codeLength;
 // Two codes clashing is about one in 10^14; three in a row means a bug.
 const MAX_ATTEMPTS = 3;
-export const INVITE_CODE = /^[A-HJ-NP-Za-km-z2-9]{8}$/u;
 
 // Bytes past the last whole run of the alphabet are drawn again, so every
 // character is equally likely.

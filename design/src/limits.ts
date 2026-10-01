@@ -28,6 +28,21 @@ export const textLimits = {
 
 export type TextKind = keyof typeof textLimits;
 
+// How a field shows its count, `{used}/{limit}`, and how a shift's name
+// shortens in a day (spec/text-limits.md).
+export const textFields = {
+  // A limit this long or shorter shows its count all the while the field
+  // is in use…
+  countAlwaysUpTo: 30,
+  // …a longer one only once this few characters are left, so a memo or a
+  // message does not carry a count all the while it is written.
+  countWhenLeft: 20,
+  // A day of the calendar shows a shift's name up to this many characters,
+  // else its first two and …: four would fit, but run to the edges of a
+  // day off's tint and the frame round today.
+  dayNameLength: 3,
+} as const;
+
 // The most days one chat message shares, with everyone's shifts or as a
 // poll's choices: a month's worth.
 export const SHARED_DAYS_MAX = 31;

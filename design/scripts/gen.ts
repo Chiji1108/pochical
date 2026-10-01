@@ -6,6 +6,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { chatRules } from "../src/chat";
 import {
   colorSchemes,
   markColors,
@@ -13,7 +14,13 @@ import {
   untintedTokens,
 } from "../src/colors";
 import type { ColorScheme } from "../src/colors";
-import { GROUP_MAX_MEMBERS, SHARED_DAYS_MAX, textLimits } from "../src/limits";
+import { inviteRules } from "../src/invite";
+import {
+  GROUP_MAX_MEMBERS,
+  SHARED_DAYS_MAX,
+  textFields,
+  textLimits,
+} from "../src/limits";
 import {
   HAIRLINE_MAX,
   radii,
@@ -35,6 +42,7 @@ import {
 } from "../src/themes";
 import type { Preset } from "../src/themes";
 import { textStyles } from "../src/type";
+import { widgetRules } from "../src/widgets";
 
 const root = path.join(import.meta.dir, "../..");
 const themes: readonly Preset[] = presets;
@@ -99,6 +107,7 @@ function kotlinColor(hex: string) {
 function json() {
   const tokens = {
     $comment: HEADER,
+    chat: chatRules,
     colors: {
       // The shift colors' names, in picker order; the first is the
       // テーマ's own color.
@@ -134,10 +143,12 @@ function json() {
       noteMarkerSteps,
       roleSteps,
     },
+    invite: inviteRules,
     limits: {
       groupMaxMembers: GROUP_MAX_MEMBERS,
       sharedDaysMax: SHARED_DAYS_MAX,
       text: textLimits,
+      textFields,
     },
     metrics: {
       hairlineMax: HAIRLINE_MAX,
@@ -149,6 +160,7 @@ function json() {
       stateLayers,
     },
     textStyles,
+    widgets: widgetRules,
   };
   return `${JSON.stringify(tokens, null, 2)}\n`;
 }
@@ -402,64 +414,113 @@ function kotlin() {
   return lines.join("\n");
 }
 
-// design/src/limits.ts for the apps: field limits and group size.
-function swiftLimits() {
+// The shared numbers (design/src/limits.ts, chat.ts, invite.ts and
+// widgets.ts) for the apps, a namespace each; what each means is written
+// beside it in the TypeScript.
+type Values = Readonly<Record<string, number | string>>;
+
+const swiftValue = (value: number | string) =>
+  typeof value === "string" ? JSON.stringify(value) : String(value);
+
+const kotlinValue = (value: number | string) => {
+  if (typeof value === "string") {
+    return JSON.stringify(value);
+  }
+  return Number.isInteger(value) ? String(value) : `${value}f`;
+};
+
+function swiftEnum(name: string, doc: string, values: Values) {
   return [
-    `// ${HEADER}`,
-    "",
-    "/// How long free text may be, in characters as a reader sees them",
-    "/// (`String.count`), by what it is. spec/text-limits.md says how fields",
-    "/// hold to them.",
-    "public enum TextLimits {",
-    ...Object.entries(textLimits).map(
-      ([name, value]) => `  public static let ${name} = ${value}`
+    `/// ${doc}`,
+    `public enum ${name} {`,
+    ...Object.entries(values).map(
+      ([key, value]) => `  public static let ${key} = ${swiftValue(value)}`
     ),
     "}",
-    "",
-    "/// The most days one chat message shares.",
-    `public let sharedDaysMax = ${SHARED_DAYS_MAX}`,
-    "",
-    "/// The most people in one group.",
-    `public let groupMaxMembers = ${GROUP_MAX_MEMBERS}`,
-    "",
-  ].join("\n");
+  ];
 }
 
-function kotlinLimits() {
+function kotlinObject(name: string, doc: string, values: Values) {
   return [
+    `/** ${doc} */`,
+    `object ${name} {`,
+    ...Object.entries(values).map(
+      ([key, value]) => `  const val ${key} = ${kotlinValue(value)}`
+    ),
+    "}",
+  ];
+}
+
+const swiftFile = (...sections: string[][]) =>
+  [`// ${HEADER}`, "", ...sections.flatMap((lines) => [...lines, ""])].join(
+    "\n"
+  );
+
+const kotlinFile = (...sections: string[][]) =>
+  [
     `// ${HEADER}`,
     "",
     "package tech.chiji.pochical.design",
     "",
-    "/**",
-    " * How long free text may be, in characters as a reader sees them (grapheme",
-    " * clusters, ICU's BreakIterator), by what it is. spec/text-limits.md says",
-    " * how fields hold to them.",
-    " */",
-    "object TextLimits {",
-    ...Object.entries(textLimits).map(
-      ([name, value]) => `  const val ${name} = ${value}`
-    ),
-    "}",
-    "",
-    "/** The most days one chat message shares. */",
-    `const val SHARED_DAYS_MAX = ${SHARED_DAYS_MAX}`,
-    "",
-    "/** The most people in one group. */",
-    `const val GROUP_MAX_MEMBERS = ${GROUP_MAX_MEMBERS}`,
-    "",
+    ...sections.flatMap((lines) => [...lines, ""]),
   ].join("\n");
-}
+
+const SWIFT_DIR = "apps/ios/Packages/PochicalDesign/Sources/PochicalDesign";
+const KOTLIN_DIR =
+  "apps/android/design/src/main/kotlin/tech/chiji/pochical/design";
+
+const TEXT_LIMITS_DOC =
+  "How long free text may be, in characters as a reader sees them, by what it is (spec/text-limits.md).";
+const TEXT_FIELDS_DOC =
+  "How a field shows its count and how a shift's name shortens in a day (spec/text-limits.md).";
+const SHARED_DAYS_DOC = "The most days one chat message shares.";
+const GROUP_MEMBERS_DOC = "The most people in one group.";
+
+// Chat.swift, Invite.swift and Widgets.swift, and their Kotlin twins.
+const shared: [string, string, Values][] = [
+  [
+    "Chat",
+    "The chat's shared numbers (spec/chat.md); times in milliseconds.",
+    chatRules,
+  ],
+  ["Invite", "What an invitation code is made of.", inviteRules],
+  ["Widgets", "The widgets' shared numbers (spec/widgets.md).", widgetRules],
+];
+
+const sharedOutputs = Object.fromEntries(
+  shared.flatMap(([name, doc, values]) => [
+    [`${SWIFT_DIR}/${name}.swift`, swiftFile(swiftEnum(name, doc, values))],
+    [`${KOTLIN_DIR}/${name}.kt`, kotlinFile(kotlinObject(name, doc, values))],
+  ])
+);
 
 const outputs = {
   "apps/android/design/src/main/kotlin/tech/chiji/pochical/design/DesignTokens.kt":
     kotlin(),
-  "apps/android/design/src/main/kotlin/tech/chiji/pochical/design/Limits.kt":
-    kotlinLimits(),
+  [`${KOTLIN_DIR}/Limits.kt`]: kotlinFile(
+    kotlinObject("TextLimits", TEXT_LIMITS_DOC, textLimits),
+    kotlinObject("TextFields", TEXT_FIELDS_DOC, textFields),
+    [
+      `/** ${SHARED_DAYS_DOC} */`,
+      `const val SHARED_DAYS_MAX = ${SHARED_DAYS_MAX}`,
+    ],
+    [
+      `/** ${GROUP_MEMBERS_DOC} */`,
+      `const val GROUP_MAX_MEMBERS = ${GROUP_MAX_MEMBERS}`,
+    ]
+  ),
   "apps/ios/Packages/PochicalDesign/Sources/PochicalDesign/DesignTokens.swift":
     swift(),
-  "apps/ios/Packages/PochicalDesign/Sources/PochicalDesign/Limits.swift":
-    swiftLimits(),
+  [`${SWIFT_DIR}/Limits.swift`]: swiftFile(
+    swiftEnum("TextLimits", TEXT_LIMITS_DOC, textLimits),
+    swiftEnum("TextFields", TEXT_FIELDS_DOC, textFields),
+    [`/// ${SHARED_DAYS_DOC}`, `public let sharedDaysMax = ${SHARED_DAYS_MAX}`],
+    [
+      `/// ${GROUP_MEMBERS_DOC}`,
+      `public let groupMaxMembers = ${GROUP_MAX_MEMBERS}`,
+    ]
+  ),
+  ...sharedOutputs,
   "spec/design-tokens.json": json(),
 };
 

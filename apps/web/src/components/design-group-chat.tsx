@@ -1,4 +1,5 @@
 import { Popover, Portal } from "@ark-ui/react";
+import { chatRules } from "@pochical/design/chat";
 import {
   Bell,
   BellOff,
@@ -212,11 +213,6 @@ const chatRow = {
   }),
 };
 
-// Past this many lines a message folds, ending in … and 続きを読む, which
-// opens the rest in place, as LINE's 全文表示 does: a message near the
-// 1000-character limit would otherwise fill the screen.
-const foldLines = 10;
-
 // A chat as the messaging apps draw one: others' bubbles on the left with
 // their avatar and name at the start of a run, yours on the right in the
 // accent; the day between runs, the time by the bubble, reactions under
@@ -298,8 +294,8 @@ const chatStyle = {
     opacity: 0.25,
   }),
   // A message keeps the lines it was written in.
-  // A long message's words, cut at foldLines with an ellipsis.
-  folded: css({ lineClamp: foldLines }),
+  // A long message's words, cut at chatRules.foldLines with an ellipsis.
+  folded: css({ lineClamp: chatRules.foldLines }),
   // Under a folded message, in the color its links take.
   unfold: cva({
     base: {
@@ -994,7 +990,7 @@ export function ChatPage({
   onOpenDay: (date: Date) => void;
 }) {
   const [draft, setDraft] = useState("");
-  // Messages whose words run past foldLines, and those opened in full.
+  // Messages whose words run past chatRules.foldLines, and those opened in full.
   const [folded, setFolded] = useState<Record<string, boolean>>({});
   const [unfolded, setUnfolded] = useState<string[]>([]);
   // Your message being changed in the composer, and the one being taken
@@ -1323,7 +1319,7 @@ export function ChatPage({
   const pin = (id: string, pinned: boolean) => {
     const order = Math.max(0, ...pins.map((line) => line.pinned ?? 0)) + 1;
     const dropped =
-      pinned && pins.length >= maxPins ? pins.at(-1)?.id : undefined;
+      pinned && pins.length >= chatRules.maxPins ? pins.at(-1)?.id : undefined;
     onChange(
       chat.messages.map((message) => {
         if (message.id === id) {
@@ -1336,7 +1332,9 @@ export function ChatPage({
       })
     );
     if (dropped) {
-      toast(`ピン留めは${maxPins}件までです。いちばん古いものを外しました`);
+      toast(
+        `ピン留めは${chatRules.maxPins}件までです。いちばん古いものを外しました`
+      );
     } else {
       toast(pinned ? "ピン留めしました" : "ピン留めを外しました");
     }
@@ -2384,7 +2382,6 @@ export function ChatPage({
 const flashMilliseconds = 1200;
 
 // How many lines stay pinned at once, as LINE keeps five announcements.
-const maxPins = 5;
 
 // In the prototype, how soon after you send someone starts writing back,
 // and for how long.
@@ -2610,7 +2607,7 @@ function LinkMenu({
   );
 }
 
-// A message's words, folded at foldLines until opened. Whether they run
+// A message's words, folded at chatRules.foldLines until opened. Whether they run
 // past it is measured, not guessed from their length, and told to the
 // chat so 続きを読む shows only under words that were cut.
 function FoldedText({
@@ -2671,7 +2668,7 @@ const linkCard = {
   }),
   // Pages give their picture at 1.91:1, the size previews are made for.
   image: css({
-    aspectRatio: "1.91",
+    aspectRatio: String(chatRules.linkPreviewAspect),
     bg: "fill.tertiary",
     display: "block",
     objectFit: "cover",
@@ -2840,11 +2837,6 @@ function InviteCard({
   );
 }
 
-// How long a link must stay as written before its page is read, so one
-// typed by hand is not read at every letter; a pasted one is read at once
-// after.
-const linkSettleMs = 400;
-
 // How long the server takes to read a page in the prototype.
 const readMs = 700;
 
@@ -2868,14 +2860,14 @@ function useLinkPreview(draft: string) {
     const timers = [
       window.setTimeout(() => {
         setSettled(link);
-      }, linkSettleMs),
+      }, chatRules.linkPreviewSettleMs),
     ];
     if (!asked.current.has(link)) {
       timers.push(
         window.setTimeout(() => {
           asked.current.add(link);
           setPages((before) => ({ ...before, [link]: previewOf(link) }));
-        }, linkSettleMs + readMs)
+        }, chatRules.linkPreviewSettleMs + readMs)
       );
     }
     return () => {
@@ -4295,7 +4287,7 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
         <span
           className={dayCard.people}
           style={{
-            gridTemplateColumns: `repeat(${Math.min(members.length, maxCardColumns)}, minmax(36px, 1fr))`,
+            gridTemplateColumns: `repeat(${Math.min(members.length, chatRules.dayCardColumns)}, minmax(36px, 1fr))`,
           }}
         >
           {members.map((member) => (
@@ -4309,13 +4301,13 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
       </span>
     );
   }
-  if (members.length > maxCardColumns) {
+  if (members.length > chatRules.dayCardColumns) {
     return <DayCardByPerson days={days} members={members} />;
   }
   const columns = {
     gridTemplateColumns: `44px repeat(${members.length}, 26px)`,
   };
-  const shown = days.slice(0, maxCardRows);
+  const shown = days.slice(0, chatRules.dayCardRows);
   const rest = days.length - shown.length;
   return (
     <span className={dayCard.card({ many: true })} data-part="day-card">
@@ -4362,11 +4354,6 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
   );
 }
 
-// A card fits this many columns of people or days in a bubble on the
-// narrowest phone, and shows a week of rows.
-const maxCardColumns = 6;
-const maxCardRows = 7;
-
 // Several days for more people than fit across: the table turns, a row
 // per person and a column per day, as the people can't be fewer but the
 // days can. Days past what fits are left to シフト表で見る.
@@ -4378,7 +4365,7 @@ function DayCardByPerson({
   members: Member[];
 }) {
   const weekTools = useWeek();
-  const shown = days.slice(0, maxCardColumns);
+  const shown = days.slice(0, chatRules.dayCardColumns);
   const rest = days.length - shown.length;
   const columns = {
     gridTemplateColumns: `26px repeat(${shown.length}, 28px)`,
