@@ -122,6 +122,69 @@ public object ChangeKt {
     public fun hasPatternOrder(): kotlin.Boolean {
       return _builder.hasPatternOrder()
     }
+
+    /**
+     * ```
+     * On a Group DO socket: a member's shared days and patterns, as their
+     * User DO pushes them (spec/sync-protocol.md, Group projection).
+     * ```
+     *
+     * `.pochical.v1.MemberDay member_day = 5 [json_name = "memberDay"];`
+     */
+    public var memberDay: tech.chiji.pochical.v1.MemberDay
+      @kotlin.jvm.JvmName("getMemberDay")
+        get() = _builder.memberDay
+      @kotlin.jvm.JvmName("setMemberDay")
+        set(value) {
+        _builder.memberDay = value
+      }
+    /**
+     * ```
+     * On a Group DO socket: a member's shared days and patterns, as their
+     * User DO pushes them (spec/sync-protocol.md, Group projection).
+     * ```
+     *
+     * `.pochical.v1.MemberDay member_day = 5 [json_name = "memberDay"];`
+     */
+    public fun clearMemberDay() {
+      _builder.clearMemberDay()
+    }
+    /**
+     * ```
+     * On a Group DO socket: a member's shared days and patterns, as their
+     * User DO pushes them (spec/sync-protocol.md, Group projection).
+     * ```
+     *
+     * `.pochical.v1.MemberDay member_day = 5 [json_name = "memberDay"];`
+     * @return Whether the memberDay field is set.
+     */
+    public fun hasMemberDay(): kotlin.Boolean {
+      return _builder.hasMemberDay()
+    }
+
+    /**
+     * `.pochical.v1.MemberPattern member_pattern = 6 [json_name = "memberPattern"];`
+     */
+    public var memberPattern: tech.chiji.pochical.v1.MemberPattern
+      @kotlin.jvm.JvmName("getMemberPattern")
+        get() = _builder.memberPattern
+      @kotlin.jvm.JvmName("setMemberPattern")
+        set(value) {
+        _builder.memberPattern = value
+      }
+    /**
+     * `.pochical.v1.MemberPattern member_pattern = 6 [json_name = "memberPattern"];`
+     */
+    public fun clearMemberPattern() {
+      _builder.clearMemberPattern()
+    }
+    /**
+     * `.pochical.v1.MemberPattern member_pattern = 6 [json_name = "memberPattern"];`
+     * @return Whether the memberPattern field is set.
+     */
+    public fun hasMemberPattern(): kotlin.Boolean {
+      return _builder.hasMemberPattern()
+    }
     public val kindCase: tech.chiji.pochical.v1.Change.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -142,4 +205,10 @@ public val tech.chiji.pochical.v1.ChangeOrBuilder.patternOrNull: tech.chiji.poch
 
 public val tech.chiji.pochical.v1.ChangeOrBuilder.patternOrderOrNull: tech.chiji.pochical.v1.PatternOrder?
   get() = if (hasPatternOrder()) getPatternOrder() else null
+
+public val tech.chiji.pochical.v1.ChangeOrBuilder.memberDayOrNull: tech.chiji.pochical.v1.MemberDay?
+  get() = if (hasMemberDay()) getMemberDay() else null
+
+public val tech.chiji.pochical.v1.ChangeOrBuilder.memberPatternOrNull: tech.chiji.pochical.v1.MemberPattern?
+  get() = if (hasMemberPattern()) getMemberPattern() else null
 

@@ -22,6 +22,13 @@
       "when": 1790857677961,
       "tag": "0002_patterns",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790857859785,
+      "tag": "0003_pushed_cursor",
+      "breakpoints": true
     }
   ]
 }

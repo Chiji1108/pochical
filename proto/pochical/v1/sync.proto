@@ -125,7 +125,24 @@ message Change {
     DayValue day = 2;
     PatternValue pattern = 3;
     PatternOrder pattern_order = 4;
+    // On a Group DO socket: a member's shared days and patterns, as their
+    // User DO pushes them (spec/sync-protocol.md, Group projection).
+    MemberDay member_day = 5;
+    MemberPattern member_pattern = 6;
   }
+}
+
+// One field of a member's day, as the group sees it: pattern and times,
+// never the memo.
+message MemberDay {
+  string user_id = 1;
+  DayValue day = 2;
+}
+
+// One of a member's patterns, so the group can draw their marks.
+message MemberPattern {
+  string user_id = 1;
+  PatternValue pattern = 2;
 }
 
 // A shift pattern, as spec/shift-patterns.md has it.

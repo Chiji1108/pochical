@@ -7,6 +7,7 @@ import {
   ServerFrameSchema,
 } from "./gen/pochical/v1/sync_pb";
 import type {
+  Change,
   ClientFrame,
   DayEdits,
   PatternEdits,
@@ -111,6 +112,19 @@ const handleHello = (
     protocolVersion,
   } satisfies SocketAttachment);
   handlers.welcome(ws, cursor);
+};
+
+// A frame of changes stays well under a WebSocket message's size.
+const CHANGES_PER_FRAME = 500;
+
+/** Changes in cursor order, as frames of up to CHANGES_PER_FRAME. */
+export const sendChanges = (ws: WebSocket, changes: Change[]): void => {
+  for (let at = 0; at < changes.length; at += CHANGES_PER_FRAME) {
+    send(ws, {
+      case: "changes",
+      value: { changes: changes.slice(at, at + CHANGES_PER_FRAME) },
+    });
+  }
 };
 
 /** Whether the socket is past Hello, so changes may be sent to it. */
