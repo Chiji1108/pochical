@@ -3,6 +3,7 @@ import { useState } from "react";
 import { css } from "styled-system/css";
 
 import { EmojiPickerSheet } from "./design-emoji-picker";
+import { groupChat, isMuted } from "./design-group-data";
 import type {
   Group,
   GroupMark,
@@ -44,6 +45,7 @@ import {
   Section,
   Segment,
   SegmentedControl,
+  SwitchRow,
 } from "./design-ui";
 import { useMarkColors, nextColor } from "./shift-mark";
 import type { MarkIcon } from "./shift-mark";
@@ -69,6 +71,7 @@ export function GroupSettingsPage({
   profile,
   onChange,
   onEdit,
+  onMuted,
   onInvite,
   onBack,
   onMember,
@@ -76,6 +79,7 @@ export function GroupSettingsPage({
 }: {
   group: Group;
   profile: Profile;
+  onMuted: (muted: boolean) => void;
   onMember?: (member: Member) => void;
   onLeave: () => void;
   onChange: (mine: GroupProfile | undefined) => void;
@@ -144,6 +148,20 @@ export function GroupSettingsPage({
               setView("profile");
             }}
             profile={profile}
+          />
+        </List>
+      </Section>
+      {/* The group chat's, as LINE keeps a room's 通知 in its settings;
+          the same switch is in 設定's チャット with every group's. A
+          one-to-one chat has its own, in its menu. */}
+      <Section title="通知">
+        <List>
+          <SwitchRow
+            checked={!isMuted(group, groupChat)}
+            label="全体チャットの通知"
+            onChange={(on) => {
+              onMuted(!on);
+            }}
           />
         </List>
       </Section>

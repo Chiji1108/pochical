@@ -764,3 +764,91 @@ export function ConfirmDialog({
     </Sheet>
   );
 }
+
+// The system's own alert, drawn as iOS draws it in any app, with iOS's
+// own blue: after an app icon change, or asking to allow notifications.
+// Its buttons sit side by side under a line, the last one bold.
+const systemAlert = {
+  box: css({
+    bg: "background.elevated",
+    borderRadius: "lg",
+    color: "text.primary",
+    overflow: "hidden",
+    textAlign: "center",
+    width: "270px",
+  }),
+  button: css({
+    "& + &": { borderLeft: "1px solid token(colors.separator)" },
+    "&:last-child": { fontWeight: 600 },
+    bg: "transparent",
+    border: 0,
+    borderTop: "1px solid token(colors.separator)",
+    color: "#0a84ff",
+    flex: "1 1 0",
+    minHeight: "touch",
+    textStyle: "callout",
+  }),
+  buttons: css({ display: "flex" }),
+  message: css({
+    lineHeight: 1.4,
+    margin: "4px 0 0",
+    textStyle: "footnote",
+  }),
+  text: css({ padding: "20px 16px" }),
+  title: css({
+    fontWeight: 600,
+    lineHeight: 1.4,
+    margin: 0,
+    textStyle: "headline",
+  }),
+};
+
+const okButton = [{ label: "OK" }];
+
+export function SystemAlert({
+  title,
+  message,
+  buttons = okButton,
+  onClose,
+}: {
+  title: string;
+  message?: string;
+  // Each closes the alert, after its own action if it has one.
+  buttons?: { label: string; onPress?: () => void }[];
+  onClose: () => void;
+}) {
+  return (
+    <Sheet
+      className={systemAlert.box}
+      label={title}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+      open
+      placement="center"
+      role="alertdialog"
+    >
+      <div className={systemAlert.text}>
+        <p className={systemAlert.title}>{title}</p>
+        {message && <p className={systemAlert.message}>{message}</p>}
+      </div>
+      <div className={systemAlert.buttons}>
+        {buttons.map((button) => (
+          <button
+            className={systemAlert.button}
+            key={button.label}
+            onClick={() => {
+              button.onPress?.();
+              onClose();
+            }}
+            type="button"
+          >
+            {button.label}
+          </button>
+        ))}
+      </div>
+    </Sheet>
+  );
+}

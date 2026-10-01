@@ -6,17 +6,13 @@ import { useUser } from "../lib/design-user-store";
 import { ChatPage } from "./design-group-chat";
 import type { PhotoSend } from "./design-group-chat";
 import {
-  aya,
   chatKey,
   chatTitle,
-  classmates,
-  cousins,
   groupChat,
+  isMuted,
   meFrom,
-  misaki,
-  mother,
-  partner,
-  schoolFriends,
+  sampleOthers,
+  withMuted,
   withNotice,
 } from "./design-group-data";
 import type { Chat, Group, Member, Profile } from "./design-group-data";
@@ -73,6 +69,8 @@ type Page =
   // And the invitation it read, to join.
   | { name: "join" };
 
+export type GroupStart = "hub" | "shifts" | "chat" | "message";
+
 export function DesignGroup({
   schedule,
   patterns,
@@ -89,8 +87,9 @@ export function DesignGroup({
   // The group to open on, like one just joined from a link.
   initialGroupId?: string;
   // Its hub, or straight on its shift table or its group chat, as the top
-  // page shows them.
-  initialPage?: "hub" | "shifts" | "chat";
+  // page shows them; message is the group chat at its latest line, as a
+  // notification of it opens it.
+  initialPage?: GroupStart;
   // What the QR page finds, as 比べる案 sets it.
   scanResult?: ScanResult;
   // Whether a photo's upload goes through, as 比べる案 sets it.
@@ -109,6 +108,9 @@ export function DesignGroup({
     if (initialPage === "chat") {
       return { chatId: groupChat, name: "chat", sharedFirst: true };
     }
+    if (initialPage === "message") {
+      return { chatId: groupChat, name: "chat" };
+    }
     return { name: initialPage };
   });
 
@@ -122,25 +124,7 @@ export function DesignGroup({
     const shown = found ? profileIn(found, profile) : profile;
     return meFrom(schedule, patterns, shown.photo);
   };
-  const membersOf = (id: string): Member[] => {
-    const me = meIn(id);
-    if (id === "family") {
-      return [me, partner, mother];
-    }
-    if (id === "friends") {
-      return [me, misaki(), aya()];
-    }
-    if (id === "ward") {
-      return [me, ...classmates()];
-    }
-    if (id === "school") {
-      return [me, ...schoolFriends()];
-    }
-    if (id === invitedGroupId) {
-      return [me, ...cousins()];
-    }
-    return [me];
-  };
+  const membersOf = (id: string): Member[] => [meIn(id), ...sampleOthers(id)];
   const chatOf = (id: string, chatId: string): Chat =>
     chats[chatKey(id, chatId)] ?? { messages: [], unread: 0 };
   const addNotice = (id: string, notice: string) => {
@@ -234,6 +218,14 @@ export function DesignGroup({
     members: membersOf(summary.id).filter(
       (member) => !removed[summary.id]?.includes(member.id)
     ),
+  };
+  // Turns one of this group's chats' notifications off or back on.
+  const setMuted = (chatId: string, muted: boolean) => {
+    setGroups(
+      groups.map((item) =>
+        item.id === group.id ? withMuted(item, chatId, muted) : item
+      )
+    );
   };
   // A day shared from the shift table opens the group chat with the day
   // set above the composer, as sharing into a chat app does: nothing
@@ -345,6 +337,11 @@ export function DesignGroup({
                 )
           }
           title={chatTitle(group, page.chatId)}
+          muted={isMuted(group, page.chatId)}
+          onMuted={(muted) => {
+            setMuted(page.chatId, muted);
+            toast(muted ? "通知をオフにしました" : "通知をオンにしました");
+          }}
         />
         {memberSheet}
       </>
@@ -442,6 +439,9 @@ export function DesignGroup({
                     item.id === group.id ? { ...item, mine } : item
                   )
                 );
+              }}
+              onMuted={(muted) => {
+                setMuted(groupChat, muted);
               }}
               onInvite={() => {
                 setPage({ name: "invite" });

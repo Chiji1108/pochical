@@ -9,6 +9,13 @@ import {
 } from "../components/design-frames";
 import { GapSheetPreview, gapDaysIn } from "../components/design-gap-sheet";
 import type { GapSheetProps } from "../components/design-gap-sheet";
+import {
+  chatKey,
+  groupChat,
+  sampleChats,
+  sampleOthers,
+} from "../components/design-group-data";
+import { LockScreen } from "../components/design-home-screen";
 import { DesignOnboarding } from "../components/design-onboarding";
 import type { OnboardingScreen } from "../components/design-onboarding";
 import {
@@ -26,6 +33,7 @@ import { dateKey, initialDesignSchedule } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
 import { isDayOff, presetPatterns } from "../lib/design-patterns";
 import type { PatternBook } from "../lib/design-patterns";
+import { defaultReminders, notificationText } from "../lib/design-reminders";
 import { parseDesignVariants } from "../lib/design-variants";
 import { pageMeta } from "../lib/site";
 
@@ -45,6 +53,25 @@ const variants = parseDesignVariants({});
 const october = new Date(2026, 9, 1);
 const OCTOBER = 9;
 const OCTOBER_DAYS = 31;
+
+// 前日 21:00's notification for the sample's 25th, a day of 残業, and the
+// family chat's latest line, as they reach the lock screen.
+const reminderDay = new Date(2026, 8, 25);
+const reminderAt = new Date(2026, 8, 24, 21, 0);
+const reminderEntry = initialDesignSchedule()[dateKey(reminderDay)] ?? {
+  shift: "day",
+};
+const presetBook: PatternBook = presetPatterns;
+const reminderShift = {
+  entry: reminderEntry,
+  pattern: presetBook[reminderEntry.shift] ?? presetPatterns.day,
+};
+const chatAt = new Date(2026, 8, 24, 10, 20);
+const latest = sampleChats[chatKey("family", groupChat)]?.messages.at(-1);
+const chatLine = `${
+  sampleOthers("family").find((member) => member.id === latest?.from)?.name ??
+  ""
+}：${latest?.text ?? ""}`;
 
 function FlowsPage() {
   const theme = useDesignTheme();
@@ -156,7 +183,47 @@ function FlowsPage() {
                 tab="settings"
               />
               <CalendarFrame label="カレンダー" page="week" tab="settings" />
+              <CalendarFrame
+                label="リマインド"
+                page="reminders"
+                tab="settings"
+              />
+              <CalendarFrame
+                label="チャットの通知"
+                page="chatNotifications"
+                tab="settings"
+              />
               <CalendarFrame label="アカウント" page="account" tab="settings" />
+            </FrameRow>
+          </FrameSection>
+
+          <FrameSection
+            description="通知は、書いてあることを確かめられる画面で開きます。"
+            title="通知をタップしたとき"
+          >
+            <FrameRow>
+              <Frame label="前日のリマインド" note="9月24日 21:00">
+                <LockScreen
+                  when={reminderAt}
+                  {...notificationText(defaultReminders[0], reminderShift)}
+                />
+              </Frame>
+              <CalendarFrame
+                detail={reminderDay}
+                label="カレンダー"
+                note="その日を選んだ週で開く。開始前のリマインドも同じ"
+              />
+            </FrameRow>
+            <FrameRow branch="チャットのメッセージ">
+              <Frame label="チャット" note="全体チャットのメッセージ">
+                <LockScreen body={chatLine} title="家族" when={chatAt} />
+              </Frame>
+              <CalendarFrame
+                groupPage="message"
+                label="全体チャット"
+                note="いちばん新しいメッセージで開く。個人チャットならそのチャット"
+                tab="group"
+              />
             </FrameRow>
           </FrameSection>
         </div>

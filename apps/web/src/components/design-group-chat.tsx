@@ -1,10 +1,13 @@
 import { Popover, Portal } from "@ark-ui/react";
 import {
+  Bell,
+  BellOff,
   CalendarPlus,
   ChevronRight,
   CircleAlert,
   Copy,
   Download,
+  Ellipsis,
   ImageIcon,
   Plus,
   Reply,
@@ -57,10 +60,12 @@ import { ToastContext } from "./design-toast";
 import {
   BackButton,
   IconButton,
+  IconMenu,
   LimitedTextArea,
   List,
   ListRow,
   listRow,
+  MenuItem,
   menuStyle,
   Screen,
   srOnly,
@@ -103,7 +108,12 @@ const chatRow = {
     flexShrink: 0,
     gap: "4px",
   }),
-  name: css({ textStyle: "body" }),
+  name: css({
+    alignItems: "center",
+    display: "flex",
+    gap: "4px",
+    textStyle: "body",
+  }),
   preview: css({
     color: "text.quaternary",
     overflow: "hidden",
@@ -538,7 +548,15 @@ const chatStyle = {
     paddingBottom: "2px",
     textStyle: "caption2",
   }),
-  title: css({ fontWeight: 600, margin: 0, textStyle: "headline" }),
+  title: css({
+    alignItems: "center",
+    display: "flex",
+    fontWeight: 600,
+    gap: "4px",
+    margin: 0,
+    textStyle: "headline",
+  }),
+  menu: css({ justifySelf: "end" }),
   when: css({
     alignSelf: "center",
     bg: "fill.tertiary",
@@ -550,18 +568,30 @@ const chatStyle = {
   }),
 };
 
+// A chat whose notifications are off, after its name in the list and in
+// its own header, as chat apps mark a muted room.
+const mutedMark = css({ color: "text.tertiary", flexShrink: 0 });
+
+function MutedMark() {
+  return (
+    <BellOff aria-label="通知オフ" className={mutedMark} role="img" size={14} />
+  );
+}
+
 export function ChatRow({
   label,
   icon,
   chat,
   members,
   onOpen,
+  muted = false,
 }: {
   label: string;
   icon: ReactNode;
   chat: Chat;
   members: Member[];
   onOpen: () => void;
+  muted?: boolean;
 }) {
   const preview = lastLine(chat, members);
   const last = chat.messages.at(-1);
@@ -574,7 +604,10 @@ export function ChatRow({
     >
       {icon}
       <span className={chatRow.text}>
-        <span className={chatRow.name}>{label}</span>
+        <span className={chatRow.name}>
+          {label}
+          {muted && <MutedMark />}
+        </span>
         <small className={chatRow.preview}>
           {preview ?? "まだメッセージはありません"}
         </small>
@@ -611,8 +644,14 @@ export function ChatPage({
   attach,
   photoSend = "ok",
   sharedFirst = false,
+  muted = false,
+  onMuted,
 }: {
   title: string;
+  // Its notifications turned off, from the menu at its top right, as
+  // LINE's rooms have it.
+  muted?: boolean;
+  onMuted?: (muted: boolean) => void;
   group: Group;
   // Whether photos' uploads go through or fail.
   photoSend?: PhotoSend;
@@ -840,7 +879,33 @@ export function ChatPage({
     <Screen>
       <header className={chatStyle.header}>
         <BackButton onClick={onBack}>{backLabel}</BackButton>
-        <h3 className={chatStyle.title}>{title}</h3>
+        <h3 className={chatStyle.title}>
+          {title}
+          {muted && <MutedMark />}
+        </h3>
+        {onMuted && (
+          <IconMenu
+            className={chatStyle.menu}
+            icon={<Ellipsis aria-hidden="true" size={20} />}
+            label="チャットのメニュー"
+          >
+            <MenuItem
+              icon={
+                muted ? (
+                  <Bell aria-hidden="true" size={18} />
+                ) : (
+                  <BellOff aria-hidden="true" size={18} />
+                )
+              }
+              onSelect={() => {
+                onMuted(!muted);
+              }}
+              value="notifications"
+            >
+              {muted ? "通知をオンにする" : "通知をオフにする"}
+            </MenuItem>
+          </IconMenu>
+        )}
       </header>
       <ol
         aria-label={`${title}のメッセージ`}

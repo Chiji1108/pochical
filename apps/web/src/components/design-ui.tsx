@@ -1640,6 +1640,7 @@ export function SwitchRow({
   checked,
   onChange,
   swatch,
+  leading,
   className,
 }: {
   label: ReactNode;
@@ -1647,6 +1648,8 @@ export function SwitchRow({
   checked: boolean;
   onChange: (checked: boolean) => void;
   swatch?: string;
+  // Before the label, as a ListRow's: a group's mark.
+  leading?: ReactNode;
   className?: string;
 }) {
   return (
@@ -1669,6 +1672,11 @@ export function SwitchRow({
             className={swatchStyle}
             style={{ background: swatch }}
           />
+        </span>
+      )}
+      {leading && (
+        <span className={listRow.leading} data-part="leading">
+          {leading}
         </span>
       )}
       <Switch.Label className={cx(listRow.label, listRow.labelGrow)}>

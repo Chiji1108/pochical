@@ -16,6 +16,7 @@ import { ChatRow } from "./design-group-chat";
 import {
   everyoneOff,
   groupChat,
+  isMuted,
   misaki,
   mother,
   partner,
@@ -367,6 +368,7 @@ export function GroupHub({
             }
             label="全体チャット"
             members={group.members}
+            muted={isMuted(group, groupChat)}
             onOpen={() => {
               onChat(groupChat);
             }}
@@ -378,6 +380,7 @@ export function GroupHub({
               key={member.id}
               label={member.name}
               members={group.members}
+              muted={isMuted(group, member.id)}
               onOpen={() => {
                 onChat(member.id);
               }}

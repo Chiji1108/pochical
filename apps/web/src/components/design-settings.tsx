@@ -46,10 +46,15 @@ import { DayCell } from "./design-day-cell";
 import type { Profile } from "./design-group-data";
 import { PhotoAvatar, PhotoEditor } from "./design-group-parts";
 import { englishMonthOf, MonthName } from "./design-month-name";
+import {
+  ChatNotificationsPage,
+  NotificationSection,
+  RemindersPage,
+} from "./design-notifications";
 import { PatternsPage } from "./design-pattern-editor";
 import { PresetContexts } from "./design-providers";
 import { RepeatSequenceEditor, ShiftPreview } from "./design-repeat-editor";
-import { ConfirmDialog, Sheet } from "./design-sheet";
+import { ConfirmDialog, SystemAlert } from "./design-sheet";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
 import {
@@ -118,7 +123,9 @@ type Page =
   | "week"
   | "appIcon"
   | "account"
-  | "profile";
+  | "profile"
+  | "reminders"
+  | "chatNotifications";
 
 // The four shapes members see. Icons come filled (塗り) or as outlines (線);
 // letters always sit on their tile, and emoji have no fill.
@@ -362,6 +369,21 @@ export function DesignSettings({
             }}
           />
         )}
+        {page === "reminders" && (
+          <RemindersPage
+            onBack={() => {
+              setPage("top");
+            }}
+            schedule={schedule}
+          />
+        )}
+        {page === "chatNotifications" && (
+          <ChatNotificationsPage
+            onBack={() => {
+              setPage("top");
+            }}
+          />
+        )}
       </ScreenScroll>
       <TabBar active="settings" onSelect={onTab} />
     </Screen>
@@ -421,6 +443,14 @@ function SettingsTop({
           value={`${coworkerCount}人`}
         />
       </ListSection>
+      <NotificationSection
+        onChats={() => {
+          onOpen("chatNotifications");
+        }}
+        onReminders={() => {
+          onOpen("reminders");
+        }}
+      />
       <ListSection title="表示">
         <StyleRow
           onOpen={() => {
@@ -485,35 +515,6 @@ const appIcons = {
     padding: 0,
   }),
 };
-const systemAlert = {
-  box: css({
-    bg: "background.elevated",
-    borderRadius: "lg",
-    color: "text.primary",
-    overflow: "hidden",
-    textAlign: "center",
-    width: "270px",
-  }),
-  // iOS's own blue, as the system draws its alerts in any app.
-  button: css({
-    bg: "transparent",
-    border: 0,
-    borderTop: "1px solid token(colors.separator)",
-    color: "#0a84ff",
-    fontWeight: 600,
-    minHeight: "touch",
-    textStyle: "callout",
-    width: "100%",
-  }),
-  title: css({
-    fontWeight: 600,
-    lineHeight: 1.4,
-    margin: 0,
-    padding: "20px 16px 20px",
-    textStyle: "headline",
-  }),
-};
-
 // Between pages, wider than between cards, so a swipe shows where one ends.
 const THEME_PAGE_GAP = 16;
 
@@ -1769,35 +1770,6 @@ function AppIconPage({ onBack }: { onBack: () => void }) {
         />
       )}
     </>
-  );
-}
-
-// The system's own alert, as iOS shows it after an icon change.
-function SystemAlert({
-  title,
-  onClose,
-}: {
-  title: string;
-  onClose: () => void;
-}) {
-  return (
-    <Sheet
-      className={systemAlert.box}
-      label={title}
-      onOpenChange={(open) => {
-        if (!open) {
-          onClose();
-        }
-      }}
-      open
-      placement="center"
-      role="alertdialog"
-    >
-      <p className={systemAlert.title}>{title}</p>
-      <button className={systemAlert.button} onClick={onClose} type="button">
-        OK
-      </button>
-    </Sheet>
   );
 }
 

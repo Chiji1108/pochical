@@ -7,6 +7,8 @@ import type { Appearance, PresetId } from "../components/design-theme";
 import { defaultWeekSettings } from "../components/design-week";
 import type { WeekSettings } from "../components/design-week";
 import type { LookSettings, ShiftMarkStyle } from "../components/shift-mark";
+import { defaultReminders } from "./design-reminders";
+import type { Reminder } from "./design-reminders";
 import { deviceSettingsKey } from "./design-settings-key";
 
 // The person's settings on /design, sorted by where each would live in the
@@ -74,6 +76,8 @@ export type DeviceSettings = {
   calendar: Record<ShiftMarkStyle, CalendarOptions>;
   // How 画像で保存 last drew the month.
   imageOptions: ImageOptions;
+  // Reminders of the person's shifts, sent by this device on its own.
+  reminders: Reminder[];
 };
 
 type SettingsState = {
@@ -92,6 +96,7 @@ type SettingsState = {
   setSky: (sky: string) => void;
   setAppIcon: (icon: string) => void;
   setImageOptions: (options: ImageOptions) => void;
+  setReminders: (reminders: Reminder[]) => void;
   // Changes the options of the shape in use.
   setCalendarOptions: (change: Partial<CalendarOptions>) => void;
 };
@@ -117,6 +122,7 @@ export const useSettings = create<SettingsState>()(
         monthName: "number",
         monthTap: "pick",
         preset: "pochical",
+        reminders: defaultReminders,
         shiftColors: true,
         week: defaultWeekSettings,
       },
@@ -155,6 +161,9 @@ export const useSettings = create<SettingsState>()(
       },
       setPreset: (preset) => {
         set((state) => ({ device: { ...state.device, preset } }));
+      },
+      setReminders: (reminders) => {
+        set((state) => ({ device: { ...state.device, reminders } }));
       },
       setShape: ({ style, fill }) => {
         set((state) => ({

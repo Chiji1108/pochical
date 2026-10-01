@@ -8,6 +8,7 @@ import { createUserStore, UserStoreContext } from "../lib/design-user-store";
 import type { OwnData } from "../lib/design-user-store";
 import { parseDesignVariants } from "../lib/design-variants";
 import { DesignCalendar } from "./design-calendar";
+import type { GroupStart } from "./design-group";
 import type { SettingsPage } from "./design-settings";
 import type { Tab } from "./design-tab-bar";
 
@@ -200,6 +201,8 @@ export function CalendarFrame({
   editing = false,
   tab,
   page,
+  groupPage,
+  detail,
   overlay,
 }: {
   label: string;
@@ -211,6 +214,9 @@ export function CalendarFrame({
   editing?: boolean;
   tab?: Tab;
   page?: SettingsPage;
+  groupPage?: GroupStart;
+  // A day of the month to open on picked.
+  detail?: Date;
 }) {
   const [store] = useState(() =>
     createUserStore({ schedule: initialDesignSchedule(), ...person })
@@ -219,7 +225,9 @@ export function CalendarFrame({
     <Frame label={label} note={note}>
       <UserStoreContext value={store}>
         <DesignCalendar
+          initialDetail={detail}
           initialEditing={editing}
+          initialGroupPage={groupPage}
           initialMonth={month}
           initialSettingsPage={page}
           initialTab={tab}
