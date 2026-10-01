@@ -70,6 +70,9 @@ const SAMPLE_TINT = "oklch(0.78 0.11 75)";
 // Words that stay as tiers of one white in the system's flat looks, as
 // SwiftUI's .primary / .secondary do.
 const flatText = {
+  // Faint, as the day-off tiles, or the stroke would be a solid block
+  // under its white date.
+  "--calendar-note-marker": "rgb(255 255 255 / 0.24)",
   "--text-primary": "#fff",
   "--text-quaternary": "rgb(255 255 255 / 0.25)",
   "--text-secondary": "rgb(255 255 255 / 0.6)",

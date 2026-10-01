@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { css, cva } from "styled-system/css";
+import { css, cva, cx } from "styled-system/css";
 
 import type { WidgetDay, WidgetEntry } from "../lib/design-widgets";
 import { srOnly } from "./design-ui";
@@ -80,13 +80,31 @@ function relativeDay(day: WidgetDay, index: number) {
 // A day as read aloud, for the places whose marks are pictures only.
 function SpokenDay({ day }: { day: WidgetDay }) {
   const time = day.time ? ` ${day.time}` : "";
+  const note = day.note ? " メモあり" : "";
   return (
     <span className={srOnly}>
       {monthDay(day.date)}({day.weekday}) {day.name ?? NOTHING}
       {time}
+      {note}
     </span>
   );
 }
+
+// A day with a memo: the calendar's stroke under its date, as marked in
+// a paper diary. Only where each day has its own date and mark; the small
+// month's numbers sit in day-off tiles with no room for it.
+const noted = css({
+  _before: {
+    bg: "calendar.noteMarker",
+    borderRadius: "2xs",
+    content: '""',
+    inset: "45% -3px -1px",
+    position: "absolute",
+    zIndex: -1,
+  },
+  isolation: "isolate",
+  position: "relative",
+});
 
 const dayMark = css({
   alignItems: "center",
@@ -331,7 +349,11 @@ export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
               <SpokenDay day={shown} />
               <span
                 aria-hidden="true"
-                className={`${twoWeeks.date({ today: time === todayTime })} ${dateTone(shown, todayTime)}`}
+                className={cx(
+                  twoWeeks.date({ today: time === todayTime }),
+                  dateTone(shown, todayTime),
+                  shown.note && noted
+                )}
               >
                 {shown.date.getDate()}
               </span>
@@ -576,9 +598,11 @@ export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
                 <SpokenDay day={day} />
                 <span
                   aria-hidden="true"
-                  className={`${month.date({
-                    today: day.date.getTime() === todayTime,
-                  })} ${dateTone(day, todayTime)}`}
+                  className={cx(
+                    month.date({ today: day.date.getTime() === todayTime }),
+                    dateTone(day, todayTime),
+                    day.note && noted
+                  )}
                 >
                   {day.date.getDate()}
                 </span>
