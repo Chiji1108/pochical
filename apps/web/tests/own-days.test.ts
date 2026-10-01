@@ -1,9 +1,12 @@
 import { expect, test } from "bun:test";
 
 import {
+  dateKey,
   editedOwnDays,
   giveDaysToOrder,
   shownDays,
+  withOrder,
+  workedOutThrough,
 } from "../src/lib/design-days";
 import type { OwnDays, Schedule } from "../src/lib/design-days";
 
@@ -65,4 +68,18 @@ test("a new order takes shifts and times from its start, not memos", () => {
     "2026-09-30": { shift: "night" },
     "2026-10-01": { members: undefined, note: "棚卸し" },
   });
+});
+
+test("a new order starting earlier replaces the orders after it", () => {
+  const first = { sequence: ["day"], start: new Date(2026, 0, 1) };
+  const second = { sequence: ["night"], start: new Date(2026, 9, 1) };
+  const backdated = { sequence: ["off"], start: new Date(2026, 5, 1) };
+  expect(withOrder([first, second], backdated)).toEqual([first, backdated]);
+});
+
+test("days are worked out through the month in view, however far", () => {
+  const today = new Date(2026, 8, 24);
+  const far = new Date(2031, 0, 1);
+  expect(dateKey(workedOutThrough([], today))).toBe("2028-09-30");
+  expect(dateKey(workedOutThrough([], today, far))).toBe("2033-01-31");
 });

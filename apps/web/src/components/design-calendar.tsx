@@ -42,6 +42,7 @@ import {
   timeChangeOf,
   timeRange,
   weekdays,
+  withOrder,
 } from "../lib/design-days";
 import type { DayEntry, RepeatRule, Schedule } from "../lib/design-days";
 import {
@@ -148,10 +149,6 @@ export function DesignCalendar({
   // over the calendar.
   pendingInvite?: boolean;
 }) {
-  // The days as they show; a change keeps only what differs from the
-  // repeating orders as the person's own.
-  const schedule = useShownDays();
-  const onChange = useChangeDays();
   const setOwnDays = useUser((state) => state.setSchedule);
   const phoneRef = useRef<HTMLDivElement>(null);
   const { say: toast, toaster } = usePhoneToaster();
@@ -242,6 +239,11 @@ export function DesignCalendar({
   // too, with ポチポチ入力 always offered in the 保存を右上 variant.
   const [enteredBlank, setEnteredBlank] = useState(true);
   const [month, setMonth] = useState(() => new Date(2026, initialMonth, 1));
+  // The days as they show, worked out through the month in view however far
+  // ahead it is; a change keeps only what differs from the repeating orders
+  // as the person's own.
+  const schedule = useShownDays(month);
+  const onChange = useChangeDays(month);
   // How far the pages are dragged, -1 to 1 toward the next, which the
   // month's name follows; and the month a swipe last landed on, whose name
   // the drag has already brought in.
@@ -437,12 +439,12 @@ export function DesignCalendar({
   }
   function applyRule(rule: RepeatRule, patterns?: Pattern[]) {
     const filled = fillRule(rule, patterns);
-    setRules((previous) => [...previous, filled]);
+    setRules((previous) => withOrder(previous, filled));
   }
   // Corrects the rule in use from its own start, rather than adding one.
   function fixRule(rule: RepeatRule) {
     const filled = fillRule(rule);
-    setRules((previous) => [...previous.slice(0, -1), filled]);
+    setRules((previous) => withOrder(previous.slice(0, -1), filled));
   }
   // The new job's patterns take over, keeping any old one still on a day
   // before the switch so those days keep their marks. A ready-made one the

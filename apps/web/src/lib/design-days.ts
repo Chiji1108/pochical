@@ -198,16 +198,32 @@ export function repeatSchedule(
 }
 
 // How far ahead /design works days out: the apps work out whichever
-// month is shown, but /design lists the days, so it stops two years on.
+// month is shown, but /design lists the days, so it stops two years past
+// today, the last order's start and the month in view.
 const MONTHS_AHEAD = 24;
 
-export function workedOutThrough(rules: readonly RepeatRule[], today: Date) {
+export function workedOutThrough(
+  rules: readonly RepeatRule[],
+  today: Date,
+  inView = today
+) {
   const last = Math.max(
     today.getTime(),
+    inView.getTime(),
     ...rules.map(({ start }) => start.getTime())
   );
   const from = new Date(last);
   return new Date(from.getFullYear(), from.getMonth() + MONTHS_AHEAD + 1, 0);
+}
+
+// The orders with a new one added: it takes over from its start, so an
+// order starting on or after that day gives way to it entirely, and the
+// newest order is always the last.
+export function withOrder(
+  rules: readonly RepeatRule[],
+  rule: RepeatRule
+): RepeatRule[] {
+  return [...rules.filter(({ start }) => start < rule.start), rule];
 }
 
 // Each day's shift by the repeating orders alone, through `through`: a day

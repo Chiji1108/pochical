@@ -122,28 +122,30 @@ export function useUser<T>(selector: (state: UserState) => T): T {
   return useStore(store, selector);
 }
 
-const plannedOf = (rules: RepeatRule[], patterns: Pattern[]) =>
+const plannedOf = (rules: RepeatRule[], patterns: Pattern[], inView?: Date) =>
   plannedShifts(
     rules,
     new Set(patterns.map(({ id }) => id)),
-    workedOutThrough(rules, designToday)
+    workedOutThrough(rules, designToday, inView)
   );
 
 // The person's days as they show: each day's own shift, else its repeating
-// order's (spec/shift-patterns.md, Repeating orders).
-export function useShownDays(): Schedule {
+// order's (spec/shift-patterns.md, Repeating orders), worked out at least
+// through the month `inView`.
+export function useShownDays(inView?: Date): Schedule {
   const own = useUser((state) => state.schedule);
   const rules = useUser((state) => state.rules);
   const patterns = useUser((state) => state.patterns);
   return useMemo(
-    () => shownDays(own, plannedOf(rules, patterns)),
-    [own, rules, patterns]
+    () => shownDays(own, plannedOf(rules, patterns, inView)),
+    [own, rules, patterns, inView]
   );
 }
 
 // Changes the days as they show, like a setter of useShownDays: only what
-// differs from the orders is kept as the person's own.
-export function useChangeDays() {
+// differs from the orders is kept as the person's own. `inView` is the
+// month the days were shown through, as useShownDays had it.
+export function useChangeDays(inView?: Date) {
   const store = useContext(UserStoreContext);
   if (!store) {
     throw new Error("useChangeDays needs a UserStoreContext around it");
@@ -151,10 +153,10 @@ export function useChangeDays() {
   return useCallback(
     (next: SetStateAction<Schedule>) => {
       const { patterns, rules, schedule, setSchedule } = store.getState();
-      const planned = plannedOf(rules, patterns);
+      const planned = plannedOf(rules, patterns, inView);
       const shown = shownDays(schedule, planned);
       setSchedule(editedOwnDays(schedule, planned, shown, apply(next, shown)));
     },
-    [store]
+    [store, inView]
   );
 }
