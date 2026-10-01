@@ -837,7 +837,7 @@ const listing = {
       wide: {
         // The day's number, and its mark in the middle of the rest.
         false: { gridTemplateColumns: "32px 1fr", justifyItems: "start" },
-        // The weekday's room fits thu and wed as well as 木.
+        // The weekday's room fits WED as well as 木, clear of the mark.
         true: { gridTemplateColumns: "28px 32px 24px 1fr" },
       },
     },
@@ -850,7 +850,9 @@ const listing = {
   }),
   smallMark: css({ justifySelf: "center" }),
   text: css({ ...oneLine, color: "text.secondary", textStyle: "footnote" }),
-  weekday: css({ textStyle: "caption1" }),
+  // A small mark beside the day's number, not a second number: a size
+  // down, its capitals spaced a little in English.
+  weekday: css({ letterSpacing: "0.04em", textStyle: "caption2" }),
 };
 
 // What a row says after its mark, where there is room: the changed
