@@ -12,7 +12,7 @@ import {
 import { clockText } from "../lib/design-reminders";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
-import { useUser } from "../lib/design-user-store";
+import { useShownDays, useUser } from "../lib/design-user-store";
 import { widgetEntry } from "../lib/design-widgets";
 import { useDeviceScheme } from "../lib/use-device-scheme";
 import { AppIcon, useAppIcons } from "./design-app-icon";
@@ -202,7 +202,7 @@ export function HomeScreen() {
   const platform = useDevice((state) => state.platform);
   const hue = useDevice((state) => state.wallpaperHue);
   const scheme = useDeviceScheme();
-  const schedule = useUser((state) => state.schedule);
+  const schedule = useShownDays();
   const patterns = useUser((state) => state.patterns);
   const week = useSettings((state) => state.device.week);
   // The person's own patterns, over the ready-made ones, as the calendar

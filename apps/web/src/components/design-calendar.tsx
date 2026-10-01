@@ -36,12 +36,13 @@ import {
   dateKey,
   defaultHolidaysOff,
   formatDay,
+  giveDaysToOrder,
   holidayShiftOf,
   keepDetails,
-  ruleSchedule,
   timeChangeOf,
   timeRange,
   weekdays,
+  withOrder,
 } from "../lib/design-days";
 import type { DayEntry, RepeatRule, Schedule } from "../lib/design-days";
 import {
@@ -57,7 +58,7 @@ import {
 import type { Pattern, PatternBook, Shift } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
-import { useUser } from "../lib/design-user-store";
+import { useChangeDays, useShownDays, useUser } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
 import { spring } from "../lib/motion";
 import { composing, limitText } from "../lib/text-limits";
@@ -110,7 +111,7 @@ import {
   TodayButton,
   WeekdayRow,
 } from "./design-ui";
-import { holidayNameOfKey, useWeek } from "./design-week";
+import { useWeek } from "./design-week";
 import { OffDisplayContext, ShiftMark } from "./shift-mark";
 
 type MemberOptions = Pick<Coworkers, "names" | "onAdd">;
@@ -148,8 +149,7 @@ export function DesignCalendar({
   // over the calendar.
   pendingInvite?: boolean;
 }) {
-  const schedule = useUser((state) => state.schedule);
-  const onChange = useUser((state) => state.setSchedule);
+  const setOwnDays = useUser((state) => state.setSchedule);
   const phoneRef = useRef<HTMLDivElement>(null);
   const { say: toast, toaster } = usePhoneToaster();
   const themeStyle = useThemeStyle();
@@ -198,7 +198,7 @@ export function DesignCalendar({
   const setRules = useUser((state) => state.setRules);
   // Renaming or deleting someone changes the days they are on too.
   const updateMembersOnDays = (change: (names: string[]) => string[]) => {
-    onChange((previous) =>
+    setOwnDays((previous) =>
       Object.fromEntries(
         Object.entries(previous).map(([key, entry]) => {
           if (!entry?.members) {
@@ -239,6 +239,11 @@ export function DesignCalendar({
   // too, with ポチポチ入力 always offered in the 保存を右上 variant.
   const [enteredBlank, setEnteredBlank] = useState(true);
   const [month, setMonth] = useState(() => new Date(2026, initialMonth, 1));
+  // The days as they show, worked out through the month in view however far
+  // ahead it is; a change keeps only what differs from the repeating orders
+  // as the person's own.
+  const schedule = useShownDays(month);
+  const onChange = useChangeDays(month);
   // How far the pages are dragged, -1 to 1 toward the next, which the
   // month's name follows; and the month a swipe last landed on, whose name
   // the drag has already brought in.
@@ -413,12 +418,11 @@ export function DesignCalendar({
     setEnteredBlank(unfilled > 0);
     setEditing(true);
   }
-  // From the switch day on, the new order replaces what the old one wrote.
-  // Fills the schedule from the rule's start. Everything from that day on
-  // is replaced, so an empty sequence leaves a roster to fill in.
-  // A new job brings its own patterns, so it passes them in.
+  // From its start, the new order shows in place of the one before: the
+  // days give their own shifts and times back to it, keeping memos and
+  // people, and an empty sequence leaves a roster to fill in. A new job
+  // brings its own patterns, so it passes them in.
   function fillRule(rule: RepeatRule, patterns = ownPatterns) {
-    const from = dateKey(rule.start);
     const holidaysOff =
       rule.sequence.length > 0 &&
       (rule.holidaysOff ??
@@ -428,24 +432,19 @@ export function DesignCalendar({
           bookOf(patterns)
         ));
     const holidayShift = holidaysOff ? holidayShiftOf(patterns) : undefined;
-    onChange((previous) => ({
-      ...Object.fromEntries(
-        Object.entries(previous).filter(([key]) => key < from)
-      ),
-      ...(rule.sequence.length > 0 ? ruleSchedule(rule, holidayShift) : {}),
-    }));
+    setOwnDays((previous) => giveDaysToOrder(previous, rule.start));
     return rule.sequence.length > 0
       ? { ...rule, holidayShift, holidaysOff }
       : rule;
   }
   function applyRule(rule: RepeatRule, patterns?: Pattern[]) {
     const filled = fillRule(rule, patterns);
-    setRules((previous) => [...previous, filled]);
+    setRules((previous) => withOrder(previous, filled));
   }
   // Corrects the rule in use from its own start, rather than adding one.
   function fixRule(rule: RepeatRule) {
     const filled = fillRule(rule);
-    setRules((previous) => [...previous.slice(0, -1), filled]);
+    setRules((previous) => withOrder(previous.slice(0, -1), filled));
   }
   // The new job's patterns take over, keeping any old one still on a day
   // before the switch so those days keep their marks. A ready-made one the
@@ -482,51 +481,20 @@ export function DesignCalendar({
       patterns
     );
   }
-  // Only holidays still showing what the rule put there change, so days
-  // the person edited stay as they are.
+  // Holidays follow the order in use: on, they take the day off now first;
+  // off, they show the sequence again. Days the person changed keep theirs.
   function setHolidaysOff(holidaysOff: boolean) {
     const rule = rules.at(-1);
     if (!rule) {
       return;
     }
-    // On, with the day off now first; back, from the one the rule used.
-    const holidayShift = holidaysOff
-      ? holidayShiftOf(ownPatterns)
-      : rule.holidayShift;
+    const holidayShift = holidaysOff ? holidayShiftOf(ownPatterns) : undefined;
     if (holidaysOff && !holidayShift) {
       return;
     }
-    const planned = ruleSchedule(rule);
-    onChange((previous) => {
-      const next = { ...previous };
-      if (!holidayShift) {
-        return next;
-      }
-      for (const [key, entry] of Object.entries(planned)) {
-        const plannedShift = entry?.shift;
-        const current = previous[key];
-        if (
-          !(holidayNameOfKey(key) && plannedShift) ||
-          plannedShift === holidayShift
-        ) {
-          continue;
-        }
-        if (holidaysOff && current?.shift === plannedShift) {
-          next[key] = { ...current, shift: holidayShift };
-        }
-        if (!holidaysOff && current?.shift === holidayShift) {
-          next[key] = { ...current, shift: plannedShift };
-        }
-      }
-      return next;
-    });
     setRules((previous) => [
       ...previous.slice(0, -1),
-      {
-        ...rule,
-        holidayShift: holidaysOff ? holidayShift : undefined,
-        holidaysOff,
-      },
+      { ...rule, holidayShift, holidaysOff },
     ]);
   }
   function openSave(completion: boolean, toCalendar = false) {

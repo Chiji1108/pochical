@@ -1,5 +1,5 @@
 {
-  "about": "A repeating order of shifts (spec/shift-patterns.md). schedule: each day from `from` to `to` takes the order's shift counted in whole days from `anchor`, which falls on the order's first shift; days before the anchor count backwards. With `holidayShift`, the national holidays of `holidays` (a country code, design/scripts/holidays.ts) take that pattern instead. lastDay: an order is filled through the end of the month a year after its start. holidaysOffByDefault: 祝日は休みにする starts on when the order is a week (seven shifts) with a pattern that counts as off on a Saturday or Sunday; `daysOff` are the patterns that count as off. holidayShift: what holidays become, the first pattern that counts as off, in the person's order.",
+  "about": "A repeating order of shifts (spec/shift-patterns.md, Repeating orders). schedule: each day from `from` to `to` takes the order's shift counted in whole days from `anchor`, which falls on the order's first shift; days before the anchor count backwards. With `holidayShift`, the national holidays of `holidays` (a country code, design/scripts/holidays.ts) take that pattern instead. shown: the days as they show from a person's orders and own days. A day follows the latest order that starts on or before it; an order with an empty sequence ends repeating; a pattern not in `patterns` leaves its days empty. A day's own `shift` wins over its order, and \"\" is a day cleared on purpose; an own day without one follows its order. holidaysOffByDefault: 祝日は休みにする starts on when the order is a week (seven shifts) with a pattern that counts as off on a Saturday or Sunday; `daysOff` are the patterns that count as off. holidayShift: what holidays become, the first pattern that counts as off, in the person's order.",
   "schedule": [
     {
       "name": "a three-day order from its anchor",
@@ -128,26 +128,140 @@
       }
     }
   ],
-  "lastDay": [
+  "shown": [
     {
-      "start": "2026-10-01",
-      "expected": "2027-10-31"
+      "name": "a later order takes over on its start",
+      "orders": [
+        {
+          "sequence": ["day", "night"],
+          "start": "2026-10-01"
+        },
+        {
+          "sequence": ["off"],
+          "start": "2026-10-04"
+        }
+      ],
+      "patterns": ["day", "night", "off"],
+      "own": {},
+      "from": "2026-10-01",
+      "to": "2026-10-06",
+      "expected": {
+        "2026-10-01": "day",
+        "2026-10-02": "night",
+        "2026-10-03": "day",
+        "2026-10-04": "off",
+        "2026-10-05": "off",
+        "2026-10-06": "off"
+      }
     },
     {
-      "start": "2026-10-31",
-      "expected": "2027-10-31"
+      "name": "an empty sequence ends repeating",
+      "orders": [
+        {
+          "sequence": ["day"],
+          "start": "2026-10-01"
+        },
+        {
+          "sequence": [],
+          "start": "2026-10-03"
+        }
+      ],
+      "patterns": ["day"],
+      "own": {},
+      "from": "2026-10-01",
+      "to": "2026-10-05",
+      "expected": {
+        "2026-10-01": "day",
+        "2026-10-02": "day"
+      }
     },
     {
-      "start": "2026-01-15",
-      "expected": "2027-01-31"
+      "name": "nothing before the first order starts, though it counts from an earlier anchor",
+      "orders": [
+        {
+          "sequence": ["day", "night"],
+          "start": "2026-10-03",
+          "anchor": "2026-10-01"
+        }
+      ],
+      "patterns": ["day", "night"],
+      "own": {},
+      "from": "2026-10-01",
+      "to": "2026-10-05",
+      "expected": {
+        "2026-10-03": "day",
+        "2026-10-04": "night",
+        "2026-10-05": "day"
+      }
     },
     {
-      "start": "2027-02-10",
-      "expected": "2028-02-29"
+      "name": "a day's own shift wins, and \"\" clears a day on purpose",
+      "orders": [
+        {
+          "sequence": ["day"],
+          "start": "2026-10-01"
+        }
+      ],
+      "patterns": ["day", "night"],
+      "own": {
+        "2026-10-02": {
+          "shift": "night"
+        },
+        "2026-10-03": {
+          "shift": ""
+        },
+        "2026-10-04": {},
+        "2026-10-07": {
+          "shift": "night"
+        }
+      },
+      "from": "2026-10-01",
+      "to": "2026-10-07",
+      "expected": {
+        "2026-10-01": "day",
+        "2026-10-02": "night",
+        "2026-10-04": "day",
+        "2026-10-05": "day",
+        "2026-10-06": "day",
+        "2026-10-07": "night"
+      }
     },
     {
-      "start": "2027-03-31",
-      "expected": "2028-03-31"
+      "name": "a pattern that is gone leaves its days empty",
+      "orders": [
+        {
+          "sequence": ["day", "gone"],
+          "start": "2026-10-01"
+        }
+      ],
+      "patterns": ["day"],
+      "own": {},
+      "from": "2026-10-01",
+      "to": "2026-10-04",
+      "expected": {
+        "2026-10-01": "day",
+        "2026-10-03": "day"
+      }
+    },
+    {
+      "name": "the holidays of an order with holidaysOff take its holidayShift",
+      "orders": [
+        {
+          "sequence": ["day"],
+          "start": "2026-11-01",
+          "holidaysOff": true,
+          "holidayShift": "off"
+        }
+      ],
+      "patterns": ["day", "off"],
+      "own": {},
+      "from": "2026-11-02",
+      "to": "2026-11-04",
+      "expected": {
+        "2026-11-02": "day",
+        "2026-11-03": "off",
+        "2026-11-04": "day"
+      }
     }
   ],
   "holidaysOffByDefault": [
