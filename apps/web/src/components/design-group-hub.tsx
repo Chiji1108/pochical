@@ -1,6 +1,7 @@
 import {
   Ban,
   ChevronRight,
+  Ellipsis,
   Flag,
   MessageCircle,
   MessagesSquare,
@@ -47,10 +48,14 @@ import {
   Button,
   DestructiveButton,
   IconButton,
+  IconMenu,
   List,
   ListRow,
+  MenuItem,
+  MenuSeparator,
   Note,
   Section,
+  Tag,
 } from "./design-ui";
 import { useWeek } from "./design-week";
 
@@ -492,7 +497,60 @@ export function MemberSheet({
     >
       {member && (
         <>
-          <SheetHeading onClose={onClose} title="" />
+          {/* Blocking and reporting, rarely used, wait in ⋯ rather than
+              in red under someone's face, as in Discord's and Telegram's
+              profiles. Blocking hides their messages and one-to-one chat
+              from you in every group you share; their shifts stay, as the
+              group is for shifts: leaving or taking them out is the step
+              for that. Reporting tells Pochical. Neither is shown to them. */}
+          <SheetHeading
+            menu={
+              <IconMenu
+                icon={<Ellipsis aria-hidden="true" size={20} />}
+                label={`${member.name}のメニュー`}
+              >
+                {isBlocked ? (
+                  <MenuItem
+                    icon={<Ban aria-hidden="true" size={18} />}
+                    onSelect={() => {
+                      setBlocked(blocked.filter((id) => id !== member.id));
+                      toast(`${member.name}のブロックを解除しました`);
+                    }}
+                    value="unblock"
+                  >
+                    ブロックを解除
+                  </MenuItem>
+                ) : (
+                  <MenuItem
+                    icon={<Ban aria-hidden="true" size={18} />}
+                    onSelect={() => {
+                      setBlocking(true);
+                    }}
+                    value="block"
+                  >
+                    ブロック
+                  </MenuItem>
+                )}
+                {onReport && (
+                  <>
+                    <MenuSeparator />
+                    <MenuItem
+                      danger
+                      icon={<Flag aria-hidden="true" size={18} />}
+                      onSelect={() => {
+                        onReport(member);
+                      }}
+                      value="report"
+                    >
+                      通報
+                    </MenuItem>
+                  </>
+                )}
+              </IconMenu>
+            }
+            onClose={onClose}
+            title=""
+          />
           <div className={profileStyle.root}>
             {member.photo ? (
               <button
@@ -509,6 +567,8 @@ export function MemberSheet({
               <Avatar member={member} size={72} />
             )}
             <h3 className={profileStyle.name}>{member.name}</h3>
+            {/* With the actions in ⋯, the face says it is blocked. */}
+            {isBlocked && <Tag size="sm">ブロック中</Tag>}
             <span className={profileStyle.where}>
               <span aria-hidden="true" className={hub.icon}>
                 <GroupIcon mark={group.mark} size={14} />
@@ -527,44 +587,6 @@ export function MemberSheet({
               </Button>
             )}
           </div>
-          {/* Blocking hides their messages and one-to-one chat from you
-              in every group you share; their shifts stay, as the group is
-              for shifts: leaving or taking them out is the step for that.
-              Reporting tells Pochical; neither is shown to them. */}
-          <List>
-            {isBlocked ? (
-              <ListRow
-                arrow={false}
-                label="ブロックを解除"
-                leading={<Ban aria-hidden="true" size={20} />}
-                onClick={() => {
-                  setBlocked(blocked.filter((id) => id !== member.id));
-                  toast(`${member.name}のブロックを解除しました`);
-                }}
-              />
-            ) : (
-              <ListRow
-                arrow={false}
-                danger
-                label="ブロック"
-                leading={<Ban aria-hidden="true" size={20} />}
-                onClick={() => {
-                  setBlocking(true);
-                }}
-              />
-            )}
-            {onReport && (
-              <ListRow
-                arrow={false}
-                danger
-                label="通報"
-                leading={<Flag aria-hidden="true" size={20} />}
-                onClick={() => {
-                  onReport(member);
-                }}
-              />
-            )}
-          </List>
           {onRemove && (
             <DestructiveButton
               onClick={() => {
