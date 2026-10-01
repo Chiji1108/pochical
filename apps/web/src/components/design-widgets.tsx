@@ -1247,8 +1247,12 @@ const column = {
     fontVariantNumeric: "tabular-nums",
     textStyle: "footnote",
   }),
+  // Each part keeps its own height and the column's width: cut with …
+  // rather than run into the day beside or under the part above.
   note: css({
     color: "text.secondary",
+    flexShrink: 0,
+    maxWidth: "100%",
     overflow: "hidden",
     textOverflow: "ellipsis",
     textStyle: "footnote",
@@ -1259,10 +1263,11 @@ const column = {
     display: "flex",
     flex: 1,
     flexDirection: "column",
-    gap: "4px",
+    gap: "2px",
     minWidth: 0,
   }),
   words: css({
+    flexShrink: 0,
     fontVariantNumeric: "tabular-nums",
     fontWeight: 600,
     maxWidth: "100%",
@@ -1283,7 +1288,7 @@ function DayColumn({ day, label }: { day: WidgetDay; label: string }) {
         {label} {day.date.getMonth() + MONTH_NUMBER}/{day.date.getDate()}(
         {day.weekday})
       </span>
-      <DayMark day={day} size={40} />
+      <DayMark day={day} size={32} />
       <Change className={column.words} day={day} />
       {day.note && <span className={column.note}>{day.note}</span>}
       {day.members.length > 0 && (
