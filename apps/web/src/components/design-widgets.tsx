@@ -6,15 +6,20 @@ import {
   useRef,
   useState,
 } from "react";
+import type { CSSProperties } from "react";
 import { css, cva, cx } from "styled-system/css";
 
+import { presetPatterns } from "../lib/design-patterns";
 import type { WidgetDay, WidgetEntry } from "../lib/design-widgets";
 import { dayName } from "../lib/text-limits";
 import { srOnly } from "./design-ui";
 import {
   CellNamesContext,
+  OffDisplayContext,
   ShiftMark,
   ShiftMarkStyleContext,
+  useDisplayColor,
+  useOffHighlight,
 } from "./shift-mark";
 
 // The widgets themselves: views of one WidgetEntry, as the native apps'
@@ -111,6 +116,13 @@ function SpokenDay({ day }: { day: WidgetDay }) {
 // a paper diary. Only where each day has its own date and mark; the small
 // month's numbers sit in day-off tiles with no room for it.
 const noted = css({
+  // On a day off's tile, the tile's own color a step deeper, as in the
+  // calendar.
+  "[data-off] &": {
+    _before: {
+      bg: "oklch(from var(--off-tint) calc(l + var(--note-on-tile-lightness)) calc(c * var(--note-on-tile-chroma)) h)",
+    },
+  },
   _before: {
     bg: "calendar.noteMarker",
     borderRadius: "2xs",
@@ -123,6 +135,56 @@ const noted = css({
   position: "relative",
 });
 
+// How a day off shows where each day has its own mark, as the calendar
+// shows it with the person's 休みを塗る and 休みの見せ方: on a tile of its
+// pattern's tint, its mark faint, or left empty. The two weeks read as
+// the calendar's week, where a day off left empty comes back faint, to
+// tell it from a day with nothing entered.
+type OffLook = { tile: boolean; mark: "show" | "faint" | "none" };
+const shownOff: OffLook = { mark: "show", tile: false };
+
+function useOffLook(day: WidgetDay, week: boolean): OffLook {
+  const highlight = useOffHighlight(useContext(ShiftMarkStyleContext));
+  const display = useContext(OffDisplayContext);
+  if (!day.off) {
+    return shownOff;
+  }
+  const shown = week && display === "blank" ? "faint" : display;
+  if (shown === "blank") {
+    return { mark: "none", tile: false };
+  }
+  if (shown === "faint") {
+    return { mark: "faint", tile: false };
+  }
+  return { mark: "show", tile: highlight };
+}
+
+const offTile = cva({
+  // Faint when the system draws in one color, or it would be a solid
+  // block over its number.
+  variants: {
+    flat: {
+      false: { bg: "var(--off-tint)" },
+      true: { bg: "rgb(255 255 255 / 0.24)" },
+    },
+  },
+});
+
+// A day off's tile on a day's cell, in its pattern's tint: a class, and
+// the tint as --off-tint, which a memo's stroke on it deepens.
+function useOffTile(day: WidgetDay, on: boolean) {
+  const { tint } = useDisplayColor(day.color ?? presetPatterns.off.color);
+  const flat = useContext(WidgetRenderingModeContext) !== "fullColor";
+  if (!on) {
+    return {};
+  }
+  return {
+    className: offTile({ flat }),
+    "data-off": flat ? undefined : "",
+    style: { "--off-tint": tint } as CSSProperties,
+  };
+}
+
 const dayMark = css({
   alignItems: "center",
   color: "text.quaternary",
@@ -132,7 +194,15 @@ const dayMark = css({
 });
 
 // A day's mark, or a quiet dash when nothing is entered.
-function DayMark({ day, size }: { day: WidgetDay; size: number }) {
+function DayMark({
+  day,
+  size,
+  faint = false,
+}: {
+  day: WidgetDay;
+  size: number;
+  faint?: boolean;
+}) {
   if (!day.shift) {
     return (
       <span
@@ -144,7 +214,7 @@ function DayMark({ day, size }: { day: WidgetDay; size: number }) {
       </span>
     );
   }
-  return (
+  const mark = (
     <ShiftMark
       early={day.early}
       late={day.late}
@@ -152,7 +222,11 @@ function DayMark({ day, size }: { day: WidgetDay; size: number }) {
       size={size}
     />
   );
+  return faint ? <span className={faintMark}>{mark}</span> : mark;
 }
+
+// 休みの見せ方 空白, where a day off comes back faint.
+const faintMark = css({ display: "inline-flex", opacity: 0.35 });
 
 // A shift's name under its mark, shortened as the calendar's.
 const markName = css({
@@ -330,16 +404,22 @@ const twoWeeks = {
   day: cva({
     base: {
       alignItems: "center",
+      borderRadius: "sm",
       display: "flex",
       flexDirection: "column",
       gap: "2px",
+      paddingBlock: "2px",
     },
     // Days already gone this week stay, faint, so the weeks keep their
     // shape.
     variants: { past: { false: {}, true: { opacity: 0.4 } } },
   }),
   grid: cva({
-    base: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)" },
+    base: {
+      columnGap: "2px",
+      display: "grid",
+      gridTemplateColumns: "repeat(7, 1fr)",
+    },
     compoundVariants: [{ css: { rowGap: "4px" }, named: true, roomy: false }],
     variants: {
       named: { false: {}, true: {} },
@@ -386,28 +466,53 @@ export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
         ))}
       </div>
       <ol className={`${list} ${twoWeeks.grid({ named, roomy })}`}>
-        {entry.twoWeeks.map((shown) => {
-          const time = shown.date.getTime();
-          return (
-            <li className={twoWeeks.day({ past: time < todayTime })} key={time}>
-              <SpokenDay day={shown} />
-              <span
-                aria-hidden="true"
-                className={cx(
-                  twoWeeks.date({ today: time === todayTime }),
-                  dateTone(shown, todayTime),
-                  shown.note && noted
-                )}
-              >
-                {shown.date.getDate()}
-              </span>
-              <DayMark day={shown} size={markSize} />
-              {named && <MarkName day={shown} />}
-            </li>
-          );
-        })}
+        {entry.twoWeeks.map((shown) => (
+          <TwoWeeksDay
+            day={shown}
+            key={shown.date.getTime()}
+            markSize={markSize}
+            named={named}
+            todayTime={todayTime}
+          />
+        ))}
       </ol>
     </div>
+  );
+}
+
+function TwoWeeksDay({
+  day,
+  todayTime,
+  markSize,
+  named,
+}: {
+  day: WidgetDay;
+  todayTime: number;
+  markSize: number;
+  named: boolean;
+}) {
+  const look = useOffLook(day, true);
+  const { className, ...tile } = useOffTile(day, look.tile);
+  const time = day.date.getTime();
+  return (
+    <li
+      className={cx(twoWeeks.day({ past: time < todayTime }), className)}
+      {...tile}
+    >
+      <SpokenDay day={day} />
+      <span
+        aria-hidden="true"
+        className={cx(
+          twoWeeks.date({ today: time === todayTime }),
+          dateTone(day, todayTime),
+          day.note && noted
+        )}
+      >
+        {day.date.getDate()}
+      </span>
+      <DayMark day={day} faint={look.mark === "faint"} size={markSize} />
+      {named && <MarkName day={day} />}
+    </li>
   );
 }
 
@@ -423,16 +528,9 @@ const mini = {
       fontVariantNumeric: "tabular-nums",
       justifyContent: "center",
     },
-    // The calendar's own day-off tile, the one mark small enough to read
-    // here; faint when the system draws in one color, or it would be a
-    // solid block over its number.
-    compoundVariants: [
-      { css: { bg: "calendar.offTint" }, flat: false, off: true },
-      { css: { bg: "rgb(255 255 255 / 0.24)" }, flat: true, off: true },
-    ],
+    // The calendar's own day-off tile (useOffTile) is the one mark small
+    // enough to read here.
     variants: {
-      flat: { false: {}, true: {} },
-      off: { false: {}, true: {} },
       today: {
         false: {},
         true: { color: "accent.default", fontWeight: 800 },
@@ -464,7 +562,6 @@ const mini = {
 // The month with its days off alone, as tiles: all a small square can
 // show of a month and still be read.
 function MiniMonth({ entry }: { entry: WidgetEntry }) {
-  const flat = useContext(WidgetRenderingModeContext) !== "fullColor";
   const { first, days, weekdays } = entry.month;
   const todayTime = entry.today.date.getTime();
   return (
@@ -479,27 +576,39 @@ function MiniMonth({ entry }: { entry: WidgetEntry }) {
       </div>
       <ol className={`${list} ${mini.grid}`}>
         {days.map((day) => (
-          <li
-            aria-hidden={!day.inMonth}
-            className={mini.date({
-              flat,
-              off: day.inMonth && day.off,
-              today: day.date.getTime() === todayTime,
-            })}
-            key={day.date.getTime()}
-          >
-            {day.inMonth && (
-              <>
-                <SpokenDay day={day} />
-                <span aria-hidden="true" className={dateTone(day, todayTime)}>
-                  {day.date.getDate()}
-                </span>
-              </>
-            )}
-          </li>
+          <MiniDay day={day} key={day.date.getTime()} todayTime={todayTime} />
         ))}
       </ol>
     </div>
+  );
+}
+
+// A day of the small month: its number, on its day-off tile whatever the
+// person's 休みを塗る, since the tiles are all this month shows.
+function MiniDay({
+  day,
+  todayTime,
+}: {
+  day: WidgetDay & { inMonth: boolean };
+  todayTime: number;
+}) {
+  const { className, ...tile } = useOffTile(day, day.inMonth && day.off);
+  if (!day.inMonth) {
+    return <li aria-hidden="true" />;
+  }
+  return (
+    <li
+      className={cx(
+        mini.date({ today: day.date.getTime() === todayTime }),
+        className
+      )}
+      {...tile}
+    >
+      <SpokenDay day={day} />
+      <span aria-hidden="true" className={dateTone(day, todayTime)}>
+        {day.date.getDate()}
+      </span>
+    </li>
   );
 }
 
@@ -563,7 +672,13 @@ const month = {
   // With a name under each mark, the parts of a day and the weeks close
   // up, so a month six weeks tall keeps within the widget.
   cell: cva({
-    base: { alignItems: "center", display: "flex", flexDirection: "column" },
+    base: {
+      alignItems: "center",
+      borderRadius: "sm",
+      display: "flex",
+      flexDirection: "column",
+      paddingTop: "2px",
+    },
     variants: { named: { false: { gap: "2px" }, true: { gap: 0 } } },
   }),
   date: cva({
@@ -577,6 +692,7 @@ const month = {
   }),
   grid: cva({
     base: {
+      columnGap: "2px",
       display: "grid",
       flex: 1,
       gridAutoRows: "1fr",
@@ -640,36 +756,56 @@ export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
       </div>
       <ol className={`${list} ${month.grid({ named })}`}>
         {days.map((day) => (
-          <li
-            aria-hidden={!day.inMonth}
-            className={month.cell({ named })}
+          <MonthDay
+            day={day}
             key={day.date.getTime()}
-          >
-            {day.inMonth && (
-              <>
-                <SpokenDay day={day} />
-                <span
-                  aria-hidden="true"
-                  className={cx(
-                    month.date({ today: day.date.getTime() === todayTime }),
-                    dateTone(day, todayTime),
-                    day.note && noted
-                  )}
-                >
-                  {day.date.getDate()}
-                </span>
-                {day.shift ? (
-                  <DayMark day={day} size={markSize} />
-                ) : (
-                  <span style={{ height: markSize }} />
-                )}
-                {named && <MarkName day={day} />}
-              </>
-            )}
-          </li>
+            markSize={markSize}
+            named={named}
+            todayTime={todayTime}
+          />
         ))}
       </ol>
     </div>
+  );
+}
+
+function MonthDay({
+  day,
+  todayTime,
+  markSize,
+  named,
+}: {
+  day: WidgetDay & { inMonth: boolean };
+  todayTime: number;
+  markSize: number;
+  named: boolean;
+}) {
+  const look = useOffLook(day, false);
+  const { className, ...tile } = useOffTile(day, day.inMonth && look.tile);
+  if (!day.inMonth) {
+    return <li aria-hidden="true" className={month.cell({ named })} />;
+  }
+  const marked = day.shift !== undefined && look.mark !== "none";
+  return (
+    <li className={cx(month.cell({ named }), className)} {...tile}>
+      <SpokenDay day={day} />
+      <span
+        aria-hidden="true"
+        className={cx(
+          month.date({ today: day.date.getTime() === todayTime }),
+          dateTone(day, todayTime),
+          day.note && noted
+        )}
+      >
+        {day.date.getDate()}
+      </span>
+      {marked ? (
+        <DayMark day={day} faint={look.mark === "faint"} size={markSize} />
+      ) : (
+        <span style={{ height: markSize }} />
+      )}
+      {named && marked && <MarkName day={day} />}
+    </li>
   );
 }
 
