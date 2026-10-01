@@ -4,7 +4,6 @@ import {
   designVariantKeys,
   designVariantOptions,
 } from "../lib/design-variants";
-import type { DesignVariants } from "../lib/design-variants";
 
 // Beside the demo's phone, on a translucent ground; one choice under
 // another on a phone, and kept in view where it fits on one line.
@@ -22,11 +21,14 @@ const panel = {
     fontSize: "11px",
     minHeight: "32px",
     padding: "0 11px",
+    whiteSpace: "nowrap",
   }),
+  // Choices that run past their room go on to the next line whole.
   choices: css({
     bg: "fill.tertiary",
     borderRadius: "12px",
     display: "flex",
+    flexWrap: "wrap",
     padding: "2px",
   }),
   decision: css({
@@ -43,6 +45,7 @@ const panel = {
     float: "left",
     fontSize: "11px",
     padding: 0,
+    whiteSpace: "nowrap",
   }),
   root: css({
     "@media (max-width: 760px)": { flexDirection: "column" },
@@ -74,24 +77,36 @@ const panel = {
   }),
 };
 
-// 比べる案: each design decision still open, switched in place.
-export function VariantPanel({
+type Options = Record<
+  string,
+  { label: string; choices: readonly { label: string; value: string }[] }
+>;
+
+// 比べる案: each design decision still open, switched in place. /demo's
+// by default; another page passes its own choices and title, as
+// /design/widgets does with the widgets' states.
+export function VariantPanel<V extends Record<string, string>>({
   variants,
   onChange,
+  options = designVariantOptions,
+  order = designVariantKeys,
+  title = "比べる案",
 }: {
-  variants: DesignVariants;
-  onChange: <K extends keyof DesignVariants>(
-    key: K,
-    value: DesignVariants[K]
-  ) => void;
+  variants: V;
+  onChange: <K extends keyof V>(key: K, value: V[K]) => void;
+  options?: Options;
+  // The choices in the order to list them.
+  order?: readonly string[];
+  title?: string;
 }) {
+  const keys = order;
   return (
     <section aria-labelledby="design-variants-title" className={panel.root}>
       <h2 className={panel.title} id="design-variants-title">
-        比べる案
+        {title}
       </h2>
-      {designVariantKeys.map((key) => {
-        const { label, choices } = designVariantOptions[key];
+      {keys.map((key) => {
+        const { label, choices } = options[key] ?? { choices: [], label: "" };
         return (
           <fieldset className={panel.decision} key={key}>
             <legend className={panel.label}>{label}</legend>
@@ -102,7 +117,7 @@ export function VariantPanel({
                   className={panel.choice}
                   key={value}
                   onClick={() => {
-                    onChange(key, value);
+                    onChange(key, value as V[typeof key]);
                   }}
                   type="button"
                 >
