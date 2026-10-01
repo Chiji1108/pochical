@@ -11,13 +11,14 @@ import {
   Trash2,
 } from "lucide-react";
 import {
-  AnimatePresence,
+  animate,
   motion,
   useMotionValue,
   useReducedMotion,
+  useTransform,
 } from "motion/react";
-import type { MotionValue } from "motion/react";
-import { useContext, useId, useRef, useState } from "react";
+import type { MotionStyle, MotionValue } from "motion/react";
+import { useContext, useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -166,9 +167,11 @@ export function DesignCalendar({
   // The row of the month the opened week is on, for the month to fold up
   // into it and unfold back around it. It follows the week as it turns.
   const [foldRow, setFoldRow] = useState(0);
-  // Counts the turns to another month or week, as against folding the one
-  // shown: a turned page is drawn afresh, so only folding animates.
-  const [pageTurn, setPageTurn] = useState(0);
+  // How far the month is folded into that week, 0 to 1: moved by opening
+  // and closing the week, or by the finger pulling the week back open.
+  const folded = useMotionValue(0);
+  const reduceFolding = useReducedMotion() ?? false;
+  const detailOpacity = useTransform(folded, [0.5, 1], [0, 1]);
   const coworkerNames = useUser((state) => state.coworkers);
   const setCoworkerNames = useUser((state) => state.setCoworkers);
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -294,7 +297,6 @@ export function DesignCalendar({
     }
     const target = new Date(date.getFullYear(), date.getMonth(), 1);
     setSwipedTo(undefined);
-    setPageTurn((turn) => turn + 1);
     setMonth(target);
     setEnteredBlank(hasBlanks(schedule, target));
     announcePicked(date);
@@ -340,10 +342,18 @@ export function DesignCalendar({
       ? month
       : new Date(date.getFullYear(), date.getMonth(), 1);
   }
+  function foldTo(target: 0 | 1, velocity = 0) {
+    if (reduceFolding) {
+      folded.jump(target);
+      return;
+    }
+    animate(folded, target, { ...fold, velocity });
+  }
   function openDetail(date: Date) {
     setFoldRow(rowOf(date, monthOpening(date)));
     setSwipedTo(undefined);
     setDetailDate(date);
+    foldTo(1);
     if (!onMonth(date)) {
       setMonth(monthOpening(date));
     }
@@ -358,7 +368,6 @@ export function DesignCalendar({
     : undefined;
   function goToMonth(target: Date) {
     setSwipedTo(undefined);
-    setPageTurn((turn) => turn + 1);
     setMonth(target);
     if (editing) {
       setSelectedDay(1);
@@ -371,7 +380,6 @@ export function DesignCalendar({
   // Move by what is on screen: a week in the week detail, otherwise a month.
   function step(direction: 1 | -1) {
     if (weekDetail) {
-      setPageTurn((turn) => turn + 1);
       openDetail(addDays(detailDate, direction * 7));
       return;
     }
@@ -536,9 +544,35 @@ export function DesignCalendar({
       openSave(true);
     }
   }
-  function closeDetail() {
+  // With the speed the finger let go at, when it pulled the week open.
+  function closeDetail(velocity = 0) {
     setDetailDate(undefined);
+    foldTo(0, velocity);
   }
+  // How far the month unfolds below the week: the finger pulling it open
+  // brings the month's foot down with it.
+  const unfoldDistance =
+    dayGridHeight(Math.max(dates.length / 7, MONTH_WEEKS)) - dayGridHeight(1);
+  const pullRef = usePullDown({
+    enabled: weekDetail,
+    // Jumped, so a spring still opening or settling the week stops and
+    // leaves it to the finger.
+    onPull: (share) => {
+      folded.jump(1 - share);
+    },
+    onRelease: (share, speed) => {
+      // In folded per second, as the finger's speed down unfolds it.
+      const velocity = -speed / unfoldDistance;
+      const flicked = Math.abs(speed) > UNFOLD_FLICK;
+      const opens = flicked ? speed > 0 : share > UNFOLD_SHARE;
+      if (opens) {
+        closeDetail(velocity);
+        return;
+      }
+      foldTo(1, velocity);
+    },
+    reach: unfoldDistance,
+  });
   function changeEntry(date: Date, entry: DayEntry | undefined) {
     onChange((previous) => ({ ...previous, [dateKey(date)]: entry }));
   }
@@ -666,117 +700,125 @@ export function DesignCalendar({
                       );
                     }}
                     onThisWeek={() => {
-                      setPageTurn((turn) => turn + 1);
                       openDetail(designToday);
                     }}
                     progress={pageDrag}
                     swiped={swipedTo === dateKey(month)}
                   />
                 </div>
-                <div className={calendarPage.scroll}>
-                  <WeekdayRow />
-                  <OffDisplayContext
-                    value={
-                      weekDetail && offDisplay === "blank"
-                        ? "faint"
-                        : offDisplay
-                    }
-                  >
-                    <Pager
-                      onStep={(direction) => {
-                        step(direction);
-                        // After step, which clears it.
-                        setSwipedTo(
-                          dateKey(
-                            weekDetail
-                              ? monthOpening(addDays(detailDate, direction * 7))
-                              : new Date(
-                                  month.getFullYear(),
-                                  month.getMonth() + direction,
-                                  1
+                {/* The open week and the day's details under it can be pulled
+                down to unfold the month again. */}
+                <div className={calendarPage.pull} ref={pullRef}>
+                  <div className={calendarPage.scroll({ weekDetail })}>
+                    <WeekdayRow />
+                    <OffDisplayContext
+                      value={
+                        weekDetail && offDisplay === "blank"
+                          ? "faint"
+                          : offDisplay
+                      }
+                    >
+                      <Pager
+                        onStep={(direction) => {
+                          step(direction);
+                          // After step, which clears it.
+                          setSwipedTo(
+                            dateKey(
+                              weekDetail
+                                ? monthOpening(
+                                    addDays(detailDate, direction * 7)
+                                  )
+                                : new Date(
+                                    month.getFullYear(),
+                                    month.getMonth() + direction,
+                                    1
+                                  )
+                            )
+                          );
+                        }}
+                        progress={pageDrag}
+                        page={weekDetail ? dateKey(detailDate) : dateKey(month)}
+                        renderPage={(offset) => {
+                          const pageMonth = new Date(
+                            month.getFullYear(),
+                            month.getMonth() + offset,
+                            1
+                          );
+                          // The page shown keeps the whole month around the
+                          // open week, to unfold back into.
+                          const pageDates =
+                            weekDetail && offset !== 0
+                              ? weekTools.weekDates(
+                                  addDays(detailDate, offset * 7)
                                 )
-                          )
-                        );
-                      }}
-                      progress={pageDrag}
-                      page={weekDetail ? dateKey(detailDate) : dateKey(month)}
-                      renderPage={(offset) => {
-                        const pageMonth = new Date(
-                          month.getFullYear(),
-                          month.getMonth() + offset,
-                          1
-                        );
-                        const pageDates = weekDetail
-                          ? weekTools.weekDates(addDays(detailDate, offset * 7))
-                          : weekTools.monthDates(pageMonth);
-                        const renderCell = (date: Date) => (
-                          <DayCell
-                            active={
-                              offset === 0 &&
-                              (editing
-                                ? date.getMonth() === month.getMonth() &&
-                                  date.getDate() === selectedDay
-                                : detailDate !== undefined &&
-                                  dateKey(date) === dateKey(detailDate))
-                            }
-                            date={date}
-                            editing={editing}
-                            entry={schedule[dateKey(date)]}
-                            key={dateKey(date)}
-                            onPress={() => {
-                              editing ? enterFrom(date) : openDetail(date);
-                            }}
-                            outside={
-                              !weekDetail &&
-                              date.getMonth() !== pageMonth.getMonth()
-                            }
-                          />
-                        );
-                        const label = `${pageMonth.getFullYear()}年${pageMonth.getMonth() + 1}月のシフト`;
-                        // Only the page shown folds; the ones beside it are
-                        // there to be dragged in.
-                        if (offset === 0) {
-                          return (
-                            <FoldingGrid
-                              dates={pageDates}
-                              key={pageTurn}
-                              label={label}
-                              renderCell={renderCell}
-                              row={foldRow}
-                              weekDetail={weekDetail}
+                              : weekTools.monthDates(pageMonth);
+                          const renderCell = (date: Date) => (
+                            <DayCell
+                              active={
+                                offset === 0 &&
+                                (editing
+                                  ? date.getMonth() === month.getMonth() &&
+                                    date.getDate() === selectedDay
+                                  : detailDate !== undefined &&
+                                    dateKey(date) === dateKey(detailDate))
+                              }
+                              date={date}
+                              editing={editing}
+                              entry={schedule[dateKey(date)]}
+                              key={dateKey(date)}
+                              onPress={() => {
+                                editing ? enterFrom(date) : openDetail(date);
+                              }}
+                              outside={
+                                !weekDetail &&
+                                date.getMonth() !== pageMonth.getMonth()
+                              }
                             />
                           );
-                        }
-                        return (
-                          <section aria-label={label} className={dayGrid}>
-                            {pageDates.map(renderCell)}
-                          </section>
-                        );
-                      }}
-                    />
-                  </OffDisplayContext>
+                          const label = `${pageMonth.getFullYear()}年${pageMonth.getMonth() + 1}月のシフト`;
+                          // Only the page shown folds; the ones beside it are
+                          // there to be dragged in.
+                          if (offset === 0) {
+                            return (
+                              <FoldingGrid
+                                dates={pageDates}
+                                folded={folded}
+                                label={label}
+                                renderCell={renderCell}
+                                row={foldRow}
+                                weekDetail={weekDetail}
+                              />
+                            );
+                          }
+                          return (
+                            <section aria-label={label} className={dayGrid}>
+                              {pageDates.map(renderCell)}
+                            </section>
+                          );
+                        }}
+                      />
+                    </OffDisplayContext>
+                  </div>
+                  {weekDetail && (
+                    <motion.section
+                      aria-label={formatDay(detailDate)}
+                      className={calendarPage.detail}
+                      style={{ opacity: detailOpacity }}
+                    >
+                      <h4 className={calendarPage.detailDate}>
+                        {formatDay(detailDate)}
+                      </h4>
+                      <DayDetail
+                        entry={schedule[dateKey(detailDate)]}
+                        members={members}
+                        onChange={(entry) => {
+                          changeEntry(detailDate, entry);
+                        }}
+                        patternKeys={patternKeys}
+                      />
+                    </motion.section>
+                  )}
                 </div>
-                {weekDetail && (
-                  <motion.section
-                    animate={{ opacity: 1 }}
-                    aria-label={formatDay(detailDate)}
-                    className={calendarPage.detail}
-                    initial={{ opacity: 0 }}
-                    transition={fold}
-                  >
-                    <h4 className={calendarPage.detailDate}>
-                      {formatDay(detailDate)}
-                    </h4>
-                    <DayDetail
-                      entry={schedule[dateKey(detailDate)]}
-                      members={members}
-                      onChange={(entry) => {
-                        changeEntry(detailDate, entry);
-                      }}
-                      patternKeys={patternKeys}
-                    />
-                  </motion.section>
-                )}
                 {/* On an empty month too, at 0日, so the month keeps the two
                 rows of one being filled in: the card above ポチポチ入力.
                 Any spare height stays over it, so the summary, the input
@@ -992,6 +1034,9 @@ const calendarPage = {
     marginTop: "12px",
     minHeight: 0,
     overflowY: "auto",
+    // Scrolled back to the top, a pull goes on to unfold the month rather
+    // than pulling the screen.
+    overscrollBehaviorY: "contain",
     padding: "16px 8px 12px",
   }),
   detailDate: css({ fontWeight: 600, margin: "0 0 16px", textStyle: "title3" }),
@@ -1009,14 +1054,22 @@ const calendarPage = {
   // own ground: a raised one would show only in dark, where the sheets'
   // color parts from the screen's.
   input: css({ flexShrink: 0, marginTop: "auto", paddingTop: "2px" }),
-  // Room around the grid for the picked day's outline.
-  scroll: css({
-    minHeight: 0,
-    overflowY: "auto",
-    overscrollBehavior: "contain",
-    padding: "4px",
-    position: "relative",
-    touchAction: "pan-y",
+  // Laid out as if it were not there: it only hears the pull.
+  pull: css({ display: "contents" }),
+  // Room around the grid for the picked day's outline. The open week has
+  // nothing to scroll, so its up and down is the pull's alone.
+  scroll: cva({
+    base: {
+      minHeight: 0,
+      overflowY: "auto",
+      overscrollBehavior: "contain",
+      padding: "4px",
+      position: "relative",
+      touchAction: "pan-y",
+    },
+    variants: {
+      weekDetail: { true: { touchAction: "pinch-zoom" } },
+    },
   }),
 };
 
@@ -1035,65 +1088,230 @@ const folding = {
 
 // The page shown, folding as the month turns into one of its weeks and
 // back, like the Calendar apps. The days lie on one sheet, each in its
-// row of the month, the week's days too while it is open; the sheet
-// moves up by `row` rows to bring the week to the top, the other days
-// fade out and in on it, and the page's height follows so what is under
-// it moves too. As one thing moving, the week can't move apart from the
-// rest of the month.
+// row of the month; the sheet moves up by `row` rows to bring the week to
+// the top, the other days fade on it, and the page's height follows so
+// what is under it moves too. As one thing moving, the week can't move
+// apart from the rest of the month. All of it follows `folded`, so a
+// finger pulling the week open moves it as the springs do.
 function FoldingGrid({
   dates,
+  folded,
   label,
   renderCell,
   row,
   weekDetail,
 }: {
   dates: Date[];
+  folded: MotionValue<number>;
   label: string;
   renderCell: (date: Date) => ReactNode;
   row: number;
   weekDetail: boolean;
 }) {
-  const weeks = dates.length / 7;
-  const room = weekDetail ? weeks : Math.max(weeks, MONTH_WEEKS);
-  // The sheet's row the dates start on: the open week keeps its own.
-  const firstRow = weekDetail ? row : 0;
+  const unfolded = dayGridHeight(Math.max(dates.length / 7, MONTH_WEEKS));
+  const week = dayGridHeight(1);
   return (
     <motion.section
-      animate={{ height: dayGridHeight(room) }}
       aria-label={label}
       className={folding.page}
-      initial={false}
-      transition={fold}
+      // Motion sets a CSS variable from a motion value, though its types
+      // leave them out.
+      style={
+        {
+          "--fold": folded,
+          height: `calc(${week}px + ${unfolded - week}px * (1 - var(--fold)))`,
+        } as MotionStyle
+      }
     >
-      <motion.div
-        animate={{ y: weekDetail ? -row * ROW_STEP : 0 }}
+      <div
         className={dayGrid}
-        initial={false}
-        transition={fold}
+        style={{
+          transform: `translateY(calc(${-row * ROW_STEP}px * var(--fold)))`,
+        }}
       >
-        <AnimatePresence initial={false}>
-          {dates.map((date, index) => (
-            <motion.div
-              animate={{ opacity: 1 }}
+        {dates.map((date, index) => {
+          // Folded away, the rest of the month is out of reach.
+          const away = weekDetail && Math.floor(index / 7) !== row;
+          return (
+            <div
+              aria-hidden={away || undefined}
               className={folding.cell}
-              exit={{ opacity: 0 }}
-              initial={{ opacity: 0 }}
+              inert={away}
               key={dateKey(date)}
-              // Placed by the sheet's row, so a day keeps its place as
-              // the days around it come and go.
-              style={{
-                gridColumn: (index % 7) + 1,
-                gridRow: firstRow + Math.floor(index / 7) + 1,
-              }}
-              transition={fold}
+              style={
+                Math.floor(index / 7) === row
+                  ? undefined
+                  : { opacity: "calc(1 - var(--fold))" }
+              }
             >
               {renderCell(date)}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </motion.div>
+            </div>
+          );
+        })}
+      </div>
     </motion.section>
   );
+}
+
+// Past this share of the way, a pull let go unfolds the month; short of
+// it, the week folds back. A flick faster than this, in pixels a second,
+// goes the way it is flicked wherever it is let go.
+const UNFOLD_SHARE = 1 / 3;
+const UNFOLD_FLICK = 400;
+// How far the finger goes before the pull is told from a tap or a swipe
+// sideways: little, so it is told before Safari takes the finger to
+// scroll.
+const PULL_SLOP = 6;
+// Held still this long, in milliseconds, before letting go, the finger
+// lets go without speed: the last move's speed is no flick.
+const PULL_STILL_MS = 80;
+
+// A pull down, as a share of `reach` (0 to 1) while the finger moves, and
+// with its speed down in pixels a second when let go. A pull starts only
+// going down, not sideways (the week's swipe) and not over something
+// scrolled down (it scrolls back up first), nor in a text box. A finger
+// taken by the system lets go standing still, so it goes back.
+function usePullDown({
+  enabled,
+  reach,
+  onPull,
+  onRelease,
+}: {
+  enabled: boolean;
+  reach: number;
+  onPull: (share: number) => void;
+  onRelease: (share: number, speed: number) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const latest = useRef({ enabled, onPull, onRelease, reach });
+  useEffect(() => {
+    latest.current = { enabled, onPull, onRelease, reach };
+  });
+  useEffect(() => {
+    const area = ref.current;
+    if (!area) {
+      return;
+    }
+    let pointer: number | undefined;
+    let pulling = false;
+    // The finger's listeners on the window, taken off as it lets go.
+    let following: AbortController | undefined;
+    const stop = () => {
+      following?.abort();
+      following = undefined;
+      pointer = undefined;
+      pulling = false;
+      area.style.removeProperty("user-select");
+    };
+    let from = { x: 0, y: 0 };
+    // Pulled since the finger went down, so letting go presses nothing.
+    let pulled = false;
+    let share = 0;
+    let speed = 0;
+    let last = { time: 0, y: 0 };
+    const move = (event: PointerEvent) => {
+      if (event.pointerId !== pointer) {
+        return;
+      }
+      if (!pulling) {
+        const across = event.clientX - from.x;
+        const down = event.clientY - from.y;
+        if (Math.hypot(across, down) < PULL_SLOP) {
+          return;
+        }
+        if (down <= Math.abs(across)) {
+          stop();
+          return;
+        }
+        pulling = true;
+        pulled = true;
+        // From here, so the month does not jump by the slop.
+        from = { x: event.clientX, y: event.clientY };
+        last = { time: event.timeStamp, y: event.clientY };
+        area.style.userSelect = "none";
+      }
+      share = Math.min(
+        Math.max((event.clientY - from.y) / latest.current.reach, 0),
+        1
+      );
+      const elapsed = (event.timeStamp - last.time) / 1000;
+      if (elapsed > 0) {
+        speed = (event.clientY - last.y) / elapsed;
+      }
+      last = { time: event.timeStamp, y: event.clientY };
+      latest.current.onPull(share);
+    };
+    const up = (event: PointerEvent) => {
+      if (event.pointerId !== pointer) {
+        return;
+      }
+      if (pulling) {
+        const still =
+          event.type === "pointercancel" ||
+          event.timeStamp - last.time > PULL_STILL_MS;
+        latest.current.onRelease(share, still ? 0 : speed);
+      }
+      stop();
+    };
+    const scrolledDown = (target: Element) => {
+      for (
+        let element: Element | null = target;
+        element && element !== area;
+        element = element.parentElement
+      ) {
+        if (element.scrollTop > 0) {
+          return true;
+        }
+      }
+      return false;
+    };
+    const start = (event: PointerEvent) => {
+      pulled = false;
+      const { target } = event;
+      if (
+        !latest.current.enabled ||
+        !event.isPrimary ||
+        event.button !== 0 ||
+        !(target instanceof Element) ||
+        target.closest("input, textarea, [contenteditable]") ||
+        scrolledDown(target)
+      ) {
+        return;
+      }
+      pointer = event.pointerId;
+      from = { x: event.clientX, y: event.clientY };
+      share = 0;
+      speed = 0;
+      following = new AbortController();
+      const { signal } = following;
+      window.addEventListener("pointermove", move, { signal });
+      window.addEventListener("pointerup", up, { signal });
+      window.addEventListener("pointercancel", up, { signal });
+    };
+    // Once pulling, the finger is the pull's: the screen does not scroll.
+    const hold = (event: TouchEvent) => {
+      if (pulling && event.cancelable) {
+        event.preventDefault();
+      }
+    };
+    const press = (event: MouseEvent) => {
+      if (pulled) {
+        event.preventDefault();
+        event.stopPropagation();
+        pulled = false;
+      }
+    };
+    area.addEventListener("pointerdown", start);
+    area.addEventListener("touchmove", hold, { passive: false });
+    area.addEventListener("click", press, true);
+    return () => {
+      stop();
+      area.removeEventListener("pointerdown", start);
+      area.removeEventListener("touchmove", hold);
+      area.removeEventListener("click", press, true);
+    };
+  }, []);
+  return ref;
 }
 
 function screenMode(editing: boolean, weekDetail: boolean) {
