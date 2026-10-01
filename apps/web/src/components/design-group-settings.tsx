@@ -452,6 +452,7 @@ const groupIcons: MarkIcon[] = [
   "house",
   "users",
   "heart",
+  "baby",
   "graduationCap",
   "briefcase",
   "hospital",
@@ -462,9 +463,8 @@ const groupIcons: MarkIcon[] = [
   "dumbbell",
   "star",
   "flower",
-  "cat",
-  "dog",
-  "sparkles",
+  "pawPrint",
+  "partyPopper",
 ];
 
 const groupEmojis = [
