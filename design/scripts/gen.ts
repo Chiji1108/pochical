@@ -329,7 +329,7 @@ function kotlin() {
   const lines = [
     `// ${HEADER}`,
     "",
-    "package tech.chiji.pochical.design",
+    "package app.pochical.design",
     "",
     "import androidx.compose.animation.core.SpringSpec",
     "import androidx.compose.animation.core.spring",
@@ -473,14 +473,13 @@ const kotlinFile = (...sections: string[][]) =>
   [
     `// ${HEADER}`,
     "",
-    "package tech.chiji.pochical.design",
+    "package app.pochical.design",
     "",
     ...sections.flatMap((lines) => [...lines, ""]),
   ].join("\n");
 
 const SWIFT_DIR = "apps/ios/Packages/PochicalDesign/Sources/PochicalDesign";
-const KOTLIN_DIR =
-  "apps/android/design/src/main/kotlin/tech/chiji/pochical/design";
+const KOTLIN_DIR = "apps/android/design/src/main/kotlin/app/pochical/design";
 
 const TEXT_LIMITS_DOC =
   "How long free text may be, in characters as a reader sees them, by what it is (spec/text-limits.md).";
@@ -508,7 +507,7 @@ const sharedOutputs = Object.fromEntries(
 );
 
 const outputs = {
-  "apps/android/design/src/main/kotlin/tech/chiji/pochical/design/DesignTokens.kt":
+  "apps/android/design/src/main/kotlin/app/pochical/design/DesignTokens.kt":
     kotlin(),
   [`${KOTLIN_DIR}/Limits.kt`]: kotlinFile(
     kotlinObject("TextLimits", TEXT_LIMITS_DOC, textLimits),
