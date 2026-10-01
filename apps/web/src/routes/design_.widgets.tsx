@@ -42,7 +42,8 @@ import {
   OffDisplayContext,
   OffHighlightContext,
 } from "../components/shift-mark";
-import { dateKey, initialDesignSchedule } from "../lib/design-days";
+import { addDays, dateKey, initialDesignSchedule } from "../lib/design-days";
+import type { DayEntry, Schedule } from "../lib/design-days";
 import { presetPatterns } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
@@ -113,6 +114,45 @@ const companions: WidgetCompanion[] = [partner, mother].map((member) => ({
   photo: member.photo,
 }));
 
+// Today as it can be, a row each, to see what every widget then says. The
+// rest of the sample stays as it is.
+const todayKey = dateKey(designToday);
+const tomorrowKey = dateKey(addDays(designToday, 1));
+function withDays(days: Record<string, DayEntry | undefined>): Schedule {
+  return { ...sampleSchedule, ...days };
+}
+const plainDay: DayEntry = { shift: "day" };
+// Someone who has not entered their shifts yet.
+const notEntered: WidgetCompanion = { name: "あや", offOn: () => undefined };
+const todayStates: {
+  label: string;
+  schedule: Schedule;
+  companion?: WidgetCompanion;
+}[] = [
+  {
+    label: "ふつうの日（変更もメモもなし）",
+    schedule: withDays({ [todayKey]: plainDay }),
+  },
+  {
+    label: "早出",
+    schedule: withDays({ [todayKey]: { shift: "day", start: "07:00" } }),
+  },
+  { label: "今日が休み", schedule: withDays({ [todayKey]: { shift: "off" } }) },
+  {
+    label: "明日が休み",
+    schedule: withDays({
+      [todayKey]: plainDay,
+      [tomorrowKey]: { shift: "off" },
+    }),
+  },
+  { label: "今日が未入力", schedule: withDays({ [todayKey]: undefined }) },
+  {
+    companion: notEntered,
+    label: "一緒に休める日が見つからない（相手が未入力）",
+    schedule: sampleSchedule,
+  },
+];
+
 type Size = "small" | "medium" | "large";
 type WidgetView = ComponentType<{ entry: WidgetEntry }>;
 
@@ -176,6 +216,8 @@ const everyWidget = kinds.flatMap(({ name, sizes }) =>
 
 // Where days off show: the small month, the two weeks and the large month.
 const offWidgets = everyWidget.filter(({ kind }) => kind === "カレンダー");
+// Every widget that today changes: all but カレンダー.
+const stateWidgets = everyWidget.filter(({ kind }) => kind !== "カレンダー");
 
 const rows = css({ display: "flex", flexDirection: "column", gap: "16px" });
 const rowLabel = css({
@@ -261,6 +303,16 @@ function WidgetsPage() {
     name: companion.name,
   }));
   const offSizes = kinds.find(({ name }) => name === "次の休み")?.sizes ?? [];
+  const states = todayStates.map((state) => ({
+    ...state,
+    entry: widgetEntry(
+      state.schedule,
+      week,
+      designToday,
+      presetPatterns,
+      state.companion
+    ),
+  }));
   return (
     <DesignPage style={pageStyle(theme)}>
       <DesignToolbar back="documents" />
@@ -286,6 +338,24 @@ function WidgetsPage() {
               </div>
             </FrameSection>
           ))}
+
+          <FrameSection
+            description="今日がどんな日かで、それぞれのウィジェットが何を言うか。カレンダーは今日によって変わらないので外しています。"
+            title="今日の状態ごと"
+          >
+            <div className={rows}>
+              {states.map(({ label, entry: shown, companion }) => (
+                <WidgetRow
+                  appearance="light"
+                  entry={shown}
+                  families={iosFamilies}
+                  key={label}
+                  label={label}
+                  widgets={companion ? offSizes : stateWidgets}
+                />
+              ))}
+            </div>
+          </FrameSection>
 
           <FrameSection
             description="次の休みのウィジェットを編集して、グループの人を選んだとき。ふたりとも休みの日だけを数えます。相手がまだ入れていない日は数えません。"
