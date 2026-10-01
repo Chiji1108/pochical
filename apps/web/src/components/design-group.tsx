@@ -125,6 +125,7 @@ export function DesignGroup({
   const [reportOf, setReportOf] = useState<Member>();
   // Who was just reported, offered to be blocked too.
   const [blockOffer, setBlockOffer] = useState<Member>();
+  const [offerNext, setOfferNext] = useState<Member>();
   const blocked = useUser((state) => state.blocked);
   // Members taken out of each group, by group id.
   const [removed, setRemoved] = useState<Record<string, string[]>>({});
@@ -310,10 +311,14 @@ export function DesignGroup({
         onClose={() => {
           setReportOf(undefined);
         }}
+        onGone={() => {
+          setBlockOffer(offerNext);
+          setOfferNext(undefined);
+        }}
         onSend={() => {
           setReportOf(undefined);
           if (offersBlock(reportOf, blocked)) {
-            setBlockOffer(reportOf);
+            setOfferNext(reportOf);
           } else {
             toast("通報しました");
           }

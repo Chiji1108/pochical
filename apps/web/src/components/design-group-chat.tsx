@@ -918,6 +918,7 @@ export function ChatPage({
   const [reporting, setReporting] = useState<string>();
   // Who was just reported, offered to be blocked too.
   const [blockOffer, setBlockOffer] = useState<Member>();
+  const [offerNext, setOfferNext] = useState<Member>();
   const [revealed, setRevealed] = useState<string[]>([]);
   const blocked = useUser((state) => state.blocked);
   const formRef = useRef<HTMLFormElement>(null);
@@ -1384,6 +1385,11 @@ export function ChatPage({
       setPickingFor(message.id);
     },
     onOpenChange: (open: boolean) => {
+      // The tap that ends a link's long press opens the link's menu, not
+      // the message's.
+      if (open && linkPress.current.fired) {
+        return;
+      }
       setSelected(open ? message.id : undefined);
     },
     onPin:
@@ -2167,11 +2173,15 @@ export function ChatPage({
           setReporting(undefined);
         }}
         sends="このメッセージと前後の数件"
+        onGone={() => {
+          setBlockOffer(offerNext);
+          setOfferNext(undefined);
+        }}
         onSend={() => {
           const writer = writerOf(byId(reporting)?.from);
           setReporting(undefined);
           if (offersBlock(writer, blocked)) {
-            setBlockOffer(writer);
+            setOfferNext(writer);
           } else {
             toast("通報しました");
           }

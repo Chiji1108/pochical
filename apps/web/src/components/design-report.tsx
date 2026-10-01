@@ -34,6 +34,7 @@ export function ReportSheet({
   sends,
   onClose,
   onSend,
+  onGone,
 }: {
   // What is being reported, as the sheet names it: 〇〇のメッセージ, or
   // the member. Open while set.
@@ -44,6 +45,8 @@ export function ReportSheet({
   sends: string;
   onClose: () => void;
   onSend: (reason: ReportReason) => void;
+  // Once the sheet has gone: where blocking is offered.
+  onGone?: () => void;
 }) {
   const [reason, setReason] = useState<ReportReason | null>(null);
   const close = () => {
@@ -53,6 +56,7 @@ export function ReportSheet({
   return (
     <Sheet
       label="通報"
+      onExitComplete={onGone}
       onOpenChange={(open) => {
         if (!open) {
           close();
