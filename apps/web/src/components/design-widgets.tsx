@@ -807,15 +807,9 @@ export function NextOffMedium({ entry }: { entry: WidgetEntry }) {
 // ── リスト ───────────────────────────────────────────────────────────────
 
 const listing = {
-  date: cva({
-    base: { fontVariantNumeric: "tabular-nums", textStyle: "subheadline" },
-    variants: {
-      today: {
-        false: {},
-        true: { color: "accent.default", fontWeight: 800 },
-      },
-    },
-  }),
+  // Today is the first line under its own date, so it needs no accent:
+  // that is for finding today among other days, as in the calendar.
+  date: css({ fontVariantNumeric: "tabular-nums", textStyle: "subheadline" }),
   head: css({ alignItems: "baseline", display: "flex", gap: "4px" }),
   headDate: css({
     fontSize: "22px",
@@ -862,7 +856,6 @@ function rowWords(day: WidgetDay, named: boolean) {
 
 function ListDays({ entry, wide }: { entry: WidgetEntry; wide: boolean }) {
   const named = useShiftNames();
-  const todayTime = entry.today.date.getTime();
   const { today: first } = entry;
   return (
     <div className={listing.root}>
@@ -878,10 +871,7 @@ function ListDays({ entry, wide }: { entry: WidgetEntry; wide: boolean }) {
             <SpokenDay day={day} />
             <span
               aria-hidden="true"
-              className={cx(
-                listing.date({ today: day.date.getTime() === todayTime }),
-                dateTone(day, todayTime)
-              )}
+              className={cx(listing.date, dateToneText({ tone: day.tone }))}
             >
               {day.date.getDate()}
             </span>
@@ -1160,12 +1150,11 @@ export function TodayMedium({ entry }: { entry: WidgetEntry }) {
 }
 
 const plain = {
-  // Today's date large, as a desk calendar shows it, in the accent that
-  // marks today everywhere, with its mark beside it.
+  // Today's date large, as a desk calendar shows it, with its mark beside
+  // it; plain, since the widget is about today alone.
   big: css({ alignItems: "center", display: "flex", gap: "8px" }),
   label: css({ color: "text.secondary", textStyle: "footnote" }),
   number: css({
-    color: "accent.default",
     fontSize: "48px",
     fontVariantNumeric: "tabular-nums",
     fontWeight: 500,
