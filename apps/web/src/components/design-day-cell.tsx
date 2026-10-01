@@ -117,6 +117,11 @@ export const dayParts = {
   markFaint: css({ opacity: 0.35 }),
   // A note: a stroke under the date, as marked in a paper diary.
   noted: css({
+    "[data-off] &": {
+      _before: {
+        bg: "var(--calendar-note-marker-on-off, token(colors.calendar.noteMarker))",
+      },
+    },
     _before: {
       bg: "calendar.noteMarker",
       borderRadius: "2xs",
@@ -278,7 +283,11 @@ export function DayCell({
   );
   if (blank) {
     return (
-      <div className={cellClass} style={offStyle}>
+      <div
+        className={cellClass}
+        data-off={offStyle ? "" : undefined}
+        style={offStyle}
+      >
         {content}
       </div>
     );
@@ -291,6 +300,7 @@ export function DayCell({
       aria-pressed={editing ? active : undefined}
       className={cellClass}
       data-active={active || undefined}
+      data-off={offStyle ? "" : undefined}
       onClick={onPress}
       style={offStyle}
       type="button"

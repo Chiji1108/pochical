@@ -1,5 +1,5 @@
 import type { ColorScheme } from "@pochical/design/colors";
-import { hexToOklch } from "@pochical/design/oklch";
+import { hexToOklch, oklchToHex } from "@pochical/design/oklch";
 import { presets, schemeIn, themeRoles } from "@pochical/design/themes";
 import type { Preset, PresetId as OwnPresetId } from "@pochical/design/themes";
 import { Moon, Sun } from "lucide-react";
@@ -76,15 +76,18 @@ export const ColorSchemeContext = createContext<ColorScheme>("light");
 export type Appearance = "system" | ColorScheme;
 
 // Every color variable the screens read, each role as `--` and its name.
-export function themeStyle(id: PresetId, requested: ColorScheme = "light") {
+export function themeStyle(
+  id: PresetId,
+  requested: ColorScheme = "light",
+  marker: NoteMarkerLook = "gray"
+) {
   const scheme = schemeOf(id, requested);
+  const roles = themeRoles(presetOf(id), scheme);
   return {
     ...Object.fromEntries(
-      Object.entries(themeRoles(presetOf(id), scheme)).map(([name, value]) => [
-        `--${name}`,
-        value,
-      ])
+      Object.entries(roles).map(([name, value]) => [`--${name}`, value])
     ),
+    ...noteMarkerStyle(marker, roles["calendar-off-tint"] ?? "", scheme),
     colorScheme: scheme,
   } as CSSProperties;
 }
@@ -92,8 +95,57 @@ export function themeStyle(id: PresetId, requested: ColorScheme = "light") {
 export function useThemeStyle() {
   return themeStyle(
     useContext(ThemeContext).theme,
-    useContext(ColorSchemeContext)
+    useContext(ColorSchemeContext),
+    useContext(NoteMarkerContext)
   );
+}
+
+// A memo's stroke under its date, being decided on /design/states: the
+// テーマ's gray, as now, or the テーマ's own tint as a highlighter, which
+// reads better but meets the day-off tile of the same tint. `tint` keeps
+// the highlighter pale and strokes it a step deeper on a day off's tile,
+// in that tile's own color; `tintEven` draws it at the deeper step on
+// every day.
+export type NoteMarkerLook = "gray" | "tint" | "tintEven";
+export const NoteMarkerContext = createContext<NoteMarkerLook>("gray");
+
+// Each step from the day-off tile's own lightness and chroma.
+const markerSteps = {
+  dark: {
+    even: { chroma: 1.15, lightness: 0.49 },
+    onTile: "calc(l + 0.1) calc(c * 1.25)",
+    pale: { chroma: 0.9, lightness: 0.36 },
+  },
+  light: {
+    even: { chroma: 1.9, lightness: 0.845 },
+    onTile: "calc(l - 0.09) calc(c * 1.9)",
+    pale: { chroma: 1.6, lightness: 0.885 },
+  },
+} as const;
+
+function noteMarkerStyle(
+  look: NoteMarkerLook,
+  tile: string,
+  scheme: ColorScheme
+) {
+  if (look === "gray" || tile === "") {
+    return {};
+  }
+  const { chroma, hue } = hexToOklch(tile);
+  const steps = markerSteps[scheme];
+  const step = look === "tint" ? steps.pale : steps.even;
+  const marker = oklchToHex({
+    chroma: chroma * step.chroma,
+    hue,
+    lightness: step.lightness,
+  });
+  return {
+    "--calendar-note-marker": marker,
+    "--calendar-note-marker-on-off":
+      look === "tint"
+        ? `oklch(from var(--off-tint, var(--calendar-off-tint)) ${steps.onTile} h)`
+        : marker,
+  };
 }
 
 // The scheme the current テーマ is drawn in, for colors worked out in
