@@ -383,8 +383,9 @@ export function sameMonth(date: Date, month: Date) {
 }
 
 // A chat line. `days` shares dates, drawn with everyone's shifts;
-// `photo` is a picture, one per line; `replyTo` quotes an earlier line; `notice` is a line from the app about
-// the group, such as a new name, shown between the messages.
+// `photo` is a picture, one per line; `replyTo` quotes an earlier line;
+// `notice` is a line from the app about who is in the group or what it is
+// called, shown between the messages.
 export type Message = {
   id: string;
   from: string;
@@ -548,6 +549,13 @@ export const sampleChats: Record<string, Chat> = {
   "school:group": {
     messages: [
       {
+        from: "sakiko",
+        id: "s0",
+        notice: "さきこがグループに参加しました",
+        time: "20:02",
+        when: "昨日",
+      },
+      {
         from: "kana",
         id: "s1",
         text: "10月に一回集まりたいね！",
@@ -591,9 +599,17 @@ export const sampleChats: Record<string, Chat> = {
     ],
     unread: 1,
   },
-  // Six in all, so reactions run from one face to a count.
+  // Six in all, so reactions run from one face to a count. けんた, who
+  // moved to another ward, has left it.
   "ward:group": {
     messages: [
+      {
+        from: "kenta",
+        id: "w0",
+        notice: "けんたがグループを抜けました",
+        time: "17:12",
+        when: "昨日",
+      },
       {
         from: "haruka",
         id: "w1",
