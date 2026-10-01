@@ -1,6 +1,9 @@
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import { DurableObject } from "cloudflare:workers";
+import { drizzle } from "drizzle-orm/durable-sqlite";
+import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
+import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
 import {
   ClientFrameSchema,
@@ -8,6 +11,8 @@ import {
   ServerFrameSchema,
 } from "./gen/pochical/v1/sync_pb";
 import type { ClientFrame } from "./gen/pochical/v1/sync_pb";
+import migrations from "./group-room-migrations/migrations.js";
+import { profile } from "./group-room-schema";
 import { MIN_PROTOCOL_VERSION } from "./protocol";
 
 /** What the group shows of itself to members and to invite links. */
@@ -78,32 +83,33 @@ const handleHello = (ws: WebSocket, protocolVersion: number): void => {
  * group costs nothing while members stay connected.
  */
 export class GroupRoom extends DurableObject<Env> {
+  private readonly db: DrizzleSqliteDODatabase;
+
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
-    ctx.storage.sql.exec(
-      `CREATE TABLE IF NOT EXISTS profile (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        name TEXT NOT NULL,
-        emoji TEXT
-      ) STRICT`
-    );
+    this.db = drizzle(ctx.storage);
+    // Nothing reaches the group before its tables are up to date.
+    void ctx.blockConcurrencyWhile(async () => {
+      await migrate(this.db, migrations);
+    });
   }
 
   /** The group's name and mark, or null before the group is set up. */
   getProfile(): GroupProfile | null {
-    const [row] = this.ctx.storage.sql
-      .exec<GroupProfile>("SELECT name, emoji FROM profile")
-      .toArray();
+    const row = this.db
+      .select({ emoji: profile.emoji, name: profile.name })
+      .from(profile)
+      .get();
     return row ?? null;
   }
 
   /** Written when the group is created or renamed (neither is built yet). */
   setProfile({ name, emoji }: GroupProfile): void {
-    this.ctx.storage.sql.exec(
-      "INSERT OR REPLACE INTO profile (id, name, emoji) VALUES (1, ?, ?)",
-      name,
-      emoji
-    );
+    this.db
+      .insert(profile)
+      .values({ emoji, id: 1, name })
+      .onConflictDoUpdate({ set: { emoji, name }, target: profile.id })
+      .run();
   }
 
   fetch(request: Request): Response {

@@ -9,6 +9,7 @@ export const ignorePatterns = [
   "apps/android",
   "apps/server/src/gen",
   "apps/server/migrations",
+  "apps/server/src/group-room-migrations",
   "apps/web/src/gen",
   "spec/design-tokens.json",
   "**/routeTree.gen.ts",
