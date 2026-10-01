@@ -2,7 +2,8 @@ import type { ColorScheme } from "@pochical/design/colors";
 import { presets } from "@pochical/design/themes";
 import type { Preset } from "@pochical/design/themes";
 import { ArrowRight, CloudCheck } from "lucide-react";
-import { useMotionValue } from "motion/react";
+import { motion, useMotionValue, useTransform } from "motion/react";
+import type { MotionValue } from "motion/react";
 import { lazy, Suspense, useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
@@ -1539,7 +1540,11 @@ function StylePreview({
       </ColorSchemeContext>
       {/* Which page is shown, on the preview's edge, kept still like the
           switch beside it while the pages move. */}
-      <SampleTag label={page === 0 ? "カレンダー" : "ウィジェット"} />
+      <SampleTag
+        label={
+          <PageNames names={previewPageNames} page={page} progress={progress} />
+        }
+      />
       {/* An always-dark テーマ has no light to switch to: its ☾ stays on. */}
       <PreviewSchemeSwitch
         disabled={alwaysDark}
@@ -1558,6 +1563,54 @@ function StylePreview({
 }
 
 const PREVIEW_PAGE_GAP = 12;
+const previewPageNames = ["カレンダー", "ウィジェット"];
+
+const pageNames = {
+  // Every name in one cell, so the tag is as wide as the longest and each
+  // name sits at its right end.
+  name: css({ gridArea: "1 / 1", textAlign: "right" }),
+  stack: css({ display: "grid" }),
+};
+
+// The shown page's name, crossfading into the next as far as the pages
+// are swiped, as the dots under them follow the finger.
+function PageNames({
+  names,
+  page,
+  progress,
+}: {
+  names: string[];
+  page: number;
+  progress: MotionValue<number>;
+}) {
+  const position = useTransform(progress, (swiped) => page + swiped);
+  return (
+    <span className={pageNames.stack}>
+      {names.map((name, index) => (
+        <PageName index={index} key={name} name={name} position={position} />
+      ))}
+    </span>
+  );
+}
+
+function PageName({
+  name,
+  index,
+  position,
+}: {
+  name: string;
+  index: number;
+  position: MotionValue<number>;
+}) {
+  const opacity = useTransform(position, (at) =>
+    Math.max(0, 1 - Math.abs(at - index))
+  );
+  return (
+    <motion.span className={pageNames.name} style={{ opacity }}>
+      {name}
+    </motion.span>
+  );
+}
 
 // The widgets come only with the preview, not with the app's first load.
 const HomePreview = lazy(async () => {

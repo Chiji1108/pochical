@@ -1005,7 +1005,7 @@ const sampleTagStyle = css({
 
 // A preview that pages between places names the one shown instead, as
 // the style page's カレンダー and ウィジェット.
-export function SampleTag({ label = "見本" }: { label?: string }) {
+export function SampleTag({ label = "見本" }: { label?: ReactNode }) {
   return (
     <span aria-hidden="true" className={sampleTagStyle}>
       {label}
