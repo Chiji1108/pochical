@@ -104,12 +104,15 @@ export function paleSkyLights(id: string) {
   return sky === undefined ? undefined : lightsOf(sky, "light", DARK_GROUND);
 }
 
-// Light spreading from both top corners and the middle, fading down.
+// Light spreading from both top corners and the middle, fading down. Each
+// fades to its own color with no alpha rather than `transparent`, which
+// renderers without premultiplied gradients (satori, for the invitation
+// share image) draw as fading through black.
 function lightFromTop([left, middle, right]: string[]) {
   return [
-    `radial-gradient(90% 80% at 0% 0%, ${left} 0%, transparent 70%)`,
-    `radial-gradient(90% 80% at 100% 0%, ${right} 0%, transparent 70%)`,
-    `radial-gradient(80% 70% at 50% 25%, ${middle} 0%, transparent 75%)`,
+    `radial-gradient(90% 80% at 0% 0%, ${left} 0%, ${left}00 70%)`,
+    `radial-gradient(90% 80% at 100% 0%, ${right} 0%, ${right}00 70%)`,
+    `radial-gradient(80% 70% at 50% 25%, ${middle} 0%, ${middle}00 75%)`,
   ].join(", ");
 }
 
