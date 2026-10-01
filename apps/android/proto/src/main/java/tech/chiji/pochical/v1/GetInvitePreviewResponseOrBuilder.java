@@ -41,4 +41,14 @@ public interface GetInvitePreviewResponseOrBuilder extends
    */
   com.google.protobuf.ByteString
       getGroupEmojiBytes();
+
+  /**
+   * <pre>
+   * How many are in the group, for 「{n}人」 on the page and cards.
+   * </pre>
+   *
+   * <code>uint32 member_count = 3 [json_name = "memberCount"];</code>
+   * @return The memberCount.
+   */
+  int getMemberCount();
 }

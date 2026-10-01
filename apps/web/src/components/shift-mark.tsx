@@ -26,8 +26,8 @@ export const defaultCellNames: CellNames = {
 };
 // 早出 and 残業 belong to the shift, not to a day on one calendar: groups
 // see them too, wherever the mark is drawn and at whatever size. So they
-// are drawn on the mark itself, as a small triangle in its top corner that
-// still reads at 16px, where words would not: the start of the day at the
+// are drawn on the mark itself, in its color, as a small triangle in its
+// top corner that still reads at 16px, where words would not: the start of the day at the
 // left, the end at the right. Inside the mark's box, it never reaches a
 // neighbor in a narrow group table.
 function TimeSide({ side }: { side: "early" | "late" }) {
@@ -71,7 +71,7 @@ const glyphStyle = {
     placeItems: "center",
   }),
   time: css({
-    bg: "text.secondary",
+    bg: "var(--sm-corner, token(colors.text.secondary))",
     height: "calc(var(--sm-size) * 0.32)",
     position: "absolute",
     top: "-2px",
@@ -525,14 +525,24 @@ export function MarkGlyph({
   early?: boolean;
   late?: boolean;
 }) {
+  const { color } = useDisplayColor(look.color);
   const glyph = <BareGlyph look={look} size={size} style={style} />;
   if (!(early || late)) {
     return glyph;
   }
+  // The corners are the shift's own color, as part of the mark they sit
+  // on, and so the テーマ's in ワントーン. Emoji bring colors of their own,
+  // so theirs stay the gray of secondary text.
+  const shiftCorner = style !== "emoji";
   return (
     <span
       className={glyphStyle.timed}
-      style={{ "--sm-size": `${size}px` } as CSSProperties}
+      style={
+        {
+          "--sm-corner": shiftCorner ? color : undefined,
+          "--sm-size": `${size}px`,
+        } as CSSProperties
+      }
     >
       {early && <TimeSide side="early" />}
       {glyph}

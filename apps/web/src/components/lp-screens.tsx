@@ -10,13 +10,13 @@ import {
   UserStoreContext,
 } from "../lib/design-user-store";
 import { parseDesignVariants } from "../lib/design-variants";
-import { WIDE } from "../lib/site";
 import { DesignCalendar } from "./design-calendar";
 import { sampleGroups } from "./design-group-data";
 import { DesignProviders, PresetContexts } from "./design-providers";
 import {
   BREATH_SECONDS,
   nextSkyId,
+  paleSkyFromTop,
   paleSkyLights,
   SKY_CHANGE,
   themeSkyId,
@@ -50,14 +50,10 @@ const variants = parseDesignVariants({});
 const HERO_SKY = themeSkyId("pochical");
 type SkyPlace = "top" | "sides";
 function skyBackground(id: string, place: SkyPlace) {
-  const [left, middle, right] = paleSkyLights(id) ?? [];
   if (place === "top") {
-    return [
-      `radial-gradient(90% 80% at 0% 0%, ${left} 0%, transparent 70%)`,
-      `radial-gradient(90% 80% at 100% 0%, ${right} 0%, transparent 70%)`,
-      `radial-gradient(80% 70% at 50% 25%, ${middle} 0%, transparent 75%)`,
-    ].join(", ");
+    return paleSkyFromTop(id);
   }
+  const [left, middle, right] = paleSkyLights(id) ?? [];
   return [
     `radial-gradient(70% 70% at 0% 45%, ${left} 0%, transparent 70%)`,
     `radial-gradient(70% 70% at 100% 55%, ${right} 0%, transparent 70%)`,
@@ -254,7 +250,7 @@ const gallery = {
     // `--gallery-last` is the last phone's index.
     "--gallery-step":
       "calc((min(100vw - 32px, 520px) - 390px * var(--gallery-scale)) / var(--gallery-last))",
-    [WIDE]: { "--gallery-drop": "48px", "--gallery-scale": "0.6" },
+    _wide: { "--gallery-drop": "48px", "--gallery-scale": "0.6" },
     flexShrink: 0,
     height:
       "calc(844px * var(--gallery-scale) + var(--gallery-last) * var(--gallery-drop))",

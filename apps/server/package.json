@@ -6,8 +6,10 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "cf-typegen": "wrangler types",
+    "auth:schema": "bunx @better-auth/cli@1 generate --config better-auth.config.ts --output src/db/auth-schema.ts -y",
     "db:generate": "drizzle-kit generate",
-    "group-room:generate": "drizzle-kit generate --config drizzle.group-room.config.ts",
+    "group-do:generate": "drizzle-kit generate --config drizzle.group-do.config.ts",
+    "user-do:generate": "drizzle-kit generate --config drizzle.user-do.config.ts",
     "typecheck": "wrangler types && tsc --noEmit",
     "test": "vitest run",
     "check": "bun run --cwd ../.. check",
@@ -16,6 +18,7 @@
   "dependencies": {
     "@bufbuild/protobuf": "2.15.0",
     "@connectrpc/connect": "2.2.0",
+    "better-auth": "^1.7.7",
     "drizzle-orm": "^0.45.3"
   },
   "devDependencies": {

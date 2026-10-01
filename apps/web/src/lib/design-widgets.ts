@@ -6,6 +6,7 @@ import {
   weekdaysFrom,
 } from "../components/design-week";
 import type { DayTone, WeekSettings } from "../components/design-week";
+import type { MarkColor } from "../components/shift-mark";
 import { addDays, dateKey, timeChangeOf, timeRange } from "./design-days";
 import type { Schedule } from "./design-days";
 import { isDayOff } from "./design-patterns";
@@ -25,8 +26,11 @@ export type WidgetDay = {
   shift?: Shift;
   // The shift's name as the person calls it.
   name?: string;
-  // A day off (休み, 有休), which the smallest month shows alone.
+  // A day off (休み, 有休), drawn on a tile as the calendar does; the
+  // smallest month shows these alone.
   off: boolean;
+  // The pattern's color, whose tint is a day off's tile.
+  color?: MarkColor;
   // "9:00 – 18:00", when the shift has a time. Read aloud, not shown:
   // a shift's hours are the same day after day.
   time?: string;
@@ -105,6 +109,7 @@ function widgetDay(
   const time = entry && timeRange(entry, pattern);
   return {
     change: changeOf(time, moved),
+    color: pattern?.color,
     date,
     early: moved?.early ?? false,
     late: moved?.late ?? false,

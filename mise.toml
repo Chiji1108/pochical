@@ -38,9 +38,17 @@ run = "bun run --cwd apps/server dev"
 description = "Generate a D1 migration from apps/server/src/db/schema.ts (pass --name <what>)"
 run = "bun run --cwd apps/server db:generate"
 
-[tasks."group-room:generate"]
-description = "Generate a Group DO migration from apps/server/src/group-room-schema.ts (pass --name <what>)"
-run = "bun run --cwd apps/server group-room:generate"
+[tasks."group-do:generate"]
+description = "Generate a Group DO migration from apps/server/src/group-do-schema.ts (pass --name <what>)"
+run = "bun run --cwd apps/server group-do:generate"
+
+[tasks."user-do:generate"]
+description = "Generate a User DO migration from apps/server/src/user-do-schema.ts (pass --name <what>)"
+run = "bun run --cwd apps/server user-do:generate"
+
+[tasks."auth:schema"]
+description = "Rewrite apps/server/src/db/auth-schema.ts from better-auth's options; then run db:generate"
+run = "bun run --cwd apps/server auth:schema"
 
 [tasks."server:test"]
 description = "Run server tests in the Workers runtime"
@@ -53,6 +61,10 @@ run = "bun run --cwd apps/server typecheck"
 [tasks."web:layout"]
 description = "Measure the /design demo's screens, or compare them with a saved run: save <name> | check <name> (needs the web dev server)"
 run = "bun tools/layout-diff/index.ts"
+
+[tasks."api:try"]
+description = "Try the server's groups and invitations by hand: create [name] [emoji] | join | preview | remake | cleanup [--local]"
+run = "bun tools/api-try/index.ts"
 
 [tasks."roster-eval"]
 description = "Compare vision models reading the roster photos in assets/shift-schedule (costs money)"

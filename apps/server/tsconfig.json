@@ -1,5 +1,10 @@
 {
-  "include": ["src/**/*.ts", "test/**/*.ts", "worker-configuration.d.ts"],
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "better-auth.config.ts",
+    "worker-configuration.d.ts"
+  ],
   "compilerOptions": {
     "target": "ES2024",
     "module": "ESNext",

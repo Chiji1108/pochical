@@ -34,6 +34,11 @@ import {
   UpcomingRectangular,
   UpcomingSmall,
 } from "../components/design-widgets";
+import {
+  CellNamesContext,
+  OffDisplayContext,
+  OffHighlightContext,
+} from "../components/shift-mark";
 import { dateKey, initialDesignSchedule } from "../lib/design-days";
 import { presetPatterns } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
@@ -77,6 +82,20 @@ const crowdedSchedule = {
     shift: "day" as const,
   },
 };
+
+// August 2026 starts on a Saturday, so its month is six weeks tall: the
+// large カレンダー at its fullest.
+const AUGUST = 7;
+const augustDay = new Date(2026, AUGUST, 24);
+const augustSchedule = initialDesignSchedule(4, AUGUST);
+
+// Days off without their tint, as when 休みを塗る is off.
+const noHighlight = {
+  highlight: { badge: false, emoji: false, icon: false },
+};
+
+// Names under the marks, as when the person shows them in the calendar.
+const namesShown = { names: { badge: true, emoji: true, icon: true } };
 
 type Size = "small" | "medium" | "large";
 type WidgetView = ComponentType<{ entry: WidgetEntry }>;
@@ -129,6 +148,13 @@ const androidFamilies: Record<Size, WidgetFamily> = {
 
 const everyWidget = kinds.flatMap(({ name, sizes }) =>
   sizes.map((widget) => ({ ...widget, kind: name }))
+);
+
+// Where days off show: the small month, the two weeks and the large month.
+const offWidgets = everyWidget.filter(
+  ({ kind, size }) =>
+    (kind === "カレンダー" && size !== "medium") ||
+    (kind === "これから" && size === "medium")
 );
 
 const rows = css({ display: "flex", flexDirection: "column", gap: "16px" });
@@ -195,6 +221,11 @@ function WidgetsPage() {
     week,
     designToday,
     presetPatterns
+  );
+  const august = widgetEntry(augustSchedule, week, augustDay, presetPatterns);
+  const named = everyWidget.filter(
+    ({ kind, size }) =>
+      kind !== "今日の詳細" && (size !== "small" || kind === "これから")
   );
   const detailSizes =
     kinds.find(({ name }) => name === "今日の詳細")?.sizes ?? [];
@@ -304,6 +335,64 @@ function WidgetsPage() {
                 wallpaperHue={wallpaperSamples[0].hue}
                 widgets={detailSizes}
               />
+            </div>
+          </FrameSection>
+
+          <FrameSection
+            description="カレンダーでマークの下に名前を出している人には、ウィジェットでも出します。2週と大きい月はマークの下に、今日や明日の行はマークの横に。"
+            title="シフト名を出しているとき"
+          >
+            <CellNamesContext value={namesShown}>
+              <div className={rows}>
+                <WidgetRow
+                  appearance="light"
+                  entry={entry}
+                  families={iosFamilies}
+                  label="iPhone"
+                  widgets={named}
+                />
+                <WidgetRow
+                  appearance="light"
+                  entry={entry}
+                  families={androidFamilies}
+                  label="Android"
+                  wallpaperHue={wallpaperSamples[0].hue}
+                  widgets={named}
+                />
+                <WidgetRow
+                  appearance="light"
+                  entry={august}
+                  families={iosFamilies}
+                  label="6週の月（2026年8月）"
+                  widgets={named.filter(({ size }) => size === "large")}
+                />
+              </div>
+            </CellNamesContext>
+          </FrameSection>
+
+          <FrameSection
+            description="休みの日は、カレンダーの「休みを塗る」と「休みの見せ方」のとおりに。空白のとき、2週はカレンダーの週と同じく薄く出します。小さい月は休みしか見せないので、いつも塗ります。"
+            title="休みの見せ方"
+          >
+            <div className={rows}>
+              <OffHighlightContext value={noHighlight}>
+                <WidgetRow
+                  appearance="light"
+                  entry={entry}
+                  families={iosFamilies}
+                  label="塗らない"
+                  widgets={offWidgets}
+                />
+              </OffHighlightContext>
+              <OffDisplayContext value="blank">
+                <WidgetRow
+                  appearance="light"
+                  entry={entry}
+                  families={iosFamilies}
+                  label="空白"
+                  widgets={offWidgets}
+                />
+              </OffDisplayContext>
             </div>
           </FrameSection>
 

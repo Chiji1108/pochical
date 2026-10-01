@@ -70,6 +70,31 @@ public object GetInvitePreviewResponseKt {
     public fun clearGroupEmoji() {
       _builder.clearGroupEmoji()
     }
+
+    /**
+     * ```
+     * How many are in the group, for 「{n}人」 on the page and cards.
+     * ```
+     *
+     * `uint32 member_count = 3 [json_name = "memberCount"];`
+     */
+    public var memberCount: kotlin.Int
+      @kotlin.jvm.JvmName("getMemberCount")
+        get() = _builder.memberCount
+      @kotlin.jvm.JvmName("setMemberCount")
+        set(value) {
+        _builder.memberCount = value
+      }
+    /**
+     * ```
+     * How many are in the group, for 「{n}人」 on the page and cards.
+     * ```
+     *
+     * `uint32 member_count = 3 [json_name = "memberCount"];`
+     */
+    public fun clearMemberCount() {
+      _builder.clearMemberCount()
+    }
   }
 }
 public inline fun tech.chiji.pochical.v1.GetInvitePreviewResponse.copy(block: `tech.chiji.pochical.v1`.GetInvitePreviewResponseKt.Dsl.() -> kotlin.Unit): tech.chiji.pochical.v1.GetInvitePreviewResponse =

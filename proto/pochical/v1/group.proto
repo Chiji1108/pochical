@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package pochical.v1;
+
+// Making groups and getting into them. Every call needs the session token
+// from better-auth as `Authorization: Bearer <token>` (UNAUTHENTICATED
+// without one). Names follow spec/text-limits.md, counted in characters as
+// a reader sees them; a longer or empty one fails with INVALID_ARGUMENT.
+service GroupService {
+  // Makes a group with the caller as its first member, and its first
+  // invitation link.
+  rpc CreateGroup(CreateGroupRequest) returns (CreateGroupResponse);
+
+  // The group's live invitation code. Members only (PERMISSION_DENIED
+  // otherwise).
+  rpc GetInviteLink(GetInviteLinkRequest) returns (GetInviteLinkResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Replaces the group's invitation code: the old link and QR code stop
+  // working at once; members stay. Members only.
+  rpc RemakeInviteLink(RemakeInviteLinkRequest) returns (RemakeInviteLinkResponse);
+
+  // Joins the group a live code opens. NOT_FOUND when no group uses it.
+  // Joining a group you are already in changes nothing and says so.
+  rpc JoinGroup(JoinGroupRequest) returns (JoinGroupResponse);
+}
+
+message CreateGroupRequest {
+  // groupName: 1 to 30 characters.
+  string name = 1;
+  // The group's mark: one emoji. Other marks come later.
+  string emoji = 2;
+  // How the caller appears in this group; personName: 1 to 20 characters.
+  string display_name = 3;
+}
+
+message CreateGroupResponse {
+  string group_id = 1;
+  string invite_code = 2;
+}
+
+message GetInviteLinkRequest {
+  string group_id = 1;
+}
+
+message GetInviteLinkResponse {
+  string invite_code = 1;
+}
+
+message RemakeInviteLinkRequest {
+  string group_id = 1;
+}
+
+message RemakeInviteLinkResponse {
+  string invite_code = 1;
+}
+
+message JoinGroupRequest {
+  string invite_code = 1;
+  // How the caller appears in this group; personName: 1 to 20 characters.
+  string display_name = 2;
+}
+
+message JoinGroupResponse {
+  string group_id = 1;
+  // The caller was in the group already; nothing changed.
+  bool already_member = 2;
+}

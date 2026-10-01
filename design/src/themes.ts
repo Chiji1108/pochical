@@ -1,6 +1,6 @@
 import { markColorIn, markColors, neutralRoles, neutralTokens } from "./colors";
 import type { ColorScheme } from "./colors";
-import { hexToOklch, mixOklab, oklchToHex } from "./oklch";
+import { hexToOklch, oklchToHex } from "./oklch";
 import type { Oklch } from "./oklch";
 
 // テーマ in the style settings: twelve, three to a row, each keeping one
@@ -302,16 +302,31 @@ function neutralsFor(preset: Preset, scheme: ColorScheme) {
   };
 }
 
-// A note's stroke under its date: a neutral gray, so no color beyond the
-// theme's, and apart from the green of days off. On paper a step deeper
-// than the switches' gray, to show on a day off's pale tile.
-export const NOTE_MARKER_DEPTH = 0.25;
-function noteMarkerOf(neutrals: Record<string, string>, scheme: ColorScheme) {
-  const fill = neutrals["fill-primary"] ?? "";
-  if (scheme === "dark") {
-    return fill;
-  }
-  return mixOklab(fill, neutrals["text-quaternary"] ?? "", NOTE_MARKER_DEPTH);
+// A memo's stroke under its date: a highlighter in the テーマ's own tint,
+// as on paper, so no color beyond the テーマ's. A day off's tile has the
+// same tint, which would swallow a stroke as pale as itself, so on a tile
+// the stroke is the tile's own color a step deeper (`onTile`: lightness
+// added, chroma multiplied), whatever pattern's color the tile is.
+export const noteMarkerSteps = {
+  dark: {
+    onTile: { chroma: 1.25, lightness: 0.1 },
+    pale: { chroma: 1, lightness: 0.43 },
+  },
+  light: {
+    onTile: { chroma: 1.9, lightness: -0.09 },
+    pale: { chroma: 1.6, lightness: 0.885 },
+  },
+} as const;
+
+// The stroke on a day without a tile, from the テーマ's tile color.
+function noteMarkerOf(tile: string, scheme: ColorScheme) {
+  const { chroma, hue } = hexToOklch(tile);
+  const step = noteMarkerSteps[scheme].pale;
+  return oklchToHex({
+    chroma: chroma * step.chroma,
+    hue,
+    lightness: step.lightness,
+  });
 }
 
 export const colorRoleNames = [
@@ -333,7 +348,7 @@ export function themeRoles(
     ...Object.fromEntries(
       themeRoleTokens.map((role) => [role.name, colors[role.key]])
     ),
-    "calendar-note-marker": noteMarkerOf(neutrals, scheme),
+    "calendar-note-marker": noteMarkerOf(colors.markTint, scheme),
   };
 }
 

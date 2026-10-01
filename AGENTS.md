@@ -3,7 +3,9 @@
 Pochical is a multi-language monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/android`) apps, a Cloudflare Workers backend (`apps/server`), and a web site (`apps/web`). `apps/mobile-legacy` is the old Expo app, kept for reference only; do not lint, test or extend it.
 
 - Tool versions and tasks live in `mise.toml` (`mise run gen`, `mise run server:test`, ...).
-- SQL schemas are Drizzle, and their migrations are generated, never written or edited by hand: D1 in `apps/server/src/db/schema.ts` (`mise run db:generate -- --name <what>`, into `apps/server/migrations`), and the Group DO's own SQLite in `apps/server/src/group-room-schema.ts` (`mise run group-room:generate -- --name <what>`, into `apps/server/src/group-room-migrations`, applied by each Group DO as it starts).
+- SQL schemas are Drizzle, and their migrations are generated, never written or edited by hand:
+  - D1 in `apps/server/src/db/schema.ts` (`mise run db:generate -- --name <what>`, into `apps/server/migrations`). better-auth's own tables are in `apps/server/src/db/auth-schema.ts`, written by `mise run auth:schema` from the options in `apps/server/src/auth.ts`; run `db:generate` after it.
+  - Each Durable Object's own SQLite: the Group DO in `apps/server/src/group-do-schema.ts` (`mise run group-do:generate -- --name <what>`) and the User DO in `apps/server/src/user-do-schema.ts` (`mise run user-do:generate -- --name <what>`), each applied by the object as it starts.
 - Wire types live in `proto/`. Never edit generated code (`apps/server/src/gen`, `apps/web/src/gen`, `apps/ios/Packages/PochicalProto/Sources`, `apps/android/proto/src/main`); change the `.proto` files and run `mise run gen`.
 - Design tokens (colors and テーマ, text styles, sizes) live in `design/` (TypeScript). apps/web imports them directly; `mise run gen` writes them out to `spec/design-tokens.json`, `apps/ios/Packages/PochicalDesign/Sources` and `apps/android/design/src/main`, which are never edited by hand. Components are not generated: each platform builds its own, with apps/web's /design as the reference.
 - Behavior shared across platforms is specified in `spec/`.

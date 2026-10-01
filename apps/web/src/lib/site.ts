@@ -5,12 +5,9 @@ export const site = {
   name: "ポチカル",
 };
 
-// Where the top page sets its words and phones side by side.
-export const WIDE = "@media (min-width: 960px)";
-
 // The picture shared links show (og:image), at the size previews expect.
 export const SHARE_IMAGE = {
-  alt: "ポチカル シフトを、ポチッと。",
+  alt: "ポチカル シフトを、ポチッと。家族や友だちと共有できる、シフトカレンダー。",
   height: 630,
   path: "/share.png",
   width: 1200,

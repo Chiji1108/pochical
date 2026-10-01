@@ -47,6 +47,10 @@ export default defineConfig({
   conditions: {
     extend: {
       hover: ["@media (hover: hover)", "&:is(:hover, [data-hover])"],
+      // Where the top page sets its words and phones side by side. A
+      // condition, not a shared constant: Panda reads styles before the
+      // code runs, so it cannot follow a key imported from another file.
+      wide: "@media (min-width: 960px)",
     },
   },
   // The design pages, /demo and /try (marked .design-page), and the phone

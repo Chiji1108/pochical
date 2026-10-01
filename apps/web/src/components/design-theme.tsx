@@ -1,6 +1,11 @@
 import type { ColorScheme } from "@pochical/design/colors";
 import { hexToOklch } from "@pochical/design/oklch";
-import { presets, schemeIn, themeRoles } from "@pochical/design/themes";
+import {
+  noteMarkerSteps,
+  presets,
+  schemeIn,
+  themeRoles,
+} from "@pochical/design/themes";
 import type { Preset, PresetId as OwnPresetId } from "@pochical/design/themes";
 import { Moon, Sun } from "lucide-react";
 import { createContext, useContext } from "react";
@@ -78,6 +83,7 @@ export type Appearance = "system" | ColorScheme;
 // Every color variable the screens read, each role as `--` and its name.
 export function themeStyle(id: PresetId, requested: ColorScheme = "light") {
   const scheme = schemeOf(id, requested);
+  const { onTile } = noteMarkerSteps[scheme];
   return {
     ...Object.fromEntries(
       Object.entries(themeRoles(presetOf(id), scheme)).map(([name, value]) => [
@@ -85,6 +91,10 @@ export function themeStyle(id: PresetId, requested: ColorScheme = "light") {
         value,
       ])
     ),
+    // A memo's stroke on a day off's tile is worked out from the tile
+    // itself (design-day-cell.tsx), by these steps.
+    "--note-on-tile-chroma": onTile.chroma,
+    "--note-on-tile-lightness": onTile.lightness,
     colorScheme: scheme,
   } as CSSProperties;
 }

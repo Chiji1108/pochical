@@ -6,18 +6,39 @@
   "compatibility_date": "2026-08-15",
   "observability": { "enabled": true },
   "durable_objects": {
-    "bindings": [{ "name": "GROUP_ROOM", "class_name": "GroupRoom" }],
+    "bindings": [
+      { "name": "GROUPS", "class_name": "GroupDO" },
+      { "name": "USERS", "class_name": "UserDO" },
+    ],
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GroupRoom"] }],
+  // Applied once each, in order, to the deployed Worker; add, never edit.
+  // v2 replaced the first class, GroupRoom, while it held no data.
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["GroupRoom"] },
+    {
+      "tag": "v2",
+      "deleted_classes": ["GroupRoom"],
+      "new_sqlite_classes": ["GroupDO"],
+    },
+    { "tag": "v3", "new_sqlite_classes": ["UserDO"] },
+  ],
   // The Group DO's migrations import their SQL as text (drizzle-kit).
   "rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }],
   // Global lookups a Durable Object cannot answer alone, such as which group
-  // an invite code opens. Wrangler creates the database on first deploy.
+  // an invite code opens. Created in APAC, near Pochical's users.
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "pochical",
+      "database_id": "b2334cd8-c8c6-4c3d-aa09-f17754326b22",
       "migrations_dir": "migrations",
     },
   ],
+  // better-auth (src/auth.ts) builds its URLs from BETTER_AUTH_URL and signs
+  // with BETTER_AUTH_SECRET (`wrangler secret put`; tests set their own).
+  "vars": { "BETTER_AUTH_URL": "https://api.pochical.app" },
+  "secrets": { "required": ["BETTER_AUTH_SECRET"] },
+  // The apps (and later the site's sign-in) reach the server here; the
+  // site's own Worker calls it through a service binding instead.
+  "routes": [{ "pattern": "api.pochical.app", "custom_domain": true }],
 }

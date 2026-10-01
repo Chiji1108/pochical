@@ -12,24 +12,10 @@ import {
   CURRENT_PROTOCOL_VERSION,
   MIN_PROTOCOL_VERSION,
 } from "../src/protocol";
+import { memberOf, openSocket, ORIGIN } from "./helpers";
 
-const ORIGIN = "https://server.test";
-
-const openGroupSocket = async (groupId: string): Promise<WebSocket> => {
-  const response = await exports.default.fetch(
-    `${ORIGIN}/v1/groups/${groupId}/socket`,
-    {
-      headers: { Upgrade: "websocket" },
-    }
-  );
-  expect(response.status).toBe(101);
-  const socket = response.webSocket;
-  if (!socket) {
-    throw new Error("Upgrade response had no WebSocket");
-  }
-  socket.accept();
-  return socket;
-};
+const openGroupSocket = async (groupId: string): Promise<WebSocket> =>
+  await openSocket(`/v1/groups/${groupId}/socket`, await memberOf(groupId));
 
 const nextFrame = async (socket: WebSocket): Promise<ServerFrame> => {
   const { promise, resolve, reject } = Promise.withResolvers<Blob>();

@@ -11,5 +11,9 @@ export const getInvite = createServerFn({ method: "GET" })
     return code;
   })
   .handler(
-    async ({ data }) => await fetchInvitePreview(data, env.POCHICAL_SERVER_URL)
+    async ({ data }) =>
+      await fetchInvitePreview(
+        data,
+        async (input, init) => await env.SERVER.fetch(input, init)
+      )
   );
