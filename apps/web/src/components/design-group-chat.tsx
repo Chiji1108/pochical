@@ -455,6 +455,9 @@ const chatStyle = {
     // The sides as wide as each other, so the title stays centered and a
     // long one is cut short between them.
     gridTemplateColumns: "1fr minmax(0, auto) 1fr",
+    // Room between the title and the buttons, so a long name is cut
+    // short before it touches them.
+    columnGap: "8px",
     // Out to the screen's edges, so its line runs from edge to edge as a
     // bar's does on iOS and Android (a list's lines stay inset); its
     // contents stay where they were.
