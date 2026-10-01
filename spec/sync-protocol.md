@@ -159,7 +159,8 @@ Presence means "has this thread open on screen", not "online in the app": mobile
 - Linking an anonymous user to Apple or Google, and what happens to a user whose phone and token are both lost
 - Snapshot format for resets and how long each DO keeps its change log
 - Wire messages for chat pages, and resets for DOs that do not keep values as registers
-- Syncing the rest of what a user owns: their repeating orders and coworkers
+- Syncing the rest of what a user owns: their repeating orders and coworkers. A repeating order with 祝日は休みにする records whose holidays it follows as a country code ("JP"), taken from the device's region when it is made, so every device puts the days off on the same dates whatever its language. The holiday data the apps carry is keyed by country, even while it holds only Japan's
+- Push notifications (chat, mentions): the server sends a localization key and its arguments (APNs `loc-key`/`loc-args`, FCM `body_loc_key`/`body_loc_args`), never text it has put together, so the app words them in its own language and the server need not know each reader's
 - A device whose clock runs far ahead: its edits win until real time catches up. Whether the server should hold back clocks past its own time
 - Presence and "last seen": whether to show them at all. Pochical is for family and friends, where visible presence and read markers can feel like pressure; typing alone may be enough. "Last seen" would also need storing in the User DO.
 - Read state options: whether members see read markers (and whether users can turn them off), "mark as unread" (it moves the watermark back, so `max` would become a per-thread LWW register), and muted threads left out of badge totals (mentions: spec/chat.md)
