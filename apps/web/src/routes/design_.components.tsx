@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   CalendarPlus,
   Check,
+  CircleAlert,
   Download,
   Image as ImageIcon,
   Info,
@@ -99,6 +100,14 @@ import {
 import type { ShiftMarkStyle } from "../components/shift-mark";
 import { sampleRosterPhoto } from "../lib/design-sample-photos";
 import { pageMeta } from "../lib/site";
+
+// The two kinds of toast, one above the other.
+const toastKinds = css({
+  alignItems: "center",
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+});
 
 export const Route = createFileRoute("/design_/components")({
   component: ComponentsPage,
@@ -1327,14 +1336,21 @@ function Sheets() {
       </Item>
       <Item
         name="Toast"
+        wide
         ios="標準はないので、画面の下に独自に重ねる"
         android="Snackbar"
-        where="入力・保存のあとの一言(Ark UI の Toast)"
+        where="入力・保存のあとの一言(Ark UI の Toast)。できたことはチェック、できなかったことは丸に「!」(kind: problem)"
       >
-        <p className={toastLook}>
-          <Check aria-hidden="true" size={16} />
-          10月のシフトを入れました
-        </p>
+        <div className={toastKinds}>
+          <p className={toastLook}>
+            <Check aria-hidden="true" size={16} />
+            10月のシフトを入れました
+          </p>
+          <p className={toastLook}>
+            <CircleAlert aria-hidden="true" size={16} />
+            この招待リンクは使えません
+          </p>
+        </div>
       </Item>
       <Item
         name="PullDownMenu + MenuPicker / MenuItem / MenuSeparator"
