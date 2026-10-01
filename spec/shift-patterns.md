@@ -38,7 +38,7 @@ Any pattern may name any other pattern except itself. Clearing a day does not cl
 A person may follow a repeating order: a sequence of their patterns laid over the days, without end.
 
 - An order has a `start`, the first day it applies, and an `anchor`, a day that falls on its first shift (the start unless set). Each day takes the sequence's shift counted in whole days from the anchor, backwards too (`spec/vectors/repeat.json`, schedule).
-- Orders make a timeline: a day follows the latest order that starts on or before it. A new order (a new rotation, a new job) starts on its day and leaves the days before it to the order before. An order with an empty sequence ends repeating: from its start, days are entered by hand, as a roster.
+- Orders make a timeline: a day follows the latest order that starts on or before it. A new order (a new rotation, a new job) starts on its day and leaves the days before it to the order before; an order that started on or after that day gives way to it entirely, so the newest order is always the one in use. An order with an empty sequence ends repeating: from its start, days are entered by hand, as a roster.
 - Days are not written out. A day's shift is worked out from its order whenever it is shown; only what the person changes on a day is kept. A day the person entered, or cleared, wins over its order.
 - Starting a new order, or correcting the one in use, clears the days' own pattern and times from its start, so the new order shows there; memos and people stay.
 - Everything that reads days reads them this way, the day's own value, else its order's: the month, counting days off, 次の休み, widgets, reminders and a group's tables.
