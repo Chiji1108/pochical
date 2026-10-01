@@ -85,15 +85,17 @@ export function VariantPanel<V extends Record<string, string>>({
   variants,
   onChange,
   options = designVariantOptions,
+  order = designVariantKeys,
   title = "比べる案",
 }: {
   variants: V;
   onChange: <K extends keyof V>(key: K, value: V[K]) => void;
   options?: Options;
+  // The choices in the order to list them.
+  order?: readonly string[];
   title?: string;
 }) {
-  const keys =
-    options === designVariantOptions ? designVariantKeys : Object.keys(options);
+  const keys = order;
   return (
     <section aria-labelledby="design-variants-title" className={panel.root}>
       <h2 className={panel.title} id="design-variants-title">

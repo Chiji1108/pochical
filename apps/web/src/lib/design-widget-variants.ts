@@ -131,9 +131,24 @@ export type WidgetVariants = {
   ]: (typeof widgetVariantOptions)[K]["choices"][number]["value"];
 };
 
-export const widgetVariantKeys = Object.keys(
-  widgetVariantOptions
-) as WidgetVariantKey[];
+// The choices in the order the panel lists them: what is shown, then the
+// device, then the person's settings.
+export const widgetVariantKeys: WidgetVariantKey[] = [
+  "kind",
+  "day",
+  "companion",
+  "month",
+  "platform",
+  "look",
+  "wallpaper",
+  "theme",
+  "shiftColors",
+  "shape",
+  "names",
+  "offLook",
+  "weekend",
+  "language",
+];
 
 export function parseWidgetVariants(
   search: Record<string, unknown>

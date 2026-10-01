@@ -46,6 +46,7 @@ import { presetPatterns } from "../lib/design-patterns";
 import { designToday } from "../lib/design-today";
 import {
   parseWidgetVariants,
+  widgetVariantKeys,
   widgetVariantOptions,
 } from "../lib/design-widget-variants";
 import type { WidgetVariants } from "../lib/design-widget-variants";
@@ -217,11 +218,21 @@ const page = {
   caption: css({ color: "text.secondary", fontSize: "12px", margin: 0 }),
   kind: css({ display: "flex", flexDirection: "column", gap: "8px" }),
   kindName: css({ fontSize: "15px", fontWeight: 700, margin: 0 }),
+  // The choices beside the widgets on a wide screen, kept in view as the
+  // widgets scroll; above them on a narrow one.
   layout: css({
+    "@media (min-width: 1100px)": {
+      alignItems: "flex-start",
+      display: "grid",
+      gridTemplateColumns: "380px 1fr",
+    },
     display: "flex",
     flexDirection: "column",
     gap: "24px",
     padding: "8px 16px 48px",
+  }),
+  panel: css({
+    "@media (min-width: 1100px)": { position: "sticky", top: "16px" },
   }),
   stage: css({ display: "flex", flexDirection: "column", gap: "32px" }),
 };
@@ -381,18 +392,21 @@ function WidgetsPage() {
       </DesignIntro>
       <DesignProviders>
         <div className={page.layout}>
-          <VariantPanel
-            onChange={(key, value) => {
-              void navigate({
-                replace: true,
-                resetScroll: false,
-                search: (previous) => ({ ...previous, [key]: value }),
-              });
-            }}
-            options={widgetVariantOptions}
-            title="切り替え"
-            variants={variants}
-          />
+          <div className={page.panel}>
+            <VariantPanel
+              onChange={(key, value) => {
+                void navigate({
+                  replace: true,
+                  resetScroll: false,
+                  search: (previous) => ({ ...previous, [key]: value }),
+                });
+              }}
+              options={widgetVariantOptions}
+              order={widgetVariantKeys}
+              title="切り替え"
+              variants={variants}
+            />
+          </div>
           <SettingsAround variants={variants}>
             <Stage variants={variants} />
           </SettingsAround>
