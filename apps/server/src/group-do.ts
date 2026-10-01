@@ -7,7 +7,7 @@ import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
 import migrations from "./group-do-migrations/migrations.js";
 import { members, profile } from "./group-do-schema";
-import { acceptSyncSocket, handleSyncMessage } from "./sync-socket";
+import { acceptSyncSocket, handleSyncMessage, send } from "./sync-socket";
 
 /** What the group shows of itself to members and to invite links. */
 export type GroupProfile = {
@@ -118,6 +118,12 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): void {
-    handleSyncMessage(ws, message);
+    handleSyncMessage(ws, message, {
+      // The group's change log does not exist yet; cursor 0 means
+      // "nothing to sync".
+      welcome: (socket) => {
+        send(socket, { case: "welcome", value: { cursor: 0n } });
+      },
+    });
   }
 }

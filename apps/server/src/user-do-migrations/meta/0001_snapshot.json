@@ -1,0 +1,117 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "b9093e55-5582-4132-8a6e-a2125da7231b",
+  "prevId": "3bf01982-2e24-4715-82de-c574f38c4f66",
+  "tables": {
+    "day_fields": {
+      "name": "day_fields",
+      "columns": {
+        "cursor": {
+          "name": "cursor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "date": {
+          "name": "date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "field": {
+          "name": "field",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "hlc_counter": {
+          "name": "hlc_counter",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "hlc_device": {
+          "name": "hlc_device",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "hlc_ms": {
+          "name": "hlc_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "day_fields_cursor": {
+          "name": "day_fields_cursor",
+          "columns": [
+            "cursor"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "day_fields_date_field_pk": {
+          "columns": [
+            "date",
+            "field"
+          ],
+          "name": "day_fields_date_field_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "memberships": {
+      "name": "memberships",
+      "columns": {
+        "group_id": {
+          "name": "group_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "joined_at": {
+          "name": "joined_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

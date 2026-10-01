@@ -80,6 +80,42 @@ public object ClientFrameKt {
     public fun hasPing(): kotlin.Boolean {
       return _builder.hasPing()
     }
+
+    /**
+     * ```
+     * The owner's own day edits, from their outbox; User DO socket only.
+     * ```
+     *
+     * `.pochical.v1.DayEdits day_edits = 3 [json_name = "dayEdits"];`
+     */
+    public var dayEdits: tech.chiji.pochical.v1.DayEdits
+      @kotlin.jvm.JvmName("getDayEdits")
+        get() = _builder.dayEdits
+      @kotlin.jvm.JvmName("setDayEdits")
+        set(value) {
+        _builder.dayEdits = value
+      }
+    /**
+     * ```
+     * The owner's own day edits, from their outbox; User DO socket only.
+     * ```
+     *
+     * `.pochical.v1.DayEdits day_edits = 3 [json_name = "dayEdits"];`
+     */
+    public fun clearDayEdits() {
+      _builder.clearDayEdits()
+    }
+    /**
+     * ```
+     * The owner's own day edits, from their outbox; User DO socket only.
+     * ```
+     *
+     * `.pochical.v1.DayEdits day_edits = 3 [json_name = "dayEdits"];`
+     * @return Whether the dayEdits field is set.
+     */
+    public fun hasDayEdits(): kotlin.Boolean {
+      return _builder.hasDayEdits()
+    }
     public val kindCase: tech.chiji.pochical.v1.ClientFrame.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -97,4 +133,7 @@ public val tech.chiji.pochical.v1.ClientFrameOrBuilder.helloOrNull: tech.chiji.p
 
 public val tech.chiji.pochical.v1.ClientFrameOrBuilder.pingOrNull: tech.chiji.pochical.v1.Ping?
   get() = if (hasPing()) getPing() else null
+
+public val tech.chiji.pochical.v1.ClientFrameOrBuilder.dayEditsOrNull: tech.chiji.pochical.v1.DayEdits?
+  get() = if (hasDayEdits()) getDayEdits() else null
 

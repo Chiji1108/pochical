@@ -104,6 +104,123 @@ public object ServerFrameKt {
     public fun hasError(): kotlin.Boolean {
       return _builder.hasError()
     }
+
+    /**
+     * ```
+     * Changes to the DO's data in cursor order, after Welcome and as they
+     * happen.
+     * ```
+     *
+     * `.pochical.v1.Changes changes = 4 [json_name = "changes"];`
+     */
+    public var changes: tech.chiji.pochical.v1.Changes
+      @kotlin.jvm.JvmName("getChanges")
+        get() = _builder.changes
+      @kotlin.jvm.JvmName("setChanges")
+        set(value) {
+        _builder.changes = value
+      }
+    /**
+     * ```
+     * Changes to the DO's data in cursor order, after Welcome and as they
+     * happen.
+     * ```
+     *
+     * `.pochical.v1.Changes changes = 4 [json_name = "changes"];`
+     */
+    public fun clearChanges() {
+      _builder.clearChanges()
+    }
+    /**
+     * ```
+     * Changes to the DO's data in cursor order, after Welcome and as they
+     * happen.
+     * ```
+     *
+     * `.pochical.v1.Changes changes = 4 [json_name = "changes"];`
+     * @return Whether the changes field is set.
+     */
+    public fun hasChanges(): kotlin.Boolean {
+      return _builder.hasChanges()
+    }
+
+    /**
+     * ```
+     * The edits of a DayEdits the server has taken; the client deletes
+     * them from its outbox.
+     * ```
+     *
+     * `.pochical.v1.Acked acked = 5 [json_name = "acked"];`
+     */
+    public var acked: tech.chiji.pochical.v1.Acked
+      @kotlin.jvm.JvmName("getAcked")
+        get() = _builder.acked
+      @kotlin.jvm.JvmName("setAcked")
+        set(value) {
+        _builder.acked = value
+      }
+    /**
+     * ```
+     * The edits of a DayEdits the server has taken; the client deletes
+     * them from its outbox.
+     * ```
+     *
+     * `.pochical.v1.Acked acked = 5 [json_name = "acked"];`
+     */
+    public fun clearAcked() {
+      _builder.clearAcked()
+    }
+    /**
+     * ```
+     * The edits of a DayEdits the server has taken; the client deletes
+     * them from its outbox.
+     * ```
+     *
+     * `.pochical.v1.Acked acked = 5 [json_name = "acked"];`
+     * @return Whether the acked field is set.
+     */
+    public fun hasAcked(): kotlin.Boolean {
+      return _builder.hasAcked()
+    }
+
+    /**
+     * ```
+     * The client's cursor is ahead of the server's: drop this DO's cache.
+     * A Changes with everything the DO holds follows.
+     * ```
+     *
+     * `.pochical.v1.Reset reset = 6 [json_name = "reset"];`
+     */
+    public var reset: tech.chiji.pochical.v1.Reset
+      @kotlin.jvm.JvmName("getReset")
+        get() = _builder.reset
+      @kotlin.jvm.JvmName("setReset")
+        set(value) {
+        _builder.reset = value
+      }
+    /**
+     * ```
+     * The client's cursor is ahead of the server's: drop this DO's cache.
+     * A Changes with everything the DO holds follows.
+     * ```
+     *
+     * `.pochical.v1.Reset reset = 6 [json_name = "reset"];`
+     */
+    public fun clearReset() {
+      _builder.clearReset()
+    }
+    /**
+     * ```
+     * The client's cursor is ahead of the server's: drop this DO's cache.
+     * A Changes with everything the DO holds follows.
+     * ```
+     *
+     * `.pochical.v1.Reset reset = 6 [json_name = "reset"];`
+     * @return Whether the reset field is set.
+     */
+    public fun hasReset(): kotlin.Boolean {
+      return _builder.hasReset()
+    }
     public val kindCase: tech.chiji.pochical.v1.ServerFrame.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -124,4 +241,13 @@ public val tech.chiji.pochical.v1.ServerFrameOrBuilder.pongOrNull: tech.chiji.po
 
 public val tech.chiji.pochical.v1.ServerFrameOrBuilder.errorOrNull: tech.chiji.pochical.v1.ServerError?
   get() = if (hasError()) getError() else null
+
+public val tech.chiji.pochical.v1.ServerFrameOrBuilder.changesOrNull: tech.chiji.pochical.v1.Changes?
+  get() = if (hasChanges()) getChanges() else null
+
+public val tech.chiji.pochical.v1.ServerFrameOrBuilder.ackedOrNull: tech.chiji.pochical.v1.Acked?
+  get() = if (hasAcked()) getAcked() else null
+
+public val tech.chiji.pochical.v1.ServerFrameOrBuilder.resetOrNull: tech.chiji.pochical.v1.Reset?
+  get() = if (hasReset()) getReset() else null
 

@@ -8,6 +8,13 @@
       "when": 1790845700184,
       "tag": "0000_memberships",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790856403249,
+      "tag": "0001_day_fields",
+      "breakpoints": true
     }
   ]
 }

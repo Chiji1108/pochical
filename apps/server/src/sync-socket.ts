@@ -6,11 +6,12 @@ import {
   ServerError_Code,
   ServerFrameSchema,
 } from "./gen/pochical/v1/sync_pb";
-import type { ClientFrame } from "./gen/pochical/v1/sync_pb";
+import type { ClientFrame, DayEdits } from "./gen/pochical/v1/sync_pb";
 import { MIN_PROTOCOL_VERSION } from "./protocol";
 
 // The sync sockets User DOs and Group DOs share (spec/sync-protocol.md):
-// accepting one for a signed-in user, and the handshake and keepalive.
+// accepting one for a signed-in user, the handshake and keepalive, and
+// handing each DO the frames that are its own.
 
 /**
  * The header the Worker sets on a socket request once the session checks
@@ -26,7 +27,17 @@ type SocketAttachment = {
   protocolVersion?: number;
 };
 
-type ServerFrameKind = MessageInitShape<typeof ServerFrameSchema>["kind"];
+export type ServerFrameKind = MessageInitShape<
+  typeof ServerFrameSchema
+>["kind"];
+
+/** What a DO does with a socket once it is past the handshake. */
+export type SyncHandlers = {
+  // Hello was accepted: send Welcome and every change after `cursor`.
+  welcome: (ws: WebSocket, cursor: bigint) => void;
+  // The owner's day edits; only a User DO takes them.
+  dayEdits?: (ws: WebSocket, edits: DayEdits) => void;
+};
 
 /** WebSocket close code for protocol violations (RFC 6455). */
 const POLICY_VIOLATION = 1008;
@@ -61,11 +72,11 @@ const decodeClientFrame = (
   }
 };
 
-const send = (ws: WebSocket, kind: ServerFrameKind): void => {
+export const send = (ws: WebSocket, kind: ServerFrameKind): void => {
   ws.send(toBinary(ServerFrameSchema, create(ServerFrameSchema, { kind })));
 };
 
-const rejectAndClose = (
+export const rejectAndClose = (
   ws: WebSocket,
   code: ServerError_Code,
   message: string
@@ -77,7 +88,8 @@ const rejectAndClose = (
 const handleHello = (
   ws: WebSocket,
   attachment: SocketAttachment,
-  protocolVersion: number
+  { protocolVersion, cursor }: { protocolVersion: number; cursor: bigint },
+  handlers: SyncHandlers
 ): void => {
   if (protocolVersion < MIN_PROTOCOL_VERSION) {
     rejectAndClose(
@@ -91,9 +103,12 @@ const handleHello = (
     ...attachment,
     protocolVersion,
   } satisfies SocketAttachment);
-  // The change log does not exist yet; cursor 0 means "nothing to sync".
-  send(ws, { case: "welcome", value: { cursor: 0n } });
+  handlers.welcome(ws, cursor);
 };
+
+/** Whether the socket is past Hello, so changes may be sent to it. */
+export const isSynced = (ws: WebSocket): boolean =>
+  attachmentOf(ws)?.protocolVersion !== undefined;
 
 /**
  * Accepts the socket the Worker forwarded, for the user it named. Uses the
@@ -117,10 +132,11 @@ export const acceptSyncSocket = (
   return new Response(null, { status: 101, webSocket: client });
 };
 
-/** One frame from a client: Hello first, then Ping. */
+/** One frame from a client: Hello first, then the rest. */
 export const handleSyncMessage = (
   ws: WebSocket,
-  message: ArrayBuffer | string
+  message: ArrayBuffer | string,
+  handlers: SyncHandlers
 ): void => {
   const frame = decodeClientFrame(message);
   const attachment = attachmentOf(ws);
@@ -135,7 +151,7 @@ export const handleSyncMessage = (
 
   const { kind } = frame;
   if (kind.case === "hello") {
-    handleHello(ws, attachment, kind.value.protocolVersion);
+    handleHello(ws, attachment, kind.value, handlers);
     return;
   }
   if (attachment.protocolVersion === undefined) {
@@ -146,6 +162,18 @@ export const handleSyncMessage = (
   switch (kind.case) {
     case "ping": {
       send(ws, { case: "pong", value: { nonce: kind.value.nonce } });
+      return;
+    }
+    case "dayEdits": {
+      if (handlers.dayEdits) {
+        handlers.dayEdits(ws, kind.value);
+      } else {
+        rejectAndClose(
+          ws,
+          ServerError_Code.BAD_FRAME,
+          "Day edits go to the user's own socket"
+        );
+      }
       return;
     }
     // A frame kind from a newer client decodes as undefined.

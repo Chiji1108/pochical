@@ -7,6 +7,8 @@ message ClientFrame {
   oneof kind {
     Hello hello = 1;
     Ping ping = 2;
+    // The owner's own day edits, from their outbox; User DO socket only.
+    DayEdits day_edits = 3;
   }
 }
 
@@ -16,6 +18,15 @@ message ServerFrame {
     Welcome welcome = 1;
     Pong pong = 2;
     ServerError error = 3;
+    // Changes to the DO's data in cursor order, after Welcome and as they
+    // happen.
+    Changes changes = 4;
+    // The edits of a DayEdits the server has taken; the client deletes
+    // them from its outbox.
+    Acked acked = 5;
+    // The client's cursor is ahead of the server's: drop this DO's cache.
+    // A Changes with everything the DO holds follows.
+    Reset reset = 6;
   }
 }
 
@@ -26,9 +37,10 @@ message Hello {
   uint64 cursor = 2;
 }
 
-// Reply to Hello once the server accepts the protocol version.
+// Reply to Hello once the server accepts the protocol version. Every
+// change after the client's cursor follows as Changes.
 message Welcome {
-  // Current head of the group's change log.
+  // Current head of the DO's change log.
   uint64 cursor = 1;
 }
 
@@ -52,3 +64,64 @@ message ServerError {
   Code code = 1;
   string message = 2;
 }
+
+// A point on a hybrid logical clock: compared by physical_ms, then
+// counter, then device_id (spec/sync-protocol.md, HLC).
+message Hlc {
+  int64 physical_ms = 1;
+  uint32 counter = 2;
+  string device_id = 3;
+}
+
+// A field of a day's shift. Each is its own last-writer-wins value.
+enum DayField {
+  DAY_FIELD_UNSPECIFIED = 0;
+  // The shift pattern's id.
+  DAY_FIELD_PATTERN = 1;
+  // "HH:MM", set only when the day's time differs from its pattern's.
+  DAY_FIELD_START = 2;
+  DAY_FIELD_END = 3;
+  // The day's memo, private to its owner; dayNote characters at most
+  // (design/src/limits.ts).
+  DAY_FIELD_NOTE = 4;
+}
+
+// One field of one day, as a device set it or as the server holds it.
+message DayValue {
+  // The day, "YYYY-MM-DD".
+  string date = 1;
+  DayField field = 2;
+  // Unset clears the field; a day with every field cleared has no shift.
+  optional string value = 3;
+  Hlc hlc = 4;
+}
+
+// Edits from the owner's outbox, in the order they were made.
+message DayEdits {
+  repeated DayEdit edits = 1;
+}
+
+message DayEdit {
+  // Unique per edit, so its acknowledgement finds it in the outbox.
+  string op_id = 1;
+  DayValue value = 2;
+}
+
+message Acked {
+  repeated string op_ids = 1;
+}
+
+message Changes {
+  repeated Change changes = 1;
+}
+
+// A value as the DO now holds it, at the cursor it got when it last
+// changed.
+message Change {
+  uint64 cursor = 1;
+  oneof kind {
+    DayValue day = 2;
+  }
+}
+
+message Reset {}

@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/sync.proto.
  */
 export const file_pochical_v1_sync: GenFile = /*@__PURE__*/
-  fileDesc("ChZwb2NoaWNhbC92MS9zeW5jLnByb3RvEgtwb2NoaWNhbC52MSJdCgtDbGllbnRGcmFtZRIjCgVoZWxsbxgBIAEoCzISLnBvY2hpY2FsLnYxLkhlbGxvSAASIQoEcGluZxgCIAEoCzIRLnBvY2hpY2FsLnYxLlBpbmdIAEIGCgRraW5kIowBCgtTZXJ2ZXJGcmFtZRInCgd3ZWxjb21lGAEgASgLMhQucG9jaGljYWwudjEuV2VsY29tZUgAEiEKBHBvbmcYAiABKAsyES5wb2NoaWNhbC52MS5Qb25nSAASKQoFZXJyb3IYAyABKAsyGC5wb2NoaWNhbC52MS5TZXJ2ZXJFcnJvckgAQgYKBGtpbmQiMQoFSGVsbG8SGAoQcHJvdG9jb2xfdmVyc2lvbhgBIAEoDRIOCgZjdXJzb3IYAiABKAQiGQoHV2VsY29tZRIOCgZjdXJzb3IYASABKAQiFQoEUGluZxINCgVub25jZRgBIAEoDSIVCgRQb25nEg0KBW5vbmNlGAEgASgNIpgBCgtTZXJ2ZXJFcnJvchIrCgRjb2RlGAEgASgOMh0ucG9jaGljYWwudjEuU2VydmVyRXJyb3IuQ29kZRIPCgdtZXNzYWdlGAIgASgJIksKBENvZGUSFAoQQ09ERV9VTlNQRUNJRklFRBAAEhkKFUNPREVfUFJPVE9DT0xfVE9PX09MRBABEhIKDkNPREVfQkFEX0ZSQU1FEAJCcAoWdGVjaC5jaGlqaS5wb2NoaWNhbC52MUIJU3luY1Byb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw");
+  fileDesc("ChZwb2NoaWNhbC92MS9zeW5jLnByb3RvEgtwb2NoaWNhbC52MSKJAQoLQ2xpZW50RnJhbWUSIwoFaGVsbG8YASABKAsyEi5wb2NoaWNhbC52MS5IZWxsb0gAEiEKBHBpbmcYAiABKAsyES5wb2NoaWNhbC52MS5QaW5nSAASKgoJZGF5X2VkaXRzGAMgASgLMhUucG9jaGljYWwudjEuRGF5RWRpdHNIAEIGCgRraW5kIv8BCgtTZXJ2ZXJGcmFtZRInCgd3ZWxjb21lGAEgASgLMhQucG9jaGljYWwudjEuV2VsY29tZUgAEiEKBHBvbmcYAiABKAsyES5wb2NoaWNhbC52MS5Qb25nSAASKQoFZXJyb3IYAyABKAsyGC5wb2NoaWNhbC52MS5TZXJ2ZXJFcnJvckgAEicKB2NoYW5nZXMYBCABKAsyFC5wb2NoaWNhbC52MS5DaGFuZ2VzSAASIwoFYWNrZWQYBSABKAsyEi5wb2NoaWNhbC52MS5BY2tlZEgAEiMKBXJlc2V0GAYgASgLMhIucG9jaGljYWwudjEuUmVzZXRIAEIGCgRraW5kIjEKBUhlbGxvEhgKEHByb3RvY29sX3ZlcnNpb24YASABKA0SDgoGY3Vyc29yGAIgASgEIhkKB1dlbGNvbWUSDgoGY3Vyc29yGAEgASgEIhUKBFBpbmcSDQoFbm9uY2UYASABKA0iFQoEUG9uZxINCgVub25jZRgBIAEoDSKYAQoLU2VydmVyRXJyb3ISKwoEY29kZRgBIAEoDjIdLnBvY2hpY2FsLnYxLlNlcnZlckVycm9yLkNvZGUSDwoHbWVzc2FnZRgCIAEoCSJLCgRDb2RlEhQKEENPREVfVU5TUEVDSUZJRUQQABIZChVDT0RFX1BST1RPQ09MX1RPT19PTEQQARISCg5DT0RFX0JBRF9GUkFNRRACIj4KA0hsYxITCgtwaHlzaWNhbF9tcxgBIAEoAxIPCgdjb3VudGVyGAIgASgNEhEKCWRldmljZV9pZBgDIAEoCSJ7CghEYXlWYWx1ZRIMCgRkYXRlGAEgASgJEiQKBWZpZWxkGAIgASgOMhUucG9jaGljYWwudjEuRGF5RmllbGQSEgoFdmFsdWUYAyABKAlIAIgBARIdCgNobGMYBCABKAsyEC5wb2NoaWNhbC52MS5IbGNCCAoGX3ZhbHVlIi8KCERheUVkaXRzEiMKBWVkaXRzGAEgAygLMhQucG9jaGljYWwudjEuRGF5RWRpdCI+CgdEYXlFZGl0Eg0KBW9wX2lkGAEgASgJEiQKBXZhbHVlGAIgASgLMhUucG9jaGljYWwudjEuRGF5VmFsdWUiFwoFQWNrZWQSDgoGb3BfaWRzGAEgAygJIi8KB0NoYW5nZXMSJAoHY2hhbmdlcxgBIAMoCzITLnBvY2hpY2FsLnYxLkNoYW5nZSJGCgZDaGFuZ2USDgoGY3Vyc29yGAEgASgEEiQKA2RheRgCIAEoCzIVLnBvY2hpY2FsLnYxLkRheVZhbHVlSABCBgoEa2luZCIHCgVSZXNldCp4CghEYXlGaWVsZBIZChVEQVlfRklFTERfVU5TUEVDSUZJRUQQABIVChFEQVlfRklFTERfUEFUVEVSThABEhMKD0RBWV9GSUVMRF9TVEFSVBACEhEKDURBWV9GSUVMRF9FTkQQAxISCg5EQVlfRklFTERfTk9URRAEQnAKFnRlY2guY2hpamkucG9jaGljYWwudjFCCVN5bmNQcm90b1ABogIDUFhYqgILUG9jaGljYWwuVjHKAgtQb2NoaWNhbFxWMeICF1BvY2hpY2FsXFYxXEdQQk1ldGFkYXRh6gIMUG9jaGljYWw6OlYxYgZwcm90bzM");
 
 /**
  * Every binary WebSocket message from a client is one ClientFrame.
@@ -33,6 +33,14 @@ export type ClientFrame = Message<"pochical.v1.ClientFrame"> & {
      */
     value: Ping;
     case: "ping";
+  } | {
+    /**
+     * The owner's own day edits, from their outbox; User DO socket only.
+     *
+     * @generated from field: pochical.v1.DayEdits day_edits = 3;
+     */
+    value: DayEdits;
+    case: "dayEdits";
   } | { case: undefined; value?: undefined };
 };
 
@@ -70,6 +78,33 @@ export type ServerFrame = Message<"pochical.v1.ServerFrame"> & {
      */
     value: ServerError;
     case: "error";
+  } | {
+    /**
+     * Changes to the DO's data in cursor order, after Welcome and as they
+     * happen.
+     *
+     * @generated from field: pochical.v1.Changes changes = 4;
+     */
+    value: Changes;
+    case: "changes";
+  } | {
+    /**
+     * The edits of a DayEdits the server has taken; the client deletes
+     * them from its outbox.
+     *
+     * @generated from field: pochical.v1.Acked acked = 5;
+     */
+    value: Acked;
+    case: "acked";
+  } | {
+    /**
+     * The client's cursor is ahead of the server's: drop this DO's cache.
+     * A Changes with everything the DO holds follows.
+     *
+     * @generated from field: pochical.v1.Reset reset = 6;
+     */
+    value: Reset;
+    case: "reset";
   } | { case: undefined; value?: undefined };
 };
 
@@ -107,13 +142,14 @@ export const HelloSchema: GenMessage<Hello> = /*@__PURE__*/
   messageDesc(file_pochical_v1_sync, 2);
 
 /**
- * Reply to Hello once the server accepts the protocol version.
+ * Reply to Hello once the server accepts the protocol version. Every
+ * change after the client's cursor follows as Changes.
  *
  * @generated from message pochical.v1.Welcome
  */
 export type Welcome = Message<"pochical.v1.Welcome"> & {
   /**
-   * Current head of the group's change log.
+   * Current head of the DO's change log.
    *
    * @generated from field: uint64 cursor = 1;
    */
@@ -212,4 +248,238 @@ export enum ServerError_Code {
  */
 export const ServerError_CodeSchema: GenEnum<ServerError_Code> = /*@__PURE__*/
   enumDesc(file_pochical_v1_sync, 6, 0);
+
+/**
+ * A point on a hybrid logical clock: compared by physical_ms, then
+ * counter, then device_id (spec/sync-protocol.md, HLC).
+ *
+ * @generated from message pochical.v1.Hlc
+ */
+export type Hlc = Message<"pochical.v1.Hlc"> & {
+  /**
+   * @generated from field: int64 physical_ms = 1;
+   */
+  physicalMs: bigint;
+
+  /**
+   * @generated from field: uint32 counter = 2;
+   */
+  counter: number;
+
+  /**
+   * @generated from field: string device_id = 3;
+   */
+  deviceId: string;
+};
+
+/**
+ * Describes the message pochical.v1.Hlc.
+ * Use `create(HlcSchema)` to create a new message.
+ */
+export const HlcSchema: GenMessage<Hlc> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_sync, 7);
+
+/**
+ * One field of one day, as a device set it or as the server holds it.
+ *
+ * @generated from message pochical.v1.DayValue
+ */
+export type DayValue = Message<"pochical.v1.DayValue"> & {
+  /**
+   * The day, "YYYY-MM-DD".
+   *
+   * @generated from field: string date = 1;
+   */
+  date: string;
+
+  /**
+   * @generated from field: pochical.v1.DayField field = 2;
+   */
+  field: DayField;
+
+  /**
+   * Unset clears the field; a day with every field cleared has no shift.
+   *
+   * @generated from field: optional string value = 3;
+   */
+  value?: string | undefined;
+
+  /**
+   * @generated from field: pochical.v1.Hlc hlc = 4;
+   */
+  hlc?: Hlc | undefined;
+};
+
+/**
+ * Describes the message pochical.v1.DayValue.
+ * Use `create(DayValueSchema)` to create a new message.
+ */
+export const DayValueSchema: GenMessage<DayValue> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_sync, 8);
+
+/**
+ * Edits from the owner's outbox, in the order they were made.
+ *
+ * @generated from message pochical.v1.DayEdits
+ */
+export type DayEdits = Message<"pochical.v1.DayEdits"> & {
+  /**
+   * @generated from field: repeated pochical.v1.DayEdit edits = 1;
+   */
+  edits: DayEdit[];
+};
+
+/**
+ * Describes the message pochical.v1.DayEdits.
+ * Use `create(DayEditsSchema)` to create a new message.
+ */
+export const DayEditsSchema: GenMessage<DayEdits> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_sync, 9);
+
+/**
+ * @generated from message pochical.v1.DayEdit
+ */
+export type DayEdit = Message<"pochical.v1.DayEdit"> & {
+  /**
+   * Unique per edit, so its acknowledgement finds it in the outbox.
+   *
+   * @generated from field: string op_id = 1;
+   */
+  opId: string;
+
+  /**
+   * @generated from field: pochical.v1.DayValue value = 2;
+   */
+  value?: DayValue | undefined;
+};
+
+/**
+ * Describes the message pochical.v1.DayEdit.
+ * Use `create(DayEditSchema)` to create a new message.
+ */
+export const DayEditSchema: GenMessage<DayEdit> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_sync, 10);
+
+/**
+ * @generated from message pochical.v1.Acked
+ */
+export type Acked = Message<"pochical.v1.Acked"> & {
+  /**
+   * @generated from field: repeated string op_ids = 1;
+   */
+  opIds: string[];
+};
+
+/**
+ * Describes the message pochical.v1.Acked.
+ * Use `create(AckedSchema)` to create a new message.
+ */
+export const AckedSchema: GenMessage<Acked> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_sync, 11);
+
+/**
+ * @generated from message pochical.v1.Changes
+ */
+export type Changes = Message<"pochical.v1.Changes"> & {
+  /**
+   * @generated from field: repeated pochical.v1.Change changes = 1;
+   */
+  changes: Change[];
+};
+
+/**
+ * Describes the message pochical.v1.Changes.
+ * Use `create(ChangesSchema)` to create a new message.
+ */
+export const ChangesSchema: GenMessage<Changes> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_sync, 12);
+
+/**
+ * A value as the DO now holds it, at the cursor it got when it last
+ * changed.
+ *
+ * @generated from message pochical.v1.Change
+ */
+export type Change = Message<"pochical.v1.Change"> & {
+  /**
+   * @generated from field: uint64 cursor = 1;
+   */
+  cursor: bigint;
+
+  /**
+   * @generated from oneof pochical.v1.Change.kind
+   */
+  kind: {
+    /**
+     * @generated from field: pochical.v1.DayValue day = 2;
+     */
+    value: DayValue;
+    case: "day";
+  } | { case: undefined; value?: undefined };
+};
+
+/**
+ * Describes the message pochical.v1.Change.
+ * Use `create(ChangeSchema)` to create a new message.
+ */
+export const ChangeSchema: GenMessage<Change> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_sync, 13);
+
+/**
+ * @generated from message pochical.v1.Reset
+ */
+export type Reset = Message<"pochical.v1.Reset"> & {
+};
+
+/**
+ * Describes the message pochical.v1.Reset.
+ * Use `create(ResetSchema)` to create a new message.
+ */
+export const ResetSchema: GenMessage<Reset> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_sync, 14);
+
+/**
+ * A field of a day's shift. Each is its own last-writer-wins value.
+ *
+ * @generated from enum pochical.v1.DayField
+ */
+export enum DayField {
+  /**
+   * @generated from enum value: DAY_FIELD_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * The shift pattern's id.
+   *
+   * @generated from enum value: DAY_FIELD_PATTERN = 1;
+   */
+  PATTERN = 1,
+
+  /**
+   * "HH:MM", set only when the day's time differs from its pattern's.
+   *
+   * @generated from enum value: DAY_FIELD_START = 2;
+   */
+  START = 2,
+
+  /**
+   * @generated from enum value: DAY_FIELD_END = 3;
+   */
+  END = 3,
+
+  /**
+   * The day's memo, private to its owner; dayNote characters at most
+   * (design/src/limits.ts).
+   *
+   * @generated from enum value: DAY_FIELD_NOTE = 4;
+   */
+  NOTE = 4,
+}
+
+/**
+ * Describes the enum pochical.v1.DayField.
+ */
+export const DayFieldSchema: GenEnum<DayField> = /*@__PURE__*/
+  enumDesc(file_pochical_v1_sync, 0);
 

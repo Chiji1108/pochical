@@ -26,6 +26,7 @@ public  final class ClientFrame extends
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
     HELLO(1),
     PING(2),
+    DAY_EDITS(3),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -43,6 +44,7 @@ public  final class ClientFrame extends
       switch (value) {
         case 1: return HELLO;
         case 2: return PING;
+        case 3: return DAY_EDITS;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -159,6 +161,76 @@ public  final class ClientFrame extends
    */
   private void clearPing() {
     if (kindCase_ == 2) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int DAY_EDITS_FIELD_NUMBER = 3;
+  /**
+   * <pre>
+   * The owner's own day edits, from their outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.DayEdits day_edits = 3 [json_name = "dayEdits"];</code>
+   */
+  @java.lang.Override
+  public boolean hasDayEdits() {
+    return kindCase_ == 3;
+  }
+  /**
+   * <pre>
+   * The owner's own day edits, from their outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.DayEdits day_edits = 3 [json_name = "dayEdits"];</code>
+   */
+  @java.lang.Override
+  public tech.chiji.pochical.v1.DayEdits getDayEdits() {
+    if (kindCase_ == 3) {
+       return (tech.chiji.pochical.v1.DayEdits) kind_;
+    }
+    return tech.chiji.pochical.v1.DayEdits.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * The owner's own day edits, from their outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.DayEdits day_edits = 3 [json_name = "dayEdits"];</code>
+   */
+  private void setDayEdits(tech.chiji.pochical.v1.DayEdits value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 3;
+  }
+  /**
+   * <pre>
+   * The owner's own day edits, from their outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.DayEdits day_edits = 3 [json_name = "dayEdits"];</code>
+   */
+  private void mergeDayEdits(tech.chiji.pochical.v1.DayEdits value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 3 &&
+        kind_ != tech.chiji.pochical.v1.DayEdits.getDefaultInstance()) {
+      kind_ = tech.chiji.pochical.v1.DayEdits.newBuilder((tech.chiji.pochical.v1.DayEdits) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 3;
+  }
+  /**
+   * <pre>
+   * The owner's own day edits, from their outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.DayEdits day_edits = 3 [json_name = "dayEdits"];</code>
+   */
+  private void clearDayEdits() {
+    if (kindCase_ == 3) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -373,6 +445,78 @@ public  final class ClientFrame extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The owner's own day edits, from their outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.DayEdits day_edits = 3 [json_name = "dayEdits"];</code>
+     */
+    @java.lang.Override
+    public boolean hasDayEdits() {
+      return instance.hasDayEdits();
+    }
+    /**
+     * <pre>
+     * The owner's own day edits, from their outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.DayEdits day_edits = 3 [json_name = "dayEdits"];</code>
+     */
+    @java.lang.Override
+    public tech.chiji.pochical.v1.DayEdits getDayEdits() {
+      return instance.getDayEdits();
+    }
+    /**
+     * <pre>
+     * The owner's own day edits, from their outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.DayEdits day_edits = 3 [json_name = "dayEdits"];</code>
+     */
+    public Builder setDayEdits(tech.chiji.pochical.v1.DayEdits value) {
+      copyOnWrite();
+      instance.setDayEdits(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The owner's own day edits, from their outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.DayEdits day_edits = 3 [json_name = "dayEdits"];</code>
+     */
+    public Builder setDayEdits(
+        tech.chiji.pochical.v1.DayEdits.Builder builderForValue) {
+      copyOnWrite();
+      instance.setDayEdits(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The owner's own day edits, from their outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.DayEdits day_edits = 3 [json_name = "dayEdits"];</code>
+     */
+    public Builder mergeDayEdits(tech.chiji.pochical.v1.DayEdits value) {
+      copyOnWrite();
+      instance.mergeDayEdits(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The owner's own day edits, from their outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.DayEdits day_edits = 3 [json_name = "dayEdits"];</code>
+     */
+    public Builder clearDayEdits() {
+      copyOnWrite();
+      instance.clearDayEdits();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ClientFrame)
   }
   @java.lang.Override
@@ -393,10 +537,11 @@ public  final class ClientFrame extends
             "kindCase_",
             tech.chiji.pochical.v1.Hello.class,
             tech.chiji.pochical.v1.Ping.class,
+            tech.chiji.pochical.v1.DayEdits.class,
           };
           java.lang.String info =
-              "\u0000\u0002\u0001\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001<\u0000\u0002<" +
-              "\u0000";
+              "\u0000\u0003\u0001\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u0003<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

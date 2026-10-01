@@ -43,5 +43,68 @@ public interface ServerFrameOrBuilder extends
    */
   tech.chiji.pochical.v1.ServerError getError();
 
+  /**
+   * <pre>
+   * Changes to the DO's data in cursor order, after Welcome and as they
+   * happen.
+   * </pre>
+   *
+   * <code>.pochical.v1.Changes changes = 4 [json_name = "changes"];</code>
+   * @return Whether the changes field is set.
+   */
+  boolean hasChanges();
+  /**
+   * <pre>
+   * Changes to the DO's data in cursor order, after Welcome and as they
+   * happen.
+   * </pre>
+   *
+   * <code>.pochical.v1.Changes changes = 4 [json_name = "changes"];</code>
+   * @return The changes.
+   */
+  tech.chiji.pochical.v1.Changes getChanges();
+
+  /**
+   * <pre>
+   * The edits of a DayEdits the server has taken; the client deletes
+   * them from its outbox.
+   * </pre>
+   *
+   * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
+   * @return Whether the acked field is set.
+   */
+  boolean hasAcked();
+  /**
+   * <pre>
+   * The edits of a DayEdits the server has taken; the client deletes
+   * them from its outbox.
+   * </pre>
+   *
+   * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
+   * @return The acked.
+   */
+  tech.chiji.pochical.v1.Acked getAcked();
+
+  /**
+   * <pre>
+   * The client's cursor is ahead of the server's: drop this DO's cache.
+   * A Changes with everything the DO holds follows.
+   * </pre>
+   *
+   * <code>.pochical.v1.Reset reset = 6 [json_name = "reset"];</code>
+   * @return Whether the reset field is set.
+   */
+  boolean hasReset();
+  /**
+   * <pre>
+   * The client's cursor is ahead of the server's: drop this DO's cache.
+   * A Changes with everything the DO holds follows.
+   * </pre>
+   *
+   * <code>.pochical.v1.Reset reset = 6 [json_name = "reset"];</code>
+   * @return The reset.
+   */
+  tech.chiji.pochical.v1.Reset getReset();
+
   public tech.chiji.pochical.v1.ServerFrame.KindCase getKindCase();
 }

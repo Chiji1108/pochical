@@ -6,103 +6,60 @@
 package tech.chiji.pochical.v1;
 
 /**
- * <pre>
- * Reply to Hello once the server accepts the protocol version. Every
- * change after the client's cursor follows as Changes.
- * </pre>
- *
- * Protobuf type {@code pochical.v1.Welcome}
+ * Protobuf type {@code pochical.v1.Reset}
  */
 @com.google.protobuf.Generated
-public  final class Welcome extends
+public  final class Reset extends
     com.google.protobuf.GeneratedMessageLite<
-        Welcome, Welcome.Builder> implements
-    // @@protoc_insertion_point(message_implements:pochical.v1.Welcome)
-    WelcomeOrBuilder {
-  private Welcome() {
+        Reset, Reset.Builder> implements
+    // @@protoc_insertion_point(message_implements:pochical.v1.Reset)
+    ResetOrBuilder {
+  private Reset() {
   }
-  public static final int CURSOR_FIELD_NUMBER = 1;
-  private long cursor_;
-  /**
-   * <pre>
-   * Current head of the DO's change log.
-   * </pre>
-   *
-   * <code>uint64 cursor = 1 [json_name = "cursor"];</code>
-   * @return The cursor.
-   */
-  @java.lang.Override
-  public long getCursor() {
-    return cursor_;
-  }
-  /**
-   * <pre>
-   * Current head of the DO's change log.
-   * </pre>
-   *
-   * <code>uint64 cursor = 1 [json_name = "cursor"];</code>
-   * @param value The cursor to set.
-   */
-  private void setCursor(long value) {
-    
-    cursor_ = value;
-  }
-  /**
-   * <pre>
-   * Current head of the DO's change log.
-   * </pre>
-   *
-   * <code>uint64 cursor = 1 [json_name = "cursor"];</code>
-   */
-  private void clearCursor() {
-
-    cursor_ = 0L;
-  }
-
-  public static tech.chiji.pochical.v1.Welcome parseFrom(
+  public static tech.chiji.pochical.v1.Reset parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static tech.chiji.pochical.v1.Welcome parseFrom(
+  public static tech.chiji.pochical.v1.Reset parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static tech.chiji.pochical.v1.Welcome parseFrom(
+  public static tech.chiji.pochical.v1.Reset parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static tech.chiji.pochical.v1.Welcome parseFrom(
+  public static tech.chiji.pochical.v1.Reset parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static tech.chiji.pochical.v1.Welcome parseFrom(byte[] data)
+  public static tech.chiji.pochical.v1.Reset parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static tech.chiji.pochical.v1.Welcome parseFrom(
+  public static tech.chiji.pochical.v1.Reset parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static tech.chiji.pochical.v1.Welcome parseFrom(java.io.InputStream input)
+  public static tech.chiji.pochical.v1.Reset parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static tech.chiji.pochical.v1.Welcome parseFrom(
+  public static tech.chiji.pochical.v1.Reset parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -110,24 +67,24 @@ public  final class Welcome extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static tech.chiji.pochical.v1.Welcome parseDelimitedFrom(java.io.InputStream input)
+  public static tech.chiji.pochical.v1.Reset parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static tech.chiji.pochical.v1.Welcome parseDelimitedFrom(
+  public static tech.chiji.pochical.v1.Reset parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static tech.chiji.pochical.v1.Welcome parseFrom(
+  public static tech.chiji.pochical.v1.Reset parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static tech.chiji.pochical.v1.Welcome parseFrom(
+  public static tech.chiji.pochical.v1.Reset parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -138,70 +95,25 @@ public  final class Welcome extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(tech.chiji.pochical.v1.Welcome prototype) {
+  public static Builder newBuilder(tech.chiji.pochical.v1.Reset prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
-   * <pre>
-   * Reply to Hello once the server accepts the protocol version. Every
-   * change after the client's cursor follows as Changes.
-   * </pre>
-   *
-   * Protobuf type {@code pochical.v1.Welcome}
+   * Protobuf type {@code pochical.v1.Reset}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        tech.chiji.pochical.v1.Welcome, Builder> implements
-      // @@protoc_insertion_point(builder_implements:pochical.v1.Welcome)
-      tech.chiji.pochical.v1.WelcomeOrBuilder {
-    // Construct using tech.chiji.pochical.v1.Welcome.newBuilder()
+        tech.chiji.pochical.v1.Reset, Builder> implements
+      // @@protoc_insertion_point(builder_implements:pochical.v1.Reset)
+      tech.chiji.pochical.v1.ResetOrBuilder {
+    // Construct using tech.chiji.pochical.v1.Reset.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
 
 
-    /**
-     * <pre>
-     * Current head of the DO's change log.
-     * </pre>
-     *
-     * <code>uint64 cursor = 1 [json_name = "cursor"];</code>
-     * @return The cursor.
-     */
-    @java.lang.Override
-    public long getCursor() {
-      return instance.getCursor();
-    }
-    /**
-     * <pre>
-     * Current head of the DO's change log.
-     * </pre>
-     *
-     * <code>uint64 cursor = 1 [json_name = "cursor"];</code>
-     * @param value The cursor to set.
-     * @return This builder for chaining.
-     */
-    public Builder setCursor(long value) {
-      copyOnWrite();
-      instance.setCursor(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * Current head of the DO's change log.
-     * </pre>
-     *
-     * <code>uint64 cursor = 1 [json_name = "cursor"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearCursor() {
-      copyOnWrite();
-      instance.clearCursor();
-      return this;
-    }
-
-    // @@protoc_insertion_point(builder_scope:pochical.v1.Welcome)
+    // @@protoc_insertion_point(builder_scope:pochical.v1.Reset)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -210,30 +122,28 @@ public  final class Welcome extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new tech.chiji.pochical.v1.Welcome();
+        return new tech.chiji.pochical.v1.Reset();
       }
       case NEW_BUILDER: {
         return new Builder();
       }
       case BUILD_MESSAGE_INFO: {
-          java.lang.Object[] objects = new java.lang.Object[] {
-            "cursor_",
-          };
+          java.lang.Object[] objects = null;
           java.lang.String info =
-              "\u0000\u0001\u0000\u0000\u0001\u0001\u0001\u0000\u0000\u0000\u0001\u0003";
+              "\u0000\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<tech.chiji.pochical.v1.Welcome> parser = PARSER;
+        com.google.protobuf.Parser<tech.chiji.pochical.v1.Reset> parser = PARSER;
         if (parser == null) {
-          synchronized (tech.chiji.pochical.v1.Welcome.class) {
+          synchronized (tech.chiji.pochical.v1.Reset.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<tech.chiji.pochical.v1.Welcome>(
+                  new DefaultInstanceBasedParser<tech.chiji.pochical.v1.Reset>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -253,24 +163,24 @@ public  final class Welcome extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:pochical.v1.Welcome)
-  private static final tech.chiji.pochical.v1.Welcome DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:pochical.v1.Reset)
+  private static final tech.chiji.pochical.v1.Reset DEFAULT_INSTANCE;
   static {
-    Welcome defaultInstance = new Welcome();
+    Reset defaultInstance = new Reset();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      Welcome.class, defaultInstance);
+      Reset.class, defaultInstance);
   }
 
-  public static tech.chiji.pochical.v1.Welcome getDefaultInstance() {
+  public static tech.chiji.pochical.v1.Reset getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<Welcome> PARSER;
+  private static volatile com.google.protobuf.Parser<Reset> PARSER;
 
-  public static com.google.protobuf.Parser<Welcome> parser() {
+  public static com.google.protobuf.Parser<Reset> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

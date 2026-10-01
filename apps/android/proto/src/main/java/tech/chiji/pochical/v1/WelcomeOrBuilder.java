@@ -12,7 +12,7 @@ public interface WelcomeOrBuilder extends
 
   /**
    * <pre>
-   * Current head of the group's change log.
+   * Current head of the DO's change log.
    * </pre>
    *
    * <code>uint64 cursor = 1 [json_name = "cursor"];</code>
