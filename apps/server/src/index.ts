@@ -5,7 +5,7 @@ import { registerInviteService } from "./invite-service";
 import { registerSystemService } from "./system-service";
 
 // Workers only binds Durable Object classes exported from the entry module.
-export { GroupRoom } from "./group-room";
+export { GroupDO } from "./group-do";
 
 const router = createConnectRouter({ grpc: false, grpcWeb: false });
 registerSystemService(router);
@@ -32,7 +32,7 @@ export default {
     // Not yet authenticated: anyone can join any group (spec/sync-protocol.md).
     const groupId = GROUP_SOCKET_PATH.exec(pathname)?.groups?.groupId;
     if (groupId !== undefined) {
-      return await env.GROUP_ROOM.getByName(groupId).fetch(request);
+      return await env.GROUPS.getByName(groupId).fetch(request);
     }
 
     return new Response("Not found", { status: 404 });

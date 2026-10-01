@@ -23,7 +23,7 @@ const addGroup = async (
   inviteCode: string,
   emoji: string | null
 ): Promise<void> => {
-  await env.GROUP_ROOM.getByName(groupId).setProfile({ emoji, name: "同期" });
+  await env.GROUPS.getByName(groupId).setProfile({ emoji, name: "同期" });
   await db.insert(invites).values({ code: inviteCode, groupId });
 };
 

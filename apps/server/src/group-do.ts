@@ -11,8 +11,8 @@ import {
   ServerFrameSchema,
 } from "./gen/pochical/v1/sync_pb";
 import type { ClientFrame } from "./gen/pochical/v1/sync_pb";
-import migrations from "./group-room-migrations/migrations.js";
-import { profile } from "./group-room-schema";
+import migrations from "./group-do-migrations/migrations.js";
+import { profile } from "./group-do-schema";
 import { MIN_PROTOCOL_VERSION } from "./protocol";
 
 /** What the group shows of itself to members and to invite links. */
@@ -82,7 +82,7 @@ const handleHello = (ws: WebSocket, protocolVersion: number): void => {
  * One Durable Object per group. Sockets use the Hibernation API so an idle
  * group costs nothing while members stay connected.
  */
-export class GroupRoom extends DurableObject<Env> {
+export class GroupDO extends DurableObject<Env> {
   private readonly db: DrizzleSqliteDODatabase;
 
   constructor(ctx: DurableObjectState, env: Env) {
