@@ -475,6 +475,8 @@ function inDaysWords(inDays: number) {
 
 const offs = {
   avatar: css({ flexShrink: 0 }),
+  // With nothing to count, the words sit in the middle of the rows' room.
+  empty: css({ marginBlock: "auto" }),
   // The count, large: a number with 日後 after it, or 今日 and 明日.
   count: css({
     alignItems: "baseline",
@@ -624,7 +626,7 @@ export function NextOffMedium({ entry }: { entry: WidgetEntry }) {
           </li>
         ))}
         {ahead.length === 0 && (
-          <li className={offs.date}>まだ入っていません</li>
+          <li className={cx(offs.date, offs.empty)}>まだ入っていません</li>
         )}
       </ol>
     </div>
@@ -967,8 +969,8 @@ const detail = {
   comingRow: css({
     alignItems: "center",
     display: "grid",
-    gap: "8px",
-    gridTemplateColumns: "64px 18px 1fr",
+    gap: "4px",
+    gridTemplateColumns: "52px 20px 1fr",
   }),
   comingWords: css({ ...oneLine, fontWeight: 400, textStyle: "footnote" }),
 };
