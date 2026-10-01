@@ -38,6 +38,10 @@ run = "bun run --cwd apps/server dev"
 description = "Generate a D1 migration from apps/server/src/db/schema.ts (pass --name <what>)"
 run = "bun run --cwd apps/server db:generate"
 
+[tasks."group-room:generate"]
+description = "Generate a Group DO migration from apps/server/src/group-room-schema.ts (pass --name <what>)"
+run = "bun run --cwd apps/server group-room:generate"
+
 [tasks."server:test"]
 description = "Run server tests in the Workers runtime"
 run = "bun run --cwd apps/server test"

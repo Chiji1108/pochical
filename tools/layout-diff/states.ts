@@ -483,7 +483,7 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
-      await tap(page, /のメッセージ：/u);
+      await tap(page, /^お母さんのメッセージ：来週の日曜/u);
     },
   },
   {
@@ -492,7 +492,7 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
-      await tap(page, /のメッセージ：/u);
+      await tap(page, /^お母さんのメッセージ：来週の日曜/u);
       await tap(page, "返信");
     },
   },
