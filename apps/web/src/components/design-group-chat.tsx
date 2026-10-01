@@ -3501,6 +3501,8 @@ const pollCard = {
     color: "text.tertiary",
     paddingInlineStart: "8px",
     textStyle: "caption",
+    // 「3人」 stays whole in a narrow card.
+    whiteSpace: "nowrap",
   }),
   vote: cva({
     base: {
