@@ -1,4 +1,4 @@
-import { siteOf } from "../lib/chat-links";
+import { siteOf } from "../lib/chat-text";
 import { dateKey, timeChangeOf, timeRange } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
@@ -390,7 +390,8 @@ export function sameMonth(date: Date, month: Date) {
 
 // A chat line. `days` shares dates, drawn with everyone's shifts;
 // `photo` is a picture, one per line; `replyTo` quotes an earlier line;
-// `link` is the preview of the first link in `text`, made as it was
+// `text` keeps a mention as <@id> (spec/chat-text.md); `link` is the
+// preview of the first link in `text`, made as it was
 // written and sent with it; `notice` is a line from the app about who is
 // in the group, how to get in or what it is called, shown between the
 // messages.
@@ -411,7 +412,7 @@ export type Message = {
 export type Reaction = { emoji: string; by: string[] };
 
 // A link's page as its preview shows it: its title, the site's name and
-// its picture, read from the page by the server (spec/chat-links.md).
+// its picture, read from the page by the server (spec/chat-text.md).
 export type LinkPreview = {
   url: string;
   title: string;
@@ -675,8 +676,16 @@ export const sampleChats: Record<string, Chat> = {
         time: "8:40",
         when: "今日",
       },
+      {
+        from: "kana",
+        id: "s5",
+        replyTo: "s3",
+        text: "<@me> 11日ならみんな来れそう！その日でいい？",
+        time: "9:15",
+        when: "今日",
+      },
     ],
-    unread: 1,
+    unread: 2,
   },
   // Six in all, so reactions run from one face to a count. けんた, who
   // moved to another ward, has left it.
@@ -845,6 +854,9 @@ export function sampleGroups(): GroupSummary[] {
     {
       id: "school",
       mark: { color: 3, kind: "letter", text: "高" },
+      // Nine of them and lively, so its group chat is turned off; a line
+      // that mentions her still comes through.
+      mutedChats: [groupChat],
       name: "高校の同級生",
     },
   ];

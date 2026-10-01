@@ -1,8 +1,26 @@
+import { Code, ConnectError, createClient } from "@connectrpc/connect";
+import { createConnectTransport } from "@connectrpc/connect-web";
+
+import { InviteService } from "../gen/pochical/v1/invite_pb";
+
 export type InvitePreview =
   | { status: "valid"; groupName: string; groupEmoji: string }
   | { status: "invalid" | "unavailable" };
-export type InviteFetch = (url: URL, init: RequestInit) => Promise<Response>;
+export type InviteFetch = typeof fetch;
 const INVITE_CODE = /^[A-HJ-NP-Za-km-z2-9]{8}$/;
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+const TIMEOUT_MS = 5000;
+
+// The server's origin, when it is https (or http on this machine for
+// `wrangler dev`).
+const serverOrigin = (baseUrl: string | undefined): string | null => {
+  if (baseUrl === undefined || !URL.canParse(baseUrl)) {
+    return null;
+  }
+  const url = new URL(baseUrl);
+  const local = url.protocol === "http:" && LOCAL_HOSTS.has(url.hostname);
+  return url.protocol === "https:" || local ? url.origin : null;
+};
 
 export async function fetchInvitePreview(
   code: string,
@@ -12,45 +30,29 @@ export async function fetchInvitePreview(
   if (!INVITE_CODE.test(code)) {
     return { status: "invalid" };
   }
-  if (!baseUrl) {
+  const origin = serverOrigin(baseUrl);
+  if (origin === null) {
     return { status: "unavailable" };
   }
+  const client = createClient(
+    InviteService,
+    createConnectTransport({
+      baseUrl: origin,
+      // Workers' fetch rejects the "error" redirect mode connect-web asks
+      // for. "manual" hands back a 3xx, which fails the call all the same.
+      fetch: async (input, init) =>
+        await request(input, { ...init, redirect: "manual" }),
+    })
+  );
   try {
-    const url = new URL("/invite-preview", baseUrl);
-    if (url.protocol !== "https:") {
-      return { status: "unavailable" };
-    }
-    url.searchParams.set("inviteCode", code);
-    const response = await request(url, {
-      cache: "no-store",
-      redirect: "error",
-      signal: AbortSignal.timeout(5000),
-    });
-    if (response.status === 404 || response.status === 400) {
-      return { status: "invalid" };
-    }
-    if (!response.ok) {
-      return { status: "unavailable" };
-    }
-    const data: unknown = await response.json();
-    if (
-      typeof data !== "object" ||
-      data === null ||
-      !("ok" in data) ||
-      data.ok !== true ||
-      !("groupName" in data) ||
-      typeof data.groupName !== "string" ||
-      !("groupEmoji" in data) ||
-      typeof data.groupEmoji !== "string"
-    ) {
-      return { status: "unavailable" };
-    }
-    return {
-      groupEmoji: data.groupEmoji,
-      groupName: data.groupName,
-      status: "valid",
-    };
-  } catch {
-    return { status: "unavailable" };
+    const { groupEmoji, groupName } = await client.getInvitePreview(
+      { inviteCode: code },
+      { timeoutMs: TIMEOUT_MS }
+    );
+    return { groupEmoji, groupName, status: "valid" };
+  } catch (error) {
+    const { code: reason } = ConnectError.from(error);
+    const gone = reason === Code.NotFound || reason === Code.InvalidArgument;
+    return { status: gone ? "invalid" : "unavailable" };
   }
 }

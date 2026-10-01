@@ -3,9 +3,12 @@ import { expect, test } from "bun:test";
 import {
   firstLink,
   inviteCodeOf,
+  mentionsOf,
+  plainText,
   siteOf,
   textParts,
-} from "../src/lib/chat-links";
+  withMentions,
+} from "../src/lib/chat-text";
 
 test("leaves a message without links whole", () => {
   expect(textParts("21日にしよ！")).toEqual([{ text: "21日にしよ！" }]);
@@ -59,6 +62,32 @@ test("needs the scheme and a host", () => {
 
 test("names a site by its host", () => {
   expect(siteOf("https://www.cafe.example/menu")).toBe("cafe.example");
+});
+
+test("finds mentions beside words and links", () => {
+  expect(textParts("<@misaki> ここ https://cafe.example どう？")).toEqual([
+    { mention: "misaki", text: "<@misaki>" },
+    { text: " ここ " },
+    { text: "https://cafe.example", url: "https://cafe.example" },
+    { text: " どう？" },
+  ]);
+  expect(mentionsOf("<@me>と<@aya>、21日ね")).toEqual(["me", "aya"]);
+});
+
+test("shows mentions by name as words alone", () => {
+  const names: Record<string, string> = { aya: "あや", me: "さくら" };
+  expect(plainText("<@me>と<@aya>、21日ね", (id) => names[id] ?? "")).toBe(
+    "@さくらと@あや、21日ね"
+  );
+});
+
+test("keeps only the picked members' names as mentions", () => {
+  expect(
+    withMentions("@あや @あやか 21日どう？@ゆう", [
+      { id: "aya", name: "あや" },
+      { id: "yu", name: "ゆう" },
+    ])
+  ).toBe("<@aya> @あやか 21日どう？<@yu>");
 });
 
 test("knows Pochical's invitation links", () => {

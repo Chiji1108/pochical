@@ -1,6 +1,6 @@
-# Chat links
+# Chat text
 
-Which words in a chat message are links, and how a link's preview is made and shown. Both native apps and the server follow it. The web prototype's `textParts` in `apps/web/src/lib/chat-links.ts` (tested in `apps/web/tests/chat-links.test.ts`) and the chat in `/design` follow this spec.
+Which words in a chat message are links and mentions, how a link's preview is made, and when a mention notifies. Both native apps and the server follow it. The web prototype's `textParts` in `apps/web/src/lib/chat-text.ts` (tested in `apps/web/tests/chat-text.test.ts`) and the chat in `/design` follow this spec.
 
 ## What is a link
 
@@ -25,7 +25,7 @@ A message carries at most one preview, for its first link. It is made while the 
 
 ## Pochical's invitation links
 
-A link to `https://pochical.app/invite/{code}` (the host in any case, an optional trailing `/`, query and fragment ignored; `inviteCodeOf` in `apps/web/src/lib/chat-links.ts`) is one of Pochical's own invitations. The chat treats it as part of the app, not as a page:
+A link to `https://pochical.app/invite/{code}` (the host in any case, an optional trailing `/`, query and fragment ignored; `inviteCodeOf` in `apps/web/src/lib/chat-text.ts`) is one of Pochical's own invitations. The chat treats it as part of the app, not as a page:
 
 - A tap on it, in the words or on its card, opens the group's join screen in the app, as reading its QR code does; when you are in the group already, it opens the group. Nothing opens in the browser, and nothing joins until you confirm on the join screen.
 - Its card shows the group instead of a page: the group's mark at the hub's size on a tint, its name, and グループへの招待・{n}人 (参加中のグループ once you are in it). A long press opens the message's actions, as on a page's card.
@@ -40,3 +40,18 @@ The server reads the page, so that people's addresses are not sent to the sites,
 - Only `http` and `https` on ports 80 and 443, to hosts that resolve to public addresses (no private, loopback or link-local ranges, checked again after each redirect). At most 3 redirects, 5 seconds, and the first 512 KB of HTML.
 - The picture is fetched by the server, shrunk and stored with the preview, and served from Pochical's own storage, so it keeps showing after the site changes or removes it.
 - Previews are cached by URL for a day.
+
+## Mentions
+
+A mention names one member of the group in a group chat (全体チャット). One-to-one chats have none.
+
+- A message keeps a mention as `<@id>`, the member's id in the group, and shows it as @ and their name in the group as it is when read, so a later name change shows the new name. Copying a message, a chat's last line in the list, a quote and a notification show the same @name as plain words. A member who has left keeps their last name.
+- While writing, an `@` at the end of the message lists the other current members whose name contains what follows it. Picking one writes `@name` and a space; only those picked become mentions when the message is sent, and only while `@name` is still followed by a space or the end. Typing a name by hand mentions no one.
+- In a message, a mention is in the name's weight, in others' messages in the accent color; one of the reader looks the same, as the chat list's @ is what finds it. A tap on a mention opens that member's profile, except the reader's own.
+- There is no mention of everyone: a group chat's line already reaches everyone, and a member who turned it off chose quiet.
+
+### Notifications
+
+- A group chat turned off sends no notifications, except for a line that mentions the reader, which notifies as if the chat were on. The chat notification settings say so under the group chats' switches, and so does a group's own 通知.
+- メンションはいつも通知 (設定 › チャット › メンション, on by default) turns that exception off: off, a chat turned off sends nothing, mentions included, and the notes are not shown. It is one switch for the account, kept by the User DO, not one per group.
+- In the chat list, a chat whose unread lines mention the reader shows @ in the accent color before the unread count.

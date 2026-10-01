@@ -8,5 +8,5 @@
   // Branches other than main are uploaded as Worker Previews by Workers
   // Builds (`wrangler preview`), which needs this block, even empty.
   "previews": {},
-  "vars": { "POCHICAL_CONVEX_HTTP_URL": "" },
+  "vars": { "POCHICAL_SERVER_URL": "" },
 }

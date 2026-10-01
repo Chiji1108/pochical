@@ -3,7 +3,8 @@
 Pochical is a multi-language monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/android`) apps, a Cloudflare Workers backend (`apps/server`), and a web site (`apps/web`). `apps/mobile-legacy` is the old Expo app, kept for reference only; do not lint, test or extend it.
 
 - Tool versions and tasks live in `mise.toml` (`mise run gen`, `mise run server:test`, ...).
-- Wire types live in `proto/`. Never edit generated code (`apps/server/src/gen`, `apps/ios/Packages/PochicalProto/Sources`, `apps/android/proto/src/main`); change the `.proto` files and run `mise run gen`.
+- The D1 schema lives in `apps/server/src/db/schema.ts` (Drizzle). Change it there and run `mise run db:generate -- --name <what>`; never write or edit `apps/server/migrations` by hand.
+- Wire types live in `proto/`. Never edit generated code (`apps/server/src/gen`, `apps/web/src/gen`, `apps/ios/Packages/PochicalProto/Sources`, `apps/android/proto/src/main`); change the `.proto` files and run `mise run gen`.
 - Design tokens (colors and テーマ, text styles, sizes) live in `design/` (TypeScript). apps/web imports them directly; `mise run gen` writes them out to `spec/design-tokens.json`, `apps/ios/Packages/PochicalDesign/Sources` and `apps/android/design/src/main`, which are never edited by hand. Components are not generated: each platform builds its own, with apps/web's /design as the reference.
 - Behavior shared across platforms is specified in `spec/`.
 

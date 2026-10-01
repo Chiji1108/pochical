@@ -570,6 +570,26 @@ export const states: State[] = [
     },
   },
   {
+    // A muted group chat whose unread lines mention you: @ by the count.
+    name: "group/chat-mentioned",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^高校の同級生/u);
+    },
+  },
+  {
+    // An @ being written: the others to mention over the composer.
+    name: "group/chat-mention-picker",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^全体チャット/u);
+      await page.getByRole("textbox", { name: "メッセージ" }).fill("21日、@");
+      await page.getByRole("list", { name: "メンションする人" }).waitFor();
+    },
+  },
+  {
     // The family chat ends on an invitation: its group under the words.
     name: "group/chat-invite",
     path: demo("scheduleSample=filled"),
