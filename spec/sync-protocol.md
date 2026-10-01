@@ -6,7 +6,7 @@ How clients and Durable Objects keep shifts, groups and chat in sync. `apps/serv
 
 | Data | Source of truth | Client storage |
 | --- | --- | --- |
-| A user's own shifts | That user's User DO | `my_shifts`: writable, changes go through the outbox |
+| A user's own shifts, patterns, repeating orders and coworkers | That user's User DO | `my_shifts`: writable, changes go through the outbox |
 | Members' shifts shown in a group | Projection held by the Group DO, fed by each member's User DO | `member_shifts`: read-only cache |
 | Groups, members, chat, read states | Group DO | Read-only cache |
 
@@ -88,18 +88,37 @@ HLC, not arrival order, decides the winner: an edit made offline at 10:00 and de
 
 The User DO socket carries a user's days (`proto/pochical/v1/sync.proto`); a Group DO socket refuses them.
 
-- A `DayValue` is one field of one day: `date` ("YYYY-MM-DD"), `field` (`DAY_FIELD_PATTERN`, `_START`, `_END`, `_NOTE`), an optional `value` (unset clears the field; a day with every field cleared has no shift) and its `Hlc`.
+- A `DayValue` is one field of one day: `date` ("YYYY-MM-DD"), `field` (`DAY_FIELD_PATTERN`, `_START`, `_END`, `_NOTE`), an optional `value` (unset clears the field) and its `Hlc`. A day whose `DAY_FIELD_PATTERN` is unset follows its repeating order, and has no shift where no order applies; a pattern of `""` is a day with no shift, order or not (Repeating orders).
 - The client sends `DayEdits`, up to 500 a frame, each with its `op_id`. The server answers the sender with `Acked` for all of them, then sends each value it changed, as `Changes`, to every device of the user that is past Hello, the sender included, so every device moves its cursor the same way.
 - An edit for no real day or field, or without a clock, is acknowledged and dropped: there is nothing to keep or correct.
 - An edit whose value does not fit its field (a pattern id past 64 characters, a time not `HH:MM`, a memo past `textLimits.dayNote`) but whose clock is newer than the stored one is answered with the stored value (or none) under a clock just past the edit's, stamped with device `server`: the compensating change of Outbox step 5.
 - After `Welcome`, a device gets its catch-up as `Changes` of up to 500 values each, in cursor order.
 - Patterns go the same way, as `PatternEdits`: each pattern is one last-writer-wins `PatternValue`, sent whole (a deleted one has no `pattern`, kept so an older edit cannot bring it back), and the order they are shown in is one more, `PatternOrder`. They share the User DO's cursor with days, so a device catches up on both in one order. A pattern that does not fit (spec/shift-patterns.md: a blank name or one past `textLimits.shiftName`, a mark that is not one emoji and at most `textLimits.shiftMark` letters, a color past the palette, one time without the other, a `next_day` naming itself) or an order with an id twice is corrected as a day's value is.
 
+### Repeating orders
+
+How a day follows a repeating order is in spec/shift-patterns.md (Repeating orders). On the wire and in storage (not in `proto/` yet):
+
+- A user's orders are one last-writer-wins value, `RepeatOrders`, sent whole like `PatternOrder`: the timeline, each order with its `start` and `anchor` ("YYYY-MM-DD"), `sequence` (pattern ids), `holidays_off`, `holiday_shift` and `holiday_country` ("JP"). They are one value because they are one timeline: two of the person's devices editing it at once is rare, and keeping either whole beats a mix of both.
+- Days are never written out from an order. `DayValue`s hold only what the person set on a day: an unset `DAY_FIELD_PATTERN` means the day follows its order, and `""` means the day was cleared on purpose and shows nothing, order or not.
+- Starting an order, or correcting the one in use, is one edit, `RepeatOrdersEdit`: the new `RepeatOrders` and `clear_from`, the order's start. The days' own shifts and times give way only if the orders do: when the server takes the new value (it fits and its clock is newer than the stored one), it clears `DAY_FIELD_PATTERN`, `_START` and `_END` on the days from `clear_from` whose values are older than the edit's clock, in the same transaction, and sends those clears to the user's devices as changes like any other. An edit that loses to newer orders, or does not fit, clears nothing. A device applies the same edit to its own SQLite at once, as Outbox has it, and the server's changes settle it.
+- A client works a day out as its own value, else its order's, with the holiday data of `design/scripts/holidays.ts` (`spec/vectors/repeat.json`). The server keeps and checks orders (dates, at most 64 characters an id, a country code of two letters) but never works days out; if it ever needs one, it uses the same logic against the same vectors.
+
+Why not write the days out: a year of days is hundreds of values for every change of order, sent to every device and every group, and runs out a year ahead. An order is one small value without an end, and a holiday the law moves is fixed by an update of the apps' holiday data, not by rewriting everyone's days.
+
+### Coworkers
+
+The people a user notes on a day, like who is on the same shift. They are names only, not app users (/design's 一緒に働く人).
+
+- Each coworker is a last-writer-wins `CoworkerValue` with an id and a name, sent whole as patterns are (a deleted one has none), and their order is one more, `CoworkerOrder`.
+- A day's people are one more day field, `DAY_FIELD_PEOPLE`: coworker ids separated by spaces, in the order they were added. Days hold ids, so renaming a coworker changes one value; a deleted coworker's id is skipped where it is shown and needs no rewrite of days.
+- Like the memo, coworkers and a day's people stay with their owner: they name people outside the app, so they are never pushed to groups.
+
 ### Group projection
 
 The User DO pushes what its groups see of the user to every Group DO the user belongs to. Values carry their HLCs, so the Group DO keeps each one only when it is newer: a push that arrives twice or late changes nothing.
 
-- Only shared values are pushed: each day's pattern and times, never the memo, and the user's patterns, so members can draw their marks. The patterns' order is the user's own.
+- Only shared values are pushed: each day's pattern and times, never the memo or the people, the user's patterns, so members can draw their marks, and their repeating orders, so members' apps work their days out as the user's own do. The patterns' order is the user's own.
 - For each group the User DO keeps how far it has pushed (`pushed_cursor`, a cursor of its own log). After any change, and on joining or making a group, its alarm pushes each group the shared values changed after that cursor, then moves it. A group that cannot be reached fails the alarm, which the runtime retries, so the values reach it later.
 - On joining, `pushed_cursor` starts at 0, so the group gets everything the user has.
 - The Group DO takes a push (`takeMemberShifts`, `pochical.v1.Changes` as bytes) only from a current member, keeps the values at its own cursor, and sends them to the members with the group open as `MemberDay` and `MemberPattern` changes. A group socket catches up from its cursor as a User DO socket does.
@@ -159,7 +178,6 @@ Presence means "has this thread open on screen", not "online in the app": mobile
 - Linking an anonymous user to Apple or Google, and what happens to a user whose phone and token are both lost
 - Snapshot format for resets and how long each DO keeps its change log
 - Wire messages for chat pages, and resets for DOs that do not keep values as registers
-- Syncing the rest of what a user owns: their repeating orders and coworkers. A repeating order with 祝日は休みにする records whose holidays it follows as a country code ("JP"), taken from the device's region when it is made, so every device puts the days off on the same dates whatever its language. The holiday data the apps carry is keyed by country, even while it holds only Japan's
 - Push notifications (chat, mentions): the server sends a localization key and its arguments (APNs `loc-key`/`loc-args`, FCM `body_loc_key`/`body_loc_args`), never text it has put together, so the app words them in its own language and the server need not know each reader's
 - A device whose clock runs far ahead: its edits win until real time catches up. Whether the server should hold back clocks past its own time
 - Presence and "last seen": whether to show them at all. Pochical is for family and friends, where visible presence and read markers can feel like pressure; typing alone may be enough. "Last seen" would also need storing in the User DO.

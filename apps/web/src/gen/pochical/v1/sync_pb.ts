@@ -306,7 +306,9 @@ export type DayValue = Message<"pochical.v1.DayValue"> & {
   field: DayField;
 
   /**
-   * Unset clears the field; a day with every field cleared has no shift.
+   * Unset clears the field. A day with no pattern follows its repeating
+   * order, if any; a pattern of "" is a day with no shift
+   * (spec/sync-protocol.md, Repeating orders).
    *
    * @generated from field: optional string value = 3;
    */

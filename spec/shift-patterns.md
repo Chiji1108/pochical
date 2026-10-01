@@ -29,16 +29,31 @@ Any pattern may name any other pattern except itself. Clearing a day does not cl
 
 ## Deleting a pattern
 
-- The days that have it are cleared too. The person is told how many before confirming.
+- The days that have it are cleared too, whether they had it of their own or from a repeating order. The person is told how many before confirming. An earlier order keeps its id and shows those days empty.
 - Other patterns that named it as `nextDay` lose that link.
 - A pattern in the repeating order in use cannot be deleted; the order has to change first.
 
+## Repeating orders
+
+A person may follow a repeating order: a sequence of their patterns laid over the days, without end.
+
+- An order has a `start`, the first day it applies, and an `anchor`, a day that falls on its first shift (the start unless set). Each day takes the sequence's shift counted in whole days from the anchor, backwards too (`spec/vectors/repeat.json`, schedule).
+- Orders make a timeline: a day follows the latest order that starts on or before it. A new order (a new rotation, a new job) starts on its day and leaves the days before it to the order before; an order that started on or after that day gives way to it entirely, so the newest order is always the one in use. An order with an empty sequence ends repeating: from its start, days are entered by hand, as a roster.
+- Days are not written out. A day's shift is worked out from its order whenever it is shown; only what the person changes on a day is kept. A day the person entered, or cleared, wins over its order.
+- Starting a new order, or correcting the one in use, clears the days' own pattern and times from its start, so the new order shows there; memos and people stay.
+- Everything that reads days reads them this way, the day's own value, else its order's: the month, counting days off, 次の休み, widgets, reminders and a group's tables.
+
 ## Holidays
 
-When a repeating order has 祝日は休みにする on, holidays get the person's first pattern with `countsAsOff`. The order records which pattern that was. Turning the switch off puts back only holidays still showing that recorded pattern, whatever the person's patterns are by then; turning it on uses whichever day-off pattern is first at that moment. With no day-off pattern it cannot be turned on, but it can always be turned off.
+An order with 祝日は休みにする on puts its `holidayShift` on the national holidays of its `holidayCountry` (`design/scripts/holidays.ts`) in place of the sequence's shift.
+
+- `holidayCountry` is the device's region when the order is made, so every device marks the same days whatever its language.
+- Turning it on records the person's first pattern with `countsAsOff` at that moment; with none it cannot be turned on, but it can always be turned off. Turning it off shows the sequence on holidays again.
+- Days the person changed keep their own value either way, so nothing they entered is overwritten.
+- A new order starts with it on when it reads as office hours: a week (seven shifts) with a pattern counting as off on a Saturday or Sunday (`spec/vectors/repeat.json`, holidaysOffByDefault).
 
 ## Changing jobs
 
-The new job's patterns replace the list. An old pattern still on a day before the switch stays in the list, so those days keep their marks.
+The new job's patterns replace the list, and its repeating order starts on the day of the switch. An old pattern still on a day before the switch, of its own or from an earlier order, stays in the list, so those days keep their marks.
 
 A new job's ready-made pattern can share an id with one the person already has. If theirs differs (they renamed it, changed its time or mark…) and is still on a day before the switch, theirs keeps the id and the new job's gets a fresh one; the new order and any `nextDay` links use the fresh id. Past days never change meaning because of a job change.
