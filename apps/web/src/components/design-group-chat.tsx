@@ -2925,6 +2925,7 @@ const pinBar = {
     minWidth: 0,
     padding: "8px",
     textAlign: "left",
+    width: "100%",
   }),
   icon: css({ color: "accent.default", flexShrink: 0 }),
   words: css({
