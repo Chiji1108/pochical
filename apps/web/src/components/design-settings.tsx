@@ -3,7 +3,7 @@ import { presets } from "@pochical/design/themes";
 import type { Preset } from "@pochical/design/themes";
 import { ArrowRight, CloudCheck } from "lucide-react";
 import { useMotionValue } from "motion/react";
-import { useContext, useState } from "react";
+import { lazy, Suspense, useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 import { token } from "styled-system/tokens";
@@ -29,7 +29,6 @@ import {
 import type { Pattern, PatternBook, Shift } from "../lib/design-patterns";
 import { useLook, useSettings } from "../lib/design-settings-store";
 import { useUser } from "../lib/design-user-store";
-import { widgetEntry } from "../lib/design-widgets";
 import { dayName } from "../lib/text-limits";
 import {
   ProviderButtons,
@@ -46,7 +45,6 @@ import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
 import type { Profile } from "./design-group-data";
 import { PhotoAvatar, PhotoEditor } from "./design-group-parts";
-import { Fit } from "./design-home-screen";
 import { englishMonthOf, MonthName } from "./design-month-name";
 import {
   ChatNotificationsPage,
@@ -98,8 +96,6 @@ import {
 } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
 import type { ColoredDay } from "./design-week";
-import { wallpaperFor, WidgetFrame } from "./design-widget-frame";
-import { TwoWeeksMedium } from "./design-widgets";
 import { WorkSetupSteps } from "./design-work-setup";
 import {
   CellNamesContext,
@@ -659,17 +655,8 @@ const settingsParts = {
   previewHeading: css({ padding: "0 8px 8px" }),
   // The home screen's page of the preview: the wallpaper edge to edge,
   // the widget in the middle of it.
-  homePreview: css({
-    alignItems: "center",
-    border: "1px solid token(colors.separator)",
-    borderRadius: "2xl",
-    display: "flex",
-    justifyContent: "center",
-    minHeight: "100%",
-    overflow: "hidden",
-    padding: "28px 12px 12px",
-    pointerEvents: "none",
-  }),
+  // Where the home screen's page goes while its widgets load.
+  homePreviewLoading: css({ borderRadius: "2xl", minHeight: "100%" }),
   // A form's row: what is set on the left, its value on the right.
   field: css({
     alignItems: "center",
@@ -1528,7 +1515,15 @@ function StylePreview({
   );
   // The calendar, and swiped aside, the home screen's two weeks: what a
   // style or the week's settings change in the widgets too.
-  const pages = [calendar, <HomePreview key="home" preview={preview} />];
+  const pages = [
+    calendar,
+    <Suspense
+      fallback={<div className={settingsParts.homePreviewLoading} />}
+      key="home"
+    >
+      <HomePreview schedule={preview.schedule} today={previewToday} />
+    </Suspense>,
+  ];
   return (
     <div className={previewWrap}>
       <ColorSchemeContext value={shown}>
@@ -1561,42 +1556,12 @@ function StylePreview({
 }
 
 const PREVIEW_PAGE_GAP = 12;
-// The widths the medium widget is laid out at, for fitting it in.
-const IOS_MEDIUM_WIDTH = 338;
-const ANDROID_MEDIUM_WIDTH = 373;
 
-// The two weeks' widget on the device's wallpaper, drawn from the same
-// made-up fortnight as the calendar beside it.
-function HomePreview({ preview }: { preview: StylePreviewData }) {
-  const platform = useDevice((state) => state.platform);
-  const hue = useDevice((state) => state.wallpaperHue);
-  const week = useSettings((state) => state.device.week);
-  const book = usePatterns();
-  const scheme = useContext(ColorSchemeContext);
-  const android = platform === "android";
-  const placement = {
-    appearance: scheme,
-    wallpaperHue: android ? hue : undefined,
-  };
-  const entry = widgetEntry(preview.schedule, week, previewToday, book);
-  return (
-    <div
-      aria-hidden="true"
-      className={settingsParts.homePreview}
-      inert
-      style={{ background: wallpaperFor(placement) }}
-    >
-      <Fit width={android ? ANDROID_MEDIUM_WIDTH : IOS_MEDIUM_WIDTH}>
-        <WidgetFrame
-          {...placement}
-          family={android ? "android4x2" : "systemMedium"}
-        >
-          <TwoWeeksMedium entry={entry} />
-        </WidgetFrame>
-      </Fit>
-    </div>
-  );
-}
+// The widgets come only with the preview, not with the app's first load.
+const HomePreview = lazy(async () => {
+  const module = await import("./design-home-preview");
+  return { default: module.HomePreview };
+});
 
 // The switches for the look in use, as one list.
 function ShapeChoices() {
