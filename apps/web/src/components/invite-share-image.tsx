@@ -79,8 +79,9 @@ const styles = {
     background: PAPER,
     color: INK,
     display: "flex",
-    // The font the Worker draws in; the page shows it where it is installed.
-    fontFamily: '"Noto Sans JP", sans-serif',
+    // The fonts the Worker draws in (src/lib/invite-image.ts); the page shows
+    // them where they are installed.
+    fontFamily: '"Noto Sans JP", "Noto Sans KR", "Noto Sans TC", sans-serif',
     height: SHARE_IMAGE.height,
     justifyContent: "center",
     paddingTop: 40,
