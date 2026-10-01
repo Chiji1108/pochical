@@ -3,14 +3,10 @@ import { expect, test } from "bun:test";
 import { fetchInvitePreview } from "../src/lib/invite-preview";
 import type { InviteFetch } from "../src/lib/invite-preview";
 
-const url = "https://server.example";
 const respond =
   (status: number, data: unknown): InviteFetch =>
   async () =>
-    new Response(JSON.stringify(data), {
-      headers: { "Content-Type": "application/json" },
-      status,
-    });
+    Response.json(data, { status });
 test("asks the server's InviteService over Connect", async () => {
   const requests: Request[] = [];
   const recording: InviteFetch = async (input, init) => {
@@ -20,55 +16,47 @@ test("asks the server's InviteService over Connect", async () => {
       init
     );
   };
-  expect(await fetchInvitePreview("Abcd2345", url, recording)).toEqual({
+  expect(await fetchInvitePreview("Abcd2345", recording)).toEqual({
     groupEmoji: "🌿",
     groupName: "同期",
     status: "valid",
   });
   const [request] = requests;
   expect(request?.url).toBe(
-    "https://server.example/pochical.v1.InviteService/GetInvitePreview"
+    "https://api.pochical.app/pochical.v1.InviteService/GetInvitePreview"
   );
   expect(await request?.json()).toEqual({ inviteCode: "Abcd2345" });
 });
 test("reads a group without an emoji mark", async () => {
   expect(
-    await fetchInvitePreview(
-      "Abcd2345",
-      url,
-      respond(200, { groupName: "同期" })
-    )
+    await fetchInvitePreview("Abcd2345", respond(200, { groupName: "同期" }))
   ).toEqual({ groupEmoji: "", groupName: "同期", status: "valid" });
 });
 test("distinguishes revoked links from outages and malformed replies", async () => {
   for (const code of ["not_found", "invalid_argument"]) {
     expect(
-      await fetchInvitePreview("Abcd2345", url, respond(404, { code }))
+      await fetchInvitePreview("Abcd2345", respond(404, { code }))
     ).toEqual({ status: "invalid" });
   }
-  for (const response of [
+  const unreachable: InviteFetch = () => {
+    throw new Error("binding unavailable");
+  };
+  for (const server of [
     respond(503, {}),
     respond(500, { code: "internal" }),
     respond(200, { groupName: 12 }),
+    unreachable,
   ]) {
-    expect(await fetchInvitePreview("Abcd2345", url, response)).toEqual({
+    expect(await fetchInvitePreview("Abcd2345", server)).toEqual({
       status: "unavailable",
     });
   }
 });
-test("rejects malformed codes without making a request and handles missing configuration", async () => {
+test("rejects malformed codes without asking the server", async () => {
   const unexpected: InviteFetch = () => {
     throw new Error("must not fetch");
   };
-  expect(await fetchInvitePreview("../other", url, unexpected)).toEqual({
+  expect(await fetchInvitePreview("../other", unexpected)).toEqual({
     status: "invalid",
-  });
-  for (const baseUrl of [undefined, "", "http://server.example", "nonsense"]) {
-    expect(await fetchInvitePreview("Abcd2345", baseUrl, unexpected)).toEqual({
-      status: "unavailable",
-    });
-  }
-  expect(await fetchInvitePreview("Abcd2345", url, unexpected)).toEqual({
-    status: "unavailable",
   });
 });

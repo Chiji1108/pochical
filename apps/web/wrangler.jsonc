@@ -8,5 +8,7 @@
   // Branches other than main are uploaded as Worker Previews by Workers
   // Builds (`wrangler preview`), which needs this block, even empty.
   "previews": {},
-  "vars": { "POCHICAL_SERVER_URL": "" },
+  // apps/server (pochical-server), called Worker to Worker rather than over
+  // api.pochical.app. Locally, run `mise run server` beside the site.
+  "services": [{ "binding": "SERVER", "service": "pochical-server" }],
 }
