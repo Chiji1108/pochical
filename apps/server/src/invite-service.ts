@@ -33,7 +33,7 @@ export const registerInviteService = (router: ConnectRouter): void => {
       const profile =
         groupId === null
           ? null
-          : await env.GROUP_ROOM.getByName(groupId).getProfile();
+          : await env.GROUPS.getByName(groupId).getProfile();
       if (profile === null) {
         throw new ConnectError("No group uses this invite code", Code.NotFound);
       }

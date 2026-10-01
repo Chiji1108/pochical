@@ -6,9 +6,18 @@
   "compatibility_date": "2026-08-15",
   "observability": { "enabled": true },
   "durable_objects": {
-    "bindings": [{ "name": "GROUP_ROOM", "class_name": "GroupRoom" }],
+    "bindings": [{ "name": "GROUPS", "class_name": "GroupDO" }],
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GroupRoom"] }],
+  // Applied once each, in order, to the deployed Worker; add, never edit.
+  // v2 replaced the first class, GroupRoom, while it held no data.
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["GroupRoom"] },
+    {
+      "tag": "v2",
+      "deleted_classes": ["GroupRoom"],
+      "new_sqlite_classes": ["GroupDO"],
+    },
+  ],
   // The Group DO's migrations import their SQL as text (drizzle-kit).
   "rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }],
   // Global lookups a Durable Object cannot answer alone, such as which group

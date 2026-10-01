@@ -7,7 +7,7 @@
     "deploy": "wrangler deploy",
     "cf-typegen": "wrangler types",
     "db:generate": "drizzle-kit generate",
-    "group-room:generate": "drizzle-kit generate --config drizzle.group-room.config.ts",
+    "group-do:generate": "drizzle-kit generate --config drizzle.group-do.config.ts",
     "typecheck": "wrangler types && tsc --noEmit",
     "test": "vitest run",
     "check": "bun run --cwd ../.. check",
