@@ -1,7 +1,13 @@
 // The tables in each User DO's own SQLite. Change them here and run
 // `mise run user-do:generate`; never edit src/user-do-migrations by hand.
 // Every User DO applies the migrations as it starts.
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 // The groups the user is in, so their sockets can be let in without
 // waking a Group DO for an id that is not theirs. Written as they join or
@@ -10,3 +16,26 @@ export const memberships = sqliteTable("memberships", {
   groupId: text("group_id").primaryKey(),
   joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull(),
 });
+
+// The user's own days, a row for each field of each day as a
+// last-writer-wins value (spec/sync-protocol.md, Shifts): the HLC that set
+// it, and the cursor it got when it last changed. Kept once cleared, with
+// no value, so an older edit cannot bring it back; and "every change after
+// cursor N" is the rows past N.
+export const dayFields = sqliteTable(
+  "day_fields",
+  {
+    cursor: integer().notNull(),
+    date: text().notNull(),
+    // DayField's number in proto/pochical/v1/sync.proto.
+    field: integer().notNull(),
+    hlcCounter: integer("hlc_counter").notNull(),
+    hlcDevice: text("hlc_device").notNull(),
+    hlcMs: integer("hlc_ms").notNull(),
+    value: text(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.date, table.field] }),
+    uniqueIndex("day_fields_cursor").on(table.cursor),
+  ]
+);

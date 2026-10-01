@@ -32,5 +32,24 @@ public interface ClientFrameOrBuilder extends
    */
   tech.chiji.pochical.v1.Ping getPing();
 
+  /**
+   * <pre>
+   * The owner's own day edits, from their outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.DayEdits day_edits = 3 [json_name = "dayEdits"];</code>
+   * @return Whether the dayEdits field is set.
+   */
+  boolean hasDayEdits();
+  /**
+   * <pre>
+   * The owner's own day edits, from their outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.DayEdits day_edits = 3 [json_name = "dayEdits"];</code>
+   * @return The dayEdits.
+   */
+  tech.chiji.pochical.v1.DayEdits getDayEdits();
+
   public tech.chiji.pochical.v1.ClientFrame.KindCase getKindCase();
 }

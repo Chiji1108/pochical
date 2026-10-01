@@ -1,0 +1,327 @@
+import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
+import type { MessageInitShape } from "@bufbuild/protobuf";
+import { describe, expect, it } from "vitest";
+
+import {
+  ClientFrameSchema,
+  DayField,
+  ServerError_Code,
+  ServerFrameSchema,
+} from "../src/gen/pochical/v1/sync_pb";
+import type { ServerFrame } from "../src/gen/pochical/v1/sync_pb";
+import { CURRENT_PROTOCOL_VERSION } from "../src/protocol";
+import { memberOf, openSocket, signInAnonymously } from "./helpers";
+
+type ClientKind = MessageInitShape<typeof ClientFrameSchema>["kind"];
+
+// A socket's frames as they arrive, read one at a time.
+const framesOf = (socket: WebSocket) => {
+  const waiting: ((frame: ServerFrame) => void)[] = [];
+  const arrived: ServerFrame[] = [];
+  const deliver = async (data: Blob): Promise<void> => {
+    const frame = fromBinary(
+      ServerFrameSchema,
+      new Uint8Array(await data.arrayBuffer())
+    );
+    const next = waiting.shift();
+    if (next) {
+      next(frame);
+      return;
+    }
+    arrived.push(frame);
+  };
+  socket.addEventListener("message", (event) => {
+    if (event.data instanceof Blob) {
+      void deliver(event.data);
+    }
+  });
+  return {
+    next: async (): Promise<ServerFrame> => {
+      const frame = arrived.shift();
+      if (frame) {
+        return frame;
+      }
+      const { promise, resolve } = Promise.withResolvers<ServerFrame>();
+      waiting.push(resolve);
+      return await promise;
+    },
+  };
+};
+
+const sendFrame = (socket: WebSocket, kind: ClientKind): void => {
+  socket.send(toBinary(ClientFrameSchema, create(ClientFrameSchema, { kind })));
+};
+
+// The user's own socket past Hello, with its frames.
+const device = async (token: string, cursor = 0n) => {
+  const socket = await openSocket("/v1/me/socket", token);
+  const frames = framesOf(socket);
+  sendFrame(socket, {
+    case: "hello",
+    value: { cursor, protocolVersion: CURRENT_PROTOCOL_VERSION },
+  });
+  const welcome = await frames.next();
+  return { frames, socket, welcome };
+};
+
+const edit = (
+  opId: string,
+  date: string,
+  field: DayField,
+  value: string | undefined,
+  ms: number,
+  deviceId = "phone"
+) => ({
+  opId,
+  value: {
+    date,
+    field,
+    hlc: { counter: 0, deviceId, physicalMs: BigInt(ms) },
+    value,
+  },
+});
+
+// After the frames a step causes, a Ping's Pong proves none are left.
+const settled = async (
+  socket: WebSocket,
+  frames: ReturnType<typeof framesOf>
+): Promise<ServerFrame> => {
+  sendFrame(socket, { case: "ping", value: { nonce: 7 } });
+  return await frames.next();
+};
+
+describe("syncing a user's own days", () => {
+  it("starts a fresh device at the head with nothing to catch up", async () => {
+    const { welcome, socket, frames } = await device(await signInAnonymously());
+    expect(welcome.kind).toMatchObject({
+      case: "welcome",
+      value: { cursor: 0n },
+    });
+    await expect(settled(socket, frames)).resolves.toMatchObject({
+      kind: { case: "pong" },
+    });
+  });
+
+  it("takes an edit, acknowledges it and sends it to every device", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    const tablet = await device(token);
+
+    sendFrame(phone.socket, {
+      case: "dayEdits",
+      value: {
+        edits: [edit("op-1", "2026-10-05", DayField.PATTERN, "night", 1000)],
+      },
+    });
+    const acked = await phone.frames.next();
+    expect(acked.kind).toMatchObject({
+      case: "acked",
+      value: { opIds: ["op-1"] },
+    });
+    const expected = {
+      case: "changes",
+      value: {
+        changes: [
+          {
+            cursor: 1n,
+            kind: {
+              case: "day",
+              value: {
+                date: "2026-10-05",
+                field: DayField.PATTERN,
+                value: "night",
+              },
+            },
+          },
+        ],
+      },
+    };
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: expected,
+    });
+    await expect(tablet.frames.next()).resolves.toMatchObject({
+      kind: expected,
+    });
+  });
+
+  it("keeps the newer of two edits by their clocks, whichever arrives last", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    sendFrame(phone.socket, {
+      case: "dayEdits",
+      value: {
+        edits: [edit("new", "2026-10-06", DayField.NOTE, "11時の版", 11_000)],
+      },
+    });
+    await phone.frames.next();
+    await phone.frames.next();
+
+    // Made offline at 10:00, delivered after the 11:00 one.
+    sendFrame(phone.socket, {
+      case: "dayEdits",
+      value: {
+        edits: [
+          edit(
+            "old",
+            "2026-10-06",
+            DayField.NOTE,
+            "10時の版",
+            10_000,
+            "tablet"
+          ),
+        ],
+      },
+    });
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: { case: "acked", value: { opIds: ["old"] } },
+    });
+    await expect(settled(phone.socket, phone.frames)).resolves.toMatchObject({
+      kind: { case: "pong" },
+    });
+  });
+
+  it("catches a device up from its cursor, and resets one that is ahead", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    sendFrame(phone.socket, {
+      case: "dayEdits",
+      value: {
+        edits: [
+          edit("a", "2026-10-07", DayField.PATTERN, "day", 1000),
+          edit("b", "2026-10-08", DayField.PATTERN, "off", 1000),
+        ],
+      },
+    });
+    await phone.frames.next();
+    await phone.frames.next();
+
+    const later = await device(token, 1n);
+    expect(later.welcome.kind).toMatchObject({ value: { cursor: 2n } });
+    await expect(later.frames.next()).resolves.toMatchObject({
+      kind: {
+        case: "changes",
+        value: {
+          changes: [{ cursor: 2n, kind: { value: { date: "2026-10-08" } } }],
+        },
+      },
+    });
+
+    const restored = await device(token, 99n);
+    await expect(restored.frames.next()).resolves.toMatchObject({
+      kind: { case: "reset" },
+    });
+    const all = await restored.frames.next();
+    expect(all.kind.case === "changes" && all.kind.value.changes).toHaveLength(
+      2
+    );
+  });
+
+  it("clears a field with an edit that has no value", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    sendFrame(phone.socket, {
+      case: "dayEdits",
+      value: {
+        edits: [edit("set", "2026-10-09", DayField.START, "08:30", 1000)],
+      },
+    });
+    await phone.frames.next();
+    await phone.frames.next();
+    sendFrame(phone.socket, {
+      case: "dayEdits",
+      value: {
+        edits: [edit("clear", "2026-10-09", DayField.START, undefined, 2000)],
+      },
+    });
+    await phone.frames.next();
+    const cleared = await phone.frames.next();
+    expect(cleared.kind).toMatchObject({
+      case: "changes",
+      value: {
+        changes: [{ cursor: 2n, kind: { value: { date: "2026-10-09" } } }],
+      },
+    });
+    const [change] =
+      cleared.kind.case === "changes" ? cleared.kind.value.changes : [];
+    expect(
+      change?.kind.case === "day" && change.kind.value.value
+    ).toBeUndefined();
+  });
+
+  it("corrects a device whose value does not fit, with a newer clock", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    sendFrame(phone.socket, {
+      case: "dayEdits",
+      value: { edits: [edit("ok", "2026-10-10", DayField.NOTE, "メモ", 1000)] },
+    });
+    await phone.frames.next();
+    await phone.frames.next();
+
+    sendFrame(phone.socket, {
+      case: "dayEdits",
+      value: {
+        edits: [
+          edit("long", "2026-10-10", DayField.NOTE, "あ".repeat(101), 2000),
+        ],
+      },
+    });
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: { case: "acked", value: { opIds: ["long"] } },
+    });
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: {
+        case: "changes",
+        value: {
+          changes: [
+            {
+              kind: {
+                value: {
+                  date: "2026-10-10",
+                  hlc: { deviceId: "server" },
+                  value: "メモ",
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+  });
+
+  it("acknowledges without keeping an edit for no real day", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    sendFrame(phone.socket, {
+      case: "dayEdits",
+      value: {
+        edits: [edit("bad", "2026-02-30", DayField.PATTERN, "day", 1000)],
+      },
+    });
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: { case: "acked", value: { opIds: ["bad"] } },
+    });
+    await expect(settled(phone.socket, phone.frames)).resolves.toMatchObject({
+      kind: { case: "pong" },
+    });
+  });
+
+  it("takes day edits only on the user's own socket", async () => {
+    const socket = await openSocket("/v1/groups/g/socket", await memberOf("g"));
+    const frames = framesOf(socket);
+    sendFrame(socket, {
+      case: "hello",
+      value: { cursor: 0n, protocolVersion: CURRENT_PROTOCOL_VERSION },
+    });
+    await frames.next();
+    sendFrame(socket, {
+      case: "dayEdits",
+      value: {
+        edits: [edit("x", "2026-10-11", DayField.PATTERN, "day", 1000)],
+      },
+    });
+    await expect(frames.next()).resolves.toMatchObject({
+      kind: { case: "error", value: { code: ServerError_Code.BAD_FRAME } },
+    });
+  });
+});

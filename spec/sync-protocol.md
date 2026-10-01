@@ -1,6 +1,6 @@
 # Sync protocol
 
-How clients and Durable Objects keep shifts, groups and chat in sync. The handshake and keepalive sections describe what `apps/server` implements today; the rest is the agreed design and will move into `proto/pochical/v1/sync.proto` as it is built.
+How clients and Durable Objects keep shifts, groups and chat in sync. `apps/server` implements signing in, groups, the sockets' handshake and keepalive, and a user's own days between their devices (Shifts, up to Group projection); the rest is the agreed design and will move into `proto/pochical/v1/sync.proto` as it is built.
 
 ## Ownership
 
@@ -56,6 +56,7 @@ Each DO keeps an append-only change log. Every accepted mutation (shift edit, me
 - After `Welcome`, the server sends every change after the client's cursor, then streams new changes as they happen.
 - The client applies changes in cursor order and stores the last applied cursor in the same SQLite transaction.
 - If the client's cursor is older than the oldest change the DO still keeps, the server tells it to reset: drop that DO's cache and load a fresh snapshot.
+- A DO whose values are last-writer-wins registers (a User DO's days) keeps only each value's latest change, at the cursor it got then, so "every change after cursor N" is the values changed since N and reaches back any distance. Such a DO resets a client only when its cursor is ahead of the DO's head (the DO restored from an older copy): `Reset`, then a `Changes` with everything it holds.
 
 ## Shifts
 
@@ -79,9 +80,19 @@ HLC, not arrival order, decides the winner: an edit made offline at 10:00 and de
 
 1. A local edit updates `my_shifts` and appends a row to the outbox in one SQLite transaction.
 2. While connected, the client sends outbox rows in order, each with a unique `op_id` and its HLC.
-3. The User DO applies each field only if its HLC is newer than the stored one, appends the result to its change log, and acknowledges the `op_id`. A repeated `op_id` is acknowledged without being applied again.
+3. The User DO applies each field only if its HLC is newer than the stored one, appends the result to its change log, and acknowledges the `op_id`. A repeated edit carries the same HLC, so it is acknowledged without being applied again.
 4. The client deletes acknowledged rows. Unsent rows survive app restarts.
 5. If the server rejects an edit (validation), it writes a compensating change with a newer HLC, which reaches every device through the change log.
+
+### On the wire
+
+The User DO socket carries a user's days (`proto/pochical/v1/sync.proto`); a Group DO socket refuses them.
+
+- A `DayValue` is one field of one day: `date` ("YYYY-MM-DD"), `field` (`DAY_FIELD_PATTERN`, `_START`, `_END`, `_NOTE`), an optional `value` (unset clears the field; a day with every field cleared has no shift) and its `Hlc`.
+- The client sends `DayEdits`, up to 500 a frame, each with its `op_id`. The server answers the sender with `Acked` for all of them, then sends each value it changed, as `Changes`, to every device of the user that is past Hello, the sender included, so every device moves its cursor the same way.
+- An edit for no real day or field, or without a clock, is acknowledged and dropped: there is nothing to keep or correct.
+- An edit whose value does not fit its field (a pattern id past 64 characters, a time not `HH:MM`, a memo past `textLimits.dayNote`) but whose clock is newer than the stored one is answered with the stored value (or none) under a clock just past the edit's, stamped with device `server`: the compensating change of Outbox step 5.
+- After `Welcome`, a device gets its catch-up as `Changes` of up to 500 values each, in cursor order.
 
 ### Group projection
 
@@ -144,6 +155,8 @@ Presence means "has this thread open on screen", not "online in the app": mobile
 
 - Linking an anonymous user to Apple or Google, and what happens to a user whose phone and token are both lost
 - Snapshot format for resets and how long each DO keeps its change log
-- Wire messages for shift changes, outbox acknowledgements, chat pages and resets
+- Wire messages for chat pages, and resets for DOs that do not keep values as registers
+- Syncing the rest of what a user owns: their patterns, repeating orders and coworkers
+- A device whose clock runs far ahead: its edits win until real time catches up. Whether the server should hold back clocks past its own time
 - Presence and "last seen": whether to show them at all. Pochical is for family and friends, where visible presence and read markers can feel like pressure; typing alone may be enough. "Last seen" would also need storing in the User DO.
 - Read state options: whether members see read markers (and whether users can turn them off), "mark as unread" (it moves the watermark back, so `max` would become a per-thread LWW register), and muted threads left out of badge totals (mentions: spec/chat.md)

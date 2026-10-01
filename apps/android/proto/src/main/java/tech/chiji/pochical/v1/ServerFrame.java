@@ -27,6 +27,9 @@ public  final class ServerFrame extends
     WELCOME(1),
     PONG(2),
     ERROR(3),
+    CHANGES(4),
+    ACKED(5),
+    RESET(6),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -45,6 +48,9 @@ public  final class ServerFrame extends
         case 1: return WELCOME;
         case 2: return PONG;
         case 3: return ERROR;
+        case 4: return CHANGES;
+        case 5: return ACKED;
+        case 6: return RESET;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -211,6 +217,231 @@ public  final class ServerFrame extends
    */
   private void clearError() {
     if (kindCase_ == 3) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int CHANGES_FIELD_NUMBER = 4;
+  /**
+   * <pre>
+   * Changes to the DO's data in cursor order, after Welcome and as they
+   * happen.
+   * </pre>
+   *
+   * <code>.pochical.v1.Changes changes = 4 [json_name = "changes"];</code>
+   */
+  @java.lang.Override
+  public boolean hasChanges() {
+    return kindCase_ == 4;
+  }
+  /**
+   * <pre>
+   * Changes to the DO's data in cursor order, after Welcome and as they
+   * happen.
+   * </pre>
+   *
+   * <code>.pochical.v1.Changes changes = 4 [json_name = "changes"];</code>
+   */
+  @java.lang.Override
+  public tech.chiji.pochical.v1.Changes getChanges() {
+    if (kindCase_ == 4) {
+       return (tech.chiji.pochical.v1.Changes) kind_;
+    }
+    return tech.chiji.pochical.v1.Changes.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * Changes to the DO's data in cursor order, after Welcome and as they
+   * happen.
+   * </pre>
+   *
+   * <code>.pochical.v1.Changes changes = 4 [json_name = "changes"];</code>
+   */
+  private void setChanges(tech.chiji.pochical.v1.Changes value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 4;
+  }
+  /**
+   * <pre>
+   * Changes to the DO's data in cursor order, after Welcome and as they
+   * happen.
+   * </pre>
+   *
+   * <code>.pochical.v1.Changes changes = 4 [json_name = "changes"];</code>
+   */
+  private void mergeChanges(tech.chiji.pochical.v1.Changes value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 4 &&
+        kind_ != tech.chiji.pochical.v1.Changes.getDefaultInstance()) {
+      kind_ = tech.chiji.pochical.v1.Changes.newBuilder((tech.chiji.pochical.v1.Changes) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 4;
+  }
+  /**
+   * <pre>
+   * Changes to the DO's data in cursor order, after Welcome and as they
+   * happen.
+   * </pre>
+   *
+   * <code>.pochical.v1.Changes changes = 4 [json_name = "changes"];</code>
+   */
+  private void clearChanges() {
+    if (kindCase_ == 4) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int ACKED_FIELD_NUMBER = 5;
+  /**
+   * <pre>
+   * The edits of a DayEdits the server has taken; the client deletes
+   * them from its outbox.
+   * </pre>
+   *
+   * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
+   */
+  @java.lang.Override
+  public boolean hasAcked() {
+    return kindCase_ == 5;
+  }
+  /**
+   * <pre>
+   * The edits of a DayEdits the server has taken; the client deletes
+   * them from its outbox.
+   * </pre>
+   *
+   * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
+   */
+  @java.lang.Override
+  public tech.chiji.pochical.v1.Acked getAcked() {
+    if (kindCase_ == 5) {
+       return (tech.chiji.pochical.v1.Acked) kind_;
+    }
+    return tech.chiji.pochical.v1.Acked.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * The edits of a DayEdits the server has taken; the client deletes
+   * them from its outbox.
+   * </pre>
+   *
+   * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
+   */
+  private void setAcked(tech.chiji.pochical.v1.Acked value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 5;
+  }
+  /**
+   * <pre>
+   * The edits of a DayEdits the server has taken; the client deletes
+   * them from its outbox.
+   * </pre>
+   *
+   * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
+   */
+  private void mergeAcked(tech.chiji.pochical.v1.Acked value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 5 &&
+        kind_ != tech.chiji.pochical.v1.Acked.getDefaultInstance()) {
+      kind_ = tech.chiji.pochical.v1.Acked.newBuilder((tech.chiji.pochical.v1.Acked) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 5;
+  }
+  /**
+   * <pre>
+   * The edits of a DayEdits the server has taken; the client deletes
+   * them from its outbox.
+   * </pre>
+   *
+   * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
+   */
+  private void clearAcked() {
+    if (kindCase_ == 5) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int RESET_FIELD_NUMBER = 6;
+  /**
+   * <pre>
+   * The client's cursor is ahead of the server's: drop this DO's cache.
+   * A Changes with everything the DO holds follows.
+   * </pre>
+   *
+   * <code>.pochical.v1.Reset reset = 6 [json_name = "reset"];</code>
+   */
+  @java.lang.Override
+  public boolean hasReset() {
+    return kindCase_ == 6;
+  }
+  /**
+   * <pre>
+   * The client's cursor is ahead of the server's: drop this DO's cache.
+   * A Changes with everything the DO holds follows.
+   * </pre>
+   *
+   * <code>.pochical.v1.Reset reset = 6 [json_name = "reset"];</code>
+   */
+  @java.lang.Override
+  public tech.chiji.pochical.v1.Reset getReset() {
+    if (kindCase_ == 6) {
+       return (tech.chiji.pochical.v1.Reset) kind_;
+    }
+    return tech.chiji.pochical.v1.Reset.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * The client's cursor is ahead of the server's: drop this DO's cache.
+   * A Changes with everything the DO holds follows.
+   * </pre>
+   *
+   * <code>.pochical.v1.Reset reset = 6 [json_name = "reset"];</code>
+   */
+  private void setReset(tech.chiji.pochical.v1.Reset value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 6;
+  }
+  /**
+   * <pre>
+   * The client's cursor is ahead of the server's: drop this DO's cache.
+   * A Changes with everything the DO holds follows.
+   * </pre>
+   *
+   * <code>.pochical.v1.Reset reset = 6 [json_name = "reset"];</code>
+   */
+  private void mergeReset(tech.chiji.pochical.v1.Reset value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 6 &&
+        kind_ != tech.chiji.pochical.v1.Reset.getDefaultInstance()) {
+      kind_ = tech.chiji.pochical.v1.Reset.newBuilder((tech.chiji.pochical.v1.Reset) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 6;
+  }
+  /**
+   * <pre>
+   * The client's cursor is ahead of the server's: drop this DO's cache.
+   * A Changes with everything the DO holds follows.
+   * </pre>
+   *
+   * <code>.pochical.v1.Reset reset = 6 [json_name = "reset"];</code>
+   */
+  private void clearReset() {
+    if (kindCase_ == 6) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -473,6 +704,240 @@ public  final class ServerFrame extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Changes to the DO's data in cursor order, after Welcome and as they
+     * happen.
+     * </pre>
+     *
+     * <code>.pochical.v1.Changes changes = 4 [json_name = "changes"];</code>
+     */
+    @java.lang.Override
+    public boolean hasChanges() {
+      return instance.hasChanges();
+    }
+    /**
+     * <pre>
+     * Changes to the DO's data in cursor order, after Welcome and as they
+     * happen.
+     * </pre>
+     *
+     * <code>.pochical.v1.Changes changes = 4 [json_name = "changes"];</code>
+     */
+    @java.lang.Override
+    public tech.chiji.pochical.v1.Changes getChanges() {
+      return instance.getChanges();
+    }
+    /**
+     * <pre>
+     * Changes to the DO's data in cursor order, after Welcome and as they
+     * happen.
+     * </pre>
+     *
+     * <code>.pochical.v1.Changes changes = 4 [json_name = "changes"];</code>
+     */
+    public Builder setChanges(tech.chiji.pochical.v1.Changes value) {
+      copyOnWrite();
+      instance.setChanges(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Changes to the DO's data in cursor order, after Welcome and as they
+     * happen.
+     * </pre>
+     *
+     * <code>.pochical.v1.Changes changes = 4 [json_name = "changes"];</code>
+     */
+    public Builder setChanges(
+        tech.chiji.pochical.v1.Changes.Builder builderForValue) {
+      copyOnWrite();
+      instance.setChanges(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Changes to the DO's data in cursor order, after Welcome and as they
+     * happen.
+     * </pre>
+     *
+     * <code>.pochical.v1.Changes changes = 4 [json_name = "changes"];</code>
+     */
+    public Builder mergeChanges(tech.chiji.pochical.v1.Changes value) {
+      copyOnWrite();
+      instance.mergeChanges(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Changes to the DO's data in cursor order, after Welcome and as they
+     * happen.
+     * </pre>
+     *
+     * <code>.pochical.v1.Changes changes = 4 [json_name = "changes"];</code>
+     */
+    public Builder clearChanges() {
+      copyOnWrite();
+      instance.clearChanges();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * The edits of a DayEdits the server has taken; the client deletes
+     * them from its outbox.
+     * </pre>
+     *
+     * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
+     */
+    @java.lang.Override
+    public boolean hasAcked() {
+      return instance.hasAcked();
+    }
+    /**
+     * <pre>
+     * The edits of a DayEdits the server has taken; the client deletes
+     * them from its outbox.
+     * </pre>
+     *
+     * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
+     */
+    @java.lang.Override
+    public tech.chiji.pochical.v1.Acked getAcked() {
+      return instance.getAcked();
+    }
+    /**
+     * <pre>
+     * The edits of a DayEdits the server has taken; the client deletes
+     * them from its outbox.
+     * </pre>
+     *
+     * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
+     */
+    public Builder setAcked(tech.chiji.pochical.v1.Acked value) {
+      copyOnWrite();
+      instance.setAcked(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The edits of a DayEdits the server has taken; the client deletes
+     * them from its outbox.
+     * </pre>
+     *
+     * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
+     */
+    public Builder setAcked(
+        tech.chiji.pochical.v1.Acked.Builder builderForValue) {
+      copyOnWrite();
+      instance.setAcked(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The edits of a DayEdits the server has taken; the client deletes
+     * them from its outbox.
+     * </pre>
+     *
+     * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
+     */
+    public Builder mergeAcked(tech.chiji.pochical.v1.Acked value) {
+      copyOnWrite();
+      instance.mergeAcked(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The edits of a DayEdits the server has taken; the client deletes
+     * them from its outbox.
+     * </pre>
+     *
+     * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
+     */
+    public Builder clearAcked() {
+      copyOnWrite();
+      instance.clearAcked();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * The client's cursor is ahead of the server's: drop this DO's cache.
+     * A Changes with everything the DO holds follows.
+     * </pre>
+     *
+     * <code>.pochical.v1.Reset reset = 6 [json_name = "reset"];</code>
+     */
+    @java.lang.Override
+    public boolean hasReset() {
+      return instance.hasReset();
+    }
+    /**
+     * <pre>
+     * The client's cursor is ahead of the server's: drop this DO's cache.
+     * A Changes with everything the DO holds follows.
+     * </pre>
+     *
+     * <code>.pochical.v1.Reset reset = 6 [json_name = "reset"];</code>
+     */
+    @java.lang.Override
+    public tech.chiji.pochical.v1.Reset getReset() {
+      return instance.getReset();
+    }
+    /**
+     * <pre>
+     * The client's cursor is ahead of the server's: drop this DO's cache.
+     * A Changes with everything the DO holds follows.
+     * </pre>
+     *
+     * <code>.pochical.v1.Reset reset = 6 [json_name = "reset"];</code>
+     */
+    public Builder setReset(tech.chiji.pochical.v1.Reset value) {
+      copyOnWrite();
+      instance.setReset(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The client's cursor is ahead of the server's: drop this DO's cache.
+     * A Changes with everything the DO holds follows.
+     * </pre>
+     *
+     * <code>.pochical.v1.Reset reset = 6 [json_name = "reset"];</code>
+     */
+    public Builder setReset(
+        tech.chiji.pochical.v1.Reset.Builder builderForValue) {
+      copyOnWrite();
+      instance.setReset(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The client's cursor is ahead of the server's: drop this DO's cache.
+     * A Changes with everything the DO holds follows.
+     * </pre>
+     *
+     * <code>.pochical.v1.Reset reset = 6 [json_name = "reset"];</code>
+     */
+    public Builder mergeReset(tech.chiji.pochical.v1.Reset value) {
+      copyOnWrite();
+      instance.mergeReset(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The client's cursor is ahead of the server's: drop this DO's cache.
+     * A Changes with everything the DO holds follows.
+     * </pre>
+     *
+     * <code>.pochical.v1.Reset reset = 6 [json_name = "reset"];</code>
+     */
+    public Builder clearReset() {
+      copyOnWrite();
+      instance.clearReset();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ServerFrame)
   }
   @java.lang.Override
@@ -494,10 +959,13 @@ public  final class ServerFrame extends
             tech.chiji.pochical.v1.Welcome.class,
             tech.chiji.pochical.v1.Pong.class,
             tech.chiji.pochical.v1.ServerError.class,
+            tech.chiji.pochical.v1.Changes.class,
+            tech.chiji.pochical.v1.Acked.class,
+            tech.chiji.pochical.v1.Reset.class,
           };
           java.lang.String info =
-              "\u0000\u0003\u0001\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001<\u0000\u0002<" +
-              "\u0000\u0003<\u0000";
+              "\u0000\u0006\u0001\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

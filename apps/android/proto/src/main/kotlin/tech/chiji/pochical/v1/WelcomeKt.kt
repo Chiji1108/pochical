@@ -12,7 +12,8 @@ public inline fun welcome(block: tech.chiji.pochical.v1.WelcomeKt.Dsl.() -> kotl
   tech.chiji.pochical.v1.WelcomeKt.Dsl._create(tech.chiji.pochical.v1.Welcome.newBuilder()).apply { block() }._build()
 /**
  * ```
- * Reply to Hello once the server accepts the protocol version.
+ * Reply to Hello once the server accepts the protocol version. Every
+ * change after the client's cursor follows as Changes.
  * ```
  *
  * Protobuf type `pochical.v1.Welcome`
@@ -35,7 +36,7 @@ public object WelcomeKt {
 
     /**
      * ```
-     * Current head of the group's change log.
+     * Current head of the DO's change log.
      * ```
      *
      * `uint64 cursor = 1 [json_name = "cursor"];`
@@ -49,7 +50,7 @@ public object WelcomeKt {
       }
     /**
      * ```
-     * Current head of the group's change log.
+     * Current head of the DO's change log.
      * ```
      *
      * `uint64 cursor = 1 [json_name = "cursor"];`
