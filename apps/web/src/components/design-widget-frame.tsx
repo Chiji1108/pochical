@@ -73,6 +73,8 @@ const flatText = {
   // Faint, as the day-off tiles, or the stroke would be a solid block
   // under its white date.
   "--calendar-note-marker": "rgb(255 255 255 / 0.24)",
+  // Lines between rows stay quiet, as on a full-color ground.
+  "--separator": "rgb(255 255 255 / 0.2)",
   "--text-primary": "#fff",
   "--text-quaternary": "rgb(255 255 255 / 0.25)",
   "--text-secondary": "rgb(255 255 255 / 0.6)",
@@ -187,6 +189,9 @@ function ThemedFrame({
     height,
     padding: margin,
     width,
+    // The system's margin, for a view that draws its own ground to the
+    // widget's edge, as SwiftUI's containerBackground does.
+    "--widget-margin": `${margin}px`,
   } as CSSProperties;
   return (
     <div className={frame({ look: lookOf(appearance) })} style={style}>

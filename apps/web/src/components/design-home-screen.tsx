@@ -20,7 +20,7 @@ import { NotificationBanner } from "./design-notifications";
 import { Phone } from "./design-phone";
 import { useThemeStyle } from "./design-theme";
 import { wallpaperFor, WidgetFrame } from "./design-widget-frame";
-import { CalendarSmall, DetailSmall, UpcomingMedium } from "./design-widgets";
+import { ListSmall, NextOffSmall, TwoWeeksMedium } from "./design-widgets";
 
 // The phone's home screen beside the app on /demo, with the widgets on it
 // drawn from the same person's data, so what is entered in the app shows
@@ -228,14 +228,14 @@ export function HomeScreen() {
                   {designToday.getDate()}日({weekdays[designToday.getDay()]})
                 </p>
                 <WidgetFrame {...placement} family="android4x2">
-                  <UpcomingMedium entry={entry} />
+                  <TwoWeeksMedium entry={entry} />
                 </WidgetFrame>
                 <div className={home.androidRow}>
                   <WidgetFrame {...placement} family="android2x2">
-                    <CalendarSmall entry={entry} />
+                    <NextOffSmall entry={entry} />
                   </WidgetFrame>
                   <WidgetFrame {...placement} family="android2x2">
-                    <DetailSmall entry={entry} />
+                    <ListSmall entry={entry} />
                   </WidgetFrame>
                 </div>
                 <Apps round />
@@ -246,14 +246,14 @@ export function HomeScreen() {
             <Fit width={IOS_WIDTH}>
               <div className={home.ios}>
                 <WidgetFrame {...placement} family="systemMedium">
-                  <UpcomingMedium entry={entry} />
+                  <TwoWeeksMedium entry={entry} />
                 </WidgetFrame>
                 <div className={home.row}>
                   <WidgetFrame {...placement} family="systemSmall">
-                    <CalendarSmall entry={entry} />
+                    <NextOffSmall entry={entry} />
                   </WidgetFrame>
                   <WidgetFrame {...placement} family="systemSmall">
-                    <DetailSmall entry={entry} />
+                    <ListSmall entry={entry} />
                   </WidgetFrame>
                 </div>
                 <Apps round={false} />
