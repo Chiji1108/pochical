@@ -709,9 +709,12 @@ const sampleTitle = css({
 // The chats of each group, on or off. The same switch is in the group's own
 // settings; off, its group chat and one-to-one chats alike stay quiet, but
 // for a line that mentions you, as in LINE and Slack: it is meant for you.
+// メンションはいつも通知, turned off, silences those too.
 export function ChatNotificationsPage({ onBack }: { onBack: () => void }) {
   const groups = useUser((state) => state.groups);
   const setGroups = useUser((state) => state.setGroups);
+  const mentionsWhenMuted = useUser((state) => state.mentionsWhenMuted);
+  const setMentionsWhenMuted = useUser((state) => state.setMentionsWhenMuted);
   const { ask, prompt } = usePermissionPrompt();
   const setMuted = (groupId: string, chatId: string, muted: boolean) => {
     setGroups(
@@ -759,7 +762,9 @@ export function ChatNotificationsPage({ onBack }: { onBack: () => void }) {
               />
             ))}
           </List>
-          <Note>オフにしても、自分へのメンションは通知されます。</Note>
+          {mentionsWhenMuted && (
+            <Note>オフにしても、自分へのメンションは通知されます。</Note>
+          )}
         </Section>
         {/* Only those turned off: each is turned off in its own chat's
             menu, and found again here. */}
@@ -788,6 +793,19 @@ export function ChatNotificationsPage({ onBack }: { onBack: () => void }) {
           <Note>
             個人チャットの通知は、それぞれのチャットの右上のメニューでオフにできます。
           </Note>
+        </Section>
+        {/* One switch for every chat: wanting a group quiet even when it
+            calls you is rare, and kept simple until someone asks for it
+            group by group. */}
+        <Section title="メンション">
+          <List>
+            <SwitchRow
+              checked={mentionsWhenMuted}
+              detail="通知をオフにしたチャットでも"
+              label="メンションはいつも通知"
+              onChange={setMentionsWhenMuted}
+            />
+          </List>
         </Section>
       </div>
       {prompt}

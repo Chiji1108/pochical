@@ -2,6 +2,7 @@ import { UserPlus, X } from "lucide-react";
 import { useState } from "react";
 import { css } from "styled-system/css";
 
+import { useUser } from "../lib/design-user-store";
 import { EmojiPickerSheet } from "./design-emoji-picker";
 import { groupChat, isMuted } from "./design-group-data";
 import type {
@@ -88,6 +89,7 @@ export function GroupSettingsPage({
   onBack: () => void;
 }) {
   const [view, setView] = useState<"settings" | "edit" | "profile">("settings");
+  const mentionsWhenMuted = useUser((state) => state.mentionsWhenMuted);
   const [leaving, setLeaving] = useState(false);
   const shown = profileIn(group, profile);
   if (view === "edit") {
@@ -164,7 +166,9 @@ export function GroupSettingsPage({
             }}
           />
         </List>
-        <Note>オフにしても、自分へのメンションは通知されます。</Note>
+        {mentionsWhenMuted && (
+          <Note>オフにしても、自分へのメンションは通知されます。</Note>
+        )}
       </Section>
       <Section title="メンバー">
         <List>

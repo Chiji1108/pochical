@@ -33,6 +33,9 @@ export type OwnData = {
   profile: Profile;
   // 一緒に働く人: names the person tags days with, never sent to a group.
   coworkers: string[];
+  // Whether a line that mentions them notifies even in a chat turned off.
+  // The server decides what to push, so it is the account's, not a phone's.
+  mentionsWhenMuted: boolean;
 };
 
 // Shared with the people in each group, kept by that group's Group DO.
@@ -52,6 +55,7 @@ export type UserState = OwnData &
     setRules: Setter<RepeatRule[]>;
     setProfile: Setter<Profile>;
     setCoworkers: Setter<string[]>;
+    setMentionsWhenMuted: Setter<boolean>;
     setGroups: Setter<GroupSummary[]>;
     setChats: Setter<Record<string, Chat>>;
   };
@@ -73,6 +77,7 @@ export function createUserStore(initial: Partial<OwnData & GroupData> = {}) {
       chats: sampleChats,
       coworkers: sampleCoworkers,
       groups: sampleGroups(),
+      mentionsWhenMuted: true,
       patterns: presetList(patternSets[4]),
       profile: { name: "さくら", photo: samplePhoto(1011) },
       rules: [],
@@ -81,6 +86,7 @@ export function createUserStore(initial: Partial<OwnData & GroupData> = {}) {
       setChats: setter("chats"),
       setCoworkers: setter("coworkers"),
       setGroups: setter("groups"),
+      setMentionsWhenMuted: setter("mentionsWhenMuted"),
       setPatterns: setter("patterns"),
       setProfile: setter("profile"),
       setRules: setter("rules"),
