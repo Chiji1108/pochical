@@ -3,6 +3,7 @@ import { createFetchHandler } from "@connectrpc/connect/protocol";
 
 import { registerGroupService } from "./group-service";
 import { registerInviteService } from "./invite-service";
+import { tooManySignIns } from "./rate-limits";
 import { getAuth, sessionUser } from "./session";
 import { USER_HEADER } from "./sync-socket";
 import { registerSystemService } from "./system-service";
@@ -26,6 +27,7 @@ const rpcHandlers = new Map(
 );
 
 const AUTH_PATH = "/api/auth/";
+const ANONYMOUS_SIGN_IN = "/api/auth/sign-in/anonymous";
 const USER_SOCKET_PATH = "/v1/me/socket";
 const GROUP_SOCKET_PATH = /^\/v1\/groups\/(?<groupId>[^/]+)\/socket$/u;
 
@@ -45,6 +47,15 @@ export default {
     const { pathname } = new URL(request.url);
 
     if (pathname.startsWith(AUTH_PATH)) {
+      if (
+        pathname === ANONYMOUS_SIGN_IN &&
+        (await tooManySignIns(env.SIGN_IN_LIMIT, request))
+      ) {
+        return Response.json(
+          { code: "TOO_MANY_REQUESTS", message: "Try again in a minute" },
+          { status: 429 }
+        );
+      }
       return await getAuth().handler(request);
     }
 

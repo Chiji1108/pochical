@@ -1,7 +1,9 @@
 import { listDurableObjectIds } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
+import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
+import { session } from "../src/db/auth-schema";
 import {
   memberOf,
   openSocket,
@@ -91,5 +93,57 @@ describe("sockets", () => {
     const ids = await listDurableObjectIds(env.GROUPS);
     const notTheirs = env.GROUPS.idFromName("not-theirs");
     expect(ids.filter((id) => id.equals(notTheirs))).toHaveLength(0);
+  });
+});
+
+describe("what a session keeps", () => {
+  it("keeps no address or device", async () => {
+    const response = await exports.default.fetch(
+      `${ORIGIN}/api/auth/sign-in/anonymous`,
+      {
+        body: "{}",
+        headers: {
+          "CF-Connecting-IP": "203.0.113.1",
+          "Content-Type": "application/json",
+          "User-Agent": "Pochical/1.0 (iPhone)",
+        },
+        method: "POST",
+      }
+    );
+    expect(response.status).toBe(200);
+    const sessions = await drizzle(env.DB)
+      .select({ ipAddress: session.ipAddress, userAgent: session.userAgent })
+      .from(session)
+      .all();
+    expect(sessions.length).toBeGreaterThan(0);
+    for (const kept of sessions) {
+      expect(kept).toStrictEqual({ ipAddress: null, userAgent: null });
+    }
+  });
+});
+
+// An anonymous sign-in as it reaches the Worker from a client's address.
+const signInFrom = async (address: string): Promise<Response> =>
+  await exports.default.fetch(`${ORIGIN}/api/auth/sign-in/anonymous`, {
+    body: "{}",
+    headers: {
+      "CF-Connecting-IP": address,
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+describe("rate limits", () => {
+  it("holds back anonymous sign-ins from one address", async () => {
+    const statuses: number[] = [];
+    for (let attempt = 0; attempt < 21; attempt += 1) {
+      // oxlint-disable-next-line no-await-in-loop -- counted in order
+      const { status } = await signInFrom("203.0.113.2");
+      statuses.push(status);
+    }
+    expect(statuses).toStrictEqual([
+      ...Array.from({ length: 20 }, () => 200),
+      429,
+    ]);
   });
 });

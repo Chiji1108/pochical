@@ -123,7 +123,6 @@ describe("GroupService", () => {
   });
 
   it("holds names to spec/text-limits.md, counting characters as seen", async () => {
-    const token = await signInAnonymously();
     const ok = { displayName: "さくら", emoji: "🍉", name: "いとこ会" };
     const accepted = [
       { ...ok, name: "あ".repeat(30) },
@@ -142,10 +141,13 @@ describe("GroupService", () => {
       { ...ok, emoji: "🍉🍉" },
       { ...ok, emoji: "あ" },
     ];
+    // Each by its own user, so the group-making limit does not count them
+    // together.
     const results = await Promise.all(
-      [...accepted, ...refused].map(
-        async (body) => await call("GroupService/CreateGroup", body, token)
-      )
+      [...accepted, ...refused].map(async (body) => {
+        const maker = await signInAnonymously();
+        return await call("GroupService/CreateGroup", body, maker);
+      })
     );
     expect(results.map((response) => response.status)).toStrictEqual([
       ...accepted.map(() => 200),
@@ -211,5 +213,20 @@ describe("GroupService", () => {
     await expect(previewOf(inviteCode)).resolves.toMatchObject({
       memberCount: GROUP_MAX_MEMBERS,
     });
+  });
+
+  it("holds back one user making many groups at once", async () => {
+    const maker = await signInAnonymously();
+    const statuses: number[] = [];
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      // oxlint-disable-next-line no-await-in-loop -- counted in order
+      const response = await call(
+        "GroupService/CreateGroup",
+        { displayName: "さくら", emoji: "🍉", name: `グループ${attempt}` },
+        maker
+      );
+      statuses.push(response.status);
+    }
+    expect(statuses).toStrictEqual([200, 200, 200, 200, 200, 429]);
   });
 });
