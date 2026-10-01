@@ -372,16 +372,21 @@ const twoWeeks = {
   // Days already gone this week stay, faint, so the weeks keep their
   // shape.
   day: cva({
+    base: { display: "grid" },
     variants: { past: { false: {}, true: { opacity: 0.4 } } },
   }),
+  // The two weeks fill the widget's height, as the month's weeks do, so
+  // names under the marks change only the marks, not the layout.
   grid: cva({
     base: {
       columnGap: "2px",
       display: "grid",
+      flex: 1,
+      gridAutoRows: "1fr",
       gridTemplateColumns: "repeat(7, 1fr)",
+      minHeight: 0,
     },
     variants: {
-      named: { false: {}, true: {} },
       roomy: { false: { rowGap: "4px" }, true: { rowGap: "8px" } },
     },
   }),
@@ -390,7 +395,6 @@ const twoWeeks = {
     flexDirection: "column",
     gap: "4px",
     height: "100%",
-    justifyContent: "center",
   }),
   weekdays: css({
     display: "grid",
@@ -426,7 +430,7 @@ export function TwoWeeksMedium({ entry }: { entry: WidgetEntry }) {
           </span>
         ))}
       </div>
-      <ol className={`${list} ${twoWeeks.grid({ named, roomy })}`}>
+      <ol className={`${list} ${twoWeeks.grid({ roomy })}`}>
         {entry.twoWeeks.map((shown) => (
           <TwoWeeksDay
             day={shown}

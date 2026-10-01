@@ -55,7 +55,6 @@ export function widgetColors(hue: number, scheme: ColorScheme) {
   const palettes = palettesOf(hue);
   const dark = scheme === "dark";
   return {
-    "--accent-default": palettes.primary(dark ? 80 : 40),
     "--background-base": palettes.neutral(dark ? 10 : 99),
     "--separator": palettes.neutralVariant(dark ? 30 : 80),
     "--text-primary": palettes.neutral(dark ? 90 : 10),
