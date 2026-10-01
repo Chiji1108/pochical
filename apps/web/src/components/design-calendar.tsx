@@ -1,3 +1,4 @@
+import { textLimits } from "@pochical/design/limits";
 import {
   ArrowRight,
   CalendarPlus,
@@ -59,7 +60,7 @@ import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
 import { spring } from "../lib/motion";
-import { composing, limitText, textLimits } from "../lib/text-limits";
+import { composing, limitText } from "../lib/text-limits";
 import type { Coworkers } from "./design-coworkers";
 import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";

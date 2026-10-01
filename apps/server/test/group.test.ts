@@ -1,7 +1,7 @@
+import { GROUP_MAX_MEMBERS } from "@pochical/design/limits";
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
-import { MAX_MEMBERS } from "../src/group-do";
 import { call, openSocket, signInAnonymously } from "./helpers";
 
 type Created = { groupId: string; inviteCode: string };
@@ -181,14 +181,14 @@ describe("GroupService", () => {
     ).resolves.toBe(404);
   });
 
-  it(`keeps a group to ${MAX_MEMBERS} members`, async () => {
+  it(`keeps a group to ${GROUP_MAX_MEMBERS} members`, async () => {
     const { groupId, inviteCode } = await createGroup(
       await signInAnonymously()
     );
     const group = env.GROUPS.getByName(groupId);
     await Promise.all(
       Array.from(
-        { length: MAX_MEMBERS - 1 },
+        { length: GROUP_MAX_MEMBERS - 1 },
         async (_, index) =>
           await group.addMember({
             displayName: `メンバー${index}`,
@@ -197,7 +197,7 @@ describe("GroupService", () => {
       )
     );
     await expect(previewOf(inviteCode)).resolves.toMatchObject({
-      memberCount: MAX_MEMBERS,
+      memberCount: GROUP_MAX_MEMBERS,
     });
 
     const late = await signInAnonymously();
@@ -209,7 +209,7 @@ describe("GroupService", () => {
       code: "resource_exhausted",
     });
     await expect(previewOf(inviteCode)).resolves.toMatchObject({
-      memberCount: MAX_MEMBERS,
+      memberCount: GROUP_MAX_MEMBERS,
     });
   });
 });

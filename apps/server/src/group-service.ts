@@ -1,6 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { ConnectRouter, HandlerContext } from "@connectrpc/connect";
+import { GROUP_MAX_MEMBERS, textLimits } from "@pochical/design/limits";
 import { env } from "cloudflare:workers";
 
 import {
@@ -11,18 +12,17 @@ import {
   JoinGroupResponseSchema,
   RemakeInviteLinkResponseSchema,
 } from "./gen/pochical/v1/group_pb";
-import { MAX_MEMBERS } from "./group-do";
 import {
   codeOfGroup,
   groupOfCode,
   INVITE_CODE,
   issueInviteCode,
 } from "./invite-codes";
-import { requireEmoji, requireText, TEXT_LIMITS } from "./text-limits";
+import { requireEmoji, requireText } from "./text-limits";
 import { requireUser } from "./user-service";
 
 const displayNameOf = (text: string): string =>
-  requireText(text, TEXT_LIMITS.personName, "display_name");
+  requireText(text, textLimits.personName, "display_name");
 
 /** The group a live code opens; INVALID_ARGUMENT or NOT_FOUND otherwise. */
 const requireGroupOfCode = async (inviteCode: string): Promise<string> => {
@@ -52,7 +52,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
   router.service(GroupService, {
     createGroup: async (request, context) => {
       const user = await requireUser(context);
-      const name = requireText(request.name, TEXT_LIMITS.groupName, "name");
+      const name = requireText(request.name, textLimits.groupName, "name");
       const emoji = requireEmoji(request.emoji);
       const displayName = displayNameOf(request.displayName);
 
@@ -80,7 +80,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
       }
       return create(GetInviteResponseSchema, {
         alreadyMember,
-        full: !alreadyMember && memberList.length >= MAX_MEMBERS,
+        full: !alreadyMember && memberList.length >= GROUP_MAX_MEMBERS,
         groupEmoji: profile.emoji ?? "",
         groupId,
         groupName: profile.name,
@@ -108,7 +108,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
       });
       if (result === "full") {
         throw new ConnectError(
-          `The group has its most members (${MAX_MEMBERS})`,
+          `The group has its most members (${GROUP_MAX_MEMBERS})`,
           Code.ResourceExhausted
         );
       }

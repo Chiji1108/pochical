@@ -1,7 +1,8 @@
+import { textLimits } from "@pochical/design/limits";
 import { useState } from "react";
 
 import type { Schedule } from "../lib/design-days";
-import { composing, limitText, textLimits } from "../lib/text-limits";
+import { composing, limitText } from "../lib/text-limits";
 import { ConfirmDialog } from "./design-sheet";
 import {
   AddButton,

@@ -326,7 +326,8 @@ export const GroupService: GenService<{
   },
   /**
    * Joins the group a live code opens. NOT_FOUND when no group uses it;
-   * RESOURCE_EXHAUSTED when it already has its most members (100).
+   * RESOURCE_EXHAUSTED when it already has its most members
+   * (GROUP_MAX_MEMBERS in design/src/limits.ts).
    * Joining a group you are already in changes nothing and says so.
    *
    * @generated from rpc pochical.v1.GroupService.JoinGroup

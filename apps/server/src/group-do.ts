@@ -1,3 +1,4 @@
+import { GROUP_MAX_MEMBERS } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
 import { asc, count, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
@@ -17,9 +18,6 @@ export type GroupProfile = {
 
 /** Someone in the group, as they appear in it. */
 export type NewMember = { userId: string; displayName: string };
-
-/** The most members a group has (spec/sync-protocol.md). */
-export const MAX_MEMBERS = 100;
 
 /** How a join went: in now, in already, or kept out of a full group. */
 export type JoinResult = "added" | "already" | "full";
@@ -70,7 +68,7 @@ export class GroupDO extends DurableObject<Env> {
     if (this.isMember(userId)) {
       return "already";
     }
-    if (this.memberCount() >= MAX_MEMBERS) {
+    if (this.memberCount() >= GROUP_MAX_MEMBERS) {
       return "full";
     }
     this.db

@@ -42,7 +42,8 @@ public interface GroupServiceClientInterface {
 
   /**
    *  Joins the group a live code opens. NOT_FOUND when no group uses it;
-   *  RESOURCE_EXHAUSTED when it already has its most members (100).
+   *  RESOURCE_EXHAUSTED when it already has its most members
+   *  (GROUP_MAX_MEMBERS in design/src/limits.ts).
    *  Joining a group you are already in changes nothing and says so.
    */
   public suspend fun joinGroup(request: JoinGroupRequest, headers: Headers = emptyMap()): ResponseMessage<JoinGroupResponse>

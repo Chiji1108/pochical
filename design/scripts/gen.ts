@@ -13,6 +13,7 @@ import {
   untintedTokens,
 } from "../src/colors";
 import type { ColorScheme } from "../src/colors";
+import { GROUP_MAX_MEMBERS, textLimits } from "../src/limits";
 import {
   HAIRLINE_MAX,
   radii,
@@ -133,6 +134,7 @@ function json() {
       noteMarkerSteps,
       roleSteps,
     },
+    limits: { groupMaxMembers: GROUP_MAX_MEMBERS, text: textLimits },
     metrics: {
       hairlineMax: HAIRLINE_MAX,
       radii,
@@ -396,11 +398,58 @@ function kotlin() {
   return lines.join("\n");
 }
 
+// design/src/limits.ts for the apps: field limits and group size.
+function swiftLimits() {
+  return [
+    `// ${HEADER}`,
+    "",
+    "/// How long free text may be, in characters as a reader sees them",
+    "/// (`String.count`), by what it is. spec/text-limits.md says how fields",
+    "/// hold to them.",
+    "public enum TextLimits {",
+    ...Object.entries(textLimits).map(
+      ([name, value]) => `  public static let ${name} = ${value}`
+    ),
+    "}",
+    "",
+    "/// The most people in one group.",
+    `public let groupMaxMembers = ${GROUP_MAX_MEMBERS}`,
+    "",
+  ].join("\n");
+}
+
+function kotlinLimits() {
+  return [
+    `// ${HEADER}`,
+    "",
+    "package tech.chiji.pochical.design",
+    "",
+    "/**",
+    " * How long free text may be, in characters as a reader sees them (grapheme",
+    " * clusters, ICU's BreakIterator), by what it is. spec/text-limits.md says",
+    " * how fields hold to them.",
+    " */",
+    "object TextLimits {",
+    ...Object.entries(textLimits).map(
+      ([name, value]) => `  const val ${name} = ${value}`
+    ),
+    "}",
+    "",
+    "/** The most people in one group. */",
+    `const val GROUP_MAX_MEMBERS = ${GROUP_MAX_MEMBERS}`,
+    "",
+  ].join("\n");
+}
+
 const outputs = {
   "apps/android/design/src/main/kotlin/tech/chiji/pochical/design/DesignTokens.kt":
     kotlin(),
+  "apps/android/design/src/main/kotlin/tech/chiji/pochical/design/Limits.kt":
+    kotlinLimits(),
   "apps/ios/Packages/PochicalDesign/Sources/PochicalDesign/DesignTokens.swift":
     swift(),
+  "apps/ios/Packages/PochicalDesign/Sources/PochicalDesign/Limits.swift":
+    swiftLimits(),
   "spec/design-tokens.json": json(),
 };
 

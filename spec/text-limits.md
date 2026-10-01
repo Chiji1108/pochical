@@ -1,20 +1,10 @@
 # Text limits
 
-How long the free text people type may be, how the fields hold it to that, and how a long value is shown. Both native apps and the server use these numbers. The web prototype's `textLimits` in `apps/web/src/lib/text-limits.ts` and `LimitedInput` in `apps/web/src/components/design-ui.tsx` follow this spec.
+How the free text people type is held to its limit and how a long value is shown. Both native apps and the server follow it. The web prototype's `LimitedInput` in `apps/web/src/components/design-ui.tsx` and `apps/web/src/lib/text-limits.ts` follow this spec.
 
 ## Limits
 
-| Kind | Fields | Limit |
-| --- | --- | --- |
-| `shiftName` | A shift pattern's name | 8 |
-| `shiftMark` | A shift pattern's letter, for the letter look | 1 |
-| `groupMark` | A group's letter, when its mark is letters | 2 |
-| `personName` | The profile's name, a group's name for you (when joining, creating a group, or in its settings), a coworker's name (in the list, or added from a day) | 20 |
-| `groupName` | A group's name, when creating or editing it | 30 |
-| `dayNote` | A day's memo | 100 |
-| `chatMessage` | A message in a group chat or a one-to-one chat | 1000 |
-
-Every name of a person has the same limit wherever it is typed, so a name that fits in one place fits in all.
+The limits themselves, by kind of text and with the fields each covers, are `textLimits` in `design/src/limits.ts`, the one place they are written. The web and the server import them; `mise run gen` writes them out as `TextLimits` for iOS (`Limits.swift`) and Android (`Limits.kt`) and under `limits` in `spec/design-tokens.json`.
 
 Not limited here: search fields, which are not kept; and times, which are picked rather than typed.
 

@@ -38,7 +38,8 @@ public protocol Pochical_V1_GroupServiceClientInterface: Sendable {
     func `getInvite`(request: Pochical_V1_GetInviteRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_GetInviteResponse>
 
     /// Joins the group a live code opens. NOT_FOUND when no group uses it;
-    /// RESOURCE_EXHAUSTED when it already has its most members (100).
+    /// RESOURCE_EXHAUSTED when it already has its most members
+    /// (GROUP_MAX_MEMBERS in design/src/limits.ts).
     /// Joining a group you are already in changes nothing and says so.
     @available(iOS 13, *)
     func `joinGroup`(request: Pochical_V1_JoinGroupRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_JoinGroupResponse>
