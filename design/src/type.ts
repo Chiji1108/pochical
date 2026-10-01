@@ -19,3 +19,30 @@ export const textStyles = {
 } as const;
 
 export type TextStyle = keyof typeof textStyles;
+
+// フォント in スタイル: the face the app's own words and numbers are drawn
+// in. A few that differ at a glance, not several gothics that barely do.
+// The system's is the default and needs nothing; the others are open
+// fonts (Google Fonts) that the app fetches when one is picked rather
+// than carrying them, as each Japanese face is megabytes. The OS's own
+// pieces, like the status bar or a notification, keep the system's.
+export const fonts = [
+  { family: null, id: "system", name: "標準", weights: [] },
+  {
+    family: "Zen Maru Gothic",
+    id: "maru",
+    name: "丸ゴシック",
+    weights: [400, 500, 700],
+  },
+  {
+    family: "Shippori Mincho",
+    id: "mincho",
+    name: "明朝",
+    weights: [400, 600, 700],
+  },
+  // A pen's hand, as a textbook writes it: still easy to read small. It
+  // has no bold, so what is bold elsewhere stays at 600.
+  { family: "Klee One", id: "tegaki", name: "手書き", weights: [400, 600] },
+] as const;
+
+export type FontId = (typeof fonts)[number]["id"];

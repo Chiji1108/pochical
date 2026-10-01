@@ -108,6 +108,8 @@ const phone = {
     alignItems: "center",
     display: "flex",
     flexShrink: 0,
+    // The OS's, whatever フォント the app is in.
+    fontFamily: "system",
     fontSize: "12px",
     fontWeight: 600,
     height: "28px",

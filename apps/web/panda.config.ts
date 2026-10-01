@@ -110,6 +110,14 @@ export default defineConfig({
         uploadRing: { to: { strokeDashoffset: 0 } },
       },
       tokens: {
+        // The system's face, which the app is in unless フォント picks
+        // another (lib/design-fonts.tsx), and the OS's own pieces always.
+        fonts: {
+          system: {
+            value:
+              '-apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif',
+          },
+        },
         // Colors by role, grouped by kind, their levels named as iOS names
         // its label and fill levels (primary to quaternary): each role of
         // design/ (text-secondary as text.secondary), pointing at the CSS

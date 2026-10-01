@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { css } from "styled-system/css";
+import { token } from "styled-system/tokens";
 
 import { formatDay } from "../lib/design-days";
 import { useDevice } from "../lib/design-device";
@@ -314,8 +315,9 @@ export function LockScreen({
     appearance: scheme,
     wallpaperHue: platform === "android" ? hue : undefined,
   });
-  // The app's colors, which its notification is drawn in.
-  const theme = useThemeStyle();
+  // The app's colors, which its notification is drawn in; its words are
+  // the system's.
+  const theme = { ...useThemeStyle(), fontFamily: token("fonts.system") };
   // Dark over a light wallpaper, as the status bar is.
   const ink = scheme === "dark" ? "#ffffff" : "#1c1b1f";
   return (

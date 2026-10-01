@@ -1,6 +1,8 @@
 import type { ColorScheme } from "@pochical/design/colors";
 import { presets } from "@pochical/design/themes";
 import type { Preset } from "@pochical/design/themes";
+import { fonts } from "@pochical/design/type";
+import type { FontId } from "@pochical/design/type";
 import { ArrowRight, CloudCheck } from "lucide-react";
 import { useMotionValue } from "motion/react";
 import { useContext, useState } from "react";
@@ -19,6 +21,7 @@ import {
 } from "../lib/design-days";
 import type { RepeatRule, Schedule } from "../lib/design-days";
 import { useDevice } from "../lib/design-device";
+import { fontFamilyOf, WebFonts } from "../lib/design-fonts";
 import {
   isDayOff,
   OwnPatternsContext,
@@ -1377,6 +1380,9 @@ function MarkPage({
           <ShiftColorsChoices />
         </Section>
       )}
+      <Section title="フォント">
+        <FontChoices />
+      </Section>
       <Section title="休みの見せ方">
         <OffLookChoices current={current} />
       </Section>
@@ -1986,6 +1992,48 @@ function ShiftColorsChoices() {
         </Segment>
       ))}
     </SegmentedControl>
+  );
+}
+
+// フォント: each face shows itself, its name and a few of the words and
+// numbers the calendar is made of, in the tall tabs シフトの色 has.
+const fontSample = css({
+  alignItems: "baseline",
+  display: "flex",
+  fontSize: "24px",
+  gap: "2px",
+  lineHeight: 1,
+});
+function FontChoices() {
+  const font = useSettings((state) => state.device.font);
+  const setFont = useSettings((state) => state.setFont);
+  return (
+    <>
+      <WebFonts />
+      <SegmentedControl
+        label="フォント"
+        onValueChange={(picked) => {
+          setFont(picked as FontId);
+        }}
+        size="tall"
+        value={font}
+      >
+        {fonts.map((option) => (
+          <Segment key={option.id} value={option.id}>
+            <span
+              aria-hidden="true"
+              className={fontSample}
+              style={{ fontFamily: fontFamilyOf(option.id) }}
+            >
+              あ<span>12</span>
+            </span>
+            <span style={{ fontFamily: fontFamilyOf(option.id) }}>
+              {option.name}
+            </span>
+          </Segment>
+        ))}
+      </SegmentedControl>
+    </>
   );
 }
 

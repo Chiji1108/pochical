@@ -13,6 +13,7 @@ import type { CSSProperties } from "react";
 import { css, cva } from "styled-system/css";
 
 import { useDevice } from "../lib/design-device";
+import { useAppFont } from "../lib/design-fonts";
 import { palettesOf } from "../lib/material-you";
 import { Choice, ChoiceGrid } from "./design-ui";
 
@@ -99,11 +100,16 @@ export function themeStyle(id: PresetId, requested: ColorScheme = "light") {
   } as CSSProperties;
 }
 
+// The person's screen: its テーマ's colors and the フォント picked.
 export function useThemeStyle() {
-  return themeStyle(
-    useContext(ThemeContext).theme,
-    useContext(ColorSchemeContext)
-  );
+  const fontFamily = useAppFont();
+  return {
+    ...themeStyle(
+      useContext(ThemeContext).theme,
+      useContext(ColorSchemeContext)
+    ),
+    fontFamily,
+  };
 }
 
 // The scheme the current テーマ is drawn in, for colors worked out in

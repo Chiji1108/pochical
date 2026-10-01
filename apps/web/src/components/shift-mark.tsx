@@ -39,8 +39,6 @@ function TimeSide({ side }: { side: "early" | "late" }) {
   );
 }
 
-const markFont = '-apple-system, "Hiragino Kaku Gothic ProN", sans-serif';
-
 // The mark's kinds, and 早出 and 残業 on it. `sm-icon` stays on the icon as
 // a hook: a picked pattern's pill turns its fill white.
 const glyphStyle = {
@@ -48,7 +46,6 @@ const glyphStyle = {
     borderRadius: "28%",
     display: "inline-grid",
     flexShrink: 0,
-    fontFamily: markFont,
     fontWeight: 700,
     lineHeight: 1,
     placeItems: "center",
@@ -65,7 +62,6 @@ const glyphStyle = {
     borderRadius: "50%",
     display: "inline-grid",
     flexShrink: 0,
-    fontFamily: markFont,
     fontWeight: 600,
     lineHeight: 1,
     placeItems: "center",

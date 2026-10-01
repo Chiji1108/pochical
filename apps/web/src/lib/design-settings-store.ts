@@ -1,4 +1,5 @@
 import type { ColorScheme } from "@pochical/design/colors";
+import type { FontId } from "@pochical/design/type";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -63,6 +64,7 @@ export type DeviceSettings = {
   // シフトの色: each shift in its own color (色分け), or all of them in the
   // テーマ's.
   shiftColors: boolean;
+  font: FontId;
   appearance: Appearance;
   week: WeekSettings;
   // 月の表示: the calendar's heading as 9月, or as sep.
@@ -89,6 +91,7 @@ type SettingsState = {
   setAccount: (account: Account | undefined) => void;
   setPreset: (preset: PresetId) => void;
   setShiftColors: (shiftColors: boolean) => void;
+  setFont: (font: FontId) => void;
   setAppearance: (appearance: Appearance) => void;
   setWeek: (week: WeekSettings) => void;
   setMonthName: (monthName: MonthName) => void;
@@ -118,6 +121,7 @@ export const useSettings = create<SettingsState>()(
         appIcon: "moss",
         appearance: "system",
         calendar: defaultCalendar,
+        font: "system",
         imageOptions: defaultImageOptions,
         monthName: "number",
         monthTap: "pick",
@@ -149,6 +153,9 @@ export const useSettings = create<SettingsState>()(
             },
           };
         });
+      },
+      setFont: (font) => {
+        set((state) => ({ device: { ...state.device, font } }));
       },
       setImageOptions: (imageOptions) => {
         set((state) => ({ device: { ...state.device, imageOptions } }));

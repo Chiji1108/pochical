@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import type { ReactNode } from "react";
 
 import { useDevice } from "../lib/design-device";
+import { FontContext, WebFonts } from "../lib/design-fonts";
 import { useLook, useSettings } from "../lib/design-settings-store";
 import { useDeviceScheme } from "../lib/use-device-scheme";
 import {
@@ -65,6 +66,7 @@ export function DesignProviders({
     appearance,
     week,
     shiftColors,
+    font,
   } = useSettings((state) => state.device);
   // 端末の色 exists only on Android; elsewhere the app's own stands in.
   const { platform, wallpaperHue } = useDevice();
@@ -85,39 +87,44 @@ export function DesignProviders({
     (appearance === "system" ? systemScheme : appearance);
   return (
     <WeekSettingsContext value={{ week }}>
-      <ColorSchemeContext value={scheme}>
-        <ThemeContext value={{ theme: preset, wallpaperHue }}>
-          <IconWeightContext value={look.fill ? "duotone" : "regular"}>
-            <ShiftMarkStyleContext value={look.style}>
-              <CellNamesContext
-                value={{
-                  names: {
-                    badge: look.names,
-                    emoji: look.names,
-                    icon: look.names,
-                  },
-                }}
-              >
-                <OffHighlightContext
+      <FontContext value={font}>
+        {font !== "system" && <WebFonts />}
+        <ColorSchemeContext value={scheme}>
+          <ThemeContext value={{ theme: preset, wallpaperHue }}>
+            <IconWeightContext value={look.fill ? "duotone" : "regular"}>
+              <ShiftMarkStyleContext value={look.style}>
+                <CellNamesContext
                   value={{
-                    highlight: {
-                      badge: look.highlight,
-                      emoji: look.highlight,
-                      icon: look.highlight,
+                    names: {
+                      badge: look.names,
+                      emoji: look.names,
+                      icon: look.names,
                     },
                   }}
                 >
-                  <MonochromeContext value={{ monochrome: !shiftColors }}>
-                    <OffDisplayContext value={look.blankOff ? "blank" : "show"}>
-                      {children}
-                    </OffDisplayContext>
-                  </MonochromeContext>
-                </OffHighlightContext>
-              </CellNamesContext>
-            </ShiftMarkStyleContext>
-          </IconWeightContext>
-        </ThemeContext>
-      </ColorSchemeContext>
+                  <OffHighlightContext
+                    value={{
+                      highlight: {
+                        badge: look.highlight,
+                        emoji: look.highlight,
+                        icon: look.highlight,
+                      },
+                    }}
+                  >
+                    <MonochromeContext value={{ monochrome: !shiftColors }}>
+                      <OffDisplayContext
+                        value={look.blankOff ? "blank" : "show"}
+                      >
+                        {children}
+                      </OffDisplayContext>
+                    </MonochromeContext>
+                  </OffHighlightContext>
+                </CellNamesContext>
+              </ShiftMarkStyleContext>
+            </IconWeightContext>
+          </ThemeContext>
+        </ColorSchemeContext>
+      </FontContext>
     </WeekSettingsContext>
   );
 }
