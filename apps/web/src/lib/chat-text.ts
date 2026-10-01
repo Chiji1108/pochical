@@ -1,4 +1,4 @@
-// A chat message's words as spec/chat-text.md has them: its links, and
+// A chat message's words as spec/chat.md has them: its links, and
 // the members it mentions.
 //
 // A link starts http:// or https:// and runs over the characters a URL is

@@ -36,6 +36,7 @@ import {
 import type { GroupEdit } from "./design-group-settings";
 import { ShiftsPage, marksUpTo } from "./design-group-shifts";
 import type { Layout } from "./design-group-shifts";
+import { ReportSheet } from "./design-report";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
 import { ToastContext } from "./design-toast";
@@ -118,6 +119,8 @@ export function DesignGroup({
 
   // The member whose profile sheet is open.
   const [profileOf, setProfileOf] = useState<Member>();
+  // A member being reported from their profile, which closes for it.
+  const [reportOf, setReportOf] = useState<Member>();
   // Members taken out of each group, by group id.
   const [removed, setRemoved] = useState<Record<string, string[]>>({});
   const toast = useContext(ToastContext);
@@ -296,25 +299,42 @@ export function DesignGroup({
     }
   };
   const memberSheet = (
-    <MemberSheet
-      group={group}
-      member={profileOf}
-      onClose={() => {
-        setProfileOf(undefined);
-      }}
-      onRemove={page.name === "settings" ? removeMember : undefined}
-      onMessage={
-        // Already in the one-to-one chat with them: nothing to open.
-        page.name === "chat" && page.chatId === profileOf?.id
-          ? undefined
-          : (member) => {
-              openChat(
-                member.id,
-                page.name === "chat" ? page.chatId : undefined
-              );
-            }
-      }
-    />
+    <>
+      <ReportSheet
+        onClose={() => {
+          setReportOf(undefined);
+        }}
+        onSend={() => {
+          setReportOf(undefined);
+          toast("通報しました");
+        }}
+        sends={`${reportOf?.name ?? ""}の名前とアイコン`}
+        what={reportOf?.name}
+      />
+      <MemberSheet
+        group={group}
+        member={profileOf}
+        onClose={() => {
+          setProfileOf(undefined);
+        }}
+        onRemove={page.name === "settings" ? removeMember : undefined}
+        onReport={(member) => {
+          setProfileOf(undefined);
+          setReportOf(member);
+        }}
+        onMessage={
+          // Already in the one-to-one chat with them: nothing to open.
+          page.name === "chat" && page.chatId === profileOf?.id
+            ? undefined
+            : (member) => {
+                openChat(
+                  member.id,
+                  page.name === "chat" ? page.chatId : undefined
+                );
+              }
+        }
+      />
+    </>
   );
 
   const unreadOf = (id: string) =>

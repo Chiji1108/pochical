@@ -1,5 +1,8 @@
 import {
+  Ban,
   ChevronRight,
+  Ellipsis,
+  Flag,
   MessageCircle,
   MessagesSquare,
   Plus,
@@ -7,11 +10,12 @@ import {
   Settings2,
   UserPlus,
 } from "lucide-react";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { css, cx } from "styled-system/css";
 
 import { addDays, formatDay } from "../lib/design-days";
 import { designToday } from "../lib/design-today";
+import { useUser } from "../lib/design-user-store";
 import { ChatRow } from "./design-group-chat";
 import {
   everyoneOff,
@@ -38,15 +42,20 @@ import {
   SheetHeading,
   sheetBody,
 } from "./design-sheet";
+import { ToastContext } from "./design-toast";
 import {
   BarGroup,
   Button,
   DestructiveButton,
   IconButton,
+  IconMenu,
   List,
   ListRow,
+  MenuItem,
+  MenuSeparator,
   Note,
   Section,
+  Tag,
 } from "./design-ui";
 import { useWeek } from "./design-week";
 
@@ -289,7 +298,11 @@ export function GroupHub({
   ).find(
     (date) => group.members.length > 1 && everyoneOff(group.members, date)
   );
-  const others = group.members.filter((member) => !member.me);
+  const blocked = useUser((state) => state.blocked);
+  // Blocked members have no one-to-one chat with you.
+  const others = group.members.filter(
+    (member) => !member.me && !blocked.includes(member.id)
+  );
   // Members you already have a one-to-one chat with, in this group.
   const talking = others.filter(
     (member) => chatOf(member.id).messages.length > 0
@@ -400,7 +413,7 @@ export function GroupHub({
             />
           )}
         </List>
-        {others.length === 0 && (
+        {group.members.length <= 1 && (
           <Note>メンバーを招待すると、1対1でも話せます。</Note>
         )}
         <Sheet
@@ -454,6 +467,7 @@ export function MemberSheet({
   onClose,
   onMessage,
   onRemove,
+  onReport,
 }: {
   member?: Member;
   group: Omit<Group, "members">;
@@ -461,9 +475,16 @@ export function MemberSheet({
   onMessage?: (member: Member) => void;
   // Takes them out of the group; any member may, as in LINE's groups.
   onRemove?: (member: Member) => void;
+  // Tells Pochical about them; the sheet closes for the reasons'.
+  onReport?: (member: Member) => void;
 }) {
   const [viewing, setViewing] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+  const blocked = useUser((state) => state.blocked);
+  const setBlocked = useUser((state) => state.setBlocked);
+  const toast = useContext(ToastContext);
+  const isBlocked = member !== undefined && blocked.includes(member.id);
   return (
     <Sheet
       label={member?.name ?? ""}
@@ -476,7 +497,60 @@ export function MemberSheet({
     >
       {member && (
         <>
-          <SheetHeading onClose={onClose} title="" />
+          {/* Blocking and reporting, rarely used, wait in ⋯ rather than
+              in red under someone's face, as in Discord's and Telegram's
+              profiles. Blocking hides their messages and one-to-one chat
+              from you in every group you share; their shifts stay, as the
+              group is for shifts: leaving or taking them out is the step
+              for that. Reporting tells Pochical. Neither is shown to them. */}
+          <SheetHeading
+            menu={
+              <IconMenu
+                icon={<Ellipsis aria-hidden="true" size={20} />}
+                label={`${member.name}のメニュー`}
+              >
+                {isBlocked ? (
+                  <MenuItem
+                    icon={<Ban aria-hidden="true" size={18} />}
+                    onSelect={() => {
+                      setBlocked(blocked.filter((id) => id !== member.id));
+                      toast(`${member.name}のブロックを解除しました`);
+                    }}
+                    value="unblock"
+                  >
+                    ブロックを解除
+                  </MenuItem>
+                ) : (
+                  <MenuItem
+                    icon={<Ban aria-hidden="true" size={18} />}
+                    onSelect={() => {
+                      setBlocking(true);
+                    }}
+                    value="block"
+                  >
+                    ブロック
+                  </MenuItem>
+                )}
+                {onReport && (
+                  <>
+                    <MenuSeparator />
+                    <MenuItem
+                      danger
+                      icon={<Flag aria-hidden="true" size={18} />}
+                      onSelect={() => {
+                        onReport(member);
+                      }}
+                      value="report"
+                    >
+                      通報
+                    </MenuItem>
+                  </>
+                )}
+              </IconMenu>
+            }
+            onClose={onClose}
+            title=""
+          />
           <div className={profileStyle.root}>
             {member.photo ? (
               <button
@@ -493,13 +567,15 @@ export function MemberSheet({
               <Avatar member={member} size={72} />
             )}
             <h3 className={profileStyle.name}>{member.name}</h3>
+            {/* With the actions in ⋯, the face says it is blocked. */}
+            {isBlocked && <Tag size="sm">ブロック中</Tag>}
             <span className={profileStyle.where}>
               <span aria-hidden="true" className={hub.icon}>
                 <GroupIcon mark={group.mark} size={14} />
               </span>
               {group.name}でのプロフィール
             </span>
-            {onMessage && (
+            {onMessage && !isBlocked && (
               <Button
                 className={profileStyle.message}
                 onClick={() => {
@@ -521,6 +597,21 @@ export function MemberSheet({
             </DestructiveButton>
           )}
         </>
+      )}
+      {member && blocking && (
+        <ConfirmDialog
+          action="ブロック"
+          message="メッセージが表示されなくなり、個人チャットも届かなくなります。ブロックしたことは相手に知らされません。"
+          onCancel={() => {
+            setBlocking(false);
+          }}
+          onConfirm={() => {
+            setBlocking(false);
+            setBlocked([...blocked, member.id]);
+            toast(`${member.name}をブロックしました`);
+          }}
+          title={`${member.name}をブロックしますか？`}
+        />
       )}
       {member && onRemove && confirming && (
         <ConfirmDialog

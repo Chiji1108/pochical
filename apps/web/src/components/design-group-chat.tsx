@@ -9,6 +9,7 @@ import {
   Copy,
   Download,
   Ellipsis,
+  Flag,
   ImageIcon,
   Link,
   Pencil,
@@ -77,6 +78,7 @@ import {
 } from "./design-group-parts";
 import { profileIn } from "./design-group-settings";
 import { DaySheet } from "./design-group-shifts";
+import { ReportSheet } from "./design-report";
 import {
   ConfirmDialog,
   PhoneContext,
@@ -123,7 +125,12 @@ function useYourName(group: Omit<Group, "members">) {
   ).name;
 }
 
-function lastLine(chat: Chat, members: Member[], yours: string) {
+function lastLine(
+  chat: Chat,
+  members: Member[],
+  yours: string,
+  blocked: string[]
+) {
   const last = chat.messages.at(-1);
   if (!last) {
     return;
@@ -134,6 +141,9 @@ function lastLine(chat: Chat, members: Member[], yours: string) {
   }
   if (last.unsent) {
     return unsentLine(who);
+  }
+  if (blocked.includes(last.from)) {
+    return blockedLine;
   }
   let text = summaryOf(last, nameIn(members, yours));
   if (last.days) {
@@ -652,6 +662,21 @@ const chatStyle = {
     paddingBottom: "2px",
     textStyle: "caption2",
   }),
+  // A blocked member's message folded to one line, in the app's own lines'
+  // voice, opening on a tap.
+  blocked: css({
+    alignSelf: "flex-start",
+    bg: "transparent",
+    border: "1px dashed token(colors.border.strong)",
+    borderRadius: "lg",
+    color: "text.tertiary",
+    display: "flex",
+    gap: "8px",
+    marginLeft: "40px",
+    padding: "8px 12px",
+    textStyle: "footnote",
+  }),
+  blockedShow: css({ color: "accent.default", fontWeight: 600 }),
   // Over the time, where LINE says 編集済み.
   edited: css({ display: "block" }),
   title: css({
@@ -699,7 +724,12 @@ export function ChatRow({
   onOpen: () => void;
   muted?: boolean;
 }) {
-  const preview = lastLine(chat, group.members, useYourName(group));
+  const preview = lastLine(
+    chat,
+    group.members,
+    useYourName(group),
+    useUser((state) => state.blocked)
+  );
   const last = chat.messages.at(-1);
   // An unread line mentions you: an @ beside the count, as Telegram marks
   // one, so it is found among chats whose notifications are off.
@@ -779,7 +809,7 @@ export function ChatPage({
 }: {
   // What an invitation link's code opens; undefined once it no longer
   // works. Asked as a message shows, not sent with it, so a remade link's
-  // card turns unusable for everyone (spec/chat-text.md).
+  // card turns unusable for everyone (spec/chat.md).
   inviteOf: (code: string) => InviteLook | undefined;
   // Opens an invitation link in the app: its group's join screen, or the
   // group itself when you are in it.
@@ -818,6 +848,11 @@ export function ChatPage({
   // back, asked about first.
   const [editing, setEditing] = useState<string>();
   const [unsending, setUnsending] = useState<string>();
+  // Someone else's message being reported, and blocked members' messages
+  // shown for now.
+  const [reporting, setReporting] = useState<string>();
+  const [revealed, setRevealed] = useState<string[]>([]);
+  const blocked = useUser((state) => state.blocked);
   const formRef = useRef<HTMLFormElement>(null);
   // Members picked from the @ list, made mentions as the message is sent.
   const [picked, setPicked] = useState<{ id: string; name: string }[]>([]);
@@ -1124,6 +1159,12 @@ export function ChatPage({
       setReplyTo(message.id);
       setSelected(undefined);
     },
+    onReport:
+      message.from === "me"
+        ? undefined
+        : () => {
+            setReporting(message.id);
+          },
     onUnsend:
       message.from === "me"
         ? () => {
@@ -1231,6 +1272,28 @@ export function ChatPage({
                 <p className={chatStyle.notice}>
                   {message.notice ?? unsentLine(member)}
                 </p>
+              </li>
+            );
+          }
+          if (
+            blocked.includes(message.from) &&
+            !revealed.includes(message.id)
+          ) {
+            return (
+              <li className={chatStyle.item()} key={message.id}>
+                {previous?.when !== message.when && (
+                  <span className={chatStyle.when}>{message.when}</span>
+                )}
+                <button
+                  className={chatStyle.blocked}
+                  onClick={() => {
+                    setRevealed((before) => [...before, message.id]);
+                  }}
+                  type="button"
+                >
+                  {blockedLine}
+                  <span className={chatStyle.blockedShow}>表示</span>
+                </button>
               </li>
             );
           }
@@ -1754,6 +1817,21 @@ export function ChatPage({
           キャンセル
         </button>
       </Sheet>
+      <ReportSheet
+        onClose={() => {
+          setReporting(undefined);
+        }}
+        sends="このメッセージと前後の数件"
+        onSend={() => {
+          setReporting(undefined);
+          toast("通報しました");
+        }}
+        what={
+          reporting === undefined
+            ? undefined
+            : `${nameOf(byId(reporting)?.from ?? "")}のメッセージ`
+        }
+      />
       {unsending !== undefined && (
         <ConfirmDialog
           action="取り消す"
@@ -2325,7 +2403,8 @@ const messageActions = {
 };
 
 // Reactions, and a little apart the menu of 返信 and コピー (and
-// リンクをコピー for a message with a link, 編集 and 送信取消 for yours), as the
+// リンクをコピー for a message with a link, 編集 and 送信取消 for yours,
+// 通報 for others'), as the
 // platforms' context menus on a message in LINE and iMessage: the rest of
 // the screen dims while the message stays bright. Ark UI's
 // Popover opens it from the message, moves focus in, and closes it by a
@@ -2342,6 +2421,7 @@ function MessageActions({
   onSave,
   onEdit,
   onUnsend,
+  onReport,
   pressToOpen = false,
   children,
 }: {
@@ -2361,6 +2441,8 @@ function MessageActions({
   // 編集, for your own message's words; 送信取消, for any of yours.
   onEdit?: () => void;
   onUnsend?: () => void;
+  // 通報, for someone else's message.
+  onReport?: () => void;
   // The message's own tap does something else, like a photo opening
   // large, so these open from its long press instead.
   pressToOpen?: boolean;
@@ -2534,7 +2616,8 @@ function MessageActions({
                 <>
                   <hr className={menuStyle.separator} />
                   <button
-                    className={cx(menuStyle.item, menuStyle.danger)}
+                    className={menuStyle.item}
+                    data-danger=""
                     onClick={() => {
                       closeThen(onUnsend);
                     }}
@@ -2547,6 +2630,24 @@ function MessageActions({
                   </button>
                 </>
               )}
+              {onReport && (
+                <>
+                  <hr className={menuStyle.separator} />
+                  <button
+                    className={menuStyle.item}
+                    data-danger=""
+                    onClick={() => {
+                      closeThen(onReport);
+                    }}
+                    type="button"
+                  >
+                    <span className={menuStyle.icon}>
+                      <Flag aria-hidden="true" size={18} />
+                    </span>
+                    通報
+                  </button>
+                </>
+              )}
             </div>
           </Popover.Content>
         </Popover.Positioner>
@@ -2554,6 +2655,10 @@ function MessageActions({
     </Popover.Root>
   );
 }
+
+// A blocked member's message, folded, as Discord shows one: the words say
+// whose it is not, and a tap shows it this once.
+const blockedLine = "ブロック中のメンバーのメッセージ";
 
 // What stays of a message taken back, as LINE says it: who took it back,
 // or for your own, only that it was.

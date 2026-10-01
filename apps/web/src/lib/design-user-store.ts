@@ -36,6 +36,8 @@ export type OwnData = {
   // Whether a line that mentions them notifies even in a chat turned off.
   // The server decides what to push, so it is the account's, not a phone's.
   mentionsWhenMuted: boolean;
+  // Members they blocked, by account: across every group they share.
+  blocked: string[];
 };
 
 // Shared with the people in each group, kept by that group's Group DO.
@@ -56,6 +58,7 @@ export type UserState = OwnData &
     setProfile: Setter<Profile>;
     setCoworkers: Setter<string[]>;
     setMentionsWhenMuted: Setter<boolean>;
+    setBlocked: Setter<string[]>;
     setGroups: Setter<GroupSummary[]>;
     setChats: Setter<Record<string, Chat>>;
   };
@@ -74,6 +77,7 @@ export function createUserStore(initial: Partial<OwnData & GroupData> = {}) {
         set((state) => ({ [key]: apply(next, state[key]) }));
       };
     return {
+      blocked: [],
       chats: sampleChats,
       coworkers: sampleCoworkers,
       groups: sampleGroups(),
@@ -83,6 +87,7 @@ export function createUserStore(initial: Partial<OwnData & GroupData> = {}) {
       rules: [],
       schedule: {},
       ...initial,
+      setBlocked: setter("blocked"),
       setChats: setter("chats"),
       setCoworkers: setter("coworkers"),
       setGroups: setter("groups"),
