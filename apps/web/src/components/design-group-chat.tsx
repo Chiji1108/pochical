@@ -944,8 +944,6 @@ export function ChatPage({
   const [writing, setWriting] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const toolsFolded = (writing || draft !== "") && !toolsOpen;
-  // A group chat has a third tool, for a poll on days.
-  const toolCount = title === "全体チャット" ? 3 : 2;
   let toolsWidth = toolsFolded ? toolWidth : toolWidth * toolCount;
   // A message being changed keeps what it carries; only its words change.
   if (editing !== undefined) {
@@ -985,8 +983,6 @@ export function ChatPage({
     );
   };
   const [sharing, setSharing] = useState(false);
-  // The day sheet opened from 日にちの投票, set for a poll from the start.
-  const [sharingPoll, setSharingPoll] = useState(false);
   // The line whose actions are open, and the one being answered.
   const [selected, setSelected] = useState<string>();
   const [replyTo, setReplyTo] = useState<string>();
@@ -2037,11 +2033,7 @@ export function ChatPage({
             {editing === undefined && toolsFolded && (
               <motion.button
                 animate={{ opacity: 1, scale: 1 }}
-                aria-label={
-                  toolCount === 3
-                    ? "写真・日にち・投票のボタンを表示"
-                    : "写真と日にちのボタンを表示"
-                }
+                aria-label="写真と日にちのボタンを表示"
                 className={chatStyle.composerButton({ tool: true })}
                 exit={{ opacity: 0, scale: 0.6 }}
                 initial={{ opacity: 0, scale: 0.6 }}
@@ -2083,29 +2075,12 @@ export function ChatPage({
                   aria-label="日にちを共有"
                   className={chatStyle.composerButton({ tool: true })}
                   onClick={() => {
-                    setSharingPoll(false);
                     setSharing(true);
                   }}
                   type="button"
                 >
                   <CalendarPlus aria-hidden="true" size={20} />
                 </button>
-                {/* A poll's own way in, so it is found without first
-                    picking two days to share: the same sheet, set for a
-                    poll. The poll card's head bears the same icon. */}
-                {toolCount === 3 && (
-                  <button
-                    aria-label="日にちの投票"
-                    className={chatStyle.composerButton({ tool: true })}
-                    onClick={() => {
-                      setSharingPoll(true);
-                      setSharing(true);
-                    }}
-                    type="button"
-                  >
-                    <CalendarCheck aria-hidden="true" size={20} />
-                  </button>
-                )}
               </motion.span>
             )}
           </AnimatePresence>
@@ -2275,7 +2250,6 @@ export function ChatPage({
         }}
         open={sharing}
         pollable={isGroup}
-        startPoll={sharingPoll}
       />
       <DecidePollSheet
         key={deciding ?? "none"}
@@ -2310,6 +2284,7 @@ const MENTION_QUERY = /@(?<query>[^\s@]*)$/u;
 // The composer's tools: each one's width, how many, and how they fold
 // into a › and back, as quick as the calendar's own fold.
 const toolWidth = 32;
+const toolCount = 2;
 const toolFold = spring("quick");
 
 // A photo of yours on its way up, or one that could not be sent.
