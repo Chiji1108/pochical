@@ -115,13 +115,7 @@ const home = {
 
 // A home screen laid out across `width`, drawn smaller where the phone
 // has less room, since widgets keep their real sizes.
-export function Fit({
-  width,
-  children,
-}: {
-  width: number;
-  children: ReactNode;
-}) {
+function Fit({ width, children }: { width: number; children: ReactNode }) {
   const box = useRef<HTMLDivElement>(null);
   const [room, setRoom] = useState(IOS_WIDTH);
   useLayoutEffect(() => {

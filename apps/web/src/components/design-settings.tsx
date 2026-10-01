@@ -2,9 +2,21 @@ import type { ColorScheme } from "@pochical/design/colors";
 import { presets } from "@pochical/design/themes";
 import type { Preset } from "@pochical/design/themes";
 import { ArrowRight, CloudCheck } from "lucide-react";
-import { motion, useMotionValue, useTransform } from "motion/react";
+import {
+  motion,
+  useMotionValue,
+  useMotionValueEvent,
+  useTransform,
+} from "motion/react";
 import type { MotionValue } from "motion/react";
-import { lazy, Suspense, useContext, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useContext,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 import { token } from "styled-system/tokens";
@@ -1485,11 +1497,30 @@ function StylePreview({
   const alwaysDark = presetOf(theme).scheme === "dark";
   const [page, setPage] = useState(0);
   const progress = useMotionValue(0);
+  // The calendar's height, which the widget's page takes too, so the
+  // pager keeps one height and nothing under it moves as it turns.
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const [calendarHeight, setCalendarHeight] = useState<number>();
+  useLayoutEffect(() => {
+    const element = calendarRef.current;
+    if (!element) {
+      return undefined;
+    }
+    setCalendarHeight(element.offsetHeight);
+    const observer = new ResizeObserver(() => {
+      setCalendarHeight(element.offsetHeight);
+    });
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
   const calendar = (
     <div
       aria-hidden="true"
       className={settingsParts.preview}
       inert
+      ref={calendarRef}
       style={themeStyle(theme, shown)}
     >
       {heading && (
@@ -1518,10 +1549,19 @@ function StylePreview({
   const pages = [
     calendar,
     <Suspense
-      fallback={<div className={settingsParts.homePreviewLoading} />}
+      fallback={
+        <div
+          className={settingsParts.homePreviewLoading}
+          style={{ height: calendarHeight }}
+        />
+      }
       key="home"
     >
-      <HomePreview schedule={preview.schedule} today={previewToday} />
+      <HomePreview
+        height={calendarHeight}
+        schedule={preview.schedule}
+        today={previewToday}
+      />
     </Suspense>,
   ];
   return (
@@ -1566,12 +1606,19 @@ const PREVIEW_PAGE_GAP = 12;
 const previewPageNames = ["カレンダー", "ウィジェット"];
 
 const pageNames = {
-  // Every name in one cell, so the tag is as wide as the longest, each in
-  // its middle.
-  name: css({ gridArea: "1 / 1", textAlign: "center" }),
+  // Each name over the same room, in its middle; an unseen copy of the
+  // longest gives the tag its width. Not a grid of overlapping names,
+  // which Safari drew empty.
+  name: css({ inset: 0, position: "absolute", textAlign: "center" }),
+  sizer: css({ visibility: "hidden" }),
   // The names slide within the tag, cut at its edges, never over each
   // other.
-  stack: css({ display: "grid", overflow: "hidden" }),
+  stack: css({
+    display: "inline-block",
+    overflow: "hidden",
+    position: "relative",
+    verticalAlign: "top",
+  }),
 };
 
 // The shown page's name, sliding out as the next slides in, as far as
@@ -1586,9 +1633,22 @@ function PageNames({
   page: number;
   progress: MotionValue<number>;
 }) {
-  const position = useTransform(progress, (swiped) => page + swiped);
+  // Where the names are, in pages, kept as PageDots keeps its bar: the
+  // page shown plus the swipe, and only the page once it has landed,
+  // whichever of the two news comes first.
+  const position = useMotionValue(page);
+  const base = useRef(page);
+  useMotionValueEvent(progress, "change", (share) => {
+    position.set(base.current + share);
+  });
+  useLayoutEffect(() => {
+    base.current = page;
+    position.set(page);
+  }, [page, position]);
+  const longest = names.toSorted((a, b) => b.length - a.length)[0] ?? "";
   return (
     <span className={pageNames.stack}>
+      <span className={pageNames.sizer}>{longest}</span>
       {names.map((name, index) => (
         <PageName index={index} key={name} name={name} position={position} />
       ))}
