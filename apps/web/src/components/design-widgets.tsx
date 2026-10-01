@@ -837,7 +837,8 @@ const listing = {
       wide: {
         // The day's number, and its mark in the middle of the rest.
         false: { gridTemplateColumns: "32px 1fr", justifyItems: "start" },
-        true: { gridTemplateColumns: "28px 20px 24px 1fr" },
+        // The weekday's room fits thu and wed as well as 木.
+        true: { gridTemplateColumns: "28px 32px 24px 1fr" },
       },
     },
   }),
@@ -979,7 +980,7 @@ const MONTH_ROOMY = 360;
 
 // The month with every day's mark, and today's time over it.
 export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
-  const { weekdayName } = useWeek();
+  const { english, weekdayName } = useWeek();
   const roomy = useContext(WidgetSizeContext).height >= MONTH_ROOMY;
   const named = useShiftNames();
   // A name under each mark takes the room of a smaller mark.
@@ -992,7 +993,11 @@ export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
   return (
     <div className={month.root}>
       <div className={month.header}>
-        <span className={month.title}>{first.getMonth() + MONTH_NUMBER}月</span>
+        <span className={month.title}>
+          {english
+            ? englishMonthOf(first)
+            : `${first.getMonth() + MONTH_NUMBER}月`}
+        </span>
         {entry.today.change && (
           <span className={month.summary}>今日 {entry.today.change}</span>
         )}
