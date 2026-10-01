@@ -25,6 +25,10 @@ export type WidgetDay = {
   // 日, 月, ...
   weekday: string;
   tone: DayTone;
+  // A national holiday while 祝日 coloring is on: the one date a grid of
+  // days colors, as the calendar does; Sundays and Saturdays are colored
+  // in the weekdays over it instead.
+  holiday: boolean;
   shift?: Shift;
   // The shift's name as the person calls it.
   name?: string;
@@ -133,6 +137,7 @@ function widgetDay(
     color: pattern?.color,
     date,
     early: moved?.early ?? false,
+    holiday: week.colored.holiday && holidayName(date) !== undefined,
     late: moved?.late ?? false,
     members: entry?.members ?? [],
     name: pattern?.name,
