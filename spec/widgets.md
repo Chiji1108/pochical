@@ -69,14 +69,13 @@ On the iPhone lock screen: circular (today's mark, and 早出 or 残業 on such 
 ## Colors
 
 - **iPhone**: the widgets use the person's テーマ in the system's light or dark. In the 色合い (tinted) and クリア (clear) looks, the system recolors them itself.
-- **Android**: the ground and words use the wallpaper's colors (Material You), as Glance's default colors do, whatever テーマ the app is in. This matches the widgets around them on the home screen. The ground is `surface`, not Glance's tinted `widgetBackground`: it is nearly white with a faint tint of the wallpaper, like Google's own Digital Wellbeing widget, so the shift colors and the Sunday and Saturday colors stay easy to read on any wallpaper.
+- **Android**: the ground and words use the wallpaper's colors (Material You), as Glance's default colors do, whatever テーマ the app is in. This matches the widgets around them on the home screen. The ground is `surface`, not Glance's tinted `widgetBackground`: it is nearly white with a faint tint of the wallpaper, like Google's own Digital Wellbeing widget, so the shift colors and the Sunday and Saturday colors stay easy to read on any wallpaper. Today's accent (its date and frame) keeps the テーマ's color, as the marks do: it is one of the calendar's marks, and a wallpaper's color beside a 墨 frame read as a mistake.
 
   | Role | Light | Dark |
   | --- | --- | --- |
   | Ground (`surface`) | neutral 99 | neutral 10 |
   | Words (`onSurface`) | neutral 10 | neutral 90 |
   | Secondary words (`onSurfaceVariant`) | neutral variant 30 | neutral variant 80 |
-  | Today's date (`primary`) | primary 40 | primary 80 |
   | Lines (`outlineVariant`) | neutral variant 80 | neutral variant 30 |
 
 - On both platforms, the shift marks keep the テーマ's colors and the person's シフトの色 setting, because a mark's color carries its meaning.
