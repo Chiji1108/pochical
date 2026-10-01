@@ -11,11 +11,14 @@ import {
   Ellipsis,
   ImageIcon,
   Link,
+  Pencil,
   Link2Off,
   Plus,
   Reply,
   RotateCcw,
   SendHorizontal,
+  Check,
+  Undo2,
   Trash2,
   X,
 } from "lucide-react";
@@ -74,7 +77,12 @@ import {
 } from "./design-group-parts";
 import { profileIn } from "./design-group-settings";
 import { DaySheet } from "./design-group-shifts";
-import { PhoneContext, PhotoViewer, Sheet } from "./design-sheet";
+import {
+  ConfirmDialog,
+  PhoneContext,
+  PhotoViewer,
+  Sheet,
+} from "./design-sheet";
 import { ToastContext } from "./design-toast";
 import {
   BackButton,
@@ -123,6 +131,9 @@ function lastLine(chat: Chat, members: Member[], yours: string) {
   const who = members.find((member) => member.id === last.from);
   if (last.notice) {
     return last.notice;
+  }
+  if (last.unsent) {
+    return unsentLine(who);
   }
   let text = summaryOf(last, nameIn(members, yours));
   if (last.days) {
@@ -640,6 +651,8 @@ const chatStyle = {
     paddingBottom: "2px",
     textStyle: "caption2",
   }),
+  // Over the time, where LINE says 編集済み.
+  edited: css({ display: "block" }),
   title: css({
     alignItems: "center",
     display: "flex",
@@ -800,6 +813,11 @@ export function ChatPage({
   onOpenDay: (date: Date) => void;
 }) {
   const [draft, setDraft] = useState("");
+  // Your message being changed in the composer, and the one being taken
+  // back, asked about first.
+  const [editing, setEditing] = useState<string>();
+  const [unsending, setUnsending] = useState<string>();
+  const formRef = useRef<HTMLFormElement>(null);
   // Members picked from the @ list, made mentions as the message is sent.
   const [picked, setPicked] = useState<{ id: string; name: string }[]>([]);
   const [attached, setAttached] = useState(attach);
@@ -816,6 +834,11 @@ export function ChatPage({
   const [writing, setWriting] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const toolsFolded = (writing || draft !== "") && !toolsOpen;
+  let toolsWidth = toolsFolded ? toolWidth : toolWidth * toolCount;
+  // A message being changed keeps what it carries; only its words change.
+  if (editing !== undefined) {
+    toolsWidth = 0;
+  }
   const photoInputRef = useRef<HTMLInputElement>(null);
   const toast = useContext(ToastContext);
   // Photos of yours still uploading, or that could not be sent, by line.
@@ -957,8 +980,72 @@ export function ChatPage({
   };
   // The attached days go first, then each photo as a line of its own,
   // then what was written, if anything.
+  // Puts your message's words back in the composer to change them, its
+  // mentions as @name again.
+  const startEditing = (message: Message) => {
+    const text = message.text ?? "";
+    setEditing(message.id);
+    setReplyTo(undefined);
+    setSelected(undefined);
+    setDraft(plainText(text, mentionName));
+    setPicked(mentionsOf(text).map((id) => ({ id, name: mentionName(id) })));
+    formRef.current?.querySelector("textarea")?.focus();
+  };
+  const stopEditing = () => {
+    setEditing(undefined);
+    setDraft("");
+    setPicked([]);
+    linkPreview.reset();
+  };
+  // The changed words replace the old ones, marked 編集済み; the page of
+  // its link stays while the link does.
+  const saveEdit = (id: string, text: string) => {
+    onChange(
+      chat.messages.map((message) => {
+        if (message.id !== id) {
+          return message;
+        }
+        const words = withMentions(text, picked);
+        const sameLink =
+          firstLink(words) === firstLink(message.text ?? "") &&
+          message.link !== undefined;
+        return {
+          ...message,
+          edited: true,
+          link: sameLink ? message.link : linkPreview.ready,
+          text: words,
+        };
+      })
+    );
+    stopEditing();
+  };
+  const unsend = (id: string) => {
+    onChange(
+      chat.messages.map((message) =>
+        message.id === id
+          ? {
+              from: message.from,
+              id: message.id,
+              time: message.time,
+              unsent: true,
+              when: message.when,
+            }
+          : message
+      )
+    );
+    setUnsending(undefined);
+    if (editing === id) {
+      stopEditing();
+    }
+  };
   const send = () => {
     const text = draft.trim();
+    if (editing !== undefined) {
+      if (text) {
+        saveEdit(editing, text);
+      }
+      return;
+    }
     if (reading > 0 || (!text && !attached && photos.length === 0)) {
       return;
     }
@@ -1014,6 +1101,12 @@ export function ChatPage({
   const actionsOf = (message: Message) => ({
     link: message.text ? firstLink(message.text) : undefined,
     mine: message.from === "me",
+    onEdit:
+      message.from === "me" && message.text !== undefined
+        ? () => {
+            startEditing(message);
+          }
+        : undefined,
     onMore: () => {
       setSelected(undefined);
       setPickingFor(message.id);
@@ -1025,9 +1118,19 @@ export function ChatPage({
       react(message.id, emoji);
     },
     onReply: () => {
+      if (editing !== undefined) {
+        stopEditing();
+      }
       setReplyTo(message.id);
       setSelected(undefined);
     },
+    onUnsend:
+      message.from === "me"
+        ? () => {
+            setSelected(undefined);
+            setUnsending(message.id);
+          }
+        : undefined,
     open: selected === message.id,
     text:
       message.text === undefined
@@ -1035,6 +1138,7 @@ export function ChatPage({
         : plainText(message.text, mentionName),
   });
   const replying = byId(replyTo);
+  const editingMessage = byId(editing);
   return (
     <Screen>
       <header className={chatStyle.header}>
@@ -1096,6 +1200,7 @@ export function ChatPage({
           const firstOfRun =
             previous?.from !== message.from ||
             previous.notice !== undefined ||
+            previous.unsent === true ||
             message.replyTo !== undefined;
           // A message whose first link is an invitation shows its group
           // instead of a page.
@@ -1112,13 +1217,21 @@ export function ChatPage({
               quoted={quoted}
             />
           );
-          if (message.notice) {
+          // A line taken back says so in the middle, as the app's own
+          // lines do, and keeps its place for a reply that quoted it.
+          if (message.notice || message.unsent) {
             return (
-              <li className={chatStyle.item()} key={message.id}>
+              <li
+                className={chatStyle.item()}
+                id={`message-${message.id}`}
+                key={message.id}
+              >
                 {previous?.when !== message.when && (
                   <span className={chatStyle.when}>{message.when}</span>
                 )}
-                <p className={chatStyle.notice}>{message.notice}</p>
+                <p className={chatStyle.notice}>
+                  {message.notice ?? unsentLine(member)}
+                </p>
               </li>
             );
           }
@@ -1204,15 +1317,14 @@ export function ChatPage({
                             // actions, as in the chat apps.
                             onClickCapture={(event) => {
                               const url = linkAt(event.target);
-                              if (!url) {
-                                return;
-                              }
-                              event.preventDefault();
-                              const code = inviteCodeOf(url);
-                              if (code) {
-                                onInvite(code);
-                              } else {
-                                openLink(url);
+                              if (url) {
+                                event.preventDefault();
+                                const code = inviteCodeOf(url);
+                                if (code) {
+                                  onInvite(code);
+                                } else {
+                                  openLink(url);
+                                }
                                 return;
                               }
                               // A mention opens that member's profile, as
@@ -1270,7 +1382,12 @@ export function ChatPage({
                       </button>
                     )}
                     {uploads[message.id] === undefined && (
-                      <small className={chatStyle.time}>{message.time}</small>
+                      <small className={chatStyle.time}>
+                        {message.edited && (
+                          <span className={chatStyle.edited}>編集済み</span>
+                        )}
+                        {message.time}
+                      </small>
                     )}
                   </span>
                   {uploads[message.id] === "failed" && (
@@ -1309,6 +1426,19 @@ export function ChatPage({
           );
         })}
       </ol>
+      {editingMessage && (
+        <div className={chatStyle.replying}>
+          <span className={chatStyle.quote}>
+            <span className={chatStyle.quoteName}>メッセージを編集</span>
+            <span className={chatStyle.quoteText}>
+              {summaryOf(editingMessage, mentionName)}
+            </span>
+          </span>
+          <IconButton glass={false} label="編集をやめる" onClick={stopEditing}>
+            <X aria-hidden="true" size={16} />
+          </IconButton>
+        </div>
+      )}
       {replying && (
         <div className={chatStyle.replying}>
           <span className={chatStyle.quote}>
@@ -1434,6 +1564,7 @@ export function ChatPage({
       <form
         className={chatStyle.composer({
           replying:
+            editing !== undefined ||
             replying !== undefined ||
             attached !== undefined ||
             linkPreview.shown !== undefined ||
@@ -1444,6 +1575,7 @@ export function ChatPage({
           event.preventDefault();
           send();
         }}
+        ref={formRef}
       >
         {/* The system's photo picker, as the apps open PHPicker and
             Android's photo picker; the camera is left to the camera. */}
@@ -1463,15 +1595,13 @@ export function ChatPage({
         {/* The tools narrow into a › and widen back, the field following
             them, while the icons and the › fade one into the other. */}
         <motion.span
-          animate={{
-            width: toolsFolded ? toolWidth : toolWidth * toolCount,
-          }}
+          animate={{ width: toolsWidth }}
           className={chatStyle.composerTools}
           initial={false}
           transition={toolFold}
         >
           <AnimatePresence initial={false} mode="popLayout">
-            {toolsFolded ? (
+            {editing === undefined && toolsFolded && (
               <motion.button
                 animate={{ opacity: 1, scale: 1 }}
                 aria-label="写真と日にちのボタンを表示"
@@ -1492,7 +1622,8 @@ export function ChatPage({
               >
                 <ChevronRight aria-hidden="true" size={22} />
               </motion.button>
-            ) : (
+            )}
+            {editing === undefined && !toolsFolded && (
               <motion.span
                 animate={{ opacity: 1, x: 0 }}
                 className={chatStyle.composerToolRow}
@@ -1543,17 +1674,30 @@ export function ChatPage({
           placeholder="メッセージ"
           value={draft}
         />
-        <button
-          aria-label="送る"
-          className={chatStyle.composerButton({ send: true })}
-          disabled={
-            reading > 0 ||
-            (draft.trim() === "" && !attached && photos.length === 0)
-          }
-          type="submit"
-        >
-          <SendHorizontal aria-hidden="true" size={18} />
-        </button>
+        {editing === undefined ? (
+          <button
+            aria-label="送る"
+            className={chatStyle.composerButton({ send: true })}
+            disabled={
+              reading > 0 ||
+              (draft.trim() === "" && !attached && photos.length === 0)
+            }
+            type="submit"
+          >
+            <SendHorizontal aria-hidden="true" size={18} />
+          </button>
+        ) : (
+          // Saves rather than sends: a check, as Telegram and LINE show
+          // while a message is changed. Emptying it does not delete it.
+          <button
+            aria-label="編集を保存"
+            className={chatStyle.composerButton({ send: true })}
+            disabled={draft.trim() === ""}
+            type="submit"
+          >
+            <Check aria-hidden="true" size={20} />
+          </button>
+        )}
       </form>
       <EmojiPickerSheet
         onOpenChange={(open) => {
@@ -1611,6 +1755,19 @@ export function ChatPage({
           キャンセル
         </button>
       </Sheet>
+      {unsending !== undefined && (
+        <ConfirmDialog
+          action="取り消す"
+          message="メンバー全員のチャットから消えます。"
+          onCancel={() => {
+            setUnsending(undefined);
+          }}
+          onConfirm={() => {
+            unsend(unsending);
+          }}
+          title="送信を取り消しますか？"
+        />
+      )}
       <DaySheet
         members={people}
         onOpenChange={setSharing}
@@ -2162,7 +2319,7 @@ const messageActions = {
 };
 
 // Reactions, and a little apart the menu of 返信 and コピー (and
-// リンクをコピー for a message with a link), as the
+// リンクをコピー for a message with a link, 編集 and 送信取消 for yours), as the
 // platforms' context menus on a message in LINE and iMessage: the rest of
 // the screen dims while the message stays bright. Ark UI's
 // Popover opens it from the message, moves focus in, and closes it by a
@@ -2177,6 +2334,8 @@ function MessageActions({
   onMore,
   onReply,
   onSave,
+  onEdit,
+  onUnsend,
   pressToOpen = false,
   children,
 }: {
@@ -2193,6 +2352,9 @@ function MessageActions({
   onReply: () => void;
   // 保存, for a photo.
   onSave?: () => void;
+  // 編集, for your own message's words; 送信取消, for any of yours.
+  onEdit?: () => void;
+  onUnsend?: () => void;
   // The message's own tap does something else, like a photo opening
   // large, so these open from its long press instead.
   pressToOpen?: boolean;
@@ -2334,6 +2496,38 @@ function MessageActions({
                   保存
                 </button>
               )}
+              {onEdit && (
+                <button
+                  className={menuStyle.item}
+                  onClick={() => {
+                    onOpenChange(false);
+                    onEdit();
+                  }}
+                  type="button"
+                >
+                  <span className={menuStyle.icon}>
+                    <Pencil aria-hidden="true" size={18} />
+                  </span>
+                  編集
+                </button>
+              )}
+              {/* Apart from the rest, in red, as iOS sets off an action
+                  that takes something away. */}
+              {onUnsend && (
+                <>
+                  <hr className={menuStyle.separator} />
+                  <button
+                    className={cx(menuStyle.item, menuStyle.danger)}
+                    onClick={onUnsend}
+                    type="button"
+                  >
+                    <span className={menuStyle.icon}>
+                      <Undo2 aria-hidden="true" size={18} />
+                    </span>
+                    送信取消
+                  </button>
+                </>
+              )}
             </div>
           </Popover.Content>
         </Popover.Positioner>
@@ -2342,7 +2536,18 @@ function MessageActions({
   );
 }
 
+// What stays of a message taken back, as LINE says it: who took it back,
+// or for your own, only that it was.
+function unsentLine(writer?: Member) {
+  return writer?.me
+    ? "メッセージの送信を取り消しました"
+    : `${writer?.name ?? "メンバー"}がメッセージの送信を取り消しました`;
+}
+
 function summaryOf(message: Message, nameOf: (id: string) => string) {
+  if (message.unsent) {
+    return "取り消されたメッセージ";
+  }
   if (message.photo) {
     return "📷 写真";
   }

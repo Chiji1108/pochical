@@ -611,6 +611,29 @@ export const states: State[] = [
     },
   },
   {
+    // Your message being changed: its words back in the composer.
+    name: "group/chat-editing",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^全体チャット/u);
+      await tap(page, /^自分のメッセージ：/u);
+      await tap(page, "編集");
+    },
+  },
+  {
+    // 送信取消 asked first.
+    name: "group/chat-unsend",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^全体チャット/u);
+      await tap(page, /^自分のメッセージ：/u);
+      await tap(page, "送信取消");
+      await page.getByRole("alertdialog").waitFor();
+    },
+  },
+  {
     name: "group/chat-one",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {

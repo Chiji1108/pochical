@@ -55,3 +55,12 @@ A mention names one member of the group in a group chat (全体チャット). On
 - A group chat turned off sends no notifications, except for a line that mentions the reader, which notifies as if the chat were on. The chat notification settings say so under the group chats' switches, and so does a group's own 通知.
 - メンションはいつも通知 (設定 › チャット › メンション, on by default) turns that exception off: off, a chat turned off sends nothing, mentions included, and the notes are not shown. It is one switch for the account, kept by the User DO, not one per group.
 - In the chat list, a chat whose unread lines mention the reader shows @ in the accent color before the unread count.
+
+## Editing and unsending
+
+A member can change or take back their own messages, at any time. Others' messages cannot be changed.
+
+- **編集** (text messages only): the message's words go back into the composer, its mentions as @name again, under a bar saying メッセージを編集 with × to stop. The send button becomes ✓ and the photo and day tools are hidden: only the words change. Saving replaces the words for everyone and marks the message 編集済み, shown over its time. A message cannot be saved empty; taking it back is 送信取消. The link's page stays while its first link does; a new first link gets a new preview.
+- **送信取消** (any of one's own messages: words, photos, shared days): asked first in a centered alert (送信を取り消しますか？ / メンバー全員のチャットから消えます。 / キャンセル | 取り消す). The message's content and reactions are removed for everyone; in its place a line in the middle says 〇〇がメッセージの送信を取り消しました (メッセージの送信を取り消しました for one's own). A reply that quoted it shows 取り消されたメッセージ, and the chat list's last line says the same as the line.
+- In the message's menu, 編集 comes after the other actions and 送信取消 last, apart and in the danger color.
+- Neither sends a notification, and neither changes unread counts. Both go through the change log as edits (spec/sync-protocol.md).

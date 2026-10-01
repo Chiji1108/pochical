@@ -400,6 +400,10 @@ export type Message = {
   from: string;
   when: string;
   time: string;
+  // Changed by its writer after it was sent; the chat says 編集済み.
+  edited?: boolean;
+  // Taken back by its writer: only a line saying so stays, for everyone.
+  unsent?: boolean;
   text?: string;
   link?: LinkPreview;
   notice?: string;
@@ -608,6 +612,8 @@ export const sampleChats: Record<string, Chat> = {
         from: "misaki",
         id: "n4",
         reactions: [{ by: ["aya"], emoji: "👍" }],
+        // First 22日, then changed: 21日 is the day everyone is off.
+        edited: true,
         replyTo: "n3",
         text: "21日にしよ！",
         time: "12:24",
@@ -712,6 +718,13 @@ export const sampleChats: Record<string, Chat> = {
         reactions: [{ by: ["haruka"], emoji: "🥲" }],
         text: "12日の夜勤、誰か代わってくれる人いないかな…",
         time: "17:42",
+        when: "昨日",
+      },
+      {
+        from: "ren",
+        id: "w2u",
+        time: "17:43",
+        unsent: true,
         when: "昨日",
       },
       {
