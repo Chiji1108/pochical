@@ -671,6 +671,28 @@ export const sampleChats: Record<string, Chat> = {
   },
 };
 
+// A group chat with a line from the app added, when who is in the group,
+// how to get in or what it is called changes: someone joining, leaving or
+// taken out, a new invite link, or a new name or icon. Nothing else, so
+// the lines stay worth reading.
+export function withNotice(
+  chats: Record<string, Chat>,
+  groupId: string,
+  notice: string
+): Record<string, Chat> {
+  const key = chatKey(groupId, groupChat);
+  const chat = chats[key] ?? { messages: [], unread: 0 };
+  const now = new Date();
+  const line: Message = {
+    from: "me",
+    id: `notice-${chat.messages.length}`,
+    notice,
+    time: `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`,
+    when: "今日",
+  };
+  return { ...chats, [key]: { ...chat, messages: [...chat.messages, line] } };
+}
+
 export function chatTitle(group: Group, chatId: string) {
   if (chatId === groupChat) {
     return "全体チャット";
