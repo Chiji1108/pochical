@@ -22,7 +22,13 @@ import type { Firing, Reminder, ReminderKind } from "../lib/design-reminders";
 import { useSettings } from "../lib/design-settings-store";
 import { useUser } from "../lib/design-user-store";
 import { AppIcon, useAppIcons } from "./design-app-icon";
-import { GroupIcon } from "./design-group-parts";
+import {
+  groupChat,
+  isMuted,
+  sampleOthers,
+  withMuted,
+} from "./design-group-data";
+import { Avatar, GroupIcon } from "./design-group-parts";
 import { DecideHeading, Sheet, sheetBody, SystemAlert } from "./design-sheet";
 import {
   Button,
@@ -188,7 +194,7 @@ export function NotificationSection({
   const reminders = useSettings((state) => state.device.reminders);
   const groups = useUser((state) => state.groups);
   const on = reminders.filter((reminder) => reminder.on);
-  const heard = groups.filter((group) => !group.muted);
+  const heard = groups.filter((group) => !isMuted(group, groupChat));
   let remindersValue = `${on.length}件`;
   if (!allowed || on.length === 0) {
     remindersValue = "オフ";
@@ -693,6 +699,25 @@ export function ChatNotificationsPage({ onBack }: { onBack: () => void }) {
   const groups = useUser((state) => state.groups);
   const setGroups = useUser((state) => state.setGroups);
   const { ask, prompt } = usePermissionPrompt();
+  const setMuted = (groupId: string, chatId: string, muted: boolean) => {
+    setGroups(
+      groups.map((item) =>
+        item.id === groupId ? withMuted(item, chatId, muted) : item
+      )
+    );
+    if (!muted) {
+      ask();
+    }
+  };
+  // The one-to-one chats turned off, as the page opened: one turned back
+  // on stays in sight, so it can be turned off again.
+  const [quiet] = useState(() =>
+    groups.flatMap((group) =>
+      sampleOthers(group.id)
+        .filter((member) => isMuted(group, member.id))
+        .map((member) => ({ group, member }))
+    )
+  );
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="チャット" />
@@ -702,11 +727,11 @@ export function ChatNotificationsPage({ onBack }: { onBack: () => void }) {
             ask();
           }}
         />
-        <Section title="グループ">
+        <Section title="全体チャット">
           <List>
             {groups.map((group) => (
               <SwitchRow
-                checked={!group.muted}
+                checked={!isMuted(group, groupChat)}
                 key={group.id}
                 label={<span className={listRow.labelText}>{group.name}</span>}
                 leading={
@@ -715,19 +740,39 @@ export function ChatNotificationsPage({ onBack }: { onBack: () => void }) {
                   </span>
                 }
                 onChange={(on) => {
-                  setGroups(
-                    groups.map((item) =>
-                      item.id === group.id ? { ...item, muted: !on } : item
-                    )
-                  );
-                  if (on) {
-                    ask();
-                  }
+                  setMuted(group.id, groupChat, !on);
                 }}
               />
             ))}
           </List>
-          <Note>個人チャットも、そのグループと一緒にオン・オフされます。</Note>
+        </Section>
+        {/* Only those turned off: each is turned off in its own chat's
+            menu, and found again here. */}
+        <Section title="個人チャット">
+          {quiet.length > 0 && (
+            <List>
+              {quiet.map(({ group, member }) => (
+                <SwitchRow
+                  checked={
+                    !isMuted(
+                      groups.find((item) => item.id === group.id) ?? group,
+                      member.id
+                    )
+                  }
+                  detail={group.name}
+                  key={`${group.id}:${member.id}`}
+                  label={member.name}
+                  leading={<Avatar member={member} size={28} />}
+                  onChange={(on) => {
+                    setMuted(group.id, member.id, !on);
+                  }}
+                />
+              ))}
+            </List>
+          )}
+          <Note>
+            個人チャットの通知は、それぞれのチャットの右上のメニューでオフにできます。
+          </Note>
         </Section>
       </div>
       {prompt}

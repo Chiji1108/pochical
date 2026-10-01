@@ -6,17 +6,13 @@ import { useUser } from "../lib/design-user-store";
 import { ChatPage } from "./design-group-chat";
 import type { PhotoSend } from "./design-group-chat";
 import {
-  aya,
   chatKey,
   chatTitle,
-  classmates,
-  cousins,
   groupChat,
+  isMuted,
   meFrom,
-  misaki,
-  mother,
-  partner,
-  schoolFriends,
+  sampleOthers,
+  withMuted,
 } from "./design-group-data";
 import type { Chat, Group, Member, Profile } from "./design-group-data";
 import { GroupHub, GroupRail, MemberSheet, NoGroups } from "./design-group-hub";
@@ -121,25 +117,7 @@ export function DesignGroup({
     const shown = found ? profileIn(found, profile) : profile;
     return meFrom(schedule, patterns, shown.photo);
   };
-  const membersOf = (id: string): Member[] => {
-    const me = meIn(id);
-    if (id === "family") {
-      return [me, partner, mother];
-    }
-    if (id === "friends") {
-      return [me, misaki(), aya()];
-    }
-    if (id === "ward") {
-      return [me, ...classmates()];
-    }
-    if (id === "school") {
-      return [me, ...schoolFriends()];
-    }
-    if (id === invitedGroupId) {
-      return [me, ...cousins()];
-    }
-    return [me];
-  };
+  const membersOf = (id: string): Member[] => [meIn(id), ...sampleOthers(id)];
   const chatOf = (id: string, chatId: string): Chat =>
     chats[chatKey(id, chatId)] ?? { messages: [], unread: 0 };
   // A line from the app in a group's chat, when who is in it, how to get
@@ -259,6 +237,14 @@ export function DesignGroup({
       (member) => !removed[summary.id]?.includes(member.id)
     ),
   };
+  // Turns one of this group's chats' notifications off or back on.
+  const setMuted = (chatId: string, muted: boolean) => {
+    setGroups(
+      groups.map((item) =>
+        item.id === group.id ? withMuted(item, chatId, muted) : item
+      )
+    );
+  };
   // A day shared from the shift table opens the group chat with the day
   // set above the composer, as sharing into a chat app does: nothing
   // reaches everyone until you send it, with a word if you like.
@@ -369,6 +355,11 @@ export function DesignGroup({
                 )
           }
           title={chatTitle(group, page.chatId)}
+          muted={isMuted(group, page.chatId)}
+          onMuted={(muted) => {
+            setMuted(page.chatId, muted);
+            toast(muted ? "通知をオフにしました" : "通知をオンにしました");
+          }}
         />
         {memberSheet}
       </>
@@ -468,11 +459,7 @@ export function DesignGroup({
                 );
               }}
               onMuted={(muted) => {
-                setGroups(
-                  groups.map((item) =>
-                    item.id === group.id ? { ...item, muted } : item
-                  )
-                );
+                setMuted(groupChat, muted);
               }}
               onInvite={() => {
                 setPage({ name: "invite" });

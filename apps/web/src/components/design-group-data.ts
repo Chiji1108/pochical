@@ -50,9 +50,11 @@ export type Group = {
   mark: GroupMark;
   // How you appear in this group, when it differs from your usual profile.
   mine?: GroupProfile;
-  // Its chats send you no notifications. Yours alone, kept with your
-  // account so the server leaves out the push.
-  muted?: boolean;
+  // The chats that send you no notifications, by chat id: the group chat
+  // (groupChat) or a member's one-to-one chat, each turned off on its own,
+  // as LINE mutes a room. Yours alone, kept with your account so the
+  // server leaves out the push.
+  mutedChats?: string[];
   members: Member[];
 };
 
@@ -674,6 +676,46 @@ export function chatTitle(group: Group, chatId: string) {
     return "全体チャット";
   }
   return group.members.find((member) => member.id === chatId)?.name ?? "";
+}
+
+// The sample groups' other members, by group id: the four the sample
+// person is in and the cousins' group of the sample invitation. A group
+// made on /design starts with no one else.
+export function sampleOthers(groupId: string): Member[] {
+  switch (groupId) {
+    case "family": {
+      return [partner, mother];
+    }
+    case "friends": {
+      return [misaki(), aya()];
+    }
+    case "ward": {
+      return classmates();
+    }
+    case "school": {
+      return schoolFriends();
+    }
+    case "cousins": {
+      return cousins();
+    }
+    default: {
+      return [];
+    }
+  }
+}
+
+export function isMuted(group: Pick<Group, "mutedChats">, chatId: string) {
+  return group.mutedChats?.includes(chatId) ?? false;
+}
+
+// The group with one of its chats turned off or back on.
+export function withMuted<G extends Pick<Group, "mutedChats">>(
+  group: G,
+  chatId: string,
+  muted: boolean
+): G {
+  const rest = (group.mutedChats ?? []).filter((id) => id !== chatId);
+  return { ...group, mutedChats: muted ? [...rest, chatId] : rest };
 }
 
 export function chatKey(groupId: string, chatId: string) {

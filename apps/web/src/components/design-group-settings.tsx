@@ -3,6 +3,7 @@ import { useState } from "react";
 import { css } from "styled-system/css";
 
 import { EmojiPickerSheet } from "./design-emoji-picker";
+import { groupChat, isMuted } from "./design-group-data";
 import type {
   Group,
   GroupMark,
@@ -150,13 +151,14 @@ export function GroupSettingsPage({
           />
         </List>
       </Section>
-      {/* As LINE keeps a chat's 通知 in its own settings; the same switch
-          is in 設定's チャット with every group's. */}
+      {/* The group chat's, as LINE keeps a room's 通知 in its settings;
+          the same switch is in 設定's チャット with every group's. A
+          one-to-one chat has its own, in its menu. */}
       <Section title="通知">
         <List>
           <SwitchRow
-            checked={!group.muted}
-            label="チャットの通知"
+            checked={!isMuted(group, groupChat)}
+            label="全体チャットの通知"
             onChange={(on) => {
               onMuted(!on);
             }}
