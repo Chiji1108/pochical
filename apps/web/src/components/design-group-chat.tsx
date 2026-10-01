@@ -1559,7 +1559,18 @@ export function ChatPage({
               )}
               {message.poll && (
                 <PollCard
-                  actions={actionsOf(message)}
+                  // Once settled, 決め直す waits in its long-press menu,
+                  // for whoever settles it: rarely wanted, and a button
+                  // in sight would make the day look less than decided.
+                  actions={{
+                    ...actionsOf(message),
+                    onRedecide:
+                      message.poll.decided !== undefined && (mine || !current)
+                        ? () => {
+                            setDeciding(message.id);
+                          }
+                        : undefined,
+                  }}
                   label={`${member?.name ?? ""}の日にちの投票`}
                   members={people}
                   // Its writer settles it, or, if they have left the group,
@@ -2916,6 +2927,7 @@ function MessageActions({
   onUnsend,
   onReport,
   onPin,
+  onRedecide,
   pinned = false,
   onPressAt,
   keyboardOpens = true,
@@ -2940,6 +2952,8 @@ function MessageActions({
   onReport?: () => void;
   // ピン留め, or ピン留めを外す when it is pinned.
   onPin?: () => void;
+  // 決め直す, for a settled poll, to whoever settles it.
+  onRedecide?: () => void;
   pinned?: boolean;
   // A long press on part of the message that has its own menu, like a
   // link in its words: open that and return true, and these stay shut.
@@ -3133,6 +3147,20 @@ function MessageActions({
                     )}
                   </span>
                   {pinned ? "ピン留めを外す" : "ピン留め"}
+                </button>
+              )}
+              {onRedecide && (
+                <button
+                  className={menuStyle.item}
+                  onClick={() => {
+                    closeThen(onRedecide);
+                  }}
+                  type="button"
+                >
+                  <span className={menuStyle.icon}>
+                    <CalendarCheck aria-hidden="true" size={18} />
+                  </span>
+                  決め直す
                 </button>
               )}
               {onEdit && (
@@ -3386,7 +3414,8 @@ function PollCard({
 }: {
   poll: Poll;
   members: Member[];
-  // 日にちを決める, then 決め直す: its writer, or anyone once they left.
+  // 日にちを決める at its foot until settled: its writer, or anyone
+  // once they left. (決め直す is in its long-press menu.)
   canDecide: boolean;
   // Whose poll it is, for a screen reader.
   label: string;
@@ -3473,9 +3502,9 @@ function PollCard({
           );
         })}
       </ul>
-      {canDecide && (
+      {canDecide && decided === undefined && (
         <button className={pollCard.foot} onClick={onDecide} type="button">
-          {decided ? "決め直す" : "日にちを決める"}
+          日にちを決める
         </button>
       )}
     </span>

@@ -121,7 +121,7 @@ export function BlockOffer({
     <ConfirmDialog
       action="ブロック"
       cancel="しない"
-      message={`${member.name}もブロックしますか？メッセージが表示されなくなり、個人チャットも届かなくなります。相手には知らされません。`}
+      message={`${member.name}をブロックしますか？メッセージが表示されなくなり、個人チャットも届かなくなります。相手には知らされません。`}
       onCancel={onClose}
       onConfirm={() => {
         setBlocked([...blocked, member.id]);
