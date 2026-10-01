@@ -1566,14 +1566,17 @@ const PREVIEW_PAGE_GAP = 12;
 const previewPageNames = ["カレンダー", "ウィジェット"];
 
 const pageNames = {
-  // Every name in one cell, so the tag is as wide as the longest and each
-  // name sits at its right end.
-  name: css({ gridArea: "1 / 1", textAlign: "right" }),
-  stack: css({ display: "grid" }),
+  // Every name in one cell, so the tag is as wide as the longest, each in
+  // its middle.
+  name: css({ gridArea: "1 / 1", textAlign: "center" }),
+  // The names slide within the tag, cut at its edges, never over each
+  // other.
+  stack: css({ display: "grid", overflow: "hidden" }),
 };
 
-// The shown page's name, crossfading into the next as far as the pages
-// are swiped, as the dots under them follow the finger.
+// The shown page's name, sliding out as the next slides in, as far as
+// the pages are swiped and the same way, as the dots under them follow
+// the finger.
 function PageNames({
   names,
   page,
@@ -1602,11 +1605,12 @@ function PageName({
   index: number;
   position: MotionValue<number>;
 }) {
+  const x = useTransform(position, (at) => `${(index - at) * 100}%`);
   const opacity = useTransform(position, (at) =>
     Math.max(0, 1 - Math.abs(at - index))
   );
   return (
-    <motion.span className={pageNames.name} style={{ opacity }}>
+    <motion.span className={pageNames.name} style={{ opacity, x }}>
       {name}
     </motion.span>
   );
