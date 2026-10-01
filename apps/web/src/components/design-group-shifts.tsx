@@ -933,7 +933,7 @@ export function ShiftsPage({
 }: {
   group: Group;
   backLabel: string;
-  // A day to open picked, from 次にみんな休み.
+  // A day to open picked, from 次のみんな休み.
   day?: Date;
   month?: Date;
   layout: Layout;

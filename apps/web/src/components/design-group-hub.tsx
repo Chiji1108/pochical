@@ -342,7 +342,7 @@ export function GroupHub({
               }}
               type="button"
             >
-              <span>次にみんな休み</span>
+              <span>次のみんな休み</span>
               <span className={hub.weekCardNextValue}>
                 {formatDay(nextOff)}・{daysFromToday(nextOff)}
               </span>
@@ -350,7 +350,7 @@ export function GroupHub({
             </button>
           ) : (
             <div className={hub.weekCardNext}>
-              <span>次にみんな休み</span>
+              <span>次のみんな休み</span>
               <span className={hub.weekCardNextValue}>なし</span>
             </div>
           )}
