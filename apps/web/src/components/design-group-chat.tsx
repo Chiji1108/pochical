@@ -2,6 +2,7 @@ import { Popover, Portal } from "@ark-ui/react";
 import {
   Bell,
   BellOff,
+  CalendarDays,
   CalendarPlus,
   ChevronRight,
   CircleAlert,
@@ -80,6 +81,7 @@ import {
   ListRow,
   listRow,
   MenuItem,
+  MenuSeparator,
   menuStyle,
   Screen,
   srOnly,
@@ -744,7 +746,11 @@ export function ChatPage({
   sharedFirst = false,
   muted = false,
   onMuted,
+  onShifts,
 }: {
+  // The group chat's menu opens everyone's shifts, to look up a day while
+  // talking it over.
+  onShifts?: () => void;
   title: string;
   // Its notifications turned off, from the menu at its top right, as
   // LINE's rooms have it.
@@ -1021,6 +1027,18 @@ export function ChatPage({
             icon={<Ellipsis aria-hidden="true" size={20} />}
             label="チャットのメニュー"
           >
+            {onShifts && (
+              <>
+                <MenuItem
+                  icon={<CalendarDays aria-hidden="true" size={18} />}
+                  onSelect={onShifts}
+                  value="shifts"
+                >
+                  みんなのシフト
+                </MenuItem>
+                <MenuSeparator />
+              </>
+            )}
             <MenuItem
               icon={
                 muted ? (

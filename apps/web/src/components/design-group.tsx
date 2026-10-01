@@ -337,6 +337,13 @@ export function DesignGroup({
                 )
           }
           title={chatTitle(group, page.chatId)}
+          onShifts={
+            page.chatId === groupChat
+              ? () => {
+                  setPage({ from: page.chatId, name: "shifts" });
+                }
+              : undefined
+          }
           muted={isMuted(group, page.chatId)}
           onMuted={(muted) => {
             setMuted(page.chatId, muted);
