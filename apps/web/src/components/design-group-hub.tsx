@@ -366,8 +366,8 @@ export function GroupHub({
                 <MessagesSquare aria-hidden="true" size={15} />
               </span>
             }
+            group={group}
             label="全体チャット"
-            members={group.members}
             muted={isMuted(group, groupChat)}
             onOpen={() => {
               onChat(groupChat);
@@ -378,8 +378,8 @@ export function GroupHub({
               chat={chatOf(member.id)}
               icon={<Avatar member={member} size={28} />}
               key={member.id}
+              group={group}
               label={member.name}
-              members={group.members}
               muted={isMuted(group, member.id)}
               onOpen={() => {
                 onChat(member.id);

@@ -30,9 +30,17 @@ import {
 import type { MouseEvent, ReactElement, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import { firstLink, siteOf, textParts } from "../lib/chat-links";
+import {
+  firstLink,
+  mentionsOf,
+  plainText,
+  siteOf,
+  textParts,
+  withMentions,
+} from "../lib/chat-text";
 import { dateKey, formatDay } from "../lib/design-days";
 import type { Photo } from "../lib/design-sample-photos";
+import { useUser } from "../lib/design-user-store";
 import { spring } from "../lib/motion";
 import { EmojiPickerSheet } from "./design-emoji-picker";
 import {
@@ -60,6 +68,7 @@ import {
   smallWeekday,
   toneColor,
 } from "./design-group-parts";
+import { profileIn } from "./design-group-settings";
 import { DaySheet } from "./design-group-shifts";
 import { PhoneContext, PhotoViewer, Sheet } from "./design-sheet";
 import { ToastContext } from "./design-toast";
@@ -87,7 +96,22 @@ export type PhotoSend = "ok" | "fails";
 
 const noMembers: Member[] = [];
 
-function lastLine(chat: Chat, members: Member[]) {
+// A member's name by id, for a mention: @ and their name in the group,
+// yours too (the others see it), not 自分.
+const nameIn = (members: Member[], yours: string) => (id: string) => {
+  const member = members.find((other) => other.id === id);
+  return member?.me ? yours : (member?.name ?? "メンバー");
+};
+
+// Your name in the group, as the others read it.
+function useYourName(group: Omit<Group, "members">) {
+  return profileIn(
+    group,
+    useUser((state) => state.profile)
+  ).name;
+}
+
+function lastLine(chat: Chat, members: Member[], yours: string) {
   const last = chat.messages.at(-1);
   if (!last) {
     return;
@@ -96,9 +120,9 @@ function lastLine(chat: Chat, members: Member[]) {
   if (last.notice) {
     return last.notice;
   }
-  let { text } = last;
+  let text = summaryOf(last, nameIn(members, yours));
   if (last.days) {
-    text = `${summaryOf(last)}を共有しました`;
+    text = `${text}を共有しました`;
   } else if (last.photo) {
     text = "写真を送りました";
   }
@@ -136,6 +160,20 @@ const chatRow = {
     minWidth: 0,
   }),
   time: css({ color: "text.quaternary", textStyle: "caption2" }),
+  badges: css({ display: "flex", gap: "4px" }),
+  // The unread count's shape, in the accent: a mention is for you, not
+  // a warning.
+  mention: css({
+    bg: "accent.fill",
+    borderRadius: "full",
+    color: "accent.onFill",
+    display: "inline-grid",
+    fontSize: "11px",
+    fontWeight: 700,
+    height: "18px",
+    placeItems: "center",
+    width: "18px",
+  }),
 };
 
 // A chat as the messaging apps draw one: others' bubbles on the left with
@@ -238,6 +276,40 @@ const chatStyle = {
   bubbleLink: cva({
     base: { textDecoration: "underline", textUnderlineOffset: "2px" },
     variants: { mine: { false: { color: "accent.default" }, true: {} } },
+  }),
+  // A member mentioned, in the weight of a name and, in others' bubbles,
+  // the accent. One of you looks the same: the chat list's @ is what
+  // finds it.
+  mention: cva({
+    base: { fontWeight: 600 },
+    variants: { mine: { false: { color: "accent.default" }, true: {} } },
+  }),
+  // The others to mention, over the composer, a few in sight and the rest
+  // a scroll away.
+  mentionList: css({
+    borderTop: "1px solid token(colors.separator)",
+    display: "flex",
+    flexDirection: "column",
+    listStyle: "none",
+    margin: 0,
+    maxHeight: "180px",
+    overflowY: "auto",
+    padding: "4px 0",
+  }),
+  mentionPick: css({
+    _hover: { bg: "fill.tertiary" },
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    borderRadius: "md",
+    color: "text.primary",
+    display: "flex",
+    gap: "12px",
+    height: "44px",
+    padding: "0 8px",
+    textAlign: "left",
+    textStyle: "body",
+    width: "100%",
   }),
   // A bubble with a link's page under its words is wide enough for the
   // page's picture, as LINE draws one.
@@ -598,19 +670,24 @@ export function ChatRow({
   label,
   icon,
   chat,
-  members,
+  group,
   onOpen,
   muted = false,
 }: {
   label: string;
   icon: ReactNode;
   chat: Chat;
-  members: Member[];
+  group: Group;
   onOpen: () => void;
   muted?: boolean;
 }) {
-  const preview = lastLine(chat, members);
+  const preview = lastLine(chat, group.members, useYourName(group));
   const last = chat.messages.at(-1);
+  // An unread line mentions you: an @ beside the count, as Telegram marks
+  // one, so it is found among chats whose notifications are off.
+  const mentioned = chat.messages
+    .slice(chat.messages.length - chat.unread)
+    .some((message) => mentionsOf(message.text ?? "").includes("me"));
   return (
     <button
       className={cx(listRow.twoLine, listRow.pressable)}
@@ -631,9 +708,16 @@ export function ChatRow({
       <span className={chatRow.meta}>
         {last && <small className={chatRow.time}>{last.time}</small>}
         {chat.unread > 0 && (
-          <span className={badge} role="status">
-            {chat.unread}
-            <span className={srOnly}>件の未読</span>
+          <span className={chatRow.badges}>
+            {mentioned && (
+              <span className={chatRow.mention}>
+                @<span className={srOnly}>自分へのメンションあり、</span>
+              </span>
+            )}
+            <span className={badge} role="status">
+              {chat.unread}
+              <span className={srOnly}>件の未読</span>
+            </span>
           </span>
         )}
       </span>
@@ -694,6 +778,8 @@ export function ChatPage({
   onOpenDay: (date: Date) => void;
 }) {
   const [draft, setDraft] = useState("");
+  // Members picked from the @ list, made mentions as the message is sent.
+  const [picked, setPicked] = useState<{ id: string; name: string }[]>([]);
   const [attached, setAttached] = useState(attach);
   const linkPreview = useLinkPreview(draft);
   // Photos chosen to go with the next send, as the chat apps hold them
@@ -800,12 +886,35 @@ export function ChatPage({
     };
   }, []);
   const isGroup = title === "全体チャット";
+  // An @ being written at the end of the message, in the group chat, lists
+  // the others whose name has what follows it, as LINE does; one picked
+  // goes in as @name and a space.
+  const mentionQuery = isGroup
+    ? MENTION_QUERY.exec(draft)?.groups?.query
+    : undefined;
+  const mentionable =
+    mentionQuery === undefined
+      ? []
+      : group.members.filter(
+          (member) => !member.me && member.name.includes(mentionQuery)
+        );
+  const pickMention = (member: Member) => {
+    setDraft(draft.replace(MENTION_QUERY, `@${member.name} `));
+    setPicked((before) => [
+      ...before.filter((other) => other.id !== member.id),
+      { id: member.id, name: member.name },
+    ]);
+  };
   // Who wrote a line, including members taken out since, whose lines stay.
   const writerOf = (id?: string) =>
     [...group.members, ...formerMembers].find((member) => member.id === id);
   const byId = (id?: string) =>
     chat.messages.find((message) => message.id === id);
   const nameOf = (id: string) => writerOf(id)?.name ?? "";
+  const mentionName = nameIn(
+    [...group.members, ...formerMembers],
+    useYourName(group)
+  );
   // Sends one line or several at once, the first answering the line
   // being replied to.
   const post = (...lines: Omit<Message, "id" | "from" | "when" | "time">[]) => {
@@ -834,9 +943,12 @@ export function ChatPage({
     post(
       ...(attached ? [{ days: attached }] : []),
       ...photos.map((photo) => ({ photo })),
-      ...(text ? [{ link: linkPreview.ready, text }] : [])
+      ...(text
+        ? [{ link: linkPreview.ready, text: withMentions(text, picked) }]
+        : [])
     );
     setDraft("");
+    setPicked([]);
     linkPreview.reset();
     setAttached(undefined);
     setPhotos([]);
@@ -895,7 +1007,10 @@ export function ChatPage({
       setSelected(undefined);
     },
     open: selected === message.id,
-    text: message.text,
+    text:
+      message.text === undefined
+        ? undefined
+        : plainText(message.text, mentionName),
   });
   const replying = byId(replyTo);
   return (
@@ -964,6 +1079,7 @@ export function ChatPage({
           const quote = quoted && (
             <BubbleQuote
               name={nameOf(quoted.from)}
+              nameOf={mentionName}
               onJump={() => {
                 jumpTo(quoted.id);
               }}
@@ -1056,7 +1172,7 @@ export function ChatPage({
                         {quote}
                         <MessageActions {...actionsOf(message)}>
                           <button
-                            aria-label={`${member?.name ?? ""}のメッセージ：${message.text ?? ""}。押すとリアクションと返信`}
+                            aria-label={`${member?.name ?? ""}のメッセージ：${plainText(message.text ?? "", mentionName)}。押すとリアクションと返信`}
                             className={chatStyle.bubbleText}
                             // A tap on a link opens it rather than the
                             // actions, as in the chat apps.
@@ -1065,11 +1181,27 @@ export function ChatPage({
                               if (url) {
                                 event.preventDefault();
                                 openLink(url);
+                                return;
+                              }
+                              // A mention opens that member's profile, as
+                              // their picture does.
+                              const mentioned = group.members.find(
+                                (other) =>
+                                  !other.me &&
+                                  other.id === mentionAt(event.target)
+                              );
+                              if (mentioned && onMember) {
+                                event.preventDefault();
+                                onMember(mentioned);
                               }
                             }}
                             type="button"
                           >
-                            <MessageText mine={mine} text={message.text} />
+                            <MessageText
+                              mine={mine}
+                              nameOf={mentionName}
+                              text={message.text}
+                            />
                           </button>
                         </MessageActions>
                         {message.link && (
@@ -1140,7 +1272,9 @@ export function ChatPage({
             <span className={chatStyle.quoteName}>
               {nameOf(replying.from)}に返信
             </span>
-            <span className={chatStyle.quoteText}>{summaryOf(replying)}</span>
+            <span className={chatStyle.quoteText}>
+              {summaryOf(replying, mentionName)}
+            </span>
           </span>
           {replying.photo && (
             <img
@@ -1232,13 +1366,36 @@ export function ChatPage({
           ))}
         </ul>
       )}
+      {mentionable.length > 0 && (
+        <ul aria-label="メンションする人" className={chatStyle.mentionList}>
+          {mentionable.map((member) => (
+            <li key={member.id}>
+              <button
+                className={chatStyle.mentionPick}
+                onClick={() => {
+                  pickMention(member);
+                }}
+                // The field keeps focus, and the keyboard stays up.
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                }}
+                type="button"
+              >
+                <Avatar member={member} size={28} />
+                {member.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       <form
         className={chatStyle.composer({
           replying:
             replying !== undefined ||
             attached !== undefined ||
             linkPreview.shown !== undefined ||
-            photos.length > 0,
+            photos.length > 0 ||
+            mentionable.length > 0,
         })}
         onSubmit={(event) => {
           event.preventDefault();
@@ -1426,6 +1583,10 @@ export function ChatPage({
 
 const flashMilliseconds = 1200;
 
+// An @ and what follows it at the end of the message being written; a
+// space ends it.
+const MENTION_QUERY = /@(?<query>[^\s@]*)$/u;
+
 // The composer's tools: each one's width, how many, and how they fold
 // into a › and back, as quick as the calendar's own fold.
 const toolWidth = 32;
@@ -1472,15 +1633,18 @@ function photoSize(photo: Photo) {
 function BubbleQuote({
   quoted,
   name,
+  nameOf,
   onJump,
 }: {
   quoted: Message;
   name: string;
+  // Names the members its words mention.
+  nameOf: (id: string) => string;
   onJump: () => void;
 }) {
   return (
     <button
-      aria-label={`${name}「${summaryOf(quoted)}」への返信。返信元を表示`}
+      aria-label={`${name}「${summaryOf(quoted, nameOf)}」への返信。返信元を表示`}
       className={chatStyle.bubbleQuote}
       onClick={onJump}
       type="button"
@@ -1488,7 +1652,9 @@ function BubbleQuote({
       <span className={chatStyle.bubbleQuoteLine}>
         <span className={chatStyle.bubbleQuoteWords}>
           <span className={chatStyle.bubbleQuoteName}>{name}</span>
-          <span className={chatStyle.bubbleQuoteText}>{summaryOf(quoted)}</span>
+          <span className={chatStyle.bubbleQuoteText}>
+            {summaryOf(quoted, nameOf)}
+          </span>
         </span>
         {quoted.photo && (
           <img alt="" className={chatStyle.quoteThumb} src={quoted.photo.src} />
@@ -1499,15 +1665,35 @@ function BubbleQuote({
   );
 }
 
-// A message's words with its links marked. A tap on one opens it (see
-// linkAt): they are not links of their own, as the whole message is the
-// button that opens its actions; the page under it and リンクをコピー
-// reach a link without that tap.
-function MessageText({ text = "", mine }: { text?: string; mine: boolean }) {
+// A message's words with its links and mentions marked. A tap on a link
+// opens it (see linkAt), on a mention that member's profile: they are not
+// links of their own, as the whole message is the button that opens its
+// actions; the page under it and リンクをコピー reach a link without that
+// tap.
+function MessageText({
+  text = "",
+  mine,
+  nameOf,
+}: {
+  text?: string;
+  mine: boolean;
+  nameOf: (id: string) => string;
+}) {
   let at = 0;
   return textParts(text).map((part) => {
     const key = at;
     at += part.text.length;
+    if (part.mention !== undefined) {
+      return (
+        <span
+          className={chatStyle.mention({ mine })}
+          data-mention={part.mention}
+          key={key}
+        >
+          @{nameOf(part.mention)}
+        </span>
+      );
+    }
     return part.url ? (
       <span
         className={chatStyle.bubbleLink({ mine })}
@@ -1520,6 +1706,13 @@ function MessageText({ text = "", mine }: { text?: string; mine: boolean }) {
       <Fragment key={key}>{part.text}</Fragment>
     );
   });
+}
+
+// The member a tap in a message's words was on, if it was a mention.
+function mentionAt(target: EventTarget) {
+  return target instanceof Element
+    ? target.closest<HTMLElement>("[data-mention]")?.dataset.mention
+    : undefined;
 }
 
 // The link under a tap in a message's words, if it was on one.
@@ -2002,11 +2195,13 @@ function MessageActions({
   );
 }
 
-function summaryOf(message: Message) {
+function summaryOf(message: Message, nameOf: (id: string) => string) {
   if (message.photo) {
     return "📷 写真";
   }
-  return message.days ? daysSummary(message.days) : (message.text ?? "");
+  return message.days
+    ? daysSummary(message.days)
+    : plainText(message.text ?? "", nameOf);
 }
 
 function daysSummary(days: Date[]) {
