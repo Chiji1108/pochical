@@ -70,7 +70,27 @@ public class GroupServiceClient(
 
 
   /**
-   *  Joins the group a live code opens. NOT_FOUND when no group uses it.
+   *  Who is in the group a live code opens, for the join screen to show
+   *  before joining. Signed in only: the public preview
+   *  (InviteService.GetInvitePreview) gives no names. NOT_FOUND when no
+   *  group uses the code.
+   */
+  override suspend fun getInvite(request: GetInviteRequest, headers: Headers): ResponseMessage<GetInviteResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.GroupService/GetInvite",
+      tech.chiji.pochical.v1.GetInviteRequest::class,
+      tech.chiji.pochical.v1.GetInviteResponse::class,
+      StreamType.UNARY,
+      idempotency = Idempotency.NO_SIDE_EFFECTS,
+    ),
+  )
+
+
+  /**
+   *  Joins the group a live code opens. NOT_FOUND when no group uses it;
+   *  RESOURCE_EXHAUSTED when it already has its most members (100).
    *  Joining a group you are already in changes nothing and says so.
    */
   override suspend fun joinGroup(request: JoinGroupRequest, headers: Headers): ResponseMessage<JoinGroupResponse> = client.unary(

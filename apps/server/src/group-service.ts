@@ -6,10 +6,12 @@ import { env } from "cloudflare:workers";
 import {
   CreateGroupResponseSchema,
   GetInviteLinkResponseSchema,
+  GetInviteResponseSchema,
   GroupService,
   JoinGroupResponseSchema,
   RemakeInviteLinkResponseSchema,
 } from "./gen/pochical/v1/group_pb";
+import { MAX_MEMBERS } from "./group-do";
 import {
   codeOfGroup,
   groupOfCode,
@@ -21,6 +23,18 @@ import { requireUser } from "./user-service";
 
 const displayNameOf = (text: string): string =>
   requireText(text, TEXT_LIMITS.personName, "display_name");
+
+/** The group a live code opens; INVALID_ARGUMENT or NOT_FOUND otherwise. */
+const requireGroupOfCode = async (inviteCode: string): Promise<string> => {
+  if (!INVITE_CODE.test(inviteCode)) {
+    throw new ConnectError("Malformed invite code", Code.InvalidArgument);
+  }
+  const groupId = await groupOfCode(env.DB, inviteCode);
+  if (groupId === null) {
+    throw new ConnectError("No group uses this invite code", Code.NotFound);
+  }
+  return groupId;
+};
 
 /** The caller, when they are in the group; PERMISSION_DENIED otherwise. */
 const requireMember = async (
@@ -52,6 +66,28 @@ export const registerGroupService = (router: ConnectRouter): void => {
       return create(CreateGroupResponseSchema, { groupId, inviteCode });
     },
 
+    getInvite: async ({ inviteCode }, context) => {
+      const user = await requireUser(context);
+      const groupId = await requireGroupOfCode(inviteCode);
+      const group = env.GROUPS.getByName(groupId);
+      const [profile, memberList, alreadyMember] = await Promise.all([
+        group.getProfile(),
+        group.memberList(),
+        group.isMember(user.id),
+      ]);
+      if (profile === null) {
+        throw new ConnectError("No group uses this invite code", Code.NotFound);
+      }
+      return create(GetInviteResponseSchema, {
+        alreadyMember,
+        full: !alreadyMember && memberList.length >= MAX_MEMBERS,
+        groupEmoji: profile.emoji ?? "",
+        groupId,
+        groupName: profile.name,
+        members: memberList,
+      });
+    },
+
     getInviteLink: async ({ groupId }, context) => {
       await requireMember(context, groupId);
       const inviteCode =
@@ -62,23 +98,23 @@ export const registerGroupService = (router: ConnectRouter): void => {
 
     joinGroup: async ({ inviteCode, displayName }, context) => {
       const user = await requireUser(context);
-      if (!INVITE_CODE.test(inviteCode)) {
-        throw new ConnectError("Malformed invite code", Code.InvalidArgument);
-      }
       const shownAs = displayNameOf(displayName);
-      const groupId = await groupOfCode(env.DB, inviteCode);
-      if (groupId === null) {
-        throw new ConnectError("No group uses this invite code", Code.NotFound);
-      }
+      const groupId = await requireGroupOfCode(inviteCode);
       // The Group DO decides; the user's DO then keeps its copy. Both are
       // idempotent, so a retry after a failure in between completes it.
-      const added = await env.GROUPS.getByName(groupId).addMember({
+      const result = await env.GROUPS.getByName(groupId).addMember({
         displayName: shownAs,
         userId: user.id,
       });
+      if (result === "full") {
+        throw new ConnectError(
+          `The group has its most members (${MAX_MEMBERS})`,
+          Code.ResourceExhausted
+        );
+      }
       await env.USERS.getByName(user.id).addMembership(groupId);
       return create(JoinGroupResponseSchema, {
-        alreadyMember: !added,
+        alreadyMember: result === "already",
         groupId,
       });
     },

@@ -101,6 +101,57 @@ public nonisolated struct Pochical_V1_RemakeInviteLinkResponse: Sendable {
   public init() {}
 }
 
+public nonisolated struct Pochical_V1_GetInviteRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var inviteCode: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Pochical_V1_GetInviteResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var groupID: String = String()
+
+  public var groupName: String = String()
+
+  /// The group's mark when it is an emoji; empty for other marks.
+  public var groupEmoji: String = String()
+
+  /// Everyone in the group, in the order they joined.
+  public var members: [Pochical_V1_InviteMember] = []
+
+  /// The caller is in the group already.
+  public var alreadyMember: Bool = false
+
+  /// The group has its most members; joining would fail.
+  public var full: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// Someone in a group, as the join screen shows them.
+public nonisolated struct Pochical_V1_InviteMember: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var displayName: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public nonisolated struct Pochical_V1_JoinGroupRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -325,6 +376,121 @@ nonisolated extension Pochical_V1_RemakeInviteLinkResponse: SwiftProtobuf.Messag
 
   public static func ==(lhs: Pochical_V1_RemakeInviteLinkResponse, rhs: Pochical_V1_RemakeInviteLinkResponse) -> Bool {
     if lhs.inviteCode != rhs.inviteCode {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_GetInviteRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetInviteRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}invite_code\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.inviteCode) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.inviteCode.isEmpty {
+      try visitor.visitSingularStringField(value: self.inviteCode, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_GetInviteRequest, rhs: Pochical_V1_GetInviteRequest) -> Bool {
+    if lhs.inviteCode != rhs.inviteCode {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_GetInviteResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetInviteResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}group_id\0\u{3}group_name\0\u{3}group_emoji\0\u{1}members\0\u{3}already_member\0\u{1}full\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.groupID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.groupName) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.groupEmoji) }()
+      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.members) }()
+      case 5: try { try decoder.decodeSingularBoolField(value: &self.alreadyMember) }()
+      case 6: try { try decoder.decodeSingularBoolField(value: &self.full) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.groupID.isEmpty {
+      try visitor.visitSingularStringField(value: self.groupID, fieldNumber: 1)
+    }
+    if !self.groupName.isEmpty {
+      try visitor.visitSingularStringField(value: self.groupName, fieldNumber: 2)
+    }
+    if !self.groupEmoji.isEmpty {
+      try visitor.visitSingularStringField(value: self.groupEmoji, fieldNumber: 3)
+    }
+    if !self.members.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.members, fieldNumber: 4)
+    }
+    if self.alreadyMember != false {
+      try visitor.visitSingularBoolField(value: self.alreadyMember, fieldNumber: 5)
+    }
+    if self.full != false {
+      try visitor.visitSingularBoolField(value: self.full, fieldNumber: 6)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_GetInviteResponse, rhs: Pochical_V1_GetInviteResponse) -> Bool {
+    if lhs.groupID != rhs.groupID {return false}
+    if lhs.groupName != rhs.groupName {return false}
+    if lhs.groupEmoji != rhs.groupEmoji {return false}
+    if lhs.members != rhs.members {return false}
+    if lhs.alreadyMember != rhs.alreadyMember {return false}
+    if lhs.full != rhs.full {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_InviteMember: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".InviteMember"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}display_name\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.displayName) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.displayName.isEmpty {
+      try visitor.visitSingularStringField(value: self.displayName, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_InviteMember, rhs: Pochical_V1_InviteMember) -> Bool {
+    if lhs.displayName != rhs.displayName {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

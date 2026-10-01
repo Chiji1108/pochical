@@ -1,5 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import { count, eq } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
@@ -17,6 +17,12 @@ export type GroupProfile = {
 
 /** Someone in the group, as they appear in it. */
 export type NewMember = { userId: string; displayName: string };
+
+/** The most members a group has (spec/sync-protocol.md). */
+export const MAX_MEMBERS = 100;
+
+/** How a join went: in now, in already, or kept out of a full group. */
+export type JoinResult = "added" | "already" | "full";
 
 /** One Durable Object per group, named by the group's id. */
 export class GroupDO extends DurableObject<Env> {
@@ -55,15 +61,32 @@ export class GroupDO extends DurableObject<Env> {
     return true;
   }
 
-  /** Adds a member; false when they were in the group already. */
-  addMember({ userId, displayName }: NewMember): boolean {
-    const added = this.db
+  /**
+   * Adds a member unless they are in already or the group is full. The
+   * object takes one call at a time, so two joins cannot both take the
+   * last place.
+   */
+  addMember({ userId, displayName }: NewMember): JoinResult {
+    if (this.isMember(userId)) {
+      return "already";
+    }
+    if (this.memberCount() >= MAX_MEMBERS) {
+      return "full";
+    }
+    this.db
       .insert(members)
       .values({ displayName, joinedAt: new Date(), userId })
-      .onConflictDoNothing()
-      .returning({ userId: members.userId })
+      .run();
+    return "added";
+  }
+
+  /** Everyone in the group as they appear in it, in the order they joined. */
+  memberList(): { displayName: string }[] {
+    return this.db
+      .select({ displayName: members.displayName })
+      .from(members)
+      .orderBy(asc(members.joinedAt))
       .all();
-    return added.length > 0;
   }
 
   /** Whether the user is in the group. */

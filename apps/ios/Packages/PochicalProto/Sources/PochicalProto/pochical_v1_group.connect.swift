@@ -30,7 +30,15 @@ public protocol Pochical_V1_GroupServiceClientInterface: Sendable {
     @available(iOS 13, *)
     func `remakeInviteLink`(request: Pochical_V1_RemakeInviteLinkRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_RemakeInviteLinkResponse>
 
-    /// Joins the group a live code opens. NOT_FOUND when no group uses it.
+    /// Who is in the group a live code opens, for the join screen to show
+    /// before joining. Signed in only: the public preview
+    /// (InviteService.GetInvitePreview) gives no names. NOT_FOUND when no
+    /// group uses the code.
+    @available(iOS 13, *)
+    func `getInvite`(request: Pochical_V1_GetInviteRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_GetInviteResponse>
+
+    /// Joins the group a live code opens. NOT_FOUND when no group uses it;
+    /// RESOURCE_EXHAUSTED when it already has its most members (100).
     /// Joining a group you are already in changes nothing and says so.
     @available(iOS 13, *)
     func `joinGroup`(request: Pochical_V1_JoinGroupRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_JoinGroupResponse>
@@ -60,6 +68,11 @@ public final class Pochical_V1_GroupServiceClient: Pochical_V1_GroupServiceClien
     }
 
     @available(iOS 13, *)
+    public func `getInvite`(request: Pochical_V1_GetInviteRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_GetInviteResponse> {
+        return await self.client.unary(path: "/pochical.v1.GroupService/GetInvite", idempotencyLevel: .noSideEffects, request: request, headers: headers)
+    }
+
+    @available(iOS 13, *)
     public func `joinGroup`(request: Pochical_V1_JoinGroupRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_JoinGroupResponse> {
         return await self.client.unary(path: "/pochical.v1.GroupService/JoinGroup", idempotencyLevel: .unknown, request: request, headers: headers)
     }
@@ -69,6 +82,7 @@ public final class Pochical_V1_GroupServiceClient: Pochical_V1_GroupServiceClien
             public static let createGroup = Connect.MethodSpec(name: "CreateGroup", service: "pochical.v1.GroupService", type: .unary)
             public static let getInviteLink = Connect.MethodSpec(name: "GetInviteLink", service: "pochical.v1.GroupService", type: .unary)
             public static let remakeInviteLink = Connect.MethodSpec(name: "RemakeInviteLink", service: "pochical.v1.GroupService", type: .unary)
+            public static let getInvite = Connect.MethodSpec(name: "GetInvite", service: "pochical.v1.GroupService", type: .unary)
             public static let joinGroup = Connect.MethodSpec(name: "JoinGroup", service: "pochical.v1.GroupService", type: .unary)
         }
     }
