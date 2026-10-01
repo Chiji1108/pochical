@@ -74,9 +74,7 @@ const hero = {
     display: "flex",
     flexDirection: "column",
     gap: "24px",
-    isolation: "isolate",
     maxWidth: "460px",
-    position: "relative",
     textAlign: "center",
   }),
   demo: css({
@@ -116,8 +114,6 @@ const hero = {
     display: "flex",
     flexDirection: "column",
     gap: "48px",
-    // The sky behind the words reaches past the screen's sides.
-    overflowX: "clip",
     padding: "40px 16px 72px",
   }),
   store: css({
@@ -320,18 +316,16 @@ const closing = {
     display: "flex",
     flexDirection: "column",
     gap: "24px",
-    isolation: "isolate",
-    position: "relative",
   }),
   icon: css({ borderRadius: "14px" }),
   release: css({ color: ON_SKY_TEXT, fontSize: "11px" }),
   root: css({
     [WIDE]: { padding: "120px 48px 160px" },
     display: "flex",
+    isolation: "isolate",
     justifyContent: "center",
-    // The sky reaches past the screen's sides.
-    overflowX: "clip",
     padding: "96px 16px 120px",
+    position: "relative",
     textAlign: "center",
   }),
   title: css({
@@ -346,10 +340,10 @@ function Closing() {
   const [presses, setPresses] = useState(0);
   return (
     <section aria-labelledby="closing-title" className={closing.root}>
+      <Suspense>
+        <Sky bare place="sides" presses={presses} />
+      </Suspense>
       <div className={closing.content}>
-        <Suspense>
-          <Sky bare presses={presses} />
-        </Suspense>
         <img
           alt=""
           className={closing.icon}
@@ -385,7 +379,7 @@ function HeroCopy() {
   return (
     <div className={hero.copy}>
       <Suspense>
-        <Sky presses={presses} />
+        <Sky place="top" presses={presses} />
       </Suspense>
       <p className={hero.eyebrow}>シフトカレンダー</p>
       <h1 className={hero.title}>

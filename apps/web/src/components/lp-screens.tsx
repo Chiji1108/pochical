@@ -1,7 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { css } from "styled-system/css";
+import { css, cva } from "styled-system/css";
 
 import { initialDesignSchedule } from "../lib/design-days";
 import {
@@ -42,31 +42,59 @@ import { WhenNear } from "./when-near";
 // The current proposal for each open design choice, as on /try.
 const variants = parseDesignVariants({});
 
-// The app's own ポチカル sky (おたのしみ): its three pale lights, drawn as
-// a soft glow that fades into the paper on every side, so it never meets
-// the browser's bars. It sits behind the hero's words only, and as in the
-// app, pressing ポチッと。 drifts it to another of the app's skies.
+// The app's own ポチカル sky (おたのしみ), drawn as the app draws it: its
+// three pale lights coming in from the screen's edges. At the page's top
+// it falls from the top corners and the middle, as over the app's
+// calendar; at its end it comes in from both sides. As in the app,
+// pressing ポチッと。 drifts it to another of the app's skies.
 const HERO_SKY = themeSkyId("pochical");
-function skyBackground(id: string) {
+type SkyPlace = "top" | "sides";
+function skyBackground(id: string, place: SkyPlace) {
   const [left, middle, right] = paleSkyLights(id) ?? [];
+  if (place === "top") {
+    return [
+      `radial-gradient(90% 80% at 0% 0%, ${left} 0%, transparent 70%)`,
+      `radial-gradient(90% 80% at 100% 0%, ${right} 0%, transparent 70%)`,
+      `radial-gradient(80% 70% at 50% 25%, ${middle} 0%, transparent 75%)`,
+    ].join(", ");
+  }
   return [
-    `radial-gradient(45% 55% at 25% 40%, ${left} 0%, transparent 70%)`,
-    `radial-gradient(45% 55% at 75% 45%, ${right} 0%, transparent 70%)`,
-    `radial-gradient(50% 60% at 50% 62%, ${middle} 0%, transparent 75%)`,
+    `radial-gradient(70% 70% at 0% 45%, ${left} 0%, transparent 70%)`,
+    `radial-gradient(70% 70% at 100% 55%, ${right} 0%, transparent 70%)`,
+    `radial-gradient(50% 50% at 50% 50%, ${middle} 0%, transparent 75%)`,
   ].join(", ");
 }
 
 const sky = {
-  // A little beyond the hero's words, which keep it behind them, faded
-  // out to nothing at its edges.
-  root: css({
-    inset: "-120px -140px",
-    maskImage: "radial-gradient(closest-side, black 45%, transparent)",
-    // The breathing light reaches past it; the page's width must not.
-    overflow: "hidden",
-    pointerEvents: "none",
-    position: "absolute",
-    zIndex: -1,
+  root: cva({
+    base: {
+      // The breathing light reaches past it; the page's width must not.
+      overflow: "hidden",
+      pointerEvents: "none",
+      position: "absolute",
+      zIndex: -1,
+    },
+    variants: {
+      place: {
+        // At the page's top, under the header too: nothing above it is
+        // positioned, so it sits on the page's own ground. It rises from
+        // the paper at the very top, where Safari's bar keeps the paper's
+        // color, and fades back into it before the phone below.
+        top: {
+          height: "min(860px, 100svh)",
+          inset: "0 0 auto",
+          maskImage:
+            "linear-gradient(to bottom, transparent, black 96px, black 40%, transparent)",
+        },
+        // Across its section from side to side, fading out above and
+        // below, so it never meets the phones or the footer in a line.
+        sides: {
+          inset: 0,
+          maskImage:
+            "linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)",
+        },
+      },
+    },
   }),
   // One sky, fading in over the one before.
   layer: css({ inset: 0, position: "absolute" }),
@@ -78,9 +106,11 @@ const sky = {
 // A bare one has none until the first press brings it.
 export function Sky({
   presses,
+  place,
   bare = false,
 }: {
   presses: number;
+  place: SkyPlace;
   bare?: boolean;
 }) {
   // It starts as if never pressed: presses made while this code was still
@@ -98,7 +128,7 @@ export function Sky({
   const { id } = shown;
   const still = useReducedMotion() ?? false;
   return (
-    <div aria-hidden="true" className={sky.root}>
+    <div aria-hidden="true" className={sky.root({ place })}>
       <AnimatePresence initial={false}>
         {id === undefined ? null : (
           <motion.div
@@ -113,7 +143,7 @@ export function Sky({
               animate={still ? undefined : { scale: 1.08, x: "2%" }}
               className={sky.light}
               initial={{ scale: 1, x: "-2%" }}
-              style={{ background: skyBackground(id) }}
+              style={{ background: skyBackground(id, place) }}
               transition={{
                 duration: BREATH_SECONDS,
                 ease: "easeInOut",
