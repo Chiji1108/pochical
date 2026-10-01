@@ -370,7 +370,7 @@ const dayRows = {
       me: {
         true: {
           bg: "background.base",
-          left: "46px",
+          left: "var(--date-width)",
           position: "sticky",
           zIndex: 2,
         },
@@ -485,8 +485,8 @@ const dayRows = {
       },
     ],
     variants: {
-      corner: { true: { left: 0, width: "46px", zIndex: 4 } },
-      me: { true: { left: "46px", zIndex: 4 } },
+      corner: { true: { left: 0, width: "var(--date-width)", zIndex: 4 } },
+      me: { true: { left: "var(--date-width)", zIndex: 4 } },
       // Under the page's own pinned rows, when it has any.
       page: { true: { top: "var(--pinned-top, -8px)" } },
       scrolls: { true: {} },
@@ -2176,6 +2176,8 @@ function DayRowsTable({
   // Opens a member's legend from their face or name, as in 週ごと.
   onMember: (member: Member) => void;
 }) {
+  const { english } = useWeek();
+  const dateWidth = english ? rowsEnglishDateWidth : rowsDateWidth;
   const density = densityOf(group.members.length);
   const withNames = density === "names";
   // Up to seven the page scrolls; more scroll sideways in their frame,
@@ -2190,9 +2192,12 @@ function DayRowsTable({
     >
       <table
         className={dayRows.table}
-        style={{
-          minWidth: rowsDateWidth + group.members.length * columnWidth,
-        }}
+        style={
+          {
+            "--date-width": `${dateWidth}px`,
+            minWidth: dateWidth + group.members.length * columnWidth,
+          } as CSSProperties
+        }
       >
         <caption className={srOnly}>みんなのシフト</caption>
         <thead>
@@ -2336,10 +2341,8 @@ function RowDate({
       ) : (
         date.getDate()
       )}
-      {/* One letter, as down a column of days: the dates in order beside
-          it tell T from T. */}
       <small className={dayRows.weekday}>
-        {weekTools.weekdayLetter(date.getDay())}
+        {weekTools.weekdayName(date.getDay())}
       </small>
     </span>
   );
@@ -2361,6 +2364,9 @@ function RowDate({
 }
 
 const rowsDateWidth = 46;
+// Room for 30 Wed, the longest of a date and its weekday in English,
+// beside the today line and the 12px in.
+const rowsEnglishDateWidth = 56;
 const rowsMemberWidth = 76;
 const rowsMarkWidth = 40;
 

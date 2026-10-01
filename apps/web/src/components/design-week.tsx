@@ -26,11 +26,11 @@ export const WeekSettingsContext = createContext<{
 }>({ week: defaultWeekSettings });
 
 export const weekdayNames = ["日", "月", "火", "水", "木", "金", "土"] as const;
-// English weekdays come in two lengths: one letter over or down a column
-// of days, where the column's place or the dates in order beside it tell
-// T from T, as calendars head their weeks; three letters beside a date
-// standing alone, where nothing else tells them apart, written as other
-// apps write them beside a date (9/24 Thu), as the months are Sep.
+// English weekdays come in two lengths: one letter over a column of days,
+// where the column's place tells T from T, as calendars head their weeks;
+// three letters beside a date, where nothing else tells them apart, even
+// down a list of days read row by row, written as other apps write them
+// there (9/24 Thu), as the months are Sep.
 export const englishWeekdayLetters = [
   "S",
   "M",
@@ -164,8 +164,7 @@ export function useWeek() {
     // A weekday's name for a heading or a day's label, in English when
     // 月と曜日 asks; sentences such as 9月24日(木) keep 日本語.
     weekdayName: (day: number) => weekdayNameOf(day, english),
-    // The same over or down a column of days, as the week's headings and
-    // the group table's dates.
+    // The same over a column of days, as the week's headings.
     weekdayLetter: (day: number) => weekdayLetterOf(day, english),
     dateClass: (date: Date) => dateClass(date, week.colored),
     dateTone: (date: Date) => toneOf(dateClass(date, week.colored)),
