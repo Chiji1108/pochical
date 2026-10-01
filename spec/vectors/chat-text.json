@@ -1,0 +1,260 @@
+{
+  "about": "A chat message's words as spec/chat.md has them. textParts cuts a message into words, links and mentions, in order: a link starts http:// or https://, runs over the characters a URL is written in, needs a host, and leaves out what closes the sentence after it (a full stop, a comma, a bracket opened before it). A mention is kept as <@id>. plainText shows each mention as @ and the member's name. withMentions turns only a picked member's whole @name (followed by a space or the end) into their mention. inviteCode: the code of Pochical's own invitation links, https://pochical.app/invite/{code}, known by the path alone, whatever query follows. site: a link's host without a leading www.",
+  "textParts": [
+    {
+      "name": "a message without links",
+      "text": "21日にしよ！",
+      "expected": [
+        {
+          "text": "21日にしよ！"
+        }
+      ]
+    },
+    {
+      "name": "a link on its own line",
+      "text": "ここ気になってた！\nhttps://cafe.example/menu",
+      "expected": [
+        {
+          "text": "ここ気になってた！\n"
+        },
+        {
+          "text": "https://cafe.example/menu",
+          "url": "https://cafe.example/menu"
+        }
+      ]
+    },
+    {
+      "name": "a link ends where Japanese starts",
+      "text": "https://cafe.example/ここどう？",
+      "expected": [
+        {
+          "text": "https://cafe.example/",
+          "url": "https://cafe.example/"
+        },
+        {
+          "text": "ここどう？"
+        }
+      ]
+    },
+    {
+      "name": "the sentence's bracket and full stop stay out",
+      "text": "(see http://a.example/x).",
+      "expected": [
+        {
+          "text": "(see "
+        },
+        {
+          "text": "http://a.example/x",
+          "url": "http://a.example/x"
+        },
+        {
+          "text": ")."
+        }
+      ]
+    },
+    {
+      "name": "a bracket the address opens stays in",
+      "text": "https://ja.example/wiki/A_(B)",
+      "expected": [
+        {
+          "text": "https://ja.example/wiki/A_(B)",
+          "url": "https://ja.example/wiki/A_(B)"
+        }
+      ]
+    },
+    {
+      "name": "a comma after a query stays out",
+      "text": "見て https://a.example/?q=1, ね",
+      "expected": [
+        {
+          "text": "見て "
+        },
+        {
+          "text": "https://a.example/?q=1",
+          "url": "https://a.example/?q=1"
+        },
+        {
+          "text": ", ね"
+        }
+      ]
+    },
+    {
+      "name": "every link",
+      "text": "https://a.example と https://b.example",
+      "expected": [
+        {
+          "text": "https://a.example",
+          "url": "https://a.example"
+        },
+        {
+          "text": " と "
+        },
+        {
+          "text": "https://b.example",
+          "url": "https://b.example"
+        }
+      ]
+    },
+    {
+      "name": "no scheme, no link",
+      "text": "cafe.example/menu",
+      "expected": [
+        {
+          "text": "cafe.example/menu"
+        }
+      ]
+    },
+    {
+      "name": "www alone is not a link",
+      "text": "www.cafe.example",
+      "expected": [
+        {
+          "text": "www.cafe.example"
+        }
+      ]
+    },
+    {
+      "name": "a scheme without a host is not a link",
+      "text": "https://",
+      "expected": [
+        {
+          "text": "https://"
+        }
+      ]
+    },
+    {
+      "name": "a capitalized scheme and host stay as written",
+      "text": "HTTPS://CAFE.EXAMPLE",
+      "expected": [
+        {
+          "text": "HTTPS://CAFE.EXAMPLE",
+          "url": "HTTPS://CAFE.EXAMPLE"
+        }
+      ]
+    },
+    {
+      "name": "mentions beside words and links",
+      "text": "<@misaki> ここ https://cafe.example どう？",
+      "expected": [
+        {
+          "mention": "misaki",
+          "text": "<@misaki>"
+        },
+        {
+          "text": " ここ "
+        },
+        {
+          "text": "https://cafe.example",
+          "url": "https://cafe.example"
+        },
+        {
+          "text": " どう？"
+        }
+      ]
+    }
+  ],
+  "mentions": [
+    {
+      "text": "<@me>と<@aya>、21日ね",
+      "expected": ["me", "aya"]
+    },
+    {
+      "text": "メンションなし",
+      "expected": []
+    }
+  ],
+  "plainText": [
+    {
+      "text": "<@me>と<@aya>、21日ね",
+      "names": {
+        "aya": "あや",
+        "me": "さくら"
+      },
+      "expected": "@さくらと@あや、21日ね"
+    }
+  ],
+  "withMentions": [
+    {
+      "name": "only a picked member's whole @name",
+      "text": "@あや @あやか 21日どう？@ゆう",
+      "picked": [
+        {
+          "id": "aya",
+          "name": "あや"
+        },
+        {
+          "id": "yu",
+          "name": "ゆう"
+        }
+      ],
+      "expected": "<@aya> @あやか 21日どう？<@yu>"
+    },
+    {
+      "name": "a name with characters regular expressions use",
+      "text": "@a.b+c どう？",
+      "picked": [
+        {
+          "id": "abc",
+          "name": "a.b+c"
+        }
+      ],
+      "expected": "<@abc> どう？"
+    }
+  ],
+  "inviteCode": [
+    {
+      "url": "https://pochical.app/invite/Toko2345",
+      "expected": "Toko2345"
+    },
+    {
+      "url": "https://POCHICAL.app/invite/Toko2345/?from=line",
+      "expected": "Toko2345"
+    },
+    {
+      "url": "https://pochical.app/invite/Toko2345?hl=ko",
+      "expected": "Toko2345"
+    },
+    {
+      "url": "http://pochical.app/invite/Toko2345",
+      "expected": null
+    },
+    {
+      "url": "https://pochical.app/invite/Toko",
+      "expected": null
+    },
+    {
+      "url": "https://pochical.app/invite/Toko2345/more",
+      "expected": null
+    },
+    {
+      "url": "https://pochical.app/invite/Toko0345",
+      "expected": null
+    },
+    {
+      "url": "https://pochical.app/support",
+      "expected": null
+    },
+    {
+      "url": "https://evil.example/invite/Toko2345",
+      "expected": null
+    },
+    {
+      "url": "https://pochical.app.evil.example/invite/Toko2345",
+      "expected": null
+    }
+  ],
+  "site": [
+    {
+      "url": "https://www.cafe.example/menu",
+      "expected": "cafe.example"
+    },
+    {
+      "url": "https://cafe.example",
+      "expected": "cafe.example"
+    },
+    {
+      "url": "https://shop.www.example/",
+      "expected": "shop.www.example"
+    }
+  ]
+}

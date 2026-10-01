@@ -1,0 +1,159 @@
+{
+  "about": "Text counted as spec/text-limits.md has it: in characters as a reader sees them (grapheme clusters, as Swift's String.count and ICU's character BreakIterator). limitText keeps the first `limit` characters. dayName shows a shift's name in a day: whole up to `length` characters, else its first `length` - 1 and …; the apps use textFields.dayNameLength (design/src/limits.ts).",
+  "characterCount": [
+    {
+      "name": "nothing",
+      "text": "",
+      "expected": 0
+    },
+    {
+      "name": "kanji",
+      "text": "夜勤",
+      "expected": 2
+    },
+    {
+      "name": "ASCII",
+      "text": "ABC",
+      "expected": 3
+    },
+    {
+      "name": "half-width katakana",
+      "text": "ｱｲｳ",
+      "expected": 3
+    },
+    {
+      "name": "full-width letters",
+      "text": "ＡＢ",
+      "expected": 2
+    },
+    {
+      "name": "a composed kana",
+      "text": "が",
+      "expected": 1
+    },
+    {
+      "name": "a kana and its voicing mark",
+      "text": "か\u3099",
+      "expected": 1
+    },
+    {
+      "name": "a letter and its accent",
+      "text": "e\u0301",
+      "expected": 1
+    },
+    {
+      "name": "an emoji and its skin tone",
+      "text": "👍🏽",
+      "expected": 1
+    },
+    {
+      "name": "a family joined by ZWJ",
+      "text": "👨\u200d👩\u200d👧\u200d👦",
+      "expected": 1
+    },
+    {
+      "name": "a flag joined by ZWJ",
+      "text": "🏳\ufe0f\u200d🌈",
+      "expected": 1
+    },
+    {
+      "name": "two flags",
+      "text": "🇯🇵🇰🇷",
+      "expected": 2
+    },
+    {
+      "name": "a keycap",
+      "text": "1\ufe0f\u20e3",
+      "expected": 1
+    },
+    {
+      "name": "Hangul syllables",
+      "text": "한국",
+      "expected": 2
+    },
+    {
+      "name": "a Hangul syllable written as its jamo",
+      "text": "ᄒ\u1161\u11ab",
+      "expected": 1
+    },
+    {
+      "name": "CR LF counts as one",
+      "text": "a\r\nb",
+      "expected": 3
+    },
+    {
+      "name": "words and an emoji",
+      "text": "夜勤🌙",
+      "expected": 3
+    }
+  ],
+  "limitText": [
+    {
+      "text": "夜勤明け",
+      "limit": 2,
+      "expected": "夜勤"
+    },
+    {
+      "text": "abc",
+      "limit": 5,
+      "expected": "abc"
+    },
+    {
+      "text": "👨\u200d👩\u200d👧\u200d👦👍🏽ab",
+      "limit": 2,
+      "expected": "👨\u200d👩\u200d👧\u200d👦👍🏽"
+    },
+    {
+      "text": "e\u0301e\u0301e\u0301",
+      "limit": 2,
+      "expected": "e\u0301e\u0301"
+    },
+    {
+      "text": "🇯🇵🇰🇷",
+      "limit": 1,
+      "expected": "🇯🇵"
+    },
+    {
+      "text": "",
+      "limit": 3,
+      "expected": ""
+    }
+  ],
+  "dayName": [
+    {
+      "name": "日勤",
+      "length": 3,
+      "expected": "日勤"
+    },
+    {
+      "name": "研修会",
+      "length": 3,
+      "expected": "研修会"
+    },
+    {
+      "name": "早出残業",
+      "length": 3,
+      "expected": "早出…"
+    },
+    {
+      "name": "👨\u200d👩\u200d👧\u200d👦家族の日",
+      "length": 3,
+      "expected": "👨\u200d👩\u200d👧\u200d👦家…"
+    },
+    {
+      "name": "Night",
+      "length": 3,
+      "expected": "Ni…"
+    },
+    {
+      "name": "夜勤明け",
+      "length": 4,
+      "expected": "夜勤明け"
+    },
+    {
+      "name": "夜勤明け休",
+      "length": 4,
+      "expected": "夜勤明…"
+    }
+  ]
+}

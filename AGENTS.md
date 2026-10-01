@@ -9,7 +9,8 @@ Pochical is a multi-language monorepo: native SwiftUI (`apps/ios`) and Jetpack C
 - Wire types live in `proto/`. Never edit generated code (`apps/server/src/gen`, `apps/web/src/gen`, `apps/ios/Packages/PochicalProto/Sources`, `apps/android/proto/src/main`); change the `.proto` files and run `mise run gen`.
 - Numbers every platform shares live in `design/src/` and are written out by `mise run gen` like the design tokens: limits (`limits.ts`), the chat's (`chat.ts`), invitation codes (`invite.ts`) and the widgets' (`widgets.ts`). Specs and code refer to them by name rather than repeating the numbers.
 - Design tokens (colors and テーマ, text styles, sizes) live in `design/` (TypeScript). apps/web imports them directly; `mise run gen` writes them out to `spec/design-tokens.json`, `apps/ios/Packages/PochicalDesign/Sources` and `apps/android/design/src/main`, which are never edited by hand. Components are not generated: each platform builds its own, with apps/web's /design as the reference.
-- Behavior shared across platforms is specified in `spec/`.
+- Behavior shared across platforms is specified in `spec/`. Pure logic every platform writes again (repeating orders, a day's time changes, counting text, chat links and mentions, HLC order) is pinned by `spec/vectors/*.json`: inputs and the expected answers, which each platform's tests read (`apps/web/tests/vectors.test.ts`, `apps/server/test/vectors.test.ts`). A new case goes in the JSON, not in one platform's test.
+- National holidays are written out by `mise run gen` from `design/scripts/holidays.ts`, keyed by country code ("JP"), for the web and the native apps alike.
 
 # TypeScript: Ultracite Code Standards
 

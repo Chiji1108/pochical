@@ -1,0 +1,224 @@
+{
+  "about": "A repeating order of shifts (spec/shift-patterns.md). schedule: each day from `from` to `to` takes the order's shift counted in whole days from `anchor`, which falls on the order's first shift; days before the anchor count backwards. With `holidayShift`, the national holidays of `holidays` (a country code, design/scripts/holidays.ts) take that pattern instead. lastDay: an order is filled through the end of the month a year after its start. holidaysOffByDefault: 祝日は休みにする starts on when the order is a week (seven shifts) with a pattern that counts as off on a Saturday or Sunday; `daysOff` are the patterns that count as off. holidayShift: what holidays become, the first pattern that counts as off, in the person's order.",
+  "schedule": [
+    {
+      "name": "a three-day order from its anchor",
+      "sequence": ["day", "night", "after"],
+      "anchor": "2026-10-01",
+      "from": "2026-10-01",
+      "to": "2026-10-07",
+      "expected": {
+        "2026-10-01": "day",
+        "2026-10-02": "night",
+        "2026-10-03": "after",
+        "2026-10-04": "day",
+        "2026-10-05": "night",
+        "2026-10-06": "after",
+        "2026-10-07": "day"
+      }
+    },
+    {
+      "name": "days before the anchor line up too",
+      "sequence": ["day", "night", "after", "off"],
+      "anchor": "2026-10-10",
+      "from": "2026-10-05",
+      "to": "2026-10-12",
+      "expected": {
+        "2026-10-05": "off",
+        "2026-10-06": "day",
+        "2026-10-07": "night",
+        "2026-10-08": "after",
+        "2026-10-09": "off",
+        "2026-10-10": "day",
+        "2026-10-11": "night",
+        "2026-10-12": "after"
+      }
+    },
+    {
+      "name": "an order of one",
+      "sequence": ["day"],
+      "anchor": "2026-10-01",
+      "from": "2026-10-01",
+      "to": "2026-10-03",
+      "expected": {
+        "2026-10-01": "day",
+        "2026-10-02": "day",
+        "2026-10-03": "day"
+      }
+    },
+    {
+      "name": "across the end of a year",
+      "sequence": ["day", "off"],
+      "anchor": "2026-12-30",
+      "from": "2026-12-30",
+      "to": "2027-01-02",
+      "expected": {
+        "2026-12-30": "day",
+        "2026-12-31": "off",
+        "2027-01-01": "day",
+        "2027-01-02": "off"
+      }
+    },
+    {
+      "name": "a leap day is a day like any other",
+      "sequence": ["day", "night", "after"],
+      "anchor": "2028-02-27",
+      "from": "2028-02-27",
+      "to": "2028-03-02",
+      "expected": {
+        "2028-02-27": "day",
+        "2028-02-28": "night",
+        "2028-02-29": "after",
+        "2028-03-01": "day",
+        "2028-03-02": "night"
+      }
+    },
+    {
+      "name": "far from its anchor, still counted in whole days",
+      "sequence": ["day", "night", "after"],
+      "anchor": "2000-01-01",
+      "from": "2026-10-01",
+      "to": "2026-10-03",
+      "expected": {
+        "2026-10-01": "after",
+        "2026-10-02": "day",
+        "2026-10-03": "night"
+      }
+    },
+    {
+      "name": "holidays keep the order when nothing is put on them",
+      "sequence": ["day", "day", "day", "day", "day", "off", "off"],
+      "anchor": "2026-04-27",
+      "from": "2026-04-27",
+      "to": "2026-05-07",
+      "expected": {
+        "2026-04-27": "day",
+        "2026-04-28": "day",
+        "2026-04-29": "day",
+        "2026-04-30": "day",
+        "2026-05-01": "day",
+        "2026-05-02": "off",
+        "2026-05-03": "off",
+        "2026-05-04": "day",
+        "2026-05-05": "day",
+        "2026-05-06": "day",
+        "2026-05-07": "day"
+      }
+    },
+    {
+      "name": "holidays take the day-off pattern, substitute holidays too",
+      "sequence": ["day", "day", "day", "day", "day", "off", "off"],
+      "anchor": "2026-04-27",
+      "from": "2026-04-27",
+      "to": "2026-05-07",
+      "holidays": "JP",
+      "holidayShift": "off",
+      "expected": {
+        "2026-04-27": "day",
+        "2026-04-28": "day",
+        "2026-04-29": "off",
+        "2026-04-30": "day",
+        "2026-05-01": "day",
+        "2026-05-02": "off",
+        "2026-05-03": "off",
+        "2026-05-04": "off",
+        "2026-05-05": "off",
+        "2026-05-06": "off",
+        "2026-05-07": "day"
+      }
+    }
+  ],
+  "lastDay": [
+    {
+      "start": "2026-10-01",
+      "expected": "2027-10-31"
+    },
+    {
+      "start": "2026-10-31",
+      "expected": "2027-10-31"
+    },
+    {
+      "start": "2026-01-15",
+      "expected": "2027-01-31"
+    },
+    {
+      "start": "2027-02-10",
+      "expected": "2028-02-29"
+    },
+    {
+      "start": "2027-03-31",
+      "expected": "2028-03-31"
+    }
+  ],
+  "holidaysOffByDefault": [
+    {
+      "name": "a week off on Saturday and Sunday",
+      "sequence": ["day", "day", "day", "day", "day", "off", "off"],
+      "start": "2026-10-05",
+      "daysOff": ["off"],
+      "expected": true
+    },
+    {
+      "name": "the same week started on a Wednesday",
+      "sequence": ["day", "day", "day", "off", "off", "day", "day"],
+      "start": "2026-10-07",
+      "daysOff": ["off"],
+      "expected": true
+    },
+    {
+      "name": "off on a weekday only",
+      "sequence": ["day", "day", "off", "day", "day", "day", "day"],
+      "start": "2026-10-05",
+      "daysOff": ["off"],
+      "expected": false
+    },
+    {
+      "name": "any pattern that counts as off",
+      "sequence": ["day", "day", "day", "day", "day", "day", "paid"],
+      "start": "2026-10-05",
+      "daysOff": ["off", "paid"],
+      "expected": true
+    },
+    {
+      "name": "only an order of seven reads as a week",
+      "sequence": ["day", "day", "day", "day", "off", "off"],
+      "start": "2026-10-05",
+      "daysOff": ["off"],
+      "expected": false
+    }
+  ],
+  "holidayShift": [
+    {
+      "name": "the first pattern that counts as off",
+      "patterns": [
+        {
+          "id": "day",
+          "countsAsOff": false
+        },
+        {
+          "id": "paid",
+          "countsAsOff": true
+        },
+        {
+          "id": "off",
+          "countsAsOff": true
+        }
+      ],
+      "expected": "paid"
+    },
+    {
+      "name": "none when no pattern counts as off",
+      "patterns": [
+        {
+          "id": "day",
+          "countsAsOff": false
+        },
+        {
+          "id": "night",
+          "countsAsOff": false
+        }
+      ],
+      "expected": null
+    }
+  ]
+}

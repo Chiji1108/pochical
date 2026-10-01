@@ -1,0 +1,75 @@
+{
+  "about": "Hybrid logical clocks (spec/sync-protocol.md, HLC): compared by physical time (ms), then counter, then device, which only breaks exact ties; devices compare by their characters' codes, as plain ASCII strings. expected is -1 when a is older, 1 when newer, 0 when the same.",
+  "compare": [
+    {
+      "name": "later physical time wins",
+      "a": {
+        "ms": 1000,
+        "counter": 5,
+        "device": "b"
+      },
+      "b": {
+        "ms": 2000,
+        "counter": 0,
+        "device": "a"
+      },
+      "expected": -1
+    },
+    {
+      "name": "the counter breaks a tie in time",
+      "a": {
+        "ms": 1000,
+        "counter": 1,
+        "device": "a"
+      },
+      "b": {
+        "ms": 1000,
+        "counter": 0,
+        "device": "z"
+      },
+      "expected": 1
+    },
+    {
+      "name": "the device breaks an exact tie",
+      "a": {
+        "ms": 1000,
+        "counter": 0,
+        "device": "device-a"
+      },
+      "b": {
+        "ms": 1000,
+        "counter": 0,
+        "device": "device-b"
+      },
+      "expected": -1
+    },
+    {
+      "name": "devices compare by their characters' codes",
+      "a": {
+        "ms": 1000,
+        "counter": 0,
+        "device": "Z"
+      },
+      "b": {
+        "ms": 1000,
+        "counter": 0,
+        "device": "a"
+      },
+      "expected": -1
+    },
+    {
+      "name": "the same clock",
+      "a": {
+        "ms": 1000,
+        "counter": 0,
+        "device": "a"
+      },
+      "b": {
+        "ms": 1000,
+        "counter": 0,
+        "device": "a"
+      },
+      "expected": 0
+    }
+  ]
+}

@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@holiday-jp/holiday_jp": "^2.5.2",
     "@types/bun": "^1.4.2",
     "budoux": "^0.9.3",
     "typescript": "~6.0.3"

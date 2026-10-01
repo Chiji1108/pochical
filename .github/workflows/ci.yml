@@ -35,6 +35,7 @@ jobs:
               - "apps/server/**"
               - "design/**"
               - "spec/design-tokens.json"
+              - "spec/vectors/**"
               - "apps/ios/Packages/PochicalDesign/**"
               - "apps/android/design/**"
               - "tools/**"
