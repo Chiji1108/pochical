@@ -143,7 +143,7 @@ function noteMarkerStyle(
     "--calendar-note-marker": marker,
     "--calendar-note-marker-on-off":
       look === "tint"
-        ? `oklch(from var(--off-tint, var(--calendar-off-tint)) ${steps.onTile} h)`
+        ? `oklch(from var(--off-tint, ${tile}) ${steps.onTile} h)`
         : marker,
   };
 }
