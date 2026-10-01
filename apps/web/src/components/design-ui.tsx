@@ -2355,6 +2355,13 @@ const menu = {
   }),
   icon: css({ color: "text.primary", display: "flex", flexShrink: 0 }),
   item: css({
+    // An action that takes something away, in the danger color with its
+    // icon, as iOS draws a destructive item. One class with the rest, so
+    // the colors never depend on which class the stylesheet puts last.
+    "&[data-danger]": {
+      "& > span": { color: "danger.default" },
+      color: "danger.default",
+    },
     _focusVisible: {
       outline: "2px solid token(colors.accent.default)",
       outlineOffset: "-2px",
@@ -2374,12 +2381,6 @@ const menu = {
     textStyle: "body",
     userSelect: "none",
     width: "100%",
-  }),
-  // An action that removes something, in the danger color with its icon,
-  // as iOS draws a destructive menu item.
-  danger: css({
-    "& > span": { color: "danger.default" },
-    color: "danger.default",
   }),
   separator: css({
     border: 0,
@@ -2405,7 +2406,6 @@ const menu = {
 // under its reactions.
 export const menuStyle = {
   content: menu.content,
-  danger: menu.danger,
   icon: menu.icon,
   item: menu.item,
   separator: menu.separator,
@@ -2523,7 +2523,8 @@ export function MenuItem({
 }) {
   return (
     <Menu.Item
-      className={cx(menu.item, danger && menu.danger)}
+      className={menu.item}
+      data-danger={danger ? "" : undefined}
       onSelect={onSelect}
       value={value}
     >

@@ -2616,7 +2616,8 @@ function MessageActions({
                 <>
                   <hr className={menuStyle.separator} />
                   <button
-                    className={cx(menuStyle.item, menuStyle.danger)}
+                    className={menuStyle.item}
+                    data-danger=""
                     onClick={() => {
                       closeThen(onUnsend);
                     }}
@@ -2633,7 +2634,8 @@ function MessageActions({
                 <>
                   <hr className={menuStyle.separator} />
                   <button
-                    className={cx(menuStyle.item, menuStyle.danger)}
+                    className={menuStyle.item}
+                    data-danger=""
                     onClick={() => {
                       closeThen(onReport);
                     }}
