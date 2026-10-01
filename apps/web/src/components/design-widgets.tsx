@@ -231,11 +231,14 @@ const list = css({ listStyle: "none", margin: 0, padding: 0 });
 
 // ── 今日 ────────────────────────────────────────────────────────────────
 
-const oneLine = {
+// One line, cut with … where it runs out. Written out in each style
+// rather than spread from a shared object, which Panda's extraction
+// missed, leaving long memos wrapping.
+const oneLine = css({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-} as const;
+});
 
 const today = {
   date: css({ color: "text.secondary", textStyle: "footnote" }),
@@ -246,7 +249,13 @@ const today = {
     textStyle: "headline",
     whiteSpace: "nowrap",
   }),
-  note: css({ ...oneLine, color: "text.secondary", textStyle: "footnote" }),
+  note: css({
+    color: "text.secondary",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    textStyle: "footnote",
+    whiteSpace: "nowrap",
+  }),
   root: css({
     // Each piece as wide as itself, so a mark's 早出/残業 corners stay on
     // the mark.
@@ -614,7 +623,7 @@ function OffsHead({ entry }: { entry: WidgetEntry }) {
   const { with: companion } = entry.offs;
   return (
     <span className={offs.head}>
-      <span className={css(oneLine)}>
+      <span className={oneLine}>
         {companion ? "一緒に休める日" : "次の休み"}
       </span>
       {companion && (
@@ -719,7 +728,7 @@ function RestToday({ entry }: { entry: WidgetEntry }) {
       <span className={srOnly}>{spokenOff(entry, { day, inDays: 0 })}</span>
       <PeekingDog />
       <span aria-hidden="true" className={offs.head}>
-        <span className={css(oneLine)}>
+        <span className={oneLine}>
           {monthDay(day.date)}({day.weekday})
         </span>
         {companion && (
@@ -849,7 +858,13 @@ const listing = {
   // Clear of the end, so a mark's 残業 corner stays inside the widget's
   // room.
   smallMark: css({ display: "inline-flex", marginRight: "2px" }),
-  text: css({ ...oneLine, color: "text.secondary", textStyle: "footnote" }),
+  text: css({
+    color: "text.secondary",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    textStyle: "footnote",
+    whiteSpace: "nowrap",
+  }),
   // A small mark beside the day's number, not a second number: a size
   // down, its capitals spaced a little in English.
   weekday: css({ letterSpacing: "0.04em", textStyle: "caption2" }),
@@ -1159,14 +1174,21 @@ const plain = {
     width: "112px",
   }),
   value: css({
-    ...oneLine,
     alignItems: "center",
     display: "flex",
     fontVariantNumeric: "tabular-nums",
     gap: "4px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
     textStyle: "subheadline",
+    whiteSpace: "nowrap",
   }),
-  words: css({ ...oneLine, fontWeight: 400 }),
+  words: css({
+    fontWeight: 400,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  }),
 };
 
 // Today on the left, its date large with its mark; on the right,
@@ -1225,7 +1247,13 @@ const column = {
     fontVariantNumeric: "tabular-nums",
     textStyle: "footnote",
   }),
-  note: css({ ...oneLine, color: "text.secondary", textStyle: "footnote" }),
+  note: css({
+    color: "text.secondary",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    textStyle: "footnote",
+    whiteSpace: "nowrap",
+  }),
   root: css({
     alignItems: "flex-start",
     display: "flex",
@@ -1235,11 +1263,13 @@ const column = {
     minWidth: 0,
   }),
   words: css({
-    ...oneLine,
     fontVariantNumeric: "tabular-nums",
     fontWeight: 600,
     maxWidth: "100%",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
     textStyle: "subheadline",
+    whiteSpace: "nowrap",
   }),
 };
 
