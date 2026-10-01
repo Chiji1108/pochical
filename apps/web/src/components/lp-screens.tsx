@@ -83,9 +83,11 @@ export function Sky({
   presses: number;
   bare?: boolean;
 }) {
+  // It starts as if never pressed: presses made while this code was still
+  // on its way change it at once on arrival.
   const [shown, setShown] = useState({
     id: bare ? undefined : HERO_SKY,
-    presses,
+    presses: 0,
   });
   if (shown.presses !== presses) {
     setShown({
