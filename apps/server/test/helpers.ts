@@ -7,7 +7,12 @@ export const ORIGIN = "https://server.test";
 export const signInAnonymously = async (): Promise<string> => {
   const response = await exports.default.fetch(
     `${ORIGIN}/api/auth/sign-in/anonymous`,
-    { method: "POST" }
+    // As the apps send it: better-auth wants a JSON body.
+    {
+      body: "{}",
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    }
   );
   expect(response.status).toBe(200);
   const token = response.headers.get("set-auth-token");
