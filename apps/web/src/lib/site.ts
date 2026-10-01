@@ -1,7 +1,7 @@
 export const site = {
   description:
     "勤務を選んで、日付をポチポチ。家族や友だちとも共有できるシフトカレンダー、ポチカル。",
-  email: "contact@chiji.tech",
+  email: "support@pochical.app",
   name: "ポチカル",
 };
 

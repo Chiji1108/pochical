@@ -4,7 +4,7 @@ managed:
   enabled: true
   override:
     - file_option: java_package_prefix
-      value: tech.chiji
+      value: app
 plugins:
   # Workers (connect-es). Runs the protoc-gen-es version pinned in apps/server.
   - local: ../node_modules/.bin/protoc-gen-es
