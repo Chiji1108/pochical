@@ -831,6 +831,7 @@ export function ChatPage({
       ...(text ? [{ link: linkPreview.ready, text }] : [])
     );
     setDraft("");
+    linkPreview.reset();
     setAttached(undefined);
     setPhotos([]);
   };
@@ -1618,8 +1619,6 @@ function useLinkPreview(draft: string) {
   const asked = useRef(new Set<string>());
   useEffect(() => {
     if (!link) {
-      // A new message starts with previews back on.
-      setSkipped(undefined);
       return;
     }
     const timers = [
@@ -1648,6 +1647,10 @@ function useLinkPreview(draft: string) {
   return {
     handleSkip: () => {
       setSkipped(link);
+    },
+    // A new message starts with previews back on.
+    reset: () => {
+      setSkipped(undefined);
     },
     ready: shown ? pages[shown] : undefined,
     shown,
