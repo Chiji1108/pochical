@@ -29,16 +29,15 @@
 
 ## 環境変数
 
-`.env.example` を `.env.local` に、`.dev.vars.example` を `.dev.vars` にコピーします。
+`.env.example` を `.env.local` にコピーします。
 
 | 変数 | 設定場所 | 用途 |
 | --- | --- | --- |
 | `VITE_SITE_URL` | `.env.local` / CIのビルド環境 | 決定した本番HTTPSオリジン。canonicalとOG画像URL |
 | `VITE_APP_STORE_URL` | 同上 | 公開後のApp Store URL |
 | `VITE_GOOGLE_PLAY_URL` | 同上 | 公開後のGoogle Play URL |
-| `POCHICAL_SERVER_URL` | `.dev.vars` / Workersの環境変数 | サーバー（`apps/server`）のオリジン。招待確認。ローカルでは `mise run server` の `http://localhost:8787` |
 
-`VITE_*` は公開される値です。OAuthの秘密鍵・クライアントシークレット等は入れません。ストアURLが空なら公開準備中と表示します。ドメイン未設定ではcanonicalを出しません。サーバーURL未設定でも招待ページ以外は動作し、招待ページは「確認できませんでした」と表示します。開発用 `.env.local` のURLを本番ビルドに混ぜないよう、本番はCIで設定してください。
+`VITE_*` は公開される値です。OAuthの秘密鍵・クライアントシークレット等は入れません。ストアURLが空なら公開準備中と表示します。ドメイン未設定ではcanonicalを出しません。招待ページはサーバー（`apps/server`、Worker名 `pochical-server`）にService Bindingで問い合わせます。ローカルでは `mise run server` を並べて起動してください。起動していなければ、招待ページは「確認できませんでした」と表示します。開発用 `.env.local` のURLを本番ビルドに混ぜないよう、本番はCIで設定してください。
 
 ## Webからのアカウント削除
 
@@ -47,7 +46,6 @@
 ## 公開前に設定するもの
 
 - 専用ドメインと本番用の上記環境変数
-- サーバーをデプロイし、Workersの `POCHICAL_SERVER_URL` にそのオリジンを設定
 - 実際に公開されたストアURL
 - Apple/Googleで、アプリと同じアカウントになることの実環境確認
 - Webでの本人確認つき削除（認証ができてから）

@@ -12,12 +12,16 @@
   // The Group DO's migrations import their SQL as text (drizzle-kit).
   "rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }],
   // Global lookups a Durable Object cannot answer alone, such as which group
-  // an invite code opens. Wrangler creates the database on first deploy.
+  // an invite code opens. Created in APAC, near Pochical's users.
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "pochical",
+      "database_id": "b2334cd8-c8c6-4c3d-aa09-f17754326b22",
       "migrations_dir": "migrations",
     },
   ],
+  // The apps (and later the site's sign-in) reach the server here; the
+  // site's own Worker calls it through a service binding instead.
+  "routes": [{ "pattern": "api.pochical.app", "custom_domain": true }],
 }
