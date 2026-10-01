@@ -1,3 +1,4 @@
+import { siteOf } from "../lib/chat-links";
 import { dateKey, timeChangeOf, timeRange } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
@@ -389,14 +390,17 @@ export function sameMonth(date: Date, month: Date) {
 
 // A chat line. `days` shares dates, drawn with everyone's shifts;
 // `photo` is a picture, one per line; `replyTo` quotes an earlier line;
-// `notice` is a line from the app about who is in the group, how to get
-// in or what it is called, shown between the messages.
+// `link` is the preview of the first link in `text`, made as it was
+// written and sent with it; `notice` is a line from the app about who is
+// in the group, how to get in or what it is called, shown between the
+// messages.
 export type Message = {
   id: string;
   from: string;
   when: string;
   time: string;
   text?: string;
+  link?: LinkPreview;
   notice?: string;
   days?: Date[];
   photo?: Photo;
@@ -405,6 +409,53 @@ export type Message = {
 };
 
 export type Reaction = { emoji: string; by: string[] };
+
+// A link's page as its preview shows it: its title, the site's name and
+// its picture, read from the page by the server (spec/chat-links.md).
+export type LinkPreview = {
+  url: string;
+  title: string;
+  site: string;
+  image?: string;
+};
+
+// A page's picture for a sample link: an Unsplash photo from
+// picsum.photos, at the 1.91:1 that pages give for previews.
+function samplePagePicture(id: number) {
+  return `https://picsum.photos/id/${id}/600/314`;
+}
+
+const cafePreview: LinkPreview = {
+  image: samplePagePicture(431),
+  site: "cafe-komorebi.example",
+  title: "cafe こもれび｜季節のケーキと自家焙煎コーヒー",
+  url: "https://cafe-komorebi.example/menu",
+};
+
+// The pages the sample links lead to. They are made up, on names kept
+// for examples, so /design shows no real shop.
+const samplePreviews: LinkPreview[] = [
+  cafePreview,
+  {
+    image: samplePagePicture(292),
+    site: "maruyama-yakiniku.example",
+    title: "焼肉まるやま 駅前店｜ネット予約",
+    url: "https://maruyama-yakiniku.example/",
+  },
+];
+
+// The preview for a link, as the server would read it: a sample page, or
+// for any other link a page that gives no title or picture, which shows
+// its address in place of a title.
+export function previewOf(url: string): LinkPreview {
+  return (
+    samplePreviews.find((sample) => sample.url === url) ?? {
+      site: siteOf(url),
+      title: url.replace(/^https?:\/\//iu, ""),
+      url,
+    }
+  );
+}
 
 export type Chat = { messages: Message[]; unread: number };
 
@@ -546,8 +597,16 @@ export const sampleChats: Record<string, Chat> = {
         time: "12:24",
         when: "今日",
       },
+      {
+        from: "aya",
+        id: "n5",
+        link: cafePreview,
+        text: `ここ気になってた！\n${cafePreview.url}`,
+        time: "12:31",
+        when: "今日",
+      },
     ],
-    unread: 3,
+    unread: 4,
   },
   // Nine in all, so shared days have to fit more people than a bubble
   // holds across.
