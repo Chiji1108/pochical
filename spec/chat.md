@@ -90,3 +90,12 @@ The stores require a way to report what people post and to block someone (App St
 - Under the header, a bar shows the latest pinned line: a pin, ピン留め (ピン留め・N件 with more than one) and its words on one line. A tap jumps to the line and rings it. With more than one, ▾ opens all of them under the bar, the latest first, each with who wrote it.
 - A long press (or a right click) on the bar, or on a line of its list, offers ピン留めを外す, as a line's long press opens its menu. There is no × on the bar: a pin is everyone's, so taking it off is not left a stray tap away.
 - A pinned line has a small pin by its time. Taking a line back (送信取消) takes its pin off too.
+
+## Polls
+
+A group chat can put days to the vote, as LINE's 日程調整 does, for the step after finding days everyone is off.
+
+- In the day sheet (日にちを共有), once two or more days are picked in a group chat, a switch 投票で決める appears (off). On, the note says 〇日の中から、みんなが行ける日を投票で決めます。 and ✓ sends a poll instead of the days. One-to-one chats have no polls.
+- The poll is a card: a head (日にちの投票, and N人が投票) that opens the line's reactions and menu like any line, then a row per day: the date (in the week's colors), みんな休み under it when everyone's shifts are off, the faces of who can come (three, or two and +N), and a 行ける button that toggles your vote. Anyone in the group votes, on as many days as they like, and can change it until the poll is settled.
+- Its writer has 日にちを決める at the card's foot: a sheet lists the days with how many can come; ✓ settles it. The chosen row is marked 決定 on the accent's container, the other days fade, voting ends, and the poll is pinned (Pins) so the day stays found. The app says 〇月〇日(〇)に決めました to the writer.
+- In a line of words (quotes, the chat list, the pin bar) a poll reads 📅 日にちの投票：〇月〇日(〇)ほか, and once settled 📅 〇月〇日(〇)に決定.

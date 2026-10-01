@@ -71,6 +71,7 @@ import {
   PullDownMenu,
   srOnly,
   SummaryRow,
+  SwitchRow,
   summaryRow,
   Tag,
   TodayButton,
@@ -753,11 +754,15 @@ export function DaySheet({
   onOpenChange,
   members,
   onShare,
+  pollable = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   members: Member[];
-  onShare: (days: Date[]) => void;
+  // `poll`: put to the vote rather than shared as they are.
+  onShare: (days: Date[], poll: boolean) => void;
+  // In a group chat, several days can be put to the vote.
+  pollable?: boolean;
 }) {
   return (
     <Sheet label="日にちを共有" onOpenChange={onOpenChange} open={open}>
@@ -767,6 +772,7 @@ export function DaySheet({
           onOpenChange(false);
         }}
         onShare={onShare}
+        pollable={pollable}
       />
     </Sheet>
   );
@@ -785,16 +791,20 @@ function DaySheetBody({
   members,
   onClose,
   onShare,
+  pollable,
 }: {
   members: Member[];
   onClose: () => void;
-  onShare: (days: Date[]) => void;
+  onShare: (days: Date[], poll: boolean) => void;
+  pollable: boolean;
 }) {
+  const [poll, setPoll] = useState(false);
   const weekTools = useWeek();
   const [month, setMonth] = useState(
     new Date(designToday.getFullYear(), designToday.getMonth(), 1)
   );
   const [picked, setPicked] = useState<Date[]>([]);
+  const canPoll = pollable && picked.length > 1;
   const isPicked = (date: Date) =>
     picked.some((item) => dateKey(item) === dateKey(date));
   const toggle = (date: Date) => {
@@ -815,7 +825,7 @@ function DaySheetBody({
         action="送る"
         disabled={picked.length === 0}
         onAction={() => {
-          onShare(picked);
+          onShare(picked, canPoll && poll);
         }}
         onCancel={onClose}
         title="日にちを共有"
@@ -898,17 +908,30 @@ function DaySheetBody({
             );
           })}
         </div>
-        <Note>
-          {picked.length > 0
-            ? `${picked.length}日分のみんなのシフトを送ります。`
-            : "日付に枠がある日は、みんな休みの日です。"}
-        </Note>
+        {/* Offered once there is more than one day to choose from, as
+            LINE's 日程調整 is a way of choosing among days. */}
+        {canPoll && (
+          <List>
+            <SwitchRow checked={poll} label="投票で決める" onChange={setPoll} />
+          </List>
+        )}
+        <Note>{dayNote(picked.length, canPoll && poll)}</Note>
       </div>
     </>
   );
 }
 
 const suggestionCount = 4;
+
+// What sending will do, under the days.
+function dayNote(count: number, poll: boolean) {
+  if (count === 0) {
+    return "日付に枠がある日は、みんな休みの日です。";
+  }
+  return poll
+    ? `${count}日の中から、みんなが行ける日を投票で決めます。`
+    : `${count}日分のみんなのシフトを送ります。`;
+}
 
 // 一覧 reads most easily, so it comes first while everyone fits across;
 // past that it scrolls sideways, and 週ごと, which grows only downwards,

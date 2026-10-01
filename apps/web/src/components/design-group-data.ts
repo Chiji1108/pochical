@@ -406,6 +406,8 @@ export type Message = {
   unsent?: boolean;
   // Pinned over the chat, for everyone; the larger, the later it was.
   pinned?: number;
+  // Days put to the vote, in place of `days` shared as they are.
+  poll?: Poll;
   text?: string;
   link?: LinkPreview;
   notice?: string;
@@ -416,6 +418,14 @@ export type Message = {
 };
 
 export type Reaction = { emoji: string; by: string[] };
+
+// Days put to the vote: who can come on each (member ids, by dateKey), and
+// the day its writer settled on, which ends the voting.
+export type Poll = {
+  days: Date[];
+  votes: Record<string, string[]>;
+  decided?: string;
+};
 
 // A link's page as its preview shows it: its title, the site's name and
 // its picture, read from the page by the server (spec/chat.md).
@@ -754,8 +764,26 @@ export const sampleChats: Record<string, Chat> = {
         time: "12:10",
         when: "今日",
       },
+      {
+        from: "sota",
+        id: "w5",
+        poll: {
+          days: [
+            new Date(2026, 9, 16),
+            new Date(2026, 9, 17),
+            new Date(2026, 9, 23),
+          ],
+          votes: {
+            "2026-10-16": ["sota", "haruka", "ren"],
+            "2026-10-17": ["sota", "mei"],
+            "2026-10-23": ["haruka", "yui"],
+          },
+        },
+        time: "12:12",
+        when: "今日",
+      },
     ],
-    unread: 1,
+    unread: 2,
   },
   "friends:misaki": {
     messages: [
