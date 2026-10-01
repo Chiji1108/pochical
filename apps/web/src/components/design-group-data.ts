@@ -32,6 +32,9 @@ export type Member = {
   style?: { look: LookSettings };
   // A profile picture; without one the avatar shows the first letter.
   photo?: string;
+  // Yours, as the others see you in this group: your avatar's letter
+  // without a picture, where `name` says 自分.
+  shownName?: string;
   patterns: MemberPattern[];
   shiftOn: (date: Date) => string | undefined;
   // 早出 and 残業, shared with the group like the shift itself, with the
@@ -331,7 +334,8 @@ function memberPatternOf(own: Pattern): MemberPattern {
 export function meFrom(
   schedule: Schedule,
   patterns: Pattern[],
-  photo?: string
+  photo?: string,
+  shownName?: string
 ): Member {
   const book = new Map(patterns.map((own) => [own.id, own]));
   return {
@@ -349,6 +353,7 @@ export function meFrom(
     patterns: patterns.map(memberPatternOf),
     photo,
     shiftOn: (date) => schedule[dateKey(date)]?.shift,
+    shownName,
   };
 }
 

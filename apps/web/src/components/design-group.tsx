@@ -133,7 +133,7 @@ export function DesignGroup({
   const meIn = (id: string) => {
     const found = groups.find((item) => item.id === id);
     const shown = found ? profileIn(found, profile) : profile;
-    return meFrom(schedule, patterns, shown.photo);
+    return meFrom(schedule, patterns, shown.photo, shown.name);
   };
   const membersOf = (id: string): Member[] => [meIn(id), ...sampleOthers(id)];
   const chatOf = (id: string, chatId: string): Chat =>

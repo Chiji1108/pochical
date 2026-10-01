@@ -755,6 +755,7 @@ export function DaySheet({
   members,
   onShare,
   pollable = false,
+  startPoll = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -763,9 +764,15 @@ export function DaySheet({
   onShare: (days: Date[], poll: boolean) => void;
   // In a group chat, several days can be put to the vote.
   pollable?: boolean;
+  // Opened as 日にちの投票: set for a poll from the start.
+  startPoll?: boolean;
 }) {
   return (
-    <Sheet label="日にちを共有" onOpenChange={onOpenChange} open={open}>
+    <Sheet
+      label={pollable && startPoll ? "日にちの投票" : "日にちを共有"}
+      onOpenChange={onOpenChange}
+      open={open}
+    >
       <DaySheetBody
         members={members}
         onClose={() => {
@@ -773,6 +780,7 @@ export function DaySheet({
         }}
         onShare={onShare}
         pollable={pollable}
+        startPoll={startPoll}
       />
     </Sheet>
   );
@@ -792,18 +800,23 @@ function DaySheetBody({
   onClose,
   onShare,
   pollable,
+  startPoll,
 }: {
   members: Member[];
   onClose: () => void;
   onShare: (days: Date[], poll: boolean) => void;
   pollable: boolean;
+  startPoll: boolean;
 }) {
-  const [poll, setPoll] = useState(false);
+  const [poll, setPoll] = useState(pollable && startPoll);
   const weekTools = useWeek();
   const [month, setMonth] = useState(
     new Date(designToday.getFullYear(), designToday.getMonth(), 1)
   );
   const [picked, setPicked] = useState<Date[]>([]);
+  // The switch shows once there is more than one day to choose from, or
+  // from the start when the sheet opened as a poll; a poll needs two.
+  const showPoll = pollable && (picked.length > 1 || poll);
   const canPoll = pollable && picked.length > 1;
   const isPicked = (date: Date) =>
     picked.some((item) => dateKey(item) === dateKey(date));
@@ -823,12 +836,12 @@ function DaySheetBody({
     <>
       <DecideHeading
         action="送る"
-        disabled={picked.length === 0}
+        disabled={picked.length === 0 || (poll && !canPoll)}
         onAction={() => {
           onShare(picked, canPoll && poll);
         }}
         onCancel={onClose}
-        title="日にちを共有"
+        title={poll ? "日にちの投票" : "日にちを共有"}
       />
       <div className={daySheetStack}>
         {suggestions.length > 0 && (
@@ -910,12 +923,12 @@ function DaySheetBody({
         </div>
         {/* Offered once there is more than one day to choose from, as
             LINE's 日程調整 is a way of choosing among days. */}
-        {canPoll && (
+        {showPoll && (
           <List>
             <SwitchRow checked={poll} label="投票で決める" onChange={setPoll} />
           </List>
         )}
-        <Note>{dayNote(picked.length, canPoll && poll)}</Note>
+        <Note>{dayNote(picked.length, poll)}</Note>
       </div>
     </>
   );
@@ -925,6 +938,9 @@ const suggestionCount = 4;
 
 // What sending will do, under the days.
 function dayNote(count: number, poll: boolean) {
+  if (poll && count < 2) {
+    return "候補の日を2日以上選んでください。日付に枠がある日は、みんな休みの日です。";
+  }
   if (count === 0) {
     return "日付に枠がある日は、みんな休みの日です。";
   }
