@@ -630,6 +630,7 @@ const banner = {
     bg: "background.card",
     borderRadius: "2xl",
     boxShadow: "md",
+    color: "text.primary",
     display: "flex",
     gap: "12px",
     padding: "12px 16px",
@@ -650,8 +651,6 @@ function NotificationSample({
   schedule: Schedule;
   book: PatternBook;
 }) {
-  const icons = useAppIcons();
-  const icon = useSettings((state) => state.device.appIcon);
   const next = nextFiring(reminder, schedule, book);
   const pattern =
     next?.pattern ??
@@ -665,24 +664,38 @@ function NotificationSample({
     return null;
   }
   const entry = next?.entry ?? { shift: pattern.id };
-  const { title, body } = notificationText(reminder, { entry, pattern });
   return (
     <section>
       <h4 className={sampleTitle}>
         {next ? `次の通知・${firingText(next.when)}` : "通知の例"}
       </h4>
-      <div aria-label="通知の見本" className={banner.root} role="img">
-        <AppIcon size={38} src={icons[icon]} />
-        <div className={banner.body}>
-          <span className={banner.head}>
-            ポチカル
-            <span>今</span>
-          </span>
-          <span className={banner.title}>{title}</span>
-          {body && <span className={banner.text}>{body}</span>}
-        </div>
-      </div>
+      <NotificationBanner {...notificationText(reminder, { entry, pattern })} />
     </section>
+  );
+}
+
+// One notification from the app, as the lock screen shows it.
+export function NotificationBanner({
+  title,
+  body,
+}: {
+  title: string;
+  body?: string;
+}) {
+  const icons = useAppIcons();
+  const icon = useSettings((state) => state.device.appIcon);
+  return (
+    <div aria-label={`通知：${title}`} className={banner.root} role="img">
+      <AppIcon size={38} src={icons[icon]} />
+      <div className={banner.body}>
+        <span className={banner.head}>
+          ポチカル
+          <span>今</span>
+        </span>
+        <span className={banner.title}>{title}</span>
+        {body && <span className={banner.text}>{body}</span>}
+      </div>
+    </div>
   );
 }
 

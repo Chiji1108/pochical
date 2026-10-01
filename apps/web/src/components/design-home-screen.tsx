@@ -2,19 +2,23 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { css } from "styled-system/css";
 
+import { formatDay } from "../lib/design-days";
 import { useDevice } from "../lib/design-device";
 import {
   bookOf,
   PatternsContext,
   presetPatterns,
 } from "../lib/design-patterns";
+import { clockText } from "../lib/design-reminders";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
 import { widgetEntry } from "../lib/design-widgets";
 import { useDeviceScheme } from "../lib/use-device-scheme";
 import { AppIcon, useAppIcons } from "./design-app-icon";
+import { NotificationBanner } from "./design-notifications";
 import { Phone } from "./design-phone";
+import { useThemeStyle } from "./design-theme";
 import { wallpaperFor, WidgetFrame } from "./design-widget-frame";
 import { CalendarSmall, DetailSmall, UpcomingMedium } from "./design-widgets";
 
@@ -260,5 +264,71 @@ export function HomeScreen() {
         </Phone>
       </section>
     </PatternsContext>
+  );
+}
+
+const lockScreen = {
+  clock: css({
+    fontSize: "88px",
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 600,
+    letterSpacing: "-2px",
+    lineHeight: 1,
+    margin: 0,
+  }),
+  date: css({ fontWeight: 600, margin: 0, textStyle: "title3" }),
+  // The time and date at the top, the notification under them, as the
+  // lock screen keeps new ones.
+  root: css({
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "8px",
+    padding: "64px 12px 0",
+  }),
+  time: css({
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    marginBottom: "auto",
+  }),
+  list: css({ marginBottom: "160px" }),
+};
+
+// The phone's lock screen with one notification on it, for the flows: the
+// system's own screen, on the wallpaper the home screen has.
+export function LockScreen({
+  when,
+  title,
+  body,
+}: {
+  when: Date;
+  title: string;
+  body?: string;
+}) {
+  const platform = useDevice((state) => state.platform);
+  const hue = useDevice((state) => state.wallpaperHue);
+  const scheme = useDeviceScheme();
+  const background = wallpaperFor({
+    appearance: scheme,
+    wallpaperHue: platform === "android" ? hue : undefined,
+  });
+  // The app's colors, which its notification is drawn in.
+  const theme = useThemeStyle();
+  // Dark over a light wallpaper, as the status bar is.
+  const ink = scheme === "dark" ? "#ffffff" : "#1c1b1f";
+  return (
+    <Phone locked style={{ ...theme, background, color: ink }}>
+      <div className={lockScreen.root}>
+        <div className={lockScreen.time}>
+          <p className={lockScreen.date}>{formatDay(when)}</p>
+          <p className={lockScreen.clock}>{clockText(when)}</p>
+        </div>
+        <div className={lockScreen.list}>
+          <NotificationBanner body={body} title={title} />
+        </div>
+      </div>
+    </Phone>
   );
 }

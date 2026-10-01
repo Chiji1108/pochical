@@ -68,6 +68,8 @@ type Page =
   // And the invitation it read, to join.
   | { name: "join" };
 
+export type GroupStart = "hub" | "shifts" | "chat" | "message";
+
 export function DesignGroup({
   schedule,
   patterns,
@@ -84,8 +86,9 @@ export function DesignGroup({
   // The group to open on, like one just joined from a link.
   initialGroupId?: string;
   // Its hub, or straight on its shift table or its group chat, as the top
-  // page shows them.
-  initialPage?: "hub" | "shifts" | "chat";
+  // page shows them; message is the group chat at its latest line, as a
+  // notification of it opens it.
+  initialPage?: GroupStart;
   // What the QR page finds, as 比べる案 sets it.
   scanResult?: ScanResult;
   // Whether a photo's upload goes through, as 比べる案 sets it.
@@ -103,6 +106,9 @@ export function DesignGroup({
   const [page, setPage] = useState<Page>(() => {
     if (initialPage === "chat") {
       return { chatId: groupChat, name: "chat", sharedFirst: true };
+    }
+    if (initialPage === "message") {
+      return { chatId: groupChat, name: "chat" };
     }
     return { name: initialPage };
   });

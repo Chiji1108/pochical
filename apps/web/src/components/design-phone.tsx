@@ -120,10 +120,11 @@ const phone = {
   statusIcons: css({ alignItems: "center", display: "flex", gap: "4px" }),
 };
 
-function PhoneStatusBar() {
+// Without the time on the lock screen, whose own clock tells it.
+function PhoneStatusBar({ time }: { time: boolean }) {
   return (
     <div aria-hidden="true" className={phone.statusBar}>
-      <span>9:41</span>
+      <span>{time && "9:41"}</span>
       <span className={phone.island} />
       <span className={phone.statusIcons}>
         <Signal size={17} strokeWidth={2.6} />
@@ -287,11 +288,14 @@ function useMouseAsFinger(phoneRef: RefObject<HTMLDivElement | null>) {
 export function Phone({
   children,
   fullScreen = false,
+  locked = false,
   ref,
   style,
 }: {
   children: ReactNode;
   fullScreen?: boolean;
+  // The lock screen: the status bar leaves out the time.
+  locked?: boolean;
   ref?: Ref<HTMLDivElement>;
   style?: CSSProperties;
 }) {
@@ -311,7 +315,7 @@ export function Phone({
       }}
       style={style}
     >
-      {!fullScreen && <PhoneStatusBar />}
+      {!fullScreen && <PhoneStatusBar time={!locked} />}
       {children}
       {!fullScreen && (
         <div aria-hidden="true" className={phone.homeIndicator} />

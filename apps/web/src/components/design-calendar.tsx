@@ -18,7 +18,15 @@ import {
   useTransform,
 } from "motion/react";
 import type { MotionStyle, MotionValue } from "motion/react";
-import { useContext, useEffect, useId, useRef, useState } from "react";
+import {
+  useContext,
+  useEffect,
+  useEffectEvent,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import type { ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -57,6 +65,7 @@ import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
 import { GapSheet, gapDaysIn } from "./design-gap-sheet";
 import { DesignGroup } from "./design-group";
+import type { GroupStart } from "./design-group";
 import { JoinScreen } from "./design-group-join";
 import { MonthName } from "./design-month-name";
 import { MonthTitleButton, monthTitle } from "./design-month-picker";
@@ -116,6 +125,7 @@ export function DesignCalendar({
   initialTab = "calendar",
   initialSettingsPage,
   initialGroupPage,
+  initialDetail,
   fullScreen = false,
 }: {
   initialEditing: boolean;
@@ -129,7 +139,10 @@ export function DesignCalendar({
   initialTab?: Tab;
   initialSettingsPage?: SettingsPage;
   // And the group tab's page: its hub, the shift table or the group chat.
-  initialGroupPage?: "hub" | "shifts" | "chat";
+  initialGroupPage?: GroupStart;
+  // A day of initialMonth to open on picked, its week folded out of the
+  // month with the day's details under it, as a reminder opens it.
+  initialDetail?: Date;
   // A group's invitation link was opened: ask about joining, in a screen
   // over the calendar.
   pendingInvite?: boolean;
@@ -163,13 +176,13 @@ export function DesignCalendar({
   const offDisplay = useContext(OffDisplayContext);
   const imageOptions = useSettings((state) => state.device.imageOptions);
   const setImageOptions = useSettings((state) => state.setImageOptions);
-  const [detailDate, setDetailDate] = useState<Date>();
+  const [detailDate, setDetailDate] = useState(initialDetail);
   // The row of the month the opened week is on, for the month to fold up
   // into it and unfold back around it. It follows the week as it turns.
   const [foldRow, setFoldRow] = useState(0);
   // How far the month is folded into that week, 0 to 1: moved by opening
   // and closing the week, or by the finger pulling the week back open.
-  const folded = useMotionValue(0);
+  const folded = useMotionValue(initialDetail ? 1 : 0);
   const reduceFolding = useReducedMotion() ?? false;
   const detailOpacity = useTransform(folded, [0.5, 1], [0, 1]);
   const coworkerNames = useUser((state) => state.coworkers);
@@ -330,6 +343,15 @@ export function DesignCalendar({
       .findIndex((day) => dateKey(day) === dateKey(date));
     return Math.max(0, Math.floor(index / 7));
   }
+  // The week of the day opened on, before the screen is first drawn.
+  const foldInitial = useEffectEvent(() => {
+    if (initialDetail) {
+      setFoldRow(rowOf(initialDetail, month));
+    }
+  });
+  useLayoutEffect(() => {
+    foldInitial();
+  }, []);
   function onMonth(date: Date) {
     return dates.some((day) => dateKey(day) === dateKey(date));
   }
