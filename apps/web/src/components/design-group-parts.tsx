@@ -440,11 +440,13 @@ function ViewerMark({
   );
 }
 
+// Yours shows the letter of your name in the group, as the others see
+// it, not of 自分.
 export function Avatar({ member, size }: { member: Member; size?: number }) {
   return (
     <PhotoAvatar
       me={member.me}
-      name={member.name}
+      name={member.shownName ?? member.name}
       photo={member.photo}
       size={size}
     />
