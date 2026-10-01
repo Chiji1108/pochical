@@ -2952,9 +2952,7 @@
     }
   },
   "widgets": {
-    "memoLinesMedium": 3,
-    "memoLinesRoomy": 5,
-    "memoLinesSmall": 1,
+    "memoLines": 1,
     "nextOffs": 3,
     "offLookaheadDays": 62
   }

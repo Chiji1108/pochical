@@ -999,10 +999,12 @@ const sampleTagStyle = css({
   top: "-8px",
 });
 
-export function SampleTag() {
+// A preview that pages between places names the one shown instead, as
+// the style page's カレンダー and ウィジェット.
+export function SampleTag({ label = "見本" }: { label?: ReactNode }) {
   return (
     <span aria-hidden="true" className={sampleTagStyle}>
-      見本
+      {label}
     </span>
   );
 }

@@ -2,8 +2,9 @@ import type { ColorScheme } from "@pochical/design/colors";
 import { presets } from "@pochical/design/themes";
 import type { Preset } from "@pochical/design/themes";
 import { ArrowRight, CloudCheck } from "lucide-react";
-import { useMotionValue } from "motion/react";
-import { useContext, useState } from "react";
+import { motion, useMotionValue, useTransform } from "motion/react";
+import type { MotionValue } from "motion/react";
+import { lazy, Suspense, useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 import { token } from "styled-system/tokens";
@@ -653,6 +654,10 @@ const settingsParts = {
     position: "relative",
   }),
   previewHeading: css({ padding: "0 8px 8px" }),
+  // The home screen's page of the preview: the wallpaper edge to edge,
+  // the widget in the middle of it.
+  // Where the home screen's page goes while its widgets load.
+  homePreviewLoading: css({ borderRadius: "2xl", minHeight: "100%" }),
   // A form's row: what is set on the left, its value on the right.
   field: css({
     alignItems: "center",
@@ -1478,46 +1483,144 @@ function StylePreview({
   const onPick = shared?.onPick ?? setPicked;
   const { theme } = useContext(ThemeContext);
   const alwaysDark = presetOf(theme).scheme === "dark";
+  const [page, setPage] = useState(0);
+  const progress = useMotionValue(0);
+  const calendar = (
+    <div
+      aria-hidden="true"
+      className={settingsParts.preview}
+      inert
+      style={themeStyle(theme, shown)}
+    >
+      {heading && (
+        <div className={settingsParts.previewHeading}>
+          <MonthName month={dates[0] ?? previewToday} />
+        </div>
+      )}
+      <WeekdayRow compact />
+      <div className={dayGrid}>
+        {shownDates.map((date) => (
+          <DayCell
+            active={false}
+            date={date}
+            editing={false}
+            entry={schedule[dateKey(date)]}
+            key={dateKey(date)}
+            onPress={() => undefined}
+            outside={false}
+          />
+        ))}
+      </div>
+    </div>
+  );
+  // The calendar, and swiped aside, the home screen's two weeks: what a
+  // style or the week's settings change in the widgets too.
+  const pages = [
+    calendar,
+    <Suspense
+      fallback={<div className={settingsParts.homePreviewLoading} />}
+      key="home"
+    >
+      <HomePreview schedule={preview.schedule} today={previewToday} />
+    </Suspense>,
+  ];
   return (
     <div className={previewWrap}>
       <ColorSchemeContext value={shown}>
-        <div
-          aria-hidden="true"
-          className={settingsParts.preview}
-          inert
-          style={themeStyle(theme, shown)}
-        >
-          <SampleTag />
-          {heading && (
-            <div className={settingsParts.previewHeading}>
-              <MonthName month={dates[0] ?? previewToday} />
-            </div>
-          )}
-          <WeekdayRow compact />
-          <div className={dayGrid}>
-            {shownDates.map((date) => (
-              <DayCell
-                active={false}
-                date={date}
-                editing={false}
-                entry={schedule[dateKey(date)]}
-                key={dateKey(date)}
-                onPress={() => undefined}
-                outside={false}
-              />
-            ))}
-          </div>
-        </div>
+        <Pager
+          ends={{ back: page > 0, forward: page < pages.length - 1 }}
+          gap={PREVIEW_PAGE_GAP}
+          onStep={(direction) => {
+            setPage((at) => at + direction);
+          }}
+          page={String(page)}
+          progress={progress}
+          renderPage={(offset) => pages[page + offset] ?? null}
+        />
       </ColorSchemeContext>
+      {/* Which page is shown, on the preview's edge, kept still like the
+          switch beside it while the pages move. */}
+      <SampleTag
+        label={
+          <PageNames names={previewPageNames} page={page} progress={progress} />
+        }
+      />
       {/* An always-dark テーマ has no light to switch to: its ☾ stays on. */}
       <PreviewSchemeSwitch
         disabled={alwaysDark}
         onPick={onPick}
         shown={alwaysDark ? "dark" : shown}
       />
+      <PageDots
+        count={pages.length}
+        current={page}
+        label="プレビュー（カレンダー、ホーム画面）"
+        onPick={setPage}
+        progress={progress}
+      />
     </div>
   );
 }
+
+const PREVIEW_PAGE_GAP = 12;
+const previewPageNames = ["カレンダー", "ウィジェット"];
+
+const pageNames = {
+  // Every name in one cell, so the tag is as wide as the longest, each in
+  // its middle.
+  name: css({ gridArea: "1 / 1", textAlign: "center" }),
+  // The names slide within the tag, cut at its edges, never over each
+  // other.
+  stack: css({ display: "grid", overflow: "hidden" }),
+};
+
+// The shown page's name, sliding out as the next slides in, as far as
+// the pages are swiped and the same way, as the dots under them follow
+// the finger.
+function PageNames({
+  names,
+  page,
+  progress,
+}: {
+  names: string[];
+  page: number;
+  progress: MotionValue<number>;
+}) {
+  const position = useTransform(progress, (swiped) => page + swiped);
+  return (
+    <span className={pageNames.stack}>
+      {names.map((name, index) => (
+        <PageName index={index} key={name} name={name} position={position} />
+      ))}
+    </span>
+  );
+}
+
+function PageName({
+  name,
+  index,
+  position,
+}: {
+  name: string;
+  index: number;
+  position: MotionValue<number>;
+}) {
+  const x = useTransform(position, (at) => `${(index - at) * 100}%`);
+  const opacity = useTransform(position, (at) =>
+    Math.max(0, 1 - Math.abs(at - index))
+  );
+  return (
+    <motion.span className={pageNames.name} style={{ opacity, x }}>
+      {name}
+    </motion.span>
+  );
+}
+
+// The widgets come only with the preview, not with the app's first load.
+const HomePreview = lazy(async () => {
+  const module = await import("./design-home-preview");
+  return { default: module.HomePreview };
+});
 
 // The switches for the look in use, as one list.
 function ShapeChoices() {
@@ -1938,7 +2041,7 @@ function WeekPage({
         </List>
       </Section>
       <Note>
-        土曜と日曜は曜日の見出しに、祝日は日付に色がつきます。祝日は日曜と同じ赤です。グループの画面でも、この並びと色で表示されます。
+        土曜と日曜は曜日の見出しに、祝日は日付に色がつきます。祝日は日曜と同じ赤です。グループの画面やウィジェットでも、この並びと色で表示されます。
       </Note>
     </>
   );

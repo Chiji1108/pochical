@@ -159,6 +159,14 @@ const todayStates: {
   },
 ];
 
+// Today off, alone and with someone off too.
+const restSchedule = withDays({ [todayKey]: { shift: "off" } });
+const restCompanion: WidgetCompanion = {
+  name: "ゆうき",
+  offOn: () => true,
+  photo: partner.photo,
+};
+
 type Size = "small" | "medium" | "large";
 type WidgetView = ComponentType<{ entry: WidgetEntry }>;
 
@@ -222,6 +230,12 @@ const everyWidget = kinds.flatMap(({ name, sizes }) =>
 
 // Where days off show: the small month, the two weeks and the large month.
 const offWidgets = everyWidget.filter(({ kind }) => kind === "カレンダー");
+// The small ones a day off today changes.
+const restWidgets = everyWidget.filter(
+  ({ kind, size }) =>
+    size === "small" && (kind === "今日" || kind === "次の休み")
+);
+
 // Every widget that today changes: all but カレンダー.
 const stateWidgets = everyWidget.filter(({ kind }) => kind !== "カレンダー");
 
@@ -309,6 +323,14 @@ function WidgetsPage() {
     name: companion.name,
   }));
   const offSizes = kinds.find(({ name }) => name === "次の休み")?.sizes ?? [];
+  const restDay = widgetEntry(restSchedule, week, designToday, presetPatterns);
+  const restTogether = widgetEntry(
+    restSchedule,
+    week,
+    designToday,
+    presetPatterns,
+    restCompanion
+  );
   const states = todayStates.map((state) => ({
     ...state,
     entry: widgetEntry(
@@ -360,6 +382,31 @@ function WidgetsPage() {
                   widgets={companion ? offSizes : stateWidgets}
                 />
               ))}
+            </div>
+          </FrameSection>
+
+          <FrameSection
+            description="今日が休みの日の、今日（小）と次の休み（小）。数えずに「おやすみ」と言い、アイコンの犬がのぞきます。"
+            title="今日が休みの日"
+          >
+            <div className={rows}>
+              {fullColor.map(({ appearance, label }) => (
+                <WidgetRow
+                  appearance={appearance}
+                  entry={restDay}
+                  families={iosFamilies}
+                  key={appearance}
+                  label={label}
+                  widgets={restWidgets}
+                />
+              ))}
+              <WidgetRow
+                appearance="light"
+                entry={restTogether}
+                families={iosFamilies}
+                label="一緒に休める日"
+                widgets={offSizes.filter(({ size }) => size === "small")}
+              />
             </div>
           </FrameSection>
 
