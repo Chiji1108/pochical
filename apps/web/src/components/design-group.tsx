@@ -311,6 +311,7 @@ export function DesignGroup({
           setReportOf(undefined);
           toast("通報しました");
         }}
+        sends={`${reportOf?.name ?? ""}の名前とアイコン`}
         what={reportOf?.name}
       />
       <MemberSheet

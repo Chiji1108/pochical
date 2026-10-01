@@ -28,12 +28,17 @@ const body = css({
 
 export function ReportSheet({
   what,
+  sends,
   onClose,
   onSend,
 }: {
   // What is being reported, as the sheet names it: 〇〇のメッセージ, or
   // the member. Open while set.
   what?: string;
+  // What goes to Pochical with the report, said plainly, so it is clear
+  // nothing else of the chat does: このメッセージと前後の数件, or the
+  // member's name and picture.
+  sends: string;
   onClose: () => void;
   onSend: (reason: ReportReason) => void;
 }) {
@@ -80,7 +85,7 @@ export function ReportSheet({
             ))}
           </ChoiceList>
           <Note>
-            ポチカルの運営が内容を確認します。通報したことは相手に知らされません。
+            通報すると、{sends}がポチカルに送られます。相手には知らされません。
           </Note>
         </Section>
       </div>

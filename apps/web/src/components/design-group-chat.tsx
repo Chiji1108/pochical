@@ -1980,6 +1980,7 @@ export function ChatPage({
         onClose={() => {
           setReporting(undefined);
         }}
+        sends="このメッセージと前後の数件"
         onSend={() => {
           setReporting(undefined);
           toast("通報しました");
@@ -2779,7 +2780,8 @@ function MessageActions({
                 <>
                   <hr className={menuStyle.separator} />
                   <button
-                    className={cx(menuStyle.item, menuStyle.danger)}
+                    className={menuStyle.item}
+                    data-danger=""
                     onClick={() => {
                       closeThen(onUnsend);
                     }}
@@ -2796,7 +2798,8 @@ function MessageActions({
                 <>
                   <hr className={menuStyle.separator} />
                   <button
-                    className={cx(menuStyle.item, menuStyle.danger)}
+                    className={menuStyle.item}
+                    data-danger=""
                     onClick={() => {
                       closeThen(onReport);
                     }}

@@ -420,6 +420,7 @@ export function SheetHeading({
   onClose,
   onBack,
   action,
+  menu,
   children,
 }: {
   title: ReactNode;
@@ -431,6 +432,8 @@ export function SheetHeading({
   // The sheet's own action, a round beside ×, as Apple Maps puts share
   // beside a place's close: it takes no room from what the sheet shows.
   action?: { label: string; icon: ReactNode; onClick: () => void };
+  // A ⋯ menu beside ×, for what is used rarely, like blocking someone.
+  menu?: ReactNode;
   // Beside the title, like a tag.
   children?: ReactNode;
 }) {
@@ -465,6 +468,7 @@ export function SheetHeading({
           {action.icon}
         </button>
       )}
+      {menu}
       <button
         aria-label="閉じる"
         className={heading.close}
