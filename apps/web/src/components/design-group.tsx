@@ -142,9 +142,10 @@ export function DesignGroup({
   };
   const chatOf = (id: string, chatId: string): Chat =>
     chats[chatKey(id, chatId)] ?? { messages: [], unread: 0 };
-  // A line from the app in a group's chat, when who is in it or what
-  // it is called changes: someone joining, leaving or taken out, or a
-  // new name or icon. Nothing else, so the lines stay worth reading.
+  // A line from the app in a group's chat, when who is in it, how to get
+  // in or what it is called changes: someone joining, leaving or taken
+  // out, a new invite link, or a new name or icon. Nothing else, so the
+  // lines stay worth reading.
   const addNotice = (id: string, notice: string) => {
     const key = chatKey(id, groupChat);
     const chat = chatOf(id, groupChat);
@@ -490,6 +491,12 @@ export function DesignGroup({
               group={group}
               onBack={() => {
                 setPage({ name: "hub" });
+              }}
+              onRemake={() => {
+                addNotice(
+                  group.id,
+                  `${profileIn(group, profile).name}が招待リンクを作り直しました`
+                );
               }}
             />
           )}

@@ -384,8 +384,8 @@ export function sameMonth(date: Date, month: Date) {
 
 // A chat line. `days` shares dates, drawn with everyone's shifts;
 // `photo` is a picture, one per line; `replyTo` quotes an earlier line;
-// `notice` is a line from the app about who is in the group or what it is
-// called, shown between the messages.
+// `notice` is a line from the app about who is in the group, how to get
+// in or what it is called, shown between the messages.
 export type Message = {
   id: string;
   from: string;

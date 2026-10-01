@@ -540,9 +540,13 @@ export function JoinScreen({
 export function InvitePage({
   group,
   onBack,
+  onRemake,
 }: {
   group: Omit<Group, "members">;
   onBack: () => void;
+  // A new link, told in the group chat: links the others have sent stop
+  // working, and they should know why.
+  onRemake: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
   const toast = useContext(ToastContext);
@@ -584,6 +588,7 @@ export function InvitePage({
           }}
           onConfirm={() => {
             setConfirming(false);
+            onRemake();
             toast("招待リンクを作り直しました");
           }}
           title="招待リンクを作り直しますか？"
