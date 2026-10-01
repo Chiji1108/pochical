@@ -2,7 +2,8 @@
 // finger, and checks where each gesture lands: a short drag goes back, a
 // drag past a quarter or a quick flick turns one page, a long drag turns
 // only one, letting go over a day opens nothing, a tap still opens it, and
-// scrolling up and down leaves the month. A trackpad's sideways swipe,
+// scrolling up and down leaves the month, and the お休み summary under the
+// calendar shows the month landed on. A trackpad's sideways swipe,
 // coasting on well past a page, turns one month too.
 // bun tools/layout-diff/pager-gestures.ts [url]
 
@@ -33,6 +34,33 @@ const heading = async (page: Page) =>
         hidden.remove();
       }
       return read.textContent ?? "";
+    });
+
+// The month the summary under the calendar shows, as it is seen: only
+// the names it rolls in and out, while hidden, are left out.
+const summaryShown = async (page: Page) =>
+  await page
+    .locator(".dc-phone button", { hasText: "のお休み" })
+    .first()
+    .evaluate((row) => {
+      const shown: string[] = [];
+      const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        let opacity = 1;
+        let seen = false;
+        for (
+          let at = node.parentElement;
+          at !== null && at !== row;
+          at = at.parentElement
+        ) {
+          opacity *= Number(getComputedStyle(at).opacity);
+          seen ||= at.getAttribute("aria-hidden") === "true";
+        }
+        if (seen && opacity > 0.5) {
+          shown.push(node.textContent ?? "");
+        }
+      }
+      return shown.join("").replace(/のお休み.*/u, "");
     });
 
 const daysOpened = async (page: Page) =>
@@ -163,6 +191,15 @@ async function withMouse(browser: Browser) {
   // page, and staying on the screen.
   await drag(page, [right - 5, y], 10 - right, 20, STEP_MS);
   expect("long drag turns one page", await heading(page), "2026年10月");
+  // The summary rolls along with the drag, and stays on the month landed
+  // on, page after page.
+  await drag(page, [right - 40, y], -box.width * 0.4, 12, 30);
+  expect("summary follows a turn", await summaryShown(page), "11月");
+  await drag(page, [box.x + 40, y], box.width * 0.4, 12, 30);
+  expect("summary follows a turn back", await summaryShown(page), "10月");
+  await drag(page, [box.x + 40, y], box.width * 0.4, 12, 30);
+  expect("summary back on this month", await summaryShown(page), "今月");
+  await drag(page, [right - 40, y], -box.width * 0.4, 12, 30);
   await page
     .getByRole("button", { name: /^10月1日/u })
     .first()
