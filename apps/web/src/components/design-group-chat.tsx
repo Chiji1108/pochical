@@ -1706,6 +1706,9 @@ export function ChatPage({
             jumpTo(id);
           }}
           onOpenChange={setPinsOpen}
+          onUnpin={(id) => {
+            pin(id, false);
+          }}
           open={pinsOpen}
           pins={pins}
         />
@@ -3298,6 +3301,9 @@ const pinBar = {
     minWidth: 0,
     padding: "8px",
     textAlign: "left",
+    // A long press offers ピン留めを外す, not the phone's own callout.
+    userSelect: "none",
+    WebkitTouchCallout: "none",
     width: "100%",
   }),
   icon: css({ color: "accent.default", flexShrink: 0 }),
@@ -3329,18 +3335,89 @@ const pinBar = {
 
 // The pinned lines over a chat: the latest, and with more than one, ▾
 // opening them all, each a tap away from its place in the chat.
+// A pinned line in the bar or its list: a tap goes to it, and a long
+// press (or a right click) offers ピン留めを外す, as a message's long press
+// opens its menu. No × in sight: taking a pin off takes it off for
+// everyone, so it is not left a stray tap away.
+function PinItem({
+  label,
+  onJump,
+  onUnpin,
+  children,
+}: {
+  // For a screen reader: what the pin is.
+  label: string;
+  onJump: () => void;
+  onUnpin: () => void;
+  children: ReactNode;
+}) {
+  const phone = useContext(PhoneContext);
+  const [open, setOpen] = useState(false);
+  const press = useLongPress(() => {
+    setOpen(true);
+  });
+  return (
+    <Popover.Root
+      lazyMount
+      onOpenChange={(details) => {
+        setOpen(details.open);
+      }}
+      open={open}
+      positioning={{ gutter: 4, placement: "bottom-start" }}
+      unmountOnExit
+    >
+      <Popover.Anchor asChild>
+        <button
+          aria-label={`${label}。押すとメッセージへ、長押しでピン留めを外す`}
+          className={pinBar.jump}
+          onClick={() => {
+            if (!press.consumeLongPress()) {
+              onJump();
+            }
+          }}
+          type="button"
+          {...press.handlers}
+        >
+          {children}
+        </button>
+      </Popover.Anchor>
+      <Portal container={phone ?? undefined}>
+        <Popover.Positioner>
+          <Popover.Content aria-label="ピン留め" className={menuStyle.content}>
+            <button
+              className={menuStyle.item}
+              onClick={() => {
+                setOpen(false);
+                onUnpin();
+              }}
+              type="button"
+            >
+              <span className={menuStyle.icon}>
+                <PinOff aria-hidden="true" size={18} />
+              </span>
+              ピン留めを外す
+            </button>
+          </Popover.Content>
+        </Popover.Positioner>
+      </Portal>
+    </Popover.Root>
+  );
+}
+
 function PinBar({
   pins,
   nameOf,
   open,
   onOpenChange,
   onJump,
+  onUnpin,
 }: {
   pins: Message[];
   nameOf: (id: string) => string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onJump: (id: string) => void;
+  onUnpin: (id: string) => void;
 }) {
   const [latest] = pins;
   if (!latest) {
@@ -3350,12 +3427,14 @@ function PinBar({
   return (
     <>
       <div className={pinBar.bar}>
-        <button
-          className={pinBar.jump}
-          onClick={() => {
+        <PinItem
+          label={`ピン留め：${summaryOf(latest, nameOf)}`}
+          onJump={() => {
             onJump(latest.id);
           }}
-          type="button"
+          onUnpin={() => {
+            onUnpin(latest.id);
+          }}
         >
           <Pin aria-hidden="true" className={pinBar.icon} size={18} />
           <span className={pinBar.words}>
@@ -3364,7 +3443,7 @@ function PinBar({
             </span>
             <span className={pinBar.text}>{summaryOf(latest, nameOf)}</span>
           </span>
-        </button>
+        </PinItem>
         {many && (
           <IconButton
             aria-expanded={open}
@@ -3386,19 +3465,20 @@ function PinBar({
         <ul aria-label="ピン留め" className={pinBar.list}>
           {pins.map((line) => (
             <li key={line.id}>
-              <button
-                aria-label={`${nameOf(line.from)}：${summaryOf(line, nameOf)}`}
-                className={pinBar.jump}
-                onClick={() => {
+              <PinItem
+                label={`${nameOf(line.from)}：${summaryOf(line, nameOf)}`}
+                onJump={() => {
                   onJump(line.id);
                 }}
-                type="button"
+                onUnpin={() => {
+                  onUnpin(line.id);
+                }}
               >
                 <span className={pinBar.words}>
                   <span className={pinBar.label}>{nameOf(line.from)}</span>
                   <span className={pinBar.text}>{summaryOf(line, nameOf)}</span>
                 </span>
-              </button>
+              </PinItem>
             </li>
           ))}
         </ul>
