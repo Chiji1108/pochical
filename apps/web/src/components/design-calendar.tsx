@@ -555,8 +555,10 @@ export function DesignCalendar({
     dayGridHeight(Math.max(dates.length / 7, MONTH_WEEKS)) - dayGridHeight(1);
   const pullRef = usePullDown({
     enabled: weekDetail,
+    // Jumped, so a spring still opening or settling the week stops and
+    // leaves it to the finger.
     onPull: (share) => {
-      folded.set(1 - share);
+      folded.jump(1 - share);
     },
     onRelease: (share, speed) => {
       // In folded per second, as the finger's speed down unfolds it.
@@ -1160,6 +1162,9 @@ const UNFOLD_FLICK = 400;
 // sideways: little, so it is told before Safari takes the finger to
 // scroll.
 const PULL_SLOP = 6;
+// Held still this long, in milliseconds, before letting go, the finger
+// lets go without speed: the last move's speed is no flick.
+const PULL_STILL_MS = 80;
 
 // A pull down, as a share of `reach` (0 to 1) while the finger moves, and
 // with its speed down in pixels a second when let go. A pull starts only
@@ -1241,10 +1246,10 @@ function usePullDown({
         return;
       }
       if (pulling) {
-        latest.current.onRelease(
-          share,
-          event.type === "pointercancel" ? 0 : speed
-        );
+        const still =
+          event.type === "pointercancel" ||
+          event.timeStamp - last.time > PULL_STILL_MS;
+        latest.current.onRelease(share, still ? 0 : speed);
       }
       stop();
     };
