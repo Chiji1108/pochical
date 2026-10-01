@@ -74,6 +74,54 @@ public object ChangeKt {
     public fun hasDay(): kotlin.Boolean {
       return _builder.hasDay()
     }
+
+    /**
+     * `.pochical.v1.PatternValue pattern = 3 [json_name = "pattern"];`
+     */
+    public var pattern: tech.chiji.pochical.v1.PatternValue
+      @kotlin.jvm.JvmName("getPattern")
+        get() = _builder.pattern
+      @kotlin.jvm.JvmName("setPattern")
+        set(value) {
+        _builder.pattern = value
+      }
+    /**
+     * `.pochical.v1.PatternValue pattern = 3 [json_name = "pattern"];`
+     */
+    public fun clearPattern() {
+      _builder.clearPattern()
+    }
+    /**
+     * `.pochical.v1.PatternValue pattern = 3 [json_name = "pattern"];`
+     * @return Whether the pattern field is set.
+     */
+    public fun hasPattern(): kotlin.Boolean {
+      return _builder.hasPattern()
+    }
+
+    /**
+     * `.pochical.v1.PatternOrder pattern_order = 4 [json_name = "patternOrder"];`
+     */
+    public var patternOrder: tech.chiji.pochical.v1.PatternOrder
+      @kotlin.jvm.JvmName("getPatternOrder")
+        get() = _builder.patternOrder
+      @kotlin.jvm.JvmName("setPatternOrder")
+        set(value) {
+        _builder.patternOrder = value
+      }
+    /**
+     * `.pochical.v1.PatternOrder pattern_order = 4 [json_name = "patternOrder"];`
+     */
+    public fun clearPatternOrder() {
+      _builder.clearPatternOrder()
+    }
+    /**
+     * `.pochical.v1.PatternOrder pattern_order = 4 [json_name = "patternOrder"];`
+     * @return Whether the patternOrder field is set.
+     */
+    public fun hasPatternOrder(): kotlin.Boolean {
+      return _builder.hasPatternOrder()
+    }
     public val kindCase: tech.chiji.pochical.v1.Change.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -88,4 +136,10 @@ public inline fun tech.chiji.pochical.v1.Change.copy(block: `tech.chiji.pochical
 
 public val tech.chiji.pochical.v1.ChangeOrBuilder.dayOrNull: tech.chiji.pochical.v1.DayValue?
   get() = if (hasDay()) getDay() else null
+
+public val tech.chiji.pochical.v1.ChangeOrBuilder.patternOrNull: tech.chiji.pochical.v1.PatternValue?
+  get() = if (hasPattern()) getPattern() else null
+
+public val tech.chiji.pochical.v1.ChangeOrBuilder.patternOrderOrNull: tech.chiji.pochical.v1.PatternOrder?
+  get() = if (hasPatternOrder()) getPatternOrder() else null
 

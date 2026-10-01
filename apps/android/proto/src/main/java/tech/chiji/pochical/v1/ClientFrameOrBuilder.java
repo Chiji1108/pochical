@@ -51,5 +51,24 @@ public interface ClientFrameOrBuilder extends
    */
   tech.chiji.pochical.v1.DayEdits getDayEdits();
 
+  /**
+   * <pre>
+   * The owner's pattern edits, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PatternEdits pattern_edits = 4 [json_name = "patternEdits"];</code>
+   * @return Whether the patternEdits field is set.
+   */
+  boolean hasPatternEdits();
+  /**
+   * <pre>
+   * The owner's pattern edits, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PatternEdits pattern_edits = 4 [json_name = "patternEdits"];</code>
+   * @return The patternEdits.
+   */
+  tech.chiji.pochical.v1.PatternEdits getPatternEdits();
+
   public tech.chiji.pochical.v1.ClientFrame.KindCase getKindCase();
 }

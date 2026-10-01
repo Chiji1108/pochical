@@ -27,5 +27,27 @@ public interface ChangeOrBuilder extends
    */
   tech.chiji.pochical.v1.DayValue getDay();
 
+  /**
+   * <code>.pochical.v1.PatternValue pattern = 3 [json_name = "pattern"];</code>
+   * @return Whether the pattern field is set.
+   */
+  boolean hasPattern();
+  /**
+   * <code>.pochical.v1.PatternValue pattern = 3 [json_name = "pattern"];</code>
+   * @return The pattern.
+   */
+  tech.chiji.pochical.v1.PatternValue getPattern();
+
+  /**
+   * <code>.pochical.v1.PatternOrder pattern_order = 4 [json_name = "patternOrder"];</code>
+   * @return Whether the patternOrder field is set.
+   */
+  boolean hasPatternOrder();
+  /**
+   * <code>.pochical.v1.PatternOrder pattern_order = 4 [json_name = "patternOrder"];</code>
+   * @return The patternOrder.
+   */
+  tech.chiji.pochical.v1.PatternOrder getPatternOrder();
+
   public tech.chiji.pochical.v1.Change.KindCase getKindCase();
 }

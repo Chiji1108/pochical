@@ -1,6 +1,6 @@
 # Sync protocol
 
-How clients and Durable Objects keep shifts, groups and chat in sync. `apps/server` implements signing in, groups, the sockets' handshake and keepalive, and a user's own days between their devices (Shifts, up to Group projection); the rest is the agreed design and will move into `proto/pochical/v1/sync.proto` as it is built.
+How clients and Durable Objects keep shifts, groups and chat in sync. `apps/server` implements signing in, groups, the sockets' handshake and keepalive, and a user's own days and patterns between their devices (Shifts, up to Group projection); the rest is the agreed design and will move into `proto/pochical/v1/sync.proto` as it is built.
 
 ## Ownership
 
@@ -93,6 +93,7 @@ The User DO socket carries a user's days (`proto/pochical/v1/sync.proto`); a Gro
 - An edit for no real day or field, or without a clock, is acknowledged and dropped: there is nothing to keep or correct.
 - An edit whose value does not fit its field (a pattern id past 64 characters, a time not `HH:MM`, a memo past `textLimits.dayNote`) but whose clock is newer than the stored one is answered with the stored value (or none) under a clock just past the edit's, stamped with device `server`: the compensating change of Outbox step 5.
 - After `Welcome`, a device gets its catch-up as `Changes` of up to 500 values each, in cursor order.
+- Patterns go the same way, as `PatternEdits`: each pattern is one last-writer-wins `PatternValue`, sent whole (a deleted one has no `pattern`, kept so an older edit cannot bring it back), and the order they are shown in is one more, `PatternOrder`. They share the User DO's cursor with days, so a device catches up on both in one order. A pattern that does not fit (spec/shift-patterns.md: a blank name or one past `textLimits.shiftName`, a mark that is not one emoji and at most `textLimits.shiftMark` letters, a color past the palette, one time without the other, a `next_day` naming itself) or an order with an id twice is corrected as a day's value is.
 
 ### Group projection
 
@@ -156,7 +157,7 @@ Presence means "has this thread open on screen", not "online in the app": mobile
 - Linking an anonymous user to Apple or Google, and what happens to a user whose phone and token are both lost
 - Snapshot format for resets and how long each DO keeps its change log
 - Wire messages for chat pages, and resets for DOs that do not keep values as registers
-- Syncing the rest of what a user owns: their patterns, repeating orders and coworkers
+- Syncing the rest of what a user owns: their repeating orders and coworkers
 - A device whose clock runs far ahead: its edits win until real time catches up. Whether the server should hold back clocks past its own time
 - Presence and "last seen": whether to show them at all. Pochical is for family and friends, where visible presence and read markers can feel like pressure; typing alone may be enough. "Last seen" would also need storing in the User DO.
 - Read state options: whether members see read markers (and whether users can turn them off), "mark as unread" (it moves the watermark back, so `max` would become a per-thread LWW register), and muted threads left out of badge totals (mentions: spec/chat.md)

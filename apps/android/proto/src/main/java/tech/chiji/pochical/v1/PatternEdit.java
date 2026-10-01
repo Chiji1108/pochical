@@ -6,28 +6,23 @@
 package tech.chiji.pochical.v1;
 
 /**
- * <pre>
- * A value as the DO now holds it, at the cursor it got when it last
- * changed.
- * </pre>
- *
- * Protobuf type {@code pochical.v1.Change}
+ * Protobuf type {@code pochical.v1.PatternEdit}
  */
 @com.google.protobuf.Generated
-public  final class Change extends
+public  final class PatternEdit extends
     com.google.protobuf.GeneratedMessageLite<
-        Change, Change.Builder> implements
-    // @@protoc_insertion_point(message_implements:pochical.v1.Change)
-    ChangeOrBuilder {
-  private Change() {
+        PatternEdit, PatternEdit.Builder> implements
+    // @@protoc_insertion_point(message_implements:pochical.v1.PatternEdit)
+    PatternEditOrBuilder {
+  private PatternEdit() {
+    opId_ = "";
   }
   private int kindCase_ = 0;
   private java.lang.Object kind_;
   public enum KindCase
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
-    DAY(2),
-    PATTERN(3),
-    PATTERN_ORDER(4),
+    PATTERN(2),
+    ORDER(3),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -43,9 +38,8 @@ public  final class Change extends
 
     public static KindCase forNumber(int value) {
       switch (value) {
-        case 2: return DAY;
-        case 3: return PATTERN;
-        case 4: return PATTERN_ORDER;
+        case 2: return PATTERN;
+        case 3: return ORDER;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -67,226 +61,217 @@ public  final class Change extends
     kind_ = null;
   }
 
-  public static final int CURSOR_FIELD_NUMBER = 1;
-  private long cursor_;
+  public static final int OP_ID_FIELD_NUMBER = 1;
+  private java.lang.String opId_;
   /**
-   * <code>uint64 cursor = 1 [json_name = "cursor"];</code>
-   * @return The cursor.
+   * <pre>
+   * Unique per edit, as a DayEdit's.
+   * </pre>
+   *
+   * <code>string op_id = 1 [json_name = "opId"];</code>
+   * @return The opId.
    */
   @java.lang.Override
-  public long getCursor() {
-    return cursor_;
+  public java.lang.String getOpId() {
+    return opId_;
   }
   /**
-   * <code>uint64 cursor = 1 [json_name = "cursor"];</code>
-   * @param value The cursor to set.
-   */
-  private void setCursor(long value) {
-    
-    cursor_ = value;
-  }
-  /**
-   * <code>uint64 cursor = 1 [json_name = "cursor"];</code>
-   */
-  private void clearCursor() {
-
-    cursor_ = 0L;
-  }
-
-  public static final int DAY_FIELD_NUMBER = 2;
-  /**
-   * <code>.pochical.v1.DayValue day = 2 [json_name = "day"];</code>
+   * <pre>
+   * Unique per edit, as a DayEdit's.
+   * </pre>
+   *
+   * <code>string op_id = 1 [json_name = "opId"];</code>
+   * @return The bytes for opId.
    */
   @java.lang.Override
-  public boolean hasDay() {
-    return kindCase_ == 2;
+  public com.google.protobuf.ByteString
+      getOpIdBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(opId_);
   }
   /**
-   * <code>.pochical.v1.DayValue day = 2 [json_name = "day"];</code>
+   * <pre>
+   * Unique per edit, as a DayEdit's.
+   * </pre>
+   *
+   * <code>string op_id = 1 [json_name = "opId"];</code>
+   * @param value The opId to set.
    */
-  @java.lang.Override
-  public tech.chiji.pochical.v1.DayValue getDay() {
-    if (kindCase_ == 2) {
-       return (tech.chiji.pochical.v1.DayValue) kind_;
-    }
-    return tech.chiji.pochical.v1.DayValue.getDefaultInstance();
-  }
-  /**
-   * <code>.pochical.v1.DayValue day = 2 [json_name = "day"];</code>
-   */
-  private void setDay(tech.chiji.pochical.v1.DayValue value) {
+  private void setOpId(
+      java.lang.String value) {
     java.util.Objects.requireNonNull(value);
-    kind_ = value;
-    kindCase_ = 2;
+
+    opId_ = value;
   }
   /**
-   * <code>.pochical.v1.DayValue day = 2 [json_name = "day"];</code>
+   * <pre>
+   * Unique per edit, as a DayEdit's.
+   * </pre>
+   *
+   * <code>string op_id = 1 [json_name = "opId"];</code>
    */
-  private void mergeDay(tech.chiji.pochical.v1.DayValue value) {
-    java.util.Objects.requireNonNull(value);
-    if (kindCase_ == 2 &&
-        kind_ != tech.chiji.pochical.v1.DayValue.getDefaultInstance()) {
-      kind_ = tech.chiji.pochical.v1.DayValue.newBuilder((tech.chiji.pochical.v1.DayValue) kind_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      kind_ = value;
-    }
-    kindCase_ = 2;
+  private void clearOpId() {
+
+    opId_ = getDefaultInstance().getOpId();
   }
   /**
-   * <code>.pochical.v1.DayValue day = 2 [json_name = "day"];</code>
+   * <pre>
+   * Unique per edit, as a DayEdit's.
+   * </pre>
+   *
+   * <code>string op_id = 1 [json_name = "opId"];</code>
+   * @param value The bytes for opId to set.
    */
-  private void clearDay() {
-    if (kindCase_ == 2) {
-      kindCase_ = 0;
-      kind_ = null;
-    }
+  private void setOpIdBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    opId_ = value.toStringUtf8();
+
   }
 
-  public static final int PATTERN_FIELD_NUMBER = 3;
+  public static final int PATTERN_FIELD_NUMBER = 2;
   /**
-   * <code>.pochical.v1.PatternValue pattern = 3 [json_name = "pattern"];</code>
+   * <code>.pochical.v1.PatternValue pattern = 2 [json_name = "pattern"];</code>
    */
   @java.lang.Override
   public boolean hasPattern() {
-    return kindCase_ == 3;
+    return kindCase_ == 2;
   }
   /**
-   * <code>.pochical.v1.PatternValue pattern = 3 [json_name = "pattern"];</code>
+   * <code>.pochical.v1.PatternValue pattern = 2 [json_name = "pattern"];</code>
    */
   @java.lang.Override
   public tech.chiji.pochical.v1.PatternValue getPattern() {
-    if (kindCase_ == 3) {
+    if (kindCase_ == 2) {
        return (tech.chiji.pochical.v1.PatternValue) kind_;
     }
     return tech.chiji.pochical.v1.PatternValue.getDefaultInstance();
   }
   /**
-   * <code>.pochical.v1.PatternValue pattern = 3 [json_name = "pattern"];</code>
+   * <code>.pochical.v1.PatternValue pattern = 2 [json_name = "pattern"];</code>
    */
   private void setPattern(tech.chiji.pochical.v1.PatternValue value) {
     java.util.Objects.requireNonNull(value);
     kind_ = value;
-    kindCase_ = 3;
+    kindCase_ = 2;
   }
   /**
-   * <code>.pochical.v1.PatternValue pattern = 3 [json_name = "pattern"];</code>
+   * <code>.pochical.v1.PatternValue pattern = 2 [json_name = "pattern"];</code>
    */
   private void mergePattern(tech.chiji.pochical.v1.PatternValue value) {
     java.util.Objects.requireNonNull(value);
-    if (kindCase_ == 3 &&
+    if (kindCase_ == 2 &&
         kind_ != tech.chiji.pochical.v1.PatternValue.getDefaultInstance()) {
       kind_ = tech.chiji.pochical.v1.PatternValue.newBuilder((tech.chiji.pochical.v1.PatternValue) kind_)
           .mergeFrom(value).buildPartial();
     } else {
       kind_ = value;
     }
-    kindCase_ = 3;
+    kindCase_ = 2;
   }
   /**
-   * <code>.pochical.v1.PatternValue pattern = 3 [json_name = "pattern"];</code>
+   * <code>.pochical.v1.PatternValue pattern = 2 [json_name = "pattern"];</code>
    */
   private void clearPattern() {
-    if (kindCase_ == 3) {
+    if (kindCase_ == 2) {
       kindCase_ = 0;
       kind_ = null;
     }
   }
 
-  public static final int PATTERN_ORDER_FIELD_NUMBER = 4;
+  public static final int ORDER_FIELD_NUMBER = 3;
   /**
-   * <code>.pochical.v1.PatternOrder pattern_order = 4 [json_name = "patternOrder"];</code>
+   * <code>.pochical.v1.PatternOrder order = 3 [json_name = "order"];</code>
    */
   @java.lang.Override
-  public boolean hasPatternOrder() {
-    return kindCase_ == 4;
+  public boolean hasOrder() {
+    return kindCase_ == 3;
   }
   /**
-   * <code>.pochical.v1.PatternOrder pattern_order = 4 [json_name = "patternOrder"];</code>
+   * <code>.pochical.v1.PatternOrder order = 3 [json_name = "order"];</code>
    */
   @java.lang.Override
-  public tech.chiji.pochical.v1.PatternOrder getPatternOrder() {
-    if (kindCase_ == 4) {
+  public tech.chiji.pochical.v1.PatternOrder getOrder() {
+    if (kindCase_ == 3) {
        return (tech.chiji.pochical.v1.PatternOrder) kind_;
     }
     return tech.chiji.pochical.v1.PatternOrder.getDefaultInstance();
   }
   /**
-   * <code>.pochical.v1.PatternOrder pattern_order = 4 [json_name = "patternOrder"];</code>
+   * <code>.pochical.v1.PatternOrder order = 3 [json_name = "order"];</code>
    */
-  private void setPatternOrder(tech.chiji.pochical.v1.PatternOrder value) {
+  private void setOrder(tech.chiji.pochical.v1.PatternOrder value) {
     java.util.Objects.requireNonNull(value);
     kind_ = value;
-    kindCase_ = 4;
+    kindCase_ = 3;
   }
   /**
-   * <code>.pochical.v1.PatternOrder pattern_order = 4 [json_name = "patternOrder"];</code>
+   * <code>.pochical.v1.PatternOrder order = 3 [json_name = "order"];</code>
    */
-  private void mergePatternOrder(tech.chiji.pochical.v1.PatternOrder value) {
+  private void mergeOrder(tech.chiji.pochical.v1.PatternOrder value) {
     java.util.Objects.requireNonNull(value);
-    if (kindCase_ == 4 &&
+    if (kindCase_ == 3 &&
         kind_ != tech.chiji.pochical.v1.PatternOrder.getDefaultInstance()) {
       kind_ = tech.chiji.pochical.v1.PatternOrder.newBuilder((tech.chiji.pochical.v1.PatternOrder) kind_)
           .mergeFrom(value).buildPartial();
     } else {
       kind_ = value;
     }
-    kindCase_ = 4;
+    kindCase_ = 3;
   }
   /**
-   * <code>.pochical.v1.PatternOrder pattern_order = 4 [json_name = "patternOrder"];</code>
+   * <code>.pochical.v1.PatternOrder order = 3 [json_name = "order"];</code>
    */
-  private void clearPatternOrder() {
-    if (kindCase_ == 4) {
+  private void clearOrder() {
+    if (kindCase_ == 3) {
       kindCase_ = 0;
       kind_ = null;
     }
   }
 
-  public static tech.chiji.pochical.v1.Change parseFrom(
+  public static tech.chiji.pochical.v1.PatternEdit parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static tech.chiji.pochical.v1.Change parseFrom(
+  public static tech.chiji.pochical.v1.PatternEdit parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static tech.chiji.pochical.v1.Change parseFrom(
+  public static tech.chiji.pochical.v1.PatternEdit parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static tech.chiji.pochical.v1.Change parseFrom(
+  public static tech.chiji.pochical.v1.PatternEdit parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static tech.chiji.pochical.v1.Change parseFrom(byte[] data)
+  public static tech.chiji.pochical.v1.PatternEdit parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static tech.chiji.pochical.v1.Change parseFrom(
+  public static tech.chiji.pochical.v1.PatternEdit parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static tech.chiji.pochical.v1.Change parseFrom(java.io.InputStream input)
+  public static tech.chiji.pochical.v1.PatternEdit parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static tech.chiji.pochical.v1.Change parseFrom(
+  public static tech.chiji.pochical.v1.PatternEdit parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -294,24 +279,24 @@ public  final class Change extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static tech.chiji.pochical.v1.Change parseDelimitedFrom(java.io.InputStream input)
+  public static tech.chiji.pochical.v1.PatternEdit parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static tech.chiji.pochical.v1.Change parseDelimitedFrom(
+  public static tech.chiji.pochical.v1.PatternEdit parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static tech.chiji.pochical.v1.Change parseFrom(
+  public static tech.chiji.pochical.v1.PatternEdit parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static tech.chiji.pochical.v1.Change parseFrom(
+  public static tech.chiji.pochical.v1.PatternEdit parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -322,24 +307,19 @@ public  final class Change extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(tech.chiji.pochical.v1.Change prototype) {
+  public static Builder newBuilder(tech.chiji.pochical.v1.PatternEdit prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
-   * <pre>
-   * A value as the DO now holds it, at the cursor it got when it last
-   * changed.
-   * </pre>
-   *
-   * Protobuf type {@code pochical.v1.Change}
+   * Protobuf type {@code pochical.v1.PatternEdit}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        tech.chiji.pochical.v1.Change, Builder> implements
-      // @@protoc_insertion_point(builder_implements:pochical.v1.Change)
-      tech.chiji.pochical.v1.ChangeOrBuilder {
-    // Construct using tech.chiji.pochical.v1.Change.newBuilder()
+        tech.chiji.pochical.v1.PatternEdit, Builder> implements
+      // @@protoc_insertion_point(builder_implements:pochical.v1.PatternEdit)
+      tech.chiji.pochical.v1.PatternEditOrBuilder {
+    // Construct using tech.chiji.pochical.v1.PatternEdit.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
@@ -358,97 +338,90 @@ public  final class Change extends
 
 
     /**
-     * <code>uint64 cursor = 1 [json_name = "cursor"];</code>
-     * @return The cursor.
+     * <pre>
+     * Unique per edit, as a DayEdit's.
+     * </pre>
+     *
+     * <code>string op_id = 1 [json_name = "opId"];</code>
+     * @return The opId.
      */
     @java.lang.Override
-    public long getCursor() {
-      return instance.getCursor();
+    public java.lang.String getOpId() {
+      return instance.getOpId();
     }
     /**
-     * <code>uint64 cursor = 1 [json_name = "cursor"];</code>
-     * @param value The cursor to set.
+     * <pre>
+     * Unique per edit, as a DayEdit's.
+     * </pre>
+     *
+     * <code>string op_id = 1 [json_name = "opId"];</code>
+     * @return The bytes for opId.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getOpIdBytes() {
+      return instance.getOpIdBytes();
+    }
+    /**
+     * <pre>
+     * Unique per edit, as a DayEdit's.
+     * </pre>
+     *
+     * <code>string op_id = 1 [json_name = "opId"];</code>
+     * @param value The opId to set.
      * @return This builder for chaining.
      */
-    public Builder setCursor(long value) {
+    public Builder setOpId(
+        java.lang.String value) {
       copyOnWrite();
-      instance.setCursor(value);
+      instance.setOpId(value);
       return this;
     }
     /**
-     * <code>uint64 cursor = 1 [json_name = "cursor"];</code>
+     * <pre>
+     * Unique per edit, as a DayEdit's.
+     * </pre>
+     *
+     * <code>string op_id = 1 [json_name = "opId"];</code>
      * @return This builder for chaining.
      */
-    public Builder clearCursor() {
+    public Builder clearOpId() {
       copyOnWrite();
-      instance.clearCursor();
+      instance.clearOpId();
+      return this;
+    }
+    /**
+     * <pre>
+     * Unique per edit, as a DayEdit's.
+     * </pre>
+     *
+     * <code>string op_id = 1 [json_name = "opId"];</code>
+     * @param value The bytes for opId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOpIdBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setOpIdBytes(value);
       return this;
     }
 
     /**
-     * <code>.pochical.v1.DayValue day = 2 [json_name = "day"];</code>
-     */
-    @java.lang.Override
-    public boolean hasDay() {
-      return instance.hasDay();
-    }
-    /**
-     * <code>.pochical.v1.DayValue day = 2 [json_name = "day"];</code>
-     */
-    @java.lang.Override
-    public tech.chiji.pochical.v1.DayValue getDay() {
-      return instance.getDay();
-    }
-    /**
-     * <code>.pochical.v1.DayValue day = 2 [json_name = "day"];</code>
-     */
-    public Builder setDay(tech.chiji.pochical.v1.DayValue value) {
-      copyOnWrite();
-      instance.setDay(value);
-      return this;
-    }
-    /**
-     * <code>.pochical.v1.DayValue day = 2 [json_name = "day"];</code>
-     */
-    public Builder setDay(
-        tech.chiji.pochical.v1.DayValue.Builder builderForValue) {
-      copyOnWrite();
-      instance.setDay(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.pochical.v1.DayValue day = 2 [json_name = "day"];</code>
-     */
-    public Builder mergeDay(tech.chiji.pochical.v1.DayValue value) {
-      copyOnWrite();
-      instance.mergeDay(value);
-      return this;
-    }
-    /**
-     * <code>.pochical.v1.DayValue day = 2 [json_name = "day"];</code>
-     */
-    public Builder clearDay() {
-      copyOnWrite();
-      instance.clearDay();
-      return this;
-    }
-
-    /**
-     * <code>.pochical.v1.PatternValue pattern = 3 [json_name = "pattern"];</code>
+     * <code>.pochical.v1.PatternValue pattern = 2 [json_name = "pattern"];</code>
      */
     @java.lang.Override
     public boolean hasPattern() {
       return instance.hasPattern();
     }
     /**
-     * <code>.pochical.v1.PatternValue pattern = 3 [json_name = "pattern"];</code>
+     * <code>.pochical.v1.PatternValue pattern = 2 [json_name = "pattern"];</code>
      */
     @java.lang.Override
     public tech.chiji.pochical.v1.PatternValue getPattern() {
       return instance.getPattern();
     }
     /**
-     * <code>.pochical.v1.PatternValue pattern = 3 [json_name = "pattern"];</code>
+     * <code>.pochical.v1.PatternValue pattern = 2 [json_name = "pattern"];</code>
      */
     public Builder setPattern(tech.chiji.pochical.v1.PatternValue value) {
       copyOnWrite();
@@ -456,7 +429,7 @@ public  final class Change extends
       return this;
     }
     /**
-     * <code>.pochical.v1.PatternValue pattern = 3 [json_name = "pattern"];</code>
+     * <code>.pochical.v1.PatternValue pattern = 2 [json_name = "pattern"];</code>
      */
     public Builder setPattern(
         tech.chiji.pochical.v1.PatternValue.Builder builderForValue) {
@@ -465,7 +438,7 @@ public  final class Change extends
       return this;
     }
     /**
-     * <code>.pochical.v1.PatternValue pattern = 3 [json_name = "pattern"];</code>
+     * <code>.pochical.v1.PatternValue pattern = 2 [json_name = "pattern"];</code>
      */
     public Builder mergePattern(tech.chiji.pochical.v1.PatternValue value) {
       copyOnWrite();
@@ -473,7 +446,7 @@ public  final class Change extends
       return this;
     }
     /**
-     * <code>.pochical.v1.PatternValue pattern = 3 [json_name = "pattern"];</code>
+     * <code>.pochical.v1.PatternValue pattern = 2 [json_name = "pattern"];</code>
      */
     public Builder clearPattern() {
       copyOnWrite();
@@ -482,54 +455,54 @@ public  final class Change extends
     }
 
     /**
-     * <code>.pochical.v1.PatternOrder pattern_order = 4 [json_name = "patternOrder"];</code>
+     * <code>.pochical.v1.PatternOrder order = 3 [json_name = "order"];</code>
      */
     @java.lang.Override
-    public boolean hasPatternOrder() {
-      return instance.hasPatternOrder();
+    public boolean hasOrder() {
+      return instance.hasOrder();
     }
     /**
-     * <code>.pochical.v1.PatternOrder pattern_order = 4 [json_name = "patternOrder"];</code>
+     * <code>.pochical.v1.PatternOrder order = 3 [json_name = "order"];</code>
      */
     @java.lang.Override
-    public tech.chiji.pochical.v1.PatternOrder getPatternOrder() {
-      return instance.getPatternOrder();
+    public tech.chiji.pochical.v1.PatternOrder getOrder() {
+      return instance.getOrder();
     }
     /**
-     * <code>.pochical.v1.PatternOrder pattern_order = 4 [json_name = "patternOrder"];</code>
+     * <code>.pochical.v1.PatternOrder order = 3 [json_name = "order"];</code>
      */
-    public Builder setPatternOrder(tech.chiji.pochical.v1.PatternOrder value) {
+    public Builder setOrder(tech.chiji.pochical.v1.PatternOrder value) {
       copyOnWrite();
-      instance.setPatternOrder(value);
+      instance.setOrder(value);
       return this;
     }
     /**
-     * <code>.pochical.v1.PatternOrder pattern_order = 4 [json_name = "patternOrder"];</code>
+     * <code>.pochical.v1.PatternOrder order = 3 [json_name = "order"];</code>
      */
-    public Builder setPatternOrder(
+    public Builder setOrder(
         tech.chiji.pochical.v1.PatternOrder.Builder builderForValue) {
       copyOnWrite();
-      instance.setPatternOrder(builderForValue.build());
+      instance.setOrder(builderForValue.build());
       return this;
     }
     /**
-     * <code>.pochical.v1.PatternOrder pattern_order = 4 [json_name = "patternOrder"];</code>
+     * <code>.pochical.v1.PatternOrder order = 3 [json_name = "order"];</code>
      */
-    public Builder mergePatternOrder(tech.chiji.pochical.v1.PatternOrder value) {
+    public Builder mergeOrder(tech.chiji.pochical.v1.PatternOrder value) {
       copyOnWrite();
-      instance.mergePatternOrder(value);
+      instance.mergeOrder(value);
       return this;
     }
     /**
-     * <code>.pochical.v1.PatternOrder pattern_order = 4 [json_name = "patternOrder"];</code>
+     * <code>.pochical.v1.PatternOrder order = 3 [json_name = "order"];</code>
      */
-    public Builder clearPatternOrder() {
+    public Builder clearOrder() {
       copyOnWrite();
-      instance.clearPatternOrder();
+      instance.clearOrder();
       return this;
     }
 
-    // @@protoc_insertion_point(builder_scope:pochical.v1.Change)
+    // @@protoc_insertion_point(builder_scope:pochical.v1.PatternEdit)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -538,7 +511,7 @@ public  final class Change extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new tech.chiji.pochical.v1.Change();
+        return new tech.chiji.pochical.v1.PatternEdit();
       }
       case NEW_BUILDER: {
         return new Builder();
@@ -547,27 +520,26 @@ public  final class Change extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "kind_",
             "kindCase_",
-            "cursor_",
-            tech.chiji.pochical.v1.DayValue.class,
+            "opId_",
             tech.chiji.pochical.v1.PatternValue.class,
             tech.chiji.pochical.v1.PatternOrder.class,
           };
           java.lang.String info =
-              "\u0000\u0004\u0001\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0003\u0002<\u0000" +
-              "\u0003<\u0000\u0004<\u0000";
+              "\u0000\u0003\u0001\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002<\u0000" +
+              "\u0003<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<tech.chiji.pochical.v1.Change> parser = PARSER;
+        com.google.protobuf.Parser<tech.chiji.pochical.v1.PatternEdit> parser = PARSER;
         if (parser == null) {
-          synchronized (tech.chiji.pochical.v1.Change.class) {
+          synchronized (tech.chiji.pochical.v1.PatternEdit.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<tech.chiji.pochical.v1.Change>(
+                  new DefaultInstanceBasedParser<tech.chiji.pochical.v1.PatternEdit>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -587,24 +559,24 @@ public  final class Change extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:pochical.v1.Change)
-  private static final tech.chiji.pochical.v1.Change DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:pochical.v1.PatternEdit)
+  private static final tech.chiji.pochical.v1.PatternEdit DEFAULT_INSTANCE;
   static {
-    Change defaultInstance = new Change();
+    PatternEdit defaultInstance = new PatternEdit();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      Change.class, defaultInstance);
+      PatternEdit.class, defaultInstance);
   }
 
-  public static tech.chiji.pochical.v1.Change getDefaultInstance() {
+  public static tech.chiji.pochical.v1.PatternEdit getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<Change> PARSER;
+  private static volatile com.google.protobuf.Parser<PatternEdit> PARSER;
 
-  public static com.google.protobuf.Parser<Change> parser() {
+  public static com.google.protobuf.Parser<PatternEdit> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

@@ -6,7 +6,11 @@ import {
   ServerError_Code,
   ServerFrameSchema,
 } from "./gen/pochical/v1/sync_pb";
-import type { ClientFrame, DayEdits } from "./gen/pochical/v1/sync_pb";
+import type {
+  ClientFrame,
+  DayEdits,
+  PatternEdits,
+} from "./gen/pochical/v1/sync_pb";
 import { MIN_PROTOCOL_VERSION } from "./protocol";
 
 // The sync sockets User DOs and Group DOs share (spec/sync-protocol.md):
@@ -35,9 +39,12 @@ export type ServerFrameKind = MessageInitShape<
 export type SyncHandlers = {
   // Hello was accepted: send Welcome and every change after `cursor`.
   welcome: (ws: WebSocket, cursor: bigint) => void;
-  // The owner's day edits; only a User DO takes them.
+  // The owner's day and pattern edits; only a User DO takes them.
   dayEdits?: (ws: WebSocket, edits: DayEdits) => void;
+  patternEdits?: (ws: WebSocket, edits: PatternEdits) => void;
 };
+
+const OWN_SOCKET_ONLY = "Edits go to the user's own socket";
 
 /** WebSocket close code for protocol violations (RFC 6455). */
 const POLICY_VIOLATION = 1008;
@@ -168,11 +175,15 @@ export const handleSyncMessage = (
       if (handlers.dayEdits) {
         handlers.dayEdits(ws, kind.value);
       } else {
-        rejectAndClose(
-          ws,
-          ServerError_Code.BAD_FRAME,
-          "Day edits go to the user's own socket"
-        );
+        rejectAndClose(ws, ServerError_Code.BAD_FRAME, OWN_SOCKET_ONLY);
+      }
+      return;
+    }
+    case "patternEdits": {
+      if (handlers.patternEdits) {
+        handlers.patternEdits(ws, kind.value);
+      } else {
+        rejectAndClose(ws, ServerError_Code.BAD_FRAME, OWN_SOCKET_ONLY);
       }
       return;
     }

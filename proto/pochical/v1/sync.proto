@@ -9,6 +9,8 @@ message ClientFrame {
     Ping ping = 2;
     // The owner's own day edits, from their outbox; User DO socket only.
     DayEdits day_edits = 3;
+    // The owner's pattern edits, from the same outbox; User DO socket only.
+    PatternEdits pattern_edits = 4;
   }
 }
 
@@ -21,8 +23,8 @@ message ServerFrame {
     // Changes to the DO's data in cursor order, after Welcome and as they
     // happen.
     Changes changes = 4;
-    // The edits of a DayEdits the server has taken; the client deletes
-    // them from its outbox.
+    // The edits of a DayEdits or PatternEdits the server has taken; the
+    // client deletes them from its outbox.
     Acked acked = 5;
     // The client's cursor is ahead of the server's: drop this DO's cache.
     // A Changes with everything the DO holds follows.
@@ -121,6 +123,58 @@ message Change {
   uint64 cursor = 1;
   oneof kind {
     DayValue day = 2;
+    PatternValue pattern = 3;
+    PatternOrder pattern_order = 4;
+  }
+}
+
+// A shift pattern, as spec/shift-patterns.md has it.
+message Pattern {
+  // shiftName characters at most (design/src/limits.ts).
+  string name = 1;
+  // The mark in each look: an emoji, a letter (shiftMark characters) and
+  // an icon by the apps' own name for it.
+  string emoji = 2;
+  string symbol = 3;
+  string icon = 4;
+  // The mark's color slot, an index into the mark palette.
+  uint32 color = 5;
+  // The standard time, "HH:MM", both or neither; none is all-day. An end
+  // at or before the start runs past midnight.
+  optional string start = 6;
+  optional string end = 7;
+  // Counted among the month's days off, and marked as one.
+  bool counts_as_off = 8;
+  // Another pattern's id, entered on the following day too.
+  optional string next_day = 9;
+}
+
+// One of the owner's patterns as a device set it, whole: each is one
+// last-writer-wins value.
+message PatternValue {
+  string id = 1;
+  // Unset: the pattern was deleted.
+  optional Pattern pattern = 2;
+  Hlc hlc = 3;
+}
+
+// The order the owner's patterns are shown in, ポチポチ入力's buttons: one
+// last-writer-wins value.
+message PatternOrder {
+  repeated string ids = 1;
+  Hlc hlc = 2;
+}
+
+message PatternEdits {
+  repeated PatternEdit edits = 1;
+}
+
+message PatternEdit {
+  // Unique per edit, as a DayEdit's.
+  string op_id = 1;
+  oneof kind {
+    PatternValue pattern = 2;
+    PatternOrder order = 3;
   }
 }
 

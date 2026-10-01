@@ -325,3 +325,211 @@ describe("syncing a user's own days", () => {
     });
   });
 });
+
+const night = {
+  color: 2,
+  countsAsOff: false,
+  emoji: "🌙",
+  end: "09:00",
+  icon: "moon",
+  name: "夜勤",
+  nextDay: "after",
+  start: "16:30",
+  symbol: "夜",
+};
+
+const patternEdit = (
+  opId: string,
+  id: string,
+  pattern: typeof night | undefined,
+  ms: number
+) => ({
+  kind: {
+    case: "pattern" as const,
+    value: {
+      hlc: { counter: 0, deviceId: "phone", physicalMs: BigInt(ms) },
+      id,
+      pattern,
+    },
+  },
+  opId,
+});
+
+// An edit of the patterns' order.
+const order = (opId: string, ids: string[], ms: number) => ({
+  kind: {
+    case: "order" as const,
+    value: {
+      hlc: { counter: 0, deviceId: "phone", physicalMs: BigInt(ms) },
+      ids,
+    },
+  },
+  opId,
+});
+
+describe("syncing a user's own patterns", () => {
+  it("takes a pattern whole and sends it to every device", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    const tablet = await device(token);
+    sendFrame(phone.socket, {
+      case: "patternEdits",
+      value: { edits: [patternEdit("p1", "night", night, 1000)] },
+    });
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: { case: "acked", value: { opIds: ["p1"] } },
+    });
+    const expected = {
+      case: "changes",
+      value: {
+        changes: [
+          {
+            cursor: 1n,
+            kind: { case: "pattern", value: { id: "night", pattern: night } },
+          },
+        ],
+      },
+    };
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: expected,
+    });
+    await expect(tablet.frames.next()).resolves.toMatchObject({
+      kind: expected,
+    });
+  });
+
+  it("keeps a deleted pattern as gone, and corrects one that does not fit", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    sendFrame(phone.socket, {
+      case: "patternEdits",
+      value: {
+        edits: [
+          patternEdit("set", "night", night, 1000),
+          patternEdit("delete", "night", undefined, 2000),
+        ],
+      },
+    });
+    await phone.frames.next();
+    const both = await phone.frames.next();
+    const changes = both.kind.case === "changes" ? both.kind.value.changes : [];
+    const last = changes.at(-1);
+    expect(
+      last?.kind.case === "pattern" && last.kind.value.pattern
+    ).toBeUndefined();
+
+    // A name past shiftName's 8 characters, newer than the deletion.
+    sendFrame(phone.socket, {
+      case: "patternEdits",
+      value: {
+        edits: [
+          patternEdit(
+            "long",
+            "night",
+            { ...night, name: "とても長い夜勤の名前" },
+            3000
+          ),
+        ],
+      },
+    });
+    await phone.frames.next();
+    const corrected = await phone.frames.next();
+    expect(corrected.kind).toMatchObject({
+      case: "changes",
+      value: {
+        changes: [
+          {
+            kind: {
+              case: "pattern",
+              value: { hlc: { deviceId: "server" }, id: "night" },
+            },
+          },
+        ],
+      },
+    });
+    const [fix] =
+      corrected.kind.case === "changes" ? corrected.kind.value.changes : [];
+    expect(
+      fix?.kind.case === "pattern" && fix.kind.value.pattern
+    ).toBeUndefined();
+  });
+
+  it("keeps the patterns' order, correcting one with an id twice", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    sendFrame(phone.socket, {
+      case: "patternEdits",
+      value: { edits: [order("o1", ["day", "night", "off"], 1000)] },
+    });
+    await phone.frames.next();
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: {
+        value: {
+          changes: [
+            {
+              kind: {
+                case: "patternOrder",
+                value: { ids: ["day", "night", "off"] },
+              },
+            },
+          ],
+        },
+      },
+    });
+    sendFrame(phone.socket, {
+      case: "patternEdits",
+      value: { edits: [order("o2", ["day", "day"], 2000)] },
+    });
+    await phone.frames.next();
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: {
+        value: {
+          changes: [
+            {
+              kind: {
+                case: "patternOrder",
+                value: {
+                  hlc: { deviceId: "server" },
+                  ids: ["day", "night", "off"],
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+  });
+
+  it("catches a new device up on days and patterns in one order", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    sendFrame(phone.socket, {
+      case: "dayEdits",
+      value: {
+        edits: [edit("d", "2026-10-12", DayField.PATTERN, "night", 1000)],
+      },
+    });
+    await phone.frames.next();
+    await phone.frames.next();
+    sendFrame(phone.socket, {
+      case: "patternEdits",
+      value: { edits: [patternEdit("p", "night", night, 1000)] },
+    });
+    await phone.frames.next();
+    await phone.frames.next();
+
+    const tablet = await device(token);
+    expect(tablet.welcome.kind).toMatchObject({ value: { cursor: 2n } });
+    await expect(tablet.frames.next()).resolves.toMatchObject({
+      kind: {
+        case: "changes",
+        value: {
+          changes: [
+            { cursor: 1n, kind: { case: "day" } },
+            { cursor: 2n, kind: { case: "pattern" } },
+          ],
+        },
+      },
+    });
+  });
+});
