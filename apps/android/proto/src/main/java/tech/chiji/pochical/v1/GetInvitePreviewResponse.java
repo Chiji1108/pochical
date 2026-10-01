@@ -132,6 +132,44 @@ public  final class GetInvitePreviewResponse extends
 
   }
 
+  public static final int MEMBER_COUNT_FIELD_NUMBER = 3;
+  private int memberCount_;
+  /**
+   * <pre>
+   * How many are in the group, for 「{n}人」 on the page and cards.
+   * </pre>
+   *
+   * <code>uint32 member_count = 3 [json_name = "memberCount"];</code>
+   * @return The memberCount.
+   */
+  @java.lang.Override
+  public int getMemberCount() {
+    return memberCount_;
+  }
+  /**
+   * <pre>
+   * How many are in the group, for 「{n}人」 on the page and cards.
+   * </pre>
+   *
+   * <code>uint32 member_count = 3 [json_name = "memberCount"];</code>
+   * @param value The memberCount to set.
+   */
+  private void setMemberCount(int value) {
+    
+    memberCount_ = value;
+  }
+  /**
+   * <pre>
+   * How many are in the group, for 「{n}人」 on the page and cards.
+   * </pre>
+   *
+   * <code>uint32 member_count = 3 [json_name = "memberCount"];</code>
+   */
+  private void clearMemberCount() {
+
+    memberCount_ = 0;
+  }
+
   public static tech.chiji.pochical.v1.GetInvitePreviewResponse parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -347,6 +385,46 @@ public  final class GetInvitePreviewResponse extends
       return this;
     }
 
+    /**
+     * <pre>
+     * How many are in the group, for 「{n}人」 on the page and cards.
+     * </pre>
+     *
+     * <code>uint32 member_count = 3 [json_name = "memberCount"];</code>
+     * @return The memberCount.
+     */
+    @java.lang.Override
+    public int getMemberCount() {
+      return instance.getMemberCount();
+    }
+    /**
+     * <pre>
+     * How many are in the group, for 「{n}人」 on the page and cards.
+     * </pre>
+     *
+     * <code>uint32 member_count = 3 [json_name = "memberCount"];</code>
+     * @param value The memberCount to set.
+     * @return This builder for chaining.
+     */
+    public Builder setMemberCount(int value) {
+      copyOnWrite();
+      instance.setMemberCount(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * How many are in the group, for 「{n}人」 on the page and cards.
+     * </pre>
+     *
+     * <code>uint32 member_count = 3 [json_name = "memberCount"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearMemberCount() {
+      copyOnWrite();
+      instance.clearMemberCount();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.GetInvitePreviewResponse)
   }
   @java.lang.Override
@@ -365,10 +443,11 @@ public  final class GetInvitePreviewResponse extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "groupName_",
             "groupEmoji_",
+            "memberCount_",
           };
           java.lang.String info =
-              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "";
+              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u000b";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

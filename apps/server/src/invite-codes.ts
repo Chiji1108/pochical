@@ -1,0 +1,80 @@
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
+
+import { invites } from "./db/schema";
+
+// 8 characters without the look-alikes I, O, l, 0 and 1: 57^8, about
+// 10^14 codes, so guessing a live one is hopeless.
+const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+const CODE_LENGTH = 8;
+// Two codes clashing is about one in 10^14; three in a row means a bug.
+const MAX_ATTEMPTS = 3;
+export const INVITE_CODE = /^[A-HJ-NP-Za-km-z2-9]{8}$/u;
+
+// Bytes past the last whole run of the alphabet are drawn again, so every
+// character is equally likely.
+const FAIR_BELOW = 256 - (256 % ALPHABET.length);
+
+export const newInviteCode = (): string => {
+  let code = "";
+  while (code.length < CODE_LENGTH) {
+    for (const byte of crypto.getRandomValues(new Uint8Array(CODE_LENGTH))) {
+      if (byte < FAIR_BELOW && code.length < CODE_LENGTH) {
+        code += ALPHABET[byte % ALPHABET.length];
+      }
+    }
+  }
+  return code;
+};
+
+/** The group a live code opens, or null. */
+export const groupOfCode = async (
+  d1: D1Database,
+  code: string
+): Promise<string | null> => {
+  const row = await drizzle(d1)
+    .select({ groupId: invites.groupId })
+    .from(invites)
+    .where(eq(invites.code, code))
+    .get();
+  return row?.groupId ?? null;
+};
+
+/** The group's live code, or null before it has one. */
+export const codeOfGroup = async (
+  d1: D1Database,
+  groupId: string
+): Promise<string | null> => {
+  const row = await drizzle(d1)
+    .select({ code: invites.code })
+    .from(invites)
+    .where(eq(invites.groupId, groupId))
+    .get();
+  return row?.code ?? null;
+};
+
+/**
+ * Gives the group a new live code, replacing any it had, so the old link
+ * stops working at once.
+ */
+export const issueInviteCode = async (
+  d1: D1Database,
+  groupId: string
+): Promise<string> => {
+  for (let attempt = 1; ; attempt += 1) {
+    const code = newInviteCode();
+    try {
+      // oxlint-disable-next-line no-await-in-loop -- a retry, after a clash
+      await drizzle(d1)
+        .insert(invites)
+        .values({ code, groupId })
+        .onConflictDoUpdate({ set: { code }, target: invites.groupId });
+      return code;
+    } catch (error) {
+      // Another group holds the code (the primary key): draw again.
+      if (attempt >= MAX_ATTEMPTS) {
+        throw error;
+      }
+    }
+  }
+};

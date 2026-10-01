@@ -1,6 +1,7 @@
 import { createConnectRouter } from "@connectrpc/connect";
 import { createFetchHandler } from "@connectrpc/connect/protocol";
 
+import { registerGroupService } from "./group-service";
 import { registerInviteService } from "./invite-service";
 import { getAuth, sessionUser } from "./session";
 import { USER_HEADER } from "./sync-socket";
@@ -14,6 +15,7 @@ export { UserDO } from "./user-do";
 const router = createConnectRouter({ grpc: false, grpcWeb: false });
 registerSystemService(router);
 registerInviteService(router);
+registerGroupService(router);
 registerUserService(router);
 
 const rpcHandlers = new Map(

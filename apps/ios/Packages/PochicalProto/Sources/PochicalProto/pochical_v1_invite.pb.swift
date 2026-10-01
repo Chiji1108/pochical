@@ -43,6 +43,9 @@ public nonisolated struct Pochical_V1_GetInvitePreviewResponse: Sendable {
   /// The group's mark when it is an emoji; empty for other marks.
   public var groupEmoji: String = String()
 
+  /// How many are in the group, for 「{n}人」 on the page and cards.
+  public var memberCount: UInt32 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -84,7 +87,7 @@ nonisolated extension Pochical_V1_GetInvitePreviewRequest: SwiftProtobuf.Message
 
 nonisolated extension Pochical_V1_GetInvitePreviewResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetInvitePreviewResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}group_name\0\u{3}group_emoji\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}group_name\0\u{3}group_emoji\0\u{3}member_count\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -94,6 +97,7 @@ nonisolated extension Pochical_V1_GetInvitePreviewResponse: SwiftProtobuf.Messag
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.groupName) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.groupEmoji) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.memberCount) }()
       default: break
       }
     }
@@ -106,12 +110,16 @@ nonisolated extension Pochical_V1_GetInvitePreviewResponse: SwiftProtobuf.Messag
     if !self.groupEmoji.isEmpty {
       try visitor.visitSingularStringField(value: self.groupEmoji, fieldNumber: 2)
     }
+    if self.memberCount != 0 {
+      try visitor.visitSingularUInt32Field(value: self.memberCount, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_GetInvitePreviewResponse, rhs: Pochical_V1_GetInvitePreviewResponse) -> Bool {
     if lhs.groupName != rhs.groupName {return false}
     if lhs.groupEmoji != rhs.groupEmoji {return false}
+    if lhs.memberCount != rhs.memberCount {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

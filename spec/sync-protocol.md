@@ -20,6 +20,15 @@ Every user is signed in, from the first launch: anonymously at first, so nobody 
 - It sends the token as `Authorization: Bearer <token>` on every Connect call and socket. Calls without a valid one fail with `UNAUTHENTICATED`; sockets get 401. `UserService.GetMe` says whose token it is.
 - Each user has a User DO named by their user id. It records the groups they are in.
 
+## Groups
+
+`GroupService` (`proto/pochical/v1/group.proto`) makes groups and lets people into them; every call needs a session.
+
+- Creating a group gives it a random id, sets up its Group DO with the name, the emoji mark and the maker as its first member, and issues its first invitation code.
+- A group has one live code, held in D1 (`invites`, from code to group), the only place a link can be looked up. Remaking it replaces the row, so the old link stops working at once. `InviteService.GetInvitePreview` answers anyone holding a live code with the group's name, mark and member count.
+- Joining with a live code adds the user to the Group DO, which decides membership, and then to the user's own DO, which keeps their groups for checking sockets. Both steps can be repeated, so a retry after a failure between them completes the join; joining a group you are in changes nothing and says so.
+- Only members read or remake a group's link.
+
 ## Sockets
 
 Clients open one WebSocket to their User DO, at `/v1/me/socket`, and one per group they are viewing, at `/v1/groups/{groupId}/socket`. The Worker checks the session before either reaches a Durable Object, and lets a group socket through only when the user's own DO lists the group, so an id that is not theirs is refused (403) without waking or creating a Group DO. Every message is binary: clients send `pochical.v1.ClientFrame`, the server sends `pochical.v1.ServerFrame` (see `proto/pochical/v1/sync.proto`). Text messages are protocol errors.

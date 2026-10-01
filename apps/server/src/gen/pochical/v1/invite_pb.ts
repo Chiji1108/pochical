@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/invite.proto.
  */
 export const file_pochical_v1_invite: GenFile = /*@__PURE__*/
-  fileDesc("Chhwb2NoaWNhbC92MS9pbnZpdGUucHJvdG8SC3BvY2hpY2FsLnYxIi4KF0dldEludml0ZVByZXZpZXdSZXF1ZXN0EhMKC2ludml0ZV9jb2RlGAEgASgJIkMKGEdldEludml0ZVByZXZpZXdSZXNwb25zZRISCgpncm91cF9uYW1lGAEgASgJEhMKC2dyb3VwX2Vtb2ppGAIgASgJMnUKDUludml0ZVNlcnZpY2USZAoQR2V0SW52aXRlUHJldmlldxIkLnBvY2hpY2FsLnYxLkdldEludml0ZVByZXZpZXdSZXF1ZXN0GiUucG9jaGljYWwudjEuR2V0SW52aXRlUHJldmlld1Jlc3BvbnNlIgOQAgFCcgoWdGVjaC5jaGlqaS5wb2NoaWNhbC52MUILSW52aXRlUHJvdG9QAaICA1BYWKoCC1BvY2hpY2FsLlYxygILUG9jaGljYWxcVjHiAhdQb2NoaWNhbFxWMVxHUEJNZXRhZGF0YeoCDFBvY2hpY2FsOjpWMWIGcHJvdG8z");
+  fileDesc("Chhwb2NoaWNhbC92MS9pbnZpdGUucHJvdG8SC3BvY2hpY2FsLnYxIi4KF0dldEludml0ZVByZXZpZXdSZXF1ZXN0EhMKC2ludml0ZV9jb2RlGAEgASgJIlkKGEdldEludml0ZVByZXZpZXdSZXNwb25zZRISCgpncm91cF9uYW1lGAEgASgJEhMKC2dyb3VwX2Vtb2ppGAIgASgJEhQKDG1lbWJlcl9jb3VudBgDIAEoDTJ1Cg1JbnZpdGVTZXJ2aWNlEmQKEEdldEludml0ZVByZXZpZXcSJC5wb2NoaWNhbC52MS5HZXRJbnZpdGVQcmV2aWV3UmVxdWVzdBolLnBvY2hpY2FsLnYxLkdldEludml0ZVByZXZpZXdSZXNwb25zZSIDkAIBQnIKFnRlY2guY2hpamkucG9jaGljYWwudjFCC0ludml0ZVByb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw");
 
 /**
  * @generated from message pochical.v1.GetInvitePreviewRequest
@@ -46,6 +46,13 @@ export type GetInvitePreviewResponse = Message<"pochical.v1.GetInvitePreviewResp
    * @generated from field: string group_emoji = 2;
    */
   groupEmoji: string;
+
+  /**
+   * How many are in the group, for 「{n}人」 on the page and cards.
+   *
+   * @generated from field: uint32 member_count = 3;
+   */
+  memberCount: number;
 };
 
 /**
