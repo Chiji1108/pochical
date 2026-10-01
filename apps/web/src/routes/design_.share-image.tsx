@@ -5,7 +5,7 @@ import { css } from "styled-system/css";
 import { DesignCalendar } from "../components/design-calendar";
 import { sampleGroups } from "../components/design-group-data";
 import { DesignProviders } from "../components/design-providers";
-import { paleSkyLights, themeSkyId } from "../components/design-surprise";
+import { paleSkyFromTop, themeSkyId } from "../components/design-surprise";
 import { initialDesignSchedule } from "../lib/design-days";
 import {
   createUserStore,
@@ -30,8 +30,6 @@ export const Route = createFileRoute("/design_/share-image")({
 // bun run image:share takes from /design/share-image into public/share.png:
 // the top page's hero in one frame, its words on the app's ポチカル sky and
 // the calendar's phone rising from the bottom edge.
-const [skyLeft, skyMiddle, skyRight] =
-  paleSkyLights(themeSkyId("pochical")) ?? [];
 
 const styles = {
   brand: css({
@@ -79,8 +77,12 @@ const styles = {
     padding: "70px 110px 0 100px",
     position: "relative",
   }),
+  // The top page's sky as it falls at the same width, only not kept
+  // clear at the very top, where the page leaves room for Safari's bar.
   sky: css({
-    inset: 0,
+    height: "800px",
+    inset: "0 0 auto",
+    maskImage: "linear-gradient(to bottom, black 40%, transparent)",
     pointerEvents: "none",
     position: "absolute",
   }),
@@ -93,11 +95,7 @@ const styles = {
   }),
 };
 
-const skyBackground = [
-  `radial-gradient(30% 45% at 18% 42%, ${skyLeft} 0%, transparent 70%)`,
-  `radial-gradient(30% 45% at 48% 38%, ${skyRight} 0%, transparent 70%)`,
-  `radial-gradient(34% 50% at 32% 70%, ${skyMiddle} 0%, transparent 75%)`,
-].join(", ");
+const skyBackground = paleSkyFromTop(themeSkyId("pochical"));
 
 // The current proposal for each open design choice, as on the top page.
 const variants = parseDesignVariants({});

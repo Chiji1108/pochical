@@ -16,6 +16,7 @@ import { DesignProviders, PresetContexts } from "./design-providers";
 import {
   BREATH_SECONDS,
   nextSkyId,
+  paleSkyFromTop,
   paleSkyLights,
   SKY_CHANGE,
   themeSkyId,
@@ -49,14 +50,10 @@ const variants = parseDesignVariants({});
 const HERO_SKY = themeSkyId("pochical");
 type SkyPlace = "top" | "sides";
 function skyBackground(id: string, place: SkyPlace) {
-  const [left, middle, right] = paleSkyLights(id) ?? [];
   if (place === "top") {
-    return [
-      `radial-gradient(90% 80% at 0% 0%, ${left} 0%, transparent 70%)`,
-      `radial-gradient(90% 80% at 100% 0%, ${right} 0%, transparent 70%)`,
-      `radial-gradient(80% 70% at 50% 25%, ${middle} 0%, transparent 75%)`,
-    ].join(", ");
+    return paleSkyFromTop(id);
   }
+  const [left, middle, right] = paleSkyLights(id) ?? [];
   return [
     `radial-gradient(70% 70% at 0% 45%, ${left} 0%, transparent 70%)`,
     `radial-gradient(70% 70% at 100% 55%, ${right} 0%, transparent 70%)`,
