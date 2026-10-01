@@ -835,8 +835,9 @@ const listing = {
     },
     variants: {
       wide: {
-        // The day's number, and its mark in the middle of the rest.
-        false: { gridTemplateColumns: "32px 1fr", justifyItems: "start" },
+        // The day's number at the start, its mark at the end, lined up
+        // with the rules between the rows.
+        false: { gridTemplateColumns: "1fr auto" },
         // The weekday's room fits WED as well as 木, clear of the mark.
         true: { gridTemplateColumns: "28px 32px 24px 1fr" },
       },
@@ -846,9 +847,11 @@ const listing = {
     display: "flex",
     flex: 1,
     flexDirection: "column",
-    marginTop: "8px",
+    marginTop: "4px",
   }),
-  smallMark: css({ justifySelf: "center" }),
+  // Clear of the end, so a mark's 残業 corner stays inside the widget's
+  // room.
+  smallMark: css({ display: "inline-flex", marginRight: "2px" }),
   text: css({ ...oneLine, color: "text.secondary", textStyle: "footnote" }),
   // A small mark beside the day's number, not a second number: a size
   // down, its capitals spaced a little in English.
@@ -894,7 +897,9 @@ function ListDays({ entry, wide }: { entry: WidgetEntry; wide: boolean }) {
               </span>
             )}
             <span aria-hidden="true" className={wide ? "" : listing.smallMark}>
-              <DayMark day={day} size={18} />
+              {/* A size under the rows' room, so a 早出 or 残業 corner keeps
+                clear of the rule above. */}
+              <DayMark day={day} size={16} />
             </span>
             {wide && (
               <span aria-hidden="true" className={listing.text}>

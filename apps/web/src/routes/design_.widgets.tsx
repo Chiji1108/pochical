@@ -332,6 +332,22 @@ function WidgetsPage() {
     presetPatterns,
     restCompanion
   );
+  // 墨 as someone keeping everything one tone would set it: no color for
+  // Sundays, Saturdays or holidays either.
+  const plainWeek = {
+    ...week,
+    colored: { holiday: false, saturday: false, sunday: false },
+  };
+  const plainStates = todayStates.map((state) => ({
+    ...state,
+    entry: widgetEntry(
+      state.schedule,
+      plainWeek,
+      designToday,
+      presetPatterns,
+      state.companion
+    ),
+  }));
   const states = todayStates.map((state) => ({
     ...state,
     entry: widgetEntry(
@@ -412,29 +428,33 @@ function WidgetsPage() {
           </FrameSection>
 
           <FrameSection
-            description="墨のテーマで、シフトの色をワントーン、アイコンを線だけ、休みを塗らない設定にしたとき。"
+            description="墨のテーマで、シフトの色をワントーン、アイコンを線だけ、休みを塗らない、土日祝にも色をつけない設定にしたとき。"
             title="今日の状態ごと（墨・ワントーン・線）"
           >
-            <PresetContexts id="sumi">
-              <MonochromeContext value={monochrome}>
-                <IconWeightContext value="regular">
-                  <OffHighlightContext value={noHighlight}>
-                    <div className={rows}>
-                      {states.map(({ label, entry: shown, companion }) => (
-                        <WidgetRow
-                          appearance="light"
-                          entry={shown}
-                          families={iosFamilies}
-                          key={label}
-                          label={label}
-                          widgets={companion ? offSizes : stateWidgets}
-                        />
-                      ))}
-                    </div>
-                  </OffHighlightContext>
-                </IconWeightContext>
-              </MonochromeContext>
-            </PresetContexts>
+            <WeekSettingsContext value={{ week: plainWeek }}>
+              <PresetContexts id="sumi">
+                <MonochromeContext value={monochrome}>
+                  <IconWeightContext value="regular">
+                    <OffHighlightContext value={noHighlight}>
+                      <div className={rows}>
+                        {plainStates.map(
+                          ({ label, entry: shown, companion }) => (
+                            <WidgetRow
+                              appearance="light"
+                              entry={shown}
+                              families={iosFamilies}
+                              key={label}
+                              label={label}
+                              widgets={companion ? offSizes : stateWidgets}
+                            />
+                          )
+                        )}
+                      </div>
+                    </OffHighlightContext>
+                  </IconWeightContext>
+                </MonochromeContext>
+              </PresetContexts>
+            </WeekSettingsContext>
           </FrameSection>
 
           <FrameSection
