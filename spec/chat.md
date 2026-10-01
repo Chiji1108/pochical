@@ -104,3 +104,11 @@ A group chat can put days to the vote, as LINE's 日程調整 does, for the step
 - Its writer has 日にちを決める at the card's foot (anyone has it once the writer has left the group, so a poll is never stuck): a sheet lists the days with how many can come; ✓ settles it. The chosen row is marked 決定 on the accent's container, the other days fade, voting ends, and the poll is pinned (Pins) so the day stays found. The app says 〇月〇日(〇)に決めました to the writer. A settled poll's foot is gone, so the day reads as decided; whoever can settle it finds 決め直す in its long-press menu, opening the same sheet on the day chosen. Choosing another moves 決定 to it, and the pin bar follows, for everyone; no line from the app says so.
 - A tap on a day's faces lists everyone who can come that day by name, as a reaction's list does.
 - In a line of words (quotes, the chat list, the pin bar) a poll reads 📅 日にちの投票：〇月〇日(〇)ほか, and once settled 📅 〇月〇日(〇)に決定.
+
+## Long messages and shared days
+
+A message may be as long as `textLimits.chatMessage` and share up to `SHARED_DAYS_MAX` days (`design/src/limits.ts`), but the chat keeps either from filling the screen.
+
+- A message's words longer than 10 lines are cut at the tenth with `…`, and 続きを読む under them, in the color the bubble's links take, opens the rest in place, as LINE's 全文表示 does. Whether words run past 10 lines is measured as they are laid out, not guessed from their length. Opened stays opened while the chat is open.
+- A card of shared days shows a week of them, 7 rows (or 6 columns when its people do not fit across, as it turns), and ほか{n}日 under them; シフト表で見る under the card shows them all.
+- Choosing days to share stops at `SHARED_DAYS_MAX`: a day past it stays unpicked and a problem toast says 一度に送れるのは{n}日までです. The server refuses a message with more.

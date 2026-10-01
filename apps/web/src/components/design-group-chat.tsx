@@ -212,6 +212,11 @@ const chatRow = {
   }),
 };
 
+// Past this many lines a message folds, ending in … and 続きを読む, which
+// opens the rest in place, as LINE's 全文表示 does: a message near the
+// 1000-character limit would otherwise fill the screen.
+const foldLines = 10;
+
 // A chat as the messaging apps draw one: others' bubbles on the left with
 // their avatar and name at the start of a run, yours on the right in the
 // accent; the day between runs, the time by the bubble, reactions under
@@ -293,6 +298,21 @@ const chatStyle = {
     opacity: 0.25,
   }),
   // A message keeps the lines it was written in.
+  // A long message's words, cut at foldLines with an ellipsis.
+  folded: css({ lineClamp: foldLines }),
+  // Under a folded message, in the color its links take.
+  unfold: cva({
+    base: {
+      bg: "transparent",
+      border: 0,
+      color: "accent.default",
+      fontWeight: 600,
+      padding: "0 12px 8px",
+      textAlign: "start",
+      textStyle: "footnote",
+    },
+    variants: { mine: { true: { color: "accent.onFill" } } },
+  }),
   bubbleText: css({
     bg: "transparent",
     border: 0,
@@ -953,6 +973,9 @@ export function ChatPage({
   onOpenDay: (date: Date) => void;
 }) {
   const [draft, setDraft] = useState("");
+  // Messages whose words run past foldLines, and those opened in full.
+  const [folded, setFolded] = useState<Record<string, boolean>>({});
+  const [unfolded, setUnfolded] = useState<string[]>([]);
   // Your message being changed in the composer, and the one being taken
   // back, asked about first.
   const [editing, setEditing] = useState<string>();
@@ -1678,13 +1701,35 @@ export function ChatPage({
                       }}
                       type="button"
                     >
-                      <MessageText
-                        mine={mine}
-                        nameOf={mentionName}
-                        text={message.text}
-                      />
+                      <FoldedText
+                        onFolds={(folds) => {
+                          setFolded((before) =>
+                            before[message.id] === folds
+                              ? before
+                              : { ...before, [message.id]: folds }
+                          );
+                        }}
+                        open={unfolded.includes(message.id)}
+                      >
+                        <MessageText
+                          mine={mine}
+                          nameOf={mentionName}
+                          text={message.text}
+                        />
+                      </FoldedText>
                     </button>
                   </MessageActions>
+                  {folded[message.id] && !unfolded.includes(message.id) && (
+                    <button
+                      className={chatStyle.unfold({ mine })}
+                      onClick={() => {
+                        setUnfolded([...unfolded, message.id]);
+                      }}
+                      type="button"
+                    >
+                      続きを読む
+                    </button>
+                  )}
                   {inviteCode && (
                     <InviteCard
                       invite={inviteOf(inviteCode)}
@@ -2534,6 +2579,33 @@ function LinkMenu({
         </Popover.Positioner>
       </Portal>
     </Popover.Root>
+  );
+}
+
+// A message's words, folded at foldLines until opened. Whether they run
+// past it is measured, not guessed from their length, and told to the
+// chat so 続きを読む shows only under words that were cut.
+function FoldedText({
+  open,
+  onFolds,
+  children,
+}: {
+  open: boolean;
+  onFolds: (folds: boolean) => void;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const words = ref.current;
+    if (!words || open) {
+      return;
+    }
+    onFolds(words.scrollHeight > words.clientHeight + 1);
+  }, [open, onFolds]);
+  return (
+    <span className={open ? undefined : chatStyle.folded} ref={ref}>
+      {children}
+    </span>
   );
 }
 
@@ -4174,7 +4246,9 @@ const dayCard = {
 
 // Shared dates with each person's shift. One day spreads out, wrapping
 // when the people are many; several become a small table, a row per day,
-// or a row per person when the people don't fit across.
+// or a row per person when the people don't fit across. Either keeps to
+// a week of days, so a month shared does not fill the chat; the rest are
+// left to シフト表で見る under it.
 function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
   const weekTools = useWeek();
   const [first] = days;
@@ -4213,6 +4287,8 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
   const columns = {
     gridTemplateColumns: `44px repeat(${members.length}, 26px)`,
   };
+  const shown = days.slice(0, maxCardRows);
+  const rest = days.length - shown.length;
   return (
     <span className={dayCard.card({ many: true })} data-part="day-card">
       <span className={dayCard.row({ names: true })} style={columns}>
@@ -4224,7 +4300,7 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
           </span>
         ))}
       </span>
-      {days.map((date) => (
+      {shown.map((date) => (
         <span
           className={dayCard.row({ together: everyoneOff(members, date) })}
           key={dateKey(date)}
@@ -4253,13 +4329,15 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
           ))}
         </span>
       ))}
+      {rest > 0 && <small className={dayCard.rest}>ほか{rest}日</small>}
     </span>
   );
 }
 
 // A card fits this many columns of people or days in a bubble on the
-// narrowest phone.
+// narrowest phone, and shows a week of rows.
 const maxCardColumns = 6;
+const maxCardRows = 7;
 
 // Several days for more people than fit across: the table turns, a row
 // per person and a column per day, as the people can't be fewer but the

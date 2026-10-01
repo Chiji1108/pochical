@@ -13,5 +13,8 @@ public enum TextLimits {
   public static let shiftName = 8
 }
 
+/// The most days one chat message shares.
+public let sharedDaysMax = 31
+
 /// The most people in one group.
 public let groupMaxMembers = 100

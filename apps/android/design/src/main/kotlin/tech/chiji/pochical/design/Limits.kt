@@ -17,5 +17,8 @@ object TextLimits {
   const val shiftName = 8
 }
 
+/** The most days one chat message shares. */
+const val SHARED_DAYS_MAX = 31
+
 /** The most people in one group. */
 const val GROUP_MAX_MEMBERS = 100

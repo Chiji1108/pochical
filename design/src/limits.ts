@@ -28,6 +28,10 @@ export const textLimits = {
 
 export type TextKind = keyof typeof textLimits;
 
+// The most days one chat message shares, with everyone's shifts or as a
+// poll's choices: a month's worth.
+export const SHARED_DAYS_MAX = 31;
+
 // The most people in one group. Far past a family's or friends' group, so
 // it only caps what a leaked invitation link can let in.
 export const GROUP_MAX_MEMBERS = 100;
