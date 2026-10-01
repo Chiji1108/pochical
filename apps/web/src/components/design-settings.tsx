@@ -12,6 +12,7 @@ import type { MotionValue } from "motion/react";
 import {
   lazy,
   Suspense,
+  useCallback,
   useContext,
   useLayoutEffect,
   useRef,
@@ -1498,22 +1499,25 @@ function StylePreview({
   const [page, setPage] = useState(0);
   const progress = useMotionValue(0);
   // The calendar's height, which the widget's page takes too, so the
-  // pager keeps one height and nothing under it moves as it turns.
-  const calendarRef = useRef<HTMLDivElement>(null);
+  // pager keeps one height and nothing under it moves as it turns. The
+  // pager draws the calendar anew as it moves between its slots, so it
+  // is measured by a callback that follows the element drawn, and a
+  // calendar taken away (measured as nothing) leaves the height alone.
   const [calendarHeight, setCalendarHeight] = useState<number>();
-  useLayoutEffect(() => {
-    const element = calendarRef.current;
+  const calendarObserver = useRef<ResizeObserver>(undefined);
+  const calendarRef = useCallback((element: HTMLDivElement | null) => {
+    calendarObserver.current?.disconnect();
     if (!element) {
-      return undefined;
+      return;
     }
-    setCalendarHeight(element.offsetHeight);
-    const observer = new ResizeObserver(() => {
-      setCalendarHeight(element.offsetHeight);
-    });
-    observer.observe(element);
-    return () => {
-      observer.disconnect();
+    const measure = () => {
+      if (element.offsetHeight > 0) {
+        setCalendarHeight(element.offsetHeight);
+      }
     };
+    measure();
+    calendarObserver.current = new ResizeObserver(measure);
+    calendarObserver.current.observe(element);
   }, []);
   const calendar = (
     <div
