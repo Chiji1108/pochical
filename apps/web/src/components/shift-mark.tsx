@@ -141,10 +141,17 @@ type MarkIconComponent = (props: {
   weight?: IconWeight;
 }) => ReactNode;
 
+const phosphorIcons = new Map<MarkIconName, MarkIconComponent>();
+
 // A Phosphor icon drawn from its paths in lib/mark-icon-paths.ts, as
-// Phosphor's own component would draw it.
+// Phosphor's own component would draw it. One component per glyph, so marks
+// that share a glyph can be told by it.
 function phosphorIcon(name: MarkIconName): MarkIconComponent {
-  return function PhosphorIcon({
+  const known = phosphorIcons.get(name);
+  if (known) {
+    return known;
+  }
+  const PhosphorIcon: MarkIconComponent = function PhosphorIcon({
     className,
     color = "currentColor",
     size,
@@ -166,6 +173,8 @@ function phosphorIcon(name: MarkIconName): MarkIconComponent {
       </svg>
     );
   };
+  phosphorIcons.set(name, PhosphorIcon);
+  return PhosphorIcon;
 }
 
 // Phosphor duotone icons. "letter" draws the symbol inside a thin circle, so
@@ -227,6 +236,15 @@ export const markIcons = {
   waves: phosphorIcon("Waves"),
 } satisfies Record<string, MarkIconComponent | undefined>;
 export type MarkIcon = keyof typeof markIcons;
+
+// Whether two looks draw the same icon: icons sharing a glyph look alike,
+// and the letter icon differs by its letter.
+export function sameIcon(a: Look, b: Look) {
+  if (a.icon === "letter" || b.icon === "letter") {
+    return a.icon === b.icon && a.symbol === b.symbol;
+  }
+  return markIcons[a.icon] === markIcons[b.icon];
+}
 
 export const markEmojis = [
   "☀️",

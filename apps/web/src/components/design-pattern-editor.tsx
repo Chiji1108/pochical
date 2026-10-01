@@ -35,9 +35,10 @@ import {
   guessLook,
   MarkGlyph,
   nextColor,
+  sameIcon,
   ShiftMarkStyleContext,
 } from "./shift-mark";
-import type { Look } from "./shift-mark";
+import type { Look, ShiftMarkStyle } from "./shift-mark";
 
 // A pattern as edited on screen. Presets start with every look filled in;
 // new ones get theirs from the name until the person picks one.
@@ -69,6 +70,23 @@ function patternOf({ allDay, start, end, ...draft }: PatternDraft): Pattern {
     name: draft.name.trim(),
     time: allDay ? undefined : [start, end],
   };
+}
+
+// What each style tells patterns apart by, named for the lookalike warning.
+const lookalikeParts: Record<ShiftMarkStyle, string> = {
+  badge: "文字と色",
+  emoji: "絵文字",
+  icon: "アイコンと色",
+};
+
+// Whether two patterns look the same in a style; without an emoji, the
+// emoji style shows the letters.
+function lookAlike(a: Look, b: Look, style: ShiftMarkStyle) {
+  if (style === "emoji" && (a.emoji || b.emoji)) {
+    return a.emoji === b.emoji;
+  }
+  const sameMark = style === "icon" ? sameIcon(a, b) : a.symbol === b.symbol;
+  return sameMark && a.color === b.color;
 }
 
 const editor = {
@@ -397,10 +415,9 @@ function PatternEditor({
     });
   };
   const canSave = draft.name.trim() !== "";
-  // Another pattern the letter style could not tell apart from this one.
-  const lookalike = others.find(
-    (other) => other.symbol === draft.symbol && other.color === draft.color
-  );
+  // Another pattern that style could not tell apart from this one.
+  const lookalike = (tab: ShiftMarkStyle) =>
+    others.find((other) => lookAlike(other, draft, tab));
 
   const nextDay = others.find((other) => other.id === draft.nextDay);
 
@@ -415,12 +432,16 @@ function PatternEditor({
         onPick={pick}
         title="印と色"
       >
-        {lookalike && (
-          <p className={editor.lookalike}>
-            「{lookalike.name}
-            」と同じ文字と色です。色か文字を変えると見分けやすくなります。
-          </p>
-        )}
+        {(tab) => {
+          const twin = lookalike(tab);
+          return (
+            twin && (
+              <p className={editor.lookalike}>
+                同じ{lookalikeParts[tab]}の「{twin.name}」がもうあります。
+              </p>
+            )
+          );
+        }}
       </LookEditorPage>
     );
   }
