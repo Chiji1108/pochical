@@ -3427,9 +3427,12 @@ const pollCard = {
     border: "1px solid token(colors.border.default)",
     borderRadius: "lg",
     display: "flex",
+    // 264px where the row has room, narrower where it does not, so the
+    // time beside it stays in the row (as a link's card does).
+    flex: "1 1 264px",
     flexDirection: "column",
     maxWidth: "100%",
-    minWidth: "min(264px, 100%)",
+    minWidth: 0,
     overflow: "hidden",
   }),
   // The card's head opens its reactions and menu, as a shared day's card
@@ -3477,7 +3480,8 @@ const pollCard = {
   together: css({ color: "accent.default", fontSize: "10px", fontWeight: 600 }),
   // The faces are a button, for the list of everyone who can come.
   faces: css({
-    "& > *": { boxShadow: "0 0 0 1.5px token(colors.background.card)" },
+    // The faces ringed apart; the count beside them is words, not ringed.
+    "& > span": { boxShadow: "0 0 0 1.5px token(colors.background.card)" },
     "& > * + *": { marginInlineStart: "-4px" },
     alignItems: "center",
     bg: "transparent",
