@@ -1,21 +1,24 @@
 import { addDays, dateKey, formatDay, timeRange } from "./design-days";
 import type { DayEntry, Schedule } from "./design-days";
-import type { PatternBook, Pattern } from "./design-patterns";
+import type { PatternBook, Pattern, Shift } from "./design-patterns";
 import { designToday } from "./design-today";
 
 // Reminders of the person's own shifts, as the native apps schedule them
 // with local notifications: kept on the device, like alarms, several at
 // once, each on or off. A reminder goes off the evening before a day with
 // a shift (前日), or some time before the shift starts (開始前), which
-// only days with a time have.
-export type Reminder =
-  | { id: string; on: boolean; kind: "dayBefore"; time: string }
-  | { id: string; on: boolean; kind: "beforeStart"; minutes: number };
+// only days with a time have. Like an alarm's days, each picks the shifts
+// it goes off for: it keeps the ones it skips, so a pattern added later is
+// reminded of until it is turned off.
+export type Reminder = { id: string; on: boolean; skip: Shift[] } & (
+  | { kind: "dayBefore"; time: string }
+  | { kind: "beforeStart"; minutes: number }
+);
 
 export type ReminderKind = Reminder["kind"];
 
 export const defaultReminders: Reminder[] = [
-  { id: "reminder-0", kind: "dayBefore", on: true, time: "21:00" },
+  { id: "reminder-0", kind: "dayBefore", on: true, skip: [], time: "21:00" },
 ];
 
 export const defaultDayBeforeTime = "21:00";
@@ -24,6 +27,14 @@ export const defaultBeforeMinutes = 60;
 const minutesPerHour = 60;
 
 // How long before, as the platforms' alert choices write it.
+// The patterns a reminder can go off for: every one the evening before,
+// only those with a time before they start.
+export function remindable(kind: ReminderKind, patterns: readonly Pattern[]) {
+  return kind === "dayBefore"
+    ? patterns
+    : patterns.filter((pattern) => pattern.time !== undefined);
+}
+
 export const beforeStartOptions = [15, 30, 60, 90, 120, 180] as const;
 
 export function beforeText(minutes: number) {
@@ -76,14 +87,18 @@ export type Firing = {
   pattern: Pattern;
 };
 
-// When a reminder goes off for a day, if it does: 前日 for every day with
-// a shift, days off included, and 開始前 only for a shift with a time.
+// When a reminder goes off for a day, if it does: for a shift it does not
+// skip, 前日 on every day with one, days off included, and 開始前 only
+// for a shift with a time.
 function firingFor(
   reminder: Reminder,
   date: Date,
   entry: DayEntry,
   pattern: Pattern
 ): Date | undefined {
+  if (reminder.skip.includes(entry.shift)) {
+    return;
+  }
   if (reminder.kind === "dayBefore") {
     return at(addDays(date, -1), reminder.time);
   }

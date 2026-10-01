@@ -1,11 +1,11 @@
-import { Bell, BellOff, Plus } from "lucide-react";
-import { useState } from "react";
+import { Bell, BellOff, Check, Plus } from "lucide-react";
+import { useContext, useState } from "react";
 import { css, cx } from "styled-system/css";
 
 import type { Schedule } from "../lib/design-days";
 import { useDevice } from "../lib/design-device";
-import { isDayOff, usePatterns } from "../lib/design-patterns";
-import type { PatternBook } from "../lib/design-patterns";
+import { OwnPatternsContext, usePatterns } from "../lib/design-patterns";
+import type { PatternBook, Shift } from "../lib/design-patterns";
 import {
   beforeStartOptions,
   beforeText,
@@ -15,6 +15,7 @@ import {
   nextFiring,
   notificationText,
   reminderName,
+  remindable,
 } from "../lib/design-reminders";
 import type { Firing, Reminder, ReminderKind } from "../lib/design-reminders";
 import { useSettings } from "../lib/design-settings-store";
@@ -24,6 +25,8 @@ import { GroupIcon } from "./design-group-parts";
 import { DecideHeading, Sheet, sheetBody, SystemAlert } from "./design-sheet";
 import {
   Button,
+  Chip,
+  ChipGroup,
   DestructiveButton,
   List,
   ListRow,
@@ -35,10 +38,12 @@ import {
   Section,
   Segment,
   SegmentedControl,
+  srOnly,
   SwitchRow,
   TimeField,
   Toggle,
 } from "./design-ui";
+import { ShiftMark } from "./shift-mark";
 
 // 通知: reminders of the person's own shifts, which the device sends by
 // itself like alarms, and the chats' messages, which the server pushes
@@ -214,6 +219,8 @@ const page = css({ display: "flex", flexDirection: "column", gap: "24px" });
 // A reminder as a row of the alarms' list: what it is and when it next
 // goes off, opening it to edit, and its switch.
 const reminderRow = {
+  marks: css({ alignItems: "center", display: "inline-flex", gap: "4px" }),
+  name: css({ alignItems: "center", display: "flex", gap: "8px" }),
   off: css({ color: "text.tertiary" }),
   open: css({
     alignItems: "center",
@@ -242,6 +249,8 @@ function ReminderRow({
   onSwitch: (on: boolean) => void;
 }) {
   const name = reminderName(reminder);
+  const shown = remindable(reminder.kind, useContext(OwnPatternsContext));
+  const picked = shown.filter((pattern) => !reminder.skip.includes(pattern.id));
   let detail: string | undefined;
   if (reminder.on) {
     detail = firing
@@ -264,7 +273,20 @@ function ReminderRow({
             !reminder.on && reminderRow.off
           )}
         >
-          {name}
+          <span className={reminderRow.name}>
+            {name}
+            {/* The shifts it goes off for, when not all of them. */}
+            {picked.length < shown.length && (
+              <span className={reminderRow.marks}>
+                {picked.map((pattern) => (
+                  <ShiftMark key={pattern.id} shift={pattern.id} size={16} />
+                ))}
+                <span className={srOnly}>
+                  {picked.map((pattern) => pattern.name).join("・")}だけ
+                </span>
+              </span>
+            )}
+          </span>
           {detail && <small>{detail}</small>}
         </span>
       </button>
@@ -380,29 +402,42 @@ export function RemindersPage({
   );
 }
 
-type Draft = { kind: ReminderKind; time: string; minutes: number };
+type Draft = {
+  kind: ReminderKind;
+  time: string;
+  minutes: number;
+  skip: Shift[];
+};
 
 function draftOf(reminder: Reminder | undefined): Draft {
   if (!reminder) {
     return {
       kind: "dayBefore",
       minutes: defaultBeforeMinutes,
+      skip: [],
       time: defaultDayBeforeTime,
     };
   }
   return reminder.kind === "dayBefore"
-    ? { kind: "dayBefore", minutes: defaultBeforeMinutes, time: reminder.time }
+    ? {
+        kind: "dayBefore",
+        minutes: defaultBeforeMinutes,
+        skip: reminder.skip,
+        time: reminder.time,
+      }
     : {
         kind: "beforeStart",
         minutes: reminder.minutes,
+        skip: reminder.skip,
         time: defaultDayBeforeTime,
       };
 }
 
 function reminderOf(draft: Draft, id: string, on: boolean): Reminder {
+  const { skip } = draft;
   return draft.kind === "dayBefore"
-    ? { id, kind: "dayBefore", on, time: draft.time }
-    : { id, kind: "beforeStart", minutes: draft.minutes, on };
+    ? { id, kind: "dayBefore", on, skip, time: draft.time }
+    : { id, kind: "beforeStart", minutes: draft.minutes, on, skip };
 }
 
 function newId(reminders: Reminder[]) {
@@ -450,6 +485,8 @@ function ReminderSheet({
   onDelete?: () => void;
 }) {
   const [draft, setDraft] = useState(() => draftOf(reminder));
+  const shown = remindable(draft.kind, useContext(OwnPatternsContext));
+  const picked = shown.filter((pattern) => !draft.skip.includes(pattern.id));
   const saved = reminderOf(
     draft,
     reminder?.id ?? newId(reminders),
@@ -459,6 +496,7 @@ function ReminderSheet({
     <>
       <DecideHeading
         action="保存"
+        disabled={picked.length === 0}
         onAction={() => {
           onSave(saved);
         }}
@@ -520,10 +558,32 @@ function ReminderSheet({
                 />
               )}
             </List>
-            {draft.kind === "beforeStart" && (
-              <Note>時間のないシフト（休みなど）の日には届きません。</Note>
-            )}
           </section>
+          <Section title="届くシフト">
+            <ChipGroup label="届くシフト">
+              {shown.map((pattern) => {
+                const on = !draft.skip.includes(pattern.id);
+                return (
+                  <Chip
+                    key={pattern.id}
+                    onClick={() => {
+                      setDraft({
+                        ...draft,
+                        skip: on
+                          ? [...draft.skip, pattern.id]
+                          : draft.skip.filter((id) => id !== pattern.id),
+                      });
+                    }}
+                    selected={on}
+                  >
+                    {on && <Check aria-hidden="true" size={12} />}
+                    <ShiftMark shift={pattern.id} size={16} />
+                    {pattern.name}
+                  </Chip>
+                );
+              })}
+            </ChipGroup>
+          </Section>
           <NotificationSample
             book={book}
             reminder={saved}
@@ -591,7 +651,7 @@ function NotificationSample({
     Object.values(book).find(
       (item) =>
         item !== undefined &&
-        !isDayOff(item) &&
+        !reminder.skip.includes(item.id) &&
         (reminder.kind === "dayBefore" || item.time !== undefined)
     );
   if (!pattern) {
