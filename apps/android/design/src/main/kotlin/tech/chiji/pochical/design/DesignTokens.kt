@@ -7,6 +7,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1422,19 +1423,30 @@ data class ThemeColors(
   }
 }
 
-/** iOS's text styles at their default sizes, which the app's type scale follows. */
+/**
+ * iOS's text styles at their default sizes, which the app's type scale follows.
+ * Japanese breaks between phrases (Android 13 and later), not in the middle of
+ * a word, as the site's does with BudouX.
+ */
 object PochicalTextStyles {
-  val body = TextStyle(fontSize = 17.sp, fontWeight = FontWeight(400))
-  val callout = TextStyle(fontSize = 16.sp, fontWeight = FontWeight(400))
-  val caption = TextStyle(fontSize = 12.sp, fontWeight = FontWeight(400))
-  val caption2 = TextStyle(fontSize = 11.sp, fontWeight = FontWeight(400))
-  val footnote = TextStyle(fontSize = 13.sp, fontWeight = FontWeight(400))
-  val headline = TextStyle(fontSize = 17.sp, fontWeight = FontWeight(600))
-  val largeTitle = TextStyle(fontSize = 34.sp, fontWeight = FontWeight(400))
-  val subheadline = TextStyle(fontSize = 15.sp, fontWeight = FontWeight(400))
-  val title1 = TextStyle(fontSize = 28.sp, fontWeight = FontWeight(400))
-  val title2 = TextStyle(fontSize = 22.sp, fontWeight = FontWeight(400))
-  val title3 = TextStyle(fontSize = 20.sp, fontWeight = FontWeight(400))
+  private val phrases =
+    LineBreak(
+      strategy = LineBreak.Strategy.HighQuality,
+      strictness = LineBreak.Strictness.Strict,
+      wordBreak = LineBreak.WordBreak.Phrase,
+    )
+
+  val body = TextStyle(fontSize = 17.sp, fontWeight = FontWeight(400), lineBreak = phrases)
+  val callout = TextStyle(fontSize = 16.sp, fontWeight = FontWeight(400), lineBreak = phrases)
+  val caption = TextStyle(fontSize = 12.sp, fontWeight = FontWeight(400), lineBreak = phrases)
+  val caption2 = TextStyle(fontSize = 11.sp, fontWeight = FontWeight(400), lineBreak = phrases)
+  val footnote = TextStyle(fontSize = 13.sp, fontWeight = FontWeight(400), lineBreak = phrases)
+  val headline = TextStyle(fontSize = 17.sp, fontWeight = FontWeight(600), lineBreak = phrases)
+  val largeTitle = TextStyle(fontSize = 34.sp, fontWeight = FontWeight(400), lineBreak = phrases)
+  val subheadline = TextStyle(fontSize = 15.sp, fontWeight = FontWeight(400), lineBreak = phrases)
+  val title1 = TextStyle(fontSize = 28.sp, fontWeight = FontWeight(400), lineBreak = phrases)
+  val title2 = TextStyle(fontSize = 22.sp, fontWeight = FontWeight(400), lineBreak = phrases)
+  val title3 = TextStyle(fontSize = 20.sp, fontWeight = FontWeight(400), lineBreak = phrases)
 }
 
 object Metrics {

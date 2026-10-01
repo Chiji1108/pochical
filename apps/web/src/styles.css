@@ -72,6 +72,15 @@
   svg {
     flex-shrink: 0;
   }
+  /* Japanese text has a <wbr> between its phrases (src/jsx), so a line
+     breaks only there, not in the middle of a word, and leaves no short
+     phrase alone on its last line. A phrase too long for its line still
+     breaks. */
+  :where(:has(> wbr)) {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    text-wrap: pretty;
+  }
   h1,
   h2,
   h3,
@@ -83,10 +92,7 @@
   h3 {
     font-feature-settings: "palt";
     overflow-wrap: anywhere;
-    /* Lines broken between phrases and evened out, so no lone 「ん。」
-       is left on a line of its own. Browsers without phrase breaking
-       fall back to their own; short headings mark theirs with <wbr>. */
-    word-break: auto-phrase;
+    /* Lines evened out, so no lone 「ん。」 is left on a line of its own. */
     text-wrap: balance;
   }
   .skip-link {
@@ -448,7 +454,6 @@
   }
   .state-page h1 {
     font-size: 30px;
-    word-break: keep-all;
   }
   .state-page p {
     font-size: 13px;
