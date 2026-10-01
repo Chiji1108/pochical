@@ -4,8 +4,10 @@
 export const textLimits = {
   chatMessage: 1000,
   dayNote: 100,
+  groupMark: 2,
   groupName: 30,
   personName: 20,
+  shiftMark: 1,
   shiftName: 8,
 } as const;
 

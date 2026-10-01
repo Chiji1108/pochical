@@ -7,6 +7,8 @@ How long the free text people type may be, how the fields hold it to that, and h
 | Kind | Fields | Limit |
 | --- | --- | --- |
 | `shiftName` | A shift pattern's name | 8 |
+| `shiftMark` | A shift pattern's letter, for the letter look | 1 |
+| `groupMark` | A group's letter, when its mark is letters | 2 |
 | `personName` | The profile's name, a group's name for you (when joining, creating a group, or in its settings), a coworker's name (in the list, or added from a day) | 20 |
 | `groupName` | A group's name, when creating or editing it | 30 |
 | `dayNote` | A day's memo | 100 |
@@ -14,7 +16,7 @@ How long the free text people type may be, how the fields hold it to that, and h
 
 Every name of a person has the same limit wherever it is typed, so a name that fits in one place fits in all.
 
-Not limited here: a mark's letter, which already takes one character (a shift's) or two (a group's); search fields, which are not kept; and times, which are picked rather than typed.
+Not limited here: search fields, which are not kept; and times, which are picked rather than typed.
 
 ## Counting
 
@@ -25,7 +27,8 @@ A limit counts characters as a reader sees them: grapheme clusters, the same as 
 - Typing stops at the limit. Pasted text is cut to the limit.
 - A word still being converted with a Japanese keyboard (marked text, a composition) may run past the limit until it is confirmed; it is then cut to the limit. A conversion is never broken off halfway.
 - While the field is in use, a count `{used}/{limit}` shows after it. For a limit of 30 or less it shows all the while; for a longer one only once 20 or fewer characters are left, so a memo or a message does not carry a count all the while it is written. It turns to the danger color only while a composition runs past the limit.
-- A field too small to show the count, like the chip for adding a person to a day, still stops at the limit and shows no count.
+- A field too small to show the count, like the chip for adding a person to a day, still stops at the limit and shows no count. A mark's letter shows none either: the mark beside it already shows what fits.
+- A mark's letter takes its first character, so 夜勤 typed or converted there becomes 夜. While it is being written it may be empty; left empty, it goes back to the letter it had.
 
 ## Showing long text
 
