@@ -105,13 +105,23 @@ export function paleSkyLights(id: string) {
 }
 
 // Light spreading from both top corners and the middle, fading down.
-function skyBackground(sky: Sky, scheme: "light" | "dark", ground: number) {
-  const [left, middle, right] = lightsOf(sky, scheme, ground);
+function lightFromTop([left, middle, right]: string[]) {
   return [
     `radial-gradient(90% 80% at 0% 0%, ${left} 0%, transparent 70%)`,
     `radial-gradient(90% 80% at 100% 0%, ${right} 0%, transparent 70%)`,
     `radial-gradient(80% 70% at 50% 25%, ${middle} 0%, transparent 75%)`,
   ].join(", ");
+}
+
+function skyBackground(sky: Sky, scheme: "light" | "dark", ground: number) {
+  return lightFromTop(lightsOf(sky, scheme, ground));
+}
+
+// A sky in light mode falling from the top, as over the app's calendar,
+// for the site's own sky: the top page's and its share image's.
+export function paleSkyFromTop(id: string) {
+  const lights = paleSkyLights(id);
+  return lights === undefined ? undefined : lightFromTop(lights);
 }
 
 // How one sky gives way to the next: at once from the tap, so the tap is
