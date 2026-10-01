@@ -189,6 +189,9 @@ function ThemedFrame({
     height,
     padding: margin,
     width,
+    // The system's margin, for a view that draws its own ground to the
+    // widget's edge, as SwiftUI's containerBackground does.
+    "--widget-margin": `${margin}px`,
   } as CSSProperties;
   return (
     <div className={frame({ look: lookOf(appearance) })} style={style}>

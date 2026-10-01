@@ -325,8 +325,68 @@ function TodayBlock({ day, note = false }: { day: WidgetDay; note?: boolean }) {
   );
 }
 
+// Today has nothing to say beside its mark: no change, no memo, and no
+// name to show. The words' room then goes to the next three days.
+function useQuiet(day: WidgetDay) {
+  const named = useShiftNames();
+  return changeWords(day, named) === undefined && !day.note;
+}
+
 export function TodaySmall({ entry }: { entry: WidgetEntry }) {
-  return <TodayBlock day={entry.today} note />;
+  const day = entry.today;
+  if (!useQuiet(day)) {
+    return <TodayBlock day={day} note />;
+  }
+  return (
+    <div className={today.root}>
+      <span className={srOnly}>
+        {day.name ?? NOTHING}
+        {day.time ? ` ${day.time}` : ""}
+      </span>
+      <span aria-hidden="true" className={today.date}>
+        {monthDay(day.date)}({day.weekday})
+      </span>
+      <DayMark day={day} size={48} />
+      <NextDays days={entry.upcoming.slice(1, 4)} />
+    </div>
+  );
+}
+
+const nextDays = {
+  day: css({
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+  }),
+  root: css({
+    borderTop: "1px solid token(colors.separator)",
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    paddingTop: "4px",
+    width: "100%",
+  }),
+  weekday: css({ textStyle: "caption2" }),
+};
+
+// A row of days: each weekday over its mark.
+function NextDays({ days }: { days: WidgetDay[] }) {
+  return (
+    <ol className={`${list} ${nextDays.root}`}>
+      {days.map((day) => (
+        <li className={nextDays.day} key={day.date.getTime()}>
+          <SpokenDay day={day} />
+          <span
+            aria-hidden="true"
+            className={cx(nextDays.weekday, toneText({ tone: day.tone }))}
+          >
+            {day.weekday}
+          </span>
+          <DayMark day={day} size={18} />
+        </li>
+      ))}
+    </ol>
+  );
 }
 
 const week = {
@@ -576,8 +636,71 @@ function spokenOff(entry: WidgetEntry, off: WidgetOff | undefined) {
   return `${title}、${inDaysWords(inDays)}、${monthDay(day.date)}(${day.weekday}) ${day.name ?? ""}`;
 }
 
+const rest = {
+  // The whole widget on today's day-off tile, edge to edge, as the
+  // calendar draws a day off; plain where days off are not colored or the
+  // system draws in one color.
+  ground: css({
+    bg: "var(--off-tint)",
+    height: "calc(100% + 2 * var(--widget-margin))",
+    margin: "calc(-1 * var(--widget-margin))",
+    padding: "var(--widget-margin)",
+  }),
+  tomorrow: css({
+    alignItems: "center",
+    color: "text.secondary",
+    display: "flex",
+    gap: "4px",
+    textStyle: "footnote",
+  }),
+};
+
+// A day off today: said as such, on the day's tile, with its mark and
+// tomorrow's under it, rather than counted as 今日.
+function RestToday({ entry }: { entry: WidgetEntry }) {
+  const day = entry.today;
+  const [, tomorrow] = entry.upcoming;
+  const companion = entry.offs.with;
+  const highlight = useOffHighlight(useContext(ShiftMarkStyleContext));
+  const { tint } = useDisplayColor(day.color ?? presetPatterns.off.color);
+  const flat = useContext(WidgetRenderingModeContext) !== "fullColor";
+  const tinted = highlight && !flat;
+  return (
+    <div
+      className={cx(offs.root, tinted && rest.ground)}
+      style={tinted ? ({ "--off-tint": tint } as CSSProperties) : undefined}
+    >
+      <span className={srOnly}>{spokenOff(entry, { day, inDays: 0 })}</span>
+      <span aria-hidden="true" className={offs.head}>
+        <span className={css(oneLine)}>
+          {companion ? "今日は一緒に休み" : "今日はお休み"}
+        </span>
+        {companion && (
+          <span className={offs.avatar}>
+            <PhotoAvatar
+              name={companion.name}
+              photo={companion.photo}
+              size={20}
+            />
+          </span>
+        )}
+      </span>
+      <DayMark day={day} size={48} />
+      {tomorrow && (
+        <span aria-hidden="true" className={rest.tomorrow}>
+          明日
+          <DayMark day={tomorrow} size={16} />
+        </span>
+      )}
+    </div>
+  );
+}
+
 // The next day off large: how soon, and its date and mark.
 export function NextOffSmall({ entry }: { entry: WidgetEntry }) {
+  if (entry.offs.today) {
+    return <RestToday entry={entry} />;
+  }
   const [next] = offsAhead(entry);
   return (
     <div className={offs.root}>

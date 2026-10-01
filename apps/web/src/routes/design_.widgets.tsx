@@ -11,6 +11,7 @@ import {
 } from "../components/design-page";
 import {
   DesignProviders,
+  PresetContexts,
   useDesignTheme,
 } from "../components/design-providers";
 import { pageStyle } from "../components/design-theme";
@@ -39,6 +40,8 @@ import {
 } from "../components/design-widgets";
 import {
   CellNamesContext,
+  IconWeightContext,
+  MonochromeContext,
   OffDisplayContext,
   OffHighlightContext,
 } from "../components/shift-mark";
@@ -94,6 +97,9 @@ const crowdedSchedule = {
 const AUGUST = 7;
 const augustDay = new Date(2026, AUGUST, 24);
 const augustSchedule = initialDesignSchedule(4, AUGUST);
+
+// Every mark in the テーマ's one color, as シフトの色 ワントーン.
+const monochrome = { monochrome: true };
 
 // Days off without their tint, as when 休みを塗る is off.
 const noHighlight = {
@@ -355,6 +361,32 @@ function WidgetsPage() {
                 />
               ))}
             </div>
+          </FrameSection>
+
+          <FrameSection
+            description="墨のテーマで、シフトの色をワントーン、アイコンを線だけ、休みを塗らない設定にしたとき。"
+            title="今日の状態ごと（墨・ワントーン・線）"
+          >
+            <PresetContexts id="sumi">
+              <MonochromeContext value={monochrome}>
+                <IconWeightContext value="regular">
+                  <OffHighlightContext value={noHighlight}>
+                    <div className={rows}>
+                      {states.map(({ label, entry: shown, companion }) => (
+                        <WidgetRow
+                          appearance="light"
+                          entry={shown}
+                          families={iosFamilies}
+                          key={label}
+                          label={label}
+                          widgets={companion ? offSizes : stateWidgets}
+                        />
+                      ))}
+                    </div>
+                  </OffHighlightContext>
+                </IconWeightContext>
+              </MonochromeContext>
+            </PresetContexts>
           </FrameSection>
 
           <FrameSection
