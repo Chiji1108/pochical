@@ -34,6 +34,10 @@ run = "buf breaking --against '../.git#branch=main,subdir=proto'"
 description = "Run the Workers dev server"
 run = "bun run --cwd apps/server dev"
 
+[tasks."db:generate"]
+description = "Generate a D1 migration from apps/server/src/db/schema.ts (pass --name <what>)"
+run = "bun run --cwd apps/server db:generate"
+
 [tasks."server:test"]
 description = "Run server tests in the Workers runtime"
 run = "bun run --cwd apps/server test"

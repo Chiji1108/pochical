@@ -10,6 +10,13 @@ import {
 import type { ClientFrame } from "./gen/pochical/v1/sync_pb";
 import { MIN_PROTOCOL_VERSION } from "./protocol";
 
+/** What the group shows of itself to members and to invite links. */
+export type GroupProfile = {
+  name: string;
+  // Set when the group's mark is an emoji.
+  emoji: string | null;
+};
+
 /** Per-socket state that survives hibernation. */
 type SocketAttachment = {
   protocolVersion: number;
@@ -71,6 +78,34 @@ const handleHello = (ws: WebSocket, protocolVersion: number): void => {
  * group costs nothing while members stay connected.
  */
 export class GroupRoom extends DurableObject<Env> {
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    ctx.storage.sql.exec(
+      `CREATE TABLE IF NOT EXISTS profile (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        name TEXT NOT NULL,
+        emoji TEXT
+      ) STRICT`
+    );
+  }
+
+  /** The group's name and mark, or null before the group is set up. */
+  getProfile(): GroupProfile | null {
+    const [row] = this.ctx.storage.sql
+      .exec<GroupProfile>("SELECT name, emoji FROM profile")
+      .toArray();
+    return row ?? null;
+  }
+
+  /** Written when the group is created or renamed (neither is built yet). */
+  setProfile({ name, emoji }: GroupProfile): void {
+    this.ctx.storage.sql.exec(
+      "INSERT OR REPLACE INTO profile (id, name, emoji) VALUES (1, ?, ?)",
+      name,
+      emoji
+    );
+  }
+
   fetch(request: Request): Response {
     if (request.headers.get("Upgrade") !== "websocket") {
       return new Response("Expected a WebSocket upgrade", { status: 426 });

@@ -12,6 +12,12 @@ plugins:
     include_imports: false
     opt:
       - target=ts
+  # apps/web's server functions call the Workers server with the same types.
+  - local: ../node_modules/.bin/protoc-gen-es
+    out: ../apps/web/src/gen
+    include_imports: false
+    opt:
+      - target=ts
   # iOS (swift-protobuf + connect-swift)
   - remote: buf.build/apple/swift:v1.38.1
     out: ../apps/ios/Packages/PochicalProto/Sources/PochicalProto
