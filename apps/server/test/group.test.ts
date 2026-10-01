@@ -1,5 +1,7 @@
+import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
+import { MAX_MEMBERS } from "../src/group-do";
 import { call, openSocket, signInAnonymously } from "./helpers";
 
 type Created = { groupId: string; inviteCode: string };
@@ -149,5 +151,65 @@ describe("GroupService", () => {
       ...accepted.map(() => 200),
       ...refused.map(() => 400),
     ]);
+  });
+
+  it("shows who is in the group before joining, to signed-in people only", async () => {
+    const maker = await signInAnonymously();
+    const { groupId, inviteCode } = await createGroup(maker);
+    const guest = await signInAnonymously();
+
+    const before = await call("GroupService/GetInvite", { inviteCode }, guest);
+    await expect(before.json()).resolves.toStrictEqual({
+      groupEmoji: "🍉",
+      groupId,
+      groupName: "いとこ会",
+      members: [{ displayName: "さくら" }],
+    });
+    await join(inviteCode, guest);
+    const after = await call("GroupService/GetInvite", { inviteCode }, guest);
+    await expect(after.json()).resolves.toMatchObject({
+      alreadyMember: true,
+      members: [{ displayName: "さくら" }, { displayName: "ゆうき" }],
+    });
+
+    const anonymous = await call("GroupService/GetInvite", { inviteCode });
+    expect(anonymous.status).toBe(401);
+    await expect(
+      statusOf(
+        call("GroupService/GetInvite", { inviteCode: "Zzzz2345" }, guest)
+      )
+    ).resolves.toBe(404);
+  });
+
+  it(`keeps a group to ${MAX_MEMBERS} members`, async () => {
+    const { groupId, inviteCode } = await createGroup(
+      await signInAnonymously()
+    );
+    const group = env.GROUPS.getByName(groupId);
+    await Promise.all(
+      Array.from(
+        { length: MAX_MEMBERS - 1 },
+        async (_, index) =>
+          await group.addMember({
+            displayName: `メンバー${index}`,
+            userId: `filler-${index}`,
+          })
+      )
+    );
+    await expect(previewOf(inviteCode)).resolves.toMatchObject({
+      memberCount: MAX_MEMBERS,
+    });
+
+    const late = await signInAnonymously();
+    const invite = await call("GroupService/GetInvite", { inviteCode }, late);
+    await expect(invite.json()).resolves.toMatchObject({ full: true });
+    const refused = await join(inviteCode, late);
+    expect(refused.status).toBe(429);
+    await expect(refused.json()).resolves.toMatchObject({
+      code: "resource_exhausted",
+    });
+    await expect(previewOf(inviteCode)).resolves.toMatchObject({
+      memberCount: MAX_MEMBERS,
+    });
   });
 });

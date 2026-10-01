@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/group.proto.
  */
 export const file_pochical_v1_group: GenFile = /*@__PURE__*/
-  fileDesc("Chdwb2NoaWNhbC92MS9ncm91cC5wcm90bxILcG9jaGljYWwudjEiRwoSQ3JlYXRlR3JvdXBSZXF1ZXN0EgwKBG5hbWUYASABKAkSDQoFZW1vamkYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJIjwKE0NyZWF0ZUdyb3VwUmVzcG9uc2USEAoIZ3JvdXBfaWQYASABKAkSEwoLaW52aXRlX2NvZGUYAiABKAkiKAoUR2V0SW52aXRlTGlua1JlcXVlc3QSEAoIZ3JvdXBfaWQYASABKAkiLAoVR2V0SW52aXRlTGlua1Jlc3BvbnNlEhMKC2ludml0ZV9jb2RlGAEgASgJIisKF1JlbWFrZUludml0ZUxpbmtSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJIi8KGFJlbWFrZUludml0ZUxpbmtSZXNwb25zZRITCgtpbnZpdGVfY29kZRgBIAEoCSI9ChBKb2luR3JvdXBSZXF1ZXN0EhMKC2ludml0ZV9jb2RlGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCSI9ChFKb2luR3JvdXBSZXNwb25zZRIQCghncm91cF9pZBgBIAEoCRIWCg5hbHJlYWR5X21lbWJlchgCIAEoCDLqAgoMR3JvdXBTZXJ2aWNlElAKC0NyZWF0ZUdyb3VwEh8ucG9jaGljYWwudjEuQ3JlYXRlR3JvdXBSZXF1ZXN0GiAucG9jaGljYWwudjEuQ3JlYXRlR3JvdXBSZXNwb25zZRJbCg1HZXRJbnZpdGVMaW5rEiEucG9jaGljYWwudjEuR2V0SW52aXRlTGlua1JlcXVlc3QaIi5wb2NoaWNhbC52MS5HZXRJbnZpdGVMaW5rUmVzcG9uc2UiA5ACARJfChBSZW1ha2VJbnZpdGVMaW5rEiQucG9jaGljYWwudjEuUmVtYWtlSW52aXRlTGlua1JlcXVlc3QaJS5wb2NoaWNhbC52MS5SZW1ha2VJbnZpdGVMaW5rUmVzcG9uc2USSgoJSm9pbkdyb3VwEh0ucG9jaGljYWwudjEuSm9pbkdyb3VwUmVxdWVzdBoeLnBvY2hpY2FsLnYxLkpvaW5Hcm91cFJlc3BvbnNlQnEKFnRlY2guY2hpamkucG9jaGljYWwudjFCCkdyb3VwUHJvdG9QAaICA1BYWKoCC1BvY2hpY2FsLlYxygILUG9jaGljYWxcVjHiAhdQb2NoaWNhbFxWMVxHUEJNZXRhZGF0YeoCDFBvY2hpY2FsOjpWMWIGcHJvdG8z");
+  fileDesc("Chdwb2NoaWNhbC92MS9ncm91cC5wcm90bxILcG9jaGljYWwudjEiRwoSQ3JlYXRlR3JvdXBSZXF1ZXN0EgwKBG5hbWUYASABKAkSDQoFZW1vamkYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJIjwKE0NyZWF0ZUdyb3VwUmVzcG9uc2USEAoIZ3JvdXBfaWQYASABKAkSEwoLaW52aXRlX2NvZGUYAiABKAkiKAoUR2V0SW52aXRlTGlua1JlcXVlc3QSEAoIZ3JvdXBfaWQYASABKAkiLAoVR2V0SW52aXRlTGlua1Jlc3BvbnNlEhMKC2ludml0ZV9jb2RlGAEgASgJIisKF1JlbWFrZUludml0ZUxpbmtSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJIi8KGFJlbWFrZUludml0ZUxpbmtSZXNwb25zZRITCgtpbnZpdGVfY29kZRgBIAEoCSInChBHZXRJbnZpdGVSZXF1ZXN0EhMKC2ludml0ZV9jb2RlGAEgASgJIqABChFHZXRJbnZpdGVSZXNwb25zZRIQCghncm91cF9pZBgBIAEoCRISCgpncm91cF9uYW1lGAIgASgJEhMKC2dyb3VwX2Vtb2ppGAMgASgJEioKB21lbWJlcnMYBCADKAsyGS5wb2NoaWNhbC52MS5JbnZpdGVNZW1iZXISFgoOYWxyZWFkeV9tZW1iZXIYBSABKAgSDAoEZnVsbBgGIAEoCCIkCgxJbnZpdGVNZW1iZXISFAoMZGlzcGxheV9uYW1lGAEgASgJIj0KEEpvaW5Hcm91cFJlcXVlc3QSEwoLaW52aXRlX2NvZGUYASABKAkSFAoMZGlzcGxheV9uYW1lGAIgASgJIj0KEUpvaW5Hcm91cFJlc3BvbnNlEhAKCGdyb3VwX2lkGAEgASgJEhYKDmFscmVhZHlfbWVtYmVyGAIgASgIMrsDCgxHcm91cFNlcnZpY2USUAoLQ3JlYXRlR3JvdXASHy5wb2NoaWNhbC52MS5DcmVhdGVHcm91cFJlcXVlc3QaIC5wb2NoaWNhbC52MS5DcmVhdGVHcm91cFJlc3BvbnNlElsKDUdldEludml0ZUxpbmsSIS5wb2NoaWNhbC52MS5HZXRJbnZpdGVMaW5rUmVxdWVzdBoiLnBvY2hpY2FsLnYxLkdldEludml0ZUxpbmtSZXNwb25zZSIDkAIBEl8KEFJlbWFrZUludml0ZUxpbmsSJC5wb2NoaWNhbC52MS5SZW1ha2VJbnZpdGVMaW5rUmVxdWVzdBolLnBvY2hpY2FsLnYxLlJlbWFrZUludml0ZUxpbmtSZXNwb25zZRJPCglHZXRJbnZpdGUSHS5wb2NoaWNhbC52MS5HZXRJbnZpdGVSZXF1ZXN0Gh4ucG9jaGljYWwudjEuR2V0SW52aXRlUmVzcG9uc2UiA5ACARJKCglKb2luR3JvdXASHS5wb2NoaWNhbC52MS5Kb2luR3JvdXBSZXF1ZXN0Gh4ucG9jaGljYWwudjEuSm9pbkdyb3VwUmVzcG9uc2VCcQoWdGVjaC5jaGlqaS5wb2NoaWNhbC52MUIKR3JvdXBQcm90b1ABogIDUFhYqgILUG9jaGljYWwuVjHKAgtQb2NoaWNhbFxWMeICF1BvY2hpY2FsXFYxXEdQQk1ldGFkYXRh6gIMUG9jaGljYWw6OlYxYgZwcm90bzM");
 
 /**
  * @generated from message pochical.v1.CreateGroupRequest
@@ -136,6 +136,92 @@ export const RemakeInviteLinkResponseSchema: GenMessage<RemakeInviteLinkResponse
   messageDesc(file_pochical_v1_group, 5);
 
 /**
+ * @generated from message pochical.v1.GetInviteRequest
+ */
+export type GetInviteRequest = Message<"pochical.v1.GetInviteRequest"> & {
+  /**
+   * @generated from field: string invite_code = 1;
+   */
+  inviteCode: string;
+};
+
+/**
+ * Describes the message pochical.v1.GetInviteRequest.
+ * Use `create(GetInviteRequestSchema)` to create a new message.
+ */
+export const GetInviteRequestSchema: GenMessage<GetInviteRequest> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_group, 6);
+
+/**
+ * @generated from message pochical.v1.GetInviteResponse
+ */
+export type GetInviteResponse = Message<"pochical.v1.GetInviteResponse"> & {
+  /**
+   * @generated from field: string group_id = 1;
+   */
+  groupId: string;
+
+  /**
+   * @generated from field: string group_name = 2;
+   */
+  groupName: string;
+
+  /**
+   * The group's mark when it is an emoji; empty for other marks.
+   *
+   * @generated from field: string group_emoji = 3;
+   */
+  groupEmoji: string;
+
+  /**
+   * Everyone in the group, in the order they joined.
+   *
+   * @generated from field: repeated pochical.v1.InviteMember members = 4;
+   */
+  members: InviteMember[];
+
+  /**
+   * The caller is in the group already.
+   *
+   * @generated from field: bool already_member = 5;
+   */
+  alreadyMember: boolean;
+
+  /**
+   * The group has its most members; joining would fail.
+   *
+   * @generated from field: bool full = 6;
+   */
+  full: boolean;
+};
+
+/**
+ * Describes the message pochical.v1.GetInviteResponse.
+ * Use `create(GetInviteResponseSchema)` to create a new message.
+ */
+export const GetInviteResponseSchema: GenMessage<GetInviteResponse> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_group, 7);
+
+/**
+ * Someone in a group, as the join screen shows them.
+ *
+ * @generated from message pochical.v1.InviteMember
+ */
+export type InviteMember = Message<"pochical.v1.InviteMember"> & {
+  /**
+   * @generated from field: string display_name = 1;
+   */
+  displayName: string;
+};
+
+/**
+ * Describes the message pochical.v1.InviteMember.
+ * Use `create(InviteMemberSchema)` to create a new message.
+ */
+export const InviteMemberSchema: GenMessage<InviteMember> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_group, 8);
+
+/**
  * @generated from message pochical.v1.JoinGroupRequest
  */
 export type JoinGroupRequest = Message<"pochical.v1.JoinGroupRequest"> & {
@@ -157,7 +243,7 @@ export type JoinGroupRequest = Message<"pochical.v1.JoinGroupRequest"> & {
  * Use `create(JoinGroupRequestSchema)` to create a new message.
  */
 export const JoinGroupRequestSchema: GenMessage<JoinGroupRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_group, 6);
+  messageDesc(file_pochical_v1_group, 9);
 
 /**
  * @generated from message pochical.v1.JoinGroupResponse
@@ -181,7 +267,7 @@ export type JoinGroupResponse = Message<"pochical.v1.JoinGroupResponse"> & {
  * Use `create(JoinGroupResponseSchema)` to create a new message.
  */
 export const JoinGroupResponseSchema: GenMessage<JoinGroupResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_group, 7);
+  messageDesc(file_pochical_v1_group, 10);
 
 /**
  * Making groups and getting into them. Every call needs the session token
@@ -226,7 +312,21 @@ export const GroupService: GenService<{
     output: typeof RemakeInviteLinkResponseSchema;
   },
   /**
-   * Joins the group a live code opens. NOT_FOUND when no group uses it.
+   * Who is in the group a live code opens, for the join screen to show
+   * before joining. Signed in only: the public preview
+   * (InviteService.GetInvitePreview) gives no names. NOT_FOUND when no
+   * group uses the code.
+   *
+   * @generated from rpc pochical.v1.GroupService.GetInvite
+   */
+  getInvite: {
+    methodKind: "unary";
+    input: typeof GetInviteRequestSchema;
+    output: typeof GetInviteResponseSchema;
+  },
+  /**
+   * Joins the group a live code opens. NOT_FOUND when no group uses it;
+   * RESOURCE_EXHAUSTED when it already has its most members (100).
    * Joining a group you are already in changes nothing and says so.
    *
    * @generated from rpc pochical.v1.GroupService.JoinGroup

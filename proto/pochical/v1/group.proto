@@ -21,7 +21,16 @@ service GroupService {
   // working at once; members stay. Members only.
   rpc RemakeInviteLink(RemakeInviteLinkRequest) returns (RemakeInviteLinkResponse);
 
-  // Joins the group a live code opens. NOT_FOUND when no group uses it.
+  // Who is in the group a live code opens, for the join screen to show
+  // before joining. Signed in only: the public preview
+  // (InviteService.GetInvitePreview) gives no names. NOT_FOUND when no
+  // group uses the code.
+  rpc GetInvite(GetInviteRequest) returns (GetInviteResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Joins the group a live code opens. NOT_FOUND when no group uses it;
+  // RESOURCE_EXHAUSTED when it already has its most members (100).
   // Joining a group you are already in changes nothing and says so.
   rpc JoinGroup(JoinGroupRequest) returns (JoinGroupResponse);
 }
@@ -54,6 +63,28 @@ message RemakeInviteLinkRequest {
 
 message RemakeInviteLinkResponse {
   string invite_code = 1;
+}
+
+message GetInviteRequest {
+  string invite_code = 1;
+}
+
+message GetInviteResponse {
+  string group_id = 1;
+  string group_name = 2;
+  // The group's mark when it is an emoji; empty for other marks.
+  string group_emoji = 3;
+  // Everyone in the group, in the order they joined.
+  repeated InviteMember members = 4;
+  // The caller is in the group already.
+  bool already_member = 5;
+  // The group has its most members; joining would fail.
+  bool full = 6;
+}
+
+// Someone in a group, as the join screen shows them.
+message InviteMember {
+  string display_name = 1;
 }
 
 message JoinGroupRequest {

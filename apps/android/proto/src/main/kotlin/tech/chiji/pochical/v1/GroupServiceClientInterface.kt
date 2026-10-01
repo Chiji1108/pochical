@@ -33,7 +33,16 @@ public interface GroupServiceClientInterface {
   public suspend fun remakeInviteLink(request: RemakeInviteLinkRequest, headers: Headers = emptyMap()): ResponseMessage<RemakeInviteLinkResponse>
 
   /**
-   *  Joins the group a live code opens. NOT_FOUND when no group uses it.
+   *  Who is in the group a live code opens, for the join screen to show
+   *  before joining. Signed in only: the public preview
+   *  (InviteService.GetInvitePreview) gives no names. NOT_FOUND when no
+   *  group uses the code.
+   */
+  public suspend fun getInvite(request: GetInviteRequest, headers: Headers = emptyMap()): ResponseMessage<GetInviteResponse>
+
+  /**
+   *  Joins the group a live code opens. NOT_FOUND when no group uses it;
+   *  RESOURCE_EXHAUSTED when it already has its most members (100).
    *  Joining a group you are already in changes nothing and says so.
    */
   public suspend fun joinGroup(request: JoinGroupRequest, headers: Headers = emptyMap()): ResponseMessage<JoinGroupResponse>
