@@ -150,7 +150,10 @@ function widgetDay(
 // companion; a day either has not entered does not count, since nobody
 // knows yet.
 function offTogether(day: WidgetDay, companion?: WidgetCompanion) {
-  return day.off && (companion?.offOn(day.date) ?? true);
+  if (!day.off) {
+    return false;
+  }
+  return companion ? companion.offOn(day.date) === true : true;
 }
 
 function offsFrom(

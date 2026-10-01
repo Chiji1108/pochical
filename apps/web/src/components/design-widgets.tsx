@@ -958,6 +958,19 @@ const detail = {
     justifyContent: "space-between",
   }),
   wide: css({ display: "flex", gap: "16px", height: "100%" }),
+  coming: css({ display: "flex", flexDirection: "column", gap: "8px" }),
+  comingLabel: css({
+    color: "text.secondary",
+    fontVariantNumeric: "tabular-nums",
+    textStyle: "footnote",
+  }),
+  comingRow: css({
+    alignItems: "center",
+    display: "grid",
+    gap: "8px",
+    gridTemplateColumns: "64px 18px 1fr",
+  }),
+  comingWords: css({ ...oneLine, fontWeight: 400, textStyle: "footnote" }),
 };
 
 // The ways to write 一緒に働く人, longest first: everyone, then fewer
@@ -1038,6 +1051,7 @@ function DayExtras({
 export function TodayMedium({ entry }: { entry: WidgetEntry }) {
   const roomy = useContext(WidgetSizeContext).height >= DETAIL_ROOMY;
   const day = entry.today;
+  const extras = Boolean(day.note) || day.members.length > 0;
   return (
     <div className={detail.wide}>
       <div className={week.today}>
@@ -1045,9 +1059,31 @@ export function TodayMedium({ entry }: { entry: WidgetEntry }) {
       </div>
       <span aria-hidden="true" className={week.rule} />
       <div className={detail.side}>
-        <DayExtras day={day} lines={roomy ? 5 : 3} />
+        {extras ? (
+          <DayExtras day={day} lines={roomy ? 5 : 3} />
+        ) : (
+          <ComingDays days={entry.upcoming.slice(1, 4)} />
+        )}
       </div>
     </div>
+  );
+}
+
+// Without a memo or people, the room beside today goes to the days after
+// it: 明日, the day after, and the next, each with its mark and words.
+function ComingDays({ days }: { days: WidgetDay[] }) {
+  return (
+    <ol className={`${list} ${detail.coming}`}>
+      {days.map((day, index) => (
+        <li className={detail.comingRow} key={day.date.getTime()}>
+          <span className={detail.comingLabel}>
+            {relativeDay(day, index + 1)}
+          </span>
+          <DayMark day={day} size={18} />
+          <Change className={detail.comingWords} day={day} />
+        </li>
+      ))}
+    </ol>
   );
 }
 
