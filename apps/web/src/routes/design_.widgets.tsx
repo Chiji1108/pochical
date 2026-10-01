@@ -34,6 +34,7 @@ import {
   UpcomingRectangular,
   UpcomingSmall,
 } from "../components/design-widgets";
+import { CellNamesContext } from "../components/shift-mark";
 import { dateKey, initialDesignSchedule } from "../lib/design-days";
 import { presetPatterns } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
@@ -77,6 +78,15 @@ const crowdedSchedule = {
     shift: "day" as const,
   },
 };
+
+// August 2026 starts on a Saturday, so its month is six weeks tall: the
+// large カレンダー at its fullest.
+const AUGUST = 7;
+const augustDay = new Date(2026, AUGUST, 24);
+const augustSchedule = initialDesignSchedule(4, AUGUST);
+
+// Names under the marks, as when the person shows them in the calendar.
+const namesShown = { names: { badge: true, emoji: true, icon: true } };
 
 type Size = "small" | "medium" | "large";
 type WidgetView = ComponentType<{ entry: WidgetEntry }>;
@@ -196,6 +206,11 @@ function WidgetsPage() {
     designToday,
     presetPatterns
   );
+  const august = widgetEntry(augustSchedule, week, augustDay, presetPatterns);
+  const named = everyWidget.filter(
+    ({ kind, size }) =>
+      kind !== "今日の詳細" && (size !== "small" || kind === "これから")
+  );
   const detailSizes =
     kinds.find(({ name }) => name === "今日の詳細")?.sizes ?? [];
   return (
@@ -305,6 +320,38 @@ function WidgetsPage() {
                 widgets={detailSizes}
               />
             </div>
+          </FrameSection>
+
+          <FrameSection
+            description="カレンダーでマークの下に名前を出している人には、ウィジェットでも出します。2週と大きい月はマークの下に、今日や明日の行はマークの横に。"
+            title="シフト名を出しているとき"
+          >
+            <CellNamesContext value={namesShown}>
+              <div className={rows}>
+                <WidgetRow
+                  appearance="light"
+                  entry={entry}
+                  families={iosFamilies}
+                  label="iPhone"
+                  widgets={named}
+                />
+                <WidgetRow
+                  appearance="light"
+                  entry={entry}
+                  families={androidFamilies}
+                  label="Android"
+                  wallpaperHue={wallpaperSamples[0].hue}
+                  widgets={named}
+                />
+                <WidgetRow
+                  appearance="light"
+                  entry={august}
+                  families={iosFamilies}
+                  label="6週の月（2026年8月）"
+                  widgets={named.filter(({ size }) => size === "large")}
+                />
+              </div>
+            </CellNamesContext>
           </FrameSection>
 
           <FrameSection title="予定が入っていないとき">

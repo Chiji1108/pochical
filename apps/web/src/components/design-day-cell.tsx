@@ -115,8 +115,15 @@ export const dayParts = {
   markAlone: css({ flex: 1, height: "auto" }),
   // 休みの見せ方 空白, while entering or in the week view.
   markFaint: css({ opacity: 0.35 }),
-  // A note: a stroke under the date, as marked in a paper diary.
+  // A note: a highlighter stroke under the date, as in a paper diary.
   noted: css({
+    // On a day off's tile, the tile's own color a step deeper, or the
+    // stroke would be as pale as the tile and vanish into it.
+    "[data-off] &": {
+      _before: {
+        bg: "oklch(from var(--off-tint) calc(l + var(--note-on-tile-lightness)) calc(c * var(--note-on-tile-chroma)) h)",
+      },
+    },
     _before: {
       bg: "calendar.noteMarker",
       borderRadius: "2xs",
@@ -278,7 +285,11 @@ export function DayCell({
   );
   if (blank) {
     return (
-      <div className={cellClass} style={offStyle}>
+      <div
+        className={cellClass}
+        data-off={offStyle ? "" : undefined}
+        style={offStyle}
+      >
         {content}
       </div>
     );
@@ -291,6 +302,7 @@ export function DayCell({
       aria-pressed={editing ? active : undefined}
       className={cellClass}
       data-active={active || undefined}
+      data-off={offStyle ? "" : undefined}
       onClick={onPress}
       style={offStyle}
       type="button"

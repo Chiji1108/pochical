@@ -6,11 +6,16 @@ import {
   useRef,
   useState,
 } from "react";
-import { css, cva } from "styled-system/css";
+import { css, cva, cx } from "styled-system/css";
 
 import type { WidgetDay, WidgetEntry } from "../lib/design-widgets";
+import { dayName } from "../lib/text-limits";
 import { srOnly } from "./design-ui";
-import { ShiftMark } from "./shift-mark";
+import {
+  CellNamesContext,
+  ShiftMark,
+  ShiftMarkStyleContext,
+} from "./shift-mark";
 
 // The widgets themselves: views of one WidgetEntry, as the native apps'
 // SwiftUI widget views and Glance composables will be. They hold no state
@@ -47,16 +52,28 @@ function monthDay(date: Date) {
   return `${date.getMonth() + MONTH_NUMBER}月${date.getDate()}日`;
 }
 
+// Whether the person shows shift names under the marks in the app's
+// calendar. The widgets then name the shift as well, for someone who
+// tells their marks apart by name.
+function useShiftNames() {
+  const style = useContext(ShiftMarkStyleContext);
+  return useContext(CellNamesContext).names[style];
+}
+
 // The words beside a day's mark: nothing on an ordinary day, since the
-// mark says which shift and its hours are the same every time; the
-// changed hours on a day of 早出 or 残業; 予定なし with nothing entered.
-function changeWords(day: WidgetDay) {
-  return day.shift ? day.change : NOTHING;
+// mark says which shift and its hours are the same every time, or its
+// name when names are shown; the changed hours on a day of 早出 or 残業;
+// 予定なし with nothing entered.
+function changeWords(day: WidgetDay, named: boolean) {
+  if (!day.shift) {
+    return NOTHING;
+  }
+  return day.change ?? (named ? day.name : undefined);
 }
 
 // Those words, with the shift's name and hours for screen readers.
 function Change({ day, className }: { day: WidgetDay; className: string }) {
-  const words = changeWords(day);
+  const words = changeWords(day, useShiftNames());
   const time = day.time ? ` ${day.time}` : "";
   return (
     <strong className={className}>
@@ -80,13 +97,31 @@ function relativeDay(day: WidgetDay, index: number) {
 // A day as read aloud, for the places whose marks are pictures only.
 function SpokenDay({ day }: { day: WidgetDay }) {
   const time = day.time ? ` ${day.time}` : "";
+  const note = day.note ? " メモあり" : "";
   return (
     <span className={srOnly}>
       {monthDay(day.date)}({day.weekday}) {day.name ?? NOTHING}
       {time}
+      {note}
     </span>
   );
 }
+
+// A day with a memo: the calendar's stroke under its date, as marked in
+// a paper diary. Only where each day has its own date and mark; the small
+// month's numbers sit in day-off tiles with no room for it.
+const noted = css({
+  _before: {
+    bg: "calendar.noteMarker",
+    borderRadius: "2xs",
+    content: '""',
+    inset: "45% -3px -1px",
+    position: "absolute",
+    zIndex: -1,
+  },
+  isolation: "isolate",
+  position: "relative",
+});
 
 const dayMark = css({
   alignItems: "center",
@@ -116,6 +151,25 @@ function DayMark({ day, size }: { day: WidgetDay; size: number }) {
       shift={day.shift}
       size={size}
     />
+  );
+}
+
+// A shift's name under its mark, shortened as the calendar's.
+const markName = css({
+  color: "text.secondary",
+  fontSize: "9px",
+  lineHeight: "11px",
+  maxWidth: "100%",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+});
+
+function MarkName({ day }: { day: WidgetDay }) {
+  return (
+    <span aria-hidden="true" className={markName}>
+      {day.name ? dayName(day.name) : ""}
+    </span>
   );
 }
 
@@ -286,7 +340,9 @@ const twoWeeks = {
   }),
   grid: cva({
     base: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)" },
+    compoundVariants: [{ css: { rowGap: "4px" }, named: true, roomy: false }],
     variants: {
+      named: { false: {}, true: {} },
       roomy: { false: { rowGap: "8px" }, true: { rowGap: "16px" } },
     },
   }),
@@ -310,6 +366,12 @@ const twoWeeks = {
 // calendar; its time is for the other kinds.
 export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
   const roomy = useContext(WidgetSizeContext).height >= TWO_WEEKS_ROOMY;
+  const named = useShiftNames();
+  // A name under each mark takes the room of a smaller mark.
+  let markSize = roomy ? 32 : 28;
+  if (named) {
+    markSize = roomy ? 26 : 20;
+  }
   const todayTime = entry.today.date.getTime();
   return (
     <div className={twoWeeks.root}>
@@ -323,7 +385,7 @@ export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
           </span>
         ))}
       </div>
-      <ol className={`${list} ${twoWeeks.grid({ roomy })}`}>
+      <ol className={`${list} ${twoWeeks.grid({ named, roomy })}`}>
         {entry.twoWeeks.map((shown) => {
           const time = shown.date.getTime();
           return (
@@ -331,11 +393,16 @@ export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
               <SpokenDay day={shown} />
               <span
                 aria-hidden="true"
-                className={`${twoWeeks.date({ today: time === todayTime })} ${dateTone(shown, todayTime)}`}
+                className={cx(
+                  twoWeeks.date({ today: time === todayTime }),
+                  dateTone(shown, todayTime),
+                  shown.note && noted
+                )}
               >
                 {shown.date.getDate()}
               </span>
-              <DayMark day={shown} size={roomy ? 32 : 28} />
+              <DayMark day={shown} size={markSize} />
+              {named && <MarkName day={shown} />}
             </li>
           );
         })}
@@ -493,11 +560,11 @@ export function CalendarMedium({ entry }: { entry: WidgetEntry }) {
 }
 
 const month = {
-  cell: css({
-    alignItems: "center",
-    display: "flex",
-    flexDirection: "column",
-    gap: "2px",
+  // With a name under each mark, the parts of a day and the weeks close
+  // up, so a month six weeks tall keeps within the widget.
+  cell: cva({
+    base: { alignItems: "center", display: "flex", flexDirection: "column" },
+    variants: { named: { false: { gap: "2px" }, true: { gap: 0 } } },
   }),
   date: cva({
     base: { fontVariantNumeric: "tabular-nums", textStyle: "caption2" },
@@ -508,12 +575,14 @@ const month = {
       },
     },
   }),
-  grid: css({
-    display: "grid",
-    flex: 1,
-    gridAutoRows: "1fr",
-    gridTemplateColumns: "repeat(7, 1fr)",
-    rowGap: "4px",
+  grid: cva({
+    base: {
+      display: "grid",
+      flex: 1,
+      gridAutoRows: "1fr",
+      gridTemplateColumns: "repeat(7, 1fr)",
+    },
+    variants: { named: { false: { rowGap: "4px" }, true: { rowGap: "2px" } } },
   }),
   header: css({
     alignItems: "baseline",
@@ -545,8 +614,13 @@ const MONTH_ROOMY = 360;
 
 // The month with every day's mark, and today's time over it.
 export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
-  const markSize =
-    useContext(WidgetSizeContext).height >= MONTH_ROOMY ? 24 : 20;
+  const roomy = useContext(WidgetSizeContext).height >= MONTH_ROOMY;
+  const named = useShiftNames();
+  // A name under each mark takes the room of a smaller mark.
+  let markSize = roomy ? 24 : 20;
+  if (named) {
+    markSize = roomy ? 20 : 16;
+  }
   const { first, days, weekdays } = entry.month;
   const todayTime = entry.today.date.getTime();
   return (
@@ -564,11 +638,11 @@ export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
           </span>
         ))}
       </div>
-      <ol className={`${list} ${month.grid}`}>
+      <ol className={`${list} ${month.grid({ named })}`}>
         {days.map((day) => (
           <li
             aria-hidden={!day.inMonth}
-            className={month.cell}
+            className={month.cell({ named })}
             key={day.date.getTime()}
           >
             {day.inMonth && (
@@ -576,9 +650,11 @@ export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
                 <SpokenDay day={day} />
                 <span
                   aria-hidden="true"
-                  className={`${month.date({
-                    today: day.date.getTime() === todayTime,
-                  })} ${dateTone(day, todayTime)}`}
+                  className={cx(
+                    month.date({ today: day.date.getTime() === todayTime }),
+                    dateTone(day, todayTime),
+                    day.note && noted
+                  )}
                 >
                   {day.date.getDate()}
                 </span>
@@ -587,6 +663,7 @@ export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
                 ) : (
                   <span style={{ height: markSize }} />
                 )}
+                {named && <MarkName day={day} />}
               </>
             )}
           </li>
