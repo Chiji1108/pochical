@@ -187,7 +187,7 @@ export function DesignGroup({
   const openInvite = (code: string) => {
     const invite = inviteOf(code);
     if (!invite) {
-      toast("この招待リンクは使えません");
+      toast("この招待リンクは使えません", "problem");
       return;
     }
     if (invite.joined) {
