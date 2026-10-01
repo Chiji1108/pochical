@@ -69,8 +69,8 @@ A member can change or take back their own messages, at any time. Others' messag
 
 The stores require a way to report what people post and to block someone (App Store Review Guideline 1.2; Google Play's user-generated content policy). Neither is shown to the member concerned, and neither changes anything for the rest of the group.
 
-- **通報** is in the menu of someone else's message (last, apart and in the danger color) and on their profile sheet. A sheet asks the reason, one of 迷惑・スパム / 嫌がらせ・いじめ / 性的・暴力的な内容 / なりすまし / その他, and sends it with ✓. The server keeps the report with the message (or the member's name and picture in that group) and the few lines around it, for Pochical's team to review; the app says 通報しました.
-- **ブロック** is on someone's profile sheet, asked first (〇〇をブロックしますか？). It applies to the account, in every group the two share:
+- **通報** is in the menu of someone else's message (last, apart and in the danger color) and in the ⋯ menu of their profile sheet. A sheet asks the reason, one of 迷惑・スパム / 嫌がらせ・いじめ / 性的・暴力的な内容 / なりすまし / その他, and sends it with ✓; the app says 通報しました. The sheet says what is sent, and nothing else of the chat is: 通報すると、このメッセージと前後の数件がポチカルに送られます。 (for a member: 〇〇の名前とアイコン) 相手には知らされません。 It does not say who reads it, so it does not read as the chat being watched.
+- **ブロック** is in the ⋯ menu of someone's profile sheet (beside ×, not in sight under their face: it is rarely used, and a family member's profile should not show it in red), asked first (〇〇をブロックしますか？). While blocked, their profile says ブロック中 under the name, and the menu has ブロックを解除. It applies to the account, in every group the two share:
   - their messages in group chats are folded to one line, ブロック中のメンバーのメッセージ, which shows the message for now on a tap; the chat list's last line says the same;
   - their one-to-one chat with you is hidden, cannot be started, and their messages to it are not delivered;
   - their shifts still show: the group exists to share shifts, and leaving the group or taking them out is the step for that.
