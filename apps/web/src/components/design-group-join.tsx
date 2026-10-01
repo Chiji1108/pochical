@@ -10,7 +10,8 @@ import {
 import { useContext, useState } from "react";
 import { css, cx } from "styled-system/css";
 
-import { cousins, partner } from "./design-group-data";
+import { useUser } from "../lib/design-user-store";
+import { cousins, partner, withNotice } from "./design-group-data";
 import type {
   Group,
   GroupMark,
@@ -19,7 +20,11 @@ import type {
   Profile,
 } from "./design-group-data";
 import { GroupIcon, PhotoAvatar, hub, markFrame } from "./design-group-parts";
-import { GroupProfilePage, GroupProfileRow } from "./design-group-settings";
+import {
+  GroupProfilePage,
+  GroupProfileRow,
+  profileIn,
+} from "./design-group-settings";
 import { ConfirmDialog, Sheet, SheetHeading, sheetBody } from "./design-sheet";
 import { ToastContext } from "./design-toast";
 import {
@@ -384,6 +389,7 @@ export function JoinScreen({
   onClose: () => void;
 }) {
   const invite = sampleInvite();
+  const setChats = useUser((state) => state.setChats);
   const [mine, setMine] = useState<GroupProfile>();
   const [editing, setEditing] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
@@ -493,6 +499,12 @@ export function JoinScreen({
         </p>
         <Button
           onClick={() => {
+            // Told here, so that joining from the hub's QR and from a
+            // link opened on the calendar both say so in the chat.
+            const { name } = profileIn(group, profile);
+            setChats((chats) =>
+              withNotice(chats, group.id, `${name}がグループに参加しました`)
+            );
             onJoin(group);
           }}
           variant="primary"
