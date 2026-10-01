@@ -34,7 +34,11 @@ import {
   UpcomingRectangular,
   UpcomingSmall,
 } from "../components/design-widgets";
-import { CellNamesContext } from "../components/shift-mark";
+import {
+  CellNamesContext,
+  OffDisplayContext,
+  OffHighlightContext,
+} from "../components/shift-mark";
 import { dateKey, initialDesignSchedule } from "../lib/design-days";
 import { presetPatterns } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
@@ -84,6 +88,11 @@ const crowdedSchedule = {
 const AUGUST = 7;
 const augustDay = new Date(2026, AUGUST, 24);
 const augustSchedule = initialDesignSchedule(4, AUGUST);
+
+// Days off without their tint, as when 休みを塗る is off.
+const noHighlight = {
+  highlight: { badge: false, emoji: false, icon: false },
+};
 
 // Names under the marks, as when the person shows them in the calendar.
 const namesShown = { names: { badge: true, emoji: true, icon: true } };
@@ -139,6 +148,13 @@ const androidFamilies: Record<Size, WidgetFamily> = {
 
 const everyWidget = kinds.flatMap(({ name, sizes }) =>
   sizes.map((widget) => ({ ...widget, kind: name }))
+);
+
+// Where days off show: the small month, the two weeks and the large month.
+const offWidgets = everyWidget.filter(
+  ({ kind, size }) =>
+    (kind === "カレンダー" && size !== "medium") ||
+    (kind === "これから" && size === "medium")
 );
 
 const rows = css({ display: "flex", flexDirection: "column", gap: "16px" });
@@ -352,6 +368,32 @@ function WidgetsPage() {
                 />
               </div>
             </CellNamesContext>
+          </FrameSection>
+
+          <FrameSection
+            description="休みの日は、カレンダーの「休みを塗る」と「休みの見せ方」のとおりに。空白のとき、2週はカレンダーの週と同じく薄く出します。小さい月は休みしか見せないので、いつも塗ります。"
+            title="休みの見せ方"
+          >
+            <div className={rows}>
+              <OffHighlightContext value={noHighlight}>
+                <WidgetRow
+                  appearance="light"
+                  entry={entry}
+                  families={iosFamilies}
+                  label="塗らない"
+                  widgets={offWidgets}
+                />
+              </OffHighlightContext>
+              <OffDisplayContext value="blank">
+                <WidgetRow
+                  appearance="light"
+                  entry={entry}
+                  families={iosFamilies}
+                  label="空白"
+                  widgets={offWidgets}
+                />
+              </OffDisplayContext>
+            </div>
           </FrameSection>
 
           <FrameSection title="予定が入っていないとき">
