@@ -62,7 +62,6 @@ import {
   patternOn,
   previewOf,
   reactionChoices,
-  weekdayLabels,
 } from "./design-group-data";
 import type {
   Chat,
@@ -1014,8 +1013,8 @@ export function ChatPage({
   group: Group;
   // Whether photos' uploads go through or fail.
   photoSend?: PhotoSend;
-  // Opens on the last day shared rather than the latest line, as the top
-  // page shows it.
+  // Opens on the last days shared or put to the vote rather than the
+  // latest line, as the top page shows it.
   sharedFirst?: boolean;
   // How many lines were unread as it opened: it opens on the first of
   // them, under ここから新着.
@@ -1123,7 +1122,7 @@ export function ChatPage({
   const lineCount = chat.messages.length;
   const [sharedId] = useState(() =>
     sharedFirst
-      ? chat.messages.findLast((message) => message.days)?.id
+      ? chat.messages.findLast((message) => message.days || message.poll)?.id
       : undefined
   );
   // The first line unread as it opened: the others' lines, counted back
@@ -3427,9 +3426,12 @@ const pollCard = {
     border: "1px solid token(colors.border.default)",
     borderRadius: "lg",
     display: "flex",
+    // 264px where the row has room, narrower where it does not, so the
+    // time beside it stays in the row (as a link's card does).
+    flex: "1 1 264px",
     flexDirection: "column",
     maxWidth: "100%",
-    minWidth: "min(264px, 100%)",
+    minWidth: 0,
     overflow: "hidden",
   }),
   // The card's head opens its reactions and menu, as a shared day's card
@@ -3477,7 +3479,8 @@ const pollCard = {
   together: css({ color: "accent.default", fontSize: "10px", fontWeight: 600 }),
   // The faces are a button, for the list of everyone who can come.
   faces: css({
-    "& > *": { boxShadow: "0 0 0 1.5px token(colors.background.card)" },
+    // The faces ringed apart; the count beside them is words, not ringed.
+    "& > span": { boxShadow: "0 0 0 1.5px token(colors.background.card)" },
     "& > * + *": { marginInlineStart: "-4px" },
     alignItems: "center",
     bg: "transparent",
@@ -3497,6 +3500,8 @@ const pollCard = {
     color: "text.tertiary",
     paddingInlineStart: "8px",
     textStyle: "caption",
+    // 「3人」 stays whole in a narrow card.
+    whiteSpace: "nowrap",
   }),
   vote: cva({
     base: {
@@ -3668,7 +3673,7 @@ function PollCard({
                 <span className={toneColor[weekTools.dateTone(day)]}>
                   {day.getMonth() + 1}/{day.getDate()}
                   <small className={smallWeekday}>
-                    {weekdayLabels[day.getDay()]}
+                    {weekTools.weekdayName(day.getDay())}
                   </small>
                 </span>
                 {everyoneOff(members, day) && (
@@ -4396,7 +4401,7 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
           >
             {date.getMonth() + 1}/{date.getDate()}
             <small className={smallWeekday}>
-              {weekdayLabels[date.getDay()]}
+              {weekTools.weekdayName(date.getDay())}
             </small>
           </span>
           {members.map((member) => (
@@ -4453,7 +4458,7 @@ function DayCardByPerson({
               ? `${date.getMonth() + 1}/${date.getDate()}`
               : date.getDate()}
             <small className={dayCard.dayHeadWeekday}>
-              {weekdayLabels[date.getDay()]}
+              {weekTools.weekdayName(date.getDay())}
             </small>
           </span>
         ))}

@@ -18,11 +18,45 @@ export const defaultWeekSettings: WeekSettings = {
   weekStart: 0,
 };
 
+// `english` is the カレンダー page's 月と曜日 set to English, which names the
+// weekdays in the headings as it does the month.
 export const WeekSettingsContext = createContext<{
   week: WeekSettings;
+  english?: boolean;
 }>({ week: defaultWeekSettings });
 
 export const weekdayNames = ["日", "月", "火", "水", "木", "金", "土"] as const;
+// English weekdays come in two lengths: one letter over a column of days,
+// where the column's place tells T from T, as calendars head their weeks;
+// three capitals beside a date, where nothing else tells them apart.
+export const englishWeekdayLetters = [
+  "S",
+  "M",
+  "T",
+  "W",
+  "T",
+  "F",
+  "S",
+] as const;
+export const englishWeekdayNames = [
+  "SUN",
+  "MON",
+  "TUE",
+  "WED",
+  "THU",
+  "FRI",
+  "SAT",
+] as const;
+
+// A weekday beside a date: 木, or THU in English.
+export function weekdayNameOf(day: number, english = false) {
+  return (english ? englishWeekdayNames : weekdayNames)[day] ?? "";
+}
+
+// A weekday over a column of days: 木, or T in English.
+export function weekdayLetterOf(day: number, english = false) {
+  return (english ? englishWeekdayLetters : weekdayNames)[day] ?? "";
+}
 
 const SUNDAY = 0;
 const SATURDAY = 6;
@@ -108,22 +142,28 @@ export function monthDatesFrom(month: Date, weekStart: number) {
   );
 }
 
-export function weekdaysFrom(week: WeekSettings) {
+export function weekdaysFrom(week: WeekSettings, english = false) {
   return Array.from({ length: WEEK_LENGTH }, (_, index) => {
     const day = (week.weekStart + index) % WEEK_LENGTH;
     const className = weekdayClass(day, week.colored);
     return {
       className,
       day,
-      label: weekdayNames[day] ?? "",
+      label: weekdayLetterOf(day, english),
       tone: toneOf(className),
     };
   });
 }
 
 export function useWeek() {
-  const { week } = useContext(WeekSettingsContext);
+  const { week, english = false } = useContext(WeekSettingsContext);
   return {
+    english,
+    // A weekday's name for a heading or a day's label, in English when
+    // 月と曜日 asks; sentences such as 9月24日(木) keep 日本語.
+    weekdayName: (day: number) => weekdayNameOf(day, english),
+    // The same over a column of days, as the week's headings.
+    weekdayLetter: (day: number) => weekdayLetterOf(day, english),
     dateClass: (date: Date) => dateClass(date, week.colored),
     dateTone: (date: Date) => toneOf(dateClass(date, week.colored)),
     // Whether a date's number shows as a holiday.
@@ -132,6 +172,6 @@ export function useWeek() {
     monthDates: (month: Date) => monthDatesFrom(month, week.weekStart),
     weekDates: (date: Date) => weekDatesFrom(date, week.weekStart),
     weekStart: week.weekStart,
-    weekdays: weekdaysFrom(week),
+    weekdays: weekdaysFrom(week, english),
   };
 }

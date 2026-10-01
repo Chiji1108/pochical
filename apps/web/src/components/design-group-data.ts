@@ -65,7 +65,6 @@ export type Group = {
 // `noPhoto` hides the usual picture in this group without choosing another.
 export type GroupProfile = { name?: string; photo?: string; noPhoto?: boolean };
 
-export const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
 export const designMonth = new Date(2026, 8, 1);
 export const weekLength = 7;
 
@@ -500,8 +499,31 @@ export const sampleChats: Record<string, Chat> = {
         from: "mother",
         id: "f1",
         reactions: [{ by: ["yuki"], emoji: "👍" }],
-        text: "来週の日曜、みんな休みみたいだからご飯行かない？",
+        text: "週末、みんなでご飯行かない？行ける日を押してね",
         time: "19:02",
+        when: "昨日",
+      },
+      // The days put to the vote, settled on the one everyone is off and
+      // pinned over the chat: what the landing page shows of the chat.
+      {
+        from: "mother",
+        id: "f1p",
+        pinned: 1,
+        poll: {
+          days: [
+            new Date(2026, 8, 26),
+            new Date(2026, 8, 27),
+            new Date(2026, 9, 3),
+          ],
+          decided: "2026-09-27",
+          votes: {
+            "2026-09-26": ["mother"],
+            "2026-09-27": ["mother", "yuki", "me"],
+            "2026-10-03": ["yuki"],
+          },
+        },
+        reactions: [{ by: ["yuki", "me"], emoji: "🎉" }],
+        time: "19:03",
         when: "昨日",
       },
       {
@@ -512,18 +534,10 @@ export const sampleChats: Record<string, Chat> = {
         when: "昨日",
       },
       {
-        days: [new Date(2026, 8, 27)],
-        from: "me",
-        id: "f3",
-        reactions: [{ by: ["mother", "yuki"], emoji: "🎉" }],
-        time: "8:15",
-        when: "今日",
-      },
-      {
         from: "me",
         id: "f4",
-        replyTo: "f1",
-        text: "27日ならいけるよ！前の日が明けじゃないから元気なはず",
+        replyTo: "f1p",
+        text: "27日楽しみ！前の日が明けじゃないから元気なはず",
         time: "8:15",
         when: "今日",
       },

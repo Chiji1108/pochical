@@ -15,8 +15,9 @@ const budgets: Record<string, number> = {
   "/privacy": 140,
   "/support": 140,
   "/terms": 140,
-  // The app itself.
-  "/try": 460,
+  // The app itself, which grows with it; raised from 450 as the widgets'
+  // settings came in (2026-10).
+  "/try": 470,
 };
 
 const DIST = new URL("../dist/", import.meta.url).pathname;

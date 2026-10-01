@@ -15,6 +15,7 @@ import {
   useDesignTheme,
 } from "../components/design-providers";
 import { pageStyle } from "../components/design-theme";
+import { WeekSettingsContext } from "../components/design-week";
 import {
   homeAppearances,
   LabelledWidget,
@@ -598,6 +599,28 @@ function WidgetsPage() {
                 />
               </OffDisplayContext>
             </div>
+          </FrameSection>
+
+          <FrameSection
+            description="カレンダー設定の「月と曜日」を英語にしたとき。見出しの月と曜日が英語になり、9月24日(木) のような文は日本語のままです。"
+            title="月と曜日を英語にしたとき"
+          >
+            <WeekSettingsContext value={{ english: true, week }}>
+              <div className={rows}>
+                <WidgetRow
+                  appearance="light"
+                  entry={states[0]?.entry ?? entry}
+                  families={iosFamilies}
+                  label="iPhone"
+                  widgets={everyWidget.filter(
+                    ({ kind, size }) =>
+                      kind === "リスト" ||
+                      kind === "カレンダー" ||
+                      (kind === "今日" && size === "medium")
+                  )}
+                />
+              </div>
+            </WeekSettingsContext>
           </FrameSection>
 
           <FrameSection title="予定が入っていないとき">

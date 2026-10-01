@@ -65,6 +65,7 @@ export function DesignProviders({
     appearance,
     week,
     shiftColors,
+    monthName,
   } = useSettings((state) => state.device);
   // 端末の色 exists only on Android; elsewhere the app's own stands in.
   const { platform, wallpaperHue } = useDevice();
@@ -84,7 +85,7 @@ export function DesignProviders({
     presetOf(preset).scheme ??
     (appearance === "system" ? systemScheme : appearance);
   return (
-    <WeekSettingsContext value={{ week }}>
+    <WeekSettingsContext value={{ english: monthName === "english", week }}>
       <ColorSchemeContext value={scheme}>
         <ThemeContext value={{ theme: preset, wallpaperHue }}>
           <IconWeightContext value={look.fill ? "duotone" : "regular"}>

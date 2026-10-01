@@ -95,7 +95,7 @@ import {
   Tag,
   WeekdayRow,
 } from "./design-ui";
-import { useWeek, weekdayNames } from "./design-week";
+import { useWeek, weekdayNameOf, weekdayNames } from "./design-week";
 import type { ColoredDay } from "./design-week";
 import { WorkSetupSteps } from "./design-work-setup";
 import {
@@ -1470,7 +1470,7 @@ function StylePreview({
   preview: StylePreviewData;
   shared?: { shown: ColorScheme; onPick: (scheme: ColorScheme) => void };
   // With the month's heading over one week of days, as the カレンダー
-  // page shows its 月の表示.
+  // page shows its 月と曜日.
   heading?: boolean;
 }) {
   const { dates, schedule } = preview;
@@ -1950,7 +1950,7 @@ function WeekRow({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-// The calendar's frame: 月の表示, what a tap on the month name does,
+// The calendar's frame: 月と曜日, what a tap on the month name does,
 // 週の始まり and 色をつける日, seen on
 // the style page's preview with the month's heading over it, in the order
 // they come down it. Only the viewer's screen changes.
@@ -1974,19 +1974,23 @@ function WeekPage({
           heading: whatever day the week starts on, it has a Saturday and a
           Sunday, and for most starts 秋分's holidays too. */}
       <StylePreview heading preview={preview} />
-      <Section title="月の表示">
+      {/* The month's name and the weekdays' together: a heading reads in
+          one language, so English names both. */}
+      <Section title="月と曜日">
         <SegmentedControl
-          label="月の表示"
+          label="月と曜日"
           onValueChange={(value) => {
             setMonthName(value === "english" ? "english" : "number");
           }}
           value={monthName}
         >
-          <Segment label={`${previewToday.getMonth() + 1}月`} value="number">
-            {previewToday.getMonth() + 1}月
+          <Segment label="日本語" value="number">
+            {previewToday.getMonth() + 1}月・
+            {weekdayNameOf(previewToday.getDay())}
           </Segment>
           <Segment label="英語" value="english">
-            {englishMonthOf(previewToday)}
+            {englishMonthOf(previewToday)}・
+            {weekdayNameOf(previewToday.getDay(), true)}
           </Segment>
         </SegmentedControl>
       </Section>
