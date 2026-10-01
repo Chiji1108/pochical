@@ -7,7 +7,6 @@ import { useSettings } from "../lib/design-settings-store";
 import { widgetEntry } from "../lib/design-widgets";
 import { Fit } from "./design-home-screen";
 import { useColorScheme } from "./design-theme";
-import { SampleTag } from "./design-ui";
 import { wallpaperFor, WidgetFrame } from "./design-widget-frame";
 import { TwoWeeksMedium } from "./design-widgets";
 
@@ -18,8 +17,7 @@ const ANDROID_MEDIUM_WIDTH = 373;
 // The home screen's page of the style preview: the wallpaper edge to
 // edge, the widget in the middle of it.
 const homePreview = {
-  // Unclipped, so the tag can sit on the top edge.
-  root: css({ minHeight: "100%", pointerEvents: "none", position: "relative" }),
+  root: css({ minHeight: "100%", pointerEvents: "none" }),
   wallpaper: css({
     alignItems: "center",
     border: "1px solid token(colors.separator)",
@@ -68,7 +66,6 @@ export function HomePreview({
           </WidgetFrame>
         </Fit>
       </div>
-      <SampleTag label="ウィジェット" />
     </div>
   );
 }

@@ -1491,7 +1491,6 @@ function StylePreview({
       inert
       style={themeStyle(theme, shown)}
     >
-      <SampleTag label="カレンダー" />
       {heading && (
         <div className={settingsParts.previewHeading}>
           <MonthName month={dates[0] ?? previewToday} />
@@ -1538,6 +1537,9 @@ function StylePreview({
           renderPage={(offset) => pages[page + offset] ?? null}
         />
       </ColorSchemeContext>
+      {/* Which page is shown, on the preview's edge, kept still like the
+          switch beside it while the pages move. */}
+      <SampleTag label={page === 0 ? "カレンダー" : "ウィジェット"} />
       {/* An always-dark テーマ has no light to switch to: its ☾ stays on. */}
       <PreviewSchemeSwitch
         disabled={alwaysDark}

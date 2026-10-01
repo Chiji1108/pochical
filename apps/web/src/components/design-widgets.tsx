@@ -662,18 +662,19 @@ const rest = {
   // The poodle looking up from the bottom edge at the right, its head
   // weighing against the words on the left.
   dog: css({
-    bottom: "calc(-1 * var(--widget-margin) - 20px)",
-    height: "104px",
+    bottom: "calc(-1 * var(--widget-margin) - 26px)",
+    height: "92px",
     pointerEvents: "none",
     position: "absolute",
     right: "calc(-1 * var(--widget-margin) - 4px)",
-    width: "104px",
+    width: "92px",
   }),
+  // The words keep to the top, clear of the dog in the corner below.
   root: css({
     display: "flex",
     flexDirection: "column",
+    gap: "8px",
     height: "100%",
-    justifyContent: "space-between",
     position: "relative",
   }),
   title: css({
@@ -688,6 +689,7 @@ const rest = {
     color: "text.secondary",
     display: "flex",
     gap: "4px",
+    marginTop: "auto",
     position: "relative",
     textStyle: "footnote",
   }),
@@ -699,7 +701,7 @@ function PeekingDog() {
   const dark = useContext(ColorSchemeContext) === "dark";
   const drawing = icons[dark ? DARK_DRAWING : LIGHT_DRAWING];
   return drawing ? (
-    <img alt="" className={rest.dog} height={104} src={drawing} width={104} />
+    <img alt="" className={rest.dog} height={92} src={drawing} width={92} />
   ) : null;
 }
 
