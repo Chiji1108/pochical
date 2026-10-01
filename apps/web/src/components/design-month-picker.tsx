@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
 import { designToday } from "../lib/design-today";
-import { monthNameOf } from "./design-month-name";
+import { shortMonthOf } from "./design-month-name";
 import { Sheet, SheetHeading } from "./design-sheet";
 import { srOnly } from "./design-ui";
 import { useWeek } from "./design-week";
@@ -103,7 +103,7 @@ export function MonthChoiceSheet({
               }}
               type="button"
             >
-              {monthNameOf(new Date(year, index, 1), english)}
+              {shortMonthOf(new Date(year, index, 1), english)}
             </button>
           );
         })}

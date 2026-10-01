@@ -37,7 +37,11 @@ import {
   smallWeekday,
   toneColor,
 } from "./design-group-parts";
-import { monthNameOf, monthWithYearOf } from "./design-month-name";
+import {
+  monthTitleOf,
+  monthWithYearOf,
+  shortMonthOf,
+} from "./design-month-name";
 import { MonthTitleButton } from "./design-month-picker";
 import {
   monthIndex,
@@ -1843,7 +1847,7 @@ function MonthDivider({
     <h4 className={monthDivider.name}>
       <span className={srOnly}>{name}</span>
       <span aria-hidden="true">
-        {thisYear ? monthNameOf(month, true) : monthWithYearOf(month, true)}
+        {thisYear ? monthTitleOf(month, true) : monthWithYearOf(month, true)}
       </span>
     </h4>
   ) : (
@@ -1872,7 +1876,7 @@ function MonthDivider({
   );
 }
 
-// The shift table's month: its name (2026年9月, or Sep 2026 as the
+// The shift table's month: its name (2026年9月, or September 2026 as the
 // カレンダー page's 月と曜日 asks), which opens a choice of months, and
 // the way back to today's day or month while it is out of sight. Over a
 // list of months, it names the month in sight, rolling to the next as the
@@ -1923,7 +1927,7 @@ function MonthRow({
           {english ? (
             <span aria-hidden="true">
               <RollingName
-                {...named((date) => monthNameOf(date, true))}
+                {...named((date) => monthTitleOf(date, true))}
                 letters
               />{" "}
               <RollingName {...rolled((date) => date.getFullYear())} />
@@ -2537,7 +2541,7 @@ export function MemberTable({
             months names its months in their headings. */}
         <span className={cornerMonth}>
           {month && !compact && !body
-            ? monthNameOf(month, weekTools.english)
+            ? shortMonthOf(month, weekTools.english)
             : ""}
         </span>
         {weekTools.weekdays.map((day) => (

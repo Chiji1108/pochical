@@ -28,9 +28,25 @@ export function englishMonthOf(month: Date) {
   return englishMonths[month.getMonth()];
 }
 
-// Everywhere else the months are English's usual short names, as other
-// apps write them on buttons and over pickers: the diary's lower case
-// suits only the heading's large type, and set small it reads as a slip.
+// Everywhere else the months are written as other apps write them: in
+// full over a list or a picker, short where room is tight. The diary's
+// lower case suits only the heading's large type; set small it reads as
+// a slip.
+const fullMonths = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
 const shortMonths = [
   "Jan",
   "Feb",
@@ -46,17 +62,23 @@ const shortMonths = [
   "Dec",
 ] as const;
 
-// A month named in a line, as the カレンダー page's 月と曜日 asks: 9月, or
-// Sep in English.
-export function monthNameOf(month: Date, english = false) {
-  return english ? shortMonths[month.getMonth()] : `${month.getMonth() + 1}月`;
+// A month heading a list or a picker, as the カレンダー page's 月と曜日
+// asks: 9月, or September in English.
+export function monthTitleOf(month: Date, english = false) {
+  return english ? fullMonths[month.getMonth()] : `${month.getMonth() + 1}月`;
 }
 
-// The same with its year: 2026年9月, or Sep 2026.
+// The same with its year: 2026年9月, or September 2026.
 export function monthWithYearOf(month: Date, english = false) {
   return english
-    ? `${monthNameOf(month, true)} ${month.getFullYear()}`
+    ? `${monthTitleOf(month, true)} ${month.getFullYear()}`
     : `${month.getFullYear()}年${month.getMonth() + 1}月`;
+}
+
+// A month where room is tight, as on a button among twelve or in a
+// table's corner: 9月, or Sep.
+export function shortMonthOf(month: Date, english = false) {
+  return english ? shortMonths[month.getMonth()] : `${month.getMonth() + 1}月`;
 }
 
 // The year over the month's name, as the calendar's heading draws it:
