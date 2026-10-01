@@ -25,6 +25,7 @@ import type {
   WidgetFamily,
 } from "../components/design-widget-frame";
 import {
+  RestLookContext,
   CalendarLarge,
   ListMedium,
   ListSmall,
@@ -38,6 +39,7 @@ import {
   TwoWeeksMedium,
   UpcomingRectangular,
 } from "../components/design-widgets";
+import type { RestLook } from "../components/design-widgets";
 import {
   CellNamesContext,
   IconWeightContext,
@@ -159,6 +161,19 @@ const todayStates: {
   },
 ];
 
+// Today off, for the looks of a day off being compared, alone and with
+// someone off too.
+const restSchedule = withDays({ [todayKey]: { shift: "off" } });
+const restCompanion: WidgetCompanion = {
+  name: "ゆうき",
+  offOn: () => true,
+  photo: partner.photo,
+};
+const restLooks: { look: RestLook; label: string }[] = [
+  { label: "A 犬", look: "dog" },
+  { label: "B マーク", look: "mark" },
+];
+
 type Size = "small" | "medium" | "large";
 type WidgetView = ComponentType<{ entry: WidgetEntry }>;
 
@@ -222,6 +237,12 @@ const everyWidget = kinds.flatMap(({ name, sizes }) =>
 
 // Where days off show: the small month, the two weeks and the large month.
 const offWidgets = everyWidget.filter(({ kind }) => kind === "カレンダー");
+// The small ones a day off today changes.
+const restWidgets = everyWidget.filter(
+  ({ kind, size }) =>
+    size === "small" && (kind === "今日" || kind === "次の休み")
+);
+
 // Every widget that today changes: all but カレンダー.
 const stateWidgets = everyWidget.filter(({ kind }) => kind !== "カレンダー");
 
@@ -309,6 +330,14 @@ function WidgetsPage() {
     name: companion.name,
   }));
   const offSizes = kinds.find(({ name }) => name === "次の休み")?.sizes ?? [];
+  const restDay = widgetEntry(restSchedule, week, designToday, presetPatterns);
+  const restTogether = widgetEntry(
+    restSchedule,
+    week,
+    designToday,
+    presetPatterns,
+    restCompanion
+  );
   const states = todayStates.map((state) => ({
     ...state,
     entry: widgetEntry(
@@ -359,6 +388,38 @@ function WidgetsPage() {
                   label={label}
                   widgets={companion ? offSizes : stateWidgets}
                 />
+              ))}
+            </div>
+          </FrameSection>
+
+          <FrameSection
+            description="今日が休みの日の、今日（小）と次の休み（小）。A はアイコンの犬が角からのぞき、B は休みのマークを大きく敷きます。"
+            title="今日が休みの日（案）"
+          >
+            <div className={rows}>
+              {restLooks.flatMap(({ look, label }) =>
+                fullColor.map(({ appearance, label: scheme }) => (
+                  <RestLookContext key={`${look}-${appearance}`} value={look}>
+                    <WidgetRow
+                      appearance={appearance}
+                      entry={restDay}
+                      families={iosFamilies}
+                      label={`${label}・${scheme}`}
+                      widgets={restWidgets}
+                    />
+                  </RestLookContext>
+                ))
+              )}
+              {restLooks.map(({ look, label }) => (
+                <RestLookContext key={`${look}-together`} value={look}>
+                  <WidgetRow
+                    appearance="light"
+                    entry={restTogether}
+                    families={iosFamilies}
+                    label={`${label}・一緒に休める日`}
+                    widgets={offSizes.filter(({ size }) => size === "small")}
+                  />
+                </RestLookContext>
               ))}
             </div>
           </FrameSection>

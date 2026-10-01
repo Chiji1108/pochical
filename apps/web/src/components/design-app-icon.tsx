@@ -317,6 +317,16 @@ function paintIcon(image: HTMLImageElement, colors: IconColors) {
 
 // The key of the dog alone in the default icon's dark look.
 export const DARK_DRAWING = "drawing-dark";
+// The dog alone in its light look, white in dark lines, for light grounds.
+export const LIGHT_DRAWING = "drawing-light";
+const lightDrawing: IconColors = {
+  dog: "#ffffff",
+  ground: "#ffffff",
+  id: LIGHT_DRAWING,
+  line: "#1d261b",
+  name: "白",
+  rim: 17,
+};
 
 // Painted once for the whole page, since each color walks every pixel.
 let paintedIcons: Promise<Record<string, string>> | undefined;
@@ -338,6 +348,9 @@ async function paintAll() {
     icons[DARK_DRAWING] =
       paintDrawing(image, mossDark, true)?.source.toDataURL("image/png") ?? "";
   }
+  icons[LIGHT_DRAWING] =
+    paintDrawing(image, lightDrawing, true)?.source.toDataURL("image/png") ??
+    "";
   return icons;
 }
 

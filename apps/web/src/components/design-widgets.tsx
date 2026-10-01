@@ -12,7 +12,9 @@ import { css, cva, cx } from "styled-system/css";
 import { presetPatterns } from "../lib/design-patterns";
 import type { WidgetDay, WidgetEntry, WidgetOff } from "../lib/design-widgets";
 import { dayName } from "../lib/text-limits";
+import { DARK_DRAWING, LIGHT_DRAWING, useAppIcons } from "./design-app-icon";
 import { PhotoAvatar } from "./design-group-parts";
+import { ColorSchemeContext } from "./design-theme";
 import { srOnly } from "./design-ui";
 import {
   CellNamesContext,
@@ -334,7 +336,15 @@ function useQuiet(day: WidgetDay) {
 
 export function TodaySmall({ entry }: { entry: WidgetEntry }) {
   const day = entry.today;
-  if (!useQuiet(day)) {
+  const quiet = useQuiet(day);
+  if (day.off && quiet) {
+    return (
+      <RestToday
+        entry={{ ...entry, offs: { ...entry.offs, with: undefined } }}
+      />
+    );
+  }
+  if (!quiet) {
     return <TodayBlock day={day} note />;
   }
   return (
@@ -574,7 +584,19 @@ const offs = {
     display: "grid",
     flex: 1,
     gap: "8px",
-    gridTemplateColumns: "72px 1fr auto",
+    // As quiet as リスト's lines: the date, its mark, and how soon at the
+    // end in the secondary color. Only the small one counts large.
+    gridTemplateColumns: "auto 18px 1fr",
+  }),
+  rowCount: css({
+    color: "text.secondary",
+    fontVariantNumeric: "tabular-nums",
+    justifySelf: "end",
+    textStyle: "footnote",
+  }),
+  rowDate: css({
+    fontVariantNumeric: "tabular-nums",
+    textStyle: "subheadline",
   }),
   rows: css({
     display: "flex",
@@ -636,44 +658,96 @@ function spokenOff(entry: WidgetEntry, off: WidgetOff | undefined) {
   return `${title}、${inDaysWords(inDays)}、${monthDay(day.date)}(${day.weekday}) ${day.name ?? ""}`;
 }
 
+// How a day off today is drawn, being decided on /design/widgets: the app
+// icon's poodle peeking in, or the day's own mark drawn large behind.
+export type RestLook = "dog" | "mark";
+export const RestLookContext = createContext<RestLook>("dog");
+
 const rest = {
-  // The whole widget on today's day-off tile, edge to edge, as the
-  // calendar draws a day off; plain where days off are not colored or the
-  // system draws in one color.
+  // B: the whole widget on today's day-off tile, edge to edge.
   ground: css({
     bg: "var(--off-tint)",
     height: "calc(100% + 2 * var(--widget-margin))",
     margin: "calc(-1 * var(--widget-margin))",
     padding: "var(--widget-margin)",
   }),
+  // A: the poodle looking in from the corner, cut by the widget's edge.
+  dog: css({
+    bottom: "calc(-1 * var(--widget-margin) - 14px)",
+    height: "88px",
+    pointerEvents: "none",
+    position: "absolute",
+    right: "calc(-1 * var(--widget-margin) - 10px)",
+    width: "88px",
+  }),
+  // B: the day's mark, large and faint, behind the words.
+  mark: css({
+    bottom: "-24px",
+    opacity: 0.22,
+    pointerEvents: "none",
+    position: "absolute",
+    right: "-20px",
+  }),
+  root: css({
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    justifyContent: "space-between",
+    position: "relative",
+  }),
+  title: css({
+    fontWeight: 600,
+    position: "relative",
+    textStyle: "headline",
+    whiteSpace: "pre-line",
+  }),
   tomorrow: css({
     alignItems: "center",
     color: "text.secondary",
     display: "flex",
     gap: "4px",
+    position: "relative",
     textStyle: "footnote",
   }),
 };
 
-// A day off today: said as such, on the day's tile, with its mark and
-// tomorrow's under it, rather than counted as 今日.
+// The poodle, white in dark lines, as it sits on any ground.
+function PeekingDog() {
+  const icons = useAppIcons();
+  const dark = useContext(ColorSchemeContext) === "dark";
+  const drawing = icons[dark ? DARK_DRAWING : LIGHT_DRAWING];
+  return drawing ? (
+    <img alt="" className={rest.dog} height={88} src={drawing} width={88} />
+  ) : null;
+}
+
+// A day off today, said as such rather than counted: おやすみ, with the
+// date over it and tomorrow's mark under it, in the look being decided.
 function RestToday({ entry }: { entry: WidgetEntry }) {
   const day = entry.today;
   const [, tomorrow] = entry.upcoming;
   const companion = entry.offs.with;
+  const look = useContext(RestLookContext);
   const highlight = useOffHighlight(useContext(ShiftMarkStyleContext));
   const { tint } = useDisplayColor(day.color ?? presetPatterns.off.color);
   const flat = useContext(WidgetRenderingModeContext) !== "fullColor";
-  const tinted = highlight && !flat;
+  const tinted = look === "mark" && highlight && !flat;
   return (
     <div
-      className={cx(offs.root, tinted && rest.ground)}
+      className={cx(rest.root, tinted && rest.ground)}
       style={tinted ? ({ "--off-tint": tint } as CSSProperties) : undefined}
     >
       <span className={srOnly}>{spokenOff(entry, { day, inDays: 0 })}</span>
+      {look === "dog" ? (
+        <PeekingDog />
+      ) : (
+        <span aria-hidden="true" className={rest.mark}>
+          <DayMark day={day} size={120} />
+        </span>
+      )}
       <span aria-hidden="true" className={offs.head}>
         <span className={css(oneLine)}>
-          {companion ? "今日は一緒に休み" : "今日はお休み"}
+          {monthDay(day.date)}({day.weekday})
         </span>
         {companion && (
           <span className={offs.avatar}>
@@ -685,7 +759,9 @@ function RestToday({ entry }: { entry: WidgetEntry }) {
           </span>
         )}
       </span>
-      <DayMark day={day} size={48} />
+      <span aria-hidden="true" className={rest.title}>
+        {companion ? "ふたりとも\nおやすみ" : "今日は\nおやすみ"}
+      </span>
       {tomorrow && (
         <span aria-hidden="true" className={rest.tomorrow}>
           明日
@@ -731,7 +807,7 @@ export function NextOffSmall({ entry }: { entry: WidgetEntry }) {
   );
 }
 
-// The next days off, a row each: how soon, the date and the mark.
+// The next days off, a line each: the date, its mark and how soon.
 export function NextOffMedium({ entry }: { entry: WidgetEntry }) {
   const ahead = offsAhead(entry).slice(0, 3);
   return (
@@ -741,11 +817,11 @@ export function NextOffMedium({ entry }: { entry: WidgetEntry }) {
       <ol aria-hidden="true" className={`${list} ${offs.rows}`}>
         {ahead.map(({ day, inDays }) => (
           <li className={offs.row} key={day.date.getTime()}>
-            <OffCount inDays={inDays} size={22} />
-            <span className={offs.date}>
+            <span className={offs.rowDate}>
               {monthDay(day.date)}({day.weekday})
             </span>
-            <DayMark day={day} size={20} />
+            <DayMark day={day} size={18} />
+            <span className={offs.rowCount}>{inDaysWords(inDays)}</span>
           </li>
         ))}
         {ahead.length === 0 && (
@@ -1015,21 +1091,13 @@ function MonthDay({
 
 // ── 今日（中）: the memo and 一緒に働く人 ────────────────────────────
 
-// Where there is room, as on Android's 2×2 and 4×2, the memo gets more
-// lines; 一緒に働く人 keep to the foot either way.
-const DETAIL_ROOMY = 150;
-
 const detail = {
-  headline: css({
-    fontVariantNumeric: "tabular-nums",
-    textStyle: "headline",
-    whiteSpace: "nowrap",
-  }),
   members: css({
     alignItems: "center",
     color: "text.secondary",
     display: "flex",
     gap: "4px",
+    maxWidth: "100%",
     minWidth: 0,
     textStyle: "footnote",
   }),
@@ -1050,52 +1118,7 @@ const detail = {
     top: 0,
     visibility: "hidden",
   }),
-  note: cva({
-    base: { margin: 0, textStyle: "footnote" },
-    variants: {
-      lines: {
-        2: { lineClamp: 2 },
-        3: { lineClamp: 3 },
-        4: { lineClamp: 4 },
-        5: { lineClamp: 5 },
-      },
-    },
-  }),
-  // In the small one, 一緒に働く人 sit at the foot.
-  pinned: css({ marginTop: "auto" }),
-  root: css({
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    height: "100%",
-  }),
-  side: css({
-    display: "flex",
-    flex: 1,
-    flexDirection: "column",
-    gap: "8px",
-    justifyContent: "center",
-    minWidth: 0,
-  }),
-  top: css({
-    alignItems: "flex-start",
-    display: "flex",
-    justifyContent: "space-between",
-  }),
   wide: css({ display: "flex", gap: "16px", height: "100%" }),
-  coming: css({ display: "flex", flexDirection: "column", gap: "8px" }),
-  comingLabel: css({
-    color: "text.secondary",
-    fontVariantNumeric: "tabular-nums",
-    textStyle: "footnote",
-  }),
-  comingRow: css({
-    alignItems: "center",
-    display: "grid",
-    gap: "4px",
-    gridTemplateColumns: "52px 20px 1fr",
-  }),
-  comingWords: css({ ...oneLine, fontWeight: 400, textStyle: "footnote" }),
 };
 
 // The ways to write 一緒に働く人, longest first: everyone, then fewer
@@ -1146,69 +1169,63 @@ function MemberNames({ names }: { names: string[] }) {
   );
 }
 
-// The memo and 一緒に働く人 of a day, as far as it has them.
-function DayExtras({
-  day,
-  lines,
-  pinMembers = false,
-}: {
-  day: WidgetDay;
-  lines: 2 | 3 | 4 | 5;
-  pinMembers?: boolean;
-}) {
+// Today large on the left, its memo and 一緒に働く人 beside.
+export function TodayMedium({ entry }: { entry: WidgetEntry }) {
+  const [, tomorrow] = entry.upcoming;
   return (
-    <>
-      {day.note && <p className={detail.note({ lines })}>{day.note}</p>}
+    <div className={detail.wide}>
+      <DayColumn day={entry.today} label="今日" />
+      <span aria-hidden="true" className={week.rule} />
+      {tomorrow && <DayColumn day={tomorrow} label="明日" />}
+    </div>
+  );
+}
+
+const column = {
+  label: css({
+    color: "text.secondary",
+    fontVariantNumeric: "tabular-nums",
+    textStyle: "footnote",
+  }),
+  note: css({ ...oneLine, color: "text.secondary", textStyle: "footnote" }),
+  root: css({
+    alignItems: "flex-start",
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "4px",
+    minWidth: 0,
+  }),
+  words: css({
+    ...oneLine,
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 600,
+    maxWidth: "100%",
+    textStyle: "subheadline",
+  }),
+};
+
+// A day as one of a pair: when it is, its mark, then whatever it has to
+// say: a change, its memo's first line and 一緒に働く人. Most days have
+// none of these, and the pair still reads as today and tomorrow.
+function DayColumn({ day, label }: { day: WidgetDay; label: string }) {
+  return (
+    <div className={column.root}>
+      <span className={column.label}>
+        {label} {day.date.getMonth() + MONTH_NUMBER}/{day.date.getDate()}(
+        {day.weekday})
+      </span>
+      <DayMark day={day} size={40} />
+      <Change className={column.words} day={day} />
+      {day.note && <span className={column.note}>{day.note}</span>}
       {day.members.length > 0 && (
-        <span
-          className={`${detail.members} ${pinMembers ? detail.pinned : ""}`}
-        >
+        <span className={detail.members}>
           <span className={srOnly}>一緒に働く人 {day.members.join("、")}</span>
           <Users aria-hidden="true" size={14} />
           <MemberNames key={day.members.join("・")} names={day.members} />
         </span>
       )}
-    </>
-  );
-}
-
-// Today large on the left, its memo and 一緒に働く人 beside.
-export function TodayMedium({ entry }: { entry: WidgetEntry }) {
-  const roomy = useContext(WidgetSizeContext).height >= DETAIL_ROOMY;
-  const day = entry.today;
-  const extras = Boolean(day.note) || day.members.length > 0;
-  return (
-    <div className={detail.wide}>
-      <div className={week.today}>
-        <TodayBlock day={day} />
-      </div>
-      <span aria-hidden="true" className={week.rule} />
-      <div className={detail.side}>
-        {extras ? (
-          <DayExtras day={day} lines={roomy ? 5 : 3} />
-        ) : (
-          <ComingDays days={entry.upcoming.slice(1, 4)} />
-        )}
-      </div>
     </div>
-  );
-}
-
-// Without a memo or people, the room beside today goes to the days after
-// it: 明日, the day after, and the next, each with its mark and words.
-function ComingDays({ days }: { days: WidgetDay[] }) {
-  return (
-    <ol className={`${list} ${detail.coming}`}>
-      {days.map((day, index) => (
-        <li className={detail.comingRow} key={day.date.getTime()}>
-          <span className={detail.comingLabel}>
-            {relativeDay(day, index + 1)}
-          </span>
-          <DayMark day={day} size={18} />
-          <Change className={detail.comingWords} day={day} />
-        </li>
-      ))}
-    </ol>
   );
 }
 
