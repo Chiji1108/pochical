@@ -2375,6 +2375,12 @@ const menu = {
     userSelect: "none",
     width: "100%",
   }),
+  // An action that removes something, in the danger color with its icon,
+  // as iOS draws a destructive menu item.
+  danger: css({
+    "& > span": { color: "danger.default" },
+    color: "danger.default",
+  }),
   separator: css({
     border: 0,
     borderTop: "1px solid token(colors.separator)",
@@ -2399,8 +2405,10 @@ const menu = {
 // under its reactions.
 export const menuStyle = {
   content: menu.content,
+  danger: menu.danger,
   icon: menu.icon,
   item: menu.item,
+  separator: menu.separator,
 };
 
 // A pull-down for a page's secondary actions, as SwiftUI's Menu and

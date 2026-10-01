@@ -483,7 +483,7 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
-      await tap(page, /のメッセージ：/u);
+      await tap(page, /^お母さんのメッセージ：来週の日曜/u);
     },
   },
   {
@@ -492,7 +492,7 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
-      await tap(page, /のメッセージ：/u);
+      await tap(page, /^お母さんのメッセージ：来週の日曜/u);
       await tap(page, "返信");
     },
   },
@@ -608,6 +608,29 @@ export const states: State[] = [
       await tap(page, /^全体チャット/u);
       await tap(page, /^いとこ会/u);
       await page.getByRole("button", { name: "参加する" }).waitFor();
+    },
+  },
+  {
+    // Your message being changed: its words back in the composer.
+    name: "group/chat-editing",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^全体チャット/u);
+      await tap(page, /^自分のメッセージ：/u);
+      await tap(page, "編集");
+    },
+  },
+  {
+    // 送信取消 asked first.
+    name: "group/chat-unsend",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^全体チャット/u);
+      await tap(page, /^自分のメッセージ：/u);
+      await tap(page, "送信取消");
+      await page.getByRole("alertdialog").waitFor();
     },
   },
   {
