@@ -115,11 +115,13 @@ export const dayParts = {
   markAlone: css({ flex: 1, height: "auto" }),
   // 休みの見せ方 空白, while entering or in the week view.
   markFaint: css({ opacity: 0.35 }),
-  // A note: a stroke under the date, as marked in a paper diary.
+  // A note: a highlighter stroke under the date, as in a paper diary.
   noted: css({
+    // On a day off's tile, the tile's own color a step deeper, or the
+    // stroke would be as pale as the tile and vanish into it.
     "[data-off] &": {
       _before: {
-        bg: "var(--calendar-note-marker-on-off, token(colors.calendar.noteMarker))",
+        bg: "oklch(from var(--off-tint) calc(l + var(--note-on-tile-lightness)) calc(c * var(--note-on-tile-chroma)) h)",
       },
     },
     _before: {

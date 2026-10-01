@@ -174,7 +174,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0xA2B49E),
     accentContainer: Color(hex: 0xEEF3ED),
     calendarOffTint: Color(hex: 0xE1E9DF),
-    calendarNoteMarker: Color(hex: 0xBFC7BE),
+    calendarNoteMarker: Color(hex: 0xD1DDCE),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0x496444), tint: Color(hex: 0xE1E9DF)),
       MarkColor(name: "からし", color: Color(hex: 0x8A6D1A), tint: Color(hex: 0xF3EAD0)),
@@ -235,7 +235,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0x697A66),
     accentContainer: Color(hex: 0x353B34),
     calendarOffTint: Color(hex: 0x3D493B),
-    calendarNoteMarker: Color(hex: 0x575C57),
+    calendarNoteMarker: Color(hex: 0x485446),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0xA4C19F), tint: Color(hex: 0x3D493B)),
       MarkColor(name: "からし", color: Color(hex: 0xD6BB77), tint: Color(hex: 0x4D432A)),
@@ -296,7 +296,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0xA8B2A1),
     accentContainer: Color(hex: 0xF0F2EE),
     calendarOffTint: Color(hex: 0xE3E8E0),
-    calendarNoteMarker: Color(hex: 0xC8C4B9),
+    calendarNoteMarker: Color(hex: 0xD4DCCF),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0x5B6851), tint: Color(hex: 0xE3E8E0)),
       MarkColor(name: "からし", color: Color(hex: 0x846F39), tint: Color(hex: 0xF1EAD7)),
@@ -357,7 +357,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0x6F7869),
     accentContainer: Color(hex: 0x373A35),
     calendarOffTint: Color(hex: 0x42473D),
-    calendarNoteMarker: Color(hex: 0x5D5A53),
+    calendarNoteMarker: Color(hex: 0x4D5248),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0xAEBDA4), tint: Color(hex: 0x42473D)),
       MarkColor(name: "からし", color: Color(hex: 0xD0BC8B), tint: Color(hex: 0x4B4331)),
@@ -418,7 +418,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0xACAFAC),
     accentContainer: Color(hex: 0xF1F1F0),
     calendarOffTint: Color(hex: 0xE5E6E5),
-    calendarNoteMarker: Color(hex: 0xC3C5C2),
+    calendarNoteMarker: Color(hex: 0xD8D9D8),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0x3C3F3B), tint: Color(hex: 0xE5E6E5)),
       MarkColor(name: "からし", color: Color(hex: 0x8A6D1A), tint: Color(hex: 0xF3EAD0)),
@@ -479,7 +479,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0x737572),
     accentContainer: Color(hex: 0x393938),
     calendarOffTint: Color(hex: 0x444544),
-    calendarNoteMarker: Color(hex: 0x5A5B59),
+    calendarNoteMarker: Color(hex: 0x4F504F),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0xB5B9B4), tint: Color(hex: 0x444544)),
       MarkColor(name: "からし", color: Color(hex: 0xD6BB77), tint: Color(hex: 0x4D432A)),
@@ -540,7 +540,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0xBBAB98),
     accentContainer: Color(hex: 0xF4F0EC),
     calendarOffTint: Color(hex: 0xECE5DC),
-    calendarNoteMarker: Color(hex: 0xCDC2B8),
+    calendarNoteMarker: Color(hex: 0xE2D7C9),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0x7C6447), tint: Color(hex: 0xECE5DC)),
       MarkColor(name: "からし", color: Color(hex: 0x846F39), tint: Color(hex: 0xF1EAD7)),
@@ -601,7 +601,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0x807261),
     accentContainer: Color(hex: 0x3E3831),
     calendarOffTint: Color(hex: 0x4D4338),
-    calendarNoteMarker: Color(hex: 0x605952),
+    calendarNoteMarker: Color(hex: 0x584E43),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0xCCB395), tint: Color(hex: 0x4D4338)),
       MarkColor(name: "からし", color: Color(hex: 0xD0BC8B), tint: Color(hex: 0x4B4331)),
@@ -662,7 +662,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0xACB389),
     accentContainer: Color(hex: 0xF0F2E8),
     calendarOffTint: Color(hex: 0xE5E9D6),
-    calendarNoteMarker: Color(hex: 0xC4C5BB),
+    calendarNoteMarker: Color(hex: 0xD7DDBF),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0x616A22), tint: Color(hex: 0xE5E9D6)),
       MarkColor(name: "からし", color: Color(hex: 0x846F39), tint: Color(hex: 0xF1EAD7)),
@@ -723,7 +723,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0x727952),
     accentContainer: Color(hex: 0x383B2C),
     calendarOffTint: Color(hex: 0x44482E),
-    calendarNoteMarker: Color(hex: 0x5B5B54),
+    calendarNoteMarker: Color(hex: 0x4F5338),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0xB4BF7B), tint: Color(hex: 0x44482E)),
       MarkColor(name: "からし", color: Color(hex: 0xD0BC8B), tint: Color(hex: 0x4B4331)),
@@ -784,7 +784,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0xBEA8A1),
     accentContainer: Color(hex: 0xF5F0EE),
     calendarOffTint: Color(hex: 0xEEE4E0),
-    calendarNoteMarker: Color(hex: 0xCDC2BD),
+    calendarNoteMarker: Color(hex: 0xE5D5CF),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0x573A30), tint: Color(hex: 0xEEE4E0)),
       MarkColor(name: "からし", color: Color(hex: 0x846F39), tint: Color(hex: 0xF1EAD7)),
@@ -845,7 +845,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0x836F69),
     accentContainer: Color(hex: 0x3F3735),
     calendarOffTint: Color(hex: 0x4F423D),
-    calendarNoteMarker: Color(hex: 0x605956),
+    calendarNoteMarker: Color(hex: 0x5A4C47),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0xD1AFA3), tint: Color(hex: 0x4F423D)),
       MarkColor(name: "からし", color: Color(hex: 0xD0BC8B), tint: Color(hex: 0x4B4331)),
@@ -906,7 +906,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0x8DB7BB),
     accentContainer: Color(hex: 0xEAF3F4),
     calendarOffTint: Color(hex: 0xD8EAEC),
-    calendarNoteMarker: Color(hex: 0xBCC7C8),
+    calendarNoteMarker: Color(hex: 0xC3DFE3),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0x1D6971), tint: Color(hex: 0xD8EAEC)),
       MarkColor(name: "からし", color: Color(hex: 0x8A6D1A), tint: Color(hex: 0xF3EAD0)),
@@ -967,7 +967,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0x567C81),
     accentContainer: Color(hex: 0x2E3C3E),
     calendarOffTint: Color(hex: 0x304A4D),
-    calendarNoteMarker: Color(hex: 0x555C5D),
+    calendarNoteMarker: Color(hex: 0x3B5558),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0x82C5CC), tint: Color(hex: 0x304A4D)),
       MarkColor(name: "からし", color: Color(hex: 0xD6BB77), tint: Color(hex: 0x4D432A)),
@@ -1028,7 +1028,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0xC9A2A9),
     accentContainer: Color(hex: 0xF8EEF0),
     calendarOffTint: Color(hex: 0xF3E1E4),
-    calendarNoteMarker: Color(hex: 0xCCC1C2),
+    calendarNoteMarker: Color(hex: 0xEDD1D6),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0x88515D), tint: Color(hex: 0xF3E1E4)),
       MarkColor(name: "からし", color: Color(hex: 0x846F39), tint: Color(hex: 0xF1EAD7)),
@@ -1089,7 +1089,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0x8C6A70),
     accentContainer: Color(hex: 0x433538),
     calendarOffTint: Color(hex: 0x553E42),
-    calendarNoteMarker: Color(hex: 0x605859),
+    calendarNoteMarker: Color(hex: 0x60494D),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0xE0A5B0), tint: Color(hex: 0x553E42)),
       MarkColor(name: "からし", color: Color(hex: 0xD0BC8B), tint: Color(hex: 0x4B4331)),
@@ -1150,7 +1150,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0xAFA8CC),
     accentContainer: Color(hex: 0xF1F0F8),
     calendarOffTint: Color(hex: 0xE7E4F4),
-    calendarNoteMarker: Color(hex: 0xC4C3CB),
+    calendarNoteMarker: Color(hex: 0xDAD5EE),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0x5F5286), tint: Color(hex: 0xE7E4F4)),
       MarkColor(name: "からし", color: Color(hex: 0x8A6D1A), tint: Color(hex: 0xF3EAD0)),
@@ -1211,7 +1211,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0x766F8F),
     accentContainer: Color(hex: 0x3A3744),
     calendarOffTint: Color(hex: 0x464157),
-    calendarNoteMarker: Color(hex: 0x5B5A5F),
+    calendarNoteMarker: Color(hex: 0x514C62),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0xBAAEE6), tint: Color(hex: 0x464157)),
       MarkColor(name: "からし", color: Color(hex: 0xD6BB77), tint: Color(hex: 0x4D432A)),
@@ -1272,7 +1272,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0x906D47),
     accentContainer: Color(hex: 0x43362E),
     calendarOffTint: Color(hex: 0x554032),
-    calendarNoteMarker: Color(hex: 0x62594F),
+    calendarNoteMarker: Color(hex: 0x604B3C),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0xEFAF69), tint: Color(hex: 0x554032)),
       MarkColor(name: "からし", color: Color(hex: 0xD0BC8B), tint: Color(hex: 0x4B4331)),
@@ -1333,7 +1333,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0x807446),
     accentContainer: Color(hex: 0x3E3928),
     calendarOffTint: Color(hex: 0x4D4526),
-    calendarNoteMarker: Color(hex: 0x525B6D),
+    calendarNoteMarker: Color(hex: 0x585030),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0xEBD47D), tint: Color(hex: 0x4D4526)),
       MarkColor(name: "からし", color: Color(hex: 0xD2BC83), tint: Color(hex: 0x4C432E)),
@@ -1394,7 +1394,7 @@ extension ThemeColors {
     accentBorder: Color(hex: 0x717673),
     accentContainer: Color(hex: 0x2D3E35),
     calendarOffTint: Color(hex: 0x2F4D3E),
-    calendarNoteMarker: Color(hex: 0x4A6156),
+    calendarNoteMarker: Color(hex: 0x395848),
     marks: [
       MarkColor(name: "テーマカラー", color: Color(hex: 0xE4EEE9), tint: Color(hex: 0x2F4D3E)),
       MarkColor(name: "からし", color: Color(hex: 0xD1BC87), tint: Color(hex: 0x4B4330)),

@@ -27,7 +27,7 @@ import {
   inkShares,
   LIGHT_FILL,
   markPalette,
-  NOTE_MARKER_DEPTH,
+  noteMarkerSteps,
   presets,
   roleSteps,
   themeRoles,
@@ -130,7 +130,7 @@ function json() {
         name,
         tinted: !untintedTokens.has(name),
       })),
-      noteMarkerDepth: NOTE_MARKER_DEPTH,
+      noteMarkerSteps,
       roleSteps,
     },
     metrics: {

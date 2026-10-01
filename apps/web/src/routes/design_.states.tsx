@@ -19,27 +19,16 @@ import {
   PresetContexts,
   useDesignTheme,
 } from "../components/design-providers";
+import { ColorSchemeContext, pageStyle } from "../components/design-theme";
+import type { PresetId } from "../components/design-theme";
 import {
-  ColorSchemeContext,
-  NoteMarkerContext,
-  pageStyle,
-} from "../components/design-theme";
-import type { NoteMarkerLook, PresetId } from "../components/design-theme";
-import {
-  CornerColorContext,
   OffDisplayContext,
   OffHighlightContext,
   ShiftMarkStyleContext,
 } from "../components/shift-mark";
 import type { OffDisplay, ShiftMarkStyle } from "../components/shift-mark";
-import {
-  dateKey,
-  initialDesignSchedule,
-  patternSets,
-} from "../lib/design-days";
-import type { Schedule } from "../lib/design-days";
+import { initialDesignSchedule, patternSets } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
-import { designToday } from "../lib/design-today";
 import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/design_/states")({
@@ -69,46 +58,6 @@ const partialPerson = { schedule: partialSchedule };
 const noHighlight = {
   highlight: { badge: false, emoji: false, icon: false },
 };
-
-// The sample September with memos on days off as well as on work days
-// and today, to see a memo's stroke on a day off's tile and beside it.
-const MEMO_DAYS_OFF = 3;
-const memoSchedule = (() => {
-  const schedule: Schedule = initialDesignSchedule();
-  const daysOff = Object.keys(schedule)
-    .filter((key) => schedule[key]?.shift === "off")
-    .slice(0, MEMO_DAYS_OFF);
-  for (const key of [...daysOff, dateKey(designToday)]) {
-    const entry = schedule[key];
-    if (entry) {
-      schedule[key] = { ...entry, note: "メモ" };
-    }
-  }
-  return schedule;
-})();
-const memoPerson = { schedule: memoSchedule };
-const markerLooks: { look: NoteMarkerLook; label: string }[] = [
-  { label: "グレー（今）", look: "gray" },
-  { label: "テーマ色・休みの上で濃く", look: "tint" },
-  { label: "テーマ色・いつも同じ濃さ", look: "tintEven" },
-];
-const markerThemes: { preset: PresetId; scheme: ColorScheme; label: string }[] =
-  [
-    { label: "ポチカル・ライト", preset: "pochical", scheme: "light" },
-    { label: "ポチカル・ダーク", preset: "pochical", scheme: "dark" },
-    { label: "墨・ライト", preset: "sumi", scheme: "light" },
-    { label: "墨・ダーク", preset: "sumi", scheme: "dark" },
-    { label: "月夜", preset: "tsukiyo", scheme: "dark" },
-    { label: "喫茶", preset: "kissa", scheme: "dark" },
-  ];
-
-const cornerColors: { color: "gray" | "shift"; label: string }[] = [
-  { color: "gray", label: "グレー（今）" },
-  { color: "shift", label: "シフトの色" },
-];
-const cornerThemes = markerThemes.filter(({ preset }) =>
-  ["pochical", "sumi"].includes(preset)
-);
 
 const patternCounts = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13] as const;
 const markStyles: { style: ShiftMarkStyle; label: string }[] = [
@@ -194,54 +143,6 @@ function StatesPage() {
                 note="入力中は薄く出る"
               />
             </FrameRow>
-          </FrameSection>
-
-          <FrameSection
-            description="メモの日の印を比べます。休みの日（タイルの上）にもメモを入れています。"
-            title="メモの印の色"
-          >
-            {markerThemes.map(({ preset, scheme, label: themeLabel }) => (
-              <FrameRow branch={themeLabel} fan key={themeLabel}>
-                {markerLooks.map(({ look, label }) => (
-                  <NoteMarkerContext key={look} value={look}>
-                    <Scheme preset={preset} scheme={scheme}>
-                      <CalendarFrame label={label} person={memoPerson} />
-                    </Scheme>
-                  </NoteMarkerContext>
-                ))}
-              </FrameRow>
-            ))}
-          </FrameSection>
-
-          <FrameSection
-            description="早出（左上）と残業（右上）の角。8日・25日が残業、19日が早出です。文字のマークでも比べます。"
-            title="早出・残業の角の色"
-          >
-            {cornerThemes.map(({ preset, scheme, label: themeLabel }) => (
-              <FrameRow branch={themeLabel} fan key={themeLabel}>
-                {cornerColors.flatMap(({ color, label }) =>
-                  markStyles
-                    .filter(({ style }) => style !== "emoji")
-                    .map(({ style, label: styleLabel }) => (
-                      <CornerColorContext
-                        key={`${color}-${style}`}
-                        value={color}
-                      >
-                        <ShiftMarkStyleContext value={style}>
-                          <NoteMarkerContext value="tint">
-                            <Scheme preset={preset} scheme={scheme}>
-                              <CalendarFrame
-                                label={`${label}・${styleLabel}`}
-                                person={memoPerson}
-                              />
-                            </Scheme>
-                          </NoteMarkerContext>
-                        </ShiftMarkStyleContext>
-                      </CornerColorContext>
-                    ))
-                )}
-              </FrameRow>
-            ))}
           </FrameSection>
 
           <FrameSection title="テーマとライト・ダーク">

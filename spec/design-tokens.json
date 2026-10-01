@@ -175,7 +175,7 @@
               "accent-border": "#a2b49e",
               "accent-container": "#eef3ed",
               "calendar-off-tint": "#e1e9df",
-              "calendar-note-marker": "#bfc7be"
+              "calendar-note-marker": "#d1ddce"
             }
           },
           "dark": {
@@ -273,7 +273,7 @@
               "accent-border": "#697a66",
               "accent-container": "#353b34",
               "calendar-off-tint": "#3d493b",
-              "calendar-note-marker": "#575c57"
+              "calendar-note-marker": "#485446"
             }
           }
         }
@@ -397,7 +397,7 @@
               "accent-border": "#a8b2a1",
               "accent-container": "#f0f2ee",
               "calendar-off-tint": "#e3e8e0",
-              "calendar-note-marker": "#c8c4b9"
+              "calendar-note-marker": "#d4dccf"
             }
           },
           "dark": {
@@ -495,7 +495,7 @@
               "accent-border": "#6f7869",
               "accent-container": "#373a35",
               "calendar-off-tint": "#42473d",
-              "calendar-note-marker": "#5d5a53"
+              "calendar-note-marker": "#4d5248"
             }
           }
         }
@@ -613,7 +613,7 @@
               "accent-border": "#acafac",
               "accent-container": "#f1f1f0",
               "calendar-off-tint": "#e5e6e5",
-              "calendar-note-marker": "#c3c5c2"
+              "calendar-note-marker": "#d8d9d8"
             }
           },
           "dark": {
@@ -711,7 +711,7 @@
               "accent-border": "#737572",
               "accent-container": "#393938",
               "calendar-off-tint": "#444544",
-              "calendar-note-marker": "#5a5b59"
+              "calendar-note-marker": "#4f504f"
             }
           }
         }
@@ -835,7 +835,7 @@
               "accent-border": "#bbab98",
               "accent-container": "#f4f0ec",
               "calendar-off-tint": "#ece5dc",
-              "calendar-note-marker": "#cdc2b8"
+              "calendar-note-marker": "#e2d7c9"
             }
           },
           "dark": {
@@ -933,7 +933,7 @@
               "accent-border": "#807261",
               "accent-container": "#3e3831",
               "calendar-off-tint": "#4d4338",
-              "calendar-note-marker": "#605952"
+              "calendar-note-marker": "#584e43"
             }
           }
         }
@@ -1052,7 +1052,7 @@
               "accent-border": "#acb389",
               "accent-container": "#f0f2e8",
               "calendar-off-tint": "#e5e9d6",
-              "calendar-note-marker": "#c4c5bb"
+              "calendar-note-marker": "#d7ddbf"
             }
           },
           "dark": {
@@ -1150,7 +1150,7 @@
               "accent-border": "#727952",
               "accent-container": "#383b2c",
               "calendar-off-tint": "#44482e",
-              "calendar-note-marker": "#5b5b54"
+              "calendar-note-marker": "#4f5338"
             }
           }
         }
@@ -1269,7 +1269,7 @@
               "accent-border": "#bea8a1",
               "accent-container": "#f5f0ee",
               "calendar-off-tint": "#eee4e0",
-              "calendar-note-marker": "#cdc2bd"
+              "calendar-note-marker": "#e5d5cf"
             }
           },
           "dark": {
@@ -1367,7 +1367,7 @@
               "accent-border": "#836f69",
               "accent-container": "#3f3735",
               "calendar-off-tint": "#4f423d",
-              "calendar-note-marker": "#605956"
+              "calendar-note-marker": "#5a4c47"
             }
           }
         }
@@ -1485,7 +1485,7 @@
               "accent-border": "#8db7bb",
               "accent-container": "#eaf3f4",
               "calendar-off-tint": "#d8eaec",
-              "calendar-note-marker": "#bcc7c8"
+              "calendar-note-marker": "#c3dfe3"
             }
           },
           "dark": {
@@ -1583,7 +1583,7 @@
               "accent-border": "#567c81",
               "accent-container": "#2e3c3e",
               "calendar-off-tint": "#304a4d",
-              "calendar-note-marker": "#555c5d"
+              "calendar-note-marker": "#3b5558"
             }
           }
         }
@@ -1702,7 +1702,7 @@
               "accent-border": "#c9a2a9",
               "accent-container": "#f8eef0",
               "calendar-off-tint": "#f3e1e4",
-              "calendar-note-marker": "#ccc1c2"
+              "calendar-note-marker": "#edd1d6"
             }
           },
           "dark": {
@@ -1800,7 +1800,7 @@
               "accent-border": "#8c6a70",
               "accent-container": "#433538",
               "calendar-off-tint": "#553e42",
-              "calendar-note-marker": "#605859"
+              "calendar-note-marker": "#60494d"
             }
           }
         }
@@ -1918,7 +1918,7 @@
               "accent-border": "#afa8cc",
               "accent-container": "#f1f0f8",
               "calendar-off-tint": "#e7e4f4",
-              "calendar-note-marker": "#c4c3cb"
+              "calendar-note-marker": "#dad5ee"
             }
           },
           "dark": {
@@ -2016,7 +2016,7 @@
               "accent-border": "#766f8f",
               "accent-container": "#3a3744",
               "calendar-off-tint": "#464157",
-              "calendar-note-marker": "#5b5a5f"
+              "calendar-note-marker": "#514c62"
             }
           }
         }
@@ -2144,7 +2144,7 @@
               "accent-border": "#906d47",
               "accent-container": "#43362e",
               "calendar-off-tint": "#554032",
-              "calendar-note-marker": "#62594f"
+              "calendar-note-marker": "#604b3c"
             }
           }
         }
@@ -2269,7 +2269,7 @@
               "accent-border": "#807446",
               "accent-container": "#3e3928",
               "calendar-off-tint": "#4d4526",
-              "calendar-note-marker": "#525b6d"
+              "calendar-note-marker": "#585030"
             }
           }
         }
@@ -2398,7 +2398,7 @@
               "accent-border": "#717673",
               "accent-container": "#2d3e35",
               "calendar-off-tint": "#2f4d3e",
-              "calendar-note-marker": "#4a6156"
+              "calendar-note-marker": "#395848"
             }
           }
         }
@@ -2756,7 +2756,28 @@
         "tinted": false
       }
     ],
-    "noteMarkerDepth": 0.25,
+    "noteMarkerSteps": {
+      "dark": {
+        "onTile": {
+          "chroma": 1.25,
+          "lightness": 0.1
+        },
+        "pale": {
+          "chroma": 1,
+          "lightness": 0.43
+        }
+      },
+      "light": {
+        "onTile": {
+          "chroma": 1.9,
+          "lightness": -0.09
+        },
+        "pale": {
+          "chroma": 1.6,
+          "lightness": 0.885
+        }
+      }
+    },
     "roleSteps": {
       "dark": {
         "accent": {

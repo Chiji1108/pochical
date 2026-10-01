@@ -26,15 +26,10 @@ export const defaultCellNames: CellNames = {
 };
 // 早出 and 残業 belong to the shift, not to a day on one calendar: groups
 // see them too, wherever the mark is drawn and at whatever size. So they
-// are drawn on the mark itself, as a small triangle in its top corner that
-// still reads at 16px, where words would not: the start of the day at the
+// are drawn on the mark itself, in its color, as a small triangle in its
+// top corner that still reads at 16px, where words would not: the start of the day at the
 // left, the end at the right. Inside the mark's box, it never reaches a
 // neighbor in a narrow group table.
-// The corners' color, being decided on /design/states: the テーマ's gray,
-// as now, or the shift's own color, as part of the mark they sit on.
-export type CornerColor = "gray" | "shift";
-export const CornerColorContext = createContext<CornerColor>("gray");
-
 function TimeSide({ side }: { side: "early" | "late" }) {
   return (
     <span
@@ -531,13 +526,14 @@ export function MarkGlyph({
   late?: boolean;
 }) {
   const { color } = useDisplayColor(look.color);
-  const corner = useContext(CornerColorContext);
   const glyph = <BareGlyph look={look} size={size} style={style} />;
   if (!(early || late)) {
     return glyph;
   }
-  // Emoji bring their own colors, so their corners stay gray.
-  const shiftCorner = corner === "shift" && style !== "emoji";
+  // The corners are the shift's own color, as part of the mark they sit
+  // on, and so the テーマ's in ワントーン. Emoji bring colors of their own,
+  // so theirs stay the gray of secondary text.
+  const shiftCorner = style !== "emoji";
   return (
     <span
       className={glyphStyle.timed}

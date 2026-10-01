@@ -57,7 +57,6 @@ export function widgetColors(hue: number, scheme: ColorScheme) {
   return {
     "--accent-default": palettes.primary(dark ? 80 : 40),
     "--background-base": palettes.neutral(dark ? 10 : 99),
-    "--calendar-note-marker": palettes.neutralVariant(dark ? 30 : 88),
     "--separator": palettes.neutralVariant(dark ? 30 : 80),
     "--text-primary": palettes.neutral(dark ? 90 : 10),
     "--text-quaternary": palettes.neutralVariant(dark ? 40 : 70),
