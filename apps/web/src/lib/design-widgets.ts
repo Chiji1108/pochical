@@ -77,7 +77,7 @@ export type WidgetEntry = {
   // Whole weeks covering today's month, from the person's week start.
   month: {
     first: Date;
-    weekdays: { label: string; tone: DayTone }[];
+    weekdays: { day: number; label: string; tone: DayTone }[];
     days: (WidgetDay & { inMonth: boolean })[];
   };
 };
@@ -204,7 +204,11 @@ export function widgetEntry(
         inMonth: day.getMonth() === first.getMonth(),
       })),
       first,
-      weekdays: weekdaysFrom(week).map(({ label, tone }) => ({ label, tone })),
+      weekdays: weekdaysFrom(week).map(({ day, label, tone }) => ({
+        day,
+        label,
+        tone,
+      })),
     },
     offs: offsFrom(
       today,

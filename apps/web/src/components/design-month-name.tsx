@@ -29,7 +29,7 @@ export function englishMonthOf(month: Date) {
 }
 
 // The year over the month's name, as the calendar's heading draws it:
-// 9月, or sep. as the カレンダー page's 月の表示 asks, said as 2026年9月 to
+// 9月, or sep. as the カレンダー page's 月と曜日 asks, said as 2026年9月 to
 // screen readers either way. The カレンダー page's preview draws it too.
 // While the pages are dragged (`progress`, -1 to 1 toward the next
 // month), the name follows the finger to the month coming in; a month
@@ -81,7 +81,7 @@ export function MonthName({
         />
       </span>
       <strong aria-hidden="true" className={monthName.month}>
-        {/* A new piece for the other 月の表示, so switching it does not
+        {/* A new piece for the other 月と曜日, so switching it does not
             roll as a turn would. */}
         <Fragment key={style}>
           <RollingName
