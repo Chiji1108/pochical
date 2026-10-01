@@ -540,6 +540,36 @@ export const states: State[] = [
     },
   },
   {
+    // The friends' chat ends on a link with its page under the words.
+    name: "group/chat-link",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^看護学校の友達/u);
+      await tap(page, /^全体チャット/u);
+      await page.getByRole("link", { name: /cafe こもれび/u }).waitFor();
+    },
+  },
+  {
+    // A link being written: its page, once read, above the composer.
+    name: "group/chat-link-compose",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^全体チャット/u);
+      await page
+        .getByRole("textbox", { name: "メッセージ" })
+        .fill("ここ予約できるみたい！ https://cafe-komorebi.example/menu");
+      await page
+        .getByRole("button", { name: "リンクのプレビューを付けない" })
+        .waitFor();
+      await page
+        .getByText(/^cafe こもれび/u)
+        .first()
+        .waitFor();
+    },
+  },
+  {
     name: "group/chat-one",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {

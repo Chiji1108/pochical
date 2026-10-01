@@ -9,6 +9,7 @@ import {
   Download,
   Ellipsis,
   ImageIcon,
+  Link,
   Plus,
   Reply,
   RotateCcw,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import {
+  Fragment,
   useContext,
   useEffect,
   useLayoutEffect,
@@ -27,6 +29,7 @@ import {
 import type { MouseEvent, ReactElement, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
+import { firstLink, siteOf, textParts } from "../lib/chat-links";
 import { dateKey, formatDay } from "../lib/design-days";
 import type { Photo } from "../lib/design-sample-photos";
 import { spring } from "../lib/motion";
@@ -34,12 +37,14 @@ import { EmojiPickerSheet } from "./design-emoji-picker";
 import {
   everyoneOff,
   patternOn,
+  previewOf,
   reactionChoices,
   weekdayLabels,
 } from "./design-group-data";
 import type {
   Chat,
   Group,
+  LinkPreview,
   Member,
   Message,
   Reaction,
@@ -226,6 +231,15 @@ const chatStyle = {
     textStyle: "subheadline",
     whiteSpace: "pre-wrap",
   }),
+  // A link in a message, underlined as the chat apps mark one; in
+  // others' bubbles in the accent, in yours in the bubble's own color.
+  bubbleLink: cva({
+    base: { textDecoration: "underline", textUnderlineOffset: "2px" },
+    variants: { mine: { false: { color: "accent.default" }, true: {} } },
+  }),
+  // A bubble with a link's page under its words is wide enough for the
+  // page's picture, as LINE draws one.
+  linked: css({ minWidth: "min(240px, 100%)" }),
   // Its buttons stay at the foot as the message grows, as in Messages.
   composer: cva({
     base: {
@@ -675,6 +689,7 @@ export function ChatPage({
 }) {
   const [draft, setDraft] = useState("");
   const [attached, setAttached] = useState(attach);
+  const linkPreview = useLinkPreview(draft);
   // Photos chosen to go with the next send, as the chat apps hold them
   // above the composer: nothing is sent on choosing.
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -813,7 +828,7 @@ export function ChatPage({
     post(
       ...(attached ? [{ days: attached }] : []),
       ...photos.map((photo) => ({ photo })),
-      ...(text ? [{ text }] : [])
+      ...(text ? [{ link: linkPreview.ready, text }] : [])
     );
     setDraft("");
     setAttached(undefined);
@@ -856,6 +871,7 @@ export function ChatPage({
   };
   // The props that turn a message into the opener of its actions.
   const actionsOf = (message: Message) => ({
+    link: message.text ? firstLink(message.text) : undefined,
     mine: message.from === "me",
     onMore: () => {
       setSelected(undefined);
@@ -1012,7 +1028,10 @@ export function ChatPage({
                       // Like the app: the quoted line sits inside the bubble,
                       // above a thin rule, and jumps to the original.
                       <span
-                        className={chatStyle.bubble({ mine })}
+                        className={cx(
+                          chatStyle.bubble({ mine }),
+                          message.link && chatStyle.linked
+                        )}
                         data-part="bubble"
                       >
                         {quote}
@@ -1020,11 +1039,28 @@ export function ChatPage({
                           <button
                             aria-label={`${member?.name ?? ""}のメッセージ：${message.text ?? ""}。押すとリアクションと返信`}
                             className={chatStyle.bubbleText}
+                            // A tap on a link opens it rather than the
+                            // actions, as in the chat apps.
+                            onClickCapture={(event) => {
+                              const url = linkAt(event.target);
+                              if (url) {
+                                event.preventDefault();
+                                openLink(url);
+                              }
+                            }}
                             type="button"
                           >
-                            {message.text}
+                            <MessageText mine={mine} text={message.text} />
                           </button>
                         </MessageActions>
+                        {message.link && (
+                          <LinkCard
+                            onLongPress={() => {
+                              setSelected(message.id);
+                            }}
+                            preview={message.link}
+                          />
+                        )}
                       </span>
                     )}
                     {uploads[message.id] === "failed" && (
@@ -1122,11 +1158,40 @@ export function ChatPage({
           </IconButton>
         </div>
       )}
+      {linkPreview.shown && (
+        <div className={chatStyle.replying}>
+          <span className={chatStyle.quote}>
+            <span className={chatStyle.quoteName}>
+              {linkPreview.ready?.site ?? siteOf(linkPreview.shown)}
+            </span>
+            <span className={chatStyle.quoteText}>
+              {linkPreview.ready?.title ?? "読み込み中…"}
+            </span>
+          </span>
+          {linkPreview.ready?.image && (
+            <img
+              alt=""
+              className={chatStyle.quoteThumb}
+              src={linkPreview.ready.image}
+            />
+          )}
+          <IconButton
+            glass={false}
+            label="リンクのプレビューを付けない"
+            onClick={linkPreview.handleSkip}
+          >
+            <X aria-hidden="true" size={16} />
+          </IconButton>
+        </div>
+      )}
       {photos.length > 0 && (
         <ul
           aria-label="送る写真"
           className={chatStyle.tray({
-            below: replying !== undefined || attached !== undefined,
+            below:
+              replying !== undefined ||
+              attached !== undefined ||
+              linkPreview.shown !== undefined,
           })}
         >
           {photos.map((photo, index) => (
@@ -1153,6 +1218,7 @@ export function ChatPage({
           replying:
             replying !== undefined ||
             attached !== undefined ||
+            linkPreview.shown !== undefined ||
             photos.length > 0,
         })}
         onSubmit={(event) => {
@@ -1414,6 +1480,180 @@ function BubbleQuote({
   );
 }
 
+// A message's words with its links marked. A tap on one opens it (see
+// linkAt): they are not links of their own, as the whole message is the
+// button that opens its actions; the page under it and リンクをコピー
+// reach a link without that tap.
+function MessageText({ text = "", mine }: { text?: string; mine: boolean }) {
+  let at = 0;
+  return textParts(text).map((part) => {
+    const key = at;
+    at += part.text.length;
+    return part.url ? (
+      <span
+        className={chatStyle.bubbleLink({ mine })}
+        data-link={part.url}
+        key={key}
+      >
+        {part.text}
+      </span>
+    ) : (
+      <Fragment key={key}>{part.text}</Fragment>
+    );
+  });
+}
+
+// The link under a tap in a message's words, if it was on one.
+function linkAt(target: EventTarget) {
+  return target instanceof Element
+    ? target.closest<HTMLElement>("[data-link]")?.dataset.link
+    : undefined;
+}
+
+// The apps open a link in the system's browser sheet (SFSafariViewController,
+// Custom Tabs), over the chat; the prototype opens a tab.
+function openLink(url: string) {
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+const linkCard = {
+  // Inset in the bubble, on the card's own ground and edge in either
+  // bubble (as a shared day's card), as the chat apps set a page apart
+  // from the words above it.
+  card: css({
+    bg: "background.card",
+    borderRadius: "md",
+    outline: "1px solid token(colors.border.default)",
+    outlineOffset: "-1px",
+    color: "text.primary",
+    display: "flex",
+    flexDirection: "column",
+    margin: "0 4px 4px",
+    overflow: "hidden",
+    textDecoration: "none",
+    // A long press opens the actions, not the phone's own callout.
+    userSelect: "none",
+    WebkitTouchCallout: "none",
+  }),
+  // Pages give their picture at 1.91:1, the size previews are made for.
+  image: css({
+    aspectRatio: "1.91",
+    bg: "fill.tertiary",
+    display: "block",
+    objectFit: "cover",
+    width: "100%",
+  }),
+  site: css({ color: "text.tertiary", textStyle: "caption2" }),
+  title: css({
+    fontWeight: 600,
+    lineClamp: 2,
+    lineHeight: 1.4,
+    textStyle: "footnote",
+  }),
+  words: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+    padding: "8px 12px",
+  }),
+};
+
+// The page a message's first link leads to, under its words inside the
+// bubble, as LINE shows one: its picture, title and site. A tap opens
+// it; a long press opens the message's actions, as on its words.
+function LinkCard({
+  preview,
+  onLongPress,
+}: {
+  preview: LinkPreview;
+  onLongPress: () => void;
+}) {
+  const press = useLongPress(onLongPress);
+  return (
+    <a
+      className={linkCard.card}
+      href={preview.url}
+      onClick={(event) => {
+        if (press.consumeLongPress()) {
+          event.preventDefault();
+        }
+      }}
+      rel="noopener noreferrer"
+      target="_blank"
+      {...press.handlers}
+    >
+      {preview.image && (
+        <img
+          alt=""
+          className={linkCard.image}
+          draggable={false}
+          src={preview.image}
+        />
+      )}
+      <span className={linkCard.words}>
+        <span className={linkCard.title}>{preview.title}</span>
+        <small className={linkCard.site}>{preview.site}</small>
+      </span>
+    </a>
+  );
+}
+
+// How long a link must stay as written before its page is read, so one
+// typed by hand is not read at every letter; a pasted one is read at once
+// after.
+const linkSettleMs = 400;
+
+// How long the server takes to read a page in the prototype.
+const readMs = 700;
+
+// The preview of the first link being written, as the chat apps make one
+// before sending: read from the server once the link settles, shown over
+// the composer, and sent with the message unless taken off with ×. A
+// message sent before it is read goes without one.
+function useLinkPreview(draft: string) {
+  const link = firstLink(draft);
+  const [settled, setSettled] = useState<string>();
+  const [skipped, setSkipped] = useState<string>();
+  const [pages, setPages] = useState<Record<string, LinkPreview>>({});
+  const asked = useRef(new Set<string>());
+  useEffect(() => {
+    if (!link) {
+      // A new message starts with previews back on.
+      setSkipped(undefined);
+      return;
+    }
+    const timers = [
+      window.setTimeout(() => {
+        setSettled(link);
+      }, linkSettleMs),
+    ];
+    if (!asked.current.has(link)) {
+      timers.push(
+        window.setTimeout(() => {
+          asked.current.add(link);
+          setPages((before) => ({ ...before, [link]: previewOf(link) }));
+        }, linkSettleMs + readMs)
+      );
+    }
+    return () => {
+      for (const timer of timers) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [link]);
+  const shown =
+    link !== undefined && link === settled && link !== skipped
+      ? link
+      : undefined;
+  return {
+    handleSkip: () => {
+      setSkipped(link);
+    },
+    ready: shown ? pages[shown] : undefined,
+    shown,
+  };
+}
+
 // A photo in a chat, as the messaging apps show one: in its own shape
 // with no bubble, unless it answers a line, when the quote's bubble holds
 // it. A tap opens it large, with 保存; its reactions and menu (with 保存
@@ -1560,7 +1800,8 @@ const messageActions = {
   start: css({ alignItems: "flex-start" }),
 };
 
-// Reactions, and a little apart the menu of 返信 and コピー, as the
+// Reactions, and a little apart the menu of 返信 and コピー (and
+// リンクをコピー for a message with a link), as the
 // platforms' context menus on a message in LINE and iMessage: the rest of
 // the screen dims while the message stays bright. Ark UI's
 // Popover opens it from the message, moves focus in, and closes it by a
@@ -1570,6 +1811,7 @@ function MessageActions({
   onOpenChange,
   mine,
   text,
+  link,
   onReact,
   onMore,
   onReply,
@@ -1584,6 +1826,8 @@ function MessageActions({
   onMore: () => void;
   // What コピー copies; shared days have none.
   text?: string;
+  // What リンクをコピー copies: the message's first link.
+  link?: string;
   onReact: (emoji: string) => void;
   onReply: () => void;
   // 保存, for a photo.
@@ -1598,10 +1842,15 @@ function MessageActions({
   const toast = useContext(ToastContext);
   // Focus lands on the whole, as in a sheet, not on 👍 with a ring.
   const contentRef = useRef<HTMLDivElement>(null);
-  const copy = async () => {
+  // The message itself, whatever element it is.
+  const messageRef = useRef<HTMLElement>(null);
+  const setMessage = (element: HTMLElement | null) => {
+    messageRef.current = element;
+  };
+  const copy = async (value: string) => {
     onOpenChange(false);
     try {
-      await navigator.clipboard.writeText(text ?? "");
+      await navigator.clipboard.writeText(value);
       toast("コピーしました");
     } catch {
       toast("コピーできませんでした");
@@ -1616,15 +1865,23 @@ function MessageActions({
       }}
       open={open}
       positioning={{
+        // Under the whole bubble, past a link's page in it too.
+        getAnchorElement: () =>
+          messageRef.current?.closest<HTMLElement>("[data-part=bubble]") ??
+          messageRef.current,
         gutter: 8,
         placement: mine ? "bottom-end" : "bottom-start",
       }}
       unmountOnExit
     >
       {pressToOpen ? (
-        <Popover.Anchor asChild>{children}</Popover.Anchor>
+        <Popover.Anchor asChild ref={setMessage}>
+          {children}
+        </Popover.Anchor>
       ) : (
-        <Popover.Trigger asChild>{children}</Popover.Trigger>
+        <Popover.Trigger asChild ref={setMessage}>
+          {children}
+        </Popover.Trigger>
       )}
       <Portal container={phone ?? undefined}>
         {/* Everything but the message dims, so it is clear which one the
@@ -1677,7 +1934,7 @@ function MessageActions({
                 <button
                   className={menuStyle.item}
                   onClick={() => {
-                    copy().catch(() => undefined);
+                    copy(text).catch(() => undefined);
                   }}
                   type="button"
                 >
@@ -1685,6 +1942,20 @@ function MessageActions({
                     <Copy aria-hidden="true" size={18} />
                   </span>
                   コピー
+                </button>
+              )}
+              {link && (
+                <button
+                  className={menuStyle.item}
+                  onClick={() => {
+                    copy(link).catch(() => undefined);
+                  }}
+                  type="button"
+                >
+                  <span className={menuStyle.icon}>
+                    <Link aria-hidden="true" size={18} />
+                  </span>
+                  リンクをコピー
                 </button>
               )}
               {onSave && (
