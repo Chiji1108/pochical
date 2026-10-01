@@ -4,7 +4,12 @@ import { createConnectTransport } from "@connectrpc/connect-web";
 import { InviteService } from "../gen/pochical/v1/invite_pb";
 
 export type InvitePreview =
-  | { status: "valid"; groupName: string; groupEmoji: string }
+  | {
+      status: "valid";
+      groupName: string;
+      groupEmoji: string;
+      memberCount: number;
+    }
   | { status: "invalid" | "unavailable" };
 // The server as the site reaches it: its service binding's fetch.
 export type InviteFetch = (
@@ -35,11 +40,12 @@ export async function fetchInvitePreview(
     })
   );
   try {
-    const { groupEmoji, groupName } = await client.getInvitePreview(
-      { inviteCode: code },
-      { timeoutMs: TIMEOUT_MS }
-    );
-    return { groupEmoji, groupName, status: "valid" };
+    const { groupEmoji, groupName, memberCount } =
+      await client.getInvitePreview(
+        { inviteCode: code },
+        { timeoutMs: TIMEOUT_MS }
+      );
+    return { groupEmoji, groupName, memberCount, status: "valid" };
   } catch (error) {
     const { code: reason } = ConnectError.from(error);
     const gone = reason === Code.NotFound || reason === Code.InvalidArgument;

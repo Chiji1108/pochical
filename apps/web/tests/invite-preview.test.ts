@@ -11,14 +11,16 @@ test("asks the server's InviteService over Connect", async () => {
   const requests: Request[] = [];
   const recording: InviteFetch = async (input, init) => {
     requests.push(new Request(input, init));
-    return await respond(200, { groupEmoji: "🌿", groupName: "同期" })(
-      input,
-      init
-    );
+    return await respond(200, {
+      groupEmoji: "🌿",
+      groupName: "同期",
+      memberCount: 3,
+    })(input, init);
   };
   expect(await fetchInvitePreview("Abcd2345", recording)).toEqual({
     groupEmoji: "🌿",
     groupName: "同期",
+    memberCount: 3,
     status: "valid",
   });
   const [request] = requests;
@@ -30,7 +32,12 @@ test("asks the server's InviteService over Connect", async () => {
 test("reads a group without an emoji mark", async () => {
   expect(
     await fetchInvitePreview("Abcd2345", respond(200, { groupName: "同期" }))
-  ).toEqual({ groupEmoji: "", groupName: "同期", status: "valid" });
+  ).toEqual({
+    groupEmoji: "",
+    groupName: "同期",
+    memberCount: 0,
+    status: "valid",
+  });
 });
 test("distinguishes revoked links from outages and malformed replies", async () => {
   for (const code of ["not_found", "invalid_argument"]) {
