@@ -7,7 +7,7 @@ import {
 } from "motion/react";
 import { useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { css } from "styled-system/css";
+import { css, cva } from "styled-system/css";
 
 import { DesignCalendar } from "../components/design-calendar";
 import { sampleGroups } from "../components/design-group-data";
@@ -52,17 +52,26 @@ export const Route = createFileRoute("/")({
 // The current proposal for each open design choice, as on /try.
 const variants = parseDesignVariants({});
 
-// The app's own ポチカル sky (おたのしみ): its three pale lights, drawn as
-// a soft glow that fades into the paper on every side, so it never meets
-// the browser's bars. It sits behind the hero's words only, and as in the
-// app, pressing ポチッと。 drifts it to another of the app's skies.
+// The app's own ポチカル sky (おたのしみ), drawn as the app draws it: its
+// three pale lights coming in from the screen's edges. At the page's top
+// it falls from the top corners and the middle, as over the app's
+// calendar; at its end it comes in from both sides. As in the app,
+// pressing ポチッと。 drifts it to another of the app's skies.
 const HERO_SKY = themeSkyId("pochical");
-function skyBackground(id: string) {
+type SkyPlace = "top" | "sides";
+function skyBackground(id: string, place: SkyPlace) {
   const [left, middle, right] = paleSkyLights(id) ?? [];
+  if (place === "top") {
+    return [
+      `radial-gradient(90% 80% at 0% 0%, ${left} 0%, transparent 70%)`,
+      `radial-gradient(90% 80% at 100% 0%, ${right} 0%, transparent 70%)`,
+      `radial-gradient(80% 70% at 50% 25%, ${middle} 0%, transparent 75%)`,
+    ].join(", ");
+  }
   return [
-    `radial-gradient(45% 55% at 25% 40%, ${left} 0%, transparent 70%)`,
-    `radial-gradient(45% 55% at 75% 45%, ${right} 0%, transparent 70%)`,
-    `radial-gradient(50% 60% at 50% 62%, ${middle} 0%, transparent 75%)`,
+    `radial-gradient(70% 70% at 0% 45%, ${left} 0%, transparent 70%)`,
+    `radial-gradient(70% 70% at 100% 55%, ${right} 0%, transparent 70%)`,
+    `radial-gradient(50% 50% at 50% 50%, ${middle} 0%, transparent 75%)`,
   ].join(", ");
 }
 
@@ -87,9 +96,7 @@ const hero = {
     display: "flex",
     flexDirection: "column",
     gap: "24px",
-    isolation: "isolate",
     maxWidth: "460px",
-    position: "relative",
     textAlign: "center",
   }),
   demo: css({
@@ -129,8 +136,6 @@ const hero = {
     display: "flex",
     flexDirection: "column",
     gap: "48px",
-    // The sky behind the words reaches past the screen's sides.
-    overflowX: "clip",
     padding: "40px 16px 72px",
   }),
   store: css({
@@ -148,16 +153,35 @@ const hero = {
 };
 
 const sky = {
-  // A little beyond the hero's words, which keep it behind them, faded
-  // out to nothing at its edges.
-  root: css({
-    inset: "-120px -140px",
-    maskImage: "radial-gradient(closest-side, black 45%, transparent)",
-    // The breathing light reaches past it; the page's width must not.
-    overflow: "hidden",
-    pointerEvents: "none",
-    position: "absolute",
-    zIndex: -1,
+  root: cva({
+    base: {
+      // The breathing light reaches past it; the page's width must not.
+      overflow: "hidden",
+      pointerEvents: "none",
+      position: "absolute",
+      zIndex: -1,
+    },
+    variants: {
+      place: {
+        // At the page's top, under the header too: nothing above it is
+        // positioned, so it sits on the page's own ground. It rises from
+        // the paper at the very top, where Safari's bar keeps the paper's
+        // color, and fades back into it before the phone below.
+        top: {
+          height: "min(860px, 100svh)",
+          inset: "0 0 auto",
+          maskImage:
+            "linear-gradient(to bottom, transparent, black 96px, black 40%, transparent)",
+        },
+        // Across its section from side to side, fading out above and
+        // below, so it never meets the phones or the footer in a line.
+        sides: {
+          inset: 0,
+          maskImage:
+            "linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)",
+        },
+      },
+    },
   }),
   // One sky, fading in over the one before.
   layer: css({ inset: 0, position: "absolute" }),
@@ -166,10 +190,10 @@ const sky = {
 
 // The sky, breathing as slowly as the app's, and giving way to the next
 // as the app's does. None yet, until a press brings the first.
-function Sky({ id }: { id: string | undefined }) {
+function Sky({ id, place }: { id: string | undefined; place: SkyPlace }) {
   const still = useReducedMotion() ?? false;
   return (
-    <div aria-hidden="true" className={sky.root}>
+    <div aria-hidden="true" className={sky.root({ place })}>
       <AnimatePresence initial={false}>
         {id === undefined ? null : (
           <motion.div
@@ -184,7 +208,7 @@ function Sky({ id }: { id: string | undefined }) {
               animate={still ? undefined : { scale: 1.08, x: "2%" }}
               className={sky.light}
               initial={{ scale: 1, x: "-2%" }}
-              style={{ background: skyBackground(id) }}
+              style={{ background: skyBackground(id, place) }}
               transition={{
                 duration: BREATH_SECONDS,
                 ease: "easeInOut",
@@ -646,18 +670,16 @@ const closing = {
     display: "flex",
     flexDirection: "column",
     gap: "24px",
-    isolation: "isolate",
-    position: "relative",
   }),
   icon: css({ borderRadius: "14px" }),
   release: css({ color: ON_SKY_TEXT, fontSize: "11px" }),
   root: css({
     [WIDE]: { padding: "120px 48px 160px" },
     display: "flex",
+    isolation: "isolate",
     justifyContent: "center",
-    // The sky reaches past the screen's sides.
-    overflowX: "clip",
     padding: "96px 16px 120px",
+    position: "relative",
     textAlign: "center",
   }),
   title: css({
@@ -672,8 +694,8 @@ function Closing() {
   const [skyId, setSkyId] = useState<string>();
   return (
     <section aria-labelledby="closing-title" className={closing.root}>
+      <Sky id={skyId} place="sides" />
       <div className={closing.content}>
-        <Sky id={skyId} />
         <img
           alt=""
           className={closing.icon}
@@ -711,7 +733,7 @@ function HeroCopy() {
   const [skyId, setSkyId] = useState(HERO_SKY);
   return (
     <div className={hero.copy}>
-      <Sky id={skyId} />
+      <Sky id={skyId} place="top" />
       <p className={hero.eyebrow}>シフトカレンダー</p>
       <h1 className={hero.title}>
         シフトを、
