@@ -659,7 +659,8 @@ export const states: State[] = [
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
       await tap(page, "お母さんのプロフィール");
-      await tap(page, "ブロック");
+      await tap(page, "お母さんのメニュー");
+      await page.getByRole("menuitem", { name: "ブロック" }).click();
       await page
         .getByRole("alertdialog")
         .getByRole("button", { exact: true, name: "ブロック" })
