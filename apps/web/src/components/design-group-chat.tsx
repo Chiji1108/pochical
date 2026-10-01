@@ -1821,6 +1821,7 @@ export function ChatPage({
         onClose={() => {
           setReporting(undefined);
         }}
+        sends="このメッセージと前後の数件"
         onSend={() => {
           setReporting(undefined);
           toast("通報しました");

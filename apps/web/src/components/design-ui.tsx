@@ -2510,16 +2510,23 @@ export function MenuItem({
   value,
   icon,
   onSelect,
+  danger = false,
   children,
 }: {
   // Names the item for the menu; not shown.
   value: string;
   icon?: ReactNode;
   onSelect: () => void;
+  // Takes something away: in the danger color, as iOS's destructive item.
+  danger?: boolean;
   children: ReactNode;
 }) {
   return (
-    <Menu.Item className={menu.item} onSelect={onSelect} value={value}>
+    <Menu.Item
+      className={cx(menu.item, danger && menu.danger)}
+      onSelect={onSelect}
+      value={value}
+    >
       {icon && <span className={menu.icon}>{icon}</span>}
       {children}
     </Menu.Item>
