@@ -15,6 +15,13 @@
       "when": 1790846435378,
       "tag": "0001_members",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790857859477,
+      "tag": "0002_member_shifts",
+      "breakpoints": true
     }
   ]
 }

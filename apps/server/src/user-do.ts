@@ -1,11 +1,16 @@
+import { create, toBinary } from "@bufbuild/protobuf";
 import { DurableObject } from "cloudflare:workers";
-import { and, asc, eq, gt, max } from "drizzle-orm";
+import { and, asc, eq, gt, max, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
 import { fitsField, hasKey } from "./day-values";
-import { ServerError_Code } from "./gen/pochical/v1/sync_pb";
+import {
+  ChangesSchema,
+  DayField,
+  ServerError_Code,
+} from "./gen/pochical/v1/sync_pb";
 import type {
   Change,
   DayEdits,
@@ -23,6 +28,7 @@ import {
   isSynced,
   rejectAndClose,
   send,
+  sendChanges,
 } from "./sync-socket";
 import migrations from "./user-do-migrations/migrations.js";
 import {
@@ -43,19 +49,10 @@ import {
 } from "./user-do-values";
 import type { DayRow, OrderRow, PatternRow } from "./user-do-values";
 
-// A frame of changes stays well under a WebSocket message's size.
-const CHANGES_PER_FRAME = 500;
 // Edits in one frame; an outbox sends more as several.
 const MAX_EDITS_PER_FRAME = 500;
-
-const sendChanges = (ws: WebSocket, changes: Change[]): void => {
-  for (let at = 0; at < changes.length; at += CHANGES_PER_FRAME) {
-    send(ws, {
-      case: "changes",
-      value: { changes: changes.slice(at, at + CHANGES_PER_FRAME) },
-    });
-  }
-};
+// Values in one push to a group.
+const VALUES_PER_PUSH = 500;
 
 /**
  * The clock a value is written with: the edit's own when the value fits,
@@ -93,13 +90,85 @@ export class UserDO extends DurableObject<Env> {
     );
   }
 
-  /** Written as the user joins a group (joining is not built yet). */
+  /**
+   * Written as the user joins a group or makes one; their shared days and
+   * patterns then start on their way to it.
+   */
   addMembership(groupId: string): void {
     this.db
       .insert(memberships)
       .values({ groupId, joinedAt: new Date() })
       .onConflictDoNothing()
       .run();
+    this.schedulePush();
+  }
+
+  /**
+   * Pushes each of the user's groups what changed for it since it last
+   * took a push. Run by the DO's alarm, which is retried when it throws, so
+   * a group that could not be reached gets the values later; they carry
+   * their clocks, so one taken twice changes nothing.
+   */
+  async alarm(): Promise<void> {
+    const userId = this.ctx.id.name;
+    if (userId === undefined) {
+      return;
+    }
+    const head = this.head();
+    const groups = this.db.select().from(memberships).all();
+    for (const { groupId, pushedCursor } of groups) {
+      // oxlint-disable-next-line no-await-in-loop -- one group at a time
+      await this.pushTo(groupId, userId, this.sharedAfter(pushedCursor));
+      this.db
+        .update(memberships)
+        .set({ pushedCursor: head })
+        .where(eq(memberships.groupId, groupId))
+        .run();
+    }
+  }
+
+  private schedulePush(): void {
+    void this.ctx.storage.setAlarm(Date.now());
+  }
+
+  /**
+   * What a group sees of the user, changed after `cursor`: days' pattern
+   * and times, never the memo, and their patterns.
+   */
+  private sharedAfter(cursor: number): Change[] {
+    const days = this.db
+      .select()
+      .from(dayFields)
+      .where(
+        and(gt(dayFields.cursor, cursor), ne(dayFields.field, DayField.NOTE))
+      )
+      .all();
+    const kept = this.db
+      .select()
+      .from(patterns)
+      .where(gt(patterns.cursor, cursor))
+      .all();
+    return [...days.map(dayChange), ...kept.map(patternChange)].toSorted(
+      (a, b) => (a.cursor < b.cursor ? -1 : 1)
+    );
+  }
+
+  private async pushTo(
+    groupId: string,
+    userId: string,
+    changes: Change[]
+  ): Promise<void> {
+    const group = this.env.GROUPS.getByName(groupId);
+    for (let at = 0; at < changes.length; at += VALUES_PER_PUSH) {
+      const pushed = toBinary(
+        ChangesSchema,
+        create(ChangesSchema, {
+          changes: changes.slice(at, at + VALUES_PER_PUSH),
+        })
+      );
+      // oxlint-disable-next-line no-await-in-loop -- in order, to one group
+      await group.takeMemberShifts(userId, pushed);
+    }
   }
 
   /** The user's own socket, forwarded once the Worker has checked them. */
@@ -216,6 +285,9 @@ export class UserDO extends DurableObject<Env> {
       case: "acked",
       value: { opIds: edits.map(({ opId }) => opId) },
     });
+    if (changed.length > 0) {
+      this.schedulePush();
+    }
     for (const socket of this.ctx.getWebSockets()) {
       if (isSynced(socket)) {
         sendChanges(socket, changed);

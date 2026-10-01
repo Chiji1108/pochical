@@ -28,6 +28,8 @@ public  final class Change extends
     DAY(2),
     PATTERN(3),
     PATTERN_ORDER(4),
+    MEMBER_DAY(5),
+    MEMBER_PATTERN(6),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -46,6 +48,8 @@ public  final class Change extends
         case 2: return DAY;
         case 3: return PATTERN;
         case 4: return PATTERN_ORDER;
+        case 5: return MEMBER_DAY;
+        case 6: return MEMBER_PATTERN;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -238,6 +242,131 @@ public  final class Change extends
    */
   private void clearPatternOrder() {
     if (kindCase_ == 4) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int MEMBER_DAY_FIELD_NUMBER = 5;
+  /**
+   * <pre>
+   * On a Group DO socket: a member's shared days and patterns, as their
+   * User DO pushes them (spec/sync-protocol.md, Group projection).
+   * </pre>
+   *
+   * <code>.pochical.v1.MemberDay member_day = 5 [json_name = "memberDay"];</code>
+   */
+  @java.lang.Override
+  public boolean hasMemberDay() {
+    return kindCase_ == 5;
+  }
+  /**
+   * <pre>
+   * On a Group DO socket: a member's shared days and patterns, as their
+   * User DO pushes them (spec/sync-protocol.md, Group projection).
+   * </pre>
+   *
+   * <code>.pochical.v1.MemberDay member_day = 5 [json_name = "memberDay"];</code>
+   */
+  @java.lang.Override
+  public tech.chiji.pochical.v1.MemberDay getMemberDay() {
+    if (kindCase_ == 5) {
+       return (tech.chiji.pochical.v1.MemberDay) kind_;
+    }
+    return tech.chiji.pochical.v1.MemberDay.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * On a Group DO socket: a member's shared days and patterns, as their
+   * User DO pushes them (spec/sync-protocol.md, Group projection).
+   * </pre>
+   *
+   * <code>.pochical.v1.MemberDay member_day = 5 [json_name = "memberDay"];</code>
+   */
+  private void setMemberDay(tech.chiji.pochical.v1.MemberDay value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 5;
+  }
+  /**
+   * <pre>
+   * On a Group DO socket: a member's shared days and patterns, as their
+   * User DO pushes them (spec/sync-protocol.md, Group projection).
+   * </pre>
+   *
+   * <code>.pochical.v1.MemberDay member_day = 5 [json_name = "memberDay"];</code>
+   */
+  private void mergeMemberDay(tech.chiji.pochical.v1.MemberDay value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 5 &&
+        kind_ != tech.chiji.pochical.v1.MemberDay.getDefaultInstance()) {
+      kind_ = tech.chiji.pochical.v1.MemberDay.newBuilder((tech.chiji.pochical.v1.MemberDay) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 5;
+  }
+  /**
+   * <pre>
+   * On a Group DO socket: a member's shared days and patterns, as their
+   * User DO pushes them (spec/sync-protocol.md, Group projection).
+   * </pre>
+   *
+   * <code>.pochical.v1.MemberDay member_day = 5 [json_name = "memberDay"];</code>
+   */
+  private void clearMemberDay() {
+    if (kindCase_ == 5) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int MEMBER_PATTERN_FIELD_NUMBER = 6;
+  /**
+   * <code>.pochical.v1.MemberPattern member_pattern = 6 [json_name = "memberPattern"];</code>
+   */
+  @java.lang.Override
+  public boolean hasMemberPattern() {
+    return kindCase_ == 6;
+  }
+  /**
+   * <code>.pochical.v1.MemberPattern member_pattern = 6 [json_name = "memberPattern"];</code>
+   */
+  @java.lang.Override
+  public tech.chiji.pochical.v1.MemberPattern getMemberPattern() {
+    if (kindCase_ == 6) {
+       return (tech.chiji.pochical.v1.MemberPattern) kind_;
+    }
+    return tech.chiji.pochical.v1.MemberPattern.getDefaultInstance();
+  }
+  /**
+   * <code>.pochical.v1.MemberPattern member_pattern = 6 [json_name = "memberPattern"];</code>
+   */
+  private void setMemberPattern(tech.chiji.pochical.v1.MemberPattern value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 6;
+  }
+  /**
+   * <code>.pochical.v1.MemberPattern member_pattern = 6 [json_name = "memberPattern"];</code>
+   */
+  private void mergeMemberPattern(tech.chiji.pochical.v1.MemberPattern value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 6 &&
+        kind_ != tech.chiji.pochical.v1.MemberPattern.getDefaultInstance()) {
+      kind_ = tech.chiji.pochical.v1.MemberPattern.newBuilder((tech.chiji.pochical.v1.MemberPattern) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 6;
+  }
+  /**
+   * <code>.pochical.v1.MemberPattern member_pattern = 6 [json_name = "memberPattern"];</code>
+   */
+  private void clearMemberPattern() {
+    if (kindCase_ == 6) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -529,6 +658,132 @@ public  final class Change extends
       return this;
     }
 
+    /**
+     * <pre>
+     * On a Group DO socket: a member's shared days and patterns, as their
+     * User DO pushes them (spec/sync-protocol.md, Group projection).
+     * </pre>
+     *
+     * <code>.pochical.v1.MemberDay member_day = 5 [json_name = "memberDay"];</code>
+     */
+    @java.lang.Override
+    public boolean hasMemberDay() {
+      return instance.hasMemberDay();
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: a member's shared days and patterns, as their
+     * User DO pushes them (spec/sync-protocol.md, Group projection).
+     * </pre>
+     *
+     * <code>.pochical.v1.MemberDay member_day = 5 [json_name = "memberDay"];</code>
+     */
+    @java.lang.Override
+    public tech.chiji.pochical.v1.MemberDay getMemberDay() {
+      return instance.getMemberDay();
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: a member's shared days and patterns, as their
+     * User DO pushes them (spec/sync-protocol.md, Group projection).
+     * </pre>
+     *
+     * <code>.pochical.v1.MemberDay member_day = 5 [json_name = "memberDay"];</code>
+     */
+    public Builder setMemberDay(tech.chiji.pochical.v1.MemberDay value) {
+      copyOnWrite();
+      instance.setMemberDay(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: a member's shared days and patterns, as their
+     * User DO pushes them (spec/sync-protocol.md, Group projection).
+     * </pre>
+     *
+     * <code>.pochical.v1.MemberDay member_day = 5 [json_name = "memberDay"];</code>
+     */
+    public Builder setMemberDay(
+        tech.chiji.pochical.v1.MemberDay.Builder builderForValue) {
+      copyOnWrite();
+      instance.setMemberDay(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: a member's shared days and patterns, as their
+     * User DO pushes them (spec/sync-protocol.md, Group projection).
+     * </pre>
+     *
+     * <code>.pochical.v1.MemberDay member_day = 5 [json_name = "memberDay"];</code>
+     */
+    public Builder mergeMemberDay(tech.chiji.pochical.v1.MemberDay value) {
+      copyOnWrite();
+      instance.mergeMemberDay(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: a member's shared days and patterns, as their
+     * User DO pushes them (spec/sync-protocol.md, Group projection).
+     * </pre>
+     *
+     * <code>.pochical.v1.MemberDay member_day = 5 [json_name = "memberDay"];</code>
+     */
+    public Builder clearMemberDay() {
+      copyOnWrite();
+      instance.clearMemberDay();
+      return this;
+    }
+
+    /**
+     * <code>.pochical.v1.MemberPattern member_pattern = 6 [json_name = "memberPattern"];</code>
+     */
+    @java.lang.Override
+    public boolean hasMemberPattern() {
+      return instance.hasMemberPattern();
+    }
+    /**
+     * <code>.pochical.v1.MemberPattern member_pattern = 6 [json_name = "memberPattern"];</code>
+     */
+    @java.lang.Override
+    public tech.chiji.pochical.v1.MemberPattern getMemberPattern() {
+      return instance.getMemberPattern();
+    }
+    /**
+     * <code>.pochical.v1.MemberPattern member_pattern = 6 [json_name = "memberPattern"];</code>
+     */
+    public Builder setMemberPattern(tech.chiji.pochical.v1.MemberPattern value) {
+      copyOnWrite();
+      instance.setMemberPattern(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.MemberPattern member_pattern = 6 [json_name = "memberPattern"];</code>
+     */
+    public Builder setMemberPattern(
+        tech.chiji.pochical.v1.MemberPattern.Builder builderForValue) {
+      copyOnWrite();
+      instance.setMemberPattern(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.MemberPattern member_pattern = 6 [json_name = "memberPattern"];</code>
+     */
+    public Builder mergeMemberPattern(tech.chiji.pochical.v1.MemberPattern value) {
+      copyOnWrite();
+      instance.mergeMemberPattern(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.MemberPattern member_pattern = 6 [json_name = "memberPattern"];</code>
+     */
+    public Builder clearMemberPattern() {
+      copyOnWrite();
+      instance.clearMemberPattern();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.Change)
   }
   @java.lang.Override
@@ -551,10 +806,12 @@ public  final class Change extends
             tech.chiji.pochical.v1.DayValue.class,
             tech.chiji.pochical.v1.PatternValue.class,
             tech.chiji.pochical.v1.PatternOrder.class,
+            tech.chiji.pochical.v1.MemberDay.class,
+            tech.chiji.pochical.v1.MemberPattern.class,
           };
           java.lang.String info =
-              "\u0000\u0004\u0001\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0003\u0002<\u0000" +
-              "\u0003<\u0000\u0004<\u0000";
+              "\u0000\u0006\u0001\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001\u0003\u0002<\u0000" +
+              "\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

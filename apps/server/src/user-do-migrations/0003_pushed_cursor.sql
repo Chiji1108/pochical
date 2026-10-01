@@ -1,0 +1,1 @@
+ALTER TABLE `memberships` ADD `pushed_cursor` integer DEFAULT 0 NOT NULL;

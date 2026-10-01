@@ -17,6 +17,10 @@ import {
 export const memberships = sqliteTable("memberships", {
   groupId: text("group_id").primaryKey(),
   joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull(),
+  // How far this user's shared values have reached the group: the cursor
+  // up to which they were pushed and taken (spec/sync-protocol.md, Group
+  // projection). Everything after it is still to go.
+  pushedCursor: integer("pushed_cursor").notNull().default(0),
 });
 
 // The user's own days, a row for each field of each day as a

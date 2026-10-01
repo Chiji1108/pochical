@@ -49,5 +49,37 @@ public interface ChangeOrBuilder extends
    */
   tech.chiji.pochical.v1.PatternOrder getPatternOrder();
 
+  /**
+   * <pre>
+   * On a Group DO socket: a member's shared days and patterns, as their
+   * User DO pushes them (spec/sync-protocol.md, Group projection).
+   * </pre>
+   *
+   * <code>.pochical.v1.MemberDay member_day = 5 [json_name = "memberDay"];</code>
+   * @return Whether the memberDay field is set.
+   */
+  boolean hasMemberDay();
+  /**
+   * <pre>
+   * On a Group DO socket: a member's shared days and patterns, as their
+   * User DO pushes them (spec/sync-protocol.md, Group projection).
+   * </pre>
+   *
+   * <code>.pochical.v1.MemberDay member_day = 5 [json_name = "memberDay"];</code>
+   * @return The memberDay.
+   */
+  tech.chiji.pochical.v1.MemberDay getMemberDay();
+
+  /**
+   * <code>.pochical.v1.MemberPattern member_pattern = 6 [json_name = "memberPattern"];</code>
+   * @return Whether the memberPattern field is set.
+   */
+  boolean hasMemberPattern();
+  /**
+   * <code>.pochical.v1.MemberPattern member_pattern = 6 [json_name = "memberPattern"];</code>
+   * @return The memberPattern.
+   */
+  tech.chiji.pochical.v1.MemberPattern getMemberPattern();
+
   public tech.chiji.pochical.v1.Change.KindCase getKindCase();
 }
