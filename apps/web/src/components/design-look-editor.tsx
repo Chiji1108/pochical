@@ -9,10 +9,10 @@ import {
   ChoiceGrid,
   colorGrid,
   fieldLabel,
-  fieldStyle,
   List,
   ListRow,
   markGrid,
+  MarkLetterInput,
   markPreview,
   Note,
   PageHeader,
@@ -95,13 +95,6 @@ export const iconNames: Record<MarkIcon, string> = {
   utensils: "食事",
   waves: "波",
 };
-
-const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
-
-// The letter just typed, which replaces the one already there.
-function lastGrapheme(value: string) {
-  return [...graphemes.segment(value)].at(-1)?.segment;
-}
 
 const allIcons = Object.keys(markIcons) as MarkIcon[];
 
@@ -281,21 +274,13 @@ function LetterEditor({
       <ListRow
         label="文字"
         control={
-          <>
-            <input
-              className={fieldStyle({ align: "end", look: "inline" })}
-              onChange={(event) => {
-                const symbol = lastGrapheme(event.target.value);
-                if (symbol) {
-                  onPick("symbol", { symbol });
-                }
-              }}
-              onFocus={(event) => {
-                event.currentTarget.select();
-              }}
-              value={look.symbol}
-            />
-          </>
+          <MarkLetterInput
+            kind="shiftMark"
+            onLetter={(symbol) => {
+              onPick("symbol", { symbol });
+            }}
+            value={look.symbol}
+          />
         }
       />
     </List>

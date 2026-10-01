@@ -56,6 +56,7 @@ import {
   LimitedInput,
   LimitedTextArea,
   ListDivider,
+  MarkLetterInput,
   OptionCard,
   Pager,
   SampleTag,
@@ -919,6 +920,7 @@ function Fields() {
   const [note, setNote] = useState("棚卸し");
   const [member, setMember] = useState("");
   const [message, setMessage] = useState("");
+  const [letter, setLetter] = useState("日");
   return (
     <Group
       note="LimitedInput の look で見た目を選びます。inline は行の中、box は地の上に1つ、chip はチップの間。文字数の上限を超えそうになると数を出します。"
@@ -944,6 +946,26 @@ function Fields() {
               />
             }
             label="名前"
+          />
+        </List>
+      </Item>
+      <Item
+        android="ListItem の trailingContent に BasicTextField（右寄せ。変換が確定したら頭の文字だけ残す）"
+        ios="LabeledContent の中の TextField（右寄せ。変換が確定したら頭の文字だけ残す）"
+        name="MarkLetterInput"
+        where="パターンの印の文字（1文字）、グループの文字のアイコン（2文字）"
+        wide
+      >
+        <List>
+          <ListRow
+            control={
+              <MarkLetterInput
+                kind="shiftMark"
+                onLetter={setLetter}
+                value={letter}
+              />
+            }
+            label="文字"
           />
         </List>
       </Item>

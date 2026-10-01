@@ -868,6 +868,46 @@ export function LimitedInput({
   );
 }
 
+// A mark's letter, a shift's or a group's: its first characters, up to the
+// limit, with no count, since the mark beside it shows what fits. It may
+// be empty while written, and left empty it shows the letter it had; a
+// mark is never without one. Focusing selects the letter, so typing
+// replaces it.
+export function MarkLetterInput({
+  kind,
+  value,
+  onLetter,
+}: {
+  kind: "shiftMark" | "groupMark";
+  value: string;
+  onLetter: (letter: string) => void;
+}) {
+  const [draft, setDraft] = useState<string>();
+  return (
+    <LimitedInput
+      align="end"
+      aria-label="文字"
+      counter={false}
+      kind={kind}
+      look="inline"
+      onBlur={() => {
+        setDraft(undefined);
+      }}
+      onFocus={(event) => {
+        event.currentTarget.select();
+      }}
+      onValueChange={(next) => {
+        setDraft(next);
+        const count = characterCount(next);
+        if (count > 0 && count <= textLimits[kind]) {
+          onLetter(next);
+        }
+      }}
+      value={draft ?? value}
+    />
+  );
+}
+
 // A field over as many lines as it is written in, as a message is. The
 // field and an unseen copy of its text share one grid cell, and the copy
 // sizes the cell: the field grows with its lines, up to `--lines` of them

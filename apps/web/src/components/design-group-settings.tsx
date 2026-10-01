@@ -32,11 +32,11 @@ import {
   fieldLabel,
   HeaderAction,
   IconButton,
-  fieldStyle,
   LimitedInput,
   List,
   ListRow,
   markGrid,
+  MarkLetterInput,
   markValue,
   Note,
   PageHeader,
@@ -616,20 +616,13 @@ function GroupMarkPage({
             <ListRow
               label="文字"
               control={
-                <>
-                  <input
-                    className={fieldStyle({ align: "end", look: "inline" })}
-                    maxLength={2}
-                    onChange={(event) => {
-                      onChange({
-                        color,
-                        kind: "letter",
-                        text: event.target.value,
-                      });
-                    }}
-                    value={letter}
-                  />
-                </>
+                <MarkLetterInput
+                  kind="groupMark"
+                  onLetter={(text) => {
+                    onChange({ color, kind: "letter", text });
+                  }}
+                  value={letter}
+                />
               }
             />
           </List>
