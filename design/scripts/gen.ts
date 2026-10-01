@@ -43,6 +43,7 @@ import {
 import type { Preset } from "../src/themes";
 import { textStyles } from "../src/type";
 import { widgetRules } from "../src/widgets";
+import { swiftPhrases } from "./phrases";
 
 const root = path.join(import.meta.dir, "../..");
 const themes: readonly Preset[] = presets;
@@ -335,6 +336,7 @@ function kotlin() {
     "import androidx.compose.ui.graphics.Color",
     "import androidx.compose.ui.text.TextStyle",
     "import androidx.compose.ui.text.font.FontWeight",
+    "import androidx.compose.ui.text.style.LineBreak",
     "import androidx.compose.ui.unit.Dp",
     "import androidx.compose.ui.unit.dp",
     "import androidx.compose.ui.unit.sp",
@@ -367,11 +369,22 @@ function kotlin() {
     "  }",
     "}",
     "",
-    "/** iOS's text styles at their default sizes, which the app's type scale follows. */",
+    "/**",
+    " * iOS's text styles at their default sizes, which the app's type scale follows.",
+    " * Japanese breaks between phrases (Android 13 and later), not in the middle of",
+    " * a word, as the site's does with BudouX.",
+    " */",
     "object PochicalTextStyles {",
+    "  private val phrases =",
+    "    LineBreak(",
+    "      strategy = LineBreak.Strategy.HighQuality,",
+    "      strictness = LineBreak.Strictness.Strict,",
+    "      wordBreak = LineBreak.WordBreak.Phrase,",
+    "    )",
+    "",
     ...Object.entries(textStyles).map(
       ([name, { size, weight }]) =>
-        `  val ${name} = TextStyle(fontSize = ${size}.sp, fontWeight = FontWeight(${weight}))`
+        `  val ${name} = TextStyle(fontSize = ${size}.sp, fontWeight = FontWeight(${weight}), lineBreak = phrases)`
     ),
     "}",
     "",
@@ -520,6 +533,7 @@ const outputs = {
       `public let groupMaxMembers = ${GROUP_MAX_MEMBERS}`,
     ]
   ),
+  [`${SWIFT_DIR}/Phrases.swift`]: swiftFile(swiftPhrases()),
   ...sharedOutputs,
   "spec/design-tokens.json": json(),
 };
