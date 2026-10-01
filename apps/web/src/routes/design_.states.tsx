@@ -26,6 +26,7 @@ import {
 } from "../components/design-theme";
 import type { NoteMarkerLook, PresetId } from "../components/design-theme";
 import {
+  CornerColorContext,
   OffDisplayContext,
   OffHighlightContext,
   ShiftMarkStyleContext,
@@ -100,6 +101,14 @@ const markerThemes: { preset: PresetId; scheme: ColorScheme; label: string }[] =
     { label: "月夜", preset: "tsukiyo", scheme: "dark" },
     { label: "喫茶", preset: "kissa", scheme: "dark" },
   ];
+
+const cornerColors: { color: "gray" | "shift"; label: string }[] = [
+  { color: "gray", label: "グレー（今）" },
+  { color: "shift", label: "シフトの色" },
+];
+const cornerThemes = markerThemes.filter(({ preset }) =>
+  ["pochical", "sumi"].includes(preset)
+);
 
 const patternCounts = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13] as const;
 const markStyles: { style: ShiftMarkStyle; label: string }[] = [
@@ -200,6 +209,37 @@ function StatesPage() {
                     </Scheme>
                   </NoteMarkerContext>
                 ))}
+              </FrameRow>
+            ))}
+          </FrameSection>
+
+          <FrameSection
+            description="早出（左上）と残業（右上）の角。8日・25日が残業、19日が早出です。文字のマークでも比べます。"
+            title="早出・残業の角の色"
+          >
+            {cornerThemes.map(({ preset, scheme, label: themeLabel }) => (
+              <FrameRow branch={themeLabel} fan key={themeLabel}>
+                {cornerColors.flatMap(({ color, label }) =>
+                  markStyles
+                    .filter(({ style }) => style !== "emoji")
+                    .map(({ style, label: styleLabel }) => (
+                      <CornerColorContext
+                        key={`${color}-${style}`}
+                        value={color}
+                      >
+                        <ShiftMarkStyleContext value={style}>
+                          <NoteMarkerContext value="tint">
+                            <Scheme preset={preset} scheme={scheme}>
+                              <CalendarFrame
+                                label={`${label}・${styleLabel}`}
+                                person={memoPerson}
+                              />
+                            </Scheme>
+                          </NoteMarkerContext>
+                        </ShiftMarkStyleContext>
+                      </CornerColorContext>
+                    ))
+                )}
               </FrameRow>
             ))}
           </FrameSection>

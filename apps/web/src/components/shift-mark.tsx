@@ -30,6 +30,11 @@ export const defaultCellNames: CellNames = {
 // still reads at 16px, where words would not: the start of the day at the
 // left, the end at the right. Inside the mark's box, it never reaches a
 // neighbor in a narrow group table.
+// The corners' color, being decided on /design/states: the テーマ's gray,
+// as now, or the shift's own color, as part of the mark they sit on.
+export type CornerColor = "gray" | "shift";
+export const CornerColorContext = createContext<CornerColor>("gray");
+
 function TimeSide({ side }: { side: "early" | "late" }) {
   return (
     <span
@@ -71,7 +76,7 @@ const glyphStyle = {
     placeItems: "center",
   }),
   time: css({
-    bg: "text.secondary",
+    bg: "var(--sm-corner, token(colors.text.secondary))",
     height: "calc(var(--sm-size) * 0.32)",
     position: "absolute",
     top: "-2px",
@@ -525,14 +530,23 @@ export function MarkGlyph({
   early?: boolean;
   late?: boolean;
 }) {
+  const { color } = useDisplayColor(look.color);
+  const corner = useContext(CornerColorContext);
   const glyph = <BareGlyph look={look} size={size} style={style} />;
   if (!(early || late)) {
     return glyph;
   }
+  // Emoji bring their own colors, so their corners stay gray.
+  const shiftCorner = corner === "shift" && style !== "emoji";
   return (
     <span
       className={glyphStyle.timed}
-      style={{ "--sm-size": `${size}px` } as CSSProperties}
+      style={
+        {
+          "--sm-corner": shiftCorner ? color : undefined,
+          "--sm-size": `${size}px`,
+        } as CSSProperties
+      }
     >
       {early && <TimeSide side="early" />}
       {glyph}
