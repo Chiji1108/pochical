@@ -73,6 +73,8 @@ const flatText = {
   // Faint, as the day-off tiles, or the stroke would be a solid block
   // under its white date.
   "--calendar-note-marker": "rgb(255 255 255 / 0.24)",
+  // Lines between rows stay quiet, as on a full-color ground.
+  "--separator": "rgb(255 255 255 / 0.2)",
   "--text-primary": "#fff",
   "--text-quaternary": "rgb(255 255 255 / 0.25)",
   "--text-secondary": "rgb(255 255 255 / 0.6)",
