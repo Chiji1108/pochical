@@ -2,7 +2,10 @@ import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { ConnectRouter } from "@connectrpc/connect";
 import { env } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
 
+import { invites } from "./db/schema";
 import {
   GetInvitePreviewResponseSchema,
   InviteService,
@@ -12,12 +15,12 @@ import {
 const INVITE_CODE = /^[A-HJ-NP-Za-km-z2-9]{8}$/u;
 
 const findGroupId = async (inviteCode: string): Promise<string | null> => {
-  const row = await env.DB.prepare(
-    "SELECT group_id FROM invites WHERE code = ?"
-  )
-    .bind(inviteCode)
-    .first<{ group_id: string }>();
-  return row?.group_id ?? null;
+  const row = await drizzle(env.DB)
+    .select({ groupId: invites.groupId })
+    .from(invites)
+    .where(eq(invites.code, inviteCode))
+    .get();
+  return row?.groupId ?? null;
 };
 
 export const registerInviteService = (router: ConnectRouter): void => {

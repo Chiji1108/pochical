@@ -1,7 +1,12 @@
 import { env, exports } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
+import { invites } from "../src/db/schema";
+
 const ORIGIN = "https://server.test";
+const db = drizzle(env.DB);
 
 const getInvitePreview = async (inviteCode: string): Promise<Response> =>
   await exports.default.fetch(
@@ -19,9 +24,7 @@ const addGroup = async (
   emoji: string | null
 ): Promise<void> => {
   await env.GROUP_ROOM.getByName(groupId).setProfile({ emoji, name: "同期" });
-  await env.DB.prepare("INSERT INTO invites (code, group_id) VALUES (?, ?)")
-    .bind(inviteCode, groupId)
-    .run();
+  await db.insert(invites).values({ code: inviteCode, groupId });
 };
 
 describe("InviteService.GetInvitePreview", () => {
@@ -45,9 +48,10 @@ describe("InviteService.GetInvitePreview", () => {
 
   it("answers NOT_FOUND once the code is replaced", async () => {
     await addGroup("remade", "Before23", "🌿");
-    await env.DB.prepare("UPDATE invites SET code = ? WHERE group_id = ?")
-      .bind("After234", "remade")
-      .run();
+    await db
+      .update(invites)
+      .set({ code: "After234" })
+      .where(eq(invites.groupId, "remade"));
 
     const response = await getInvitePreview("Before23");
     expect(response.status).toBe(404);
@@ -55,9 +59,9 @@ describe("InviteService.GetInvitePreview", () => {
   });
 
   it("answers NOT_FOUND for a code whose group has no profile", async () => {
-    await env.DB.prepare("INSERT INTO invites (code, group_id) VALUES (?, ?)")
-      .bind("Empty234", "never-set-up")
-      .run();
+    await db
+      .insert(invites)
+      .values({ code: "Empty234", groupId: "never-set-up" });
 
     const response = await getInvitePreview("Empty234");
     expect(response.status).toBe(404);
