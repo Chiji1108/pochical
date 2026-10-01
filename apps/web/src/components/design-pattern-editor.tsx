@@ -5,7 +5,7 @@ import { css } from "styled-system/css";
 import { isRepeating } from "../lib/design-days";
 import { PATTERNS_PER_PAGE, presetList } from "../lib/design-patterns";
 import type { Pattern, PresetShift } from "../lib/design-patterns";
-import { useUser } from "../lib/design-user-store";
+import { useShownDays, useUser } from "../lib/design-user-store";
 import { LookEditorPage } from "./design-look-editor";
 import type { LookField } from "./design-look-editor";
 import { ConfirmDialog } from "./design-sheet";
@@ -128,13 +128,14 @@ export function PatternsPage({ onBack }: { onBack: () => void }) {
   const style = useContext(ShiftMarkStyleContext);
   const items = useUser((state) => state.patterns);
   const setItems = useUser((state) => state.setPatterns);
-  const schedule = useUser((state) => state.schedule);
-  const setSchedule = useUser((state) => state.setSchedule);
+  const schedule = useShownDays();
+  const setOwnDays = useUser((state) => state.setSchedule);
   const rules = useUser((state) => state.rules);
   const [editing, setEditing] = useState<PatternDraft>();
   const [isNew, setIsNew] = useState(false);
   const [view, setView] = useState<"list" | "sort" | "add">("list");
-  // The days a pattern is entered on, which go with it.
+  // The days a pattern shows on, of their own or from an order, which go
+  // with it.
   const daysOf = (id: string) =>
     Object.values(schedule).filter((entry) => entry?.shift === id).length;
   // The repeating order in use still needs it.
@@ -149,7 +150,8 @@ export function PatternsPage({ onBack }: { onBack: () => void }) {
           item.nextDay === id ? { ...item, nextDay: undefined } : item
         )
     );
-    setSchedule((previous) =>
+    // Days the pattern came to from an order go with it, as it is gone.
+    setOwnDays((previous) =>
       Object.fromEntries(
         Object.entries(previous).filter(([, entry]) => entry?.shift !== id)
       )

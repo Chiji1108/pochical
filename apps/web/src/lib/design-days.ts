@@ -16,33 +16,27 @@ export type DayEntry = {
   members?: string[];
 };
 export type Schedule = Record<string, DayEntry | undefined>;
-// A repeating order of shifts; `start` is the first day of the sequence and
-// the day the rule takes over from the one before it.
-// `holidaysOff` turns national holidays into 休み, for people off on them.
-// `anchor` is a day that falls on the first shift of the sequence, when
-// that is not `start` itself.
+
+// What the person set on a day themselves, the only days kept
+// (spec/shift-patterns.md, Repeating orders): a shift of their own, or ""
+// for a day cleared on purpose. A day without one follows its repeating
+// order.
+export type OwnDay = Omit<DayEntry, "shift"> & { shift?: Shift };
+export type OwnDays = Record<string, OwnDay | undefined>;
+
+// A repeating order of shifts; `start` is the first day it applies, taking
+// over from the order before it. `anchor` is a day that falls on the
+// sequence's first shift, when that is not `start` itself. With
+// `holidaysOff`, national holidays take `holidayShift`, the day off the
+// person had first when it was turned on.
 export type RepeatRule = {
   sequence: Shift[];
   start: Date;
   anchor?: Date;
   holidaysOff?: boolean;
-  // The pattern it put on holidays, so turning them back finds those days
-  // even after the person's patterns have changed.
   holidayShift?: Shift;
 };
 
-// What a rule fills in from its start, a year ahead, with holidays on
-// `holidayShift` when there is one.
-export function ruleSchedule(rule: RepeatRule, holidayShift?: Shift) {
-  const { sequence, start } = rule;
-  return repeatSchedule(
-    sequence,
-    rule.anchor ?? start,
-    start,
-    ruleEnd(start),
-    holidayShift
-  );
-}
 export type PatternCount = 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13;
 const eight: PresetShift[] = [
   "early",
@@ -172,12 +166,6 @@ export function initialDesignSchedule(
   );
 }
 
-// Repeating shifts are filled in a year ahead: through the end of the
-// month a year after the rule's start.
-export function ruleEnd(start: Date) {
-  return new Date(start.getFullYear(), start.getMonth() + 13, 0);
-}
-
 // Lays a repeating sequence over [from, to], counting from the anchor day so
 // days before the anchor line up too.
 export function repeatSchedule(
@@ -207,6 +195,129 @@ export function repeatSchedule(
     };
   }
   return schedule;
+}
+
+// How far ahead /design works days out: the apps work out whichever
+// month is shown, but /design lists the days, so it stops two years on.
+const MONTHS_AHEAD = 24;
+
+export function workedOutThrough(rules: readonly RepeatRule[], today: Date) {
+  const last = Math.max(
+    today.getTime(),
+    ...rules.map(({ start }) => start.getTime())
+  );
+  const from = new Date(last);
+  return new Date(from.getFullYear(), from.getMonth() + MONTHS_AHEAD + 1, 0);
+}
+
+// Each day's shift by the repeating orders alone, through `through`: a day
+// follows the latest order that starts on or before it, and an order with
+// an empty sequence ends repeating. A pattern that is gone (not in
+// `known`) leaves its days empty.
+export function plannedShifts(
+  rules: readonly RepeatRule[],
+  known: ReadonlySet<Shift>,
+  through: Date
+): Record<string, Shift> {
+  const ordered = [...rules].sort(
+    (a, b) => a.start.getTime() - b.start.getTime()
+  );
+  const planned: Record<string, Shift> = {};
+  for (const [index, rule] of ordered.entries()) {
+    const next = ordered[index + 1];
+    const to = next ? addDays(next.start, -1) : through;
+    if (rule.sequence.length === 0 || to < rule.start) {
+      continue;
+    }
+    const days = repeatSchedule(
+      rule.sequence,
+      rule.anchor ?? rule.start,
+      rule.start,
+      to,
+      rule.holidaysOff ? rule.holidayShift : undefined
+    );
+    for (const [key, entry] of Object.entries(days)) {
+      if (entry && known.has(entry.shift)) {
+        planned[key] = entry.shift;
+      }
+    }
+  }
+  return planned;
+}
+
+// A day as it shows: its own shift, else its order's; "" shows nothing.
+export function shownDay(
+  own: OwnDay | undefined,
+  planned: Shift | undefined
+): DayEntry | undefined {
+  const shift = own?.shift ?? planned;
+  if (!shift) {
+    return;
+  }
+  return { ...own, shift };
+}
+
+// Every day that shows a shift, from the person's own days and orders.
+export function shownDays(
+  own: OwnDays,
+  planned: Record<string, Shift>
+): Schedule {
+  const keys = new Set([...Object.keys(planned), ...Object.keys(own)]);
+  return Object.fromEntries(
+    [...keys].flatMap((key) => {
+      const day = shownDay(own[key], planned[key]);
+      return day ? [[key, day]] : [];
+    })
+  );
+}
+
+// What to keep of a day so it shows `entry`: only what differs from its
+// order. Clearing a day the order fills keeps "" there.
+function ownDay(
+  entry: DayEntry | undefined,
+  planned: Shift | undefined
+): OwnDay | undefined {
+  if (!entry) {
+    return planned ? { shift: "" } : undefined;
+  }
+  const { shift, ...details } = entry;
+  const kept: OwnDay = shift === planned ? details : entry;
+  return Object.values(kept).some((value) => value !== undefined)
+    ? kept
+    : undefined;
+}
+
+// The person's own days after an edit that turned the days shown from
+// `shown` into `next`. Only the days the edit touched change.
+export function editedOwnDays(
+  own: OwnDays,
+  planned: Record<string, Shift>,
+  shown: Schedule,
+  next: Schedule
+): OwnDays {
+  const edited = { ...own };
+  for (const key of new Set([...Object.keys(shown), ...Object.keys(next)])) {
+    if (next[key] === shown[key]) {
+      continue;
+    }
+    edited[key] = ownDay(next[key], planned[key]);
+  }
+  return edited;
+}
+
+// Starting an order, or correcting the one in use, gives the days from its
+// start back to it: their own shifts and times go, memos and people stay.
+export function giveDaysToOrder(own: OwnDays, start: Date): OwnDays {
+  const from = dateKey(start);
+  return Object.fromEntries(
+    Object.entries(own).flatMap(([key, day]) => {
+      if (!day || key < from) {
+        return [[key, day]];
+      }
+      const { members, note } = day;
+      return members || note ? [[key, { members, note }]] : [];
+    })
+  );
 }
 
 export function keepDetails(

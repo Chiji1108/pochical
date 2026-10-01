@@ -1,7 +1,6 @@
 import { useContext, useState } from "react";
 
-import { repeatSchedule } from "../lib/design-days";
-import type { Schedule } from "../lib/design-days";
+import type { RepeatRule } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { createUserStore, UserStoreContext } from "../lib/design-user-store";
@@ -23,17 +22,19 @@ import {
 } from "./design-work-setup";
 import type { Step, WorkSetup } from "./design-work-setup";
 
-function startSchedule(sequence?: Shift[], anchor?: Date): Schedule {
+// The order a new person starts on: from the month before the one shown,
+// or from its first day when that is earlier, counted from its first day.
+function startRules(sequence?: Shift[], anchor?: Date): RepeatRule[] {
   if (!(sequence && anchor)) {
-    return {};
+    return [];
   }
-  return repeatSchedule(
-    sequence,
-    anchor,
-    new Date(designMonth.getFullYear(), designMonth.getMonth() - 1, 1),
-    // A stored rule has no end; a year ahead is plenty for the preview.
-    new Date(designMonth.getFullYear(), designMonth.getMonth() + 13, 0)
+  const monthBefore = new Date(
+    designMonth.getFullYear(),
+    designMonth.getMonth() - 1,
+    1
   );
+  const start = anchor < monthBefore ? anchor : monthBefore;
+  return [{ anchor, sequence, start }];
 }
 
 // The patterns and order a returning account brings back in the prototype.
@@ -95,8 +96,7 @@ export function DesignOnboarding({
       note,
       person: createUserStore({
         patterns: presetList(patternKeys),
-        rules: sequence && anchor ? [{ sequence, start: anchor }] : [],
-        schedule: startSchedule(sequence, anchor),
+        rules: startRules(sequence, anchor),
       }),
     });
   }

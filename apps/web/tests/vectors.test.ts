@@ -15,13 +15,14 @@ import {
   withMentions,
 } from "../src/lib/chat-text";
 import {
-  dateKey,
   defaultHolidaysOff,
   holidayShiftOf,
+  plannedShifts,
   repeatSchedule,
-  ruleEnd,
+  shownDays,
   timeChangeOf,
 } from "../src/lib/design-days";
+import type { OwnDays } from "../src/lib/design-days";
 import type { Pattern, PatternBook } from "../src/lib/design-patterns";
 import { characterCount, dayName, limitText } from "../src/lib/text-limits";
 
@@ -51,11 +52,25 @@ describe("spec/vectors/repeat.json", () => {
       expect(shifts).toEqual(order.expected);
     });
   }
-  test("lastDay", () => {
-    for (const { start, expected } of repeat.lastDay) {
-      expect(dateKey(ruleEnd(dayOf(start)))).toBe(expected);
-    }
-  });
+  for (const { name, ...days } of repeat.shown) {
+    test(name, () => {
+      const rules = days.orders.map((order) => ({
+        ...order,
+        anchor: "anchor" in order ? dayOf(order.anchor) : undefined,
+        start: dayOf(order.start),
+      }));
+      const planned = plannedShifts(
+        rules,
+        new Set(days.patterns),
+        dayOf(days.to)
+      );
+      const shown = Object.entries(shownDays(days.own as OwnDays, planned))
+        .filter(([date]) => date >= days.from && date <= days.to)
+        .toSorted(([a], [b]) => a.localeCompare(b))
+        .map(([date, entry]) => [date, entry?.shift]);
+      expect(Object.fromEntries(shown)).toEqual(days.expected);
+    });
+  }
   for (const { name, ...order } of repeat.holidaysOffByDefault) {
     test(name, () => {
       const book: PatternBook = Object.fromEntries(
