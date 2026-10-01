@@ -658,35 +658,16 @@ function spokenOff(entry: WidgetEntry, off: WidgetOff | undefined) {
   return `${title}、${inDaysWords(inDays)}、${monthDay(day.date)}(${day.weekday}) ${day.name ?? ""}`;
 }
 
-// How a day off today is drawn, being decided on /design/widgets: the app
-// icon's poodle peeking in, or the day's own mark drawn large behind.
-export type RestLook = "dog" | "mark";
-export const RestLookContext = createContext<RestLook>("dog");
-
 const rest = {
-  // B: the whole widget on today's day-off tile, edge to edge.
-  ground: css({
-    bg: "var(--off-tint)",
-    height: "calc(100% + 2 * var(--widget-margin))",
-    margin: "calc(-1 * var(--widget-margin))",
-    padding: "var(--widget-margin)",
-  }),
-  // A: the poodle looking in from the corner, cut by the widget's edge.
+  // The poodle looking up from the bottom edge at the right, its head
+  // weighing against the words on the left.
   dog: css({
-    bottom: "calc(-1 * var(--widget-margin) - 14px)",
-    height: "88px",
+    bottom: "calc(-1 * var(--widget-margin) - 20px)",
+    height: "104px",
     pointerEvents: "none",
     position: "absolute",
-    right: "calc(-1 * var(--widget-margin) - 10px)",
-    width: "88px",
-  }),
-  // B: the day's mark, large and faint, behind the words.
-  mark: css({
-    bottom: "-24px",
-    opacity: 0.22,
-    pointerEvents: "none",
-    position: "absolute",
-    right: "-20px",
+    right: "calc(-1 * var(--widget-margin) - 4px)",
+    width: "104px",
   }),
   root: css({
     display: "flex",
@@ -697,8 +678,9 @@ const rest = {
   }),
   title: css({
     fontWeight: 600,
+    lineHeight: 1.3,
     position: "relative",
-    textStyle: "headline",
+    textStyle: "title3",
     whiteSpace: "pre-line",
   }),
   tomorrow: css({
@@ -717,34 +699,21 @@ function PeekingDog() {
   const dark = useContext(ColorSchemeContext) === "dark";
   const drawing = icons[dark ? DARK_DRAWING : LIGHT_DRAWING];
   return drawing ? (
-    <img alt="" className={rest.dog} height={88} src={drawing} width={88} />
+    <img alt="" className={rest.dog} height={104} src={drawing} width={104} />
   ) : null;
 }
 
 // A day off today, said as such rather than counted: おやすみ, with the
-// date over it and tomorrow's mark under it, in the look being decided.
+// date over it, tomorrow's mark under it, and the app icon's poodle
+// looking up from the corner.
 function RestToday({ entry }: { entry: WidgetEntry }) {
   const day = entry.today;
   const [, tomorrow] = entry.upcoming;
   const companion = entry.offs.with;
-  const look = useContext(RestLookContext);
-  const highlight = useOffHighlight(useContext(ShiftMarkStyleContext));
-  const { tint } = useDisplayColor(day.color ?? presetPatterns.off.color);
-  const flat = useContext(WidgetRenderingModeContext) !== "fullColor";
-  const tinted = look === "mark" && highlight && !flat;
   return (
-    <div
-      className={cx(rest.root, tinted && rest.ground)}
-      style={tinted ? ({ "--off-tint": tint } as CSSProperties) : undefined}
-    >
+    <div className={rest.root}>
       <span className={srOnly}>{spokenOff(entry, { day, inDays: 0 })}</span>
-      {look === "dog" ? (
-        <PeekingDog />
-      ) : (
-        <span aria-hidden="true" className={rest.mark}>
-          <DayMark day={day} size={120} />
-        </span>
-      )}
+      <PeekingDog />
       <span aria-hidden="true" className={offs.head}>
         <span className={css(oneLine)}>
           {monthDay(day.date)}({day.weekday})
@@ -1172,11 +1141,86 @@ function MemberNames({ names }: { names: string[] }) {
 // Today large on the left, its memo and 一緒に働く人 beside.
 export function TodayMedium({ entry }: { entry: WidgetEntry }) {
   const [, tomorrow] = entry.upcoming;
+  const day = entry.today;
+  // Most days have no change, memo or people: then today stands large,
+  // beside tomorrow and the next day off, rather than over empty room.
+  if (!(day.change || day.note || day.members.length > 0)) {
+    return <PlainToday entry={entry} />;
+  }
   return (
     <div className={detail.wide}>
       <DayColumn day={entry.today} label="今日" />
       <span aria-hidden="true" className={week.rule} />
       {tomorrow && <DayColumn day={tomorrow} label="明日" />}
+    </div>
+  );
+}
+
+const plain = {
+  label: css({ color: "text.secondary", textStyle: "footnote" }),
+  row: css({
+    "&:not(:first-child)": { borderTop: "1px solid token(colors.separator)" },
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "2px",
+    justifyContent: "center",
+    minWidth: 0,
+  }),
+  rows: css({ display: "flex", flex: 1, flexDirection: "column", minWidth: 0 }),
+  today: css({
+    display: "flex",
+    flexDirection: "column",
+    flexShrink: 0,
+    justifyContent: "space-between",
+    width: "112px",
+  }),
+  value: css({
+    ...oneLine,
+    alignItems: "center",
+    display: "flex",
+    fontVariantNumeric: "tabular-nums",
+    gap: "4px",
+    textStyle: "subheadline",
+  }),
+  words: css({ ...oneLine, fontWeight: 400 }),
+};
+
+// Today large on the left; on the right, tomorrow and the next day off,
+// a line each.
+function PlainToday({ entry }: { entry: WidgetEntry }) {
+  const day = entry.today;
+  const [, tomorrow] = entry.upcoming;
+  const [next] = entry.offs.next;
+  return (
+    <div className={detail.wide}>
+      <div className={plain.today}>
+        <span className={today.date}>
+          {monthDay(day.date)}({day.weekday})
+        </span>
+        <DayMark day={day} size={56} />
+        <Change className={today.headline} day={day} />
+      </div>
+      <span aria-hidden="true" className={week.rule} />
+      <div className={plain.rows}>
+        {tomorrow && (
+          <div className={plain.row}>
+            <span className={plain.label}>明日</span>
+            <span className={plain.value}>
+              <DayMark day={tomorrow} size={18} />
+              <Change className={plain.words} day={tomorrow} />
+            </span>
+          </div>
+        )}
+        <div className={plain.row}>
+          <span className={plain.label}>次の休み</span>
+          <span className={plain.value}>
+            {next
+              ? `${inDaysWords(next.inDays)}・${monthDay(next.day.date)}(${next.day.weekday})`
+              : "まだ入っていません"}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

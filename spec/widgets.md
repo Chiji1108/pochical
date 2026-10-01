@@ -50,8 +50,8 @@ The widgets are views of one entry. They hold no state and open the app when tap
 
 | Kind | Small (iPhone systemSmall, Android 2×2) | Medium (systemMedium, 4×2) | Large (systemLarge, 4×4) |
 | --- | --- | --- | --- |
-| 今日 | today's date, its mark large, any change, and the first line of its note | today large, beside its note (three lines) and 一緒に働く人 | – |
-| 次の休み | how soon the next day off comes, large (今日, 明日, else the number with 日後), with its date and mark | the next three days off, a row each: how soon, the date and the mark | – |
+| 今日 | today's date, its mark large, any change, and the first line of its note; with none of these, the next three days' marks under today's | with a change, note or 一緒に働く人: today and 明日 side by side, each with its mark, change, note's first line and people. With none: today large, beside 明日 (mark and any change) and 次の休み (how soon and the date) | – |
+| 次の休み | how soon the next day off comes, large (明日, else the number with 日後), with its date and mark. When today is off, it is not counted: おやすみ, tomorrow's mark, and the app icon's poodle looking up from the corner (今日 small does the same on a day off with nothing else to say) | the next three days off, a line each: the date, its mark and how soon, in the secondary color | – |
 | リスト | the date (9.24 木) over today and the three days after, a line each: the day's number and its mark | the same lines with the weekday, and beside the mark the change, else the note, else the name when names are shown | – |
 | カレンダー | – | `twoWeeks`: this week and the next, seven across from the week start, with days already gone faint and today as its accent date | the month with every day's mark, and today's change if it has one |
 

@@ -25,7 +25,6 @@ import type {
   WidgetFamily,
 } from "../components/design-widget-frame";
 import {
-  RestLookContext,
   CalendarLarge,
   ListMedium,
   ListSmall,
@@ -39,7 +38,6 @@ import {
   TwoWeeksMedium,
   UpcomingRectangular,
 } from "../components/design-widgets";
-import type { RestLook } from "../components/design-widgets";
 import {
   CellNamesContext,
   IconWeightContext,
@@ -161,18 +159,13 @@ const todayStates: {
   },
 ];
 
-// Today off, for the looks of a day off being compared, alone and with
-// someone off too.
+// Today off, alone and with someone off too.
 const restSchedule = withDays({ [todayKey]: { shift: "off" } });
 const restCompanion: WidgetCompanion = {
   name: "ゆうき",
   offOn: () => true,
   photo: partner.photo,
 };
-const restLooks: { look: RestLook; label: string }[] = [
-  { label: "A 犬", look: "dog" },
-  { label: "B マーク", look: "mark" },
-];
 
 type Size = "small" | "medium" | "large";
 type WidgetView = ComponentType<{ entry: WidgetEntry }>;
@@ -393,34 +386,27 @@ function WidgetsPage() {
           </FrameSection>
 
           <FrameSection
-            description="今日が休みの日の、今日（小）と次の休み（小）。A はアイコンの犬が角からのぞき、B は休みのマークを大きく敷きます。"
-            title="今日が休みの日（案）"
+            description="今日が休みの日の、今日（小）と次の休み（小）。数えずに「おやすみ」と言い、アイコンの犬がのぞきます。"
+            title="今日が休みの日"
           >
             <div className={rows}>
-              {restLooks.flatMap(({ look, label }) =>
-                fullColor.map(({ appearance, label: scheme }) => (
-                  <RestLookContext key={`${look}-${appearance}`} value={look}>
-                    <WidgetRow
-                      appearance={appearance}
-                      entry={restDay}
-                      families={iosFamilies}
-                      label={`${label}・${scheme}`}
-                      widgets={restWidgets}
-                    />
-                  </RestLookContext>
-                ))
-              )}
-              {restLooks.map(({ look, label }) => (
-                <RestLookContext key={`${look}-together`} value={look}>
-                  <WidgetRow
-                    appearance="light"
-                    entry={restTogether}
-                    families={iosFamilies}
-                    label={`${label}・一緒に休める日`}
-                    widgets={offSizes.filter(({ size }) => size === "small")}
-                  />
-                </RestLookContext>
+              {fullColor.map(({ appearance, label }) => (
+                <WidgetRow
+                  appearance={appearance}
+                  entry={restDay}
+                  families={iosFamilies}
+                  key={appearance}
+                  label={label}
+                  widgets={restWidgets}
+                />
               ))}
+              <WidgetRow
+                appearance="light"
+                entry={restTogether}
+                families={iosFamilies}
+                label="一緒に休める日"
+                widgets={offSizes.filter(({ size }) => size === "small")}
+              />
             </div>
           </FrameSection>
 

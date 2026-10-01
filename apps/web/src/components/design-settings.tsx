@@ -1491,7 +1491,7 @@ function StylePreview({
       inert
       style={themeStyle(theme, shown)}
     >
-      <SampleTag />
+      <SampleTag label="カレンダー" />
       {heading && (
         <div className={settingsParts.previewHeading}>
           <MonthName month={dates[0] ?? previewToday} />
