@@ -347,10 +347,19 @@ const chatStyle = {
     display: "flex",
     flexDirection: "column",
     listStyle: "none",
-    margin: 0,
+    marginBottom: 0,
+    // Out to the screen's edges, so its line runs from edge to edge as a
+    // bar's does on iOS and Android (a list's lines stay inset); its
+    // contents stay where they were.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    marginTop: 0,
     maxHeight: "180px",
     overflowY: "auto",
-    padding: "4px 0",
+    paddingBottom: "4px",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "4px",
   }),
   mentionPick: css({
     _hover: { bg: "fill.tertiary" },
@@ -378,7 +387,15 @@ const chatStyle = {
       borderTop: "1px solid token(colors.separator)",
       display: "flex",
       gap: "8px",
-      padding: "8px 0 4px",
+      // Out to the screen's edges, so its line runs from edge to edge as a
+      // bar's does on iOS and Android (a list's lines stay inset); its
+      // contents stay where they were.
+      marginLeft: "calc(-1 * var(--screen-left))",
+      marginRight: "calc(-1 * var(--screen-right))",
+      paddingBottom: "4px",
+      paddingLeft: "var(--screen-left)",
+      paddingRight: "var(--screen-right)",
+      paddingTop: "8px",
     },
     // The reply above it already draws the line.
     variants: { replying: { true: { borderTop: 0 } } },
@@ -456,7 +473,15 @@ const chatStyle = {
     borderBottom: "1px solid token(colors.separator)",
     display: "grid",
     gridTemplateColumns: "1fr auto 1fr",
-    padding: "4px 0 8px",
+    // Out to the screen's edges, so its line runs from edge to edge as a
+    // bar's does on iOS and Android (a list's lines stay inset); its
+    // contents stay where they were.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    paddingBottom: "8px",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "4px",
   }),
   // A message jumped to rings its bubble or shared days for a moment.
   item: cva({
@@ -678,8 +703,17 @@ const chatStyle = {
       display: "flex",
       gap: "8px",
       listStyle: "none",
-      margin: 0,
-      padding: "12px 0 4px",
+      marginBottom: 0,
+      // Out to the screen's edges, so its line runs from edge to edge as a
+      // bar's does on iOS and Android (a list's lines stay inset); its
+      // contents stay where they were.
+      marginLeft: "calc(-1 * var(--screen-left))",
+      marginRight: "calc(-1 * var(--screen-right))",
+      marginTop: 0,
+      paddingBottom: "4px",
+      paddingLeft: "var(--screen-left)",
+      paddingRight: "var(--screen-right)",
+      paddingTop: "12px",
     },
     // The reply or the days above already draw the line.
     variants: { below: { true: { borderTop: 0, paddingTop: "8px" } } },
@@ -718,7 +752,14 @@ const chatStyle = {
     borderTop: "1px solid token(colors.separator)",
     display: "flex",
     gap: "8px",
-    padding: "8px 0 0",
+    // Out to the screen's edges, so its line runs from edge to edge as a
+    // bar's does on iOS and Android (a list's lines stay inset); its
+    // contents stay where they were.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "8px",
   }),
   tap: cva({
     base: {
@@ -967,8 +1008,6 @@ export function ChatPage({
   const [writing, setWriting] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const toolsFolded = (writing || draft !== "") && !toolsOpen;
-  // A group chat has a third tool, for a poll on days.
-  const toolCount = title === "全体チャット" ? 3 : 2;
   let toolsWidth = toolsFolded ? toolWidth : toolWidth * toolCount;
   // A message being changed keeps what it carries; only its words change.
   if (editing !== undefined) {
@@ -1008,8 +1047,6 @@ export function ChatPage({
     );
   };
   const [sharing, setSharing] = useState(false);
-  // The day sheet opened from 日にちの投票, set for a poll from the start.
-  const [sharingPoll, setSharingPoll] = useState(false);
   // The line whose actions are open, and the one being answered.
   const [selected, setSelected] = useState<string>();
   const [replyTo, setReplyTo] = useState<string>();
@@ -2082,11 +2119,7 @@ export function ChatPage({
             {editing === undefined && toolsFolded && (
               <motion.button
                 animate={{ opacity: 1, scale: 1 }}
-                aria-label={
-                  toolCount === 3
-                    ? "写真・日にち・投票のボタンを表示"
-                    : "写真と日にちのボタンを表示"
-                }
+                aria-label="写真と日にちのボタンを表示"
                 className={chatStyle.composerButton({ tool: true })}
                 exit={{ opacity: 0, scale: 0.6 }}
                 initial={{ opacity: 0, scale: 0.6 }}
@@ -2128,29 +2161,12 @@ export function ChatPage({
                   aria-label="日にちを共有"
                   className={chatStyle.composerButton({ tool: true })}
                   onClick={() => {
-                    setSharingPoll(false);
                     setSharing(true);
                   }}
                   type="button"
                 >
                   <CalendarPlus aria-hidden="true" size={20} />
                 </button>
-                {/* A poll's own way in, so it is found without first
-                    picking two days to share: the same sheet, set for a
-                    poll. The poll card's head bears the same icon. */}
-                {toolCount === 3 && (
-                  <button
-                    aria-label="日にちの投票"
-                    className={chatStyle.composerButton({ tool: true })}
-                    onClick={() => {
-                      setSharingPoll(true);
-                      setSharing(true);
-                    }}
-                    type="button"
-                  >
-                    <CalendarCheck aria-hidden="true" size={20} />
-                  </button>
-                )}
               </motion.span>
             )}
           </AnimatePresence>
@@ -2320,7 +2336,6 @@ export function ChatPage({
         }}
         open={sharing}
         pollable={isGroup}
-        startPoll={sharingPoll}
       />
       <DecidePollSheet
         key={deciding ?? "none"}
@@ -2355,6 +2370,7 @@ const MENTION_QUERY = /@(?<query>[^\s@]*)$/u;
 // The composer's tools: each one's width, how many, and how they fold
 // into a › and back, as quick as the calendar's own fold.
 const toolWidth = 32;
+const toolCount = 2;
 const toolFold = spring("quick");
 
 // A photo of yours on its way up, or one that could not be sent.
@@ -3670,7 +3686,15 @@ const pinBar = {
     borderBottom: "1px solid token(colors.separator)",
     display: "flex",
     gap: "4px",
-    padding: "4px 0",
+    // Out to the screen's edges, so its line runs from edge to edge as a
+    // bar's does on iOS and Android (a list's lines stay inset); its
+    // contents stay where they were.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    paddingBottom: "4px",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "4px",
   }),
   jump: css({
     alignItems: "center",
@@ -3711,8 +3735,17 @@ const pinBar = {
   list: css({
     borderBottom: "1px solid token(colors.separator)",
     listStyle: "none",
-    margin: 0,
-    padding: "4px 0",
+    marginBottom: 0,
+    // Out to the screen's edges, so its line runs from edge to edge as a
+    // bar's does on iOS and Android (a list's lines stay inset); its
+    // contents stay where they were.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    marginTop: 0,
+    paddingBottom: "4px",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "4px",
   }),
 };
 
