@@ -19,6 +19,12 @@ const tap = async (page: Page, name: string | RegExp) => {
   await page.getByRole("button", { exact: true, name }).first().click();
 };
 
+// Opens a message's reactions and menu, as its long press does; a right
+// click stands in for holding a finger on it.
+const holdOn = async (page: Page, name: string | RegExp) => {
+  await page.getByRole("button", { name }).first().click({ button: "right" });
+};
+
 // A step that taps one button.
 const tapOn = (name: string | RegExp) => async (page: Page) => {
   await tap(page, name);
@@ -483,7 +489,7 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
-      await tap(page, /^お母さんのメッセージ：来週の日曜/u);
+      await holdOn(page, /^お母さんのメッセージ：来週の日曜/u);
     },
   },
   {
@@ -492,7 +498,7 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
-      await tap(page, /^お母さんのメッセージ：来週の日曜/u);
+      await holdOn(page, /^お母さんのメッセージ：来週の日曜/u);
       await tap(page, "返信");
     },
   },
@@ -617,7 +623,7 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
-      await tap(page, /^自分のメッセージ：/u);
+      await holdOn(page, /^自分のメッセージ：/u);
       await tap(page, "編集");
     },
   },
@@ -628,7 +634,7 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
-      await tap(page, /^自分のメッセージ：/u);
+      await holdOn(page, /^自分のメッセージ：/u);
       await tap(page, "送信取消");
       await page.getByRole("alertdialog").waitFor();
     },
@@ -640,7 +646,7 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
-      await tap(page, /^お母さんのメッセージ：来週の日曜/u);
+      await holdOn(page, /^お母さんのメッセージ：来週の日曜/u);
       await tap(page, "通報");
       await page.getByRole("dialog", { name: "通報" }).waitFor();
     },
@@ -683,7 +689,7 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
-      await tap(page, /^お母さんのメッセージ：来週の日曜/u);
+      await holdOn(page, /^お母さんのメッセージ：来週の日曜/u);
       await tap(page, "ピン留め");
       await page
         .getByRole("button", { name: /^ピン留め/u })

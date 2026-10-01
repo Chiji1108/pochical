@@ -38,7 +38,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { MouseEvent, PointerEvent, ReactElement, ReactNode } from "react";
+import type { MouseEvent, ReactElement, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import {
@@ -925,39 +925,6 @@ export function ChatPage({
   // A link long pressed in a message's words: its own small menu, 開く and
   // コピー, as iOS offers on a link in text, rather than the message's.
   const [linkMenu, setLinkMenu] = useState<LinkMenuAt>();
-  const linkPress = useRef<{ timer?: number; fired: boolean }>({
-    fired: false,
-  });
-  const linkPressHandlers = {
-    onContextMenu: (event: MouseEvent) => {
-      const link = linkElementAt(event.target);
-      if (link) {
-        event.preventDefault();
-        linkPress.current.fired = true;
-        setLinkMenu(link);
-      }
-    },
-    onPointerCancel: () => {
-      window.clearTimeout(linkPress.current.timer);
-    },
-    onPointerDown: (event: PointerEvent) => {
-      window.clearTimeout(linkPress.current.timer);
-      linkPress.current.fired = false;
-      const link = linkElementAt(event.target);
-      if (link) {
-        linkPress.current.timer = window.setTimeout(() => {
-          linkPress.current.fired = true;
-          setLinkMenu(link);
-        }, longPressMs);
-      }
-    },
-    onPointerLeave: () => {
-      window.clearTimeout(linkPress.current.timer);
-    },
-    onPointerUp: () => {
-      window.clearTimeout(linkPress.current.timer);
-    },
-  };
   // Members picked from the @ list, made mentions as the message is sent.
   const [picked, setPicked] = useState<{ id: string; name: string }[]>([]);
   const [attached, setAttached] = useState(attach);
@@ -1385,11 +1352,6 @@ export function ChatPage({
       setPickingFor(message.id);
     },
     onOpenChange: (open: boolean) => {
-      // The tap that ends a link's long press opens the link's menu, not
-      // the message's.
-      if (open && linkPress.current.fired) {
-        return;
-      }
       setSelected(open ? message.id : undefined);
     },
     onPin:
@@ -1547,7 +1509,7 @@ export function ChatPage({
               {!message.photo && message.days && (
                 <MessageActions {...actionsOf(message)}>
                   <button
-                    aria-label={`${member?.name ?? ""}が共有した日にち。押すとリアクションと返信`}
+                    aria-label={`${member?.name ?? ""}が共有した日にち。長押しでリアクションと返信`}
                     className={chatStyle.tap({ mine })}
                     type="button"
                   >
@@ -1582,21 +1544,22 @@ export function ChatPage({
                   data-part="bubble"
                 >
                   {quote}
-                  <MessageActions {...actionsOf(message)}>
+                  <MessageActions
+                    {...actionsOf(message)}
+                    onPressAt={(target) => {
+                      const link = linkElementAt(target);
+                      if (link) {
+                        setLinkMenu(link);
+                      }
+                      return link !== undefined;
+                    }}
+                  >
                     <button
-                      aria-label={`${member?.name ?? ""}のメッセージ：${plainText(message.text ?? "", mentionName)}。押すとリアクションと返信`}
+                      aria-label={`${member?.name ?? ""}のメッセージ：${plainText(message.text ?? "", mentionName)}。長押しでリアクションと返信`}
                       className={chatStyle.bubbleText}
                       // A tap on a link opens it rather than the
                       // actions, as in the chat apps.
                       onClickCapture={(event) => {
-                        // The click after a link's long press does nothing
-                        // more: its menu is already open.
-                        // (The flag stays up until the next press, so the
-                        // message's menu, deciding after this, stays shut.)
-                        if (linkPress.current.fired) {
-                          event.preventDefault();
-                          return;
-                        }
                         const url = linkAt(event.target);
                         if (url) {
                           event.preventDefault();
@@ -1620,7 +1583,6 @@ export function ChatPage({
                         }
                       }}
                       type="button"
-                      {...linkPressHandlers}
                     >
                       <MessageText
                         mine={mine}
@@ -2383,7 +2345,7 @@ function mentionAt(target: EventTarget) {
 // menu opens under.
 type LinkMenuAt = { url: string; element: HTMLElement };
 
-function linkElementAt(target: EventTarget): LinkMenuAt | undefined {
+function linkElementAt(target: EventTarget | null): LinkMenuAt | undefined {
   const element =
     target instanceof Element
       ? target.closest<HTMLElement>("[data-link]")
@@ -2748,18 +2710,10 @@ function PhotoLine({
   // Whose photo it is, for a screen reader and the large view.
   label: string;
   quote?: ReactNode;
-  actions: Omit<
-    Parameters<typeof MessageActions>[0],
-    "children" | "onSave" | "pressToOpen"
-  >;
+  actions: Omit<Parameters<typeof MessageActions>[0], "children" | "onSave">;
   onSave: () => void;
 }) {
   const [viewing, setViewing] = useState(false);
-  const press = useLongPress(() => {
-    if (!upload) {
-      actions.onOpenChange(true);
-    }
-  });
   const size = photoSize(photo);
   const quoted = quote !== undefined;
   return (
@@ -2772,17 +2726,19 @@ function PhotoLine({
         style={{ width: size.width }}
       >
         {quote}
-        <MessageActions {...actions} onSave={onSave} pressToOpen>
+        <MessageActions
+          {...actions}
+          disabled={upload !== undefined}
+          keyboardOpens={false}
+          onSave={onSave}
+        >
           <button
             aria-label={`${label}。押すと大きく表示、長押しでリアクションと返信`}
             className={chatStyle.photoButton}
             onClick={() => {
-              if (!press.consumeLongPress()) {
-                setViewing(true);
-              }
+              setViewing(true);
             }}
             type="button"
-            {...press.handlers}
           >
             <img
               alt=""
@@ -2827,6 +2783,13 @@ function PhotoLine({
 }
 
 const messageActions = {
+  // Holds the message without a box of its own, so the layout is the
+  // message's; a long press there offers no text to select.
+  anchor: css({
+    WebkitTouchCallout: "none",
+    display: "contents",
+    userSelect: "none",
+  }),
   // The message the actions are for stays bright above the dimming.
   lifted: css({ position: "relative", zIndex: 25 }),
   scrim: css({
@@ -2897,7 +2860,9 @@ function MessageActions({
   onReport,
   onPin,
   pinned = false,
-  pressToOpen = false,
+  onPressAt,
+  keyboardOpens = true,
+  disabled = false,
   children,
 }: {
   open: boolean;
@@ -2919,9 +2884,14 @@ function MessageActions({
   // ピン留め, or ピン留めを外す when it is pinned.
   onPin?: () => void;
   pinned?: boolean;
-  // The message's own tap does something else, like a photo opening
-  // large, so these open from its long press instead.
-  pressToOpen?: boolean;
+  // A long press on part of the message that has its own menu, like a
+  // link in its words: open that and return true, and these stay shut.
+  onPressAt?: (target: EventTarget | null) => boolean;
+  // Enter or Space on the message opens these, as the long press does,
+  // unless its own press does something, like a photo opening large.
+  keyboardOpens?: boolean;
+  // Not yet, like a photo still going up.
+  disabled?: boolean;
   // The message itself, a button that opens this.
   children: ReactElement;
 }) {
@@ -2938,6 +2908,14 @@ function MessageActions({
   // until the menu has gone: closing, the menu hands focus back to the
   // message, which would take it from the composer or close the alert.
   const after = useRef<() => void>(undefined);
+  // Where the press began, for a part with its own menu (onPressAt).
+  const pressed = useRef<EventTarget | null>(null);
+  const press = useLongPress(() => {
+    if (disabled || onPressAt?.(pressed.current) === true) {
+      return;
+    }
+    onOpenChange(true);
+  });
   const closeThen = (action: () => void) => {
     after.current = action;
     onOpenChange(false);
@@ -2964,24 +2942,47 @@ function MessageActions({
       }}
       open={open}
       positioning={{
-        // Under the whole bubble, past a link's page in it too.
+        // Under the whole bubble, past a link's page in it too; else under
+        // the message itself (its holder takes no room of its own).
         getAnchorElement: () =>
           messageRef.current?.closest<HTMLElement>("[data-part=bubble]") ??
-          messageRef.current,
+          (messageRef.current?.firstElementChild as HTMLElement | null) ??
+          null,
         gutter: 8,
         placement: mine ? "bottom-end" : "bottom-start",
       }}
       unmountOnExit
     >
-      {pressToOpen ? (
-        <Popover.Anchor asChild ref={setMessage}>
+      <Popover.Anchor asChild ref={setMessage}>
+        {/* Holds the message and hears its press: a long press (or a
+            right click) opens these, as LINE and iMessage do, and the
+            click it ends with is swallowed here, before the message's own
+            (a link, a mention) can act on it. A tap is the message's own:
+            a link or a mention opens, a photo opens large, else nothing,
+            so scrolling past a line never opens its menu by accident. */}
+        <span
+          className={messageActions.anchor}
+          onClickCapture={(event) => {
+            if (press.consumeLongPress()) {
+              event.preventDefault();
+              event.stopPropagation();
+              return;
+            }
+            // A click with no pointer is Enter or Space.
+            if (keyboardOpens && event.detail === 0 && !disabled) {
+              event.preventDefault();
+              event.stopPropagation();
+              onOpenChange(true);
+            }
+          }}
+          onPointerDownCapture={(event) => {
+            pressed.current = event.target;
+          }}
+          {...press.handlers}
+        >
           {children}
-        </Popover.Anchor>
-      ) : (
-        <Popover.Trigger asChild ref={setMessage}>
-          {children}
-        </Popover.Trigger>
-      )}
+        </span>
+      </Popover.Anchor>
       <Portal container={phone ?? undefined}>
         {/* Everything but the message dims, so it is clear which one the
             actions are for; a tap on it closes them. */}
@@ -3283,7 +3284,7 @@ function PollCard({
     <span className={pollCard.card} data-part="bubble">
       <MessageActions {...actions}>
         <button
-          aria-label={`${label}。押すとリアクションと返信`}
+          aria-label={`${label}。長押しでリアクションと返信`}
           className={pollCard.head}
           type="button"
         >

@@ -2,6 +2,10 @@
 
 How chat messages behave beyond sync (spec/sync-protocol.md): which words are links and mentions, how a link's preview is made, when a mention notifies, editing and unsending, and reporting and blocking. Both native apps and the server follow it. The web prototype's `textParts` in `apps/web/src/lib/chat-text.ts` (tested in `apps/web/tests/chat-text.test.ts`) and the chat in `/design` follow this spec.
 
+## Opening a message's menu
+
+A long press on a message (the system's context-menu press: `.contextMenu` on iOS, `combinedClickable`'s long click on Android; a right click on the web) opens its reactions and menu, as LINE and iMessage do. A tap is the message's own: a link or a mention opens, a photo opens large, a shared day or a poll's head does nothing. So scrolling past a line never opens its menu by accident. A long press on a link opens the link's menu instead. With a keyboard or a screen reader, activating the message opens its menu (a photo's activation opens it large; its menu is in the screen reader's actions).
+
 ## What is a link
 
 - A link starts with `http://` or `https://` (any case) and runs over the characters a URL is written in (ASCII letters, digits and `-._~:/?#[]@!$&'()*+,;=%`). Any other character ends it, so Japanese written right after a link is not part of it: in `https://example.jp/ここどう？` the link is `https://example.jp/`.
@@ -12,7 +16,7 @@ How chat messages behave beyond sync (spec/sync-protocol.md): which words are li
 ## In a message
 
 - Links are underlined; in others' messages in the accent color, in one's own in the bubble's text color.
-- A tap on a link opens it in the system's browser sheet over the chat (`SFSafariViewController`, Custom Tabs). A tap elsewhere on the message opens its reactions and menu as before.
+- A tap on a link opens it in the system's browser sheet over the chat (`SFSafariViewController`, Custom Tabs).
 - A long press on a link (or a right click) opens the link's own small menu under it, リンクを開く and リンクをコピー, as iOS offers on a link in text; the message's menu stays shorter without a link item.
 
 ## Previews
@@ -96,6 +100,6 @@ The stores require a way to report what people post and to block someone (App St
 A group chat can put days to the vote, as LINE's 日程調整 does, for the step after finding days everyone is off.
 
 - In the day sheet (日にちを共有), once two or more days are picked in a group chat, a switch 投票で決める appears (off). On, the note says 〇日の中から、みんなが行ける日を投票で決めます。 and ✓ sends a poll instead of the days. One-to-one chats have no polls.
-- The poll is a card: a head (日にちの投票, and N人が投票) that opens the line's reactions and menu like any line, then a row per day: the date (in the week's colors), みんな休み under it when everyone's shifts are off, the faces of who can come (three, or two and +N), and a 行ける button that toggles your vote. Anyone in the group votes, on as many days as they like, and can change it until the poll is settled.
+- The poll is a card: a head (日にちの投票, and N人が投票) whose long press opens the line's reactions and menu like any line's, then a row per day: the date (in the week's colors), みんな休み under it when everyone's shifts are off, the faces of who can come (three, or two and +N), and a 行ける button that toggles your vote. Anyone in the group votes, on as many days as they like, and can change it until the poll is settled.
 - Its writer has 日にちを決める at the card's foot: a sheet lists the days with how many can come; ✓ settles it. The chosen row is marked 決定 on the accent's container, the other days fade, voting ends, and the poll is pinned (Pins) so the day stays found. The app says 〇月〇日(〇)に決めました to the writer.
 - In a line of words (quotes, the chat list, the pin bar) a poll reads 📅 日にちの投票：〇月〇日(〇)ほか, and once settled 📅 〇月〇日(〇)に決定.
