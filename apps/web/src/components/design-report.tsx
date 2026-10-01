@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { css } from "styled-system/css";
 
-import { DecideHeading, Sheet } from "./design-sheet";
+import { useUser } from "../lib/design-user-store";
+import type { Member } from "./design-group-data";
+import { ConfirmDialog, DecideHeading, Sheet } from "./design-sheet";
+import { ToastContext } from "./design-toast";
 import { ChoiceList, ChoiceRow, Note, Section } from "./design-ui";
 
 // Telling Pochical about a message or a member, as the stores ask of an
@@ -91,4 +94,43 @@ export function ReportSheet({
       </div>
     </Sheet>
   );
+}
+
+// Once a member or their message is reported, blocking them is offered
+// at once, as Instagram and X do: whoever was upset by them is spared a
+// second trip to their profile. Saying no is just as easy.
+export function BlockOffer({
+  member,
+  onClose,
+}: {
+  // The member just reported; open while set.
+  member?: Member;
+  onClose: () => void;
+}) {
+  const blocked = useUser((state) => state.blocked);
+  const setBlocked = useUser((state) => state.setBlocked);
+  const toast = useContext(ToastContext);
+  if (!member) {
+    return null;
+  }
+  return (
+    <ConfirmDialog
+      action="ブロック"
+      cancel="しない"
+      message={`${member.name}もブロックしますか？メッセージが表示されなくなり、個人チャットも届かなくなります。相手には知らされません。`}
+      onCancel={onClose}
+      onConfirm={() => {
+        setBlocked([...blocked, member.id]);
+        toast(`${member.name}をブロックしました`);
+        onClose();
+      }}
+      title="通報しました"
+    />
+  );
+}
+
+// Whether to offer blocking after a report: not for yourself, nor for
+// someone already blocked.
+export function offersBlock(member: Member | undefined, blocked: string[]) {
+  return member !== undefined && !member.me && !blocked.includes(member.id);
 }

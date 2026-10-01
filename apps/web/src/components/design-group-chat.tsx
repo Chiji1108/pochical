@@ -12,6 +12,7 @@ import {
   Copy,
   Download,
   Ellipsis,
+  ExternalLink,
   Flag,
   ImageIcon,
   Link,
@@ -37,7 +38,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { MouseEvent, ReactElement, ReactNode } from "react";
+import type { MouseEvent, PointerEvent, ReactElement, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import {
@@ -84,7 +85,7 @@ import {
 } from "./design-group-parts";
 import { profileIn } from "./design-group-settings";
 import { DaySheet } from "./design-group-shifts";
-import { ReportSheet } from "./design-report";
+import { BlockOffer, offersBlock, ReportSheet } from "./design-report";
 import {
   ConfirmDialog,
   DecideHeading,
@@ -733,9 +734,12 @@ const chatStyle = {
   }),
   blockedShow: css({ color: "accent.default", fontWeight: 600 }),
   // A pinned line's pin, by its time.
-  pinMark: css({ display: "block", marginLeft: "auto" }),
-  // Over the time, where LINE says 編集済み.
-  edited: css({ display: "block" }),
+  // Over the time, where LINE says 編集済み: that and a pinned line's pin
+  // on one line, so the time never sits under a stack. Toward the bubble.
+  timeNote: cva({
+    base: { alignItems: "center", display: "flex", gap: "2px" },
+    variants: { mine: { false: {}, true: { justifyContent: "flex-end" } } },
+  }),
   title: css({
     alignItems: "center",
     display: "flex",
@@ -912,9 +916,47 @@ export function ChatPage({
   // Someone else's message being reported, and blocked members' messages
   // shown for now.
   const [reporting, setReporting] = useState<string>();
+  // Who was just reported, offered to be blocked too.
+  const [blockOffer, setBlockOffer] = useState<Member>();
   const [revealed, setRevealed] = useState<string[]>([]);
   const blocked = useUser((state) => state.blocked);
   const formRef = useRef<HTMLFormElement>(null);
+  // A link long pressed in a message's words: its own small menu, 開く and
+  // コピー, as iOS offers on a link in text, rather than the message's.
+  const [linkMenu, setLinkMenu] = useState<LinkMenuAt>();
+  const linkPress = useRef<{ timer?: number; fired: boolean }>({
+    fired: false,
+  });
+  const linkPressHandlers = {
+    onContextMenu: (event: MouseEvent) => {
+      const link = linkElementAt(event.target);
+      if (link) {
+        event.preventDefault();
+        linkPress.current.fired = true;
+        setLinkMenu(link);
+      }
+    },
+    onPointerCancel: () => {
+      window.clearTimeout(linkPress.current.timer);
+    },
+    onPointerDown: (event: PointerEvent) => {
+      window.clearTimeout(linkPress.current.timer);
+      linkPress.current.fired = false;
+      const link = linkElementAt(event.target);
+      if (link) {
+        linkPress.current.timer = window.setTimeout(() => {
+          linkPress.current.fired = true;
+          setLinkMenu(link);
+        }, longPressMs);
+      }
+    },
+    onPointerLeave: () => {
+      window.clearTimeout(linkPress.current.timer);
+    },
+    onPointerUp: () => {
+      window.clearTimeout(linkPress.current.timer);
+    },
+  };
   // Members picked from the @ list, made mentions as the message is sent.
   const [picked, setPicked] = useState<{ id: string; name: string }[]>([]);
   const [attached, setAttached] = useState(attach);
@@ -1330,7 +1372,6 @@ export function ChatPage({
   };
   // The props that turn a message into the opener of its actions.
   const actionsOf = (message: Message) => ({
-    link: message.text ? firstLink(message.text) : undefined,
     mine: message.from === "me",
     onEdit:
       message.from === "me" && message.text !== undefined
@@ -1542,6 +1583,13 @@ export function ChatPage({
                       // A tap on a link opens it rather than the
                       // actions, as in the chat apps.
                       onClickCapture={(event) => {
+                        // The click after a link's long press does nothing
+                        // more: its menu is already open.
+                        if (linkPress.current.fired) {
+                          linkPress.current.fired = false;
+                          event.preventDefault();
+                          return;
+                        }
                         const url = linkAt(event.target);
                         if (url) {
                           event.preventDefault();
@@ -1565,6 +1613,7 @@ export function ChatPage({
                         }
                       }}
                       type="button"
+                      {...linkPressHandlers}
                     >
                       <MessageText
                         mine={mine}
@@ -1608,16 +1657,13 @@ export function ChatPage({
               )}
               {uploads[message.id] === undefined && (
                 <small className={chatStyle.time}>
-                  {message.pinned !== undefined && (
-                    <Pin
-                      aria-label="ピン留め中"
-                      className={chatStyle.pinMark}
-                      role="img"
-                      size={11}
-                    />
-                  )}
-                  {message.edited && (
-                    <span className={chatStyle.edited}>編集済み</span>
+                  {(message.pinned !== undefined || message.edited) && (
+                    <span className={chatStyle.timeNote({ mine })}>
+                      {message.pinned !== undefined && (
+                        <Pin aria-label="ピン留め中" role="img" size={11} />
+                      )}
+                      {message.edited && "編集済み"}
+                    </span>
                   )}
                   {message.time}
                 </small>
@@ -2102,20 +2148,45 @@ export function ChatPage({
           キャンセル
         </button>
       </Sheet>
+      <LinkMenu
+        at={linkMenu}
+        onClose={() => {
+          setLinkMenu(undefined);
+        }}
+        onOpen={(url) => {
+          const code = inviteCodeOf(url);
+          if (code) {
+            onInvite(code);
+          } else {
+            openLink(url);
+          }
+        }}
+      />
       <ReportSheet
         onClose={() => {
           setReporting(undefined);
         }}
         sends="このメッセージと前後の数件"
         onSend={() => {
+          const writer = writerOf(byId(reporting)?.from);
           setReporting(undefined);
-          toast("通報しました");
+          if (offersBlock(writer, blocked)) {
+            setBlockOffer(writer);
+          } else {
+            toast("通報しました");
+          }
         }}
         what={
           reporting === undefined
             ? undefined
             : `${nameOf(byId(reporting)?.from ?? "")}のメッセージ`
         }
+      />
+      <BlockOffer
+        member={blockOffer}
+        onClose={() => {
+          setBlockOffer(undefined);
+        }}
       />
       {unsending !== undefined && (
         <ConfirmDialog
@@ -2295,6 +2366,93 @@ function mentionAt(target: EventTarget) {
   return target instanceof Element
     ? target.closest<HTMLElement>("[data-mention]")?.dataset.mention
     : undefined;
+}
+
+// A link long pressed: its address and the words that show it, which its
+// menu opens under.
+type LinkMenuAt = { url: string; element: HTMLElement };
+
+function linkElementAt(target: EventTarget): LinkMenuAt | undefined {
+  const element =
+    target instanceof Element
+      ? target.closest<HTMLElement>("[data-link]")
+      : null;
+  const url = element?.dataset.link;
+  return element && url ? { element, url } : undefined;
+}
+
+// 開く and コピー for a link long pressed in a message, under the link.
+function LinkMenu({
+  at,
+  onClose,
+  onOpen,
+}: {
+  at?: LinkMenuAt;
+  onClose: () => void;
+  onOpen: (url: string) => void;
+}) {
+  const phone = useContext(PhoneContext);
+  const toast = useContext(ToastContext);
+  return (
+    <Popover.Root
+      lazyMount
+      onOpenChange={(details) => {
+        if (!details.open) {
+          onClose();
+        }
+      }}
+      open={at !== undefined}
+      positioning={{
+        getAnchorElement: () => at?.element ?? null,
+        gutter: 4,
+        placement: "bottom-start",
+      }}
+      unmountOnExit
+    >
+      <Portal container={phone ?? undefined}>
+        <Popover.Positioner>
+          <Popover.Content aria-label="リンク" className={menuStyle.content}>
+            <button
+              className={menuStyle.item}
+              onClick={() => {
+                if (at) {
+                  onOpen(at.url);
+                }
+                onClose();
+              }}
+              type="button"
+            >
+              <span className={menuStyle.icon}>
+                <ExternalLink aria-hidden="true" size={18} />
+              </span>
+              リンクを開く
+            </button>
+            <button
+              className={menuStyle.item}
+              onClick={() => {
+                const url = at?.url ?? "";
+                onClose();
+                navigator.clipboard
+                  .writeText(url)
+                  .then(() => {
+                    toast("コピーしました");
+                  })
+                  .catch(() => {
+                    toast("コピーできませんでした", "problem");
+                  });
+              }}
+              type="button"
+            >
+              <span className={menuStyle.icon}>
+                <Link aria-hidden="true" size={18} />
+              </span>
+              リンクをコピー
+            </button>
+          </Popover.Content>
+        </Popover.Positioner>
+      </Portal>
+    </Popover.Root>
+  );
 }
 
 // The link under a tap in a message's words, if it was on one.
@@ -2707,10 +2865,10 @@ const messageActions = {
   start: css({ alignItems: "flex-start" }),
 };
 
-// Reactions, and a little apart the menu of 返信 and コピー (and
-// リンクをコピー for a message with a link, 編集 and 送信取消 for yours,
-// 通報 for others'), as the
-// platforms' context menus on a message in LINE and iMessage: the rest of
+// Reactions, and a little apart the menu: 返信, コピー, ピン留め, and 編集
+// and 送信取消 for yours or 通報 for others', as the platforms' context
+// menus on a message in LINE and iMessage (a link's own 開く and コピー
+// are on the link's long press, see LinkMenu): the rest of
 // the screen dims while the message stays bright. Ark UI's
 // Popover opens it from the message, moves focus in, and closes it by a
 // tap elsewhere or Escape.
@@ -2719,7 +2877,6 @@ function MessageActions({
   onOpenChange,
   mine,
   text,
-  link,
   onReact,
   onMore,
   onReply,
@@ -2739,8 +2896,6 @@ function MessageActions({
   onMore: () => void;
   // What コピー copies; shared days have none.
   text?: string;
-  // What リンクをコピー copies: the message's first link.
-  link?: string;
   onReact: (emoji: string) => void;
   onReply: () => void;
   // 保存, for a photo.
@@ -2875,20 +3030,6 @@ function MessageActions({
                     <Copy aria-hidden="true" size={18} />
                   </span>
                   コピー
-                </button>
-              )}
-              {link && (
-                <button
-                  className={menuStyle.item}
-                  onClick={() => {
-                    copy(link).catch(() => undefined);
-                  }}
-                  type="button"
-                >
-                  <span className={menuStyle.icon}>
-                    <Link aria-hidden="true" size={18} />
-                  </span>
-                  リンクをコピー
                 </button>
               )}
               {onSave && (

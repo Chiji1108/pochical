@@ -725,12 +725,15 @@ export function ConfirmDialog({
   title,
   message,
   action,
+  cancel = "キャンセル",
   onConfirm,
   onCancel,
 }: {
   title: string;
   message: string;
   action: string;
+  // The other answer, when it is a choice rather than calling it off.
+  cancel?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -755,7 +758,7 @@ export function ConfirmDialog({
           onClick={onCancel}
           type="button"
         >
-          キャンセル
+          {cancel}
         </button>
         <button
           className={cx(confirm.button, confirm.action)}
