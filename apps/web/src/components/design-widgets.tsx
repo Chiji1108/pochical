@@ -560,11 +560,11 @@ export function CalendarMedium({ entry }: { entry: WidgetEntry }) {
 }
 
 const month = {
-  cell: css({
-    alignItems: "center",
-    display: "flex",
-    flexDirection: "column",
-    gap: "2px",
+  // With a name under each mark, the parts of a day and the weeks close
+  // up, so a month six weeks tall keeps within the widget.
+  cell: cva({
+    base: { alignItems: "center", display: "flex", flexDirection: "column" },
+    variants: { named: { false: { gap: "2px" }, true: { gap: 0 } } },
   }),
   date: cva({
     base: { fontVariantNumeric: "tabular-nums", textStyle: "caption2" },
@@ -575,12 +575,14 @@ const month = {
       },
     },
   }),
-  grid: css({
-    display: "grid",
-    flex: 1,
-    gridAutoRows: "1fr",
-    gridTemplateColumns: "repeat(7, 1fr)",
-    rowGap: "4px",
+  grid: cva({
+    base: {
+      display: "grid",
+      flex: 1,
+      gridAutoRows: "1fr",
+      gridTemplateColumns: "repeat(7, 1fr)",
+    },
+    variants: { named: { false: { rowGap: "4px" }, true: { rowGap: "2px" } } },
   }),
   header: css({
     alignItems: "baseline",
@@ -636,11 +638,11 @@ export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
           </span>
         ))}
       </div>
-      <ol className={`${list} ${month.grid}`}>
+      <ol className={`${list} ${month.grid({ named })}`}>
         {days.map((day) => (
           <li
             aria-hidden={!day.inMonth}
-            className={month.cell}
+            className={month.cell({ named })}
             key={day.date.getTime()}
           >
             {day.inMonth && (

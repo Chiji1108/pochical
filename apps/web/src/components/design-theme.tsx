@@ -114,7 +114,7 @@ const markerSteps = {
   dark: {
     even: { chroma: 1.15, lightness: 0.49 },
     onTile: "calc(l + 0.1) calc(c * 1.25)",
-    pale: { chroma: 0.9, lightness: 0.36 },
+    pale: { chroma: 1, lightness: 0.43 },
   },
   light: {
     even: { chroma: 1.9, lightness: 0.845 },
