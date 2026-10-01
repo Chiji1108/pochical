@@ -125,8 +125,8 @@ export function LookEditorPage({
   emojis?: readonly string[];
   onBack: () => void;
   onPick: (field: LookField, value: Partial<Look>) => void;
-  // Notes or warnings under the choices.
-  children?: ReactNode;
+  // Warnings under the open tab's choices.
+  children?: (tab: ShiftMarkStyle) => ReactNode;
 }) {
   const style = useContext(ShiftMarkStyleContext);
   const [tab, setTab] = useState<ShiftMarkStyle>(style);
@@ -155,11 +155,7 @@ export function LookEditorPage({
       )}
       {tab === "badge" && <LetterEditor look={look} onPick={onPick} />}
       {tab !== "emoji" && <ColorPicker look={look} onPick={onPick} />}
-      {children}
-      <Note>
-        今の見た目は「{styleNames[style]}
-        」です。ほかの見た目は、その見た目を選んだ人にこう表示されます。
-      </Note>
+      {children?.(tab)}
     </>
   );
 }
