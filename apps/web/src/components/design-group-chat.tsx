@@ -986,7 +986,6 @@ export function ChatPage({
     const text = message.text ?? "";
     setEditing(message.id);
     setReplyTo(undefined);
-    setSelected(undefined);
     setDraft(plainText(text, mentionName));
     setPicked(mentionsOf(text).map((id) => ({ id, name: mentionName(id) })));
     formRef.current?.querySelector("textarea")?.focus();
@@ -1127,7 +1126,6 @@ export function ChatPage({
     onUnsend:
       message.from === "me"
         ? () => {
-            setSelected(undefined);
             setUnsending(message.id);
           }
         : undefined,
@@ -2370,6 +2368,14 @@ function MessageActions({
   const setMessage = (element: HTMLElement | null) => {
     messageRef.current = element;
   };
+  // An action that opens something else (the composer, an alert) waits
+  // until the menu has gone: closing, the menu hands focus back to the
+  // message, which would take it from the composer or close the alert.
+  const after = useRef<() => void>(undefined);
+  const closeThen = (action: () => void) => {
+    after.current = action;
+    onOpenChange(false);
+  };
   const copy = async (value: string) => {
     onOpenChange(false);
     try {
@@ -2383,6 +2389,10 @@ function MessageActions({
     <Popover.Root
       initialFocusEl={() => contentRef.current}
       lazyMount
+      onExitComplete={() => {
+        after.current?.();
+        after.current = undefined;
+      }}
       onOpenChange={(details) => {
         onOpenChange(details.open);
       }}
@@ -2500,8 +2510,7 @@ function MessageActions({
                 <button
                   className={menuStyle.item}
                   onClick={() => {
-                    onOpenChange(false);
-                    onEdit();
+                    closeThen(onEdit);
                   }}
                   type="button"
                 >
@@ -2518,7 +2527,9 @@ function MessageActions({
                   <hr className={menuStyle.separator} />
                   <button
                     className={cx(menuStyle.item, menuStyle.danger)}
-                    onClick={onUnsend}
+                    onClick={() => {
+                      closeThen(onUnsend);
+                    }}
                     type="button"
                   >
                     <span className={menuStyle.icon}>
