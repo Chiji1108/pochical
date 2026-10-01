@@ -4,61 +4,13 @@ import type {
   EmojiPickerListEmojiProps,
   EmojiPickerListRowProps,
 } from "frimousse";
-import { css } from "styled-system/css";
+
+import { pickerStyle as picker } from "./design-picker-style";
 
 // EmojiPickerSheet's list (design-emoji-picker.tsx), in a module of its
 // own so Frimousse loads when the sheet first opens, not with every page.
 
 const emojiColumns = 8;
-
-const picker = {
-  categoryHeader: css({
-    bg: "background.elevated",
-    color: "text.tertiary",
-    fontWeight: 600,
-    padding: "12px 4px 8px",
-    textStyle: "footnote",
-  }),
-  emoji: css({
-    "&[data-active]": { bg: "fill.tertiary" },
-    alignItems: "center",
-    aspectRatio: "1",
-    bg: "transparent",
-    border: 0,
-    borderRadius: "md",
-    display: "flex",
-    flex: 1,
-    fontSize: "24px",
-    justifyContent: "center",
-    padding: 0,
-  }),
-  root: css({
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    minHeight: 0,
-  }),
-  row: css({ display: "flex", paddingInline: "2px" }),
-  search: css({
-    _focusVisible: { outline: "2px solid token(colors.accent.default)" },
-    _placeholder: { color: "text.tertiary" },
-    bg: "fill.quaternary",
-    border: 0,
-    borderRadius: "md",
-    color: "text.primary",
-    font: "inherit",
-    height: "action",
-    paddingInline: "16px",
-    textStyle: "body",
-    width: "100%",
-  }),
-  viewport: css({
-    height: "340px",
-    marginInline: "-4px",
-    overflowY: "auto",
-    position: "relative",
-  }),
-};
 
 function CategoryHeader({
   category,
@@ -83,7 +35,7 @@ function EmojiButton({ emoji, ...props }: EmojiPickerListEmojiProps) {
   return (
     <button
       aria-label={emoji.label}
-      className={picker.emoji}
+      className={picker.choice}
       data-active={emoji.isActive ? "" : undefined}
       {...props}
       type="button"
