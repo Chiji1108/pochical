@@ -14,6 +14,7 @@ import {
   RemakeInviteLinkResponseSchema,
 } from "./gen/pochical/v1/group_pb";
 import { codeOfGroup, groupOfCode, issueInviteCode } from "./invite-codes";
+import { overLimit } from "./rate-limits";
 import { requireEmoji, requireText } from "./text-limits";
 import { requireUser } from "./user-service";
 
@@ -48,6 +49,12 @@ export const registerGroupService = (router: ConnectRouter): void => {
   router.service(GroupService, {
     createGroup: async (request, context) => {
       const user = await requireUser(context);
+      if (await overLimit(env.GROUP_CREATE_LIMIT, user.id)) {
+        throw new ConnectError(
+          "Too many groups made just now",
+          Code.ResourceExhausted
+        );
+      }
       const name = requireText(request.name, textLimits.groupName, "name");
       const emoji = requireEmoji(request.emoji);
       const displayName = displayNameOf(request.displayName);

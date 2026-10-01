@@ -38,6 +38,21 @@
   // with BETTER_AUTH_SECRET (`wrangler secret put`; tests set their own).
   "vars": { "BETTER_AUTH_URL": "https://api.pochical.app" },
   "secrets": { "required": ["BETTER_AUTH_SECRET"] },
+  // Cloudflare's rate limiting, counted per location and kept by nobody:
+  // anonymous sign-ins by the client's address, groups made by the user.
+  // The numbers live here, where the limiters are made (src/rate-limits.ts).
+  "ratelimits": [
+    {
+      "name": "SIGN_IN_LIMIT",
+      "namespace_id": "1001",
+      "simple": { "limit": 20, "period": 60 },
+    },
+    {
+      "name": "GROUP_CREATE_LIMIT",
+      "namespace_id": "1002",
+      "simple": { "limit": 5, "period": 60 },
+    },
+  ],
   // The apps (and later the site's sign-in) reach the server here; the
   // site's own Worker calls it through a service binding instead.
   "routes": [{ "pattern": "api.pochical.app", "custom_domain": true }],
