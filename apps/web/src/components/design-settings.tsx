@@ -29,6 +29,7 @@ import {
 import type { Pattern, PatternBook, Shift } from "../lib/design-patterns";
 import { useLook, useSettings } from "../lib/design-settings-store";
 import { useUser } from "../lib/design-user-store";
+import { widgetEntry } from "../lib/design-widgets";
 import { dayName } from "../lib/text-limits";
 import {
   ProviderButtons,
@@ -45,6 +46,7 @@ import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
 import type { Profile } from "./design-group-data";
 import { PhotoAvatar, PhotoEditor } from "./design-group-parts";
+import { Fit } from "./design-home-screen";
 import { englishMonthOf, MonthName } from "./design-month-name";
 import {
   ChatNotificationsPage,
@@ -96,6 +98,8 @@ import {
 } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
 import type { ColoredDay } from "./design-week";
+import { wallpaperFor, WidgetFrame } from "./design-widget-frame";
+import { TwoWeeksMedium } from "./design-widgets";
 import { WorkSetupSteps } from "./design-work-setup";
 import {
   CellNamesContext,
@@ -653,6 +657,19 @@ const settingsParts = {
     position: "relative",
   }),
   previewHeading: css({ padding: "0 8px 8px" }),
+  // The home screen's page of the preview: the wallpaper edge to edge,
+  // the widget in the middle of it.
+  homePreview: css({
+    alignItems: "center",
+    border: "1px solid token(colors.separator)",
+    borderRadius: "2xl",
+    display: "flex",
+    justifyContent: "center",
+    minHeight: "100%",
+    overflow: "hidden",
+    padding: "28px 12px 12px",
+    pointerEvents: "none",
+  }),
   // A form's row: what is set on the left, its value on the right.
   field: css({
     alignItems: "center",
@@ -1478,36 +1495,53 @@ function StylePreview({
   const onPick = shared?.onPick ?? setPicked;
   const { theme } = useContext(ThemeContext);
   const alwaysDark = presetOf(theme).scheme === "dark";
+  const [page, setPage] = useState(0);
+  const progress = useMotionValue(0);
+  const calendar = (
+    <div
+      aria-hidden="true"
+      className={settingsParts.preview}
+      inert
+      style={themeStyle(theme, shown)}
+    >
+      <SampleTag />
+      {heading && (
+        <div className={settingsParts.previewHeading}>
+          <MonthName month={dates[0] ?? previewToday} />
+        </div>
+      )}
+      <WeekdayRow compact />
+      <div className={dayGrid}>
+        {shownDates.map((date) => (
+          <DayCell
+            active={false}
+            date={date}
+            editing={false}
+            entry={schedule[dateKey(date)]}
+            key={dateKey(date)}
+            onPress={() => undefined}
+            outside={false}
+          />
+        ))}
+      </div>
+    </div>
+  );
+  // The calendar, and swiped aside, the home screen's two weeks: what a
+  // style or the week's settings change in the widgets too.
+  const pages = [calendar, <HomePreview key="home" preview={preview} />];
   return (
     <div className={previewWrap}>
       <ColorSchemeContext value={shown}>
-        <div
-          aria-hidden="true"
-          className={settingsParts.preview}
-          inert
-          style={themeStyle(theme, shown)}
-        >
-          <SampleTag />
-          {heading && (
-            <div className={settingsParts.previewHeading}>
-              <MonthName month={dates[0] ?? previewToday} />
-            </div>
-          )}
-          <WeekdayRow compact />
-          <div className={dayGrid}>
-            {shownDates.map((date) => (
-              <DayCell
-                active={false}
-                date={date}
-                editing={false}
-                entry={schedule[dateKey(date)]}
-                key={dateKey(date)}
-                onPress={() => undefined}
-                outside={false}
-              />
-            ))}
-          </div>
-        </div>
+        <Pager
+          ends={{ back: page > 0, forward: page < pages.length - 1 }}
+          gap={PREVIEW_PAGE_GAP}
+          onStep={(direction) => {
+            setPage((at) => at + direction);
+          }}
+          page={String(page)}
+          progress={progress}
+          renderPage={(offset) => pages[page + offset] ?? null}
+        />
       </ColorSchemeContext>
       {/* An always-dark テーマ has no light to switch to: its ☾ stays on. */}
       <PreviewSchemeSwitch
@@ -1515,6 +1549,51 @@ function StylePreview({
         onPick={onPick}
         shown={alwaysDark ? "dark" : shown}
       />
+      <PageDots
+        count={pages.length}
+        current={page}
+        label="プレビュー（カレンダー、ホーム画面）"
+        onPick={setPage}
+        progress={progress}
+      />
+    </div>
+  );
+}
+
+const PREVIEW_PAGE_GAP = 12;
+// The widths the medium widget is laid out at, for fitting it in.
+const IOS_MEDIUM_WIDTH = 338;
+const ANDROID_MEDIUM_WIDTH = 373;
+
+// The two weeks' widget on the device's wallpaper, drawn from the same
+// made-up fortnight as the calendar beside it.
+function HomePreview({ preview }: { preview: StylePreviewData }) {
+  const platform = useDevice((state) => state.platform);
+  const hue = useDevice((state) => state.wallpaperHue);
+  const week = useSettings((state) => state.device.week);
+  const book = usePatterns();
+  const scheme = useContext(ColorSchemeContext);
+  const android = platform === "android";
+  const placement = {
+    appearance: scheme,
+    wallpaperHue: android ? hue : undefined,
+  };
+  const entry = widgetEntry(preview.schedule, week, previewToday, book);
+  return (
+    <div
+      aria-hidden="true"
+      className={settingsParts.homePreview}
+      inert
+      style={{ background: wallpaperFor(placement) }}
+    >
+      <Fit width={android ? ANDROID_MEDIUM_WIDTH : IOS_MEDIUM_WIDTH}>
+        <WidgetFrame
+          {...placement}
+          family={android ? "android4x2" : "systemMedium"}
+        >
+          <TwoWeeksMedium entry={entry} />
+        </WidgetFrame>
+      </Fit>
     </div>
   );
 }
@@ -1938,7 +2017,7 @@ function WeekPage({
         </List>
       </Section>
       <Note>
-        土曜と日曜は曜日の見出しに、祝日は日付に色がつきます。祝日は日曜と同じ赤です。グループの画面でも、この並びと色で表示されます。
+        土曜と日曜は曜日の見出しに、祝日は日付に色がつきます。祝日は日曜と同じ赤です。グループの画面やウィジェットでも、この並びと色で表示されます。
       </Note>
     </>
   );
