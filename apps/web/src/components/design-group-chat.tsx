@@ -979,7 +979,7 @@ export function ChatPage({
   const choosePhotos = async (files: File[]) => {
     const room = maxPhotos - photos.length;
     if (files.length > room) {
-      toast(`写真は一度に${maxPhotos}枚まで送れます`);
+      toast(`写真は一度に${maxPhotos}枚まで送れます`, "problem");
     }
     const taken = files.slice(0, room);
     setReading((count) => count + taken.length);
@@ -991,7 +991,7 @@ export function ChatPage({
     );
     setPhotos((before) => [...before, ...chosen].slice(0, maxPhotos));
     if (chosen.length < taken.length) {
-      toast("開けない写真がありました");
+      toast("開けない写真がありました", "problem");
     }
   };
   const react = (id: string, emoji: string) => {
@@ -2222,7 +2222,7 @@ function MessageActions({
       await navigator.clipboard.writeText(value);
       toast("コピーしました");
     } catch {
-      toast("コピーできませんでした");
+      toast("コピーできませんでした", "problem");
     }
   };
   return (
