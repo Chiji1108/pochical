@@ -1,6 +1,9 @@
 // What an invitation code is, for every platform: the server issues codes
 // of it, and the apps and the site recognize them in links
-// (https://pochical.app/invite/{code}). `mise run gen` writes it out for
+// (https://pochical.app/invite/{code}). A link is known by its path alone:
+// a query a later app or site adds (such as ?hl=ko, the language the
+// sender wants its preview in) is ignored, not a reason to turn the link
+// away. `mise run gen` writes it out for
 // the native apps (Invite.swift, Invite.kt) and as JSON
 // (spec/design-tokens.json).
 export const inviteRules = {

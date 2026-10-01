@@ -15,8 +15,16 @@ import { SHARE_IMAGE } from "./site";
 // text with harfbuzzjs, whose loader looks for a script URL a Worker does
 // not have.
 
-const FONT = "Noto Sans JP";
-// Only the characters drawn are fetched, so a font is a few kilobytes.
+// Noto Sans JP first, for Japanese shapes; then KR for Hangul, which JP
+// has none of, and TC for the traditional characters JP lacks (嬤), so a
+// group named in Korean or Chinese shows its name. Only the characters
+// drawn are fetched, so a font is a few kilobytes.
+const INVITE_IMAGE_FONTS = [
+  "Noto Sans JP",
+  "Noto Sans KR",
+  "Noto Sans TC",
+] as const;
+const WEIGHTS = [400, 700] as const;
 const FONT_CSS = "https://fonts.googleapis.com/css2";
 const FONT_URL = /src: url\((?<url>[^)]+)\)/u;
 // Twemoji, the emoji set satori's own examples use, pinned so a group's
@@ -58,15 +66,19 @@ const loadEngines = async (): Promise<void> => {
   }
 };
 
-const fontOf = async (weight: number, text: string): Promise<ArrayBuffer> => {
+const fontOf = async (
+  family: string,
+  weight: number,
+  text: string
+): Promise<ArrayBuffer> => {
   const query = new URLSearchParams({
-    family: `${FONT}:wght@${weight}`,
+    family: `${family}:wght@${weight}`,
     text,
   });
   const answer = await fetch(`${FONT_CSS}?${query}`, ASSET_CACHE);
   const url = FONT_URL.exec(await answer.text())?.groups?.url;
   if (url === undefined) {
-    throw new Error(`No ${FONT} ${weight} in Google Fonts' answer`);
+    throw new Error(`No ${family} ${weight} in Google Fonts' answer`);
   }
   const font = await fetch(url, ASSET_CACHE);
   return await font.arrayBuffer();
@@ -92,15 +104,17 @@ export const drawInviteImage = async (
 ): Promise<Uint8Array> => {
   await loadEngines();
   const text = `${FIXED_TEXT}${group.name}`;
-  const [bold, regular] = await Promise.all([
-    fontOf(700, text),
-    fontOf(400, text),
-  ]);
+  const fonts = await Promise.all(
+    INVITE_IMAGE_FONTS.flatMap((name) =>
+      WEIGHTS.map(async (weight) => ({
+        data: await fontOf(name, weight, text),
+        name,
+        weight,
+      }))
+    )
+  );
   const svg = await satori(InviteShareImage({ group, icon: iconData }), {
-    fonts: [
-      { data: bold, name: FONT, weight: 700 },
-      { data: regular, name: FONT, weight: 400 },
-    ],
+    fonts,
     height: SHARE_IMAGE.height,
     loadAdditionalAsset: async (code, segment) =>
       code === "emoji" ? await emojiOf(segment) : [],

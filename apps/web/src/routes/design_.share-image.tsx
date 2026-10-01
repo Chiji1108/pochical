@@ -32,7 +32,8 @@ export const Route = createFileRoute("/design_/share-image")({
 // the top page's hero in one frame, its words on the app's ポチカル sky and
 // the calendar's phone rising from the bottom edge. Under it, an invitation
 // link's picture for a sample group, which the site's Worker draws for each
-// group (src/lib/invite-image.ts) in Noto Sans JP and Twemoji.
+// group (src/lib/invite-image.ts) in Noto Sans JP (KR and TC for what it
+// lacks) and Twemoji.
 
 const styles = {
   brand: css({
