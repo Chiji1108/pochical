@@ -140,6 +140,32 @@ export function DesignGroup({
     }
     return [me];
   };
+  const chatOf = (id: string, chatId: string): Chat =>
+    chats[chatKey(id, chatId)] ?? { messages: [], unread: 0 };
+  // A line from the app in a group's chat, when who is in it, how to get
+  // in or what it is called changes: someone joining, leaving or taken
+  // out, a new invite link, or a new name or icon. Nothing else, so the
+  // lines stay worth reading.
+  const addNotice = (id: string, notice: string) => {
+    const key = chatKey(id, groupChat);
+    const chat = chatOf(id, groupChat);
+    setChats({
+      ...chats,
+      [key]: {
+        ...chat,
+        messages: [
+          ...chat.messages,
+          {
+            from: "me",
+            id: `notice-${chat.messages.length}`,
+            notice,
+            time: timeNow(),
+            when: "今日",
+          },
+        ],
+      },
+    });
+  };
   const scanPage = (
     <ScanPage
       onClose={() => {
@@ -168,6 +194,10 @@ export function DesignGroup({
         setGroups([...groups, joined]);
         setGroupId(joined.id);
         setPage({ name: "hub" });
+        addNotice(
+          joined.id,
+          `${profileIn(joined, profile).name}がグループに参加しました`
+        );
         toast(`「${joined.name}」に参加しました`);
       }}
       profile={profile}
@@ -229,29 +259,6 @@ export function DesignGroup({
       (member) => !removed[summary.id]?.includes(member.id)
     ),
   };
-  const chatOf = (id: string, chatId: string): Chat =>
-    chats[chatKey(id, chatId)] ?? { messages: [], unread: 0 };
-  // A line from the app in the group chat, like a new name.
-  const addNotice = (notice: string) => {
-    const key = chatKey(group.id, groupChat);
-    const chat = chatOf(group.id, groupChat);
-    setChats({
-      ...chats,
-      [key]: {
-        ...chat,
-        messages: [
-          ...chat.messages,
-          {
-            from: "me",
-            id: `notice-${chat.messages.length}`,
-            notice,
-            time: timeNow(),
-            when: "今日",
-          },
-        ],
-      },
-    });
-  };
   // A day shared from the shift table opens the group chat with the day
   // set above the composer, as sharing into a chat app does: nothing
   // reaches everyone until you send it, with a word if you like.
@@ -270,6 +277,7 @@ export function DesignGroup({
       [group.id]: [...(removed[group.id] ?? []), member.id],
     });
     addNotice(
+      group.id,
       `${profileIn(group, profile).name}が${member.name}をグループから外しました`
     );
     toast(`${member.name}を外しました`);
@@ -473,7 +481,7 @@ export function DesignGroup({
                   group,
                   edit
                 );
-                addNotice(notice);
+                addNotice(group.id, notice);
               }}
               profile={profile}
             />
@@ -483,6 +491,12 @@ export function DesignGroup({
               group={group}
               onBack={() => {
                 setPage({ name: "hub" });
+              }}
+              onRemake={() => {
+                addNotice(
+                  group.id,
+                  `${profileIn(group, profile).name}が招待リンクを作り直しました`
+                );
               }}
             />
           )}
