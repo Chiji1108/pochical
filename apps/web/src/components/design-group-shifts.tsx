@@ -37,11 +37,7 @@ import {
   smallWeekday,
   toneColor,
 } from "./design-group-parts";
-import {
-  englishMonthOf,
-  monthNameOf,
-  monthWithYearOf,
-} from "./design-month-name";
+import { monthNameOf, monthWithYearOf } from "./design-month-name";
 import { MonthTitleButton } from "./design-month-picker";
 import {
   monthIndex,
@@ -1876,7 +1872,7 @@ function MonthDivider({
   );
 }
 
-// The shift table's month: its name (2026年9月, or sep. 2026 as the
+// The shift table's month: its name (2026年9月, or Sep 2026 as the
 // カレンダー page's 月と曜日 asks), which opens a choice of months, and
 // the way back to today's day or month while it is out of sight. Over a
 // list of months, it names the month in sight, rolling to the next as the
@@ -1926,7 +1922,10 @@ function MonthRow({
         <strong className={shiftsPage.monthName}>
           {english ? (
             <span aria-hidden="true">
-              <RollingName {...named(englishMonthOf)} letters />{" "}
+              <RollingName
+                {...named((date) => monthNameOf(date, true))}
+                letters
+              />{" "}
               <RollingName {...rolled((date) => date.getFullYear())} />
             </span>
           ) : (
