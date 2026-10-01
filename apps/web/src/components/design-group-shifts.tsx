@@ -838,6 +838,9 @@ function DaySheetBody({
       <div className={daySheetStack}>
         {pollable && (
           <SegmentedControl
+            // Its own part, 24px clear of the calendar as parts are,
+            // where the calendar's rows keep their 12px.
+            className={modeSwitch}
             label="日にちをどうするか"
             onValueChange={setMode}
             value={mode}
@@ -932,6 +935,8 @@ function DaySheetBody({
 }
 
 const suggestionCount = 4;
+
+const modeSwitch = css({ marginBottom: "12px" });
 
 // What sending will do, under the days.
 function dayNote(count: number, poll: boolean) {
