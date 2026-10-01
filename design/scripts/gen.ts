@@ -13,7 +13,7 @@ import {
   untintedTokens,
 } from "../src/colors";
 import type { ColorScheme } from "../src/colors";
-import { GROUP_MAX_MEMBERS, textLimits } from "../src/limits";
+import { GROUP_MAX_MEMBERS, SHARED_DAYS_MAX, textLimits } from "../src/limits";
 import {
   HAIRLINE_MAX,
   radii,
@@ -134,7 +134,11 @@ function json() {
       noteMarkerSteps,
       roleSteps,
     },
-    limits: { groupMaxMembers: GROUP_MAX_MEMBERS, text: textLimits },
+    limits: {
+      groupMaxMembers: GROUP_MAX_MEMBERS,
+      sharedDaysMax: SHARED_DAYS_MAX,
+      text: textLimits,
+    },
     metrics: {
       hairlineMax: HAIRLINE_MAX,
       radii,
@@ -412,6 +416,9 @@ function swiftLimits() {
     ),
     "}",
     "",
+    "/// The most days one chat message shares.",
+    `public let sharedDaysMax = ${SHARED_DAYS_MAX}`,
+    "",
     "/// The most people in one group.",
     `public let groupMaxMembers = ${GROUP_MAX_MEMBERS}`,
     "",
@@ -434,6 +441,9 @@ function kotlinLimits() {
       ([name, value]) => `  const val ${name} = ${value}`
     ),
     "}",
+    "",
+    "/** The most days one chat message shares. */",
+    `const val SHARED_DAYS_MAX = ${SHARED_DAYS_MAX}`,
     "",
     "/** The most people in one group. */",
     `const val GROUP_MAX_MEMBERS = ${GROUP_MAX_MEMBERS}`,

@@ -2823,6 +2823,7 @@
   },
   "limits": {
     "groupMaxMembers": 100,
+    "sharedDaysMax": 31,
     "text": {
       "chatMessage": 1000,
       "dayNote": 100,

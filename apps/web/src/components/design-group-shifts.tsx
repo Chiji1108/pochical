@@ -1,3 +1,4 @@
+import { SHARED_DAYS_MAX } from "@pochical/design/limits";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronLeft, ChevronRight, Download, Info, Share } from "lucide-react";
 import { useMotionValue, useReducedMotion } from "motion/react";
@@ -814,6 +815,7 @@ function DaySheetBody({
     new Date(designToday.getFullYear(), designToday.getMonth(), 1)
   );
   const [picked, setPicked] = useState<Date[]>([]);
+  const toast = useContext(ToastContext);
   // The switch shows once there is more than one day to choose from, or
   // from the start when the sheet opened as a poll; a poll needs two.
   const showPoll = pollable && (picked.length > 1 || poll);
@@ -821,11 +823,17 @@ function DaySheetBody({
   const isPicked = (date: Date) =>
     picked.some((item) => dateKey(item) === dateKey(date));
   const toggle = (date: Date) => {
-    setPicked(
-      isPicked(date)
-        ? picked.filter((item) => dateKey(item) !== dateKey(date))
-        : [...picked, date].sort((a, b) => a.getTime() - b.getTime())
-    );
+    if (isPicked(date)) {
+      setPicked(picked.filter((item) => dateKey(item) !== dateKey(date)));
+      return;
+    }
+    // A message shares a month's worth at most; past it a day stays
+    // unpicked and says why, as choosing too many photos does.
+    if (picked.length >= SHARED_DAYS_MAX) {
+      toast(`一度に送れるのは${SHARED_DAYS_MAX}日までです`, "problem");
+      return;
+    }
+    setPicked([...picked, date].sort((a, b) => a.getTime() - b.getTime()));
   };
   const suggestions = Array.from({ length: 45 }, (_, index) =>
     addDays(designToday, index)
