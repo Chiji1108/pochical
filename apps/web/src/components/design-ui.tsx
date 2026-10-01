@@ -17,6 +17,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { textLimits } from "@pochical/design/limits";
+import type { TextKind } from "@pochical/design/limits";
 import {
   Check,
   ChevronDown,
@@ -63,13 +65,7 @@ import type {
 import { css, cva, cx } from "styled-system/css";
 
 import { spring } from "../lib/motion";
-import {
-  characterCount,
-  countShown,
-  limitText,
-  textLimits,
-} from "../lib/text-limits";
-import type { TextKind } from "../lib/text-limits";
+import { characterCount, countShown, limitText } from "../lib/text-limits";
 import { useWeek } from "./design-week";
 import type { DayTone } from "./design-week";
 

@@ -32,6 +32,9 @@ export type Member = {
   style?: { look: LookSettings };
   // A profile picture; without one the avatar shows the first letter.
   photo?: string;
+  // Yours, as the others see you in this group: your avatar's letter
+  // without a picture, where `name` says 自分.
+  shownName?: string;
   patterns: MemberPattern[];
   shiftOn: (date: Date) => string | undefined;
   // 早出 and 残業, shared with the group like the shift itself, with the
@@ -331,7 +334,8 @@ function memberPatternOf(own: Pattern): MemberPattern {
 export function meFrom(
   schedule: Schedule,
   patterns: Pattern[],
-  photo?: string
+  photo?: string,
+  shownName?: string
 ): Member {
   const book = new Map(patterns.map((own) => [own.id, own]));
   return {
@@ -349,6 +353,7 @@ export function meFrom(
     patterns: patterns.map(memberPatternOf),
     photo,
     shiftOn: (date) => schedule[dateKey(date)]?.shift,
+    shownName,
   };
 }
 
@@ -597,6 +602,25 @@ export const sampleChats: Record<string, Chat> = {
 
   "friends:group": {
     messages: [
+      // A long message, folded past ten lines until 続きを読む.
+      {
+        from: "misaki",
+        id: "n-1",
+        text: "来月の旅行の件、いろいろ調べてみたからまとめるね！\n\n行き先は前に話してた箱根がいいかなと思ってる。新宿からロマンスカーで1時間半くらいだし、夜勤明けでも寝てれば着くのがありがたい。\n\n宿は温泉付きの旅館を2つ見つけたよ。1つ目は駅から近くて、部屋に露天風呂がついてるところ。少し高いけど、せっかくだしアリかなと思ってる。2つ目は山の上のほうで、送迎バスがあるところ。夕ごはんがすごく評判いいみたい。\n\n日程は、みんなの休みが合いそうなところを下に送るから、行けそうな日に返事してほしい！\n\n持ち物は、浴衣は宿で借りられるから、着替えと歩きやすい靴くらいで大丈夫そう。あと美術館にも行きたいから、行きたい人は教えてね。\n\n予算は1人2万円くらいで考えてるけど、もっと抑えたい人がいたら遠慮なく言ってね。",
+        time: "21:40",
+        when: "昨日",
+      },
+      // Ten days shared: the card keeps to a week of rows.
+      {
+        days: Array.from(
+          { length: 10 },
+          (_, index) => new Date(2026, 9, 5 + index)
+        ),
+        from: "misaki",
+        id: "n0",
+        time: "21:41",
+        when: "昨日",
+      },
       {
         days: [new Date(2026, 8, 14), new Date(2026, 8, 21)],
         from: "misaki",

@@ -1,4 +1,5 @@
 import { Popover, Portal } from "@ark-ui/react";
+import { chatRules } from "@pochical/design/chat";
 import {
   Bell,
   BellOff,
@@ -293,6 +294,21 @@ const chatStyle = {
     opacity: 0.25,
   }),
   // A message keeps the lines it was written in.
+  // A long message's words, cut at chatRules.foldLines with an ellipsis.
+  folded: css({ lineClamp: chatRules.foldLines }),
+  // Under a folded message, in the color its links take.
+  unfold: cva({
+    base: {
+      bg: "transparent",
+      border: 0,
+      color: "accent.default",
+      fontWeight: 600,
+      padding: "0 12px 8px",
+      textAlign: "start",
+      textStyle: "footnote",
+    },
+    variants: { mine: { true: { color: "accent.onFill" } } },
+  }),
   bubbleText: css({
     bg: "transparent",
     border: 0,
@@ -327,10 +343,19 @@ const chatStyle = {
     display: "flex",
     flexDirection: "column",
     listStyle: "none",
-    margin: 0,
+    marginBottom: 0,
+    // Out to the screen's edges, so its line runs from edge to edge as a
+    // bar's does on iOS and Android (a list's lines stay inset); its
+    // contents stay where they were.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    marginTop: 0,
     maxHeight: "180px",
     overflowY: "auto",
-    padding: "4px 0",
+    paddingBottom: "4px",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "4px",
   }),
   mentionPick: css({
     _hover: { bg: "fill.tertiary" },
@@ -358,7 +383,15 @@ const chatStyle = {
       borderTop: "1px solid token(colors.separator)",
       display: "flex",
       gap: "8px",
-      padding: "8px 0 4px",
+      // Out to the screen's edges, so its line runs from edge to edge as a
+      // bar's does on iOS and Android (a list's lines stay inset); its
+      // contents stay where they were.
+      marginLeft: "calc(-1 * var(--screen-left))",
+      marginRight: "calc(-1 * var(--screen-right))",
+      paddingBottom: "4px",
+      paddingLeft: "var(--screen-left)",
+      paddingRight: "var(--screen-right)",
+      paddingTop: "8px",
     },
     // The reply above it already draws the line.
     variants: { replying: { true: { borderTop: 0 } } },
@@ -435,8 +468,21 @@ const chatStyle = {
     alignItems: "center",
     borderBottom: "1px solid token(colors.separator)",
     display: "grid",
-    gridTemplateColumns: "1fr auto 1fr",
-    padding: "4px 0 8px",
+    // The sides as wide as each other, so the title stays centered and a
+    // long one is cut short between them.
+    gridTemplateColumns: "1fr minmax(0, auto) 1fr",
+    // Room between the title and the buttons, so a long name is cut
+    // short before it touches them.
+    columnGap: "8px",
+    // Out to the screen's edges, so its line runs from edge to edge as a
+    // bar's does on iOS and Android (a list's lines stay inset); its
+    // contents stay where they were.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    paddingBottom: "8px",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "4px",
   }),
   // A message jumped to rings its bubble or shared days for a moment.
   item: cva({
@@ -658,8 +704,17 @@ const chatStyle = {
       display: "flex",
       gap: "8px",
       listStyle: "none",
-      margin: 0,
-      padding: "12px 0 4px",
+      marginBottom: 0,
+      // Out to the screen's edges, so its line runs from edge to edge as a
+      // bar's does on iOS and Android (a list's lines stay inset); its
+      // contents stay where they were.
+      marginLeft: "calc(-1 * var(--screen-left))",
+      marginRight: "calc(-1 * var(--screen-right))",
+      marginTop: 0,
+      paddingBottom: "4px",
+      paddingLeft: "var(--screen-left)",
+      paddingRight: "var(--screen-right)",
+      paddingTop: "12px",
     },
     // The reply or the days above already draw the line.
     variants: { below: { true: { borderTop: 0, paddingTop: "8px" } } },
@@ -698,7 +753,14 @@ const chatStyle = {
     borderTop: "1px solid token(colors.separator)",
     display: "flex",
     gap: "8px",
-    padding: "8px 0 0",
+    // Out to the screen's edges, so its line runs from edge to edge as a
+    // bar's does on iOS and Android (a list's lines stay inset); its
+    // contents stay where they were.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "8px",
   }),
   tap: cva({
     base: {
@@ -744,12 +806,42 @@ const chatStyle = {
     variants: { mine: { false: {}, true: { justifyContent: "flex-end" } } },
   }),
   title: css({
+    display: "flex",
+    flexDirection: "column",
+    fontWeight: 600,
+    margin: 0,
+    minWidth: 0,
+    textStyle: "headline",
+  }),
+  titleButton: css({
+    _active: { opacity: 0.6 },
+    bg: "transparent",
+    border: 0,
+    color: "inherit",
+    display: "flex",
+    flexDirection: "column",
+    font: "inherit",
+    minWidth: 0,
+    padding: 0,
+  }),
+  // The name and the mute mark on one line, the count under it.
+  titleLine: css({
     alignItems: "center",
     display: "flex",
-    fontWeight: 600,
     gap: "4px",
-    margin: 0,
-    textStyle: "headline",
+    justifyContent: "center",
+    minWidth: 0,
+  }),
+  titleName: css({
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  }),
+  titleCount: css({
+    color: "text.tertiary",
+    fontWeight: 400,
+    textAlign: "center",
+    textStyle: "caption2",
   }),
   menu: css({ justifySelf: "end" }),
   when: css({
@@ -762,6 +854,30 @@ const chatStyle = {
     textStyle: "caption2",
   }),
 };
+
+// A chat's title in its header: the name, the mute mark, and for a group
+// the count under them.
+function ChatTitle({
+  title,
+  count,
+  muted,
+}: {
+  title: string;
+  count?: number;
+  muted: boolean;
+}) {
+  return (
+    <>
+      <span className={chatStyle.titleLine}>
+        <span className={chatStyle.titleName}>{title}</span>
+        {muted && <MutedMark />}
+      </span>
+      {count !== undefined && (
+        <small className={chatStyle.titleCount}>{count}人</small>
+      )}
+    </>
+  );
+}
 
 // A chat whose notifications are off, after its name in the list and in
 // its own header, as chat apps mark a muted room.
@@ -855,6 +971,8 @@ export function ChatPage({
   inviteOf,
   onInvite,
   title,
+  isGroup = false,
+  onTitle,
   group,
   people,
   chat,
@@ -882,7 +1000,12 @@ export function ChatPage({
   // The group chat's menu opens everyone's shifts, to look up a day while
   // talking it over.
   onShifts?: () => void;
+  // The group's name in its group chat, else the other member's name.
   title: string;
+  // The group chat, where everyone talks; else a one-to-one chat.
+  isGroup?: boolean;
+  // A tap on the title: the group's settings and members.
+  onTitle?: () => void;
   // Its notifications turned off, from the menu at its top right, as
   // LINE's rooms have it.
   muted?: boolean;
@@ -912,6 +1035,9 @@ export function ChatPage({
   onOpenDay: (date: Date) => void;
 }) {
   const [draft, setDraft] = useState("");
+  // Messages whose words run past chatRules.foldLines, and those opened in full.
+  const [folded, setFolded] = useState<Record<string, boolean>>({});
+  const [unfolded, setUnfolded] = useState<string[]>([]);
   // Your message being changed in the composer, and the one being taken
   // back, asked about first.
   const [editing, setEditing] = useState<string>();
@@ -1062,7 +1188,6 @@ export function ChatPage({
       observer.disconnect();
     };
   }, []);
-  const isGroup = title === "全体チャット";
   // Someone writing back, shown under the latest line: in the prototype,
   // whoever spoke last before you, for a few seconds after you send. The
   // apps show it from the typing frames (spec/sync-protocol.md).
@@ -1239,7 +1364,7 @@ export function ChatPage({
   const pin = (id: string, pinned: boolean) => {
     const order = Math.max(0, ...pins.map((line) => line.pinned ?? 0)) + 1;
     const dropped =
-      pinned && pins.length >= maxPins ? pins.at(-1)?.id : undefined;
+      pinned && pins.length >= chatRules.maxPins ? pins.at(-1)?.id : undefined;
     onChange(
       chat.messages.map((message) => {
         if (message.id === id) {
@@ -1252,7 +1377,9 @@ export function ChatPage({
       })
     );
     if (dropped) {
-      toast(`ピン留めは${maxPins}件までです。いちばん古いものを外しました`);
+      toast(
+        `ピン留めは${chatRules.maxPins}件までです。いちばん古いものを外しました`
+      );
     } else {
       toast(pinned ? "ピン留めしました" : "ピン留めを外しました");
     }
@@ -1637,13 +1764,35 @@ export function ChatPage({
                       }}
                       type="button"
                     >
-                      <MessageText
-                        mine={mine}
-                        nameOf={mentionName}
-                        text={message.text}
-                      />
+                      <FoldedText
+                        onFolds={(folds) => {
+                          setFolded((before) =>
+                            before[message.id] === folds
+                              ? before
+                              : { ...before, [message.id]: folds }
+                          );
+                        }}
+                        open={unfolded.includes(message.id)}
+                      >
+                        <MessageText
+                          mine={mine}
+                          nameOf={mentionName}
+                          text={message.text}
+                        />
+                      </FoldedText>
                     </button>
                   </MessageActions>
+                  {folded[message.id] && !unfolded.includes(message.id) && (
+                    <button
+                      className={chatStyle.unfold({ mine })}
+                      onClick={() => {
+                        setUnfolded([...unfolded, message.id]);
+                      }}
+                      type="button"
+                    >
+                      続きを読む
+                    </button>
+                  )}
                   {inviteCode && (
                     <InviteCard
                       invite={inviteOf(inviteCode)}
@@ -1726,9 +1875,31 @@ export function ChatPage({
     <Screen>
       <header className={chatStyle.header}>
         <BackButton onClick={onBack}>{backLabel}</BackButton>
+        {/* The group's name, and under it how many are in it, as
+            Telegram and Messages head a group: clear which group this is,
+            without a count in brackets. A long name is cut short, the mute
+            mark stays. A tap opens the group's settings and members. */}
         <h3 className={chatStyle.title}>
-          {title}
-          {muted && <MutedMark />}
+          {onTitle ? (
+            <button
+              aria-label={`${title}、${group.members.length}人。押すとグループの設定`}
+              className={chatStyle.titleButton}
+              onClick={onTitle}
+              type="button"
+            >
+              <ChatTitle
+                count={isGroup ? group.members.length : undefined}
+                muted={muted}
+                title={title}
+              />
+            </button>
+          ) : (
+            <ChatTitle
+              count={isGroup ? group.members.length : undefined}
+              muted={muted}
+              title={title}
+            />
+          )}
         </h3>
         {onMuted && (
           <IconMenu
@@ -2270,7 +2441,6 @@ export function ChatPage({
 const flashMilliseconds = 1200;
 
 // How many lines stay pinned at once, as LINE keeps five announcements.
-const maxPins = 5;
 
 // In the prototype, how soon after you send someone starts writing back,
 // and for how long.
@@ -2496,6 +2666,33 @@ function LinkMenu({
   );
 }
 
+// A message's words, folded at chatRules.foldLines until opened. Whether they run
+// past it is measured, not guessed from their length, and told to the
+// chat so 続きを読む shows only under words that were cut.
+function FoldedText({
+  open,
+  onFolds,
+  children,
+}: {
+  open: boolean;
+  onFolds: (folds: boolean) => void;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const words = ref.current;
+    if (!words || open) {
+      return;
+    }
+    onFolds(words.scrollHeight > words.clientHeight + 1);
+  }, [open, onFolds]);
+  return (
+    <span className={open ? undefined : chatStyle.folded} ref={ref}>
+      {children}
+    </span>
+  );
+}
+
 // The link under a tap in a message's words, if it was on one.
 function linkAt(target: EventTarget) {
   return target instanceof Element
@@ -2530,7 +2727,7 @@ const linkCard = {
   }),
   // Pages give their picture at 1.91:1, the size previews are made for.
   image: css({
-    aspectRatio: "1.91",
+    aspectRatio: String(chatRules.linkPreviewAspect),
     bg: "fill.tertiary",
     display: "block",
     objectFit: "cover",
@@ -2699,11 +2896,6 @@ function InviteCard({
   );
 }
 
-// How long a link must stay as written before its page is read, so one
-// typed by hand is not read at every letter; a pasted one is read at once
-// after.
-const linkSettleMs = 400;
-
 // How long the server takes to read a page in the prototype.
 const readMs = 700;
 
@@ -2727,14 +2919,14 @@ function useLinkPreview(draft: string) {
     const timers = [
       window.setTimeout(() => {
         setSettled(link);
-      }, linkSettleMs),
+      }, chatRules.linkPreviewSettleMs),
     ];
     if (!asked.current.has(link)) {
       timers.push(
         window.setTimeout(() => {
           asked.current.add(link);
           setPages((before) => ({ ...before, [link]: previewOf(link) }));
-        }, linkSettleMs + readMs)
+        }, chatRules.linkPreviewSettleMs + readMs)
       );
     }
     return () => {
@@ -3573,7 +3765,15 @@ const pinBar = {
     borderBottom: "1px solid token(colors.separator)",
     display: "flex",
     gap: "4px",
-    padding: "4px 0",
+    // Out to the screen's edges, so its line runs from edge to edge as a
+    // bar's does on iOS and Android (a list's lines stay inset); its
+    // contents stay where they were.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    paddingBottom: "4px",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "4px",
   }),
   jump: css({
     alignItems: "center",
@@ -3614,8 +3814,17 @@ const pinBar = {
   list: css({
     borderBottom: "1px solid token(colors.separator)",
     listStyle: "none",
-    margin: 0,
-    padding: "4px 0",
+    marginBottom: 0,
+    // Out to the screen's edges, so its line runs from edge to edge as a
+    // bar's does on iOS and Android (a list's lines stay inset); its
+    // contents stay where they were.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    marginTop: 0,
+    paddingBottom: "4px",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "4px",
   }),
 };
 
@@ -4116,7 +4325,9 @@ const dayCard = {
 
 // Shared dates with each person's shift. One day spreads out, wrapping
 // when the people are many; several become a small table, a row per day,
-// or a row per person when the people don't fit across.
+// or a row per person when the people don't fit across. Either keeps to
+// a week of days, so a month shared does not fill the chat; the rest are
+// left to シフト表で見る under it.
 function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
   const weekTools = useWeek();
   const [first] = days;
@@ -4135,7 +4346,7 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
         <span
           className={dayCard.people}
           style={{
-            gridTemplateColumns: `repeat(${Math.min(members.length, maxCardColumns)}, minmax(36px, 1fr))`,
+            gridTemplateColumns: `repeat(${Math.min(members.length, chatRules.dayCardColumns)}, minmax(36px, 1fr))`,
           }}
         >
           {members.map((member) => (
@@ -4149,12 +4360,14 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
       </span>
     );
   }
-  if (members.length > maxCardColumns) {
+  if (members.length > chatRules.dayCardColumns) {
     return <DayCardByPerson days={days} members={members} />;
   }
   const columns = {
     gridTemplateColumns: `44px repeat(${members.length}, 26px)`,
   };
+  const shown = days.slice(0, chatRules.dayCardRows);
+  const rest = days.length - shown.length;
   return (
     <span className={dayCard.card({ many: true })} data-part="day-card">
       <span className={dayCard.row({ names: true })} style={columns}>
@@ -4166,7 +4379,7 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
           </span>
         ))}
       </span>
-      {days.map((date) => (
+      {shown.map((date) => (
         <span
           className={dayCard.row({ together: everyoneOff(members, date) })}
           key={dateKey(date)}
@@ -4195,13 +4408,10 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
           ))}
         </span>
       ))}
+      {rest > 0 && <small className={dayCard.rest}>ほか{rest}日</small>}
     </span>
   );
 }
-
-// A card fits this many columns of people or days in a bubble on the
-// narrowest phone.
-const maxCardColumns = 6;
 
 // Several days for more people than fit across: the table turns, a row
 // per person and a column per day, as the people can't be fewer but the
@@ -4214,7 +4424,7 @@ function DayCardByPerson({
   members: Member[];
 }) {
   const weekTools = useWeek();
-  const shown = days.slice(0, maxCardColumns);
+  const shown = days.slice(0, chatRules.dayCardColumns);
   const rest = days.length - shown.length;
   const columns = {
     gridTemplateColumns: `26px repeat(${shown.length}, 28px)`,

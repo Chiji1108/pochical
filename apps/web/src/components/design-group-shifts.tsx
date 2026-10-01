@@ -1,3 +1,4 @@
+import { SHARED_DAYS_MAX } from "@pochical/design/limits";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronLeft, ChevronRight, Download, Info, Share } from "lucide-react";
 import { useMotionValue, useReducedMotion } from "motion/react";
@@ -70,8 +71,9 @@ import {
   Pager,
   PullDownMenu,
   srOnly,
+  Segment,
+  SegmentedControl,
   SummaryRow,
-  SwitchRow,
   summaryRow,
   Tag,
   TodayButton,
@@ -748,7 +750,9 @@ const people = {
 };
 
 // Picking days to share: days everyone is off first, then any day on a
-// small calendar. Several can be picked at once.
+// small calendar. Several can be picked at once. In a group chat, 共有 |
+// 投票 at its top puts them to the vote instead, seen from the moment it
+// opens: one way in for both, as their sheet is the same.
 export function DaySheet({
   open,
   onOpenChange,
@@ -798,21 +802,30 @@ function DaySheetBody({
   onShare: (days: Date[], poll: boolean) => void;
   pollable: boolean;
 }) {
-  const [poll, setPoll] = useState(false);
+  const [mode, setMode] = useState<"share" | "poll">("share");
+  const poll = pollable && mode === "poll";
   const weekTools = useWeek();
   const [month, setMonth] = useState(
     new Date(designToday.getFullYear(), designToday.getMonth(), 1)
   );
   const [picked, setPicked] = useState<Date[]>([]);
+  const toast = useContext(ToastContext);
+  // A poll needs two days to choose from.
   const canPoll = pollable && picked.length > 1;
   const isPicked = (date: Date) =>
     picked.some((item) => dateKey(item) === dateKey(date));
   const toggle = (date: Date) => {
-    setPicked(
-      isPicked(date)
-        ? picked.filter((item) => dateKey(item) !== dateKey(date))
-        : [...picked, date].sort((a, b) => a.getTime() - b.getTime())
-    );
+    if (isPicked(date)) {
+      setPicked(picked.filter((item) => dateKey(item) !== dateKey(date)));
+      return;
+    }
+    // A message shares a month's worth at most; past it a day stays
+    // unpicked and says why, as choosing too many photos does.
+    if (picked.length >= SHARED_DAYS_MAX) {
+      toast(`一度に送れるのは${SHARED_DAYS_MAX}日までです`, "problem");
+      return;
+    }
+    setPicked([...picked, date].sort((a, b) => a.getTime() - b.getTime()));
   };
   const suggestions = Array.from({ length: 45 }, (_, index) =>
     addDays(designToday, index)
@@ -823,14 +836,27 @@ function DaySheetBody({
     <>
       <DecideHeading
         action="送る"
-        disabled={picked.length === 0}
+        disabled={picked.length === 0 || (poll && !canPoll)}
         onAction={() => {
           onShare(picked, canPoll && poll);
         }}
         onCancel={onClose}
-        title="日にちを共有"
+        title={poll ? "日にちの投票" : "日にちを共有"}
       />
       <div className={daySheetStack}>
+        {pollable && (
+          <SegmentedControl
+            // Its own part, 24px clear of the calendar as parts are,
+            // where the calendar's rows keep their 12px.
+            className={modeSwitch}
+            label="日にちをどうするか"
+            onValueChange={setMode}
+            value={mode}
+          >
+            <Segment value="share">共有</Segment>
+            <Segment value="poll">投票</Segment>
+          </SegmentedControl>
+        )}
         {suggestions.length > 0 && (
           <div className={shareDays.suggest}>
             <span className={shareDays.togetherLabel}>みんな休み</span>
@@ -910,12 +936,7 @@ function DaySheetBody({
         </div>
         {/* Offered once there is more than one day to choose from, as
             LINE's 日程調整 is a way of choosing among days. */}
-        {canPoll && (
-          <List>
-            <SwitchRow checked={poll} label="投票で決める" onChange={setPoll} />
-          </List>
-        )}
-        <Note>{dayNote(picked.length, canPoll && poll)}</Note>
+        <Note>{dayNote(picked.length, poll)}</Note>
       </div>
     </>
   );
@@ -923,8 +944,13 @@ function DaySheetBody({
 
 const suggestionCount = 4;
 
+const modeSwitch = css({ marginBottom: "12px" });
+
 // What sending will do, under the days.
 function dayNote(count: number, poll: boolean) {
+  if (poll && count < 2) {
+    return "候補の日を2日以上選んでください。日付に枠がある日は、みんな休みの日です。";
+  }
   if (count === 0) {
     return "日付に枠がある日は、みんな休みの日です。";
   }

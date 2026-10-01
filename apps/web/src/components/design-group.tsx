@@ -67,7 +67,8 @@ type Page =
     }
   | { name: "invite" }
   | { name: "new" }
-  | { name: "settings" }
+  // `from` is the chat whose title opened it, to go back there.
+  | { name: "settings"; from?: string }
   // Reading a group's QR code to join it.
   | { name: "scan" }
   // And the invitation it read, to join, or one tapped in a chat; closing
@@ -133,7 +134,7 @@ export function DesignGroup({
   const meIn = (id: string) => {
     const found = groups.find((item) => item.id === id);
     const shown = found ? profileIn(found, profile) : profile;
-    return meFrom(schedule, patterns, shown.photo);
+    return meFrom(schedule, patterns, shown.photo, shown.name);
   };
   const membersOf = (id: string): Member[] => [meIn(id), ...sampleOthers(id)];
   const chatOf = (id: string, chatId: string): Chat =>
@@ -411,7 +412,19 @@ export function DesignGroup({
                   (member) => member.me || member.id === page.chatId
                 )
           }
-          title={chatTitle(group, page.chatId)}
+          isGroup={page.chatId === groupChat}
+          onTitle={
+            page.chatId === groupChat
+              ? () => {
+                  setPage({ from: page.chatId, name: "settings" });
+                }
+              : undefined
+          }
+          title={
+            page.chatId === groupChat
+              ? group.name
+              : chatTitle(group, page.chatId)
+          }
           onShifts={
             page.chatId === groupChat
               ? () => {
@@ -506,7 +519,11 @@ export function DesignGroup({
               }}
               onMember={onMember}
               onBack={() => {
-                setPage({ name: "hub" });
+                setPage(
+                  page.from
+                    ? { chatId: page.from, name: "chat" }
+                    : { name: "hub" }
+                );
               }}
               onChange={(mine) => {
                 setGroups(

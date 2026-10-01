@@ -1,3 +1,4 @@
+import { textLimits } from "@pochical/design/limits";
 import {
   ArrowRight,
   CalendarPlus,
@@ -59,7 +60,7 @@ import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
 import { spring } from "../lib/motion";
-import { composing, limitText, textLimits } from "../lib/text-limits";
+import { composing, limitText } from "../lib/text-limits";
 import type { Coworkers } from "./design-coworkers";
 import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
@@ -1053,13 +1054,21 @@ const calendarPage = {
   detail: css({
     borderTop: "1px solid token(colors.separator)",
     flex: 1,
+    // Out to the screen's edges, so its line runs from edge to edge as a
+    // bar's does on iOS and Android (a list's lines stay inset); its
+    // contents stay where they were.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
     marginTop: "12px",
     minHeight: 0,
     overflowY: "auto",
     // Scrolled back to the top, a pull goes on to unfold the month rather
     // than pulling the screen.
     overscrollBehaviorY: "contain",
-    padding: "16px 8px 12px",
+    paddingBottom: "12px",
+    paddingLeft: "calc(var(--screen-left) + 8px)",
+    paddingRight: "calc(var(--screen-right) + 8px)",
+    paddingTop: "16px",
   }),
   detailDate: css({ fontWeight: 600, margin: "0 0 16px", textStyle: "title3" }),
   // Under the month: its summary, then what to do next and the tab bar.

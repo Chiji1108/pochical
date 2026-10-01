@@ -31,7 +31,8 @@ public object GetInvitePreviewRequestKt {
 
     /**
      * ```
-     * 8 characters from A-Z, a-z and 2-9 without the look-alikes I, O, l.
+     * inviteRules.codeLength characters from inviteRules.codeAlphabet
+     * (design/src/invite.ts).
      * ```
      *
      * `string invite_code = 1 [json_name = "inviteCode"];`
@@ -45,7 +46,8 @@ public object GetInvitePreviewRequestKt {
       }
     /**
      * ```
-     * 8 characters from A-Z, a-z and 2-9 without the look-alikes I, O, l.
+     * inviteRules.codeLength characters from inviteRules.codeAlphabet
+     * (design/src/invite.ts).
      * ```
      *
      * `string invite_code = 1 [json_name = "inviteCode"];`

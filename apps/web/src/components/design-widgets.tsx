@@ -1,3 +1,4 @@
+import { widgetRules } from "@pochical/design/widgets";
 import { Users } from "lucide-react";
 import {
   createContext,
@@ -780,7 +781,7 @@ export function NextOffSmall({ entry }: { entry: WidgetEntry }) {
 
 // The next days off, a line each: the date, its mark and how soon.
 export function NextOffMedium({ entry }: { entry: WidgetEntry }) {
-  const ahead = offsAhead(entry).slice(0, 3);
+  const ahead = offsAhead(entry).slice(0, widgetRules.nextOffs);
   return (
     <div className={offs.root}>
       <span className={srOnly}>{spokenOff(entry, ahead[0])}</span>

@@ -1,22 +1,7 @@
-// How long free text may be, by what it is, as spec/text-limits.md sets it
-// for every platform. Counted as a reader sees characters, so an emoji or
-// a letter with its accent counts as one.
-export const textLimits = {
-  chatMessage: 1000,
-  dayNote: 100,
-  groupMark: 2,
-  groupName: 30,
-  personName: 20,
-  shiftMark: 1,
-  shiftName: 8,
-} as const;
-
-export type TextKind = keyof typeof textLimits;
-
-// Past this many, a count is shown only once the rest left is small, so
-// a note or a message does not carry one all the while it is written.
-const SHORT_LIMIT = 30;
-const COUNT_WHEN_LEFT = 20;
+// How fields hold to the text limits (design/src/limits.ts), as
+// spec/text-limits.md sets it for every platform. Counted as a reader sees
+// characters, so an emoji or a letter with its accent counts as one.
+import { textFields } from "@pochical/design/limits";
 
 const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
 
@@ -29,24 +14,24 @@ export function limitText(text: string, limit: number) {
   return kept.map(({ segment }) => segment).join("");
 }
 
-// A day of the calendar shows three characters of a shift's name: four
-// would fit its width, but run to the edges of a day off's tint and the
-// frame round today.
-// A longer name shows its first three and …, the same on every platform,
-// rather than however many a width happens to fit.
-const DAY_NAME_LENGTH = 3;
+// A day shows a shift's name up to textFields.dayNameLength characters,
+// else its first ones and …, the same on every platform, rather than
+// however many a width happens to fit.
 
 export function dayName(name: string) {
-  if (characterCount(name) <= DAY_NAME_LENGTH) {
+  if (characterCount(name) <= textFields.dayNameLength) {
     return name;
   }
-  return `${limitText(name, DAY_NAME_LENGTH - 1)}…`;
+  return `${limitText(name, textFields.dayNameLength - 1)}…`;
 }
 
 // Whether the count shows while the field is in use: all the while for
 // a short one, like a name, and near the end for a long one.
 export function countShown(count: number, limit: number) {
-  return limit <= SHORT_LIMIT || limit - count <= COUNT_WHEN_LEFT;
+  return (
+    limit <= textFields.countAlwaysUpTo ||
+    limit - count <= textFields.countWhenLeft
+  );
 }
 
 // Whether a key is confirming a Japanese conversion rather than meant as

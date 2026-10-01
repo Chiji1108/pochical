@@ -25,7 +25,8 @@ public nonisolated struct Pochical_V1_GetInvitePreviewRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// 8 characters from A-Z, a-z and 2-9 without the look-alikes I, O, l.
+  /// inviteRules.codeLength characters from inviteRules.codeAlphabet
+  /// (design/src/invite.ts).
   public var inviteCode: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()

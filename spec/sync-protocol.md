@@ -28,7 +28,7 @@ Every user is signed in, from the first launch: anonymously at first, so nobody 
 - A group has one live code, held in D1 (`invites`, from code to group), the only place a link can be looked up. Remaking it replaces the row, so the old link stops working at once. `InviteService.GetInvitePreview` answers anyone holding a live code with the group's name, mark and member count.
 - Joining with a live code adds the user to the Group DO, which decides membership, and then to the user's own DO, which keeps their groups for checking sockets. Both steps can be repeated, so a retry after a failure between them completes the join; joining a group you are in changes nothing and says so.
 - Only members read or remake a group's link.
-- A group has at most 100 members. The Group DO counts and adds in one step, so two people joining at once cannot both take the last place; a join past it fails with `RESOURCE_EXHAUSTED`, which the app shows as the group being full.
+- A group has at most `GROUP_MAX_MEMBERS` members (`design/src/limits.ts`). The Group DO counts and adds in one step, so two people joining at once cannot both take the last place; a join past it fails with `RESOURCE_EXHAUSTED`, which the app shows as the group being full.
 - What anyone holding a link sees, on the site and in a link's card, is the group's name, mark and member count only. The app's join screen shows who is in the group before joining, through `GroupService.GetInvite`, which needs a session.
 
 ## Sockets
@@ -135,8 +135,8 @@ Presence means "has this thread open on screen", not "online in the app": mobile
 
 ### Typing
 
-- While composing, the client sends a typing frame at most every 3 seconds, and a stop frame when it sends the message or the field becomes empty.
-- Receivers show the indicator for about 5 seconds unless it is refreshed, so a lost stop frame cannot leave it stuck.
+- While composing, the client sends a typing frame at most every `chatRules.typingSendMs` (`design/src/chat.ts`), and a stop frame when it sends the message or the field becomes empty.
+- Receivers show the indicator for `chatRules.typingShowMs` unless it is refreshed, so a lost stop frame cannot leave it stuck.
 
 ## Not yet specified
 
