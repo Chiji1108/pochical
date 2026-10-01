@@ -301,6 +301,10 @@ export function DesignGroup({
 
   if (page.name === "chat") {
     const key = chatKey(group.id, page.chatId);
+    // The other person, in a one-to-one chat.
+    const chatMember = group.members.find(
+      (member) => !member.me && member.id === page.chatId
+    );
     return (
       <>
         <ChatPage
@@ -337,6 +341,20 @@ export function DesignGroup({
                 )
           }
           title={chatTitle(group, page.chatId)}
+          onShifts={
+            page.chatId === groupChat
+              ? () => {
+                  setPage({ from: page.chatId, name: "shifts" });
+                }
+              : undefined
+          }
+          onProfile={
+            chatMember
+              ? () => {
+                  onMember(chatMember);
+                }
+              : undefined
+          }
           muted={isMuted(group, page.chatId)}
           onMuted={(muted) => {
             setMuted(page.chatId, muted);
