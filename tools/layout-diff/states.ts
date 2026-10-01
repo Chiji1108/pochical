@@ -634,6 +634,37 @@ export const states: State[] = [
     },
   },
   {
+    // Someone else's message reported: the reasons.
+    name: "group/chat-report",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^全体チャット/u);
+      await tap(page, /^お母さんのメッセージ：来週の日曜/u);
+      await tap(page, "通報");
+      await page.getByRole("dialog", { name: "通報" }).waitFor();
+    },
+  },
+  {
+    // A member blocked from their profile: their messages folded.
+    name: "group/chat-blocked",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^全体チャット/u);
+      await tap(page, "お母さんのプロフィール");
+      await tap(page, "ブロック");
+      await page
+        .getByRole("alertdialog")
+        .getByRole("button", { exact: true, name: "ブロック" })
+        .click();
+      await page
+        .getByText("ブロック中のメンバーのメッセージ")
+        .first()
+        .waitFor();
+    },
+  },
+  {
     name: "group/chat-one",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {

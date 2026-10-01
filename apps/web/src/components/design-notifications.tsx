@@ -28,8 +28,15 @@ import {
   sampleOthers,
   withMuted,
 } from "./design-group-data";
+import type { Member } from "./design-group-data";
 import { Avatar, GroupIcon } from "./design-group-parts";
-import { DecideHeading, Sheet, sheetBody, SystemAlert } from "./design-sheet";
+import {
+  ConfirmDialog,
+  DecideHeading,
+  Sheet,
+  sheetBody,
+  SystemAlert,
+} from "./design-sheet";
 import {
   Button,
   Chip,
@@ -714,6 +721,19 @@ export function ChatNotificationsPage({ onBack }: { onBack: () => void }) {
   const groups = useUser((state) => state.groups);
   const setGroups = useUser((state) => state.setGroups);
   const mentionsWhenMuted = useUser((state) => state.mentionsWhenMuted);
+  const blocked = useUser((state) => state.blocked);
+  const setBlocked = useUser((state) => state.setBlocked);
+  const [unblocking, setUnblocking] = useState<Member>();
+  // Each blocked member with a group you share, to say who they are.
+  const blockedMembers = blocked.flatMap((id) => {
+    for (const group of groups) {
+      const member = sampleOthers(group.id).find((other) => other.id === id);
+      if (member) {
+        return [{ group, member }];
+      }
+    }
+    return [];
+  });
   const setMentionsWhenMuted = useUser((state) => state.setMentionsWhenMuted);
   const { ask, prompt } = usePermissionPrompt();
   const setMuted = (groupId: string, chatId: string, muted: boolean) => {
@@ -807,11 +827,50 @@ export function ChatNotificationsPage({ onBack }: { onBack: () => void }) {
             />
           </List>
         </Section>
+        {/* Where a block is undone besides their profile; shown only
+            while there is one. */}
+        {blockedMembers.length > 0 && (
+          <Section title="ブロック中のメンバー">
+            <List>
+              {blockedMembers.map(({ group, member }) => (
+                <ListRow
+                  arrow={false}
+                  detail={group.name}
+                  key={member.id}
+                  label={member.name}
+                  leading={<Avatar member={member} size={28} />}
+                  onClick={() => {
+                    setUnblocking(member);
+                  }}
+                  value="解除"
+                  valueClassName={unblockValue}
+                />
+              ))}
+            </List>
+          </Section>
+        )}
       </div>
+      {unblocking && (
+        <ConfirmDialog
+          action="解除"
+          message="メッセージがまた表示され、個人チャットも届くようになります。"
+          onCancel={() => {
+            setUnblocking(undefined);
+          }}
+          onConfirm={() => {
+            setBlocked(blocked.filter((id) => id !== unblocking.id));
+            setUnblocking(undefined);
+          }}
+          title={`${unblocking.name}のブロックを解除しますか？`}
+        />
+      )}
       {prompt}
     </>
   );
 }
+
+// 解除 at a blocked member's row, in the accent, as a row's action.
+const unblockValue = css({ color: "accent.default" });
 
 // The group's mark, as the group settings' row shows it.
 const groupMark = css({

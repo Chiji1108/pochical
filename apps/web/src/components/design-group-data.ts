@@ -390,7 +390,7 @@ export function sameMonth(date: Date, month: Date) {
 
 // A chat line. `days` shares dates, drawn with everyone's shifts;
 // `photo` is a picture, one per line; `replyTo` quotes an earlier line;
-// `text` keeps a mention as <@id> (spec/chat-text.md); `link` is the
+// `text` keeps a mention as <@id> (spec/chat.md); `link` is the
 // preview of the first link in `text`, made as it was
 // written and sent with it; `notice` is a line from the app about who is
 // in the group, how to get in or what it is called, shown between the
@@ -416,7 +416,7 @@ export type Message = {
 export type Reaction = { emoji: string; by: string[] };
 
 // A link's page as its preview shows it: its title, the site's name and
-// its picture, read from the page by the server (spec/chat-text.md).
+// its picture, read from the page by the server (spec/chat.md).
 export type LinkPreview = {
   url: string;
   title: string;
