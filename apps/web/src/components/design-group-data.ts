@@ -404,6 +404,8 @@ export type Message = {
   edited?: boolean;
   // Taken back by its writer: only a line saying so stays, for everyone.
   unsent?: boolean;
+  // Pinned over the chat, for everyone; the larger, the later it was.
+  pinned?: number;
   text?: string;
   link?: LinkPreview;
   notice?: string;
@@ -614,6 +616,8 @@ export const sampleChats: Record<string, Chat> = {
         reactions: [{ by: ["aya"], emoji: "👍" }],
         // First 22日, then changed: 21日 is the day everyone is off.
         edited: true,
+        // What was decided, kept over the chat.
+        pinned: 1,
         replyTo: "n3",
         text: "21日にしよ！",
         time: "12:24",

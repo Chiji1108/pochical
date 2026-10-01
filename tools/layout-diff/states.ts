@@ -677,6 +677,21 @@ export const states: State[] = [
     },
   },
   {
+    // A line pinned over the chat, from its menu.
+    name: "group/chat-pinned",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^全体チャット/u);
+      await tap(page, /^お母さんのメッセージ：来週の日曜/u);
+      await tap(page, "ピン留め");
+      await page
+        .getByRole("button", { name: /^ピン留め/u })
+        .first()
+        .waitFor();
+    },
+  },
+  {
     name: "group/chat-one",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
