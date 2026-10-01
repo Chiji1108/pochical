@@ -26,7 +26,6 @@ import {
   sameMonth,
   togetherIn,
   weekLength,
-  weekdayLabels,
 } from "./design-group-data";
 import type { Group, Member, TimeChange, Together } from "./design-group-data";
 import {
@@ -872,7 +871,7 @@ function DaySheetBody({
               >
                 {date.getMonth() + 1}/{date.getDate()}
                 <small className={smallWeekday}>
-                  {weekdayLabels[date.getDay()]}
+                  {weekTools.weekdayName(date.getDay())}
                 </small>
               </button>
             ))}
@@ -2304,7 +2303,9 @@ function RowDate({
       ) : (
         date.getDate()
       )}
-      <small className={dayRows.weekday}>{weekdayLabels[date.getDay()]}</small>
+      <small className={dayRows.weekday}>
+        {weekTools.weekdayName(date.getDay())}
+      </small>
     </span>
   );
   if (!onPick) {

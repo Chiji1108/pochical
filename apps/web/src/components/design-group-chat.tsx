@@ -62,7 +62,6 @@ import {
   patternOn,
   previewOf,
   reactionChoices,
-  weekdayLabels,
 } from "./design-group-data";
 import type {
   Chat,
@@ -3668,7 +3667,7 @@ function PollCard({
                 <span className={toneColor[weekTools.dateTone(day)]}>
                   {day.getMonth() + 1}/{day.getDate()}
                   <small className={smallWeekday}>
-                    {weekdayLabels[day.getDay()]}
+                    {weekTools.weekdayName(day.getDay())}
                   </small>
                 </span>
                 {everyoneOff(members, day) && (
@@ -4396,7 +4395,7 @@ function DayCard({ days, members }: { days: Date[]; members: Member[] }) {
           >
             {date.getMonth() + 1}/{date.getDate()}
             <small className={smallWeekday}>
-              {weekdayLabels[date.getDay()]}
+              {weekTools.weekdayName(date.getDay())}
             </small>
           </span>
           {members.map((member) => (
@@ -4453,7 +4452,7 @@ function DayCardByPerson({
               ? `${date.getMonth() + 1}/${date.getDate()}`
               : date.getDate()}
             <small className={dayCard.dayHeadWeekday}>
-              {weekdayLabels[date.getDay()]}
+              {weekTools.weekdayName(date.getDay())}
             </small>
           </span>
         ))}

@@ -18,11 +18,29 @@ export const defaultWeekSettings: WeekSettings = {
   weekStart: 0,
 };
 
+// `english` is the カレンダー page's 月と曜日 set to English, which names the
+// weekdays in the headings as it does the month.
 export const WeekSettingsContext = createContext<{
   week: WeekSettings;
+  english?: boolean;
 }>({ week: defaultWeekSettings });
 
 export const weekdayNames = ["日", "月", "火", "水", "木", "金", "土"] as const;
+// Lowercase, as the month's English name (sep.) is.
+export const englishWeekdayNames = [
+  "sun",
+  "mon",
+  "tue",
+  "wed",
+  "thu",
+  "fri",
+  "sat",
+] as const;
+
+// A weekday's name in a heading: 日, or sun in English.
+export function weekdayNameOf(day: number, english = false) {
+  return (english ? englishWeekdayNames : weekdayNames)[day] ?? "";
+}
 
 const SUNDAY = 0;
 const SATURDAY = 6;
@@ -108,22 +126,26 @@ export function monthDatesFrom(month: Date, weekStart: number) {
   );
 }
 
-export function weekdaysFrom(week: WeekSettings) {
+export function weekdaysFrom(week: WeekSettings, english = false) {
   return Array.from({ length: WEEK_LENGTH }, (_, index) => {
     const day = (week.weekStart + index) % WEEK_LENGTH;
     const className = weekdayClass(day, week.colored);
     return {
       className,
       day,
-      label: weekdayNames[day] ?? "",
+      label: weekdayNameOf(day, english),
       tone: toneOf(className),
     };
   });
 }
 
 export function useWeek() {
-  const { week } = useContext(WeekSettingsContext);
+  const { week, english = false } = useContext(WeekSettingsContext);
   return {
+    english,
+    // A weekday's name for a heading or a day's label, in English when
+    // 月と曜日 asks; sentences such as 9月24日(木) keep 日本語.
+    weekdayName: (day: number) => weekdayNameOf(day, english),
     dateClass: (date: Date) => dateClass(date, week.colored),
     dateTone: (date: Date) => toneOf(dateClass(date, week.colored)),
     // Whether a date's number shows as a holiday.
@@ -132,6 +154,6 @@ export function useWeek() {
     monthDates: (month: Date) => monthDatesFrom(month, week.weekStart),
     weekDates: (date: Date) => weekDatesFrom(date, week.weekStart),
     weekStart: week.weekStart,
-    weekdays: weekdaysFrom(week),
+    weekdays: weekdaysFrom(week, english),
   };
 }

@@ -15,8 +15,10 @@ import type { WidgetDay, WidgetEntry, WidgetOff } from "../lib/design-widgets";
 import { dayName } from "../lib/text-limits";
 import { DARK_DRAWING, LIGHT_DRAWING, useAppIcons } from "./design-app-icon";
 import { PhotoAvatar } from "./design-group-parts";
+import { englishMonthOf } from "./design-month-name";
 import { ColorSchemeContext } from "./design-theme";
 import { srOnly } from "./design-ui";
+import { useWeek } from "./design-week";
 import {
   CellNamesContext,
   OffDisplayContext,
@@ -382,6 +384,7 @@ const nextDays = {
 
 // A row of days: each weekday over its mark.
 function NextDays({ days }: { days: WidgetDay[] }) {
+  const { weekdayName } = useWeek();
   return (
     <ol className={`${list} ${nextDays.root}`}>
       {days.map((day) => (
@@ -391,7 +394,7 @@ function NextDays({ days }: { days: WidgetDay[] }) {
             aria-hidden="true"
             className={cx(nextDays.weekday, toneText({ tone: day.tone }))}
           >
-            {day.weekday}
+            {weekdayName(day.date.getDay())}
           </span>
           <DayMark day={day} size={18} />
         </li>
@@ -463,6 +466,7 @@ const twoWeeks = {
 // calendar lays them. Today is its accent date among them, as in the
 // calendar; its time is for the other kinds.
 export function TwoWeeksMedium({ entry }: { entry: WidgetEntry }) {
+  const { weekdayName } = useWeek();
   const roomy = useContext(WidgetSizeContext).height >= TWO_WEEKS_ROOMY;
   const named = useShiftNames();
   // A name under each mark takes the room of a smaller mark.
@@ -479,7 +483,7 @@ export function TwoWeeksMedium({ entry }: { entry: WidgetEntry }) {
             className={toneText({ tone: weekday.tone })}
             key={weekday.label}
           >
-            {weekday.label}
+            {weekdayName(weekday.day)}
           </span>
         ))}
       </div>
@@ -855,6 +859,7 @@ function rowWords(day: WidgetDay, named: boolean) {
 }
 
 function ListDays({ entry, wide }: { entry: WidgetEntry; wide: boolean }) {
+  const { weekdayName } = useWeek();
   const named = useShiftNames();
   const { today: first } = entry;
   return (
@@ -863,7 +868,9 @@ function ListDays({ entry, wide }: { entry: WidgetEntry; wide: boolean }) {
         <span className={listing.headDate}>
           {first.date.getMonth() + MONTH_NUMBER}.{first.date.getDate()}
         </span>
-        <span className={listing.headWeekday}>{first.weekday}</span>
+        <span className={listing.headWeekday}>
+          {weekdayName(first.date.getDay())}
+        </span>
       </span>
       <ol className={`${list} ${listing.rows}`}>
         {entry.upcoming.slice(0, 4).map((day) => (
@@ -880,7 +887,7 @@ function ListDays({ entry, wide }: { entry: WidgetEntry; wide: boolean }) {
                 aria-hidden="true"
                 className={cx(listing.weekday, toneText({ tone: day.tone }))}
               >
-                {day.weekday}
+                {weekdayName(day.date.getDay())}
               </span>
             )}
             <span aria-hidden="true" className={wide ? "" : listing.smallMark}>
@@ -972,6 +979,7 @@ const MONTH_ROOMY = 360;
 
 // The month with every day's mark, and today's time over it.
 export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
+  const { weekdayName } = useWeek();
   const roomy = useContext(WidgetSizeContext).height >= MONTH_ROOMY;
   const named = useShiftNames();
   // A name under each mark takes the room of a smaller mark.
@@ -992,7 +1000,7 @@ export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
       <div aria-hidden="true" className={month.weekdays}>
         {weekdays.map((day) => (
           <span className={toneText({ tone: day.tone })} key={day.label}>
-            {day.label}
+            {weekdayName(day.day)}
           </span>
         ))}
       </div>
@@ -1192,6 +1200,11 @@ const plain = {
 // Today on the left, its date large with its mark; on the right,
 // tomorrow and the next day off, a line each.
 function PlainToday({ entry }: { entry: WidgetEntry }) {
+  const { english, weekdayName } = useWeek();
+  // 9月 木曜日, or sep. thu as 月と曜日 asks.
+  const heading = english
+    ? `${englishMonthOf(entry.today.date)} ${weekdayName(entry.today.date.getDay())}`
+    : `${entry.today.date.getMonth() + MONTH_NUMBER}月 ${weekdayName(entry.today.date.getDay())}曜日`;
   const day = entry.today;
   const [, tomorrow] = entry.upcoming;
   const [next] = entry.offs.next;
@@ -1203,7 +1216,7 @@ function PlainToday({ entry }: { entry: WidgetEntry }) {
           {day.time ? ` ${day.time}` : ""}
         </span>
         <span aria-hidden="true" className={today.date}>
-          {day.date.getMonth() + MONTH_NUMBER}月 {day.weekday}曜日
+          {heading}
         </span>
         <span aria-hidden="true" className={plain.big}>
           <span className={plain.number}>{day.date.getDate()}</span>
