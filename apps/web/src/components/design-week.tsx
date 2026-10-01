@@ -28,8 +28,9 @@ export const WeekSettingsContext = createContext<{
 export const weekdayNames = ["日", "月", "火", "水", "木", "金", "土"] as const;
 // English weekdays come in two lengths: one letter over or down a column
 // of days, where the column's place or the dates in order beside it tell
-// T from T, as calendars head their weeks; three capitals beside a date
-// standing alone, where nothing else tells them apart.
+// T from T, as calendars head their weeks; three letters beside a date
+// standing alone, where nothing else tells them apart, written as other
+// apps write them beside a date (9/24 Thu), as the months are Sep.
 export const englishWeekdayLetters = [
   "S",
   "M",
@@ -40,16 +41,16 @@ export const englishWeekdayLetters = [
   "S",
 ] as const;
 export const englishWeekdayNames = [
-  "SUN",
-  "MON",
-  "TUE",
-  "WED",
-  "THU",
-  "FRI",
-  "SAT",
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
 ] as const;
 
-// A weekday beside a date: 木, or THU in English.
+// A weekday beside a date: 木, or Thu in English.
 export function weekdayNameOf(day: number, english = false) {
   return (english ? englishWeekdayNames : weekdayNames)[day] ?? "";
 }
