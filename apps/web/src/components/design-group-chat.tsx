@@ -4,6 +4,7 @@ import {
   BellOff,
   CalendarDays,
   CalendarPlus,
+  ChevronDown,
   ChevronRight,
   CircleAlert,
   Copy,
@@ -445,6 +446,52 @@ const chatStyle = {
     base: { alignItems: "flex-start", display: "flex", gap: "8px" },
     variants: { mine: { true: { flexDirection: "row-reverse" } } },
   }),
+  // The lines and, over their foot, the ↓ to the latest.
+  lines: css({
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    minHeight: 0,
+    position: "relative",
+  }),
+  latest: css({ bottom: "12px", position: "absolute", right: "4px" }),
+  // ここから新着: a rule either side of the words, in the accent, as LINE
+  // marks where the unread lines start.
+  unread: css({
+    "&::before, &::after": {
+      bg: "accent.border",
+      content: '""',
+      flex: 1,
+      height: "1px",
+    },
+    alignItems: "center",
+    color: "accent.default",
+    display: "flex",
+    gap: "12px",
+    margin: "4px 0",
+    textStyle: "caption",
+  }),
+  // Three dots in a bubble of the others' kind, rising in turn.
+  typing: css({
+    "& > span": {
+      _motionReduce: { animation: "none" },
+      animation: "typingDot 1.2s ease-in-out infinite",
+      bg: "text.tertiary",
+      borderRadius: "circle",
+      height: "6px",
+      width: "6px",
+    },
+    "& > span:nth-child(2)": { animationDelay: "0.15s" },
+    "& > span:nth-child(3)": { animationDelay: "0.3s" },
+    alignItems: "center",
+    bg: "fill.tertiary",
+    borderRadius:
+      "token(radii.lg) token(radii.lg) token(radii.lg) token(radii.sm)",
+    display: "flex",
+    gap: "4px",
+    height: "36px",
+    padding: "0 16px",
+  }),
   // Chat apps scroll without a bar over the bubbles.
   messages: css({
     "&::-webkit-scrollbar": { display: "none" },
@@ -803,6 +850,7 @@ export function ChatPage({
   attach,
   photoSend = "ok",
   sharedFirst = false,
+  unreadAtOpen = 0,
   muted = false,
   onMuted,
   onShifts,
@@ -828,6 +876,9 @@ export function ChatPage({
   // Opens on the last day shared rather than the latest line, as the top
   // page shows it.
   sharedFirst?: boolean;
+  // How many lines were unread as it opened: it opens on the first of
+  // them, under ここから新着.
+  unreadAtOpen?: number;
   // Days brought from the shift table, waiting above the composer.
   attach?: Date[];
   // Where 戻る goes: the group, or the chat a member was opened from.
@@ -925,7 +976,23 @@ export function ChatPage({
       ? chat.messages.findLast((message) => message.days)?.id
       : undefined
   );
-  // Until a line is added, it stays on the shared day.
+  // The first line unread as it opened: the others' lines, counted back
+  // from the latest. The line above it stays while the chat is open, as
+  // LINE keeps its 「ここから未読メッセージ」.
+  const [firstUnreadId] = useState(() => {
+    let left = unreadAtOpen;
+    for (const message of chat.messages.toReversed()) {
+      if (left > 0 && message.from !== "me" && !message.notice) {
+        left -= 1;
+        if (left === 0) {
+          return message.id;
+        }
+      }
+    }
+    return;
+  });
+  // Until a line is added, it stays on the shared day, or on the line
+  // above the first unread one.
   const [openedLines] = useState(lineCount);
   const failedCount = Object.values(uploads).filter(
     (status) => status === "failed"
@@ -935,17 +1002,23 @@ export function ChatPage({
     if (!list || lineCount + failedCount === 0) {
       return;
     }
+    let target: string | undefined;
+    if (sharedId !== undefined) {
+      target = `#message-${sharedId}`;
+    } else if (firstUnreadId !== undefined) {
+      target = "#unread-line";
+    }
     const shared =
-      sharedId === undefined || lineCount !== openedLines
+      target === undefined || lineCount !== openedLines
         ? null
-        : list.querySelector<HTMLElement>(`#message-${sharedId}`);
+        : list.querySelector<HTMLElement>(target);
     list.scrollTop = shared
       ? shared.getBoundingClientRect().top -
         list.getBoundingClientRect().top +
         list.scrollTop -
         sharedRoom
       : list.scrollHeight;
-  }, [lineCount, failedCount, openedLines, sharedId]);
+  }, [lineCount, failedCount, openedLines, sharedId, firstUnreadId]);
   // When what sits over the composer (a reply, days, photos) takes room,
   // the lines keep their bottom edge, as in the chat apps, so the latest
   // line is not hidden under it. When it goes, the room shows more below.
@@ -967,6 +1040,48 @@ export function ChatPage({
     };
   }, []);
   const isGroup = title === "全体チャット";
+  // Someone writing back, shown under the latest line: in the prototype,
+  // whoever spoke last before you, for a few seconds after you send. The
+  // apps show it from the typing frames (spec/sync-protocol.md).
+  const [typingId, setTypingId] = useState<string>();
+  const typingTimers = useRef<number[]>([]);
+  useEffect(
+    () => () => {
+      for (const timer of typingTimers.current) {
+        window.clearTimeout(timer);
+      }
+    },
+    []
+  );
+  const typingMember = group.members.find(
+    (member) => member.id === typingId && !member.me
+  );
+  const answerSoon = () => {
+    const last = chat.messages.findLast(
+      (message) => message.from !== "me" && !message.notice && !message.unsent
+    );
+    if (!last || blocked.includes(last.from)) {
+      return;
+    }
+    typingTimers.current.push(
+      window.setTimeout(() => {
+        setTypingId(last.from);
+      }, typingStartMs),
+      window.setTimeout(() => {
+        setTypingId(undefined);
+      }, typingStartMs + typingMs)
+    );
+  };
+  // ↓ to the latest line, once the chat is scrolled up from it.
+  const [awayFromLatest, setAwayFromLatest] = useState(false);
+  // The dots come in under the latest line in sight, as a new line does,
+  // unless the chat is scrolled up away from it.
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (list && typingId !== undefined && !awayFromLatest) {
+      list.scrollTop = list.scrollHeight;
+    }
+  }, [typingId, awayFromLatest]);
   // An @ being written at the end of the message, in the group chat, lists
   // the others whose name has what follows it, as LINE does; one picked
   // goes in as @name and a space.
@@ -1009,6 +1124,7 @@ export function ChatPage({
     }));
     onChange([...chat.messages, ...sent]);
     setReplyTo(undefined);
+    answerSoon();
     const photoIds = sent.flatMap((line) => (line.photo ? [line.id] : []));
     if (photoIds.length > 0) {
       upload(photoIds);
@@ -1179,6 +1295,254 @@ export function ChatPage({
   });
   const replying = byId(replyTo);
   const editingMessage = byId(editing);
+  // One line of the chat as it is drawn: a message, or one of the app's.
+  const lineOf = (message: Message, index: number) => {
+    const previous = chat.messages[index - 1];
+    const member = writerOf(message.from);
+    const current = member !== undefined && group.members.includes(member);
+    const mine = member?.me === true;
+    const firstOfRun =
+      previous?.from !== message.from ||
+      previous.notice !== undefined ||
+      previous.unsent === true ||
+      message.replyTo !== undefined;
+    // A message whose first link is an invitation shows its group
+    // instead of a page.
+    const firstUrl = message.text ? firstLink(message.text) : undefined;
+    const inviteCode = firstUrl ? inviteCodeOf(firstUrl) : undefined;
+    const quoted = byId(message.replyTo);
+    const quote = quoted && (
+      <BubbleQuote
+        name={nameOf(quoted.from)}
+        nameOf={mentionName}
+        onJump={() => {
+          jumpTo(quoted.id);
+        }}
+        quoted={quoted}
+      />
+    );
+    // A line taken back says so in the middle, as the app's own
+    // lines do, and keeps its place for a reply that quoted it.
+    if (message.notice || message.unsent) {
+      return (
+        <li
+          className={chatStyle.item()}
+          id={`message-${message.id}`}
+          key={message.id}
+        >
+          {previous?.when !== message.when && (
+            <span className={chatStyle.when}>{message.when}</span>
+          )}
+          <p className={chatStyle.notice}>
+            {message.notice ?? unsentLine(member)}
+          </p>
+        </li>
+      );
+    }
+    if (blocked.includes(message.from) && !revealed.includes(message.id)) {
+      return (
+        <li className={chatStyle.item()} key={message.id}>
+          {previous?.when !== message.when && (
+            <span className={chatStyle.when}>{message.when}</span>
+          )}
+          <button
+            className={chatStyle.blocked}
+            onClick={() => {
+              setRevealed((before) => [...before, message.id]);
+            }}
+            type="button"
+          >
+            {blockedLine}
+            <span className={chatStyle.blockedShow}>表示</span>
+          </button>
+        </li>
+      );
+    }
+    return (
+      <li
+        className={chatStyle.item({ flash: flash === message.id })}
+        id={`message-${message.id}`}
+        key={message.id}
+      >
+        {previous?.when !== message.when && (
+          <span className={chatStyle.when}>{message.when}</span>
+        )}
+        <span className={chatStyle.message({ mine })}>
+          {!mine && (
+            <span className={chatStyle.avatar}>
+              {firstOfRun &&
+                member &&
+                (onMember && current ? (
+                  <button
+                    aria-label={`${member.name}のプロフィール`}
+                    className={memberButton}
+                    onClick={() => {
+                      onMember(member);
+                    }}
+                    type="button"
+                  >
+                    <Avatar member={member} size={chatAvatarSize} />
+                  </button>
+                ) : (
+                  <Avatar member={member} size={chatAvatarSize} />
+                ))}
+            </span>
+          )}
+          <span className={chatStyle.body({ mine })}>
+            {!mine && isGroup && firstOfRun && (
+              <small className={chatStyle.name}>{member?.name}</small>
+            )}
+            <span
+              className={cx(
+                chatStyle.bubbleRow({ mine }),
+                selected === message.id && messageActions.lifted
+              )}
+            >
+              {message.photo && (
+                <PhotoLine
+                  actions={actionsOf(message)}
+                  upload={uploads[message.id]}
+                  label={`${member?.name ?? ""}が送った写真`}
+                  onSave={() => {
+                    toast("写真を保存しました");
+                  }}
+                  photo={message.photo}
+                  quote={quote}
+                />
+              )}
+              {!message.photo && message.days && (
+                <MessageActions {...actionsOf(message)}>
+                  <button
+                    aria-label={`${member?.name ?? ""}が共有した日にち。押すとリアクションと返信`}
+                    className={chatStyle.tap({ mine })}
+                    type="button"
+                  >
+                    <DayCard days={message.days} members={people} />
+                  </button>
+                </MessageActions>
+              )}
+              {!message.photo && !message.days && (
+                // Like the app: the quoted line sits inside the bubble,
+                // above a thin rule, and jumps to the original.
+                <span
+                  className={cx(
+                    chatStyle.bubble({ mine }),
+                    (inviteCode || message.link) && chatStyle.linked
+                  )}
+                  data-part="bubble"
+                >
+                  {quote}
+                  <MessageActions {...actionsOf(message)}>
+                    <button
+                      aria-label={`${member?.name ?? ""}のメッセージ：${plainText(message.text ?? "", mentionName)}。押すとリアクションと返信`}
+                      className={chatStyle.bubbleText}
+                      // A tap on a link opens it rather than the
+                      // actions, as in the chat apps.
+                      onClickCapture={(event) => {
+                        const url = linkAt(event.target);
+                        if (url) {
+                          event.preventDefault();
+                          const code = inviteCodeOf(url);
+                          if (code) {
+                            onInvite(code);
+                          } else {
+                            openLink(url);
+                          }
+                          return;
+                        }
+                        // A mention opens that member's profile, as
+                        // their picture does.
+                        const mentioned = group.members.find(
+                          (other) =>
+                            !other.me && other.id === mentionAt(event.target)
+                        );
+                        if (mentioned && onMember) {
+                          event.preventDefault();
+                          onMember(mentioned);
+                        }
+                      }}
+                      type="button"
+                    >
+                      <MessageText
+                        mine={mine}
+                        nameOf={mentionName}
+                        text={message.text}
+                      />
+                    </button>
+                  </MessageActions>
+                  {inviteCode && (
+                    <InviteCard
+                      invite={inviteOf(inviteCode)}
+                      onLongPress={() => {
+                        setSelected(message.id);
+                      }}
+                      onOpen={() => {
+                        onInvite(inviteCode);
+                      }}
+                    />
+                  )}
+                  {!inviteCode && message.link && (
+                    <LinkCard
+                      onLongPress={() => {
+                        setSelected(message.id);
+                      }}
+                      preview={message.link}
+                    />
+                  )}
+                </span>
+              )}
+              {uploads[message.id] === "failed" && (
+                <button
+                  aria-label="送れませんでした。押すと再送か削除"
+                  className={chatStyle.failed}
+                  onClick={() => {
+                    setFailedOpen(message.id);
+                  }}
+                  type="button"
+                >
+                  <CircleAlert aria-hidden="true" size={22} />
+                </button>
+              )}
+              {uploads[message.id] === undefined && (
+                <small className={chatStyle.time}>
+                  {message.edited && (
+                    <span className={chatStyle.edited}>編集済み</span>
+                  )}
+                  {message.time}
+                </small>
+              )}
+            </span>
+            {uploads[message.id] === "failed" && (
+              <small className={chatStyle.failedNote}>送れませんでした</small>
+            )}
+            {message.days && (
+              <button
+                className={chatStyle.dayOpen({ mine })}
+                onClick={() => message.days && onOpenDay(message.days[0])}
+                type="button"
+              >
+                シフト表で見る
+              </button>
+            )}
+            {message.reactions && message.reactions.length > 0 && (
+              <span className={chatStyle.reactions({ mine })}>
+                {message.reactions.map((reaction) => (
+                  <ReactionPill
+                    key={reaction.emoji}
+                    onToggle={() => {
+                      react(message.id, reaction.emoji);
+                    }}
+                    people={reaction.by.flatMap((id) => writerOf(id) ?? [])}
+                    reaction={reaction}
+                  />
+                ))}
+              </span>
+            )}
+          </span>
+        </span>
+      </li>
+    );
+  };
   return (
     <Screen>
       <header className={chatStyle.header}>
@@ -1223,271 +1587,66 @@ export function ChatPage({
           </IconMenu>
         )}
       </header>
-      <ol
-        aria-label={`${title}のメッセージ`}
-        className={chatStyle.messages}
-        ref={listRef}
-      >
-        {chat.messages.length === 0 && (
-          <li className={chatStyle.empty}>まだメッセージはありません</li>
-        )}
-        {chat.messages.map((message, index) => {
-          const previous = chat.messages[index - 1];
-          const member = writerOf(message.from);
-          const current =
-            member !== undefined && group.members.includes(member);
-          const mine = member?.me === true;
-          const firstOfRun =
-            previous?.from !== message.from ||
-            previous.notice !== undefined ||
-            previous.unsent === true ||
-            message.replyTo !== undefined;
-          // A message whose first link is an invitation shows its group
-          // instead of a page.
-          const firstUrl = message.text ? firstLink(message.text) : undefined;
-          const inviteCode = firstUrl ? inviteCodeOf(firstUrl) : undefined;
-          const quoted = byId(message.replyTo);
-          const quote = quoted && (
-            <BubbleQuote
-              name={nameOf(quoted.from)}
-              nameOf={mentionName}
-              onJump={() => {
-                jumpTo(quoted.id);
-              }}
-              quoted={quoted}
-            />
-          );
-          // A line taken back says so in the middle, as the app's own
-          // lines do, and keeps its place for a reply that quoted it.
-          if (message.notice || message.unsent) {
-            return (
-              <li
-                className={chatStyle.item()}
-                id={`message-${message.id}`}
-                key={message.id}
-              >
-                {previous?.when !== message.when && (
-                  <span className={chatStyle.when}>{message.when}</span>
-                )}
-                <p className={chatStyle.notice}>
-                  {message.notice ?? unsentLine(member)}
-                </p>
-              </li>
+      <div className={chatStyle.lines}>
+        <ol
+          aria-label={`${title}のメッセージ`}
+          className={chatStyle.messages}
+          onScroll={(event) => {
+            const list = event.currentTarget;
+            setAwayFromLatest(
+              list.scrollHeight - list.scrollTop - list.clientHeight >
+                list.clientHeight / 2
             );
-          }
-          if (
-            blocked.includes(message.from) &&
-            !revealed.includes(message.id)
-          ) {
-            return (
-              <li className={chatStyle.item()} key={message.id}>
-                {previous?.when !== message.when && (
-                  <span className={chatStyle.when}>{message.when}</span>
-                )}
-                <button
-                  className={chatStyle.blocked}
-                  onClick={() => {
-                    setRevealed((before) => [...before, message.id]);
-                  }}
-                  type="button"
-                >
-                  {blockedLine}
-                  <span className={chatStyle.blockedShow}>表示</span>
-                </button>
-              </li>
-            );
-          }
-          return (
-            <li
-              className={chatStyle.item({ flash: flash === message.id })}
-              id={`message-${message.id}`}
-              key={message.id}
-            >
-              {previous?.when !== message.when && (
-                <span className={chatStyle.when}>{message.when}</span>
+          }}
+          ref={listRef}
+        >
+          {chat.messages.length === 0 && (
+            <li className={chatStyle.empty}>まだメッセージはありません</li>
+          )}
+          {chat.messages.map((message, index) => (
+            <Fragment key={message.id}>
+              {message.id === firstUnreadId && (
+                <li className={chatStyle.unread} id="unread-line">
+                  <span>ここから新着</span>
+                </li>
               )}
-              <span className={chatStyle.message({ mine })}>
-                {!mine && (
-                  <span className={chatStyle.avatar}>
-                    {firstOfRun &&
-                      member &&
-                      (onMember && current ? (
-                        <button
-                          aria-label={`${member.name}のプロフィール`}
-                          className={memberButton}
-                          onClick={() => {
-                            onMember(member);
-                          }}
-                          type="button"
-                        >
-                          <Avatar member={member} size={chatAvatarSize} />
-                        </button>
-                      ) : (
-                        <Avatar member={member} size={chatAvatarSize} />
-                      ))}
-                  </span>
-                )}
-                <span className={chatStyle.body({ mine })}>
-                  {!mine && isGroup && firstOfRun && (
-                    <small className={chatStyle.name}>{member?.name}</small>
-                  )}
-                  <span
-                    className={cx(
-                      chatStyle.bubbleRow({ mine }),
-                      selected === message.id && messageActions.lifted
-                    )}
-                  >
-                    {message.photo && (
-                      <PhotoLine
-                        actions={actionsOf(message)}
-                        upload={uploads[message.id]}
-                        label={`${member?.name ?? ""}が送った写真`}
-                        onSave={() => {
-                          toast("写真を保存しました");
-                        }}
-                        photo={message.photo}
-                        quote={quote}
-                      />
-                    )}
-                    {!message.photo && message.days && (
-                      <MessageActions {...actionsOf(message)}>
-                        <button
-                          aria-label={`${member?.name ?? ""}が共有した日にち。押すとリアクションと返信`}
-                          className={chatStyle.tap({ mine })}
-                          type="button"
-                        >
-                          <DayCard days={message.days} members={people} />
-                        </button>
-                      </MessageActions>
-                    )}
-                    {!message.photo && !message.days && (
-                      // Like the app: the quoted line sits inside the bubble,
-                      // above a thin rule, and jumps to the original.
-                      <span
-                        className={cx(
-                          chatStyle.bubble({ mine }),
-                          (inviteCode || message.link) && chatStyle.linked
-                        )}
-                        data-part="bubble"
-                      >
-                        {quote}
-                        <MessageActions {...actionsOf(message)}>
-                          <button
-                            aria-label={`${member?.name ?? ""}のメッセージ：${plainText(message.text ?? "", mentionName)}。押すとリアクションと返信`}
-                            className={chatStyle.bubbleText}
-                            // A tap on a link opens it rather than the
-                            // actions, as in the chat apps.
-                            onClickCapture={(event) => {
-                              const url = linkAt(event.target);
-                              if (url) {
-                                event.preventDefault();
-                                const code = inviteCodeOf(url);
-                                if (code) {
-                                  onInvite(code);
-                                } else {
-                                  openLink(url);
-                                }
-                                return;
-                              }
-                              // A mention opens that member's profile, as
-                              // their picture does.
-                              const mentioned = group.members.find(
-                                (other) =>
-                                  !other.me &&
-                                  other.id === mentionAt(event.target)
-                              );
-                              if (mentioned && onMember) {
-                                event.preventDefault();
-                                onMember(mentioned);
-                              }
-                            }}
-                            type="button"
-                          >
-                            <MessageText
-                              mine={mine}
-                              nameOf={mentionName}
-                              text={message.text}
-                            />
-                          </button>
-                        </MessageActions>
-                        {inviteCode && (
-                          <InviteCard
-                            invite={inviteOf(inviteCode)}
-                            onLongPress={() => {
-                              setSelected(message.id);
-                            }}
-                            onOpen={() => {
-                              onInvite(inviteCode);
-                            }}
-                          />
-                        )}
-                        {!inviteCode && message.link && (
-                          <LinkCard
-                            onLongPress={() => {
-                              setSelected(message.id);
-                            }}
-                            preview={message.link}
-                          />
-                        )}
-                      </span>
-                    )}
-                    {uploads[message.id] === "failed" && (
-                      <button
-                        aria-label="送れませんでした。押すと再送か削除"
-                        className={chatStyle.failed}
-                        onClick={() => {
-                          setFailedOpen(message.id);
-                        }}
-                        type="button"
-                      >
-                        <CircleAlert aria-hidden="true" size={22} />
-                      </button>
-                    )}
-                    {uploads[message.id] === undefined && (
-                      <small className={chatStyle.time}>
-                        {message.edited && (
-                          <span className={chatStyle.edited}>編集済み</span>
-                        )}
-                        {message.time}
-                      </small>
-                    )}
-                  </span>
-                  {uploads[message.id] === "failed" && (
-                    <small className={chatStyle.failedNote}>
-                      送れませんでした
-                    </small>
-                  )}
-                  {message.days && (
-                    <button
-                      className={chatStyle.dayOpen({ mine })}
-                      onClick={() => message.days && onOpenDay(message.days[0])}
-                      type="button"
-                    >
-                      シフト表で見る
-                    </button>
-                  )}
-                  {message.reactions && message.reactions.length > 0 && (
-                    <span className={chatStyle.reactions({ mine })}>
-                      {message.reactions.map((reaction) => (
-                        <ReactionPill
-                          key={reaction.emoji}
-                          onToggle={() => {
-                            react(message.id, reaction.emoji);
-                          }}
-                          people={reaction.by.flatMap(
-                            (id) => writerOf(id) ?? []
-                          )}
-                          reaction={reaction}
-                        />
-                      ))}
-                    </span>
-                  )}
+              {lineOf(message, index)}
+            </Fragment>
+          ))}
+          {typingMember && (
+            <li className={chatStyle.item()}>
+              <span className={chatStyle.message({ mine: false })}>
+                <span className={chatStyle.avatar}>
+                  <Avatar member={typingMember} size={chatAvatarSize} />
+                </span>
+                <span
+                  aria-label={`${typingMember.name}が入力中`}
+                  className={chatStyle.typing}
+                  role="status"
+                >
+                  <span />
+                  <span />
+                  <span />
                 </span>
               </span>
             </li>
-          );
-        })}
-      </ol>
+          )}
+        </ol>
+        {awayFromLatest && (
+          <IconButton
+            className={chatStyle.latest}
+            label="最新のメッセージへ"
+            onClick={() => {
+              listRef.current?.scrollTo({
+                behavior: "smooth",
+                top: listRef.current.scrollHeight,
+              });
+            }}
+          >
+            <ChevronDown aria-hidden="true" size={20} />
+          </IconButton>
+        )}
+      </div>
       {editingMessage && (
         <div className={chatStyle.replying}>
           <span className={chatStyle.quote}>
@@ -1859,6 +2018,11 @@ export function ChatPage({
 }
 
 const flashMilliseconds = 1200;
+
+// In the prototype, how soon after you send someone starts writing back,
+// and for how long.
+const typingStartMs = 800;
+const typingMs = 3500;
 
 // An @ and what follows it at the end of the message being written; a
 // space ends it.

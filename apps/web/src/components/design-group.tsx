@@ -62,6 +62,8 @@ type Page =
       from?: string;
       attach?: Date[];
       sharedFirst?: boolean;
+      // How many lines were unread as it opened, for ここから新着.
+      unread?: number;
     }
   | { name: "invite" }
   | { name: "new" }
@@ -286,11 +288,12 @@ export function DesignGroup({
   };
   const openChat = (chatId: string, from?: string) => {
     setProfileOf(undefined);
+    const chat = chatOf(group.id, chatId);
     setChats({
       ...chats,
-      [chatKey(group.id, chatId)]: { ...chatOf(group.id, chatId), unread: 0 },
+      [chatKey(group.id, chatId)]: { ...chat, unread: 0 },
     });
-    setPage({ chatId, from, name: "chat" });
+    setPage({ chatId, from, name: "chat", unread: chat.unread });
   };
   // Tapping a member opens their profile, where a one-to-one chat starts.
   const onMember = (member: Member) => {
@@ -360,6 +363,7 @@ export function DesignGroup({
           attach={page.attach}
           photoSend={photoSend}
           sharedFirst={page.sharedFirst}
+          unreadAtOpen={page.unread}
           backLabel={page.from ? chatTitle(group, page.from) : group.name}
           chat={chatOf(group.id, page.chatId)}
           formerMembers={membersOf(group.id).filter((member) =>
@@ -427,14 +431,7 @@ export function DesignGroup({
               chatOf={(chatId) => chatOf(group.id, chatId)}
               group={group}
               onChat={(chatId) => {
-                setChats({
-                  ...chats,
-                  [chatKey(group.id, chatId)]: {
-                    ...chatOf(group.id, chatId),
-                    unread: 0,
-                  },
-                });
-                setPage({ chatId, name: "chat" });
+                openChat(chatId);
               }}
               onInvite={() => {
                 setPage({ name: "invite" });

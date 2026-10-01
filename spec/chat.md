@@ -76,3 +76,9 @@ The stores require a way to report what people post and to block someone (App St
   - their shifts still show: the group exists to share shifts, and leaving the group or taking them out is the step for that.
 - A block is undone with ブロックを解除 on their profile, or in 設定 › チャット › ブロック中のメンバー (shown while there is one), asked first.
 - The server also filters what is posted for known abusive material before it reaches the group; what it catches is not delivered.
+
+## Unread lines and typing
+
+- A chat opened with unread lines opens on the first of them, under a line saying ここから新着 (a rule either side, in the accent). The line stays where it is while the chat is open and is gone the next time it opens. A chat opened from a shared day (the shift table, the landing page) opens on that day instead. With nothing unread, it opens on the latest line.
+- Scrolled up more than half the screen from the latest line, a round ↓ shows at the foot of the lines; a tap scrolls to the latest.
+- Someone writing shows as three dots rising in turn, in a bubble of the others' kind with their picture, under the latest line (from the typing frames in spec/sync-protocol.md). A screen reader hears 〇〇が入力中. A blocked member's typing is not shown. Nobody sees whether you have read their lines.
