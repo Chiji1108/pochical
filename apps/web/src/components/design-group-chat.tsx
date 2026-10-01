@@ -33,6 +33,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   Fragment,
   useContext,
+  useEffectEvent,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -464,6 +465,8 @@ const chatStyle = {
     position: "relative",
   }),
   latest: css({ bottom: "12px", position: "absolute", right: "4px" }),
+  // The count of new lines below, on the ↓'s corner as a chat's unread.
+  latestCount: css({ position: "absolute", right: "-4px", top: "-4px" }),
   // ここから新着: a rule either side of the words, in the accent, as LINE
   // marks where the unread lines start.
   unread: css({
@@ -1094,6 +1097,43 @@ export function ChatPage({
   };
   // ↓ to the latest line, once the chat is scrolled up from it.
   const [awayFromLatest, setAwayFromLatest] = useState(false);
+  // The unread lines not yet on screen, counted on the ↓, as LINE and
+  // Slack count what is below: from the first unread line, the others'
+  // lines whose top has not yet come above the foot of the list. Once on
+  // screen, a line stays counted as seen.
+  const seenLines = useRef(new Set<string>());
+  const [unseen, setUnseen] = useState(0);
+  const countUnseen = (list: HTMLElement) => {
+    const start = chat.messages.findIndex(
+      (message) => message.id === firstUnreadId
+    );
+    if (start === -1) {
+      return;
+    }
+    const foot = list.getBoundingClientRect().bottom;
+    let count = 0;
+    for (const message of chat.messages.slice(start)) {
+      const element = list.querySelector(`#message-${message.id}`);
+      if (message.from === "me" || message.notice || !element) {
+        continue;
+      }
+      if (element.getBoundingClientRect().top < foot) {
+        seenLines.current.add(message.id);
+      } else if (!seenLines.current.has(message.id)) {
+        count += 1;
+      }
+    }
+    setUnseen(count);
+  };
+  // Once, as the chat opens on its first unread line.
+  const countOnOpen = useEffectEvent(() => {
+    if (listRef.current) {
+      countUnseen(listRef.current);
+    }
+  });
+  useLayoutEffect(() => {
+    countOnOpen();
+  }, []);
   // The dots come in under the latest line in sight, as a new line does,
   // unless the chat is scrolled up away from it.
   useLayoutEffect(() => {
@@ -1522,7 +1562,9 @@ export function ChatPage({
                   actions={actionsOf(message)}
                   label={`${member?.name ?? ""}の日にちの投票`}
                   members={people}
-                  mine={mine}
+                  // Its writer settles it, or, if they have left the group,
+                  // anyone: a poll is never left without someone to.
+                  canDecide={mine || !current}
                   onDecide={() => {
                     setDeciding(message.id);
                   }}
@@ -1738,6 +1780,7 @@ export function ChatPage({
               list.scrollHeight - list.scrollTop - list.clientHeight >
                 list.clientHeight / 2
             );
+            countUnseen(list);
           }}
           ref={listRef}
         >
@@ -1773,19 +1816,32 @@ export function ChatPage({
             </li>
           )}
         </ol>
-        {awayFromLatest && (
-          <IconButton
-            className={chatStyle.latest}
-            label="最新のメッセージへ"
-            onClick={() => {
-              listRef.current?.scrollTo({
-                behavior: "smooth",
-                top: listRef.current.scrollHeight,
-              });
-            }}
-          >
-            <ChevronDown aria-hidden="true" size={20} />
-          </IconButton>
+        {(awayFromLatest || unseen > 0) && (
+          <span className={chatStyle.latest}>
+            <IconButton
+              label={
+                unseen > 0
+                  ? `最新のメッセージへ、まだ見ていない新着${unseen}件`
+                  : "最新のメッセージへ"
+              }
+              onClick={() => {
+                listRef.current?.scrollTo({
+                  behavior: "smooth",
+                  top: listRef.current.scrollHeight,
+                });
+              }}
+            >
+              <ChevronDown aria-hidden="true" size={20} />
+            </IconButton>
+            {unseen > 0 && (
+              <span
+                aria-hidden="true"
+                className={cx(badge, chatStyle.latestCount)}
+              >
+                {unseen}
+              </span>
+            )}
+          </span>
         )}
       </div>
       {editingMessage && (
@@ -2185,6 +2241,7 @@ export function ChatPage({
         pollable={isGroup}
       />
       <DecidePollSheet
+        key={deciding ?? "none"}
         onClose={() => {
           setDeciding(undefined);
         }}
@@ -3192,13 +3249,23 @@ const pollCard = {
     width: "60px",
   }),
   together: css({ color: "accent.default", fontSize: "10px", fontWeight: 600 }),
+  // The faces are a button, for the list of everyone who can come.
   faces: css({
     "& > *": { boxShadow: "0 0 0 1.5px token(colors.background.card)" },
     "& > * + *": { marginInlineStart: "-4px" },
     alignItems: "center",
+    bg: "transparent",
+    border: 0,
     display: "flex",
     flex: 1,
     minWidth: 0,
+    padding: 0,
+  }),
+  votersTitle: css({
+    display: "block",
+    fontWeight: 600,
+    padding: "4px 12px",
+    textStyle: "footnote",
   }),
   count: css({
     color: "text.tertiary",
@@ -3250,6 +3317,56 @@ const pollCard = {
   }),
 };
 
+// Who can come on a day, as faces; a tap lists them all by name, as a
+// reaction's list does, since the faces stop at three.
+function Voters({ day, people }: { day: Date; people: Member[] }) {
+  const phone = useContext(PhoneContext);
+  const faces =
+    people.length > maxVoteFaces ? people.slice(0, maxVoteFaces - 1) : people;
+  if (people.length === 0) {
+    return <span className={pollCard.faces} />;
+  }
+  return (
+    <Popover.Root
+      lazyMount
+      positioning={{ gutter: 6, placement: "top" }}
+      unmountOnExit
+    >
+      <Popover.Trigger
+        aria-label={`${formatDay(day)}に行ける人：${people.map((person) => person.name).join("、")}`}
+        className={pollCard.faces}
+      >
+        {faces.map((person) => (
+          <Avatar key={person.id} member={person} size={22} />
+        ))}
+        <small className={pollCard.count}>
+          {people.length > faces.length
+            ? `+${people.length - faces.length}`
+            : `${people.length}人`}
+        </small>
+      </Popover.Trigger>
+      <Portal container={phone ?? undefined}>
+        <Popover.Positioner>
+          <Popover.Content
+            aria-label={`${formatDay(day)}に行ける人`}
+            className={cx(menuStyle.content, reactionPill.list)}
+          >
+            <span className={pollCard.votersTitle}>{formatDay(day)}</span>
+            <ul className={reactionPill.people}>
+              {people.map((person) => (
+                <li className={reactionPill.person} key={person.id}>
+                  <Avatar member={person} size={chatAvatarSize} />
+                  {person.name}
+                </li>
+              ))}
+            </ul>
+          </Popover.Content>
+        </Popover.Positioner>
+      </Portal>
+    </Popover.Root>
+  );
+}
+
 // How many voters' faces a day's row shows before +N.
 const maxVoteFaces = 3;
 
@@ -3260,7 +3377,7 @@ const maxVoteFaces = 3;
 function PollCard({
   poll,
   members,
-  mine,
+  canDecide,
   label,
   actions,
   writerOf,
@@ -3269,7 +3386,8 @@ function PollCard({
 }: {
   poll: Poll;
   members: Member[];
-  mine: boolean;
+  // 日にちを決める, then 決め直す: its writer, or anyone once they left.
+  canDecide: boolean;
   // Whose poll it is, for a screen reader.
   label: string;
   actions: Omit<Parameters<typeof MessageActions>[0], "children">;
@@ -3311,10 +3429,6 @@ function PollCard({
           );
           const yours = poll.votes[key]?.includes("me") ?? false;
           const isDecided = key === poll.decided;
-          const faces =
-            people.length > maxVoteFaces
-              ? people.slice(0, maxVoteFaces - 1)
-              : people;
           return (
             <li
               className={pollCard.row({
@@ -3334,22 +3448,7 @@ function PollCard({
                   <span className={pollCard.together}>みんな休み</span>
                 )}
               </span>
-              <span
-                aria-label={`行ける：${people.map((person) => person.name).join("、") || "まだいません"}`}
-                className={pollCard.faces}
-                role="img"
-              >
-                {faces.map((person) => (
-                  <Avatar key={person.id} member={person} size={22} />
-                ))}
-                {people.length > 0 && (
-                  <small className={pollCard.count}>
-                    {people.length > faces.length
-                      ? `+${people.length - faces.length}`
-                      : `${people.length}人`}
-                  </small>
-                )}
-              </span>
+              <Voters day={day} people={people} />
               {isDecided && (
                 <span className={pollCard.decidedMark}>
                   <Check aria-hidden="true" size={16} />
@@ -3374,9 +3473,9 @@ function PollCard({
           );
         })}
       </ul>
-      {mine && decided === undefined && (
+      {canDecide && (
         <button className={pollCard.foot} onClick={onDecide} type="button">
-          日にちを決める
+          {decided ? "決め直す" : "日にちを決める"}
         </button>
       )}
     </span>
@@ -3393,14 +3492,16 @@ function DecidePollSheet({
   onClose: () => void;
   onDecide: (key: string) => void;
 }) {
-  const [picked, setPicked] = useState<string | null>(null);
+  // Opened again on a settled poll, its day is picked to start with.
+  const [picked, setPicked] = useState<string | null>(poll?.decided ?? null);
   const close = () => {
     setPicked(null);
     onClose();
   };
+  const title = poll?.decided ? "日にちを決め直す" : "日にちを決める";
   return (
     <Sheet
-      label="日にちを決める"
+      label={title}
       onOpenChange={(open) => {
         if (!open) {
           close();
@@ -3418,7 +3519,7 @@ function DecidePollSheet({
           }
         }}
         onCancel={close}
-        title="日にちを決める"
+        title={title}
       />
       {poll && (
         <ChoiceList label="決める日" onValueChange={setPicked} value={picked}>
