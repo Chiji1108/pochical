@@ -1,14 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { lazy, Suspense, useState } from "react";
-import type { ReactNode } from "react";
+import type { ComponentProps, ComponentType, ReactNode } from "react";
 import { css } from "styled-system/css";
 
+// Its types only: the code itself loads after the page shows (below).
+import type * as LpScreens from "../components/lp-screens";
 import { StoreLinks } from "../components/store-links";
 import { pageMeta, site, WIDE } from "../lib/site";
 
 export const Route = createFileRoute("/")({
   component: Home,
   head: () => pageMeta("シフトを、ポチッと。", site.description, "/"),
+  // The server draws the screens into the page itself, so it has their
+  // code before it draws; a fresh server would otherwise send the page
+  // without them. The browser takes them after (below).
+  loader: async () => {
+    if (import.meta.env.SSR) {
+      await import("../components/lp-screens");
+    }
+  },
 });
 
 // What the app's own code draws, its sky and its phones, loads after the
@@ -16,23 +26,35 @@ export const Route = createFileRoute("/")({
 // hydrates each once its code arrives). Keep the app out of this file's
 // imports, or the page waits for all of it again: scripts/bundle-budget.ts
 // checks.
-const screens = import("../components/lp-screens");
-const Sky = lazy(async () => {
-  const { Sky: component } = await screens;
-  return { default: component };
-});
-const HeroPhone = lazy(async () => {
-  const { HeroPhone: component } = await screens;
-  return { default: component };
-});
-const FeatureScreen = lazy(async () => {
-  const { FeatureScreen: component } = await screens;
-  return { default: component };
-});
-const ThemeGallery = lazy(async () => {
-  const { ThemeGallery: component } = await screens;
-  return { default: component };
-});
+type Screens = typeof LpScreens;
+let loaded: Screens | undefined;
+const screens = (async () => {
+  const module = await import("../components/lp-screens");
+  loaded = module;
+  return module;
+})();
+
+// One of the screens: drawn at once where its code is already in, as on
+// the server, and otherwise waiting for it (React keeps the server's
+// drawing meanwhile).
+function fromScreens<Props extends object>(
+  pick: (module: Screens) => ComponentType<Props>
+) {
+  const Waiting = lazy(async () => ({ default: pick(await screens) }));
+  return function Screen(props: Props) {
+    const [ready] = useState(() => loaded);
+    if (ready === undefined) {
+      return <Waiting {...(props as ComponentProps<typeof Waiting>)} />;
+    }
+    const Ready = pick(ready);
+    return <Ready {...props} />;
+  };
+}
+
+const Sky = fromScreens((module) => module.Sky);
+const HeroPhone = fromScreens((module) => module.HeroPhone);
+const FeatureScreen = fromScreens((module) => module.FeatureScreen);
+const ThemeGallery = fromScreens((module) => module.ThemeGallery);
 
 // The site's muted gray, a step darker: over the sky it keeps above 5:1,
 // where the site's own falls short of 4.5:1.
