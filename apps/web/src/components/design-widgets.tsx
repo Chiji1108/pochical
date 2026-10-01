@@ -414,7 +414,7 @@ const TWO_WEEKS_ROOMY = 150;
 
 const twoWeeks = {
   date: cva({
-    base: { fontVariantNumeric: "tabular-nums", textStyle: "footnote" },
+    base: { fontVariantNumeric: "tabular-nums", textStyle: "caption1" },
     variants: {
       today: {
         false: {},
@@ -429,7 +429,8 @@ const twoWeeks = {
       display: "flex",
       flexDirection: "column",
       gap: "2px",
-      paddingBlock: "2px",
+      justifyContent: "center",
+      paddingBlock: "4px",
     },
     // Days already gone this week stay, faint, so the weeks keep their
     // shape.
@@ -470,9 +471,10 @@ export function TwoWeeksMedium({ entry }: { entry: WidgetEntry }) {
   const roomy = useContext(WidgetSizeContext).height >= TWO_WEEKS_ROOMY;
   const named = useShiftNames();
   // A name under each mark takes the room of a smaller mark.
-  let markSize = roomy ? 32 : 28;
+  // Near the month's marks, so the two calendars read as one family.
+  let markSize = roomy ? 26 : 22;
   if (named) {
-    markSize = roomy ? 26 : 20;
+    markSize = roomy ? 22 : 18;
   }
   const todayTime = entry.today.date.getTime();
   return (
@@ -929,17 +931,20 @@ const month = {
   // With a name under each mark, the parts of a day and the weeks close
   // up, so a month six weeks tall keeps within the widget.
   cell: cva({
+    // The date and mark together in the middle of the day's tile, as in
+    // the two weeks and the app's calendar.
     base: {
       alignItems: "center",
       borderRadius: "sm",
       display: "flex",
       flexDirection: "column",
-      paddingTop: "2px",
+      justifyContent: "center",
+      paddingBlock: "2px",
     },
     variants: { named: { false: { gap: "2px" }, true: { gap: 0 } } },
   }),
   date: cva({
-    base: { fontVariantNumeric: "tabular-nums", textStyle: "caption2" },
+    base: { fontVariantNumeric: "tabular-nums", textStyle: "caption1" },
     variants: {
       today: {
         false: {},
