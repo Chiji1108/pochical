@@ -1,4 +1,5 @@
 import {
+  BellOff,
   ChevronRight,
   MessageCircle,
   MessagesSquare,
@@ -262,6 +263,8 @@ export function GroupRail({
   );
 }
 
+const mutedIcon = css({ color: "text.tertiary", flexShrink: 0 });
+
 // The group at a glance: this week for everyone, then its chats.
 export function GroupHub({
   group,
@@ -302,6 +305,16 @@ export function GroupHub({
             <GroupIcon mark={group.mark} size={16} />
           </span>
           <span className={hub.name}>{group.name}</span>
+          {/* Its chats turned off, as chat apps mark a muted room by its
+              name. */}
+          {group.muted && (
+            <BellOff
+              aria-label="通知オフ"
+              className={mutedIcon}
+              role="img"
+              size={16}
+            />
+          )}
         </h3>
         <BarGroup>
           <IconButton label="メンバーを招待" onClick={onInvite}>

@@ -50,6 +50,9 @@ export type Group = {
   mark: GroupMark;
   // How you appear in this group, when it differs from your usual profile.
   mine?: GroupProfile;
+  // Its chats send you no notifications. Yours alone, kept with your
+  // account so the server leaves out the push.
+  muted?: boolean;
   members: Member[];
 };
 

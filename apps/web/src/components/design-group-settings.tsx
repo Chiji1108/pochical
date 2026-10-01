@@ -43,6 +43,7 @@ import {
   Section,
   Segment,
   SegmentedControl,
+  SwitchRow,
 } from "./design-ui";
 import { useMarkColors, nextColor } from "./shift-mark";
 import type { MarkIcon } from "./shift-mark";
@@ -68,6 +69,7 @@ export function GroupSettingsPage({
   profile,
   onChange,
   onEdit,
+  onMuted,
   onInvite,
   onBack,
   onMember,
@@ -75,6 +77,7 @@ export function GroupSettingsPage({
 }: {
   group: Group;
   profile: Profile;
+  onMuted: (muted: boolean) => void;
   onMember?: (member: Member) => void;
   onLeave: () => void;
   onChange: (mine: GroupProfile | undefined) => void;
@@ -143,6 +146,19 @@ export function GroupSettingsPage({
               setView("profile");
             }}
             profile={profile}
+          />
+        </List>
+      </Section>
+      {/* As LINE keeps a chat's 通知 in its own settings; the same switch
+          is in 設定's チャット with every group's. */}
+      <Section title="通知">
+        <List>
+          <SwitchRow
+            checked={!group.muted}
+            label="チャットの通知"
+            onChange={(on) => {
+              onMuted(!on);
+            }}
           />
         </List>
       </Section>

@@ -9,12 +9,18 @@ import { wallpaperSamples } from "./material-you";
 // the テーマ 端末の色.
 export type Platform = "ios" | "android";
 
+// Whether the system lets the app notify: not asked yet, refused (only the
+// system's settings can turn it back on), or allowed.
+export type NotificationPermission = "notAsked" | "denied" | "allowed";
+
 type DeviceState = {
   platform: Platform;
   wallpaperHue: number;
+  notifications: NotificationPermission;
 };
 
 export const useDevice = create<DeviceState>()(() => ({
+  notifications: "notAsked",
   platform: "ios",
   wallpaperHue: wallpaperSamples[0].hue,
 }));

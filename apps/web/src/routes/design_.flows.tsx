@@ -156,6 +156,16 @@ function FlowsPage() {
                 tab="settings"
               />
               <CalendarFrame label="カレンダー" page="week" tab="settings" />
+              <CalendarFrame
+                label="リマインド"
+                page="reminders"
+                tab="settings"
+              />
+              <CalendarFrame
+                label="チャットの通知"
+                page="chatNotifications"
+                tab="settings"
+              />
               <CalendarFrame label="アカウント" page="account" tab="settings" />
             </FrameRow>
           </FrameSection>

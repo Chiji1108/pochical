@@ -416,6 +416,32 @@ export const states: State[] = [
     },
   },
   {
+    name: "settings/reminders",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^リマインド/u);
+    },
+  },
+  {
+    name: "settings/reminder-add",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^リマインド/u);
+      await tap(page, "リマインドを追加");
+      await page.getByText("開始前", { exact: true }).click();
+    },
+  },
+  {
+    name: "settings/chat-notifications",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^チャット/u);
+    },
+  },
+  {
     name: "settings/style",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {

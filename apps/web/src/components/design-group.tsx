@@ -459,6 +459,13 @@ export function DesignGroup({
                   )
                 );
               }}
+              onMuted={(muted) => {
+                setGroups(
+                  groups.map((item) =>
+                    item.id === group.id ? { ...item, muted } : item
+                  )
+                );
+              }}
               onInvite={() => {
                 setPage({ name: "invite" });
               }}
