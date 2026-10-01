@@ -13,7 +13,7 @@ import {
 import type { CSSProperties, ReactNode, Ref } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import { addDays, dateKey, formatDay } from "../lib/design-days";
+import { addDays, dateKey, formatDay, movesText } from "../lib/design-days";
 import { designToday } from "../lib/design-today";
 import { dayName } from "../lib/text-limits";
 import { dayCell, dayParts, todayMark } from "./design-day-cell";
@@ -2205,7 +2205,7 @@ function DayRow({
             {/* The whole row picks the day, as the whole column does in
                 週ごと. */}
             <button
-              aria-label={`${formatDay(date)} ${member.name}：${item?.name ?? "未入力"}${changeOn(member, date) ? `、${movesOf(changeOn(member, date))}` : ""}。押すとその日のみんなの予定`}
+              aria-label={`${formatDay(date)} ${member.name}：${item?.name ?? "未入力"}${changeOn(member, date) ? `、${movesText(changeOn(member, date))}` : ""}。押すとその日のみんなの予定`}
               aria-pressed={picked}
               className={dayRows.cellButton}
               onClick={() => {
@@ -2279,16 +2279,6 @@ const rowsDateWidth = 46;
 const rowsMemberWidth = 76;
 const rowsMarkWidth = 40;
 
-// 早出 and 残業 as words, like 早出・残業; empty when neither.
-function movesOf(change: TimeChange | undefined) {
-  if (!change) {
-    return "";
-  }
-  return [change.early ? "早出" : "", change.late ? "残業" : ""]
-    .filter(Boolean)
-    .join("・");
-}
-
 // A member's hours in the day sheet: 早出 and 残業 said in words, with
 // the day's actual hours instead of the pattern's.
 function DaySheetTime({
@@ -2301,7 +2291,7 @@ function DaySheetTime({
   if (change) {
     return (
       <small className={shiftsPage.sheetTime}>
-        <strong>{movesOf(change)}</strong> {change.time}
+        <strong>{movesText(change)}</strong> {change.time}
       </small>
     );
   }

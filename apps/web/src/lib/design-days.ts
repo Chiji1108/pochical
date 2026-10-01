@@ -279,3 +279,15 @@ export function timeChangeOf(
   const late = entry.end !== undefined && endOf(entry.end) > endOf(time[1]);
   return { early, late };
 }
+
+// 早出 and 残業 as words, like 早出・残業; empty when neither.
+export function movesText(
+  change: { early: boolean; late: boolean } | undefined
+) {
+  if (!change) {
+    return "";
+  }
+  return [change.early ? "早出" : "", change.late ? "残業" : ""]
+    .filter(Boolean)
+    .join("・");
+}

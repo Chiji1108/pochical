@@ -2,7 +2,12 @@ import { useContext } from "react";
 import type { CSSProperties } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import { dateKey, timeChangeOf, timeRange } from "../lib/design-days";
+import {
+  dateKey,
+  movesText,
+  timeChangeOf,
+  timeRange,
+} from "../lib/design-days";
 import type { DayEntry } from "../lib/design-days";
 import { isDayOff, presetPatterns, usePatterns } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
@@ -181,9 +186,7 @@ function dayDetails(
   entry?: DayEntry
 ) {
   const change = timeChangeOf(entry, pattern);
-  const moves = [change?.early ? "早出" : "", change?.late ? "残業" : ""]
-    .filter(Boolean)
-    .join("・");
+  const moves = movesText(change);
   return [
     holidayName(date) ?? "",
     pattern?.name ?? "未入力",

@@ -1,4 +1,11 @@
-import { addDays, dateKey, formatDay, timeRange } from "./design-days";
+import {
+  addDays,
+  dateKey,
+  formatDay,
+  movesText,
+  timeChangeOf,
+  timeRange,
+} from "./design-days";
 import type { DayEntry, Schedule } from "./design-days";
 import type { PatternBook, Pattern, Shift } from "./design-patterns";
 import { designToday } from "./design-today";
@@ -141,15 +148,26 @@ export function firingText(when: Date) {
   return `${formatDay(when)} ${clockText(when)}`;
 }
 
+// The shift by name, with the day's own 早出 or 残業 always said, as the
+// calendar marks them: the time alone looks like any other day's.
+export function shiftText({
+  entry,
+  pattern,
+}: Pick<Firing, "entry" | "pattern">) {
+  const moves = movesText(timeChangeOf(entry, pattern));
+  return moves ? `${pattern.name}（${moves}）` : pattern.name;
+}
+
 // What the notification says: the shift as its title, and its time.
 export function notificationText(
   reminder: Reminder,
   { entry, pattern }: Pick<Firing, "entry" | "pattern">
 ) {
   const time = timeRange(entry, pattern);
+  const shift = shiftText({ entry, pattern });
   const title =
     reminder.kind === "dayBefore"
-      ? `明日は${pattern.name}`
-      : `あと${beforeText(reminder.minutes)}で${pattern.name}`;
+      ? `明日は${shift}`
+      : `あと${beforeText(reminder.minutes)}で${shift}`;
   return { body: time, title };
 }

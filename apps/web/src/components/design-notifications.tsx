@@ -16,6 +16,7 @@ import {
   notificationText,
   reminderName,
   remindable,
+  shiftText,
 } from "../lib/design-reminders";
 import type { Firing, Reminder, ReminderKind } from "../lib/design-reminders";
 import { useSettings } from "../lib/design-settings-store";
@@ -254,7 +255,7 @@ function ReminderRow({
   let detail: string | undefined;
   if (reminder.on) {
     detail = firing
-      ? `次は ${firingText(firing.when)}・${firing.pattern.name}`
+      ? `次は ${firingText(firing.when)}・${shiftText(firing)}`
       : "この先、届くシフトがありません";
   }
   return (
