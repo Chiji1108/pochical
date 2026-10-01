@@ -17,6 +17,12 @@ const url = process.argv[2] ?? "http://localhost:3000/demo";
 const LAND_MS = 900;
 const STEP_MS = 16;
 
+declare global {
+  // The frames `recordRestFrames` notes, in the page.
+  // oxlint-disable-next-line no-var
+  var restFrames: string[][] | undefined;
+}
+
 type Box = { x: number; y: number; width: number; height: number };
 
 // The month the heading names, as a screen reader reads it: the rolling
@@ -62,6 +68,73 @@ const summaryShown = async (page: Page) =>
       }
       return shown.join("").replace(/のお休み.*/u, "");
     });
+
+// Notes, every frame the pages are at rest, the month the page in the
+// middle shows and the months the heading and the summary show, as they
+// are seen; `restFrames` reads them back. A frame between landing and the
+// names catching up shows a month that is not the page's.
+const recordRestFrames = async (page: Page) => {
+  await page.evaluate(() => {
+    // Sent into the page as source, so its helpers live inside it.
+    // oxlint-disable-next-line unicorn/consistent-function-scoping
+    const seenText = (root: Element) => {
+      const shown: string[] = [];
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        let opacity = 1;
+        let seen = false;
+        for (
+          let at = node.parentElement;
+          at !== null && at !== root;
+          at = at.parentElement
+        ) {
+          opacity *= Number(getComputedStyle(at).opacity);
+          seen ||= at.getAttribute("aria-hidden") === "true";
+        }
+        if (seen && opacity > 0.5) {
+          shown.push(node.textContent ?? "");
+        }
+      }
+      return shown.join("");
+    };
+    const frames: string[][] = [];
+    globalThis.restFrames = frames;
+    const note = () => {
+      const middle = [
+        ...document.querySelectorAll('.dc-phone [aria-hidden="false"]'),
+      ].find((slide) => slide.querySelector('section[aria-label$="のシフト"]'));
+      const viewport = middle?.parentElement?.parentElement?.parentElement;
+      const title = document.querySelector(".dc-phone h3");
+      const summary = [...document.querySelectorAll(".dc-phone button")].find(
+        (button) => button.textContent?.includes("のお休み")
+      );
+      if (middle && viewport && title && summary) {
+        const resting =
+          Math.abs(
+            middle.getBoundingClientRect().left -
+              viewport.getBoundingClientRect().left
+          ) < 1;
+        if (resting) {
+          const label =
+            middle
+              .querySelector('section[aria-label$="のシフト"]')
+              ?.getAttribute("aria-label") ?? "";
+          frames.push([
+            label.replaceAll(/^\d+年|のシフト$/gu, ""),
+            // After the year's four digits.
+            seenText(title).slice(4),
+            seenText(summary).replace(/のお休み.*/u, ""),
+          ]);
+        }
+      }
+      requestAnimationFrame(note);
+    };
+    requestAnimationFrame(note);
+  });
+};
+
+const restFrames = async (page: Page) =>
+  await page.evaluate(() => globalThis.restFrames ?? []);
 
 const daysOpened = async (page: Page) =>
   await page.getByRole("button", { name: "完了" }).count();
@@ -192,13 +265,24 @@ async function withMouse(browser: Browser) {
   await drag(page, [right - 5, y], 10 - right, 20, STEP_MS);
   expect("long drag turns one page", await heading(page), "2026年10月");
   // The summary rolls along with the drag, and stays on the month landed
-  // on, page after page.
+  // on, page after page, as the heading does, from the first frame.
+  await recordRestFrames(page);
   await drag(page, [right - 40, y], -box.width * 0.4, 12, 30);
   expect("summary follows a turn", await summaryShown(page), "11月");
   await drag(page, [box.x + 40, y], box.width * 0.4, 12, 30);
   expect("summary follows a turn back", await summaryShown(page), "10月");
   await drag(page, [box.x + 40, y], box.width * 0.4, 12, 30);
   expect("summary back on this month", await summaryShown(page), "今月");
+  const frames = await restFrames(page);
+  const astray = frames.filter(
+    ([month, title, summary]) =>
+      title !== month || (summary === "今月" ? "9月" : summary) !== month
+  );
+  expect(
+    "names on the page's month every frame",
+    astray.map((frame) => frame.join(" / ")).join(", "),
+    ""
+  );
   await drag(page, [right - 40, y], -box.width * 0.4, 12, 30);
   await page
     .getByRole("button", { name: /^10月1日/u })
