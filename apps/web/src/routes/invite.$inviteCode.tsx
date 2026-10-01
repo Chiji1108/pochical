@@ -10,15 +10,26 @@ export const Route = createFileRoute("/invite/$inviteCode")({
   component: Invite,
   // Chat apps build the link's preview card from these tags, so it names
   // the group as the page does.
-  head: ({ loaderData, params }) =>
-    pageMeta(
-      loaderData?.status === "valid"
-        ? `${loaderData.groupEmoji}「${loaderData.groupName}」への招待`
-        : "グループへの招待",
+  head: ({ loaderData, params }) => {
+    const path = `/invite/${encodeURIComponent(params.inviteCode)}`;
+    if (loaderData?.status !== "valid") {
+      return pageMeta(
+        "グループへの招待",
+        "ポチカルでシフトを共有しましょう。",
+        path,
+        true
+      );
+    }
+    const group = `${loaderData.groupEmoji}「${loaderData.groupName}」`;
+    return pageMeta(
+      `${group}への招待`,
       "ポチカルでシフトを共有しましょう。",
-      `/invite/${encodeURIComponent(params.inviteCode)}`,
-      true
-    ),
+      path,
+      true,
+      // Drawn for the group by the site's Worker (src/server.ts).
+      { alt: `${group}への招待`, path: `${path}/og.png` }
+    );
+  },
   // Typed by hand so head, which comes first, can read its result.
   loader: async ({ params }: { params: { inviteCode: string } }) =>
     await getInvite({ data: params.inviteCode }),

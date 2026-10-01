@@ -6,6 +6,7 @@ import { DesignCalendar } from "../components/design-calendar";
 import { sampleGroups } from "../components/design-group-data";
 import { DesignProviders } from "../components/design-providers";
 import { paleSkyFromTop, themeSkyId } from "../components/design-surprise";
+import { InviteShareImage } from "../components/invite-share-image";
 import { initialDesignSchedule } from "../lib/design-days";
 import {
   createUserStore,
@@ -29,7 +30,9 @@ export const Route = createFileRoute("/design_/share-image")({
 // The picture a link to the site shows where it is shared (og:image), which
 // bun run image:share takes from /design/share-image into public/share.png:
 // the top page's hero in one frame, its words on the app's ポチカル sky and
-// the calendar's phone rising from the bottom edge.
+// the calendar's phone rising from the bottom edge. Under it, an invitation
+// link's picture for a sample group, which the site's Worker draws for each
+// group (src/lib/invite-image.ts) in Noto Sans JP and Twemoji.
 
 const styles = {
   brand: css({
@@ -55,6 +58,8 @@ const styles = {
     letterSpacing: "0.04em",
     lineHeight: 1.8,
   }),
+  // The site's image, and an invitation's under it.
+  page: css({ display: "flex", flexDirection: "column", gap: "40px" }),
   phone: css({
     flexShrink: 0,
     height: "560px",
@@ -100,6 +105,8 @@ const skyBackground = paleSkyFromTop(themeSkyId("pochical"));
 // The current proposal for each open design choice, as on the top page.
 const variants = parseDesignVariants({});
 
+const sampleInviteGroup = { emoji: "🍉", memberCount: 5, name: "いとこ会" };
+
 function ShareImage() {
   const [person] = useState(() =>
     createUserStore({
@@ -108,6 +115,19 @@ function ShareImage() {
       schedule: initialDesignSchedule(),
     })
   );
+  return (
+    <div className={styles.page}>
+      <SiteShareImage person={person} />
+      <InviteShareImage group={sampleInviteGroup} icon="/app/pwa-192x192.png" />
+    </div>
+  );
+}
+
+function SiteShareImage({
+  person,
+}: {
+  person: ReturnType<typeof createUserStore>;
+}) {
   return (
     <div
       className={styles.root}

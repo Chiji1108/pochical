@@ -19,6 +19,9 @@ const outside = new Set([
   "design-phone.tsx",
   "design-variant-panel.tsx",
   "design-widget-frame.tsx",
+  // An invitation's share image, in the site's colors (styles.css) as the
+  // site's own share image is.
+  "invite-share-image.tsx",
 ]);
 
 // Colors that are not the app's to choose, each where it is drawn.

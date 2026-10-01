@@ -25,11 +25,15 @@ export const getSiteOrigin = (): string | undefined => {
   return url.origin;
 };
 
+// A page's own share image, at SHARE_IMAGE's size, in place of the site's.
+export type PageImage = { path: string; alt: string };
+
 export const pageMeta = (
   title: string,
   description: string,
   path: string,
-  privatePage = false
+  privatePage = false,
+  image: PageImage = SHARE_IMAGE
 ) => {
   const origin = getSiteOrigin();
   return {
@@ -49,13 +53,13 @@ export const pageMeta = (
       ...(origin
         ? [
             { content: `${origin}${path}`, property: "og:url" },
-            { content: `${origin}${SHARE_IMAGE.path}`, property: "og:image" },
+            { content: `${origin}${image.path}`, property: "og:image" },
             { content: String(SHARE_IMAGE.width), property: "og:image:width" },
             {
               content: String(SHARE_IMAGE.height),
               property: "og:image:height",
             },
-            { content: SHARE_IMAGE.alt, property: "og:image:alt" },
+            { content: image.alt, property: "og:image:alt" },
           ]
         : []),
       ...(privatePage
