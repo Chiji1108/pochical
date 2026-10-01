@@ -10,8 +10,9 @@ import type { CSSProperties } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import { presetPatterns } from "../lib/design-patterns";
-import type { WidgetDay, WidgetEntry } from "../lib/design-widgets";
+import type { WidgetDay, WidgetEntry, WidgetOff } from "../lib/design-widgets";
 import { dayName } from "../lib/text-limits";
+import { PhotoAvatar } from "./design-group-parts";
 import { srOnly } from "./design-ui";
 import {
   CellNamesContext,
@@ -29,11 +30,11 @@ import {
 // none of their own, and the frame they are shown in (design-widget-frame)
 // stands in for the rest.
 //
-// Three kinds, each in the sizes it suits: これから (today and the days
-// after), カレンダー (the month) and 今日の詳細 (today's time, memo and
-// 一緒に働く人). The mark says which shift it is, so the words next to it
-// are the time; a shift's name shows only where it has no time (休み,
-// 明け), and screen readers always hear it.
+// Four kinds, each in the sizes it suits: 今日, 次の休み (how soon the
+// next day off comes, alone or with someone picked when editing the
+// widget), リスト (today and the days after, a line each) and カレンダー
+// (two weeks, the month). The mark says which shift it is, so words beside
+// it are only what changed, and screen readers always hear the name.
 
 // How the system is drawing the widget, as SwiftUI's widgetRenderingMode
 // tells a view: in full color, or flattened to one color by opacity
@@ -276,7 +277,13 @@ function dateTone(day: WidgetDay, todayTime: number) {
 
 const list = css({ listStyle: "none", margin: 0, padding: 0 });
 
-// ── これから ─────────────────────────────────────────────────────────────
+// ── 今日 ────────────────────────────────────────────────────────────────
+
+const oneLine = {
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+} as const;
 
 const today = {
   date: css({ color: "text.secondary", textStyle: "footnote" }),
@@ -287,6 +294,7 @@ const today = {
     textStyle: "headline",
     whiteSpace: "nowrap",
   }),
+  note: css({ ...oneLine, color: "text.secondary", textStyle: "footnote" }),
   root: css({
     // Each piece as wide as itself, so a mark's 早出/残業 corners stay on
     // the mark.
@@ -297,89 +305,28 @@ const today = {
     justifyContent: "space-between",
     maxWidth: "100%",
   }),
+  words: css({ display: "flex", flexDirection: "column", maxWidth: "100%" }),
 };
 
-// Today large: the date, its mark and any change to its hours.
-function TodayBlock({ day }: { day: WidgetDay }) {
+// Today large: the date, its mark and any change to its hours, and the
+// memo's first line where the memo has no room of its own.
+function TodayBlock({ day, note = false }: { day: WidgetDay; note?: boolean }) {
   return (
     <div className={today.root}>
       <span className={today.date}>
         {monthDay(day.date)}({day.weekday})
       </span>
       <DayMark day={day} size={48} />
-      <Change className={today.headline} day={day} />
-    </div>
-  );
-}
-
-const upcoming = {
-  day: css({
-    alignItems: "center",
-    display: "flex",
-    flexDirection: "column",
-    gap: "2px",
-  }),
-  next: css({
-    borderTop: "1px solid token(colors.separator)",
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    paddingTop: "4px",
-  }),
-  root: css({
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    height: "100%",
-  }),
-  // The mark over any change to its hours: side by side, a change with
-  // 翌 runs out of the square.
-  today: css({
-    alignItems: "flex-start",
-    display: "flex",
-    flex: 1,
-    flexDirection: "column",
-    gap: "2px",
-    justifyContent: "center",
-    minWidth: 0,
-  }),
-  weekday: css({ textStyle: "caption2" }),
-};
-
-// A day in a row of days: its weekday over its mark.
-function UpcomingDay({ day, size }: { day: WidgetDay; size: number }) {
-  return (
-    <li className={upcoming.day}>
-      <SpokenDay day={day} />
-      <span
-        aria-hidden="true"
-        className={`${upcoming.weekday} ${toneText({ tone: day.tone })}`}
-      >
-        {day.weekday}
-      </span>
-      <DayMark day={day} size={size} />
-    </li>
-  );
-}
-
-// Today, and the next three days under it.
-export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
-  const day = entry.today;
-  return (
-    <div className={upcoming.root}>
-      <span className={today.date}>
-        {monthDay(day.date)}({day.weekday})
-      </span>
-      <div className={upcoming.today}>
-        <DayMark day={day} size={40} />
+      <span className={today.words}>
         <Change className={today.headline} day={day} />
-      </div>
-      <ol className={`${list} ${upcoming.next}`}>
-        {entry.upcoming.slice(1, 4).map((next) => (
-          <UpcomingDay day={next} key={next.date.getTime()} size={18} />
-        ))}
-      </ol>
+        {note && day.note && <span className={today.note}>{day.note}</span>}
+      </span>
     </div>
   );
+}
+
+export function TodaySmall({ entry }: { entry: WidgetEntry }) {
+  return <TodayBlock day={entry.today} note />;
 }
 
 const week = {
@@ -444,7 +391,7 @@ const twoWeeks = {
 // This week and the next, seven across from the week start as the
 // calendar lays them. Today is its accent date among them, as in the
 // calendar; its time is for the other kinds.
-export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
+export function TwoWeeksMedium({ entry }: { entry: WidgetEntry }) {
   const roomy = useContext(WidgetSizeContext).height >= TWO_WEEKS_ROOMY;
   const named = useShiftNames();
   // A name under each mark takes the room of a smaller mark.
@@ -516,20 +463,179 @@ function TwoWeeksDay({
   );
 }
 
-// ── カレンダー ───────────────────────────────────────────────────────────
+// ── 次の休み ─────────────────────────────────────────────────────────────
 
-const mini = {
+// When a day off comes, in words: 今日, 明日, else how many days on.
+function inDaysWords(inDays: number) {
+  if (inDays === 0) {
+    return "今日";
+  }
+  return inDays === 1 ? "明日" : `${inDays}日後`;
+}
+
+const offs = {
+  avatar: css({ flexShrink: 0 }),
+  // The count, large: a number with 日後 after it, or 今日 and 明日.
+  count: css({
+    alignItems: "baseline",
+    display: "flex",
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 700,
+    lineHeight: 1,
+  }),
+  date: css({
+    alignItems: "center",
+    color: "text.secondary",
+    display: "flex",
+    fontVariantNumeric: "tabular-nums",
+    gap: "4px",
+    textStyle: "footnote",
+  }),
+  head: css({
+    alignItems: "center",
+    color: "text.secondary",
+    display: "flex",
+    gap: "6px",
+    justifyContent: "space-between",
+    minWidth: 0,
+    textStyle: "footnote",
+  }),
+  root: css({
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    justifyContent: "space-between",
+  }),
+  row: css({
+    "&:not(:first-child)": { borderTop: "1px solid token(colors.separator)" },
+    alignItems: "center",
+    display: "grid",
+    flex: 1,
+    gap: "8px",
+    gridTemplateColumns: "72px 1fr auto",
+  }),
+  rows: css({
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    marginTop: "4px",
+  }),
+  unit: css({ fontSize: "13px", fontWeight: 600, marginLeft: "2px" }),
+};
+
+// 次の休み, or 一緒に休める日 with the person's picture beside it.
+function OffsHead({ entry }: { entry: WidgetEntry }) {
+  const { with: companion } = entry.offs;
+  return (
+    <span className={offs.head}>
+      <span className={css(oneLine)}>
+        {companion ? "一緒に休める日" : "次の休み"}
+      </span>
+      {companion && (
+        <span className={offs.avatar}>
+          <PhotoAvatar
+            name={companion.name}
+            photo={companion.photo}
+            size={20}
+          />
+        </span>
+      )}
+    </span>
+  );
+}
+
+// A count: the number of days large with 日後 small, or 今日 and 明日.
+function OffCount({ inDays, size }: { inDays: number; size: number }) {
+  const number = inDays > 1;
+  return (
+    <span aria-hidden="true" className={offs.count} style={{ fontSize: size }}>
+      {number ? inDays : inDaysWords(inDays)}
+      {number && <span className={offs.unit}>日後</span>}
+    </span>
+  );
+}
+
+// Today when it is off, then the days off after it.
+function offsAhead(entry: WidgetEntry): WidgetOff[] {
+  const ahead = entry.offs.today ? [{ day: entry.today, inDays: 0 }] : [];
+  return [...ahead, ...entry.offs.next];
+}
+
+// The whole of it as read aloud.
+function spokenOff(entry: WidgetEntry, off: WidgetOff | undefined) {
+  const companion = entry.offs.with;
+  const title = companion
+    ? `${companion.name}さんと一緒に休める日`
+    : "次の休み";
+  if (!off) {
+    return `${title}、まだ入っていません`;
+  }
+  const { day, inDays } = off;
+  return `${title}、${inDaysWords(inDays)}、${monthDay(day.date)}(${day.weekday}) ${day.name ?? ""}`;
+}
+
+// The next day off large: how soon, and its date and mark.
+export function NextOffSmall({ entry }: { entry: WidgetEntry }) {
+  const [next] = offsAhead(entry);
+  return (
+    <div className={offs.root}>
+      <span className={srOnly}>{spokenOff(entry, next)}</span>
+      <OffsHead entry={entry} />
+      {next ? (
+        <OffCount inDays={next.inDays} size={next.inDays > 1 ? 48 : 36} />
+      ) : (
+        <span
+          aria-hidden="true"
+          className={offs.count}
+          style={{ fontSize: 36 }}
+        >
+          –
+        </span>
+      )}
+      <span aria-hidden="true" className={offs.date}>
+        {next ? (
+          <>
+            {monthDay(next.day.date)}({next.day.weekday})
+            <DayMark day={next.day} size={16} />
+          </>
+        ) : (
+          "まだ入っていません"
+        )}
+      </span>
+    </div>
+  );
+}
+
+// The next days off, a row each: how soon, the date and the mark.
+export function NextOffMedium({ entry }: { entry: WidgetEntry }) {
+  const ahead = offsAhead(entry).slice(0, 3);
+  return (
+    <div className={offs.root}>
+      <span className={srOnly}>{spokenOff(entry, ahead[0])}</span>
+      <OffsHead entry={entry} />
+      <ol aria-hidden="true" className={`${list} ${offs.rows}`}>
+        {ahead.map(({ day, inDays }) => (
+          <li className={offs.row} key={day.date.getTime()}>
+            <OffCount inDays={inDays} size={22} />
+            <span className={offs.date}>
+              {monthDay(day.date)}({day.weekday})
+            </span>
+            <DayMark day={day} size={20} />
+          </li>
+        ))}
+        {ahead.length === 0 && (
+          <li className={offs.date}>まだ入っていません</li>
+        )}
+      </ol>
+    </div>
+  );
+}
+
+// ── リスト ───────────────────────────────────────────────────────────────
+
+const listing = {
   date: cva({
-    base: {
-      alignItems: "center",
-      borderRadius: "xs",
-      display: "flex",
-      fontSize: "11px",
-      fontVariantNumeric: "tabular-nums",
-      justifyContent: "center",
-    },
-    // The calendar's own day-off tile (useOffTile) is the one mark small
-    // enough to read here.
+    base: { fontVariantNumeric: "tabular-nums", textStyle: "subheadline" },
     variants: {
       today: {
         false: {},
@@ -537,136 +643,109 @@ const mini = {
       },
     },
   }),
-  grid: css({
-    display: "grid",
-    flex: 1,
-    gap: "2px",
-    gridAutoRows: "1fr",
-    gridTemplateColumns: "repeat(7, 1fr)",
+  head: css({ alignItems: "baseline", display: "flex", gap: "6px" }),
+  headDate: css({
+    fontSize: "22px",
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 600,
+    lineHeight: 1.1,
   }),
-  root: css({
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    height: "100%",
-  }),
-  title: css({ fontWeight: 700, textStyle: "subheadline" }),
-  weekdays: css({
-    display: "grid",
-    fontSize: "11px",
-    gridTemplateColumns: "repeat(7, 1fr)",
-    textAlign: "center",
-  }),
-};
-
-// The month with its days off alone, as tiles: all a small square can
-// show of a month and still be read.
-function MiniMonth({ entry }: { entry: WidgetEntry }) {
-  const { first, days, weekdays } = entry.month;
-  const todayTime = entry.today.date.getTime();
-  return (
-    <div className={mini.root}>
-      <span className={mini.title}>{first.getMonth() + MONTH_NUMBER}月</span>
-      <div aria-hidden="true" className={mini.weekdays}>
-        {weekdays.map((day) => (
-          <span className={toneText({ tone: day.tone })} key={day.label}>
-            {day.label}
-          </span>
-        ))}
-      </div>
-      <ol className={`${list} ${mini.grid}`}>
-        {days.map((day) => (
-          <MiniDay day={day} key={day.date.getTime()} todayTime={todayTime} />
-        ))}
-      </ol>
-    </div>
-  );
-}
-
-// A day of the small month: its number, on its day-off tile whatever the
-// person's 休みを塗る, since the tiles are all this month shows.
-function MiniDay({
-  day,
-  todayTime,
-}: {
-  day: WidgetDay & { inMonth: boolean };
-  todayTime: number;
-}) {
-  const { className, ...tile } = useOffTile(day, day.inMonth && day.off);
-  if (!day.inMonth) {
-    return <li aria-hidden="true" />;
-  }
-  return (
-    <li
-      className={cx(
-        mini.date({ today: day.date.getTime() === todayTime }),
-        className
-      )}
-      {...tile}
-    >
-      <SpokenDay day={day} />
-      <span aria-hidden="true" className={dateTone(day, todayTime)}>
-        {day.date.getDate()}
-      </span>
-    </li>
-  );
-}
-
-export function CalendarSmall({ entry }: { entry: WidgetEntry }) {
-  return <MiniMonth entry={entry} />;
-}
-
-const agenda = {
-  label: css({ color: "text.secondary", textStyle: "footnote" }),
-  month: css({ flexShrink: 0, width: "140px" }),
-  root: css({ display: "flex", gap: "16px", height: "100%" }),
-  row: css({
-    alignItems: "center",
-    display: "grid",
-    gap: "8px",
-    gridTemplateColumns: "20px 1fr",
+  headWeekday: css({ color: "text.secondary", textStyle: "footnote" }),
+  root: css({ display: "flex", flexDirection: "column", height: "100%" }),
+  row: cva({
+    base: {
+      "&:not(:first-child)": {
+        borderTop: "1px solid token(colors.separator)",
+      },
+      alignItems: "center",
+      display: "grid",
+      flex: 1,
+      gap: "8px",
+    },
+    variants: {
+      wide: {
+        // The day's number, and its mark in the middle of the rest.
+        false: { gridTemplateColumns: "32px 1fr", justifyItems: "start" },
+        true: { gridTemplateColumns: "28px 20px 24px 1fr" },
+      },
+    },
   }),
   rows: css({
     display: "flex",
     flex: 1,
     flexDirection: "column",
-    gap: "8px",
-    justifyContent: "center",
-    minWidth: 0,
+    marginTop: "6px",
   }),
-  text: css({ display: "flex", flexDirection: "column", minWidth: 0 }),
-  time: css({
-    fontVariantNumeric: "tabular-nums",
-    fontWeight: 600,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    textStyle: "subheadline",
-    whiteSpace: "nowrap",
-  }),
+  smallMark: css({ justifySelf: "center" }),
+  text: css({ ...oneLine, color: "text.secondary", textStyle: "footnote" }),
+  weekday: css({ textStyle: "caption1" }),
 };
 
-// The month beside today and the next two days, as calendar apps' own
-// widgets pair them.
-export function CalendarMedium({ entry }: { entry: WidgetEntry }) {
+// What a row says after its mark, where there is room: the changed
+// hours, else the memo, else the shift's name when names are shown.
+function rowWords(day: WidgetDay, named: boolean) {
+  return day.change ?? day.note ?? (named ? day.name : undefined);
+}
+
+function ListDays({ entry, wide }: { entry: WidgetEntry; wide: boolean }) {
+  const named = useShiftNames();
+  const todayTime = entry.today.date.getTime();
+  const { today: first } = entry;
   return (
-    <div className={agenda.root}>
-      <div className={agenda.month}>
-        <MiniMonth entry={entry} />
-      </div>
-      <ol className={`${list} ${agenda.rows}`}>
-        {entry.upcoming.slice(0, 3).map((day, index) => (
-          <li className={agenda.row} key={day.date.getTime()}>
-            <DayMark day={day} size={20} />
-            <span className={agenda.text}>
-              <span className={agenda.label}>{relativeDay(day, index)}</span>
-              <Change className={agenda.time} day={day} />
+    <div className={listing.root}>
+      <span aria-hidden="true" className={listing.head}>
+        <span className={listing.headDate}>
+          {first.date.getMonth() + MONTH_NUMBER}.{first.date.getDate()}
+        </span>
+        <span className={listing.headWeekday}>{first.weekday}</span>
+      </span>
+      <ol className={`${list} ${listing.rows}`}>
+        {entry.upcoming.slice(0, 4).map((day) => (
+          <li className={listing.row({ wide })} key={day.date.getTime()}>
+            <SpokenDay day={day} />
+            <span
+              aria-hidden="true"
+              className={cx(
+                listing.date({ today: day.date.getTime() === todayTime }),
+                dateTone(day, todayTime)
+              )}
+            >
+              {day.date.getDate()}
             </span>
+            {wide && (
+              <span
+                aria-hidden="true"
+                className={cx(listing.weekday, toneText({ tone: day.tone }))}
+              >
+                {day.weekday}
+              </span>
+            )}
+            <span aria-hidden="true" className={wide ? "" : listing.smallMark}>
+              <DayMark day={day} size={18} />
+            </span>
+            {wide && (
+              <span aria-hidden="true" className={listing.text}>
+                {rowWords(day, named)}
+              </span>
+            )}
           </li>
         ))}
       </ol>
     </div>
   );
 }
+
+// Today and the three days after, a line each.
+export function ListSmall({ entry }: { entry: WidgetEntry }) {
+  return <ListDays entry={entry} wide={false} />;
+}
+
+// The same, with each day's weekday and what it says beside the mark.
+export function ListMedium({ entry }: { entry: WidgetEntry }) {
+  return <ListDays entry={entry} wide />;
+}
+
+// ── カレンダー ───────────────────────────────────────────────────────────
 
 const month = {
   // With a name under each mark, the parts of a day and the weeks close
@@ -809,7 +888,7 @@ function MonthDay({
   );
 }
 
-// ── 今日の詳細 ───────────────────────────────────────────────────────────
+// ── 今日（中）: the memo and 一緒に働く人 ────────────────────────────
 
 // Where there is room, as on Android's 2×2 and 4×2, the memo gets more
 // lines; 一緒に働く人 keep to the foot either way.
@@ -955,26 +1034,8 @@ function DayExtras({
   );
 }
 
-// Today's time with its memo and 一緒に働く人.
-export function DetailSmall({ entry }: { entry: WidgetEntry }) {
-  const roomy = useContext(WidgetSizeContext).height >= DETAIL_ROOMY;
-  const day = entry.today;
-  return (
-    <div className={detail.root}>
-      <div className={detail.top}>
-        <span className={today.date}>
-          {monthDay(day.date)}({day.weekday})
-        </span>
-        <DayMark day={day} size={roomy ? 32 : 28} />
-      </div>
-      <Change className={detail.headline} day={day} />
-      <DayExtras day={day} lines={roomy ? 4 : 2} pinMembers />
-    </div>
-  );
-}
-
 // Today large on the left, its memo and 一緒に働く人 beside.
-export function DetailMedium({ entry }: { entry: WidgetEntry }) {
+export function TodayMedium({ entry }: { entry: WidgetEntry }) {
   const roomy = useContext(WidgetSizeContext).height >= DETAIL_ROOMY;
   const day = entry.today;
   return (
@@ -993,6 +1054,12 @@ export function DetailMedium({ entry }: { entry: WidgetEntry }) {
 // ── Lock screen ─────────────────────────────────────────────────────────
 
 const circular = {
+  count: css({
+    fontSize: "20px",
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 700,
+    lineHeight: 1,
+  }),
   root: css({
     alignItems: "center",
     // The lock screen's own round ground: AccessoryWidgetBackground.
@@ -1034,6 +1101,23 @@ export function TodayCircular({ entry }: { entry: WidgetEntry }) {
           {word}
         </span>
       )}
+    </div>
+  );
+}
+
+// How soon the next day off comes, on the round face: 休み over the
+// count, or 今日 and 明日.
+export function NextOffCircular({ entry }: { entry: WidgetEntry }) {
+  const [next] = offsAhead(entry);
+  return (
+    <div className={circular.root}>
+      <span className={srOnly}>{spokenOff(entry, next)}</span>
+      <span aria-hidden="true" className={circular.word}>
+        {entry.offs.with ? "一緒" : "休み"}
+      </span>
+      <span aria-hidden="true" className={circular.count}>
+        {next ? inDaysWords(next.inDays).replace("日後", "") : "–"}
+      </span>
     </div>
   );
 }

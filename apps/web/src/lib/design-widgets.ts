@@ -45,10 +45,29 @@ export type WidgetDay = {
   members: string[];
 };
 
+// Someone in the person's groups whose days off 次の休み is set to meet,
+// as the person picks them when editing the widget. `offOn` is whether
+// they are off on a day, or undefined where they have not entered it.
+export type WidgetCompanion = {
+  name: string;
+  photo?: string;
+  offOn: (date: Date) => boolean | undefined;
+};
+
+// A day off ahead, and how many days until it.
+export type WidgetOff = { day: WidgetDay; inDays: number };
+
 export type WidgetEntry = {
   // When the entry is for; a new one starts each day at midnight.
   date: Date;
   today: WidgetDay;
+  // 次の休み: whether today is off, and the next days off after it, as
+  // far as they are entered. With a companion, only days both are off.
+  offs: {
+    with?: { name: string; photo?: string };
+    today: boolean;
+    next: WidgetOff[];
+  };
   // Today and the six days after it.
   upcoming: WidgetDay[];
   // This week and the next, from the person's week start.
@@ -62,6 +81,9 @@ export type WidgetEntry = {
 };
 
 const UPCOMING_DAYS = 7;
+// How far ahead 次の休み looks, and how many days off it keeps.
+const OFF_LOOKAHEAD = 62;
+const NEXT_OFFS = 3;
 const WEEK_LENGTH = 7;
 const SUNDAY = 0;
 const SATURDAY = 6;
@@ -124,17 +146,48 @@ function widgetDay(
   };
 }
 
+// A day counts as off together when the person is off and so is the
+// companion; a day either has not entered does not count, since nobody
+// knows yet.
+function offTogether(day: WidgetDay, companion?: WidgetCompanion) {
+  return day.off && (companion?.offOn(day.date) ?? true);
+}
+
+function offsFrom(
+  today: WidgetDay,
+  dayAt: (inDays: number) => WidgetDay,
+  companion?: WidgetCompanion
+): WidgetEntry["offs"] {
+  const next: WidgetOff[] = [];
+  for (let inDays = 1; inDays <= OFF_LOOKAHEAD; inDays += 1) {
+    const day = dayAt(inDays);
+    if (offTogether(day, companion)) {
+      next.push({ day, inDays });
+      if (next.length === NEXT_OFFS) {
+        break;
+      }
+    }
+  }
+  return {
+    next,
+    today: offTogether(today, companion),
+    with: companion && { name: companion.name, photo: companion.photo },
+  };
+}
+
 // `book` is the person's patterns, which name and mark each day's shift.
 export function widgetEntry(
   schedule: Schedule,
   week: WeekSettings,
   now: Date,
-  book: PatternBook
+  book: PatternBook,
+  companion?: WidgetCompanion
 ): WidgetEntry {
   const date = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const upcoming = Array.from({ length: UPCOMING_DAYS }, (_, index) =>
     widgetDay(addDays(date, index), schedule, week, book)
   );
+  const today = upcoming[0] ?? widgetDay(date, schedule, week, book);
   const first = new Date(date.getFullYear(), date.getMonth(), 1);
   const thisWeek = weekDatesFrom(date, week.weekStart);
   const twoWeeks = [
@@ -151,7 +204,12 @@ export function widgetEntry(
       first,
       weekdays: weekdaysFrom(week).map(({ label, tone }) => ({ label, tone })),
     },
-    today: upcoming[0] ?? widgetDay(date, schedule, week, book),
+    offs: offsFrom(
+      today,
+      (inDays) => widgetDay(addDays(date, inDays), schedule, week, book),
+      companion
+    ),
+    today,
     twoWeeks,
     upcoming,
   };

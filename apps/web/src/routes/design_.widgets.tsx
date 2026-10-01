@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import { css } from "styled-system/css";
 
 import { FrameSection, frameSections } from "../components/design-frames";
+import { mother, partner, patternOn } from "../components/design-group-data";
 import {
   DesignIntro,
   DesignPage,
@@ -24,15 +25,17 @@ import type {
 } from "../components/design-widget-frame";
 import {
   CalendarLarge,
-  CalendarMedium,
-  CalendarSmall,
-  DetailMedium,
-  DetailSmall,
+  ListMedium,
+  ListSmall,
+  NextOffCircular,
+  NextOffMedium,
+  NextOffSmall,
   TodayCircular,
   TodayInline,
-  UpcomingMedium,
+  TodayMedium,
+  TodaySmall,
+  TwoWeeksMedium,
   UpcomingRectangular,
-  UpcomingSmall,
 } from "../components/design-widgets";
 import {
   CellNamesContext,
@@ -44,7 +47,7 @@ import { presetPatterns } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
 import { widgetEntry } from "../lib/design-widgets";
-import type { WidgetEntry } from "../lib/design-widgets";
+import type { WidgetCompanion, WidgetEntry } from "../lib/design-widgets";
 import { wallpaperSamples } from "../lib/material-you";
 import { pageMeta } from "../lib/site";
 
@@ -60,10 +63,12 @@ export const Route = createFileRoute("/design_/widgets")({
   }),
 });
 
-// The sample month, with today a work day that has a memo and people
-// with it, so every widget has something to show.
+// The sample month and the next, with today a work day that has a memo
+// and people with it, so every widget has something to show.
+const OCTOBER = 9;
 const sampleSchedule = {
   ...initialDesignSchedule(),
+  ...initialDesignSchedule(4, OCTOBER),
   [dateKey(designToday)]: {
     end: "20:00",
     members: ["田中", "山本"],
@@ -97,6 +102,17 @@ const noHighlight = {
 // Names under the marks, as when the person shows them in the calendar.
 const namesShown = { names: { badge: true, emoji: true, icon: true } };
 
+// The people 次の休み can be set to meet: a partner off at weekends, and
+// a mother off on Tuesdays, Thursdays and weekends.
+const companions: WidgetCompanion[] = [partner, mother].map((member) => ({
+  name: member.name,
+  offOn: (date) => {
+    const pattern = patternOn(member, date);
+    return pattern && pattern.off;
+  },
+  photo: member.photo,
+}));
+
 type Size = "small" | "medium" | "large";
 type WidgetView = ComponentType<{ entry: WidgetEntry }>;
 
@@ -108,29 +124,37 @@ const kinds: {
 }[] = [
   {
     description:
-      "今日と、この先の日。小は続く3日、中は今週と来週の2週間を曜日の列に揃えて。",
-    name: "これから",
+      "今日のマークと早出・残業。小はメモの1行目まで、中はメモと一緒に働く人も。",
+    name: "今日",
     sizes: [
-      { View: UpcomingSmall, size: "small" },
-      { View: UpcomingMedium, size: "medium" },
+      { View: TodaySmall, size: "small" },
+      { View: TodayMedium, size: "medium" },
     ],
   },
   {
     description:
-      "小は休みの日だけをタイルで。中は月の横に今日から3日分、大は毎日のマークまで。",
-    name: "カレンダー",
+      "次の休みまであと何日か。中はその先の休みも。ウィジェットの編集で人を選ぶと、その人と一緒に休める日になります。",
+    name: "次の休み",
     sizes: [
-      { View: CalendarSmall, size: "small" },
-      { View: CalendarMedium, size: "medium" },
-      { View: CalendarLarge, size: "large" },
+      { View: NextOffSmall, size: "small" },
+      { View: NextOffMedium, size: "medium" },
     ],
   },
   {
-    description: "今日のマークと早出・残業、メモ、一緒に働く人。",
-    name: "今日の詳細",
+    description:
+      "今日から4日、1日1行。中は曜日と、早出・残業かメモをマークの横に。",
+    name: "リスト",
     sizes: [
-      { View: DetailSmall, size: "small" },
-      { View: DetailMedium, size: "medium" },
+      { View: ListSmall, size: "small" },
+      { View: ListMedium, size: "medium" },
+    ],
+  },
+  {
+    description: "中は今週と来週の2週間、大は月。",
+    name: "カレンダー",
+    sizes: [
+      { View: TwoWeeksMedium, size: "medium" },
+      { View: CalendarLarge, size: "large" },
     ],
   },
 ];
@@ -151,11 +175,7 @@ const everyWidget = kinds.flatMap(({ name, sizes }) =>
 );
 
 // Where days off show: the small month, the two weeks and the large month.
-const offWidgets = everyWidget.filter(
-  ({ kind, size }) =>
-    (kind === "カレンダー" && size !== "medium") ||
-    (kind === "これから" && size === "medium")
-);
+const offWidgets = everyWidget.filter(({ kind }) => kind === "カレンダー");
 
 const rows = css({ display: "flex", flexDirection: "column", gap: "16px" });
 const rowLabel = css({
@@ -225,10 +245,22 @@ function WidgetsPage() {
   const august = widgetEntry(augustSchedule, week, augustDay, presetPatterns);
   const named = everyWidget.filter(
     ({ kind, size }) =>
-      kind !== "今日の詳細" && (size !== "small" || kind === "これから")
+      kind === "カレンダー" ||
+      (kind === "リスト" && size === "medium") ||
+      (kind === "今日" && size === "small")
   );
-  const detailSizes =
-    kinds.find(({ name }) => name === "今日の詳細")?.sizes ?? [];
+  const detailSizes = kinds.find(({ name }) => name === "今日")?.sizes ?? [];
+  const together = companions.map((companion) => ({
+    entry: widgetEntry(
+      sampleSchedule,
+      week,
+      designToday,
+      presetPatterns,
+      companion
+    ),
+    name: companion.name,
+  }));
+  const offSizes = kinds.find(({ name }) => name === "次の休み")?.sizes ?? [];
   return (
     <DesignPage style={pageStyle(theme)}>
       <DesignToolbar back="documents" />
@@ -256,6 +288,26 @@ function WidgetsPage() {
           ))}
 
           <FrameSection
+            description="次の休みのウィジェットを編集して、グループの人を選んだとき。ふたりとも休みの日だけを数えます。相手がまだ入れていない日は数えません。"
+            title="一緒に休める日"
+          >
+            <div className={rows}>
+              {together.flatMap(({ entry: shared, name }) =>
+                fullColor.map(({ appearance, label }) => (
+                  <WidgetRow
+                    appearance={appearance}
+                    entry={shared}
+                    families={iosFamilies}
+                    key={`${name}-${appearance}`}
+                    label={`${name}・${label}`}
+                    widgets={offSizes}
+                  />
+                ))
+              )}
+            </div>
+          </FrameSection>
+
+          <FrameSection
             description="iPhone の色合いとクリアでは、背景が差し替わり、中身は白一色の濃淡になります。"
             title="色合い・クリア"
           >
@@ -280,6 +332,9 @@ function WidgetsPage() {
             <Wallpaper appearance="lock">
               <LabelledWidget appearance="lock" family="accessoryCircular">
                 <TodayCircular entry={entry} />
+              </LabelledWidget>
+              <LabelledWidget appearance="lock" family="accessoryCircular">
+                <NextOffCircular entry={entry} />
               </LabelledWidget>
               <LabelledWidget appearance="lock" family="accessoryRectangular">
                 <UpcomingRectangular entry={entry} />
