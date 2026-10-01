@@ -1,5 +1,15 @@
 {
   "$comment": "Code generated from design/ by `mise run gen`. Do not edit.",
+  "chat": {
+    "dayCardColumns": 6,
+    "dayCardRows": 7,
+    "foldLines": 10,
+    "linkPreviewAspect": 1.91,
+    "linkPreviewSettleMs": 400,
+    "maxPins": 5,
+    "typingSendMs": 3000,
+    "typingShowMs": 5000
+  },
   "colors": {
     "marks": [
       "テーマカラー",
@@ -2821,6 +2831,10 @@
       }
     }
   },
+  "invite": {
+    "codeAlphabet": "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789",
+    "codeLength": 8
+  },
   "limits": {
     "groupMaxMembers": 100,
     "sharedDaysMax": 31,
@@ -2832,6 +2846,11 @@
       "personName": 20,
       "shiftMark": 1,
       "shiftName": 8
+    },
+    "textFields": {
+      "countAlwaysUpTo": 30,
+      "countWhenLeft": 20,
+      "dayNameLength": 3
     }
   },
   "metrics": {
@@ -2931,5 +2950,12 @@
       "size": 20,
       "weight": 400
     }
+  },
+  "widgets": {
+    "memoLinesMedium": 3,
+    "memoLinesRoomy": 5,
+    "memoLinesSmall": 1,
+    "nextOffs": 3,
+    "offLookaheadDays": 62
   }
 }

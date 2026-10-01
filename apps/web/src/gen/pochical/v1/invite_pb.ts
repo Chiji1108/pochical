@@ -17,7 +17,8 @@ export const file_pochical_v1_invite: GenFile = /*@__PURE__*/
  */
 export type GetInvitePreviewRequest = Message<"pochical.v1.GetInvitePreviewRequest"> & {
   /**
-   * 8 characters from A-Z, a-z and 2-9 without the look-alikes I, O, l.
+   * inviteRules.codeLength characters from inviteRules.codeAlphabet
+   * (design/src/invite.ts).
    *
    * @generated from field: string invite_code = 1;
    */

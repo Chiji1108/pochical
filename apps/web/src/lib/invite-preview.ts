@@ -1,5 +1,6 @@
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
+import { INVITE_CODE } from "@pochical/design/invite";
 
 import { InviteService } from "../gen/pochical/v1/invite_pb";
 
@@ -16,7 +17,6 @@ export type InviteFetch = (
   input: RequestInfo | URL,
   init?: RequestInit
 ) => Promise<Response>;
-const INVITE_CODE = /^[A-HJ-NP-Za-km-z2-9]{8}$/u;
 // A service binding ignores the host; this one names where the apps reach
 // the same server.
 const SERVER_ORIGIN = "https://api.pochical.app";

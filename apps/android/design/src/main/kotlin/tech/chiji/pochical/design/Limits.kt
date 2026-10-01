@@ -2,11 +2,7 @@
 
 package tech.chiji.pochical.design
 
-/**
- * How long free text may be, in characters as a reader sees them (grapheme
- * clusters, ICU's BreakIterator), by what it is. spec/text-limits.md says
- * how fields hold to them.
- */
+/** How long free text may be, in characters as a reader sees them, by what it is (spec/text-limits.md). */
 object TextLimits {
   const val chatMessage = 1000
   const val dayNote = 100
@@ -15,6 +11,13 @@ object TextLimits {
   const val personName = 20
   const val shiftMark = 1
   const val shiftName = 8
+}
+
+/** How a field shows its count and how a shift's name shortens in a day (spec/text-limits.md). */
+object TextFields {
+  const val countAlwaysUpTo = 30
+  const val countWhenLeft = 20
+  const val dayNameLength = 3
 }
 
 /** The most days one chat message shares. */

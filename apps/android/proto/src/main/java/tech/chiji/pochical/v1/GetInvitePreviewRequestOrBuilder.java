@@ -12,7 +12,8 @@ public interface GetInvitePreviewRequestOrBuilder extends
 
   /**
    * <pre>
-   * 8 characters from A-Z, a-z and 2-9 without the look-alikes I, O, l.
+   * inviteRules.codeLength characters from inviteRules.codeAlphabet
+   * (design/src/invite.ts).
    * </pre>
    *
    * <code>string invite_code = 1 [json_name = "inviteCode"];</code>
@@ -21,7 +22,8 @@ public interface GetInvitePreviewRequestOrBuilder extends
   java.lang.String getInviteCode();
   /**
    * <pre>
-   * 8 characters from A-Z, a-z and 2-9 without the look-alikes I, O, l.
+   * inviteRules.codeLength characters from inviteRules.codeAlphabet
+   * (design/src/invite.ts).
    * </pre>
    *
    * <code>string invite_code = 1 [json_name = "inviteCode"];</code>

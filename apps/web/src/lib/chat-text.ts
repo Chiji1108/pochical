@@ -1,3 +1,5 @@
+import { inviteRules } from "@pochical/design/invite";
+
 // A chat message's words as spec/chat.md has them: its links, and
 // the members it mentions.
 //
@@ -115,7 +117,10 @@ export function siteOf(url: string) {
 // Pochical's own invitation links, https://pochical.app/invite/{code}:
 // the chat opens them in the app, on the group's join screen, rather than
 // in the browser.
-const INVITE_PATH = /^\/invite\/(?<code>[A-HJ-NP-Za-km-z2-9]{8})\/?$/u;
+const INVITE_PATH = new RegExp(
+  `^/invite/(?<code>[${inviteRules.codeAlphabet}]{${inviteRules.codeLength}})/?$`,
+  "u"
+);
 
 // The invite code a link carries, if it is one of Pochical's.
 export function inviteCodeOf(url: string) {

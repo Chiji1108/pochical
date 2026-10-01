@@ -1,3 +1,5 @@
+import { widgetRules } from "@pochical/design/widgets";
+
 import {
   holidayName,
   monthDatesFrom,
@@ -81,9 +83,6 @@ export type WidgetEntry = {
 };
 
 const UPCOMING_DAYS = 7;
-// How far ahead 次の休み looks, and how many days off it keeps.
-const OFF_LOOKAHEAD = 62;
-const NEXT_OFFS = 3;
 const WEEK_LENGTH = 7;
 const SUNDAY = 0;
 const SATURDAY = 6;
@@ -162,11 +161,11 @@ function offsFrom(
   companion?: WidgetCompanion
 ): WidgetEntry["offs"] {
   const next: WidgetOff[] = [];
-  for (let inDays = 1; inDays <= OFF_LOOKAHEAD; inDays += 1) {
+  for (let inDays = 1; inDays <= widgetRules.offLookaheadDays; inDays += 1) {
     const day = dayAt(inDays);
     if (offTogether(day, companion)) {
       next.push({ day, inDays });
-      if (next.length === NEXT_OFFS) {
+      if (next.length === widgetRules.nextOffs) {
         break;
       }
     }

@@ -1,6 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { ConnectRouter, HandlerContext } from "@connectrpc/connect";
+import { INVITE_CODE } from "@pochical/design/invite";
 import { GROUP_MAX_MEMBERS, textLimits } from "@pochical/design/limits";
 import { env } from "cloudflare:workers";
 
@@ -12,12 +13,7 @@ import {
   JoinGroupResponseSchema,
   RemakeInviteLinkResponseSchema,
 } from "./gen/pochical/v1/group_pb";
-import {
-  codeOfGroup,
-  groupOfCode,
-  INVITE_CODE,
-  issueInviteCode,
-} from "./invite-codes";
+import { codeOfGroup, groupOfCode, issueInviteCode } from "./invite-codes";
 import { requireEmoji, requireText } from "./text-limits";
 import { requireUser } from "./user-service";
 

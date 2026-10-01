@@ -1,13 +1,14 @@
 import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { ConnectRouter } from "@connectrpc/connect";
+import { INVITE_CODE } from "@pochical/design/invite";
 import { env } from "cloudflare:workers";
 
 import {
   GetInvitePreviewResponseSchema,
   InviteService,
 } from "./gen/pochical/v1/invite_pb";
-import { groupOfCode, INVITE_CODE } from "./invite-codes";
+import { groupOfCode } from "./invite-codes";
 
 export const registerInviteService = (router: ConnectRouter): void => {
   router.service(InviteService, {
