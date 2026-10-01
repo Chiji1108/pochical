@@ -172,13 +172,14 @@ export function initialDesignSchedule(
   );
 }
 
-// Lays a repeating sequence over [from, to], counting from the anchor day so
-// days before the anchor line up too.
-// Repeating shifts are filled in a year ahead.
-function ruleEnd(start: Date) {
+// Repeating shifts are filled in a year ahead: through the end of the
+// month a year after the rule's start.
+export function ruleEnd(start: Date) {
   return new Date(start.getFullYear(), start.getMonth() + 13, 0);
 }
 
+// Lays a repeating sequence over [from, to], counting from the anchor day so
+// days before the anchor line up too.
 export function repeatSchedule(
   sequence: Shift[],
   anchor: Date,

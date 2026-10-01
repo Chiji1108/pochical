@@ -18,11 +18,14 @@ export function limitText(text: string, limit: number) {
 // else its first ones and …, the same on every platform, rather than
 // however many a width happens to fit.
 
-export function dayName(name: string) {
-  if (characterCount(name) <= textFields.dayNameLength) {
+export function dayName(
+  name: string,
+  length: number = textFields.dayNameLength
+) {
+  if (characterCount(name) <= length) {
     return name;
   }
-  return `${limitText(name, textFields.dayNameLength - 1)}…`;
+  return `${limitText(name, length - 1)}…`;
 }
 
 // Whether the count shows while the field is in use: all the while for

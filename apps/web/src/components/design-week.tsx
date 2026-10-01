@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 
-import { holidayNames } from "../lib/holiday-names";
+import { holidays } from "../lib/holiday-names";
 
 // 週の始まり and 色をつける日 from settings. They are the viewer's own and
 // shape every calendar and group view on their screen; members never see
@@ -72,7 +72,7 @@ export function holidayName(date: Date) {
 
 // For dates already written as "YYYY-MM-DD".
 export function holidayNameOfKey(key: string) {
-  return holidayNames[key];
+  return holidays.JP?.[key];
 }
 
 // Sundays read red and Saturdays blue, each only while it is turned on.

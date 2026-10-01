@@ -1,0 +1,107 @@
+{
+  "about": "How a day's own time moved from its pattern's standard `time` (start, end): starting earlier is early (早出), ending later is late (残業); a later start or an earlier end is neither. Times are counted from the standard start around the clock, so a night shift's end the next morning, or a start the evening before, compares the right way. Without a time of its own, or for a pattern without a time, there is no change (null).",
+  "cases": [
+    {
+      "name": "starting earlier is early",
+      "time": ["08:30", "17:00"],
+      "start": "08:00",
+      "expected": {
+        "early": true,
+        "late": false
+      }
+    },
+    {
+      "name": "ending later is late",
+      "time": ["08:30", "17:00"],
+      "end": "19:00",
+      "expected": {
+        "early": false,
+        "late": true
+      }
+    },
+    {
+      "name": "both at once",
+      "time": ["08:30", "17:00"],
+      "start": "07:30",
+      "end": "18:00",
+      "expected": {
+        "early": true,
+        "late": true
+      }
+    },
+    {
+      "name": "starting later is only a change",
+      "time": ["08:30", "17:00"],
+      "start": "09:00",
+      "expected": {
+        "early": false,
+        "late": false
+      }
+    },
+    {
+      "name": "ending earlier is only a change",
+      "time": ["08:30", "17:00"],
+      "end": "16:00",
+      "expected": {
+        "early": false,
+        "late": false
+      }
+    },
+    {
+      "name": "a night shift ending later the next morning",
+      "time": ["16:30", "09:00"],
+      "end": "10:00",
+      "expected": {
+        "early": false,
+        "late": true
+      }
+    },
+    {
+      "name": "a night shift ending earlier the next morning",
+      "time": ["16:30", "09:00"],
+      "end": "08:00",
+      "expected": {
+        "early": false,
+        "late": false
+      }
+    },
+    {
+      "name": "a night shift starting earlier",
+      "time": ["22:00", "07:00"],
+      "start": "21:00",
+      "expected": {
+        "early": true,
+        "late": false
+      }
+    },
+    {
+      "name": "a shift starting after midnight, moved to the evening before",
+      "time": ["00:30", "09:00"],
+      "start": "23:30",
+      "expected": {
+        "early": true,
+        "late": false
+      }
+    },
+    {
+      "name": "a shift ending at midnight, moved past it",
+      "time": ["15:00", "00:00"],
+      "end": "01:00",
+      "expected": {
+        "early": false,
+        "late": true
+      }
+    },
+    {
+      "name": "no time of its own",
+      "time": ["08:30", "17:00"],
+      "expected": null
+    },
+    {
+      "name": "a pattern without a time",
+      "time": null,
+      "start": "08:00",
+      "expected": null
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 // Writes the design tokens out for the native apps and as JSON for anyone
 // else: every テーマ's colors worked out for light and dark, the shift
-// colors as each テーマ draws them, the text styles and the sizes. Run by
+// colors as each テーマ draws them, the text styles and the sizes, and the
+// shared numbers and national holidays beside them. Run by
 // `mise run gen`; with --check it only reports files that are out of date,
 // as CI does.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -43,6 +44,7 @@ import {
 import type { Preset } from "../src/themes";
 import { textStyles } from "../src/type";
 import { widgetRules } from "../src/widgets";
+import { kotlinHolidays, swiftHolidays, webHolidays } from "./holidays";
 import { swiftPhrases } from "./phrases";
 
 const root = path.join(import.meta.dir, "../..");
@@ -533,6 +535,9 @@ const outputs = {
     ]
   ),
   [`${SWIFT_DIR}/Phrases.swift`]: swiftFile(swiftPhrases()),
+  [`${SWIFT_DIR}/Holidays.swift`]: swiftFile(swiftHolidays()),
+  [`${KOTLIN_DIR}/Holidays.kt`]: kotlinFile(kotlinHolidays()),
+  "apps/web/src/lib/holiday-names.ts": webHolidays(HEADER),
   ...sharedOutputs,
   "spec/design-tokens.json": json(),
 };
