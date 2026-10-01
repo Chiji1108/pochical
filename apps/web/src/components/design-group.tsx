@@ -411,7 +411,12 @@ export function DesignGroup({
                   (member) => member.me || member.id === page.chatId
                 )
           }
-          title={chatTitle(group, page.chatId)}
+          isGroup={page.chatId === groupChat}
+          title={
+            page.chatId === groupChat
+              ? group.name
+              : chatTitle(group, page.chatId)
+          }
           onShifts={
             page.chatId === groupChat
               ? () => {

@@ -472,7 +472,12 @@ const chatStyle = {
     alignItems: "center",
     borderBottom: "1px solid token(colors.separator)",
     display: "grid",
-    gridTemplateColumns: "1fr auto 1fr",
+    // The sides as wide as each other, so the title stays centered and a
+    // long one is cut short between them.
+    gridTemplateColumns: "1fr minmax(0, auto) 1fr",
+    // Room between the title and the buttons, so a long name is cut
+    // short before it touches them.
+    columnGap: "8px",
     // Out to the screen's edges, so its line runs from edge to edge as a
     // bar's does on iOS and Android (a list's lines stay inset); its
     // contents stay where they were.
@@ -810,7 +815,19 @@ const chatStyle = {
     fontWeight: 600,
     gap: "4px",
     margin: 0,
+    minWidth: 0,
     textStyle: "headline",
+  }),
+  titleName: css({
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  }),
+  titleCount: css({
+    color: "text.secondary",
+    flexShrink: 0,
+    fontWeight: 400,
+    marginLeft: "-4px",
   }),
   menu: css({ justifySelf: "end" }),
   when: css({
@@ -916,6 +933,7 @@ export function ChatPage({
   inviteOf,
   onInvite,
   title,
+  isGroup = false,
   group,
   people,
   chat,
@@ -943,7 +961,10 @@ export function ChatPage({
   // The group chat's menu opens everyone's shifts, to look up a day while
   // talking it over.
   onShifts?: () => void;
+  // The group's name in its group chat, else the other member's name.
   title: string;
+  // The group chat, where everyone talks; else a one-to-one chat.
+  isGroup?: boolean;
   // Its notifications turned off, from the menu at its top right, as
   // LINE's rooms have it.
   muted?: boolean;
@@ -1126,7 +1147,6 @@ export function ChatPage({
       observer.disconnect();
     };
   }, []);
-  const isGroup = title === "全体チャット";
   // Someone writing back, shown under the latest line: in the prototype,
   // whoever spoke last before you, for a few seconds after you send. The
   // apps show it from the typing frames (spec/sync-protocol.md).
@@ -1812,8 +1832,16 @@ export function ChatPage({
     <Screen>
       <header className={chatStyle.header}>
         <BackButton onClick={onBack}>{backLabel}</BackButton>
+        {/* The group's name and how many are in it, as LINE heads a
+            group's chat, so it is clear which group this is; a long name
+            is cut short, the count and the mute mark stay. */}
         <h3 className={chatStyle.title}>
-          {title}
+          <span className={chatStyle.titleName}>{title}</span>
+          {isGroup && (
+            <span className={chatStyle.titleCount}>
+              （{group.members.length}）
+            </span>
+          )}
           {muted && <MutedMark />}
         </h3>
         {onMuted && (
