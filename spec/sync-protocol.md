@@ -16,7 +16,7 @@ Clients never write to another user's data. A Group DO never edits shifts; it on
 
 Every user is signed in, from the first launch: anonymously at first, so nobody has to make an account to use groups, and later linked to Apple or Google to keep the same user on a new phone. better-auth (`apps/server/src/auth.ts`) serves this at `/api/auth/*` in its own JSON shapes, the one part of the server not defined in `proto/`.
 
-- A client signs in with `POST /api/auth/sign-in/anonymous` and keeps the session token from the response's `set-auth-token` header: iOS in the Keychain and Android in Block Store, so a reinstall comes back as the same user.
+- A client signs in with `POST /api/auth/sign-in/anonymous`, sending `Content-Type: application/json` and the body `{}` (better-auth answers 415 without them), and keeps the session token from the response's `set-auth-token` header: iOS in the Keychain and Android in Block Store, so a reinstall comes back as the same user.
 - It sends the token as `Authorization: Bearer <token>` on every Connect call and socket. Calls without a valid one fail with `UNAUTHENTICATED`; sockets get 401. `UserService.GetMe` says whose token it is.
 - Each user has a User DO named by their user id. It records the groups they are in.
 
