@@ -327,8 +327,9 @@ const chatStyle = {
     width: "100%",
   }),
   // A bubble with a link's page under its words is wide enough for the
-  // page's picture, as LINE draws one.
-  linked: css({ minWidth: "min(240px, 100%)" }),
+  // page's picture, as LINE draws one: 240px where the row has room, and
+  // narrower where it does not, so the time beside it stays in the row.
+  linked: css({ flex: "1 1 240px" }),
   // Its buttons stay at the foot as the message grows, as in Messages.
   composer: cva({
     base: {
@@ -1064,7 +1065,7 @@ export function ChatPage({
   const choosePhotos = async (files: File[]) => {
     const room = maxPhotos - photos.length;
     if (files.length > room) {
-      toast(`写真は一度に${maxPhotos}枚まで送れます`);
+      toast(`写真は一度に${maxPhotos}枚まで送れます`, "problem");
     }
     const taken = files.slice(0, room);
     setReading((count) => count + taken.length);
@@ -1076,7 +1077,7 @@ export function ChatPage({
     );
     setPhotos((before) => [...before, ...chosen].slice(0, maxPhotos));
     if (chosen.length < taken.length) {
-      toast("開けない写真がありました");
+      toast("開けない写真がありました", "problem");
     }
   };
   const react = (id: string, emoji: string) => {
@@ -2054,6 +2055,8 @@ const inviteCard = {
     textStyle: "footnote",
   }),
   note: css({ color: "text.tertiary", textStyle: "caption2" }),
+  // The member count moves to the next line whole in a narrow bubble.
+  count: css({ whiteSpace: "nowrap" }),
 };
 
 // An invitation link's group, under the message's words where a page's
@@ -2100,9 +2103,14 @@ function InviteCard({
       <span className={inviteCard.words}>
         <span className={inviteCard.name}>{invite.name}</span>
         <small className={inviteCard.note}>
-          {invite.joined
-            ? "参加中のグループ"
-            : `グループへの招待・${invite.members}人`}
+          {invite.joined ? (
+            "参加中のグループ"
+          ) : (
+            <>
+              グループへの招待・
+              <span className={inviteCard.count}>{invite.members}人</span>
+            </>
+          )}
         </small>
       </span>
     </button>
@@ -2382,7 +2390,7 @@ function MessageActions({
       await navigator.clipboard.writeText(value);
       toast("コピーしました");
     } catch {
-      toast("コピーできませんでした");
+      toast("コピーできませんでした", "problem");
     }
   };
   return (

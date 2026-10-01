@@ -10,6 +10,9 @@
       "@cloudflare/vitest-pool-workers/types"
     ],
     "verbatimModuleSyntax": true,
+    // drizzle-kit writes the Group DO's migrations as JS importing JSON.
+    "allowJs": true,
+    "resolveJsonModule": true,
     "noEmit": true,
     "skipLibCheck": true,
     "strict": true,

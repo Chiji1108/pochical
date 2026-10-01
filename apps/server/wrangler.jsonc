@@ -9,6 +9,8 @@
     "bindings": [{ "name": "GROUP_ROOM", "class_name": "GroupRoom" }],
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GroupRoom"] }],
+  // The Group DO's migrations import their SQL as text (drizzle-kit).
+  "rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }],
   // Global lookups a Durable Object cannot answer alone, such as which group
   // an invite code opens. Wrangler creates the database on first deploy.
   "d1_databases": [
