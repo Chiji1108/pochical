@@ -244,7 +244,7 @@ export const hub = {
     textAlign: "left",
     width: "100%",
   }),
-  // 次にみんな休み: a row under the week, laid out like 今月のみんな休み.
+  // 次のみんな休み: a row under the week, laid out like 今月のみんな休み.
   weekCardNext: css({
     "& svg": { color: "text.quaternary" },
     alignItems: "center",

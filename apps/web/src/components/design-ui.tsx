@@ -1091,7 +1091,7 @@ export function TodayButton({
 // A number of days that opens what they are: 今月のお休み under the
 // calendar, みんな休み under the group's shifts. A rounded row, not a pill:
 // it opens what it sums up, where the pills below it do something.
-// Colored as the hub's 次にみんな休み: the label quiet,
+// Colored as the hub's 次のみんな休み: the label quiet,
 // the number in the color of days off, and the chevron faint, as the
 // platforms' rows that open more: the whole row is what is pressed.
 export const summaryRow = {
