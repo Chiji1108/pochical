@@ -36,6 +36,7 @@ import {
   Sheet,
   SheetHeading,
   SheetPicture,
+  SystemAlert,
 } from "../components/design-sheet";
 import { TabBar } from "../components/design-tab-bar";
 import { pageStyle, useThemeStyle } from "../components/design-theme";
@@ -1159,10 +1160,10 @@ function Overlays() {
       title="画面と重なり"
     >
       <Item
-        android="Scaffold ＋ LazyColumn、ModalBottomSheet、AlertDialog、全画面の Dialog"
-        ios="NavigationStack の画面 ＋ ScrollView、.sheet、.alert、.fullScreenCover"
-        name="Screen + ScreenScroll / Sheet / ConfirmDialog / PhotoViewer"
-        where="すべての画面、内訳などのシート、確かめる質問、写真を大きく"
+        android="Scaffold ＋ LazyColumn、ModalBottomSheet、AlertDialog、全画面の Dialog。SystemAlert は OS が出す（POST_NOTIFICATIONS の許可など）"
+        ios="NavigationStack の画面 ＋ ScrollView、.sheet、.alert、.fullScreenCover。SystemAlert は OS が出す（requestAuthorization、アイコン変更）"
+        name="Screen + ScreenScroll / Sheet / ConfirmDialog / SystemAlert / PhotoViewer"
+        where="すべての画面、内訳などのシート、確かめる質問、OS の確認（通知の許可など）、写真を大きく"
         wide
       >
         <OverlaySample />
@@ -1173,7 +1174,9 @@ function Overlays() {
 
 function OverlaySample() {
   const phone = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState<"sheet" | "confirm" | "photo" | null>(null);
+  const [open, setOpen] = useState<
+    "sheet" | "confirm" | "system" | "photo" | null
+  >(null);
   const [photo] = useState(sampleRosterPhoto);
   const close = () => {
     setOpen(null);
@@ -1199,6 +1202,14 @@ function OverlaySample() {
               variant="quiet"
             >
               確かめる質問を出す
+            </Button>
+            <Button
+              onClick={() => {
+                setOpen("system");
+              }}
+              variant="quiet"
+            >
+              OS の確認を出す
             </Button>
             <Button
               onClick={() => {
@@ -1228,6 +1239,13 @@ function OverlaySample() {
             onCancel={close}
             onConfirm={close}
             title="「家族」を抜けますか？"
+          />
+        )}
+        {open === "system" && (
+          <SystemAlert
+            buttons={[{ label: "許可しない" }, { label: "許可" }]}
+            onClose={close}
+            title="“ポチカル”は通知を送信します。よろしいですか？"
           />
         )}
         <PhotoViewer
