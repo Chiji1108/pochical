@@ -82,3 +82,10 @@ The stores require a way to report what people post and to block someone (App St
 - A chat opened with unread lines opens on the first of them, under a line saying ここから新着 (a rule either side, in the accent). The line stays where it is while the chat is open and is gone the next time it opens. A chat opened from a shared day (the shift table, the landing page) opens on that day instead. With nothing unread, it opens on the latest line.
 - Scrolled up more than half the screen from the latest line, a round ↓ shows at the foot of the lines; a tap scrolls to the latest.
 - Someone writing shows as three dots rising in turn, in a bubble of the others' kind with their picture, under the latest line (from the typing frames in spec/sync-protocol.md). A screen reader hears 〇〇が入力中. A blocked member's typing is not shown. Nobody sees whether you have read their lines.
+
+## Pins
+
+- Any member can pin a line (words, a photo, shared days) from its menu, in a group chat or a one-to-one chat, and anyone can take a pin off (ピン留めを外す). It is the same for everyone in the chat. No line from the app says who pinned it.
+- At most 5 lines are pinned at once, as LINE keeps five announcements; a sixth takes the place of the oldest, and the app says so.
+- Under the header, a bar shows the latest pinned line: a pin, ピン留め (ピン留め・N件 with more than one) and its words on one line. A tap jumps to the line and rings it. With more than one, ▾ opens all of them under the bar, the latest first, each with who wrote it.
+- A pinned line has a small pin by its time. Taking a line back (送信取消) takes its pin off too.

@@ -6,6 +6,7 @@ import {
   CalendarPlus,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   CircleAlert,
   Copy,
   Download,
@@ -14,6 +15,8 @@ import {
   ImageIcon,
   Link,
   Pencil,
+  Pin,
+  PinOff,
   Link2Off,
   Plus,
   Reply,
@@ -724,6 +727,8 @@ const chatStyle = {
     textStyle: "footnote",
   }),
   blockedShow: css({ color: "accent.default", fontWeight: 600 }),
+  // A pinned line's pin, by its time.
+  pinMark: css({ display: "block", marginLeft: "auto" }),
   // Over the time, where LINE says 編集済み.
   edited: css({ display: "block" }),
   title: css({
@@ -1162,6 +1167,33 @@ export function ChatPage({
     );
     stopEditing();
   };
+  // Pinned lines, the latest first; at most a few, as LINE keeps its
+  // announcements, the oldest giving way.
+  const pins = chat.messages
+    .filter((message) => message.pinned !== undefined && !message.unsent)
+    .toSorted((a, b) => (b.pinned ?? 0) - (a.pinned ?? 0));
+  const [pinsOpen, setPinsOpen] = useState(false);
+  const pin = (id: string, pinned: boolean) => {
+    const order = Math.max(0, ...pins.map((line) => line.pinned ?? 0)) + 1;
+    const dropped =
+      pinned && pins.length >= maxPins ? pins.at(-1)?.id : undefined;
+    onChange(
+      chat.messages.map((message) => {
+        if (message.id === id) {
+          return { ...message, pinned: pinned ? order : undefined };
+        }
+        if (message.id === dropped) {
+          return { ...message, pinned: undefined };
+        }
+        return message;
+      })
+    );
+    if (dropped) {
+      toast(`ピン留めは${maxPins}件までです。いちばん古いものを外しました`);
+    } else {
+      toast(pinned ? "ピン留めしました" : "ピン留めを外しました");
+    }
+  };
   const unsend = (id: string) => {
     onChange(
       chat.messages.map((message) =>
@@ -1257,6 +1289,12 @@ export function ChatPage({
     onOpenChange: (open: boolean) => {
       setSelected(open ? message.id : undefined);
     },
+    onPin:
+      message.notice || message.unsent
+        ? undefined
+        : () => {
+            pin(message.id, message.pinned === undefined);
+          },
     onReact: (emoji: string) => {
       react(message.id, emoji);
     },
@@ -1280,6 +1318,7 @@ export function ChatPage({
           }
         : undefined,
     open: selected === message.id,
+    pinned: message.pinned !== undefined,
     text:
       message.text === undefined
         ? undefined
@@ -1497,6 +1536,14 @@ export function ChatPage({
               )}
               {uploads[message.id] === undefined && (
                 <small className={chatStyle.time}>
+                  {message.pinned !== undefined && (
+                    <Pin
+                      aria-label="ピン留め中"
+                      className={chatStyle.pinMark}
+                      role="img"
+                      size={11}
+                    />
+                  )}
                   {message.edited && (
                     <span className={chatStyle.edited}>編集済み</span>
                   )}
@@ -1579,6 +1626,18 @@ export function ChatPage({
           </IconMenu>
         )}
       </header>
+      {pins[0] && (
+        <PinBar
+          nameOf={mentionName}
+          onJump={(id) => {
+            setPinsOpen(false);
+            jumpTo(id);
+          }}
+          onOpenChange={setPinsOpen}
+          open={pinsOpen}
+          pins={pins}
+        />
+      )}
       <div className={chatStyle.lines}>
         <ol
           aria-label={`${title}のメッセージ`}
@@ -2009,6 +2068,9 @@ export function ChatPage({
 }
 
 const flashMilliseconds = 1200;
+
+// How many lines stay pinned at once, as LINE keeps five announcements.
+const maxPins = 5;
 
 // In the prototype, how soon after you send someone starts writing back,
 // and for how long.
@@ -2577,6 +2639,8 @@ function MessageActions({
   onEdit,
   onUnsend,
   onReport,
+  onPin,
+  pinned = false,
   pressToOpen = false,
   children,
 }: {
@@ -2598,6 +2662,9 @@ function MessageActions({
   onUnsend?: () => void;
   // 通報, for someone else's message.
   onReport?: () => void;
+  // ピン留め, or ピン留めを外す when it is pinned.
+  onPin?: () => void;
+  pinned?: boolean;
   // The message's own tap does something else, like a photo opening
   // large, so these open from its long press instead.
   pressToOpen?: boolean;
@@ -2751,6 +2818,25 @@ function MessageActions({
                   保存
                 </button>
               )}
+              {onPin && (
+                <button
+                  className={menuStyle.item}
+                  onClick={() => {
+                    onOpenChange(false);
+                    onPin();
+                  }}
+                  type="button"
+                >
+                  <span className={menuStyle.icon}>
+                    {pinned ? (
+                      <PinOff aria-hidden="true" size={18} />
+                    ) : (
+                      <Pin aria-hidden="true" size={18} />
+                    )}
+                  </span>
+                  {pinned ? "ピン留めを外す" : "ピン留め"}
+                </button>
+              )}
               {onEdit && (
                 <button
                   className={menuStyle.item}
@@ -2806,6 +2892,136 @@ function MessageActions({
         </Popover.Positioner>
       </Portal>
     </Popover.Root>
+  );
+}
+
+const pinBar = {
+  // Under the header, the latest pinned line, as LINE shows its
+  // announcement: the pin, whose words, and a tap jumps to it.
+  bar: css({
+    alignItems: "center",
+    borderBottom: "1px solid token(colors.separator)",
+    display: "flex",
+    gap: "4px",
+    padding: "4px 0",
+  }),
+  jump: css({
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    borderRadius: "md",
+    color: "text.primary",
+    display: "flex",
+    flex: 1,
+    gap: "12px",
+    minWidth: 0,
+    padding: "8px",
+    textAlign: "left",
+  }),
+  icon: css({ color: "accent.default", flexShrink: 0 }),
+  words: css({
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    minWidth: 0,
+  }),
+  label: css({
+    color: "accent.default",
+    fontWeight: 600,
+    textStyle: "caption",
+  }),
+  text: css({
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    textStyle: "subheadline",
+    whiteSpace: "nowrap",
+  }),
+  // All of them, opened from ▾ under the bar.
+  list: css({
+    borderBottom: "1px solid token(colors.separator)",
+    listStyle: "none",
+    margin: 0,
+    padding: "4px 0",
+  }),
+};
+
+// The pinned lines over a chat: the latest, and with more than one, ▾
+// opening them all, each a tap away from its place in the chat.
+function PinBar({
+  pins,
+  nameOf,
+  open,
+  onOpenChange,
+  onJump,
+}: {
+  pins: Message[];
+  nameOf: (id: string) => string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onJump: (id: string) => void;
+}) {
+  const [latest] = pins;
+  if (!latest) {
+    return null;
+  }
+  const many = pins.length > 1;
+  return (
+    <>
+      <div className={pinBar.bar}>
+        <button
+          className={pinBar.jump}
+          onClick={() => {
+            onJump(latest.id);
+          }}
+          type="button"
+        >
+          <Pin aria-hidden="true" className={pinBar.icon} size={18} />
+          <span className={pinBar.words}>
+            <span className={pinBar.label}>
+              {many ? `ピン留め・${pins.length}件` : "ピン留め"}
+            </span>
+            <span className={pinBar.text}>{summaryOf(latest, nameOf)}</span>
+          </span>
+        </button>
+        {many && (
+          <IconButton
+            aria-expanded={open}
+            glass={false}
+            label={open ? "ピン留めを閉じる" : "ピン留めをすべて表示"}
+            onClick={() => {
+              onOpenChange(!open);
+            }}
+          >
+            {open ? (
+              <ChevronUp aria-hidden="true" size={20} />
+            ) : (
+              <ChevronDown aria-hidden="true" size={20} />
+            )}
+          </IconButton>
+        )}
+      </div>
+      {many && open && (
+        <ul aria-label="ピン留め" className={pinBar.list}>
+          {pins.map((line) => (
+            <li key={line.id}>
+              <button
+                aria-label={`${nameOf(line.from)}：${summaryOf(line, nameOf)}`}
+                className={pinBar.jump}
+                onClick={() => {
+                  onJump(line.id);
+                }}
+                type="button"
+              >
+                <span className={pinBar.words}>
+                  <span className={pinBar.label}>{nameOf(line.from)}</span>
+                  <span className={pinBar.text}>{summaryOf(line, nameOf)}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
   );
 }
 
