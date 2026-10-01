@@ -4,6 +4,7 @@
   "compilerOptions": {
     "target": "ES2024",
     "jsx": "react-jsx",
+    "jsxImportSource": "#/jsx",
     "module": "ESNext",
     "paths": {
       "#/*": ["./src/*"],

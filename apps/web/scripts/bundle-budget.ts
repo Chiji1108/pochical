@@ -7,7 +7,8 @@
 import { readdir, readFile } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
 
-// KB, gzipped. The site's own share (React and the router) is about 120.
+// KB, gzipped. The site's own share (React, the router and BudouX's
+// Japanese phrases, src/jsx) is about 130.
 const budgets: Record<string, number> = {
   // Its words; the phones and the sky load after (lp-screens.tsx).
   "/": 150,
@@ -15,7 +16,7 @@ const budgets: Record<string, number> = {
   "/support": 140,
   "/terms": 140,
   // The app itself.
-  "/try": 450,
+  "/try": 460,
 };
 
 const DIST = new URL("../dist/", import.meta.url).pathname;

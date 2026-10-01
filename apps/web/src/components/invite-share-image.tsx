@@ -1,3 +1,5 @@
+/* @jsxImportSource react */
+// satori breaks its own lines and draws no <wbr> (src/jsx).
 import type { CSSProperties } from "react";
 
 import { SHARE_IMAGE } from "../lib/site";

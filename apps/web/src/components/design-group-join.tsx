@@ -273,11 +273,9 @@ const joinScreen = {
     margin: "0 8px 12px",
     textAlign: "center",
     textStyle: "footnote",
-    // Broken between phrases and evened out, as the site's headings. It
-    // leaves the group's name to the screen above, so a long one cannot
-    // stretch it.
+    // Evened out, as the site's headings. It leaves the group's name to the
+    // screen above, so a long one cannot stretch it.
     textWrap: "balance",
-    wordBreak: "auto-phrase",
   }),
   foot: css({ display: "flex", flexDirection: "column", paddingTop: "12px" }),
   from: css({
