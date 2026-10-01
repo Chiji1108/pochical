@@ -1074,6 +1074,14 @@ export function ChatPage({
   };
   // ↓ to the latest line, once the chat is scrolled up from it.
   const [awayFromLatest, setAwayFromLatest] = useState(false);
+  // The dots come in under the latest line in sight, as a new line does,
+  // unless the chat is scrolled up away from it.
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (list && typingId !== undefined && !awayFromLatest) {
+      list.scrollTop = list.scrollHeight;
+    }
+  }, [typingId, awayFromLatest]);
   // An @ being written at the end of the message, in the group chat, lists
   // the others whose name has what follows it, as LINE does; one picked
   // goes in as @name and a space.
