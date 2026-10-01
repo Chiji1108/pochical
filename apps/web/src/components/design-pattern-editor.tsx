@@ -35,6 +35,7 @@ import {
   guessLook,
   MarkGlyph,
   nextColor,
+  sameIcon,
   ShiftMarkStyleContext,
 } from "./shift-mark";
 import type { Look, ShiftMarkStyle } from "./shift-mark";
@@ -78,14 +79,14 @@ const lookalikeParts: Record<ShiftMarkStyle, string> = {
   icon: "アイコンと色",
 };
 
-// What a pattern looks like in a style; without an emoji, the emoji style
-// shows the letters.
-function markKey(look: Look, style: ShiftMarkStyle) {
-  if (style === "emoji" && look.emoji) {
-    return `emoji:${look.emoji}`;
+// Whether two patterns look the same in a style; without an emoji, the
+// emoji style shows the letters.
+function lookAlike(a: Look, b: Look, style: ShiftMarkStyle) {
+  if (style === "emoji" && (a.emoji || b.emoji)) {
+    return a.emoji === b.emoji;
   }
-  const mark = style === "icon" ? look.icon : look.symbol;
-  return `${style === "icon" ? "icon" : "badge"}:${mark}:${look.color}`;
+  const sameMark = style === "icon" ? sameIcon(a, b) : a.symbol === b.symbol;
+  return sameMark && a.color === b.color;
 }
 
 const editor = {
@@ -416,7 +417,7 @@ function PatternEditor({
   const canSave = draft.name.trim() !== "";
   // Another pattern that style could not tell apart from this one.
   const lookalike = (tab: ShiftMarkStyle) =>
-    others.find((other) => markKey(other, tab) === markKey(draft, tab));
+    others.find((other) => lookAlike(other, draft, tab));
 
   const nextDay = others.find((other) => other.id === draft.nextDay);
 
