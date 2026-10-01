@@ -26,20 +26,36 @@ export const WeekSettingsContext = createContext<{
 }>({ week: defaultWeekSettings });
 
 export const weekdayNames = ["日", "月", "火", "水", "木", "金", "土"] as const;
-// Lowercase, as the month's English name (sep.) is.
+// English weekdays come in two lengths: one letter over a column of days,
+// where the column's place tells T from T, as calendars head their weeks;
+// three capitals beside a date, where nothing else tells them apart.
+export const englishWeekdayLetters = [
+  "S",
+  "M",
+  "T",
+  "W",
+  "T",
+  "F",
+  "S",
+] as const;
 export const englishWeekdayNames = [
-  "sun",
-  "mon",
-  "tue",
-  "wed",
-  "thu",
-  "fri",
-  "sat",
+  "SUN",
+  "MON",
+  "TUE",
+  "WED",
+  "THU",
+  "FRI",
+  "SAT",
 ] as const;
 
-// A weekday's name in a heading: 日, or sun in English.
+// A weekday beside a date: 木, or THU in English.
 export function weekdayNameOf(day: number, english = false) {
   return (english ? englishWeekdayNames : weekdayNames)[day] ?? "";
+}
+
+// A weekday over a column of days: 木, or T in English.
+export function weekdayLetterOf(day: number, english = false) {
+  return (english ? englishWeekdayLetters : weekdayNames)[day] ?? "";
 }
 
 const SUNDAY = 0;
@@ -133,7 +149,7 @@ export function weekdaysFrom(week: WeekSettings, english = false) {
     return {
       className,
       day,
-      label: weekdayNameOf(day, english),
+      label: weekdayLetterOf(day, english),
       tone: toneOf(className),
     };
   });
@@ -146,6 +162,8 @@ export function useWeek() {
     // A weekday's name for a heading or a day's label, in English when
     // 月と曜日 asks; sentences such as 9月24日(木) keep 日本語.
     weekdayName: (day: number) => weekdayNameOf(day, english),
+    // The same over a column of days, as the week's headings.
+    weekdayLetter: (day: number) => weekdayLetterOf(day, english),
     dateClass: (date: Date) => dateClass(date, week.colored),
     dateTone: (date: Date) => toneOf(dateClass(date, week.colored)),
     // Whether a date's number shows as a holiday.

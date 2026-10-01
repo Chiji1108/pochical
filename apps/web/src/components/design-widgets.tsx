@@ -466,7 +466,7 @@ const twoWeeks = {
 // calendar lays them. Today is its accent date among them, as in the
 // calendar; its time is for the other kinds.
 export function TwoWeeksMedium({ entry }: { entry: WidgetEntry }) {
-  const { weekdayName } = useWeek();
+  const { weekdayLetter } = useWeek();
   const roomy = useContext(WidgetSizeContext).height >= TWO_WEEKS_ROOMY;
   const named = useShiftNames();
   // A name under each mark takes the room of a smaller mark.
@@ -483,7 +483,7 @@ export function TwoWeeksMedium({ entry }: { entry: WidgetEntry }) {
             className={toneText({ tone: weekday.tone })}
             key={weekday.label}
           >
-            {weekdayName(weekday.day)}
+            {weekdayLetter(weekday.day)}
           </span>
         ))}
       </div>
@@ -980,7 +980,7 @@ const MONTH_ROOMY = 360;
 
 // The month with every day's mark, and today's time over it.
 export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
-  const { english, weekdayName } = useWeek();
+  const { english, weekdayLetter } = useWeek();
   const roomy = useContext(WidgetSizeContext).height >= MONTH_ROOMY;
   const named = useShiftNames();
   // A name under each mark takes the room of a smaller mark.
@@ -1005,7 +1005,7 @@ export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
       <div aria-hidden="true" className={month.weekdays}>
         {weekdays.map((day) => (
           <span className={toneText({ tone: day.tone })} key={day.label}>
-            {weekdayName(day.day)}
+            {weekdayLetter(day.day)}
           </span>
         ))}
       </div>
