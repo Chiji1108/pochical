@@ -1004,7 +1004,8 @@ export function ChatPage({
   title: string;
   // The group chat, where everyone talks; else a one-to-one chat.
   isGroup?: boolean;
-  // A tap on the title: the group's settings and members.
+  // A tap on the title: the group's settings and members, or the other
+  // member's profile.
   onTitle?: () => void;
   // Its notifications turned off, from the menu at its top right, as
   // LINE's rooms have it.
@@ -1878,11 +1879,16 @@ export function ChatPage({
         {/* The group's name, and under it how many are in it, as
             Telegram and Messages head a group: clear which group this is,
             without a count in brackets. A long name is cut short, the mute
-            mark stays. A tap opens the group's settings and members. */}
+            mark stays. A tap opens the group's settings and members, or in
+            a one-to-one chat the other member's profile. */}
         <h3 className={chatStyle.title}>
           {onTitle ? (
             <button
-              aria-label={`${title}、${group.members.length}人。押すとグループの設定`}
+              aria-label={
+                isGroup
+                  ? `${title}、${group.members.length}人。押すとグループの設定`
+                  : `${title}。押すとプロフィール`
+              }
               className={chatStyle.titleButton}
               onClick={onTitle}
               type="button"

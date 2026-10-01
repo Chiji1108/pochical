@@ -413,13 +413,21 @@ export function DesignGroup({
                 )
           }
           isGroup={page.chatId === groupChat}
-          onTitle={
-            page.chatId === groupChat
-              ? () => {
-                  setPage({ from: page.chatId, name: "settings" });
-                }
-              : undefined
-          }
+          // The title opens who the chat is with: the group's settings
+          // and members, or the other member's profile, where blocking
+          // and reporting wait in ⋯ when a chat goes wrong.
+          onTitle={() => {
+            if (page.chatId === groupChat) {
+              setPage({ from: page.chatId, name: "settings" });
+              return;
+            }
+            const other = group.members.find(
+              (member) => member.id === page.chatId
+            );
+            if (other) {
+              onMember(other);
+            }
+          }}
           title={
             page.chatId === groupChat
               ? group.name
