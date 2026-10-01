@@ -93,7 +93,9 @@ message DayValue {
   // The day, "YYYY-MM-DD".
   string date = 1;
   DayField field = 2;
-  // Unset clears the field; a day with every field cleared has no shift.
+  // Unset clears the field. A day with no pattern follows its repeating
+  // order, if any; a pattern of "" is a day with no shift
+  // (spec/sync-protocol.md, Repeating orders).
   optional string value = 3;
   Hlc hlc = 4;
 }

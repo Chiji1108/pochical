@@ -137,7 +137,9 @@ public  final class DayValue extends
   private java.lang.String value_;
   /**
    * <pre>
-   * Unset clears the field; a day with every field cleared has no shift.
+   * Unset clears the field. A day with no pattern follows its repeating
+   * order, if any; a pattern of "" is a day with no shift
+   * (spec/sync-protocol.md, Repeating orders).
    * </pre>
    *
    * <code>optional string value = 3 [json_name = "value"];</code>
@@ -149,7 +151,9 @@ public  final class DayValue extends
   }
   /**
    * <pre>
-   * Unset clears the field; a day with every field cleared has no shift.
+   * Unset clears the field. A day with no pattern follows its repeating
+   * order, if any; a pattern of "" is a day with no shift
+   * (spec/sync-protocol.md, Repeating orders).
    * </pre>
    *
    * <code>optional string value = 3 [json_name = "value"];</code>
@@ -161,7 +165,9 @@ public  final class DayValue extends
   }
   /**
    * <pre>
-   * Unset clears the field; a day with every field cleared has no shift.
+   * Unset clears the field. A day with no pattern follows its repeating
+   * order, if any; a pattern of "" is a day with no shift
+   * (spec/sync-protocol.md, Repeating orders).
    * </pre>
    *
    * <code>optional string value = 3 [json_name = "value"];</code>
@@ -174,7 +180,9 @@ public  final class DayValue extends
   }
   /**
    * <pre>
-   * Unset clears the field; a day with every field cleared has no shift.
+   * Unset clears the field. A day with no pattern follows its repeating
+   * order, if any; a pattern of "" is a day with no shift
+   * (spec/sync-protocol.md, Repeating orders).
    * </pre>
    *
    * <code>optional string value = 3 [json_name = "value"];</code>
@@ -188,7 +196,9 @@ public  final class DayValue extends
   }
   /**
    * <pre>
-   * Unset clears the field; a day with every field cleared has no shift.
+   * Unset clears the field. A day with no pattern follows its repeating
+   * order, if any; a pattern of "" is a day with no shift
+   * (spec/sync-protocol.md, Repeating orders).
    * </pre>
    *
    * <code>optional string value = 3 [json_name = "value"];</code>
@@ -199,7 +209,9 @@ public  final class DayValue extends
   }
   /**
    * <pre>
-   * Unset clears the field; a day with every field cleared has no shift.
+   * Unset clears the field. A day with no pattern follows its repeating
+   * order, if any; a pattern of "" is a day with no shift
+   * (spec/sync-protocol.md, Repeating orders).
    * </pre>
    *
    * <code>optional string value = 3 [json_name = "value"];</code>
@@ -478,7 +490,9 @@ public  final class DayValue extends
 
     /**
      * <pre>
-     * Unset clears the field; a day with every field cleared has no shift.
+     * Unset clears the field. A day with no pattern follows its repeating
+     * order, if any; a pattern of "" is a day with no shift
+     * (spec/sync-protocol.md, Repeating orders).
      * </pre>
      *
      * <code>optional string value = 3 [json_name = "value"];</code>
@@ -490,7 +504,9 @@ public  final class DayValue extends
     }
     /**
      * <pre>
-     * Unset clears the field; a day with every field cleared has no shift.
+     * Unset clears the field. A day with no pattern follows its repeating
+     * order, if any; a pattern of "" is a day with no shift
+     * (spec/sync-protocol.md, Repeating orders).
      * </pre>
      *
      * <code>optional string value = 3 [json_name = "value"];</code>
@@ -502,7 +518,9 @@ public  final class DayValue extends
     }
     /**
      * <pre>
-     * Unset clears the field; a day with every field cleared has no shift.
+     * Unset clears the field. A day with no pattern follows its repeating
+     * order, if any; a pattern of "" is a day with no shift
+     * (spec/sync-protocol.md, Repeating orders).
      * </pre>
      *
      * <code>optional string value = 3 [json_name = "value"];</code>
@@ -515,7 +533,9 @@ public  final class DayValue extends
     }
     /**
      * <pre>
-     * Unset clears the field; a day with every field cleared has no shift.
+     * Unset clears the field. A day with no pattern follows its repeating
+     * order, if any; a pattern of "" is a day with no shift
+     * (spec/sync-protocol.md, Repeating orders).
      * </pre>
      *
      * <code>optional string value = 3 [json_name = "value"];</code>
@@ -530,7 +550,9 @@ public  final class DayValue extends
     }
     /**
      * <pre>
-     * Unset clears the field; a day with every field cleared has no shift.
+     * Unset clears the field. A day with no pattern follows its repeating
+     * order, if any; a pattern of "" is a day with no shift
+     * (spec/sync-protocol.md, Repeating orders).
      * </pre>
      *
      * <code>optional string value = 3 [json_name = "value"];</code>
@@ -543,7 +565,9 @@ public  final class DayValue extends
     }
     /**
      * <pre>
-     * Unset clears the field; a day with every field cleared has no shift.
+     * Unset clears the field. A day with no pattern follows its repeating
+     * order, if any; a pattern of "" is a day with no shift
+     * (spec/sync-protocol.md, Repeating orders).
      * </pre>
      *
      * <code>optional string value = 3 [json_name = "value"];</code>

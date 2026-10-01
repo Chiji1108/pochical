@@ -354,7 +354,9 @@ public nonisolated struct Pochical_V1_DayValue: Sendable {
 
   public var field: Pochical_V1_DayField = .unspecified
 
-  /// Unset clears the field; a day with every field cleared has no shift.
+  /// Unset clears the field. A day with no pattern follows its repeating
+  /// order, if any; a pattern of "" is a day with no shift
+  /// (spec/sync-protocol.md, Repeating orders).
   public var value: String {
     get {_value ?? String()}
     set {_value = newValue}
