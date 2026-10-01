@@ -37,6 +37,7 @@ import {
   smallWeekday,
   toneColor,
 } from "./design-group-parts";
+import { englishMonthOf } from "./design-month-name";
 import { MonthTitleButton } from "./design-month-picker";
 import {
   monthIndex,
@@ -1825,6 +1826,7 @@ function MonthDivider({
   together: Together;
   onPickDay: (date: Date) => void;
 }) {
+  const { english } = useWeek();
   const thisYear = month.getFullYear() === designToday.getFullYear();
   const name = thisYear
     ? `${month.getMonth() + 1}月`
@@ -1832,10 +1834,24 @@ function MonthDivider({
   const title = `${
     thisYear && month.getMonth() === designToday.getMonth() ? "今月" : name
   }のみんな休み`;
+  // In English as the month row over it writes it, said in 日本語 to
+  // screen readers as the rest of the screen is.
+  const heading = english ? (
+    <h4 className={monthDivider.name}>
+      <span className={srOnly}>{name}</span>
+      <span aria-hidden="true">
+        {thisYear
+          ? englishMonthOf(month)
+          : `${englishMonthOf(month)} ${month.getFullYear()}`}
+      </span>
+    </h4>
+  ) : (
+    <h4 className={monthDivider.name}>{name}</h4>
+  );
   if (together.days.length === 0) {
     return (
       <div className={monthDivider.root({ quiet: true })}>
-        <h4 className={monthDivider.name}>{name}</h4>
+        {heading}
         <span className={monthDivider.note}>
           {together.unsure ? "未入力の日あり" : "みんな休みなし"}
         </span>
@@ -1844,7 +1860,7 @@ function MonthDivider({
   }
   return (
     <div className={monthDivider.root()}>
-      <h4 className={monthDivider.name}>{name}</h4>
+      {heading}
       <TogetherSummary
         label="みんな休み"
         onPickDay={onPickDay}
@@ -1855,7 +1871,8 @@ function MonthDivider({
   );
 }
 
-// The shift table's month: its name, which opens a choice of months, and
+// The shift table's month: its name (2026年9月, or sep. 2026 as the
+// カレンダー page's 月と曜日 asks), which opens a choice of months, and
 // the way back to today's day or month while it is out of sight. Over a
 // list of months, it names the month in sight, rolling to the next as the
 // list scrolls on, the way it went. Over 1人ずつ's pages (`progress`), the
@@ -1883,28 +1900,36 @@ function MonthRow({
   swiped?: boolean;
 }) {
   const reduceMotion = useReducedMotion() ?? false;
+  const { english } = useWeek();
   const turn = useTurn(monthIndex(month), swiped);
   const next = monthAfter(month, 1);
   const previous = monthAfter(month, -1);
   const isThisMonth = (date: Date) =>
     monthIndex(date) === monthIndex(designToday);
-  const rolled = (of: (date: Date) => number) => ({
-    ...(progress
-      ? { next: String(of(next)), previous: String(of(previous)) }
-      : {}),
+  const named = (of: (date: Date) => string) => ({
+    ...(progress ? { next: of(next), previous: of(previous) } : {}),
     progress,
     still: reduceMotion,
-    text: String(of(month)),
+    text: of(month),
     turn,
   });
+  const rolled = (of: (date: Date) => number) =>
+    named((date) => String(of(date)));
   return (
     <div className={shiftsPage.monthRow}>
       <MonthTitleButton first={first} last={last} month={month} onPick={onPick}>
         <strong className={shiftsPage.monthName}>
-          <span aria-hidden="true">
-            <RollingName {...rolled((date) => date.getFullYear())} />年
-            <RollingName {...rolled((date) => date.getMonth() + 1)} />月
-          </span>
+          {english ? (
+            <span aria-hidden="true">
+              <RollingName {...named(englishMonthOf)} letters />{" "}
+              <RollingName {...rolled((date) => date.getFullYear())} />
+            </span>
+          ) : (
+            <span aria-hidden="true">
+              <RollingName {...rolled((date) => date.getFullYear())} />年
+              <RollingName {...rolled((date) => date.getMonth() + 1)} />月
+            </span>
+          )}
         </strong>
       </MonthTitleButton>
       <TodayCorner
@@ -2303,8 +2328,10 @@ function RowDate({
       ) : (
         date.getDate()
       )}
+      {/* One letter, as down a column of days: the dates in order beside
+          it tell T from T. */}
       <small className={dayRows.weekday}>
-        {weekTools.weekdayName(date.getDay())}
+        {weekTools.weekdayLetter(date.getDay())}
       </small>
     </span>
   );
