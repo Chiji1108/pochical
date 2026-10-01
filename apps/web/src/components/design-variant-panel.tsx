@@ -4,7 +4,6 @@ import {
   designVariantKeys,
   designVariantOptions,
 } from "../lib/design-variants";
-import type { DesignVariants } from "../lib/design-variants";
 
 // Beside the demo's phone, on a translucent ground; one choice under
 // another on a phone, and kept in view where it fits on one line.
@@ -74,24 +73,34 @@ const panel = {
   }),
 };
 
-// 比べる案: each design decision still open, switched in place.
-export function VariantPanel({
+type Options = Record<
+  string,
+  { label: string; choices: readonly { label: string; value: string }[] }
+>;
+
+// 比べる案: each design decision still open, switched in place. /demo's
+// by default; another page passes its own choices and title, as
+// /design/widgets does with the widgets' states.
+export function VariantPanel<V extends Record<string, string>>({
   variants,
   onChange,
+  options = designVariantOptions,
+  title = "比べる案",
 }: {
-  variants: DesignVariants;
-  onChange: <K extends keyof DesignVariants>(
-    key: K,
-    value: DesignVariants[K]
-  ) => void;
+  variants: V;
+  onChange: <K extends keyof V>(key: K, value: V[K]) => void;
+  options?: Options;
+  title?: string;
 }) {
+  const keys =
+    options === designVariantOptions ? designVariantKeys : Object.keys(options);
   return (
     <section aria-labelledby="design-variants-title" className={panel.root}>
       <h2 className={panel.title} id="design-variants-title">
-        比べる案
+        {title}
       </h2>
-      {designVariantKeys.map((key) => {
-        const { label, choices } = designVariantOptions[key];
+      {keys.map((key) => {
+        const { label, choices } = options[key] ?? { choices: [], label: "" };
         return (
           <fieldset className={panel.decision} key={key}>
             <legend className={panel.label}>{label}</legend>
@@ -102,7 +111,7 @@ export function VariantPanel({
                   className={panel.choice}
                   key={value}
                   onClick={() => {
-                    onChange(key, value);
+                    onChange(key, value as V[typeof key]);
                   }}
                   type="button"
                 >
