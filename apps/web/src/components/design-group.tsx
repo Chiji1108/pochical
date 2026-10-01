@@ -17,6 +17,7 @@ import {
   mother,
   partner,
   schoolFriends,
+  withNotice,
 } from "./design-group-data";
 import type { Chat, Group, Member, Profile } from "./design-group-data";
 import { GroupHub, GroupRail, MemberSheet, NoGroups } from "./design-group-hub";
@@ -142,29 +143,8 @@ export function DesignGroup({
   };
   const chatOf = (id: string, chatId: string): Chat =>
     chats[chatKey(id, chatId)] ?? { messages: [], unread: 0 };
-  // A line from the app in a group's chat, when who is in it, how to get
-  // in or what it is called changes: someone joining, leaving or taken
-  // out, a new invite link, or a new name or icon. Nothing else, so the
-  // lines stay worth reading.
   const addNotice = (id: string, notice: string) => {
-    const key = chatKey(id, groupChat);
-    const chat = chatOf(id, groupChat);
-    setChats({
-      ...chats,
-      [key]: {
-        ...chat,
-        messages: [
-          ...chat.messages,
-          {
-            from: "me",
-            id: `notice-${chat.messages.length}`,
-            notice,
-            time: timeNow(),
-            when: "今日",
-          },
-        ],
-      },
-    });
+    setChats((all) => withNotice(all, id, notice));
   };
   const scanPage = (
     <ScanPage
@@ -194,10 +174,6 @@ export function DesignGroup({
         setGroups([...groups, joined]);
         setGroupId(joined.id);
         setPage({ name: "hub" });
-        addNotice(
-          joined.id,
-          `${profileIn(joined, profile).name}がグループに参加しました`
-        );
         toast(`「${joined.name}」に参加しました`);
       }}
       profile={profile}
@@ -524,9 +500,4 @@ function editNotice(by: string, before: GroupEdit, after: GroupEdit) {
     return `${by}がグループ名を「${after.name}」に変更しました`;
   }
   return `${by}がグループのアイコンを変更しました`;
-}
-
-function timeNow() {
-  const now = new Date();
-  return `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
