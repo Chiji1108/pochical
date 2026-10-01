@@ -5,5 +5,6 @@ import { defineConfig } from "drizzle-kit";
 export default defineConfig({
   dialect: "sqlite",
   out: "./migrations",
-  schema: "./src/db/schema.ts",
+  // auth-schema.ts is better-auth's, written by `mise run auth:schema`.
+  schema: ["./src/db/schema.ts", "./src/db/auth-schema.ts"],
 });

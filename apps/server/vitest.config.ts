@@ -12,6 +12,8 @@ export default defineConfig({
       // test/setup.ts applies these to the test database.
       miniflare: {
         bindings: {
+          BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
+          BETTER_AUTH_URL: "https://server.test",
           TEST_MIGRATIONS: await readD1Migrations(
             path.join(import.meta.dirname, "migrations")
           ),
