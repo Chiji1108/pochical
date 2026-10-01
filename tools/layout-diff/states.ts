@@ -665,6 +665,17 @@ export const states: State[] = [
     },
   },
   {
+    // A chat with unread lines opens on the first, under ここから新着.
+    name: "group/chat-unread",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, "グループ");
+      await tap(page, /^看護学校の友達/u);
+      await tap(page, /^全体チャット/u);
+      await page.getByText("ここから新着").waitFor();
+    },
+  },
+  {
     name: "group/chat-one",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {

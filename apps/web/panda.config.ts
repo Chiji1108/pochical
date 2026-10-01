@@ -104,6 +104,12 @@ export default defineConfig({
         scrimOut: { to: { opacity: 0 } },
         // A photo's upload ring filling as the photo goes up.
         uploadRing: { to: { strokeDashoffset: 0 } },
+        // A dot of someone typing: rising and brightening in turn, as
+        // Messages draws it.
+        typingDot: {
+          "0%, 60%, 100%": { opacity: 0.35, transform: "translateY(0)" },
+          "30%": { opacity: 1, transform: "translateY(-3px)" },
+        },
       },
       tokens: {
         // Colors by role, grouped by kind, their levels named as iOS names
