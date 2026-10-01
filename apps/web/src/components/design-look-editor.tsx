@@ -25,7 +25,6 @@ import {
   MonochromeContext,
   useMarkColors,
   markEmojis,
-  markIcons,
   ShiftMarkStyleContext,
 } from "./shift-mark";
 import type { Look, MarkIcon, ShiftMarkStyle } from "./shift-mark";
@@ -63,6 +62,7 @@ export const iconNames: Record<MarkIcon, string> = {
   flame: "炎",
   flower: "花",
   graduationCap: "学位帽",
+  handHeart: "手とハート",
   heart: "ハート",
   hospital: "病院",
   house: "家",
@@ -76,27 +76,97 @@ export const iconNames: Record<MarkIcon, string> = {
   partyPopper: "お祝い",
   phone: "電話",
   plane: "飛行機",
+  scissors: "はさみ",
   shield: "盾",
   shoppingBag: "買い物",
   siren: "サイレン",
   sparkles: "きらきら",
   star: "星",
   stethoscope: "聴診器",
+  storefront: "お店",
   sun: "太陽",
-  sunMoon: "夕方",
-  sunrise: "日の出",
-  sunset: "夕日",
+  sunHorizon: "地平線の太陽",
   syringe: "注射器",
   train: "電車",
   treePalm: "ヤシの木",
+  truck: "トラック",
   tulip: "チューリップ",
   umbrella: "傘",
   users: "人たち",
   utensils: "食事",
   waves: "波",
+  wrench: "工具",
 };
 
-const allIcons = Object.keys(markIcons) as MarkIcon[];
+// Passes the icons through only when every one of them is there, so a new
+// icon cannot miss the picker.
+function everyIcon<const T extends readonly MarkIcon[]>(
+  icons: T & ([Exclude<MarkIcon, T[number]>] extends [never] ? unknown : never)
+): T {
+  return icons;
+}
+
+// The icons in the picker, grouped by meaning like the emoji: the letter,
+// the sky through the day, rest and nature, animals, work, care, getting
+// around, and fun.
+const allIcons = everyIcon([
+  "letter",
+  "sunHorizon",
+  "cloudSun",
+  "sun",
+  "cloudMoon",
+  "moon",
+  "moonStar",
+  "star",
+  "sparkles",
+  "clock",
+  "calendarCheck",
+  "couch",
+  "bed",
+  "coffee",
+  "leaf",
+  "flower",
+  "tulip",
+  "lotus",
+  "treePalm",
+  "drop",
+  "waves",
+  "umbrella",
+  "flame",
+  "cat",
+  "dog",
+  "fish",
+  "briefcase",
+  "laptop",
+  "building",
+  "users",
+  "phone",
+  "book",
+  "graduationCap",
+  "storefront",
+  "shoppingBag",
+  "utensils",
+  "scissors",
+  "wrench",
+  "truck",
+  "house",
+  "hospital",
+  "stethoscope",
+  "syringe",
+  "ambulance",
+  "siren",
+  "shield",
+  "handHeart",
+  "baby",
+  "car",
+  "bus",
+  "train",
+  "plane",
+  "music",
+  "dumbbell",
+  "heart",
+  "partyPopper",
+]);
 
 // One screen for choosing how something is marked in every style: shift
 // patterns and groups alike. Each tab shows its own look, so what people

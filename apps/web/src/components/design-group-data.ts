@@ -198,7 +198,7 @@ export const aya = (): Member => ({
     pattern(
       "late",
       "遅番",
-      { color: 5, emoji: "🌇", icon: "sunset" },
+      { color: 5, emoji: "🌇", icon: "cloudMoon" },
       { time: "13:00 – 22:00" }
     ),
     pattern("lesson", "レッスン", { ...guessLook("レッスン"), color: 6 }),

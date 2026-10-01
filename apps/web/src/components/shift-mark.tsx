@@ -177,9 +177,11 @@ function phosphorIcon(name: MarkIconName): MarkIconComponent {
   return PhosphorIcon;
 }
 
-// Phosphor duotone icons. "letter" draws the symbol inside a thin circle, so
-// any shift has an icon. Phosphor has one sun-on-the-horizon icon, so sunrise
-// and dusk share it and the sunset uses a dim sun.
+// Phosphor duotone icons, one per glyph. "letter" draws the symbol inside a
+// thin circle, so any shift has an icon. The sky has only the glyphs that
+// stay apart at calendar size (a dim sun reads as the sun), so shifts in the
+// same part of the day share one: dawn and dusk the horizon, late and
+// evening shifts the clouded moon.
 export const markIcons = {
   ambulance: phosphorIcon("Ambulance"),
   baby: phosphorIcon("Baby"),
@@ -203,6 +205,7 @@ export const markIcons = {
   flame: phosphorIcon("Fire"),
   flower: phosphorIcon("Flower"),
   graduationCap: phosphorIcon("GraduationCap"),
+  handHeart: phosphorIcon("HandHeart"),
   heart: phosphorIcon("Heart"),
   hospital: phosphorIcon("Hospital"),
   house: phosphorIcon("House"),
@@ -216,24 +219,26 @@ export const markIcons = {
   partyPopper: phosphorIcon("Confetti"),
   phone: phosphorIcon("Phone"),
   plane: phosphorIcon("Airplane"),
+  scissors: phosphorIcon("Scissors"),
   shield: phosphorIcon("Shield"),
   shoppingBag: phosphorIcon("ShoppingBag"),
   siren: phosphorIcon("Siren"),
   sparkles: phosphorIcon("Sparkle"),
   star: phosphorIcon("Star"),
   stethoscope: phosphorIcon("Stethoscope"),
+  storefront: phosphorIcon("Storefront"),
   sun: phosphorIcon("Sun"),
-  sunMoon: phosphorIcon("SunHorizon"),
-  sunrise: phosphorIcon("SunHorizon"),
-  sunset: phosphorIcon("SunDim"),
+  sunHorizon: phosphorIcon("SunHorizon"),
   syringe: phosphorIcon("Syringe"),
   train: phosphorIcon("Train"),
   treePalm: phosphorIcon("TreePalm"),
+  truck: phosphorIcon("Truck"),
   tulip: phosphorIcon("FlowerTulip"),
   umbrella: phosphorIcon("Umbrella"),
   users: phosphorIcon("Users"),
   utensils: phosphorIcon("ForkKnife"),
   waves: phosphorIcon("Waves"),
+  wrench: phosphorIcon("Wrench"),
 } satisfies Record<string, MarkIconComponent | undefined>;
 export type MarkIcon = keyof typeof markIcons;
 
@@ -331,12 +336,12 @@ const lookHints: {
   { emoji: "🚒", icon: "siren", words: ["当番", "当直"] },
   { emoji: "🛌", icon: "bed", words: ["非番"] },
   { emoji: "🌷", icon: "flower", words: ["有休", "有給", "年休"] },
-  { emoji: "🌅", icon: "sunrise", words: ["明け"] },
-  { emoji: "🌆", icon: "sunMoon", words: ["夕"] },
+  { emoji: "🌅", icon: "sunHorizon", words: ["明け"] },
+  { emoji: "🌆", icon: "sunHorizon", words: ["夕"] },
   { emoji: "🌜", icon: "cloudMoon", words: ["準夜"] },
   { emoji: "🌙", icon: "moon", words: ["深夜", "夜"] },
   { emoji: "🌤️", icon: "cloudSun", words: ["早"] },
-  { emoji: "🌇", icon: "sunset", words: ["遅"] },
+  { emoji: "🌇", icon: "cloudMoon", words: ["遅"] },
   { emoji: "🌿", icon: "leaf", words: ["休", "公"] },
   { emoji: "☀️", icon: "sun", words: ["日", "昼"] },
 ];

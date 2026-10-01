@@ -27,7 +27,13 @@ export type PatternBook = Partial<Record<string, Pattern>>;
 // The patterns ポチカル offers ready-made, to start from or add with a tap.
 // A person's copy keeps the id, so the samples can name them.
 const presets = {
-  after: { color: 3, emoji: "🌅", icon: "sunrise", name: "明け", symbol: "明" },
+  after: {
+    color: 3,
+    emoji: "🌅",
+    icon: "sunHorizon",
+    name: "明け",
+    symbol: "明",
+  },
   day: {
     color: 1,
     emoji: "☀️",
@@ -55,7 +61,7 @@ const presets = {
   evening: {
     color: 2,
     emoji: "🌆",
-    icon: "sunMoon",
+    icon: "sunHorizon",
     name: "夕勤",
     symbol: "夕",
     time: ["15:00", "23:00"],
