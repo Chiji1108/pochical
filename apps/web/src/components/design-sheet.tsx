@@ -221,6 +221,7 @@ export function Sheet({
   placement = "bottom",
   modal = true,
   finalFocusEl,
+  onExitComplete,
   className,
   children,
 }: {
@@ -235,6 +236,9 @@ export function Sheet({
   // Where focus goes as it closes, in place of where it was before: the
   // thing it is about, or a stand-in for an opener that is gone.
   finalFocusEl?: () => HTMLElement | null;
+  // Once it has gone, focus handed back: the moment to open what comes
+  // next, which opening sooner the hand-back would close again.
+  onExitComplete?: () => void;
   className?: string;
   children: ReactNode;
 }) {
@@ -266,6 +270,7 @@ export function Sheet({
     initialFocusEl: () => contentRef.current,
     lazyMount: true,
     modal,
+    onExitComplete,
     onOpenChange: (details: { open: boolean }) => {
       onOpenChange(details.open);
     },
@@ -725,12 +730,15 @@ export function ConfirmDialog({
   title,
   message,
   action,
+  cancel = "キャンセル",
   onConfirm,
   onCancel,
 }: {
   title: string;
   message: string;
   action: string;
+  // The other answer, when it is a choice rather than calling it off.
+  cancel?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -755,7 +763,7 @@ export function ConfirmDialog({
           onClick={onCancel}
           type="button"
         >
-          キャンセル
+          {cancel}
         </button>
         <button
           className={cx(confirm.button, confirm.action)}

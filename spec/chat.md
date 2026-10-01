@@ -13,7 +13,7 @@ How chat messages behave beyond sync (spec/sync-protocol.md): which words are li
 
 - Links are underlined; in others' messages in the accent color, in one's own in the bubble's text color.
 - A tap on a link opens it in the system's browser sheet over the chat (`SFSafariViewController`, Custom Tabs). A tap elsewhere on the message opens its reactions and menu as before.
-- A message with a link has リンクをコピー in its menu, after コピー. It copies the first link.
+- A long press on a link (or a right click) opens the link's own small menu under it, リンクを開く and リンクをコピー, as iOS offers on a link in text; the message's menu stays shorter without a link item.
 
 ## Previews
 
@@ -60,7 +60,7 @@ A mention names one member of the group in a group chat (全体チャット). On
 
 A member can change or take back their own messages, at any time. Others' messages cannot be changed.
 
-- **編集** (text messages only): the message's words go back into the composer, its mentions as @name again, under a bar saying メッセージを編集 with × to stop. The send button becomes ✓ and the photo and day tools are hidden: only the words change. Saving replaces the words for everyone and marks the message 編集済み, shown over its time. A message cannot be saved empty; taking it back is 送信取消. The link's page stays while its first link does; a new first link gets a new preview.
+- **編集** (text messages only): the message's words go back into the composer, its mentions as @name again, under a bar saying メッセージを編集 with × to stop. The send button becomes ✓ and the photo and day tools are hidden: only the words change. Saving replaces the words for everyone and marks the message 編集済み, shown over its time (on one line with a pin, when it is pinned). A message cannot be saved empty; taking it back is 送信取消. The link's page stays while its first link does; a new first link gets a new preview.
 - **送信取消** (any of one's own messages: words, photos, shared days): asked first in a centered alert (送信を取り消しますか？ / メンバー全員のチャットから消えます。 / キャンセル | 取り消す). The message's content and reactions are removed for everyone; in its place a line in the middle says 〇〇がメッセージの送信を取り消しました (メッセージの送信を取り消しました for one's own). A reply that quoted it shows 取り消されたメッセージ, and the chat list's last line says the same as the line.
 - In the message's menu, 編集 comes after the other actions and 送信取消 last, apart and in the danger color.
 - Neither sends a notification, and neither changes unread counts. Both go through the change log as edits (spec/sync-protocol.md).
@@ -69,7 +69,7 @@ A member can change or take back their own messages, at any time. Others' messag
 
 The stores require a way to report what people post and to block someone (App Store Review Guideline 1.2; Google Play's user-generated content policy). Neither is shown to the member concerned, and neither changes anything for the rest of the group.
 
-- **通報** is in the menu of someone else's message (last, apart and in the danger color) and in the ⋯ menu of their profile sheet. A sheet asks the reason, one of 迷惑・スパム / 嫌がらせ・いじめ / 性的・暴力的な内容 / なりすまし / その他, and sends it with ✓; the app says 通報しました. The sheet says what is sent, and nothing else of the chat is: 通報すると、このメッセージと前後の数件がポチカルに送られます。 (for a member: 〇〇の名前とアイコン) 相手には知らされません。 It does not say who reads it, so it does not read as the chat being watched.
+- **通報** is in the menu of someone else's message (last, apart and in the danger color) and in the ⋯ menu of their profile sheet. A sheet asks the reason, one of 迷惑・スパム / 嫌がらせ・いじめ / 性的・暴力的な内容 / なりすまし / その他, and sends it with ✓. Then a centered alert says 通報しました and offers to block them too (〇〇もブロックしますか？… / しない | ブロック), unless they are already blocked; otherwise the app says 通報しました. The sheet says what is sent, and nothing else of the chat is: 通報すると、このメッセージと前後の数件がポチカルに送られます。 (for a member: 〇〇の名前とアイコン) 相手には知らされません。 It does not say who reads it, so it does not read as the chat being watched.
 - **ブロック** is in the ⋯ menu of someone's profile sheet (beside ×, not in sight under their face: it is rarely used, and a family member's profile should not show it in red), asked first (〇〇をブロックしますか？). While blocked, their profile says ブロック中 under the name, and the menu has ブロックを解除. It applies to the account, in every group the two share:
   - their messages in group chats are folded to one line, ブロック中のメンバーのメッセージ, which shows the message for now on a tap; the chat list's last line says the same;
   - their one-to-one chat with you is hidden, cannot be started, and their messages to it are not delivered;
