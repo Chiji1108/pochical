@@ -22,7 +22,7 @@ patches/         Bunが適用する依存パッケージのパッチ
 | --- | --- |
 | `mise run gen` | `proto/` からTypeScript・Swift・Kotlinのコードを生成 |
 | `mise run proto:lint` | `proto/` のlintと整形チェック |
-| `mise run server` | サーバーの開発環境を起動 |
+| `mise run server` | サーバーの開発環境を起動（先に `apps/server/.dev.vars` に `BETTER_AUTH_SECRET=<32文字以上のランダムな値>` と `BETTER_AUTH_URL=http://localhost:8787` を書く） |
 | `mise run server:test` | サーバーのテストをWorkersのランタイムで実行 |
 | `bun run web` | Webの開発サーバーを起動 |
 | `bun run build:web` / `bun run preview:web` | Webのビルド・プレビュー |

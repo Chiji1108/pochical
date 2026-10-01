@@ -6,7 +6,10 @@
   "compatibility_date": "2026-08-15",
   "observability": { "enabled": true },
   "durable_objects": {
-    "bindings": [{ "name": "GROUPS", "class_name": "GroupDO" }],
+    "bindings": [
+      { "name": "GROUPS", "class_name": "GroupDO" },
+      { "name": "USERS", "class_name": "UserDO" },
+    ],
   },
   // Applied once each, in order, to the deployed Worker; add, never edit.
   // v2 replaced the first class, GroupRoom, while it held no data.
@@ -17,6 +20,7 @@
       "deleted_classes": ["GroupRoom"],
       "new_sqlite_classes": ["GroupDO"],
     },
+    { "tag": "v3", "new_sqlite_classes": ["UserDO"] },
   ],
   // The Group DO's migrations import their SQL as text (drizzle-kit).
   "rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }],
@@ -30,6 +34,10 @@
       "migrations_dir": "migrations",
     },
   ],
+  // better-auth (src/auth.ts) builds its URLs from BETTER_AUTH_URL and signs
+  // with BETTER_AUTH_SECRET (`wrangler secret put`; tests set their own).
+  "vars": { "BETTER_AUTH_URL": "https://api.pochical.app" },
+  "secrets": { "required": ["BETTER_AUTH_SECRET"] },
   // The apps (and later the site's sign-in) reach the server here; the
   // site's own Worker calls it through a service binding instead.
   "routes": [{ "pattern": "api.pochical.app", "custom_domain": true }],

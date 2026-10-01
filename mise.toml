@@ -42,6 +42,14 @@ run = "bun run --cwd apps/server db:generate"
 description = "Generate a Group DO migration from apps/server/src/group-do-schema.ts (pass --name <what>)"
 run = "bun run --cwd apps/server group-do:generate"
 
+[tasks."user-do:generate"]
+description = "Generate a User DO migration from apps/server/src/user-do-schema.ts (pass --name <what>)"
+run = "bun run --cwd apps/server user-do:generate"
+
+[tasks."auth:schema"]
+description = "Rewrite apps/server/src/db/auth-schema.ts from better-auth's options; then run db:generate"
+run = "bun run --cwd apps/server auth:schema"
+
 [tasks."server:test"]
 description = "Run server tests in the Workers runtime"
 run = "bun run --cwd apps/server test"

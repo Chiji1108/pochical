@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package pochical.v1;
+
+// The signed-in user. Every call here needs the session token from
+// better-auth (/api/auth) as `Authorization: Bearer <token>`; without a
+// valid one it fails with UNAUTHENTICATED.
+service UserService {
+  // Who the token belongs to, for the apps to check a stored session.
+  rpc GetMe(GetMeRequest) returns (GetMeResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+message GetMeRequest {}
+
+message GetMeResponse {
+  string user_id = 1;
+  // Signed in without Apple or Google yet; linking one keeps the user.
+  bool anonymous = 2;
+}

@@ -10,6 +10,8 @@ export const ignorePatterns = [
   "apps/server/src/gen",
   "apps/server/migrations",
   "apps/server/src/group-do-migrations",
+  "apps/server/src/user-do-migrations",
+  "apps/server/src/db/auth-schema.ts",
   "apps/web/src/gen",
   "spec/design-tokens.json",
   "**/routeTree.gen.ts",
