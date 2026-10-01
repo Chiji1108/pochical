@@ -2821,6 +2821,18 @@
       }
     }
   },
+  "limits": {
+    "groupMaxMembers": 100,
+    "text": {
+      "chatMessage": 1000,
+      "dayNote": 100,
+      "groupMark": 2,
+      "groupName": 30,
+      "personName": 20,
+      "shiftMark": 1,
+      "shiftName": 8
+    }
+  },
   "metrics": {
     "hairlineMax": 2,
     "radii": {

@@ -1,18 +1,6 @@
-// How long free text may be, by what it is, as spec/text-limits.md sets it
-// for every platform. Counted as a reader sees characters, so an emoji or
-// a letter with its accent counts as one.
-export const textLimits = {
-  chatMessage: 1000,
-  dayNote: 100,
-  groupMark: 2,
-  groupName: 30,
-  personName: 20,
-  shiftMark: 1,
-  shiftName: 8,
-} as const;
-
-export type TextKind = keyof typeof textLimits;
-
+// How fields hold to the text limits (design/src/limits.ts), as
+// spec/text-limits.md sets it for every platform. Counted as a reader sees
+// characters, so an emoji or a letter with its accent counts as one.
 // Past this many, a count is shown only once the rest left is small, so
 // a note or a message does not carry one all the while it is written.
 const SHORT_LIMIT = 30;

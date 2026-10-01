@@ -1,11 +1,8 @@
 import { Code, ConnectError } from "@connectrpc/connect";
 
-// spec/text-limits.md: how long typed text may be, counted in characters
-// as a reader sees them (grapheme clusters, as Swift's String.count).
-export const TEXT_LIMITS = {
-  groupName: 30,
-  personName: 20,
-} as const;
+// How the server holds text to the limits in design/src/limits.ts, as
+// spec/text-limits.md has it: counted in characters as a reader sees them
+// (grapheme clusters, as Swift's String.count).
 
 const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
 
