@@ -1159,7 +1159,18 @@ export function TodayMedium({ entry }: { entry: WidgetEntry }) {
 }
 
 const plain = {
+  // Today's date large, as a desk calendar shows it, in the accent that
+  // marks today everywhere, with its mark beside it.
+  big: css({ alignItems: "center", display: "flex", gap: "8px" }),
   label: css({ color: "text.secondary", textStyle: "footnote" }),
+  number: css({
+    color: "accent.default",
+    fontSize: "48px",
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 500,
+    letterSpacing: "-0.02em",
+    lineHeight: 1,
+  }),
   row: css({
     "&:not(:first-child)": { borderTop: "1px solid token(colors.separator)" },
     display: "flex",
@@ -1188,8 +1199,8 @@ const plain = {
   words: css({ ...oneLine, fontWeight: 400 }),
 };
 
-// Today large on the left; on the right, tomorrow and the next day off,
-// a line each.
+// Today on the left, its date large with its mark; on the right,
+// tomorrow and the next day off, a line each.
 function PlainToday({ entry }: { entry: WidgetEntry }) {
   const day = entry.today;
   const [, tomorrow] = entry.upcoming;
@@ -1197,11 +1208,17 @@ function PlainToday({ entry }: { entry: WidgetEntry }) {
   return (
     <div className={detail.wide}>
       <div className={plain.today}>
-        <span className={today.date}>
-          {monthDay(day.date)}({day.weekday})
+        <span className={srOnly}>
+          {monthDay(day.date)}({day.weekday}) {day.name ?? NOTHING}
+          {day.time ? ` ${day.time}` : ""}
         </span>
-        <DayMark day={day} size={56} />
-        <Change className={today.headline} day={day} />
+        <span aria-hidden="true" className={today.date}>
+          {day.date.getMonth() + MONTH_NUMBER}月 {day.weekday}曜日
+        </span>
+        <span aria-hidden="true" className={plain.big}>
+          <span className={plain.number}>{day.date.getDate()}</span>
+          <DayMark day={day} size={36} />
+        </span>
       </div>
       <span aria-hidden="true" className={week.rule} />
       <div className={plain.rows}>
