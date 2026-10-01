@@ -81,6 +81,12 @@
     overflow-wrap: break-word;
     text-wrap: pretty;
   }
+  /* Text kept to one line keeps to it: Chrome and Safari break at a
+     <wbr> even under white-space: nowrap, which wrapped a one-line memo
+     cut with … over three lines. */
+  :where(.white-space_nowrap) wbr {
+    display: none;
+  }
   h1,
   h2,
   h3,
