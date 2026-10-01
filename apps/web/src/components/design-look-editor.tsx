@@ -3,6 +3,7 @@ import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 
 import { EmojiPickerSheet } from "./design-emoji-picker";
+import { IconPickerSheet, iconNames } from "./design-icon-picker";
 import {
   Button,
   Choice,
@@ -39,68 +40,10 @@ export const styleNames: Record<ShiftMarkStyle, string> = {
   icon: "アイコン",
 };
 
-export const iconNames: Record<MarkIcon, string> = {
-  ambulance: "救急車",
-  baby: "赤ちゃん",
-  bed: "ベッド",
-  book: "本",
-  briefcase: "かばん",
-  building: "ビル",
-  calendarCheck: "予定",
-  car: "車",
-  clock: "時計",
-  cloudMoon: "夜空",
-  cloudSun: "晴れ",
-  coffee: "コーヒー",
-  couch: "ソファ",
-  dumbbell: "運動",
-  flower: "花",
-  gift: "プレゼント",
-  graduationCap: "学位帽",
-  handHeart: "手とハート",
-  heart: "ハート",
-  hospital: "病院",
-  house: "家",
-  laptop: "パソコン",
-  leaf: "葉っぱ",
-  letter: "文字アイコン",
-  moon: "月",
-  moonStar: "月と星",
-  music: "音楽",
-  partyPopper: "お祝い",
-  pawPrint: "足あと",
-  phone: "電話",
-  plane: "飛行機",
-  scissors: "はさみ",
-  shield: "盾",
-  shoppingBag: "買い物",
-  siren: "サイレン",
-  star: "星",
-  stethoscope: "聴診器",
-  storefront: "お店",
-  sun: "太陽",
-  sunHorizon: "地平線の太陽",
-  syringe: "注射器",
-  teacher: "先生",
-  train: "電車",
-  treePalm: "ヤシの木",
-  truck: "トラック",
-  users: "人たち",
-  utensils: "食事",
-  wrench: "工具",
-};
-
-// Passes the icons through only when every one of them is there, so a new
-// icon cannot miss the picker.
-function everyIcon<const T extends readonly MarkIcon[]>(
-  icons: T & ([Exclude<MarkIcon, T[number]>] extends [never] ? unknown : never)
-): T {
-  return icons;
-}
-
-// The icons in the picker, a row of eight for each kind like the emoji:
-// the sky through the day, days off, work, jobs, care, and the rest of life.
-const allIcons = everyIcon([
+// The icons offered first, a row of eight for each kind like the emoji:
+// the sky through the day, days off, work, jobs, care, and the rest of
+// life. Every other one is in IconPickerSheet.
+const offeredIcons: readonly MarkIcon[] = [
   "letter",
   "sunHorizon",
   "cloudSun",
@@ -149,7 +92,7 @@ const allIcons = everyIcon([
   "gift",
   "partyPopper",
   "calendarCheck",
-]);
+];
 
 // One screen for choosing how something is marked in every style: shift
 // patterns and groups alike. Each tab shows its own look, so what people
@@ -158,7 +101,7 @@ export function LookEditorPage({
   title,
   back,
   look,
-  icons = allIcons,
+  icons = offeredIcons,
   emojis = markEmojis,
   onBack,
   onPick,
@@ -234,21 +177,42 @@ function IconGrid({
   icons: readonly MarkIcon[];
   onPick: (field: LookField, value: Partial<Look>) => void;
 }) {
+  const [picking, setPicking] = useState(false);
   return (
-    <ChoiceGrid
-      className={markGrid}
-      label="アイコン"
-      onValueChange={(icon) => {
-        onPick("icon", { icon });
-      }}
-      value={look.icon ?? null}
-    >
-      {icons.map((icon) => (
-        <Choice key={icon} label={iconNames[icon]} value={icon}>
-          <MarkGlyph look={{ ...look, icon }} size={20} style="icon" />
-        </Choice>
-      ))}
-    </ChoiceGrid>
+    <>
+      <ChoiceGrid
+        className={markGrid}
+        label="アイコン"
+        onValueChange={(icon) => {
+          onPick("icon", { icon });
+        }}
+        value={look.icon ?? null}
+      >
+        {withPicked(icons, look.icon).map((icon) => (
+          <Choice key={icon} label={iconNames[icon]} value={icon}>
+            <MarkGlyph look={{ ...look, icon }} size={20} style="icon" />
+          </Choice>
+        ))}
+      </ChoiceGrid>
+      <OtherChoicesButton
+        onClick={() => {
+          setPicking(true);
+        }}
+      >
+        ほかのアイコンを選ぶ
+      </OtherChoicesButton>
+      <IconPickerSheet
+        renderIcon={(icon) => (
+          <MarkGlyph look={{ ...look, icon }} size={24} style="icon" />
+        )}
+        onOpenChange={setPicking}
+        onPick={(icon) => {
+          onPick("icon", { icon });
+        }}
+        open={picking}
+        picked={look.icon}
+      />
+    </>
   );
 }
 
@@ -278,11 +242,13 @@ function EmojiGrid({
           </Choice>
         ))}
       </ChoiceGrid>
-      <OtherEmojiButton
+      <OtherChoicesButton
         onClick={() => {
           setPicking(true);
         }}
-      />
+      >
+        ほかの絵文字を選ぶ
+      </OtherChoicesButton>
       <EmojiPickerSheet
         onOpenChange={setPicking}
         onPick={(emoji) => {
@@ -294,18 +260,27 @@ function EmojiGrid({
   );
 }
 
-// An emoji picked from every emoji leads the ones offered, so it shows as
+// One picked from the whole sheet leads the ones offered, so it shows as
 // picked among them.
-export function withPicked(emojis: readonly string[], picked?: string) {
-  return picked && !emojis.includes(picked) ? [picked, ...emojis] : emojis;
+export function withPicked<Value extends string>(
+  offered: readonly Value[],
+  picked?: Value
+) {
+  return picked && !offered.includes(picked) ? [picked, ...offered] : offered;
 }
 
-// After the emoji offered, the way to every other one.
-export function OtherEmojiButton({ onClick }: { onClick: () => void }) {
+// After the emoji or icons offered, the way to every other one.
+export function OtherChoicesButton({
+  onClick,
+  children,
+}: {
+  onClick: () => void;
+  children: ReactNode;
+}) {
   return (
     <Button onClick={onClick} variant="quiet">
       <Plus aria-hidden="true" size={18} />
-      ほかの絵文字を選ぶ
+      {children}
     </Button>
   );
 }

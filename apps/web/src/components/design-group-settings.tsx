@@ -22,7 +22,8 @@ import {
   markFrame,
   markPart,
 } from "./design-group-parts";
-import { iconNames, OtherEmojiButton, withPicked } from "./design-look-editor";
+import { IconPickerSheet, iconNames } from "./design-icon-picker";
+import { OtherChoicesButton, withPicked } from "./design-look-editor";
 import { ConfirmDialog } from "./design-sheet";
 import {
   Choice,
@@ -511,6 +512,7 @@ function GroupMarkPage({
     mark.kind === "photo" ? undefined : mark.kind
   );
   const [pickingEmoji, setPickingEmoji] = useState(false);
+  const [pickingIcon, setPickingIcon] = useState(false);
   const color = colorOfMark(mark);
   const letter = mark.kind === "letter" ? mark.text : firstLetter(name) || "グ";
   return (
@@ -564,11 +566,13 @@ function GroupMarkPage({
               </Choice>
             ))}
           </ChoiceGrid>
-          <OtherEmojiButton
+          <OtherChoicesButton
             onClick={() => {
               setPickingEmoji(true);
             }}
-          />
+          >
+            ほかの絵文字を選ぶ
+          </OtherChoicesButton>
           <EmojiPickerSheet
             onOpenChange={setPickingEmoji}
             onPick={(emoji) => {
@@ -588,7 +592,10 @@ function GroupMarkPage({
             }}
             value={mark.kind === "icon" ? mark.icon : null}
           >
-            {groupIcons.map((icon) => (
+            {withPicked(
+              groupIcons,
+              mark.kind === "icon" ? mark.icon : undefined
+            ).map((icon) => (
               <Choice key={icon} label={iconNames[icon]} value={icon}>
                 <GroupIcon
                   bare
@@ -598,6 +605,24 @@ function GroupMarkPage({
               </Choice>
             ))}
           </ChoiceGrid>
+          <OtherChoicesButton
+            onClick={() => {
+              setPickingIcon(true);
+            }}
+          >
+            ほかのアイコンを選ぶ
+          </OtherChoicesButton>
+          <IconPickerSheet
+            renderIcon={(icon) => (
+              <GroupIcon bare mark={{ color, icon, kind: "icon" }} size={24} />
+            )}
+            onOpenChange={setPickingIcon}
+            onPick={(icon) => {
+              onChange({ color, icon, kind: "icon" });
+            }}
+            open={pickingIcon}
+            picked={mark.kind === "icon" ? mark.icon : undefined}
+          />
           <MarkColors
             color={color}
             onPick={(value) => {
