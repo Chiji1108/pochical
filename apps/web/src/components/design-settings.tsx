@@ -70,8 +70,12 @@ import { PatternsPage } from "./design-pattern-editor";
 import { PresetContexts } from "./design-providers";
 import { RepeatSequenceEditor, ShiftPreview } from "./design-repeat-editor";
 import { ConfirmDialog, SystemAlert } from "./design-sheet";
-import { SupportChatPage, supportLinesOf } from "./design-support-chat";
-import type { SupportSample } from "./design-support-chat";
+import {
+  SupportChatPage,
+  supportLinesOf,
+  SupportRow,
+} from "./design-support-chat";
+import type { SupportLine, SupportSample } from "./design-support-chat";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
 import {
@@ -270,6 +274,7 @@ export function DesignSettings({
             onOpen={setPage}
             patternKeys={patternKeys}
             profile={profile}
+            supportLines={supportLines}
           />
         )}
         {page === "profile" && (
@@ -435,12 +440,14 @@ function SettingsTop({
   patternKeys,
   coworkerCount,
   profile,
+  supportLines,
   onOpen,
 }: {
   current: RepeatRule | undefined;
   patternKeys: Shift[];
   coworkerCount: number;
   profile: Profile;
+  supportLines: SupportLine[];
   onOpen: (page: Page) => void;
 }) {
   return (
@@ -537,11 +544,13 @@ function SettingsTop({
           }}
         />
       </ListSection>
-      <AboutSection
-        onSupport={() => {
+      <SupportRow
+        lines={supportLines}
+        onOpen={() => {
           onOpen("support");
         }}
       />
+      <AboutSection />
     </>
   );
 }
@@ -552,14 +561,14 @@ function openOutside(url: string) {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
-// Pochical itself, at the foot of the settings. お問い合わせ opens a chat
-// with the people who make it (SupportChatPage); rows that leave the app
-// end in ↗ instead of the arrow of rows that go on inside it. The store's
+// Pochical itself, at the foot of the settings, under the chat with the
+// people who make it (SupportRow). Rows that leave the app end in ↗
+// instead of the arrow of rows that go on inside it. The store's
 // own review prompt comes by itself only now and then (spec/review.md);
 // the review row is there whenever someone wants to write one, and opens
 // the store's page for writing it (App Store's ?action=write-review,
 // Google Play's listing), which the prototype has none of before release.
-function AboutSection({ onSupport }: { onSupport: () => void }) {
+function AboutSection() {
   const platform = useDevice((state) => state.platform);
   const toast = useContext(ToastContext);
   const store = platform === "ios" ? "App Store" : "Google Play";
@@ -576,7 +585,6 @@ function AboutSection({ onSupport }: { onSupport: () => void }) {
             openOutside("/support");
           }}
         />
-        <ListRow label="お問い合わせ" onClick={onSupport} />
         <ListRow
           arrow={outside}
           label={`${store}でレビューを書く`}

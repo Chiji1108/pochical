@@ -1,6 +1,6 @@
 import { Image as ImageIcon, SendHorizontal, X } from "lucide-react";
 import { useContext, useLayoutEffect, useRef, useState } from "react";
-import { css } from "styled-system/css";
+import { css, cx } from "styled-system/css";
 
 import { APP_VERSION, deviceNames, useDevice } from "../lib/design-device";
 import type { Photo } from "../lib/design-sample-photos";
@@ -9,6 +9,7 @@ import { site } from "../lib/site";
 import { AppIcon, useAppIcons } from "./design-app-icon";
 import {
   chatAvatarSize,
+  chatRow,
   chatStyle,
   maxPhotos,
   photoOf,
@@ -16,15 +17,23 @@ import {
 } from "./design-group-chat";
 import { PhotoViewer } from "./design-sheet";
 import { ToastContext } from "./design-toast";
-import { BackButton, LimitedTextArea, Screen, srOnly } from "./design-ui";
+import {
+  BackButton,
+  LimitedTextArea,
+  List,
+  listRow,
+  Screen,
+  srOnly,
+} from "./design-ui";
 
-// お問い合わせ as a chat with the people who make Pochical, rather than a
-// mail: a small complaint or wish is easier to write in a chat, and the
-// answer comes back in the same place. It looks like the group chats, so
-// it is already familiar, and keeps to what writing to support needs:
-// words and photos (a screenshot of what went wrong), no reactions,
-// replies, days or polls. Its head says plainly who reads it and what
-// reaches them, since only this chat is read by Pochical's people.
+// Writing to support as a chat with the people who make Pochical, rather
+// than a mail: a small complaint or wish is easier to write in a chat,
+// and the answer comes back in the same place. It looks like the group
+// chats, so it is already familiar, and keeps to what writing to support
+// needs: words and photos (a screenshot of what went wrong), no
+// reactions, replies, days or polls. Its head says plainly who reads it
+// and what reaches them, since only this chat is read by Pochical's
+// people.
 
 export type SupportSample = "none" | "answered";
 
@@ -57,6 +66,54 @@ const answeredLines: SupportLine[] = [
 
 export function supportLinesOf(sample: SupportSample): SupportLine[] {
   return sample === "answered" ? answeredLines : [];
+}
+
+// The home screen icon in use, which stands for Pochical's people here.
+function useOwnIcon() {
+  const icons = useAppIcons();
+  return icons[useSettings((state) => state.device.appIcon)];
+}
+
+// The way into the chat from the settings, drawn as a chat in the group
+// chats' list is: the icon, who it is with and, once there are any, the
+// latest line and its time. Among the rows that leave for the site it
+// would read as one more link; standing on its own as a chat, it says
+// that Pochical's people can be talked to.
+export function SupportRow({
+  lines,
+  onOpen,
+}: {
+  lines: SupportLine[];
+  onOpen: () => void;
+}) {
+  const icon = useOwnIcon();
+  const last = lines.at(-1);
+  let preview = "ほしい機能や不具合のこと、気軽にどうぞ";
+  if (last) {
+    preview = last.photo ? "写真" : (last.text ?? "");
+  }
+  return (
+    <List>
+      <button
+        className={cx(listRow.twoLine, listRow.pressable)}
+        data-list-row=""
+        onClick={onOpen}
+        type="button"
+      >
+        {/* The size of a face in the chats' list. */}
+        <AppIcon size={28} src={icon} />
+        <span className={chatRow.text}>
+          <span className={chatRow.name}>作っている人とチャット</span>
+          <small className={chatRow.preview}>{preview}</small>
+        </span>
+        {last && (
+          <span className={chatRow.meta}>
+            <small className={chatRow.time}>{last.time}</small>
+          </span>
+        )}
+      </button>
+    </List>
+  );
 }
 
 const support = {
@@ -168,8 +225,7 @@ export function SupportChatPage({
   const photoInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLOListElement>(null);
   const toast = useContext(ToastContext);
-  const icons = useAppIcons();
-  const icon = icons[useSettings((state) => state.device.appIcon)];
+  const icon = useOwnIcon();
   // Opens on the latest line and follows each one sent; with none yet,
   // the intro stays in sight from its top.
   const latest = lines.at(-1)?.id;
@@ -221,11 +277,12 @@ export function SupportChatPage({
     <Screen>
       <header className={chatStyle.header}>
         <BackButton onClick={onBack}>設定</BackButton>
-        <h3 className={chatStyle.title}>お問い合わせ</h3>
+        {/* Named for who is on the other side, as a chat is. */}
+        <h3 className={chatStyle.title}>{site.name}</h3>
       </header>
       <div className={chatStyle.lines}>
         <ol
-          aria-label="お問い合わせのメッセージ"
+          aria-label={`${site.name}とのメッセージ`}
           className={chatStyle.messages}
           ref={listRef}
         >

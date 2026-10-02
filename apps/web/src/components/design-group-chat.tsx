@@ -168,7 +168,7 @@ function lastLine(
 
 // A chat in the hub's list: its name and last line, with the time and
 // what is unread at the end.
-const chatRow = {
+export const chatRow = {
   meta: css({
     alignItems: "flex-end",
     display: "flex",
