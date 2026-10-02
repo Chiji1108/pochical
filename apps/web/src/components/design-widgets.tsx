@@ -435,12 +435,27 @@ export function SimpleMedium({ entry }: { entry: WidgetEntry }) {
 // ── これから ─────────────────────────────────────────────────────────────
 
 const upcoming = {
-  head: css({ display: "flex", flexDirection: "column", gap: "4px" }),
-  // The date at the start and the mark at the end, level with each other.
-  headLine: css({
+  change: css({
+    color: "text.secondary",
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 400,
+    maxWidth: "100%",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    textStyle: "footnote",
+    whiteSpace: "nowrap",
+  }),
+  head: css({
     alignItems: "center",
     display: "flex",
-    justifyContent: "space-between",
+    gap: "8px",
+    justifyContent: "center",
+  }),
+  headText: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+    minWidth: 0,
   }),
   // Today's line and the three days as one group in the middle, not
   // pushed to the top and bottom with a gap between.
@@ -451,40 +466,32 @@ const upcoming = {
     height: "100%",
     justifyContent: "center",
   }),
-  words: css({
-    fontVariantNumeric: "tabular-nums",
-    fontWeight: 400,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    textStyle: "subheadline",
-    whiteSpace: "nowrap",
-  }),
 };
 
-// Today as a heading line: its date and its mark side by side, and what
-// changed under them only on a day that has some. A memo is the
+// Today's mark large beside its date and what changed, the two together
+// in the middle, over the days after it centered as well. A memo is the
 // calendar's stroke under the date.
 function UpcomingHead({ day }: { day: WidgetDay }) {
   const words = useWords();
   const said = changeWords(day, useShiftNames()) !== undefined;
   return (
     <div className={upcoming.head}>
-      <span className={upcoming.headLine}>
+      <DayMark day={day} size={said ? 34 : 40} />
+      <span className={upcoming.headText}>
         <span className={simple.date}>
           <span className={cx(day.note && dayParts.noted)}>
             {words.short(day.date)}
           </span>
         </span>
-        <DayMark day={day} size={28} />
+        {said ? (
+          <Change className={upcoming.change} day={day} />
+        ) : (
+          <span className={srOnly}>
+            {day.name ?? NOTHING}
+            {day.time ? ` ${day.time}` : ""}
+          </span>
+        )}
       </span>
-      {said ? (
-        <Change className={upcoming.words} day={day} />
-      ) : (
-        <span className={srOnly}>
-          {day.name ?? NOTHING}
-          {day.time ? ` ${day.time}` : ""}
-        </span>
-      )}
     </div>
   );
 }
