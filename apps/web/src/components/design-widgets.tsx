@@ -360,7 +360,7 @@ const upcoming = {
     flexDirection: "column",
     flexShrink: 0,
     justifyContent: "space-between",
-    width: "128px",
+    width: "112px",
   }),
   note: css({
     color: "text.secondary",
@@ -376,7 +376,7 @@ const upcoming = {
     display: "grid",
     flex: 1,
     gap: "8px",
-    gridTemplateColumns: "72px 20px 1fr",
+    gridTemplateColumns: "48px 20px 1fr",
     minHeight: 0,
   }),
   rowLabel: css({
@@ -435,7 +435,8 @@ export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
 }
 
 // Today large on the left; on the right, the days after it a line each,
-// with what changed, the memo, or the shift's name when names are shown.
+// each by its date as the rows under it read (25 金), with what changed,
+// the memo, or the shift's name when names are shown.
 export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
   const words = useWords();
   const named = useShiftNames();
@@ -446,13 +447,11 @@ export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
       </div>
       <span aria-hidden="true" className={simple.rule} />
       <ol className={`${list} ${upcoming.rows}`}>
-        {entry.upcoming.slice(1, 5).map((day, index) => (
+        {entry.upcoming.slice(1, 5).map((day) => (
           <li className={upcoming.row} key={day.date.getTime()}>
             <SpokenDay day={day} />
             <span aria-hidden="true" className={upcoming.rowLabel}>
-              {index === 0
-                ? words.tomorrow
-                : `${day.date.getDate()} ${words.weekday(day.date)}`}
+              {`${day.date.getDate()} ${words.weekday(day.date)}`}
             </span>
             <DayMark day={day} size={18} />
             <span aria-hidden="true" className={upcoming.rowWords}>
