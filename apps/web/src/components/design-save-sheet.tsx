@@ -8,7 +8,7 @@ import {
 import { useContext, useState } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import { dateKey } from "../lib/design-days";
+import { dateKey, formatMonth } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
 import type { ImageOptions } from "../lib/design-settings-store";
 import { AppIcon } from "./design-app-icon";
@@ -199,7 +199,7 @@ export function SaveSheet({
   const close = () => {
     change(false);
   };
-  const monthLabel = `${month.getMonth() + 1}月`;
+  const monthLabel = formatMonth(month);
   const count = includeOff ? shiftCount : shiftCount - offCount;
   const calendar = deviceCalendars.find((item) => item.id === calendarId);
   const title = stepTitle(step, completion, monthLabel);

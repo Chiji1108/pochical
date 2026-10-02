@@ -27,8 +27,10 @@ import {
   dateKey,
   defaultHolidaysOff,
   formatDay,
-  isRepeating,
+  formatMonth,
   holidayShiftOf,
+  isRepeating,
+  monthAfter,
   repeatSchedule,
 } from "../lib/design-days";
 import type { RepeatRule, Schedule } from "../lib/design-days";
@@ -1314,7 +1316,7 @@ function ProfilePage({
 }
 
 function nextMonthStart() {
-  return new Date(previewToday.getFullYear(), previewToday.getMonth() + 1, 1);
+  return monthAfter(previewToday, 1);
 }
 
 const workStyles = {
@@ -2090,7 +2092,7 @@ function WeekRow({ onOpen }: { onOpen: () => void }) {
   const month =
     monthName === "english"
       ? englishMonthOf(previewToday)
-      : `${previewToday.getMonth() + 1}月`;
+      : formatMonth(previewToday);
   return (
     <ListRow
       label="カレンダー"
@@ -2135,8 +2137,7 @@ function WeekPage({
           value={monthName}
         >
           <Segment label="日本語" value="number">
-            {previewToday.getMonth() + 1}月・
-            {weekdayNameOf(previewToday.getDay())}
+            {formatMonth(previewToday)}・{weekdayNameOf(previewToday.getDay())}
           </Segment>
           <Segment label="英語" value="english">
             {englishMonthOf(previewToday)}・

@@ -14,7 +14,18 @@ import {
 import type { CSSProperties, ReactNode, Ref } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import { addDays, dateKey, formatDay, movesText } from "../lib/design-days";
+import {
+  addDays,
+  dateKey,
+  daysOfMonth,
+  formatDay,
+  formatMonth,
+  formatMonthFromToday,
+  formatYearMonth,
+  isSameMonth,
+  monthAfter,
+  movesText,
+} from "../lib/design-days";
 import { designToday } from "../lib/design-today";
 import { dayName } from "../lib/text-limits";
 import { monthGrid } from "./design-date-picker";
@@ -870,7 +881,7 @@ function DaySheetBody({
             aria-label="前の月"
             className={monthGrid.arrow}
             onClick={() => {
-              setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
+              setMonth(monthAfter(month, -1));
             }}
             type="button"
           >
@@ -886,7 +897,7 @@ function DaySheetBody({
             aria-label="次の月"
             className={monthGrid.arrow}
             onClick={() => {
-              setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
+              setMonth(monthAfter(month, 1));
             }}
             type="button"
           >
@@ -1022,7 +1033,7 @@ export function ShiftsPage({
             setLegendOpen(true);
           }}
           onSave={() => {
-            toast(`${month.getMonth() + 1}月のシフト表を写真に保存しました`);
+            toast(`${formatMonth(month)}のシフト表を写真に保存しました`);
           }}
         />
       }
@@ -1148,9 +1159,7 @@ function PagedShifts({
     group.members,
     dates.filter((date) => sameMonth(date, month))
   );
-  const thisMonth =
-    sameMonth(month, designToday) &&
-    month.getFullYear() === designToday.getFullYear();
+  const thisMonth = isSameMonth(month, designToday);
   if (layout !== "person") {
     // Remounted per layout and week start, so each opens where the other
     // left off, with its weeks as the settings draw them.
@@ -1199,8 +1208,11 @@ function PagedShifts({
       />
       <PagedTogether
         beside={{
-          next: togetherIn(group.members, daysOf(monthAfter(month, 1))),
-          previous: togetherIn(group.members, daysOf(monthAfter(month, -1))),
+          next: togetherIn(group.members, daysOfMonth(monthAfter(month, 1))),
+          previous: togetherIn(
+            group.members,
+            daysOfMonth(monthAfter(month, -1))
+          ),
         }}
         month={month}
         onPickDay={onPickDay}
@@ -1244,12 +1256,7 @@ function PagedTogether({
   const [open, setOpen] = useState(false);
   const reduceMotion = useReducedMotion() ?? false;
   const turn = useTurn(monthIndex(month), swiped);
-  const monthOf = (by: number) => {
-    const date = monthAfter(month, by);
-    return monthIndex(date) === monthIndex(designToday)
-      ? "今月"
-      : `${date.getMonth() + 1}月`;
-  };
+  const monthOf = (by: number) => formatMonthFromToday(monthAfter(month, by));
   const label = `${monthOf(0)}のみんな休み`;
   const value = togetherValue(together);
   const counted = together.days.length > 0;
@@ -1420,23 +1427,6 @@ function monthKey(month: Date) {
   return `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
 }
 
-// The 1st of the month `count` months on from the date's.
-function monthAfter(date: Date, count: number) {
-  return new Date(date.getFullYear(), date.getMonth() + count, 1);
-}
-
-function daysOf(month: Date) {
-  const count = new Date(
-    month.getFullYear(),
-    month.getMonth() + 1,
-    0
-  ).getDate();
-  return Array.from(
-    { length: count },
-    (_, index) => new Date(month.getFullYear(), month.getMonth(), index + 1)
-  );
-}
-
 // A computed length in pixels, as "40px"; 0 for one like "auto".
 function pixels(length: string) {
   return Number(length.replace("px", "")) || 0;
@@ -1490,10 +1480,10 @@ function monthListRows(
       key: monthKey(month),
       kind: "heading",
       month,
-      together: togetherIn(members, daysOf(month)),
+      together: togetherIn(members, daysOfMonth(month)),
     });
     if (layout === "days") {
-      for (const date of daysOf(month)) {
+      for (const date of daysOfMonth(month)) {
         rows.push({ days: [date], key: dateKey(date), kind: "days", month });
       }
       continue;
@@ -1563,10 +1553,7 @@ function ScrollingShifts({
     if (picked) {
       return indexOfDay(picked);
     }
-    return sameMonth(month, designToday) &&
-      month.getFullYear() === designToday.getFullYear()
-      ? todayIndex
-      : indexOfMonth(month);
+    return isSameMonth(month, designToday) ? todayIndex : indexOfMonth(month);
   });
   // oxlint-disable-next-line react/incompatible-library -- the app does not run the React Compiler, which this warns about.
   const virtualizer = useVirtualizer({
@@ -1830,9 +1817,7 @@ function MonthDivider({
 }) {
   const { english } = useWeek();
   const thisYear = month.getFullYear() === designToday.getFullYear();
-  const name = thisYear
-    ? `${month.getMonth() + 1}月`
-    : `${month.getFullYear()}年${month.getMonth() + 1}月`;
+  const name = thisYear ? formatMonth(month) : formatYearMonth(month);
   const title = `${
     thisYear && month.getMonth() === designToday.getMonth() ? "今月" : name
   }のみんな休み`;

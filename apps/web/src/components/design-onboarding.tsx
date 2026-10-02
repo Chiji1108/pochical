@@ -1,6 +1,7 @@
 import { useContext, useState } from "react";
 
 import type { RepeatRule } from "../lib/design-days";
+import { monthAfter } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { createUserStore, UserStoreContext } from "../lib/design-user-store";
@@ -28,11 +29,7 @@ function startRules(sequence?: Shift[], anchor?: Date): RepeatRule[] {
   if (!(sequence && anchor)) {
     return [];
   }
-  const monthBefore = new Date(
-    designMonth.getFullYear(),
-    designMonth.getMonth() - 1,
-    1
-  );
+  const monthBefore = monthAfter(designMonth, -1);
   const start = anchor < monthBefore ? anchor : monthBefore;
   return [{ anchor, sequence, start }];
 }

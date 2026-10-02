@@ -2,6 +2,7 @@ import { useState } from "react";
 import { css } from "styled-system/css";
 
 import type { Schedule } from "../lib/design-days";
+import { daysOfMonth, formatMonth } from "../lib/design-days";
 import type { Shift } from "../lib/design-patterns";
 import {
   Sheet,
@@ -48,15 +49,7 @@ function keyOf(date: Date) {
 // Blanks after the last entered day are left alone: those are more likely
 // not decided yet.
 export function gapDaysIn(schedule: Schedule, month: Date) {
-  const count = new Date(
-    month.getFullYear(),
-    month.getMonth() + 1,
-    0
-  ).getDate();
-  const days = Array.from(
-    { length: count },
-    (_, index) => new Date(month.getFullYear(), month.getMonth(), index + 1)
-  );
+  const days = daysOfMonth(month);
   const lastEntered = days.findLast((date) => schedule[keyOf(date)]);
   return days.filter(
     (date) =>
@@ -138,7 +131,7 @@ function GapSheetBody({
 }: GapSheetProps & { onClose: () => void }) {
   const [picked, setPicked] = useState<Shift>();
   const current = choices.find(({ key }) => key === picked) ?? choices[0];
-  const monthLabel = `${month.getMonth() + 1}月`;
+  const monthLabel = formatMonth(month);
   return (
     <>
       <SheetHeading onClose={close} title={titleOf(days)} />

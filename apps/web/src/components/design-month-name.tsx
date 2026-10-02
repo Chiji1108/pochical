@@ -3,6 +3,7 @@ import type { MotionValue } from "motion/react";
 import { Fragment } from "react";
 import { css, cva } from "styled-system/css";
 
+import { formatMonth, formatYearMonth, monthAfter } from "../lib/design-days";
 import { useSettings } from "../lib/design-settings-store";
 import { monthIndex, RollingName, useTurn } from "./design-rolling";
 import { srOnly } from "./design-ui";
@@ -65,20 +66,20 @@ const shortMonths = [
 // A month heading a list or a picker, as the カレンダー page's 月と曜日
 // asks: 9月, or September in English.
 export function monthTitleOf(month: Date, english = false) {
-  return english ? fullMonths[month.getMonth()] : `${month.getMonth() + 1}月`;
+  return english ? fullMonths[month.getMonth()] : formatMonth(month);
 }
 
 // The same with its year: 2026年9月, or September 2026.
 export function monthWithYearOf(month: Date, english = false) {
   return english
     ? `${monthTitleOf(month, true)} ${month.getFullYear()}`
-    : `${month.getFullYear()}年${month.getMonth() + 1}月`;
+    : formatYearMonth(month);
 }
 
 // A month where room is tight, as on a button among twelve or in a
 // table's corner: 9月, or Sep.
 export function shortMonthOf(month: Date, english = false) {
-  return english ? shortMonths[month.getMonth()] : `${month.getMonth() + 1}月`;
+  return english ? shortMonths[month.getMonth()] : formatMonth(month);
 }
 
 // The year over the month's name, as the calendar's heading draws it:
@@ -108,12 +109,8 @@ export function MonthName({
   const reduceMotion = useReducedMotion() ?? false;
   const turn = useTurn(monthIndex(month), swiped);
   const english = style === "english";
-  const previous =
-    besideMonths?.previous ??
-    new Date(month.getFullYear(), month.getMonth() - 1, 1);
-  const next =
-    besideMonths?.next ??
-    new Date(month.getFullYear(), month.getMonth() + 1, 1);
+  const previous = besideMonths?.previous ?? monthAfter(month, -1);
+  const next = besideMonths?.next ?? monthAfter(month, 1);
   const nameOf = (date: Date) =>
     english ? englishMonthOf(date) : String(date.getMonth() + 1);
   const yearOf = (date: Date) => String(date.getFullYear());
@@ -121,9 +118,7 @@ export function MonthName({
     progress ? { next: of(next), previous: of(previous) } : {};
   return (
     <>
-      <span className={srOnly}>
-        {month.getFullYear()}年{month.getMonth() + 1}月
-      </span>
+      <span className={srOnly}>{formatYearMonth(month)}</span>
       <span aria-hidden="true" className={monthName.year({ lower: english })}>
         <RollingName
           {...beside(yearOf)}

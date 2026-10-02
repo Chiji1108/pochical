@@ -2,10 +2,13 @@ import { Check, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { css, cva } from "styled-system/css";
 
-import { dateKey } from "../lib/design-days";
+import { dateKey, formatYearMonth } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
 import type { Shift } from "../lib/design-patterns";
+import { monthWithYearOf } from "./design-month-name";
 import { Sheet, SheetHeading, sheetBody } from "./design-sheet";
+import { srOnly } from "./design-ui";
+import { useWeek } from "./design-week";
 import { ShiftMark } from "./shift-mark";
 
 // Someone from 一緒に働く人 whose days the calendar shows, picked in
@@ -64,10 +67,22 @@ export function BreakdownSheet({
   onOpenChange: (open: boolean) => void;
   onShow: (name: string | undefined) => void;
 }) {
+  const { english } = useWeek();
   return (
     <Sheet label="今月の内訳" onOpenChange={onOpenChange} open={open}>
       <SheetHeading
-        eyebrow={`${month.getFullYear()}年${month.getMonth() + 1}月`}
+        eyebrow={
+          // In English as the カレンダー page's 月と曜日 asks, said in
+          // 日本語 to screen readers as the rest of the sheet is.
+          english ? (
+            <>
+              <span className={srOnly}>{formatYearMonth(month)}</span>
+              <span aria-hidden="true">{monthWithYearOf(month, true)}</span>
+            </>
+          ) : (
+            formatYearMonth(month)
+          )
+        }
         onClose={() => {
           onOpenChange(false);
         }}

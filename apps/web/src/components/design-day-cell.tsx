@@ -4,6 +4,7 @@ import { css, cva, cx } from "styled-system/css";
 
 import {
   dateKey,
+  formatMonthDay,
   movesText,
   timeChangeOf,
   timeRange,
@@ -302,7 +303,7 @@ export function DayCell({
   return (
     <button
       aria-haspopup={editing ? undefined : "dialog"}
-      aria-label={`${date.getMonth() + 1}月${date.getDate()}日、${details.join("、")}`}
+      aria-label={`${formatMonthDay(date)}、${details.join("、")}`}
       aria-pressed={editing ? active : undefined}
       className={cellClass}
       data-active={active || undefined}
