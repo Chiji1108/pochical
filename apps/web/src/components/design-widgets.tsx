@@ -210,6 +210,30 @@ const toneText = cva({
 
 const list = css({ listStyle: "none", margin: 0, padding: 0 });
 
+const englishMonths = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+const englishWeekdays = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
 // ── Words ───────────────────────────────────────────────────────────────
 
 // The widgets' few words. 月と曜日 set to English writes the dates as the
@@ -217,14 +241,19 @@ const list = css({ listStyle: "none", margin: 0, padding: 0 });
 // reads in one language; changed hours and memos stay as entered.
 function useWords() {
   const { english, weekdayName } = useWeek();
+  // A weekday heading a column of days: 金, or FRI.
   const weekday = (date: Date) => weekdayName(date.getDay()).toUpperCase();
   if (english) {
+    // Dates as English writes them, Thu, Sep 24, rather than the month's
+    // heading (sep.), which is for the calendar's large title alone.
+    const month = (date: Date) => englishMonths[date.getMonth()] ?? "";
+    const day = (date: Date) => weekdayName(date.getDay());
     return {
-      date: (date: Date) =>
-        `${englishMonthOf(date)} ${date.getDate()} ${weekday(date)}`,
-      heading: (date: Date) => `${englishMonthOf(date)} ${weekday(date)}`,
+      date: (date: Date) => `${day(date)}, ${month(date)} ${date.getDate()}`,
+      heading: (date: Date) => englishWeekdays[date.getDay()] ?? "",
       inDays: (inDays: number) =>
         inDays === 1 ? "Tomorrow" : `in ${inDays} days`,
+      line: (date: Date) => `${day(date)} ${date.getDate()}`,
       nextOff: "Next day off",
       nothingYet: "Nothing yet",
       offTogether: "Off together",
@@ -241,6 +270,7 @@ function useWords() {
     heading: (date: Date) =>
       `${date.getMonth() + MONTH_NUMBER}月 ${weekday(date)}曜日`,
     inDays: (inDays: number) => (inDays === 1 ? "明日" : `${inDays}日後`),
+    line: (date: Date) => `${date.getDate()} ${weekday(date)}`,
     nextOff: "次の休み",
     nothingYet: "まだ入っていません",
     offTogether: "一緒に休める日",
@@ -452,7 +482,7 @@ export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
           <li className={upcoming.row} key={day.date.getTime()}>
             <SpokenDay day={day} />
             <span aria-hidden="true" className={upcoming.rowLabel}>
-              {`${day.date.getDate()} ${words.weekday(day.date)}`}
+              {words.line(day.date)}
             </span>
             <DayMark day={day} size={18} />
             <span aria-hidden="true" className={upcoming.rowWords}>
