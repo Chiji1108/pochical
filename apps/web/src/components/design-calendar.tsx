@@ -96,8 +96,6 @@ import {
   Button,
   Chip,
   ChipGroup,
-  ChoiceGrid,
-  ChoiceChip,
   DAY_ROW_GAP,
   DAY_ROW_HEIGHT,
   dayGrid,
@@ -110,11 +108,12 @@ import {
   List,
   ListRow,
   listRow,
-  markValue,
   MenuItem,
+  MenuPicker,
   MONTH_WEEKS,
   PageDots,
   Pager,
+  PullDownMenu,
   Screen,
   srOnly,
   SummaryRow,
@@ -1923,11 +1922,13 @@ function ShiftInputControls({
 // A day opened in the week, read before it is changed: its shift, time,
 // the people working it and its memo as a list's rows, each saying what
 // the day holds. A row is changed where it is, as iOS's forms do: the
-// time's pills set the time, the shift and the people unfold their chips
-// under their row, and the memo is written in its own field. Nothing
-// changes on a stray tap, as it did when every shift was a chip on show.
+// shift from a pull-down, as one is picked in a Form's menu Picker, the
+// time by its pills, the people by chips unfolded under their row (more
+// than one, and a name may be added), and the memo in its own field.
+// Nothing changes on a stray tap, as it did when every shift was a chip
+// on show.
 const dayDetail = {
-  // A row's chips, unfolded under it inside the list, with a line above
+  // The people's chips, unfolded under their row inside the list, with a line above
   // as between rows; marked as a row so the row after it draws its own.
   unfolded: css({
     "&::before": {
@@ -1951,20 +1952,10 @@ const dayDetail = {
     color: "text.primary",
     textStyle: "body",
   }),
-  patterns: css({
-    border: 0,
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
-    margin: 0,
-    padding: 0,
-  }),
   // An action on its row, in the accent as iOS's text buttons in a list.
   reset: css({ "& > *": { color: "accent.default" } }),
   root: css({ display: "flex", flexDirection: "column", gap: "24px" }),
 };
-
-type Unfolded = "shift" | "members" | undefined;
 
 // The chevron of a row that unfolds in place, turned down while it is open.
 function Disclosure({ open }: { open: boolean }) {
@@ -2074,10 +2065,7 @@ function DayDetail({
   const pattern = entry && book[entry.shift];
   const time = pattern?.time;
   const timeChanged = Boolean(entry?.start || entry?.end);
-  // A blank day has nothing to read, so its shifts are out to pick from.
-  const [unfolded, setUnfolded] = useState<Unfolded>(
-    entry ? undefined : "shift"
-  );
+  const [membersOpen, setMembersOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
   // Said in words here, where there is room: the mark only shows a shape.
   const change = timeChangeOf(entry, pattern);
@@ -2095,11 +2083,8 @@ function DayDetail({
   ].filter(Boolean);
   function clear() {
     setClearing(false);
-    setUnfolded("shift");
+    setMembersOpen(false);
     onChange(undefined);
-  }
-  function toggle(row: Exclude<Unfolded, undefined>) {
-    setUnfolded(unfolded === row ? undefined : row);
   }
   function changeTime(field: "start" | "end", value: string) {
     if (!(entry && time)) {
@@ -2115,44 +2100,34 @@ function DayDetail({
     <div className={dayDetail.root}>
       <List>
         <ListRow
-          aria-expanded={unfolded === "shift"}
-          arrow={<Disclosure open={unfolded === "shift"} />}
-          label="シフト"
-          onClick={() => {
-            toggle("shift");
-          }}
-          value={
-            entry ? (
-              <>
-                <ShiftMark shift={entry.shift} size={18} />
-                {pattern?.name}
-              </>
-            ) : (
-              "なし"
-            )
-          }
-          valueClassName={markValue}
-        />
-        {unfolded === "shift" && (
-          <div className={dayDetail.unfolded} data-list-row="">
-            <ChoiceGrid
-              className={dayDetail.patterns}
-              label="シフト"
-              onValueChange={(key) => {
-                onChange(keepDetails(entry, key));
-                setUnfolded(undefined);
-              }}
-              value={entry?.shift ?? null}
+          control={
+            <PullDownMenu
+              label={
+                entry ? (
+                  <>
+                    <ShiftMark shift={entry.shift} size={16} />
+                    {pattern?.name}
+                  </>
+                ) : (
+                  "なし"
+                )
+              }
             >
-              {patternKeys.map((key) => (
-                <ChoiceChip key={key} value={key}>
-                  <ShiftMark shift={key} size={14} />
-                  {book[key]?.name}
-                </ChoiceChip>
-              ))}
-            </ChoiceGrid>
-          </div>
-        )}
+              <MenuPicker
+                onValueChange={(key) => {
+                  onChange(keepDetails(entry, key));
+                }}
+                options={patternKeys.map((key) => ({
+                  icon: <ShiftMark shift={key} size={18} />,
+                  label: book[key]?.name ?? key,
+                  value: key,
+                }))}
+                value={entry?.shift ?? ""}
+              />
+            </PullDownMenu>
+          }
+          label="シフト"
+        />
         {entry && time && (
           <ListRow
             control={
@@ -2178,16 +2153,16 @@ function DayDetail({
         )}
         {entry && time && (
           <ListRow
-            aria-expanded={unfolded === "members"}
-            arrow={<Disclosure open={unfolded === "members"} />}
+            aria-expanded={membersOpen}
+            arrow={<Disclosure open={membersOpen} />}
             label="一緒に働く人"
             onClick={() => {
-              toggle("members");
+              setMembersOpen(!membersOpen);
             }}
             value={selected.length > 0 ? selected.join("、") : "なし"}
           />
         )}
-        {entry && time && unfolded === "members" && (
+        {entry && time && membersOpen && (
           <div className={dayDetail.unfolded} data-list-row="">
             <MemberChips
               members={members}

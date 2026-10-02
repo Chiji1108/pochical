@@ -2348,8 +2348,12 @@ const menu = {
     border: "1px solid token(colors.border.default)",
     borderRadius: "2xl",
     boxShadow: "lg",
+    // A long list, as many shift patterns, scrolls inside the room there
+    // is rather than running off the screen.
+    maxHeight: "var(--available-height)",
     minWidth: "200px",
     outline: "none",
+    overflowY: "auto",
     padding: "8px",
     zIndex: 30,
   }),
@@ -2466,15 +2470,17 @@ export function IconMenu({
 }
 
 // One choice among several inside a menu, marked with a check, as a
-// Picker inside a SwiftUI Menu.
+// Picker inside a SwiftUI Menu. An option's icon, as a shift's mark,
+// stands after the check. With no option picked, as a blank day's shift,
+// `value` is "".
 export function MenuPicker<Value extends string>({
   value,
   onValueChange,
   options,
 }: {
-  value: Value;
+  value: Value | "";
   onValueChange: (value: Value) => void;
-  options: readonly { value: Value; label: string }[];
+  options: readonly { value: Value; label: string; icon?: ReactNode }[];
 }) {
   return (
     <Menu.RadioItemGroup
@@ -2498,6 +2504,7 @@ export function MenuPicker<Value extends string>({
             size={18}
             visibility={option.value === value ? "visible" : "hidden"}
           />
+          {option.icon && <span className={menu.icon}>{option.icon}</span>}
           <Menu.ItemText>{option.label}</Menu.ItemText>
         </Menu.RadioItem>
       ))}
