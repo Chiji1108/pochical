@@ -121,6 +121,8 @@ function lastLine(
   return who?.me ? `自分：${text}` : text;
 }
 
+// A chat's title in its header: the name, the mute mark, and for a group
+// the count under them.
 function ChatTitle({
   title,
   count,
