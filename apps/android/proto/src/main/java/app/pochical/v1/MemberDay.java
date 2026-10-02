@@ -8,7 +8,7 @@ package app.pochical.v1;
 /**
  * <pre>
  * One field of a member's day, as the group sees it: pattern and times,
- * never the memo.
+ * never the memo or the people.
  * </pre>
  *
  * Protobuf type {@code pochical.v1.MemberDay}
@@ -203,7 +203,7 @@ public  final class MemberDay extends
   /**
    * <pre>
    * One field of a member's day, as the group sees it: pattern and times,
-   * never the memo.
+   * never the memo or the people.
    * </pre>
    *
    * Protobuf type {@code pochical.v1.MemberDay}

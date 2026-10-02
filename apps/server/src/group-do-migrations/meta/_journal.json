@@ -22,6 +22,13 @@
       "when": 1790857859477,
       "tag": "0002_member_shifts",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790901475963,
+      "tag": "0003_member_repeat_orders",
+      "breakpoints": true
     }
   ]
 }

@@ -2,14 +2,30 @@ import { create, fromJsonString, toJsonString } from "@bufbuild/protobuf";
 
 import {
   ChangeSchema,
+  CoworkerOrderSchema,
+  CoworkerValueSchema,
   DayValueSchema,
   PatternOrderSchema,
   PatternSchema,
   PatternValueSchema,
+  RepeatOrdersSchema,
 } from "./gen/pochical/v1/sync_pb";
-import type { Change, Hlc, Pattern } from "./gen/pochical/v1/sync_pb";
+import type {
+  Change,
+  Hlc,
+  Pattern,
+  RepeatOrder,
+  RepeatOrders,
+} from "./gen/pochical/v1/sync_pb";
 import type { Clock } from "./hlc";
-import type { dayFields, patternOrder, patterns } from "./user-do-schema";
+import type {
+  coworkerOrder,
+  coworkers,
+  dayFields,
+  patternOrder,
+  patterns,
+  repeatOrders,
+} from "./user-do-schema";
 
 // The User DO's stored values as the Changes devices receive, and the
 // clocks they were written with.
@@ -17,6 +33,9 @@ import type { dayFields, patternOrder, patterns } from "./user-do-schema";
 export type DayRow = typeof dayFields.$inferSelect;
 export type PatternRow = typeof patterns.$inferSelect;
 export type OrderRow = typeof patternOrder.$inferSelect;
+export type RepeatOrdersRow = typeof repeatOrders.$inferSelect;
+export type CoworkerRow = typeof coworkers.$inferSelect;
+export type CoworkerOrderRow = typeof coworkerOrder.$inferSelect;
 
 type ClockColumns = { hlcMs: number; hlcCounter: number; hlcDevice: string };
 
@@ -39,7 +58,7 @@ export const clockColumns = (clock: Clock): ClockColumns => ({
   hlcMs: clock.ms,
 });
 
-const hlcOf = (row: ClockColumns) => ({
+export const hlcOf = (row: ClockColumns) => ({
   counter: row.hlcCounter,
   deviceId: row.hlcDevice,
   physicalMs: BigInt(row.hlcMs),
@@ -91,6 +110,53 @@ export const orderChange = (row: OrderRow): Change =>
     kind: {
       case: "patternOrder",
       value: create(PatternOrderSchema, {
+        hlc: hlcOf(row),
+        ids: parseIds(row.ids),
+      }),
+    },
+  });
+
+/** Orders as a row keeps them: the timeline's JSON, without its clock. */
+export const encodeOrders = (orders: readonly RepeatOrder[]): string =>
+  toJsonString(
+    RepeatOrdersSchema,
+    create(RepeatOrdersSchema, { orders: [...orders] })
+  );
+
+/** A stored timeline under the clock it was written with. */
+export const ordersOfRow = (
+  row: ClockColumns & { data: string }
+): RepeatOrders =>
+  create(RepeatOrdersSchema, {
+    hlc: hlcOf(row),
+    orders: fromJsonString(RepeatOrdersSchema, row.data).orders,
+  });
+
+export const repeatOrdersChange = (row: RepeatOrdersRow): Change =>
+  create(ChangeSchema, {
+    cursor: BigInt(row.cursor),
+    kind: { case: "repeatOrders", value: ordersOfRow(row) },
+  });
+
+export const coworkerChange = (row: CoworkerRow): Change =>
+  create(ChangeSchema, {
+    cursor: BigInt(row.cursor),
+    kind: {
+      case: "coworker",
+      value: create(CoworkerValueSchema, {
+        hlc: hlcOf(row),
+        id: row.id,
+        name: row.name ?? undefined,
+      }),
+    },
+  });
+
+export const coworkerOrderChange = (row: CoworkerOrderRow): Change =>
+  create(ChangeSchema, {
+    cursor: BigInt(row.cursor),
+    kind: {
+      case: "coworkerOrder",
+      value: create(CoworkerOrderSchema, {
         hlc: hlcOf(row),
         ids: parseIds(row.ids),
       }),

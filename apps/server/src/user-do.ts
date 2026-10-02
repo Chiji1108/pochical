@@ -1,11 +1,23 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { DurableObject } from "cloudflare:workers";
-import { and, asc, eq, gt, max, ne } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNotNull,
+  lt,
+  max,
+  notInArray,
+  or,
+} from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
-import { fitsField, hasKey } from "./day-values";
+import { fitsField, hasKey, isDate } from "./day-values";
 import {
   ChangesSchema,
   DayField,
@@ -13,14 +25,24 @@ import {
 } from "./gen/pochical/v1/sync_pb";
 import type {
   Change,
+  CoworkerEdits,
+  CoworkerOrder,
+  CoworkerValue,
   DayEdits,
   DayValue,
   PatternEdits,
   PatternOrder,
   PatternValue,
+  RepeatOrdersEdit,
+  RepeatOrdersEdits,
 } from "./gen/pochical/v1/sync_pb";
 import { clockAfter, compareClocks } from "./hlc";
 import type { Clock } from "./hlc";
+import {
+  fitsCoworkerName,
+  fitsCoworkerOrder,
+  fitsOrders,
+} from "./order-values";
 import { fitsOrder, fitsPattern, isId } from "./pattern-values";
 import {
   acceptSyncSocket,
@@ -32,27 +54,49 @@ import {
 } from "./sync-socket";
 import migrations from "./user-do-migrations/migrations.js";
 import {
+  coworkerOrder,
+  coworkers,
   dayFields,
   memberships,
   patternOrder,
   patterns,
+  repeatOrders,
 } from "./user-do-schema";
 import {
   clockColumns,
   clockOfHlc,
   clockOfRow,
+  coworkerChange,
+  coworkerOrderChange,
   dayChange,
+  encodeOrders,
   encodePattern,
   orderChange,
+  ordersOfRow,
   parseIds,
   patternChange,
+  repeatOrdersChange,
 } from "./user-do-values";
-import type { DayRow, OrderRow, PatternRow } from "./user-do-values";
+import type {
+  CoworkerOrderRow,
+  CoworkerRow,
+  DayRow,
+  OrderRow,
+  PatternRow,
+  RepeatOrdersRow,
+} from "./user-do-values";
 
 // Edits in one frame; an outbox sends more as several.
 const MAX_EDITS_PER_FRAME = 500;
 // Values in one push to a group.
 const VALUES_PER_PUSH = 500;
+// The day fields that stay with their owner, never pushed to groups.
+const PRIVATE_FIELDS = [DayField.NOTE, DayField.PEOPLE];
+// The fields a day gives back to a new or corrected repeating order.
+const ORDER_FIELDS = [DayField.PATTERN, DayField.START, DayField.END];
+
+const byCursor = (changes: Change[]): Change[] =>
+  changes.toSorted((a, b) => (a.cursor < b.cursor ? -1 : 1));
 
 /**
  * The clock a value is written with: the edit's own when the value fits,
@@ -63,7 +107,7 @@ const writtenClock = (clock: Clock, fits: boolean): Clock =>
 
 /**
  * One Durable Object per signed-in user, named by their better-auth user
- * id. It owns their days and their patterns, synced between their own
+ * id. It owns their days, patterns, repeating orders and coworkers, synced between their own
  * devices over their socket (spec/sync-protocol.md, Shifts), and knows
  * which groups they are in.
  */
@@ -133,14 +177,18 @@ export class UserDO extends DurableObject<Env> {
 
   /**
    * What a group sees of the user, changed after `cursor`: days' pattern
-   * and times, never the memo, and their patterns.
+   * and times, never the memo or the people, their patterns and their
+   * repeating orders.
    */
   private sharedAfter(cursor: number): Change[] {
     const days = this.db
       .select()
       .from(dayFields)
       .where(
-        and(gt(dayFields.cursor, cursor), ne(dayFields.field, DayField.NOTE))
+        and(
+          gt(dayFields.cursor, cursor),
+          notInArray(dayFields.field, PRIVATE_FIELDS)
+        )
       )
       .all();
     const kept = this.db
@@ -148,9 +196,16 @@ export class UserDO extends DurableObject<Env> {
       .from(patterns)
       .where(gt(patterns.cursor, cursor))
       .all();
-    return [...days.map(dayChange), ...kept.map(patternChange)].toSorted(
-      (a, b) => (a.cursor < b.cursor ? -1 : 1)
-    );
+    const orders = this.db
+      .select()
+      .from(repeatOrders)
+      .where(gt(repeatOrders.cursor, cursor))
+      .all();
+    return byCursor([
+      ...days.map(dayChange),
+      ...kept.map(patternChange),
+      ...orders.map(repeatOrdersChange),
+    ]);
   }
 
   private async pushTo(
@@ -178,11 +233,17 @@ export class UserDO extends DurableObject<Env> {
 
   webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): void {
     handleSyncMessage(ws, message, {
+      coworkerEdits: (socket, edits) => {
+        this.takeCoworkerEdits(socket, edits);
+      },
       dayEdits: (socket, edits) => {
         this.takeDayEdits(socket, edits);
       },
       patternEdits: (socket, edits) => {
         this.takePatternEdits(socket, edits);
+      },
+      repeatOrdersEdits: (socket, edits) => {
+        this.takeRepeatOrdersEdits(socket, edits);
       },
       welcome: (socket, cursor) => {
         this.welcome(socket, cursor);
@@ -190,23 +251,23 @@ export class UserDO extends DurableObject<Env> {
     });
   }
 
-  /** The newest cursor across days and patterns, 0 before any. */
+  /** The newest cursor across everything the user owns, 0 before any. */
   private head(): number {
     const heads = [
-      this.db
-        .select({ head: max(dayFields.cursor) })
-        .from(dayFields)
-        .get(),
-      this.db
-        .select({ head: max(patterns.cursor) })
-        .from(patterns)
-        .get(),
-      this.db
-        .select({ head: max(patternOrder.cursor) })
-        .from(patternOrder)
-        .get(),
-    ];
-    return Math.max(0, ...heads.map((row) => row?.head ?? 0));
+      dayFields,
+      patterns,
+      patternOrder,
+      repeatOrders,
+      coworkers,
+      coworkerOrder,
+    ].map(
+      (table) =>
+        this.db
+          .select({ head: max(table.cursor) })
+          .from(table)
+          .get()?.head ?? 0
+    );
+    return Math.max(0, ...heads);
   }
 
   /** Every value changed after `cursor`, in cursor order. */
@@ -227,11 +288,29 @@ export class UserDO extends DurableObject<Env> {
       .from(patternOrder)
       .where(gt(patternOrder.cursor, cursor))
       .all();
-    return [
+    const orders = this.db
+      .select()
+      .from(repeatOrders)
+      .where(gt(repeatOrders.cursor, cursor))
+      .all();
+    const people = this.db
+      .select()
+      .from(coworkers)
+      .where(gt(coworkers.cursor, cursor))
+      .all();
+    const peopleOrder = this.db
+      .select()
+      .from(coworkerOrder)
+      .where(gt(coworkerOrder.cursor, cursor))
+      .all();
+    return byCursor([
       ...days.map(dayChange),
       ...kept.map(patternChange),
       ...order.map(orderChange),
-    ].toSorted((a, b) => (a.cursor < b.cursor ? -1 : 1));
+      ...orders.map(repeatOrdersChange),
+      ...people.map(coworkerChange),
+      ...peopleOrder.map(coworkerOrderChange),
+    ]);
   }
 
   /**
@@ -252,14 +331,15 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /**
-   * Takes a frame of edits in one transaction, each given the next cursor
-   * when it changes anything; acknowledges every edit and sends what
-   * changed to every device of the user.
+   * Takes a frame of edits in one transaction, each change given the next
+   * cursor; acknowledges every edit and sends what changed to every
+   * device of the user. An edit may change nothing, one value, or several
+   * (an order and the days it takes back), from `cursor` on.
    */
   private takeEdits<Edit extends { opId: string }>(
     ws: WebSocket,
     edits: Edit[],
-    apply: (edit: Edit, cursor: number) => Change | undefined
+    apply: (edit: Edit, cursor: number) => Change | Change[] | undefined
   ): void {
     if (edits.length > MAX_EDITS_PER_FRAME) {
       rejectAndClose(
@@ -273,10 +353,11 @@ export class UserDO extends DurableObject<Env> {
       let cursor = this.head();
       const changes: Change[] = [];
       for (const edit of edits) {
-        const change = apply(edit, cursor + 1);
-        if (change) {
-          cursor = Number(change.cursor);
-          changes.push(change);
+        const made = [apply(edit, cursor + 1) ?? []].flat();
+        const last = made.at(-1);
+        if (last) {
+          cursor = Number(last.cursor);
+          changes.push(...made);
         }
       }
       return changes;
@@ -315,6 +396,29 @@ export class UserDO extends DurableObject<Env> {
       }
       if (kind.case === "order") {
         return this.applyOrder(kind.value, cursor);
+      }
+      return undefined;
+    });
+  }
+
+  /** The owner's repeating orders, each edit one whole timeline. */
+  private takeRepeatOrdersEdits(
+    ws: WebSocket,
+    { edits }: RepeatOrdersEdits
+  ): void {
+    this.takeEdits(ws, edits, (edit, cursor) =>
+      this.applyRepeatOrders(edit, cursor)
+    );
+  }
+
+  /** The owner's coworker edits, taken as their patterns are. */
+  private takeCoworkerEdits(ws: WebSocket, { edits }: CoworkerEdits): void {
+    this.takeEdits(ws, edits, ({ kind }, cursor) => {
+      if (kind.case === "coworker") {
+        return this.applyCoworker(kind.value, cursor);
+      }
+      if (kind.case === "order") {
+        return this.applyCoworkerOrder(kind.value, cursor);
       }
       return undefined;
     });
@@ -406,5 +510,161 @@ export class UserDO extends DurableObject<Env> {
       .onConflictDoUpdate({ set: row, target: patternOrder.id })
       .run();
     return orderChange(row);
+  }
+
+  /**
+   * Orders taken when newer and fitting; then, in the same transaction,
+   * the days from `clear_from` give their own pattern and times back to
+   * them, those older than the edit (spec/sync-protocol.md, Repeating
+   * orders). Orders that lose, or do not fit, clear nothing.
+   */
+  private applyRepeatOrders(
+    { clearFrom, orders: edit }: RepeatOrdersEdit,
+    cursor: number
+  ): Change[] {
+    if (!(edit?.hlc && isId(edit.hlc.deviceId))) {
+      return [];
+    }
+    const stored = this.db.select().from(repeatOrders).get();
+    const clock = clockOfHlc(edit.hlc);
+    if (stored && compareClocks(clock, clockOfRow(stored)) <= 0) {
+      return [];
+    }
+    const fits =
+      fitsOrders(edit.orders) && (clearFrom === undefined || isDate(clearFrom));
+    // Orders that do not fit leave what was stored (or none).
+    let kept = edit.orders;
+    if (!fits) {
+      kept = stored ? ordersOfRow(stored).orders : [];
+    }
+    const row: RepeatOrdersRow = {
+      ...clockColumns(writtenClock(clock, fits)),
+      cursor,
+      data: encodeOrders(kept),
+      id: 1,
+    };
+    this.db
+      .insert(repeatOrders)
+      .values(row)
+      .onConflictDoUpdate({ set: row, target: repeatOrders.id })
+      .run();
+    const changes = [repeatOrdersChange(row)];
+    if (fits && clearFrom !== undefined) {
+      changes.push(...this.giveDaysToOrders(clearFrom, row, cursor + 1));
+    }
+    return changes;
+  }
+
+  /**
+   * Clears the own pattern and times of the days from `from` whose values
+   * are older than the orders' clock, each at the next cursor.
+   */
+  private giveDaysToOrders(
+    from: string,
+    orders: RepeatOrdersRow,
+    cursor: number
+  ): Change[] {
+    const clock = clockOfRow(orders);
+    const older = or(
+      lt(dayFields.hlcMs, clock.ms),
+      and(
+        eq(dayFields.hlcMs, clock.ms),
+        lt(dayFields.hlcCounter, clock.counter)
+      ),
+      and(
+        eq(dayFields.hlcMs, clock.ms),
+        eq(dayFields.hlcCounter, clock.counter),
+        lt(dayFields.hlcDevice, clock.device)
+      )
+    );
+    const owned = this.db
+      .select()
+      .from(dayFields)
+      .where(
+        and(
+          gte(dayFields.date, from),
+          inArray(dayFields.field, ORDER_FIELDS),
+          isNotNull(dayFields.value),
+          older
+        )
+      )
+      .orderBy(asc(dayFields.date), asc(dayFields.field))
+      .all();
+    return owned.map((stored, index) => {
+      const row: DayRow = {
+        ...clockColumns(clock),
+        cursor: cursor + index,
+        date: stored.date,
+        field: stored.field,
+        value: null,
+      };
+      this.db
+        .update(dayFields)
+        .set(row)
+        .where(
+          and(eq(dayFields.date, row.date), eq(dayFields.field, row.field))
+        )
+        .run();
+      return dayChange(row);
+    });
+  }
+
+  private applyCoworker(
+    edit: CoworkerValue,
+    cursor: number
+  ): Change | undefined {
+    if (!(isId(edit.id) && edit.hlc && isId(edit.hlc.deviceId))) {
+      return undefined;
+    }
+    const stored = this.db
+      .select()
+      .from(coworkers)
+      .where(eq(coworkers.id, edit.id))
+      .get();
+    const clock = clockOfHlc(edit.hlc);
+    if (stored && compareClocks(clock, clockOfRow(stored)) <= 0) {
+      return undefined;
+    }
+    const fits = edit.name === undefined || fitsCoworkerName(edit.name);
+    const row: CoworkerRow = {
+      ...clockColumns(writtenClock(clock, fits)),
+      cursor,
+      id: edit.id,
+      name: fits ? (edit.name ?? null) : (stored?.name ?? null),
+    };
+    this.db
+      .insert(coworkers)
+      .values(row)
+      .onConflictDoUpdate({ set: row, target: coworkers.id })
+      .run();
+    return coworkerChange(row);
+  }
+
+  private applyCoworkerOrder(
+    edit: CoworkerOrder,
+    cursor: number
+  ): Change | undefined {
+    if (!(edit.hlc && isId(edit.hlc.deviceId))) {
+      return undefined;
+    }
+    const stored = this.db.select().from(coworkerOrder).get();
+    const clock = clockOfHlc(edit.hlc);
+    if (stored && compareClocks(clock, clockOfRow(stored)) <= 0) {
+      return undefined;
+    }
+    const fits = fitsCoworkerOrder(edit.ids);
+    const ids = fits ? edit.ids : parseIds(stored?.ids ?? "[]");
+    const row: CoworkerOrderRow = {
+      ...clockColumns(writtenClock(clock, fits)),
+      cursor,
+      id: 1,
+      ids: JSON.stringify(ids),
+    };
+    this.db
+      .insert(coworkerOrder)
+      .values(row)
+      .onConflictDoUpdate({ set: row, target: coworkerOrder.id })
+      .run();
+    return coworkerOrderChange(row);
   }
 }

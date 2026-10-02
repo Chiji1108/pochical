@@ -30,6 +30,10 @@ public  final class Change extends
     PATTERN_ORDER(4),
     MEMBER_DAY(5),
     MEMBER_PATTERN(6),
+    REPEAT_ORDERS(7),
+    COWORKER(8),
+    COWORKER_ORDER(9),
+    MEMBER_REPEAT_ORDERS(10),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -50,6 +54,10 @@ public  final class Change extends
         case 4: return PATTERN_ORDER;
         case 5: return MEMBER_DAY;
         case 6: return MEMBER_PATTERN;
+        case 7: return REPEAT_ORDERS;
+        case 8: return COWORKER;
+        case 9: return COWORKER_ORDER;
+        case 10: return MEMBER_REPEAT_ORDERS;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -367,6 +375,231 @@ public  final class Change extends
    */
   private void clearMemberPattern() {
     if (kindCase_ == 6) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int REPEAT_ORDERS_FIELD_NUMBER = 7;
+  /**
+   * <code>.pochical.v1.RepeatOrders repeat_orders = 7 [json_name = "repeatOrders"];</code>
+   */
+  @java.lang.Override
+  public boolean hasRepeatOrders() {
+    return kindCase_ == 7;
+  }
+  /**
+   * <code>.pochical.v1.RepeatOrders repeat_orders = 7 [json_name = "repeatOrders"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.RepeatOrders getRepeatOrders() {
+    if (kindCase_ == 7) {
+       return (app.pochical.v1.RepeatOrders) kind_;
+    }
+    return app.pochical.v1.RepeatOrders.getDefaultInstance();
+  }
+  /**
+   * <code>.pochical.v1.RepeatOrders repeat_orders = 7 [json_name = "repeatOrders"];</code>
+   */
+  private void setRepeatOrders(app.pochical.v1.RepeatOrders value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 7;
+  }
+  /**
+   * <code>.pochical.v1.RepeatOrders repeat_orders = 7 [json_name = "repeatOrders"];</code>
+   */
+  private void mergeRepeatOrders(app.pochical.v1.RepeatOrders value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 7 &&
+        kind_ != app.pochical.v1.RepeatOrders.getDefaultInstance()) {
+      kind_ = app.pochical.v1.RepeatOrders.newBuilder((app.pochical.v1.RepeatOrders) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 7;
+  }
+  /**
+   * <code>.pochical.v1.RepeatOrders repeat_orders = 7 [json_name = "repeatOrders"];</code>
+   */
+  private void clearRepeatOrders() {
+    if (kindCase_ == 7) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int COWORKER_FIELD_NUMBER = 8;
+  /**
+   * <code>.pochical.v1.CoworkerValue coworker = 8 [json_name = "coworker"];</code>
+   */
+  @java.lang.Override
+  public boolean hasCoworker() {
+    return kindCase_ == 8;
+  }
+  /**
+   * <code>.pochical.v1.CoworkerValue coworker = 8 [json_name = "coworker"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.CoworkerValue getCoworker() {
+    if (kindCase_ == 8) {
+       return (app.pochical.v1.CoworkerValue) kind_;
+    }
+    return app.pochical.v1.CoworkerValue.getDefaultInstance();
+  }
+  /**
+   * <code>.pochical.v1.CoworkerValue coworker = 8 [json_name = "coworker"];</code>
+   */
+  private void setCoworker(app.pochical.v1.CoworkerValue value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 8;
+  }
+  /**
+   * <code>.pochical.v1.CoworkerValue coworker = 8 [json_name = "coworker"];</code>
+   */
+  private void mergeCoworker(app.pochical.v1.CoworkerValue value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 8 &&
+        kind_ != app.pochical.v1.CoworkerValue.getDefaultInstance()) {
+      kind_ = app.pochical.v1.CoworkerValue.newBuilder((app.pochical.v1.CoworkerValue) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 8;
+  }
+  /**
+   * <code>.pochical.v1.CoworkerValue coworker = 8 [json_name = "coworker"];</code>
+   */
+  private void clearCoworker() {
+    if (kindCase_ == 8) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int COWORKER_ORDER_FIELD_NUMBER = 9;
+  /**
+   * <code>.pochical.v1.CoworkerOrder coworker_order = 9 [json_name = "coworkerOrder"];</code>
+   */
+  @java.lang.Override
+  public boolean hasCoworkerOrder() {
+    return kindCase_ == 9;
+  }
+  /**
+   * <code>.pochical.v1.CoworkerOrder coworker_order = 9 [json_name = "coworkerOrder"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.CoworkerOrder getCoworkerOrder() {
+    if (kindCase_ == 9) {
+       return (app.pochical.v1.CoworkerOrder) kind_;
+    }
+    return app.pochical.v1.CoworkerOrder.getDefaultInstance();
+  }
+  /**
+   * <code>.pochical.v1.CoworkerOrder coworker_order = 9 [json_name = "coworkerOrder"];</code>
+   */
+  private void setCoworkerOrder(app.pochical.v1.CoworkerOrder value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 9;
+  }
+  /**
+   * <code>.pochical.v1.CoworkerOrder coworker_order = 9 [json_name = "coworkerOrder"];</code>
+   */
+  private void mergeCoworkerOrder(app.pochical.v1.CoworkerOrder value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 9 &&
+        kind_ != app.pochical.v1.CoworkerOrder.getDefaultInstance()) {
+      kind_ = app.pochical.v1.CoworkerOrder.newBuilder((app.pochical.v1.CoworkerOrder) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 9;
+  }
+  /**
+   * <code>.pochical.v1.CoworkerOrder coworker_order = 9 [json_name = "coworkerOrder"];</code>
+   */
+  private void clearCoworkerOrder() {
+    if (kindCase_ == 9) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int MEMBER_REPEAT_ORDERS_FIELD_NUMBER = 10;
+  /**
+   * <pre>
+   * On a Group DO socket: a member's repeating orders, so the group works
+   * their days out as their own devices do.
+   * </pre>
+   *
+   * <code>.pochical.v1.MemberRepeatOrders member_repeat_orders = 10 [json_name = "memberRepeatOrders"];</code>
+   */
+  @java.lang.Override
+  public boolean hasMemberRepeatOrders() {
+    return kindCase_ == 10;
+  }
+  /**
+   * <pre>
+   * On a Group DO socket: a member's repeating orders, so the group works
+   * their days out as their own devices do.
+   * </pre>
+   *
+   * <code>.pochical.v1.MemberRepeatOrders member_repeat_orders = 10 [json_name = "memberRepeatOrders"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.MemberRepeatOrders getMemberRepeatOrders() {
+    if (kindCase_ == 10) {
+       return (app.pochical.v1.MemberRepeatOrders) kind_;
+    }
+    return app.pochical.v1.MemberRepeatOrders.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * On a Group DO socket: a member's repeating orders, so the group works
+   * their days out as their own devices do.
+   * </pre>
+   *
+   * <code>.pochical.v1.MemberRepeatOrders member_repeat_orders = 10 [json_name = "memberRepeatOrders"];</code>
+   */
+  private void setMemberRepeatOrders(app.pochical.v1.MemberRepeatOrders value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 10;
+  }
+  /**
+   * <pre>
+   * On a Group DO socket: a member's repeating orders, so the group works
+   * their days out as their own devices do.
+   * </pre>
+   *
+   * <code>.pochical.v1.MemberRepeatOrders member_repeat_orders = 10 [json_name = "memberRepeatOrders"];</code>
+   */
+  private void mergeMemberRepeatOrders(app.pochical.v1.MemberRepeatOrders value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 10 &&
+        kind_ != app.pochical.v1.MemberRepeatOrders.getDefaultInstance()) {
+      kind_ = app.pochical.v1.MemberRepeatOrders.newBuilder((app.pochical.v1.MemberRepeatOrders) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 10;
+  }
+  /**
+   * <pre>
+   * On a Group DO socket: a member's repeating orders, so the group works
+   * their days out as their own devices do.
+   * </pre>
+   *
+   * <code>.pochical.v1.MemberRepeatOrders member_repeat_orders = 10 [json_name = "memberRepeatOrders"];</code>
+   */
+  private void clearMemberRepeatOrders() {
+    if (kindCase_ == 10) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -784,6 +1017,228 @@ public  final class Change extends
       return this;
     }
 
+    /**
+     * <code>.pochical.v1.RepeatOrders repeat_orders = 7 [json_name = "repeatOrders"];</code>
+     */
+    @java.lang.Override
+    public boolean hasRepeatOrders() {
+      return instance.hasRepeatOrders();
+    }
+    /**
+     * <code>.pochical.v1.RepeatOrders repeat_orders = 7 [json_name = "repeatOrders"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.RepeatOrders getRepeatOrders() {
+      return instance.getRepeatOrders();
+    }
+    /**
+     * <code>.pochical.v1.RepeatOrders repeat_orders = 7 [json_name = "repeatOrders"];</code>
+     */
+    public Builder setRepeatOrders(app.pochical.v1.RepeatOrders value) {
+      copyOnWrite();
+      instance.setRepeatOrders(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.RepeatOrders repeat_orders = 7 [json_name = "repeatOrders"];</code>
+     */
+    public Builder setRepeatOrders(
+        app.pochical.v1.RepeatOrders.Builder builderForValue) {
+      copyOnWrite();
+      instance.setRepeatOrders(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.RepeatOrders repeat_orders = 7 [json_name = "repeatOrders"];</code>
+     */
+    public Builder mergeRepeatOrders(app.pochical.v1.RepeatOrders value) {
+      copyOnWrite();
+      instance.mergeRepeatOrders(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.RepeatOrders repeat_orders = 7 [json_name = "repeatOrders"];</code>
+     */
+    public Builder clearRepeatOrders() {
+      copyOnWrite();
+      instance.clearRepeatOrders();
+      return this;
+    }
+
+    /**
+     * <code>.pochical.v1.CoworkerValue coworker = 8 [json_name = "coworker"];</code>
+     */
+    @java.lang.Override
+    public boolean hasCoworker() {
+      return instance.hasCoworker();
+    }
+    /**
+     * <code>.pochical.v1.CoworkerValue coworker = 8 [json_name = "coworker"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.CoworkerValue getCoworker() {
+      return instance.getCoworker();
+    }
+    /**
+     * <code>.pochical.v1.CoworkerValue coworker = 8 [json_name = "coworker"];</code>
+     */
+    public Builder setCoworker(app.pochical.v1.CoworkerValue value) {
+      copyOnWrite();
+      instance.setCoworker(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.CoworkerValue coworker = 8 [json_name = "coworker"];</code>
+     */
+    public Builder setCoworker(
+        app.pochical.v1.CoworkerValue.Builder builderForValue) {
+      copyOnWrite();
+      instance.setCoworker(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.CoworkerValue coworker = 8 [json_name = "coworker"];</code>
+     */
+    public Builder mergeCoworker(app.pochical.v1.CoworkerValue value) {
+      copyOnWrite();
+      instance.mergeCoworker(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.CoworkerValue coworker = 8 [json_name = "coworker"];</code>
+     */
+    public Builder clearCoworker() {
+      copyOnWrite();
+      instance.clearCoworker();
+      return this;
+    }
+
+    /**
+     * <code>.pochical.v1.CoworkerOrder coworker_order = 9 [json_name = "coworkerOrder"];</code>
+     */
+    @java.lang.Override
+    public boolean hasCoworkerOrder() {
+      return instance.hasCoworkerOrder();
+    }
+    /**
+     * <code>.pochical.v1.CoworkerOrder coworker_order = 9 [json_name = "coworkerOrder"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.CoworkerOrder getCoworkerOrder() {
+      return instance.getCoworkerOrder();
+    }
+    /**
+     * <code>.pochical.v1.CoworkerOrder coworker_order = 9 [json_name = "coworkerOrder"];</code>
+     */
+    public Builder setCoworkerOrder(app.pochical.v1.CoworkerOrder value) {
+      copyOnWrite();
+      instance.setCoworkerOrder(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.CoworkerOrder coworker_order = 9 [json_name = "coworkerOrder"];</code>
+     */
+    public Builder setCoworkerOrder(
+        app.pochical.v1.CoworkerOrder.Builder builderForValue) {
+      copyOnWrite();
+      instance.setCoworkerOrder(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.CoworkerOrder coworker_order = 9 [json_name = "coworkerOrder"];</code>
+     */
+    public Builder mergeCoworkerOrder(app.pochical.v1.CoworkerOrder value) {
+      copyOnWrite();
+      instance.mergeCoworkerOrder(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.CoworkerOrder coworker_order = 9 [json_name = "coworkerOrder"];</code>
+     */
+    public Builder clearCoworkerOrder() {
+      copyOnWrite();
+      instance.clearCoworkerOrder();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * On a Group DO socket: a member's repeating orders, so the group works
+     * their days out as their own devices do.
+     * </pre>
+     *
+     * <code>.pochical.v1.MemberRepeatOrders member_repeat_orders = 10 [json_name = "memberRepeatOrders"];</code>
+     */
+    @java.lang.Override
+    public boolean hasMemberRepeatOrders() {
+      return instance.hasMemberRepeatOrders();
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: a member's repeating orders, so the group works
+     * their days out as their own devices do.
+     * </pre>
+     *
+     * <code>.pochical.v1.MemberRepeatOrders member_repeat_orders = 10 [json_name = "memberRepeatOrders"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.MemberRepeatOrders getMemberRepeatOrders() {
+      return instance.getMemberRepeatOrders();
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: a member's repeating orders, so the group works
+     * their days out as their own devices do.
+     * </pre>
+     *
+     * <code>.pochical.v1.MemberRepeatOrders member_repeat_orders = 10 [json_name = "memberRepeatOrders"];</code>
+     */
+    public Builder setMemberRepeatOrders(app.pochical.v1.MemberRepeatOrders value) {
+      copyOnWrite();
+      instance.setMemberRepeatOrders(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: a member's repeating orders, so the group works
+     * their days out as their own devices do.
+     * </pre>
+     *
+     * <code>.pochical.v1.MemberRepeatOrders member_repeat_orders = 10 [json_name = "memberRepeatOrders"];</code>
+     */
+    public Builder setMemberRepeatOrders(
+        app.pochical.v1.MemberRepeatOrders.Builder builderForValue) {
+      copyOnWrite();
+      instance.setMemberRepeatOrders(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: a member's repeating orders, so the group works
+     * their days out as their own devices do.
+     * </pre>
+     *
+     * <code>.pochical.v1.MemberRepeatOrders member_repeat_orders = 10 [json_name = "memberRepeatOrders"];</code>
+     */
+    public Builder mergeMemberRepeatOrders(app.pochical.v1.MemberRepeatOrders value) {
+      copyOnWrite();
+      instance.mergeMemberRepeatOrders(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: a member's repeating orders, so the group works
+     * their days out as their own devices do.
+     * </pre>
+     *
+     * <code>.pochical.v1.MemberRepeatOrders member_repeat_orders = 10 [json_name = "memberRepeatOrders"];</code>
+     */
+    public Builder clearMemberRepeatOrders() {
+      copyOnWrite();
+      instance.clearMemberRepeatOrders();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.Change)
   }
   @java.lang.Override
@@ -808,10 +1263,15 @@ public  final class Change extends
             app.pochical.v1.PatternOrder.class,
             app.pochical.v1.MemberDay.class,
             app.pochical.v1.MemberPattern.class,
+            app.pochical.v1.RepeatOrders.class,
+            app.pochical.v1.CoworkerValue.class,
+            app.pochical.v1.CoworkerOrder.class,
+            app.pochical.v1.MemberRepeatOrders.class,
           };
           java.lang.String info =
-              "\u0000\u0006\u0001\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001\u0003\u0002<\u0000" +
-              "\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000";
+              "\u0000\n\u0001\u0000\u0001\n\n\u0000\u0000\u0000\u0001\u0003\u0002<\u0000\u0003<" +
+              "\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<\u0000" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

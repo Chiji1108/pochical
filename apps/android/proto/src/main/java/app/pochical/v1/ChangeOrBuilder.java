@@ -81,5 +81,59 @@ public interface ChangeOrBuilder extends
    */
   app.pochical.v1.MemberPattern getMemberPattern();
 
+  /**
+   * <code>.pochical.v1.RepeatOrders repeat_orders = 7 [json_name = "repeatOrders"];</code>
+   * @return Whether the repeatOrders field is set.
+   */
+  boolean hasRepeatOrders();
+  /**
+   * <code>.pochical.v1.RepeatOrders repeat_orders = 7 [json_name = "repeatOrders"];</code>
+   * @return The repeatOrders.
+   */
+  app.pochical.v1.RepeatOrders getRepeatOrders();
+
+  /**
+   * <code>.pochical.v1.CoworkerValue coworker = 8 [json_name = "coworker"];</code>
+   * @return Whether the coworker field is set.
+   */
+  boolean hasCoworker();
+  /**
+   * <code>.pochical.v1.CoworkerValue coworker = 8 [json_name = "coworker"];</code>
+   * @return The coworker.
+   */
+  app.pochical.v1.CoworkerValue getCoworker();
+
+  /**
+   * <code>.pochical.v1.CoworkerOrder coworker_order = 9 [json_name = "coworkerOrder"];</code>
+   * @return Whether the coworkerOrder field is set.
+   */
+  boolean hasCoworkerOrder();
+  /**
+   * <code>.pochical.v1.CoworkerOrder coworker_order = 9 [json_name = "coworkerOrder"];</code>
+   * @return The coworkerOrder.
+   */
+  app.pochical.v1.CoworkerOrder getCoworkerOrder();
+
+  /**
+   * <pre>
+   * On a Group DO socket: a member's repeating orders, so the group works
+   * their days out as their own devices do.
+   * </pre>
+   *
+   * <code>.pochical.v1.MemberRepeatOrders member_repeat_orders = 10 [json_name = "memberRepeatOrders"];</code>
+   * @return Whether the memberRepeatOrders field is set.
+   */
+  boolean hasMemberRepeatOrders();
+  /**
+   * <pre>
+   * On a Group DO socket: a member's repeating orders, so the group works
+   * their days out as their own devices do.
+   * </pre>
+   *
+   * <code>.pochical.v1.MemberRepeatOrders member_repeat_orders = 10 [json_name = "memberRepeatOrders"];</code>
+   * @return The memberRepeatOrders.
+   */
+  app.pochical.v1.MemberRepeatOrders getMemberRepeatOrders();
+
   public app.pochical.v1.Change.KindCase getKindCase();
 }

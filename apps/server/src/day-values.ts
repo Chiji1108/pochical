@@ -11,6 +11,8 @@ const DATE = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})$/u;
 const TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/u;
 // Pattern ids and device ids are the apps' own, so only kept short.
 const MAX_ID_LENGTH = 64;
+// Far past the people anyone notes on one day.
+export const MAX_PEOPLE_A_DAY = 50;
 
 /** Whether the text is a real calendar day written "YYYY-MM-DD". */
 export const isDate = (text: string): boolean => {
@@ -33,6 +35,7 @@ const KEPT_FIELDS: ReadonlySet<number> = new Set([
   DayField.START,
   DayField.END,
   DayField.NOTE,
+  DayField.PEOPLE,
 ]);
 
 /** A field the server keeps, by its number. */
@@ -42,13 +45,25 @@ export const isDayField = (field: number): field is DayField =>
 const isId = (text: string): boolean =>
   text !== "" && text.length <= MAX_ID_LENGTH;
 
+// A day's people: coworker ids separated by single spaces, each once.
+const isPeople = (value: string): boolean => {
+  const ids = value.split(" ");
+  return (
+    ids.length <= MAX_PEOPLE_A_DAY &&
+    new Set(ids).size === ids.length &&
+    ids.every((id) => isId(id))
+  );
+};
+
 // What a set value of each field must be.
 const fits: Record<DayField, (value: string) => boolean> = {
   [DayField.UNSPECIFIED]: () => false,
-  [DayField.PATTERN]: isId,
+  // "" is a day with no shift, whatever its repeating order.
+  [DayField.PATTERN]: (value) => value === "" || isId(value),
   [DayField.START]: (value) => TIME.test(value),
   [DayField.END]: (value) => TIME.test(value),
   [DayField.NOTE]: (value) => characterCount(value) <= textLimits.dayNote,
+  [DayField.PEOPLE]: isPeople,
 };
 
 /** Whether a set value fits its field; clearing always does. */

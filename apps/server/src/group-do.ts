@@ -12,14 +12,17 @@ import migrations from "./group-do-migrations/migrations.js";
 import {
   memberDays,
   memberPatterns,
+  memberRepeatOrders,
   members,
   profile,
 } from "./group-do-schema";
 import {
   memberDayChange,
   memberPatternChange,
+  memberRepeatOrdersChange,
   takeMemberDay,
   takeMemberPattern,
+  takeMemberRepeatOrders,
 } from "./group-shifts";
 import {
   acceptSyncSocket,
@@ -165,6 +168,13 @@ export class GroupDO extends DurableObject<Env> {
           change = takeMemberDay(this.db, userId, kind.value, cursor + 1);
         } else if (kind.case === "pattern") {
           change = takeMemberPattern(this.db, userId, kind.value, cursor + 1);
+        } else if (kind.case === "repeatOrders") {
+          change = takeMemberRepeatOrders(
+            this.db,
+            userId,
+            kind.value,
+            cursor + 1
+          );
         }
         if (change) {
           cursor = Number(change.cursor);
@@ -191,6 +201,10 @@ export class GroupDO extends DurableObject<Env> {
         .select({ head: max(memberPatterns.cursor) })
         .from(memberPatterns)
         .get(),
+      this.db
+        .select({ head: max(memberRepeatOrders.cursor) })
+        .from(memberRepeatOrders)
+        .get(),
     ];
     return Math.max(0, ...heads.map((row) => row?.head ?? 0));
   }
@@ -207,9 +221,15 @@ export class GroupDO extends DurableObject<Env> {
       .from(memberPatterns)
       .where(gt(memberPatterns.cursor, cursor))
       .all();
+    const orders = this.db
+      .select()
+      .from(memberRepeatOrders)
+      .where(gt(memberRepeatOrders.cursor, cursor))
+      .all();
     return [
       ...days.map(memberDayChange),
       ...kept.map(memberPatternChange),
+      ...orders.map(memberRepeatOrdersChange),
     ].toSorted((a, b) => (a.cursor < b.cursor ? -1 : 1));
   }
 

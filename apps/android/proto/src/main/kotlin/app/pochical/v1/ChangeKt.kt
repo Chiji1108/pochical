@@ -185,6 +185,117 @@ public object ChangeKt {
     public fun hasMemberPattern(): kotlin.Boolean {
       return _builder.hasMemberPattern()
     }
+
+    /**
+     * `.pochical.v1.RepeatOrders repeat_orders = 7 [json_name = "repeatOrders"];`
+     */
+    public var repeatOrders: app.pochical.v1.RepeatOrders
+      @kotlin.jvm.JvmName("getRepeatOrders")
+        get() = _builder.repeatOrders
+      @kotlin.jvm.JvmName("setRepeatOrders")
+        set(value) {
+        _builder.repeatOrders = value
+      }
+    /**
+     * `.pochical.v1.RepeatOrders repeat_orders = 7 [json_name = "repeatOrders"];`
+     */
+    public fun clearRepeatOrders() {
+      _builder.clearRepeatOrders()
+    }
+    /**
+     * `.pochical.v1.RepeatOrders repeat_orders = 7 [json_name = "repeatOrders"];`
+     * @return Whether the repeatOrders field is set.
+     */
+    public fun hasRepeatOrders(): kotlin.Boolean {
+      return _builder.hasRepeatOrders()
+    }
+
+    /**
+     * `.pochical.v1.CoworkerValue coworker = 8 [json_name = "coworker"];`
+     */
+    public var coworker: app.pochical.v1.CoworkerValue
+      @kotlin.jvm.JvmName("getCoworker")
+        get() = _builder.coworker
+      @kotlin.jvm.JvmName("setCoworker")
+        set(value) {
+        _builder.coworker = value
+      }
+    /**
+     * `.pochical.v1.CoworkerValue coworker = 8 [json_name = "coworker"];`
+     */
+    public fun clearCoworker() {
+      _builder.clearCoworker()
+    }
+    /**
+     * `.pochical.v1.CoworkerValue coworker = 8 [json_name = "coworker"];`
+     * @return Whether the coworker field is set.
+     */
+    public fun hasCoworker(): kotlin.Boolean {
+      return _builder.hasCoworker()
+    }
+
+    /**
+     * `.pochical.v1.CoworkerOrder coworker_order = 9 [json_name = "coworkerOrder"];`
+     */
+    public var coworkerOrder: app.pochical.v1.CoworkerOrder
+      @kotlin.jvm.JvmName("getCoworkerOrder")
+        get() = _builder.coworkerOrder
+      @kotlin.jvm.JvmName("setCoworkerOrder")
+        set(value) {
+        _builder.coworkerOrder = value
+      }
+    /**
+     * `.pochical.v1.CoworkerOrder coworker_order = 9 [json_name = "coworkerOrder"];`
+     */
+    public fun clearCoworkerOrder() {
+      _builder.clearCoworkerOrder()
+    }
+    /**
+     * `.pochical.v1.CoworkerOrder coworker_order = 9 [json_name = "coworkerOrder"];`
+     * @return Whether the coworkerOrder field is set.
+     */
+    public fun hasCoworkerOrder(): kotlin.Boolean {
+      return _builder.hasCoworkerOrder()
+    }
+
+    /**
+     * ```
+     * On a Group DO socket: a member's repeating orders, so the group works
+     * their days out as their own devices do.
+     * ```
+     *
+     * `.pochical.v1.MemberRepeatOrders member_repeat_orders = 10 [json_name = "memberRepeatOrders"];`
+     */
+    public var memberRepeatOrders: app.pochical.v1.MemberRepeatOrders
+      @kotlin.jvm.JvmName("getMemberRepeatOrders")
+        get() = _builder.memberRepeatOrders
+      @kotlin.jvm.JvmName("setMemberRepeatOrders")
+        set(value) {
+        _builder.memberRepeatOrders = value
+      }
+    /**
+     * ```
+     * On a Group DO socket: a member's repeating orders, so the group works
+     * their days out as their own devices do.
+     * ```
+     *
+     * `.pochical.v1.MemberRepeatOrders member_repeat_orders = 10 [json_name = "memberRepeatOrders"];`
+     */
+    public fun clearMemberRepeatOrders() {
+      _builder.clearMemberRepeatOrders()
+    }
+    /**
+     * ```
+     * On a Group DO socket: a member's repeating orders, so the group works
+     * their days out as their own devices do.
+     * ```
+     *
+     * `.pochical.v1.MemberRepeatOrders member_repeat_orders = 10 [json_name = "memberRepeatOrders"];`
+     * @return Whether the memberRepeatOrders field is set.
+     */
+    public fun hasMemberRepeatOrders(): kotlin.Boolean {
+      return _builder.hasMemberRepeatOrders()
+    }
     public val kindCase: app.pochical.v1.Change.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -211,4 +322,16 @@ public val app.pochical.v1.ChangeOrBuilder.memberDayOrNull: app.pochical.v1.Memb
 
 public val app.pochical.v1.ChangeOrBuilder.memberPatternOrNull: app.pochical.v1.MemberPattern?
   get() = if (hasMemberPattern()) getMemberPattern() else null
+
+public val app.pochical.v1.ChangeOrBuilder.repeatOrdersOrNull: app.pochical.v1.RepeatOrders?
+  get() = if (hasRepeatOrders()) getRepeatOrders() else null
+
+public val app.pochical.v1.ChangeOrBuilder.coworkerOrNull: app.pochical.v1.CoworkerValue?
+  get() = if (hasCoworker()) getCoworker() else null
+
+public val app.pochical.v1.ChangeOrBuilder.coworkerOrderOrNull: app.pochical.v1.CoworkerOrder?
+  get() = if (hasCoworkerOrder()) getCoworkerOrder() else null
+
+public val app.pochical.v1.ChangeOrBuilder.memberRepeatOrdersOrNull: app.pochical.v1.MemberRepeatOrders?
+  get() = if (hasMemberRepeatOrders()) getMemberRepeatOrders() else null
 

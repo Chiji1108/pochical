@@ -13,7 +13,7 @@ public inline fun memberDay(block: app.pochical.v1.MemberDayKt.Dsl.() -> kotlin.
 /**
  * ```
  * One field of a member's day, as the group sees it: pattern and times,
- * never the memo.
+ * never the memo or the people.
  * ```
  *
  * Protobuf type `pochical.v1.MemberDay`

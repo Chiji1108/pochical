@@ -70,5 +70,45 @@ public interface ClientFrameOrBuilder extends
    */
   app.pochical.v1.PatternEdits getPatternEdits();
 
+  /**
+   * <pre>
+   * The owner's repeating orders, from the same outbox; User DO socket
+   * only.
+   * </pre>
+   *
+   * <code>.pochical.v1.RepeatOrdersEdits repeat_orders_edits = 5 [json_name = "repeatOrdersEdits"];</code>
+   * @return Whether the repeatOrdersEdits field is set.
+   */
+  boolean hasRepeatOrdersEdits();
+  /**
+   * <pre>
+   * The owner's repeating orders, from the same outbox; User DO socket
+   * only.
+   * </pre>
+   *
+   * <code>.pochical.v1.RepeatOrdersEdits repeat_orders_edits = 5 [json_name = "repeatOrdersEdits"];</code>
+   * @return The repeatOrdersEdits.
+   */
+  app.pochical.v1.RepeatOrdersEdits getRepeatOrdersEdits();
+
+  /**
+   * <pre>
+   * The owner's coworkers, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.CoworkerEdits coworker_edits = 6 [json_name = "coworkerEdits"];</code>
+   * @return Whether the coworkerEdits field is set.
+   */
+  boolean hasCoworkerEdits();
+  /**
+   * <pre>
+   * The owner's coworkers, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.CoworkerEdits coworker_edits = 6 [json_name = "coworkerEdits"];</code>
+   * @return The coworkerEdits.
+   */
+  app.pochical.v1.CoworkerEdits getCoworkerEdits();
+
   public app.pochical.v1.ClientFrame.KindCase getKindCase();
 }
