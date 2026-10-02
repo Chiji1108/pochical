@@ -23,7 +23,6 @@ import {
   useContext,
   useEffect,
   useEffectEvent,
-  useId,
   useLayoutEffect,
   useRef,
   useState,
@@ -81,7 +80,13 @@ import {
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import { DesignSettings } from "./design-settings";
 import type { SettingsPage } from "./design-settings";
-import { PhoneContext, Sheet, SheetHeading, sheetBody } from "./design-sheet";
+import {
+  ConfirmDialog,
+  PhoneContext,
+  Sheet,
+  SheetHeading,
+  sheetBody,
+} from "./design-sheet";
 import { surpriseStyles, useSurprise } from "./design-surprise";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
@@ -91,19 +96,24 @@ import {
   Button,
   Chip,
   ChipGroup,
-  ChoiceGrid,
-  ChoiceChip,
   DAY_ROW_GAP,
   DAY_ROW_HEIGHT,
   dayGrid,
+  DestructiveButton,
   dayGridHeight,
   DoneButton,
   IconMenu,
   LimitedInput,
+  LimitedTextArea,
+  List,
+  ListRow,
+  listRow,
   MenuItem,
+  MenuPicker,
   MONTH_WEEKS,
   PageDots,
   Pager,
+  PullDownMenu,
   Screen,
   srOnly,
   SummaryRow,
@@ -828,6 +838,7 @@ export function DesignCalendar({
                         {formatDay(detailDate)}
                       </h4>
                       <DayDetail
+                        key={dateKey(detailDate)}
                         entry={schedule[dateKey(detailDate)]}
                         members={members}
                         onChange={(entry) => {
@@ -1130,8 +1141,8 @@ const calendarPage = {
     // than pulling the screen.
     overscrollBehaviorY: "contain",
     paddingBottom: "12px",
-    paddingLeft: "calc(var(--screen-left) + 8px)",
-    paddingRight: "calc(var(--screen-right) + 8px)",
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
     paddingTop: "16px",
   }),
   detailDate: css({ fontWeight: 600, margin: "0 0 16px", textStyle: "title3" }),
@@ -2016,52 +2027,60 @@ function ShiftInputControls({
   );
 }
 
-// A day opened in the week: its shift as chips, then its time, the people
-// working it and a memo, each a labelled row, and a way to clear it.
+// A day opened in the week, read before it is changed: its shift, time,
+// the people working it and its memo as a list's rows, each saying what
+// the day holds. A row is changed where it is, as iOS's forms do: the
+// shift from a pull-down, as one is picked in a Form's menu Picker, the
+// time by its pills, the people by chips unfolded under their row (more
+// than one, and a name may be added), and the memo in its own field.
+// Nothing changes on a stray tap, as it did when every shift was a chip
+// on show.
 const dayDetail = {
-  delete: css({
-    alignItems: "center",
-    alignSelf: "center",
-    bg: "transparent",
-    border: 0,
-    borderRadius: "lg",
-    color: "danger.default",
-    display: "flex",
-    gap: "4px",
-    minHeight: "touch",
-    padding: "0 16px",
-    textStyle: "caption",
+  // The people's chips, unfolded under their row inside the list, with a line above
+  // as between rows; marked as a row so the row after it draws its own.
+  unfolded: css({
+    "&::before": {
+      borderTop: "1px solid token(colors.separator)",
+      content: '""',
+      left: "16px",
+      position: "absolute",
+      right: "16px",
+      top: 0,
+    },
+    padding: "12px 16px 16px",
+    position: "relative",
   }),
-  empty: css({ color: "text.quaternary", margin: 0, textStyle: "footnote" }),
-  hint: css({ color: "text.quaternary", margin: 0, textStyle: "caption" }),
-  label: css({ color: "text.tertiary", textStyle: "footnote" }),
-  // The legend floats, so the fieldset lays it out like the other rows'
-  // labels.
-  legend: css({ float: "left", padding: "0 0 8px", width: "100%" }),
+  disclosure: css({ transition: "transform 0.2s" }),
+  disclosureOpen: css({ transform: "rotate(90deg)" }),
   memberInput: css({ width: "88px" }),
-  members: css({ border: 0, margin: 0, padding: 0 }),
-  patterns: css({
-    border: 0,
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
-    margin: 0,
-    padding: 0,
+  memo: css({
+    "--lines": "5",
+    "--pad-x": "16px",
+    "--pad-y": "14px",
+    color: "text.primary",
+    textStyle: "body",
   }),
-  reset: css({
-    bg: "transparent",
-    border: 0,
-    color: "accent.default",
-    marginLeft: "8px",
-    padding: "4px 8px",
-    textDecoration: "underline",
-    textStyle: "caption",
-  }),
-  root: css({ display: "flex", flexDirection: "column", gap: "20px" }),
-  row: css({ display: "flex", flexDirection: "column", gap: "8px" }),
+  // An action on its row, in the accent as iOS's text buttons in a list.
+  reset: css({ "& > *": { color: "accent.default" } }),
+  root: css({ display: "flex", flexDirection: "column", gap: "24px" }),
 };
 
-function MemberField({
+// The chevron of a row that unfolds in place, turned down while it is open.
+function Disclosure({ open }: { open: boolean }) {
+  return (
+    <ChevronRight
+      aria-hidden="true"
+      className={cx(
+        listRow.arrow,
+        dayDetail.disclosure,
+        open && dayDetail.disclosureOpen
+      )}
+      size={17}
+    />
+  );
+}
+
+function MemberChips({
   members,
   selected,
   onChange,
@@ -2087,60 +2106,55 @@ function MemberField({
     }
   }
   return (
-    <fieldset className={cx(dayDetail.row, dayDetail.members)}>
-      <legend className={cx(dayDetail.label, dayDetail.legend)}>
-        一緒に働く人
-      </legend>
-      <ChipGroup>
-        {members.names.map((name) => (
-          <Chip
-            selected={selected.includes(name)}
-            key={name}
-            onClick={() => {
-              onChange(
-                selected.includes(name)
-                  ? selected.filter((member) => member !== name)
-                  : [...selected, name]
-              );
-            }}
-          >
-            {selected.includes(name) && <Check aria-hidden="true" size={12} />}
-            {name}
-          </Chip>
-        ))}
-        {adding ? (
-          <LimitedInput
-            aria-label="追加する人の名前"
-            autoFocus
-            className={dayDetail.memberInput}
-            look="chip"
-            counter={false}
-            kind="personName"
-            onBlur={(event) => {
+    <ChipGroup>
+      {members.names.map((name) => (
+        <Chip
+          selected={selected.includes(name)}
+          key={name}
+          onClick={() => {
+            onChange(
+              selected.includes(name)
+                ? selected.filter((member) => member !== name)
+                : [...selected, name]
+            );
+          }}
+        >
+          {selected.includes(name) && <Check aria-hidden="true" size={12} />}
+          {name}
+        </Chip>
+      ))}
+      {adding ? (
+        <LimitedInput
+          aria-label="追加する人の名前"
+          autoFocus
+          className={dayDetail.memberInput}
+          look="chip"
+          counter={false}
+          kind="personName"
+          onBlur={(event) => {
+            add(event.currentTarget.value);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !composing(event)) {
               add(event.currentTarget.value);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !composing(event)) {
-                add(event.currentTarget.value);
-              } else if (event.key === "Escape") {
-                setAdding(false);
-              }
-            }}
-            placeholder="名前"
-          />
-        ) : (
-          <Chip
-            onClick={() => {
-              setAdding(true);
-            }}
-            variant="add"
-          >
-            <Plus aria-hidden="true" size={12} />
-            {members.names.length > 0 ? "追加" : "人を追加"}
-          </Chip>
-        )}
-      </ChipGroup>
-    </fieldset>
+            } else if (event.key === "Escape") {
+              setAdding(false);
+            }
+          }}
+          placeholder="名前"
+        />
+      ) : (
+        <Chip
+          onClick={() => {
+            setAdding(true);
+          }}
+          variant="add"
+        >
+          <Plus aria-hidden="true" size={12} />
+          {members.names.length > 0 ? "追加" : "人を追加"}
+        </Chip>
+      )}
+    </ChipGroup>
   );
 }
 
@@ -2155,17 +2169,31 @@ function DayDetail({
   members: MemberOptions;
   onChange: (entry: DayEntry | undefined) => void;
 }) {
-  const noteId = useId();
   const book = usePatterns();
   const pattern = entry && book[entry.shift];
   const time = pattern?.time;
   const timeChanged = Boolean(entry?.start || entry?.end);
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
   // Said in words here, where there is room: the mark only shows a shape.
   const change = timeChangeOf(entry, pattern);
   const moves =
     [change?.early ? "早出" : "", change?.late ? "残業" : ""]
       .filter(Boolean)
       .join("・") || "変更済み";
+  const selected = entry?.members ?? [];
+  // What would go with the shift. A day with nothing more is cleared at
+  // once, as one tap brings it back; with more it is asked first.
+  const lost = [
+    timeChanged ? "時間の変更" : "",
+    selected.length > 0 ? "一緒に働く人" : "",
+    entry?.note ? "メモ" : "",
+  ].filter(Boolean);
+  function clear() {
+    setClearing(false);
+    setMembersOpen(false);
+    onChange(undefined);
+  }
   function changeTime(field: "start" | "end", value: string) {
     if (!(entry && time)) {
       return;
@@ -2178,95 +2206,122 @@ function DayDetail({
   }
   return (
     <div className={dayDetail.root}>
-      <ChoiceGrid
-        className={dayDetail.patterns}
-        label="シフト"
-        onValueChange={(key) => {
-          onChange(keepDetails(entry, key));
-        }}
-        value={entry?.shift ?? null}
-      >
-        {patternKeys.map((key) => (
-          <ChoiceChip key={key} value={key}>
-            <ShiftMark shift={key} size={14} />
-            {book[key]?.name}
-          </ChoiceChip>
-        ))}
-      </ChoiceGrid>
-      {entry ? (
-        <>
-          {time && (
-            <div className={dayDetail.row}>
-              <span className={dayDetail.label}>時間</span>
+      <List>
+        <ListRow
+          control={
+            <PullDownMenu
+              label={
+                entry ? (
+                  <>
+                    <ShiftMark shift={entry.shift} size={16} />
+                    {pattern?.name}
+                  </>
+                ) : (
+                  "なし"
+                )
+              }
+            >
+              <MenuPicker
+                onValueChange={(key) => {
+                  onChange(keepDetails(entry, key));
+                }}
+                options={patternKeys.map((key) => ({
+                  icon: <ShiftMark shift={key} size={18} />,
+                  label: book[key]?.name ?? key,
+                  value: key,
+                }))}
+                value={entry?.shift ?? ""}
+              />
+            </PullDownMenu>
+          }
+          label="シフト"
+        />
+        {entry && time && (
+          <ListRow
+            control={
               <TimeRange
                 end={entry.end ?? time[1]}
                 onChange={changeTime}
                 start={entry.start ?? time[0]}
               />
-              <p className={dayDetail.hint}>
-                {timeChanged ? (
-                  <>
-                    {moves}
-                    <button
-                      className={dayDetail.reset}
-                      onClick={() => {
-                        onChange({
-                          ...entry,
-                          end: undefined,
-                          start: undefined,
-                        });
-                      }}
-                      type="button"
-                    >
-                      標準（{timeRange({ shift: entry.shift }, pattern)}）に戻す
-                    </button>
-                  </>
-                ) : (
-                  "標準の時間"
-                )}
-              </p>
-            </div>
-          )}
-          {time && (
-            <MemberField
+            }
+            detail={timeChanged ? moves : undefined}
+            label="時間"
+          />
+        )}
+        {entry && time && timeChanged && (
+          <ListRow
+            arrow={false}
+            className={dayDetail.reset}
+            label={`標準（${timeRange({ shift: entry.shift }, pattern)}）に戻す`}
+            onClick={() => {
+              onChange({ ...entry, end: undefined, start: undefined });
+            }}
+          />
+        )}
+        {entry && time && (
+          <ListRow
+            aria-expanded={membersOpen}
+            arrow={<Disclosure open={membersOpen} />}
+            label="一緒に働く人"
+            onClick={() => {
+              setMembersOpen(!membersOpen);
+            }}
+            value={selected.length > 0 ? selected.join("、") : "なし"}
+          />
+        )}
+        {entry && time && membersOpen && (
+          <div className={dayDetail.unfolded} data-list-row="">
+            <MemberChips
               members={members}
-              onChange={(selected) => {
+              onChange={(next) => {
                 onChange({
                   ...entry,
-                  members: selected.length > 0 ? selected : undefined,
+                  members: next.length > 0 ? next : undefined,
                 });
               }}
-              selected={entry.members ?? []}
+              selected={selected}
             />
-          )}
-          <label className={dayDetail.row} htmlFor={noteId}>
-            <span className={dayDetail.label}>メモ</span>
-            <LimitedInput
-              look="box"
-              id={noteId}
-              kind="dayNote"
-              onValueChange={(note) => {
-                onChange({ ...entry, note: note || undefined });
-              }}
-              placeholder="メモを入力"
-              value={entry.note ?? ""}
-            />
-          </label>
-          <button
-            className={dayDetail.delete}
-            onClick={() => {
-              onChange(undefined);
+          </div>
+        )}
+      </List>
+      {entry && (
+        <List>
+          <LimitedTextArea
+            aria-label="メモ"
+            className={dayDetail.memo}
+            kind="dayNote"
+            onValueChange={(note) => {
+              onChange({ ...entry, note: note || undefined });
             }}
-            type="button"
-          >
-            <Trash2 aria-hidden="true" size={14} />
-            この日のシフトを消す
-          </button>
-        </>
-      ) : (
-        <p className={dayDetail.empty}>
-          シフトを選ぶと、時間やメモを入力できます。
-        </p>
+            placeholder="メモ"
+            value={entry.note ?? ""}
+          />
+        </List>
+      )}
+      {entry && (
+        <DestructiveButton
+          onClick={() => {
+            if (lost.length > 0) {
+              setClearing(true);
+            } else {
+              clear();
+            }
+          }}
+        >
+          この日のシフトを消す
+        </DestructiveButton>
+      )}
+      {clearing && (
+        <ConfirmDialog
+          action="消す"
+          message={`${lost.join("、")}も消えます。`}
+          onCancel={() => {
+            setClearing(false);
+          }}
+          onConfirm={clear}
+          title="この日のシフトを消しますか？"
+        />
       )}
     </div>
   );
