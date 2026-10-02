@@ -15,14 +15,55 @@ export type State = {
 const demo = (variants: string) =>
   `/demo?groupSample=some&inviteLink=none&memberSample=some&scanResult=invite&${variants}`;
 
+// Japanese text has a <wbr> between its phrases (apps/web/src/jsx), and
+// Playwright reads a space for each one that is not an inline box: hidden
+// in one-line text, or laid out by a flex label. So 月で見る is named
+// 月で 見る, and 一緒に働く人 一緒に 働く 人, though the same words are
+// read out. A name here, a string to match whole or a pattern, may have
+// spaces between any two of its characters, or none where it has one.
+//
+// A pattern's pieces: an escape (Bun writes the characters past ASCII as
+// \u escapes, an emoji as two), a set in [], a count in {}, or one
+// character.
+const PIECE =
+  /\\ud[89ab][\da-f]{2}\\ud[c-f][\da-f]{2}|\\u\{[\da-f]+\}|\\u[\da-f]{4}|\\.|\[(?:\\.|[^\]\\])*\]|\{\d+(?:,\d*)?\}|[^]/giu;
+const CHARACTER = /^(?:\\u|[^\\^$.*+?()[\]{}|])/u;
+const SPACE = /^\s$/u;
+const SYNTAX = /[\\^$.*+?()[\]{}|/]/gu;
+
+const spaced = (pattern: string) => {
+  const pieces = (pattern.match(PIECE) ?? []).filter(
+    (piece) => !SPACE.test(piece)
+  );
+  return pieces
+    .map((piece, index) => {
+      const next = pieces[index + 1];
+      const between =
+        next !== undefined && CHARACTER.test(piece) && CHARACTER.test(next);
+      return between ? String.raw`${piece}\s*` : piece;
+    })
+    .join("");
+};
+
+const named = (name: string | RegExp) =>
+  typeof name === "string"
+    ? new RegExp(`^${spaced(name.replace(SYNTAX, String.raw`\$&`))}$`, "u")
+    : new RegExp(spaced(name.source), name.flags);
+
 const tap = async (page: Page, name: string | RegExp) => {
-  await page.getByRole("button", { exact: true, name }).first().click();
+  await page
+    .getByRole("button", { name: named(name) })
+    .first()
+    .click();
 };
 
 // Opens a message's reactions and menu, as its long press does; a right
 // click stands in for holding a finger on it.
 const holdOn = async (page: Page, name: string | RegExp) => {
-  await page.getByRole("button", { name }).first().click({ button: "right" });
+  await page
+    .getByRole("button", { name: named(name) })
+    .first()
+    .click({ button: "right" });
 };
 
 // A step that taps one button.
@@ -33,7 +74,7 @@ const tapOn = (name: string | RegExp) => async (page: Page) => {
 // One of the save menu's ways, from the calendar's top right.
 const fromSaveMenu = async (page: Page, item: string) => {
   await tap(page, "この月のシフトを保存");
-  await page.getByRole("menuitem", { name: item }).click();
+  await page.getByRole("menuitem", { name: named(item) }).click();
 };
 
 const toGroupEdit = async (page: Page) => {
@@ -113,7 +154,7 @@ export const states: State[] = [
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, /^9月8日/u);
-      await tap(page, "日勤");
+      await tap(page, "シフト 日勤");
     },
   },
   {
@@ -121,7 +162,7 @@ export const states: State[] = [
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, /^9月8日/u);
-      await tap(page, /^一緒に\s*働く\s*人/u);
+      await tap(page, /^一緒に働く人/u);
       await tap(page, "追加");
     },
   },
@@ -499,7 +540,7 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
-      await holdOn(page, /^お母さんのメッセージ：来週の日曜/u);
+      await holdOn(page, /^お母さんのメッセージ：じゃあお店予約/u);
     },
   },
   {
@@ -508,7 +549,7 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
-      await holdOn(page, /^お母さんのメッセージ：来週の日曜/u);
+      await holdOn(page, /^お母さんのメッセージ：じゃあお店予約/u);
       await tap(page, "返信");
     },
   },
@@ -656,7 +697,7 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
-      await holdOn(page, /^お母さんのメッセージ：来週の日曜/u);
+      await holdOn(page, /^お母さんのメッセージ：じゃあお店予約/u);
       await tap(page, "通報");
       await page.getByRole("dialog", { name: "通報" }).waitFor();
     },
@@ -699,7 +740,7 @@ export const states: State[] = [
     steps: async (page) => {
       await tap(page, "グループ");
       await tap(page, /^全体チャット/u);
-      await holdOn(page, /^お母さんのメッセージ：来週の日曜/u);
+      await holdOn(page, /^お母さんのメッセージ：じゃあお店予約/u);
       await tap(page, "ピン留め");
       await page
         .getByRole("button", { name: /^ピン留め/u })
