@@ -1,0 +1,33 @@
+{
+  "about": "How long a device may wait before a try to reconnect (spec/sync-protocol.md, Reconnecting): tries counts the tries since the last Welcome, this one included; the most is firstMs doubled for each try before it, up to mostMs (socketRules.reconnectFirstMs and reconnectMostMs in design/src/socket.ts), and the device waits a time drawn at random from 0 up to that most.",
+  "waitMost": [
+    {
+      "name": "the first try",
+      "tries": 1,
+      "firstMs": 1000,
+      "mostMs": 60000,
+      "expected": 1000
+    },
+    {
+      "name": "each failed try doubles it",
+      "tries": 3,
+      "firstMs": 1000,
+      "mostMs": 60000,
+      "expected": 4000
+    },
+    {
+      "name": "up to the most",
+      "tries": 7,
+      "firstMs": 1000,
+      "mostMs": 60000,
+      "expected": 60000
+    },
+    {
+      "name": "and no further, however many tries",
+      "tries": 60,
+      "firstMs": 1000,
+      "mostMs": 60000,
+      "expected": 60000
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import { syncLimits } from "@pochical/design/limits";
+import { socketRules } from "@pochical/design/socket";
 
 import {
   ClientFrameSchema,
@@ -149,6 +150,20 @@ export const isSynced = (ws: WebSocket): boolean =>
  * Hibernation API, so an idle object costs nothing while clients stay
  * connected.
  */
+/**
+ * Has the runtime answer a device's keepalive text, so a socket kept
+ * alive does not wake a hibernating Durable Object (spec/sync-protocol.md,
+ * Keepalive). Set as each DO starts.
+ */
+export const answerKeepalive = (ctx: DurableObjectState): void => {
+  ctx.setWebSocketAutoResponse(
+    new WebSocketRequestResponsePair(
+      socketRules.keepaliveText,
+      socketRules.keepaliveReply
+    )
+  );
+};
+
 export const acceptSyncSocket = (
   ctx: DurableObjectState,
   request: Request
