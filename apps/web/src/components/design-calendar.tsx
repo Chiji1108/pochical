@@ -12,39 +12,23 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import {
-  animate,
-  motion,
-  useMotionValue,
-  useReducedMotion,
-  useTransform,
-} from "motion/react";
-import type { MotionStyle, MotionValue } from "motion/react";
-import {
-  useContext,
-  useEffect,
-  useEffectEvent,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { motion, useMotionValue, useReducedMotion } from "motion/react";
+import type { MotionValue } from "motion/react";
+import { useContext, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import {
   addDays,
   dateKey,
-  defaultHolidaysOff,
   formatDay,
-  giveDaysToOrder,
-  holidayShiftOf,
   keepDetails,
+  membersOrNone,
   timeChangeOf,
   timeRange,
   weekdays,
-  withOrder,
 } from "../lib/design-days";
-import type { DayEntry, RepeatRule, Schedule } from "../lib/design-days";
+import type { DayEntry, Schedule } from "../lib/design-days";
 import {
   bookOf,
   isDayOff,
@@ -52,24 +36,23 @@ import {
   OwnPatternsContext,
   PatternsContext,
   presetPatterns,
-  samePattern,
   usePatterns,
 } from "../lib/design-patterns";
-import type { Pattern, PatternBook, Shift } from "../lib/design-patterns";
+import type { PatternBook, Shift } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
 import { useChangeDays, useShownDays, useUser } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
-import { spring } from "../lib/motion";
+import { useWorkChanges } from "../lib/design-work-changes";
 import { composing, limitText } from "../lib/text-limits";
-import { coworkersFull } from "./design-coworkers";
-import type { Coworkers } from "./design-coworkers";
+import { coworkersFull, useCoworkerList } from "./design-coworkers";
 import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
 import { GapSheet, gapDaysIn } from "./design-gap-sheet";
 import { DesignGroup } from "./design-group";
 import type { GroupStart } from "./design-group";
 import { JoinScreen } from "./design-group-join";
+import { BreakdownSheet, useShownWith } from "./design-month-breakdown";
 import { MonthName } from "./design-month-name";
 import { MonthTitleButton, monthTitle } from "./design-month-picker";
 import { Phone } from "./design-phone";
@@ -82,13 +65,7 @@ import {
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import { DesignSettings } from "./design-settings";
 import type { SettingsPage } from "./design-settings";
-import {
-  ConfirmDialog,
-  PhoneContext,
-  Sheet,
-  SheetHeading,
-  sheetBody,
-} from "./design-sheet";
+import { ConfirmDialog, PhoneContext } from "./design-sheet";
 import { surpriseStyles, useSurprise } from "./design-surprise";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
@@ -98,11 +75,8 @@ import {
   Button,
   Chip,
   ChipGroup,
-  DAY_ROW_GAP,
-  DAY_ROW_HEIGHT,
   dayGrid,
   DestructiveButton,
-  dayGridHeight,
   DoneButton,
   IconButton,
   IconMenu,
@@ -113,7 +87,6 @@ import {
   listRow,
   MenuItem,
   MenuPicker,
-  MONTH_WEEKS,
   PageDots,
   Pager,
   PullDownMenu,
@@ -125,9 +98,8 @@ import {
   WeekdayRow,
 } from "./design-ui";
 import { useWeek } from "./design-week";
+import { FoldingGrid, useWeekFold } from "./design-week-fold";
 import { OffDisplayContext, ShiftMark } from "./shift-mark";
-
-type MemberOptions = Pick<Coworkers, "names" | "onAdd">;
 
 // One person's phone. Their data comes from the nearest UserStoreContext,
 // so two phones under one store show the same person.
@@ -162,7 +134,6 @@ export function DesignCalendar({
   // over the calendar.
   pendingInvite?: boolean;
 }) {
-  const setOwnDays = useUser((state) => state.setSchedule);
   const phoneRef = useRef<HTMLDivElement>(null);
   const { say: toast, toaster } = usePhoneToaster();
   const themeStyle = useThemeStyle();
@@ -190,17 +161,7 @@ export function DesignCalendar({
   const offDisplay = useContext(OffDisplayContext);
   const imageOptions = useSettings((state) => state.device.imageOptions);
   const setImageOptions = useSettings((state) => state.setImageOptions);
-  const [detailDate, setDetailDate] = useState(initialDetail);
-  // The row of the month the opened week is on, for the month to fold up
-  // into it and unfold back around it. It follows the week as it turns.
-  const [foldRow, setFoldRow] = useState(0);
-  // How far the month is folded into that week, 0 to 1: moved by opening
-  // and closing the week, or by the finger pulling the week back open.
-  const folded = useMotionValue(initialDetail ? 1 : 0);
-  const reduceFolding = useReducedMotion() ?? false;
-  const detailOpacity = useTransform(folded, [0.5, 1], [0, 1]);
   const coworkerNames = useUser((state) => state.coworkers);
-  const setCoworkerNames = useUser((state) => state.setCoworkers);
   const [tab, setTab] = useState<Tab>(initialTab);
   const surprise = useSurprise();
   // The group the group tab opens on, like one just joined from a link.
@@ -208,43 +169,6 @@ export function DesignCalendar({
   const profile = useUser((state) => state.profile);
   const setProfile = useUser((state) => state.setProfile);
   const rules = useUser((state) => state.rules);
-  const setRules = useUser((state) => state.setRules);
-  // Renaming or deleting someone changes the days they are on too.
-  const updateMembersOnDays = (change: (names: string[]) => string[]) => {
-    setOwnDays((previous) =>
-      Object.fromEntries(
-        Object.entries(previous).map(([key, entry]) => {
-          if (!entry?.members) {
-            return [key, entry];
-          }
-          const next = change(entry.members);
-          return [
-            key,
-            { ...entry, members: next.length > 0 ? next : undefined },
-          ];
-        })
-      )
-    );
-  };
-  const members: Coworkers = {
-    names: coworkerNames,
-    onAdd: (name) => {
-      setCoworkerNames((previous) => [...previous, name]);
-    },
-    onDelete: (name) => {
-      setCoworkerNames((previous) => previous.filter((item) => item !== name));
-      updateMembersOnDays((names) => names.filter((item) => item !== name));
-    },
-    onRename: (from, to) => {
-      setCoworkerNames((previous) =>
-        previous.map((name) => (name === from ? to : name))
-      );
-      updateMembersOnDays((names) =>
-        names.map((name) => (name === from ? to : name))
-      );
-    },
-    onReorder: setCoworkerNames,
-  };
   const [editing, setEditing] = useState(initialEditing);
   const [selectedDay, setSelectedDay] = useState(initialDay);
   // Whether the month being entered had blank days when it came up, as
@@ -257,6 +181,8 @@ export function DesignCalendar({
   // as the person's own.
   const schedule = useShownDays(month);
   const onChange = useChangeDays(month);
+  const { applyRule, changeJob, fixRule, setHolidaysOff } =
+    useWorkChanges(schedule);
   // How far the pages are dragged, -1 to 1 toward the next, which the
   // month's name follows; and the month a swipe last landed on, whose name
   // the drag has already brought in.
@@ -281,20 +207,10 @@ export function DesignCalendar({
       return shift !== undefined && isDayOff(book[shift]);
     }).length;
   const daysOff = daysOffIn(monthDays);
-  // Someone picked in 今月の内訳: the calendar shows the days they are on,
-  // the others faded, and the summary counts them in place of the days
-  // off. A name renamed or deleted since lets it go.
-  const [shownWith, setShownWith] = useState<string>();
-  const withPerson =
-    shownWith !== undefined && coworkerNames.includes(shownWith)
-      ? shownWith
-      : undefined;
-  const isWith = (name: string, date: Date) =>
-    schedule[dateKey(date)]?.members?.includes(name) ?? false;
+  // Someone picked in 今月の内訳, whose days the calendar shows.
+  const shown = useShownWith(coworkerNames, schedule);
   const summaryIn = (days: Date[]) =>
-    withPerson === undefined
-      ? daysOffIn(days)
-      : days.filter((date) => isWith(withPerson, date)).length;
+    shown.person === undefined ? daysOffIn(days) : shown.countIn(days);
   // The months beside, for the summary to follow a drag of the pages.
   const summaryBy = (by: number) => {
     const beside = new Date(month.getFullYear(), month.getMonth() + by, 1);
@@ -304,13 +220,6 @@ export function DesignCalendar({
         .filter((date) => date.getMonth() === beside.getMonth())
     );
   };
-  // Who is on this month's days, in the order of 一緒に働く人.
-  const monthCoworkers = coworkerNames
-    .map((name) => ({
-      count: monthDays.filter((date) => isWith(name, date)).length,
-      name,
-    }))
-    .filter(({ count }) => count > 0);
   const counts = ownPatterns.map((pattern) => ({
     count: monthDays.filter(
       (date) => schedule[dateKey(date)]?.shift === pattern.id
@@ -375,59 +284,29 @@ export function DesignCalendar({
       </span>
     </InputDatePicker>
   );
-  const weekDetail = !editing && detailDate !== undefined;
-  const headingMode = screenMode(editing, weekDetail);
-  function rowOf(date: Date, inMonth: Date) {
-    const index = weekTools
-      .monthDates(inMonth)
-      .findIndex((day) => dateKey(day) === dateKey(date));
-    return Math.max(0, Math.floor(index / 7));
-  }
-  // The week of the day opened on, before the screen is first drawn.
-  const foldInitial = useEffectEvent(() => {
-    if (initialDetail) {
-      setFoldRow(rowOf(initialDetail, month));
-    }
-  });
-  useLayoutEffect(() => {
-    foldInitial();
-  }, []);
-  function onMonth(date: Date) {
-    return dates.some((day) => dateKey(day) === dateKey(date));
-  }
-  // The month stays while the week opened is one of its rows, as every row
-  // holds a day of it: a day of the month before, opened from the top row,
-  // folds back into that row. Only a week off the month takes its month.
-  // The month shown once a date's week is opened.
-  function monthOpening(date: Date) {
-    return onMonth(date)
-      ? month
-      : new Date(date.getFullYear(), date.getMonth(), 1);
-  }
-  function foldTo(target: 0 | 1, velocity = 0) {
-    if (reduceFolding) {
-      folded.jump(target);
-      return;
-    }
-    animate(folded, target, { ...fold, velocity });
-  }
-  function openDetail(date: Date) {
-    setFoldRow(rowOf(date, monthOpening(date)));
-    setSwipedTo(undefined);
-    setDetailDate(date);
-    foldTo(1);
-    if (!onMonth(date)) {
-      setMonth(monthOpening(date));
-    }
-  }
-  // The months the pages beside lead to: the months before and after, or
-  // in the week view the months the weeks before and after are shown in.
-  const besideMonths = weekDetail
-    ? {
-        next: monthOpening(addDays(detailDate, 7)),
-        previous: monthOpening(addDays(detailDate, -7)),
+  const {
+    besideMonths,
+    closeDetail,
+    detailOpacity,
+    foldRow,
+    folded,
+    openDate,
+    openDetail,
+    pullRef,
+  } = useWeekFold({
+    dates,
+    editing,
+    initialDetail,
+    month,
+    onOpen: (target) => {
+      setSwipedTo(undefined);
+      if (target) {
+        setMonth(target);
       }
-    : undefined;
+    },
+  });
+  const weekDetail = openDate !== undefined;
+  const headingMode = screenMode(editing, weekDetail);
   function goToMonth(target: Date) {
     setSwipedTo(undefined);
     setMonth(target);
@@ -442,96 +321,17 @@ export function DesignCalendar({
   // Move by what is on screen: a week in the week detail, otherwise a month.
   function step(direction: 1 | -1) {
     if (weekDetail) {
-      openDetail(addDays(detailDate, direction * 7));
+      openDetail(addDays(openDate, direction * 7));
       return;
     }
     goToMonth(new Date(month.getFullYear(), month.getMonth() + direction, 1));
   }
   // Entering is about every day, so it lets go of someone's days.
   function startInput() {
-    setShownWith(undefined);
+    shown.show(undefined);
     setSelectedDay(1);
     setEnteredBlank(unfilled > 0);
     setEditing(true);
-  }
-  // From its start, the new order shows in place of the one before: the
-  // days give their own shifts and times back to it, keeping memos and
-  // people, and an empty sequence leaves a roster to fill in. A new job
-  // brings its own patterns, so it passes them in.
-  function fillRule(rule: RepeatRule, patterns = ownPatterns) {
-    const holidaysOff =
-      rule.sequence.length > 0 &&
-      (rule.holidaysOff ??
-        defaultHolidaysOff(
-          rule.sequence,
-          rule.anchor ?? rule.start,
-          bookOf(patterns)
-        ));
-    const holidayShift = holidaysOff ? holidayShiftOf(patterns) : undefined;
-    setOwnDays((previous) => giveDaysToOrder(previous, rule.start));
-    return rule.sequence.length > 0
-      ? { ...rule, holidayShift, holidaysOff }
-      : rule;
-  }
-  function applyRule(rule: RepeatRule, patterns?: Pattern[]) {
-    const filled = fillRule(rule, patterns);
-    setRules((previous) => withOrder(previous, filled));
-  }
-  // Corrects the rule in use from its own start, rather than adding one.
-  function fixRule(rule: RepeatRule) {
-    const filled = fillRule(rule);
-    setRules((previous) => withOrder(previous.slice(0, -1), filled));
-  }
-  // The new job's patterns take over, keeping any old one still on a day
-  // before the switch so those days keep their marks. A ready-made one the
-  // person has changed, still on those days, stays theirs; the new job's
-  // comes in under an id of its own, and its order uses that.
-  function changeJob(job: { patterns: Pattern[]; rule: RepeatRule }) {
-    const from = dateKey(job.rule.start);
-    const usedBefore = (id: string) =>
-      Object.entries(schedule).some(
-        ([key, entry]) => key < from && entry?.shift === id
-      );
-    const renamed = new Map<string, string>();
-    for (const pattern of job.patterns) {
-      const own = ownPatterns.find((item) => item.id === pattern.id);
-      if (own && usedBefore(own.id) && !samePattern(own, pattern)) {
-        renamed.set(pattern.id, crypto.randomUUID());
-      }
-    }
-    const renameOf = (id: string) => renamed.get(id) ?? id;
-    const incoming = job.patterns.map((pattern) => ({
-      ...pattern,
-      id: renameOf(pattern.id),
-      nextDay: pattern.nextDay && renameOf(pattern.nextDay),
-    }));
-    const kept = ownPatterns.filter(
-      (pattern) =>
-        !incoming.some((next) => next.id === pattern.id) &&
-        usedBefore(pattern.id)
-    );
-    const patterns = [...incoming, ...kept];
-    setPatterns(patterns);
-    applyRule(
-      { ...job.rule, sequence: job.rule.sequence.map(renameOf) },
-      patterns
-    );
-  }
-  // Holidays follow the order in use: on, they take the day off now first;
-  // off, they show the sequence again. Days the person changed keep theirs.
-  function setHolidaysOff(holidaysOff: boolean) {
-    const rule = rules.at(-1);
-    if (!rule) {
-      return;
-    }
-    const holidayShift = holidaysOff ? holidayShiftOf(ownPatterns) : undefined;
-    if (holidaysOff && !holidayShift) {
-      return;
-    }
-    setRules((previous) => [
-      ...previous.slice(0, -1),
-      { ...rule, holidayShift, holidaysOff },
-    ]);
   }
   function openSave(completion: boolean, toCalendar = false) {
     setSaveCompletion(completion);
@@ -571,35 +371,6 @@ export function DesignCalendar({
       openSave(true);
     }
   }
-  // With the speed the finger let go at, when it pulled the week open.
-  function closeDetail(velocity = 0) {
-    setDetailDate(undefined);
-    foldTo(0, velocity);
-  }
-  // How far the month unfolds below the week: the finger pulling it open
-  // brings the month's foot down with it.
-  const unfoldDistance =
-    dayGridHeight(Math.max(dates.length / 7, MONTH_WEEKS)) - dayGridHeight(1);
-  const pullRef = usePullDown({
-    enabled: weekDetail,
-    // Jumped, so a spring still opening or settling the week stops and
-    // leaves it to the finger.
-    onPull: (share) => {
-      folded.jump(1 - share);
-    },
-    onRelease: (share, speed) => {
-      // In folded per second, as the finger's speed down unfolds it.
-      const velocity = -speed / unfoldDistance;
-      const flicked = Math.abs(speed) > UNFOLD_FLICK;
-      const opens = flicked ? speed > 0 : share > UNFOLD_SHARE;
-      if (opens) {
-        closeDetail(velocity);
-        return;
-      }
-      foldTo(1, velocity);
-    },
-    reach: unfoldDistance,
-  });
   function changeEntry(date: Date, entry: DayEntry | undefined) {
     onChange((previous) => ({ ...previous, [dateKey(date)]: entry }));
   }
@@ -636,7 +407,6 @@ export function DesignCalendar({
             <Phone fullScreen={fullScreen} ref={phoneRef} style={themeStyle}>
               {tab === "settings" && (
                 <DesignSettings
-                  coworkers={members}
                   initialPage={initialSettingsPage}
                   onApplyRule={applyRule}
                   onChangeJob={changeJob}
@@ -706,7 +476,7 @@ export function DesignCalendar({
                     swiped={swipedTo === dateKey(month)}
                   />
                   <HeadingActions
-                    detailDate={detailDate}
+                    detailDate={openDate}
                     mode={headingMode}
                     month={month}
                     onDone={finishHeading}
@@ -751,20 +521,19 @@ export function DesignCalendar({
                           // After step, which clears it.
                           setSwipedTo(
                             dateKey(
-                              weekDetail
-                                ? monthOpening(
-                                    addDays(detailDate, direction * 7)
-                                  )
-                                : new Date(
-                                    month.getFullYear(),
-                                    month.getMonth() + direction,
-                                    1
-                                  )
+                              besideMonths?.[
+                                direction > 0 ? "next" : "previous"
+                              ] ??
+                                new Date(
+                                  month.getFullYear(),
+                                  month.getMonth() + direction,
+                                  1
+                                )
                             )
                           );
                         }}
                         progress={pageDrag}
-                        page={weekDetail ? dateKey(detailDate) : dateKey(month)}
+                        page={weekDetail ? dateKey(openDate) : dateKey(month)}
                         renderPage={(offset) => {
                           const pageMonth = new Date(
                             month.getFullYear(),
@@ -776,7 +545,7 @@ export function DesignCalendar({
                           const pageDates =
                             weekDetail && offset !== 0
                               ? weekTools.weekDates(
-                                  addDays(detailDate, offset * 7)
+                                  addDays(openDate, offset * 7)
                                 )
                               : weekTools.monthDates(pageMonth);
                           const renderCell = (date: Date) => (
@@ -786,8 +555,8 @@ export function DesignCalendar({
                                 (editing
                                   ? date.getMonth() === month.getMonth() &&
                                     date.getDate() === selectedDay
-                                  : detailDate !== undefined &&
-                                    dateKey(date) === dateKey(detailDate))
+                                  : openDate !== undefined &&
+                                    dateKey(date) === dateKey(openDate))
                               }
                               date={date}
                               editing={editing}
@@ -796,11 +565,7 @@ export function DesignCalendar({
                               onPress={() => {
                                 editing ? enterFrom(date) : openDetail(date);
                               }}
-                              dimmed={
-                                withPerson !== undefined &&
-                                !editing &&
-                                !isWith(withPerson, date)
-                              }
+                              dimmed={!editing && shown.fades(date)}
                               outside={
                                 !weekDetail &&
                                 date.getMonth() !== pageMonth.getMonth()
@@ -833,19 +598,18 @@ export function DesignCalendar({
                   </div>
                   {weekDetail && (
                     <motion.section
-                      aria-label={formatDay(detailDate)}
+                      aria-label={formatDay(openDate)}
                       className={calendarPage.detail}
                       style={{ opacity: detailOpacity }}
                     >
                       <h4 className={calendarPage.detailDate}>
-                        {formatDay(detailDate)}
+                        {formatDay(openDate)}
                       </h4>
                       <DayDetail
-                        key={dateKey(detailDate)}
-                        entry={schedule[dateKey(detailDate)]}
-                        members={members}
+                        key={dateKey(openDate)}
+                        entry={schedule[dateKey(openDate)]}
                         onChange={(entry) => {
-                          changeEntry(detailDate, entry);
+                          changeEntry(openDate, entry);
                         }}
                         patternKeys={patternKeys}
                       />
@@ -863,12 +627,12 @@ export function DesignCalendar({
                       days={summaryIn(monthDays)}
                       month={month}
                       onClear={() => {
-                        setShownWith(undefined);
+                        shown.show(undefined);
                       }}
                       onOpen={() => {
                         setOpenSheet("breakdown");
                       }}
-                      person={withPerson}
+                      person={shown.person}
                       progress={pageDrag}
                       swiped={swipedTo === dateKey(month)}
                     />
@@ -895,83 +659,20 @@ export function DesignCalendar({
                   </div>
                 )}
               </Screen>
-              <Sheet
-                label="今月の内訳"
+              <BreakdownSheet
+                counts={counts}
+                days={monthDays.length}
+                month={month}
                 onOpenChange={sheetChange("breakdown")}
+                onShow={(name) => {
+                  shown.show(name);
+                  setOpenSheet(null);
+                }}
                 open={openSheet === "breakdown"}
-              >
-                <SheetHeading
-                  eyebrow={`${month.getFullYear()}年${month.getMonth() + 1}月`}
-                  onClose={() => {
-                    setOpenSheet(null);
-                  }}
-                  title="今月の内訳"
-                />
-                <div className={sheetBody}>
-                  <dl className={breakdown.list}>
-                    {counts.map(({ key, label, count }) => (
-                      <div className={breakdown.row()} key={key}>
-                        <dt className={breakdown.name}>
-                          <ShiftMark shift={key} size={18} />
-                          {label}
-                        </dt>
-                        <dd className={breakdown.count}>
-                          {count}
-                          <span className={breakdown.unit}>日</span>
-                        </dd>
-                      </div>
-                    ))}
-                    <div className={breakdown.row({ unfilled: true })}>
-                      <dt className={breakdown.name}>未入力</dt>
-                      <dd className={breakdown.count}>
-                        {unfilled}
-                        <span className={breakdown.unit}>日</span>
-                      </dd>
-                    </div>
-                  </dl>
-                  <p className={breakdown.total}>
-                    この月は全{monthDays.length}日
-                  </p>
-                  {monthCoworkers.length > 0 && (
-                    <section>
-                      <h3 className={breakdown.heading}>一緒に働く人</h3>
-                      <ul className={breakdown.list}>
-                        {monthCoworkers.map(({ name, count }) => (
-                          <li key={name}>
-                            <button
-                              aria-pressed={name === withPerson}
-                              className={breakdown.row({ pressable: true })}
-                              onClick={() => {
-                                setShownWith(
-                                  name === withPerson ? undefined : name
-                                );
-                                setOpenSheet(null);
-                              }}
-                              type="button"
-                            >
-                              <span className={breakdown.name}>
-                                {name === withPerson && (
-                                  <Check aria-hidden="true" size={18} />
-                                )}
-                                {name}
-                              </span>
-                              <span className={breakdown.count}>
-                                {count}
-                                <span className={breakdown.unit}>日</span>
-                                <ChevronRight
-                                  aria-hidden="true"
-                                  className={breakdown.chevron}
-                                  size={17}
-                                />
-                              </span>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  )}
-                </div>
-              </Sheet>
+                people={shown.peopleIn(monthDays)}
+                shownWith={shown.person}
+                unfilled={unfilled}
+              />
               <SaveSheet
                 completion={saveCompletion}
                 month={month}
@@ -1013,70 +714,6 @@ export function DesignCalendar({
     </PatternsContext>
   );
 }
-
-// 今月の内訳: a row for each pattern and one for the days still blank,
-// with the month's length under them. With many patterns they scroll
-// under the heading, which stays with its ×.
-const breakdown = {
-  count: css({
-    color: "accent.default",
-    fontWeight: 600,
-    margin: 0,
-    textStyle: "title3",
-  }),
-  chevron: css({
-    color: "text.quaternary",
-    marginLeft: "8px",
-    verticalAlign: "-2px",
-  }),
-  // 一緒に働く人, under the month's total.
-  heading: css({
-    color: "text.tertiary",
-    fontWeight: 600,
-    margin: "28px 0 0",
-    textStyle: "subheadline",
-  }),
-  list: css({ listStyle: "none", margin: 0, padding: 0 }),
-  name: css({
-    "& > span": { fontSize: "24px" },
-    alignItems: "center",
-    display: "flex",
-    gap: "12px",
-    textStyle: "body",
-  }),
-  row: cva({
-    base: {
-      alignItems: "center",
-      borderBottom: "1px solid token(colors.separator)",
-      display: "flex",
-      justifyContent: "space-between",
-      minHeight: "52px",
-    },
-    variants: {
-      unfilled: { true: { color: "text.tertiary" } },
-      // Someone's row: pressed, the calendar shows their days.
-      pressable: {
-        true: {
-          bg: "transparent",
-          borderInline: 0,
-          borderTop: 0,
-          color: "text.primary",
-          cursor: "pointer",
-          paddingInline: 0,
-          width: "100%",
-        },
-      },
-    },
-  }),
-  total: css({
-    color: "text.tertiary",
-    // 20px under the list, with the scrolling part's 12px gap.
-    margin: "8px 0 0",
-    textAlign: "center",
-    textStyle: "footnote",
-  }),
-  unit: css({ fontWeight: 400, marginLeft: "8px", textStyle: "footnote" }),
-};
 
 // The month at the top: the year over its number, "‹ 今月 ›" in the middle
 // so it never moves with the month's width, and the screen's action on the
@@ -1181,247 +818,6 @@ const calendarPage = {
     },
   }),
 };
-
-// From one row of days to the next.
-const ROW_STEP = DAY_ROW_HEIGHT + DAY_ROW_GAP;
-// How the month folds into a week and back: one spring for all of it,
-// the moving, the height and the fading, the same as one withAnimation
-// of the standard spring in the apps.
-const fold = spring("standard");
-const folding = {
-  cell: css({ display: "grid", minWidth: 0 }),
-  // Clips nothing: the rows moving out of it fade on the way, and the
-  // pager's edges take them out of sight.
-  page: css({ position: "relative" }),
-};
-
-// The page shown, folding as the month turns into one of its weeks and
-// back, like the Calendar apps. The days lie on one sheet, each in its
-// row of the month; the sheet moves up by `row` rows to bring the week to
-// the top, the other days fade on it, and the page's height follows so
-// what is under it moves too. As one thing moving, the week can't move
-// apart from the rest of the month. All of it follows `folded`, so a
-// finger pulling the week open moves it as the springs do.
-function FoldingGrid({
-  dates,
-  folded,
-  label,
-  renderCell,
-  row,
-  weekDetail,
-}: {
-  dates: Date[];
-  folded: MotionValue<number>;
-  label: string;
-  renderCell: (date: Date) => ReactNode;
-  row: number;
-  weekDetail: boolean;
-}) {
-  const unfolded = dayGridHeight(Math.max(dates.length / 7, MONTH_WEEKS));
-  const week = dayGridHeight(1);
-  return (
-    <motion.section
-      aria-label={label}
-      className={folding.page}
-      // Motion sets a CSS variable from a motion value, though its types
-      // leave them out.
-      style={
-        {
-          "--fold": folded,
-          height: `calc(${week}px + ${unfolded - week}px * (1 - var(--fold)))`,
-        } as MotionStyle
-      }
-    >
-      <div
-        className={dayGrid}
-        style={{
-          transform: `translateY(calc(${-row * ROW_STEP}px * var(--fold)))`,
-        }}
-      >
-        {dates.map((date, index) => {
-          // Folded away, the rest of the month is out of reach.
-          const away = weekDetail && Math.floor(index / 7) !== row;
-          return (
-            <div
-              aria-hidden={away || undefined}
-              className={folding.cell}
-              inert={away}
-              key={dateKey(date)}
-              style={
-                Math.floor(index / 7) === row
-                  ? undefined
-                  : { opacity: "calc(1 - var(--fold))" }
-              }
-            >
-              {renderCell(date)}
-            </div>
-          );
-        })}
-      </div>
-    </motion.section>
-  );
-}
-
-// Past this share of the way, a pull let go unfolds the month; short of
-// it, the week folds back. A flick faster than this, in pixels a second,
-// goes the way it is flicked wherever it is let go.
-const UNFOLD_SHARE = 1 / 3;
-const UNFOLD_FLICK = 400;
-// How far the finger goes before the pull is told from a tap or a swipe
-// sideways: little, so it is told before Safari takes the finger to
-// scroll.
-const PULL_SLOP = 6;
-// Held still this long, in milliseconds, before letting go, the finger
-// lets go without speed: the last move's speed is no flick.
-const PULL_STILL_MS = 80;
-
-// A pull down, as a share of `reach` (0 to 1) while the finger moves, and
-// with its speed down in pixels a second when let go. A pull starts only
-// going down, not sideways (the week's swipe) and not over something
-// scrolled down (it scrolls back up first), nor in a text box. A finger
-// taken by the system lets go standing still, so it goes back.
-function usePullDown({
-  enabled,
-  reach,
-  onPull,
-  onRelease,
-}: {
-  enabled: boolean;
-  reach: number;
-  onPull: (share: number) => void;
-  onRelease: (share: number, speed: number) => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const latest = useRef({ enabled, onPull, onRelease, reach });
-  useEffect(() => {
-    latest.current = { enabled, onPull, onRelease, reach };
-  });
-  useEffect(() => {
-    const area = ref.current;
-    if (!area) {
-      return;
-    }
-    let pointer: number | undefined;
-    let pulling = false;
-    // The finger's listeners on the window, taken off as it lets go.
-    let following: AbortController | undefined;
-    const stop = () => {
-      following?.abort();
-      following = undefined;
-      pointer = undefined;
-      pulling = false;
-      area.style.removeProperty("user-select");
-    };
-    let from = { x: 0, y: 0 };
-    // Pulled since the finger went down, so letting go presses nothing.
-    let pulled = false;
-    let share = 0;
-    let speed = 0;
-    let last = { time: 0, y: 0 };
-    const move = (event: PointerEvent) => {
-      if (event.pointerId !== pointer) {
-        return;
-      }
-      if (!pulling) {
-        const across = event.clientX - from.x;
-        const down = event.clientY - from.y;
-        if (Math.hypot(across, down) < PULL_SLOP) {
-          return;
-        }
-        if (down <= Math.abs(across)) {
-          stop();
-          return;
-        }
-        pulling = true;
-        pulled = true;
-        // From here, so the month does not jump by the slop.
-        from = { x: event.clientX, y: event.clientY };
-        last = { time: event.timeStamp, y: event.clientY };
-        area.style.userSelect = "none";
-      }
-      share = Math.min(
-        Math.max((event.clientY - from.y) / latest.current.reach, 0),
-        1
-      );
-      const elapsed = (event.timeStamp - last.time) / 1000;
-      if (elapsed > 0) {
-        speed = (event.clientY - last.y) / elapsed;
-      }
-      last = { time: event.timeStamp, y: event.clientY };
-      latest.current.onPull(share);
-    };
-    const up = (event: PointerEvent) => {
-      if (event.pointerId !== pointer) {
-        return;
-      }
-      if (pulling) {
-        const still =
-          event.type === "pointercancel" ||
-          event.timeStamp - last.time > PULL_STILL_MS;
-        latest.current.onRelease(share, still ? 0 : speed);
-      }
-      stop();
-    };
-    const scrolledDown = (target: Element) => {
-      for (
-        let element: Element | null = target;
-        element && element !== area;
-        element = element.parentElement
-      ) {
-        if (element.scrollTop > 0) {
-          return true;
-        }
-      }
-      return false;
-    };
-    const start = (event: PointerEvent) => {
-      pulled = false;
-      const { target } = event;
-      if (
-        !latest.current.enabled ||
-        !event.isPrimary ||
-        event.button !== 0 ||
-        !(target instanceof Element) ||
-        target.closest("input, textarea, [contenteditable]") ||
-        scrolledDown(target)
-      ) {
-        return;
-      }
-      pointer = event.pointerId;
-      from = { x: event.clientX, y: event.clientY };
-      share = 0;
-      speed = 0;
-      following = new AbortController();
-      const { signal } = following;
-      window.addEventListener("pointermove", move, { signal });
-      window.addEventListener("pointerup", up, { signal });
-      window.addEventListener("pointercancel", up, { signal });
-    };
-    // Once pulling, the finger is the pull's: the screen does not scroll.
-    const hold = (event: TouchEvent) => {
-      if (pulling && event.cancelable) {
-        event.preventDefault();
-      }
-    };
-    const press = (event: MouseEvent) => {
-      if (pulled) {
-        event.preventDefault();
-        event.stopPropagation();
-        pulled = false;
-      }
-    };
-    area.addEventListener("pointerdown", start);
-    area.addEventListener("touchmove", hold, { passive: false });
-    area.addEventListener("click", press, true);
-    return () => {
-      stop();
-      area.removeEventListener("pointerdown", start);
-      area.removeEventListener("touchmove", hold);
-      area.removeEventListener("click", press, true);
-    };
-  }, []);
-  return ref;
-}
 
 function screenMode(editing: boolean, weekDetail: boolean) {
   if (editing) {
@@ -2091,14 +1487,13 @@ function Disclosure({ open }: { open: boolean }) {
 }
 
 function MemberChips({
-  members,
   selected,
   onChange,
 }: {
-  members: MemberOptions;
   selected: string[];
   onChange: (selected: string[]) => void;
 }) {
+  const members = useCoworkerList();
   const [adding, setAdding] = useState(false);
   const toast = useContext(ToastContext);
   // Held to the limit here too: a name confirmed and added in one go may
@@ -2181,12 +1576,10 @@ function MemberChips({
 function DayDetail({
   entry,
   patternKeys,
-  members,
   onChange,
 }: {
   entry: DayEntry | undefined;
   patternKeys: Shift[];
-  members: MemberOptions;
   onChange: (entry: DayEntry | undefined) => void;
 }) {
   const book = usePatterns();
@@ -2293,12 +1686,8 @@ function DayDetail({
         {entry && time && membersOpen && (
           <div className={dayDetail.unfolded} data-list-row="">
             <MemberChips
-              members={members}
               onChange={(next) => {
-                onChange({
-                  ...entry,
-                  members: next.length > 0 ? next : undefined,
-                });
+                onChange({ ...entry, members: membersOrNone(next) });
               }}
               selected={selected}
             />

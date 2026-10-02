@@ -17,6 +17,12 @@ export type DayEntry = {
 };
 export type Schedule = Record<string, DayEntry | undefined>;
 
+// A day's people as kept: none rather than an empty list, so a day with
+// nobody on it holds nothing more than one never given anyone.
+export function membersOrNone(members: string[]) {
+  return members.length > 0 ? members : undefined;
+}
+
 // What the person set on a day themselves, the only days kept
 // (spec/shift-patterns.md, Repeating orders): a shift of their own, or ""
 // for a day cleared on purpose. A day without one follows its repeating
