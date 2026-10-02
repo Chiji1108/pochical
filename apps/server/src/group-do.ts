@@ -1,7 +1,7 @@
 import { fromBinary } from "@bufbuild/protobuf";
 import { GROUP_MAX_MEMBERS } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
-import { asc, count, eq, gt, max } from "drizzle-orm";
+import { asc, count, eq, gt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
@@ -10,6 +10,7 @@ import { ChangesSchema } from "./gen/pochical/v1/sync_pb";
 import type { Change } from "./gen/pochical/v1/sync_pb";
 import migrations from "./group-do-migrations/migrations.js";
 import {
+  logHead,
   memberDays,
   memberPatterns,
   memberRepeatOrders,
@@ -50,7 +51,6 @@ export type JoinResult = "added" | "already" | "full";
 /** One kind of value the group keeps of its members, as GroupDO.logs lists them. */
 type MemberLog = {
   after: (cursor: number) => Change[];
-  table: typeof memberDays | typeof memberPatterns | typeof memberRepeatOrders;
 };
 
 /** One Durable Object per group, named by the group's id. */
@@ -190,6 +190,13 @@ export class GroupDO extends DurableObject<Env> {
           kept.push(change);
         }
       }
+      if (kept.length > 0) {
+        this.db
+          .insert(logHead)
+          .values({ cursor, id: 1 })
+          .onConflictDoUpdate({ set: { cursor }, target: logHead.id })
+          .run();
+      }
       return kept;
     });
     for (const socket of this.ctx.getWebSockets()) {
@@ -201,7 +208,7 @@ export class GroupDO extends DurableObject<Env> {
 
   /**
    * Every kind of value the group keeps of its members, in one list so
-   * catch-up and the cursor head cover the same ones.
+   * catch-up covers them all.
    */
   private logs(): MemberLog[] {
     const { db } = this;
@@ -214,7 +221,6 @@ export class GroupDO extends DurableObject<Env> {
             .where(gt(memberDays.cursor, cursor))
             .all()
             .map(memberDayChange),
-        table: memberDays,
       },
       {
         after: (cursor) =>
@@ -224,7 +230,6 @@ export class GroupDO extends DurableObject<Env> {
             .where(gt(memberPatterns.cursor, cursor))
             .all()
             .map(memberPatternChange),
-        table: memberPatterns,
       },
       {
         after: (cursor) =>
@@ -234,21 +239,20 @@ export class GroupDO extends DurableObject<Env> {
             .where(gt(memberRepeatOrders.cursor, cursor))
             .all()
             .map(memberRepeatOrdersChange),
-        table: memberRepeatOrders,
       },
     ];
   }
 
-  /** The newest cursor of the group's log, 0 before any. */
+  /**
+   * The newest cursor the group's log has given out, 0 before any: kept
+   * in a row of its own, not read off the values, which leaving members
+   * take away.
+   */
   private head(): number {
-    const heads = this.logs().map(
-      ({ table }) =>
-        this.db
-          .select({ head: max(table.cursor) })
-          .from(table)
-          .get()?.head ?? 0
+    return (
+      this.db.select({ cursor: logHead.cursor }).from(logHead).get()?.cursor ??
+      0
     );
-    return Math.max(0, ...heads);
   }
 
   /** Every value changed after `cursor`, in cursor order. */

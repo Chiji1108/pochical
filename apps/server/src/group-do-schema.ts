@@ -23,6 +23,19 @@ export const profile = sqliteTable(
   (table) => [check("profile_single_row", sql`${table.id} = 1`)]
 );
 
+// The newest cursor the group's log has given out: one row. Kept apart
+// from the values, whose rows a member's leaving takes away, so the
+// cursor never goes back and a device past it never misses what comes
+// next (spec/sync-protocol.md, Change log and cursor).
+export const logHead = sqliteTable(
+  "log_head",
+  {
+    cursor: integer().notNull(),
+    id: integer().primaryKey(),
+  },
+  (table) => [check("log_head_single_row", sql`${table.id} = 1`)]
+);
+
 // Who is in the group, as they appear in it. The Group DO is where
 // membership is decided; each member's User DO keeps a copy of their own
 // groups for checking sockets.
