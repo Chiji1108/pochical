@@ -9,6 +9,16 @@ import { wallpaperSamples } from "./material-you";
 // the テーマ 端末の色.
 export type Platform = "ios" | "android";
 
+// The app's version the prototype stands in for, and the phone it says it
+// is (the reference devices), in place of what the apps read from the
+// system: settings show the version, and a message to support carries
+// both.
+export const APP_VERSION = "1.0.0";
+export const deviceNames: Record<Platform, string> = {
+  android: "Pixel 9a・Android 16",
+  ios: "iPhone 16 Pro・iOS 26.0",
+};
+
 // Whether the system lets the app notify: not asked yet, refused (only the
 // system's settings can turn it back on), or allowed.
 export type NotificationPermission = "notAsked" | "denied" | "allowed";
