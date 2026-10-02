@@ -301,19 +301,14 @@ const oneLine = css({
 const simple = {
   // Today's date in bold, as a card dates itself.
   date: css({ fontWeight: 700, textStyle: "headline", whiteSpace: "nowrap" }),
-  // The day (or days) as one group in the middle of the widget: a row
-  // for the headings, one for the marks, and one for what changed only
-  // when a day has something to say, so the medium one's two headings
-  // and marks stay level whatever each says.
-  grid: css({
-    alignContent: "center",
+  day: css({
     alignItems: "center",
-    columnGap: "16px",
-    display: "grid",
-    height: "100%",
-    justifyItems: "center",
-    position: "relative",
-    rowGap: "12px",
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "12px",
+    justifyContent: "center",
+    minWidth: 0,
     textAlign: "center",
   }),
   // Over tomorrow: small spaced capitals, a label rather than a date.
@@ -327,15 +322,7 @@ const simple = {
   }),
   mark: css({ display: "flex" }),
   pair: css({ display: "flex", gap: "16px", height: "100%" }),
-  // Between today and tomorrow, the widget's full height.
-  rule: css({
-    bg: "separator",
-    bottom: 0,
-    left: "50%",
-    position: "absolute",
-    top: 0,
-    width: "1px",
-  }),
+  rule: css({ bg: "separator", flexShrink: 0, width: "1px" }),
   words: css({
     fontVariantNumeric: "tabular-nums",
     fontWeight: 400,
@@ -353,56 +340,35 @@ const SIMPLE_ROOMY = 150;
 // How much larger a mark draws with nothing said under it.
 const QUIET_GROWTH = 12;
 
-// Days plainly: each its date (or TOMORROW), its mark large, and only
-// what changed under it. A day with nothing changed is its own design,
-// not one with an empty line kept for words: with nothing said by any,
-// the marks grow and the group closes up round them.
-function SimpleDays({ days }: { days: { day: WidgetDay; label?: string }[] }) {
+// A day plainly: its date (or TOMORROW), its mark large, and only what
+// changed under it, as one group in the middle of its room. A day with
+// nothing changed is its own design, not one with an empty line kept for
+// words: its mark grows and the group closes up round it. Beside another
+// day each centers on its own, rather than lining its parts up with the
+// other's, which left a quiet day high with a gap under it.
+function SimpleDay({ day, label }: { day: WidgetDay; label?: string }) {
   const words = useWords();
-  const named = useShiftNames();
+  const said = changeWords(day, useShiftNames()) !== undefined;
   const roomy = useContext(WidgetSizeContext).height >= SIMPLE_ROOMY;
-  const said = days.map(({ day }) => changeWords(day, named) !== undefined);
-  const anySaid = said.includes(true);
   const base = roomy ? 64 : 48;
-  const size = anySaid ? base : base + QUIET_GROWTH;
-  const rows = anySaid ? 3 : 2;
   return (
-    <div
-      className={simple.grid}
-      style={{
-        gridTemplateColumns: `repeat(${days.length}, 1fr)`,
-        gridTemplateRows: `repeat(${rows}, auto)`,
-      }}
-    >
-      {days.length > 1 && <span aria-hidden="true" className={simple.rule} />}
-      {days.map(({ day, label }, index) => {
-        // Each day in its own column, its parts each in their row.
-        const at = (row: number) => ({ gridColumn: index + 1, gridRow: row });
-        return [
-          label ? (
-            <span className={simple.label} key={`${index}-head`} style={at(1)}>
-              {label}
-            </span>
-          ) : (
-            <span className={simple.date} key={`${index}-head`} style={at(1)}>
-              {words.short(day.date)}
-            </span>
-          ),
-          <span className={simple.mark} key={`${index}-mark`} style={at(2)}>
-            <DayMark day={day} size={size} />
-          </span>,
-          said[index] ? (
-            <span key={`${index}-words`} style={at(3)}>
-              <Change className={simple.words} day={day} />
-            </span>
-          ) : (
-            <span className={srOnly} key={`${index}-words`}>
-              {day.name ?? NOTHING}
-              {day.time ? ` ${day.time}` : ""}
-            </span>
-          ),
-        ];
-      })}
+    <div className={simple.day}>
+      {label ? (
+        <span className={simple.label}>{label}</span>
+      ) : (
+        <span className={simple.date}>{words.short(day.date)}</span>
+      )}
+      <span className={simple.mark}>
+        <DayMark day={day} size={said ? base : base + QUIET_GROWTH} />
+      </span>
+      {said ? (
+        <Change className={simple.words} day={day} />
+      ) : (
+        <span className={srOnly}>
+          {day.name ?? NOTHING}
+          {day.time ? ` ${day.time}` : ""}
+        </span>
+      )}
     </div>
   );
 }
@@ -417,18 +383,20 @@ export function SimpleSmall({ entry }: { entry: WidgetEntry }) {
       />
     );
   }
-  return <SimpleDays days={[{ day }]} />;
+  return <SimpleDay day={day} />;
 }
 
 // Today and tomorrow, side by side.
 export function SimpleMedium({ entry }: { entry: WidgetEntry }) {
   const words = useWords();
   const [, tomorrow] = entry.upcoming;
-  const days: { day: WidgetDay; label?: string }[] = [{ day: entry.today }];
-  if (tomorrow) {
-    days.push({ day: tomorrow, label: words.tomorrow });
-  }
-  return <SimpleDays days={days} />;
+  return (
+    <div className={simple.pair}>
+      <SimpleDay day={entry.today} />
+      <span aria-hidden="true" className={simple.rule} />
+      {tomorrow && <SimpleDay day={tomorrow} label={words.tomorrow} />}
+    </div>
+  );
 }
 
 // ── これから ─────────────────────────────────────────────────────────────
