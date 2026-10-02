@@ -6,7 +6,7 @@ import orderClears from "../../../spec/vectors/order-clears.json";
 import text from "../../../spec/vectors/text.json";
 import { DayField } from "../src/gen/pochical/v1/sync_pb";
 import { compareClocks } from "../src/hlc";
-import { belowFloor, givesWay } from "../src/order-clears";
+import { givesWay, heldBackBy } from "../src/order-clears";
 import { characterCount } from "../src/text-limits";
 
 describe("spec/vectors/hlc.json", () => {
@@ -42,10 +42,12 @@ describe("spec/vectors/order-clears.json", () => {
     }
   );
 
-  test.each(orderClears.belowFloor)(
+  test.each(orderClears.heldBackBy)(
     "held back: $name",
     ({ date, expected, field, floors, set }) => {
-      expect(belowFloor(floors, date, fieldOf(field), set)).toBe(expected);
+      expect(heldBackBy(floors, date, fieldOf(field), set)?.from ?? null).toBe(
+        expected
+      );
     }
   );
 });

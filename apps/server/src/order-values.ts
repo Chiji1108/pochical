@@ -46,11 +46,11 @@ export const fitsCoworkerOrder = (ids: readonly string[]): boolean =>
   ids.every((id) => isId(id));
 
 /**
- * Whether `clearFrom` is the start of one of the orders: only a new or
- * corrected order takes days back, from its own start.
+ * Whether `clearFrom` is the start of the newest order: only a new or
+ * corrected order takes days back, from its own start, and it is always
+ * the last of the timeline.
  */
 export const fitsClearFrom = (
   orders: readonly RepeatOrder[],
   clearFrom: string | undefined
-): boolean =>
-  clearFrom === undefined || orders.some(({ start }) => start === clearFrom);
+): boolean => clearFrom === undefined || orders.at(-1)?.start === clearFrom;

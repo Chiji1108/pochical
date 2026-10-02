@@ -25,6 +25,7 @@ import {
   clockOfHlc,
   clockOfRow,
   encodeOrders,
+  hlcOf,
   ordersOfRow,
 } from "./user-do-values";
 
@@ -36,12 +37,6 @@ import {
 type DayRow = typeof memberDays.$inferSelect;
 type PatternRow = typeof memberPatterns.$inferSelect;
 type OrdersRow = typeof memberRepeatOrders.$inferSelect;
-
-const hlcOf = (row: DayRow | PatternRow) => ({
-  counter: row.hlcCounter,
-  deviceId: row.hlcDevice,
-  physicalMs: BigInt(row.hlcMs),
-});
 
 export const memberDayChange = (row: DayRow): Change =>
   create(ChangeSchema, {

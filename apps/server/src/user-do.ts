@@ -36,7 +36,7 @@ import type {
 } from "./gen/pochical/v1/sync_pb";
 import { clockAfter, compareClocks } from "./hlc";
 import type { Clock } from "./hlc";
-import { belowFloor, givesWay, ORDER_FIELDS } from "./order-clears";
+import { givesWay, heldBackBy, ORDER_FIELDS } from "./order-clears";
 import type { Floor } from "./order-clears";
 import {
   fitsClearFrom,
@@ -383,8 +383,10 @@ export class UserDO extends DurableObject<Env> {
    * is corrected; one for no real day or field is only acknowledged.
    */
   private takeDayEdits(ws: WebSocket, { edits }: DayEdits): void {
+    // Read once a frame: no day edit lays a floor.
+    const floors = this.floors();
     this.takeEdits(ws, edits, ({ value }, cursor) =>
-      hasKey(value) ? this.applyDay(value, cursor) : undefined
+      hasKey(value) ? this.applyDay(value, cursor, floors) : undefined
     );
   }
 
@@ -424,7 +426,11 @@ export class UserDO extends DurableObject<Env> {
     });
   }
 
-  private applyDay(edit: DayValue, cursor: number): Change | undefined {
+  private applyDay(
+    edit: DayValue,
+    cursor: number,
+    floors: readonly Floor[]
+  ): Change | undefined {
     const key = and(
       eq(dayFields.date, edit.date),
       eq(dayFields.field, edit.field)
@@ -435,10 +441,19 @@ export class UserDO extends DurableObject<Env> {
       return undefined;
     }
     // An edit made before orders that cleared its day arrived late: it
-    // would bring back what they took, so it is corrected instead.
-    const fits =
-      fitsField(edit.field, edit.value) &&
-      !belowFloor(this.floors(), edit.date, edit.field, clock);
+    // would bring back what they took, so it gets the clear instead, under
+    // the clear's clock, which a later edit from the same device outranks.
+    const floor = heldBackBy(floors, edit.date, edit.field, clock);
+    if (floor) {
+      return this.writeDay({
+        ...clockColumns(floor.clock),
+        cursor,
+        date: edit.date,
+        field: edit.field,
+        value: null,
+      });
+    }
+    const fits = fitsField(edit.field, edit.value);
     const row: DayRow = {
       ...clockColumns(writtenClock(clock, fits)),
       cursor,
@@ -447,6 +462,10 @@ export class UserDO extends DurableObject<Env> {
       // A value that does not fit leaves what was stored (or nothing).
       value: fits ? (edit.value ?? null) : (stored?.value ?? null),
     };
+    return this.writeDay(row);
+  }
+
+  private writeDay(row: DayRow): Change {
     this.db
       .insert(dayFields)
       .values(row)

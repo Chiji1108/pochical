@@ -1,5 +1,5 @@
 {
-  "about": "What a repeating order takes back from a person's own days (spec/sync-protocol.md, Repeating orders). givesWay: when orders are taken with clear_from `from` at `clock`, a stored value gives way (is cleared) when it is a PATTERN, START or END, on or after `from`, set at a clock older than the orders' (HLC order, spec/vectors/hlc.json); memos and people stay. belowFloor: every taken clear is kept as a floor; an edit arriving later is held back (corrected, as one that does not fit) when any floor would have cleared it, so an edit made offline before the orders cannot bring back what they took. Fields are DayField names without the DAY_FIELD_ prefix.",
+  "about": "What a repeating order takes back from a person's own days (spec/sync-protocol.md, Repeating orders). givesWay: when orders are taken with clear_from `from` at `clock`, a stored value gives way (is cleared) when it is a PATTERN, START or END, on or after `from`, set at a clock older than the orders' (HLC order, spec/vectors/hlc.json); memos and people stay. Devices apply it when they start or correct an order themselves. heldBackBy (the server alone, which keeps every clear it made as a floor): an edit arriving later is held back when some floor would have cleared it, and answered with that clear under the floor's clock; `expected` is the `from` of the newest such floor, or null when the edit is taken. Fields are DayField names without the DAY_FIELD_ prefix.",
   "givesWay": [
     {
       "name": "a pattern set before the orders, from their start",
@@ -173,7 +173,7 @@
       "expected": false
     }
   ],
-  "belowFloor": [
+  "heldBackBy": [
     {
       "name": "an edit made before orders that cleared its day",
       "floors": [
@@ -201,7 +201,7 @@
         "counter": 0,
         "device": "tablet"
       },
-      "expected": true
+      "expected": "2026-10-03"
     },
     {
       "name": "an edit made after them",
@@ -230,7 +230,7 @@
         "counter": 0,
         "device": "tablet"
       },
-      "expected": false
+      "expected": null
     },
     {
       "name": "a later clear holds back only its own days",
@@ -259,7 +259,36 @@
         "counter": 0,
         "device": "tablet"
       },
-      "expected": true
+      "expected": "2026-11-01"
+    },
+    {
+      "name": "the newest of several clears that apply",
+      "floors": [
+        {
+          "from": "2026-10-03",
+          "clock": {
+            "ms": 2000,
+            "counter": 1,
+            "device": "phone"
+          }
+        },
+        {
+          "from": "2026-11-01",
+          "clock": {
+            "ms": 9000,
+            "counter": 0,
+            "device": "phone"
+          }
+        }
+      ],
+      "date": "2026-11-05",
+      "field": "PATTERN",
+      "set": {
+        "ms": 1500,
+        "counter": 0,
+        "device": "tablet"
+      },
+      "expected": "2026-11-01"
     },
     {
       "name": "a day before every clear",
@@ -288,7 +317,7 @@
         "counter": 0,
         "device": "tablet"
       },
-      "expected": false
+      "expected": null
     },
     {
       "name": "a memo is never held back",
@@ -317,7 +346,7 @@
         "counter": 0,
         "device": "tablet"
       },
-      "expected": false
+      "expected": null
     }
   ]
 }

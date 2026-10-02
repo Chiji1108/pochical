@@ -142,6 +142,10 @@ describe("syncing a user's repeating orders", () => {
     ],
     [[order("2026-10-03", ["day"])], "2026-10-01"],
     [[], "2026-10-01"],
+    [
+      [order("2026-10-01", ["day"]), order("2026-10-03", ["off"])],
+      "2026-10-01",
+    ],
   ])(
     "corrects orders that do not fit, and clears nothing for them",
     async (orders, clearFrom) => {
@@ -178,14 +182,15 @@ describe("syncing a user's repeating orders", () => {
     await phone.frames.next();
     await phone.frames.next();
 
-    // Made offline before the orders, on a day nothing was entered on.
+    // Made offline before the orders, on a day nothing was entered on,
+    // and then again after them, on the same day.
     sendFrame(phone.socket, {
       case: "dayEdits",
       value: {
         edits: [
           edit("late", "2026-10-07", DayField.PATTERN, "night", 2000, "tablet"),
           edit("memo", "2026-10-08", DayField.NOTE, "メモ", 2000, "tablet"),
-          edit("new", "2026-10-09", DayField.PATTERN, "night", 4000, "tablet"),
+          edit("after", "2026-10-07", DayField.PATTERN, "day", 4000, "tablet"),
         ],
       },
     });
@@ -195,10 +200,11 @@ describe("syncing a user's repeating orders", () => {
     expect(daysIn(changes)).toStrictEqual([
       ["2026-10-07", DayField.PATTERN, undefined],
       ["2026-10-08", DayField.NOTE, "メモ"],
-      ["2026-10-09", DayField.PATTERN, "night"],
+      ["2026-10-07", DayField.PATTERN, "day"],
     ]);
+    // Answered with the clear itself, which the later edit outranks.
     expect(changes[0]?.kind).toMatchObject({
-      value: { hlc: { deviceId: "server" } },
+      value: { hlc: { deviceId: "phone", physicalMs: 3000n } },
     });
   });
 
