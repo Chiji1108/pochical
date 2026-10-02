@@ -124,10 +124,11 @@ describe("what a session keeps", () => {
   });
 
   it("lasts for good, so a user away a long while is still signed in", async () => {
-    await signInAnonymously();
+    const token = await signInAnonymously();
     const sessions = await drizzle(env.DB)
       .select({ expiresAt: session.expiresAt })
       .from(session)
+      .where(eq(session.userId, await userIdOf(token)))
       .all();
     const inFiftyYears = new Date();
     inFiftyYears.setFullYear(inFiftyYears.getFullYear() + 50);
