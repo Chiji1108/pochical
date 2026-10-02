@@ -105,7 +105,7 @@ import {
 import { profileIn } from "./design-group-settings";
 import { DaySheet } from "./design-group-shifts";
 import { shortMonthOf } from "./design-month-name";
-import { BlockOffer, offersBlock, ReportSheet } from "./design-report";
+import { ReportSheet } from "./design-report";
 import {
   ConfirmDialog,
   DecideHeading,
@@ -366,9 +366,6 @@ export function ChatPage({
   const [unsending, setUnsending] = useState<string>();
   // Someone else's message being reported.
   const [reporting, setReporting] = useState<string>();
-  // Who was just reported, offered to be blocked too.
-  const [blockOffer, setBlockOffer] = useState<Member>();
-  const [offerNext, setOfferNext] = useState<Member>();
   const blocked = useUser((state) => state.blocked);
   // A link long pressed in a message's words: its own small menu, 開く and
   // コピー, as iOS offers on a link in text, rather than the message's.
@@ -837,34 +834,16 @@ export function ChatPage({
         }}
       />
       <ReportSheet
+        member={writerOf(byId(reporting)?.from)}
         onClose={() => {
           setReporting(undefined);
         }}
         sends="このメッセージと前後の数件"
-        onGone={() => {
-          setBlockOffer(offerNext);
-          setOfferNext(undefined);
-        }}
-        onSend={() => {
-          const writer = writerOf(byId(reporting)?.from);
-          setReporting(undefined);
-          if (offersBlock(writer, blocked)) {
-            setOfferNext(writer);
-          } else {
-            toast("通報しました");
-          }
-        }}
         what={
           reporting === undefined
             ? undefined
             : `${nameOf(byId(reporting)?.from ?? "")}のメッセージ`
         }
-      />
-      <BlockOffer
-        member={blockOffer}
-        onClose={() => {
-          setBlockOffer(undefined);
-        }}
       />
       {unsending !== undefined && (
         <ConfirmDialog
