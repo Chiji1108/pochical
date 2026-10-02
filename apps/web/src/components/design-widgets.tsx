@@ -250,6 +250,7 @@ function useWords() {
     const day = (date: Date) => weekdayName(date.getDay());
     return {
       date: (date: Date) => `${day(date)}, ${month(date)} ${date.getDate()}`,
+      dayName: day,
       heading: (date: Date) => englishWeekdays[date.getDay()] ?? "",
       inDays: (inDays: number) =>
         inDays === 1 ? "Tomorrow" : `in ${inDays} days`,
@@ -259,6 +260,7 @@ function useWords() {
       offTogether: "Off together",
       rest: "Day off\ntoday",
       restTogether: "Both off\ntoday",
+      short: (date: Date) => `${month(date)} ${date.getDate()}.`,
       today: "Today",
       tomorrow: "Tomorrow",
       unit: "days",
@@ -267,6 +269,7 @@ function useWords() {
   }
   return {
     date: (date: Date) => `${monthDay(date)}(${weekday(date)})`,
+    dayName: weekday,
     heading: (date: Date) =>
       `${date.getMonth() + MONTH_NUMBER}月 ${weekday(date)}曜日`,
     inDays: (inDays: number) => (inDays === 1 ? "明日" : `${inDays}日後`),
@@ -276,6 +279,7 @@ function useWords() {
     offTogether: "一緒に休める日",
     rest: "今日は\nおやすみ",
     restTogether: "ふたりとも\nおやすみ",
+    short: monthDay,
     today: "今日",
     tomorrow: "明日",
     unit: "日後",
@@ -295,37 +299,43 @@ const oneLine = css({
 });
 
 const simple = {
-  // The date large, as a desk calendar shows it.
-  big: css({
-    fontSize: "44px",
-    fontVariantNumeric: "tabular-nums",
-    fontWeight: 500,
-    letterSpacing: "-0.02em",
-    lineHeight: 1,
-  }),
-  label: css({ color: "text.secondary", textStyle: "footnote" }),
-  markRow: css({
-    alignItems: "center",
+  // The date in bold beside its weekday, quieter, as a card dates itself.
+  date: css({ fontWeight: 700 }),
+  head: css({
     display: "flex",
-    gap: "4px",
-    maxWidth: "100%",
-    minWidth: 0,
+    gap: "8px",
+    justifyContent: "center",
+    textStyle: "headline",
+    whiteSpace: "nowrap",
   }),
+  // Over tomorrow: small spaced capitals, a label rather than a date.
+  label: css({
+    color: "text.secondary",
+    fontSize: "11px",
+    letterSpacing: "0.12em",
+    lineHeight: "22px",
+    textTransform: "uppercase",
+  }),
+  // The mark large in the middle of what room is left.
+  mark: css({ alignItems: "center", display: "flex", flex: 1, minHeight: 0 }),
   pair: css({ display: "flex", gap: "16px", height: "100%" }),
   root: css({
-    alignItems: "flex-start",
+    alignItems: "center",
     display: "flex",
     flex: 1,
     flexDirection: "column",
     height: "100%",
-    justifyContent: "space-between",
     minWidth: 0,
+    textAlign: "center",
   }),
   rule: css({ bg: "separator", flexShrink: 0, width: "1px" }),
+  weekday: css({ color: "text.tertiary", fontWeight: 600 }),
   words: css({
     fontVariantNumeric: "tabular-nums",
-    fontWeight: 600,
-    minWidth: 0,
+    fontWeight: 400,
+    letterSpacing: "0.02em",
+    maxWidth: "100%",
+    minHeight: "22px",
     overflow: "hidden",
     textOverflow: "ellipsis",
     textStyle: "subheadline",
@@ -333,24 +343,33 @@ const simple = {
   }),
 };
 
-// A day plainly: when it is, its date large, and its mark with what
-// changed beside it. Nothing more, for someone who wants the day alone.
-function SimpleDay({ day, label }: { day: WidgetDay; label?: string }) {
+// A day plainly, in the middle: its date (or 明日 over tomorrow), its
+// mark large, and only what changed under it. Nothing more, for someone
+// who wants the day alone.
+function SimpleDay({
+  day,
+  label,
+  markSize,
+}: {
+  day: WidgetDay;
+  label?: string;
+  markSize: number;
+}) {
   const words = useWords();
   return (
     <div className={simple.root}>
-      <span className={simple.label}>
-        {label
-          ? `${label} · ${words.weekday(day.date)}`
-          : words.heading(day.date)}
+      {label ? (
+        <span className={simple.label}>{label}</span>
+      ) : (
+        <span className={simple.head}>
+          <span className={simple.date}>{words.short(day.date)}</span>
+          <span className={simple.weekday}>{words.dayName(day.date)}</span>
+        </span>
+      )}
+      <span className={simple.mark}>
+        <DayMark day={day} size={markSize} />
       </span>
-      <span aria-hidden="true" className={simple.big}>
-        {day.date.getDate()}
-      </span>
-      <span className={simple.markRow}>
-        <DayMark day={day} size={32} />
-        <Change className={simple.words} day={day} />
-      </span>
+      <Change className={simple.words} day={day} />
     </div>
   );
 }
@@ -365,7 +384,7 @@ export function SimpleSmall({ entry }: { entry: WidgetEntry }) {
       />
     );
   }
-  return <SimpleDay day={day} />;
+  return <SimpleDay day={day} markSize={56} />;
 }
 
 // Today and tomorrow, side by side.
@@ -374,9 +393,11 @@ export function SimpleMedium({ entry }: { entry: WidgetEntry }) {
   const [, tomorrow] = entry.upcoming;
   return (
     <div className={simple.pair}>
-      <SimpleDay day={entry.today} label={words.today} />
+      <SimpleDay day={entry.today} markSize={44} />
       <span aria-hidden="true" className={simple.rule} />
-      {tomorrow && <SimpleDay day={tomorrow} label={words.tomorrow} />}
+      {tomorrow && (
+        <SimpleDay day={tomorrow} label={words.tomorrow} markSize={44} />
+      )}
     </div>
   );
 }
@@ -384,6 +405,31 @@ export function SimpleMedium({ entry }: { entry: WidgetEntry }) {
 // ── これから ─────────────────────────────────────────────────────────────
 
 const upcoming = {
+  // The date large, as a desk calendar shows it.
+  big: css({
+    fontSize: "44px",
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 500,
+    letterSpacing: "-0.02em",
+    lineHeight: 1,
+  }),
+  heading: css({ color: "text.secondary", textStyle: "footnote" }),
+  markRow: css({
+    alignItems: "center",
+    display: "flex",
+    gap: "4px",
+    maxWidth: "100%",
+    minWidth: 0,
+  }),
+  words: css({
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 600,
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    textStyle: "subheadline",
+    whiteSpace: "nowrap",
+  }),
   pair: css({ gap: "12px" }),
   // Today on the left of the medium one.
   today: css({
@@ -440,15 +486,15 @@ function UpcomingToday({ day, note }: { day: WidgetDay; note: boolean }) {
   const words = useWords();
   return (
     <>
-      <span className={simple.label}>{words.heading(day.date)}</span>
+      <span className={upcoming.heading}>{words.heading(day.date)}</span>
       <span className={upcoming.todayHead}>
-        <span aria-hidden="true" className={simple.big}>
+        <span aria-hidden="true" className={upcoming.big}>
           {day.date.getDate()}
         </span>
         <DayMark day={day} size={32} />
       </span>
-      <span className={simple.markRow}>
-        <Change className={simple.words} day={day} />
+      <span className={upcoming.markRow}>
+        <Change className={upcoming.words} day={day} />
       </span>
       {note && day.note && <span className={upcoming.note}>{day.note}</span>}
     </>
