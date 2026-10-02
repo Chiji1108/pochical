@@ -299,16 +299,22 @@ const oneLine = css({
 });
 
 const simple = {
-  centered: css({ gap: "12px", justifyContent: "center" }),
-  markCentered: css({ display: "flex" }),
-  // The date in bold beside its weekday, quieter, as a card dates itself.
-  date: css({ fontWeight: 700 }),
-  head: css({
-    display: "flex",
-    gap: "8px",
-    justifyContent: "center",
-    textStyle: "headline",
-    whiteSpace: "nowrap",
+  // Today's date in bold, as a card dates itself.
+  date: css({ fontWeight: 700, textStyle: "headline", whiteSpace: "nowrap" }),
+  // The day (or days) as one group in the middle of the widget: a row
+  // for the headings, one for the marks, and one for what changed only
+  // when a day has something to say, so the medium one's two headings
+  // and marks stay level whatever each says.
+  grid: css({
+    alignContent: "center",
+    alignItems: "center",
+    columnGap: "16px",
+    display: "grid",
+    height: "100%",
+    justifyItems: "center",
+    position: "relative",
+    rowGap: "12px",
+    textAlign: "center",
   }),
   // Over tomorrow: small spaced capitals, a label rather than a date.
   label: css({
@@ -317,21 +323,19 @@ const simple = {
     letterSpacing: "0.12em",
     lineHeight: "22px",
     textTransform: "uppercase",
+    whiteSpace: "nowrap",
   }),
-  // The mark large in the middle of what room is left.
-  mark: css({ alignItems: "center", display: "flex", flex: 1, minHeight: 0 }),
+  mark: css({ display: "flex" }),
   pair: css({ display: "flex", gap: "16px", height: "100%" }),
-  root: css({
-    alignItems: "center",
-    display: "flex",
-    flex: 1,
-    flexDirection: "column",
-    height: "100%",
-    minWidth: 0,
-    textAlign: "center",
+  // Between today and tomorrow, the widget's full height.
+  rule: css({
+    bg: "separator",
+    bottom: 0,
+    left: "50%",
+    position: "absolute",
+    top: 0,
+    width: "1px",
   }),
-  rule: css({ bg: "separator", flexShrink: 0, width: "1px" }),
-  weekday: css({ color: "text.tertiary", fontWeight: 600 }),
   words: css({
     fontVariantNumeric: "tabular-nums",
     fontWeight: 400,
@@ -344,54 +348,64 @@ const simple = {
   }),
 };
 
-// A day plainly, in the middle: its date (or 明日 over tomorrow), its
-// mark large, and only what changed under it. Nothing more, for someone
-// who wants the day alone.
-function SimpleDay({
-  day,
-  label,
-  markSize,
-  centered = false,
-}: {
-  day: WidgetDay;
-  label?: string;
-  markSize: number;
-  // Alone in the small one: the date and mark one group in the middle,
-  // rather than the date at the top and the mark adrift below it.
-  centered?: boolean;
-}) {
+// Where the widget is taller, as on Android's launcher, its marks grow.
+const SIMPLE_ROOMY = 150;
+// How much larger a mark draws with nothing said under it.
+const QUIET_GROWTH = 12;
+
+// Days plainly: each its date (or TOMORROW), its mark large, and only
+// what changed under it. A day with nothing changed is its own design,
+// not one with an empty line kept for words: with nothing said by any,
+// the marks grow and the group closes up round them.
+function SimpleDays({ days }: { days: { day: WidgetDay; label?: string }[] }) {
   const words = useWords();
-  // A day with nothing changed is its own design, not one with an empty
-  // line kept for words: the mark grows into the room and sits in the
-  // middle of it.
-  const said = changeWords(day, useShiftNames()) !== undefined;
+  const named = useShiftNames();
+  const roomy = useContext(WidgetSizeContext).height >= SIMPLE_ROOMY;
+  const said = days.map(({ day }) => changeWords(day, named) !== undefined);
+  const anySaid = said.includes(true);
+  const base = roomy ? 64 : 48;
+  const size = anySaid ? base : base + QUIET_GROWTH;
+  const rows = anySaid ? 3 : 2;
   return (
-    <div className={cx(simple.root, centered && simple.centered)}>
-      {label ? (
-        <span className={simple.label}>{label}</span>
-      ) : (
-        <span className={simple.head}>
-          <span className={simple.date}>{words.short(day.date)}</span>
-          <span className={simple.weekday}>{words.dayName(day.date)}</span>
-        </span>
-      )}
-      <span className={centered ? simple.markCentered : simple.mark}>
-        <DayMark day={day} size={said ? markSize : markSize + QUIET_GROWTH} />
-      </span>
-      {said ? (
-        <Change className={simple.words} day={day} />
-      ) : (
-        <span className={srOnly}>
-          {day.name ?? NOTHING}
-          {day.time ? ` ${day.time}` : ""}
-        </span>
-      )}
+    <div
+      className={simple.grid}
+      style={{
+        gridTemplateColumns: `repeat(${days.length}, 1fr)`,
+        gridTemplateRows: `repeat(${rows}, auto)`,
+      }}
+    >
+      {days.length > 1 && <span aria-hidden="true" className={simple.rule} />}
+      {days.map(({ day, label }, index) => {
+        // Each day in its own column, its parts each in their row.
+        const at = (row: number) => ({ gridColumn: index + 1, gridRow: row });
+        return [
+          label ? (
+            <span className={simple.label} key={`${index}-head`} style={at(1)}>
+              {label}
+            </span>
+          ) : (
+            <span className={simple.date} key={`${index}-head`} style={at(1)}>
+              {words.short(day.date)}
+            </span>
+          ),
+          <span className={simple.mark} key={`${index}-mark`} style={at(2)}>
+            <DayMark day={day} size={size} />
+          </span>,
+          said[index] ? (
+            <span key={`${index}-words`} style={at(3)}>
+              <Change className={simple.words} day={day} />
+            </span>
+          ) : (
+            <span className={srOnly} key={`${index}-words`}>
+              {day.name ?? NOTHING}
+              {day.time ? ` ${day.time}` : ""}
+            </span>
+          ),
+        ];
+      })}
     </div>
   );
 }
-
-// How much larger a mark draws with nothing said under it.
-const QUIET_GROWTH = 12;
 
 // Today alone; on a day off, said as such, with the poodle.
 export function SimpleSmall({ entry }: { entry: WidgetEntry }) {
@@ -403,22 +417,18 @@ export function SimpleSmall({ entry }: { entry: WidgetEntry }) {
       />
     );
   }
-  return <SimpleDay centered day={day} markSize={52} />;
+  return <SimpleDays days={[{ day }]} />;
 }
 
 // Today and tomorrow, side by side.
 export function SimpleMedium({ entry }: { entry: WidgetEntry }) {
   const words = useWords();
   const [, tomorrow] = entry.upcoming;
-  return (
-    <div className={simple.pair}>
-      <SimpleDay day={entry.today} markSize={44} />
-      <span aria-hidden="true" className={simple.rule} />
-      {tomorrow && (
-        <SimpleDay day={tomorrow} label={words.tomorrow} markSize={44} />
-      )}
-    </div>
-  );
+  const days: { day: WidgetDay; label?: string }[] = [{ day: entry.today }];
+  if (tomorrow) {
+    days.push({ day: tomorrow, label: words.tomorrow });
+  }
+  return <SimpleDays days={days} />;
 }
 
 // ── これから ─────────────────────────────────────────────────────────────
