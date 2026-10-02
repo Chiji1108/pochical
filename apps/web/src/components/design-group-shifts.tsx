@@ -17,6 +17,7 @@ import { css, cva, cx } from "styled-system/css";
 import { addDays, dateKey, formatDay, movesText } from "../lib/design-days";
 import { designToday } from "../lib/design-today";
 import { dayName } from "../lib/text-limits";
+import { monthGrid } from "./design-date-picker";
 import { dayCell, dayParts, todayMark } from "./design-day-cell";
 import {
   changeOn,
@@ -568,9 +569,6 @@ const shareDays = {
       _disabled: { visibility: "hidden" },
       bg: "transparent",
       border: 0,
-      borderRadius: "md",
-      fontSize: "13px",
-      fontWeight: 600,
       height: "36px",
       padding: 0,
     },
@@ -625,32 +623,7 @@ const shareDays = {
     fontWeight: 600,
     textStyle: "footnote",
   }),
-  weekday: css({
-    color: "text.quaternary",
-    fontSize: "10px",
-    textAlign: "center",
-  }),
 };
-
-// ‹ 2026年9月 › over the month of a picker of days, as the platforms'
-// date pickers keep their arrows.
-const monthSwitch = css({
-  "& button": {
-    bg: "transparent",
-    border: 0,
-    borderRadius: "md",
-    color: "accent.default",
-    display: "grid",
-    height: "32px",
-    placeItems: "center",
-    width: "32px",
-  },
-  "& strong": { minWidth: "96px", textAlign: "center", textStyle: "body" },
-  alignItems: "center",
-  display: "flex",
-  gap: "8px",
-  justifyContent: "center",
-});
 
 // The group's shifts page: the month row, the table under it, and room at
 // the foot for the picked day's sheet to cover.
@@ -892,15 +865,16 @@ function DaySheetBody({
             </div>
           </div>
         )}
-        <div className={monthSwitch}>
+        <div className={monthGrid.heading}>
           <button
             aria-label="前の月"
+            className={monthGrid.arrow}
             onClick={() => {
               setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
             }}
             type="button"
           >
-            <ChevronLeft aria-hidden="true" size={18} />
+            <ChevronLeft aria-hidden="true" size={20} />
           </button>
           <strong aria-live="polite">
             <span className={srOnly}>{monthWithYearOf(month)}</span>
@@ -910,19 +884,26 @@ function DaySheetBody({
           </strong>
           <button
             aria-label="次の月"
+            className={monthGrid.arrow}
             onClick={() => {
               setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
             }}
             type="button"
           >
-            <ChevronRight aria-hidden="true" size={18} />
+            <ChevronRight aria-hidden="true" size={20} />
           </button>
         </div>
-        <div className={shareDays.days}>
+        <div
+          className={shareDays.days}
+          // The weekdays, then room for six weeks, the most a month spans,
+          // so the sheet keeps its height as the months turn and ‹ › stay
+          // under the finger.
+          style={{ gridTemplateRows: `auto repeat(${MONTH_WEEKS}, 36px)` }}
+        >
           {weekTools.weekdays.map((day) => (
             <span
               aria-hidden="true"
-              className={shareDays.weekday}
+              className={monthGrid.weekday}
               key={day.day}
             >
               {day.label}
@@ -931,14 +912,19 @@ function DaySheetBody({
           {weekTools.monthDates(month).map((date) => {
             const outside = !sameMonth(date, month);
             const together = !outside && everyoneOff(members, date);
+            const today = dateKey(date) === dateKey(designToday);
             return (
               <button
                 aria-label={`${formatDay(date)}${together ? "、みんな休み" : ""}`}
                 aria-pressed={isPicked(date)}
-                className={shareDays.day({
-                  together,
-                  tone: weekTools.dateTone(date),
-                })}
+                className={cx(
+                  shareDays.day({
+                    together,
+                    tone: today ? "plain" : weekTools.dateTone(date),
+                  }),
+                  monthGrid.day,
+                  today && todayMark
+                )}
                 disabled={outside}
                 key={dateKey(date)}
                 onClick={() => {

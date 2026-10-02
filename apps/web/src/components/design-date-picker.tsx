@@ -2,14 +2,50 @@ import { DatePicker, parseDate } from "@ark-ui/react";
 import { ChevronDown, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { css, cva } from "styled-system/css";
+import { css, cva, cx } from "styled-system/css";
 
 import { dateKey } from "../lib/design-days";
 import { designToday } from "../lib/design-today";
+import { todayMark } from "./design-day-cell";
 import { monthWithYearOf } from "./design-month-name";
 import { Sheet } from "./design-sheet";
 import { Button, srOnly } from "./design-ui";
 import { useWeek } from "./design-week";
+
+// The parts every small month to pick days in is drawn with, here and in
+// 日にちを共有's month: ‹ › at the two ends, where they stay whatever the
+// month's name, in the accent as the platforms' date pickers tint them;
+// the weekdays and the dates as the calendar draws them.
+export const monthGrid = {
+  arrow: css({
+    bg: "transparent",
+    border: 0,
+    borderRadius: "md",
+    color: "accent.default",
+    display: "grid",
+    height: "touch",
+    placeItems: "center",
+    width: "touch",
+  }),
+  day: css({
+    _hover: { bg: "accent.hover" },
+    borderRadius: "md",
+    fontWeight: 600,
+    textStyle: "subheadline",
+  }),
+  heading: css({
+    alignItems: "center",
+    display: "flex",
+    justifyContent: "space-between",
+    textStyle: "body",
+  }),
+  weekday: css({
+    color: "text.tertiary",
+    fontSize: "11px",
+    fontWeight: 400,
+    textAlign: "center",
+  }),
+};
 
 const picker = {
   card: css({
@@ -35,52 +71,27 @@ const picker = {
     placeItems: "center",
     width: "touch",
   }),
-  month: css({
-    alignItems: "center",
-    display: "flex",
-    justifyContent: "space-between",
-    margin: "12px 0",
-    textStyle: "body",
-  }),
+  month: css({ margin: "12px 0" }),
   table: css({ borderCollapse: "collapse", width: "100%" }),
   title: css({ margin: 0, textStyle: "body" }),
-  weekday: css({
-    color: "text.tertiary",
-    fontWeight: 400,
-    paddingBottom: "8px",
-    textStyle: "caption",
-  }),
+  weekday: css({ paddingBottom: "8px" }),
 };
 
-// A day in the month. The picked day's fill and an outside day's fade
-// outrank the week's colors, being attribute selectors.
+// A day in the month. The picked day's fill outranks the week's colors,
+// being an attribute selector. The days around the month are left out,
+// as in 日にちを共有's month, keeping their place in the six weeks.
 const pickerCell = cva({
   base: {
-    "&[data-outside-range]": { color: "text.quaternary" },
-    "&[data-selected]": {
-      bg: "accent.fill",
-      color: "accent.onFill",
-      fontWeight: 600,
-    },
+    "&[data-outside-range]": { visibility: "hidden" },
+    "&[data-selected]": { bg: "accent.fill", color: "accent.onFill" },
     _focusVisible: { outline: "2px solid token(colors.accent.default)" },
-    _hover: { bg: "accent.container" },
     alignItems: "center",
-    borderRadius: "md",
     cursor: "default",
     display: "flex",
     justifyContent: "center",
     minHeight: "touch",
-    textStyle: "subheadline",
   },
   variants: {
-    // The design's today, not the real one Ark marks.
-    today: {
-      false: {},
-      true: {
-        outline: "1.5px solid token(colors.accent.focus)",
-        outlineOffset: "-1.5px",
-      },
-    },
     tone: {
       holiday: { color: "calendar.holiday" },
       plain: {},
@@ -110,6 +121,9 @@ export function MonthPicker({
   return (
     <DatePicker.Root
       defaultFocusedValue={toDateValue(value ?? month ?? designToday)}
+      // Six weeks in every month, so what is under it stays put as the
+      // months turn.
+      fixedWeeks
       inline
       locale="ja-JP"
       onValueChange={(details) => {
@@ -118,7 +132,6 @@ export function MonthPicker({
           onSelect(new Date(picked.year, picked.month - 1, picked.day));
         }
       }}
-      outsideDaySelectable
       startOfWeek={weekTools.weekStart}
       value={value ? [toDateValue(value)] : []}
     >
@@ -126,10 +139,12 @@ export function MonthPicker({
         <DatePicker.Context>
           {(api) => (
             <>
-              <DatePicker.ViewControl className={picker.month}>
+              <DatePicker.ViewControl
+                className={cx(monthGrid.heading, picker.month)}
+              >
                 <DatePicker.PrevTrigger
                   aria-label="前の月"
-                  className={picker.iconButton}
+                  className={monthGrid.arrow}
                 >
                   <ChevronLeft aria-hidden="true" size={20} />
                 </DatePicker.PrevTrigger>
@@ -150,7 +165,7 @@ export function MonthPicker({
                 </strong>
                 <DatePicker.NextTrigger
                   aria-label="次の月"
-                  className={picker.iconButton}
+                  className={monthGrid.arrow}
                 >
                   <ChevronRight aria-hidden="true" size={20} />
                 </DatePicker.NextTrigger>
@@ -160,7 +175,7 @@ export function MonthPicker({
                   <DatePicker.TableRow>
                     {weekTools.weekdays.map((day) => (
                       <DatePicker.TableHeader
-                        className={picker.weekday}
+                        className={cx(monthGrid.weekday, picker.weekday)}
                         key={day.day}
                       >
                         {day.label}
@@ -173,16 +188,22 @@ export function MonthPicker({
                     <DatePicker.TableRow key={week[0]?.toString()}>
                       {week.map((day) => {
                         const date = new Date(day.year, day.month - 1, day.day);
+                        const today = dateKey(date) === dateKey(designToday);
                         return (
                           <DatePicker.TableCell
                             key={day.toString()}
                             value={day}
                           >
                             <DatePicker.TableCellTrigger
-                              className={pickerCell({
-                                today: dateKey(date) === dateKey(designToday),
-                                tone: weekTools.dateTone(date),
-                              })}
+                              className={cx(
+                                pickerCell({
+                                  tone: today
+                                    ? "plain"
+                                    : weekTools.dateTone(date),
+                                }),
+                                monthGrid.day,
+                                today && todayMark
+                              )}
                             >
                               {day.day}
                             </DatePicker.TableCellTrigger>
