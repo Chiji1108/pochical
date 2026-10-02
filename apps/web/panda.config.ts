@@ -1,4 +1,5 @@
 import { defineConfig } from "@pandacss/dev";
+import { chatRules } from "@pochical/design/chat";
 import { radii, shadows, sizes, stateLayers } from "@pochical/design/metrics";
 import { colorRoleNames } from "@pochical/design/themes";
 import { textStyles } from "@pochical/design/type";
@@ -69,6 +70,12 @@ export default defineConfig({
   },
   // The site and the prototype bring their own base styles.
   preflight: false,
+  // A long chat message's words, cut at chatRules.foldLines
+  // (design-chat-style.ts). Panda cannot follow the imported number there,
+  // so its class is made here, where the number is imported.
+  staticCss: {
+    css: [{ properties: { lineClamp: [String(chatRules.foldLines)] } }],
+  },
   theme: {
     extend: {
       // iOS's text styles (design/src/type.ts): each sets a size, and
