@@ -1,5 +1,6 @@
 import { listDurableObjectIds } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
@@ -134,6 +135,27 @@ describe("what a session keeps", () => {
     for (const kept of sessions) {
       expect(kept.expiresAt.getTime()).toBeGreaterThan(inFiftyYears.getTime());
     }
+  });
+
+  it("is never refreshed, which would cut it back to 400 days", async () => {
+    const token = await signInAnonymously();
+    const theirs = eq(session.userId, await userIdOf(token));
+    // A session near its end, as better-auth would refresh it.
+    const nearItsEnd = new Date(Date.now() + 60_000);
+    await drizzle(env.DB)
+      .update(session)
+      .set({ expiresAt: nearItsEnd })
+      .where(theirs)
+      .run();
+
+    const response = await getMe({ Authorization: `Bearer ${token}` });
+    expect(response.status).toBe(200);
+    const kept = await drizzle(env.DB)
+      .select({ expiresAt: session.expiresAt })
+      .from(session)
+      .where(theirs)
+      .get();
+    expect(kept?.expiresAt.getTime()).toBe(nearItsEnd.getTime());
   });
 });
 

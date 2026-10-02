@@ -57,7 +57,8 @@ export const COWORKERS_MAX = 100;
 
 // How much of what a user owns one synced value may hold
 // (spec/sync-protocol.md). Far past what one person keeps, so they only
-// bound a value; an edit past them is corrected by the server.
+// bound a value; an edit past them is corrected by the server, but for
+// clockAheadMs, past which a frame is refused (CODE_CLOCK_AHEAD).
 export const syncLimits = {
   // Values in one Changes frame the server sends; a frame stays well
   // under a WebSocket message's size.
