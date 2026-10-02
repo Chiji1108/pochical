@@ -36,8 +36,9 @@ import {
   profileIn,
 } from "./design-group-settings";
 import type { GroupEdit } from "./design-group-settings";
-import { ShiftsPage, marksUpTo } from "./design-group-shifts";
-import type { Layout } from "./design-group-shifts";
+import { ShiftsPage } from "./design-group-shifts";
+import { marksUpTo } from "./design-group-shifts-days";
+import type { Layout } from "./design-group-shifts-parts";
 import { ReportSheet } from "./design-report";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
