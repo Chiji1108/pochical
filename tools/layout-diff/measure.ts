@@ -136,11 +136,12 @@ export function measure(root: string): Screen {
     }
     if (tag === "img") {
       const src = element.getAttribute("src") ?? "";
-      // A picture made in the page, like a photo just chosen, has a new
-      // blob: or data: URL each load, so it goes by its kind; more than one
-      // are counted in the order of the page.
-      const made = /^(?<kind>blob|data):/u.exec(src)?.groups?.kind;
-      const file = made ?? src.split("/").pop() ?? "";
+      // A photo just chosen has a new blob: URL each load, so it goes by
+      // that, counted in the order of the page; a data: URL, the same each
+      // load, still names its picture.
+      const file = src.startsWith("blob:")
+        ? "blob"
+        : (src.split("/").pop() ?? "");
       return `img ${file.slice(0, 40)}${placeOf(element)}`;
     }
     if (tag === "svg") {

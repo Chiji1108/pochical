@@ -10,6 +10,9 @@ export type State = {
   steps?: (page: Page) => Promise<void>;
   // What to measure, when not the phones.
   root?: string;
+  // Measured in a tab with Playwright's clock installed, for steps that
+  // run the page's timers out with page.clock.
+  clock?: boolean;
 };
 
 const demo = (variants: string) =>
@@ -105,20 +108,25 @@ const choosePhotos = async (page: Page) => {
   await page.getByRole("list", { name: "送る写真" }).waitFor();
 };
 
-// Sends the chosen photos and waits for the chat to come to rest: the
-// photos no longer 送信中 (up, or failed), and the one who spoke last done
-// with the few seconds of 入力中 the demo shows after a send.
+// Longer than anything the demo does after a send: the photos' upload
+// and the few seconds of 入力中 from the one who spoke last.
+const SEND_SETTLES_MS = 10_000;
+
+// Sends the chosen photos and runs the demo's timers out (in a state with
+// clock: true), so the chat is measured at rest: the photos no longer
+// 送信中 (up, or failed) and no one 入力中, whether or not anyone was shown
+// writing back.
 const sendPhotos = async (page: Page) => {
   await tap(page, "送る");
-  const typing = page.getByRole("status", { name: /が入力中$/u });
-  await typing.waitFor();
-  await typing.waitFor({ state: "hidden" });
-  await page.waitForFunction(
-    () =>
-      ![...document.querySelectorAll("[role=status]")].some(
-        (status) => status.textContent === "送信中"
-      )
-  );
+  await page.clock.runFor(SEND_SETTLES_MS);
+  await page
+    .getByRole("status", { name: /が入力中$/u })
+    .waitFor({ state: "hidden" });
+  await page
+    .getByRole("status")
+    .filter({ hasText: "送信中" })
+    .first()
+    .waitFor({ state: "hidden" });
 };
 
 const toGroupMonth = async (page: Page) => {
@@ -592,6 +600,7 @@ export const states: State[] = [
   },
   {
     // Sent and up: each photo a line of its own, once the chat is at rest.
+    clock: true,
     name: "group/chat-photos-sent",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
@@ -601,11 +610,13 @@ export const states: State[] = [
   },
   {
     // A photo whose upload failed: the red ! and its note.
+    clock: true,
     name: "group/chat-photo-failed",
     path: demo("photoSend=fails&scheduleSample=filled"),
     steps: async (page) => {
       await choosePhotos(page);
       await sendPhotos(page);
+      // Already failed by now: this only makes sure the note is there.
       await page
         .getByRole("button", { name: /^送れませんでした/u })
         .first()
@@ -736,6 +747,13 @@ export const states: State[] = [
         .getByText("ブロック中のメンバーのメッセージ")
         .first()
         .waitFor();
+      // Closing the menu and then the alert both hand focus back, and
+      // which comes last varies, sometimes leaving ⋯ with its focus ring;
+      // a tap on the profile's name puts it on the profile every time.
+      await page
+        .getByRole("dialog", { name: "お母さん" })
+        .getByRole("heading", { name: "お母さん" })
+        .click();
     },
   },
   {
