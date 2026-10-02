@@ -1,4 +1,3 @@
-import { chatRules } from "@pochical/design/chat";
 import { css, cva } from "styled-system/css";
 
 // The look of the chats: the list of them in a group, and a chat's own
@@ -133,7 +132,9 @@ export const chatStyle = {
   }),
   // A message keeps the lines it was written in.
   // A long message's words, cut at chatRules.foldLines with an ellipsis.
-  folded: css({ lineClamp: chatRules.foldLines }),
+  // The number reaches the style as a variable FoldedText sets: Panda
+  // reads styles before the code runs, so it cannot follow chatRules.
+  folded: css({ lineClamp: "var(--fold-lines)" }),
   // Under a folded message, in the color its links take.
   unfold: cva({
     base: {

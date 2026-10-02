@@ -40,7 +40,13 @@ import {
   useRef,
   useState,
 } from "react";
-import type { MouseEvent, ReactElement, ReactNode, UIEvent } from "react";
+import type {
+  CSSProperties,
+  MouseEvent,
+  ReactElement,
+  ReactNode,
+  UIEvent,
+} from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import {
@@ -2133,6 +2139,8 @@ function LinkMenu({
   );
 }
 
+const foldLines = { "--fold-lines": chatRules.foldLines } as CSSProperties;
+
 // A message's words, folded at chatRules.foldLines until opened. Whether they run
 // past it is measured, not guessed from their length, and told to the
 // chat so 続きを読む shows only under words that were cut.
@@ -2154,7 +2162,11 @@ function FoldedText({
     onFolds(words.scrollHeight > words.clientHeight + 1);
   }, [open, onFolds]);
   return (
-    <span className={open ? undefined : chatStyle.folded} ref={ref}>
+    <span
+      className={open ? undefined : chatStyle.folded}
+      ref={ref}
+      style={open ? undefined : foldLines}
+    >
       {children}
     </span>
   );
