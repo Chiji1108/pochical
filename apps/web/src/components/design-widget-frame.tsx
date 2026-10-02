@@ -109,7 +109,10 @@ const frame = cva({
 
 // The widget's content as the system draws it in each look.
 const content = cva({
-  base: { height: "100%" },
+  // Every line as tall as Japanese makes it, in English too: left to the
+  // font, letters' lines are shorter than kanji's, so a widget's rows,
+  // and the days of its calendars, changed size with 月と曜日.
+  base: { height: "100%", lineHeight: 1.5 },
   variants: {
     rendering: {
       // Every piece one flat white, keeping its opacity.
