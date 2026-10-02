@@ -14,7 +14,7 @@ import type { ImageOptions } from "../lib/design-settings-store";
 import { AppIcon } from "./design-app-icon";
 import { DayCell } from "./design-day-cell";
 import { monthWithYearOf } from "./design-month-name";
-import { NameTabs, OffLookTabs } from "./design-settings";
+import { NameTabs, OffLookTabs } from "./design-settings-style";
 import { Sheet, SheetHeading, sheetBody, sheetLead } from "./design-sheet";
 import {
   ColorSchemeContext,

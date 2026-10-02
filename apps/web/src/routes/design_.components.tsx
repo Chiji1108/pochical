@@ -28,7 +28,7 @@ import {
   DesignProviders,
   useDesignTheme,
 } from "../components/design-providers";
-import { NameTabs, OffLookTabs } from "../components/design-settings";
+import { NameTabs, OffLookTabs } from "../components/design-settings-style";
 import {
   ConfirmDialog,
   DecideHeading,
