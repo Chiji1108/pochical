@@ -2753,6 +2753,9 @@ const weekdayRow = cva({
     display: "grid",
     fontSize: "11px",
     gridTemplateColumns: weekColumns,
+    // The line 日 gives it, for S too: left to the font, letters stand
+    // 3px shorter than kanji, and the month under them moved with 月と曜日.
+    lineHeight: 1.5,
     paddingBottom: "12px",
     textAlign: "center",
   },
