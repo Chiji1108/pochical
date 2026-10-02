@@ -590,6 +590,8 @@ const shareDays = {
     display: "flex",
     flexWrap: "wrap",
     gap: "8px",
+    // Its own part, 24px clear of the month as the switch above it is.
+    marginBottom: "12px",
     padding: "12px 12px",
   }),
   suggestion: css({
@@ -634,7 +636,6 @@ const monthSwitch = css({
   display: "flex",
   gap: "8px",
   justifyContent: "center",
-  marginTop: "-8px",
 });
 
 // The group's shifts page: the month row, the table under it, and room at
