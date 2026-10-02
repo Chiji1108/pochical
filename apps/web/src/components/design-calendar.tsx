@@ -434,7 +434,9 @@ export function DesignCalendar({
     }
     goToMonth(new Date(month.getFullYear(), month.getMonth() + direction, 1));
   }
+  // Entering is about every day, so it lets go of someone's days.
   function startInput() {
+    setShownWith(undefined);
     setSelectedDay(1);
     setEnteredBlank(unfilled > 0);
     setEditing(true);
