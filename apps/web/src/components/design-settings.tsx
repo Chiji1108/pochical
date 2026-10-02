@@ -201,7 +201,9 @@ export function DesignSettings({
   onChangeJob,
   onHolidaysOff,
   onTab,
+  onOpenDay,
   initialPage = "top",
+  initialCoworker,
 }: {
   patterns: Pattern[];
   coworkers: Coworkers;
@@ -214,8 +216,12 @@ export function DesignSettings({
   onChangeJob: (job: { patterns: Pattern[]; rule: RepeatRule }) => void;
   onHolidaysOff: (holidaysOff: boolean) => void;
   onTab: (tab: Tab) => void;
+  // One of someone's days, pressed in 一緒に働く人, to show in the calendar.
+  onOpenDay: (coworker: string, date: Date) => void;
   // For the flow diagrams: a page to open on.
   initialPage?: Page;
+  // On the coworkers page, someone whose days to open on.
+  initialCoworker?: string;
 }) {
   const [page, setPage] = useState<Page>(initialPage);
   const weekTools = useWeek();
@@ -370,9 +376,11 @@ export function DesignSettings({
         {page === "coworkers" && (
           <CoworkersPage
             coworkers={coworkers}
+            initialPerson={initialCoworker}
             onBack={() => {
               setPage("top");
             }}
+            onOpenDay={onOpenDay}
             schedule={schedule}
           />
         )}

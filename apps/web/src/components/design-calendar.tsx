@@ -189,6 +189,14 @@ export function DesignCalendar({
   const coworkerNames = useUser((state) => state.coworkers);
   const setCoworkerNames = useUser((state) => state.setCoworkers);
   const [tab, setTab] = useState<Tab>(initialTab);
+  // Someone whose day was opened from 一緒に働く人: settings opens on them
+  // again the next time it is shown, as a tab keeps its place.
+  const [settingsCoworker, setSettingsCoworker] = useState<string>();
+  useEffect(() => {
+    if (tab === "settings") {
+      setSettingsCoworker(undefined);
+    }
+  }, [tab]);
   const surprise = useSurprise();
   // The group the group tab opens on, like one just joined from a link.
   const [openGroup, setOpenGroup] = useState<string>();
@@ -377,11 +385,16 @@ export function DesignCalendar({
     }
     animate(folded, target, { ...fold, velocity });
   }
-  function openDetail(date: Date) {
+  // `instant` when coming from another tab, with nothing to fold from.
+  function openDetail(date: Date, instant = false) {
     setFoldRow(rowOf(date, monthOpening(date)));
     setSwipedTo(undefined);
     setDetailDate(date);
-    foldTo(1);
+    if (instant) {
+      folded.jump(1);
+    } else {
+      foldTo(1);
+    }
     if (!onMonth(date)) {
       setMonth(monthOpening(date));
     }
@@ -601,11 +614,22 @@ export function DesignCalendar({
               {tab === "settings" && (
                 <DesignSettings
                   coworkers={members}
-                  initialPage={initialSettingsPage}
+                  initialCoworker={settingsCoworker}
+                  initialPage={
+                    settingsCoworker === undefined
+                      ? initialSettingsPage
+                      : "coworkers"
+                  }
                   onApplyRule={applyRule}
                   onChangeJob={changeJob}
                   onFixRule={fixRule}
                   onHolidaysOff={setHolidaysOff}
+                  onOpenDay={(coworker, date) => {
+                    setSettingsCoworker(coworker);
+                    setEditing(false);
+                    setTab("calendar");
+                    openDetail(date, true);
+                  }}
                   onProfile={setProfile}
                   onTab={setTab}
                   patterns={ownPatterns}

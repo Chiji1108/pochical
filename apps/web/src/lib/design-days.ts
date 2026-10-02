@@ -105,6 +105,12 @@ export function dateKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
+// The day a dateKey names, back as a local date.
+export function dateOfKey(key: string) {
+  const [year = 0, month = 1, day = 1] = key.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 // A week with 休み on a weekend day reads as office hours, which usually
 // have national holidays off too.
 export function defaultHolidaysOff(
@@ -129,10 +135,14 @@ export function holidayShiftOf(patterns: readonly Pattern[]) {
 }
 
 const sampleDetails: Record<string, Omit<DayEntry, "shift">> = {
+  "2026-09-02": { members: ["田中"] },
   "2026-09-08": { end: "20:00", note: "棚卸し" },
+  "2026-09-09": { members: ["田中", "佐藤"] },
+  "2026-09-12": { members: ["山本"] },
   "2026-09-19": { members: ["田中", "山本"], start: "08:00" },
-  "2026-09-25": { end: "20:00" },
+  "2026-09-25": { end: "20:00", members: ["田中"] },
   "2026-09-26": { note: "新人さん同行" },
+  "2026-09-28": { members: ["田中", "鈴木"] },
 };
 
 function sampleShift(patternCount: PatternCount, index: number): PresetShift {
