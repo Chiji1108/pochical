@@ -331,14 +331,15 @@ function CalendarTab({
     editing,
     enterFrom,
     enterShift,
+    enterMonth,
     enteredBlank,
+    lastDay,
     selectedDate,
     selectedDay,
     selectedShift,
     skip,
     start: startEntering,
     stop: stopEntering,
-    turnedTo,
   } = useShiftEntry({
     initialDay,
     initialEditing,
@@ -347,7 +348,6 @@ function CalendarTab({
     schedule,
     turnTo,
   });
-  const lastDay = monthDays.length;
   const datePicker = (
     <InputDatePicker
       ariaLabel={`入力する日付：${month.getMonth() + 1}月${selectedDay}日(${weekdays[selectedDate.getDay()]})。タップで変更`}
@@ -384,9 +384,10 @@ function CalendarTab({
     initialDetail,
     month,
     onOpen: (target) => {
-      setSwipedTo(undefined);
       if (target) {
-        setMonth(target);
+        turnTo(target);
+      } else {
+        setSwipedTo(undefined);
       }
     },
   });
@@ -395,7 +396,7 @@ function CalendarTab({
   function goToMonth(target: Date) {
     turnTo(target);
     if (editing) {
-      turnedTo(target);
+      enterMonth(target);
     }
   }
   // Move by what is on screen: a week in the week detail, otherwise a month.
@@ -776,7 +777,7 @@ function useShiftEntry({
     announcePicked(date);
   }
   // A month turned to while entering starts on its first day.
-  function turnedTo(target: Date) {
+  function enterMonth(target: Date) {
     setSelectedDay(1);
     setEnteredBlank(hasBlanks(schedule, target));
     setAnnouncement(
@@ -824,15 +825,16 @@ function useShiftEntry({
     announcement,
     editing,
     enterFrom,
+    enterMonth,
     enterShift,
     enteredBlank,
+    lastDay,
     selectedDate,
     selectedDay,
     selectedShift,
     skip,
     start,
     stop,
-    turnedTo,
   };
 }
 
