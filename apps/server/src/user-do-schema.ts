@@ -23,6 +23,14 @@ export const memberships = sqliteTable("memberships", {
   pushedCursor: integer("pushed_cursor").notNull().default(0),
 });
 
+// The groups the user made, by the request id their app sent, so a
+// CreateGroup repeated after a lost answer gives back the same group
+// rather than a second one.
+export const groupRequests = sqliteTable("group_requests", {
+  groupId: text("group_id").notNull(),
+  requestId: text("request_id").primaryKey(),
+});
+
 // The user's own days, a row for each field of each day as a
 // last-writer-wins value (spec/sync-protocol.md, Shifts): the HLC that set
 // it, and the cursor it got when it last changed. Kept once cleared, with

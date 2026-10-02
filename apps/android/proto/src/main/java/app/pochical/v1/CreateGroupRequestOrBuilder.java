@@ -69,4 +69,32 @@ public interface CreateGroupRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDisplayNameBytes();
+
+  /**
+   * <pre>
+   * An id the app makes once for each group it sets out to create, up to
+   * syncLimits.idLength characters without spaces, and sends again with
+   * every retry: the same id from the same user gives back the group it
+   * made the first time, unchanged, so a retry after a lost answer never
+   * makes a second group. INVALID_ARGUMENT when missing or malformed.
+   * </pre>
+   *
+   * <code>string request_id = 4 [json_name = "requestId"];</code>
+   * @return The requestId.
+   */
+  java.lang.String getRequestId();
+  /**
+   * <pre>
+   * An id the app makes once for each group it sets out to create, up to
+   * syncLimits.idLength characters without spaces, and sends again with
+   * every retry: the same id from the same user gives back the group it
+   * made the first time, unchanged, so a retry after a lost answer never
+   * makes a second group. INVALID_ARGUMENT when missing or malformed.
+   * </pre>
+   *
+   * <code>string request_id = 4 [json_name = "requestId"];</code>
+   * @return The bytes for requestId.
+   */
+  com.google.protobuf.ByteString
+      getRequestIdBytes();
 }

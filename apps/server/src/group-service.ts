@@ -13,7 +13,8 @@ import {
   JoinGroupResponseSchema,
   RemakeInviteLinkResponseSchema,
 } from "./gen/pochical/v1/group_pb";
-import { codeOfGroup, groupOfCode, issueInviteCode } from "./invite-codes";
+import { isId } from "./ids";
+import { groupOfCode, issueInviteCode, liveInviteCode } from "./invite-codes";
 import { overLimit } from "./rate-limits";
 import { requireEmoji, requireText } from "./text-limits";
 import { requireUser } from "./user-service";
@@ -49,23 +50,31 @@ export const registerGroupService = (router: ConnectRouter): void => {
   router.service(GroupService, {
     createGroup: async (request, context) => {
       const user = await requireUser(context);
-      if (await overLimit(env.GROUP_CREATE_LIMIT, user.id)) {
+      const name = requireText(request.name, textLimits.groupName, "name");
+      const emoji = requireEmoji(request.emoji);
+      const displayName = displayNameOf(request.displayName);
+      if (!isId(request.requestId)) {
+        throw new ConnectError("Malformed request_id", Code.InvalidArgument);
+      }
+
+      // Each step can be repeated, so a retry with the same request id
+      // finishes what a failed try left and makes no second group. Only a
+      // new request counts against the limit on groups made.
+      const users = env.USERS.getByName(user.id);
+      const isRetry = (await users.groupOf(request.requestId)) !== null;
+      if (!isRetry && (await overLimit(env.GROUP_CREATE_LIMIT, user.id))) {
         throw new ConnectError(
           "Too many groups made just now",
           Code.ResourceExhausted
         );
       }
-      const name = requireText(request.name, textLimits.groupName, "name");
-      const emoji = requireEmoji(request.emoji);
-      const displayName = displayNameOf(request.displayName);
-
-      const groupId = crypto.randomUUID();
+      const groupId = await users.groupIdFor(request.requestId);
       await env.GROUPS.getByName(groupId).create(
         { emoji, name },
         { displayName, userId: user.id }
       );
-      await env.USERS.getByName(user.id).addMembership(groupId);
-      const inviteCode = await issueInviteCode(env.DB, groupId);
+      await users.addMembership(groupId);
+      const inviteCode = await liveInviteCode(env.DB, groupId);
       return create(CreateGroupResponseSchema, { groupId, inviteCode });
     },
 
@@ -93,9 +102,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
 
     getInviteLink: async ({ groupId }, context) => {
       await requireMember(context, groupId);
-      const inviteCode =
-        (await codeOfGroup(env.DB, groupId)) ??
-        (await issueInviteCode(env.DB, groupId));
+      const inviteCode = await liveInviteCode(env.DB, groupId);
       return create(GetInviteLinkResponseSchema, { inviteCode });
     },
 
