@@ -377,7 +377,7 @@ const upcoming = {
     display: "grid",
     flex: 1,
     gap: "4px",
-    gridTemplateColumns: "48px 20px 1fr",
+    gridTemplateColumns: "56px 20px 1fr",
     minHeight: 0,
   }),
   rowLabel: css({
