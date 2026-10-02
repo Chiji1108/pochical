@@ -835,7 +835,9 @@ function ColumnDay({
   const words = useWords();
   const { english } = useWeek();
   const flat = useContext(WidgetRenderingModeContext) !== "fullColor";
-  const look = useOffLook(day, true);
+  // A day off left empty stays empty: a day with nothing entered has its
+  // dash here, so the two still read apart.
+  const look = useOffLook(day, false);
   const { tint } = useDisplayColor(day.color ?? presetPatterns.off.color);
   const together = shown?.together ?? false;
   const theirs = shown?.theirs;
