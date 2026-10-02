@@ -552,10 +552,13 @@ const nextDays = {
     flexDirection: "column",
     gap: "2px",
   }),
+  // The first day's edge on today's date, the last's on today's mark,
+  // so the days below line up with the line above rather than sitting
+  // inside it.
   root: css({
     borderTop: "1px solid token(colors.separator)",
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
+    display: "flex",
+    justifyContent: "space-between",
     paddingTop: "8px",
     width: "100%",
   }),
