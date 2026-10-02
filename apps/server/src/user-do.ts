@@ -427,8 +427,8 @@ export class UserDO extends DurableObject<Env> {
 
   /**
    * Takes a frame of edits in one transaction, each change given the next
-   * cursor; acknowledges every edit and sends what changed to every
-   * device of the user. An edit may change nothing, one value, or several
+   * cursor; sends what changed to every device of the user, then
+   * acknowledges every edit to the sender. An edit may change nothing, one value, or several
    * (an order and the days it takes back), from `cursor` on. A frame with
    * a clock too far past the server's time is refused whole, so the
    * device corrects its clock and sends the edits again.
@@ -469,10 +469,6 @@ export class UserDO extends DurableObject<Env> {
       }
       return changes;
     });
-    send(ws, {
-      case: "acked",
-      value: { opIds: edits.map(({ opId }) => opId) },
-    });
     if (changed.length > 0) {
       this.schedulePush();
     }
@@ -481,6 +477,12 @@ export class UserDO extends DurableObject<Env> {
         sendChanges(socket, changed);
       }
     }
+    // After the changes, so the sender has the server's value by the time
+    // its edits leave the outbox (spec/sync-protocol.md, Outbox).
+    send(ws, {
+      case: "acked",
+      value: { opIds: edits.map(({ opId }) => opId) },
+    });
   }
 
   /**

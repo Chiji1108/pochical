@@ -29,11 +29,6 @@ describe("syncing a user's own days", () => {
         edits: [edit("op-1", "2026-10-05", DayField.PATTERN, "night", 1000)],
       },
     });
-    const acked = await phone.frames.next();
-    expect(acked.kind).toMatchObject({
-      case: "acked",
-      value: { opIds: ["op-1"] },
-    });
     const expected = {
       case: "changes",
       value: {
@@ -52,8 +47,13 @@ describe("syncing a user's own days", () => {
         ],
       },
     };
+    // The sender gets the change first, then its acknowledgement, so its
+    // edit leaves the outbox only once the server's value is in.
     await expect(phone.frames.next()).resolves.toMatchObject({
       kind: expected,
+    });
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: { case: "acked", value: { opIds: ["op-1"] } },
     });
     await expect(tablet.frames.next()).resolves.toMatchObject({
       kind: expected,
@@ -149,8 +149,8 @@ describe("syncing a user's own days", () => {
         edits: [edit("clear", "2026-10-09", DayField.START, undefined, 2000)],
       },
     });
-    await phone.frames.next();
     const cleared = await phone.frames.next();
+    await phone.frames.next();
     expect(cleared.kind).toMatchObject({
       case: "changes",
       value: {
@@ -183,9 +183,6 @@ describe("syncing a user's own days", () => {
       },
     });
     await expect(phone.frames.next()).resolves.toMatchObject({
-      kind: { case: "acked", value: { opIds: ["long"] } },
-    });
-    await expect(phone.frames.next()).resolves.toMatchObject({
       kind: {
         case: "changes",
         value: {
@@ -203,6 +200,9 @@ describe("syncing a user's own days", () => {
         },
       },
     });
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: { case: "acked", value: { opIds: ["long"] } },
+    });
   });
 
   it("lets the device's next edit win over the correction", async () => {
@@ -217,8 +217,8 @@ describe("syncing a user's own days", () => {
         ],
       },
     });
-    await phone.frames.next();
     const { kind } = await phone.frames.next();
+    await phone.frames.next();
     expect(kind.case === "changes" ? kind.value.changes : []).toMatchObject([
       { kind: { value: { hlc: { deviceId: "server", physicalMs: 1000n } } } },
       { kind: { value: { hlc: { deviceId: "phone" }, value: "08:00" } } },
@@ -231,7 +231,6 @@ describe("syncing a user's own days", () => {
     const last = edit("bad", "2026-10-10", DayField.START, "25:00", 1000);
     last.value.hlc.counter = 0xff_ff_ff_ff;
     sendFrame(phone.socket, { case: "dayEdits", value: { edits: [last] } });
-    await phone.frames.next();
     await expect(phone.frames.next()).resolves.toMatchObject({
       kind: {
         value: {
@@ -247,6 +246,7 @@ describe("syncing a user's own days", () => {
         },
       },
     });
+    await phone.frames.next();
     // The stored correction still goes out to a new device.
     const tablet = await device(token);
     await expect(tablet.frames.next()).resolves.toMatchObject({
@@ -376,9 +376,6 @@ describe("syncing a user's own patterns", () => {
       case: "patternEdits",
       value: { edits: [patternEdit("p1", "night", night, 1000)] },
     });
-    await expect(phone.frames.next()).resolves.toMatchObject({
-      kind: { case: "acked", value: { opIds: ["p1"] } },
-    });
     const expected = {
       case: "changes",
       value: {
@@ -392,6 +389,9 @@ describe("syncing a user's own patterns", () => {
     };
     await expect(phone.frames.next()).resolves.toMatchObject({
       kind: expected,
+    });
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: { case: "acked", value: { opIds: ["p1"] } },
     });
     await expect(tablet.frames.next()).resolves.toMatchObject({
       kind: expected,
@@ -410,8 +410,8 @@ describe("syncing a user's own patterns", () => {
         ],
       },
     });
-    await phone.frames.next();
     const both = await phone.frames.next();
+    await phone.frames.next();
     const changes = both.kind.case === "changes" ? both.kind.value.changes : [];
     const last = changes.at(-1);
     expect(
@@ -432,8 +432,8 @@ describe("syncing a user's own patterns", () => {
         ],
       },
     });
-    await phone.frames.next();
     const corrected = await phone.frames.next();
+    await phone.frames.next();
     expect(corrected.kind).toMatchObject({
       case: "changes",
       value: {
@@ -461,7 +461,6 @@ describe("syncing a user's own patterns", () => {
       case: "patternEdits",
       value: { edits: [order("o1", ["day", "night", "off"], 1000)] },
     });
-    await phone.frames.next();
     await expect(phone.frames.next()).resolves.toMatchObject({
       kind: {
         value: {
@@ -476,11 +475,11 @@ describe("syncing a user's own patterns", () => {
         },
       },
     });
+    await phone.frames.next();
     sendFrame(phone.socket, {
       case: "patternEdits",
       value: { edits: [order("o2", ["day", "day"], 2000)] },
     });
-    await phone.frames.next();
     await expect(phone.frames.next()).resolves.toMatchObject({
       kind: {
         value: {
@@ -498,6 +497,7 @@ describe("syncing a user's own patterns", () => {
         },
       },
     });
+    await phone.frames.next();
   });
 
   it("catches a new device up on days and patterns in one order", async () => {

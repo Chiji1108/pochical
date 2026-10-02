@@ -98,22 +98,30 @@ HLC, not arrival order, decides the winner: an edit made offline at 10:00 and de
 
 - Each `Welcome` carries the server's time, `server_ms`. The device's offset is `server_ms` less the middle of the round trip, from when it sent `Hello` to when `Welcome` arrived, divided as whole numbers (offset). It keeps the last offset across launches, 0 before its first `Welcome`, and `now` is its own time plus the offset.
 - The server refuses a frame of edits in which any clock runs more than `syncLimits.clockAheadMs` (`design/src/limits.ts`) past its own time: `ServerError { CODE_CLOCK_AHEAD }`, nothing in the frame is taken, and the socket is closed (ahead). A corrected clock stays well within it, so this catches edits stamped before the device's first `Welcome` or before its clock was changed.
-- After `CODE_CLOCK_AHEAD`, the device reconnects, and once the new `Welcome` has corrected its offset, before sending its outbox, it starts its clock again from the later of `now` and the latest clock among the changes it has taken, dropping its own far-ahead one, and gives every unsent edit a new clock from a local edit's tick, in outbox order; the value each edit set in the device's own copy takes the same clock. Then it sends them. Its edits keep their order and come after everything it has taken; only on a device whose clock ran that far off do edits made offline lose their own times.
+- After `CODE_CLOCK_AHEAD`, the device reconnects, and once the new `Welcome` has corrected its offset, before sending its outbox, it starts its clock again from the later of `now` and the latest clock among the changes it has taken, dropping its own far-ahead one, and gives every unsent edit a new clock from a local edit's tick, in outbox order. Then it sends them. Its edits keep their order and come after everything it has taken; only on a device whose clock ran that far off do edits made offline lose their own times.
 
 ### Outbox
 
 1. A local edit updates `my_shifts` and appends a row to the outbox in one SQLite transaction.
 2. While connected, the client sends outbox rows in order, each with a unique `op_id` and its HLC.
-3. The User DO applies each field only if its HLC is newer than the stored one, appends the result to its change log, and acknowledges the `op_id`. A repeated edit carries the same HLC, so it is acknowledged without being applied again.
+3. The User DO applies each field only if its HLC is newer than the stored one, appends the result to its change log, sends what changed to every device as `Changes`, and then acknowledges the `op_id` to the sender with `Acked`. A repeated edit carries the same HLC, so it is acknowledged without being applied again.
 4. The client deletes acknowledged rows. Unsent rows survive app restarts.
 5. If the server rejects an edit (validation), it writes a compensating change with a newer HLC, which reaches every device through the change log.
+
+What a device shows of a value while its edits wait (`spec/vectors/local-edits.json`). A value is what one change carries: a field of a day, a pattern, the patterns' order, the repeating orders, a coworker or the coworkers' order.
+
+- A device keeps, for each value, the server's (the last `Change` it took for it) apart from its own edits of it still in the outbox, and shows the latest waiting edit's value if there is one, else the server's.
+- A `Change` replaces the server's value and leaves the outbox alone, so a waiting edit keeps showing whatever arrives meanwhile. Its `Acked` ends the wait, and the device then shows the server's value, which by then is the edit's own, the correction for it, or the newer value it lost to: the server sends a frame's `Changes` before its `Acked`.
+- So a device never compares clocks to choose what to show; the server has done that. Clocks only go out with its edits.
+- A repeating-orders edit waiting in the outbox also hides the days' own values it takes back (`givesWay`); the server's clears for them come as `Changes` before its `Acked`.
+- A `Reset` drops the server's values and keeps the outbox.
 
 ### On the wire
 
 The User DO socket carries a user's days (`proto/pochical/v1/sync.proto`); a Group DO socket refuses them.
 
 - A `DayValue` is one field of one day: `date` ("YYYY-MM-DD"), `field` (`DAY_FIELD_PATTERN`, `_START`, `_END`, `_NOTE`, `_PEOPLE`), an optional `value` (unset clears the field) and its `Hlc`. A day whose `DAY_FIELD_PATTERN` is unset follows its repeating order, and has no shift where no order applies; a pattern of `dayRules.noShift` (`""`, `design/src/days.ts`) is a day with no shift, order or not (Repeating orders); keep it apart from no pattern everywhere, as its note there says.
-- The client sends `DayEdits`, up to `syncLimits.editsPerFrame` a frame (`design/src/limits.ts`; every edit frame alike), each with its `op_id`. The server answers the sender with `Acked` for all of them, then sends each value it changed, as `Changes`, to every device of the user that is past Hello, the sender included, so every device moves its cursor the same way.
+- The client sends `DayEdits`, up to `syncLimits.editsPerFrame` a frame (`design/src/limits.ts`; every edit frame alike), each with its `op_id`. The server sends each value it changed, as `Changes`, to every device of the user that is past Hello, the sender included, so every device moves its cursor the same way, and then answers the sender with `Acked` for all of them (Outbox).
 - An edit for no real day or field, or without a clock, is acknowledged and dropped: there is nothing to keep or correct.
 - An edit whose value does not fit its field (a pattern that is neither `dayRules.noShift` nor an id, an id being up to `syncLimits.idLength` characters with no spaces as `apps/server/src/ids.ts` has it; a time not `HH:MM`; a memo past `textLimits.dayNote`) but whose clock is newer than the stored one is answered with the stored value (or none) under a clock just past the edit's, stamped with device `server`: the compensating change of Outbox step 5.
 - After `Welcome`, a device gets its catch-up as `Changes` of up to `syncLimits.changesPerFrame` values each, in cursor order.
