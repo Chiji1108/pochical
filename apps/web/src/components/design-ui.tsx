@@ -1443,6 +1443,11 @@ export const listRow = {
   }),
 };
 
+// A control that says its value, as a pull-down, is named by the row's
+// label and then the value, as the platforms read a Picker's row: シフト
+// 日勤. The row's own <label> would name it シフト alone.
+const RowLabelContext = createContext<string | undefined>(undefined);
+
 // A row: its label, a value on the right, something before the label
 // (an icon, a mark, a face), and a control after it (a switch, a field).
 // Pressed, it is a button with an arrow; holding a control, or pointing at
@@ -1487,6 +1492,9 @@ export function ListRow({
 }) {
   const pressable = Boolean(onClick);
   const isLabel = !pressable && (control !== undefined || Boolean(htmlFor));
+  const id = useId();
+  // The label's id, for a control it names.
+  const labelId = isLabel ? id : undefined;
   const shownArrow =
     arrow === undefined || arrow === true
       ? pressable && (
@@ -1510,6 +1518,7 @@ export function ListRow({
           (value === undefined || truncate) && listRow.labelGrow,
           labelClassName
         )}
+        id={labelId}
       >
         {truncate ? <span className={listRow.labelText}>{label}</span> : label}
         {detail !== undefined && <small>{detail}</small>}
@@ -1525,7 +1534,9 @@ export function ListRow({
           {value}
         </span>
       )}
-      {control}
+      <RowLabelContext.Provider value={labelId}>
+        {control}
+      </RowLabelContext.Provider>
       {shownArrow}
     </>
   );
@@ -2429,11 +2440,20 @@ export function PullDownMenu({
   label: ReactNode;
   children: ReactNode;
 }) {
+  const rowLabel = useContext(RowLabelContext);
+  const triggerId = useId();
   return (
     <Menu.Root
+      ids={{ trigger: triggerId }}
       positioning={{ gutter: 6, placement: "bottom-end", strategy: "fixed" }}
     >
-      <Menu.Trigger className={menu.trigger}>
+      <Menu.Trigger
+        // In a row, the row's label and then the choice (ListRow).
+        aria-labelledby={
+          rowLabel === undefined ? undefined : `${rowLabel} ${triggerId}`
+        }
+        className={menu.trigger}
+      >
         {label}
         <ChevronDown aria-hidden="true" size={15} />
       </Menu.Trigger>
