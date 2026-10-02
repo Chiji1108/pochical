@@ -23,6 +23,7 @@ object TextFields {
 /** How much of what a user owns one synced value may hold (spec/sync-protocol.md). */
 object SyncLimits {
   const val changesPerFrame = 500
+  const val clockAheadMs = 300000
   const val editsPerFrame = 500
   const val idLength = 64
   const val orders = 200

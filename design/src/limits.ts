@@ -57,11 +57,17 @@ export const COWORKERS_MAX = 100;
 
 // How much of what a user owns one synced value may hold
 // (spec/sync-protocol.md). Far past what one person keeps, so they only
-// bound a value; an edit past them is corrected by the server.
+// bound a value; an edit past them is corrected by the server, but for
+// clockAheadMs, past which a frame is refused (CODE_CLOCK_AHEAD).
 export const syncLimits = {
   // Values in one Changes frame the server sends; a frame stays well
   // under a WebSocket message's size.
   changesPerFrame: 500,
+  // How far past the server's time an edit's clock may run, in ms, once
+  // the device has corrected its clock by Welcome's server_ms
+  // (spec/sync-protocol.md, HLC). A frame with a clock further ahead is
+  // refused with CODE_CLOCK_AHEAD.
+  clockAheadMs: 300_000,
   // Edits in one frame a device sends (DayEdits, PatternEdits, …); an
   // outbox sends more as several. Past it the server closes the socket.
   editsPerFrame: 500,

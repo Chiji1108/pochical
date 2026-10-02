@@ -30,6 +30,7 @@ import {
   isSynced,
   send,
   sendChanges,
+  sendWelcome,
 } from "./sync-socket";
 
 /** What the group shows of itself to members and to invite links. */
@@ -261,7 +262,7 @@ export class GroupDO extends DurableObject<Env> {
    */
   private welcome(ws: WebSocket, cursor: bigint): void {
     const head = this.head();
-    send(ws, { case: "welcome", value: { cursor: BigInt(head) } });
+    sendWelcome(ws, head);
     if (cursor > BigInt(head)) {
       send(ws, { case: "reset", value: {} });
       sendChanges(ws, this.changesAfter(0));

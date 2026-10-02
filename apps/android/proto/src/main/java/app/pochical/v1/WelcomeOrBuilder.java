@@ -19,4 +19,15 @@ public interface WelcomeOrBuilder extends
    * @return The cursor.
    */
   long getCursor();
+
+  /**
+   * <pre>
+   * The server's time as it sent Welcome, ms since the Unix epoch: the
+   * device corrects its clock by it (spec/sync-protocol.md, HLC).
+   * </pre>
+   *
+   * <code>int64 server_ms = 2 [json_name = "serverMs"];</code>
+   * @return The serverMs.
+   */
+  long getServerMs();
 }

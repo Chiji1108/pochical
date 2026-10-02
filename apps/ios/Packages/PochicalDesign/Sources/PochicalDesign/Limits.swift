@@ -21,6 +21,7 @@ public enum TextFields {
 /// How much of what a user owns one synced value may hold (spec/sync-protocol.md).
 public enum SyncLimits {
   public static let changesPerFrame = 500
+  public static let clockAheadMs = 300000
   public static let editsPerFrame = 500
   public static let idLength = 64
   public static let orders = 200

@@ -59,6 +59,47 @@ public  final class Welcome extends
     cursor_ = 0L;
   }
 
+  public static final int SERVER_MS_FIELD_NUMBER = 2;
+  private long serverMs_;
+  /**
+   * <pre>
+   * The server's time as it sent Welcome, ms since the Unix epoch: the
+   * device corrects its clock by it (spec/sync-protocol.md, HLC).
+   * </pre>
+   *
+   * <code>int64 server_ms = 2 [json_name = "serverMs"];</code>
+   * @return The serverMs.
+   */
+  @java.lang.Override
+  public long getServerMs() {
+    return serverMs_;
+  }
+  /**
+   * <pre>
+   * The server's time as it sent Welcome, ms since the Unix epoch: the
+   * device corrects its clock by it (spec/sync-protocol.md, HLC).
+   * </pre>
+   *
+   * <code>int64 server_ms = 2 [json_name = "serverMs"];</code>
+   * @param value The serverMs to set.
+   */
+  private void setServerMs(long value) {
+    
+    serverMs_ = value;
+  }
+  /**
+   * <pre>
+   * The server's time as it sent Welcome, ms since the Unix epoch: the
+   * device corrects its clock by it (spec/sync-protocol.md, HLC).
+   * </pre>
+   *
+   * <code>int64 server_ms = 2 [json_name = "serverMs"];</code>
+   */
+  private void clearServerMs() {
+
+    serverMs_ = 0L;
+  }
+
   public static app.pochical.v1.Welcome parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -201,6 +242,49 @@ public  final class Welcome extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The server's time as it sent Welcome, ms since the Unix epoch: the
+     * device corrects its clock by it (spec/sync-protocol.md, HLC).
+     * </pre>
+     *
+     * <code>int64 server_ms = 2 [json_name = "serverMs"];</code>
+     * @return The serverMs.
+     */
+    @java.lang.Override
+    public long getServerMs() {
+      return instance.getServerMs();
+    }
+    /**
+     * <pre>
+     * The server's time as it sent Welcome, ms since the Unix epoch: the
+     * device corrects its clock by it (spec/sync-protocol.md, HLC).
+     * </pre>
+     *
+     * <code>int64 server_ms = 2 [json_name = "serverMs"];</code>
+     * @param value The serverMs to set.
+     * @return This builder for chaining.
+     */
+    public Builder setServerMs(long value) {
+      copyOnWrite();
+      instance.setServerMs(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The server's time as it sent Welcome, ms since the Unix epoch: the
+     * device corrects its clock by it (spec/sync-protocol.md, HLC).
+     * </pre>
+     *
+     * <code>int64 server_ms = 2 [json_name = "serverMs"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearServerMs() {
+      copyOnWrite();
+      instance.clearServerMs();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.Welcome)
   }
   @java.lang.Override
@@ -218,9 +302,11 @@ public  final class Welcome extends
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
             "cursor_",
+            "serverMs_",
           };
           java.lang.String info =
-              "\u0000\u0001\u0000\u0000\u0001\u0001\u0001\u0000\u0000\u0000\u0001\u0003";
+              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0003\u0002\u0002" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

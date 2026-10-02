@@ -5,6 +5,22 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { account, session, user, verification } from "./db/auth-schema";
 
+// A session lasts for good: an anonymous user's token is their only key,
+// so an expiry would only lock out someone who did not open the app for a
+// while. It ends when they sign out or delete their account
+// (spec/sync-protocol.md, Signing in). better-auth also sets the token as
+// a cookie, which may last at most 400 days, from `expiresIn`; so that is
+// 400 days, and each session is stored to expire a century on and never
+// refreshed, which would cut it back to 400 days.
+const COOKIE_SECONDS_MOST = 400 * 24 * 60 * 60;
+const SESSION_YEARS = 100;
+
+const neverExpires = (): Date => {
+  const at = new Date();
+  at.setUTCFullYear(at.getUTCFullYear() + SESSION_YEARS);
+  return at;
+};
+
 export type AuthConfig = {
   // Where the apps reach the server; better-auth builds its URLs from it.
   baseURL: string;
@@ -24,6 +40,10 @@ export type AuthConfig = {
  */
 export const createAuth = (d1: D1Database, { baseURL, secret }: AuthConfig) =>
   betterAuth({
+    // Linking Apple or Google keeps the anonymous user, whose email is the
+    // anonymous plugin's placeholder, so the provider's never matches it
+    // (spec/sync-protocol.md, Signing in).
+    account: { accountLinking: { allowDifferentEmails: true } },
     advanced: { ipAddress: { disableIpTracking: true } },
     basePath: "/api/auth",
     baseURL,
@@ -36,7 +56,12 @@ export const createAuth = (d1: D1Database, { baseURL, secret }: AuthConfig) =>
         create: {
           // oxlint-disable-next-line require-await -- better-auth's hooks return a promise
           before: async (created) => ({
-            data: { ...created, ipAddress: null, userAgent: null },
+            data: {
+              ...created,
+              expiresAt: neverExpires(),
+              ipAddress: null,
+              userAgent: null,
+            },
           }),
         },
       },
@@ -44,6 +69,10 @@ export const createAuth = (d1: D1Database, { baseURL, secret }: AuthConfig) =>
     plugins: [anonymous(), bearer()],
     rateLimit: { enabled: false },
     secret,
+    session: {
+      disableSessionRefresh: true,
+      expiresIn: COOKIE_SECONDS_MOST,
+    },
   });
 
 export type Auth = ReturnType<typeof createAuth>;

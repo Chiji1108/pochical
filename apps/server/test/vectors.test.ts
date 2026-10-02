@@ -1,3 +1,4 @@
+import { syncLimits } from "@pochical/design/limits";
 import { describe, expect, test } from "vitest";
 
 // The cases every platform checks its own code against (spec/vectors).
@@ -5,13 +6,18 @@ import hlc from "../../../spec/vectors/hlc.json";
 import orderClears from "../../../spec/vectors/order-clears.json";
 import text from "../../../spec/vectors/text.json";
 import { DayField } from "../src/gen/pochical/v1/sync_pb";
-import { compareClocks } from "../src/hlc";
+import { compareClocks, isAhead } from "../src/hlc";
 import { givesWay, heldBackBy } from "../src/order-clears";
 import { characterCount } from "../src/text-limits";
 
 describe("spec/vectors/hlc.json", () => {
   test.each(hlc.compare)("$name", ({ a, b, expected }) => {
     expect(Math.sign(compareClocks(a, b))).toBe(expected);
+  });
+
+  test.each(hlc.ahead)("$name", ({ now, pastLimitMs, expected }) => {
+    const ms = now + syncLimits.clockAheadMs + pastLimitMs;
+    expect(isAhead({ counter: 0, device: "phone", ms }, now)).toBe(expected);
   });
 });
 

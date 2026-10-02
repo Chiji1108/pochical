@@ -1,3 +1,5 @@
+import { syncLimits } from "@pochical/design/limits";
+
 // Hybrid logical clocks as spec/sync-protocol.md (HLC) has them: compared
 // by physical time, then counter, then device, which only breaks exact
 // ties.
@@ -37,3 +39,10 @@ export const clockAfter = (seen: Clock): Clock => {
   }
   return { counter: seen.counter + 1, device: SERVER_DEVICE, ms: seen.ms };
 };
+
+/**
+ * Whether a device's clock runs further past the server's time `now` than
+ * syncLimits.clockAheadMs allows (spec/sync-protocol.md, HLC).
+ */
+export const isAhead = (clock: Clock, now: number): boolean =>
+  clock.ms > now + syncLimits.clockAheadMs;
