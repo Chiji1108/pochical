@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import { invites } from "../src/db/schema";
 import { ChangesSchema, DayField } from "../src/gen/pochical/v1/sync_pb";
+import type { UserDO } from "../src/user-do";
 import { call, signInAnonymously, userIdOf } from "./helpers";
 import {
   changesIn,
@@ -44,6 +45,59 @@ const pushed = (value: string, ms: number, field = DayField.PATTERN) =>
       ],
     })
   );
+
+// How long the User DO first waits to push again to a group it could not
+// reach (PUSH_RETRY_FIRST_MS).
+const FIRST_RETRY_MS = 10_000;
+
+// A signed-in user and their User DO.
+const someone = async () => {
+  const maker = await signInAnonymously();
+  const makerId = await userIdOf(maker);
+  return { maker, makerId, user: env.USERS.getByName(makerId) };
+};
+
+// Lists the user in groups whose DOs fail every push to them; `meanwhile`
+// runs as each push fails.
+const failPushesTo = async (
+  user: DurableObjectStub<UserDO>,
+  groupIds: string[],
+  meanwhile?: (instance: UserDO) => void
+): Promise<void> => {
+  await runInDurableObject(user, (instance, state) => {
+    for (const groupId of groupIds) {
+      state.storage.sql.exec(
+        "INSERT INTO memberships (group_id, joined_at) VALUES (?, 0)",
+        groupId
+      );
+    }
+    Reflect.set(instance, "env", {
+      GROUPS: {
+        getByName: (name: string) =>
+          groupIds.includes(name)
+            ? {
+                takeMemberShifts: () => {
+                  meanwhile?.(instance);
+                  throw new Error("unreachable");
+                },
+              }
+            : env.GROUPS.getByName(name),
+      },
+    });
+  });
+};
+
+// Puts 夜勤 on a day from the user's phone, so they have a value to push.
+const enterADay = async (token: string): Promise<void> => {
+  const phone = await device(token);
+  sendFrame(phone.socket, {
+    case: "dayEdits",
+    value: {
+      edits: [edit("p", "2026-10-20", DayField.PATTERN, "night", 1000)],
+    },
+  });
+  await phone.frames.next();
+};
 
 // The group's live invitation code, read from D1.
 const liveCode = async (groupId: string): Promise<string> => {
@@ -168,46 +222,21 @@ describe("a member's shifts in their groups", () => {
   });
 
   it("pushes to the other groups when one cannot be reached, and comes back for it", async () => {
-    const maker = await signInAnonymously();
-    const makerId = await userIdOf(maker);
-    const user = env.USERS.getByName(makerId);
-    // A group the user is in whose DO fails every push, listed first.
-    const unreachable = "!unreachable";
-    await runInDurableObject(user, (instance, state) => {
-      state.storage.sql.exec(
-        "INSERT INTO memberships (group_id, joined_at) VALUES (?, 0)",
-        unreachable
-      );
-      Reflect.set(instance, "env", {
-        GROUPS: {
-          getByName: (name: string) =>
-            name === unreachable
-              ? {
-                  takeMemberShifts: () => {
-                    throw new Error("unreachable");
-                  },
-                }
-              : env.GROUPS.getByName(name),
-        },
-      });
-    });
+    const { maker, makerId, user } = await someone();
+    // Listed first, so the group after it shows it is not held back.
+    await failPushesTo(user, ["!unreachable"]);
     const created = await call(
       "GroupService/CreateGroup",
       { displayName: "さくら", emoji: "🍉", name: "いとこ会" },
       maker
     );
     const { groupId } = (await created.json()) as { groupId: string };
-    const phone = await device(maker);
-    sendFrame(phone.socket, {
-      case: "dayEdits",
-      value: {
-        edits: [edit("p", "2026-10-20", DayField.PATTERN, "night", 1000)],
-      },
-    });
-    await phone.frames.next();
+    await enterADay(maker);
 
     const before = Date.now();
     await runInDurableObject(user, async (instance, state) => {
+      // As if no push had failed yet, whatever ran before this one.
+      state.storage.kv.delete("pushFailures:!unreachable");
       await state.storage.deleteAlarm();
       await instance.alarm();
       expect(
@@ -217,15 +246,60 @@ describe("a member's shifts in their groups", () => {
           )
           .toArray()
       ).toStrictEqual([
-        { group_id: unreachable, pushed_cursor: 0 },
+        { group_id: "!unreachable", pushed_cursor: 0 },
         { group_id: groupId, pushed_cursor: 1 },
       ]);
-      await expect(state.storage.getAlarm()).resolves.toBeGreaterThan(before);
+      const retry = await state.storage.getAlarm();
+      expect(retry).toBeGreaterThanOrEqual(before + FIRST_RETRY_MS);
+      expect(retry).toBeLessThanOrEqual(Date.now() + FIRST_RETRY_MS);
     });
 
     const group = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     expect(changesIn(await group.frames.next())).toMatchObject([
       { kind: { value: { day: { value: "night" }, userId: makerId } } },
     ]);
+  });
+
+  it("waits by each group's own failures, and stops after many in a row", async () => {
+    const { maker, user } = await someone();
+    await failPushesTo(user, ["!long-gone", "!just-now"]);
+    await enterADay(maker);
+
+    await runInDurableObject(user, async (instance, state) => {
+      // One group has failed for hours; the other fails for the first time.
+      state.storage.kv.put("pushFailures:!long-gone", 20);
+      state.storage.kv.delete("pushFailures:!just-now");
+      await state.storage.deleteAlarm();
+      const before = Date.now();
+      await instance.alarm();
+      const retry = await state.storage.getAlarm();
+      expect(retry).toBeGreaterThanOrEqual(before + FIRST_RETRY_MS);
+      expect(retry).toBeLessThanOrEqual(Date.now() + FIRST_RETRY_MS);
+
+      // Both past the most retries: the next change tries them again.
+      state.storage.kv.put("pushFailures:!long-gone", 30);
+      state.storage.kv.put("pushFailures:!just-now", 30);
+      await state.storage.deleteAlarm();
+      await instance.alarm();
+      await expect(state.storage.getAlarm()).resolves.toBeNull();
+    });
+  });
+
+  it("leaves the next round to a change made while it pushes", async () => {
+    const { maker, user } = await someone();
+    // The change comes as the push to the group fails.
+    await failPushesTo(user, ["!unreachable"], (instance) => {
+      instance.addMembership("!unreachable");
+    });
+    await enterADay(maker);
+
+    await runInDurableObject(user, async (instance, state) => {
+      await state.storage.deleteAlarm();
+      const before = Date.now();
+      await instance.alarm();
+      await expect(state.storage.getAlarm()).resolves.toBeLessThan(
+        before + FIRST_RETRY_MS
+      );
+    });
   });
 });
