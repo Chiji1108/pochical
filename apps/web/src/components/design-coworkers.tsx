@@ -1,6 +1,7 @@
 import { textLimits } from "@pochical/design/limits";
 import { useState } from "react";
 
+import { membersOrNone } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
 import { useUser } from "../lib/design-user-store";
 import { composing, limitText } from "../lib/text-limits";
@@ -43,10 +44,7 @@ export function useCoworkerList(): Coworkers {
             return [key, entry];
           }
           const next = change(entry.members);
-          return [
-            key,
-            { ...entry, members: next.length > 0 ? next : undefined },
-          ];
+          return [key, { ...entry, members: membersOrNone(next) }];
         })
       )
     );

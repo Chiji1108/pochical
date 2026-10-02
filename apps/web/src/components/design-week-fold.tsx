@@ -31,19 +31,21 @@ import { useWeek } from "./design-week";
 // week, with the day's details under it, and closing it, or pulling the
 // week down, unfolds the month back around it. `onOpen` is told as a week
 // opens, with the month to turn to when the week is off the one shown.
+// `dates` are the days the month shows.
 export function useWeekFold({
   month,
+  dates,
   editing,
   initialDetail,
   onOpen,
 }: {
   month: Date;
+  dates: Date[];
   editing: boolean;
   initialDetail?: Date;
   onOpen: (turnTo: Date | undefined) => void;
 }) {
   const weekTools = useWeek();
-  const dates = weekTools.monthDates(month);
   const [detailDate, setDetailDate] = useState(initialDetail);
   // The row of the month the opened week is on, for the month to fold up
   // into it and unfold back around it. It follows the week as it turns.
@@ -53,7 +55,9 @@ export function useWeekFold({
   const folded = useMotionValue(initialDetail ? 1 : 0);
   const reduceFolding = useReducedMotion() ?? false;
   const detailOpacity = useTransform(folded, [0.5, 1], [0, 1]);
-  const weekDetail = !editing && detailDate !== undefined;
+  // The day whose week is open, while not entering, which shows the month.
+  const openDate = editing ? undefined : detailDate;
+  const weekDetail = openDate !== undefined;
   function rowOf(date: Date, inMonth: Date) {
     const index = weekTools
       .monthDates(inMonth)
@@ -103,8 +107,8 @@ export function useWeekFold({
   // in the week view the months the weeks before and after are shown in.
   const besideMonths = weekDetail
     ? {
-        next: monthOpening(addDays(detailDate, 7)),
-        previous: monthOpening(addDays(detailDate, -7)),
+        next: monthOpening(addDays(openDate, 7)),
+        previous: monthOpening(addDays(openDate, -7)),
       }
     : undefined;
   // How far the month unfolds below the week: the finger pulling it open
@@ -134,11 +138,10 @@ export function useWeekFold({
   return {
     besideMonths,
     closeDetail,
-    detailDate,
     detailOpacity,
     foldRow,
     folded,
-    monthOpening,
+    openDate,
     openDetail,
     pullRef,
   };

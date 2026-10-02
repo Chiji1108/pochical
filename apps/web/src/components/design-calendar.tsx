@@ -23,6 +23,7 @@ import {
   dateKey,
   formatDay,
   keepDetails,
+  membersOrNone,
   timeChangeOf,
   timeRange,
   weekdays,
@@ -45,7 +46,6 @@ import type { DesignVariants } from "../lib/design-variants";
 import { useWorkChanges } from "../lib/design-work-changes";
 import { composing, limitText } from "../lib/text-limits";
 import { useCoworkerList } from "./design-coworkers";
-import type { Coworkers } from "./design-coworkers";
 import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
 import { GapSheet, gapDaysIn } from "./design-gap-sheet";
@@ -100,8 +100,6 @@ import {
 import { useWeek } from "./design-week";
 import { FoldingGrid, useWeekFold } from "./design-week-fold";
 import { OffDisplayContext, ShiftMark } from "./shift-mark";
-
-type MemberOptions = Pick<Coworkers, "names" | "onAdd">;
 
 // One person's phone. Their data comes from the nearest UserStoreContext,
 // so two phones under one store show the same person.
@@ -163,8 +161,7 @@ export function DesignCalendar({
   const offDisplay = useContext(OffDisplayContext);
   const imageOptions = useSettings((state) => state.device.imageOptions);
   const setImageOptions = useSettings((state) => state.setImageOptions);
-  const members = useCoworkerList();
-  const coworkerNames = members.names;
+  const coworkerNames = useUser((state) => state.coworkers);
   const [tab, setTab] = useState<Tab>(initialTab);
   const surprise = useSurprise();
   // The group the group tab opens on, like one just joined from a link.
@@ -290,14 +287,14 @@ export function DesignCalendar({
   const {
     besideMonths,
     closeDetail,
-    detailDate,
     detailOpacity,
     foldRow,
     folded,
-    monthOpening,
+    openDate,
     openDetail,
     pullRef,
   } = useWeekFold({
+    dates,
     editing,
     initialDetail,
     month,
@@ -308,8 +305,7 @@ export function DesignCalendar({
       }
     },
   });
-  // Re-derived here, so the date is known to be there with it.
-  const weekDetail = !editing && detailDate !== undefined;
+  const weekDetail = openDate !== undefined;
   const headingMode = screenMode(editing, weekDetail);
   function goToMonth(target: Date) {
     setSwipedTo(undefined);
@@ -325,7 +321,7 @@ export function DesignCalendar({
   // Move by what is on screen: a week in the week detail, otherwise a month.
   function step(direction: 1 | -1) {
     if (weekDetail) {
-      openDetail(addDays(detailDate, direction * 7));
+      openDetail(addDays(openDate, direction * 7));
       return;
     }
     goToMonth(new Date(month.getFullYear(), month.getMonth() + direction, 1));
@@ -411,7 +407,6 @@ export function DesignCalendar({
             <Phone fullScreen={fullScreen} ref={phoneRef} style={themeStyle}>
               {tab === "settings" && (
                 <DesignSettings
-                  coworkers={members}
                   initialPage={initialSettingsPage}
                   onApplyRule={applyRule}
                   onChangeJob={changeJob}
@@ -482,7 +477,7 @@ export function DesignCalendar({
                     swiped={swipedTo === dateKey(month)}
                   />
                   <HeadingActions
-                    detailDate={detailDate}
+                    detailDate={openDate}
                     mode={headingMode}
                     month={month}
                     onDone={finishHeading}
@@ -527,20 +522,19 @@ export function DesignCalendar({
                           // After step, which clears it.
                           setSwipedTo(
                             dateKey(
-                              weekDetail
-                                ? monthOpening(
-                                    addDays(detailDate, direction * 7)
-                                  )
-                                : new Date(
-                                    month.getFullYear(),
-                                    month.getMonth() + direction,
-                                    1
-                                  )
+                              besideMonths?.[
+                                direction > 0 ? "next" : "previous"
+                              ] ??
+                                new Date(
+                                  month.getFullYear(),
+                                  month.getMonth() + direction,
+                                  1
+                                )
                             )
                           );
                         }}
                         progress={pageDrag}
-                        page={weekDetail ? dateKey(detailDate) : dateKey(month)}
+                        page={weekDetail ? dateKey(openDate) : dateKey(month)}
                         renderPage={(offset) => {
                           const pageMonth = new Date(
                             month.getFullYear(),
@@ -552,7 +546,7 @@ export function DesignCalendar({
                           const pageDates =
                             weekDetail && offset !== 0
                               ? weekTools.weekDates(
-                                  addDays(detailDate, offset * 7)
+                                  addDays(openDate, offset * 7)
                                 )
                               : weekTools.monthDates(pageMonth);
                           const renderCell = (date: Date) => (
@@ -562,8 +556,8 @@ export function DesignCalendar({
                                 (editing
                                   ? date.getMonth() === month.getMonth() &&
                                     date.getDate() === selectedDay
-                                  : detailDate !== undefined &&
-                                    dateKey(date) === dateKey(detailDate))
+                                  : openDate !== undefined &&
+                                    dateKey(date) === dateKey(openDate))
                               }
                               date={date}
                               editing={editing}
@@ -605,19 +599,18 @@ export function DesignCalendar({
                   </div>
                   {weekDetail && (
                     <motion.section
-                      aria-label={formatDay(detailDate)}
+                      aria-label={formatDay(openDate)}
                       className={calendarPage.detail}
                       style={{ opacity: detailOpacity }}
                     >
                       <h4 className={calendarPage.detailDate}>
-                        {formatDay(detailDate)}
+                        {formatDay(openDate)}
                       </h4>
                       <DayDetail
-                        key={dateKey(detailDate)}
-                        entry={schedule[dateKey(detailDate)]}
-                        members={members}
+                        key={dateKey(openDate)}
+                        entry={schedule[dateKey(openDate)]}
                         onChange={(entry) => {
-                          changeEntry(detailDate, entry);
+                          changeEntry(openDate, entry);
                         }}
                         patternKeys={patternKeys}
                       />
@@ -1495,14 +1488,13 @@ function Disclosure({ open }: { open: boolean }) {
 }
 
 function MemberChips({
-  members,
   selected,
   onChange,
 }: {
-  members: MemberOptions;
   selected: string[];
   onChange: (selected: string[]) => void;
 }) {
+  const members = useCoworkerList();
   const [adding, setAdding] = useState(false);
   // Held to the limit here too: a name confirmed and added in one go may
   // not have been cut to it yet.
@@ -1575,12 +1567,10 @@ function MemberChips({
 function DayDetail({
   entry,
   patternKeys,
-  members,
   onChange,
 }: {
   entry: DayEntry | undefined;
   patternKeys: Shift[];
-  members: MemberOptions;
   onChange: (entry: DayEntry | undefined) => void;
 }) {
   const book = usePatterns();
@@ -1687,12 +1677,8 @@ function DayDetail({
         {entry && time && membersOpen && (
           <div className={dayDetail.unfolded} data-list-row="">
             <MemberChips
-              members={members}
               onChange={(next) => {
-                onChange({
-                  ...entry,
-                  members: next.length > 0 ? next : undefined,
-                });
+                onChange({ ...entry, members: membersOrNone(next) });
               }}
               selected={selected}
             />

@@ -17,7 +17,6 @@ import { useUser } from "./design-user-store";
 export function useWorkChanges(schedule: Schedule) {
   const ownPatterns = useUser((state) => state.patterns);
   const setPatterns = useUser((state) => state.setPatterns);
-  const rules = useUser((state) => state.rules);
   const setRules = useUser((state) => state.setRules);
   const setOwnDays = useUser((state) => state.setSchedule);
   // From its start, the new order shows in place of the one before: the
@@ -86,18 +85,17 @@ export function useWorkChanges(schedule: Schedule) {
   // Holidays follow the order in use: on, they take the day off now first;
   // off, they show the sequence again. Days the person changed keep theirs.
   function setHolidaysOff(holidaysOff: boolean) {
-    const rule = rules.at(-1);
-    if (!rule) {
-      return;
-    }
     const holidayShift = holidaysOff ? holidayShiftOf(ownPatterns) : undefined;
     if (holidaysOff && !holidayShift) {
       return;
     }
-    setRules((previous) => [
-      ...previous.slice(0, -1),
-      { ...rule, holidayShift, holidaysOff },
-    ]);
+    // The order in use as it is by then, should another change come first.
+    setRules((previous) => {
+      const rule = previous.at(-1);
+      return rule
+        ? [...previous.slice(0, -1), { ...rule, holidayShift, holidaysOff }]
+        : previous;
+    });
   }
   return { applyRule, changeJob, fixRule, setHolidaysOff };
 }

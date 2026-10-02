@@ -54,8 +54,7 @@ import {
 } from "./design-account";
 import type { AccountProvider } from "./design-account";
 import { AppIcon, pickableIcons, useAppIcons } from "./design-app-icon";
-import { CoworkersPage } from "./design-coworkers";
-import type { Coworkers } from "./design-coworkers";
+import { CoworkersPage, useCoworkerList } from "./design-coworkers";
 import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
 import type { Profile } from "./design-group-data";
@@ -201,7 +200,6 @@ function shortDay(date: Date) {
 
 export function DesignSettings({
   patterns,
-  coworkers,
   rules,
   schedule,
   profile,
@@ -215,7 +213,6 @@ export function DesignSettings({
   initialPage = "top",
 }: {
   patterns: Pattern[];
-  coworkers: Coworkers;
   rules: RepeatRule[];
   schedule: Schedule;
   profile: Profile;
@@ -230,6 +227,7 @@ export function DesignSettings({
   // For the flow diagrams: a page to open on.
   initialPage?: Page;
 }) {
+  const coworkers = useCoworkerList();
   const [page, setPage] = useState<Page>(initialPage);
   // Kept here, so leaving the chat and coming back finds it as it was.
   const [supportLines, setSupportLines] = useState(() =>
