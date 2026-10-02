@@ -15,10 +15,9 @@ import type { SupportLine } from "../lib/design-support";
 import { useUser } from "../lib/design-user-store";
 import { site } from "../lib/site";
 import { AppIcon, useAppIcons } from "./design-app-icon";
+import { chatRow, chatStyle } from "./design-chat-style";
 import {
   chatAvatarSize,
-  chatRow,
-  chatStyle,
   maxPhotos,
   photoOf,
   photoSize,
