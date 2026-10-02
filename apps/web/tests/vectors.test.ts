@@ -4,6 +4,7 @@ import { describe, expect, test } from "bun:test";
 // the native apps' tests read the same files.
 import chatText from "../../../spec/vectors/chat-text.json";
 import hlc from "../../../spec/vectors/hlc.json";
+import localEdits from "../../../spec/vectors/local-edits.json";
 import repeat from "../../../spec/vectors/repeat.json";
 import review from "../../../spec/vectors/review.json";
 import text from "../../../spec/vectors/text.json";
@@ -27,6 +28,8 @@ import {
 import type { OwnDays } from "../src/lib/design-days";
 import type { Pattern, PatternBook } from "../src/lib/design-patterns";
 import { clockOffset, receive, tick } from "../src/lib/hlc";
+import { noValue, shownValue, takeEvent } from "../src/lib/local-edits";
+import type { LocalEvent } from "../src/lib/local-edits";
 import { mayAskForReview, openedOn } from "../src/lib/review";
 import type { ReviewHistory } from "../src/lib/review";
 import { characterCount, dayName, limitText } from "../src/lib/text-limits";
@@ -214,6 +217,18 @@ describe("spec/vectors/hlc.json", () => {
   for (const { name, expected, ...times } of hlc.offset) {
     test(name, () => {
       expect(clockOffset(times)).toBe(expected);
+    });
+  }
+});
+
+describe("spec/vectors/local-edits.json", () => {
+  for (const { name, steps } of localEdits.cases) {
+    test(name, () => {
+      let state = noValue;
+      for (const { shows, ...event } of steps) {
+        state = takeEvent(state, event as LocalEvent);
+        expect(shownValue(state)).toBe(shows);
+      }
     });
   }
 });

@@ -1,0 +1,229 @@
+{
+  "about": "What a device shows of one synced value (spec/sync-protocol.md, Outbox): it keeps the server's value, the last change it took, apart from its own edits waiting in the outbox, and shows the latest waiting edit's value if there is one, else the server's. Each step is an event and what the device shows after it: edit (a local edit, op its op_id, value null for a clear), change (a Change for this value from the server, null for a clear), acked (the op_ids of an Acked frame; ids of other values' edits change nothing here) or reset (a Reset). The server sends a frame's Changes before its Acked.",
+  "cases": [
+    {
+      "name": "an edit shows at once, and stays through its change and its acknowledgement",
+      "steps": [
+        {
+          "change": "day",
+          "shows": "day"
+        },
+        {
+          "edit": {
+            "op": "a",
+            "value": "night"
+          },
+          "shows": "night"
+        },
+        {
+          "change": "night",
+          "shows": "night"
+        },
+        {
+          "acked": ["a"],
+          "shows": "night"
+        }
+      ]
+    },
+    {
+      "name": "a newer value from another device waits behind the edit, then wins once the edit is acknowledged without a change",
+      "steps": [
+        {
+          "change": "day",
+          "shows": "day"
+        },
+        {
+          "edit": {
+            "op": "a",
+            "value": "night"
+          },
+          "shows": "night"
+        },
+        {
+          "change": "off",
+          "shows": "night"
+        },
+        {
+          "acked": ["a"],
+          "shows": "off"
+        }
+      ]
+    },
+    {
+      "name": "an older value from another device arrives while the edit waits, and the edit wins",
+      "steps": [
+        {
+          "edit": {
+            "op": "a",
+            "value": "night"
+          },
+          "shows": "night"
+        },
+        {
+          "change": "off",
+          "shows": "night"
+        },
+        {
+          "change": "night",
+          "shows": "night"
+        },
+        {
+          "acked": ["a"],
+          "shows": "night"
+        }
+      ]
+    },
+    {
+      "name": "a value that does not fit shows until the server's correction is acknowledged",
+      "steps": [
+        {
+          "change": "08:30",
+          "shows": "08:30"
+        },
+        {
+          "edit": {
+            "op": "a",
+            "value": "25:00"
+          },
+          "shows": "25:00"
+        },
+        {
+          "change": "08:30",
+          "shows": "25:00"
+        },
+        {
+          "acked": ["a"],
+          "shows": "08:30"
+        }
+      ]
+    },
+    {
+      "name": "of two waiting edits the later shows, also once the first is acknowledged",
+      "steps": [
+        {
+          "edit": {
+            "op": "a",
+            "value": "day"
+          },
+          "shows": "day"
+        },
+        {
+          "edit": {
+            "op": "b",
+            "value": "night"
+          },
+          "shows": "night"
+        },
+        {
+          "change": "day",
+          "shows": "night"
+        },
+        {
+          "acked": ["a"],
+          "shows": "night"
+        },
+        {
+          "change": "night",
+          "shows": "night"
+        },
+        {
+          "acked": ["b"],
+          "shows": "night"
+        }
+      ]
+    },
+    {
+      "name": "clearing a value shows nothing, as the server's clear does",
+      "steps": [
+        {
+          "change": "day",
+          "shows": "day"
+        },
+        {
+          "edit": {
+            "op": "a",
+            "value": null
+          },
+          "shows": null
+        },
+        {
+          "change": null,
+          "shows": null
+        },
+        {
+          "acked": ["a"],
+          "shows": null
+        }
+      ]
+    },
+    {
+      "name": "an acknowledgement of another value's edit changes nothing here",
+      "steps": [
+        {
+          "change": "day",
+          "shows": "day"
+        },
+        {
+          "edit": {
+            "op": "a",
+            "value": "night"
+          },
+          "shows": "night"
+        },
+        {
+          "acked": ["other"],
+          "shows": "night"
+        }
+      ]
+    },
+    {
+      "name": "a reset drops the server's value but keeps the waiting edit",
+      "steps": [
+        {
+          "change": "day",
+          "shows": "day"
+        },
+        {
+          "edit": {
+            "op": "a",
+            "value": "night"
+          },
+          "shows": "night"
+        },
+        {
+          "reset": true,
+          "shows": "night"
+        },
+        {
+          "change": "day",
+          "shows": "night"
+        },
+        {
+          "change": "night",
+          "shows": "night"
+        },
+        {
+          "acked": ["a"],
+          "shows": "night"
+        }
+      ]
+    },
+    {
+      "name": "a reset without a waiting edit shows nothing until the server's values come",
+      "steps": [
+        {
+          "change": "day",
+          "shows": "day"
+        },
+        {
+          "reset": true,
+          "shows": null
+        },
+        {
+          "change": "day",
+          "shows": "day"
+        }
+      ]
+    }
+  ]
+}
