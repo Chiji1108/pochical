@@ -58,6 +58,33 @@ public object WelcomeKt {
     public fun clearCursor() {
       _builder.clearCursor()
     }
+
+    /**
+     * ```
+     * The server's time as it sent Welcome, ms since the Unix epoch: the
+     * device corrects its clock by it (spec/sync-protocol.md, HLC).
+     * ```
+     *
+     * `int64 server_ms = 2 [json_name = "serverMs"];`
+     */
+    public var serverMs: kotlin.Long
+      @kotlin.jvm.JvmName("getServerMs")
+        get() = _builder.serverMs
+      @kotlin.jvm.JvmName("setServerMs")
+        set(value) {
+        _builder.serverMs = value
+      }
+    /**
+     * ```
+     * The server's time as it sent Welcome, ms since the Unix epoch: the
+     * device corrects its clock by it (spec/sync-protocol.md, HLC).
+     * ```
+     *
+     * `int64 server_ms = 2 [json_name = "serverMs"];`
+     */
+    public fun clearServerMs() {
+      _builder.clearServerMs()
+    }
   }
 }
 public inline fun app.pochical.v1.Welcome.copy(block: `app.pochical.v1`.WelcomeKt.Dsl.() -> kotlin.Unit): app.pochical.v1.Welcome =

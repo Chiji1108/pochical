@@ -18,8 +18,13 @@ Every user is signed in, from the first launch: anonymously at first, so nobody 
 
 - A client signs in with `POST /api/auth/sign-in/anonymous`, sending `Content-Type: application/json` and the body `{}` (better-auth answers 415 without them), and keeps the session token from the response's `set-auth-token` header: iOS in the Keychain and Android in Block Store, so a reinstall comes back as the same user.
 - It sends the token as `Authorization: Bearer <token>` on every Connect call and socket. Calls without a valid one fail with `UNAUTHENTICATED`; sockets get 401. `UserService.GetMe` says whose token it is.
+- A session lasts for good, until the user signs out or deletes their account. An anonymous user's token is their only key, so an expiry would only lock out someone who did not open the app for a while (a widget is enough to keep using it). better-auth puts a session's lifetime on its cookie too, which may last at most 400 days, so the server stores each session to expire a century on and never refreshes it (`apps/server/src/auth.ts`); the apps use the token, not the cookie.
 - Each user has a User DO named by their user id. It records the groups they are in.
 - A session keeps its token and its user only: better-auth's IP address and user agent are left empty, so the server holds no one's address or device.
+- Linking Apple or Google keeps the user: the app gets the provider's ID token (Sign in with Apple; Google through Credential Manager or Google Sign-In) and sends it on the signed-in session to `POST /api/auth/link-social` (`{ provider, idToken: { token, nonce } }`). An anonymous user's email is a placeholder, never the provider's, so the server allows linking a different email (`account.accountLinking.allowDifferentEmails`); the provider must still give an email, or `/link-social` answers `USER_EMAIL_NOT_FOUND`: an ID token carries one only when the app asks for the email scope, which Sign in with Google through Credential Manager does by default and Sign in with Apple does not, so both apps ask for it. The server reads the email to link and keeps none of it (below). The user id stays, and with it their User DO, groups and messages; the user is no longer anonymous once linked. better-auth leaves `isAnonymous` set, so the server clears it as the provider's account is linked, in the same change that builds linking: a linked user still marked anonymous could be deleted through the anonymous plugin's `/delete-anonymous-user` without signing in again, and the switch below would keep the device's anonymous user, as the plugin deletes it only when the account switched to is not anonymous. better-auth's way for an anonymous user to sign in with a provider (`/sign-in/social`), which makes a new user and deletes the anonymous one, is used only to switch, below. (Not built yet: linking, with clearing `isAnonymous`.)
+- When the provider's account belongs to another user already, `/link-social` answers 409 (`SOCIAL_ACCOUNT_ALREADY_LINKED`): that user holds the person's earlier data, as on a new phone. The app asks first, then signs in to that user with `/sign-in/social` and the same ID token; the anonymous user on this device, and what was entered there, are deleted as deleting an account deletes them (not built yet). A new phone's first launch offers signing in with Apple or Google before anything is entered, so there is seldom anything to lose.
+- The server keeps no provider tokens: the ID token (which carries the person's email), and any access or refresh token, are left out of better-auth's `account` row, as a session keeps no address. Only which provider account is linked to which user is kept (not built yet).
+- A user who never linked and loses both their phone and its stored token cannot be reached again. That is why the app suggests linking, at moments its screens decide.
 - Cloudflare's rate limiting holds back what an anonymous account makes cheap, by the limiters in `apps/server/wrangler.jsonc` (`ratelimits`, where their numbers are): anonymous sign-ins per client address, answered with 429, and groups made per user, answered with `RESOURCE_EXHAUSTED`. The address is only counted, never kept.
 
 ## Groups
@@ -42,7 +47,7 @@ Clients open one WebSocket to their User DO, at `/v1/me/socket`, and one per gro
 1. Before connecting, the client may call `SystemService.GetServerInfo` and ask the user to update when its protocol version is below `min_protocol_version`.
 2. The first frame must be `Hello { protocol_version, cursor }`.
    - Below the server minimum: the server replies `ServerError { CODE_PROTOCOL_TOO_OLD }` and closes with 1008.
-   - Otherwise it replies `Welcome { cursor }` with the head of the DO's change log.
+   - Otherwise it replies `Welcome { cursor, server_ms }` with the head of the DO's change log and the server's time, which the device corrects its clock by (HLC).
 3. Any other frame before `Hello` gets `ServerError { CODE_BAD_FRAME }` and the socket is closed with 1008.
 
 ### Keepalive
@@ -70,11 +75,17 @@ Deleting a day's shift writes a tombstone instead of removing the row, so a devi
 
 A hybrid logical clock value is `(physical_ms, counter, device_id)`, compared in that order.
 
-- On a local edit: `physical_ms = max(now, last.physical_ms)`; if it did not advance, `counter = last.counter + 1`, otherwise `counter = 0`.
-- On receiving a change: advance the local clock past the received value the same way, so any later local edit orders after it.
+- On a local edit: `physical_ms = max(now, last.physical_ms)`; if it did not advance, `counter = last.counter + 1`, otherwise `counter = 0`. The counter is a `uint32`: at its end the clock moves to the next millisecond (`spec/vectors/hlc.json`, tick).
+- On receiving a change: the device's last clock becomes the received one when that is later, so its next local edit orders after it (receive).
 - `device_id` only breaks exact ties.
 
 HLC, not arrival order, decides the winner: an edit made offline at 10:00 and delivered at 12:00 must lose to an edit made online at 11:00.
+
+`now` is the device's time corrected by the server's, so a device whose clock is set wrong cannot win over later edits, nor carry every device that takes its edits along with it:
+
+- Each `Welcome` carries the server's time, `server_ms`. The device's offset is `server_ms` less the middle of the round trip, from when it sent `Hello` to when `Welcome` arrived, divided as whole numbers (offset). It keeps the last offset across launches, 0 before its first `Welcome`, and `now` is its own time plus the offset.
+- The server refuses a frame of edits in which any clock runs more than `syncLimits.clockAheadMs` (`design/src/limits.ts`) past its own time: `ServerError { CODE_CLOCK_AHEAD }`, nothing in the frame is taken, and the socket is closed (ahead). A corrected clock stays well within it, so this catches edits stamped before the device's first `Welcome` or before its clock was changed.
+- After `CODE_CLOCK_AHEAD`, the device reconnects, and once the new `Welcome` has corrected its offset, before sending its outbox, it starts its clock again from the later of `now` and the latest clock among the changes it has taken, dropping its own far-ahead one, and gives every unsent edit a new clock from a local edit's tick, in outbox order; the value each edit set in the device's own copy takes the same clock. Then it sends them. Its edits keep their order and come after everything it has taken; only on a device whose clock ran that far off do edits made offline lose their own times.
 
 ### Outbox
 
@@ -178,10 +189,9 @@ Presence means "has this thread open on screen", not "online in the app": mobile
 
 ## Not yet specified
 
-- Linking an anonymous user to Apple or Google, and what happens to a user whose phone and token are both lost
+- Deleting an account: what goes (the User DO, memberships and what groups hold of the user, their messages' authorship) and how the user's other devices learn of it. Apple asks apps to revoke a deleted user's Sign in with Apple tokens; with none kept, deletion has the person sign in with Apple once more for a fresh code to revoke with
 - Snapshot format for resets and how long each DO keeps its change log
 - Wire messages for chat pages, and resets for DOs that do not keep values as registers
 - Push notifications (chat, mentions): the server sends a localization key and its arguments (APNs `loc-key`/`loc-args`, FCM `body_loc_key`/`body_loc_args`), never text it has put together, so the app words them in its own language and the server need not know each reader's
-- A device whose clock runs far ahead: its edits win until real time catches up. Whether the server should hold back clocks past its own time
 - Presence and "last seen": whether to show them at all. Pochical is for family and friends, where visible presence and read markers can feel like pressure; typing alone may be enough. "Last seen" would also need storing in the User DO.
 - Read state options: whether members see read markers (and whether users can turn them off), "mark as unread" (it moves the watermark back, so `max` would become a per-thread LWW register), and muted threads left out of badge totals (mentions: spec/chat.md)

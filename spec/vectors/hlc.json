@@ -1,5 +1,5 @@
 {
-  "about": "Hybrid logical clocks (spec/sync-protocol.md, HLC): compared by physical time (ms), then counter, then device, which only breaks exact ties; devices compare by their characters' codes, as plain ASCII strings. expected is -1 when a is older, 1 when newer, 0 when the same.",
+  "about": "Hybrid logical clocks (spec/sync-protocol.md, HLC). compare: by physical time (ms), then counter, then device, which only breaks exact ties; devices compare by their characters' codes, as plain ASCII strings; expected is -1 when a is older, 1 when newer, 0 when the same. tick: the clock of a local edit, from the device's last clock and its corrected now; counter is a uint32, so at 4294967295 the clock moves to the next millisecond. receive: the device's last clock after it takes a change, so its next edit orders after the change. offset: what a device adds to its own time to correct it, from when it sent Hello (sentMs), when Welcome arrived (receivedMs) and Welcome's server_ms: serverMs - (sentMs + receivedMs) / 2, divided as whole numbers. ahead: whether a clock runs further past the server's now than syncLimits.clockAheadMs (design/src/limits.ts) allows, so the server refuses its frame; its ms is now + clockAheadMs + pastLimitMs, so the cases hold whatever the limit.",
   "compare": [
     {
       "name": "later physical time wins",
@@ -70,6 +70,158 @@
         "device": "a"
       },
       "expected": 0
+    }
+  ],
+  "tick": [
+    {
+      "name": "a first edit takes now",
+      "last": {
+        "ms": 0,
+        "counter": 0
+      },
+      "now": 1000,
+      "expected": {
+        "ms": 1000,
+        "counter": 0
+      }
+    },
+    {
+      "name": "time moved on: now, counter back to 0",
+      "last": {
+        "ms": 1000,
+        "counter": 3
+      },
+      "now": 2000,
+      "expected": {
+        "ms": 2000,
+        "counter": 0
+      }
+    },
+    {
+      "name": "the same millisecond: the counter moves",
+      "last": {
+        "ms": 1000,
+        "counter": 3
+      },
+      "now": 1000,
+      "expected": {
+        "ms": 1000,
+        "counter": 4
+      }
+    },
+    {
+      "name": "now behind the last clock: the last clock, counter moved",
+      "last": {
+        "ms": 5000,
+        "counter": 0
+      },
+      "now": 1000,
+      "expected": {
+        "ms": 5000,
+        "counter": 1
+      }
+    },
+    {
+      "name": "a full counter rolls into the next millisecond",
+      "last": {
+        "ms": 1000,
+        "counter": 4294967295
+      },
+      "now": 1000,
+      "expected": {
+        "ms": 1001,
+        "counter": 0
+      }
+    }
+  ],
+  "receive": [
+    {
+      "name": "a newer change carries the clock forward",
+      "last": {
+        "ms": 1000,
+        "counter": 0
+      },
+      "remote": {
+        "ms": 3000,
+        "counter": 2
+      },
+      "expected": {
+        "ms": 3000,
+        "counter": 2
+      }
+    },
+    {
+      "name": "the same millisecond with a larger counter",
+      "last": {
+        "ms": 3000,
+        "counter": 1
+      },
+      "remote": {
+        "ms": 3000,
+        "counter": 5
+      },
+      "expected": {
+        "ms": 3000,
+        "counter": 5
+      }
+    },
+    {
+      "name": "an older change leaves the clock",
+      "last": {
+        "ms": 3000,
+        "counter": 1
+      },
+      "remote": {
+        "ms": 2000,
+        "counter": 9
+      },
+      "expected": {
+        "ms": 3000,
+        "counter": 1
+      }
+    }
+  ],
+  "offset": [
+    {
+      "name": "the device is behind the server",
+      "sentMs": 1000,
+      "receivedMs": 1200,
+      "serverMs": 61100,
+      "expected": 60000
+    },
+    {
+      "name": "the device is ahead of the server",
+      "sentMs": 100000,
+      "receivedMs": 100100,
+      "serverMs": 40050,
+      "expected": -60000
+    },
+    {
+      "name": "an odd round trip divides as whole numbers",
+      "sentMs": 1000,
+      "receivedMs": 1101,
+      "serverMs": 1050,
+      "expected": 0
+    }
+  ],
+  "ahead": [
+    {
+      "name": "within the limit",
+      "now": 2000,
+      "pastLimitMs": -60000,
+      "expected": false
+    },
+    {
+      "name": "exactly as far ahead as allowed",
+      "now": 2000,
+      "pastLimitMs": 0,
+      "expected": false
+    },
+    {
+      "name": "one millisecond further",
+      "now": 2000,
+      "pastLimitMs": 1,
+      "expected": true
     }
   ]
 }

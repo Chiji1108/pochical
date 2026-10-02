@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 // The cases every platform checks its own code against (spec/vectors);
 // the native apps' tests read the same files.
 import chatText from "../../../spec/vectors/chat-text.json";
+import hlc from "../../../spec/vectors/hlc.json";
 import repeat from "../../../spec/vectors/repeat.json";
 import review from "../../../spec/vectors/review.json";
 import text from "../../../spec/vectors/text.json";
@@ -25,6 +26,7 @@ import {
 } from "../src/lib/design-days";
 import type { OwnDays } from "../src/lib/design-days";
 import type { Pattern, PatternBook } from "../src/lib/design-patterns";
+import { clockOffset, receive, tick } from "../src/lib/hlc";
 import { mayAskForReview, openedOn } from "../src/lib/review";
 import type { ReviewHistory } from "../src/lib/review";
 import { characterCount, dayName, limitText } from "../src/lib/text-limits";
@@ -194,6 +196,24 @@ describe("spec/vectors/review.json", () => {
           version,
         })
       ).toBe(expected);
+    });
+  }
+});
+
+describe("spec/vectors/hlc.json", () => {
+  for (const { name, last, now, expected } of hlc.tick) {
+    test(name, () => {
+      expect(tick(last, now)).toEqual(expected);
+    });
+  }
+  for (const { name, last, remote, expected } of hlc.receive) {
+    test(name, () => {
+      expect(receive(last, remote)).toEqual(expected);
+    });
+  }
+  for (const { name, expected, ...times } of hlc.offset) {
+    test(name, () => {
+      expect(clockOffset(times)).toBe(expected);
     });
   }
 });

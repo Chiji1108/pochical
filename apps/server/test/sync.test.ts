@@ -1,3 +1,4 @@
+import { syncLimits } from "@pochical/design/limits";
 import { describe, expect, it } from "vitest";
 
 import { DayField, ServerError_Code } from "../src/gen/pochical/v1/sync_pb";
@@ -287,6 +288,41 @@ describe("syncing a user's own days", () => {
     await expect(frames.next()).resolves.toMatchObject({
       kind: { case: "error", value: { code: ServerError_Code.BAD_FRAME } },
     });
+  });
+
+  it("tells a device the server's time as it welcomes it", async () => {
+    const before = Date.now();
+    const { welcome } = await device(await signInAnonymously());
+    const after = Date.now();
+    expect(welcome.kind.case).toBe("welcome");
+    const serverMs =
+      welcome.kind.case === "welcome" ? Number(welcome.kind.value.serverMs) : 0;
+    expect(serverMs).toBeGreaterThanOrEqual(before);
+    expect(serverMs).toBeLessThanOrEqual(after);
+  });
+
+  it("refuses a frame with a clock too far ahead, taking none of it", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    const ahead = Date.now() + syncLimits.clockAheadMs + 60_000;
+    sendFrame(phone.socket, {
+      case: "dayEdits",
+      value: {
+        edits: [
+          edit("ok", "2026-10-12", DayField.PATTERN, "day", 1000),
+          edit("ahead", "2026-10-13", DayField.PATTERN, "night", ahead),
+        ],
+      },
+    });
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: {
+        case: "error",
+        value: { code: ServerError_Code.CLOCK_AHEAD },
+      },
+    });
+
+    const tablet = await device(token);
+    expect(tablet.welcome.kind).toMatchObject({ value: { cursor: 0n } });
   });
 });
 

@@ -273,6 +273,10 @@ public nonisolated struct Pochical_V1_Welcome: Sendable {
   /// Current head of the DO's change log.
   public var cursor: UInt64 = 0
 
+  /// The server's time as it sent Welcome, ms since the Unix epoch: the
+  /// device corrects its clock by it (spec/sync-protocol.md, HLC).
+  public var serverMs: Int64 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -322,6 +326,13 @@ public nonisolated struct Pochical_V1_ServerError: Sendable {
 
     /// The frame could not be decoded, or Hello was not sent first.
     case badFrame // = 2
+
+    /// An edit's clock runs more than syncLimits.clockAheadMs
+    /// (design/src/limits.ts) past the server's time. Nothing in the frame
+    /// is taken and the server closes the socket; the device corrects its
+    /// clock and the edits' (spec/sync-protocol.md, HLC) and sends them
+    /// again.
+    case clockAhead // = 3
     case UNRECOGNIZED(Int)
 
     public init() {
@@ -333,6 +344,7 @@ public nonisolated struct Pochical_V1_ServerError: Sendable {
       case 0: self = .unspecified
       case 1: self = .protocolTooOld
       case 2: self = .badFrame
+      case 3: self = .clockAhead
       default: self = .UNRECOGNIZED(rawValue)
       }
     }
@@ -342,6 +354,7 @@ public nonisolated struct Pochical_V1_ServerError: Sendable {
       case .unspecified: return 0
       case .protocolTooOld: return 1
       case .badFrame: return 2
+      case .clockAhead: return 3
       case .UNRECOGNIZED(let i): return i
       }
     }
@@ -351,6 +364,7 @@ public nonisolated struct Pochical_V1_ServerError: Sendable {
       .unspecified,
       .protocolTooOld,
       .badFrame,
+      .clockAhead,
     ]
 
   }
@@ -1395,7 +1409,7 @@ nonisolated extension Pochical_V1_Hello: SwiftProtobuf.Message, SwiftProtobuf._M
 
 nonisolated extension Pochical_V1_Welcome: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Welcome"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cursor\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cursor\0\u{3}server_ms\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1404,6 +1418,7 @@ nonisolated extension Pochical_V1_Welcome: SwiftProtobuf.Message, SwiftProtobuf.
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularUInt64Field(value: &self.cursor) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.serverMs) }()
       default: break
       }
     }
@@ -1413,11 +1428,15 @@ nonisolated extension Pochical_V1_Welcome: SwiftProtobuf.Message, SwiftProtobuf.
     if self.cursor != 0 {
       try visitor.visitSingularUInt64Field(value: self.cursor, fieldNumber: 1)
     }
+    if self.serverMs != 0 {
+      try visitor.visitSingularInt64Field(value: self.serverMs, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_Welcome, rhs: Pochical_V1_Welcome) -> Bool {
     if lhs.cursor != rhs.cursor {return false}
+    if lhs.serverMs != rhs.serverMs {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1519,7 +1538,7 @@ nonisolated extension Pochical_V1_ServerError: SwiftProtobuf.Message, SwiftProto
 }
 
 nonisolated extension Pochical_V1_ServerError.Code: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CODE_UNSPECIFIED\0\u{1}CODE_PROTOCOL_TOO_OLD\0\u{1}CODE_BAD_FRAME\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CODE_UNSPECIFIED\0\u{1}CODE_PROTOCOL_TOO_OLD\0\u{1}CODE_BAD_FRAME\0\u{1}CODE_CLOCK_AHEAD\0")
 }
 
 nonisolated extension Pochical_V1_Hlc: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {

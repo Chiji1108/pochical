@@ -25,13 +25,14 @@ import type {
   CoworkerValue,
   DayEdits,
   DayValue,
+  Hlc,
   PatternEdits,
   PatternOrder,
   PatternValue,
   RepeatOrdersEdit,
   RepeatOrdersEdits,
 } from "./gen/pochical/v1/sync_pb";
-import { clockAfter, compareClocks } from "./hlc";
+import { clockAfter, compareClocks, isAhead } from "./hlc";
 import type { Clock } from "./hlc";
 import { isId } from "./ids";
 import { givesWay, heldBackBy, ORDER_FIELDS } from "./order-clears";
@@ -51,6 +52,7 @@ import {
   rejectAndClose,
   send,
   sendChanges,
+  sendWelcome,
 } from "./sync-socket";
 import migrations from "./user-do-migrations/migrations.js";
 import {
@@ -412,7 +414,7 @@ export class UserDO extends DurableObject<Env> {
    */
   private welcome(ws: WebSocket, cursor: bigint): void {
     const head = this.head();
-    send(ws, { case: "welcome", value: { cursor: BigInt(head) } });
+    sendWelcome(ws, head);
     if (cursor > BigInt(head)) {
       send(ws, { case: "reset", value: {} });
       sendChanges(ws, this.changesAfter(0));
@@ -425,11 +427,14 @@ export class UserDO extends DurableObject<Env> {
    * Takes a frame of edits in one transaction, each change given the next
    * cursor; acknowledges every edit and sends what changed to every
    * device of the user. An edit may change nothing, one value, or several
-   * (an order and the days it takes back), from `cursor` on.
+   * (an order and the days it takes back), from `cursor` on. A frame with
+   * a clock too far past the server's time is refused whole, so the
+   * device corrects its clock and sends the edits again.
    */
   private takeEdits<Edit extends { opId: string }>(
     ws: WebSocket,
     edits: Edit[],
+    clockOf: (edit: Edit) => Hlc | undefined,
     apply: (edit: Edit, cursor: number) => Change | Change[] | undefined
   ): void {
     if (edits.length > syncLimits.editsPerFrame) {
@@ -437,6 +442,15 @@ export class UserDO extends DurableObject<Env> {
         ws,
         ServerError_Code.BAD_FRAME,
         `At most ${syncLimits.editsPerFrame} edits a frame`
+      );
+      return;
+    }
+    const now = Date.now();
+    if (edits.some((edit) => isAhead(clockOfHlc(clockOf(edit)), now))) {
+      rejectAndClose(
+        ws,
+        ServerError_Code.CLOCK_AHEAD,
+        `A clock runs more than ${syncLimits.clockAheadMs} ms past the server's`
       );
       return;
     }
@@ -476,22 +490,31 @@ export class UserDO extends DurableObject<Env> {
   private takeDayEdits(ws: WebSocket, { edits }: DayEdits): void {
     // Read once a frame: no day edit lays a floor.
     const floors = this.floors();
-    this.takeEdits(ws, edits, ({ value }, cursor) =>
-      hasKey(value) ? this.applyDay(value, cursor, floors) : undefined
+    this.takeEdits(
+      ws,
+      edits,
+      ({ value }) => value?.hlc,
+      ({ value }, cursor) =>
+        hasKey(value) ? this.applyDay(value, cursor, floors) : undefined
     );
   }
 
   /** The owner's pattern edits, taken as their days are. */
   private takePatternEdits(ws: WebSocket, { edits }: PatternEdits): void {
-    this.takeEdits(ws, edits, ({ kind }, cursor) => {
-      if (kind.case === "pattern") {
-        return this.applyPattern(kind.value, cursor);
+    this.takeEdits(
+      ws,
+      edits,
+      ({ kind }) => kind.value?.hlc,
+      ({ kind }, cursor) => {
+        if (kind.case === "pattern") {
+          return this.applyPattern(kind.value, cursor);
+        }
+        if (kind.case === "order") {
+          return this.applyOrder(kind.value, cursor);
+        }
+        return undefined;
       }
-      if (kind.case === "order") {
-        return this.applyOrder(kind.value, cursor);
-      }
-      return undefined;
-    });
+    );
   }
 
   /** The owner's repeating orders, each edit one whole timeline. */
@@ -499,22 +522,30 @@ export class UserDO extends DurableObject<Env> {
     ws: WebSocket,
     { edits }: RepeatOrdersEdits
   ): void {
-    this.takeEdits(ws, edits, (edit, cursor) =>
-      this.applyRepeatOrders(edit, cursor)
+    this.takeEdits(
+      ws,
+      edits,
+      ({ orders }) => orders?.hlc,
+      (edit, cursor) => this.applyRepeatOrders(edit, cursor)
     );
   }
 
   /** The owner's coworker edits, taken as their patterns are. */
   private takeCoworkerEdits(ws: WebSocket, { edits }: CoworkerEdits): void {
-    this.takeEdits(ws, edits, ({ kind }, cursor) => {
-      if (kind.case === "coworker") {
-        return this.applyCoworker(kind.value, cursor);
+    this.takeEdits(
+      ws,
+      edits,
+      ({ kind }) => kind.value?.hlc,
+      ({ kind }, cursor) => {
+        if (kind.case === "coworker") {
+          return this.applyCoworker(kind.value, cursor);
+        }
+        if (kind.case === "order") {
+          return this.applyCoworkerOrder(kind.value, cursor);
+        }
+        return undefined;
       }
-      if (kind.case === "order") {
-        return this.applyCoworkerOrder(kind.value, cursor);
-      }
-      return undefined;
-    });
+    );
   }
 
   private applyDay(
