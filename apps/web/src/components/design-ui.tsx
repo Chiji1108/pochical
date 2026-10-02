@@ -2438,7 +2438,17 @@ export function PullDownMenu({
         <ChevronDown aria-hidden="true" size={15} />
       </Menu.Trigger>
       <Menu.Positioner>
-        <Menu.Content className={menu.content}>{children}</Menu.Content>
+        <Menu.Content
+          className={menu.content}
+          // As a row's control the menu sits inside the row's label, and
+          // a pick's click would go on to the label, which presses the
+          // button again and opens the menu the pick just closed.
+          onClick={(event) => {
+            event.preventDefault();
+          }}
+        >
+          {children}
+        </Menu.Content>
       </Menu.Positioner>
     </Menu.Root>
   );
