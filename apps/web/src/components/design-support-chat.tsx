@@ -1,11 +1,5 @@
-import { Image as ImageIcon, SendHorizontal, X } from "lucide-react";
-import {
-  useContext,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { Image as ImageIcon, SendHorizontal } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { css, cx } from "styled-system/css";
 
 import { APP_VERSION, deviceNames, useDevice } from "../lib/design-device";
@@ -15,16 +9,16 @@ import type { SupportLine } from "../lib/design-support";
 import { useUser } from "../lib/design-user-store";
 import { site } from "../lib/site";
 import { AppIcon, useAppIcons } from "./design-app-icon";
-import { chatRow, chatStyle } from "./design-chat-style";
 import {
-  chatAvatarSize,
-  maxPhotos,
-  photoOf,
+  PhotoInput,
+  PhotoTray,
   photoSize,
-} from "./design-group-chat";
+  useChosenPhotos,
+} from "./design-chat-photos";
+import { chatRow, chatStyle } from "./design-chat-style";
+import { chatAvatarSize } from "./design-group-chat";
 import { badge } from "./design-group-parts";
 import { PhotoViewer } from "./design-sheet";
-import { ToastContext } from "./design-toast";
 import {
   BackButton,
   LimitedTextArea,
@@ -198,12 +192,11 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
   }, [unread, setSupport]);
   const [draft, setDraft] = useState("");
   // Photos chosen to go with the next send, held above the composer as
-  // in the group chats: nothing is sent on choosing.
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [reading, setReading] = useState(0);
+  // in the group chats.
+  const chosen = useChosenPhotos();
+  const { photos } = chosen;
   const photoInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLOListElement>(null);
-  const toast = useContext(ToastContext);
   const icon = useOwnIcon();
   // Opens on the latest line and follows each one sent; with none yet,
   // the intro stays in sight from its top.
@@ -214,25 +207,8 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
       list.scrollTop = list.scrollHeight;
     }
   }, [latest]);
-  const choosePhotos = async (files: File[]) => {
-    const room = maxPhotos - photos.length;
-    if (files.length > room) {
-      toast(`写真は一度に${maxPhotos}枚まで送れます`, "problem");
-    }
-    const taken = files.slice(0, room);
-    setReading((count) => count + taken.length);
-    const results = await Promise.allSettled(taken.map(photoOf));
-    setReading((count) => count - taken.length);
-    const chosen = results.flatMap((result) =>
-      result.status === "fulfilled" ? [result.value] : []
-    );
-    setPhotos((before) => [...before, ...chosen].slice(0, maxPhotos));
-    if (chosen.length < taken.length) {
-      toast("開けない写真がありました", "problem");
-    }
-  };
   const text = draft.trim();
-  const canSend = reading === 0 && (text !== "" || photos.length > 0);
+  const canSend = !chosen.reading && (text !== "" || photos.length > 0);
   // Each photo is a line of its own, then what was written.
   const send = () => {
     if (!canSend) {
@@ -250,7 +226,7 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
     }));
     setSupport((before) => ({ ...before, lines: [...before.lines, ...sent] }));
     setDraft("");
-    setPhotos([]);
+    chosen.clear();
   };
   return (
     <Screen>
@@ -310,27 +286,7 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
           })}
         </ol>
       </div>
-      {photos.length > 0 && (
-        <ul aria-label="送る写真" className={chatStyle.tray({ below: false })}>
-          {photos.map((photo, index) => (
-            <li className={chatStyle.trayItem} key={photo.src}>
-              <img alt="" className={chatStyle.trayImage} src={photo.src} />
-              <button
-                aria-label={`${index + 1}枚目の写真を外す`}
-                className={chatStyle.trayRemove}
-                onClick={() => {
-                  setPhotos((before) =>
-                    before.filter((other) => other !== photo)
-                  );
-                }}
-                type="button"
-              >
-                <X aria-hidden="true" size={12} strokeWidth={3} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <PhotoTray below={false} onRemove={chosen.handleRemove} photos={photos} />
       <form
         className={chatStyle.composer({ replying: photos.length > 0 })}
         onSubmit={(event) => {
@@ -338,19 +294,7 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
           send();
         }}
       >
-        <input
-          accept="image/*"
-          className={srOnly}
-          multiple
-          onChange={(event) => {
-            const files = [...(event.target.files ?? [])];
-            event.target.value = "";
-            choosePhotos(files).catch(() => undefined);
-          }}
-          ref={photoInputRef}
-          tabIndex={-1}
-          type="file"
-        />
+        <PhotoInput onChoose={chosen.handleChoose} ref={photoInputRef} />
         <span className={support.tools}>
           <button
             aria-label="写真を送る"
