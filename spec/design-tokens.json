@@ -2980,7 +2980,6 @@
     }
   },
   "widgets": {
-    "memoLines": 1,
     "nextOffs": 3,
     "offLookaheadDays": 62
   }

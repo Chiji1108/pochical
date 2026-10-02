@@ -37,11 +37,14 @@ import {
 // none of their own, and the frame they are shown in (design-widget-frame)
 // stands in for the rest.
 //
-// Four kinds, each in the sizes it suits: 今日, 次の休み (how soon the
-// next day off comes, alone or with someone picked when editing the
-// widget), リスト (today and the days after, a line each) and カレンダー
-// (two weeks, the month). The mark says which shift it is, so words beside
-// it are only what changed, and screen readers always hear the name.
+// Four kinds, each in the sizes it suits: シンプル (today, and tomorrow,
+// large), 次の休み (how soon the next day off comes, alone, with someone
+// or with a group picked when editing the widget), これから (the days
+// from today, with someone's beside them if picked) and カレンダー (two
+// weeks, the month). The mark says which shift it is, so words beside it
+// are only what changed, and screen readers always hear the name. A
+// memo's words are the app's; widgets show only that a day has one, with
+// the calendar's stroke under its date.
 
 // How the system is drawing the widget, as SwiftUI's widgetRenderingMode
 // tells a view: in full color, or flattened to one color by opacity
@@ -84,16 +87,38 @@ function changeWords(day: WidgetDay, named: boolean) {
   return day.change ?? (named ? day.name : undefined);
 }
 
+// What a day says in words where its mark carries its own name label
+// (NamedMark): 予定なし with nothing entered, else only the changed
+// hours. The name is the mark's label, not news.
+function newsWords(day: WidgetDay) {
+  return day.shift ? day.change : NOTHING;
+}
+
 // Those words, with the shift's name and hours for screen readers.
-function Change({ day, className }: { day: WidgetDay; className: string }) {
-  const words = changeWords(day, useShiftNames());
+// `withName` false leaves the name to the label under the mark.
+function Change({
+  day,
+  className,
+  withName = true,
+  spoken = true,
+}: {
+  day: WidgetDay;
+  className: string;
+  withName?: boolean;
+  // False where the view reads the whole day aloud itself (SpokenDay).
+  spoken?: boolean;
+}) {
+  const named = useShiftNames();
+  const words = withName ? changeWords(day, named) : newsWords(day);
   const time = day.time ? ` ${day.time}` : "";
   return (
     <strong className={className}>
-      <span className={srOnly}>
-        {day.name ?? NOTHING}
-        {time}
-      </span>
+      {spoken && (
+        <span className={srOnly}>
+          {day.name ?? NOTHING}
+          {time}
+        </span>
+      )}
       {words && <span aria-hidden="true">{words}</span>}
     </strong>
   );
@@ -206,6 +231,56 @@ function MarkName({ day }: { day: WidgetDay }) {
   );
 }
 
+// Under a large mark, its name a size larger.
+const markNameLarge = css({ fontSize: "11px", lineHeight: "13px" });
+
+// How much smaller a mark draws with its name under it.
+const NAME_ROOM = 6;
+
+const namedMark = css({
+  alignItems: "center",
+  display: "flex",
+  flexDirection: "column",
+  gap: "2px",
+  maxWidth: "100%",
+});
+
+// A day's mark with its name under it when names are shown, as the
+// calendar's day has it: the caller draws the mark a size smaller to make
+// room, and the two are one group, centered wherever there is room for
+// it. `reserve` keeps the name's line on a day without a name, so the
+// marks of a row stay level.
+function NamedMark({
+  day,
+  size,
+  named,
+  faint = false,
+  large = false,
+  reserve = false,
+}: {
+  day: WidgetDay;
+  size: number;
+  named: boolean;
+  faint?: boolean;
+  large?: boolean;
+  reserve?: boolean;
+}) {
+  const labelled = named && day.shift !== undefined;
+  return (
+    <span className={namedMark}>
+      <DayMark day={day} faint={faint} size={size} />
+      {(labelled || (named && reserve)) && (
+        <span
+          aria-hidden="true"
+          className={cx(markName, large && markNameLarge)}
+        >
+          {labelled && day.name ? dayName(day.name) : "\u00A0"}
+        </span>
+      )}
+    </span>
+  );
+}
+
 const toneText = cva({
   variants: {
     tone: {
@@ -262,7 +337,6 @@ function useWords() {
       heading: (date: Date) => englishWeekdays[date.getDay()] ?? "",
       inDays: (inDays: number) =>
         inDays === 1 ? "Tomorrow" : `in ${inDays} days`,
-      line: (date: Date) => `${day(date)} ${date.getDate()}`,
       apart: "No days off together yet",
       nextOff: "Next day off",
       nothingYet: "Nothing yet",
@@ -275,6 +349,7 @@ function useWords() {
         `Waiting on ${first}${rest.length > 0 ? ` +${rest.length}` : ""}`,
       short: (date: Date) => `${month(date)} ${date.getDate()}.`,
       today: "Today",
+      tomorrow: "Tomorrow",
       // The day after a day off, short enough to keep clear of the
       // poodle in the corner: Fri, as 明日 is in Japanese.
       nextDay: (date: Date) => day(date),
@@ -289,7 +364,6 @@ function useWords() {
     heading: (date: Date) =>
       `${date.getMonth() + MONTH_NUMBER}月 ${weekday(date)}曜日`,
     inDays: (inDays: number) => (inDays === 1 ? "明日" : `${inDays}日後`),
-    line: (date: Date) => `${date.getDate()} ${weekday(date)}`,
     nextDay: () => "明日",
     nextOff: "次の休み",
     nothingYet: "まだ入っていません",
@@ -300,6 +374,7 @@ function useWords() {
     restTogether: "ふたりとも\nおやすみ",
     short: monthDay,
     today: "今日",
+    tomorrow: "明日",
     unit: "日後",
     waiting: (names: string[]) => `${waitingNames(names)}の入力待ち`,
     weekday,
@@ -337,17 +412,18 @@ const simple = {
     minWidth: 0,
     textAlign: "center",
   }),
+  // Over tomorrow: small spaced capitals, a label rather than a date.
+  label: css({
+    color: "text.secondary",
+    fontSize: "11px",
+    letterSpacing: "0.12em",
+    lineHeight: "22px",
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
+  }),
   mark: css({ display: "flex" }),
   pair: css({ display: "flex", gap: "16px", height: "100%" }),
   rule: css({ bg: "separator", flexShrink: 0, width: "1px" }),
-  note: css({
-    color: "text.secondary",
-    maxWidth: "100%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    textStyle: "subheadline",
-    whiteSpace: "nowrap",
-  }),
   words: css({
     fontVariantNumeric: "tabular-nums",
     fontWeight: 400,
@@ -369,96 +445,98 @@ const QUIET_GROWTH = 12;
 // it, as one group in the middle of its room. A day with nothing changed
 // is its own design, not one with an empty line kept for words: its mark
 // grows and the group closes up round it.
-function SimpleDay({
-  day,
-  withNote = false,
-}: {
-  day: WidgetDay;
-  // これから's today: the memo's first line where nothing changed.
-  withNote?: boolean;
-}) {
+function SimpleDay({ day, label }: { day: WidgetDay; label?: string }) {
   const words = useWords();
-  const said = changeWords(day, useShiftNames()) !== undefined;
-  const note = !said && withNote ? day.note : undefined;
+  const named = useShiftNames();
+  const said = newsWords(day) !== undefined;
   const roomy = useContext(WidgetSizeContext).height >= SIMPLE_ROOMY;
   const base = roomy ? 64 : 48;
-  const quiet = !(said || note);
+  let size = said ? base : base + QUIET_GROWTH;
+  if (named) {
+    size -= NAME_ROOM + 2;
+  }
+  // A memo is the calendar's stroke under the date (or 明日); its words
+  // are the app's.
+  const noted = day.note ? dayParts.noted : undefined;
   return (
     <div className={simple.day}>
-      <span className={simple.date}>{words.short(day.date)}</span>
-      <span className={simple.mark}>
-        <DayMark day={day} size={quiet ? base + QUIET_GROWTH : base} />
-      </span>
-      {said && <Change className={simple.words} day={day} />}
-      {note && <span className={simple.note}>{note}</span>}
-      {!said && (
-        <span className={srOnly}>
-          {day.name ?? NOTHING}
-          {day.time ? ` ${day.time}` : ""}
+      <SpokenDay day={day} />
+      {label ? (
+        <span aria-hidden="true" className={simple.label}>
+          <span className={noted}>{label}</span>
         </span>
+      ) : (
+        <span aria-hidden="true" className={simple.date}>
+          <span className={noted}>{words.short(day.date)}</span>
+        </span>
+      )}
+      <span aria-hidden="true" className={simple.mark}>
+        <NamedMark day={day} large named={named} size={size} />
+      </span>
+      {said && (
+        <Change
+          className={simple.words}
+          day={day}
+          spoken={false}
+          withName={false}
+        />
       )}
     </div>
   );
 }
 
-// Today alone; on a day off, said as such, with the poodle. Set to
-// someone, today and tomorrow, theirs under the person's.
+// Today alone; on a day off, said as such, with the poodle.
 export function SimpleSmall({ entry }: { entry: WidgetEntry }) {
-  if (entry.pair) {
-    return <DayColumns count={2} entry={entry} />;
-  }
   const day = entry.today;
   if (day.off && !day.change) {
     return (
       <RestToday
         entry={{ ...entry, offs: { ...entry.offs, with: undefined } }}
+        noted
       />
     );
   }
   return <SimpleDay day={day} />;
 }
 
-// Five days from today, a column each; set to someone, theirs under the
-// person's.
+// Today and tomorrow, side by side.
 export function SimpleMedium({ entry }: { entry: WidgetEntry }) {
-  return <DayColumns count={5} entry={entry} />;
+  const words = useWords();
+  const [, tomorrow] = entry.upcoming;
+  return (
+    <div className={simple.pair}>
+      <SimpleDay day={entry.today} />
+      <span aria-hidden="true" className={simple.rule} />
+      {tomorrow && <SimpleDay day={tomorrow} label={words.tomorrow} />}
+    </div>
+  );
 }
 
 // ── これから ─────────────────────────────────────────────────────────────
 
 const upcoming = {
-  head: css({ display: "flex", flexDirection: "column", gap: "4px" }),
-  // The date at the start and the mark at the end, level with each other.
-  headLine: css({
-    alignItems: "center",
-    display: "flex",
-    justifyContent: "space-between",
-  }),
-  pair: css({ gap: "12px" }),
-  row: css({
-    "&:not(:first-child)": { borderTop: "1px solid token(colors.separator)" },
-    alignItems: "center",
-    display: "grid",
-    flex: 1,
-    gap: "4px",
-    gridTemplateColumns: "52px 18px 1fr",
-    minHeight: 0,
-  }),
-  rowLabel: css({
+  change: css({
     color: "text.secondary",
     fontVariantNumeric: "tabular-nums",
-    textStyle: "footnote",
-    whiteSpace: "nowrap",
-  }),
-  rowWords: css({
-    color: "text.secondary",
-    minWidth: 0,
+    fontWeight: 400,
+    maxWidth: "100%",
     overflow: "hidden",
     textOverflow: "ellipsis",
     textStyle: "footnote",
     whiteSpace: "nowrap",
   }),
-  rows: css({ display: "flex", flex: 1, flexDirection: "column", minWidth: 0 }),
+  head: css({
+    alignItems: "center",
+    display: "flex",
+    gap: "8px",
+    justifyContent: "center",
+  }),
+  headText: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+    minWidth: 0,
+  }),
   // Today's line and the three days as one group in the middle, not
   // pushed to the top and bottom with a gap between.
   small: css({
@@ -468,45 +546,50 @@ const upcoming = {
     height: "100%",
     justifyContent: "center",
   }),
-  // シンプル's today, in the medium one's left column.
-  today: css({ display: "flex", flexShrink: 0, width: "100px" }),
-  words: css({
-    fontVariantNumeric: "tabular-nums",
-    fontWeight: 400,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    textStyle: "subheadline",
-    whiteSpace: "nowrap",
-  }),
 };
 
-// Today large: its date and mark, what changed, and its memo's first
-// line.
-// Today as a heading line: its date and its mark side by side, and what
-// changed under them only on a day that has some.
+// Today's mark large beside its date and what changed, the two together
+// in the middle, over the days after it centered as well. A memo is the
+// calendar's stroke under the date.
 function UpcomingHead({ day }: { day: WidgetDay }) {
   const words = useWords();
-  const said = changeWords(day, useShiftNames()) !== undefined;
+  const named = useShiftNames();
+  const said = newsWords(day) !== undefined;
+  let size = said ? 34 : 40;
+  if (named) {
+    size -= NAME_ROOM;
+  }
   return (
     <div className={upcoming.head}>
-      <span className={upcoming.headLine}>
-        <span className={simple.date}>{words.short(day.date)}</span>
-        <DayMark day={day} size={28} />
+      <SpokenDay day={day} />
+      <span aria-hidden="true">
+        <NamedMark day={day} large named={named} size={size} />
       </span>
-      {said ? (
-        <Change className={upcoming.words} day={day} />
-      ) : (
-        <span className={srOnly}>
-          {day.name ?? NOTHING}
-          {day.time ? ` ${day.time}` : ""}
+      <span aria-hidden="true" className={upcoming.headText}>
+        <span className={simple.date}>
+          <span className={cx(day.note && dayParts.noted)}>
+            {words.short(day.date)}
+          </span>
         </span>
-      )}
+        {said && (
+          <Change
+            className={upcoming.change}
+            day={day}
+            spoken={false}
+            withName={false}
+          />
+        )}
+      </span>
     </div>
   );
 }
 
-// Today's line, and the next three days' marks under it.
+// Today's line, and the next three days' marks under it; set to someone,
+// today and tomorrow, theirs under the person's.
 export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
+  if (entry.pair) {
+    return <DayColumns count={2} entry={entry} />;
+  }
   return (
     <div className={upcoming.small}>
       <UpcomingHead day={entry.today} />
@@ -515,37 +598,13 @@ export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
   );
 }
 
-// シンプル's today on the left, with the memo where nothing changed; on
-// the right, the days after it a line each, each by its date (25 金),
-// with what changed, the memo, or the shift's name when names are shown.
+// Five days from today, a column each; set to someone, theirs under the
+// person's.
 export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
-  const words = useWords();
-  const named = useShiftNames();
-  return (
-    <div className={cx(simple.pair, upcoming.pair)}>
-      <div className={upcoming.today}>
-        <SimpleDay day={entry.today} withNote />
-      </div>
-      <span aria-hidden="true" className={simple.rule} />
-      <ol className={`${list} ${upcoming.rows}`}>
-        {entry.upcoming.slice(1, 5).map((day) => (
-          <li className={upcoming.row} key={day.date.getTime()}>
-            <SpokenDay day={day} />
-            <span aria-hidden="true" className={upcoming.rowLabel}>
-              {words.line(day.date)}
-            </span>
-            <DayMark day={day} size={18} />
-            <span aria-hidden="true" className={upcoming.rowWords}>
-              {day.change ?? day.note ?? (named ? day.name : "")}
-            </span>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
+  return <DayColumns count={5} entry={entry} />;
 }
 
-// ── シンプル's days ─────────────────────────────────────────────────────
+// ── これから's days ─────────────────────────────────────────────────────
 
 // Where the widget is taller, as on Android's launcher, the marks grow.
 const COLUMNS_ROOMY = 150;
@@ -740,7 +799,7 @@ function ColumnDate({
 // only what changed under the mark. A day off is a tile down its whole
 // column, date and all, as the calendar's day is. Today is always the
 // first, so it is drawn plain. A memo is the calendar's stroke under the
-// date; its words stay in これから and the app.
+// date; its words are the app's.
 //
 // Set to someone, it is the group's 週ごと in small: the person's row and
 // theirs, each with their face in a first column as wide as the days',
@@ -760,6 +819,9 @@ function DayColumns({ entry, count }: { entry: WidgetEntry; count: number }) {
       (pair?.days[index]?.theirs?.late ?? false)
   );
   let size = roomy ? 44 : 36;
+  if (named) {
+    size -= NAME_ROOM;
+  }
   if (pair) {
     const grown = roomy ? 32 : 26;
     size = named || worded ? grown - 6 : grown;
@@ -857,7 +919,9 @@ function ColumnDay({
     band = flat ? "flat" : "own";
   }
   const moved = day.change === undefined ? [] : shortChange(day);
-  const mine = columnWords(moved, day.name, named, lines);
+  // Alone, the name is the label under the mark and the words are only
+  // what changed; beside someone, one line holds either.
+  const mine = pair ? columnWords(moved, day.name, named, lines) : moved;
   const marked = day.shift !== undefined && look.mark !== "none";
   return (
     <>
@@ -915,7 +979,13 @@ function ColumnDay({
         <SpokenDay day={day} />
         <span aria-hidden="true" className={columns.mark}>
           {marked || !day.shift ? (
-            <DayMark day={day} faint={look.mark === "faint"} size={size} />
+            <NamedMark
+              day={day}
+              faint={look.mark === "faint"}
+              named={named && !pair}
+              reserve
+              size={size}
+            />
           ) : null}
         </span>
         {mine.length > 0 && (
@@ -1038,6 +1108,7 @@ const nextDays = {
 // A row of days: each weekday over its mark.
 function NextDays({ days }: { days: WidgetDay[] }) {
   const words = useWords();
+  const named = useShiftNames();
   return (
     <ol className={`${list} ${nextDays.root}`}>
       {days.map((day) => (
@@ -1047,9 +1118,16 @@ function NextDays({ days }: { days: WidgetDay[] }) {
             aria-hidden="true"
             className={cx(nextDays.weekday, toneText({ tone: day.tone }))}
           >
-            {words.weekday(day.date)}
+            <span className={cx(day.note && dayParts.noted)}>
+              {words.weekday(day.date)}
+            </span>
           </span>
-          <DayMark day={day} size={24} />
+          <NamedMark
+            day={day}
+            named={named}
+            reserve
+            size={named ? 24 - NAME_ROOM : 24}
+          />
         </li>
       ))}
     </ol>
@@ -1303,7 +1381,7 @@ const offs = {
     display: "grid",
     flex: 1,
     gap: "8px",
-    // As quiet as リスト's lines: the date, its mark, and how soon at the
+    // As quiet as a list's lines: the date, its mark, and how soon at the
     // end in the secondary color. Only the small one counts large.
     gridTemplateColumns: "auto 18px 1fr",
   }),
@@ -1465,7 +1543,15 @@ function PeekingDog() {
 // A day off today, said as such rather than counted: おやすみ, with the
 // date over it, tomorrow's mark under it, and the app icon's poodle
 // looking up from the corner.
-function RestToday({ entry }: { entry: WidgetEntry }) {
+// `noted` draws a memo's stroke under the date, as シンプル does for the
+// day it shows; 次の休み's days go without.
+function RestToday({
+  entry,
+  noted = false,
+}: {
+  entry: WidgetEntry;
+  noted?: boolean;
+}) {
   const words = useWords();
   const day = entry.today;
   const [, tomorrow] = entry.upcoming;
@@ -1476,10 +1562,16 @@ function RestToday({ entry }: { entry: WidgetEntry }) {
   }
   return (
     <div className={rest.root}>
-      <span className={srOnly}>{spokenOff(entry, { day, inDays: 0 })}</span>
+      <span className={srOnly}>
+        {spokenOff(entry, { day, inDays: 0 })}
+        {noted && day.note ? " メモあり" : ""}
+      </span>
       <PeekingDog />
       <span aria-hidden="true" className={offs.head}>
-        <span className={oneLine}>{words.date(day.date)}</span>
+        {/* The stroke outside the clipped line, so its ends show. */}
+        <span className={cx(noted && day.note && dayParts.noted)}>
+          <span className={oneLine}>{words.date(day.date)}</span>
+        </span>
         <CompanionFace entry={entry} />
       </span>
       <span aria-hidden="true" className={rest.title}>
