@@ -10,6 +10,9 @@ import repeat from "../../../spec/vectors/repeat.json";
 import review from "../../../spec/vectors/review.json";
 import text from "../../../spec/vectors/text.json";
 import timeChange from "../../../spec/vectors/time-change.json";
+import unread from "../../../spec/vectors/unread.json";
+import { chatKey, groupsUnread } from "../src/components/design-group-data";
+import type { Chat } from "../src/components/design-group-data";
 import {
   inviteCodeOf,
   mentionsOf,
@@ -201,6 +204,41 @@ describe("spec/vectors/review.json", () => {
           version,
         })
       ).toBe(expected);
+    });
+  }
+});
+
+describe("spec/vectors/unread.json", () => {
+  for (const {
+    name,
+    mentionsWhenMuted,
+    groups,
+    expected,
+  } of unread.notifying) {
+    test(name, () => {
+      const chats: Record<string, Chat> = {};
+      const summaries = groups.map((group, groupIndex) => {
+        const id = `group-${groupIndex}`;
+        const mutedChats: string[] = [];
+        for (const [chatIndex, chat] of group.chats.entries()) {
+          const chatId = `chat-${chatIndex}`;
+          if (chat.muted) {
+            mutedChats.push(chatId);
+          }
+          chats[chatKey(id, chatId)] = {
+            messages: [...chat.read, ...chat.unread].map((words, index) => ({
+              from: "yuki",
+              id: `line-${index}`,
+              text: words,
+              time: "10:00",
+              when: "今日",
+            })),
+            unread: chat.unread.length,
+          };
+        }
+        return { id, mutedChats };
+      });
+      expect(groupsUnread(chats, summaries, mentionsWhenMuted)).toBe(expected);
     });
   }
 });
