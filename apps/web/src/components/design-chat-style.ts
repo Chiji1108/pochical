@@ -696,3 +696,5 @@ export const chatStyle = {
 
 // A chat's title in its header: the name, the mute mark, and for a group
 // the count under them.
+
+export const chatAvatarSize = 32;

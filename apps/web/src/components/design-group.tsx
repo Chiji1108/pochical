@@ -3,8 +3,9 @@ import { useContext, useState } from "react";
 import type { Schedule } from "../lib/design-days";
 import type { Pattern } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
+import type { InviteLook } from "./design-chat-cards";
 import { ChatPage } from "./design-group-chat";
-import type { PhotoSend, InviteLook } from "./design-group-chat";
+import type { PhotoSend } from "./design-group-chat";
 import {
   chatKey,
   chatTitle,
