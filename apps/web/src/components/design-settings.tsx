@@ -32,7 +32,7 @@ import {
   repeatSchedule,
 } from "../lib/design-days";
 import type { RepeatRule, Schedule } from "../lib/design-days";
-import { useDevice } from "../lib/design-device";
+import { APP_VERSION, useDevice } from "../lib/design-device";
 import {
   isDayOff,
   OwnPatternsContext,
@@ -70,6 +70,8 @@ import { PatternsPage } from "./design-pattern-editor";
 import { PresetContexts } from "./design-providers";
 import { RepeatSequenceEditor, ShiftPreview } from "./design-repeat-editor";
 import { ConfirmDialog, SystemAlert } from "./design-sheet";
+import { SupportChatPage, supportLinesOf } from "./design-support-chat";
+import type { SupportSample } from "./design-support-chat";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
 import {
@@ -142,7 +144,8 @@ type Page =
   | "account"
   | "profile"
   | "reminders"
-  | "chatNotifications";
+  | "chatNotifications"
+  | "support";
 
 // The four shapes members see. Icons come filled (塗り) or as outlines (線);
 // letters always sit on their tile, and emoji have no fill.
@@ -204,6 +207,7 @@ export function DesignSettings({
   onChangeJob,
   onHolidaysOff,
   onTab,
+  supportSample = "none",
   initialPage = "top",
 }: {
   patterns: Pattern[];
@@ -217,10 +221,16 @@ export function DesignSettings({
   onChangeJob: (job: { patterns: Pattern[]; rule: RepeatRule }) => void;
   onHolidaysOff: (holidaysOff: boolean) => void;
   onTab: (tab: Tab) => void;
+  // What has been said with support so far.
+  supportSample?: SupportSample;
   // For the flow diagrams: a page to open on.
   initialPage?: Page;
 }) {
   const [page, setPage] = useState<Page>(initialPage);
+  // Kept here, so leaving the chat and coming back finds it as it was.
+  const [supportLines, setSupportLines] = useState(() =>
+    supportLinesOf(supportSample)
+  );
   const weekTools = useWeek();
   const patternKeys = patterns.map((pattern) => pattern.id);
   const preview = stylePreviewOf(patterns, weekTools.weekDates);
@@ -237,6 +247,19 @@ export function DesignSettings({
   const lastSequence =
     [...rules].reverse().find((rule) => rule.sequence.length > 0)?.sequence ??
     [];
+  // A chat fills the screen, its composer where the tab bar was, as the
+  // group chats do.
+  if (page === "support") {
+    return (
+      <SupportChatPage
+        lines={supportLines}
+        onBack={() => {
+          setPage("top");
+        }}
+        onChange={setSupportLines}
+      />
+    );
+  }
   return (
     <Screen>
       <ScreenScroll>
@@ -514,49 +537,29 @@ function SettingsTop({
           }}
         />
       </ListSection>
-      <AboutSection />
+      <AboutSection
+        onSupport={() => {
+          onOpen("support");
+        }}
+      />
     </>
   );
 }
 
-// The version the prototype stands in for, and the phones it says it is
-// (the reference devices), in place of what the apps read from the system.
-const APP_VERSION = "1.0.0";
-const sampleDevices = {
-  android: "Pixel 9a・Android 16",
-  ios: "iPhone 16 Pro・iOS 26.0",
-} as const;
-
-// A new mail to support, with room to write at the top and, under a rule,
-// the app's version and the phone, said plainly as what they are for.
-function contactMail(device: string) {
-  const body = [
-    "",
-    "",
-    "",
-    "――――",
-    "アプリと端末の情報です。不具合を調べるのに使います（消しても大丈夫です）。",
-    `${site.name} ${APP_VERSION}`,
-    device,
-  ].join("\n");
-  const subject = `${site.name}のお問い合わせ`;
-  return `mailto:${site.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
-
 // The apps open the site's pages in the system's browser sheet
-// (SFSafariViewController, Custom Tabs) and the mail in its compose
-// sheet; the prototype opens a tab.
+// (SFSafariViewController, Custom Tabs); the prototype opens a tab.
 function openOutside(url: string) {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
-// Pochical itself, at the foot of the settings. Rows that leave the app
+// Pochical itself, at the foot of the settings. お問い合わせ opens a chat
+// with the people who make it (SupportChatPage); rows that leave the app
 // end in ↗ instead of the arrow of rows that go on inside it. The store's
 // own review prompt comes by itself only now and then (spec/review.md);
 // the review row is there whenever someone wants to write one, and opens
 // the store's page for writing it (App Store's ?action=write-review,
 // Google Play's listing), which the prototype has none of before release.
-function AboutSection() {
+function AboutSection({ onSupport }: { onSupport: () => void }) {
   const platform = useDevice((state) => state.platform);
   const toast = useContext(ToastContext);
   const store = platform === "ios" ? "App Store" : "Google Play";
@@ -573,13 +576,7 @@ function AboutSection() {
             openOutside("/support");
           }}
         />
-        <ListRow
-          arrow={outside}
-          label="お問い合わせ"
-          onClick={() => {
-            openOutside(contactMail(sampleDevices[platform]));
-          }}
-        />
+        <ListRow label="お問い合わせ" onClick={onSupport} />
         <ListRow
           arrow={outside}
           label={`${store}でレビューを書く`}
