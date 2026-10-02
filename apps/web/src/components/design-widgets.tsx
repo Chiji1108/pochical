@@ -652,10 +652,11 @@ function pairMarkSize(roomy: boolean, named: boolean) {
 }
 
 // The days from today in columns, as the group's 週ごと lays a week: the
-// dates over them, each under its weekday in one letter as over the
-// calendar's columns (S M T), then the person's row and the picked one's,
-// each with their face in a first column as wide as the days'. Today is
-// always the first day, so its date is drawn plain. Days off sit on the
+// dates over them, each under its weekday (THU in English: the days start
+// from today, not the week's start, so one letter could be either T),
+// then the person's row and the picked one's, each with their face in a
+// first column as wide as the days'. Today is always the first day, so
+// its date is drawn plain. Days off sit on the
 // group tables' tiles, and a day both are off joins them into one band.
 function PairDays({
   entry,
@@ -666,7 +667,7 @@ function PairDays({
   pair: WidgetPair;
   count: number;
 }) {
-  const { weekdayLetter } = useWeek();
+  const words = useWords();
   const named = useShiftNames();
   const flat = useContext(WidgetRenderingModeContext) !== "fullColor";
   const roomy = useContext(WidgetSizeContext).height >= PAIR_ROOMY;
@@ -712,7 +713,7 @@ function PairDays({
                 aria-hidden="true"
                 className={cx(pair.weekday, toneText({ tone: day.tone }))}
               >
-                {weekdayLetter(day.date.getDay())}
+                {words.weekday(day.date)}
               </span>
               <span
                 aria-hidden="true"
