@@ -105,6 +105,22 @@ const choosePhotos = async (page: Page) => {
   await page.getByRole("list", { name: "送る写真" }).waitFor();
 };
 
+// Sends the chosen photos and waits for the chat to come to rest: the
+// photos no longer 送信中 (up, or failed), and the one who spoke last done
+// with the few seconds of 入力中 the demo shows after a send.
+const sendPhotos = async (page: Page) => {
+  await tap(page, "送る");
+  const typing = page.getByRole("status", { name: /が入力中$/u });
+  await typing.waitFor();
+  await typing.waitFor({ state: "hidden" });
+  await page.waitForFunction(
+    () =>
+      ![...document.querySelectorAll("[role=status]")].some(
+        (status) => status.textContent === "送信中"
+      )
+  );
+};
+
 const toGroupMonth = async (page: Page) => {
   await tap(page, "グループ");
   await tap(page, "月で見る");
@@ -575,12 +591,12 @@ export const states: State[] = [
     steps: choosePhotos,
   },
   {
-    // Sent: each photo a line of its own.
+    // Sent and up: each photo a line of its own, once the chat is at rest.
     name: "group/chat-photos-sent",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await choosePhotos(page);
-      await tap(page, "送る");
+      await sendPhotos(page);
     },
   },
   {
@@ -589,7 +605,7 @@ export const states: State[] = [
     path: demo("photoSend=fails&scheduleSample=filled"),
     steps: async (page) => {
       await choosePhotos(page);
-      await tap(page, "送る");
+      await sendPhotos(page);
       await page
         .getByRole("button", { name: /^送れませんでした/u })
         .first()
