@@ -97,10 +97,6 @@ function DemoPage() {
   const [person, setPerson] = useState(() =>
     makePerson(variants, variants.scheduleSample)
   );
-  // The chat with support follows its choice at once, as it is switched.
-  useEffect(() => {
-    person.setState({ support: supportThreadOf(variants.supportSample) });
-  }, [person, variants.supportSample]);
   // Starting over remounts the phone, so its screens reset too.
   const [version, setVersion] = useState(0);
   const startOver = (sample: DesignVariants["scheduleSample"]) => {
@@ -168,6 +164,13 @@ function DemoPage() {
               if (key === "memberSample") {
                 person.setState({
                   coworkers: value === "some" ? sampleCoworkers : [],
+                });
+              }
+              if (key === "supportSample") {
+                person.setState({
+                  support: supportThreadOf(
+                    value as DesignVariants["supportSample"]
+                  ),
                 });
               }
               void navigate({

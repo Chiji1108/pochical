@@ -189,12 +189,14 @@ function SupportPhoto({ photo, mine }: { photo: Photo; mine: boolean }) {
 export function SupportChatPage({ onBack }: { onBack: () => void }) {
   const lines = useUser((state) => state.support.lines);
   const setSupport = useUser((state) => state.setSupport);
-  // Opening it reads the answers waiting in it.
+  // Answers on screen are read: those waiting as it opens, and those that
+  // come while it is open.
+  const unread = useUser((state) => state.support.unread);
   useEffect(() => {
-    setSupport((before) =>
-      before.unread === 0 ? before : { ...before, unread: 0 }
-    );
-  }, [setSupport]);
+    if (unread > 0) {
+      setSupport((before) => ({ ...before, unread: 0 }));
+    }
+  }, [unread, setSupport]);
   const [draft, setDraft] = useState("");
   // Photos chosen to go with the next send, held above the composer as
   // in the group chats: nothing is sent on choosing.

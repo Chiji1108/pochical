@@ -3,7 +3,7 @@ import { useId } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import { useUser } from "../lib/design-user-store";
-import { isMuted } from "./design-group-data";
+import { groupsUnread } from "./design-group-data";
 import { badge } from "./design-group-parts";
 import { srOnly } from "./design-ui";
 
@@ -62,21 +62,16 @@ const tabBar = {
   }),
 };
 
-// What waits unread behind each tab: the lines in the group chats whose
-// notifications are on, and the answers from Pochical's people.
+// What waits unread behind each tab (spec/chat.md, Unread lines): the group
+// chats' lines that notify, and the answers from Pochical's people. Each
+// is worked out in its selector, so the bar redraws only when a count
+// changes.
 function useUnread(): Record<Tab, number> {
-  const chats = useUser((state) => state.chats);
-  const groups = useUser((state) => state.groups);
-  const support = useUser((state) => state.support.unread);
-  let group = 0;
-  for (const [key, chat] of Object.entries(chats)) {
-    const [groupId = "", chatId = ""] = key.split(":");
-    const joined = groups.find((item) => item.id === groupId);
-    if (joined && !isMuted(joined, chatId)) {
-      group += chat.unread;
-    }
-  }
-  return { calendar: 0, group, settings: support };
+  const group = useUser((state) =>
+    groupsUnread(state.chats, state.groups, state.mentionsWhenMuted)
+  );
+  const settings = useUser((state) => state.support.unread);
+  return { calendar: 0, group, settings };
 }
 
 export function TabBar({

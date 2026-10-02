@@ -9,6 +9,7 @@ import {
   chatKey,
   chatTitle,
   groupChat,
+  groupUnread,
   isMuted,
   meFrom,
   sampleOthers,
@@ -108,6 +109,7 @@ export function DesignGroup({
   const [groupId, setGroupId] = useState(initialGroupId);
   const chats = useUser((state) => state.chats);
   const setChats = useUser((state) => state.setChats);
+  const mentionsWhenMuted = useUser((state) => state.mentionsWhenMuted);
   // The table layout each group was last seen in.
   const [layouts, setLayouts] = useState<Record<string, Layout>>({});
   const [page, setPage] = useState<Page>(() => {
@@ -359,10 +361,10 @@ export function DesignGroup({
     </>
   );
 
-  const unreadOf = (id: string) =>
-    Object.entries(chats)
-      .filter(([key]) => key.startsWith(`${id}:`))
-      .reduce((total, [, chat]) => total + chat.unread, 0);
+  const unreadOf = (id: string) => {
+    const found = groups.find((item) => item.id === id);
+    return found ? groupUnread(chats, found, mentionsWhenMuted) : 0;
+  };
 
   if (page.name === "scan") {
     return scanPage;
