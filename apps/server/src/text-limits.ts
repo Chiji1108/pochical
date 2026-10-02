@@ -35,9 +35,13 @@ export const requireText = (
 // digits and punctuation.
 const EMOJI = /^\p{Extended_Pictographic}|^\p{Regional_Indicator}/u;
 
+/** Whether the text is exactly one character that is an emoji. */
+export const isEmoji = (text: string): boolean =>
+  characterCount(text) === 1 && EMOJI.test(text);
+
 /** A group's emoji mark: exactly one character that is an emoji. */
 export const requireEmoji = (text: string): string => {
-  if (characterCount(text) !== 1 || !EMOJI.test(text)) {
+  if (!isEmoji(text)) {
     throw new ConnectError("emoji must be one emoji", Code.InvalidArgument);
   }
   return text;

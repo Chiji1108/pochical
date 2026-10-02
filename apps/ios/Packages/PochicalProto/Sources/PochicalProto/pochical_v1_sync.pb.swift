@@ -373,7 +373,9 @@ public nonisolated struct Pochical_V1_ServerError: Sendable {
 }
 
 /// A point on a hybrid logical clock: compared by physical_ms, then
-/// counter, then device_id (spec/sync-protocol.md, HLC).
+/// counter, then device_id (spec/sync-protocol.md, HLC). device_id is the
+/// device's own id in ASCII letters, digits and "-" (a UUID), or "server"
+/// for the server's corrections.
 public nonisolated struct Pochical_V1_Hlc: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -659,8 +661,8 @@ public nonisolated struct Pochical_V1_Pattern: Sendable {
   /// shiftName characters at most (design/src/limits.ts).
   public var name: String = String()
 
-  /// The mark in each look: an emoji, a letter (shiftMark characters) and
-  /// an icon by the apps' own name for it.
+  /// The mark in each look: one emoji, letters (1 to shiftMark characters,
+  /// not blank) and an icon by the apps' own name for it.
   public var emoji: String = String()
 
   public var symbol: String = String()

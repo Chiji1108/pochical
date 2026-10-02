@@ -83,7 +83,9 @@ message ServerError {
 }
 
 // A point on a hybrid logical clock: compared by physical_ms, then
-// counter, then device_id (spec/sync-protocol.md, HLC).
+// counter, then device_id (spec/sync-protocol.md, HLC). device_id is the
+// device's own id in ASCII letters, digits and "-" (a UUID), or "server"
+// for the server's corrections.
 message Hlc {
   int64 physical_ms = 1;
   uint32 counter = 2;
@@ -176,8 +178,8 @@ message MemberPattern {
 message Pattern {
   // shiftName characters at most (design/src/limits.ts).
   string name = 1;
-  // The mark in each look: an emoji, a letter (shiftMark characters) and
-  // an icon by the apps' own name for it.
+  // The mark in each look: one emoji, letters (1 to shiftMark characters,
+  // not blank) and an icon by the apps' own name for it.
   string emoji = 2;
   string symbol = 3;
   string icon = 4;

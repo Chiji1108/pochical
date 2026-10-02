@@ -92,7 +92,7 @@ A hybrid logical clock value is `(physical_ms, counter, device_id)`, compared in
 
 - On a local edit: `physical_ms = max(now, last.physical_ms)`; if it did not advance, `counter = last.counter + 1`, otherwise `counter = 0`. The counter is a `uint32`: at its end the clock moves to the next millisecond (`spec/vectors/hlc.json`, tick).
 - On receiving a change: the device's last clock becomes the received one when that is later, so its next local edit orders after it (receive).
-- `device_id` only breaks exact ties.
+- `device_id` only breaks exact ties. It is the device's own id, written in ASCII letters, digits and `-` (a UUID as it is written), at most `syncLimits.idLength` long, so every platform orders two of them alike: Swift compares strings by Unicode scalars and JavaScript by UTF-16 units, which differ past the Basic Multilingual Plane. `server` is the server's own, for its corrections (Outbox step 5). The server acknowledges an edit with any other `device_id` without applying it.
 
 HLC, not arrival order, decides the winner: an edit made offline at 10:00 and delivered at 12:00 must lose to an edit made online at 11:00.
 
@@ -127,7 +127,7 @@ The User DO socket carries a user's days (`proto/pochical/v1/sync.proto`); a Gro
 - An edit for no real day or field, or without a clock, is acknowledged and dropped: there is nothing to keep or correct.
 - An edit whose value does not fit its field (a pattern that is neither `dayRules.noShift` nor an id, an id being up to `syncLimits.idLength` characters with no spaces as `apps/server/src/ids.ts` has it; a time not `HH:MM`; a memo past `textLimits.dayNote`) but whose clock is newer than the stored one is answered with the stored value (or none) under a clock just past the edit's, stamped with device `server`: the compensating change of Outbox step 5.
 - After `Welcome`, a device gets its catch-up as `Changes` of up to `syncLimits.changesPerFrame` values each, in cursor order.
-- Patterns go the same way, as `PatternEdits`: each pattern is one last-writer-wins `PatternValue`, sent whole (a deleted one has no `pattern`, kept so an older edit cannot bring it back), and the order they are shown in is one more, `PatternOrder`. They share the User DO's cursor with days, so a device catches up on both in one order. A pattern that does not fit (spec/shift-patterns.md: a blank name or one past `textLimits.shiftName`, a mark that is not one emoji and at most `textLimits.shiftMark` letters, a color past the palette, one time without the other, a `next_day` naming itself) or an order with an id twice is corrected as a day's value is.
+- Patterns go the same way, as `PatternEdits`: each pattern is one last-writer-wins `PatternValue`, sent whole (a deleted one has no `pattern`, kept so an older edit cannot bring it back), and the order they are shown in is one more, `PatternOrder`. They share the User DO's cursor with days, so a device catches up on both in one order. A pattern that does not fit (spec/shift-patterns.md: a blank name or one past `textLimits.shiftName`, a mark whose emoji is not one emoji, or whose letters are blank or past `textLimits.shiftMark`, a color past the palette, one time without the other, a `next_day` naming itself) or an order with an id twice is corrected as a day's value is.
 
 ### Repeating orders
 

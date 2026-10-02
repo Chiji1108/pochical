@@ -3,7 +3,7 @@ import { syncLimits, textLimits } from "@pochical/design/limits";
 
 import { DayField } from "./gen/pochical/v1/sync_pb";
 import type { DayValue } from "./gen/pochical/v1/sync_pb";
-import { isId } from "./ids";
+import { isDeviceId, isId } from "./ids";
 import { characterCount } from "./text-limits";
 
 // What a day's field may hold (spec/sync-protocol.md, Shifts), checked as
@@ -88,4 +88,4 @@ export const hasKey = (value: DayValue | undefined): value is DayValue =>
   isDate(value.date) &&
   isDayField(value.field) &&
   value.hlc !== undefined &&
-  isId(value.hlc.deviceId);
+  isDeviceId(value.hlc.deviceId);

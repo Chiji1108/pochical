@@ -8,7 +8,9 @@ package app.pochical.v1;
 /**
  * <pre>
  * A point on a hybrid logical clock: compared by physical_ms, then
- * counter, then device_id (spec/sync-protocol.md, HLC).
+ * counter, then device_id (spec/sync-protocol.md, HLC). device_id is the
+ * device's own id in ASCII letters, digits and "-" (a UUID), or "server"
+ * for the server's corrections.
  * </pre>
  *
  * Protobuf type {@code pochical.v1.Hlc}
@@ -207,7 +209,9 @@ public  final class Hlc extends
   /**
    * <pre>
    * A point on a hybrid logical clock: compared by physical_ms, then
-   * counter, then device_id (spec/sync-protocol.md, HLC).
+   * counter, then device_id (spec/sync-protocol.md, HLC). device_id is the
+   * device's own id in ASCII letters, digits and "-" (a UUID), or "server"
+   * for the server's corrections.
    * </pre>
    *
    * Protobuf type {@code pochical.v1.Hlc}
