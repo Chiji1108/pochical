@@ -437,7 +437,7 @@ const upcoming = {
     display: "grid",
     flex: 1,
     gap: "4px",
-    gridTemplateColumns: "56px 20px 1fr",
+    gridTemplateColumns: "52px 18px 1fr",
     minHeight: 0,
   }),
   rowLabel: css({
@@ -455,14 +455,17 @@ const upcoming = {
     whiteSpace: "nowrap",
   }),
   rows: css({ display: "flex", flex: 1, flexDirection: "column", minWidth: 0 }),
+  // Today's line and the three days as one group in the middle, not
+  // pushed to the top and bottom with a gap between.
   small: css({
     display: "flex",
     flexDirection: "column",
+    gap: "12px",
     height: "100%",
-    justifyContent: "space-between",
+    justifyContent: "center",
   }),
   // シンプル's today, in the medium one's left column.
-  today: css({ display: "flex", flexShrink: 0, width: "112px" }),
+  today: css({ display: "flex", flexShrink: 0, width: "100px" }),
   words: css({
     fontVariantNumeric: "tabular-nums",
     fontWeight: 400,
@@ -549,7 +552,7 @@ const nextDays = {
     borderTop: "1px solid token(colors.separator)",
     display: "grid",
     gridTemplateColumns: "repeat(3, 1fr)",
-    paddingTop: "4px",
+    paddingTop: "8px",
     width: "100%",
   }),
   weekday: css({ textStyle: "caption2" }),
@@ -569,7 +572,7 @@ function NextDays({ days }: { days: WidgetDay[] }) {
           >
             {words.weekday(day.date)}
           </span>
-          <DayMark day={day} size={18} />
+          <DayMark day={day} size={24} />
         </li>
       ))}
     </ol>
