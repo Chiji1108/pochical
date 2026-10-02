@@ -114,8 +114,8 @@ export const mother: Member = {
 
 const nurseOrder = ["day", "day", "night", "after", "off", "off"] as const;
 
-// Built on first use: this file and the calendar import each other, so
-// the calendar's patterns are not ready while this module loads.
+// A nurse on the 日勤・夜勤 order, made afresh for each use: the ward's
+// classmates and some cousins are her with another name and offset.
 export const misaki = (): Member => ({
   id: "misaki",
   name: "みさき",
