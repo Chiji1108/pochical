@@ -1493,7 +1493,6 @@ function Pochical() {
           <MonthSummary
             days={5}
             month={new Date(2026, 8, 1)}
-            onClear={() => undefined}
             onOpen={() => undefined}
             person="田中"
           />

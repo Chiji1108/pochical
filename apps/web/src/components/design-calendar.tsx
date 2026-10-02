@@ -338,9 +338,15 @@ export function DesignCalendar({
     setSaveToCalendar(toCalendar);
     setOpenSheet("save");
   }
+  // The corner's 完了 or ×: it closes what is open last, the week before
+  // someone's days.
   function finishHeading() {
-    if (!editing) {
+    if (weekDetail) {
       closeDetail();
+      return;
+    }
+    if (!editing) {
+      shown.show(undefined);
       return;
     }
     setEditing(false);
@@ -476,6 +482,11 @@ export function DesignCalendar({
                     swiped={swipedTo === dateKey(month)}
                   />
                   <HeadingActions
+                    closeLabel={
+                      shown.person === undefined
+                        ? undefined
+                        : `${shown.person}と一緒の日の表示をやめる`
+                    }
                     detailDate={openDate}
                     mode={headingMode}
                     month={month}
@@ -626,9 +637,6 @@ export function DesignCalendar({
                       beside={{ next: summaryBy(1), previous: summaryBy(-1) }}
                       days={summaryIn(monthDays)}
                       month={month}
-                      onClear={() => {
-                        shown.show(undefined);
-                      }}
                       onOpen={() => {
                         setOpenSheet("breakdown");
                       }}
@@ -835,7 +843,6 @@ export function MonthSummary({
   days,
   onOpen,
   person,
-  onClear,
   progress,
   swiped = false,
   beside,
@@ -845,8 +852,6 @@ export function MonthSummary({
   days: number;
   onOpen: () => void;
   person?: string;
-  // Back to the days off.
-  onClear?: () => void;
   progress?: MotionValue<number>;
   swiped?: boolean;
   // The same count in the months before and after, while the pages can be
@@ -901,8 +906,6 @@ export function MonthSummary({
           </span>
         </>
       }
-      clearLabel={`${person}と一緒の日の表示をやめる`}
-      onClear={person === undefined ? undefined : onClear}
       onOpen={onOpen}
     />
   );
@@ -987,12 +990,16 @@ function HeadingActions({
   onDone,
   onImage,
   onCalendar,
+  closeLabel,
   progress,
   swiped,
 }: {
   mode: "view" | "edit" | "week";
   month: Date;
   detailDate: Date | undefined;
+  // On the month, what its × leaves in place of the save menu, while it
+  // shows something other than the plain month (someone's days).
+  closeLabel?: string;
   // The months' pages being dragged, which 今月 follows.
   progress: MotionValue<number>;
   swiped: boolean;
@@ -1068,6 +1075,7 @@ function HeadingActions({
           {back}
         </TodayCorner>
       }
+      closeLabel={closeLabel}
       mode={mode}
       next={next}
       onCalendar={onCalendar}
@@ -1083,8 +1091,10 @@ function HeadingActions({
 // own: the save menu on the month, 完了 to finish ポチポチ入力, and × to
 // close an opened week. The week saves each change as it is made, so it
 // has nothing to finish; 完了 there read as editing, and its accent drew
-// the eye to leaving rather than to the day.
+// the eye to leaving rather than to the day. The month showing someone's
+// days has × too, as it is a view to leave, not a month to save.
 function SwipeCorner({
+  closeLabel,
   mode,
   previous,
   next,
@@ -1093,6 +1103,7 @@ function SwipeCorner({
   onCalendar,
   onDone,
 }: {
+  closeLabel?: string;
   mode: "view" | "edit" | "week";
   previous: ReactNode;
   next: ReactNode;
@@ -1110,7 +1121,7 @@ function SwipeCorner({
         </div>
       )}
       {mode !== "edit" && back}
-      {mode === "view" ? (
+      {mode === "view" && closeLabel === undefined ? (
         <IconMenu
           icon={<Download aria-hidden="true" size={21} />}
           label="この月のシフトを保存"
@@ -1134,6 +1145,11 @@ function SwipeCorner({
       {mode === "edit" && <DoneButton onClick={onDone} />}
       {mode === "week" && (
         <IconButton label="閉じる" onClick={onDone}>
+          <X aria-hidden="true" size={20} />
+        </IconButton>
+      )}
+      {mode === "view" && closeLabel !== undefined && (
+        <IconButton label={closeLabel} onClick={onDone}>
           <X aria-hidden="true" size={20} />
         </IconButton>
       )}
