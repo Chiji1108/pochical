@@ -29,6 +29,13 @@
       "when": 1790901475963,
       "tag": "0003_member_repeat_orders",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790943318685,
+      "tag": "0004_log_head",
+      "breakpoints": true
     }
   ]
 }

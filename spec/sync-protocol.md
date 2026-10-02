@@ -71,6 +71,8 @@ The numbers are `socketRules` in `design/src/socket.ts`.
 
 Each DO keeps an append-only change log. Every accepted mutation (shift edit, message sent, message edited or deleted, read state moved) gets the next `cursor`, a `uint64` that only grows.
 
+A DO that ever removes rows keeps the newest cursor it gave out in a row of its own (the Group DO's `log_head`), since the newest of the rows left could be older, and a device already past it would miss what comes next. The User DO, which keeps every value once written (a deleted one as a tombstone), reads it off its values.
+
 - After `Welcome`, the server sends every change after the client's cursor, then streams new changes as they happen.
 - The client applies changes in cursor order and stores the last applied cursor in the same SQLite transaction.
 - If the client's cursor is older than the oldest change the DO still keeps, the server tells it to reset: drop that DO's cache and load a fresh snapshot.
