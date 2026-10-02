@@ -31,9 +31,11 @@ export const requireText = (
   return text;
 };
 
-// One emoji, as the picker gives: a single character outside letters,
-// digits and punctuation.
-const EMOJI = /^\p{Extended_Pictographic}|^\p{Regional_Indicator}/u;
+// One emoji, as the picker and the system keyboards give: a single
+// character that starts as a pictograph or a flag, or a keycap (1️⃣, #️⃣),
+// which starts with the plain digit or sign under its combining keycap.
+const EMOJI =
+  /^\p{Extended_Pictographic}|^\p{Regional_Indicator}|^[#*0-9]\uFE0F?\u20E3/u;
 
 /** Whether the text is exactly one character that is an emoji. */
 export const isEmoji = (text: string): boolean =>
