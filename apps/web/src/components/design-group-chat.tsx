@@ -389,7 +389,7 @@ export function ChatPage({
     failedCount,
     messages: chat.messages,
     sharedFirst,
-    typing: typingMember !== undefined,
+    typingId: typingMember?.id,
     unreadAtOpen,
   });
   // Who wrote a line, including members taken out since, whose lines stay.
@@ -982,13 +982,14 @@ function useChatScroll({
   sharedFirst,
   unreadAtOpen,
   failedCount,
-  typing,
+  typingId,
 }: {
   messages: Message[];
   sharedFirst: boolean;
   unreadAtOpen: number;
   failedCount: number;
-  typing: boolean;
+  // Who is writing back, whose dots come in under the latest line.
+  typingId?: string;
 }) {
   const listRef = useRef<HTMLOListElement>(null);
   const lineCount = messages.length;
@@ -1085,10 +1086,10 @@ function useChatScroll({
   // unless the chat is scrolled up away from it.
   useLayoutEffect(() => {
     const list = listRef.current;
-    if (list && typing && !awayFromLatest) {
+    if (list && typingId !== undefined && !awayFromLatest) {
       list.scrollTop = list.scrollHeight;
     }
-  }, [typing, awayFromLatest]);
+  }, [typingId, awayFromLatest]);
   const handleScroll = (event: UIEvent<HTMLOListElement>) => {
     const list = event.currentTarget;
     setAwayFromLatest(
@@ -1806,7 +1807,14 @@ function MessageLine({
                     }}
                     type="button"
                   >
-                    <FoldedText onFolds={setFolded} open={unfolded}>
+                    <FoldedText
+                      // A new function each time, so the words are measured
+                      // again as they change, as when edited.
+                      onFolds={(folds) => {
+                        setFolded(folds);
+                      }}
+                      open={unfolded}
+                    >
                       <MessageText
                         mine={mine}
                         nameOf={mentionName}
