@@ -588,32 +588,41 @@ const shareDays = {
     gap: "4px",
     gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
   }),
+  // みんな休み over a row of its days that scrolls sideways out to the
+  // sheet's sides, as 1人ずつ's people do: one height however many there
+  // are, and a half-shown day says there are more.
   suggest: css({
-    alignItems: "center",
-    bg: "accent.container",
-    borderRadius: "2xl",
     display: "flex",
-    flexWrap: "wrap",
+    flexDirection: "column",
     gap: "8px",
     // Its own part, 24px clear of the month as the switch above it is.
     marginBottom: "12px",
-    padding: "12px 12px",
   }),
+  // Tinted as the calendar's days everyone is off, so the row and the
+  // month say the same thing; picked, filled as a picked day is.
   suggestion: css({
     "&[aria-pressed=true]": { bg: "accent.fill", color: "accent.onFill" },
-    bg: "background.card",
-    border: "1.5px solid transparent",
+    bg: "accent.container",
+    border: 0,
     borderRadius: "full",
     color: "accent.default",
+    flexShrink: 0,
     fontWeight: 600,
-    minHeight: "30px",
+    minHeight: "32px",
     padding: "0 12px",
     textStyle: "footnote",
+  }),
+  // Out over the sheet's 24px sides, the first day in line with the page.
+  suggestions: css({
+    display: "flex",
+    gap: "8px",
+    margin: "0 -24px",
+    overflowX: "auto",
+    padding: "0 24px",
   }),
   togetherLabel: css({
     color: "accent.default",
     fontWeight: 600,
-    marginRight: "4px",
     textStyle: "footnote",
   }),
   weekday: css({
@@ -834,9 +843,7 @@ function DaySheetBody({
   };
   const suggestions = Array.from({ length: 45 }, (_, index) =>
     addDays(designToday, index)
-  )
-    .filter((date) => everyoneOff(members, date))
-    .slice(0, suggestionCount);
+  ).filter((date) => everyoneOff(members, date));
   return (
     <>
       <DecideHeading
@@ -865,22 +872,24 @@ function DaySheetBody({
         {suggestions.length > 0 && (
           <div className={shareDays.suggest}>
             <span className={shareDays.togetherLabel}>みんな休み</span>
-            {suggestions.map((date) => (
-              <button
-                aria-pressed={isPicked(date)}
-                className={shareDays.suggestion}
-                key={dateKey(date)}
-                onClick={() => {
-                  toggle(date);
-                }}
-                type="button"
-              >
-                {date.getMonth() + 1}/{date.getDate()}
-                <small className={smallWeekday}>
-                  {weekTools.weekdayName(date.getDay())}
-                </small>
-              </button>
-            ))}
+            <div className={shareDays.suggestions}>
+              {suggestions.map((date) => (
+                <button
+                  aria-pressed={isPicked(date)}
+                  className={shareDays.suggestion}
+                  key={dateKey(date)}
+                  onClick={() => {
+                    toggle(date);
+                  }}
+                  type="button"
+                >
+                  {date.getMonth() + 1}/{date.getDate()}
+                  <small className={smallWeekday}>
+                    {weekTools.weekdayName(date.getDay())}
+                  </small>
+                </button>
+              ))}
+            </div>
           </div>
         )}
         <div className={monthSwitch}>
@@ -949,8 +958,6 @@ function DaySheetBody({
     </>
   );
 }
-
-const suggestionCount = 4;
 
 const modeSwitch = css({ marginBottom: "12px" });
 
