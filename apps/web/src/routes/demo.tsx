@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 
 import { DesignApp } from "../components/design-app";
-import { sampleGroups } from "../components/design-group-data";
+import { sampleGroups } from "../components/design-group-samples";
 import { HomeScreen } from "../components/design-home-screen";
 import {
   designCaption,

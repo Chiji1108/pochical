@@ -11,7 +11,7 @@ import {
 } from "../lib/design-user-store";
 import { parseDesignVariants } from "../lib/design-variants";
 import { DesignApp } from "./design-app";
-import { sampleGroups } from "./design-group-data";
+import { sampleGroups } from "./design-group-samples";
 import { DesignProviders, PresetContexts } from "./design-providers";
 import {
   BREATH_SECONDS,

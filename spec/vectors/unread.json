@@ -1,0 +1,115 @@
+{
+  "about": "Which unread lines a count stands for (spec/chat.md, Unread lines): what notifies. A chat that is on counts every unread line; a chat turned off counts only its unread lines that mention the reader, and those only while メンションはいつも通知 (`mentionsWhenMuted`) is on. A group's count adds up its chats', and the グループ tab's adds up its groups'. Each chat lists its lines oldest first: `read` ones, then `unread` ones, as their words; a mention is kept as <@id>, and the reader is `me`.",
+  "notifying": [
+    {
+      "name": "a chat that is on counts every unread line",
+      "mentionsWhenMuted": true,
+      "groups": [
+        {
+          "chats": [
+            {
+              "muted": false,
+              "read": ["おつかれ"],
+              "unread": ["明日ひま？", "ご飯いこ", "18時でどう？"]
+            }
+          ]
+        }
+      ],
+      "expected": 3
+    },
+    {
+      "name": "a chat turned off counts nothing without a mention",
+      "mentionsWhenMuted": true,
+      "groups": [
+        {
+          "chats": [
+            {
+              "muted": true,
+              "read": [],
+              "unread": ["明日ひま？", "ご飯いこ"]
+            }
+          ]
+        }
+      ],
+      "expected": 0
+    },
+    {
+      "name": "a chat turned off counts the lines that mention the reader",
+      "mentionsWhenMuted": true,
+      "groups": [
+        {
+          "chats": [
+            {
+              "muted": true,
+              "read": [],
+              "unread": ["明日ひま？", "<@me> 来れる？", "<@yuki> どう？"]
+            }
+          ]
+        }
+      ],
+      "expected": 1
+    },
+    {
+      "name": "a mention already read does not count",
+      "mentionsWhenMuted": true,
+      "groups": [
+        {
+          "chats": [
+            {
+              "muted": true,
+              "read": ["<@me> 来れる？"],
+              "unread": ["了解"]
+            }
+          ]
+        }
+      ],
+      "expected": 0
+    },
+    {
+      "name": "with メンションはいつも通知 off, a chat turned off counts nothing",
+      "mentionsWhenMuted": false,
+      "groups": [
+        {
+          "chats": [
+            {
+              "muted": true,
+              "read": [],
+              "unread": ["<@me> 来れる？"]
+            }
+          ]
+        }
+      ],
+      "expected": 0
+    },
+    {
+      "name": "the tab adds up every group's chats",
+      "mentionsWhenMuted": true,
+      "groups": [
+        {
+          "chats": [
+            {
+              "muted": false,
+              "read": [],
+              "unread": ["明日ひま？", "ご飯いこ"]
+            },
+            {
+              "muted": true,
+              "read": [],
+              "unread": ["<@me> 写真送るね", "これ"]
+            }
+          ]
+        },
+        {
+          "chats": [
+            {
+              "muted": true,
+              "read": [],
+              "unread": ["a", "b", "c", "d", "e"]
+            }
+          ]
+        }
+      ],
+      "expected": 3
+    }
+  ]
+}

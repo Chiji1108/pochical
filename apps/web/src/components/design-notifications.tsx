@@ -22,14 +22,10 @@ import type { Firing, Reminder, ReminderKind } from "../lib/design-reminders";
 import { useSettings } from "../lib/design-settings-store";
 import { useUser } from "../lib/design-user-store";
 import { AppIcon, useAppIcons } from "./design-app-icon";
-import {
-  groupChat,
-  isMuted,
-  sampleOthers,
-  withMuted,
-} from "./design-group-data";
+import { groupChat, isMuted, withMuted } from "./design-group-data";
 import type { Member } from "./design-group-data";
 import { Avatar, GroupIcon } from "./design-group-parts";
+import { sampleOthers } from "./design-group-samples";
 import {
   ConfirmDialog,
   DecideHeading,

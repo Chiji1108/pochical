@@ -2,16 +2,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode, ComponentType } from "react";
 import { css } from "styled-system/css";
 
+import { changeOn, patternOn } from "../components/design-group-data";
+import type { Member } from "../components/design-group-data";
 import {
-  changeOn,
   mother,
   partner,
-  patternOn,
   sampleGroups,
   sampleOthers,
   samplePhoto,
-} from "../components/design-group-data";
-import type { Member } from "../components/design-group-data";
+} from "../components/design-group-samples";
 import {
   DesignIntro,
   DesignPage,

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { css } from "styled-system/css";
 
 import { DesignApp } from "../components/design-app";
-import { sampleGroups } from "../components/design-group-data";
+import { sampleGroups } from "../components/design-group-samples";
 import { DesignProviders } from "../components/design-providers";
 import { paleSkyFromTop, themeSkyId } from "../components/design-surprise";
 import { InviteShareImage } from "../components/invite-share-image";

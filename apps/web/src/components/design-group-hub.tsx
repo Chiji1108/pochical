@@ -17,14 +17,7 @@ import { addDays, formatDay } from "../lib/design-days";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
 import { ChatRow } from "./design-group-chat";
-import {
-  everyoneOff,
-  groupChat,
-  isMuted,
-  misaki,
-  mother,
-  partner,
-} from "./design-group-data";
+import { everyoneOff, groupChat, isMuted } from "./design-group-data";
 import type { Chat, Group, Member } from "./design-group-data";
 import {
   Avatar,
@@ -34,6 +27,7 @@ import {
   markFrame,
   memberButton,
 } from "./design-group-parts";
+import { misaki, mother, partner } from "./design-group-samples";
 import { MemberTable } from "./design-group-shifts";
 import {
   ConfirmDialog,
