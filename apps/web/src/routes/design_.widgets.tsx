@@ -2,8 +2,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode, ComponentType } from "react";
 import { css } from "styled-system/css";
 
-import { patternOn } from "../components/design-group-data";
-import { mother, partner } from "../components/design-group-samples";
+import { changeOn, patternOn } from "../components/design-group-data";
+import type { Member } from "../components/design-group-data";
+import {
+  mother,
+  partner,
+  sampleGroups,
+  sampleOthers,
+  samplePhoto,
+} from "../components/design-group-samples";
 import {
   DesignIntro,
   DesignPage,
@@ -52,7 +59,11 @@ import {
 } from "../lib/design-widget-variants";
 import type { WidgetVariants } from "../lib/design-widget-variants";
 import { widgetEntry } from "../lib/design-widgets";
-import type { WidgetCompanion, WidgetEntry } from "../lib/design-widgets";
+import type {
+  WidgetCompanion,
+  WidgetEntry,
+  WidgetPerson,
+} from "../lib/design-widgets";
 import { wallpaperSamples } from "../lib/material-you";
 import { pageMeta } from "../lib/site";
 
@@ -111,28 +122,77 @@ const noHighlight = {
 // Names under the marks, as when the person shows them in the calendar.
 const namesShown = { names: { badge: true, emoji: true, icon: true } };
 
-// The people 次の休み can be set to meet: a partner off at weekends, a
-// mother off on Tuesdays, Thursdays and weekends, and someone who has
-// entered nothing yet.
-function companionOf(member: typeof partner): WidgetCompanion {
+// Who the widgets can be set to: a partner off at weekends, a mother off
+// on Tuesdays, Thursdays and weekends, someone who has entered nothing
+// yet, and the sample person's groups: 家族 (those two), 看護学校の友達
+// (two nurses on rotating shifts) and 高校の同級生 (nine, all kinds of
+// work).
+function personOf(member: Member): WidgetPerson {
   return {
-    name: member.name,
-    offOn: (date) => {
+    dayOn: (date) => {
       const pattern = patternOn(member, date);
-      return pattern && pattern.off;
+      if (!pattern) {
+        return undefined;
+      }
+      const change = changeOn(member, date);
+      return {
+        early: change?.early ?? false,
+        late: change?.late ?? false,
+        look: pattern.look,
+        name: pattern.name,
+        off: pattern.off,
+        time: change?.time ?? pattern.time,
+      };
     },
+    name: member.name,
     photo: member.photo,
+    style: member.style?.look,
   };
 }
-const companions: Record<
-  WidgetVariants["companion"],
-  WidgetCompanion | undefined
-> = {
-  mother: companionOf(mother),
-  none: undefined,
-  notEntered: { name: "あや", offOn: () => undefined },
-  partner: companionOf(partner),
-};
+
+function groupOf(id: string): WidgetCompanion {
+  const group = sampleGroups().find((one) => one.id === id);
+  return {
+    kind: "group",
+    mark: group?.mark ?? { emoji: "👥", kind: "emoji" },
+    name: group?.name ?? "",
+    people: sampleOthers(id).map(personOf),
+  };
+}
+
+function companionOf(
+  choice: WidgetVariants["companion"]
+): WidgetCompanion | undefined {
+  switch (choice) {
+    case "partner": {
+      return { kind: "person", person: personOf(partner) };
+    }
+    case "mother": {
+      return { kind: "person", person: personOf(mother) };
+    }
+    case "notEntered": {
+      return {
+        kind: "person",
+        person: { dayOn: () => undefined, name: "あや" },
+      };
+    }
+    case "family": {
+      return groupOf("family");
+    }
+    case "friends": {
+      return groupOf("friends");
+    }
+    case "school": {
+      return groupOf("school");
+    }
+    case "none": {
+      return undefined;
+    }
+  }
+}
+
+// The sample person, as their groups see them.
+const me = { name: "さくら", photo: samplePhoto(1011) };
 
 // Today as 今日 asks; the rest of the sample stays as it is.
 const todayKey = dateKey(designToday);
@@ -157,13 +217,14 @@ function scheduleFor(day: WidgetVariants["day"]): Schedule {
 
 type Size = "small" | "medium" | "large";
 type WidgetView = ComponentType<{ entry: WidgetEntry }>;
+type KindSize = { size: Size; View: WidgetView };
 
 // The kinds a person picks from the widget gallery, each in its sizes.
 const kinds: {
   id: Exclude<WidgetVariants["kind"], "all" | "lock">;
   name: string;
   description: string;
-  sizes: { size: Size; View: WidgetView }[];
+  sizes: KindSize[];
 }[] = [
   {
     description:
@@ -177,7 +238,7 @@ const kinds: {
   },
   {
     description:
-      "次の休みまであと何日か。中はその先の休みも。ウィジェットの編集で人を選ぶと、その人と一緒に休める日になります。今日が休みの日は数えずに「おやすみ」。",
+      "次の休みまであと何日か。中はその先の休みも。ウィジェットの編集で人を選ぶとその人と一緒に休める日、グループを選ぶとみんな休み（全員が休みの日）になります。今日が休みの日は数えずに「おやすみ」。",
     id: "nextOff",
     name: "次の休み",
     sizes: [
@@ -187,7 +248,7 @@ const kinds: {
   },
   {
     description:
-      "今日を大きく、この先の日を並べて。小は続く3日のマーク、中は4日を1行ずつ、変わったことやメモと。",
+      "今日を大きく、この先の日を並べて。小は続く3日のマーク、中は4日を1行ずつ、変わったことやメモと。ウィジェットの編集で人を選ぶと、今日からの日にその人の段が並びます（小は2日、中は5日）。",
     id: "upcoming",
     name: "これから",
     sizes: [
@@ -319,7 +380,7 @@ function Stage({ variants }: { variants: WidgetVariants }) {
     week,
     august ? augustDay : designToday,
     presetPatterns,
-    companions[variants.companion]
+    { companion: companionOf(variants.companion), me }
   );
   const placement = {
     appearance: variants.look,

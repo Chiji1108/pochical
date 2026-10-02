@@ -376,7 +376,7 @@ export function MemberLook({
   member,
   children,
 }: {
-  member: Member;
+  member: Pick<Member, "style">;
   children: ReactNode;
 }) {
   const theirs = member.style?.look;
