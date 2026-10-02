@@ -19,7 +19,7 @@ import {
 } from "./sync-helpers";
 
 // A member's day value as their User DO pushes it.
-const pushed = (value: string, ms: number) =>
+const pushed = (value: string, ms: number, field = DayField.PATTERN) =>
   toBinary(
     ChangesSchema,
     create(ChangesSchema, {
@@ -30,7 +30,7 @@ const pushed = (value: string, ms: number) =>
             case: "day",
             value: {
               date: "2026-10-22",
-              field: DayField.PATTERN,
+              field,
               hlc: {
                 counter: 0,
                 deviceId: "phone",
@@ -145,5 +145,24 @@ describe("a member's shifts in their groups", () => {
     expect(changesIn(await group.frames.next())).toMatchObject([
       { kind: { value: { day: { value: "night" }, userId: makerId } } },
     ]);
+  });
+
+  it("drops a memo or people pushed to it, keeping only shared fields", async () => {
+    const { groupId, guest, makerId } = await pair();
+    const groupDo = env.GROUPS.getByName(groupId);
+    await groupDo.takeMemberShifts(
+      makerId,
+      pushed("ひみつのメモ", 1000, DayField.NOTE)
+    );
+    await groupDo.takeMemberShifts(
+      makerId,
+      pushed("coworker-1", 1000, DayField.PEOPLE)
+    );
+
+    const group = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
+    expect(group.welcome.kind).toMatchObject({ value: { cursor: 0n } });
+    await expect(settled(group.socket, group.frames)).resolves.toMatchObject({
+      kind: { case: "pong" },
+    });
   });
 });

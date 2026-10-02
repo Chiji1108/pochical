@@ -11,18 +11,13 @@ import {
   inArray,
   isNotNull,
   max,
-  notInArray,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
-import { fitsField, hasKey } from "./day-values";
-import {
-  ChangesSchema,
-  DayField,
-  ServerError_Code,
-} from "./gen/pochical/v1/sync_pb";
+import { fitsField, hasKey, SHARED_DAY_FIELDS } from "./day-values";
+import { ChangesSchema, ServerError_Code } from "./gen/pochical/v1/sync_pb";
 import type {
   Change,
   CoworkerEdits,
@@ -94,8 +89,6 @@ import type {
 
 // Values in one push to a group.
 const VALUES_PER_PUSH = 500;
-// The day fields that stay with their owner, never pushed to groups.
-const PRIVATE_FIELDS = [DayField.NOTE, DayField.PEOPLE];
 
 /** One kind of value the user owns, as UserDO.logs lists them. */
 type SyncedLog = {
@@ -209,7 +202,7 @@ export class UserDO extends DurableObject<Env> {
                 gt(dayFields.cursor, cursor),
                 // Memos and people stay with their owner.
                 sharedOnly
-                  ? notInArray(dayFields.field, PRIVATE_FIELDS)
+                  ? inArray(dayFields.field, SHARED_DAY_FIELDS)
                   : undefined
               )
             )
