@@ -1559,7 +1559,9 @@ export function ListRow({
 }) {
   const pressable = Boolean(onClick);
   const isLabel = !pressable && (control !== undefined || Boolean(htmlFor));
-  const labelId = useId();
+  const id = useId();
+  // The label's id, for a control it names.
+  const labelId = isLabel ? id : undefined;
   const shownArrow =
     arrow === undefined || arrow === true
       ? pressable && (
@@ -1583,7 +1585,7 @@ export function ListRow({
           (value === undefined || truncate) && listRow.labelGrow,
           labelClassName
         )}
-        id={isLabel ? labelId : undefined}
+        id={labelId}
       >
         {truncate ? <span className={listRow.labelText}>{label}</span> : label}
         {detail !== undefined && <small>{detail}</small>}
@@ -1599,7 +1601,7 @@ export function ListRow({
           {value}
         </span>
       )}
-      <RowLabelContext.Provider value={isLabel ? labelId : undefined}>
+      <RowLabelContext.Provider value={labelId}>
         {control}
       </RowLabelContext.Provider>
       {shownArrow}
