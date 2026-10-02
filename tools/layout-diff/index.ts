@@ -111,7 +111,7 @@ async function measureAll(options: {
   const browser = await launch();
   // Each worker its own context, so nothing a screen stores reaches
   // another.
-  const newPage = async (clock: boolean) => {
+  const newPage = async () => {
     const context = await browser.newContext({
       colorScheme: options.dark ? "dark" : "light",
       deviceScaleFactor: 1,
@@ -124,12 +124,6 @@ async function measureAll(options: {
       localStorage.clear();
       sessionStorage.clear();
     });
-    // Time flows as usual, but the steps can run the page's timers out
-    // at once. Only in a tab of its own: under the stand-in timers, some
-    // of Motion's transitions stop partway.
-    if (clock) {
-      await context.clock.install();
-    }
     return await context.newPage();
   };
   const { only } = options;
@@ -142,35 +136,19 @@ async function measureAll(options: {
     // The workers take the screens in turn, each from a fresh load.
     const queue = [...chosen];
     const [first] = chosen;
-    // A first load in each tab, not kept: until a tab has the page's
-    // styles cached they can come in after the calendar, which then
-    // brings its pager up on the month before. Only the load: steps may
-    // need the clock the tab does not have.
-    const warmed = async (clock: boolean) => {
-      const page = await newPage(clock);
-      if (first !== undefined) {
-        await measureState(page, options.url, { ...first, steps: undefined });
-      }
-      return page;
-    };
     const work = async () => {
-      const page = await warmed(false);
-      // The tab with the clock, opened the first time a state needs it.
-      let clockPage: Page | undefined;
-      const pageFor = async (state: State) => {
-        if (state.clock !== true) {
-          return page;
-        }
-        clockPage ??= await warmed(true);
-        return clockPage;
-      };
+      const page = await newPage();
+      // A first load, not kept: until a tab has the page's styles cached
+      // they can come in after the calendar, which then brings its pager
+      // up on the month before.
+      if (first !== undefined) {
+        await measureState(page, options.url, first);
+      }
       for (let state = queue.shift(); state; state = queue.shift()) {
         // oxlint-disable-next-line no-await-in-loop
         try {
           // oxlint-disable-next-line no-await-in-loop
-          const tab = await pageFor(state);
-          // oxlint-disable-next-line no-await-in-loop
-          const screen = await measureState(tab, options.url, state);
+          const screen = await measureState(page, options.url, state);
           measured.set(state.name, screen);
         } catch (error) {
           throw new Error(`${state.name}: ${String(error)}`, { cause: error });
