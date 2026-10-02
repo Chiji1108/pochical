@@ -3,16 +3,24 @@ import { describe, expect, test } from "bun:test";
 // The cases every platform checks its own code against (spec/vectors);
 // the native apps' tests read the same files.
 import chatText from "../../../spec/vectors/chat-text.json";
+import entering from "../../../spec/vectors/entering.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import localEdits from "../../../spec/vectors/local-edits.json";
+import ownDays from "../../../spec/vectors/own-days.json";
+import patternChanges from "../../../spec/vectors/patterns.json";
 import reconnect from "../../../spec/vectors/reconnect.json";
 import repeat from "../../../spec/vectors/repeat.json";
 import review from "../../../spec/vectors/review.json";
 import text from "../../../spec/vectors/text.json";
 import timeChange from "../../../spec/vectors/time-change.json";
+import together from "../../../spec/vectors/together.json";
 import unread from "../../../spec/vectors/unread.json";
-import { chatKey, groupsUnread } from "../src/components/design-group-data";
-import type { Chat } from "../src/components/design-group-data";
+import {
+  chatKey,
+  groupsUnread,
+  togetherIn,
+} from "../src/components/design-group-data";
+import type { Chat, Member } from "../src/components/design-group-data";
 import {
   inviteCodeOf,
   mentionsOf,
@@ -22,14 +30,25 @@ import {
   withMentions,
 } from "../src/lib/chat-text";
 import {
+  addDays,
+  dateKey,
+  daysWithout,
   defaultHolidaysOff,
+  editedOwnDays,
+  gapDaysIn,
+  giveDaysToOrder,
   holidayShiftOf,
+  nextDayOf,
+  patternsWithout,
   plannedShifts,
   repeatSchedule,
   shownDays,
   timeChangeOf,
+  withOrder,
+  withShiftEntered,
 } from "../src/lib/design-days";
-import type { OwnDays } from "../src/lib/design-days";
+import type { OwnDays, Schedule } from "../src/lib/design-days";
+import { patternsForJob } from "../src/lib/design-patterns";
 import type { Pattern, PatternBook } from "../src/lib/design-patterns";
 import { clockOffset, receive, tick } from "../src/lib/hlc";
 import { noValue, shownValue, takeEvent } from "../src/lib/local-edits";
@@ -100,6 +119,17 @@ describe("spec/vectors/repeat.json", () => {
   for (const { name, patterns, expected } of repeat.holidayShift) {
     test(name, () => {
       expect(holidayShiftOf(patterns.map(patternOf)) ?? null).toBe(expected);
+    });
+  }
+  const ruleOf = (order: { sequence: string[]; start: string }) => ({
+    sequence: order.sequence,
+    start: dayOf(order.start),
+  });
+  for (const { name, orders, order, expected } of repeat.added) {
+    test(name, () => {
+      expect(withOrder(orders.map(ruleOf), ruleOf(order))).toEqual(
+        expected.map(ruleOf)
+      );
     });
   }
 });
@@ -204,6 +234,143 @@ describe("spec/vectors/review.json", () => {
           version,
         })
       ).toBe(expected);
+    });
+  }
+});
+
+// What a value holds once undefined fields drop away, as JSON writes it.
+const plain = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map(plain);
+  }
+  if (typeof value === "object" && value !== null) {
+    return Object.fromEntries(
+      Object.entries(value).flatMap(([key, field]) =>
+        field === undefined ? [] : [[key, plain(field)]]
+      )
+    );
+  }
+  return value;
+};
+
+const bookOfVectors = (patterns: readonly Partial<Pattern>[]): PatternBook =>
+  Object.fromEntries(
+    patterns.map((pattern) => [pattern.id ?? "", patternOf(pattern)] as const)
+  );
+
+describe("spec/vectors/entering.json", () => {
+  for (const {
+    name,
+    patterns,
+    days,
+    date,
+    shift,
+    expected,
+    moves,
+  } of entering.enter) {
+    test(name, () => {
+      const book = bookOfVectors(patterns);
+      const entered = shift ?? undefined;
+      const after = withShiftEntered(
+        days as Schedule,
+        dayOf(date),
+        entered,
+        book
+      );
+      expect(plain(after)).toEqual(expected);
+      expect(nextDayOf(entered, book) === undefined ? 1 : 2).toBe(moves);
+    });
+  }
+  for (const { name, days, month, expected } of entering.gaps) {
+    test(name, () => {
+      const schedule: Schedule = Object.fromEntries(
+        days.map((date) => [date, { shift: "day" }])
+      );
+      const gaps = gapDaysIn(schedule, dayOf(`${month}-01`)).map(dateKey);
+      expect(gaps).toEqual(expected);
+    });
+  }
+});
+
+describe("spec/vectors/together.json", () => {
+  const off = { id: "off", off: true } as Member["patterns"][number];
+  const work = { id: "work", off: false } as Member["patterns"][number];
+  for (const { name, members, from, to, expected } of together.together) {
+    test(name, () => {
+      const group = members.map((member, index): Member => ({
+        id: `member-${index}`,
+        name: `member-${index}`,
+        patterns: [off, work],
+        shiftOn: (date) =>
+          (member.days as Record<string, string | undefined>)[dateKey(date)],
+      }));
+      const dates: Date[] = [];
+      for (
+        let date = dayOf(from);
+        dateKey(date) <= to;
+        date = addDays(date, 1)
+      ) {
+        dates.push(date);
+      }
+      const found = togetherIn(group, dates);
+      expect({ days: found.days.map(dateKey), unsure: found.unsure }).toEqual(
+        expected
+      );
+    });
+  }
+});
+
+describe("spec/vectors/patterns.json", () => {
+  const idsOf = (patterns: readonly Pattern[]) =>
+    plain(patterns.map(({ id, nextDay }) => ({ id, nextDay })));
+  for (const { name, patterns, own, id, expected } of patternChanges.deleted) {
+    test(name, () => {
+      expect(idsOf(patternsWithout(patterns.map(patternOf), id))).toEqual(
+        expected.patterns
+      );
+      expect(plain(daysWithout(own as OwnDays, id))).toEqual(expected.own);
+    });
+  }
+  for (const { name, ...job } of patternChanges.newJob) {
+    test(name, () => {
+      let fresh = 0;
+      const changed = patternsForJob({
+        incoming: (job.incoming as unknown as Partial<Pattern>[]).map(
+          patternOf
+        ),
+        newId: () => {
+          fresh += 1;
+          return `new-${fresh}`;
+        },
+        own: (job.own as unknown as Partial<Pattern>[]).map(patternOf),
+        sequence: job.sequence,
+        usedBefore: (patternId) =>
+          (job.usedBefore as string[]).includes(patternId),
+      });
+      expect(idsOf(changed.patterns)).toEqual(job.expected.patterns);
+      expect(changed.sequence).toEqual(job.expected.sequence);
+    });
+  }
+});
+
+describe("spec/vectors/own-days.json", () => {
+  for (const { name, own, edits, expected, ...days } of ownDays.edited) {
+    test(name, () => {
+      const planned = days.planned as Record<string, string>;
+      const shown = shownDays(own as OwnDays, planned);
+      const next: Schedule = { ...shown };
+      for (const [date, entry] of Object.entries(edits)) {
+        next[date] = (entry ?? undefined) as Schedule[string];
+      }
+      const edited = editedOwnDays(own as OwnDays, planned, shown, next);
+      expect(plain(edited)).toEqual(expected);
+    });
+  }
+  for (const { name, own, start, expected } of ownDays.givenToOrder) {
+    test(name, () => {
+      expect(plain(giveDaysToOrder(own as OwnDays, dayOf(start)))).toEqual(
+        expected
+      );
     });
   }
 });

@@ -175,6 +175,45 @@ export function samePattern(a: Pattern, b: Pattern) {
   );
 }
 
+// The patterns after changing jobs (spec/shift-patterns.md, Changing
+// jobs): the new job's take over, and an old one still on a day before
+// the switch (`usedBefore`) stays, so those days keep their marks. A
+// ready-made one the person has changed, still on those days, keeps its
+// id; the new job's then comes in under a fresh one (`newId`), which its
+// order and next days use.
+export function patternsForJob({
+  own,
+  incoming,
+  sequence,
+  usedBefore,
+  newId,
+}: {
+  own: readonly Pattern[];
+  incoming: readonly Pattern[];
+  sequence: readonly Shift[];
+  usedBefore: (id: Shift) => boolean;
+  newId: () => Shift;
+}): { patterns: Pattern[]; sequence: Shift[] } {
+  const renamed = new Map<Shift, Shift>();
+  for (const pattern of incoming) {
+    const theirs = own.find((item) => item.id === pattern.id);
+    if (theirs && usedBefore(theirs.id) && !samePattern(theirs, pattern)) {
+      renamed.set(pattern.id, newId());
+    }
+  }
+  const renameOf = (id: Shift) => renamed.get(id) ?? id;
+  const coming = incoming.map((pattern) => ({
+    ...pattern,
+    id: renameOf(pattern.id),
+    nextDay: pattern.nextDay && renameOf(pattern.nextDay),
+  }));
+  const kept = own.filter(
+    (pattern) =>
+      !coming.some((next) => next.id === pattern.id) && usedBefore(pattern.id)
+  );
+  return { patterns: [...coming, ...kept], sequence: sequence.map(renameOf) };
+}
+
 export function isDayOff(pattern: Pattern | undefined) {
   return pattern?.countsAsOff === true;
 }

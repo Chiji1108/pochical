@@ -7,7 +7,7 @@ import {
   FrameSection,
   frameSections,
 } from "../components/design-frames";
-import { GapSheetPreview, gapDaysIn } from "../components/design-gap-sheet";
+import { GapSheetPreview } from "../components/design-gap-sheet";
 import type { GapSheetProps } from "../components/design-gap-sheet";
 import { chatKey, groupChat } from "../components/design-group-data";
 import { sampleChats, sampleOthers } from "../components/design-group-samples";
@@ -25,7 +25,7 @@ import {
 } from "../components/design-providers";
 import { pageStyle } from "../components/design-theme";
 import { OffDisplayContext } from "../components/shift-mark";
-import { dateKey, initialDesignSchedule } from "../lib/design-days";
+import { gapDaysIn, dateKey, initialDesignSchedule } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
 import { isDayOff, presetPatterns } from "../lib/design-patterns";
 import type { PatternBook } from "../lib/design-patterns";

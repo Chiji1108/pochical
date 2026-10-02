@@ -2,7 +2,7 @@ import { Plus } from "lucide-react";
 import { Fragment, useContext, useState } from "react";
 import { css } from "styled-system/css";
 
-import { isRepeating } from "../lib/design-days";
+import { daysWithout, isRepeating, patternsWithout } from "../lib/design-days";
 import { PATTERNS_PER_PAGE, presetList } from "../lib/design-patterns";
 import type { Pattern, PresetShift } from "../lib/design-patterns";
 import { useShownDays, useUser } from "../lib/design-user-store";
@@ -143,19 +143,8 @@ export function PatternsPage({ onBack }: { onBack: () => void }) {
     isRepeating(rules) && (rules.at(-1)?.sequence.includes(id) ?? false);
   // Gone with its days, and from any pattern that followed on with it.
   const remove = (id: string) => {
-    setItems((previous) =>
-      previous
-        .filter((item) => item.id !== id)
-        .map((item) =>
-          item.nextDay === id ? { ...item, nextDay: undefined } : item
-        )
-    );
-    // Days the pattern came to from an order go with it, as it is gone.
-    setOwnDays((previous) =>
-      Object.fromEntries(
-        Object.entries(previous).filter(([, entry]) => entry?.shift !== id)
-      )
-    );
+    setItems((previous) => patternsWithout(previous, id));
+    setOwnDays((previous) => daysWithout(previous, id));
   };
 
   if (editing) {

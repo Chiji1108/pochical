@@ -1,0 +1,105 @@
+{
+  "about": "みんな休み: the days of `dates` (from `from` to `to`) on which every member's pattern counts as a day off. Each member's `days` give, by date, \"off\" (a pattern counting as off) or \"work\"; a date missing is not entered yet and never counts as off. `unsure` says some day may yet be one: no one who has entered it works, but someone has not entered it, so a month without one says 未入力の日あり rather than none.",
+  "together": [
+    {
+      "name": "a day everyone is off",
+      "members": [
+        {
+          "days": {
+            "2026-10-03": "off",
+            "2026-10-04": "work"
+          }
+        },
+        {
+          "days": {
+            "2026-10-03": "off",
+            "2026-10-04": "off"
+          }
+        }
+      ],
+      "from": "2026-10-03",
+      "to": "2026-10-04",
+      "expected": {
+        "days": ["2026-10-03"],
+        "unsure": false
+      }
+    },
+    {
+      "name": "a day someone has not entered is not counted, and leaves it unsure",
+      "members": [
+        {
+          "days": {
+            "2026-10-03": "off"
+          }
+        },
+        {
+          "days": {}
+        }
+      ],
+      "from": "2026-10-03",
+      "to": "2026-10-03",
+      "expected": {
+        "days": [],
+        "unsure": true
+      }
+    },
+    {
+      "name": "someone working settles a day others have not entered",
+      "members": [
+        {
+          "days": {
+            "2026-10-03": "work"
+          }
+        },
+        {
+          "days": {}
+        }
+      ],
+      "from": "2026-10-03",
+      "to": "2026-10-03",
+      "expected": {
+        "days": [],
+        "unsure": false
+      }
+    },
+    {
+      "name": "no day everyone is off, and every day entered",
+      "members": [
+        {
+          "days": {
+            "2026-10-03": "off",
+            "2026-10-04": "work"
+          }
+        },
+        {
+          "days": {
+            "2026-10-03": "work",
+            "2026-10-04": "off"
+          }
+        }
+      ],
+      "from": "2026-10-03",
+      "to": "2026-10-04",
+      "expected": {
+        "days": [],
+        "unsure": false
+      }
+    },
+    {
+      "name": "a group of one counts its own days off, and its blank days stay unsure",
+      "members": [
+        {
+          "days": {
+            "2026-10-03": "off"
+          }
+        }
+      ],
+      "from": "2026-10-03",
+      "to": "2026-10-04",
+      "expected": {
+        "days": ["2026-10-03"],
+        "unsure": true
+      }
+    }
+  ]
+}

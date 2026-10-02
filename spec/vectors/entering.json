@@ -1,0 +1,180 @@
+{
+  "about": "Entering shifts day by day (ポチポチ入力, spec/shift-patterns.md, The next day). enter: `days` are the days as they show, by date, each a `shift` (a pattern's id) with an optional `note` and `members`; entering `shift` on `date` (null clears it) gives `expected`. The day keeps its note and people; a pattern with a `nextDay` also enters that pattern on the following day, keeping that day's note and people, and only that day: the following day's own `nextDay` is never followed. Clearing a day clears only that day. `moves` is how many days the selection then moves on. gaps: the blank days 完了 asks about in `month`: those before the month's last entered day; blanks after it are left alone.",
+  "enter": [
+    {
+      "name": "a shift takes the day, keeping its memo and people",
+      "patterns": [
+        {
+          "id": "day"
+        },
+        {
+          "id": "off"
+        }
+      ],
+      "days": {
+        "2026-10-01": {
+          "shift": "off",
+          "note": "歯医者",
+          "members": ["さとう"]
+        }
+      },
+      "date": "2026-10-01",
+      "shift": "day",
+      "expected": {
+        "2026-10-01": {
+          "shift": "day",
+          "note": "歯医者",
+          "members": ["さとう"]
+        }
+      },
+      "moves": 1
+    },
+    {
+      "name": "a pattern with a next day fills the day after, keeping its memo",
+      "patterns": [
+        {
+          "id": "night",
+          "nextDay": "after"
+        },
+        {
+          "id": "after"
+        },
+        {
+          "id": "day"
+        }
+      ],
+      "days": {
+        "2026-10-02": {
+          "shift": "day",
+          "note": "美容院"
+        }
+      },
+      "date": "2026-10-01",
+      "shift": "night",
+      "expected": {
+        "2026-10-01": {
+          "shift": "night"
+        },
+        "2026-10-02": {
+          "shift": "after",
+          "note": "美容院"
+        }
+      },
+      "moves": 2
+    },
+    {
+      "name": "one day only: the next day's own next day is not followed",
+      "patterns": [
+        {
+          "id": "night",
+          "nextDay": "after"
+        },
+        {
+          "id": "after",
+          "nextDay": "night"
+        },
+        {
+          "id": "day"
+        }
+      ],
+      "days": {
+        "2026-10-03": {
+          "shift": "day"
+        }
+      },
+      "date": "2026-10-01",
+      "shift": "night",
+      "expected": {
+        "2026-10-01": {
+          "shift": "night"
+        },
+        "2026-10-02": {
+          "shift": "after"
+        },
+        "2026-10-03": {
+          "shift": "day"
+        }
+      },
+      "moves": 2
+    },
+    {
+      "name": "clearing a day clears only that day",
+      "patterns": [
+        {
+          "id": "night",
+          "nextDay": "after"
+        },
+        {
+          "id": "after"
+        }
+      ],
+      "days": {
+        "2026-10-01": {
+          "shift": "night",
+          "note": "棚卸し"
+        },
+        "2026-10-02": {
+          "shift": "after"
+        }
+      },
+      "date": "2026-10-01",
+      "shift": null,
+      "expected": {
+        "2026-10-02": {
+          "shift": "after"
+        }
+      },
+      "moves": 1
+    },
+    {
+      "name": "the next day runs into the next month",
+      "patterns": [
+        {
+          "id": "night",
+          "nextDay": "after"
+        },
+        {
+          "id": "after"
+        }
+      ],
+      "days": {},
+      "date": "2026-10-31",
+      "shift": "night",
+      "expected": {
+        "2026-10-31": {
+          "shift": "night"
+        },
+        "2026-11-01": {
+          "shift": "after"
+        }
+      },
+      "moves": 2
+    }
+  ],
+  "gaps": [
+    {
+      "name": "blanks between entered days",
+      "days": ["2026-10-01", "2026-10-02", "2026-10-05"],
+      "month": "2026-10",
+      "expected": ["2026-10-03", "2026-10-04"]
+    },
+    {
+      "name": "blanks after the last entered day are left alone",
+      "days": ["2026-10-01", "2026-10-03"],
+      "month": "2026-10",
+      "expected": ["2026-10-02"]
+    },
+    {
+      "name": "a month with nothing entered has no gaps",
+      "days": [],
+      "month": "2026-10",
+      "expected": []
+    },
+    {
+      "name": "only the month's own days count",
+      "days": ["2026-09-30", "2026-10-02", "2026-11-03"],
+      "month": "2026-10",
+      "expected": ["2026-10-01"]
+    }
+  ]
+}

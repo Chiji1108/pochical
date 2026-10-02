@@ -6,7 +6,7 @@ import {
   withOrder,
 } from "./design-days";
 import type { RepeatRule, Schedule } from "./design-days";
-import { bookOf, samePattern } from "./design-patterns";
+import { bookOf, patternsForJob } from "./design-patterns";
 import type { Pattern } from "./design-patterns";
 import { useUser } from "./design-user-store";
 
@@ -53,34 +53,18 @@ export function useWorkChanges(schedule: Schedule) {
   // comes in under an id of its own, and its order uses that.
   function changeJob(job: { patterns: Pattern[]; rule: RepeatRule }) {
     const from = dateKey(job.rule.start);
-    const usedBefore = (id: string) =>
-      Object.entries(schedule).some(
-        ([key, entry]) => key < from && entry?.shift === id
-      );
-    const renamed = new Map<string, string>();
-    for (const pattern of job.patterns) {
-      const own = ownPatterns.find((item) => item.id === pattern.id);
-      if (own && usedBefore(own.id) && !samePattern(own, pattern)) {
-        renamed.set(pattern.id, crypto.randomUUID());
-      }
-    }
-    const renameOf = (id: string) => renamed.get(id) ?? id;
-    const incoming = job.patterns.map((pattern) => ({
-      ...pattern,
-      id: renameOf(pattern.id),
-      nextDay: pattern.nextDay && renameOf(pattern.nextDay),
-    }));
-    const kept = ownPatterns.filter(
-      (pattern) =>
-        !incoming.some((next) => next.id === pattern.id) &&
-        usedBefore(pattern.id)
-    );
-    const patterns = [...incoming, ...kept];
+    const { patterns, sequence } = patternsForJob({
+      incoming: job.patterns,
+      newId: () => crypto.randomUUID(),
+      own: ownPatterns,
+      sequence: job.rule.sequence,
+      usedBefore: (id) =>
+        Object.entries(schedule).some(
+          ([key, entry]) => key < from && entry?.shift === id
+        ),
+    });
     setPatterns(patterns);
-    applyRule(
-      { ...job.rule, sequence: job.rule.sequence.map(renameOf) },
-      patterns
-    );
+    applyRule({ ...job.rule, sequence }, patterns);
   }
   // Holidays follow the order in use: on, they take the day off now first;
   // off, they show the sequence again. Days the person changed keep theirs.

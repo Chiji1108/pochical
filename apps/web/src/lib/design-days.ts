@@ -359,6 +359,68 @@ export function keepDetails(
   return { members: entry?.members, note: entry?.note, shift };
 }
 
+// The pattern entered on the day after `shift`, if it names one.
+export function nextDayOf(shift: Shift | undefined, book: PatternBook) {
+  return shift === undefined ? undefined : book[shift]?.nextDay;
+}
+
+// The days after entering `shift` on `date` (ポチポチ入力): the day takes it,
+// keeping its memo and people, and a pattern with a next day fills the
+// following day too. One day only: the next day's own next day is not
+// followed, so patterns naming each other never run on. No shift clears
+// the day, and only that day (spec/shift-patterns.md, The next day).
+export function withShiftEntered(
+  schedule: Schedule,
+  date: Date,
+  shift: Shift | undefined,
+  book: PatternBook
+): Schedule {
+  const key = dateKey(date);
+  const following = nextDayOf(shift, book);
+  const followingKey = dateKey(addDays(date, 1));
+  return {
+    ...schedule,
+    [key]: shift === undefined ? undefined : keepDetails(schedule[key], shift),
+    ...(following && {
+      [followingKey]: keepDetails(schedule[followingKey], following),
+    }),
+  };
+}
+
+// Many people leave days off blank, pressing 翌日へ as other apps taught
+// them. Rather than stop them while entering, 完了 asks once about the
+// blanks between entered days and fills them with a day off in one tap.
+// Blanks after the last entered day are left alone: those are more likely
+// not decided yet.
+export function gapDaysIn(schedule: Schedule, month: Date) {
+  const days = daysOfMonth(month);
+  const lastEntered = days.findLast((date) => schedule[dateKey(date)]);
+  return days.filter(
+    (date) =>
+      lastEntered !== undefined &&
+      date < lastEntered &&
+      !schedule[dateKey(date)]
+  );
+}
+
+// Deleting a pattern (spec/shift-patterns.md, Deleting a pattern): it goes
+// from the list, and patterns that named it as their next day lose that
+// link; the days that have it of their own lose it too, while days an
+// order gave it show empty, as their pattern is gone.
+export function patternsWithout(patterns: readonly Pattern[], id: Shift) {
+  return patterns
+    .filter((pattern) => pattern.id !== id)
+    .map((pattern) =>
+      pattern.nextDay === id ? { ...pattern, nextDay: undefined } : pattern
+    );
+}
+
+export function daysWithout(own: OwnDays, id: Shift): OwnDays {
+  return Object.fromEntries(
+    Object.entries(own).filter(([, day]) => day?.shift !== id)
+  );
+}
+
 export function addDays(date: Date, days: number) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 }

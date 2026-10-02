@@ -1,5 +1,5 @@
 {
-  "about": "A repeating order of shifts (spec/shift-patterns.md, Repeating orders). schedule: each day from `from` to `to` takes the order's shift counted in whole days from `anchor`, which falls on the order's first shift; days before the anchor count backwards. With `holidayShift`, the national holidays of `holidays` (a country code, design/scripts/holidays.ts) take that pattern instead. shown: the days as they show from a person's orders and own days. A day follows the latest order that starts on or before it; an order with an empty sequence ends repeating; a pattern not in `patterns` leaves its days empty. A day's own `shift` wins over its order, and \"\" (dayRules.noShift, design/src/days.ts) is a day cleared on purpose; an own day without one follows its order. holidaysOffByDefault: 祝日は休みにする starts on when the order is a week (seven shifts) with a pattern that counts as off on a Saturday or Sunday; `daysOff` are the patterns that count as off. holidayShift: what holidays become, the first pattern that counts as off, in the person's order.",
+  "about": "A repeating order of shifts (spec/shift-patterns.md, Repeating orders). schedule: each day from `from` to `to` takes the order's shift counted in whole days from `anchor`, which falls on the order's first shift; days before the anchor count backwards. With `holidayShift`, the national holidays of `holidays` (a country code, design/scripts/holidays.ts) take that pattern instead. shown: the days as they show from a person's orders and own days. A day follows the latest order that starts on or before it; an order with an empty sequence ends repeating; a pattern not in `patterns` leaves its days empty. A day's own `shift` wins over its order, and \"\" (dayRules.noShift, design/src/days.ts) is a day cleared on purpose; an own day without one follows its order. holidaysOffByDefault: 祝日は休みにする starts on when the order is a week (seven shifts) with a pattern that counts as off on a Saturday or Sunday; `daysOff` are the patterns that count as off. holidayShift: what holidays become, the first pattern that counts as off, in the person's order. added: an order added to `orders` (a new rotation, a new job, or one dated back) starts on its day; orders that started on or after it give way to it entirely, and those before stay.",
   "schedule": [
     {
       "name": "a three-day order from its anchor",
@@ -333,6 +333,77 @@
         }
       ],
       "expected": null
+    }
+  ],
+  "added": [
+    {
+      "name": "a new order goes after the ones before it",
+      "orders": [
+        {
+          "sequence": ["day"],
+          "start": "2026-01-01"
+        }
+      ],
+      "order": {
+        "sequence": ["night"],
+        "start": "2026-10-01"
+      },
+      "expected": [
+        {
+          "sequence": ["day"],
+          "start": "2026-01-01"
+        },
+        {
+          "sequence": ["night"],
+          "start": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "name": "a new order starting earlier replaces the orders after it",
+      "orders": [
+        {
+          "sequence": ["day"],
+          "start": "2026-01-01"
+        },
+        {
+          "sequence": ["night"],
+          "start": "2026-10-01"
+        }
+      ],
+      "order": {
+        "sequence": ["off"],
+        "start": "2026-06-01"
+      },
+      "expected": [
+        {
+          "sequence": ["day"],
+          "start": "2026-01-01"
+        },
+        {
+          "sequence": ["off"],
+          "start": "2026-06-01"
+        }
+      ]
+    },
+    {
+      "name": "a new order on the same day replaces the one there",
+      "orders": [
+        {
+          "sequence": ["day"],
+          "start": "2026-10-01"
+        }
+      ],
+      "order": {
+        "sequence": ["night"],
+        "start": "2026-10-01"
+      },
+      "expected": [
+        {
+          "sequence": ["night"],
+          "start": "2026-10-01"
+        }
+      ]
     }
   ]
 }
