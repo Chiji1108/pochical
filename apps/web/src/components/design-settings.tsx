@@ -27,7 +27,6 @@ import {
   dateKey,
   defaultHolidaysOff,
   formatDay,
-  formatMonth,
   holidayShiftOf,
   isRepeating,
   monthAfter,
@@ -61,7 +60,7 @@ import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
 import type { Profile } from "./design-group-data";
 import { PhotoAvatar, PhotoEditor } from "./design-group-parts";
-import { englishMonthOf, MonthName } from "./design-month-name";
+import { MonthName, shortMonthOf } from "./design-month-name";
 import {
   ChatNotificationsPage,
   NotificationSection,
@@ -2089,10 +2088,9 @@ const coloredDayOptions: { day: ColoredDay; name: string; color: string }[] = [
 function WeekRow({ onOpen }: { onOpen: () => void }) {
   const week = useSettings((state) => state.device.week);
   const monthName = useSettings((state) => state.device.monthName);
-  const month =
-    monthName === "english"
-      ? englishMonthOf(previewToday)
-      : formatMonth(previewToday);
+  // Set small in a row, the month reads as UI text does (Sep), not as
+  // the calendar's heading draws it (sep.).
+  const month = shortMonthOf(previewToday, monthName === "english");
   return (
     <ListRow
       label="カレンダー"
@@ -2136,11 +2134,13 @@ function WeekPage({
           }}
           value={monthName}
         >
+          {/* Each choice as it reads in small UI text, 9月・木 or Sep・Thu;
+              the preview above shows the heading's own sep. */}
           <Segment label="日本語" value="number">
-            {formatMonth(previewToday)}・{weekdayNameOf(previewToday.getDay())}
+            {shortMonthOf(previewToday)}・{weekdayNameOf(previewToday.getDay())}
           </Segment>
           <Segment label="英語" value="english">
-            {englishMonthOf(previewToday)}・
+            {shortMonthOf(previewToday, true)}・
             {weekdayNameOf(previewToday.getDay(), true)}
           </Segment>
         </SegmentedControl>
