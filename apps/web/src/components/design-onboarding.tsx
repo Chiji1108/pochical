@@ -8,8 +8,8 @@ import type { UserStore } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
 import { ProviderButtons, signInMilliseconds } from "./design-account";
 import type { AccountProvider } from "./design-account";
+import { DesignApp } from "./design-app";
 import { DARK_DRAWING, useAppIcons } from "./design-app-icon";
-import { DesignCalendar } from "./design-calendar";
 import { Phone } from "./design-phone";
 import { ColorSchemeContext, useThemeStyle } from "./design-theme";
 import { Button, pushToBottom } from "./design-ui";
@@ -105,7 +105,7 @@ export function DesignOnboarding({
     return (
       <div className={onboarding.finished}>
         <UserStoreContext value={finished.person}>
-          <DesignCalendar
+          <DesignApp
             initialEditing={false}
             pendingInvite={variants.inviteLink === "opened"}
             variants={variants}

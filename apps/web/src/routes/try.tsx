@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { css, cx } from "styled-system/css";
 
-import { DesignCalendar } from "../components/design-calendar";
+import { DesignApp } from "../components/design-app";
 import { sampleGroups } from "../components/design-group-data";
 import { DesignProviders } from "../components/design-providers";
 import { appSplashScreens } from "../lib/app-splash-screens";
@@ -172,11 +172,7 @@ function TryPage() {
     <main className={cx("design-page", page)} id="main">
       <DesignProviders>
         <UserStoreContext value={person}>
-          <DesignCalendar
-            fullScreen
-            initialEditing={false}
-            variants={variants}
-          />
+          <DesignApp fullScreen initialEditing={false} variants={variants} />
         </UserStoreContext>
       </DesignProviders>
     </main>
