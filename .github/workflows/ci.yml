@@ -94,7 +94,11 @@ jobs:
       # by hand, none left behind by a .proto change. protoc-gen-es comes
       # from the workspace's dependencies.
       - run: bun install --frozen-lockfile --filter '!@pochical/mobile-legacy'
-      - run: |
+      # buf's remote plugins (Swift, Kotlin) are fetched signed in, clear
+      # of the Buf Schema Registry's limits on anonymous use.
+      - env:
+          BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
+        run: |
           mise run gen:proto
           git status --porcelain
           test -z "$(git status --porcelain)"
