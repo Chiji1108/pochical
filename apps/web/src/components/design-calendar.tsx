@@ -21,9 +21,16 @@ import { css, cva, cx } from "styled-system/css";
 import {
   addDays,
   dateKey,
+  daysOfMonth,
   formatDay,
+  formatMonthDay,
+  formatMonthFromToday,
+  formatYearMonth,
+  formatYearMonthDay,
+  isSameMonth,
   keepDetails,
   membersOrNone,
+  monthAfter,
   timeChangeOf,
   timeRange,
   weekdays,
@@ -168,14 +175,8 @@ export function DesignCalendar({
   const summaryIn = (days: Date[]) =>
     shown.person === undefined ? daysOffIn(days) : shown.countIn(days);
   // The months beside, for the summary to follow a drag of the pages.
-  const summaryBy = (by: number) => {
-    const beside = new Date(month.getFullYear(), month.getMonth() + by, 1);
-    return summaryIn(
-      weekTools
-        .monthDates(beside)
-        .filter((date) => date.getMonth() === beside.getMonth())
-    );
-  };
+  const summaryBy = (by: number) =>
+    summaryIn(daysOfMonth(monthAfter(month, by)));
   const counts = ownPatterns.map((pattern) => ({
     count: monthDays.filter(
       (date) => schedule[dateKey(date)]?.shift === pattern.id
@@ -215,7 +216,7 @@ export function DesignCalendar({
   });
   const datePicker = (
     <InputDatePicker
-      ariaLabel={`入力する日付：${month.getMonth() + 1}月${selectedDay}日(${weekdays[selectedDate.getDay()]})。タップで変更`}
+      ariaLabel={`入力する日付：${formatDay(selectedDate)}。タップで変更`}
       date={selectedDate}
       onSelect={(date) => {
         enterFrom(date);
@@ -223,7 +224,7 @@ export function DesignCalendar({
       }}
     >
       <span>
-        {`${month.getMonth() + 1}月${selectedDay}日`}
+        {formatMonthDay(selectedDate)}
         <span
           className={shiftInput.weekday({
             tone: weekTools.dateTone(selectedDate),
@@ -270,7 +271,7 @@ export function DesignCalendar({
       openDetail(addDays(openDate, direction * 7));
       return;
     }
-    goToMonth(new Date(month.getFullYear(), month.getMonth() + direction, 1));
+    goToMonth(monthAfter(month, direction));
   }
   // Entering is about every day, so it lets go of someone's days.
   function startInput() {
@@ -400,22 +401,14 @@ export function DesignCalendar({
                   setSwipedTo(
                     dateKey(
                       besideMonths?.[direction > 0 ? "next" : "previous"] ??
-                        new Date(
-                          month.getFullYear(),
-                          month.getMonth() + direction,
-                          1
-                        )
+                        monthAfter(month, direction)
                     )
                   );
                 }}
                 progress={pageDrag}
                 page={weekDetail ? dateKey(openDate) : dateKey(month)}
                 renderPage={(offset) => {
-                  const pageMonth = new Date(
-                    month.getFullYear(),
-                    month.getMonth() + offset,
-                    1
-                  );
+                  const pageMonth = monthAfter(month, offset);
                   // The page shown keeps the whole month around the
                   // open week, to unfold back into.
                   const pageDates =
@@ -445,7 +438,7 @@ export function DesignCalendar({
                       }
                     />
                   );
-                  const label = `${pageMonth.getFullYear()}年${pageMonth.getMonth() + 1}月のシフト`;
+                  const label = `${formatYearMonth(pageMonth)}のシフト`;
                   // Only the page shown folds; the ones beside it are
                   // there to be dragged in.
                   if (offset === 0) {
@@ -608,35 +601,26 @@ function useShiftEntry({
     month.getMonth(),
     selectedDay
   );
-  const lastDay = new Date(
-    month.getFullYear(),
-    month.getMonth() + 1,
-    0
-  ).getDate();
+  const lastDay = daysOfMonth(month).length;
   const selectedShift = schedule[dateKey(selectedDate)]?.shift;
   function moveToNextDay(result: string, days = 1) {
     const nextDay = Math.min(selectedDay + days, lastDay);
     setSelectedDay(nextDay);
     setAnnouncement(
-      `${month.getMonth() + 1}月${selectedDay}日、${result}。${selectedDay === lastDay ? "月末です。入力が終わったら完了を押してください" : `${nextDay}日を選択中`}`
+      `${formatMonthDay(selectedDate)}、${result}。${selectedDay === lastDay ? "月末です。入力が終わったら完了を押してください" : `${nextDay}日を選択中`}`
     );
   }
   function announcePicked(date: Date) {
-    setAnnouncement(
-      `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日を選択中`
-    );
+    setAnnouncement(`${formatYearMonthDay(date)}を選択中`);
   }
   // The day to enter, in its own month: a day of the month before or after,
   // tapped on the calendar or picked from the date, turns to that month.
   function enterFrom(date: Date) {
     setSelectedDay(date.getDate());
-    if (
-      date.getFullYear() === month.getFullYear() &&
-      date.getMonth() === month.getMonth()
-    ) {
+    if (isSameMonth(date, month)) {
       return;
     }
-    const target = new Date(date.getFullYear(), date.getMonth(), 1);
+    const target = monthAfter(date, 0);
     turnTo(target);
     setEnteredBlank(hasBlanks(schedule, target));
     announcePicked(date);
@@ -645,9 +629,7 @@ function useShiftEntry({
   function enterMonth(target: Date) {
     setSelectedDay(1);
     setEnteredBlank(hasBlanks(schedule, target));
-    setAnnouncement(
-      `${target.getFullYear()}年${target.getMonth() + 1}月1日を選択中`
-    );
+    setAnnouncement(`${formatYearMonthDay(target)}を選択中`);
   }
   function start() {
     setSelectedDay(1);
@@ -841,13 +823,7 @@ export function MonthSummary({
   const counted = person === undefined ? "のお休み" : `、${person}と一緒`;
   const reduceMotion = useReducedMotion() ?? false;
   const turn = useTurn(monthIndex(month), swiped);
-  const monthOf = (by: number) => {
-    const date = new Date(month.getFullYear(), month.getMonth() + by, 1);
-    const thisMonth =
-      date.getFullYear() === designToday.getFullYear() &&
-      date.getMonth() === designToday.getMonth();
-    return thisMonth ? "今月" : `${date.getMonth() + 1}月`;
-  };
+  const monthOf = (by: number) => formatMonthFromToday(monthAfter(month, by));
   const dragged = progress && beside;
   return (
     <SummaryRow
@@ -999,8 +975,7 @@ function HeadingActions({
     ? weekTools
         .weekDates(detailDate ?? designToday)
         .some((date) => dateKey(date) === dateKey(designToday))
-    : month.getFullYear() === designToday.getFullYear() &&
-      month.getMonth() === designToday.getMonth();
+    : isSameMonth(month, designToday);
   const previous = (
     <button
       aria-label={`前の${unit}`}
@@ -1022,13 +997,8 @@ function HeadingActions({
     weekTools
       .weekDates(addDays(detailDate ?? designToday, days))
       .some((date) => dateKey(date) === dateKey(designToday));
-  const isThisMonth = (by: number) => {
-    const beside = new Date(month.getFullYear(), month.getMonth() + by, 1);
-    return (
-      beside.getFullYear() === designToday.getFullYear() &&
-      beside.getMonth() === designToday.getMonth()
-    );
-  };
+  const isThisMonth = (by: number) =>
+    isSameMonth(monthAfter(month, by), designToday);
   const next = (
     <button
       aria-label={`次の${unit}`}
@@ -1154,15 +1124,7 @@ function StartArea({ label, onStart }: { label: string; onStart: () => void }) {
 
 // Whether any day of the month has nothing entered.
 function hasBlanks(schedule: Schedule, month: Date) {
-  const count = new Date(
-    month.getFullYear(),
-    month.getMonth() + 1,
-    0
-  ).getDate();
-  return Array.from(
-    { length: count },
-    (_, index) => new Date(month.getFullYear(), month.getMonth(), index + 1)
-  ).some((date) => !schedule[dateKey(date)]);
+  return daysOfMonth(month).some((date) => !schedule[dateKey(date)]);
 }
 
 // Emoji marks draw in the system's emoji font wherever they sit.

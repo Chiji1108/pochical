@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
+import { formatYearMonth } from "../lib/design-days";
 import { designToday } from "../lib/design-today";
 import { shortMonthOf } from "./design-month-name";
 import { Sheet, SheetHeading } from "./design-sheet";
@@ -136,7 +137,7 @@ export function MonthTitleButton({
     <>
       <button
         aria-haspopup="dialog"
-        aria-label={`${month.getFullYear()}年${month.getMonth() + 1}月。押すと月を選べます`}
+        aria-label={`${formatYearMonth(month)}。押すと月を選べます`}
         className={monthTitle}
         data-month-title=""
         onClick={() => {

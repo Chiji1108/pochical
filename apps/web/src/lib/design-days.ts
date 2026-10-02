@@ -8,6 +8,7 @@ import type {
   PresetShift,
   Shift,
 } from "./design-patterns";
+import { designToday } from "./design-today";
 
 export type DayEntry = {
   shift: Shift;
@@ -362,8 +363,55 @@ export function addDays(date: Date, days: number) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 }
 
+// The 1st of the month `count` months on from the date's.
+export function monthAfter(date: Date, count: number) {
+  return new Date(date.getFullYear(), date.getMonth() + count, 1);
+}
+
+// Whether two dates fall in the same month of the same year.
+export function isSameMonth(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+// Every day of the date's month, the 1st to the last.
+export function daysOfMonth(month: Date) {
+  const count = new Date(
+    month.getFullYear(),
+    month.getMonth() + 1,
+    0
+  ).getDate();
+  return Array.from(
+    { length: count },
+    (_, index) => new Date(month.getFullYear(), month.getMonth(), index + 1)
+  );
+}
+
+// Dates as the Japanese sentences around them write them: 9月, 2026年9月,
+// 9月27日, 2026年9月27日 and 9月27日(日). A heading that follows the
+// カレンダー page's 月と曜日 takes its name from design-month-name instead.
+export function formatMonth(date: Date) {
+  return `${date.getMonth() + 1}月`;
+}
+
+// 今月 for today's month, else 9月, as a sentence about a month says it.
+export function formatMonthFromToday(date: Date) {
+  return isSameMonth(date, designToday) ? "今月" : formatMonth(date);
+}
+
+export function formatYearMonth(date: Date) {
+  return `${date.getFullYear()}年${formatMonth(date)}`;
+}
+
+export function formatMonthDay(date: Date) {
+  return `${formatMonth(date)}${date.getDate()}日`;
+}
+
+export function formatYearMonthDay(date: Date) {
+  return `${date.getFullYear()}年${formatMonthDay(date)}`;
+}
+
 export function formatDay(date: Date) {
-  return `${date.getMonth() + 1}月${date.getDate()}日(${weekdays[date.getDay()]})`;
+  return `${formatMonthDay(date)}(${weekdays[date.getDay()]})`;
 }
 
 function formatTime(time: string) {
