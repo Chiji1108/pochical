@@ -629,7 +629,11 @@ const pair = {
     paddingBlock: "4px 2px",
     position: "relative",
   }),
-  face: css({ alignItems: "center", display: "flex" }),
+  face: css({
+    alignItems: "center",
+    display: "flex",
+    justifyContent: "center",
+  }),
   grid: css({ columnGap: "2px", display: "grid", height: "100%" }),
   number: css({
     fontSize: "13px",
@@ -650,9 +654,9 @@ function pairMarkSize(roomy: boolean, named: boolean) {
 // The days from today in columns, as the group's 週ごと lays a week: the
 // dates over them, each under its weekday in one letter as over the
 // calendar's columns (S M T), then the person's row and the picked one's,
-// each with their face at its start. Today is the first column always, so
-// its date is drawn plain. Days off sit on the group tables' tiles, and a day both
-// are off joins them into one band.
+// each with their face in a first column as wide as the days'. Today is
+// always the first day, so its date is drawn plain. Days off sit on the
+// group tables' tiles, and a day both are off joins them into one band.
 function PairDays({
   entry,
   pair: shown,
@@ -678,7 +682,9 @@ function PairDays({
     <div
       className={pair.grid}
       style={{
-        gridTemplateColumns: `${PAIR_FACE}px repeat(${count}, 1fr)`,
+        // The faces take a column as wide as a day's, so the columns keep one
+        // rhythm and the widget's two sides the same room.
+        gridTemplateColumns: `repeat(${count + 1}, 1fr)`,
         gridTemplateRows: "auto 1fr 1fr",
       }}
     >
