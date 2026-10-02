@@ -923,7 +923,8 @@ function DaySheetBody({
                     tone: today ? "plain" : weekTools.dateTone(date),
                   }),
                   monthGrid.day,
-                  today && todayMark
+                  today && todayMark,
+                  today && monthGrid.today
                 )}
                 disabled={outside}
                 key={dateKey(date)}
@@ -950,10 +951,10 @@ const modeSwitch = css({ marginBottom: "12px" });
 // What sending will do, under the days.
 function dayNote(count: number, poll: boolean) {
   if (poll && count < 2) {
-    return "候補の日を2日以上選んでください。日付に枠がある日は、みんな休みの日です。";
+    return "候補の日を2日以上選んでください。うすく色のついた日は、みんな休みの日です。";
   }
   if (count === 0) {
-    return "日付に枠がある日は、みんな休みの日です。";
+    return "うすく色のついた日は、みんな休みの日です。";
   }
   return poll
     ? `${count}日の中から、みんなが行ける日を投票で決めます。`

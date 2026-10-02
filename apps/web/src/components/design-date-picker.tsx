@@ -15,7 +15,7 @@ import { useWeek } from "./design-week";
 // The parts every small month to pick days in is drawn with, here and in
 // 日にちを共有's month: ‹ › at the two ends, where they stay whatever the
 // month's name, in the accent as the platforms' date pickers tint them;
-// the weekdays and the dates as the calendar draws them.
+// the weekdays, the dates and today as the calendar draws them.
 export const monthGrid = {
   arrow: css({
     bg: "transparent",
@@ -28,10 +28,19 @@ export const monthGrid = {
     width: "touch",
   }),
   day: css({
-    _hover: { bg: "accent.hover" },
+    // Not on a picked day, whose fill it would wash out.
+    _hover: {
+      "&:not([aria-pressed=true], [data-selected])": { bg: "accent.hover" },
+    },
     borderRadius: "md",
     fontWeight: 600,
     textStyle: "subheadline",
+  }),
+  // Today: the accent date (todayMark) and, as the calendar has it, a
+  // light frame drawn inside the day.
+  today: css({
+    outline: "1.5px solid token(colors.accent.focus)",
+    outlineOffset: "-1.5px",
   }),
   heading: css({
     alignItems: "center",
@@ -202,7 +211,8 @@ export function MonthPicker({
                                     : weekTools.dateTone(date),
                                 }),
                                 monthGrid.day,
-                                today && todayMark
+                                today && todayMark,
+                                today && monthGrid.today
                               )}
                             >
                               {day.day}
