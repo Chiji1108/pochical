@@ -103,6 +103,39 @@ public object CreateGroupRequestKt {
     public fun clearDisplayName() {
       _builder.clearDisplayName()
     }
+
+    /**
+     * ```
+     * An id the app makes once for each group it sets out to create, up to
+     * syncLimits.idLength characters without spaces, and sends again with
+     * every retry: the same id from the same user gives back the group it
+     * made the first time, unchanged, so a retry after a lost answer never
+     * makes a second group. INVALID_ARGUMENT when missing or malformed.
+     * ```
+     *
+     * `string request_id = 4 [json_name = "requestId"];`
+     */
+    public var requestId: kotlin.String
+      @kotlin.jvm.JvmName("getRequestId")
+        get() = _builder.requestId
+      @kotlin.jvm.JvmName("setRequestId")
+        set(value) {
+        _builder.requestId = value
+      }
+    /**
+     * ```
+     * An id the app makes once for each group it sets out to create, up to
+     * syncLimits.idLength characters without spaces, and sends again with
+     * every retry: the same id from the same user gives back the group it
+     * made the first time, unchanged, so a retry after a lost answer never
+     * makes a second group. INVALID_ARGUMENT when missing or malformed.
+     * ```
+     *
+     * `string request_id = 4 [json_name = "requestId"];`
+     */
+    public fun clearRequestId() {
+      _builder.clearRequestId()
+    }
   }
 }
 public inline fun app.pochical.v1.CreateGroupRequest.copy(block: `app.pochical.v1`.CreateGroupRequestKt.Dsl.() -> kotlin.Unit): app.pochical.v1.CreateGroupRequest =

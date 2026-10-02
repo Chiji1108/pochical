@@ -163,7 +163,12 @@ describe("a member's shifts in their groups", () => {
 
     const created = await call(
       "GroupService/CreateGroup",
-      { displayName: "さくら", emoji: "🍉", name: "同期" },
+      {
+        displayName: "さくら",
+        emoji: "🍉",
+        name: "同期",
+        requestId: crypto.randomUUID(),
+      },
       maker
     );
     const { groupId } = (await created.json()) as { groupId: string };
@@ -245,7 +250,12 @@ describe("a member's shifts in their groups", () => {
     await failPushesTo(user, ["!unreachable"]);
     const created = await call(
       "GroupService/CreateGroup",
-      { displayName: "さくら", emoji: "🍉", name: "いとこ会" },
+      {
+        displayName: "さくら",
+        emoji: "🍉",
+        name: "いとこ会",
+        requestId: crypto.randomUUID(),
+      },
       maker
     );
     const { groupId } = (await created.json()) as { groupId: string };
