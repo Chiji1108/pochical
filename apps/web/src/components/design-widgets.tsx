@@ -335,7 +335,6 @@ const simple = {
     fontWeight: 400,
     letterSpacing: "0.02em",
     maxWidth: "100%",
-    minHeight: "22px",
     overflow: "hidden",
     textOverflow: "ellipsis",
     textStyle: "subheadline",
@@ -356,6 +355,10 @@ function SimpleDay({
   markSize: number;
 }) {
   const words = useWords();
+  // A day with nothing changed is its own design, not one with an empty
+  // line kept for words: the mark grows into the room and sits in the
+  // middle of it.
+  const said = changeWords(day, useShiftNames()) !== undefined;
   return (
     <div className={simple.root}>
       {label ? (
@@ -367,12 +370,22 @@ function SimpleDay({
         </span>
       )}
       <span className={simple.mark}>
-        <DayMark day={day} size={markSize} />
+        <DayMark day={day} size={said ? markSize : markSize + QUIET_GROWTH} />
       </span>
-      <Change className={simple.words} day={day} />
+      {said ? (
+        <Change className={simple.words} day={day} />
+      ) : (
+        <span className={srOnly}>
+          {day.name ?? NOTHING}
+          {day.time ? ` ${day.time}` : ""}
+        </span>
+      )}
     </div>
   );
 }
+
+// How much larger a mark draws with nothing said under it.
+const QUIET_GROWTH = 12;
 
 // Today alone; on a day off, said as such, with the poodle.
 export function SimpleSmall({ entry }: { entry: WidgetEntry }) {
@@ -432,11 +445,14 @@ const upcoming = {
   }),
   pair: css({ gap: "12px" }),
   // Today on the left of the medium one.
+  // Only the parts today has, gathered in the middle: a day with no
+  // change or memo is the date and mark alone, not gaps where they go.
   today: css({
     display: "flex",
     flexDirection: "column",
     flexShrink: 0,
-    justifyContent: "space-between",
+    gap: "4px",
+    justifyContent: "center",
     width: "104px",
   }),
   note: css({
