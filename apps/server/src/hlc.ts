@@ -23,9 +23,12 @@ export const SERVER_DEVICE = "server";
 
 /**
  * A clock just past `seen`, for the server to overwrite a value a device
- * set: never before now, and always after what the device wrote.
+ * set (spec/sync-protocol.md, Outbox step 5): after what the device wrote,
+ * so it takes the correction, but before anything it does next, so its
+ * later edits still win.
  */
-export const clockAfter = (seen: Clock, now: number): Clock =>
-  now > seen.ms
-    ? { counter: 0, device: SERVER_DEVICE, ms: now }
-    : { counter: seen.counter + 1, device: SERVER_DEVICE, ms: seen.ms };
+export const clockAfter = (seen: Clock): Clock => ({
+  counter: seen.counter + 1,
+  device: SERVER_DEVICE,
+  ms: seen.ms,
+});

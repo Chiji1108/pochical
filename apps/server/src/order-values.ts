@@ -39,11 +39,13 @@ export const fitsOrders = (orders: readonly RepeatOrder[]): boolean =>
 export const fitsCoworkerName = (name: string): boolean =>
   name.trim() !== "" && characterCount(name) <= textLimits.personName;
 
+/** Whether a list is ids, each once. */
+export const isIdList = (ids: readonly string[]): boolean =>
+  new Set(ids).size === ids.length && ids.every((id) => isId(id));
+
 /** Whether an order of coworkers is ids, each once, and not too many. */
 export const fitsCoworkerOrder = (ids: readonly string[]): boolean =>
-  ids.length <= COWORKERS_MAX &&
-  new Set(ids).size === ids.length &&
-  ids.every((id) => isId(id));
+  ids.length <= COWORKERS_MAX && isIdList(ids);
 
 /**
  * Whether `clearFrom` is the start of the newest order: only a new or

@@ -46,6 +46,7 @@ import {
   fitsCoworkerName,
   fitsCoworkerOrder,
   fitsOrders,
+  isIdList,
 } from "./order-values";
 import { fitsOrder, fitsPattern } from "./pattern-values";
 import {
@@ -117,7 +118,7 @@ const byCursor = (changes: Change[]): Change[] =>
  * else one just past it, so the device that made it takes the correction.
  */
 const writtenClock = (clock: Clock, fits: boolean): Clock =>
-  fits ? clock : clockAfter(clock, Date.now());
+  fits ? clock : clockAfter(clock);
 
 /**
  * One Durable Object per signed-in user, named by their better-auth user
@@ -738,7 +739,20 @@ export class UserDO extends DurableObject<Env> {
       return undefined;
     }
     const fits = fitsCoworkerOrder(edit.ids);
-    const ids = fits ? edit.ids : parseIds(stored?.ids ?? "[]");
+    let ids = fits ? edit.ids : parseIds(stored?.ids ?? "[]");
+    // An order past COWORKERS_MAX names coworkers the server refused: it
+    // keeps the person's order of those they do keep.
+    if (!fits && isIdList(edit.ids)) {
+      const kept = new Set(
+        this.db
+          .select({ id: coworkers.id })
+          .from(coworkers)
+          .where(isNotNull(coworkers.name))
+          .all()
+          .map(({ id }) => id)
+      );
+      ids = edit.ids.filter((id) => kept.has(id)).slice(0, COWORKERS_MAX);
+    }
     const row: CoworkerOrderRow = {
       ...clockColumns(writtenClock(clock, fits)),
       cursor,

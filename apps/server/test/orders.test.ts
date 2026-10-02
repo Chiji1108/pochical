@@ -50,13 +50,19 @@ const ordersEdit = (
 });
 
 // One coworker edit, named by its id and clock.
-const coworkerEdit = (id: string, name: string, ms: number) => ({
+const coworkerEdit = (id: string, name: string | undefined, ms: number) => ({
   kind: {
     case: "coworker" as const,
     value: { hlc: clock(ms), id, name },
   },
   opId: `${id}-${ms}`,
 });
+
+// The coworker changes a frame holds, as id and name.
+const coworkersIn = (changes: ReturnType<typeof changesIn>) =>
+  changes.flatMap(({ kind }) =>
+    kind.case === "coworker" ? [[kind.value.id, kind.value.name]] : []
+  );
 
 // The day values a frame of changes holds, as date, field and value.
 const daysIn = (changes: ReturnType<typeof changesIn>) =>
@@ -391,6 +397,79 @@ describe("syncing a user's coworkers", () => {
     ]);
     const refused = changes[0]?.kind;
     expect(refused?.case === "coworker" && refused.value.name).toBeUndefined();
+  });
+
+  it("makes room when one is deleted, and counts bringing one back as adding", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    const ids = Array.from(
+      { length: COWORKERS_MAX },
+      (_, index) => `c${index}`
+    );
+    const frame = async (edits: ReturnType<typeof coworkerEdit>[]) => {
+      sendFrame(phone.socket, { case: "coworkerEdits", value: { edits } });
+      await phone.frames.next();
+      return changesIn(await phone.frames.next());
+    };
+    await frame(ids.map((id) => coworkerEdit(id, id, 1000)));
+
+    // c0 goes, extra takes its place, and c0 back is past the cap.
+    expect(
+      coworkersIn(
+        await frame([
+          coworkerEdit("c0", undefined, 2000),
+          coworkerEdit("extra", "extra", 2000),
+          coworkerEdit("c0", "c0", 3000),
+        ])
+      )
+    ).toStrictEqual([
+      ["c0", undefined],
+      ["extra", "extra"],
+      ["c0", undefined],
+    ]);
+
+    // The refusal sits just past that edit, so the device's next ones win:
+    // c1 goes and c0 comes back.
+    expect(
+      coworkersIn(
+        await frame([
+          coworkerEdit("c1", undefined, 4000),
+          coworkerEdit("c0", "c0", 4000),
+        ])
+      )
+    ).toStrictEqual([
+      ["c1", undefined],
+      ["c0", "c0"],
+    ]);
+
+    // An order naming one too many keeps the person's order of the rest.
+    const kept = ["extra", ...ids.filter((id) => id !== "c1")];
+    sendFrame(phone.socket, {
+      case: "coworkerEdits",
+      value: {
+        edits: [
+          {
+            kind: {
+              case: "order",
+              value: {
+                hlc: clock(5000),
+                ids: [...kept.slice(0, 50), "c1", ...kept.slice(50)],
+              },
+            },
+            opId: "order",
+          },
+        ],
+      },
+    });
+    await phone.frames.next();
+    expect(changesIn(await phone.frames.next())).toMatchObject([
+      {
+        kind: {
+          case: "coworkerOrder",
+          value: { hlc: { deviceId: "server" }, ids: kept },
+        },
+      },
+    ]);
   });
 
   it("takes a day's people and refuses ids written twice", async () => {
