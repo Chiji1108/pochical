@@ -37,7 +37,7 @@ import {
 import type { GroupEdit } from "./design-group-settings";
 import { ShiftsPage, marksUpTo } from "./design-group-shifts";
 import type { Layout } from "./design-group-shifts";
-import { BlockOffer, offersBlock, ReportSheet } from "./design-report";
+import { ReportSheet } from "./design-report";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
 import { ToastContext } from "./design-toast";
@@ -126,10 +126,6 @@ export function DesignGroup({
   const [profileOf, setProfileOf] = useState<Member>();
   // A member being reported from their profile, which closes for it.
   const [reportOf, setReportOf] = useState<Member>();
-  // Who was just reported, offered to be blocked too.
-  const [blockOffer, setBlockOffer] = useState<Member>();
-  const [offerNext, setOfferNext] = useState<Member>();
-  const blocked = useUser((state) => state.blocked);
   // Members taken out of each group, by group id.
   const [removed, setRemoved] = useState<Record<string, string[]>>({});
   const toast = useContext(ToastContext);
@@ -311,29 +307,12 @@ export function DesignGroup({
   const memberSheet = (
     <>
       <ReportSheet
+        member={reportOf}
         onClose={() => {
           setReportOf(undefined);
-        }}
-        onGone={() => {
-          setBlockOffer(offerNext);
-          setOfferNext(undefined);
-        }}
-        onSend={() => {
-          setReportOf(undefined);
-          if (offersBlock(reportOf, blocked)) {
-            setOfferNext(reportOf);
-          } else {
-            toast("通報しました");
-          }
         }}
         sends={`${reportOf?.name ?? ""}の名前とアイコン`}
         what={reportOf?.name}
-      />
-      <BlockOffer
-        member={blockOffer}
-        onClose={() => {
-          setBlockOffer(undefined);
-        }}
       />
       <MemberSheet
         group={group}
