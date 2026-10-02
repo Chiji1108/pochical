@@ -52,11 +52,12 @@ const picker = {
   }),
 };
 
-// A day in the month. The picked day's fill and an outside day's fade
-// outrank the week's colors, being attribute selectors.
+// A day in the month. The picked day's fill outranks the week's colors,
+// being an attribute selector. The days around the month are left out,
+// as in 日にちを共有's month, keeping their place in the six weeks.
 const pickerCell = cva({
   base: {
-    "&[data-outside-range]": { color: "text.quaternary" },
+    "&[data-outside-range]": { visibility: "hidden" },
     "&[data-selected]": {
       bg: "accent.fill",
       color: "accent.onFill",
@@ -121,7 +122,6 @@ export function MonthPicker({
           onSelect(new Date(picked.year, picked.month - 1, picked.day));
         }
       }}
-      outsideDaySelectable
       startOfWeek={weekTools.weekStart}
       value={value ? [toDateValue(value)] : []}
     >
