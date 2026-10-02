@@ -87,9 +87,26 @@ function changeWords(day: WidgetDay, named: boolean) {
   return day.change ?? (named ? day.name : undefined);
 }
 
+// What a day says in words where its mark carries its own name label
+// (NamedMark): 予定なし with nothing entered, else only the changed
+// hours. The name is the mark's label, not news.
+function newsWords(day: WidgetDay) {
+  return day.shift ? day.change : NOTHING;
+}
+
 // Those words, with the shift's name and hours for screen readers.
-function Change({ day, className }: { day: WidgetDay; className: string }) {
-  const words = changeWords(day, useShiftNames());
+// `withName` false leaves the name to the label under the mark.
+function Change({
+  day,
+  className,
+  withName = true,
+}: {
+  day: WidgetDay;
+  className: string;
+  withName?: boolean;
+}) {
+  const named = useShiftNames();
+  const words = withName ? changeWords(day, named) : newsWords(day);
   const time = day.time ? ` ${day.time}` : "";
   return (
     <strong className={className}>
@@ -205,6 +222,56 @@ function MarkName({ day }: { day: WidgetDay }) {
   return (
     <span aria-hidden="true" className={markName}>
       {day.name ? dayName(day.name) : ""}
+    </span>
+  );
+}
+
+// Under a large mark, its name a size larger.
+const markNameLarge = css({ fontSize: "11px", lineHeight: "13px" });
+
+// How much smaller a mark draws with its name under it.
+const NAME_ROOM = 6;
+
+const namedMark = css({
+  alignItems: "center",
+  display: "flex",
+  flexDirection: "column",
+  gap: "2px",
+  maxWidth: "100%",
+});
+
+// A day's mark with its name under it when names are shown, as the
+// calendar's day has it: the caller draws the mark a size smaller to make
+// room, and the two are one group, centered wherever there is room for
+// it. `reserve` keeps the name's line on a day without a name, so the
+// marks of a row stay level.
+function NamedMark({
+  day,
+  size,
+  named,
+  faint = false,
+  large = false,
+  reserve = false,
+}: {
+  day: WidgetDay;
+  size: number;
+  named: boolean;
+  faint?: boolean;
+  large?: boolean;
+  reserve?: boolean;
+}) {
+  const labelled = named && day.shift !== undefined;
+  return (
+    <span className={namedMark}>
+      <DayMark day={day} faint={faint} size={size} />
+      {(labelled || (named && reserve)) && (
+        <span
+          aria-hidden="true"
+          className={cx(markName, large && markNameLarge)}
+        >
+          {labelled && day.name ? dayName(day.name) : "\u00A0"}
+        </span>
+      )}
     </span>
   );
 }
@@ -375,9 +442,14 @@ const QUIET_GROWTH = 12;
 // grows and the group closes up round it.
 function SimpleDay({ day, label }: { day: WidgetDay; label?: string }) {
   const words = useWords();
-  const said = changeWords(day, useShiftNames()) !== undefined;
+  const named = useShiftNames();
+  const said = newsWords(day) !== undefined;
   const roomy = useContext(WidgetSizeContext).height >= SIMPLE_ROOMY;
   const base = roomy ? 64 : 48;
+  let size = said ? base : base + QUIET_GROWTH;
+  if (named) {
+    size -= NAME_ROOM + 2;
+  }
   // A memo is the calendar's stroke under the date (or 明日); its words
   // are the app's.
   const noted = day.note ? dayParts.noted : undefined;
@@ -393,9 +465,9 @@ function SimpleDay({ day, label }: { day: WidgetDay; label?: string }) {
         </span>
       )}
       <span className={simple.mark}>
-        <DayMark day={day} size={said ? base : base + QUIET_GROWTH} />
+        <NamedMark day={day} large named={named} size={size} />
       </span>
-      {said && <Change className={simple.words} day={day} />}
+      {said && <Change className={simple.words} day={day} withName={false} />}
       {!said && (
         <span className={srOnly}>
           {day.name ?? NOTHING}
@@ -473,10 +545,15 @@ const upcoming = {
 // calendar's stroke under the date.
 function UpcomingHead({ day }: { day: WidgetDay }) {
   const words = useWords();
-  const said = changeWords(day, useShiftNames()) !== undefined;
+  const named = useShiftNames();
+  const said = newsWords(day) !== undefined;
+  let size = said ? 34 : 40;
+  if (named) {
+    size -= NAME_ROOM;
+  }
   return (
     <div className={upcoming.head}>
-      <DayMark day={day} size={said ? 34 : 40} />
+      <NamedMark day={day} large named={named} size={size} />
       <span className={upcoming.headText}>
         <span className={simple.date}>
           <span className={cx(day.note && dayParts.noted)}>
@@ -484,7 +561,7 @@ function UpcomingHead({ day }: { day: WidgetDay }) {
           </span>
         </span>
         {said ? (
-          <Change className={upcoming.change} day={day} />
+          <Change className={upcoming.change} day={day} withName={false} />
         ) : (
           <span className={srOnly}>
             {day.name ?? NOTHING}
@@ -731,6 +808,9 @@ function DayColumns({ entry, count }: { entry: WidgetEntry; count: number }) {
       (pair?.days[index]?.theirs?.late ?? false)
   );
   let size = roomy ? 44 : 36;
+  if (named) {
+    size -= NAME_ROOM;
+  }
   if (pair) {
     const grown = roomy ? 32 : 26;
     size = named || worded ? grown - 6 : grown;
@@ -828,7 +908,9 @@ function ColumnDay({
     band = flat ? "flat" : "own";
   }
   const moved = day.change === undefined ? [] : shortChange(day);
-  const mine = columnWords(moved, day.name, named, lines);
+  // Alone, the name is the label under the mark and the words are only
+  // what changed; beside someone, one line holds either.
+  const mine = pair ? columnWords(moved, day.name, named, lines) : moved;
   const marked = day.shift !== undefined && look.mark !== "none";
   return (
     <>
@@ -886,7 +968,13 @@ function ColumnDay({
         <SpokenDay day={day} />
         <span aria-hidden="true" className={columns.mark}>
           {marked || !day.shift ? (
-            <DayMark day={day} faint={look.mark === "faint"} size={size} />
+            <NamedMark
+              day={day}
+              faint={look.mark === "faint"}
+              named={named && !pair}
+              reserve
+              size={size}
+            />
           ) : null}
         </span>
         {mine.length > 0 && (
@@ -1009,6 +1097,7 @@ const nextDays = {
 // A row of days: each weekday over its mark.
 function NextDays({ days }: { days: WidgetDay[] }) {
   const words = useWords();
+  const named = useShiftNames();
   return (
     <ol className={`${list} ${nextDays.root}`}>
       {days.map((day) => (
@@ -1022,7 +1111,12 @@ function NextDays({ days }: { days: WidgetDay[] }) {
               {words.weekday(day.date)}
             </span>
           </span>
-          <DayMark day={day} size={24} />
+          <NamedMark
+            day={day}
+            named={named}
+            reserve
+            size={named ? 24 - NAME_ROOM : 24}
+          />
         </li>
       ))}
     </ol>
