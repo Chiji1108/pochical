@@ -263,6 +263,9 @@ function useWords() {
       short: (date: Date) => `${month(date)} ${date.getDate()}.`,
       today: "Today",
       tomorrow: "Tomorrow",
+      // The day after a day off, short enough to keep clear of the
+      // poodle in the corner: Fri, as 明日 is in Japanese.
+      nextDay: (date: Date) => day(date),
       unit: "days",
       weekday,
     };
@@ -274,6 +277,7 @@ function useWords() {
       `${date.getMonth() + MONTH_NUMBER}月 ${weekday(date)}曜日`,
     inDays: (inDays: number) => (inDays === 1 ? "明日" : `${inDays}日後`),
     line: (date: Date) => `${date.getDate()} ${weekday(date)}`,
+    nextDay: () => "明日",
     nextOff: "次の休み",
     nothingYet: "まだ入っていません",
     offTogether: "一緒に休める日",
@@ -966,7 +970,7 @@ function RestToday({ entry }: { entry: WidgetEntry }) {
       </span>
       {tomorrow && (
         <span aria-hidden="true" className={rest.tomorrow}>
-          {words.tomorrow}
+          {words.nextDay(tomorrow.date)}
           <DayMark day={tomorrow} size={16} />
         </span>
       )}
