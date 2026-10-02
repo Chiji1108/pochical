@@ -28,10 +28,14 @@ import { MIN_PROTOCOL_VERSION } from "./protocol";
  * overwrites whatever a client sent under this name.
  */
 export const USER_HEADER = "X-Pochical-User";
+/** The session the socket was opened with, set beside USER_HEADER. */
+export const SESSION_HEADER = "X-Pochical-Session";
 
 /** Per-socket state that survives hibernation. */
 type SocketAttachment = {
   userId: string;
+  // The session it was opened with, so ending the session closes it.
+  sessionId: string;
   // Set once Hello is accepted.
   protocolVersion?: number;
 };
@@ -62,7 +66,9 @@ const attachmentOf = (ws: WebSocket): SocketAttachment | null => {
     typeof value !== "object" ||
     value === null ||
     !("userId" in value) ||
-    typeof value.userId !== "string"
+    typeof value.userId !== "string" ||
+    !("sessionId" in value) ||
+    typeof value.sessionId !== "string"
   ) {
     return null;
   }
@@ -70,7 +76,7 @@ const attachmentOf = (ws: WebSocket): SocketAttachment | null => {
     "protocolVersion" in value && typeof value.protocolVersion === "number"
       ? value.protocolVersion
       : undefined;
-  return { protocolVersion, userId: value.userId };
+  return { protocolVersion, sessionId: value.sessionId, userId: value.userId };
 };
 
 const decodeClientFrame = (
@@ -172,13 +178,33 @@ export const acceptSyncSocket = (
     return new Response("Expected a WebSocket upgrade", { status: 426 });
   }
   const userId = request.headers.get(USER_HEADER);
-  if (userId === null) {
+  const sessionId = request.headers.get(SESSION_HEADER);
+  if (userId === null || sessionId === null) {
     return new Response("Sign in first", { status: 401 });
   }
   const { 0: client, 1: server } = new WebSocketPair();
   ctx.acceptWebSocket(server);
-  server.serializeAttachment({ userId } satisfies SocketAttachment);
+  server.serializeAttachment({ sessionId, userId } satisfies SocketAttachment);
   return new Response(null, { status: 101, webSocket: client });
+};
+
+/** WebSocket close code for a normal closure (RFC 6455). */
+const NORMAL_CLOSURE = 1000;
+
+/**
+ * Closes the sockets opened with a session that has ended (signed out, or
+ * the account deleted), which were let in when it was live. A device that
+ * reconnects is then refused with 401 (spec/sync-protocol.md, Reconnecting).
+ */
+export const closeSessionSockets = (
+  ctx: DurableObjectState,
+  sessionId: string
+): void => {
+  for (const socket of ctx.getWebSockets()) {
+    if (attachmentOf(socket)?.sessionId === sessionId) {
+      socket.close(NORMAL_CLOSURE, "Session ended");
+    }
+  }
 };
 
 /** One frame from a client: Hello first, then the rest. */

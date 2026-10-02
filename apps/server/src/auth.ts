@@ -25,6 +25,9 @@ export type AuthConfig = {
   // Where the apps reach the server; better-auth builds its URLs from it.
   baseURL: string;
   secret: string;
+  // Told when a session ends (signing out, or the user's sessions going
+  // with their account), to close what was let in with it.
+  onSessionEnd?: (ended: { id: string; userId: string }) => Promise<void>;
 };
 
 /**
@@ -38,7 +41,10 @@ export type AuthConfig = {
  * and sign-ins are held back by Cloudflare's rate limiting (src/index.ts)
  * rather than better-auth's, which would key on the address it keeps.
  */
-export const createAuth = (d1: D1Database, { baseURL, secret }: AuthConfig) =>
+export const createAuth = (
+  d1: D1Database,
+  { baseURL, onSessionEnd, secret }: AuthConfig
+) =>
   betterAuth({
     // Linking Apple or Google keeps the anonymous user, whose email is the
     // anonymous plugin's placeholder, so the provider's never matches it
@@ -63,6 +69,17 @@ export const createAuth = (d1: D1Database, { baseURL, secret }: AuthConfig) =>
               userAgent: null,
             },
           }),
+        },
+        delete: {
+          after: async (ended) => {
+            try {
+              await onSessionEnd?.(ended);
+            } catch (error) {
+              // Signing out still succeeds; the sockets are refused at
+              // their next connect.
+              console.error("Closing an ended session's sockets failed", error);
+            }
+          },
         },
       },
     },

@@ -48,6 +48,7 @@ import { fitsOrder, fitsPattern } from "./pattern-values";
 import {
   acceptSyncSocket,
   answerKeepalive,
+  closeSessionSockets,
   handleSyncMessage,
   isSynced,
   rejectAndClose,
@@ -147,6 +148,23 @@ export class UserDO extends DurableObject<Env> {
     void ctx.blockConcurrencyWhile(async () => {
       await migrate(this.db, migrations);
     });
+  }
+
+  /**
+   * Closes the sockets the session opened, here and in the user's groups,
+   * once it has ended.
+   */
+  async endSession(sessionId: string): Promise<void> {
+    closeSessionSockets(this.ctx, sessionId);
+    const groups = this.db
+      .select({ groupId: memberships.groupId })
+      .from(memberships)
+      .all();
+    await Promise.all(
+      groups.map(async ({ groupId }) => {
+        await this.env.GROUPS.getByName(groupId).endSession(sessionId);
+      })
+    );
   }
 
   /** The group the user's request made, or null for a new request. */

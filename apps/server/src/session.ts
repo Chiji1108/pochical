@@ -4,7 +4,7 @@ import { createAuth } from "./auth";
 import type { Auth } from "./auth";
 
 /** The signed-in user a request's session token belongs to. */
-export type SessionUser = { id: string; anonymous: boolean };
+export type SessionUser = { id: string; anonymous: boolean; sessionId: string };
 
 let auth: Auth | undefined;
 
@@ -12,6 +12,10 @@ let auth: Auth | undefined;
 export const getAuth = (): Auth => {
   auth ??= createAuth(env.DB, {
     baseURL: env.BETTER_AUTH_URL,
+    // Its sockets close on the user's DO and their groups'.
+    onSessionEnd: async ({ id, userId }) => {
+      await env.USERS.getByName(userId).endSession(id);
+    },
     secret: env.BETTER_AUTH_SECRET,
   });
   return auth;
@@ -32,5 +36,6 @@ export const sessionUser = async (
   return {
     anonymous: session.user.isAnonymous === true,
     id: session.user.id,
+    sessionId: session.session.id,
   };
 };

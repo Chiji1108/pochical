@@ -5,7 +5,8 @@ import { registerGroupService } from "./group-service";
 import { registerInviteService } from "./invite-service";
 import { tooManySignIns } from "./rate-limits";
 import { getAuth, sessionUser } from "./session";
-import { USER_HEADER } from "./sync-socket";
+import type { SessionUser } from "./session";
+import { SESSION_HEADER, USER_HEADER } from "./sync-socket";
 import { registerSystemService } from "./system-service";
 import { registerUserService } from "./user-service";
 
@@ -32,10 +33,12 @@ const USER_SOCKET_PATH = "/v1/me/socket";
 const GROUP_SOCKET_PATH = /^\/v1\/groups\/(?<groupId>[^/]+)\/socket$/u;
 
 // The socket request as a Durable Object receives it: naming the user the
-// session belongs to, whatever the client sent under that header.
-const forUser = (request: Request, userId: string): Request => {
+// session belongs to and the session, whatever the client sent under
+// those headers.
+const forUser = (request: Request, user: SessionUser): Request => {
   const headers = new Headers(request.headers);
-  headers.set(USER_HEADER, userId);
+  headers.set(USER_HEADER, user.id);
+  headers.set(SESSION_HEADER, user.sessionId);
   return new Request(request, { headers });
 };
 
@@ -69,9 +72,7 @@ export default {
       if (!user) {
         return signInFirst();
       }
-      return await env.USERS.getByName(user.id).fetch(
-        forUser(request, user.id)
-      );
+      return await env.USERS.getByName(user.id).fetch(forUser(request, user));
     }
 
     // Only members reach a group, and the check asks the user's own DO, so
@@ -85,9 +86,7 @@ export default {
       if (!(await env.USERS.getByName(user.id).isMember(groupId))) {
         return new Response("Not a member of this group", { status: 403 });
       }
-      return await env.GROUPS.getByName(groupId).fetch(
-        forUser(request, user.id)
-      );
+      return await env.GROUPS.getByName(groupId).fetch(forUser(request, user));
     }
 
     return new Response("Not found", { status: 404 });
