@@ -325,6 +325,14 @@ const simple = {
   mark: css({ display: "flex" }),
   pair: css({ display: "flex", gap: "16px", height: "100%" }),
   rule: css({ bg: "separator", flexShrink: 0, width: "1px" }),
+  note: css({
+    color: "text.secondary",
+    maxWidth: "100%",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    textStyle: "subheadline",
+    whiteSpace: "nowrap",
+  }),
   words: css({
     fontVariantNumeric: "tabular-nums",
     fontWeight: 400,
@@ -348,11 +356,22 @@ const QUIET_GROWTH = 12;
 // words: its mark grows and the group closes up round it. Beside another
 // day each centers on its own, rather than lining its parts up with the
 // other's, which left a quiet day high with a gap under it.
-function SimpleDay({ day, label }: { day: WidgetDay; label?: string }) {
+function SimpleDay({
+  day,
+  label,
+  withNote = false,
+}: {
+  day: WidgetDay;
+  label?: string;
+  // これから's today: the memo's first line where nothing changed.
+  withNote?: boolean;
+}) {
   const words = useWords();
   const said = changeWords(day, useShiftNames()) !== undefined;
+  const note = !said && withNote ? day.note : undefined;
   const roomy = useContext(WidgetSizeContext).height >= SIMPLE_ROOMY;
   const base = roomy ? 64 : 48;
+  const quiet = !(said || note);
   return (
     <div className={simple.day}>
       {label ? (
@@ -361,11 +380,11 @@ function SimpleDay({ day, label }: { day: WidgetDay; label?: string }) {
         <span className={simple.date}>{words.short(day.date)}</span>
       )}
       <span className={simple.mark}>
-        <DayMark day={day} size={said ? base : base + QUIET_GROWTH} />
+        <DayMark day={day} size={quiet ? base + QUIET_GROWTH : base} />
       </span>
-      {said ? (
-        <Change className={simple.words} day={day} />
-      ) : (
+      {said && <Change className={simple.words} day={day} />}
+      {note && <span className={simple.note}>{note}</span>}
+      {!said && (
         <span className={srOnly}>
           {day.name ?? NOTHING}
           {day.time ? ` ${day.time}` : ""}
@@ -404,51 +423,14 @@ export function SimpleMedium({ entry }: { entry: WidgetEntry }) {
 // ── これから ─────────────────────────────────────────────────────────────
 
 const upcoming = {
-  // The date large, as a desk calendar shows it.
-  big: css({
-    fontSize: "44px",
-    fontVariantNumeric: "tabular-nums",
-    fontWeight: 500,
-    letterSpacing: "-0.02em",
-    lineHeight: 1,
-  }),
-  heading: css({ color: "text.secondary", textStyle: "footnote" }),
-  markRow: css({
+  head: css({ display: "flex", flexDirection: "column", gap: "4px" }),
+  // The date at the start and the mark at the end, level with each other.
+  headLine: css({
     alignItems: "center",
     display: "flex",
-    gap: "4px",
-    maxWidth: "100%",
-    minWidth: 0,
-  }),
-  words: css({
-    fontVariantNumeric: "tabular-nums",
-    fontWeight: 600,
-    minWidth: 0,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    textStyle: "subheadline",
-    whiteSpace: "nowrap",
+    justifyContent: "space-between",
   }),
   pair: css({ gap: "12px" }),
-  // Today on the left of the medium one.
-  // Only the parts today has, gathered in the middle: a day with no
-  // change or memo is the date and mark alone, not gaps where they go.
-  today: css({
-    display: "flex",
-    flexDirection: "column",
-    flexShrink: 0,
-    gap: "4px",
-    justifyContent: "center",
-    width: "104px",
-  }),
-  note: css({
-    color: "text.secondary",
-    maxWidth: "100%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    textStyle: "footnote",
-    whiteSpace: "nowrap",
-  }),
   row: css({
     "&:not(:first-child)": { borderTop: "1px solid token(colors.separator)" },
     alignItems: "center",
@@ -479,50 +461,63 @@ const upcoming = {
     height: "100%",
     justifyContent: "space-between",
   }),
-  todayHead: css({ alignItems: "center", display: "flex", gap: "8px" }),
+  // シンプル's today, in the medium one's left column.
+  today: css({ display: "flex", flexShrink: 0, width: "112px" }),
+  words: css({
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 400,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    textStyle: "subheadline",
+    whiteSpace: "nowrap",
+  }),
 };
 
 // Today large: its date and mark, what changed, and its memo's first
 // line.
-function UpcomingToday({ day, note }: { day: WidgetDay; note: boolean }) {
+// Today as a heading line: its date and its mark side by side, and what
+// changed under them only on a day that has some.
+function UpcomingHead({ day }: { day: WidgetDay }) {
   const words = useWords();
+  const said = changeWords(day, useShiftNames()) !== undefined;
   return (
-    <>
-      <span className={upcoming.heading}>{words.heading(day.date)}</span>
-      <span className={upcoming.todayHead}>
-        <span aria-hidden="true" className={upcoming.big}>
-          {day.date.getDate()}
-        </span>
-        <DayMark day={day} size={32} />
+    <div className={upcoming.head}>
+      <span className={upcoming.headLine}>
+        <span className={simple.date}>{words.short(day.date)}</span>
+        <DayMark day={day} size={28} />
       </span>
-      <span className={upcoming.markRow}>
+      {said ? (
         <Change className={upcoming.words} day={day} />
-      </span>
-      {note && day.note && <span className={upcoming.note}>{day.note}</span>}
-    </>
+      ) : (
+        <span className={srOnly}>
+          {day.name ?? NOTHING}
+          {day.time ? ` ${day.time}` : ""}
+        </span>
+      )}
+    </div>
   );
 }
 
-// Today large, and the next three days' marks under it.
+// Today's line, and the next three days' marks under it.
 export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
   return (
     <div className={upcoming.small}>
-      <UpcomingToday day={entry.today} note={false} />
+      <UpcomingHead day={entry.today} />
       <NextDays days={entry.upcoming.slice(1, 4)} />
     </div>
   );
 }
 
-// Today large on the left; on the right, the days after it a line each,
-// each by its date as the rows under it read (25 金), with what changed,
-// the memo, or the shift's name when names are shown.
+// シンプル's today on the left, with the memo where nothing changed; on
+// the right, the days after it a line each, each by its date (25 金),
+// with what changed, the memo, or the shift's name when names are shown.
 export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
   const words = useWords();
   const named = useShiftNames();
   return (
     <div className={cx(simple.pair, upcoming.pair)}>
       <div className={upcoming.today}>
-        <UpcomingToday day={entry.today} note />
+        <SimpleDay day={entry.today} withNote />
       </div>
       <span aria-hidden="true" className={simple.rule} />
       <ol className={`${list} ${upcoming.rows}`}>
