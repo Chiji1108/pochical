@@ -12,8 +12,8 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 // The groups the user is in, so their sockets can be let in without
-// waking a Group DO for an id that is not theirs. Written as they join or
-// leave (joining is not built yet).
+// waking a Group DO for an id that is not theirs. Written as they make or
+// join a group, and later as they leave (leaving is not built yet).
 export const memberships = sqliteTable("memberships", {
   groupId: text("group_id").primaryKey(),
   joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull(),

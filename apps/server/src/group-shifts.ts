@@ -2,6 +2,7 @@ import { create, fromJsonString, toJsonString } from "@bufbuild/protobuf";
 import { and, eq } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
+import { SHARED_DAY_FIELDS } from "./day-values";
 import {
   ChangeSchema,
   DayValueSchema,
@@ -74,13 +75,19 @@ export const memberPatternChange = (row: PatternRow): Change =>
     },
   });
 
-/** A member's day value, written at `cursor` when it is newer. */
+/**
+ * A member's day value, written at `cursor` when it is newer. A field
+ * groups do not see is dropped, whatever pushed it.
+ */
 export const takeMemberDay = (
   db: DrizzleSqliteDODatabase,
   userId: string,
   day: DayValue,
   cursor: number
 ): Change | undefined => {
+  if (!SHARED_DAY_FIELDS.includes(day.field)) {
+    return undefined;
+  }
   const stored = db
     .select()
     .from(memberDays)

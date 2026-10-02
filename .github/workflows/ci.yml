@@ -48,6 +48,10 @@ jobs:
               - ".github/workflows/ci.yml"
             proto:
               - "proto/**"
+              - "apps/server/src/gen/**"
+              - "apps/web/src/gen/**"
+              - "apps/ios/Packages/PochicalProto/**"
+              - "apps/android/proto/**"
               - "mise.toml"
               - ".github/workflows/ci.yml"
 
@@ -84,8 +88,20 @@ jobs:
           fetch-depth: 0
       - uses: jdx/mise-action@v3
         with:
-          install_args: buf
+          install_args: buf bun
       - run: mise run proto:lint
+      # The code generated from proto/ is what proto/ gives now: none edited
+      # by hand, none left behind by a .proto change. protoc-gen-es comes
+      # from the workspace's dependencies.
+      - run: bun install --frozen-lockfile --filter '!@pochical/mobile-legacy'
+      # buf's remote plugins (Swift, Kotlin) are fetched signed in, clear
+      # of the Buf Schema Registry's limits on anonymous use.
+      - env:
+          BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
+        run: |
+          mise run gen:proto
+          git status --porcelain
+          test -z "$(git status --porcelain)"
       # proto:breaking compares with the local main branch.
       - if: github.event_name == 'pull_request'
         run: |

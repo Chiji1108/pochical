@@ -11,18 +11,13 @@ import {
   inArray,
   isNotNull,
   max,
-  notInArray,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
-import { fitsField, hasKey } from "./day-values";
-import {
-  ChangesSchema,
-  DayField,
-  ServerError_Code,
-} from "./gen/pochical/v1/sync_pb";
+import { fitsField, hasKey, SHARED_DAY_FIELDS } from "./day-values";
+import { ChangesSchema, ServerError_Code } from "./gen/pochical/v1/sync_pb";
 import type {
   Change,
   CoworkerEdits,
@@ -96,8 +91,16 @@ import type {
 
 // Values in one push to a group.
 const VALUES_PER_PUSH = 500;
-// The day fields that stay with their owner, never pushed to groups.
-const PRIVATE_FIELDS = [DayField.NOTE, DayField.PEOPLE];
+// After a push to a group fails, the alarm comes back for it after this
+// long, twice as long each time it fails in a row, up to the most…
+const PUSH_RETRY_FIRST_MS = 10_000;
+const PUSH_RETRY_MOST_MS = 3_600_000;
+// …and stops coming back after this many in a row, about a day: the
+// user's next change tries it again.
+const PUSH_RETRIES_MOST = 30;
+
+// How many pushes to the group have failed in a row, in the DO's storage.
+const pushFailuresKey = (groupId: string): string => `pushFailures:${groupId}`;
 
 /** One kind of value the user owns, as UserDO.logs lists them. */
 type SyncedLog = {
@@ -130,6 +133,9 @@ const writtenClock = (clock: Clock, fits: boolean): Clock =>
  */
 export class UserDO extends DurableObject<Env> {
   private readonly db: DrizzleSqliteDODatabase;
+  // Set when a change asks for a push, so an alarm running meanwhile
+  // leaves the next one to it.
+  private pushRequested = false;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -166,29 +172,77 @@ export class UserDO extends DurableObject<Env> {
 
   /**
    * Pushes each of the user's groups what changed for it since it last
-   * took a push. Run by the DO's alarm, which is retried when it throws, so
-   * a group that could not be reached gets the values later; they carry
-   * their clocks, so one taken twice changes nothing.
+   * took a push. Run by the DO's alarm. A group that could not be reached
+   * keeps its cursor and gets the values on a later round, without holding
+   * back the groups after it; they carry their clocks, so one taken twice
+   * changes nothing.
+   *
+   * The runtime's own retries of an alarm that throws stop after a few,
+   * which would leave the values waiting for the user's next change, so
+   * the alarm comes back for a failed group itself, each group waiting by
+   * its own failures. A change made while it runs has set the next alarm
+   * already, which is kept.
    */
   async alarm(): Promise<void> {
     const userId = this.ctx.id.name;
     if (userId === undefined) {
       return;
     }
+    this.pushRequested = false;
     const head = this.head();
     const groups = this.db.select().from(memberships).all();
+    const retries: number[] = [];
     for (const { groupId, pushedCursor } of groups) {
-      // oxlint-disable-next-line no-await-in-loop -- one group at a time
-      await this.pushTo(groupId, userId, this.sharedAfter(pushedCursor));
+      try {
+        // oxlint-disable-next-line no-await-in-loop -- one group at a time
+        await this.pushTo(groupId, userId, this.sharedAfter(pushedCursor));
+      } catch (error) {
+        console.error(`Pushing to group ${groupId} failed`, error);
+        const wait = this.pushFailed(groupId);
+        if (wait !== undefined) {
+          retries.push(wait);
+        }
+        continue;
+      }
+      this.pushSucceeded(groupId);
       this.db
         .update(memberships)
         .set({ pushedCursor: head })
         .where(eq(memberships.groupId, groupId))
         .run();
     }
+    if (!this.pushRequested && retries.length > 0) {
+      await this.ctx.storage.setAlarm(Date.now() + Math.min(...retries));
+    }
+  }
+
+  /**
+   * Counts a failed push to the group: how long to wait before trying it
+   * again, or undefined once it has failed too many times in a row.
+   */
+  private pushFailed(groupId: string): number | undefined {
+    const { kv } = this.ctx.storage;
+    const stored: unknown = kv.get(pushFailuresKey(groupId));
+    const failures = (typeof stored === "number" ? stored : 0) + 1;
+    kv.put(pushFailuresKey(groupId), failures);
+    if (failures > PUSH_RETRIES_MOST) {
+      return undefined;
+    }
+    return Math.min(
+      PUSH_RETRY_FIRST_MS * 2 ** (failures - 1),
+      PUSH_RETRY_MOST_MS
+    );
+  }
+
+  private pushSucceeded(groupId: string): void {
+    const { kv } = this.ctx.storage;
+    if (kv.get(pushFailuresKey(groupId)) !== undefined) {
+      kv.delete(pushFailuresKey(groupId));
+    }
   }
 
   private schedulePush(): void {
+    this.pushRequested = true;
     void this.ctx.storage.setAlarm(Date.now());
   }
 
@@ -209,9 +263,10 @@ export class UserDO extends DurableObject<Env> {
             .where(
               and(
                 gt(dayFields.cursor, cursor),
-                // Memos and people stay with their owner.
+                // Only the fields groups see: memos and people, and any
+                // field not named there, stay with their owner.
                 sharedOnly
-                  ? notInArray(dayFields.field, PRIVATE_FIELDS)
+                  ? inArray(dayFields.field, SHARED_DAY_FIELDS)
                   : undefined
               )
             )

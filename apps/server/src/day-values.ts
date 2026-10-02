@@ -40,6 +40,17 @@ const KEPT_FIELDS: ReadonlySet<number> = new Set([
 export const isDayField = (field: number): field is DayField =>
   KEPT_FIELDS.has(field);
 
+/**
+ * The fields groups see of a member's day: its pattern and times. Named
+ * rather than the private ones left out, so a field added later stays
+ * with its owner until it is put here.
+ */
+export const SHARED_DAY_FIELDS: readonly DayField[] = [
+  DayField.PATTERN,
+  DayField.START,
+  DayField.END,
+];
+
 // A day's people: coworker ids separated by single spaces, each once.
 const isPeople = (value: string): boolean => {
   const ids = value.split(" ");
