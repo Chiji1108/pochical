@@ -37,11 +37,14 @@ import {
 // none of their own, and the frame they are shown in (design-widget-frame)
 // stands in for the rest.
 //
-// Four kinds, each in the sizes it suits: 今日, 次の休み (how soon the
-// next day off comes, alone or with someone picked when editing the
-// widget), リスト (today and the days after, a line each) and カレンダー
-// (two weeks, the month). The mark says which shift it is, so words beside
-// it are only what changed, and screen readers always hear the name.
+// Four kinds, each in the sizes it suits: シンプル (today, and tomorrow,
+// large), 次の休み (how soon the next day off comes, alone, with someone
+// or with a group picked when editing the widget), これから (the days
+// from today, with someone's beside them if picked) and カレンダー (two
+// weeks, the month). The mark says which shift it is, so words beside it
+// are only what changed, and screen readers always hear the name. A
+// memo's words are the app's; widgets show only that a day has one, with
+// the calendar's stroke under its date.
 
 // How the system is drawing the widget, as SwiftUI's widgetRenderingMode
 // tells a view: in full color, or flattened to one color by opacity
@@ -262,7 +265,6 @@ function useWords() {
       heading: (date: Date) => englishWeekdays[date.getDay()] ?? "",
       inDays: (inDays: number) =>
         inDays === 1 ? "Tomorrow" : `in ${inDays} days`,
-      line: (date: Date) => `${day(date)} ${date.getDate()}`,
       apart: "No days off together yet",
       nextOff: "Next day off",
       nothingYet: "Nothing yet",
@@ -275,6 +277,7 @@ function useWords() {
         `Waiting on ${first}${rest.length > 0 ? ` +${rest.length}` : ""}`,
       short: (date: Date) => `${month(date)} ${date.getDate()}.`,
       today: "Today",
+      tomorrow: "Tomorrow",
       // The day after a day off, short enough to keep clear of the
       // poodle in the corner: Fri, as 明日 is in Japanese.
       nextDay: (date: Date) => day(date),
@@ -289,7 +292,6 @@ function useWords() {
     heading: (date: Date) =>
       `${date.getMonth() + MONTH_NUMBER}月 ${weekday(date)}曜日`,
     inDays: (inDays: number) => (inDays === 1 ? "明日" : `${inDays}日後`),
-    line: (date: Date) => `${date.getDate()} ${weekday(date)}`,
     nextDay: () => "明日",
     nextOff: "次の休み",
     nothingYet: "まだ入っていません",
@@ -300,6 +302,7 @@ function useWords() {
     restTogether: "ふたりとも\nおやすみ",
     short: monthDay,
     today: "今日",
+    tomorrow: "明日",
     unit: "日後",
     waiting: (names: string[]) => `${waitingNames(names)}の入力待ち`,
     weekday,
@@ -337,17 +340,18 @@ const simple = {
     minWidth: 0,
     textAlign: "center",
   }),
+  // Over tomorrow: small spaced capitals, a label rather than a date.
+  label: css({
+    color: "text.secondary",
+    fontSize: "11px",
+    letterSpacing: "0.12em",
+    lineHeight: "22px",
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
+  }),
   mark: css({ display: "flex" }),
   pair: css({ display: "flex", gap: "16px", height: "100%" }),
   rule: css({ bg: "separator", flexShrink: 0, width: "1px" }),
-  note: css({
-    color: "text.secondary",
-    maxWidth: "100%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    textStyle: "subheadline",
-    whiteSpace: "nowrap",
-  }),
   words: css({
     fontVariantNumeric: "tabular-nums",
     fontWeight: 400,
@@ -369,28 +373,29 @@ const QUIET_GROWTH = 12;
 // it, as one group in the middle of its room. A day with nothing changed
 // is its own design, not one with an empty line kept for words: its mark
 // grows and the group closes up round it.
-function SimpleDay({
-  day,
-  withNote = false,
-}: {
-  day: WidgetDay;
-  // これから's today: the memo's first line where nothing changed.
-  withNote?: boolean;
-}) {
+function SimpleDay({ day, label }: { day: WidgetDay; label?: string }) {
   const words = useWords();
   const said = changeWords(day, useShiftNames()) !== undefined;
-  const note = !said && withNote ? day.note : undefined;
   const roomy = useContext(WidgetSizeContext).height >= SIMPLE_ROOMY;
   const base = roomy ? 64 : 48;
-  const quiet = !(said || note);
+  // A memo is the calendar's stroke under the date (or 明日); its words
+  // are the app's.
+  const noted = day.note ? dayParts.noted : undefined;
   return (
     <div className={simple.day}>
-      <span className={simple.date}>{words.short(day.date)}</span>
+      {label ? (
+        <span className={simple.label}>
+          <span className={noted}>{label}</span>
+        </span>
+      ) : (
+        <span className={simple.date}>
+          <span className={noted}>{words.short(day.date)}</span>
+        </span>
+      )}
       <span className={simple.mark}>
-        <DayMark day={day} size={quiet ? base + QUIET_GROWTH : base} />
+        <DayMark day={day} size={said ? base : base + QUIET_GROWTH} />
       </span>
       {said && <Change className={simple.words} day={day} />}
-      {note && <span className={simple.note}>{note}</span>}
       {!said && (
         <span className={srOnly}>
           {day.name ?? NOTHING}
@@ -401,12 +406,8 @@ function SimpleDay({
   );
 }
 
-// Today alone; on a day off, said as such, with the poodle. Set to
-// someone, today and tomorrow, theirs under the person's.
+// Today alone; on a day off, said as such, with the poodle.
 export function SimpleSmall({ entry }: { entry: WidgetEntry }) {
-  if (entry.pair) {
-    return <DayColumns count={2} entry={entry} />;
-  }
   const day = entry.today;
   if (day.off && !day.change) {
     return (
@@ -418,10 +419,17 @@ export function SimpleSmall({ entry }: { entry: WidgetEntry }) {
   return <SimpleDay day={day} />;
 }
 
-// Five days from today, a column each; set to someone, theirs under the
-// person's.
+// Today and tomorrow, side by side.
 export function SimpleMedium({ entry }: { entry: WidgetEntry }) {
-  return <DayColumns count={5} entry={entry} />;
+  const words = useWords();
+  const [, tomorrow] = entry.upcoming;
+  return (
+    <div className={simple.pair}>
+      <SimpleDay day={entry.today} />
+      <span aria-hidden="true" className={simple.rule} />
+      {tomorrow && <SimpleDay day={tomorrow} label={words.tomorrow} />}
+    </div>
+  );
 }
 
 // ── これから ─────────────────────────────────────────────────────────────
@@ -434,31 +442,6 @@ const upcoming = {
     display: "flex",
     justifyContent: "space-between",
   }),
-  pair: css({ gap: "12px" }),
-  row: css({
-    "&:not(:first-child)": { borderTop: "1px solid token(colors.separator)" },
-    alignItems: "center",
-    display: "grid",
-    flex: 1,
-    gap: "4px",
-    gridTemplateColumns: "52px 18px 1fr",
-    minHeight: 0,
-  }),
-  rowLabel: css({
-    color: "text.secondary",
-    fontVariantNumeric: "tabular-nums",
-    textStyle: "footnote",
-    whiteSpace: "nowrap",
-  }),
-  rowWords: css({
-    color: "text.secondary",
-    minWidth: 0,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    textStyle: "footnote",
-    whiteSpace: "nowrap",
-  }),
-  rows: css({ display: "flex", flex: 1, flexDirection: "column", minWidth: 0 }),
   // Today's line and the three days as one group in the middle, not
   // pushed to the top and bottom with a gap between.
   small: css({
@@ -468,8 +451,6 @@ const upcoming = {
     height: "100%",
     justifyContent: "center",
   }),
-  // シンプル's today, in the medium one's left column.
-  today: css({ display: "flex", flexShrink: 0, width: "100px" }),
   words: css({
     fontVariantNumeric: "tabular-nums",
     fontWeight: 400,
@@ -480,17 +461,20 @@ const upcoming = {
   }),
 };
 
-// Today large: its date and mark, what changed, and its memo's first
-// line.
 // Today as a heading line: its date and its mark side by side, and what
-// changed under them only on a day that has some.
+// changed under them only on a day that has some. A memo is the
+// calendar's stroke under the date.
 function UpcomingHead({ day }: { day: WidgetDay }) {
   const words = useWords();
   const said = changeWords(day, useShiftNames()) !== undefined;
   return (
     <div className={upcoming.head}>
       <span className={upcoming.headLine}>
-        <span className={simple.date}>{words.short(day.date)}</span>
+        <span className={simple.date}>
+          <span className={cx(day.note && dayParts.noted)}>
+            {words.short(day.date)}
+          </span>
+        </span>
         <DayMark day={day} size={28} />
       </span>
       {said ? (
@@ -505,8 +489,12 @@ function UpcomingHead({ day }: { day: WidgetDay }) {
   );
 }
 
-// Today's line, and the next three days' marks under it.
+// Today's line, and the next three days' marks under it; set to someone,
+// today and tomorrow, theirs under the person's.
 export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
+  if (entry.pair) {
+    return <DayColumns count={2} entry={entry} />;
+  }
   return (
     <div className={upcoming.small}>
       <UpcomingHead day={entry.today} />
@@ -515,37 +503,13 @@ export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
   );
 }
 
-// シンプル's today on the left, with the memo where nothing changed; on
-// the right, the days after it a line each, each by its date (25 金),
-// with what changed, the memo, or the shift's name when names are shown.
+// Five days from today, a column each; set to someone, theirs under the
+// person's.
 export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
-  const words = useWords();
-  const named = useShiftNames();
-  return (
-    <div className={cx(simple.pair, upcoming.pair)}>
-      <div className={upcoming.today}>
-        <SimpleDay day={entry.today} withNote />
-      </div>
-      <span aria-hidden="true" className={simple.rule} />
-      <ol className={`${list} ${upcoming.rows}`}>
-        {entry.upcoming.slice(1, 5).map((day) => (
-          <li className={upcoming.row} key={day.date.getTime()}>
-            <SpokenDay day={day} />
-            <span aria-hidden="true" className={upcoming.rowLabel}>
-              {words.line(day.date)}
-            </span>
-            <DayMark day={day} size={18} />
-            <span aria-hidden="true" className={upcoming.rowWords}>
-              {day.change ?? day.note ?? (named ? day.name : "")}
-            </span>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
+  return <DayColumns count={5} entry={entry} />;
 }
 
-// ── シンプル's days ─────────────────────────────────────────────────────
+// ── これから's days ─────────────────────────────────────────────────────
 
 // Where the widget is taller, as on Android's launcher, the marks grow.
 const COLUMNS_ROOMY = 150;
@@ -740,7 +704,7 @@ function ColumnDate({
 // only what changed under the mark. A day off is a tile down its whole
 // column, date and all, as the calendar's day is. Today is always the
 // first, so it is drawn plain. A memo is the calendar's stroke under the
-// date; its words stay in これから and the app.
+// date; its words are the app's.
 //
 // Set to someone, it is the group's 週ごと in small: the person's row and
 // theirs, each with their face in a first column as wide as the days',
@@ -1047,7 +1011,9 @@ function NextDays({ days }: { days: WidgetDay[] }) {
             aria-hidden="true"
             className={cx(nextDays.weekday, toneText({ tone: day.tone }))}
           >
-            {words.weekday(day.date)}
+            <span className={cx(day.note && dayParts.noted)}>
+              {words.weekday(day.date)}
+            </span>
           </span>
           <DayMark day={day} size={24} />
         </li>
@@ -1303,7 +1269,7 @@ const offs = {
     display: "grid",
     flex: 1,
     gap: "8px",
-    // As quiet as リスト's lines: the date, its mark, and how soon at the
+    // As quiet as a list's lines: the date, its mark, and how soon at the
     // end in the secondary color. Only the small one counts large.
     gridTemplateColumns: "auto 18px 1fr",
   }),
@@ -1479,7 +1445,10 @@ function RestToday({ entry }: { entry: WidgetEntry }) {
       <span className={srOnly}>{spokenOff(entry, { day, inDays: 0 })}</span>
       <PeekingDog />
       <span aria-hidden="true" className={offs.head}>
-        <span className={oneLine}>{words.date(day.date)}</span>
+        {/* The stroke outside the clipped line, so its ends show. */}
+        <span className={cx(day.note && dayParts.noted)}>
+          <span className={oneLine}>{words.date(day.date)}</span>
+        </span>
         <CompanionFace entry={entry} />
       </span>
       <span aria-hidden="true" className={rest.title}>

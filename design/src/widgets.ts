@@ -3,9 +3,6 @@
 // native apps (Widgets.swift, Widgets.kt) and as JSON
 // (spec/design-tokens.json).
 export const widgetRules = {
-  // The lines a memo is cut at, wherever a widget shows it: 今日's small,
-  // and each day of 今日's medium.
-  memoLines: 1,
   // 次の休み shows up to this many days off.
   nextOffs: 3,
   // How many days ahead of today 次の休み looks, and no further than what
