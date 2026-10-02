@@ -150,7 +150,7 @@ export function firstUnreadOf(messages: Message[], unread: number) {
       }
     }
   }
-  return;
+  return undefined;
 }
 
 // The last line sharing days or putting them to the vote.

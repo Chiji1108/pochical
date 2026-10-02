@@ -40,7 +40,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { MouseEvent, ReactElement, ReactNode } from "react";
+import type { MouseEvent, ReactElement, ReactNode, UIEvent } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import {
@@ -1046,13 +1046,10 @@ export function ChatPage({
   onChange: (messages: Message[]) => void;
   onOpenDay: (date: Date) => void;
 }) {
-  const [draft, setDraft] = useState("");
   // Messages whose words run past chatRules.foldLines, and those opened in full.
   const [folded, setFolded] = useState<Record<string, boolean>>({});
   const [unfolded, setUnfolded] = useState<string[]>([]);
-  // Your message being changed in the composer, and the one being taken
-  // back, asked about first.
-  const [editing, setEditing] = useState<string>();
+  // Your message being taken back, asked about first.
   const [unsending, setUnsending] = useState<string>();
   // Someone else's message being reported, and blocked members' messages
   // shown for now.
@@ -1062,64 +1059,12 @@ export function ChatPage({
   const [offerNext, setOfferNext] = useState<Member>();
   const [revealed, setRevealed] = useState<string[]>([]);
   const blocked = useUser((state) => state.blocked);
-  const formRef = useRef<HTMLFormElement>(null);
   // A link long pressed in a message's words: its own small menu, 開く and
   // コピー, as iOS offers on a link in text, rather than the message's.
   const [linkMenu, setLinkMenu] = useState<LinkMenuAt>();
-  // Members picked from the @ list, made mentions as the message is sent.
-  const [picked, setPicked] = useState<{ id: string; name: string }[]>([]);
-  const [attached, setAttached] = useState(attach);
-  const linkPreview = useLinkPreview(draft);
-  // Photos chosen to go with the next send, as the chat apps hold them
-  // above the composer: nothing is sent on choosing.
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  // Photos chosen but still being read; sending waits for them, so none
-  // lands in the composer after the message has gone.
-  const [reading, setReading] = useState(0);
-  // While the field is in use, the tools fold into a ›, as in LINE,
-  // giving it their room: from the moment it is tapped, and while words
-  // wait in it. › opens them until the next letter.
-  const [writing, setWriting] = useState(false);
-  const [toolsOpen, setToolsOpen] = useState(false);
-  const toolsFolded = (writing || draft !== "") && !toolsOpen;
-  let toolsWidth = toolsFolded ? toolWidth : toolWidth * toolCount;
-  // A message being changed keeps what it carries; only its words change.
-  if (editing !== undefined) {
-    toolsWidth = 0;
-  }
-  const photoInputRef = useRef<HTMLInputElement>(null);
   const toast = useContext(ToastContext);
-  // Photos of yours still uploading, or that could not be sent, by line.
-  // Only this phone knows them, as the apps keep them in their outbox;
-  // the group sees a photo once it is up.
-  const [uploads, setUploads] = useState<Record<string, Upload>>({});
   const [failedOpen, setFailedOpen] = useState<string>();
-  const uploadTimers = useRef<number[]>([]);
-  useEffect(
-    () => () => {
-      for (const timer of uploadTimers.current) {
-        window.clearTimeout(timer);
-      }
-    },
-    []
-  );
-  const upload = (ids: string[]) => {
-    const set = (status?: Upload) => {
-      setUploads((before) => {
-        const others = Object.entries(before).filter(
-          ([id]) => !ids.includes(id)
-        );
-        const these = status ? ids.map((id) => [id, status] as const) : [];
-        return Object.fromEntries([...others, ...these]);
-      });
-    };
-    set("sending");
-    uploadTimers.current.push(
-      window.setTimeout(() => {
-        set(photoSend === "fails" ? "failed" : undefined);
-      }, uploadMilliseconds)
-    );
-  };
+  const { failedCount, upload, uploads } = usePhotoUploads(photoSend);
   const [sharing, setSharing] = useState(false);
   // The line whose actions are open, and the one being answered.
   const [selected, setSelected] = useState<string>();
@@ -1127,166 +1072,21 @@ export function ChatPage({
   // The line whose reaction is being picked from every emoji.
   const [pickingFor, setPickingFor] = useState<string>();
   const [flash, setFlash] = useState<string>();
-  // As chat apps do, a chat opens on its latest line and follows each
-  // new one, like a day just shared from the shift table, and a photo's
-  // failure note under the lines just sent.
-  const listRef = useRef<HTMLOListElement>(null);
-  const lineCount = chat.messages.length;
-  const [sharedId] = useState(() =>
-    sharedFirst ? lastSharedOf(chat.messages) : undefined
-  );
-  // The first line unread as it opened: the others' lines, counted back
-  // from the latest. The line above it stays while the chat is open, as
-  // LINE keeps its 「ここから未読メッセージ」.
-  const [firstUnreadId] = useState(() =>
-    firstUnreadOf(chat.messages, unreadAtOpen)
-  );
-  // Until a line is added, it stays on the shared day, or on the line
-  // above the first unread one.
-  const [openedLines] = useState(lineCount);
-  const failedCount = Object.values(uploads).filter(
-    (status) => status === "failed"
-  ).length;
-  useLayoutEffect(() => {
-    const list = listRef.current;
-    if (!list || lineCount + failedCount === 0) {
-      return;
-    }
-    let target: string | undefined;
-    if (sharedId !== undefined) {
-      target = `#message-${sharedId}`;
-    } else if (firstUnreadId !== undefined) {
-      target = "#unread-line";
-    }
-    const shared =
-      target === undefined || lineCount !== openedLines
-        ? null
-        : list.querySelector<HTMLElement>(target);
-    list.scrollTop = shared
-      ? shared.getBoundingClientRect().top -
-        list.getBoundingClientRect().top +
-        list.scrollTop -
-        sharedRoom
-      : list.scrollHeight;
-  }, [lineCount, failedCount, openedLines, sharedId, firstUnreadId]);
-  // When what sits over the composer (a reply, days, photos) takes room,
-  // the lines keep their bottom edge, as in the chat apps, so the latest
-  // line is not hidden under it. When it goes, the room shows more below.
-  useLayoutEffect(() => {
-    const list = listRef.current;
-    if (!list) {
-      return;
-    }
-    let height = list.clientHeight;
-    const observer = new ResizeObserver(() => {
-      if (list.clientHeight < height) {
-        list.scrollTop += height - list.clientHeight;
-      }
-      height = list.clientHeight;
-    });
-    observer.observe(list);
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-  // Someone writing back, shown under the latest line: in the prototype,
-  // whoever spoke last before you, for a few seconds after you send. The
-  // apps show it from the typing frames (spec/sync-protocol.md).
-  const [typingId, setTypingId] = useState<string>();
-  const typingTimers = useRef<number[]>([]);
-  useEffect(
-    () => () => {
-      for (const timer of typingTimers.current) {
-        window.clearTimeout(timer);
-      }
-    },
-    []
-  );
-  const typingMember = group.members.find(
-    (member) => member.id === typingId && !member.me
-  );
-  const answerSoon = () => {
-    const last = chat.messages.findLast(
-      (message) => message.from !== "me" && !message.notice && !message.unsent
-    );
-    if (!last || blocked.includes(last.from)) {
-      return;
-    }
-    typingTimers.current.push(
-      window.setTimeout(() => {
-        setTypingId(last.from);
-      }, typingStartMs),
-      window.setTimeout(() => {
-        setTypingId(undefined);
-      }, typingStartMs + typingMs)
-    );
-  };
-  // ↓ to the latest line, once the chat is scrolled up from it.
-  const [awayFromLatest, setAwayFromLatest] = useState(false);
-  // The unread lines not yet on screen, counted on the ↓, as LINE and
-  // Slack count what is below: from the first unread line, the others'
-  // lines whose top has not yet come above the foot of the list. Once on
-  // screen, a line stays counted as seen.
-  const seenLines = useRef(new Set<string>());
-  const [unseen, setUnseen] = useState(0);
-  const countUnseen = (list: HTMLElement) => {
-    const start = chat.messages.findIndex(
-      (message) => message.id === firstUnreadId
-    );
-    if (start === -1) {
-      return;
-    }
-    const foot = list.getBoundingClientRect().bottom;
-    let count = 0;
-    for (const message of chat.messages.slice(start)) {
-      const element = list.querySelector(`#message-${message.id}`);
-      if (message.from === "me" || message.notice || !element) {
-        continue;
-      }
-      if (element.getBoundingClientRect().top < foot) {
-        seenLines.current.add(message.id);
-      } else if (!seenLines.current.has(message.id)) {
-        count += 1;
-      }
-    }
-    setUnseen(count);
-  };
-  // Once, as the chat opens on its first unread line.
-  const countOnOpen = useEffectEvent(() => {
-    if (listRef.current) {
-      countUnseen(listRef.current);
-    }
+  const { answerSoon, typingMember } = useTypingSoon(group, chat.messages);
+  const {
+    awayFromLatest,
+    firstUnreadId,
+    handleLatest,
+    handleScroll,
+    listRef,
+    unseen,
+  } = useChatScroll({
+    failedCount,
+    messages: chat.messages,
+    sharedFirst,
+    typing: typingMember !== undefined,
+    unreadAtOpen,
   });
-  useLayoutEffect(() => {
-    countOnOpen();
-  }, []);
-  // The dots come in under the latest line in sight, as a new line does,
-  // unless the chat is scrolled up away from it.
-  useLayoutEffect(() => {
-    const list = listRef.current;
-    if (list && typingId !== undefined && !awayFromLatest) {
-      list.scrollTop = list.scrollHeight;
-    }
-  }, [typingId, awayFromLatest]);
-  // An @ being written at the end of the message, in the group chat, lists
-  // the others whose name has what follows it, as LINE does; one picked
-  // goes in as @name and a space.
-  const mentionQuery = isGroup
-    ? MENTION_QUERY.exec(draft)?.groups?.query
-    : undefined;
-  const mentionable =
-    mentionQuery === undefined
-      ? []
-      : group.members.filter(
-          (member) => !member.me && member.name.includes(mentionQuery)
-        );
-  const pickMention = (member: Member) => {
-    setDraft(draft.replace(MENTION_QUERY, `@${member.name} `));
-    setPicked((before) => [
-      ...before.filter((other) => other.id !== member.id),
-      { id: member.id, name: member.name },
-    ]);
-  };
   // Who wrote a line, including members taken out since, whose lines stay.
   const writerOf = (id?: string) =>
     [...group.members, ...formerMembers].find((member) => member.id === id);
@@ -1297,6 +1097,13 @@ export function ChatPage({
     [...group.members, ...formerMembers],
     useYourName(group)
   );
+  const composer = useComposer({
+    attach,
+    // An @ lists the others in the group chat only.
+    members: isGroup ? group.members : noMembers,
+    mentionName,
+  });
+  const { editing } = composer;
   // Sends one line or several at once, the first answering the line
   // being replied to.
   const post = (...lines: Omit<Message, "id" | "from" | "when" | "time">[]) => {
@@ -1316,36 +1123,9 @@ export function ChatPage({
       upload(photoIds);
     }
   };
-  // The attached days go first, then each photo as a line of its own,
-  // then what was written, if anything.
-  // Puts your message's words back in the composer to change them, its
-  // mentions as @name again.
   const startEditing = (message: Message) => {
-    const text = message.text ?? "";
-    setEditing(message.id);
     setReplyTo(undefined);
-    setDraft(plainText(text, mentionName));
-    setPicked(mentionsOf(text).map((id) => ({ id, name: mentionName(id) })));
-    formRef.current?.querySelector("textarea")?.focus();
-  };
-  const stopEditing = () => {
-    setEditing(undefined);
-    setDraft("");
-    setPicked([]);
-    linkPreview.reset();
-  };
-  // The changed words replace the old ones, marked 編集済み; the page of
-  // its link stays while the link does.
-  const saveEdit = (id: string, text: string) => {
-    onChange(
-      editMessage(
-        chat.messages,
-        id,
-        withMentions(text, picked),
-        linkPreview.ready
-      )
-    );
-    stopEditing();
+    composer.startEditing(message);
   };
   const pins = pinsOf(chat.messages);
   const [pinsOpen, setPinsOpen] = useState(false);
@@ -1376,50 +1156,45 @@ export function ChatPage({
     onChange(unsendMessage(chat.messages, id));
     setUnsending(undefined);
     if (editing === id) {
-      stopEditing();
+      composer.stopEditing();
     }
   };
   const send = () => {
-    const text = draft.trim();
+    const text = composer.draft.trim();
+    // The changed words replace the old ones, marked 編集済み; the page of
+    // its link stays while the link does.
     if (editing !== undefined) {
       if (text) {
-        saveEdit(editing, text);
+        onChange(
+          editMessage(
+            chat.messages,
+            editing,
+            withMentions(text, composer.picked),
+            composer.linkPreview.ready
+          )
+        );
+        composer.stopEditing();
       }
       return;
     }
-    if (reading > 0 || (!text && !attached && photos.length === 0)) {
+    if (!composer.sendable) {
       return;
     }
+    // The attached days go first, then each photo as a line of its own,
+    // then what was written, if anything.
     post(
-      ...(attached ? [{ days: attached }] : []),
-      ...photos.map((photo) => ({ photo })),
+      ...(composer.attached ? [{ days: composer.attached }] : []),
+      ...composer.photos.map((photo) => ({ photo })),
       ...(text
-        ? [{ link: linkPreview.ready, text: withMentions(text, picked) }]
+        ? [
+            {
+              link: composer.linkPreview.ready,
+              text: withMentions(text, composer.picked),
+            },
+          ]
         : [])
     );
-    setDraft("");
-    setPicked([]);
-    linkPreview.reset();
-    setAttached(undefined);
-    setPhotos([]);
-  };
-  const choosePhotos = async (files: File[]) => {
-    const room = maxPhotos - photos.length;
-    if (files.length > room) {
-      toast(`写真は一度に${maxPhotos}枚まで送れます`, "problem");
-    }
-    const taken = files.slice(0, room);
-    setReading((count) => count + taken.length);
-    // One photo that cannot be opened leaves the others chosen.
-    const results = await Promise.allSettled(taken.map(photoOf));
-    setReading((count) => count - taken.length);
-    const chosen = results.flatMap((result) =>
-      result.status === "fulfilled" ? [result.value] : []
-    );
-    setPhotos((before) => [...before, ...chosen].slice(0, maxPhotos));
-    if (chosen.length < taken.length) {
-      toast("開けない写真がありました", "problem");
-    }
+    composer.clear();
   };
   const react = (id: string, emoji: string) => {
     onChange(reactTo(chat.messages, id, emoji));
@@ -1461,7 +1236,7 @@ export function ChatPage({
     },
     onReply: () => {
       if (editing !== undefined) {
-        stopEditing();
+        composer.stopEditing();
       }
       setReplyTo(message.id);
       setSelected(undefined);
@@ -1486,7 +1261,6 @@ export function ChatPage({
         : plainText(message.text, mentionName),
   });
   const replying = byId(replyTo);
-  const editingMessage = byId(editing);
   // One line of the chat as it is drawn: a message, or one of the app's.
   const lineOf = (message: Message, index: number) => {
     const previous = chat.messages[index - 1];
@@ -1890,14 +1664,7 @@ export function ChatPage({
         <ol
           aria-label={`${title}のメッセージ`}
           className={chatStyle.messages}
-          onScroll={(event) => {
-            const list = event.currentTarget;
-            setAwayFromLatest(
-              list.scrollHeight - list.scrollTop - list.clientHeight >
-                list.clientHeight / 2
-            );
-            countUnseen(list);
-          }}
+          onScroll={handleScroll}
           ref={listRef}
         >
           {chat.messages.length === 0 && (
@@ -1940,12 +1707,7 @@ export function ChatPage({
                   ? `最新のメッセージへ、まだ見ていない新着${unseen}件`
                   : "最新のメッセージへ"
               }
-              onClick={() => {
-                listRef.current?.scrollTo({
-                  behavior: "smooth",
-                  top: listRef.current.scrollHeight,
-                });
-              }}
+              onClick={handleLatest}
             >
               <ChevronDown aria-hidden="true" size={20} />
             </IconButton>
@@ -1960,279 +1722,20 @@ export function ChatPage({
           </span>
         )}
       </div>
-      {editingMessage && (
-        <div className={chatStyle.replying}>
-          <span className={chatStyle.quote}>
-            <span className={chatStyle.quoteName}>メッセージを編集</span>
-            <span className={chatStyle.quoteText}>
-              {summaryOf(editingMessage, mentionName)}
-            </span>
-          </span>
-          <IconButton glass={false} label="編集をやめる" onClick={stopEditing}>
-            <X aria-hidden="true" size={16} />
-          </IconButton>
-        </div>
-      )}
-      {replying && (
-        <div className={chatStyle.replying}>
-          <span className={chatStyle.quote}>
-            <span className={chatStyle.quoteName}>
-              {nameOf(replying.from)}に返信
-            </span>
-            <span className={chatStyle.quoteText}>
-              {summaryOf(replying, mentionName)}
-            </span>
-          </span>
-          {replying.photo && (
-            <img
-              alt=""
-              className={chatStyle.quoteThumb}
-              src={replying.photo.src}
-            />
-          )}
-          <IconButton
-            glass={false}
-            label="返信をやめる"
-            onClick={() => {
-              setReplyTo(undefined);
-            }}
-          >
-            <X aria-hidden="true" size={16} />
-          </IconButton>
-        </div>
-      )}
-      {attached && (
-        <div className={chatStyle.replying}>
-          <span className={chatStyle.quote}>
-            <span className={chatStyle.quoteName}>共有する日</span>
-            <span className={chatStyle.quoteText}>{daysSummary(attached)}</span>
-          </span>
-          <IconButton
-            glass={false}
-            label="共有をやめる"
-            onClick={() => {
-              setAttached(undefined);
-            }}
-          >
-            <X aria-hidden="true" size={16} />
-          </IconButton>
-        </div>
-      )}
-      {linkPreview.shown && (
-        <div className={chatStyle.replying}>
-          <span className={chatStyle.quote}>
-            <span className={chatStyle.quoteName}>
-              {linkPreview.ready?.site ?? siteOf(linkPreview.shown)}
-            </span>
-            <span className={chatStyle.quoteText}>
-              {linkPreview.ready?.title ?? "読み込み中…"}
-            </span>
-          </span>
-          {linkPreview.ready?.image && (
-            <img
-              alt=""
-              className={chatStyle.quoteThumb}
-              src={linkPreview.ready.image}
-            />
-          )}
-          <IconButton
-            glass={false}
-            label="リンクのプレビューを付けない"
-            onClick={linkPreview.handleSkip}
-          >
-            <X aria-hidden="true" size={16} />
-          </IconButton>
-        </div>
-      )}
-      {photos.length > 0 && (
-        <ul
-          aria-label="送る写真"
-          className={chatStyle.tray({
-            below:
-              replying !== undefined ||
-              attached !== undefined ||
-              linkPreview.shown !== undefined,
-          })}
-        >
-          {photos.map((photo, index) => (
-            <li className={chatStyle.trayItem} key={photo.src}>
-              <img alt="" className={chatStyle.trayImage} src={photo.src} />
-              <button
-                aria-label={`${index + 1}枚目の写真を外す`}
-                className={chatStyle.trayRemove}
-                onClick={() => {
-                  setPhotos((before) =>
-                    before.filter((other) => other !== photo)
-                  );
-                }}
-                type="button"
-              >
-                <X aria-hidden="true" size={12} strokeWidth={3} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {mentionable.length > 0 && (
-        <ul aria-label="メンションする人" className={chatStyle.mentionList}>
-          {mentionable.map((member) => (
-            <li key={member.id}>
-              <button
-                className={chatStyle.mentionPick}
-                onClick={() => {
-                  pickMention(member);
-                }}
-                // The field keeps focus, and the keyboard stays up.
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                }}
-                type="button"
-              >
-                <Avatar member={member} size={28} />
-                {member.name}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <form
-        className={chatStyle.composer({
-          replying:
-            editing !== undefined ||
-            replying !== undefined ||
-            attached !== undefined ||
-            linkPreview.shown !== undefined ||
-            photos.length > 0 ||
-            mentionable.length > 0,
-        })}
-        onSubmit={(event) => {
-          event.preventDefault();
-          send();
+      <Composer
+        composer={composer}
+        editingMessage={byId(editing)}
+        mentionName={mentionName}
+        nameOf={nameOf}
+        onSend={send}
+        onShareDays={() => {
+          setSharing(true);
         }}
-        ref={formRef}
-      >
-        {/* The system's photo picker, as the apps open PHPicker and
-            Android's photo picker; the camera is left to the camera. */}
-        <input
-          accept="image/*"
-          className={srOnly}
-          multiple
-          onChange={(event) => {
-            const files = [...(event.target.files ?? [])];
-            event.target.value = "";
-            choosePhotos(files).catch(() => undefined);
-          }}
-          ref={photoInputRef}
-          tabIndex={-1}
-          type="file"
-        />
-        {/* The tools narrow into a › and widen back, the field following
-            them, while the icons and the › fade one into the other. */}
-        <motion.span
-          animate={{ width: toolsWidth }}
-          className={chatStyle.composerTools}
-          initial={false}
-          transition={toolFold}
-        >
-          <AnimatePresence initial={false} mode="popLayout">
-            {editing === undefined && toolsFolded && (
-              <motion.button
-                animate={{ opacity: 1, scale: 1 }}
-                aria-label="写真と日にちのボタンを表示"
-                className={chatStyle.composerButton({ tool: true })}
-                exit={{ opacity: 0, scale: 0.6 }}
-                initial={{ opacity: 0, scale: 0.6 }}
-                key="more"
-                onClick={() => {
-                  setToolsOpen(true);
-                }}
-                // The field keeps focus (and the keyboard stays up), so
-                // the tools do not open under the finger as it leaves.
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                }}
-                transition={toolFold}
-                type="button"
-              >
-                <ChevronRight aria-hidden="true" size={22} />
-              </motion.button>
-            )}
-            {editing === undefined && !toolsFolded && (
-              <motion.span
-                animate={{ opacity: 1, x: 0 }}
-                className={chatStyle.composerToolRow}
-                exit={{ opacity: 0, x: -toolWidth }}
-                initial={{ opacity: 0, x: -toolWidth }}
-                key="tools"
-                transition={toolFold}
-              >
-                <button
-                  aria-label="写真を送る"
-                  className={chatStyle.composerButton({ tool: true })}
-                  onClick={() => {
-                    photoInputRef.current?.click();
-                  }}
-                  type="button"
-                >
-                  <ImageIcon aria-hidden="true" size={20} />
-                </button>
-                <button
-                  aria-label="日にちを共有"
-                  className={chatStyle.composerButton({ tool: true })}
-                  onClick={() => {
-                    setSharing(true);
-                  }}
-                  type="button"
-                >
-                  <CalendarPlus aria-hidden="true" size={20} />
-                </button>
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </motion.span>
-        <LimitedTextArea
-          aria-label="メッセージ"
-          className={chatStyle.composerInput}
-          kind="chatMessage"
-          onBlur={() => {
-            setWriting(false);
-          }}
-          onValueChange={(text) => {
-            setDraft(text);
-            setToolsOpen(false);
-          }}
-          onFocus={() => {
-            setWriting(true);
-            setToolsOpen(false);
-          }}
-          placeholder="メッセージ"
-          value={draft}
-        />
-        {editing === undefined ? (
-          <button
-            aria-label="送る"
-            className={chatStyle.composerButton({ send: true })}
-            disabled={
-              reading > 0 ||
-              (draft.trim() === "" && !attached && photos.length === 0)
-            }
-            type="submit"
-          >
-            <SendHorizontal aria-hidden="true" size={18} />
-          </button>
-        ) : (
-          // Saves rather than sends: a check, as Telegram and LINE show
-          // while a message is changed. Emptying it does not delete it.
-          <button
-            aria-label="編集を保存"
-            className={chatStyle.composerButton({ send: true })}
-            disabled={draft.trim() === ""}
-            type="submit"
-          >
-            <Check aria-hidden="true" size={20} />
-          </button>
-        )}
-      </form>
+        onStopReplying={() => {
+          setReplyTo(undefined);
+        }}
+        replying={replying}
+      />
       <EmojiPickerSheet
         onOpenChange={(open) => {
           if (!open) {
@@ -2369,6 +1872,657 @@ export function ChatPage({
         poll={byId(deciding)?.poll}
       />
     </Screen>
+  );
+}
+
+// Photos of yours still uploading, or that could not be sent, by line.
+// Only this phone knows them, as the apps keep them in their outbox; the
+// group sees a photo once it is up.
+function usePhotoUploads(photoSend: PhotoSend) {
+  const [uploads, setUploads] = useState<Record<string, Upload>>({});
+  const timers = useRef<number[]>([]);
+  useEffect(
+    () => () => {
+      for (const timer of timers.current) {
+        window.clearTimeout(timer);
+      }
+    },
+    []
+  );
+  const upload = (ids: string[]) => {
+    const set = (status?: Upload) => {
+      setUploads((before) => {
+        const others = Object.entries(before).filter(
+          ([id]) => !ids.includes(id)
+        );
+        const these = status ? ids.map((id) => [id, status] as const) : [];
+        return Object.fromEntries([...others, ...these]);
+      });
+    };
+    set("sending");
+    timers.current.push(
+      window.setTimeout(() => {
+        set(photoSend === "fails" ? "failed" : undefined);
+      }, uploadMilliseconds)
+    );
+  };
+  const failedCount = Object.values(uploads).filter(
+    (status) => status === "failed"
+  ).length;
+  return { failedCount, upload, uploads };
+}
+
+// Someone writing back, shown under the latest line: in the prototype,
+// whoever spoke last before you, for a few seconds after you send. The
+// apps show it from the typing frames (spec/sync-protocol.md).
+function useTypingSoon(group: Group, messages: Message[]) {
+  const blocked = useUser((state) => state.blocked);
+  const [typingId, setTypingId] = useState<string>();
+  const timers = useRef<number[]>([]);
+  useEffect(
+    () => () => {
+      for (const timer of timers.current) {
+        window.clearTimeout(timer);
+      }
+    },
+    []
+  );
+  const typingMember = group.members.find(
+    (member) => member.id === typingId && !member.me
+  );
+  const answerSoon = () => {
+    const last = messages.findLast(
+      (message) => message.from !== "me" && !message.notice && !message.unsent
+    );
+    if (!last || blocked.includes(last.from)) {
+      return;
+    }
+    timers.current.push(
+      window.setTimeout(() => {
+        setTypingId(last.from);
+      }, typingStartMs),
+      window.setTimeout(() => {
+        setTypingId(undefined);
+      }, typingStartMs + typingMs)
+    );
+  };
+  return { answerSoon, typingMember };
+}
+
+// Where the chat's lines are scrolled. As chat apps do, a chat opens on
+// its latest line and follows each new one, like a day just shared from
+// the shift table, and a photo's failure note under the lines just sent;
+// or it opens on the last shared day, or above the first unread line.
+function useChatScroll({
+  messages,
+  sharedFirst,
+  unreadAtOpen,
+  failedCount,
+  typing,
+}: {
+  messages: Message[];
+  sharedFirst: boolean;
+  unreadAtOpen: number;
+  failedCount: number;
+  typing: boolean;
+}) {
+  const listRef = useRef<HTMLOListElement>(null);
+  const lineCount = messages.length;
+  const [sharedId] = useState(() =>
+    sharedFirst ? lastSharedOf(messages) : undefined
+  );
+  // The first line unread as it opened: the others' lines, counted back
+  // from the latest. The line above it stays while the chat is open, as
+  // LINE keeps its 「ここから未読メッセージ」.
+  const [firstUnreadId] = useState(() => firstUnreadOf(messages, unreadAtOpen));
+  // Until a line is added, it stays on the shared day, or on the line
+  // above the first unread one.
+  const [openedLines] = useState(lineCount);
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list || lineCount + failedCount === 0) {
+      return;
+    }
+    let target: string | undefined;
+    if (sharedId !== undefined) {
+      target = `#message-${sharedId}`;
+    } else if (firstUnreadId !== undefined) {
+      target = "#unread-line";
+    }
+    const shared =
+      target === undefined || lineCount !== openedLines
+        ? null
+        : list.querySelector<HTMLElement>(target);
+    list.scrollTop = shared
+      ? shared.getBoundingClientRect().top -
+        list.getBoundingClientRect().top +
+        list.scrollTop -
+        sharedRoom
+      : list.scrollHeight;
+  }, [lineCount, failedCount, openedLines, sharedId, firstUnreadId]);
+  // When what sits over the composer (a reply, days, photos) takes room,
+  // the lines keep their bottom edge, as in the chat apps, so the latest
+  // line is not hidden under it. When it goes, the room shows more below.
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) {
+      return;
+    }
+    let height = list.clientHeight;
+    const observer = new ResizeObserver(() => {
+      if (list.clientHeight < height) {
+        list.scrollTop += height - list.clientHeight;
+      }
+      height = list.clientHeight;
+    });
+    observer.observe(list);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+  // ↓ to the latest line, once the chat is scrolled up from it.
+  const [awayFromLatest, setAwayFromLatest] = useState(false);
+  // The unread lines not yet on screen, counted on the ↓, as LINE and
+  // Slack count what is below: from the first unread line, the others'
+  // lines whose top has not yet come above the foot of the list. Once on
+  // screen, a line stays counted as seen.
+  const seenLines = useRef(new Set<string>());
+  const [unseen, setUnseen] = useState(0);
+  const countUnseen = (list: HTMLElement) => {
+    const start = messages.findIndex((message) => message.id === firstUnreadId);
+    if (start === -1) {
+      return;
+    }
+    const foot = list.getBoundingClientRect().bottom;
+    let count = 0;
+    for (const message of messages.slice(start)) {
+      const element = list.querySelector(`#message-${message.id}`);
+      if (message.from === "me" || message.notice || !element) {
+        continue;
+      }
+      if (element.getBoundingClientRect().top < foot) {
+        seenLines.current.add(message.id);
+      } else if (!seenLines.current.has(message.id)) {
+        count += 1;
+      }
+    }
+    setUnseen(count);
+  };
+  // Once, as the chat opens on its first unread line.
+  const countOnOpen = useEffectEvent(() => {
+    if (listRef.current) {
+      countUnseen(listRef.current);
+    }
+  });
+  useLayoutEffect(() => {
+    countOnOpen();
+  }, []);
+  // The dots come in under the latest line in sight, as a new line does,
+  // unless the chat is scrolled up away from it.
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (list && typing && !awayFromLatest) {
+      list.scrollTop = list.scrollHeight;
+    }
+  }, [typing, awayFromLatest]);
+  const handleScroll = (event: UIEvent<HTMLOListElement>) => {
+    const list = event.currentTarget;
+    setAwayFromLatest(
+      list.scrollHeight - list.scrollTop - list.clientHeight >
+        list.clientHeight / 2
+    );
+    countUnseen(list);
+  };
+  const handleLatest = () => {
+    listRef.current?.scrollTo({
+      behavior: "smooth",
+      top: listRef.current.scrollHeight,
+    });
+  };
+  return {
+    awayFromLatest,
+    firstUnreadId,
+    handleLatest,
+    handleScroll,
+    listRef,
+    unseen,
+  };
+}
+
+type Mention = { id: string; name: string };
+
+// What is being written: the words, the members picked from the @ list,
+// days brought from the shift table, photos chosen, the page of its first
+// link, and your message whose words are being changed instead.
+function useComposer({
+  attach,
+  members,
+  mentionName,
+}: {
+  attach?: Date[];
+  // Who an @ lists: the others in the group chat, none in a one-to-one.
+  members: Member[];
+  mentionName: (id: string) => string;
+}) {
+  const toast = useContext(ToastContext);
+  const [draft, setDraft] = useState("");
+  // Members picked from the @ list, made mentions as the message is sent.
+  const [picked, setPicked] = useState<Mention[]>([]);
+  const [attached, setAttached] = useState(attach);
+  const linkPreview = useLinkPreview(draft);
+  // Photos chosen to go with the next send, as the chat apps hold them
+  // above the composer: nothing is sent on choosing.
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  // Photos chosen but still being read; sending waits for them, so none
+  // lands in the composer after the message has gone.
+  const [reading, setReading] = useState(0);
+  const [editing, setEditing] = useState<string>();
+  const formRef = useRef<HTMLFormElement>(null);
+  // An @ being written at the end of the message lists the others whose
+  // name has what follows it, as LINE does; one picked goes in as @name
+  // and a space.
+  const mentionQuery = MENTION_QUERY.exec(draft)?.groups?.query;
+  const mentionable =
+    mentionQuery === undefined
+      ? []
+      : members.filter(
+          (member) => !member.me && member.name.includes(mentionQuery)
+        );
+  const pickMention = (member: Member) => {
+    setDraft(draft.replace(MENTION_QUERY, `@${member.name} `));
+    setPicked((before) => [
+      ...before.filter((other) => other.id !== member.id),
+      { id: member.id, name: member.name },
+    ]);
+  };
+  const clear = () => {
+    setDraft("");
+    setPicked([]);
+    linkPreview.reset();
+    setAttached(undefined);
+    setPhotos([]);
+  };
+  // Puts your message's words back in the composer to change them, its
+  // mentions as @name again.
+  const startEditing = (message: Message) => {
+    const text = message.text ?? "";
+    setEditing(message.id);
+    setDraft(plainText(text, mentionName));
+    setPicked(mentionsOf(text).map((id) => ({ id, name: mentionName(id) })));
+    formRef.current?.querySelector("textarea")?.focus();
+  };
+  const stopEditing = () => {
+    setEditing(undefined);
+    setDraft("");
+    setPicked([]);
+    linkPreview.reset();
+  };
+  const choosePhotos = async (files: File[]) => {
+    const room = maxPhotos - photos.length;
+    if (files.length > room) {
+      toast(`写真は一度に${maxPhotos}枚まで送れます`, "problem");
+    }
+    const taken = files.slice(0, room);
+    setReading((count) => count + taken.length);
+    // One photo that cannot be opened leaves the others chosen.
+    const results = await Promise.allSettled(taken.map(photoOf));
+    setReading((count) => count - taken.length);
+    const chosen = results.flatMap((result) =>
+      result.status === "fulfilled" ? [result.value] : []
+    );
+    setPhotos((before) => [...before, ...chosen].slice(0, maxPhotos));
+    if (chosen.length < taken.length) {
+      toast("開けない写真がありました", "problem");
+    }
+  };
+  // Something to send, once every photo chosen has been read.
+  const sendable =
+    reading === 0 &&
+    (draft.trim() !== "" || attached !== undefined || photos.length > 0);
+  return {
+    attached,
+    choosePhotos,
+    clear,
+    draft,
+    editing,
+    formRef,
+    linkPreview,
+    mentionable,
+    photos,
+    pickMention,
+    picked,
+    sendable,
+    setAttached,
+    setDraft,
+    setPhotos,
+    startEditing,
+    stopEditing,
+  };
+}
+
+type ComposerState = ReturnType<typeof useComposer>;
+
+// The foot of the chat: what the next message carries (the line it
+// answers, days, a link's page, photos), the @ list, and the field with
+// its tools and send.
+function Composer({
+  composer,
+  editingMessage,
+  replying,
+  onStopReplying,
+  nameOf,
+  mentionName,
+  onSend,
+  onShareDays,
+}: {
+  composer: ComposerState;
+  // Your message whose words are being changed, or the one being answered.
+  editingMessage?: Message;
+  replying?: Message;
+  onStopReplying: () => void;
+  nameOf: (id: string) => string;
+  mentionName: (id: string) => string;
+  onSend: () => void;
+  onShareDays: () => void;
+}) {
+  const {
+    attached,
+    draft,
+    editing,
+    formRef,
+    linkPreview,
+    mentionable,
+    photos,
+  } = composer;
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  // While the field is in use, the tools fold into a ›, as in LINE,
+  // giving it their room: from the moment it is tapped, and while words
+  // wait in it. › opens them until the next letter.
+  const [writing, setWriting] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const toolsFolded = (writing || draft !== "") && !toolsOpen;
+  let toolsWidth = toolsFolded ? toolWidth : toolWidth * toolCount;
+  // A message being changed keeps what it carries; only its words change.
+  if (editing !== undefined) {
+    toolsWidth = 0;
+  }
+  return (
+    <>
+      {editingMessage && (
+        <div className={chatStyle.replying}>
+          <span className={chatStyle.quote}>
+            <span className={chatStyle.quoteName}>メッセージを編集</span>
+            <span className={chatStyle.quoteText}>
+              {summaryOf(editingMessage, mentionName)}
+            </span>
+          </span>
+          <IconButton
+            glass={false}
+            label="編集をやめる"
+            onClick={() => {
+              composer.stopEditing();
+            }}
+          >
+            <X aria-hidden="true" size={16} />
+          </IconButton>
+        </div>
+      )}
+      {replying && (
+        <div className={chatStyle.replying}>
+          <span className={chatStyle.quote}>
+            <span className={chatStyle.quoteName}>
+              {nameOf(replying.from)}に返信
+            </span>
+            <span className={chatStyle.quoteText}>
+              {summaryOf(replying, mentionName)}
+            </span>
+          </span>
+          {replying.photo && (
+            <img
+              alt=""
+              className={chatStyle.quoteThumb}
+              src={replying.photo.src}
+            />
+          )}
+          <IconButton
+            glass={false}
+            label="返信をやめる"
+            onClick={onStopReplying}
+          >
+            <X aria-hidden="true" size={16} />
+          </IconButton>
+        </div>
+      )}
+      {attached && (
+        <div className={chatStyle.replying}>
+          <span className={chatStyle.quote}>
+            <span className={chatStyle.quoteName}>共有する日</span>
+            <span className={chatStyle.quoteText}>{daysSummary(attached)}</span>
+          </span>
+          <IconButton
+            glass={false}
+            label="共有をやめる"
+            onClick={() => {
+              composer.setAttached(undefined);
+            }}
+          >
+            <X aria-hidden="true" size={16} />
+          </IconButton>
+        </div>
+      )}
+      {linkPreview.shown && (
+        <div className={chatStyle.replying}>
+          <span className={chatStyle.quote}>
+            <span className={chatStyle.quoteName}>
+              {linkPreview.ready?.site ?? siteOf(linkPreview.shown)}
+            </span>
+            <span className={chatStyle.quoteText}>
+              {linkPreview.ready?.title ?? "読み込み中…"}
+            </span>
+          </span>
+          {linkPreview.ready?.image && (
+            <img
+              alt=""
+              className={chatStyle.quoteThumb}
+              src={linkPreview.ready.image}
+            />
+          )}
+          <IconButton
+            glass={false}
+            label="リンクのプレビューを付けない"
+            onClick={linkPreview.handleSkip}
+          >
+            <X aria-hidden="true" size={16} />
+          </IconButton>
+        </div>
+      )}
+      {photos.length > 0 && (
+        <ul
+          aria-label="送る写真"
+          className={chatStyle.tray({
+            below:
+              replying !== undefined ||
+              attached !== undefined ||
+              linkPreview.shown !== undefined,
+          })}
+        >
+          {photos.map((photo, index) => (
+            <li className={chatStyle.trayItem} key={photo.src}>
+              <img alt="" className={chatStyle.trayImage} src={photo.src} />
+              <button
+                aria-label={`${index + 1}枚目の写真を外す`}
+                className={chatStyle.trayRemove}
+                onClick={() => {
+                  composer.setPhotos((before) =>
+                    before.filter((other) => other !== photo)
+                  );
+                }}
+                type="button"
+              >
+                <X aria-hidden="true" size={12} strokeWidth={3} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {mentionable.length > 0 && (
+        <ul aria-label="メンションする人" className={chatStyle.mentionList}>
+          {mentionable.map((member) => (
+            <li key={member.id}>
+              <button
+                className={chatStyle.mentionPick}
+                onClick={() => {
+                  composer.pickMention(member);
+                }}
+                // The field keeps focus, and the keyboard stays up.
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                }}
+                type="button"
+              >
+                <Avatar member={member} size={28} />
+                {member.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form
+        className={chatStyle.composer({
+          replying:
+            editing !== undefined ||
+            replying !== undefined ||
+            attached !== undefined ||
+            linkPreview.shown !== undefined ||
+            photos.length > 0 ||
+            mentionable.length > 0,
+        })}
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSend();
+        }}
+        ref={formRef}
+      >
+        {/* The system's photo picker, as the apps open PHPicker and
+          Android's photo picker; the camera is left to the camera. */}
+        <input
+          accept="image/*"
+          className={srOnly}
+          multiple
+          onChange={(event) => {
+            const files = [...(event.target.files ?? [])];
+            event.target.value = "";
+            composer.choosePhotos(files).catch(() => undefined);
+          }}
+          ref={photoInputRef}
+          tabIndex={-1}
+          type="file"
+        />
+        {/* The tools narrow into a › and widen back, the field following
+          them, while the icons and the › fade one into the other. */}
+        <motion.span
+          animate={{ width: toolsWidth }}
+          className={chatStyle.composerTools}
+          initial={false}
+          transition={toolFold}
+        >
+          <AnimatePresence initial={false} mode="popLayout">
+            {editing === undefined && toolsFolded && (
+              <motion.button
+                animate={{ opacity: 1, scale: 1 }}
+                aria-label="写真と日にちのボタンを表示"
+                className={chatStyle.composerButton({ tool: true })}
+                exit={{ opacity: 0, scale: 0.6 }}
+                initial={{ opacity: 0, scale: 0.6 }}
+                key="more"
+                onClick={() => {
+                  setToolsOpen(true);
+                }}
+                // The field keeps focus (and the keyboard stays up), so
+                // the tools do not open under the finger as it leaves.
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                }}
+                transition={toolFold}
+                type="button"
+              >
+                <ChevronRight aria-hidden="true" size={22} />
+              </motion.button>
+            )}
+            {editing === undefined && !toolsFolded && (
+              <motion.span
+                animate={{ opacity: 1, x: 0 }}
+                className={chatStyle.composerToolRow}
+                exit={{ opacity: 0, x: -toolWidth }}
+                initial={{ opacity: 0, x: -toolWidth }}
+                key="tools"
+                transition={toolFold}
+              >
+                <button
+                  aria-label="写真を送る"
+                  className={chatStyle.composerButton({ tool: true })}
+                  onClick={() => {
+                    photoInputRef.current?.click();
+                  }}
+                  type="button"
+                >
+                  <ImageIcon aria-hidden="true" size={20} />
+                </button>
+                <button
+                  aria-label="日にちを共有"
+                  className={chatStyle.composerButton({ tool: true })}
+                  onClick={() => {
+                    onShareDays();
+                  }}
+                  type="button"
+                >
+                  <CalendarPlus aria-hidden="true" size={20} />
+                </button>
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.span>
+        <LimitedTextArea
+          aria-label="メッセージ"
+          className={chatStyle.composerInput}
+          kind="chatMessage"
+          onBlur={() => {
+            setWriting(false);
+          }}
+          onValueChange={(text) => {
+            composer.setDraft(text);
+            setToolsOpen(false);
+          }}
+          onFocus={() => {
+            setWriting(true);
+            setToolsOpen(false);
+          }}
+          placeholder="メッセージ"
+          value={draft}
+        />
+        {editing === undefined ? (
+          <button
+            aria-label="送る"
+            className={chatStyle.composerButton({ send: true })}
+            disabled={!composer.sendable}
+            type="submit"
+          >
+            <SendHorizontal aria-hidden="true" size={18} />
+          </button>
+        ) : (
+          // Saves rather than sends: a check, as Telegram and LINE show
+          // while a message is changed. Emptying it does not delete it.
+          <button
+            aria-label="編集を保存"
+            className={chatStyle.composerButton({ send: true })}
+            disabled={draft.trim() === ""}
+            type="submit"
+          >
+            <Check aria-hidden="true" size={20} />
+          </button>
+        )}
+      </form>
+    </>
   );
 }
 
