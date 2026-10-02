@@ -1,0 +1,163 @@
+{
+  "about": "Whether the apps may ask the store for its review prompt (spec/review.md), at a moment the spec allows. `opened` are the local days the app was opened, in order, the first being the first time and the last being today; a day opened twice counts once. `lastAsked` is the day and app version of the last ask, if any; `version` is the app's version now; `troubled` says something went wrong since the app came to the front. The numbers are design/src/review.ts's reviewRules: 21 days since first opened, 7 separate days, 2 months, 120 days between asks.",
+  "mayAsk": [
+    {
+      "name": "used on separate days over two months",
+      "opened": [
+        "2026-10-01",
+        "2026-10-03",
+        "2026-10-08",
+        "2026-10-15",
+        "2026-10-22",
+        "2026-10-29",
+        "2026-11-02"
+      ],
+      "version": "1.0.0",
+      "troubled": false,
+      "expected": true
+    },
+    {
+      "name": "twenty days after first opened is too soon",
+      "opened": [
+        "2026-09-25",
+        "2026-09-26",
+        "2026-09-28",
+        "2026-10-01",
+        "2026-10-05",
+        "2026-10-10",
+        "2026-10-12",
+        "2026-10-15"
+      ],
+      "version": "1.0.0",
+      "troubled": false,
+      "expected": false
+    },
+    {
+      "name": "twenty-one days after first opened is enough",
+      "opened": [
+        "2026-09-25",
+        "2026-09-26",
+        "2026-09-28",
+        "2026-10-01",
+        "2026-10-05",
+        "2026-10-10",
+        "2026-10-16"
+      ],
+      "version": "1.0.0",
+      "troubled": false,
+      "expected": true
+    },
+    {
+      "name": "six separate days are too few",
+      "opened": [
+        "2026-09-20",
+        "2026-09-27",
+        "2026-10-04",
+        "2026-10-11",
+        "2026-10-18",
+        "2026-10-25"
+      ],
+      "version": "1.0.0",
+      "troubled": false,
+      "expected": false
+    },
+    {
+      "name": "a day opened again counts once",
+      "opened": [
+        "2026-09-20",
+        "2026-09-27",
+        "2026-10-04",
+        "2026-10-11",
+        "2026-10-11",
+        "2026-10-18",
+        "2026-10-25",
+        "2026-10-25"
+      ],
+      "version": "1.0.0",
+      "troubled": false,
+      "expected": false
+    },
+    {
+      "name": "many days within one month",
+      "opened": [
+        "2026-10-01",
+        "2026-10-02",
+        "2026-10-03",
+        "2026-10-04",
+        "2026-10-05",
+        "2026-10-06",
+        "2026-10-07",
+        "2026-10-31"
+      ],
+      "version": "1.0.0",
+      "troubled": false,
+      "expected": false
+    },
+    {
+      "name": "asked in this version already",
+      "opened": [
+        "2026-06-01",
+        "2026-06-10",
+        "2026-06-20",
+        "2026-07-01",
+        "2026-07-10",
+        "2026-07-20",
+        "2026-08-01",
+        "2027-02-01"
+      ],
+      "lastAsked": { "day": "2026-07-20", "version": "1.0.0" },
+      "version": "1.0.0",
+      "troubled": false,
+      "expected": false
+    },
+    {
+      "name": "asked in an earlier version 119 days ago",
+      "opened": [
+        "2026-06-01",
+        "2026-06-10",
+        "2026-06-20",
+        "2026-07-01",
+        "2026-07-10",
+        "2026-07-20",
+        "2026-08-01",
+        "2026-11-16"
+      ],
+      "lastAsked": { "day": "2026-07-20", "version": "1.0.0" },
+      "version": "1.1.0",
+      "troubled": false,
+      "expected": false
+    },
+    {
+      "name": "asked in an earlier version 120 days ago",
+      "opened": [
+        "2026-06-01",
+        "2026-06-10",
+        "2026-06-20",
+        "2026-07-01",
+        "2026-07-10",
+        "2026-07-20",
+        "2026-08-01",
+        "2026-11-17"
+      ],
+      "lastAsked": { "day": "2026-07-20", "version": "1.0.0" },
+      "version": "1.1.0",
+      "troubled": false,
+      "expected": true
+    },
+    {
+      "name": "not after something went wrong",
+      "opened": [
+        "2026-10-01",
+        "2026-10-03",
+        "2026-10-08",
+        "2026-10-15",
+        "2026-10-22",
+        "2026-10-29",
+        "2026-11-02"
+      ],
+      "version": "1.0.0",
+      "troubled": true,
+      "expected": false
+    }
+  ]
+}

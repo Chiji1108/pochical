@@ -212,6 +212,7 @@ export function DayCell({
   active,
   onPress,
   plain = false,
+  dimmed = false,
   className,
 }: {
   date: Date;
@@ -220,6 +221,9 @@ export function DayCell({
   editing: boolean;
   active: boolean;
   onPress: () => void;
+  // Not one of the days the calendar is showing someone on: faded like
+  // the days around the month, so theirs stand out.
+  dimmed?: boolean;
   // Only the shift, for the saved image: no today frame, no note stroke.
   plain?: boolean;
   className?: string;
@@ -253,7 +257,7 @@ export function DayCell({
     dayCell({
       active,
       off: Boolean(offStyle),
-      outside,
+      outside: outside || dimmed,
       today: today && !editing && !active && !plain,
     }),
     className

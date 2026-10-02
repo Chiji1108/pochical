@@ -20,16 +20,16 @@ import { LabelledWidget, Wallpaper } from "../components/design-widget-frame";
 import type { WidgetFamily } from "../components/design-widget-frame";
 import {
   CalendarLarge,
-  ListMedium,
-  ListSmall,
   NextOffCircular,
   NextOffMedium,
   NextOffSmall,
   TodayCircular,
   TodayInline,
-  TodayMedium,
-  TodaySmall,
+  SimpleMedium,
+  SimpleSmall,
   TwoWeeksMedium,
+  UpcomingMedium,
+  UpcomingSmall,
   UpcomingRectangular,
 } from "../components/design-widgets";
 import {
@@ -166,12 +166,12 @@ const kinds: {
 }[] = [
   {
     description:
-      "今日のマークと早出・残業。小はメモの1行目まで、中は今日と明日（何もない日は大きい日付と、明日・次の休み）。",
-    id: "today",
-    name: "今日",
+      "その日だけを大きく。小は今日、中は今日と明日。変わったこと（早出・残業）だけを添えます。今日が休みの日は「おやすみ」。",
+    id: "simple",
+    name: "シンプル",
     sizes: [
-      { View: TodaySmall, size: "small" },
-      { View: TodayMedium, size: "medium" },
+      { View: SimpleSmall, size: "small" },
+      { View: SimpleMedium, size: "medium" },
     ],
   },
   {
@@ -186,12 +186,12 @@ const kinds: {
   },
   {
     description:
-      "今日から4日、1日1行。中は曜日と、早出・残業かメモをマークの横に。",
-    id: "list",
-    name: "リスト",
+      "今日を大きく、この先の日を並べて。小は続く3日のマーク、中は4日を1行ずつ、変わったことやメモと。",
+    id: "upcoming",
+    name: "これから",
     sizes: [
-      { View: ListSmall, size: "small" },
-      { View: ListMedium, size: "medium" },
+      { View: UpcomingSmall, size: "small" },
+      { View: UpcomingMedium, size: "medium" },
     ],
   },
   {

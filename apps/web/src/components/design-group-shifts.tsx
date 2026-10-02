@@ -17,6 +17,7 @@ import { css, cva, cx } from "styled-system/css";
 import { addDays, dateKey, formatDay, movesText } from "../lib/design-days";
 import { designToday } from "../lib/design-today";
 import { dayName } from "../lib/text-limits";
+import { monthGrid } from "./design-date-picker";
 import { dayCell, dayParts, todayMark } from "./design-day-cell";
 import {
   changeOn,
@@ -568,9 +569,6 @@ const shareDays = {
       _disabled: { visibility: "hidden" },
       bg: "transparent",
       border: 0,
-      borderRadius: "md",
-      fontSize: "13px",
-      fontWeight: 600,
       height: "36px",
       padding: 0,
     },
@@ -588,60 +586,44 @@ const shareDays = {
     gap: "4px",
     gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
   }),
+  // みんな休み over a row of its days that scrolls sideways out to the
+  // sheet's sides, as 1人ずつ's people do: one height however many there
+  // are, and a half-shown day says there are more.
   suggest: css({
-    alignItems: "center",
-    bg: "accent.container",
-    borderRadius: "2xl",
     display: "flex",
-    flexWrap: "wrap",
+    flexDirection: "column",
     gap: "8px",
     // Its own part, 24px clear of the month as the switch above it is.
     marginBottom: "12px",
-    padding: "12px 12px",
   }),
+  // Tinted as the calendar's days everyone is off, so the row and the
+  // month say the same thing; picked, filled as a picked day is.
   suggestion: css({
     "&[aria-pressed=true]": { bg: "accent.fill", color: "accent.onFill" },
-    bg: "background.card",
-    border: "1.5px solid transparent",
+    bg: "accent.container",
+    border: 0,
     borderRadius: "full",
     color: "accent.default",
+    flexShrink: 0,
     fontWeight: 600,
-    minHeight: "30px",
+    minHeight: "32px",
     padding: "0 12px",
     textStyle: "footnote",
+  }),
+  // Out over the sheet's 24px sides, the first day in line with the page.
+  suggestions: css({
+    display: "flex",
+    gap: "8px",
+    margin: "0 -24px",
+    overflowX: "auto",
+    padding: "0 24px",
   }),
   togetherLabel: css({
     color: "accent.default",
     fontWeight: 600,
-    marginRight: "4px",
     textStyle: "footnote",
   }),
-  weekday: css({
-    color: "text.quaternary",
-    fontSize: "10px",
-    textAlign: "center",
-  }),
 };
-
-// ‹ 2026年9月 › over the month of a picker of days, as the platforms'
-// date pickers keep their arrows.
-const monthSwitch = css({
-  "& button": {
-    bg: "transparent",
-    border: 0,
-    borderRadius: "md",
-    color: "accent.default",
-    display: "grid",
-    height: "32px",
-    placeItems: "center",
-    width: "32px",
-  },
-  "& strong": { minWidth: "96px", textAlign: "center", textStyle: "body" },
-  alignItems: "center",
-  display: "flex",
-  gap: "8px",
-  justifyContent: "center",
-});
 
 // The group's shifts page: the month row, the table under it, and room at
 // the foot for the picked day's sheet to cover.
@@ -834,9 +816,7 @@ function DaySheetBody({
   };
   const suggestions = Array.from({ length: 45 }, (_, index) =>
     addDays(designToday, index)
-  )
-    .filter((date) => everyoneOff(members, date))
-    .slice(0, suggestionCount);
+  ).filter((date) => everyoneOff(members, date));
   return (
     <>
       <DecideHeading
@@ -865,33 +845,36 @@ function DaySheetBody({
         {suggestions.length > 0 && (
           <div className={shareDays.suggest}>
             <span className={shareDays.togetherLabel}>みんな休み</span>
-            {suggestions.map((date) => (
-              <button
-                aria-pressed={isPicked(date)}
-                className={shareDays.suggestion}
-                key={dateKey(date)}
-                onClick={() => {
-                  toggle(date);
-                }}
-                type="button"
-              >
-                {date.getMonth() + 1}/{date.getDate()}
-                <small className={smallWeekday}>
-                  {weekTools.weekdayName(date.getDay())}
-                </small>
-              </button>
-            ))}
+            <div className={shareDays.suggestions}>
+              {suggestions.map((date) => (
+                <button
+                  aria-pressed={isPicked(date)}
+                  className={shareDays.suggestion}
+                  key={dateKey(date)}
+                  onClick={() => {
+                    toggle(date);
+                  }}
+                  type="button"
+                >
+                  {date.getMonth() + 1}/{date.getDate()}
+                  <small className={smallWeekday}>
+                    {weekTools.weekdayName(date.getDay())}
+                  </small>
+                </button>
+              ))}
+            </div>
           </div>
         )}
-        <div className={monthSwitch}>
+        <div className={monthGrid.heading}>
           <button
             aria-label="前の月"
+            className={monthGrid.arrow}
             onClick={() => {
               setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
             }}
             type="button"
           >
-            <ChevronLeft aria-hidden="true" size={18} />
+            <ChevronLeft aria-hidden="true" size={20} />
           </button>
           <strong aria-live="polite">
             <span className={srOnly}>{monthWithYearOf(month)}</span>
@@ -901,19 +884,26 @@ function DaySheetBody({
           </strong>
           <button
             aria-label="次の月"
+            className={monthGrid.arrow}
             onClick={() => {
               setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
             }}
             type="button"
           >
-            <ChevronRight aria-hidden="true" size={18} />
+            <ChevronRight aria-hidden="true" size={20} />
           </button>
         </div>
-        <div className={shareDays.days}>
+        <div
+          className={shareDays.days}
+          // The weekdays, then room for six weeks, the most a month spans,
+          // so the sheet keeps its height as the months turn and ‹ › stay
+          // under the finger.
+          style={{ gridTemplateRows: `auto repeat(${MONTH_WEEKS}, 36px)` }}
+        >
           {weekTools.weekdays.map((day) => (
             <span
               aria-hidden="true"
-              className={shareDays.weekday}
+              className={monthGrid.weekday}
               key={day.day}
             >
               {day.label}
@@ -922,14 +912,20 @@ function DaySheetBody({
           {weekTools.monthDates(month).map((date) => {
             const outside = !sameMonth(date, month);
             const together = !outside && everyoneOff(members, date);
+            const today = dateKey(date) === dateKey(designToday);
             return (
               <button
                 aria-label={`${formatDay(date)}${together ? "、みんな休み" : ""}`}
                 aria-pressed={isPicked(date)}
-                className={shareDays.day({
-                  together,
-                  tone: weekTools.dateTone(date),
-                })}
+                className={cx(
+                  shareDays.day({
+                    together,
+                    tone: today ? "plain" : weekTools.dateTone(date),
+                  }),
+                  monthGrid.day,
+                  today && todayMark,
+                  today && monthGrid.today
+                )}
                 disabled={outside}
                 key={dateKey(date)}
                 onClick={() => {
@@ -950,17 +946,15 @@ function DaySheetBody({
   );
 }
 
-const suggestionCount = 4;
-
 const modeSwitch = css({ marginBottom: "12px" });
 
 // What sending will do, under the days.
 function dayNote(count: number, poll: boolean) {
   if (poll && count < 2) {
-    return "候補の日を2日以上選んでください。日付に枠がある日は、みんな休みの日です。";
+    return "候補の日を2日以上選んでください。うすく色のついた日は、みんな休みの日です。";
   }
   if (count === 0) {
-    return "日付に枠がある日は、みんな休みの日です。";
+    return "うすく色のついた日は、みんな休みの日です。";
   }
   return poll
     ? `${count}日の中から、みんなが行ける日を投票で決めます。`
