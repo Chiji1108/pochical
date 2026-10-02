@@ -588,16 +588,19 @@ const shareDays = {
     gap: "4px",
     gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
   }),
+  // One band that scrolls sideways, its label with its days, cut off at
+  // its rounded ends, so a half-shown day says there are more and the band
+  // keeps one height however many there are.
   suggest: css({
     alignItems: "center",
     bg: "accent.container",
     borderRadius: "2xl",
     display: "flex",
-    flexWrap: "wrap",
     gap: "8px",
     // Its own part, 24px clear of the month as the switch above it is.
     marginBottom: "12px",
-    padding: "12px 12px",
+    overflowX: "auto",
+    padding: "12px",
   }),
   suggestion: css({
     "&[aria-pressed=true]": { bg: "accent.fill", color: "accent.onFill" },
@@ -605,6 +608,7 @@ const shareDays = {
     border: "1.5px solid transparent",
     borderRadius: "full",
     color: "accent.default",
+    flexShrink: 0,
     fontWeight: 600,
     minHeight: "30px",
     padding: "0 12px",
@@ -612,6 +616,7 @@ const shareDays = {
   }),
   togetherLabel: css({
     color: "accent.default",
+    flexShrink: 0,
     fontWeight: 600,
     marginRight: "4px",
     textStyle: "footnote",
@@ -834,9 +839,7 @@ function DaySheetBody({
   };
   const suggestions = Array.from({ length: 45 }, (_, index) =>
     addDays(designToday, index)
-  )
-    .filter((date) => everyoneOff(members, date))
-    .slice(0, suggestionCount);
+  ).filter((date) => everyoneOff(members, date));
   return (
     <>
       <DecideHeading
@@ -949,8 +952,6 @@ function DaySheetBody({
     </>
   );
 }
-
-const suggestionCount = 4;
 
 const modeSwitch = css({ marginBottom: "12px" });
 
