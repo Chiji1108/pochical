@@ -44,6 +44,17 @@ import type { MouseEvent, ReactElement, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import {
+  decidePoll,
+  editMessage,
+  firstUnreadOf,
+  lastSharedOf,
+  pinMessage,
+  pinsOf,
+  reactTo,
+  unsendMessage,
+  votePoll,
+} from "../lib/chat-messages";
+import {
   firstLink,
   inviteCodeOf,
   mentionsOf,
@@ -1122,25 +1133,14 @@ export function ChatPage({
   const listRef = useRef<HTMLOListElement>(null);
   const lineCount = chat.messages.length;
   const [sharedId] = useState(() =>
-    sharedFirst
-      ? chat.messages.findLast((message) => message.days || message.poll)?.id
-      : undefined
+    sharedFirst ? lastSharedOf(chat.messages) : undefined
   );
   // The first line unread as it opened: the others' lines, counted back
   // from the latest. The line above it stays while the chat is open, as
   // LINE keeps its 「ここから未読メッセージ」.
-  const [firstUnreadId] = useState(() => {
-    let left = unreadAtOpen;
-    for (const message of chat.messages.toReversed()) {
-      if (left > 0 && message.from !== "me" && !message.notice) {
-        left -= 1;
-        if (left === 0) {
-          return message.id;
-        }
-      }
-    }
-    return;
-  });
+  const [firstUnreadId] = useState(() =>
+    firstUnreadOf(chat.messages, unreadAtOpen)
+  );
   // Until a line is added, it stays on the shared day, or on the line
   // above the first unread one.
   const [openedLines] = useState(lineCount);
@@ -1338,110 +1338,42 @@ export function ChatPage({
   // its link stays while the link does.
   const saveEdit = (id: string, text: string) => {
     onChange(
-      chat.messages.map((message) => {
-        if (message.id !== id) {
-          return message;
-        }
-        const words = withMentions(text, picked);
-        const sameLink =
-          firstLink(words) === firstLink(message.text ?? "") &&
-          message.link !== undefined;
-        return {
-          ...message,
-          edited: true,
-          link: sameLink ? message.link : linkPreview.ready,
-          text: words,
-        };
-      })
+      editMessage(
+        chat.messages,
+        id,
+        withMentions(text, picked),
+        linkPreview.ready
+      )
     );
     stopEditing();
   };
-  // Pinned lines, the latest first; at most a few, as LINE keeps its
-  // announcements, the oldest giving way.
-  const pins = chat.messages
-    .filter((message) => message.pinned !== undefined && !message.unsent)
-    .toSorted((a, b) => (b.pinned ?? 0) - (a.pinned ?? 0));
+  const pins = pinsOf(chat.messages);
   const [pinsOpen, setPinsOpen] = useState(false);
   const pin = (id: string, pinned: boolean) => {
-    const order = Math.max(0, ...pins.map((line) => line.pinned ?? 0)) + 1;
-    const dropped =
-      pinned && pins.length >= chatRules.maxPins ? pins.at(-1)?.id : undefined;
-    onChange(
-      chat.messages.map((message) => {
-        if (message.id === id) {
-          return { ...message, pinned: pinned ? order : undefined };
-        }
-        if (message.id === dropped) {
-          return { ...message, pinned: undefined };
-        }
-        return message;
-      })
-    );
-    if (dropped) {
-      toast(
-        `ピン留めは${chatRules.maxPins}件までです。いちばん古いものを外しました`
-      );
+    const next = pinMessage(chat.messages, id, pinned);
+    onChange(next.messages);
+    if (next.dropped) {
+      toast(droppedPinLine);
     } else {
       toast(pinned ? "ピン留めしました" : "ピン留めを外しました");
     }
   };
-  // Your 行ける on a day of a poll, or taking it back.
-  const vote = (id: string, key: string) => {
-    onChange(
-      chat.messages.map((message) => {
-        if (message.id !== id || !message.poll) {
-          return message;
-        }
-        const voters = message.poll.votes[key] ?? [];
-        const next = voters.includes("me")
-          ? voters.filter((voter) => voter !== "me")
-          : [...voters, "me"];
-        return {
-          ...message,
-          poll: {
-            ...message.poll,
-            votes: { ...message.poll.votes, [key]: next },
-          },
-        };
-      })
-    );
-  };
-  // The poll being settled by its writer, and settling it: the voting
-  // ends and the poll is pinned over the chat, where the day stays found.
+  // The poll being settled by its writer, and settling it.
   const [deciding, setDeciding] = useState<string>();
   const decide = (id: string, key: string) => {
-    const order = Math.max(0, ...pins.map((line) => line.pinned ?? 0)) + 1;
-    onChange(
-      chat.messages.map((message) =>
-        message.id === id && message.poll
-          ? {
-              ...message,
-              pinned: order,
-              poll: { ...message.poll, decided: key },
-            }
-          : message
-      )
-    );
+    const next = decidePoll(chat.messages, id, key);
+    onChange(next.messages);
     setDeciding(undefined);
     const day = byId(id)?.poll?.days.find((date) => dateKey(date) === key);
-    if (day) {
-      toast(`${formatDay(day)}に決めました`);
+    const decided = day ? `${formatDay(day)}に決めました` : undefined;
+    if (next.dropped) {
+      toast(decided ? `${decided}。${droppedPinLine}` : droppedPinLine);
+    } else if (decided) {
+      toast(decided);
     }
   };
   const unsend = (id: string) => {
-    onChange(
-      chat.messages.map((message) =>
-        message.id === id
-          ? {
-              from: message.from,
-              id: message.id,
-              time: message.time,
-              unsent: true,
-              when: message.when,
-            }
-          : message
-      )
-    );
+    onChange(unsendMessage(chat.messages, id));
     setUnsending(undefined);
     if (editing === id) {
       stopEditing();
@@ -1490,11 +1422,7 @@ export function ChatPage({
     }
   };
   const react = (id: string, emoji: string) => {
-    onChange(
-      chat.messages.map((message) =>
-        message.id === id ? toggleReaction(message, emoji) : message
-      )
-    );
+    onChange(reactTo(chat.messages, id, emoji));
     setSelected(undefined);
   };
   const jumpTo = (id: string) => {
@@ -1708,7 +1636,7 @@ export function ChatPage({
                     setDeciding(message.id);
                   }}
                   onVote={(key) => {
-                    vote(message.id, key);
+                    onChange(votePoll(chat.messages, message.id, key));
                   }}
                   poll={message.poll}
                   writerOf={writerOf}
@@ -2446,7 +2374,8 @@ export function ChatPage({
 
 const flashMilliseconds = 1200;
 
-// How many lines stay pinned at once, as LINE keeps five announcements.
+// Said when one more pin takes the place of the oldest.
+const droppedPinLine = `ピン留めは${chatRules.maxPins}件までです。いちばん古いものを外しました`;
 
 // In the prototype, how soon after you send someone starts writing back,
 // and for how long.
@@ -4207,25 +4136,6 @@ function useLongPress(onLongPress: () => void) {
       onPointerLeave: cancel,
       onPointerUp: cancel,
     },
-  };
-}
-
-// Adds your reaction, or takes it back if it was already yours.
-function toggleReaction(message: Message, emoji: string): Message {
-  const reactions = message.reactions ?? [];
-  const existing = reactions.find((reaction) => reaction.emoji === emoji);
-  if (!existing) {
-    return { ...message, reactions: [...reactions, { by: ["me"], emoji }] };
-  }
-  const mine = existing.by.includes("me");
-  const by = mine
-    ? existing.by.filter((id) => id !== "me")
-    : [...existing.by, "me"];
-  return {
-    ...message,
-    reactions: reactions
-      .map((reaction) => (reaction.emoji === emoji ? { by, emoji } : reaction))
-      .filter((reaction) => reaction.by.length > 0),
   };
 }
 
