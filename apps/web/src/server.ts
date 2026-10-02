@@ -17,7 +17,11 @@ const inviteImage = async (
   ctx: ExecutionContext
 ): Promise<Response> => {
   const cache = await caches.open("invite-images");
-  const cached = await cache.match(request);
+  // Kept by its path alone: a query, which changes nothing in the image,
+  // must not make it be drawn again.
+  const { origin, pathname } = new URL(request.url);
+  const key = new Request(`${origin}${pathname}`);
+  const cached = await cache.match(key);
   if (cached) {
     return cached;
   }
@@ -38,7 +42,7 @@ const inviteImage = async (
     const response = new Response(Uint8Array.from(png), {
       headers: { "Cache-Control": IMAGE_CACHE, "Content-Type": "image/png" },
     });
-    ctx.waitUntil(cache.put(request, response.clone()));
+    ctx.waitUntil(cache.put(key, response.clone()));
     return response;
   } catch {
     return Response.redirect(new URL("/share.png", request.url).href, 302);
