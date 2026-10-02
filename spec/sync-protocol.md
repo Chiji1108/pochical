@@ -18,8 +18,12 @@ Every user is signed in, from the first launch: anonymously at first, so nobody 
 
 - A client signs in with `POST /api/auth/sign-in/anonymous`, sending `Content-Type: application/json` and the body `{}` (better-auth answers 415 without them), and keeps the session token from the response's `set-auth-token` header: iOS in the Keychain and Android in Block Store, so a reinstall comes back as the same user.
 - It sends the token as `Authorization: Bearer <token>` on every Connect call and socket. Calls without a valid one fail with `UNAUTHENTICATED`; sockets get 401. `UserService.GetMe` says whose token it is.
+- A session lasts for good, until the user signs out or deletes their account. An anonymous user's token is their only key, so an expiry would only lock out someone who did not open the app for a while (a widget is enough to keep using it). better-auth puts a session's lifetime on its cookie too, which may last at most 400 days, so the server stores each session to expire a century on and never refreshes it (`apps/server/src/auth.ts`); the apps use the token, not the cookie.
 - Each user has a User DO named by their user id. It records the groups they are in.
 - A session keeps its token and its user only: better-auth's IP address and user agent are left empty, so the server holds no one's address or device.
+- Linking Apple or Google keeps the user: the app gets the provider's ID token (Sign in with Apple; Google through Credential Manager or Google Sign-In) and sends it on the signed-in session to `POST /api/auth/link-social` (`{ provider, idToken: { token, nonce } }`). The user id stays, and with it their User DO, groups and messages; the user is no longer anonymous once linked. better-auth's way for an anonymous user to sign in with a provider (`/sign-in/social`), which makes a new user and deletes the anonymous one, is used only to switch, below. (Not built yet: marking the user as no longer anonymous.)
+- When the provider's account belongs to another user already, `/link-social` answers 409 (`SOCIAL_ACCOUNT_ALREADY_LINKED`): that user holds the person's earlier data, as on a new phone. The app asks first, then signs in to that user with `/sign-in/social` and the same ID token; the anonymous user on this device, and what was entered there, are deleted as deleting an account deletes them (not built yet). A new phone's first launch offers signing in with Apple or Google before anything is entered, so there is seldom anything to lose.
+- A user who never linked and loses both their phone and its stored token cannot be reached again. That is why the app suggests linking, at moments its screens decide.
 - Cloudflare's rate limiting holds back what an anonymous account makes cheap, by the limiters in `apps/server/wrangler.jsonc` (`ratelimits`, where their numbers are): anonymous sign-ins per client address, answered with 429, and groups made per user, answered with `RESOURCE_EXHAUSTED`. The address is only counted, never kept.
 
 ## Groups
@@ -178,7 +182,7 @@ Presence means "has this thread open on screen", not "online in the app": mobile
 
 ## Not yet specified
 
-- Linking an anonymous user to Apple or Google, and what happens to a user whose phone and token are both lost
+- Deleting an account: what goes (the User DO, memberships and what groups hold of the user, their messages' authorship) and how the user's other devices learn of it
 - Snapshot format for resets and how long each DO keeps its change log
 - Wire messages for chat pages, and resets for DOs that do not keep values as registers
 - Push notifications (chat, mentions): the server sends a localization key and its arguments (APNs `loc-key`/`loc-args`, FCM `body_loc_key`/`body_loc_args`), never text it has put together, so the app words them in its own language and the server need not know each reader's

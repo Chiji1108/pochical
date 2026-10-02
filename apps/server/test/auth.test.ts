@@ -121,6 +121,20 @@ describe("what a session keeps", () => {
       expect(kept).toStrictEqual({ ipAddress: null, userAgent: null });
     }
   });
+
+  it("lasts for good, so a user away a long while is still signed in", async () => {
+    await signInAnonymously();
+    const sessions = await drizzle(env.DB)
+      .select({ expiresAt: session.expiresAt })
+      .from(session)
+      .all();
+    const inFiftyYears = new Date();
+    inFiftyYears.setFullYear(inFiftyYears.getFullYear() + 50);
+    expect(sessions.length).toBeGreaterThan(0);
+    for (const kept of sessions) {
+      expect(kept.expiresAt.getTime()).toBeGreaterThan(inFiftyYears.getTime());
+    }
+  });
 });
 
 // An anonymous sign-in as it reaches the Worker from a client's address.
