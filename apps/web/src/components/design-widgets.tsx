@@ -263,6 +263,9 @@ function useWords() {
       short: (date: Date) => `${month(date)} ${date.getDate()}.`,
       today: "Today",
       tomorrow: "Tomorrow",
+      // The day after a day off, short enough to keep clear of the
+      // poodle in the corner: Fri, as 明日 is in Japanese.
+      nextDay: (date: Date) => day(date),
       unit: "days",
       weekday,
     };
@@ -274,6 +277,7 @@ function useWords() {
       `${date.getMonth() + MONTH_NUMBER}月 ${weekday(date)}曜日`,
     inDays: (inDays: number) => (inDays === 1 ? "明日" : `${inDays}日後`),
     line: (date: Date) => `${date.getDate()} ${weekday(date)}`,
+    nextDay: () => "明日",
     nextOff: "次の休み",
     nothingYet: "まだ入っていません",
     offTogether: "一緒に休める日",
@@ -299,14 +303,19 @@ const oneLine = css({
 });
 
 const simple = {
-  // The date in bold beside its weekday, quieter, as a card dates itself.
-  date: css({ fontWeight: 700 }),
-  head: css({
+  // Today's date in bold, as a card dates itself.
+  date: css({ fontWeight: 700, textStyle: "headline", whiteSpace: "nowrap" }),
+  day: css({
+    alignItems: "center",
     display: "flex",
-    gap: "8px",
+    flex: 1,
+    flexDirection: "column",
+    gap: "12px",
+    // The whole height, alone in the small one too, to center in.
+    height: "100%",
     justifyContent: "center",
-    textStyle: "headline",
-    whiteSpace: "nowrap",
+    minWidth: 0,
+    textAlign: "center",
   }),
   // Over tomorrow: small spaced capitals, a label rather than a date.
   label: css({
@@ -315,21 +324,19 @@ const simple = {
     letterSpacing: "0.12em",
     lineHeight: "22px",
     textTransform: "uppercase",
+    whiteSpace: "nowrap",
   }),
-  // The mark large in the middle of what room is left.
-  mark: css({ alignItems: "center", display: "flex", flex: 1, minHeight: 0 }),
+  mark: css({ display: "flex" }),
   pair: css({ display: "flex", gap: "16px", height: "100%" }),
-  root: css({
-    alignItems: "center",
-    display: "flex",
-    flex: 1,
-    flexDirection: "column",
-    height: "100%",
-    minWidth: 0,
-    textAlign: "center",
-  }),
   rule: css({ bg: "separator", flexShrink: 0, width: "1px" }),
-  weekday: css({ color: "text.tertiary", fontWeight: 600 }),
+  note: css({
+    color: "text.secondary",
+    maxWidth: "100%",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    textStyle: "subheadline",
+    whiteSpace: "nowrap",
+  }),
   words: css({
     fontVariantNumeric: "tabular-nums",
     fontWeight: 400,
@@ -342,39 +349,46 @@ const simple = {
   }),
 };
 
-// A day plainly, in the middle: its date (or 明日 over tomorrow), its
-// mark large, and only what changed under it. Nothing more, for someone
-// who wants the day alone.
+// Where the widget is taller, as on Android's launcher, its marks grow.
+const SIMPLE_ROOMY = 150;
+// How much larger a mark draws with nothing said under it.
+const QUIET_GROWTH = 12;
+
+// A day plainly: its date (or TOMORROW), its mark large, and only what
+// changed under it, as one group in the middle of its room. A day with
+// nothing changed is its own design, not one with an empty line kept for
+// words: its mark grows and the group closes up round it. Beside another
+// day each centers on its own, rather than lining its parts up with the
+// other's, which left a quiet day high with a gap under it.
 function SimpleDay({
   day,
   label,
-  markSize,
+  withNote = false,
 }: {
   day: WidgetDay;
   label?: string;
-  markSize: number;
+  // これから's today: the memo's first line where nothing changed.
+  withNote?: boolean;
 }) {
   const words = useWords();
-  // A day with nothing changed is its own design, not one with an empty
-  // line kept for words: the mark grows into the room and sits in the
-  // middle of it.
   const said = changeWords(day, useShiftNames()) !== undefined;
+  const note = !said && withNote ? day.note : undefined;
+  const roomy = useContext(WidgetSizeContext).height >= SIMPLE_ROOMY;
+  const base = roomy ? 64 : 48;
+  const quiet = !(said || note);
   return (
-    <div className={simple.root}>
+    <div className={simple.day}>
       {label ? (
         <span className={simple.label}>{label}</span>
       ) : (
-        <span className={simple.head}>
-          <span className={simple.date}>{words.short(day.date)}</span>
-          <span className={simple.weekday}>{words.dayName(day.date)}</span>
-        </span>
+        <span className={simple.date}>{words.short(day.date)}</span>
       )}
       <span className={simple.mark}>
-        <DayMark day={day} size={said ? markSize : markSize + QUIET_GROWTH} />
+        <DayMark day={day} size={quiet ? base + QUIET_GROWTH : base} />
       </span>
-      {said ? (
-        <Change className={simple.words} day={day} />
-      ) : (
+      {said && <Change className={simple.words} day={day} />}
+      {note && <span className={simple.note}>{note}</span>}
+      {!said && (
         <span className={srOnly}>
           {day.name ?? NOTHING}
           {day.time ? ` ${day.time}` : ""}
@@ -383,9 +397,6 @@ function SimpleDay({
     </div>
   );
 }
-
-// How much larger a mark draws with nothing said under it.
-const QUIET_GROWTH = 12;
 
 // Today alone; on a day off, said as such, with the poodle.
 export function SimpleSmall({ entry }: { entry: WidgetEntry }) {
@@ -397,7 +408,7 @@ export function SimpleSmall({ entry }: { entry: WidgetEntry }) {
       />
     );
   }
-  return <SimpleDay day={day} markSize={56} />;
+  return <SimpleDay day={day} />;
 }
 
 // Today and tomorrow, side by side.
@@ -406,11 +417,9 @@ export function SimpleMedium({ entry }: { entry: WidgetEntry }) {
   const [, tomorrow] = entry.upcoming;
   return (
     <div className={simple.pair}>
-      <SimpleDay day={entry.today} markSize={44} />
+      <SimpleDay day={entry.today} />
       <span aria-hidden="true" className={simple.rule} />
-      {tomorrow && (
-        <SimpleDay day={tomorrow} label={words.tomorrow} markSize={44} />
-      )}
+      {tomorrow && <SimpleDay day={tomorrow} label={words.tomorrow} />}
     </div>
   );
 }
@@ -418,58 +427,21 @@ export function SimpleMedium({ entry }: { entry: WidgetEntry }) {
 // ── これから ─────────────────────────────────────────────────────────────
 
 const upcoming = {
-  // The date large, as a desk calendar shows it.
-  big: css({
-    fontSize: "44px",
-    fontVariantNumeric: "tabular-nums",
-    fontWeight: 500,
-    letterSpacing: "-0.02em",
-    lineHeight: 1,
-  }),
-  heading: css({ color: "text.secondary", textStyle: "footnote" }),
-  markRow: css({
+  head: css({ display: "flex", flexDirection: "column", gap: "4px" }),
+  // The date at the start and the mark at the end, level with each other.
+  headLine: css({
     alignItems: "center",
     display: "flex",
-    gap: "4px",
-    maxWidth: "100%",
-    minWidth: 0,
-  }),
-  words: css({
-    fontVariantNumeric: "tabular-nums",
-    fontWeight: 600,
-    minWidth: 0,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    textStyle: "subheadline",
-    whiteSpace: "nowrap",
+    justifyContent: "space-between",
   }),
   pair: css({ gap: "12px" }),
-  // Today on the left of the medium one.
-  // Only the parts today has, gathered in the middle: a day with no
-  // change or memo is the date and mark alone, not gaps where they go.
-  today: css({
-    display: "flex",
-    flexDirection: "column",
-    flexShrink: 0,
-    gap: "4px",
-    justifyContent: "center",
-    width: "104px",
-  }),
-  note: css({
-    color: "text.secondary",
-    maxWidth: "100%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    textStyle: "footnote",
-    whiteSpace: "nowrap",
-  }),
   row: css({
     "&:not(:first-child)": { borderTop: "1px solid token(colors.separator)" },
     alignItems: "center",
     display: "grid",
     flex: 1,
     gap: "4px",
-    gridTemplateColumns: "56px 20px 1fr",
+    gridTemplateColumns: "52px 18px 1fr",
     minHeight: 0,
   }),
   rowLabel: css({
@@ -487,56 +459,72 @@ const upcoming = {
     whiteSpace: "nowrap",
   }),
   rows: css({ display: "flex", flex: 1, flexDirection: "column", minWidth: 0 }),
+  // Today's line and the three days as one group in the middle, not
+  // pushed to the top and bottom with a gap between.
   small: css({
     display: "flex",
     flexDirection: "column",
+    gap: "12px",
     height: "100%",
-    justifyContent: "space-between",
+    justifyContent: "center",
   }),
-  todayHead: css({ alignItems: "center", display: "flex", gap: "8px" }),
+  // シンプル's today, in the medium one's left column.
+  today: css({ display: "flex", flexShrink: 0, width: "100px" }),
+  words: css({
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 400,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    textStyle: "subheadline",
+    whiteSpace: "nowrap",
+  }),
 };
 
 // Today large: its date and mark, what changed, and its memo's first
 // line.
-function UpcomingToday({ day, note }: { day: WidgetDay; note: boolean }) {
+// Today as a heading line: its date and its mark side by side, and what
+// changed under them only on a day that has some.
+function UpcomingHead({ day }: { day: WidgetDay }) {
   const words = useWords();
+  const said = changeWords(day, useShiftNames()) !== undefined;
   return (
-    <>
-      <span className={upcoming.heading}>{words.heading(day.date)}</span>
-      <span className={upcoming.todayHead}>
-        <span aria-hidden="true" className={upcoming.big}>
-          {day.date.getDate()}
-        </span>
-        <DayMark day={day} size={32} />
+    <div className={upcoming.head}>
+      <span className={upcoming.headLine}>
+        <span className={simple.date}>{words.short(day.date)}</span>
+        <DayMark day={day} size={28} />
       </span>
-      <span className={upcoming.markRow}>
+      {said ? (
         <Change className={upcoming.words} day={day} />
-      </span>
-      {note && day.note && <span className={upcoming.note}>{day.note}</span>}
-    </>
+      ) : (
+        <span className={srOnly}>
+          {day.name ?? NOTHING}
+          {day.time ? ` ${day.time}` : ""}
+        </span>
+      )}
+    </div>
   );
 }
 
-// Today large, and the next three days' marks under it.
+// Today's line, and the next three days' marks under it.
 export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
   return (
     <div className={upcoming.small}>
-      <UpcomingToday day={entry.today} note={false} />
+      <UpcomingHead day={entry.today} />
       <NextDays days={entry.upcoming.slice(1, 4)} />
     </div>
   );
 }
 
-// Today large on the left; on the right, the days after it a line each,
-// each by its date as the rows under it read (25 金), with what changed,
-// the memo, or the shift's name when names are shown.
+// シンプル's today on the left, with the memo where nothing changed; on
+// the right, the days after it a line each, each by its date (25 金),
+// with what changed, the memo, or the shift's name when names are shown.
 export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
   const words = useWords();
   const named = useShiftNames();
   return (
     <div className={cx(simple.pair, upcoming.pair)}>
       <div className={upcoming.today}>
-        <UpcomingToday day={entry.today} note />
+        <SimpleDay day={entry.today} withNote />
       </div>
       <span aria-hidden="true" className={simple.rule} />
       <ol className={`${list} ${upcoming.rows}`}>
@@ -568,7 +556,7 @@ const nextDays = {
     borderTop: "1px solid token(colors.separator)",
     display: "grid",
     gridTemplateColumns: "repeat(3, 1fr)",
-    paddingTop: "4px",
+    paddingTop: "8px",
     width: "100%",
   }),
   weekday: css({ textStyle: "caption2" }),
@@ -588,7 +576,7 @@ function NextDays({ days }: { days: WidgetDay[] }) {
           >
             {words.weekday(day.date)}
           </span>
-          <DayMark day={day} size={18} />
+          <DayMark day={day} size={24} />
         </li>
       ))}
     </ol>
@@ -982,7 +970,7 @@ function RestToday({ entry }: { entry: WidgetEntry }) {
       </span>
       {tomorrow && (
         <span aria-hidden="true" className={rest.tomorrow}>
-          {words.tomorrow}
+          {words.nextDay(tomorrow.date)}
           <DayMark day={tomorrow} size={16} />
         </span>
       )}
