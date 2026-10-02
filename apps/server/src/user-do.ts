@@ -36,6 +36,7 @@ import type {
 } from "./gen/pochical/v1/sync_pb";
 import { clockAfter, compareClocks } from "./hlc";
 import type { Clock } from "./hlc";
+import { isId } from "./ids";
 import { givesWay, heldBackBy, ORDER_FIELDS } from "./order-clears";
 import type { Floor } from "./order-clears";
 import {
@@ -44,7 +45,7 @@ import {
   fitsCoworkerOrder,
   fitsOrders,
 } from "./order-values";
-import { fitsOrder, fitsPattern, isId } from "./pattern-values";
+import { fitsOrder, fitsPattern } from "./pattern-values";
 import {
   acceptSyncSocket,
   handleSyncMessage,
@@ -94,6 +95,19 @@ const MAX_EDITS_PER_FRAME = 500;
 const VALUES_PER_PUSH = 500;
 // The day fields that stay with their owner, never pushed to groups.
 const PRIVATE_FIELDS = [DayField.NOTE, DayField.PEOPLE];
+
+/** One kind of value the user owns, as UserDO.logs lists them. */
+type SyncedLog = {
+  after: (cursor: number, sharedOnly: boolean) => Change[];
+  shared: boolean;
+  table:
+    | typeof dayFields
+    | typeof patterns
+    | typeof patternOrder
+    | typeof repeatOrders
+    | typeof coworkers
+    | typeof coworkerOrder;
+};
 
 const byCursor = (changes: Change[]): Change[] =>
   changes.toSorted((a, b) => (a.cursor < b.cursor ? -1 : 1));
@@ -176,36 +190,119 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /**
+   * Every kind of value the user owns, in one list so catch-up, the cursor
+   * head and the pushes to groups cover the same ones: its table, its rows
+   * changed after a cursor as changes (only what groups see, when asked),
+   * and whether groups see it at all.
+   */
+  private logs(): SyncedLog[] {
+    const { db } = this;
+    return [
+      {
+        after: (cursor, sharedOnly) =>
+          db
+            .select()
+            .from(dayFields)
+            .where(
+              and(
+                gt(dayFields.cursor, cursor),
+                // Memos and people stay with their owner.
+                sharedOnly
+                  ? notInArray(dayFields.field, PRIVATE_FIELDS)
+                  : undefined
+              )
+            )
+            .all()
+            .map(dayChange),
+        shared: true,
+        table: dayFields,
+      },
+      {
+        after: (cursor) =>
+          db
+            .select()
+            .from(patterns)
+            .where(gt(patterns.cursor, cursor))
+            .all()
+            .map(patternChange),
+        shared: true,
+        table: patterns,
+      },
+      {
+        after: (cursor) =>
+          db
+            .select()
+            .from(patternOrder)
+            .where(gt(patternOrder.cursor, cursor))
+            .all()
+            .map(orderChange),
+        shared: false,
+        table: patternOrder,
+      },
+      {
+        after: (cursor) =>
+          db
+            .select()
+            .from(repeatOrders)
+            .where(gt(repeatOrders.cursor, cursor))
+            .all()
+            .map(repeatOrdersChange),
+        shared: true,
+        table: repeatOrders,
+      },
+      {
+        after: (cursor) =>
+          db
+            .select()
+            .from(coworkers)
+            .where(gt(coworkers.cursor, cursor))
+            .all()
+            .map(coworkerChange),
+        shared: false,
+        table: coworkers,
+      },
+      {
+        after: (cursor) =>
+          db
+            .select()
+            .from(coworkerOrder)
+            .where(gt(coworkerOrder.cursor, cursor))
+            .all()
+            .map(coworkerOrderChange),
+        shared: false,
+        table: coworkerOrder,
+      },
+    ];
+  }
+
+  /** The newest cursor across everything the user owns, 0 before any. */
+  private head(): number {
+    const heads = this.logs().map(
+      ({ table }) =>
+        this.db
+          .select({ head: max(table.cursor) })
+          .from(table)
+          .get()?.head ?? 0
+    );
+    return Math.max(0, ...heads);
+  }
+
+  /** Every value changed after `cursor`, in cursor order. */
+  private changesAfter(cursor: number): Change[] {
+    return byCursor(this.logs().flatMap(({ after }) => after(cursor, false)));
+  }
+
+  /**
    * What a group sees of the user, changed after `cursor`: days' pattern
    * and times, never the memo or the people, their patterns and their
    * repeating orders.
    */
   private sharedAfter(cursor: number): Change[] {
-    const days = this.db
-      .select()
-      .from(dayFields)
-      .where(
-        and(
-          gt(dayFields.cursor, cursor),
-          notInArray(dayFields.field, PRIVATE_FIELDS)
-        )
+    return byCursor(
+      this.logs().flatMap(({ after, shared }) =>
+        shared ? after(cursor, true) : []
       )
-      .all();
-    const kept = this.db
-      .select()
-      .from(patterns)
-      .where(gt(patterns.cursor, cursor))
-      .all();
-    const orders = this.db
-      .select()
-      .from(repeatOrders)
-      .where(gt(repeatOrders.cursor, cursor))
-      .all();
-    return byCursor([
-      ...days.map(dayChange),
-      ...kept.map(patternChange),
-      ...orders.map(repeatOrdersChange),
-    ]);
+    );
   }
 
   private async pushTo(
@@ -249,68 +346,6 @@ export class UserDO extends DurableObject<Env> {
         this.welcome(socket, cursor);
       },
     });
-  }
-
-  /** The newest cursor across everything the user owns, 0 before any. */
-  private head(): number {
-    const heads = [
-      dayFields,
-      patterns,
-      patternOrder,
-      repeatOrders,
-      coworkers,
-      coworkerOrder,
-    ].map(
-      (table) =>
-        this.db
-          .select({ head: max(table.cursor) })
-          .from(table)
-          .get()?.head ?? 0
-    );
-    return Math.max(0, ...heads);
-  }
-
-  /** Every value changed after `cursor`, in cursor order. */
-  private changesAfter(cursor: number): Change[] {
-    const days = this.db
-      .select()
-      .from(dayFields)
-      .where(gt(dayFields.cursor, cursor))
-      .orderBy(asc(dayFields.cursor))
-      .all();
-    const kept = this.db
-      .select()
-      .from(patterns)
-      .where(gt(patterns.cursor, cursor))
-      .all();
-    const order = this.db
-      .select()
-      .from(patternOrder)
-      .where(gt(patternOrder.cursor, cursor))
-      .all();
-    const orders = this.db
-      .select()
-      .from(repeatOrders)
-      .where(gt(repeatOrders.cursor, cursor))
-      .all();
-    const people = this.db
-      .select()
-      .from(coworkers)
-      .where(gt(coworkers.cursor, cursor))
-      .all();
-    const peopleOrder = this.db
-      .select()
-      .from(coworkerOrder)
-      .where(gt(coworkerOrder.cursor, cursor))
-      .all();
-    return byCursor([
-      ...days.map(dayChange),
-      ...kept.map(patternChange),
-      ...order.map(orderChange),
-      ...orders.map(repeatOrdersChange),
-      ...people.map(coworkerChange),
-      ...peopleOrder.map(coworkerOrderChange),
-    ]);
   }
 
   /**

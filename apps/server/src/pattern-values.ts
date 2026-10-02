@@ -2,15 +2,13 @@ import { markColors } from "@pochical/design/colors";
 import { syncLimits, textLimits } from "@pochical/design/limits";
 
 import type { Pattern } from "./gen/pochical/v1/sync_pb";
+import { isId } from "./ids";
 import { characterCount } from "./text-limits";
 
 // What a pattern and the patterns' order may hold (spec/shift-patterns.md),
 // checked as the owner's edits arrive.
 
 const TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/u;
-export const isId = (text: string): boolean =>
-  text !== "" && text.length <= syncLimits.idLength;
-
 const isTime = (text: string | undefined): boolean =>
   text === undefined || TIME.test(text);
 

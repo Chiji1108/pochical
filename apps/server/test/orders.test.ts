@@ -321,6 +321,31 @@ describe("syncing a user's coworkers", () => {
     });
   });
 
+  it("refuses a coworker whose id has a space, which a day's people could not name", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    sendFrame(phone.socket, {
+      case: "coworkerEdits",
+      value: {
+        edits: [
+          {
+            kind: {
+              case: "coworker",
+              value: { hlc: clock(1000), id: "a b", name: "佐藤" },
+            },
+            opId: "a",
+          },
+        ],
+      },
+    });
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: { case: "acked", value: { opIds: ["a"] } },
+    });
+    await expect(settled(phone.socket, phone.frames)).resolves.toMatchObject({
+      kind: { case: "pong" },
+    });
+  });
+
   it("takes a day's people and refuses ids written twice", async () => {
     const token = await signInAnonymously();
     const phone = await device(token);

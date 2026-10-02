@@ -2,7 +2,7 @@ import { syncLimits, textLimits } from "@pochical/design/limits";
 
 import { isDate } from "./day-values";
 import type { RepeatOrder } from "./gen/pochical/v1/sync_pb";
-import { isId } from "./pattern-values";
+import { isId } from "./ids";
 import { characterCount } from "./text-limits";
 
 // What a user's repeating orders and coworkers may hold

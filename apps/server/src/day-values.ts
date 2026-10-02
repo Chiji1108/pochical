@@ -2,6 +2,7 @@ import { syncLimits, textLimits } from "@pochical/design/limits";
 
 import { DayField } from "./gen/pochical/v1/sync_pb";
 import type { DayValue } from "./gen/pochical/v1/sync_pb";
+import { isId } from "./ids";
 import { characterCount } from "./text-limits";
 
 // What a day's field may hold (spec/sync-protocol.md, Shifts), checked as
@@ -37,9 +38,6 @@ const KEPT_FIELDS: ReadonlySet<number> = new Set([
 /** A field the server keeps, by its number. */
 export const isDayField = (field: number): field is DayField =>
   KEPT_FIELDS.has(field);
-
-const isId = (text: string): boolean =>
-  text !== "" && text.length <= syncLimits.idLength;
 
 // A day's people: coworker ids separated by single spaces, each once.
 const isPeople = (value: string): boolean => {

@@ -58,7 +58,7 @@ export const syncLimits = {
   // Coworkers one person notes.
   coworkers: 500,
   // Characters in an id the apps make (patterns, coworkers, devices) and
-  // in an icon's name.
+  // in an icon's name; ids hold no spaces, which separate a day's people.
   idLength: 64,
   // Repeating orders in one timeline: a change of rotation or job each.
   orders: 200,
