@@ -21,6 +21,7 @@ import { css, cva, cx } from "styled-system/css";
 import {
   addDays,
   dateKey,
+  daysMovedOn,
   daysOfMonth,
   formatDay,
   formatMonthDay,
@@ -33,6 +34,7 @@ import {
   membersOrNone,
   monthAfter,
   nextDayOf,
+  selectedAfter,
   timeChangeOf,
   timeRange,
   weekdays,
@@ -607,7 +609,7 @@ function useShiftEntry({
   const lastDay = daysOfMonth(month).length;
   const selectedShift = schedule[dateKey(selectedDate)]?.shift;
   function moveToNextDay(result: string, days = 1) {
-    const nextDay = Math.min(selectedDay + days, lastDay);
+    const nextDay = selectedAfter(selectedDate, days).getDate();
     setSelectedDay(nextDay);
     setAnnouncement(
       `${formatMonthDay(selectedDate)}、${result}。${selectedDay === lastDay ? "月末です。入力が終わったら完了を押してください" : `${nextDay}日を選択中`}`
@@ -655,7 +657,7 @@ function useShiftEntry({
       following
         ? `${book[shift]?.name}を入力しました。翌日は${book[following]?.name}です`
         : `${book[shift]?.name}を入力しました`,
-      following ? 2 : 1
+      daysMovedOn(shift, book)
     );
   }
   function skip() {
