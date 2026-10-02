@@ -299,6 +299,8 @@ const oneLine = css({
 });
 
 const simple = {
+  centered: css({ gap: "12px", justifyContent: "center" }),
+  markCentered: css({ display: "flex" }),
   // The date in bold beside its weekday, quieter, as a card dates itself.
   date: css({ fontWeight: 700 }),
   head: css({
@@ -349,10 +351,14 @@ function SimpleDay({
   day,
   label,
   markSize,
+  centered = false,
 }: {
   day: WidgetDay;
   label?: string;
   markSize: number;
+  // Alone in the small one: the date and mark one group in the middle,
+  // rather than the date at the top and the mark adrift below it.
+  centered?: boolean;
 }) {
   const words = useWords();
   // A day with nothing changed is its own design, not one with an empty
@@ -360,7 +366,7 @@ function SimpleDay({
   // middle of it.
   const said = changeWords(day, useShiftNames()) !== undefined;
   return (
-    <div className={simple.root}>
+    <div className={cx(simple.root, centered && simple.centered)}>
       {label ? (
         <span className={simple.label}>{label}</span>
       ) : (
@@ -369,7 +375,7 @@ function SimpleDay({
           <span className={simple.weekday}>{words.dayName(day.date)}</span>
         </span>
       )}
-      <span className={simple.mark}>
+      <span className={centered ? simple.markCentered : simple.mark}>
         <DayMark day={day} size={said ? markSize : markSize + QUIET_GROWTH} />
       </span>
       {said ? (
@@ -397,7 +403,7 @@ export function SimpleSmall({ entry }: { entry: WidgetEntry }) {
       />
     );
   }
-  return <SimpleDay day={day} markSize={56} />;
+  return <SimpleDay centered day={day} markSize={52} />;
 }
 
 // Today and tomorrow, side by side.
