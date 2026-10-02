@@ -1,9 +1,10 @@
 import { create, toBinary } from "@bufbuild/protobuf";
-import { syncLimits } from "@pochical/design/limits";
+import { COWORKERS_MAX, syncLimits } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
 import {
   and,
   asc,
+  count,
   eq,
   gt,
   gte,
@@ -693,7 +694,12 @@ export class UserDO extends DurableObject<Env> {
     if (stored && compareClocks(clock, clockOfRow(stored)) <= 0) {
       return undefined;
     }
-    const fits = edit.name === undefined || fitsCoworkerName(edit.name);
+    // A coworker newly kept past COWORKERS_MAX is refused, answered as
+    // deleted, like a name that does not fit.
+    const adding = edit.name !== undefined && (stored?.name ?? null) === null;
+    const fits =
+      edit.name === undefined ||
+      (fitsCoworkerName(edit.name) && !(adding && this.coworkersFull()));
     const row: CoworkerRow = {
       ...clockColumns(writtenClock(clock, fits)),
       cursor,
@@ -706,6 +712,17 @@ export class UserDO extends DurableObject<Env> {
       .onConflictDoUpdate({ set: row, target: coworkers.id })
       .run();
     return coworkerChange(row);
+  }
+
+  /** Whether the user keeps COWORKERS_MAX coworkers already. */
+  private coworkersFull(): boolean {
+    const kept =
+      this.db
+        .select({ kept: count() })
+        .from(coworkers)
+        .where(isNotNull(coworkers.name))
+        .get()?.kept ?? 0;
+    return kept >= COWORKERS_MAX;
   }
 
   private applyCoworkerOrder(

@@ -1,4 +1,4 @@
-import { syncLimits, textLimits } from "@pochical/design/limits";
+import { COWORKERS_MAX, syncLimits, textLimits } from "@pochical/design/limits";
 
 import { isDate } from "./day-values";
 import type { RepeatOrder } from "./gen/pochical/v1/sync_pb";
@@ -41,7 +41,7 @@ export const fitsCoworkerName = (name: string): boolean =>
 
 /** Whether an order of coworkers is ids, each once, and not too many. */
 export const fitsCoworkerOrder = (ids: readonly string[]): boolean =>
-  ids.length <= syncLimits.coworkers &&
+  ids.length <= COWORKERS_MAX &&
   new Set(ids).size === ids.length &&
   ids.every((id) => isId(id));
 

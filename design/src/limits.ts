@@ -51,6 +51,10 @@ export const SHARED_DAYS_MAX = 31;
 // it only caps what a leaked invitation link can let in.
 export const GROUP_MAX_MEMBERS = 100;
 
+// The most people one person keeps in 一緒に働く人. Room for a whole
+// ward or shop, so it only caps what one account stores and syncs.
+export const COWORKERS_MAX = 100;
+
 // How much of what a user owns one synced value may hold
 // (spec/sync-protocol.md). Far past what one person keeps, so they only
 // bound a value; an edit past them is corrected by the server.
@@ -58,8 +62,6 @@ export const syncLimits = {
   // Values in one Changes frame the server sends; a frame stays well
   // under a WebSocket message's size.
   changesPerFrame: 500,
-  // Coworkers one person notes.
-  coworkers: 500,
   // Edits in one frame a device sends (DayEdits, PatternEdits, …); an
   // outbox sends more as several. Past it the server closes the socket.
   editsPerFrame: 500,

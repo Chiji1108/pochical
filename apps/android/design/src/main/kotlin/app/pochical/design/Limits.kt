@@ -23,7 +23,6 @@ object TextFields {
 /** How much of what a user owns one synced value may hold (spec/sync-protocol.md). */
 object SyncLimits {
   const val changesPerFrame = 500
-  const val coworkers = 500
   const val editsPerFrame = 500
   const val idLength = 64
   const val orders = 200
@@ -37,3 +36,6 @@ const val SHARED_DAYS_MAX = 31
 
 /** The most people in one group. */
 const val GROUP_MAX_MEMBERS = 100
+
+/** The most people one person keeps in 一緒に働く人. */
+const val COWORKERS_MAX = 100

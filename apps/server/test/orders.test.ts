@@ -1,3 +1,4 @@
+import { COWORKERS_MAX } from "@pochical/design/limits";
 import { describe, expect, it } from "vitest";
 
 import { DayField } from "../src/gen/pochical/v1/sync_pb";
@@ -46,6 +47,15 @@ const ordersEdit = (
 ) => ({
   case: "repeatOrdersEdits" as const,
   value: { edits: [{ clearFrom, opId, orders: { hlc: clock(ms), orders } }] },
+});
+
+// One coworker edit, named by its id and clock.
+const coworkerEdit = (id: string, name: string, ms: number) => ({
+  kind: {
+    case: "coworker" as const,
+    value: { hlc: clock(ms), id, name },
+  },
+  opId: `${id}-${ms}`,
 });
 
 // The day values a frame of changes holds, as date, field and value.
@@ -344,6 +354,43 @@ describe("syncing a user's coworkers", () => {
     await expect(settled(phone.socket, phone.frames)).resolves.toMatchObject({
       kind: { case: "pong" },
     });
+  });
+
+  it("refuses a new coworker past COWORKERS_MAX, but still renames one", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    sendFrame(phone.socket, {
+      case: "coworkerEdits",
+      value: {
+        edits: Array.from({ length: COWORKERS_MAX }, (_, index) =>
+          coworkerEdit(`c${index}`, `人${index}`, 1000)
+        ),
+      },
+    });
+    await phone.frames.next();
+    await phone.frames.next();
+
+    sendFrame(phone.socket, {
+      case: "coworkerEdits",
+      value: {
+        edits: [
+          coworkerEdit("extra", "もう一人", 2000),
+          coworkerEdit("c0", "佐藤", 2000),
+        ],
+      },
+    });
+    await phone.frames.next();
+    const { kind } = await phone.frames.next();
+    const changes = kind.case === "changes" ? kind.value.changes : [];
+    expect(changes.map((change) => change.kind)).toMatchObject([
+      {
+        case: "coworker",
+        value: { hlc: { deviceId: "server" }, id: "extra" },
+      },
+      { case: "coworker", value: { id: "c0", name: "佐藤" } },
+    ]);
+    const refused = changes[0]?.kind;
+    expect(refused?.case === "coworker" && refused.value.name).toBeUndefined();
   });
 
   it("takes a day's people and refuses ids written twice", async () => {

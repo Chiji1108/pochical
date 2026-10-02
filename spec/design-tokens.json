@@ -2836,11 +2836,11 @@
     "codeLength": 8
   },
   "limits": {
+    "coworkersMax": 100,
     "groupMaxMembers": 100,
     "sharedDaysMax": 31,
     "sync": {
       "changesPerFrame": 500,
-      "coworkers": 500,
       "editsPerFrame": 500,
       "idLength": 64,
       "orders": 200,

@@ -21,7 +21,6 @@ public enum TextFields {
 /// How much of what a user owns one synced value may hold (spec/sync-protocol.md).
 public enum SyncLimits {
   public static let changesPerFrame = 500
-  public static let coworkers = 500
   public static let editsPerFrame = 500
   public static let idLength = 64
   public static let orders = 200
@@ -35,3 +34,6 @@ public let sharedDaysMax = 31
 
 /// The most people in one group.
 public let groupMaxMembers = 100
+
+/// The most people one person keeps in 一緒に働く人.
+public let coworkersMax = 100
