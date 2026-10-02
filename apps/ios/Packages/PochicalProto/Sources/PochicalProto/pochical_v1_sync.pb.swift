@@ -205,8 +205,8 @@ public nonisolated struct Pochical_V1_ServerFrame: Sendable {
   }
 
   /// The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-  /// CoworkerEdits the server has taken; the client deletes them from its
-  /// outbox.
+  /// CoworkerEdits the server has taken, sent after the Changes they made;
+  /// the client deletes them from its outbox.
   public var acked: Pochical_V1_Acked {
     get {
       if case .acked(let v)? = kind {return v}
@@ -235,8 +235,8 @@ public nonisolated struct Pochical_V1_ServerFrame: Sendable {
     /// happen.
     case changes(Pochical_V1_Changes)
     /// The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-    /// CoworkerEdits the server has taken; the client deletes them from its
-    /// outbox.
+    /// CoworkerEdits the server has taken, sent after the Changes they made;
+    /// the client deletes them from its outbox.
     case acked(Pochical_V1_Acked)
     /// The client's cursor is ahead of the server's: drop this DO's cache.
     /// A Changes with everything the DO holds follows.

@@ -96,8 +96,8 @@ describe("syncing a user's repeating orders", () => {
       phone.socket,
       ordersEdit("o", [order("2026-10-03", ["day", "off"])], 2000, "2026-10-03")
     );
-    await phone.frames.next();
     const { kind } = await phone.frames.next();
+    await phone.frames.next();
     const changes = kind.case === "changes" ? kind.value.changes : [];
     expect(changes[0]?.kind).toMatchObject({
       case: "repeatOrders",
@@ -178,8 +178,8 @@ describe("syncing a user's repeating orders", () => {
       await phone.frames.next();
 
       sendFrame(phone.socket, ordersEdit("bad", orders, 2000, clearFrom));
-      await phone.frames.next();
       const { kind } = await phone.frames.next();
+      await phone.frames.next();
       const changes = kind.case === "changes" ? kind.value.changes : [];
       expect(changes).toHaveLength(1);
       expect(changes[0]?.kind).toMatchObject({
@@ -211,8 +211,8 @@ describe("syncing a user's repeating orders", () => {
         ],
       },
     });
-    await phone.frames.next();
     const { kind } = await phone.frames.next();
+    await phone.frames.next();
     const changes = kind.case === "changes" ? kind.value.changes : [];
     expect(daysIn(changes)).toStrictEqual([
       ["2026-10-07", DayField.PATTERN, undefined],
@@ -236,8 +236,8 @@ describe("syncing a user's repeating orders", () => {
         ],
       },
     });
-    await phone.frames.next();
     const { kind } = await phone.frames.next();
+    await phone.frames.next();
     expect(
       daysIn(kind.case === "changes" ? kind.value.changes : [])
     ).toStrictEqual([["2026-10-05", DayField.PATTERN, dayRules.noShift]]);
@@ -317,6 +317,8 @@ describe("syncing a user's coworkers", () => {
         ],
       },
     });
+    // The sender gets the changes first, then its acknowledgement.
+    await phone.frames.next();
     await expect(phone.frames.next()).resolves.toMatchObject({
       kind: { case: "acked", value: { opIds: ["a", "b", "c"] } },
     });
@@ -390,8 +392,8 @@ describe("syncing a user's coworkers", () => {
         ],
       },
     });
-    await phone.frames.next();
     const { kind } = await phone.frames.next();
+    await phone.frames.next();
     const changes = kind.case === "changes" ? kind.value.changes : [];
     expect(changes.map((change) => change.kind)).toMatchObject([
       {
@@ -413,8 +415,9 @@ describe("syncing a user's coworkers", () => {
     );
     const frame = async (edits: ReturnType<typeof coworkerEdit>[]) => {
       sendFrame(phone.socket, { case: "coworkerEdits", value: { edits } });
+      const changes = changesIn(await phone.frames.next());
       await phone.frames.next();
-      return changesIn(await phone.frames.next());
+      return changes;
     };
     await frame(ids.map((id) => coworkerEdit(id, id, 1000)));
 
@@ -466,7 +469,6 @@ describe("syncing a user's coworkers", () => {
         ],
       },
     });
-    await phone.frames.next();
     expect(changesIn(await phone.frames.next())).toMatchObject([
       {
         kind: {
@@ -475,6 +477,7 @@ describe("syncing a user's coworkers", () => {
         },
       },
     ]);
+    await phone.frames.next();
   });
 
   it("takes a day's people and refuses ids written twice", async () => {
@@ -489,8 +492,8 @@ describe("syncing a user's coworkers", () => {
         ],
       },
     });
-    await phone.frames.next();
     const { kind } = await phone.frames.next();
+    await phone.frames.next();
     expect(
       daysIn(kind.case === "changes" ? kind.value.changes : [])
     ).toStrictEqual([
