@@ -28,9 +28,9 @@ export const widgetVariantOptions = {
   kind: {
     choices: [
       { label: "すべて", value: "all" },
-      { label: "今日", value: "today" },
+      { label: "シンプル", value: "simple" },
       { label: "次の休み", value: "nextOff" },
-      { label: "リスト", value: "list" },
+      { label: "これから", value: "upcoming" },
       { label: "カレンダー", value: "calendar" },
       { label: "ロック画面", value: "lock" },
     ],
