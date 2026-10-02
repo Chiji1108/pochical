@@ -1,4 +1,4 @@
-import { textLimits } from "@pochical/design/limits";
+import { COWORKERS_MAX, textLimits } from "@pochical/design/limits";
 import {
   ArrowRight,
   CalendarPlus,
@@ -10,6 +10,7 @@ import {
   Pencil,
   Plus,
   Trash2,
+  X,
 } from "lucide-react";
 import {
   animate,
@@ -61,6 +62,7 @@ import { useChangeDays, useShownDays, useUser } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
 import { spring } from "../lib/motion";
 import { composing, limitText } from "../lib/text-limits";
+import { coworkersFull } from "./design-coworkers";
 import type { Coworkers } from "./design-coworkers";
 import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
@@ -102,6 +104,7 @@ import {
   DestructiveButton,
   dayGridHeight,
   DoneButton,
+  IconButton,
   IconMenu,
   LimitedInput,
   LimitedTextArea,
@@ -1575,7 +1578,7 @@ function MonthHeading({
 // together at the edge; entering drops them, as its date picker changes
 // the month, leaving 完了 alone there. Without `arrows`, a swipe alone
 // turns the page, as in the platforms' calendars: the corner holds 今月
-// while away from it, then the save menu or 完了, and the arrows stay for
+// while away from it, then the save menu, 完了 or ×, and the arrows stay for
 // screen readers, as a native calendar's accessibility actions, showing
 // only while the keyboard is on them.
 function HeadingActions({
@@ -1680,8 +1683,11 @@ function HeadingActions({
 }
 
 // The heading's corner when a swipe alone turns the page: the arrows for
-// the keyboard and screen readers, 今月 while away, then the save menu or
-// 完了.
+// the keyboard and screen readers, 今月 while away, then the screen's
+// own: the save menu on the month, 完了 to finish ポチポチ入力, and × to
+// close an opened week. The week saves each change as it is made, so it
+// has nothing to finish; 完了 there read as editing, and its accent drew
+// the eye to leaving rather than to the day.
 function SwipeCorner({
   mode,
   previous,
@@ -1728,8 +1734,12 @@ function SwipeCorner({
             端末カレンダーに追加
           </MenuItem>
         </IconMenu>
-      ) : (
-        <DoneButton onClick={onDone} />
+      ) : null}
+      {mode === "edit" && <DoneButton onClick={onDone} />}
+      {mode === "week" && (
+        <IconButton label="閉じる" onClick={onDone}>
+          <X aria-hidden="true" size={20} />
+        </IconButton>
       )}
     </div>
   );
@@ -2090,6 +2100,7 @@ function MemberChips({
   onChange: (selected: string[]) => void;
 }) {
   const [adding, setAdding] = useState(false);
+  const toast = useContext(ToastContext);
   // Held to the limit here too: a name confirmed and added in one go may
   // not have been cut to it yet.
   function add(name: string) {
@@ -2099,6 +2110,11 @@ function MemberChips({
       return;
     }
     if (!members.names.includes(trimmed)) {
+      // Counted again: the list may have grown while the name was typed.
+      if (members.names.length >= COWORKERS_MAX) {
+        toast(coworkersFull, "problem");
+        return;
+      }
       members.onAdd(trimmed);
     }
     if (!selected.includes(trimmed)) {
@@ -2146,6 +2162,10 @@ function MemberChips({
       ) : (
         <Chip
           onClick={() => {
+            if (members.names.length >= COWORKERS_MAX) {
+              toast(coworkersFull, "problem");
+              return;
+            }
             setAdding(true);
           }}
           variant="add"

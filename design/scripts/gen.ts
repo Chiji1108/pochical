@@ -17,6 +17,7 @@ import {
 import type { ColorScheme } from "../src/colors";
 import { inviteRules } from "../src/invite";
 import {
+  COWORKERS_MAX,
   GROUP_MAX_MEMBERS,
   SHARED_DAYS_MAX,
   textFields,
@@ -149,6 +150,7 @@ function json() {
     },
     invite: inviteRules,
     limits: {
+      coworkersMax: COWORKERS_MAX,
       groupMaxMembers: GROUP_MAX_MEMBERS,
       sharedDaysMax: SHARED_DAYS_MAX,
       text: textLimits,
@@ -491,6 +493,7 @@ const TEXT_FIELDS_DOC =
   "How a field shows its count and how a shift's name shortens in a day (spec/text-limits.md).";
 const SHARED_DAYS_DOC = "The most days one chat message shares.";
 const GROUP_MEMBERS_DOC = "The most people in one group.";
+const COWORKERS_DOC = "The most people one person keeps in 一緒に働く人.";
 
 // Chat.swift, Invite.swift, Review.swift and Widgets.swift, and their
 // Kotlin twins.
@@ -529,7 +532,8 @@ const outputs = {
     [
       `/** ${GROUP_MEMBERS_DOC} */`,
       `const val GROUP_MAX_MEMBERS = ${GROUP_MAX_MEMBERS}`,
-    ]
+    ],
+    [`/** ${COWORKERS_DOC} */`, `const val COWORKERS_MAX = ${COWORKERS_MAX}`]
   ),
   "apps/ios/Packages/PochicalDesign/Sources/PochicalDesign/DesignTokens.swift":
     swift(),
@@ -540,7 +544,8 @@ const outputs = {
     [
       `/// ${GROUP_MEMBERS_DOC}`,
       `public let groupMaxMembers = ${GROUP_MAX_MEMBERS}`,
-    ]
+    ],
+    [`/// ${COWORKERS_DOC}`, `public let coworkersMax = ${COWORKERS_MAX}`]
   ),
   [`${SWIFT_DIR}/Phrases.swift`]: swiftFile(swiftPhrases()),
   [`${SWIFT_DIR}/Holidays.swift`]: swiftFile(swiftHolidays()),

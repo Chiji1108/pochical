@@ -59,6 +59,13 @@ export const designVariantOptions = {
     ],
     label: "予定",
   },
+  supportSample: {
+    choices: [
+      { label: "はじめて", value: "none" },
+      { label: "返事あり", value: "answered" },
+    ],
+    label: "お問い合わせ",
+  },
   wallpaper: {
     choices: [
       { label: "青緑", value: "teal" },

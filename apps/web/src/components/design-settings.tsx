@@ -32,7 +32,7 @@ import {
   repeatSchedule,
 } from "../lib/design-days";
 import type { RepeatRule, Schedule } from "../lib/design-days";
-import { useDevice } from "../lib/design-device";
+import { APP_VERSION, useDevice } from "../lib/design-device";
 import {
   isDayOff,
   OwnPatternsContext,
@@ -70,6 +70,7 @@ import { PatternsPage } from "./design-pattern-editor";
 import { PresetContexts } from "./design-providers";
 import { RepeatSequenceEditor, ShiftPreview } from "./design-repeat-editor";
 import { ConfirmDialog, SystemAlert } from "./design-sheet";
+import { SupportChatPage, SupportRow } from "./design-support-chat";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
 import {
@@ -142,7 +143,8 @@ type Page =
   | "account"
   | "profile"
   | "reminders"
-  | "chatNotifications";
+  | "chatNotifications"
+  | "support";
 
 // The four shapes members see. Icons come filled (塗り) or as outlines (線);
 // letters always sit on their tile, and emoji have no fill.
@@ -237,6 +239,17 @@ export function DesignSettings({
   const lastSequence =
     [...rules].reverse().find((rule) => rule.sequence.length > 0)?.sequence ??
     [];
+  // A chat fills the screen, its composer where the tab bar was, as the
+  // group chats do.
+  if (page === "support") {
+    return (
+      <SupportChatPage
+        onBack={() => {
+          setPage("top");
+        }}
+      />
+    );
+  }
   return (
     <Screen>
       <ScreenScroll>
@@ -514,44 +527,25 @@ function SettingsTop({
           }}
         />
       </ListSection>
+      <SupportRow
+        onOpen={() => {
+          onOpen("support");
+        }}
+      />
       <AboutSection />
     </>
   );
 }
 
-// The version the prototype stands in for, and the phones it says it is
-// (the reference devices), in place of what the apps read from the system.
-const APP_VERSION = "1.0.0";
-const sampleDevices = {
-  android: "Pixel 9a・Android 16",
-  ios: "iPhone 16 Pro・iOS 26.0",
-} as const;
-
-// A new mail to support, with room to write at the top and, under a rule,
-// the app's version and the phone, said plainly as what they are for.
-function contactMail(device: string) {
-  const body = [
-    "",
-    "",
-    "",
-    "――――",
-    "アプリと端末の情報です。不具合を調べるのに使います（消しても大丈夫です）。",
-    `${site.name} ${APP_VERSION}`,
-    device,
-  ].join("\n");
-  const subject = `${site.name}のお問い合わせ`;
-  return `mailto:${site.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
-
 // The apps open the site's pages in the system's browser sheet
-// (SFSafariViewController, Custom Tabs) and the mail in its compose
-// sheet; the prototype opens a tab.
+// (SFSafariViewController, Custom Tabs); the prototype opens a tab.
 function openOutside(url: string) {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
-// Pochical itself, at the foot of the settings. Rows that leave the app
-// end in ↗ instead of the arrow of rows that go on inside it. The store's
+// Pochical itself, at the foot of the settings, under the chat with the
+// people who make it (SupportRow). Rows that leave the app end in ↗
+// instead of the arrow of rows that go on inside it. The store's
 // own review prompt comes by itself only now and then (spec/review.md);
 // the review row is there whenever someone wants to write one, and opens
 // the store's page for writing it (App Store's ?action=write-review,
@@ -571,13 +565,6 @@ function AboutSection() {
           label="ヘルプ"
           onClick={() => {
             openOutside("/support");
-          }}
-        />
-        <ListRow
-          arrow={outside}
-          label="お問い合わせ"
-          onClick={() => {
-            openOutside(contactMail(sampleDevices[platform]));
           }}
         />
         <ListRow

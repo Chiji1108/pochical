@@ -99,7 +99,13 @@ import {
 } from "../components/shift-mark";
 import type { ShiftMarkStyle } from "../components/shift-mark";
 import { sampleRosterPhoto } from "../lib/design-sample-photos";
+import { supportThreadOf } from "../lib/design-support";
+import { createUserStore, UserStoreContext } from "../lib/design-user-store";
 import { pageMeta } from "../lib/site";
+
+// The sample person the tab bar counts unread for: their groups' chats
+// and an answer from support, so both counts show.
+const tabBarPerson = createUserStore({ support: supportThreadOf("answered") });
 
 // The two kinds of toast, one above the other.
 const toastKinds = css({
@@ -1500,7 +1506,9 @@ function Pochical() {
           wide
         >
           <div className={catalog.tabBarStage}>
-            <TabBar active="calendar" onSelect={() => undefined} />
+            <UserStoreContext value={tabBarPerson}>
+              <TabBar active="calendar" onSelect={() => undefined} />
+            </UserStoreContext>
           </div>
         </Item>
         <Item

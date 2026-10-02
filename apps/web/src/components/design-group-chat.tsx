@@ -168,7 +168,7 @@ function lastLine(
 
 // A chat in the hub's list: its name and last line, with the time and
 // what is unread at the end.
-const chatRow = {
+export const chatRow = {
   meta: css({
     alignItems: "flex-end",
     display: "flex",
@@ -217,7 +217,7 @@ const chatRow = {
 // their avatar and name at the start of a run, yours on the right in the
 // accent; the day between runs, the time by the bubble, reactions under
 // it, and the reply being written above the composer.
-const chatStyle = {
+export const chatStyle = {
   avatar: css({ flexShrink: 0, width: "32px" }),
   body: cva({
     base: {
@@ -2471,11 +2471,11 @@ const uploadMilliseconds = 1600;
 
 // How many photos go in one send: a roster is a page or two, and more
 // would flood a small group's chat.
-const maxPhotos = 4;
+export const maxPhotos = 4;
 
 // A chosen photo with its size, read before it is shown so its line
 // keeps its place; the apps read it while shrinking the photo to send.
-async function photoOf(file: File): Promise<Photo> {
+export async function photoOf(file: File): Promise<Photo> {
   const src = URL.createObjectURL(file);
   const image = new Image();
   image.src = src;
@@ -2488,7 +2488,7 @@ async function photoOf(file: File): Promise<Photo> {
 const photoBox = { height: 260, width: 220 };
 const photoAspect = { max: 2, min: 1 / 2 };
 
-function photoSize(photo: Photo) {
+export function photoSize(photo: Photo) {
   const aspect = Math.min(
     Math.max(photo.width / photo.height, photoAspect.min),
     photoAspect.max
@@ -4491,7 +4491,7 @@ function DayCardByPerson({
     </span>
   );
 }
-const chatAvatarSize = 32;
+export const chatAvatarSize = 32;
 const reactionFaceSize = 18;
 // Past this many, a reaction shows two faces and "+N".
 const maxReactionFaces = 3;
