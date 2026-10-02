@@ -70,12 +70,7 @@ import { PatternsPage } from "./design-pattern-editor";
 import { PresetContexts } from "./design-providers";
 import { RepeatSequenceEditor, ShiftPreview } from "./design-repeat-editor";
 import { ConfirmDialog, SystemAlert } from "./design-sheet";
-import {
-  SupportChatPage,
-  supportLinesOf,
-  SupportRow,
-} from "./design-support-chat";
-import type { SupportLine, SupportSample } from "./design-support-chat";
+import { SupportChatPage, SupportRow } from "./design-support-chat";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
 import {
@@ -211,7 +206,6 @@ export function DesignSettings({
   onChangeJob,
   onHolidaysOff,
   onTab,
-  supportSample = "none",
   initialPage = "top",
 }: {
   patterns: Pattern[];
@@ -225,16 +219,10 @@ export function DesignSettings({
   onChangeJob: (job: { patterns: Pattern[]; rule: RepeatRule }) => void;
   onHolidaysOff: (holidaysOff: boolean) => void;
   onTab: (tab: Tab) => void;
-  // What has been said with support so far.
-  supportSample?: SupportSample;
   // For the flow diagrams: a page to open on.
   initialPage?: Page;
 }) {
   const [page, setPage] = useState<Page>(initialPage);
-  // Kept here, so leaving the chat and coming back finds it as it was.
-  const [supportLines, setSupportLines] = useState(() =>
-    supportLinesOf(supportSample)
-  );
   const weekTools = useWeek();
   const patternKeys = patterns.map((pattern) => pattern.id);
   const preview = stylePreviewOf(patterns, weekTools.weekDates);
@@ -256,11 +244,9 @@ export function DesignSettings({
   if (page === "support") {
     return (
       <SupportChatPage
-        lines={supportLines}
         onBack={() => {
           setPage("top");
         }}
-        onChange={setSupportLines}
       />
     );
   }
@@ -274,7 +260,6 @@ export function DesignSettings({
             onOpen={setPage}
             patternKeys={patternKeys}
             profile={profile}
-            supportLines={supportLines}
           />
         )}
         {page === "profile" && (
@@ -440,14 +425,12 @@ function SettingsTop({
   patternKeys,
   coworkerCount,
   profile,
-  supportLines,
   onOpen,
 }: {
   current: RepeatRule | undefined;
   patternKeys: Shift[];
   coworkerCount: number;
   profile: Profile;
-  supportLines: SupportLine[];
   onOpen: (page: Page) => void;
 }) {
   return (
@@ -545,7 +528,6 @@ function SettingsTop({
         />
       </ListSection>
       <SupportRow
-        lines={supportLines}
         onOpen={() => {
           onOpen("support");
         }}

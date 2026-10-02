@@ -21,6 +21,7 @@ import { VariantPanel } from "../components/design-variant-panel";
 import { initialDesignSchedule, patternSets } from "../lib/design-days";
 import { useDevice } from "../lib/design-device";
 import { presetList } from "../lib/design-patterns";
+import { supportThreadOf } from "../lib/design-support";
 import {
   createUserStore,
   sampleCoworkers,
@@ -46,16 +47,15 @@ function samplePatterns(count: DesignVariants["patternSample"]) {
 
 // A sample person, starting over with the sample or with nothing entered.
 function makePerson(
-  sample: DesignVariants["scheduleSample"],
-  members: DesignVariants["memberSample"],
-  groups: DesignVariants["groupSample"],
-  patterns: DesignVariants["patternSample"]
+  { memberSample, groupSample, patternSample, supportSample }: DesignVariants,
+  sample: DesignVariants["scheduleSample"]
 ) {
   return createUserStore({
-    coworkers: members === "some" ? sampleCoworkers : [],
-    groups: groups === "some" ? sampleGroups() : [],
-    patterns: samplePatterns(patterns),
+    coworkers: memberSample === "some" ? sampleCoworkers : [],
+    groups: groupSample === "some" ? sampleGroups() : [],
+    patterns: samplePatterns(patternSample),
     schedule: sample === "empty" ? {} : initialDesignSchedule(),
+    support: supportThreadOf(supportSample),
   });
 }
 
@@ -95,24 +95,16 @@ function DemoPage() {
     });
   }, [variants.platform, variants.wallpaper]);
   const [person, setPerson] = useState(() =>
-    makePerson(
-      variants.scheduleSample,
-      variants.memberSample,
-      variants.groupSample,
-      variants.patternSample
-    )
+    makePerson(variants, variants.scheduleSample)
   );
+  // The chat with support follows its choice at once, as it is switched.
+  useEffect(() => {
+    person.setState({ support: supportThreadOf(variants.supportSample) });
+  }, [person, variants.supportSample]);
   // Starting over remounts the phone, so its screens reset too.
   const [version, setVersion] = useState(0);
   const startOver = (sample: DesignVariants["scheduleSample"]) => {
-    setPerson(
-      makePerson(
-        sample,
-        variants.memberSample,
-        variants.groupSample,
-        variants.patternSample
-      )
-    );
+    setPerson(makePerson(variants, sample));
     setVersion((value) => value + 1);
   };
   return (
