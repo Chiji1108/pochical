@@ -3,14 +3,19 @@
 // The widgets' own settings, the day they show and the device they sit
 // on, so a widget can be looked at in any state without a page of rows.
 export const widgetVariantOptions = {
+  // Who 次の休み and これから are set to, as editing the widget picks:
+  // someone, or for 次の休み a whole group.
   companion: {
     choices: [
       { label: "なし", value: "none" },
       { label: "ゆうき", value: "partner" },
       { label: "お母さん", value: "mother" },
       { label: "未入力の人", value: "notEntered" },
+      { label: "家族", value: "family" },
+      { label: "看護学校の友達", value: "friends" },
+      { label: "高校の同級生", value: "school" },
     ],
-    label: "一緒に休む人",
+    label: "一緒に見る相手",
   },
   day: {
     choices: [

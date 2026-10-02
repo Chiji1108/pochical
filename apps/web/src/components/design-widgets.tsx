@@ -1,20 +1,28 @@
 import { widgetRules } from "@pochical/design/widgets";
-import { createContext, useContext } from "react";
+import { Fragment, createContext, useContext } from "react";
 import type { CSSProperties } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import { presetPatterns } from "../lib/design-patterns";
-import type { WidgetDay, WidgetEntry, WidgetOff } from "../lib/design-widgets";
+import type {
+  WidgetDay,
+  WidgetEntry,
+  WidgetNoOff,
+  WidgetOff,
+  WidgetPair,
+  WidgetPersonDay,
+} from "../lib/design-widgets";
 import { dayName } from "../lib/text-limits";
 import { DARK_DRAWING, LIGHT_DRAWING, useAppIcons } from "./design-app-icon";
 import { dayCell, dayParts, todayMark } from "./design-day-cell";
-import { PhotoAvatar } from "./design-group-parts";
+import { GroupIcon, MemberLook, PhotoAvatar } from "./design-group-parts";
 import { englishMonthOf } from "./design-month-name";
 import { ColorSchemeContext } from "./design-theme";
 import { srOnly } from "./design-ui";
 import { useWeek } from "./design-week";
 import {
   CellNamesContext,
+  MarkGlyph,
   OffDisplayContext,
   ShiftMark,
   ShiftMarkStyleContext,
@@ -255,11 +263,16 @@ function useWords() {
       inDays: (inDays: number) =>
         inDays === 1 ? "Tomorrow" : `in ${inDays} days`,
       line: (date: Date) => `${day(date)} ${date.getDate()}`,
+      apart: "No days off together yet",
       nextOff: "Next day off",
       nothingYet: "Nothing yet",
+      offAll: "Everyone off",
       offTogether: "Off together",
       rest: "Day off\ntoday",
+      restAll: "Everyone off\ntoday",
       restTogether: "Both off\ntoday",
+      waiting: ([first = "", ...rest]: string[]) =>
+        `Waiting on ${first}${rest.length > 0 ? ` +${rest.length}` : ""}`,
       short: (date: Date) => `${month(date)} ${date.getDate()}.`,
       today: "Today",
       tomorrow: "Tomorrow",
@@ -271,6 +284,7 @@ function useWords() {
     };
   }
   return {
+    apart: "重なる休みはまだありません",
     date: (date: Date) => `${monthDay(date)}(${weekday(date)})`,
     dayName: weekday,
     heading: (date: Date) =>
@@ -280,15 +294,23 @@ function useWords() {
     nextDay: () => "明日",
     nextOff: "次の休み",
     nothingYet: "まだ入っていません",
+    offAll: "みんな休み",
     offTogether: "一緒に休める日",
     rest: "今日は\nおやすみ",
+    restAll: "みんな\nおやすみ",
     restTogether: "ふたりとも\nおやすみ",
     short: monthDay,
     today: "今日",
     tomorrow: "明日",
     unit: "日後",
+    waiting: (names: string[]) => `${waitingNames(names)}の入力待ち`,
     weekday,
   };
+}
+
+// Who a day off together waits on: あやさん, or あやさんほか2人.
+function waitingNames([first = "", ...rest]: string[]) {
+  return rest.length > 0 ? `${first}さんほか${rest.length}人` : `${first}さん`;
 }
 
 // ── シンプル ─────────────────────────────────────────────────────────────
@@ -505,8 +527,12 @@ function UpcomingHead({ day }: { day: WidgetDay }) {
   );
 }
 
-// Today's line, and the next three days' marks under it.
+// Today's line, and the next three days' marks under it; set to someone,
+// today and tomorrow, theirs under the person's.
 export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
+  if (entry.pair) {
+    return <PairDays count={2} entry={entry} pair={entry.pair} />;
+  }
   return (
     <div className={upcoming.small}>
       <UpcomingHead day={entry.today} />
@@ -518,9 +544,13 @@ export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
 // シンプル's today on the left, with the memo where nothing changed; on
 // the right, the days after it a line each, each by its date (25 金),
 // with what changed, the memo, or the shift's name when names are shown.
+// Set to someone, five days from today, theirs under the person's.
 export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
   const words = useWords();
   const named = useShiftNames();
+  if (entry.pair) {
+    return <PairDays count={5} entry={entry} pair={entry.pair} />;
+  }
   return (
     <div className={cx(simple.pair, upcoming.pair)}>
       <div className={upcoming.today}>
@@ -542,6 +572,250 @@ export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
         ))}
       </ol>
     </div>
+  );
+}
+
+// ── これから with someone ───────────────────────────────────────────────
+
+// Where the widget is taller, as on Android's launcher, the marks grow.
+const PAIR_ROOMY = 150;
+const PAIR_FACE = 24;
+
+// A day off's tile, as in the group's tables: the テーマ's light tint
+// whatever the pattern, a little in from the cell; a day both are off
+// joins the tiles down the column into one band. Faint where the system
+// draws in one color.
+const pairTile = {
+  borderRadius: "sm",
+  content: '""',
+  inset: "3px",
+  position: "absolute",
+  zIndex: -1,
+} as const;
+
+const pair = {
+  // As far in from its column as the tiles are from their cells.
+  band: cva({
+    base: {
+      "&::before": { ...pairTile, inset: "0 3px", zIndex: 0 },
+      position: "relative",
+    },
+    variants: {
+      flat: {
+        false: { "&::before": { bg: "accent.container" } },
+        true: { "&::before": { bg: "rgb(255 255 255 / 0.24)" } },
+      },
+    },
+  }),
+  cell: cva({
+    base: {
+      alignItems: "center",
+      display: "flex",
+      flexDirection: "column",
+      gap: "1px",
+      isolation: "isolate",
+      justifyContent: "center",
+      minWidth: 0,
+      position: "relative",
+    },
+    variants: {
+      tile: {
+        flat: { "&::before": { ...pairTile, bg: "rgb(255 255 255 / 0.24)" } },
+        full: { "&::before": { ...pairTile, bg: "accent.container" } },
+        none: {},
+      },
+    },
+  }),
+  date: css({
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    paddingBlock: "4px 2px",
+    position: "relative",
+  }),
+  face: css({
+    alignItems: "center",
+    display: "flex",
+    justifyContent: "center",
+  }),
+  grid: css({ columnGap: "2px", display: "grid", height: "100%" }),
+  number: css({
+    fontSize: "13px",
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 600,
+    lineHeight: "16px",
+  }),
+  weekday: css({ lineHeight: "13px", textStyle: "caption2" }),
+};
+
+// Marks grow where the widget is taller; a name under each takes the
+// room of a smaller one.
+function pairMarkSize(roomy: boolean, named: boolean) {
+  const grown = roomy ? 32 : 26;
+  return named ? grown - 6 : grown;
+}
+
+// The days from today in columns, as the group's 週ごと lays a week: the
+// dates over them, each under its weekday (THU in English: the days start
+// from today, not the week's start, so one letter could be either T),
+// then the person's row and the picked one's, each with their face in a
+// first column as wide as the days'. Today is always the first day, so
+// its date is drawn plain. Days off sit on the
+// group tables' tiles, and a day both are off joins them into one band.
+function PairDays({
+  entry,
+  pair: shown,
+  count,
+}: {
+  entry: WidgetEntry;
+  pair: WidgetPair;
+  count: number;
+}) {
+  const words = useWords();
+  const named = useShiftNames();
+  const flat = useContext(WidgetRenderingModeContext) !== "fullColor";
+  const roomy = useContext(WidgetSizeContext).height >= PAIR_ROOMY;
+  const size = pairMarkSize(roomy, named);
+  const days = entry.upcoming.slice(0, count);
+  const tileOf = (off: boolean, together: boolean) => {
+    if (!off || together) {
+      return "none";
+    }
+    return flat ? "flat" : "full";
+  };
+  return (
+    <div
+      className={pair.grid}
+      style={{
+        // The faces take a column as wide as a day's, so the columns keep one
+        // rhythm and the widget's two sides the same room.
+        gridTemplateColumns: `repeat(${count + 1}, 1fr)`,
+        gridTemplateRows: "auto 1fr 1fr",
+      }}
+    >
+      {days.map((day, index) => {
+        const column = index + 2;
+        const { theirs, together } = shown.days[index] ?? { together: false };
+        return (
+          <Fragment key={day.date.getTime()}>
+            {together && (
+              <span
+                aria-hidden="true"
+                className={pair.band({ flat })}
+                style={{ gridColumn: column, gridRow: "1 / 4" }}
+              />
+            )}
+            <span
+              className={pair.date}
+              style={{ gridColumn: column, gridRow: 1 }}
+            >
+              <span className={srOnly}>
+                {monthDay(day.date)}({day.weekday})
+                {together ? " ふたりとも休み" : ""}
+              </span>
+              <span
+                aria-hidden="true"
+                className={cx(pair.weekday, toneText({ tone: day.tone }))}
+              >
+                {words.weekday(day.date)}
+              </span>
+              <span
+                aria-hidden="true"
+                className={cx(pair.number, day.holiday && dayParts.holiday)}
+              >
+                {day.date.getDate()}
+              </span>
+            </span>
+            <span
+              className={pair.cell({ tile: tileOf(day.off, together) })}
+              style={{ gridColumn: column, gridRow: 2 }}
+            >
+              <SpokenDay day={day} />
+              <DayMark day={day} size={size} />
+              {named && day.shift && <MarkName day={day} />}
+            </span>
+            <span
+              className={pair.cell({
+                tile: tileOf(theirs?.off ?? false, together),
+              })}
+              style={{ gridColumn: column, gridRow: 3 }}
+            >
+              <span className={srOnly}>
+                {shown.with.name}さん {theirs?.name ?? "未入力"}
+                {theirs?.time ? ` ${theirs.time}` : ""}
+              </span>
+              <TheirMark day={theirs} size={size} style={shown.with.style} />
+              {named && theirs && (
+                <span aria-hidden="true" className={markName}>
+                  {dayName(theirs.name)}
+                </span>
+              )}
+            </span>
+          </Fragment>
+        );
+      })}
+      <span className={pair.face} style={{ gridColumn: 1, gridRow: 2 }}>
+        <PhotoAvatar
+          me
+          name={shown.me.name}
+          photo={shown.me.photo}
+          size={PAIR_FACE}
+        />
+        <span className={srOnly}>{shown.me.name}</span>
+      </span>
+      <span className={pair.face} style={{ gridColumn: 1, gridRow: 3 }}>
+        <PhotoAvatar
+          name={shown.with.name}
+          photo={shown.with.photo}
+          size={PAIR_FACE}
+        />
+        <span className={srOnly}>{shown.with.name}</span>
+      </span>
+    </div>
+  );
+}
+
+// Their mark in the shape they chose, in the viewer's テーマ, as the
+// group's tables draw it; a quiet dash where they have not entered.
+function TheirMark({
+  day,
+  size,
+  style,
+}: {
+  day?: WidgetPersonDay;
+  size: number;
+  style?: WidgetPair["with"]["style"];
+}) {
+  if (!day) {
+    return (
+      <span
+        aria-hidden="true"
+        className={dayMark}
+        style={{ height: size, width: size }}
+      >
+        –
+      </span>
+    );
+  }
+  return (
+    <MemberLook member={{ style: style && { look: style } }}>
+      <ViewerGlyph day={day} size={size} />
+    </MemberLook>
+  );
+}
+
+function ViewerGlyph({ day, size }: { day: WidgetPersonDay; size: number }) {
+  const style = useContext(ShiftMarkStyleContext);
+  return (
+    <span aria-hidden="true" className={dayMark}>
+      <MarkGlyph
+        early={day.early}
+        late={day.late}
+        look={day.look}
+        size={size}
+        style={style}
+      />
+    </span>
   );
 }
 
@@ -779,6 +1053,18 @@ function inDaysWords(inDays: number) {
 
 const offs = {
   avatar: css({ flexShrink: 0 }),
+  // A group's mark, framed as the app's list of groups frames it.
+  groupFace: css({
+    bg: "fill.quaternary",
+    borderRadius: "sm",
+    display: "grid",
+    flexShrink: 0,
+    fontSize: "13px",
+    height: "20px",
+    overflow: "hidden",
+    placeItems: "center",
+    width: "20px",
+  }),
   // With nothing to count, the words sit in the middle of the rows' room.
   empty: css({ marginBlock: "auto" }),
   // The count, large: a number with 日後 after it, or 今日 and 明日.
@@ -841,26 +1127,53 @@ const offs = {
   unit: css({ fontSize: "13px", fontWeight: 600, marginLeft: "2px" }),
 };
 
-// 次の休み, or 一緒に休める日 with the person's picture beside it.
+// 次の休み, 一緒に休める日 with the person's picture beside it, or
+// みんなで休める日 with the group's.
 function OffsHead({ entry }: { entry: WidgetEntry }) {
   const words = useWords();
   const { with: companion } = entry.offs;
+  let title = words.nextOff;
+  if (companion) {
+    title = companion.kind === "group" ? words.offAll : words.offTogether;
+  }
   return (
     <span className={offs.head}>
-      <span className={oneLine}>
-        {companion ? words.offTogether : words.nextOff}
-      </span>
-      {companion && (
-        <span className={offs.avatar}>
-          <PhotoAvatar
-            name={companion.name}
-            photo={companion.photo}
-            size={20}
-          />
-        </span>
-      )}
+      <span className={oneLine}>{title}</span>
+      <CompanionFace entry={entry} />
     </span>
   );
+}
+
+// The face of who the widget is set to: a person's round picture, or a
+// group's mark in its rounded square, as the app frames them.
+function CompanionFace({ entry }: { entry: WidgetEntry }) {
+  const { with: companion } = entry.offs;
+  if (!companion) {
+    return null;
+  }
+  if (companion.kind === "group") {
+    return (
+      <span className={offs.groupFace}>
+        <GroupIcon mark={companion.mark} size={14} />
+      </span>
+    );
+  }
+  return (
+    <span className={offs.avatar}>
+      <PhotoAvatar name={companion.name} photo={companion.photo} size={20} />
+    </span>
+  );
+}
+
+// What is said when no day off is ahead.
+function noOffWords(
+  none: WidgetNoOff | undefined,
+  words: ReturnType<typeof useWords>
+) {
+  if (none?.kind === "waiting") {
+    return words.waiting(none.names);
+  }
+  return none?.kind === "apart" ? words.apart : words.nothingYet;
 }
 
 // A count: the number of days large with 日後 small, or 今日 and 明日.
@@ -884,11 +1197,20 @@ function offsAhead(entry: WidgetEntry): WidgetOff[] {
 // The whole of it as read aloud.
 function spokenOff(entry: WidgetEntry, off: WidgetOff | undefined) {
   const companion = entry.offs.with;
-  const title = companion
-    ? `${companion.name}さんと一緒に休める日`
-    : "次の休み";
+  let title = "次の休み";
+  if (companion) {
+    title =
+      companion.kind === "group"
+        ? `${companion.name}のみんな休み`
+        : `${companion.name}さんと一緒に休める日`;
+  }
   if (!off) {
-    return `${title}、まだ入っていません`;
+    const { none } = entry.offs;
+    if (none?.kind === "waiting") {
+      return `${title}、${waitingNames(none.names)}の入力待ち`;
+    }
+    const apart = none?.kind === "apart";
+    return `${title}、${apart ? "重なる休みはまだありません" : "まだ入っていません"}`;
   }
   const { day, inDays } = off;
   return `${title}、${inDaysWords(inDays)}、${monthDay(day.date)}(${day.weekday}) ${day.name ?? ""}`;
@@ -949,24 +1271,20 @@ function RestToday({ entry }: { entry: WidgetEntry }) {
   const day = entry.today;
   const [, tomorrow] = entry.upcoming;
   const companion = entry.offs.with;
+  let title = words.rest;
+  if (companion) {
+    title = companion.kind === "group" ? words.restAll : words.restTogether;
+  }
   return (
     <div className={rest.root}>
       <span className={srOnly}>{spokenOff(entry, { day, inDays: 0 })}</span>
       <PeekingDog />
       <span aria-hidden="true" className={offs.head}>
         <span className={oneLine}>{words.date(day.date)}</span>
-        {companion && (
-          <span className={offs.avatar}>
-            <PhotoAvatar
-              name={companion.name}
-              photo={companion.photo}
-              size={20}
-            />
-          </span>
-        )}
+        <CompanionFace entry={entry} />
       </span>
       <span aria-hidden="true" className={rest.title}>
-        {companion ? words.restTogether : words.rest}
+        {title}
       </span>
       {tomorrow && (
         <span aria-hidden="true" className={rest.tomorrow}>
@@ -1007,7 +1325,7 @@ export function NextOffSmall({ entry }: { entry: WidgetEntry }) {
             <DayMark day={next.day} size={16} />
           </>
         ) : (
-          words.nothingYet
+          noOffWords(entry.offs.none, words)
         )}
       </span>
     </div>
@@ -1031,7 +1349,9 @@ export function NextOffMedium({ entry }: { entry: WidgetEntry }) {
           </li>
         ))}
         {ahead.length === 0 && (
-          <li className={cx(offs.date, offs.empty)}>{words.nothingYet}</li>
+          <li className={cx(offs.date, offs.empty)}>
+            {noOffWords(entry.offs.none, words)}
+          </li>
         )}
       </ol>
     </div>
@@ -1203,6 +1523,15 @@ export function TodayCircular({ entry }: { entry: WidgetEntry }) {
   );
 }
 
+// 休み, else 一緒 with someone, or みんな with a group.
+function circularWord(entry: WidgetEntry) {
+  const companion = entry.offs.with;
+  if (!companion) {
+    return "休み";
+  }
+  return companion.kind === "group" ? "みんな" : "一緒";
+}
+
 // How soon the next day off comes, on the round face: 休み over the
 // count, or 今日 and 明日.
 export function NextOffCircular({ entry }: { entry: WidgetEntry }) {
@@ -1211,7 +1540,7 @@ export function NextOffCircular({ entry }: { entry: WidgetEntry }) {
     <div className={circular.root}>
       <span className={srOnly}>{spokenOff(entry, next)}</span>
       <span aria-hidden="true" className={circular.word}>
-        {entry.offs.with ? "一緒" : "休み"}
+        {circularWord(entry)}
       </span>
       <span aria-hidden="true" className={circular.count}>
         {next ? inDaysWords(next.inDays).replace("日後", "") : "–"}

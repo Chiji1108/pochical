@@ -6,8 +6,8 @@ What the home and lock screen widgets show, and how it is worked out. Both nativ
 
 - An entry is for one calendar day in the device's time zone and starts at local midnight. The next day's entry is scheduled for the following midnight.
 - A new entry is made at once when the person's shifts, patterns or week settings change on the device.
-- The widgets show the person's own shifts. The one exception is 次の休み set to someone from the person's groups: it uses whether that person is off on each day, and nothing else of their shifts.
-- A new entry is also made when that person's shifts change.
+- The widgets show the person's own shifts, with two exceptions picked when editing the widget. 次の休み set to someone from the person's groups, or to a whole group, uses whether each of them is off on each day, and nothing else of their shifts. これから set to someone shows that person's days beside the person's own: each day's pattern (its look, name and hours), whether it is off, and its 早出 and 残業.
+- A new entry is also made when the shifts of those picked change.
 
 ## Days
 
@@ -40,9 +40,11 @@ Days with nothing entered have no `shift`, `name` or `time`. They are shown as n
 | `month.first` | The first day of that day's month. |
 | `month.weekdays` | The seven day-of-week names in order from the person's week start, each with its tone (Sunday and Saturday coloring only). |
 | `month.days` | Whole weeks from the person's week start that cover the month. Each day has `inMonth`, which is false for the days before and after the month. Days outside the month are left empty in the views. |
-| `offs.today` | Today is a day off (with a companion: both are off). |
-| `offs.next` | The next days off after today, up to `widgetRules.nextOffs`, each with `inDays`, how many days on it is. It looks up to `widgetRules.offLookaheadDays` days ahead and stops at what is entered. With a companion, only days both are off count, and a day either has not entered does not. |
-| `offs.with` | The companion's name and picture, when 次の休み is set to someone. |
+| `offs.today` | Today is a day off (set to someone or a group: everyone is off). |
+| `offs.next` | The next days off after today, up to `widgetRules.nextOffs`, each with `inDays`, how many days on it is. It looks up to `widgetRules.offLookaheadDays` days ahead and stops at what is entered. Set to someone or a group, only days everyone is off count, and a day anyone has not entered does not. |
+| `offs.with` | Who 次の休み is set to: a person's name and picture, or a group's name and mark. |
+| `offs.none` | Why nothing is ahead, only when neither today nor any day after is counted: `waiting` with the names of those who have not entered days the person is off and no one who has entered them works; else `apart` when set to someone or a group and the person has entered days; else `notEntered`. |
+| `pair` | When これから is set to someone: the person's name and picture, theirs and the shape they draw their marks in, and for each day of `upcoming` their day (absent where they have not entered it) and `together`, both are off. |
 
 ## Views
 
@@ -52,12 +54,14 @@ The widgets are views of one entry. They hold no state and open the app when tap
 | --- | --- | --- | --- |
 | シンプル | today alone: its weekday, its date large, its mark and any change. A day off with nothing changed says おやすみ (as 次の休み does) | today and tomorrow side by side, each the same way | – |
 | 次の休み | how soon the next day off comes, large (明日, else the number with 日後), with its date and mark. When today is off, it is not counted: おやすみ, tomorrow's mark, and the app icon's poodle looking up from the corner (今日 small does the same on a day off with nothing else to say) | the next three days off, a line each: the date, its mark and how soon, in the secondary color | – |
-| これから | today as a heading line (its date bold, its mark at the end, any change under them) over the next three days' weekdays and marks | シンプル's today on the left (the date, the mark large, and any change, else the note's first line); on the right the four days after it, a line each: the date and weekday, the mark, and the change, else the note, else the name when names are shown | – |
+| これから | today as a heading line (its date bold, its mark at the end, any change under them) over the next three days' weekdays and marks. Set to someone: today and tomorrow, theirs under the person's | シンプル's today on the left (the date, the mark large, and any change, else the note's first line); on the right the four days after it, a line each: the date and weekday, the mark, and the change, else the note, else the name when names are shown. Set to someone: five days from today, theirs under the person's | – |
 | カレンダー | – | `twoWeeks`: this week and the next, seven across from the week start, with days already gone faint and today as its accent date | the month with every day's mark, and today's change if it has one |
 
-**次の休み with someone.** Editing the widget (iOS's ウィジェットを編集 through its App Intent; Android's configuration screen) offers 一緒に休む人: nobody, or anyone in the person's groups. With someone picked, the widget is titled 一緒に休める日 with their picture, and counts only days both are off. With nothing to show, it says まだ入っていません. The choice is about what the widget shows, not how it looks; looks follow the app's settings.
+**次の休み with someone or a group.** Editing the widget (iOS's ウィジェットを編集 through its App Intent; Android's configuration screen) offers 一緒に休む人: nobody, one of the person's groups, or anyone in them, the groups listed before the people. With someone picked, the widget is titled 一緒に休める日 with their picture, and counts only days both are off; with a group, it is titled みんな休み, as the group's own screens call a day everyone is off, with the group's mark, and counts only those days. With nothing to show, it says why, from `offs.none`: who it waits on (あやさんの入力待ち, あやさんほか2人の入力待ち), 重なる休みはまだありません, or まだ入っていません. The choice is about what the widget shows, not how it looks; looks follow the app's settings.
 
-On the iPhone lock screen: circular (today's mark, and 早出 or 残業 on such a day), circular 次の休み (休み, or 一緒 with someone, over the count), rectangular (today and 明日, each with its mark and any change) and inline (today's mark, name and any change).
+**これから with someone.** Editing これから offers 一緒に見る人: nobody, or anyone in the person's groups. With someone picked, the widget becomes the group's 週ごと in small: a column per day from today, the date over each (its weekday above, colored as in the calendar, and in English three capitals (THU): the columns start from today rather than the week's start, so one letter could not tell Tuesday from Thursday; today's without the accent, as it is always the first, though a Sunday, Saturday or holiday keeps its color), then the person's row and theirs, each with their face in a first column as wide as a day's, so the columns keep one rhythm. Their marks are drawn in the shape they chose, in the person's テーマ, as in the group's tables. Days off sit on the group tables' tiles, and a day both are off joins them down its column into one band. Names under the marks follow the app's 名前 setting for both rows: whoever puts someone on a widget knows their marks. A day they have not entered shows a dash.
+
+On the iPhone lock screen: circular (today's mark, and 早出 or 残業 on such a day), circular 次の休み (休み, or 一緒 with someone, or みんな with a group, over the count), rectangular (today and 明日, each with its mark and any change) and inline (today's mark, name and any change).
 
 - **The mark says the shift, and its hours go unsaid.** A shift's hours are the same every time it comes, so an ordinary day shows its mark alone. Only a day whose hours differ from its pattern's shows words, from the entry's `change`: 早出 7:00〜, 残業 〜20:00, 早出・残業 7:00〜20:00, or the new hours (9:00〜17:00) for other changes. A day with nothing entered says 予定なし. The lock screen's inline widget is a line of text, so it names the shift (日勤, then any change), and the round one says 早出 or 残業 under the mark on such a day. Screen readers always hear the name and the hours.
 - **Room differs by platform.** The same size is taller on Android's launcher (4×2 is 341×170dp inside) than on the iPhone (306×126pt). Views read their own size (SwiftUI's widget family, Glance's `LocalSize`) and spend extra height on their own spacing instead of stretching: the two weeks stay centered with larger marks and more space between the weeks, and the large month's marks grow.
