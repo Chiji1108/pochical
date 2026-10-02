@@ -1,5 +1,6 @@
 import { widgetRules } from "@pochical/design/widgets";
 
+import type { GroupMark } from "../components/design-group-data";
 import {
   holidayName,
   monthDatesFrom,
@@ -8,7 +9,7 @@ import {
   weekdaysFrom,
 } from "../components/design-week";
 import type { DayTone, WeekSettings } from "../components/design-week";
-import type { MarkColor } from "../components/shift-mark";
+import type { Look, LookSettings, MarkColor } from "../components/shift-mark";
 import { addDays, dateKey, timeChangeOf, timeRange } from "./design-days";
 import type { Schedule } from "./design-days";
 import { isDayOff } from "./design-patterns";
@@ -51,17 +52,51 @@ export type WidgetDay = {
   members: string[];
 };
 
-// Someone in the person's groups whose days off 次の休み is set to meet,
-// as the person picks them when editing the widget. `offOn` is whether
-// they are off on a day, or undefined where they have not entered it.
-export type WidgetCompanion = {
+// Another person's day, as their own pattern has it: its look, name and
+// hours, and whether it is a day off. Undefined where they have not
+// entered it.
+export type WidgetPersonDay = {
+  look: Look;
+  name: string;
+  time?: string;
+  off: boolean;
+  early: boolean;
+  late: boolean;
+};
+
+// Someone in the person's groups: their face, the shape they draw their
+// marks in, and their days.
+export type WidgetPerson = {
   name: string;
   photo?: string;
-  offOn: (date: Date) => boolean | undefined;
+  style?: LookSettings;
+  dayOn: (date: Date) => WidgetPersonDay | undefined;
 };
+
+// Who a widget is set to, as the person picks when editing it: someone
+// (次の休み and これから) or a whole group (次の休み).
+export type WidgetCompanion =
+  | { kind: "person"; person: WidgetPerson }
+  | { kind: "group"; name: string; mark: GroupMark; people: WidgetPerson[] };
 
 // A day off ahead, and how many days until it.
 export type WidgetOff = { day: WidgetDay; inDays: number };
+
+// Why no day off is ahead: the person has entered none; days are off for
+// them but someone has not entered those days yet; or what is entered
+// never meets.
+export type WidgetNoOff =
+  | { kind: "notEntered" }
+  | { kind: "waiting"; names: string[] }
+  | { kind: "apart" };
+
+// これから with someone: the days of `upcoming`, theirs beside each, and
+// whether both are off.
+export type WidgetPair = {
+  me: { name: string; photo?: string };
+  with: { name: string; photo?: string; style?: LookSettings };
+  days: { theirs?: WidgetPersonDay; together: boolean }[];
+};
 
 export type WidgetEntry = {
   // When the entry is for; a new one starts each day at midnight.
@@ -70,10 +105,16 @@ export type WidgetEntry = {
   // 次の休み: whether today is off, and the next days off after it, as
   // far as they are entered. With a companion, only days both are off.
   offs: {
-    with?: { name: string; photo?: string };
+    with?:
+      | { kind: "person"; name: string; photo?: string }
+      | { kind: "group"; name: string; mark: GroupMark };
     today: boolean;
     next: WidgetOff[];
+    // Only when nothing is ahead, today included.
+    none?: WidgetNoOff;
   };
+  // これから set to someone.
+  pair?: WidgetPair;
   // Today and the six days after it.
   upcoming: WidgetDay[];
   // This week and the next, from the person's week start.
@@ -150,14 +191,50 @@ function widgetDay(
   };
 }
 
-// A day counts as off together when the person is off and so is the
-// companion; a day either has not entered does not count, since nobody
-// knows yet.
-function offTogether(day: WidgetDay, companion?: WidgetCompanion) {
-  if (!day.off) {
-    return false;
+function peopleOf(companion?: WidgetCompanion): WidgetPerson[] {
+  if (!companion) {
+    return [];
   }
-  return companion ? companion.offOn(day.date) === true : true;
+  return companion.kind === "person" ? [companion.person] : companion.people;
+}
+
+// A day counts as off together when the person is off and so is everyone
+// they picked; a day someone has not entered does not count, since nobody
+// knows yet.
+function offTogether(day: WidgetDay, people: WidgetPerson[]) {
+  return day.off && people.every((one) => one.dayOn(day.date)?.off === true);
+}
+
+// Those who have not entered a day the person is off and no one who has
+// entered it works: the day may yet be off together.
+function waitingOn(day: WidgetDay, people: WidgetPerson[]) {
+  if (!day.off) {
+    return [];
+  }
+  const days = people.map((one) => one.dayOn(day.date));
+  if (days.some((theirs) => theirs && !theirs.off)) {
+    return [];
+  }
+  return people.filter((_, index) => days[index] === undefined);
+}
+
+function noOffOf(
+  days: WidgetDay[],
+  people: WidgetPerson[]
+): WidgetNoOff | undefined {
+  const waiting = new Set<string>();
+  for (const day of days) {
+    for (const one of waitingOn(day, people)) {
+      waiting.add(one.name);
+    }
+  }
+  if (waiting.size > 0) {
+    return { kind: "waiting", names: [...waiting] };
+  }
+  const entered = days.some((day) => day.shift !== undefined);
+  return entered && people.length > 0
+    ? { kind: "apart" }
+    : { kind: "notEntered" };
 }
 
 function offsFrom(
@@ -165,30 +242,68 @@ function offsFrom(
   dayAt: (inDays: number) => WidgetDay,
   companion?: WidgetCompanion
 ): WidgetEntry["offs"] {
+  const people = peopleOf(companion);
+  const looked = [today];
   const next: WidgetOff[] = [];
   for (let inDays = 1; inDays <= widgetRules.offLookaheadDays; inDays += 1) {
     const day = dayAt(inDays);
-    if (offTogether(day, companion)) {
+    looked.push(day);
+    if (offTogether(day, people)) {
       next.push({ day, inDays });
       if (next.length === widgetRules.nextOffs) {
         break;
       }
     }
   }
+  const offToday = offTogether(today, people);
+  const nothing = next.length === 0 && !offToday;
   return {
     next,
-    today: offTogether(today, companion),
-    with: companion && { name: companion.name, photo: companion.photo },
+    none: nothing ? noOffOf(looked, people) : undefined,
+    today: offToday,
+    with: companion && withOf(companion),
   };
 }
 
-// `book` is the person's patterns, which name and mark each day's shift.
+function withOf(companion: WidgetCompanion) {
+  if (companion.kind === "group") {
+    const { name, mark } = companion;
+    return { kind: "group", mark, name } as const;
+  }
+  const { name, photo } = companion.person;
+  return { kind: "person", name, photo } as const;
+}
+
+function pairOf(
+  upcoming: WidgetDay[],
+  companion: WidgetCompanion | undefined,
+  me: { name: string; photo?: string }
+): WidgetPair | undefined {
+  if (companion?.kind !== "person") {
+    return undefined;
+  }
+  const { person } = companion;
+  return {
+    days: upcoming.map((day) => {
+      const theirs = person.dayOn(day.date);
+      return { theirs, together: day.off && theirs?.off === true };
+    }),
+    me,
+    with: { name: person.name, photo: person.photo, style: person.style },
+  };
+}
+
+// `book` is the person's patterns, which name and mark each day's shift;
+// `me` is their face, beside someone else's in これから.
 export function widgetEntry(
   schedule: Schedule,
   week: WeekSettings,
   now: Date,
   book: PatternBook,
-  companion?: WidgetCompanion
+  {
+    companion,
+    me = { name: "自分" },
+  }: { companion?: WidgetCompanion; me?: { name: string; photo?: string } } = {}
 ): WidgetEntry {
   const date = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const upcoming = Array.from({ length: UPCOMING_DAYS }, (_, index) =>
@@ -220,6 +335,7 @@ export function widgetEntry(
       (inDays) => widgetDay(addDays(date, inDays), schedule, week, book),
       companion
     ),
+    pair: pairOf(upcoming, companion, me),
     today,
     twoWeeks,
     upcoming,

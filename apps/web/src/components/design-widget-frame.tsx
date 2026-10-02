@@ -273,8 +273,9 @@ export function LabelledWidget({
   family,
   appearance,
   wallpaperHue,
+  note,
   children,
-}: Placement & { family: WidgetFamily; children: ReactNode }) {
+}: Placement & { family: WidgetFamily; note?: string; children: ReactNode }) {
   const { width, height, label } = widgetFamilies[family];
   const unit = family.startsWith("android") ? "dp" : "pt";
   return (
@@ -289,6 +290,7 @@ export function LabelledWidget({
       <figcaption>
         {label} {width}×{height}
         {unit}
+        {note && ` · ${note}`}
       </figcaption>
     </figure>
   );
