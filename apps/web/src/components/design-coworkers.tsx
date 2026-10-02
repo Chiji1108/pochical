@@ -1,10 +1,7 @@
 import { textLimits } from "@pochical/design/limits";
 import { useState } from "react";
 
-import { dateKey, dateOfKey } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
-import { usePatterns } from "../lib/design-patterns";
-import { designToday } from "../lib/design-today";
 import { composing, limitText } from "../lib/text-limits";
 import { ConfirmDialog } from "./design-sheet";
 import {
@@ -18,11 +15,8 @@ import {
   listRow,
   Note,
   PageHeader,
-  Section,
   SortableList,
 } from "./design-ui";
-import { useWeek } from "./design-week";
-import { ShiftMark } from "./shift-mark";
 
 // The people you note on a day, like who is on the same shift. Only names:
 // they are not app users, unlike the members of a group.
@@ -34,73 +28,43 @@ export type Coworkers = {
   onDelete: (name: string) => void;
 };
 
-// The days someone is on, as dateKeys from the earliest.
 function daysWith(schedule: Schedule, name: string) {
-  return Object.keys(schedule)
-    .filter((key) => schedule[key]?.members?.includes(name))
-    .toSorted();
+  return Object.values(schedule).filter((entry) =>
+    entry?.members?.includes(name)
+  ).length;
 }
 
-// `initialPerson` opens on someone's days, as going back to settings does
-// after one of them was opened in the calendar.
 export function CoworkersPage({
   coworkers,
   schedule,
-  initialPerson,
   onBack,
-  onOpenDay,
 }: {
   coworkers: Coworkers;
   schedule: Schedule;
-  initialPerson?: string;
   onBack: () => void;
-  onOpenDay: (person: string, date: Date) => void;
 }) {
   const [view, setView] = useState<"list" | "sort">("list");
-  const [opened, setOpened] = useState(initialPerson);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState<string>();
   const [adding, setAdding] = useState(false);
   const { names } = coworkers;
-  const person =
-    opened !== undefined && names.includes(opened) ? opened : undefined;
 
-  if (person !== undefined && editing) {
+  if (editing !== undefined) {
     return (
       <CoworkerEditor
-        days={daysWith(schedule, person).length}
-        name={person}
+        days={daysWith(schedule, editing)}
+        name={editing}
         onBack={() => {
-          setEditing(false);
+          setEditing(undefined);
         }}
         onDelete={() => {
-          coworkers.onDelete(person);
-          setOpened(undefined);
-          setEditing(false);
+          coworkers.onDelete(editing);
+          setEditing(undefined);
         }}
         onSave={(name) => {
-          coworkers.onRename(person, name);
-          setOpened(name);
-          setEditing(false);
+          coworkers.onRename(editing, name);
+          setEditing(undefined);
         }}
-        taken={names.filter((item) => item !== person)}
-      />
-    );
-  }
-  if (person !== undefined) {
-    return (
-      <CoworkerDays
-        days={daysWith(schedule, person)}
-        name={person}
-        onBack={() => {
-          setOpened(undefined);
-        }}
-        onEdit={() => {
-          setEditing(true);
-        }}
-        onOpenDay={(date) => {
-          onOpenDay(person, date);
-        }}
-        schedule={schedule}
+        taken={names.filter((item) => item !== editing)}
       />
     );
   }
@@ -154,11 +118,11 @@ export function CoworkersPage({
             <ListRow
               key={name}
               onClick={() => {
-                setOpened(name);
+                setEditing(name);
               }}
               label={name}
               truncate
-              value={<>{daysWith(schedule, name).length}日</>}
+              value={<>{daysWith(schedule, name)}日</>}
             />
           ))}
         </List>
@@ -198,79 +162,8 @@ export function CoworkersPage({
       <Note>
         {sorting
           ? "つまみを上下に動かして並べ替えます。日付の詳細でも、この順に並びます。"
-          : "同じシフトに入る人などを、日付の詳細でその日にメモできます。"}
+          : "同じシフトに入る人などを、日付の詳細でその日にメモできます。ここで直した名前は、入れてある日にも反映されます。"}
       </Note>
-    </>
-  );
-}
-
-// A day's date as a row of a list: 9/19(土), or 9/19 Sat when 月と曜日 is
-// English, with the year in front outside this one.
-function dayLabel(date: Date, english: boolean, weekday: string) {
-  const year =
-    date.getFullYear() === designToday.getFullYear()
-      ? ""
-      : `${date.getFullYear()}/`;
-  const day = `${year}${date.getMonth() + 1}/${date.getDate()}`;
-  return english ? `${day} ${weekday}` : `${day}(${weekday})`;
-}
-
-// Someone's days: the ones to come from the nearest, then the ones gone
-// from the latest. Pressing one opens it in the calendar.
-function CoworkerDays({
-  name,
-  days,
-  schedule,
-  onBack,
-  onEdit,
-  onOpenDay,
-}: {
-  name: string;
-  days: string[];
-  schedule: Schedule;
-  onBack: () => void;
-  onEdit: () => void;
-  onOpenDay: (date: Date) => void;
-}) {
-  const book = usePatterns();
-  const { english, weekdayName } = useWeek();
-  const today = dateKey(designToday);
-  const coming = days.filter((key) => key >= today);
-  const past = days.filter((key) => key < today).toReversed();
-  const row = (key: string) => {
-    const date = dateOfKey(key);
-    const shift = schedule[key]?.shift;
-    return (
-      <ListRow
-        key={key}
-        label={dayLabel(date, english, weekdayName(date.getDay()))}
-        leading={shift && <ShiftMark shift={shift} size={20} />}
-        onClick={() => {
-          onOpenDay(date);
-        }}
-        value={shift ? book[shift]?.name : undefined}
-      />
-    );
-  };
-  return (
-    <>
-      <PageHeader
-        back="一緒に働く人"
-        onBack={onBack}
-        trailing={<HeaderAction onClick={onEdit}>編集</HeaderAction>}
-        title={name}
-      />
-      {coming.length > 0 && (
-        <Section note={`${coming.length}日`} title="これから">
-          <List>{coming.map(row)}</List>
-        </Section>
-      )}
-      {past.length > 0 && (
-        <Section note={`${past.length}日`} title="これまで">
-          <List>{past.map(row)}</List>
-        </Section>
-      )}
-      {days.length === 0 && <Note>一緒の日はまだありません。</Note>}
     </>
   );
 }
@@ -299,7 +192,7 @@ function CoworkerEditor({
   return (
     <>
       <PageHeader
-        back={name}
+        back="一緒に働く人"
         onBack={onBack}
         trailing={
           <HeaderAction

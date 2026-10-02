@@ -1476,13 +1476,20 @@ function Pochical() {
           name="MonthSummary"
           ios="独自の行"
           android="独自の行"
-          where="カレンダー下の今月のお休み"
+          where="カレンダー下の今月のお休み、一緒の日を見ている間はその日数"
           wide
         >
           <MonthSummary
-            daysOff={9}
+            days={9}
             month={new Date(2026, 8, 1)}
             onOpen={() => undefined}
+          />
+          <MonthSummary
+            days={5}
+            month={new Date(2026, 8, 1)}
+            onClear={() => undefined}
+            onOpen={() => undefined}
+            person="田中"
           />
         </Item>
         <Item

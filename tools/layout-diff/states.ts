@@ -389,16 +389,6 @@ export const states: State[] = [
     },
   },
   {
-    name: "settings/coworker-edit",
-    path: demo("scheduleSample=filled"),
-    steps: async (page) => {
-      await tap(page, "設定");
-      await tap(page, /^一緒に働く人/u);
-      await tap(page, /^田中/u);
-      await tap(page, "編集");
-    },
-  },
-  {
     name: "settings/work",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {

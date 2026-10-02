@@ -105,12 +105,6 @@ export function dateKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-// The day a dateKey names, back as a local date.
-export function dateOfKey(key: string) {
-  const [year = 0, month = 1, day = 1] = key.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
 // A week with 休み on a weekend day reads as office hours, which usually
 // have national holidays off too.
 export function defaultHolidaysOff(
