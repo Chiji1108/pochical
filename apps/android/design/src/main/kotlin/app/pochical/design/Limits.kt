@@ -25,3 +25,6 @@ const val SHARED_DAYS_MAX = 31
 
 /** The most people in one group. */
 const val GROUP_MAX_MEMBERS = 100
+
+/** The most people one person keeps in 一緒に働く人. */
+const val COWORKERS_MAX = 100

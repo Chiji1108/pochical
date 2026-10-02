@@ -1,4 +1,4 @@
-import { textLimits } from "@pochical/design/limits";
+import { COWORKERS_MAX, textLimits } from "@pochical/design/limits";
 import {
   ArrowRight,
   CalendarPlus,
@@ -1963,6 +1963,7 @@ function MemberField({
   onChange: (selected: string[]) => void;
 }) {
   const [adding, setAdding] = useState(false);
+  const toast = useContext(ToastContext);
   // Held to the limit here too: a name confirmed and added in one go may
   // not have been cut to it yet.
   function add(name: string) {
@@ -2023,6 +2024,10 @@ function MemberField({
         ) : (
           <Chip
             onClick={() => {
+              if (members.names.length >= COWORKERS_MAX) {
+                toast(`一緒に働く人は${COWORKERS_MAX}人までです`, "problem");
+                return;
+              }
               setAdding(true);
             }}
             variant="add"

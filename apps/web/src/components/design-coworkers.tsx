@@ -1,9 +1,10 @@
-import { textLimits } from "@pochical/design/limits";
-import { useState } from "react";
+import { COWORKERS_MAX, textLimits } from "@pochical/design/limits";
+import { useContext, useState } from "react";
 
 import type { Schedule } from "../lib/design-days";
 import { composing, limitText } from "../lib/text-limits";
 import { ConfirmDialog } from "./design-sheet";
+import { ToastContext } from "./design-toast";
 import {
   AddButton,
   BackButton,
@@ -46,6 +47,7 @@ export function CoworkersPage({
   const [view, setView] = useState<"list" | "sort">("list");
   const [editing, setEditing] = useState<string>();
   const [adding, setAdding] = useState(false);
+  const toast = useContext(ToastContext);
   const { names } = coworkers;
 
   if (editing !== undefined) {
@@ -153,6 +155,10 @@ export function CoworkersPage({
         ) : (
           <AddButton
             onClick={() => {
+              if (names.length >= COWORKERS_MAX) {
+                toast(`一緒に働く人は${COWORKERS_MAX}人までです`, "problem");
+                return;
+              }
               setAdding(true);
             }}
           >
