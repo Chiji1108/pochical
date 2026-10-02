@@ -110,6 +110,9 @@ export function MonthPicker({
   return (
     <DatePicker.Root
       defaultFocusedValue={toDateValue(value ?? month ?? designToday)}
+      // Six weeks in every month, so what is under it stays put as the
+      // months turn.
+      fixedWeeks
       inline
       locale="ja-JP"
       onValueChange={(details) => {

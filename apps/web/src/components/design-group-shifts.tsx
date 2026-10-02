@@ -918,7 +918,13 @@ function DaySheetBody({
             <ChevronRight aria-hidden="true" size={18} />
           </button>
         </div>
-        <div className={shareDays.days}>
+        <div
+          className={shareDays.days}
+          // The weekdays, then room for six weeks, the most a month spans,
+          // so the sheet keeps its height as the months turn and ‹ › stay
+          // under the finger.
+          style={{ gridTemplateRows: `auto repeat(${MONTH_WEEKS}, 36px)` }}
+        >
           {weekTools.weekdays.map((day) => (
             <span
               aria-hidden="true"
