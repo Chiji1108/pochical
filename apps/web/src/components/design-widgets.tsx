@@ -708,7 +708,8 @@ function columnWords(
 }
 
 // A date as a column heads it: the day of the month, with its month on
-// today's column and on the 1st, so a run of days says where it is.
+// today's column alone. Five days that run into the next month say so
+// plainly (29 30 1), and a month on the 1st too broke the quiet row.
 function ColumnDate({
   date,
   first,
@@ -718,7 +719,7 @@ function ColumnDate({
   first: boolean;
   english: boolean;
 }) {
-  if (!(first || date.getDate() === 1)) {
+  if (!first) {
     return <>{date.getDate()}</>;
   }
   const month = english
