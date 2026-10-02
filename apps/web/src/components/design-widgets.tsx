@@ -307,6 +307,8 @@ const simple = {
     flex: 1,
     flexDirection: "column",
     gap: "12px",
+    // The whole height, alone in the small one too, to center in.
+    height: "100%",
     justifyContent: "center",
     minWidth: 0,
     textAlign: "center",
