@@ -1,0 +1,323 @@
+{
+  "about": "What a repeating order takes back from a person's own days (spec/sync-protocol.md, Repeating orders). givesWay: when orders are taken with clear_from `from` at `clock`, a stored value gives way (is cleared) when it is a PATTERN, START or END, on or after `from`, set at a clock older than the orders' (HLC order, spec/vectors/hlc.json); memos and people stay. belowFloor: every taken clear is kept as a floor; an edit arriving later is held back (corrected, as one that does not fit) when any floor would have cleared it, so an edit made offline before the orders cannot bring back what they took. Fields are DayField names without the DAY_FIELD_ prefix.",
+  "givesWay": [
+    {
+      "name": "a pattern set before the orders, from their start",
+      "floor": {
+        "from": "2026-10-03",
+        "clock": {
+          "ms": 2000,
+          "counter": 1,
+          "device": "phone"
+        }
+      },
+      "date": "2026-10-05",
+      "field": "PATTERN",
+      "set": {
+        "ms": 1000,
+        "counter": 0,
+        "device": "phone"
+      },
+      "expected": true
+    },
+    {
+      "name": "a time too",
+      "floor": {
+        "from": "2026-10-03",
+        "clock": {
+          "ms": 2000,
+          "counter": 1,
+          "device": "phone"
+        }
+      },
+      "date": "2026-10-05",
+      "field": "START",
+      "set": {
+        "ms": 1000,
+        "counter": 0,
+        "device": "phone"
+      },
+      "expected": true
+    },
+    {
+      "name": "the start itself gives way",
+      "floor": {
+        "from": "2026-10-03",
+        "clock": {
+          "ms": 2000,
+          "counter": 1,
+          "device": "phone"
+        }
+      },
+      "date": "2026-10-03",
+      "field": "END",
+      "set": {
+        "ms": 1000,
+        "counter": 0,
+        "device": "phone"
+      },
+      "expected": true
+    },
+    {
+      "name": "a day before the start keeps its own",
+      "floor": {
+        "from": "2026-10-03",
+        "clock": {
+          "ms": 2000,
+          "counter": 1,
+          "device": "phone"
+        }
+      },
+      "date": "2026-10-01",
+      "field": "PATTERN",
+      "set": {
+        "ms": 1000,
+        "counter": 0,
+        "device": "phone"
+      },
+      "expected": false
+    },
+    {
+      "name": "a memo stays",
+      "floor": {
+        "from": "2026-10-03",
+        "clock": {
+          "ms": 2000,
+          "counter": 1,
+          "device": "phone"
+        }
+      },
+      "date": "2026-10-05",
+      "field": "NOTE",
+      "set": {
+        "ms": 1000,
+        "counter": 0,
+        "device": "phone"
+      },
+      "expected": false
+    },
+    {
+      "name": "the day's people stay",
+      "floor": {
+        "from": "2026-10-03",
+        "clock": {
+          "ms": 2000,
+          "counter": 1,
+          "device": "phone"
+        }
+      },
+      "date": "2026-10-05",
+      "field": "PEOPLE",
+      "set": {
+        "ms": 1000,
+        "counter": 0,
+        "device": "phone"
+      },
+      "expected": false
+    },
+    {
+      "name": "a value set after the orders stays",
+      "floor": {
+        "from": "2026-10-03",
+        "clock": {
+          "ms": 2000,
+          "counter": 1,
+          "device": "phone"
+        }
+      },
+      "date": "2026-10-05",
+      "field": "PATTERN",
+      "set": {
+        "ms": 5000,
+        "counter": 0,
+        "device": "phone"
+      },
+      "expected": false
+    },
+    {
+      "name": "at the same time, the lower counter gives way",
+      "floor": {
+        "from": "2026-10-03",
+        "clock": {
+          "ms": 2000,
+          "counter": 1,
+          "device": "phone"
+        }
+      },
+      "date": "2026-10-05",
+      "field": "PATTERN",
+      "set": {
+        "ms": 2000,
+        "counter": 0,
+        "device": "tablet"
+      },
+      "expected": true
+    },
+    {
+      "name": "at the same time and counter, the device breaks the tie",
+      "floor": {
+        "from": "2026-10-03",
+        "clock": {
+          "ms": 2000,
+          "counter": 1,
+          "device": "phone"
+        }
+      },
+      "date": "2026-10-05",
+      "field": "PATTERN",
+      "set": {
+        "ms": 2000,
+        "counter": 1,
+        "device": "tablet"
+      },
+      "expected": false
+    }
+  ],
+  "belowFloor": [
+    {
+      "name": "an edit made before orders that cleared its day",
+      "floors": [
+        {
+          "from": "2026-10-03",
+          "clock": {
+            "ms": 2000,
+            "counter": 1,
+            "device": "phone"
+          }
+        },
+        {
+          "from": "2026-11-01",
+          "clock": {
+            "ms": 9000,
+            "counter": 0,
+            "device": "phone"
+          }
+        }
+      ],
+      "date": "2026-10-10",
+      "field": "PATTERN",
+      "set": {
+        "ms": 1500,
+        "counter": 0,
+        "device": "tablet"
+      },
+      "expected": true
+    },
+    {
+      "name": "an edit made after them",
+      "floors": [
+        {
+          "from": "2026-10-03",
+          "clock": {
+            "ms": 2000,
+            "counter": 1,
+            "device": "phone"
+          }
+        },
+        {
+          "from": "2026-11-01",
+          "clock": {
+            "ms": 9000,
+            "counter": 0,
+            "device": "phone"
+          }
+        }
+      ],
+      "date": "2026-10-10",
+      "field": "PATTERN",
+      "set": {
+        "ms": 3000,
+        "counter": 0,
+        "device": "tablet"
+      },
+      "expected": false
+    },
+    {
+      "name": "a later clear holds back only its own days",
+      "floors": [
+        {
+          "from": "2026-10-03",
+          "clock": {
+            "ms": 2000,
+            "counter": 1,
+            "device": "phone"
+          }
+        },
+        {
+          "from": "2026-11-01",
+          "clock": {
+            "ms": 9000,
+            "counter": 0,
+            "device": "phone"
+          }
+        }
+      ],
+      "date": "2026-11-05",
+      "field": "PATTERN",
+      "set": {
+        "ms": 3000,
+        "counter": 0,
+        "device": "tablet"
+      },
+      "expected": true
+    },
+    {
+      "name": "a day before every clear",
+      "floors": [
+        {
+          "from": "2026-10-03",
+          "clock": {
+            "ms": 2000,
+            "counter": 1,
+            "device": "phone"
+          }
+        },
+        {
+          "from": "2026-11-01",
+          "clock": {
+            "ms": 9000,
+            "counter": 0,
+            "device": "phone"
+          }
+        }
+      ],
+      "date": "2026-10-01",
+      "field": "PATTERN",
+      "set": {
+        "ms": 100,
+        "counter": 0,
+        "device": "tablet"
+      },
+      "expected": false
+    },
+    {
+      "name": "a memo is never held back",
+      "floors": [
+        {
+          "from": "2026-10-03",
+          "clock": {
+            "ms": 2000,
+            "counter": 1,
+            "device": "phone"
+          }
+        },
+        {
+          "from": "2026-11-01",
+          "clock": {
+            "ms": 9000,
+            "counter": 0,
+            "device": "phone"
+          }
+        }
+      ],
+      "date": "2026-10-10",
+      "field": "NOTE",
+      "set": {
+        "ms": 1500,
+        "counter": 0,
+        "device": "tablet"
+      },
+      "expected": false
+    }
+  ]
+}

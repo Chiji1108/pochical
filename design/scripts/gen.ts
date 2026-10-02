@@ -19,6 +19,7 @@ import { inviteRules } from "../src/invite";
 import {
   GROUP_MAX_MEMBERS,
   SHARED_DAYS_MAX,
+  syncLimits,
   textFields,
   textLimits,
 } from "../src/limits";
@@ -150,6 +151,7 @@ function json() {
     limits: {
       groupMaxMembers: GROUP_MAX_MEMBERS,
       sharedDaysMax: SHARED_DAYS_MAX,
+      sync: syncLimits,
       text: textLimits,
       textFields,
     },
@@ -487,6 +489,8 @@ const TEXT_LIMITS_DOC =
   "How long free text may be, in characters as a reader sees them, by what it is (spec/text-limits.md).";
 const TEXT_FIELDS_DOC =
   "How a field shows its count and how a shift's name shortens in a day (spec/text-limits.md).";
+const SYNC_LIMITS_DOC =
+  "How much of what a user owns one synced value may hold (spec/sync-protocol.md).";
 const SHARED_DAYS_DOC = "The most days one chat message shares.";
 const GROUP_MEMBERS_DOC = "The most people in one group.";
 
@@ -514,6 +518,7 @@ const outputs = {
   [`${KOTLIN_DIR}/Limits.kt`]: kotlinFile(
     kotlinObject("TextLimits", TEXT_LIMITS_DOC, textLimits),
     kotlinObject("TextFields", TEXT_FIELDS_DOC, textFields),
+    kotlinObject("SyncLimits", SYNC_LIMITS_DOC, syncLimits),
     [
       `/** ${SHARED_DAYS_DOC} */`,
       `const val SHARED_DAYS_MAX = ${SHARED_DAYS_MAX}`,
@@ -528,6 +533,7 @@ const outputs = {
   [`${SWIFT_DIR}/Limits.swift`]: swiftFile(
     swiftEnum("TextLimits", TEXT_LIMITS_DOC, textLimits),
     swiftEnum("TextFields", TEXT_FIELDS_DOC, textFields),
+    swiftEnum("SyncLimits", SYNC_LIMITS_DOC, syncLimits),
     [`/// ${SHARED_DAYS_DOC}`, `public let sharedDaysMax = ${SHARED_DAYS_MAX}`],
     [
       `/// ${GROUP_MEMBERS_DOC}`,

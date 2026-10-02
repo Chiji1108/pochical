@@ -1,4 +1,4 @@
-import { textLimits } from "@pochical/design/limits";
+import { syncLimits, textLimits } from "@pochical/design/limits";
 
 import { isDate } from "./day-values";
 import type { RepeatOrder } from "./gen/pochical/v1/sync_pb";
@@ -7,15 +7,8 @@ import { characterCount } from "./text-limits";
 
 // What a user's repeating orders and coworkers may hold
 // (spec/shift-patterns.md, Repeating orders; spec/sync-protocol.md,
-// Coworkers), checked as the owner's edits arrive. The counts are far past
-// what one person keeps, so they only bound what one value can carry.
-
-// Orders in one timeline: a change of rotation or job each.
-export const MAX_ORDERS = 200;
-// Shifts in one order: a rotation a year long.
-export const MAX_SEQUENCE = 366;
-// Coworkers one person notes.
-export const MAX_COWORKERS = 500;
+// Coworkers), checked as the owner's edits arrive, to the counts in
+// design/src/limits.ts (syncLimits).
 
 // A country code as the holiday data keys it (design/scripts/holidays.ts).
 const COUNTRY = /^[A-Z]{2}$/u;
@@ -23,7 +16,7 @@ const COUNTRY = /^[A-Z]{2}$/u;
 const fitsOrder = (order: RepeatOrder): boolean =>
   isDate(order.start) &&
   (order.anchor === undefined || isDate(order.anchor)) &&
-  order.sequence.length <= MAX_SEQUENCE &&
+  order.sequence.length <= syncLimits.sequence &&
   order.sequence.every((id) => isId(id)) &&
   COUNTRY.test(order.holidayCountry) &&
   (order.holidayShift === undefined || isId(order.holidayShift)) &&
@@ -35,7 +28,7 @@ const fitsOrder = (order: RepeatOrder): boolean =>
  * only grow, so each takes over from the one before.
  */
 export const fitsOrders = (orders: readonly RepeatOrder[]): boolean =>
-  orders.length <= MAX_ORDERS &&
+  orders.length <= syncLimits.orders &&
   orders.every(
     (order, index) =>
       fitsOrder(order) &&
@@ -48,6 +41,16 @@ export const fitsCoworkerName = (name: string): boolean =>
 
 /** Whether an order of coworkers is ids, each once, and not too many. */
 export const fitsCoworkerOrder = (ids: readonly string[]): boolean =>
-  ids.length <= MAX_COWORKERS &&
+  ids.length <= syncLimits.coworkers &&
   new Set(ids).size === ids.length &&
   ids.every((id) => isId(id));
+
+/**
+ * Whether `clearFrom` is the start of one of the orders: only a new or
+ * corrected order takes days back, from its own start.
+ */
+export const fitsClearFrom = (
+  orders: readonly RepeatOrder[],
+  clearFrom: string | undefined
+): boolean =>
+  clearFrom === undefined || orders.some(({ start }) => start === clearFrom);

@@ -50,3 +50,22 @@ export const SHARED_DAYS_MAX = 31;
 // The most people in one group. Far past a family's or friends' group, so
 // it only caps what a leaked invitation link can let in.
 export const GROUP_MAX_MEMBERS = 100;
+
+// How much of what a user owns one synced value may hold
+// (spec/sync-protocol.md). Far past what one person keeps, so they only
+// bound a value; an edit past them is corrected by the server.
+export const syncLimits = {
+  // Coworkers one person notes.
+  coworkers: 500,
+  // Characters in an id the apps make (patterns, coworkers, devices) and
+  // in an icon's name.
+  idLength: 64,
+  // Repeating orders in one timeline: a change of rotation or job each.
+  orders: 200,
+  // Shift patterns one person keeps; ポチポチ入力 shows ten to a page.
+  patterns: 200,
+  // People noted on one day.
+  peopleADay: 50,
+  // Shifts in one repeating order: a rotation a year long.
+  sequence: 366,
+} as const;

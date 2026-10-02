@@ -2838,6 +2838,14 @@
   "limits": {
     "groupMaxMembers": 100,
     "sharedDaysMax": 31,
+    "sync": {
+      "coworkers": 500,
+      "idLength": 64,
+      "orders": 200,
+      "patterns": 200,
+      "peopleADay": 50,
+      "sequence": 366
+    },
     "text": {
       "chatMessage": 1000,
       "dayNote": 100,

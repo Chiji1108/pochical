@@ -2,8 +2,11 @@ import { describe, expect, test } from "vitest";
 
 // The cases every platform checks its own code against (spec/vectors).
 import hlc from "../../../spec/vectors/hlc.json";
+import orderClears from "../../../spec/vectors/order-clears.json";
 import text from "../../../spec/vectors/text.json";
+import { DayField } from "../src/gen/pochical/v1/sync_pb";
 import { compareClocks } from "../src/hlc";
+import { belowFloor, givesWay } from "../src/order-clears";
 import { characterCount } from "../src/text-limits";
 
 describe("spec/vectors/hlc.json", () => {
@@ -18,4 +21,31 @@ describe("spec/vectors/text.json", () => {
   test.each(text.characterCount)("$name", ({ text: written, expected }) => {
     expect(characterCount(written)).toBe(expected);
   });
+});
+
+// The vectors name fields as DayField does, without DAY_FIELD_.
+const FIELDS: Record<string, DayField | undefined> = {
+  END: DayField.END,
+  NOTE: DayField.NOTE,
+  PATTERN: DayField.PATTERN,
+  PEOPLE: DayField.PEOPLE,
+  START: DayField.START,
+};
+const fieldOf = (name: string): DayField =>
+  FIELDS[name] ?? DayField.UNSPECIFIED;
+
+describe("spec/vectors/order-clears.json", () => {
+  test.each(orderClears.givesWay)(
+    "gives way: $name",
+    ({ date, expected, field, floor, set }) => {
+      expect(givesWay(date, fieldOf(field), set, floor)).toBe(expected);
+    }
+  );
+
+  test.each(orderClears.belowFloor)(
+    "held back: $name",
+    ({ date, expected, field, floors, set }) => {
+      expect(belowFloor(floors, date, fieldOf(field), set)).toBe(expected);
+    }
+  );
 });

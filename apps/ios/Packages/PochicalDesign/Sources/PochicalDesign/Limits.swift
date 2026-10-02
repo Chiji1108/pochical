@@ -18,6 +18,16 @@ public enum TextFields {
   public static let dayNameLength = 3
 }
 
+/// How much of what a user owns one synced value may hold (spec/sync-protocol.md).
+public enum SyncLimits {
+  public static let coworkers = 500
+  public static let idLength = 64
+  public static let orders = 200
+  public static let patterns = 200
+  public static let peopleADay = 50
+  public static let sequence = 366
+}
+
 /// The most days one chat message shares.
 public let sharedDaysMax = 31
 

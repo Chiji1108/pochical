@@ -1,4 +1,4 @@
-import { textLimits } from "@pochical/design/limits";
+import { syncLimits, textLimits } from "@pochical/design/limits";
 
 import { DayField } from "./gen/pochical/v1/sync_pb";
 import type { DayValue } from "./gen/pochical/v1/sync_pb";
@@ -9,10 +9,6 @@ import { characterCount } from "./text-limits";
 
 const DATE = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})$/u;
 const TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/u;
-// Pattern ids and device ids are the apps' own, so only kept short.
-const MAX_ID_LENGTH = 64;
-// Far past the people anyone notes on one day.
-export const MAX_PEOPLE_A_DAY = 50;
 
 /** Whether the text is a real calendar day written "YYYY-MM-DD". */
 export const isDate = (text: string): boolean => {
@@ -43,13 +39,13 @@ export const isDayField = (field: number): field is DayField =>
   KEPT_FIELDS.has(field);
 
 const isId = (text: string): boolean =>
-  text !== "" && text.length <= MAX_ID_LENGTH;
+  text !== "" && text.length <= syncLimits.idLength;
 
 // A day's people: coworker ids separated by single spaces, each once.
 const isPeople = (value: string): boolean => {
   const ids = value.split(" ");
   return (
-    ids.length <= MAX_PEOPLE_A_DAY &&
+    ids.length <= syncLimits.peopleADay &&
     new Set(ids).size === ids.length &&
     ids.every((id) => isId(id))
   );

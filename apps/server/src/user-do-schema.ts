@@ -123,3 +123,15 @@ export const coworkerOrder = sqliteTable(
   },
   (table) => [check("coworker_order_single_row", sql`${table.id} = 1`)]
 );
+
+// Where taken repeating orders cleared the user's days: from each
+// clear_from, the clock of the orders that cleared it (the newest, when
+// orders cleared from the same day twice). An edit of a pattern or time on
+// a day from there with an older clock arrived late and is corrected
+// (spec/sync-protocol.md, Repeating orders).
+export const orderClears = sqliteTable("order_clears", {
+  fromDate: text("from_date").primaryKey(),
+  hlcCounter: integer("hlc_counter").notNull(),
+  hlcDevice: text("hlc_device").notNull(),
+  hlcMs: integer("hlc_ms").notNull(),
+});

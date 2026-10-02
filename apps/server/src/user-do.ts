@@ -8,16 +8,14 @@ import {
   gte,
   inArray,
   isNotNull,
-  lt,
   max,
   notInArray,
-  or,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
-import { fitsField, hasKey, isDate } from "./day-values";
+import { fitsField, hasKey } from "./day-values";
 import {
   ChangesSchema,
   DayField,
@@ -38,7 +36,10 @@ import type {
 } from "./gen/pochical/v1/sync_pb";
 import { clockAfter, compareClocks } from "./hlc";
 import type { Clock } from "./hlc";
+import { belowFloor, givesWay, ORDER_FIELDS } from "./order-clears";
+import type { Floor } from "./order-clears";
 import {
+  fitsClearFrom,
   fitsCoworkerName,
   fitsCoworkerOrder,
   fitsOrders,
@@ -58,6 +59,7 @@ import {
   coworkers,
   dayFields,
   memberships,
+  orderClears,
   patternOrder,
   patterns,
   repeatOrders,
@@ -92,8 +94,6 @@ const MAX_EDITS_PER_FRAME = 500;
 const VALUES_PER_PUSH = 500;
 // The day fields that stay with their owner, never pushed to groups.
 const PRIVATE_FIELDS = [DayField.NOTE, DayField.PEOPLE];
-// The fields a day gives back to a new or corrected repeating order.
-const ORDER_FIELDS = [DayField.PATTERN, DayField.START, DayField.END];
 
 const byCursor = (changes: Change[]): Change[] =>
   changes.toSorted((a, b) => (a.cursor < b.cursor ? -1 : 1));
@@ -434,7 +434,11 @@ export class UserDO extends DurableObject<Env> {
     if (stored && compareClocks(clock, clockOfRow(stored)) <= 0) {
       return undefined;
     }
-    const fits = fitsField(edit.field, edit.value);
+    // An edit made before orders that cleared its day arrived late: it
+    // would bring back what they took, so it is corrected instead.
+    const fits =
+      fitsField(edit.field, edit.value) &&
+      !belowFloor(this.floors(), edit.date, edit.field, clock);
     const row: DayRow = {
       ...clockColumns(writtenClock(clock, fits)),
       cursor,
@@ -531,7 +535,7 @@ export class UserDO extends DurableObject<Env> {
       return [];
     }
     const fits =
-      fitsOrders(edit.orders) && (clearFrom === undefined || isDate(clearFrom));
+      fitsOrders(edit.orders) && fitsClearFrom(edit.orders, clearFrom);
     // Orders that do not fit leave what was stored (or none).
     let kept = edit.orders;
     if (!fits) {
@@ -555,28 +559,39 @@ export class UserDO extends DurableObject<Env> {
     return changes;
   }
 
+  /** Where taken orders cleared the user's days, and when. */
+  private floors(): Floor[] {
+    return this.db
+      .select()
+      .from(orderClears)
+      .all()
+      .map((row) => ({ clock: clockOfRow(row), from: row.fromDate }));
+  }
+
   /**
-   * Clears the own pattern and times of the days from `from` whose values
-   * are older than the orders' clock, each at the next cursor.
+   * Clears the own pattern and times of the days from `from` set before
+   * the orders, each at the next cursor, and keeps where they cleared, so
+   * an edit made before them that arrives later cannot bring them back.
    */
   private giveDaysToOrders(
     from: string,
     orders: RepeatOrdersRow,
     cursor: number
   ): Change[] {
-    const clock = clockOfRow(orders);
-    const older = or(
-      lt(dayFields.hlcMs, clock.ms),
-      and(
-        eq(dayFields.hlcMs, clock.ms),
-        lt(dayFields.hlcCounter, clock.counter)
-      ),
-      and(
-        eq(dayFields.hlcMs, clock.ms),
-        eq(dayFields.hlcCounter, clock.counter),
-        lt(dayFields.hlcDevice, clock.device)
-      )
-    );
+    const floor: Floor = { clock: clockOfRow(orders), from };
+    const stored = this.db
+      .select()
+      .from(orderClears)
+      .where(eq(orderClears.fromDate, from))
+      .get();
+    if (!stored || compareClocks(clockOfRow(stored), floor.clock) < 0) {
+      const row = { ...clockColumns(floor.clock), fromDate: from };
+      this.db
+        .insert(orderClears)
+        .values(row)
+        .onConflictDoUpdate({ set: row, target: orderClears.fromDate })
+        .run();
+    }
     const owned = this.db
       .select()
       .from(dayFields)
@@ -584,18 +599,18 @@ export class UserDO extends DurableObject<Env> {
         and(
           gte(dayFields.date, from),
           inArray(dayFields.field, ORDER_FIELDS),
-          isNotNull(dayFields.value),
-          older
+          isNotNull(dayFields.value)
         )
       )
       .orderBy(asc(dayFields.date), asc(dayFields.field))
-      .all();
-    return owned.map((stored, index) => {
+      .all()
+      .filter((row) => givesWay(row.date, row.field, clockOfRow(row), floor));
+    return owned.map((kept, index) => {
       const row: DayRow = {
-        ...clockColumns(clock),
+        ...clockColumns(floor.clock),
         cursor: cursor + index,
-        date: stored.date,
-        field: stored.field,
+        date: kept.date,
+        field: kept.field,
         value: null,
       };
       this.db

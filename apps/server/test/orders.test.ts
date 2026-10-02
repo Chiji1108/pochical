@@ -126,13 +126,25 @@ describe("syncing a user's repeating orders", () => {
 
   // Starts must only grow, holidays off records the pattern taken, and the
   // country is a code.
+  // …and only a new or corrected order takes days back, from its start.
   it.each([
-    [[order("2026-10-05", ["day"]), order("2026-10-01", ["off"])]],
-    [[{ ...order("2026-10-01", ["day"]), holidayShift: undefined }]],
-    [[{ ...order("2026-10-01", ["day"]), holidayCountry: "Japan" }]],
+    [
+      [order("2026-10-05", ["day"]), order("2026-10-01", ["off"])],
+      "2026-10-01",
+    ],
+    [
+      [{ ...order("2026-10-01", ["day"]), holidayShift: undefined }],
+      "2026-10-01",
+    ],
+    [
+      [{ ...order("2026-10-01", ["day"]), holidayCountry: "Japan" }],
+      "2026-10-01",
+    ],
+    [[order("2026-10-03", ["day"])], "2026-10-01"],
+    [[], "2026-10-01"],
   ])(
     "corrects orders that do not fit, and clears nothing for them",
-    async (orders) => {
+    async (orders, clearFrom) => {
       const token = await signInAnonymously();
       const phone = await device(token);
       sendFrame(phone.socket, {
@@ -144,7 +156,7 @@ describe("syncing a user's repeating orders", () => {
       await phone.frames.next();
       await phone.frames.next();
 
-      sendFrame(phone.socket, ordersEdit("bad", orders, 2000, "2026-10-01"));
+      sendFrame(phone.socket, ordersEdit("bad", orders, 2000, clearFrom));
       await phone.frames.next();
       const { kind } = await phone.frames.next();
       const changes = kind.case === "changes" ? kind.value.changes : [];
@@ -155,6 +167,40 @@ describe("syncing a user's repeating orders", () => {
       });
     }
   );
+
+  it("holds back an edit made before orders that cleared its day", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    sendFrame(
+      phone.socket,
+      ordersEdit("o", [order("2026-10-03", ["day"])], 3000, "2026-10-03")
+    );
+    await phone.frames.next();
+    await phone.frames.next();
+
+    // Made offline before the orders, on a day nothing was entered on.
+    sendFrame(phone.socket, {
+      case: "dayEdits",
+      value: {
+        edits: [
+          edit("late", "2026-10-07", DayField.PATTERN, "night", 2000, "tablet"),
+          edit("memo", "2026-10-08", DayField.NOTE, "メモ", 2000, "tablet"),
+          edit("new", "2026-10-09", DayField.PATTERN, "night", 4000, "tablet"),
+        ],
+      },
+    });
+    await phone.frames.next();
+    const { kind } = await phone.frames.next();
+    const changes = kind.case === "changes" ? kind.value.changes : [];
+    expect(daysIn(changes)).toStrictEqual([
+      ["2026-10-07", DayField.PATTERN, undefined],
+      ["2026-10-08", DayField.NOTE, "メモ"],
+      ["2026-10-09", DayField.PATTERN, "night"],
+    ]);
+    expect(changes[0]?.kind).toMatchObject({
+      value: { hlc: { deviceId: "server" } },
+    });
+  });
 
   it("keeps a day cleared on purpose as an empty pattern", async () => {
     const token = await signInAnonymously();
