@@ -53,7 +53,7 @@ import { EmojiPickerSheet } from "./design-emoji-picker";
 import type { Chat, Group, Member, Message } from "./design-group-data";
 import { Avatar, badge, photoPicker } from "./design-group-parts";
 import { profileIn } from "./design-group-settings";
-import { DaySheet } from "./design-group-shifts";
+import { DaySheet } from "./design-group-shifts-day-sheet";
 import { ReportSheet } from "./design-report";
 import { ConfirmDialog, Sheet } from "./design-sheet";
 import { ToastContext } from "./design-toast";

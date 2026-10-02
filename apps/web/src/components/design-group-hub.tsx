@@ -28,7 +28,7 @@ import {
   memberButton,
 } from "./design-group-parts";
 import { misaki, mother, partner } from "./design-group-samples";
-import { MemberTable } from "./design-group-shifts";
+import { MemberTable } from "./design-group-shifts-weeks";
 import {
   ConfirmDialog,
   PhotoViewer,
