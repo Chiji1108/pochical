@@ -137,274 +137,25 @@ export function DesignCalendar({
   const phoneRef = useRef<HTMLDivElement>(null);
   const { say: toast, toaster } = usePhoneToaster();
   const themeStyle = useThemeStyle();
-  // The sheet open over the phone, if any; one at a time.
-  const [openSheet, setOpenSheet] = useState<
-    "breakdown" | "save" | "gap" | null
-  >(null);
-  const sheetChange = (name: typeof openSheet) => (open: boolean) => {
-    setOpenSheet(open ? name : null);
-  };
-  // Blank days between entered ones, asked about when entering ends.
-  const [gapDays, setGapDays] = useState<Date[]>([]);
-  // Whether the sheet offers showing days off blank: decided as it opens,
-  // so switching it on there does not take the switch away.
-  const [offerBlank, setOfferBlank] = useState(false);
-  const setCalendarOptions = useSettings((state) => state.setCalendarOptions);
-  // Whether the save sheet opened because the month was just filled in.
-  const [saveCompletion, setSaveCompletion] = useState(false);
-  // Whether it opened straight on adding to the device calendar.
-  const [saveToCalendar, setSaveToCalendar] = useState(false);
-  const [imagePreview, setImagePreview] = useState(false);
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [joining, setJoining] = useState(pendingInvite);
   const groups = useUser((state) => state.groups);
   const setGroups = useUser((state) => state.setGroups);
-  const offDisplay = useContext(OffDisplayContext);
-  const imageOptions = useSettings((state) => state.device.imageOptions);
-  const setImageOptions = useSettings((state) => state.setImageOptions);
-  const coworkerNames = useUser((state) => state.coworkers);
-  const [tab, setTab] = useState<Tab>(initialTab);
-  const surprise = useSurprise();
   // The group the group tab opens on, like one just joined from a link.
   const [openGroup, setOpenGroup] = useState<string>();
   const profile = useUser((state) => state.profile);
   const setProfile = useUser((state) => state.setProfile);
   const rules = useUser((state) => state.rules);
-  const [editing, setEditing] = useState(initialEditing);
-  const [selectedDay, setSelectedDay] = useState(initialDay);
-  // Whether the month being entered had blank days when it came up, as
-  // only then can 完了 have just filled it. A filled month can be entered
-  // too, with ポチポチ入力 always offered in the 保存を右上 variant.
-  const [enteredBlank, setEnteredBlank] = useState(true);
+  // The month in view on the calendar. The days as every tab shows them
+  // are worked out through it, however far ahead it is.
   const [month, setMonth] = useState(() => new Date(2026, initialMonth, 1));
-  // The days as they show, worked out through the month in view however far
-  // ahead it is; a change keeps only what differs from the repeating orders
-  // as the person's own.
   const schedule = useShownDays(month);
-  const onChange = useChangeDays(month);
   const { applyRule, changeJob, fixRule, setHolidaysOff } =
     useWorkChanges(schedule);
-  // How far the pages are dragged, -1 to 1 toward the next, which the
-  // month's name follows; and the month a swipe last landed on, whose name
-  // the drag has already brought in.
-  const pageDrag = useMotionValue(0);
-  const [swipedTo, setSwipedTo] = useState<string>();
   const ownPatterns = useUser((state) => state.patterns);
-  const setPatterns = useUser((state) => state.setPatterns);
-  const patternKeys = ownPatterns.map((pattern) => pattern.id);
   // The person's own patterns, over the ready-made ones that templates
   // and samples name.
   const book: PatternBook = { ...presetPatterns, ...bookOf(ownPatterns) };
-  const sharing = useUser((state) => state.groups.length > 0);
-  const [announcement, setAnnouncement] = useState("");
-  const weekTools = useWeek();
-  const dates = weekTools.monthDates(month);
-  const monthDays = dates.filter(
-    (date) => date.getMonth() === month.getMonth()
-  );
-  const daysOffIn = (days: Date[]) =>
-    days.filter((date) => {
-      const shift = schedule[dateKey(date)]?.shift;
-      return shift !== undefined && isDayOff(book[shift]);
-    }).length;
-  const daysOff = daysOffIn(monthDays);
-  // Someone picked in 今月の内訳, whose days the calendar shows.
-  const shown = useShownWith(coworkerNames, schedule);
-  const summaryIn = (days: Date[]) =>
-    shown.person === undefined ? daysOffIn(days) : shown.countIn(days);
-  // The months beside, for the summary to follow a drag of the pages.
-  const summaryBy = (by: number) => {
-    const beside = new Date(month.getFullYear(), month.getMonth() + by, 1);
-    return summaryIn(
-      weekTools
-        .monthDates(beside)
-        .filter((date) => date.getMonth() === beside.getMonth())
-    );
-  };
-  const counts = ownPatterns.map((pattern) => ({
-    count: monthDays.filter(
-      (date) => schedule[dateKey(date)]?.shift === pattern.id
-    ).length,
-    key: pattern.id,
-    label: pattern.name,
-  }));
-  const unfilled = monthDays.filter((date) => !schedule[dateKey(date)]).length;
-  const selectedDate = new Date(
-    month.getFullYear(),
-    month.getMonth(),
-    selectedDay
-  );
-  const lastDay = monthDays.length;
-  const selectedShift = schedule[dateKey(selectedDate)]?.shift;
-  function moveToNextDay(result: string, days = 1) {
-    const nextDay = Math.min(selectedDay + days, lastDay);
-    setSelectedDay(nextDay);
-    setAnnouncement(
-      `${month.getMonth() + 1}月${selectedDay}日、${result}。${selectedDay === lastDay ? "月末です。入力が終わったら完了を押してください" : `${nextDay}日を選択中`}`
-    );
-  }
-  function announcePicked(date: Date) {
-    setAnnouncement(
-      `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日を選択中`
-    );
-  }
-  // The day to enter, in its own month: a day of the month before or after,
-  // tapped on the calendar or picked from the date, turns to that month.
-  function enterFrom(date: Date) {
-    setSelectedDay(date.getDate());
-    if (
-      date.getFullYear() === month.getFullYear() &&
-      date.getMonth() === month.getMonth()
-    ) {
-      return;
-    }
-    const target = new Date(date.getFullYear(), date.getMonth(), 1);
-    setSwipedTo(undefined);
-    setMonth(target);
-    setEnteredBlank(hasBlanks(schedule, target));
-    announcePicked(date);
-  }
-  const datePicker = (
-    <InputDatePicker
-      ariaLabel={`入力する日付：${month.getMonth() + 1}月${selectedDay}日(${weekdays[selectedDate.getDay()]})。タップで変更`}
-      date={selectedDate}
-      onSelect={(date) => {
-        enterFrom(date);
-        announcePicked(date);
-      }}
-    >
-      <span>
-        {`${month.getMonth() + 1}月${selectedDay}日`}
-        <span
-          className={shiftInput.weekday({
-            tone: weekTools.dateTone(selectedDate),
-          })}
-        >
-          ({weekdays[selectedDate.getDay()]})
-        </span>
-      </span>
-    </InputDatePicker>
-  );
-  const {
-    besideMonths,
-    closeDetail,
-    detailOpacity,
-    foldRow,
-    folded,
-    openDate,
-    openDetail,
-    pullRef,
-  } = useWeekFold({
-    dates,
-    editing,
-    initialDetail,
-    month,
-    onOpen: (target) => {
-      setSwipedTo(undefined);
-      if (target) {
-        setMonth(target);
-      }
-    },
-  });
-  const weekDetail = openDate !== undefined;
-  const headingMode = screenMode(editing, weekDetail);
-  function goToMonth(target: Date) {
-    setSwipedTo(undefined);
-    setMonth(target);
-    if (editing) {
-      setSelectedDay(1);
-      setEnteredBlank(hasBlanks(schedule, target));
-      setAnnouncement(
-        `${target.getFullYear()}年${target.getMonth() + 1}月1日を選択中`
-      );
-    }
-  }
-  // Move by what is on screen: a week in the week detail, otherwise a month.
-  function step(direction: 1 | -1) {
-    if (weekDetail) {
-      openDetail(addDays(openDate, direction * 7));
-      return;
-    }
-    goToMonth(new Date(month.getFullYear(), month.getMonth() + direction, 1));
-  }
-  // Entering is about every day, so it lets go of someone's days.
-  function startInput() {
-    shown.show(undefined);
-    setSelectedDay(1);
-    setEnteredBlank(unfilled > 0);
-    setEditing(true);
-  }
-  function openSave(completion: boolean, toCalendar = false) {
-    setSaveCompletion(completion);
-    setSaveToCalendar(toCalendar);
-    setOpenSheet("save");
-  }
-  // The corner's 完了 or ×: it closes what is open last, the week before
-  // someone's days.
-  function finishHeading() {
-    if (weekDetail) {
-      closeDetail();
-      return;
-    }
-    if (!editing) {
-      shown.show(undefined);
-      return;
-    }
-    setEditing(false);
-    const gaps = gapDaysIn(schedule, month);
-    if (gaps.length > 0) {
-      setGapDays(gaps);
-      setOfferBlank(offDisplay === "show");
-      setOpenSheet("gap");
-      return;
-    }
-    // A month just filled in is worth keeping, so saving is offered then.
-    if (unfilled === 0 && enteredBlank) {
-      openSave(true);
-    }
-  }
-  // Fills the blanks with the person's day off, or adds 休み back when
-  // they have none.
-  function fillGaps(key: Shift | undefined) {
-    const shift = key ?? presetPatterns.off.id;
-    if (!key) {
-      setPatterns((previous) => [...previous, presetPatterns.off]);
-    }
-    onChange((previous) => ({
-      ...previous,
-      ...Object.fromEntries(gapDays.map((date) => [dateKey(date), { shift }])),
-    }));
-    if (unfilled === gapDays.length) {
-      openSave(true);
-    }
-  }
-  function changeEntry(date: Date, entry: DayEntry | undefined) {
-    onChange((previous) => ({ ...previous, [dateKey(date)]: entry }));
-  }
-  function enterShift(shift: Shift | undefined) {
-    const key = dateKey(selectedDate);
-    // One day only: the next day's own next day is not followed, so
-    // patterns naming each other never run on (spec/shift-patterns.md).
-    const following = shift && book[shift]?.nextDay;
-    const followingKey = dateKey(addDays(selectedDate, 1));
-    onChange((previous) => ({
-      ...previous,
-      [key]:
-        shift === undefined ? undefined : keepDetails(previous[key], shift),
-      ...(following && {
-        [followingKey]: keepDetails(previous[followingKey], following),
-      }),
-    }));
-    if (!shift) {
-      moveToNextDay("シフトを消しました");
-      return;
-    }
-    moveToNextDay(
-      following
-        ? `${book[shift]?.name}を入力しました。翌日は${book[following]?.name}です`
-        : `${book[shift]?.name}を入力しました`,
-      following ? 2 : 1
-    );
-  }
   return (
     <PatternsContext value={book}>
       <OwnPatternsContext value={ownPatterns}>
@@ -453,267 +204,17 @@ export function DesignCalendar({
                   profile={profile}
                 />
               )}
-              {tab === "calendar" && imagePreview && (
-                <ImagePreviewPage
-                  month={month}
-                  onClose={() => {
-                    setImagePreview(false);
-                  }}
-                  onOptions={setImageOptions}
-                  options={imageOptions}
-                  schedule={schedule}
-                />
-              )}
-              <Screen
-                className={surpriseStyles.screen}
-                hidden={tab !== "calendar" || imagePreview || joining}
-              >
-                {surprise.layer}
-                <div className={heading.bar}>
-                  <MonthHeading
-                    beside={besideMonths}
-                    mode={headingMode}
-                    month={month}
-                    onPick={goToMonth}
-                    onSurprise={() => {
-                      surprise.play();
-                    }}
-                    progress={pageDrag}
-                    swiped={swipedTo === dateKey(month)}
-                  />
-                  <HeadingActions
-                    closeLabel={
-                      shown.person === undefined
-                        ? undefined
-                        : `${shown.person}と一緒の日の表示をやめる`
-                    }
-                    detailDate={openDate}
-                    mode={headingMode}
-                    month={month}
-                    onDone={finishHeading}
-                    onCalendar={() => {
-                      openSave(false, true);
-                    }}
-                    onImage={() => {
-                      setImagePreview(true);
-                    }}
-                    onStep={step}
-                    onThisMonth={() => {
-                      goToMonth(
-                        new Date(
-                          designToday.getFullYear(),
-                          designToday.getMonth(),
-                          1
-                        )
-                      );
-                    }}
-                    onThisWeek={() => {
-                      openDetail(designToday);
-                    }}
-                    progress={pageDrag}
-                    swiped={swipedTo === dateKey(month)}
-                  />
-                </div>
-                {/* The open week and the day's details under it can be pulled
-                down to unfold the month again. */}
-                <div className={calendarPage.pull} ref={pullRef}>
-                  <div className={calendarPage.scroll({ weekDetail })}>
-                    <WeekdayRow />
-                    <OffDisplayContext
-                      value={
-                        weekDetail && offDisplay === "blank"
-                          ? "faint"
-                          : offDisplay
-                      }
-                    >
-                      <Pager
-                        onStep={(direction) => {
-                          step(direction);
-                          // After step, which clears it.
-                          setSwipedTo(
-                            dateKey(
-                              besideMonths?.[
-                                direction > 0 ? "next" : "previous"
-                              ] ??
-                                new Date(
-                                  month.getFullYear(),
-                                  month.getMonth() + direction,
-                                  1
-                                )
-                            )
-                          );
-                        }}
-                        progress={pageDrag}
-                        page={weekDetail ? dateKey(openDate) : dateKey(month)}
-                        renderPage={(offset) => {
-                          const pageMonth = new Date(
-                            month.getFullYear(),
-                            month.getMonth() + offset,
-                            1
-                          );
-                          // The page shown keeps the whole month around the
-                          // open week, to unfold back into.
-                          const pageDates =
-                            weekDetail && offset !== 0
-                              ? weekTools.weekDates(
-                                  addDays(openDate, offset * 7)
-                                )
-                              : weekTools.monthDates(pageMonth);
-                          const renderCell = (date: Date) => (
-                            <DayCell
-                              active={
-                                offset === 0 &&
-                                (editing
-                                  ? date.getMonth() === month.getMonth() &&
-                                    date.getDate() === selectedDay
-                                  : openDate !== undefined &&
-                                    dateKey(date) === dateKey(openDate))
-                              }
-                              date={date}
-                              editing={editing}
-                              entry={schedule[dateKey(date)]}
-                              key={dateKey(date)}
-                              onPress={() => {
-                                editing ? enterFrom(date) : openDetail(date);
-                              }}
-                              dimmed={!editing && shown.fades(date)}
-                              outside={
-                                !weekDetail &&
-                                date.getMonth() !== pageMonth.getMonth()
-                              }
-                            />
-                          );
-                          const label = `${pageMonth.getFullYear()}年${pageMonth.getMonth() + 1}月のシフト`;
-                          // Only the page shown folds; the ones beside it are
-                          // there to be dragged in.
-                          if (offset === 0) {
-                            return (
-                              <FoldingGrid
-                                dates={pageDates}
-                                folded={folded}
-                                label={label}
-                                renderCell={renderCell}
-                                row={foldRow}
-                                weekDetail={weekDetail}
-                              />
-                            );
-                          }
-                          return (
-                            <section aria-label={label} className={dayGrid}>
-                              {pageDates.map(renderCell)}
-                            </section>
-                          );
-                        }}
-                      />
-                    </OffDisplayContext>
-                  </div>
-                  {weekDetail && (
-                    <motion.section
-                      aria-label={formatDay(openDate)}
-                      className={calendarPage.detail}
-                      style={{ opacity: detailOpacity }}
-                    >
-                      <h4 className={calendarPage.detailDate}>
-                        {formatDay(openDate)}
-                      </h4>
-                      <DayDetail
-                        key={dateKey(openDate)}
-                        entry={schedule[dateKey(openDate)]}
-                        onChange={(entry) => {
-                          changeEntry(openDate, entry);
-                        }}
-                        patternKeys={patternKeys}
-                      />
-                    </motion.section>
-                  )}
-                </div>
-                {/* On an empty month too, at 0日, so the month keeps the two
-                rows of one being filled in: the card above ポチポチ入力.
-                Any spare height stays over it, so the summary, the input
-                or save buttons and the tab bar sit together at the bottom. */}
-                {headingMode === "view" && (
-                  <div className={calendarPage.bottom}>
-                    <MonthSummary
-                      beside={{ next: summaryBy(1), previous: summaryBy(-1) }}
-                      days={summaryIn(monthDays)}
-                      month={month}
-                      onOpen={() => {
-                        setOpenSheet("breakdown");
-                      }}
-                      person={shown.person}
-                      progress={pageDrag}
-                      swiped={swipedTo === dateKey(month)}
-                    />
-                    {/* Filled month or not: a filled month is fixed the same
-                    way, and saving is in the heading's corner. */}
-                    <div className={calendarPage.controls}>
-                      <StartArea label="ポチポチ入力" onStart={startInput} />
-                    </div>
-                    <TabBar active="calendar" onSelect={setTab} />
-                  </div>
-                )}
-                {headingMode === "edit" && (
-                  <div className={calendarPage.input}>
-                    <ShiftInputControls
-                      canSkip={selectedDay < lastDay}
-                      datePicker={datePicker}
-                      onEnter={enterShift}
-                      onSkip={() => {
-                        moveToNextDay("変更せずに進みました");
-                      }}
-                      patternKeys={patternKeys}
-                      selectedShift={selectedShift}
-                    />
-                  </div>
-                )}
-              </Screen>
-              <BreakdownSheet
-                counts={counts}
-                days={monthDays.length}
+              <CalendarTab
+                covered={joining}
+                initialDay={initialDay}
+                initialDetail={initialDetail}
+                initialEditing={initialEditing}
                 month={month}
-                onOpenChange={sheetChange("breakdown")}
-                onShow={(name) => {
-                  shown.show(name);
-                  setOpenSheet(null);
-                }}
-                open={openSheet === "breakdown"}
-                people={shown.peopleIn(monthDays)}
-                shownWith={shown.person}
-                unfilled={unfilled}
+                onMonth={setMonth}
+                onTab={setTab}
+                schedule={schedule}
+                shown={tab === "calendar"}
               />
-              <SaveSheet
-                completion={saveCompletion}
-                month={month}
-                offCount={daysOff}
-                onImage={() => {
-                  setImagePreview(true);
-                }}
-                onOpenChange={sheetChange("save")}
-                open={openSheet === "save"}
-                toCalendar={saveToCalendar}
-                shiftCount={monthDays.length - unfilled}
-              />
-              <GapSheet
-                choices={ownPatterns
-                  .filter((pattern) => isDayOff(pattern))
-                  .map((pattern) => ({ key: pattern.id, label: pattern.name }))}
-                days={gapDays}
-                onFill={fillGaps}
-                blankOff={offDisplay === "blank"}
-                completes={unfilled === gapDays.length}
-                month={month}
-                offCount={daysOff}
-                sharing={sharing}
-                offerBlank={offerBlank}
-                onBlankOff={(blankOff) => {
-                  setCalendarOptions({ blankOff });
-                }}
-                onOpenChange={sheetChange("gap")}
-                open={openSheet === "gap"}
-              />
-              <span aria-live="polite" className={srOnly}>
-                {announcement}
-              </span>
               <PhoneToasts toaster={toaster} />
             </Phone>
           </ToastContext>
@@ -721,6 +222,620 @@ export function DesignCalendar({
       </OwnPatternsContext>
     </PatternsContext>
   );
+}
+
+// The calendar tab: the month, or a week folded out of it with a day's
+// details, its summary, and entering the shifts day by day. It stays put
+// while another tab is shown, as a tab keeps its place.
+function CalendarTab({
+  initialEditing,
+  initialDay,
+  initialDetail,
+  month,
+  onMonth: setMonth,
+  schedule,
+  shown: tabShown,
+  covered,
+  onTab,
+}: {
+  initialEditing: boolean;
+  initialDay: number;
+  initialDetail?: Date;
+  month: Date;
+  onMonth: (month: Date) => void;
+  // The days as they show, worked out through the month in view.
+  schedule: Schedule;
+  // Its tab is the one shown; and whether a screen covers it, like
+  // joining a group.
+  shown: boolean;
+  covered: boolean;
+  onTab: (tab: Tab) => void;
+}) {
+  // The sheet open over the phone, if any; one at a time.
+  const [openSheet, setOpenSheet] = useState<
+    "breakdown" | "save" | "gap" | null
+  >(null);
+  const sheetChange = (name: typeof openSheet) => (open: boolean) => {
+    setOpenSheet(open ? name : null);
+  };
+  // Blank days between entered ones, asked about when entering ends.
+  const [gapDays, setGapDays] = useState<Date[]>([]);
+  // Whether the sheet offers showing days off blank: decided as it opens,
+  // so switching it on there does not take the switch away.
+  const [offerBlank, setOfferBlank] = useState(false);
+  const setCalendarOptions = useSettings((state) => state.setCalendarOptions);
+  // Whether the save sheet opened because the month was just filled in.
+  const [saveCompletion, setSaveCompletion] = useState(false);
+  // Whether it opened straight on adding to the device calendar.
+  const [saveToCalendar, setSaveToCalendar] = useState(false);
+  const [imagePreview, setImagePreview] = useState(false);
+  const offDisplay = useContext(OffDisplayContext);
+  const imageOptions = useSettings((state) => state.device.imageOptions);
+  const setImageOptions = useSettings((state) => state.setImageOptions);
+  const coworkerNames = useUser((state) => state.coworkers);
+  const surprise = useSurprise();
+  // A change keeps only what differs from the repeating orders as the
+  // person's own.
+  const onChange = useChangeDays(month);
+  // How far the pages are dragged, -1 to 1 toward the next, which the
+  // month's name follows; and the month a swipe last landed on, whose name
+  // the drag has already brought in.
+  const pageDrag = useMotionValue(0);
+  const [swipedTo, setSwipedTo] = useState<string>();
+  const ownPatterns = useUser((state) => state.patterns);
+  const setPatterns = useUser((state) => state.setPatterns);
+  const patternKeys = ownPatterns.map((pattern) => pattern.id);
+  const book = usePatterns();
+  const sharing = useUser((state) => state.groups.length > 0);
+  const weekTools = useWeek();
+  const dates = weekTools.monthDates(month);
+  const monthDays = dates.filter(
+    (date) => date.getMonth() === month.getMonth()
+  );
+  const daysOffIn = (days: Date[]) =>
+    days.filter((date) => {
+      const shift = schedule[dateKey(date)]?.shift;
+      return shift !== undefined && isDayOff(book[shift]);
+    }).length;
+  const daysOff = daysOffIn(monthDays);
+  // Someone picked in 今月の内訳, whose days the calendar shows.
+  const shown = useShownWith(coworkerNames, schedule);
+  const summaryIn = (days: Date[]) =>
+    shown.person === undefined ? daysOffIn(days) : shown.countIn(days);
+  // The months beside, for the summary to follow a drag of the pages.
+  const summaryBy = (by: number) => {
+    const beside = new Date(month.getFullYear(), month.getMonth() + by, 1);
+    return summaryIn(
+      weekTools
+        .monthDates(beside)
+        .filter((date) => date.getMonth() === beside.getMonth())
+    );
+  };
+  const counts = ownPatterns.map((pattern) => ({
+    count: monthDays.filter(
+      (date) => schedule[dateKey(date)]?.shift === pattern.id
+    ).length,
+    key: pattern.id,
+    label: pattern.name,
+  }));
+  const unfilled = monthDays.filter((date) => !schedule[dateKey(date)]).length;
+  // A month turned to by a tap or a pick rather than a swipe, whose name
+  // the drag has not brought in.
+  const turnTo = (target: Date) => {
+    setSwipedTo(undefined);
+    setMonth(target);
+  };
+  const {
+    announcement,
+    announcePicked,
+    editing,
+    enterFrom,
+    enterShift,
+    enterMonth,
+    enteredBlank,
+    lastDay,
+    selectedDate,
+    selectedDay,
+    selectedShift,
+    skip,
+    start: startEntering,
+    stop: stopEntering,
+  } = useShiftEntry({
+    initialDay,
+    initialEditing,
+    month,
+    onChange,
+    schedule,
+    turnTo,
+  });
+  const datePicker = (
+    <InputDatePicker
+      ariaLabel={`入力する日付：${month.getMonth() + 1}月${selectedDay}日(${weekdays[selectedDate.getDay()]})。タップで変更`}
+      date={selectedDate}
+      onSelect={(date) => {
+        enterFrom(date);
+        announcePicked(date);
+      }}
+    >
+      <span>
+        {`${month.getMonth() + 1}月${selectedDay}日`}
+        <span
+          className={shiftInput.weekday({
+            tone: weekTools.dateTone(selectedDate),
+          })}
+        >
+          ({weekdays[selectedDate.getDay()]})
+        </span>
+      </span>
+    </InputDatePicker>
+  );
+  const {
+    besideMonths,
+    closeDetail,
+    detailOpacity,
+    foldRow,
+    folded,
+    openDate,
+    openDetail,
+    pullRef,
+  } = useWeekFold({
+    dates,
+    editing,
+    initialDetail,
+    month,
+    onOpen: (target) => {
+      if (target) {
+        turnTo(target);
+      } else {
+        setSwipedTo(undefined);
+      }
+    },
+  });
+  const weekDetail = openDate !== undefined;
+  const headingMode = screenMode(editing, weekDetail);
+  function goToMonth(target: Date) {
+    turnTo(target);
+    if (editing) {
+      enterMonth(target);
+    }
+  }
+  // Move by what is on screen: a week in the week detail, otherwise a month.
+  function step(direction: 1 | -1) {
+    if (weekDetail) {
+      openDetail(addDays(openDate, direction * 7));
+      return;
+    }
+    goToMonth(new Date(month.getFullYear(), month.getMonth() + direction, 1));
+  }
+  // Entering is about every day, so it lets go of someone's days.
+  function startInput() {
+    shown.show(undefined);
+    startEntering();
+  }
+  function openSave(completion: boolean, toCalendar = false) {
+    setSaveCompletion(completion);
+    setSaveToCalendar(toCalendar);
+    setOpenSheet("save");
+  }
+  // The corner's 完了 or ×: it closes what is open last, the week before
+  // someone's days.
+  function finishHeading() {
+    if (weekDetail) {
+      closeDetail();
+      return;
+    }
+    if (!editing) {
+      shown.show(undefined);
+      return;
+    }
+    stopEntering();
+    const gaps = gapDaysIn(schedule, month);
+    if (gaps.length > 0) {
+      setGapDays(gaps);
+      setOfferBlank(offDisplay === "show");
+      setOpenSheet("gap");
+      return;
+    }
+    // A month just filled in is worth keeping, so saving is offered then.
+    if (unfilled === 0 && enteredBlank) {
+      openSave(true);
+    }
+  }
+  // Fills the blanks with the person's day off, or adds 休み back when
+  // they have none.
+  function fillGaps(key: Shift | undefined) {
+    const shift = key ?? presetPatterns.off.id;
+    if (!key) {
+      setPatterns((previous) => [...previous, presetPatterns.off]);
+    }
+    onChange((previous) => ({
+      ...previous,
+      ...Object.fromEntries(gapDays.map((date) => [dateKey(date), { shift }])),
+    }));
+    if (unfilled === gapDays.length) {
+      openSave(true);
+    }
+  }
+  function changeEntry(date: Date, entry: DayEntry | undefined) {
+    onChange((previous) => ({ ...previous, [dateKey(date)]: entry }));
+  }
+  return (
+    <>
+      {tabShown && imagePreview && (
+        <ImagePreviewPage
+          month={month}
+          onClose={() => {
+            setImagePreview(false);
+          }}
+          onOptions={setImageOptions}
+          options={imageOptions}
+          schedule={schedule}
+        />
+      )}
+      <Screen
+        className={surpriseStyles.screen}
+        hidden={!tabShown || imagePreview || covered}
+      >
+        {surprise.layer}
+        <div className={heading.bar}>
+          <MonthHeading
+            beside={besideMonths}
+            mode={headingMode}
+            month={month}
+            onPick={goToMonth}
+            onSurprise={() => {
+              surprise.play();
+            }}
+            progress={pageDrag}
+            swiped={swipedTo === dateKey(month)}
+          />
+          <HeadingActions
+            closeLabel={
+              shown.person === undefined
+                ? undefined
+                : `${shown.person}と一緒の日の表示をやめる`
+            }
+            detailDate={openDate}
+            mode={headingMode}
+            month={month}
+            onDone={finishHeading}
+            onCalendar={() => {
+              openSave(false, true);
+            }}
+            onImage={() => {
+              setImagePreview(true);
+            }}
+            onStep={step}
+            onThisMonth={() => {
+              goToMonth(
+                new Date(designToday.getFullYear(), designToday.getMonth(), 1)
+              );
+            }}
+            onThisWeek={() => {
+              openDetail(designToday);
+            }}
+            progress={pageDrag}
+            swiped={swipedTo === dateKey(month)}
+          />
+        </div>
+        {/* The open week and the day's details under it can be pulled
+        down to unfold the month again. */}
+        <div className={calendarPage.pull} ref={pullRef}>
+          <div className={calendarPage.scroll({ weekDetail })}>
+            <WeekdayRow />
+            <OffDisplayContext
+              value={
+                weekDetail && offDisplay === "blank" ? "faint" : offDisplay
+              }
+            >
+              <Pager
+                onStep={(direction) => {
+                  step(direction);
+                  // After step, which clears it.
+                  setSwipedTo(
+                    dateKey(
+                      besideMonths?.[direction > 0 ? "next" : "previous"] ??
+                        new Date(
+                          month.getFullYear(),
+                          month.getMonth() + direction,
+                          1
+                        )
+                    )
+                  );
+                }}
+                progress={pageDrag}
+                page={weekDetail ? dateKey(openDate) : dateKey(month)}
+                renderPage={(offset) => {
+                  const pageMonth = new Date(
+                    month.getFullYear(),
+                    month.getMonth() + offset,
+                    1
+                  );
+                  // The page shown keeps the whole month around the
+                  // open week, to unfold back into.
+                  const pageDates =
+                    weekDetail && offset !== 0
+                      ? weekTools.weekDates(addDays(openDate, offset * 7))
+                      : weekTools.monthDates(pageMonth);
+                  const renderCell = (date: Date) => (
+                    <DayCell
+                      active={
+                        offset === 0 &&
+                        (editing
+                          ? date.getMonth() === month.getMonth() &&
+                            date.getDate() === selectedDay
+                          : openDate !== undefined &&
+                            dateKey(date) === dateKey(openDate))
+                      }
+                      date={date}
+                      editing={editing}
+                      entry={schedule[dateKey(date)]}
+                      key={dateKey(date)}
+                      onPress={() => {
+                        editing ? enterFrom(date) : openDetail(date);
+                      }}
+                      dimmed={!editing && shown.fades(date)}
+                      outside={
+                        !weekDetail && date.getMonth() !== pageMonth.getMonth()
+                      }
+                    />
+                  );
+                  const label = `${pageMonth.getFullYear()}年${pageMonth.getMonth() + 1}月のシフト`;
+                  // Only the page shown folds; the ones beside it are
+                  // there to be dragged in.
+                  if (offset === 0) {
+                    return (
+                      <FoldingGrid
+                        dates={pageDates}
+                        folded={folded}
+                        label={label}
+                        renderCell={renderCell}
+                        row={foldRow}
+                        weekDetail={weekDetail}
+                      />
+                    );
+                  }
+                  return (
+                    <section aria-label={label} className={dayGrid}>
+                      {pageDates.map(renderCell)}
+                    </section>
+                  );
+                }}
+              />
+            </OffDisplayContext>
+          </div>
+          {weekDetail && (
+            <motion.section
+              aria-label={formatDay(openDate)}
+              className={calendarPage.detail}
+              style={{ opacity: detailOpacity }}
+            >
+              <h4 className={calendarPage.detailDate}>{formatDay(openDate)}</h4>
+              <DayDetail
+                key={dateKey(openDate)}
+                entry={schedule[dateKey(openDate)]}
+                onChange={(entry) => {
+                  changeEntry(openDate, entry);
+                }}
+                patternKeys={patternKeys}
+              />
+            </motion.section>
+          )}
+        </div>
+        {/* On an empty month too, at 0日, so the month keeps the two
+        rows of one being filled in: the card above ポチポチ入力.
+        Any spare height stays over it, so the summary, the input
+        or save buttons and the tab bar sit together at the bottom. */}
+        {headingMode === "view" && (
+          <div className={calendarPage.bottom}>
+            <MonthSummary
+              beside={{ next: summaryBy(1), previous: summaryBy(-1) }}
+              days={summaryIn(monthDays)}
+              month={month}
+              onOpen={() => {
+                setOpenSheet("breakdown");
+              }}
+              person={shown.person}
+              progress={pageDrag}
+              swiped={swipedTo === dateKey(month)}
+            />
+            {/* Filled month or not: a filled month is fixed the same
+            way, and saving is in the heading's corner. */}
+            <div className={calendarPage.controls}>
+              <StartArea label="ポチポチ入力" onStart={startInput} />
+            </div>
+            <TabBar active="calendar" onSelect={onTab} />
+          </div>
+        )}
+        {headingMode === "edit" && (
+          <div className={calendarPage.input}>
+            <ShiftInputControls
+              canSkip={selectedDay < lastDay}
+              datePicker={datePicker}
+              onEnter={enterShift}
+              onSkip={skip}
+              patternKeys={patternKeys}
+              selectedShift={selectedShift}
+            />
+          </div>
+        )}
+      </Screen>
+      <BreakdownSheet
+        counts={counts}
+        days={monthDays.length}
+        month={month}
+        onOpenChange={sheetChange("breakdown")}
+        onShow={(name) => {
+          shown.show(name);
+          setOpenSheet(null);
+        }}
+        open={openSheet === "breakdown"}
+        people={shown.peopleIn(monthDays)}
+        shownWith={shown.person}
+        unfilled={unfilled}
+      />
+      <SaveSheet
+        completion={saveCompletion}
+        month={month}
+        offCount={daysOff}
+        onImage={() => {
+          setImagePreview(true);
+        }}
+        onOpenChange={sheetChange("save")}
+        open={openSheet === "save"}
+        toCalendar={saveToCalendar}
+        shiftCount={monthDays.length - unfilled}
+      />
+      <GapSheet
+        choices={ownPatterns
+          .filter((pattern) => isDayOff(pattern))
+          .map((pattern) => ({ key: pattern.id, label: pattern.name }))}
+        days={gapDays}
+        onFill={fillGaps}
+        blankOff={offDisplay === "blank"}
+        completes={unfilled === gapDays.length}
+        month={month}
+        offCount={daysOff}
+        sharing={sharing}
+        offerBlank={offerBlank}
+        onBlankOff={(blankOff) => {
+          setCalendarOptions({ blankOff });
+        }}
+        onOpenChange={sheetChange("gap")}
+        open={openSheet === "gap"}
+      />
+      <span aria-live="polite" className={srOnly}>
+        {announcement}
+      </span>
+    </>
+  );
+}
+
+// Entering the shifts day by day (ポチポチ入力): the day being entered,
+// whether its month had blank days as entering came to it, and what a
+// screen reader hears as each day is entered.
+function useShiftEntry({
+  initialEditing,
+  initialDay,
+  month,
+  schedule,
+  onChange,
+  turnTo,
+}: {
+  initialEditing: boolean;
+  initialDay: number;
+  month: Date;
+  schedule: Schedule;
+  onChange: ReturnType<typeof useChangeDays>;
+  // Turns the calendar to another month, for a day picked in it.
+  turnTo: (month: Date) => void;
+}) {
+  const book = usePatterns();
+  const [editing, setEditing] = useState(initialEditing);
+  const [selectedDay, setSelectedDay] = useState(initialDay);
+  // Whether the month being entered had blank days when it came up, as
+  // only then can 完了 have just filled it. A filled month can be entered
+  // too, with ポチポチ入力 always offered in the 保存を右上 variant.
+  const [enteredBlank, setEnteredBlank] = useState(true);
+  const [announcement, setAnnouncement] = useState("");
+  const selectedDate = new Date(
+    month.getFullYear(),
+    month.getMonth(),
+    selectedDay
+  );
+  const lastDay = new Date(
+    month.getFullYear(),
+    month.getMonth() + 1,
+    0
+  ).getDate();
+  const selectedShift = schedule[dateKey(selectedDate)]?.shift;
+  function moveToNextDay(result: string, days = 1) {
+    const nextDay = Math.min(selectedDay + days, lastDay);
+    setSelectedDay(nextDay);
+    setAnnouncement(
+      `${month.getMonth() + 1}月${selectedDay}日、${result}。${selectedDay === lastDay ? "月末です。入力が終わったら完了を押してください" : `${nextDay}日を選択中`}`
+    );
+  }
+  function announcePicked(date: Date) {
+    setAnnouncement(
+      `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日を選択中`
+    );
+  }
+  // The day to enter, in its own month: a day of the month before or after,
+  // tapped on the calendar or picked from the date, turns to that month.
+  function enterFrom(date: Date) {
+    setSelectedDay(date.getDate());
+    if (
+      date.getFullYear() === month.getFullYear() &&
+      date.getMonth() === month.getMonth()
+    ) {
+      return;
+    }
+    const target = new Date(date.getFullYear(), date.getMonth(), 1);
+    turnTo(target);
+    setEnteredBlank(hasBlanks(schedule, target));
+    announcePicked(date);
+  }
+  // A month turned to while entering starts on its first day.
+  function enterMonth(target: Date) {
+    setSelectedDay(1);
+    setEnteredBlank(hasBlanks(schedule, target));
+    setAnnouncement(
+      `${target.getFullYear()}年${target.getMonth() + 1}月1日を選択中`
+    );
+  }
+  function start() {
+    setSelectedDay(1);
+    setEnteredBlank(hasBlanks(schedule, month));
+    setEditing(true);
+  }
+  function stop() {
+    setEditing(false);
+  }
+  function enterShift(shift: Shift | undefined) {
+    const key = dateKey(selectedDate);
+    // One day only: the next day's own next day is not followed, so
+    // patterns naming each other never run on (spec/shift-patterns.md).
+    const following = shift && book[shift]?.nextDay;
+    const followingKey = dateKey(addDays(selectedDate, 1));
+    onChange((previous) => ({
+      ...previous,
+      [key]:
+        shift === undefined ? undefined : keepDetails(previous[key], shift),
+      ...(following && {
+        [followingKey]: keepDetails(previous[followingKey], following),
+      }),
+    }));
+    if (!shift) {
+      moveToNextDay("シフトを消しました");
+      return;
+    }
+    moveToNextDay(
+      following
+        ? `${book[shift]?.name}を入力しました。翌日は${book[following]?.name}です`
+        : `${book[shift]?.name}を入力しました`,
+      following ? 2 : 1
+    );
+  }
+  function skip() {
+    moveToNextDay("変更せずに進みました");
+  }
+  return {
+    announcePicked,
+    announcement,
+    editing,
+    enterFrom,
+    enterMonth,
+    enterShift,
+    enteredBlank,
+    lastDay,
+    selectedDate,
+    selectedDay,
+    selectedShift,
+    skip,
+    start,
+    stop,
+  };
 }
 
 // The month at the top: the year over its number, "‹ 今月 ›" in the middle
