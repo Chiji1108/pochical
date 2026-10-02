@@ -61,6 +61,15 @@ describe("anonymous sign-in", () => {
   });
 });
 
+// The code a socket closes with, once it does.
+const closeCodeOf = async (socket: WebSocket): Promise<number> => {
+  const { promise, resolve } = Promise.withResolvers<number>();
+  socket.addEventListener("close", (event) => {
+    resolve(event.code);
+  });
+  return await promise;
+};
+
 describe("sockets", () => {
   it("opens the user's own socket", async () => {
     const socket = await openSocket("/v1/me/socket", await signInAnonymously());
@@ -95,6 +104,34 @@ describe("sockets", () => {
     const ids = await listDurableObjectIds(env.GROUPS);
     const notTheirs = env.GROUPS.idFromName("not-theirs");
     expect(ids.filter((id) => id.equals(notTheirs))).toHaveLength(0);
+  });
+
+  it("closes the sockets a session opened once it signs out", async () => {
+    const token = await memberOf("signing-out");
+    const own = await openSocket("/v1/me/socket", token);
+    const group = await openSocket("/v1/groups/signing-out/socket", token);
+    const ownClosed = closeCodeOf(own);
+    const groupClosed = closeCodeOf(group);
+
+    const response = await exports.default.fetch(
+      `${ORIGIN}/api/auth/sign-out`,
+      {
+        body: "{}",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      }
+    );
+    expect(response.status).toBe(200);
+    await expect(ownClosed).resolves.toBe(1000);
+    await expect(groupClosed).resolves.toBe(1000);
+    // And the session lets nothing in again.
+    const again = await upgrade("/v1/me/socket", {
+      Authorization: `Bearer ${token}`,
+    });
+    expect(again.status).toBe(401);
   });
 });
 

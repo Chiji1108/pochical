@@ -27,6 +27,7 @@ import {
 import {
   acceptSyncSocket,
   answerKeepalive,
+  closeSessionSockets,
   handleSyncMessage,
   isSynced,
   send,
@@ -117,6 +118,11 @@ export class GroupDO extends DurableObject<Env> {
       .from(members)
       .orderBy(asc(members.joinedAt))
       .all();
+  }
+
+  /** Closes a member's sockets opened with a session that has ended. */
+  endSession(sessionId: string): void {
+    closeSessionSockets(this.ctx, sessionId);
   }
 
   /** Whether the user is in the group. */
