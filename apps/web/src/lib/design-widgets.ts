@@ -74,7 +74,7 @@ export type WidgetPerson = {
 };
 
 // Who a widget is set to, as the person picks when editing it: someone
-// (次の休み and これから) or a whole group (次の休み).
+// (次の休み and シンプル) or a whole group (次の休み).
 export type WidgetCompanion =
   | { kind: "person"; person: WidgetPerson }
   | { kind: "group"; name: string; mark: GroupMark; people: WidgetPerson[] };
@@ -90,7 +90,7 @@ export type WidgetNoOff =
   | { kind: "waiting"; names: string[] }
   | { kind: "apart" };
 
-// これから with someone: the days of `upcoming`, theirs beside each, and
+// シンプル with someone: the days of `upcoming`, theirs beside each, and
 // whether both are off.
 export type WidgetPair = {
   me: { name: string; photo?: string };
@@ -113,7 +113,7 @@ export type WidgetEntry = {
     // Only when nothing is ahead, today included.
     none?: WidgetNoOff;
   };
-  // これから set to someone.
+  // シンプル set to someone.
   pair?: WidgetPair;
   // Today and the six days after it.
   upcoming: WidgetDay[];
@@ -294,7 +294,7 @@ function pairOf(
 }
 
 // `book` is the person's patterns, which name and mark each day's shift;
-// `me` is their face, beside someone else's in これから.
+// `me` is their face, beside someone else's in シンプル.
 export function widgetEntry(
   schedule: Schedule,
   week: WeekSettings,

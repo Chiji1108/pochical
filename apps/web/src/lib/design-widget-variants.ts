@@ -3,7 +3,7 @@
 // The widgets' own settings, the day they show and the device they sit
 // on, so a widget can be looked at in any state without a page of rows.
 export const widgetVariantOptions = {
-  // Who 次の休み and これから are set to, as editing the widget picks:
+  // Who 次の休み and シンプル are set to, as editing the widget picks:
   // someone, or for 次の休み a whole group.
   companion: {
     choices: [
