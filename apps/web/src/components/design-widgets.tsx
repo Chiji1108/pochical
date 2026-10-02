@@ -338,9 +338,16 @@ const nextDays = {
   weekday: css({ textStyle: "caption2" }),
 };
 
+// The widgets keep THU in capitals until their own design settles; the
+// app's screens write a weekday beside a date as Thu.
+function useWidgetWeekday() {
+  const { weekdayName } = useWeek();
+  return (day: number) => weekdayName(day).toUpperCase();
+}
+
 // A row of days: each weekday over its mark.
 function NextDays({ days }: { days: WidgetDay[] }) {
-  const { weekdayName } = useWeek();
+  const weekdayName = useWidgetWeekday();
   return (
     <ol className={`${list} ${nextDays.root}`}>
       {days.map((day) => (
@@ -881,7 +888,7 @@ function rowWords(day: WidgetDay, named: boolean) {
 }
 
 function ListDays({ entry, wide }: { entry: WidgetEntry; wide: boolean }) {
-  const { weekdayName } = useWeek();
+  const weekdayName = useWidgetWeekday();
   const named = useShiftNames();
   const { today: first } = entry;
   return (
@@ -1198,7 +1205,8 @@ const plain = {
 // Today on the left, its date large with its mark; on the right,
 // tomorrow and the next day off, a line each.
 function PlainToday({ entry }: { entry: WidgetEntry }) {
-  const { english, weekdayName } = useWeek();
+  const { english } = useWeek();
+  const weekdayName = useWidgetWeekday();
   // 9月 木曜日, or sep. thu as 月と曜日 asks.
   const heading = english
     ? `${englishMonthOf(entry.today.date)} ${weekdayName(entry.today.date.getDay())}`

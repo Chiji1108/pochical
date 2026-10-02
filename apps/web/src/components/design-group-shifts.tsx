@@ -37,6 +37,11 @@ import {
   smallWeekday,
   toneColor,
 } from "./design-group-parts";
+import {
+  monthTitleOf,
+  monthWithYearOf,
+  shortMonthOf,
+} from "./design-month-name";
 import { MonthTitleButton } from "./design-month-picker";
 import {
   monthIndex,
@@ -365,7 +370,7 @@ const dayRows = {
       me: {
         true: {
           bg: "background.base",
-          left: "46px",
+          left: "var(--date-width)",
           position: "sticky",
           zIndex: 2,
         },
@@ -480,8 +485,8 @@ const dayRows = {
       },
     ],
     variants: {
-      corner: { true: { left: 0, width: "46px", zIndex: 4 } },
-      me: { true: { left: "46px", zIndex: 4 } },
+      corner: { true: { left: 0, width: "var(--date-width)", zIndex: 4 } },
+      me: { true: { left: "var(--date-width)", zIndex: 4 } },
       // Under the page's own pinned rows, when it has any.
       page: { true: { top: "var(--pinned-top, -8px)" } },
       scrolls: { true: {} },
@@ -889,7 +894,10 @@ function DaySheetBody({
             <ChevronLeft aria-hidden="true" size={18} />
           </button>
           <strong aria-live="polite">
-            {month.getFullYear()}年{month.getMonth() + 1}月
+            <span className={srOnly}>{monthWithYearOf(month)}</span>
+            <span aria-hidden="true">
+              {monthWithYearOf(month, weekTools.english)}
+            </span>
           </strong>
           <button
             aria-label="次の月"
@@ -1826,6 +1834,7 @@ function MonthDivider({
   together: Together;
   onPickDay: (date: Date) => void;
 }) {
+  const { english } = useWeek();
   const thisYear = month.getFullYear() === designToday.getFullYear();
   const name = thisYear
     ? `${month.getMonth() + 1}月`
@@ -1833,10 +1842,22 @@ function MonthDivider({
   const title = `${
     thisYear && month.getMonth() === designToday.getMonth() ? "今月" : name
   }のみんな休み`;
+  // In English as the month row over it writes it, said in 日本語 to
+  // screen readers as the rest of the screen is.
+  const heading = english ? (
+    <h4 className={monthDivider.name}>
+      <span className={srOnly}>{name}</span>
+      <span aria-hidden="true">
+        {thisYear ? monthTitleOf(month, true) : monthWithYearOf(month, true)}
+      </span>
+    </h4>
+  ) : (
+    <h4 className={monthDivider.name}>{name}</h4>
+  );
   if (together.days.length === 0) {
     return (
       <div className={monthDivider.root({ quiet: true })}>
-        <h4 className={monthDivider.name}>{name}</h4>
+        {heading}
         <span className={monthDivider.note}>
           {together.unsure ? "未入力の日あり" : "みんな休みなし"}
         </span>
@@ -1845,7 +1866,7 @@ function MonthDivider({
   }
   return (
     <div className={monthDivider.root()}>
-      <h4 className={monthDivider.name}>{name}</h4>
+      {heading}
       <TogetherSummary
         label="みんな休み"
         onPickDay={onPickDay}
@@ -1856,7 +1877,8 @@ function MonthDivider({
   );
 }
 
-// The shift table's month: its name, which opens a choice of months, and
+// The shift table's month: its name (2026年9月, or September 2026 as the
+// カレンダー page's 月と曜日 asks), which opens a choice of months, and
 // the way back to today's day or month while it is out of sight. Over a
 // list of months, it names the month in sight, rolling to the next as the
 // list scrolls on, the way it went. Over 1人ずつ's pages (`progress`), the
@@ -1884,28 +1906,39 @@ function MonthRow({
   swiped?: boolean;
 }) {
   const reduceMotion = useReducedMotion() ?? false;
+  const { english } = useWeek();
   const turn = useTurn(monthIndex(month), swiped);
   const next = monthAfter(month, 1);
   const previous = monthAfter(month, -1);
   const isThisMonth = (date: Date) =>
     monthIndex(date) === monthIndex(designToday);
-  const rolled = (of: (date: Date) => number) => ({
-    ...(progress
-      ? { next: String(of(next)), previous: String(of(previous)) }
-      : {}),
+  const named = (of: (date: Date) => string) => ({
+    ...(progress ? { next: of(next), previous: of(previous) } : {}),
     progress,
     still: reduceMotion,
-    text: String(of(month)),
+    text: of(month),
     turn,
   });
+  const rolled = (of: (date: Date) => number) =>
+    named((date) => String(of(date)));
   return (
     <div className={shiftsPage.monthRow}>
       <MonthTitleButton first={first} last={last} month={month} onPick={onPick}>
         <strong className={shiftsPage.monthName}>
-          <span aria-hidden="true">
-            <RollingName {...rolled((date) => date.getFullYear())} />年
-            <RollingName {...rolled((date) => date.getMonth() + 1)} />月
-          </span>
+          {english ? (
+            <span aria-hidden="true">
+              <RollingName
+                {...named((date) => monthTitleOf(date, true))}
+                letters
+              />{" "}
+              <RollingName {...rolled((date) => date.getFullYear())} />
+            </span>
+          ) : (
+            <span aria-hidden="true">
+              <RollingName {...rolled((date) => date.getFullYear())} />年
+              <RollingName {...rolled((date) => date.getMonth() + 1)} />月
+            </span>
+          )}
         </strong>
       </MonthTitleButton>
       <TodayCorner
@@ -2144,6 +2177,8 @@ function DayRowsTable({
   // Opens a member's legend from their face or name, as in 週ごと.
   onMember: (member: Member) => void;
 }) {
+  const { english } = useWeek();
+  const dateWidth = english ? rowsEnglishDateWidth : rowsDateWidth;
   const density = densityOf(group.members.length);
   const withNames = density === "names";
   // Up to seven the page scrolls; more scroll sideways in their frame,
@@ -2158,9 +2193,12 @@ function DayRowsTable({
     >
       <table
         className={dayRows.table}
-        style={{
-          minWidth: rowsDateWidth + group.members.length * columnWidth,
-        }}
+        style={
+          {
+            "--date-width": `${dateWidth}px`,
+            minWidth: dateWidth + group.members.length * columnWidth,
+          } as CSSProperties
+        }
       >
         <caption className={srOnly}>みんなのシフト</caption>
         <thead>
@@ -2327,6 +2365,9 @@ function RowDate({
 }
 
 const rowsDateWidth = 46;
+// Room for 30 Wed, the longest of a date and its weekday in English,
+// beside the today line and the 12px in.
+const rowsEnglishDateWidth = 56;
 const rowsMemberWidth = 76;
 const rowsMarkWidth = 40;
 
@@ -2506,7 +2547,9 @@ export function MemberTable({
         {/* Pinned above the weeks, so the month stays in sight; a list of
             months names its months in their headings. */}
         <span className={cornerMonth}>
-          {month && !compact && !body ? `${month.getMonth() + 1}月` : ""}
+          {month && !compact && !body
+            ? shortMonthOf(month, weekTools.english)
+            : ""}
         </span>
         {weekTools.weekdays.map((day) => (
           <span className={toneColor[day.tone]} key={day.day}>

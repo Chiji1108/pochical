@@ -6,8 +6,9 @@ import { css, cva } from "styled-system/css";
 
 import { dateKey } from "../lib/design-days";
 import { designToday } from "../lib/design-today";
+import { monthWithYearOf } from "./design-month-name";
 import { Sheet } from "./design-sheet";
-import { Button } from "./design-ui";
+import { Button, srOnly } from "./design-ui";
 import { useWeek } from "./design-week";
 
 const picker = {
@@ -133,7 +134,19 @@ export function MonthPicker({
                   <ChevronLeft aria-hidden="true" size={20} />
                 </DatePicker.PrevTrigger>
                 <strong aria-live="polite">
-                  {api.focusedValue.year}年{api.focusedValue.month}月
+                  <span className={srOnly}>
+                    {api.focusedValue.year}年{api.focusedValue.month}月
+                  </span>
+                  <span aria-hidden="true">
+                    {monthWithYearOf(
+                      new Date(
+                        api.focusedValue.year,
+                        api.focusedValue.month - 1,
+                        1
+                      ),
+                      weekTools.english
+                    )}
+                  </span>
                 </strong>
                 <DatePicker.NextTrigger
                   aria-label="次の月"

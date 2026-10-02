@@ -4,7 +4,10 @@ import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
 import { designToday } from "../lib/design-today";
+import { shortMonthOf } from "./design-month-name";
 import { Sheet, SheetHeading } from "./design-sheet";
+import { srOnly } from "./design-ui";
+import { useWeek } from "./design-week";
 
 // Where a month is chosen from its name, as Google Calendar's title opens
 // a small calendar: a year with its arrows, as a picker keeps them, and
@@ -29,6 +32,7 @@ export function MonthChoiceSheet({
   const outside = (target: Date) =>
     (first !== undefined && target.getTime() < first.getTime()) ||
     (last !== undefined && target.getTime() > last.getTime());
+  const { english } = useWeek();
   const [year, setYear] = useState(month.getFullYear());
   // Each opening starts from the year on screen, however the sheet is
   // opened and wherever the months have moved since.
@@ -62,7 +66,10 @@ export function MonthChoiceSheet({
         >
           <ChevronLeft aria-hidden="true" size={20} />
         </button>
-        <strong aria-live="polite">{year}年</strong>
+        <strong aria-live="polite">
+          <span className={srOnly}>{year}年</span>
+          <span aria-hidden="true">{english ? year : `${year}年`}</span>
+        </strong>
         <button
           aria-label="次の年"
           className={monthChoice.step}
@@ -85,6 +92,7 @@ export function MonthChoiceSheet({
           return (
             <button
               aria-current={current ? "date" : undefined}
+              aria-label={english ? `${index + 1}月` : undefined}
               aria-pressed={shown}
               className={monthChoice.month({ current, shown })}
               disabled={outside(new Date(year, index, 1))}
@@ -95,7 +103,7 @@ export function MonthChoiceSheet({
               }}
               type="button"
             >
-              {index + 1}月
+              {shortMonthOf(new Date(year, index, 1), english)}
             </button>
           );
         })}
