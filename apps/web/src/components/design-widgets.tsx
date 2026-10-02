@@ -1,5 +1,5 @@
 import { widgetRules } from "@pochical/design/widgets";
-import { Fragment, createContext, useContext } from "react";
+import { createContext, useContext } from "react";
 import type { CSSProperties } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -275,7 +275,6 @@ function useWords() {
         `Waiting on ${first}${rest.length > 0 ? ` +${rest.length}` : ""}`,
       short: (date: Date) => `${month(date)} ${date.getDate()}.`,
       today: "Today",
-      tomorrow: "Tomorrow",
       // The day after a day off, short enough to keep clear of the
       // poodle in the corner: Fri, as 明日 is in Japanese.
       nextDay: (date: Date) => day(date),
@@ -301,7 +300,6 @@ function useWords() {
     restTogether: "ふたりとも\nおやすみ",
     short: monthDay,
     today: "今日",
-    tomorrow: "明日",
     unit: "日後",
     waiting: (names: string[]) => `${waitingNames(names)}の入力待ち`,
     weekday,
@@ -339,15 +337,6 @@ const simple = {
     minWidth: 0,
     textAlign: "center",
   }),
-  // Over tomorrow: small spaced capitals, a label rather than a date.
-  label: css({
-    color: "text.secondary",
-    fontSize: "11px",
-    letterSpacing: "0.12em",
-    lineHeight: "22px",
-    textTransform: "uppercase",
-    whiteSpace: "nowrap",
-  }),
   mark: css({ display: "flex" }),
   pair: css({ display: "flex", gap: "16px", height: "100%" }),
   rule: css({ bg: "separator", flexShrink: 0, width: "1px" }),
@@ -376,19 +365,15 @@ const SIMPLE_ROOMY = 150;
 // How much larger a mark draws with nothing said under it.
 const QUIET_GROWTH = 12;
 
-// A day plainly: its date (or TOMORROW), its mark large, and only what
-// changed under it, as one group in the middle of its room. A day with
-// nothing changed is its own design, not one with an empty line kept for
-// words: its mark grows and the group closes up round it. Beside another
-// day each centers on its own, rather than lining its parts up with the
-// other's, which left a quiet day high with a gap under it.
+// A day plainly: its date, its mark large, and only what changed under
+// it, as one group in the middle of its room. A day with nothing changed
+// is its own design, not one with an empty line kept for words: its mark
+// grows and the group closes up round it.
 function SimpleDay({
   day,
-  label,
   withNote = false,
 }: {
   day: WidgetDay;
-  label?: string;
   // これから's today: the memo's first line where nothing changed.
   withNote?: boolean;
 }) {
@@ -400,11 +385,7 @@ function SimpleDay({
   const quiet = !(said || note);
   return (
     <div className={simple.day}>
-      {label ? (
-        <span className={simple.label}>{label}</span>
-      ) : (
-        <span className={simple.date}>{words.short(day.date)}</span>
-      )}
+      <span className={simple.date}>{words.short(day.date)}</span>
       <span className={simple.mark}>
         <DayMark day={day} size={quiet ? base + QUIET_GROWTH : base} />
       </span>
@@ -420,8 +401,12 @@ function SimpleDay({
   );
 }
 
-// Today alone; on a day off, said as such, with the poodle.
+// Today alone; on a day off, said as such, with the poodle. Set to
+// someone, today and tomorrow, theirs under the person's.
 export function SimpleSmall({ entry }: { entry: WidgetEntry }) {
+  if (entry.pair) {
+    return <DayColumns count={2} entry={entry} />;
+  }
   const day = entry.today;
   if (day.off && !day.change) {
     return (
@@ -433,17 +418,10 @@ export function SimpleSmall({ entry }: { entry: WidgetEntry }) {
   return <SimpleDay day={day} />;
 }
 
-// Today and tomorrow, side by side.
+// Five days from today, a column each; set to someone, theirs under the
+// person's.
 export function SimpleMedium({ entry }: { entry: WidgetEntry }) {
-  const words = useWords();
-  const [, tomorrow] = entry.upcoming;
-  return (
-    <div className={simple.pair}>
-      <SimpleDay day={entry.today} />
-      <span aria-hidden="true" className={simple.rule} />
-      {tomorrow && <SimpleDay day={tomorrow} label={words.tomorrow} />}
-    </div>
-  );
+  return <DayColumns count={5} entry={entry} />;
 }
 
 // ── これから ─────────────────────────────────────────────────────────────
@@ -527,12 +505,8 @@ function UpcomingHead({ day }: { day: WidgetDay }) {
   );
 }
 
-// Today's line, and the next three days' marks under it; set to someone,
-// today and tomorrow, theirs under the person's.
+// Today's line, and the next three days' marks under it.
 export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
-  if (entry.pair) {
-    return <PairDays count={2} entry={entry} pair={entry.pair} />;
-  }
   return (
     <div className={upcoming.small}>
       <UpcomingHead day={entry.today} />
@@ -544,13 +518,9 @@ export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
 // シンプル's today on the left, with the memo where nothing changed; on
 // the right, the days after it a line each, each by its date (25 金),
 // with what changed, the memo, or the shift's name when names are shown.
-// Set to someone, five days from today, theirs under the person's.
 export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
   const words = useWords();
   const named = useShiftNames();
-  if (entry.pair) {
-    return <PairDays count={5} entry={entry} pair={entry.pair} />;
-  }
   return (
     <div className={cx(simple.pair, upcoming.pair)}>
       <div className={upcoming.today}>
@@ -575,17 +545,18 @@ export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
   );
 }
 
-// ── これから with someone ───────────────────────────────────────────────
+// ── シンプル's days ─────────────────────────────────────────────────────
 
 // Where the widget is taller, as on Android's launcher, the marks grow.
-const PAIR_ROOMY = 150;
-const PAIR_FACE = 24;
+const COLUMNS_ROOMY = 150;
+const FACE_SIZE = 24;
 
-// A day off's tile, as in the group's tables: the テーマ's light tint
-// whatever the pattern, a little in from the cell; a day both are off
-// joins the tiles down the column into one band. Faint where the system
-// draws in one color.
-const pairTile = {
+// A day off's tile, a little in from its cell: the pattern's own tint, as
+// the person's calendar draws it; beside someone, the テーマ's light tint
+// whatever the pattern, as the group's tables draw it, and a day both are
+// off joins the tiles down the column into one band. Faint where the
+// system draws in one color.
+const columnTile = {
   borderRadius: "sm",
   content: '""',
   inset: "3px",
@@ -593,39 +564,55 @@ const pairTile = {
   zIndex: -1,
 } as const;
 
-const pair = {
-  // As far in from its column as the tiles are from their cells.
+const columns = {
+  // A whole column's tile, its date in it as a calendar's day off has:
+  // as far in from its column as the tiles are from their cells.
   band: cva({
     base: {
-      "&::before": { ...pairTile, inset: "0 3px", zIndex: 0 },
+      "&::before": { ...columnTile, inset: "0 3px", zIndex: 0 },
       position: "relative",
     },
     variants: {
-      flat: {
-        false: { "&::before": { bg: "accent.container" } },
-        true: { "&::before": { bg: "rgb(255 255 255 / 0.24)" } },
+      tint: {
+        accent: { "&::before": { bg: "accent.container" } },
+        flat: { "&::before": { bg: "rgb(255 255 255 / 0.24)" } },
+        own: { "&::before": { bg: "var(--off-tint)" } },
       },
     },
   }),
+  // The mark in the middle of its cell, and what changed hanging under
+  // it, so the marks of a row stay level whatever is said under them.
+  // Two rows are too short to hang words, so there the mark and its words
+  // close up in the middle, as the group's tables have them.
   cell: cva({
     base: {
-      alignItems: "center",
-      display: "flex",
-      flexDirection: "column",
-      gap: "1px",
       isolation: "isolate",
-      justifyContent: "center",
+      justifyItems: "center",
       minWidth: 0,
       position: "relative",
     },
     variants: {
+      compact: {
+        false: { display: "grid", gridTemplateRows: "1fr auto 1fr" },
+        true: {
+          alignItems: "center",
+          display: "flex",
+          flexDirection: "column",
+          gap: "2px",
+          justifyContent: "center",
+        },
+      },
       tile: {
-        flat: { "&::before": { ...pairTile, bg: "rgb(255 255 255 / 0.24)" } },
-        full: { "&::before": { ...pairTile, bg: "accent.container" } },
+        accent: { "&::before": { ...columnTile, bg: "accent.container" } },
+        flat: {
+          "&::before": { ...columnTile, bg: "rgb(255 255 255 / 0.24)" },
+        },
         none: {},
       },
     },
   }),
+  // The weekday over the date, as the calendar heads its columns, so the
+  // date sits right over its mark as in the calendar's day.
   date: css({
     alignItems: "center",
     display: "flex",
@@ -639,139 +626,351 @@ const pair = {
     justifyContent: "center",
   }),
   grid: css({ columnGap: "2px", display: "grid", height: "100%" }),
-  number: css({
-    fontSize: "13px",
-    fontVariantNumeric: "tabular-nums",
-    fontWeight: 600,
-    lineHeight: "16px",
+  mark: css({ alignSelf: "center", display: "flex", gridRow: 2 }),
+  // Today's month, small beside its day, so it fits a narrow column.
+  month: css({ fontSize: "10px", fontWeight: 500, marginRight: "2px" }),
+  number: cva({
+    base: {
+      fontVariantNumeric: "tabular-nums",
+      fontWeight: 600,
+      whiteSpace: "nowrap",
+    },
+    variants: {
+      compact: {
+        false: { fontSize: "15px", lineHeight: "20px" },
+        true: { fontSize: "13px", lineHeight: "16px" },
+      },
+    },
   }),
   weekday: css({ lineHeight: "13px", textStyle: "caption2" }),
+  words: cva({
+    base: {
+      color: "text.secondary",
+      display: "flex",
+      flexDirection: "column",
+      fontVariantNumeric: "tabular-nums",
+      maxWidth: "100%",
+      overflow: "hidden",
+      textAlign: "center",
+      whiteSpace: "nowrap",
+    },
+    variants: {
+      compact: {
+        false: {
+          alignSelf: "start",
+          fontSize: "10px",
+          gridRow: 3,
+          lineHeight: "12px",
+          paddingTop: "2px",
+        },
+        true: { fontSize: "9px", letterSpacing: "-0.02em", lineHeight: "11px" },
+      },
+    },
+  }),
 };
 
-// Marks grow where the widget is taller; a name under each takes the
-// room of a smaller one.
-function pairMarkSize(roomy: boolean, named: boolean) {
-  const grown = roomy ? 32 : 26;
-  return named ? grown - 6 : grown;
+// What changed, short enough for a column: the hour it now starts or
+// ends at, the side the 早出 and 残業 corners already show; both ends a
+// line each where both moved.
+function shortChange({
+  time,
+  early,
+  late,
+}: {
+  time?: string;
+  early: boolean;
+  late: boolean;
+}) {
+  if (time === undefined) {
+    return [];
+  }
+  const [start = "", end = ""] = time.split(" – ");
+  if (early && !late) {
+    return [`${start}〜`];
+  }
+  if (late && !early) {
+    return [`〜${end}`];
+  }
+  return [`${start}〜`, `〜${end}`];
 }
 
-// The days from today in columns, as the group's 週ごと lays a week: the
-// dates over them, each under its weekday (THU in English: the days start
-// from today, not the week's start, so one letter could be either T),
-// then the person's row and the picked one's, each with their face in a
-// first column as wide as the days'. Today is always the first day, so
-// its date is drawn plain. Days off sit on the
-// group tables' tiles, and a day both are off joins them into one band.
-function PairDays({
-  entry,
-  pair: shown,
-  count,
+// The words under a mark: what changed, else its name when names are
+// shown. `lines` keeps them to one line where a row has no room for two.
+function columnWords(
+  change: string[],
+  name: string | undefined,
+  named: boolean,
+  lines: number
+) {
+  if (change.length > 0) {
+    return change.slice(0, lines);
+  }
+  return named && name !== undefined ? [dayName(name)] : [];
+}
+
+// A date as a column heads it: the day of the month, with its month on
+// today's column alone. Five days that run into the next month say so
+// plainly (29 30 1), and a month on the 1st too broke the quiet row.
+function ColumnDate({
+  date,
+  first,
+  english,
 }: {
-  entry: WidgetEntry;
-  pair: WidgetPair;
-  count: number;
+  date: Date;
+  first: boolean;
+  english: boolean;
+}) {
+  if (!first) {
+    return <>{date.getDate()}</>;
+  }
+  const month = english
+    ? (englishMonths[date.getMonth()] ?? "")
+    : `${date.getMonth() + MONTH_NUMBER}/`;
+  return (
+    <>
+      <span className={columns.month}>{month}</span>
+      {date.getDate()}
+    </>
+  );
+}
+
+// Days from today in columns, as a week reads across: each date under its
+// weekday (THU in English: the days start from today, not the week's
+// start, so one letter could be either T), the mark large under it, and
+// only what changed under the mark. A day off is a tile down its whole
+// column, date and all, as the calendar's day is. Today is always the
+// first, so it is drawn plain. A memo is the calendar's stroke under the
+// date; its words stay in これから and the app.
+//
+// Set to someone, it is the group's 週ごと in small: the person's row and
+// theirs, each with their face in a first column as wide as the days',
+// on the group tables' tiles, a band down a day both are off.
+function DayColumns({ entry, count }: { entry: WidgetEntry; count: number }) {
+  const named = useShiftNames();
+  const roomy = useContext(WidgetSizeContext).height >= COLUMNS_ROOMY;
+  const { pair } = entry;
+  const days = entry.upcoming.slice(0, count);
+  // Two rows leave a line of words under each mark; one row, two.
+  const lines = pair ? 1 : 2;
+  const worded = days.some(
+    (day, index) =>
+      day.change !== undefined ||
+      (named && day.name !== undefined) ||
+      (pair?.days[index]?.theirs?.early ?? false) ||
+      (pair?.days[index]?.theirs?.late ?? false)
+  );
+  let size = roomy ? 44 : 36;
+  if (pair) {
+    const grown = roomy ? 32 : 26;
+    size = named || worded ? grown - 6 : grown;
+  }
+  const offset = pair ? 2 : 1;
+  return (
+    <div
+      className={columns.grid}
+      style={{
+        // The faces take a column as wide as a day's, so the columns keep
+        // one rhythm and the widget's two sides the same room.
+        gridTemplateColumns: `repeat(${count + offset - 1}, 1fr)`,
+        gridTemplateRows: pair ? "auto 1fr 1fr" : "auto 1fr",
+      }}
+    >
+      {days.map((day, index) => (
+        <ColumnDay
+          column={index + offset}
+          day={day}
+          first={index === 0}
+          key={day.date.getTime()}
+          lines={lines}
+          named={named}
+          pair={pair}
+          shown={pair?.days[index]}
+          size={size}
+        />
+      ))}
+      {pair && (
+        <>
+          <span className={columns.face} style={{ gridColumn: 1, gridRow: 2 }}>
+            <PhotoAvatar
+              me
+              name={pair.me.name}
+              photo={pair.me.photo}
+              size={FACE_SIZE}
+            />
+            <span className={srOnly}>{pair.me.name}</span>
+          </span>
+          <span className={columns.face} style={{ gridColumn: 1, gridRow: 3 }}>
+            <PhotoAvatar
+              name={pair.with.name}
+              photo={pair.with.photo}
+              size={FACE_SIZE}
+            />
+            <span className={srOnly}>{pair.with.name}</span>
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ColumnDay({
+  day,
+  column,
+  first,
+  lines,
+  named,
+  size,
+  pair,
+  shown,
+}: {
+  day: WidgetDay;
+  column: number;
+  first: boolean;
+  lines: number;
+  named: boolean;
+  size: number;
+  pair?: WidgetPair;
+  shown?: WidgetPair["days"][number];
 }) {
   const words = useWords();
-  const named = useShiftNames();
+  const { english } = useWeek();
   const flat = useContext(WidgetRenderingModeContext) !== "fullColor";
-  const roomy = useContext(WidgetSizeContext).height >= PAIR_ROOMY;
-  const size = pairMarkSize(roomy, named);
-  const days = entry.upcoming.slice(0, count);
-  const tileOf = (off: boolean, together: boolean) => {
+  // A day off left empty stays empty: a day with nothing entered has its
+  // dash here, so the two still read apart.
+  const look = useOffLook(day, false);
+  const { tint } = useDisplayColor(day.color ?? presetPatterns.off.color);
+  const together = shown?.together ?? false;
+  const theirs = shown?.theirs;
+  // Beside someone, each day off is the group tables' tile in its cell.
+  const tileOf = (off: boolean) => {
     if (!off || together) {
       return "none";
     }
-    return flat ? "flat" : "full";
+    return flat ? "flat" : "accent";
   };
+  // Alone, the person's calendar's tile down the column; beside someone,
+  // the band on a day both are off.
+  let band: "accent" | "own" | "flat" | undefined;
+  if (together) {
+    band = flat ? "flat" : "accent";
+  } else if (!pair && day.off && look.tile) {
+    band = flat ? "flat" : "own";
+  }
+  const moved = day.change === undefined ? [] : shortChange(day);
+  const mine = columnWords(moved, day.name, named, lines);
+  const marked = day.shift !== undefined && look.mark !== "none";
   return (
-    <div
-      className={pair.grid}
-      style={{
-        // The faces take a column as wide as a day's, so the columns keep one
-        // rhythm and the widget's two sides the same room.
-        gridTemplateColumns: `repeat(${count + 1}, 1fr)`,
-        gridTemplateRows: "auto 1fr 1fr",
-      }}
-    >
-      {days.map((day, index) => {
-        const column = index + 2;
-        const { theirs, together } = shown.days[index] ?? { together: false };
-        return (
-          <Fragment key={day.date.getTime()}>
-            {together && (
-              <span
-                aria-hidden="true"
-                className={pair.band({ flat })}
-                style={{ gridColumn: column, gridRow: "1 / 4" }}
-              />
-            )}
-            <span
-              className={pair.date}
-              style={{ gridColumn: column, gridRow: 1 }}
-            >
-              <span className={srOnly}>
-                {monthDay(day.date)}({day.weekday})
-                {together ? " ふたりとも休み" : ""}
-              </span>
-              <span
-                aria-hidden="true"
-                className={cx(pair.weekday, toneText({ tone: day.tone }))}
-              >
-                {words.weekday(day.date)}
-              </span>
-              <span
-                aria-hidden="true"
-                className={cx(pair.number, day.holiday && dayParts.holiday)}
-              >
-                {day.date.getDate()}
-              </span>
-            </span>
-            <span
-              className={pair.cell({ tile: tileOf(day.off, together) })}
-              style={{ gridColumn: column, gridRow: 2 }}
-            >
-              <SpokenDay day={day} />
-              <DayMark day={day} size={size} />
-              {named && day.shift && <MarkName day={day} />}
-            </span>
-            <span
-              className={pair.cell({
-                tile: tileOf(theirs?.off ?? false, together),
-              })}
-              style={{ gridColumn: column, gridRow: 3 }}
-            >
-              <span className={srOnly}>
-                {shown.with.name}さん {theirs?.name ?? "未入力"}
-                {theirs?.time ? ` ${theirs.time}` : ""}
-              </span>
-              <TheirMark day={theirs} size={size} style={shown.with.style} />
-              {named && theirs && (
-                <span aria-hidden="true" className={markName}>
-                  {dayName(theirs.name)}
-                </span>
-              )}
-            </span>
-          </Fragment>
-        );
-      })}
-      <span className={pair.face} style={{ gridColumn: 1, gridRow: 2 }}>
-        <PhotoAvatar
-          me
-          name={shown.me.name}
-          photo={shown.me.photo}
-          size={PAIR_FACE}
+    <>
+      {band && (
+        <span
+          aria-hidden="true"
+          className={columns.band({ tint: band })}
+          style={
+            {
+              "--off-tint": tint,
+              gridColumn: column,
+              gridRow: "1 / -1",
+            } as CSSProperties
+          }
         />
-        <span className={srOnly}>{shown.me.name}</span>
+      )}
+      <span
+        className={columns.date}
+        // On the tile, a memo's stroke takes the tile's color a step deeper.
+        data-off={band === "own" ? "" : undefined}
+        style={
+          {
+            "--off-tint": tint,
+            gridColumn: column,
+            gridRow: 1,
+          } as CSSProperties
+        }
+      >
+        {together && <span className={srOnly}>ふたりとも休み</span>}
+        <span
+          aria-hidden="true"
+          className={cx(columns.weekday, toneText({ tone: day.tone }))}
+        >
+          {words.weekday(day.date)}
+        </span>
+        <span
+          aria-hidden="true"
+          className={cx(
+            columns.number({ compact: pair !== undefined }),
+            day.holiday && dayParts.holiday
+          )}
+        >
+          <span className={cx(day.note && dayParts.noted)}>
+            <ColumnDate date={day.date} english={english} first={first} />
+          </span>
+        </span>
       </span>
-      <span className={pair.face} style={{ gridColumn: 1, gridRow: 3 }}>
-        <PhotoAvatar
-          name={shown.with.name}
-          photo={shown.with.photo}
-          size={PAIR_FACE}
-        />
-        <span className={srOnly}>{shown.with.name}</span>
+      <span
+        className={columns.cell({
+          compact: pair !== undefined,
+          tile: pair ? tileOf(day.off) : "none",
+        })}
+        style={{ gridColumn: column, gridRow: 2 }}
+      >
+        <SpokenDay day={day} />
+        <span aria-hidden="true" className={columns.mark}>
+          {marked || !day.shift ? (
+            <DayMark day={day} faint={look.mark === "faint"} size={size} />
+          ) : null}
+        </span>
+        {mine.length > 0 && (
+          <span
+            aria-hidden="true"
+            className={columns.words({ compact: pair !== undefined })}
+          >
+            {mine.map((line) => (
+              <span key={line}>{line}</span>
+            ))}
+          </span>
+        )}
       </span>
-    </div>
+      {pair && (
+        <span
+          className={columns.cell({
+            compact: true,
+            tile: tileOf(theirs?.off ?? false),
+          })}
+          style={{ gridColumn: column, gridRow: 3 }}
+        >
+          <span className={srOnly}>
+            {pair.with.name}さん {theirs?.name ?? "未入力"}
+            {theirs?.time ? ` ${theirs.time}` : ""}
+          </span>
+          <span aria-hidden="true" className={columns.mark}>
+            <TheirMark day={theirs} size={size} style={pair.with.style} />
+          </span>
+          {theirs && <TheirWords day={theirs} lines={lines} named={named} />}
+        </span>
+      )}
+    </>
+  );
+}
+
+function TheirWords({
+  day,
+  lines,
+  named,
+}: {
+  day: WidgetPersonDay;
+  lines: number;
+  named: boolean;
+}) {
+  const moved = day.early || day.late ? shortChange(day) : [];
+  const shown = columnWords(moved, day.name, named, lines);
+  if (shown.length === 0) {
+    return null;
+  }
+  return (
+    <span aria-hidden="true" className={columns.words({ compact: true })}>
+      {shown.map((line) => (
+        <span key={line}>{line}</span>
+      ))}
+    </span>
   );
 }
 
