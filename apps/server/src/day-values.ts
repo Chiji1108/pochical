@@ -1,3 +1,4 @@
+import { dayRules } from "@pochical/design/days";
 import { syncLimits, textLimits } from "@pochical/design/limits";
 
 import { DayField } from "./gen/pochical/v1/sync_pb";
@@ -52,8 +53,8 @@ const isPeople = (value: string): boolean => {
 // What a set value of each field must be.
 const fits: Record<DayField, (value: string) => boolean> = {
   [DayField.UNSPECIFIED]: () => false,
-  // "" is a day with no shift, whatever its repeating order.
-  [DayField.PATTERN]: (value) => value === "" || isId(value),
+  // A day cleared on purpose has no shift, whatever its repeating order.
+  [DayField.PATTERN]: (value) => value === dayRules.noShift || isId(value),
   [DayField.START]: (value) => TIME.test(value),
   [DayField.END]: (value) => TIME.test(value),
   [DayField.NOTE]: (value) => characterCount(value) <= textLimits.dayNote,

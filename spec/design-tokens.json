@@ -2415,6 +2415,9 @@
       }
     ]
   },
+  "days": {
+    "noShift": ""
+  },
   "derivation": {
     "inkShares": {
       "home-indicator": 1,

@@ -1,3 +1,4 @@
+import { dayRules } from "@pochical/design/days";
 import { COWORKERS_MAX } from "@pochical/design/limits";
 import { describe, expect, it } from "vitest";
 
@@ -229,13 +230,17 @@ describe("syncing a user's repeating orders", () => {
     const phone = await device(token);
     sendFrame(phone.socket, {
       case: "dayEdits",
-      value: { edits: [edit("a", "2026-10-05", DayField.PATTERN, "", 1000)] },
+      value: {
+        edits: [
+          edit("a", "2026-10-05", DayField.PATTERN, dayRules.noShift, 1000),
+        ],
+      },
     });
     await phone.frames.next();
     const { kind } = await phone.frames.next();
     expect(
       daysIn(kind.case === "changes" ? kind.value.changes : [])
-    ).toStrictEqual([["2026-10-05", DayField.PATTERN, ""]]);
+    ).toStrictEqual([["2026-10-05", DayField.PATTERN, dayRules.noShift]]);
   });
 });
 

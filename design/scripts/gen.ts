@@ -15,6 +15,7 @@ import {
   untintedTokens,
 } from "../src/colors";
 import type { ColorScheme } from "../src/colors";
+import { dayRules } from "../src/days";
 import { inviteRules } from "../src/invite";
 import {
   COWORKERS_MAX,
@@ -133,6 +134,7 @@ function json() {
         ),
       })),
     },
+    days: dayRules,
     derivation: {
       inkShares,
       lightFill: LIGHT_FILL,
@@ -499,13 +501,18 @@ const SHARED_DAYS_DOC = "The most days one chat message shares.";
 const GROUP_MEMBERS_DOC = "The most people in one group.";
 const COWORKERS_DOC = "The most people one person keeps in 一緒に働く人.";
 
-// Chat.swift, Invite.swift, Review.swift and Widgets.swift, and their
-// Kotlin twins.
+// Chat.swift, Days.swift, Invite.swift, Review.swift and Widgets.swift,
+// and their Kotlin twins.
 const shared: [string, string, Values][] = [
   [
     "Chat",
     "The chat's shared numbers (spec/chat.md); times in milliseconds.",
     chatRules,
+  ],
+  [
+    "Days",
+    "What a day's values mean (design/src/days.ts): noShift is a day cleared on purpose, unlike no pattern, which follows the repeating order.",
+    dayRules,
   ],
   ["Invite", "What an invitation code is made of.", inviteRules],
   [
