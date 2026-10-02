@@ -23,3 +23,6 @@ public let sharedDaysMax = 31
 
 /// The most people in one group.
 public let groupMaxMembers = 100
+
+/// The most people one person keeps in 一緒に働く人.
+public let coworkersMax = 100

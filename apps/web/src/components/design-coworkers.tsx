@@ -1,9 +1,10 @@
-import { textLimits } from "@pochical/design/limits";
-import { useState } from "react";
+import { COWORKERS_MAX, textLimits } from "@pochical/design/limits";
+import { useContext, useState } from "react";
 
 import type { Schedule } from "../lib/design-days";
 import { composing, limitText } from "../lib/text-limits";
 import { ConfirmDialog } from "./design-sheet";
+import { ToastContext } from "./design-toast";
 import {
   AddButton,
   BackButton,
@@ -17,6 +18,9 @@ import {
   PageHeader,
   SortableList,
 } from "./design-ui";
+
+// Said when adding past COWORKERS_MAX, from the list or from a day.
+export const coworkersFull = `一緒に働く人は${COWORKERS_MAX}人までです`;
 
 // The people you note on a day, like who is on the same shift. Only names:
 // they are not app users, unlike the members of a group.
@@ -46,6 +50,7 @@ export function CoworkersPage({
   const [view, setView] = useState<"list" | "sort">("list");
   const [editing, setEditing] = useState<string>();
   const [adding, setAdding] = useState(false);
+  const toast = useContext(ToastContext);
   const { names } = coworkers;
 
   if (editing !== undefined) {
@@ -74,9 +79,15 @@ export function CoworkersPage({
   const add = (value: string) => {
     const name = limitText(value.trim(), textLimits.personName);
     setAdding(false);
-    if (name && !names.includes(name)) {
-      coworkers.onAdd(name);
+    if (!name || names.includes(name)) {
+      return;
     }
+    // Counted again: the list may have grown while the name was typed.
+    if (names.length >= COWORKERS_MAX) {
+      toast(coworkersFull, "problem");
+      return;
+    }
+    coworkers.onAdd(name);
   };
   const sorting = view === "sort";
   return (
@@ -153,6 +164,10 @@ export function CoworkersPage({
         ) : (
           <AddButton
             onClick={() => {
+              if (names.length >= COWORKERS_MAX) {
+                toast(coworkersFull, "problem");
+                return;
+              }
               setAdding(true);
             }}
           >

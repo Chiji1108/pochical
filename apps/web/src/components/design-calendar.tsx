@@ -1,4 +1,4 @@
-import { textLimits } from "@pochical/design/limits";
+import { COWORKERS_MAX, textLimits } from "@pochical/design/limits";
 import {
   ArrowRight,
   CalendarPlus,
@@ -62,6 +62,7 @@ import { useChangeDays, useShownDays, useUser } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
 import { spring } from "../lib/motion";
 import { composing, limitText } from "../lib/text-limits";
+import { coworkersFull } from "./design-coworkers";
 import type { Coworkers } from "./design-coworkers";
 import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
@@ -2100,6 +2101,7 @@ function MemberChips({
   onChange: (selected: string[]) => void;
 }) {
   const [adding, setAdding] = useState(false);
+  const toast = useContext(ToastContext);
   // Held to the limit here too: a name confirmed and added in one go may
   // not have been cut to it yet.
   function add(name: string) {
@@ -2109,6 +2111,11 @@ function MemberChips({
       return;
     }
     if (!members.names.includes(trimmed)) {
+      // Counted again: the list may have grown while the name was typed.
+      if (members.names.length >= COWORKERS_MAX) {
+        toast(coworkersFull, "problem");
+        return;
+      }
       members.onAdd(trimmed);
     }
     if (!selected.includes(trimmed)) {
@@ -2156,6 +2163,10 @@ function MemberChips({
       ) : (
         <Chip
           onClick={() => {
+            if (members.names.length >= COWORKERS_MAX) {
+              toast(coworkersFull, "problem");
+              return;
+            }
             setAdding(true);
           }}
           variant="add"

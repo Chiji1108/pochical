@@ -112,6 +112,7 @@ The people a user notes on a day, like who is on the same shift. They are names 
 
 - Each coworker is a last-writer-wins `CoworkerValue` with an id and a name, sent whole as patterns are (a deleted one has none), and their order is one more, `CoworkerOrder`.
 - A day's people are one more day field, `DAY_FIELD_PEOPLE`: coworker ids separated by spaces, in the order they were added. Days hold ids, so renaming a coworker changes one value; a deleted coworker's id is skipped where it is shown and needs no rewrite of days.
+- A user keeps at most `COWORKERS_MAX` coworkers (`design/src/limits.ts`). Adding past it, in 一緒に働く人 or from a day, stops with a problem toast, 一緒に働く人は{n}人までです, and the User DO refuses a new coworker past it.
 - Like the memo, coworkers and a day's people stay with their owner: they name people outside the app, so they are never pushed to groups.
 
 ### Group projection
