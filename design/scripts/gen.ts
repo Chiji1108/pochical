@@ -35,6 +35,7 @@ import {
   stateLayers,
 } from "../src/metrics";
 import { reviewRules } from "../src/review";
+import { socketRules } from "../src/socket";
 import {
   colorRoleNames,
   inkShares,
@@ -170,6 +171,7 @@ function json() {
       stateLayers,
     },
     review: reviewRules,
+    socket: socketRules,
     textStyles,
     widgets: widgetRules,
   };
@@ -437,8 +439,8 @@ function kotlin() {
   return lines.join("\n");
 }
 
-// The shared numbers (design/src/limits.ts, chat.ts, invite.ts, review.ts
-// and widgets.ts) for the apps, a namespace each; what each means is written
+// The shared numbers (design/src/limits.ts, chat.ts, invite.ts, review.ts,
+// socket.ts and widgets.ts) for the apps, a namespace each; what each means is written
 // beside it in the TypeScript.
 type Values = Readonly<Record<string, number | string>>;
 
@@ -501,7 +503,8 @@ const SHARED_DAYS_DOC = "The most days one chat message shares.";
 const GROUP_MEMBERS_DOC = "The most people in one group.";
 const COWORKERS_DOC = "The most people one person keeps in 一緒に働く人.";
 
-// Chat.swift, Days.swift, Invite.swift, Review.swift and Widgets.swift,
+// Chat.swift, Days.swift, Invite.swift, Review.swift, SyncSocket.swift and
+// Widgets.swift,
 // and their Kotlin twins.
 const shared: [string, string, Values][] = [
   [
@@ -519,6 +522,11 @@ const shared: [string, string, Values][] = [
     "Review",
     "When the apps ask the store for its review prompt (spec/review.md).",
     reviewRules,
+  ],
+  [
+    "SyncSocket",
+    "How the apps keep their sync sockets (spec/sync-protocol.md, Sockets); times in milliseconds.",
+    socketRules,
   ],
   ["Widgets", "The widgets' shared numbers (spec/widgets.md).", widgetRules],
 ];

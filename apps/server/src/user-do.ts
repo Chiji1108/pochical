@@ -47,6 +47,7 @@ import {
 import { fitsOrder, fitsPattern } from "./pattern-values";
 import {
   acceptSyncSocket,
+  answerKeepalive,
   handleSyncMessage,
   isSynced,
   rejectAndClose,
@@ -140,6 +141,7 @@ export class UserDO extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.db = drizzle(ctx.storage);
+    answerKeepalive(ctx);
     // Nothing reaches the user before their tables are up to date.
     void ctx.blockConcurrencyWhile(async () => {
       await migrate(this.db, migrations);

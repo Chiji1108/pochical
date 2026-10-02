@@ -135,7 +135,13 @@ export function measure(root: string): Screen {
       return `${tag} "${text}"${placeOf(element)}`;
     }
     if (tag === "img") {
-      const file = (element.getAttribute("src") ?? "").split("/").pop() ?? "";
+      const src = element.getAttribute("src") ?? "";
+      // A photo just chosen has a new blob: URL each load, so it goes by
+      // that, counted in the order of the page; a data: URL, the same each
+      // load, still names its picture.
+      const file = src.startsWith("blob:")
+        ? "blob"
+        : (src.split("/").pop() ?? "");
       return `img ${file.slice(0, 40)}${placeOf(element)}`;
     }
     if (tag === "svg") {

@@ -5,6 +5,7 @@ import { describe, expect, test } from "bun:test";
 import chatText from "../../../spec/vectors/chat-text.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import localEdits from "../../../spec/vectors/local-edits.json";
+import reconnect from "../../../spec/vectors/reconnect.json";
 import repeat from "../../../spec/vectors/repeat.json";
 import review from "../../../spec/vectors/review.json";
 import text from "../../../spec/vectors/text.json";
@@ -30,6 +31,7 @@ import type { Pattern, PatternBook } from "../src/lib/design-patterns";
 import { clockOffset, receive, tick } from "../src/lib/hlc";
 import { noValue, shownValue, takeEvent } from "../src/lib/local-edits";
 import type { LocalEvent } from "../src/lib/local-edits";
+import { reconnectWaitMost } from "../src/lib/reconnect";
 import { mayAskForReview, openedOn } from "../src/lib/review";
 import type { ReviewHistory } from "../src/lib/review";
 import { characterCount, dayName, limitText } from "../src/lib/text-limits";
@@ -229,6 +231,14 @@ describe("spec/vectors/local-edits.json", () => {
         state = takeEvent(state, event as LocalEvent);
         expect(shownValue(state)).toBe(shows);
       }
+    });
+  }
+});
+
+describe("spec/vectors/reconnect.json", () => {
+  for (const { name, tries, firstMs, mostMs, expected } of reconnect.waitMost) {
+    test(name, () => {
+      expect(reconnectWaitMost(tries, firstMs, mostMs)).toBe(expected);
     });
   }
 });

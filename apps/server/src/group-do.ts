@@ -26,6 +26,7 @@ import {
 } from "./group-shifts";
 import {
   acceptSyncSocket,
+  answerKeepalive,
   handleSyncMessage,
   isSynced,
   send,
@@ -59,6 +60,7 @@ export class GroupDO extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.db = drizzle(ctx.storage);
+    answerKeepalive(ctx);
     // Nothing reaches the group before its tables are up to date.
     void ctx.blockConcurrencyWhile(async () => {
       await migrate(this.db, migrations);
