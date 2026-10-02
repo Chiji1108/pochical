@@ -364,6 +364,24 @@ export function nextDayOf(shift: Shift | undefined, book: PatternBook) {
   return shift === undefined ? undefined : book[shift]?.nextDay;
 }
 
+// How many days the selection moves on after entering `shift`: past the
+// day after too when the pattern fills it.
+export function daysMovedOn(shift: Shift | undefined, book: PatternBook) {
+  return nextDayOf(shift, book) === undefined ? 1 : 2;
+}
+
+// The day selected `days` on from `date` while entering, never past the
+// month's last day: entering stays there until 完了, though a next day
+// may fill the first of the month after.
+export function selectedAfter(date: Date, days: number) {
+  const last = daysOfMonth(date).length;
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    Math.min(date.getDate() + days, last)
+  );
+}
+
 // The days after entering `shift` on `date` (ポチポチ入力): the day takes it,
 // keeping its memo and people, and a pattern with a next day fills the
 // following day too. One day only: the next day's own next day is not

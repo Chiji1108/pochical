@@ -21,7 +21,7 @@ A person's patterns sync between their devices as whole values, each last-writer
 
 ## The next day
 
-Entering a pattern with a `nextDay` also enters that pattern on the following day, replacing what was there but keeping that day's note and people. Selection then moves on two days.
+Entering a pattern with a `nextDay` also enters that pattern on the following day, replacing what was there but keeping that day's note and people. Selection then moves on two days. Selection never moves past the month's last day: entering stays there until 完了, even when the next day it filled is the first of the month after.
 
 It goes **one day only**. The following day's own `nextDay` is never followed, so patterns that name each other (夜勤 → 明け, 明け → 夜勤) are allowed and each entry still fills exactly one extra day. Implementations must not chain.
 

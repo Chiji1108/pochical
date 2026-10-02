@@ -32,16 +32,17 @@ import {
 import {
   addDays,
   dateKey,
+  daysMovedOn,
   daysWithout,
   defaultHolidaysOff,
   editedOwnDays,
   gapDaysIn,
   giveDaysToOrder,
   holidayShiftOf,
-  nextDayOf,
   patternsWithout,
   plannedShifts,
   repeatSchedule,
+  selectedAfter,
   shownDays,
   timeChangeOf,
   withOrder,
@@ -266,7 +267,7 @@ describe("spec/vectors/entering.json", () => {
     date,
     shift,
     expected,
-    moves,
+    selects,
   } of entering.enter) {
     test(name, () => {
       const book = bookOfVectors(patterns);
@@ -278,7 +279,9 @@ describe("spec/vectors/entering.json", () => {
         book
       );
       expect(plain(after)).toEqual(expected);
-      expect(nextDayOf(entered, book) === undefined ? 1 : 2).toBe(moves);
+      expect(
+        dateKey(selectedAfter(dayOf(date), daysMovedOn(entered, book)))
+      ).toBe(selects);
     });
   }
   for (const { name, days, month, expected } of entering.gaps) {
