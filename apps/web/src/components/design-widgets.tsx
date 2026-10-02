@@ -594,12 +594,16 @@ const pairTile = {
 } as const;
 
 const pair = {
+  // As far in from its column as the tiles are from their cells.
   band: cva({
-    base: { borderRadius: "sm", marginInline: "3px" },
+    base: {
+      "&::before": { ...pairTile, inset: "0 3px", zIndex: 0 },
+      position: "relative",
+    },
     variants: {
       flat: {
-        false: { bg: "accent.container" },
-        true: { bg: "rgb(255 255 255 / 0.24)" },
+        false: { "&::before": { bg: "accent.container" } },
+        true: { "&::before": { bg: "rgb(255 255 255 / 0.24)" } },
       },
     },
   }),
@@ -1052,7 +1056,7 @@ const offs = {
   // A group's mark, framed as the app's list of groups frames it.
   groupFace: css({
     bg: "fill.quaternary",
-    borderRadius: "6px",
+    borderRadius: "sm",
     display: "grid",
     flexShrink: 0,
     fontSize: "13px",
