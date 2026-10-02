@@ -18,6 +18,7 @@ public  final class CreateGroupRequest extends
     name_ = "";
     emoji_ = "";
     displayName_ = "";
+    requestId_ = "";
   }
   public static final int NAME_FIELD_NUMBER = 1;
   private java.lang.String name_;
@@ -217,6 +218,93 @@ public  final class CreateGroupRequest extends
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
     displayName_ = value.toStringUtf8();
+
+  }
+
+  public static final int REQUEST_ID_FIELD_NUMBER = 4;
+  private java.lang.String requestId_;
+  /**
+   * <pre>
+   * An id the app makes once for each group it sets out to create, up to
+   * syncLimits.idLength characters without spaces, and sends again with
+   * every retry: the same id from the same user gives back the group it
+   * made the first time, unchanged, so a retry after a lost answer never
+   * makes a second group. INVALID_ARGUMENT when missing or malformed.
+   * </pre>
+   *
+   * <code>string request_id = 4 [json_name = "requestId"];</code>
+   * @return The requestId.
+   */
+  @java.lang.Override
+  public java.lang.String getRequestId() {
+    return requestId_;
+  }
+  /**
+   * <pre>
+   * An id the app makes once for each group it sets out to create, up to
+   * syncLimits.idLength characters without spaces, and sends again with
+   * every retry: the same id from the same user gives back the group it
+   * made the first time, unchanged, so a retry after a lost answer never
+   * makes a second group. INVALID_ARGUMENT when missing or malformed.
+   * </pre>
+   *
+   * <code>string request_id = 4 [json_name = "requestId"];</code>
+   * @return The bytes for requestId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRequestIdBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(requestId_);
+  }
+  /**
+   * <pre>
+   * An id the app makes once for each group it sets out to create, up to
+   * syncLimits.idLength characters without spaces, and sends again with
+   * every retry: the same id from the same user gives back the group it
+   * made the first time, unchanged, so a retry after a lost answer never
+   * makes a second group. INVALID_ARGUMENT when missing or malformed.
+   * </pre>
+   *
+   * <code>string request_id = 4 [json_name = "requestId"];</code>
+   * @param value The requestId to set.
+   */
+  private void setRequestId(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    requestId_ = value;
+  }
+  /**
+   * <pre>
+   * An id the app makes once for each group it sets out to create, up to
+   * syncLimits.idLength characters without spaces, and sends again with
+   * every retry: the same id from the same user gives back the group it
+   * made the first time, unchanged, so a retry after a lost answer never
+   * makes a second group. INVALID_ARGUMENT when missing or malformed.
+   * </pre>
+   *
+   * <code>string request_id = 4 [json_name = "requestId"];</code>
+   */
+  private void clearRequestId() {
+
+    requestId_ = getDefaultInstance().getRequestId();
+  }
+  /**
+   * <pre>
+   * An id the app makes once for each group it sets out to create, up to
+   * syncLimits.idLength characters without spaces, and sends again with
+   * every retry: the same id from the same user gives back the group it
+   * made the first time, unchanged, so a retry after a lost answer never
+   * makes a second group. INVALID_ARGUMENT when missing or malformed.
+   * </pre>
+   *
+   * <code>string request_id = 4 [json_name = "requestId"];</code>
+   * @param value The bytes for requestId to set.
+   */
+  private void setRequestIdBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    requestId_ = value.toStringUtf8();
 
   }
 
@@ -524,6 +612,95 @@ public  final class CreateGroupRequest extends
       return this;
     }
 
+    /**
+     * <pre>
+     * An id the app makes once for each group it sets out to create, up to
+     * syncLimits.idLength characters without spaces, and sends again with
+     * every retry: the same id from the same user gives back the group it
+     * made the first time, unchanged, so a retry after a lost answer never
+     * makes a second group. INVALID_ARGUMENT when missing or malformed.
+     * </pre>
+     *
+     * <code>string request_id = 4 [json_name = "requestId"];</code>
+     * @return The requestId.
+     */
+    @java.lang.Override
+    public java.lang.String getRequestId() {
+      return instance.getRequestId();
+    }
+    /**
+     * <pre>
+     * An id the app makes once for each group it sets out to create, up to
+     * syncLimits.idLength characters without spaces, and sends again with
+     * every retry: the same id from the same user gives back the group it
+     * made the first time, unchanged, so a retry after a lost answer never
+     * makes a second group. INVALID_ARGUMENT when missing or malformed.
+     * </pre>
+     *
+     * <code>string request_id = 4 [json_name = "requestId"];</code>
+     * @return The bytes for requestId.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getRequestIdBytes() {
+      return instance.getRequestIdBytes();
+    }
+    /**
+     * <pre>
+     * An id the app makes once for each group it sets out to create, up to
+     * syncLimits.idLength characters without spaces, and sends again with
+     * every retry: the same id from the same user gives back the group it
+     * made the first time, unchanged, so a retry after a lost answer never
+     * makes a second group. INVALID_ARGUMENT when missing or malformed.
+     * </pre>
+     *
+     * <code>string request_id = 4 [json_name = "requestId"];</code>
+     * @param value The requestId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRequestId(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setRequestId(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * An id the app makes once for each group it sets out to create, up to
+     * syncLimits.idLength characters without spaces, and sends again with
+     * every retry: the same id from the same user gives back the group it
+     * made the first time, unchanged, so a retry after a lost answer never
+     * makes a second group. INVALID_ARGUMENT when missing or malformed.
+     * </pre>
+     *
+     * <code>string request_id = 4 [json_name = "requestId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRequestId() {
+      copyOnWrite();
+      instance.clearRequestId();
+      return this;
+    }
+    /**
+     * <pre>
+     * An id the app makes once for each group it sets out to create, up to
+     * syncLimits.idLength characters without spaces, and sends again with
+     * every retry: the same id from the same user gives back the group it
+     * made the first time, unchanged, so a retry after a lost answer never
+     * makes a second group. INVALID_ARGUMENT when missing or malformed.
+     * </pre>
+     *
+     * <code>string request_id = 4 [json_name = "requestId"];</code>
+     * @param value The bytes for requestId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRequestIdBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setRequestIdBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.CreateGroupRequest)
   }
   @java.lang.Override
@@ -543,10 +720,11 @@ public  final class CreateGroupRequest extends
             "name_",
             "emoji_",
             "displayName_",
+            "requestId_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0208";
+              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0208\u0004\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

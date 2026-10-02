@@ -101,7 +101,12 @@ export const pair = async () => {
   const maker = await signInAnonymously();
   const created = await call(
     "GroupService/CreateGroup",
-    { displayName: "さくら", emoji: "🍉", name: "いとこ会" },
+    {
+      displayName: "さくら",
+      emoji: "🍉",
+      name: "いとこ会",
+      requestId: crypto.randomUUID(),
+    },
     maker
   );
   const { groupId, inviteCode } = (await created.json()) as {

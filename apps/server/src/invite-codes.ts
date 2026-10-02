@@ -53,6 +53,36 @@ export const codeOfGroup = async (
 };
 
 /**
+ * The group's live code, issuing its first when it has none. Calls at once
+ * agree on one: each issues only where no code is yet, then reads back
+ * the one that is.
+ */
+export const liveInviteCode = async (
+  d1: D1Database,
+  groupId: string
+): Promise<string> => {
+  for (let attempt = 1; ; attempt += 1) {
+    // oxlint-disable-next-line no-await-in-loop -- after a clash, read again
+    const live = await codeOfGroup(d1, groupId);
+    if (live !== null) {
+      return live;
+    }
+    try {
+      // oxlint-disable-next-line no-await-in-loop -- a retry, after a clash
+      await drizzle(d1)
+        .insert(invites)
+        .values({ code: newInviteCode(), groupId })
+        .onConflictDoNothing({ target: invites.groupId });
+    } catch (error) {
+      // Another group holds the code (the primary key): draw again.
+      if (attempt >= MAX_ATTEMPTS) {
+        throw error;
+      }
+    }
+  }
+};
+
+/**
  * Gives the group a new live code, replacing any it had, so the old link
  * stops working at once.
  */

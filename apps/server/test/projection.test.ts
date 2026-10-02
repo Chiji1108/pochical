@@ -163,7 +163,12 @@ describe("a member's shifts in their groups", () => {
 
     const created = await call(
       "GroupService/CreateGroup",
-      { displayName: "さくら", emoji: "🍉", name: "同期" },
+      {
+        displayName: "さくら",
+        emoji: "🍉",
+        name: "同期",
+        requestId: crypto.randomUUID(),
+      },
       maker
     );
     const { groupId } = (await created.json()) as { groupId: string };
@@ -177,6 +182,24 @@ describe("a member's shifts in their groups", () => {
         cursor: 1n,
         kind: { case: "memberDay", value: { day: { date: "2026-10-21" } } },
       },
+    ]);
+  });
+
+  it("never gives out a cursor again once a member's values are gone", async () => {
+    const { groupId, guest, makerId } = await pair();
+    const groupDo = env.GROUPS.getByName(groupId);
+    await groupDo.takeMemberShifts(makerId, pushed("night", 1000));
+    // As a member's leaving will: their values go, with the newest cursor.
+    await runInDurableObject(groupDo, (_instance, state) => {
+      state.storage.sql.exec("DELETE FROM member_days");
+    });
+    await groupDo.takeMemberShifts(makerId, pushed("day", 2000));
+
+    // A device that had cursor 1 still gets the new value, at cursor 2.
+    const group = await syncSocket(`/v1/groups/${groupId}/socket`, guest, 1n);
+    expect(group.welcome.kind).toMatchObject({ value: { cursor: 2n } });
+    expect(changesIn(await group.frames.next())).toMatchObject([
+      { cursor: 2n, kind: { value: { day: { value: "day" } } } },
     ]);
   });
 
@@ -227,7 +250,12 @@ describe("a member's shifts in their groups", () => {
     await failPushesTo(user, ["!unreachable"]);
     const created = await call(
       "GroupService/CreateGroup",
-      { displayName: "さくら", emoji: "🍉", name: "いとこ会" },
+      {
+        displayName: "さくら",
+        emoji: "🍉",
+        name: "いとこ会",
+        requestId: crypto.randomUUID(),
+      },
       maker
     );
     const { groupId } = (await created.json()) as { groupId: string };

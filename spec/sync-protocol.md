@@ -31,7 +31,7 @@ Every user is signed in, from the first launch: anonymously at first, so nobody 
 
 `GroupService` (`proto/pochical/v1/group.proto`) makes groups and lets people into them; every call needs a session.
 
-- Creating a group gives it a random id, sets up its Group DO with the name, the emoji mark and the maker as its first member, and issues its first invitation code.
+- Creating a group gives it a random id, sets up its Group DO with the name, the emoji mark and the maker as its first member, and issues its first invitation code. The app sends a `request_id` it makes once for the group and again with every retry; the maker's User DO keeps which group each request made, so a retry after a lost answer gives back the same group, link and all, and never makes a second.
 - A group has one live code, held in D1 (`invites`, from code to group), the only place a link can be looked up. Remaking it replaces the row, so the old link stops working at once. `InviteService.GetInvitePreview` answers anyone holding a live code with the group's name, mark and member count.
 - Joining with a live code adds the user to the Group DO, which decides membership, and then to the user's own DO, which keeps their groups for checking sockets. Both steps can be repeated, so a retry after a failure between them completes the join; joining a group you are in changes nothing and says so.
 - Only members read or remake a group's link.
@@ -70,6 +70,8 @@ The numbers are `socketRules` in `design/src/socket.ts`.
 ## Change log and cursor
 
 Each DO keeps an append-only change log. Every accepted mutation (shift edit, message sent, message edited or deleted, read state moved) gets the next `cursor`, a `uint64` that only grows.
+
+A DO that ever removes rows keeps the newest cursor it gave out in a row of its own (the Group DO's `log_head`), since the newest of the rows left could be older, and a device already past it would miss what comes next. The User DO, which keeps every value once written (a deleted one as a tombstone), reads it off its values.
 
 - After `Welcome`, the server sends every change after the client's cursor, then streams new changes as they happen.
 - The client applies changes in cursor order and stores the last applied cursor in the same SQLite transaction.

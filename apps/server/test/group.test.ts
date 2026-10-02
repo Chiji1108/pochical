@@ -1,4 +1,4 @@
-import { GROUP_MAX_MEMBERS } from "@pochical/design/limits";
+import { GROUP_MAX_MEMBERS, syncLimits } from "@pochical/design/limits";
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
@@ -17,7 +17,12 @@ const createGroup = async (
 ): Promise<Created> => {
   const response = await call(
     "GroupService/CreateGroup",
-    { displayName: "さくら", emoji: "🍉", name },
+    {
+      displayName: "さくら",
+      emoji: "🍉",
+      name,
+      requestId: crypto.randomUUID(),
+    },
     token
   );
   expect(response.status).toBe(200);
@@ -57,6 +62,43 @@ describe("GroupService", () => {
     const socket = await openSocket(`/v1/groups/${groupId}/socket`, maker);
     expect(socket.readyState).toBe(WebSocket.OPEN);
     socket.close();
+  });
+
+  it("makes one group however often the same request comes", async () => {
+    const maker = await signInAnonymously();
+    const body = {
+      displayName: "さくら",
+      emoji: "🍉",
+      name: "いとこ会",
+      requestId: "the-same-request",
+    };
+    const made = async (sent: typeof body) => {
+      const response = await call("GroupService/CreateGroup", sent, maker);
+      expect(response.status).toBe(200);
+      return (await response.json()) as Created;
+    };
+    const first = await made(body);
+    // A retry after a lost answer, even with the name changed meanwhile,
+    // gives back the first group, its link and its name unchanged.
+    await expect(made({ ...body, name: "別の名前" })).resolves.toStrictEqual(
+      first
+    );
+    await expect(previewOf(first.inviteCode)).resolves.toMatchObject({
+      groupName: "いとこ会",
+      memberCount: 1,
+    });
+    // A new request makes a new group.
+    const second = await made({ ...body, requestId: "another-request" });
+    expect(second.groupId).not.toBe(first.groupId);
+
+    // Two tries at once, as a retry sent while the first is still on its
+    // way, agree on one group and one live link.
+    const racing = { ...body, requestId: "racing-request" };
+    const [one, other] = await Promise.all([made(racing), made(racing)]);
+    expect(other).toStrictEqual(one);
+    await expect(previewOf(one?.inviteCode ?? "")).resolves.toMatchObject({
+      groupName: "いとこ会",
+    });
   });
 
   it("lets someone with the link join, once", async () => {
@@ -123,12 +165,18 @@ describe("GroupService", () => {
       displayName: "さくら",
       emoji: "🍉",
       name: "いとこ会",
+      requestId: crypto.randomUUID(),
     });
     expect(response.status).toBe(401);
   });
 
   it("holds names to spec/text-limits.md, counting characters as seen", async () => {
-    const ok = { displayName: "さくら", emoji: "🍉", name: "いとこ会" };
+    const ok = {
+      displayName: "さくら",
+      emoji: "🍉",
+      name: "いとこ会",
+      requestId: "request-1",
+    };
     const accepted = [
       { ...ok, name: "あ".repeat(30) },
       // 30 emoji, each one character however many code units.
@@ -145,6 +193,9 @@ describe("GroupService", () => {
       { ...ok, emoji: "" },
       { ...ok, emoji: "🍉🍉" },
       { ...ok, emoji: "あ" },
+      { ...ok, requestId: "" },
+      { ...ok, requestId: "has space" },
+      { ...ok, requestId: "x".repeat(syncLimits.idLength + 1) },
     ];
     // Each by its own user, so the group-making limit does not count them
     // together.
@@ -228,7 +279,12 @@ describe("GroupService", () => {
         // oxlint-disable-next-line no-await-in-loop -- counted in order
         const response = await call(
           "GroupService/CreateGroup",
-          { displayName: "さくら", emoji: "🍉", name: `グループ${attempt}` },
+          {
+            displayName: "さくら",
+            emoji: "🍉",
+            name: `グループ${attempt}`,
+            requestId: `request-${attempt}`,
+          },
           maker
         );
         counted.push(response.status);
@@ -236,5 +292,28 @@ describe("GroupService", () => {
       return counted;
     });
     expect(statuses).toStrictEqual([200, 200, 200, 200, 200, 429]);
+  });
+
+  it("never counts a retry of one request against the limit", async () => {
+    const statuses = await inOneLimitWindow(async () => {
+      const maker = await signInAnonymously();
+      const counted: number[] = [];
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        // oxlint-disable-next-line no-await-in-loop -- counted in order
+        const response = await call(
+          "GroupService/CreateGroup",
+          {
+            displayName: "さくら",
+            emoji: "🍉",
+            name: "いとこ会",
+            requestId: "retried",
+          },
+          maker
+        );
+        counted.push(response.status);
+      }
+      return counted;
+    });
+    expect(statuses).toStrictEqual(statuses.map(() => 200));
   });
 });

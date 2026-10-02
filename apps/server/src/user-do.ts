@@ -61,6 +61,7 @@ import {
   coworkerOrder,
   coworkers,
   dayFields,
+  groupRequests,
   memberships,
   orderClears,
   patternOrder,
@@ -164,6 +165,33 @@ export class UserDO extends DurableObject<Env> {
         await this.env.GROUPS.getByName(groupId).endSession(sessionId);
       })
     );
+  }
+
+  /** The group the user's request made, or null for a new request. */
+  groupOf(requestId: string): string | null {
+    return (
+      this.db
+        .select({ groupId: groupRequests.groupId })
+        .from(groupRequests)
+        .where(eq(groupRequests.requestId, requestId))
+        .get()?.groupId ?? null
+    );
+  }
+
+  /**
+   * The id of the group the user's request makes: a new one the first
+   * time the request id comes, the same one each time after, so a
+   * repeated CreateGroup sets up the same group. The object takes one call
+   * at a time, so two tries at once get the same id.
+   */
+  groupIdFor(requestId: string): string {
+    const made = this.groupOf(requestId);
+    if (made !== null) {
+      return made;
+    }
+    const groupId = crypto.randomUUID();
+    this.db.insert(groupRequests).values({ groupId, requestId }).run();
+    return groupId;
   }
 
   /** Whether the user is in the group. */
