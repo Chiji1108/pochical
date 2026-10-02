@@ -368,3 +368,99 @@ describe("syncing a user's coworkers", () => {
     ]);
   });
 });
+
+describe("catching up on what a user owns", () => {
+  it("brings a new device every kind of value, in cursor order", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    const steps = [
+      {
+        case: "dayEdits" as const,
+        value: {
+          edits: [edit("d", "2026-10-12", DayField.PATTERN, "night", 1000)],
+        },
+      },
+      {
+        case: "patternEdits" as const,
+        value: {
+          edits: [
+            {
+              kind: {
+                case: "order" as const,
+                value: { hlc: clock(1000), ids: ["night"] },
+              },
+              opId: "po",
+            },
+          ],
+        },
+      },
+      ordersEdit("o", [order("2026-10-01", ["day"])], 1000),
+      {
+        case: "coworkerEdits" as const,
+        value: {
+          edits: [
+            {
+              kind: {
+                case: "coworker" as const,
+                value: { hlc: clock(1000), id: "c1", name: "佐藤" },
+              },
+              opId: "c",
+            },
+            {
+              kind: {
+                case: "order" as const,
+                value: { hlc: clock(1000), ids: ["c1"] },
+              },
+              opId: "co",
+            },
+          ],
+        },
+      },
+    ];
+    for (const step of steps) {
+      sendFrame(phone.socket, step);
+      // oxlint-disable-next-line no-await-in-loop -- each in turn
+      await phone.frames.next();
+      // oxlint-disable-next-line no-await-in-loop -- each in turn
+      await phone.frames.next();
+    }
+
+    const tablet = await device(token);
+    expect(tablet.welcome.kind).toMatchObject({ value: { cursor: 5n } });
+    const caughtUp = changesIn(await tablet.frames.next());
+    expect(
+      caughtUp.map(({ cursor, kind }) => [cursor, kind.case])
+    ).toStrictEqual([
+      [1n, "day"],
+      [2n, "patternOrder"],
+      [3n, "repeatOrders"],
+      [4n, "coworker"],
+      [5n, "coworkerOrder"],
+    ]);
+  });
+
+  it("brings a member who opens the group later everyone's orders", async () => {
+    const { groupId, guest, maker, makerId } = await pair();
+    const phone = await device(maker);
+    sendFrame(
+      phone.socket,
+      ordersEdit("o", [order("2026-10-01", ["day"])], 1000)
+    );
+    await phone.frames.next();
+    await phone.frames.next();
+    await push(makerId);
+
+    const group = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
+    expect(changesIn(await group.frames.next())).toMatchObject([
+      {
+        kind: {
+          case: "memberRepeatOrders",
+          value: {
+            orders: { orders: [{ sequence: ["day"], start: "2026-10-01" }] },
+            userId: makerId,
+          },
+        },
+      },
+    ]);
+  });
+});

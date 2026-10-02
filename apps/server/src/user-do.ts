@@ -1,4 +1,5 @@
 import { create, toBinary } from "@bufbuild/protobuf";
+import { syncLimits } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
 import {
   and,
@@ -89,8 +90,6 @@ import type {
   RepeatOrdersRow,
 } from "./user-do-values";
 
-// Edits in one frame; an outbox sends more as several.
-const MAX_EDITS_PER_FRAME = 500;
 // Values in one push to a group.
 const VALUES_PER_PUSH = 500;
 // The day fields that stay with their owner, never pushed to groups.
@@ -376,11 +375,11 @@ export class UserDO extends DurableObject<Env> {
     edits: Edit[],
     apply: (edit: Edit, cursor: number) => Change | Change[] | undefined
   ): void {
-    if (edits.length > MAX_EDITS_PER_FRAME) {
+    if (edits.length > syncLimits.editsPerFrame) {
       rejectAndClose(
         ws,
         ServerError_Code.BAD_FRAME,
-        `At most ${MAX_EDITS_PER_FRAME} edits a frame`
+        `At most ${syncLimits.editsPerFrame} edits a frame`
       );
       return;
     }

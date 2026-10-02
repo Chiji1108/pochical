@@ -1,5 +1,6 @@
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import type { MessageInitShape } from "@bufbuild/protobuf";
+import { syncLimits } from "@pochical/design/limits";
 
 import {
   ClientFrameSchema,
@@ -118,15 +119,12 @@ const handleHello = (
   handlers.welcome(ws, cursor);
 };
 
-// A frame of changes stays well under a WebSocket message's size.
-const CHANGES_PER_FRAME = 500;
-
-/** Changes in cursor order, as frames of up to CHANGES_PER_FRAME. */
+/** Changes in cursor order, as frames of up to syncLimits.changesPerFrame. */
 export const sendChanges = (ws: WebSocket, changes: Change[]): void => {
-  for (let at = 0; at < changes.length; at += CHANGES_PER_FRAME) {
+  for (let at = 0; at < changes.length; at += syncLimits.changesPerFrame) {
     send(ws, {
       case: "changes",
-      value: { changes: changes.slice(at, at + CHANGES_PER_FRAME) },
+      value: { changes: changes.slice(at, at + syncLimits.changesPerFrame) },
     });
   }
 };
