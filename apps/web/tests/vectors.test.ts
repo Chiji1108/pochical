@@ -4,6 +4,7 @@ import { describe, expect, test } from "bun:test";
 // the native apps' tests read the same files.
 import chatText from "../../../spec/vectors/chat-text.json";
 import repeat from "../../../spec/vectors/repeat.json";
+import review from "../../../spec/vectors/review.json";
 import text from "../../../spec/vectors/text.json";
 import timeChange from "../../../spec/vectors/time-change.json";
 import {
@@ -24,6 +25,8 @@ import {
 } from "../src/lib/design-days";
 import type { OwnDays } from "../src/lib/design-days";
 import type { Pattern, PatternBook } from "../src/lib/design-patterns";
+import { mayAskForReview, openedOn } from "../src/lib/review";
+import type { ReviewHistory } from "../src/lib/review";
 import { characterCount, dayName, limitText } from "../src/lib/text-limits";
 
 const dayOf = (key: string) => {
@@ -162,4 +165,35 @@ describe("spec/vectors/chat-text.json", () => {
       expect(siteOf(url)).toBe(expected);
     }
   });
+});
+
+describe("spec/vectors/review.json", () => {
+  for (const {
+    name,
+    opened,
+    version,
+    troubled,
+    expected,
+    ...rest
+  } of review.mayAsk) {
+    test(name, () => {
+      let history: ReviewHistory | undefined;
+      for (const day of opened) {
+        history = openedOn(history, day);
+      }
+      const today = opened.at(-1);
+      if (history === undefined || today === undefined) {
+        throw new Error(`${name} opens the app on no day`);
+      }
+      const lastAsked = "lastAsked" in rest ? rest.lastAsked : undefined;
+      expect(
+        mayAskForReview({
+          history: { ...history, lastAsked },
+          today,
+          troubled,
+          version,
+        })
+      ).toBe(expected);
+    });
+  }
 });

@@ -31,6 +31,7 @@ import {
   springs,
   stateLayers,
 } from "../src/metrics";
+import { reviewRules } from "../src/review";
 import {
   colorRoleNames,
   inkShares,
@@ -162,6 +163,7 @@ function json() {
       springs,
       stateLayers,
     },
+    review: reviewRules,
     textStyles,
     widgets: widgetRules,
   };
@@ -429,8 +431,8 @@ function kotlin() {
   return lines.join("\n");
 }
 
-// The shared numbers (design/src/limits.ts, chat.ts, invite.ts and
-// widgets.ts) for the apps, a namespace each; what each means is written
+// The shared numbers (design/src/limits.ts, chat.ts, invite.ts, review.ts
+// and widgets.ts) for the apps, a namespace each; what each means is written
 // beside it in the TypeScript.
 type Values = Readonly<Record<string, number | string>>;
 
@@ -490,7 +492,8 @@ const TEXT_FIELDS_DOC =
 const SHARED_DAYS_DOC = "The most days one chat message shares.";
 const GROUP_MEMBERS_DOC = "The most people in one group.";
 
-// Chat.swift, Invite.swift and Widgets.swift, and their Kotlin twins.
+// Chat.swift, Invite.swift, Review.swift and Widgets.swift, and their
+// Kotlin twins.
 const shared: [string, string, Values][] = [
   [
     "Chat",
@@ -498,6 +501,11 @@ const shared: [string, string, Values][] = [
     chatRules,
   ],
   ["Invite", "What an invitation code is made of.", inviteRules],
+  [
+    "Review",
+    "When the apps ask the store for its review prompt (spec/review.md).",
+    reviewRules,
+  ],
   ["Widgets", "The widgets' shared numbers (spec/widgets.md).", widgetRules],
 ];
 

@@ -2905,6 +2905,12 @@
       "pressed": 0.16
     }
   },
+  "review": {
+    "minDaysBetweenAsks": 120,
+    "minDaysSinceFirstOpen": 21,
+    "minOpenDays": 7,
+    "minOpenMonths": 2
+  },
   "textStyles": {
     "body": {
       "size": 17,
