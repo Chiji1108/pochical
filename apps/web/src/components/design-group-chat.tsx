@@ -73,6 +73,12 @@ import { dateKey, formatDay } from "../lib/design-days";
 import type { Photo } from "../lib/design-sample-photos";
 import { useUser } from "../lib/design-user-store";
 import { spring } from "../lib/motion";
+import {
+  PhotoInput,
+  PhotoTray,
+  photoSize,
+  useChosenPhotos,
+} from "./design-chat-photos";
 import { chatRow, chatStyle } from "./design-chat-style";
 import { EmojiPickerSheet } from "./design-emoji-picker";
 import { everyoneOff, patternOn, reactionChoices } from "./design-group-data";
@@ -1132,18 +1138,12 @@ function useComposer({
   members: Member[];
   mentionName: (id: string) => string;
 }) {
-  const toast = useContext(ToastContext);
   const [draft, setDraft] = useState("");
   // Members picked from the @ list, made mentions as the message is sent.
   const [picked, setPicked] = useState<Mention[]>([]);
   const [attached, setAttached] = useState(attach);
   const linkPreview = useLinkPreview(draft);
-  // Photos chosen to go with the next send, as the chat apps hold them
-  // above the composer: nothing is sent on choosing.
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  // Photos chosen but still being read; sending waits for them, so none
-  // lands in the composer after the message has gone.
-  const [reading, setReading] = useState(0);
+  const chosen = useChosenPhotos();
   const [editing, setEditing] = useState<string>();
   const formRef = useRef<HTMLFormElement>(null);
   // An @ being written at the end of the message lists the others whose
@@ -1168,7 +1168,7 @@ function useComposer({
     setPicked([]);
     linkPreview.reset();
     setAttached(undefined);
-    setPhotos([]);
+    chosen.clear();
   };
   // Puts your message's words back in the composer to change them, its
   // mentions as @name again.
@@ -1185,44 +1185,26 @@ function useComposer({
     setPicked([]);
     linkPreview.reset();
   };
-  const choosePhotos = async (files: File[]) => {
-    const room = maxPhotos - photos.length;
-    if (files.length > room) {
-      toast(`写真は一度に${maxPhotos}枚まで送れます`, "problem");
-    }
-    const taken = files.slice(0, room);
-    setReading((count) => count + taken.length);
-    // One photo that cannot be opened leaves the others chosen.
-    const results = await Promise.allSettled(taken.map(photoOf));
-    setReading((count) => count - taken.length);
-    const chosen = results.flatMap((result) =>
-      result.status === "fulfilled" ? [result.value] : []
-    );
-    setPhotos((before) => [...before, ...chosen].slice(0, maxPhotos));
-    if (chosen.length < taken.length) {
-      toast("開けない写真がありました", "problem");
-    }
-  };
   // Something to send, once every photo chosen has been read.
   const sendable =
-    reading === 0 &&
-    (draft.trim() !== "" || attached !== undefined || photos.length > 0);
+    !chosen.reading &&
+    (draft.trim() !== "" || attached !== undefined || chosen.photos.length > 0);
   return {
     attached,
-    choosePhotos,
     clear,
     draft,
     editing,
     formRef,
+    handleChoosePhotos: chosen.handleChoose,
+    handleRemovePhoto: chosen.handleRemove,
     linkPreview,
     mentionable,
-    photos,
+    photos: chosen.photos,
     pickMention,
     picked,
     sendable,
     setAttached,
     setDraft,
-    setPhotos,
     startEditing,
     stopEditing,
   };
@@ -1364,35 +1346,15 @@ function Composer({
           </IconButton>
         </div>
       )}
-      {photos.length > 0 && (
-        <ul
-          aria-label="送る写真"
-          className={chatStyle.tray({
-            below:
-              replying !== undefined ||
-              attached !== undefined ||
-              linkPreview.shown !== undefined,
-          })}
-        >
-          {photos.map((photo, index) => (
-            <li className={chatStyle.trayItem} key={photo.src}>
-              <img alt="" className={chatStyle.trayImage} src={photo.src} />
-              <button
-                aria-label={`${index + 1}枚目の写真を外す`}
-                className={chatStyle.trayRemove}
-                onClick={() => {
-                  composer.setPhotos((before) =>
-                    before.filter((other) => other !== photo)
-                  );
-                }}
-                type="button"
-              >
-                <X aria-hidden="true" size={12} strokeWidth={3} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <PhotoTray
+        below={
+          replying !== undefined ||
+          attached !== undefined ||
+          linkPreview.shown !== undefined
+        }
+        onRemove={composer.handleRemovePhoto}
+        photos={photos}
+      />
       {mentionable.length > 0 && (
         <ul aria-label="メンションする人" className={chatStyle.mentionList}>
           {mentionable.map((member) => (
@@ -1431,20 +1393,9 @@ function Composer({
         }}
         ref={formRef}
       >
-        {/* The system's photo picker, as the apps open PHPicker and
-          Android's photo picker; the camera is left to the camera. */}
-        <input
-          accept="image/*"
-          className={srOnly}
-          multiple
-          onChange={(event) => {
-            const files = [...(event.target.files ?? [])];
-            event.target.value = "";
-            composer.choosePhotos(files).catch(() => undefined);
-          }}
+        <PhotoInput
+          onChoose={composer.handleChoosePhotos}
           ref={photoInputRef}
-          tabIndex={-1}
-          type="file"
         />
         {/* The tools narrow into a › and widen back, the field following
           them, while the icons and the › fade one into the other. */}
@@ -1942,34 +1893,6 @@ type Upload = "sending" | "failed";
 
 // How long a photo takes to go up in the prototype.
 const uploadMilliseconds = 1600;
-
-// How many photos go in one send: a roster is a page or two, and more
-// would flood a small group's chat.
-export const maxPhotos = 4;
-
-// A chosen photo with its size, read before it is shown so its line
-// keeps its place; the apps read it while shrinking the photo to send.
-export async function photoOf(file: File): Promise<Photo> {
-  const src = URL.createObjectURL(file);
-  const image = new Image();
-  image.src = src;
-  await image.decode();
-  return { height: image.naturalHeight, src, width: image.naturalWidth };
-}
-
-// The box a photo fits in, and how far from square it may be before its
-// ends are cut, as LINE crops a panorama in the chat.
-const photoBox = { height: 260, width: 220 };
-const photoAspect = { max: 2, min: 1 / 2 };
-
-export function photoSize(photo: Photo) {
-  const aspect = Math.min(
-    Math.max(photo.width / photo.height, photoAspect.min),
-    photoAspect.max
-  );
-  const width = Math.min(photoBox.width, photoBox.height * aspect);
-  return { height: Math.round(width / aspect), width: Math.round(width) };
-}
 
 // The line a reply answers, inside the bubble over a thin rule, in the
 // bubble's own text color; one line, so it never outweighs the answer.
