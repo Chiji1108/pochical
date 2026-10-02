@@ -1,21 +1,14 @@
 import { markColors } from "@pochical/design/colors";
-import { textLimits } from "@pochical/design/limits";
+import { syncLimits, textLimits } from "@pochical/design/limits";
 
 import type { Pattern } from "./gen/pochical/v1/sync_pb";
+import { isId } from "./ids";
 import { characterCount } from "./text-limits";
 
 // What a pattern and the patterns' order may hold (spec/shift-patterns.md),
 // checked as the owner's edits arrive.
 
 const TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/u;
-// Pattern ids and icon names are the apps' own, so only kept short.
-const MAX_ID_LENGTH = 64;
-// Far past what one person keeps: ポチポチ入力 shows ten to a page.
-export const MAX_PATTERNS = 200;
-
-export const isId = (text: string): boolean =>
-  text !== "" && text.length <= MAX_ID_LENGTH;
-
 const isTime = (text: string | undefined): boolean =>
   text === undefined || TIME.test(text);
 
@@ -42,6 +35,6 @@ export const fitsPattern = (id: string, pattern: Pattern): boolean => {
 
 /** Whether an order of patterns is ids, each once, and not too many. */
 export const fitsOrder = (ids: readonly string[]): boolean =>
-  ids.length <= MAX_PATTERNS &&
+  ids.length <= syncLimits.patterns &&
   new Set(ids).size === ids.length &&
   ids.every((id) => isId(id));

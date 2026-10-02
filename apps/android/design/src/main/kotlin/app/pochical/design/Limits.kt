@@ -20,6 +20,17 @@ object TextFields {
   const val dayNameLength = 3
 }
 
+/** How much of what a user owns one synced value may hold (spec/sync-protocol.md). */
+object SyncLimits {
+  const val changesPerFrame = 500
+  const val editsPerFrame = 500
+  const val idLength = 64
+  const val orders = 200
+  const val patterns = 200
+  const val peopleADay = 50
+  const val sequence = 366
+}
+
 /** The most days one chat message shares. */
 const val SHARED_DAYS_MAX = 31
 

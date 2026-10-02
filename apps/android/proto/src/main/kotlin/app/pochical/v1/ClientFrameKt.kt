@@ -152,6 +152,81 @@ public object ClientFrameKt {
     public fun hasPatternEdits(): kotlin.Boolean {
       return _builder.hasPatternEdits()
     }
+
+    /**
+     * ```
+     * The owner's repeating orders, from the same outbox; User DO socket
+     * only.
+     * ```
+     *
+     * `.pochical.v1.RepeatOrdersEdits repeat_orders_edits = 5 [json_name = "repeatOrdersEdits"];`
+     */
+    public var repeatOrdersEdits: app.pochical.v1.RepeatOrdersEdits
+      @kotlin.jvm.JvmName("getRepeatOrdersEdits")
+        get() = _builder.repeatOrdersEdits
+      @kotlin.jvm.JvmName("setRepeatOrdersEdits")
+        set(value) {
+        _builder.repeatOrdersEdits = value
+      }
+    /**
+     * ```
+     * The owner's repeating orders, from the same outbox; User DO socket
+     * only.
+     * ```
+     *
+     * `.pochical.v1.RepeatOrdersEdits repeat_orders_edits = 5 [json_name = "repeatOrdersEdits"];`
+     */
+    public fun clearRepeatOrdersEdits() {
+      _builder.clearRepeatOrdersEdits()
+    }
+    /**
+     * ```
+     * The owner's repeating orders, from the same outbox; User DO socket
+     * only.
+     * ```
+     *
+     * `.pochical.v1.RepeatOrdersEdits repeat_orders_edits = 5 [json_name = "repeatOrdersEdits"];`
+     * @return Whether the repeatOrdersEdits field is set.
+     */
+    public fun hasRepeatOrdersEdits(): kotlin.Boolean {
+      return _builder.hasRepeatOrdersEdits()
+    }
+
+    /**
+     * ```
+     * The owner's coworkers, from the same outbox; User DO socket only.
+     * ```
+     *
+     * `.pochical.v1.CoworkerEdits coworker_edits = 6 [json_name = "coworkerEdits"];`
+     */
+    public var coworkerEdits: app.pochical.v1.CoworkerEdits
+      @kotlin.jvm.JvmName("getCoworkerEdits")
+        get() = _builder.coworkerEdits
+      @kotlin.jvm.JvmName("setCoworkerEdits")
+        set(value) {
+        _builder.coworkerEdits = value
+      }
+    /**
+     * ```
+     * The owner's coworkers, from the same outbox; User DO socket only.
+     * ```
+     *
+     * `.pochical.v1.CoworkerEdits coworker_edits = 6 [json_name = "coworkerEdits"];`
+     */
+    public fun clearCoworkerEdits() {
+      _builder.clearCoworkerEdits()
+    }
+    /**
+     * ```
+     * The owner's coworkers, from the same outbox; User DO socket only.
+     * ```
+     *
+     * `.pochical.v1.CoworkerEdits coworker_edits = 6 [json_name = "coworkerEdits"];`
+     * @return Whether the coworkerEdits field is set.
+     */
+    public fun hasCoworkerEdits(): kotlin.Boolean {
+      return _builder.hasCoworkerEdits()
+    }
     public val kindCase: app.pochical.v1.ClientFrame.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -175,4 +250,10 @@ public val app.pochical.v1.ClientFrameOrBuilder.dayEditsOrNull: app.pochical.v1.
 
 public val app.pochical.v1.ClientFrameOrBuilder.patternEditsOrNull: app.pochical.v1.PatternEdits?
   get() = if (hasPatternEdits()) getPatternEdits() else null
+
+public val app.pochical.v1.ClientFrameOrBuilder.repeatOrdersEditsOrNull: app.pochical.v1.RepeatOrdersEdits?
+  get() = if (hasRepeatOrdersEdits()) getRepeatOrdersEdits() else null
+
+public val app.pochical.v1.ClientFrameOrBuilder.coworkerEditsOrNull: app.pochical.v1.CoworkerEdits?
+  get() = if (hasCoworkerEdits()) getCoworkerEdits() else null
 

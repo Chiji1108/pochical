@@ -71,3 +71,19 @@ export const memberPatterns = sqliteTable(
     uniqueIndex("member_patterns_cursor").on(table.cursor),
   ]
 );
+
+// Members' repeating orders, so the group works their days out as their
+// own devices do: each member's timeline as pochical.v1.RepeatOrders' JSON
+// without its clock, one last-writer-wins value.
+export const memberRepeatOrders = sqliteTable(
+  "member_repeat_orders",
+  {
+    cursor: integer().notNull(),
+    data: text().notNull(),
+    hlcCounter: integer("hlc_counter").notNull(),
+    hlcDevice: text("hlc_device").notNull(),
+    hlcMs: integer("hlc_ms").notNull(),
+    userId: text("user_id").primaryKey(),
+  },
+  (table) => [uniqueIndex("member_repeat_orders_cursor").on(table.cursor)]
+);

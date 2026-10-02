@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 
+import { dayRules } from "@pochical/design/days";
+
 import {
   dateKey,
   editedOwnDays,
@@ -35,7 +37,7 @@ test("another shift is kept, and clearing a day keeps an empty one", () => {
     "2026-10-02": undefined,
   }));
   expect(own["2026-10-01"]).toEqual({ shift: "night" });
-  expect(own["2026-10-02"]).toEqual({ shift: "" });
+  expect(own["2026-10-02"]).toEqual({ shift: dayRules.noShift });
 });
 
 test("entering the order's own shift again gives the day back to it", () => {
@@ -60,7 +62,7 @@ test("a new order takes shifts and times from its start, not memos", () => {
     {
       "2026-09-30": { shift: "night" },
       "2026-10-01": { end: "20:00", note: "棚卸し", shift: "night" },
-      "2026-10-02": { shift: "" },
+      "2026-10-02": { shift: dayRules.noShift },
     },
     new Date(2026, 9, 1)
   );

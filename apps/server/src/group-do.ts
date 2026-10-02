@@ -12,14 +12,17 @@ import migrations from "./group-do-migrations/migrations.js";
 import {
   memberDays,
   memberPatterns,
+  memberRepeatOrders,
   members,
   profile,
 } from "./group-do-schema";
 import {
   memberDayChange,
   memberPatternChange,
+  memberRepeatOrdersChange,
   takeMemberDay,
   takeMemberPattern,
+  takeMemberRepeatOrders,
 } from "./group-shifts";
 import {
   acceptSyncSocket,
@@ -41,6 +44,12 @@ export type NewMember = { userId: string; displayName: string };
 
 /** How a join went: in now, in already, or kept out of a full group. */
 export type JoinResult = "added" | "already" | "full";
+
+/** One kind of value the group keeps of its members, as GroupDO.logs lists them. */
+type MemberLog = {
+  after: (cursor: number) => Change[];
+  table: typeof memberDays | typeof memberPatterns | typeof memberRepeatOrders;
+};
 
 /** One Durable Object per group, named by the group's id. */
 export class GroupDO extends DurableObject<Env> {
@@ -165,6 +174,13 @@ export class GroupDO extends DurableObject<Env> {
           change = takeMemberDay(this.db, userId, kind.value, cursor + 1);
         } else if (kind.case === "pattern") {
           change = takeMemberPattern(this.db, userId, kind.value, cursor + 1);
+        } else if (kind.case === "repeatOrders") {
+          change = takeMemberRepeatOrders(
+            this.db,
+            userId,
+            kind.value,
+            cursor + 1
+          );
         }
         if (change) {
           cursor = Number(change.cursor);
@@ -180,37 +196,63 @@ export class GroupDO extends DurableObject<Env> {
     }
   }
 
+  /**
+   * Every kind of value the group keeps of its members, in one list so
+   * catch-up and the cursor head cover the same ones.
+   */
+  private logs(): MemberLog[] {
+    const { db } = this;
+    return [
+      {
+        after: (cursor) =>
+          db
+            .select()
+            .from(memberDays)
+            .where(gt(memberDays.cursor, cursor))
+            .all()
+            .map(memberDayChange),
+        table: memberDays,
+      },
+      {
+        after: (cursor) =>
+          db
+            .select()
+            .from(memberPatterns)
+            .where(gt(memberPatterns.cursor, cursor))
+            .all()
+            .map(memberPatternChange),
+        table: memberPatterns,
+      },
+      {
+        after: (cursor) =>
+          db
+            .select()
+            .from(memberRepeatOrders)
+            .where(gt(memberRepeatOrders.cursor, cursor))
+            .all()
+            .map(memberRepeatOrdersChange),
+        table: memberRepeatOrders,
+      },
+    ];
+  }
+
   /** The newest cursor of the group's log, 0 before any. */
   private head(): number {
-    const heads = [
-      this.db
-        .select({ head: max(memberDays.cursor) })
-        .from(memberDays)
-        .get(),
-      this.db
-        .select({ head: max(memberPatterns.cursor) })
-        .from(memberPatterns)
-        .get(),
-    ];
-    return Math.max(0, ...heads.map((row) => row?.head ?? 0));
+    const heads = this.logs().map(
+      ({ table }) =>
+        this.db
+          .select({ head: max(table.cursor) })
+          .from(table)
+          .get()?.head ?? 0
+    );
+    return Math.max(0, ...heads);
   }
 
   /** Every value changed after `cursor`, in cursor order. */
   private changesAfter(cursor: number): Change[] {
-    const days = this.db
-      .select()
-      .from(memberDays)
-      .where(gt(memberDays.cursor, cursor))
-      .all();
-    const kept = this.db
-      .select()
-      .from(memberPatterns)
-      .where(gt(memberPatterns.cursor, cursor))
-      .all();
-    return [
-      ...days.map(memberDayChange),
-      ...kept.map(memberPatternChange),
-    ].toSorted((a, b) => (a.cursor < b.cursor ? -1 : 1));
+    return this.logs()
+      .flatMap(({ after }) => after(cursor))
+      .toSorted((a, b) => (a.cursor < b.cursor ? -1 : 1));
   }
 
   /**

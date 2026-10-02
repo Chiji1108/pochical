@@ -18,14 +18,22 @@ export const compareClocks = (a: Clock, b: Clock): number => {
   return a.device < b.device ? -1 : 1;
 };
 
+// The largest counter an Hlc carries (uint32).
+const MAX_COUNTER = 0xff_ff_ff_ff;
+
 /** The device the server stamps its own corrections with. */
 export const SERVER_DEVICE = "server";
 
 /**
  * A clock just past `seen`, for the server to overwrite a value a device
- * set: never before now, and always after what the device wrote.
+ * set (spec/sync-protocol.md, Outbox step 5): after what the device wrote,
+ * so it takes the correction, but before anything it does next, so its
+ * later edits still win.
  */
-export const clockAfter = (seen: Clock, now: number): Clock =>
-  now > seen.ms
-    ? { counter: 0, device: SERVER_DEVICE, ms: now }
-    : { counter: seen.counter + 1, device: SERVER_DEVICE, ms: seen.ms };
+export const clockAfter = (seen: Clock): Clock => {
+  // The counter is a uint32 on the wire: at its end, the next millisecond.
+  if (seen.counter >= MAX_COUNTER) {
+    return { counter: 0, device: SERVER_DEVICE, ms: seen.ms + 1 };
+  }
+  return { counter: seen.counter + 1, device: SERVER_DEVICE, ms: seen.ms };
+};

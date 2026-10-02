@@ -204,6 +204,55 @@ describe("syncing a user's own days", () => {
     });
   });
 
+  it("lets the device's next edit win over the correction", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    sendFrame(phone.socket, {
+      case: "dayEdits",
+      value: {
+        edits: [
+          edit("bad", "2026-10-10", DayField.START, "25:00", 1000),
+          edit("good", "2026-10-10", DayField.START, "08:00", 2000),
+        ],
+      },
+    });
+    await phone.frames.next();
+    const { kind } = await phone.frames.next();
+    expect(kind.case === "changes" ? kind.value.changes : []).toMatchObject([
+      { kind: { value: { hlc: { deviceId: "server", physicalMs: 1000n } } } },
+      { kind: { value: { hlc: { deviceId: "phone" }, value: "08:00" } } },
+    ]);
+  });
+
+  it("corrects an edit whose counter is at its end in the next millisecond", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    const last = edit("bad", "2026-10-10", DayField.START, "25:00", 1000);
+    last.value.hlc.counter = 0xff_ff_ff_ff;
+    sendFrame(phone.socket, { case: "dayEdits", value: { edits: [last] } });
+    await phone.frames.next();
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: {
+        value: {
+          changes: [
+            {
+              kind: {
+                value: {
+                  hlc: { counter: 0, deviceId: "server", physicalMs: 1001n },
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    // The stored correction still goes out to a new device.
+    const tablet = await device(token);
+    await expect(tablet.frames.next()).resolves.toMatchObject({
+      kind: { case: "changes" },
+    });
+  });
+
   it("acknowledges without keeping an edit for no real day", async () => {
     const token = await signInAnonymously();
     const phone = await device(token);

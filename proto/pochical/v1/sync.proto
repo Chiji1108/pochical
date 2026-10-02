@@ -11,6 +11,11 @@ message ClientFrame {
     DayEdits day_edits = 3;
     // The owner's pattern edits, from the same outbox; User DO socket only.
     PatternEdits pattern_edits = 4;
+    // The owner's repeating orders, from the same outbox; User DO socket
+    // only.
+    RepeatOrdersEdits repeat_orders_edits = 5;
+    // The owner's coworkers, from the same outbox; User DO socket only.
+    CoworkerEdits coworker_edits = 6;
   }
 }
 
@@ -23,8 +28,9 @@ message ServerFrame {
     // Changes to the DO's data in cursor order, after Welcome and as they
     // happen.
     Changes changes = 4;
-    // The edits of a DayEdits or PatternEdits the server has taken; the
-    // client deletes them from its outbox.
+    // The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
+    // CoworkerEdits the server has taken; the client deletes them from its
+    // outbox.
     Acked acked = 5;
     // The client's cursor is ahead of the server's: drop this DO's cache.
     // A Changes with everything the DO holds follows.
@@ -86,6 +92,9 @@ enum DayField {
   // The day's memo, private to its owner; dayNote characters at most
   // (design/src/limits.ts).
   DAY_FIELD_NOTE = 4;
+  // The day's people: coworker ids separated by spaces, in the order they
+  // were added. Private to their owner, like the memo.
+  DAY_FIELD_PEOPLE = 5;
 }
 
 // One field of one day, as a device set it or as the server holds it.
@@ -94,7 +103,8 @@ message DayValue {
   string date = 1;
   DayField field = 2;
   // Unset clears the field. A day with no pattern follows its repeating
-  // order, if any; a pattern of "" is a day with no shift
+  // order, if any; a pattern of "" (dayRules.noShift, design/src/days.ts)
+  // is a day with no shift
   // (spec/sync-protocol.md, Repeating orders).
   optional string value = 3;
   Hlc hlc = 4;
@@ -131,11 +141,17 @@ message Change {
     // User DO pushes them (spec/sync-protocol.md, Group projection).
     MemberDay member_day = 5;
     MemberPattern member_pattern = 6;
+    RepeatOrders repeat_orders = 7;
+    CoworkerValue coworker = 8;
+    CoworkerOrder coworker_order = 9;
+    // On a Group DO socket: a member's repeating orders, so the group works
+    // their days out as their own devices do.
+    MemberRepeatOrders member_repeat_orders = 10;
   }
 }
 
 // One field of a member's day, as the group sees it: pattern and times,
-// never the memo.
+// never the memo or the people.
 message MemberDay {
   string user_id = 1;
   DayValue day = 2;
@@ -194,6 +210,86 @@ message PatternEdit {
   oneof kind {
     PatternValue pattern = 2;
     PatternOrder order = 3;
+  }
+}
+
+// A repeating order of the owner's patterns (spec/shift-patterns.md,
+// Repeating orders).
+message RepeatOrder {
+  // The first day it applies, "YYYY-MM-DD".
+  string start = 1;
+  // A day that falls on the sequence's first shift, "YYYY-MM-DD"; unset,
+  // the start.
+  optional string anchor = 2;
+  // Pattern ids, one a day. Empty: repeating ends from the start, and days
+  // are entered by hand.
+  repeated string sequence = 3;
+  // 祝日は休みにする: the national holidays of holiday_country take
+  // holiday_shift in place of the sequence's shift.
+  bool holidays_off = 4;
+  // The day-off pattern holidays take, the person's first one when
+  // holidays_off was turned on; set whenever holidays_off is.
+  optional string holiday_shift = 5;
+  // Whose holidays, as a country code ("JP"): the device's region when the
+  // order was made.
+  string holiday_country = 6;
+}
+
+// The owner's repeating orders as one last-writer-wins value: a timeline,
+// starts in increasing order, each taking over from the one before.
+message RepeatOrders {
+  repeated RepeatOrder orders = 1;
+  Hlc hlc = 2;
+}
+
+message RepeatOrdersEdits {
+  repeated RepeatOrdersEdit edits = 1;
+}
+
+// Starting an order, or correcting the one in use (spec/sync-protocol.md,
+// Repeating orders).
+message RepeatOrdersEdit {
+  // Unique per edit, as a DayEdit's.
+  string op_id = 1;
+  RepeatOrders orders = 2;
+  // The new or corrected order's start: when the server takes the orders,
+  // the days from it give their own pattern and times back to the order,
+  // those older than the edit's clock. Unset clears nothing.
+  optional string clear_from = 3;
+}
+
+// A member's repeating orders, as the group sees them.
+message MemberRepeatOrders {
+  string user_id = 1;
+  RepeatOrders orders = 2;
+}
+
+// One of the owner's coworkers, the people they note on a day: a name
+// only, not an app user. Each is one last-writer-wins value.
+message CoworkerValue {
+  string id = 1;
+  // personName characters at most (design/src/limits.ts). Unset: deleted.
+  optional string name = 2;
+  Hlc hlc = 3;
+}
+
+// The order the owner's coworkers are listed in: one last-writer-wins
+// value.
+message CoworkerOrder {
+  repeated string ids = 1;
+  Hlc hlc = 2;
+}
+
+message CoworkerEdits {
+  repeated CoworkerEdit edits = 1;
+}
+
+message CoworkerEdit {
+  // Unique per edit, as a DayEdit's.
+  string op_id = 1;
+  oneof kind {
+    CoworkerValue coworker = 2;
+    CoworkerOrder order = 3;
   }
 }
 

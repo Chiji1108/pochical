@@ -1,5 +1,4 @@
 import { create, toBinary } from "@bufbuild/protobuf";
-import { runDurableObjectAlarm } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
@@ -7,9 +6,17 @@ import { describe, expect, it } from "vitest";
 
 import { invites } from "../src/db/schema";
 import { ChangesSchema, DayField } from "../src/gen/pochical/v1/sync_pb";
-import type { ServerFrame } from "../src/gen/pochical/v1/sync_pb";
 import { call, signInAnonymously, userIdOf } from "./helpers";
-import { device, edit, sendFrame, settled, syncSocket } from "./sync-helpers";
+import {
+  changesIn,
+  device,
+  edit,
+  pair,
+  push,
+  sendFrame,
+  settled,
+  syncSocket,
+} from "./sync-helpers";
 
 // A member's day value as their User DO pushes it.
 const pushed = (value: string, ms: number) =>
@@ -46,35 +53,6 @@ const liveCode = async (groupId: string): Promise<string> => {
     .get();
   return row?.code ?? "";
 };
-
-// A group of two: its maker and someone who joined by its link.
-const pair = async () => {
-  const maker = await signInAnonymously();
-  const created = await call(
-    "GroupService/CreateGroup",
-    { displayName: "さくら", emoji: "🍉", name: "いとこ会" },
-    maker
-  );
-  const { groupId, inviteCode } = (await created.json()) as {
-    groupId: string;
-    inviteCode: string;
-  };
-  const guest = await signInAnonymously();
-  await call(
-    "GroupService/JoinGroup",
-    { displayName: "ゆうき", inviteCode },
-    guest
-  );
-  return { groupId, guest, maker, makerId: await userIdOf(maker) };
-};
-
-// Runs the user's push now, as their alarm would.
-const push = async (userId: string): Promise<void> => {
-  await runDurableObjectAlarm(env.USERS.getByName(userId));
-};
-
-const changesIn = (frame: ServerFrame) =>
-  frame.kind.case === "changes" ? frame.kind.value.changes : [];
 
 describe("a member's shifts in their groups", () => {
   it("reaches the group with the pattern and times, never the memo", async () => {

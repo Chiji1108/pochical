@@ -2415,6 +2415,9 @@
       }
     ]
   },
+  "days": {
+    "noShift": ""
+  },
   "derivation": {
     "inkShares": {
       "home-indicator": 1,
@@ -2839,6 +2842,15 @@
     "coworkersMax": 100,
     "groupMaxMembers": 100,
     "sharedDaysMax": 31,
+    "sync": {
+      "changesPerFrame": 500,
+      "editsPerFrame": 500,
+      "idLength": 64,
+      "orders": 200,
+      "patterns": 200,
+      "peopleADay": 50,
+      "sequence": 366
+    },
     "text": {
       "chatMessage": 1000,
       "dayNote": 100,

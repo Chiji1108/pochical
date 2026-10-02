@@ -15,11 +15,13 @@ import {
   untintedTokens,
 } from "../src/colors";
 import type { ColorScheme } from "../src/colors";
+import { dayRules } from "../src/days";
 import { inviteRules } from "../src/invite";
 import {
   COWORKERS_MAX,
   GROUP_MAX_MEMBERS,
   SHARED_DAYS_MAX,
+  syncLimits,
   textFields,
   textLimits,
 } from "../src/limits";
@@ -132,6 +134,7 @@ function json() {
         ),
       })),
     },
+    days: dayRules,
     derivation: {
       inkShares,
       lightFill: LIGHT_FILL,
@@ -153,6 +156,7 @@ function json() {
       coworkersMax: COWORKERS_MAX,
       groupMaxMembers: GROUP_MAX_MEMBERS,
       sharedDaysMax: SHARED_DAYS_MAX,
+      sync: syncLimits,
       text: textLimits,
       textFields,
     },
@@ -491,17 +495,24 @@ const TEXT_LIMITS_DOC =
   "How long free text may be, in characters as a reader sees them, by what it is (spec/text-limits.md).";
 const TEXT_FIELDS_DOC =
   "How a field shows its count and how a shift's name shortens in a day (spec/text-limits.md).";
+const SYNC_LIMITS_DOC =
+  "How much of what a user owns one synced value may hold (spec/sync-protocol.md).";
 const SHARED_DAYS_DOC = "The most days one chat message shares.";
 const GROUP_MEMBERS_DOC = "The most people in one group.";
 const COWORKERS_DOC = "The most people one person keeps in 一緒に働く人.";
 
-// Chat.swift, Invite.swift, Review.swift and Widgets.swift, and their
-// Kotlin twins.
+// Chat.swift, Days.swift, Invite.swift, Review.swift and Widgets.swift,
+// and their Kotlin twins.
 const shared: [string, string, Values][] = [
   [
     "Chat",
     "The chat's shared numbers (spec/chat.md); times in milliseconds.",
     chatRules,
+  ],
+  [
+    "Days",
+    "What a day's values mean (design/src/days.ts): noShift is a day cleared on purpose, unlike no pattern, which follows the repeating order.",
+    dayRules,
   ],
   ["Invite", "What an invitation code is made of.", inviteRules],
   [
@@ -525,6 +536,7 @@ const outputs = {
   [`${KOTLIN_DIR}/Limits.kt`]: kotlinFile(
     kotlinObject("TextLimits", TEXT_LIMITS_DOC, textLimits),
     kotlinObject("TextFields", TEXT_FIELDS_DOC, textFields),
+    kotlinObject("SyncLimits", SYNC_LIMITS_DOC, syncLimits),
     [
       `/** ${SHARED_DAYS_DOC} */`,
       `const val SHARED_DAYS_MAX = ${SHARED_DAYS_MAX}`,
@@ -540,6 +552,7 @@ const outputs = {
   [`${SWIFT_DIR}/Limits.swift`]: swiftFile(
     swiftEnum("TextLimits", TEXT_LIMITS_DOC, textLimits),
     swiftEnum("TextFields", TEXT_FIELDS_DOC, textFields),
+    swiftEnum("SyncLimits", SYNC_LIMITS_DOC, syncLimits),
     [`/// ${SHARED_DAYS_DOC}`, `public let sharedDaysMax = ${SHARED_DAYS_MAX}`],
     [
       `/// ${GROUP_MEMBERS_DOC}`,

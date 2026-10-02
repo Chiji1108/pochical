@@ -1,5 +1,7 @@
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import type { MessageInitShape } from "@bufbuild/protobuf";
+import { runDurableObjectAlarm } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 
 import {
   ClientFrameSchema,
@@ -7,7 +9,7 @@ import {
 } from "../src/gen/pochical/v1/sync_pb";
 import type { DayField, ServerFrame } from "../src/gen/pochical/v1/sync_pb";
 import { CURRENT_PROTOCOL_VERSION } from "../src/protocol";
-import { openSocket } from "./helpers";
+import { call, openSocket, signInAnonymously, userIdOf } from "./helpers";
 
 // Sync sockets in tests: their frames as they arrive, and the edits sent
 // on them.
@@ -93,3 +95,32 @@ export const settled = async (
 // The user's own socket past Hello, with its frames.
 export const device = async (token: string, cursor = 0n) =>
   await syncSocket("/v1/me/socket", token, cursor);
+
+// A group of two: its maker and someone who joined by its link.
+export const pair = async () => {
+  const maker = await signInAnonymously();
+  const created = await call(
+    "GroupService/CreateGroup",
+    { displayName: "さくら", emoji: "🍉", name: "いとこ会" },
+    maker
+  );
+  const { groupId, inviteCode } = (await created.json()) as {
+    groupId: string;
+    inviteCode: string;
+  };
+  const guest = await signInAnonymously();
+  await call(
+    "GroupService/JoinGroup",
+    { displayName: "ゆうき", inviteCode },
+    guest
+  );
+  return { groupId, guest, maker, makerId: await userIdOf(maker) };
+};
+
+// Runs the user's push now, as their alarm would.
+export const push = async (userId: string): Promise<void> => {
+  await runDurableObjectAlarm(env.USERS.getByName(userId));
+};
+
+export const changesIn = (frame: ServerFrame) =>
+  frame.kind.case === "changes" ? frame.kind.value.changes : [];

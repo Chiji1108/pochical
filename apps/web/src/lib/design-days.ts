@@ -1,3 +1,5 @@
+import { dayRules } from "@pochical/design/days";
+
 import { holidayName } from "../components/design-week";
 import { isDayOff } from "./design-patterns";
 import type {
@@ -24,8 +26,8 @@ export function membersOrNone(members: string[]) {
 }
 
 // What the person set on a day themselves, the only days kept
-// (spec/shift-patterns.md, Repeating orders): a shift of their own, or ""
-// for a day cleared on purpose. A day without one follows its repeating
+// (spec/shift-patterns.md, Repeating orders): a shift of their own, or
+// dayRules.noShift for a day cleared on purpose. A day without one follows its repeating
 // order.
 export type OwnDay = Omit<DayEntry, "shift"> & { shift?: Shift };
 export type OwnDays = Record<string, OwnDay | undefined>;
@@ -277,7 +279,7 @@ export function shownDay(
   planned: Shift | undefined
 ): DayEntry | undefined {
   const shift = own?.shift ?? planned;
-  if (!shift) {
+  if (shift === undefined || shift === dayRules.noShift) {
     return;
   }
   return { ...own, shift };
@@ -298,13 +300,13 @@ export function shownDays(
 }
 
 // What to keep of a day so it shows `entry`: only what differs from its
-// order. Clearing a day the order fills keeps "" there.
+// order. Clearing a day the order fills keeps dayRules.noShift there.
 function ownDay(
   entry: DayEntry | undefined,
   planned: Shift | undefined
 ): OwnDay | undefined {
   if (!entry) {
-    return planned ? { shift: "" } : undefined;
+    return planned ? { shift: dayRules.noShift } : undefined;
   }
   const { shift, ...details } = entry;
   const kept: OwnDay = shift === planned ? details : entry;

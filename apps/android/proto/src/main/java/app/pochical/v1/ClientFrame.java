@@ -28,6 +28,8 @@ public  final class ClientFrame extends
     PING(2),
     DAY_EDITS(3),
     PATTERN_EDITS(4),
+    REPEAT_ORDERS_EDITS(5),
+    COWORKER_EDITS(6),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -47,6 +49,8 @@ public  final class ClientFrame extends
         case 2: return PING;
         case 3: return DAY_EDITS;
         case 4: return PATTERN_EDITS;
+        case 5: return REPEAT_ORDERS_EDITS;
+        case 6: return COWORKER_EDITS;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -303,6 +307,151 @@ public  final class ClientFrame extends
    */
   private void clearPatternEdits() {
     if (kindCase_ == 4) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int REPEAT_ORDERS_EDITS_FIELD_NUMBER = 5;
+  /**
+   * <pre>
+   * The owner's repeating orders, from the same outbox; User DO socket
+   * only.
+   * </pre>
+   *
+   * <code>.pochical.v1.RepeatOrdersEdits repeat_orders_edits = 5 [json_name = "repeatOrdersEdits"];</code>
+   */
+  @java.lang.Override
+  public boolean hasRepeatOrdersEdits() {
+    return kindCase_ == 5;
+  }
+  /**
+   * <pre>
+   * The owner's repeating orders, from the same outbox; User DO socket
+   * only.
+   * </pre>
+   *
+   * <code>.pochical.v1.RepeatOrdersEdits repeat_orders_edits = 5 [json_name = "repeatOrdersEdits"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.RepeatOrdersEdits getRepeatOrdersEdits() {
+    if (kindCase_ == 5) {
+       return (app.pochical.v1.RepeatOrdersEdits) kind_;
+    }
+    return app.pochical.v1.RepeatOrdersEdits.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * The owner's repeating orders, from the same outbox; User DO socket
+   * only.
+   * </pre>
+   *
+   * <code>.pochical.v1.RepeatOrdersEdits repeat_orders_edits = 5 [json_name = "repeatOrdersEdits"];</code>
+   */
+  private void setRepeatOrdersEdits(app.pochical.v1.RepeatOrdersEdits value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 5;
+  }
+  /**
+   * <pre>
+   * The owner's repeating orders, from the same outbox; User DO socket
+   * only.
+   * </pre>
+   *
+   * <code>.pochical.v1.RepeatOrdersEdits repeat_orders_edits = 5 [json_name = "repeatOrdersEdits"];</code>
+   */
+  private void mergeRepeatOrdersEdits(app.pochical.v1.RepeatOrdersEdits value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 5 &&
+        kind_ != app.pochical.v1.RepeatOrdersEdits.getDefaultInstance()) {
+      kind_ = app.pochical.v1.RepeatOrdersEdits.newBuilder((app.pochical.v1.RepeatOrdersEdits) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 5;
+  }
+  /**
+   * <pre>
+   * The owner's repeating orders, from the same outbox; User DO socket
+   * only.
+   * </pre>
+   *
+   * <code>.pochical.v1.RepeatOrdersEdits repeat_orders_edits = 5 [json_name = "repeatOrdersEdits"];</code>
+   */
+  private void clearRepeatOrdersEdits() {
+    if (kindCase_ == 5) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int COWORKER_EDITS_FIELD_NUMBER = 6;
+  /**
+   * <pre>
+   * The owner's coworkers, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.CoworkerEdits coworker_edits = 6 [json_name = "coworkerEdits"];</code>
+   */
+  @java.lang.Override
+  public boolean hasCoworkerEdits() {
+    return kindCase_ == 6;
+  }
+  /**
+   * <pre>
+   * The owner's coworkers, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.CoworkerEdits coworker_edits = 6 [json_name = "coworkerEdits"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.CoworkerEdits getCoworkerEdits() {
+    if (kindCase_ == 6) {
+       return (app.pochical.v1.CoworkerEdits) kind_;
+    }
+    return app.pochical.v1.CoworkerEdits.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * The owner's coworkers, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.CoworkerEdits coworker_edits = 6 [json_name = "coworkerEdits"];</code>
+   */
+  private void setCoworkerEdits(app.pochical.v1.CoworkerEdits value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 6;
+  }
+  /**
+   * <pre>
+   * The owner's coworkers, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.CoworkerEdits coworker_edits = 6 [json_name = "coworkerEdits"];</code>
+   */
+  private void mergeCoworkerEdits(app.pochical.v1.CoworkerEdits value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 6 &&
+        kind_ != app.pochical.v1.CoworkerEdits.getDefaultInstance()) {
+      kind_ = app.pochical.v1.CoworkerEdits.newBuilder((app.pochical.v1.CoworkerEdits) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 6;
+  }
+  /**
+   * <pre>
+   * The owner's coworkers, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.CoworkerEdits coworker_edits = 6 [json_name = "coworkerEdits"];</code>
+   */
+  private void clearCoworkerEdits() {
+    if (kindCase_ == 6) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -661,6 +810,156 @@ public  final class ClientFrame extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The owner's repeating orders, from the same outbox; User DO socket
+     * only.
+     * </pre>
+     *
+     * <code>.pochical.v1.RepeatOrdersEdits repeat_orders_edits = 5 [json_name = "repeatOrdersEdits"];</code>
+     */
+    @java.lang.Override
+    public boolean hasRepeatOrdersEdits() {
+      return instance.hasRepeatOrdersEdits();
+    }
+    /**
+     * <pre>
+     * The owner's repeating orders, from the same outbox; User DO socket
+     * only.
+     * </pre>
+     *
+     * <code>.pochical.v1.RepeatOrdersEdits repeat_orders_edits = 5 [json_name = "repeatOrdersEdits"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.RepeatOrdersEdits getRepeatOrdersEdits() {
+      return instance.getRepeatOrdersEdits();
+    }
+    /**
+     * <pre>
+     * The owner's repeating orders, from the same outbox; User DO socket
+     * only.
+     * </pre>
+     *
+     * <code>.pochical.v1.RepeatOrdersEdits repeat_orders_edits = 5 [json_name = "repeatOrdersEdits"];</code>
+     */
+    public Builder setRepeatOrdersEdits(app.pochical.v1.RepeatOrdersEdits value) {
+      copyOnWrite();
+      instance.setRepeatOrdersEdits(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The owner's repeating orders, from the same outbox; User DO socket
+     * only.
+     * </pre>
+     *
+     * <code>.pochical.v1.RepeatOrdersEdits repeat_orders_edits = 5 [json_name = "repeatOrdersEdits"];</code>
+     */
+    public Builder setRepeatOrdersEdits(
+        app.pochical.v1.RepeatOrdersEdits.Builder builderForValue) {
+      copyOnWrite();
+      instance.setRepeatOrdersEdits(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The owner's repeating orders, from the same outbox; User DO socket
+     * only.
+     * </pre>
+     *
+     * <code>.pochical.v1.RepeatOrdersEdits repeat_orders_edits = 5 [json_name = "repeatOrdersEdits"];</code>
+     */
+    public Builder mergeRepeatOrdersEdits(app.pochical.v1.RepeatOrdersEdits value) {
+      copyOnWrite();
+      instance.mergeRepeatOrdersEdits(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The owner's repeating orders, from the same outbox; User DO socket
+     * only.
+     * </pre>
+     *
+     * <code>.pochical.v1.RepeatOrdersEdits repeat_orders_edits = 5 [json_name = "repeatOrdersEdits"];</code>
+     */
+    public Builder clearRepeatOrdersEdits() {
+      copyOnWrite();
+      instance.clearRepeatOrdersEdits();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * The owner's coworkers, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.CoworkerEdits coworker_edits = 6 [json_name = "coworkerEdits"];</code>
+     */
+    @java.lang.Override
+    public boolean hasCoworkerEdits() {
+      return instance.hasCoworkerEdits();
+    }
+    /**
+     * <pre>
+     * The owner's coworkers, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.CoworkerEdits coworker_edits = 6 [json_name = "coworkerEdits"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.CoworkerEdits getCoworkerEdits() {
+      return instance.getCoworkerEdits();
+    }
+    /**
+     * <pre>
+     * The owner's coworkers, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.CoworkerEdits coworker_edits = 6 [json_name = "coworkerEdits"];</code>
+     */
+    public Builder setCoworkerEdits(app.pochical.v1.CoworkerEdits value) {
+      copyOnWrite();
+      instance.setCoworkerEdits(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The owner's coworkers, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.CoworkerEdits coworker_edits = 6 [json_name = "coworkerEdits"];</code>
+     */
+    public Builder setCoworkerEdits(
+        app.pochical.v1.CoworkerEdits.Builder builderForValue) {
+      copyOnWrite();
+      instance.setCoworkerEdits(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The owner's coworkers, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.CoworkerEdits coworker_edits = 6 [json_name = "coworkerEdits"];</code>
+     */
+    public Builder mergeCoworkerEdits(app.pochical.v1.CoworkerEdits value) {
+      copyOnWrite();
+      instance.mergeCoworkerEdits(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The owner's coworkers, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.CoworkerEdits coworker_edits = 6 [json_name = "coworkerEdits"];</code>
+     */
+    public Builder clearCoworkerEdits() {
+      copyOnWrite();
+      instance.clearCoworkerEdits();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ClientFrame)
   }
   @java.lang.Override
@@ -683,10 +982,12 @@ public  final class ClientFrame extends
             app.pochical.v1.Ping.class,
             app.pochical.v1.DayEdits.class,
             app.pochical.v1.PatternEdits.class,
+            app.pochical.v1.RepeatOrdersEdits.class,
+            app.pochical.v1.CoworkerEdits.class,
           };
           java.lang.String info =
-              "\u0000\u0004\u0001\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001<\u0000\u0002<" +
-              "\u0000\u0003<\u0000\u0004<\u0000";
+              "\u0000\u0006\u0001\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

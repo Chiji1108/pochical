@@ -48,6 +48,15 @@ public enum DayField
    * <code>DAY_FIELD_NOTE = 4;</code>
    */
   DAY_FIELD_NOTE(4),
+  /**
+   * <pre>
+   * The day's people: coworker ids separated by spaces, in the order they
+   * were added. Private to their owner, like the memo.
+   * </pre>
+   *
+   * <code>DAY_FIELD_PEOPLE = 5;</code>
+   */
+  DAY_FIELD_PEOPLE(5),
   UNRECOGNIZED(-1),
   ;
 
@@ -84,6 +93,15 @@ public enum DayField
    * <code>DAY_FIELD_NOTE = 4;</code>
    */
   public static final int DAY_FIELD_NOTE_VALUE = 4;
+  /**
+   * <pre>
+   * The day's people: coworker ids separated by spaces, in the order they
+   * were added. Private to their owner, like the memo.
+   * </pre>
+   *
+   * <code>DAY_FIELD_PEOPLE = 5;</code>
+   */
+  public static final int DAY_FIELD_PEOPLE_VALUE = 5;
 
 
   @java.lang.Override
@@ -111,6 +129,7 @@ public enum DayField
       case 2: return DAY_FIELD_START;
       case 3: return DAY_FIELD_END;
       case 4: return DAY_FIELD_NOTE;
+      case 5: return DAY_FIELD_PEOPLE;
       default: return null;
     }
   }

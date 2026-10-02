@@ -54,3 +54,26 @@ export const GROUP_MAX_MEMBERS = 100;
 // The most people one person keeps in 一緒に働く人. Room for a whole
 // ward or shop, so it only caps what one account stores and syncs.
 export const COWORKERS_MAX = 100;
+
+// How much of what a user owns one synced value may hold
+// (spec/sync-protocol.md). Far past what one person keeps, so they only
+// bound a value; an edit past them is corrected by the server.
+export const syncLimits = {
+  // Values in one Changes frame the server sends; a frame stays well
+  // under a WebSocket message's size.
+  changesPerFrame: 500,
+  // Edits in one frame a device sends (DayEdits, PatternEdits, …); an
+  // outbox sends more as several. Past it the server closes the socket.
+  editsPerFrame: 500,
+  // Characters in an id the apps make (patterns, coworkers, devices) and
+  // in an icon's name; ids hold no spaces, which separate a day's people.
+  idLength: 64,
+  // Repeating orders in one timeline: a change of rotation or job each.
+  orders: 200,
+  // Shift patterns one person keeps; ポチポチ入力 shows ten to a page.
+  patterns: 200,
+  // People noted on one day.
+  peopleADay: 50,
+  // Shifts in one repeating order: a rotation a year long.
+  sequence: 366,
+} as const;

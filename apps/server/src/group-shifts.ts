@@ -8,23 +8,35 @@ import {
   PatternSchema,
   PatternValueSchema,
 } from "./gen/pochical/v1/sync_pb";
-import type { Change, DayValue, PatternValue } from "./gen/pochical/v1/sync_pb";
-import { memberDays, memberPatterns } from "./group-do-schema";
+import type {
+  Change,
+  DayValue,
+  PatternValue,
+  RepeatOrders,
+} from "./gen/pochical/v1/sync_pb";
+import {
+  memberDays,
+  memberPatterns,
+  memberRepeatOrders,
+} from "./group-do-schema";
 import { compareClocks } from "./hlc";
-import { clockColumns, clockOfHlc, clockOfRow } from "./user-do-values";
+import {
+  clockColumns,
+  clockOfHlc,
+  clockOfRow,
+  encodeOrders,
+  hlcOf,
+  ordersOfRow,
+} from "./user-do-values";
 
-// A Group DO's copy of its members' shared days and patterns
+// A Group DO's copy of its members' shared days, patterns and repeating
+// orders
 // (spec/sync-protocol.md, Group projection): each value last-writer-wins
 // by its HLC, so a push that arrives twice, or late, changes nothing.
 
 type DayRow = typeof memberDays.$inferSelect;
 type PatternRow = typeof memberPatterns.$inferSelect;
-
-const hlcOf = (row: DayRow | PatternRow) => ({
-  counter: row.hlcCounter,
-  deviceId: row.hlcDevice,
-  physicalMs: BigInt(row.hlcMs),
-});
+type OrdersRow = typeof memberRepeatOrders.$inferSelect;
 
 export const memberDayChange = (row: DayRow): Change =>
   create(ChangeSchema, {
@@ -141,4 +153,42 @@ export const takeMemberPattern = (
     })
     .run();
   return memberPatternChange(row);
+};
+
+export const memberRepeatOrdersChange = (row: OrdersRow): Change =>
+  create(ChangeSchema, {
+    cursor: BigInt(row.cursor),
+    kind: {
+      case: "memberRepeatOrders",
+      value: { orders: ordersOfRow(row), userId: row.userId },
+    },
+  });
+
+/** A member's repeating orders, written at `cursor` when they are newer. */
+export const takeMemberRepeatOrders = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  orders: RepeatOrders,
+  cursor: number
+): Change | undefined => {
+  const stored = db
+    .select()
+    .from(memberRepeatOrders)
+    .where(eq(memberRepeatOrders.userId, userId))
+    .get();
+  const clock = clockOfHlc(orders.hlc);
+  if (stored && compareClocks(clock, clockOfRow(stored)) <= 0) {
+    return undefined;
+  }
+  const row: OrdersRow = {
+    ...clockColumns(clock),
+    cursor,
+    data: encodeOrders(orders.orders),
+    userId,
+  };
+  db.insert(memberRepeatOrders)
+    .values(row)
+    .onConflictDoUpdate({ set: row, target: memberRepeatOrders.userId })
+    .run();
+  return memberRepeatOrdersChange(row);
 };

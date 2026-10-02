@@ -1,5 +1,6 @@
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import type { MessageInitShape } from "@bufbuild/protobuf";
+import { syncLimits } from "@pochical/design/limits";
 
 import {
   ClientFrameSchema,
@@ -9,8 +10,10 @@ import {
 import type {
   Change,
   ClientFrame,
+  CoworkerEdits,
   DayEdits,
   PatternEdits,
+  RepeatOrdersEdits,
 } from "./gen/pochical/v1/sync_pb";
 import { MIN_PROTOCOL_VERSION } from "./protocol";
 
@@ -40,9 +43,11 @@ export type ServerFrameKind = MessageInitShape<
 export type SyncHandlers = {
   // Hello was accepted: send Welcome and every change after `cursor`.
   welcome: (ws: WebSocket, cursor: bigint) => void;
-  // The owner's day and pattern edits; only a User DO takes them.
+  // The owner's edits of what they own; only a User DO takes them.
   dayEdits?: (ws: WebSocket, edits: DayEdits) => void;
   patternEdits?: (ws: WebSocket, edits: PatternEdits) => void;
+  repeatOrdersEdits?: (ws: WebSocket, edits: RepeatOrdersEdits) => void;
+  coworkerEdits?: (ws: WebSocket, edits: CoworkerEdits) => void;
 };
 
 const OWN_SOCKET_ONLY = "Edits go to the user's own socket";
@@ -114,15 +119,12 @@ const handleHello = (
   handlers.welcome(ws, cursor);
 };
 
-// A frame of changes stays well under a WebSocket message's size.
-const CHANGES_PER_FRAME = 500;
-
-/** Changes in cursor order, as frames of up to CHANGES_PER_FRAME. */
+/** Changes in cursor order, as frames of up to syncLimits.changesPerFrame. */
 export const sendChanges = (ws: WebSocket, changes: Change[]): void => {
-  for (let at = 0; at < changes.length; at += CHANGES_PER_FRAME) {
+  for (let at = 0; at < changes.length; at += syncLimits.changesPerFrame) {
     send(ws, {
       case: "changes",
-      value: { changes: changes.slice(at, at + CHANGES_PER_FRAME) },
+      value: { changes: changes.slice(at, at + syncLimits.changesPerFrame) },
     });
   }
 };
@@ -196,6 +198,22 @@ export const handleSyncMessage = (
     case "patternEdits": {
       if (handlers.patternEdits) {
         handlers.patternEdits(ws, kind.value);
+      } else {
+        rejectAndClose(ws, ServerError_Code.BAD_FRAME, OWN_SOCKET_ONLY);
+      }
+      return;
+    }
+    case "repeatOrdersEdits": {
+      if (handlers.repeatOrdersEdits) {
+        handlers.repeatOrdersEdits(ws, kind.value);
+      } else {
+        rejectAndClose(ws, ServerError_Code.BAD_FRAME, OWN_SOCKET_ONLY);
+      }
+      return;
+    }
+    case "coworkerEdits": {
+      if (handlers.coworkerEdits) {
+        handlers.coworkerEdits(ws, kind.value);
       } else {
         rejectAndClose(ws, ServerError_Code.BAD_FRAME, OWN_SOCKET_ONLY);
       }
