@@ -26,6 +26,7 @@ import {
   ChevronRight,
   GripVertical,
   Plus,
+  X,
 } from "lucide-react";
 import {
   animate,
@@ -1120,37 +1121,103 @@ export const summaryRow = {
     width: "100%",
   }),
   unit: css({ marginLeft: "2px", textStyle: "footnote" }),
+  // With a way out of what it counts: the row opens as before, and an ×
+  // at its end, in the chevron's place, leaves.
+  split: css({
+    alignItems: "stretch",
+    bg: "fill.quaternary",
+    borderRadius: "2xl",
+    display: "flex",
+    flexShrink: 0,
+    width: "100%",
+  }),
+  open: css({
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    color: "text.secondary",
+    cursor: "pointer",
+    display: "flex",
+    flex: 1,
+    justifyContent: "space-between",
+    minWidth: 0,
+    padding: "12px 0 12px 16px",
+    textStyle: "footnote",
+  }),
+  clear: css({
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    color: "text.tertiary",
+    cursor: "pointer",
+    display: "flex",
+    justifyContent: "center",
+    paddingInline: "12px 16px",
+  }),
 };
 
 // The label and the number may be names that roll, as the calendar's
-// do with the month.
+// do with the month. With `onClear`, an × named `clearLabel` takes the
+// chevron's place.
 export function SummaryRow({
   label,
   days,
   onOpen,
+  onClear,
+  clearLabel,
 }: {
   label: ReactNode;
   days: ReactNode;
   onOpen: () => void;
+  onClear?: () => void;
+  clearLabel?: string;
 }) {
-  return (
-    <button
-      aria-haspopup="dialog"
-      className={summaryRow.row}
-      onClick={onOpen}
-      type="button"
-    >
-      <span>{label}</span>
-      <strong className={summaryRow.count}>
-        {days}
-        <span className={summaryRow.unit}>日</span>
+  const count = (
+    <strong className={summaryRow.count}>
+      {days}
+      <span className={summaryRow.unit}>日</span>
+      {onClear === undefined && (
         <ChevronRight
           aria-hidden="true"
           className={summaryRow.chevron}
           size={17}
         />
-      </strong>
-    </button>
+      )}
+    </strong>
+  );
+  if (onClear === undefined) {
+    return (
+      <button
+        aria-haspopup="dialog"
+        className={summaryRow.row}
+        onClick={onOpen}
+        type="button"
+      >
+        <span>{label}</span>
+        {count}
+      </button>
+    );
+  }
+  return (
+    <div className={summaryRow.split}>
+      <button
+        aria-haspopup="dialog"
+        className={summaryRow.open}
+        onClick={onOpen}
+        type="button"
+      >
+        <span>{label}</span>
+        {count}
+      </button>
+      <button
+        aria-label={clearLabel}
+        className={summaryRow.clear}
+        onClick={onClear}
+        type="button"
+      >
+        <X aria-hidden="true" size={18} />
+      </button>
+    </div>
   );
 }
 
@@ -1483,6 +1550,7 @@ export function ListRow({
   valueClassName?: string;
   "aria-label"?: string;
   "aria-pressed"?: boolean;
+  "aria-expanded"?: boolean;
 }) {
   const pressable = Boolean(onClick);
   const isLabel = !pressable && (control !== undefined || Boolean(htmlFor));
@@ -2347,8 +2415,12 @@ const menu = {
     border: "1px solid token(colors.border.default)",
     borderRadius: "2xl",
     boxShadow: "lg",
+    // A long list, as many shift patterns, scrolls inside the room there
+    // is rather than running off the screen.
+    maxHeight: "var(--available-height)",
     minWidth: "200px",
     outline: "none",
+    overflowY: "auto",
     padding: "8px",
     zIndex: 30,
   }),
@@ -2413,7 +2485,9 @@ export const menuStyle = {
 // A pull-down for a page's secondary actions, as SwiftUI's Menu and
 // Compose's DropdownMenu: its button names what is chosen now, and the
 // choices and actions open under it. Ark UI's Menu moves through them by
-// arrow keys and closes on a pick, outside or by Escape.
+// arrow keys and closes on a pick, outside or by Escape. Placed as fixed,
+// it opens over what is around it, as a menu does, rather than being cut
+// by a list's round corners or a scrolling page it sits in.
 export function PullDownMenu({
   label,
   children,
@@ -2423,13 +2497,25 @@ export function PullDownMenu({
   children: ReactNode;
 }) {
   return (
-    <Menu.Root positioning={{ gutter: 6, placement: "bottom-end" }}>
+    <Menu.Root
+      positioning={{ gutter: 6, placement: "bottom-end", strategy: "fixed" }}
+    >
       <Menu.Trigger className={menu.trigger}>
         {label}
         <ChevronDown aria-hidden="true" size={15} />
       </Menu.Trigger>
       <Menu.Positioner>
-        <Menu.Content className={menu.content}>{children}</Menu.Content>
+        <Menu.Content
+          className={menu.content}
+          // As a row's control the menu sits inside the row's label, and
+          // a pick's click would go on to the label, which presses the
+          // button again and opens the menu the pick just closed.
+          onClick={(event) => {
+            event.preventDefault();
+          }}
+        >
+          {children}
+        </Menu.Content>
       </Menu.Positioner>
     </Menu.Root>
   );
@@ -2465,15 +2551,17 @@ export function IconMenu({
 }
 
 // One choice among several inside a menu, marked with a check, as a
-// Picker inside a SwiftUI Menu.
+// Picker inside a SwiftUI Menu. An option's icon, as a shift's mark,
+// stands after the check. With no option picked, as a blank day's shift,
+// `value` is "".
 export function MenuPicker<Value extends string>({
   value,
   onValueChange,
   options,
 }: {
-  value: Value;
+  value: Value | "";
   onValueChange: (value: Value) => void;
-  options: readonly { value: Value; label: string }[];
+  options: readonly { value: Value; label: string; icon?: ReactNode }[];
 }) {
   return (
     <Menu.RadioItemGroup
@@ -2497,6 +2585,7 @@ export function MenuPicker<Value extends string>({
             size={18}
             visibility={option.value === value ? "visible" : "hidden"}
           />
+          {option.icon && <span className={menu.icon}>{option.icon}</span>}
           <Menu.ItemText>{option.label}</Menu.ItemText>
         </Menu.RadioItem>
       ))}

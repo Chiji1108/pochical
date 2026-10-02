@@ -108,10 +108,20 @@ export const states: State[] = [
     steps: tapOn(/^9月8日/u),
   },
   {
+    // The day's shift row's pull-down, opened.
+    name: "calendar/day-shift-menu",
+    path: demo("scheduleSample=filled"),
+    steps: async (page) => {
+      await tap(page, /^9月8日/u);
+      await tap(page, "日勤");
+    },
+  },
+  {
     name: "calendar/day-adding-member",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
       await tap(page, /^9月8日/u);
+      await tap(page, /^一緒に\s*働く\s*人/u);
       await tap(page, "追加");
     },
   },

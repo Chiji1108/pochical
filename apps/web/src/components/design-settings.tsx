@@ -1,7 +1,7 @@
 import type { ColorScheme } from "@pochical/design/colors";
 import { presets } from "@pochical/design/themes";
 import type { Preset } from "@pochical/design/themes";
-import { ArrowRight, CloudCheck } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CloudCheck } from "lucide-react";
 import {
   motion,
   useMotionValue,
@@ -43,6 +43,7 @@ import {
 import type { Pattern, PatternBook, Shift } from "../lib/design-patterns";
 import { useLook, useSettings } from "../lib/design-settings-store";
 import { useUser } from "../lib/design-user-store";
+import { site } from "../lib/site";
 import { dayName } from "../lib/text-limits";
 import {
   ProviderButtons,
@@ -81,6 +82,7 @@ import {
   deviceColorsPreset,
 } from "./design-theme";
 import type { Appearance, PresetId } from "./design-theme";
+import { ToastContext } from "./design-toast";
 import {
   Button,
   ChipGroup,
@@ -93,6 +95,7 @@ import {
   LimitedInput,
   List,
   ListRow,
+  listRow,
   Note,
   PageDots,
   PageHeader,
@@ -511,7 +514,98 @@ function SettingsTop({
           }}
         />
       </ListSection>
+      <AboutSection />
     </>
+  );
+}
+
+// The version the prototype stands in for, and the phones it says it is
+// (the reference devices), in place of what the apps read from the system.
+const APP_VERSION = "1.0.0";
+const sampleDevices = {
+  android: "Pixel 9a・Android 16",
+  ios: "iPhone 16 Pro・iOS 26.0",
+} as const;
+
+// A new mail to support, with room to write at the top and, under a rule,
+// the app's version and the phone, said plainly as what they are for.
+function contactMail(device: string) {
+  const body = [
+    "",
+    "",
+    "",
+    "――――",
+    "アプリと端末の情報です。不具合を調べるのに使います（消しても大丈夫です）。",
+    `${site.name} ${APP_VERSION}`,
+    device,
+  ].join("\n");
+  const subject = `${site.name}のお問い合わせ`;
+  return `mailto:${site.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+// The apps open the site's pages in the system's browser sheet
+// (SFSafariViewController, Custom Tabs) and the mail in its compose
+// sheet; the prototype opens a tab.
+function openOutside(url: string) {
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+// Pochical itself, at the foot of the settings. Rows that leave the app
+// end in ↗ instead of the arrow of rows that go on inside it. The store's
+// own review prompt comes by itself only now and then (spec/review.md);
+// the review row is there whenever someone wants to write one, and opens
+// the store's page for writing it (App Store's ?action=write-review,
+// Google Play's listing), which the prototype has none of before release.
+function AboutSection() {
+  const platform = useDevice((state) => state.platform);
+  const toast = useContext(ToastContext);
+  const store = platform === "ios" ? "App Store" : "Google Play";
+  const outside = (
+    <ArrowUpRight aria-hidden="true" className={listRow.arrow} size={17} />
+  );
+  return (
+    <div>
+      <ListSection title={`${site.name}について`}>
+        <ListRow
+          arrow={outside}
+          label="ヘルプ"
+          onClick={() => {
+            openOutside("/support");
+          }}
+        />
+        <ListRow
+          arrow={outside}
+          label="お問い合わせ"
+          onClick={() => {
+            openOutside(contactMail(sampleDevices[platform]));
+          }}
+        />
+        <ListRow
+          arrow={outside}
+          label={`${store}でレビューを書く`}
+          onClick={() => {
+            toast("公開後はレビューを書く画面が開きます", "problem");
+          }}
+        />
+        <ListRow
+          arrow={outside}
+          label="利用規約"
+          onClick={() => {
+            openOutside("/terms");
+          }}
+        />
+        <ListRow
+          arrow={outside}
+          label="プライバシーポリシー"
+          onClick={() => {
+            openOutside("/privacy");
+          }}
+        />
+      </ListSection>
+      <p className={settingsParts.version}>
+        {site.name} {APP_VERSION}
+      </p>
+    </div>
   );
 }
 
@@ -630,6 +724,13 @@ const settingsParts = {
     color: "text.tertiary",
     lineHeight: 1.5,
     margin: "8px 16px 0",
+    textStyle: "footnote",
+  }),
+  // The app's version under the last list, as apps end their settings.
+  version: css({
+    color: "text.tertiary",
+    margin: "16px 0 0",
+    textAlign: "center",
     textStyle: "footnote",
   }),
   card: css({ bg: "fill.quaternary", borderRadius: "2xl", padding: "16px" }),
