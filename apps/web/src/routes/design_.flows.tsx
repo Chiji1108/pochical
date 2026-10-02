@@ -9,12 +9,8 @@ import {
 } from "../components/design-frames";
 import { GapSheetPreview, gapDaysIn } from "../components/design-gap-sheet";
 import type { GapSheetProps } from "../components/design-gap-sheet";
-import {
-  chatKey,
-  groupChat,
-  sampleChats,
-  sampleOthers,
-} from "../components/design-group-data";
+import { chatKey, groupChat } from "../components/design-group-data";
+import { sampleChats, sampleOthers } from "../components/design-group-samples";
 import { LockScreen } from "../components/design-home-screen";
 import { DesignOnboarding } from "../components/design-onboarding";
 import type { OnboardingScreen } from "../components/design-onboarding";

@@ -12,7 +12,6 @@ import {
   groupUnread,
   isMuted,
   meFrom,
-  sampleOthers,
   withMuted,
   withNotice,
 } from "./design-group-data";
@@ -28,6 +27,7 @@ import {
 } from "./design-group-join";
 import type { ScanResult } from "./design-group-join";
 import { hub } from "./design-group-parts";
+import { sampleOthers } from "./design-group-samples";
 import {
   GroupSettingsPage,
   NewGroupPage,

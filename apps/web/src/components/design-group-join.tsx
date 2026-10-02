@@ -11,7 +11,7 @@ import { useContext, useState } from "react";
 import { css, cx } from "styled-system/css";
 
 import { useUser } from "../lib/design-user-store";
-import { cousins, partner, withNotice } from "./design-group-data";
+import { withNotice } from "./design-group-data";
 import type {
   Group,
   GroupMark,
@@ -20,6 +20,7 @@ import type {
   Profile,
 } from "./design-group-data";
 import { GroupIcon, PhotoAvatar, hub, markFrame } from "./design-group-parts";
+import { cousins, partner } from "./design-group-samples";
 import {
   GroupProfilePage,
   GroupProfileRow,

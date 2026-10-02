@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { css, cx } from "styled-system/css";
 
 import { DesignApp } from "../components/design-app";
-import { sampleGroups } from "../components/design-group-data";
+import { sampleGroups } from "../components/design-group-samples";
 import { DesignProviders } from "../components/design-providers";
 import { appSplashScreens } from "../lib/app-splash-screens";
 import { initialDesignSchedule } from "../lib/design-days";

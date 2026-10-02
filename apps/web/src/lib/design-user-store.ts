@@ -2,16 +2,16 @@ import { createContext, useCallback, useContext, useMemo } from "react";
 import type { SetStateAction } from "react";
 import { createStore, useStore } from "zustand";
 
-import {
-  sampleChats,
-  sampleGroups,
-  samplePhoto,
-} from "../components/design-group-data";
 import type {
   Chat,
   GroupSummary,
   Profile,
 } from "../components/design-group-data";
+import {
+  sampleChats,
+  sampleGroups,
+  samplePhoto,
+} from "../components/design-group-samples";
 import {
   editedOwnDays,
   patternSets,

@@ -75,12 +75,7 @@ import { useUser } from "../lib/design-user-store";
 import { spring } from "../lib/motion";
 import { chatRow, chatStyle } from "./design-chat-style";
 import { EmojiPickerSheet } from "./design-emoji-picker";
-import {
-  everyoneOff,
-  patternOn,
-  previewOf,
-  reactionChoices,
-} from "./design-group-data";
+import { everyoneOff, patternOn, reactionChoices } from "./design-group-data";
 import type {
   Chat,
   Group,
@@ -102,6 +97,7 @@ import {
   smallWeekday,
   toneColor,
 } from "./design-group-parts";
+import { previewOf } from "./design-group-samples";
 import { profileIn } from "./design-group-settings";
 import { DaySheet } from "./design-group-shifts";
 import { shortMonthOf } from "./design-month-name";

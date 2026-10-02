@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode, ComponentType } from "react";
 import { css } from "styled-system/css";
 
-import { mother, partner, patternOn } from "../components/design-group-data";
+import { patternOn } from "../components/design-group-data";
+import { mother, partner } from "../components/design-group-samples";
 import {
   DesignIntro,
   DesignPage,
