@@ -26,7 +26,6 @@ import {
   ChevronRight,
   GripVertical,
   Plus,
-  X,
 } from "lucide-react";
 import {
   animate,
@@ -1121,103 +1120,37 @@ export const summaryRow = {
     width: "100%",
   }),
   unit: css({ marginLeft: "2px", textStyle: "footnote" }),
-  // With a way out of what it counts: the row opens as before, and an ×
-  // at its end, in the chevron's place, leaves.
-  split: css({
-    alignItems: "stretch",
-    bg: "fill.quaternary",
-    borderRadius: "2xl",
-    display: "flex",
-    flexShrink: 0,
-    width: "100%",
-  }),
-  open: css({
-    alignItems: "center",
-    bg: "transparent",
-    border: 0,
-    color: "text.secondary",
-    cursor: "pointer",
-    display: "flex",
-    flex: 1,
-    justifyContent: "space-between",
-    minWidth: 0,
-    padding: "12px 0 12px 16px",
-    textStyle: "footnote",
-  }),
-  clear: css({
-    alignItems: "center",
-    bg: "transparent",
-    border: 0,
-    color: "text.tertiary",
-    cursor: "pointer",
-    display: "flex",
-    justifyContent: "center",
-    paddingInline: "12px 16px",
-  }),
 };
 
 // The label and the number may be names that roll, as the calendar's
-// do with the month. With `onClear`, an × named `clearLabel` takes the
-// chevron's place.
+// do with the month.
 export function SummaryRow({
   label,
   days,
   onOpen,
-  onClear,
-  clearLabel,
 }: {
   label: ReactNode;
   days: ReactNode;
   onOpen: () => void;
-  onClear?: () => void;
-  clearLabel?: string;
 }) {
-  const count = (
-    <strong className={summaryRow.count}>
-      {days}
-      <span className={summaryRow.unit}>日</span>
-      {onClear === undefined && (
+  return (
+    <button
+      aria-haspopup="dialog"
+      className={summaryRow.row}
+      onClick={onOpen}
+      type="button"
+    >
+      <span>{label}</span>
+      <strong className={summaryRow.count}>
+        {days}
+        <span className={summaryRow.unit}>日</span>
         <ChevronRight
           aria-hidden="true"
           className={summaryRow.chevron}
           size={17}
         />
-      )}
-    </strong>
-  );
-  if (onClear === undefined) {
-    return (
-      <button
-        aria-haspopup="dialog"
-        className={summaryRow.row}
-        onClick={onOpen}
-        type="button"
-      >
-        <span>{label}</span>
-        {count}
-      </button>
-    );
-  }
-  return (
-    <div className={summaryRow.split}>
-      <button
-        aria-haspopup="dialog"
-        className={summaryRow.open}
-        onClick={onOpen}
-        type="button"
-      >
-        <span>{label}</span>
-        {count}
-      </button>
-      <button
-        aria-label={clearLabel}
-        className={summaryRow.clear}
-        onClick={onClear}
-        type="button"
-      >
-        <X aria-hidden="true" size={18} />
-      </button>
-    </div>
+      </strong>
+    </button>
   );
 }
 
