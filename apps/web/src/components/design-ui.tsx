@@ -2418,7 +2418,9 @@ export const menuStyle = {
 // A pull-down for a page's secondary actions, as SwiftUI's Menu and
 // Compose's DropdownMenu: its button names what is chosen now, and the
 // choices and actions open under it. Ark UI's Menu moves through them by
-// arrow keys and closes on a pick, outside or by Escape.
+// arrow keys and closes on a pick, outside or by Escape. Placed as fixed,
+// it opens over what is around it, as a menu does, rather than being cut
+// by a list's round corners or a scrolling page it sits in.
 export function PullDownMenu({
   label,
   children,
@@ -2428,7 +2430,9 @@ export function PullDownMenu({
   children: ReactNode;
 }) {
   return (
-    <Menu.Root positioning={{ gutter: 6, placement: "bottom-end" }}>
+    <Menu.Root
+      positioning={{ gutter: 6, placement: "bottom-end", strategy: "fixed" }}
+    >
       <Menu.Trigger className={menu.trigger}>
         {label}
         <ChevronDown aria-hidden="true" size={15} />
