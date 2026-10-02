@@ -277,7 +277,7 @@ const simple = {
   markRow: css({
     alignItems: "center",
     display: "flex",
-    gap: "6px",
+    gap: "4px",
     maxWidth: "100%",
     minWidth: 0,
   }),
