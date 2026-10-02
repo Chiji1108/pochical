@@ -50,3 +50,7 @@ export const SHARED_DAYS_MAX = 31;
 // The most people in one group. Far past a family's or friends' group, so
 // it only caps what a leaked invitation link can let in.
 export const GROUP_MAX_MEMBERS = 100;
+
+// The most people one person keeps in 一緒に働く人. Room for a whole
+// ward or shop, so it only caps what one account stores and syncs.
+export const COWORKERS_MAX = 100;
