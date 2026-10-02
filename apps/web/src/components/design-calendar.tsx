@@ -34,17 +34,13 @@ import { css, cva, cx } from "styled-system/css";
 import {
   addDays,
   dateKey,
-  defaultHolidaysOff,
   formatDay,
-  giveDaysToOrder,
-  holidayShiftOf,
   keepDetails,
   timeChangeOf,
   timeRange,
   weekdays,
-  withOrder,
 } from "../lib/design-days";
-import type { DayEntry, RepeatRule, Schedule } from "../lib/design-days";
+import type { DayEntry, Schedule } from "../lib/design-days";
 import {
   bookOf,
   isDayOff,
@@ -52,16 +48,17 @@ import {
   OwnPatternsContext,
   PatternsContext,
   presetPatterns,
-  samePattern,
   usePatterns,
 } from "../lib/design-patterns";
-import type { Pattern, PatternBook, Shift } from "../lib/design-patterns";
+import type { PatternBook, Shift } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
 import { useChangeDays, useShownDays, useUser } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
+import { useWorkChanges } from "../lib/design-work-changes";
 import { spring } from "../lib/motion";
 import { composing, limitText } from "../lib/text-limits";
+import { useCoworkerList } from "./design-coworkers";
 import type { Coworkers } from "./design-coworkers";
 import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
@@ -69,6 +66,7 @@ import { GapSheet, gapDaysIn } from "./design-gap-sheet";
 import { DesignGroup } from "./design-group";
 import type { GroupStart } from "./design-group";
 import { JoinScreen } from "./design-group-join";
+import { BreakdownSheet, useShownWith } from "./design-month-breakdown";
 import { MonthName } from "./design-month-name";
 import { MonthTitleButton, monthTitle } from "./design-month-picker";
 import { Phone } from "./design-phone";
@@ -81,7 +79,7 @@ import {
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import { DesignSettings } from "./design-settings";
 import type { SettingsPage } from "./design-settings";
-import { PhoneContext, Sheet, SheetHeading, sheetBody } from "./design-sheet";
+import { PhoneContext } from "./design-sheet";
 import { surpriseStyles, useSurprise } from "./design-surprise";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
@@ -149,7 +147,6 @@ export function DesignCalendar({
   // over the calendar.
   pendingInvite?: boolean;
 }) {
-  const setOwnDays = useUser((state) => state.setSchedule);
   const phoneRef = useRef<HTMLDivElement>(null);
   const { say: toast, toaster } = usePhoneToaster();
   const themeStyle = useThemeStyle();
@@ -186,8 +183,8 @@ export function DesignCalendar({
   const folded = useMotionValue(initialDetail ? 1 : 0);
   const reduceFolding = useReducedMotion() ?? false;
   const detailOpacity = useTransform(folded, [0.5, 1], [0, 1]);
-  const coworkerNames = useUser((state) => state.coworkers);
-  const setCoworkerNames = useUser((state) => state.setCoworkers);
+  const members = useCoworkerList();
+  const coworkerNames = members.names;
   const [tab, setTab] = useState<Tab>(initialTab);
   const surprise = useSurprise();
   // The group the group tab opens on, like one just joined from a link.
@@ -195,43 +192,6 @@ export function DesignCalendar({
   const profile = useUser((state) => state.profile);
   const setProfile = useUser((state) => state.setProfile);
   const rules = useUser((state) => state.rules);
-  const setRules = useUser((state) => state.setRules);
-  // Renaming or deleting someone changes the days they are on too.
-  const updateMembersOnDays = (change: (names: string[]) => string[]) => {
-    setOwnDays((previous) =>
-      Object.fromEntries(
-        Object.entries(previous).map(([key, entry]) => {
-          if (!entry?.members) {
-            return [key, entry];
-          }
-          const next = change(entry.members);
-          return [
-            key,
-            { ...entry, members: next.length > 0 ? next : undefined },
-          ];
-        })
-      )
-    );
-  };
-  const members: Coworkers = {
-    names: coworkerNames,
-    onAdd: (name) => {
-      setCoworkerNames((previous) => [...previous, name]);
-    },
-    onDelete: (name) => {
-      setCoworkerNames((previous) => previous.filter((item) => item !== name));
-      updateMembersOnDays((names) => names.filter((item) => item !== name));
-    },
-    onRename: (from, to) => {
-      setCoworkerNames((previous) =>
-        previous.map((name) => (name === from ? to : name))
-      );
-      updateMembersOnDays((names) =>
-        names.map((name) => (name === from ? to : name))
-      );
-    },
-    onReorder: setCoworkerNames,
-  };
   const [editing, setEditing] = useState(initialEditing);
   const [selectedDay, setSelectedDay] = useState(initialDay);
   // Whether the month being entered had blank days when it came up, as
@@ -244,6 +204,8 @@ export function DesignCalendar({
   // as the person's own.
   const schedule = useShownDays(month);
   const onChange = useChangeDays(month);
+  const { applyRule, changeJob, fixRule, setHolidaysOff } =
+    useWorkChanges(schedule);
   // How far the pages are dragged, -1 to 1 toward the next, which the
   // month's name follows; and the month a swipe last landed on, whose name
   // the drag has already brought in.
@@ -268,20 +230,10 @@ export function DesignCalendar({
       return shift !== undefined && isDayOff(book[shift]);
     }).length;
   const daysOff = daysOffIn(monthDays);
-  // Someone picked in 今月の内訳: the calendar shows the days they are on,
-  // the others faded, and the summary counts them in place of the days
-  // off. A name renamed or deleted since lets it go.
-  const [shownWith, setShownWith] = useState<string>();
-  const withPerson =
-    shownWith !== undefined && coworkerNames.includes(shownWith)
-      ? shownWith
-      : undefined;
-  const isWith = (name: string, date: Date) =>
-    schedule[dateKey(date)]?.members?.includes(name) ?? false;
+  // Someone picked in 今月の内訳, whose days the calendar shows.
+  const shown = useShownWith(coworkerNames, schedule);
   const summaryIn = (days: Date[]) =>
-    withPerson === undefined
-      ? daysOffIn(days)
-      : days.filter((date) => isWith(withPerson, date)).length;
+    shown.person === undefined ? daysOffIn(days) : shown.countIn(days);
   // The months beside, for the summary to follow a drag of the pages.
   const summaryBy = (by: number) => {
     const beside = new Date(month.getFullYear(), month.getMonth() + by, 1);
@@ -291,13 +243,6 @@ export function DesignCalendar({
         .filter((date) => date.getMonth() === beside.getMonth())
     );
   };
-  // Who is on this month's days, in the order of 一緒に働く人.
-  const monthCoworkers = coworkerNames
-    .map((name) => ({
-      count: monthDays.filter((date) => isWith(name, date)).length,
-      name,
-    }))
-    .filter(({ count }) => count > 0);
   const counts = ownPatterns.map((pattern) => ({
     count: monthDays.filter(
       (date) => schedule[dateKey(date)]?.shift === pattern.id
@@ -436,89 +381,10 @@ export function DesignCalendar({
   }
   // Entering is about every day, so it lets go of someone's days.
   function startInput() {
-    setShownWith(undefined);
+    shown.show(undefined);
     setSelectedDay(1);
     setEnteredBlank(unfilled > 0);
     setEditing(true);
-  }
-  // From its start, the new order shows in place of the one before: the
-  // days give their own shifts and times back to it, keeping memos and
-  // people, and an empty sequence leaves a roster to fill in. A new job
-  // brings its own patterns, so it passes them in.
-  function fillRule(rule: RepeatRule, patterns = ownPatterns) {
-    const holidaysOff =
-      rule.sequence.length > 0 &&
-      (rule.holidaysOff ??
-        defaultHolidaysOff(
-          rule.sequence,
-          rule.anchor ?? rule.start,
-          bookOf(patterns)
-        ));
-    const holidayShift = holidaysOff ? holidayShiftOf(patterns) : undefined;
-    setOwnDays((previous) => giveDaysToOrder(previous, rule.start));
-    return rule.sequence.length > 0
-      ? { ...rule, holidayShift, holidaysOff }
-      : rule;
-  }
-  function applyRule(rule: RepeatRule, patterns?: Pattern[]) {
-    const filled = fillRule(rule, patterns);
-    setRules((previous) => withOrder(previous, filled));
-  }
-  // Corrects the rule in use from its own start, rather than adding one.
-  function fixRule(rule: RepeatRule) {
-    const filled = fillRule(rule);
-    setRules((previous) => withOrder(previous.slice(0, -1), filled));
-  }
-  // The new job's patterns take over, keeping any old one still on a day
-  // before the switch so those days keep their marks. A ready-made one the
-  // person has changed, still on those days, stays theirs; the new job's
-  // comes in under an id of its own, and its order uses that.
-  function changeJob(job: { patterns: Pattern[]; rule: RepeatRule }) {
-    const from = dateKey(job.rule.start);
-    const usedBefore = (id: string) =>
-      Object.entries(schedule).some(
-        ([key, entry]) => key < from && entry?.shift === id
-      );
-    const renamed = new Map<string, string>();
-    for (const pattern of job.patterns) {
-      const own = ownPatterns.find((item) => item.id === pattern.id);
-      if (own && usedBefore(own.id) && !samePattern(own, pattern)) {
-        renamed.set(pattern.id, crypto.randomUUID());
-      }
-    }
-    const renameOf = (id: string) => renamed.get(id) ?? id;
-    const incoming = job.patterns.map((pattern) => ({
-      ...pattern,
-      id: renameOf(pattern.id),
-      nextDay: pattern.nextDay && renameOf(pattern.nextDay),
-    }));
-    const kept = ownPatterns.filter(
-      (pattern) =>
-        !incoming.some((next) => next.id === pattern.id) &&
-        usedBefore(pattern.id)
-    );
-    const patterns = [...incoming, ...kept];
-    setPatterns(patterns);
-    applyRule(
-      { ...job.rule, sequence: job.rule.sequence.map(renameOf) },
-      patterns
-    );
-  }
-  // Holidays follow the order in use: on, they take the day off now first;
-  // off, they show the sequence again. Days the person changed keep theirs.
-  function setHolidaysOff(holidaysOff: boolean) {
-    const rule = rules.at(-1);
-    if (!rule) {
-      return;
-    }
-    const holidayShift = holidaysOff ? holidayShiftOf(ownPatterns) : undefined;
-    if (holidaysOff && !holidayShift) {
-      return;
-    }
-    setRules((previous) => [
-      ...previous.slice(0, -1),
-      { ...rule, holidayShift, holidaysOff },
-    ]);
   }
   function openSave(completion: boolean, toCalendar = false) {
     setSaveCompletion(completion);
@@ -783,11 +649,7 @@ export function DesignCalendar({
                               onPress={() => {
                                 editing ? enterFrom(date) : openDetail(date);
                               }}
-                              dimmed={
-                                withPerson !== undefined &&
-                                !editing &&
-                                !isWith(withPerson, date)
-                              }
+                              dimmed={!editing && shown.fades(date)}
                               outside={
                                 !weekDetail &&
                                 date.getMonth() !== pageMonth.getMonth()
@@ -849,12 +711,12 @@ export function DesignCalendar({
                       days={summaryIn(monthDays)}
                       month={month}
                       onClear={() => {
-                        setShownWith(undefined);
+                        shown.show(undefined);
                       }}
                       onOpen={() => {
                         setOpenSheet("breakdown");
                       }}
-                      person={withPerson}
+                      person={shown.person}
                       progress={pageDrag}
                       swiped={swipedTo === dateKey(month)}
                     />
@@ -881,83 +743,20 @@ export function DesignCalendar({
                   </div>
                 )}
               </Screen>
-              <Sheet
-                label="今月の内訳"
+              <BreakdownSheet
+                counts={counts}
+                days={monthDays.length}
+                month={month}
                 onOpenChange={sheetChange("breakdown")}
+                onShow={(name) => {
+                  shown.show(name);
+                  setOpenSheet(null);
+                }}
                 open={openSheet === "breakdown"}
-              >
-                <SheetHeading
-                  eyebrow={`${month.getFullYear()}年${month.getMonth() + 1}月`}
-                  onClose={() => {
-                    setOpenSheet(null);
-                  }}
-                  title="今月の内訳"
-                />
-                <div className={sheetBody}>
-                  <dl className={breakdown.list}>
-                    {counts.map(({ key, label, count }) => (
-                      <div className={breakdown.row()} key={key}>
-                        <dt className={breakdown.name}>
-                          <ShiftMark shift={key} size={18} />
-                          {label}
-                        </dt>
-                        <dd className={breakdown.count}>
-                          {count}
-                          <span className={breakdown.unit}>日</span>
-                        </dd>
-                      </div>
-                    ))}
-                    <div className={breakdown.row({ unfilled: true })}>
-                      <dt className={breakdown.name}>未入力</dt>
-                      <dd className={breakdown.count}>
-                        {unfilled}
-                        <span className={breakdown.unit}>日</span>
-                      </dd>
-                    </div>
-                  </dl>
-                  <p className={breakdown.total}>
-                    この月は全{monthDays.length}日
-                  </p>
-                  {monthCoworkers.length > 0 && (
-                    <section>
-                      <h3 className={breakdown.heading}>一緒に働く人</h3>
-                      <ul className={breakdown.list}>
-                        {monthCoworkers.map(({ name, count }) => (
-                          <li key={name}>
-                            <button
-                              aria-pressed={name === withPerson}
-                              className={breakdown.row({ pressable: true })}
-                              onClick={() => {
-                                setShownWith(
-                                  name === withPerson ? undefined : name
-                                );
-                                setOpenSheet(null);
-                              }}
-                              type="button"
-                            >
-                              <span className={breakdown.name}>
-                                {name === withPerson && (
-                                  <Check aria-hidden="true" size={18} />
-                                )}
-                                {name}
-                              </span>
-                              <span className={breakdown.count}>
-                                {count}
-                                <span className={breakdown.unit}>日</span>
-                                <ChevronRight
-                                  aria-hidden="true"
-                                  className={breakdown.chevron}
-                                  size={17}
-                                />
-                              </span>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  )}
-                </div>
-              </Sheet>
+                people={shown.peopleIn(monthDays)}
+                shownWith={shown.person}
+                unfilled={unfilled}
+              />
               <SaveSheet
                 completion={saveCompletion}
                 month={month}
@@ -999,70 +798,6 @@ export function DesignCalendar({
     </PatternsContext>
   );
 }
-
-// 今月の内訳: a row for each pattern and one for the days still blank,
-// with the month's length under them. With many patterns they scroll
-// under the heading, which stays with its ×.
-const breakdown = {
-  count: css({
-    color: "accent.default",
-    fontWeight: 600,
-    margin: 0,
-    textStyle: "title3",
-  }),
-  chevron: css({
-    color: "text.quaternary",
-    marginLeft: "8px",
-    verticalAlign: "-2px",
-  }),
-  // 一緒に働く人, under the month's total.
-  heading: css({
-    color: "text.tertiary",
-    fontWeight: 600,
-    margin: "28px 0 0",
-    textStyle: "subheadline",
-  }),
-  list: css({ listStyle: "none", margin: 0, padding: 0 }),
-  name: css({
-    "& > span": { fontSize: "24px" },
-    alignItems: "center",
-    display: "flex",
-    gap: "12px",
-    textStyle: "body",
-  }),
-  row: cva({
-    base: {
-      alignItems: "center",
-      borderBottom: "1px solid token(colors.separator)",
-      display: "flex",
-      justifyContent: "space-between",
-      minHeight: "52px",
-    },
-    variants: {
-      unfilled: { true: { color: "text.tertiary" } },
-      // Someone's row: pressed, the calendar shows their days.
-      pressable: {
-        true: {
-          bg: "transparent",
-          borderInline: 0,
-          borderTop: 0,
-          color: "text.primary",
-          cursor: "pointer",
-          paddingInline: 0,
-          width: "100%",
-        },
-      },
-    },
-  }),
-  total: css({
-    color: "text.tertiary",
-    // 20px under the list, with the scrolling part's 12px gap.
-    margin: "8px 0 0",
-    textAlign: "center",
-    textStyle: "footnote",
-  }),
-  unit: css({ fontWeight: 400, marginLeft: "8px", textStyle: "footnote" }),
-};
 
 // The month at the top: the year over its number, "‹ 今月 ›" in the middle
 // so it never moves with the month's width, and the screen's action on the

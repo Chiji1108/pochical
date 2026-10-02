@@ -2,6 +2,7 @@ import { textLimits } from "@pochical/design/limits";
 import { useState } from "react";
 
 import type { Schedule } from "../lib/design-days";
+import { useUser } from "../lib/design-user-store";
 import { composing, limitText } from "../lib/text-limits";
 import { ConfirmDialog } from "./design-sheet";
 import {
@@ -27,6 +28,49 @@ export type Coworkers = {
   onRename: (from: string, to: string) => void;
   onDelete: (name: string) => void;
 };
+
+// The person's coworkers, kept in their store: renaming or deleting
+// someone changes the days they are on too.
+export function useCoworkerList(): Coworkers {
+  const names = useUser((state) => state.coworkers);
+  const setNames = useUser((state) => state.setCoworkers);
+  const setOwnDays = useUser((state) => state.setSchedule);
+  const updateMembersOnDays = (change: (people: string[]) => string[]) => {
+    setOwnDays((previous) =>
+      Object.fromEntries(
+        Object.entries(previous).map(([key, entry]) => {
+          if (!entry?.members) {
+            return [key, entry];
+          }
+          const next = change(entry.members);
+          return [
+            key,
+            { ...entry, members: next.length > 0 ? next : undefined },
+          ];
+        })
+      )
+    );
+  };
+  return {
+    names,
+    onAdd: (name) => {
+      setNames((previous) => [...previous, name]);
+    },
+    onDelete: (name) => {
+      setNames((previous) => previous.filter((item) => item !== name));
+      updateMembersOnDays((people) => people.filter((item) => item !== name));
+    },
+    onRename: (from, to) => {
+      setNames((previous) =>
+        previous.map((name) => (name === from ? to : name))
+      );
+      updateMembersOnDays((people) =>
+        people.map((name) => (name === from ? to : name))
+      );
+    },
+    onReorder: setNames,
+  };
+}
 
 function daysWith(schedule: Schedule, name: string) {
   return Object.values(schedule).filter((entry) =>
