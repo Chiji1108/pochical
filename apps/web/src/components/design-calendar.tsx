@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { motion, useMotionValue, useReducedMotion } from "motion/react";
 import type { MotionValue } from "motion/react";
-import { useContext, useRef, useState } from "react";
+import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -30,32 +30,23 @@ import {
 } from "../lib/design-days";
 import type { DayEntry, Schedule } from "../lib/design-days";
 import {
-  bookOf,
   isDayOff,
   PATTERNS_PER_PAGE,
-  OwnPatternsContext,
-  PatternsContext,
   presetPatterns,
   usePatterns,
 } from "../lib/design-patterns";
-import type { PatternBook, Shift } from "../lib/design-patterns";
+import type { Shift } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
-import { useChangeDays, useShownDays, useUser } from "../lib/design-user-store";
-import type { DesignVariants } from "../lib/design-variants";
-import { useWorkChanges } from "../lib/design-work-changes";
+import { useChangeDays, useUser } from "../lib/design-user-store";
 import { composing, limitText } from "../lib/text-limits";
 import { coworkersFull, useCoworkerList } from "./design-coworkers";
 import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
 import { GapSheet, gapDaysIn } from "./design-gap-sheet";
-import { DesignGroup } from "./design-group";
-import type { GroupStart } from "./design-group";
-import { JoinScreen } from "./design-group-join";
 import { BreakdownSheet, useShownWith } from "./design-month-breakdown";
 import { MonthName } from "./design-month-name";
 import { MonthTitleButton, monthTitle } from "./design-month-picker";
-import { Phone } from "./design-phone";
 import {
   monthIndex,
   RollingName,
@@ -63,14 +54,11 @@ import {
   useTurn,
 } from "./design-rolling";
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
-import { DesignSettings } from "./design-settings";
-import type { SettingsPage } from "./design-settings";
-import { ConfirmDialog, PhoneContext } from "./design-sheet";
+import { ConfirmDialog } from "./design-sheet";
 import { surpriseStyles, useSurprise } from "./design-surprise";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
-import { useThemeStyle } from "./design-theme";
-import { PhoneToasts, ToastContext, usePhoneToaster } from "./design-toast";
+import { ToastContext } from "./design-toast";
 import {
   Button,
   Chip,
@@ -101,133 +89,10 @@ import { useWeek } from "./design-week";
 import { FoldingGrid, useWeekFold } from "./design-week-fold";
 import { OffDisplayContext, ShiftMark } from "./shift-mark";
 
-// One person's phone. Their data comes from the nearest UserStoreContext,
-// so two phones under one store show the same person.
-export function DesignCalendar({
-  initialEditing,
-  initialDay = 1,
-  initialMonth = 8,
-  variants,
-  pendingInvite = false,
-  initialTab = "calendar",
-  initialSettingsPage,
-  initialGroupPage,
-  initialDetail,
-  fullScreen = false,
-}: {
-  initialEditing: boolean;
-  // The day entering starts on, as the top page opens on its first blank.
-  initialDay?: number;
-  // On /try: filling a real phone's screen rather than a pictured one.
-  fullScreen?: boolean;
-  initialMonth?: number;
-  variants: DesignVariants;
-  // For the flow diagrams: a tab, and a settings page, to open on.
-  initialTab?: Tab;
-  initialSettingsPage?: SettingsPage;
-  // And the group tab's page: its hub, the shift table or the group chat.
-  initialGroupPage?: GroupStart;
-  // A day of initialMonth to open on picked, its week folded out of the
-  // month with the day's details under it, as a reminder opens it.
-  initialDetail?: Date;
-  // A group's invitation link was opened: ask about joining, in a screen
-  // over the calendar.
-  pendingInvite?: boolean;
-}) {
-  const phoneRef = useRef<HTMLDivElement>(null);
-  const { say: toast, toaster } = usePhoneToaster();
-  const themeStyle = useThemeStyle();
-  const [tab, setTab] = useState<Tab>(initialTab);
-  const [joining, setJoining] = useState(pendingInvite);
-  const groups = useUser((state) => state.groups);
-  const setGroups = useUser((state) => state.setGroups);
-  // The group the group tab opens on, like one just joined from a link.
-  const [openGroup, setOpenGroup] = useState<string>();
-  const profile = useUser((state) => state.profile);
-  const setProfile = useUser((state) => state.setProfile);
-  const rules = useUser((state) => state.rules);
-  // The month in view on the calendar. The days as every tab shows them
-  // are worked out through it, however far ahead it is.
-  const [month, setMonth] = useState(() => new Date(2026, initialMonth, 1));
-  const schedule = useShownDays(month);
-  const { applyRule, changeJob, fixRule, setHolidaysOff } =
-    useWorkChanges(schedule);
-  const ownPatterns = useUser((state) => state.patterns);
-  // The person's own patterns, over the ready-made ones that templates
-  // and samples name.
-  const book: PatternBook = { ...presetPatterns, ...bookOf(ownPatterns) };
-  return (
-    <PatternsContext value={book}>
-      <OwnPatternsContext value={ownPatterns}>
-        <PhoneContext value={phoneRef}>
-          <ToastContext value={toast}>
-            <Phone fullScreen={fullScreen} ref={phoneRef} style={themeStyle}>
-              {tab === "settings" && (
-                <DesignSettings
-                  initialPage={initialSettingsPage}
-                  onApplyRule={applyRule}
-                  onChangeJob={changeJob}
-                  onFixRule={fixRule}
-                  onHolidaysOff={setHolidaysOff}
-                  onProfile={setProfile}
-                  onTab={setTab}
-                  patterns={ownPatterns}
-                  profile={profile}
-                  rules={rules}
-                  schedule={schedule}
-                />
-              )}
-              {tab === "group" && (
-                <DesignGroup
-                  initialGroupId={openGroup}
-                  initialPage={initialGroupPage}
-                  photoSend={variants.photoSend}
-                  scanResult={variants.scanResult}
-                  onTab={setTab}
-                  patterns={ownPatterns}
-                  profile={profile}
-                  schedule={schedule}
-                />
-              )}
-              {joining && (
-                <JoinScreen
-                  onClose={() => {
-                    setJoining(false);
-                  }}
-                  onJoin={(joined) => {
-                    setGroups([...groups, joined]);
-                    setJoining(false);
-                    setOpenGroup(joined.id);
-                    setTab("group");
-                    toast(`「${joined.name}」に参加しました`);
-                  }}
-                  profile={profile}
-                />
-              )}
-              <CalendarTab
-                covered={joining}
-                initialDay={initialDay}
-                initialDetail={initialDetail}
-                initialEditing={initialEditing}
-                month={month}
-                onMonth={setMonth}
-                onTab={setTab}
-                schedule={schedule}
-                shown={tab === "calendar"}
-              />
-              <PhoneToasts toaster={toaster} />
-            </Phone>
-          </ToastContext>
-        </PhoneContext>
-      </OwnPatternsContext>
-    </PatternsContext>
-  );
-}
-
 // The calendar tab: the month, or a week folded out of it with a day's
 // details, its summary, and entering the shifts day by day. It stays put
 // while another tab is shown, as a tab keeps its place.
-function CalendarTab({
+export function DesignCalendar({
   initialEditing,
   initialDay,
   initialDetail,

@@ -7,7 +7,7 @@ import { initialDesignSchedule } from "../lib/design-days";
 import { createUserStore, UserStoreContext } from "../lib/design-user-store";
 import type { OwnData } from "../lib/design-user-store";
 import { parseDesignVariants } from "../lib/design-variants";
-import { DesignCalendar } from "./design-calendar";
+import { DesignApp } from "./design-app";
 import type { GroupStart } from "./design-group";
 import type { SettingsPage } from "./design-settings";
 import type { Tab } from "./design-tab-bar";
@@ -224,7 +224,7 @@ export function CalendarFrame({
   return (
     <Frame label={label} note={note}>
       <UserStoreContext value={store}>
-        <DesignCalendar
+        <DesignApp
           initialDetail={detail}
           initialEditing={editing}
           initialGroupPage={groupPage}

@@ -10,7 +10,7 @@ import {
   UserStoreContext,
 } from "../lib/design-user-store";
 import { parseDesignVariants } from "../lib/design-variants";
-import { DesignCalendar } from "./design-calendar";
+import { DesignApp } from "./design-app";
 import { sampleGroups } from "./design-group-data";
 import { DesignProviders, PresetContexts } from "./design-providers";
 import {
@@ -175,7 +175,7 @@ export function HeroPhone() {
   return (
     <DesignProviders fresh>
       <UserStoreContext value={person}>
-        <DesignCalendar
+        <DesignApp
           initialDay={HERO_FIRST_BLANK}
           initialEditing
           variants={variants}
@@ -211,7 +211,7 @@ export function FeatureScreen({
     <WhenNear aria-hidden="true" className={screenStyle} inert>
       <DesignProviders fresh>
         <UserStoreContext value={person}>
-          <DesignCalendar
+          <DesignApp
             initialEditing={false}
             initialGroupPage={groupPage}
             initialTab={tab}
@@ -381,7 +381,7 @@ export function ThemeGallery() {
           key: look.id,
           screen: (
             <LookContexts look={look}>
-              <DesignCalendar initialEditing={false} variants={variants} />
+              <DesignApp initialEditing={false} variants={variants} />
             </LookContexts>
           ),
         }))}

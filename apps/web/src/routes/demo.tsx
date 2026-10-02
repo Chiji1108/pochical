@@ -3,7 +3,7 @@ import { BookOpen, RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 
-import { DesignCalendar } from "../components/design-calendar";
+import { DesignApp } from "../components/design-app";
 import { sampleGroups } from "../components/design-group-data";
 import { HomeScreen } from "../components/design-home-screen";
 import {
@@ -123,7 +123,7 @@ function DemoPage() {
         <div className={demo.layout}>
           <div className={demo.phone} key={version}>
             <UserStoreContext value={person}>
-              <DesignCalendar
+              <DesignApp
                 initialEditing={false}
                 pendingInvite={variants.inviteLink === "opened"}
                 variants={variants}

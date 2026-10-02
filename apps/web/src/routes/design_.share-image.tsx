@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
 
-import { DesignCalendar } from "../components/design-calendar";
+import { DesignApp } from "../components/design-app";
 import { sampleGroups } from "../components/design-group-data";
 import { DesignProviders } from "../components/design-providers";
 import { paleSkyFromTop, themeSkyId } from "../components/design-surprise";
@@ -157,7 +157,7 @@ function SiteShareImage({
       <div aria-hidden="true" className={styles.phone} inert>
         <DesignProviders fresh>
           <UserStoreContext value={person}>
-            <DesignCalendar initialEditing={false} variants={variants} />
+            <DesignApp initialEditing={false} variants={variants} />
           </UserStoreContext>
         </DesignProviders>
       </div>

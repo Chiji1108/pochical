@@ -10,7 +10,7 @@ import { css, cva, cx } from "styled-system/css";
 // put them. Menus and confirmations keep their own shape, with キャンセル
 // at the bottom.
 
-// The phone a sheet opens in. DesignCalendar gives it; sheets drawn by
+// The phone a sheet opens in. DesignApp gives it; sheets drawn by
 // its screens open over that phone rather than over the page.
 export const PhoneContext = createContext<RefObject<HTMLElement | null> | null>(
   null
