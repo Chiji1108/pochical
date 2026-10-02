@@ -694,5 +694,5 @@ export const chatStyle = {
   }),
 };
 
-// A chat's title in its header: the name, the mute mark, and for a group
-// the count under them.
+// The size of the faces beside others' lines, as the chat apps draw them.
+export const chatAvatarSize = 32;

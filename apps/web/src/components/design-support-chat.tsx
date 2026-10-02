@@ -15,8 +15,7 @@ import {
   photoSize,
   useChosenPhotos,
 } from "./design-chat-photos";
-import { chatRow, chatStyle } from "./design-chat-style";
-import { chatAvatarSize } from "./design-group-chat";
+import { chatAvatarSize, chatRow, chatStyle } from "./design-chat-style";
 import { badge } from "./design-group-parts";
 import { PhotoViewer } from "./design-sheet";
 import {
