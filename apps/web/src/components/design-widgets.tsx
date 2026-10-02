@@ -611,7 +611,8 @@ const columns = {
       },
     },
   }),
-  // The date over its weekday, as a column of days is headed.
+  // The weekday over the date, as the calendar heads its columns, so the
+  // date sits right over its mark as in the calendar's day.
   date: css({
     alignItems: "center",
     display: "flex",
@@ -733,7 +734,7 @@ function ColumnDate({
   );
 }
 
-// Days from today in columns, as a week reads across: each date over its
+// Days from today in columns, as a week reads across: each date under its
 // weekday (THU in English: the days start from today, not the week's
 // start, so one letter could be either T), the mark large under it, and
 // only what changed under the mark. A day off is a tile down its whole
@@ -886,6 +887,12 @@ function ColumnDay({
         {together && <span className={srOnly}>ふたりとも休み</span>}
         <span
           aria-hidden="true"
+          className={cx(columns.weekday, toneText({ tone: day.tone }))}
+        >
+          {words.weekday(day.date)}
+        </span>
+        <span
+          aria-hidden="true"
           className={cx(
             columns.number({ compact: pair !== undefined }),
             day.holiday && dayParts.holiday
@@ -894,12 +901,6 @@ function ColumnDay({
           <span className={cx(day.note && dayParts.noted)}>
             <ColumnDate date={day.date} english={english} first={first} />
           </span>
-        </span>
-        <span
-          aria-hidden="true"
-          className={cx(columns.weekday, toneText({ tone: day.tone }))}
-        >
-          {words.weekday(day.date)}
         </span>
       </span>
       <span
