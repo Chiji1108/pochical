@@ -383,6 +383,7 @@ export function ChatPage({
     firstUnreadId,
     handleLatest,
     handleScroll,
+    keepPlace,
     listRef,
     unseen,
   } = useChatScroll({
@@ -685,6 +686,7 @@ export function ChatPage({
                 onFailed={() => {
                   setFailedOpen(message.id);
                 }}
+                onFolded={keepPlace}
                 onInvite={onInvite}
                 onJump={jumpTo}
                 onLinkMenu={setLinkMenu}
@@ -1003,28 +1005,33 @@ function useChatScroll({
   // Until a line is added, it stays on the shared day, or on the line
   // above the first unread one.
   const [openedLines] = useState(lineCount);
+  // Where the lines were last put, and the scroll that left them there.
+  const placed = useRef<{ target?: string; top: number }>(undefined);
   useLayoutEffect(() => {
     const list = listRef.current;
     if (!list || lineCount + failedCount === 0) {
       return;
     }
+    const opening = lineCount === openedLines;
     let target: string | undefined;
-    if (sharedId !== undefined) {
+    if (opening && sharedId !== undefined) {
       target = `#message-${sharedId}`;
-    } else if (firstUnreadId !== undefined) {
+    } else if (opening && firstUnreadId !== undefined) {
       target = "#unread-line";
     }
-    const shared =
-      target === undefined || lineCount !== openedLines
-        ? null
-        : list.querySelector<HTMLElement>(target);
-    list.scrollTop = shared
-      ? shared.getBoundingClientRect().top -
-        list.getBoundingClientRect().top +
-        list.scrollTop -
-        sharedRoom
-      : list.scrollHeight;
+    placed.current = { target, top: scrollOnto(list, target) };
   }, [lineCount, failedCount, openedLines, sharedId, firstUnreadId]);
+  // A line grown after the lines were put, as words measured to fold get
+  // their 続きを読む, puts them there again: the latest line stays in
+  // full above the composer, and the unread line or shared day stays at
+  // the top. Not once the chat has been scrolled since.
+  const keepPlace = () => {
+    const list = listRef.current;
+    const at = placed.current;
+    if (list && at && Math.abs(list.scrollTop - at.top) < 1) {
+      placed.current = { ...at, top: scrollOnto(list, at.target) };
+    }
+  };
   // When what sits over the composer (a reply, days, photos) takes room,
   // the lines keep their bottom edge, as in the chat apps, so the latest
   // line is not hidden under it. When it goes, the room shows more below.
@@ -1109,9 +1116,24 @@ function useChatScroll({
     firstUnreadId,
     handleLatest,
     handleScroll,
+    keepPlace,
     listRef,
     unseen,
   };
+}
+
+// Scrolls the lines onto a line (the shared day, or ここから新着), else
+// to the latest, and gives back where that left them.
+function scrollOnto(list: HTMLElement, target: string | undefined) {
+  const line =
+    target === undefined ? null : list.querySelector<HTMLElement>(target);
+  list.scrollTop = line
+    ? line.getBoundingClientRect().top -
+      list.getBoundingClientRect().top +
+      list.scrollTop -
+      sharedRoom
+    : list.scrollHeight;
+  return list.scrollTop;
 }
 
 type Mention = { id: string; name: string };
@@ -1581,6 +1603,7 @@ function MessageLine({
   onDecide,
   onVote,
   onFailed,
+  onFolded,
   onOpenDay,
 }: {
   message: Message;
@@ -1611,11 +1634,20 @@ function MessageLine({
   onDecide: () => void;
   onVote: (key: string) => void;
   onFailed: () => void;
+  // Its words were measured to fold, and 続きを読む has come in under
+  // them, after the chat was scrolled to its place.
+  onFolded: () => void;
   onOpenDay: (date: Date) => void;
 }) {
   // Words past chatRules.foldLines, and whether they were opened in full.
   const [folded, setFolded] = useState(false);
   const [unfolded, setUnfolded] = useState(false);
+  const foldedIn = useEffectEvent(onFolded);
+  useLayoutEffect(() => {
+    if (folded) {
+      foldedIn();
+    }
+  }, [folded]);
   // A blocked member's line, shown for now.
   const [revealed, setRevealed] = useState(false);
   const toast = useContext(ToastContext);
