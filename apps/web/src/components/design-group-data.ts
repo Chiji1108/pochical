@@ -1,4 +1,4 @@
-import { siteOf } from "../lib/chat-text";
+import { mentionsOf, siteOf } from "../lib/chat-text";
 import { dateKey, timeChangeOf, timeRange } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
@@ -908,6 +908,56 @@ export function withMuted<G extends Pick<Group, "mutedChats">>(
 
 export function chatKey(groupId: string, chatId: string) {
   return `${groupId}:${chatId}`;
+}
+
+// The unread lines that notify (spec/chat.md, Unread lines): all of a chat's
+// while it is on; in a chat turned off, only those that mention the
+// reader, and those only while メンションはいつも通知 is on.
+function notifyingUnread(
+  chat: Chat,
+  muted: boolean,
+  mentionsWhenMuted: boolean
+) {
+  if (!muted) {
+    return chat.unread;
+  }
+  if (!mentionsWhenMuted || chat.unread === 0) {
+    return 0;
+  }
+  return chat.messages
+    .slice(-chat.unread)
+    .filter((message) => mentionsOf(message.text ?? "").includes("me")).length;
+}
+
+// What notifies unread in one group's chats, for its icon in the list of
+// groups.
+export function groupUnread(
+  chats: Record<string, Chat>,
+  group: Pick<Group, "id" | "mutedChats">,
+  mentionsWhenMuted: boolean
+) {
+  const prefix = chatKey(group.id, "");
+  let total = 0;
+  for (const [key, chat] of Object.entries(chats)) {
+    if (key.startsWith(prefix)) {
+      const muted = isMuted(group, key.slice(prefix.length));
+      total += notifyingUnread(chat, muted, mentionsWhenMuted);
+    }
+  }
+  return total;
+}
+
+// What notifies unread in all the groups one is in, for the グループ tab.
+export function groupsUnread(
+  chats: Record<string, Chat>,
+  groups: Pick<Group, "id" | "mutedChats">[],
+  mentionsWhenMuted: boolean
+) {
+  let total = 0;
+  for (const group of groups) {
+    total += groupUnread(chats, group, mentionsWhenMuted);
+  }
+  return total;
 }
 
 // A group as the list keeps it, without its members' shifts.

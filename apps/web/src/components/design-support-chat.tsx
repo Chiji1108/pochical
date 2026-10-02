@@ -1,10 +1,18 @@
 import { Image as ImageIcon, SendHorizontal, X } from "lucide-react";
-import { useContext, useLayoutEffect, useRef, useState } from "react";
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { css, cx } from "styled-system/css";
 
 import { APP_VERSION, deviceNames, useDevice } from "../lib/design-device";
 import type { Photo } from "../lib/design-sample-photos";
 import { useSettings } from "../lib/design-settings-store";
+import type { SupportLine } from "../lib/design-support";
+import { useUser } from "../lib/design-user-store";
 import { site } from "../lib/site";
 import { AppIcon, useAppIcons } from "./design-app-icon";
 import {
@@ -15,6 +23,7 @@ import {
   photoOf,
   photoSize,
 } from "./design-group-chat";
+import { badge } from "./design-group-parts";
 import { PhotoViewer } from "./design-sheet";
 import { ToastContext } from "./design-toast";
 import {
@@ -35,39 +44,6 @@ import {
 // and what reaches them, since only this chat is read by Pochical's
 // people.
 
-export type SupportSample = "none" | "answered";
-
-export type SupportLine = {
-  id: string;
-  // You, or Pochical's people.
-  from: "me" | "support";
-  text?: string;
-  photo?: Photo;
-  when: string;
-  time: string;
-};
-
-const answeredLines: SupportLine[] = [
-  {
-    from: "me",
-    id: "s1",
-    text: "夜勤と準夜の色が似ていて、月の表だと見分けにくいです。もう少し違う色にできたらうれしいです！",
-    time: "22:41",
-    when: "9月28日(月)",
-  },
-  {
-    from: "support",
-    id: "s2",
-    text: "ご連絡ありがとうございます！並べると、たしかに似て見えますね。色の組み合わせを見直してみます。変えたら、ここでお知らせします。",
-    time: "11:05",
-    when: "9月30日(水)",
-  },
-];
-
-export function supportLinesOf(sample: SupportSample): SupportLine[] {
-  return sample === "answered" ? answeredLines : [];
-}
-
 // The home screen icon in use, which stands for Pochical's people here.
 function useOwnIcon() {
   const icons = useAppIcons();
@@ -76,17 +52,13 @@ function useOwnIcon() {
 
 // The way into the chat from the settings, drawn as a chat in the group
 // chats' list is: the icon, who it is with and, once there are any, the
-// latest line and its time. Among the rows that leave for the site it
-// would read as one more link; standing on its own as a chat, it says
-// that Pochical's people can be talked to.
-export function SupportRow({
-  lines,
-  onOpen,
-}: {
-  lines: SupportLine[];
-  onOpen: () => void;
-}) {
+// latest line and its time, and the count of answers not read yet, as a
+// chat's unread. Among the rows that leave for the site it would read as
+// one more link; standing on its own as a chat, it says that Pochical's
+// people can be talked to.
+export function SupportRow({ onOpen }: { onOpen: () => void }) {
   const icon = useOwnIcon();
+  const { lines, unread } = useUser((state) => state.support);
   const last = lines.at(-1);
   let preview = "ほしい機能や不具合のこと、気軽にどうぞ";
   if (last) {
@@ -109,6 +81,12 @@ export function SupportRow({
         {last && (
           <span className={chatRow.meta}>
             <small className={chatRow.time}>{last.time}</small>
+            {unread > 0 && (
+              <span className={badge} role="status">
+                {unread}
+                <span className={srOnly}>件の未読</span>
+              </span>
+            )}
           </span>
         )}
       </button>
@@ -208,15 +186,17 @@ function SupportPhoto({ photo, mine }: { photo: Photo; mine: boolean }) {
   );
 }
 
-export function SupportChatPage({
-  lines,
-  onChange,
-  onBack,
-}: {
-  lines: SupportLine[];
-  onChange: (lines: SupportLine[]) => void;
-  onBack: () => void;
-}) {
+export function SupportChatPage({ onBack }: { onBack: () => void }) {
+  const lines = useUser((state) => state.support.lines);
+  const setSupport = useUser((state) => state.setSupport);
+  // Answers on screen are read: those waiting as it opens, and those that
+  // come while it is open.
+  const unread = useUser((state) => state.support.unread);
+  useEffect(() => {
+    if (unread > 0) {
+      setSupport((before) => ({ ...before, unread: 0 }));
+    }
+  }, [unread, setSupport]);
   const [draft, setDraft] = useState("");
   // Photos chosen to go with the next send, held above the composer as
   // in the group chats: nothing is sent on choosing.
@@ -269,7 +249,7 @@ export function SupportChatPage({
       time: "10:10",
       when: "今日",
     }));
-    onChange([...lines, ...sent]);
+    setSupport((before) => ({ ...before, lines: [...before.lines, ...sent] }));
     setDraft("");
     setPhotos([]);
   };

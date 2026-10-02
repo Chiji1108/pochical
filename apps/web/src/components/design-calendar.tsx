@@ -648,7 +648,6 @@ export function DesignCalendar({
                   profile={profile}
                   rules={rules}
                   schedule={schedule}
-                  supportSample={variants.supportSample}
                 />
               )}
               {tab === "group" && (

@@ -1,5 +1,11 @@
 import { CalendarDays, Settings2, UsersRound } from "lucide-react";
-import { css, cva } from "styled-system/css";
+import { useId } from "react";
+import { css, cva, cx } from "styled-system/css";
+
+import { useUser } from "../lib/design-user-store";
+import { groupsUnread } from "./design-group-data";
+import { badge } from "./design-group-parts";
+import { srOnly } from "./design-ui";
 
 export type Tab = "calendar" | "group" | "settings";
 
@@ -30,6 +36,10 @@ const tabBar = {
     right: "20px",
     zIndex: 10,
   }),
+  // The unread count on the icon's top right corner, as the platforms'
+  // tab bars badge one.
+  count: css({ left: "16px", position: "absolute", top: "-6px" }),
+  icon: css({ display: "flex", position: "relative" }),
   item: cva({
     base: {
       alignItems: "center",
@@ -52,6 +62,18 @@ const tabBar = {
   }),
 };
 
+// What waits unread behind each tab (spec/chat.md, Unread lines): the group
+// chats' lines that notify, and the answers from Pochical's people. Each
+// is worked out in its selector, so the bar redraws only when a count
+// changes.
+function useUnread(): Record<Tab, number> {
+  const group = useUser((state) =>
+    groupsUnread(state.chats, state.groups, state.mentionsWhenMuted)
+  );
+  const settings = useUser((state) => state.support.unread);
+  return { calendar: 0, group, settings };
+}
+
 export function TabBar({
   active,
   onSelect,
@@ -59,11 +81,16 @@ export function TabBar({
   active: Tab;
   onSelect: (tab: Tab) => void;
 }) {
+  const unread = useUnread();
+  const id = useId();
   return (
     <nav aria-label="タブ" className={tabBar.bar} data-tab-bar="">
       {tabs.map(({ tab, label, icon: Icon }) => (
         <button
           aria-current={active === tab ? "page" : undefined}
+          // Named as the tab alone; what waits in it is said after.
+          aria-describedby={unread[tab] > 0 ? `${id}-${tab}` : undefined}
+          aria-label={label}
           className={tabBar.item({ active: active === tab })}
           key={tab}
           onClick={() => {
@@ -71,7 +98,15 @@ export function TabBar({
           }}
           type="button"
         >
-          <Icon aria-hidden="true" size={24} />
+          <span className={tabBar.icon}>
+            <Icon aria-hidden="true" size={24} />
+            {unread[tab] > 0 && (
+              <span className={cx(badge, tabBar.count)} id={`${id}-${tab}`}>
+                {unread[tab]}
+                <span className={srOnly}>件の未読</span>
+              </span>
+            )}
+          </span>
           {label}
         </button>
       ))}

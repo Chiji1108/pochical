@@ -22,6 +22,8 @@ import {
 import type { OwnDays, RepeatRule, Schedule } from "./design-days";
 import { presetList } from "./design-patterns";
 import type { Pattern } from "./design-patterns";
+import { supportThreadOf } from "./design-support";
+import type { SupportThread } from "./design-support";
 import { designToday } from "./design-today";
 
 // One person's data on /design, sorted by where it would live in the app.
@@ -47,6 +49,8 @@ export type OwnData = {
   mentionsWhenMuted: boolean;
   // Members they blocked, by account: across every group they share.
   blocked: string[];
+  // Their chat with the people who make Pochical.
+  support: SupportThread;
 };
 
 // Shared with the people in each group, kept by that group's Group DO.
@@ -68,6 +72,7 @@ export type UserState = OwnData &
     setCoworkers: Setter<string[]>;
     setMentionsWhenMuted: Setter<boolean>;
     setBlocked: Setter<string[]>;
+    setSupport: Setter<SupportThread>;
     setGroups: Setter<GroupSummary[]>;
     setChats: Setter<Record<string, Chat>>;
   };
@@ -95,6 +100,7 @@ export function createUserStore(initial: Partial<OwnData & GroupData> = {}) {
       profile: { name: "さくら", photo: samplePhoto(1011) },
       rules: [],
       schedule: {},
+      support: supportThreadOf("none"),
       ...initial,
       setBlocked: setter("blocked"),
       setChats: setter("chats"),
@@ -105,6 +111,7 @@ export function createUserStore(initial: Partial<OwnData & GroupData> = {}) {
       setProfile: setter("profile"),
       setRules: setter("rules"),
       setSchedule: setter("schedule"),
+      setSupport: setter("support"),
     };
   });
 }
