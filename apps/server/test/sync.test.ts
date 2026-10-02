@@ -271,6 +271,27 @@ describe("syncing a user's own days", () => {
     });
   });
 
+  it("acknowledges without keeping an edit from no device it could be", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    // Not ASCII, which platforms order differently, and the server's own.
+    sendFrame(phone.socket, {
+      case: "dayEdits",
+      value: {
+        edits: [
+          edit("kana", "2026-10-14", DayField.PATTERN, "day", 1000, "でんわ"),
+          edit("server", "2026-10-14", DayField.PATTERN, "day", 1000, "server"),
+        ],
+      },
+    });
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: { case: "acked", value: { opIds: ["kana", "server"] } },
+    });
+    await expect(settled(phone.socket, phone.frames)).resolves.toMatchObject({
+      kind: { case: "pong" },
+    });
+  });
+
   it("takes day edits only on the user's own socket", async () => {
     const socket = await openSocket("/v1/groups/g/socket", await memberOf("g"));
     const frames = framesOf(socket);
@@ -452,6 +473,38 @@ describe("syncing a user's own patterns", () => {
     expect(
       fix?.kind.case === "pattern" && fix.kind.value.pattern
     ).toBeUndefined();
+  });
+
+  it("corrects a pattern whose mark is not one emoji, or has no letter", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    sendFrame(phone.socket, {
+      case: "patternEdits",
+      value: {
+        edits: [
+          patternEdit("letter", "night", { ...night, emoji: "夜" }, 1000),
+          patternEdit("blank", "after", { ...night, symbol: " " }, 1000),
+        ],
+      },
+    });
+    const corrected = await phone.frames.next();
+    await phone.frames.next();
+    const changes =
+      corrected.kind.case === "changes" ? corrected.kind.value.changes : [];
+    expect(
+      changes.map((change) =>
+        change.kind.case === "pattern"
+          ? {
+              device: change.kind.value.hlc?.deviceId,
+              id: change.kind.value.id,
+              pattern: change.kind.value.pattern,
+            }
+          : undefined
+      )
+    ).toStrictEqual([
+      { device: "server", id: "night", pattern: undefined },
+      { device: "server", id: "after", pattern: undefined },
+    ]);
   });
 
   it("keeps the patterns' order, correcting one with an id twice", async () => {

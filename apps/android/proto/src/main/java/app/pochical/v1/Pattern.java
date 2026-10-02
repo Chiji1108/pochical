@@ -99,8 +99,8 @@ public  final class Pattern extends
   private java.lang.String emoji_;
   /**
    * <pre>
-   * The mark in each look: an emoji, a letter (shiftMark characters) and
-   * an icon by the apps' own name for it.
+   * The mark in each look: one emoji, letters (1 to shiftMark characters,
+   * not blank) and an icon by the apps' own name for it.
    * </pre>
    *
    * <code>string emoji = 2 [json_name = "emoji"];</code>
@@ -112,8 +112,8 @@ public  final class Pattern extends
   }
   /**
    * <pre>
-   * The mark in each look: an emoji, a letter (shiftMark characters) and
-   * an icon by the apps' own name for it.
+   * The mark in each look: one emoji, letters (1 to shiftMark characters,
+   * not blank) and an icon by the apps' own name for it.
    * </pre>
    *
    * <code>string emoji = 2 [json_name = "emoji"];</code>
@@ -126,8 +126,8 @@ public  final class Pattern extends
   }
   /**
    * <pre>
-   * The mark in each look: an emoji, a letter (shiftMark characters) and
-   * an icon by the apps' own name for it.
+   * The mark in each look: one emoji, letters (1 to shiftMark characters,
+   * not blank) and an icon by the apps' own name for it.
    * </pre>
    *
    * <code>string emoji = 2 [json_name = "emoji"];</code>
@@ -141,8 +141,8 @@ public  final class Pattern extends
   }
   /**
    * <pre>
-   * The mark in each look: an emoji, a letter (shiftMark characters) and
-   * an icon by the apps' own name for it.
+   * The mark in each look: one emoji, letters (1 to shiftMark characters,
+   * not blank) and an icon by the apps' own name for it.
    * </pre>
    *
    * <code>string emoji = 2 [json_name = "emoji"];</code>
@@ -153,8 +153,8 @@ public  final class Pattern extends
   }
   /**
    * <pre>
-   * The mark in each look: an emoji, a letter (shiftMark characters) and
-   * an icon by the apps' own name for it.
+   * The mark in each look: one emoji, letters (1 to shiftMark characters,
+   * not blank) and an icon by the apps' own name for it.
    * </pre>
    *
    * <code>string emoji = 2 [json_name = "emoji"];</code>
@@ -728,8 +728,8 @@ public  final class Pattern extends
 
     /**
      * <pre>
-     * The mark in each look: an emoji, a letter (shiftMark characters) and
-     * an icon by the apps' own name for it.
+     * The mark in each look: one emoji, letters (1 to shiftMark characters,
+     * not blank) and an icon by the apps' own name for it.
      * </pre>
      *
      * <code>string emoji = 2 [json_name = "emoji"];</code>
@@ -741,8 +741,8 @@ public  final class Pattern extends
     }
     /**
      * <pre>
-     * The mark in each look: an emoji, a letter (shiftMark characters) and
-     * an icon by the apps' own name for it.
+     * The mark in each look: one emoji, letters (1 to shiftMark characters,
+     * not blank) and an icon by the apps' own name for it.
      * </pre>
      *
      * <code>string emoji = 2 [json_name = "emoji"];</code>
@@ -755,8 +755,8 @@ public  final class Pattern extends
     }
     /**
      * <pre>
-     * The mark in each look: an emoji, a letter (shiftMark characters) and
-     * an icon by the apps' own name for it.
+     * The mark in each look: one emoji, letters (1 to shiftMark characters,
+     * not blank) and an icon by the apps' own name for it.
      * </pre>
      *
      * <code>string emoji = 2 [json_name = "emoji"];</code>
@@ -771,8 +771,8 @@ public  final class Pattern extends
     }
     /**
      * <pre>
-     * The mark in each look: an emoji, a letter (shiftMark characters) and
-     * an icon by the apps' own name for it.
+     * The mark in each look: one emoji, letters (1 to shiftMark characters,
+     * not blank) and an icon by the apps' own name for it.
      * </pre>
      *
      * <code>string emoji = 2 [json_name = "emoji"];</code>
@@ -785,8 +785,8 @@ public  final class Pattern extends
     }
     /**
      * <pre>
-     * The mark in each look: an emoji, a letter (shiftMark characters) and
-     * an icon by the apps' own name for it.
+     * The mark in each look: one emoji, letters (1 to shiftMark characters,
+     * not blank) and an icon by the apps' own name for it.
      * </pre>
      *
      * <code>string emoji = 2 [json_name = "emoji"];</code>

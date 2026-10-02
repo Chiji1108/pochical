@@ -3,7 +3,7 @@ import { syncLimits, textLimits } from "@pochical/design/limits";
 
 import type { Pattern } from "./gen/pochical/v1/sync_pb";
 import { isId } from "./ids";
-import { characterCount } from "./text-limits";
+import { characterCount, isEmoji } from "./text-limits";
 
 // What a pattern and the patterns' order may hold (spec/shift-patterns.md),
 // checked as the owner's edits arrive.
@@ -19,7 +19,9 @@ export const fitsPattern = (id: string, pattern: Pattern): boolean => {
   return (
     pattern.name.trim() !== "" &&
     name <= textLimits.shiftName &&
-    characterCount(pattern.emoji) === 1 &&
+    // The mark in each look: one emoji, and 1 to shiftMark letters.
+    isEmoji(pattern.emoji) &&
+    pattern.symbol.trim() !== "" &&
     characterCount(pattern.symbol) <= textLimits.shiftMark &&
     isId(pattern.icon) &&
     pattern.color < markColors.length &&

@@ -184,6 +184,9 @@ describe("GroupService", () => {
       { ...ok, displayName: "あ".repeat(20) },
       { ...ok, emoji: "👨‍👩‍👧" },
       { ...ok, emoji: "🇯🇵" },
+      // A keycap starts with its plain digit.
+      { ...ok, emoji: "1️⃣" },
+      { ...ok, emoji: "#️⃣" },
     ];
     const refused = [
       { ...ok, name: "あ".repeat(31) },
@@ -193,6 +196,7 @@ describe("GroupService", () => {
       { ...ok, emoji: "" },
       { ...ok, emoji: "🍉🍉" },
       { ...ok, emoji: "あ" },
+      { ...ok, emoji: "1" },
       { ...ok, requestId: "" },
       { ...ok, requestId: "has space" },
       { ...ok, requestId: "x".repeat(syncLimits.idLength + 1) },

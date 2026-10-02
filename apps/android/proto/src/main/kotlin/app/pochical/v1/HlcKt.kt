@@ -13,7 +13,9 @@ public inline fun hlc(block: app.pochical.v1.HlcKt.Dsl.() -> kotlin.Unit): app.p
 /**
  * ```
  * A point on a hybrid logical clock: compared by physical_ms, then
- * counter, then device_id (spec/sync-protocol.md, HLC).
+ * counter, then device_id (spec/sync-protocol.md, HLC). device_id is the
+ * device's own id in ASCII letters, digits and "-" (a UUID), or "server"
+ * for the server's corrections.
  * ```
  *
  * Protobuf type `pochical.v1.Hlc`

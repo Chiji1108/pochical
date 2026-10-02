@@ -34,7 +34,7 @@ import type {
 } from "./gen/pochical/v1/sync_pb";
 import { clockAfter, compareClocks, isAhead } from "./hlc";
 import type { Clock } from "./hlc";
-import { isId } from "./ids";
+import { isDeviceId, isId } from "./ids";
 import { givesWay, heldBackBy, ORDER_FIELDS } from "./order-clears";
 import type { Floor } from "./order-clears";
 import {
@@ -650,7 +650,7 @@ export class UserDO extends DurableObject<Env> {
   }
 
   private applyPattern(edit: PatternValue, cursor: number): Change | undefined {
-    if (!(isId(edit.id) && edit.hlc && isId(edit.hlc.deviceId))) {
+    if (!(isId(edit.id) && edit.hlc && isDeviceId(edit.hlc.deviceId))) {
       return undefined;
     }
     const stored = this.db
@@ -683,7 +683,7 @@ export class UserDO extends DurableObject<Env> {
   }
 
   private applyOrder(edit: PatternOrder, cursor: number): Change | undefined {
-    if (!(edit.hlc && isId(edit.hlc.deviceId))) {
+    if (!(edit.hlc && isDeviceId(edit.hlc.deviceId))) {
       return undefined;
     }
     const stored = this.db.select().from(patternOrder).get();
@@ -717,7 +717,7 @@ export class UserDO extends DurableObject<Env> {
     { clearFrom, orders: edit }: RepeatOrdersEdit,
     cursor: number
   ): Change[] {
-    if (!(edit?.hlc && isId(edit.hlc.deviceId))) {
+    if (!(edit?.hlc && isDeviceId(edit.hlc.deviceId))) {
       return [];
     }
     const stored = this.db.select().from(repeatOrders).get();
@@ -819,7 +819,7 @@ export class UserDO extends DurableObject<Env> {
     edit: CoworkerValue,
     cursor: number
   ): Change | undefined {
-    if (!(isId(edit.id) && edit.hlc && isId(edit.hlc.deviceId))) {
+    if (!(isId(edit.id) && edit.hlc && isDeviceId(edit.hlc.deviceId))) {
       return undefined;
     }
     const stored = this.db
@@ -866,7 +866,7 @@ export class UserDO extends DurableObject<Env> {
     edit: CoworkerOrder,
     cursor: number
   ): Change | undefined {
-    if (!(edit.hlc && isId(edit.hlc.deviceId))) {
+    if (!(edit.hlc && isDeviceId(edit.hlc.deviceId))) {
       return undefined;
     }
     const stored = this.db.select().from(coworkerOrder).get();
