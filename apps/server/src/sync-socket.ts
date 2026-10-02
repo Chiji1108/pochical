@@ -89,6 +89,17 @@ export const send = (ws: WebSocket, kind: ServerFrameKind): void => {
   ws.send(toBinary(ServerFrameSchema, create(ServerFrameSchema, { kind })));
 };
 
+/**
+ * Welcome at the DO's head, with the server's time for the device to
+ * correct its clock by (spec/sync-protocol.md, HLC).
+ */
+export const sendWelcome = (ws: WebSocket, head: number): void => {
+  send(ws, {
+    case: "welcome",
+    value: { cursor: BigInt(head), serverMs: BigInt(Date.now()) },
+  });
+};
+
 export const rejectAndClose = (
   ws: WebSocket,
   code: ServerError_Code,

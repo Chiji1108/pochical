@@ -50,6 +50,9 @@ message Hello {
 message Welcome {
   // Current head of the DO's change log.
   uint64 cursor = 1;
+  // The server's time as it sent Welcome, ms since the Unix epoch: the
+  // device corrects its clock by it (spec/sync-protocol.md, HLC).
+  int64 server_ms = 2;
 }
 
 message Ping {
@@ -67,6 +70,12 @@ message ServerError {
     CODE_PROTOCOL_TOO_OLD = 1;
     // The frame could not be decoded, or Hello was not sent first.
     CODE_BAD_FRAME = 2;
+    // An edit's clock runs more than syncLimits.clockAheadMs
+    // (design/src/limits.ts) past the server's time. Nothing in the frame
+    // is taken and the server closes the socket; the device corrects its
+    // clock and the edits' (spec/sync-protocol.md, HLC) and sends them
+    // again.
+    CODE_CLOCK_AHEAD = 3;
   }
 
   Code code = 1;

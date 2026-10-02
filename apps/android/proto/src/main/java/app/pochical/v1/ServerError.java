@@ -42,6 +42,18 @@ public  final class ServerError extends
      * <code>CODE_BAD_FRAME = 2;</code>
      */
     CODE_BAD_FRAME(2),
+    /**
+     * <pre>
+     * An edit's clock runs more than syncLimits.clockAheadMs
+     * (design/src/limits.ts) past the server's time. Nothing in the frame
+     * is taken and the server closes the socket; the device corrects its
+     * clock and the edits' (spec/sync-protocol.md, HLC) and sends them
+     * again.
+     * </pre>
+     *
+     * <code>CODE_CLOCK_AHEAD = 3;</code>
+     */
+    CODE_CLOCK_AHEAD(3),
     UNRECOGNIZED(-1),
     ;
 
@@ -65,6 +77,18 @@ public  final class ServerError extends
      * <code>CODE_BAD_FRAME = 2;</code>
      */
     public static final int CODE_BAD_FRAME_VALUE = 2;
+    /**
+     * <pre>
+     * An edit's clock runs more than syncLimits.clockAheadMs
+     * (design/src/limits.ts) past the server's time. Nothing in the frame
+     * is taken and the server closes the socket; the device corrects its
+     * clock and the edits' (spec/sync-protocol.md, HLC) and sends them
+     * again.
+     * </pre>
+     *
+     * <code>CODE_CLOCK_AHEAD = 3;</code>
+     */
+    public static final int CODE_CLOCK_AHEAD_VALUE = 3;
 
 
     @java.lang.Override
@@ -90,6 +114,7 @@ public  final class ServerError extends
         case 0: return CODE_UNSPECIFIED;
         case 1: return CODE_PROTOCOL_TOO_OLD;
         case 2: return CODE_BAD_FRAME;
+        case 3: return CODE_CLOCK_AHEAD;
         default: return null;
       }
     }

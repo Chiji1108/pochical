@@ -46,7 +46,7 @@ Clients open one WebSocket to their User DO, at `/v1/me/socket`, and one per gro
 1. Before connecting, the client may call `SystemService.GetServerInfo` and ask the user to update when its protocol version is below `min_protocol_version`.
 2. The first frame must be `Hello { protocol_version, cursor }`.
    - Below the server minimum: the server replies `ServerError { CODE_PROTOCOL_TOO_OLD }` and closes with 1008.
-   - Otherwise it replies `Welcome { cursor }` with the head of the DO's change log.
+   - Otherwise it replies `Welcome { cursor, server_ms }` with the head of the DO's change log and the server's time, which the device corrects its clock by (HLC).
 3. Any other frame before `Hello` gets `ServerError { CODE_BAD_FRAME }` and the socket is closed with 1008.
 
 ### Keepalive
@@ -74,11 +74,17 @@ Deleting a day's shift writes a tombstone instead of removing the row, so a devi
 
 A hybrid logical clock value is `(physical_ms, counter, device_id)`, compared in that order.
 
-- On a local edit: `physical_ms = max(now, last.physical_ms)`; if it did not advance, `counter = last.counter + 1`, otherwise `counter = 0`.
-- On receiving a change: advance the local clock past the received value the same way, so any later local edit orders after it.
+- On a local edit: `physical_ms = max(now, last.physical_ms)`; if it did not advance, `counter = last.counter + 1`, otherwise `counter = 0`. The counter is a `uint32`: at its end the clock moves to the next millisecond (`spec/vectors/hlc.json`, tick).
+- On receiving a change: the device's last clock becomes the received one when that is later, so its next local edit orders after it (receive).
 - `device_id` only breaks exact ties.
 
 HLC, not arrival order, decides the winner: an edit made offline at 10:00 and delivered at 12:00 must lose to an edit made online at 11:00.
+
+`now` is the device's time corrected by the server's, so a device whose clock is set wrong cannot win over later edits, nor carry every device that takes its edits along with it:
+
+- Each `Welcome` carries the server's time, `server_ms`. The device's offset is `server_ms` less the middle of the round trip, from when it sent `Hello` to when `Welcome` arrived, divided as whole numbers (offset). It keeps the last offset across launches, 0 before its first `Welcome`, and `now` is its own time plus the offset.
+- The server refuses a frame of edits in which any clock runs more than `syncLimits.clockAheadMs` (`design/src/limits.ts`) past its own time: `ServerError { CODE_CLOCK_AHEAD }`, nothing in the frame is taken, and the socket is closed (ahead). A corrected clock stays well within it, so this catches edits stamped before the device's first `Welcome` or before its clock was changed.
+- On each `Welcome`, before sending its outbox, the device takes its last clock back to `now` if it is that far ahead (only unsent edits can have carried it there: the server sends no such clock), then gives every unsent edit whose clock is that far ahead a new clock from a local edit's tick, in outbox order. After `CODE_CLOCK_AHEAD` it reconnects and does the same.
 
 ### Outbox
 
@@ -186,6 +192,5 @@ Presence means "has this thread open on screen", not "online in the app": mobile
 - Snapshot format for resets and how long each DO keeps its change log
 - Wire messages for chat pages, and resets for DOs that do not keep values as registers
 - Push notifications (chat, mentions): the server sends a localization key and its arguments (APNs `loc-key`/`loc-args`, FCM `body_loc_key`/`body_loc_args`), never text it has put together, so the app words them in its own language and the server need not know each reader's
-- A device whose clock runs far ahead: its edits win until real time catches up. Whether the server should hold back clocks past its own time
 - Presence and "last seen": whether to show them at all. Pochical is for family and friends, where visible presence and read markers can feel like pressure; typing alone may be enough. "Last seen" would also need storing in the User DO.
 - Read state options: whether members see read markers (and whether users can turn them off), "mark as unread" (it moves the watermark back, so `max` would become a per-thread LWW register), and muted threads left out of badge totals (mentions: spec/chat.md)

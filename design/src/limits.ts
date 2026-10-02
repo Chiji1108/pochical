@@ -62,6 +62,11 @@ export const syncLimits = {
   // Values in one Changes frame the server sends; a frame stays well
   // under a WebSocket message's size.
   changesPerFrame: 500,
+  // How far past the server's time an edit's clock may run, in ms, once
+  // the device has corrected its clock by Welcome's server_ms
+  // (spec/sync-protocol.md, HLC). A frame with a clock further ahead is
+  // refused with CODE_CLOCK_AHEAD.
+  clockAheadMs: 300_000,
   // Edits in one frame a device sends (DayEdits, PatternEdits, …); an
   // outbox sends more as several. Past it the server closes the socket.
   editsPerFrame: 500,
