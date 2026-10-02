@@ -36,6 +36,9 @@
   ],
   // better-auth (src/auth.ts) builds its URLs from BETTER_AUTH_URL and signs
   // with BETTER_AUTH_SECRET (`wrangler secret put`; tests set their own).
+  // Never change it: the apps' session tokens are signed with it, so a new
+  // one signs every user out, and anonymous users cannot sign back in
+  // (spec/sync-protocol.md, Reconnecting).
   "vars": { "BETTER_AUTH_URL": "https://api.pochical.app" },
   "secrets": { "required": ["BETTER_AUTH_SECRET"] },
   // Cloudflare's rate limiting, counted per location and kept by nobody:

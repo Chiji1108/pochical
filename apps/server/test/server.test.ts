@@ -13,7 +13,7 @@ import {
   CURRENT_PROTOCOL_VERSION,
   MIN_PROTOCOL_VERSION,
 } from "../src/protocol";
-import { memberOf, openSocket, ORIGIN } from "./helpers";
+import { memberOf, openSocket, ORIGIN, signInAnonymously } from "./helpers";
 
 const openGroupSocket = async (groupId: string): Promise<WebSocket> =>
   await openSocket(`/v1/groups/${groupId}/socket`, await memberOf(groupId));
@@ -124,6 +124,13 @@ describe("group socket", () => {
     const again = nextText(socket);
     socket.send(socketRules.keepaliveText);
     await expect(again).resolves.toBe(socketRules.keepaliveReply);
+  });
+
+  it("answers the keepalive on the user's own socket too", async () => {
+    const socket = await openSocket("/v1/me/socket", await signInAnonymously());
+    const reply = nextText(socket);
+    socket.send(socketRules.keepaliveText);
+    await expect(reply).resolves.toBe(socketRules.keepaliveReply);
   });
 
   it("rejects frames sent before Hello", async () => {
