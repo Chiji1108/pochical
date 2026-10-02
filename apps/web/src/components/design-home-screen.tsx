@@ -20,7 +20,7 @@ import { NotificationBanner } from "./design-notifications";
 import { Phone } from "./design-phone";
 import { useThemeStyle } from "./design-theme";
 import { wallpaperFor, WidgetFrame } from "./design-widget-frame";
-import { ListSmall, NextOffSmall, TwoWeeksMedium } from "./design-widgets";
+import { UpcomingSmall, NextOffSmall, TwoWeeksMedium } from "./design-widgets";
 
 // The phone's home screen beside the app on /demo, with the widgets on it
 // drawn from the same person's data, so what is entered in the app shows
@@ -235,7 +235,7 @@ export function HomeScreen() {
                     <NextOffSmall entry={entry} />
                   </WidgetFrame>
                   <WidgetFrame {...placement} family="android2x2">
-                    <ListSmall entry={entry} />
+                    <UpcomingSmall entry={entry} />
                   </WidgetFrame>
                 </div>
                 <Apps round />
@@ -253,7 +253,7 @@ export function HomeScreen() {
                     <NextOffSmall entry={entry} />
                   </WidgetFrame>
                   <WidgetFrame {...placement} family="systemSmall">
-                    <ListSmall entry={entry} />
+                    <UpcomingSmall entry={entry} />
                   </WidgetFrame>
                 </div>
                 <Apps round={false} />

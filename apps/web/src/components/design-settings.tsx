@@ -1,7 +1,7 @@
 import type { ColorScheme } from "@pochical/design/colors";
 import { presets } from "@pochical/design/themes";
 import type { Preset } from "@pochical/design/themes";
-import { ArrowRight, CloudCheck } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CloudCheck } from "lucide-react";
 import {
   motion,
   useMotionValue,
@@ -32,7 +32,7 @@ import {
   repeatSchedule,
 } from "../lib/design-days";
 import type { RepeatRule, Schedule } from "../lib/design-days";
-import { useDevice } from "../lib/design-device";
+import { APP_VERSION, useDevice } from "../lib/design-device";
 import {
   isDayOff,
   OwnPatternsContext,
@@ -43,6 +43,7 @@ import {
 import type { Pattern, PatternBook, Shift } from "../lib/design-patterns";
 import { useLook, useSettings } from "../lib/design-settings-store";
 import { useUser } from "../lib/design-user-store";
+import { site } from "../lib/site";
 import { dayName } from "../lib/text-limits";
 import {
   ProviderButtons,
@@ -69,6 +70,12 @@ import { PatternsPage } from "./design-pattern-editor";
 import { PresetContexts } from "./design-providers";
 import { RepeatSequenceEditor, ShiftPreview } from "./design-repeat-editor";
 import { ConfirmDialog, SystemAlert } from "./design-sheet";
+import {
+  SupportChatPage,
+  supportLinesOf,
+  SupportRow,
+} from "./design-support-chat";
+import type { SupportLine, SupportSample } from "./design-support-chat";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
 import {
@@ -81,6 +88,7 @@ import {
   deviceColorsPreset,
 } from "./design-theme";
 import type { Appearance, PresetId } from "./design-theme";
+import { ToastContext } from "./design-toast";
 import {
   Button,
   ChipGroup,
@@ -93,6 +101,7 @@ import {
   LimitedInput,
   List,
   ListRow,
+  listRow,
   Note,
   PageDots,
   PageHeader,
@@ -139,7 +148,8 @@ type Page =
   | "account"
   | "profile"
   | "reminders"
-  | "chatNotifications";
+  | "chatNotifications"
+  | "support";
 
 // The four shapes members see. Icons come filled (塗り) or as outlines (線);
 // letters always sit on their tile, and emoji have no fill.
@@ -201,6 +211,7 @@ export function DesignSettings({
   onChangeJob,
   onHolidaysOff,
   onTab,
+  supportSample = "none",
   initialPage = "top",
 }: {
   patterns: Pattern[];
@@ -214,10 +225,16 @@ export function DesignSettings({
   onChangeJob: (job: { patterns: Pattern[]; rule: RepeatRule }) => void;
   onHolidaysOff: (holidaysOff: boolean) => void;
   onTab: (tab: Tab) => void;
+  // What has been said with support so far.
+  supportSample?: SupportSample;
   // For the flow diagrams: a page to open on.
   initialPage?: Page;
 }) {
   const [page, setPage] = useState<Page>(initialPage);
+  // Kept here, so leaving the chat and coming back finds it as it was.
+  const [supportLines, setSupportLines] = useState(() =>
+    supportLinesOf(supportSample)
+  );
   const weekTools = useWeek();
   const patternKeys = patterns.map((pattern) => pattern.id);
   const preview = stylePreviewOf(patterns, weekTools.weekDates);
@@ -234,6 +251,19 @@ export function DesignSettings({
   const lastSequence =
     [...rules].reverse().find((rule) => rule.sequence.length > 0)?.sequence ??
     [];
+  // A chat fills the screen, its composer where the tab bar was, as the
+  // group chats do.
+  if (page === "support") {
+    return (
+      <SupportChatPage
+        lines={supportLines}
+        onBack={() => {
+          setPage("top");
+        }}
+        onChange={setSupportLines}
+      />
+    );
+  }
   return (
     <Screen>
       <ScreenScroll>
@@ -244,6 +274,7 @@ export function DesignSettings({
             onOpen={setPage}
             patternKeys={patternKeys}
             profile={profile}
+            supportLines={supportLines}
           />
         )}
         {page === "profile" && (
@@ -409,12 +440,14 @@ function SettingsTop({
   patternKeys,
   coworkerCount,
   profile,
+  supportLines,
   onOpen,
 }: {
   current: RepeatRule | undefined;
   patternKeys: Shift[];
   coworkerCount: number;
   profile: Profile;
+  supportLines: SupportLine[];
   onOpen: (page: Page) => void;
 }) {
   return (
@@ -511,7 +544,73 @@ function SettingsTop({
           }}
         />
       </ListSection>
+      <SupportRow
+        lines={supportLines}
+        onOpen={() => {
+          onOpen("support");
+        }}
+      />
+      <AboutSection />
     </>
+  );
+}
+
+// The apps open the site's pages in the system's browser sheet
+// (SFSafariViewController, Custom Tabs); the prototype opens a tab.
+function openOutside(url: string) {
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+// Pochical itself, at the foot of the settings, under the chat with the
+// people who make it (SupportRow). Rows that leave the app end in ↗
+// instead of the arrow of rows that go on inside it. The store's
+// own review prompt comes by itself only now and then (spec/review.md);
+// the review row is there whenever someone wants to write one, and opens
+// the store's page for writing it (App Store's ?action=write-review,
+// Google Play's listing), which the prototype has none of before release.
+function AboutSection() {
+  const platform = useDevice((state) => state.platform);
+  const toast = useContext(ToastContext);
+  const store = platform === "ios" ? "App Store" : "Google Play";
+  const outside = (
+    <ArrowUpRight aria-hidden="true" className={listRow.arrow} size={17} />
+  );
+  return (
+    <div>
+      <ListSection title={`${site.name}について`}>
+        <ListRow
+          arrow={outside}
+          label="ヘルプ"
+          onClick={() => {
+            openOutside("/support");
+          }}
+        />
+        <ListRow
+          arrow={outside}
+          label={`${store}でレビューを書く`}
+          onClick={() => {
+            toast("公開後はレビューを書く画面が開きます", "problem");
+          }}
+        />
+        <ListRow
+          arrow={outside}
+          label="利用規約"
+          onClick={() => {
+            openOutside("/terms");
+          }}
+        />
+        <ListRow
+          arrow={outside}
+          label="プライバシーポリシー"
+          onClick={() => {
+            openOutside("/privacy");
+          }}
+        />
+      </ListSection>
+      <p className={settingsParts.version}>
+        {site.name} {APP_VERSION}
+      </p>
+    </div>
   );
 }
 
@@ -630,6 +729,13 @@ const settingsParts = {
     color: "text.tertiary",
     lineHeight: 1.5,
     margin: "8px 16px 0",
+    textStyle: "footnote",
+  }),
+  // The app's version under the last list, as apps end their settings.
+  version: css({
+    color: "text.tertiary",
+    margin: "16px 0 0",
+    textAlign: "center",
     textStyle: "footnote",
   }),
   card: css({ bg: "fill.quaternary", borderRadius: "2xl", padding: "16px" }),
