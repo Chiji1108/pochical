@@ -100,20 +100,25 @@ function Change({
   day,
   className,
   withName = true,
+  spoken = true,
 }: {
   day: WidgetDay;
   className: string;
   withName?: boolean;
+  // False where the view reads the whole day aloud itself (SpokenDay).
+  spoken?: boolean;
 }) {
   const named = useShiftNames();
   const words = withName ? changeWords(day, named) : newsWords(day);
   const time = day.time ? ` ${day.time}` : "";
   return (
     <strong className={className}>
-      <span className={srOnly}>
-        {day.name ?? NOTHING}
-        {time}
-      </span>
+      {spoken && (
+        <span className={srOnly}>
+          {day.name ?? NOTHING}
+          {time}
+        </span>
+      )}
       {words && <span aria-hidden="true">{words}</span>}
     </strong>
   );
@@ -455,24 +460,26 @@ function SimpleDay({ day, label }: { day: WidgetDay; label?: string }) {
   const noted = day.note ? dayParts.noted : undefined;
   return (
     <div className={simple.day}>
+      <SpokenDay day={day} />
       {label ? (
-        <span className={simple.label}>
+        <span aria-hidden="true" className={simple.label}>
           <span className={noted}>{label}</span>
         </span>
       ) : (
-        <span className={simple.date}>
+        <span aria-hidden="true" className={simple.date}>
           <span className={noted}>{words.short(day.date)}</span>
         </span>
       )}
-      <span className={simple.mark}>
+      <span aria-hidden="true" className={simple.mark}>
         <NamedMark day={day} large named={named} size={size} />
       </span>
-      {said && <Change className={simple.words} day={day} withName={false} />}
-      {!said && (
-        <span className={srOnly}>
-          {day.name ?? NOTHING}
-          {day.time ? ` ${day.time}` : ""}
-        </span>
+      {said && (
+        <Change
+          className={simple.words}
+          day={day}
+          spoken={false}
+          withName={false}
+        />
       )}
     </div>
   );
@@ -485,6 +492,7 @@ export function SimpleSmall({ entry }: { entry: WidgetEntry }) {
     return (
       <RestToday
         entry={{ ...entry, offs: { ...entry.offs, with: undefined } }}
+        noted
       />
     );
   }
@@ -553,20 +561,23 @@ function UpcomingHead({ day }: { day: WidgetDay }) {
   }
   return (
     <div className={upcoming.head}>
-      <NamedMark day={day} large named={named} size={size} />
-      <span className={upcoming.headText}>
+      <SpokenDay day={day} />
+      <span aria-hidden="true">
+        <NamedMark day={day} large named={named} size={size} />
+      </span>
+      <span aria-hidden="true" className={upcoming.headText}>
         <span className={simple.date}>
           <span className={cx(day.note && dayParts.noted)}>
             {words.short(day.date)}
           </span>
         </span>
-        {said ? (
-          <Change className={upcoming.change} day={day} withName={false} />
-        ) : (
-          <span className={srOnly}>
-            {day.name ?? NOTHING}
-            {day.time ? ` ${day.time}` : ""}
-          </span>
+        {said && (
+          <Change
+            className={upcoming.change}
+            day={day}
+            spoken={false}
+            withName={false}
+          />
         )}
       </span>
     </div>
@@ -1532,7 +1543,15 @@ function PeekingDog() {
 // A day off today, said as such rather than counted: おやすみ, with the
 // date over it, tomorrow's mark under it, and the app icon's poodle
 // looking up from the corner.
-function RestToday({ entry }: { entry: WidgetEntry }) {
+// `noted` draws a memo's stroke under the date, as シンプル does for the
+// day it shows; 次の休み's days go without.
+function RestToday({
+  entry,
+  noted = false,
+}: {
+  entry: WidgetEntry;
+  noted?: boolean;
+}) {
   const words = useWords();
   const day = entry.today;
   const [, tomorrow] = entry.upcoming;
@@ -1543,11 +1562,14 @@ function RestToday({ entry }: { entry: WidgetEntry }) {
   }
   return (
     <div className={rest.root}>
-      <span className={srOnly}>{spokenOff(entry, { day, inDays: 0 })}</span>
+      <span className={srOnly}>
+        {spokenOff(entry, { day, inDays: 0 })}
+        {noted && day.note ? " メモあり" : ""}
+      </span>
       <PeekingDog />
       <span aria-hidden="true" className={offs.head}>
         {/* The stroke outside the clipped line, so its ends show. */}
-        <span className={cx(day.note && dayParts.noted)}>
+        <span className={cx(noted && day.note && dayParts.noted)}>
           <span className={oneLine}>{words.date(day.date)}</span>
         </span>
         <CompanionFace entry={entry} />
