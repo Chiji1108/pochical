@@ -16,8 +16,10 @@ const budgets: Record<string, number> = {
   "/support": 140,
   "/terms": 140,
   // The app itself, which grows with it; raised from 450 as the widgets'
-  // settings came in (2026-10).
-  "/try": 470,
+  // settings came in (2026-10), and from 470 when the group chat's pieces
+  // got files of their own: the same code, but gzipped across another
+  // chunk's edge it weighs 1.5 KB more.
+  "/try": 475,
 };
 
 const DIST = new URL("../dist/", import.meta.url).pathname;
