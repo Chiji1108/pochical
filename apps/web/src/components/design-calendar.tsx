@@ -10,6 +10,7 @@ import {
   Pencil,
   Plus,
   Trash2,
+  X,
 } from "lucide-react";
 import {
   animate,
@@ -102,6 +103,7 @@ import {
   DestructiveButton,
   dayGridHeight,
   DoneButton,
+  IconButton,
   IconMenu,
   LimitedInput,
   LimitedTextArea,
@@ -1575,7 +1577,7 @@ function MonthHeading({
 // together at the edge; entering drops them, as its date picker changes
 // the month, leaving 完了 alone there. Without `arrows`, a swipe alone
 // turns the page, as in the platforms' calendars: the corner holds 今月
-// while away from it, then the save menu or 完了, and the arrows stay for
+// while away from it, then the save menu, 完了 or ×, and the arrows stay for
 // screen readers, as a native calendar's accessibility actions, showing
 // only while the keyboard is on them.
 function HeadingActions({
@@ -1680,8 +1682,11 @@ function HeadingActions({
 }
 
 // The heading's corner when a swipe alone turns the page: the arrows for
-// the keyboard and screen readers, 今月 while away, then the save menu or
-// 完了.
+// the keyboard and screen readers, 今月 while away, then the screen's
+// own: the save menu on the month, 完了 to finish ポチポチ入力, and × to
+// close an opened week. The week saves each change as it is made, so it
+// has nothing to finish; 完了 there read as editing, and its accent drew
+// the eye to leaving rather than to the day.
 function SwipeCorner({
   mode,
   previous,
@@ -1728,8 +1733,12 @@ function SwipeCorner({
             端末カレンダーに追加
           </MenuItem>
         </IconMenu>
-      ) : (
-        <DoneButton onClick={onDone} />
+      ) : null}
+      {mode === "edit" && <DoneButton onClick={onDone} />}
+      {mode === "week" && (
+        <IconButton label="閉じる" onClick={onDone}>
+          <X aria-hidden="true" size={20} />
+        </IconButton>
       )}
     </div>
   );
