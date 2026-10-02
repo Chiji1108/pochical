@@ -354,13 +354,14 @@ export function SimpleMedium({ entry }: { entry: WidgetEntry }) {
 // ── これから ─────────────────────────────────────────────────────────────
 
 const upcoming = {
+  pair: css({ gap: "12px" }),
   // Today on the left of the medium one.
   today: css({
     display: "flex",
     flexDirection: "column",
     flexShrink: 0,
     justifyContent: "space-between",
-    width: "112px",
+    width: "104px",
   }),
   note: css({
     color: "text.secondary",
@@ -375,7 +376,7 @@ const upcoming = {
     alignItems: "center",
     display: "grid",
     flex: 1,
-    gap: "8px",
+    gap: "4px",
     gridTemplateColumns: "48px 20px 1fr",
     minHeight: 0,
   }),
@@ -441,7 +442,7 @@ export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
   const words = useWords();
   const named = useShiftNames();
   return (
-    <div className={simple.pair}>
+    <div className={cx(simple.pair, upcoming.pair)}>
       <div className={upcoming.today}>
         <UpcomingToday day={entry.today} note />
       </div>
