@@ -1483,6 +1483,7 @@ export function ListRow({
   valueClassName?: string;
   "aria-label"?: string;
   "aria-pressed"?: boolean;
+  "aria-expanded"?: boolean;
 }) {
   const pressable = Boolean(onClick);
   const isLabel = !pressable && (control !== undefined || Boolean(htmlFor));
