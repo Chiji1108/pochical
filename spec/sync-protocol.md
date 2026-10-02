@@ -40,7 +40,9 @@ Every user is signed in, from the first launch: anonymously at first, so nobody 
 
 ## Sockets
 
-Clients open one WebSocket to their User DO, at `/v1/me/socket`, and one per group they are viewing, at `/v1/groups/{groupId}/socket`. The Worker checks the session before either reaches a Durable Object, and lets a group socket through only when the user's own DO lists the group, so an id that is not theirs is refused (403) without waking or creating a Group DO. Every message is binary: clients send `pochical.v1.ClientFrame`, the server sends `pochical.v1.ServerFrame` (see `proto/pochical/v1/sync.proto`). Text messages are protocol errors.
+Clients open one WebSocket to their User DO, at `/v1/me/socket`, and one per group they are viewing, at `/v1/groups/{groupId}/socket`. The Worker checks the session before either reaches a Durable Object, and lets a group socket through only when the user's own DO lists the group, so an id that is not theirs is refused (403) without waking or creating a Group DO. Every message is binary: clients send `pochical.v1.ClientFrame`, the server sends `pochical.v1.ServerFrame` (see `proto/pochical/v1/sync.proto`). Text messages are protocol errors, but for the keepalive text (Keepalive).
+
+A device keeps its User DO socket open while the app is in the foreground, and a group's socket while that group is on screen. It closes them as the app goes to the background, where the OS would soon stop them anyway, and opens them again when it comes back.
 
 ### Handshake
 
@@ -52,7 +54,18 @@ Clients open one WebSocket to their User DO, at `/v1/me/socket`, and one per gro
 
 ### Keepalive
 
-`Ping { nonce }` is answered with `Pong { nonce }`.
+The numbers are `socketRules` in `design/src/socket.ts`.
+
+- While a socket is open, a device sends the text message `keepaliveText` every `keepaliveEveryMs`, and the server answers `keepaliveReply`. The runtime answers it (`setWebSocketAutoResponse`), so keeping a socket alive never wakes a hibernating Durable Object. With no answer within `keepaliveWithinMs`, the device takes the socket for dead, closes it and reconnects.
+- `Ping { nonce }` is answered with `Pong { nonce }` by the Durable Object itself, after every frame it sent before. It is not for keeping alive: a device that sends one after `Welcome` knows, at its `Pong`, that its catch-up has all arrived.
+
+### Reconnecting
+
+- A device reconnects when a socket closes, or its keepalive goes unanswered. Before each try it waits a time drawn at random from 0 up to `reconnectFirstMs` doubled for each try before it since its last `Welcome`, at most `reconnectMostMs` (`spec/vectors/reconnect.json`). A `Welcome` starts the count again. The random wait keeps devices cut off together, as by a deploy, from coming back together.
+- It tries at once, starting the count again, when the app comes to the foreground or the network comes back: the person is waiting then.
+- After `CODE_CLOCK_AHEAD` it reconnects at once (HLC).
+- It does not reconnect after `CODE_PROTOCOL_TOO_OLD` until the app is updated, nor after a 401 to the upgrade, nor to a group after a 403 (it is not a member any more, so the group leaves its list).
+- A 401 means the session is gone: sessions last for good, so the user signed out or their account was deleted, on another device or by request. The device never answers it with a new anonymous sign-in, which would be a new user without their data. A linked user is asked to sign in with Apple or Google again; for an anonymous user the account no longer exists, so the app clears what it holds and starts afresh.
 
 ## Change log and cursor
 
