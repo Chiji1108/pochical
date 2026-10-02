@@ -16,7 +16,8 @@ import SwiftProtobuf
 public protocol Pochical_V1_GroupServiceClientInterface: Sendable {
 
     /// Makes a group with the caller as its first member, and its first
-    /// invitation link.
+    /// invitation link. Repeating it with the same request_id changes nothing
+    /// and answers the same.
     @available(iOS 13, *)
     func `createGroup`(request: Pochical_V1_CreateGroupRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_CreateGroupResponse>
 

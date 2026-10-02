@@ -22,7 +22,8 @@ public class GroupServiceClient(
 ) : GroupServiceClientInterface {
   /**
    *  Makes a group with the caller as its first member, and its first
-   *  invitation link.
+   *  invitation link. Repeating it with the same request_id changes nothing
+   *  and answers the same.
    */
   override suspend fun createGroup(request: CreateGroupRequest, headers: Headers): ResponseMessage<CreateGroupResponse> = client.unary(
     request,

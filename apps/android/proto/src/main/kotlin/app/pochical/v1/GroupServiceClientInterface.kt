@@ -16,7 +16,8 @@ import com.connectrpc.ResponseMessage
 public interface GroupServiceClientInterface {
   /**
    *  Makes a group with the caller as its first member, and its first
-   *  invitation link.
+   *  invitation link. Repeating it with the same request_id changes nothing
+   *  and answers the same.
    */
   public suspend fun createGroup(request: CreateGroupRequest, headers: Headers = emptyMap()): ResponseMessage<CreateGroupResponse>
 

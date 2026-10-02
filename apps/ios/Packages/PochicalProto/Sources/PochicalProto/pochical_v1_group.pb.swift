@@ -34,6 +34,13 @@ public nonisolated struct Pochical_V1_CreateGroupRequest: Sendable {
   /// How the caller appears in this group; personName: 1 to 20 characters.
   public var displayName: String = String()
 
+  /// An id the app makes once for each group it sets out to create, up to
+  /// syncLimits.idLength characters without spaces, and sends again with
+  /// every retry: the same id from the same user gives back the group it
+  /// made the first time, unchanged, so a retry after a lost answer never
+  /// makes a second group. INVALID_ARGUMENT when missing or malformed.
+  public var requestID: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -188,7 +195,7 @@ fileprivate nonisolated let _protobuf_package = "pochical.v1"
 
 nonisolated extension Pochical_V1_CreateGroupRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CreateGroupRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}emoji\0\u{3}display_name\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}emoji\0\u{3}display_name\0\u{3}request_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -199,6 +206,7 @@ nonisolated extension Pochical_V1_CreateGroupRequest: SwiftProtobuf.Message, Swi
       case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.emoji) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.displayName) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.requestID) }()
       default: break
       }
     }
@@ -214,6 +222,9 @@ nonisolated extension Pochical_V1_CreateGroupRequest: SwiftProtobuf.Message, Swi
     if !self.displayName.isEmpty {
       try visitor.visitSingularStringField(value: self.displayName, fieldNumber: 3)
     }
+    if !self.requestID.isEmpty {
+      try visitor.visitSingularStringField(value: self.requestID, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -221,6 +232,7 @@ nonisolated extension Pochical_V1_CreateGroupRequest: SwiftProtobuf.Message, Swi
     if lhs.name != rhs.name {return false}
     if lhs.emoji != rhs.emoji {return false}
     if lhs.displayName != rhs.displayName {return false}
+    if lhs.requestID != rhs.requestID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
