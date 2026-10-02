@@ -27,13 +27,16 @@ import {
   formatMonthFromToday,
   formatYearMonth,
   formatYearMonthDay,
+  gapDaysIn,
   isSameMonth,
   keepDetails,
   membersOrNone,
   monthAfter,
+  nextDayOf,
   timeChangeOf,
   timeRange,
   weekdays,
+  withShiftEntered,
 } from "../lib/design-days";
 import type { DayEntry, Schedule } from "../lib/design-days";
 import {
@@ -50,7 +53,7 @@ import { composing, limitText } from "../lib/text-limits";
 import { coworkersFull, useCoworkerList } from "./design-coworkers";
 import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
-import { GapSheet, gapDaysIn } from "./design-gap-sheet";
+import { GapSheet } from "./design-gap-sheet";
 import { BreakdownSheet, useShownWith } from "./design-month-breakdown";
 import { MonthName } from "./design-month-name";
 import { MonthTitleButton, monthTitle } from "./design-month-picker";
@@ -640,19 +643,10 @@ function useShiftEntry({
     setEditing(false);
   }
   function enterShift(shift: Shift | undefined) {
-    const key = dateKey(selectedDate);
-    // One day only: the next day's own next day is not followed, so
-    // patterns naming each other never run on (spec/shift-patterns.md).
-    const following = shift && book[shift]?.nextDay;
-    const followingKey = dateKey(addDays(selectedDate, 1));
-    onChange((previous) => ({
-      ...previous,
-      [key]:
-        shift === undefined ? undefined : keepDetails(previous[key], shift),
-      ...(following && {
-        [followingKey]: keepDetails(previous[followingKey], following),
-      }),
-    }));
+    const following = nextDayOf(shift, book);
+    onChange((previous) =>
+      withShiftEntered(previous, selectedDate, shift, book)
+    );
     if (!shift) {
       moveToNextDay("シフトを消しました");
       return;

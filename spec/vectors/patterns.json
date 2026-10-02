@@ -1,0 +1,305 @@
+{
+  "about": "Changing the list of patterns (spec/shift-patterns.md). deleted: deleting pattern `id` takes it from `patterns`, takes the link from patterns that named it as `nextDay`, and takes it from the days that have it of their own (`own`, by date; \"\" is a day cleared on purpose). newJob: changing jobs; the new job's `incoming` patterns take over from the person's `own`, and an old one still on a day before the switch (`usedBefore`) stays after them. A ready-made pattern sharing an id with one of the person's that differs (name, mark, time, off, next day) and is still used before the switch keeps the person's id; the new job's takes a fresh one, which `sequence` (the new order) and next days use. Fresh ids are \"new-1\", \"new-2\"… in the order of `incoming`. `expected` lists the patterns by id, in order, with their next day.",
+  "deleted": [
+    {
+      "name": "its days of their own go, and links to it",
+      "patterns": [
+        {
+          "id": "night",
+          "nextDay": "after"
+        },
+        {
+          "id": "after"
+        },
+        {
+          "id": "day"
+        }
+      ],
+      "own": {
+        "2026-10-01": {
+          "shift": "night"
+        },
+        "2026-10-02": {
+          "shift": "after"
+        },
+        "2026-10-03": {
+          "shift": "after",
+          "note": "病院"
+        },
+        "2026-10-04": {
+          "shift": ""
+        }
+      },
+      "id": "after",
+      "expected": {
+        "patterns": [
+          {
+            "id": "night"
+          },
+          {
+            "id": "day"
+          }
+        ],
+        "own": {
+          "2026-10-01": {
+            "shift": "night"
+          },
+          "2026-10-04": {
+            "shift": ""
+          }
+        }
+      }
+    },
+    {
+      "name": "an own day without a shift of its own stays",
+      "patterns": [
+        {
+          "id": "day"
+        },
+        {
+          "id": "off"
+        }
+      ],
+      "own": {
+        "2026-10-01": {
+          "note": "棚卸し"
+        }
+      },
+      "id": "day",
+      "expected": {
+        "patterns": [
+          {
+            "id": "off"
+          }
+        ],
+        "own": {
+          "2026-10-01": {
+            "note": "棚卸し"
+          }
+        }
+      }
+    }
+  ],
+  "newJob": [
+    {
+      "name": "the new job's patterns replace ones no longer on past days",
+      "own": [
+        {
+          "id": "office",
+          "name": "出勤",
+          "countsAsOff": false,
+          "emoji": "🌞",
+          "icon": "sun",
+          "color": 1,
+          "time": ["09:00", "18:00"]
+        }
+      ],
+      "incoming": [
+        {
+          "id": "day",
+          "name": "日勤",
+          "countsAsOff": false,
+          "emoji": "🌞",
+          "icon": "sun",
+          "color": 1,
+          "time": ["09:00", "18:00"]
+        },
+        {
+          "id": "night",
+          "name": "夜勤",
+          "countsAsOff": false,
+          "emoji": "🌞",
+          "icon": "sun",
+          "color": 1,
+          "time": ["16:30", "09:30"],
+          "nextDay": "after"
+        },
+        {
+          "id": "after",
+          "name": "明け",
+          "countsAsOff": false,
+          "emoji": "🌞",
+          "icon": "sun",
+          "color": 1
+        }
+      ],
+      "sequence": ["day", "night", "after"],
+      "usedBefore": [],
+      "expected": {
+        "patterns": [
+          {
+            "id": "day"
+          },
+          {
+            "id": "night",
+            "nextDay": "after"
+          },
+          {
+            "id": "after"
+          }
+        ],
+        "sequence": ["day", "night", "after"]
+      }
+    },
+    {
+      "name": "an old pattern still on past days stays after them",
+      "own": [
+        {
+          "id": "office",
+          "name": "出勤",
+          "countsAsOff": false,
+          "emoji": "🌞",
+          "icon": "sun",
+          "color": 1,
+          "time": ["09:00", "18:00"]
+        }
+      ],
+      "incoming": [
+        {
+          "id": "day",
+          "name": "日勤",
+          "countsAsOff": false,
+          "emoji": "🌞",
+          "icon": "sun",
+          "color": 1,
+          "time": ["09:00", "18:00"]
+        }
+      ],
+      "sequence": ["day"],
+      "usedBefore": ["office"],
+      "expected": {
+        "patterns": [
+          {
+            "id": "day"
+          },
+          {
+            "id": "office"
+          }
+        ],
+        "sequence": ["day"]
+      }
+    },
+    {
+      "name": "a changed ready-made pattern on past days keeps its id; the new job's takes a fresh one",
+      "own": [
+        {
+          "id": "day",
+          "name": "日勤",
+          "countsAsOff": false,
+          "emoji": "🌞",
+          "icon": "sun",
+          "color": 1,
+          "time": ["08:30", "17:30"]
+        }
+      ],
+      "incoming": [
+        {
+          "id": "night",
+          "name": "夜勤",
+          "countsAsOff": false,
+          "emoji": "🌞",
+          "icon": "sun",
+          "color": 1,
+          "time": ["16:30", "09:30"],
+          "nextDay": "day"
+        },
+        {
+          "id": "day",
+          "name": "日勤",
+          "countsAsOff": false,
+          "emoji": "🌞",
+          "icon": "sun",
+          "color": 1,
+          "time": ["09:00", "18:00"]
+        }
+      ],
+      "sequence": ["day", "night"],
+      "usedBefore": ["day"],
+      "expected": {
+        "patterns": [
+          {
+            "id": "night",
+            "nextDay": "new-1"
+          },
+          {
+            "id": "new-1"
+          },
+          {
+            "id": "day"
+          }
+        ],
+        "sequence": ["new-1", "night"]
+      }
+    },
+    {
+      "name": "the same ready-made pattern, unchanged, is simply the new job's",
+      "own": [
+        {
+          "id": "day",
+          "name": "日勤",
+          "countsAsOff": false,
+          "emoji": "🌞",
+          "icon": "sun",
+          "color": 1,
+          "time": ["09:00", "18:00"]
+        }
+      ],
+      "incoming": [
+        {
+          "id": "day",
+          "name": "日勤",
+          "countsAsOff": false,
+          "emoji": "🌞",
+          "icon": "sun",
+          "color": 1,
+          "time": ["09:00", "18:00"]
+        }
+      ],
+      "sequence": ["day"],
+      "usedBefore": ["day"],
+      "expected": {
+        "patterns": [
+          {
+            "id": "day"
+          }
+        ],
+        "sequence": ["day"]
+      }
+    },
+    {
+      "name": "a changed pattern no longer on past days gives way",
+      "own": [
+        {
+          "id": "day",
+          "name": "日勤",
+          "countsAsOff": false,
+          "emoji": "🌞",
+          "icon": "sun",
+          "color": 1,
+          "time": ["08:30", "17:30"]
+        }
+      ],
+      "incoming": [
+        {
+          "id": "day",
+          "name": "日勤",
+          "countsAsOff": false,
+          "emoji": "🌞",
+          "icon": "sun",
+          "color": 1,
+          "time": ["09:00", "18:00"]
+        }
+      ],
+      "sequence": ["day"],
+      "usedBefore": [],
+      "expected": {
+        "patterns": [
+          {
+            "id": "day"
+          }
+        ],
+        "sequence": ["day"]
+      }
+    }
+  ]
+}

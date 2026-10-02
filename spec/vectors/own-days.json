@@ -1,0 +1,129 @@
+{
+  "about": "A person's own days under repeating orders (spec/shift-patterns.md, Repeating orders): only what differs from the order is kept as theirs. edited: `planned` is the orders' shift by date; the days show as `own` over it, and an edit sets the days in `edits` (null clears one) to give the person's own days `expected`. A day showing its planned shift keeps no shift of its own (a memo or people stay); clearing a day the order fills keeps \"\" (dayRules.noShift); a day the edit does not touch stays as it was. givenToOrder: starting an order, or correcting the one in use, on `start` gives the days from then back to it: their own shifts and times go, memos and people stay; days before it stay as they were.",
+  "edited": [
+    {
+      "name": "a memo on a day the order fills keeps no shift of its own",
+      "own": {},
+      "planned": {
+        "2026-10-01": "day",
+        "2026-10-02": "day"
+      },
+      "edits": {
+        "2026-10-01": {
+          "shift": "day",
+          "note": "棚卸し"
+        }
+      },
+      "expected": {
+        "2026-10-01": {
+          "note": "棚卸し"
+        }
+      }
+    },
+    {
+      "name": "another shift is kept, and clearing a day keeps an empty one",
+      "own": {},
+      "planned": {
+        "2026-10-01": "day",
+        "2026-10-02": "day"
+      },
+      "edits": {
+        "2026-10-01": {
+          "shift": "night"
+        },
+        "2026-10-02": null
+      },
+      "expected": {
+        "2026-10-01": {
+          "shift": "night"
+        },
+        "2026-10-02": {
+          "shift": ""
+        }
+      }
+    },
+    {
+      "name": "entering the order's own shift again gives the day back to it",
+      "own": {
+        "2026-10-01": {
+          "shift": "night"
+        }
+      },
+      "planned": {
+        "2026-10-01": "day",
+        "2026-10-02": "day"
+      },
+      "edits": {
+        "2026-10-01": {
+          "shift": "day"
+        }
+      },
+      "expected": {}
+    },
+    {
+      "name": "days the edit does not touch stay as they were",
+      "own": {
+        "2026-09-01": {
+          "note": "前の月"
+        }
+      },
+      "planned": {
+        "2026-10-01": "day",
+        "2026-10-02": "day"
+      },
+      "edits": {
+        "2026-10-01": {
+          "shift": "night"
+        }
+      },
+      "expected": {
+        "2026-09-01": {
+          "note": "前の月"
+        },
+        "2026-10-01": {
+          "shift": "night"
+        }
+      }
+    },
+    {
+      "name": "clearing a day no order fills leaves nothing",
+      "own": {
+        "2026-10-05": {
+          "shift": "night"
+        }
+      },
+      "planned": {},
+      "edits": {
+        "2026-10-05": null
+      },
+      "expected": {}
+    }
+  ],
+  "givenToOrder": [
+    {
+      "name": "a new order takes shifts and times from its start, not memos",
+      "own": {
+        "2026-09-30": {
+          "shift": "night"
+        },
+        "2026-10-01": {
+          "end": "20:00",
+          "note": "棚卸し",
+          "shift": "night"
+        },
+        "2026-10-02": {
+          "shift": ""
+        }
+      },
+      "start": "2026-10-01",
+      "expected": {
+        "2026-09-30": {
+          "shift": "night"
+        },
+        "2026-10-01": {
+          "note": "棚卸し"
+        }
+      }
+    }
+  ]
+}

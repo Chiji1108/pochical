@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { css } from "styled-system/css";
 
-import type { Schedule } from "../lib/design-days";
-import { daysOfMonth, formatMonth } from "../lib/design-days";
+import { formatMonth } from "../lib/design-days";
 import type { Shift } from "../lib/design-patterns";
 import {
   Sheet,
@@ -38,24 +37,6 @@ const gap = {
 };
 
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
-
-function keyOf(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-// Many people leave days off blank, pressing 翌日へ as other apps taught
-// them. Rather than stop them while entering, 完了 asks once about the
-// blanks between entered days and fills them with a day off in one tap.
-// Blanks after the last entered day are left alone: those are more likely
-// not decided yet.
-export function gapDaysIn(schedule: Schedule, month: Date) {
-  const days = daysOfMonth(month);
-  const lastEntered = days.findLast((date) => schedule[keyOf(date)]);
-  return days.filter(
-    (date) =>
-      lastEntered !== undefined && date < lastEntered && !schedule[keyOf(date)]
-  );
-}
 
 export type GapSheetProps = {
   month: Date;
