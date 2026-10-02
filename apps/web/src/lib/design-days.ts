@@ -129,10 +129,14 @@ export function holidayShiftOf(patterns: readonly Pattern[]) {
 }
 
 const sampleDetails: Record<string, Omit<DayEntry, "shift">> = {
+  "2026-09-02": { members: ["田中"] },
   "2026-09-08": { end: "20:00", note: "棚卸し" },
+  "2026-09-09": { members: ["田中", "佐藤"] },
+  "2026-09-12": { members: ["山本"] },
   "2026-09-19": { members: ["田中", "山本"], start: "08:00" },
-  "2026-09-25": { end: "20:00" },
+  "2026-09-25": { end: "20:00", members: ["田中"] },
   "2026-09-26": { note: "新人さん同行" },
+  "2026-09-28": { members: ["田中", "鈴木"] },
 };
 
 function sampleShift(patternCount: PatternCount, index: number): PresetShift {

@@ -268,15 +268,36 @@ export function DesignCalendar({
       return shift !== undefined && isDayOff(book[shift]);
     }).length;
   const daysOff = daysOffIn(monthDays);
-  // The months beside, for 今月のお休み to follow a drag of the pages.
-  const daysOffBy = (by: number) => {
+  // Someone picked in 今月の内訳: the calendar shows the days they are on,
+  // the others faded, and the summary counts them in place of the days
+  // off. A name renamed or deleted since lets it go.
+  const [shownWith, setShownWith] = useState<string>();
+  const withPerson =
+    shownWith !== undefined && coworkerNames.includes(shownWith)
+      ? shownWith
+      : undefined;
+  const isWith = (name: string, date: Date) =>
+    schedule[dateKey(date)]?.members?.includes(name) ?? false;
+  const summaryIn = (days: Date[]) =>
+    withPerson === undefined
+      ? daysOffIn(days)
+      : days.filter((date) => isWith(withPerson, date)).length;
+  // The months beside, for the summary to follow a drag of the pages.
+  const summaryBy = (by: number) => {
     const beside = new Date(month.getFullYear(), month.getMonth() + by, 1);
-    return daysOffIn(
+    return summaryIn(
       weekTools
         .monthDates(beside)
         .filter((date) => date.getMonth() === beside.getMonth())
     );
   };
+  // Who is on this month's days, in the order of 一緒に働く人.
+  const monthCoworkers = coworkerNames
+    .map((name) => ({
+      count: monthDays.filter((date) => isWith(name, date)).length,
+      name,
+    }))
+    .filter(({ count }) => count > 0);
   const counts = ownPatterns.map((pattern) => ({
     count: monthDays.filter(
       (date) => schedule[dateKey(date)]?.shift === pattern.id
@@ -413,7 +434,9 @@ export function DesignCalendar({
     }
     goToMonth(new Date(month.getFullYear(), month.getMonth() + direction, 1));
   }
+  // Entering is about every day, so it lets go of someone's days.
   function startInput() {
+    setShownWith(undefined);
     setSelectedDay(1);
     setEnteredBlank(unfilled > 0);
     setEditing(true);
@@ -760,6 +783,11 @@ export function DesignCalendar({
                               onPress={() => {
                                 editing ? enterFrom(date) : openDetail(date);
                               }}
+                              dimmed={
+                                withPerson !== undefined &&
+                                !editing &&
+                                !isWith(withPerson, date)
+                              }
                               outside={
                                 !weekDetail &&
                                 date.getMonth() !== pageMonth.getMonth()
@@ -817,12 +845,16 @@ export function DesignCalendar({
                 {headingMode === "view" && (
                   <div className={calendarPage.bottom}>
                     <MonthSummary
-                      beside={{ next: daysOffBy(1), previous: daysOffBy(-1) }}
-                      daysOff={daysOff}
+                      beside={{ next: summaryBy(1), previous: summaryBy(-1) }}
+                      days={summaryIn(monthDays)}
                       month={month}
+                      onClear={() => {
+                        setShownWith(undefined);
+                      }}
                       onOpen={() => {
                         setOpenSheet("breakdown");
                       }}
+                      person={withPerson}
                       progress={pageDrag}
                       swiped={swipedTo === dateKey(month)}
                     />
@@ -886,6 +918,44 @@ export function DesignCalendar({
                   <p className={breakdown.total}>
                     この月は全{monthDays.length}日
                   </p>
+                  {monthCoworkers.length > 0 && (
+                    <section>
+                      <h3 className={breakdown.heading}>一緒に働く人</h3>
+                      <ul className={breakdown.list}>
+                        {monthCoworkers.map(({ name, count }) => (
+                          <li key={name}>
+                            <button
+                              aria-pressed={name === withPerson}
+                              className={breakdown.row({ pressable: true })}
+                              onClick={() => {
+                                setShownWith(
+                                  name === withPerson ? undefined : name
+                                );
+                                setOpenSheet(null);
+                              }}
+                              type="button"
+                            >
+                              <span className={breakdown.name}>
+                                {name === withPerson && (
+                                  <Check aria-hidden="true" size={18} />
+                                )}
+                                {name}
+                              </span>
+                              <span className={breakdown.count}>
+                                {count}
+                                <span className={breakdown.unit}>日</span>
+                                <ChevronRight
+                                  aria-hidden="true"
+                                  className={breakdown.chevron}
+                                  size={17}
+                                />
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
                 </div>
               </Sheet>
               <SaveSheet
@@ -940,7 +1010,19 @@ const breakdown = {
     margin: 0,
     textStyle: "title3",
   }),
-  list: css({ margin: 0 }),
+  chevron: css({
+    color: "text.quaternary",
+    marginLeft: "8px",
+    verticalAlign: "-2px",
+  }),
+  // 一緒に働く人, under the month's total.
+  heading: css({
+    color: "text.tertiary",
+    fontWeight: 600,
+    margin: "28px 0 0",
+    textStyle: "subheadline",
+  }),
+  list: css({ listStyle: "none", margin: 0, padding: 0 }),
   name: css({
     "& > span": { fontSize: "24px" },
     alignItems: "center",
@@ -956,7 +1038,21 @@ const breakdown = {
       justifyContent: "space-between",
       minHeight: "52px",
     },
-    variants: { unfilled: { true: { color: "text.tertiary" } } },
+    variants: {
+      unfilled: { true: { color: "text.tertiary" } },
+      // Someone's row: pressed, the calendar shows their days.
+      pressable: {
+        true: {
+          bg: "transparent",
+          borderInline: 0,
+          borderTop: 0,
+          color: "text.primary",
+          cursor: "pointer",
+          paddingInline: 0,
+          width: "100%",
+        },
+      },
+    },
   }),
   total: css({
     color: "text.tertiary",
@@ -1326,21 +1422,28 @@ function screenMode(editing: boolean, weekDetail: boolean) {
 // lands; the words around them stay put.
 export function MonthSummary({
   month,
-  daysOff,
+  days,
   onOpen,
+  person,
+  onClear,
   progress,
   swiped = false,
   beside,
 }: {
   month: Date;
-  daysOff: number;
+  // The days off, or with `person` the days they are on.
+  days: number;
   onOpen: () => void;
+  person?: string;
+  // Back to the days off.
+  onClear?: () => void;
   progress?: MotionValue<number>;
   swiped?: boolean;
-  // The days off in the months before and after, while the pages can be
+  // The same count in the months before and after, while the pages can be
   // dragged.
   beside?: { previous: number; next: number };
 }) {
+  const counted = person === undefined ? "のお休み" : `、${person}と一緒`;
   const reduceMotion = useReducedMotion() ?? false;
   const turn = useTurn(monthIndex(month), swiped);
   const monthOf = (by: number) => {
@@ -1355,7 +1458,7 @@ export function MonthSummary({
     <SummaryRow
       days={
         <>
-          <span className={srOnly}>{daysOff}</span>
+          <span className={srOnly}>{days}</span>
           <span aria-hidden="true">
             <RollingName
               end
@@ -1363,7 +1466,7 @@ export function MonthSummary({
               previous={dragged ? String(beside.previous) : undefined}
               progress={progress}
               still={reduceMotion}
-              text={String(daysOff)}
+              text={String(days)}
               turn={turn}
             />
           </span>
@@ -1371,7 +1474,10 @@ export function MonthSummary({
       }
       label={
         <>
-          <span className={srOnly}>{monthOf(0)}のお休み</span>
+          <span className={srOnly}>
+            {monthOf(0)}
+            {counted}
+          </span>
           <span aria-hidden="true">
             <RollingName
               next={dragged ? monthOf(1) : undefined}
@@ -1381,10 +1487,12 @@ export function MonthSummary({
               text={monthOf(0)}
               turn={turn}
             />
-            のお休み
+            {counted}
           </span>
         </>
       }
+      clearLabel={`${person}と一緒の日の表示をやめる`}
+      onClear={person === undefined ? undefined : onClear}
       onOpen={onOpen}
     />
   );
