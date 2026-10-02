@@ -89,6 +89,12 @@ import type {
 
 // Values in one push to a group.
 const VALUES_PER_PUSH = 500;
+// After a round of pushes where one failed, the alarm comes back after
+// this long, twice as long each round that fails in a row, up to the most.
+const PUSH_RETRY_FIRST_MS = 10_000;
+const PUSH_RETRY_MOST_MS = 3_600_000;
+// How many rounds of pushes in a row have failed, in the DO's storage.
+const PUSH_FAILURES_KEY = "pushFailures";
 
 /** One kind of value the user owns, as UserDO.logs lists them. */
 type SyncedLog = {
@@ -157,9 +163,10 @@ export class UserDO extends DurableObject<Env> {
 
   /**
    * Pushes each of the user's groups what changed for it since it last
-   * took a push. Run by the DO's alarm, which is retried when it throws, so
-   * a group that could not be reached gets the values later; they carry
-   * their clocks, so one taken twice changes nothing.
+   * took a push. Run by the DO's alarm. A group that could not be reached
+   * keeps its cursor and gets the values on a later round, without holding
+   * back the groups after it; they carry their clocks, so one taken twice
+   * changes nothing.
    */
   async alarm(): Promise<void> {
     const userId = this.ctx.id.name;
@@ -168,14 +175,46 @@ export class UserDO extends DurableObject<Env> {
     }
     const head = this.head();
     const groups = this.db.select().from(memberships).all();
+    let failed = false;
     for (const { groupId, pushedCursor } of groups) {
-      // oxlint-disable-next-line no-await-in-loop -- one group at a time
-      await this.pushTo(groupId, userId, this.sharedAfter(pushedCursor));
+      try {
+        // oxlint-disable-next-line no-await-in-loop -- one group at a time
+        await this.pushTo(groupId, userId, this.sharedAfter(pushedCursor));
+      } catch (error) {
+        console.error(`Pushing to group ${groupId} failed`, error);
+        failed = true;
+        continue;
+      }
       this.db
         .update(memberships)
         .set({ pushedCursor: head })
         .where(eq(memberships.groupId, groupId))
         .run();
+    }
+    await this.retryFailedPushes(failed);
+  }
+
+  /**
+   * After a round where a push failed, comes back for it, waiting longer
+   * each round that fails in a row. The runtime's own retries of an alarm
+   * that throws stop after a few, which would leave the values waiting for
+   * the user's next edit. An alarm set sooner, by an edit, is kept.
+   */
+  private async retryFailedPushes(failed: boolean): Promise<void> {
+    const { kv } = this.ctx.storage;
+    if (!failed) {
+      kv.delete(PUSH_FAILURES_KEY);
+      return;
+    }
+    const stored: unknown = kv.get(PUSH_FAILURES_KEY);
+    const failures = (typeof stored === "number" ? stored : 0) + 1;
+    kv.put(PUSH_FAILURES_KEY, failures);
+    const retryAt =
+      Date.now() +
+      Math.min(PUSH_RETRY_FIRST_MS * 2 ** (failures - 1), PUSH_RETRY_MOST_MS);
+    const pending = await this.ctx.storage.getAlarm();
+    if (pending === null || pending > retryAt) {
+      await this.ctx.storage.setAlarm(retryAt);
     }
   }
 
