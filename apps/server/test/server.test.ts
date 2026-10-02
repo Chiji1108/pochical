@@ -1,4 +1,5 @@
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
+import { socketRules } from "@pochical/design/socket";
 import { exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
@@ -36,6 +37,18 @@ const nextFrame = async (socket: WebSocket): Promise<ServerFrame> => {
     ServerFrameSchema,
     new Uint8Array(await data.arrayBuffer())
   );
+};
+
+const nextText = async (socket: WebSocket): Promise<unknown> => {
+  const { promise, resolve } = Promise.withResolvers<unknown>();
+  socket.addEventListener(
+    "message",
+    (event) => {
+      resolve(event.data);
+    },
+    { once: true }
+  );
+  return await promise;
 };
 
 const sendFrame = (
@@ -87,6 +100,30 @@ describe("group socket", () => {
       case: "pong",
       value: { nonce: 42 },
     });
+  });
+
+  it("answers the keepalive text, before Hello and after", async () => {
+    const socket = await openGroupSocket("keepalive");
+
+    const reply = nextText(socket);
+    socket.send(socketRules.keepaliveText);
+    await expect(reply).resolves.toBe(socketRules.keepaliveReply);
+
+    // The keepalive is not a protocol error: Hello still welcomes.
+    const welcome = nextFrame(socket);
+    sendFrame(socket, {
+      kind: {
+        case: "hello",
+        value: { protocolVersion: CURRENT_PROTOCOL_VERSION },
+      },
+    });
+    await expect(welcome).resolves.toMatchObject({
+      kind: { case: "welcome" },
+    });
+
+    const again = nextText(socket);
+    socket.send(socketRules.keepaliveText);
+    await expect(again).resolves.toBe(socketRules.keepaliveReply);
   });
 
   it("rejects frames sent before Hello", async () => {

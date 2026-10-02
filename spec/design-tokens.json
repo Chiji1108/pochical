@@ -2925,6 +2925,14 @@
     "minOpenDays": 7,
     "minOpenMonths": 2
   },
+  "socket": {
+    "keepaliveEveryMs": 30000,
+    "keepaliveReply": "pong",
+    "keepaliveText": "ping",
+    "keepaliveWithinMs": 10000,
+    "reconnectFirstMs": 1000,
+    "reconnectMostMs": 60000
+  },
   "textStyles": {
     "body": {
       "size": 17,
