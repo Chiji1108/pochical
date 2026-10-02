@@ -38,7 +38,6 @@ import {
   SimpleSmall,
   TwoWeeksMedium,
   UpcomingMedium,
-  UpcomingMediumWeek,
   UpcomingSmall,
   UpcomingRectangular,
 } from "../components/design-widgets";
@@ -219,7 +218,7 @@ function scheduleFor(day: WidgetVariants["day"]): Schedule {
 
 type Size = "small" | "medium" | "large";
 type WidgetView = ComponentType<{ entry: WidgetEntry }>;
-type KindSize = { size: Size; View: WidgetView; note?: string };
+type KindSize = { size: Size; View: WidgetView };
 
 // The kinds a person picks from the widget gallery, each in its sizes.
 const kinds: {
@@ -250,7 +249,7 @@ const kinds: {
   },
   {
     description:
-      "今日を大きく、この先の日を並べて。小は続く3日のマーク、中は4日を1行ずつ、変わったことやメモと。ウィジェットの編集で人を選ぶと、今日からの日にその人の段が並びます（小は2日、中は5日。比べるために7日も）。",
+      "今日を大きく、この先の日を並べて。小は続く3日のマーク、中は4日を1行ずつ、変わったことやメモと。ウィジェットの編集で人を選ぶと、今日からの日にその人の段が並びます（小は2日、中は5日）。",
     id: "upcoming",
     name: "これから",
     sizes: [
@@ -371,22 +370,6 @@ const shapeStyles = {
   line: "icon",
 } as const;
 
-// これから set to someone, in five days and in seven, side by side.
-function sizesOf(
-  id: (typeof kinds)[number]["id"],
-  sizes: KindSize[],
-  entry: WidgetEntry
-): KindSize[] {
-  if (id !== "upcoming" || !entry.pair) {
-    return sizes;
-  }
-  return [
-    { View: UpcomingSmall, note: "2日", size: "small" },
-    { View: UpcomingMedium, note: "5日", size: "medium" },
-    { View: UpcomingMediumWeek, note: "7日", size: "medium" },
-  ];
-}
-
 // The widgets of one kind, or all, on the device's home screen as the
 // choices set it.
 function Stage({ variants }: { variants: WidgetVariants }) {
@@ -445,13 +428,8 @@ function Stage({ variants }: { variants: WidgetVariants }) {
           <h2 className={page.kindName}>{name}</h2>
           <p className={page.caption}>{description}</p>
           <Wallpaper {...placement}>
-            {sizesOf(id, sizes, entry).map(({ size, View, note }) => (
-              <LabelledWidget
-                {...placement}
-                family={families[size]}
-                key={`${size}${note ?? ""}`}
-                note={note}
-              >
+            {sizes.map(({ size, View }) => (
+              <LabelledWidget {...placement} family={families[size]} key={size}>
                 <View entry={entry} />
               </LabelledWidget>
             ))}

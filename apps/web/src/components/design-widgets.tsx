@@ -575,15 +575,6 @@ export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
   );
 }
 
-// The same set to someone, a week from today: tried beside the five days
-// to see which reads better.
-export function UpcomingMediumWeek({ entry }: { entry: WidgetEntry }) {
-  if (!entry.pair) {
-    return <UpcomingMedium entry={entry} />;
-  }
-  return <PairDays count={7} entry={entry} pair={entry.pair} />;
-}
-
 // ── これから with someone ───────────────────────────────────────────────
 
 // Where the widget is taller, as on Android's launcher, the marks grow.
@@ -649,11 +640,10 @@ const pair = {
   weekday: css({ lineHeight: "13px", textStyle: "caption2" }),
 };
 
-// Marks a size for the room each day has: fewer days, larger marks; a
-// name under each takes the room of a smaller one.
-function pairMarkSize(count: number, roomy: boolean, named: boolean) {
-  const base = count > 5 ? 24 : 26;
-  const grown = roomy ? base + 6 : base;
+// Marks grow where the widget is taller; a name under each takes the
+// room of a smaller one.
+function pairMarkSize(roomy: boolean, named: boolean) {
+  const grown = roomy ? 32 : 26;
   return named ? grown - 6 : grown;
 }
 
@@ -675,7 +665,7 @@ function PairDays({
   const named = useShiftNames();
   const flat = useContext(WidgetRenderingModeContext) !== "fullColor";
   const roomy = useContext(WidgetSizeContext).height >= PAIR_ROOMY;
-  const size = pairMarkSize(count, roomy, named);
+  const size = pairMarkSize(roomy, named);
   const days = entry.upcoming.slice(0, count);
   const tileOf = (off: boolean, together: boolean) => {
     if (!off || together) {
