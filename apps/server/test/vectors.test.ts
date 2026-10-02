@@ -1,3 +1,4 @@
+import { syncLimits } from "@pochical/design/limits";
 import { describe, expect, test } from "vitest";
 
 // The cases every platform checks its own code against (spec/vectors).
@@ -14,7 +15,8 @@ describe("spec/vectors/hlc.json", () => {
     expect(Math.sign(compareClocks(a, b))).toBe(expected);
   });
 
-  test.each(hlc.ahead)("$name", ({ ms, now, expected }) => {
+  test.each(hlc.ahead)("$name", ({ now, pastLimitMs, expected }) => {
+    const ms = now + syncLimits.clockAheadMs + pastLimitMs;
     expect(isAhead({ counter: 0, device: "phone", ms }, now)).toBe(expected);
   });
 });

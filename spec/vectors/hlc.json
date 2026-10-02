@@ -1,5 +1,5 @@
 {
-  "about": "Hybrid logical clocks (spec/sync-protocol.md, HLC). compare: by physical time (ms), then counter, then device, which only breaks exact ties; devices compare by their characters' codes, as plain ASCII strings; expected is -1 when a is older, 1 when newer, 0 when the same. tick: the clock of a local edit, from the device's last clock and its corrected now; counter is a uint32, so at 4294967295 the clock moves to the next millisecond. receive: the device's last clock after it takes a change, so its next edit orders after the change. offset: what a device adds to its own time to correct it, from when it sent Hello (sentMs), when Welcome arrived (receivedMs) and Welcome's server_ms: serverMs - (sentMs + receivedMs) / 2, divided as whole numbers. ahead: whether a clock's ms runs further past the server's now than syncLimits.clockAheadMs (design/src/limits.ts, 300000), so the server refuses its frame.",
+  "about": "Hybrid logical clocks (spec/sync-protocol.md, HLC). compare: by physical time (ms), then counter, then device, which only breaks exact ties; devices compare by their characters' codes, as plain ASCII strings; expected is -1 when a is older, 1 when newer, 0 when the same. tick: the clock of a local edit, from the device's last clock and its corrected now; counter is a uint32, so at 4294967295 the clock moves to the next millisecond. receive: the device's last clock after it takes a change, so its next edit orders after the change. offset: what a device adds to its own time to correct it, from when it sent Hello (sentMs), when Welcome arrived (receivedMs) and Welcome's server_ms: serverMs - (sentMs + receivedMs) / 2, divided as whole numbers. ahead: whether a clock runs further past the server's now than syncLimits.clockAheadMs (design/src/limits.ts) allows, so the server refuses its frame; its ms is now + clockAheadMs + pastLimitMs, so the cases hold whatever the limit.",
   "compare": [
     {
       "name": "later physical time wins",
@@ -206,21 +206,21 @@
   ],
   "ahead": [
     {
-      "name": "a clock behind the server",
-      "ms": 1000,
+      "name": "within the limit",
       "now": 2000,
+      "pastLimitMs": -60000,
       "expected": false
     },
     {
       "name": "exactly as far ahead as allowed",
-      "ms": 302000,
       "now": 2000,
+      "pastLimitMs": 0,
       "expected": false
     },
     {
       "name": "one millisecond further",
-      "ms": 302001,
       "now": 2000,
+      "pastLimitMs": 1,
       "expected": true
     }
   ]

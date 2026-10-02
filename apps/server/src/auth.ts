@@ -40,6 +40,10 @@ export type AuthConfig = {
  */
 export const createAuth = (d1: D1Database, { baseURL, secret }: AuthConfig) =>
   betterAuth({
+    // Linking Apple or Google keeps the anonymous user, whose email is the
+    // anonymous plugin's placeholder, so the provider's never matches it
+    // (spec/sync-protocol.md, Signing in).
+    account: { accountLinking: { allowDifferentEmails: true } },
     advanced: { ipAddress: { disableIpTracking: true } },
     basePath: "/api/auth",
     baseURL,
