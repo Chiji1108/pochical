@@ -13,6 +13,7 @@ import type { Schedule } from "../lib/design-days";
 import type { ImageOptions } from "../lib/design-settings-store";
 import { AppIcon } from "./design-app-icon";
 import { DayCell } from "./design-day-cell";
+import { monthWithYearOf } from "./design-month-name";
 import { NameTabs, OffLookTabs } from "./design-settings";
 import { Sheet, SheetHeading, sheetBody, sheetLead } from "./design-sheet";
 import {
@@ -368,7 +369,10 @@ export function ImagePreviewPage({
   const { theme } = useContext(ThemeContext);
   const shown = options.scheme ?? scheme;
   const alwaysDark = presetOf(theme).scheme === "dark";
-  const title = `${month.getFullYear()}年${month.getMonth() + 1}月のシフト`;
+  // The month alone, as the calendar heads it: a calendar of marks says
+  // for itself that it is shifts. In English as 月と曜日 asks, like the
+  // weekdays under it.
+  const title = monthWithYearOf(month, weekTools.english);
   return (
     <Screen>
       <ScreenScroll>
@@ -396,7 +400,7 @@ export function ImagePreviewPage({
                 {/* A picture to share shows every day as it is. */}
                 <OffDisplayContext value={options.blankOff ? "blank" : "show"}>
                   <figure
-                    aria-label={`${title}の画像`}
+                    aria-label={`${monthWithYearOf(month)}のシフトの画像`}
                     className={picture.frame}
                     inert
                     style={themeStyle(theme, shown)}
