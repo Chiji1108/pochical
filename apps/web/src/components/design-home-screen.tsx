@@ -114,8 +114,15 @@ const home = {
 };
 
 // A home screen laid out across `width`, drawn smaller where the phone
-// has less room, since widgets keep their real sizes.
-function Fit({ width, children }: { width: number; children: ReactNode }) {
+// has less room, since widgets keep their real sizes. /design/widgets
+// draws its lock screen phone the same way.
+export function Fit({
+  width,
+  children,
+}: {
+  width: number;
+  children: ReactNode;
+}) {
   const box = useRef<HTMLDivElement>(null);
   const [room, setRoom] = useState(IOS_WIDTH);
   useLayoutEffect(() => {
@@ -270,7 +277,15 @@ const lockScreen = {
     lineHeight: 1,
     margin: 0,
   }),
-  date: css({ fontWeight: 600, margin: 0, textStyle: "title3" }),
+  // The date, and the inline widget after it, as one line.
+  date: css({
+    alignItems: "center",
+    display: "flex",
+    fontWeight: 600,
+    gap: "8px",
+    margin: 0,
+    textStyle: "title3",
+  }),
   // The time and date at the top, the notification under them, as the
   // lock screen keeps new ones.
   root: css({
@@ -288,40 +303,61 @@ const lockScreen = {
     marginBottom: "auto",
   }),
   list: css({ marginBottom: "160px" }),
+  // The widgets under the clock: up to four slots, a rectangular one
+  // taking two.
+  widgets: css({ display: "flex", gap: "8px", marginTop: "8px" }),
 };
 
-// The phone's lock screen with one notification on it, for the flows: the
-// system's own screen, on the wallpaper the home screen has.
+// The phone's lock screen, the system's own screen, on the wallpaper the
+// home screen has: with one notification on it for the flows, or with
+// the app's widgets, the inline one after the date and the others under
+// the clock. Those are drawn light, so /design/widgets gives a `ground`
+// dark enough for them.
 export function LockScreen({
   when,
   title,
   body,
+  inline,
+  widgets,
+  ground,
 }: {
   when: Date;
-  title: string;
+  title?: string;
   body?: string;
+  inline?: ReactNode;
+  widgets?: ReactNode;
+  ground?: string;
 }) {
   const platform = useDevice((state) => state.platform);
   const hue = useDevice((state) => state.wallpaperHue);
   const scheme = useDeviceScheme();
-  const background = wallpaperFor({
-    appearance: scheme,
-    wallpaperHue: platform === "android" ? hue : undefined,
-  });
+  const background =
+    ground ??
+    wallpaperFor({
+      appearance: scheme,
+      wallpaperHue: platform === "android" ? hue : undefined,
+    });
   // The app's colors, which its notification is drawn in.
   const theme = useThemeStyle();
   // Dark over a light wallpaper, as the status bar is.
-  const ink = scheme === "dark" ? "#ffffff" : "#1c1b1f";
+  const ink = ground !== undefined || scheme === "dark" ? "#ffffff" : "#1c1b1f";
   return (
     <Phone locked style={{ ...theme, background, color: ink }}>
       <div className={lockScreen.root}>
         <div className={lockScreen.time}>
-          <p className={lockScreen.date}>{formatDay(when)}</p>
+          {/* A div, not a p: the inline widget after the date is a box. */}
+          <div className={lockScreen.date}>
+            {formatDay(when)}
+            {inline}
+          </div>
           <p className={lockScreen.clock}>{clockText(when)}</p>
+          {widgets && <div className={lockScreen.widgets}>{widgets}</div>}
         </div>
-        <div className={lockScreen.list}>
-          <NotificationBanner body={body} title={title} />
-        </div>
+        {title !== undefined && (
+          <div className={lockScreen.list}>
+            <NotificationBanner body={body} title={title} />
+          </div>
+        )}
       </div>
     </Phone>
   );

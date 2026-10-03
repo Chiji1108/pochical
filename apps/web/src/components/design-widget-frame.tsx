@@ -1,6 +1,6 @@
 import type { ColorScheme } from "@pochical/design/colors";
 import type { CSSProperties, ReactNode } from "react";
-import { css, cva } from "styled-system/css";
+import { css, cva, cx } from "styled-system/css";
 
 import { wallpaperOf, widgetColors } from "../lib/material-you";
 import { ColorSchemeContext, useThemeStyle } from "./design-theme";
@@ -149,13 +149,21 @@ export function WidgetFrame({
   family,
   appearance,
   wallpaperHue,
+  inLine = false,
   children,
-}: Placement & { family: WidgetFamily; children: ReactNode }) {
+}: Placement & {
+  family: WidgetFamily;
+  // Set in the line it sits in, with no box of its own: the inline
+  // widget after the lock screen's date, in the date's own font.
+  inLine?: boolean;
+  children: ReactNode;
+}) {
   return (
     <ColorSchemeContext value={schemeOf(appearance)}>
       <ThemedFrame
         appearance={appearance}
         family={family}
+        inLine={inLine}
         wallpaperHue={wallpaperHue}
       >
         {children}
@@ -170,8 +178,13 @@ function ThemedFrame({
   family,
   appearance,
   wallpaperHue,
+  inLine,
   children,
-}: Placement & { family: WidgetFamily; children: ReactNode }) {
+}: Placement & {
+  family: WidgetFamily;
+  inLine: boolean;
+  children: ReactNode;
+}) {
   const theme = useThemeStyle();
   const { width, height, margin, radius } = widgetFamilies[family];
   const rendering = renderingOf(appearance);
@@ -182,15 +195,16 @@ function ThemedFrame({
       : widgetColors(wallpaperHue, schemeOf(appearance))),
     ...(rendering === "fullColor" ? {} : flatText),
     borderRadius: radius,
-    height,
-    padding: margin,
-    width,
+    ...(inLine ? {} : { height, padding: margin, width }),
     // The system's margin, for a view that draws its own ground to the
     // widget's edge, as SwiftUI's containerBackground does.
     "--widget-margin": `${margin}px`,
   } as CSSProperties;
   return (
-    <div className={frame({ look: lookOf(appearance) })} style={style}>
+    <div
+      className={cx(frame({ look: lookOf(appearance) }), inLine && inLineFrame)}
+      style={style}
+    >
       <div className={content({ rendering })}>
         <WidgetRenderingModeContext value={rendering}>
           <WidgetSizeContext
@@ -203,6 +217,8 @@ function ThemedFrame({
     </div>
   );
 }
+
+const inLineFrame = css({ display: "inline-flex" });
 
 const wallpaper = css({
   // A phone's width is narrower than the large widget with room around it.
