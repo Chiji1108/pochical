@@ -41,7 +41,6 @@ import {
   selectedAfter,
   timeChangeOf,
   timeRange,
-  weekdays,
   withShiftEntered,
 } from "../lib/design-days";
 import type { DayEntry, Schedule } from "../lib/design-days";
@@ -96,7 +95,7 @@ import {
   TodayButton,
   WeekdayRow,
 } from "./design-ui";
-import { useWeek } from "./design-week";
+import { useWeek, weekdayNames } from "./design-week";
 import { FoldingGrid, useWeekFold } from "./design-week-fold";
 import { OffDisplayContext, ShiftMark } from "./shift-mark";
 
@@ -234,7 +233,7 @@ export function DesignCalendar({
             tone: weekTools.dateTone(selectedDate),
           })}
         >
-          ({weekdays[selectedDate.getDay()]})
+          ({weekdayNames[selectedDate.getDay()]})
         </span>
       </span>
     </InputDatePicker>
@@ -1122,9 +1121,6 @@ function hasBlanks(schedule: Schedule, month: Date) {
   return daysOfMonth(month).some((date) => !schedule[dateKey(date)]);
 }
 
-// Emoji marks draw in the system's emoji font wherever they sit.
-const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", sans-serif';
-
 // Entering a month: the day's date, a button for each pattern, and 消す
 // and 翌日へ. Up to four patterns sit in one row; more take two rows, of
 // three for five or six, four for seven or eight, and five for nine or
@@ -1160,7 +1156,7 @@ const shiftInput = {
   mark: css({
     display: "grid",
     flexShrink: 0,
-    fontFamily: EMOJI_FONT,
+    fontFamily: "emoji",
     fontSize: "24px",
     height: "28px",
     lineHeight: 1,

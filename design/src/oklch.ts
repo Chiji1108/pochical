@@ -82,18 +82,3 @@ export function oklchToHex(color: Oklch): string {
     )
     .join("")}`;
 }
-
-// Two colors mixed in OKLab, `share` of the second, as CSS's
-// color-mix(in oklab, first, second share) does.
-export function mixOklab(first: string, second: string, share: number) {
-  const from = hexToOklab(first);
-  const to = hexToOklab(second);
-  const mix = (start: number, end: number) => start + (end - start) * share;
-  return oklchToHex(
-    oklabToOklch({
-      a: mix(from.a, to.a),
-      b: mix(from.b, to.b),
-      lightness: mix(from.lightness, to.lightness),
-    })
-  );
-}

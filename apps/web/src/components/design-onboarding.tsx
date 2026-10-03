@@ -4,6 +4,7 @@ import type { RepeatRule } from "../lib/design-days";
 import { monthAfter } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
+import { designMonth } from "../lib/design-today";
 import { createUserStore, UserStoreContext } from "../lib/design-user-store";
 import type { UserStore } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
@@ -15,7 +16,6 @@ import { Phone } from "./design-phone";
 import { ColorSchemeContext, useThemeStyle } from "./design-theme";
 import { Button, pushToBottom } from "./design-ui";
 import {
-  designMonth,
   onboarding,
   rotationTemplates,
   StepHeader,

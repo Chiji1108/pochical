@@ -17,7 +17,7 @@ import {
   monthAfter,
 } from "../lib/design-days";
 import { designToday } from "../lib/design-today";
-import { sameMonth, togetherIn, weekLength } from "./design-group-data";
+import { sameMonth, togetherIn } from "./design-group-data";
 import type { Group, Member, Together } from "./design-group-data";
 import {
   DayRow,
@@ -38,7 +38,7 @@ import {
   useTurn,
 } from "./design-rolling";
 import { TodayButton } from "./design-ui";
-import { useWeek } from "./design-week";
+import { useWeek, weekLength } from "./design-week";
 
 // The shift table's months as one list that scrolls on, by day or by
 // week, drawing only the rows in sight, with the month in sight named

@@ -8,9 +8,6 @@ import { fieldHint, fieldLabel } from "./design-ui";
 import { useWeek } from "./design-week";
 import { ShiftMark } from "./shift-mark";
 
-// Emoji marks draw in the system's emoji font wherever they sit.
-const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", sans-serif';
-
 // A repeating order being put together: the days so far as tiles, each
 // taken out by a tap, over the patterns to add, dashed like the
 // platforms' add buttons.
@@ -29,7 +26,7 @@ const repeatEditor = {
   }),
   day: css({
     "& > small": { color: "text.quaternary", fontSize: "8px" },
-    "& > span": { fontFamily: EMOJI_FONT, fontSize: "18px", lineHeight: 1.2 },
+    "& > span": { fontFamily: "emoji", fontSize: "18px", lineHeight: 1.2 },
     alignItems: "center",
     bg: "background.card",
     border: "1px solid token(colors.border.default)",
@@ -87,7 +84,7 @@ const shiftPreview = {
   }),
   strip: css({
     display: "grid",
-    fontFamily: EMOJI_FONT,
+    fontFamily: "emoji",
     fontSize: "16px",
     gap: "4px",
     gridTemplateColumns: "repeat(7, minmax(0, 1fr))",

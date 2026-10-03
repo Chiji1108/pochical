@@ -295,7 +295,7 @@ export const untintedTokens = new Set([
   "media-warning",
 ]);
 
-export function neutralValue(
+function neutralValue(
   token: ColorToken,
   scheme: ColorScheme,
   tint?: NeutralTint

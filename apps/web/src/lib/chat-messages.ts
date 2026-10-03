@@ -74,7 +74,7 @@ export function decidePoll(messages: Message[], id: string, key: string) {
 }
 
 // Adds your reaction, or takes it back if it was already yours.
-export function toggleReaction(message: Message, emoji: string): Message {
+function toggleReaction(message: Message, emoji: string): Message {
   const reactions = message.reactions ?? [];
   const existing = reactions.find((reaction) => reaction.emoji === emoji);
   if (!existing) {

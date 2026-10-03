@@ -481,7 +481,7 @@ const optionCard = {
   }),
   icon: css({
     flexShrink: 0,
-    fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", sans-serif',
+    fontFamily: "emoji",
     fontSize: "28px",
   }),
   list: css({

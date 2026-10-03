@@ -10,6 +10,8 @@ import {
   Wifi,
 } from "lucide-react";
 
+import { weekdayNames } from "./design-week";
+
 const shifts = [
   "day",
   "day",
@@ -49,7 +51,6 @@ const patterns = {
   night: { emoji: "🌙", name: "夜勤" },
   off: { emoji: "🌿", name: "休み" },
 };
-const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
 
 // The old top page's phone, the site's first picture of the app, kept on
 // /design/assets as the key visual the screens grew from. Its styles are
@@ -104,7 +105,7 @@ export function CalendarPreview() {
               </div>
             </div>
             <div className="calendar-weekdays">
-              {weekdays.map((day) => (
+              {weekdayNames.map((day) => (
                 <span key={day}>{day}</span>
               ))}
             </div>

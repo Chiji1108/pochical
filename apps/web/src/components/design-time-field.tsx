@@ -7,14 +7,16 @@ import {
   TimeField as AriaTimeField,
 } from "react-aria-components";
 
+import { clockOf } from "../lib/design-days";
+
 // TimeField's working part (design-ui.tsx), in a module of its own:
 // React Aria is a large part of what a calendar needs, and times are only
 // set once a sheet opens, so it loads then instead of with every page.
 
 // "9:00" as React Aria's Time, and back.
 function timeOf(text: string) {
-  const [hour = 0, minute = 0] = text.split(":").map(Number);
-  return new Time(hour, minute);
+  const { hours, minutes } = clockOf(text);
+  return new Time(hours, minutes);
 }
 function timeText(time: Time) {
   return `${String(time.hour).padStart(2, "0")}:${String(time.minute).padStart(2, "0")}`;

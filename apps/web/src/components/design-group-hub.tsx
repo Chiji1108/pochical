@@ -13,7 +13,7 @@ import {
 import { useContext, useState } from "react";
 import { css, cx } from "styled-system/css";
 
-import { addDays, formatDay } from "../lib/design-days";
+import { addDays, dayMilliseconds, formatDay } from "../lib/design-days";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
 import { ChatRow } from "./design-group-chat";
@@ -652,8 +652,6 @@ const profileStyle = {
   }),
 };
 
-const dayMs = 24 * 60 * 60 * 1000;
-
 // How far a day is from today, the way people say it: 今日, 明日, 3日後.
 function daysFromToday(date: Date) {
   const days = Math.round(
@@ -663,7 +661,7 @@ function daysFromToday(date: Date) {
         designToday.getMonth(),
         designToday.getDate()
       ).getTime()) /
-      dayMs
+      dayMilliseconds
   );
   if (days === 0) {
     return "今日";

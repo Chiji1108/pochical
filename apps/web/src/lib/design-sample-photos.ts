@@ -1,3 +1,5 @@
+import { weekdayNames } from "../components/design-week";
+
 // A picture sent in a chat, with its size so a line keeps its place
 // before the picture loads; the apps get the size with the upload.
 export type Photo = { src: string; width: number; height: number };
@@ -8,7 +10,6 @@ const rosterHeight = 600;
 const rosterNames = ["佐藤", "田中", "ゆうき", "山本", "高橋", "伊藤", "中村"];
 const rosterDays = 15;
 const rosterShifts = ["日", "日", "夜", "明", "休", "日", "早", "休"];
-const weekdayNames = ["日", "月", "火", "水", "木", "金", "土"];
 
 // A month's roster from the ward, as someone would photograph the paper
 // one and send it: drawn here so /design needs no real person's roster.

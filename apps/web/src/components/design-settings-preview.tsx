@@ -30,13 +30,10 @@ import {
   presetPatterns,
 } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
+import { designToday } from "../lib/design-today";
 import { DayCell } from "./design-day-cell";
 import { MonthName } from "./design-month-name";
-import {
-  previewToday,
-  settingsParts,
-  WEEK_DAYS,
-} from "./design-settings-parts";
+import { settingsParts } from "./design-settings-parts";
 import {
   ColorSchemeContext,
   presetOf,
@@ -46,6 +43,7 @@ import {
   themeStyle,
 } from "./design-theme";
 import { dayGrid, PageDots, Pager, SampleTag, WeekdayRow } from "./design-ui";
+import { weekLength } from "./design-week";
 
 // The preview at the top of the スタイル and カレンダー pages: a week of
 // the calendar and, swiped aside, the home screen's widgets, drawn with
@@ -61,9 +59,9 @@ export type StylePreviewData = { dates: Date[]; schedule: Schedule };
 export function stylePreviewOf(
   patterns: Pattern[],
   weekDates: (date: Date) => Date[],
-  from: Date = previewToday
+  from: Date = designToday
 ): StylePreviewData {
-  const dates = [...weekDates(from), ...weekDates(addDays(from, 7))];
+  const dates = [...weekDates(from), ...weekDates(addDays(from, weekLength))];
   return {
     dates,
     schedule: repeatSchedule(
@@ -135,7 +133,7 @@ export function StylePreview({
   const { dates, schedule } = preview;
   // Under the month's heading, drawn at the calendar's own size, one week
   // is enough to show the days' colors, and keeps the preview short.
-  const shownDates = heading ? dates.slice(0, WEEK_DAYS) : dates;
+  const shownDates = heading ? dates.slice(0, weekLength) : dates;
   const scheme = useContext(ColorSchemeContext);
   const [picked, setPicked] = useState<ColorScheme>();
   const shown = shared?.shown ?? picked ?? scheme;
@@ -175,7 +173,7 @@ export function StylePreview({
     >
       {heading && (
         <div className={settingsParts.previewHeading}>
-          <MonthName month={dates[0] ?? previewToday} />
+          <MonthName month={dates[0] ?? designToday} />
         </div>
       )}
       <WeekdayRow compact />
@@ -210,7 +208,7 @@ export function StylePreview({
       <HomePreview
         height={calendarHeight}
         schedule={preview.schedule}
-        today={previewToday}
+        today={designToday}
       />
     </Suspense>,
   ];

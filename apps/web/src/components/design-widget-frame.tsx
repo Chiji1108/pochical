@@ -56,13 +56,6 @@ export type WidgetFamily = keyof typeof widgetFamilies;
 // piece of the widget becomes one flat white, keeping only how opaque it
 // is, over a tinted or glass ground in place of the widget's own.
 export type HomeAppearance = "light" | "dark" | "tinted" | "clear";
-export const homeAppearances: { appearance: HomeAppearance; label: string }[] =
-  [
-    { appearance: "light", label: "ライト" },
-    { appearance: "dark", label: "ダーク" },
-    { appearance: "tinted", label: "色合い" },
-    { appearance: "clear", label: "クリア" },
-  ];
 
 // A person's own pick for 色合い; a sample one here.
 const SAMPLE_TINT = "oklch(0.78 0.11 75)";

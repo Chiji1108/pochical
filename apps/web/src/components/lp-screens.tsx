@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
 import { initialDesignSchedule } from "../lib/design-days";
+import { useSamplePerson } from "../lib/design-sample-person";
 import {
   createUserStore,
   sampleCoworkers,
@@ -286,18 +287,6 @@ function PhoneGallery({
       </DesignProviders>
     </WhenNear>
   );
-}
-
-// The sample person, for a feature's screens to share.
-function useSamplePerson() {
-  const [person] = useState(() =>
-    createUserStore({
-      coworkers: sampleCoworkers,
-      groups: sampleGroups(),
-      schedule: initialDesignSchedule(),
-    })
-  );
-  return person;
 }
 
 // The calendar in a few looks, each set as someone might set theirs:

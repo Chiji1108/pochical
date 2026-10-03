@@ -1,19 +1,14 @@
 import { presets } from "@pochical/design/themes";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { css, cx } from "styled-system/css";
 
 import { DesignApp } from "../components/design-app";
-import { sampleGroups } from "../components/design-group-samples";
 import { DesignProviders } from "../components/design-providers";
 import { appSplashScreens } from "../lib/app-splash-screens";
-import { initialDesignSchedule } from "../lib/design-days";
+import { useSamplePerson } from "../lib/design-sample-person";
 import { deviceSettingsKey } from "../lib/design-settings-key";
-import {
-  createUserStore,
-  sampleCoworkers,
-  UserStoreContext,
-} from "../lib/design-user-store";
+import { UserStoreContext } from "../lib/design-user-store";
 import { parseDesignVariants } from "../lib/design-variants";
 import { screenColor } from "../lib/screen-color";
 import { pageMeta } from "../lib/site";
@@ -160,13 +155,7 @@ function useBarColor() {
 // The app alone on a phone: the demo's sample person, starting over on
 // reload. /demo has it framed, with the open design choices beside it.
 function TryPage() {
-  const [person] = useState(() =>
-    createUserStore({
-      coworkers: sampleCoworkers,
-      groups: sampleGroups(),
-      schedule: initialDesignSchedule(),
-    })
-  );
+  const person = useSamplePerson();
   useBarColor();
   return (
     <main className={cx("design-page", page)} id="main">

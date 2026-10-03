@@ -62,14 +62,15 @@ export function weekdayLetterOf(day: number, english = false) {
 
 const SUNDAY = 0;
 const SATURDAY = 6;
-const WEEK_LENGTH = 7;
+export const weekLength = 7;
 
-function holidayKey(date: Date) {
+// A day as days and holidays are kept: "YYYY-MM-DD", in local time.
+export function dateKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 export function holidayName(date: Date) {
-  return holidayNameOfKey(holidayKey(date));
+  return holidayNameOfKey(dateKey(date));
 }
 
 // For dates already written as "YYYY-MM-DD".
@@ -112,13 +113,13 @@ function dateClass(date: Date, colored: WeekSettings["colored"]) {
 
 // Days from the week start on or before `date`.
 function daysIntoWeek(date: Date, weekStart: number) {
-  return (date.getDay() - weekStart + WEEK_LENGTH) % WEEK_LENGTH;
+  return (date.getDay() - weekStart + weekLength) % weekLength;
 }
 
 export function weekDatesFrom(date: Date, weekStart: number) {
   const offset = daysIntoWeek(date, weekStart);
   return Array.from(
-    { length: WEEK_LENGTH },
+    { length: weekLength },
     (_, index) =>
       new Date(
         date.getFullYear(),
@@ -138,15 +139,15 @@ export function monthDatesFrom(month: Date, weekStart: number) {
   ).getDate();
   const offset = daysIntoWeek(first, weekStart);
   return Array.from(
-    { length: Math.ceil((offset + count) / WEEK_LENGTH) * WEEK_LENGTH },
+    { length: Math.ceil((offset + count) / weekLength) * weekLength },
     (_, index) =>
       new Date(month.getFullYear(), month.getMonth(), index - offset + 1)
   );
 }
 
 export function weekdaysFrom(week: WeekSettings, english = false) {
-  return Array.from({ length: WEEK_LENGTH }, (_, index) => {
-    const day = (week.weekStart + index) % WEEK_LENGTH;
+  return Array.from({ length: weekLength }, (_, index) => {
+    const day = (week.weekStart + index) % weekLength;
     const className = weekdayClass(day, week.colored);
     return {
       className,

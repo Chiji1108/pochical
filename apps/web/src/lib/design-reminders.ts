@@ -1,5 +1,6 @@
 import {
   addDays,
+  clockOf,
   dateKey,
   formatDay,
   movesText,
@@ -75,7 +76,7 @@ const designNow = new Date(
 const lookAhead = 60;
 
 function at(date: Date, time: string) {
-  const [hours = 0, minutes = 0] = time.split(":").map(Number);
+  const { hours, minutes } = clockOf(time);
   return new Date(
     date.getFullYear(),
     date.getMonth(),

@@ -1,6 +1,11 @@
 import { dayRules } from "@pochical/design/days";
 
-import { holidayName } from "../components/design-week";
+import {
+  dateKey,
+  holidayName,
+  weekdayNames,
+  weekLength,
+} from "../components/design-week";
 import { isDayOff } from "./design-patterns";
 import type {
   Pattern,
@@ -9,6 +14,10 @@ import type {
   Shift,
 } from "./design-patterns";
 import { designToday } from "./design-today";
+
+// The key every day is kept under, written once in design-week.tsx beside
+// the holidays kept under it; the day helpers' users take it from here.
+export { dateKey } from "../components/design-week";
 
 export type DayEntry = {
   shift: Shift;
@@ -69,8 +78,7 @@ export const patternSets: Record<PatternCount, PresetShift[]> = {
   8: eight,
   9: [...eight, "junya"],
 };
-export const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
-const dayMilliseconds = 86_400_000;
+export const dayMilliseconds = 86_400_000;
 const leadingZeroPattern = /^0/;
 const sample: PresetShift[] = [
   "day",
@@ -110,10 +118,6 @@ export function isRepeating(rules: RepeatRule[]) {
   return (rules.at(-1)?.sequence.length ?? 0) > 0;
 }
 
-export function dateKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
 // A week with 休み on a weekend day reads as office hours, which usually
 // have national holidays off too.
 export function defaultHolidaysOff(
@@ -121,7 +125,6 @@ export function defaultHolidaysOff(
   start: Date,
   book: PatternBook
 ) {
-  const weekLength = 7;
   if (sequence.length !== weekLength) {
     return false;
   }
@@ -275,7 +278,7 @@ export function plannedShifts(
 }
 
 // A day as it shows: its own shift, else its order's; "" shows nothing.
-export function shownDay(
+function shownDay(
   own: OwnDay | undefined,
   planned: Shift | undefined
 ): DayEntry | undefined {
@@ -491,7 +494,7 @@ export function formatYearMonthDay(date: Date) {
 }
 
 export function formatDay(date: Date) {
-  return `${formatMonthDay(date)}(${weekdays[date.getDay()]})`;
+  return `${formatMonthDay(date)}(${weekdayNames[date.getDay()]})`;
 }
 
 function formatTime(time: string) {
@@ -513,8 +516,14 @@ const minutesPerDay = 1440;
 const minutesPerHour = 60;
 const halfDay = minutesPerDay / 2;
 
-function minutesOf(time: string) {
+// "9:00" as its hours and minutes.
+export function clockOf(time: string) {
   const [hours = 0, minutes = 0] = time.split(":").map(Number);
+  return { hours, minutes };
+}
+
+function minutesOf(time: string) {
+  const { hours, minutes } = clockOf(time);
   return hours * minutesPerHour + minutes;
 }
 

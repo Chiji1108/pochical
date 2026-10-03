@@ -21,8 +21,6 @@ import type { Look } from "./shift-mark";
 // Pieces the group screens share: faces, marks, a group's icon and
 // picking a photo.
 
-const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", sans-serif';
-
 // A group's mark in its frame: groups are rounded squares, people circles.
 // On the rail the open one's ring sits on top of the mark, inside its
 // edge, so a photo does not hide it and it keeps clear of the flag and
@@ -52,7 +50,7 @@ export const markFrame = cva({
     bg: "background.card",
     borderRadius: "lg",
     display: "grid",
-    fontFamily: EMOJI_FONT,
+    fontFamily: "emoji",
     fontSize: "22px",
     height: "42px",
     overflow: "hidden",
@@ -76,8 +74,8 @@ export const markFrame = cva({
 // A group mark fills its frame, the same for every member: a photo, an
 // emoji, a letter or an icon.
 export const markPart = {
-  choiceEmoji: css({ fontFamily: EMOJI_FONT, fontSize: "20px" }),
-  emoji: css({ fontFamily: EMOJI_FONT, lineHeight: 1 }),
+  choiceEmoji: css({ fontFamily: "emoji", fontSize: "20px" }),
+  emoji: css({ fontFamily: "emoji", lineHeight: 1 }),
   icon: css({
     display: "grid",
     height: "100%",

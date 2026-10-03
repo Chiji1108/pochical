@@ -56,7 +56,7 @@ const glyphStyle = {
   }),
   early: css({ clipPath: "polygon(0 0, 100% 0, 0 100%)", left: "-2px" }),
   emoji: css({
-    fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", sans-serif',
+    fontFamily: "emoji",
     lineHeight: 1,
   }),
   icon: css({ flexShrink: 0 }),

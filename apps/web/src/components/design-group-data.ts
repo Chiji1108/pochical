@@ -62,10 +62,6 @@ export type Group = {
 // `noPhoto` hides the usual picture in this group without choosing another.
 export type GroupProfile = { name?: string; photo?: string; noPhoto?: boolean };
 
-export const designMonth = new Date(2026, 8, 1);
-
-export const weekLength = 7;
-
 export type Profile = { name: string; photo?: string };
 
 // A pattern as the group sees it: its standard time spelled out.
