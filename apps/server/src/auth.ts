@@ -21,7 +21,7 @@ const neverExpires = (): Date => {
   return at;
 };
 
-export type AuthConfig = {
+type AuthConfig = {
   // Where the apps reach the server; better-auth builds its URLs from it.
   baseURL: string;
   secret: string;
