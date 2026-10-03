@@ -12,10 +12,9 @@ import {
   monthAfter,
   movesText,
 } from "../lib/design-days";
-import { designToday } from "../lib/design-today";
+import { designMonth, designToday } from "../lib/design-today";
 import {
   changeOn,
-  designMonth,
   everyoneOff,
   patternOn,
   sameMonth,

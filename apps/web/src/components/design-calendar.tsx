@@ -41,7 +41,6 @@ import {
   selectedAfter,
   timeChangeOf,
   timeRange,
-  weekdays,
   withShiftEntered,
 } from "../lib/design-days";
 import type { DayEntry, Schedule } from "../lib/design-days";
@@ -96,7 +95,7 @@ import {
   TodayButton,
   WeekdayRow,
 } from "./design-ui";
-import { useWeek } from "./design-week";
+import { useWeek, weekdayNames } from "./design-week";
 import { FoldingGrid, useWeekFold } from "./design-week-fold";
 import { OffDisplayContext, ShiftMark } from "./shift-mark";
 
@@ -234,7 +233,7 @@ export function DesignCalendar({
             tone: weekTools.dateTone(selectedDate),
           })}
         >
-          ({weekdays[selectedDate.getDay()]})
+          ({weekdayNames[selectedDate.getDay()]})
         </span>
       </span>
     </InputDatePicker>

@@ -11,6 +11,7 @@ import {
   sheetLead,
 } from "./design-sheet";
 import { Button, Chip, ChipGroup, List, SwitchRow, Tag } from "./design-ui";
+import { weekdayNames } from "./design-week";
 
 export type OffChoice = { key: Shift; label: string };
 
@@ -35,8 +36,6 @@ const gap = {
   }),
   line: css({ display: "block" }),
 };
-
-const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
 
 export type GapSheetProps = {
   month: Date;
@@ -138,7 +137,7 @@ function GapSheetBody({
           <ChipGroup as="ul" className={spaced}>
             {days.map((day) => (
               <Tag as="li" key={day.getDate()}>
-                {day.getDate()}日({weekdays[day.getDay()]})
+                {day.getDate()}日({weekdayNames[day.getDay()]})
               </Tag>
             ))}
           </ChipGroup>

@@ -3,9 +3,10 @@ import { css } from "styled-system/css";
 import { token } from "styled-system/tokens";
 
 import { useSettings } from "../lib/design-settings-store";
+import { designToday } from "../lib/design-today";
 import { AppIcon, pickableIcons, useAppIcons } from "./design-app-icon";
 import { shortMonthOf } from "./design-month-name";
-import { previewToday, settingsParts } from "./design-settings-parts";
+import { settingsParts } from "./design-settings-parts";
 import { StylePreview } from "./design-settings-preview";
 import type { StylePreviewData } from "./design-settings-preview";
 import { SystemAlert } from "./design-sheet";
@@ -179,7 +180,7 @@ export function WeekRow({ onOpen }: { onOpen: () => void }) {
   const monthName = useSettings((state) => state.device.monthName);
   // Set small in a row, the month reads as UI text does (Sep), not as
   // the calendar's heading draws it (sep.).
-  const month = shortMonthOf(previewToday, monthName === "english");
+  const month = shortMonthOf(designToday, monthName === "english");
   return (
     <ListRow
       label="カレンダー"
@@ -226,11 +227,11 @@ export function WeekPage({
           {/* Each choice as it reads in small UI text, 9月・木 or Sep・Thu;
               the preview above shows the heading's own sep. */}
           <Segment label="日本語" value="number">
-            {shortMonthOf(previewToday)}・{weekdayNameOf(previewToday.getDay())}
+            {shortMonthOf(designToday)}・{weekdayNameOf(designToday.getDay())}
           </Segment>
           <Segment label="英語" value="english">
-            {shortMonthOf(previewToday, true)}・
-            {weekdayNameOf(previewToday.getDay(), true)}
+            {shortMonthOf(designToday, true)}・
+            {weekdayNameOf(designToday.getDay(), true)}
           </Segment>
         </SegmentedControl>
       </Section>

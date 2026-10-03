@@ -195,9 +195,6 @@ function Dock({ round }: { round: boolean }) {
   );
 }
 
-const MONTH_NUMBER = 1;
-const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
-
 export function HomeScreen() {
   const platform = useDevice((state) => state.platform);
   const hue = useDevice((state) => state.wallpaperHue);
@@ -223,10 +220,7 @@ export function HomeScreen() {
           {android ? (
             <Fit width={ANDROID_WIDTH}>
               <div className={home.android}>
-                <p className={home.glance}>
-                  {designToday.getMonth() + MONTH_NUMBER}月
-                  {designToday.getDate()}日({weekdays[designToday.getDay()]})
-                </p>
+                <p className={home.glance}>{formatDay(designToday)}</p>
                 <WidgetFrame {...placement} family="android4x2">
                   <TwoWeeksMedium entry={entry} />
                 </WidgetFrame>

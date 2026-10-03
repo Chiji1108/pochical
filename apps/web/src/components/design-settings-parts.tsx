@@ -3,16 +3,13 @@ import { css } from "styled-system/css";
 
 import { monthAfter } from "../lib/design-days";
 import type { PatternBook, Shift } from "../lib/design-patterns";
+import { designToday } from "../lib/design-today";
 import { List, Section } from "./design-ui";
 
 // What the settings pages share: their sections and rows, and the sample
 // days their previews and examples count from.
 
 export const previewDays = 14;
-
-export const previewToday = new Date(2026, 8, 24);
-
-export const WEEK_DAYS = 7;
 
 // Shortens runs of the same shift, e.g. 日勤×2・夕勤×2. An order from
 // before may name a pattern deleted since.
@@ -130,5 +127,5 @@ export function ListSection({
 }
 
 export function nextMonthStart() {
-  return monthAfter(previewToday, 1);
+  return monthAfter(designToday, 1);
 }

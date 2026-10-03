@@ -8,6 +8,7 @@ import {
   usePatterns,
 } from "../lib/design-patterns";
 import type { PresetShift, Shift } from "../lib/design-patterns";
+import { designMonth } from "../lib/design-today";
 import { MonthPicker } from "./design-date-picker";
 import { RepeatSequenceEditor, ShiftPreview } from "./design-repeat-editor";
 import {
@@ -107,8 +108,6 @@ export type Step =
   | { name: "rotation" }
   | { name: "custom"; template: Template; sequence: Shift[] }
   | { name: "anchor"; template: Template; sequence: Shift[] };
-
-export const designMonth = new Date(2026, 8, 1);
 
 // What the setup questions end with: the patterns to use, and for work
 // that repeats, the order and a day that falls on its first shift.

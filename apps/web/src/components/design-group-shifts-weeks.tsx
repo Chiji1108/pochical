@@ -4,18 +4,13 @@ import { css, cva, cx } from "styled-system/css";
 import { dateKey, formatDay } from "../lib/design-days";
 import { designToday } from "../lib/design-today";
 import { todayMark } from "./design-day-cell";
-import {
-  everyoneOff,
-  patternOn,
-  sameMonth,
-  weekLength,
-} from "./design-group-data";
+import { everyoneOff, patternOn, sameMonth } from "./design-group-data";
 import type { Group, Member } from "./design-group-data";
 import { Avatar, cornerMonth, Mark, toneColor } from "./design-group-parts";
 import { offTile, pickedFrame } from "./design-group-shifts-parts";
 import { shortMonthOf } from "./design-month-name";
 import { srOnly } from "./design-ui";
-import { useWeek } from "./design-week";
+import { useWeek, weekLength } from "./design-week";
 
 // 週ごと: the shift table as weeks, a row per member under each week's
 // dates, also the group hub's glance at this week.

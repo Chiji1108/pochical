@@ -1,4 +1,5 @@
 import { siteOf } from "../lib/chat-text";
+import { dayMilliseconds } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
 import { sampleRosterPhoto } from "../lib/design-sample-photos";
 import { firstCharacter } from "../lib/text-limits";
@@ -59,7 +60,7 @@ export function samplePhoto(id: number) {
 function dayNumber(date: Date) {
   const base = Date.UTC(2026, 0, 4);
   const day = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
-  return Math.round((day - base) / 86_400_000);
+  return Math.round((day - base) / dayMilliseconds);
 }
 
 export const partner: Member = {
