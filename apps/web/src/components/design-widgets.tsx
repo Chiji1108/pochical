@@ -1995,16 +1995,16 @@ const inline = css({
   whiteSpace: "nowrap",
 });
 
-// One line over the clock: today's mark and name, and any change to its
-// hours. A line of text, it names the shift where the others let the
-// mark say it.
+// One line over the clock, after the system's date: today's mark and
+// name. A line of text, it names the shift where the others let the mark
+// say it; changed hours would run past the date's room, and 早出 and 残業
+// show on the mark's sides.
 export function TodayInline({ entry }: { entry: WidgetEntry }) {
   const day = entry.today;
-  const words = [day.name ?? NOTHING, day.change].filter(Boolean).join(" ");
   return (
     <div className={inline}>
       <DayMark day={day} size={14} />
-      {words}
+      {day.name ?? NOTHING}
       <span className={srOnly}>{day.time}</span>
     </div>
   );
