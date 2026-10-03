@@ -1,6 +1,12 @@
 import { widgetRules } from "@pochical/design/widgets";
-import { createContext, useContext } from "react";
-import type { CSSProperties } from "react";
+import {
+  createContext,
+  useContext,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import { presetPatterns } from "../lib/design-patterns";
@@ -1457,10 +1463,41 @@ function noOffWords(
 function OffCount({ inDays, size }: { inDays: number; size: number }) {
   const words = useWords();
   const number = inDays > 1;
+  const text = number ? `${inDays}` : words.inDays(inDays);
+  // Other words start again at the size asked for.
   return (
-    <span aria-hidden="true" className={offs.count} style={{ fontSize: size }}>
-      {number ? inDays : words.inDays(inDays)}
+    <FitCount key={text} size={size}>
+      {text}
       {number && <span className={offs.unit}>{words.unit}</span>}
+    </FitCount>
+  );
+}
+
+// Words too wide for the widget at their size (Tomorrow) shrink to its
+// width, as SwiftUI's minimumScaleFactor does.
+function FitCount({ size, children }: { size: number; children: ReactNode }) {
+  const { width: room } = useContext(WidgetSizeContext);
+  const ref = useRef<HTMLSpanElement>(null);
+  const [fit, setFit] = useState(size);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) {
+      return;
+    }
+    // The words' width at the size asked for, from their width as shown.
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const natural = (range.getBoundingClientRect().width * size) / fit;
+    setFit(Math.min(size, Math.floor((size * room) / natural)));
+  }, [fit, room, size]);
+  return (
+    <span
+      aria-hidden="true"
+      className={offs.count}
+      ref={ref}
+      style={{ fontSize: fit }}
+    >
+      {children}
     </span>
   );
 }
