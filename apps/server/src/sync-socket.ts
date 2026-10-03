@@ -106,7 +106,7 @@ export const send = (ws: WebSocket, kind: ServerFrameKind): void => {
  * Welcome at the DO's head, with the server's time for the device to
  * correct its clock by (spec/sync-protocol.md, HLC).
  */
-export const sendWelcome = (ws: WebSocket, head: number): void => {
+const sendWelcome = (ws: WebSocket, head: number): void => {
   send(ws, {
     case: "welcome",
     value: { cursor: BigInt(head), serverMs: BigInt(Date.now()) },
@@ -144,7 +144,7 @@ const handleHello = (
 };
 
 /** Changes in cursor order, as frames of up to syncLimits.changesPerFrame. */
-export const sendChanges = (ws: WebSocket, changes: Change[]): void => {
+const sendChanges = (ws: WebSocket, changes: Change[]): void => {
   for (let at = 0; at < changes.length; at += syncLimits.changesPerFrame) {
     send(ws, {
       case: "changes",
@@ -154,8 +154,48 @@ export const sendChanges = (ws: WebSocket, changes: Change[]): void => {
 };
 
 /** Whether the socket is past Hello, so changes may be sent to it. */
-export const isSynced = (ws: WebSocket): boolean =>
+const isSynced = (ws: WebSocket): boolean =>
   attachmentOf(ws)?.protocolVersion !== undefined;
+
+/** Changes gathered from a DO's several logs, in cursor order. */
+export const byCursor = (changes: Change[]): Change[] =>
+  changes.toSorted((a, b) => (a.cursor < b.cursor ? -1 : 1));
+
+/**
+ * Welcome at the DO's head, then every value changed after the device's
+ * cursor. Each value keeps only its latest change, so this reaches back
+ * any distance; a device ahead of the DO (its data restored from an older
+ * copy) is told to reset and gets everything.
+ */
+export const welcome = (
+  ws: WebSocket,
+  cursor: bigint,
+  head: number,
+  changesAfter: (cursor: number) => Change[]
+): void => {
+  sendWelcome(ws, head);
+  if (cursor > BigInt(head)) {
+    send(ws, { case: "reset", value: {} });
+    sendChanges(ws, changesAfter(0));
+    return;
+  }
+  sendChanges(ws, changesAfter(Number(cursor)));
+};
+
+/**
+ * Sends changes to every socket of the DO past Hello: each of the user's
+ * devices, or everyone with the group open.
+ */
+export const broadcastChanges = (
+  ctx: DurableObjectState,
+  changes: Change[]
+): void => {
+  for (const socket of ctx.getWebSockets()) {
+    if (isSynced(socket)) {
+      sendChanges(socket, changes);
+    }
+  }
+};
 
 /**
  * Has the runtime answer a device's keepalive text, so a socket kept
