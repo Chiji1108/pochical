@@ -13,7 +13,7 @@ export const SHARE_IMAGE = {
   width: 1200,
 } as const;
 
-export const getSiteOrigin = (): string | undefined => {
+const getSiteOrigin = (): string | undefined => {
   const value = import.meta.env.VITE_SITE_URL;
   if (!value) {
     return;

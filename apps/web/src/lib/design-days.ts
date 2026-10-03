@@ -278,7 +278,7 @@ export function plannedShifts(
 }
 
 // A day as it shows: its own shift, else its order's; "" shows nothing.
-export function shownDay(
+function shownDay(
   own: OwnDay | undefined,
   planned: Shift | undefined
 ): DayEntry | undefined {

@@ -161,7 +161,7 @@ export const OwnPatternsContext = createContext<readonly Pattern[]>(
 );
 
 // Whether two patterns would show and count a day the same way.
-export function samePattern(a: Pattern, b: Pattern) {
+function samePattern(a: Pattern, b: Pattern) {
   return (
     a.name === b.name &&
     a.emoji === b.emoji &&
