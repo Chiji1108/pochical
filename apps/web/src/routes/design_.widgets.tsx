@@ -11,6 +11,7 @@ import {
   sampleOthers,
   samplePhoto,
 } from "../components/design-group-samples";
+import { Fit, LockScreen } from "../components/design-home-screen";
 import {
   DesignIntro,
   DesignPage,
@@ -24,7 +25,12 @@ import {
 import { pageStyle } from "../components/design-theme";
 import { VariantPanel } from "../components/design-variant-panel";
 import { WeekSettingsContext } from "../components/design-week";
-import { LabelledWidget, Wallpaper } from "../components/design-widget-frame";
+import {
+  LabelledWidget,
+  Wallpaper,
+  WidgetFrame,
+  wallpaperFor,
+} from "../components/design-widget-frame";
 import type { WidgetFamily } from "../components/design-widget-frame";
 import {
   CalendarLarge,
@@ -369,6 +375,22 @@ const shapeStyles = {
   line: "icon",
 } as const;
 
+// The lock screen at 6:45 on the day shown, as it is looked at before a
+// shift.
+const LOCK_HOUR = 6;
+const LOCK_MINUTE = 45;
+
+// A phone's width, as the flows draw their screens, drawn smaller where
+// the page is narrower, since the widgets keep their real sizes.
+const PHONE_WIDTH = 390;
+const lockPhone = css({ flexShrink: 0, width: `${PHONE_WIDTH}px` });
+
+function lockTime(day: Date) {
+  const at = new Date(day);
+  at.setHours(LOCK_HOUR, LOCK_MINUTE, 0, 0);
+  return at;
+}
+
 // The widgets of one kind, or all, on the device's home screen as the
 // choices set it.
 function Stage({ variants }: { variants: WidgetVariants }) {
@@ -397,22 +419,35 @@ function Stage({ variants }: { variants: WidgetVariants }) {
       <div className={page.kind}>
         <h2 className={page.kindName}>ロック画面</h2>
         <p className={page.caption}>
-          iPhone のロック画面。背景はなく、灰色の濃淡で壁紙の上に出ます。
+          iPhone
+          のロック画面に置いたところ。1行は時計の上の日付の後ろに、円形（72pt）と長方形（160×72pt）は時計の下に。背景はなく、灰色の濃淡で壁紙の上に出ます。
         </p>
-        <Wallpaper appearance="lock">
-          <LabelledWidget appearance="lock" family="accessoryCircular">
-            <TodayCircular entry={entry} />
-          </LabelledWidget>
-          <LabelledWidget appearance="lock" family="accessoryCircular">
-            <NextOffCircular entry={entry} />
-          </LabelledWidget>
-          <LabelledWidget appearance="lock" family="accessoryRectangular">
-            <UpcomingRectangular entry={entry} />
-          </LabelledWidget>
-          <LabelledWidget appearance="lock" family="accessoryInline">
-            <TodayInline entry={entry} />
-          </LabelledWidget>
-        </Wallpaper>
+        <Fit width={PHONE_WIDTH}>
+          <div className={lockPhone}>
+            <LockScreen
+              ground={wallpaperFor({ appearance: "lock" })}
+              inline={
+                <WidgetFrame appearance="lock" family="accessoryInline" inLine>
+                  <TodayInline entry={entry} />
+                </WidgetFrame>
+              }
+              when={lockTime(entry.today.date)}
+              widgets={
+                <>
+                  <WidgetFrame appearance="lock" family="accessoryCircular">
+                    <TodayCircular entry={entry} />
+                  </WidgetFrame>
+                  <WidgetFrame appearance="lock" family="accessoryCircular">
+                    <NextOffCircular entry={entry} />
+                  </WidgetFrame>
+                  <WidgetFrame appearance="lock" family="accessoryRectangular">
+                    <UpcomingRectangular entry={entry} />
+                  </WidgetFrame>
+                </>
+              }
+            />
+          </div>
+        </Fit>
       </div>
     );
   }

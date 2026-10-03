@@ -1981,14 +1981,12 @@ function RectangularDay({
   );
 }
 
+// In the date's own font, as the system sets it after the date.
 const inline = css({
   alignItems: "center",
   display: "flex",
-  fontVariantNumeric: "tabular-nums",
   gap: "4px",
-  height: "100%",
   overflow: "hidden",
-  textStyle: "subheadline",
   whiteSpace: "nowrap",
 });
 
@@ -2000,7 +1998,7 @@ export function TodayInline({ entry }: { entry: WidgetEntry }) {
   const day = entry.today;
   return (
     <div className={inline}>
-      <DayMark day={day} size={14} />
+      <DayMark day={day} size={18} />
       {day.name ?? NOTHING}
       <span className={srOnly}>{day.time}</span>
     </div>
