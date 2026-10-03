@@ -6,6 +6,7 @@ import { DayField } from "../src/gen/pochical/v1/sync_pb";
 import { signInAnonymously } from "./helpers";
 import {
   changesIn,
+  clock,
   device,
   edit,
   pair,
@@ -17,12 +18,6 @@ import {
 
 // Repeating orders and coworkers (spec/sync-protocol.md, Repeating orders
 // and Coworkers), synced as the user's own values.
-
-const clock = (ms: number, deviceId = "phone") => ({
-  counter: 0,
-  deviceId,
-  physicalMs: BigInt(ms),
-});
 
 type Order = {
   holidayCountry: string;

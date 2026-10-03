@@ -95,7 +95,7 @@ import type {
 const VALUES_PER_PUSH = 500;
 // After a push to a group fails, the alarm comes back for it after this
 // long, twice as long each time it fails in a row, up to the most…
-const PUSH_RETRY_FIRST_MS = 10_000;
+export const PUSH_RETRY_FIRST_MS = 10_000;
 const PUSH_RETRY_MOST_MS = 3_600_000;
 // …and stops coming back after this many in a row, about a day: the
 // user's next change tries it again.

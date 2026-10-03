@@ -7,10 +7,12 @@ import { describe, expect, it } from "vitest";
 
 import { invites } from "../src/db/schema";
 import { ChangesSchema, DayField } from "../src/gen/pochical/v1/sync_pb";
+import { PUSH_RETRY_FIRST_MS } from "../src/user-do";
 import type { UserDO } from "../src/user-do";
 import { call, signInAnonymously, userIdOf } from "./helpers";
 import {
   changesIn,
+  clock,
   device,
   edit,
   pair,
@@ -33,11 +35,7 @@ const pushed = (value: string, ms: number, field = DayField.PATTERN) =>
             value: {
               date: "2026-10-22",
               field,
-              hlc: {
-                counter: 0,
-                deviceId: "phone",
-                physicalMs: BigInt(ms),
-              },
+              hlc: clock(ms),
               value,
             },
           },
@@ -45,10 +43,6 @@ const pushed = (value: string, ms: number, field = DayField.PATTERN) =>
       ],
     })
   );
-
-// How long the User DO first waits to push again to a group it could not
-// reach (PUSH_RETRY_FIRST_MS).
-const FIRST_RETRY_MS = 10_000;
 
 // A signed-in user and their User DO.
 const someone = async () => {
@@ -278,8 +272,8 @@ describe("a member's shifts in their groups", () => {
         { group_id: groupId, pushed_cursor: 1 },
       ]);
       const retry = await state.storage.getAlarm();
-      expect(retry).toBeGreaterThanOrEqual(before + FIRST_RETRY_MS);
-      expect(retry).toBeLessThanOrEqual(Date.now() + FIRST_RETRY_MS);
+      expect(retry).toBeGreaterThanOrEqual(before + PUSH_RETRY_FIRST_MS);
+      expect(retry).toBeLessThanOrEqual(Date.now() + PUSH_RETRY_FIRST_MS);
     });
 
     const group = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
@@ -301,8 +295,8 @@ describe("a member's shifts in their groups", () => {
       const before = Date.now();
       await instance.alarm();
       const retry = await state.storage.getAlarm();
-      expect(retry).toBeGreaterThanOrEqual(before + FIRST_RETRY_MS);
-      expect(retry).toBeLessThanOrEqual(Date.now() + FIRST_RETRY_MS);
+      expect(retry).toBeGreaterThanOrEqual(before + PUSH_RETRY_FIRST_MS);
+      expect(retry).toBeLessThanOrEqual(Date.now() + PUSH_RETRY_FIRST_MS);
 
       // Both past the most retries: the next change tries them again.
       state.storage.kv.put("pushFailures:!long-gone", 30);
@@ -326,7 +320,7 @@ describe("a member's shifts in their groups", () => {
       const before = Date.now();
       await instance.alarm();
       await expect(state.storage.getAlarm()).resolves.toBeLessThan(
-        before + FIRST_RETRY_MS
+        before + PUSH_RETRY_FIRST_MS
       );
     });
   });
