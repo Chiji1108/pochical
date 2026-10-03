@@ -34,7 +34,7 @@ import type {
 } from "./gen/pochical/v1/sync_pb";
 import { clockAfter, compareClocks, isAhead } from "./hlc";
 import type { Clock } from "./hlc";
-import { isDeviceId, isId } from "./ids";
+import { hasDeviceClock, isId, isIdList } from "./ids";
 import { givesWay, heldBackBy, ORDER_FIELDS } from "./order-clears";
 import type { Floor } from "./order-clears";
 import {
@@ -42,7 +42,6 @@ import {
   fitsCoworkerName,
   fitsCoworkerOrder,
   fitsOrders,
-  isIdList,
 } from "./order-values";
 import { fitsOrder, fitsPattern } from "./pattern-values";
 import {
@@ -96,7 +95,7 @@ import type {
 const VALUES_PER_PUSH = 500;
 // After a push to a group fails, the alarm comes back for it after this
 // long, twice as long each time it fails in a row, up to the most…
-const PUSH_RETRY_FIRST_MS = 10_000;
+export const PUSH_RETRY_FIRST_MS = 10_000;
 const PUSH_RETRY_MOST_MS = 3_600_000;
 // …and stops coming back after this many in a row, about a day: the
 // user's next change tries it again.
@@ -650,7 +649,7 @@ export class UserDO extends DurableObject<Env> {
   }
 
   private applyPattern(edit: PatternValue, cursor: number): Change | undefined {
-    if (!(isId(edit.id) && edit.hlc && isDeviceId(edit.hlc.deviceId))) {
+    if (!(isId(edit.id) && hasDeviceClock(edit))) {
       return undefined;
     }
     const stored = this.db
@@ -683,7 +682,7 @@ export class UserDO extends DurableObject<Env> {
   }
 
   private applyOrder(edit: PatternOrder, cursor: number): Change | undefined {
-    if (!(edit.hlc && isDeviceId(edit.hlc.deviceId))) {
+    if (!hasDeviceClock(edit)) {
       return undefined;
     }
     const stored = this.db.select().from(patternOrder).get();
@@ -717,7 +716,7 @@ export class UserDO extends DurableObject<Env> {
     { clearFrom, orders: edit }: RepeatOrdersEdit,
     cursor: number
   ): Change[] {
-    if (!(edit?.hlc && isDeviceId(edit.hlc.deviceId))) {
+    if (!hasDeviceClock(edit)) {
       return [];
     }
     const stored = this.db.select().from(repeatOrders).get();
@@ -819,7 +818,7 @@ export class UserDO extends DurableObject<Env> {
     edit: CoworkerValue,
     cursor: number
   ): Change | undefined {
-    if (!(isId(edit.id) && edit.hlc && isDeviceId(edit.hlc.deviceId))) {
+    if (!(isId(edit.id) && hasDeviceClock(edit))) {
       return undefined;
     }
     const stored = this.db
@@ -866,7 +865,7 @@ export class UserDO extends DurableObject<Env> {
     edit: CoworkerOrder,
     cursor: number
   ): Change | undefined {
-    if (!(edit.hlc && isDeviceId(edit.hlc.deviceId))) {
+    if (!hasDeviceClock(edit)) {
       return undefined;
     }
     const stored = this.db.select().from(coworkerOrder).get();

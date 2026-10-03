@@ -66,6 +66,13 @@ export const syncSocket = async (path: string, token: string, cursor = 0n) => {
   return { frames, socket, welcome };
 };
 
+// A device's clock at `ms`, as an edit carries it.
+export const clock = (ms: number, deviceId = "phone") => ({
+  counter: 0,
+  deviceId,
+  physicalMs: BigInt(ms),
+});
+
 export const edit = (
   opId: string,
   date: string,
@@ -78,7 +85,7 @@ export const edit = (
   value: {
     date,
     field,
-    hlc: { counter: 0, deviceId, physicalMs: BigInt(ms) },
+    hlc: clock(ms, deviceId),
     value,
   },
 });

@@ -4,7 +4,14 @@ import { describe, expect, it } from "vitest";
 import { DayField, ServerError_Code } from "../src/gen/pochical/v1/sync_pb";
 import { CURRENT_PROTOCOL_VERSION } from "../src/protocol";
 import { memberOf, openSocket, signInAnonymously } from "./helpers";
-import { device, edit, framesOf, sendFrame, settled } from "./sync-helpers";
+import {
+  clock,
+  device,
+  edit,
+  framesOf,
+  sendFrame,
+  settled,
+} from "./sync-helpers";
 
 describe("syncing a user's own days", () => {
   it("starts a fresh device at the head with nothing to catch up", async () => {
@@ -368,7 +375,7 @@ const patternEdit = (
   kind: {
     case: "pattern" as const,
     value: {
-      hlc: { counter: 0, deviceId: "phone", physicalMs: BigInt(ms) },
+      hlc: clock(ms),
       id,
       pattern,
     },
@@ -381,7 +388,7 @@ const order = (opId: string, ids: string[], ms: number) => ({
   kind: {
     case: "order" as const,
     value: {
-      hlc: { counter: 0, deviceId: "phone", physicalMs: BigInt(ms) },
+      hlc: clock(ms),
       ids,
     },
   },

@@ -40,19 +40,25 @@ type SocketAttachment = {
   protocolVersion?: number;
 };
 
-export type ServerFrameKind = MessageInitShape<
-  typeof ServerFrameSchema
->["kind"];
+type ServerFrameKind = MessageInitShape<typeof ServerFrameSchema>["kind"];
+
+// The frames of the owner's edits of what they own, by their kind.
+type EditFrames = {
+  dayEdits: DayEdits;
+  patternEdits: PatternEdits;
+  repeatOrdersEdits: RepeatOrdersEdits;
+  coworkerEdits: CoworkerEdits;
+};
+
+// What a DO does with each kind of edit; only a User DO takes them.
+type EditHandlers = {
+  [Kind in keyof EditFrames]?: (ws: WebSocket, edits: EditFrames[Kind]) => void;
+};
 
 /** What a DO does with a socket once it is past the handshake. */
-export type SyncHandlers = {
+type SyncHandlers = EditHandlers & {
   // Hello was accepted: send Welcome and every change after `cursor`.
   welcome: (ws: WebSocket, cursor: bigint) => void;
-  // The owner's edits of what they own; only a User DO takes them.
-  dayEdits?: (ws: WebSocket, edits: DayEdits) => void;
-  patternEdits?: (ws: WebSocket, edits: PatternEdits) => void;
-  repeatOrdersEdits?: (ws: WebSocket, edits: RepeatOrdersEdits) => void;
-  coworkerEdits?: (ws: WebSocket, edits: CoworkerEdits) => void;
 };
 
 const OWN_SOCKET_ONLY = "Edits go to the user's own socket";
@@ -152,11 +158,6 @@ export const isSynced = (ws: WebSocket): boolean =>
   attachmentOf(ws)?.protocolVersion !== undefined;
 
 /**
- * Accepts the socket the Worker forwarded, for the user it named. Uses the
- * Hibernation API, so an idle object costs nothing while clients stay
- * connected.
- */
-/**
  * Has the runtime answer a device's keepalive text, so a socket kept
  * alive does not wake a hibernating Durable Object (spec/sync-protocol.md,
  * Keepalive). Set as each DO starts.
@@ -170,6 +171,11 @@ export const answerKeepalive = (ctx: DurableObjectState): void => {
   );
 };
 
+/**
+ * Accepts the socket the Worker forwarded, for the user it named. Uses the
+ * Hibernation API, so an idle object costs nothing while clients stay
+ * connected.
+ */
 export const acceptSyncSocket = (
   ctx: DurableObjectState,
   request: Request
@@ -207,6 +213,21 @@ export const closeSessionSockets = (
   }
 };
 
+// Edits go to the DO's handler for their kind; a DO without one is not the
+// user's own.
+const handleEdits = <Kind extends keyof EditFrames>(
+  ws: WebSocket,
+  { case: kind, value }: { case: Kind; value: EditFrames[Kind] },
+  handlers: EditHandlers
+): void => {
+  const handle = handlers[kind];
+  if (handle) {
+    handle(ws, value);
+  } else {
+    rejectAndClose(ws, ServerError_Code.BAD_FRAME, OWN_SOCKET_ONLY);
+  }
+};
+
 /** One frame from a client: Hello first, then the rest. */
 export const handleSyncMessage = (
   ws: WebSocket,
@@ -239,36 +260,11 @@ export const handleSyncMessage = (
       send(ws, { case: "pong", value: { nonce: kind.value.nonce } });
       return;
     }
-    case "dayEdits": {
-      if (handlers.dayEdits) {
-        handlers.dayEdits(ws, kind.value);
-      } else {
-        rejectAndClose(ws, ServerError_Code.BAD_FRAME, OWN_SOCKET_ONLY);
-      }
-      return;
-    }
-    case "patternEdits": {
-      if (handlers.patternEdits) {
-        handlers.patternEdits(ws, kind.value);
-      } else {
-        rejectAndClose(ws, ServerError_Code.BAD_FRAME, OWN_SOCKET_ONLY);
-      }
-      return;
-    }
-    case "repeatOrdersEdits": {
-      if (handlers.repeatOrdersEdits) {
-        handlers.repeatOrdersEdits(ws, kind.value);
-      } else {
-        rejectAndClose(ws, ServerError_Code.BAD_FRAME, OWN_SOCKET_ONLY);
-      }
-      return;
-    }
+    case "dayEdits":
+    case "patternEdits":
+    case "repeatOrdersEdits":
     case "coworkerEdits": {
-      if (handlers.coworkerEdits) {
-        handlers.coworkerEdits(ws, kind.value);
-      } else {
-        rejectAndClose(ws, ServerError_Code.BAD_FRAME, OWN_SOCKET_ONLY);
-      }
+      handleEdits(ws, kind, handlers);
       return;
     }
     // A frame kind from a newer client decodes as undefined.

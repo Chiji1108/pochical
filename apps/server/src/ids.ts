@@ -1,5 +1,6 @@
 import { syncLimits } from "@pochical/design/limits";
 
+import type { Hlc } from "./gen/pochical/v1/sync_pb";
 import { SERVER_DEVICE } from "./hlc";
 
 // The ids the apps make (patterns, coworkers, devices) and the icon names
@@ -24,3 +25,21 @@ const DEVICE = /^[A-Za-z0-9-]+$/u;
  */
 export const isDeviceId = (text: string): boolean =>
   isId(text) && DEVICE.test(text) && text !== SERVER_DEVICE;
+
+/**
+ * Whether the value carries a clock a device stamped: a value without one
+ * cannot be applied or corrected, only acknowledged.
+ */
+export const hasDeviceClock = <T extends { hlc?: Hlc }>(
+  value: T | undefined
+): value is T & { hlc: Hlc } =>
+  value?.hlc !== undefined && isDeviceId(value.hlc.deviceId);
+
+/** Whether a list is ids, each once, and at most `max` of them when given. */
+export const isIdList = (
+  ids: readonly string[],
+  max = Number.POSITIVE_INFINITY
+): boolean =>
+  ids.length <= max &&
+  new Set(ids).size === ids.length &&
+  ids.every((id) => isId(id));

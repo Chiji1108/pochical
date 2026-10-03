@@ -1,3 +1,5 @@
+import { Code, ConnectError } from "@connectrpc/connect";
+import type { HandlerContext } from "@connectrpc/connect";
 import { env } from "cloudflare:workers";
 
 import { createAuth } from "./auth";
@@ -38,4 +40,15 @@ export const sessionUser = async (
     id: session.user.id,
     sessionId: session.session.id,
   };
+};
+
+/** The caller's user, or UNAUTHENTICATED for a missing or stale token. */
+export const requireUser = async (
+  context: HandlerContext
+): Promise<SessionUser> => {
+  const user = await sessionUser(context.requestHeader);
+  if (!user) {
+    throw new ConnectError("Sign in first", Code.Unauthenticated);
+  }
+  return user;
 };

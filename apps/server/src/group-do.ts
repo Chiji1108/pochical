@@ -44,10 +44,10 @@ export type GroupProfile = {
 };
 
 /** Someone in the group, as they appear in it. */
-export type NewMember = { userId: string; displayName: string };
+type NewMember = { userId: string; displayName: string };
 
 /** How a join went: in now, in already, or kept out of a full group. */
-export type JoinResult = "added" | "already" | "full";
+type JoinResult = "added" | "already" | "full";
 
 /** One kind of value the group keeps of its members, as GroupDO.logs lists them. */
 type MemberLog = {

@@ -1,22 +1,15 @@
-import { env, exports } from "cloudflare:workers";
+import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
 import { invites } from "../src/db/schema";
+import { call } from "./helpers";
 
-const ORIGIN = "https://server.test";
 const db = drizzle(env.DB);
 
 const getInvitePreview = async (inviteCode: string): Promise<Response> =>
-  await exports.default.fetch(
-    `${ORIGIN}/pochical.v1.InviteService/GetInvitePreview`,
-    {
-      body: JSON.stringify({ inviteCode }),
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-    }
-  );
+  await call("InviteService/GetInvitePreview", { inviteCode });
 
 const addGroup = async (
   groupId: string,
