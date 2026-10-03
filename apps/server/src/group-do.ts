@@ -28,12 +28,11 @@ import {
 import {
   acceptSyncSocket,
   answerKeepalive,
+  broadcastChanges,
+  byCursor,
   closeSessionSockets,
   handleSyncMessage,
-  isSynced,
-  send,
-  sendChanges,
-  sendWelcome,
+  welcome,
 } from "./sync-socket";
 
 /** What the group shows of itself to members and to invite links. */
@@ -158,7 +157,9 @@ export class GroupDO extends DurableObject<Env> {
   webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): void {
     handleSyncMessage(ws, message, {
       welcome: (socket, cursor) => {
-        this.welcome(socket, cursor);
+        welcome(socket, cursor, this.head(), (after) =>
+          this.changesAfter(after)
+        );
       },
     });
   }
@@ -205,11 +206,7 @@ export class GroupDO extends DurableObject<Env> {
       }
       return kept;
     });
-    for (const socket of this.ctx.getWebSockets()) {
-      if (isSynced(socket)) {
-        sendChanges(socket, taken);
-      }
-    }
+    broadcastChanges(this.ctx, taken);
   }
 
   /**
@@ -263,23 +260,6 @@ export class GroupDO extends DurableObject<Env> {
 
   /** Every value changed after `cursor`, in cursor order. */
   private changesAfter(cursor: number): Change[] {
-    return this.logs()
-      .flatMap(({ after }) => after(cursor))
-      .toSorted((a, b) => (a.cursor < b.cursor ? -1 : 1));
-  }
-
-  /**
-   * Welcome, then every value changed after the member's cursor; one ahead
-   * of the group is told to reset and gets everything.
-   */
-  private welcome(ws: WebSocket, cursor: bigint): void {
-    const head = this.head();
-    sendWelcome(ws, head);
-    if (cursor > BigInt(head)) {
-      send(ws, { case: "reset", value: {} });
-      sendChanges(ws, this.changesAfter(0));
-      return;
-    }
-    sendChanges(ws, this.changesAfter(Number(cursor)));
+    return byCursor(this.logs().flatMap(({ after }) => after(cursor)));
   }
 }

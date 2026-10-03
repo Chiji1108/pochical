@@ -47,13 +47,13 @@ import { fitsOrder, fitsPattern } from "./pattern-values";
 import {
   acceptSyncSocket,
   answerKeepalive,
+  broadcastChanges,
+  byCursor,
   closeSessionSockets,
   handleSyncMessage,
-  isSynced,
   rejectAndClose,
   send,
-  sendChanges,
-  sendWelcome,
+  welcome,
 } from "./sync-socket";
 import migrations from "./user-do-migrations/migrations.js";
 import {
@@ -116,9 +116,6 @@ type SyncedLog = {
     | typeof coworkers
     | typeof coworkerOrder;
 };
-
-const byCursor = (changes: Change[]): Change[] =>
-  changes.toSorted((a, b) => (a.cursor < b.cursor ? -1 : 1));
 
 /**
  * The clock a value is written with: the edit's own when the value fits,
@@ -448,26 +445,11 @@ export class UserDO extends DurableObject<Env> {
         this.takeRepeatOrdersEdits(socket, edits);
       },
       welcome: (socket, cursor) => {
-        this.welcome(socket, cursor);
+        welcome(socket, cursor, this.head(), (after) =>
+          this.changesAfter(after)
+        );
       },
     });
-  }
-
-  /**
-   * Welcome, then every value changed after the device's cursor. Each
-   * value keeps only its latest change, so this reaches back any distance;
-   * a device ahead of the server (its data restored from an older copy)
-   * is told to reset and gets everything.
-   */
-  private welcome(ws: WebSocket, cursor: bigint): void {
-    const head = this.head();
-    sendWelcome(ws, head);
-    if (cursor > BigInt(head)) {
-      send(ws, { case: "reset", value: {} });
-      sendChanges(ws, this.changesAfter(0));
-      return;
-    }
-    sendChanges(ws, this.changesAfter(Number(cursor)));
   }
 
   /**
@@ -517,11 +499,7 @@ export class UserDO extends DurableObject<Env> {
     if (changed.length > 0) {
       this.schedulePush();
     }
-    for (const socket of this.ctx.getWebSockets()) {
-      if (isSynced(socket)) {
-        sendChanges(socket, changed);
-      }
-    }
+    broadcastChanges(this.ctx, changed);
     // After the changes, so the sender has the server's value by the time
     // its edits leave the outbox (spec/sync-protocol.md, Outbox).
     send(ws, {
