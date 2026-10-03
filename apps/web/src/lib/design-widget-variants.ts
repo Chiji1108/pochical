@@ -80,6 +80,15 @@ export const widgetVariantOptions = {
     ],
     label: "休みの見せ方",
   },
+  // 次の休み's medium: the list, or the small one's on the left and the
+  // two after it on the right, to compare.
+  offsLayout: {
+    choices: [
+      { label: "リスト", value: "list" },
+      { label: "左に大きく", value: "split" },
+    ],
+    label: "次の休み（中）",
+  },
   platform: {
     choices: [
       { label: "iPhone", value: "ios" },
@@ -141,6 +150,7 @@ export type WidgetVariants = {
 // device, then the person's settings.
 export const widgetVariantKeys: WidgetVariantKey[] = [
   "kind",
+  "offsLayout",
   "day",
   "companion",
   "month",

@@ -36,6 +36,7 @@ import {
   CalendarLarge,
   NextOffCircular,
   NextOffMedium,
+  NextOffMediumSplit,
   NextOffSmall,
   TodayCircular,
   TodayInline,
@@ -463,11 +464,22 @@ function Stage({ variants }: { variants: WidgetVariants }) {
           <h2 className={page.kindName}>{name}</h2>
           <p className={page.caption}>{description}</p>
           <Wallpaper {...placement}>
-            {sizes.map(({ size, View }) => (
-              <LabelledWidget {...placement} family={families[size]} key={size}>
-                <View entry={entry} />
-              </LabelledWidget>
-            ))}
+            {sizes.map(({ size, View }) => {
+              // 次の休み's medium in the layout picked, to compare.
+              const Shown =
+                View === NextOffMedium && variants.offsLayout === "split"
+                  ? NextOffMediumSplit
+                  : View;
+              return (
+                <LabelledWidget
+                  {...placement}
+                  family={families[size]}
+                  key={size}
+                >
+                  <Shown entry={entry} />
+                </LabelledWidget>
+              );
+            })}
           </Wallpaper>
         </div>
       ))}

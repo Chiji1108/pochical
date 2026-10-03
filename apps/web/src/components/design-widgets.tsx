@@ -3,6 +3,7 @@ import {
   createContext,
   useContext,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -1615,7 +1616,9 @@ const rest = {
     height: "92px",
     pointerEvents: "none",
     position: "absolute",
-    right: "calc(-1 * var(--widget-margin) - 4px)",
+    // To the widget's edge, or where it shares the widget (次の休み's
+    // medium, its left half), to its own.
+    right: "var(--dog-right, calc(-1 * var(--widget-margin) - 4px))",
     width: "92px",
   }),
   // The words keep to the top, clear of the dog in the corner below.
@@ -1785,6 +1788,82 @@ export function NextOffMedium({ entry }: { entry: WidgetEntry }) {
     </div>
   );
 }
+
+// The next day off as the small one has it, on the left, and the two
+// after it on the right, a line each: the date and its mark over how
+// soon. On a day off the left is the small one's おやすみ, and the right
+// the next two days off. A prototype beside the list, to compare.
+export function NextOffMediumSplit({ entry }: { entry: WidgetEntry }) {
+  const words = useWords();
+  const { width, height } = useContext(WidgetSizeContext);
+  // The left half's room, for the small one's count to fit to.
+  const half = useMemo(
+    () => ({ height, width: (width - 2 * SPLIT_GAP - 1) / 2 }),
+    [height, width]
+  );
+  const { next } = entry.offs;
+  const later = entry.offs.today ? next.slice(0, 2) : next.slice(1, 3);
+  return (
+    <div className={split.pair}>
+      <WidgetSizeContext value={half}>
+        <div className={split.side} style={splitDog}>
+          <NextOffSmall entry={entry} />
+        </div>
+      </WidgetSizeContext>
+      <span aria-hidden="true" className={simple.rule} />
+      <ol className={`${list} ${split.rows}`}>
+        {later.map(({ day, inDays }) => (
+          <li className={split.row} key={day.date.getTime()}>
+            <span className={srOnly}>
+              {`${monthDay(day.date)}(${day.weekday})、${inDaysWords(inDays)}`}
+            </span>
+            <span aria-hidden="true" className={split.line}>
+              {words.date(day.date)}
+              <DayMark day={day} size={18} />
+            </span>
+            <span aria-hidden="true" className={offs.rowCount}>
+              {words.inDays(inDays)}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+// The room between the halves and the rule between them, as シンプル's
+// medium has it.
+const SPLIT_GAP = 16;
+// The poodle up to the rule, rather than the widget's edge.
+const splitDog = { "--dog-right": "-12px" } as CSSProperties;
+
+const split = {
+  line: css({
+    alignItems: "center",
+    display: "flex",
+    fontVariantNumeric: "tabular-nums",
+    gap: "6px",
+    textStyle: "subheadline",
+    whiteSpace: "nowrap",
+  }),
+  pair: css({
+    columnGap: `${SPLIT_GAP}px`,
+    display: "grid",
+    gridTemplateColumns: "1fr 1px 1fr",
+    height: "100%",
+  }),
+  row: css({
+    "&:not(:first-child)": { borderTop: "1px solid token(colors.separator)" },
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "2px",
+    justifyContent: "center",
+    minWidth: 0,
+  }),
+  rows: css({ display: "flex", flexDirection: "column", minWidth: 0 }),
+  side: css({ height: "100%", minWidth: 0, position: "relative" }),
+};
 
 // ── カレンダー ───────────────────────────────────────────────────────────
 
