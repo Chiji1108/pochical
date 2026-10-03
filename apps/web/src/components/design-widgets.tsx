@@ -1500,10 +1500,14 @@ function FitCount({
     if (!element) {
       return;
     }
-    // The words' width at the size asked for, from their width as shown.
+    // The words' width at the size asked for, from their width as shown,
+    // less any zoom a preview draws the widget smaller with (/demo's
+    // home screen on a narrow phone), as `room` is the widget's own.
     const range = document.createRange();
     range.selectNodeContents(element);
-    const natural = (range.getBoundingClientRect().width * size) / fit;
+    const shown = element.getBoundingClientRect().width;
+    const zoom = element.offsetWidth > 0 ? shown / element.offsetWidth : 1;
+    const natural = (range.getBoundingClientRect().width * size) / (fit * zoom);
     setFit(Math.min(size, Math.floor((size * room) / natural)));
   }, [fit, room, size]);
   return (
