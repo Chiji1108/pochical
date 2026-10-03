@@ -1,18 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import { css } from "styled-system/css";
 
 import { DesignApp } from "../components/design-app";
-import { sampleGroups } from "../components/design-group-samples";
 import { DesignProviders } from "../components/design-providers";
 import { paleSkyFromTop, themeSkyId } from "../components/design-surprise";
 import { InviteShareImage } from "../components/invite-share-image";
-import { initialDesignSchedule } from "../lib/design-days";
-import {
-  createUserStore,
-  sampleCoworkers,
-  UserStoreContext,
-} from "../lib/design-user-store";
+import { useSamplePerson } from "../lib/design-sample-person";
+import { UserStoreContext } from "../lib/design-user-store";
+import type { UserStore } from "../lib/design-user-store";
 import { parseDesignVariants } from "../lib/design-variants";
 import { pageMeta, SHARE_IMAGE } from "../lib/site";
 
@@ -109,13 +104,7 @@ const variants = parseDesignVariants({});
 const sampleInviteGroup = { emoji: "🍉", memberCount: 5, name: "いとこ会" };
 
 function ShareImage() {
-  const [person] = useState(() =>
-    createUserStore({
-      coworkers: sampleCoworkers,
-      groups: sampleGroups(),
-      schedule: initialDesignSchedule(),
-    })
-  );
+  const person = useSamplePerson();
   return (
     <div className={styles.page}>
       <SiteShareImage person={person} />
@@ -124,11 +113,7 @@ function ShareImage() {
   );
 }
 
-function SiteShareImage({
-  person,
-}: {
-  person: ReturnType<typeof createUserStore>;
-}) {
+function SiteShareImage({ person }: { person: UserStore }) {
   return (
     <div
       className={styles.root}
