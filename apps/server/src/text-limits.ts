@@ -10,6 +10,10 @@ const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
 export const characterCount = (text: string): number =>
   [...graphemes.segment(text)].length;
 
+/** Whether the text has 1 to `limit` characters and is not only spaces. */
+export const fitsText = (text: string, limit: number): boolean =>
+  text.trim() !== "" && characterCount(text) <= limit;
+
 /**
  * The text, when it has 1 to `limit` characters and is not only spaces;
  * INVALID_ARGUMENT otherwise. The server never cuts text itself.

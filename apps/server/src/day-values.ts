@@ -3,7 +3,7 @@ import { syncLimits, textLimits } from "@pochical/design/limits";
 
 import { DayField } from "./gen/pochical/v1/sync_pb";
 import type { DayValue } from "./gen/pochical/v1/sync_pb";
-import { isDeviceId, isId } from "./ids";
+import { hasDeviceClock, isId, isIdList } from "./ids";
 import { characterCount } from "./text-limits";
 
 // What a day's field may hold (spec/sync-protocol.md, Shifts), checked as
@@ -27,6 +27,9 @@ export const isDate = (text: string): boolean => {
   );
 };
 
+/** Whether the text is a time of day written "HH:mm", 00:00 to 23:59. */
+export const isTime = (text: string): boolean => TIME.test(text);
+
 // The fields the server keeps.
 const KEPT_FIELDS: ReadonlySet<number> = new Set([
   DayField.PATTERN,
@@ -37,8 +40,7 @@ const KEPT_FIELDS: ReadonlySet<number> = new Set([
 ]);
 
 /** A field the server keeps, by its number. */
-export const isDayField = (field: number): field is DayField =>
-  KEPT_FIELDS.has(field);
+const isDayField = (field: number): field is DayField => KEPT_FIELDS.has(field);
 
 /**
  * The fields groups see of a member's day: its pattern and times. Named
@@ -52,22 +54,16 @@ export const SHARED_DAY_FIELDS: readonly DayField[] = [
 ];
 
 // A day's people: coworker ids separated by single spaces, each once.
-const isPeople = (value: string): boolean => {
-  const ids = value.split(" ");
-  return (
-    ids.length <= syncLimits.peopleADay &&
-    new Set(ids).size === ids.length &&
-    ids.every((id) => isId(id))
-  );
-};
+const isPeople = (value: string): boolean =>
+  isIdList(value.split(" "), syncLimits.peopleADay);
 
 // What a set value of each field must be.
 const fits: Record<DayField, (value: string) => boolean> = {
   [DayField.UNSPECIFIED]: () => false,
   // A day cleared on purpose has no shift, whatever its repeating order.
   [DayField.PATTERN]: (value) => value === dayRules.noShift || isId(value),
-  [DayField.START]: (value) => TIME.test(value),
-  [DayField.END]: (value) => TIME.test(value),
+  [DayField.START]: isTime,
+  [DayField.END]: isTime,
   [DayField.NOTE]: (value) => characterCount(value) <= textLimits.dayNote,
   [DayField.PEOPLE]: isPeople,
 };
@@ -87,5 +83,4 @@ export const hasKey = (value: DayValue | undefined): value is DayValue =>
   value !== undefined &&
   isDate(value.date) &&
   isDayField(value.field) &&
-  value.hlc !== undefined &&
-  isDeviceId(value.hlc.deviceId);
+  hasDeviceClock(value);
