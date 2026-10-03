@@ -38,7 +38,7 @@ export function shortDay(date: Date) {
 export const settingsParts = {
   // A work style's emoji before its name, the size of a row's icon.
   styleIcon: css({
-    fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", sans-serif',
+    fontFamily: "emoji",
     fontSize: "20px",
     lineHeight: 1,
   }),

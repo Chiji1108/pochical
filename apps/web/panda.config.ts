@@ -130,6 +130,11 @@ export default defineConfig({
             pressed: { value: stateLayer(stateLayers.pressed) },
           },
         },
+        // Emoji marks and icons draw in the system's emoji font wherever
+        // they sit.
+        fonts: {
+          emoji: { value: '"Apple Color Emoji", "Segoe UI Emoji", sans-serif' },
+        },
         // The corners by size (design/src/metrics.ts), and a circle for
         // round avatars and dots.
         radii: {

@@ -24,9 +24,6 @@ import {
   useOffHighlight,
 } from "./shift-mark";
 
-// Emoji marks draw in the system's emoji font wherever they sit.
-const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", sans-serif';
-
 // A day of a month: its date, and its shift's mark with the name under
 // it when names are shown. The group's month of one person draws its days
 // with the same parts.
@@ -106,7 +103,7 @@ export const dayParts = {
   mark: css({
     display: "grid",
     flexShrink: 0,
-    fontFamily: EMOJI_FONT,
+    fontFamily: "emoji",
     fontSize: "20px",
     height: "24px",
     lineHeight: 1,
