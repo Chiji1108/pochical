@@ -1908,50 +1908,79 @@ export function NextOffCircular({ entry }: { entry: WidgetEntry }) {
 }
 
 const rectangular = {
-  // As wide as the longer label, so the marks line up: 今日 and 明日, or
-  // Today and a weekday.
-  label: cva({
-    base: { flexShrink: 0, fontWeight: 700 },
-    variants: {
-      english: { false: { width: "32px" }, true: { width: "40px" } },
-    },
-  }),
-  line: css({
+  day: css({
     alignItems: "center",
-    display: "flex",
-    fontVariantNumeric: "tabular-nums",
-    gap: "4px",
-    overflow: "hidden",
-    whiteSpace: "nowrap",
-  }),
-  root: css({
     display: "flex",
     flexDirection: "column",
     gap: "4px",
-    height: "100%",
-    justifyContent: "center",
-    textStyle: "footnote",
+    minWidth: 0,
   }),
-  time: css({ fontWeight: 400 }),
+  root: css({
+    alignContent: "center",
+    display: "grid",
+    gridTemplateColumns: "repeat(7, 1fr)",
+    height: "100%",
+  }),
+  // Today's weekday heavier, the first of the row.
+  weekday: cva({
+    base: { color: "text.secondary", textStyle: "caption1" },
+    variants: {
+      today: { false: {}, true: { color: "text.primary", fontWeight: 700 } },
+    },
+  }),
 };
 
-// Today and tomorrow, a line each: 今日 and 明日, or Today and the
-// weekday, as under the small 次の休み's おやすみ.
+// Seven days from today, each weekday over its mark: the week ahead at
+// a glance, for anyone, where a day of 早出 or 残業 shows on its mark's
+// sides as in the calendar. Seven in a row tell T from T by their order,
+// so the weekdays are the calendar's letters. No memo stroke: at this
+// size on the lock screen it reads as a line through the weekday.
 export function UpcomingRectangular({ entry }: { entry: WidgetEntry }) {
-  const words = useWords();
-  const { english } = useWeek();
+  const { weekdayLetter } = useWeek();
+  const named = useShiftNames();
   return (
     <ol className={`${list} ${rectangular.root}`}>
-      {entry.upcoming.slice(0, 2).map((day, index) => (
-        <li className={rectangular.line} key={day.date.getTime()}>
-          <span className={rectangular.label({ english })}>
-            {index === 0 ? words.today : words.nextDay(day.date)}
-          </span>
-          <DayMark day={day} size={16} />
-          <Change className={rectangular.time} day={day} />
-        </li>
+      {entry.upcoming.map((day, index) => (
+        <RectangularDay
+          day={day}
+          key={day.date.getTime()}
+          label={weekdayLetter(day.date.getDay())}
+          named={named}
+          today={index === 0}
+        />
       ))}
     </ol>
+  );
+}
+
+function RectangularDay({
+  day,
+  label,
+  named,
+  today,
+}: {
+  day: WidgetDay;
+  label: string;
+  named: boolean;
+  today: boolean;
+}) {
+  // A day off as in the calendar's week: its mark, or faint where
+  // 休みの見せ方 leaves it empty.
+  const look = useOffLook(day, true);
+  return (
+    <li className={rectangular.day}>
+      <SpokenDay day={day} />
+      <span aria-hidden="true" className={rectangular.weekday({ today })}>
+        {label}
+      </span>
+      <NamedMark
+        day={day}
+        faint={look.mark === "faint"}
+        named={named}
+        reserve
+        size={named ? 20 - NAME_ROOM : 20}
+      />
+    </li>
   );
 }
 
@@ -1966,16 +1995,16 @@ const inline = css({
   whiteSpace: "nowrap",
 });
 
-// One line over the clock: today's mark and name, and any change to its
-// hours. A line of text, it names the shift where the others let the
-// mark say it.
+// One line over the clock, after the system's date: today's mark and
+// name. A line of text, it names the shift where the others let the mark
+// say it; changed hours would run past the date's room, and 早出 and 残業
+// show on the mark's sides.
 export function TodayInline({ entry }: { entry: WidgetEntry }) {
   const day = entry.today;
-  const words = [day.name ?? NOTHING, day.change].filter(Boolean).join(" ");
   return (
     <div className={inline}>
       <DayMark day={day} size={14} />
-      {words}
+      {day.name ?? NOTHING}
       <span className={srOnly}>{day.time}</span>
     </div>
   );
