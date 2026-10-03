@@ -333,8 +333,13 @@ function useWords() {
       date: (date: Date) => `${day(date)}, ${month(date)} ${date.getDate()}`,
       dayName: day,
       heading: (date: Date) => englishWeekdays[date.getDay()] ?? "",
-      inDays: (inDays: number) =>
-        inDays === 1 ? "Tomorrow" : `in ${inDays} days`,
+      // Today too, where 次の休み's medium starts from a day off today.
+      inDays: (inDays: number) => {
+        if (inDays === 0) {
+          return "Today";
+        }
+        return inDays === 1 ? "Tomorrow" : `in ${inDays} days`;
+      },
       apart: "No days off together yet",
       // Over the count on the lock screen's round face.
       circle: { all: "Everyone", alone: "Off", together: "Together" },
@@ -372,7 +377,7 @@ function useWords() {
     dayName: weekday,
     heading: (date: Date) =>
       `${date.getMonth() + MONTH_NUMBER}月 ${weekday(date)}曜日`,
-    inDays: (inDays: number) => (inDays === 1 ? "明日" : `${inDays}日後`),
+    inDays: inDaysWords,
     nextDay: () => "明日",
     nextOff: "次の休み",
     nothingYet: "まだ入っていません",
@@ -1639,15 +1644,38 @@ const rest = {
   }),
 };
 
-// The poodle, white in dark lines, as it sits on any ground.
+// The poodle, white in dark lines, as it sits on any ground. Where the
+// system draws the widget in one color, it is drawn desaturated, as
+// SwiftUI's widgetAccentedRenderingMode(.desaturated) has it: its white
+// body takes the tint and its lines stay, rather than a white blob.
 function PeekingDog() {
   const icons = useAppIcons();
   const dark = useContext(ColorSchemeContext) === "dark";
+  const accented = useContext(WidgetRenderingModeContext) === "accented";
+  if (accented) {
+    const light = icons[LIGHT_DRAWING];
+    return light ? (
+      <span
+        aria-hidden="true"
+        className={cx(rest.dog, desaturatedDog)}
+        style={{ maskImage: `url(${light})` }}
+      />
+    ) : null;
+  }
   const drawing = icons[dark ? DARK_DRAWING : LIGHT_DRAWING];
   return drawing ? (
     <img alt="" className={rest.dog} height={92} src={drawing} width={92} />
   ) : null;
 }
+
+// The preview's one-color look turns everything white, so the drawing is
+// a mask of its own lightness: the body shows, the lines let the ground
+// through.
+const desaturatedDog = css({
+  bg: "white",
+  maskMode: "luminance",
+  maskSize: "100% 100%",
+});
 
 // A day off today, said as such rather than counted: おやすみ, with the
 // date over it, tomorrow's mark under it, and the app icon's poodle
