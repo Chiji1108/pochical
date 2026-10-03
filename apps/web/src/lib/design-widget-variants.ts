@@ -22,6 +22,7 @@ export const widgetVariantOptions = {
       { label: "ふつう", value: "plain" },
       { label: "残業とメモ", value: "busy" },
       { label: "早出", value: "early" },
+      { label: "早出と残業", value: "earlyLate" },
       { label: "休み", value: "off" },
       { label: "明日休み", value: "offTomorrow" },
       { label: "長いメモ", value: "crowded" },
