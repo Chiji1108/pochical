@@ -66,7 +66,7 @@ A mention names one member of the group in a group chat (全体チャット). On
 
 A member can change or take back their own messages, at any time. Others' messages cannot be changed.
 
-- **編集** (text messages only): the message's words go back into the composer, its mentions as @name again, under a bar saying メッセージを編集 with × to stop. The send button becomes ✓ and the photo and day tools are hidden: only the words change. Saving replaces the words for everyone and marks the message 編集済み, shown over its time (on one line with a pin, when it is pinned). A message cannot be saved empty; taking it back is 送信取消. The link's page stays while its first link does; a new first link gets a new preview.
+- **編集** (text messages only): the message's words go back into the composer, its mentions as @name again, under a bar saying メッセージを編集 with × to stop. The send button becomes ✓ and the photo and day tools are hidden: only the words change. Saving replaces the words for everyone and marks the message 編集済み, shown over its time (on one line with a pin, when it is pinned). A message cannot be saved empty; taking it back is 送信取消. The link's page stays while its first link does; a new first link gets a new preview (`spec/vectors/chat.json`, edited).
 - **送信取消** (any of one's own messages: words, photos, shared days): asked first in a centered alert (送信を取り消しますか？ / メンバー全員のチャットから消えます。 / キャンセル | 取り消す). The message's content and reactions are removed for everyone; in its place a line in the middle says 〇〇がメッセージの送信を取り消しました (メッセージの送信を取り消しました for one's own). A reply that quoted it shows 取り消されたメッセージ, and the chat list's last line says the same as the line.
 - In the message's menu, 編集 comes after the other actions and 送信取消 last, apart and in the danger color.
 - Neither sends a notification, and neither changes unread counts. Both go through the change log as edits (spec/sync-protocol.md).
@@ -85,7 +85,7 @@ The stores require a way to report what people post and to block someone (App St
 
 ## Unread lines and typing
 
-- A chat opened with unread lines opens on the first of them, under a line saying ここから新着 (a rule either side, in the accent). The line stays where it is while the chat is open and is gone the next time it opens. A chat opened from a shared day (the shift table, the landing page) opens on that day instead. With nothing unread, it opens on the latest line.
+- A chat opened with unread lines opens on the first of them, under a line saying ここから新着 (a rule either side, in the accent); the app's own lines and the reader's are not counted (`spec/vectors/chat.json`, firstUnread). The line stays where it is while the chat is open and is gone the next time it opens. A chat opened from a shared day (the shift table, the landing page) opens on that day instead. With nothing unread, it opens on the latest line.
 - Scrolled up more than half the screen from the latest line, or with unread lines below not yet seen, a round ↓ shows at the foot of the lines; a tap scrolls to the latest. While unread lines (others', from the first unread one) have not yet come on screen, the ↓ carries their count in the unread badge's red, as LINE and Slack count what is below; a line once on screen stays seen.
 - A count of unread lines stands for what notifies: every unread line of a chat that is on, and in a chat turned off only those that mention the reader, while メンションはいつも通知 is on (`spec/vectors/unread.json`). A group's icon in the list of groups shows its chats' count, and the グループ tab all groups'. Each chat in a group's chat list still shows all its own unread lines. The 設定 tab counts the answers from Pochical's people not read yet, which a chat on its row in settings also shows; opening that chat reads them.
 - Someone writing shows as three dots rising in turn, in a bubble of the others' kind with their picture, under the latest line (from the typing frames in spec/sync-protocol.md). A screen reader hears 〇〇が入力中. A blocked member's typing is not shown. Nobody sees whether you have read their lines.
@@ -93,7 +93,7 @@ The stores require a way to report what people post and to block someone (App St
 ## Pins
 
 - Any member can pin a line (words, a photo, shared days) from its menu, in a group chat or a one-to-one chat, and anyone can take a pin off (ピン留めを外す). It is the same for everyone in the chat. No line from the app says who pinned it.
-- At most `chatRules.maxPins` lines are pinned at once, as LINE keeps five announcements; one more takes the place of the oldest, and the app says so.
+- At most `chatRules.maxPins` lines are pinned at once, as LINE keeps five announcements; one more takes the place of the oldest, and the app says so. Pinning a line already pinned only moves it up (`spec/vectors/chat.json`, pins).
 - Under the header, a bar shows the latest pinned line: a pin, ピン留め (ピン留め・N件 with more than one) and its words on one line. A tap jumps to the line and rings it. With more than one, ▾ opens all of them under the bar, the latest first, each with who wrote it.
 - A long press (or a right click) on the bar, or on a line of its list, offers ピン留めを外す, as a line's long press opens its menu. There is no × on the bar: a pin is everyone's, so taking it off is not left a stray tap away.
 - A pinned line has a small pin by its time. Taking a line back (送信取消) takes its pin off too.

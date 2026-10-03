@@ -1,0 +1,106 @@
+{
+  "about": "What a chat's lines become as people use them (spec/chat.md). pins (Pins, Polls, Editing and unsending): a chat's `lines` by id in order, its `pins` the latest first, then one `step`: pin or unpin a line, unsend one (送信取消), or settle the poll a line carries (日にちを決める). `expected` is the pins after it, the latest first, and the one that made room for the new pin (`dropped`, for the app to say so), if any. The most pinned at once is design/src/chat.ts's chatRules.maxPins, 5. edited (Editing and unsending): a line with words and its link's page is given new words; `expected` says whether it keeps its page (`kept`) or takes the new words' (`new`). firstUnread (Unread lines and typing): who wrote each line, oldest first (`others`, `me`, or `app` for the app's own lines such as someone joining), and how many are unread; `expected` is the index of the line the chat opens on under ここから新着, null with nothing unread. Only others' lines count.",
+  "pins": [
+    {
+      "name": "a pinned line comes first among the pins",
+      "lines": ["a", "b"],
+      "pins": ["a"],
+      "step": { "pin": "b" },
+      "expected": { "pins": ["b", "a"], "dropped": null }
+    },
+    {
+      "name": "one pin past the most takes the place of the oldest",
+      "lines": ["p0", "p1", "p2", "p3", "p4", "new"],
+      "pins": ["p4", "p3", "p2", "p1", "p0"],
+      "step": { "pin": "new" },
+      "expected": { "pins": ["new", "p4", "p3", "p2", "p1"], "dropped": "p0" }
+    },
+    {
+      "name": "pinning a line already pinned only moves it up",
+      "lines": ["p0", "p1", "p2", "p3", "p4"],
+      "pins": ["p4", "p3", "p2", "p1", "p0"],
+      "step": { "pin": "p0" },
+      "expected": { "pins": ["p0", "p4", "p3", "p2", "p1"], "dropped": null }
+    },
+    {
+      "name": "taking a pin off leaves the others",
+      "lines": ["a", "b"],
+      "pins": ["b", "a"],
+      "step": { "unpin": "b" },
+      "expected": { "pins": ["a"], "dropped": null }
+    },
+    {
+      "name": "a line taken back is not among the pins",
+      "lines": ["a", "b"],
+      "pins": ["b", "a"],
+      "step": { "unsend": "a" },
+      "expected": { "pins": ["b"], "dropped": null }
+    },
+    {
+      "name": "a settled poll is pinned, within the most pins",
+      "lines": ["p0", "p1", "p2", "p3", "p4", "poll"],
+      "pins": ["p4", "p3", "p2", "p1", "p0"],
+      "step": { "settle": "poll" },
+      "expected": { "pins": ["poll", "p4", "p3", "p2", "p1"], "dropped": "p0" }
+    },
+    {
+      "name": "settling a pinned poll again only moves its pin up",
+      "lines": ["poll", "p0", "p1", "p2", "p3"],
+      "pins": ["p3", "p2", "p1", "p0", "poll"],
+      "step": { "settle": "poll" },
+      "expected": { "pins": ["poll", "p3", "p2", "p1", "p0"], "dropped": null }
+    }
+  ],
+  "edited": [
+    {
+      "name": "an edit keeps its link's page while the link stays",
+      "text": "ここ https://cafe.example",
+      "edit": "ここどう？ https://cafe.example",
+      "expected": "kept"
+    },
+    {
+      "name": "a second link added after the first keeps the first's page",
+      "text": "https://cafe.example",
+      "edit": "https://cafe.example か https://b.example",
+      "expected": "kept"
+    },
+    {
+      "name": "an edit that changes the link takes the new page",
+      "text": "https://cafe.example",
+      "edit": "https://b.example",
+      "expected": "new"
+    },
+    {
+      "name": "a new link put before the old one takes the new page",
+      "text": "https://cafe.example",
+      "edit": "https://b.example じゃなくて https://cafe.example",
+      "expected": "new"
+    },
+    {
+      "name": "an edit that removes the link takes the new words' page, none",
+      "text": "ここ https://cafe.example",
+      "edit": "やっぱりいいや",
+      "expected": "new"
+    }
+  ],
+  "firstUnread": [
+    {
+      "name": "the chat opens on the first of the unread lines",
+      "lines": ["others", "others", "others"],
+      "unread": 2,
+      "expected": 1
+    },
+    {
+      "name": "the app's own lines and the reader's are not counted",
+      "lines": ["others", "others", "app", "me", "others"],
+      "unread": 2,
+      "expected": 1
+    },
+    {
+      "name": "with nothing unread there is no first unread line",
+      "lines": ["others", "me"],
+      "unread": 0,
+      "expected": null
+    }
+  ]
+}
