@@ -3,6 +3,7 @@ import { useState } from "react";
 import { css } from "styled-system/css";
 
 import { useUser } from "../lib/design-user-store";
+import { firstCharacter } from "../lib/text-limits";
 import { EmojiPickerSheet } from "./design-emoji-picker";
 import { groupChat, isMuted } from "./design-group-data";
 import type {
@@ -454,10 +455,6 @@ const groupHints: { words: string[]; emoji: string }[] = [
   { emoji: "👭", words: ["友達", "友だち", "仲間"] },
 ];
 
-function firstLetter(name: string) {
-  return [...name.trim()][0] ?? "";
-}
-
 // From the name alone: a fitting emoji, or else its first letter.
 function guessGroupMark(name: string, color: number): GroupMark {
   const hint = groupHints.find(({ words }) =>
@@ -465,7 +462,7 @@ function guessGroupMark(name: string, color: number): GroupMark {
   );
   return hint
     ? { emoji: hint.emoji, kind: "emoji" }
-    : { color, kind: "letter", text: firstLetter(name) };
+    : { color, kind: "letter", text: firstCharacter(name) };
 }
 
 export function colorOfMark(mark: GroupMark) {
@@ -537,7 +534,8 @@ function GroupMarkPage({
   const [pickingEmoji, setPickingEmoji] = useState(false);
   const [pickingIcon, setPickingIcon] = useState(false);
   const color = colorOfMark(mark);
-  const letter = mark.kind === "letter" ? mark.text : firstLetter(name) || "グ";
+  const letter =
+    mark.kind === "letter" ? mark.text : firstCharacter(name) || "グ";
   return (
     <>
       <PageHeader back={back} onBack={onBack} title="アイコン" />

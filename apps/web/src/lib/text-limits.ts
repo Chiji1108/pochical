@@ -14,6 +14,12 @@ export function limitText(text: string, limit: number) {
   return kept.map(({ segment }) => segment).join("");
 }
 
+// A name's first character, as a mark's letter or a face without a photo
+// shows it, whole even when it is an emoji joined of several.
+export function firstCharacter(name: string) {
+  return limitText(name.trim(), 1);
+}
+
 // A day shows a shift's name up to textFields.dayNameLength characters,
 // else its first ones and …, the same on every platform, rather than
 // however many a width happens to fit.

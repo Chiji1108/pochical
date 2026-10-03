@@ -12,6 +12,7 @@ import { usePatterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { markIconPaths } from "../lib/mark-icon-paths";
 import type { MarkIconName } from "../lib/mark-icon-paths";
+import { firstCharacter } from "../lib/text-limits";
 import { presetOf, ThemeContext, useColorScheme } from "./design-theme";
 
 export type ShiftMarkStyle = "icon" | "emoji" | "badge";
@@ -412,15 +413,6 @@ export type Look = {
 // An index into the palette below.
 export type MarkColor = number;
 
-const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
-
-function firstLetter(name: string) {
-  return (
-    graphemes.segment(name.trim())[Symbol.iterator]().next().value?.segment ??
-    ""
-  );
-}
-
 // Longer words first, so 待機 wins over a single-letter match.
 const lookHints: {
   words: string[];
@@ -454,7 +446,7 @@ export function guessLook(name: string): Omit<Look, "color"> {
   return {
     emoji: hint?.emoji ?? "⭐️",
     icon: hint?.icon ?? "letter",
-    symbol: firstLetter(name),
+    symbol: firstCharacter(name),
   };
 }
 
