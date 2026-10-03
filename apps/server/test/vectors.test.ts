@@ -8,7 +8,7 @@ import text from "../../../spec/vectors/text.json";
 import { DayField } from "../src/gen/pochical/v1/sync_pb";
 import { compareClocks, isAhead } from "../src/hlc";
 import { givesWay, heldBackBy } from "../src/order-clears";
-import { characterCount } from "../src/text-limits";
+import { characterCount, isEmoji } from "../src/text-limits";
 
 describe("spec/vectors/hlc.json", () => {
   test.each(hlc.compare)("$name", ({ a, b, expected }) => {
@@ -21,11 +21,15 @@ describe("spec/vectors/hlc.json", () => {
   });
 });
 
-// The server holds text to the limits with its own count, which must be
-// the apps'.
+// The server holds text to the limits with its own count, and marks to
+// one emoji, which must be the apps'.
 describe("spec/vectors/text.json", () => {
   test.each(text.characterCount)("$name", ({ text: written, expected }) => {
     expect(characterCount(written)).toBe(expected);
+  });
+
+  test.each(text.isEmoji)("isEmoji: $name", ({ text: written, expected }) => {
+    expect(isEmoji(written)).toBe(expected);
   });
 });
 

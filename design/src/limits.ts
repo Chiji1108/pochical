@@ -55,6 +55,11 @@ export const GROUP_MAX_MEMBERS = 100;
 // ward or shop, so it only caps what one account stores and syncs.
 export const COWORKERS_MAX = 100;
 
+// The shift buttons on one page of ポチポチ入力, in two rows of five, so
+// they fit under a month six weeks tall. More go on to further pages, in
+// the order the person puts them.
+export const PATTERNS_PER_PAGE = 10;
+
 // How much of what a user owns one synced value may hold
 // (spec/sync-protocol.md). Far past what one person keeps, so they only
 // bound a value; an edit past them is corrected by the server, but for
@@ -76,7 +81,8 @@ export const syncLimits = {
   idLength: 64,
   // Repeating orders in one timeline: a change of rotation or job each.
   orders: 200,
-  // Shift patterns one person keeps; ポチポチ入力 shows ten to a page.
+  // Shift patterns one person keeps; ポチポチ入力 shows PATTERNS_PER_PAGE to
+  // a page.
   patterns: 200,
   // People noted on one day.
   peopleADay: 50,

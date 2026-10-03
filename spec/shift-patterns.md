@@ -4,7 +4,7 @@ What a person's shift patterns are and how entering them behaves. The web protot
 
 ## A pattern
 
-Each person has their own list of patterns, in their order. ポチポチ入力 shows its buttons in that order, ten to a page.
+Each person has their own list of patterns, in their order. ポチポチ入力 shows its buttons in that order, `PATTERNS_PER_PAGE` to a page (`design/src/limits.ts`).
 
 | Field | Meaning |
 | --- | --- |

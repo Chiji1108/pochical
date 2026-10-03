@@ -1,9 +1,10 @@
+import { PATTERNS_PER_PAGE } from "@pochical/design/limits";
 import { Plus } from "lucide-react";
 import { Fragment, useContext, useState } from "react";
 import { css } from "styled-system/css";
 
 import { daysWithout, isRepeating, patternsWithout } from "../lib/design-days";
-import { PATTERNS_PER_PAGE, presetList } from "../lib/design-patterns";
+import { presetList } from "../lib/design-patterns";
 import type { Pattern, PresetShift } from "../lib/design-patterns";
 import { useShownDays, useUser } from "../lib/design-user-store";
 import { LookEditorPage } from "./design-look-editor";

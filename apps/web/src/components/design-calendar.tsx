@@ -1,4 +1,8 @@
-import { COWORKERS_MAX, textLimits } from "@pochical/design/limits";
+import {
+  COWORKERS_MAX,
+  PATTERNS_PER_PAGE,
+  textLimits,
+} from "@pochical/design/limits";
 import {
   ArrowRight,
   CalendarPlus,
@@ -41,12 +45,7 @@ import {
   withShiftEntered,
 } from "../lib/design-days";
 import type { DayEntry, Schedule } from "../lib/design-days";
-import {
-  isDayOff,
-  PATTERNS_PER_PAGE,
-  presetPatterns,
-  usePatterns,
-} from "../lib/design-patterns";
+import { isDayOff, presetPatterns, usePatterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";

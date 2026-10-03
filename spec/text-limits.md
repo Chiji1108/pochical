@@ -12,6 +12,8 @@ Not limited here: search fields, which are not kept; and times, which are picked
 
 A limit counts characters as a reader sees them: grapheme clusters, the same as Swift's `String.count` and ICU's character `BreakIterator`. An emoji, a flag or a letter with its accent is one character; a full-width and a half-width letter are one each. Lengths are never counted in UTF-16 code units or bytes.
 
+A mark's emoji (a group's, a shift pattern's) is one emoji, as the pickers and the system keyboards give one: exactly one character that starts as a pictograph (`Extended_Pictographic`) or a flag (a regional indicator), or a keycap (1️⃣, #️⃣), which starts with its plain digit or sign. The server refuses any other (`spec/vectors/text.json`, isEmoji).
+
 ## Fields
 
 - Typing stops at the limit. Pasted text is cut to the limit.

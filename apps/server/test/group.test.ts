@@ -182,11 +182,8 @@ describe("GroupService", () => {
       // 30 emoji, each one character however many code units.
       { ...ok, name: "👨‍👩‍👧".repeat(30) },
       { ...ok, displayName: "あ".repeat(20) },
+      // What one emoji is: spec/vectors/text.json, isEmoji.
       { ...ok, emoji: "👨‍👩‍👧" },
-      { ...ok, emoji: "🇯🇵" },
-      // A keycap starts with its plain digit.
-      { ...ok, emoji: "1️⃣" },
-      { ...ok, emoji: "#️⃣" },
     ];
     const refused = [
       { ...ok, name: "あ".repeat(31) },
@@ -195,8 +192,6 @@ describe("GroupService", () => {
       { ...ok, displayName: "" },
       { ...ok, emoji: "" },
       { ...ok, emoji: "🍉🍉" },
-      { ...ok, emoji: "あ" },
-      { ...ok, emoji: "1" },
       { ...ok, requestId: "" },
       { ...ok, requestId: "has space" },
       { ...ok, requestId: "x".repeat(syncLimits.idLength + 1) },
