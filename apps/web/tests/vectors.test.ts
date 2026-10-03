@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
+import chatText from "../../../spec/vectors/chat-text.json";
 // The cases every platform checks its own code against (spec/vectors);
 // the native apps' tests read the same files.
-import chatText from "../../../spec/vectors/chat-text.json";
+import chatMessages from "../../../spec/vectors/chat.json";
 import entering from "../../../spec/vectors/entering.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import localEdits from "../../../spec/vectors/local-edits.json";
@@ -20,7 +21,19 @@ import {
   groupsUnread,
   togetherIn,
 } from "../src/components/design-group-data";
-import type { Chat, Member } from "../src/components/design-group-data";
+import type {
+  Chat,
+  Member,
+  Message,
+} from "../src/components/design-group-data";
+import {
+  decidePoll,
+  editMessage,
+  firstUnreadOf,
+  pinMessage,
+  pinsOf,
+  unsendMessage,
+} from "../src/lib/chat-messages";
 import {
   inviteCodeOf,
   mentionsOf,
@@ -409,6 +422,84 @@ describe("spec/vectors/unread.json", () => {
         return { id, mutedChats };
       });
       expect(groupsUnread(chats, summaries, mentionsWhenMuted)).toBe(expected);
+    });
+  }
+});
+
+// A chat line with only what the logic reads.
+const line = (id: string, more: Partial<Message> = {}): Message => ({
+  from: "yuki",
+  id,
+  time: "10:00",
+  when: "今日",
+  ...more,
+});
+
+describe("spec/vectors/chat.json", () => {
+  type Step = Partial<Record<"pin" | "unpin" | "unsend" | "settle", string>>;
+  const takeStep = (messages: Message[], step: Step) => {
+    if (step.pin !== undefined) {
+      return pinMessage(messages, step.pin, true);
+    }
+    if (step.unpin !== undefined) {
+      return pinMessage(messages, step.unpin, false);
+    }
+    if (step.unsend !== undefined) {
+      return { messages: unsendMessage(messages, step.unsend) };
+    }
+    if (step.settle !== undefined) {
+      return decidePoll(messages, step.settle, "2026-10-03");
+    }
+    throw new Error(`Unknown step ${JSON.stringify(step)}`);
+  };
+  for (const { name, lines, pins, expected, ...pinCase } of chatMessages.pins) {
+    test(name, () => {
+      const step = pinCase.step as Step;
+      const messages = lines.map((id) => {
+        const pinnedAt = pins.indexOf(id);
+        return line(id, {
+          pinned: pinnedAt === -1 ? undefined : pins.length - pinnedAt,
+          poll:
+            id === step.settle
+              ? { days: [dayOf("2026-10-03")], votes: {} }
+              : undefined,
+        });
+      });
+      const after = takeStep(messages, step);
+      expect({
+        dropped: after.dropped ?? null,
+        pins: pinsOf(after.messages).map(({ id }) => id),
+      }).toEqual(expected);
+    });
+  }
+  for (const { name, text: words, edit, expected } of chatMessages.edited) {
+    test(name, () => {
+      const page = { site: "old", title: "old", url: "old" };
+      const fresh = { site: "new", title: "new", url: "new" };
+      const [edited] = editMessage(
+        [line("a", { link: page, text: words })],
+        "a",
+        edit,
+        fresh
+      );
+      expect(edited?.link === page ? "kept" : "new").toBe(expected);
+    });
+  }
+  for (const {
+    name,
+    lines,
+    unread: count,
+    expected,
+  } of chatMessages.firstUnread) {
+    test(name, () => {
+      const messages = lines.map((who, index) =>
+        line(String(index), {
+          from: who === "others" ? "yuki" : who,
+          notice: who === "app" ? "ゆきが参加しました" : undefined,
+        })
+      );
+      const first = firstUnreadOf(messages, count);
+      expect(first === undefined ? null : Number(first)).toBe(expected);
     });
   }
 });
