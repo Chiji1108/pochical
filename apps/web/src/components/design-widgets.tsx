@@ -1907,6 +1907,10 @@ export function NextOffCircular({ entry }: { entry: WidgetEntry }) {
   );
 }
 
+// Days the rectangular one shows, as これから's medium: seven left each a
+// cramped 23pt.
+const RECTANGULAR_DAYS = 5;
+
 const rectangular = {
   day: css({
     alignItems: "center",
@@ -1918,35 +1922,30 @@ const rectangular = {
   root: css({
     alignContent: "center",
     display: "grid",
-    gridTemplateColumns: "repeat(7, 1fr)",
+    gridTemplateColumns: `repeat(${RECTANGULAR_DAYS}, 1fr)`,
     height: "100%",
   }),
-  // Today's weekday heavier, the first of the row.
-  weekday: cva({
-    base: { color: "text.secondary", textStyle: "caption1" },
-    variants: {
-      today: { false: {}, true: { color: "text.primary", fontWeight: 700 } },
-    },
-  }),
+  // Today is always the first, so it is drawn as the others, as in
+  // これから's columns.
+  weekday: css({ color: "text.secondary", textStyle: "caption" }),
 };
 
-// Seven days from today, each weekday over its mark: the week ahead at
-// a glance, for anyone, where a day of 早出 or 残業 shows on its mark's
-// sides as in the calendar. Seven in a row tell T from T by their order,
-// so the weekdays are the calendar's letters. No memo stroke: at this
-// size on the lock screen it reads as a line through the weekday.
+// Five days from today, each weekday over its mark: the days ahead at a
+// glance, for anyone, where a day of 早出 or 残業 shows on its mark's
+// sides as in the calendar. The weekdays are これから's (金, or FRI). No
+// memo stroke: at this size on the lock screen it reads as a line
+// through the weekday.
 export function UpcomingRectangular({ entry }: { entry: WidgetEntry }) {
-  const { weekdayLetter } = useWeek();
+  const words = useWords();
   const named = useShiftNames();
   return (
     <ol className={`${list} ${rectangular.root}`}>
-      {entry.upcoming.map((day, index) => (
+      {entry.upcoming.slice(0, RECTANGULAR_DAYS).map((day) => (
         <RectangularDay
           day={day}
           key={day.date.getTime()}
-          label={weekdayLetter(day.date.getDay())}
+          label={words.weekday(day.date)}
           named={named}
-          today={index === 0}
         />
       ))}
     </ol>
@@ -1957,12 +1956,10 @@ function RectangularDay({
   day,
   label,
   named,
-  today,
 }: {
   day: WidgetDay;
   label: string;
   named: boolean;
-  today: boolean;
 }) {
   // A day off as in the calendar's week: its mark, or faint where
   // 休みの見せ方 leaves it empty.
@@ -1970,7 +1967,7 @@ function RectangularDay({
   return (
     <li className={rectangular.day}>
       <SpokenDay day={day} />
-      <span aria-hidden="true" className={rectangular.weekday({ today })}>
+      <span aria-hidden="true" className={rectangular.weekday}>
         {label}
       </span>
       <NamedMark
@@ -1978,7 +1975,7 @@ function RectangularDay({
         faint={look.mark === "faint"}
         named={named}
         reserve
-        size={named ? 20 - NAME_ROOM : 20}
+        size={named ? 24 - NAME_ROOM : 24}
       />
     </li>
   );
