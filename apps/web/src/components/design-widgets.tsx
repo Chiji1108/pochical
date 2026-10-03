@@ -130,14 +130,6 @@ function Change({
   );
 }
 
-// Today, 明日, then the weekday and date.
-function relativeDay(day: WidgetDay, index: number) {
-  if (index === 0) {
-    return "今日";
-  }
-  return index === 1 ? "明日" : `${day.date.getDate()}日(${day.weekday})`;
-}
-
 // A day as read aloud, for the places whose marks are pictures only.
 function SpokenDay({ day }: { day: WidgetDay }) {
   const time = day.time ? ` ${day.time}` : "";
@@ -344,6 +336,8 @@ function useWords() {
       inDays: (inDays: number) =>
         inDays === 1 ? "Tomorrow" : `in ${inDays} days`,
       apart: "No days off together yet",
+      // Over the count on the lock screen's round face.
+      circle: { all: "Everyone", alone: "Off", together: "Together" },
       nextOff: "Next day off",
       nothingYet: "Nothing yet",
       offAll: "Everyone off",
@@ -359,12 +353,21 @@ function useWords() {
       // The day after a day off, short enough to keep clear of the
       // poodle in the corner: Fri, as 明日 is in Japanese.
       nextDay: (date: Date) => day(date),
+      // How soon on the round face: Today, the weekday for tomorrow, as
+      // nextDay, else the number.
+      soon: ({ day: { date }, inDays }: WidgetOff) => {
+        if (inDays === 0) {
+          return "Today";
+        }
+        return inDays === 1 ? day(date) : `${inDays}`;
+      },
       unit: "days",
       weekday,
     };
   }
   return {
     apart: "重なる休みはまだありません",
+    circle: { all: "みんな", alone: "休み", together: "一緒" },
     date: (date: Date) => `${monthDay(date)}(${weekday(date)})`,
     dayName: weekday,
     heading: (date: Date) =>
@@ -379,6 +382,8 @@ function useWords() {
     restAll: "みんな\nおやすみ",
     restTogether: "ふたりとも\nおやすみ",
     short: monthDay,
+    soon: ({ inDays }: WidgetOff) =>
+      inDays > 1 ? `${inDays}` : inDaysWords(inDays),
     today: "今日",
     tomorrow: "明日",
     unit: "日後",
@@ -1474,9 +1479,20 @@ function OffCount({ inDays, size }: { inDays: number; size: number }) {
 }
 
 // Words too wide for the widget at their size (Tomorrow) shrink to its
-// width, as SwiftUI's minimumScaleFactor does.
-function FitCount({ size, children }: { size: number; children: ReactNode }) {
-  const { width: room } = useContext(WidgetSizeContext);
+// width, or to the `room` given, as SwiftUI's minimumScaleFactor does.
+function FitCount({
+  size,
+  room: given,
+  className = offs.count,
+  children,
+}: {
+  size: number;
+  room?: number;
+  className?: string;
+  children: ReactNode;
+}) {
+  const { width } = useContext(WidgetSizeContext);
+  const room = given ?? width;
   const ref = useRef<HTMLSpanElement>(null);
   const [fit, setFit] = useState(size);
   useLayoutEffect(() => {
@@ -1493,7 +1509,7 @@ function FitCount({ size, children }: { size: number; children: ReactNode }) {
   return (
     <span
       aria-hidden="true"
-      className={offs.count}
+      className={className}
       ref={ref}
       style={{ fontSize: fit }}
     >
@@ -1799,9 +1815,12 @@ function MonthDay({
 
 // ── Lock screen ─────────────────────────────────────────────────────────
 
+// The count's room on the round face, clear of its edge: Wed fits at
+// full size, Today a little smaller.
+const CIRCULAR_COUNT_ROOM = 48;
+
 const circular = {
   count: css({
-    fontSize: "20px",
     fontVariantNumeric: "tabular-nums",
     fontWeight: 700,
     lineHeight: 1,
@@ -1852,33 +1871,47 @@ export function TodayCircular({ entry }: { entry: WidgetEntry }) {
 }
 
 // 休み, else 一緒 with someone, or みんな with a group.
-function circularWord(entry: WidgetEntry) {
+function circularWord(entry: WidgetEntry, words: ReturnType<typeof useWords>) {
   const companion = entry.offs.with;
   if (!companion) {
-    return "休み";
+    return words.circle.alone;
   }
-  return companion.kind === "group" ? "みんな" : "一緒";
+  return companion.kind === "group" ? words.circle.all : words.circle.together;
 }
 
 // How soon the next day off comes, on the round face: 休み over the
 // count, or 今日 and 明日.
 export function NextOffCircular({ entry }: { entry: WidgetEntry }) {
+  const words = useWords();
   const [next] = offsAhead(entry);
+  const text = next ? words.soon(next) : "–";
   return (
     <div className={circular.root}>
       <span className={srOnly}>{spokenOff(entry, next)}</span>
       <span aria-hidden="true" className={circular.word}>
-        {circularWord(entry)}
+        {circularWord(entry, words)}
       </span>
-      <span aria-hidden="true" className={circular.count}>
-        {next ? inDaysWords(next.inDays).replace("日後", "") : "–"}
-      </span>
+      <FitCount
+        className={circular.count}
+        key={text}
+        room={CIRCULAR_COUNT_ROOM}
+        size={20}
+      >
+        {text}
+      </FitCount>
     </div>
   );
 }
 
 const rectangular = {
-  label: css({ fontWeight: 700, width: "32px" }),
+  // As wide as the longer label, so the marks line up: 今日 and 明日, or
+  // Today and a weekday.
+  label: cva({
+    base: { flexShrink: 0, fontWeight: 700 },
+    variants: {
+      english: { false: { width: "32px" }, true: { width: "40px" } },
+    },
+  }),
   line: css({
     alignItems: "center",
     display: "flex",
@@ -1898,13 +1931,18 @@ const rectangular = {
   time: css({ fontWeight: 400 }),
 };
 
-// Today and tomorrow, a line each.
+// Today and tomorrow, a line each: 今日 and 明日, or Today and the
+// weekday, as under the small 次の休み's おやすみ.
 export function UpcomingRectangular({ entry }: { entry: WidgetEntry }) {
+  const words = useWords();
+  const { english } = useWeek();
   return (
     <ol className={`${list} ${rectangular.root}`}>
       {entry.upcoming.slice(0, 2).map((day, index) => (
         <li className={rectangular.line} key={day.date.getTime()}>
-          <span className={rectangular.label}>{relativeDay(day, index)}</span>
+          <span className={rectangular.label({ english })}>
+            {index === 0 ? words.today : words.nextDay(day.date)}
+          </span>
           <DayMark day={day} size={16} />
           <Change className={rectangular.time} day={day} />
         </li>
