@@ -11,6 +11,7 @@ import type { Preset } from "@pochical/design/themes";
 import type { ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
+import { firstCharacter } from "../lib/text-limits";
 import { themeStyle } from "./design-theme";
 
 const schemeLabels: Record<ColorScheme, string> = {
@@ -662,7 +663,7 @@ function MarkChip({
         className={palette.markTile({ size: "large" })}
         style={{ background: tint, color }}
       >
-        {option.name.slice(0, 1)}
+        {firstCharacter(option.name)}
       </span>
       <span className={palette.markValues}>
         <small>
@@ -773,7 +774,7 @@ function DistinctTokens() {
                           key={mark.name}
                           style={{ background: mark.tint, color: mark.color }}
                         >
-                          {mark.name.slice(0, 1)}
+                          {firstCharacter(mark.name)}
                         </span>
                       ))}
                       <span className={palette.distinctNames}>

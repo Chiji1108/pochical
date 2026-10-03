@@ -3,6 +3,7 @@ import { useContext, useId, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
+import { firstCharacter } from "../lib/text-limits";
 import { changeOn, patternOn } from "./design-group-data";
 import type { GroupMark, Member } from "./design-group-data";
 import { Sheet } from "./design-sheet";
@@ -480,7 +481,7 @@ export function PhotoAvatar({
       {photo ? (
         <img alt="" height={size} loading="lazy" src={photo} width={size} />
       ) : (
-        name.slice(0, 1)
+        firstCharacter(name)
       )}
     </span>
   );

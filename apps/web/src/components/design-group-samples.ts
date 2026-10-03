@@ -1,6 +1,7 @@
 import { siteOf } from "../lib/chat-text";
 import { presetList } from "../lib/design-patterns";
 import { sampleRosterPhoto } from "../lib/design-sample-photos";
+import { firstCharacter } from "../lib/text-limits";
 import { groupChat, memberPatternOf } from "./design-group-data";
 import type {
   Chat,
@@ -29,7 +30,7 @@ function pattern(
       color: look.color,
       emoji: look.emoji,
       icon: look.icon,
-      symbol: look.symbol ?? name.slice(0, 1),
+      symbol: look.symbol ?? firstCharacter(name),
     },
     name,
     off: extra.off ?? false,
