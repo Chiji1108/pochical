@@ -35,7 +35,6 @@ import type { WidgetFamily } from "../components/design-widget-frame";
 import {
   CalendarLarge,
   NextOffCircular,
-  NextOffMedium,
   NextOffSmall,
   TodayCircular,
   TodayInline,
@@ -245,13 +244,10 @@ const kinds: {
   },
   {
     description:
-      "次の休みまであと何日か。中はその先の休みも。ウィジェットの編集で人を選ぶとその人と一緒に休める日、グループを選ぶとみんな休み（全員が休みの日）になります。今日が休みの日は数えずに「おやすみ」。",
+      "次の休みまであと何日か。ウィジェットの編集で人を選ぶとその人と一緒に休める日、グループを選ぶとみんな休み（全員が休みの日）になります。今日が休みの日は数えずに「おやすみ」。",
     id: "nextOff",
     name: "次の休み",
-    sizes: [
-      { View: NextOffSmall, size: "small" },
-      { View: NextOffMedium, size: "medium" },
-    ],
+    sizes: [{ View: NextOffSmall, size: "small" }],
   },
   {
     description:

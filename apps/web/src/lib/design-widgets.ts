@@ -103,14 +103,14 @@ export type WidgetEntry = {
   // When the entry is for; a new one starts each day at midnight.
   date: Date;
   today: WidgetDay;
-  // 次の休み: whether today is off, and the next days off after it, as
-  // far as they are entered. With a companion, only days both are off.
+  // 次の休み: whether today is off, and the next day off after it, as far
+  // as days are entered. With a companion, only days both are off.
   offs: {
     with?:
       | { kind: "person"; name: string; photo?: string }
       | { kind: "group"; name: string; mark: GroupMark };
     today: boolean;
-    next: WidgetOff[];
+    next?: WidgetOff;
     // Only when nothing is ahead, today included.
     none?: WidgetNoOff;
   };
@@ -244,19 +244,17 @@ function offsFrom(
 ): WidgetEntry["offs"] {
   const people = peopleOf(companion);
   const looked = [today];
-  const next: WidgetOff[] = [];
+  let next: WidgetOff | undefined;
   for (let inDays = 1; inDays <= widgetRules.offLookaheadDays; inDays += 1) {
     const day = dayAt(inDays);
     looked.push(day);
     if (offTogether(day, people)) {
-      next.push({ day, inDays });
-      if (next.length === widgetRules.nextOffs) {
-        break;
-      }
+      next = { day, inDays };
+      break;
     }
   }
   const offToday = offTogether(today, people);
-  const nothing = next.length === 0 && !offToday;
+  const nothing = next === undefined && !offToday;
   return {
     next,
     none: nothing ? noOffOf(looked, people) : undefined,
