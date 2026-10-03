@@ -634,6 +634,9 @@ const columnTile = {
   zIndex: -1,
 } as const;
 
+// The line's room from the column's sides, as the day-off tile's.
+const WORDS_INSET = 3;
+
 const columns = {
   // A whole column's tile, its date in it as a calendar's day off has:
   // as far in from its column as the tiles are from their cells.
@@ -713,35 +716,40 @@ const columns = {
     },
   }),
   weekday: css({ lineHeight: "13px", textStyle: "caption2" }),
+  // The column's whole width, which its one line shrinks to.
   words: cva({
     base: {
       color: "text.secondary",
       display: "flex",
-      flexDirection: "column",
       fontVariantNumeric: "tabular-nums",
-      maxWidth: "100%",
+      justifyContent: "center",
       overflow: "hidden",
-      textAlign: "center",
+      paddingInline: `${WORDS_INSET}px`,
       whiteSpace: "nowrap",
+      width: "100%",
     },
     variants: {
       compact: {
         false: {
           alignSelf: "start",
-          fontSize: "10px",
           gridRow: 3,
           lineHeight: "12px",
           paddingTop: "2px",
         },
-        true: { fontSize: "9px", letterSpacing: "-0.02em", lineHeight: "11px" },
+        true: { letterSpacing: "-0.02em", lineHeight: "11px" },
       },
     },
   }),
+  line: css({ display: "inline-block" }),
 };
 
-// What changed, short enough for a column: the hour it now starts or
-// ends at, the side the 早出 and 残業 corners already show; both ends a
-// line each where both moved.
+// A column's words, and beside someone's row, a size smaller.
+const COLUMN_WORDS = 10;
+const COMPACT_WORDS = 9;
+
+// What changed, short enough for a column, on one line: the hour it now
+// starts or ends at, the side the 早出 and 残業 corners already show, or
+// both ends where both moved, shrunk to the column where it is too wide.
 function shortChange({
   time,
   early,
@@ -752,30 +760,88 @@ function shortChange({
   late: boolean;
 }) {
   if (time === undefined) {
-    return [];
+    return undefined;
   }
   const [start = "", end = ""] = time.split(" – ");
   if (early && !late) {
-    return [`${start}〜`];
+    return `${start}〜`;
   }
   if (late && !early) {
-    return [`〜${end}`];
+    return `〜${end}`;
   }
-  return [`${start}〜`, `〜${end}`];
+  return `${start}〜${end}`;
 }
 
 // The words under a mark: what changed, else its name when names are
-// shown. `lines` keeps them to one line where a row has no room for two.
+// shown.
 function columnWords(
-  change: string[],
+  change: string | undefined,
   name: string | undefined,
-  named: boolean,
-  lines: number
+  named: boolean
 ) {
-  if (change.length > 0) {
-    return change.slice(0, lines);
+  if (change !== undefined) {
+    return change;
   }
-  return named && name !== undefined ? [dayName(name)] : [];
+  return named && name !== undefined ? dayName(name) : undefined;
+}
+
+// A column's one line of words, at its size or shrunk to the column, as
+// SwiftUI's minimumScaleFactor does, down to 8pt; too wide even so, the
+// hours go without their :00 (7〜20). The widget's width keys it, so a column of
+// another width measures again from the start.
+function ColumnLine({ words, compact }: { words: string; compact: boolean }) {
+  const { width } = useContext(WidgetSizeContext);
+  return (
+    <FittedLine
+      compact={compact}
+      key={`${words} ${width}`}
+      shorter={words.replaceAll(":00", "")}
+      words={words}
+    />
+  );
+}
+
+// How small a column's line may go before it is written shorter: under
+// 8pt the hours no longer read.
+const MIN_LINE_SIZE = 8;
+function FittedLine({
+  words,
+  shorter,
+  compact,
+}: {
+  words: string;
+  shorter: string;
+  compact: boolean;
+}) {
+  const size = compact ? COMPACT_WORDS : COLUMN_WORDS;
+  const ref = useRef<HTMLSpanElement>(null);
+  const [shown, setShown] = useState({ size, text: words });
+  useLayoutEffect(() => {
+    const line = ref.current;
+    const column = line?.parentElement;
+    if (!line || !column) {
+      return;
+    }
+    // Both in the column's own units, whatever zoom draws it at.
+    const room = column.clientWidth - 2 * WORDS_INSET;
+    const natural = (line.offsetWidth * size) / shown.size;
+    const scale = Math.min(1, room / natural);
+    if (size * scale < MIN_LINE_SIZE && shown.text !== shorter) {
+      setShown({ size, text: shorter });
+      return;
+    }
+    const fit = Math.floor(size * scale * 10) / 10;
+    if (fit !== shown.size) {
+      setShown({ size: fit, text: shown.text });
+    }
+  }, [shorter, shown, size]);
+  return (
+    <span aria-hidden="true" className={columns.words({ compact })}>
+      <span className={columns.line} ref={ref} style={{ fontSize: shown.size }}>
+        {shown.text}
+      </span>
+    </span>
+  );
 }
 
 // A date as a column heads it: the day of the month, with its month on
@@ -820,8 +886,6 @@ function DayColumns({ entry, count }: { entry: WidgetEntry; count: number }) {
   const roomy = useContext(WidgetSizeContext).height >= COLUMNS_ROOMY;
   const { pair } = entry;
   const days = entry.upcoming.slice(0, count);
-  // Two rows leave a line of words under each mark; one row, two.
-  const lines = pair ? 1 : 2;
   const worded = days.some(
     (day, index) =>
       day.change !== undefined ||
@@ -854,7 +918,6 @@ function DayColumns({ entry, count }: { entry: WidgetEntry; count: number }) {
           day={day}
           first={index === 0}
           key={day.date.getTime()}
-          lines={lines}
           named={named}
           pair={pair}
           shown={pair?.days[index]}
@@ -890,7 +953,6 @@ function ColumnDay({
   day,
   column,
   first,
-  lines,
   named,
   size,
   pair,
@@ -899,7 +961,6 @@ function ColumnDay({
   day: WidgetDay;
   column: number;
   first: boolean;
-  lines: number;
   named: boolean;
   size: number;
   pair?: WidgetPair;
@@ -929,10 +990,10 @@ function ColumnDay({
   } else if (!pair && day.off && look.tile) {
     band = flat ? "flat" : "own";
   }
-  const moved = day.change === undefined ? [] : shortChange(day);
+  const moved = day.change === undefined ? undefined : shortChange(day);
   // Alone, the name is the label under the mark and the words are only
   // what changed; beside someone, one line holds either.
-  const mine = pair ? columnWords(moved, day.name, named, lines) : moved;
+  const mine = pair ? columnWords(moved, day.name, named) : moved;
   const marked = day.shift !== undefined && look.mark !== "none";
   return (
     <>
@@ -999,15 +1060,8 @@ function ColumnDay({
             />
           ) : null}
         </span>
-        {mine.length > 0 && (
-          <span
-            aria-hidden="true"
-            className={columns.words({ compact: pair !== undefined })}
-          >
-            {mine.map((line) => (
-              <span key={line}>{line}</span>
-            ))}
-          </span>
+        {mine !== undefined && (
+          <ColumnLine compact={pair !== undefined} words={mine} />
         )}
       </span>
       {pair && (
@@ -1025,34 +1079,20 @@ function ColumnDay({
           <span aria-hidden="true" className={columns.mark}>
             <TheirMark day={theirs} size={size} style={pair.with.style} />
           </span>
-          {theirs && <TheirWords day={theirs} lines={lines} named={named} />}
+          {theirs && <TheirWords day={theirs} named={named} />}
         </span>
       )}
     </>
   );
 }
 
-function TheirWords({
-  day,
-  lines,
-  named,
-}: {
-  day: WidgetPersonDay;
-  lines: number;
-  named: boolean;
-}) {
-  const moved = day.early || day.late ? shortChange(day) : [];
-  const shown = columnWords(moved, day.name, named, lines);
-  if (shown.length === 0) {
+function TheirWords({ day, named }: { day: WidgetPersonDay; named: boolean }) {
+  const moved = day.early || day.late ? shortChange(day) : undefined;
+  const shown = columnWords(moved, day.name, named);
+  if (shown === undefined) {
     return null;
   }
-  return (
-    <span aria-hidden="true" className={columns.words({ compact: true })}>
-      {shown.map((line) => (
-        <span key={line}>{line}</span>
-      ))}
-    </span>
-  );
+  return <ColumnLine compact words={shown} />;
 }
 
 // Their mark in the shape they chose, in the viewer's テーマ, as the
@@ -1471,16 +1511,18 @@ function OffCount({ inDays, size }: { inDays: number; size: number }) {
   const text = number ? `${inDays}` : words.inDays(inDays);
   // Other words start again at the size asked for.
   return (
-    <FitCount key={text} size={size}>
+    <FitText key={text} size={size}>
       {text}
       {number && <span className={offs.unit}>{words.unit}</span>}
-    </FitCount>
+    </FitText>
   );
 }
 
 // Words too wide for the widget at their size (Tomorrow) shrink to its
 // width, or to the `room` given, as SwiftUI's minimumScaleFactor does.
-function FitCount({
+// The caller keys it by its words, so other words start again at the
+// size asked for.
+function FitText({
   size,
   room: given,
   className = offs.count,
@@ -1492,7 +1534,6 @@ function FitCount({
   children: ReactNode;
 }) {
   const { width } = useContext(WidgetSizeContext);
-  const room = given ?? width;
   const ref = useRef<HTMLSpanElement>(null);
   const [fit, setFit] = useState(size);
   useLayoutEffect(() => {
@@ -1500,6 +1541,7 @@ function FitCount({
     if (!element) {
       return;
     }
+    const room = given ?? width;
     // The words' width at the size asked for, from their width as shown,
     // less any zoom a preview draws the widget smaller with (/demo's
     // home screen on a narrow phone), as `room` is the widget's own.
@@ -1509,7 +1551,7 @@ function FitCount({
     const zoom = element.offsetWidth > 0 ? shown / element.offsetWidth : 1;
     const natural = (range.getBoundingClientRect().width * size) / (fit * zoom);
     setFit(Math.min(size, Math.floor((size * room) / natural)));
-  }, [fit, room, size]);
+  }, [fit, given, size, width]);
   return (
     <span
       aria-hidden="true"
@@ -1895,14 +1937,14 @@ export function NextOffCircular({ entry }: { entry: WidgetEntry }) {
       <span aria-hidden="true" className={circular.word}>
         {circularWord(entry, words)}
       </span>
-      <FitCount
+      <FitText
         className={circular.count}
         key={text}
         room={CIRCULAR_COUNT_ROOM}
         size={20}
       >
         {text}
-      </FitCount>
+      </FitText>
     </div>
   );
 }

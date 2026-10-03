@@ -210,6 +210,7 @@ function scheduleFor(day: WidgetVariants["day"]): Schedule {
     busy: {},
     crowded: crowdedSchedule,
     early: { [todayKey]: { shift: "day", start: "07:00" } },
+    earlyLate: { [todayKey]: { end: "20:00", shift: "day", start: "07:00" } },
     empty: {},
     off: { [todayKey]: { shift: "off" } },
     offTomorrow: { [todayKey]: plainDay, [tomorrowKey]: { shift: "off" } },

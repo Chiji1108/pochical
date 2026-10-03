@@ -42,7 +42,8 @@ export type WidgetDay = {
   // a shift's hours are the same day after day.
   time?: string;
   // What is shown instead, and only on a day whose hours differ from its
-  // pattern's: "早出 7:00〜", "残業 〜20:00", both, or the new hours.
+  // pattern's: "早出 7:00〜", "残業 〜20:00", or the hours alone where
+  // both moved and for new hours.
   change?: string;
   // 早出 and 残業, drawn on the mark's sides as in the calendar.
   early: boolean;
@@ -145,7 +146,9 @@ function toneOf(date: Date, colored: WeekSettings["colored"]): DayTone {
 }
 
 // A day's changed hours, in words, from its time and how it moved:
-// timeChangeOf says whether it moved at all, and which way.
+// timeChangeOf says whether it moved at all, and which way. Where both
+// ends moved, the hours alone, so they keep to one line: the mark's
+// corners say 早出 and 残業.
 function changeOf(
   time: string | undefined,
   moved: { early: boolean; late: boolean } | undefined
@@ -154,10 +157,7 @@ function changeOf(
     return undefined;
   }
   const [start = "", end = ""] = time.split(" – ");
-  if (moved.early && moved.late) {
-    return `早出・残業 ${start}〜${end}`;
-  }
-  if (moved.early) {
+  if (moved.early && !moved.late) {
     return `早出 ${start}〜`;
   }
   return moved.late ? `残業 〜${end}` : `${start}〜${end}`;
