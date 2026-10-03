@@ -423,14 +423,23 @@ const simple = {
     minWidth: 0,
     textAlign: "center",
   }),
-  // Over tomorrow: small spaced capitals, a label rather than a date.
-  label: css({
-    color: "text.secondary",
-    fontSize: "11px",
-    letterSpacing: "0.12em",
-    lineHeight: "22px",
-    textTransform: "uppercase",
-    whiteSpace: "nowrap",
+  // Over tomorrow, a label rather than a date: in English small spaced
+  // capitals, an English heading's way; Japanese has no capitals, and
+  // spacing two small kanji only leaves a gap between them, so there
+  // it is a size larger and heavier, unspaced. As tall as the date's
+  // line either way, so the marks stay level.
+  label: cva({
+    base: { color: "text.secondary", lineHeight: "22px", whiteSpace: "nowrap" },
+    variants: {
+      english: {
+        false: { fontSize: "13px", fontWeight: 600 },
+        true: {
+          fontSize: "11px",
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+        },
+      },
+    },
   }),
   mark: css({ display: "flex" }),
   pair: css({ display: "flex", gap: "16px", height: "100%" }),
@@ -458,6 +467,7 @@ const QUIET_GROWTH = 12;
 // grows and the group closes up round it.
 function SimpleDay({ day, label }: { day: WidgetDay; label?: string }) {
   const words = useWords();
+  const { english } = useWeek();
   const named = useShiftNames();
   const said = newsWords(day) !== undefined;
   const roomy = useContext(WidgetSizeContext).height >= SIMPLE_ROOMY;
@@ -473,7 +483,7 @@ function SimpleDay({ day, label }: { day: WidgetDay; label?: string }) {
     <div className={simple.day}>
       <SpokenDay day={day} />
       {label ? (
-        <span aria-hidden="true" className={simple.label}>
+        <span aria-hidden="true" className={simple.label({ english })}>
           <span className={noted}>{label}</span>
         </span>
       ) : (
