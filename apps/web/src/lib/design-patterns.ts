@@ -217,8 +217,3 @@ export function patternsForJob({
 export function isDayOff(pattern: Pattern | undefined) {
   return pattern?.countsAsOff === true;
 }
-
-// As many patterns as the input buttons hold on one page, in two rows of
-// five, so they fit under a month six weeks tall. More go on to further
-// pages, in the order the person puts them.
-export const PATTERNS_PER_PAGE = 10;

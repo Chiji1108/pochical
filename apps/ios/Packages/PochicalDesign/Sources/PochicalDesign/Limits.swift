@@ -38,3 +38,6 @@ public let groupMaxMembers = 100
 
 /// The most people one person keeps in 一緒に働く人.
 public let coworkersMax = 100
+
+/// The shift buttons on one page of ポチポチ入力, in two rows of five.
+public let patternsPerPage = 10

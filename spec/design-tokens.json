@@ -2841,6 +2841,7 @@
   "limits": {
     "coworkersMax": 100,
     "groupMaxMembers": 100,
+    "patternsPerPage": 10,
     "sharedDaysMax": 31,
     "sync": {
       "changesPerFrame": 500,
