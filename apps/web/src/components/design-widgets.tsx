@@ -1,4 +1,3 @@
-import { widgetRules } from "@pochical/design/widgets";
 import {
   createContext,
   useContext,
@@ -333,13 +332,8 @@ function useWords() {
       date: (date: Date) => `${day(date)}, ${month(date)} ${date.getDate()}`,
       dayName: day,
       heading: (date: Date) => englishWeekdays[date.getDay()] ?? "",
-      // Today too, where 次の休み's medium starts from a day off today.
-      inDays: (inDays: number) => {
-        if (inDays === 0) {
-          return "Today";
-        }
-        return inDays === 1 ? "Tomorrow" : `in ${inDays} days`;
-      },
+      inDays: (inDays: number) =>
+        inDays === 1 ? "Tomorrow" : `in ${inDays} days`,
       apart: "No days off together yet",
       // Over the count on the lock screen's round face.
       circle: { all: "Everyone", alone: "Off", together: "Together" },
@@ -1408,8 +1402,6 @@ const offs = {
     placeItems: "center",
     width: "20px",
   }),
-  // With nothing to count, the words sit in the middle of the rows' room.
-  empty: css({ marginBlock: "auto" }),
   // The count, large: a number with 日後 after it, or 今日 and 明日.
   count: css({
     alignItems: "baseline",
@@ -1440,32 +1432,6 @@ const offs = {
     flexDirection: "column",
     height: "100%",
     justifyContent: "space-between",
-  }),
-  row: css({
-    "&:not(:first-child)": { borderTop: "1px solid token(colors.separator)" },
-    alignItems: "center",
-    display: "grid",
-    flex: 1,
-    gap: "8px",
-    // As quiet as a list's lines: the date, its mark, and how soon at the
-    // end in the secondary color. Only the small one counts large.
-    gridTemplateColumns: "auto 18px 1fr",
-  }),
-  rowCount: css({
-    color: "text.secondary",
-    fontVariantNumeric: "tabular-nums",
-    justifySelf: "end",
-    textStyle: "footnote",
-  }),
-  rowDate: css({
-    fontVariantNumeric: "tabular-nums",
-    textStyle: "subheadline",
-  }),
-  rows: css({
-    display: "flex",
-    flex: 1,
-    flexDirection: "column",
-    marginTop: "4px",
   }),
   unit: css({ fontSize: "13px", fontWeight: 600, marginLeft: "2px" }),
 };
@@ -1579,10 +1545,9 @@ function FitText({
   );
 }
 
-// Today when it is off, then the days off after it.
-function offsAhead(entry: WidgetEntry): WidgetOff[] {
-  const ahead = entry.offs.today ? [{ day: entry.today, inDays: 0 }] : [];
-  return [...ahead, ...entry.offs.next];
+// The soonest day off: today when it is off, else the next one.
+function soonestOff(entry: WidgetEntry): WidgetOff | undefined {
+  return entry.offs.today ? { day: entry.today, inDays: 0 } : entry.offs.next;
 }
 
 // The whole of it as read aloud.
@@ -1670,9 +1635,9 @@ function PeekingDog() {
 
 // The preview's one-color look turns everything white, so the drawing is
 // a mask of its own lightness: the body shows, the lines let the ground
-// through.
+// through. Any solid color does under it.
 const desaturatedDog = css({
-  bg: "white",
+  bg: "text.primary",
   maskMode: "luminance",
   maskSize: "100% 100%",
 });
@@ -1730,7 +1695,7 @@ export function NextOffSmall({ entry }: { entry: WidgetEntry }) {
   if (entry.offs.today) {
     return <RestToday entry={entry} />;
   }
-  const [next] = offsAhead(entry);
+  const next = soonestOff(entry);
   return (
     <div className={offs.root}>
       <span className={srOnly}>{spokenOff(entry, next)}</span>
@@ -1756,32 +1721,6 @@ export function NextOffSmall({ entry }: { entry: WidgetEntry }) {
           noOffWords(entry.offs.none, words)
         )}
       </span>
-    </div>
-  );
-}
-
-// The next days off, a line each: the date, its mark and how soon.
-export function NextOffMedium({ entry }: { entry: WidgetEntry }) {
-  const words = useWords();
-  const ahead = offsAhead(entry).slice(0, widgetRules.nextOffs);
-  return (
-    <div className={offs.root}>
-      <span className={srOnly}>{spokenOff(entry, ahead[0])}</span>
-      <OffsHead entry={entry} />
-      <ol aria-hidden="true" className={`${list} ${offs.rows}`}>
-        {ahead.map(({ day, inDays }) => (
-          <li className={offs.row} key={day.date.getTime()}>
-            <span className={offs.rowDate}>{words.date(day.date)}</span>
-            <DayMark day={day} size={18} />
-            <span className={offs.rowCount}>{words.inDays(inDays)}</span>
-          </li>
-        ))}
-        {ahead.length === 0 && (
-          <li className={cx(offs.date, offs.empty)}>
-            {noOffWords(entry.offs.none, words)}
-          </li>
-        )}
-      </ol>
     </div>
   );
 }
@@ -1967,7 +1906,7 @@ function circularWord(entry: WidgetEntry, words: ReturnType<typeof useWords>) {
 // count, or 今日 and 明日.
 export function NextOffCircular({ entry }: { entry: WidgetEntry }) {
   const words = useWords();
-  const [next] = offsAhead(entry);
+  const next = soonestOff(entry);
   const text = next ? words.soon(next) : "–";
   return (
     <div className={circular.root}>

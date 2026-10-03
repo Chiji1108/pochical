@@ -3,8 +3,6 @@
 // native apps (Widgets.swift, Widgets.kt) and as JSON
 // (spec/design-tokens.json).
 export const widgetRules = {
-  // 次の休み shows up to this many days off.
-  nextOffs: 3,
   // How many days ahead of today 次の休み looks, and no further than what
   // is entered.
   offLookaheadDays: 62,
