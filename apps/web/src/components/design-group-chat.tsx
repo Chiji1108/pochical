@@ -1,4 +1,3 @@
-import { chatRules } from "@pochical/design/chat";
 import {
   Bell,
   BellOff,
@@ -10,7 +9,6 @@ import {
 } from "lucide-react";
 import {
   Fragment,
-  useContext,
   useEffect,
   useEffectEvent,
   useLayoutEffect,
@@ -18,36 +16,23 @@ import {
   useState,
 } from "react";
 import type { ReactNode, UIEvent } from "react";
-import { css, cx } from "styled-system/css";
+import { cx } from "styled-system/css";
 
-import {
-  decidePoll,
-  editMessage,
-  firstUnreadOf,
-  lastSharedOf,
-  pinMessage,
-  pinsOf,
-  reactTo,
-  unsendMessage,
-  votePoll,
-} from "../lib/chat-messages";
-import {
-  inviteCodeOf,
-  mentionsOf,
-  plainText,
-  withMentions,
-} from "../lib/chat-text";
-import { dateKey, formatDay } from "../lib/design-days";
+import { firstUnreadOf, lastSharedOf, pinsOf } from "../lib/chat-messages";
+import { inviteCodeOf, mentionsOf } from "../lib/chat-text";
 import { useUser } from "../lib/design-user-store";
 import { LinkMenu, openLink } from "./design-chat-actions";
-import type { LineActions, LinkMenuAt } from "./design-chat-actions";
+import type { LinkMenuAt } from "./design-chat-actions";
 import { uploadMilliseconds } from "./design-chat-cards";
 import type { InviteLook, Upload } from "./design-chat-cards";
 import { Composer, useComposer } from "./design-chat-composer";
-import { MessageLine } from "./design-chat-line";
+import { useChatEdits } from "./design-chat-edits";
+import { ChatContext, MessageLine } from "./design-chat-line";
+import type { ChatScope } from "./design-chat-line";
+import { ChatListRow, LineFrame, MutedMark } from "./design-chat-parts";
 import { PinBar } from "./design-chat-pins";
 import { DecidePollSheet } from "./design-chat-poll";
-import { chatAvatarSize, chatRow, chatStyle } from "./design-chat-style";
+import { chatAvatarSize, chatStyle } from "./design-chat-style";
 import { blockedLine, summaryOf, unsentLine } from "./design-chat-summary";
 import { EmojiPickerSheet } from "./design-emoji-picker";
 import type { Chat, Group, Member, Message } from "./design-group-data";
@@ -55,12 +40,11 @@ import { Avatar, badge, photoPicker } from "./design-group-parts";
 import { profileIn } from "./design-group-settings";
 import { DaySheet } from "./design-group-shifts-day-sheet";
 import { BackButton } from "./design-header";
-import { List, ListRow, listRow } from "./design-list";
+import { List, ListRow } from "./design-list";
 import { IconMenu, MenuItem, MenuSeparator } from "./design-menu";
 import { ReportSheet } from "./design-report";
 import { ConfirmDialog, Sheet } from "./design-sheet";
-import { ToastContext } from "./design-toast";
-import { IconButton, Screen, srOnly } from "./design-ui";
+import { IconButton, Screen } from "./design-ui";
 
 // A group's chats: the messages, replies and reactions, photos going
 // up, and shared days shown in a message.
@@ -137,16 +121,6 @@ function ChatTitle({
   );
 }
 
-// A chat whose notifications are off, after its name in the list and in
-// its own header, as chat apps mark a muted room.
-const mutedMark = css({ color: "text.tertiary", flexShrink: 0 });
-
-function MutedMark() {
-  return (
-    <BellOff aria-label="通知オフ" className={mutedMark} role="img" size={14} />
-  );
-}
-
 export function ChatRow({
   label,
   icon,
@@ -169,45 +143,19 @@ export function ChatRow({
     useUser((state) => state.blocked)
   );
   const last = chat.messages.at(-1);
-  // An unread line mentions you: an @ beside the count, as Telegram marks
-  // one, so it is found among chats whose notifications are off.
-  const mentioned = chat.messages
-    .slice(chat.messages.length - chat.unread)
-    .some((message) => mentionsOf(message.text ?? "").includes("me"));
   return (
-    <button
-      className={cx(listRow.twoLine, listRow.pressable)}
-      data-list-row=""
-      onClick={onOpen}
-      type="button"
-    >
-      {icon}
-      <span className={chatRow.text}>
-        <span className={chatRow.name}>
-          {label}
-          {muted && <MutedMark />}
-        </span>
-        <small className={chatRow.preview}>
-          {preview ?? "まだメッセージはありません"}
-        </small>
-      </span>
-      <span className={chatRow.meta}>
-        {last && <small className={chatRow.time}>{last.time}</small>}
-        {chat.unread > 0 && (
-          <span className={chatRow.badges}>
-            {mentioned && (
-              <span className={chatRow.mention}>
-                @<span className={srOnly}>自分へのメンションあり、</span>
-              </span>
-            )}
-            <span className={badge} role="status">
-              {chat.unread}
-              <span className={srOnly}>件の未読</span>
-            </span>
-          </span>
-        )}
-      </span>
-    </button>
+    <ChatListRow
+      icon={icon}
+      label={label}
+      mentioned={chat.messages
+        .slice(chat.messages.length - chat.unread)
+        .some((message) => mentionsOf(message.text ?? "").includes("me"))}
+      muted={muted}
+      onOpen={onOpen}
+      preview={preview ?? "まだメッセージはありません"}
+      time={last?.time}
+      unread={chat.unread}
+    />
   );
 }
 
@@ -284,24 +232,13 @@ export function ChatPage({
   onChange: (messages: Message[]) => void;
   onOpenDay: (date: Date) => void;
 }) {
-  // Your message being taken back, asked about first.
-  const [unsending, setUnsending] = useState<string>();
-  // Someone else's message being reported.
-  const [reporting, setReporting] = useState<string>();
   const blocked = useUser((state) => state.blocked);
   // A link long pressed in a message's words: its own small menu, 開く and
   // コピー, as iOS offers on a link in text, rather than the message's.
   const [linkMenu, setLinkMenu] = useState<LinkMenuAt>();
-  const toast = useContext(ToastContext);
   const [failedOpen, setFailedOpen] = useState<string>();
   const { failedCount, upload, uploads } = usePhotoUploads(photoSend);
   const [sharing, setSharing] = useState(false);
-  // The line whose actions are open, and the one being answered.
-  const [selected, setSelected] = useState<string>();
-  const [replyTo, setReplyTo] = useState<string>();
-  // The line whose reaction is being picked from every emoji.
-  const [pickingFor, setPickingFor] = useState<string>();
-  const [flash, setFlash] = useState<string>();
   const { answerSoon, typingMember } = useTypingSoon(group, chat.messages);
   const {
     awayFromLatest,
@@ -321,8 +258,6 @@ export function ChatPage({
   // Who wrote a line, including members taken out since, whose lines stay.
   const writerOf = (id?: string) =>
     [...group.members, ...formerMembers].find((member) => member.id === id);
-  const byId = (id?: string) =>
-    chat.messages.find((message) => message.id === id);
   const nameOf = (id: string) => writerOf(id)?.name ?? "";
   const mentionName = nameIn(
     [...group.members, ...formerMembers],
@@ -334,164 +269,62 @@ export function ChatPage({
     members: isGroup ? group.members : noMembers,
     mentionName,
   });
-  const { editing } = composer;
-  // Sends one line or several at once, the first answering the line
-  // being replied to.
-  const post = (...lines: Omit<Message, "id" | "from" | "when" | "time">[]) => {
-    const sent = lines.map((line, index) => ({
-      ...line,
-      from: "me",
-      id: `sent-${chat.messages.length + index}`,
-      replyTo: index === 0 ? replyTo : undefined,
-      time: "10:10",
-      when: "今日",
-    }));
-    onChange([...chat.messages, ...sent]);
-    setReplyTo(undefined);
-    answerSoon();
-    const photoIds = sent.flatMap((line) => (line.photo ? [line.id] : []));
-    if (photoIds.length > 0) {
-      upload(photoIds);
-    }
-  };
-  const startEditing = (message: Message) => {
-    setReplyTo(undefined);
-    composer.startEditing(message);
-  };
+  const {
+    actionsOf,
+    byId,
+    decide,
+    deciding,
+    flash,
+    jumpTo,
+    pickingFor,
+    pin,
+    post,
+    react,
+    remove,
+    replyTo,
+    reporting,
+    selected,
+    send,
+    setDeciding,
+    setPickingFor,
+    setReplyTo,
+    setReporting,
+    setSelected,
+    setUnsending,
+    unsend,
+    unsending,
+    vote,
+  } = useChatEdits({
+    composer,
+    mentionName,
+    messages: chat.messages,
+    onChange,
+    // Someone may write back, and photos start going up.
+    onSent: (sent) => {
+      answerSoon();
+      const photoIds = sent.flatMap((line) => (line.photo ? [line.id] : []));
+      if (photoIds.length > 0) {
+        upload(photoIds);
+      }
+    },
+  });
   const pins = pinsOf(chat.messages);
   const [pinsOpen, setPinsOpen] = useState(false);
-  const pin = (id: string, pinned: boolean) => {
-    const next = pinMessage(chat.messages, id, pinned);
-    onChange(next.messages);
-    if (next.dropped) {
-      toast(droppedPinLine);
-    } else {
-      toast(pinned ? "ピン留めしました" : "ピン留めを外しました");
-    }
-  };
-  // The poll being settled by its writer, and settling it.
-  const [deciding, setDeciding] = useState<string>();
-  const decide = (id: string, key: string) => {
-    const next = decidePoll(chat.messages, id, key);
-    onChange(next.messages);
-    setDeciding(undefined);
-    const day = byId(id)?.poll?.days.find((date) => dateKey(date) === key);
-    const decided = day ? `${formatDay(day)}に決めました` : undefined;
-    if (next.dropped) {
-      toast(decided ? `${decided}。${droppedPinLine}` : droppedPinLine);
-    } else if (decided) {
-      toast(decided);
-    }
-  };
-  const unsend = (id: string) => {
-    onChange(unsendMessage(chat.messages, id));
-    setUnsending(undefined);
-    if (editing === id) {
-      composer.stopEditing();
-    }
-  };
-  const send = () => {
-    const text = composer.draft.trim();
-    // The changed words replace the old ones, marked 編集済み; the page of
-    // its link stays while the link does.
-    if (editing !== undefined) {
-      if (text) {
-        onChange(
-          editMessage(
-            chat.messages,
-            editing,
-            withMentions(text, composer.picked),
-            composer.linkPreview.ready
-          )
-        );
-        composer.stopEditing();
-      }
-      return;
-    }
-    if (!composer.sendable) {
-      return;
-    }
-    // The attached days go first, then each photo as a line of its own,
-    // then what was written, if anything.
-    post(
-      ...(composer.attached ? [{ days: composer.attached }] : []),
-      ...composer.photos.map((photo) => ({ photo })),
-      ...(text
-        ? [
-            {
-              link: composer.linkPreview.ready,
-              text: withMentions(text, composer.picked),
-            },
-          ]
-        : [])
-    );
-    composer.clear();
-  };
-  const react = (id: string, emoji: string) => {
-    onChange(reactTo(chat.messages, id, emoji));
-    setSelected(undefined);
-  };
-  const jumpTo = (id: string) => {
-    document
-      .getElementById(`message-${id}`)
-      ?.scrollIntoView({ behavior: "smooth", block: "center" });
-    setFlash(id);
-    setTimeout(() => {
-      setFlash(undefined);
-    }, flashMilliseconds);
-  };
-  // The props that turn a message into the opener of its actions.
-  const actionsOf = (message: Message): LineActions => ({
-    mine: message.from === "me",
-    onEdit:
-      message.from === "me" && message.text !== undefined
-        ? () => {
-            startEditing(message);
-          }
-        : undefined,
-    onMore: () => {
-      setSelected(undefined);
-      setPickingFor(message.id);
-    },
-    onOpenChange: (open: boolean) => {
-      setSelected(open ? message.id : undefined);
-    },
-    onPin:
-      message.notice || message.unsent
-        ? undefined
-        : () => {
-            pin(message.id, message.pinned === undefined);
-          },
-    onReact: (emoji: string) => {
-      react(message.id, emoji);
-    },
-    onReply: () => {
-      if (editing !== undefined) {
-        composer.stopEditing();
-      }
-      setReplyTo(message.id);
-      setSelected(undefined);
-    },
-    onReport:
-      message.from === "me"
-        ? undefined
-        : () => {
-            setReporting(message.id);
-          },
-    onUnsend:
-      message.from === "me"
-        ? () => {
-            setUnsending(message.id);
-          }
-        : undefined,
-    open: selected === message.id,
-    pinned: message.pinned !== undefined,
-    text:
-      message.text === undefined
-        ? undefined
-        : plainText(message.text, mentionName),
-  });
   const replying = byId(replyTo);
+  // What every line shares, given once rather than to each.
+  const scope: ChatScope = {
+    group,
+    inviteOf,
+    isGroup,
+    mentionName,
+    onInvite,
+    onJump: jumpTo,
+    onLinkMenu: setLinkMenu,
+    onMember,
+    onOpenDay,
+    people,
+    writerOf,
+  };
   return (
     <Screen>
       <header className={chatStyle.header}>
@@ -579,64 +412,53 @@ export function ChatPage({
         />
       )}
       <div className={chatStyle.lines}>
-        <ol
-          aria-label={`${title}のメッセージ`}
-          className={chatStyle.messages}
-          onScroll={handleScroll}
-          ref={listRef}
-        >
-          {chat.messages.length === 0 && (
-            <li className={chatStyle.empty}>まだメッセージはありません</li>
-          )}
-          {chat.messages.map((message, index) => (
-            <Fragment key={message.id}>
-              {message.id === firstUnreadId && (
-                <li className={chatStyle.unread} id="unread-line">
-                  <span>ここから新着</span>
-                </li>
-              )}
-              <MessageLine
-                actions={actionsOf(message)}
-                flash={flash === message.id}
-                group={group}
-                hidden={blocked.includes(message.from)}
-                inviteOf={inviteOf}
-                isGroup={isGroup}
-                lifted={selected === message.id}
-                mentionName={mentionName}
-                message={message}
-                onDecide={() => {
-                  setDeciding(message.id);
-                }}
-                onFailed={() => {
-                  setFailedOpen(message.id);
-                }}
-                onFolded={keepPlace}
-                onInvite={onInvite}
-                onJump={jumpTo}
-                onLinkMenu={setLinkMenu}
-                onMember={onMember}
-                onOpenDay={onOpenDay}
-                onSelect={() => {
-                  setSelected(message.id);
-                }}
-                onVote={(key) => {
-                  onChange(votePoll(chat.messages, message.id, key));
-                }}
-                people={people}
-                previous={chat.messages[index - 1]}
-                quoted={byId(message.replyTo)}
-                upload={uploads[message.id]}
-                writerOf={writerOf}
-              />
-            </Fragment>
-          ))}
-          {typingMember && (
-            <li className={chatStyle.item()}>
-              <span className={chatStyle.message({ mine: false })}>
-                <span className={chatStyle.avatar}>
-                  <Avatar member={typingMember} size={chatAvatarSize} />
-                </span>
+        <ChatContext value={scope}>
+          <ol
+            aria-label={`${title}のメッセージ`}
+            className={chatStyle.messages}
+            onScroll={handleScroll}
+            ref={listRef}
+          >
+            {chat.messages.length === 0 && (
+              <li className={chatStyle.empty}>まだメッセージはありません</li>
+            )}
+            {chat.messages.map((message, index) => (
+              <Fragment key={message.id}>
+                {message.id === firstUnreadId && (
+                  <li className={chatStyle.unread} id="unread-line">
+                    <span>ここから新着</span>
+                  </li>
+                )}
+                <MessageLine
+                  actions={actionsOf(message)}
+                  flash={flash === message.id}
+                  hidden={blocked.includes(message.from)}
+                  lifted={selected === message.id}
+                  message={message}
+                  onDecide={() => {
+                    setDeciding(message.id);
+                  }}
+                  onFailed={() => {
+                    setFailedOpen(message.id);
+                  }}
+                  onFolded={keepPlace}
+                  onSelect={() => {
+                    setSelected(message.id);
+                  }}
+                  onVote={(key) => {
+                    vote(message.id, key);
+                  }}
+                  previous={chat.messages[index - 1]}
+                  quoted={byId(message.replyTo)}
+                  upload={uploads[message.id]}
+                />
+              </Fragment>
+            ))}
+            {typingMember && (
+              <LineFrame
+                avatar={<Avatar member={typingMember} size={chatAvatarSize} />}
+                mine={false}
+              >
                 <span
                   aria-label={`${typingMember.name}が入力中`}
                   className={chatStyle.typing}
@@ -646,10 +468,10 @@ export function ChatPage({
                   <span />
                   <span />
                 </span>
-              </span>
-            </li>
-          )}
-        </ol>
+              </LineFrame>
+            )}
+          </ol>
+        </ChatContext>
         {(awayFromLatest || unseen > 0) && (
           <span className={chatStyle.latest}>
             <IconButton
@@ -675,17 +497,20 @@ export function ChatPage({
       </div>
       <Composer
         composer={composer}
-        editingMessage={byId(editing)}
-        mentionName={mentionName}
-        nameOf={nameOf}
+        editingMessage={byId(composer.editing)}
         onSend={send}
         onShareDays={() => {
           setSharing(true);
         }}
-        onStopReplying={() => {
-          setReplyTo(undefined);
-        }}
-        replying={replying}
+        reply={
+          replying && {
+            message: replying,
+            onStop: () => {
+              setReplyTo(undefined);
+            },
+            writer: nameOf(replying.from),
+          }
+        }
       />
       <EmojiPickerSheet
         onOpenChange={(open) => {
@@ -726,9 +551,9 @@ export function ChatPage({
             label="削除"
             leading={<Trash2 aria-hidden="true" size={20} />}
             onClick={() => {
-              onChange(
-                chat.messages.filter((message) => message.id !== failedOpen)
-              );
+              if (failedOpen) {
+                remove(failedOpen);
+              }
               setFailedOpen(undefined);
             }}
           />
@@ -1042,11 +867,6 @@ function scrollOnto(list: HTMLElement, target: string | undefined) {
     : list.scrollHeight;
   return list.scrollTop;
 }
-
-const flashMilliseconds = 1200;
-
-// Said when one more pin takes the place of the oldest.
-const droppedPinLine = `ピン留めは${chatRules.maxPins}件までです。いちばん古いものを外しました`;
 
 // In the prototype, how soon after you send someone starts writing back,
 // and for how long.

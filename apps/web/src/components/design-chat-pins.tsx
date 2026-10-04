@@ -1,14 +1,12 @@
-import { Popover, Portal } from "@ark-ui/react";
 import { ChevronDown, ChevronUp, Pin, PinOff } from "lucide-react";
-import { useContext, useState } from "react";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { css } from "styled-system/css";
 
 import { useLongPress } from "./design-chat-actions";
+import { PhonePopover, PopoverMenuItem } from "./design-chat-popover";
 import { summaryOf } from "./design-chat-summary";
 import type { Message } from "./design-group-data";
-import { menuStyle } from "./design-menu";
-import { PhoneContext } from "./design-sheet";
 import { IconButton } from "./design-ui";
 
 // The lines pinned over a chat (spec/chat.md, Pins): the bar under the
@@ -103,22 +101,13 @@ function PinItem({
   onUnpin: () => void;
   children: ReactNode;
 }) {
-  const phone = useContext(PhoneContext);
   const [open, setOpen] = useState(false);
   const press = useLongPress(() => {
     setOpen(true);
   });
   return (
-    <Popover.Root
-      lazyMount
-      onOpenChange={(details) => {
-        setOpen(details.open);
-      }}
-      open={open}
-      positioning={{ gutter: 4, placement: "bottom-start" }}
-      unmountOnExit
-    >
-      <Popover.Anchor asChild>
+    <PhonePopover
+      anchor={
         <button
           aria-label={`${label}。押すとメッセージへ、長押しでピン留めを外す`}
           className={pinBar.jump}
@@ -132,27 +121,22 @@ function PinItem({
         >
           {children}
         </button>
-      </Popover.Anchor>
-      <Portal container={phone ?? undefined}>
-        <Popover.Positioner>
-          <Popover.Content aria-label="ピン留め" className={menuStyle.content}>
-            <button
-              className={menuStyle.item}
-              onClick={() => {
-                setOpen(false);
-                onUnpin();
-              }}
-              type="button"
-            >
-              <span className={menuStyle.icon}>
-                <PinOff aria-hidden="true" size={18} />
-              </span>
-              ピン留めを外す
-            </button>
-          </Popover.Content>
-        </Popover.Positioner>
-      </Portal>
-    </Popover.Root>
+      }
+      label="ピン留め"
+      onOpenChange={setOpen}
+      open={open}
+      positioning={{ gutter: 4, placement: "bottom-start" }}
+    >
+      <PopoverMenuItem
+        icon={<PinOff aria-hidden="true" size={18} />}
+        onClick={() => {
+          setOpen(false);
+          onUnpin();
+        }}
+      >
+        ピン留めを外す
+      </PopoverMenuItem>
+    </PhonePopover>
   );
 }
 

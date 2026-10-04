@@ -17,6 +17,7 @@ import { useContext, useRef } from "react";
 import type { MouseEvent, ReactElement } from "react";
 import { css, cx } from "styled-system/css";
 
+import { PhonePopover, PopoverMenuItem } from "./design-chat-popover";
 import { reactionChoices } from "./design-group-data";
 import { menuStyle } from "./design-menu";
 import { PhoneContext } from "./design-sheet";
@@ -63,13 +64,12 @@ export function LinkMenu({
   onClose: () => void;
   onOpen: (url: string) => void;
 }) {
-  const phone = useContext(PhoneContext);
   const toast = useContext(ToastContext);
   return (
-    <Popover.Root
-      lazyMount
-      onOpenChange={(details) => {
-        if (!details.open) {
+    <PhonePopover
+      label="リンク"
+      onOpenChange={(open) => {
+        if (!open) {
           onClose();
         }
       }}
@@ -79,51 +79,36 @@ export function LinkMenu({
         gutter: 4,
         placement: "bottom-start",
       }}
-      unmountOnExit
     >
-      <Portal container={phone ?? undefined}>
-        <Popover.Positioner>
-          <Popover.Content aria-label="リンク" className={menuStyle.content}>
-            <button
-              className={menuStyle.item}
-              onClick={() => {
-                if (at) {
-                  onOpen(at.url);
-                }
-                onClose();
-              }}
-              type="button"
-            >
-              <span className={menuStyle.icon}>
-                <ExternalLink aria-hidden="true" size={18} />
-              </span>
-              リンクを開く
-            </button>
-            <button
-              className={menuStyle.item}
-              onClick={() => {
-                const url = at?.url ?? "";
-                onClose();
-                navigator.clipboard
-                  .writeText(url)
-                  .then(() => {
-                    toast("コピーしました");
-                  })
-                  .catch(() => {
-                    toast("コピーできませんでした", "problem");
-                  });
-              }}
-              type="button"
-            >
-              <span className={menuStyle.icon}>
-                <Link aria-hidden="true" size={18} />
-              </span>
-              リンクをコピー
-            </button>
-          </Popover.Content>
-        </Popover.Positioner>
-      </Portal>
-    </Popover.Root>
+      <PopoverMenuItem
+        icon={<ExternalLink aria-hidden="true" size={18} />}
+        onClick={() => {
+          if (at) {
+            onOpen(at.url);
+          }
+          onClose();
+        }}
+      >
+        リンクを開く
+      </PopoverMenuItem>
+      <PopoverMenuItem
+        icon={<Link aria-hidden="true" size={18} />}
+        onClick={() => {
+          const url = at?.url ?? "";
+          onClose();
+          navigator.clipboard
+            .writeText(url)
+            .then(() => {
+              toast("コピーしました");
+            })
+            .catch(() => {
+              toast("コピーできませんでした", "problem");
+            });
+        }}
+      >
+        リンクをコピー
+      </PopoverMenuItem>
+    </PhonePopover>
   );
 }
 
@@ -381,128 +366,98 @@ export function MessageActions({
               </button>
             </div>
             <div className={menuStyle.content}>
-              <button
-                className={menuStyle.item}
+              <PopoverMenuItem
+                icon={<Reply aria-hidden="true" size={18} />}
                 onClick={onReply}
-                type="button"
               >
-                <span className={menuStyle.icon}>
-                  <Reply aria-hidden="true" size={18} />
-                </span>
                 返信
-              </button>
+              </PopoverMenuItem>
               {text && (
-                <button
-                  className={menuStyle.item}
+                <PopoverMenuItem
+                  icon={<Copy aria-hidden="true" size={18} />}
                   onClick={() => {
                     copy(text).catch(() => undefined);
                   }}
-                  type="button"
                 >
-                  <span className={menuStyle.icon}>
-                    <Copy aria-hidden="true" size={18} />
-                  </span>
                   コピー
-                </button>
+                </PopoverMenuItem>
               )}
               {onSave && (
-                <button
-                  className={menuStyle.item}
+                <PopoverMenuItem
+                  icon={<Download aria-hidden="true" size={18} />}
                   onClick={() => {
                     onOpenChange(false);
                     onSave();
                   }}
-                  type="button"
                 >
-                  <span className={menuStyle.icon}>
-                    <Download aria-hidden="true" size={18} />
-                  </span>
                   保存
-                </button>
+                </PopoverMenuItem>
               )}
               {onPin && (
-                <button
-                  className={menuStyle.item}
+                <PopoverMenuItem
+                  icon={
+                    pinned ? (
+                      <PinOff aria-hidden="true" size={18} />
+                    ) : (
+                      <Pin aria-hidden="true" size={18} />
+                    )
+                  }
                   onClick={() => {
                     onOpenChange(false);
                     onPin();
                   }}
-                  type="button"
                 >
-                  <span className={menuStyle.icon}>
-                    {pinned ? (
-                      <PinOff aria-hidden="true" size={18} />
-                    ) : (
-                      <Pin aria-hidden="true" size={18} />
-                    )}
-                  </span>
                   {pinned ? "ピン留めを外す" : "ピン留め"}
-                </button>
+                </PopoverMenuItem>
               )}
               {onRedecide && (
-                <button
-                  className={menuStyle.item}
+                <PopoverMenuItem
+                  icon={<CalendarCheck aria-hidden="true" size={18} />}
                   onClick={() => {
                     closeThen(onRedecide);
                   }}
-                  type="button"
                 >
-                  <span className={menuStyle.icon}>
-                    <CalendarCheck aria-hidden="true" size={18} />
-                  </span>
                   決め直す
-                </button>
+                </PopoverMenuItem>
               )}
               {onEdit && (
-                <button
-                  className={menuStyle.item}
+                <PopoverMenuItem
+                  icon={<Pencil aria-hidden="true" size={18} />}
                   onClick={() => {
                     closeThen(onEdit);
                   }}
-                  type="button"
                 >
-                  <span className={menuStyle.icon}>
-                    <Pencil aria-hidden="true" size={18} />
-                  </span>
                   編集
-                </button>
+                </PopoverMenuItem>
               )}
               {/* Apart from the rest, in red, as iOS sets off an action
                   that takes something away. */}
               {onUnsend && (
                 <>
                   <hr className={menuStyle.separator} />
-                  <button
-                    className={menuStyle.item}
-                    data-danger=""
+                  <PopoverMenuItem
+                    danger
+                    icon={<Undo2 aria-hidden="true" size={18} />}
                     onClick={() => {
                       closeThen(onUnsend);
                     }}
-                    type="button"
                   >
-                    <span className={menuStyle.icon}>
-                      <Undo2 aria-hidden="true" size={18} />
-                    </span>
                     送信取消
-                  </button>
+                  </PopoverMenuItem>
                 </>
               )}
               {onReport && (
                 <>
                   <hr className={menuStyle.separator} />
-                  <button
-                    className={menuStyle.item}
-                    data-danger=""
+                  <PopoverMenuItem
+                    danger
+                    icon={<Flag aria-hidden="true" size={18} />}
                     onClick={() => {
                       closeThen(onReport);
                     }}
-                    type="button"
                   >
-                    <span className={menuStyle.icon}>
-                      <Flag aria-hidden="true" size={18} />
-                    </span>
                     通報
-                  </button>
+                  </PopoverMenuItem>
                 </>
               )}
             </div>
