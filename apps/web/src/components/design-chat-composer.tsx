@@ -129,7 +129,7 @@ export function useComposer({
   };
 }
 
-type ComposerState = ReturnType<typeof useComposer>;
+export type ComposerState = ReturnType<typeof useComposer>;
 
 // The foot of the chat: what the next message carries (the line it
 // answers, days, a link's page, photos), the @ list, and the field with

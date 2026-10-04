@@ -1,6 +1,7 @@
 import { chatRules } from "@pochical/design/chat";
 import { CircleAlert, Pin } from "lucide-react";
 import {
+  createContext,
   Fragment,
   useContext,
   useEffectEvent,
@@ -46,41 +47,52 @@ import { ToastContext } from "./design-toast";
 // line it answers, its words (links and mentions in them, folded when
 // long), its time and its reactions.
 
+// What every line of a chat shares: the chat it is in, who wrote what,
+// and where a tap in it goes. ChatPage gives it once for all its lines.
+export type ChatScope = {
+  group: Group;
+  isGroup: boolean;
+  // Who a shared day shows: everyone, or the two people in a direct chat.
+  people: Member[];
+  writerOf: (id?: string) => Member | undefined;
+  mentionName: (id: string) => string;
+  inviteOf: (code: string) => InviteLook | undefined;
+  onInvite: (code: string) => void;
+  onMember?: (member: Member) => void;
+  onJump: (id: string) => void;
+  onLinkMenu: (at: LinkMenuAt) => void;
+  onOpenDay: (date: Date) => void;
+};
+
+export const ChatContext = createContext<ChatScope | undefined>(undefined);
+
+function useChatScope() {
+  const scope = useContext(ChatContext);
+  if (!scope) {
+    throw new Error("A chat's line is drawn inside ChatContext");
+  }
+  return scope;
+}
+
 // One line of the chat as it is drawn: a message, or one of the app's.
 export function MessageLine({
   message,
   previous,
-  group,
-  isGroup,
-  people,
-  writerOf,
-  mentionName,
   quoted,
   hidden,
   flash,
   lifted,
   upload,
   actions,
-  inviteOf,
-  onInvite,
-  onMember,
-  onJump,
-  onLinkMenu,
   onSelect,
   onDecide,
   onVote,
   onFailed,
   onFolded,
-  onOpenDay,
 }: {
   message: Message;
   // The line above, after which a new day or a new run starts.
   previous?: Message;
-  group: Group;
-  isGroup: boolean;
-  people: Member[];
-  writerOf: (id?: string) => Member | undefined;
-  mentionName: (id: string) => string;
   // The line it answers.
   quoted?: Message;
   // Written by someone you blocked: folded away until shown.
@@ -91,11 +103,6 @@ export function MessageLine({
   lifted: boolean;
   upload?: Upload;
   actions: LineActions;
-  inviteOf: (code: string) => InviteLook | undefined;
-  onInvite: (code: string) => void;
-  onMember?: (member: Member) => void;
-  onJump: (id: string) => void;
-  onLinkMenu: (at: LinkMenuAt) => void;
   // Opens its actions, from a card's long press.
   onSelect: () => void;
   onDecide: () => void;
@@ -104,8 +111,20 @@ export function MessageLine({
   // Its words were measured to fold, and 続きを読む has come in under
   // them, after the chat was scrolled to its place.
   onFolded: () => void;
-  onOpenDay: (date: Date) => void;
 }) {
+  const {
+    group,
+    isGroup,
+    people,
+    writerOf,
+    mentionName,
+    inviteOf,
+    onInvite,
+    onMember,
+    onJump,
+    onLinkMenu,
+    onOpenDay,
+  } = useChatScope();
   // Words past chatRules.foldLines, and whether they were opened in full.
   const [folded, setFolded] = useState(false);
   const [unfolded, setUnfolded] = useState(false);
