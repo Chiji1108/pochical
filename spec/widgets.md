@@ -34,6 +34,7 @@ Days with nothing entered have no `shift`, `name` or `time`. They are shown as n
 | Field | Meaning |
 | --- | --- |
 | `date` | The day the entry is for. |
+| `nothingEntered` | The person has entered no day at all yet, as on first opening the app (days from a repeating order count as entered). |
 | `today` | That day. |
 | `upcoming` | That day and the six days after it, seven days in order. |
 | `twoWeeks` | The week that day is in and the week after, fourteen days from the person's week start. |
@@ -48,7 +49,7 @@ Days with nothing entered have no `shift`, `name` or `time`. They are shown as n
 
 ## Views
 
-The widgets are views of one entry. They hold no state and open the app when tapped. There are four kinds; a person picks one from the widget gallery in the sizes it offers.
+The widgets are views of one entry. They hold no state and open the app on what they show when tapped (Opening the app). There are four kinds; a person picks one from the widget gallery in the sizes it offers.
 
 | Kind | Small (iPhone systemSmall, Android 2×2) | Medium (systemMedium, 4×2) | Large (systemLarge, 4×4) |
 | --- | --- | --- | --- |
@@ -57,11 +58,11 @@ The widgets are views of one entry. They hold no state and open the app when tap
 | これから | today's mark large beside its date (bold) and any change, the two centered together, over the next three days' weekdays and marks. Today goes without its weekday, as a weather forecast heads now apart from the days it names: it is today. Set to someone: today and tomorrow in columns, theirs under the person's | five days from today, a column each: the weekday over the date, as the calendar heads its columns, so the date sits right over its mark, then the mark large, and only changed hours under it, short enough for a column (`7:00〜` for 早出, `〜20:00` for 残業, `7:00〜20:00` on one line where both moved or for other changes). A memo is the calendar's stroke under its date; a day off is its pattern's tile down the whole column, date and all, as the calendar's day, following 休みを塗る and 休みの見せ方 (空白 leaves it empty, told from a day with nothing entered by that day's dash). The month is written small before today's date alone: a run of five days going into the next month says so plainly (29 30 1). Set to someone: theirs under the person's | – |
 | カレンダー | – | `twoWeeks`: this week and the next, seven across from the week start, with days already gone faint and today as its accent date | the month with every day's mark, and today's change if it has one |
 
-**次の休み with someone or a group.** Editing the widget (iOS's ウィジェットを編集 through its App Intent; Android's configuration screen) offers 一緒に休む人: nobody, one of the person's groups, or anyone in them, the groups listed before the people. With someone picked, the widget is titled 一緒に休める日 with their picture, and counts only days both are off; with a group, it is titled みんな休み, as the group's own screens call a day everyone is off, with the group's mark, and counts only those days. With nothing to show, it says why, from `offs.none`: who it waits on (あやさんの入力待ち, あやさんほか2人の入力待ち), 重なる休みはまだありません, or まだ入っていません. The choice is about what the widget shows, not how it looks; looks follow the app's settings.
+**次の休み with someone or a group.** Editing the widget (iOS's ウィジェットを編集 through its App Intent; Android's configuration screen) offers 一緒に休む人: nobody, one of the person's groups, or anyone in them, the groups listed before the people. Each one is listed once, as an account, however many of the person's groups they are in: their days are the same in every group, whatever name they go by there. They are named, and their picture shown, as in the first of the person's groups that has them, in the order the app lists groups, the same group a tap opens (Opening the app). With someone picked, the widget is titled 一緒に休める日 with their picture, and counts only days both are off; with a group, it is titled みんな休み, as the group's own screens call a day everyone is off, with the group's mark, and counts only those days. With nothing to show, it says why, from `offs.none`: who it waits on (あやさんの入力待ち, あやさんほか2人の入力待ち), 重なる休みはまだありません, or まだ入っていません. The choice is about what the widget shows, not how it looks; looks follow the app's settings.
 
 **Words only for what changed.** The widgets show marks and, of words, only changed hours. Of a day, a widget says in words only what the person's groups see too, its shift and hours; a memo's words and 一緒に働く人 stay with their owner, as sync never pushes them to groups (`spec/sync-protocol.md`), and a home screen is seen by whoever is beside the phone. A widget shows only that a day has a memo, with the calendar's stroke under its date, and the memo is the app's to show when the day is opened. Should people ask for their memos on their own widgets, it would be theirs to turn on. Words keep to one line under a mark, whatever moved: a day of 早出 and 残業 is its hours alone (7:00〜20:00), and where that is too wide for a column it shrinks, down to 8pt, then goes without its :00 (7〜20). A column's words and their shorter form are pinned in `spec/vectors/widgets.json`; when to write them shorter is each platform's, by measuring. In これから's columns, each weekday sits over its date, in English three capitals (THU): the columns start from today rather than the week's start, so one letter could not tell Tuesday from Thursday. Today's date has no accent, as it is always the first, though a Sunday, Saturday or holiday keeps its color.
 
-**これから with someone.** Editing これから offers 一緒に見る人: nobody, or anyone in the person's groups. With someone picked, the columns become the group's 週ごと in small: the person's row and theirs, each with their face in a first column as wide as a day's, so the columns keep one rhythm. Their marks are drawn in the shape they chose, in the person's テーマ, as in the group's tables. Days off sit on the group tables' tiles in each cell, and a day both are off joins them down its column into one band. Two rows leave room for one line under a mark, so changed hours there are the first line alone. Names under the marks follow the app's 名前 setting for both rows: whoever puts someone on a widget knows their marks. A day they have not entered shows a dash.
+**これから with someone.** Editing これから offers 一緒に見る人: nobody, or anyone in the person's groups, each once as for 次の休み. With someone picked, the columns become the group's 週ごと in small: the person's row and theirs, each with their face in a first column as wide as a day's, so the columns keep one rhythm. Their marks are drawn in the shape they chose, in the person's テーマ, as in the group's tables. Days off sit on the group tables' tiles in each cell, and a day both are off joins them down its column into one band. Two rows leave room for one line under a mark, so changed hours there are the first line alone. Names under the marks follow the app's 名前 setting for both rows: whoever puts someone on a widget knows their marks. A day they have not entered shows a dash.
 
 On the iPhone lock screen: circular (today's mark, and 早出 or 残業 on such a day), circular 次の休み (休み, or 一緒 with someone, or みんな with a group, over the count), rectangular (five days from today, as これから's medium, each weekday over its mark, today drawn as the others since it is always the first: the days ahead for anyone, whether or not their hours ever change, a day of 早出 or 残業 showing on its mark's sides as in the calendar and no words; weekdays as これから's (金, or FRI); seven left each day a cramped 23pt; a day off as in the calendar's week, faint where 休みの見せ方 is 空白; no memo stroke, which at this size reads as a line through the weekday) and inline (today's mark and name, after the system's date over the clock, so it reads as the date's own: 10月3日(土) 日勤. No changed hours, which would run past the date's room; 早出 and 残業 show on the mark's sides).
 
@@ -73,6 +74,34 @@ On the iPhone lock screen: circular (today's mark, and 早出 or 残業 on such 
 - **Today's date** is the accent color and heavier where today sits among other days (the two weeks, the month), as in the calendar. Where a view is about today alone, or its first line is always today under today's date (シンプル, これから), today's date is drawn plain. Sunday and holiday dates are red, and Saturday dates are blue, following the person's settings. Where days stand in columns under their weekdays (the two weeks, the month, これから's five days), the weekdays carry Sunday's and Saturday's colors, and of the dates only a holiday's is red, as in the calendar.
 - **A day with a memo** has the calendar's stroke under its date (`calendar-note-marker`), on every day シンプル, これから and カレンダー show, under the date or the word standing for the day (明日 in シンプル, the weekday over each of これから's next three days). 次の休み's days, おやすみ included, are about being off, and go without it. A memo's words are not shown. It is the calendar's highlighter in the テーマ's tint on both platforms, as the shift marks keep the テーマ's colors on Android too (`derivation.noteMarkerSteps` in `spec/design-tokens.json`; on a day off's tile it is the tile's color a step deeper). In the system's one-color looks it is faint, as the day-off tiles are. Screen readers hear メモあり after the day.
 - **The system's one-color looks.** When the system draws the widget in one color (iPhone 色合い and クリア, and the lock screen), filled shapes become solid blocks. In those looks, day-off tiles are drawn faint instead (SwiftUI: `widgetRenderingMode` other than `fullColor`), and the poodle on a day off is drawn desaturated (`widgetAccentedRenderingMode(.desaturated)`), so its lines stay rather than it turning one white shape.
+- **Before anything is entered** (`nothingEntered`), each home screen widget, whatever its kind and size, says only where its days will come from, in the secondary color in the middle of its room: シフトを入れると / ここに出ます (Shifts you enter / show here). No app icon or name: the system shows the app's name under the widget, and Apple's guidance keeps a logo out of it. On the lock screen the rectangular one says the same, the inline one シフトを入れると出ます (Enter shifts to see them) after the date, and the round ones stay as on a day with nothing entered, a dash. Set to someone or a group, it is the same: the person's own days come first.
+
+## Opening the app
+
+A tap opens the app on what the widget shows, so it can be checked there, as a notification opens on what it says (`/design/flows`). A day opens the calendar on its week with that day picked: `pochical://day/{yyyy-mm-dd}`, in the app's own scheme as `pochical://invite/{code}` is. Set to someone or a group, a day opens that group's table at the day instead, where whose days make it count can be seen: `pochical://group/{groupId}/day/{yyyy-mm-dd}`; for a person, picked once whatever groups they share, the app picks the group: the first of the person's groups that has them, in the order the app lists groups.
+
+| Widget | Opens |
+| --- | --- |
+| シンプル | small: today. Medium: today or tomorrow, whichever half is tapped |
+| 次の休み | the day off it counts (today on a day off), alone in the calendar, set to someone or a group in the group's table; with none ahead, today |
+| これから | small: today. Medium: the day of the column tapped. Set to someone: in the group's table |
+| カレンダー | the day tapped; elsewhere, today |
+| Lock screen | today; the round 次の休み as 次の休み does |
+
+Before anything is entered, every widget opens the calendar on today, where days are entered. On the iPhone a small widget and the lock screen's take one link for the whole widget (WidgetKit's `widgetURL`), and a medium or large one a link for each day (`Link`). Android could set one for every element, but its widgets open the same places as the iPhone's, its small ones as a whole too, so the two behave alike.
+
+## In the widget gallery
+
+Each kind is one widget in the gallery, offering the sizes in the table above; on the iPhone the lock screen's are sizes of the same kinds. Its name and description are what the gallery lists (WidgetKit's `configurationDisplayName` and `description`; Android's `android:label` and `android:description`).
+
+| Kind | Sizes | Name | Description |
+| --- | --- | --- | --- |
+| シンプル | small, medium; lock screen round (today's mark) and inline | シンプル | 今日のシフトを大きく。中は明日も。 |
+| 次の休み | small; lock screen round | 次の休み | 次の休みまであと何日か。一緒に休む人も選べます。 |
+| これから | small, medium; lock screen rectangular | これから | 今日からの数日のシフト。一緒に見る人も選べます。 |
+| カレンダー | medium, large (Android 4×2, 4×4) | カレンダー | 2週間と、1か月のシフト。 |
+
+What a gallery shows of a kind before it is placed: on the iPhone the person's own entry once they have entered days (WidgetKit's snapshot), else the sample week /design/widgets shows on an ordinary day (ふつう), which is also the placeholder while an entry loads. Android's picker shows the sample, as a generated preview where the launcher supports it (Android 15), else as a picture of it.
 
 ## Colors
 

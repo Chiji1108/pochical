@@ -6,6 +6,7 @@ import {
   FrameRow,
   FrameSection,
   frameSections,
+  HomeFrame,
 } from "../components/design-frames";
 import { GapSheetPreview } from "../components/design-gap-sheet";
 import type { GapSheetProps } from "../components/design-gap-sheet";
@@ -25,11 +26,17 @@ import {
 } from "../components/design-providers";
 import { pageStyle } from "../components/design-theme";
 import { OffDisplayContext } from "../components/shift-mark";
-import { gapDaysIn, dateKey, initialDesignSchedule } from "../lib/design-days";
+import {
+  addDays,
+  gapDaysIn,
+  dateKey,
+  initialDesignSchedule,
+} from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
 import { isDayOff, presetPatterns } from "../lib/design-patterns";
 import type { PatternBook } from "../lib/design-patterns";
 import { defaultReminders, notificationText } from "../lib/design-reminders";
+import { designToday } from "../lib/design-today";
 import { parseDesignVariants } from "../lib/design-variants";
 import { pageMeta } from "../lib/site";
 
@@ -63,6 +70,20 @@ const reminderShift = {
   pattern: presetBook[reminderEntry.shift] ?? presetPatterns.day,
 };
 const chatAt = new Date(2026, 8, 24, 10, 20);
+
+// Where the sample's widgets lead: today, the day off 次の休み counts
+// (today on a day off), and a day further on, as one tapped in カレンダー
+// or これから's columns.
+const LOOKAHEAD = 62;
+const TAPPED_DAY_OFFSET = 2;
+const nextOffDay =
+  Array.from({ length: LOOKAHEAD }, (_, index) =>
+    addDays(designToday, index)
+  ).find((day) => {
+    const entry = initialDesignSchedule()[dateKey(day)];
+    return entry !== undefined && isDayOff(presetBook[entry.shift]);
+  }) ?? designToday;
+const tappedDay = addDays(designToday, TAPPED_DAY_OFFSET);
 const latest = sampleChats[chatKey("family", groupChat)]?.messages.at(-1);
 const chatLine = `${
   sampleOthers("family").find((member) => member.id === latest?.from)?.name ??
@@ -219,6 +240,37 @@ function FlowsPage() {
                 label="全体チャット"
                 note="いちばん新しいメッセージで開く。個人チャットならそのチャット"
                 tab="group"
+              />
+            </FrameRow>
+          </FrameSection>
+
+          <FrameSection
+            description="ウィジェットも、映っている日を確かめられる画面で開きます。何も入れていないうちは、今日のカレンダー。"
+            title="ウィジェットをタップしたとき"
+          >
+            <FrameRow>
+              <HomeFrame
+                label="ホーム画面"
+                note="これから・次の休み・カレンダー"
+              />
+              <CalendarFrame
+                detail={designToday}
+                label="カレンダー"
+                note="これから（小）は今日を選んだ週で開く。シンプルとロック画面も今日"
+              />
+            </FrameRow>
+            <FrameRow branch="次の休み">
+              <CalendarFrame
+                detail={nextOffDay}
+                label="カレンダー"
+                note="数えている休みの日を選んだ週で開く（今日が休みなら今日）。一緒に休む人やグループを選んでいれば、そのグループの表でその日"
+              />
+            </FrameRow>
+            <FrameRow branch="カレンダー・これから（中）の日">
+              <CalendarFrame
+                detail={tappedDay}
+                label="カレンダー"
+                note="押した日を選んだ週で開く。シンプル（中）は今日か明日"
               />
             </FrameRow>
           </FrameSection>

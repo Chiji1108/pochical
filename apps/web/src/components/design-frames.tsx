@@ -9,6 +9,7 @@ import type { OwnData } from "../lib/design-user-store";
 import { parseDesignVariants } from "../lib/design-variants";
 import { DesignApp } from "./design-app";
 import type { GroupStart } from "./design-group";
+import { HomeScreen } from "./design-home-screen";
 import type { SettingsPage } from "./design-settings";
 import type { Tab } from "./design-tab-bar";
 
@@ -187,6 +188,21 @@ export function Frame({
         {note && <small>{note}</small>}
       </figcaption>
     </figure>
+  );
+}
+
+// The phone's home screen with the sample person's widgets on it, as
+// /demo draws it, for where a widget's tap leads.
+export function HomeFrame({ label, note }: { label: string; note?: string }) {
+  const [store] = useState(() =>
+    createUserStore({ schedule: initialDesignSchedule(), ...samplePerson })
+  );
+  return (
+    <Frame label={label} note={note}>
+      <UserStoreContext value={store}>
+        <HomeScreen />
+      </UserStoreContext>
+    </Frame>
   );
 }
 

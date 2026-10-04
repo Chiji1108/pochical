@@ -8,6 +8,7 @@ import { dayCell, dayParts, todayMark } from "./design-day-cell";
 import { englishMonthOf } from "./design-month-name";
 import { useWeek } from "./design-week";
 import {
+  firstRunOr,
   DayMark,
   MONTH_NUMBER,
   MarkName,
@@ -64,7 +65,7 @@ const twoWeeks = {
 // This week and the next, seven across from the week start as the
 // calendar lays them. Today is its accent date among them, as in the
 // calendar; its time is for the other kinds.
-export function TwoWeeksMedium({ entry }: { entry: WidgetEntry }) {
+function TwoWeeksMediumView({ entry }: { entry: WidgetEntry }) {
   const { weekdayLetter } = useWeek();
   const roomy = useContext(WidgetSizeContext).height >= TWO_WEEKS_ROOMY;
   const named = useShiftNames();
@@ -247,7 +248,7 @@ const month = {
 const MONTH_ROOMY = 360;
 
 // The month with every day's mark, and today's time over it.
-export function CalendarLarge({ entry }: { entry: WidgetEntry }) {
+function CalendarLargeView({ entry }: { entry: WidgetEntry }) {
   const { english, weekdayLetter } = useWeek();
   const roomy = useContext(WidgetSizeContext).height >= MONTH_ROOMY;
   const named = useShiftNames();
@@ -315,3 +316,7 @@ function MonthDay({
     </li>
   );
 }
+
+export const TwoWeeksMedium = firstRunOr(TwoWeeksMediumView);
+
+export const CalendarLarge = firstRunOr(CalendarLargeView);

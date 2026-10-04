@@ -107,6 +107,9 @@ export type WidgetPair = {
 export type WidgetEntry = {
   // When the entry is for; a new one starts each day at midnight.
   date: Date;
+  // The person has entered no day at all yet, as on first opening the
+  // app: the widgets then say where their days will come from.
+  nothingEntered: boolean;
   today: WidgetDay;
   // 次の休み: whether today is off, and the next day off after it, as far
   // as days are entered. With a companion, only days both are off.
@@ -351,6 +354,9 @@ export function widgetEntry(
         tone,
       })),
     },
+    nothingEntered: !Object.values(schedule).some(
+      (day) => day?.shift !== undefined
+    ),
     offs: offsFrom(
       today,
       (inDays) => widgetDay(addDays(date, inDays), schedule, week, book),

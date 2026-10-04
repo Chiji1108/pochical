@@ -1,7 +1,8 @@
 import { createContext, useContext } from "react";
+import type { ComponentType } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import type { WidgetDay, WidgetOff } from "../lib/design-widgets";
+import type { WidgetDay, WidgetEntry, WidgetOff } from "../lib/design-widgets";
 import { dayName } from "../lib/text-limits";
 import { shortMonthOf } from "./design-month-name";
 import { srOnly } from "./design-ui";
@@ -309,6 +310,9 @@ export function useWords() {
       circle: { all: "Everyone", alone: "Off", together: "Together" },
       nextOff: "Next day off",
       nothingYet: "Nothing yet",
+      // Before any day is entered.
+      firstRun: "Shifts you enter\nshow here",
+      firstRunLine: "Enter shifts to see them",
       offAll: "Everyone off",
       offTogether: "Off together",
       rest: "Day off\ntoday",
@@ -339,6 +343,8 @@ export function useWords() {
     circle: { all: "みんな", alone: "休み", together: "一緒" },
     date: (date: Date) => `${monthDay(date)}(${weekday(date)})`,
     dayName: weekday,
+    firstRun: "シフトを入れると\nここに出ます",
+    firstRunLine: "シフトを入れると出ます",
     heading: (date: Date) =>
       `${date.getMonth() + MONTH_NUMBER}月 ${weekday(date)}曜日`,
     inDays: inDaysWords,
@@ -382,3 +388,29 @@ export const oneLine = css({
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
 });
+
+// Before the person has entered any day: where the widget's days will
+// come from, in the middle of its room. No app icon or name, which the
+// system already shows under the widget.
+const firstRun = css({
+  alignItems: "center",
+  color: "text.secondary",
+  display: "flex",
+  height: "100%",
+  justifyContent: "center",
+  textAlign: "center",
+  textStyle: "subheadline",
+  whiteSpace: "pre-line",
+});
+
+function FirstRun() {
+  const words = useWords();
+  return <div className={firstRun}>{words.firstRun}</div>;
+}
+
+// A widget's view, or FirstRun before anything is entered.
+export function firstRunOr(View: ComponentType<{ entry: WidgetEntry }>) {
+  return function FirstRunOr({ entry }: { entry: WidgetEntry }) {
+    return entry.nothingEntered ? <FirstRun /> : <View entry={entry} />;
+  };
+}

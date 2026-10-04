@@ -17,6 +17,7 @@ import { shortMonthOf } from "./design-month-name";
 import { srOnly } from "./design-ui";
 import { useWeek } from "./design-week";
 import {
+  firstRunOr,
   Change,
   MONTH_NUMBER,
   NAME_ROOM,
@@ -116,7 +117,7 @@ function UpcomingHead({ day }: { day: WidgetDay }) {
 
 // Today's line, and the next three days' marks under it; set to someone,
 // today and tomorrow, theirs under the person's.
-export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
+function UpcomingSmallView({ entry }: { entry: WidgetEntry }) {
   if (entry.pair) {
     return <DayColumns count={2} entry={entry} />;
   }
@@ -130,7 +131,7 @@ export function UpcomingSmall({ entry }: { entry: WidgetEntry }) {
 
 // Five days from today, a column each; set to someone, theirs under the
 // person's.
-export function UpcomingMedium({ entry }: { entry: WidgetEntry }) {
+function UpcomingMediumView({ entry }: { entry: WidgetEntry }) {
   return <DayColumns count={5} entry={entry} />;
 }
 
@@ -681,3 +682,7 @@ function NextDays({ days }: { days: WidgetDay[] }) {
 
 // Two weeks keep to themselves in the middle; where there is room, as on
 // Android's 4×2, their marks grow and the weeks stand further apart.
+
+export const UpcomingSmall = firstRunOr(UpcomingSmallView);
+
+export const UpcomingMedium = firstRunOr(UpcomingMediumView);

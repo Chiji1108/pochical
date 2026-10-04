@@ -3,6 +3,7 @@ import { css } from "styled-system/css";
 import type { WidgetDay, WidgetEntry } from "../lib/design-widgets";
 import { srOnly } from "./design-ui";
 import {
+  firstRunOr,
   DayMark,
   NAME_ROOM,
   NOTHING,
@@ -135,7 +136,7 @@ const rectangular = {
 // sides as in the calendar. The weekdays are これから's (金, or FRI). No
 // memo stroke: at this size on the lock screen it reads as a line
 // through the weekday.
-export function UpcomingRectangular({ entry }: { entry: WidgetEntry }) {
+function UpcomingRectangularView({ entry }: { entry: WidgetEntry }) {
   const words = useWords();
   const named = useShiftNames();
   return (
@@ -195,7 +196,11 @@ const inline = css({
 // say it; changed hours would run past the date's room, and 早出 and 残業
 // show on the mark's sides.
 export function TodayInline({ entry }: { entry: WidgetEntry }) {
+  const words = useWords();
   const day = entry.today;
+  if (entry.nothingEntered) {
+    return <div className={inline}>{words.firstRunLine}</div>;
+  }
   return (
     <div className={inline}>
       <DayMark day={day} size={18} />
@@ -204,3 +209,5 @@ export function TodayInline({ entry }: { entry: WidgetEntry }) {
     </div>
   );
 }
+
+export const UpcomingRectangular = firstRunOr(UpcomingRectangularView);
