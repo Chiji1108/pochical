@@ -243,9 +243,11 @@ export function InviteCard({
 // A photo in a chat, as the messaging apps show one: in its own shape
 // with no bubble, unless it answers a line, when the quote's bubble holds
 // it. A tap opens it large, with 保存; its reactions and menu (with 保存
-// too) open from a long press, as on a photo in LINE.
+// too) open from a long press, as on a photo in LINE. In the support
+// chat, which has neither, a tap only opens it large.
 export function PhotoLine({
   photo,
+  mine,
   label,
   quote,
   actions,
@@ -253,70 +255,81 @@ export function PhotoLine({
   upload,
 }: {
   photo: Photo;
+  mine: boolean;
   // Still going up, or not sent; neither takes reactions yet.
   upload?: Upload;
   // Whose photo it is, for a screen reader and the large view.
   label: string;
   quote?: ReactNode;
-  actions: LineActions;
-  onSave: () => void;
+  // Its reactions and menu, from a long press; none in the support chat.
+  actions?: LineActions;
+  onSave?: () => void;
 }) {
   const [viewing, setViewing] = useState(false);
   const size = photoSize(photo);
   const quoted = quote !== undefined;
+  const open = (
+    <button
+      aria-label={
+        actions
+          ? `${label}。押すと大きく表示、長押しでリアクションと返信`
+          : `${label}。押すと大きく表示`
+      }
+      className={chatStyle.photoButton}
+      onClick={() => {
+        setViewing(true);
+      }}
+      type="button"
+    >
+      <img
+        alt=""
+        className={chatStyle.photoImage({ quoted })}
+        draggable={false}
+        height={size.height}
+        src={photo.src}
+        width={size.width}
+      />
+      {upload === "sending" && (
+        <span className={chatStyle.uploading} role="status">
+          <svg
+            aria-hidden="true"
+            className={chatStyle.uploadRing}
+            viewBox="0 0 36 36"
+          >
+            <circle cx="18" cy="18" r="15" />
+            <circle
+              cx="18"
+              cy="18"
+              pathLength="100"
+              r="15"
+              style={{ animationDuration: `${uploadMilliseconds}ms` }}
+            />
+          </svg>
+          <span className={srOnly}>送信中</span>
+        </span>
+      )}
+    </button>
+  );
   return (
     <>
       <span
-        className={
-          quoted ? chatStyle.bubble({ mine: actions.mine }) : chatStyle.photo
-        }
+        className={quoted ? chatStyle.bubble({ mine }) : chatStyle.photo}
         data-part="bubble"
         style={{ width: size.width }}
       >
         {quote}
-        <MessageActions
-          {...actions}
-          disabled={upload !== undefined}
-          keyboardOpens={false}
-          onSave={onSave}
-        >
-          <button
-            aria-label={`${label}。押すと大きく表示、長押しでリアクションと返信`}
-            className={chatStyle.photoButton}
-            onClick={() => {
-              setViewing(true);
-            }}
-            type="button"
+        {actions ? (
+          <MessageActions
+            {...actions}
+            disabled={upload !== undefined}
+            keyboardOpens={false}
+            onSave={onSave}
           >
-            <img
-              alt=""
-              className={chatStyle.photoImage({ quoted })}
-              draggable={false}
-              height={size.height}
-              src={photo.src}
-              width={size.width}
-            />
-            {upload === "sending" && (
-              <span className={chatStyle.uploading} role="status">
-                <svg
-                  aria-hidden="true"
-                  className={chatStyle.uploadRing}
-                  viewBox="0 0 36 36"
-                >
-                  <circle cx="18" cy="18" r="15" />
-                  <circle
-                    cx="18"
-                    cy="18"
-                    pathLength="100"
-                    r="15"
-                    style={{ animationDuration: `${uploadMilliseconds}ms` }}
-                  />
-                </svg>
-                <span className={srOnly}>送信中</span>
-              </span>
-            )}
-          </button>
-        </MessageActions>
+            {open}
+          </MessageActions>
+        ) : (
+          open
+        )}
       </span>
       <PhotoViewer
         label={label}

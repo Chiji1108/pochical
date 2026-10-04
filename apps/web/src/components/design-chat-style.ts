@@ -264,6 +264,8 @@ export const chatStyle = {
     },
   }),
   composerToolRow: css({ display: "flex" }),
+  // A lone tool, as the support chat's photo button, which never folds.
+  composerToolsStill: css({ display: "flex", flexShrink: 0 }),
   composerTools: css({
     display: "flex",
     flexShrink: 0,

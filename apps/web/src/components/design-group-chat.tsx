@@ -18,7 +18,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode, UIEvent } from "react";
-import { css, cx } from "styled-system/css";
+import { cx } from "styled-system/css";
 
 import {
   decidePoll,
@@ -45,9 +45,10 @@ import { uploadMilliseconds } from "./design-chat-cards";
 import type { InviteLook, Upload } from "./design-chat-cards";
 import { Composer, useComposer } from "./design-chat-composer";
 import { MessageLine } from "./design-chat-line";
+import { ChatListRow, LineFrame, MutedMark } from "./design-chat-parts";
 import { PinBar } from "./design-chat-pins";
 import { DecidePollSheet } from "./design-chat-poll";
-import { chatAvatarSize, chatRow, chatStyle } from "./design-chat-style";
+import { chatAvatarSize, chatStyle } from "./design-chat-style";
 import { blockedLine, summaryOf, unsentLine } from "./design-chat-summary";
 import { EmojiPickerSheet } from "./design-emoji-picker";
 import type { Chat, Group, Member, Message } from "./design-group-data";
@@ -55,12 +56,12 @@ import { Avatar, badge, photoPicker } from "./design-group-parts";
 import { profileIn } from "./design-group-settings";
 import { DaySheet } from "./design-group-shifts-day-sheet";
 import { BackButton } from "./design-header";
-import { List, ListRow, listRow } from "./design-list";
+import { List, ListRow } from "./design-list";
 import { IconMenu, MenuItem, MenuSeparator } from "./design-menu";
 import { ReportSheet } from "./design-report";
 import { ConfirmDialog, Sheet } from "./design-sheet";
 import { ToastContext } from "./design-toast";
-import { IconButton, Screen, srOnly } from "./design-ui";
+import { IconButton, Screen } from "./design-ui";
 
 // A group's chats: the messages, replies and reactions, photos going
 // up, and shared days shown in a message.
@@ -137,16 +138,6 @@ function ChatTitle({
   );
 }
 
-// A chat whose notifications are off, after its name in the list and in
-// its own header, as chat apps mark a muted room.
-const mutedMark = css({ color: "text.tertiary", flexShrink: 0 });
-
-function MutedMark() {
-  return (
-    <BellOff aria-label="通知オフ" className={mutedMark} role="img" size={14} />
-  );
-}
-
 export function ChatRow({
   label,
   icon,
@@ -169,45 +160,19 @@ export function ChatRow({
     useUser((state) => state.blocked)
   );
   const last = chat.messages.at(-1);
-  // An unread line mentions you: an @ beside the count, as Telegram marks
-  // one, so it is found among chats whose notifications are off.
-  const mentioned = chat.messages
-    .slice(chat.messages.length - chat.unread)
-    .some((message) => mentionsOf(message.text ?? "").includes("me"));
   return (
-    <button
-      className={cx(listRow.twoLine, listRow.pressable)}
-      data-list-row=""
-      onClick={onOpen}
-      type="button"
-    >
-      {icon}
-      <span className={chatRow.text}>
-        <span className={chatRow.name}>
-          {label}
-          {muted && <MutedMark />}
-        </span>
-        <small className={chatRow.preview}>
-          {preview ?? "まだメッセージはありません"}
-        </small>
-      </span>
-      <span className={chatRow.meta}>
-        {last && <small className={chatRow.time}>{last.time}</small>}
-        {chat.unread > 0 && (
-          <span className={chatRow.badges}>
-            {mentioned && (
-              <span className={chatRow.mention}>
-                @<span className={srOnly}>自分へのメンションあり、</span>
-              </span>
-            )}
-            <span className={badge} role="status">
-              {chat.unread}
-              <span className={srOnly}>件の未読</span>
-            </span>
-          </span>
-        )}
-      </span>
-    </button>
+    <ChatListRow
+      icon={icon}
+      label={label}
+      mentioned={chat.messages
+        .slice(chat.messages.length - chat.unread)
+        .some((message) => mentionsOf(message.text ?? "").includes("me"))}
+      muted={muted}
+      onOpen={onOpen}
+      preview={preview ?? "まだメッセージはありません"}
+      time={last?.time}
+      unread={chat.unread}
+    />
   );
 }
 
@@ -632,22 +597,20 @@ export function ChatPage({
             </Fragment>
           ))}
           {typingMember && (
-            <li className={chatStyle.item()}>
-              <span className={chatStyle.message({ mine: false })}>
-                <span className={chatStyle.avatar}>
-                  <Avatar member={typingMember} size={chatAvatarSize} />
-                </span>
-                <span
-                  aria-label={`${typingMember.name}が入力中`}
-                  className={chatStyle.typing}
-                  role="status"
-                >
-                  <span />
-                  <span />
-                  <span />
-                </span>
+            <LineFrame
+              avatar={<Avatar member={typingMember} size={chatAvatarSize} />}
+              mine={false}
+            >
+              <span
+                aria-label={`${typingMember.name}が入力中`}
+                className={chatStyle.typing}
+                role="status"
+              >
+                <span />
+                <span />
+                <span />
               </span>
-            </li>
+            </LineFrame>
           )}
         </ol>
         {(awayFromLatest || unseen > 0) && (
@@ -676,16 +639,19 @@ export function ChatPage({
       <Composer
         composer={composer}
         editingMessage={byId(editing)}
-        mentionName={mentionName}
-        nameOf={nameOf}
         onSend={send}
         onShareDays={() => {
           setSharing(true);
         }}
-        onStopReplying={() => {
-          setReplyTo(undefined);
-        }}
-        replying={replying}
+        reply={
+          replying && {
+            message: replying,
+            onStop: () => {
+              setReplyTo(undefined);
+            },
+            writer: nameOf(replying.from),
+          }
+        }
       />
       <EmojiPickerSheet
         onOpenChange={(open) => {

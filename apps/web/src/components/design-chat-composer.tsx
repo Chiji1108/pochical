@@ -32,24 +32,35 @@ import { IconButton } from "./design-ui";
 
 type Mention = { id: string; name: string };
 
+// A chat with no one to mention, as the support chat.
+const noOne: Member[] = [];
+
+const nameless = () => "";
+
 // What is being written: the words, the members picked from the @ list,
 // days brought from the shift table, photos chosen, the page of its first
 // link, and your message whose words are being changed instead.
 export function useComposer({
   attach,
-  members,
-  mentionName,
+  members = noOne,
+  mentionName = nameless,
+  linkPreviews = true,
 }: {
   attach?: Date[];
-  // Who an @ lists: the others in the group chat, none in a one-to-one.
-  members: Member[];
-  mentionName: (id: string) => string;
+  // Who an @ lists: the others in the group chat, none in a one-to-one
+  // or the support chat.
+  members?: Member[];
+  // A mention's name, for words put back to be changed.
+  mentionName?: (id: string) => string;
+  // Whether a link's page is read as it is written; the support chat
+  // sends its words as they are.
+  linkPreviews?: boolean;
 }) {
   const [draft, setDraft] = useState("");
   // Members picked from the @ list, made mentions as the message is sent.
   const [picked, setPicked] = useState<Mention[]>([]);
   const [attached, setAttached] = useState(attach);
-  const linkPreview = useLinkPreview(draft);
+  const linkPreview = useLinkPreview(linkPreviews ? draft : "");
   const chosen = useChosenPhotos();
   const [editing, setEditing] = useState<string>();
   const formRef = useRef<HTMLFormElement>(null);
@@ -105,6 +116,7 @@ export function useComposer({
     handleChoosePhotos: chosen.handleChoose,
     handleRemovePhoto: chosen.handleRemove,
     linkPreview,
+    mentionName,
     mentionable,
     photos: chosen.photos,
     pickMention,
@@ -125,22 +137,20 @@ type ComposerState = ReturnType<typeof useComposer>;
 export function Composer({
   composer,
   editingMessage,
-  replying,
-  onStopReplying,
-  nameOf,
-  mentionName,
+  reply,
   onSend,
   onShareDays,
 }: {
   composer: ComposerState;
-  // Your message whose words are being changed, or the one being answered.
+  // Your message whose words are being changed.
   editingMessage?: Message;
-  replying?: Message;
-  onStopReplying: () => void;
-  nameOf: (id: string) => string;
-  mentionName: (id: string) => string;
+  // The line being answered, by whom, and stopping.
+  reply?: { message: Message; writer: string; onStop: () => void };
   onSend: () => void;
-  onShareDays: () => void;
+  // Opens the days to share. Without it, as in the support chat, photos
+  // are the one tool, and it stays in sight while writing: folding one
+  // button into a › would give the field no room.
+  onShareDays?: () => void;
 }) {
   const {
     attached,
@@ -149,6 +159,7 @@ export function Composer({
     formRef,
     linkPreview,
     mentionable,
+    mentionName,
     photos,
   } = composer;
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -163,6 +174,18 @@ export function Composer({
   if (editing !== undefined) {
     toolsWidth = 0;
   }
+  const photoButton = (
+    <button
+      aria-label="写真を送る"
+      className={chatStyle.composerButton({ tool: true })}
+      onClick={() => {
+        photoInputRef.current?.click();
+      }}
+      type="button"
+    >
+      <ImageIcon aria-hidden="true" size={20} />
+    </button>
+  );
   return (
     <>
       {editingMessage && (
@@ -184,27 +207,27 @@ export function Composer({
           </IconButton>
         </div>
       )}
-      {replying && (
+      {reply && (
         <div className={chatStyle.replying}>
           <span className={chatStyle.quote}>
-            <span className={chatStyle.quoteName}>
-              {nameOf(replying.from)}に返信
-            </span>
+            <span className={chatStyle.quoteName}>{reply.writer}に返信</span>
             <span className={chatStyle.quoteText}>
-              {summaryOf(replying, mentionName)}
+              {summaryOf(reply.message, mentionName)}
             </span>
           </span>
-          {replying.photo && (
+          {reply.message.photo && (
             <img
               alt=""
               className={chatStyle.quoteThumb}
-              src={replying.photo.src}
+              src={reply.message.photo.src}
             />
           )}
           <IconButton
             glass={false}
             label="返信をやめる"
-            onClick={onStopReplying}
+            onClick={() => {
+              reply.onStop();
+            }}
           >
             <X aria-hidden="true" size={16} />
           </IconButton>
@@ -255,7 +278,7 @@ export function Composer({
       )}
       <PhotoTray
         below={
-          replying !== undefined ||
+          reply !== undefined ||
           attached !== undefined ||
           linkPreview.shown !== undefined
         }
@@ -288,7 +311,7 @@ export function Composer({
         className={chatStyle.composer({
           replying:
             editing !== undefined ||
-            replying !== undefined ||
+            reply !== undefined ||
             attached !== undefined ||
             linkPreview.shown !== undefined ||
             photos.length > 0 ||
@@ -304,70 +327,65 @@ export function Composer({
           onChoose={composer.handleChoosePhotos}
           ref={photoInputRef}
         />
-        {/* The tools narrow into a › and widen back, the field following
-          them, while the icons and the › fade one into the other. */}
-        <motion.span
-          animate={{ width: toolsWidth }}
-          className={chatStyle.composerTools}
-          initial={false}
-          transition={toolFold}
-        >
-          <AnimatePresence initial={false} mode="popLayout">
-            {editing === undefined && toolsFolded && (
-              <motion.button
-                animate={{ opacity: 1, scale: 1 }}
-                aria-label="写真と日にちのボタンを表示"
-                className={chatStyle.composerButton({ tool: true })}
-                exit={{ opacity: 0, scale: 0.6 }}
-                initial={{ opacity: 0, scale: 0.6 }}
-                key="more"
-                onClick={() => {
-                  setToolsOpen(true);
-                }}
-                // The field keeps focus (and the keyboard stays up), so
-                // the tools do not open under the finger as it leaves.
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                }}
-                transition={toolFold}
-                type="button"
-              >
-                <ChevronRight aria-hidden="true" size={22} />
-              </motion.button>
-            )}
-            {editing === undefined && !toolsFolded && (
-              <motion.span
-                animate={{ opacity: 1, x: 0 }}
-                className={chatStyle.composerToolRow}
-                exit={{ opacity: 0, x: -toolWidth }}
-                initial={{ opacity: 0, x: -toolWidth }}
-                key="tools"
-                transition={toolFold}
-              >
-                <button
-                  aria-label="写真を送る"
+        {onShareDays ? (
+          // The tools narrow into a › and widen back, the field following
+          // them, while the icons and the › fade one into the other.
+          <motion.span
+            animate={{ width: toolsWidth }}
+            className={chatStyle.composerTools}
+            initial={false}
+            transition={toolFold}
+          >
+            <AnimatePresence initial={false} mode="popLayout">
+              {editing === undefined && toolsFolded && (
+                <motion.button
+                  animate={{ opacity: 1, scale: 1 }}
+                  aria-label="写真と日にちのボタンを表示"
                   className={chatStyle.composerButton({ tool: true })}
+                  exit={{ opacity: 0, scale: 0.6 }}
+                  initial={{ opacity: 0, scale: 0.6 }}
+                  key="more"
                   onClick={() => {
-                    photoInputRef.current?.click();
+                    setToolsOpen(true);
                   }}
+                  // The field keeps focus (and the keyboard stays up), so
+                  // the tools do not open under the finger as it leaves.
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                  }}
+                  transition={toolFold}
                   type="button"
                 >
-                  <ImageIcon aria-hidden="true" size={20} />
-                </button>
-                <button
-                  aria-label="日にちを共有"
-                  className={chatStyle.composerButton({ tool: true })}
-                  onClick={() => {
-                    onShareDays();
-                  }}
-                  type="button"
+                  <ChevronRight aria-hidden="true" size={22} />
+                </motion.button>
+              )}
+              {editing === undefined && !toolsFolded && (
+                <motion.span
+                  animate={{ opacity: 1, x: 0 }}
+                  className={chatStyle.composerToolRow}
+                  exit={{ opacity: 0, x: -toolWidth }}
+                  initial={{ opacity: 0, x: -toolWidth }}
+                  key="tools"
+                  transition={toolFold}
                 >
-                  <CalendarPlus aria-hidden="true" size={20} />
-                </button>
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </motion.span>
+                  {photoButton}
+                  <button
+                    aria-label="日にちを共有"
+                    className={chatStyle.composerButton({ tool: true })}
+                    onClick={() => {
+                      onShareDays();
+                    }}
+                    type="button"
+                  >
+                    <CalendarPlus aria-hidden="true" size={20} />
+                  </button>
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.span>
+        ) : (
+          <span className={chatStyle.composerToolsStill}>{photoButton}</span>
+        )}
         <LimitedTextArea
           aria-label="メッセージ"
           className={chatStyle.composerInput}
