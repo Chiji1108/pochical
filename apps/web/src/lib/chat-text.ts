@@ -1,4 +1,7 @@
+import { chatRules } from "@pochical/design/chat";
 import { inviteRules } from "@pochical/design/invite";
+
+import { isEmoji } from "./text-limits";
 
 // A chat message's words as spec/chat.md has them: its links, and
 // the members it mentions.
@@ -101,6 +104,19 @@ export function withMentions(
     sent = sent.replace(written, `<@${id}>`);
   }
   return sent;
+}
+
+const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
+
+// How many emoji a message of nothing but 1 to chatRules.largeEmojiMax
+// emoji has, shown large without a bubble; 0 for any other, so a space
+// or a line between them keeps the bubble.
+export function largeEmojiCount(text: string) {
+  const characters = [...graphemes.segment(text)];
+  const large =
+    characters.length <= chatRules.largeEmojiMax &&
+    characters.every(({ segment }) => isEmoji(segment));
+  return large ? characters.length : 0;
 }
 
 // The link a message's preview is for: its first.

@@ -7,6 +7,8 @@ object Chat {
   const val dayCardColumns = 6
   const val dayCardRows = 7
   const val foldLines = 10
+  const val largeEmojiMax = 3
+  const val largeEmojiSize = 48
   const val linkPreviewAspect = 1.91f
   const val linkPreviewSettleMs = 400
   const val maxPins = 5

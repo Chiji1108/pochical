@@ -15,6 +15,7 @@ import { cx } from "styled-system/css";
 import {
   firstLink,
   inviteCodeOf,
+  largeEmojiCount,
   plainText,
   textParts,
 } from "../lib/chat-text";
@@ -37,7 +38,7 @@ import {
 import type { InviteLook, Upload } from "./design-chat-cards";
 import { ChatItem, LineFrame } from "./design-chat-parts";
 import { PollCard } from "./design-chat-poll";
-import { chatAvatarSize, chatStyle } from "./design-chat-style";
+import { chatAvatarSize, chatStyle, largeEmojiSize } from "./design-chat-style";
 import { blockedLine, summaryOf, unsentLine } from "./design-chat-summary";
 import type { Group, Member, Message } from "./design-group-data";
 import { Avatar, memberButton } from "./design-group-parts";
@@ -149,6 +150,10 @@ export function MessageLine({
   // of a page.
   const firstUrl = message.text ? firstLink(message.text) : undefined;
   const inviteCode = firstUrl ? inviteCodeOf(firstUrl) : undefined;
+  // Nothing but a few emoji: drawn large, without a bubble. A reply keeps
+  // its bubble, as the line it answers sits inside one.
+  const largeEmoji =
+    !quoted && message.text !== undefined && largeEmojiCount(message.text) > 0;
   const quote = quoted && (
     <BubbleQuote
       name={writerOf(quoted.from)?.name ?? ""}
@@ -267,7 +272,21 @@ export function MessageLine({
             writerOf={writerOf}
           />
         )}
-        {!message.photo && !message.days && !message.poll && (
+        {largeEmoji && (
+          <span className={chatStyle.largeEmoji} data-part="bubble">
+            <MessageActions {...actions}>
+              <button
+                aria-label={`${member?.name ?? ""}のメッセージ：${message.text}。長押しでリアクションと返信`}
+                className={chatStyle.largeEmojiText}
+                style={largeEmojiSize}
+                type="button"
+              >
+                {message.text}
+              </button>
+            </MessageActions>
+          </span>
+        )}
+        {!message.photo && !message.days && !message.poll && !largeEmoji && (
           // Like the app: the quoted line sits inside the bubble,
           // above a thin rule, and jumps to the original.
           <span

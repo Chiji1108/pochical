@@ -11,6 +11,12 @@ export const chatRules = {
   dayCardRows: 7,
   // A message's words past this many lines end in … and 続きを読む.
   foldLines: 10,
+  // A message of nothing but 1 to this many emoji shows them large,
+  // without a bubble, as iMessage does.
+  largeEmojiMax: 3,
+  // The size such emoji are drawn at, in points (sp on Android) at the
+  // reader's default text size, growing with it as body does.
+  largeEmojiSize: 48,
   // The width over height a link preview's picture is cropped to, the
   // size pages give their og:image.
   linkPreviewAspect: 1.91,

@@ -1,3 +1,5 @@
+import { chatRules } from "@pochical/design/chat";
+import type { CSSProperties } from "react";
 import { css, cva } from "styled-system/css";
 
 // The look of the chats: the list of them in a group, and a chat's own
@@ -49,6 +51,13 @@ export const chatRow = {
     width: "18px",
   }),
 };
+
+// The size a message of nothing but a few emoji is drawn at, for
+// chatStyle.largeEmojiText: Panda reads styles before the code runs, so
+// it reaches them as a variable.
+export const largeEmojiSize = {
+  "--large-emoji-size": `${chatRules.largeEmojiSize}px`,
+} as CSSProperties;
 
 // A chat as the messaging apps draw one: others' bubbles on the left with
 // their avatar and name at the start of a run, yours on the right in the
@@ -161,6 +170,20 @@ export const chatStyle = {
     textAlign: "left",
     textStyle: "subheadline",
     whiteSpace: "pre-wrap",
+  }),
+  // A message of nothing but a few emoji (chatRules.largeEmojiMax), large
+  // and without a bubble, as iMessage draws them. The size reaches the
+  // style as a variable, as the fold's lines do. Rounded for the ring a
+  // jump gives it.
+  largeEmoji: css({ borderRadius: "lg", display: "flex", minWidth: 0 }),
+  largeEmojiText: css({
+    bg: "transparent",
+    border: 0,
+    color: "inherit",
+    fontSize: "var(--large-emoji-size)",
+    lineHeight: 1.15,
+    padding: 0,
+    whiteSpace: "nowrap",
   }),
   // A link in a message, underlined as the chat apps mark one; in
   // others' bubbles in the accent, in yours in the bubble's own color.

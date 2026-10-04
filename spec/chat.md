@@ -21,6 +21,13 @@ A long press on a message (the system's context-menu press: `.contextMenu` on iO
 - A tap on a link opens it in the system's browser sheet over the chat (`SFSafariViewController`, Custom Tabs).
 - A long press on a link (or a right click) opens the link's own small menu under it, リンクを開く and リンクをコピー, as iOS offers on a link in text; the message's menu stays shorter without a link item.
 
+## Large emoji
+
+A message of nothing but 1 to `chatRules.largeEmojiMax` emoji shows them large and without a bubble, as iMessage does: drawn at `chatRules.largeEmojiSize` (points on iOS, sp on Android) at the reader's default text size, growing with it as body does. Each one is an emoji as a mark's is (spec/text-limits.md, `isEmoji`); a space, a line break or any other character among them keeps the message an ordinary bubble, and so does a reply, as the line it answers sits inside its bubble. `spec/vectors/chat-text.json` (largeEmoji) pins which messages count.
+
+- Only how the message is drawn changes: it is sent and kept as words like any other, so an edit that leaves only emoji, or adds words to them, redraws it at once. The chat list's last line, a quote of it and its notification show it at the usual size.
+- The time sits beside it, its reactions under it and its long press opens its reactions and menu, as on a bubble; a jump to it rings the emoji.
+
 ## Previews
 
 A message carries at most one preview, for its first link. It is made while the message is written and sent with it, so everyone sees the same preview and receivers never fetch the page.

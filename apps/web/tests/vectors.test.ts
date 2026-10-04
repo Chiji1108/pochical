@@ -40,6 +40,7 @@ import {
 } from "../src/lib/chat-messages";
 import {
   inviteCodeOf,
+  largeEmojiCount,
   mentionsOf,
   plainText,
   siteOf,
@@ -85,7 +86,12 @@ import type { LocalEvent } from "../src/lib/local-edits";
 import { reconnectWaitMost } from "../src/lib/reconnect";
 import { mayAskForReview, openedOn } from "../src/lib/review";
 import type { ReviewHistory } from "../src/lib/review";
-import { characterCount, dayName, limitText } from "../src/lib/text-limits";
+import {
+  characterCount,
+  dayName,
+  isEmoji,
+  limitText,
+} from "../src/lib/text-limits";
 
 const dayOf = (key: string) => {
   const [year = 0, month = 1, day = 1] = key.split("-").map(Number);
@@ -194,6 +200,11 @@ describe("spec/vectors/text.json", () => {
       expect(dayName(name, length)).toBe(expected);
     }
   });
+  for (const { name, text: written, expected } of text.isEmoji) {
+    test(`isEmoji: ${name}`, () => {
+      expect(isEmoji(written)).toBe(expected);
+    });
+  }
 });
 
 describe("spec/vectors/chat-text.json", () => {
@@ -234,6 +245,11 @@ describe("spec/vectors/chat-text.json", () => {
       expect(siteOf(url)).toBe(expected);
     }
   });
+  for (const { name, text: message, expected } of chatText.largeEmoji) {
+    test(`largeEmoji: ${name}`, () => {
+      expect(largeEmojiCount(message)).toBe(expected);
+    });
+  }
 });
 
 describe("spec/vectors/review.json", () => {
