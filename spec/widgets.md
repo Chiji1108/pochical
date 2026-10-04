@@ -1,6 +1,6 @@
 # Widgets
 
-What the home and lock screen widgets show, and how it is worked out. Both native apps build one entry per day from the person's own shifts and settings (WidgetKit's `TimelineEntry`, Glance's state), and the widget views draw only from that entry. The web prototype's `widgetEntry` in `apps/web/src/lib/design-widgets.ts` follows this spec, and `/design/widgets` shows the views.
+What the home and lock screen widgets show, and how it is worked out. Both native apps build one entry per day from the person's own shifts and settings (WidgetKit's `TimelineEntry`, Glance's state), and the widget views draw only from that entry. The web prototype's `widgetEntry` in `apps/web/src/lib/design-widgets.ts` follows this spec, and `/design/widgets` shows the views. A day's `time` and `change`, and what 次の休み counts (`offs`), are pinned by `spec/vectors/widgets.json`.
 
 ## When an entry is made
 
@@ -25,7 +25,7 @@ Each day in an entry has:
 | `early`, `late` | 早出 and 残業: the day starts before or ends after the pattern's standard time, counted as the calendar does. |
 | `off` | The day's pattern is a day off (休み, 有休). |
 | `color` | The pattern's color, whose tint is a day off's tile. |
-| `note` | The day's note, if any. |
+| `noted` | Whether the day has a memo. The entry carries neither a memo's words nor the day's 一緒に働く人, which the widgets never show (Words only for what changed). |
 
 Days with nothing entered have no `shift`, `name` or `time`. They are shown as nothing entered (予定なし), never as a day off.
 

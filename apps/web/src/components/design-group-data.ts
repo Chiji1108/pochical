@@ -3,6 +3,7 @@ import { dateKey, timeChangeOf, timeRange } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
 import type { Pattern } from "../lib/design-patterns";
 import type { Photo } from "../lib/design-sample-photos";
+import { allOff, mayAllBeOff } from "../lib/together";
 import type { Look, LookSettings, MarkIcon } from "./shift-mark";
 
 // The group screens' data: members, groups and chats as the prototype
@@ -106,20 +107,16 @@ export function patternOn(member: Member, date: Date) {
   return member.patterns.find((item) => item.id === id);
 }
 
+// Whether each member is off on the day, undefined where they have not
+// entered it.
+function offsOn(members: Member[], date: Date) {
+  return members.map((member) => patternOn(member, date)?.off);
+}
+
 // Everyone has a pattern that counts as a day off. An unfilled day does
 // not count, since nobody knows yet.
 export function everyoneOff(members: Member[], date: Date) {
-  return members.every((member) => patternOn(member, date)?.off === true);
-}
-
-// A day everyone may yet be off: no one who has entered it works, but
-// someone has not entered it.
-function mayAllBeOff(members: Member[], date: Date) {
-  const items = members.map((member) => patternOn(member, date));
-  return (
-    items.includes(undefined) &&
-    items.every((item) => item === undefined || item.off)
-  );
+  return allOff(offsOn(members, date));
 }
 
 // A month's days everyone is off, and whether days not entered yet may
@@ -129,7 +126,7 @@ export type Together = { days: Date[]; unsure: boolean };
 export function togetherIn(members: Member[], dates: Date[]): Together {
   return {
     days: dates.filter((date) => everyoneOff(members, date)),
-    unsure: dates.some((date) => mayAllBeOff(members, date)),
+    unsure: dates.some((date) => mayAllBeOff(offsOn(members, date))),
   };
 }
 

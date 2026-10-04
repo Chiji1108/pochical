@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
-import chatText from "../../../spec/vectors/chat-text.json";
+import { widgetRules } from "@pochical/design/widgets";
+
 // The cases every platform checks its own code against (spec/vectors);
 // the native apps' tests read the same files.
+import chatText from "../../../spec/vectors/chat-text.json";
 import chatMessages from "../../../spec/vectors/chat.json";
 import entering from "../../../spec/vectors/entering.json";
 import hlc from "../../../spec/vectors/hlc.json";
@@ -16,6 +18,7 @@ import text from "../../../spec/vectors/text.json";
 import timeChange from "../../../spec/vectors/time-change.json";
 import together from "../../../spec/vectors/together.json";
 import unread from "../../../spec/vectors/unread.json";
+import widgets from "../../../spec/vectors/widgets.json";
 import {
   chatKey,
   groupsUnread,
@@ -26,6 +29,7 @@ import type {
   Member,
   Message,
 } from "../src/components/design-group-data";
+import { defaultWeekSettings } from "../src/components/design-week";
 import {
   decidePoll,
   editMessage,
@@ -45,6 +49,7 @@ import {
 import {
   addDays,
   dateKey,
+  dayMilliseconds,
   daysMovedOn,
   daysWithout,
   defaultHolidaysOff,
@@ -64,6 +69,12 @@ import {
 import type { OwnDays, Schedule } from "../src/lib/design-days";
 import { patternsForJob } from "../src/lib/design-patterns";
 import type { Pattern, PatternBook } from "../src/lib/design-patterns";
+import { widgetEntry } from "../src/lib/design-widgets";
+import type {
+  WidgetCompanion,
+  WidgetPerson,
+  WidgetPersonDay,
+} from "../src/lib/design-widgets";
 import { clockOffset, receive, tick } from "../src/lib/hlc";
 import { noValue, shownValue, takeEvent } from "../src/lib/local-edits";
 import type { LocalEvent } from "../src/lib/local-edits";
@@ -500,6 +511,88 @@ describe("spec/vectors/chat.json", () => {
       );
       const first = firstUnreadOf(messages, count);
       expect(first === undefined ? null : Number(first)).toBe(expected);
+    });
+  }
+});
+
+describe("spec/vectors/widgets.json", () => {
+  // A Monday with no holiday near it.
+  const today = dayOf("2026-10-05");
+  for (const { name, expected, ...day } of widgets.day) {
+    test(name, () => {
+      const time = day.time as [string, string] | null;
+      const entry = widgetEntry(
+        {
+          [dateKey(today)]: {
+            end: "end" in day ? day.end : undefined,
+            shift: "shift",
+            start: "start" in day ? day.start : undefined,
+          },
+        },
+        defaultWeekSettings,
+        today,
+        { shift: patternOf(time ? { id: "shift", time } : { id: "shift" }) }
+      );
+      expect({
+        change: entry.today.change ?? null,
+        time: entry.today.time ?? null,
+      }).toEqual(expected);
+    });
+  }
+
+  type Days = { days: Record<string, string | null>; rest?: string };
+  // What one has on a day, by how many days from today it is.
+  const shiftOn = ({ days, rest }: Days, inDays: number) =>
+    String(inDays) in days ? days[String(inDays)] : rest;
+  const book: PatternBook = {
+    off: patternOf({ countsAsOff: true, id: "off" }),
+    work: patternOf({ id: "work" }),
+  };
+  const daysFrom = (date: Date) =>
+    Math.round((date.getTime() - today.getTime()) / dayMilliseconds);
+  for (const { name, expected, ...offs } of widgets.offs) {
+    test(name, () => {
+      const mine = offs.me as Days;
+      const schedule: Schedule = {};
+      for (
+        let inDays = 0;
+        inDays <= widgetRules.offLookaheadDays + 1;
+        inDays += 1
+      ) {
+        const shift = shiftOn(mine, inDays);
+        if (shift) {
+          schedule[dateKey(addDays(today, inDays))] = { shift };
+        }
+      }
+      const people = offs.with.map((one): WidgetPerson => ({
+        dayOn: (date) => {
+          const shift = shiftOn(one as Days, daysFrom(date));
+          return shift
+            ? ({ off: shift === "off" } as WidgetPersonDay)
+            : undefined;
+        },
+        name: one.name,
+      }));
+      const [only] = people;
+      let companion: WidgetCompanion | undefined;
+      if (people.length > 1) {
+        companion = {
+          kind: "group",
+          mark: { emoji: "🍉", kind: "emoji" },
+          name: "group",
+          people,
+        };
+      } else if (only) {
+        companion = { kind: "person", person: only };
+      }
+      const entry = widgetEntry(schedule, defaultWeekSettings, today, book, {
+        companion,
+      });
+      expect({
+        next: entry.offs.next?.inDays ?? null,
+        none: entry.offs.none ?? null,
+        today: entry.offs.today,
+      }).toEqual(expected);
     });
   }
 });
