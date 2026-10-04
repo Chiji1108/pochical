@@ -165,10 +165,10 @@ export const presets = [
     tint: { chroma: 0.032, hue: 125 },
     vividness: 0.6,
   },
-  // すみれ more purple: turned from blue-violet toward grape.
+  // すみれ more purple: a pale grayed grape, #bba1c6.
   {
-    accent: { chroma: 0.105, hue: 315, lightness: 0.45 },
-    grays: { hue: 315, strength: 0.8 },
+    accent: { chroma: 0.06, hue: 316, lightness: 0.744 },
+    grays: { hue: 316, strength: 0.8 },
     id: "budou",
     name: "ぶどう",
   },

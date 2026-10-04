@@ -2644,12 +2644,12 @@
         "id": "budou",
         "input": {
           "accent": {
-            "chroma": 0.105,
-            "hue": 315,
-            "lightness": 0.45
+            "chroma": 0.06,
+            "hue": 316,
+            "lightness": 0.744
           },
           "grays": {
-            "hue": 315,
+            "hue": 316,
             "strength": 0.8
           },
           "id": "budou",
@@ -2660,8 +2660,8 @@
           "light": {
             "marks": [
               {
-                "color": "#6b417d",
-                "tint": "#eee1f4"
+                "color": "#bba1c6",
+                "tint": "#ebe3ee"
               },
               {
                 "color": "#8a6d1a",
@@ -2714,16 +2714,16 @@
               "background-elevated": "#ffffff",
               "fill-quaternary": "#f8f6f8",
               "fill-tertiary": "#f2eff3",
-              "fill-secondary": "#e9e6eb",
+              "fill-secondary": "#e9e5ea",
               "fill-primary": "#dad5dc",
               "text-primary": "#333134",
               "text-secondary": "#5f5862",
-              "text-tertiary": "#7a747d",
+              "text-tertiary": "#7a747c",
               "text-quaternary": "#918b93",
               "text-disabled": "#bfbac1",
               "border-default": "#e4e0e6",
               "separator": "#efecf0",
-              "border-strong": "#c3bbc8",
+              "border-strong": "#c4bbc7",
               "calendar-holiday": "#a96561",
               "calendar-saturday": "#6682a0",
               "danger-default": "#b0564f",
@@ -2745,21 +2745,21 @@
               "media-dim": "#00000052",
               "media-shade": "#00000099",
               "media-warning": "#ffd60a",
-              "accent-default": "#6b417d",
-              "accent-fill": "#6b417d",
-              "accent-on-fill": "#ffffff",
-              "accent-focus": "#89639b",
-              "accent-border": "#bea2cb",
-              "accent-container": "#f5eef8",
-              "calendar-off-tint": "#eee1f4",
-              "calendar-note-marker": "#e5d0ef"
+              "accent-default": "#bba1c6",
+              "accent-fill": "#bba1c6",
+              "accent-on-fill": "#2b232e",
+              "accent-focus": "#ddc5e7",
+              "accent-border": "#b7a7be",
+              "accent-container": "#f3eff5",
+              "calendar-off-tint": "#ebe3ee",
+              "calendar-note-marker": "#e1d4e5"
             }
           },
           "dark": {
             "marks": [
               {
-                "color": "#d0a4e4",
-                "tint": "#4e3e56"
+                "color": "#c6add0",
+                "tint": "#4b414f"
               },
               {
                 "color": "#d6bb77",
@@ -2816,7 +2816,7 @@
               "fill-primary": "#5c595e",
               "text-primary": "#dfdde0",
               "text-secondary": "#c3c0c5",
-              "text-tertiary": "#ada9b0",
+              "text-tertiary": "#aea9af",
               "text-quaternary": "#9b969d",
               "text-disabled": "#6a676c",
               "border-default": "#514e53",
@@ -2843,14 +2843,14 @@
               "media-dim": "#00000052",
               "media-shade": "#00000099",
               "media-warning": "#ffd60a",
-              "accent-default": "#d0a4e4",
-              "accent-fill": "#d0a4e4",
-              "accent-on-fill": "#2e2034",
-              "accent-focus": "#b28fc3",
-              "accent-border": "#83698e",
-              "accent-container": "#3f3544",
-              "calendar-off-tint": "#4e3e56",
-              "calendar-note-marker": "#594961"
+              "accent-default": "#c6add0",
+              "accent-fill": "#c6add0",
+              "accent-on-fill": "#2b232e",
+              "accent-focus": "#aa96b3",
+              "accent-border": "#7d6e83",
+              "accent-container": "#3d373f",
+              "calendar-off-tint": "#4b414f",
+              "calendar-note-marker": "#564b5a"
             }
           }
         }
