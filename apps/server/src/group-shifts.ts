@@ -20,13 +20,12 @@ import {
   memberPatterns,
   memberRepeatOrders,
 } from "./group-do-schema";
-import { compareClocks } from "./hlc";
 import {
   clockColumns,
   clockOfHlc,
-  clockOfRow,
   encodeOrders,
   hlcOf,
+  isNewer,
   ordersOfRow,
 } from "./user-do-values";
 
@@ -100,7 +99,7 @@ export const takeMemberDay = (
     )
     .get();
   const clock = clockOfHlc(day.hlc);
-  if (stored && compareClocks(clock, clockOfRow(stored)) <= 0) {
+  if (!isNewer(clock, stored)) {
     return undefined;
   }
   const row: DayRow = {
@@ -139,7 +138,7 @@ export const takeMemberPattern = (
     )
     .get();
   const clock = clockOfHlc(value.hlc);
-  if (stored && compareClocks(clock, clockOfRow(stored)) <= 0) {
+  if (!isNewer(clock, stored)) {
     return undefined;
   }
   const row: PatternRow = {
@@ -184,7 +183,7 @@ export const takeMemberRepeatOrders = (
     .where(eq(memberRepeatOrders.userId, userId))
     .get();
   const clock = clockOfHlc(orders.hlc);
-  if (stored && compareClocks(clock, clockOfRow(stored)) <= 0) {
+  if (!isNewer(clock, stored)) {
     return undefined;
   }
   const row: OrdersRow = {

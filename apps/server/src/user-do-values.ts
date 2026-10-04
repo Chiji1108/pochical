@@ -17,6 +17,7 @@ import type {
   RepeatOrder,
   RepeatOrders,
 } from "./gen/pochical/v1/sync_pb";
+import { compareClocks } from "./hlc";
 import type { Clock } from "./hlc";
 import type {
   coworkerOrder,
@@ -44,6 +45,16 @@ export const clockOfRow = (row: ClockColumns): Clock => ({
   device: row.hlcDevice,
   ms: row.hlcMs,
 });
+
+/**
+ * Whether a value under `clock` beats the row stored for it, so it is
+ * written: always, when nothing is stored yet.
+ */
+export const isNewer = (
+  clock: Clock,
+  stored: ClockColumns | undefined
+): boolean =>
+  stored === undefined || compareClocks(clock, clockOfRow(stored)) > 0;
 
 export const clockOfHlc = (hlc: Hlc | undefined): Clock => ({
   counter: hlc?.counter ?? 0,
