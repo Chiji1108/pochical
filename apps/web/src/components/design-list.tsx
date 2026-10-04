@@ -357,7 +357,6 @@ const toggle = {
     boxShadow: "sm",
     display: "block",
     height: "22px",
-    margin: "2px",
     transition: "transform 0.15s",
     width: "22px",
   }),
@@ -374,6 +373,9 @@ const toggle = {
     flexShrink: 0,
     height: "26px",
     marginLeft: "auto",
+    // The gap round the knob is the track's padding, not the knob's margin:
+    // a Toggle's root is a block, and the margin would collapse through it.
+    padding: "2px",
     transition: "background 0.15s",
     width: "44px",
   }),
