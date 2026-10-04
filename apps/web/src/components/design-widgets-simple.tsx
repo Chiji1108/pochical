@@ -5,6 +5,7 @@ import type { WidgetDay, WidgetEntry } from "../lib/design-widgets";
 import { dayParts } from "./design-day-cell";
 import { useWeek } from "./design-week";
 import {
+  firstRunOr,
   Change,
   NAME_ROOM,
   NamedMark,
@@ -120,12 +121,12 @@ function SimpleDay({ day, label }: { day: WidgetDay; label?: string }) {
 // Today alone, a day off by its mark as any day: which day off it is
 // (公休, 有給) is the mark's to say. The poodle and おやすみ are
 // 次の休み's, the kind about days off.
-export function SimpleSmall({ entry }: { entry: WidgetEntry }) {
+function SimpleSmallView({ entry }: { entry: WidgetEntry }) {
   return <SimpleDay day={entry.today} />;
 }
 
 // Today and tomorrow, side by side.
-export function SimpleMedium({ entry }: { entry: WidgetEntry }) {
+function SimpleMediumView({ entry }: { entry: WidgetEntry }) {
   const words = useWords();
   const [, tomorrow] = entry.upcoming;
   return (
@@ -136,3 +137,7 @@ export function SimpleMedium({ entry }: { entry: WidgetEntry }) {
     </div>
   );
 }
+
+export const SimpleSmall = firstRunOr(SimpleSmallView);
+
+export const SimpleMedium = firstRunOr(SimpleMediumView);

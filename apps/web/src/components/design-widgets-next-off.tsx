@@ -12,6 +12,7 @@ import { GroupIcon, PhotoAvatar } from "./design-group-parts";
 import { ColorSchemeContext } from "./design-theme";
 import { srOnly } from "./design-ui";
 import {
+  firstRunOr,
   DayMark,
   WidgetRenderingModeContext,
   WidgetSizeContext,
@@ -316,7 +317,7 @@ function RestToday({ entry }: { entry: WidgetEntry }) {
 }
 
 // The next day off large: how soon, and its date and mark.
-export function NextOffSmall({ entry }: { entry: WidgetEntry }) {
+function NextOffSmallView({ entry }: { entry: WidgetEntry }) {
   const words = useWords();
   if (entry.offs.today) {
     return <RestToday entry={entry} />;
@@ -350,3 +351,5 @@ export function NextOffSmall({ entry }: { entry: WidgetEntry }) {
     </div>
   );
 }
+
+export const NextOffSmall = firstRunOr(NextOffSmallView);

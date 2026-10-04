@@ -28,7 +28,7 @@ export const widgetVariantOptions = {
       { label: "休み", value: "off" },
       { label: "明日休み", value: "offTomorrow" },
       { label: "未入力", value: "blank" },
-      { label: "予定なし", value: "empty" },
+      { label: "何も入れていない", value: "empty" },
     ],
     label: "今日",
   },

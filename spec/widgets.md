@@ -34,6 +34,7 @@ Days with nothing entered have no `shift`, `name` or `time`. They are shown as n
 | Field | Meaning |
 | --- | --- |
 | `date` | The day the entry is for. |
+| `nothingEntered` | The person has entered no day at all yet, as on first opening the app (days from a repeating order count as entered). |
 | `today` | That day. |
 | `upcoming` | That day and the six days after it, seven days in order. |
 | `twoWeeks` | The week that day is in and the week after, fourteen days from the person's week start. |
@@ -73,6 +74,7 @@ On the iPhone lock screen: circular (today's mark, and 早出 or 残業 on such 
 - **Today's date** is the accent color and heavier where today sits among other days (the two weeks, the month), as in the calendar. Where a view is about today alone, or its first line is always today under today's date (シンプル, これから), today's date is drawn plain. Sunday and holiday dates are red, and Saturday dates are blue, following the person's settings. Where days stand in columns under their weekdays (the two weeks, the month, これから's five days), the weekdays carry Sunday's and Saturday's colors, and of the dates only a holiday's is red, as in the calendar.
 - **A day with a memo** has the calendar's stroke under its date (`calendar-note-marker`), on every day シンプル, これから and カレンダー show, under the date or the word standing for the day (明日 in シンプル, the weekday over each of これから's next three days). 次の休み's days, おやすみ included, are about being off, and go without it. A memo's words are not shown. It is the calendar's highlighter in the テーマ's tint on both platforms, as the shift marks keep the テーマ's colors on Android too (`derivation.noteMarkerSteps` in `spec/design-tokens.json`; on a day off's tile it is the tile's color a step deeper). In the system's one-color looks it is faint, as the day-off tiles are. Screen readers hear メモあり after the day.
 - **The system's one-color looks.** When the system draws the widget in one color (iPhone 色合い and クリア, and the lock screen), filled shapes become solid blocks. In those looks, day-off tiles are drawn faint instead (SwiftUI: `widgetRenderingMode` other than `fullColor`), and the poodle on a day off is drawn desaturated (`widgetAccentedRenderingMode(.desaturated)`), so its lines stay rather than it turning one white shape.
+- **Before anything is entered** (`nothingEntered`), each home screen widget, whatever its kind and size, says only where its days will come from, in the secondary color in the middle of its room: シフトを入れると / ここに出ます (Shifts you enter / show here). No app icon or name: the system shows the app's name under the widget, and Apple's guidance keeps a logo out of it. On the lock screen the rectangular one says the same, the inline one シフトを入れると出ます (Enter shifts to see them) after the date, and the round ones stay as on a day with nothing entered, a dash. Set to someone or a group, it is the same: the person's own days come first.
 
 ## Colors
 
