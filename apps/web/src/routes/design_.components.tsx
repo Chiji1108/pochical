@@ -15,7 +15,7 @@ import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
-import { MonthSummary } from "../components/design-calendar";
+import { MonthSummary } from "../components/design-calendar-heading";
 import {
   Chip,
   ChipGroup,
