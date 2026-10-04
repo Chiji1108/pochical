@@ -37,6 +37,9 @@ import { Screen } from "./design-ui";
 
 const noShift = () => undefined;
 
+// No one is mentioned here.
+const nameless = () => "";
+
 // Who the chat is between: you, and Pochical's people, who answer under
 // the app's name and its icon.
 function membersOf(profile: Profile, icon?: string): Member[] {
@@ -141,9 +144,6 @@ function Intro({ icon }: { icon?: string }) {
     </li>
   );
 }
-
-// No one is mentioned here.
-const nameless = () => "";
 
 export function SupportChatPage({ onBack }: { onBack: () => void }) {
   const lines = useUser((state) => state.support.lines);
