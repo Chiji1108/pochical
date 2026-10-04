@@ -2,25 +2,20 @@ import { Plus } from "lucide-react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 
-import { EmojiPickerSheet } from "./design-emoji-picker";
-import { IconPickerSheet, iconNames } from "./design-icon-picker";
 import {
-  Button,
   Choice,
   ChoiceGrid,
   colorGrid,
-  fieldLabel,
-  List,
-  ListRow,
   markGrid,
-  MarkLetterInput,
-  markPreview,
-  Note,
-  PageHeader,
-  SampleTag,
   Segment,
   SegmentedControl,
-} from "./design-ui";
+} from "./design-choices";
+import { EmojiPickerSheet } from "./design-emoji-picker";
+import { MarkLetterInput, markPreview, SampleTag } from "./design-fields";
+import { PageHeader } from "./design-header";
+import { IconPickerSheet, iconNames } from "./design-icon-picker";
+import { List, ListRow } from "./design-list";
+import { Button, fieldLabel, Note } from "./design-ui";
 import {
   MarkGlyph,
   MonochromeContext,

@@ -7,8 +7,9 @@ import { css } from "styled-system/css";
 import { useLongPress } from "./design-chat-actions";
 import { summaryOf } from "./design-chat-summary";
 import type { Message } from "./design-group-data";
+import { menuStyle } from "./design-menu";
 import { PhoneContext } from "./design-sheet";
-import { IconButton, menuStyle } from "./design-ui";
+import { IconButton } from "./design-ui";
 
 // The lines pinned over a chat (spec/chat.md, Pins): the bar under the
 // header, and the list of all of them under it.

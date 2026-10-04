@@ -3,6 +3,8 @@ import { css } from "styled-system/css";
 
 import { formatMonth } from "../lib/design-days";
 import type { Shift } from "../lib/design-patterns";
+import { Chip, ChipGroup, Tag } from "./design-choices";
+import { List, SwitchRow } from "./design-list";
 import {
   Sheet,
   SheetHeading,
@@ -10,7 +12,7 @@ import {
   sheetBody,
   sheetLead,
 } from "./design-sheet";
-import { Button, Chip, ChipGroup, List, SwitchRow, Tag } from "./design-ui";
+import { Button } from "./design-ui";
 import { weekdayNames } from "./design-week";
 
 export type OffChoice = { key: Shift; label: string };

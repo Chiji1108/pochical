@@ -10,6 +10,16 @@ import { isDayOff, presetPatterns, usePatterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useLook, useSettings } from "../lib/design-settings-store";
 import { dayName } from "../lib/text-limits";
+import {
+  ChoiceGrid,
+  ChoiceTile,
+  PageDots,
+  Segment,
+  SegmentedControl,
+} from "./design-choices";
+import { PageHeader } from "./design-header";
+import { ListRow } from "./design-list";
+import { Pager } from "./design-pager";
 import { PresetContexts } from "./design-providers";
 import { settingsParts } from "./design-settings-parts";
 import { StylePreview, useOwnSamples } from "./design-settings-preview";
@@ -22,18 +32,7 @@ import {
   themeStyle,
 } from "./design-theme";
 import type { PresetId } from "./design-theme";
-import {
-  ChoiceGrid,
-  ChoiceTile,
-  ListRow,
-  PageDots,
-  PageHeader,
-  Pager,
-  Section,
-  Segment,
-  SegmentedControl,
-  srOnly,
-} from "./design-ui";
+import { Section, srOnly } from "./design-ui";
 import {
   CellNamesContext,
   IconWeightContext,

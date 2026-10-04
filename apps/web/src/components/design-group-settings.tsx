@@ -4,7 +4,16 @@ import { css } from "styled-system/css";
 
 import { useUser } from "../lib/design-user-store";
 import { firstCharacter } from "../lib/text-limits";
+import {
+  Choice,
+  ChoiceGrid,
+  colorGrid,
+  markGrid,
+  Segment,
+  SegmentedControl,
+} from "./design-choices";
 import { EmojiPickerSheet } from "./design-emoji-picker";
+import { LimitedInput, MarkLetterInput, markValue } from "./design-fields";
 import { groupChat, isMuted } from "./design-group-data";
 import type {
   Group,
@@ -25,29 +34,17 @@ import {
   markFrame,
   markPart,
 } from "./design-group-parts";
+import { HeaderAction, PageHeader } from "./design-header";
 import { IconPickerSheet, iconNames } from "./design-icon-picker";
+import { List, ListRow, SwitchRow } from "./design-list";
 import { OtherChoicesButton, withPicked } from "./design-look-editor";
 import { ConfirmDialog } from "./design-sheet";
 import {
-  Choice,
-  ChoiceGrid,
-  colorGrid,
   DestructiveButton,
   fieldLabel,
-  HeaderAction,
   IconButton,
-  LimitedInput,
-  List,
-  ListRow,
-  markGrid,
-  MarkLetterInput,
-  markValue,
   Note,
-  PageHeader,
   Section,
-  Segment,
-  SegmentedControl,
-  SwitchRow,
 } from "./design-ui";
 import { useMarkColors, nextColor } from "./shift-mark";
 import type { MarkIcon } from "./shift-mark";

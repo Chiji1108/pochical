@@ -11,18 +11,14 @@ import {
   signInMilliseconds,
 } from "./design-account";
 import type { AccountProvider } from "./design-account";
+import { LimitedInput } from "./design-fields";
 import type { Profile } from "./design-group-data";
 import { PhotoEditor } from "./design-group-parts";
+import { PageHeader } from "./design-header";
+import { List, ListRow } from "./design-list";
 import { settingsParts } from "./design-settings-parts";
 import { ConfirmDialog } from "./design-sheet";
-import {
-  LimitedInput,
-  List,
-  ListRow,
-  Note,
-  PageHeader,
-  Section,
-} from "./design-ui";
+import { Note, Section } from "./design-ui";
 
 // The account and the profile: what keeps someone's data, and the name and
 // picture others see.

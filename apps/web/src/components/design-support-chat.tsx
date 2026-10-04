@@ -16,16 +16,12 @@ import {
   useChosenPhotos,
 } from "./design-chat-photos";
 import { chatAvatarSize, chatRow, chatStyle } from "./design-chat-style";
+import { LimitedTextArea } from "./design-fields";
 import { badge } from "./design-group-parts";
+import { BackButton } from "./design-header";
+import { List, listRow } from "./design-list";
 import { PhotoViewer } from "./design-sheet";
-import {
-  BackButton,
-  LimitedTextArea,
-  List,
-  listRow,
-  Screen,
-  srOnly,
-} from "./design-ui";
+import { Screen, srOnly } from "./design-ui";
 
 // Writing to support as a chat with the people who make Pochical, rather
 // than a mail: a small complaint or wish is easier to write in a chat,

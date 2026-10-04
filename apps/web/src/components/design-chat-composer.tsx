@@ -21,10 +21,11 @@ import { spring } from "../lib/motion";
 import { PhotoInput, PhotoTray, useChosenPhotos } from "./design-chat-photos";
 import { chatStyle } from "./design-chat-style";
 import { daysSummary, summaryOf } from "./design-chat-summary";
+import { LimitedTextArea } from "./design-fields";
 import type { LinkPreview, Member, Message } from "./design-group-data";
 import { Avatar } from "./design-group-parts";
 import { previewOf } from "./design-group-samples";
-import { IconButton, LimitedTextArea } from "./design-ui";
+import { IconButton } from "./design-ui";
 
 // Writing in a chat: what is being written (useComposer), the page of a
 // link as it is written, and the composer at the chat's foot.

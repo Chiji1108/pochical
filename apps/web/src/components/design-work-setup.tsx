@@ -9,16 +9,11 @@ import {
 } from "../lib/design-patterns";
 import type { PresetShift, Shift } from "../lib/design-patterns";
 import { designMonth } from "../lib/design-today";
+import { Tag } from "./design-choices";
 import { MonthPicker } from "./design-date-picker";
+import { BackButton } from "./design-header";
 import { RepeatSequenceEditor, ShiftPreview } from "./design-repeat-editor";
-import {
-  BackButton,
-  Button,
-  OptionCard,
-  optionList,
-  pushToBottom,
-  Tag,
-} from "./design-ui";
+import { Button, OptionCard, optionList, pushToBottom } from "./design-ui";
 import { ShiftMark } from "./shift-mark";
 
 type Template = {

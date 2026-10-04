@@ -16,6 +16,7 @@ import { css, cx } from "styled-system/css";
 import { addDays, dayMilliseconds, formatDay } from "../lib/design-days";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
+import { Tag } from "./design-choices";
 import { ChatRow } from "./design-group-chat";
 import { everyoneOff, groupChat, isMuted } from "./design-group-data";
 import type { Chat, Group, Member } from "./design-group-data";
@@ -29,6 +30,8 @@ import {
 } from "./design-group-parts";
 import { misaki, mother, partner } from "./design-group-samples";
 import { MemberTable } from "./design-group-shifts-weeks";
+import { List, ListRow } from "./design-list";
+import { IconMenu, MenuItem, MenuSeparator } from "./design-menu";
 import {
   ConfirmDialog,
   PhotoViewer,
@@ -42,14 +45,8 @@ import {
   Button,
   DestructiveButton,
   IconButton,
-  IconMenu,
-  List,
-  ListRow,
-  MenuItem,
-  MenuSeparator,
   Note,
   Section,
-  Tag,
 } from "./design-ui";
 import { useWeek } from "./design-week";
 

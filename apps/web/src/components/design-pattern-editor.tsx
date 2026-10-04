@@ -7,31 +7,21 @@ import { daysWithout, isRepeating, patternsWithout } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
 import type { Pattern, PresetShift } from "../lib/design-patterns";
 import { useShownDays, useUser } from "../lib/design-user-store";
+import { ChoiceList, ChoiceRow } from "./design-choices";
+import {
+  LimitedInput,
+  markPreview,
+  markValue,
+  SampleTag,
+  TimeRange,
+} from "./design-fields";
+import { BackButton, HeaderAction, PageHeader } from "./design-header";
+import { List, ListDivider, ListRow, listRow, SwitchRow } from "./design-list";
 import { LookEditorPage } from "./design-look-editor";
 import type { LookField } from "./design-look-editor";
 import { ConfirmDialog } from "./design-sheet";
-import {
-  AddButton,
-  BackButton,
-  ChoiceList,
-  ChoiceRow,
-  DestructiveButton,
-  HeaderAction,
-  LimitedInput,
-  List,
-  ListDivider,
-  ListRow,
-  listRow,
-  markPreview,
-  markValue,
-  Note,
-  PageHeader,
-  SampleTag,
-  Section,
-  SortableList,
-  SwitchRow,
-  TimeRange,
-} from "./design-ui";
+import { SortableList } from "./design-sortable-list";
+import { AddButton, DestructiveButton, Note, Section } from "./design-ui";
 import {
   guessLook,
   MarkGlyph,

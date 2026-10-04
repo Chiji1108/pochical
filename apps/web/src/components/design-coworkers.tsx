@@ -5,21 +5,13 @@ import { membersOrNone } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
 import { useUser } from "../lib/design-user-store";
 import { composing, limitText } from "../lib/text-limits";
+import { LimitedInput } from "./design-fields";
+import { BackButton, HeaderAction, PageHeader } from "./design-header";
+import { List, ListRow, listRow } from "./design-list";
 import { ConfirmDialog } from "./design-sheet";
+import { SortableList } from "./design-sortable-list";
 import { ToastContext } from "./design-toast";
-import {
-  AddButton,
-  BackButton,
-  DestructiveButton,
-  HeaderAction,
-  LimitedInput,
-  List,
-  ListRow,
-  listRow,
-  Note,
-  PageHeader,
-  SortableList,
-} from "./design-ui";
+import { AddButton, DestructiveButton, Note } from "./design-ui";
 
 // Said when adding past COWORKERS_MAX, from the list or from a day.
 export const coworkersFull = `一緒に働く人は${COWORKERS_MAX}人までです`;

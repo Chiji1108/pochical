@@ -11,6 +11,7 @@ import { MessageActions, useLongPress } from "./design-chat-actions";
 import type { LineActions } from "./design-chat-actions";
 import { photoSize } from "./design-chat-photos";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
+import { Tag } from "./design-choices";
 import { everyoneOff, patternOn } from "./design-group-data";
 import type {
   GroupMark,
@@ -26,9 +27,10 @@ import {
   smallWeekday,
   toneColor,
 } from "./design-group-parts";
+import { menuStyle } from "./design-menu";
 import { shortMonthOf } from "./design-month-name";
 import { PhoneContext, PhotoViewer } from "./design-sheet";
-import { menuStyle, srOnly, Tag } from "./design-ui";
+import { srOnly } from "./design-ui";
 import { useWeek } from "./design-week";
 
 // What a chat's line carries besides its words: a link's page, a group's
