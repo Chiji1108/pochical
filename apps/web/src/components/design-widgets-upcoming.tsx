@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import { presetPatterns } from "../lib/design-patterns";
+import { columnHours, withoutWholeHours } from "../lib/design-widgets";
 import type {
   WidgetDay,
   WidgetEntry,
@@ -265,31 +266,6 @@ const columns = {
 const COLUMN_WORDS = 10;
 const COMPACT_WORDS = 9;
 
-// What changed, short enough for a column, on one line: the hour it now
-// starts or ends at, the side the 早出 and 残業 corners already show, or
-// both ends where both moved, shrunk to the column where it is too wide.
-function shortChange({
-  time,
-  early,
-  late,
-}: {
-  time?: string;
-  early: boolean;
-  late: boolean;
-}) {
-  if (time === undefined) {
-    return undefined;
-  }
-  const [start = "", end = ""] = time.split(" – ");
-  if (early && !late) {
-    return `${start}〜`;
-  }
-  if (late && !early) {
-    return `〜${end}`;
-  }
-  return `${start}〜${end}`;
-}
-
 // The words under a mark: what changed, else its name when names are
 // shown.
 function columnWords(
@@ -313,7 +289,7 @@ function ColumnLine({ words, compact }: { words: string; compact: boolean }) {
     <FittedLine
       compact={compact}
       key={`${words} ${width}`}
-      shorter={words.replaceAll(":00", "")}
+      shorter={withoutWholeHours(words)}
       words={words}
     />
   );
@@ -508,7 +484,7 @@ function ColumnDay({
   } else if (!pair && day.off && look.tile) {
     band = flat ? "flat" : "own";
   }
-  const moved = day.change === undefined ? undefined : shortChange(day);
+  const moved = day.change === undefined ? undefined : columnHours(day);
   // Alone, the name is the label under the mark and the words are only
   // what changed; beside someone, one line holds either.
   const mine = pair ? columnWords(moved, day.name, named) : moved;
@@ -605,7 +581,7 @@ function ColumnDay({
 }
 
 function TheirWords({ day, named }: { day: WidgetPersonDay; named: boolean }) {
-  const moved = day.early || day.late ? shortChange(day) : undefined;
+  const moved = day.early || day.late ? columnHours(day) : undefined;
   const shown = columnWords(moved, day.name, named);
   if (shown === undefined) {
     return null;
