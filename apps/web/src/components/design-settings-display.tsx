@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { css } from "styled-system/css";
-import { token } from "styled-system/tokens";
 
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
@@ -162,14 +161,16 @@ export function AppearancePage({ onBack }: { onBack: () => void }) {
   );
 }
 
+// The variables written out, not token.var(): styled-system/tokens would
+// bring every token's table into what /try waits for, 8 KB gzipped.
 const coloredDayOptions: { day: ColoredDay; name: string; color: string }[] = [
   {
-    color: token.var("colors.calendar.saturday"),
+    color: "var(--colors-calendar-saturday)",
     day: "saturday",
     name: "土曜",
   },
-  { color: token.var("colors.calendar.holiday"), day: "sunday", name: "日曜" },
-  { color: token.var("colors.calendar.holiday"), day: "holiday", name: "祝日" },
+  { color: "var(--colors-calendar-holiday)", day: "sunday", name: "日曜" },
+  { color: "var(--colors-calendar-holiday)", day: "holiday", name: "祝日" },
 ];
 
 export function WeekRow({ onOpen }: { onOpen: () => void }) {
