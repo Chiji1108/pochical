@@ -290,13 +290,18 @@ function DaySheetBody({
         </div>
         {/* Offered once there is more than one day to choose from, as
             LINE's 日程調整 is a way of choosing among days. */}
-        <Note>{dayNote(picked.length, poll)}</Note>
+        <Note className={dayNoteStyle}>{dayNote(picked.length, poll)}</Note>
       </div>
     </>
   );
 }
 
 const modeSwitch = css({ marginBottom: "12px" });
+
+// Room for two lines of the note, the most its words take, so the sheet
+// keeps its height as days are picked (the note shortens once a poll has
+// two) and 送る stays under the finger, as the calendar's six weeks do.
+const dayNoteStyle = css({ minHeight: "2lh" });
 
 // What sending will do, under the days.
 function dayNote(count: number, poll: boolean) {

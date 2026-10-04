@@ -355,8 +355,14 @@ const noteStyle = css({
   textStyle: "caption",
 });
 
-export function Note({ children }: { children: ReactNode }) {
-  return <p className={noteStyle}>{children}</p>;
+export function Note({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <p className={cx(noteStyle, className)}>{children}</p>;
 }
 
 // A field's name, and a hint after it in lighter words: over what it names,
