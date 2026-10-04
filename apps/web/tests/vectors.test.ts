@@ -69,7 +69,11 @@ import {
 import type { OwnDays, Schedule } from "../src/lib/design-days";
 import { patternsForJob } from "../src/lib/design-patterns";
 import type { Pattern, PatternBook } from "../src/lib/design-patterns";
-import { widgetEntry } from "../src/lib/design-widgets";
+import {
+  columnHours,
+  widgetEntry,
+  withoutWholeHours,
+} from "../src/lib/design-widgets";
 import type {
   WidgetCompanion,
   WidgetPerson,
@@ -533,8 +537,13 @@ describe("spec/vectors/widgets.json", () => {
         today,
         { shift: patternOf(time ? { id: "shift", time } : { id: "shift" }) }
       );
+      // A column says only what changed, as the widget's words do.
+      const column =
+        entry.today.change === undefined ? undefined : columnHours(entry.today);
       expect({
         change: entry.today.change ?? null,
+        column: column ?? null,
+        columnShort: column === undefined ? null : withoutWholeHours(column),
         time: entry.today.time ?? null,
       }).toEqual(expected);
     });

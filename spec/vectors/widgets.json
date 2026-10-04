@@ -1,12 +1,14 @@
 {
-  "about": "What a widget's entry says of a day and of days off (spec/widgets.md). day: a day's own `start` and `end`, if set, over its pattern's standard `time` (null for a pattern without one); `expected.time` is the range read aloud (a leading zero dropped from the hour, 翌 before an end at or before the start) and `expected.change` the words shown on a day whose hours differ from its pattern's (null on an ordinary day). offs: what 次の休み counts. Each one's `days` are keyed by how many days from today (0 is today): work, off, or null where not entered; days not listed are `rest`, else not entered. `with` is who the widget is set to: nobody, one person, or the people of a group. `expected.today` says today is off (together); `expected.next` is how many days on the next day off after today is, looking no further than design/src/widgets.ts's widgetRules.offLookaheadDays (62), or null; `expected.none`, only when neither today nor any day ahead counts, is why: waiting (with the names of those who have not entered days the person is off and no one who has entered them works, as they come), apart (set to someone and the person has entered days), else notEntered. A day counts only when the person and everyone picked are off, as みんな休み (spec/vectors/together.json).",
+  "about": "What a widget's entry says of a day and of days off (spec/widgets.md). day: a day's own `start` and `end`, if set, over its pattern's standard `time` (null for a pattern without one); `expected.time` is the range read aloud (a leading zero dropped from the hour, 翌 before an end at or before the start) and `expected.change` the words shown on a day whose hours differ from its pattern's (null on an ordinary day); `expected.column` the same, short enough for a column of これから on one line (the new start alone for 早出, the new end alone for 残業, else both ends), and `expected.columnShort` that written shorter for a column it does not fit even shrunk to 8pt, its hours without :00. offs: what 次の休み counts. Each one's `days` are keyed by how many days from today (0 is today): work, off, or null where not entered; days not listed are `rest`, else not entered. `with` is who the widget is set to: nobody, one person, or the people of a group. `expected.today` says today is off (together); `expected.next` is how many days on the next day off after today is, looking no further than design/src/widgets.ts's widgetRules.offLookaheadDays (62), or null; `expected.none`, only when neither today nor any day ahead counts, is why: waiting (with the names of those who have not entered days the person is off and no one who has entered them works, as they come), apart (set to someone and the person has entered days), else notEntered. A day counts only when the person and everyone picked are off, as みんな休み (spec/vectors/together.json).",
   "day": [
     {
       "name": "an ordinary day says nothing, and is read with its pattern's hours",
       "time": ["09:00", "18:00"],
       "expected": {
         "time": "9:00 – 18:00",
-        "change": null
+        "change": null,
+        "column": null,
+        "columnShort": null
       }
     },
     {
@@ -14,7 +16,9 @@
       "time": ["16:30", "09:30"],
       "expected": {
         "time": "16:30 – 翌9:30",
-        "change": null
+        "change": null,
+        "column": null,
+        "columnShort": null
       }
     },
     {
@@ -23,7 +27,9 @@
       "start": "07:00",
       "expected": {
         "time": "7:00 – 18:00",
-        "change": "早出 7:00〜"
+        "change": "早出 7:00〜",
+        "column": "7:00〜",
+        "columnShort": "7〜"
       }
     },
     {
@@ -32,7 +38,9 @@
       "end": "20:00",
       "expected": {
         "time": "9:00 – 20:00",
-        "change": "残業 〜20:00"
+        "change": "残業 〜20:00",
+        "column": "〜20:00",
+        "columnShort": "〜20"
       }
     },
     {
@@ -42,7 +50,9 @@
       "end": "20:00",
       "expected": {
         "time": "7:00 – 20:00",
-        "change": "7:00〜20:00"
+        "change": "7:00〜20:00",
+        "column": "7:00〜20:00",
+        "columnShort": "7〜20"
       }
     },
     {
@@ -52,7 +62,21 @@
       "end": "17:00",
       "expected": {
         "time": "10:00 – 17:00",
-        "change": "10:00〜17:00"
+        "change": "10:00〜17:00",
+        "column": "10:00〜17:00",
+        "columnShort": "10〜17"
+      }
+    },
+    {
+      "name": "a column keeps minutes that are not :00 when it writes shorter",
+      "time": ["09:00", "18:00"],
+      "start": "07:30",
+      "end": "20:00",
+      "expected": {
+        "time": "7:30 – 20:00",
+        "change": "7:30〜20:00",
+        "column": "7:30〜20:00",
+        "columnShort": "7:30〜20"
       }
     },
     {
@@ -60,7 +84,9 @@
       "time": null,
       "expected": {
         "time": null,
-        "change": null
+        "change": null,
+        "column": null,
+        "columnShort": null
       }
     }
   ],

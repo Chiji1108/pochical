@@ -153,6 +153,37 @@ function changeOf(
   return `${start}〜${end}`;
 }
 
+// What changed, short enough for a column of これから, on one line: the
+// hour it now starts or ends at, the side the 早出 and 残業 corners
+// already show, or both ends where both moved or for new hours.
+export function columnHours({
+  time,
+  early,
+  late,
+}: {
+  time?: string;
+  early: boolean;
+  late: boolean;
+}) {
+  if (time === undefined) {
+    return undefined;
+  }
+  const [start = "", end = ""] = time.split(" – ");
+  if (early && !late) {
+    return `${start}〜`;
+  }
+  if (late && !early) {
+    return `〜${end}`;
+  }
+  return `${start}〜${end}`;
+}
+
+// Those words written shorter, for a column they do not fit even shrunk
+// to 8pt: the hours without their :00 (7〜20).
+export function withoutWholeHours(words: string) {
+  return words.replaceAll(":00", "");
+}
+
 function widgetDay(
   date: Date,
   schedule: Schedule,
