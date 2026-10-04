@@ -49,7 +49,7 @@ Days with nothing entered have no `shift`, `name` or `time`. They are shown as n
 
 ## Views
 
-The widgets are views of one entry. They hold no state and open the app when tapped. There are four kinds; a person picks one from the widget gallery in the sizes it offers.
+The widgets are views of one entry. They hold no state and open the app on what they show when tapped (Opening the app). There are four kinds; a person picks one from the widget gallery in the sizes it offers.
 
 | Kind | Small (iPhone systemSmall, Android 2×2) | Medium (systemMedium, 4×2) | Large (systemLarge, 4×4) |
 | --- | --- | --- | --- |
@@ -75,6 +75,33 @@ On the iPhone lock screen: circular (today's mark, and 早出 or 残業 on such 
 - **A day with a memo** has the calendar's stroke under its date (`calendar-note-marker`), on every day シンプル, これから and カレンダー show, under the date or the word standing for the day (明日 in シンプル, the weekday over each of これから's next three days). 次の休み's days, おやすみ included, are about being off, and go without it. A memo's words are not shown. It is the calendar's highlighter in the テーマ's tint on both platforms, as the shift marks keep the テーマ's colors on Android too (`derivation.noteMarkerSteps` in `spec/design-tokens.json`; on a day off's tile it is the tile's color a step deeper). In the system's one-color looks it is faint, as the day-off tiles are. Screen readers hear メモあり after the day.
 - **The system's one-color looks.** When the system draws the widget in one color (iPhone 色合い and クリア, and the lock screen), filled shapes become solid blocks. In those looks, day-off tiles are drawn faint instead (SwiftUI: `widgetRenderingMode` other than `fullColor`), and the poodle on a day off is drawn desaturated (`widgetAccentedRenderingMode(.desaturated)`), so its lines stay rather than it turning one white shape.
 - **Before anything is entered** (`nothingEntered`), each home screen widget, whatever its kind and size, says only where its days will come from, in the secondary color in the middle of its room: シフトを入れると / ここに出ます (Shifts you enter / show here). No app icon or name: the system shows the app's name under the widget, and Apple's guidance keeps a logo out of it. On the lock screen the rectangular one says the same, the inline one シフトを入れると出ます (Enter shifts to see them) after the date, and the round ones stay as on a day with nothing entered, a dash. Set to someone or a group, it is the same: the person's own days come first.
+
+## Opening the app
+
+A tap opens the app on what the widget shows, so it can be checked there, as a notification opens on what it says (`/design/flows`). A day opens the calendar on its week with that day picked: `pochical://day/{yyyy-mm-dd}`, in the app's own scheme as `pochical://invite/{code}` is. Set to someone or a group, a day opens that group's table at the day instead, where whose days make it count can be seen: `pochical://group/{groupId}/day/{yyyy-mm-dd}`; for a person, the first of the person's groups that has them, in the order the app lists groups.
+
+| Widget | Opens |
+| --- | --- |
+| シンプル | small: today. Medium: today or tomorrow, whichever half is tapped |
+| 次の休み | the day off it counts (today on a day off), alone in the calendar, set to someone or a group in the group's table; with none ahead, today |
+| これから | small: today. Medium: the day of the column tapped. Set to someone: in the group's table |
+| カレンダー | the day tapped; elsewhere, today |
+| Lock screen | today; the round 次の休み as 次の休み does |
+
+Before anything is entered, every widget opens the calendar on today, where days are entered. On the iPhone a small widget and the lock screen's take one link for the whole widget (WidgetKit's `widgetURL`), and a medium or large one a link for each day (`Link`). Android could set one for every element, but its widgets open the same places as the iPhone's, its small ones as a whole too, so the two behave alike.
+
+## In the widget gallery
+
+Each kind is one widget in the gallery, offering the sizes in the table above; on the iPhone the lock screen's are sizes of the same kinds. Its name and description are what the gallery lists (WidgetKit's `configurationDisplayName` and `description`; Android's `android:label` and `android:description`).
+
+| Kind | Sizes | Name | Description |
+| --- | --- | --- | --- |
+| シンプル | small, medium; lock screen round (today's mark) and inline | シンプル | 今日のシフトを大きく。中は明日も。 |
+| 次の休み | small; lock screen round | 次の休み | 次の休みまであと何日か。一緒に休む人も選べます。 |
+| これから | small, medium; lock screen rectangular | これから | 今日からの数日のシフト。一緒に見る人も選べます。 |
+| カレンダー | medium, large (Android 4×2, 4×4) | カレンダー | 2週間と、1か月のシフト。 |
+
+What a gallery shows of a kind before it is placed: on the iPhone the person's own entry once they have entered days (WidgetKit's snapshot), else the sample week /design/widgets shows on an ordinary day (ふつう), which is also the placeholder while an entry loads. Android's picker shows the sample, as a generated preview where the launcher supports it (Android 15), else as a picture of it.
 
 ## Colors
 
