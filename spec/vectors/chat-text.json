@@ -1,5 +1,5 @@
 {
-  "about": "A chat message's words as spec/chat.md has them. textParts cuts a message into words, links and mentions, in order: a link starts http:// or https://, runs over the characters a URL is written in, needs a host, and leaves out what closes the sentence after it (a full stop, a comma, a bracket opened before it). A mention is kept as <@id>. plainText shows each mention as @ and the member's name. withMentions turns only a picked member's whole @name (followed by a space or the end) into their mention. inviteCode: the code of Pochical's own invitation links, https://pochical.app/invite/{code}, known by the path alone, whatever query follows. site: a link's host without a leading www.",
+  "about": "A chat message's words as spec/chat.md has them. textParts cuts a message into words, links and mentions, in order: a link starts http:// or https://, runs over the characters a URL is written in, needs a host, and leaves out what closes the sentence after it (a full stop, a comma, a bracket opened before it). A mention is kept as <@id>. plainText shows each mention as @ and the member's name. withMentions turns only a picked member's whole @name (followed by a space or the end) into their mention. inviteCode: the code of Pochical's own invitation links, https://pochical.app/invite/{code}, known by the path alone, whatever query follows. site: a link's host without a leading www. largeEmoji: how many emoji a message of nothing but 1 to chatRules.largeEmojiMax (3) emoji has, each one emoji as text.json's isEmoji has it, shown large without a bubble; 0 for any other message, so a space, a line or a word among them keeps the bubble.",
   "textParts": [
     {
       "name": "a message without links",
@@ -255,6 +255,88 @@
     {
       "url": "https://shop.www.example/",
       "expected": "shop.www.example"
+    }
+  ],
+  "largeEmoji": [
+    {
+      "name": "one emoji",
+      "text": "👍",
+      "expected": 1
+    },
+    {
+      "name": "three emoji",
+      "text": "🎉🎂🥳",
+      "expected": 3
+    },
+    {
+      "name": "four emoji",
+      "text": "🎉🎂🥳🎁",
+      "expected": 0
+    },
+    {
+      "name": "a skin tone is one",
+      "text": "👍🏽👍🏽",
+      "expected": 2
+    },
+    {
+      "name": "a family joined by ZWJ is one",
+      "text": "👨‍👩‍👧‍👦",
+      "expected": 1
+    },
+    {
+      "name": "two flags",
+      "text": "🇯🇵🇰🇷",
+      "expected": 2
+    },
+    {
+      "name": "a keycap",
+      "text": "1️⃣",
+      "expected": 1
+    },
+    {
+      "name": "a pictograph with its variation selector",
+      "text": "❤️",
+      "expected": 1
+    },
+    {
+      "name": "a space between",
+      "text": "👍 👍",
+      "expected": 0
+    },
+    {
+      "name": "a space after",
+      "text": "👍 ",
+      "expected": 0
+    },
+    {
+      "name": "a line after",
+      "text": "👍\n",
+      "expected": 0
+    },
+    {
+      "name": "with a word",
+      "text": "了解👍",
+      "expected": 0
+    },
+    {
+      "name": "a plain digit",
+      "text": "1",
+      "expected": 0
+    },
+    {
+      "name": "a kanji",
+      "text": "了",
+      "expected": 0
+    },
+    {
+      "name": "a mention",
+      "text": "<@aya>",
+      "expected": 0
+    },
+    {
+      "name": "nothing",
+      "text": "",
+      "expected": 0
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { css } from "styled-system/css";
 
+import { largeEmojiCount } from "../lib/chat-text";
 import { APP_VERSION, deviceNames, useDevice } from "../lib/design-device";
 import { useSettings } from "../lib/design-settings-store";
 import type { SupportLine } from "../lib/design-support";
@@ -9,7 +10,12 @@ import { site } from "../lib/site";
 import { AppIcon, useAppIcons } from "./design-app-icon";
 import { PhotoLine } from "./design-chat-cards";
 import { Composer, useComposer } from "./design-chat-composer";
-import { ChatListRow, LineFrame } from "./design-chat-parts";
+import {
+  Bubble,
+  ChatListRow,
+  LargeEmoji,
+  LineFrame,
+} from "./design-chat-parts";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
 import { BackButton } from "./design-header";
 import { List } from "./design-list";
@@ -172,6 +178,10 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
             const previous = lines[index - 1];
             const firstOfRun =
               previous?.from !== line.from || previous.when !== line.when;
+            // Nothing but a few emoji: large, without a bubble, as in the
+            // group chats.
+            const largeEmoji =
+              !line.photo && largeEmojiCount(line.text ?? "") > 0;
             return (
               <LineFrame
                 avatar={
@@ -183,19 +193,18 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
                 name={firstOfRun ? site.name : undefined}
               >
                 <span className={chatStyle.bubbleRow({ mine })}>
-                  {line.photo ? (
+                  {line.photo && (
                     <PhotoLine
                       label={mine ? "送った写真" : `${site.name}から届いた写真`}
                       mine={mine}
                       photo={line.photo}
                     />
-                  ) : (
-                    <span
-                      className={chatStyle.bubble({ mine })}
-                      data-part="bubble"
-                    >
+                  )}
+                  {largeEmoji && <LargeEmoji>{line.text}</LargeEmoji>}
+                  {!line.photo && !largeEmoji && (
+                    <Bubble mine={mine}>
                       <span className={chatStyle.bubbleText}>{line.text}</span>
-                    </span>
+                    </Bubble>
                   )}
                   <small className={chatStyle.time}>{line.time}</small>
                 </span>

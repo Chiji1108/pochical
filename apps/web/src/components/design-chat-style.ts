@@ -162,6 +162,17 @@ export const chatStyle = {
     textStyle: "subheadline",
     whiteSpace: "pre-wrap",
   }),
+  // A message of nothing but a few emoji (LargeEmoji), large and without
+  // a bubble, at the size LargeEmoji sets. Rounded for the ring a jump
+  // gives it.
+  largeEmoji: css({
+    borderRadius: "lg",
+    display: "flex",
+    fontSize: "var(--large-emoji-size)",
+    lineHeight: 1.15,
+    minWidth: 0,
+    whiteSpace: "nowrap",
+  }),
   // A link in a message, underlined as the chat apps mark one; in
   // others' bubbles in the accent, in yours in the bubble's own color.
   bubbleLink: cva({

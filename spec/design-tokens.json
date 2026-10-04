@@ -4,6 +4,8 @@
     "dayCardColumns": 6,
     "dayCardRows": 7,
     "foldLines": 10,
+    "largeEmojiMax": 3,
+    "largeEmojiSize": 48,
     "linkPreviewAspect": 1.91,
     "linkPreviewSettleMs": 400,
     "maxPins": 5,

@@ -15,6 +15,7 @@ import { cx } from "styled-system/css";
 import {
   firstLink,
   inviteCodeOf,
+  largeEmojiCount,
   plainText,
   textParts,
 } from "../lib/chat-text";
@@ -35,7 +36,7 @@ import {
   ReactionPill,
 } from "./design-chat-cards";
 import type { InviteLook, Upload } from "./design-chat-cards";
-import { ChatItem, LineFrame } from "./design-chat-parts";
+import { Bubble, ChatItem, LargeEmoji, LineFrame } from "./design-chat-parts";
 import { PollCard } from "./design-chat-poll";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
 import { blockedLine, summaryOf, unsentLine } from "./design-chat-summary";
@@ -149,6 +150,10 @@ export function MessageLine({
   // of a page.
   const firstUrl = message.text ? firstLink(message.text) : undefined;
   const inviteCode = firstUrl ? inviteCodeOf(firstUrl) : undefined;
+  // Nothing but a few emoji: drawn large, without a bubble. A reply keeps
+  // its bubble, as the line it answers sits inside one.
+  const largeEmoji =
+    !quoted && message.text !== undefined && largeEmojiCount(message.text) > 0;
   const quote = quoted && (
     <BubbleQuote
       name={writerOf(quoted.from)?.name ?? ""}
@@ -267,15 +272,25 @@ export function MessageLine({
             writerOf={writerOf}
           />
         )}
-        {!message.photo && !message.days && !message.poll && (
+        {largeEmoji && (
+          <LargeEmoji>
+            <MessageActions {...actions}>
+              <button
+                aria-label={`${member?.name ?? ""}のメッセージ：${message.text}。長押しでリアクションと返信`}
+                className={chatStyle.tap({ mine })}
+                type="button"
+              >
+                {message.text}
+              </button>
+            </MessageActions>
+          </LargeEmoji>
+        )}
+        {!message.photo && !message.days && !message.poll && !largeEmoji && (
           // Like the app: the quoted line sits inside the bubble,
           // above a thin rule, and jumps to the original.
-          <span
-            className={cx(
-              chatStyle.bubble({ mine }),
-              (inviteCode || message.link) && chatStyle.linked
-            )}
-            data-part="bubble"
+          <Bubble
+            linked={inviteCode !== undefined || message.link !== undefined}
+            mine={mine}
           >
             {quote}
             <MessageActions
@@ -356,7 +371,7 @@ export function MessageLine({
             {!inviteCode && message.link && (
               <LinkCard onLongPress={onSelect} preview={message.link} />
             )}
-          </span>
+          </Bubble>
         )}
         {upload === "failed" && (
           <button
