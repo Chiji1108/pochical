@@ -50,8 +50,9 @@ const allowed = new Set([
   // A fade's mask, which reads only how opaque it is.
   "design-group-hub.tsx #000",
   // What the OS draws a widget in when it renders it in one color.
-  "design-widgets.tsx rgb(255 255 255 / 0.24)",
-  "design-widgets.tsx rgb(255 255 255 / 0.16)",
+  "design-widgets-calendar.tsx rgb(255 255 255 / 0.24)",
+  "design-widgets-upcoming.tsx rgb(255 255 255 / 0.24)",
+  "design-widgets-lock.tsx rgb(255 255 255 / 0.16)",
 ]);
 
 const literal =
