@@ -44,7 +44,6 @@ export function useComposer({
   attach,
   members = noOne,
   mentionName = nameless,
-  linkPreviews = true,
 }: {
   attach?: Date[];
   // Who an @ lists: the others in the group chat, none in a one-to-one
@@ -52,15 +51,12 @@ export function useComposer({
   members?: Member[];
   // A mention's name, for words put back to be changed.
   mentionName?: (id: string) => string;
-  // Whether a link's page is read as it is written; the support chat
-  // sends its words as they are.
-  linkPreviews?: boolean;
 }) {
   const [draft, setDraft] = useState("");
   // Members picked from the @ list, made mentions as the message is sent.
   const [picked, setPicked] = useState<Mention[]>([]);
   const [attached, setAttached] = useState(attach);
-  const linkPreview = useLinkPreview(linkPreviews ? draft : "");
+  const linkPreview = useLinkPreview(draft);
   const chosen = useChosenPhotos();
   const [editing, setEditing] = useState<string>();
   const formRef = useRef<HTMLFormElement>(null);
