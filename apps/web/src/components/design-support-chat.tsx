@@ -10,8 +10,13 @@ import { site } from "../lib/site";
 import { AppIcon, useAppIcons } from "./design-app-icon";
 import { PhotoLine } from "./design-chat-cards";
 import { Composer, useComposer } from "./design-chat-composer";
-import { ChatListRow, LineFrame } from "./design-chat-parts";
-import { chatAvatarSize, chatStyle, largeEmojiSize } from "./design-chat-style";
+import {
+  Bubble,
+  ChatListRow,
+  LargeEmoji,
+  LineFrame,
+} from "./design-chat-parts";
+import { chatAvatarSize, chatStyle } from "./design-chat-style";
 import { BackButton } from "./design-header";
 import { List } from "./design-list";
 import { Screen } from "./design-ui";
@@ -195,23 +200,11 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
                       photo={line.photo}
                     />
                   )}
-                  {largeEmoji && (
-                    <span className={chatStyle.largeEmoji} data-part="bubble">
-                      <span
-                        className={chatStyle.largeEmojiText}
-                        style={largeEmojiSize}
-                      >
-                        {line.text}
-                      </span>
-                    </span>
-                  )}
+                  {largeEmoji && <LargeEmoji>{line.text}</LargeEmoji>}
                   {!line.photo && !largeEmoji && (
-                    <span
-                      className={chatStyle.bubble({ mine })}
-                      data-part="bubble"
-                    >
+                    <Bubble mine={mine}>
                       <span className={chatStyle.bubbleText}>{line.text}</span>
-                    </span>
+                    </Bubble>
                   )}
                   <small className={chatStyle.time}>{line.time}</small>
                 </span>

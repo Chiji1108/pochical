@@ -1,5 +1,6 @@
+import { chatRules } from "@pochical/design/chat";
 import { BellOff } from "lucide-react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { css, cx } from "styled-system/css";
 
 import { chatRow, chatStyle } from "./design-chat-style";
@@ -8,7 +9,8 @@ import { listRow } from "./design-list";
 import { srOnly } from "./design-ui";
 
 // What every chat draws alike, the group chats and the support chat: a
-// chat's row in a list, and the frame a line sits in. Each chat fills
+// chat's row in a list, the frame a line sits in, and the bubble or the
+// large emoji its words are drawn in. Each chat fills
 // them with its own, so the two never drift apart.
 
 // A chat whose notifications are off, after its name in the list and in
@@ -140,5 +142,47 @@ export function LineFrame({
         </span>
       </span>
     </ChatItem>
+  );
+}
+
+// A line's words in their bubble: the others' on the left in a fill,
+// yours on the right in the accent. A bubble with a link's page under
+// its words is wide enough for the page (`linked`).
+export function Bubble({
+  mine,
+  linked = false,
+  children,
+}: {
+  mine: boolean;
+  linked?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <span
+      className={cx(chatStyle.bubble({ mine }), linked && chatStyle.linked)}
+      data-part="bubble"
+    >
+      {children}
+    </span>
+  );
+}
+
+// The size LargeEmoji draws at. Panda reads styles before the code runs,
+// so it reaches them as a variable rather than from chatRules.
+const largeEmojiSize = {
+  "--large-emoji-size": `${chatRules.largeEmojiSize}px`,
+} as CSSProperties;
+
+// A message of nothing but a few emoji (spec/chat.md, Large emoji), drawn
+// large without a bubble in its place, as iMessage does.
+export function LargeEmoji({ children }: { children: ReactNode }) {
+  return (
+    <span
+      className={chatStyle.largeEmoji}
+      data-part="bubble"
+      style={largeEmojiSize}
+    >
+      {children}
+    </span>
   );
 }
