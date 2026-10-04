@@ -1,18 +1,15 @@
-import { Popover, Portal } from "@ark-ui/react";
 import { CalendarCheck, Check } from "lucide-react";
-import { useContext, useState } from "react";
-import { css, cva, cx } from "styled-system/css";
+import { useState } from "react";
+import { css, cva } from "styled-system/css";
 
 import { dateKey, formatDay } from "../lib/design-days";
 import { MessageActions } from "./design-chat-actions";
-import { reactionPill } from "./design-chat-cards";
-import { chatAvatarSize } from "./design-chat-style";
+import { PeopleList, PhonePopover } from "./design-chat-popover";
 import { ChoiceList, ChoiceRow } from "./design-choices";
 import { everyoneOff } from "./design-group-data";
 import type { Member, Poll } from "./design-group-data";
 import { Avatar, smallWeekday, toneColor } from "./design-group-parts";
-import { menuStyle } from "./design-menu";
-import { DecideHeading, PhoneContext, Sheet } from "./design-sheet";
+import { DecideHeading, Sheet } from "./design-sheet";
 import { useWeek } from "./design-week";
 
 // Days put to the vote in a group chat (spec/chat.md, Polls): the card
@@ -149,50 +146,35 @@ const pollCard = {
 // Who can come on a day, as faces; a tap lists them all by name, as a
 // reaction's list does, since the faces stop at three.
 function Voters({ day, people }: { day: Date; people: Member[] }) {
-  const phone = useContext(PhoneContext);
   const faces =
     people.length > maxVoteFaces ? people.slice(0, maxVoteFaces - 1) : people;
   if (people.length === 0) {
     return <span className={pollCard.faces} />;
   }
   return (
-    <Popover.Root
-      lazyMount
+    <PhonePopover
+      label={`${formatDay(day)}に行ける人`}
       positioning={{ gutter: 6, placement: "top" }}
-      unmountOnExit
+      trigger={
+        <button
+          aria-label={`${formatDay(day)}に行ける人：${people.map((person) => person.name).join("、")}`}
+          className={pollCard.faces}
+          type="button"
+        >
+          {faces.map((person) => (
+            <Avatar key={person.id} member={person} size={22} />
+          ))}
+          <small className={pollCard.count}>
+            {people.length > faces.length
+              ? `+${people.length - faces.length}`
+              : `${people.length}人`}
+          </small>
+        </button>
+      }
     >
-      <Popover.Trigger
-        aria-label={`${formatDay(day)}に行ける人：${people.map((person) => person.name).join("、")}`}
-        className={pollCard.faces}
-      >
-        {faces.map((person) => (
-          <Avatar key={person.id} member={person} size={22} />
-        ))}
-        <small className={pollCard.count}>
-          {people.length > faces.length
-            ? `+${people.length - faces.length}`
-            : `${people.length}人`}
-        </small>
-      </Popover.Trigger>
-      <Portal container={phone ?? undefined}>
-        <Popover.Positioner>
-          <Popover.Content
-            aria-label={`${formatDay(day)}に行ける人`}
-            className={cx(menuStyle.content, reactionPill.list)}
-          >
-            <span className={pollCard.votersTitle}>{formatDay(day)}</span>
-            <ul className={reactionPill.people}>
-              {people.map((person) => (
-                <li className={reactionPill.person} key={person.id}>
-                  <Avatar member={person} size={chatAvatarSize} />
-                  {person.name}
-                </li>
-              ))}
-            </ul>
-          </Popover.Content>
-        </Popover.Positioner>
-      </Portal>
-    </Popover.Root>
+      <span className={pollCard.votersTitle}>{formatDay(day)}</span>
+      <PeopleList people={people} />
+    </PhonePopover>
   );
 }
 

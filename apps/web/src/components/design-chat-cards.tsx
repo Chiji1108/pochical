@@ -1,7 +1,6 @@
-import { Popover, Portal } from "@ark-ui/react";
 import { chatRules } from "@pochical/design/chat";
 import { Link2Off } from "lucide-react";
-import { useContext, useState } from "react";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -10,7 +9,8 @@ import type { Photo } from "../lib/design-sample-photos";
 import { MessageActions, useLongPress } from "./design-chat-actions";
 import type { LineActions } from "./design-chat-actions";
 import { photoSize } from "./design-chat-photos";
-import { chatAvatarSize, chatStyle } from "./design-chat-style";
+import { PeopleList, PhonePopover } from "./design-chat-popover";
+import { chatStyle } from "./design-chat-style";
 import { Tag } from "./design-choices";
 import { everyoneOff, patternOn } from "./design-group-data";
 import type {
@@ -27,9 +27,8 @@ import {
   smallWeekday,
   toneColor,
 } from "./design-group-parts";
-import { menuStyle } from "./design-menu";
 import { shortMonthOf } from "./design-month-name";
-import { PhoneContext, PhotoViewer } from "./design-sheet";
+import { PhotoViewer } from "./design-sheet";
 import { srOnly } from "./design-ui";
 import { useWeek } from "./design-week";
 
@@ -344,7 +343,6 @@ export function ReactionPill({
   people: Member[];
   onToggle: () => void;
 }) {
-  const phone = useContext(PhoneContext);
   const [open, setOpen] = useState(false);
   const press = useLongPress(() => {
     setOpen(true);
@@ -352,16 +350,8 @@ export function ReactionPill({
   const crowded = people.length > maxReactionFaces;
   const faces = crowded ? people.slice(0, maxReactionFaces - 1) : people;
   return (
-    <Popover.Root
-      lazyMount
-      onOpenChange={(details) => {
-        setOpen(details.open);
-      }}
-      open={open}
-      positioning={{ gutter: 6, placement: "top" }}
-      unmountOnExit
-    >
-      <Popover.Anchor asChild>
+    <PhonePopover
+      anchor={
         <button
           aria-label={`${reaction.emoji} ${people.map((person) => person.name).join("、")}`}
           aria-pressed={reaction.by.includes("me")}
@@ -386,30 +376,19 @@ export function ReactionPill({
             </small>
           )}
         </button>
-      </Popover.Anchor>
-      <Portal container={phone ?? undefined}>
-        <Popover.Positioner>
-          <Popover.Content
-            aria-label={`${reaction.emoji}を付けた人`}
-            className={cx(menuStyle.content, reactionPill.list)}
-          >
-            <span className={reactionPill.listEmoji}>{reaction.emoji}</span>
-            <ul className={reactionPill.people}>
-              {people.map((person) => (
-                <li className={reactionPill.person} key={person.id}>
-                  <Avatar member={person} size={chatAvatarSize} />
-                  {person.name}
-                </li>
-              ))}
-            </ul>
-          </Popover.Content>
-        </Popover.Positioner>
-      </Portal>
-    </Popover.Root>
+      }
+      label={`${reaction.emoji}を付けた人`}
+      onOpenChange={setOpen}
+      open={open}
+      positioning={{ gutter: 6, placement: "top" }}
+    >
+      <span className={reactionPill.listEmoji}>{reaction.emoji}</span>
+      <PeopleList people={people} />
+    </PhonePopover>
   );
 }
 
-export const reactionPill = {
+const reactionPill = {
   // The faces overlap a little, each ringed in the pill's own color. A
   // letter in place of a photo is inked dark with the letter cut out in
   // the pill's color, so its round shows on the pill as a photo would.
@@ -424,7 +403,6 @@ export const reactionPill = {
     "& > * + *": { marginInlineStart: "-2px" },
     display: "flex",
   }),
-  list: css({ minWidth: "160px", padding: "8px 8px 4px" }),
   listEmoji: css({
     display: "block",
     padding: "4px 12px",
@@ -434,14 +412,6 @@ export const reactionPill = {
     color: "text.tertiary",
     paddingInlineEnd: "4px",
     textStyle: "caption",
-  }),
-  people: css({ listStyle: "none", margin: 0, padding: 0 }),
-  person: css({
-    alignItems: "center",
-    display: "flex",
-    gap: "12px",
-    padding: "8px 12px",
-    textStyle: "body",
   }),
   pill: css({
     "&[aria-pressed=true]": {
