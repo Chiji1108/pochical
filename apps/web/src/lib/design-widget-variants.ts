@@ -1,3 +1,5 @@
+import { chosenVariants, wallpaperVariant } from "./design-variants";
+
 // What /design/widgets switches between, as /demo's choices do: each kept
 // in the URL, the first of each the one shown when the URL leaves it out.
 // The widgets' own settings, the day they show and the device they sit
@@ -111,14 +113,7 @@ export const widgetVariantOptions = {
     ],
     label: "テーマ",
   },
-  wallpaper: {
-    choices: [
-      { label: "青緑", value: "teal" },
-      { label: "桃", value: "peach" },
-      { label: "山吹", value: "yamabuki" },
-    ],
-    label: "Android の壁紙",
-  },
+  wallpaper: wallpaperVariant,
   weekend: {
     choices: [
       { label: "色をつける", value: "colored" },
@@ -158,11 +153,9 @@ export const widgetVariantKeys: WidgetVariantKey[] = [
 export function parseWidgetVariants(
   search: Record<string, unknown>
 ): WidgetVariants {
-  return Object.fromEntries(
-    widgetVariantKeys.map((key) => {
-      const { choices } = widgetVariantOptions[key];
-      const choice = choices.find(({ value }) => value === search[key]);
-      return [key, (choice ?? choices[0]).value];
-    })
+  return chosenVariants(
+    widgetVariantOptions,
+    widgetVariantKeys,
+    search
   ) as WidgetVariants;
 }

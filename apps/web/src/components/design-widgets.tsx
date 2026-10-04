@@ -21,7 +21,7 @@ import { dayName } from "../lib/text-limits";
 import { DARK_DRAWING, LIGHT_DRAWING, useAppIcons } from "./design-app-icon";
 import { dayCell, dayParts, todayMark } from "./design-day-cell";
 import { GroupIcon, MemberLook, PhotoAvatar } from "./design-group-parts";
-import { englishMonthOf } from "./design-month-name";
+import { englishMonthOf, shortMonthOf } from "./design-month-name";
 import { ColorSchemeContext } from "./design-theme";
 import { srOnly } from "./design-ui";
 import { useWeek } from "./design-week";
@@ -290,20 +290,6 @@ const toneText = cva({
 
 const list = css({ listStyle: "none", margin: 0, padding: 0 });
 
-const englishMonths = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
 const englishWeekdays = [
   "Sunday",
   "Monday",
@@ -326,7 +312,7 @@ function useWords() {
   if (english) {
     // Dates as English writes them, Thu, Sep 24, rather than the month's
     // heading (sep.), which is for the calendar's large title alone.
-    const month = (date: Date) => englishMonths[date.getMonth()] ?? "";
+    const month = (date: Date) => shortMonthOf(date, true) ?? "";
     const day = (date: Date) => weekdayName(date.getDay());
     return {
       date: (date: Date) => `${day(date)}, ${month(date)} ${date.getDate()}`,
@@ -862,7 +848,7 @@ function ColumnDate({
     return <>{date.getDate()}</>;
   }
   const month = english
-    ? (englishMonths[date.getMonth()] ?? "")
+    ? (shortMonthOf(date, true) ?? "")
     : `${date.getMonth() + MONTH_NUMBER}/`;
   return (
     <>

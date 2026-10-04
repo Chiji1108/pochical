@@ -1,3 +1,33 @@
+// The wallpaper behind Android's widgets and screens, whose colors they
+// take (lib/material-you.ts); /design and /design/widgets both offer it.
+export const wallpaperVariant = {
+  choices: [
+    { label: "青緑", value: "teal" },
+    { label: "桃", value: "peach" },
+    { label: "山吹", value: "yamabuki" },
+  ],
+  label: "Android の壁紙",
+} as const;
+
+// The choice the URL names for each key, else the first, which is the
+// current proposal.
+export function chosenVariants<Key extends string>(
+  options: Record<
+    Key,
+    { choices: readonly [{ value: string }, ...{ value: string }[]] }
+  >,
+  keys: readonly Key[],
+  search: Record<string, unknown>
+) {
+  return Object.fromEntries(
+    keys.map((key) => {
+      const { choices } = options[key];
+      const choice = choices.find(({ value }) => value === search[key]);
+      return [key, (choice ?? choices[0]).value];
+    })
+  );
+}
+
 // Design decisions that /design lets you switch between. The first choice of
 // each entry is the current proposal and is used when the URL omits it.
 export const designVariantOptions = {
@@ -66,14 +96,7 @@ export const designVariantOptions = {
     ],
     label: "お問い合わせ",
   },
-  wallpaper: {
-    choices: [
-      { label: "青緑", value: "teal" },
-      { label: "桃", value: "peach" },
-      { label: "山吹", value: "yamabuki" },
-    ],
-    label: "Android の壁紙",
-  },
+  wallpaper: wallpaperVariant,
 } as const;
 
 type VariantKey = keyof typeof designVariantOptions;
@@ -91,11 +114,9 @@ export const designVariantKeys = Object.keys(
 export function parseDesignVariants(
   search: Record<string, unknown>
 ): DesignVariants {
-  return Object.fromEntries(
-    designVariantKeys.map((key) => {
-      const { choices } = designVariantOptions[key];
-      const choice = choices.find(({ value }) => value === search[key]);
-      return [key, (choice ?? choices[0]).value];
-    })
+  return chosenVariants(
+    designVariantOptions,
+    designVariantKeys,
+    search
   ) as DesignVariants;
 }

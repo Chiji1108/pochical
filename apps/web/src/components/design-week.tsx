@@ -111,6 +111,12 @@ function dateClass(date: Date, colored: WeekSettings["colored"]) {
   return weekdayClass(date.getDay(), colored);
 }
 
+// How a date's number is colored, for those that take it as a variant: a
+// holiday or a Sunday red, a Saturday blue, each only while turned on.
+export function dateToneOf(date: Date, colored: WeekSettings["colored"]) {
+  return toneOf(dateClass(date, colored));
+}
+
 // Days from the week start on or before `date`.
 function daysIntoWeek(date: Date, weekStart: number) {
   return (date.getDay() - weekStart + weekLength) % weekLength;
@@ -168,7 +174,7 @@ export function useWeek() {
     // The same over a column of days, as the week's headings.
     weekdayLetter: (day: number) => weekdayLetterOf(day, english),
     dateClass: (date: Date) => dateClass(date, week.colored),
-    dateTone: (date: Date) => toneOf(dateClass(date, week.colored)),
+    dateTone: (date: Date) => dateToneOf(date, week.colored),
     // Whether a date's number shows as a holiday.
     isColoredHoliday: (date: Date) =>
       week.colored.holiday && holidayName(date) !== undefined,
