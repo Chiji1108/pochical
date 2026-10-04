@@ -2,9 +2,11 @@ import { widgetRules } from "@pochical/design/widgets";
 
 import type { GroupMark } from "../components/design-group-data";
 import {
+  dateToneOf,
   holidayName,
   monthDatesFrom,
   weekDatesFrom,
+  weekLength,
   weekdayNames,
   weekdaysFrom,
 } from "../components/design-week";
@@ -132,21 +134,6 @@ export type WidgetEntry = {
 };
 
 const UPCOMING_DAYS = 7;
-const WEEK_LENGTH = 7;
-const SUNDAY = 0;
-const SATURDAY = 6;
-
-// Holidays and Sundays read red, Saturdays blue, each only while turned on.
-function toneOf(date: Date, colored: WeekSettings["colored"]): DayTone {
-  const day = date.getDay();
-  if (
-    (colored.holiday && holidayName(date)) ||
-    (colored.sunday && day === SUNDAY)
-  ) {
-    return "holiday";
-  }
-  return colored.saturday && day === SATURDAY ? "saturday" : "plain";
-}
 
 // A day's changed hours, in words, from its time and how it moved:
 // timeChangeOf says whether it moved at all, and which way. Where both
@@ -188,7 +175,7 @@ function widgetDay(
     off: isDayOff(pattern),
     shift: entry?.shift,
     time,
-    tone: toneOf(date, week.colored),
+    tone: dateToneOf(date, week.colored),
     weekday: weekdayNames[date.getDay()] ?? "",
   };
 }
@@ -317,7 +304,7 @@ export function widgetEntry(
   const thisWeek = weekDatesFrom(date, week.weekStart);
   const twoWeeks = [
     ...thisWeek,
-    ...thisWeek.map((day) => addDays(day, WEEK_LENGTH)),
+    ...thisWeek.map((day) => addDays(day, weekLength)),
   ].map((day) => widgetDay(day, schedule, week, book));
   return {
     date,
