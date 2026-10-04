@@ -1,0 +1,369 @@
+{
+  "about": "What a widget's entry says of a day and of days off (spec/widgets.md). day: a day's own `start` and `end`, if set, over its pattern's standard `time` (null for a pattern without one); `expected.time` is the range read aloud (a leading zero dropped from the hour, 翌 before an end at or before the start) and `expected.change` the words shown on a day whose hours differ from its pattern's (null on an ordinary day). offs: what 次の休み counts. Each one's `days` are keyed by how many days from today (0 is today): work, off, or null where not entered; days not listed are `rest`, else not entered. `with` is who the widget is set to: nobody, one person, or the people of a group. `expected.today` says today is off (together); `expected.next` is how many days on the next day off after today is, looking no further than design/src/widgets.ts's widgetRules.offLookaheadDays (62), or null; `expected.none`, only when neither today nor any day ahead counts, is why: waiting (with the names of those who have not entered days the person is off and no one who has entered them works, as they come), apart (set to someone and the person has entered days), else notEntered. A day counts only when the person and everyone picked are off, as みんな休み (spec/vectors/together.json).",
+  "day": [
+    {
+      "name": "an ordinary day says nothing, and is read with its pattern's hours",
+      "time": ["09:00", "18:00"],
+      "expected": {
+        "time": "9:00 – 18:00",
+        "change": null
+      }
+    },
+    {
+      "name": "a night shift's end reads 翌",
+      "time": ["16:30", "09:30"],
+      "expected": {
+        "time": "16:30 – 翌9:30",
+        "change": null
+      }
+    },
+    {
+      "name": "starting earlier is 早出 from the new start",
+      "time": ["09:00", "18:00"],
+      "start": "07:00",
+      "expected": {
+        "time": "7:00 – 18:00",
+        "change": "早出 7:00〜"
+      }
+    },
+    {
+      "name": "ending later is 残業 to the new end",
+      "time": ["09:00", "18:00"],
+      "end": "20:00",
+      "expected": {
+        "time": "9:00 – 20:00",
+        "change": "残業 〜20:00"
+      }
+    },
+    {
+      "name": "both at once are the hours alone",
+      "time": ["09:00", "18:00"],
+      "start": "07:00",
+      "end": "20:00",
+      "expected": {
+        "time": "7:00 – 20:00",
+        "change": "7:00〜20:00"
+      }
+    },
+    {
+      "name": "other new hours are the hours alone",
+      "time": ["09:00", "18:00"],
+      "start": "10:00",
+      "end": "17:00",
+      "expected": {
+        "time": "10:00 – 17:00",
+        "change": "10:00〜17:00"
+      }
+    },
+    {
+      "name": "a pattern without a time has neither",
+      "time": null,
+      "expected": {
+        "time": null,
+        "change": null
+      }
+    }
+  ],
+  "offs": [
+    {
+      "name": "the next day off, counted in days",
+      "me": {
+        "days": {
+          "0": "work",
+          "1": "work",
+          "2": "off"
+        },
+        "rest": "work"
+      },
+      "with": [],
+      "expected": {
+        "today": false,
+        "next": 2,
+        "none": null
+      }
+    },
+    {
+      "name": "tomorrow is one day on",
+      "me": {
+        "days": {
+          "0": "work",
+          "1": "off"
+        },
+        "rest": "work"
+      },
+      "with": [],
+      "expected": {
+        "today": false,
+        "next": 1,
+        "none": null
+      }
+    },
+    {
+      "name": "a day off today is not counted as the next",
+      "me": {
+        "days": {
+          "0": "off",
+          "1": "work",
+          "2": "work",
+          "3": "off"
+        },
+        "rest": "work"
+      },
+      "with": [],
+      "expected": {
+        "today": true,
+        "next": 3,
+        "none": null
+      }
+    },
+    {
+      "name": "the last day looked at still counts",
+      "me": {
+        "days": {
+          "0": "work",
+          "62": "off"
+        }
+      },
+      "with": [],
+      "expected": {
+        "today": false,
+        "next": 62,
+        "none": null
+      }
+    },
+    {
+      "name": "nothing is looked for past the last day",
+      "me": {
+        "days": {
+          "0": "work",
+          "63": "off"
+        }
+      },
+      "with": [],
+      "expected": {
+        "today": false,
+        "next": null,
+        "none": {
+          "kind": "notEntered"
+        }
+      }
+    },
+    {
+      "name": "nothing entered",
+      "me": {
+        "days": {}
+      },
+      "with": [],
+      "expected": {
+        "today": false,
+        "next": null,
+        "none": {
+          "kind": "notEntered"
+        }
+      }
+    },
+    {
+      "name": "with someone, only a day both are off counts",
+      "me": {
+        "days": {
+          "0": "work",
+          "1": "off",
+          "2": "work",
+          "3": "off"
+        },
+        "rest": "work"
+      },
+      "with": [
+        {
+          "name": "あや",
+          "days": {
+            "1": "work",
+            "3": "off"
+          },
+          "rest": "work"
+        }
+      ],
+      "expected": {
+        "today": false,
+        "next": 3,
+        "none": null
+      }
+    },
+    {
+      "name": "with someone, today off together",
+      "me": {
+        "days": {
+          "0": "off"
+        },
+        "rest": "work"
+      },
+      "with": [
+        {
+          "name": "あや",
+          "days": {
+            "0": "off"
+          },
+          "rest": "work"
+        }
+      ],
+      "expected": {
+        "today": true,
+        "next": null,
+        "none": null
+      }
+    },
+    {
+      "name": "a day the person has not entered never counts",
+      "me": {
+        "days": {
+          "0": "work",
+          "2": "off"
+        }
+      },
+      "with": [
+        {
+          "name": "あや",
+          "days": {
+            "1": "off",
+            "2": "off"
+          },
+          "rest": "work"
+        }
+      ],
+      "expected": {
+        "today": false,
+        "next": 2,
+        "none": null
+      }
+    },
+    {
+      "name": "waiting on someone who has not entered the person's days off",
+      "me": {
+        "days": {
+          "0": "work",
+          "1": "off"
+        },
+        "rest": "work"
+      },
+      "with": [
+        {
+          "name": "あや",
+          "days": {
+            "0": "work"
+          }
+        }
+      ],
+      "expected": {
+        "today": false,
+        "next": null,
+        "none": {
+          "kind": "waiting",
+          "names": ["あや"]
+        }
+      }
+    },
+    {
+      "name": "with a group, waiting only where no one entered works",
+      "me": {
+        "days": {
+          "0": "work",
+          "1": "off",
+          "2": "off"
+        },
+        "rest": "work"
+      },
+      "with": [
+        {
+          "name": "あや",
+          "days": {
+            "1": "work",
+            "2": "off"
+          },
+          "rest": "work"
+        },
+        {
+          "name": "ゆき",
+          "days": {}
+        },
+        {
+          "name": "りく",
+          "days": {
+            "2": "off"
+          },
+          "rest": "work"
+        }
+      ],
+      "expected": {
+        "today": false,
+        "next": null,
+        "none": {
+          "kind": "waiting",
+          "names": ["ゆき"]
+        }
+      }
+    },
+    {
+      "name": "waiting names come in the order their days do",
+      "me": {
+        "days": {
+          "0": "work",
+          "1": "off",
+          "2": "off"
+        },
+        "rest": "work"
+      },
+      "with": [
+        {
+          "name": "あや",
+          "days": {
+            "1": "off",
+            "2": null
+          },
+          "rest": "work"
+        },
+        {
+          "name": "ゆき",
+          "days": {
+            "1": null,
+            "2": "off"
+          },
+          "rest": "work"
+        }
+      ],
+      "expected": {
+        "today": false,
+        "next": null,
+        "none": {
+          "kind": "waiting",
+          "names": ["ゆき", "あや"]
+        }
+      }
+    },
+    {
+      "name": "entered days that never meet are apart",
+      "me": {
+        "days": {
+          "0": "work",
+          "1": "off"
+        },
+        "rest": "work"
+      },
+      "with": [
+        {
+          "name": "あや",
+          "days": {
+            "1": "work"
+          },
+          "rest": "off"
+        }
+      ],
+      "expected": {
+        "today": false,
+        "next": null,
+        "none": {
+          "kind": "apart"
+        }
+      }
+    }
+  ]
+}

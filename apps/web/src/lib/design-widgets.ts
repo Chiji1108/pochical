@@ -14,12 +14,14 @@ import { addDays, dateKey, timeChangeOf, timeRange } from "./design-days";
 import type { Schedule } from "./design-days";
 import { isDayOff } from "./design-patterns";
 import type { PatternBook, Shift } from "./design-patterns";
+import { allOff, mayAllBeOff } from "./together";
 
 // What the home and lock screen widgets show, worked out ahead of time: the
 // native apps' WidgetKit TimelineEntry and Glance state. The widget views
 // draw only from this, never from the person's store, so they carry over
 // to SwiftUI and Compose as views of the same entry. How each field is
-// worked out is what the platforms share, and goes to spec/ once settled.
+// worked out is what the platforms share (spec/widgets.md), pinned by
+// spec/vectors/widgets.json.
 
 export type WidgetDay = {
   date: Date;
@@ -158,10 +160,10 @@ function changeOf(
     return undefined;
   }
   const [start = "", end = ""] = time.split(" – ");
-  if (moved.early && !moved.late) {
-    return `早出 ${start}〜`;
+  if (moved.early !== moved.late) {
+    return moved.early ? `早出 ${start}〜` : `残業 〜${end}`;
   }
-  return moved.late ? `残業 〜${end}` : `${start}〜${end}`;
+  return `${start}〜${end}`;
 }
 
 function widgetDay(
@@ -198,24 +200,27 @@ function peopleOf(companion?: WidgetCompanion): WidgetPerson[] {
   return companion.kind === "person" ? [companion.person] : companion.people;
 }
 
+// Whether each of those picked is off on the day, undefined where they
+// have not entered it.
+function theirOffs(day: WidgetDay, people: WidgetPerson[]) {
+  return people.map((one) => one.dayOn(day.date)?.off);
+}
+
 // A day counts as off together when the person is off and so is everyone
-// they picked; a day someone has not entered does not count, since nobody
-// knows yet.
+// they picked, as みんな休み is counted in a group.
 function offTogether(day: WidgetDay, people: WidgetPerson[]) {
-  return day.off && people.every((one) => one.dayOn(day.date)?.off === true);
+  const mine = day.shift === undefined ? undefined : day.off;
+  return allOff([mine, ...theirOffs(day, people)]);
 }
 
 // Those who have not entered a day the person is off and no one who has
 // entered it works: the day may yet be off together.
 function waitingOn(day: WidgetDay, people: WidgetPerson[]) {
-  if (!day.off) {
+  const theirs = theirOffs(day, people);
+  if (!(day.off && mayAllBeOff(theirs))) {
     return [];
   }
-  const days = people.map((one) => one.dayOn(day.date));
-  if (days.some((theirs) => theirs && !theirs.off)) {
-    return [];
-  }
-  return people.filter((_, index) => days[index] === undefined);
+  return people.filter((_, index) => theirs[index] === undefined);
 }
 
 function noOffOf(
