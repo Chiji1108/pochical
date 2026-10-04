@@ -3,13 +3,14 @@ import type { ColorScheme } from "./colors";
 import { hexToOklch, oklchToHex } from "./oklch";
 import type { Oklch } from "./oklch";
 
-// テーマ in the style settings: twelve, three to a row, each keeping one
+// テーマ in the style settings: fifteen, three to a row, each keeping one
 // color on the screen at about the shifts' own strength, so none clashes
 // with them. The first row is the basics: the app's moss, the same moss
 // softened on cream, and black ink. The second is warm, earthy ones:
 // milk tea, matcha and cocoa. The third is colors: blue, pink and violet.
 // The fourth is always dark, its character a night: a coffee shop, a
-// moonlit night, a blackboard. Whether shifts keep their own colors is a
+// moonlit night, a blackboard. A fifth, on trial, pushes 禅, すみれ and
+// ココア further. Whether shifts keep their own colors is a
 // choice of its own, シフトの色, since it carries meaning rather than
 // taste. Only the viewer's screen changes; a shift's color slot is what
 // syncs.
@@ -152,6 +153,32 @@ export const presets = [
     scheme: "dark",
     tint: { chroma: 0.1, hue: 162 },
     vividness: 0.8,
+  },
+  // Trial: three of the above pushed further, to set beside them.
+  // 禅 duller: the sage nearly gray, as raked gravel, the shifts quieter.
+  {
+    accent: { chroma: 0.024, hue: 128, lightness: 0.5 },
+    grays: { hue: 95, strength: 0.9 },
+    ground: { chroma: 0.004, hue: 92, lightness: 0.993 },
+    id: "karesansui",
+    name: "枯山水",
+    tint: { chroma: 0.032, hue: 125 },
+    vividness: 0.6,
+  },
+  // すみれ more purple: turned from blue-violet toward grape.
+  {
+    accent: { chroma: 0.105, hue: 315, lightness: 0.45 },
+    grays: { hue: 315, strength: 0.8 },
+    id: "budou",
+    name: "ぶどう",
+  },
+  // ココア deeper: a dark chocolate, nearly black.
+  {
+    accent: { chroma: 0.042, hue: 38, lightness: 0.3 },
+    grays: { hue: 42, strength: 1.2 },
+    id: "cacao",
+    name: "カカオ",
+    vividness: 0.75,
   },
 ] as const satisfies readonly Preset[];
 

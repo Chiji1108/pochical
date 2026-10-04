@@ -444,7 +444,7 @@ function ShiftColorsChoices() {
 type ThemeOption = Preset & { id: PresetId };
 
 // The テーマ in rows of three, each row a page: the basics, the soft ones,
-// the colors, the nights.
+// the colors, the nights, and the trial row.
 const themePages: ThemeOption[][] = Array.from(
   { length: Math.ceil(presets.length / 3) },
   (_, page) => presets.slice(page * 3, page * 3 + 3)
