@@ -505,18 +505,11 @@ function SimpleDay({ day, label }: { day: WidgetDay; label?: string }) {
   );
 }
 
-// Today alone; on a day off, said as such, with the poodle.
+// Today alone, a day off by its mark as any day: which day off it is
+// (公休, 有給) is the mark's to say. The poodle and おやすみ are
+// 次の休み's, the kind about days off.
 export function SimpleSmall({ entry }: { entry: WidgetEntry }) {
-  const day = entry.today;
-  if (day.off && !day.change) {
-    return (
-      <RestToday
-        entry={{ ...entry, offs: { ...entry.offs, with: undefined } }}
-        noted
-      />
-    );
-  }
-  return <SimpleDay day={day} />;
+  return <SimpleDay day={entry.today} />;
 }
 
 // Today and tomorrow, side by side.
@@ -1644,16 +1637,9 @@ const desaturatedDog = css({
 
 // A day off today, said as such rather than counted: おやすみ, with the
 // date over it, tomorrow's mark under it, and the app icon's poodle
-// looking up from the corner.
-// `noted` draws a memo's stroke under the date, as シンプル does for the
-// day it shows; 次の休み's days go without.
-function RestToday({
-  entry,
-  noted = false,
-}: {
-  entry: WidgetEntry;
-  noted?: boolean;
-}) {
+// looking up from the corner. 次の休み's days, about being off, go
+// without a memo's stroke.
+function RestToday({ entry }: { entry: WidgetEntry }) {
   const words = useWords();
   const day = entry.today;
   const [, tomorrow] = entry.upcoming;
@@ -1664,16 +1650,10 @@ function RestToday({
   }
   return (
     <div className={rest.root}>
-      <span className={srOnly}>
-        {spokenOff(entry, { day, inDays: 0 })}
-        {noted && day.note ? " メモあり" : ""}
-      </span>
+      <span className={srOnly}>{spokenOff(entry, { day, inDays: 0 })}</span>
       <PeekingDog />
       <span aria-hidden="true" className={offs.head}>
-        {/* The stroke outside the clipped line, so its ends show. */}
-        <span className={cx(noted && day.note && dayParts.noted)}>
-          <span className={oneLine}>{words.date(day.date)}</span>
-        </span>
+        <span className={oneLine}>{words.date(day.date)}</span>
         <CompanionFace entry={entry} />
       </span>
       <span aria-hidden="true" className={rest.title}>
