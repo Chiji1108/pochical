@@ -313,9 +313,9 @@ export function ChatPage({
   const replying = byId(replyTo);
   // What every line shares, given once rather than to each.
   const scope: ChatScope = {
-    group,
     inviteOf,
     isGroup,
+    members: group.members,
     mentionName,
     onInvite,
     onJump: jumpTo,

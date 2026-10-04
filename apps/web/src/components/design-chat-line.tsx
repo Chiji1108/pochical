@@ -40,7 +40,7 @@ import { Bubble, ChatItem, LargeEmoji, LineFrame } from "./design-chat-parts";
 import { PollCard } from "./design-chat-poll";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
 import { blockedLine, summaryOf, unsentLine } from "./design-chat-summary";
-import type { Group, Member, Message } from "./design-group-data";
+import type { Member, Message } from "./design-group-data";
 import { Avatar, memberButton } from "./design-group-parts";
 import { ToastContext } from "./design-toast";
 
@@ -48,17 +48,25 @@ import { ToastContext } from "./design-toast";
 // line it answers, its words (links and mentions in them, folded when
 // long), its time and its reactions.
 
-// What every line of a chat shares: the chat it is in, who wrote what,
-// and where a tap in it goes. ChatPage gives it once for all its lines.
+// What every line of a chat shares: who is in it, who wrote what, and
+// where a tap in it goes. ChatPage gives it once for all its lines, and so
+// does the support chat, with Pochical's people as its other member.
 export type ChatScope = {
-  group: Group;
+  // Who is in the chat now: a mention or a face opens only theirs.
+  members: Member[];
   isGroup: boolean;
+  // Faces by member id, for writers drawn other than by their picture,
+  // as the support chat's app icon.
+  faces?: Record<string, ReactNode>;
   // Who a shared day shows: everyone, or the two people in a direct chat.
   people: Member[];
   writerOf: (id?: string) => Member | undefined;
   mentionName: (id: string) => string;
-  inviteOf: (code: string) => InviteLook | undefined;
-  onInvite: (code: string) => void;
+  // What one of Pochical's invitation links opens, and opening it in the
+  // app. Without them, as in the support chat, such a link is one like
+  // any other, opened in the browser.
+  inviteOf?: (code: string) => InviteLook | undefined;
+  onInvite?: (code: string) => void;
   onMember?: (member: Member) => void;
   onJump: (id: string) => void;
   onLinkMenu: (at: LinkMenuAt) => void;
@@ -75,6 +83,8 @@ function useChatScope() {
   return scope;
 }
 
+const nothing = () => undefined;
+
 // One line of the chat as it is drawn: a message, or one of the app's.
 export function MessageLine({
   message,
@@ -86,10 +96,10 @@ export function MessageLine({
   upload,
   actions,
   onSelect,
-  onDecide,
-  onVote,
-  onFailed,
-  onFolded,
+  onDecide = nothing,
+  onVote = nothing,
+  onFailed = nothing,
+  onFolded = nothing,
 }: {
   message: Message;
   // The line above, after which a new day or a new run starts.
@@ -106,16 +116,19 @@ export function MessageLine({
   actions: LineActions;
   // Opens its actions, from a card's long press.
   onSelect: () => void;
-  onDecide: () => void;
-  onVote: (key: string) => void;
-  onFailed: () => void;
+  // Settling its poll, and a vote in it, for a chat that has polls.
+  onDecide?: () => void;
+  onVote?: (key: string) => void;
+  // A tap on a photo that could not be sent.
+  onFailed?: () => void;
   // Its words were measured to fold, and 続きを読む has come in under
   // them, after the chat was scrolled to its place.
-  onFolded: () => void;
+  onFolded?: () => void;
 }) {
   const {
-    group,
+    members,
     isGroup,
+    faces,
     people,
     writerOf,
     mentionName,
@@ -139,7 +152,7 @@ export function MessageLine({
   const [revealed, setRevealed] = useState(false);
   const toast = useContext(ToastContext);
   const member = writerOf(message.from);
-  const current = member !== undefined && group.members.includes(member);
+  const current = member !== undefined && members.includes(member);
   const mine = member?.me === true;
   const firstOfRun =
     previous?.from !== message.from ||
@@ -149,7 +162,7 @@ export function MessageLine({
   // A message whose first link is an invitation shows its group instead
   // of a page.
   const firstUrl = message.text ? firstLink(message.text) : undefined;
-  const inviteCode = firstUrl ? inviteCodeOf(firstUrl) : undefined;
+  const inviteCode = firstUrl && inviteOf ? inviteCodeOf(firstUrl) : undefined;
   // Nothing but a few emoji: drawn large, without a bubble. A reply keeps
   // its bubble, as the line it answers sits inside one.
   const largeEmoji =
@@ -193,6 +206,9 @@ export function MessageLine({
       </ChatItem>
     );
   }
+  const face =
+    member &&
+    (faces?.[member.id] ?? <Avatar member={member} size={chatAvatarSize} />);
   return (
     <LineFrame
       avatar={
@@ -207,10 +223,10 @@ export function MessageLine({
             }}
             type="button"
           >
-            <Avatar member={member} size={chatAvatarSize} />
+            {face}
           </button>
         ) : (
-          <Avatar member={member} size={chatAvatarSize} />
+          face
         ))
       }
       day={day}
@@ -313,7 +329,7 @@ export function MessageLine({
                   if (url) {
                     event.preventDefault();
                     const code = inviteCodeOf(url);
-                    if (code) {
+                    if (code !== undefined && onInvite) {
                       onInvite(code);
                     } else {
                       openLink(url);
@@ -322,7 +338,7 @@ export function MessageLine({
                   }
                   // A mention opens that member's profile, as
                   // their picture does.
-                  const mentioned = group.members.find(
+                  const mentioned = members.find(
                     (other) => !other.me && other.id === mentionAt(event.target)
                   );
                   if (mentioned && onMember) {
@@ -361,10 +377,10 @@ export function MessageLine({
             )}
             {inviteCode && (
               <InviteCard
-                invite={inviteOf(inviteCode)}
+                invite={inviteOf?.(inviteCode)}
                 onLongPress={onSelect}
                 onOpen={() => {
-                  onInvite(inviteCode);
+                  onInvite?.(inviteCode);
                 }}
               />
             )}
