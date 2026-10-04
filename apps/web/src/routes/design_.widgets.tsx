@@ -34,17 +34,20 @@ import {
 import type { WidgetFamily } from "../components/design-widget-frame";
 import {
   CalendarLarge,
+  TwoWeeksMedium,
+} from "../components/design-widgets-calendar";
+import {
   NextOffCircular,
-  NextOffSmall,
   TodayCircular,
   TodayInline,
-  SimpleMedium,
-  SimpleSmall,
-  TwoWeeksMedium,
+  UpcomingRectangular,
+} from "../components/design-widgets-lock";
+import { NextOffSmall } from "../components/design-widgets-next-off";
+import { SimpleMedium, SimpleSmall } from "../components/design-widgets-simple";
+import {
   UpcomingMedium,
   UpcomingSmall,
-  UpcomingRectangular,
-} from "../components/design-widgets";
+} from "../components/design-widgets-upcoming";
 import {
   CellNamesContext,
   IconWeightContext,

@@ -8,7 +8,7 @@ import { useSettings } from "../lib/design-settings-store";
 import { widgetEntry } from "../lib/design-widgets";
 import { useColorScheme } from "./design-theme";
 import { wallpaperFor, WidgetFrame } from "./design-widget-frame";
-import { TwoWeeksMedium } from "./design-widgets";
+import { TwoWeeksMedium } from "./design-widgets-calendar";
 
 // The medium widget's size as laid out, for fitting it in.
 const IOS_MEDIUM = { height: 158, width: 338 };

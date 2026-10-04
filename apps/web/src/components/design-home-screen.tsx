@@ -20,7 +20,9 @@ import { NotificationBanner } from "./design-notifications";
 import { Phone } from "./design-phone";
 import { useThemeStyle } from "./design-theme";
 import { wallpaperFor, WidgetFrame } from "./design-widget-frame";
-import { UpcomingSmall, NextOffSmall, TwoWeeksMedium } from "./design-widgets";
+import { TwoWeeksMedium } from "./design-widgets-calendar";
+import { NextOffSmall } from "./design-widgets-next-off";
+import { UpcomingSmall } from "./design-widgets-upcoming";
 
 // The phone's home screen beside the app on /demo, with the widgets on it
 // drawn from the same person's data, so what is entered in the app shows
