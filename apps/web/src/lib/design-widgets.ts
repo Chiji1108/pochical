@@ -48,9 +48,10 @@ export type WidgetDay = {
   // 早出 and 残業, drawn on the mark's sides as in the calendar.
   early: boolean;
   late: boolean;
-  note?: string;
-  // 一緒に働く人 the person tagged the day with.
-  members: string[];
+  // Whether the day has a memo, which the calendar's stroke under its date
+  // says. Its words, like 一緒に働く人, stay with their owner: an entry
+  // never carries them.
+  noted: boolean;
 };
 
 // Another person's day, as their own pattern has it: its look, name and
@@ -180,9 +181,8 @@ function widgetDay(
     early: moved?.early ?? false,
     holiday: week.colored.holiday && holidayName(date) !== undefined,
     late: moved?.late ?? false,
-    members: entry?.members ?? [],
     name: pattern?.name,
-    note: entry?.note,
+    noted: Boolean(entry?.note),
     off: isDayOff(pattern),
     shift: entry?.shift,
     time,

@@ -132,7 +132,7 @@ function Change({
 // A day as read aloud, for the places whose marks are pictures only.
 function SpokenDay({ day }: { day: WidgetDay }) {
   const time = day.time ? ` ${day.time}` : "";
-  const note = day.note ? " メモあり" : "";
+  const note = day.noted ? " メモあり" : "";
   return (
     <span className={srOnly}>
       {monthDay(day.date)}({day.weekday}) {day.name ?? NOTHING}
@@ -477,7 +477,7 @@ function SimpleDay({ day, label }: { day: WidgetDay; label?: string }) {
   }
   // A memo is the calendar's stroke under the date (or 明日); its words
   // are the app's.
-  const noted = day.note ? dayParts.noted : undefined;
+  const noted = day.noted ? dayParts.noted : undefined;
   return (
     <div className={simple.day}>
       <SpokenDay day={day} />
@@ -580,7 +580,7 @@ function UpcomingHead({ day }: { day: WidgetDay }) {
       </span>
       <span aria-hidden="true" className={upcoming.headText}>
         <span className={simple.date}>
-          <span className={cx(day.note && dayParts.noted)}>
+          <span className={cx(day.noted && dayParts.noted)}>
             {words.short(day.date)}
           </span>
         </span>
@@ -1038,7 +1038,7 @@ function ColumnDay({
             day.holiday && dayParts.holiday
           )}
         >
-          <span className={cx(day.note && dayParts.noted)}>
+          <span className={cx(day.noted && dayParts.noted)}>
             <ColumnDate date={day.date} english={english} first={first} />
           </span>
         </span>
@@ -1171,7 +1171,7 @@ function NextDays({ days }: { days: WidgetDay[] }) {
             aria-hidden="true"
             className={cx(nextDays.weekday, toneText({ tone: day.tone }))}
           >
-            <span className={cx(day.note && dayParts.noted)}>
+            <span className={cx(day.noted && dayParts.noted)}>
               {words.weekday(day.date)}
             </span>
           </span>
@@ -1345,7 +1345,7 @@ function GridDay({
           day.holiday && !isToday && dayParts.holiday
         )}
       >
-        <span className={cx(isToday && todayMark, day.note && dayParts.noted)}>
+        <span className={cx(isToday && todayMark, day.noted && dayParts.noted)}>
           {day.date.getDate()}
         </span>
       </span>

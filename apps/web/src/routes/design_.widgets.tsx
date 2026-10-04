@@ -85,27 +85,15 @@ export const Route = createFileRoute("/design_/widgets")({
   validateSearch: parseWidgetVariants,
 });
 
-// The sample month and the next, with today a work day that has a memo
-// and people with it, so every widget has something to show.
+// The sample month and the next, with today a work day of 残業 that has a
+// memo, so every widget has something to show.
 const OCTOBER = 9;
 const sampleSchedule = {
   ...initialDesignSchedule(),
   ...initialDesignSchedule(4, OCTOBER),
   [dateKey(designToday)]: {
     end: "20:00",
-    members: ["田中", "山本"],
     note: "新人さん同行。17時から棚卸しの打ち合わせ",
-    shift: "day" as const,
-  },
-};
-
-// Today with a long memo and six people, to see how both give way.
-const crowdedSchedule = {
-  ...sampleSchedule,
-  [dateKey(designToday)]: {
-    end: "20:00",
-    members: ["田中", "山本", "佐藤", "鈴木", "高橋", "伊藤"],
-    note: "新人さん同行。17時から棚卸しの打ち合わせ。帰りに備品の発注を確認して、明日の申し送りに書いておく",
     shift: "day" as const,
   },
 };
@@ -207,7 +195,6 @@ function scheduleFor(day: WidgetVariants["day"]): Schedule {
   const days: Record<WidgetVariants["day"], Schedule> = {
     blank: { [todayKey]: undefined },
     busy: {},
-    crowded: crowdedSchedule,
     early: { [todayKey]: { shift: "day", start: "07:00" } },
     earlyLate: { [todayKey]: { end: "20:00", shift: "day", start: "07:00" } },
     empty: {},

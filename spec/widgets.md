@@ -25,7 +25,7 @@ Each day in an entry has:
 | `early`, `late` | 早出 and 残業: the day starts before or ends after the pattern's standard time, counted as the calendar does. |
 | `off` | The day's pattern is a day off (休み, 有休). |
 | `color` | The pattern's color, whose tint is a day off's tile. |
-| `note` | The day's note, if any. |
+| `noted` | Whether the day has a memo. The entry carries neither a memo's words nor the day's 一緒に働く人, which the widgets never show (Words only for what changed). |
 
 Days with nothing entered have no `shift`, `name` or `time`. They are shown as nothing entered (予定なし), never as a day off.
 
