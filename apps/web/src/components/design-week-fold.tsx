@@ -24,7 +24,7 @@ import {
   dayGrid,
   dayGridHeight,
   MONTH_WEEKS,
-} from "./design-ui";
+} from "./design-day-grid";
 import { useWeek } from "./design-week";
 
 // The calendar's week view: a day opened folds the month up into its

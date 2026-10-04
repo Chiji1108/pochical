@@ -1,6 +1,6 @@
 # Text limits
 
-How the free text people type is held to its limit and how a long value is shown. Both native apps and the server follow it. The web prototype's `LimitedInput` in `apps/web/src/components/design-ui.tsx` and `apps/web/src/lib/text-limits.ts` follow this spec.
+How the free text people type is held to its limit and how a long value is shown. Both native apps and the server follow it. The web prototype's `LimitedInput` in `apps/web/src/components/design-fields.tsx` and `apps/web/src/lib/text-limits.ts` follow this spec.
 
 ## Limits
 

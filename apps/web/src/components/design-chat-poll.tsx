@@ -7,11 +7,12 @@ import { dateKey, formatDay } from "../lib/design-days";
 import { MessageActions } from "./design-chat-actions";
 import { reactionPill } from "./design-chat-cards";
 import { chatAvatarSize } from "./design-chat-style";
+import { ChoiceList, ChoiceRow } from "./design-choices";
 import { everyoneOff } from "./design-group-data";
 import type { Member, Poll } from "./design-group-data";
 import { Avatar, smallWeekday, toneColor } from "./design-group-parts";
+import { menuStyle } from "./design-menu";
 import { DecideHeading, PhoneContext, Sheet } from "./design-sheet";
-import { ChoiceList, ChoiceRow, menuStyle } from "./design-ui";
 import { useWeek } from "./design-week";
 
 // Days put to the vote in a group chat (spec/chat.md, Polls): the card

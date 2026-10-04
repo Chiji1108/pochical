@@ -14,7 +14,10 @@ import type { RepeatRule } from "../lib/design-days";
 import { presetList, usePatterns } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
+import { ChipGroup, Tag } from "./design-choices";
 import { InputDatePicker } from "./design-date-picker";
+import { PageHeader } from "./design-header";
+import { List, ListRow, SwitchRow } from "./design-list";
 import { RepeatSequenceEditor, ShiftPreview } from "./design-repeat-editor";
 import {
   ListSection,
@@ -24,17 +27,7 @@ import {
   settingsParts,
   shortDay,
 } from "./design-settings-parts";
-import {
-  Button,
-  ChipGroup,
-  fieldLabel,
-  List,
-  ListRow,
-  Note,
-  PageHeader,
-  SwitchRow,
-  Tag,
-} from "./design-ui";
+import { Button, fieldLabel, Note } from "./design-ui";
 import { WorkSetupSteps } from "./design-work-setup";
 import { ShiftMark } from "./shift-mark";
 

@@ -6,8 +6,9 @@ import { css, cva } from "styled-system/css";
 import { firstCharacter } from "../lib/text-limits";
 import { changeOn, patternOn } from "./design-group-data";
 import type { GroupMark, Member } from "./design-group-data";
+import { List, ListRow } from "./design-list";
 import { Sheet } from "./design-sheet";
-import { List, ListRow, srOnly } from "./design-ui";
+import { srOnly } from "./design-ui";
 import type { DayTone } from "./design-week";
 import {
   IconWeightContext,

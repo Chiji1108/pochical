@@ -29,6 +29,7 @@ import { monthKey, shiftsPage } from "./design-group-shifts-parts";
 import type { Layout } from "./design-group-shifts-parts";
 import { MonthDivider } from "./design-group-shifts-together";
 import { MemberTable, WeekBlock, weekTable } from "./design-group-shifts-weeks";
+import { TodayButton } from "./design-header";
 import { monthTitleOf } from "./design-month-name";
 import { MonthTitleButton } from "./design-month-picker";
 import {
@@ -37,7 +38,6 @@ import {
   TodayCorner,
   useTurn,
 } from "./design-rolling";
-import { TodayButton } from "./design-ui";
 import { useWeek, weekLength } from "./design-week";
 
 // The shift table's months as one list that scrolls on, by day or by

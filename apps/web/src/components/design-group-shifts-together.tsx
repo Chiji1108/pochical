@@ -15,6 +15,7 @@ import {
 import { designToday } from "../lib/design-today";
 import type { Together } from "./design-group-data";
 import { shiftsPage } from "./design-group-shifts-parts";
+import { List, ListRow, SummaryRow, summaryRow } from "./design-list";
 import { monthTitleOf, monthWithYearOf } from "./design-month-name";
 import {
   monthIndex,
@@ -23,7 +24,7 @@ import {
   useTurn,
 } from "./design-rolling";
 import { Sheet, sheetBody, SheetHeading } from "./design-sheet";
-import { List, ListRow, srOnly, SummaryRow, summaryRow } from "./design-ui";
+import { srOnly } from "./design-ui";
 import { holidayName, useWeek } from "./design-week";
 
 // みんな休み: the days everyone in the group is off in a month, counted

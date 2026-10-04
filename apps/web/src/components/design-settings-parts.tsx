@@ -4,7 +4,8 @@ import { css } from "styled-system/css";
 import { monthAfter } from "../lib/design-days";
 import type { PatternBook, Shift } from "../lib/design-patterns";
 import { designToday } from "../lib/design-today";
-import { List, Section } from "./design-ui";
+import { List } from "./design-list";
+import { Section } from "./design-ui";
 
 // What the settings pages share: their sections and rows, and the sample
 // days their previews and examples count from.

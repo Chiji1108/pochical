@@ -7,7 +7,18 @@ import path from "node:path";
 // A piece added to the shared files without a place there fails here, so
 // the page never falls behind the code.
 const components = path.join(import.meta.dir, "../src/components");
-const shared = ["design-ui.tsx", "design-sheet.tsx"];
+const shared = [
+  "design-ui.tsx",
+  "design-fields.tsx",
+  "design-header.tsx",
+  "design-list.tsx",
+  "design-choices.tsx",
+  "design-menu.tsx",
+  "design-sortable-list.tsx",
+  "design-day-grid.tsx",
+  "design-pager.tsx",
+  "design-sheet.tsx",
+];
 const catalog = readFileSync(
   path.join(import.meta.dir, "../src/routes/design_.components.tsx"),
   "utf-8"

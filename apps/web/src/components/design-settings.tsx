@@ -9,6 +9,8 @@ import { site } from "../lib/site";
 import { CoworkersPage, useCoworkerList } from "./design-coworkers";
 import type { Profile } from "./design-group-data";
 import { PhotoAvatar } from "./design-group-parts";
+import { PageHeader } from "./design-header";
+import { ListRow, listRow } from "./design-list";
 import {
   ChatNotificationsPage,
   NotificationSection,
@@ -41,13 +43,7 @@ import { SupportChatPage, SupportRow } from "./design-support-chat";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
 import { ToastContext } from "./design-toast";
-import {
-  ListRow,
-  listRow,
-  PageHeader,
-  Screen,
-  ScreenScroll,
-} from "./design-ui";
+import { Screen, ScreenScroll } from "./design-ui";
 import { useWeek } from "./design-week";
 import { ShiftMark } from "./shift-mark";
 

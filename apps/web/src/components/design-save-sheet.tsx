@@ -13,6 +13,9 @@ import type { Schedule } from "../lib/design-days";
 import type { ImageOptions } from "../lib/design-settings-store";
 import { AppIcon } from "./design-app-icon";
 import { DayCell } from "./design-day-cell";
+import { dayGrid, WeekdayRow } from "./design-day-grid";
+import { PageHeader } from "./design-header";
+import { List, ListRow, SwitchRow } from "./design-list";
 import { monthWithYearOf } from "./design-month-name";
 import { NameTabs, OffLookTabs } from "./design-settings-style";
 import { Sheet, SheetHeading, sheetBody, sheetLead } from "./design-sheet";
@@ -25,19 +28,7 @@ import {
   previewWrap,
 } from "./design-theme";
 import { ToastContext } from "./design-toast";
-import {
-  Button,
-  dayGrid,
-  List,
-  ListRow,
-  Note,
-  PageHeader,
-  Screen,
-  ScreenScroll,
-  Section,
-  SwitchRow,
-  WeekdayRow,
-} from "./design-ui";
+import { Button, Note, Screen, ScreenScroll, Section } from "./design-ui";
 import { useWeek } from "./design-week";
 import {
   CellNamesContext,

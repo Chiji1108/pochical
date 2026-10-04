@@ -16,13 +16,58 @@ import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
 import { MonthSummary } from "../components/design-calendar";
+import {
+  Chip,
+  ChipGroup,
+  Choice,
+  ChoiceChip,
+  ChoiceGrid,
+  ChoiceTile,
+  ChoiceList,
+  ChoiceRow,
+  colorGrid,
+  PageDots,
+  Segment,
+  SegmentedControl,
+  Tag,
+} from "../components/design-choices";
 import { DayCell } from "../components/design-day-cell";
+import { dayGrid, WeekdayRow } from "../components/design-day-grid";
+import {
+  LimitedInput,
+  LimitedTextArea,
+  MarkLetterInput,
+  SampleTag,
+  TimeRange,
+} from "../components/design-fields";
 import { PhotoAvatar } from "../components/design-group-parts";
+import {
+  BackButton,
+  TodayButton,
+  DoneButton,
+  HeaderAction,
+  PageHeader,
+} from "../components/design-header";
+import {
+  ListDivider,
+  SummaryRow,
+  List,
+  ListRow,
+  SwitchRow,
+} from "../components/design-list";
+import {
+  IconMenu,
+  MenuItem,
+  MenuPicker,
+  MenuSeparator,
+  PullDownMenu,
+} from "../components/design-menu";
 import {
   DesignIntro,
   DesignPage,
   DesignToolbar,
 } from "../components/design-page";
+import { Pager } from "../components/design-pager";
 import { Phone } from "../components/design-phone";
 import {
   DesignProviders,
@@ -39,57 +84,21 @@ import {
   SheetPicture,
   SystemAlert,
 } from "../components/design-sheet";
+import { SortableList } from "../components/design-sortable-list";
 import { TabBar } from "../components/design-tab-bar";
 import { pageStyle, useThemeStyle } from "../components/design-theme";
 import { toastLook } from "../components/design-toast";
 import {
   AddButton,
-  BackButton,
   BarGroup,
   Button,
-  Chip,
-  ChipGroup,
-  Choice,
-  ChoiceChip,
-  ChoiceGrid,
-  ChoiceTile,
   DestructiveButton,
-  IconMenu,
-  LimitedInput,
-  LimitedTextArea,
-  ListDivider,
-  MarkLetterInput,
   OptionCard,
-  Pager,
-  SampleTag,
-  SortableList,
-  SummaryRow,
-  TodayButton,
-  ChoiceList,
-  ChoiceRow,
-  colorGrid,
-  dayGrid,
-  DoneButton,
-  HeaderAction,
   IconButton,
-  List,
-  ListRow,
-  MenuItem,
-  MenuPicker,
-  MenuSeparator,
   Note,
-  PageDots,
-  PageHeader,
-  PullDownMenu,
   Screen,
   ScreenScroll,
   Section,
-  Segment,
-  SegmentedControl,
-  SwitchRow,
-  Tag,
-  TimeRange,
-  WeekdayRow,
 } from "../components/design-ui";
 import { useWeek } from "../components/design-week";
 import {

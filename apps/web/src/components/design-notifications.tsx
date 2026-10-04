@@ -22,10 +22,15 @@ import type { Firing, Reminder, ReminderKind } from "../lib/design-reminders";
 import { useSettings } from "../lib/design-settings-store";
 import { useUser } from "../lib/design-user-store";
 import { AppIcon, useAppIcons } from "./design-app-icon";
+import { Chip, ChipGroup, Segment, SegmentedControl } from "./design-choices";
+import { TimeField } from "./design-fields";
 import { groupChat, isMuted, withMuted } from "./design-group-data";
 import type { Member } from "./design-group-data";
 import { Avatar, GroupIcon } from "./design-group-parts";
 import { sampleOthers } from "./design-group-samples";
+import { PageHeader } from "./design-header";
+import { List, ListRow, listRow, SwitchRow, Toggle } from "./design-list";
+import { MenuPicker, PullDownMenu } from "./design-menu";
 import {
   ConfirmDialog,
   DecideHeading,
@@ -33,26 +38,7 @@ import {
   sheetBody,
   SystemAlert,
 } from "./design-sheet";
-import {
-  Button,
-  Chip,
-  ChipGroup,
-  DestructiveButton,
-  List,
-  ListRow,
-  listRow,
-  MenuPicker,
-  Note,
-  PageHeader,
-  PullDownMenu,
-  Section,
-  Segment,
-  SegmentedControl,
-  srOnly,
-  SwitchRow,
-  TimeField,
-  Toggle,
-} from "./design-ui";
+import { Button, DestructiveButton, Note, Section, srOnly } from "./design-ui";
 import { ShiftMark } from "./shift-mark";
 
 // 通知: reminders of the person's own shifts, which the device sends by

@@ -18,9 +18,9 @@ import type { MouseEvent, ReactElement } from "react";
 import { css, cx } from "styled-system/css";
 
 import { reactionChoices } from "./design-group-data";
+import { menuStyle } from "./design-menu";
 import { PhoneContext } from "./design-sheet";
 import { ToastContext } from "./design-toast";
-import { menuStyle } from "./design-ui";
 
 // What a long press (or a right click) on a chat's line opens: its
 // reactions and menu, or a link's own small menu, and the press itself.

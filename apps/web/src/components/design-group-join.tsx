@@ -26,15 +26,14 @@ import {
   GroupProfileRow,
   profileIn,
 } from "./design-group-settings";
+import { PageHeader } from "./design-header";
+import { List, ListRow } from "./design-list";
 import { ConfirmDialog, Sheet, SheetHeading, sheetBody } from "./design-sheet";
 import { ToastContext } from "./design-toast";
 import {
   Button,
   IconButton,
-  List,
-  ListRow,
   Note,
-  PageHeader,
   Screen,
   ScreenScroll,
   Section,

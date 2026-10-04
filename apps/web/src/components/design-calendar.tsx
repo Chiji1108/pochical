@@ -50,13 +50,20 @@ import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
 import { useChangeDays, useUser } from "../lib/design-user-store";
 import { composing, limitText } from "../lib/text-limits";
+import { Chip, ChipGroup, PageDots } from "./design-choices";
 import { coworkersFull, useCoworkerList } from "./design-coworkers";
 import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
+import { dayGrid, WeekdayRow } from "./design-day-grid";
+import { LimitedInput, LimitedTextArea, TimeRange } from "./design-fields";
 import { GapSheet } from "./design-gap-sheet";
+import { DoneButton, TodayButton } from "./design-header";
+import { List, ListRow, listRow, SummaryRow } from "./design-list";
+import { IconMenu, MenuItem, MenuPicker, PullDownMenu } from "./design-menu";
 import { BreakdownSheet, useShownWith } from "./design-month-breakdown";
 import { MonthName } from "./design-month-name";
 import { MonthTitleButton, monthTitle } from "./design-month-picker";
+import { Pager } from "./design-pager";
 import {
   monthIndex,
   RollingName,
@@ -71,29 +78,10 @@ import type { Tab } from "./design-tab-bar";
 import { ToastContext } from "./design-toast";
 import {
   Button,
-  Chip,
-  ChipGroup,
-  dayGrid,
   DestructiveButton,
-  DoneButton,
   IconButton,
-  IconMenu,
-  LimitedInput,
-  LimitedTextArea,
-  List,
-  ListRow,
-  listRow,
-  MenuItem,
-  MenuPicker,
-  PageDots,
-  Pager,
-  PullDownMenu,
   Screen,
   srOnly,
-  SummaryRow,
-  TimeRange,
-  TodayButton,
-  WeekdayRow,
 } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
 import { FoldingGrid, useWeekFold } from "./design-week-fold";

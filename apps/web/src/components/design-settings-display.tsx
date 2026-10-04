@@ -5,6 +5,16 @@ import { token } from "styled-system/tokens";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
 import { AppIcon, pickableIcons, useAppIcons } from "./design-app-icon";
+import {
+  ChoiceGrid,
+  ChoiceList,
+  ChoiceRow,
+  ChoiceTile,
+  Segment,
+  SegmentedControl,
+} from "./design-choices";
+import { PageHeader } from "./design-header";
+import { List, ListRow, SwitchRow } from "./design-list";
 import { shortMonthOf } from "./design-month-name";
 import { settingsParts } from "./design-settings-parts";
 import { StylePreview } from "./design-settings-preview";
@@ -12,20 +22,7 @@ import type { StylePreviewData } from "./design-settings-preview";
 import { SystemAlert } from "./design-sheet";
 import { presetOf } from "./design-theme";
 import type { Appearance } from "./design-theme";
-import {
-  ChoiceGrid,
-  ChoiceList,
-  ChoiceRow,
-  ChoiceTile,
-  List,
-  ListRow,
-  Note,
-  PageHeader,
-  Section,
-  Segment,
-  SegmentedControl,
-  SwitchRow,
-} from "./design-ui";
+import { Note, Section } from "./design-ui";
 import { weekdayNameOf, weekdayNames } from "./design-week";
 import type { ColoredDay } from "./design-week";
 

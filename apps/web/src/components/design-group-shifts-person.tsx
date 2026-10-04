@@ -6,21 +6,20 @@ import { css, cx } from "styled-system/css";
 import { dateKey, formatDay, monthAfter } from "../lib/design-days";
 import { designToday } from "../lib/design-today";
 import { dayName } from "../lib/text-limits";
+import { ChoiceChip, ChoiceGrid } from "./design-choices";
 import { dayCell, dayParts, todayMark } from "./design-day-cell";
+import {
+  dayGrid,
+  dayGridHeight,
+  MONTH_WEEKS,
+  WeekdayRow,
+} from "./design-day-grid";
 import { everyoneOff, patternOn, sameMonth } from "./design-group-data";
 import type { Group, Member } from "./design-group-data";
 import { Avatar, MemberLook, MemberMark } from "./design-group-parts";
 import { monthKey, people } from "./design-group-shifts-parts";
-import {
-  ChoiceChip,
-  ChoiceGrid,
-  dayGrid,
-  dayGridHeight,
-  MONTH_WEEKS,
-  Note,
-  Pager,
-  WeekdayRow,
-} from "./design-ui";
+import { Pager } from "./design-pager";
+import { Note } from "./design-ui";
 import { useWeek } from "./design-week";
 import { useDisplayColor } from "./shift-mark";
 

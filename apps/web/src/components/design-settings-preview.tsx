@@ -31,8 +31,12 @@ import {
 } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
 import { designToday } from "../lib/design-today";
+import { PageDots } from "./design-choices";
 import { DayCell } from "./design-day-cell";
+import { dayGrid, WeekdayRow } from "./design-day-grid";
+import { SampleTag } from "./design-fields";
 import { MonthName } from "./design-month-name";
+import { Pager } from "./design-pager";
 import { settingsParts } from "./design-settings-parts";
 import {
   ColorSchemeContext,
@@ -42,7 +46,6 @@ import {
   ThemeContext,
   themeStyle,
 } from "./design-theme";
-import { dayGrid, PageDots, Pager, SampleTag, WeekdayRow } from "./design-ui";
 import { weekLength } from "./design-week";
 
 // The preview at the top of the スタイル and カレンダー pages: a week of

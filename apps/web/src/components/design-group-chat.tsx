@@ -54,21 +54,13 @@ import type { Chat, Group, Member, Message } from "./design-group-data";
 import { Avatar, badge, photoPicker } from "./design-group-parts";
 import { profileIn } from "./design-group-settings";
 import { DaySheet } from "./design-group-shifts-day-sheet";
+import { BackButton } from "./design-header";
+import { List, ListRow, listRow } from "./design-list";
+import { IconMenu, MenuItem, MenuSeparator } from "./design-menu";
 import { ReportSheet } from "./design-report";
 import { ConfirmDialog, Sheet } from "./design-sheet";
 import { ToastContext } from "./design-toast";
-import {
-  BackButton,
-  IconButton,
-  IconMenu,
-  List,
-  ListRow,
-  listRow,
-  MenuItem,
-  MenuSeparator,
-  Screen,
-  srOnly,
-} from "./design-ui";
+import { IconButton, Screen, srOnly } from "./design-ui";
 
 // A group's chats: the messages, replies and reactions, photos going
 // up, and shared days shown in a message.

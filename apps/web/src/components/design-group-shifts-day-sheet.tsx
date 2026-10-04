@@ -5,21 +5,17 @@ import { css, cva, cx } from "styled-system/css";
 
 import { addDays, dateKey, formatDay, monthAfter } from "../lib/design-days";
 import { designToday } from "../lib/design-today";
+import { Segment, SegmentedControl } from "./design-choices";
 import { monthGrid } from "./design-date-picker";
 import { todayMark } from "./design-day-cell";
+import { MONTH_WEEKS } from "./design-day-grid";
 import { everyoneOff, sameMonth } from "./design-group-data";
 import type { Member } from "./design-group-data";
 import { smallWeekday } from "./design-group-parts";
 import { monthWithYearOf } from "./design-month-name";
 import { DecideHeading, Sheet } from "./design-sheet";
 import { ToastContext } from "./design-toast";
-import {
-  MONTH_WEEKS,
-  Note,
-  Segment,
-  SegmentedControl,
-  srOnly,
-} from "./design-ui";
+import { Note, srOnly } from "./design-ui";
 import { useWeek } from "./design-week";
 
 // Sharing days from a chat's composer (日にちを共有): the days picked on

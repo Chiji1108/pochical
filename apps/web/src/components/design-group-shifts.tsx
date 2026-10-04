@@ -13,6 +13,7 @@ import {
   movesText,
 } from "../lib/design-days";
 import { designMonth, designToday } from "../lib/design-today";
+import { Tag } from "./design-choices";
 import {
   changeOn,
   everyoneOff,
@@ -27,20 +28,17 @@ import { shiftsPage } from "./design-group-shifts-parts";
 import type { Layout } from "./design-group-shifts-parts";
 import { PeoplePicker, PersonPager } from "./design-group-shifts-person";
 import { PagedTogether } from "./design-group-shifts-together";
-import { monthIndex } from "./design-rolling";
-import { PhoneContext, Sheet, sheetBody, SheetHeading } from "./design-sheet";
-import { ToastContext } from "./design-toast";
+import { BackButton, PageHeader } from "./design-header";
+import { List, ListRow } from "./design-list";
 import {
-  BackButton,
-  List,
-  ListRow,
   MenuItem,
   MenuPicker,
   MenuSeparator,
-  PageHeader,
   PullDownMenu,
-  Tag,
-} from "./design-ui";
+} from "./design-menu";
+import { monthIndex } from "./design-rolling";
+import { PhoneContext, Sheet, sheetBody, SheetHeading } from "./design-sheet";
+import { ToastContext } from "./design-toast";
 import { useWeek } from "./design-week";
 
 // Everyone's shifts in a group: by day, by week or one person at a time,

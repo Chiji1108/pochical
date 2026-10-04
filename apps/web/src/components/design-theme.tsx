@@ -14,7 +14,7 @@ import { css, cva } from "styled-system/css";
 
 import { useDevice } from "../lib/design-device";
 import { palettesOf } from "../lib/material-you";
-import { Choice, ChoiceGrid } from "./design-ui";
+import { Choice, ChoiceGrid } from "./design-choices";
 
 // The テーマ themselves, and how each works out every color, live in
 // design/ (themes.ts), which the native apps are generated from; this

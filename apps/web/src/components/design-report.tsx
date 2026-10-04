@@ -2,10 +2,11 @@ import { useContext, useState } from "react";
 import { css } from "styled-system/css";
 
 import { useUser } from "../lib/design-user-store";
+import { ChoiceList, ChoiceRow } from "./design-choices";
 import type { Member } from "./design-group-data";
 import { ConfirmDialog, DecideHeading, Sheet } from "./design-sheet";
 import { ToastContext } from "./design-toast";
-import { ChoiceList, ChoiceRow, Note, Section } from "./design-ui";
+import { Note, Section } from "./design-ui";
 
 // Telling Pochical about a message or a member, as the stores ask of an
 // app where people post to each other (App Store 1.2, Google Play's user

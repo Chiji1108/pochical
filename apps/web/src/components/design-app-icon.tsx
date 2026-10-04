@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import { Choice, ChoiceGrid } from "./design-ui";
+import { Choice, ChoiceGrid } from "./design-choices";
 
 // The app icon from the poodle drawing: black lines on white. The outside
 // of the dog is found by flooding in from the edges, so the ground can take
