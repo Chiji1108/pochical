@@ -561,10 +561,9 @@ const upcoming = {
   }),
 };
 
-// Today's weekday over its mark, as the days below have theirs, beside
-// its date and what changed, the two together in the middle, over the
-// days after it centered as well: the row reads on from today (木, then
-// 金 土 日). A memo is the calendar's stroke under the date.
+// Today's mark large beside its date and what changed, the two together
+// in the middle, over the days after it centered as well. A memo is the
+// calendar's stroke under the date.
 function UpcomingHead({ day }: { day: WidgetDay }) {
   const words = useWords();
   const named = useShiftNames();
@@ -576,10 +575,7 @@ function UpcomingHead({ day }: { day: WidgetDay }) {
   return (
     <div className={upcoming.head}>
       <SpokenDay day={day} />
-      <span aria-hidden="true" className={nextDays.day}>
-        <span className={cx(nextDays.weekday, toneText({ tone: day.tone }))}>
-          {words.weekday(day.date)}
-        </span>
+      <span aria-hidden="true">
         <NamedMark day={day} large named={named} size={size} />
       </span>
       <span aria-hidden="true" className={upcoming.headText}>
