@@ -1,17 +1,18 @@
 import { markColorIn, markColors } from "@pochical/design/colors";
+import { markIconPaths } from "@pochical/design/mark-icon-paths";
+import { markIconGlyphs } from "@pochical/design/mark-icons";
+import type { MarkIcon } from "@pochical/design/mark-icons";
 import {
   markPalette,
   THEME_SLOT,
   themeMarkColor,
 } from "@pochical/design/themes";
 import { createContext, useContext } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 import { css, cx } from "styled-system/css";
 
 import { usePatterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
-import { markIconPaths } from "../lib/mark-icon-paths";
-import type { MarkIconName } from "../lib/mark-icon-paths";
 import { firstCharacter } from "../lib/text-limits";
 import { presetOf, ThemeContext, useColorScheme } from "./design-theme";
 
@@ -135,212 +136,43 @@ export const OffHighlightContext = createContext<{
   highlight: OffHighlight;
 }>({ highlight: defaultOffHighlight });
 
-type MarkIconComponent = (props: {
+// An icon a pattern can name, drawn from Phosphor's paths for its glyph
+// (design's mark-icons.ts) as Phosphor's own component would draw it.
+// "letter" has no glyph and draws nothing here; its marks draw the symbol.
+export function MarkIconSvg({
+  icon,
+  className,
+  color = "currentColor",
+  size,
+  weight = "regular",
+}: {
+  icon: MarkIcon;
   className?: string;
   color?: string;
   size: number;
   weight?: IconWeight;
-}) => ReactNode;
-
-const phosphorIcons = new Map<MarkIconName, MarkIconComponent>();
-
-// A Phosphor icon drawn from its paths in lib/mark-icon-paths.ts, as
-// Phosphor's own component would draw it. One component per glyph, so marks
-// that share a glyph can be told by it.
-function phosphorIcon(name: MarkIconName): MarkIconComponent {
-  const known = phosphorIcons.get(name);
-  if (known) {
-    return known;
+}) {
+  const glyph = markIconGlyphs[icon];
+  if (glyph === undefined) {
+    return null;
   }
-  const PhosphorIcon: MarkIconComponent = function PhosphorIcon({
-    className,
-    color = "currentColor",
-    size,
-    weight = "regular",
-  }) {
-    return (
-      <svg
-        aria-hidden="true"
-        className={className}
-        fill={color}
-        height={size}
-        viewBox="0 0 256 256"
-        width={size}
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {markIconPaths[name][weight].map(({ d, opacity }) => (
-          <path d={d} key={d} opacity={opacity} />
-        ))}
-      </svg>
-    );
-  };
-  phosphorIcons.set(name, PhosphorIcon);
-  return PhosphorIcon;
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill={color}
+      height={size}
+      viewBox="0 0 256 256"
+      width={size}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {markIconPaths[glyph][weight].map(({ d, opacity }) => (
+        <path d={d} key={d} opacity={opacity} />
+      ))}
+    </svg>
+  );
 }
-
-// Phosphor duotone icons, one per glyph. "letter" draws the symbol inside a
-// thin circle, so any shift has an icon. The sky has only the glyphs that
-// stay apart at calendar size (a dim sun reads as the sun), so shifts in the
-// same part of the day share one: dawn and dusk the horizon, late and
-// evening shifts the clouded moon.
-export const markIcons = {
-  alarm: phosphorIcon("Alarm"),
-  ambulance: phosphorIcon("Ambulance"),
-  baby: phosphorIcon("Baby"),
-  babyCarriage: phosphorIcon("BabyCarriage"),
-  backpack: phosphorIcon("Backpack"),
-  balloon: phosphorIcon("Balloon"),
-  bandaids: phosphorIcon("Bandaids"),
-  bank: phosphorIcon("Bank"),
-  baseball: phosphorIcon("Baseball"),
-  basket: phosphorIcon("Basket"),
-  basketball: phosphorIcon("Basketball"),
-  bath: phosphorIcon("Bathtub"),
-  bed: phosphorIcon("Bed"),
-  beer: phosphorIcon("BeerStein"),
-  bell: phosphorIcon("Bell"),
-  bicycle: phosphorIcon("Bicycle"),
-  bird: phosphorIcon("Bird"),
-  boat: phosphorIcon("Boat"),
-  book: phosphorIcon("BookOpen"),
-  books: phosphorIcon("Books"),
-  bread: phosphorIcon("Bread"),
-  briefcase: phosphorIcon("Briefcase"),
-  broom: phosphorIcon("Broom"),
-  building: phosphorIcon("Buildings"),
-  bus: phosphorIcon("Bus"),
-  cake: phosphorIcon("Cake"),
-  calculator: phosphorIcon("Calculator"),
-  calendarCheck: phosphorIcon("CalendarCheck"),
-  calendarHeart: phosphorIcon("CalendarHeart"),
-  camera: phosphorIcon("Camera"),
-  car: phosphorIcon("Car"),
-  cashRegister: phosphorIcon("CashRegister"),
-  cat: phosphorIcon("Cat"),
-  chart: phosphorIcon("ChartLine"),
-  chefHat: phosphorIcon("ChefHat"),
-  clock: phosphorIcon("Clock"),
-  cloud: phosphorIcon("Cloud"),
-  cloudMoon: phosphorIcon("CloudMoon"),
-  cloudSun: phosphorIcon("CloudSun"),
-  code: phosphorIcon("Code"),
-  coffee: phosphorIcon("Coffee"),
-  coins: phosphorIcon("Coins"),
-  cookingPot: phosphorIcon("CookingPot"),
-  couch: phosphorIcon("Couch"),
-  desktop: phosphorIcon("Desktop"),
-  dog: phosphorIcon("Dog"),
-  dumbbell: phosphorIcon("Barbell"),
-  envelope: phosphorIcon("Envelope"),
-  eyeglasses: phosphorIcon("Eyeglasses"),
-  factory: phosphorIcon("Factory"),
-  film: phosphorIcon("FilmSlate"),
-  fireExtinguisher: phosphorIcon("FireExtinguisher"),
-  fireTruck: phosphorIcon("FireTruck"),
-  firstAid: phosphorIcon("FirstAidKit"),
-  fish: phosphorIcon("Fish"),
-  flower: phosphorIcon("Flower"),
-  folder: phosphorIcon("Folder"),
-  game: phosphorIcon("GameController"),
-  gasPump: phosphorIcon("GasPump"),
-  gift: phosphorIcon("Gift"),
-  graduationCap: phosphorIcon("GraduationCap"),
-  guitar: phosphorIcon("Guitar"),
-  hammer: phosphorIcon("Hammer"),
-  handHeart: phosphorIcon("HandHeart"),
-  handshake: phosphorIcon("Handshake"),
-  hardHat: phosphorIcon("HardHat"),
-  headset: phosphorIcon("Headset"),
-  heart: phosphorIcon("Heart"),
-  heartbeat: phosphorIcon("Heartbeat"),
-  hospital: phosphorIcon("Hospital"),
-  hourglass: phosphorIcon("Hourglass"),
-  house: phosphorIcon("House"),
-  iceCream: phosphorIcon("IceCream"),
-  idBadge: phosphorIcon("IdentificationBadge"),
-  island: phosphorIcon("Island"),
-  laptop: phosphorIcon("Laptop"),
-  leaf: phosphorIcon("Leaf"),
-  letter: undefined,
-  lightbulb: phosphorIcon("Lightbulb"),
-  lightning: phosphorIcon("Lightning"),
-  mapPin: phosphorIcon("MapPin"),
-  megaphone: phosphorIcon("Megaphone"),
-  microphone: phosphorIcon("MicrophoneStage"),
-  microscope: phosphorIcon("Microscope"),
-  moon: phosphorIcon("Moon"),
-  moonStar: phosphorIcon("MoonStars"),
-  motorcycle: phosphorIcon("Motorcycle"),
-  mountains: phosphorIcon("Mountains"),
-  music: phosphorIcon("MusicNote"),
-  needle: phosphorIcon("Needle"),
-  notebook: phosphorIcon("Notebook"),
-  package: phosphorIcon("Package"),
-  paintBrush: phosphorIcon("PaintBrush"),
-  palette: phosphorIcon("Palette"),
-  partyPopper: phosphorIcon("Confetti"),
-  pawPrint: phosphorIcon("PawPrint"),
-  pen: phosphorIcon("PencilSimple"),
-  pencil: phosphorIcon("Pencil"),
-  phone: phosphorIcon("Phone"),
-  pill: phosphorIcon("Pill"),
-  plane: phosphorIcon("Airplane"),
-  policeCar: phosphorIcon("PoliceCar"),
-  popcorn: phosphorIcon("Popcorn"),
-  pottedPlant: phosphorIcon("PottedPlant"),
-  presentation: phosphorIcon("PresentationChart"),
-  printer: phosphorIcon("Printer"),
-  rabbit: phosphorIcon("Rabbit"),
-  rain: phosphorIcon("CloudRain"),
-  rainbow: phosphorIcon("Rainbow"),
-  run: phosphorIcon("PersonSimpleRun"),
-  scales: phosphorIcon("Scales"),
-  scissors: phosphorIcon("Scissors"),
-  shield: phosphorIcon("Shield"),
-  shieldCheck: phosphorIcon("ShieldCheck"),
-  shoppingBag: phosphorIcon("ShoppingBag"),
-  shoppingCart: phosphorIcon("ShoppingCart"),
-  siren: phosphorIcon("Siren"),
-  smiley: phosphorIcon("Smiley"),
-  sneaker: phosphorIcon("Sneaker"),
-  snow: phosphorIcon("Snowflake"),
-  soccer: phosphorIcon("SoccerBall"),
-  star: phosphorIcon("Star"),
-  stethoscope: phosphorIcon("Stethoscope"),
-  storefront: phosphorIcon("Storefront"),
-  subway: phosphorIcon("Subway"),
-  suitcase: phosphorIcon("SuitcaseRolling"),
-  sun: phosphorIcon("Sun"),
-  sunHorizon: phosphorIcon("SunHorizon"),
-  sunglasses: phosphorIcon("Sunglasses"),
-  swim: phosphorIcon("PersonSimpleSwim"),
-  syringe: phosphorIcon("Syringe"),
-  tShirt: phosphorIcon("TShirt"),
-  taxi: phosphorIcon("Taxi"),
-  teacher: phosphorIcon("ChalkboardTeacher"),
-  tennis: phosphorIcon("TennisBall"),
-  tent: phosphorIcon("Tent"),
-  ticket: phosphorIcon("Ticket"),
-  timer: phosphorIcon("Timer"),
-  tooth: phosphorIcon("Tooth"),
-  tractor: phosphorIcon("Tractor"),
-  train: phosphorIcon("Train"),
-  translate: phosphorIcon("Translate"),
-  tree: phosphorIcon("Tree"),
-  treePalm: phosphorIcon("TreePalm"),
-  trophy: phosphorIcon("Trophy"),
-  truck: phosphorIcon("Truck"),
-  users: phosphorIcon("Users"),
-  utensils: phosphorIcon("ForkKnife"),
-  van: phosphorIcon("Van"),
-  videoCamera: phosphorIcon("VideoCamera"),
-  warehouse: phosphorIcon("Warehouse"),
-  washingMachine: phosphorIcon("WashingMachine"),
-  wheelchair: phosphorIcon("Wheelchair"),
-  wine: phosphorIcon("Wine"),
-  wrench: phosphorIcon("Wrench"),
-} satisfies Record<string, MarkIconComponent | undefined>;
-export type MarkIcon = keyof typeof markIcons;
+export type { MarkIcon } from "@pochical/design/mark-icons";
 
 // Whether two looks draw the same icon: icons sharing a glyph look alike,
 // and the letter icon differs by its letter.
@@ -348,7 +180,7 @@ export function sameIcon(a: Look, b: Look) {
   if (a.icon === "letter" || b.icon === "letter") {
     return a.icon === b.icon && a.symbol === b.symbol;
   }
-  return markIcons[a.icon] === markIcons[b.icon];
+  return markIconGlyphs[a.icon] === markIconGlyphs[b.icon];
 }
 
 export const markEmojis = [
@@ -595,8 +427,7 @@ function IconGlyph({
 }) {
   const { color } = useDisplayColor(look.color);
   const weight = useContext(IconWeightContext);
-  const Icon = markIcons[icon];
-  if (!Icon) {
+  if (markIconGlyphs[icon] === undefined) {
     return (
       <span
         aria-hidden="true"
@@ -613,9 +444,10 @@ function IconGlyph({
     );
   }
   return (
-    <Icon
+    <MarkIconSvg
       className={cx(glyphStyle.icon, "sm-icon")}
       color={color}
+      icon={icon}
       size={size}
       weight={weight}
     />

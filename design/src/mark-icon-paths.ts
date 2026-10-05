@@ -1,4 +1,4 @@
-// Written by scripts/mark-icons.ts (bun run icon:marks); do not edit.
+// Written by scripts/mark-icons.ts (bun run --cwd design icon:marks); do not edit.
 // Phosphor's paths for the shift marks' icons, duotone and regular, on a 256 grid.
 type MarkIconPath = { d: string; opacity?: number };
 export type MarkIconName =
