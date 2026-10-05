@@ -70,3 +70,45 @@ private func change(_ cursor: UInt64, _ fill: (inout Pochical_V1_Change) -> Void
     #expect(try GroupSync.cursor(of: "g1", in: db) == 0)
   }
 }
+
+@Test func oneWhoLeftGoesWithTheirShifts() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try GroupSync.take(
+      [
+        change(1) {
+          $0.member.userID = "u1"
+          $0.member.displayName = "さくら"
+        },
+        change(2) {
+          $0.memberDay.userID = "u1"
+          $0.memberDay.day.date = "2026-10-03"
+          $0.memberDay.day.field = .pattern
+          $0.memberDay.day.value = "night"
+        },
+        change(3) {
+          $0.member.userID = "u1"
+          $0.member.left = true
+        },
+      ], of: "g1", in: db)
+    let october = (Day(year: 2026, month: 10, day: 1), Day(year: 2026, month: 10, day: 31))
+    #expect(try GroupSync.members(of: "g1", from: october.0, through: october.1, in: db).isEmpty)
+    #expect(try MemberDayRow.fetchCount(db) == 0)
+  }
+}
+
+@Test func aGroupLeftGoesWithWhatTheDeviceHeldOfIt() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try GroupSync.take(
+      [change(1) { $0.member.userID = "u1"; $0.member.displayName = "さくら" }], of: "g1", in: db)
+    try Sync.take(
+      [
+        change(4) { $0.membership.groupID = "g1"; $0.membership.name = "いとこ会" },
+        change(5) { $0.membership.groupID = "g1"; $0.membership.left = true },
+      ], in: db)
+    #expect(try GroupRow.fetchCount(db) == 0)
+    #expect(try GroupMemberRow.fetchCount(db) == 0)
+    #expect(try GroupSync.cursor(of: "g1", in: db) == 0)
+  }
+}
