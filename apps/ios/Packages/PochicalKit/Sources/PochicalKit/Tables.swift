@@ -94,8 +94,9 @@ struct OutboxEdit: Hashable, Sendable {
   var clearFrom: String?
 }
 
-/// The device's own place in sync (spec/sync-protocol.md, HLC): its id,
-/// its last clock, and what it adds to its own time to correct it. One row.
+/// The device's own place in sync (spec/sync-protocol.md, HLC; Change log
+/// and cursor): its id, its last clock, what it adds to its own time to
+/// correct it, and the last change it took from its User DO. One row.
 @Table("syncState")
 struct SyncState: Hashable, Sendable {
   @Column(primaryKey: true)
@@ -105,6 +106,15 @@ struct SyncState: Hashable, Sendable {
   var lastMs: Int64
   var lastCounter: Int64
   var offsetMs: Int64
+  /// The cursor of the last change taken, 0 before any.
+  var cursor: Int64 = 0
+
+  /// The row, or a new device's: a new id, no clock, no offset, no cursor.
+  static func current(in db: Database) throws -> SyncState {
+    try find(1).fetchOne(db)
+      ?? SyncState(
+        deviceID: UUID().uuidString.lowercased(), lastMs: 0, lastCounter: 0, offsetMs: 0)
+  }
 }
 
 extension DatabaseMigrator {
@@ -215,7 +225,8 @@ extension DatabaseMigrator {
           "deviceID" TEXT NOT NULL,
           "lastMs" INTEGER NOT NULL,
           "lastCounter" INTEGER NOT NULL,
-          "offsetMs" INTEGER NOT NULL
+          "offsetMs" INTEGER NOT NULL,
+          "cursor" INTEGER NOT NULL DEFAULT 0
         ) STRICT
         """
       )

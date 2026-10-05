@@ -1,6 +1,4 @@
-import Connect
 import Foundation
-import PochicalProto
 import Security
 
 /// Where the apps reach the server: `mise run server` on the Mac while
@@ -109,19 +107,10 @@ public actor Account {
     return token
   }
 
-  /// The headers that say who is calling, as Connect's calls take them.
+  /// The headers that say who is calling, as Connect's calls and the
+  /// sockets take them.
   public func headers() async throws -> [String: [String]] {
     ["Authorization": ["Bearer \(try await token())"]]
-  }
-
-  /// Who the kept token belongs to (`UserService.GetMe`).
-  public func me() async throws -> Pochical_V1_GetMeResponse {
-    let client = ProtocolClient(
-      httpClient: URLSessionHTTPClient(),
-      config: ProtocolClientConfig(host: server.absoluteString, codec: ProtoCodec()))
-    let response = await Pochical_V1_UserServiceClient(client: client)
-      .getMe(request: Pochical_V1_GetMeRequest(), headers: try await headers())
-    return try response.result.get()
   }
 
   /// better-auth's anonymous sign-in, which answers 415 without the JSON

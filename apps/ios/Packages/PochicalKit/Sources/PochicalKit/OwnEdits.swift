@@ -123,10 +123,7 @@ extension OwnValues {
   /// The clock of a local edit (spec/sync-protocol.md, HLC), from the
   /// device's last one at its corrected now, kept as its new last one.
   static func nextClock(now: Int64, in db: Database) throws -> Pochical_V1_Hlc {
-    var state =
-      try SyncState.find(1).fetchOne(db)
-      ?? SyncState(
-        deviceID: UUID().uuidString.lowercased(), lastMs: 0, lastCounter: 0, offsetMs: 0)
+    var state = try SyncState.current(in: db)
     let last = HlcTime(ms: state.lastMs, counter: UInt32(state.lastCounter))
     let clock = last.tick(now: now + state.offsetMs)
     state.lastMs = clock.ms
