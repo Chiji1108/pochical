@@ -2,6 +2,7 @@ import PochicalDesign
 import PochicalKit
 import SQLiteData
 import SwiftUI
+import UIKit
 
 @main
 struct PochicalApp: App {
@@ -30,19 +31,51 @@ struct PochicalApp: App {
     }
     // The socket is open only in the foreground (spec/sync-protocol.md,
     // Sockets), and the shared database lets go of its locks before iOS
-    // suspends the app (appDatabase), including when it was launched in
-    // the background.
+    // suspends the app (appDatabase), once what waits is sent, including
+    // when it was launched in the background.
     .onChange(of: scenePhase, initial: true) { _, phase in
       switch phase {
       case .background:
-        Task { await sync.stop() }
-        NotificationCenter.default.post(name: Database.suspendNotification, object: nil)
+        // Edits still waiting get a little time to go first (Sockets).
+        let time = BackgroundTime()
+        time.begin {
+          time.end()
+          Task { await sync.stop() }
+        }
+        Task {
+          await sync.finishSending()
+          time.end()
+        }
       case .active:
         NotificationCenter.default.post(name: Database.resumeNotification, object: nil)
         Task { await sync.start() }
       default:
         break
       }
+    }
+  }
+}
+
+/// The time iOS gives the app in the background to send what waits. As it
+/// ends, the shared database lets go of its locks, unless the app came
+/// back meanwhile.
+@MainActor private final class BackgroundTime {
+  private var id = UIBackgroundTaskIdentifier.invalid
+  private var ended = false
+
+  func begin(expired: @escaping @MainActor () -> Void) {
+    id = UIApplication.shared.beginBackgroundTask(withName: "送信", expirationHandler: expired)
+  }
+
+  /// Once, whether iOS gave any time or not.
+  func end() {
+    guard !ended else { return }
+    ended = true
+    if UIApplication.shared.applicationState == .background {
+      NotificationCenter.default.post(name: Database.suspendNotification, object: nil)
+    }
+    if id != .invalid {
+      UIApplication.shared.endBackgroundTask(id)
     }
   }
 }

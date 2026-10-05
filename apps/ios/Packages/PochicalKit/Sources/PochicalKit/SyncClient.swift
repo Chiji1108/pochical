@@ -1,4 +1,5 @@
 import Foundation
+import GRDB
 import Network
 import OSLog
 import PochicalDesign
@@ -7,11 +8,12 @@ import SQLiteData
 
 /// The socket to the user's own DO (spec/sync-protocol.md, Sockets): open
 /// while the app is in the foreground, it says Hello with the device's
-/// cursor, corrects the device's time by Welcome, and takes the catch-up
-/// and every change after it into the database. It keeps the socket alive
-/// and reconnects after a random wait that doubles with each failed try,
-/// at once when the network comes back; never after a 401 or an update the
-/// server asks for.
+/// cursor, corrects the device's time by Welcome, takes the catch-up and
+/// every change after it into the database, and sends the outbox's edits
+/// as they come, which the server's Acked then ends (Outbox). It keeps the
+/// socket alive and reconnects after a random wait that doubles with each
+/// failed try, at once when the network comes back; never after a 401 or
+/// an update the server asks for.
 public actor SyncClient {
   /// Why it stopped trying, for good until the app is signed in again or
   /// updated.
@@ -41,6 +43,13 @@ public actor SyncClient {
   private var connected = false
   /// When the server last answered the keepalive.
   private var lastReplyMs: Int64 = 0
+  /// The server refused a frame's clocks: the outbox takes new ones once
+  /// the next Welcome has corrected the device's time.
+  private var clockWasAhead = false
+  /// Sending the outbox on the socket open, from its Welcome.
+  private var sending: Task<Void, Never>?
+  /// Waiting for the outbox to empty before closing, in the background.
+  private var finishing: Task<Void, Never>?
   public private(set) var stopped: Stop?
 
   public init(account: Account, database: any DatabaseWriter, server: URL = Server.url) {
@@ -56,6 +65,8 @@ public actor SyncClient {
   /// person is waiting: the app came to the foreground. An open socket
   /// stays.
   public func start() {
+    finishing?.cancel()
+    finishing = nil
     guard stopped == nil, !(running != nil && connected) else { return }
     running?.cancel()
     tries = 0
@@ -71,11 +82,42 @@ public actor SyncClient {
 
   /// Closes the socket: the app went to the background.
   public func stop() {
+    finishing?.cancel()
+    finishing = nil
     running?.cancel()
     running = nil
     socket?.cancel(with: .goingAway, reason: nil)
     socket = nil
     connected = false
+  }
+
+  /// Going to the background: the socket stays until the outbox is sent
+  /// and acknowledged, or `stop` (the time the OS gave runs out), so an
+  /// edit made just before reaches the user's other devices and groups
+  /// without waiting for the app to be opened again (Sockets).
+  public func finishSending() async {
+    let waiting = (try? await database.read { try Sync.lastWaiting(in: $0) }) ?? nil
+    guard waiting != nil, stopped == nil else {
+      stop()
+      return
+    }
+    if running == nil {
+      start()
+    }
+    let emptied = Task { [database] in
+      let outbox = ValueObservation.tracking { try Sync.lastWaiting(in: $0) }
+      do {
+        for try await last in outbox.values(in: database) where last == nil {
+          return
+        }
+      } catch {}
+    }
+    finishing = emptied
+    await emptied.value
+    // Not stopped or brought back meanwhile.
+    if finishing == emptied {
+      stop()
+    }
   }
 
   private func networkCameBack() {
@@ -103,6 +145,7 @@ public actor SyncClient {
       } catch is ClockAhead {
         // Reconnected at once; the outbox's clocks are put right then.
         tries = 0
+        clockWasAhead = true
       } catch is CancellationError {
         return
       } catch {
@@ -133,7 +176,11 @@ public actor SyncClient {
     }
     lastReplyMs = sentMs
     let keepalive = Task { await keepAlive(socket) }
-    defer { keepalive.cancel() }
+    defer {
+      keepalive.cancel()
+      sending?.cancel()
+      sending = nil
+    }
     while true {
       let message: URLSessionWebSocketTask.Message
       do {
@@ -163,6 +210,15 @@ public actor SyncClient {
           sentMs: sentMs, receivedMs: receivedMs, serverMs: welcome.serverMs, in: db)
       }
       Logger.sync.info("Welcome at cursor \(welcome.cursor)")
+      if clockWasAhead {
+        let now = Self.nowMs()
+        try await database.write { db in try Sync.restamp(now: now, in: db) }
+        clockWasAhead = false
+      }
+      sending?.cancel()
+      if let socket {
+        sending = Task { await sendOutbox(socket) }
+      }
     case .changes(let changes):
       try await database.write { db in try Sync.take(changes.changes, in: db) }
       Logger.sync.info("Took \(changes.changes.count) changes")
@@ -170,6 +226,7 @@ public actor SyncClient {
       try await database.write { db in try Sync.reset(in: db) }
     case .acked(let acked):
       try await database.write { db in try OwnValues.acknowledge(acked.opIds, in: db) }
+      Logger.sync.info("\(acked.opIds.count) edits acknowledged")
     case .error(let error):
       switch error.code {
       case .protocolTooOld: throw Stop.protocolTooOld
@@ -178,6 +235,28 @@ public actor SyncClient {
       }
     case .pong, nil:
       break
+    }
+  }
+
+  /// Sends the outbox's edits in order, all of them on a new socket and
+  /// then each as it is written; an edit is sent again only on the next
+  /// socket, until its Acked takes it out.
+  private func sendOutbox(_ socket: URLSessionWebSocketTask) async {
+    var sent = 0
+    let outbox = ValueObservation.tracking { try Sync.lastWaiting(in: $0) }
+    do {
+      for try await last in outbox.values(in: database) {
+        guard let last, last > sent else { continue }
+        let (frames, through) = try await database.read { [sent] db in
+          try Sync.frames(after: sent, in: db)
+        }
+        for frame in frames {
+          try await socket.send(.data(frame.serializedData()))
+        }
+        sent = through
+      }
+    } catch {
+      // The socket closed; the next one sends them all again.
     }
   }
 

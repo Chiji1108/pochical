@@ -13,6 +13,8 @@ let package = Package(
     .package(path: "../PochicalDesign"),
     .package(path: "../PochicalProto"),
     .package(url: "https://github.com/pointfreeco/sqlite-data.git", exact: "1.12.0"),
+    // SQLiteData's own, for ValueObservation, which it does not export.
+    .package(url: "https://github.com/groue/GRDB.swift", exact: "7.11.1"),
   ],
   targets: [
     .target(
@@ -21,6 +23,7 @@ let package = Package(
         "PochicalDesign",
         "PochicalProto",
         .product(name: "SQLiteData", package: "sqlite-data"),
+        .product(name: "GRDB", package: "GRDB.swift"),
       ]
     ),
     .testTarget(name: "PochicalKitTests", dependencies: ["PochicalKit"]),
