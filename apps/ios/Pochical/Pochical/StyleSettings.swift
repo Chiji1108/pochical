@@ -8,6 +8,10 @@ import SwiftUI
 /// over them, so there is nothing to confirm.
 struct StyleSettings: View {
   @Environment(Settings.self) private var settings
+  @Environment(\.colorScheme) private var colorScheme
+  /// The light or dark the preview and the テーマ cards are seen in, from
+  /// the preview's ☀︎ / ☾; the screen's until one is picked.
+  @State private var picked: ColorScheme?
   @FetchAll private var days: [DayRow]
   @FetchAll private var patterns: [PatternRow]
   @FetchAll private var patternOrder: [PatternOrderRow]
@@ -20,9 +24,23 @@ struct StyleSettings: View {
     let work = calendar.patterns.first { !$0.countsAsOff }
     let off = calendar.patterns.first(where: \.countsAsOff)
     let samples = Array(calendar.patterns.prefix(3))
+    let theme = settings.device.theme
+    let shown = Binding { picked ?? colorScheme } set: { picked = $0 }
     Form {
       Section {
         ThisWeek(calendar: calendar)
+          .shown(in: theme, shown.wrappedValue)
+          // On the preview's top edge, as /design's. A テーマ drawn dark
+          // has no light to switch to: its ☾ stays on.
+          .overlay(alignment: .topLeading) {
+            SchemeSwitch(
+              shown: theme.isAlwaysDark ? .constant(.dark) : shown,
+              disabled: theme.isAlwaysDark
+            )
+            .offset(x: 12, y: -10)
+          }
+          // Room for the switch over the edge.
+          .padding(.top, 10)
       }
       .settingsOnPage()
       Section {
@@ -44,7 +62,7 @@ struct StyleSettings: View {
         Text("グループの人にも、この見た目で表示されます。")
       }
       Section("テーマ") {
-        ThemeChoices(samples: samples)
+        ThemeChoices(samples: samples, scheme: shown.wrappedValue)
           .settingsOnPage()
       }
       // Emoji keep their own colors, so シフトの色 would change nothing.
@@ -266,13 +284,14 @@ private struct ThisWeek: View {
 
 /// The テーマ, three to a page swiped sideways with dots under them, as
 /// /design's (after Telegram's 外観): each card the テーマ's own screen in
-/// the light or dark of this one, with the person's marks on its card and
+/// the light or dark picked by ☀︎ / ☾, with the person's marks on its card and
 /// its text and accent side by side.
 private struct ThemeChoices: View {
   @Environment(Settings.self) private var settings
-  @Environment(\.colorScheme) private var colorScheme
   @Environment(\.themeColors) private var colors
   let samples: [Pattern]
+  /// The light or dark each card shows its テーマ in.
+  let scheme: ColorScheme
   @State private var page = 0
 
   private static let pages = stride(from: 0, to: Theme.allCases.count, by: 3).map {
@@ -304,7 +323,7 @@ private struct ThemeChoices: View {
 
   private func card(_ theme: Theme) -> some View {
     let isPicked = theme == settings.device.theme
-    let own = theme.colors(theme.isAlwaysDark ? .dark : colorScheme)
+    let own = theme.colors(theme.isAlwaysDark ? .dark : scheme)
     return Button {
       settings.device.theme = theme
     } label: {

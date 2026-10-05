@@ -28,7 +28,6 @@ import {
   ColorSchemeContext,
   deviceColorsPreset,
   presetOf,
-  PreviewSchemeSwitch,
   themeStyle,
 } from "./design-theme";
 import type { PresetId } from "./design-theme";
@@ -166,8 +165,8 @@ export function MarkPage({
   onBack: () => void;
 }) {
   const current = useContext(ShiftMarkStyleContext);
-  // The preview and the テーマ cards show in the other of light and dark
-  // together, from either one's ☀︎ / ☾, without touching 外観.
+  // The テーマ cards show in the light or dark the preview's ☀︎ / ☾ picks,
+  // without touching 外観.
   const scheme = useContext(ColorSchemeContext);
   const [picked, setPicked] = useState<ColorScheme>();
   const shown = picked ?? scheme;
@@ -184,16 +183,7 @@ export function MarkPage({
           グループの人にも、この見た目で表示されます。
         </p>
       </Section>
-      <Section
-        title="テーマ"
-        trailing={
-          <PreviewSchemeSwitch
-            onPick={setPicked}
-            placement="inline"
-            shown={shown}
-          />
-        }
-      >
+      <Section title="テーマ">
         <ThemeChoices scheme={shown} />
       </Section>
       {/* Emoji keep their own colors, so シフトの色 would change nothing;
