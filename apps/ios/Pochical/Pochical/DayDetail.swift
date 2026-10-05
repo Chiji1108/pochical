@@ -33,6 +33,7 @@ struct DayDetail: View {
 
   var body: some View {
     Form {
+      // Rows on a quiet ground on the page's own, as /design's lists.
       Section {
         shiftRow
         if let entry, let pattern, let time = pattern.time {
@@ -51,9 +52,11 @@ struct DayDetail: View {
           peopleRows(entry)
         }
       }
+      .listRowBackground(colors.fillQuaternary)
       Section {
         memoField
       }
+      .listRowBackground(colors.fillQuaternary)
       if let entry {
         Section {
           Button("この日のシフトを消す", role: .destructive) {
@@ -72,8 +75,11 @@ struct DayDetail: View {
             Text("\(lost(entry).joined(separator: "、"))も消えます。")
           }
         }
+        .listRowBackground(colors.fillQuaternary)
       }
     }
+    .listSectionSpacing(.compact)
+    .contentMargins(.top, 12, for: .scrollContent)
     .scrollContentBackground(.hidden)
     .background(colors.backgroundBase)
     .safeAreaInset(edge: .top, spacing: 0) {

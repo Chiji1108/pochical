@@ -17,7 +17,7 @@ How カレンダー, the person's own month, behaves on screen: what each part s
 - The tray holds the day being entered, a button for each pattern in the person's order (pages of `PATTERNS_PER_PAGE` past that many, `design/src/limits.ts`), 消す and 翌日へ. 消す is offered only when the day has a shift, and 翌日へ only before the month's last day.
 - A pattern entered moves the selection on as spec/shift-patterns.md (The next day) has it.
 - 消す clears the day's shift, with its own hours and people; its memo stays (spec/shift-patterns.md, A day's memo). The tray is a keyboard, so it asks nothing.
-- 完了 ends entering, then asks about the month's blank days before its last entered one (spec/shift-patterns.md, Blanks when entering ends): how many, how the month's days off change, which days, and one button to fill them. With more than one pattern that counts as off, chips pick which; the first is picked to begin with. While days off are shown, 休みの日は空白で見せる is offered beside it, for those who would rather leave them blank. With no pattern that counts as off, nothing is asked.
+- 完了 ends entering, then asks about the month's blank days before its last entered one (spec/shift-patterns.md, Blanks when entering ends): how many, how the month's days off change, that the month is then complete when no blank would be left, which days, and one button to fill them. Closing it leaves them blank, by the sheet's own close (× on iOS, with nothing else to say the same). With more than one pattern that counts as off, chips pick which; the first is picked to begin with. While days off are shown, 休みの日は空白で見せる is offered beside it, for those who would rather leave them blank. With no pattern that counts as off, nothing is asked.
 
 ## A day's detail
 

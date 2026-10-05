@@ -125,6 +125,12 @@ struct CalendarScreen: View {
           )
           .id(day)
         }
+        .padding(.top, 16)
+        // A line from edge to edge between the week and the day, as a
+        // bar's runs.
+        .overlay(alignment: .top) {
+          Rectangle().fill(colors.separator).frame(height: 1)
+        }
         .padding(.top, 12)
         .opacity(max(1 - 2 * pull, 0))
         // It shows as the month folds into the week, and goes at once as
@@ -167,16 +173,8 @@ struct CalendarScreen: View {
         }
       }
     }
-    .sheet(isPresented: Binding(get: { !gaps.isEmpty }, set: { if !$0 { gaps = [] } })) {
-      let offPatterns = calendar.patterns.filter(\.countsAsOff)
-      if !offPatterns.isEmpty, let month = gaps.first?.firstOfMonth {
-        GapSheet(
-          month: month, days: gaps, offPatterns: offPatterns,
-          offCount: offCount(in: month, calendar: calendar)
-        ) { off in
-          write { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }
-        }
-      }
+    .fittedSheet(isPresented: Binding(get: { !gaps.isEmpty }, set: { if !$0 { gaps = [] } })) {
+      gapSheet(calendar)
     }
     .task {
       // Past midnight, while the app is open or waiting in the background.
@@ -347,6 +345,20 @@ struct CalendarScreen: View {
     let month = day.firstOfMonth
     let shown = calendar.shown(from: month, through: month.daysOfMonth.last!)
     gaps = gapDays(in: month, days: shown)
+  }
+
+  /// What 完了 asks about the month's blank days, while there are some
+  /// and a pattern that counts as off to fill them with.
+  private func gapSheet(_ calendar: OwnCalendar) -> GapSheet? {
+    let offPatterns = calendar.patterns.filter(\.countsAsOff)
+    guard !offPatterns.isEmpty, let month = gaps.first?.firstOfMonth else { return nil }
+    return GapSheet(
+      month: month, days: gaps, offPatterns: offPatterns,
+      offCount: offCount(in: month, calendar: calendar),
+      completes: monthDays(month, calendar).count + gaps.count == month.daysOfMonth.count
+    ) { off in
+      write { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }
+    }
   }
 
   private func offCount(in month: Day, calendar: OwnCalendar) -> Int {

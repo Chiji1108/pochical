@@ -5,6 +5,9 @@ import SwiftUI
 /// What 完了 asks when the month has blank days before its last entered
 /// one: whether to make them days off, all at once (spec/shift-patterns.md,
 /// Blanks when entering ends).
+///
+/// It stands as tall as it holds (`fittedSheet`), so it draws its own bar
+/// rather than a NavigationStack's.
 struct GapSheet: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
@@ -15,6 +18,8 @@ struct GapSheet: View {
   let offPatterns: [Pattern]
   /// The month's days off now.
   let offCount: Int
+  /// Whether filling the days leaves the month with no blank day.
+  let completes: Bool
   let onFill: (Pattern) -> Void
   @State private var picked: PatternID?
 
@@ -23,11 +28,30 @@ struct GapSheet: View {
   }
 
   var body: some View {
-    NavigationStack {
-      VStack(alignment: .leading, spacing: 16) {
-        Text(lead)
+    VStack(alignment: .leading, spacing: 0) {
+      // The bar of an iOS sheet: × at the leading edge, the title in the
+      // middle.
+      ZStack {
+        Text("空いている日が\(days.count)日あります")
+          .font(.headline)
+          .foregroundStyle(colors.textPrimary)
+          .padding(.horizontal, Metrics.touch + 8)
+          .accessibilityAddTraits(.isHeader)
+        Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
+          .labelStyle(.iconOnly)
+          .buttonStyle(BarButton())
+          .foregroundStyle(colors.textPrimary)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .padding(.horizontal, -4)
+      .padding(.top, 16)
+      .padding(.bottom, 16)
+      VStack(alignment: .leading, spacing: 0) {
+        lead
           .font(.subheadline)
           .foregroundStyle(colors.textSecondary)
+          .fixedSize(horizontal: false, vertical: true)
+          .padding(.bottom, 20)
         ScrollView(.horizontal) {
           HStack(spacing: 8) {
             ForEach(days, id: \.self) { day in
@@ -40,6 +64,7 @@ struct GapSheet: View {
           }
         }
         .scrollIndicators(.hidden)
+        .padding(.bottom, 16)
         if offPatterns.count > 1 {
           HStack(spacing: 8) {
             ForEach(offPatterns, id: \.id) { pattern in
@@ -52,8 +77,8 @@ struct GapSheet: View {
           }
           .accessibilityElement(children: .contain)
           .accessibilityLabel("入れるパターン")
+          .padding(.bottom, 16)
         }
-        Spacer(minLength: 0)
         Button {
           onFill(offPattern)
           dismiss()
@@ -67,20 +92,19 @@ struct GapSheet: View {
         .tint(colors.accentFill)
         .foregroundStyle(colors.accentOnFill)
       }
-      .padding(.horizontal, 20)
-      .padding(.bottom, 8)
-      .navigationTitle("空いている日が\(days.count)日あります")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
-        }
-      }
     }
-    .presentationDetents([.medium])
+    .padding([.horizontal, .bottom], 20)
   }
 
-  private var lead: String {
-    "\(offPattern.name)にすると、\(month.month)月のお休みが\(offCount)日 → \(offCount + days.count)日になります。"
+  /// What filling the days does: the month's days off, which the summary
+  /// counts, grow by them, and a month left with no blank is complete.
+  private var lead: Text {
+    let count = Text("\(offCount)日 → \(offCount + days.count)日")
+      .fontWeight(.bold)
+      .foregroundStyle(colors.accentDefault)
+    let change = Text(
+      "\(offPattern.name)にすると、\(month.month)月のお休みが\(count)になります。")
+    guard completes else { return change }
+    return Text("\(change)\nこれで\(month.month)月が全部埋まります。")
   }
 }
