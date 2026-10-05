@@ -8,6 +8,7 @@ import {
   ORIGIN,
   openSocket,
   signInAnonymously,
+  userIdOf,
 } from "./helpers";
 import {
   changesIn,
@@ -501,5 +502,17 @@ describe("changing a group and leaving it", () => {
       { kind: { value: { left: false, userId: makerId } } },
       { kind: { value: { left: false } } },
     ]);
+  });
+});
+
+describe("finishing a leaving", () => {
+  it("takes the member out of the group on a retry after the group's step failed", async () => {
+    const { groupId, guest, inviteCode } = await pair();
+    // As if the first try stopped after the user's own step.
+    await env.USERS.getByName(await userIdOf(guest)).removeMembership(groupId);
+    await call("GroupService/LeaveGroup", { groupId }, guest);
+    await expect(previewOf(inviteCode)).resolves.toMatchObject({
+      memberCount: 1,
+    });
   });
 });

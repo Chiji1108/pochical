@@ -135,8 +135,9 @@ export const registerGroupService = (router: ConnectRouter): void => {
       const user = await requireUser(context);
       // The user's DO first, so their devices stop opening the group even
       // if the group's own step fails; both can be repeated.
+      // A group the user was never in wakes no Group DO.
       const users = env.USERS.getByName(user.id);
-      if (await users.isMember(groupId)) {
+      if (await users.wasMember(groupId)) {
         await users.removeMembership(groupId);
         await env.GROUPS.getByName(groupId).removeMember(user.id);
       }

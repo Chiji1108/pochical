@@ -203,6 +203,20 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /**
+   * Whether the user is in the group or was once, so a leaving whose
+   * second step failed can be finished.
+   */
+  wasMember(groupId: string): boolean {
+    return (
+      this.db
+        .select({ groupId: memberships.groupId })
+        .from(memberships)
+        .where(eq(memberships.groupId, groupId))
+        .get() !== undefined
+    );
+  }
+
+  /**
    * The group's new name and mark, for the user's list of groups, which
    * their devices hear of at once. A group they are not in changes nothing.
    */
