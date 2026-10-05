@@ -12,7 +12,9 @@ import Testing
 }
 
 @MainActor @Test func settingsAreKeptAsTheyChange() throws {
-  let store = try #require(UserDefaults(suiteName: "test-\(UUID())"))
+  let suite = "test-\(UUID())"
+  let store = try #require(UserDefaults(suiteName: suite))
+  defer { store.removePersistentDomain(forName: suite) }
   let settings = Settings(store: store)
   #expect(settings.device == DeviceSettings())
   settings.device.week.start = 1
