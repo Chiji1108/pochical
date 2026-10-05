@@ -13,6 +13,7 @@
 		C6C3832A307345A800C0C5B8 /* PochicalDesign in Frameworks */ = {isa = PBXBuildFile; productRef = C6C38329307345A800C0C5B8 /* PochicalDesign */; };
 		C6C3832C307345D500C0C5B8 /* PochicalDesign in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3832B307345D500C0C5B8 /* PochicalDesign */; };
 		C6C3832F307345FB00C0C5B8 /* PochicalProto in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3832E307345FB00C0C5B8 /* PochicalProto */; };
+		C6C383423073460000C0C5B8 /* PochicalKit in Frameworks */ = {isa = PBXBuildFile; productRef = C6C383413073460000C0C5B8 /* PochicalKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -102,6 +103,7 @@
 			isa = PBXFrameworksBuildPhase;
 			files = (
 				C6C3832F307345FB00C0C5B8 /* PochicalProto in Frameworks */,
+				C6C383423073460000C0C5B8 /* PochicalKit in Frameworks */,
 				C6C3832A307345A800C0C5B8 /* PochicalDesign in Frameworks */,
 			);
 		};
@@ -183,6 +185,7 @@
 			packageProductDependencies = (
 				C6C38329307345A800C0C5B8 /* PochicalDesign */,
 				C6C3832E307345FB00C0C5B8 /* PochicalProto */,
+				C6C383413073460000C0C5B8 /* PochicalKit */,
 			);
 			productName = Pochical;
 			productReference = C6C382E2307343AF00C0C5B8 /* Pochical.app */;
@@ -289,6 +292,7 @@
 			packageReferences = (
 				C6C38328307345A800C0C5B8 /* XCLocalSwiftPackageReference "../Packages/PochicalDesign" */,
 				C6C3832D307345FB00C0C5B8 /* XCLocalSwiftPackageReference "../Packages/PochicalProto" */,
+				C6C383403073460000C0C5B8 /* XCLocalSwiftPackageReference "../Packages/PochicalKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C6C382E3307343AF00C0C5B8 /* Products */;
@@ -757,6 +761,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/PochicalProto;
 		};
+		C6C383403073460000C0C5B8 /* XCLocalSwiftPackageReference "../Packages/PochicalKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/PochicalKit;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -772,6 +780,11 @@
 		C6C3832E307345FB00C0C5B8 /* PochicalProto */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = PochicalProto;
+		};
+		C6C383413073460000C0C5B8 /* PochicalKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C6C383403073460000C0C5B8 /* XCLocalSwiftPackageReference "../Packages/PochicalKit" */;
+			productName = PochicalKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
