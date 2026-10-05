@@ -17,6 +17,8 @@ struct GroupsScreen: View {
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
   /// The group open beside the rail, the first until one is picked.
   @Binding var openID: String?
+  /// Opens the camera to read a group's QR code.
+  let onScan: () -> Void
   @State private var path: [GroupRoute] = []
 
   var body: some View {
@@ -24,9 +26,9 @@ struct GroupsScreen: View {
       Group {
         if let open = groups.first(where: { $0.id == openID }) ?? groups.first {
           HStack(alignment: .top, spacing: 0) {
-            GroupRail(groups: groups, openID: open.id) { openID = $0 } onNew: {
-              path.append(.newGroup)
-            }
+            GroupRail(
+              groups: groups, openID: open.id, onOpen: { openID = $0 },
+              onNew: { path.append(.newGroup) }, onScan: onScan)
             GroupHub(group: open) {
               path.append(.invite(open))
             } onSettings: {
@@ -37,7 +39,7 @@ struct GroupsScreen: View {
             .padding(.horizontal, 16)
           }
         } else {
-          NoGroups { path.append(.newGroup) }
+          NoGroups(onNew: { path.append(.newGroup) }, onScan: onScan)
             .padding(.horizontal, 20)
         }
       }
@@ -76,12 +78,12 @@ enum GroupRoute: Hashable {
   case settings(GroupRow)
 }
 
-/// No group yet: what sharing shifts is for, then 作成 (/design's
-/// NoGroups). The sample of a shared week comes with the group's table of
-/// shifts, and 参加 with joining.
+/// No group yet: what sharing shifts is for, then 作成 and QR参加
+/// (/design's NoGroups). The sample of a shared week comes later.
 private struct NoGroups: View {
   @Environment(\.themeColors) private var colors
   let onNew: () -> Void
+  let onScan: () -> Void
 
   var body: some View {
     VStack(spacing: 20) {
@@ -102,20 +104,28 @@ private struct NoGroups: View {
       .buttonBorderShape(.capsule)
       .tint(colors.accentFill)
       .foregroundStyle(colors.accentOnFill)
+      Button(action: onScan) {
+        Label("QRコードで参加", systemImage: "qrcode.viewfinder")
+          .frame(maxWidth: .infinity, minHeight: Metrics.control)
+      }
+      .buttonStyle(.bordered)
+      .buttonBorderShape(.capsule)
+      .tint(colors.textPrimary)
     }
     .frame(maxHeight: .infinity)
   }
 }
 
 /// The groups down the left edge, as the messaging apps' server rails: a
-/// mark each, the open one ringed and flagged at the edge, then the way to
-/// start one (/design's GroupRail).
+/// mark each, the open one ringed and flagged at the edge, then the ways to
+/// start or join one (/design's GroupRail).
 private struct GroupRail: View {
   @Environment(\.themeColors) private var colors
   let groups: [GroupRow]
   let openID: String
   let onOpen: (String) -> Void
   let onNew: () -> Void
+  let onScan: () -> Void
 
   var body: some View {
     ScrollView {
@@ -144,6 +154,13 @@ private struct GroupRail: View {
           .frame(width: 28, height: 2)
           .accessibilityHidden(true)
         Button("グループを作る", systemImage: "plus", action: onNew)
+          .labelStyle(.iconOnly)
+          .font(.title3)
+          .foregroundStyle(colors.accentDefault)
+          .frame(width: 42, height: 42)
+          .background(colors.backgroundCard, in: Circle())
+          .buttonStyle(.plain)
+        Button("QRコードで参加", systemImage: "qrcode.viewfinder", action: onScan)
           .labelStyle(.iconOnly)
           .font(.title3)
           .foregroundStyle(colors.accentDefault)
