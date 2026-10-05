@@ -38,7 +38,7 @@ struct GroupDayHeader: View {
           LetterAvatar(name: member.name, size: 24)
           if density == .names {
             Text(member.name)
-              .font(.system(size: 11))
+              .font(.footnote.weight(.semibold))
               .foregroundStyle(colors.textPrimary)
               .lineLimit(1)
           }
@@ -131,13 +131,14 @@ struct GroupDayRow: View {
     let holiday = week.holiday && Holidays.name(on: day.key, in: "JP") != nil
     let tone: Color =
       switch day.weekday {
+      case _ where day == Day.today: colors.accentDefault
       case 0 where week.sunday: colors.calendarHoliday
       case 6 where week.saturday: colors.calendarSaturday
       default: holiday ? colors.calendarHoliday : colors.textPrimary
       }
     return HStack(alignment: .firstTextBaseline, spacing: 3) {
       Text("\(day.day)")
-        .font(.system(size: 12, weight: .semibold))
+        .font(.system(size: 12, weight: day == Day.today ? .bold : .semibold))
       Text(WeekdayRow.names[day.weekday])
         .font(.system(size: 9))
     }

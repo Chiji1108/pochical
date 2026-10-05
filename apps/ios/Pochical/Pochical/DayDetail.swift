@@ -286,8 +286,7 @@ struct DayDetail: View {
   }
 
   private func hours(_ start: String, _ end: String) -> String {
-    let trim = { (time: String) in time.hasPrefix("0") ? String(time.dropFirst()) : time }
-    return "\(trim(start)) – \(end <= start ? "翌" : "")\(trim(end))"
+    hoursText(start, end)
   }
 
   // "HH:MM" and the date pickers' dates, on any one day.
@@ -362,4 +361,11 @@ struct FlowLayout: Layout {
     }
     return rows
   }
+}
+
+/// Hours as the day and the group's screens write them: 9:00 – 18:00, an
+/// end past midnight as 翌9:30.
+func hoursText(_ start: String, _ end: String) -> String {
+  let trim = { (time: String) in time.hasPrefix("0") ? String(time.dropFirst()) : time }
+  return "\(trim(start)) – \(end <= start ? "翌" : "")\(trim(end))"
 }

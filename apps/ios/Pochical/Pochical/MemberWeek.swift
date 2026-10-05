@@ -50,6 +50,7 @@ struct GroupWeekdays: View {
 /// date and all, and the picked day framed the same way. Members' marks
 /// show in the viewer's look until each member's own comes with them.
 struct GroupWeek: View {
+  @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
   let days: [Day]
   let members: [GroupMember]
@@ -80,9 +81,10 @@ struct GroupWeek: View {
       .frame(width: facesWidth)
       ForEach(days, id: \.self) { day in
         let column = VStack(spacing: 0) {
-          Text("\(day.day)")
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(day == today ? colors.accentDefault : colors.textPrimary)
+          // A month's 1st says its month, where the week runs into it.
+          Text(day.day == 1 && day != days[0] ? "\(day.month)/1" : "\(day.day)")
+            .font(.system(size: 11, weight: day == today ? .bold : .semibold))
+            .foregroundStyle(dateColor(day, today: today))
             .frame(height: dateHeight)
           ForEach(Array(members.enumerated()), id: \.element.id) { index, member in
             let entry = shown[index][day]
@@ -124,6 +126,23 @@ struct GroupWeek: View {
           column
         }
       }
+    }
+  }
+
+  /// Today in the accent; else Sundays, Saturdays and holidays in their
+  /// colors as the calendar has them.
+  private func dateColor(_ day: Day, today: Day) -> Color {
+    if day == today {
+      return colors.accentDefault
+    }
+    let week = settings.device.week
+    if week.holiday, Holidays.name(on: day.key, in: "JP") != nil {
+      return colors.calendarHoliday
+    }
+    switch day.weekday {
+    case 0 where week.sunday: return colors.calendarHoliday
+    case 6 where week.saturday: return colors.calendarSaturday
+    default: return colors.textPrimary
     }
   }
 
@@ -193,7 +212,8 @@ struct MemberWeek: View {
         .foregroundStyle(colors.textSecondary)
       Spacer()
       Text(next.map { "\(dayName($0))・\(fromToday($0, today: today))" } ?? "なし")
-        .foregroundStyle(colors.textPrimary)
+        .fontWeight(next == nil ? .regular : .semibold)
+        .foregroundStyle(next == nil ? colors.textTertiary : colors.textPrimary)
       if next != nil {
         Image(systemName: "chevron.right")
           .imageScale(.small)

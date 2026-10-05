@@ -21,6 +21,8 @@ struct GroupPersonView: View {
   @State private var personID: String?
   /// The month shown, from the swiped pages.
   @State private var month: Day? = Day.today.firstOfMonth
+  /// Where the pages are as a finger moves them, for the month's name.
+  @State private var position = PagerPosition(pages: span)
 
   private static let span = 24
   private static let gridHeight = 6 * DayCell.height + 5 * 4
@@ -34,7 +36,7 @@ struct GroupPersonView: View {
     VStack(alignment: .leading, spacing: 12) {
       people(picked: person)
       HStack {
-        Text(monthName(shown)).font(.title3.bold()).accessibilityAddTraits(.isHeader)
+        RollingMonthTitle(position: position) { Day.today.firstOfMonth.addingMonths($0 - Self.span) }
         Spacer()
         if shown != Day.today.firstOfMonth {
           Button("今月") {
@@ -52,14 +54,14 @@ struct GroupPersonView: View {
         }
       }
       .padding(.horizontal, 16)
-      together(in: shown)
-        .padding(.horizontal, 16)
       if let person, person.userID != meID, me != nil {
         Text("薄い枠の日は、自分も休みの日です。")
           .font(.footnote)
           .foregroundStyle(colors.textTertiary)
           .padding(.horizontal, 20)
       }
+      together(in: shown)
+        .padding(.horizontal, 16)
     }
   }
 
@@ -74,16 +76,18 @@ struct GroupPersonView: View {
           } label: {
             HStack(spacing: 6) {
               LetterAvatar(name: member.name, size: 22)
-              Text(member.name).font(.subheadline).lineLimit(1)
+              Text(member.name)
+                .font(.subheadline.weight(isPicked ? .semibold : .regular))
+                .foregroundStyle(isPicked ? colors.accentDefault : colors.textSecondary)
+                .lineLimit(1)
             }
             .padding(.leading, 4)
             .padding(.trailing, 12)
             .frame(minHeight: 32)
-            .background(isPicked ? colors.accentContainer : colors.fillQuaternary, in: Capsule())
+            .background(isPicked ? colors.accentContainer : colors.backgroundCard, in: Capsule())
             .overlay {
-              if isPicked {
-                Capsule().strokeBorder(colors.accentDefault, lineWidth: 1.5)
-              }
+              Capsule().strokeBorder(
+                isPicked ? colors.accentDefault : colors.separator, lineWidth: isPicked ? 1.5 : 1)
             }
           }
           .buttonStyle(.plain)
@@ -111,6 +115,11 @@ struct GroupPersonView: View {
     }
     .scrollTargetBehavior(.paging)
     .scrollPosition(id: $month)
+    .onScrollGeometryChange(for: CGFloat.self) { geometry in
+      geometry.contentOffset.x / max(geometry.containerSize.width, 1)
+    } action: { _, pages in
+      position.pages = pages
+    }
     .scrollIndicators(.hidden)
     .frame(height: Self.gridHeight)
   }
@@ -163,14 +172,14 @@ struct GroupPersonView: View {
       members.count > 1
       ? Together.days(offs, from: days[0], through: days[days.count - 1])
       : (days: [], unsure: false)
-    let title = "\(month == Day.today.firstOfMonth ? "今月" : monthName(month))のみんな休み"
+    let title = "\(month == Day.today.firstOfMonth ? "今月" : "\(month.month)月")のみんな休み"
     let row = HStack {
       Text(title).foregroundStyle(colors.textSecondary)
       Spacer()
       if together.days.isEmpty {
         Text(together.unsure ? "未入力あり" : "なし").foregroundStyle(colors.textTertiary)
       } else {
-        Text("\(together.days.count)日").foregroundStyle(colors.textPrimary)
+        TogetherCount(count: together.days.count)
         Image(systemName: "chevron.right")
           .imageScale(.small)
           .foregroundStyle(colors.textQuaternary)
@@ -192,7 +201,4 @@ struct GroupPersonView: View {
     }
   }
 
-  private func monthName(_ month: Day) -> String {
-    month.year == Day.today.year ? "\(month.month)月" : "\(month.year)年\(month.month)月"
-  }
 }

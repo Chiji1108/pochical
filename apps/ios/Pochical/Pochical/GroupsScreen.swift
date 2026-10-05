@@ -238,7 +238,7 @@ private struct GroupHub: View {
                 Text("月で見る")
                 Image(systemName: "chevron.right").imageScale(.small)
               }
-              .font(.subheadline)
+              .font(.subheadline.weight(.semibold))
               .foregroundStyle(colors.accentDefault)
             }
             .buttonStyle(.plain)
@@ -283,14 +283,21 @@ private struct GroupHub: View {
         .lineLimit(1)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityAddTraits(.isHeader)
-      Button("メンバーを招待", systemImage: "person.badge.plus", action: onInvite)
-        .labelStyle(.iconOnly)
-        .buttonStyle(BarButton())
-        .foregroundStyle(colors.textPrimary)
-      Button("グループの設定", systemImage: "slider.horizontal.3", action: onSettings)
-        .labelStyle(.iconOnly)
-        .buttonStyle(BarButton())
-        .foregroundStyle(colors.textPrimary)
+      // Both on one piece of glass, as a bar's buttons together.
+      HStack(spacing: 0) {
+        Button(action: onInvite) {
+          Image(systemName: "person.badge.plus").frame(width: 44, height: 44)
+        }
+        .accessibilityLabel("メンバーを招待")
+        Button(action: onSettings) {
+          Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44)
+        }
+        .accessibilityLabel("グループの設定")
+      }
+      .buttonStyle(.plain)
+      .foregroundStyle(colors.textPrimary)
+      .padding(.horizontal, 4)
+      .glassEffect(.regular.interactive(), in: .capsule)
     }
     .padding(.top, 4)
   }

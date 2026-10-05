@@ -97,7 +97,7 @@ struct GroupSettingsPage: View {
       let today = Day.today
       try? await $members.load(GroupMembersRequest(groupID: group.id, from: today, through: today))
     }
-    .task { meID = try? await groupCalls.userID() }
+    .task { meID = await groupCalls.userID() }
     .alert("グループから抜けますか？", isPresented: $confirmingLeave) {
       Button("抜ける", role: .destructive) { leave() }
       Button("キャンセル", role: .cancel) {}
