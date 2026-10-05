@@ -14,7 +14,7 @@ import {
 // The groups the user is in, so their sockets can be let in without
 // waking a Group DO for an id that is not theirs, and their devices list
 // them with the group's name and mark as last heard. Written as they make
-// or join a group, and later as they leave (leaving is not built yet).
+// or join a group, as it is renamed, and as they leave.
 // Cursors are shared with day_fields.
 export const memberships = sqliteTable("memberships", {
   cursor: integer().notNull().default(0),
@@ -22,6 +22,9 @@ export const memberships = sqliteTable("memberships", {
   emoji: text(),
   groupId: text("group_id").primaryKey(),
   joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull(),
+  // Set once the user leaves: the row stays, at the cursor of their
+  // leaving, so their devices catching up hear of it.
+  leftAt: integer("left_at", { mode: "timestamp_ms" }),
   name: text().notNull().default(""),
   // How far this user's shared values have reached the group: the cursor
   // up to which they were pushed and taken (spec/sync-protocol.md, Group

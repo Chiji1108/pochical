@@ -1,14 +1,23 @@
 import { GROUP_MAX_MEMBERS, syncLimits } from "@pochical/design/limits";
-import { env } from "cloudflare:workers";
+import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
 import {
   call,
   inOneLimitWindow,
+  ORIGIN,
   openSocket,
   signInAnonymously,
+  userIdOf,
 } from "./helpers";
-import { changesIn, device, pair, settled, syncSocket } from "./sync-helpers";
+import {
+  changesIn,
+  device,
+  pair,
+  PAIR_ROSTER,
+  settled,
+  syncSocket,
+} from "./sync-helpers";
 
 type Created = { groupId: string; inviteCode: string };
 
@@ -378,5 +387,132 @@ describe("who is in a group, on members' devices", () => {
     expect(changesIn(await group.frames.next())).toMatchObject([
       { cursor: 4n, kind: { case: "member", value: { displayName: "あや" } } },
     ]);
+  });
+});
+
+describe("changing a group and leaving it", () => {
+  it("renames the group for everyone, in the group and in their lists", async () => {
+    const { groupId, guest, maker } = await pair();
+    const group = await syncSocket(
+      `/v1/groups/${groupId}/socket`,
+      guest,
+      PAIR_ROSTER
+    );
+    const phone = await device(maker);
+    await phone.frames.next();
+
+    const renamed = await call(
+      "GroupService/RenameGroup",
+      { emoji: "🏠", groupId, name: "いとこの家" },
+      guest
+    );
+    expect(renamed.status).toBe(200);
+    expect(changesIn(await group.frames.next())).toMatchObject([
+      {
+        kind: {
+          case: "groupProfile",
+          value: { emoji: "🏠", name: "いとこの家" },
+        },
+      },
+    ]);
+    expect(changesIn(await phone.frames.next())).toMatchObject([
+      {
+        kind: {
+          case: "membership",
+          value: { emoji: "🏠", groupId, name: "いとこの家" },
+        },
+      },
+    ]);
+  });
+
+  it("changes how a member appears, and only for members", async () => {
+    const { groupId, guest } = await pair();
+    const group = await syncSocket(
+      `/v1/groups/${groupId}/socket`,
+      guest,
+      PAIR_ROSTER
+    );
+    await call(
+      "GroupService/SetDisplayName",
+      { displayName: "ゆうちゃん", groupId },
+      guest
+    );
+    expect(changesIn(await group.frames.next())).toMatchObject([
+      { kind: { case: "member", value: { displayName: "ゆうちゃん" } } },
+    ]);
+
+    const stranger = await signInAnonymously();
+    await expect(
+      statusOf(
+        call(
+          "GroupService/SetDisplayName",
+          { displayName: "だれか", groupId },
+          stranger
+        )
+      )
+    ).resolves.toBe(403);
+  });
+
+  it("tells the member's devices and the group when they leave", async () => {
+    const { groupId, guest, maker } = await pair();
+    const tablet = await device(guest);
+    await tablet.frames.next();
+    const late = await syncSocket(
+      `/v1/groups/${groupId}/socket`,
+      maker,
+      PAIR_ROSTER
+    );
+
+    await call("GroupService/LeaveGroup", { groupId }, guest);
+    expect(changesIn(await tablet.frames.next())).toMatchObject([
+      { kind: { case: "membership", value: { groupId, left: true } } },
+    ]);
+    expect(changesIn(await late.frames.next())).toMatchObject([
+      { kind: { case: "member", value: { left: true } } },
+    ]);
+  });
+
+  it("no longer lets in or counts one who left, until they join again", async () => {
+    const { groupId, guest, inviteCode, maker, makerId } = await pair();
+    await call("GroupService/LeaveGroup", { groupId }, guest);
+    // Leaving twice changes nothing.
+    const again = await call("GroupService/LeaveGroup", { groupId }, guest);
+    expect(again.status).toBe(200);
+
+    const refused = await exports.default.fetch(
+      `${ORIGIN}/v1/groups/${groupId}/socket`,
+      { headers: { Authorization: `Bearer ${guest}`, Upgrade: "websocket" } }
+    );
+    expect(refused.status).toBe(403);
+    await expect(previewOf(inviteCode)).resolves.toMatchObject({
+      memberCount: 1,
+    });
+    const invite = await call("GroupService/GetInvite", { inviteCode }, maker);
+    await expect(invite.json()).resolves.toMatchObject({
+      members: [{ displayName: "さくら" }],
+    });
+
+    // Back by the link, as anyone joins.
+    await join(inviteCode, guest);
+    const back = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
+    const roster = changesIn(await back.frames.next()).filter(
+      ({ kind }) => kind.case === "member"
+    );
+    expect(roster).toMatchObject([
+      { kind: { value: { left: false, userId: makerId } } },
+      { kind: { value: { left: false } } },
+    ]);
+  });
+});
+
+describe("finishing a leaving", () => {
+  it("takes the member out of the group on a retry after the group's step failed", async () => {
+    const { groupId, guest, inviteCode } = await pair();
+    // As if the first try stopped after the user's own step.
+    await env.USERS.getByName(await userIdOf(guest)).removeMembership(groupId);
+    await call("GroupService/LeaveGroup", { groupId }, guest);
+    await expect(previewOf(inviteCode)).resolves.toMatchObject({
+      memberCount: 1,
+    });
   });
 });

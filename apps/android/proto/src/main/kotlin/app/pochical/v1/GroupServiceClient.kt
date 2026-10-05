@@ -106,4 +106,52 @@ public class GroupServiceClient(
     ),
   )
 
+
+  /**
+   *  Gives the group a new name and mark, which every member sees. Members
+   *  only.
+   */
+  override suspend fun renameGroup(request: RenameGroupRequest, headers: Headers): ResponseMessage<RenameGroupResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.GroupService/RenameGroup",
+      app.pochical.v1.RenameGroupRequest::class,
+      app.pochical.v1.RenameGroupResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
+
+  /**
+   *  How the caller appears in the group from now on. Members only.
+   */
+  override suspend fun setDisplayName(request: SetDisplayNameRequest, headers: Headers): ResponseMessage<SetDisplayNameResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.GroupService/SetDisplayName",
+      app.pochical.v1.SetDisplayNameRequest::class,
+      app.pochical.v1.SetDisplayNameResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
+
+  /**
+   *  Takes the caller out of the group: what it holds of their shifts goes,
+   *  and its socket and calls refuse them until they join again by a live
+   *  link. Leaving a group you are not in changes nothing.
+   */
+  override suspend fun leaveGroup(request: LeaveGroupRequest, headers: Headers): ResponseMessage<LeaveGroupResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.GroupService/LeaveGroup",
+      app.pochical.v1.LeaveGroupRequest::class,
+      app.pochical.v1.LeaveGroupResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
 }

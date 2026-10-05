@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/group.proto.
  */
 export const file_pochical_v1_group: GenFile = /*@__PURE__*/
-  fileDesc("Chdwb2NoaWNhbC92MS9ncm91cC5wcm90bxILcG9jaGljYWwudjEiWwoSQ3JlYXRlR3JvdXBSZXF1ZXN0EgwKBG5hbWUYASABKAkSDQoFZW1vamkYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJEhIKCnJlcXVlc3RfaWQYBCABKAkiPAoTQ3JlYXRlR3JvdXBSZXNwb25zZRIQCghncm91cF9pZBgBIAEoCRITCgtpbnZpdGVfY29kZRgCIAEoCSIoChRHZXRJbnZpdGVMaW5rUmVxdWVzdBIQCghncm91cF9pZBgBIAEoCSIsChVHZXRJbnZpdGVMaW5rUmVzcG9uc2USEwoLaW52aXRlX2NvZGUYASABKAkiKwoXUmVtYWtlSW52aXRlTGlua1JlcXVlc3QSEAoIZ3JvdXBfaWQYASABKAkiLwoYUmVtYWtlSW52aXRlTGlua1Jlc3BvbnNlEhMKC2ludml0ZV9jb2RlGAEgASgJIicKEEdldEludml0ZVJlcXVlc3QSEwoLaW52aXRlX2NvZGUYASABKAkioAEKEUdldEludml0ZVJlc3BvbnNlEhAKCGdyb3VwX2lkGAEgASgJEhIKCmdyb3VwX25hbWUYAiABKAkSEwoLZ3JvdXBfZW1vamkYAyABKAkSKgoHbWVtYmVycxgEIAMoCzIZLnBvY2hpY2FsLnYxLkludml0ZU1lbWJlchIWCg5hbHJlYWR5X21lbWJlchgFIAEoCBIMCgRmdWxsGAYgASgIIiQKDEludml0ZU1lbWJlchIUCgxkaXNwbGF5X25hbWUYASABKAkiPQoQSm9pbkdyb3VwUmVxdWVzdBITCgtpbnZpdGVfY29kZRgBIAEoCRIUCgxkaXNwbGF5X25hbWUYAiABKAkiPQoRSm9pbkdyb3VwUmVzcG9uc2USEAoIZ3JvdXBfaWQYASABKAkSFgoOYWxyZWFkeV9tZW1iZXIYAiABKAgyuwMKDEdyb3VwU2VydmljZRJQCgtDcmVhdGVHcm91cBIfLnBvY2hpY2FsLnYxLkNyZWF0ZUdyb3VwUmVxdWVzdBogLnBvY2hpY2FsLnYxLkNyZWF0ZUdyb3VwUmVzcG9uc2USWwoNR2V0SW52aXRlTGluaxIhLnBvY2hpY2FsLnYxLkdldEludml0ZUxpbmtSZXF1ZXN0GiIucG9jaGljYWwudjEuR2V0SW52aXRlTGlua1Jlc3BvbnNlIgOQAgESXwoQUmVtYWtlSW52aXRlTGluaxIkLnBvY2hpY2FsLnYxLlJlbWFrZUludml0ZUxpbmtSZXF1ZXN0GiUucG9jaGljYWwudjEuUmVtYWtlSW52aXRlTGlua1Jlc3BvbnNlEk8KCUdldEludml0ZRIdLnBvY2hpY2FsLnYxLkdldEludml0ZVJlcXVlc3QaHi5wb2NoaWNhbC52MS5HZXRJbnZpdGVSZXNwb25zZSIDkAIBEkoKCUpvaW5Hcm91cBIdLnBvY2hpY2FsLnYxLkpvaW5Hcm91cFJlcXVlc3QaHi5wb2NoaWNhbC52MS5Kb2luR3JvdXBSZXNwb25zZUJqCg9hcHAucG9jaGljYWwudjFCCkdyb3VwUHJvdG9QAaICA1BYWKoCC1BvY2hpY2FsLlYxygILUG9jaGljYWxcVjHiAhdQb2NoaWNhbFxWMVxHUEJNZXRhZGF0YeoCDFBvY2hpY2FsOjpWMWIGcHJvdG8z");
+  fileDesc("Chdwb2NoaWNhbC92MS9ncm91cC5wcm90bxILcG9jaGljYWwudjEiWwoSQ3JlYXRlR3JvdXBSZXF1ZXN0EgwKBG5hbWUYASABKAkSDQoFZW1vamkYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJEhIKCnJlcXVlc3RfaWQYBCABKAkiPAoTQ3JlYXRlR3JvdXBSZXNwb25zZRIQCghncm91cF9pZBgBIAEoCRITCgtpbnZpdGVfY29kZRgCIAEoCSIoChRHZXRJbnZpdGVMaW5rUmVxdWVzdBIQCghncm91cF9pZBgBIAEoCSIsChVHZXRJbnZpdGVMaW5rUmVzcG9uc2USEwoLaW52aXRlX2NvZGUYASABKAkiKwoXUmVtYWtlSW52aXRlTGlua1JlcXVlc3QSEAoIZ3JvdXBfaWQYASABKAkiLwoYUmVtYWtlSW52aXRlTGlua1Jlc3BvbnNlEhMKC2ludml0ZV9jb2RlGAEgASgJIicKEEdldEludml0ZVJlcXVlc3QSEwoLaW52aXRlX2NvZGUYASABKAkioAEKEUdldEludml0ZVJlc3BvbnNlEhAKCGdyb3VwX2lkGAEgASgJEhIKCmdyb3VwX25hbWUYAiABKAkSEwoLZ3JvdXBfZW1vamkYAyABKAkSKgoHbWVtYmVycxgEIAMoCzIZLnBvY2hpY2FsLnYxLkludml0ZU1lbWJlchIWCg5hbHJlYWR5X21lbWJlchgFIAEoCBIMCgRmdWxsGAYgASgIIiQKDEludml0ZU1lbWJlchIUCgxkaXNwbGF5X25hbWUYASABKAkiPQoQSm9pbkdyb3VwUmVxdWVzdBITCgtpbnZpdGVfY29kZRgBIAEoCRIUCgxkaXNwbGF5X25hbWUYAiABKAkiPQoRSm9pbkdyb3VwUmVzcG9uc2USEAoIZ3JvdXBfaWQYASABKAkSFgoOYWxyZWFkeV9tZW1iZXIYAiABKAgiQwoSUmVuYW1lR3JvdXBSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJEgwKBG5hbWUYAiABKAkSDQoFZW1vamkYAyABKAkiFQoTUmVuYW1lR3JvdXBSZXNwb25zZSI/ChVTZXREaXNwbGF5TmFtZVJlcXVlc3QSEAoIZ3JvdXBfaWQYASABKAkSFAoMZGlzcGxheV9uYW1lGAIgASgJIhgKFlNldERpc3BsYXlOYW1lUmVzcG9uc2UiJQoRTGVhdmVHcm91cFJlcXVlc3QSEAoIZ3JvdXBfaWQYASABKAkiFAoSTGVhdmVHcm91cFJlc3BvbnNlMrcFCgxHcm91cFNlcnZpY2USUAoLQ3JlYXRlR3JvdXASHy5wb2NoaWNhbC52MS5DcmVhdGVHcm91cFJlcXVlc3QaIC5wb2NoaWNhbC52MS5DcmVhdGVHcm91cFJlc3BvbnNlElsKDUdldEludml0ZUxpbmsSIS5wb2NoaWNhbC52MS5HZXRJbnZpdGVMaW5rUmVxdWVzdBoiLnBvY2hpY2FsLnYxLkdldEludml0ZUxpbmtSZXNwb25zZSIDkAIBEl8KEFJlbWFrZUludml0ZUxpbmsSJC5wb2NoaWNhbC52MS5SZW1ha2VJbnZpdGVMaW5rUmVxdWVzdBolLnBvY2hpY2FsLnYxLlJlbWFrZUludml0ZUxpbmtSZXNwb25zZRJPCglHZXRJbnZpdGUSHS5wb2NoaWNhbC52MS5HZXRJbnZpdGVSZXF1ZXN0Gh4ucG9jaGljYWwudjEuR2V0SW52aXRlUmVzcG9uc2UiA5ACARJKCglKb2luR3JvdXASHS5wb2NoaWNhbC52MS5Kb2luR3JvdXBSZXF1ZXN0Gh4ucG9jaGljYWwudjEuSm9pbkdyb3VwUmVzcG9uc2USUAoLUmVuYW1lR3JvdXASHy5wb2NoaWNhbC52MS5SZW5hbWVHcm91cFJlcXVlc3QaIC5wb2NoaWNhbC52MS5SZW5hbWVHcm91cFJlc3BvbnNlElkKDlNldERpc3BsYXlOYW1lEiIucG9jaGljYWwudjEuU2V0RGlzcGxheU5hbWVSZXF1ZXN0GiMucG9jaGljYWwudjEuU2V0RGlzcGxheU5hbWVSZXNwb25zZRJNCgpMZWF2ZUdyb3VwEh4ucG9jaGljYWwudjEuTGVhdmVHcm91cFJlcXVlc3QaHy5wb2NoaWNhbC52MS5MZWF2ZUdyb3VwUmVzcG9uc2VCagoPYXBwLnBvY2hpY2FsLnYxQgpHcm91cFByb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw");
 
 /**
  * @generated from message pochical.v1.CreateGroupRequest
@@ -281,6 +281,117 @@ export const JoinGroupResponseSchema: GenMessage<JoinGroupResponse> = /*@__PURE_
   messageDesc(file_pochical_v1_group, 10);
 
 /**
+ * @generated from message pochical.v1.RenameGroupRequest
+ */
+export type RenameGroupRequest = Message<"pochical.v1.RenameGroupRequest"> & {
+  /**
+   * @generated from field: string group_id = 1;
+   */
+  groupId: string;
+
+  /**
+   * groupName: 1 to 30 characters.
+   *
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * The group's mark: one emoji.
+   *
+   * @generated from field: string emoji = 3;
+   */
+  emoji: string;
+};
+
+/**
+ * Describes the message pochical.v1.RenameGroupRequest.
+ * Use `create(RenameGroupRequestSchema)` to create a new message.
+ */
+export const RenameGroupRequestSchema: GenMessage<RenameGroupRequest> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_group, 11);
+
+/**
+ * @generated from message pochical.v1.RenameGroupResponse
+ */
+export type RenameGroupResponse = Message<"pochical.v1.RenameGroupResponse"> & {
+};
+
+/**
+ * Describes the message pochical.v1.RenameGroupResponse.
+ * Use `create(RenameGroupResponseSchema)` to create a new message.
+ */
+export const RenameGroupResponseSchema: GenMessage<RenameGroupResponse> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_group, 12);
+
+/**
+ * @generated from message pochical.v1.SetDisplayNameRequest
+ */
+export type SetDisplayNameRequest = Message<"pochical.v1.SetDisplayNameRequest"> & {
+  /**
+   * @generated from field: string group_id = 1;
+   */
+  groupId: string;
+
+  /**
+   * personName: 1 to 20 characters.
+   *
+   * @generated from field: string display_name = 2;
+   */
+  displayName: string;
+};
+
+/**
+ * Describes the message pochical.v1.SetDisplayNameRequest.
+ * Use `create(SetDisplayNameRequestSchema)` to create a new message.
+ */
+export const SetDisplayNameRequestSchema: GenMessage<SetDisplayNameRequest> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_group, 13);
+
+/**
+ * @generated from message pochical.v1.SetDisplayNameResponse
+ */
+export type SetDisplayNameResponse = Message<"pochical.v1.SetDisplayNameResponse"> & {
+};
+
+/**
+ * Describes the message pochical.v1.SetDisplayNameResponse.
+ * Use `create(SetDisplayNameResponseSchema)` to create a new message.
+ */
+export const SetDisplayNameResponseSchema: GenMessage<SetDisplayNameResponse> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_group, 14);
+
+/**
+ * @generated from message pochical.v1.LeaveGroupRequest
+ */
+export type LeaveGroupRequest = Message<"pochical.v1.LeaveGroupRequest"> & {
+  /**
+   * @generated from field: string group_id = 1;
+   */
+  groupId: string;
+};
+
+/**
+ * Describes the message pochical.v1.LeaveGroupRequest.
+ * Use `create(LeaveGroupRequestSchema)` to create a new message.
+ */
+export const LeaveGroupRequestSchema: GenMessage<LeaveGroupRequest> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_group, 15);
+
+/**
+ * @generated from message pochical.v1.LeaveGroupResponse
+ */
+export type LeaveGroupResponse = Message<"pochical.v1.LeaveGroupResponse"> & {
+};
+
+/**
+ * Describes the message pochical.v1.LeaveGroupResponse.
+ * Use `create(LeaveGroupResponseSchema)` to create a new message.
+ */
+export const LeaveGroupResponseSchema: GenMessage<LeaveGroupResponse> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_group, 16);
+
+/**
  * Making groups and getting into them. Every call needs the session token
  * from better-auth as `Authorization: Bearer <token>` (UNAUTHENTICATED
  * without one). Names follow spec/text-limits.md, counted in characters as
@@ -348,6 +459,39 @@ export const GroupService: GenService<{
     methodKind: "unary";
     input: typeof JoinGroupRequestSchema;
     output: typeof JoinGroupResponseSchema;
+  },
+  /**
+   * Gives the group a new name and mark, which every member sees. Members
+   * only.
+   *
+   * @generated from rpc pochical.v1.GroupService.RenameGroup
+   */
+  renameGroup: {
+    methodKind: "unary";
+    input: typeof RenameGroupRequestSchema;
+    output: typeof RenameGroupResponseSchema;
+  },
+  /**
+   * How the caller appears in the group from now on. Members only.
+   *
+   * @generated from rpc pochical.v1.GroupService.SetDisplayName
+   */
+  setDisplayName: {
+    methodKind: "unary";
+    input: typeof SetDisplayNameRequestSchema;
+    output: typeof SetDisplayNameResponseSchema;
+  },
+  /**
+   * Takes the caller out of the group: what it holds of their shifts goes,
+   * and its socket and calls refuse them until they join again by a live
+   * link. Leaving a group you are not in changes nothing.
+   *
+   * @generated from rpc pochical.v1.GroupService.LeaveGroup
+   */
+  leaveGroup: {
+    methodKind: "unary";
+    input: typeof LeaveGroupRequestSchema;
+    output: typeof LeaveGroupResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_pochical_v1_group, 0);

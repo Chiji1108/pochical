@@ -43,6 +43,13 @@
       "when": 1791206751381,
       "tag": "0005_roster_cursors",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791213473429,
+      "tag": "0006_member_left",
+      "breakpoints": true
     }
   ]
 }

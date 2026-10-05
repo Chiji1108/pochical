@@ -48,4 +48,22 @@ public interface GroupServiceClientInterface {
    *  Joining a group you are already in changes nothing and says so.
    */
   public suspend fun joinGroup(request: JoinGroupRequest, headers: Headers = emptyMap()): ResponseMessage<JoinGroupResponse>
+
+  /**
+   *  Gives the group a new name and mark, which every member sees. Members
+   *  only.
+   */
+  public suspend fun renameGroup(request: RenameGroupRequest, headers: Headers = emptyMap()): ResponseMessage<RenameGroupResponse>
+
+  /**
+   *  How the caller appears in the group from now on. Members only.
+   */
+  public suspend fun setDisplayName(request: SetDisplayNameRequest, headers: Headers = emptyMap()): ResponseMessage<SetDisplayNameResponse>
+
+  /**
+   *  Takes the caller out of the group: what it holds of their shifts goes,
+   *  and its socket and calls refuse them until they join again by a live
+   *  link. Leaving a group you are not in changes nothing.
+   */
+  public suspend fun leaveGroup(request: LeaveGroupRequest, headers: Headers = emptyMap()): ResponseMessage<LeaveGroupResponse>
 }

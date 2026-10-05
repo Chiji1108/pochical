@@ -45,6 +45,9 @@ export const members = sqliteTable("members", {
   cursor: integer().notNull().default(0),
   displayName: text("display_name").notNull(),
   joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull(),
+  // Set once they leave: the row stays, at the cursor of their leaving, so
+  // a device catching up hears of it; their values go.
+  leftAt: integer("left_at", { mode: "timestamp_ms" }),
   userId: text("user_id").primaryKey(),
 });
 

@@ -10,7 +10,10 @@ import {
   GetInviteResponseSchema,
   GroupService,
   JoinGroupResponseSchema,
+  LeaveGroupResponseSchema,
   RemakeInviteLinkResponseSchema,
+  RenameGroupResponseSchema,
+  SetDisplayNameResponseSchema,
 } from "./gen/pochical/v1/group_pb";
 import { isId } from "./ids";
 import {
@@ -26,16 +29,17 @@ import { requireEmoji, requireText } from "./text-limits";
 const displayNameOf = (text: string): string =>
   requireText(text, textLimits.personName, "display_name");
 
-/** The caller, when they are in the group; PERMISSION_DENIED otherwise. */
+/** The caller's id, when they are in the group; PERMISSION_DENIED otherwise. */
 const requireMember = async (
   context: HandlerContext,
   groupId: string
-): Promise<void> => {
+): Promise<string> => {
   const user = await requireUser(context);
   // The user's own DO, so an id that is not theirs wakes no Group DO.
   if (!(await env.USERS.getByName(user.id).isMember(groupId))) {
     throw new ConnectError("Not a member of this group", Code.PermissionDenied);
   }
+  return user.id;
 };
 
 export const registerGroupService = (router: ConnectRouter): void => {
@@ -88,7 +92,8 @@ export const registerGroupService = (router: ConnectRouter): void => {
         groupEmoji: profile.emoji ?? "",
         groupId,
         groupName: profile.name,
-        members: memberList,
+        // Names only: who they are stays inside the group.
+        members: memberList.map(({ displayName }) => ({ displayName })),
       });
     },
 
@@ -126,10 +131,53 @@ export const registerGroupService = (router: ConnectRouter): void => {
       });
     },
 
+    leaveGroup: async ({ groupId }, context) => {
+      const user = await requireUser(context);
+      // The user's DO first, so their devices stop opening the group even
+      // if the group's own step fails; both can be repeated.
+      // A group the user was never in wakes no Group DO.
+      const users = env.USERS.getByName(user.id);
+      if (await users.wasMember(groupId)) {
+        await users.removeMembership(groupId);
+        await env.GROUPS.getByName(groupId).removeMember(user.id);
+      }
+      return create(LeaveGroupResponseSchema, {});
+    },
+
     remakeInviteLink: async ({ groupId }, context) => {
       await requireMember(context, groupId);
       const inviteCode = await issueInviteCode(env.DB, groupId);
       return create(RemakeInviteLinkResponseSchema, { inviteCode });
+    },
+
+    renameGroup: async (request, context) => {
+      await requireMember(context, request.groupId);
+      const name = requireText(request.name, textLimits.groupName, "name");
+      const emoji = requireEmoji(request.emoji);
+      const group = env.GROUPS.getByName(request.groupId);
+      await group.setProfile({ emoji, name });
+      // Each member's list of groups shows the new name; one that cannot be
+      // reached now hears it from the group's socket when they open it.
+      const memberList = await group.memberList();
+      await Promise.allSettled(
+        memberList.map(async ({ userId }) => {
+          await env.USERS.getByName(userId).renameMembership(request.groupId, {
+            emoji,
+            name,
+          });
+        })
+      );
+      return create(RenameGroupResponseSchema, {});
+    },
+
+    setDisplayName: async (request, context) => {
+      const userId = await requireMember(context, request.groupId);
+      const displayName = displayNameOf(request.displayName);
+      await env.GROUPS.getByName(request.groupId).setDisplayName(
+        userId,
+        displayName
+      );
+      return create(SetDisplayNameResponseSchema, {});
     },
   });
 };

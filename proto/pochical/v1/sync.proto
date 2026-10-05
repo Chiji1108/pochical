@@ -177,6 +177,9 @@ message Membership {
   string emoji = 3;
   // When the user joined, in ms since the epoch: the list's order.
   int64 joined_at_ms = 4;
+  // The user left the group: it goes from their list, with what the
+  // device holds of it.
+  bool left = 5;
 }
 
 // The group's name and mark, as its members see them: one value.
@@ -194,6 +197,8 @@ message Member {
   string display_name = 2;
   // When they joined, in ms since the epoch: the group's order of members.
   int64 joined_at_ms = 3;
+  // They left the group: they go from it, with their shifts.
+  bool left = 4;
 }
 
 // One field of a member's day, as the group sees it: pattern and times,

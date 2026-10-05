@@ -253,6 +253,18 @@ export const closeSessionSockets = (
   }
 };
 
+/** Closes a user's sockets on a DO they no longer reach, as a group they left. */
+export const closeUserSockets = (
+  ctx: DurableObjectState,
+  userId: string
+): void => {
+  for (const socket of ctx.getWebSockets()) {
+    if (attachmentOf(socket)?.userId === userId) {
+      socket.close(NORMAL_CLOSURE, "Left the group");
+    }
+  }
+};
+
 // Edits go to the DO's handler for their kind; a DO without one is not the
 // user's own.
 const handleEdits = <Kind extends keyof EditFrames>(

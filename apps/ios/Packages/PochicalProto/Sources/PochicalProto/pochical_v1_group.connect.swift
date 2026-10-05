@@ -44,6 +44,21 @@ public protocol Pochical_V1_GroupServiceClientInterface: Sendable {
     /// Joining a group you are already in changes nothing and says so.
     @available(iOS 13, *)
     func `joinGroup`(request: Pochical_V1_JoinGroupRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_JoinGroupResponse>
+
+    /// Gives the group a new name and mark, which every member sees. Members
+    /// only.
+    @available(iOS 13, *)
+    func `renameGroup`(request: Pochical_V1_RenameGroupRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_RenameGroupResponse>
+
+    /// How the caller appears in the group from now on. Members only.
+    @available(iOS 13, *)
+    func `setDisplayName`(request: Pochical_V1_SetDisplayNameRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetDisplayNameResponse>
+
+    /// Takes the caller out of the group: what it holds of their shifts goes,
+    /// and its socket and calls refuse them until they join again by a live
+    /// link. Leaving a group you are not in changes nothing.
+    @available(iOS 13, *)
+    func `leaveGroup`(request: Pochical_V1_LeaveGroupRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_LeaveGroupResponse>
 }
 
 /// Concrete implementation of `Pochical_V1_GroupServiceClientInterface`.
@@ -79,6 +94,21 @@ public final class Pochical_V1_GroupServiceClient: Pochical_V1_GroupServiceClien
         return await self.client.unary(path: "/pochical.v1.GroupService/JoinGroup", idempotencyLevel: .unknown, request: request, headers: headers)
     }
 
+    @available(iOS 13, *)
+    public func `renameGroup`(request: Pochical_V1_RenameGroupRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_RenameGroupResponse> {
+        return await self.client.unary(path: "/pochical.v1.GroupService/RenameGroup", idempotencyLevel: .unknown, request: request, headers: headers)
+    }
+
+    @available(iOS 13, *)
+    public func `setDisplayName`(request: Pochical_V1_SetDisplayNameRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_SetDisplayNameResponse> {
+        return await self.client.unary(path: "/pochical.v1.GroupService/SetDisplayName", idempotencyLevel: .unknown, request: request, headers: headers)
+    }
+
+    @available(iOS 13, *)
+    public func `leaveGroup`(request: Pochical_V1_LeaveGroupRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_LeaveGroupResponse> {
+        return await self.client.unary(path: "/pochical.v1.GroupService/LeaveGroup", idempotencyLevel: .unknown, request: request, headers: headers)
+    }
+
     public enum Metadata {
         public enum Methods {
             public static let createGroup = Connect.MethodSpec(name: "CreateGroup", service: "pochical.v1.GroupService", type: .unary)
@@ -86,6 +116,9 @@ public final class Pochical_V1_GroupServiceClient: Pochical_V1_GroupServiceClien
             public static let remakeInviteLink = Connect.MethodSpec(name: "RemakeInviteLink", service: "pochical.v1.GroupService", type: .unary)
             public static let getInvite = Connect.MethodSpec(name: "GetInvite", service: "pochical.v1.GroupService", type: .unary)
             public static let joinGroup = Connect.MethodSpec(name: "JoinGroup", service: "pochical.v1.GroupService", type: .unary)
+            public static let renameGroup = Connect.MethodSpec(name: "RenameGroup", service: "pochical.v1.GroupService", type: .unary)
+            public static let setDisplayName = Connect.MethodSpec(name: "SetDisplayName", service: "pochical.v1.GroupService", type: .unary)
+            public static let leaveGroup = Connect.MethodSpec(name: "LeaveGroup", service: "pochical.v1.GroupService", type: .unary)
         }
     }
 }
