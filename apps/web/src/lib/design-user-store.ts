@@ -42,8 +42,10 @@ export type OwnData = {
   // Repeating orders, each taking over from the one before on its start.
   rules: RepeatRule[];
   profile: Profile;
-  // 一緒に働く人: names the person tags days with, never sent to a group.
-  coworkers: string[];
+  // 一緒に働く人: the people the person tags days with, in their order,
+  // never sent to a group. Days name them by id (spec/sync-protocol.md,
+  // Coworkers).
+  coworkers: Coworker[];
   // Whether a line that mentions them notifies even in a chat turned off.
   // The server decides what to push, so it is the account's, not a phone's.
   mentionsWhenMuted: boolean;
@@ -69,7 +71,7 @@ export type UserState = OwnData &
     setPatterns: Setter<Pattern[]>;
     setRules: Setter<RepeatRule[]>;
     setProfile: Setter<Profile>;
-    setCoworkers: Setter<string[]>;
+    setCoworkers: Setter<Coworker[]>;
     setMentionsWhenMuted: Setter<boolean>;
     setBlocked: Setter<string[]>;
     setSupport: Setter<SupportThread>;
@@ -77,7 +79,16 @@ export type UserState = OwnData &
     setChats: Setter<Record<string, Chat>>;
   };
 
-export const sampleCoworkers = ["佐藤", "田中", "鈴木", "山本", "高橋"];
+// Someone in 一緒に働く人: a name, not an app user.
+export type Coworker = { id: string; name: string };
+
+export const sampleCoworkers: Coworker[] = [
+  { id: "satou", name: "佐藤" },
+  { id: "tanaka", name: "田中" },
+  { id: "suzuki", name: "鈴木" },
+  { id: "yamamoto", name: "山本" },
+  { id: "takahashi", name: "高橋" },
+];
 
 const apply = <T>(next: SetStateAction<T>, previous: T): T =>
   typeof next === "function" ? (next as (value: T) => T)(previous) : next;

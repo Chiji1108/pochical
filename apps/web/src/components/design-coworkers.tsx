@@ -1,9 +1,9 @@
 import { COWORKERS_MAX, textLimits } from "@pochical/design/limits";
 import { useContext, useState } from "react";
 
-import { peopleOrNone } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
 import { useUser } from "../lib/design-user-store";
+import type { Coworker } from "../lib/design-user-store";
 import { composing, limitText } from "../lib/text-limits";
 import { LimitedInput } from "./design-fields";
 import { BackButton, HeaderAction, PageHeader } from "./design-header";
@@ -17,59 +17,47 @@ import { AddButton, DestructiveButton, Note } from "./design-ui";
 export const coworkersFull = `一緒に働く人は${COWORKERS_MAX}人までです`;
 
 // The people you note on a day, like who is on the same shift. Only names:
-// they are not app users, unlike the members of a group.
+// they are not app users, unlike the members of a group. Days name them by
+// id, so a new name shows on every day they are on without changing the
+// days, and someone deleted is skipped where a day is shown.
 export type Coworkers = {
-  names: string[];
-  onAdd: (name: string) => void;
-  onReorder: (names: string[]) => void;
-  onRename: (from: string, to: string) => void;
-  onDelete: (name: string) => void;
+  list: Coworker[];
+  onAdd: (name: string) => string;
+  onReorder: (ids: string[]) => void;
+  onRename: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
 };
 
-// The person's coworkers, kept in their store: renaming or deleting
-// someone changes the days they are on too.
+// The person's coworkers, kept in their store.
 export function useCoworkerList(): Coworkers {
-  const names = useUser((state) => state.coworkers);
-  const setNames = useUser((state) => state.setCoworkers);
-  const setOwnDays = useUser((state) => state.setSchedule);
-  const updatePeopleOnDays = (change: (people: string[]) => string[]) => {
-    setOwnDays((previous) =>
-      Object.fromEntries(
-        Object.entries(previous).map(([key, entry]) => {
-          if (!entry?.people) {
-            return [key, entry];
-          }
-          const next = change(entry.people);
-          return [key, { ...entry, people: peopleOrNone(next) }];
-        })
-      )
-    );
-  };
+  const list = useUser((state) => state.coworkers);
+  const setList = useUser((state) => state.setCoworkers);
   return {
-    names,
+    list,
     onAdd: (name) => {
-      setNames((previous) => [...previous, name]);
+      const id = crypto.randomUUID();
+      setList((previous) => [...previous, { id, name }]);
+      return id;
     },
-    onDelete: (name) => {
-      setNames((previous) => previous.filter((item) => item !== name));
-      updatePeopleOnDays((people) => people.filter((item) => item !== name));
+    onDelete: (id) => {
+      setList((previous) => previous.filter((item) => item.id !== id));
     },
-    onRename: (from, to) => {
-      setNames((previous) =>
-        previous.map((name) => (name === from ? to : name))
-      );
-      updatePeopleOnDays((people) =>
-        people.map((name) => (name === from ? to : name))
+    onRename: (id, name) => {
+      setList((previous) =>
+        previous.map((item) => (item.id === id ? { id, name } : item))
       );
     },
-    onReorder: setNames,
+    onReorder: (ids) => {
+      setList((previous) =>
+        ids.flatMap((id) => previous.filter((item) => item.id === id))
+      );
+    },
   };
 }
 
-function daysWith(schedule: Schedule, name: string) {
-  return Object.values(schedule).filter((entry) =>
-    entry?.people?.includes(name)
-  ).length;
+function daysWith(schedule: Schedule, id: string) {
+  return Object.values(schedule).filter((entry) => entry?.people?.includes(id))
+    .length;
 }
 
 export function CoworkersPage({
@@ -82,28 +70,30 @@ export function CoworkersPage({
   onBack: () => void;
 }) {
   const [view, setView] = useState<"list" | "sort">("list");
-  const [editing, setEditing] = useState<string>();
+  const [editingID, setEditing] = useState<string>();
   const [adding, setAdding] = useState(false);
   const toast = useContext(ToastContext);
-  const { names } = coworkers;
+  const { list } = coworkers;
+  const names = list.map(({ name }) => name);
+  const editing = list.find(({ id }) => id === editingID);
 
   if (editing !== undefined) {
     return (
       <CoworkerEditor
-        days={daysWith(schedule, editing)}
-        name={editing}
+        days={daysWith(schedule, editing.id)}
+        name={editing.name}
         onBack={() => {
           setEditing(undefined);
         }}
         onDelete={() => {
-          coworkers.onDelete(editing);
+          coworkers.onDelete(editing.id);
           setEditing(undefined);
         }}
         onSave={(name) => {
-          coworkers.onRename(editing, name);
+          coworkers.onRename(editing.id, name);
           setEditing(undefined);
         }}
-        taken={names.filter((item) => item !== editing)}
+        taken={names.filter((name) => name !== editing.name)}
       />
     );
   }
@@ -148,26 +138,26 @@ export function CoworkersPage({
       />
       {sorting && (
         <SortableList
-          items={names.map((name) => ({ id: name }))}
-          label={(item) => item.id}
+          items={list}
+          label={(item) => item.name}
           onChange={(items) => {
             coworkers.onReorder(items.map((item) => item.id));
           }}
         >
-          {(item) => <span className={listRow.label}>{item.id}</span>}
+          {(item) => <span className={listRow.label}>{item.name}</span>}
         </SortableList>
       )}
       {!sorting && names.length > 0 && (
         <List>
-          {names.map((name) => (
+          {list.map(({ id, name }) => (
             <ListRow
-              key={name}
+              key={id}
               onClick={() => {
-                setEditing(name);
+                setEditing(id);
               }}
               label={name}
               truncate
-              value={<>{daysWith(schedule, name)}日</>}
+              value={<>{daysWith(schedule, id)}日</>}
             />
           ))}
         </List>
@@ -217,8 +207,8 @@ export function CoworkersPage({
   );
 }
 
-// Renaming changes every day the name is on; deleting takes it off them,
-// which the second press confirms.
+// Renaming shows on every day the person is on; deleting takes them off
+// those days, which the second press confirms.
 function CoworkerEditor({
   name,
   days,

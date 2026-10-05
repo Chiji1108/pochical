@@ -7,6 +7,7 @@ import { keepDetails, timeChangeOf, timeRange } from "../lib/design-days";
 import type { DayEntry } from "../lib/design-days";
 import { usePatterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
+import { useUser } from "../lib/design-user-store";
 import { composing, limitText } from "../lib/text-limits";
 import { Chip, ChipGroup } from "./design-choices";
 import { coworkersFull, useCoworkerList } from "./design-coworkers";
@@ -89,33 +90,35 @@ function MemberChips({
     if (!trimmed) {
       return;
     }
-    if (!members.names.includes(trimmed)) {
+    // Someone of that name already listed is picked rather than added.
+    let id = members.list.find(({ name: listed }) => listed === trimmed)?.id;
+    if (id === undefined) {
       // Counted again: the list may have grown while the name was typed.
-      if (members.names.length >= COWORKERS_MAX) {
+      if (members.list.length >= COWORKERS_MAX) {
         toast(coworkersFull, "problem");
         return;
       }
-      members.onAdd(trimmed);
+      id = members.onAdd(trimmed);
     }
-    if (!selected.includes(trimmed)) {
-      onChange([...selected, trimmed]);
+    if (!selected.includes(id)) {
+      onChange([...selected, id]);
     }
   }
   return (
     <ChipGroup>
-      {members.names.map((name) => (
+      {members.list.map(({ id, name }) => (
         <Chip
-          selected={selected.includes(name)}
-          key={name}
+          selected={selected.includes(id)}
+          key={id}
           onClick={() => {
             onChange(
-              selected.includes(name)
-                ? selected.filter((member) => member !== name)
-                : [...selected, name]
+              selected.includes(id)
+                ? selected.filter((member) => member !== id)
+                : [...selected, id]
             );
           }}
         >
-          {selected.includes(name) && <Check aria-hidden="true" size={12} />}
+          {selected.includes(id) && <Check aria-hidden="true" size={12} />}
           {name}
         </Chip>
       ))}
@@ -142,7 +145,7 @@ function MemberChips({
       ) : (
         <Chip
           onClick={() => {
-            if (members.names.length >= COWORKERS_MAX) {
+            if (members.list.length >= COWORKERS_MAX) {
               toast(coworkersFull, "problem");
               return;
             }
@@ -151,7 +154,7 @@ function MemberChips({
           variant="add"
         >
           <Plus aria-hidden="true" size={12} />
-          {members.names.length > 0 ? "追加" : "人を追加"}
+          {members.list.length > 0 ? "追加" : "人を追加"}
         </Chip>
       )}
     </ChipGroup>
@@ -180,12 +183,18 @@ export function DayDetail({
       .filter(Boolean)
       .join("・") || "変更済み";
   const selected = entry?.people ?? [];
+  // The people on the day by name; someone deleted from 一緒に働く人 since
+  // is skipped.
+  const coworkers = useUser((state) => state.coworkers);
+  const names = selected.flatMap(
+    (id) => coworkers.find((coworker) => coworker.id === id)?.name ?? []
+  );
   // What would go with the shift; the memo stays, as it is the day's. A
   // day with nothing more is cleared at once, as one tap brings it back;
   // with more it is asked first.
   const lost = [
     timeChanged ? "時間の変更" : "",
-    selected.length > 0 ? "一緒に働く人" : "",
+    names.length > 0 ? "一緒に働く人" : "",
   ].filter(Boolean);
   function clear() {
     setClearing(false);
@@ -265,7 +274,7 @@ export function DayDetail({
             onClick={() => {
               setMembersOpen(!membersOpen);
             }}
-            value={selected.length > 0 ? selected.join("、") : "なし"}
+            value={names.length > 0 ? names.join("、") : "なし"}
           />
         )}
         {entry && time && membersOpen && (

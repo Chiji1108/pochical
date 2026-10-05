@@ -99,7 +99,7 @@ export function DesignCalendar({
   const offDisplay = useContext(OffDisplayContext);
   const imageOptions = useSettings((state) => state.device.imageOptions);
   const setImageOptions = useSettings((state) => state.setImageOptions);
-  const coworkerNames = useUser((state) => state.coworkers);
+  const coworkers = useUser((state) => state.coworkers);
   const surprise = useSurprise();
   // A change keeps only what differs from the repeating orders as the
   // person's own.
@@ -126,7 +126,7 @@ export function DesignCalendar({
     }).length;
   const daysOff = daysOffIn(monthDays);
   // Someone picked in 今月の内訳, whose days the calendar shows.
-  const shown = useShownWith(coworkerNames, schedule);
+  const shown = useShownWith(coworkers, schedule);
   const summaryIn = (days: Date[]) =>
     shown.person === undefined ? daysOffIn(days) : shown.countIn(days);
   // The months beside, for the summary to follow a drag of the pages.
@@ -314,7 +314,7 @@ export function DesignCalendar({
             closeLabel={
               shown.person === undefined
                 ? undefined
-                : `${shown.person}と一緒の日の表示をやめる`
+                : `${shown.person.name}と一緒の日の表示をやめる`
             }
             detailDate={openDate}
             mode={headingMode}
@@ -448,7 +448,7 @@ export function DesignCalendar({
               onOpen={() => {
                 setOpenSheet("breakdown");
               }}
-              person={shown.person}
+              person={shown.person?.name}
               progress={pageDrag}
               swiped={swipedTo === dateKey(month)}
             />
@@ -478,13 +478,13 @@ export function DesignCalendar({
         days={monthDays.length}
         month={month}
         onOpenChange={sheetChange("breakdown")}
-        onShow={(name) => {
-          shown.show(name);
+        onShow={(id) => {
+          shown.show(id);
           setOpenSheet(null);
         }}
         open={openSheet === "breakdown"}
         people={shown.peopleIn(monthDays)}
-        shownWith={shown.person}
+        shownWith={shown.person?.id}
         unfilled={unfilled}
       />
       <SaveSheet
