@@ -20,6 +20,9 @@ struct GroupShiftsPage: View {
   let group: GroupRow
   @State private var picked: Day?
   @State private var togetherSheet: TogetherList?
+  /// A day picked in the みんな休み sheet, shown once that sheet has gone:
+  /// one sheet cannot come up while another is going.
+  @State private var pickedFromList: Day?
 
   init(group: GroupRow, day: Day?) {
     self.group = group
@@ -74,10 +77,15 @@ struct GroupShiftsPage: View {
         .presentationDetents([.medium, .large])
         .presentationBackgroundInteraction(.enabled(upThrough: .medium))
     }
-    .sheet(item: $togetherSheet) { list in
-      TogetherSheet(list: list) { day in
-        togetherSheet = nil
+    .sheet(item: $togetherSheet) {
+      if let day = pickedFromList {
+        pickedFromList = nil
         picked = day
+      }
+    } content: { list in
+      TogetherSheet(list: list) { day in
+        pickedFromList = day
+        togetherSheet = nil
       }
       .presentationDetents([.medium, .large])
     }
