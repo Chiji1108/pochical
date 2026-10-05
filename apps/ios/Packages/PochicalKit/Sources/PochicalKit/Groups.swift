@@ -56,14 +56,22 @@ enum Groups {
 public struct GroupCalls: Sendable {
   let account: Account
   let client: Pochical_V1_GroupServiceClient
+  private let users: Pochical_V1_UserServiceClient
 
   public init(account: Account, server: URL = Server.url) {
     self.account = account
-    client = Pochical_V1_GroupServiceClient(
-      client: ProtocolClient(
-        httpClient: URLSessionHTTPClient(),
-        config: ProtocolClientConfig(
-          host: server.absoluteString, networkProtocol: .connect, codec: ProtoCodec())))
+    let protocolClient = ProtocolClient(
+      httpClient: URLSessionHTTPClient(),
+      config: ProtocolClientConfig(
+        host: server.absoluteString, networkProtocol: .connect, codec: ProtoCodec()))
+    client = Pochical_V1_GroupServiceClient(client: protocolClient)
+    users = Pochical_V1_UserServiceClient(client: protocolClient)
+  }
+
+  /// The signed-in user's id, as groups know them among their members.
+  public func userID() async throws -> String {
+    try await users.getMe(request: Pochical_V1_GetMeRequest(), headers: account.headers()).result
+      .get().userID
   }
 
   /// Makes a group with the user in it, as `displayName`. `requestID` is
