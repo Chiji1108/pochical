@@ -74,29 +74,33 @@ struct CalendarScreen: View {
         including: opened == nil ? .none : .all)
       if let day = opened {
         let entry = calendar.shown(from: day, through: day)[day]
-        DayDetail(
-          day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
-          coworkers: ordered(coworkerRows, by: coworkerOrder), style: style,
-          peopleOpen: $peopleOpen,
-          onChange: { entry in
-            write { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
-          },
-          onNoteChange: { note in
-            write { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
-          },
-          // Someone added from a day is on that day too.
-          onAddCoworker: { name in
-            write { db, now in
-              let id = try OwnValues.addCoworker(named: name, now: now, in: db)
-              if var entry {
-                entry.people = (entry.people ?? []) + [id]
-                try OwnValues.set(day, to: entry, now: now, in: db)
+        // The day's detail is new for each day, its fields with it, inside
+        // what shows as the week opens.
+        VStack(spacing: 0) {
+          DayDetail(
+            day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
+            coworkers: ordered(coworkerRows, by: coworkerOrder), style: style,
+            peopleOpen: $peopleOpen,
+            onChange: { entry in
+              write { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
+            },
+            onNoteChange: { note in
+              write { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
+            },
+            // Someone added from a day is on that day too.
+            onAddCoworker: { name in
+              write { db, now in
+                let id = try OwnValues.addCoworker(named: name, now: now, in: db)
+                if var entry {
+                  entry.people = (entry.people ?? []) + [id]
+                  try OwnValues.set(day, to: entry, now: now, in: db)
+                }
               }
-            }
-          },
-          onStep: { step in opened = day.adding(days: step) }
-        )
-        .id(day)
+            },
+            onStep: { step in opened = day.adding(days: step) }
+          )
+          .id(day)
+        }
         .padding(.top, 12)
         // It shows as the month folds into the week, and goes at once as
         // the month unfolds, as /design's does.
