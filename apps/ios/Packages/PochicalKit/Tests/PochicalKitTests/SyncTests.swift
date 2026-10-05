@@ -66,3 +66,41 @@ private func change(_ value: String, cursor: UInt64, ms: Int64) -> Pochical_V1_C
     #expect(next.physicalMs == 5_200)
   }
 }
+
+@Test func theOutboxGoesInFramesOfOneKindInOrder() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try OwnValues.edit(dayChange("day"), opID: "a", in: db)
+    try OwnValues.edit(dayChange("night"), opID: "b", in: db)
+    var order = Pochical_V1_PatternOrder()
+    order.ids = ["night", "day"]
+    var change = Pochical_V1_Change()
+    change.patternOrder = order
+    try OwnValues.edit(change, opID: "c", in: db)
+    try OwnValues.edit(dayChange("off"), opID: "d", in: db)
+
+    let (frames, last) = try Sync.frames(after: 0, in: db)
+    #expect(frames.map { $0.dayEdits.edits.map(\.opID) } == [["a", "b"], [], ["d"]])
+    #expect(frames[1].patternEdits.edits.map(\.opID) == ["c"])
+    #expect(try Sync.frames(after: last, in: db).frames.isEmpty)
+    #expect(try Sync.lastWaiting(in: db) == last)
+  }
+}
+
+@Test func aFarAheadClockStartsAgainFromWhatWasTaken() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try Sync.take([change("day", cursor: 1, ms: 5_000)], in: db)
+    // The device's clock ran far ahead before the server corrected it.
+    try OwnValues.edit(dayChange("night"), opID: "a", in: db)
+    var state = try SyncState.current(in: db)
+    state.lastMs = 900_000_000
+    try SyncState.upsert { state }.execute(db)
+    try OwnValues.edit(dayChange("off"), opID: "b", in: db)
+
+    try Sync.restamp(now: 1_000, in: db)
+    let edits = try Sync.frames(after: 0, in: db).frames[0].dayEdits.edits
+    #expect(edits.map(\.value.hlc.physicalMs) == [5_000, 5_000])
+    #expect(edits.map(\.value.hlc.counter) == [1, 2])
+  }
+}
