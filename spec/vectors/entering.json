@@ -1,5 +1,5 @@
 {
-  "about": "Entering shifts day by day (ポチポチ入力, spec/shift-patterns.md, The next day). enter: `days` are the days as they show, by date, each a `shift` (a pattern's id) with an optional `note` and `people`; entering `shift` on `date` (null clears it) gives `expected`. The day keeps its note and people; a pattern with a `nextDay` also enters that pattern on the following day, keeping that day's note and people, and only that day: the following day's own `nextDay` is never followed. Clearing a day clears only that day. `selects` is the day selected next: one day on, or two past a next day filled, but never past the month's last day, where entering stays until 完了 even when a next day fills the first of the month after. gaps: the blank days 完了 asks about in `month`: those before the month's last entered day; blanks after it are left alone.",
+  "about": "Entering shifts day by day (ポチポチ入力, spec/shift-patterns.md, The next day). enter: `days` are the days as they show, by date, each a `shift` (a pattern's id) with an optional `note` and `people`; entering `shift` on `date` (null clears it) gives `expected`. The day keeps its note and people; a pattern with a `nextDay` also enters that pattern on the following day (none when that pattern is gone), keeping that day's note and people, and only that day: the following day's own `nextDay` is never followed. Clearing a day clears only that day. `selects` is the day selected next: one day on, or two past a next day filled, but never past the month's last day, where entering stays until 完了 even when a next day fills the first of the month after. gaps: the blank days 完了 asks about in `month`: those before the month's last entered day; blanks after it are left alone.",
   "enter": [
     {
       "name": "a shift takes the day, keeping its memo and people",
@@ -149,6 +149,27 @@
         }
       },
       "selects": "2026-10-31"
+    },
+    {
+      "name": "a next day naming a pattern that is gone fills nothing",
+      "patterns": [
+        {
+          "id": "night",
+          "nextDay": "after"
+        },
+        {
+          "id": "day"
+        }
+      ],
+      "days": {},
+      "date": "2026-10-01",
+      "shift": "night",
+      "expected": {
+        "2026-10-01": {
+          "shift": "night"
+        }
+      },
+      "selects": "2026-10-02"
     }
   ],
   "gaps": [

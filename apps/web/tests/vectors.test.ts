@@ -52,7 +52,6 @@ import {
   dateKey,
   dayMilliseconds,
   daysMovedOn,
-  daysWithout,
   defaultHolidaysOff,
   editedOwnDays,
   gapDaysIn,
@@ -131,7 +130,9 @@ describe("spec/vectors/repeat.json", () => {
         new Set(days.patterns),
         dayOf(days.to)
       );
-      const shown = Object.entries(shownDays(days.own as OwnDays, planned))
+      const shown = Object.entries(
+        shownDays(days.own as OwnDays, planned, new Set(days.patterns))
+      )
         .filter(([date]) => date >= days.from && date <= days.to)
         .toSorted(([a], [b]) => a.localeCompare(b))
         .map(([date, entry]) => [date, entry?.shift]);
@@ -370,12 +371,11 @@ describe("spec/vectors/together.json", () => {
 describe("spec/vectors/patterns.json", () => {
   const idsOf = (patterns: readonly Pattern[]) =>
     plain(patterns.map(({ id, nextDay }) => ({ id, nextDay })));
-  for (const { name, patterns, own, id, expected } of patternChanges.deleted) {
+  for (const { name, patterns, id, expected } of patternChanges.deleted) {
     test(name, () => {
       expect(idsOf(patternsWithout(patterns.map(patternOf), id))).toEqual(
         expected.patterns
       );
-      expect(plain(daysWithout(own as OwnDays, id))).toEqual(expected.own);
     });
   }
   for (const { name, ...job } of patternChanges.newJob) {
@@ -404,7 +404,12 @@ describe("spec/vectors/own-days.json", () => {
   for (const { name, own, edits, expected, ...days } of ownDays.edited) {
     test(name, () => {
       const planned = days.planned as Record<string, string>;
-      const shown = shownDays(own as OwnDays, planned);
+      // Every pattern these days name is the person's.
+      const known = new Set([
+        ...Object.values(planned),
+        ...Object.values(own as OwnDays).flatMap((day) => day?.shift ?? []),
+      ]);
+      const shown = shownDays(own as OwnDays, planned, known);
       const next: Schedule = { ...shown };
       for (const [date, entry] of Object.entries(edits)) {
         next[date] = (entry ?? undefined) as Schedule[string];

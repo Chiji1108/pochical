@@ -163,6 +163,17 @@ The people a user notes on a day, like who is on the same shift. They are names 
 - A user keeps at most `COWORKERS_MAX` coworkers (`design/src/limits.ts`). Adding past it, in 一緒に働く人 or from a day, stops with a problem toast, 一緒に働く人は{n}人までです, and the User DO refuses a new coworker past it: it answers with the coworker deleted, as a value that does not fit. Their order holds at most as many ids; a longer one names coworkers the server refused, and is answered with the person's order of those they keep.
 - Like the memo, coworkers and a day's people stay with their owner: they name people outside the app, so they are never pushed to groups.
 
+### Deleted values
+
+A deleted pattern or coworker is kept as a tombstone (a value without its pattern or name), so an older edit cannot bring it back. What names it keeps its id: deleting rewrites nothing else, as offline-first sync tools do, since a device offline at the time can still name it afterwards, and a rewrite would race the edits it meets. Every reader resolves a reference as it reads:
+
+- A day whose own shift, or whose order's (its sequence or `holiday_shift`), names a pattern that is gone shows no shift and counts as blank (`spec/vectors/repeat.json`, shown).
+- A pattern's `next_day` naming one that is gone fills nothing (`spec/vectors/entering.json`, enter).
+- A day's people, and the patterns' and coworkers' orders, skip ids that are gone.
+- When a device writes a reference field (a day's people), it leaves out ids that are gone, so they go as the values are touched (Coworkers).
+
+Keeping the ids also lets a deletion be undone with what named it intact.
+
 ### Group projection
 
 The User DO pushes what its groups see of the user to every Group DO the user belongs to. Values carry their HLCs, so the Group DO keeps each one only when it is newer: a push that arrives twice or late changes nothing.

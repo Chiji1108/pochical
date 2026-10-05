@@ -155,7 +155,12 @@ export function useShownDays(inView?: Date): Schedule {
   const rules = useUser((state) => state.rules);
   const patterns = useUser((state) => state.patterns);
   return useMemo(
-    () => shownDays(own, plannedOf(rules, patterns, inView)),
+    () =>
+      shownDays(
+        own,
+        plannedOf(rules, patterns, inView),
+        new Set(patterns.map(({ id }) => id))
+      ),
     [own, rules, patterns, inView]
   );
 }
@@ -172,7 +177,11 @@ export function useChangeDays(inView?: Date) {
     (next: SetStateAction<Schedule>) => {
       const { patterns, rules, schedule, setSchedule } = store.getState();
       const planned = plannedOf(rules, patterns, inView);
-      const shown = shownDays(schedule, planned);
+      const shown = shownDays(
+        schedule,
+        planned,
+        new Set(patterns.map(({ id }) => id))
+      );
       setSchedule(editedOwnDays(schedule, planned, shown, apply(next, shown)));
     },
     [store, inView]

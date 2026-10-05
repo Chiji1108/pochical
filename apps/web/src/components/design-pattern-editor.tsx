@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import { Fragment, useContext, useState } from "react";
 import { css } from "styled-system/css";
 
-import { daysWithout, isRepeating, patternsWithout } from "../lib/design-days";
+import { isRepeating, patternsWithout } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
 import type { Pattern, PresetShift } from "../lib/design-patterns";
 import { useShownDays, useUser } from "../lib/design-user-store";
@@ -120,7 +120,6 @@ export function PatternsPage({ onBack }: { onBack: () => void }) {
   const items = useUser((state) => state.patterns);
   const setItems = useUser((state) => state.setPatterns);
   const schedule = useShownDays();
-  const setOwnDays = useUser((state) => state.setSchedule);
   const rules = useUser((state) => state.rules);
   const [editing, setEditing] = useState<PatternDraft>();
   const [isNew, setIsNew] = useState(false);
@@ -132,10 +131,9 @@ export function PatternsPage({ onBack }: { onBack: () => void }) {
   // The repeating order in use still needs it.
   const inOrder = (id: string) =>
     isRepeating(rules) && (rules.at(-1)?.sequence.includes(id) ?? false);
-  // Gone with its days, and from any pattern that followed on with it.
+  // Gone from the list; the days that name it show empty, as it is gone.
   const remove = (id: string) => {
     setItems((previous) => patternsWithout(previous, id));
-    setOwnDays((previous) => daysWithout(previous, id));
   };
 
   if (editing) {

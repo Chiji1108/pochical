@@ -8,7 +8,7 @@ public func enteringShift(
 ) -> [Day: DayEntry] {
   var entered = days
   entered[day] = shift.map { keepingDetails(of: days[day], shift: $0) }
-  if let following = shift.flatMap({ patterns[$0]?.nextDay }) {
+  if let following = nextDay(of: shift, patterns) {
     let next = day.adding(days: 1)
     entered[next] = keepingDetails(of: days[next], shift: following)
   }
@@ -28,7 +28,7 @@ private func keepingDetails(of entry: DayEntry?, shift: PatternID) -> DayEntry {
 public func selectedAfterEntering(
   _ shift: PatternID?, on day: Day, patterns: [PatternID: Pattern]
 ) -> Day {
-  let fillsNextDay = shift.flatMap { patterns[$0]?.nextDay } != nil
+  let fillsNextDay = nextDay(of: shift, patterns) != nil
   let next = day.adding(days: fillsNextDay ? 2 : 1)
   let last = day.daysOfMonth.last!
   return min(next, last)
@@ -43,4 +43,13 @@ public func gapDays(in month: Day, days: [Day: DayEntry]) -> [Day] {
     return []
   }
   return monthDays.filter { $0 < lastEntered && days[$0] == nil }
+}
+
+/// The pattern entered on the day after `shift`, none when it names a
+/// pattern that is gone.
+func nextDay(of shift: PatternID?, _ patterns: [PatternID: Pattern]) -> PatternID? {
+  guard let next = shift.flatMap({ patterns[$0]?.nextDay }), patterns[next] != nil else {
+    return nil
+  }
+  return next
 }

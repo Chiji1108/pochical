@@ -39,8 +39,8 @@ Many people leave days off blank, moving on with 翌日へ. Rather than stop the
 
 ## Deleting a pattern
 
-- The days that have it are cleared too, whether they had it of their own or from a repeating order, their memos staying (A day's memo). The person is told how many before confirming. An earlier order keeps its id and shows those days empty (`spec/vectors/patterns.json`, deleted).
-- Other patterns that named it as `nextDay` lose that link.
+- It goes from the list, and nothing that names it is rewritten: the days that have it, of their own or from a repeating order, keep its id and show empty, counting as blank; their memos and people stay. The person is told how many days before confirming (spec/sync-protocol.md, Deleted values; `spec/vectors/patterns.json`, deleted).
+- Other patterns that named it as `nextDay` keep the id and fill nothing on the next day.
 - A pattern in the repeating order in use cannot be deleted; the order has to change first.
 
 ## Repeating orders

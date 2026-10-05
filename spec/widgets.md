@@ -8,6 +8,7 @@ What the home and lock screen widgets show, and how it is worked out. Both nativ
 - A new entry is made at once when the person's shifts, patterns or week settings change on the device.
 - The widgets show the person's own shifts, with two exceptions picked when editing the widget. 次の休み set to someone from the person's groups, or to a whole group, uses whether each of them is off on each day, and nothing else of their shifts. これから set to someone shows that person's days beside the person's own: each day's pattern (its look, name and hours), whether it is off, and its 早出 and 残業.
 - A new entry is also made when the shifts of those picked change.
+- Someone picked who is no longer in any of the person's groups, or a group the person left or that was deleted, is read as nobody picked: the widget shows the person's own days until it is edited again, as a reference to something gone is (spec/sync-protocol.md, Deleted values).
 
 ## Days
 

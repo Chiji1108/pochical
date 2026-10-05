@@ -50,13 +50,17 @@ public struct OwnDay: Hashable, Sendable {
 }
 
 /// Every day that shows a shift, from the person's own days and their
-/// orders' (`plannedShifts`): its own shift, else its order's. A day whose
-/// shift is `Days.noShift` shows nothing.
-public func shownDays(own: [Day: OwnDay], planned: [Day: PatternID]) -> [Day: DayEntry] {
+/// orders' (`plannedShifts`): its own shift, else its order's, with
+/// `known` the person's patterns. A day whose shift is `Days.noShift`, or
+/// names a pattern that is gone, shows nothing (spec/sync-protocol.md,
+/// Deleted values).
+public func shownDays(
+  own: [Day: OwnDay], planned: [Day: PatternID], known: Set<PatternID>
+) -> [Day: DayEntry] {
   var shown: [Day: DayEntry] = [:]
   for day in Set(own.keys).union(planned.keys) {
     let own = own[day]
-    guard let shift = own?.shift ?? planned[day], shift != Days.noShift else {
+    guard let shift = own?.shift ?? planned[day], known.contains(shift) else {
       continue
     }
     shown[day] = DayEntry(
@@ -113,11 +117,4 @@ public func givingDaysToOrder(own: [Day: OwnDay], from start: Day) -> [Day: OwnD
   return given
 }
 
-/// The person's own days once pattern `id` is deleted: the days that have
-/// it of their own lose it, their memos staying.
-public func days(_ own: [Day: OwnDay], without id: PatternID) -> [Day: OwnDay] {
-  own.compactMapValues { day in
-    guard day.shift == id else { return day }
-    return day.note.map { OwnDay(note: $0) }
-  }
-}
+
