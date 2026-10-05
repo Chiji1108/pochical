@@ -42,7 +42,8 @@ public struct OwnCalendar: Sendable {
   /// else its order's (spec/shift-patterns.md, Repeating orders).
   public func shown(from: Day, through: Day) -> [Day: DayEntry] {
     let own = own.filter { $0.key >= from && $0.key <= through }
-    return shownDays(own: own, planned: planned(from: from, through: through))
+    return shownDays(
+      own: own, planned: planned(from: from, through: through), known: Set(patternsByID.keys))
   }
 
   /// The day's memo, its own whether it has a shift or not.

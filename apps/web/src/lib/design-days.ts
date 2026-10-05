@@ -278,26 +278,31 @@ export function plannedShifts(
 }
 
 // A day as it shows: its own shift, else its order's; "" shows nothing.
+// A day's own shift naming a pattern that is gone shows nothing, as an
+// order's does (spec/sync-protocol.md, Deleted values).
 function shownDay(
   own: OwnDay | undefined,
-  planned: Shift | undefined
+  planned: Shift | undefined,
+  known: ReadonlySet<Shift>
 ): DayEntry | undefined {
   const shift = own?.shift ?? planned;
-  if (shift === undefined || shift === dayRules.noShift) {
+  if (shift === undefined || !known.has(shift)) {
     return;
   }
   return { ...own, shift };
 }
 
-// Every day that shows a shift, from the person's own days and orders.
+// Every day that shows a shift, from the person's own days and orders,
+// with `known` the person's patterns.
 export function shownDays(
   own: OwnDays,
-  planned: Record<string, Shift>
+  planned: Record<string, Shift>,
+  known: ReadonlySet<Shift>
 ): Schedule {
   const keys = new Set([...Object.keys(planned), ...Object.keys(own)]);
   return Object.fromEntries(
     [...keys].flatMap((key) => {
-      const day = shownDay(own[key], planned[key]);
+      const day = shownDay(own[key], planned[key], known);
       return day ? [[key, day]] : [];
     })
   );
@@ -375,8 +380,10 @@ export function keepDetails(
 }
 
 // The pattern entered on the day after `shift`, if it names one.
+// None when it names a pattern that is gone.
 export function nextDayOf(shift: Shift | undefined, book: PatternBook) {
-  return shift === undefined ? undefined : book[shift]?.nextDay;
+  const next = shift === undefined ? undefined : book[shift]?.nextDay;
+  return next !== undefined && book[next] !== undefined ? next : undefined;
 }
 
 // How many days the selection moves on after entering `shift`: past the
@@ -453,28 +460,11 @@ export function gapDaysIn(schedule: Schedule, month: Date) {
 }
 
 // Deleting a pattern (spec/shift-patterns.md, Deleting a pattern): it goes
-// from the list, and patterns that named it as their next day lose that
-// link; the days that have it of their own lose it too, while days an
-// order gave it show empty, as their pattern is gone.
+// from the list and nothing that names it changes. Days, orders and other
+// patterns' next days keep its id, read as a pattern that is gone
+// (spec/sync-protocol.md, Deleted values).
 export function patternsWithout(patterns: readonly Pattern[], id: Shift) {
-  return patterns
-    .filter((pattern) => pattern.id !== id)
-    .map((pattern) =>
-      pattern.nextDay === id ? { ...pattern, nextDay: undefined } : pattern
-    );
-}
-
-// Their memos stay, as a memo is the day's (spec/shift-patterns.md, A
-// day's memo).
-export function daysWithout(own: OwnDays, id: Shift): OwnDays {
-  return Object.fromEntries(
-    Object.entries(own).flatMap(([key, day]) => {
-      if (day?.shift !== id) {
-        return [[key, day]];
-      }
-      return day.note ? [[key, { note: day.note }]] : [];
-    })
-  );
+  return patterns.filter((pattern) => pattern.id !== id);
 }
 
 export function addDays(date: Date, days: number) {

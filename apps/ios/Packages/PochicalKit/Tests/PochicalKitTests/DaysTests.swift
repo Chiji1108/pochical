@@ -133,7 +133,8 @@ func shown(_ vector: RepeatVectors.Shown) {
   let planned = plannedShifts(
     orders: vector.orders.map(\.order), known: Set(vector.patterns), from: vector.from,
     through: vector.to)
-  let shown = shownDays(own: byDay(vector.own).mapValues(\.own), planned: planned)
+  let shown = shownDays(
+    own: byDay(vector.own).mapValues(\.own), planned: planned, known: Set(vector.patterns))
     .filter { $0.key >= vector.from && $0.key <= vector.to }
   #expect(shown.mapValues(\.shift) == byDay(vector.expected))
 }
@@ -238,12 +239,10 @@ struct PatternsVectors: Decodable, Sendable {
   struct Deleted: VectorCase {
     struct Expected: Decodable, Sendable {
       let patterns: [PatternLink]
-      let own: [String: VectorDay]
     }
 
     let name: String
     let patterns: [VectorPattern]
-    let own: [String: VectorDay]
     let id: String
     let expected: Expected
   }
@@ -274,8 +273,6 @@ func links(_ patterns: [Pattern]) -> [PatternLink] {
 func deleted(_ vector: PatternsVectors.Deleted) {
   let left = patterns(vector.patterns.map(\.pattern), without: vector.id)
   #expect(links(left) == vector.expected.patterns)
-  let own = days(byDay(vector.own).mapValues(\.own), without: vector.id)
-  #expect(own == byDay(vector.expected.own).mapValues(\.own))
 }
 
 @Test(arguments: try vectors("patterns", as: PatternsVectors.self).newJob)

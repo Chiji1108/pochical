@@ -1,8 +1,8 @@
 {
-  "about": "Changing the list of patterns (spec/shift-patterns.md). deleted: deleting pattern `id` takes it from `patterns`, takes the link from patterns that named it as `nextDay`, and takes it from the days that have it of their own (`own`, by date; \"\" is a day cleared on purpose), their memos staying. newJob: changing jobs; the new job's `incoming` patterns take over from the person's `own`, and an old one still on a day before the switch (`usedBefore`) stays after them. A ready-made pattern sharing an id with one of the person's that differs (name, mark, time, off, next day) and is still used before the switch keeps the person's id; the new job's takes a fresh one, which `sequence` (the new order) and next days use. Fresh ids are \"new-1\", \"new-2\"… in the order of `incoming`. `expected` lists the patterns by id, in order, with their next day.",
+  "about": "Changing the list of patterns (spec/shift-patterns.md). deleted: deleting pattern `id` takes it from `patterns` and changes nothing that names it: other patterns keep it as their `nextDay`, and days and orders keep it, each read as naming a pattern that is gone (spec/sync-protocol.md, Deleted values). newJob: changing jobs; the new job's `incoming` patterns take over from the person's `own`, and an old one still on a day before the switch (`usedBefore`) stays after them. A ready-made pattern sharing an id with one of the person's that differs (name, mark, time, off, next day) and is still used before the switch keeps the person's id; the new job's takes a fresh one, which `sequence` (the new order) and next days use. Fresh ids are \"new-1\", \"new-2\"… in the order of `incoming`. `expected` lists the patterns by id, in order, with their next day.",
   "deleted": [
     {
-      "name": "its days of their own lose it, keeping their memos, and links to it go",
+      "name": "it goes from the list, and patterns that name it keep it",
       "patterns": [
         {
           "id": "night",
@@ -15,71 +15,17 @@
           "id": "day"
         }
       ],
-      "own": {
-        "2026-10-01": {
-          "shift": "night"
-        },
-        "2026-10-02": {
-          "shift": "after"
-        },
-        "2026-10-03": {
-          "shift": "after",
-          "note": "病院"
-        },
-        "2026-10-04": {
-          "shift": ""
-        }
-      },
       "id": "after",
       "expected": {
         "patterns": [
           {
-            "id": "night"
+            "id": "night",
+            "nextDay": "after"
           },
           {
             "id": "day"
           }
-        ],
-        "own": {
-          "2026-10-01": {
-            "shift": "night"
-          },
-          "2026-10-03": {
-            "note": "病院"
-          },
-          "2026-10-04": {
-            "shift": ""
-          }
-        }
-      }
-    },
-    {
-      "name": "an own day without a shift of its own stays",
-      "patterns": [
-        {
-          "id": "day"
-        },
-        {
-          "id": "off"
-        }
-      ],
-      "own": {
-        "2026-10-01": {
-          "note": "棚卸し"
-        }
-      },
-      "id": "day",
-      "expected": {
-        "patterns": [
-          {
-            "id": "off"
-          }
-        ],
-        "own": {
-          "2026-10-01": {
-            "note": "棚卸し"
-          }
-        }
+        ]
       }
     }
   ],

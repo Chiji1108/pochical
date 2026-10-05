@@ -54,15 +54,10 @@ public func holidayShift(of patterns: [Pattern]) -> PatternID? {
 }
 
 /// The patterns once `id` is deleted (spec/shift-patterns.md, Deleting a
-/// pattern): patterns that named it as their next day lose that link.
+/// pattern): it goes from the list and nothing that names it changes, as
+/// days, orders and next days read it as a pattern that is gone.
 public func patterns(_ patterns: [Pattern], without id: PatternID) -> [Pattern] {
-  patterns.filter { $0.id != id }.map { pattern in
-    var pattern = pattern
-    if pattern.nextDay == id {
-      pattern.nextDay = nil
-    }
-    return pattern
-  }
+  patterns.filter { $0.id != id }
 }
 
 /// The patterns after changing jobs (spec/shift-patterns.md, Changing
