@@ -1,3 +1,4 @@
+import PochicalDesign
 import PochicalKit
 import SQLiteData
 import SwiftUI
@@ -10,12 +11,16 @@ struct PochicalApp: App {
     prepareDependencies {
       // Without its database the app has nowhere to keep anything.
       $0.defaultDatabase = try! appDatabase()
+      #if DEBUG
+        try! SampleDays.putIfAsked(in: $0.defaultDatabase)
+      #endif
     }
   }
 
   var body: some Scene {
     WindowGroup {
-      ContentView()
+      CalendarScreen()
+        .modifier(Themed(theme: .pochical))
     }
     // The shared database lets go of its locks before iOS suspends the
     // app (appDatabase), including when it was launched in the background.

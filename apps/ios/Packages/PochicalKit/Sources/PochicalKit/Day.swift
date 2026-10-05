@@ -14,6 +14,17 @@ public struct Day: Hashable, Comparable, Sendable {
     self.day = day
   }
 
+  /// The day `date` falls on in `calendar`, the device's own unless given.
+  public init(_ date: Date, in calendar: Calendar) {
+    let parts = calendar.dateComponents([.year, .month, .day], from: date)
+    self.init(year: parts.year!, month: parts.month!, day: parts.day!)
+  }
+
+  /// Today, where the device is.
+  public static var today: Day {
+    Day(.now, in: .current)
+  }
+
   /// The day a "YYYY-MM-DD" key names, or nil for one that names no day.
   public init?(_ key: String) {
     let parts = key.split(separator: "-")
@@ -49,6 +60,17 @@ public struct Day: Hashable, Comparable, Sendable {
   /// 0 for Sunday through 6 for Saturday.
   public var weekday: Int {
     Self.calendar.component(.weekday, from: date) - 1
+  }
+
+  /// The 1st of this day's month.
+  public var firstOfMonth: Day {
+    Day(year: year, month: month, day: 1)
+  }
+
+  /// The 1st of the month `count` months on, or back for a negative count.
+  public func addingMonths(_ count: Int) -> Day {
+    let months = year * 12 + (month - 1) + count
+    return Day(year: months.floorDivided(by: 12), month: months.floorModulo(12) + 1, day: 1)
   }
 
   /// Every day of this day's month, the 1st to the last.
@@ -92,5 +114,15 @@ extension Day: Codable {
   public func encode(to encoder: any Encoder) throws {
     var container = encoder.singleValueContainer()
     try container.encode(key)
+  }
+}
+
+extension Int {
+  fileprivate func floorDivided(by divisor: Int) -> Int {
+    (self - floorModulo(divisor)) / divisor
+  }
+
+  fileprivate func floorModulo(_ divisor: Int) -> Int {
+    ((self % divisor) + divisor) % divisor
   }
 }

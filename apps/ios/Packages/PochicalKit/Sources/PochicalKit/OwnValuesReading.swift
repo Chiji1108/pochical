@@ -17,17 +17,23 @@ extension OwnValues {
   /// The person's patterns in their order. One the order does not name yet
   /// comes after those it does.
   public static func patterns(in db: Database) throws -> [Pattern] {
-    let order = try PatternOrderRow.order(by: \.position).fetchAll(db).map(\.patternID)
-    let place = Dictionary(order.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
-    return try PatternRow.fetchAll(db)
-      .sorted { (place[$0.id] ?? .max, $0.id) < (place[$1.id] ?? .max, $1.id) }
-      .map(\.pattern)
+    try ordered(PatternRow.fetchAll(db), by: PatternOrderRow.fetchAll(db))
   }
 
   /// The person's repeating orders, in their timeline's order.
   public static func repeatOrders(in db: Database) throws -> [RepeatOrder] {
     try RepeatOrderRow.order(by: \.position).fetchAll(db).compactMap(\.order)
   }
+}
+
+/// The patterns in the order `order` gives. One it does not name yet comes
+/// after those it does.
+func ordered(_ rows: [PatternRow], by order: [PatternOrderRow]) -> [Pattern] {
+  let place = Dictionary(
+    order.map { ($0.patternID, $0.position) }, uniquingKeysWith: { first, _ in first })
+  return rows
+    .sorted { (place[$0.id] ?? .max, $0.id) < (place[$1.id] ?? .max, $1.id) }
+    .map(\.pattern)
 }
 
 extension DayRow {
