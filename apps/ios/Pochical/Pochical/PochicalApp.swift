@@ -28,7 +28,7 @@ struct PochicalApp: App {
   var body: some Scene {
     WindowGroup {
       RootView()
-        .modifier(Themed(theme: .pochical))
+        .modifier(Themed(theme: settings.device.theme))
         .environment(settings)
     }
     // The socket is open only in the foreground (spec/sync-protocol.md,

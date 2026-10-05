@@ -1,4 +1,5 @@
 import Foundation
+import PochicalDesign
 import Testing
 
 @testable import PochicalKit
@@ -35,4 +36,11 @@ import Testing
   #expect(settings.look.style == .badge)
   #expect(settings.look.fill)
   #expect(settings.look.icon.highlight)
+}
+
+@Test func aThemeNoLongerKnownIsTheAppsOwn() throws {
+  let kept = Data(#"{"themeID":"gone"}"#.utf8)
+  let settings = try JSONDecoder().decode(DeviceSettings.self, from: kept)
+  #expect(settings.theme == .pochical)
+  #expect(settings.look.colored)
 }

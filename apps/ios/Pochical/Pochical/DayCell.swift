@@ -70,7 +70,7 @@ struct DayCell: View {
     .frame(height: Self.height)
     .background {
       if look.options.highlight, offShown == .shown, let pattern, pattern.countsAsOff {
-        RoundedRectangle(cornerRadius: Radius.md).fill(colors.mark(pattern.color).tint)
+        RoundedRectangle(cornerRadius: Radius.md).fill(colors.mark(look.colored ? pattern.color : 0).tint)
       }
     }
     .overlay {

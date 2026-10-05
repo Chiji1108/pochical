@@ -13,8 +13,20 @@ extension ThemeColors {
   }
 }
 
-/// Puts the テーマ's colors in the environment for the screens under it.
+/// Puts the テーマ's colors in the environment for the screens under it;
+/// a テーマ drawn dark whatever 外観 says turns the screens dark with it.
 struct Themed: ViewModifier {
+  let theme: Theme
+
+  func body(content: Content) -> some View {
+    content
+      .modifier(ThemeColorsForScheme(theme: theme))
+      .preferredColorScheme(theme.isAlwaysDark ? .dark : nil)
+  }
+}
+
+/// The テーマ's colors in the light or dark the screen is drawn in.
+private struct ThemeColorsForScheme: ViewModifier {
   @Environment(\.colorScheme) private var colorScheme
   let theme: Theme
 
