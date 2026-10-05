@@ -46,8 +46,14 @@ const dayDetail = {
   disclosureOpen: css({ transform: "rotate(90deg)" }),
   memberInput: css({ width: "88px" }),
   // The memo and, while it holds words, the button that clears it at once.
-  memoRow: css({ alignItems: "flex-start", display: "flex" }),
+  memoRow: css({
+    "--pad-y": "14px",
+    alignItems: "flex-start",
+    display: "flex",
+  }),
   memoBox: css({ flex: 1, minWidth: 0 }),
+  // As tall as the memo's first line with the room over and under it, so
+  // the button sits level with one line and beside the first of many.
   memoClear: css({
     bg: "transparent",
     border: 0,
@@ -55,14 +61,14 @@ const dayDetail = {
     cursor: "pointer",
     display: "grid",
     flexShrink: 0,
-    height: "touch",
+    height: "calc(2 * var(--pad-y) + 1lh)",
     placeItems: "center",
+    textStyle: "body",
     width: "touch",
   }),
   memo: css({
     "--lines": "5",
     "--pad-x": "16px",
-    "--pad-y": "14px",
     color: "text.primary",
     textStyle: "body",
   }),
