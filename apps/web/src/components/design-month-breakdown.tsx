@@ -5,6 +5,7 @@ import { css, cva } from "styled-system/css";
 import { dateKey, formatYearMonth } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
 import type { Shift } from "../lib/design-patterns";
+import type { Coworker } from "../lib/design-user-store";
 import { monthWithYearOf } from "./design-month-name";
 import { Sheet, SheetHeading, sheetBody } from "./design-sheet";
 import { srOnly } from "./design-ui";
@@ -13,27 +14,29 @@ import { ShiftMark } from "./shift-mark";
 
 // Someone from 一緒に働く人 whose days the calendar shows, picked in
 // 今月の内訳: the other days fade, and the summary under the month counts
-// theirs in place of the days off. A name renamed or deleted since lets
-// it go.
-export function useShownWith(names: readonly string[], schedule: Schedule) {
+// theirs in place of the days off. Someone deleted since lets it go.
+export function useShownWith(
+  coworkers: readonly Coworker[],
+  schedule: Schedule
+) {
   const [picked, setPicked] = useState<string>();
-  const person =
-    picked !== undefined && names.includes(picked) ? picked : undefined;
-  const isWith = (name: string, date: Date) =>
-    schedule[dateKey(date)]?.people?.includes(name) ?? false;
+  const person = coworkers.find(({ id }) => id === picked);
+  const isWith = (id: string, date: Date) =>
+    schedule[dateKey(date)]?.people?.includes(id) ?? false;
   return {
     // How many of `days` the person shown is on.
     countIn: (days: Date[]) =>
       person === undefined
         ? 0
-        : days.filter((date) => isWith(person, date)).length,
+        : days.filter((date) => isWith(person.id, date)).length,
     // Whether a day fades: someone is shown and not on it.
-    fades: (date: Date) => person !== undefined && !isWith(person, date),
+    fades: (date: Date) => person !== undefined && !isWith(person.id, date),
     // Who is on any of `days`, with how many, in the order of 一緒に働く人.
     peopleIn: (days: Date[]) =>
-      names
-        .map((name) => ({
-          count: days.filter((date) => isWith(name, date)).length,
+      coworkers
+        .map(({ id, name }) => ({
+          count: days.filter((date) => isWith(id, date)).length,
+          id,
           name,
         }))
         .filter(({ count }) => count > 0),
@@ -61,11 +64,12 @@ export function BreakdownSheet({
   unfilled: number;
   // How many days the month has.
   days: number;
-  people: { name: string; count: number }[];
+  people: { id: string; name: string; count: number }[];
+  // The id of the person whose days are shown.
   shownWith: string | undefined;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onShow: (name: string | undefined) => void;
+  onShow: (id: string | undefined) => void;
 }) {
   const { english } = useWeek();
   return (
@@ -115,18 +119,18 @@ export function BreakdownSheet({
           <section>
             <h3 className={breakdown.heading}>一緒に働く人</h3>
             <ul className={breakdown.list}>
-              {people.map(({ name, count }) => (
-                <li key={name}>
+              {people.map(({ id, name, count }) => (
+                <li key={id}>
                   <button
-                    aria-pressed={name === shownWith}
+                    aria-pressed={id === shownWith}
                     className={breakdown.row({ pressable: true })}
                     onClick={() => {
-                      onShow(name === shownWith ? undefined : name);
+                      onShow(id === shownWith ? undefined : id);
                     }}
                     type="button"
                   >
                     <span className={breakdown.name}>
-                      {name === shownWith && (
+                      {id === shownWith && (
                         <Check aria-hidden="true" size={18} />
                       )}
                       {name}

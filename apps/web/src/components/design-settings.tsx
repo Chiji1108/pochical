@@ -130,7 +130,7 @@ export function DesignSettings({
       <ScreenScroll>
         {page === "top" && (
           <SettingsTop
-            coworkerCount={coworkers.names.length}
+            coworkerCount={coworkers.list.length}
             current={current}
             onOpen={setPage}
             patternKeys={patternKeys}
