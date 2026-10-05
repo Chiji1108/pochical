@@ -329,7 +329,14 @@ export function DayDetail({
           <div className={dayDetail.unfolded} data-list-row="">
             <MemberChips
               onChange={(next) => {
-                onChange({ ...entry, people: next });
+                // Someone deleted from 一緒に働く人 goes as the day's
+                // people are written (spec/sync-protocol.md, Coworkers).
+                onChange({
+                  ...entry,
+                  people: next.filter((id) =>
+                    coworkers.some((coworker) => coworker.id === id)
+                  ),
+                });
               }}
               selected={selected}
             />
