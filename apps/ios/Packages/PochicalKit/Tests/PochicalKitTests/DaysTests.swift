@@ -141,7 +141,10 @@ func shown(_ vector: RepeatVectors.Shown) {
 @Test(arguments: try vectors("repeat", as: RepeatVectors.self).holidaysOffByDefault)
 func holidaysOffByDefault(_ vector: RepeatVectors.HolidaysOffByDefault) {
   let patterns = Dictionary(
-    vector.sequence.map { id in (id, VectorPattern.off(id, vector.daysOff.contains(id))) },
+    vector.sequence.map { id in
+      (id, Pattern(id: id, name: "", emoji: "", symbol: "", icon: "", color: 0,
+        countsAsOff: vector.daysOff.contains(id)))
+    },
     uniquingKeysWith: { first, _ in first })
   #expect(
     holidaysOffByDefault(vector.sequence, start: vector.start, patterns: patterns)
@@ -157,12 +160,6 @@ func holidayShift(_ vector: RepeatVectors.HolidayShift) {
 func added(_ vector: RepeatVectors.Added) {
   let added = orders(vector.orders.map(\.order), adding: vector.order.order)
   #expect(added == vector.expected.map(\.order))
-}
-
-extension VectorPattern {
-  static func off(_ id: String, _ countsAsOff: Bool) -> Pattern {
-    Pattern(id: id, name: "", emoji: "", symbol: "", icon: "", color: 0, countsAsOff: countsAsOff)
-  }
 }
 
 struct OwnDaysVectors: Decodable, Sendable {

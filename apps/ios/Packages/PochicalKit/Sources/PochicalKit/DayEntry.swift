@@ -83,9 +83,10 @@ private func ownDay(showing entry: DayEntry?, planned: PatternID?) -> OwnDay? {
   guard let entry else {
     return planned == nil ? nil : OwnDay(shift: Days.noShift)
   }
+  // A day with nobody on it keeps no people, not an empty list.
   let kept = OwnDay(
     shift: entry.shift == planned ? nil : entry.shift, start: entry.start, end: entry.end,
-    note: entry.note, people: entry.people)
+    note: entry.note, people: entry.people?.isEmpty == true ? nil : entry.people)
   return kept.isEmpty ? nil : kept
 }
 
