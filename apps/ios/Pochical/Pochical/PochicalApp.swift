@@ -11,6 +11,8 @@ struct PochicalApp: App {
   /// in on its first try, anonymously at first (spec/sync-protocol.md,
   /// Signing in); offline, the calendar works and it tries again.
   private let sync: SyncClient
+  /// The calls that make and join groups, as the same user.
+  private let groupCalls: GroupCalls
   @State private var settings = Settings()
 
   init() {
@@ -22,7 +24,9 @@ struct PochicalApp: App {
       #endif
     }
     @Dependency(\.defaultDatabase) var database
-    sync = SyncClient(account: Account(), database: database)
+    let account = Account()
+    sync = SyncClient(account: account, database: database)
+    groupCalls = GroupCalls(account: account)
   }
 
   var body: some Scene {
@@ -30,6 +34,7 @@ struct PochicalApp: App {
       RootView()
         .modifier(Themed(theme: settings.device.theme, appearance: settings.device.appearance))
         .environment(settings)
+        .environment(\.groupCalls, groupCalls)
     }
     // The socket is open only in the foreground (spec/sync-protocol.md,
     // Sockets), and the shared database lets go of its locks before iOS

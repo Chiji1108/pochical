@@ -30,6 +30,7 @@ public enum Sync {
     var last = HlcTime(ms: state.lastMs, counter: UInt32(state.lastCounter))
     for change in changes {
       try OwnValues.take(change, in: db)
+      try Groups.take(change, in: db)
       if let hlc = change.hlc {
         last = last.receiving(HlcTime(ms: hlc.physicalMs, counter: hlc.counter))
       }
@@ -44,6 +45,7 @@ public enum Sync {
   /// back to the start for the Changes with everything that follow.
   public static func reset(in db: Database) throws {
     try OwnValues.reset(in: db)
+    try Groups.reset(in: db)
     var state = try SyncState.current(in: db)
     state.cursor = 0
     try SyncState.upsert { state }.execute(db)

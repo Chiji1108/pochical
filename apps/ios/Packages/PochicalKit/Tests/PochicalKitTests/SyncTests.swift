@@ -104,3 +104,23 @@ private func change(_ value: String, cursor: UInt64, ms: Int64) -> Pochical_V1_C
     #expect(edits.map(\.value.hlc.counter) == [1, 2])
   }
 }
+
+@Test func theUsersGroupsComeWithTheirChangesAndGoWithAReset() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var change = Pochical_V1_Change()
+    change.cursor = 3
+    change.membership.groupID = "g1"
+    change.membership.name = "いとこ会"
+    change.membership.emoji = "🍉"
+    change.membership.joinedAtMs = 1_000
+    try Sync.take([change], in: db)
+    #expect(
+      try GroupRow.fetchAll(db)
+        == [GroupRow(id: "g1", name: "いとこ会", emoji: "🍉", joinedAtMs: 1_000)])
+    #expect(try Sync.cursor(in: db) == 3)
+
+    try Sync.reset(in: db)
+    #expect(try GroupRow.fetchCount(db) == 0)
+  }
+}
