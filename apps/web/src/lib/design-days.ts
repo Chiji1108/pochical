@@ -25,14 +25,14 @@ export type DayEntry = {
   start?: string;
   end?: string;
   note?: string;
-  members?: string[];
+  people?: string[];
 };
 export type Schedule = Record<string, DayEntry | undefined>;
 
 // A day's people as kept: none rather than an empty list, so a day with
 // nobody on it holds nothing more than one never given anyone.
-export function membersOrNone(members: string[]) {
-  return members.length > 0 ? members : undefined;
+export function peopleOrNone(people: string[] | undefined) {
+  return people && people.length > 0 ? people : undefined;
 }
 
 // What the person set on a day themselves, the only days kept
@@ -141,14 +141,14 @@ export function holidayShiftOf(patterns: readonly Pattern[]) {
 }
 
 const sampleDetails: Record<string, Omit<DayEntry, "shift">> = {
-  "2026-09-02": { members: ["田中"] },
+  "2026-09-02": { people: ["田中"] },
   "2026-09-08": { end: "20:00", note: "棚卸し" },
-  "2026-09-09": { members: ["田中", "佐藤"] },
-  "2026-09-12": { members: ["山本"] },
-  "2026-09-19": { members: ["田中", "山本"], start: "08:00" },
-  "2026-09-25": { end: "20:00", members: ["田中"] },
+  "2026-09-09": { people: ["田中", "佐藤"] },
+  "2026-09-12": { people: ["山本"] },
+  "2026-09-19": { people: ["田中", "山本"], start: "08:00" },
+  "2026-09-25": { end: "20:00", people: ["田中"] },
   "2026-09-26": { note: "新人さん同行" },
-  "2026-09-28": { members: ["田中", "鈴木"] },
+  "2026-09-28": { people: ["田中", "鈴木"] },
 };
 
 function sampleShift(patternCount: PatternCount, index: number): PresetShift {
@@ -313,7 +313,10 @@ function ownDay(
     return planned ? { shift: dayRules.noShift } : undefined;
   }
   const { shift, ...details } = entry;
-  const kept: OwnDay = shift === planned ? details : entry;
+  const kept: OwnDay = {
+    ...(shift === planned ? details : entry),
+    people: peopleOrNone(entry.people),
+  };
   return Object.values(kept).some((value) => value !== undefined)
     ? kept
     : undefined;
@@ -346,8 +349,8 @@ export function giveDaysToOrder(own: OwnDays, start: Date): OwnDays {
       if (!day || key < from) {
         return [[key, day]];
       }
-      const { members, note } = day;
-      return members || note ? [[key, { members, note }]] : [];
+      const { people, note } = day;
+      return people || note ? [[key, { note, people }]] : [];
     })
   );
 }
@@ -359,7 +362,7 @@ export function keepDetails(
   if (entry?.shift === shift) {
     return entry;
   }
-  return { members: entry?.members, note: entry?.note, shift };
+  return { note: entry?.note, people: entry?.people, shift };
 }
 
 // The pattern entered on the day after `shift`, if it names one.

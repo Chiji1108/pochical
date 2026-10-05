@@ -1,5 +1,5 @@
 {
-  "about": "A person's own days under repeating orders (spec/shift-patterns.md, Repeating orders): only what differs from the order is kept as theirs. edited: `planned` is the orders' shift by date; the days show as `own` over it, and an edit sets the days in `edits` (null clears one) to give the person's own days `expected`. A day showing its planned shift keeps no shift of its own (a memo or people stay); clearing a day the order fills keeps \"\" (dayRules.noShift); a day the edit does not touch stays as it was. givenToOrder: starting an order, or correcting the one in use, on `start` gives the days from then back to it: their own shifts and times go, memos and people stay; days before it stay as they were.",
+  "about": "A person's own days under repeating orders (spec/shift-patterns.md, Repeating orders): only what differs from the order is kept as theirs. edited: `planned` is the orders' shift by date; the days show as `own` over it, and an edit sets the days in `edits` (null clears one) to give the person's own days `expected`. A day showing its planned shift keeps no shift of its own (a memo or `people` stay, and a day with nobody on it keeps no `people`, not an empty list); clearing a day the order fills keeps \"\" (dayRules.noShift); a day the edit does not touch stays as it was. givenToOrder: starting an order, or correcting the one in use, on `start` gives the days from then back to it: their own shifts and times go, memos and people stay; days before it stay as they were.",
   "edited": [
     {
       "name": "a memo on a day the order fills keeps no shift of its own",
@@ -95,6 +95,24 @@
       "planned": {},
       "edits": {
         "2026-10-05": null
+      },
+      "expected": {}
+    },
+    {
+      "name": "taking the last person off a day the order fills leaves nothing",
+      "own": {
+        "2026-10-01": {
+          "people": ["さとう"]
+        }
+      },
+      "planned": {
+        "2026-10-01": "day"
+      },
+      "edits": {
+        "2026-10-01": {
+          "shift": "day",
+          "people": []
+        }
       },
       "expected": {}
     }
