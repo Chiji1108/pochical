@@ -3,19 +3,30 @@ import PochicalKit
 import SwiftUI
 
 /// A day opened from the month: its shift, its own hours, the people on
-/// it and a memo, each kept as soon as it changes.
+/// it and a memo (spec/calendar.md, A day's detail).
 struct DayDetail: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.scenePhase) private var scenePhase
   let day: Day
   let entry: DayEntry?
+  /// The day's memo, its own whether it has a shift or not.
+  let note: String?
   let patterns: [Pattern]
   let coworkers: [Coworker]
   let style: MarkStyle
+  /// Whether 一緒に働く人 is unfolded: kept as another day is opened.
+  @Binding var peopleOpen: Bool
   let onChange: (DayEntry?) -> Void
+  /// "" clears the memo.
+  let onNoteChange: (String) -> Void
   let onAddCoworker: (String) -> Void
-  @State private var note = ""
+  /// Opens the day before (-1) or after (1).
+  let onStep: (Int) -> Void
+  /// The memo as it is written, kept when the field is left, the detail
+  /// closes or the app goes to the background (spec/calendar.md, Text
+  /// fields).
+  @State private var draft = ""
   @FocusState private var writingNote: Bool
-  @State private var peopleOpen = false
   @State private var clearing = false
   @State private var addingCoworker = false
   @State private var newCoworker = ""
@@ -34,25 +45,16 @@ struct DayDetail: View {
               onChange(reset)
             }
           }
+        }
+        // Someone works alongside on any shift but a day off.
+        if let entry, let pattern, !pattern.countsAsOff {
           peopleRows(entry)
         }
       }
+      Section {
+        memoField
+      }
       if let entry {
-        Section {
-          TextField("メモ", text: $note, axis: .vertical)
-            .focused($writingNote)
-            .onChange(of: note) { _, text in
-              if text.count > TextLimits.dayNote {
-                note = String(text.prefix(TextLimits.dayNote))
-              }
-            }
-            .onChange(of: writingNote) { _, writing in
-              if !writing {
-                keepNote(entry)
-              }
-            }
-            .onDisappear { keepNote(entry) }
-        }
         Section {
           Button("この日のシフトを消す", role: .destructive) {
             if lost(entry).isEmpty {
@@ -75,15 +77,29 @@ struct DayDetail: View {
     .scrollContentBackground(.hidden)
     .background(colors.backgroundBase)
     .safeAreaInset(edge: .top, spacing: 0) {
-      Text("\(day.month)月\(day.day)日(\(WeekdayRow.names[day.weekday]))")
-        .font(.title3.weight(.semibold))
-        .foregroundStyle(colors.textPrimary)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
-        .accessibilityAddTraits(.isHeader)
+      HStack {
+        Text("\(day.month)月\(day.day)日(\(WeekdayRow.names[day.weekday]))")
+          .font(.title3.weight(.semibold))
+          .foregroundStyle(colors.textPrimary)
+          .accessibilityAddTraits(.isHeader)
+        Spacer()
+        // The day before and after, a week's end no stop.
+        Button("前の日", systemImage: "chevron.left") { onStep(-1) }
+        Button("次の日", systemImage: "chevron.right") { onStep(1) }
+      }
+      .labelStyle(.iconOnly)
+      .buttonStyle(.borderless)
+      .tint(colors.textPrimary)
+      .padding(.horizontal, 20)
     }
     .tint(colors.accentDefault)
-    .onAppear { note = entry?.note ?? "" }
+    .onAppear { draft = note ?? "" }
+    .onDisappear { keepNote() }
+    .onChange(of: scenePhase) { _, phase in
+      if phase != .active {
+        keepNote()
+      }
+    }
     .alert("一緒に働く人を追加", isPresented: $addingCoworker) {
       TextField("名前", text: $newCoworker)
       Button("追加") {
@@ -178,7 +194,9 @@ struct DayDetail: View {
         ForEach(coworkers) { coworker in
           let isPicked = picked.contains(coworker.id)
           Button {
-            var people = picked
+            // Someone deleted from 一緒に働く人 goes as the day's people
+            // are written (spec/sync-protocol.md, Coworkers).
+            var people = picked.filter { id in coworkers.contains { $0.id == id } }
             if isPicked {
               people.removeAll { $0 == coworker.id }
             } else {
@@ -221,16 +239,45 @@ struct DayDetail: View {
   private func lost(_ entry: DayEntry) -> [String] {
     [
       entry.start != nil || entry.end != nil ? "時間の変更" : nil,
-      entry.people?.isEmpty == false ? "一緒に働く人" : nil,
+      (entry.people ?? []).contains { id in coworkers.contains { $0.id == id } }
+        ? "一緒に働く人" : nil,
     ].compactMap(\.self)
   }
 
   /// "" clears the memo; an entry without one keeps the day's.
-  private func keepNote(_ entry: DayEntry) {
-    guard note != (entry.note ?? "") else { return }
-    var changed = entry
-    changed.note = note
-    onChange(changed)
+  private func keepNote() {
+    if draft != (note ?? "") {
+      onNoteChange(draft)
+    }
+  }
+
+  /// The memo, on any day, with a button that clears it at once while it
+  /// holds words, as a one-line field's does.
+  private var memoField: some View {
+    // Beside the first line, one line or many.
+    HStack(alignment: .firstTextBaseline) {
+      TextField("メモ", text: $draft, axis: .vertical)
+        .focused($writingNote)
+        .onChange(of: draft) { _, text in
+          if text.count > TextLimits.dayNote {
+            draft = String(text.prefix(TextLimits.dayNote))
+          }
+        }
+        .onChange(of: writingNote) { _, writing in
+          if !writing {
+            keepNote()
+          }
+        }
+      if !draft.isEmpty {
+        Button("メモを消す", systemImage: "xmark.circle.fill") {
+          draft = ""
+          onNoteChange("")
+        }
+        .labelStyle(.iconOnly)
+        .buttonStyle(.plain)
+        .foregroundStyle(colors.textTertiary)
+      }
+    }
   }
 
   private func hours(_ start: String, _ end: String) -> String {

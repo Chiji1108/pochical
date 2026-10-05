@@ -7,6 +7,9 @@ struct DayCell: View {
   @Environment(\.themeColors) private var colors
   let day: Day
   let entry: DayEntry?
+  /// The day's memo, its own whether it has a shift or not
+  /// (spec/shift-patterns.md, A day's memo).
+  let note: String?
   let pattern: Pattern?
   /// A day of the month before or after, faded whole.
   let outside: Bool
@@ -80,7 +83,7 @@ struct DayCell: View {
       .background(alignment: .bottom) {
         // A note: a highlighter stroke over the date's lower half, as in a
         // paper diary.
-        if entry?.note?.isEmpty == false {
+        if note?.isEmpty == false {
           RoundedRectangle(cornerRadius: Radius.xxs)
             .fill(colors.calendarNoteMarker)
             .frame(height: 7)
@@ -110,7 +113,7 @@ struct DayCell: View {
       let moves = [change.early ? "早出" : nil, change.late ? "残業" : nil].compactMap(\.self)
       parts.append(moves.isEmpty ? "時間変更" : moves.joined(separator: "・"))
     }
-    if entry?.note?.isEmpty == false {
+    if note?.isEmpty == false {
       parts.append("メモあり")
     }
     return parts.joined(separator: "、")

@@ -45,8 +45,20 @@ public struct OwnCalendar: Sendable {
     return shownDays(own: own, planned: planned(from: from, through: through))
   }
 
+  /// The day's memo, its own whether it has a shift or not.
+  public func note(on day: Day) -> String? {
+    own[day]?.note
+  }
+
   /// Each day's shift by the orders alone, from `from` through `through`.
   func planned(from: Day, through: Day) -> [Day: PatternID] {
     plannedShifts(orders: orders, known: Set(patternsByID.keys), from: from, through: through)
   }
+}
+
+/// Where ポチポチ入力 starts in `month`'s month: its first day without a
+/// shift in `days`, else its 1st (spec/calendar.md).
+public func firstBlankDay(in month: Day, days: [Day: DayEntry]) -> Day {
+  let monthDays = month.daysOfMonth
+  return monthDays.first { days[$0] == nil } ?? monthDays[0]
 }
