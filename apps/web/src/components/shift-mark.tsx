@@ -8,7 +8,6 @@ import {
   themeMarkColor,
 } from "@pochical/design/themes";
 import { createContext, useContext } from "react";
-import type { CSSProperties } from "react";
 import { css, cx } from "styled-system/css";
 
 import { usePatterns } from "../lib/design-patterns";
@@ -361,12 +360,10 @@ export function MarkGlyph({
   return (
     <span
       className={glyphStyle.timed}
-      style={
-        {
-          "--sm-corner": shiftCorner ? color : undefined,
-          "--sm-size": `${size}px`,
-        } as CSSProperties
-      }
+      style={{
+        "--sm-corner": shiftCorner ? color : undefined,
+        "--sm-size": `${size}px`,
+      }}
     >
       {early && <TimeSide side="early" />}
       {glyph}

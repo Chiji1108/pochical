@@ -169,9 +169,9 @@ export function Bubble({
 
 // The size LargeEmoji draws at. Panda reads styles before the code runs,
 // so it reaches them as a variable rather than from chatRules.
-const largeEmojiSize = {
+const largeEmojiSize: CSSProperties = {
   "--large-emoji-size": `${chatRules.largeEmojiSize}px`,
-} as CSSProperties;
+};
 
 // A message of nothing but a few emoji (spec/chat.md, Large emoji), drawn
 // large without a bubble in its place, as iMessage does.

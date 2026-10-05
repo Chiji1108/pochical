@@ -1,6 +1,6 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
 import { initialDesignSchedule } from "../lib/design-days";
@@ -272,15 +272,11 @@ function PhoneGallery({
       aria-hidden="true"
       className={gallery.root}
       inert
-      style={{ "--gallery-last": phones.length - 1 } as CSSProperties}
+      style={{ "--gallery-last": phones.length - 1 }}
     >
       <DesignProviders fresh>
         {phones.map(({ key, screen }, index) => (
-          <div
-            className={gallery.phone}
-            key={key}
-            style={{ "--index": index } as CSSProperties}
-          >
+          <div className={gallery.phone} key={key} style={{ "--index": index }}>
             <div className={gallery.inner}>{screen}</div>
           </div>
         ))}

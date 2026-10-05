@@ -81,7 +81,10 @@ export const ColorSchemeContext = createContext<ColorScheme>("light");
 export type Appearance = "system" | ColorScheme;
 
 // Every color variable the screens read, each role as `--` and its name.
-export function themeStyle(id: PresetId, requested: ColorScheme = "light") {
+export function themeStyle(
+  id: PresetId,
+  requested: ColorScheme = "light"
+): CSSProperties {
   const scheme = schemeOf(id, requested);
   const { onTile } = noteMarkerSteps[scheme];
   return {
@@ -96,7 +99,7 @@ export function themeStyle(id: PresetId, requested: ColorScheme = "light") {
     "--note-on-tile-chroma": onTile.chroma,
     "--note-on-tile-lightness": onTile.lightness,
     colorScheme: scheme,
-  } as CSSProperties;
+  };
 }
 
 export function useThemeStyle() {

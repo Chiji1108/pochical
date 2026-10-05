@@ -188,7 +188,7 @@ function ThemedFrame({
   const theme = useThemeStyle();
   const { width, height, margin, radius } = widgetFamilies[family];
   const rendering = renderingOf(appearance);
-  const style = {
+  const style: CSSProperties = {
     ...theme,
     ...(wallpaperHue === undefined
       ? {}
@@ -199,7 +199,7 @@ function ThemedFrame({
     // The system's margin, for a view that draws its own ground to the
     // widget's edge, as SwiftUI's containerBackground does.
     "--widget-margin": `${margin}px`,
-  } as CSSProperties;
+  };
   return (
     <div
       className={cx(frame({ look: lookOf(appearance) }), inLine && inLineFrame)}

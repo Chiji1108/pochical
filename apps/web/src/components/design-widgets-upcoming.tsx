@@ -1,5 +1,4 @@
 import { useContext, useLayoutEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import { presetPatterns } from "../lib/design-patterns";
@@ -496,26 +495,22 @@ function ColumnDay({
         <span
           aria-hidden="true"
           className={columns.band({ tint: band })}
-          style={
-            {
-              "--off-tint": tint,
-              gridColumn: column,
-              gridRow: "1 / -1",
-            } as CSSProperties
-          }
+          style={{
+            "--off-tint": tint,
+            gridColumn: column,
+            gridRow: "1 / -1",
+          }}
         />
       )}
       <span
         className={columns.date}
         // On the tile, a memo's stroke takes the tile's color a step deeper.
         data-off={band === "own" ? "" : undefined}
-        style={
-          {
-            "--off-tint": tint,
-            gridColumn: column,
-            gridRow: 1,
-          } as CSSProperties
-        }
+        style={{
+          "--off-tint": tint,
+          gridColumn: column,
+          gridRow: 1,
+        }}
       >
         {together && <span className={srOnly}>ふたりとも休み</span>}
         <span

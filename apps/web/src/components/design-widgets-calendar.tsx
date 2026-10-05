@@ -1,5 +1,4 @@
 import { useContext } from "react";
-import type { CSSProperties } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import { presetPatterns } from "../lib/design-patterns";
@@ -164,12 +163,10 @@ function GridDay({
         tile && flat && flatTile
       )}
       data-off={tile && !flat ? "" : undefined}
-      style={
-        {
-          "--off-tint": tile ? tint : undefined,
-          height: "100%",
-        } as CSSProperties
-      }
+      style={{
+        "--off-tint": tile ? tint : undefined,
+        height: "100%",
+      }}
     >
       <SpokenDay day={day} />
       <span

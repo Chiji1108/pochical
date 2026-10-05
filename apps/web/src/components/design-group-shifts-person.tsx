@@ -227,7 +227,9 @@ function PersonDay({
         }
       : {}
   );
-  const style = off ? ({ "--off-tint": tint } as CSSProperties) : undefined;
+  const style: CSSProperties | undefined = off
+    ? { "--off-tint": tint }
+    : undefined;
   const content = (
     <>
       <span
