@@ -215,13 +215,13 @@ struct DayDetail: View {
     return names.isEmpty ? "なし" : names.joined(separator: "、")
   }
 
-  /// What would go with the shift. A day with nothing more is cleared at
-  /// once, as one tap brings it back; with more it is asked first.
+  /// What would go with the shift; the memo stays, as it is the day's. A
+  /// day with nothing more is cleared at once, as one tap brings it back;
+  /// with more it is asked first.
   private func lost(_ entry: DayEntry) -> [String] {
     [
       entry.start != nil || entry.end != nil ? "時間の変更" : nil,
       entry.people?.isEmpty == false ? "一緒に働く人" : nil,
-      entry.note?.isEmpty == false ? "メモ" : nil,
     ].compactMap(\.self)
   }
 
