@@ -8,14 +8,16 @@ import SwiftUI
 private let monthSpan = 24
 
 /// How everyone's shifts are laid out (/design's Layout): a row a day
-/// (一覧) or a block a week (週ごと). 1人ずつ comes later.
+/// (一覧), a block a week (週ごと), or one member's month at a time
+/// (1人ずつ).
 enum ShiftsLayout: Hashable, CaseIterable {
-  case days, weeks
+  case days, weeks, person
 
   var name: String {
     switch self {
     case .days: "一覧"
     case .weeks: "週ごと"
+    case .person: "1人ずつ"
     }
   }
 }
@@ -23,15 +25,18 @@ enum ShiftsLayout: Hashable, CaseIterable {
 /// Everyone's shifts in a group (/design's ShiftsPage with its list of
 /// months): each month under its heading with its みんな休み, then its days
 /// a row each (一覧) or its weeks a block each (週ごと), two years either
-/// side of today, drawn as they come into sight. A group of up to seven
-/// opens on 一覧, which shows everyone across; a bigger one on 週ごと, and
-/// 一覧 for it, scrolling sideways, comes later. It opens on the day asked
-/// for, else today. A day pressed shows everyone's that day in a sheet
+/// side of today, drawn as they come into sight; or 1人ずつ. A group of up
+/// to seven opens on 一覧, which shows everyone across; a bigger one on
+/// 週ごと, and 一覧 for it, scrolling sideways, comes later. It opens on the
+/// day asked for, else today. A day pressed shows everyone's that day in a sheet
 /// along the bottom, the table left live above it.
 struct GroupShiftsPage: View {
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
+  @Environment(\.groupCalls) private var groupCalls
   @Fetch private var members: [GroupMember] = []
+  /// The viewer's id among the members, for 1人ずつ.
+  @State private var meID: String?
   let group: GroupRow
   @State private var picked: Day?
   @State private var togetherSheet: TogetherList?
@@ -42,7 +47,8 @@ struct GroupShiftsPage: View {
   @State private var pickedLayout: ShiftsLayout?
 
   private var layouts: [ShiftsLayout] {
-    DayRowsDensity(members: members.count) == .scroll ? [.weeks] : ShiftsLayout.allCases
+    DayRowsDensity(members: members.count) == .scroll
+      ? [.weeks, .person] : ShiftsLayout.allCases
   }
 
   private var layout: ShiftsLayout {
@@ -62,41 +68,15 @@ struct GroupShiftsPage: View {
       switch layout {
       case .days: GroupDayHeader(members: members).padding(.horizontal, 16)
       case .weeks: GroupWeekdays().padding(.horizontal, 16).padding(.bottom, 6)
+      case .person: EmptyView()
       }
-      ScrollViewReader { scroll in
+      if layout == .person {
         ScrollView {
-          LazyVStack(alignment: .leading, spacing: layout == .weeks ? 12 : 0) {
-            ForEach(months, id: \.self) { month in
-              heading(month)
-                .padding(.top, layout == .weeks ? 12 : 36)
-                .padding(.bottom, layout == .weeks ? 0 : 12)
-              switch layout {
-              case .days:
-                ForEach(month.daysOfMonth, id: \.self) { day in
-                  GroupDayRow(day: day, members: members, picked: day == picked, onPick: pick)
-                    .id(day)
-                }
-              case .weeks:
-                ForEach(weeks(endingIn: month), id: \.self) { week in
-                  GroupWeek(
-                    days: week, members: members, month: month, picked: picked, onPick: pick
-                  )
-                  .padding(.vertical, 4)
-                  .background(
-                    colors.backgroundBase, in: RoundedRectangle(cornerRadius: Radius.xxl)
-                  )
-                  .overlay(
-                    RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(colors.separator))
-                  .id(week[0])
-                }
-              }
-            }
-          }
-          .padding(.horizontal, 16)
-          .padding(.bottom, 24)
+          GroupPersonView(members: members, meID: meID, picked: $picked) { togetherSheet = $0 }
+            .padding(.vertical, 8)
         }
-        .onAppear { scroll.scrollTo(anchor(of: opening), anchor: .center) }
-        .onChange(of: layout) { scroll.scrollTo(anchor(of: picked ?? Day.today), anchor: .center) }
+      } else {
+        list(months: months, opening: opening)
       }
     }
     .background(colors.backgroundBase)
@@ -113,6 +93,9 @@ struct GroupShiftsPage: View {
           }
         }
       }
+    }
+    .task {
+      meID = try? await groupCalls.userID()
     }
     .task(id: settings.device.week.start) {
       let first = thisMonth.addingMonths(-monthSpan).adding(days: -6)
@@ -194,6 +177,44 @@ struct GroupShiftsPage: View {
     return weeks
   }
 
+  /// 一覧 and 週ごと: the months as one list, opening on `opening`.
+  private func list(months: [Day], opening: Day) -> some View {
+    ScrollViewReader { scroll in
+      ScrollView {
+        LazyVStack(alignment: .leading, spacing: layout == .weeks ? 12 : 0) {
+          ForEach(months, id: \.self) { month in
+            heading(month)
+              .padding(.top, layout == .weeks ? 12 : 36)
+              .padding(.bottom, layout == .weeks ? 0 : 12)
+            if layout == .days {
+              ForEach(month.daysOfMonth, id: \.self) { day in
+                GroupDayRow(day: day, members: members, picked: day == picked, onPick: pick)
+                  .id(day)
+              }
+            } else {
+              ForEach(weeks(endingIn: month), id: \.self) { week in
+                GroupWeek(
+                  days: week, members: members, month: month, picked: picked, onPick: pick
+                )
+                .padding(.vertical, 4)
+                .background(
+                  colors.backgroundBase, in: RoundedRectangle(cornerRadius: Radius.xxl)
+                )
+                .overlay(
+                  RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(colors.separator))
+                .id(week[0])
+              }
+            }
+          }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 24)
+      }
+      .onAppear { scroll.scrollTo(anchor(of: opening), anchor: .center) }
+      .onChange(of: layout) { scroll.scrollTo(anchor(of: picked ?? Day.today), anchor: .center) }
+    }
+  }
+
   private func pick(_ day: Day) {
     picked = picked == day ? nil : day
   }
@@ -209,7 +230,7 @@ struct GroupShiftsPage: View {
 }
 
 /// A month's days everyone is off, for its sheet.
-private struct TogetherList: Identifiable {
+struct TogetherList: Identifiable {
   let title: String
   let days: [Day]
   var id: String { title }
