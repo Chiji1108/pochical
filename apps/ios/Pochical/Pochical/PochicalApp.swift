@@ -61,17 +61,21 @@ struct PochicalApp: App {
 /// back meanwhile.
 @MainActor private final class BackgroundTime {
   private var id = UIBackgroundTaskIdentifier.invalid
+  private var ended = false
 
   func begin(expired: @escaping @MainActor () -> Void) {
     id = UIApplication.shared.beginBackgroundTask(withName: "送信", expirationHandler: expired)
   }
 
+  /// Once, whether iOS gave any time or not.
   func end() {
-    guard id != .invalid else { return }
+    guard !ended else { return }
+    ended = true
     if UIApplication.shared.applicationState == .background {
       NotificationCenter.default.post(name: Database.suspendNotification, object: nil)
     }
-    UIApplication.shared.endBackgroundTask(id)
-    id = .invalid
+    if id != .invalid {
+      UIApplication.shared.endBackgroundTask(id)
+    }
   }
 }
