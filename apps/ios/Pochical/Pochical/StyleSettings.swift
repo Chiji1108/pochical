@@ -275,20 +275,22 @@ private struct ThemeChoices: View {
   }
 
   var body: some View {
-    TabView(selection: $page) {
-      ForEach(Self.pages.indices, id: \.self) { index in
-        HStack(alignment: .top, spacing: 8) {
-          ForEach(Self.pages[index], id: \.self) { theme in
-            card(theme)
+    VStack(spacing: 4) {
+      TabView(selection: $page) {
+        ForEach(Self.pages.indices, id: \.self) { index in
+          HStack(alignment: .top, spacing: 8) {
+            ForEach(Self.pages[index], id: \.self) { theme in
+              card(theme)
+            }
           }
+          .frame(maxHeight: .infinity, alignment: .top)
+          .tag(index)
         }
-        .frame(maxHeight: .infinity, alignment: .top)
-        .tag(index)
       }
+      .tabViewStyle(.page(indexDisplayMode: .never))
+      .frame(height: 100)
+      PageDots(count: Self.pages.count, current: $page, label: "テーマのページ")
     }
-    .tabViewStyle(.page(indexDisplayMode: .always))
-    .indexViewStyle(.page(backgroundDisplayMode: .always))
-    .frame(height: 128)
     .onAppear {
       // Opens on the page of the テーマ in use.
       page = Self.pages.firstIndex { $0.contains(settings.device.theme) } ?? 0
