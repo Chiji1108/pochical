@@ -119,7 +119,7 @@ private func guessedEmoji(for name: String) -> String {
 }
 
 /// The group's mark, picked from /design's emoji.
-private struct EmojiPage: View {
+struct EmojiPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
   let emoji: String

@@ -39,6 +39,12 @@ enum Groups {
   /// to what takes them.
   static func take(_ change: Pochical_V1_Change, in db: Database) throws {
     guard case .membership(let membership) = change.kind else { return }
+    // A group left goes, with what the device holds of it.
+    if membership.left {
+      try GroupRow.find(membership.groupID).delete().execute(db)
+      try GroupSync.reset(membership.groupID, in: db)
+      return
+    }
     let row = GroupRow(
       id: membership.groupID, name: membership.name, emoji: membership.emoji,
       joinedAtMs: membership.joinedAtMs)
@@ -96,6 +102,31 @@ public struct GroupCalls: Sendable {
     request.groupID = groupID
     return try await client.getInviteLink(request: request, headers: account.headers()).result
       .get().inviteCode
+  }
+
+  /// Gives the group a new name and mark, which every member sees.
+  public func rename(_ groupID: String, name: String, emoji: String) async throws {
+    var request = Pochical_V1_RenameGroupRequest()
+    request.groupID = groupID
+    request.name = name
+    request.emoji = emoji
+    _ = try await client.renameGroup(request: request, headers: account.headers()).result.get()
+  }
+
+  /// How the user appears in the group from now on.
+  public func setDisplayName(_ displayName: String, in groupID: String) async throws {
+    var request = Pochical_V1_SetDisplayNameRequest()
+    request.groupID = groupID
+    request.displayName = displayName
+    _ = try await client.setDisplayName(request: request, headers: account.headers()).result
+      .get()
+  }
+
+  /// Takes the user out of the group.
+  public func leave(_ groupID: String) async throws {
+    var request = Pochical_V1_LeaveGroupRequest()
+    request.groupID = groupID
+    _ = try await client.leaveGroup(request: request, headers: account.headers()).result.get()
   }
 
   /// A new invitation code for the group: the old link and QR code stop

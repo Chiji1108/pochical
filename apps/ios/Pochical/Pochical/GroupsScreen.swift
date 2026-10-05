@@ -29,6 +29,8 @@ struct GroupsScreen: View {
             }
             GroupHub(group: open) {
               path.append(.invite(open))
+            } onSettings: {
+              path.append(.settings(open))
             } onShifts: { day in
               path.append(.shifts(open, day: day))
             }
@@ -41,6 +43,8 @@ struct GroupsScreen: View {
       }
       .toolbarVisibility(.hidden, for: .navigationBar)
       .navigationDestination(for: GroupRoute.self) { route in
+        // Pages show the group as it is now, renamed meanwhile or not.
+        let live = { (group: GroupRow) in groups.first { $0.id == group.id } ?? group }
         switch route {
         case .newGroup:
           NewGroupPage { made in
@@ -48,9 +52,16 @@ struct GroupsScreen: View {
             path.removeAll()
           }
         case .invite(let group):
-          InvitePage(group: group)
+          InvitePage(group: live(group))
         case .shifts(let group, let day):
-          GroupShiftsPage(group: group, day: day)
+          GroupShiftsPage(group: live(group), day: day)
+        case .settings(let group):
+          GroupSettingsPage(group: live(group)) {
+            path.append(.invite(group))
+          } onLeft: {
+            openID = nil
+            path.removeAll()
+          }
         }
       }
     }
@@ -62,6 +73,7 @@ enum GroupRoute: Hashable {
   case invite(GroupRow)
   /// Everyone's shifts by the month, on a day when one is given.
   case shifts(GroupRow, day: Day?)
+  case settings(GroupRow)
 }
 
 /// No group yet: what sharing shifts is for, then 作成 (/design's
@@ -187,6 +199,7 @@ private struct GroupHub: View {
   @Fetch private var members: [GroupMember] = []
   let group: GroupRow
   let onInvite: () -> Void
+  let onSettings: () -> Void
   /// Opens everyone's shifts by the month, on a day when one is given.
   let onShifts: (Day?) -> Void
 
@@ -254,6 +267,10 @@ private struct GroupHub: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityAddTraits(.isHeader)
       Button("メンバーを招待", systemImage: "person.badge.plus", action: onInvite)
+        .labelStyle(.iconOnly)
+        .buttonStyle(BarButton())
+        .foregroundStyle(colors.textPrimary)
+      Button("グループの設定", systemImage: "slider.horizontal.3", action: onSettings)
         .labelStyle(.iconOnly)
         .buttonStyle(BarButton())
         .foregroundStyle(colors.textPrimary)

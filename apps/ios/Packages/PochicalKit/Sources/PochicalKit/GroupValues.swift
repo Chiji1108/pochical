@@ -192,6 +192,16 @@ public enum GroupSync {
     case .member(let member):
       try GroupMemberRow.where { $0.groupID.eq(groupID) && $0.userID.eq(member.userID) }
         .delete().execute(db)
+      // One who left goes, with their shifts.
+      if member.left {
+        try MemberDayRow.where { $0.groupID.eq(groupID) && $0.userID.eq(member.userID) }
+          .delete().execute(db)
+        try MemberPatternRow.where { $0.groupID.eq(groupID) && $0.userID.eq(member.userID) }
+          .delete().execute(db)
+        try MemberOrderRow.where { $0.groupID.eq(groupID) && $0.userID.eq(member.userID) }
+          .delete().execute(db)
+        return
+      }
       let row = GroupMemberRow(
         groupID: groupID, userID: member.userID, displayName: member.displayName,
         joinedAtMs: member.joinedAtMs)
