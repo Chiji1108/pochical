@@ -125,6 +125,12 @@ struct CalendarScreen: View {
           )
           .id(day)
         }
+        .padding(.top, 16)
+        // A line from edge to edge between the week and the day, as a
+        // bar's runs.
+        .overlay(alignment: .top) {
+          Rectangle().fill(colors.separator).frame(height: 1)
+        }
         .padding(.top, 12)
         .opacity(max(1 - 2 * pull, 0))
         // It shows as the month folds into the week, and goes at once as
@@ -172,7 +178,8 @@ struct CalendarScreen: View {
       if !offPatterns.isEmpty, let month = gaps.first?.firstOfMonth {
         GapSheet(
           month: month, days: gaps, offPatterns: offPatterns,
-          offCount: offCount(in: month, calendar: calendar)
+          offCount: offCount(in: month, calendar: calendar),
+          completes: monthDays(month, calendar).count + gaps.count == month.daysOfMonth.count
         ) { off in
           write { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }
         }

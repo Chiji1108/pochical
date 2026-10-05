@@ -23,9 +23,9 @@ struct EntryTray: View {
     VStack(spacing: 8) {
       dateLabel
       patternButtons
+      // Together in the middle, as /design has them.
       HStack(spacing: 8) {
         trayAction("消す", systemImage: "trash", enabled: canClear) { onEnter(nil) }
-        Spacer()
         trayAction("翌日へ", systemImage: "arrow.right", enabled: canSkip, trailingIcon: true) {
           onSkip()
         }
@@ -112,7 +112,7 @@ struct EntryTray: View {
             RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(colors.borderDefault)
           )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TrayPress(scale: 0.97))
       }
     }
     .accessibilityElement(children: .contain)
@@ -142,7 +142,24 @@ struct EntryTray: View {
       .frame(minHeight: Metrics.touch)
       .contentShape(Rectangle())
     }
-    .buttonStyle(.plain)
+    .buttonStyle(TrayPress())
     .disabled(!enabled)
+  }
+}
+
+/// A tray key pressed: the accent laid over it, as /design's state layer,
+/// and a pattern's key giving a little under the finger.
+private struct TrayPress: ButtonStyle {
+  @Environment(\.themeColors) private var colors
+  var scale: CGFloat = 1
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .overlay {
+        RoundedRectangle(cornerRadius: Radius.lg)
+          .fill(colors.accentDefault.opacity(configuration.isPressed ? Metrics.pressedOpacity : 0))
+      }
+      .scaleEffect(configuration.isPressed ? scale : 1)
+      .animation(Springs.quick, value: configuration.isPressed)
   }
 }
