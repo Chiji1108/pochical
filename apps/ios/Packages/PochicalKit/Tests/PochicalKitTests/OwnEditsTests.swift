@@ -96,3 +96,25 @@ private func outbox(_ db: Database) throws -> [Pochical_V1_DayValue] {
     #expect(clocks[0].deviceID.count == 36)
   }
 }
+
+@Test func aDaysDetailEditsOnlyTheFieldsItChanges() throws {
+  let database = try calendarWithAnOrder()
+  try database.write { db in
+    let day = Day("2026-10-05")!
+    try OwnValues.set(day, to: DayEntry(shift: "day", end: "20:00", note: "棚卸し"), now: 1000, in: db)
+    let edits = try outbox(db)
+    #expect(edits.map(\.field) == [.end, .note])
+    #expect(try OwnValues.ownDays(from: day, through: day, in: db)[day]
+      == OwnDay(end: "20:00", note: "棚卸し"))
+  }
+}
+
+@Test func addsCoworkersAtTheEndOfTheList() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    let first = try OwnValues.addCoworker(named: "さとう", now: 1000, in: db)
+    let second = try OwnValues.addCoworker(named: "たなか", now: 1000, in: db)
+    #expect(try OwnValues.coworkers(in: db).map(\.id) == [first, second])
+    #expect(try OwnValues.coworkers(in: db).map(\.name) == ["さとう", "たなか"])
+  }
+}

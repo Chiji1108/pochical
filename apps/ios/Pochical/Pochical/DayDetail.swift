@@ -1,0 +1,313 @@
+import PochicalDesign
+import PochicalKit
+import SwiftUI
+
+/// A day opened from the month: its shift, its own hours, the people on
+/// it and a memo, each kept as soon as it changes.
+struct DayDetail: View {
+  @Environment(\.themeColors) private var colors
+  let day: Day
+  let entry: DayEntry?
+  let patterns: [Pattern]
+  let coworkers: [Coworker]
+  let style: MarkStyle
+  let onChange: (DayEntry?) -> Void
+  let onAddCoworker: (String) -> Void
+  @State private var note = ""
+  @FocusState private var writingNote: Bool
+  @State private var peopleOpen = false
+  @State private var clearing = false
+  @State private var addingCoworker = false
+  @State private var newCoworker = ""
+
+  var body: some View {
+    Form {
+      Section {
+        shiftRow
+        if let entry, let pattern, let time = pattern.time {
+          timeRow(entry, time)
+          if entry.start != nil || entry.end != nil {
+            Button("標準（\(hours(time.start, time.end))）に戻す") {
+              var reset = entry
+              reset.start = nil
+              reset.end = nil
+              onChange(reset)
+            }
+          }
+          peopleRows(entry)
+        }
+      }
+      if let entry {
+        Section {
+          TextField("メモ", text: $note, axis: .vertical)
+            .focused($writingNote)
+            .onChange(of: note) { _, text in
+              if text.count > TextLimits.dayNote {
+                note = String(text.prefix(TextLimits.dayNote))
+              }
+            }
+            .onChange(of: writingNote) { _, writing in
+              if !writing {
+                keepNote(entry)
+              }
+            }
+            .onDisappear { keepNote(entry) }
+        }
+        Section {
+          Button("この日のシフトを消す", role: .destructive) {
+            if lost(entry).isEmpty {
+              onChange(nil)
+            } else {
+              clearing = true
+            }
+          }
+          .frame(maxWidth: .infinity)
+          .confirmationDialog(
+            "この日のシフトを消しますか？", isPresented: $clearing, titleVisibility: .visible
+          ) {
+            Button("消す", role: .destructive) { onChange(nil) }
+          } message: {
+            Text("\(lost(entry).joined(separator: "、"))も消えます。")
+          }
+        }
+      }
+    }
+    .scrollContentBackground(.hidden)
+    .background(colors.backgroundBase)
+    .safeAreaInset(edge: .top, spacing: 0) {
+      Text("\(day.month)月\(day.day)日(\(WeekdayRow.names[day.weekday]))")
+        .font(.title3.weight(.semibold))
+        .foregroundStyle(colors.textPrimary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .accessibilityAddTraits(.isHeader)
+    }
+    .tint(colors.accentDefault)
+    .onAppear { note = entry?.note ?? "" }
+    .alert("一緒に働く人を追加", isPresented: $addingCoworker) {
+      TextField("名前", text: $newCoworker)
+      Button("追加") {
+        let name = String(newCoworker.trimmingCharacters(in: .whitespacesAndNewlines)
+          .prefix(TextLimits.personName))
+        if !name.isEmpty {
+          onAddCoworker(name)
+        }
+        newCoworker = ""
+      }
+      Button("キャンセル", role: .cancel) { newCoworker = "" }
+    }
+  }
+
+  private var pattern: Pattern? {
+    entry.flatMap { entry in patterns.first { $0.id == entry.shift } }
+  }
+
+  /// The shift, picked from the person's patterns; picking another keeps
+  /// the day's memo and people, as entering does.
+  private var shiftRow: some View {
+    Picker(
+      "シフト",
+      selection: Binding(
+        get: { entry?.shift ?? "" },
+        set: { shift in
+          guard !shift.isEmpty, shift != entry?.shift else { return }
+          onChange(DayEntry(shift: shift, note: entry?.note, people: entry?.people))
+        })
+    ) {
+      if entry == nil {
+        Text("なし").tag("")
+      }
+      ForEach(patterns, id: \.id) { pattern in
+        Label {
+          Text(pattern.name)
+        } icon: {
+          ShiftMark(pattern: pattern, style: style, size: 18)
+        }
+        .tag(pattern.id)
+      }
+    }
+    .pickerStyle(.menu)
+  }
+
+  /// The day's own hours, a change from the pattern's said in words: 早出
+  /// and 残業, else 変更済み.
+  private func timeRow(_ entry: DayEntry, _ time: ShiftTime) -> some View {
+    let change = timeChange(start: entry.start, end: entry.end, standard: time)
+    let moves = [change?.early == true ? "早出" : nil, change?.late == true ? "残業" : nil]
+      .compactMap(\.self).joined(separator: "・")
+    return HStack {
+      VStack(alignment: .leading, spacing: 2) {
+        Text("時間")
+        if change != nil {
+          Text(moves.isEmpty ? "変更済み" : moves)
+            .font(.caption)
+            .foregroundStyle(colors.accentDefault)
+        }
+      }
+      Spacer()
+      clock(entry.start ?? time.start) { setTime(entry, start: $0, standard: time) }
+      Text("–").foregroundStyle(colors.textTertiary)
+      clock(entry.end ?? time.end) { setTime(entry, end: $0, standard: time) }
+    }
+  }
+
+  private func clock(_ time: String, set: @escaping (String) -> Void) -> some View {
+    DatePicker(
+      "", selection: Binding(get: { Self.date(time) }, set: { set(Self.time($0)) }),
+      displayedComponents: .hourAndMinute
+    )
+    .labelsHidden()
+  }
+
+  /// A time kept only where it differs from the pattern's standard one.
+  private func setTime(_ entry: DayEntry, start: String? = nil, end: String? = nil, standard: ShiftTime) {
+    var changed = entry
+    if let start {
+      changed.start = start == standard.start ? nil : start
+    }
+    if let end {
+      changed.end = end == standard.end ? nil : end
+    }
+    onChange(changed)
+  }
+
+  @ViewBuilder private func peopleRows(_ entry: DayEntry) -> some View {
+    let picked = entry.people ?? []
+    DisclosureGroup(isExpanded: $peopleOpen) {
+      FlowLayout(spacing: 8) {
+        ForEach(coworkers) { coworker in
+          let isPicked = picked.contains(coworker.id)
+          Button {
+            var people = picked
+            if isPicked {
+              people.removeAll { $0 == coworker.id }
+            } else {
+              people.append(coworker.id)
+            }
+            var changed = entry
+            changed.people = people
+            onChange(changed)
+          } label: {
+            Label(coworker.name, systemImage: "checkmark")
+              .labelStyle(ChipLabel(showsIcon: isPicked))
+          }
+          .buttonStyle(.bordered)
+          .buttonBorderShape(.capsule)
+          .tint(isPicked ? colors.accentDefault : colors.textSecondary)
+          .accessibilityAddTraits(isPicked ? .isSelected : [])
+        }
+        Button("追加", systemImage: "plus") { addingCoworker = true }
+          .labelStyle(.titleAndIcon)
+          .buttonStyle(.bordered)
+          .buttonBorderShape(.capsule)
+          .tint(colors.textSecondary)
+      }
+      .padding(.vertical, 4)
+    } label: {
+      LabeledContent("一緒に働く人") {
+        Text(names(picked))
+      }
+    }
+  }
+
+  private func names(_ ids: [String]) -> String {
+    let names = ids.compactMap { id in coworkers.first { $0.id == id }?.name }
+    return names.isEmpty ? "なし" : names.joined(separator: "、")
+  }
+
+  /// What would go with the shift. A day with nothing more is cleared at
+  /// once, as one tap brings it back; with more it is asked first.
+  private func lost(_ entry: DayEntry) -> [String] {
+    [
+      entry.start != nil || entry.end != nil ? "時間の変更" : nil,
+      entry.people?.isEmpty == false ? "一緒に働く人" : nil,
+      entry.note?.isEmpty == false ? "メモ" : nil,
+    ].compactMap(\.self)
+  }
+
+  private func keepNote(_ entry: DayEntry) {
+    let kept = note.isEmpty ? nil : note
+    guard kept != entry.note else { return }
+    var changed = entry
+    changed.note = kept
+    onChange(changed)
+  }
+
+  private func hours(_ start: String, _ end: String) -> String {
+    let trim = { (time: String) in time.hasPrefix("0") ? String(time.dropFirst()) : time }
+    return "\(trim(start)) – \(end <= start ? "翌" : "")\(trim(end))"
+  }
+
+  // "HH:MM" and the date pickers' dates, on any one day.
+  private static func date(_ time: String) -> Date {
+    let parts = time.split(separator: ":").compactMap { Int($0) }
+    return Calendar.current.date(
+      bySettingHour: parts.first ?? 0, minute: parts.dropFirst().first ?? 0, second: 0, of: .now)
+      ?? .now
+  }
+
+  private static func time(_ date: Date) -> String {
+    let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
+    return String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0)
+  }
+}
+
+/// A chip's label: its words, with a check when picked.
+private struct ChipLabel: LabelStyle {
+  let showsIcon: Bool
+
+  func makeBody(configuration: Configuration) -> some View {
+    HStack(spacing: 4) {
+      if showsIcon {
+        configuration.icon.imageScale(.small)
+      }
+      configuration.title
+    }
+  }
+}
+
+/// Lays its pieces out in rows, starting a new row when one is full.
+struct FlowLayout: Layout {
+  var spacing: CGFloat = 8
+
+  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    let rows = rows(in: proposal.width ?? .infinity, subviews)
+    let height = rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(rows.count - 1, 0))
+    return CGSize(width: proposal.width ?? rows.map(\.width).max() ?? 0, height: height)
+  }
+
+  func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    var y = bounds.minY
+    for row in rows(in: bounds.width, subviews) {
+      var x = bounds.minX
+      for index in row.indices {
+        let size = subviews[index].sizeThatFits(.unspecified)
+        subviews[index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+        x += size.width + spacing
+      }
+      y += row.height + spacing
+    }
+  }
+
+  private struct Row {
+    var indices: [Int] = []
+    var width: CGFloat = 0
+    var height: CGFloat = 0
+  }
+
+  private func rows(in width: CGFloat, _ subviews: Subviews) -> [Row] {
+    var rows: [Row] = [Row()]
+    for index in subviews.indices {
+      let size = subviews[index].sizeThatFits(.unspecified)
+      if !rows[rows.count - 1].indices.isEmpty, rows[rows.count - 1].width + spacing + size.width > width {
+        rows.append(Row())
+      }
+      var row = rows[rows.count - 1]
+      row.width += (row.indices.isEmpty ? 0 : spacing) + size.width
+      row.height = max(row.height, size.height)
+      row.indices.append(index)
+      rows[rows.count - 1] = row
+    }
+    return rows
+  }
+}

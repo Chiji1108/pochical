@@ -20,6 +20,11 @@ extension OwnValues {
     try ordered(PatternRow.fetchAll(db), by: PatternOrderRow.fetchAll(db))
   }
 
+  /// The person's coworkers in their order, as `ordered(_:by:)` has it.
+  public static func coworkers(in db: Database) throws -> [Coworker] {
+    try ordered(CoworkerRow.fetchAll(db), by: CoworkerOrderRow.fetchAll(db))
+  }
+
   /// The person's repeating orders, in their timeline's order.
   public static func repeatOrders(in db: Database) throws -> [RepeatOrder] {
     try RepeatOrderRow.order(by: \.position).fetchAll(db).compactMap(\.order)
@@ -34,6 +39,22 @@ func ordered(_ rows: [PatternRow], by order: [PatternOrderRow]) -> [Pattern] {
   return rows
     .sorted { (place[$0.id] ?? .max, $0.id) < (place[$1.id] ?? .max, $1.id) }
     .map(\.pattern)
+}
+
+/// Someone the person notes on a day (一緒に働く人): a name, not an app user.
+public struct Coworker: Hashable, Sendable, Identifiable {
+  public let id: String
+  public let name: String
+}
+
+/// The coworkers in the order `order` gives; one it does not name yet comes
+/// after those it does.
+public func ordered(_ rows: [CoworkerRow], by order: [CoworkerOrderRow]) -> [Coworker] {
+  let place = Dictionary(
+    order.map { ($0.coworkerID, $0.position) }, uniquingKeysWith: { first, _ in first })
+  return rows
+    .sorted { (place[$0.id] ?? .max, $0.name) < (place[$1.id] ?? .max, $1.name) }
+    .map { Coworker(id: $0.id, name: $0.name) }
 }
 
 extension DayRow {
