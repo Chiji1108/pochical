@@ -70,11 +70,21 @@
 			);
 			target = C6C3830D307344A900C0C5B8 /* PochicalWidgetsExtension */;
 		};
+		C6C3A0013073A00100C0C5B8 /* Exceptions for "Pochical" folder in "Pochical" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C6C382E1307343AF00C0C5B8 /* Pochical */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C6C382E4307343AF00C0C5B8 /* Pochical */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C6C3A0013073A00100C0C5B8 /* Exceptions for "Pochical" folder in "Pochical" target */,
+			);
 			path = Pochical;
 			sourceTree = "<group>";
 		};
@@ -498,6 +508,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				INFOPLIST_FILE = Pochical/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "ポチカル";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "QRコードや画像を写真に保存するときに使います。";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -535,6 +546,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				INFOPLIST_FILE = Pochical/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "ポチカル";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "QRコードや画像を写真に保存するときに使います。";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
