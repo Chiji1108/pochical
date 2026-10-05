@@ -14,6 +14,7 @@ struct InvitePage: View {
   @State private var link: URL?
   @State private var failed = false
   @State private var confirmingRemake = false
+  @State private var remakeFailed = false
   @State private var copied = false
 
   var body: some View {
@@ -92,6 +93,11 @@ struct InvitePage: View {
     } message: {
       Text("今のリンクとQRコードでは、もう参加できなくなります。今いるメンバーはそのままです。")
     }
+    .alert("招待リンクを作り直せませんでした", isPresented: $remakeFailed) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text("今のリンクはそのまま使えます。通信できる場所で、もう一度お試しください。")
+    }
   }
 
   private func load(remaking: Bool = false) async {
@@ -105,6 +111,7 @@ struct InvitePage: View {
       link = inviteLink(code: code)
     } catch {
       failed = link == nil
+      remakeFailed = remaking
     }
   }
 }
