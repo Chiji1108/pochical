@@ -70,7 +70,7 @@ export function CoworkersPage({
   onBack: () => void;
 }) {
   const [view, setView] = useState<"list" | "sort">("list");
-  const [editingID, setEditing] = useState<string>();
+  const [editingID, setEditingID] = useState<string>();
   const [adding, setAdding] = useState(false);
   const toast = useContext(ToastContext);
   const { list } = coworkers;
@@ -83,15 +83,15 @@ export function CoworkersPage({
         days={daysWith(schedule, editing.id)}
         name={editing.name}
         onBack={() => {
-          setEditing(undefined);
+          setEditingID(undefined);
         }}
         onDelete={() => {
           coworkers.onDelete(editing.id);
-          setEditing(undefined);
+          setEditingID(undefined);
         }}
         onSave={(name) => {
           coworkers.onRename(editing.id, name);
-          setEditing(undefined);
+          setEditingID(undefined);
         }}
         taken={names.filter((name) => name !== editing.name)}
       />
@@ -153,7 +153,7 @@ export function CoworkersPage({
             <ListRow
               key={id}
               onClick={() => {
-                setEditing(id);
+                setEditingID(id);
               }}
               label={name}
               truncate
