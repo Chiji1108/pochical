@@ -11,6 +11,7 @@ How カレンダー, the person's own month, behaves on screen: what each part s
 - The day being entered, or the day opened, is framed in the accent, more strongly than today.
 - A day with a memo has a highlighter stroke under its date, shift or not (spec/shift-patterns.md, A day's memo).
 - Today moves on at midnight while the screen is open.
+- Marks are drawn in the person's スタイル (設定, kept on the device): icons filled or outlined, emoji, or letters on a tile; and for each shape its own options, kept as each was left: the shift's name under its mark, days off on a tint of their color, and days off left blank (休みの見せ方 空白), which come back faint while entering and in a day's week, where they are what is being looked at.
 - The week starts on the day the person sets (設定 > カレンダー, kept on the device). Saturdays and Sundays color the weekdays' heading and holidays their date, in Sunday's red, each unless the person turns it off.
 
 ## ポチポチ入力

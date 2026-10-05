@@ -49,7 +49,6 @@ struct CalendarScreen: View {
   private static let unfoldFlick: CGFloat = 400
   private static let screenEdge: CGFloat = 16
   private var weekStart: Int { settings.device.week.start }
-  private let style = MarkStyle.icon
 
   var body: some View {
     let calendar = OwnCalendar(
@@ -112,7 +111,7 @@ struct CalendarScreen: View {
         VStack(spacing: 0) {
           DayDetail(
             day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
-            coworkers: ordered(coworkerRows, by: coworkerOrder), style: style,
+            coworkers: ordered(coworkerRows, by: coworkerOrder),
             peopleOpen: $peopleOpen,
             onChange: { entry in
               write { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
@@ -298,10 +297,18 @@ struct CalendarScreen: View {
     return day.firstOfMonth
   }
 
+  /// Days off left blank on the month come back faint while entering and
+  /// in a day's week, where they are what is being looked at (休みの見せ方
+  /// 空白).
+  private var offShown: OffShown {
+    guard settings.device.look.options.blankOff else { return .shown }
+    return entering != nil || opened != nil ? .faint : .hidden
+  }
+
   private func pageDays(_ calendar: OwnCalendar) -> PageDays {
     PageDays(
-      today: today, calendar: calendar, style: style, highlightOff: style != .emoji,
-      colorsHolidays: settings.device.week.holiday, selected: entering ?? opened, isEntering: entering != nil,
+      today: today, calendar: calendar, colorsHolidays: settings.device.week.holiday,
+      offShown: offShown, selected: entering ?? opened, isEntering: entering != nil,
       onSelect: { day in
         if pulled { return }
         if entering != nil {
@@ -317,7 +324,7 @@ struct CalendarScreen: View {
     if let day = entering {
       let shown = calendar.shown(from: day, through: day)
       EntryTray(
-        day: day, week: settings.device.week, patterns: calendar.patterns, style: style,
+        day: day, week: settings.device.week, patterns: calendar.patterns,
         canClear: shown[day] != nil,
         canSkip: day != day.daysOfMonth.last,
         onEnter: { shift in
@@ -507,10 +514,10 @@ enum CalendarPage: Hashable {
 struct PageDays {
   let today: Day
   let calendar: OwnCalendar
-  let style: MarkStyle
-  let highlightOff: Bool
   /// Whether holidays' dates take Sunday's red.
   let colorsHolidays: Bool
+  /// How days off show while the person leaves them blank.
+  let offShown: OffShown
   /// The day being entered or opened, framed.
   let selected: Day?
   let isEntering: Bool
@@ -527,8 +534,8 @@ struct PageDays {
           pattern: entry.flatMap { calendar.patternsByID[$0.shift] },
           outside: month.map { day.month != $0.month } ?? false, isToday: day == today,
           isHoliday: Holidays.name(on: day.key, in: "JP") != nil,
-          colorsHoliday: colorsHolidays, style: style,
-          highlightOff: highlightOff, isSelected: day == selected, isEntering: isEntering,
+          colorsHoliday: colorsHolidays, offShown: offShown, isSelected: day == selected,
+          isEntering: isEntering,
           onSelect: onSelect)
       }
     }

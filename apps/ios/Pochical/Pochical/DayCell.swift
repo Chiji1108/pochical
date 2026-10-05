@@ -5,6 +5,7 @@ import SwiftUI
 /// A day of a month's page: its date, and its shift's mark.
 struct DayCell: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.look) private var look
   let day: Day
   let entry: DayEntry?
   /// The day's memo, its own whether it has a shift or not
@@ -18,9 +19,8 @@ struct DayCell: View {
   /// Whether a holiday's date takes Sunday's red (the person's カレンダー
   /// settings).
   var colorsHoliday = true
-  let style: MarkStyle
-  /// Days off on a tint of their own pattern's color.
-  let highlightOff: Bool
+  /// How a day off shows when the person leaves days off blank.
+  var offShown = OffShown.shown
   /// The day being entered or opened, framed in the accent.
   var isSelected = false
   /// While entering, today's frame gives way to the day being entered.
@@ -47,12 +47,20 @@ struct DayCell: View {
   private var cell: some View {
     VStack(spacing: 2) {
       date
-      if let pattern {
+      if let pattern, !(pattern.countsAsOff && offShown == .hidden) {
         ShiftMark(
-          pattern: pattern, style: style, size: 24,
+          pattern: pattern, size: markSize,
           change: timeChange(start: entry?.start, end: entry?.end, standard: pattern.time)
         )
-        .frame(maxHeight: .infinity)
+        .opacity(pattern.countsAsOff && offShown == .faint ? 0.35 : 1)
+        .frame(maxHeight: look.options.names ? nil : .infinity)
+        if look.options.names {
+          Text(dayName(pattern.name))
+            .font(.system(size: 9))
+            .foregroundStyle(colors.textSecondary)
+            .lineLimit(1)
+            .frame(maxHeight: .infinity, alignment: .top)
+        }
       } else {
         Spacer(minLength: 0)
       }
@@ -61,7 +69,7 @@ struct DayCell: View {
     .frame(maxWidth: .infinity)
     .frame(height: Self.height)
     .background {
-      if highlightOff, let pattern, pattern.countsAsOff {
+      if look.options.highlight, offShown == .shown, let pattern, pattern.countsAsOff {
         RoundedRectangle(cornerRadius: Radius.md).fill(colors.mark(pattern.color).tint)
       }
     }
@@ -97,6 +105,17 @@ struct DayCell: View {
       .frame(height: 14)
   }
 
+  /// Letters stand on a tile a little larger; a name under the mark takes
+  /// some of the room.
+  private var markSize: CGFloat {
+    switch (look.style, look.options.names) {
+    case (.badge, false): 26
+    case (.badge, true): 22
+    case (_, false): 24
+    case (_, true): 21
+    }
+  }
+
   private var dateColor: Color {
     if isToday {
       return colors.accentDefault
@@ -130,4 +149,20 @@ struct PressedScale: ButtonStyle {
       .scaleEffect(configuration.isPressed ? 0.94 : 1)
       .animation(Springs.quick, value: configuration.isPressed)
   }
+}
+
+/// How days off show on the person's month while they leave them blank
+/// (休みの見せ方 空白): left out, or faint while entering and in a day's
+/// week; shown as they are otherwise.
+enum OffShown {
+  case shown
+  case faint
+  case hidden
+}
+
+/// A shift's name as a day has room for: up to `TextFields.dayNameLength`
+/// characters, else cut short with …, as /design's dayName.
+func dayName(_ name: String) -> String {
+  let length = TextFields.dayNameLength
+  return name.count <= length ? name : "\(name.prefix(length - 1))…"
 }

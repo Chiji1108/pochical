@@ -3,7 +3,8 @@ import PochicalKit
 import SwiftUI
 
 /// 設定: what the person sets, sorted as /design's settings are. 表示
-/// holds the calendar's frame for now; the rest comes as it is built.
+/// holds スタイル and the calendar's frame for now; the rest comes as it is
+/// built.
 struct SettingsScreen: View {
   @Environment(Settings.self) private var settings
 
@@ -11,6 +12,11 @@ struct SettingsScreen: View {
     NavigationStack {
       List {
         Section("表示") {
+          NavigationLink {
+            StyleSettings()
+          } label: {
+            LabeledContent("スタイル", value: styleName)
+          }
           NavigationLink {
             CalendarSettings()
           } label: {
@@ -20,6 +26,14 @@ struct SettingsScreen: View {
         }
       }
       .navigationTitle("設定")
+    }
+  }
+
+  private var styleName: String {
+    switch settings.device.look.style {
+    case .icon: settings.device.look.fill ? "塗り" : "線"
+    case .emoji: "絵文字"
+    case .badge: "文字"
     }
   }
 }
