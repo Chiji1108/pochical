@@ -210,7 +210,7 @@ function dayDetails(
 export function DayCell({
   date,
   entry,
-  note = entry?.note,
+  note: ownNote,
   outside,
   editing,
   active,
@@ -258,6 +258,7 @@ export function DayCell({
   // stroke as in a paper diary, apart from the shift's 早出 and 残業
   // corners, and only on the person's own calendar. Other time
   // changes, a later start or an earlier end, show when the day is opened.
+  const note = ownNote ?? entry?.note;
   const noted = !plain && Boolean(note);
   // The picked frame wins over today's.
   const cellClass = cx(

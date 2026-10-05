@@ -1,6 +1,6 @@
 import { COWORKERS_MAX, textLimits } from "@pochical/design/limits";
 import { Check, ChevronRight, CircleX, Plus } from "lucide-react";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useEffectEvent, useState } from "react";
 import { css, cx } from "styled-system/css";
 
 import { keepDetails, timeChangeOf, timeRange } from "../lib/design-days";
@@ -206,15 +206,12 @@ export function DayDetail({
   const [draft, setDraft] = useState(note ?? "");
   // Kept too when the detail closes or the page is hidden, as an app goes
   // to the background, with the field still in focus.
-  const unsaved = useRef({ draft, note, onNoteChange });
-  unsaved.current = { draft, note, onNoteChange };
+  const keep = useEffectEvent(() => {
+    if (draft !== (note ?? "")) {
+      onNoteChange(draft);
+    }
+  });
   useEffect(() => {
-    const keep = () => {
-      const latest = unsaved.current;
-      if (latest.draft !== (latest.note ?? "")) {
-        latest.onNoteChange(latest.draft);
-      }
-    };
     const keepWhenHidden = () => {
       if (document.visibilityState === "hidden") {
         keep();
