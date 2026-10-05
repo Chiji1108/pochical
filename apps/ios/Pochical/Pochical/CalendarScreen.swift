@@ -22,10 +22,21 @@ struct CalendarScreen: View {
   @State private var opened: Day?
   /// Whether a day's 一緒に働く人 is unfolded, kept from day to day.
   @State private var peopleOpen = false
+  /// The week swiped to beside an opened one, until the swipe settles and
+  /// opens the same weekday there.
+  @State private var swipedWeek: Day?
+  /// How far a pull down has unfolded the month around an opened week, 0
+  /// to 1, while the finger is on it.
+  @State private var pull: CGFloat = 0
 
   /// How far the pages reach either side of this month. Only the pages in
   /// view are drawn, so they can reach far without a cost.
   private static let monthsAround = 120
+  /// Past this share of the way, a pull let go unfolds the month; short of
+  /// it, the week folds back. A flick faster than `unfoldFlick`, in points
+  /// a second, goes the way it is flicked wherever it is let go.
+  private static let unfoldShare: CGFloat = 1 / 3
+  private static let unfoldFlick: CGFloat = 400
   private static let screenEdge: CGFloat = 16
   private let weekStart = 0
   private let style = MarkStyle.icon
@@ -42,19 +53,17 @@ struct CalendarScreen: View {
       // sight rather than being cut off inside them.
       ScrollView(.horizontal) {
         LazyHStack(spacing: 0) {
-          ForEach(months, id: \.self) { month in
-            MonthPage(
-              month: month, today: today, calendar: calendar, weekStart: weekStart,
-              style: style, highlightOff: style != .emoji, selected: entering ?? opened,
-              openedWeek: opened, isEntering: entering != nil,
-              onSelect: { day in
-                if entering != nil {
-                  entering = day
-                } else {
-                  withAnimation(Springs.standard) { opened = day }
-                }
+          ForEach(pages, id: \.self) { page in
+            Group {
+              switch page {
+              case .month(let month):
+                MonthPage(
+                  month: month, weekStart: weekStart, days: pageDays(calendar),
+                  openedWeek: opened, fold: fold)
+              case .week(let week):
+                WeekPage(week: week, days: pageDays(calendar))
               }
-            )
+            }
             .padding(.horizontal, Self.screenEdge)
             .containerRelativeFrame(.horizontal)
           }
@@ -62,15 +71,20 @@ struct CalendarScreen: View {
         .scrollTargetLayout()
       }
       .scrollTargetBehavior(.paging)
-      .scrollPosition(id: $shownMonth)
+      .scrollPosition(id: shownPage)
       .scrollIndicators(.hidden)
-      // An opened day's week stays put under its detail.
-      .scrollDisabled(opened != nil)
-      .frame(height: opened == nil ? MonthPage.height : DayCell.height)
-      // While a day is open, a swipe moves a week and a pull down unfolds
-      // the month (spec/calendar.md, A day's detail).
+      // A week swiped to opens once the swipe settles, so the pages are
+      // not changed under the finger.
+      .onScrollPhaseChange { _, phase in
+        if phase == .idle { openSwipedWeek() }
+      }
+      .frame(height: DayCell.height + (MonthPage.height - DayCell.height) * (1 - fold))
+      // While a day is open, a pull down unfolds the month, following the
+      // finger (spec/calendar.md, A day's detail).
       .simultaneousGesture(
-        DragGesture(minimumDistance: 24).onEnded(weekDragEnded),
+        DragGesture(minimumDistance: 12)
+          .onChanged(pullChanged)
+          .onEnded(pullEnded),
         including: opened == nil ? .none : .all)
       if let day = opened {
         let entry = calendar.shown(from: day, through: day)[day]
@@ -102,6 +116,7 @@ struct CalendarScreen: View {
           .id(day)
         }
         .padding(.top, 12)
+        .opacity(max(1 - 2 * pull, 0))
         // It shows as the month folds into the week, and goes at once as
         // the month unfolds, as /design's does.
         .transition(
@@ -122,13 +137,8 @@ struct CalendarScreen: View {
         entering = firstBlankDay(in: month, days: monthDays(month, currentCalendar))
       }
     }
-    // The month stays while the opened day's week is one of its rows, as
-    // each holds a day of it; a week off it shows its own month's page.
     .onChange(of: opened) { _, day in
-      guard let day, let month = shownMonth else { return }
-      if !monthWeeks(month, weekStart: weekStart).contains(where: { $0.contains(day) }) {
-        shownMonth = day.firstOfMonth
-      }
+      if let day { shownMonth = monthShowing(day) }
     }
     .onChange(of: entering) { _, day in
       if let day, day.firstOfMonth != shownMonth {
@@ -174,20 +184,98 @@ struct CalendarScreen: View {
     day.adding(days: -(((day.weekday - weekStart) % 7 + 7) % 7))
   }
 
-  private func weekDragEnded(_ drag: DragGesture.Value) {
+  /// How far the month is folded into the opened week, 0 to 1: moved by
+  /// opening and closing the week, or by a finger pulling it open.
+  private var fold: CGFloat {
+    opened == nil ? 0 : 1 - pull
+  }
+
+  /// How far a pull unfolds the month: the month's foot comes down with
+  /// the finger.
+  private static let unfoldDistance = MonthPage.height - DayCell.height
+
+  private func pullChanged(_ drag: DragGesture.Value) {
     let (dx, dy) = (drag.translation.width, drag.translation.height)
-    guard let day = opened else { return }
-    if abs(dx) > abs(dy), abs(dx) > 50 {
-      // Not animated: the sheet would slide up or down a row for a swipe
-      // sideways.
-      opened = day.adding(days: dx < 0 ? 7 : -7)
-    } else if dy > 60 {
-      withAnimation(Springs.standard) { opened = nil }
+    // A pull starts going down, not sideways, which is the week's swipe.
+    guard pull > 0 || dy > abs(dx) else { return }
+    pull = min(max(dy / Self.unfoldDistance, 0), 1)
+  }
+
+  private func pullEnded(_ drag: DragGesture.Value) {
+    guard pull > 0 else { return }
+    let speed = drag.velocity.height
+    let unfolds = abs(speed) > Self.unfoldFlick ? speed > 0 : pull > Self.unfoldShare
+    withAnimation(Springs.standard) {
+      if unfolds { opened = nil }
+      pull = 0
     }
   }
 
-  private var months: [Day] {
-    (-Self.monthsAround...Self.monthsAround).map { thisMonth.addingMonths($0) }
+  /// The pages: the months, or with a day opened its month, folded into
+  /// the week, between the weeks before and after it.
+  private var pages: [CalendarPage] {
+    guard let day = opened, let month = shownMonth else {
+      return (-Self.monthsAround...Self.monthsAround).map { .month(thisMonth.addingMonths($0)) }
+    }
+    // The month keeps its place among the pages, so the scroll view stays
+    // on it as the weeks come in and go.
+    let place = (month.year - thisMonth.year) * 12 + month.month - thisMonth.month
+    let week = weekOf(day)
+    return (-Self.monthsAround...Self.monthsAround).map {
+      $0 == place ? .month(month) : .week(week.adding(days: 7 * ($0 - place)))
+    }
+  }
+
+  /// The page in view: the month, or the week being swiped to.
+  private var shownPage: Binding<CalendarPage?> {
+    Binding(
+      get: { swipedWeek.map(CalendarPage.week) ?? shownMonth.map(CalendarPage.month) },
+      set: { page in
+        switch page {
+        case .month(let month):
+          shownMonth = month
+          swipedWeek = nil
+        case .week(let week):
+          swipedWeek = week
+        case nil:
+          break
+        }
+      })
+  }
+
+  /// Opens the same weekday in the week swiped to, which becomes the month's
+  /// folded week in place of the page beside it, drawn the same.
+  private func openSwipedWeek() {
+    guard let week = swipedWeek, let day = opened else { return }
+    let next = day.adding(days: week.days(since: weekOf(day)))
+    // All at once, so the pages never stand on the month left behind.
+    opened = next
+    shownMonth = monthShowing(next)
+    swipedWeek = nil
+  }
+
+  /// The month shown with `day` opened: the one shown while the day's week
+  /// is one of its rows, as each holds a day of it, else the day's own.
+  private func monthShowing(_ day: Day) -> Day {
+    if let month = shownMonth,
+      monthWeeks(month, weekStart: weekStart).contains(where: { $0.contains(day) })
+    {
+      return month
+    }
+    return day.firstOfMonth
+  }
+
+  private func pageDays(_ calendar: OwnCalendar) -> PageDays {
+    PageDays(
+      today: today, calendar: calendar, style: style, highlightOff: style != .emoji,
+      selected: entering ?? opened, isEntering: entering != nil,
+      onSelect: { day in
+        if entering != nil {
+          entering = day
+        } else {
+          withAnimation(Springs.standard) { opened = day }
+        }
+      })
   }
 
   /// ポチポチ入力 to start entering, or its tray while entering.
@@ -348,28 +436,59 @@ struct WeekdayRow: View {
   }
 }
 
+/// A page of the calendar: a month, or beside an opened week the weeks
+/// before and after it.
+enum CalendarPage: Hashable {
+  case month(Day)
+  /// A week, by its first day.
+  case week(Day)
+}
+
+/// What a page's days are drawn with.
+struct PageDays {
+  let today: Day
+  let calendar: OwnCalendar
+  let style: MarkStyle
+  let highlightOff: Bool
+  /// The day being entered or opened, framed.
+  let selected: Day?
+  let isEntering: Bool
+  /// Picks a day: to enter while entering, else to open.
+  let onSelect: ((Day) -> Void)?
+
+  /// A week's row, its days of other months faded when `month` is given.
+  func row(_ week: [Day], shown: [Day: DayEntry], fadingOutside month: Day?) -> some View {
+    HStack(spacing: 4) {
+      ForEach(week, id: \.self) { day in
+        let entry = shown[day]
+        DayCell(
+          day: day, entry: entry, note: calendar.note(on: day),
+          pattern: entry.flatMap { calendar.patternsByID[$0.shift] },
+          outside: month.map { day.month != $0.month } ?? false, isToday: day == today,
+          isHoliday: Holidays.name(on: day.key, in: "JP") != nil, style: style,
+          highlightOff: highlightOff, isSelected: day == selected, isEntering: isEntering,
+          onSelect: onSelect)
+      }
+    }
+  }
+}
+
 /// A month's page: its weeks, a row each, with room kept for six, the most
 /// a month spans, so what is under it stays put as the months turn.
 ///
 /// A day opened folds the page into its week, as the Calendar apps do and
 /// /design's FoldingGrid: the days lie on one sheet, which moves up to
 /// bring the week to the top while the other weeks fade on it, and the
-/// page's height follows. As one thing moving under one animation, the
-/// week can't move apart from the rest of the month.
+/// page's height follows. All of it follows `fold`, so a finger pulling the
+/// week open moves it as the animations do.
 struct MonthPage: View {
   let month: Day
-  let today: Day
-  let calendar: OwnCalendar
   let weekStart: Int
-  let style: MarkStyle
-  let highlightOff: Bool
-  /// The day being entered, framed.
-  let selected: Day?
+  let days: PageDays
   /// The day opened, whose week the page folds into.
   let openedWeek: Day?
-  let isEntering: Bool
-  /// Picks a day: to enter while entering, else to open.
-  let onSelect: ((Day) -> Void)?
+  /// How far the page is folded into that week, 0 to 1.
+  let fold: CGFloat
 
   private static let rowGap: CGFloat = 4
   private static let rowStep = DayCell.height + rowGap
@@ -377,33 +496,32 @@ struct MonthPage: View {
 
   var body: some View {
     let weeks = monthWeeks(month, weekStart: weekStart)
-    let folded = openedWeek != nil
-    // The pages beside the opened one fold into their first week, out of
-    // sight while the opened one stays put.
     let row = openedWeek.flatMap { day in weeks.firstIndex { $0.contains(day) } } ?? 0
-    let shown = calendar.shown(from: weeks.first![0], through: weeks.last![6])
+    let shown = days.calendar.shown(from: weeks.first![0], through: weeks.last![6])
     VStack(spacing: Self.rowGap) {
       ForEach(Array(weeks.enumerated()), id: \.element.first) { index, week in
-        let away = folded && index != row
-        HStack(spacing: 4) {
-          ForEach(week, id: \.self) { day in
-            let entry = shown[day]
-            DayCell(
-              day: day, entry: entry, note: calendar.note(on: day),
-              pattern: entry.flatMap { calendar.patternsByID[$0.shift] },
-              outside: !folded && day.month != month.month, isToday: day == today,
-              isHoliday: Holidays.name(on: day.key, in: "JP") != nil, style: style,
-              highlightOff: highlightOff, isSelected: day == selected, isEntering: isEntering,
-              onSelect: onSelect)
-          }
-        }
         // Folded away, the rest of the month is out of reach.
-        .opacity(away ? 0 : 1)
-        .allowsHitTesting(!away)
-        .accessibilityHidden(away)
+        let away = openedWeek != nil && index != row
+        days.row(week, shown: shown, fadingOutside: openedWeek == nil ? month : nil)
+          .opacity(away ? 1 - fold : 1)
+          .allowsHitTesting(!away)
+          .accessibilityHidden(away)
       }
     }
-    .offset(y: folded ? -CGFloat(row) * Self.rowStep : 0)
-    .frame(height: folded ? DayCell.height : Self.height, alignment: .top)
+    .offset(y: -CGFloat(row) * Self.rowStep * fold)
+    .frame(height: DayCell.height + (Self.height - DayCell.height) * (1 - fold), alignment: .top)
+  }
+}
+
+/// A week beside an opened one, drawn as the month folded into it is, so
+/// it can take that page's place once swiped to.
+struct WeekPage: View {
+  let week: Day
+  let days: PageDays
+
+  var body: some View {
+    let week = (0..<7).map { self.week.adding(days: $0) }
+    days.row(week, shown: days.calendar.shown(from: week[0], through: week[6]), fadingOutside: nil)
+      .frame(height: DayCell.height, alignment: .top)
   }
 }
