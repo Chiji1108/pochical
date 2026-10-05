@@ -254,7 +254,8 @@ struct DayDetail: View {
   /// The memo, on any day, with a button that clears it at once while it
   /// holds words, as a one-line field's does.
   private var memoField: some View {
-    HStack(alignment: .top) {
+    // Beside the first line, one line or many.
+    HStack(alignment: .firstTextBaseline) {
       TextField("メモ", text: $draft, axis: .vertical)
         .focused($writingNote)
         .onChange(of: draft) { _, text in
