@@ -27,8 +27,12 @@ struct GroupsScreen: View {
             GroupRail(groups: groups, openID: open.id) { openID = $0 } onNew: {
               path.append(.newGroup)
             }
-            GroupHub(group: open) { path.append(.invite(open)) }
-              .padding(.horizontal, 16)
+            GroupHub(group: open) {
+              path.append(.invite(open))
+            } onShifts: { day in
+              path.append(.shifts(open, day: day))
+            }
+            .padding(.horizontal, 16)
           }
         } else {
           NoGroups { path.append(.newGroup) }
@@ -45,6 +49,8 @@ struct GroupsScreen: View {
           }
         case .invite(let group):
           InvitePage(group: group)
+        case .shifts(let group, let day):
+          GroupShiftsPage(group: group, day: day)
         }
       }
     }
@@ -54,6 +60,8 @@ struct GroupsScreen: View {
 enum GroupRoute: Hashable {
   case newGroup
   case invite(GroupRow)
+  /// Everyone's shifts by the month, on a day when one is given.
+  case shifts(GroupRow, day: Day?)
 }
 
 /// No group yet: what sharing shifts is for, then 作成 (/design's
@@ -179,16 +187,33 @@ private struct GroupHub: View {
   @Fetch private var members: [GroupMember] = []
   let group: GroupRow
   let onInvite: () -> Void
+  /// Opens everyone's shifts by the month, on a day when one is given.
+  let onShifts: (Day?) -> Void
 
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 20) {
         heading
         VStack(alignment: .leading, spacing: 8) {
-          Text("シフト")
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(colors.textTertiary)
-          MemberWeek(members: members)
+          HStack {
+            Text("シフト")
+              .font(.subheadline.weight(.semibold))
+              .foregroundStyle(colors.textTertiary)
+              .accessibilityAddTraits(.isHeader)
+            Spacer()
+            Button {
+              onShifts(nil)
+            } label: {
+              HStack(spacing: 2) {
+                Text("月で見る")
+                Image(systemName: "chevron.right").imageScale(.small)
+              }
+              .font(.subheadline)
+              .foregroundStyle(colors.accentDefault)
+            }
+            .buttonStyle(.plain)
+          }
+          MemberWeek(members: members, onOpen: onShifts)
         }
       }
       .padding(.bottom, 24)
@@ -245,7 +270,7 @@ private struct SocketKey: Hashable {
 
 /// Everyone in a group with their shifts, read again as the group's
 /// values change.
-private struct GroupMembersRequest: FetchKeyRequest, Hashable {
+struct GroupMembersRequest: FetchKeyRequest, Hashable {
   let groupID: String
   let from: Day
   let through: Day
