@@ -2,15 +2,19 @@ import {
   ChevronRight,
   CircleAlert,
   Copy,
+  Download,
   ImageIcon,
   QrCode,
   Send,
+  Share,
   X,
 } from "lucide-react";
 import { useContext, useState } from "react";
 import { css, cx } from "styled-system/css";
 
 import { useUser } from "../lib/design-user-store";
+import { useLongPress } from "./design-chat-actions";
+import { PhonePopover, PopoverMenuItem } from "./design-chat-popover";
 import { withNotice } from "./design-group-data";
 import type {
   Group,
@@ -568,7 +572,7 @@ export function InvitePage({
     <>
       <PageHeader back={group.name} onBack={onBack} title="メンバーを招待" />
       <div className={hub.qr}>
-        <QrCode aria-hidden="true" size={132} strokeWidth={1.2} />
+        <InviteQr />
         <small className={hub.qrNote}>
           この画面を相手に読み取ってもらいます
         </small>
@@ -609,5 +613,73 @@ export function InvitePage({
         />
       )}
     </>
+  );
+}
+
+const inviteQr = css({
+  WebkitTouchCallout: "none",
+  bg: "transparent",
+  border: 0,
+  borderRadius: "md",
+  color: "inherit",
+  display: "grid",
+  padding: 0,
+  placeItems: "center",
+});
+
+// The invitation's QR code. A long press (or a right click) shares or saves
+// it, as the platforms' own images do; Enter or Space opens the same menu.
+// A tap does nothing: it is there to be read off the screen.
+function InviteQr() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const toast = useContext(ToastContext);
+  const press = useLongPress(() => {
+    setMenuOpen(true);
+  });
+  return (
+    <PhonePopover
+      anchor={
+        <button
+          aria-label="招待のQRコード。長押しで共有と保存"
+          className={inviteQr}
+          onClick={(event) => {
+            if (press.consumeLongPress()) {
+              return;
+            }
+            // A click with no pointer is Enter or Space.
+            if (event.detail === 0) {
+              setMenuOpen(true);
+            }
+          }}
+          type="button"
+          {...press.handlers}
+        >
+          <QrCode aria-hidden="true" size={132} strokeWidth={1.2} />
+        </button>
+      }
+      label="QRコード"
+      onOpenChange={setMenuOpen}
+      open={menuOpen}
+      positioning={{ gutter: 4, placement: "bottom" }}
+    >
+      <PopoverMenuItem
+        icon={<Share aria-hidden="true" size={18} />}
+        onClick={() => {
+          setMenuOpen(false);
+          toast("LINEなどに送れるメニューが開きます（見本）");
+        }}
+      >
+        共有
+      </PopoverMenuItem>
+      <PopoverMenuItem
+        icon={<Download aria-hidden="true" size={18} />}
+        onClick={() => {
+          setMenuOpen(false);
+          toast("写真に保存しました");
+        }}
+      >
+        写真に保存
+      </PopoverMenuItem>
+    </PhonePopover>
   );
 }
