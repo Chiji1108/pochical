@@ -32,12 +32,13 @@ extension OwnValues {
 
 extension DayRow {
   var ownDay: OwnDay {
-    OwnDay(shift: pattern, start: start, end: end, note: note, people: people.map(Self.ids))
+    OwnDay(shift: pattern, start: start, end: end, note: note, people: people.map(ids))
   }
+}
 
-  static func ids(_ joined: String) -> [String] {
-    joined.split(separator: " ").map(String.init)
-  }
+/// Ids as the wire joins them, separated by spaces.
+private func ids(_ joined: String) -> [String] {
+  joined.split(separator: " ").map(String.init)
 }
 
 extension PatternRow {
@@ -56,7 +57,7 @@ extension RepeatOrderRow {
       return nil
     }
     return RepeatOrder(
-      sequence: DayRow.ids(sequence), start: start, anchor: anchor.flatMap(Day.init),
+      sequence: ids(sequence), start: start, anchor: anchor.flatMap(Day.init),
       holidaysOff: holidaysOff, holidayShift: holidayShift, holidayCountry: holidayCountry)
   }
 }
