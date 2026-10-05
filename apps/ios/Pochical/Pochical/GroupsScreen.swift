@@ -4,6 +4,8 @@ import SQLiteData
 import SwiftUI
 
 extension EnvironmentValues {
+  /// The signed-in user, whom the calls and sockets go as.
+  @Entry var account = Account()
   /// The server's GroupService, as the signed-in user.
   @Entry var groupCalls = GroupCalls(account: Account())
 }
@@ -164,14 +166,55 @@ private struct GroupMark: View {
   }
 }
 
-/// The open group: its mark and name, and 招待 (/design's GroupHub). This
-/// week of everyone's shifts and the chats come as they are built.
+/// The open group: its mark and name, 招待, and this week of everyone's
+/// shifts (/design's GroupHub); the chats come as they are built. The
+/// group's socket is open while it is on screen and the app in the
+/// foreground (spec/sync-protocol.md, Sockets).
 private struct GroupHub: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.account) private var account
+  @Environment(\.scenePhase) private var scenePhase
+  @Dependency(\.defaultDatabase) private var database
+  @Environment(Settings.self) private var settings
+  @Fetch private var members: [GroupMember] = []
   let group: GroupRow
   let onInvite: () -> Void
 
   var body: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 20) {
+        heading
+        VStack(alignment: .leading, spacing: 8) {
+          Text("シフト")
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(colors.textTertiary)
+          MemberWeek(members: members)
+        }
+      }
+      .padding(.bottom, 24)
+    }
+    .scrollIndicators(.hidden)
+    .task(id: request) {
+      try? await $members.load(request)
+    }
+    .task(id: SocketKey(groupID: group.id, active: scenePhase == .active)) {
+      guard scenePhase == .active else { return }
+      let socket = SyncClient(account: account, database: database, peer: .group(group.id))
+      await socket.start()
+      while !Task.isCancelled {
+        try? await Task.sleep(for: .seconds(3600))
+      }
+      await socket.stop()
+    }
+  }
+
+  /// The group's members with their days of this week.
+  private var request: GroupMembersRequest {
+    let week = thisWeek(start: settings.device.week.start)
+    return GroupMembersRequest(groupID: group.id, from: week[0], through: week[6])
+  }
+
+  private var heading: some View {
     HStack(spacing: 8) {
       Text(group.emoji)
         .font(.system(size: 16))
@@ -189,6 +232,23 @@ private struct GroupHub: View {
         .foregroundStyle(colors.textPrimary)
     }
     .padding(.top, 4)
-    .frame(maxHeight: .infinity, alignment: .top)
+  }
+}
+
+/// The group a socket is for, and whether the app is in the foreground.
+private struct SocketKey: Hashable {
+  let groupID: String
+  let active: Bool
+}
+
+/// Everyone in a group with their shifts, read again as the group's
+/// values change.
+private struct GroupMembersRequest: FetchKeyRequest, Hashable {
+  let groupID: String
+  let from: Day
+  let through: Day
+
+  func fetch(_ db: Database) throws -> [GroupMember] {
+    try GroupSync.members(of: groupID, from: from, through: through, in: db)
   }
 }

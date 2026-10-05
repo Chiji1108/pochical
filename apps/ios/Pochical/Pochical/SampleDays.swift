@@ -1,4 +1,5 @@
 #if DEBUG
+  import Foundation
   import PochicalKit
   import PochicalProto
   import SQLiteData
@@ -14,6 +15,12 @@
       try database.write { db in
         guard try PatternRow.fetchCount(db) == 0 else {
           return
+        }
+        // Entered as the person would, so they reach the server and the
+        // person's groups like anything else they enter.
+        let now = Int64(Date.now.timeIntervalSince1970 * 1000)
+        func enter(_ change: Pochical_V1_Change) throws {
+          try OwnValues.edit(change, opID: UUID().uuidString.lowercased(), in: db)
         }
         let patterns: [(String, String, String, String, String, UInt32, (String, String)?, Bool, String?)] = [
           ("day", "日勤", "☀️", "日", "sun", 1, ("09:00", "18:00"), false, nil),
@@ -39,15 +46,17 @@
           var value = Pochical_V1_PatternValue()
           value.id = id
           value.pattern = pattern
+          value.hlc = try OwnValues.nextClock(now: now, in: db)
           var change = Pochical_V1_Change()
           change.pattern = value
-          try OwnValues.take(change, in: db)
+          try enter(change)
         }
         var order = Pochical_V1_PatternOrder()
         order.ids = patterns.map(\.0)
+        order.hlc = try OwnValues.nextClock(now: now, in: db)
         var change = Pochical_V1_Change()
         change.patternOrder = order
-        try OwnValues.take(change, in: db)
+        try enter(change)
 
         var repeatOrder = Pochical_V1_RepeatOrder()
         repeatOrder.start = Day.today.firstOfMonth.addingMonths(-1).key
@@ -57,9 +66,10 @@
         repeatOrder.holidayCountry = "JP"
         var orders = Pochical_V1_RepeatOrders()
         orders.orders = [repeatOrder]
+        orders.hlc = try OwnValues.nextClock(now: now, in: db)
         change = Pochical_V1_Change()
         change.repeatOrders = orders
-        try OwnValues.take(change, in: db)
+        try enter(change)
 
         let first = Day.today.firstOfMonth
         for (offset, field, value) in [
@@ -70,9 +80,10 @@
           day.date = first.adding(days: offset).key
           day.field = field
           day.value = value
+          day.hlc = try OwnValues.nextClock(now: now, in: db)
           change = Pochical_V1_Change()
           change.day = day
-          try OwnValues.take(change, in: db)
+          try enter(change)
         }
       }
     }

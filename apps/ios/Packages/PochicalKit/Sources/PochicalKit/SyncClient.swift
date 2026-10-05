@@ -6,15 +6,23 @@ import PochicalDesign
 import PochicalProto
 import SQLiteData
 
-/// The socket to the user's own DO (spec/sync-protocol.md, Sockets): open
-/// while the app is in the foreground, it says Hello with the device's
-/// cursor, corrects the device's time by Welcome, takes the catch-up and
-/// every change after it into the database, and sends the outbox's edits
-/// as they come, which the server's Acked then ends (Outbox). It keeps the
-/// socket alive and reconnects after a random wait that doubles with each
-/// failed try, at once when the network comes back; never after a 401 or
-/// an update the server asks for.
+/// A socket to one of the server's DOs (spec/sync-protocol.md, Sockets).
+/// The user's own, open while the app is in the foreground, says Hello
+/// with the device's cursor, corrects the device's time by Welcome, takes
+/// the catch-up and every change after it into the database, and sends the
+/// outbox's edits as they come, which the server's Acked then ends
+/// (Outbox). A group's, open while the group is on screen, takes the
+/// group's values the same way and sends nothing. Each keeps its socket
+/// alive and reconnects after a random wait that doubles with each failed
+/// try, at once when the network comes back; never after a 401 or an
+/// update the server asks for.
 public actor SyncClient {
+  /// Whose DO the socket reaches.
+  public enum Peer: Sendable, Equatable {
+    case user
+    case group(String)
+  }
+
   /// Why it stopped trying, for good until the app is signed in again or
   /// updated.
   public enum Stop: Error, Sendable {
@@ -31,6 +39,7 @@ public actor SyncClient {
 
   private let account: Account
   private let database: any DatabaseWriter
+  private let peer: Peer
   private let socketURL: URL
   private let session = URLSession(configuration: .default)
   private let paths = NWPathMonitor()
@@ -52,13 +61,25 @@ public actor SyncClient {
   private var finishing: Task<Void, Never>?
   public private(set) var stopped: Stop?
 
-  public init(account: Account, database: any DatabaseWriter, server: URL = Server.url) {
+  public init(
+    account: Account, database: any DatabaseWriter, peer: Peer = .user, server: URL = Server.url
+  ) {
     self.account = account
     self.database = database
+    self.peer = peer
     var socket = URLComponents(url: server, resolvingAgainstBaseURL: false)!
     socket.scheme = server.scheme == "https" ? "wss" : "ws"
-    socket.path = "/v1/me/socket"
+    switch peer {
+    case .user: socket.path = "/v1/me/socket"
+    case .group(let groupID): socket.path = "/v1/groups/\(groupID)/socket"
+    }
     socketURL = socket.url!
+  }
+
+  // A group's client goes with its screen; its watch on the network goes
+  // with it.
+  deinit {
+    paths.cancel()
   }
 
   /// Connects, or tries again at once with the count started again, as the
@@ -165,7 +186,12 @@ public actor SyncClient {
     defer { socket.cancel(with: .goingAway, reason: nil) }
     var hello = Pochical_V1_Hello()
     hello.protocolVersion = Self.protocolVersion
-    hello.cursor = try await database.read { try Sync.cursor(in: $0) }
+    hello.cursor = try await database.read { [peer] db in
+      switch peer {
+      case .user: try Sync.cursor(in: db)
+      case .group(let groupID): try GroupSync.cursor(of: groupID, in: db)
+      }
+    }
     var frame = Pochical_V1_ClientFrame()
     frame.hello = hello
     let sentMs = Self.nowMs()
@@ -204,6 +230,8 @@ public actor SyncClient {
     case .welcome(let welcome):
       tries = 0
       connected = true
+      // A group's socket only takes; the user's corrects the time and sends.
+      guard peer == .user else { return }
       let receivedMs = Self.nowMs()
       try await database.write { db in
         try Sync.welcome(
@@ -220,10 +248,20 @@ public actor SyncClient {
         sending = Task { await sendOutbox(socket) }
       }
     case .changes(let changes):
-      try await database.write { db in try Sync.take(changes.changes, in: db) }
+      try await database.write { [peer] db in
+        switch peer {
+        case .user: try Sync.take(changes.changes, in: db)
+        case .group(let groupID): try GroupSync.take(changes.changes, of: groupID, in: db)
+        }
+      }
       Logger.sync.info("Took \(changes.changes.count) changes")
     case .reset:
-      try await database.write { db in try Sync.reset(in: db) }
+      try await database.write { [peer] db in
+        switch peer {
+        case .user: try Sync.reset(in: db)
+        case .group(let groupID): try GroupSync.reset(groupID, in: db)
+        }
+      }
     case .acked(let acked):
       try await database.write { db in try OwnValues.acknowledge(acked.opIds, in: db) }
       Logger.sync.info("\(acked.opIds.count) edits acknowledged")
