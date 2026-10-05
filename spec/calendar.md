@@ -21,7 +21,7 @@ How カレンダー, the person's own month, behaves on screen: what each part s
 
 ## A day's detail
 
-- Tapping a day, while not entering, opens it: the month folds to its week, the day framed, and the day's detail shows under it.
+- Tapping a day, while not entering, opens it: the month folds to its week, the day framed, and the day's detail shows under it. The month folds as one sheet, as the Calendar apps' does: it moves up to bring the week to the top while its other weeks fade, and unfolds back the same way, the detail going at once. The month shown stays while the week is one of its rows, a faded day's too.
 - Another day of that week can be tapped, and ‹ and › beside the day's date open the day before and after, past a week's end too, so days can be gone through one after another. Swiping moves a week, opening the same weekday a week on or back; 今週 is offered while another week is open. Pulling the week down unfolds the month again, as × in the heading does.
 - シフト is picked from the person's patterns. Picking another keeps the day's memo and people, as entering does. A day with no shift shows なし.
 - 時間 shows for a pattern with hours: the day's own start and end, each kept only where it differs from the pattern's, with the change said in words (早出, 残業, else 変更済み), and 標準に戻す while it differs.
