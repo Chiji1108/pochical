@@ -83,5 +83,6 @@ var migrator: DatabaseMigrator {
     migrator.eraseDatabaseOnSchemaChange = true
   #endif
   migrator.registerOwnValues()
+  migrator.registerGroups()
   return migrator
 }
