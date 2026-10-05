@@ -14,7 +14,7 @@ extension EnvironmentValues {
 struct GroupsScreen: View {
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
   /// The group open beside the rail, the first until one is picked.
-  @State private var openID: String?
+  @Binding var openID: String?
   @State private var path: [GroupRoute] = []
 
   var body: some View {

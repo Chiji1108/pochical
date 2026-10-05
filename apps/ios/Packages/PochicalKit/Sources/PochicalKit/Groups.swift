@@ -54,8 +54,8 @@ enum Groups {
 /// The server's GroupService (proto/pochical/v1/group.proto), called as
 /// the signed-in user.
 public struct GroupCalls: Sendable {
-  private let account: Account
-  private let client: Pochical_V1_GroupServiceClient
+  let account: Account
+  let client: Pochical_V1_GroupServiceClient
 
   public init(account: Account, server: URL = Server.url) {
     self.account = account
