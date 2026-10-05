@@ -12,35 +12,18 @@ struct StyleSettings: View {
   /// The light or dark the preview and the テーマ cards are seen in, from
   /// the preview's ☀︎ / ☾; the screen's until one is picked.
   @State private var picked: ColorScheme?
-  @FetchAll private var days: [DayRow]
   @FetchAll private var patterns: [PatternRow]
   @FetchAll private var patternOrder: [PatternOrderRow]
-  @FetchAll private var orders: [RepeatOrderRow]
 
   var body: some View {
     @Bindable var settings = settings
-    let calendar = OwnCalendar(
-      days: days, patterns: patterns, patternOrder: patternOrder, orders: orders)
+    let calendar = OwnCalendar(days: [], patterns: patterns, patternOrder: patternOrder, orders: [])
     let work = calendar.patterns.first { !$0.countsAsOff }
     let off = calendar.patterns.first(where: \.countsAsOff)
     let samples = Array(calendar.patterns.prefix(3))
-    let theme = settings.device.theme
-    let shown = Binding { picked ?? colorScheme } set: { picked = $0 }
     Form {
       Section {
-        ThisWeek(calendar: calendar)
-          .shown(in: theme, shown.wrappedValue)
-          // On the preview's top edge, as /design's. A テーマ drawn dark
-          // has no light to switch to: its ☾ stays on.
-          .overlay(alignment: .topLeading) {
-            SchemeSwitch(
-              shown: theme.isAlwaysDark ? .constant(.dark) : shown,
-              disabled: theme.isAlwaysDark
-            )
-            .offset(x: 12, y: -10)
-          }
-          // Room for the switch over the edge.
-          .padding(.top, 10)
+        StylePreview(picked: $picked)
       }
       .settingsOnPage()
       Section {
@@ -62,7 +45,7 @@ struct StyleSettings: View {
         Text("グループの人にも、この見た目で表示されます。")
       }
       Section("テーマ") {
-        ThemeChoices(samples: samples, scheme: shown.wrappedValue)
+        ThemeChoices(samples: samples, scheme: picked ?? colorScheme)
           .settingsOnPage()
       }
       // Emoji keep their own colors, so シフトの色 would change nothing.
@@ -249,36 +232,6 @@ private struct Choices<Option: Hashable, Sample: View>: View {
     }
     .padding(4)
     .background(colors.fillTertiary, in: Capsule())
-  }
-}
-
-/// This week and the next of the person's month in the look being set, on
-/// a card as /design's preview is.
-private struct ThisWeek: View {
-  @Environment(Settings.self) private var settings
-  @Environment(\.themeColors) private var colors
-  let calendar: OwnCalendar
-
-  var body: some View {
-    let today = Day.today
-    let week = settings.device.week
-    let first = today.adding(days: -(((today.weekday - week.start) % 7 + 7) % 7))
-    let days = (0..<14).map { first.adding(days: $0) }
-    let shown = calendar.shown(from: days[0], through: days[13])
-    let pageDays = PageDays(
-      today: today, calendar: calendar, colorsHolidays: week.holiday,
-      offShown: settings.device.look.options.blankOff ? .hidden : .shown, selected: nil,
-      isEntering: false, onSelect: nil)
-    VStack(spacing: 4) {
-      WeekdayRow(week: week)
-      pageDays.row(Array(days[0..<7]), shown: shown, fadingOutside: nil)
-      pageDays.row(Array(days[7..<14]), shown: shown, fadingOutside: nil)
-    }
-    .padding(12)
-    .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.xl))
-    .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(colors.separator))
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel("今週と来週の見え方")
   }
 }
 
