@@ -31,19 +31,17 @@ struct HlcVectors: Decodable, Sendable {
   let offset: [Offset]
 }
 
-let hlc = vectors("hlc", as: HlcVectors.self)
-
-@Test(arguments: hlc.tick)
+@Test(arguments: try vectors("hlc", as: HlcVectors.self).tick)
 func tick(_ vector: HlcVectors.Tick) {
   #expect(vector.last.tick(now: vector.now) == vector.expected)
 }
 
-@Test(arguments: hlc.receive)
+@Test(arguments: try vectors("hlc", as: HlcVectors.self).receive)
 func receive(_ vector: HlcVectors.Receive) {
   #expect(vector.last.receiving(vector.remote) == vector.expected)
 }
 
-@Test(arguments: hlc.offset)
+@Test(arguments: try vectors("hlc", as: HlcVectors.self).offset)
 func offset(_ vector: HlcVectors.Offset) {
   let offset = clockOffset(
     sentMs: vector.sentMs, receivedMs: vector.receivedMs, serverMs: vector.serverMs)

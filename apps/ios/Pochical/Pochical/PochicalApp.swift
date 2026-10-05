@@ -18,8 +18,8 @@ struct PochicalApp: App {
       ContentView()
     }
     // The shared database lets go of its locks before iOS suspends the
-    // app (appDatabase).
-    .onChange(of: scenePhase) { _, phase in
+    // app (appDatabase), including when it was launched in the background.
+    .onChange(of: scenePhase, initial: true) { _, phase in
       switch phase {
       case .background:
         NotificationCenter.default.post(name: Database.suspendNotification, object: nil)

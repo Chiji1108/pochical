@@ -31,16 +31,16 @@ public func appDatabase() throws -> any DatabaseWriter {
     }
   }
   // Tests and previews get a database of their own, in a temporary file.
-  let database =
-    if context == .live {
-      try coordinated(at: sharedDatabaseURL()) { url in
-        try defaultDatabase(path: url.path(), configuration: configuration)
-      }
-    } else {
-      try defaultDatabase(configuration: configuration)
-    }
-  try migrator.migrate(database)
-  return database
+  guard context == .live else {
+    let database = try defaultDatabase(configuration: configuration)
+    try migrator.migrate(database)
+    return database
+  }
+  return try coordinated(at: sharedDatabaseURL()) { url in
+    let database = try defaultDatabase(path: url.path(), configuration: configuration)
+    try migrator.migrate(database)
+    return database
+  }
 }
 
 /// Where the database lives in the App Group's container.
@@ -56,8 +56,8 @@ func sharedDatabaseURL() throws -> URL {
 
 struct MissingAppGroup: Error {}
 
-/// Opens the database while no other process is opening it, so the app
-/// and a widget never both set up a new file.
+/// Opens and sets up the database while no other process is opening it,
+/// so a widget never reads one half set up.
 private func coordinated(
   at url: URL, open: (URL) throws -> any DatabaseWriter
 ) throws -> any DatabaseWriter {

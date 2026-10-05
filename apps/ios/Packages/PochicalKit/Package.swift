@@ -11,7 +11,7 @@ let package = Package(
   ],
   dependencies: [
     .package(path: "../PochicalDesign"),
-    .package(url: "https://github.com/pointfreeco/sqlite-data.git", from: "1.12.0"),
+    .package(url: "https://github.com/pointfreeco/sqlite-data.git", exact: "1.12.0"),
   ],
   targets: [
     .target(

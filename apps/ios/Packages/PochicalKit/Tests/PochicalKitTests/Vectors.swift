@@ -2,19 +2,16 @@ import Foundation
 import Testing
 
 /// A file of spec/vectors, the cases every platform checks its own code
-/// against, read from the repository this package is in.
-func vectors<Cases: Decodable>(_ name: String, as _: Cases.Type = Cases.self) -> Cases {
+/// against, read from the repository this package is in. Read in a test's
+/// arguments, a file that cannot be read fails that test alone.
+func vectors<Cases: Decodable>(_ name: String, as _: Cases.Type = Cases.self) throws -> Cases {
   // Tests/PochicalKitTests/Vectors.swift, under apps/ios/Packages/PochicalKit.
   var root = URL(filePath: #filePath)
   for _ in 0..<7 {
     root.deleteLastPathComponent()
   }
   let url = root.appending(path: "spec/vectors/\(name).json")
-  do {
-    return try JSONDecoder().decode(Cases.self, from: Data(contentsOf: url))
-  } catch {
-    fatalError("Cannot read \(url.path()): \(error)")
-  }
+  return try JSONDecoder().decode(Cases.self, from: Data(contentsOf: url))
 }
 
 /// One case of a vectors file, named as the file names it.
