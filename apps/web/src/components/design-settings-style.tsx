@@ -136,10 +136,13 @@ const themeCard = {
 const offSample = cva({
   base: {
     "& small": { color: "text.secondary", fontSize: "9px", fontWeight: 600 },
-    // The shift's name under the mark, smaller than the date.
+    // The shift's name under the mark, smaller than the date. Its line is
+    // one em tall, so it fits in what the box has left; at its normal height
+    // the box squeezed it and lineClamp's overflow cut its letters off.
     "& small[data-part=name]": {
       fontSize: "7px",
       lineClamp: 1,
+      lineHeight: "1",
       maxWidth: "100%",
       overflowWrap: "anywhere",
     },
