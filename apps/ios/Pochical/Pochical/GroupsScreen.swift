@@ -208,10 +208,12 @@ private struct GroupHub: View {
     }
   }
 
-  /// The group's members with their days of this week.
+  /// The group's members with their days of this week and as far ahead
+  /// as 次のみんな休み looks.
   private var request: GroupMembersRequest {
     let week = thisWeek(start: settings.device.week.start)
-    return GroupMembersRequest(groupID: group.id, from: week[0], through: week[6])
+    let ahead = Day.today.adding(days: nextTogetherDays - 1)
+    return GroupMembersRequest(groupID: group.id, from: week[0], through: max(week[6], ahead))
   }
 
   private var heading: some View {
