@@ -20,7 +20,7 @@ export function useShownWith(names: readonly string[], schedule: Schedule) {
   const person =
     picked !== undefined && names.includes(picked) ? picked : undefined;
   const isWith = (name: string, date: Date) =>
-    schedule[dateKey(date)]?.members?.includes(name) ?? false;
+    schedule[dateKey(date)]?.people?.includes(name) ?? false;
   return {
     // How many of `days` the person shown is on.
     countIn: (days: Date[]) =>

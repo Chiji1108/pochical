@@ -1,7 +1,7 @@
 import { COWORKERS_MAX, textLimits } from "@pochical/design/limits";
 import { useContext, useState } from "react";
 
-import { membersOrNone } from "../lib/design-days";
+import { peopleOrNone } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
 import { useUser } from "../lib/design-user-store";
 import { composing, limitText } from "../lib/text-limits";
@@ -32,15 +32,15 @@ export function useCoworkerList(): Coworkers {
   const names = useUser((state) => state.coworkers);
   const setNames = useUser((state) => state.setCoworkers);
   const setOwnDays = useUser((state) => state.setSchedule);
-  const updateMembersOnDays = (change: (people: string[]) => string[]) => {
+  const updatePeopleOnDays = (change: (people: string[]) => string[]) => {
     setOwnDays((previous) =>
       Object.fromEntries(
         Object.entries(previous).map(([key, entry]) => {
-          if (!entry?.members) {
+          if (!entry?.people) {
             return [key, entry];
           }
-          const next = change(entry.members);
-          return [key, { ...entry, members: membersOrNone(next) }];
+          const next = change(entry.people);
+          return [key, { ...entry, people: peopleOrNone(next) }];
         })
       )
     );
@@ -52,13 +52,13 @@ export function useCoworkerList(): Coworkers {
     },
     onDelete: (name) => {
       setNames((previous) => previous.filter((item) => item !== name));
-      updateMembersOnDays((people) => people.filter((item) => item !== name));
+      updatePeopleOnDays((people) => people.filter((item) => item !== name));
     },
     onRename: (from, to) => {
       setNames((previous) =>
         previous.map((name) => (name === from ? to : name))
       );
-      updateMembersOnDays((people) =>
+      updatePeopleOnDays((people) =>
         people.map((name) => (name === from ? to : name))
       );
     },
@@ -68,7 +68,7 @@ export function useCoworkerList(): Coworkers {
 
 function daysWith(schedule: Schedule, name: string) {
   return Object.values(schedule).filter((entry) =>
-    entry?.members?.includes(name)
+    entry?.people?.includes(name)
   ).length;
 }
 

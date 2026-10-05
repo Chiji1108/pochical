@@ -11,14 +11,14 @@ struct VectorDay: Decodable, Sendable {
   let start: String?
   let end: String?
   let note: String?
-  let members: [String]?
+  let people: [String]?
 
   var own: OwnDay {
-    OwnDay(shift: shift, start: start, end: end, note: note, people: members)
+    OwnDay(shift: shift, start: start, end: end, note: note, people: people)
   }
 
   var entry: DayEntry {
-    DayEntry(shift: shift ?? "", start: start, end: end, note: note, people: members)
+    DayEntry(shift: shift ?? "", start: start, end: end, note: note, people: people)
   }
 }
 

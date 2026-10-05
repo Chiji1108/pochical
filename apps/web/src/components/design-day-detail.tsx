@@ -3,12 +3,7 @@ import { Check, ChevronRight, Plus } from "lucide-react";
 import { useContext, useState } from "react";
 import { css, cx } from "styled-system/css";
 
-import {
-  keepDetails,
-  membersOrNone,
-  timeChangeOf,
-  timeRange,
-} from "../lib/design-days";
+import { keepDetails, timeChangeOf, timeRange } from "../lib/design-days";
 import type { DayEntry } from "../lib/design-days";
 import { usePatterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
@@ -184,7 +179,7 @@ export function DayDetail({
     [change?.early ? "早出" : "", change?.late ? "残業" : ""]
       .filter(Boolean)
       .join("・") || "変更済み";
-  const selected = entry?.members ?? [];
+  const selected = entry?.people ?? [];
   // What would go with the shift. A day with nothing more is cleared at
   // once, as one tap brings it back; with more it is asked first.
   const lost = [
@@ -277,7 +272,7 @@ export function DayDetail({
           <div className={dayDetail.unfolded} data-list-row="">
             <MemberChips
               onChange={(next) => {
-                onChange({ ...entry, members: membersOrNone(next) });
+                onChange({ ...entry, people: next });
               }}
               selected={selected}
             />
