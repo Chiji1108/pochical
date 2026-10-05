@@ -54,6 +54,13 @@ run = "bun run --cwd apps/server auth:schema"
 description = "Run server tests in the Workers runtime"
 run = "bun run --cwd apps/server test"
 
+[tasks."ios:test"]
+description = "Run the iOS packages' tests on this Mac, spec/vectors among them"
+run = [
+  "swift test --package-path apps/ios/Packages/PochicalDesign",
+  "swift test --package-path apps/ios/Packages/PochicalKit",
+]
+
 [tasks."server:typecheck"]
 description = "Typecheck the server"
 run = "bun run --cwd apps/server typecheck"
