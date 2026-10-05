@@ -20,10 +20,12 @@ public protocol TokenStore: Sendable {
 }
 
 /// The session token in the Keychain, which outlives the app, so a
-/// reinstall comes back as the same user (spec/sync-protocol.md, Signing
-/// in). Readable after the phone's first unlock, as the app syncs in the
-/// background, and kept to this phone: another phone is another device of
-/// the user only once they link Apple or Google.
+/// reinstall comes back as the same user, and goes with the phone's
+/// encrypted backups and Quick Start, so a new phone does too
+/// (spec/sync-protocol.md, Signing in). Not synced through iCloud
+/// Keychain: the person's other devices come in by linking Apple or
+/// Google. Readable after the phone's first unlock, as the app syncs in
+/// the background.
 public struct KeychainTokenStore: TokenStore {
   private let service = "app.pochical.session"
   private let account = "token"
@@ -54,7 +56,7 @@ public struct KeychainTokenStore: TokenStore {
         kSecClass: kSecClassGenericPassword,
         kSecAttrService: service,
         kSecAttrAccount: account,
-        kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+        kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlock,
         kSecValueData: Data(token.utf8),
       ] as CFDictionary, nil)
     guard status == errSecSuccess else {
