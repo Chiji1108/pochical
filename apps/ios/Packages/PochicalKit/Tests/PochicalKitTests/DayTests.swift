@@ -17,3 +17,21 @@ import Testing
   #expect(day.weekday == 4)
   #expect(Day("2028-02-01")!.daysOfMonth.count == 29)
 }
+
+@Test func countsInMonths() {
+  let day = Day("2026-11-15")!
+  #expect(day.addingMonths(2).key == "2027-01-01")
+  #expect(day.addingMonths(-11).key == "2025-12-01")
+  #expect(day.firstOfMonth.key == "2026-11-01")
+}
+
+@Test func laysAMonthOutInWholeWeeks() {
+  // October 2026 begins on a Thursday and ends on a Saturday.
+  let sunday = monthWeeks(Day("2026-10-01")!, weekStart: 0)
+  #expect(sunday.count == 5)
+  #expect(sunday.first?.first?.key == "2026-09-27")
+  #expect(sunday.last?.last?.key == "2026-10-31")
+  let monday = monthWeeks(Day("2026-10-01")!, weekStart: 1)
+  #expect(monday.first?.first?.key == "2026-09-28")
+  #expect(monday.last?.last?.key == "2026-11-01")
+}
