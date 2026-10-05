@@ -28,8 +28,9 @@ struct CalendarScreen: View {
   /// How far a pull down has unfolded the month around an opened week, 0
   /// to 1, while the finger is on it.
   @State private var pull: CGFloat = 0
-  /// Where the pages are, which the heading follows.
-  @State private var position = PagerPosition()
+  /// Where the pages are, which the heading follows; on this month's
+  /// page until the pages first say.
+  @State private var position = PagerPosition(pages: monthsAround)
   /// Whether a finger is on the week, so a pull the system takes away,
   /// which never ends, folds back too.
   @GestureState private var pulling = false

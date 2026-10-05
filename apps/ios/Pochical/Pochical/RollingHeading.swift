@@ -7,7 +7,11 @@ import SwiftUI
 /// the screen's state so that only what follows the pages is drawn again
 /// as they move.
 @Observable final class PagerPosition {
-  var pages: CGFloat = 0
+  var pages: CGFloat
+
+  init(pages: Int) {
+    self.pages = CGFloat(pages)
+  }
 }
 
 /// The year over the month, as /design's MonthName: while the pages move,
