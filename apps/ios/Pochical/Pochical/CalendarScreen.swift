@@ -28,6 +28,12 @@ struct CalendarScreen: View {
   /// How far a pull down has unfolded the month around an opened week, 0
   /// to 1, while the finger is on it.
   @State private var pull: CGFloat = 0
+  /// Whether a finger is on the week, so a pull the system takes away,
+  /// which never ends, folds back too.
+  @GestureState private var pulling = false
+  /// Pulled since the finger went down, so letting go on a day presses
+  /// nothing, as /design's pull does.
+  @State private var pulled = false
 
   /// How far the pages reach either side of this month. Only the pages in
   /// view are drawn, so they can reach far without a cost.
@@ -83,7 +89,11 @@ struct CalendarScreen: View {
       // finger (spec/calendar.md, A day's detail).
       .simultaneousGesture(
         DragGesture(minimumDistance: 12)
-          .onChanged(pullChanged)
+          .updating($pulling) { _, pulling, _ in pulling = true }
+          .onChanged { drag in
+            pull = pullShare(drag, from: pull)
+            if pull > 0 { pulled = true }
+          }
           .onEnded(pullEnded),
         including: opened == nil ? .none : .all)
       if let day = opened {
@@ -137,8 +147,18 @@ struct CalendarScreen: View {
         entering = firstBlankDay(in: month, days: monthDays(month, currentCalendar))
       }
     }
+    .onChange(of: pulling) { _, pulling in
+      if !pulling, pull > 0 {
+        withAnimation(Springs.standard) { pull = 0 }
+      }
+    }
     .onChange(of: opened) { _, day in
-      if let day { shownMonth = monthShowing(day) }
+      guard let day else {
+        // A swipe left unsettled as the week closed goes with it.
+        swipedWeek = nil
+        return
+      }
+      shownMonth = monthShowing(day)
     }
     .onChange(of: entering) { _, day in
       if let day, day.firstOfMonth != shownMonth {
@@ -194,17 +214,21 @@ struct CalendarScreen: View {
   /// the finger.
   private static let unfoldDistance = MonthPage.height - DayCell.height
 
-  private func pullChanged(_ drag: DragGesture.Value) {
+  /// How far `drag` pulls the month open, from `pull` so far.
+  private func pullShare(_ drag: DragGesture.Value, from pull: CGFloat) -> CGFloat {
     let (dx, dy) = (drag.translation.width, drag.translation.height)
     // A pull starts going down, not sideways, which is the week's swipe.
-    guard pull > 0 || dy > abs(dx) else { return }
-    pull = min(max(dy / Self.unfoldDistance, 0), 1)
+    guard pull > 0 || dy > abs(dx) else { return 0 }
+    return min(max(dy / Self.unfoldDistance, 0), 1)
   }
 
   private func pullEnded(_ drag: DragGesture.Value) {
-    guard pull > 0 else { return }
+    // A day's button lets go after the pull, in the same touch.
+    Task { @MainActor in pulled = false }
+    let share = pullShare(drag, from: pull)
+    guard share > 0 else { return }
     let speed = drag.velocity.height
-    let unfolds = abs(speed) > Self.unfoldFlick ? speed > 0 : pull > Self.unfoldShare
+    let unfolds = abs(speed) > Self.unfoldFlick ? speed > 0 : share > Self.unfoldShare
     withAnimation(Springs.standard) {
       if unfolds { opened = nil }
       pull = 0
@@ -270,6 +294,7 @@ struct CalendarScreen: View {
       today: today, calendar: calendar, style: style, highlightOff: style != .emoji,
       selected: entering ?? opened, isEntering: entering != nil,
       onSelect: { day in
+        if pulled { return }
         if entering != nil {
           entering = day
         } else {
