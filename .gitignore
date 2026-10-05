@@ -64,3 +64,6 @@ tools/roster-eval/out/
 # layout-diff's measured runs, remade whenever they are needed
 tools/layout-diff/out/
 tools/api-try/out/
+
+# Xcode
+xcuserdata/
