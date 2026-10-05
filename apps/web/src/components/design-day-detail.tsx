@@ -286,7 +286,8 @@ export function DayDetail({
             className={dayDetail.memo}
             kind="dayNote"
             onValueChange={(note) => {
-              onChange({ ...entry, note: note || undefined });
+              // "" clears the memo; without one an entry keeps the day's.
+              onChange({ ...entry, note });
             }}
             placeholder="メモ"
             value={entry.note ?? ""}

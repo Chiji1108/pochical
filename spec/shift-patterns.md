@@ -27,13 +27,19 @@ It goes **one day only**. The following day's own `nextDay` is never followed, s
 
 Any pattern may name any other pattern except itself. Clearing a day does not clear the day after it (`spec/vectors/entering.json`, enter).
 
+## A day's memo
+
+A memo is about the day, not its shift: 歯医者 or 旅行 still holds when the shift goes. Entering, picking or clearing a shift, deleting its pattern, and an order taking a day back all leave the day's memo as it is; only editing the memo changes it, and an empty memo clears it (`spec/vectors/own-days.json`, edited). The day's people and its own hours belong to the shift and go with it.
+
+So a day may hold a memo and no shift. It is blank wherever blanks count (Blanks when entering ends), and its memo still shows on the calendar (spec/calendar.md).
+
 ## Blanks when entering ends
 
-Many people leave days off blank, moving on with 翌日へ. Rather than stop them while entering, 完了 asks once about the blank days of the month before its last entered day, and fills them with a day off in one tap. Blanks after the last entered day are left alone: those are more likely not decided yet (`spec/vectors/entering.json`, gaps).
+Many people leave days off blank, moving on with 翌日へ. Rather than stop them while entering, 完了 asks once about the blank days of the month before its last entered day, and fills them with a day off in one tap. Blanks after the last entered day are left alone: those are more likely not decided yet (`spec/vectors/entering.json`, gaps). Someone with no pattern that counts as off leaves days off blank on purpose, so nothing is asked of them.
 
 ## Deleting a pattern
 
-- The days that have it are cleared too, whether they had it of their own or from a repeating order. The person is told how many before confirming. An earlier order keeps its id and shows those days empty (`spec/vectors/patterns.json`, deleted).
+- The days that have it are cleared too, whether they had it of their own or from a repeating order, their memos staying (A day's memo). The person is told how many before confirming. An earlier order keeps its id and shows those days empty (`spec/vectors/patterns.json`, deleted).
 - Other patterns that named it as `nextDay` lose that link.
 - A pattern in the repeating order in use cannot be deleted; the order has to change first.
 

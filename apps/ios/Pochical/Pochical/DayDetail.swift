@@ -225,11 +225,11 @@ struct DayDetail: View {
     ].compactMap(\.self)
   }
 
+  /// "" clears the memo; an entry without one keeps the day's.
   private func keepNote(_ entry: DayEntry) {
-    let kept = note.isEmpty ? nil : note
-    guard kept != entry.note else { return }
+    guard note != (entry.note ?? "") else { return }
     var changed = entry
-    changed.note = kept
+    changed.note = note
     onChange(changed)
   }
 

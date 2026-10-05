@@ -304,17 +304,25 @@ export function shownDays(
 }
 
 // What to keep of a day so it shows `entry`: only what differs from its
-// order. Clearing a day the order fills keeps dayRules.noShift there.
+// order. Clearing a day the order fills keeps dayRules.noShift there. The
+// memo is the day's, not the shift's (spec/shift-patterns.md, A day's
+// memo): an entry without one keeps `previous`'s, and "" clears it.
 function ownDay(
   entry: DayEntry | undefined,
-  planned: Shift | undefined
+  planned: Shift | undefined,
+  previous: OwnDay | undefined
 ): OwnDay | undefined {
+  const note = (entry?.note ?? previous?.note) || undefined;
   if (!entry) {
-    return planned ? { shift: dayRules.noShift } : undefined;
+    if (planned) {
+      return { note, shift: dayRules.noShift };
+    }
+    return note ? { note } : undefined;
   }
   const { shift, ...details } = entry;
   const kept: OwnDay = {
     ...(shift === planned ? details : entry),
+    note,
     people: peopleOrNone(entry.people),
   };
   return Object.values(kept).some((value) => value !== undefined)
@@ -335,7 +343,7 @@ export function editedOwnDays(
     if (next[key] === shown[key]) {
       continue;
     }
-    edited[key] = ownDay(next[key], planned[key]);
+    edited[key] = ownDay(next[key], planned[key], own[key]);
   }
   return edited;
 }
@@ -439,9 +447,16 @@ export function patternsWithout(patterns: readonly Pattern[], id: Shift) {
     );
 }
 
+// Their memos stay, as a memo is the day's (spec/shift-patterns.md, A
+// day's memo).
 export function daysWithout(own: OwnDays, id: Shift): OwnDays {
   return Object.fromEntries(
-    Object.entries(own).filter(([, day]) => day?.shift !== id)
+    Object.entries(own).flatMap(([key, day]) => {
+      if (day?.shift !== id) {
+        return [[key, day]];
+      }
+      return day.note ? [[key, { note: day.note }]] : [];
+    })
   );
 }
 
