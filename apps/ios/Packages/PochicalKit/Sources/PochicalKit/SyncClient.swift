@@ -33,6 +33,9 @@ public actor SyncClient {
   private let session = URLSession(configuration: .default)
   private let paths = NWPathMonitor()
   private var running: Task<Void, Never>?
+  /// The socket open or opening, closed by `stop` at once rather than
+  /// left to notice its task's cancellation.
+  private var socket: URLSessionWebSocketTask?
   /// Tries since the last Welcome.
   private var tries = 0
   private var connected = false
@@ -70,6 +73,9 @@ public actor SyncClient {
   public func stop() {
     running?.cancel()
     running = nil
+    socket?.cancel(with: .goingAway, reason: nil)
+    socket = nil
+    connected = false
   }
 
   private func networkCameBack() {
@@ -87,6 +93,7 @@ public actor SyncClient {
         if Task.isCancelled { return }
       }
       tries += 1
+      connected = false
       do {
         try await connect()
       } catch let stop as Stop {
@@ -101,7 +108,6 @@ public actor SyncClient {
       } catch {
         Logger.sync.info("Socket closed: \(error)")
       }
-      connected = false
     }
   }
 
@@ -111,6 +117,7 @@ public actor SyncClient {
       request.setValue(values.joined(separator: ","), forHTTPHeaderField: name)
     }
     let socket = session.webSocketTask(with: request)
+    self.socket = socket
     socket.resume()
     defer { socket.cancel(with: .goingAway, reason: nil) }
     var hello = Pochical_V1_Hello()
