@@ -6,10 +6,8 @@ import SwiftUI
 /// one: whether to make them days off, all at once (spec/shift-patterns.md,
 /// Blanks when entering ends).
 ///
-/// It stands as tall as it holds. A sheet lays its content out at odd
-/// sizes as it comes up, and a height changed on the way up undoes its
-/// slide, so the calendar measures it first, out of sight at the
-/// screen's width, and it comes up at that height.
+/// It stands as tall as it holds (`fittedSheet`), so it draws its own bar
+/// rather than a NavigationStack's.
 struct GapSheet: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss

@@ -18,8 +18,6 @@ struct CalendarScreen: View {
   /// The day ポチポチ入力 enters next, while entering.
   @State private var entering: Day?
   @State private var gaps: [Day] = []
-  /// The gap sheet's height, measured before it comes up (GapSheet).
-  @State private var gapSheetHeight: CGFloat?
   /// The day opened from the month, its week alone left above its detail.
   @State private var opened: Day?
   /// Whether a day's 一緒に働く人 is unfolded, kept from day to day.
@@ -175,22 +173,9 @@ struct CalendarScreen: View {
         }
       }
     }
-    .background {
-      if !gaps.isEmpty, gapSheetHeight == nil, let sheet = gapSheet(calendar) {
-        sheet
-          .fixedSize(horizontal: false, vertical: true)
-          .hidden()
-          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { gapSheetHeight = $0 }
-      }
-    }
-    .sheet(
-      isPresented: Binding(
-        get: { gapSheetHeight != nil },
-        set: { if !$0 { gaps = []; gapSheetHeight = nil } })
-    ) {
+    .sheet(isPresented: Binding(get: { !gaps.isEmpty }, set: { if !$0 { gaps = [] } })) {
       gapSheet(calendar)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .presentationDetents([.height(gapSheetHeight ?? 0)])
+        .fittedSheet()
     }
     .task {
       // Past midnight, while the app is open or waiting in the background.
