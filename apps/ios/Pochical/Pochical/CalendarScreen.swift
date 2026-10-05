@@ -10,13 +10,13 @@ struct CalendarScreen: View {
   @FetchAll private var patterns: [PatternRow]
   @FetchAll private var patternOrder: [PatternOrderRow]
   @FetchAll private var orders: [RepeatOrderRow]
+  @State private var today = Day.today
   @State private var shownMonth: Day? = Day.today.firstOfMonth
 
   /// How far the pages reach either side of this month. Only the pages in
   /// view are drawn, so they can reach far without a cost.
   private static let monthsAround = 120
   private static let screenEdge: CGFloat = 16
-  private let thisMonth = Day.today.firstOfMonth
   private let weekStart = 0
   private let style = MarkStyle.icon
 
@@ -34,7 +34,8 @@ struct CalendarScreen: View {
         LazyHStack(spacing: 0) {
           ForEach(months, id: \.self) { month in
             MonthPage(
-              month: month, calendar: calendar, weekStart: weekStart, style: style,
+              month: month, today: today, calendar: calendar, weekStart: weekStart,
+              style: style,
               highlightOff: style != .emoji
             )
             .padding(.horizontal, Self.screenEdge)
@@ -50,6 +51,16 @@ struct CalendarScreen: View {
       Spacer(minLength: 0)
     }
     .background(colors.backgroundBase)
+    .task {
+      // Past midnight, while the app is open or waiting in the background.
+      for await _ in NotificationCenter.default.notifications(named: .NSCalendarDayChanged) {
+        today = .today
+      }
+    }
+  }
+
+  private var thisMonth: Day {
+    today.firstOfMonth
   }
 
   private var months: [Day] {
@@ -128,6 +139,7 @@ struct WeekdayRow: View {
 /// a month spans, so what is under it stays put as the months turn.
 struct MonthPage: View {
   let month: Day
+  let today: Day
   let calendar: OwnCalendar
   let weekStart: Int
   let style: MarkStyle
@@ -139,7 +151,6 @@ struct MonthPage: View {
   var body: some View {
     let weeks = monthWeeks(month, weekStart: weekStart)
     let shown = calendar.shown(from: weeks.first![0], through: weeks.last![6])
-    let today = Day.today
     VStack(spacing: Self.rowGap) {
       ForEach(weeks, id: \.first) { week in
         HStack(spacing: 4) {

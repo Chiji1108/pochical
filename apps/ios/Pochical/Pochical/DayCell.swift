@@ -81,6 +81,12 @@ struct DayCell: View {
       parts.append(name)
     }
     parts.append(pattern?.name ?? "未入力")
+    if let pattern, let entry,
+      let change = timeChange(start: entry.start, end: entry.end, standard: pattern.time)
+    {
+      let moves = [change.early ? "早出" : nil, change.late ? "残業" : nil].compactMap(\.self)
+      parts.append(moves.isEmpty ? "時間変更" : moves.joined(separator: "・"))
+    }
     if entry?.note?.isEmpty == false {
       parts.append("メモあり")
     }
