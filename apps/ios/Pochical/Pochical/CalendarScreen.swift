@@ -6,12 +6,16 @@ import SwiftUI
 /// カレンダー: the person's month, a page a month, turned by swiping.
 struct CalendarScreen: View {
   @Environment(\.themeColors) private var colors
+  @Dependency(\.defaultDatabase) private var database
   @FetchAll private var days: [DayRow]
   @FetchAll private var patterns: [PatternRow]
   @FetchAll private var patternOrder: [PatternOrderRow]
   @FetchAll private var orders: [RepeatOrderRow]
   @State private var today = Day.today
   @State private var shownMonth: Day? = Day.today.firstOfMonth
+  /// The day ポチポチ入力 enters next, while entering.
+  @State private var entering: Day?
+  @State private var gaps: [Day] = []
 
   /// How far the pages reach either side of this month. Only the pages in
   /// view are drawn, so they can reach far without a cost.
@@ -35,8 +39,8 @@ struct CalendarScreen: View {
           ForEach(months, id: \.self) { month in
             MonthPage(
               month: month, today: today, calendar: calendar, weekStart: weekStart,
-              style: style,
-              highlightOff: style != .emoji
+              style: style, highlightOff: style != .emoji, selected: entering,
+              onSelect: entering == nil ? nil : { entering = $0 }
             )
             .padding(.horizontal, Self.screenEdge)
             .containerRelativeFrame(.horizontal)
@@ -49,8 +53,37 @@ struct CalendarScreen: View {
       .scrollIndicators(.hidden)
       .frame(height: MonthPage.height)
       Spacer(minLength: 0)
+      bottom(calendar)
+        .padding(.horizontal, Self.screenEdge)
+        .padding(.bottom, 8)
     }
     .background(colors.backgroundBase)
+    // A month turned to while entering starts on its first day; a day
+    // picked in a month around it turns to that month.
+    .onChange(of: shownMonth) { _, month in
+      if let month, let day = entering, day.firstOfMonth != month {
+        entering = month
+      }
+    }
+    .onChange(of: entering) { _, day in
+      if let day, day.firstOfMonth != shownMonth {
+        withAnimation(Springs.standard) {
+          shownMonth = day.firstOfMonth
+        }
+      }
+    }
+    .sheet(isPresented: Binding(get: { !gaps.isEmpty }, set: { if !$0 { gaps = [] } })) {
+      if let off = holidayShift(of: calendar.patterns).flatMap({ calendar.patternsByID[$0] }),
+        let month = gaps.first?.firstOfMonth
+      {
+        GapSheet(
+          month: month, days: gaps, offPattern: off,
+          offCount: offCount(in: month, calendar: calendar)
+        ) {
+          write { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }
+        }
+      }
+    }
     .task {
       // Past midnight, while the app is open or waiting in the background.
       for await _ in NotificationCenter.default.notifications(named: .NSCalendarDayChanged) {
@@ -65,6 +98,69 @@ struct CalendarScreen: View {
 
   private var months: [Day] {
     (-Self.monthsAround...Self.monthsAround).map { thisMonth.addingMonths($0) }
+  }
+
+  /// ポチポチ入力 to start entering, or its tray while entering.
+  @ViewBuilder private func bottom(_ calendar: OwnCalendar) -> some View {
+    if let day = entering {
+      let shown = calendar.shown(from: day, through: day)
+      EntryTray(
+        day: day, patterns: calendar.patterns, style: style, canClear: shown[day] != nil,
+        canSkip: day != day.daysOfMonth.last,
+        onEnter: { shift in
+          write { db, now in try OwnValues.enter(shift, on: day, now: now, in: db) }
+          entering = selectedAfterEntering(shift, on: day, patterns: calendar.patternsByID)
+        },
+        onSkip: { entering = selectedAfterEntering(nil, on: day, patterns: [:]) }
+      )
+    } else {
+      Button {
+        entering = (shownMonth ?? thisMonth).firstOfMonth
+      } label: {
+        Label("ポチポチ入力", systemImage: "pencil")
+          .font(.headline)
+          .frame(maxWidth: .infinity, minHeight: Metrics.control)
+      }
+      .buttonStyle(.borderedProminent)
+      .buttonBorderShape(.capsule)
+      .tint(colors.accentFill)
+      .foregroundStyle(colors.accentOnFill)
+    }
+  }
+
+  /// 完了: entering ends, and blank days before the month's last entered
+  /// one are asked about.
+  private func finish() {
+    guard let day = entering else {
+      return
+    }
+    entering = nil
+    let calendar = OwnCalendar(
+      days: days, patterns: patterns, patternOrder: patternOrder, orders: orders)
+    // With no pattern that counts as off there is nothing to offer.
+    guard holidayShift(of: calendar.patterns) != nil else {
+      return
+    }
+    let month = day.firstOfMonth
+    let shown = calendar.shown(from: month, through: month.daysOfMonth.last!)
+    gaps = gapDays(in: month, days: shown)
+  }
+
+  private func offCount(in month: Day, calendar: OwnCalendar) -> Int {
+    calendar.shown(from: month, through: month.daysOfMonth.last!).values.filter {
+      calendar.patternsByID[$0.shift]?.countsAsOff == true
+    }.count
+  }
+
+  /// Writes the person's edits at once; they wait in the outbox for sync.
+  private func write(_ edit: @escaping (Database, Int64) throws -> Void) {
+    let now = Int64(Date.now.timeIntervalSince1970 * 1000)
+    do {
+      try database.write { db in try edit(db, now) }
+    } catch {
+      // Not expected: the edit is the device's own, and its tables are.
+      assertionFailure("Could not keep the edit: \(error)")
+    }
   }
 
   private var heading: some View {
@@ -87,7 +183,15 @@ struct CalendarScreen: View {
       .accessibilityLabel("\(month.year)年\(month.month)月")
       .accessibilityAddTraits(.isHeader)
       Spacer()
-      if month != thisMonth {
+      if entering != nil {
+        Button("完了", systemImage: "checkmark") {
+          finish()
+        }
+        .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.capsule)
+        .tint(colors.accentFill)
+        .foregroundStyle(colors.accentOnFill)
+      } else if month != thisMonth {
         Button("今月") {
           withAnimation(Springs.standard) {
             shownMonth = thisMonth
@@ -110,7 +214,7 @@ struct WeekdayRow: View {
   @Environment(\.themeColors) private var colors
   let weekStart: Int
 
-  private static let names = ["日", "月", "火", "水", "木", "金", "土"]
+  static let names = ["日", "月", "火", "水", "木", "金", "土"]
 
   var body: some View {
     HStack(spacing: 4) {
@@ -144,6 +248,10 @@ struct MonthPage: View {
   let weekStart: Int
   let style: MarkStyle
   let highlightOff: Bool
+  /// The day being entered, framed.
+  let selected: Day?
+  /// Picks a day to enter, while entering.
+  let onSelect: ((Day) -> Void)?
 
   private static let rowGap: CGFloat = 4
   static let height = 6 * DayCell.height + 5 * rowGap
@@ -160,7 +268,7 @@ struct MonthPage: View {
               day: day, entry: entry, pattern: entry.flatMap { calendar.patternsByID[$0.shift] },
               outside: day.month != month.month, isToday: day == today,
               isHoliday: Holidays.name(on: day.key, in: "JP") != nil, style: style,
-              highlightOff: highlightOff)
+              highlightOff: highlightOff, isSelected: day == selected, onSelect: onSelect)
           }
         }
       }

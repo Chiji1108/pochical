@@ -41,9 +41,12 @@ public struct OwnCalendar: Sendable {
   /// Every day from `from` through `through` that shows a shift: its own,
   /// else its order's (spec/shift-patterns.md, Repeating orders).
   public func shown(from: Day, through: Day) -> [Day: DayEntry] {
-    let planned = plannedShifts(
-      orders: orders, known: Set(patternsByID.keys), from: from, through: through)
     let own = own.filter { $0.key >= from && $0.key <= through }
-    return shownDays(own: own, planned: planned)
+    return shownDays(own: own, planned: planned(from: from, through: through))
+  }
+
+  /// Each day's shift by the orders alone, from `from` through `through`.
+  func planned(from: Day, through: Day) -> [Day: PatternID] {
+    plannedShifts(orders: orders, known: Set(patternsByID.keys), from: from, through: through)
   }
 }
