@@ -62,6 +62,17 @@ The new job's patterns replace the list, and its repeating order starts on the d
 
 A new job's ready-made pattern can share an id with one the person already has. If theirs differs (they renamed it, changed its time or mark…) and is still on a day before the switch, theirs keeps the id and the new job's gets a fresh one; the new order and any `nextDay` links use the fresh id. Past days never change meaning because of a job change (`spec/vectors/patterns.json`, newJob).
 
+## Adding a device's patterns to an account
+
+A device that switches to an account already in use may add what it holds to the account's (spec/sync-protocol.md, Switching to an account in use). Its patterns then join the account's list:
+
+- A device pattern with the same name as one of the account's becomes that one: the account's pattern, its mark and time, stays, and the device's days take its id. Two patterns named 日勤 would read as one shift, and the person could not tell which is which.
+- Any other is added after the account's patterns, in the device's order. It keeps its id unless the account has a different pattern under it (both copied the same ready-made one, and one side renamed it), and then gets a fresh one, as on changing jobs.
+- The ids the device's days and repeating orders name (a day's pattern, `nextDay`, an order's sequence and `holidayShift`) are rewritten to the ones they became.
+- Deleted patterns are left out.
+
+Which pattern each one becomes is pure logic every platform writes; its cases go in `spec/vectors/patterns.json` when it is built.
+
 ## Days everyone is off
 
 In a group, a day everyone is off (みんな休み) is one on which every member's pattern counts as a day off. A day someone has not entered never counts. A month's count also says whether more may yet come: when no one who has entered a day works but someone has not entered it, the group's screens say 未入力の日あり rather than that there are none (`spec/vectors/together.json`).
