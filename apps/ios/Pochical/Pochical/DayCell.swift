@@ -15,6 +15,9 @@ struct DayCell: View {
   let outside: Bool
   let isToday: Bool
   let isHoliday: Bool
+  /// Whether a holiday's date takes Sunday's red (the person's カレンダー
+  /// settings).
+  var colorsHoliday = true
   let style: MarkStyle
   /// Days off on a tint of their own pattern's color.
   let highlightOff: Bool
@@ -98,7 +101,7 @@ struct DayCell: View {
     if isToday {
       return colors.accentDefault
     }
-    return isHoliday ? colors.calendarHoliday : colors.textPrimary
+    return isHoliday && colorsHoliday ? colors.calendarHoliday : colors.textPrimary
   }
 
   private var accessibilityText: String {

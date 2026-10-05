@@ -11,6 +11,7 @@ struct PochicalApp: App {
   /// in on its first try, anonymously at first (spec/sync-protocol.md,
   /// Signing in); offline, the calendar works and it tries again.
   private let sync: SyncClient
+  @State private var settings = Settings()
 
   init() {
     prepareDependencies {
@@ -26,8 +27,9 @@ struct PochicalApp: App {
 
   var body: some Scene {
     WindowGroup {
-      CalendarScreen()
+      RootView()
         .modifier(Themed(theme: .pochical))
+        .environment(settings)
     }
     // The socket is open only in the foreground (spec/sync-protocol.md,
     // Sockets), and the shared database lets go of its locks before iOS

@@ -8,6 +8,8 @@ import SwiftUI
 struct EntryTray: View {
   @Environment(\.themeColors) private var colors
   let day: Day
+  /// Which days take their colors (the person's カレンダー settings).
+  let week: DeviceSettings.Week
   let patterns: [Pattern]
   let style: MarkStyle
   /// Whether the day has a shift to clear.
@@ -48,10 +50,11 @@ struct EntryTray: View {
   }
 
   private var weekdayColor: Color {
-    if Holidays.name(on: day.key, in: "JP") != nil || day.weekday == 0 {
+    let isHoliday = Holidays.name(on: day.key, in: "JP") != nil
+    if (isHoliday && week.holiday) || (day.weekday == 0 && week.sunday) {
       return colors.calendarHoliday
     }
-    return day.weekday == 6 ? colors.calendarSaturday : colors.textTertiary
+    return day.weekday == 6 && week.saturday ? colors.calendarSaturday : colors.textTertiary
   }
 
   /// One page for up to `patternsPerPage`, else pages of them, swiped.
