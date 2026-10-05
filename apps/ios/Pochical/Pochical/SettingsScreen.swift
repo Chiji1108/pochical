@@ -1,5 +1,6 @@
 import PochicalDesign
 import PochicalKit
+import SQLiteData
 import SwiftUI
 
 /// 設定: what the person sets, sorted as /design's settings are. 表示
@@ -7,6 +8,8 @@ import SwiftUI
 /// built.
 struct SettingsScreen: View {
   @Environment(Settings.self) private var settings
+  @FetchAll private var patterns: [PatternRow]
+  @FetchAll private var patternOrder: [PatternOrderRow]
   /// The icon in use, read again as the page comes back from changing it.
   @State private var appIcon = AppIconChoice.current
 
@@ -17,7 +20,17 @@ struct SettingsScreen: View {
           NavigationLink {
             StyleSettings()
           } label: {
-            LabeledContent("スタイル", value: styleName)
+            // A look is shown rather than named, as /design's: one of the
+            // person's own marks, then the テーマ's name.
+            LabeledContent("スタイル") {
+              HStack(spacing: 6) {
+                if let work = ownPatterns.first(where: { !$0.countsAsOff }) ?? ownPatterns.first {
+                  ShiftMark(pattern: work, size: 18)
+                }
+                Text(settings.device.theme.name)
+              }
+            }
+            .accessibilityValue("\(styleName)、\(settings.device.theme.name)")
           }
           NavigationLink {
             AppearanceSettings()
@@ -41,7 +54,9 @@ struct SettingsScreen: View {
               "カレンダー", value: "\(WeekdayRow.names[settings.device.week.start])曜はじまり")
           }
         }
+        .settingsRows()
       }
+      .settingsList()
       .navigationTitle("設定")
       .onAppear { appIcon = .current }
     }
@@ -51,6 +66,10 @@ struct SettingsScreen: View {
   private var appearanceName: String {
     let theme = settings.device.theme
     return theme.isAlwaysDark ? "ダーク（\(theme.name)）" : settings.device.appearance.name
+  }
+
+  private var ownPatterns: [Pattern] {
+    OwnCalendar(days: [], patterns: patterns, patternOrder: patternOrder, orders: []).patterns
   }
 
   private var styleName: String {
@@ -86,9 +105,10 @@ private struct AppearanceSettings: View {
             ? "テーマの「\(theme.name)」はいつもダークで表示されます。ほかのテーマにすると、ここでの設定に戻ります。"
             : "端末に合わせると、スマホの設定に合わせてライトとダークが切り替わります。")
       }
+      .settingsRows()
     }
+    .settingsList()
     .navigationTitle("外観")
-    .navigationBarTitleDisplayMode(.inline)
   }
 }
 
@@ -111,6 +131,8 @@ private struct CalendarSettings: View {
         }
         .pickerStyle(.segmented)
         .labelsHidden()
+        // On the page, as /design's segments sit, not in a card.
+        .settingsOnPage()
       }
       Section {
         Toggle(isOn: $settings.device.week.saturday) {
@@ -127,9 +149,10 @@ private struct CalendarSettings: View {
       } footer: {
         Text("土曜と日曜は曜日の見出しに、祝日は日付に色がつきます。祝日は日曜と同じ赤です。")
       }
+      .settingsRows()
     }
+    .settingsList()
     .navigationTitle("カレンダー")
-    .navigationBarTitleDisplayMode(.inline)
   }
 
   /// A day's name after a dot of the color it takes.

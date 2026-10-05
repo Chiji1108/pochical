@@ -24,9 +24,13 @@ struct EntryTray: View {
     VStack(spacing: 8) {
       dateLabel
       patternButtons
-      // Together in the middle, as /design has them.
+      // Together in the middle, as /design has them, the pages' dots
+      // between them so the pages take no more height.
       HStack(spacing: 8) {
         trayAction("消す", systemImage: "trash", enabled: canClear) { onEnter(nil) }
+        if pageCount > 1 {
+          PageDots(count: pageCount, current: $page, label: "シフトのページ")
+        }
         trayAction("翌日へ", systemImage: "arrow.right", enabled: canSkip, trailingIcon: true) {
           onSkip()
         }
@@ -69,12 +73,15 @@ struct EntryTray: View {
             .tag(index)
         }
       }
-      .tabViewStyle(.page(indexDisplayMode: .always))
-      .indexViewStyle(.page(backgroundDisplayMode: .interactive))
-      .frame(height: 2 * 64 + 8 + 28)
+      .tabViewStyle(.page(indexDisplayMode: .never))
+      .frame(height: 2 * 64 + 8)
     } else {
       grid(patterns, columns: columns)
     }
+  }
+
+  private var pageCount: Int {
+    (patterns.count + patternsPerPage - 1) / patternsPerPage
   }
 
   /// Fewer patterns sit in fewer columns, as /design lays them out.
