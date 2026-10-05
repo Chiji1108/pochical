@@ -35,6 +35,8 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
   /// The テーマ's id, as /design's preset; one no longer known is the app's
   /// own.
   public var themeID = Theme.pochical.rawValue
+  /// 外観: light or dark as the phone is, or one of them always.
+  public var appearance = Appearance.system
 
   public var theme: Theme {
     get { Theme(rawValue: themeID) ?? .pochical }
@@ -48,6 +50,23 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
     week = try container.decodeIfPresent(Week.self, forKey: .week) ?? Week()
     look = try container.decodeIfPresent(Look.self, forKey: .look) ?? Look()
     themeID = try container.decodeIfPresent(String.self, forKey: .themeID) ?? Theme.pochical.rawValue
+    appearance = try container.decodeIfPresent(Appearance.self, forKey: .appearance) ?? .system
+  }
+}
+
+/// 外観 (/design's Appearance): following the phone, or always light or
+/// dark. A テーマ drawn dark whatever it says wins over it.
+public enum Appearance: String, Codable, CaseIterable, Sendable {
+  case system
+  case light
+  case dark
+
+  public var name: String {
+    switch self {
+    case .system: "端末に合わせる"
+    case .light: "ライト"
+    case .dark: "ダーク"
+    }
   }
 }
 

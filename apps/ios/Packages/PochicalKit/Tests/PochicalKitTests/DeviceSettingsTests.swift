@@ -44,3 +44,9 @@ import Testing
   #expect(settings.theme == .pochical)
   #expect(settings.look.colored)
 }
+
+@Test func appearanceFollowsThePhoneUntilSet() throws {
+  #expect(DeviceSettings().appearance == .system)
+  let kept = Data(#"{"appearance":"dark"}"#.utf8)
+  #expect(try JSONDecoder().decode(DeviceSettings.self, from: kept).appearance == .dark)
+}

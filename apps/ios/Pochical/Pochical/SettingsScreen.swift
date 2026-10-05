@@ -18,6 +18,11 @@ struct SettingsScreen: View {
             LabeledContent("スタイル", value: styleName)
           }
           NavigationLink {
+            AppearanceSettings()
+          } label: {
+            LabeledContent("外観", value: appearanceName)
+          }
+          NavigationLink {
             CalendarSettings()
           } label: {
             LabeledContent(
@@ -29,12 +34,48 @@ struct SettingsScreen: View {
     }
   }
 
+  /// The choice, or the dark of a テーマ drawn so whatever it says.
+  private var appearanceName: String {
+    let theme = settings.device.theme
+    return theme.isAlwaysDark ? "ダーク（\(theme.name)）" : settings.device.appearance.name
+  }
+
   private var styleName: String {
     switch settings.device.look.style {
     case .icon: settings.device.look.fill ? "塗り" : "線"
     case .emoji: "絵文字"
     case .badge: "文字"
     }
+  }
+}
+
+/// 外観 (/design's AppearancePage): following the phone, or keeping light
+/// or dark. It stays open under a テーマ drawn dark whatever it says, which
+/// says so, as it takes effect again once the テーマ changes.
+private struct AppearanceSettings: View {
+  @Environment(Settings.self) private var settings
+
+  var body: some View {
+    @Bindable var settings = settings
+    let theme = settings.device.theme
+    Form {
+      Section {
+        Picker("外観", selection: $settings.device.appearance) {
+          ForEach(Appearance.allCases, id: \.self) { appearance in
+            Text(appearance.name).tag(appearance)
+          }
+        }
+        .pickerStyle(.inline)
+        .labelsHidden()
+      } footer: {
+        Text(
+          theme.isAlwaysDark
+            ? "テーマの「\(theme.name)」はいつもダークで表示されます。ほかのテーマにすると、ここでの設定に戻ります。"
+            : "端末に合わせると、スマホの設定に合わせてライトとダークが切り替わります。")
+      }
+    }
+    .navigationTitle("外観")
+    .navigationBarTitleDisplayMode(.inline)
   }
 }
 
