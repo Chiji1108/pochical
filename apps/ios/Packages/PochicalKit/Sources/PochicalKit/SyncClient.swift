@@ -76,6 +76,12 @@ public actor SyncClient {
     socketURL = socket.url!
   }
 
+  // A group's client goes with its screen; its watch on the network goes
+  // with it.
+  deinit {
+    paths.cancel()
+  }
+
   /// Connects, or tries again at once with the count started again, as the
   /// person is waiting: the app came to the foreground. An open socket
   /// stays.

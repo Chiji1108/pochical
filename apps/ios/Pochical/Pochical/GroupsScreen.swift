@@ -175,6 +175,7 @@ private struct GroupHub: View {
   @Environment(\.account) private var account
   @Environment(\.scenePhase) private var scenePhase
   @Dependency(\.defaultDatabase) private var database
+  @Environment(Settings.self) private var settings
   @Fetch private var members: [GroupMember] = []
   let group: GroupRow
   let onInvite: () -> Void
@@ -193,8 +194,8 @@ private struct GroupHub: View {
       .padding(.bottom, 24)
     }
     .scrollIndicators(.hidden)
-    .task(id: group.id) {
-      try? await $members.load(GroupMembersRequest(groupID: group.id))
+    .task(id: request) {
+      try? await $members.load(request)
     }
     .task(id: SocketKey(groupID: group.id, active: scenePhase == .active)) {
       guard scenePhase == .active else { return }
@@ -205,6 +206,12 @@ private struct GroupHub: View {
       }
       await socket.stop()
     }
+  }
+
+  /// The group's members with their days of this week.
+  private var request: GroupMembersRequest {
+    let week = thisWeek(start: settings.device.week.start)
+    return GroupMembersRequest(groupID: group.id, from: week[0], through: week[6])
   }
 
   private var heading: some View {
@@ -236,10 +243,12 @@ private struct SocketKey: Hashable {
 
 /// Everyone in a group with their shifts, read again as the group's
 /// values change.
-private struct GroupMembersRequest: FetchKeyRequest {
+private struct GroupMembersRequest: FetchKeyRequest, Hashable {
   let groupID: String
+  let from: Day
+  let through: Day
 
   func fetch(_ db: Database) throws -> [GroupMember] {
-    try GroupSync.members(of: groupID, in: db)
+    try GroupSync.members(of: groupID, from: from, through: through, in: db)
   }
 }

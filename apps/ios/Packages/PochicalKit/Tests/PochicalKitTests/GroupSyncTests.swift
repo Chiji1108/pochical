@@ -55,7 +55,8 @@ private func change(_ cursor: UInt64, _ fill: (inout Pochical_V1_Change) -> Void
       ], of: "g1", in: db)
     #expect(try GroupSync.cursor(of: "g1", in: db) == 5)
 
-    let members = try GroupSync.members(of: "g1", in: db)
+    let october = (Day(year: 2026, month: 10, day: 1), Day(year: 2026, month: 10, day: 31))
+    let members = try GroupSync.members(of: "g1", from: october.0, through: october.1, in: db)
     #expect(members.map(\.name) == ["さくら"])
     let shown = try #require(members.first).calendar.shown(
       from: Day(year: 2026, month: 10, day: 1), through: Day(year: 2026, month: 10, day: 3))
@@ -65,7 +66,7 @@ private func change(_ cursor: UInt64, _ fill: (inout Pochical_V1_Change) -> Void
     #expect(shown[Day(year: 2026, month: 10, day: 3)] == nil)
 
     try GroupSync.reset("g1", in: db)
-    #expect(try GroupSync.members(of: "g1", in: db).isEmpty)
+    #expect(try GroupSync.members(of: "g1", from: october.0, through: october.1, in: db).isEmpty)
     #expect(try GroupSync.cursor(of: "g1", in: db) == 0)
   }
 }

@@ -2,6 +2,13 @@ import PochicalDesign
 import PochicalKit
 import SwiftUI
 
+/// Today's week, from the day it starts on (0 for Sunday).
+func thisWeek(start: Int) -> [Day] {
+  let today = Day.today
+  let first = today.adding(days: -(((today.weekday - start) % 7 + 7) % 7))
+  return (0..<7).map { first.adding(days: $0) }
+}
+
 /// This week for everyone in the group (/design's MemberTable, compact):
 /// the weekdays and dates across, then a row per member, their face and
 /// each day's mark, days off on their tile. Members' marks show in the
@@ -14,8 +21,7 @@ struct MemberWeek: View {
   var body: some View {
     let today = Day.today
     let week = settings.device.week
-    let first = today.adding(days: -(((today.weekday - week.start) % 7 + 7) % 7))
-    let days = (0..<7).map { first.adding(days: $0) }
+    let days = thisWeek(start: week.start)
     Grid(horizontalSpacing: 0, verticalSpacing: 4) {
       GridRow {
         Color.clear.frame(width: 28, height: 1)

@@ -281,11 +281,17 @@ public struct MemberCalendar: Hashable, Sendable {
 
 extension GroupSync {
   /// Everyone in the group in the order they joined, each with what the
-  /// group holds of their shifts.
-  public static func members(of groupID: String, in db: Database) throws -> [GroupMember] {
+  /// group holds of their shifts, their own days read from `from` through
+  /// `through`.
+  public static func members(of groupID: String, from: Day, through: Day, in db: Database) throws
+    -> [GroupMember]
+  {
     let members = try GroupMemberRow.where { $0.groupID.eq(groupID) }
       .order(by: \.joinedAtMs).fetchAll(db)
-    let days = try MemberDayRow.where { $0.groupID.eq(groupID) }.fetchAll(db)
+    let days = try MemberDayRow.where {
+      $0.groupID.eq(groupID) && $0.date >= from.key && $0.date <= through.key
+    }
+    .fetchAll(db)
     let patterns = try MemberPatternRow.where { $0.groupID.eq(groupID) }.fetchAll(db)
     let orders = try MemberOrderRow.where { $0.groupID.eq(groupID) }.order(by: \.position)
       .fetchAll(db)
