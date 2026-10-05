@@ -581,6 +581,33 @@ public nonisolated struct Pochical_V1_Change: Sendable {
     set {kind = .memberRepeatOrders(newValue)}
   }
 
+  /// On the User DO socket: a group the user is in, for their list of
+  /// groups (spec/sync-protocol.md, Groups).
+  public var membership: Pochical_V1_Membership {
+    get {
+      if case .membership(let v)? = kind {return v}
+      return Pochical_V1_Membership()
+    }
+    set {kind = .membership(newValue)}
+  }
+
+  /// On a Group DO socket: the group's name and mark, and who is in it.
+  public var groupProfile: Pochical_V1_GroupProfile {
+    get {
+      if case .groupProfile(let v)? = kind {return v}
+      return Pochical_V1_GroupProfile()
+    }
+    set {kind = .groupProfile(newValue)}
+  }
+
+  public var member: Pochical_V1_Member {
+    get {
+      if case .member(let v)? = kind {return v}
+      return Pochical_V1_Member()
+    }
+    set {kind = .member(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Kind: Equatable, Sendable {
@@ -597,8 +624,73 @@ public nonisolated struct Pochical_V1_Change: Sendable {
     /// On a Group DO socket: a member's repeating orders, so the group works
     /// their days out as their own devices do.
     case memberRepeatOrders(Pochical_V1_MemberRepeatOrders)
+    /// On the User DO socket: a group the user is in, for their list of
+    /// groups (spec/sync-protocol.md, Groups).
+    case membership(Pochical_V1_Membership)
+    /// On a Group DO socket: the group's name and mark, and who is in it.
+    case groupProfile(Pochical_V1_GroupProfile)
+    case member(Pochical_V1_Member)
 
   }
+
+  public init() {}
+}
+
+/// A group the user is in, with its name and mark as their User DO last
+/// heard them, so their list of groups needs no socket to each group.
+public nonisolated struct Pochical_V1_Membership: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var groupID: String = String()
+
+  /// groupName characters at most (design/src/limits.ts).
+  public var name: String = String()
+
+  /// The group's mark when it is an emoji; empty for other marks.
+  public var emoji: String = String()
+
+  /// When the user joined, in ms since the epoch: the list's order.
+  public var joinedAtMs: Int64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// The group's name and mark, as its members see them: one value.
+public nonisolated struct Pochical_V1_GroupProfile: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// groupName characters at most (design/src/limits.ts).
+  public var name: String = String()
+
+  /// The group's mark when it is an emoji; empty for other marks.
+  public var emoji: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// Someone in the group, as they appear in it.
+public nonisolated struct Pochical_V1_Member: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var userID: String = String()
+
+  /// personName characters at most (design/src/limits.ts).
+  public var displayName: String = String()
+
+  /// When they joined, in ms since the epoch: the group's order of members.
+  public var joinedAtMs: Int64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 }
@@ -1763,7 +1855,7 @@ nonisolated extension Pochical_V1_Changes: SwiftProtobuf.Message, SwiftProtobuf.
 
 nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Change"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cursor\0\u{1}day\0\u{1}pattern\0\u{3}pattern_order\0\u{3}member_day\0\u{3}member_pattern\0\u{3}repeat_orders\0\u{1}coworker\0\u{3}coworker_order\0\u{3}member_repeat_orders\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cursor\0\u{1}day\0\u{1}pattern\0\u{3}pattern_order\0\u{3}member_day\0\u{3}member_pattern\0\u{3}repeat_orders\0\u{1}coworker\0\u{3}coworker_order\0\u{3}member_repeat_orders\0\u{1}membership\0\u{3}group_profile\0\u{1}member\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1889,6 +1981,45 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
           self.kind = .memberRepeatOrders(v)
         }
       }()
+      case 11: try {
+        var v: Pochical_V1_Membership?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .membership(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .membership(v)
+        }
+      }()
+      case 12: try {
+        var v: Pochical_V1_GroupProfile?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .groupProfile(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .groupProfile(v)
+        }
+      }()
+      case 13: try {
+        var v: Pochical_V1_Member?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .member(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .member(v)
+        }
+      }()
       default: break
       }
     }
@@ -1939,6 +2070,18 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
       guard case .memberRepeatOrders(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
     }()
+    case .membership?: try {
+      guard case .membership(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
+    }()
+    case .groupProfile?: try {
+      guard case .groupProfile(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
+    }()
+    case .member?: try {
+      guard case .member(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+    }()
     case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -1947,6 +2090,126 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
   public static func ==(lhs: Pochical_V1_Change, rhs: Pochical_V1_Change) -> Bool {
     if lhs.cursor != rhs.cursor {return false}
     if lhs.kind != rhs.kind {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_Membership: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Membership"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}group_id\0\u{1}name\0\u{1}emoji\0\u{3}joined_at_ms\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.groupID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.emoji) }()
+      case 4: try { try decoder.decodeSingularInt64Field(value: &self.joinedAtMs) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.groupID.isEmpty {
+      try visitor.visitSingularStringField(value: self.groupID, fieldNumber: 1)
+    }
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
+    }
+    if !self.emoji.isEmpty {
+      try visitor.visitSingularStringField(value: self.emoji, fieldNumber: 3)
+    }
+    if self.joinedAtMs != 0 {
+      try visitor.visitSingularInt64Field(value: self.joinedAtMs, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_Membership, rhs: Pochical_V1_Membership) -> Bool {
+    if lhs.groupID != rhs.groupID {return false}
+    if lhs.name != rhs.name {return false}
+    if lhs.emoji != rhs.emoji {return false}
+    if lhs.joinedAtMs != rhs.joinedAtMs {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_GroupProfile: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GroupProfile"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}emoji\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.emoji) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
+    }
+    if !self.emoji.isEmpty {
+      try visitor.visitSingularStringField(value: self.emoji, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_GroupProfile, rhs: Pochical_V1_GroupProfile) -> Bool {
+    if lhs.name != rhs.name {return false}
+    if lhs.emoji != rhs.emoji {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Member"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{3}display_name\0\u{3}joined_at_ms\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.userID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.displayName) }()
+      case 3: try { try decoder.decodeSingularInt64Field(value: &self.joinedAtMs) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.userID.isEmpty {
+      try visitor.visitSingularStringField(value: self.userID, fieldNumber: 1)
+    }
+    if !self.displayName.isEmpty {
+      try visitor.visitSingularStringField(value: self.displayName, fieldNumber: 2)
+    }
+    if self.joinedAtMs != 0 {
+      try visitor.visitSingularInt64Field(value: self.joinedAtMs, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_Member, rhs: Pochical_V1_Member) -> Bool {
+    if lhs.userID != rhs.userID {return false}
+    if lhs.displayName != rhs.displayName {return false}
+    if lhs.joinedAtMs != rhs.joinedAtMs {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

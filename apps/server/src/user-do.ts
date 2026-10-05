@@ -16,6 +16,7 @@ import type {
   PatternEdits,
   RepeatOrdersEdits,
 } from "./gen/pochical/v1/sync_pb";
+import type { GroupProfile } from "./group-do";
 import { isAhead } from "./hlc";
 import {
   acceptSyncSocket,
@@ -53,6 +54,7 @@ import {
   coworkerChange,
   coworkerOrderChange,
   dayChange,
+  membershipChange,
   orderChange,
   patternChange,
   repeatOrdersChange,
@@ -81,7 +83,8 @@ type SyncedLog = {
     | typeof patternOrder
     | typeof repeatOrders
     | typeof coworkers
-    | typeof coworkerOrder;
+    | typeof coworkerOrder
+    | typeof memberships;
 };
 
 /**
@@ -162,15 +165,30 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /**
-   * Written as the user joins a group or makes one; their shared days and
-   * patterns then start on their way to it.
+   * Written as the user joins a group or makes one, with its name and mark
+   * for their devices' list of groups, which hear of it at once; their
+   * shared days and patterns then start on their way to it. Joining a
+   * group they are in changes nothing.
    */
-  addMembership(groupId: string): void {
-    this.db
-      .insert(memberships)
-      .values({ groupId, joinedAt: new Date() })
-      .onConflictDoNothing()
-      .run();
+  addMembership(groupId: string, group: GroupProfile): void {
+    // None when the user was in the group already.
+    const [added] = this.ctx.storage.transactionSync(() =>
+      this.db
+        .insert(memberships)
+        .values({
+          cursor: this.head() + 1,
+          emoji: group.emoji,
+          groupId,
+          joinedAt: new Date(),
+          name: group.name,
+        })
+        .onConflictDoNothing()
+        .returning()
+        .all()
+    );
+    if (added !== undefined) {
+      broadcastChanges(this.ctx, [membershipChange(added)]);
+    }
     this.schedulePush();
   }
 
@@ -333,6 +351,17 @@ export class UserDO extends DurableObject<Env> {
             .map(coworkerOrderChange),
         shared: false,
         table: coworkerOrder,
+      },
+      {
+        after: (cursor) =>
+          db
+            .select()
+            .from(memberships)
+            .where(gt(memberships.cursor, cursor))
+            .all()
+            .map(membershipChange),
+        shared: false,
+        table: memberships,
       },
     ];
   }

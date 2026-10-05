@@ -65,7 +65,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
         { emoji, name },
         { displayName, userId: user.id }
       );
-      await users.addMembership(groupId);
+      await users.addMembership(groupId, { emoji, name });
       const inviteCode = await liveInviteCode(env.DB, groupId);
       return create(CreateGroupResponseSchema, { groupId, inviteCode });
     },
@@ -104,7 +104,8 @@ export const registerGroupService = (router: ConnectRouter): void => {
       const groupId = await requireGroupOfCode(env.DB, inviteCode);
       // The Group DO decides; the user's DO then keeps its copy. Both are
       // idempotent, so a retry after a failure in between completes it.
-      const result = await env.GROUPS.getByName(groupId).addMember({
+      const group = env.GROUPS.getByName(groupId);
+      const result = await group.addMember({
         displayName: shownAs,
         userId: user.id,
       });
@@ -114,7 +115,11 @@ export const registerGroupService = (router: ConnectRouter): void => {
           Code.ResourceExhausted
         );
       }
-      await env.USERS.getByName(user.id).addMembership(groupId);
+      const profile = await group.getProfile();
+      if (profile === null) {
+        throw noGroupOfCode();
+      }
+      await env.USERS.getByName(user.id).addMembership(groupId, profile);
       return create(JoinGroupResponseSchema, {
         alreadyMember: result === "already",
         groupId,

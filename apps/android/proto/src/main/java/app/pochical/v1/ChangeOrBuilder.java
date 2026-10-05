@@ -135,5 +135,56 @@ public interface ChangeOrBuilder extends
    */
   app.pochical.v1.MemberRepeatOrders getMemberRepeatOrders();
 
+  /**
+   * <pre>
+   * On the User DO socket: a group the user is in, for their list of
+   * groups (spec/sync-protocol.md, Groups).
+   * </pre>
+   *
+   * <code>.pochical.v1.Membership membership = 11 [json_name = "membership"];</code>
+   * @return Whether the membership field is set.
+   */
+  boolean hasMembership();
+  /**
+   * <pre>
+   * On the User DO socket: a group the user is in, for their list of
+   * groups (spec/sync-protocol.md, Groups).
+   * </pre>
+   *
+   * <code>.pochical.v1.Membership membership = 11 [json_name = "membership"];</code>
+   * @return The membership.
+   */
+  app.pochical.v1.Membership getMembership();
+
+  /**
+   * <pre>
+   * On a Group DO socket: the group's name and mark, and who is in it.
+   * </pre>
+   *
+   * <code>.pochical.v1.GroupProfile group_profile = 12 [json_name = "groupProfile"];</code>
+   * @return Whether the groupProfile field is set.
+   */
+  boolean hasGroupProfile();
+  /**
+   * <pre>
+   * On a Group DO socket: the group's name and mark, and who is in it.
+   * </pre>
+   *
+   * <code>.pochical.v1.GroupProfile group_profile = 12 [json_name = "groupProfile"];</code>
+   * @return The groupProfile.
+   */
+  app.pochical.v1.GroupProfile getGroupProfile();
+
+  /**
+   * <code>.pochical.v1.Member member = 13 [json_name = "member"];</code>
+   * @return Whether the member field is set.
+   */
+  boolean hasMember();
+  /**
+   * <code>.pochical.v1.Member member = 13 [json_name = "member"];</code>
+   * @return The member.
+   */
+  app.pochical.v1.Member getMember();
+
   public app.pochical.v1.Change.KindCase getKindCase();
 }

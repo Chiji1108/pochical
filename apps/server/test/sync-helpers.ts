@@ -90,6 +90,15 @@ export const edit = (
   },
 });
 
+// Reads up to the next Acked, once the edits sent have been taken, past
+// what came before it, like a catch-up.
+export const untilAcked = async (
+  frames: ReturnType<typeof framesOf>
+): Promise<ServerFrame> => {
+  const frame = await frames.next();
+  return frame.kind.case === "acked" ? frame : await untilAcked(frames);
+};
+
 // After the frames a step causes, a Ping's Pong proves none are left.
 export const settled = async (
   socket: WebSocket,
@@ -126,8 +135,18 @@ export const pair = async () => {
     { displayName: "ゆうき", inviteCode },
     guest
   );
-  return { groupId, guest, maker, makerId: await userIdOf(maker) };
+  return {
+    groupId,
+    guest,
+    inviteCode,
+    maker,
+    makerId: await userIdOf(maker),
+  };
 };
+
+// The cursor after what pair() leaves in its group's log: the group's
+// name and mark, then its two members.
+export const PAIR_ROSTER = 3n;
 
 // Runs the user's push now, as their alarm would.
 export const push = async (userId: string): Promise<void> => {
@@ -136,3 +155,9 @@ export const push = async (userId: string): Promise<void> => {
 
 export const changesIn = (frame: ServerFrame) =>
   frame.kind.case === "changes" ? frame.kind.value.changes : [];
+
+// A group's changes of its members' shifts, without who is in it.
+export const shiftsIn = (frame: ServerFrame) =>
+  changesIn(frame).filter(
+    ({ kind }) => kind.case !== "groupProfile" && kind.case !== "member"
+  );

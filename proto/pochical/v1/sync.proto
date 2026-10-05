@@ -158,7 +158,42 @@ message Change {
     // On a Group DO socket: a member's repeating orders, so the group works
     // their days out as their own devices do.
     MemberRepeatOrders member_repeat_orders = 10;
+    // On the User DO socket: a group the user is in, for their list of
+    // groups (spec/sync-protocol.md, Groups).
+    Membership membership = 11;
+    // On a Group DO socket: the group's name and mark, and who is in it.
+    GroupProfile group_profile = 12;
+    Member member = 13;
   }
+}
+
+// A group the user is in, with its name and mark as their User DO last
+// heard them, so their list of groups needs no socket to each group.
+message Membership {
+  string group_id = 1;
+  // groupName characters at most (design/src/limits.ts).
+  string name = 2;
+  // The group's mark when it is an emoji; empty for other marks.
+  string emoji = 3;
+  // When the user joined, in ms since the epoch: the list's order.
+  int64 joined_at_ms = 4;
+}
+
+// The group's name and mark, as its members see them: one value.
+message GroupProfile {
+  // groupName characters at most (design/src/limits.ts).
+  string name = 1;
+  // The group's mark when it is an emoji; empty for other marks.
+  string emoji = 2;
+}
+
+// Someone in the group, as they appear in it.
+message Member {
+  string user_id = 1;
+  // personName characters at most (design/src/limits.ts).
+  string display_name = 2;
+  // When they joined, in ms since the epoch: the group's order of members.
+  int64 joined_at_ms = 3;
 }
 
 // One field of a member's day, as the group sees it: pattern and times,

@@ -8,6 +8,7 @@ import {
   openSocket,
   signInAnonymously,
 } from "./helpers";
+import { changesIn, device, pair, settled, syncSocket } from "./sync-helpers";
 
 type Created = { groupId: string; inviteCode: string };
 
@@ -314,5 +315,68 @@ describe("GroupService", () => {
       return counted;
     });
     expect(statuses).toStrictEqual(statuses.map(() => 200));
+  });
+});
+
+describe("who is in a group, on members' devices", () => {
+  it("lists a group on the user's devices as they make or join it", async () => {
+    const maker = await signInAnonymously();
+    const phone = await device(maker);
+    const { groupId, inviteCode } = await createGroup(maker);
+    expect(changesIn(await phone.frames.next())).toMatchObject([
+      {
+        kind: {
+          case: "membership",
+          value: { emoji: "🍉", groupId, name: "いとこ会" },
+        },
+      },
+    ]);
+
+    // A device opened later catches up on it, once however often they join.
+    const guest = await signInAnonymously();
+    await join(inviteCode, guest);
+    await join(inviteCode, guest);
+    const tablet = await device(guest);
+    expect(changesIn(await tablet.frames.next())).toMatchObject([
+      { kind: { case: "membership", value: { groupId } } },
+    ]);
+    await expect(settled(tablet.socket, tablet.frames)).resolves.toMatchObject({
+      kind: { case: "pong" },
+    });
+  });
+
+  it("shows members the group's name and who is in it, live", async () => {
+    const { groupId, guest, inviteCode, makerId } = await pair();
+    const group = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
+    expect(changesIn(await group.frames.next())).toMatchObject([
+      {
+        cursor: 1n,
+        kind: {
+          case: "groupProfile",
+          value: { emoji: "🍉", name: "いとこ会" },
+        },
+      },
+      {
+        cursor: 2n,
+        kind: {
+          case: "member",
+          value: { displayName: "さくら", userId: makerId },
+        },
+      },
+      {
+        cursor: 3n,
+        kind: { case: "member", value: { displayName: "ゆうき" } },
+      },
+    ]);
+
+    const newcomer = await signInAnonymously();
+    await call(
+      "GroupService/JoinGroup",
+      { displayName: "あや", inviteCode },
+      newcomer
+    );
+    expect(changesIn(await group.frames.next())).toMatchObject([
+      { cursor: 4n, kind: { case: "member", value: { displayName: "あや" } } },
+    ]);
   });
 });

@@ -12,11 +12,17 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 // The groups the user is in, so their sockets can be let in without
-// waking a Group DO for an id that is not theirs. Written as they make or
-// join a group, and later as they leave (leaving is not built yet).
+// waking a Group DO for an id that is not theirs, and their devices list
+// them with the group's name and mark as last heard. Written as they make
+// or join a group, and later as they leave (leaving is not built yet).
+// Cursors are shared with day_fields.
 export const memberships = sqliteTable("memberships", {
+  cursor: integer().notNull().default(0),
+  // Set when the group's mark is an emoji.
+  emoji: text(),
   groupId: text("group_id").primaryKey(),
   joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull(),
+  name: text().notNull().default(""),
   // How far this user's shared values have reached the group: the cursor
   // up to which they were pushed and taken (spec/sync-protocol.md, Group
   // projection). Everything after it is still to go.
