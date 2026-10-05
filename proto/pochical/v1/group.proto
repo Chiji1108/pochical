@@ -35,6 +35,18 @@ service GroupService {
   // (GROUP_MAX_MEMBERS in design/src/limits.ts).
   // Joining a group you are already in changes nothing and says so.
   rpc JoinGroup(JoinGroupRequest) returns (JoinGroupResponse);
+
+  // Gives the group a new name and mark, which every member sees. Members
+  // only.
+  rpc RenameGroup(RenameGroupRequest) returns (RenameGroupResponse);
+
+  // How the caller appears in the group from now on. Members only.
+  rpc SetDisplayName(SetDisplayNameRequest) returns (SetDisplayNameResponse);
+
+  // Takes the caller out of the group: what it holds of their shifts goes,
+  // and its socket and calls refuse them until they join again by a live
+  // link. Leaving a group you are not in changes nothing.
+  rpc LeaveGroup(LeaveGroupRequest) returns (LeaveGroupResponse);
 }
 
 message CreateGroupRequest {
@@ -106,3 +118,27 @@ message JoinGroupResponse {
   // The caller was in the group already; nothing changed.
   bool already_member = 2;
 }
+
+message RenameGroupRequest {
+  string group_id = 1;
+  // groupName: 1 to 30 characters.
+  string name = 2;
+  // The group's mark: one emoji.
+  string emoji = 3;
+}
+
+message RenameGroupResponse {}
+
+message SetDisplayNameRequest {
+  string group_id = 1;
+  // personName: 1 to 20 characters.
+  string display_name = 2;
+}
+
+message SetDisplayNameResponse {}
+
+message LeaveGroupRequest {
+  string group_id = 1;
+}
+
+message LeaveGroupResponse {}

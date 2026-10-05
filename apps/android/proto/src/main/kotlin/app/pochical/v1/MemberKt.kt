@@ -99,6 +99,31 @@ public object MemberKt {
     public fun clearJoinedAtMs() {
       _builder.clearJoinedAtMs()
     }
+
+    /**
+     * ```
+     * They left the group: they go from it, with their shifts.
+     * ```
+     *
+     * `bool left = 4 [json_name = "left"];`
+     */
+    public var left: kotlin.Boolean
+      @kotlin.jvm.JvmName("getLeft")
+        get() = _builder.left
+      @kotlin.jvm.JvmName("setLeft")
+        set(value) {
+        _builder.left = value
+      }
+    /**
+     * ```
+     * They left the group: they go from it, with their shifts.
+     * ```
+     *
+     * `bool left = 4 [json_name = "left"];`
+     */
+    public fun clearLeft() {
+      _builder.clearLeft()
+    }
   }
 }
 public inline fun app.pochical.v1.Member.copy(block: `app.pochical.v1`.MemberKt.Dsl.() -> kotlin.Unit): app.pochical.v1.Member =

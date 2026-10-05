@@ -1,7 +1,7 @@
 import { create, fromBinary } from "@bufbuild/protobuf";
 import { GROUP_MAX_MEMBERS } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
-import { asc, count, eq, gt } from "drizzle-orm";
+import { and, asc, count, eq, gt, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
@@ -31,6 +31,7 @@ import {
   broadcastChanges,
   byCursor,
   closeSessionSockets,
+  closeUserSockets,
   handleSyncMessage,
   welcome,
 } from "./sync-socket";
@@ -64,15 +65,28 @@ const memberChange = ({
   cursor,
   displayName,
   joinedAt,
+  leftAt,
   userId,
 }: MemberRow): Change =>
   create(ChangeSchema, {
     cursor: BigInt(cursor),
     kind: {
       case: "member",
-      value: { displayName, joinedAtMs: BigInt(joinedAt.getTime()), userId },
+      value: {
+        displayName,
+        joinedAtMs: BigInt(joinedAt.getTime()),
+        left: leftAt !== null,
+        userId,
+      },
     },
   });
+
+/** Someone in the group now: their row, not left. */
+const inGroup = (userId?: string) =>
+  and(
+    isNull(members.leftAt),
+    userId === undefined ? undefined : eq(members.userId, userId)
+  );
 
 /** One kind of value the group keeps, as GroupDO.logs lists them. */
 type MemberLog = {
@@ -134,12 +148,69 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /** Everyone in the group as they appear in it, in the order they joined. */
-  memberList(): { displayName: string }[] {
+  memberList(): { displayName: string; userId: string }[] {
     return this.db
-      .select({ displayName: members.displayName })
+      .select({ displayName: members.displayName, userId: members.userId })
       .from(members)
+      .where(inGroup())
       .orderBy(asc(members.joinedAt))
       .all();
+  }
+
+  /**
+   * How the member appears in the group from now on; false when they are
+   * not in it.
+   */
+  setDisplayName(userId: string, displayName: string): boolean {
+    const changed = this.ctx.storage.transactionSync(() => {
+      if (!this.isMember(userId)) {
+        return undefined;
+      }
+      return this.db
+        .update(members)
+        .set({ cursor: this.nextCursor(), displayName })
+        .where(eq(members.userId, userId))
+        .returning()
+        .get();
+    });
+    if (changed === undefined) {
+      return false;
+    }
+    broadcastChanges(this.ctx, [memberChange(changed)]);
+    return true;
+  }
+
+  /**
+   * Takes the member out: their row stays as left, at the next cursor, so
+   * devices catching up hear of it, and their shifts go. Their sockets
+   * here close. Leaving when not in it changes nothing.
+   */
+  removeMember(userId: string): void {
+    const left = this.ctx.storage.transactionSync(() => {
+      if (!this.isMember(userId)) {
+        return undefined;
+      }
+      this.db.delete(memberDays).where(eq(memberDays.userId, userId)).run();
+      this.db
+        .delete(memberPatterns)
+        .where(eq(memberPatterns.userId, userId))
+        .run();
+      this.db
+        .delete(memberRepeatOrders)
+        .where(eq(memberRepeatOrders.userId, userId))
+        .run();
+      return this.db
+        .update(members)
+        .set({ cursor: this.nextCursor(), leftAt: new Date() })
+        .where(eq(members.userId, userId))
+        .returning()
+        .get();
+    });
+    if (left === undefined) {
+      return;
+    }
+    closeUserSockets(this.ctx, userId);
+    broadcastChanges(this.ctx, [memberChange(left)]);
   }
 
   /** Closes a member's sockets opened with a session that has ended. */
@@ -153,14 +224,17 @@ export class GroupDO extends DurableObject<Env> {
       this.db
         .select({ userId: members.userId })
         .from(members)
-        .where(eq(members.userId, userId))
+        .where(inGroup(userId))
         .get() !== undefined
     );
   }
 
   /** How many are in the group. */
   memberCount(): number {
-    return this.db.select({ n: count() }).from(members).get()?.n ?? 0;
+    return (
+      this.db.select({ n: count() }).from(members).where(inGroup()).get()?.n ??
+      0
+    );
   }
 
   /** Written when the group is created, and later when it is renamed. */
@@ -179,15 +253,20 @@ export class GroupDO extends DurableObject<Env> {
     return profileChange({ cursor, emoji, name });
   }
 
-  /** A new member at the next cursor, as a change. */
+  /** A new member at the next cursor, or one who left coming back, as a change. */
   private writeMember({ userId, displayName }: NewMember): Change {
     const row = {
       cursor: this.nextCursor(),
       displayName,
       joinedAt: new Date(),
+      leftAt: null,
       userId,
     };
-    this.db.insert(members).values(row).run();
+    this.db
+      .insert(members)
+      .values(row)
+      .onConflictDoUpdate({ set: row, target: members.userId })
+      .run();
     return memberChange(row);
   }
 
@@ -225,7 +304,7 @@ export class GroupDO extends DurableObject<Env> {
    */
   takeMemberShifts(userId: string, pushed: Uint8Array): void {
     if (!this.isMember(userId)) {
-      return;
+      return undefined;
     }
     const { changes } = fromBinary(ChangesSchema, pushed);
     const taken = this.ctx.storage.transactionSync(() => {

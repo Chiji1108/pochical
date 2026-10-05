@@ -654,6 +654,10 @@ public nonisolated struct Pochical_V1_Membership: Sendable {
   /// When the user joined, in ms since the epoch: the list's order.
   public var joinedAtMs: Int64 = 0
 
+  /// The user left the group: it goes from their list, with what the
+  /// device holds of it.
+  public var left: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -689,6 +693,9 @@ public nonisolated struct Pochical_V1_Member: Sendable {
 
   /// When they joined, in ms since the epoch: the group's order of members.
   public var joinedAtMs: Int64 = 0
+
+  /// They left the group: they go from it, with their shifts.
+  public var left: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2097,7 +2104,7 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
 
 nonisolated extension Pochical_V1_Membership: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Membership"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}group_id\0\u{1}name\0\u{1}emoji\0\u{3}joined_at_ms\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}group_id\0\u{1}name\0\u{1}emoji\0\u{3}joined_at_ms\0\u{1}left\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2109,6 +2116,7 @@ nonisolated extension Pochical_V1_Membership: SwiftProtobuf.Message, SwiftProtob
       case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.emoji) }()
       case 4: try { try decoder.decodeSingularInt64Field(value: &self.joinedAtMs) }()
+      case 5: try { try decoder.decodeSingularBoolField(value: &self.left) }()
       default: break
       }
     }
@@ -2127,6 +2135,9 @@ nonisolated extension Pochical_V1_Membership: SwiftProtobuf.Message, SwiftProtob
     if self.joinedAtMs != 0 {
       try visitor.visitSingularInt64Field(value: self.joinedAtMs, fieldNumber: 4)
     }
+    if self.left != false {
+      try visitor.visitSingularBoolField(value: self.left, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2135,6 +2146,7 @@ nonisolated extension Pochical_V1_Membership: SwiftProtobuf.Message, SwiftProtob
     if lhs.name != rhs.name {return false}
     if lhs.emoji != rhs.emoji {return false}
     if lhs.joinedAtMs != rhs.joinedAtMs {return false}
+    if lhs.left != rhs.left {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2177,7 +2189,7 @@ nonisolated extension Pochical_V1_GroupProfile: SwiftProtobuf.Message, SwiftProt
 
 nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Member"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{3}display_name\0\u{3}joined_at_ms\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{3}display_name\0\u{3}joined_at_ms\0\u{1}left\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2188,6 +2200,7 @@ nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._
       case 1: try { try decoder.decodeSingularStringField(value: &self.userID) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.displayName) }()
       case 3: try { try decoder.decodeSingularInt64Field(value: &self.joinedAtMs) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.left) }()
       default: break
       }
     }
@@ -2203,6 +2216,9 @@ nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._
     if self.joinedAtMs != 0 {
       try visitor.visitSingularInt64Field(value: self.joinedAtMs, fieldNumber: 3)
     }
+    if self.left != false {
+      try visitor.visitSingularBoolField(value: self.left, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2210,6 +2226,7 @@ nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._
     if lhs.userID != rhs.userID {return false}
     if lhs.displayName != rhs.displayName {return false}
     if lhs.joinedAtMs != rhs.joinedAtMs {return false}
+    if lhs.left != rhs.left {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

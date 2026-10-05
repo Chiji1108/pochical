@@ -57,6 +57,13 @@
       "when": 1791206751904,
       "tag": "0007_membership_values",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1791213473855,
+      "tag": "0008_membership_left",
+      "breakpoints": true
     }
   ]
 }

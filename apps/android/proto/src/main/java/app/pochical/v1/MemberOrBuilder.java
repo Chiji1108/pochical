@@ -51,4 +51,14 @@ public interface MemberOrBuilder extends
    * @return The joinedAtMs.
    */
   long getJoinedAtMs();
+
+  /**
+   * <pre>
+   * They left the group: they go from it, with their shifts.
+   * </pre>
+   *
+   * <code>bool left = 4 [json_name = "left"];</code>
+   * @return The left.
+   */
+  boolean getLeft();
 }

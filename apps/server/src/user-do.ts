@@ -1,7 +1,7 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { syncLimits } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
-import { and, eq, gt, inArray, max } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, max } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
@@ -118,6 +118,7 @@ export class UserDO extends DurableObject<Env> {
     const groups = this.db
       .select({ groupId: memberships.groupId })
       .from(memberships)
+      .where(isNull(memberships.leftAt))
       .all();
     await Promise.all(
       groups.map(async ({ groupId }) => {
@@ -159,7 +160,9 @@ export class UserDO extends DurableObject<Env> {
       this.db
         .select({ groupId: memberships.groupId })
         .from(memberships)
-        .where(eq(memberships.groupId, groupId))
+        .where(
+          and(eq(memberships.groupId, groupId), isNull(memberships.leftAt))
+        )
         .get() !== undefined
     );
   }
@@ -172,24 +175,73 @@ export class UserDO extends DurableObject<Env> {
    */
   addMembership(groupId: string, group: GroupProfile): void {
     // None when the user was in the group already.
-    const [added] = this.ctx.storage.transactionSync(() =>
-      this.db
+    const added = this.ctx.storage.transactionSync(() => {
+      if (this.isMember(groupId)) {
+        return undefined;
+      }
+      // A group left before starts again, its values pushed whole.
+      const row = {
+        cursor: this.head() + 1,
+        emoji: group.emoji,
+        groupId,
+        joinedAt: new Date(),
+        leftAt: null,
+        name: group.name,
+        pushedCursor: 0,
+      };
+      return this.db
         .insert(memberships)
-        .values({
-          cursor: this.head() + 1,
-          emoji: group.emoji,
-          groupId,
-          joinedAt: new Date(),
-          name: group.name,
-        })
-        .onConflictDoNothing()
+        .values(row)
+        .onConflictDoUpdate({ set: row, target: memberships.groupId })
         .returning()
-        .all()
-    );
+        .get();
+    });
     if (added !== undefined) {
       broadcastChanges(this.ctx, [membershipChange(added)]);
     }
     this.schedulePush();
+  }
+
+  /**
+   * The group's new name and mark, for the user's list of groups, which
+   * their devices hear of at once. A group they are not in changes nothing.
+   */
+  renameMembership(groupId: string, group: GroupProfile): void {
+    const renamed = this.ctx.storage.transactionSync(() => {
+      if (!this.isMember(groupId)) {
+        return undefined;
+      }
+      return this.db
+        .update(memberships)
+        .set({ cursor: this.head() + 1, emoji: group.emoji, name: group.name })
+        .where(eq(memberships.groupId, groupId))
+        .returning()
+        .get();
+    });
+    if (renamed !== undefined) {
+      broadcastChanges(this.ctx, [membershipChange(renamed)]);
+    }
+  }
+
+  /**
+   * The user left the group: it stays as left, at the next cursor, so
+   * their devices catching up hear of it, and nothing more is pushed to it.
+   */
+  removeMembership(groupId: string): void {
+    const left = this.ctx.storage.transactionSync(() => {
+      if (!this.isMember(groupId)) {
+        return undefined;
+      }
+      return this.db
+        .update(memberships)
+        .set({ cursor: this.head() + 1, leftAt: new Date() })
+        .where(eq(memberships.groupId, groupId))
+        .returning()
+        .get();
+    });
+    if (left !== undefined) {
+      broadcastChanges(this.ctx, [membershipChange(left)]);
+    }
   }
 
   /**
@@ -212,7 +264,11 @@ export class UserDO extends DurableObject<Env> {
     }
     this.pushRequested = false;
     const head = this.head();
-    const groups = this.db.select().from(memberships).all();
+    const groups = this.db
+      .select()
+      .from(memberships)
+      .where(isNull(memberships.leftAt))
+      .all();
     const retries: number[] = [];
     for (const { groupId, pushedCursor } of groups) {
       try {

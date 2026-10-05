@@ -186,6 +186,7 @@ export const membershipChange = (row: MembershipRow): Change =>
         emoji: row.emoji ?? "",
         groupId: row.groupId,
         joinedAtMs: BigInt(row.joinedAt.getTime()),
+        left: row.leftAt !== null,
         name: row.name,
       },
     },
