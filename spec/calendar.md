@@ -22,11 +22,11 @@ How カレンダー, the person's own month, behaves on screen: what each part s
 ## A day's detail
 
 - Tapping a day, while not entering, opens it: the month folds to its week, the day framed, and the day's detail shows under it.
-- Another day of that week can be tapped. Swiping moves a week, opening the same weekday a week on or back; 今週 is offered while another week is open. Pulling the week down unfolds the month again, as × in the heading does.
+- Another day of that week can be tapped, and ‹ and › beside the day's date open the day before and after, past a week's end too, so days can be gone through one after another. Swiping moves a week, opening the same weekday a week on or back; 今週 is offered while another week is open. Pulling the week down unfolds the month again, as × in the heading does.
 - シフト is picked from the person's patterns. Picking another keeps the day's memo and people, as entering does. A day with no shift shows なし.
 - 時間 shows for a pattern with hours: the day's own start and end, each kept only where it differs from the pattern's, with the change said in words (早出, 残業, else 変更済み), and 標準に戻す while it differs.
-- 一緒に働く人 shows for a pattern that does not count as off. It unfolds into the person's coworkers, in their order, picked or not, and 追加 while under `COWORKERS_MAX`. Someone added there goes to the end of the list and is on the day too.
-- The memo can be written on any day, shift or not, up to `textLimits.dayNote`, and is kept as text fields are (below).
+- 一緒に働く人 shows for a pattern that does not count as off. It unfolds into the person's coworkers, in their order, picked or not, and 追加 while under `COWORKERS_MAX`. Someone added there goes to the end of the list and is on the day too. Unfolded, it stays so as another day is opened, for noting people day after day.
+- The memo can be written on any day, shift or not, up to `textLimits.dayNote`, and is kept as text fields are (below). While it holds words, a clear button in the field empties it at once and keeps that, as a one-line field's does: the memo alone goes, the shift stays.
 - この日のシフトを消す, with a shift, clears it with its own hours and people; the memo stays. When a time change or people would go with it, it asks first and names them: 「一緒に働く人も消えます。」.
 
 ## Text fields

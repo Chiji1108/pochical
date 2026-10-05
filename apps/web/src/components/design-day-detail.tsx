@@ -1,11 +1,11 @@
 import { COWORKERS_MAX, textLimits } from "@pochical/design/limits";
-import { Check, ChevronRight, Plus } from "lucide-react";
-import { useContext, useState } from "react";
+import { Check, ChevronRight, CircleX, Plus } from "lucide-react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { css, cx } from "styled-system/css";
 
 import { keepDetails, timeChangeOf, timeRange } from "../lib/design-days";
 import type { DayEntry } from "../lib/design-days";
-import { usePatterns } from "../lib/design-patterns";
+import { isDayOff, usePatterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
 import { composing, limitText } from "../lib/text-limits";
@@ -45,6 +45,20 @@ const dayDetail = {
   disclosure: css({ transition: "transform 0.2s" }),
   disclosureOpen: css({ transform: "rotate(90deg)" }),
   memberInput: css({ width: "88px" }),
+  // The memo and, while it holds words, the button that clears it at once.
+  memoRow: css({ alignItems: "flex-start", display: "flex" }),
+  memoBox: css({ flex: 1, minWidth: 0 }),
+  memoClear: css({
+    bg: "transparent",
+    border: 0,
+    color: "text.tertiary",
+    cursor: "pointer",
+    display: "grid",
+    flexShrink: 0,
+    height: "touch",
+    placeItems: "center",
+    width: "touch",
+  }),
   memo: css({
     "--lines": "5",
     "--pad-x": "16px",
@@ -163,18 +177,55 @@ function MemberChips({
 
 export function DayDetail({
   entry,
+  note,
   patternKeys,
+  membersOpen,
   onChange,
+  onNoteChange,
+  onMembersOpenChange,
 }: {
   entry: DayEntry | undefined;
+  // The day's memo, its own whether it has a shift or not
+  // (spec/shift-patterns.md, A day's memo).
+  note: string | undefined;
   patternKeys: Shift[];
+  // Whether 一緒に働く人 is unfolded: kept as the next day is opened, so
+  // people can be noted day after day.
+  membersOpen: boolean;
   onChange: (entry: DayEntry | undefined) => void;
+  // "" clears the memo.
+  onNoteChange: (note: string) => void;
+  onMembersOpenChange: (open: boolean) => void;
 }) {
   const book = usePatterns();
   const pattern = entry && book[entry.shift];
   const time = pattern?.time;
   const timeChanged = Boolean(entry?.start || entry?.end);
-  const [membersOpen, setMembersOpen] = useState(false);
+  // The memo as it is written, kept when the field is left
+  // (spec/calendar.md, Text fields).
+  const [draft, setDraft] = useState(note ?? "");
+  // Kept too when the detail closes or the page is hidden, as an app goes
+  // to the background, with the field still in focus.
+  const unsaved = useRef({ draft, note, onNoteChange });
+  unsaved.current = { draft, note, onNoteChange };
+  useEffect(() => {
+    const keep = () => {
+      const latest = unsaved.current;
+      if (latest.draft !== (latest.note ?? "")) {
+        latest.onNoteChange(latest.draft);
+      }
+    };
+    const keepWhenHidden = () => {
+      if (document.visibilityState === "hidden") {
+        keep();
+      }
+    };
+    document.addEventListener("visibilitychange", keepWhenHidden);
+    return () => {
+      document.removeEventListener("visibilitychange", keepWhenHidden);
+      keep();
+    };
+  }, []);
   const [clearing, setClearing] = useState(false);
   // Said in words here, where there is room: the mark only shows a shape.
   const change = timeChangeOf(entry, pattern);
@@ -198,7 +249,6 @@ export function DayDetail({
   ].filter(Boolean);
   function clear() {
     setClearing(false);
-    setMembersOpen(false);
     onChange(undefined);
   }
   function changeTime(field: "start" | "end", value: string) {
@@ -266,18 +316,19 @@ export function DayDetail({
             }}
           />
         )}
-        {entry && time && (
+        {/* Someone works alongside on any shift but a day off. */}
+        {entry && pattern && !isDayOff(pattern) && (
           <ListRow
             aria-expanded={membersOpen}
             arrow={<Disclosure open={membersOpen} />}
             label="一緒に働く人"
             onClick={() => {
-              setMembersOpen(!membersOpen);
+              onMembersOpenChange(!membersOpen);
             }}
             value={names.length > 0 ? names.join("、") : "なし"}
           />
         )}
-        {entry && time && membersOpen && (
+        {entry && pattern && !isDayOff(pattern) && membersOpen && (
           <div className={dayDetail.unfolded} data-list-row="">
             <MemberChips
               onChange={(next) => {
@@ -288,21 +339,41 @@ export function DayDetail({
           </div>
         )}
       </List>
-      {entry && (
-        <List>
+      <List>
+        <div className={dayDetail.memoRow}>
           <LimitedTextArea
             aria-label="メモ"
-            className={dayDetail.memo}
+            className={cx(dayDetail.memoBox, dayDetail.memo)}
             kind="dayNote"
-            onValueChange={(note) => {
-              // "" clears the memo; without one an entry keeps the day's.
-              onChange({ ...entry, note });
+            onBlur={() => {
+              if (draft !== (note ?? "")) {
+                onNoteChange(draft);
+              }
             }}
+            onValueChange={setDraft}
             placeholder="メモ"
-            value={entry.note ?? ""}
+            value={draft}
           />
-        </List>
-      )}
+          {draft !== "" && (
+            <button
+              aria-label="メモを消す"
+              className={dayDetail.memoClear}
+              onClick={() => {
+                setDraft("");
+                onNoteChange("");
+              }}
+              // Keeps the field from losing focus first, which would keep
+              // the words about to be cleared.
+              onMouseDown={(event) => {
+                event.preventDefault();
+              }}
+              type="button"
+            >
+              <CircleX aria-hidden="true" size={18} />
+            </button>
+          )}
+        </div>
+      </List>
       {entry && (
         <DestructiveButton
           onClick={() => {

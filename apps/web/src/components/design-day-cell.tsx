@@ -192,7 +192,8 @@ function dayOffStyle(
 function dayDetails(
   date: Date,
   pattern: Pattern | undefined,
-  entry?: DayEntry
+  entry?: DayEntry,
+  note?: string
 ) {
   const change = timeChangeOf(entry, pattern);
   const moves = movesText(change);
@@ -202,13 +203,14 @@ function dayDetails(
     change && entry
       ? `${moves || "時間変更"} ${timeRange(entry, pattern)}`
       : "",
-    entry?.note ? "メモあり" : "",
+    note ? "メモあり" : "",
   ].filter(Boolean);
 }
 
 export function DayCell({
   date,
   entry,
+  note = entry?.note,
   outside,
   editing,
   active,
@@ -219,6 +221,9 @@ export function DayCell({
 }: {
   date: Date;
   entry: DayEntry | undefined;
+  // The day's memo, its own whether it has a shift or not
+  // (spec/shift-patterns.md, A day's memo); the entry's unless given.
+  note?: string;
   outside: boolean;
   editing: boolean;
   active: boolean;
@@ -253,7 +258,7 @@ export function DayCell({
   // stroke as in a paper diary, apart from the shift's 早出 and 残業
   // corners, and only on the person's own calendar. Other time
   // changes, a later start or an earlier end, show when the day is opened.
-  const noted = !plain && Boolean(entry?.note);
+  const noted = !plain && Boolean(note);
   // The picked frame wins over today's.
   const cellClass = cx(
     dayCell({
@@ -300,7 +305,7 @@ export function DayCell({
       </div>
     );
   }
-  const details = dayDetails(date, pattern, entry);
+  const details = dayDetails(date, pattern, entry, note);
   return (
     <button
       aria-haspopup={editing ? undefined : "dialog"}
