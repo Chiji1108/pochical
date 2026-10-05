@@ -84,5 +84,6 @@ var migrator: DatabaseMigrator {
   #endif
   migrator.registerOwnValues()
   migrator.registerGroups()
+  migrator.registerGroupValues()
   return migrator
 }
