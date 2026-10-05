@@ -57,7 +57,7 @@ struct GapSheet: View {
         }
       }
     }
-    .presentationDetents([.height(300)])
+    .presentationDetents([.medium])
   }
 
   private var lead: String {
