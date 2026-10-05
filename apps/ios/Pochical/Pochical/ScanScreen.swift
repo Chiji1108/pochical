@@ -16,12 +16,14 @@ struct ScanScreen: View {
   let onInvite: (OpenedInvite) -> Void
   @State private var photo: PhotosPickerItem?
   @State private var problem: String?
-  @State private var cameraAllowed = AVCaptureDevice.authorizationStatus(for: .video) != .denied
+  /// Whether the camera may be used, known once the person has answered:
+  /// the camera starts only then, or it would run without its picture.
+  @State private var camera = AVCaptureDevice.authorizationStatus(for: .video)
 
   var body: some View {
     ZStack {
       colors.mediaBackground.ignoresSafeArea()
-      if cameraAllowed {
+      if camera == .authorized {
         QRCamera { read($0, fromPhoto: false) }
           .ignoresSafeArea()
           .overlay(colors.mediaDim.opacity(0.5).ignoresSafeArea().allowsHitTesting(false))
@@ -47,9 +49,9 @@ struct ScanScreen: View {
         Frame()
           .frame(width: 220, height: 220)
         Text(
-          cameraAllowed
-            ? "グループの招待QRコードを枠に合わせてください"
-            : "カメラを使うには、設定でポチカルにカメラを許可してください"
+          camera == .denied || camera == .restricted
+            ? "カメラを使うには、設定でポチカルにカメラを許可してください"
+            : "グループの招待QRコードを枠に合わせてください"
         )
         .multilineTextAlignment(.center)
         Spacer()
@@ -66,8 +68,9 @@ struct ScanScreen: View {
       .foregroundStyle(colors.mediaText)
     }
     .task {
-      if AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined {
-        cameraAllowed = await AVCaptureDevice.requestAccess(for: .video)
+      if camera == .notDetermined {
+        _ = await AVCaptureDevice.requestAccess(for: .video)
+        camera = AVCaptureDevice.authorizationStatus(for: .video)
       }
     }
     .onChange(of: photo) { _, item in
