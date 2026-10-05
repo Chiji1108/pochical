@@ -290,10 +290,14 @@ export function MessageActions({
       positioning={{
         // Under the whole bubble, past a link's page in it too; else under
         // the message itself (its holder takes no room of its own).
-        getAnchorElement: () =>
-          messageRef.current?.closest<HTMLElement>("[data-part=bubble]") ??
-          (messageRef.current?.firstElementChild as HTMLElement | null) ??
-          null,
+        getAnchorElement: () => {
+          const message = messageRef.current;
+          const first = message?.firstElementChild;
+          return (
+            message?.closest<HTMLElement>("[data-part=bubble]") ??
+            (first instanceof HTMLElement ? first : null)
+          );
+        },
         gutter: 8,
         placement: mine ? "bottom-end" : "bottom-start",
       }}

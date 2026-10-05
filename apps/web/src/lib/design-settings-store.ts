@@ -111,6 +111,21 @@ const defaultCalendar: Record<ShiftMarkStyle, CalendarOptions> = {
   icon: { blankOff: false, highlight: true, names: false },
 };
 
+// The device settings a save holds, whatever was saved: what is not an
+// object is none.
+function savedDevice(persisted: unknown) {
+  if (
+    typeof persisted === "object" &&
+    persisted !== null &&
+    "device" in persisted &&
+    typeof persisted.device === "object" &&
+    persisted.device !== null
+  ) {
+    return persisted.device;
+  }
+  return {};
+}
+
 export const useSettings = create<SettingsState>()(
   persist(
     (set) => ({
@@ -188,11 +203,7 @@ export const useSettings = create<SettingsState>()(
       // Settings added later keep their defaults when an older save loads.
       merge: (persisted, current) => ({
         ...current,
-        device: {
-          ...current.device,
-          ...(persisted as { device?: Partial<DeviceSettings> } | undefined)
-            ?.device,
-        },
+        device: { ...current.device, ...savedDevice(persisted) },
       }),
       name: deviceSettingsKey,
       partialize: (state) => ({ device: state.device }),
