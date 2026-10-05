@@ -10,10 +10,13 @@ import {
   device,
   edit,
   pair,
+  PAIR_ROSTER,
   push,
   sendFrame,
   settled,
+  shiftsIn,
   syncSocket,
+  untilAcked,
 } from "./sync-helpers";
 
 // Repeating orders and coworkers (spec/sync-protocol.md, Repeating orders
@@ -242,7 +245,11 @@ describe("syncing a user's repeating orders", () => {
 describe("a member's repeating orders and people in their groups", () => {
   it("reaches the group with the orders, never the day's people", async () => {
     const { groupId, guest, maker, makerId } = await pair();
-    const group = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
+    const group = await syncSocket(
+      `/v1/groups/${groupId}/socket`,
+      guest,
+      PAIR_ROSTER
+    );
     const phone = await device(maker);
 
     sendFrame(phone.socket, {
@@ -251,14 +258,12 @@ describe("a member's repeating orders and people in their groups", () => {
         edits: [edit("p", "2026-10-20", DayField.PEOPLE, "c1 c2", 1000)],
       },
     });
-    await phone.frames.next();
-    await phone.frames.next();
+    await untilAcked(phone.frames);
     sendFrame(
       phone.socket,
       ordersEdit("o", [order("2026-10-01", ["day"])], 2000)
     );
-    await phone.frames.next();
-    await phone.frames.next();
+    await untilAcked(phone.frames);
     await push(makerId);
 
     const reached = await group.frames.next();
@@ -575,12 +580,11 @@ describe("catching up on what a user owns", () => {
       phone.socket,
       ordersEdit("o", [order("2026-10-01", ["day"])], 1000)
     );
-    await phone.frames.next();
-    await phone.frames.next();
+    await untilAcked(phone.frames);
     await push(makerId);
 
     const group = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
-    expect(changesIn(await group.frames.next())).toMatchObject([
+    expect(shiftsIn(await group.frames.next())).toMatchObject([
       {
         kind: {
           case: "memberRepeatOrders",

@@ -296,6 +296,105 @@ public object ChangeKt {
     public fun hasMemberRepeatOrders(): kotlin.Boolean {
       return _builder.hasMemberRepeatOrders()
     }
+
+    /**
+     * ```
+     * On the User DO socket: a group the user is in, for their list of
+     * groups (spec/sync-protocol.md, Groups).
+     * ```
+     *
+     * `.pochical.v1.Membership membership = 11 [json_name = "membership"];`
+     */
+    public var membership: app.pochical.v1.Membership
+      @kotlin.jvm.JvmName("getMembership")
+        get() = _builder.membership
+      @kotlin.jvm.JvmName("setMembership")
+        set(value) {
+        _builder.membership = value
+      }
+    /**
+     * ```
+     * On the User DO socket: a group the user is in, for their list of
+     * groups (spec/sync-protocol.md, Groups).
+     * ```
+     *
+     * `.pochical.v1.Membership membership = 11 [json_name = "membership"];`
+     */
+    public fun clearMembership() {
+      _builder.clearMembership()
+    }
+    /**
+     * ```
+     * On the User DO socket: a group the user is in, for their list of
+     * groups (spec/sync-protocol.md, Groups).
+     * ```
+     *
+     * `.pochical.v1.Membership membership = 11 [json_name = "membership"];`
+     * @return Whether the membership field is set.
+     */
+    public fun hasMembership(): kotlin.Boolean {
+      return _builder.hasMembership()
+    }
+
+    /**
+     * ```
+     * On a Group DO socket: the group's name and mark, and who is in it.
+     * ```
+     *
+     * `.pochical.v1.GroupProfile group_profile = 12 [json_name = "groupProfile"];`
+     */
+    public var groupProfile: app.pochical.v1.GroupProfile
+      @kotlin.jvm.JvmName("getGroupProfile")
+        get() = _builder.groupProfile
+      @kotlin.jvm.JvmName("setGroupProfile")
+        set(value) {
+        _builder.groupProfile = value
+      }
+    /**
+     * ```
+     * On a Group DO socket: the group's name and mark, and who is in it.
+     * ```
+     *
+     * `.pochical.v1.GroupProfile group_profile = 12 [json_name = "groupProfile"];`
+     */
+    public fun clearGroupProfile() {
+      _builder.clearGroupProfile()
+    }
+    /**
+     * ```
+     * On a Group DO socket: the group's name and mark, and who is in it.
+     * ```
+     *
+     * `.pochical.v1.GroupProfile group_profile = 12 [json_name = "groupProfile"];`
+     * @return Whether the groupProfile field is set.
+     */
+    public fun hasGroupProfile(): kotlin.Boolean {
+      return _builder.hasGroupProfile()
+    }
+
+    /**
+     * `.pochical.v1.Member member = 13 [json_name = "member"];`
+     */
+    public var member: app.pochical.v1.Member
+      @kotlin.jvm.JvmName("getMember")
+        get() = _builder.member
+      @kotlin.jvm.JvmName("setMember")
+        set(value) {
+        _builder.member = value
+      }
+    /**
+     * `.pochical.v1.Member member = 13 [json_name = "member"];`
+     */
+    public fun clearMember() {
+      _builder.clearMember()
+    }
+    /**
+     * `.pochical.v1.Member member = 13 [json_name = "member"];`
+     * @return Whether the member field is set.
+     */
+    public fun hasMember(): kotlin.Boolean {
+      return _builder.hasMember()
+    }
     public val kindCase: app.pochical.v1.Change.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -334,4 +433,13 @@ public val app.pochical.v1.ChangeOrBuilder.coworkerOrderOrNull: app.pochical.v1.
 
 public val app.pochical.v1.ChangeOrBuilder.memberRepeatOrdersOrNull: app.pochical.v1.MemberRepeatOrders?
   get() = if (hasMemberRepeatOrders()) getMemberRepeatOrders() else null
+
+public val app.pochical.v1.ChangeOrBuilder.membershipOrNull: app.pochical.v1.Membership?
+  get() = if (hasMembership()) getMembership() else null
+
+public val app.pochical.v1.ChangeOrBuilder.groupProfileOrNull: app.pochical.v1.GroupProfile?
+  get() = if (hasGroupProfile()) getGroupProfile() else null
+
+public val app.pochical.v1.ChangeOrBuilder.memberOrNull: app.pochical.v1.Member?
+  get() = if (hasMember()) getMember() else null
 

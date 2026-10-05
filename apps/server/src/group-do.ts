@@ -1,4 +1,4 @@
-import { fromBinary } from "@bufbuild/protobuf";
+import { create, fromBinary } from "@bufbuild/protobuf";
 import { GROUP_MAX_MEMBERS } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
 import { asc, count, eq, gt } from "drizzle-orm";
@@ -6,7 +6,7 @@ import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
-import { ChangesSchema } from "./gen/pochical/v1/sync_pb";
+import { ChangeSchema, ChangesSchema } from "./gen/pochical/v1/sync_pb";
 import type { Change } from "./gen/pochical/v1/sync_pb";
 import migrations from "./group-do-migrations/migrations.js";
 import {
@@ -48,7 +48,33 @@ type NewMember = { userId: string; displayName: string };
 /** How a join went: in now, in already, or kept out of a full group. */
 type JoinResult = "added" | "already" | "full";
 
-/** One kind of value the group keeps of its members, as GroupDO.logs lists them. */
+type ProfileRow = Pick<
+  typeof profile.$inferSelect,
+  "cursor" | "emoji" | "name"
+>;
+type MemberRow = typeof members.$inferSelect;
+
+const profileChange = ({ cursor, emoji, name }: ProfileRow): Change =>
+  create(ChangeSchema, {
+    cursor: BigInt(cursor),
+    kind: { case: "groupProfile", value: { emoji: emoji ?? "", name } },
+  });
+
+const memberChange = ({
+  cursor,
+  displayName,
+  joinedAt,
+  userId,
+}: MemberRow): Change =>
+  create(ChangeSchema, {
+    cursor: BigInt(cursor),
+    kind: {
+      case: "member",
+      value: { displayName, joinedAtMs: BigInt(joinedAt.getTime()), userId },
+    },
+  });
+
+/** One kind of value the group keeps, as GroupDO.logs lists them. */
 type MemberLog = {
   after: (cursor: number) => Change[];
 };
@@ -85,8 +111,8 @@ export class GroupDO extends DurableObject<Env> {
       return false;
     }
     this.ctx.storage.transactionSync(() => {
-      this.setProfile(group);
-      this.addMember(creator);
+      this.writeProfile(group);
+      this.writeMember(creator);
     });
     return true;
   }
@@ -103,10 +129,7 @@ export class GroupDO extends DurableObject<Env> {
     if (this.memberCount() >= GROUP_MAX_MEMBERS) {
       return "full";
     }
-    this.db
-      .insert(members)
-      .values({ displayName, joinedAt: new Date(), userId })
-      .run();
+    broadcastChanges(this.ctx, [this.writeMember({ displayName, userId })]);
     return "added";
   }
 
@@ -141,12 +164,42 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /** Written when the group is created, and later when it is renamed. */
-  setProfile({ name, emoji }: GroupProfile): void {
+  setProfile(group: GroupProfile): void {
+    broadcastChanges(this.ctx, [this.writeProfile(group)]);
+  }
+
+  /** The group's name and mark at the next cursor, as a change. */
+  private writeProfile({ name, emoji }: GroupProfile): Change {
+    const cursor = this.nextCursor();
     this.db
       .insert(profile)
-      .values({ emoji, id: 1, name })
-      .onConflictDoUpdate({ set: { emoji, name }, target: profile.id })
+      .values({ cursor, emoji, id: 1, name })
+      .onConflictDoUpdate({ set: { cursor, emoji, name }, target: profile.id })
       .run();
+    return profileChange({ cursor, emoji, name });
+  }
+
+  /** A new member at the next cursor, as a change. */
+  private writeMember({ userId, displayName }: NewMember): Change {
+    const row = {
+      cursor: this.nextCursor(),
+      displayName,
+      joinedAt: new Date(),
+      userId,
+    };
+    this.db.insert(members).values(row).run();
+    return memberChange(row);
+  }
+
+  /** Gives out the cursor after the newest, for a value written now. */
+  private nextCursor(): number {
+    const cursor = this.head() + 1;
+    this.db
+      .insert(logHead)
+      .values({ cursor, id: 1 })
+      .onConflictDoUpdate({ set: { cursor }, target: logHead.id })
+      .run();
+    return cursor;
   }
 
   /** A member's socket, forwarded once the Worker has checked them. */
@@ -210,12 +263,30 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /**
-   * Every kind of value the group keeps of its members, in one list so
-   * catch-up covers them all.
+   * Every kind of value the group keeps, of itself and its members, in
+   * one list so catch-up covers them all.
    */
   private logs(): MemberLog[] {
     const { db } = this;
     return [
+      {
+        after: (cursor) =>
+          db
+            .select()
+            .from(profile)
+            .where(gt(profile.cursor, cursor))
+            .all()
+            .map(profileChange),
+      },
+      {
+        after: (cursor) =>
+          db
+            .select()
+            .from(members)
+            .where(gt(members.cursor, cursor))
+            .all()
+            .map(memberChange),
+      },
       {
         after: (cursor) =>
           db

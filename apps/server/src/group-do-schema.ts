@@ -11,10 +11,12 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-// What the group shows of itself to members and to invite links: one row.
+// What the group shows of itself to members and to invite links: one row,
+// at the cursor it got when it last changed.
 export const profile = sqliteTable(
   "profile",
   {
+    cursor: integer().notNull().default(0),
     // Set when the group's mark is an emoji.
     emoji: text(),
     id: integer().primaryKey(),
@@ -36,10 +38,11 @@ export const logHead = sqliteTable(
   (table) => [check("log_head_single_row", sql`${table.id} = 1`)]
 );
 
-// Who is in the group, as they appear in it. The Group DO is where
-// membership is decided; each member's User DO keeps a copy of their own
-// groups for checking sockets.
+// Who is in the group, as they appear in it, each at the cursor it got
+// when it last changed. The Group DO is where membership is decided; each
+// member's User DO keeps a copy of their own groups for checking sockets.
 export const members = sqliteTable("members", {
+  cursor: integer().notNull().default(0),
   displayName: text("display_name").notNull(),
   joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull(),
   userId: text("user_id").primaryKey(),

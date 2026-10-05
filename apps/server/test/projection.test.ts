@@ -16,10 +16,13 @@ import {
   device,
   edit,
   pair,
+  PAIR_ROSTER,
   push,
   sendFrame,
   settled,
+  shiftsIn,
   syncSocket,
+  untilAcked,
 } from "./sync-helpers";
 
 // A member's day value as their User DO pushes it.
@@ -90,7 +93,7 @@ const enterADay = async (token: string): Promise<void> => {
       edits: [edit("p", "2026-10-20", DayField.PATTERN, "night", 1000)],
     },
   });
-  await phone.frames.next();
+  await untilAcked(phone.frames);
 };
 
 // The group's live invitation code, read from D1.
@@ -106,7 +109,11 @@ const liveCode = async (groupId: string): Promise<string> => {
 describe("a member's shifts in their groups", () => {
   it("reaches the group with the pattern and times, never the memo", async () => {
     const { groupId, guest, maker, makerId } = await pair();
-    const group = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
+    const group = await syncSocket(
+      `/v1/groups/${groupId}/socket`,
+      guest,
+      PAIR_ROSTER
+    );
     const phone = await device(maker);
 
     sendFrame(phone.socket, {
@@ -118,7 +125,7 @@ describe("a member's shifts in their groups", () => {
         ],
       },
     });
-    await phone.frames.next();
+    await untilAcked(phone.frames);
     await push(makerId);
 
     const reached = await group.frames.next();
@@ -169,11 +176,12 @@ describe("a member's shifts in their groups", () => {
     await push(makerId);
 
     const group = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
-    expect(group.welcome.kind).toMatchObject({ value: { cursor: 1n } });
+    // After the group's name and mark and its maker.
+    expect(group.welcome.kind).toMatchObject({ value: { cursor: 3n } });
     const caughtUp = await group.frames.next();
-    expect(changesIn(caughtUp)).toMatchObject([
+    expect(shiftsIn(caughtUp)).toMatchObject([
       {
-        cursor: 1n,
+        cursor: 3n,
         kind: { case: "memberDay", value: { day: { date: "2026-10-21" } } },
       },
     ]);
@@ -189,11 +197,12 @@ describe("a member's shifts in their groups", () => {
     });
     await groupDo.takeMemberShifts(makerId, pushed("day", 2000));
 
-    // A device that had cursor 1 still gets the new value, at cursor 2.
-    const group = await syncSocket(`/v1/groups/${groupId}/socket`, guest, 1n);
-    expect(group.welcome.kind).toMatchObject({ value: { cursor: 2n } });
+    // A device that had the first value still gets the new one, after it.
+    const had = PAIR_ROSTER + 1n;
+    const group = await syncSocket(`/v1/groups/${groupId}/socket`, guest, had);
+    expect(group.welcome.kind).toMatchObject({ value: { cursor: had + 1n } });
     expect(changesIn(await group.frames.next())).toMatchObject([
-      { cursor: 2n, kind: { value: { day: { value: "day" } } } },
+      { cursor: had + 1n, kind: { value: { day: { value: "day" } } } },
     ]);
   });
 
@@ -213,8 +222,11 @@ describe("a member's shifts in their groups", () => {
       newcomer
     );
     const group = await syncSocket(`/v1/groups/${groupId}/socket`, newcomer);
-    expect(group.welcome.kind).toMatchObject({ value: { cursor: 1n } });
-    expect(changesIn(await group.frames.next())).toMatchObject([
+    // One value taken, then the newcomer.
+    expect(group.welcome.kind).toMatchObject({
+      value: { cursor: PAIR_ROSTER + 2n },
+    });
+    expect(shiftsIn(await group.frames.next())).toMatchObject([
       { kind: { value: { day: { value: "night" }, userId: makerId } } },
     ]);
   });
@@ -231,8 +243,14 @@ describe("a member's shifts in their groups", () => {
       pushed("coworker-1", 1000, DayField.PEOPLE)
     );
 
-    const group = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
-    expect(group.welcome.kind).toMatchObject({ value: { cursor: 0n } });
+    const group = await syncSocket(
+      `/v1/groups/${groupId}/socket`,
+      guest,
+      PAIR_ROSTER
+    );
+    expect(group.welcome.kind).toMatchObject({
+      value: { cursor: PAIR_ROSTER },
+    });
     await expect(settled(group.socket, group.frames)).resolves.toMatchObject({
       kind: { case: "pong" },
     });
@@ -261,23 +279,23 @@ describe("a member's shifts in their groups", () => {
       state.storage.kv.delete("pushFailures:!unreachable");
       await state.storage.deleteAlarm();
       await instance.alarm();
-      expect(
-        state.storage.sql
-          .exec(
-            "SELECT group_id, pushed_cursor FROM memberships ORDER BY group_id"
-          )
-          .toArray()
-      ).toStrictEqual([
-        { group_id: "!unreachable", pushed_cursor: 0 },
-        { group_id: groupId, pushed_cursor: 1 },
-      ]);
+      const [unreached, reached] = state.storage.sql
+        .exec(
+          "SELECT group_id, pushed_cursor FROM memberships ORDER BY group_id"
+        )
+        .toArray();
+      // Past the membership, which groups never get, and the day.
+      expect(reached).toStrictEqual({ group_id: groupId, pushed_cursor: 2 });
+      // The day is still to go to the group that failed.
+      expect(unreached).toMatchObject({ group_id: "!unreachable" });
+      expect(unreached?.pushed_cursor).toBeLessThan(2);
       const retry = await state.storage.getAlarm();
       expect(retry).toBeGreaterThanOrEqual(before + PUSH_RETRY_FIRST_MS);
       expect(retry).toBeLessThanOrEqual(Date.now() + PUSH_RETRY_FIRST_MS);
     });
 
     const group = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
-    expect(changesIn(await group.frames.next())).toMatchObject([
+    expect(shiftsIn(await group.frames.next())).toMatchObject([
       { kind: { value: { day: { value: "night" }, userId: makerId } } },
     ]);
   });
@@ -311,7 +329,7 @@ describe("a member's shifts in their groups", () => {
     const { maker, user } = await someone();
     // The change comes as the push to the group fails.
     await failPushesTo(user, ["!unreachable"], (instance) => {
-      instance.addMembership("!unreachable");
+      instance.addMembership("!unreachable", { emoji: null, name: "届かない" });
     });
     await enterADay(maker);
 

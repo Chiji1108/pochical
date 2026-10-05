@@ -23,6 +23,7 @@ import type {
   coworkerOrder,
   coworkers,
   dayFields,
+  memberships,
   patternOrder,
   patterns,
   repeatOrders,
@@ -171,5 +172,21 @@ export const coworkerOrderChange = (row: CoworkerOrderRow): Change =>
         hlc: hlcOf(row),
         ids: parseIds(row.ids),
       }),
+    },
+  });
+
+type MembershipRow = typeof memberships.$inferSelect;
+
+export const membershipChange = (row: MembershipRow): Change =>
+  create(ChangeSchema, {
+    cursor: BigInt(row.cursor),
+    kind: {
+      case: "membership",
+      value: {
+        emoji: row.emoji ?? "",
+        groupId: row.groupId,
+        joinedAtMs: BigInt(row.joinedAt.getTime()),
+        name: row.name,
+      },
     },
   });

@@ -34,6 +34,9 @@ public  final class Change extends
     COWORKER(8),
     COWORKER_ORDER(9),
     MEMBER_REPEAT_ORDERS(10),
+    MEMBERSHIP(11),
+    GROUP_PROFILE(12),
+    MEMBER(13),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -58,6 +61,9 @@ public  final class Change extends
         case 8: return COWORKER;
         case 9: return COWORKER_ORDER;
         case 10: return MEMBER_REPEAT_ORDERS;
+        case 11: return MEMBERSHIP;
+        case 12: return GROUP_PROFILE;
+        case 13: return MEMBER;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -600,6 +606,201 @@ public  final class Change extends
    */
   private void clearMemberRepeatOrders() {
     if (kindCase_ == 10) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int MEMBERSHIP_FIELD_NUMBER = 11;
+  /**
+   * <pre>
+   * On the User DO socket: a group the user is in, for their list of
+   * groups (spec/sync-protocol.md, Groups).
+   * </pre>
+   *
+   * <code>.pochical.v1.Membership membership = 11 [json_name = "membership"];</code>
+   */
+  @java.lang.Override
+  public boolean hasMembership() {
+    return kindCase_ == 11;
+  }
+  /**
+   * <pre>
+   * On the User DO socket: a group the user is in, for their list of
+   * groups (spec/sync-protocol.md, Groups).
+   * </pre>
+   *
+   * <code>.pochical.v1.Membership membership = 11 [json_name = "membership"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.Membership getMembership() {
+    if (kindCase_ == 11) {
+       return (app.pochical.v1.Membership) kind_;
+    }
+    return app.pochical.v1.Membership.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * On the User DO socket: a group the user is in, for their list of
+   * groups (spec/sync-protocol.md, Groups).
+   * </pre>
+   *
+   * <code>.pochical.v1.Membership membership = 11 [json_name = "membership"];</code>
+   */
+  private void setMembership(app.pochical.v1.Membership value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 11;
+  }
+  /**
+   * <pre>
+   * On the User DO socket: a group the user is in, for their list of
+   * groups (spec/sync-protocol.md, Groups).
+   * </pre>
+   *
+   * <code>.pochical.v1.Membership membership = 11 [json_name = "membership"];</code>
+   */
+  private void mergeMembership(app.pochical.v1.Membership value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 11 &&
+        kind_ != app.pochical.v1.Membership.getDefaultInstance()) {
+      kind_ = app.pochical.v1.Membership.newBuilder((app.pochical.v1.Membership) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 11;
+  }
+  /**
+   * <pre>
+   * On the User DO socket: a group the user is in, for their list of
+   * groups (spec/sync-protocol.md, Groups).
+   * </pre>
+   *
+   * <code>.pochical.v1.Membership membership = 11 [json_name = "membership"];</code>
+   */
+  private void clearMembership() {
+    if (kindCase_ == 11) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int GROUP_PROFILE_FIELD_NUMBER = 12;
+  /**
+   * <pre>
+   * On a Group DO socket: the group's name and mark, and who is in it.
+   * </pre>
+   *
+   * <code>.pochical.v1.GroupProfile group_profile = 12 [json_name = "groupProfile"];</code>
+   */
+  @java.lang.Override
+  public boolean hasGroupProfile() {
+    return kindCase_ == 12;
+  }
+  /**
+   * <pre>
+   * On a Group DO socket: the group's name and mark, and who is in it.
+   * </pre>
+   *
+   * <code>.pochical.v1.GroupProfile group_profile = 12 [json_name = "groupProfile"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.GroupProfile getGroupProfile() {
+    if (kindCase_ == 12) {
+       return (app.pochical.v1.GroupProfile) kind_;
+    }
+    return app.pochical.v1.GroupProfile.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * On a Group DO socket: the group's name and mark, and who is in it.
+   * </pre>
+   *
+   * <code>.pochical.v1.GroupProfile group_profile = 12 [json_name = "groupProfile"];</code>
+   */
+  private void setGroupProfile(app.pochical.v1.GroupProfile value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 12;
+  }
+  /**
+   * <pre>
+   * On a Group DO socket: the group's name and mark, and who is in it.
+   * </pre>
+   *
+   * <code>.pochical.v1.GroupProfile group_profile = 12 [json_name = "groupProfile"];</code>
+   */
+  private void mergeGroupProfile(app.pochical.v1.GroupProfile value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 12 &&
+        kind_ != app.pochical.v1.GroupProfile.getDefaultInstance()) {
+      kind_ = app.pochical.v1.GroupProfile.newBuilder((app.pochical.v1.GroupProfile) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 12;
+  }
+  /**
+   * <pre>
+   * On a Group DO socket: the group's name and mark, and who is in it.
+   * </pre>
+   *
+   * <code>.pochical.v1.GroupProfile group_profile = 12 [json_name = "groupProfile"];</code>
+   */
+  private void clearGroupProfile() {
+    if (kindCase_ == 12) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int MEMBER_FIELD_NUMBER = 13;
+  /**
+   * <code>.pochical.v1.Member member = 13 [json_name = "member"];</code>
+   */
+  @java.lang.Override
+  public boolean hasMember() {
+    return kindCase_ == 13;
+  }
+  /**
+   * <code>.pochical.v1.Member member = 13 [json_name = "member"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.Member getMember() {
+    if (kindCase_ == 13) {
+       return (app.pochical.v1.Member) kind_;
+    }
+    return app.pochical.v1.Member.getDefaultInstance();
+  }
+  /**
+   * <code>.pochical.v1.Member member = 13 [json_name = "member"];</code>
+   */
+  private void setMember(app.pochical.v1.Member value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 13;
+  }
+  /**
+   * <code>.pochical.v1.Member member = 13 [json_name = "member"];</code>
+   */
+  private void mergeMember(app.pochical.v1.Member value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 13 &&
+        kind_ != app.pochical.v1.Member.getDefaultInstance()) {
+      kind_ = app.pochical.v1.Member.newBuilder((app.pochical.v1.Member) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 13;
+  }
+  /**
+   * <code>.pochical.v1.Member member = 13 [json_name = "member"];</code>
+   */
+  private void clearMember() {
+    if (kindCase_ == 13) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -1239,6 +1440,204 @@ public  final class Change extends
       return this;
     }
 
+    /**
+     * <pre>
+     * On the User DO socket: a group the user is in, for their list of
+     * groups (spec/sync-protocol.md, Groups).
+     * </pre>
+     *
+     * <code>.pochical.v1.Membership membership = 11 [json_name = "membership"];</code>
+     */
+    @java.lang.Override
+    public boolean hasMembership() {
+      return instance.hasMembership();
+    }
+    /**
+     * <pre>
+     * On the User DO socket: a group the user is in, for their list of
+     * groups (spec/sync-protocol.md, Groups).
+     * </pre>
+     *
+     * <code>.pochical.v1.Membership membership = 11 [json_name = "membership"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.Membership getMembership() {
+      return instance.getMembership();
+    }
+    /**
+     * <pre>
+     * On the User DO socket: a group the user is in, for their list of
+     * groups (spec/sync-protocol.md, Groups).
+     * </pre>
+     *
+     * <code>.pochical.v1.Membership membership = 11 [json_name = "membership"];</code>
+     */
+    public Builder setMembership(app.pochical.v1.Membership value) {
+      copyOnWrite();
+      instance.setMembership(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * On the User DO socket: a group the user is in, for their list of
+     * groups (spec/sync-protocol.md, Groups).
+     * </pre>
+     *
+     * <code>.pochical.v1.Membership membership = 11 [json_name = "membership"];</code>
+     */
+    public Builder setMembership(
+        app.pochical.v1.Membership.Builder builderForValue) {
+      copyOnWrite();
+      instance.setMembership(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * On the User DO socket: a group the user is in, for their list of
+     * groups (spec/sync-protocol.md, Groups).
+     * </pre>
+     *
+     * <code>.pochical.v1.Membership membership = 11 [json_name = "membership"];</code>
+     */
+    public Builder mergeMembership(app.pochical.v1.Membership value) {
+      copyOnWrite();
+      instance.mergeMembership(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * On the User DO socket: a group the user is in, for their list of
+     * groups (spec/sync-protocol.md, Groups).
+     * </pre>
+     *
+     * <code>.pochical.v1.Membership membership = 11 [json_name = "membership"];</code>
+     */
+    public Builder clearMembership() {
+      copyOnWrite();
+      instance.clearMembership();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * On a Group DO socket: the group's name and mark, and who is in it.
+     * </pre>
+     *
+     * <code>.pochical.v1.GroupProfile group_profile = 12 [json_name = "groupProfile"];</code>
+     */
+    @java.lang.Override
+    public boolean hasGroupProfile() {
+      return instance.hasGroupProfile();
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: the group's name and mark, and who is in it.
+     * </pre>
+     *
+     * <code>.pochical.v1.GroupProfile group_profile = 12 [json_name = "groupProfile"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.GroupProfile getGroupProfile() {
+      return instance.getGroupProfile();
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: the group's name and mark, and who is in it.
+     * </pre>
+     *
+     * <code>.pochical.v1.GroupProfile group_profile = 12 [json_name = "groupProfile"];</code>
+     */
+    public Builder setGroupProfile(app.pochical.v1.GroupProfile value) {
+      copyOnWrite();
+      instance.setGroupProfile(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: the group's name and mark, and who is in it.
+     * </pre>
+     *
+     * <code>.pochical.v1.GroupProfile group_profile = 12 [json_name = "groupProfile"];</code>
+     */
+    public Builder setGroupProfile(
+        app.pochical.v1.GroupProfile.Builder builderForValue) {
+      copyOnWrite();
+      instance.setGroupProfile(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: the group's name and mark, and who is in it.
+     * </pre>
+     *
+     * <code>.pochical.v1.GroupProfile group_profile = 12 [json_name = "groupProfile"];</code>
+     */
+    public Builder mergeGroupProfile(app.pochical.v1.GroupProfile value) {
+      copyOnWrite();
+      instance.mergeGroupProfile(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: the group's name and mark, and who is in it.
+     * </pre>
+     *
+     * <code>.pochical.v1.GroupProfile group_profile = 12 [json_name = "groupProfile"];</code>
+     */
+    public Builder clearGroupProfile() {
+      copyOnWrite();
+      instance.clearGroupProfile();
+      return this;
+    }
+
+    /**
+     * <code>.pochical.v1.Member member = 13 [json_name = "member"];</code>
+     */
+    @java.lang.Override
+    public boolean hasMember() {
+      return instance.hasMember();
+    }
+    /**
+     * <code>.pochical.v1.Member member = 13 [json_name = "member"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.Member getMember() {
+      return instance.getMember();
+    }
+    /**
+     * <code>.pochical.v1.Member member = 13 [json_name = "member"];</code>
+     */
+    public Builder setMember(app.pochical.v1.Member value) {
+      copyOnWrite();
+      instance.setMember(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.Member member = 13 [json_name = "member"];</code>
+     */
+    public Builder setMember(
+        app.pochical.v1.Member.Builder builderForValue) {
+      copyOnWrite();
+      instance.setMember(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.Member member = 13 [json_name = "member"];</code>
+     */
+    public Builder mergeMember(app.pochical.v1.Member value) {
+      copyOnWrite();
+      instance.mergeMember(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.Member member = 13 [json_name = "member"];</code>
+     */
+    public Builder clearMember() {
+      copyOnWrite();
+      instance.clearMember();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.Change)
   }
   @java.lang.Override
@@ -1267,11 +1666,14 @@ public  final class Change extends
             app.pochical.v1.CoworkerValue.class,
             app.pochical.v1.CoworkerOrder.class,
             app.pochical.v1.MemberRepeatOrders.class,
+            app.pochical.v1.Membership.class,
+            app.pochical.v1.GroupProfile.class,
+            app.pochical.v1.Member.class,
           };
           java.lang.String info =
-              "\u0000\n\u0001\u0000\u0001\n\n\u0000\u0000\u0000\u0001\u0003\u0002<\u0000\u0003<" +
+              "\u0000\r\u0001\u0000\u0001\r\r\u0000\u0000\u0000\u0001\u0003\u0002<\u0000\u0003<" +
               "\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<\u0000" +
-              "";
+              "\u000b<\u0000\f<\u0000\r<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
