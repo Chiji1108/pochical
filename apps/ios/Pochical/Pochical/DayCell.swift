@@ -15,9 +15,11 @@ struct DayCell: View {
   let style: MarkStyle
   /// Days off on a tint of their own pattern's color.
   let highlightOff: Bool
-  /// The day being entered, framed in the accent.
+  /// The day being entered or opened, framed in the accent.
   var isSelected = false
-  /// Picks the day to enter, while entering; nil otherwise.
+  /// While entering, today's frame gives way to the day being entered.
+  var isEntering = false
+  /// Picks the day: to enter while entering, else to open.
   var onSelect: ((Day) -> Void)?
 
   static let height: CGFloat = 64
@@ -62,7 +64,7 @@ struct DayCell: View {
       // day being entered, else today, lighter, and not while entering.
       if isSelected {
         RoundedRectangle(cornerRadius: Radius.md).strokeBorder(colors.accentDefault, lineWidth: 2)
-      } else if isToday && onSelect == nil {
+      } else if isToday && !isEntering {
         RoundedRectangle(cornerRadius: Radius.md).strokeBorder(colors.accentFocus, lineWidth: 1.5)
       }
     }

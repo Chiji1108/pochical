@@ -44,7 +44,7 @@ struct CalendarScreen: View {
             MonthPage(
               month: month, today: today, calendar: calendar, weekStart: weekStart,
               style: style, highlightOff: style != .emoji, selected: entering ?? opened,
-              openedWeek: opened,
+              openedWeek: opened, isEntering: entering != nil,
               onSelect: { day in
                 if entering != nil {
                   entering = day
@@ -297,6 +297,7 @@ struct MonthPage: View {
   let selected: Day?
   /// The day opened, whose week alone shows.
   let openedWeek: Day?
+  let isEntering: Bool
   /// Picks a day: to enter while entering, else to open.
   let onSelect: ((Day) -> Void)?
 
@@ -319,7 +320,8 @@ struct MonthPage: View {
               day: day, entry: entry, pattern: entry.flatMap { calendar.patternsByID[$0.shift] },
               outside: day.month != month.month, isToday: day == today,
               isHoliday: Holidays.name(on: day.key, in: "JP") != nil, style: style,
-              highlightOff: highlightOff, isSelected: day == selected, onSelect: onSelect)
+              highlightOff: highlightOff, isSelected: day == selected, isEntering: isEntering,
+              onSelect: onSelect)
           }
         }
       }
