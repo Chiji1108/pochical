@@ -173,9 +173,8 @@ struct CalendarScreen: View {
         }
       }
     }
-    .sheet(isPresented: Binding(get: { !gaps.isEmpty }, set: { if !$0 { gaps = [] } })) {
+    .fittedSheet(isPresented: Binding(get: { !gaps.isEmpty }, set: { if !$0 { gaps = [] } })) {
       gapSheet(calendar)
-        .fittedSheet()
     }
     .task {
       // Past midnight, while the app is open or waiting in the background.
