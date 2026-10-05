@@ -3,9 +3,9 @@ import PochicalKit
 import SQLiteData
 import SwiftUI
 
-/// スタイル (/design's MarkPage): how shifts are marked, each choice drawn
-/// on the person's own patterns, and this week in the look over them, so
-/// there is nothing to confirm. テーマ and シフトの色 come next.
+/// スタイル (/design's MarkPage): how shifts are marked and the テーマ, each
+/// choice drawn on the person's own patterns, and this week in the look
+/// over them, so there is nothing to confirm.
 struct StyleSettings: View {
   @Environment(Settings.self) private var settings
   @FetchAll private var days: [DayRow]
@@ -19,6 +19,7 @@ struct StyleSettings: View {
       days: days, patterns: patterns, patternOrder: patternOrder, orders: orders)
     let work = calendar.patterns.first { !$0.countsAsOff }
     let off = calendar.patterns.first(where: \.countsAsOff)
+    let samples = Array(calendar.patterns.prefix(3))
     Form {
       Section {
         ThisWeek(calendar: calendar)
@@ -38,6 +39,28 @@ struct StyleSettings: View {
         Text("シフトの見た目")
       } footer: {
         Text("グループの人にも、この見た目で表示されます。")
+      }
+      Section("テーマ") {
+        ThemeChoices(samples: samples)
+      }
+      // Emoji keep their own colors, so シフトの色 would change nothing.
+      if settings.device.look.style != .emoji {
+        Section("シフトの色") {
+          Choices(
+            options: [true, false], picked: settings.device.look.colored,
+            label: { $0 ? "色分け" : "ワントーン" }
+          ) { colored in
+            HStack(spacing: 4) {
+              ForEach(samples, id: \.id) { pattern in
+                ShiftMark(pattern: pattern, size: 18)
+              }
+            }
+            .padding(.vertical, 6)
+            .environment(\.look, lookWith { $0.colored = colored })
+          } onPick: { colored in
+            settings.device.look.colored = colored
+          }
+        }
       }
       Section("休みの見せ方") {
         Choices(
@@ -62,6 +85,12 @@ struct StyleSettings: View {
     }
     .navigationTitle("スタイル")
     .navigationBarTitleDisplayMode(.inline)
+  }
+
+  private func lookWith(_ change: (inout Look) -> Void) -> Look {
+    var look = settings.device.look
+    change(&look)
+    return look
   }
 
   /// A day drawn small in the person's look as `change` leaves it: its
@@ -212,5 +241,83 @@ private struct ThisWeek: View {
     }
     .accessibilityElement(children: .ignore)
     .accessibilityLabel("今週の見え方")
+  }
+}
+
+/// The テーマ, three to a page swiped sideways with dots under them, as
+/// /design's (after Telegram's 外観): each card the テーマ's own screen in
+/// the light or dark of this one, with the person's marks on its card and
+/// its text and accent side by side.
+private struct ThemeChoices: View {
+  @Environment(Settings.self) private var settings
+  @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.themeColors) private var colors
+  let samples: [Pattern]
+  @State private var page = 0
+
+  private static let pages = stride(from: 0, to: Theme.allCases.count, by: 3).map {
+    Array(Theme.allCases[$0..<min($0 + 3, Theme.allCases.count)])
+  }
+
+  var body: some View {
+    TabView(selection: $page) {
+      ForEach(Self.pages.indices, id: \.self) { index in
+        HStack(alignment: .top, spacing: 8) {
+          ForEach(Self.pages[index], id: \.self) { theme in
+            card(theme)
+          }
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+        .tag(index)
+      }
+    }
+    .tabViewStyle(.page(indexDisplayMode: .always))
+    .indexViewStyle(.page(backgroundDisplayMode: .always))
+    .frame(height: 150)
+    .onAppear {
+      // Opens on the page of the テーマ in use.
+      page = Self.pages.firstIndex { $0.contains(settings.device.theme) } ?? 0
+    }
+  }
+
+  private func card(_ theme: Theme) -> some View {
+    let isPicked = theme == settings.device.theme
+    let own = theme.colors(theme.isAlwaysDark ? .dark : colorScheme)
+    return Button {
+      settings.device.theme = theme
+    } label: {
+      VStack(spacing: 6) {
+        VStack(spacing: 8) {
+          HStack(spacing: 2) {
+            ForEach(samples, id: \.id) { pattern in
+              ShiftMark(pattern: pattern, size: 14)
+            }
+          }
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, 8)
+          .background(own.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.sm))
+          .overlay(RoundedRectangle(cornerRadius: Radius.sm).strokeBorder(own.separator))
+          HStack(spacing: 4) {
+            Capsule().fill(own.textPrimary).frame(width: 20, height: 4)
+            Capsule().fill(own.accentFill).frame(width: 28, height: 4)
+          }
+        }
+        .padding(8)
+        .padding(.bottom, 4)
+        .background(own.backgroundBase, in: RoundedRectangle(cornerRadius: Radius.lg))
+        .overlay {
+          RoundedRectangle(cornerRadius: Radius.lg)
+            .strokeBorder(isPicked ? colors.accentDefault : own.separator, lineWidth: isPicked ? 2 : 1)
+        }
+        .environment(\.themeColors, own)
+        Text(theme.name)
+          .font(.footnote)
+          .foregroundStyle(isPicked ? colors.accentDefault : colors.textSecondary)
+      }
+      .frame(maxWidth: .infinity)
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(theme.name)
+    .accessibilityAddTraits(isPicked ? .isSelected : [])
   }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import PochicalDesign
 
 /// What the person set for their own screen, kept on this device alone, as
 /// /design's device settings are (apps/web/src/lib/design-settings-store.ts).
@@ -31,6 +32,14 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
 
   public var week = Week()
   public var look = Look()
+  /// The テーマ's id, as /design's preset; one no longer known is the app's
+  /// own.
+  public var themeID = Theme.pochical.rawValue
+
+  public var theme: Theme {
+    get { Theme(rawValue: themeID) ?? .pochical }
+    set { themeID = newValue.rawValue }
+  }
 
   public init() {}
 
@@ -38,6 +47,7 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     week = try container.decodeIfPresent(Week.self, forKey: .week) ?? Week()
     look = try container.decodeIfPresent(Look.self, forKey: .look) ?? Look()
+    themeID = try container.decodeIfPresent(String.self, forKey: .themeID) ?? Theme.pochical.rawValue
   }
 }
 
@@ -79,6 +89,9 @@ public struct Look: Codable, Equatable, Sendable {
   public var style = MarkStyle.icon
   /// Filled (塗り) or outlined (線); icons alone have the choice.
   public var fill = true
+  /// シフトの色: each shift in its own color (色分け), or all of them in
+  /// the テーマ's, the palette's first.
+  public var colored = true
   public var icon = MarkOptions(highlight: true)
   public var emoji = MarkOptions()
   public var badge = MarkOptions()
@@ -108,6 +121,7 @@ public struct Look: Codable, Equatable, Sendable {
     let defaults = Look()
     style = try container.decodeIfPresent(MarkStyle.self, forKey: .style) ?? defaults.style
     fill = try container.decodeIfPresent(Bool.self, forKey: .fill) ?? defaults.fill
+    colored = try container.decodeIfPresent(Bool.self, forKey: .colored) ?? defaults.colored
     icon = try container.decodeIfPresent(MarkOptions.self, forKey: .icon) ?? defaults.icon
     emoji = try container.decodeIfPresent(MarkOptions.self, forKey: .emoji) ?? defaults.emoji
     badge = try container.decodeIfPresent(MarkOptions.self, forKey: .badge) ?? defaults.badge

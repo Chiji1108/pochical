@@ -40,7 +40,7 @@ struct ShiftMark: View {
   }
 
   @ViewBuilder private var glyph: some View {
-    let color = colors.mark(pattern.color)
+    let color = colors.mark(look.colored ? pattern.color : 0)
     switch look.style {
     case .emoji:
       Text(pattern.emoji).font(.system(size: size))
@@ -80,7 +80,7 @@ struct ShiftMark: View {
     let side = size * 0.32
     return unit
       .applying(CGAffineTransform(scaleX: side, y: side))
-      .fill(look.style == .emoji ? colors.textSecondary : colors.mark(pattern.color).color)
+      .fill(look.style == .emoji ? colors.textSecondary : colors.mark(look.colored ? pattern.color : 0).color)
       .frame(width: side, height: side)
   }
 }
