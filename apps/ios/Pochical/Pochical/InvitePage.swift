@@ -27,6 +27,18 @@ struct InvitePage: View {
                 .interpolation(.none)
                 .resizable()
                 .accessibilityLabel("招待のQRコード")
+                // As iOS's images, a long press shares or saves it.
+                .contextMenu {
+                  let image = Image(uiImage: qr)
+                  ShareLink(
+                    item: image, preview: SharePreview("「\(group.name)」への招待", image: image)
+                  ) {
+                    Label("共有", systemImage: "square.and.arrow.up")
+                  }
+                  Button("写真に保存", systemImage: "square.and.arrow.down") {
+                    UIImageWriteToSavedPhotosAlbum(qr, nil, nil, nil)
+                  }
+                }
             } else if failed {
               Image(systemName: "wifi.exclamationmark")
                 .font(.largeTitle)
@@ -35,7 +47,7 @@ struct InvitePage: View {
               ProgressView()
             }
           }
-          .frame(width: 180, height: 180)
+          .frame(width: 200, height: 200)
           Text(failed ? "リンクを読み込めませんでした" : "この画面を相手に読み取ってもらいます")
             .font(.footnote)
             .foregroundStyle(colors.textSecondary)
@@ -116,13 +128,18 @@ struct InvitePage: View {
   }
 }
 
-/// The link as a QR code, one pixel a module, to be scaled up unsmoothed.
+/// The link as a QR code, black on white with the white margin of four
+/// modules readers expect, large enough to share and save sharp; shown
+/// scaled unsmoothed.
 private func qrCode(of link: URL) -> UIImage? {
   let filter = CIFilter.qrCodeGenerator()
   filter.message = Data(link.absoluteString.utf8)
   filter.correctionLevel = "M"
-  guard let image = filter.outputImage,
-    let drawn = CIContext().createCGImage(image, from: image.extent)
+  let module: CGFloat = 16
+  guard let code = filter.outputImage?.transformed(by: CGAffineTransform(scaleX: module, y: module))
   else { return nil }
+  let framed = code.composited(
+    over: CIImage(color: .white).cropped(to: code.extent.insetBy(dx: -3 * module, dy: -3 * module)))
+  guard let drawn = CIContext().createCGImage(framed, from: framed.extent) else { return nil }
   return UIImage(cgImage: drawn)
 }
