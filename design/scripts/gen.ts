@@ -51,6 +51,7 @@ import type { Preset } from "../src/themes";
 import { textStyles } from "../src/type";
 import { widgetRules } from "../src/widgets";
 import { kotlinHolidays, swiftHolidays, webHolidays } from "./holidays";
+import { kotlinMarkIcons, swiftMarkIcons } from "./mark-icon-code";
 import { swiftPhrases } from "./phrases";
 
 const root = path.join(import.meta.dir, "../..");
@@ -583,6 +584,8 @@ const outputs = {
   [`${SWIFT_DIR}/Phrases.swift`]: swiftFile(swiftPhrases()),
   [`${SWIFT_DIR}/Holidays.swift`]: swiftFile(swiftHolidays()),
   [`${KOTLIN_DIR}/Holidays.kt`]: kotlinFile(kotlinHolidays()),
+  [`${SWIFT_DIR}/MarkIcons.swift`]: swiftFile(swiftMarkIcons()),
+  [`${KOTLIN_DIR}/MarkIcons.kt`]: kotlinFile(kotlinMarkIcons()),
   "apps/web/src/lib/holiday-names.ts": webHolidays(HEADER),
   ...sharedOutputs,
   "spec/design-tokens.json": json(),

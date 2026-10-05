@@ -10,7 +10,6 @@
     "generate-routes": "tsr generate",
     "icon:site": "bun scripts/site-icon.ts",
     "icon:app": "bun scripts/app-assets.ts",
-    "icon:marks": "bun scripts/mark-icons.ts",
     "image:share": "bun scripts/share-image.ts",
     "build": "panda codegen && vite build",
     "bundle:budget": "bun scripts/bundle-budget.ts",

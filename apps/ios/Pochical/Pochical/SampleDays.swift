@@ -15,17 +15,18 @@
         guard try PatternRow.fetchCount(db) == 0 else {
           return
         }
-        let patterns: [(String, String, String, String, UInt32, (String, String)?, Bool, String?)] = [
-          ("day", "日勤", "☀️", "日", 1, ("09:00", "18:00"), false, nil),
-          ("night", "夜勤", "🌙", "夜", 8, ("16:30", "09:30"), false, "after"),
-          ("after", "明け", "🌅", "明", 3, nil, false, nil),
-          ("off", "休み", "🌿", "休", 0, nil, true, nil),
+        let patterns: [(String, String, String, String, String, UInt32, (String, String)?, Bool, String?)] = [
+          ("day", "日勤", "☀️", "日", "sun", 1, ("09:00", "18:00"), false, nil),
+          ("night", "夜勤", "🌙", "夜", "moon", 8, ("16:30", "09:30"), false, "after"),
+          ("after", "明け", "🌅", "明", "sunHorizon", 3, nil, false, nil),
+          ("off", "休み", "🌿", "休", "leaf", 0, nil, true, nil),
         ]
-        for (id, name, emoji, symbol, color, time, off, nextDay) in patterns {
+        for (id, name, emoji, symbol, icon, color, time, off, nextDay) in patterns {
           var pattern = Pochical_V1_Pattern()
           pattern.name = name
           pattern.emoji = emoji
           pattern.symbol = symbol
+          pattern.icon = icon
           pattern.color = color
           if let time {
             pattern.start = time.0

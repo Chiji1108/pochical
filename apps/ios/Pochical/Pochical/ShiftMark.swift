@@ -52,14 +52,27 @@ struct ShiftMark: View {
         .frame(minWidth: size, minHeight: size)
         .background(color.tint, in: RoundedRectangle(cornerRadius: size * 0.28))
     case .icon:
-      // The letter in a thin ring, as a mark with no icon of its own is
-      // drawn. TODO: Phosphor's icons, written out by `mise run gen`.
-      Text(pattern.symbol)
-        .font(.system(size: (size * 0.5).rounded(), weight: .semibold))
-        .foregroundStyle(color.color)
+      if let layers = MarkIcons.layers(pattern.icon, filled: true, size: size) {
+        ZStack {
+          ForEach(layers.indices, id: \.self) { index in
+            layers[index].path.fill(color.color.opacity(layers[index].opacity))
+          }
+        }
         .frame(width: size, height: size)
-        .overlay(Circle().strokeBorder(color.color, lineWidth: 1.7))
+      } else {
+        letterInRing(color)
+      }
     }
+  }
+
+  /// The letter in a thin ring: the icon "letter", and any id with no
+  /// glyph.
+  private func letterInRing(_ color: MarkColor) -> some View {
+    Text(pattern.symbol)
+      .font(.system(size: (size * 0.5).rounded(), weight: .semibold))
+      .foregroundStyle(color.color)
+      .frame(width: size, height: size)
+      .overlay(Circle().strokeBorder(color.color, lineWidth: 1.7))
   }
 
   /// A corner triangle, in the mark's color; emoji bring colors of their
