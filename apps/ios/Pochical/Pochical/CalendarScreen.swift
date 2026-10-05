@@ -20,6 +20,8 @@ struct CalendarScreen: View {
   @State private var gaps: [Day] = []
   /// The day opened from the month, its week alone left above its detail.
   @State private var opened: Day?
+  /// Whether a day's 一緒に働く人 is unfolded, kept from day to day.
+  @State private var peopleOpen = false
 
   /// How far the pages reach either side of this month. Only the pages in
   /// view are drawn, so they can reach far without a cost.
@@ -65,13 +67,22 @@ struct CalendarScreen: View {
       // An opened day's week stays put under its detail.
       .scrollDisabled(opened != nil)
       .frame(height: opened == nil ? MonthPage.height : DayCell.height)
+      // While a day is open, a swipe moves a week and a pull down unfolds
+      // the month (spec/calendar.md, A day's detail).
+      .simultaneousGesture(
+        DragGesture(minimumDistance: 24).onEnded(weekDragEnded),
+        including: opened == nil ? .none : .all)
       if let day = opened {
         let entry = calendar.shown(from: day, through: day)[day]
         DayDetail(
-          day: day, entry: entry, patterns: calendar.patterns,
+          day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
           coworkers: ordered(coworkerRows, by: coworkerOrder), style: style,
+          peopleOpen: $peopleOpen,
           onChange: { entry in
             write { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
+          },
+          onNoteChange: { note in
+            write { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
           },
           // Someone added from a day is on that day too.
           onAddCoworker: { name in
@@ -82,7 +93,8 @@ struct CalendarScreen: View {
                 try OwnValues.set(day, to: entry, now: now, in: db)
               }
             }
-          }
+          },
+          onStep: { step in opened = day.adding(days: step) }
         )
         .id(day)
         .padding(.top, 12)
@@ -95,11 +107,17 @@ struct CalendarScreen: View {
       }
     }
     .background(colors.backgroundBase)
-    // A month turned to while entering starts on its first day; a day
-    // picked in a month around it turns to that month.
+    // A month turned to while entering starts on its first blank day; a
+    // day picked in a month around it turns to that month.
     .onChange(of: shownMonth) { _, month in
       if let month, let day = entering, day.firstOfMonth != month {
-        entering = month
+        entering = firstBlankDay(in: month, days: monthDays(month, currentCalendar))
+      }
+    }
+    // An opened day moved to another month shows that month's page.
+    .onChange(of: opened) { _, day in
+      if let day, day.firstOfMonth != shownMonth {
+        shownMonth = day.firstOfMonth
       }
     }
     .onChange(of: entering) { _, day in
@@ -110,13 +128,12 @@ struct CalendarScreen: View {
       }
     }
     .sheet(isPresented: Binding(get: { !gaps.isEmpty }, set: { if !$0 { gaps = [] } })) {
-      if let off = holidayShift(of: calendar.patterns).flatMap({ calendar.patternsByID[$0] }),
-        let month = gaps.first?.firstOfMonth
-      {
+      let offPatterns = calendar.patterns.filter(\.countsAsOff)
+      if !offPatterns.isEmpty, let month = gaps.first?.firstOfMonth {
         GapSheet(
-          month: month, days: gaps, offPattern: off,
+          month: month, days: gaps, offPatterns: offPatterns,
           offCount: offCount(in: month, calendar: calendar)
-        ) {
+        ) { off in
           write { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }
         }
       }
@@ -131,6 +148,30 @@ struct CalendarScreen: View {
 
   private var thisMonth: Day {
     today.firstOfMonth
+  }
+
+  private var currentCalendar: OwnCalendar {
+    OwnCalendar(days: days, patterns: patterns, patternOrder: patternOrder, orders: orders)
+  }
+
+  /// The days of `month`'s month that show a shift.
+  private func monthDays(_ month: Day, _ calendar: OwnCalendar) -> [Day: DayEntry] {
+    calendar.shown(from: month.firstOfMonth, through: month.daysOfMonth.last!)
+  }
+
+  /// The first day of the week `day` is in, from the week start.
+  private func weekOf(_ day: Day) -> Day {
+    day.adding(days: -(((day.weekday - weekStart) % 7 + 7) % 7))
+  }
+
+  private func weekDragEnded(_ drag: DragGesture.Value) {
+    let (dx, dy) = (drag.translation.width, drag.translation.height)
+    guard let day = opened else { return }
+    if abs(dx) > abs(dy), abs(dx) > 50 {
+      withAnimation(Springs.standard) { opened = day.adding(days: dx < 0 ? 7 : -7) }
+    } else if dy > 60 {
+      withAnimation(Springs.standard) { opened = nil }
+    }
   }
 
   private var months: [Day] {
@@ -152,7 +193,8 @@ struct CalendarScreen: View {
       )
     } else {
       Button {
-        entering = (shownMonth ?? thisMonth).firstOfMonth
+        let month = shownMonth ?? thisMonth
+        entering = firstBlankDay(in: month, days: monthDays(month, calendar))
       } label: {
         Label("ポチポチ入力", systemImage: "pencil")
           .font(.headline)
@@ -172,8 +214,7 @@ struct CalendarScreen: View {
       return
     }
     entering = nil
-    let calendar = OwnCalendar(
-      days: days, patterns: patterns, patternOrder: patternOrder, orders: orders)
+    let calendar = currentCalendar
     // With no pattern that counts as off there is nothing to offer.
     guard holidayShift(of: calendar.patterns) != nil else {
       return
@@ -220,7 +261,15 @@ struct CalendarScreen: View {
       .accessibilityLabel("\(month.year)年\(month.month)月")
       .accessibilityAddTraits(.isHeader)
       Spacer()
-      if opened != nil {
+      if let day = opened {
+        if weekOf(day) != weekOf(today) {
+          Button("今週") {
+            withAnimation(Springs.standard) { opened = today }
+          }
+          .buttonStyle(.bordered)
+          .buttonBorderShape(.capsule)
+          .tint(colors.textPrimary)
+        }
         Button("閉じる", systemImage: "xmark") {
           withAnimation(Springs.standard) { opened = nil }
         }
@@ -317,7 +366,8 @@ struct MonthPage: View {
           ForEach(week, id: \.self) { day in
             let entry = shown[day]
             DayCell(
-              day: day, entry: entry, pattern: entry.flatMap { calendar.patternsByID[$0.shift] },
+              day: day, entry: entry, note: calendar.note(on: day),
+              pattern: entry.flatMap { calendar.patternsByID[$0.shift] },
               outside: day.month != month.month, isToday: day == today,
               isHoliday: Holidays.name(on: day.key, in: "JP") != nil, style: style,
               highlightOff: highlightOff, isSelected: day == selected, isEntering: isEntering,

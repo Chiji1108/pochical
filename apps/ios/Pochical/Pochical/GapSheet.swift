@@ -10,10 +10,17 @@ struct GapSheet: View {
   @Environment(\.dismiss) private var dismiss
   let month: Day
   let days: [Day]
-  let offPattern: Pattern
+  /// The patterns that count as off; with more than one, chips pick
+  /// which fills the days, the first to begin with.
+  let offPatterns: [Pattern]
   /// The month's days off now.
   let offCount: Int
-  let onFill: () -> Void
+  let onFill: (Pattern) -> Void
+  @State private var picked: PatternID?
+
+  private var offPattern: Pattern {
+    offPatterns.first { $0.id == picked } ?? offPatterns[0]
+  }
 
   var body: some View {
     NavigationStack {
@@ -33,9 +40,22 @@ struct GapSheet: View {
           }
         }
         .scrollIndicators(.hidden)
+        if offPatterns.count > 1 {
+          HStack(spacing: 8) {
+            ForEach(offPatterns, id: \.id) { pattern in
+              Button(pattern.name) { picked = pattern.id }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .tint(pattern.id == offPattern.id ? colors.accentDefault : colors.textSecondary)
+                .accessibilityAddTraits(pattern.id == offPattern.id ? .isSelected : [])
+            }
+          }
+          .accessibilityElement(children: .contain)
+          .accessibilityLabel("入れるパターン")
+        }
         Spacer(minLength: 0)
         Button {
-          onFill()
+          onFill(offPattern)
           dismiss()
         } label: {
           Text("\(offPattern.name)にする")

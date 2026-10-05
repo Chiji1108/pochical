@@ -35,3 +35,12 @@ import Testing
   #expect(monday.first?.first?.key == "2026-09-28")
   #expect(monday.last?.last?.key == "2026-11-01")
 }
+
+@Test func entersFromTheMonthsFirstBlankDay() {
+  let month = Day("2026-10-01")!
+  let filled = Dictionary(
+    uniqueKeysWithValues: month.daysOfMonth.prefix(3).map { ($0, DayEntry(shift: "day")) })
+  #expect(firstBlankDay(in: month, days: filled).key == "2026-10-04")
+  let full = Dictionary(uniqueKeysWithValues: month.daysOfMonth.map { ($0, DayEntry(shift: "day")) })
+  #expect(firstBlankDay(in: month, days: full).key == "2026-10-01")
+}

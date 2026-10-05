@@ -42,6 +42,24 @@ extension OwnValues {
     try setShown([day: entry], calendar: calendar, now: now, in: db)
   }
 
+  /// Sets a day's memo, whether it has a shift or not; "" clears it
+  /// (spec/shift-patterns.md, A day's memo).
+  public static func setNote(_ day: Day, to note: String, now: Int64, in db: Database) throws {
+    let stored = try DayRow.find(day.key).fetchOne(db)?.note
+    let kept = note.isEmpty ? nil : note
+    guard kept != stored else { return }
+    var dayValue = Pochical_V1_DayValue()
+    dayValue.date = day.key
+    dayValue.field = .note
+    if let kept {
+      dayValue.value = kept
+    }
+    dayValue.hlc = try nextClock(now: now, in: db)
+    var change = Pochical_V1_Change()
+    change.day = dayValue
+    try edit(change, opID: UUID().uuidString.lowercased(), in: db)
+  }
+
   /// Adds a person to 一緒に働く人, at the end of the list, and gives back
   /// their id.
   public static func addCoworker(named name: String, now: Int64, in db: Database) throws

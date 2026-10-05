@@ -118,3 +118,27 @@ private func outbox(_ db: Database) throws -> [Pochical_V1_DayValue] {
     #expect(try OwnValues.coworkers(in: db).map(\.name) == ["さとう", "たなか"])
   }
 }
+
+@Test func aMemoIsSetOnADayWithoutAShift() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    let day = Day("2026-10-05")!
+    try OwnValues.setNote(day, to: "歯医者", now: 1000, in: db)
+    try OwnValues.setNote(day, to: "歯医者", now: 1000, in: db)
+    #expect(try outbox(db).map(\.field) == [.note])
+    #expect(try OwnValues.ownDays(from: day, through: day, in: db)[day] == OwnDay(note: "歯医者"))
+    try OwnValues.setNote(day, to: "", now: 1000, in: db)
+    #expect(try OwnValues.ownDays(from: day, through: day, in: db).isEmpty)
+  }
+}
+
+@Test func clearingADayKeepsItsMemo() throws {
+  let database = try calendarWithAnOrder()
+  try database.write { db in
+    let day = Day("2026-10-05")!
+    try OwnValues.set(day, to: DayEntry(shift: "night", note: "棚卸し"), now: 1000, in: db)
+    try OwnValues.enter(nil, on: day, now: 1000, in: db)
+    #expect(try OwnValues.ownDays(from: day, through: day, in: db)[day]
+      == OwnDay(shift: Days.noShift, note: "棚卸し"))
+  }
+}
