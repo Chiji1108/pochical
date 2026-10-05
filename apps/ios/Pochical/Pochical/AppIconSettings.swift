@@ -83,8 +83,8 @@ struct AppIconSettings: View {
       }
       .padding(16)
     }
+    .background(colors.backgroundBase)
     .navigationTitle("アプリアイコン")
-    .navigationBarTitleDisplayMode(.inline)
   }
 
   private func pick(_ icon: AppIconChoice) async {

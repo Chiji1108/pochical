@@ -24,17 +24,20 @@ struct StyleSettings: View {
       Section {
         ThisWeek(calendar: calendar)
       }
-      .listRowBackground(Color.clear)
-      .listRowInsets(EdgeInsets())
+      .settingsOnPage()
       Section {
         Choices(
           options: Shape.allCases, picked: Shape(settings.device.look),
           label: \.name
         ) { shape in
-          sample(work) { $0 = shape.look(from: settings.device.look) }
+          if let work {
+            ShiftMark(pattern: work, size: 20)
+              .environment(\.look, shape.look(from: settings.device.look))
+          }
         } onPick: { shape in
           settings.device.look = shape.look(from: settings.device.look)
         }
+        .settingsOnPage()
       } header: {
         Text("シフトの見た目")
       } footer: {
@@ -42,6 +45,7 @@ struct StyleSettings: View {
       }
       Section("テーマ") {
         ThemeChoices(samples: samples)
+          .settingsOnPage()
       }
       // Emoji keep their own colors, so シフトの色 would change nothing.
       if settings.device.look.style != .emoji {
@@ -55,11 +59,11 @@ struct StyleSettings: View {
                 ShiftMark(pattern: pattern, size: 18)
               }
             }
-            .padding(.vertical, 6)
             .environment(\.look, lookWith { $0.colored = colored })
           } onPick: { colored in
             settings.device.look.colored = colored
           }
+          .settingsOnPage()
         }
       }
       Section("休みの見せ方") {
@@ -71,6 +75,7 @@ struct StyleSettings: View {
         } onPick: { offLook in
           offLook.apply(to: &settings.device.look.options)
         }
+        .settingsOnPage()
       }
       Section("シフト名") {
         Choices(
@@ -81,10 +86,11 @@ struct StyleSettings: View {
         } onPick: { names in
           settings.device.look.options.names = names
         }
+        .settingsOnPage()
       }
     }
+    .settingsList()
     .navigationTitle("スタイル")
-    .navigationBarTitleDisplayMode(.inline)
   }
 
   private func lookWith(_ change: (inout Look) -> Void) -> Look {
@@ -175,8 +181,9 @@ private enum OffLook: CaseIterable, Hashable {
   }
 }
 
-/// Choices side by side, each drawing what it does over its name, as
-/// /design's tall segments: the one picked framed in the accent.
+/// Choices side by side in one track, each drawing what it does over its
+/// name, as /design's tall segments: the one picked raised on the card's
+/// ground, its name in bold.
 private struct Choices<Option: Hashable, Sample: View>: View {
   @Environment(\.themeColors) private var colors
   let options: [Option]
@@ -186,61 +193,69 @@ private struct Choices<Option: Hashable, Sample: View>: View {
   let onPick: (Option) -> Void
 
   var body: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: 0) {
       ForEach(options, id: \.self) { option in
         let isPicked = option == picked
         Button {
-          onPick(option)
+          withAnimation(Springs.quick) { onPick(option) }
         } label: {
-          VStack(spacing: 6) {
+          VStack(spacing: 4) {
             sample(option)
               .allowsHitTesting(false)
               .accessibilityHidden(true)
             Text(label(option))
-              .font(.footnote)
-              .foregroundStyle(isPicked ? colors.accentDefault : colors.textSecondary)
+              .font(.footnote.weight(isPicked ? .semibold : .regular))
+              .foregroundStyle(colors.textPrimary)
           }
           .padding(.vertical, 8)
-          .frame(maxWidth: .infinity)
-          .background(
-            colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.lg)
-          )
-          .overlay {
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .background {
             if isPicked {
               RoundedRectangle(cornerRadius: Radius.lg)
-                .strokeBorder(colors.accentDefault, lineWidth: 2)
+                .fill(colors.backgroundCard)
+                .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
             }
           }
+          .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label(option))
         .accessibilityAddTraits(isPicked ? .isSelected : [])
       }
     }
+    .fixedSize(horizontal: false, vertical: true)
+    .padding(3)
+    .background(colors.fillTertiary, in: RoundedRectangle(cornerRadius: Radius.lg + 3))
   }
 }
 
-/// This week of the person's month, in the look being set.
+/// This week and the next of the person's month in the look being set, on
+/// a card as /design's preview is.
 private struct ThisWeek: View {
   @Environment(Settings.self) private var settings
+  @Environment(\.themeColors) private var colors
   let calendar: OwnCalendar
 
   var body: some View {
     let today = Day.today
     let week = settings.device.week
     let first = today.adding(days: -(((today.weekday - week.start) % 7 + 7) % 7))
-    let days = (0..<7).map { first.adding(days: $0) }
-    VStack(spacing: 0) {
+    let days = (0..<14).map { first.adding(days: $0) }
+    let shown = calendar.shown(from: days[0], through: days[13])
+    let pageDays = PageDays(
+      today: today, calendar: calendar, colorsHolidays: week.holiday,
+      offShown: settings.device.look.options.blankOff ? .hidden : .shown, selected: nil,
+      isEntering: false, onSelect: nil)
+    VStack(spacing: 4) {
       WeekdayRow(week: week)
-      PageDays(
-        today: today, calendar: calendar, colorsHolidays: week.holiday,
-        offShown: settings.device.look.options.blankOff ? .hidden : .shown, selected: nil,
-        isEntering: false, onSelect: nil
-      )
-      .row(days, shown: calendar.shown(from: days[0], through: days[6]), fadingOutside: nil)
+      pageDays.row(Array(days[0..<7]), shown: shown, fadingOutside: nil)
+      pageDays.row(Array(days[7..<14]), shown: shown, fadingOutside: nil)
     }
+    .padding(12)
+    .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.xl))
+    .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(colors.separator))
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel("今週の見え方")
+    .accessibilityLabel("今週と来週の見え方")
   }
 }
 
@@ -273,7 +288,7 @@ private struct ThemeChoices: View {
     }
     .tabViewStyle(.page(indexDisplayMode: .always))
     .indexViewStyle(.page(backgroundDisplayMode: .always))
-    .frame(height: 150)
+    .frame(height: 128)
     .onAppear {
       // Opens on the page of the テーマ in use.
       page = Self.pages.firstIndex { $0.contains(settings.device.theme) } ?? 0
