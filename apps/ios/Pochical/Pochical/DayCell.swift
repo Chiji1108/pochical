@@ -15,10 +15,28 @@ struct DayCell: View {
   let style: MarkStyle
   /// Days off on a tint of their own pattern's color.
   let highlightOff: Bool
+  /// The day being entered, framed in the accent.
+  var isSelected = false
+  /// Picks the day to enter, while entering; nil otherwise.
+  var onSelect: ((Day) -> Void)?
 
   static let height: CGFloat = 64
 
   var body: some View {
+    if let onSelect {
+      Button {
+        onSelect(day)
+      } label: {
+        cell
+      }
+      .buttonStyle(PressedScale())
+      .accessibilityAddTraits(isSelected ? .isSelected : [])
+    } else {
+      cell
+    }
+  }
+
+  private var cell: some View {
     VStack(spacing: 2) {
       date
       if let pattern {
@@ -40,8 +58,11 @@ struct DayCell: View {
       }
     }
     .overlay {
-      // Today framed inside the day, so it never reaches the page beside.
-      if isToday {
+      // Framed inside the day, so it never reaches the page beside: the
+      // day being entered, else today, lighter, and not while entering.
+      if isSelected {
+        RoundedRectangle(cornerRadius: Radius.md).strokeBorder(colors.accentDefault, lineWidth: 2)
+      } else if isToday && onSelect == nil {
         RoundedRectangle(cornerRadius: Radius.md).strokeBorder(colors.accentFocus, lineWidth: 1.5)
       }
     }
@@ -91,5 +112,14 @@ struct DayCell: View {
       parts.append("メモあり")
     }
     return parts.joined(separator: "、")
+  }
+}
+
+/// A day pressed shrinks a little under the finger, as /design's do.
+struct PressedScale: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .scaleEffect(configuration.isPressed ? 0.94 : 1)
+      .animation(Springs.quick, value: configuration.isPressed)
   }
 }

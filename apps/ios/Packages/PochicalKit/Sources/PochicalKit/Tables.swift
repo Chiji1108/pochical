@@ -94,6 +94,19 @@ struct OutboxEdit: Hashable, Sendable {
   var clearFrom: String?
 }
 
+/// The device's own place in sync (spec/sync-protocol.md, HLC): its id,
+/// its last clock, and what it adds to its own time to correct it. One row.
+@Table("syncState")
+struct SyncState: Hashable, Sendable {
+  @Column(primaryKey: true)
+  var id: Int = 1
+  /// The device's own id, a UUID as it is written.
+  var deviceID: String
+  var lastMs: Int64
+  var lastCounter: Int64
+  var offsetMs: Int64
+}
+
 extension DatabaseMigrator {
   mutating func registerOwnValues() {
     registerMigration("Create the user's own values") { db in
@@ -192,6 +205,18 @@ extension DatabaseMigrator {
       try #sql(
         """
         CREATE INDEX "outbox_key" ON "outbox"("key")
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        CREATE TABLE "syncState" (
+          "id" INTEGER PRIMARY KEY NOT NULL CHECK ("id" = 1),
+          "deviceID" TEXT NOT NULL,
+          "lastMs" INTEGER NOT NULL,
+          "lastCounter" INTEGER NOT NULL,
+          "offsetMs" INTEGER NOT NULL
+        ) STRICT
         """
       )
       .execute(db)
