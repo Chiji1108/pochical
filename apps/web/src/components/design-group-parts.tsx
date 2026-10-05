@@ -1,3 +1,4 @@
+import { markIconGlyphs } from "@pochical/design/mark-icons";
 import { Camera, ImageIcon, RotateCcw, Trash2 } from "lucide-react";
 import { useContext, useId, useState } from "react";
 import type { ReactNode } from "react";
@@ -14,7 +15,7 @@ import {
   IconWeightContext,
   MarkGlyph,
   useMarkColor,
-  markIcons,
+  MarkIconSvg,
   ShiftMarkStyleContext,
 } from "./shift-mark";
 import type { Look } from "./shift-mark";
@@ -706,8 +707,7 @@ export function GroupIcon({
       </span>
     );
   }
-  const Icon = markIcons[mark.icon];
-  if (!Icon) {
+  if (markIconGlyphs[mark.icon] === undefined) {
     return null;
   }
   return (
@@ -715,7 +715,7 @@ export function GroupIcon({
       className={bare ? markPart.iconBare : markPart.icon}
       style={{ background: bare ? undefined : tint, color }}
     >
-      <Icon size={size} weight="duotone" />
+      <MarkIconSvg icon={mark.icon} size={size} weight="duotone" />
     </span>
   );
 }

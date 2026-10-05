@@ -1,6 +1,5 @@
 import { markColorIn, markColors } from "@pochical/design/colors";
 import { markIconPaths } from "@pochical/design/mark-icon-paths";
-import type { MarkIconName } from "@pochical/design/mark-icon-paths";
 import { markIconGlyphs } from "@pochical/design/mark-icons";
 import type { MarkIcon } from "@pochical/design/mark-icons";
 import {
@@ -9,7 +8,7 @@ import {
   themeMarkColor,
 } from "@pochical/design/themes";
 import { createContext, useContext } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 import { css, cx } from "styled-system/css";
 
 import { usePatterns } from "../lib/design-patterns";
@@ -137,57 +136,42 @@ export const OffHighlightContext = createContext<{
   highlight: OffHighlight;
 }>({ highlight: defaultOffHighlight });
 
-type MarkIconComponent = (props: {
+// An icon a pattern can name, drawn from Phosphor's paths for its glyph
+// (design's mark-icons.ts) as Phosphor's own component would draw it.
+// "letter" has no glyph and draws nothing here; its marks draw the symbol.
+export function MarkIconSvg({
+  icon,
+  className,
+  color = "currentColor",
+  size,
+  weight = "regular",
+}: {
+  icon: MarkIcon;
   className?: string;
   color?: string;
   size: number;
   weight?: IconWeight;
-}) => ReactNode;
-
-const phosphorIcons = new Map<MarkIconName, MarkIconComponent>();
-
-// A Phosphor icon drawn from its paths in design's mark-icon-paths.ts, as
-// Phosphor's own component would draw it. One component per glyph, so marks
-// that share a glyph can be told by it.
-function phosphorIcon(name: MarkIconName): MarkIconComponent {
-  const known = phosphorIcons.get(name);
-  if (known) {
-    return known;
+}) {
+  const glyph = markIconGlyphs[icon];
+  if (glyph === undefined) {
+    return null;
   }
-  const PhosphorIcon: MarkIconComponent = function PhosphorIcon({
-    className,
-    color = "currentColor",
-    size,
-    weight = "regular",
-  }) {
-    return (
-      <svg
-        aria-hidden="true"
-        className={className}
-        fill={color}
-        height={size}
-        viewBox="0 0 256 256"
-        width={size}
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {markIconPaths[name][weight].map(({ d, opacity }) => (
-          <path d={d} key={d} opacity={opacity} />
-        ))}
-      </svg>
-    );
-  };
-  phosphorIcons.set(name, PhosphorIcon);
-  return PhosphorIcon;
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill={color}
+      height={size}
+      viewBox="0 0 256 256"
+      width={size}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {markIconPaths[glyph][weight].map(({ d, opacity }) => (
+        <path d={d} key={d} opacity={opacity} />
+      ))}
+    </svg>
+  );
 }
-
-// Each icon a pattern can name drawn as Phosphor draws it, by the glyphs
-// of design's mark-icons.ts; "letter" has none, and draws the symbol.
-export const markIcons = Object.fromEntries(
-  Object.entries(markIconGlyphs).map(([icon, glyph]) => [
-    icon,
-    glyph === undefined ? undefined : phosphorIcon(glyph),
-  ])
-) as Record<MarkIcon, MarkIconComponent | undefined>;
 export type { MarkIcon } from "@pochical/design/mark-icons";
 
 // Whether two looks draw the same icon: icons sharing a glyph look alike,
@@ -196,7 +180,7 @@ export function sameIcon(a: Look, b: Look) {
   if (a.icon === "letter" || b.icon === "letter") {
     return a.icon === b.icon && a.symbol === b.symbol;
   }
-  return markIcons[a.icon] === markIcons[b.icon];
+  return markIconGlyphs[a.icon] === markIconGlyphs[b.icon];
 }
 
 export const markEmojis = [
@@ -443,8 +427,7 @@ function IconGlyph({
 }) {
   const { color } = useDisplayColor(look.color);
   const weight = useContext(IconWeightContext);
-  const Icon = markIcons[icon];
-  if (!Icon) {
+  if (markIconGlyphs[icon] === undefined) {
     return (
       <span
         aria-hidden="true"
@@ -461,9 +444,10 @@ function IconGlyph({
     );
   }
   return (
-    <Icon
+    <MarkIconSvg
       className={cx(glyphStyle.icon, "sm-icon")}
       color={color}
+      icon={icon}
       size={size}
       weight={weight}
     />
