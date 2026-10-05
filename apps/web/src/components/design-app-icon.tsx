@@ -95,9 +95,9 @@ const INK_LIGHTNESS = 100;
 type Rgb = [number, number, number];
 
 export function rgbOf(hex: string): Rgb {
-  return [1, 3, 5].map((start) =>
-    Number.parseInt(hex.slice(start, start + 2), 16)
-  ) as Rgb;
+  const channel = (start: number) =>
+    Number.parseInt(hex.slice(start, start + 2), 16);
+  return [channel(1), channel(3), channel(5)];
 }
 
 // Marks every paper pixel reachable from the image's edges.

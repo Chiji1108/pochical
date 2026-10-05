@@ -732,6 +732,12 @@ export function sampleGroups(): GroupSummary[] {
   ];
 }
 
+// A declaration, not a const: the samples above call it as the module
+// loads.
+function isSampleLook(id: string): id is keyof typeof sampleLooks {
+  return Object.hasOwn(sampleLooks, id);
+}
+
 function presetLook(id: string) {
-  return sampleLooks[id as keyof typeof sampleLooks] ?? sampleLooks.natural;
+  return isSampleLook(id) ? sampleLooks[id] : sampleLooks.natural;
 }
