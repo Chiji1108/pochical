@@ -11,11 +11,15 @@ struct CalendarScreen: View {
   @FetchAll private var patterns: [PatternRow]
   @FetchAll private var patternOrder: [PatternOrderRow]
   @FetchAll private var orders: [RepeatOrderRow]
+  @FetchAll private var coworkerRows: [CoworkerRow]
+  @FetchAll private var coworkerOrder: [CoworkerOrderRow]
   @State private var today = Day.today
   @State private var shownMonth: Day? = Day.today.firstOfMonth
   /// The day ポチポチ入力 enters next, while entering.
   @State private var entering: Day?
   @State private var gaps: [Day] = []
+  /// The day opened from the month, its week alone left above its detail.
+  @State private var opened: Day?
 
   /// How far the pages reach either side of this month. Only the pages in
   /// view are drawn, so they can reach far without a cost.
@@ -39,8 +43,15 @@ struct CalendarScreen: View {
           ForEach(months, id: \.self) { month in
             MonthPage(
               month: month, today: today, calendar: calendar, weekStart: weekStart,
-              style: style, highlightOff: style != .emoji, selected: entering,
-              onSelect: entering == nil ? nil : { entering = $0 }
+              style: style, highlightOff: style != .emoji, selected: entering ?? opened,
+              openedWeek: opened,
+              onSelect: { day in
+                if entering != nil {
+                  entering = day
+                } else {
+                  withAnimation(Springs.standard) { opened = day }
+                }
+              }
             )
             .padding(.horizontal, Self.screenEdge)
             .containerRelativeFrame(.horizontal)
@@ -51,11 +62,37 @@ struct CalendarScreen: View {
       .scrollTargetBehavior(.paging)
       .scrollPosition(id: $shownMonth)
       .scrollIndicators(.hidden)
-      .frame(height: MonthPage.height)
-      Spacer(minLength: 0)
-      bottom(calendar)
-        .padding(.horizontal, Self.screenEdge)
-        .padding(.bottom, 8)
+      // An opened day's week stays put under its detail.
+      .scrollDisabled(opened != nil)
+      .frame(height: opened == nil ? MonthPage.height : DayCell.height)
+      if let day = opened {
+        let entry = calendar.shown(from: day, through: day)[day]
+        DayDetail(
+          day: day, entry: entry, patterns: calendar.patterns,
+          coworkers: ordered(coworkerRows, by: coworkerOrder), style: style,
+          onChange: { entry in
+            write { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
+          },
+          // Someone added from a day is on that day too.
+          onAddCoworker: { name in
+            write { db, now in
+              let id = try OwnValues.addCoworker(named: name, now: now, in: db)
+              if var entry {
+                entry.people = (entry.people ?? []) + [id]
+                try OwnValues.set(day, to: entry, now: now, in: db)
+              }
+            }
+          }
+        )
+        .id(day)
+        .padding(.top, 12)
+        .transition(.opacity)
+      } else {
+        Spacer(minLength: 0)
+        bottom(calendar)
+          .padding(.horizontal, Self.screenEdge)
+          .padding(.bottom, 8)
+      }
     }
     .background(colors.backgroundBase)
     // A month turned to while entering starts on its first day; a day
@@ -183,7 +220,15 @@ struct CalendarScreen: View {
       .accessibilityLabel("\(month.year)年\(month.month)月")
       .accessibilityAddTraits(.isHeader)
       Spacer()
-      if entering != nil {
+      if opened != nil {
+        Button("閉じる", systemImage: "xmark") {
+          withAnimation(Springs.standard) { opened = nil }
+        }
+        .labelStyle(.iconOnly)
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.circle)
+        .tint(colors.textPrimary)
+      } else if entering != nil {
         Button("完了", systemImage: "checkmark") {
           finish()
         }
@@ -250,14 +295,20 @@ struct MonthPage: View {
   let highlightOff: Bool
   /// The day being entered, framed.
   let selected: Day?
-  /// Picks a day to enter, while entering.
+  /// The day opened, whose week alone shows.
+  let openedWeek: Day?
+  /// Picks a day: to enter while entering, else to open.
   let onSelect: ((Day) -> Void)?
 
   private static let rowGap: CGFloat = 4
   static let height = 6 * DayCell.height + 5 * rowGap
 
   var body: some View {
-    let weeks = monthWeeks(month, weekStart: weekStart)
+    let all = monthWeeks(month, weekStart: weekStart)
+    // The pages beside the opened one keep a week of their own, out of
+    // sight while the opened one stays put.
+    let opened = openedWeek.map { opened in all.filter { $0.contains(opened) } } ?? []
+    let weeks = openedWeek == nil ? all : opened.isEmpty ? [all[0]] : opened
     let shown = calendar.shown(from: weeks.first![0], through: weeks.last![6])
     VStack(spacing: Self.rowGap) {
       ForEach(weeks, id: \.first) { week in
@@ -273,6 +324,6 @@ struct MonthPage: View {
         }
       }
     }
-    .frame(height: Self.height, alignment: .top)
+    .frame(height: openedWeek == nil ? Self.height : DayCell.height, alignment: .top)
   }
 }

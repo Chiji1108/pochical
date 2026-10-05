@@ -36,6 +36,35 @@ extension OwnValues {
     try setShown(edits, calendar: calendar, now: now, in: db)
   }
 
+  /// Sets a day to show `entry`, or nothing, as its detail changes it.
+  public static func set(_ day: Day, to entry: DayEntry?, now: Int64, in db: Database) throws {
+    let calendar = try ownCalendar(from: day, through: day, in: db)
+    try setShown([day: entry], calendar: calendar, now: now, in: db)
+  }
+
+  /// Adds a person to 一緒に働く人, at the end of the list, and gives back
+  /// their id.
+  public static func addCoworker(named name: String, now: Int64, in db: Database) throws
+    -> String
+  {
+    let id = UUID().uuidString.lowercased()
+    var coworker = Pochical_V1_CoworkerValue()
+    coworker.id = id
+    coworker.name = name
+    coworker.hlc = try nextClock(now: now, in: db)
+    var change = Pochical_V1_Change()
+    change.coworker = coworker
+    try edit(change, opID: UUID().uuidString.lowercased(), in: db)
+
+    var order = Pochical_V1_CoworkerOrder()
+    order.ids = try CoworkerOrderRow.order(by: \.position).fetchAll(db).map(\.coworkerID) + [id]
+    order.hlc = try nextClock(now: now, in: db)
+    change = Pochical_V1_Change()
+    change.coworkerOrder = order
+    try edit(change, opID: UUID().uuidString.lowercased(), in: db)
+    return id
+  }
+
   /// Makes the days in `edits` show what they say, as edits of the fields
   /// whose own values change.
   private static func setShown(
