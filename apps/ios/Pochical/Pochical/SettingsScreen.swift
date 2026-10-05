@@ -7,6 +7,8 @@ import SwiftUI
 /// built.
 struct SettingsScreen: View {
   @Environment(Settings.self) private var settings
+  /// The icon in use, read again as the page comes back from changing it.
+  @State private var appIcon = AppIconChoice.current
 
   var body: some View {
     NavigationStack {
@@ -23,6 +25,16 @@ struct SettingsScreen: View {
             LabeledContent("外観", value: appearanceName)
           }
           NavigationLink {
+            AppIconSettings()
+          } label: {
+            LabeledContent("アプリアイコン") {
+              HStack(spacing: 8) {
+                appIcon.image(size: 22)
+                Text(appIcon.name)
+              }
+            }
+          }
+          NavigationLink {
             CalendarSettings()
           } label: {
             LabeledContent(
@@ -31,6 +43,7 @@ struct SettingsScreen: View {
         }
       }
       .navigationTitle("設定")
+      .onAppear { appIcon = .current }
     }
   }
 

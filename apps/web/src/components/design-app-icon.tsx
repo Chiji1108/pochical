@@ -54,7 +54,7 @@ export const iconColorOptions: IconColors[] = [
 
 // What iOS shows on a home screen set to dark icons: each icon darkened
 // but still itself, so choosing モス never turns into a black icon.
-const darkTwins: IconColors[] = [
+export const darkTwins: IconColors[] = [
   {
     dog: "#ece8df",
     ground: "#2b3a29",
@@ -147,7 +147,11 @@ const DIAGONAL = 4;
 
 // Each outside pixel's distance in pixels to the drawing (lines and the
 // dog inside them), by a two-pass chamfer transform.
-function distanceToDrawing(outside: Uint8Array, width: number, height: number) {
+export function distanceToDrawing(
+  outside: Uint8Array,
+  width: number,
+  height: number
+) {
   const far = 1_000_000;
   const distance = new Float32Array(width * height);
   for (let index = 0; index < distance.length; index += 1) {
@@ -219,33 +223,18 @@ export function inkBounds(
   return { bottom, left, right, top };
 }
 
-// The drawing in the icon's colors, at the source's size. With a clear
-// ground, only the dog and its rim are painted and the rest is see-through.
-function paintDrawing(
-  image: HTMLImageElement,
+// The drawing's pixels in the icon's colors, RGBA at the source's size,
+// from the source's lightness: what the page paints on its canvas and the
+// scripts (scripts/ios-app-icons.ts) write out. With a clear ground, only
+// the dog and its rim are painted and the rest is see-through.
+export function paintedPixels(
+  lightness: Uint8Array,
+  width: number,
+  height: number,
   colors: IconColors,
   clearGround = false
 ) {
-  const { naturalWidth: width, naturalHeight: height } = image;
-  const source = document.createElement("canvas");
-  source.width = width;
-  source.height = height;
-  const sourceContext = source.getContext("2d");
-  if (!sourceContext) {
-    return;
-  }
-  sourceContext.drawImage(image, 0, 0);
-  const pixels = sourceContext.getImageData(0, 0, width, height);
-  const lightness = new Uint8Array(width * height);
-  for (let index = 0; index < lightness.length; index += 1) {
-    const offset = index * 4;
-    lightness[index] = Math.round(
-      ((pixels.data[offset] ?? 0) +
-        (pixels.data[offset + 1] ?? 0) +
-        (pixels.data[offset + 2] ?? 0)) /
-        3
-    );
-  }
+  const pixels = new Uint8ClampedArray(width * height * 4);
   const outside = outsideOf(lightness, width, height);
   const ground = rgbOf(colors.ground);
   const dog = rgbOf(colors.dog);
@@ -271,12 +260,42 @@ function paintDrawing(
     const ink = 1 - (lightness[index] ?? 255) / 255;
     const offset = index * 4;
     for (let channel = 0; channel < 3; channel += 1) {
-      pixels.data[offset + channel] = Math.round(
+      pixels[offset + channel] = Math.round(
         (base[channel] ?? 0) * (1 - ink) + (line[channel] ?? 0) * ink
       );
     }
-    pixels.data[offset + 3] = clearGround ? Math.round(share * 255) : 255;
+    pixels[offset + 3] = clearGround ? Math.round(share * 255) : 255;
   }
+  return pixels;
+}
+
+// The drawing in the icon's colors, at the source's size, on a canvas.
+function paintDrawing(
+  image: HTMLImageElement,
+  colors: IconColors,
+  clearGround = false
+) {
+  const { naturalWidth: width, naturalHeight: height } = image;
+  const source = document.createElement("canvas");
+  source.width = width;
+  source.height = height;
+  const sourceContext = source.getContext("2d");
+  if (!sourceContext) {
+    return;
+  }
+  sourceContext.drawImage(image, 0, 0);
+  const pixels = sourceContext.getImageData(0, 0, width, height);
+  const lightness = new Uint8Array(width * height);
+  for (let index = 0; index < lightness.length; index += 1) {
+    const offset = index * 4;
+    lightness[index] = Math.round(
+      ((pixels.data[offset] ?? 0) +
+        (pixels.data[offset + 1] ?? 0) +
+        (pixels.data[offset + 2] ?? 0)) /
+        3
+    );
+  }
+  pixels.data.set(paintedPixels(lightness, width, height, colors, clearGround));
   sourceContext.putImageData(pixels, 0, 0);
   return { lightness, source };
 }
