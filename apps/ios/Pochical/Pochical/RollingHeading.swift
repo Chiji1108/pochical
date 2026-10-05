@@ -50,7 +50,8 @@ struct MonthName: View {
 /// A name rolling within its own line toward `coming`, `share` of the way
 /// to its page (-0.5 to 0.5; toward the next above 0). Half way, the next
 /// page's name takes its place, half rolled in, so the roll runs on
-/// without a break.
+/// without a break. Its width goes along from the one name's to the
+/// other's, so what follows it (月) moves over as it rolls.
 private struct RollingText: View {
   let text: String
   let coming: String
@@ -58,21 +59,55 @@ private struct RollingText: View {
 
   var body: some View {
     let moving = coming == text ? 0 : share
-    ZStack {
+    BlendedWidth(share: abs(moving)) {
       Text(text)
+        .fixedSize()
         .visualEffect { content, proxy in
           content.offset(y: -moving * proxy.size.height)
         }
         .opacity(1 - abs(moving))
       if moving != 0 {
         Text(coming)
+          .fixedSize()
           .visualEffect { content, proxy in
             content.offset(y: ((moving > 0 ? 1 : -1) - moving) * proxy.size.height)
           }
           .opacity(abs(moving))
       }
     }
-    .clipped()
+    // Within its own line, while a wider name can still show whole.
+    .mask { Rectangle().padding(.horizontal, -24) }
+  }
+}
+
+/// Its first view's width going to its second's by `share`, both laid at
+/// its leading edge.
+private struct BlendedWidth: Layout {
+  var share: CGFloat
+
+  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+    guard let first = sizes.first else { return .zero }
+    let second = sizes.count > 1 ? sizes[1] : first
+    return CGSize(
+      width: first.width + (second.width - first.width) * share,
+      height: max(first.height, second.height))
+  }
+
+  func placeSubviews(
+    in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+  ) {
+    for subview in subviews {
+      subview.place(at: bounds.origin, anchor: .topLeading, proposal: .unspecified)
+    }
+  }
+  /// The first view's baseline, so what stands beside it on its line
+  /// stays put as the second rolls in.
+  func explicitAlignment(
+    of guide: VerticalAlignment, in bounds: CGRect, proposal: ProposedViewSize,
+    subviews: Subviews, cache: inout ()
+  ) -> CGFloat? {
+    subviews.first.map { bounds.minY + $0.dimensions(in: .unspecified)[guide] }
   }
 }
 
