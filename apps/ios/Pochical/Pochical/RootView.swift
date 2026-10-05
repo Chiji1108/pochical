@@ -11,6 +11,10 @@ struct RootView: View {
   @State private var tab = RootTab.calendar
   @State private var openGroupID: String?
   @State private var invite: OpenedInvite?
+  @State private var scanning = false
+  /// An invitation read by the camera, opened once the camera has gone:
+  /// one cover cannot come up while another is going.
+  @State private var scanned: OpenedInvite?
 
   var body: some View {
     TabView(selection: $tab) {
@@ -18,7 +22,7 @@ struct RootView: View {
         CalendarScreen()
       }
       Tab("グループ", systemImage: "person.2", value: .groups) {
-        GroupsScreen(openID: $openGroupID)
+        GroupsScreen(openID: $openGroupID) { scanning = true }
       }
       Tab("設定", systemImage: "gearshape", value: .settings) {
         SettingsScreen()
@@ -29,6 +33,17 @@ struct RootView: View {
     .onOpenURL { url in
       if let code = openedInviteCode(of: url) {
         invite = OpenedInvite(code: code)
+      }
+    }
+    .fullScreenCover(isPresented: $scanning) {
+      if let scanned {
+        invite = scanned
+        self.scanned = nil
+      }
+    } content: {
+      ScanScreen { read in
+        scanned = read
+        scanning = false
       }
     }
     .fullScreenCover(item: $invite) { invite in
