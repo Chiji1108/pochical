@@ -74,7 +74,7 @@ private func coordinated(
   return try result!.get()
 }
 
-/// The tables, each step once. Tables come with the features that use them.
+/// The tables, each step once.
 var migrator: DatabaseMigrator {
   var migrator = DatabaseMigrator()
   #if DEBUG
@@ -82,5 +82,6 @@ var migrator: DatabaseMigrator {
     // database afresh rather than needing a migration of its own.
     migrator.eraseDatabaseOnSchemaChange = true
   #endif
+  migrator.registerOwnValues()
   return migrator
 }
