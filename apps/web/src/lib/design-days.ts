@@ -312,7 +312,8 @@ function ownDay(
   planned: Shift | undefined,
   previous: OwnDay | undefined
 ): OwnDay | undefined {
-  const note = (entry?.note ?? previous?.note) || undefined;
+  const written = entry?.note ?? previous?.note;
+  const note = written === "" ? undefined : written;
   if (!entry) {
     if (planned) {
       return { note, shift: dayRules.noShift };
