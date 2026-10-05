@@ -182,10 +182,12 @@ private enum OffLook: CaseIterable, Hashable {
 }
 
 /// Choices side by side in one track, each drawing what it does over its
-/// name, as /design's tall segments: the one picked raised on the card's
-/// ground, its name in bold.
+/// name, as /design's tall segments and iOS's segmented control: the
+/// picked one raised on the card's ground, which slides to the next as it
+/// is picked; track and raised ground both round-ended, as iOS 26's.
 private struct Choices<Option: Hashable, Sample: View>: View {
   @Environment(\.themeColors) private var colors
+  @Namespace private var raised
   let options: [Option]
   let picked: Option
   let label: (Option) -> String
@@ -193,11 +195,11 @@ private struct Choices<Option: Hashable, Sample: View>: View {
   let onPick: (Option) -> Void
 
   var body: some View {
-    HStack(spacing: 0) {
+    HStack(spacing: 4) {
       ForEach(options, id: \.self) { option in
         let isPicked = option == picked
         Button {
-          withAnimation(Springs.quick) { onPick(option) }
+          withAnimation(Springs.standard) { onPick(option) }
         } label: {
           VStack(spacing: 4) {
             sample(option)
@@ -205,18 +207,13 @@ private struct Choices<Option: Hashable, Sample: View>: View {
               .accessibilityHidden(true)
             Text(label(option))
               .font(.footnote.weight(isPicked ? .semibold : .regular))
-              .foregroundStyle(colors.textPrimary)
+              .foregroundStyle(isPicked ? colors.textPrimary : colors.textSecondary)
           }
           .padding(.vertical, 8)
           .frame(maxWidth: .infinity, maxHeight: .infinity)
-          .background {
-            if isPicked {
-              RoundedRectangle(cornerRadius: Radius.lg)
-                .fill(colors.backgroundCard)
-                .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
-            }
-          }
-          .contentShape(Rectangle())
+          // Where the raised ground stands when this one is picked.
+          .matchedGeometryEffect(id: option, in: raised, isSource: true)
+          .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label(option))
@@ -224,8 +221,16 @@ private struct Choices<Option: Hashable, Sample: View>: View {
       }
     }
     .fixedSize(horizontal: false, vertical: true)
-    .padding(3)
-    .background(colors.fillTertiary, in: RoundedRectangle(cornerRadius: Radius.lg + 3))
+    // One raised ground under every choice, so as it slides it passes
+    // under the ones between rather than over them.
+    .background {
+      Capsule()
+        .fill(colors.backgroundCard)
+        .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
+        .matchedGeometryEffect(id: picked, in: raised, isSource: false)
+    }
+    .padding(4)
+    .background(colors.fillTertiary, in: Capsule())
   }
 }
 
