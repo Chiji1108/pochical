@@ -117,10 +117,16 @@ private struct AppearanceSettings: View {
 private struct CalendarSettings: View {
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
+  @State private var picked: ColorScheme?
 
   var body: some View {
     @Bindable var settings = settings
     Form {
+      // スタイル's preview cut to this week under the month's heading.
+      Section {
+        StylePreview(heading: true, picked: $picked)
+      }
+      .settingsOnPage()
       Section("週の始まり") {
         Picker("週の始まり", selection: $settings.device.week.start) {
           ForEach(0..<7, id: \.self) { day in
