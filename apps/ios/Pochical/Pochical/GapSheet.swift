@@ -5,6 +5,11 @@ import SwiftUI
 /// What 完了 asks when the month has blank days before its last entered
 /// one: whether to make them days off, all at once (spec/shift-patterns.md,
 /// Blanks when entering ends).
+///
+/// It stands as tall as it holds. A sheet lays its content out at odd
+/// sizes as it comes up, and a height changed on the way up undoes its
+/// slide, so the calendar measures it first, out of sight at the
+/// screen's width, and it comes up at that height.
 struct GapSheet: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
@@ -19,15 +24,30 @@ struct GapSheet: View {
   let completes: Bool
   let onFill: (Pattern) -> Void
   @State private var picked: PatternID?
-  /// The sheet's height, its content's, so it stands no taller.
-  @State private var height: CGFloat = 320
 
   private var offPattern: Pattern {
     offPatterns.first { $0.id == picked } ?? offPatterns[0]
   }
 
   var body: some View {
-    NavigationStack {
+    VStack(alignment: .leading, spacing: 0) {
+      // The bar of an iOS sheet: × at the leading edge, the title in the
+      // middle.
+      ZStack {
+        Text("空いている日が\(days.count)日あります")
+          .font(.headline)
+          .foregroundStyle(colors.textPrimary)
+          .padding(.horizontal, Metrics.touch + 8)
+          .accessibilityAddTraits(.isHeader)
+        Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
+          .labelStyle(.iconOnly)
+          .buttonStyle(BarButton())
+          .foregroundStyle(colors.textPrimary)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .padding(.horizontal, -4)
+      .padding(.top, 16)
+      .padding(.bottom, 16)
       VStack(alignment: .leading, spacing: 0) {
         lead
           .font(.subheadline)
@@ -74,22 +94,8 @@ struct GapSheet: View {
         .tint(colors.accentFill)
         .foregroundStyle(colors.accentOnFill)
       }
-      .padding([.horizontal, .bottom], 20)
-      // As tall as what it holds with the bar over it, as iOS's sheets of
-      // a few lines stand.
-      .onGeometryChange(for: CGFloat.self) { proxy in
-        proxy.size.height + proxy.safeAreaInsets.top
-      } action: { height = $0 }
-      .frame(maxHeight: .infinity, alignment: .top)
-      .navigationTitle("空いている日が\(days.count)日あります")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
-        }
-      }
     }
-    .presentationDetents([.height(height)])
+    .padding([.horizontal, .bottom], 20)
   }
 
   /// What filling the days does: the month's days off, which the summary

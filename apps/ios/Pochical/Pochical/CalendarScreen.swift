@@ -18,6 +18,8 @@ struct CalendarScreen: View {
   /// The day ポチポチ入力 enters next, while entering.
   @State private var entering: Day?
   @State private var gaps: [Day] = []
+  /// The gap sheet's height, measured before it comes up (GapSheet).
+  @State private var gapSheetHeight: CGFloat?
   /// The day opened from the month, its week alone left above its detail.
   @State private var opened: Day?
   /// Whether a day's 一緒に働く人 is unfolded, kept from day to day.
@@ -173,17 +175,22 @@ struct CalendarScreen: View {
         }
       }
     }
-    .sheet(isPresented: Binding(get: { !gaps.isEmpty }, set: { if !$0 { gaps = [] } })) {
-      let offPatterns = calendar.patterns.filter(\.countsAsOff)
-      if !offPatterns.isEmpty, let month = gaps.first?.firstOfMonth {
-        GapSheet(
-          month: month, days: gaps, offPatterns: offPatterns,
-          offCount: offCount(in: month, calendar: calendar),
-          completes: monthDays(month, calendar).count + gaps.count == month.daysOfMonth.count
-        ) { off in
-          write { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }
-        }
+    .background {
+      if !gaps.isEmpty, gapSheetHeight == nil, let sheet = gapSheet(calendar) {
+        sheet
+          .fixedSize(horizontal: false, vertical: true)
+          .hidden()
+          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { gapSheetHeight = $0 }
       }
+    }
+    .sheet(
+      isPresented: Binding(
+        get: { gapSheetHeight != nil },
+        set: { if !$0 { gaps = []; gapSheetHeight = nil } })
+    ) {
+      gapSheet(calendar)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .presentationDetents([.height(gapSheetHeight ?? 0)])
     }
     .task {
       // Past midnight, while the app is open or waiting in the background.
@@ -354,6 +361,20 @@ struct CalendarScreen: View {
     let month = day.firstOfMonth
     let shown = calendar.shown(from: month, through: month.daysOfMonth.last!)
     gaps = gapDays(in: month, days: shown)
+  }
+
+  /// What 完了 asks about the month's blank days, while there are some
+  /// and a pattern that counts as off to fill them with.
+  private func gapSheet(_ calendar: OwnCalendar) -> GapSheet? {
+    let offPatterns = calendar.patterns.filter(\.countsAsOff)
+    guard !offPatterns.isEmpty, let month = gaps.first?.firstOfMonth else { return nil }
+    return GapSheet(
+      month: month, days: gaps, offPatterns: offPatterns,
+      offCount: offCount(in: month, calendar: calendar),
+      completes: monthDays(month, calendar).count + gaps.count == month.daysOfMonth.count
+    ) { off in
+      write { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }
+    }
   }
 
   private func offCount(in month: Day, calendar: OwnCalendar) -> Int {
