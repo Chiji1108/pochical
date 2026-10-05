@@ -10,7 +10,7 @@ import type { Preset, PresetId as OwnPresetId } from "@pochical/design/themes";
 import { Moon, Sun } from "lucide-react";
 import { createContext, useContext } from "react";
 import type { CSSProperties } from "react";
-import { css, cva } from "styled-system/css";
+import { css } from "styled-system/css";
 
 import { useDevice } from "../lib/design-device";
 import { palettesOf } from "../lib/material-you";
@@ -130,8 +130,7 @@ const previewSchemes = [
 ] as const;
 
 // ☀︎ / ☾ on a preview's top edge, to see it in the other of light and dark
-// without changing 外観. Sits inside a previewWrap, with the preview, or
-// inline at the end of a section's title for what the section shows.
+// without changing 外観. Sits inside a previewWrap, with the preview.
 export const previewWrap = css({ position: "relative" });
 const schemeSwitch = {
   // Drawn small, but each side takes its half of the whole switch and a
@@ -163,33 +162,26 @@ const schemeSwitch = {
   // Ark keeps the group itself relatively positioned, so the choices
   // flow into the wrapper that sits on the edge.
   choices: css({ display: "contents" }),
-  frame: cva({
-    base: {
-      bg: "background.card",
-      border: "1px solid token(colors.separator)",
-      borderRadius: "md",
-      display: "flex",
-      gap: "2px",
-      margin: 0,
-      padding: "2px",
-    },
-    variants: {
-      placement: {
-        edge: { left: "12px", position: "absolute", top: "-10px" },
-        inline: {},
-      },
-    },
+  frame: css({
+    bg: "background.card",
+    border: "1px solid token(colors.separator)",
+    borderRadius: "md",
+    display: "flex",
+    gap: "2px",
+    left: "12px",
+    margin: 0,
+    padding: "2px",
+    position: "absolute",
+    top: "-10px",
   }),
 };
 export function PreviewSchemeSwitch({
   shown,
   onPick,
-  placement = "edge",
   disabled,
 }: {
   shown: ColorScheme;
   onPick: (scheme: ColorScheme) => void;
-  placement?: "edge" | "inline";
   // For what has only one of them, like an always-dark テーマ: the switch
   // stays in its place, showing that one, and cannot be turned.
   disabled?: boolean;
@@ -197,7 +189,7 @@ export function PreviewSchemeSwitch({
   return (
     // Ark keeps the group itself relatively positioned, so a wrapper
     // places it on the edge.
-    <div className={schemeSwitch.frame({ placement })}>
+    <div className={schemeSwitch.frame}>
       <ChoiceGrid
         className={schemeSwitch.choices}
         disabled={disabled}

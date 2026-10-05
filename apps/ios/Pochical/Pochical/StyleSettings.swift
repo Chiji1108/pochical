@@ -10,7 +10,7 @@ struct StyleSettings: View {
   @Environment(Settings.self) private var settings
   @Environment(\.colorScheme) private var colorScheme
   /// The light or dark the preview and the テーマ cards are seen in, from
-  /// either one's ☀︎ / ☾; the screen's until one is picked.
+  /// the preview's ☀︎ / ☾; the screen's until one is picked.
   @State private var picked: ColorScheme?
   @FetchAll private var days: [DayRow]
   @FetchAll private var patterns: [PatternRow]
@@ -61,15 +61,9 @@ struct StyleSettings: View {
       } footer: {
         Text("グループの人にも、この見た目で表示されます。")
       }
-      Section {
+      Section("テーマ") {
         ThemeChoices(samples: samples, scheme: shown.wrappedValue)
           .settingsOnPage()
-      } header: {
-        HStack {
-          Text("テーマ")
-          Spacer()
-          SchemeSwitch(shown: shown)
-        }
       }
       // Emoji keep their own colors, so シフトの色 would change nothing.
       if settings.device.look.style != .emoji {
