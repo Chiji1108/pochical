@@ -74,19 +74,25 @@ public func editedOwnDays(
 ) -> [Day: OwnDay] {
   var edited = own
   for (day, entry) in edits {
-    edited[day] = ownDay(showing: entry, planned: planned[day])
+    edited[day] = ownDay(showing: entry, planned: planned[day], previous: own[day])
   }
   return edited
 }
 
-private func ownDay(showing entry: DayEntry?, planned: PatternID?) -> OwnDay? {
+/// The memo is the day's, not the shift's (spec/shift-patterns.md, A
+/// day's memo): an entry without one keeps `previous`'s, and "" clears it.
+private func ownDay(showing entry: DayEntry?, planned: PatternID?, previous: OwnDay?)
+  -> OwnDay?
+{
+  let note = (entry?.note ?? previous?.note).flatMap { $0.isEmpty ? nil : $0 }
   guard let entry else {
-    return planned == nil ? nil : OwnDay(shift: Days.noShift)
+    let kept = OwnDay(shift: planned == nil ? nil : Days.noShift, note: note)
+    return kept.isEmpty ? nil : kept
   }
   // A day with nobody on it keeps no people, not an empty list.
   let kept = OwnDay(
     shift: entry.shift == planned ? nil : entry.shift, start: entry.start, end: entry.end,
-    note: entry.note, people: entry.people?.isEmpty == true ? nil : entry.people)
+    note: note, people: entry.people?.isEmpty == true ? nil : entry.people)
   return kept.isEmpty ? nil : kept
 }
 
@@ -108,7 +114,10 @@ public func givingDaysToOrder(own: [Day: OwnDay], from start: Day) -> [Day: OwnD
 }
 
 /// The person's own days once pattern `id` is deleted: the days that have
-/// it of their own lose it.
+/// it of their own lose it, their memos staying.
 public func days(_ own: [Day: OwnDay], without id: PatternID) -> [Day: OwnDay] {
-  own.filter { $0.value.shift != id }
+  own.compactMapValues { day in
+    guard day.shift == id else { return day }
+    return day.note.map { OwnDay(note: $0) }
+  }
 }

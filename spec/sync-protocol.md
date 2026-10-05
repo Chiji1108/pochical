@@ -120,6 +120,8 @@ HLC, not arrival order, decides the winner: an edit made offline at 10:00 and de
 4. The client deletes acknowledged rows. Unsent rows survive app restarts.
 5. If the server rejects an edit (validation), it writes a compensating change with a newer HLC, which reaches every device through the change log.
 
+Free text is edited once it is written, when its field is left, not on each change (spec/calendar.md, Text fields).
+
 What a device shows of a value while its edits wait (`spec/vectors/local-edits.json`). A value is what one change carries: a field of a day, a pattern, the patterns' order, the repeating orders, a coworker or the coworkers' order.
 
 - A device keeps, for each value, the server's (the last `Change` it took for it) apart from its own edits of it still in the outbox, and shows the latest waiting edit's value if there is one, else the server's.

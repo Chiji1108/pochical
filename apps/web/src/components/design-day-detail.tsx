@@ -180,12 +180,12 @@ export function DayDetail({
       .filter(Boolean)
       .join("・") || "変更済み";
   const selected = entry?.people ?? [];
-  // What would go with the shift. A day with nothing more is cleared at
-  // once, as one tap brings it back; with more it is asked first.
+  // What would go with the shift; the memo stays, as it is the day's. A
+  // day with nothing more is cleared at once, as one tap brings it back;
+  // with more it is asked first.
   const lost = [
     timeChanged ? "時間の変更" : "",
     selected.length > 0 ? "一緒に働く人" : "",
-    entry?.note ? "メモ" : "",
   ].filter(Boolean);
   function clear() {
     setClearing(false);
@@ -286,7 +286,8 @@ export function DayDetail({
             className={dayDetail.memo}
             kind="dayNote"
             onValueChange={(note) => {
-              onChange({ ...entry, note: note || undefined });
+              // "" clears the memo; without one an entry keeps the day's.
+              onChange({ ...entry, note });
             }}
             placeholder="メモ"
             value={entry.note ?? ""}
