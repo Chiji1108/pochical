@@ -524,7 +524,7 @@ function MessageText({
   });
 }
 
-const foldLines = { "--fold-lines": chatRules.foldLines } as CSSProperties;
+const foldLines: CSSProperties = { "--fold-lines": chatRules.foldLines };
 
 // A message's words, folded at chatRules.foldLines until opened. Whether they run
 // past it is measured, not guessed from their length, and told to the

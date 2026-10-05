@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode, Ref } from "react";
+import type { ReactNode, Ref } from "react";
 import { css, cva } from "styled-system/css";
 
 import { dateKey, formatDay, movesText } from "../lib/design-days";
@@ -307,12 +307,10 @@ export function DayRowsTable({
     >
       <table
         className={dayRows.table}
-        style={
-          {
-            "--date-width": `${dateWidth}px`,
-            minWidth: dateWidth + group.members.length * columnWidth,
-          } as CSSProperties
-        }
+        style={{
+          "--date-width": `${dateWidth}px`,
+          minWidth: dateWidth + group.members.length * columnWidth,
+        }}
       >
         <caption className={srOnly}>みんなのシフト</caption>
         <thead>

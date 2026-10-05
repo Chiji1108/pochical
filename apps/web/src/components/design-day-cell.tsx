@@ -177,11 +177,15 @@ function CellShift({
 
 // Days off take a light tint of their own pattern color, not the theme,
 // when the setting for the current look asks for it.
-function dayOffStyle(dayOff: boolean, highlight: boolean, tint: string) {
+function dayOffStyle(
+  dayOff: boolean,
+  highlight: boolean,
+  tint: string
+): CSSProperties | undefined {
   if (!(highlight && dayOff)) {
     return;
   }
-  return { "--off-tint": tint } as CSSProperties;
+  return { "--off-tint": tint };
 }
 
 // What a screen reader says after the date.
