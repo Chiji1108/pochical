@@ -241,6 +241,41 @@ struct CalendarScreen: View {
     }
   }
 
+  /// The heading's buttons, on the month's line: 今月 away from this
+  /// month, 完了 while entering, and in a day's week 今週 away from this
+  /// week and × (spec/calendar.md).
+  @ViewBuilder private var actions: some View {
+    if let day = opened {
+      // Back to this week and closing are of different kinds, so they
+      // stand apart.
+      HStack(spacing: 12) {
+        if weekOf(day) != weekOf(today) {
+          Button("今週") {
+            withAnimation(Springs.standard) { opened = today }
+          }
+          .buttonStyle(BarButton())
+        }
+        Button("閉じる", systemImage: "xmark", role: .close) {
+          withAnimation(Springs.standard) { opened = nil }
+        }
+        .labelStyle(.iconOnly)
+        .buttonStyle(BarButton())
+      }
+    } else if entering != nil {
+      Button("完了", systemImage: "checkmark", role: .confirm) {
+        finish()
+      }
+      .labelStyle(.iconOnly)
+      .buttonStyle(BarButton(tint: colors.accentFill))
+      .foregroundStyle(colors.accentOnFill)
+    } else if (shownMonth ?? thisMonth) != thisMonth {
+      Button("今月") {
+        withAnimation(Springs.standard) { shownMonth = thisMonth }
+      }
+      .buttonStyle(BarButton())
+    }
+  }
+
   private var heading: some View {
     let month = shownMonth ?? thisMonth
     return HStack(alignment: .bottom) {
@@ -261,40 +296,8 @@ struct CalendarScreen: View {
       .accessibilityLabel("\(month.year)年\(month.month)月")
       .accessibilityAddTraits(.isHeader)
       Spacer()
-      if let day = opened {
-        if weekOf(day) != weekOf(today) {
-          Button("今週") {
-            withAnimation(Springs.standard) { opened = today }
-          }
-          .buttonStyle(.bordered)
-          .buttonBorderShape(.capsule)
-          .tint(colors.textPrimary)
-        }
-        Button("閉じる", systemImage: "xmark") {
-          withAnimation(Springs.standard) { opened = nil }
-        }
-        .labelStyle(.iconOnly)
-        .buttonStyle(.bordered)
-        .buttonBorderShape(.circle)
-        .tint(colors.textPrimary)
-      } else if entering != nil {
-        Button("完了", systemImage: "checkmark") {
-          finish()
-        }
-        .buttonStyle(.borderedProminent)
-        .buttonBorderShape(.capsule)
-        .tint(colors.accentFill)
-        .foregroundStyle(colors.accentOnFill)
-      } else if month != thisMonth {
-        Button("今月") {
-          withAnimation(Springs.standard) {
-            shownMonth = thisMonth
-          }
-        }
-        .buttonStyle(.bordered)
-        .buttonBorderShape(.capsule)
-        .tint(colors.textPrimary)
-      }
+      actions
+        .foregroundStyle(colors.textPrimary)
     }
     .padding(.horizontal, 8)
     .padding(.top, 8)

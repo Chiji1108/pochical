@@ -73,7 +73,7 @@ struct GapSheet: View {
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
-          Button("閉じる", systemImage: "xmark") { dismiss() }
+          Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
         }
       }
     }
