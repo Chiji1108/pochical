@@ -13,7 +13,6 @@ let package = Package(
     .package(path: "../PochicalDesign"),
     .package(path: "../PochicalProto"),
     .package(url: "https://github.com/pointfreeco/sqlite-data.git", exact: "1.12.0"),
-    .package(url: "https://github.com/connectrpc/connect-swift.git", exact: "1.2.3"),
   ],
   targets: [
     .target(
@@ -22,7 +21,6 @@ let package = Package(
         "PochicalDesign",
         "PochicalProto",
         .product(name: "SQLiteData", package: "sqlite-data"),
-        .product(name: "Connect", package: "connect-swift"),
       ]
     ),
     .testTarget(name: "PochicalKitTests", dependencies: ["PochicalKit"]),

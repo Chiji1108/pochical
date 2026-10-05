@@ -1,14 +1,15 @@
-import OSLog
 import PochicalDesign
 import PochicalKit
-import PochicalProto
 import SQLiteData
 import SwiftUI
 
 @main
 struct PochicalApp: App {
   @Environment(\.scenePhase) private var scenePhase
-  private let account = Account()
+  /// The user's socket, open while the app is in the foreground. It signs
+  /// in on its first try, anonymously at first (spec/sync-protocol.md,
+  /// Signing in); offline, the calendar works and it tries again.
+  private let sync: SyncClient
 
   init() {
     prepareDependencies {
@@ -18,39 +19,30 @@ struct PochicalApp: App {
         try! SampleDays.putIfAsked(in: $0.defaultDatabase)
       #endif
     }
+    @Dependency(\.defaultDatabase) var database
+    sync = SyncClient(account: Account(), database: database)
   }
 
   var body: some Scene {
     WindowGroup {
       CalendarScreen()
         .modifier(Themed(theme: .pochical))
-        // Every user is signed in from the first launch, anonymously at
-        // first (spec/sync-protocol.md, Signing in); offline, the next
-        // launch tries again, and the calendar works meanwhile.
-        .task {
-          do {
-            let me = try await account.me()
-            Logger.account.info("Signed in as \(me.userID, privacy: .private)")
-          } catch {
-            Logger.account.error("Could not sign in: \(error)")
-          }
-        }
     }
-    // The shared database lets go of its locks before iOS suspends the
-    // app (appDatabase), including when it was launched in the background.
+    // The socket is open only in the foreground (spec/sync-protocol.md,
+    // Sockets), and the shared database lets go of its locks before iOS
+    // suspends the app (appDatabase), including when it was launched in
+    // the background.
     .onChange(of: scenePhase, initial: true) { _, phase in
       switch phase {
       case .background:
+        Task { await sync.stop() }
         NotificationCenter.default.post(name: Database.suspendNotification, object: nil)
       case .active:
         NotificationCenter.default.post(name: Database.resumeNotification, object: nil)
+        Task { await sync.start() }
       default:
         break
       }
     }
   }
-}
-
-extension Logger {
-  static let account = Logger(subsystem: "app.pochical", category: "account")
 }
