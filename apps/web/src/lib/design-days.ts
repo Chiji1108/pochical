@@ -420,6 +420,22 @@ export function withShiftEntered(
   };
 }
 
+// Where ポチポチ入力 starts in a month: its first day without a shift, else
+// its 1st (spec/calendar.md).
+export function firstBlankDay(schedule: Schedule, month: Date) {
+  const days = daysOfMonth(month);
+  return days.find((date) => !schedule[dateKey(date)]) ?? days[0] ?? month;
+}
+
+// The person's own days with the memo of the day under `key` set to
+// `note`, "" clearing it; the memo is the day's, shift or not
+// (spec/shift-patterns.md, A day's memo).
+export function withNote(own: OwnDays, key: string, note: string): OwnDays {
+  const day: OwnDay = { ...own[key], note: note === "" ? undefined : note };
+  const kept = Object.values(day).some((value) => value !== undefined);
+  return { ...own, [key]: kept ? day : undefined };
+}
+
 // Many people leave days off blank, pressing 翌日へ as other apps taught
 // them. Rather than stop them while entering, 完了 asks once about the
 // blanks between entered days and fills them with a day off in one tap.

@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, useMotionValue } from "motion/react";
 import { useContext, useState } from "react";
 import { css, cva } from "styled-system/css";
@@ -7,6 +8,7 @@ import {
   dateKey,
   daysMovedOn,
   daysOfMonth,
+  firstBlankDay,
   formatDay,
   formatMonthDay,
   formatYearMonth,
@@ -16,10 +18,11 @@ import {
   monthAfter,
   nextDayOf,
   selectedAfter,
+  withNote,
   withShiftEntered,
 } from "../lib/design-days";
 import type { DayEntry, Schedule } from "../lib/design-days";
-import { isDayOff, presetPatterns, usePatterns } from "../lib/design-patterns";
+import { isDayOff, usePatterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
@@ -46,7 +49,7 @@ import {
 import { surpriseStyles, useSurprise } from "./design-surprise";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
-import { Screen, srOnly } from "./design-ui";
+import { IconButton, Screen, srOnly } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
 import { FoldingGrid, useWeekFold } from "./design-week-fold";
 import { OffDisplayContext } from "./shift-mark";
@@ -100,6 +103,11 @@ export function DesignCalendar({
   const imageOptions = useSettings((state) => state.device.imageOptions);
   const setImageOptions = useSettings((state) => state.setImageOptions);
   const coworkers = useUser((state) => state.coworkers);
+  // The person's own days, for the memos of days without a shift.
+  const own = useUser((state) => state.schedule);
+  const setOwn = useUser((state) => state.setSchedule);
+  // 一緒に働く人 stays unfolded from one opened day to the next.
+  const [membersOpen, setMembersOpen] = useState(false);
   const surprise = useSurprise();
   // A change keeps only what differs from the repeating orders as the
   // person's own.
@@ -110,7 +118,6 @@ export function DesignCalendar({
   const pageDrag = useMotionValue(0);
   const [swipedTo, setSwipedTo] = useState<string>();
   const ownPatterns = useUser((state) => state.patterns);
-  const setPatterns = useUser((state) => state.setPatterns);
   const patternKeys = ownPatterns.map((pattern) => pattern.id);
   const book = usePatterns();
   const sharing = useUser((state) => state.groups.length > 0);
@@ -250,7 +257,9 @@ export function DesignCalendar({
       return;
     }
     stopEntering();
-    const gaps = gapDaysIn(schedule, month);
+    // Someone with no pattern that counts as off leaves days off blank on
+    // purpose, so nothing is asked (spec/shift-patterns.md).
+    const gaps = ownPatterns.some(isDayOff) ? gapDaysIn(schedule, month) : [];
     if (gaps.length > 0) {
       setGapDays(gaps);
       setOfferBlank(offDisplay === "show");
@@ -262,12 +271,12 @@ export function DesignCalendar({
       openSave(true);
     }
   }
-  // Fills the blanks with the person's day off, or adds 休み back when
-  // they have none.
+  // Fills the blanks with the person's day off.
   function fillGaps(key: Shift | undefined) {
-    const shift = key ?? presetPatterns.off.id;
-    if (!key) {
-      setPatterns((previous) => [...previous, presetPatterns.off]);
+    // Only asked with a day off to fill with.
+    const shift = key ?? ownPatterns.find(isDayOff)?.id;
+    if (shift === undefined) {
+      return;
     }
     onChange((previous) => ({
       ...previous,
@@ -384,6 +393,7 @@ export function DesignCalendar({
                       editing={editing}
                       entry={schedule[dateKey(date)]}
                       key={dateKey(date)}
+                      note={own[dateKey(date)]?.note}
                       onPress={() => {
                         editing ? enterFrom(date) : openDetail(date);
                       }}
@@ -423,12 +433,43 @@ export function DesignCalendar({
               className={calendarPage.detail}
               style={{ opacity: detailOpacity }}
             >
-              <h4 className={calendarPage.detailDate}>{formatDay(openDate)}</h4>
+              <div className={calendarPage.detailHeading}>
+                <h4 className={calendarPage.detailDate}>
+                  {formatDay(openDate)}
+                </h4>
+                {/* The day before and after, a week's end no stop. */}
+                <IconButton
+                  glass={false}
+                  label="前の日"
+                  onClick={() => {
+                    openDetail(addDays(openDate, -1));
+                  }}
+                >
+                  <ChevronLeft size={22} />
+                </IconButton>
+                <IconButton
+                  glass={false}
+                  label="次の日"
+                  onClick={() => {
+                    openDetail(addDays(openDate, 1));
+                  }}
+                >
+                  <ChevronRight size={22} />
+                </IconButton>
+              </div>
               <DayDetail
                 key={dateKey(openDate)}
                 entry={schedule[dateKey(openDate)]}
+                membersOpen={membersOpen}
+                note={own[dateKey(openDate)]?.note}
                 onChange={(entry) => {
                   changeEntry(openDate, entry);
+                }}
+                onMembersOpenChange={setMembersOpen}
+                onNoteChange={(note) => {
+                  setOwn((previous) =>
+                    withNote(previous, dateKey(openDate), note)
+                  );
                 }}
                 patternKeys={patternKeys}
               />
@@ -580,14 +621,15 @@ function useShiftEntry({
     setEnteredBlank(hasBlanks(schedule, target));
     announcePicked(date);
   }
-  // A month turned to while entering starts on its first day.
+  // A month turned to while entering starts on its first blank day, as
+  // entering does (spec/calendar.md).
   function enterMonth(target: Date) {
-    setSelectedDay(1);
+    setSelectedDay(firstBlankDay(schedule, target).getDate());
     setEnteredBlank(hasBlanks(schedule, target));
     setAnnouncement(`${formatYearMonthDay(target)}を選択中`);
   }
   function start() {
-    setSelectedDay(1);
+    setSelectedDay(firstBlankDay(schedule, month).getDate());
     setEnteredBlank(hasBlanks(schedule, month));
     setEditing(true);
   }
@@ -653,7 +695,14 @@ const calendarPage = {
     paddingRight: "var(--screen-right)",
     paddingTop: "16px",
   }),
-  detailDate: css({ fontWeight: 600, margin: "0 0 16px", textStyle: "title3" }),
+  detailDate: css({ flex: 1, fontWeight: 600, margin: 0, textStyle: "title3" }),
+  // The date, with the day before and after beside it.
+  detailHeading: css({
+    alignItems: "center",
+    display: "flex",
+    gap: "4px",
+    marginBottom: "16px",
+  }),
   // Under the month: its summary, then what to do next and the tab bar.
   // Room at the foot for the tab bar floating over it, 16px clear.
   bottom: css({
