@@ -13,7 +13,6 @@ struct DayDetail: View {
   let note: String?
   let patterns: [Pattern]
   let coworkers: [Coworker]
-  let style: MarkStyle
   /// Whether 一緒に働く人 is unfolded: kept as another day is opened.
   @Binding var peopleOpen: Bool
   let onChange: (DayEntry?) -> Void
@@ -143,7 +142,7 @@ struct DayDetail: View {
         Label {
           Text(pattern.name)
         } icon: {
-          ShiftMark(pattern: pattern, style: style, size: 18)
+          ShiftMark(pattern: pattern, size: 18)
         }
         .tag(pattern.id)
       }

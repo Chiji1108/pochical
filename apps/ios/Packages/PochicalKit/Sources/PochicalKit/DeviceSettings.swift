@@ -30,12 +30,87 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
   }
 
   public var week = Week()
+  public var look = Look()
 
   public init() {}
 
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     week = try container.decodeIfPresent(Week.self, forKey: .week) ?? Week()
+    look = try container.decodeIfPresent(Look.self, forKey: .look) ?? Look()
+  }
+}
+
+/// How a pattern's mark is drawn: its icon, its emoji or its letter on a
+/// tile.
+public enum MarkStyle: String, Codable, CaseIterable, Sendable {
+  case icon
+  case emoji
+  case badge
+}
+
+/// How the person's own month draws days in one shape (/design's
+/// CalendarOptions): the shift's name under its mark, days off on a tint
+/// of their color, and days off left blank.
+public struct MarkOptions: Codable, Equatable, Sendable {
+  public var names = false
+  public var highlight = false
+  public var blankOff = false
+
+  public init(names: Bool = false, highlight: Bool = false, blankOff: Bool = false) {
+    self.names = names
+    self.highlight = highlight
+    self.blankOff = blankOff
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    names = try container.decodeIfPresent(Bool.self, forKey: .names) ?? false
+    highlight = try container.decodeIfPresent(Bool.self, forKey: .highlight) ?? false
+    blankOff = try container.decodeIfPresent(Bool.self, forKey: .blankOff) ?? false
+  }
+}
+
+/// The marks' look (/design's スタイル): the shape, an icon's fill, and the
+/// options kept for each shape, so each finds its own as it was left.
+/// Icons start with days off highlighted; letters sit on tiles already and
+/// emoji bring their own colors, so they start without.
+public struct Look: Codable, Equatable, Sendable {
+  public var style = MarkStyle.icon
+  /// Filled (塗り) or outlined (線); icons alone have the choice.
+  public var fill = true
+  public var icon = MarkOptions(highlight: true)
+  public var emoji = MarkOptions()
+  public var badge = MarkOptions()
+
+  public init() {}
+
+  /// The options of the shape in use.
+  public var options: MarkOptions {
+    get {
+      switch style {
+      case .icon: icon
+      case .emoji: emoji
+      case .badge: badge
+      }
+    }
+    set {
+      switch style {
+      case .icon: icon = newValue
+      case .emoji: emoji = newValue
+      case .badge: badge = newValue
+      }
+    }
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    let defaults = Look()
+    style = try container.decodeIfPresent(MarkStyle.self, forKey: .style) ?? defaults.style
+    fill = try container.decodeIfPresent(Bool.self, forKey: .fill) ?? defaults.fill
+    icon = try container.decodeIfPresent(MarkOptions.self, forKey: .icon) ?? defaults.icon
+    emoji = try container.decodeIfPresent(MarkOptions.self, forKey: .emoji) ?? defaults.emoji
+    badge = try container.decodeIfPresent(MarkOptions.self, forKey: .badge) ?? defaults.badge
   }
 }
 

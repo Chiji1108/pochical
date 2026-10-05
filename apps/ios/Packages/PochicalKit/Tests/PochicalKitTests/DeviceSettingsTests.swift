@@ -21,3 +21,18 @@ import Testing
   settings.device.week.saturday = false
   #expect(Settings(store: store).device == settings.device)
 }
+
+@Test func eachShapeKeepsItsOwnOptions() throws {
+  var look = Look()
+  #expect(look.options == MarkOptions(highlight: true))
+  look.options.names = true
+  look.style = .emoji
+  #expect(look.options == MarkOptions())
+  look.style = .icon
+  #expect(look.options.names)
+  let kept = Data(#"{"look":{"style":"badge"}}"#.utf8)
+  let settings = try JSONDecoder().decode(DeviceSettings.self, from: kept)
+  #expect(settings.look.style == .badge)
+  #expect(settings.look.fill)
+  #expect(settings.look.icon.highlight)
+}

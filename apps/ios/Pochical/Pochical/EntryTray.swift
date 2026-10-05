@@ -11,7 +11,6 @@ struct EntryTray: View {
   /// Which days take their colors (the person's カレンダー settings).
   let week: DeviceSettings.Week
   let patterns: [Pattern]
-  let style: MarkStyle
   /// Whether the day has a shift to clear.
   let canClear: Bool
   /// Whether a day of the month comes after it.
@@ -100,7 +99,7 @@ struct EntryTray: View {
           onEnter(pattern.id)
         } label: {
           VStack(spacing: 8) {
-            ShiftMark(pattern: pattern, style: style, size: 26)
+            ShiftMark(pattern: pattern, size: 26)
               .frame(height: 28)
             Text(pattern.name)
               .font(.caption)
