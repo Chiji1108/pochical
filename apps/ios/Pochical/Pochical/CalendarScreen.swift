@@ -6,6 +6,7 @@ import SwiftUI
 /// カレンダー: the person's month, a page a month, turned by swiping.
 struct CalendarScreen: View {
   @Environment(\.themeColors) private var colors
+  @Environment(Settings.self) private var settings
   @Dependency(\.defaultDatabase) private var database
   @FetchAll private var days: [DayRow]
   @FetchAll private var patterns: [PatternRow]
@@ -47,7 +48,7 @@ struct CalendarScreen: View {
   private static let unfoldShare: CGFloat = 1 / 3
   private static let unfoldFlick: CGFloat = 400
   private static let screenEdge: CGFloat = 16
-  private let weekStart = 0
+  private var weekStart: Int { settings.device.week.start }
   private let style = MarkStyle.icon
 
   var body: some View {
@@ -56,7 +57,7 @@ struct CalendarScreen: View {
     VStack(spacing: 0) {
       heading
         .padding(.horizontal, Self.screenEdge)
-      WeekdayRow(weekStart: weekStart)
+      WeekdayRow(week: settings.device.week)
         .padding(.horizontal, Self.screenEdge)
       // The pages run to the screen's edges, so a month slides out of
       // sight rather than being cut off inside them.
@@ -154,6 +155,8 @@ struct CalendarScreen: View {
       }
     }
     .background(colors.backgroundBase)
+    // The tabs give way to entering and to a day's week, as /design's do.
+    .toolbarVisibility(entering == nil && opened == nil ? .visible : .hidden, for: .tabBar)
     // A month turned to while entering starts on its first blank day; a
     // day picked in a month around it turns to that month.
     .onChange(of: shownMonth) { _, month in
@@ -298,7 +301,7 @@ struct CalendarScreen: View {
   private func pageDays(_ calendar: OwnCalendar) -> PageDays {
     PageDays(
       today: today, calendar: calendar, style: style, highlightOff: style != .emoji,
-      selected: entering ?? opened, isEntering: entering != nil,
+      colorsHolidays: settings.device.week.holiday, selected: entering ?? opened, isEntering: entering != nil,
       onSelect: { day in
         if pulled { return }
         if entering != nil {
@@ -314,7 +317,8 @@ struct CalendarScreen: View {
     if let day = entering {
       let shown = calendar.shown(from: day, through: day)
       EntryTray(
-        day: day, patterns: calendar.patterns, style: style, canClear: shown[day] != nil,
+        day: day, week: settings.device.week, patterns: calendar.patterns, style: style,
+        canClear: shown[day] != nil,
         canSkip: day != day.daysOfMonth.last,
         onEnter: { shift in
           write { db, now in try OwnValues.enter(shift, on: day, now: now, in: db) }
@@ -461,17 +465,17 @@ struct CalendarScreen: View {
 }
 
 /// The weekday names over the pages, from the week start, Sundays and
-/// Saturdays in their colors.
+/// Saturdays in their colors unless the person turned them off.
 struct WeekdayRow: View {
   @Environment(\.themeColors) private var colors
-  let weekStart: Int
+  let week: DeviceSettings.Week
 
   static let names = ["日", "月", "火", "水", "木", "金", "土"]
 
   var body: some View {
     HStack(spacing: 4) {
       ForEach(0..<7, id: \.self) { index in
-        let weekday = (weekStart + index) % 7
+        let weekday = (week.start + index) % 7
         Text(Self.names[weekday])
           .font(.system(size: 11))
           .foregroundStyle(color(of: weekday))
@@ -484,8 +488,8 @@ struct WeekdayRow: View {
 
   private func color(of weekday: Int) -> Color {
     switch weekday {
-    case 0: colors.calendarHoliday
-    case 6: colors.calendarSaturday
+    case 0 where week.sunday: colors.calendarHoliday
+    case 6 where week.saturday: colors.calendarSaturday
     default: colors.textTertiary
     }
   }
@@ -505,6 +509,8 @@ struct PageDays {
   let calendar: OwnCalendar
   let style: MarkStyle
   let highlightOff: Bool
+  /// Whether holidays' dates take Sunday's red.
+  let colorsHolidays: Bool
   /// The day being entered or opened, framed.
   let selected: Day?
   let isEntering: Bool
@@ -520,7 +526,8 @@ struct PageDays {
           day: day, entry: entry, note: calendar.note(on: day),
           pattern: entry.flatMap { calendar.patternsByID[$0.shift] },
           outside: month.map { day.month != $0.month } ?? false, isToday: day == today,
-          isHoliday: Holidays.name(on: day.key, in: "JP") != nil, style: style,
+          isHoliday: Holidays.name(on: day.key, in: "JP") != nil,
+          colorsHoliday: colorsHolidays, style: style,
           highlightOff: highlightOff, isSelected: day == selected, isEntering: isEntering,
           onSelect: onSelect)
       }
