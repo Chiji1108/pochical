@@ -48,3 +48,13 @@ private struct ThemeColorsForScheme: ViewModifier {
     content.environment(\.themeColors, theme.colors(theme.isAlwaysDark ? .dark : colorScheme))
   }
 }
+
+extension View {
+  /// Drawn in the テーマ's light or dark whatever the screen is in, as a
+  /// preview of the other one is; dark for a テーマ drawn dark.
+  func shown(in theme: Theme, _ scheme: ColorScheme) -> some View {
+    self
+      .modifier(ThemeColorsForScheme(theme: theme))
+      .environment(\.colorScheme, theme.isAlwaysDark ? .dark : scheme)
+  }
+}
