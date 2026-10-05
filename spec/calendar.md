@@ -5,6 +5,7 @@ How カレンダー, the person's own month, behaves on screen: what each part s
 ## The month
 
 - A page a month, turned by swiping. 今月 is offered in the heading while another month is shown, and brings this month back.
+- The heading follows the pages as they move, by a finger or on their own: the month rolls within its line toward the one coming in, the next up from below and the one before down from above, and the year only when it changes; 今月 (今週 in a day's week) fades in as the pages leave this month and out as they come back to it. With reduced motion the names just change.
 - Each page keeps room for six weeks, the most a month spans, so what is under the grid stays put as months turn. The days of the months around it show faded, with what they hold.
 - Today is framed inside its day, and its date drawn in the accent. While entering (ポチポチ入力), the frame gives way to the day being entered; the accent date stays.
 - The day being entered, or the day opened, is framed in the accent, more strongly than today.

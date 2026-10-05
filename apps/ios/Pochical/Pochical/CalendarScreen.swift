@@ -28,6 +28,8 @@ struct CalendarScreen: View {
   /// How far a pull down has unfolded the month around an opened week, 0
   /// to 1, while the finger is on it.
   @State private var pull: CGFloat = 0
+  /// Where the pages are, which the heading follows.
+  @State private var position = PagerPosition()
   /// Whether a finger is on the week, so a pull the system takes away,
   /// which never ends, folds back too.
   @GestureState private var pulling = false
@@ -83,6 +85,11 @@ struct CalendarScreen: View {
       // not changed under the finger.
       .onScrollPhaseChange { _, phase in
         if phase == .idle { openSwipedWeek() }
+      }
+      .onScrollGeometryChange(for: CGFloat.self) { geometry in
+        geometry.contentOffset.x / max(geometry.containerSize.width, 1)
+      } action: { _, pages in
+        position.pages = pages
       }
       .frame(height: DayCell.height + (MonthPage.height - DayCell.height) * (1 - fold))
       // While a day is open, a pull down unfolds the month, following the
@@ -241,7 +248,7 @@ struct CalendarScreen: View {
     }
     // The month keeps its place among the pages, so the scroll view stays
     // on it as the weeks come in and go.
-    let place = (month.year - thisMonth.year) * 12 + month.month - thisMonth.month
+    let place = monthsAfterThis(month)
     let week = weekOf(day)
     return (-Self.monthsAround...Self.monthsAround).map {
       $0 == place ? .month(month) : .week(week.adding(days: 7 * ($0 - place)))
@@ -386,7 +393,7 @@ struct CalendarScreen: View {
       // Back to this week and closing are of different kinds, so they
       // stand apart.
       HStack(spacing: 12) {
-        if weekOf(day) != weekOf(today) {
+        TodayFade(position: position, todayPage: todayPage) {
           Button("今週") {
             opened = today
           }
@@ -405,33 +412,19 @@ struct CalendarScreen: View {
       .labelStyle(.iconOnly)
       .buttonStyle(BarButton(tint: colors.accentFill))
       .foregroundStyle(colors.accentOnFill)
-    } else if (shownMonth ?? thisMonth) != thisMonth {
-      Button("今月") {
-        withAnimation(Springs.standard) { shownMonth = thisMonth }
+    } else {
+      TodayFade(position: position, todayPage: todayPage) {
+        Button("今月") {
+          withAnimation(Springs.standard) { shownMonth = thisMonth }
+        }
+        .buttonStyle(BarButton())
       }
-      .buttonStyle(BarButton())
     }
   }
 
   private var heading: some View {
-    let month = shownMonth ?? thisMonth
-    return HStack(alignment: .bottom) {
-      VStack(alignment: .leading, spacing: 4) {
-        Text(String(month.year))
-          .font(.system(size: 11))
-          .foregroundStyle(colors.textTertiary)
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
-          Text(month.month, format: .number)
-            .font(.system(size: 36, weight: .semibold))
-            .contentTransition(.numericText())
-          Text("月")
-            .font(.system(size: 14, weight: .medium))
-        }
-        .foregroundStyle(colors.textPrimary)
-      }
-      .accessibilityElement(children: .ignore)
-      .accessibilityLabel("\(month.year)年\(month.month)月")
-      .accessibilityAddTraits(.isHeader)
+    HStack(alignment: .bottom) {
+      MonthName(position: position, monthAt: monthOfPage)
       Spacer()
       actions
         .foregroundStyle(colors.textPrimary)
@@ -439,6 +432,30 @@ struct CalendarScreen: View {
     .padding(.horizontal, 8)
     .padding(.top, 8)
     .padding(.bottom, 12)
+  }
+
+  /// How many months `month` is after this one, which is where its page
+  /// lies from this month's.
+  private func monthsAfterThis(_ month: Day) -> Int {
+    (month.year - thisMonth.year) * 12 + month.month - thisMonth.month
+  }
+
+  /// The month the page at `index` shows: its own, or for a week beside
+  /// the opened one, the month that week opens in.
+  private func monthOfPage(_ index: Int) -> Day {
+    let place = index - Self.monthsAround
+    guard let day = opened, let month = shownMonth else {
+      return thisMonth.addingMonths(place)
+    }
+    let weeks = place - monthsAfterThis(month)
+    return weeks == 0 ? month : monthShowing(day.adding(days: 7 * weeks))
+  }
+
+  /// The page of this month, or with a day opened, of this week.
+  private var todayPage: Int {
+    guard let day = opened, let month = shownMonth else { return Self.monthsAround }
+    return Self.monthsAround + monthsAfterThis(month)
+      + weekOf(today).days(since: weekOf(day)) / 7
   }
 }
 
