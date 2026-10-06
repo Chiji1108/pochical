@@ -389,6 +389,16 @@ message ChatLine {
   // The op_id of the edit that sent it, so the sending device puts the
   // group's line in place of the one it showed while it waited.
   string op_id = 8;
+  // Its reactions, each emoji with who chose it in the order they did,
+  // the emoji in the order first chosen; none once unsent.
+  repeated ChatReaction reactions = 9;
+}
+
+// One emoji on a line and the members who chose it.
+message ChatReaction {
+  // One emoji, as a mark's (spec/text-limits.md, isEmoji).
+  string emoji = 1;
+  repeated string user_ids = 2;
 }
 
 // How far a member has read a chat: every line up to last_read_seq.
@@ -413,7 +423,18 @@ message ChatEdit {
     ChatChange change = 3;
     ChatUnsend unsend = 4;
     ChatRead read = 5;
+    ChatReact react = 6;
   }
+}
+
+// The member's reaction on a line, put on or taken off: anyone's line but
+// one taken back, any emoji, as many as they like.
+message ChatReact {
+  string thread_id = 1;
+  uint64 seq = 2;
+  string emoji = 3;
+  // On, or taken back.
+  bool on = 4;
 }
 
 // A new line at the end of the chat.

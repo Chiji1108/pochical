@@ -78,6 +78,13 @@ A member can change or take back their own messages, at any time. Others' messag
 - In the message's menu, 編集 comes after the other actions and 送信取消 last, apart and in the danger color.
 - Neither sends a notification, and neither changes unread counts. Both go through the change log as edits (spec/sync-protocol.md).
 
+## Reactions
+
+- Any member reacts to any line (not one taken back) with an emoji, from the top of its long-press menu: 👍 ❤️ 😂 👀 🙏 🎉 in a row, as Messages puts its tapbacks over the menu, then ほかの絵文字 for any other, from the system's emoji keyboard. A pick closes the menu. Several emoji may be on a line, and one member may choose several.
+- Under the line, each emoji sits with the faces of who chose it, in the order they did, past three two faces and +N, in a pill on the card's ground; the reader's own on the accent's container, edged in the accent. A tap puts yours on or takes it back; a long press lists everyone who chose it by name.
+- Emoji keep the order they were first chosen in, and one nobody holds any more goes. Taking a line back (送信取消) takes its reactions off. A reaction sends no notification and changes no unread count.
+- A reaction is the member's edit of the line (`ChatReact`, on or off), which the group takes only for one emoji (spec/text-limits.md, isEmoji). The line comes again with every reaction on it, so a device simply shows the latest.
+
 ## Reporting and blocking
 
 The stores require a way to report what people post and to block someone (App Store Review Guideline 1.2; Google Play's user-generated content policy). Neither is shown to the member concerned, and neither changes anything for the rest of the group.

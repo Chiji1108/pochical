@@ -17,10 +17,15 @@ import {
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
 import { ChangeSchema, ChatLineSchema } from "./gen/pochical/v1/sync_pb";
-import type { Change, ChatEdit, ChatLine } from "./gen/pochical/v1/sync_pb";
-import { chatLines, readMarks } from "./group-do-schema";
+import type {
+  Change,
+  ChatEdit,
+  ChatLine,
+  ChatReact,
+} from "./gen/pochical/v1/sync_pb";
+import { chatLines, chatReactions, readMarks } from "./group-do-schema";
 import { isId } from "./ids";
-import { fitsText } from "./text-limits";
+import { fitsText, isEmoji } from "./text-limits";
 
 // A group's chats as its Group DO keeps them (spec/sync-protocol.md,
 // Chat): lines at their place in each chat (seq) and on the group's change
@@ -89,11 +94,38 @@ export const seenBy = (change: Change, userId: string): boolean => {
 type LineRow = typeof chatLines.$inferSelect;
 type MarkRow = typeof readMarks.$inferSelect;
 
-const lineOf = (row: LineRow): ChatLine =>
+/**
+ * A line's reactions: each emoji, in the order first chosen, with who
+ * chose it in the order they did.
+ */
+const reactionsOf = (
+  db: DrizzleSqliteDODatabase,
+  row: LineRow
+): { emoji: string; userIds: string[] }[] => {
+  const chosen = db
+    .select()
+    .from(chatReactions)
+    .where(
+      and(
+        eq(chatReactions.threadId, row.threadId),
+        eq(chatReactions.seq, row.seq)
+      )
+    )
+    .orderBy(asc(chatReactions.madeCursor))
+    .all();
+  const byEmoji = new Map<string, string[]>();
+  for (const { emoji, userId } of chosen) {
+    byEmoji.set(emoji, [...(byEmoji.get(emoji) ?? []), userId]);
+  }
+  return [...byEmoji].map(([emoji, userIds]) => ({ emoji, userIds }));
+};
+
+const lineOf = (db: DrizzleSqliteDODatabase, row: LineRow): ChatLine =>
   create(ChatLineSchema, {
     authorId: row.authorId,
     edited: row.edited,
     opId: row.opId,
+    reactions: reactionsOf(db, row),
     sentAtMs: BigInt(row.sentAt.getTime()),
     seq: BigInt(row.seq),
     text: row.text,
@@ -101,10 +133,13 @@ const lineOf = (row: LineRow): ChatLine =>
     unsent: row.unsent,
   });
 
-export const chatLineChange = (row: LineRow): Change =>
+export const chatLineChange = (
+  db: DrizzleSqliteDODatabase,
+  row: LineRow
+): Change =>
   create(ChangeSchema, {
     cursor: BigInt(row.cursor),
-    kind: { case: "chatLine", value: lineOf(row) },
+    kind: { case: "chatLine", value: lineOf(db, row) },
   });
 
 export const readMarkChange = (row: MarkRow): Change =>
@@ -226,6 +261,47 @@ const mayWrite = (
   return kind.case !== "send" || other === undefined || isMember(other);
 };
 
+/**
+ * The member's reaction on a line put on or taken off, the line moving to
+ * `cursor` with it; nothing for a line taken back, gone, or an emoji that
+ * is not one, nor when it changes nothing.
+ */
+const takeReaction = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  { threadId, seq, emoji, on }: ChatReact,
+  cursor: number
+): Taken => {
+  const line = lineAt(db, threadId, seq);
+  if (line === undefined || line.unsent || !isEmoji(emoji)) {
+    return {};
+  }
+  const mine = and(
+    eq(chatReactions.threadId, threadId),
+    eq(chatReactions.seq, line.seq),
+    eq(chatReactions.userId, userId),
+    eq(chatReactions.emoji, emoji)
+  );
+  const had = db.select().from(chatReactions).where(mine).get() !== undefined;
+  if (had === on) {
+    return {};
+  }
+  if (on) {
+    db.insert(chatReactions)
+      .values({ emoji, madeCursor: cursor, seq: line.seq, threadId, userId })
+      .run();
+  } else {
+    db.delete(chatReactions).where(mine).run();
+  }
+  const row = db
+    .update(chatLines)
+    .set({ cursor })
+    .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, line.seq)))
+    .returning()
+    .get();
+  return row === undefined ? {} : { change: chatLineChange(db, row) };
+};
+
 /** What taking an edit did: its change, and the line to send back when it was refused. */
 type Taken = { change?: Change; refused?: Change };
 
@@ -274,7 +350,7 @@ export const takeChatEdit = (
         })
         .returning()
         .get();
-      return { change: chatLineChange(row) };
+      return { change: chatLineChange(db, row) };
     }
     case "change":
     case "unsend": {
@@ -289,7 +365,18 @@ export const takeChatEdit = (
         line.unsent ||
         !(unsend || fitsLine(text))
       ) {
-        return { refused: chatLineChange(line) };
+        return { refused: chatLineChange(db, line) };
+      }
+      // Taking a line back takes its reactions with it.
+      if (unsend) {
+        db.delete(chatReactions)
+          .where(
+            and(
+              eq(chatReactions.threadId, line.threadId),
+              eq(chatReactions.seq, line.seq)
+            )
+          )
+          .run();
       }
       const row = db
         .update(chatLines)
@@ -306,7 +393,10 @@ export const takeChatEdit = (
         )
         .returning()
         .get();
-      return row === undefined ? {} : { change: chatLineChange(row) };
+      return row === undefined ? {} : { change: chatLineChange(db, row) };
+    }
+    case "react": {
+      return takeReaction(db, userId, kind.value, cursor);
     }
     case "read": {
       // Never past the chat's end, and only forward.
@@ -350,7 +440,10 @@ export const chatPage = (
     .limit(chatRules.pageSize)
     .all()
     .toReversed();
-  return { atStart: (rows[0]?.seq ?? 1) <= 1, lines: rows.map(lineOf) };
+  return {
+    atStart: (rows[0]?.seq ?? 1) <= 1,
+    lines: rows.map((row) => lineOf(db, row)),
+  };
 };
 
 /**
@@ -386,7 +479,7 @@ export const chatChangesAfter = (
       )
       .orderBy(asc(chatLines.cursor))
       .all()
-      .map(chatLineChange)
+      .map((row) => chatLineChange(db, row))
   );
   const marks = db
     .select()

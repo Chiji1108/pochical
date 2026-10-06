@@ -322,3 +322,50 @@ func theNamesToListWhileWriting(_ vector: MessageTextVectors.Query) {
     #expect(try !Chats.summary(of: groupThread, in: "g", me: "aya", db: db).mentioned)
   }
 }
+
+struct EmojiVectors: Decodable, Sendable {
+  struct Case: VectorCase {
+    let name: String
+    let text: String
+    let expected: Bool
+  }
+
+  let isEmoji: [Case]
+}
+
+@Test(arguments: try vectors("text", as: EmojiVectors.self).isEmoji)
+func oneEmoji(_ vector: EmojiVectors.Case) {
+  #expect(isEmoji(vector.text) == vector.expected)
+}
+
+@Test func aLinesReactionsComeWithItAndTheMembersShowAtOnce() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var reacted = line(1, "21日どう？")
+    var thumbs = Pochical_V1_ChatReaction()
+    thumbs.emoji = "👍"
+    thumbs.userIds = ["aya"]
+    reacted.chatLine.reactions = [thumbs]
+    try GroupSync.take([reacted], of: "g", in: db)
+    var react = Pochical_V1_ChatReact()
+    react.threadID = groupThread
+    react.seq = 1
+    react.emoji = "👍"
+    react.on = true
+    try Chats.edit(.react(react), in: "g", now: 1, db: db)
+    react.emoji = "🎉"
+    try Chats.edit(.react(react), in: "g", now: 2, db: db)
+    let state = try Chats.state(of: groupThread, in: "g", me: "me", db: db)
+    #expect(
+      state.lines.first?.reactions == [
+        LineReaction(emoji: "👍", userIDs: ["aya", "me"]),
+        LineReaction(emoji: "🎉", userIDs: ["me"]),
+      ])
+
+    react.on = false
+    try Chats.edit(.react(react), in: "g", now: 3, db: db)
+    #expect(
+      try Chats.state(of: groupThread, in: "g", me: "me", db: db).lines.first?.reactions
+        == [LineReaction(emoji: "👍", userIDs: ["aya", "me"])])
+  }
+}

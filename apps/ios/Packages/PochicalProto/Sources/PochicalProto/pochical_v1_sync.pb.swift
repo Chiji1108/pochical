@@ -1317,6 +1317,26 @@ public nonisolated struct Pochical_V1_ChatLine: Sendable {
   /// group's line in place of the one it showed while it waited.
   public var opID: String = String()
 
+  /// Its reactions, each emoji with who chose it in the order they did,
+  /// the emoji in the order first chosen; none once unsent.
+  public var reactions: [Pochical_V1_ChatReaction] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// One emoji on a line and the members who chose it.
+public nonisolated struct Pochical_V1_ChatReaction: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// One emoji, as a mark's (spec/text-limits.md, isEmoji).
+  public var emoji: String = String()
+
+  public var userIds: [String] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1396,6 +1416,14 @@ public nonisolated struct Pochical_V1_ChatEdit: Sendable {
     set {kind = .read(newValue)}
   }
 
+  public var react: Pochical_V1_ChatReact {
+    get {
+      if case .react(let v)? = kind {return v}
+      return Pochical_V1_ChatReact()
+    }
+    set {kind = .react(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Kind: Equatable, Sendable {
@@ -1403,8 +1431,30 @@ public nonisolated struct Pochical_V1_ChatEdit: Sendable {
     case change(Pochical_V1_ChatChange)
     case unsend(Pochical_V1_ChatUnsend)
     case read(Pochical_V1_ChatRead)
+    case react(Pochical_V1_ChatReact)
 
   }
+
+  public init() {}
+}
+
+/// The member's reaction on a line, put on or taken off: anyone's line but
+/// one taken back, any emoji, as many as they like.
+public nonisolated struct Pochical_V1_ChatReact: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var threadID: String = String()
+
+  public var seq: UInt64 = 0
+
+  public var emoji: String = String()
+
+  /// On, or taken back.
+  public var on: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 }
@@ -3443,7 +3493,7 @@ nonisolated extension Pochical_V1_Reset: SwiftProtobuf.Message, SwiftProtobuf._M
 
 nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatLine"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{3}author_id\0\u{1}text\0\u{3}sent_at_ms\0\u{1}edited\0\u{1}unsent\0\u{3}op_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{3}author_id\0\u{1}text\0\u{3}sent_at_ms\0\u{1}edited\0\u{1}unsent\0\u{3}op_id\0\u{1}reactions\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3459,6 +3509,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
       case 6: try { try decoder.decodeSingularBoolField(value: &self.edited) }()
       case 7: try { try decoder.decodeSingularBoolField(value: &self.unsent) }()
       case 8: try { try decoder.decodeSingularStringField(value: &self.opID) }()
+      case 9: try { try decoder.decodeRepeatedMessageField(value: &self.reactions) }()
       default: break
       }
     }
@@ -3489,6 +3540,9 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
     if !self.opID.isEmpty {
       try visitor.visitSingularStringField(value: self.opID, fieldNumber: 8)
     }
+    if !self.reactions.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.reactions, fieldNumber: 9)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -3501,6 +3555,42 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
     if lhs.edited != rhs.edited {return false}
     if lhs.unsent != rhs.unsent {return false}
     if lhs.opID != rhs.opID {return false}
+    if lhs.reactions != rhs.reactions {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_ChatReaction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ChatReaction"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}emoji\0\u{3}user_ids\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.emoji) }()
+      case 2: try { try decoder.decodeRepeatedStringField(value: &self.userIds) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.emoji.isEmpty {
+      try visitor.visitSingularStringField(value: self.emoji, fieldNumber: 1)
+    }
+    if !self.userIds.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.userIds, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_ChatReaction, rhs: Pochical_V1_ChatReaction) -> Bool {
+    if lhs.emoji != rhs.emoji {return false}
+    if lhs.userIds != rhs.userIds {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -3578,7 +3668,7 @@ nonisolated extension Pochical_V1_ChatEdits: SwiftProtobuf.Message, SwiftProtobu
 
 nonisolated extension Pochical_V1_ChatEdit: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatEdit"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}op_id\0\u{1}send\0\u{1}change\0\u{1}unsend\0\u{1}read\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}op_id\0\u{1}send\0\u{1}change\0\u{1}unsend\0\u{1}read\0\u{1}react\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3639,6 +3729,19 @@ nonisolated extension Pochical_V1_ChatEdit: SwiftProtobuf.Message, SwiftProtobuf
           self.kind = .read(v)
         }
       }()
+      case 6: try {
+        var v: Pochical_V1_ChatReact?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .react(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .react(v)
+        }
+      }()
       default: break
       }
     }
@@ -3669,6 +3772,10 @@ nonisolated extension Pochical_V1_ChatEdit: SwiftProtobuf.Message, SwiftProtobuf
       guard case .read(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
     }()
+    case .react?: try {
+      guard case .react(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    }()
     case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -3677,6 +3784,51 @@ nonisolated extension Pochical_V1_ChatEdit: SwiftProtobuf.Message, SwiftProtobuf
   public static func ==(lhs: Pochical_V1_ChatEdit, rhs: Pochical_V1_ChatEdit) -> Bool {
     if lhs.opID != rhs.opID {return false}
     if lhs.kind != rhs.kind {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_ChatReact: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ChatReact"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{1}emoji\0\u{1}on\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.threadID) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.seq) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.emoji) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.on) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.threadID.isEmpty {
+      try visitor.visitSingularStringField(value: self.threadID, fieldNumber: 1)
+    }
+    if self.seq != 0 {
+      try visitor.visitSingularUInt64Field(value: self.seq, fieldNumber: 2)
+    }
+    if !self.emoji.isEmpty {
+      try visitor.visitSingularStringField(value: self.emoji, fieldNumber: 3)
+    }
+    if self.on != false {
+      try visitor.visitSingularBoolField(value: self.on, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_ChatReact, rhs: Pochical_V1_ChatReact) -> Bool {
+    if lhs.threadID != rhs.threadID {return false}
+    if lhs.seq != rhs.seq {return false}
+    if lhs.emoji != rhs.emoji {return false}
+    if lhs.on != rhs.on {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -74,5 +74,16 @@ public interface ChatEditOrBuilder extends
    */
   app.pochical.v1.ChatRead getRead();
 
+  /**
+   * <code>.pochical.v1.ChatReact react = 6 [json_name = "react"];</code>
+   * @return Whether the react field is set.
+   */
+  boolean hasReact();
+  /**
+   * <code>.pochical.v1.ChatReact react = 6 [json_name = "react"];</code>
+   * @return The react.
+   */
+  app.pochical.v1.ChatReact getReact();
+
   public app.pochical.v1.ChatEdit.KindCase getKindCase();
 }

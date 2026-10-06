@@ -30,7 +30,45 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   public var unsent: Bool
   /// The sending edit's op_id, to swap the line shown while it waited.
   public var opID: String
+  /// Its reactions as JSON, `[LineReaction]`.
+  var reactionsJSON = "[]"
   public var id: Int64 { seq }
+
+  /// Each emoji on the line, in the order first chosen, with who chose it.
+  public var reactions: [LineReaction] {
+    get { (try? JSONDecoder().decode([LineReaction].self, from: Data(reactionsJSON.utf8))) ?? [] }
+    set {
+      reactionsJSON =
+        (try? JSONEncoder().encode(newValue)).flatMap { String(data: $0, encoding: .utf8) }
+        ?? "[]"
+    }
+  }
+}
+
+/// One emoji on a line and the members who chose it, in the order they did.
+public struct LineReaction: Hashable, Sendable, Codable {
+  public let emoji: String
+  public var userIDs: [String]
+
+  public init(emoji: String, userIDs: [String]) {
+    self.emoji = emoji
+    self.userIDs = userIDs
+  }
+}
+
+extension [LineReaction] {
+  /// The reactions with `userID`'s `emoji` put on or taken off: a new emoji
+  /// goes last, and one nobody holds any more goes.
+  func toggling(_ emoji: String, by userID: String, on: Bool) -> [LineReaction] {
+    var reactions = self
+    if let at = reactions.firstIndex(where: { $0.emoji == emoji }) {
+      reactions[at].userIDs.removeAll { $0 == userID }
+      if on { reactions[at].userIDs.append(userID) }
+    } else if on {
+      reactions.append(LineReaction(emoji: emoji, userIDs: [userID]))
+    }
+    return reactions.filter { !$0.userIDs.isEmpty }
+  }
 }
 
 /// How far a member has read a chat.
@@ -122,6 +160,14 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep the chats' reactions") { db in
+      try #sql(
+        """
+        ALTER TABLE "chatLines" ADD COLUMN "reactionsJSON" TEXT NOT NULL DEFAULT '[]'
+        """
+      )
+      .execute(db)
+    }
   }
 }
 
@@ -152,10 +198,11 @@ public enum Chats {
       $0.groupID.eq(groupID) && $0.threadID.eq(line.threadID) && $0.seq.eq(seq)
     }
     .delete().execute(db)
-    let row = ChatLineRow(
+    var row = ChatLineRow(
       groupID: groupID, threadID: line.threadID, seq: seq, authorID: line.authorID,
       text: line.text, sentAtMs: line.sentAtMs, edited: line.edited, unsent: line.unsent,
       opID: line.opID)
+    row.reactions = line.reactions.map { LineReaction(emoji: $0.emoji, userIDs: $0.userIds) }
     try ChatLineRow.insert { row }.execute(db)
   }
 
@@ -300,9 +347,9 @@ extension Chats {
   /// The chat as its screen shows it: the lines on from the latest back to
   /// the first gap, the member's sends still waiting (and their changes
   /// and taking back already in place), and every read mark.
-  public static func state(of threadID: String, in groupID: String, db: Database) throws
-    -> ChatState
-  {
+  public static func state(
+    of threadID: String, in groupID: String, me: String? = nil, db: Database
+  ) throws -> ChatState {
     let all = try ChatLineRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
       .order { $0.seq.desc() }.fetchAll(db)
     var block: [ChatLineRow] = []
@@ -332,6 +379,11 @@ extension Chats {
         if let at = lines.firstIndex(where: { $0.seq == Int64(unsend.seq) }) {
           lines[at].text = ""
           lines[at].unsent = true
+          lines[at].reactions = []
+        }
+      case .react(let react) where react.threadID == threadID:
+        if let me, let at = lines.firstIndex(where: { $0.seq == Int64(react.seq) }) {
+          lines[at].reactions = lines[at].reactions.toggling(react.emoji, by: me, on: react.on)
         }
       case .read(let read) where read.threadID == threadID:
         ownRead = max(ownRead, Int64(read.lastReadSeq))

@@ -31,12 +31,20 @@ const chat = (
 };
 
 type ChatKind =
+  | { react: [number, string, boolean] }
   | { send: string }
   | { change: [number, string] }
   | { unsend: number }
   | { read: number };
 
 function sendChatKind(kind: ChatKind, threadId: string) {
+  if ("react" in kind) {
+    const [seq, emoji, on] = kind.react;
+    return {
+      case: "react",
+      value: { emoji, on, seq: BigInt(seq), threadId },
+    } as const;
+  }
   if ("send" in kind) {
     return {
       case: "send",
@@ -400,6 +408,58 @@ describe("a group's chat", () => {
           ],
         },
       },
+    });
+  });
+
+  it("keeps each member's reactions on a line, in the order chosen", async () => {
+    const { groupId, guest, maker, makerId } = await pair();
+    const { userIdOf } = await import("./helpers");
+    const guestId = await userIdOf(guest);
+    const mine = await groupSocket(groupId, maker);
+    const theirs = await groupSocket(groupId, guest);
+    chat(mine.socket, [{ kind: { send: "21日どう？" }, opId: "a" }]);
+    await theirs.frames.next();
+
+    chat(theirs.socket, [
+      { kind: { react: [1, "👍", true] }, opId: "r1" },
+      // Put on twice: the second changes nothing.
+      { kind: { react: [1, "👍", true] }, opId: "r2" },
+      { kind: { react: [1, "🎉", true] }, opId: "r3" },
+    ]);
+    chat(mine.socket, [{ kind: { react: [1, "👍", true] }, opId: "r4" }]);
+    const reactionsIn = async () => {
+      const changes = changesIn(await theirs.frames.next());
+      const last = changes.at(-1)?.kind;
+      return last?.case === "chatLine" ? last.value.reactions : undefined;
+    };
+    await expect(reactionsIn()).resolves.toMatchObject([
+      { emoji: "👍", userIds: [guestId] },
+      { emoji: "🎉", userIds: [guestId] },
+    ]);
+    // Their Acked, then the other's reaction.
+    await theirs.frames.next();
+    await expect(reactionsIn()).resolves.toMatchObject([
+      { emoji: "👍", userIds: [guestId, makerId] },
+      { emoji: "🎉", userIds: [guestId] },
+    ]);
+  });
+
+  it("takes reactions off with a line taken back, and takes no word as one", async () => {
+    const { groupId, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    chat(mine.socket, [{ kind: { send: "まちがい" }, opId: "a" }]);
+    await mine.frames.next();
+    await mine.frames.next();
+    chat(mine.socket, [
+      { kind: { react: [1, "OK", true] }, opId: "r1" },
+      { kind: { react: [1, "👀", true] }, opId: "r2" },
+      { kind: { unsend: 1 }, opId: "u" },
+      { kind: { react: [1, "👀", true] }, opId: "r3" },
+    ]);
+    const changes = changesIn(await mine.frames.next());
+    expect(changes).toHaveLength(2);
+    expect(changes[1]).toMatchObject({
+      kind: { case: "chatLine", value: { reactions: [], unsent: true } },
     });
   });
 });

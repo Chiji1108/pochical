@@ -24,6 +24,7 @@ public  final class ChatLine extends
     authorId_ = "";
     text_ = "";
     opId_ = "";
+    reactions_ = emptyProtobufList();
   }
   public static final int THREAD_ID_FIELD_NUMBER = 1;
   private java.lang.String threadId_;
@@ -433,6 +434,155 @@ public  final class ChatLine extends
     checkByteStringIsUtf8(value);
     opId_ = value.toStringUtf8();
 
+  }
+
+  public static final int REACTIONS_FIELD_NUMBER = 9;
+  private com.google.protobuf.Internal.ProtobufList<app.pochical.v1.ChatReaction> reactions_;
+  /**
+   * <pre>
+   * Its reactions, each emoji with who chose it in the order they did,
+   * the emoji in the order first chosen; none once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<app.pochical.v1.ChatReaction> getReactionsList() {
+    return reactions_;
+  }
+  /**
+   * <pre>
+   * Its reactions, each emoji with who chose it in the order they did,
+   * the emoji in the order first chosen; none once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+   */
+  public java.util.List<? extends app.pochical.v1.ChatReactionOrBuilder> 
+      getReactionsOrBuilderList() {
+    return reactions_;
+  }
+  /**
+   * <pre>
+   * Its reactions, each emoji with who chose it in the order they did,
+   * the emoji in the order first chosen; none once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+   */
+  @java.lang.Override
+  public int getReactionsCount() {
+    return reactions_.size();
+  }
+  /**
+   * <pre>
+   * Its reactions, each emoji with who chose it in the order they did,
+   * the emoji in the order first chosen; none once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatReaction getReactions(int index) {
+    return reactions_.get(index);
+  }
+  /**
+   * <pre>
+   * Its reactions, each emoji with who chose it in the order they did,
+   * the emoji in the order first chosen; none once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+   */
+  public app.pochical.v1.ChatReactionOrBuilder getReactionsOrBuilder(
+      int index) {
+    return reactions_.get(index);
+  }
+  private void ensureReactionsIsMutable() {
+    com.google.protobuf.Internal.ProtobufList<app.pochical.v1.ChatReaction> tmp = reactions_;
+    if (!tmp.isModifiable()) {
+      reactions_ =
+          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+     }
+  }
+
+  /**
+   * <pre>
+   * Its reactions, each emoji with who chose it in the order they did,
+   * the emoji in the order first chosen; none once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+   */
+  private void setReactions(
+      int index, app.pochical.v1.ChatReaction value) {
+    java.util.Objects.requireNonNull(value);
+    ensureReactionsIsMutable();
+    reactions_.set(index, value);
+  }
+  /**
+   * <pre>
+   * Its reactions, each emoji with who chose it in the order they did,
+   * the emoji in the order first chosen; none once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+   */
+  private void addReactions(app.pochical.v1.ChatReaction value) {
+    java.util.Objects.requireNonNull(value);
+    ensureReactionsIsMutable();
+    reactions_.add(value);
+  }
+  /**
+   * <pre>
+   * Its reactions, each emoji with who chose it in the order they did,
+   * the emoji in the order first chosen; none once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+   */
+  private void addReactions(
+      int index, app.pochical.v1.ChatReaction value) {
+    java.util.Objects.requireNonNull(value);
+    ensureReactionsIsMutable();
+    reactions_.add(index, value);
+  }
+  /**
+   * <pre>
+   * Its reactions, each emoji with who chose it in the order they did,
+   * the emoji in the order first chosen; none once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+   */
+  private void addAllReactions(
+      java.lang.Iterable<? extends app.pochical.v1.ChatReaction> values) {
+    ensureReactionsIsMutable();
+    com.google.protobuf.AbstractMessageLite.addAll(
+        values, reactions_);
+  }
+  /**
+   * <pre>
+   * Its reactions, each emoji with who chose it in the order they did,
+   * the emoji in the order first chosen; none once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+   */
+  private void clearReactions() {
+    reactions_ = emptyProtobufList();
+  }
+  /**
+   * <pre>
+   * Its reactions, each emoji with who chose it in the order they did,
+   * the emoji in the order first chosen; none once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+   */
+  private void removeReactions(int index) {
+    ensureReactionsIsMutable();
+    reactions_.remove(index);
   }
 
   public static app.pochical.v1.ChatLine parseFrom(
@@ -963,6 +1113,168 @@ public  final class ChatLine extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+     */
+    @java.lang.Override
+    public java.util.List<app.pochical.v1.ChatReaction> getReactionsList() {
+      return java.util.Collections.unmodifiableList(
+          instance.getReactionsList());
+    }
+    /**
+     * <pre>
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+     */
+    @java.lang.Override
+    public int getReactionsCount() {
+      return instance.getReactionsCount();
+    }/**
+     * <pre>
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatReaction getReactions(int index) {
+      return instance.getReactions(index);
+    }
+    /**
+     * <pre>
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+     */
+    public Builder setReactions(
+        int index, app.pochical.v1.ChatReaction value) {
+      copyOnWrite();
+      instance.setReactions(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+     */
+    public Builder setReactions(
+        int index, app.pochical.v1.ChatReaction.Builder builderForValue) {
+      copyOnWrite();
+      instance.setReactions(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+     */
+    public Builder addReactions(app.pochical.v1.ChatReaction value) {
+      copyOnWrite();
+      instance.addReactions(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+     */
+    public Builder addReactions(
+        int index, app.pochical.v1.ChatReaction value) {
+      copyOnWrite();
+      instance.addReactions(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+     */
+    public Builder addReactions(
+        app.pochical.v1.ChatReaction.Builder builderForValue) {
+      copyOnWrite();
+      instance.addReactions(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+     */
+    public Builder addReactions(
+        int index, app.pochical.v1.ChatReaction.Builder builderForValue) {
+      copyOnWrite();
+      instance.addReactions(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+     */
+    public Builder addAllReactions(
+        java.lang.Iterable<? extends app.pochical.v1.ChatReaction> values) {
+      copyOnWrite();
+      instance.addAllReactions(values);
+      return this;
+    }
+    /**
+     * <pre>
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+     */
+    public Builder clearReactions() {
+      copyOnWrite();
+      instance.clearReactions();
+      return this;
+    }
+    /**
+     * <pre>
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+     */
+    public Builder removeReactions(int index) {
+      copyOnWrite();
+      instance.removeReactions(index);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatLine)
   }
   @java.lang.Override
@@ -987,10 +1299,12 @@ public  final class ChatLine extends
             "edited_",
             "unsent_",
             "opId_",
+            "reactions_",
+            app.pochical.v1.ChatReaction.class,
           };
           java.lang.String info =
-              "\u0000\b\u0000\u0000\u0001\b\b\u0000\u0000\u0000\u0001\u0208\u0002\u0003\u0003\u0208" +
-              "\u0004\u0208\u0005\u0002\u0006\u0007\u0007\u0007\b\u0208";
+              "\u0000\t\u0000\u0000\u0001\t\t\u0000\u0001\u0000\u0001\u0208\u0002\u0003\u0003\u0208" +
+              "\u0004\u0208\u0005\u0002\u0006\u0007\u0007\u0007\b\u0208\t\u001b";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
