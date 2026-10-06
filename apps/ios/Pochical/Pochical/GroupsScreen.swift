@@ -25,6 +25,8 @@ struct GroupsScreen: View {
   @State private var socket: SyncClient?
   /// The group open beside the rail, the first until one is picked.
   @Binding var openID: String?
+  /// Each group's unread lines that count.
+  let unread: [String: Int]
   /// Opens the camera to read a group's QR code.
   let onScan: () -> Void
   @State private var path: [GroupRoute] = []
@@ -35,7 +37,7 @@ struct GroupsScreen: View {
         if let open = groups.first(where: { $0.id == openID }) ?? groups.first {
           HStack(alignment: .top, spacing: 0) {
             GroupRail(
-              groups: groups, openID: open.id, onOpen: { openID = $0 },
+              groups: groups, openID: open.id, unread: unread, onOpen: { openID = $0 },
               onNew: { path.append(.newGroup) }, onScan: onScan)
             GroupHub(group: open) {
               path.append(.invite(open))
@@ -153,6 +155,7 @@ private struct GroupRail: View {
   @Environment(\.themeColors) private var colors
   let groups: [GroupRow]
   let openID: String
+  let unread: [String: Int]
   let onOpen: (String) -> Void
   let onNew: () -> Void
   let onScan: () -> Void
@@ -162,6 +165,7 @@ private struct GroupRail: View {
       VStack(spacing: 12) {
         ForEach(groups) { group in
           let isOpen = group.id == openID
+          let count = unread[group.id] ?? 0
           Button {
             onOpen(group.id)
           } label: {
@@ -173,10 +177,20 @@ private struct GroupRail: View {
                   .fill(colors.accentDefault)
                   .frame(width: 4, height: isOpen ? 30 : 0)
               }
+              .overlay(alignment: .bottomTrailing) {
+                // Its chats' unread, ringed in the rail's ground.
+                if count > 0 {
+                  UnreadCount(count: count)
+                    .padding(2)
+                    .background(colors.fillQuaternary, in: Capsule())
+                    .offset(x: -1, y: 2)
+                    .accessibilityHidden(true)
+                }
+              }
               .contentShape(.rect)
           }
           .buttonStyle(.plain)
-          .accessibilityLabel(group.name)
+          .accessibilityLabel(count > 0 ? "\(group.name)、未読\(count)件" : group.name)
           .accessibilityAddTraits(isOpen ? .isSelected : [])
         }
         Capsule()

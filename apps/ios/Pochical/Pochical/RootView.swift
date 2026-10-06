@@ -1,5 +1,6 @@
 import PochicalDesign
 import PochicalKit
+import SQLiteData
 import SwiftUI
 
 /// The app's tabs, as /design's tab bar has them: カレンダー, グループ and
@@ -8,6 +9,10 @@ import SwiftUI
 struct RootView: View {
   @Environment(\.themeColors) private var colors
   @Environment(Settings.self) private var settings
+  @Environment(\.groupCalls) private var groupCalls
+  /// Each group's unread lines that count (spec/chat.md, Unread lines).
+  @Fetch private var unread: [String: Int] = [:]
+  @State private var meID: String?
   @State private var tab = RootTab.calendar
   @State private var openGroupID: String?
   @State private var invite: OpenedInvite?
@@ -22,14 +27,20 @@ struct RootView: View {
         CalendarScreen()
       }
       Tab("グループ", systemImage: "person.2", value: .groups) {
-        GroupsScreen(openID: $openGroupID) { scanning = true }
+        GroupsScreen(openID: $openGroupID, unread: unread) { scanning = true }
       }
+      .badge(unread.values.reduce(0, +))
       Tab("設定", systemImage: "gearshape", value: .settings) {
         SettingsScreen()
       }
     }
     .tint(colors.accentDefault)
     .environment(\.look, settings.device.look)
+    .task { meID = await groupCalls.userID() }
+    .task(id: meID) {
+      guard let meID else { return }
+      try? await $unread.load(UnreadRequest(me: meID))
+    }
     .onOpenURL { url in
       if let code = openedInviteCode(of: url) {
         invite = OpenedInvite(code: code)
@@ -53,6 +64,16 @@ struct RootView: View {
         self.invite = nil
       }
     }
+  }
+}
+
+/// Each group's unread lines that count for `me`, read again as they
+/// change.
+struct UnreadRequest: FetchKeyRequest, Hashable {
+  let me: String
+
+  func fetch(_ db: Database) throws -> [String: Int] {
+    try Chats.unreadByGroup(me: me, db: db)
   }
 }
 

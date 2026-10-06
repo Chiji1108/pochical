@@ -19,6 +19,7 @@ import {
   GROUP_THREAD,
   moveReadMark,
   takeChatEdit,
+  unreadCount,
 } from "./group-chat";
 import migrations from "./group-do-migrations/migrations.js";
 import {
@@ -399,6 +400,16 @@ export class GroupDO extends DurableObject<Env> {
       rejectAndClose(ws, ServerError_Code.BAD_FRAME, "Not in the group");
       return;
     }
+    // Whose unread lines changed, by chat: everyone else's with a new
+    // line, the reader's with a read.
+    const counted = new Map<string, Set<string>>();
+    const recount = (threadId: string, userIds: string[]): void => {
+      const users = counted.get(threadId) ?? new Set<string>();
+      for (const id of userIds) {
+        users.add(id);
+      }
+      counted.set(threadId, users);
+    };
     const { changed, refused } = this.ctx.storage.transactionSync(() => {
       const made: Change[] = [];
       const back: Change[] = [];
@@ -408,6 +419,16 @@ export class GroupDO extends DurableObject<Env> {
         if (taken.change) {
           this.setHead(cursor);
           made.push(taken.change);
+          if (edit.kind.case === "send") {
+            recount(
+              edit.kind.value.threadId,
+              this.memberList()
+                .map((member) => member.userId)
+                .filter((id) => id !== userId)
+            );
+          } else if (edit.kind.case === "read") {
+            recount(edit.kind.value.threadId, [userId]);
+          }
         }
         if (taken.refused) {
           back.push(taken.refused);
@@ -416,6 +437,7 @@ export class GroupDO extends DurableObject<Env> {
       return { changed: made, refused: back };
     });
     broadcastChanges(this.ctx, changed);
+    this.tellUnread(counted);
     if (refused.length > 0) {
       send(ws, { case: "changes", value: { changes: refused } });
     }
@@ -423,6 +445,31 @@ export class GroupDO extends DurableObject<Env> {
       case: "acked",
       value: { opIds: edits.map(({ opId }) => opId) },
     });
+  }
+
+  /**
+   * Gives each member's User DO their new count of a chat's unread lines,
+   * with the cursor it was counted at, for their badges
+   * (spec/sync-protocol.md, Unread summary). One that fails is put right
+   * by the member's next count.
+   */
+  private tellUnread(counted: Map<string, Set<string>>): void {
+    const groupId = this.ctx.id.name;
+    if (groupId === undefined || counted.size === 0) {
+      return;
+    }
+    const cursor = this.head();
+    const calls = [...counted].flatMap(([threadId, userIds]) =>
+      [...userIds].map(async (userId) => {
+        await this.env.USERS.getByName(userId).setUnread(
+          groupId,
+          threadId,
+          unreadCount(this.db, userId, threadId),
+          cursor
+        );
+      })
+    );
+    this.ctx.waitUntil(Promise.allSettled(calls));
   }
 
   /** Moves the log's head to `cursor`, a value having been written there. */

@@ -85,7 +85,7 @@ The numbers are `socketRules` in `design/src/socket.ts`.
 
 Each DO keeps an append-only change log. Every accepted mutation (shift edit, message sent, message edited or deleted, read state moved) gets the next `cursor`, a `uint64` that only grows.
 
-A DO that ever removes rows keeps the newest cursor it gave out in a row of its own (the Group DO's `log_head`), since the newest of the rows left could be older, and a device already past it would miss what comes next. The User DO, which keeps every value once written (a deleted one as a tombstone), reads it off its values.
+A DO that ever removes rows keeps the newest cursor it gave out in a row of its own (the Group DO's `log_head`), since the newest of the rows left could be older, and a device already past it would miss what comes next. The User DO, which keeps every value once written (a deleted one as a tombstone), reads it off its values; the only rows it removes, a left group's unread counts, go with a newer cursor written in the same transaction.
 
 - After `Welcome`, the server sends every change after the client's cursor, then streams new changes as they happen.
 - The client applies changes in cursor order and stores the last applied cursor in the same SQLite transaction.
@@ -220,11 +220,13 @@ Clients advance the watermark to the newest message shown on screen, batching up
 
 ### Unread summary
 
-Tab and app icon badges need unread counts across every group, without a socket to each Group DO. When a message is accepted, the Group DO already notifies each member's User DO to send push notifications; the same call carries the member's new unread count for that thread, and watermark changes do the same.
+Tab and app icon badges need unread counts across every group, without a socket to each Group DO. When a line is sent, the Group DO counts each other member's unread lines in that thread and gives the count to their User DO (`setUnread`), with the group's cursor it was counted at; a read does the same for the reader. The same call is where push notifications will start.
 
-- The User DO keeps `unread_by_thread` and streams it to the user's devices over the User DO socket.
-- The APNs `badge` and FCM notification count come from the User DO's total.
+- The User DO keeps one `unread_counts` row per group and thread, in its own log like the memberships, and sends each change to the user's devices on their socket as an `UnreadCount`. Counts can arrive out of order, so one counted at an older group cursor than the row's changes nothing. A failed call is put right by the member's next count.
+- Leaving a group deletes its rows, in the transaction that marks the membership left at a newer cursor, so the head never goes back; devices drop a group's counts as they hear of the leaving, and joining again starts at the chats' end.
+- A device shows the group's count, except in a chat where a read of its own still waits to be sent: there it counts the lines it holds past that read, so reading clears the badge at once. A group's icon adds up its chats', the グループ tab all groups' (spec/chat.md, Unread lines).
 - Reading on one device clears the badge on the user's other devices through the User DO.
+- The APNs `badge` and FCM notification count will come from the User DO's total (not built yet, with push).
 
 ## Ephemeral state
 

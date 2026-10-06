@@ -125,7 +125,8 @@ public enum OwnValues {
         try CoworkerOrderRow.insert { CoworkerOrderRow(position: position, coworkerID: id) }
           .execute(db)
       }
-    case .memberDay, .memberPattern, .memberRepeatOrders, .membership, .groupProfile, .member,
+    case .memberDay, .memberPattern, .memberRepeatOrders, .membership, .unreadCount, .groupProfile,
+      .member,
       .chatLine, .readMark, nil:
       return
     }
@@ -148,7 +149,8 @@ extension Pochical_V1_Change {
     case .repeatOrders: "repeatOrders"
     case .coworker(let value): "coworker/\(value.id)"
     case .coworkerOrder: "coworkerOrder"
-    case .memberDay, .memberPattern, .memberRepeatOrders, .membership, .groupProfile, .member,
+    case .memberDay, .memberPattern, .memberRepeatOrders, .membership, .unreadCount, .groupProfile,
+      .member,
       .chatLine, .readMark, nil:
       nil
     }
@@ -173,7 +175,8 @@ extension Pochical_V1_Change {
       change.coworker = value
     case .coworkerOrder:
       change.coworkerOrder = Pochical_V1_CoworkerOrder()
-    case .memberDay, .memberPattern, .memberRepeatOrders, .membership, .groupProfile, .member,
+    case .memberDay, .memberPattern, .memberRepeatOrders, .membership, .unreadCount, .groupProfile,
+      .member,
       .chatLine, .readMark, nil:
       break
     }

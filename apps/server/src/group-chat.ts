@@ -1,7 +1,19 @@
 import { create } from "@bufbuild/protobuf";
 import { chatRules } from "@pochical/design/chat";
 import { textLimits } from "@pochical/design/limits";
-import { and, asc, desc, eq, gt, lt, lte, max, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  lt,
+  lte,
+  max,
+  ne,
+  or,
+} from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
 import { ChangeSchema, ChatLineSchema } from "./gen/pochical/v1/sync_pb";
@@ -110,6 +122,38 @@ export const moveReadMark = (
     })
     .run();
   return readMarkChange(row);
+};
+
+/**
+ * How many of the chat's lines the member has not read: others' lines
+ * past their mark (spec/sync-protocol.md, Read states).
+ */
+export const unreadCount = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  threadId: string
+): number => {
+  const read =
+    db
+      .select({ lastReadSeq: readMarks.lastReadSeq })
+      .from(readMarks)
+      .where(
+        and(eq(readMarks.userId, userId), eq(readMarks.threadId, threadId))
+      )
+      .get()?.lastReadSeq ?? 0;
+  return (
+    db
+      .select({ n: count() })
+      .from(chatLines)
+      .where(
+        and(
+          eq(chatLines.threadId, threadId),
+          gt(chatLines.seq, read),
+          ne(chatLines.authorId, userId)
+        )
+      )
+      .get()?.n ?? 0
+  );
 };
 
 /** What taking an edit did: its change, and the line to send back when it was refused. */

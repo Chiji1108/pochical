@@ -35,15 +35,20 @@ extension DatabaseMigrator {
 }
 
 enum Groups {
-  /// A group the user is in, from their socket; other changes are left
-  /// to what takes them.
+  /// A group the user is in, or how much of its chats they have not
+  /// read, from their socket; other changes are left to what takes them.
   static func take(_ change: Pochical_V1_Change, in db: Database) throws {
+    if case .unreadCount(let unread) = change.kind {
+      try Chats.take(unread, in: db)
+      return
+    }
     guard case .membership(let membership) = change.kind else { return }
     // A group left goes, with what the device holds of it.
     if membership.left {
       try GroupRow.find(membership.groupID).delete().execute(db)
       try GroupSync.reset(membership.groupID, in: db)
       try Chats.dropWaiting(of: membership.groupID, in: db)
+      try Chats.dropUnread(of: membership.groupID, in: db)
       return
     }
     let row = GroupRow(
@@ -55,6 +60,7 @@ enum Groups {
   /// A Reset: the groups come again with everything else.
   static func reset(in db: Database) throws {
     try GroupRow.delete().execute(db)
+    try UnreadCountRow.delete().execute(db)
   }
 }
 

@@ -8,6 +8,7 @@ import m0005 from './0005_order_clears.sql';
 import m0006 from './0006_group_requests.sql';
 import m0007 from './0007_membership_values.sql';
 import m0008 from './0008_membership_left.sql';
+import m0009 from './0009_unread_counts.sql';
 
   export default {
     journal,
@@ -20,7 +21,8 @@ m0004,
 m0005,
 m0006,
 m0007,
-m0008
+m0008,
+m0009
     }
   }
   
