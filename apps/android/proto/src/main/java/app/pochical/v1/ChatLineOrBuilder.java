@@ -210,4 +210,63 @@ public interface ChatLineOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDaysBytes(int index);
+
+  /**
+   * <pre>
+   * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
+   * </pre>
+   *
+   * <code>bool poll = 12 [json_name = "poll"];</code>
+   * @return The poll.
+   */
+  boolean getPoll();
+
+  /**
+   * <pre>
+   * A poll's votes: each day someone can come, with who can, in the
+   * order they said so. None once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+   */
+  java.util.List<app.pochical.v1.ChatVotes> 
+      getVotesList();
+  /**
+   * <pre>
+   * A poll's votes: each day someone can come, with who can, in the
+   * order they said so. None once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+   */
+  app.pochical.v1.ChatVotes getVotes(int index);
+  /**
+   * <pre>
+   * A poll's votes: each day someone can come, with who can, in the
+   * order they said so. None once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+   */
+  int getVotesCount();
+
+  /**
+   * <pre>
+   * The day a poll was settled on, as YYYY-MM-DD; empty while open.
+   * </pre>
+   *
+   * <code>string decided = 14 [json_name = "decided"];</code>
+   * @return The decided.
+   */
+  java.lang.String getDecided();
+  /**
+   * <pre>
+   * The day a poll was settled on, as YYYY-MM-DD; empty while open.
+   * </pre>
+   *
+   * <code>string decided = 14 [json_name = "decided"];</code>
+   * @return The bytes for decided.
+   */
+  com.google.protobuf.ByteString
+      getDecidedBytes();
 }

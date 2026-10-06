@@ -398,6 +398,19 @@ message ChatLine {
   // The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
   // line of days has no words. None once unsent.
   repeated string days = 11;
+  // Its days are put to the vote (spec/chat.md, Polls), in a group chat.
+  bool poll = 12;
+  // A poll's votes: each day someone can come, with who can, in the
+  // order they said so. None once unsent.
+  repeated ChatVotes votes = 13;
+  // The day a poll was settled on, as YYYY-MM-DD; empty while open.
+  string decided = 14;
+}
+
+// Who can come on one of a poll's days.
+message ChatVotes {
+  string day = 1;
+  repeated string user_ids = 2;
 }
 
 // One emoji on a line and the members who chose it.
@@ -431,7 +444,27 @@ message ChatEdit {
     ChatRead read = 5;
     ChatReact react = 6;
     ChatPin pin = 7;
+    ChatVote vote = 8;
+    ChatDecide decide = 9;
   }
+}
+
+// The member can come on one of a poll's days (行ける), or takes it
+// back: anyone in the group, on as many days as they like, until the
+// poll is settled.
+message ChatVote {
+  string thread_id = 1;
+  uint64 seq = 2;
+  string day = 3;
+  bool on = 4;
+}
+
+// A poll settled on one of its days (日にちを決める, 決め直す), by its
+// writer, or by anyone once they have left the group. It pins the poll.
+message ChatDecide {
+  string thread_id = 1;
+  uint64 seq = 2;
+  string day = 3;
 }
 
 // A line pinned for everyone in the chat, or its pin taken off, by any
@@ -463,6 +496,8 @@ message ChatSend {
   // 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
   // each once and in order; none for words.
   repeated string days = 3;
+  // The days put to the vote instead: 2 days at least, in the group chat.
+  bool poll = 4;
 }
 
 // New words for one of the member's own lines of words (編集).

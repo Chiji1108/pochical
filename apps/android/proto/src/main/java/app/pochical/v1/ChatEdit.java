@@ -33,6 +33,8 @@ public  final class ChatEdit extends
     READ(5),
     REACT(6),
     PIN(7),
+    VOTE(8),
+    DECIDE(9),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -54,6 +56,8 @@ public  final class ChatEdit extends
         case 5: return READ;
         case 6: return REACT;
         case 7: return PIN;
+        case 8: return VOTE;
+        case 9: return DECIDE;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -437,6 +441,106 @@ public  final class ChatEdit extends
    */
   private void clearPin() {
     if (kindCase_ == 7) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int VOTE_FIELD_NUMBER = 8;
+  /**
+   * <code>.pochical.v1.ChatVote vote = 8 [json_name = "vote"];</code>
+   */
+  @java.lang.Override
+  public boolean hasVote() {
+    return kindCase_ == 8;
+  }
+  /**
+   * <code>.pochical.v1.ChatVote vote = 8 [json_name = "vote"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatVote getVote() {
+    if (kindCase_ == 8) {
+       return (app.pochical.v1.ChatVote) kind_;
+    }
+    return app.pochical.v1.ChatVote.getDefaultInstance();
+  }
+  /**
+   * <code>.pochical.v1.ChatVote vote = 8 [json_name = "vote"];</code>
+   */
+  private void setVote(app.pochical.v1.ChatVote value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 8;
+  }
+  /**
+   * <code>.pochical.v1.ChatVote vote = 8 [json_name = "vote"];</code>
+   */
+  private void mergeVote(app.pochical.v1.ChatVote value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 8 &&
+        kind_ != app.pochical.v1.ChatVote.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ChatVote.newBuilder((app.pochical.v1.ChatVote) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 8;
+  }
+  /**
+   * <code>.pochical.v1.ChatVote vote = 8 [json_name = "vote"];</code>
+   */
+  private void clearVote() {
+    if (kindCase_ == 8) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int DECIDE_FIELD_NUMBER = 9;
+  /**
+   * <code>.pochical.v1.ChatDecide decide = 9 [json_name = "decide"];</code>
+   */
+  @java.lang.Override
+  public boolean hasDecide() {
+    return kindCase_ == 9;
+  }
+  /**
+   * <code>.pochical.v1.ChatDecide decide = 9 [json_name = "decide"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatDecide getDecide() {
+    if (kindCase_ == 9) {
+       return (app.pochical.v1.ChatDecide) kind_;
+    }
+    return app.pochical.v1.ChatDecide.getDefaultInstance();
+  }
+  /**
+   * <code>.pochical.v1.ChatDecide decide = 9 [json_name = "decide"];</code>
+   */
+  private void setDecide(app.pochical.v1.ChatDecide value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 9;
+  }
+  /**
+   * <code>.pochical.v1.ChatDecide decide = 9 [json_name = "decide"];</code>
+   */
+  private void mergeDecide(app.pochical.v1.ChatDecide value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 9 &&
+        kind_ != app.pochical.v1.ChatDecide.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ChatDecide.newBuilder((app.pochical.v1.ChatDecide) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 9;
+  }
+  /**
+   * <code>.pochical.v1.ChatDecide decide = 9 [json_name = "decide"];</code>
+   */
+  private void clearDecide() {
+    if (kindCase_ == 9) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -914,6 +1018,102 @@ public  final class ChatEdit extends
       return this;
     }
 
+    /**
+     * <code>.pochical.v1.ChatVote vote = 8 [json_name = "vote"];</code>
+     */
+    @java.lang.Override
+    public boolean hasVote() {
+      return instance.hasVote();
+    }
+    /**
+     * <code>.pochical.v1.ChatVote vote = 8 [json_name = "vote"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatVote getVote() {
+      return instance.getVote();
+    }
+    /**
+     * <code>.pochical.v1.ChatVote vote = 8 [json_name = "vote"];</code>
+     */
+    public Builder setVote(app.pochical.v1.ChatVote value) {
+      copyOnWrite();
+      instance.setVote(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatVote vote = 8 [json_name = "vote"];</code>
+     */
+    public Builder setVote(
+        app.pochical.v1.ChatVote.Builder builderForValue) {
+      copyOnWrite();
+      instance.setVote(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatVote vote = 8 [json_name = "vote"];</code>
+     */
+    public Builder mergeVote(app.pochical.v1.ChatVote value) {
+      copyOnWrite();
+      instance.mergeVote(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatVote vote = 8 [json_name = "vote"];</code>
+     */
+    public Builder clearVote() {
+      copyOnWrite();
+      instance.clearVote();
+      return this;
+    }
+
+    /**
+     * <code>.pochical.v1.ChatDecide decide = 9 [json_name = "decide"];</code>
+     */
+    @java.lang.Override
+    public boolean hasDecide() {
+      return instance.hasDecide();
+    }
+    /**
+     * <code>.pochical.v1.ChatDecide decide = 9 [json_name = "decide"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatDecide getDecide() {
+      return instance.getDecide();
+    }
+    /**
+     * <code>.pochical.v1.ChatDecide decide = 9 [json_name = "decide"];</code>
+     */
+    public Builder setDecide(app.pochical.v1.ChatDecide value) {
+      copyOnWrite();
+      instance.setDecide(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatDecide decide = 9 [json_name = "decide"];</code>
+     */
+    public Builder setDecide(
+        app.pochical.v1.ChatDecide.Builder builderForValue) {
+      copyOnWrite();
+      instance.setDecide(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatDecide decide = 9 [json_name = "decide"];</code>
+     */
+    public Builder mergeDecide(app.pochical.v1.ChatDecide value) {
+      copyOnWrite();
+      instance.mergeDecide(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatDecide decide = 9 [json_name = "decide"];</code>
+     */
+    public Builder clearDecide() {
+      copyOnWrite();
+      instance.clearDecide();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatEdit)
   }
   @java.lang.Override
@@ -939,10 +1139,12 @@ public  final class ChatEdit extends
             app.pochical.v1.ChatRead.class,
             app.pochical.v1.ChatReact.class,
             app.pochical.v1.ChatPin.class,
+            app.pochical.v1.ChatVote.class,
+            app.pochical.v1.ChatDecide.class,
           };
           java.lang.String info =
-              "\u0000\u0007\u0001\u0000\u0001\u0007\u0007\u0000\u0000\u0000\u0001\u0208\u0002<\u0000" +
-              "\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000";
+              "\u0000\t\u0001\u0000\u0001\t\t\u0000\u0000\u0000\u0001\u0208\u0002<\u0000\u0003<" +
+              "\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

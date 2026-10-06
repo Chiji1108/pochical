@@ -448,3 +448,35 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     #expect(state.lines.map(\.days) == [[]])
   }
 }
+
+@Test func aPollsVotesAndItsSettlingShowWhileTheyWait() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var poll = line(1, "")
+    poll.chatLine.days = ["2026-10-10", "2026-10-11"]
+    poll.chatLine.poll = true
+    var others = Pochical_V1_ChatVotes()
+    others.day = "2026-10-11"
+    others.userIds = ["u2"]
+    poll.chatLine.votes = [others]
+    try GroupSync.take([poll], of: "g", in: db)
+    var vote = Pochical_V1_ChatVote()
+    vote.threadID = groupThread
+    vote.seq = 1
+    vote.day = "2026-10-11"
+    vote.on = true
+    try Chats.edit(.vote(vote), in: "g", now: 1, db: db)
+    var state = try Chats.state(of: groupThread, in: "g", me: "me", db: db)
+    let tenth = Day(year: 2026, month: 10, day: 11)
+    #expect(state.lines[0].votes.voters(on: tenth) == ["u2", "me"])
+
+    var decide = Pochical_V1_ChatDecide()
+    decide.threadID = groupThread
+    decide.seq = 1
+    decide.day = "2026-10-11"
+    try Chats.edit(.decide(decide), in: "g", now: 2, db: db)
+    state = try Chats.state(of: groupThread, in: "g", me: "me", db: db)
+    #expect(state.lines[0].decided == tenth)
+    #expect(state.pins.map(\.seq) == [1])
+  }
+}

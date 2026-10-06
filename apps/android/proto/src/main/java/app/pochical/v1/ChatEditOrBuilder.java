@@ -96,5 +96,27 @@ public interface ChatEditOrBuilder extends
    */
   app.pochical.v1.ChatPin getPin();
 
+  /**
+   * <code>.pochical.v1.ChatVote vote = 8 [json_name = "vote"];</code>
+   * @return Whether the vote field is set.
+   */
+  boolean hasVote();
+  /**
+   * <code>.pochical.v1.ChatVote vote = 8 [json_name = "vote"];</code>
+   * @return The vote.
+   */
+  app.pochical.v1.ChatVote getVote();
+
+  /**
+   * <code>.pochical.v1.ChatDecide decide = 9 [json_name = "decide"];</code>
+   * @return Whether the decide field is set.
+   */
+  boolean hasDecide();
+  /**
+   * <code>.pochical.v1.ChatDecide decide = 9 [json_name = "decide"];</code>
+   * @return The decide.
+   */
+  app.pochical.v1.ChatDecide getDecide();
+
   public app.pochical.v1.ChatEdit.KindCase getKindCase();
 }

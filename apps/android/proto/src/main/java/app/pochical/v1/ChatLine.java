@@ -26,6 +26,8 @@ public  final class ChatLine extends
     opId_ = "";
     reactions_ = emptyProtobufList();
     days_ = emptyProtobufList();
+    votes_ = emptyProtobufList();
+    decided_ = "";
   }
   public static final int THREAD_ID_FIELD_NUMBER = 1;
   private java.lang.String threadId_;
@@ -763,6 +765,260 @@ public  final class ChatLine extends
     checkByteStringIsUtf8(value);
     ensureDaysIsMutable();
     days_.add(value.toStringUtf8());
+  }
+
+  public static final int POLL_FIELD_NUMBER = 12;
+  private boolean poll_;
+  /**
+   * <pre>
+   * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
+   * </pre>
+   *
+   * <code>bool poll = 12 [json_name = "poll"];</code>
+   * @return The poll.
+   */
+  @java.lang.Override
+  public boolean getPoll() {
+    return poll_;
+  }
+  /**
+   * <pre>
+   * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
+   * </pre>
+   *
+   * <code>bool poll = 12 [json_name = "poll"];</code>
+   * @param value The poll to set.
+   */
+  private void setPoll(boolean value) {
+    
+    poll_ = value;
+  }
+  /**
+   * <pre>
+   * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
+   * </pre>
+   *
+   * <code>bool poll = 12 [json_name = "poll"];</code>
+   */
+  private void clearPoll() {
+
+    poll_ = false;
+  }
+
+  public static final int VOTES_FIELD_NUMBER = 13;
+  private com.google.protobuf.Internal.ProtobufList<app.pochical.v1.ChatVotes> votes_;
+  /**
+   * <pre>
+   * A poll's votes: each day someone can come, with who can, in the
+   * order they said so. None once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<app.pochical.v1.ChatVotes> getVotesList() {
+    return votes_;
+  }
+  /**
+   * <pre>
+   * A poll's votes: each day someone can come, with who can, in the
+   * order they said so. None once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+   */
+  public java.util.List<? extends app.pochical.v1.ChatVotesOrBuilder> 
+      getVotesOrBuilderList() {
+    return votes_;
+  }
+  /**
+   * <pre>
+   * A poll's votes: each day someone can come, with who can, in the
+   * order they said so. None once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+   */
+  @java.lang.Override
+  public int getVotesCount() {
+    return votes_.size();
+  }
+  /**
+   * <pre>
+   * A poll's votes: each day someone can come, with who can, in the
+   * order they said so. None once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatVotes getVotes(int index) {
+    return votes_.get(index);
+  }
+  /**
+   * <pre>
+   * A poll's votes: each day someone can come, with who can, in the
+   * order they said so. None once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+   */
+  public app.pochical.v1.ChatVotesOrBuilder getVotesOrBuilder(
+      int index) {
+    return votes_.get(index);
+  }
+  private void ensureVotesIsMutable() {
+    com.google.protobuf.Internal.ProtobufList<app.pochical.v1.ChatVotes> tmp = votes_;
+    if (!tmp.isModifiable()) {
+      votes_ =
+          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+     }
+  }
+
+  /**
+   * <pre>
+   * A poll's votes: each day someone can come, with who can, in the
+   * order they said so. None once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+   */
+  private void setVotes(
+      int index, app.pochical.v1.ChatVotes value) {
+    java.util.Objects.requireNonNull(value);
+    ensureVotesIsMutable();
+    votes_.set(index, value);
+  }
+  /**
+   * <pre>
+   * A poll's votes: each day someone can come, with who can, in the
+   * order they said so. None once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+   */
+  private void addVotes(app.pochical.v1.ChatVotes value) {
+    java.util.Objects.requireNonNull(value);
+    ensureVotesIsMutable();
+    votes_.add(value);
+  }
+  /**
+   * <pre>
+   * A poll's votes: each day someone can come, with who can, in the
+   * order they said so. None once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+   */
+  private void addVotes(
+      int index, app.pochical.v1.ChatVotes value) {
+    java.util.Objects.requireNonNull(value);
+    ensureVotesIsMutable();
+    votes_.add(index, value);
+  }
+  /**
+   * <pre>
+   * A poll's votes: each day someone can come, with who can, in the
+   * order they said so. None once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+   */
+  private void addAllVotes(
+      java.lang.Iterable<? extends app.pochical.v1.ChatVotes> values) {
+    ensureVotesIsMutable();
+    com.google.protobuf.AbstractMessageLite.addAll(
+        values, votes_);
+  }
+  /**
+   * <pre>
+   * A poll's votes: each day someone can come, with who can, in the
+   * order they said so. None once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+   */
+  private void clearVotes() {
+    votes_ = emptyProtobufList();
+  }
+  /**
+   * <pre>
+   * A poll's votes: each day someone can come, with who can, in the
+   * order they said so. None once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+   */
+  private void removeVotes(int index) {
+    ensureVotesIsMutable();
+    votes_.remove(index);
+  }
+
+  public static final int DECIDED_FIELD_NUMBER = 14;
+  private java.lang.String decided_;
+  /**
+   * <pre>
+   * The day a poll was settled on, as YYYY-MM-DD; empty while open.
+   * </pre>
+   *
+   * <code>string decided = 14 [json_name = "decided"];</code>
+   * @return The decided.
+   */
+  @java.lang.Override
+  public java.lang.String getDecided() {
+    return decided_;
+  }
+  /**
+   * <pre>
+   * The day a poll was settled on, as YYYY-MM-DD; empty while open.
+   * </pre>
+   *
+   * <code>string decided = 14 [json_name = "decided"];</code>
+   * @return The bytes for decided.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDecidedBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(decided_);
+  }
+  /**
+   * <pre>
+   * The day a poll was settled on, as YYYY-MM-DD; empty while open.
+   * </pre>
+   *
+   * <code>string decided = 14 [json_name = "decided"];</code>
+   * @param value The decided to set.
+   */
+  private void setDecided(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    decided_ = value;
+  }
+  /**
+   * <pre>
+   * The day a poll was settled on, as YYYY-MM-DD; empty while open.
+   * </pre>
+   *
+   * <code>string decided = 14 [json_name = "decided"];</code>
+   */
+  private void clearDecided() {
+
+    decided_ = getDefaultInstance().getDecided();
+  }
+  /**
+   * <pre>
+   * The day a poll was settled on, as YYYY-MM-DD; empty while open.
+   * </pre>
+   *
+   * <code>string decided = 14 [json_name = "decided"];</code>
+   * @param value The bytes for decided to set.
+   */
+  private void setDecidedBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    decided_ = value.toStringUtf8();
+
   }
 
   public static app.pochical.v1.ChatLine parseFrom(
@@ -1635,6 +1891,277 @@ public  final class ChatLine extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
+     * </pre>
+     *
+     * <code>bool poll = 12 [json_name = "poll"];</code>
+     * @return The poll.
+     */
+    @java.lang.Override
+    public boolean getPoll() {
+      return instance.getPoll();
+    }
+    /**
+     * <pre>
+     * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
+     * </pre>
+     *
+     * <code>bool poll = 12 [json_name = "poll"];</code>
+     * @param value The poll to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPoll(boolean value) {
+      copyOnWrite();
+      instance.setPoll(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
+     * </pre>
+     *
+     * <code>bool poll = 12 [json_name = "poll"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPoll() {
+      copyOnWrite();
+      instance.clearPoll();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+     */
+    @java.lang.Override
+    public java.util.List<app.pochical.v1.ChatVotes> getVotesList() {
+      return java.util.Collections.unmodifiableList(
+          instance.getVotesList());
+    }
+    /**
+     * <pre>
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+     */
+    @java.lang.Override
+    public int getVotesCount() {
+      return instance.getVotesCount();
+    }/**
+     * <pre>
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatVotes getVotes(int index) {
+      return instance.getVotes(index);
+    }
+    /**
+     * <pre>
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+     */
+    public Builder setVotes(
+        int index, app.pochical.v1.ChatVotes value) {
+      copyOnWrite();
+      instance.setVotes(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+     */
+    public Builder setVotes(
+        int index, app.pochical.v1.ChatVotes.Builder builderForValue) {
+      copyOnWrite();
+      instance.setVotes(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+     */
+    public Builder addVotes(app.pochical.v1.ChatVotes value) {
+      copyOnWrite();
+      instance.addVotes(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+     */
+    public Builder addVotes(
+        int index, app.pochical.v1.ChatVotes value) {
+      copyOnWrite();
+      instance.addVotes(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+     */
+    public Builder addVotes(
+        app.pochical.v1.ChatVotes.Builder builderForValue) {
+      copyOnWrite();
+      instance.addVotes(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+     */
+    public Builder addVotes(
+        int index, app.pochical.v1.ChatVotes.Builder builderForValue) {
+      copyOnWrite();
+      instance.addVotes(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+     */
+    public Builder addAllVotes(
+        java.lang.Iterable<? extends app.pochical.v1.ChatVotes> values) {
+      copyOnWrite();
+      instance.addAllVotes(values);
+      return this;
+    }
+    /**
+     * <pre>
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+     */
+    public Builder clearVotes() {
+      copyOnWrite();
+      instance.clearVotes();
+      return this;
+    }
+    /**
+     * <pre>
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
+     */
+    public Builder removeVotes(int index) {
+      copyOnWrite();
+      instance.removeVotes(index);
+      return this;
+    }
+
+    /**
+     * <pre>
+     * The day a poll was settled on, as YYYY-MM-DD; empty while open.
+     * </pre>
+     *
+     * <code>string decided = 14 [json_name = "decided"];</code>
+     * @return The decided.
+     */
+    @java.lang.Override
+    public java.lang.String getDecided() {
+      return instance.getDecided();
+    }
+    /**
+     * <pre>
+     * The day a poll was settled on, as YYYY-MM-DD; empty while open.
+     * </pre>
+     *
+     * <code>string decided = 14 [json_name = "decided"];</code>
+     * @return The bytes for decided.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getDecidedBytes() {
+      return instance.getDecidedBytes();
+    }
+    /**
+     * <pre>
+     * The day a poll was settled on, as YYYY-MM-DD; empty while open.
+     * </pre>
+     *
+     * <code>string decided = 14 [json_name = "decided"];</code>
+     * @param value The decided to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDecided(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setDecided(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The day a poll was settled on, as YYYY-MM-DD; empty while open.
+     * </pre>
+     *
+     * <code>string decided = 14 [json_name = "decided"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDecided() {
+      copyOnWrite();
+      instance.clearDecided();
+      return this;
+    }
+    /**
+     * <pre>
+     * The day a poll was settled on, as YYYY-MM-DD; empty while open.
+     * </pre>
+     *
+     * <code>string decided = 14 [json_name = "decided"];</code>
+     * @param value The bytes for decided to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDecidedBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setDecidedBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatLine)
   }
   @java.lang.Override
@@ -1663,11 +2190,15 @@ public  final class ChatLine extends
             app.pochical.v1.ChatReaction.class,
             "pinnedOrder_",
             "days_",
+            "poll_",
+            "votes_",
+            app.pochical.v1.ChatVotes.class,
+            "decided_",
           };
           java.lang.String info =
-              "\u0000\u000b\u0000\u0000\u0001\u000b\u000b\u0000\u0002\u0000\u0001\u0208\u0002\u0003" +
+              "\u0000\u000e\u0000\u0000\u0001\u000e\u000e\u0000\u0003\u0000\u0001\u0208\u0002\u0003" +
               "\u0003\u0208\u0004\u0208\u0005\u0002\u0006\u0007\u0007\u0007\b\u0208\t\u001b\n\u0003" +
-              "\u000b\u021a";
+              "\u000b\u021a\f\u0007\r\u001b\u000e\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

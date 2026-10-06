@@ -16,8 +16,12 @@ func daysSummary(_ days: [Day]) -> String {
 
 /// A line in a line of words: its days as daysSummary, else its words
 /// with its mentions as names.
-func lineWords(_ text: String, days: [Day], nameOf: (String) -> String) -> String {
-  days.isEmpty ? plainText(text, nameOf: nameOf) : daysSummary(days)
+func lineWords(
+  _ text: String, days: [Day], poll: Bool = false, decided: Day? = nil,
+  nameOf: (String) -> String
+) -> String {
+  if poll { return pollSummary(days, decided: decided) }
+  return days.isEmpty ? plainText(text, nameOf: nameOf) : daysSummary(days)
 }
 
 /// The date's color by the week's: Sundays and holidays in red, Saturdays
@@ -37,6 +41,8 @@ private func dateTone(_ day: Day, week: DeviceSettings.Week, colors: ThemeColors
 /// across. Either keeps to a week of days, so a month shared does not fill
 /// the chat; the rest are left to シフト表で見る under it.
 struct DayCard: View {
+  /// The dates' column, room for 12/28 and its weekday.
+  private static var dateWidth: CGFloat { 52 }
   @Environment(\.themeColors) private var colors
   @Environment(Settings.self) private var settings
   let days: [Day]
@@ -110,7 +116,7 @@ struct DayCard: View {
     let shown = Array(days.prefix(Chat.dayCardRows))
     return VStack(alignment: .trailing, spacing: 0) {
       HStack(spacing: 4) {
-        Color.clear.frame(width: 44, height: 1)
+        Color.clear.frame(width: Self.dateWidth, height: 1)
         ForEach(members) { member in
           LetterAvatar(name: member.name, size: 22)
             .frame(width: 26)
@@ -125,8 +131,10 @@ struct DayCard: View {
             Text(WeekdayRow.names[day.weekday]).font(.system(size: 9))
           }
           .foregroundStyle(dateTone(day, week: settings.device.week, colors: colors))
+          .lineLimit(1)
+          .fixedSize()
           .padding(.leading, 4)
-          .frame(width: 44, alignment: .leading)
+          .frame(width: Self.dateWidth, alignment: .leading)
           ForEach(members) { member in
             cell(shifts.pattern(of: member, on: day))
               .frame(width: 26)
@@ -261,13 +269,21 @@ struct ShareDaysSheet: View {
   let groupID: String
   /// Who the card shows: everyone, or the two of a one-to-one chat.
   let people: Set<String>?
-  let onSend: ([Day]) -> Void
+  /// 共有 | 投票 at its top: in the group chat, not a one-to-one chat.
+  let pollable: Bool
+  /// Sends the days, shared, or put to the vote.
+  let onSend: ([Day], Bool) -> Void
+  /// On 投票: the days are put to the vote instead.
+  @State private var poll = false
   @State private var month = Day.today.firstOfMonth
   @State private var picked: [Day] = []
   @State private var notice: String?
   /// How many notices have been said, so only the latest one's time takes
   /// it away.
   @State private var notices = 0
+
+  /// The fewest days a poll puts to the vote.
+  private static var pollLeast: Int { 2 }
 
   /// How far ahead the days everyone is off are offered.
   private static var suggestionDays: Int { 45 }
@@ -281,13 +297,20 @@ struct ShareDaysSheet: View {
     NavigationStack {
       ScrollView {
         VStack(alignment: .leading, spacing: 16) {
+          if pollable {
+            Picker("日にちをどうするか", selection: $poll) {
+              Text("共有").tag(false)
+              Text("投票").tag(true)
+            }
+            .pickerStyle(.segmented)
+          }
           suggestions(together.filter { $0 >= today }.sorted())
           monthGrid(together: together, today: today)
           note
         }
         .padding(16)
       }
-      .navigationTitle("日にちを共有")
+      .navigationTitle(poll ? "日にちの投票" : "日にちを共有")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
@@ -295,10 +318,10 @@ struct ShareDaysSheet: View {
         }
         ToolbarItem(placement: .confirmationAction) {
           Button("送る", systemImage: "checkmark", role: .confirm) {
-            onSend(picked)
+            onSend(picked, poll)
             dismiss()
           }
-          .disabled(picked.isEmpty)
+          .disabled(picked.count < (poll ? Self.pollLeast : 1))
         }
       }
       .overlay(alignment: .top) {
@@ -423,10 +446,15 @@ struct ShareDaysSheet: View {
 
   /// What ✓ will do, or what the tinted days are.
   private var note: some View {
-    Text(
-      picked.isEmpty
-        ? "うすく色のついた日は、みんな休みの日です。" : "\(picked.count)日分のみんなのシフトを送ります。"
-    )
+    let tinted = "うすく色のついた日は、みんな休みの日です。"
+    let words =
+      switch (poll, picked.count) {
+      case (true, ..<Self.pollLeast): "候補の日を\(Self.pollLeast)日以上選んでください。\(tinted)"
+      case (true, let count): "\(count)日の中から、みんなが行ける日を投票で決めます。"
+      case (false, 0): tinted
+      case (false, let count): "\(count)日分のみんなのシフトを送ります。"
+      }
+    return Text(words)
     .font(.footnote)
     .foregroundStyle(colors.textSecondary)
     .frame(maxWidth: .infinity, minHeight: 40, alignment: .topLeading)

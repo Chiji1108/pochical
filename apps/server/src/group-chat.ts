@@ -18,17 +18,25 @@ import {
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
 import { pinStep } from "./chat-pins";
+import type { PinStep } from "./chat-pins";
 import { isDate } from "./day-values";
 import { ChangeSchema, ChatLineSchema } from "./gen/pochical/v1/sync_pb";
 import type {
   Change,
   ChatEdit,
   ChatLine,
+  ChatDecide,
   ChatPin,
   ChatReact,
   ChatSend,
+  ChatVote,
 } from "./gen/pochical/v1/sync_pb";
-import { chatLines, chatReactions, readMarks } from "./group-do-schema";
+import {
+  chatLines,
+  chatReactions,
+  chatVotes,
+  readMarks,
+} from "./group-do-schema";
 import { isId } from "./ids";
 import { fitsText, isEmoji } from "./text-limits";
 
@@ -125,19 +133,46 @@ const reactionsOf = (
   return [...byEmoji].map(([emoji, userIds]) => ({ emoji, userIds }));
 };
 
+/** A poll's votes: each day someone can come, with who can, in order. */
+const votesOf = (
+  db: DrizzleSqliteDODatabase,
+  row: LineRow
+): { day: string; userIds: string[] }[] => {
+  if (!row.poll) {
+    return [];
+  }
+  const said = db
+    .select()
+    .from(chatVotes)
+    .where(
+      and(eq(chatVotes.threadId, row.threadId), eq(chatVotes.seq, row.seq))
+    )
+    .orderBy(asc(chatVotes.madeCursor))
+    .all();
+  return (row.days ?? []).flatMap((day) => {
+    const userIds = said
+      .filter((vote) => vote.day === day)
+      .map((vote) => vote.userId);
+    return userIds.length === 0 ? [] : [{ day, userIds }];
+  });
+};
+
 const lineOf = (db: DrizzleSqliteDODatabase, row: LineRow): ChatLine =>
   create(ChatLineSchema, {
     authorId: row.authorId,
     days: row.days ?? [],
+    decided: row.decided ?? "",
     edited: row.edited,
     opId: row.opId,
     pinnedOrder: BigInt(row.pinnedAt ?? 0),
+    poll: row.poll,
     reactions: reactionsOf(db, row),
     sentAtMs: BigInt(row.sentAt.getTime()),
     seq: BigInt(row.seq),
     text: row.text,
     threadId: row.threadId,
     unsent: row.unsent,
+    votes: votesOf(db, row),
   });
 
 export const chatLineChange = (
@@ -173,9 +208,21 @@ const fitsDays = (days: readonly string[]): boolean =>
     (day, at) => isDate(day) && (at === 0 || (days[at - 1] ?? "") < day)
   );
 
-/** A new line's words, or its days with no words. */
-const fitsSend = ({ text, days }: ChatSend): boolean =>
-  days.length === 0 ? fitsLine(text) : text === "" && fitsDays(days);
+/** The fewest days a poll puts to the vote. */
+const POLL_MIN_DAYS = 2;
+
+/**
+ * A new line's words, or its days with no words; a poll's days are two
+ * at least, in the group chat (a one-to-one chat has no polls).
+ */
+const fitsSend = ({ text, days, poll, threadId }: ChatSend): boolean => {
+  if (days.length === 0) {
+    return !poll && fitsLine(text);
+  }
+  const pollFits =
+    !poll || (threadId === GROUP_THREAD && days.length >= POLL_MIN_DAYS);
+  return text === "" && fitsDays(days) && pollFits;
+};
 
 /** The chat's last seq, 0 before any line. */
 export const chatHead = (
@@ -344,7 +391,7 @@ const takeWords = (
   if (line.authorId !== userId || line.unsent || !words) {
     return { refused: chatLineChange(db, line) };
   }
-  // Taking a line back takes its reactions with it.
+  // Taking a line back takes its reactions and votes with it.
   if (unsend) {
     db.delete(chatReactions)
       .where(
@@ -354,13 +401,25 @@ const takeWords = (
         )
       )
       .run();
+    db.delete(chatVotes)
+      .where(
+        and(eq(chatVotes.threadId, line.threadId), eq(chatVotes.seq, line.seq))
+      )
+      .run();
   }
   const row = db
     .update(chatLines)
     .set(
       // Taking a line back takes its pin off too.
       unsend
-        ? { cursor, days: null, pinnedAt: null, text, unsent: true }
+        ? {
+            cursor,
+            days: null,
+            decided: null,
+            pinnedAt: null,
+            text,
+            unsent: true,
+          }
         : { cursor, edited: true, text }
     )
     .where(
@@ -369,6 +428,48 @@ const takeWords = (
     .returning()
     .get();
   return row === undefined ? {} : { change: chatLineChange(db, row) };
+};
+
+/**
+ * A line moved to `cursor` with `values` and its pin as `step` leaves it;
+ * a pin the step took the place of comes off at the cursor after.
+ */
+const pinning = (
+  db: DrizzleSqliteDODatabase,
+  line: LineRow,
+  step: PinStep,
+  values: Partial<LineRow>,
+  cursor: number
+): Taken => {
+  const { threadId } = line;
+  const pinned = db
+    .select({ seq: chatLines.seq })
+    .from(chatLines)
+    .where(and(eq(chatLines.threadId, threadId), isNotNull(chatLines.pinnedAt)))
+    .orderBy(desc(chatLines.pinnedAt))
+    .all()
+    .map((row) => String(row.seq));
+  const { dropped, pins } = pinStep(pinned, step);
+  const set = (at: number, lineSeq: number, more: Partial<LineRow>) =>
+    db
+      .update(chatLines)
+      .set({ cursor: at, ...more })
+      .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, lineSeq)))
+      .returning()
+      .get();
+  const stays = pins.includes(String(line.seq));
+  const row = set(cursor, line.seq, {
+    ...values,
+    pinnedAt: stays ? cursor : null,
+  });
+  const off =
+    dropped === null
+      ? undefined
+      : set(cursor + 1, Number(dropped), { pinnedAt: null });
+  return {
+    alsoChanged: off === undefined ? undefined : chatLineChange(db, off),
+    change: row === undefined ? undefined : chatLineChange(db, row),
+  };
 };
 
 /**
@@ -388,29 +489,85 @@ const takePin = (
   if (line === undefined || line.unsent || (!on && line.pinnedAt === null)) {
     return {};
   }
-  const pinned = db
-    .select({ seq: chatLines.seq })
-    .from(chatLines)
-    .where(and(eq(chatLines.threadId, threadId), isNotNull(chatLines.pinnedAt)))
-    .orderBy(desc(chatLines.pinnedAt))
-    .all()
-    .map((row) => String(row.seq));
   const id = String(line.seq);
-  const { dropped } = pinStep(pinned, on ? { pin: id } : { unpin: id });
-  const set = (at: number, lineSeq: number, pinnedAt: number | null) =>
-    db
-      .update(chatLines)
-      .set({ cursor: at, pinnedAt })
-      .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, lineSeq)))
-      .returning()
-      .get();
-  const row = set(cursor, line.seq, on ? cursor : null);
-  const off =
-    dropped === null ? undefined : set(cursor + 1, Number(dropped), null);
-  return {
-    alsoChanged: off === undefined ? undefined : chatLineChange(db, off),
-    change: row === undefined ? undefined : chatLineChange(db, row),
-  };
+  return pinning(db, line, on ? { pin: id } : { unpin: id }, {}, cursor);
+};
+
+/**
+ * The member can come on one of a poll's days, or takes it back, the
+ * poll moving to `cursor`; nothing for a settled poll, a day not on it,
+ * a line that is no poll, nor when it changes nothing.
+ */
+const takeVote = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  { threadId, seq, day, on }: ChatVote,
+  cursor: number
+): Taken => {
+  const line = lineAt(db, threadId, seq);
+  const open =
+    line?.poll === true &&
+    !line.unsent &&
+    line.decided === null &&
+    (line.days ?? []).includes(day);
+  if (!open) {
+    return {};
+  }
+  const mine = and(
+    eq(chatVotes.threadId, threadId),
+    eq(chatVotes.seq, line.seq),
+    eq(chatVotes.day, day),
+    eq(chatVotes.userId, userId)
+  );
+  const had = db.select().from(chatVotes).where(mine).get() !== undefined;
+  if (had === on) {
+    return {};
+  }
+  if (on) {
+    db.insert(chatVotes)
+      .values({ day, madeCursor: cursor, seq: line.seq, threadId, userId })
+      .run();
+  } else {
+    db.delete(chatVotes).where(mine).run();
+  }
+  const row = db
+    .update(chatLines)
+    .set({ cursor })
+    .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, line.seq)))
+    .returning()
+    .get();
+  return row === undefined ? {} : { change: chatLineChange(db, row) };
+};
+
+/**
+ * A poll settled on one of its days, by its writer, or by anyone once
+ * they have left; it is pinned, as the day is to stay found (spec/chat.md,
+ * Polls). Nothing for a day not on it, nor the day it is settled on.
+ */
+const takeDecide = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  { threadId, seq, day }: ChatDecide,
+  cursor: number,
+  isMember: (userId: string) => boolean
+): Taken => {
+  const line = lineAt(db, threadId, seq);
+  const settles =
+    line?.poll === true &&
+    !line.unsent &&
+    line.decided !== day &&
+    (line.days ?? []).includes(day) &&
+    (line.authorId === userId || !isMember(line.authorId));
+  if (!settles) {
+    return {};
+  }
+  return pinning(
+    db,
+    line,
+    { settle: String(line.seq) },
+    { decided: day },
+    cursor
+  );
 };
 
 /** What taking an edit did: its change, and the line to send back when it was refused. */
@@ -461,6 +618,7 @@ export const takeChatEdit = (
           cursor,
           days: kind.value.days.length === 0 ? null : kind.value.days,
           opId,
+          poll: kind.value.poll,
           sentAt: new Date(),
           seq: chatHead(db, kind.value.threadId) + 1,
           text: kind.value.text,
@@ -479,6 +637,12 @@ export const takeChatEdit = (
     }
     case "pin": {
       return takePin(db, kind.value, cursor);
+    }
+    case "vote": {
+      return takeVote(db, userId, kind.value, cursor);
+    }
+    case "decide": {
+      return takeDecide(db, userId, kind.value, cursor, isMember);
     }
     case "read": {
       // Never past the chat's end, and only forward.
