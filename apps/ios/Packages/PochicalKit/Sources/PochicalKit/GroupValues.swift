@@ -15,6 +15,8 @@ public struct GroupMemberRow: Hashable, Sendable {
   public var displayName: String
   /// When they joined, in ms since the epoch: the group's order.
   public var joinedAtMs: Int64
+  /// They left: kept for the name on their lines in the chats.
+  public var left = false
 }
 
 /// A member's day as the group sees it: its pattern and times only.
@@ -144,6 +146,14 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep who left a group") { db in
+      try #sql(
+        """
+        ALTER TABLE "groupMembers" ADD COLUMN "left" INTEGER NOT NULL DEFAULT 0
+        """
+      )
+      .execute(db)
+    }
   }
 }
 
@@ -176,6 +186,7 @@ public enum GroupSync {
     try MemberPatternRow.where { $0.groupID.eq(groupID) }.delete().execute(db)
     try MemberOrderRow.where { $0.groupID.eq(groupID) }.delete().execute(db)
     try GroupCursorRow.find(groupID).delete().execute(db)
+    try Chats.reset(groupID, in: db)
   }
 
   private static func take(_ change: Pochical_V1_Change, of groupID: String, in db: Database)
@@ -192,7 +203,8 @@ public enum GroupSync {
     case .member(let member):
       try GroupMemberRow.where { $0.groupID.eq(groupID) && $0.userID.eq(member.userID) }
         .delete().execute(db)
-      // One who left goes, with their shifts.
+      // One who left goes with their shifts, their name kept for their
+      // lines in the chats.
       if member.left {
         try MemberDayRow.where { $0.groupID.eq(groupID) && $0.userID.eq(member.userID) }
           .delete().execute(db)
@@ -200,11 +212,10 @@ public enum GroupSync {
           .delete().execute(db)
         try MemberOrderRow.where { $0.groupID.eq(groupID) && $0.userID.eq(member.userID) }
           .delete().execute(db)
-        return
       }
       let row = GroupMemberRow(
         groupID: groupID, userID: member.userID, displayName: member.displayName,
-        joinedAtMs: member.joinedAtMs)
+        joinedAtMs: member.joinedAtMs, left: member.left)
       try GroupMemberRow.insert { row }.execute(db)
     case .memberDay(let member):
       try takeDay(member.day, of: member.userID, in: groupID, db: db)
@@ -234,8 +245,9 @@ public enum GroupSync {
           holidayShift: own.holidayShift, holidayCountry: own.holidayCountry)
         try MemberOrderRow.insert { row }.execute(db)
       }
+    case .chatLine, .readMark:
+      try Chats.take(change, of: groupID, in: db)
     case .day, .pattern, .patternOrder, .repeatOrders, .coworker, .coworkerOrder, .membership,
-      .chatLine, .readMark,
       nil:
       return
     }
@@ -297,7 +309,7 @@ extension GroupSync {
   public static func members(of groupID: String, from: Day, through: Day, in db: Database) throws
     -> [GroupMember]
   {
-    let members = try GroupMemberRow.where { $0.groupID.eq(groupID) }
+    let members = try GroupMemberRow.where { $0.groupID.eq(groupID) && !$0.left }
       .order(by: \.joinedAtMs).fetchAll(db)
     let days = try MemberDayRow.where {
       $0.groupID.eq(groupID) && $0.date >= from.key && $0.date <= through.key

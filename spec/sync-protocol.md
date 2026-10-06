@@ -186,7 +186,7 @@ The User DO pushes what its groups see of the user to every Group DO the user be
 - For each group the User DO keeps how far it has pushed (`pushed_cursor`, a cursor of its own log). After any change, and on joining or making a group, its alarm pushes each group the shared values changed after that cursor, then moves it. A group that cannot be reached keeps its cursor without holding back the others, and the alarm comes back for it, 10 seconds later and twice as long each time that group fails in a row, up to an hour, so the values reach it later. After about a day of failures in a row it stops coming back; the user's next change tries the group again.
 - On joining, `pushed_cursor` starts at 0, so the group gets everything the user has.
 - The Group DO takes a push (`takeMemberShifts`, `pochical.v1.Changes` as bytes) only from a current member, drops any day field that is not shared, keeps the rest at its own cursor and sends them to the members with the group open as `MemberDay` and `MemberPattern` changes. A group socket catches up from its cursor as a User DO socket does.
-- On leaving, the Group DO deletes that member's projected shifts and sends members their `Member` marked `left`, on which devices drop that member's values.
+- On leaving, the Group DO deletes that member's projected shifts and sends members their `Member` marked `left`, on which devices drop that member's shifts and keep their name, which their lines in the chats still show.
 
 ## Chat
 

@@ -230,8 +230,15 @@ public actor SyncClient {
     case .welcome(let welcome):
       tries = 0
       connected = true
-      // A group's socket only takes; the user's corrects the time and sends.
-      guard peer == .user else { return }
+      // A group's socket sends its chat outbox; the user's corrects the
+      // time and sends theirs.
+      guard peer == .user else {
+        sending?.cancel()
+        if let socket, case .group(let groupID) = peer {
+          sending = Task { await sendChatOutbox(of: groupID, on: socket) }
+        }
+        return
+      }
       let receivedMs = Self.nowMs()
       try await database.write { db in
         try Sync.welcome(
@@ -263,7 +270,12 @@ public actor SyncClient {
         }
       }
     case .acked(let acked):
-      try await database.write { db in try OwnValues.acknowledge(acked.opIds, in: db) }
+      try await database.write { [peer] db in
+        switch peer {
+        case .user: try OwnValues.acknowledge(acked.opIds, in: db)
+        case .group: try Chats.acknowledge(acked.opIds, in: db)
+        }
+      }
       Logger.sync.info("\(acked.opIds.count) edits acknowledged")
     case .error(let error):
       switch error.code {
@@ -271,8 +283,11 @@ public actor SyncClient {
       case .clockAhead: throw ClockAhead()
       default: throw ServerRefused(code: error.code, message: error.message)
       }
-    // Chat pages are asked for by the chat, which comes later.
-    case .pong, .chatPage, nil:
+    case .chatPage(let page):
+      if case .group(let groupID) = peer {
+        try await database.write { db in try Chats.take(page, of: groupID, in: db) }
+      }
+    case .pong, nil:
       break
     }
   }
@@ -288,6 +303,36 @@ public actor SyncClient {
         guard let last, last > sent else { continue }
         let (frames, through) = try await database.read { [sent] db in
           try Sync.frames(after: sent, in: db)
+        }
+        for frame in frames {
+          try await socket.send(.data(frame.serializedData()))
+        }
+        sent = through
+      }
+    } catch {
+      // The socket closed; the next one sends them all again.
+    }
+  }
+
+  /// Asks the group for a page of a chat's lines before `seq` (the latest
+  /// with 0), when its socket is open; the page comes into the database.
+  public func requestPage(of threadID: String, before seq: Int64) async {
+    guard connected, let socket else { return }
+    var frame = Pochical_V1_ClientFrame()
+    frame.chatPageRequest.threadID = threadID
+    frame.chatPageRequest.beforeSeq = UInt64(max(seq, 0))
+    try? await socket.send(.data(frame.serializedData()))
+  }
+
+  /// Sends the group's chat outbox as `sendOutbox` does the user's.
+  private func sendChatOutbox(of groupID: String, on socket: URLSessionWebSocketTask) async {
+    var sent = 0
+    let outbox = ValueObservation.tracking { try Chats.lastWaiting(of: groupID, in: $0) }
+    do {
+      for try await last in outbox.values(in: database) {
+        guard let last, last > sent else { continue }
+        let (frames, through) = try await database.read { [sent] db in
+          try Chats.frames(of: groupID, after: sent, in: db)
         }
         for frame in frames {
           try await socket.send(.data(frame.serializedData()))

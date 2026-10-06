@@ -8,13 +8,21 @@ extension EnvironmentValues {
   @Entry var account = Account()
   /// The server's GroupService, as the signed-in user.
   @Entry var groupCalls = GroupCalls(account: Account())
+  /// The open group's socket, for its screens to ask it for chat pages.
+  @Entry var groupSocket: SyncClient?
 }
 
 /// The グループ tab (/design's DesignGroup): with no group yet, what groups
 /// are for and a way to start one; else the groups down the side, as
 /// /design's rail, and the one open beside them.
 struct GroupsScreen: View {
+  @Environment(\.account) private var account
+  @Environment(\.scenePhase) private var scenePhase
+  @Dependency(\.defaultDatabase) private var database
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
+  /// The open group's socket, open while the group's screens are and the
+  /// app is in the foreground (spec/sync-protocol.md, Sockets).
+  @State private var socket: SyncClient?
   /// The group open beside the rail, the first until one is picked.
   @Binding var openID: String?
   /// Opens the camera to read a group's QR code.
@@ -35,6 +43,8 @@ struct GroupsScreen: View {
               path.append(.settings(open))
             } onShifts: { day in
               path.append(.shifts(open, day: day))
+            } onChat: {
+              path.append(.chat(open))
             }
             .padding(.horizontal, 16)
           }
@@ -57,6 +67,8 @@ struct GroupsScreen: View {
           InvitePage(group: live(group))
         case .shifts(let group, let day):
           GroupShiftsPage(group: live(group), day: day)
+        case .chat(let group):
+          ChatScreen(group: live(group))
         case .settings(let group):
           GroupSettingsPage(group: live(group)) {
             path.append(.invite(group))
@@ -67,6 +79,22 @@ struct GroupsScreen: View {
         }
       }
     }
+    .environment(\.groupSocket, socket)
+    .task(id: SocketKey(groupID: openGroupID ?? "", active: scenePhase == .active)) {
+      guard scenePhase == .active, let groupID = openGroupID else { return }
+      let client = SyncClient(account: account, database: database, peer: .group(groupID))
+      socket = client
+      await client.start()
+      while !Task.isCancelled {
+        try? await Task.sleep(for: .seconds(3600))
+      }
+      await client.stop()
+    }
+  }
+
+  /// The group open, whose socket is kept.
+  private var openGroupID: String? {
+    (groups.first { $0.id == openID } ?? groups.first)?.id
   }
 }
 
@@ -76,6 +104,8 @@ enum GroupRoute: Hashable {
   /// Everyone's shifts by the month, on a day when one is given.
   case shifts(GroupRow, day: Day?)
   case settings(GroupRow)
+  /// 全体チャット.
+  case chat(GroupRow)
 }
 
 /// No group yet: what sharing shifts is for, then 作成 and QR参加
@@ -203,15 +233,10 @@ private struct GroupMark: View {
   }
 }
 
-/// The open group: its mark and name, 招待, and this week of everyone's
-/// shifts (/design's GroupHub); the chats come as they are built. The
-/// group's socket is open while it is on screen and the app in the
-/// foreground (spec/sync-protocol.md, Sockets).
+/// The open group: its mark and name, 招待, this week of everyone's
+/// shifts and its chat (/design's GroupHub).
 private struct GroupHub: View {
   @Environment(\.themeColors) private var colors
-  @Environment(\.account) private var account
-  @Environment(\.scenePhase) private var scenePhase
-  @Dependency(\.defaultDatabase) private var database
   @Environment(Settings.self) private var settings
   @Fetch private var members: [GroupMember] = []
   let group: GroupRow
@@ -219,6 +244,7 @@ private struct GroupHub: View {
   let onSettings: () -> Void
   /// Opens everyone's shifts by the month, on a day when one is given.
   let onShifts: (Day?) -> Void
+  let onChat: () -> Void
 
   var body: some View {
     ScrollView {
@@ -245,21 +271,19 @@ private struct GroupHub: View {
           }
           MemberWeek(members: members, onOpen: onShifts)
         }
+        VStack(alignment: .leading, spacing: 8) {
+          Text("チャット")
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(colors.textTertiary)
+            .accessibilityAddTraits(.isHeader)
+          ChatRow(group: group, onOpen: onChat)
+        }
       }
       .padding(.bottom, 24)
     }
     .scrollIndicators(.hidden)
     .task(id: request) {
       try? await $members.load(request)
-    }
-    .task(id: SocketKey(groupID: group.id, active: scenePhase == .active)) {
-      guard scenePhase == .active else { return }
-      let socket = SyncClient(account: account, database: database, peer: .group(group.id))
-      await socket.start()
-      while !Task.isCancelled {
-        try? await Task.sleep(for: .seconds(3600))
-      }
-      await socket.stop()
     }
   }
 
