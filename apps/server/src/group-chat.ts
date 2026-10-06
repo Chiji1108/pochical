@@ -27,8 +27,64 @@ import { fitsText } from "./text-limits";
 // log (cursor), and how far each member has read. The group orders
 // everything as it takes it, so no clocks are kept.
 
-/** The group's own chat, 全体チャット. One-to-one chats come later. */
+/** The group's own chat, 全体チャット. */
 export const GROUP_THREAD = "group";
+
+const DIRECT = "direct:";
+
+/**
+ * Two members' one-to-one chat: their ids in order after "direct:", so
+ * either of them names it alike.
+ */
+export const directThread = (a: string, b: string): string =>
+  `${DIRECT}${[a, b].toSorted().join(":")}`;
+
+/** The two members of a one-to-one chat; none for any other id. */
+const pairOf = (threadId: string): [string, string] | undefined => {
+  if (!threadId.startsWith(DIRECT)) {
+    return undefined;
+  }
+  const [first, second, ...rest] = threadId.slice(DIRECT.length).split(":");
+  if (
+    first === undefined ||
+    second === undefined ||
+    rest.length > 0 ||
+    !(isId(first) && isId(second)) ||
+    first === second ||
+    directThread(first, second) !== threadId
+  ) {
+    return undefined;
+  }
+  return [first, second];
+};
+
+/** The other member of a one-to-one chat of the member's; none otherwise. */
+export const otherIn = (
+  threadId: string,
+  userId: string
+): string | undefined => {
+  const pair = pairOf(threadId);
+  if (pair === undefined || !pair.includes(userId)) {
+    return undefined;
+  }
+  return pair[0] === userId ? pair[1] : pair[0];
+};
+
+/** Whether the member may read the chat: the group's, or one of their own. */
+export const mayRead = (threadId: string, userId: string): boolean =>
+  threadId === GROUP_THREAD || otherIn(threadId, userId) !== undefined;
+
+/**
+ * Whether the member may see the change: anything but the lines and read
+ * marks of others' one-to-one chats.
+ */
+export const seenBy = (change: Change, userId: string): boolean => {
+  const { kind } = change;
+  if (kind.case === "chatLine" || kind.case === "readMark") {
+    return mayRead(kind.value.threadId, userId);
+  }
+  return true;
+};
 
 type LineRow = typeof chatLines.$inferSelect;
 type MarkRow = typeof readMarks.$inferSelect;
@@ -63,8 +119,6 @@ export const readMarkChange = (row: MarkRow): Change =>
       },
     },
   });
-
-const isThread = (threadId: string): boolean => threadId === GROUP_THREAD;
 
 const fitsLine = (text: string): boolean =>
   fitsText(text, textLimits.chatMessage);
@@ -156,6 +210,22 @@ export const unreadCount = (
   );
 };
 
+/**
+ * Whether the member may make the edit in its chat: one they may read,
+ * and in a one-to-one chat new lines only while the other is in the group.
+ */
+const mayWrite = (
+  userId: string,
+  kind: ChatEdit["kind"],
+  isMember: (userId: string) => boolean
+): boolean => {
+  if (kind.case === undefined || !mayRead(kind.value.threadId, userId)) {
+    return false;
+  }
+  const other = otherIn(kind.value.threadId, userId);
+  return kind.case !== "send" || other === undefined || isMember(other);
+};
+
 /** What taking an edit did: its change, and the line to send back when it was refused. */
 type Taken = { change?: Change; refused?: Change };
 
@@ -171,10 +241,12 @@ export const takeChatEdit = (
   db: DrizzleSqliteDODatabase,
   userId: string,
   { opId, kind }: ChatEdit,
-  cursor: number
+  cursor: number,
+  isMember: (userId: string) => boolean
 ): Taken => {
   if (
-    !(isId(opId) && kind.case !== undefined && isThread(kind.value.threadId))
+    kind.case === undefined ||
+    !(isId(opId) && mayWrite(userId, kind, isMember))
   ) {
     return {};
   }
@@ -258,10 +330,11 @@ export const takeChatEdit = (
  */
 export const chatPage = (
   db: DrizzleSqliteDODatabase,
+  userId: string,
   threadId: string,
   beforeSeq: bigint
 ): { lines: ChatLine[]; atStart: boolean } => {
-  if (!isThread(threadId)) {
+  if (!mayRead(threadId, userId)) {
     return { atStart: true, lines: [] };
   }
   const rows = db
@@ -281,20 +354,22 @@ export const chatPage = (
 };
 
 /**
- * The chats' lines and read marks changed after `cursor`, for a device
- * catching up: every read mark, every change to a line it may hold (one
+ * The chats' lines and read marks changed after `cursor`, for a member's
+ * device catching up, of the chats they may read: every read mark, every change to a line it may hold (one
  * written by then), and of the lines written since only each chat's
  * latest page, the rest coming as pages as it scrolls back.
  */
 export const chatChangesAfter = (
   db: DrizzleSqliteDODatabase,
+  userId: string,
   cursor: number
 ): Change[] => {
-  // Each chat's own latest page, by its own last seq.
+  // Each chat the member may read, its own latest page by its own last seq.
   const threads = db
     .selectDistinct({ threadId: chatLines.threadId })
     .from(chatLines)
-    .all();
+    .all()
+    .filter(({ threadId }) => mayRead(threadId, userId));
   const lines = threads.flatMap(({ threadId }) =>
     db
       .select()
@@ -318,6 +393,7 @@ export const chatChangesAfter = (
     .from(readMarks)
     .where(gt(readMarks.cursor, cursor))
     .all()
+    .filter(({ threadId }) => mayRead(threadId, userId))
     .map(readMarkChange);
   return [...lines, ...marks];
 };

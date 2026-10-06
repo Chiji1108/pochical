@@ -44,78 +44,6 @@ struct ChatSummaryRequest: FetchKeyRequest, Hashable {
   }
 }
 
-/// 全体チャット in the hub's list (/design's ChatRow): its latest line and
-/// time, and how many of others' lines are unread.
-struct ChatRow: View {
-  @Environment(\.themeColors) private var colors
-  @Environment(\.groupCalls) private var groupCalls
-  @Fetch private var chat = ChatSummaryRequest.Value()
-  let group: GroupRow
-  let onOpen: () -> Void
-  @State private var meID: String?
-
-  var body: some View {
-    let summary = chat.summary
-    let time = summary.waiting?.madeAtMs ?? summary.last?.sentAtMs
-    Button(action: onOpen) {
-      HStack(spacing: 12) {
-        Image(systemName: "bubble.left.and.bubble.right")
-          .font(.system(size: 13, weight: .semibold))
-          .foregroundStyle(colors.accentDefault)
-          .frame(width: 28, height: 28)
-          .background(colors.accentContainer, in: RoundedRectangle(cornerRadius: Radius.sm))
-          .accessibilityHidden(true)
-        VStack(alignment: .leading, spacing: 2) {
-          Text("全体チャット")
-            .font(.body)
-            .foregroundStyle(colors.textPrimary)
-          Text(preview)
-            .font(.caption)
-            .foregroundStyle(colors.textQuaternary)
-            .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        if time != nil || summary.unread > 0 {
-          VStack(alignment: .trailing, spacing: 4) {
-            if let time {
-              Text(ChatTime.listed(time))
-                .font(.caption2)
-                .foregroundStyle(colors.textQuaternary)
-            }
-            if summary.unread > 0 {
-              UnreadCount(count: summary.unread)
-            }
-          }
-        }
-      }
-      .padding(.horizontal, 16)
-      .frame(minHeight: 68)
-      .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
-      .contentShape(.rect)
-    }
-    .buttonStyle(.plain)
-    .task { meID = await groupCalls.userID() }
-    .task(id: meID.map { ChatSummaryRequest(groupID: group.id, threadID: groupThread, me: $0) }) {
-      guard let meID else { return }
-      try? await $chat.load(
-        ChatSummaryRequest(groupID: group.id, threadID: groupThread, me: meID))
-    }
-  }
-
-  /// The latest line as one line of words: 自分： before one's own.
-  private var preview: String {
-    let summary = chat.summary
-    if let waiting = summary.waiting {
-      return "自分：\(waiting.text)"
-    }
-    guard let last = summary.last else { return "まだメッセージはありません" }
-    if last.unsent {
-      return unsentLine(chat.lastWriter, mine: last.authorID == meID)
-    }
-    return last.authorID == meID ? "自分：\(last.text)" : last.text
-  }
-}
-
 /// How many lines are unread, in the badge's red.
 struct UnreadCount: View {
   @Environment(\.themeColors) private var colors
@@ -171,9 +99,10 @@ enum ChatTime {
   }
 }
 
-/// A group's own chat, 全体チャット (/design's ChatPage): others' lines on
-/// the left with their face and name at the start of a run, one's own on
-/// the right in the accent, the day over each day's first line. It opens
+/// One of a group's chats (/design's ChatPage), 全体チャット or a
+/// one-to-one chat: others' lines on the left with their face, and in the
+/// group's chat their name, at the start of a run, one's own on the right
+/// in the accent, the day over each day's first line. It opens
 /// on the first unread line under ここから新着, else on the latest, and
 /// earlier lines come from the group as it is scrolled back. A long press
 /// opens a line's menu: コピー, and on one's own 編集 and 送信取消.
@@ -185,6 +114,9 @@ struct ChatScreen: View {
   @Dependency(\.defaultDatabase) private var database
   @Fetch private var chat = ChatRequest.Value()
   let group: GroupRow
+  let threadID: String
+  /// The other member of a one-to-one chat; none for 全体チャット.
+  let otherID: String?
   @State private var meID: String?
   /// The line ここから新着 sits over, fixed as the chat opens.
   @State private var unreadFrom: Int64?
@@ -213,7 +145,7 @@ struct ChatScreen: View {
               // Asked again until the socket is open to ask.
               let first = state.lines.first?.seq ?? 0
               while !Task.isCancelled {
-                if await socket?.requestPage(of: groupThread, before: first) == true { return }
+                if await socket?.requestPage(of: threadID, before: first) == true { return }
                 try? await Task.sleep(for: .seconds(1))
               }
             }
@@ -277,13 +209,13 @@ struct ChatScreen: View {
       composer
     }
     .background(colors.backgroundBase)
-    .navigationTitle(group.name)
-    .navigationSubtitle("\(chat.writers.count { !$0.left })人")
+    .navigationTitle(otherID.flatMap { names[$0] } ?? group.name)
+    .navigationSubtitle(otherID == nil ? "\(chat.writers.count { !$0.left })人" : group.name)
     .navigationBarTitleDisplayMode(.inline)
     .toolbarVisibility(.visible, for: .navigationBar)
     .toolbarVisibility(.hidden, for: .tabBar)
     .task {
-      try? await $chat.load(ChatRequest(groupID: group.id, threadID: groupThread))
+      try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID))
       meID = await groupCalls.userID()
       await open()
     }
@@ -383,7 +315,8 @@ struct ChatScreen: View {
         let mine = line.authorID == meID
         LineView(
           text: line.text, time: line.sentAtMs, edited: line.edited, mine: mine,
-          writer: mine || !startsRun ? nil : names[line.authorID] ?? "", waiting: false
+          writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
+          named: otherID == nil, waiting: false
         ) {
           Button("コピー", systemImage: "doc.on.doc") { UIPasteboard.general.string = line.text }
           if mine {
@@ -398,7 +331,7 @@ struct ChatScreen: View {
     case .waiting(let line):
       LineView(
         text: line.text, time: line.madeAtMs, edited: false, mine: true, writer: nil,
-        waiting: true
+        named: false, waiting: true
       ) {
         Button("コピー", systemImage: "doc.on.doc") { UIPasteboard.general.string = line.text }
       }
@@ -523,14 +456,14 @@ struct ChatScreen: View {
       latest > chat.state.lastRead(by: me)
     else { return }
     var read = Pochical_V1_ChatRead()
-    read.threadID = groupThread
+    read.threadID = threadID
     read.lastReadSeq = UInt64(latest)
     write(.read(read))
   }
 
   private func send(_ text: String) {
     var send = Pochical_V1_ChatSend()
-    send.threadID = groupThread
+    send.threadID = threadID
     send.text = text
     write(.send(send))
     draft = ""
@@ -557,7 +490,7 @@ struct ChatScreen: View {
 
   private func save(_ line: ChatLineRow, text: String) {
     var change = Pochical_V1_ChatChange()
-    change.threadID = groupThread
+    change.threadID = threadID
     change.seq = UInt64(line.seq)
     change.text = text
     write(.change(change))
@@ -566,7 +499,7 @@ struct ChatScreen: View {
 
   private func unsend(_ line: ChatLineRow) {
     var unsend = Pochical_V1_ChatUnsend()
-    unsend.threadID = groupThread
+    unsend.threadID = threadID
     unsend.seq = UInt64(line.seq)
     write(.unsend(unsend))
     if editing?.seq == line.seq { stopEditing() }
@@ -621,8 +554,11 @@ private struct LineView<Menu: View>: View {
   let time: Int64
   let edited: Bool
   let mine: Bool
-  /// The writer's name at the start of a run of others' lines.
+  /// The writer's name at the start of a run of others' lines, for their
+  /// face.
   let writer: String?
+  /// Their name shows over the run too, as in a group chat.
+  let named: Bool
   let waiting: Bool
   /// The bubble's long-press menu.
   @ViewBuilder let menu: () -> Menu
@@ -643,7 +579,7 @@ private struct LineView<Menu: View>: View {
         .accessibilityHidden(true)
       }
       VStack(alignment: mine ? .trailing : .leading, spacing: 4) {
-        if let writer {
+        if let writer, named {
           Text(writer)
             .font(.caption2)
             .foregroundStyle(colors.textTertiary)

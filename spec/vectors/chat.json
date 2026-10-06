@@ -1,54 +1,89 @@
 {
-  "about": "What a chat's lines become as people use them (spec/chat.md). pins (Pins, Polls, Editing and unsending): a chat's `lines` by id in order, its `pins` the latest first, then one `step`: pin or unpin a line, unsend one (送信取消), or settle the poll a line carries (日にちを決める). `expected` is the pins after it, the latest first, and the one that made room for the new pin (`dropped`, for the app to say so), if any. The most pinned at once is design/src/chat.ts's chatRules.maxPins, 5. edited (Editing and unsending): a line with words and its link's page is given new words; `expected` says whether it keeps its page (`kept`) or takes the new words' (`new`). firstUnread (Unread lines and typing): who wrote each line, oldest first (`others`, `me`, or `app` for the app's own lines such as someone joining), and how many are unread; `expected` is the index of the line the chat opens on under ここから新着, null with nothing unread. Only others' lines count.",
+  "about": "What a chat's lines become as people use them (spec/chat.md). pins (Pins, Polls, Editing and unsending): a chat's `lines` by id in order, its `pins` the latest first, then one `step`: pin or unpin a line, unsend one (送信取消), or settle the poll a line carries (日にちを決める). `expected` is the pins after it, the latest first, and the one that made room for the new pin (`dropped`, for the app to say so), if any. The most pinned at once is design/src/chat.ts's chatRules.maxPins, 5. edited (Editing and unsending): a line with words and its link's page is given new words; `expected` says whether it keeps its page (`kept`) or takes the new words' (`new`). firstUnread (Unread lines and typing): who wrote each line, oldest first (`others`, `me`, or `app` for the app's own lines such as someone joining), and how many are unread; `expected` is the index of the line the chat opens on under ここから新着, null with nothing unread. Only others' lines count. directThread (One-to-one chats, spec/sync-protocol.md): two members' ids, given in either order; `expected` is their chat's thread id, the same from both sides: \"direct:\" and the two ids in order (by their UTF-16 code units, as every id is ASCII), joined by \":\".",
   "pins": [
     {
       "name": "a pinned line comes first among the pins",
       "lines": ["a", "b"],
       "pins": ["a"],
-      "step": { "pin": "b" },
-      "expected": { "pins": ["b", "a"], "dropped": null }
+      "step": {
+        "pin": "b"
+      },
+      "expected": {
+        "pins": ["b", "a"],
+        "dropped": null
+      }
     },
     {
       "name": "one pin past the most takes the place of the oldest",
       "lines": ["p0", "p1", "p2", "p3", "p4", "new"],
       "pins": ["p4", "p3", "p2", "p1", "p0"],
-      "step": { "pin": "new" },
-      "expected": { "pins": ["new", "p4", "p3", "p2", "p1"], "dropped": "p0" }
+      "step": {
+        "pin": "new"
+      },
+      "expected": {
+        "pins": ["new", "p4", "p3", "p2", "p1"],
+        "dropped": "p0"
+      }
     },
     {
       "name": "pinning a line already pinned only moves it up",
       "lines": ["p0", "p1", "p2", "p3", "p4"],
       "pins": ["p4", "p3", "p2", "p1", "p0"],
-      "step": { "pin": "p0" },
-      "expected": { "pins": ["p0", "p4", "p3", "p2", "p1"], "dropped": null }
+      "step": {
+        "pin": "p0"
+      },
+      "expected": {
+        "pins": ["p0", "p4", "p3", "p2", "p1"],
+        "dropped": null
+      }
     },
     {
       "name": "taking a pin off leaves the others",
       "lines": ["a", "b"],
       "pins": ["b", "a"],
-      "step": { "unpin": "b" },
-      "expected": { "pins": ["a"], "dropped": null }
+      "step": {
+        "unpin": "b"
+      },
+      "expected": {
+        "pins": ["a"],
+        "dropped": null
+      }
     },
     {
       "name": "a line taken back is not among the pins",
       "lines": ["a", "b"],
       "pins": ["b", "a"],
-      "step": { "unsend": "a" },
-      "expected": { "pins": ["b"], "dropped": null }
+      "step": {
+        "unsend": "a"
+      },
+      "expected": {
+        "pins": ["b"],
+        "dropped": null
+      }
     },
     {
       "name": "a settled poll is pinned, within the most pins",
       "lines": ["p0", "p1", "p2", "p3", "p4", "poll"],
       "pins": ["p4", "p3", "p2", "p1", "p0"],
-      "step": { "settle": "poll" },
-      "expected": { "pins": ["poll", "p4", "p3", "p2", "p1"], "dropped": "p0" }
+      "step": {
+        "settle": "poll"
+      },
+      "expected": {
+        "pins": ["poll", "p4", "p3", "p2", "p1"],
+        "dropped": "p0"
+      }
     },
     {
       "name": "settling a pinned poll again only moves its pin up",
       "lines": ["poll", "p0", "p1", "p2", "p3"],
       "pins": ["p3", "p2", "p1", "p0", "poll"],
-      "step": { "settle": "poll" },
-      "expected": { "pins": ["poll", "p3", "p2", "p1", "p0"], "dropped": null }
+      "step": {
+        "settle": "poll"
+      },
+      "expected": {
+        "pins": ["poll", "p3", "p2", "p1", "p0"],
+        "dropped": null
+      }
     }
   ],
   "edited": [
@@ -101,6 +136,32 @@
       "lines": ["others", "me"],
       "unread": 0,
       "expected": null
+    }
+  ],
+  "directThread": [
+    {
+      "name": "the ids in order",
+      "a": "aya",
+      "b": "yuki",
+      "expected": "direct:aya:yuki"
+    },
+    {
+      "name": "the same chat from the other side",
+      "a": "yuki",
+      "b": "aya",
+      "expected": "direct:aya:yuki"
+    },
+    {
+      "name": "upper case orders before lower case",
+      "a": "b7Kx",
+      "b": "B7Kx",
+      "expected": "direct:B7Kx:b7Kx"
+    },
+    {
+      "name": "a shorter id that starts the other orders first",
+      "a": "abc1",
+      "b": "abc",
+      "expected": "direct:abc:abc1"
     }
   ]
 }
