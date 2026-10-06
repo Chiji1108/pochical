@@ -187,13 +187,14 @@ private struct ChatRow<Icon: View>: View {
     let summary = chat.summary
     let nameOf = { (id: String) in chat.names[id] ?? "メンバー" }
     if let waiting = summary.waiting {
-      return "自分：\(lineWords(waiting.text, days: waiting.days, nameOf: nameOf))"
+      return "自分：\(lineWords(waiting.text, days: waiting.days, poll: waiting.poll, nameOf: nameOf))"
     }
     guard let last = summary.last else { return "まだメッセージはありません" }
     if last.unsent {
       return unsentLine(chat.names[last.authorID], mine: last.authorID == me)
     }
-    let words = lineWords(last.text, days: last.days, nameOf: nameOf)
+    let words = lineWords(
+      last.text, days: last.days, poll: last.poll, decided: last.decided, nameOf: nameOf)
     return last.authorID == me ? "自分：\(words)" : words
   }
 }

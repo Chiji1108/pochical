@@ -38,7 +38,29 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   /// The days a line of shared days shares, as JSON, `["YYYY-MM-DD"]`;
   /// none for words, and once unsent.
   var daysJSON = "[]"
+  /// Its days are put to the vote.
+  public var poll = false
+  /// A poll's votes as JSON, `[DayVotes]`.
+  var votesJSON = "[]"
+  /// The day a poll was settled on, as YYYY-MM-DD; empty while open.
+  var decidedKey = ""
   public var id: Int64 { seq }
+
+  /// Who can come on each of a poll's days, in the order they said so.
+  public var votes: [DayVotes] {
+    get { (try? JSONDecoder().decode([DayVotes].self, from: Data(votesJSON.utf8))) ?? [] }
+    set {
+      votesJSON =
+        (try? JSONEncoder().encode(newValue)).flatMap { String(data: $0, encoding: .utf8) }
+        ?? "[]"
+    }
+  }
+
+  /// The day a poll was settled on.
+  public var decided: Day? {
+    get { Day(decidedKey) }
+    set { decidedKey = newValue?.key ?? "" }
+  }
 
   /// The days it shares with everyone's shifts, in order.
   public var days: [Day] {
@@ -54,6 +76,35 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
         (try? JSONEncoder().encode(newValue)).flatMap { String(data: $0, encoding: .utf8) }
         ?? "[]"
     }
+  }
+}
+
+/// Who can come on one of a poll's days.
+public struct DayVotes: Hashable, Sendable, Codable {
+  public let day: Day
+  public var userIDs: [String]
+
+  public init(day: Day, userIDs: [String]) {
+    self.day = day
+    self.userIDs = userIDs
+  }
+}
+
+extension [DayVotes] {
+  /// `user` can come on `day`, or takes it back, the days kept in `order`.
+  public func voting(_ day: Day, by user: String, on: Bool, order: [Day]) -> [DayVotes] {
+    var byDay = Dictionary(map { ($0.day, $0.userIDs) }, uniquingKeysWith: { first, _ in first })
+    var users = byDay[day, default: []].filter { $0 != user }
+    if on { users.append(user) }
+    byDay[day] = users
+    return order.compactMap { day in
+      byDay[day].flatMap { $0.isEmpty ? nil : DayVotes(day: day, userIDs: $0) }
+    }
+  }
+
+  /// Who can come on `day`.
+  public func voters(on day: Day) -> [String] {
+    first { $0.day == day }?.userIDs ?? []
   }
 }
 
@@ -207,6 +258,26 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep the chats' polls") { db in
+      try #sql(
+        """
+        ALTER TABLE "chatLines" ADD COLUMN "poll" INTEGER NOT NULL DEFAULT 0
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        ALTER TABLE "chatLines" ADD COLUMN "votesJSON" TEXT NOT NULL DEFAULT '[]'
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        ALTER TABLE "chatLines" ADD COLUMN "decidedKey" TEXT NOT NULL DEFAULT ''
+        """
+      )
+      .execute(db)
+    }
   }
 }
 
@@ -244,6 +315,11 @@ public enum Chats {
     row.reactions = line.reactions.map { LineReaction(emoji: $0.emoji, userIDs: $0.userIds) }
     row.pinnedOrder = Int64(line.pinnedOrder)
     row.days = line.days.compactMap(Day.init)
+    row.poll = line.poll
+    row.votes = line.votes.compactMap { votes in
+      Day(votes.day).map { DayVotes(day: $0, userIDs: votes.userIds) }
+    }
+    row.decidedKey = line.decided
     try ChatLineRow.insert { row }.execute(db)
   }
 
@@ -386,6 +462,8 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
   public let madeAtMs: Int64
   /// The days it shares, for a line of shared days.
   public var days: [Day] = []
+  /// Its days are put to the vote.
+  public var poll = false
   public var id: String { opID }
 }
 
@@ -424,7 +502,7 @@ extension Chats {
         waiting.append(
           WaitingLine(
             opID: edit.opID, text: send.text, madeAtMs: row.madeAtMs,
-            days: send.days.compactMap(Day.init)))
+            days: send.days.compactMap(Day.init), poll: send.poll))
       case .change(let change) where change.threadID == threadID:
         if let at = lines.firstIndex(where: { $0.seq == Int64(change.seq) }) {
           lines[at].text = change.text
@@ -436,11 +514,26 @@ extension Chats {
           lines[at].unsent = true
           lines[at].reactions = []
           lines[at].days = []
+          lines[at].votes = []
+          lines[at].decided = nil
         }
         pinned = pinStep(pinned, unsend: String(unsend.seq)).pins
       case .pin(let pin) where pin.threadID == threadID:
         let id = String(pin.seq)
         pinned = (pin.on ? pinStep(pinned, pin: id) : pinStep(pinned, unpin: id)).pins
+      case .vote(let vote) where vote.threadID == threadID:
+        if let me, let day = Day(vote.day),
+          let at = lines.firstIndex(where: { $0.seq == Int64(vote.seq) }), lines[at].decided == nil
+        {
+          lines[at].votes = lines[at].votes.voting(
+            day, by: me, on: vote.on, order: lines[at].days)
+        }
+      case .decide(let decide) where decide.threadID == threadID:
+        if let at = lines.firstIndex(where: { $0.seq == Int64(decide.seq) }) {
+          lines[at].decided = Day(decide.day)
+        }
+        // Settling pins the poll (spec/vectors/chat.json, pins).
+        pinned = pinStep(pinned, pin: String(decide.seq)).pins
       case .react(let react) where react.threadID == threadID:
         if let me, let at = lines.firstIndex(where: { $0.seq == Int64(react.seq) }) {
           lines[at].reactions = lines[at].reactions.toggling(react.emoji, by: me, on: react.on)
@@ -551,7 +644,8 @@ extension Chats {
         ownRead = max(ownRead, Int64(read.lastReadSeq))
       case .send(let send) where send.threadID == threadID:
         waiting = WaitingLine(
-          opID: edit.opID, text: send.text, madeAtMs: madeAtMs, days: send.days.compactMap(Day.init))
+          opID: edit.opID, text: send.text, madeAtMs: madeAtMs, days: send.days.compactMap(Day.init),
+          poll: send.poll)
       default: break
       }
     }

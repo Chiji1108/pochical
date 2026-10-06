@@ -467,7 +467,163 @@ public object ChatLineKt {
 @kotlin.jvm.JvmName("setDays")
     public fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.clear() {
       _builder.clearDays()
-    }}
+    }
+    /**
+     * ```
+     * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
+     * ```
+     *
+     * `bool poll = 12 [json_name = "poll"];`
+     */
+    public var poll: kotlin.Boolean
+      @kotlin.jvm.JvmName("getPoll")
+        get() = _builder.poll
+      @kotlin.jvm.JvmName("setPoll")
+        set(value) {
+        _builder.poll = value
+      }
+    /**
+     * ```
+     * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
+     * ```
+     *
+     * `bool poll = 12 [json_name = "poll"];`
+     */
+    public fun clearPoll() {
+      _builder.clearPoll()
+    }
+
+    /**
+     * An uninstantiable, behaviorless type to represent the field in
+     * generics.
+     */
+    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
+    public class VotesProxy private constructor() : com.google.protobuf.kotlin.DslProxy()
+    /**
+     * ```
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];`
+     */
+     public val votes: com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatVotes, VotesProxy>
+      @kotlin.jvm.JvmSynthetic
+  get() = com.google.protobuf.kotlin.DslList(
+        _builder.votesList
+      )
+    /**
+     * ```
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];`
+     * @param value The votes to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addVotes")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatVotes, VotesProxy>.add(value: app.pochical.v1.ChatVotes) {
+      _builder.addVotes(value)
+    }
+    /**
+     * ```
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];`
+     * @param value The votes to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignVotes")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatVotes, VotesProxy>.plusAssign(value: app.pochical.v1.ChatVotes) {
+      add(value)
+    }
+    /**
+     * ```
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];`
+     * @param values The votes to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addAllVotes")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatVotes, VotesProxy>.addAll(values: kotlin.collections.Iterable<app.pochical.v1.ChatVotes>) {
+      _builder.addAllVotes(values)
+    }
+    /**
+     * ```
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];`
+     * @param values The votes to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignAllVotes")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatVotes, VotesProxy>.plusAssign(values: kotlin.collections.Iterable<app.pochical.v1.ChatVotes>) {
+      addAll(values)
+    }
+    /**
+     * ```
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];`
+     * @param index The index to set the value at.
+     * @param value The votes to set.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("setVotes")
+    public operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatVotes, VotesProxy>.set(index: kotlin.Int, value: app.pochical.v1.ChatVotes) {
+      _builder.setVotes(index, value)
+    }
+    /**
+     * ```
+     * A poll's votes: each day someone can come, with who can, in the
+     * order they said so. None once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];`
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("clearVotes")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatVotes, VotesProxy>.clear() {
+      _builder.clearVotes()
+    }
+
+    /**
+     * ```
+     * The day a poll was settled on, as YYYY-MM-DD; empty while open.
+     * ```
+     *
+     * `string decided = 14 [json_name = "decided"];`
+     */
+    public var decided: kotlin.String
+      @kotlin.jvm.JvmName("getDecided")
+        get() = _builder.decided
+      @kotlin.jvm.JvmName("setDecided")
+        set(value) {
+        _builder.decided = value
+      }
+    /**
+     * ```
+     * The day a poll was settled on, as YYYY-MM-DD; empty while open.
+     * ```
+     *
+     * `string decided = 14 [json_name = "decided"];`
+     */
+    public fun clearDecided() {
+      _builder.clearDecided()
+    }
+  }
 }
 public inline fun app.pochical.v1.ChatLine.copy(block: `app.pochical.v1`.ChatLineKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatLine =
   `app.pochical.v1`.ChatLineKt.Dsl._create(this.toBuilder()).apply { block() }._build()

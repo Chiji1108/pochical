@@ -32,6 +32,9 @@ const chat = (
 
 type ChatKind =
   | { days: string[] }
+  | { poll: string[] }
+  | { vote: [number, string, boolean] }
+  | { decide: [number, string] }
   | { pin: [number, boolean] }
   | { react: [number, string, boolean] }
   | { send: string }
@@ -40,6 +43,26 @@ type ChatKind =
   | { read: number };
 
 function sendChatKind(kind: ChatKind, threadId: string) {
+  if ("poll" in kind) {
+    return {
+      case: "send",
+      value: { days: kind.poll, poll: true, text: "", threadId },
+    } as const;
+  }
+  if ("vote" in kind) {
+    const [seq, day, on] = kind.vote;
+    return {
+      case: "vote",
+      value: { day, on, seq: BigInt(seq), threadId },
+    } as const;
+  }
+  if ("decide" in kind) {
+    const [seq, day] = kind.decide;
+    return {
+      case: "decide",
+      value: { day, seq: BigInt(seq), threadId },
+    } as const;
+  }
   if ("days" in kind) {
     return {
       case: "send",
@@ -495,6 +518,78 @@ describe("a group's chat", () => {
     chat(mine.socket, [{ kind: { unsend: 1 }, opId: "c" }]);
     expect(changesIn(await mine.frames.next())).toMatchObject([
       { kind: { value: { days: [], unsent: true } } },
+    ]);
+  });
+
+  it("takes votes on a poll until its writer settles and pins it", async () => {
+    const { userIdOf } = await import("./helpers");
+    const { groupId, guest, maker, makerId } = await pair();
+    const guestId = await userIdOf(guest);
+    const mine = await groupSocket(groupId, maker);
+    const theirs = await groupSocket(groupId, guest);
+    const days = ["2026-10-10", "2026-10-11", "2026-10-12"];
+    chat(mine.socket, [
+      { kind: { poll: ["2026-10-10"] }, opId: "one-day" },
+      { kind: { poll: days }, opId: "p" },
+    ]);
+    expect(changesIn(await theirs.frames.next())).toMatchObject([
+      { kind: { value: { days, poll: true, seq: 1n } } },
+    ]);
+    await mine.frames.next();
+    await mine.frames.next();
+
+    chat(theirs.socket, [
+      { kind: { vote: [1, "2026-10-11", true] }, opId: "v1" },
+      { kind: { vote: [1, "2026-10-13", true] }, opId: "not-on-it" },
+      // Only its writer settles it while they are in the group.
+      { kind: { decide: [1, "2026-10-11"] }, opId: "not-theirs" },
+    ]);
+    expect(changesIn(await mine.frames.next())).toMatchObject([
+      {
+        kind: {
+          value: { votes: [{ day: "2026-10-11", userIds: [guestId] }] },
+        },
+      },
+    ]);
+    // Their own change and acknowledgement.
+    await theirs.frames.next();
+    await theirs.frames.next();
+    chat(mine.socket, [
+      { kind: { vote: [1, "2026-10-11", true] }, opId: "v2" },
+      { kind: { decide: [1, "2026-10-11"] }, opId: "d" },
+      { kind: { vote: [1, "2026-10-10", true] }, opId: "too-late" },
+    ]);
+    const changes = changesIn(await theirs.frames.next());
+    expect(changes).toHaveLength(2);
+    expect(changes[1]).toMatchObject({
+      kind: {
+        value: {
+          decided: "2026-10-11",
+          votes: [{ day: "2026-10-11", userIds: [guestId, makerId] }],
+        },
+      },
+    });
+    const decided = changes[1]?.kind;
+    expect(
+      decided?.case === "chatLine" && decided.value.pinnedOrder > 0n
+    ).toBeTruthy();
+  });
+
+  it("lets anyone settle a poll once its writer has left", async () => {
+    const { call } = await import("./helpers");
+    const { groupId, guest, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    const theirs = await groupSocket(groupId, guest);
+    chat(mine.socket, [
+      { kind: { poll: ["2026-10-10", "2026-10-11"] }, opId: "p" },
+    ]);
+    await theirs.frames.next();
+    await call("GroupService/LeaveGroup", { groupId }, maker);
+    // Their leaving comes first.
+    await theirs.frames.next();
+    chat(theirs.socket, [{ kind: { decide: [1, "2026-10-10"] }, opId: "d" }]);
+    expect(changesIn(await theirs.frames.next())).toMatchObject([
+      { kind: { value: { decided: "2026-10-10" } } },
     ]);
   });
 

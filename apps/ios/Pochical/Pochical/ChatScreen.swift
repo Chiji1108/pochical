@@ -158,6 +158,8 @@ struct ChatScreen: View {
   @State private var reactingTo: ChatLineRow?
   /// The days to share are being picked.
   @State private var sharingDays = false
+  /// The poll whose day is being picked.
+  @State private var deciding: ChatLineRow?
   /// The line whose reactions and menu are open.
   @State private var acting: MessageActionsRequest?
 
@@ -301,7 +303,13 @@ struct ChatScreen: View {
     }
     .sheet(isPresented: $sharingDays) {
       ShareDaysSheet(
-        groupID: group.id, people: otherID.map { Set([$0, meID ?? ""]) }, onSend: shareDays)
+        groupID: group.id, people: otherID.map { Set([$0, meID ?? ""]) }, pollable: otherID == nil,
+        onSend: shareDays)
+    }
+    .sheet(item: $deciding) { line in
+      DecidePollSheet(days: line.days, votes: line.votes, decided: line.decided) { day in
+        decide(line, on: day)
+      }
     }
     .sheet(item: $reactingTo) { line in
       EmojiKeyboardSheet { react($0, on: line) }
@@ -388,9 +396,10 @@ struct ChatScreen: View {
       } else {
         let mine = line.authorID == meID
         let onReact = { (emoji: String) in react(emoji, on: line) }
+        let poll = pollLine(for: line)
         LineView(
-          text: line.text, days: line.days, members: cardMembers,
-          shifts: line.days.first.map { GroupRoute.shifts(group, day: $0) },
+          text: line.text, days: line.days, members: cardMembers, poll: poll,
+          shifts: line.poll ? nil : line.days.first.map { GroupRoute.shifts(group, day: $0) },
           time: line.sentAtMs, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
           named: otherID == nil, first: startsRun, waiting: false, nameOf: nameOf,
@@ -403,7 +412,7 @@ struct ChatScreen: View {
               lineID: line.opID, frame: frame, mine: mine,
               bubble: AnyView(
                 LineContent(
-                  text: line.text, days: line.days, members: cardMembers, mine: mine,
+                  text: line.text, days: line.days, members: cardMembers, poll: poll, mine: mine,
                   first: startsRun, waiting: false, nameOf: nameOf)),
               finger: finger, reactions: line.reactions, meID: meID, onReact: onReact,
               onMoreReactions: { reactingTo = line }, actions: actions(for: line, mine: mine)))
@@ -411,7 +420,10 @@ struct ChatScreen: View {
       }
     case .waiting(let line, let startsRun):
       LineView(
-        text: line.text, days: line.days, members: cardMembers, time: line.madeAtMs,
+        text: line.text, days: line.days, members: cardMembers,
+        poll: line.poll
+          ? PollLine(votes: [], decided: nil, names: names, meID: meID, canDecide: true) : nil,
+        time: line.madeAtMs,
         edited: false, mine: true, writer: nil, named: false, first: startsRun, waiting: true,
         nameOf: nameOf, lifted: acting?.lineID == line.opID
       ) { frame, finger in
@@ -658,11 +670,46 @@ struct ChatScreen: View {
   }
 
   /// Shares days with everyone's shifts, as a line of their own.
-  private func shareDays(_ days: [Day]) {
+  private func shareDays(_ days: [Day], poll: Bool) {
     var send = Pochical_V1_ChatSend()
     send.threadID = threadID
     send.days = days.map(\.key)
+    send.poll = poll
     write(.send(send))
+  }
+
+  /// Who may settle a poll: its writer, or anyone once they have left, so
+  /// a poll is never stuck.
+  private func canDecide(_ line: ChatLineRow) -> Bool {
+    line.authorID == meID
+      || chat.writers.contains { $0.userID == line.authorID && $0.left }
+  }
+
+  /// A poll's card's votes and what voting and settling it do.
+  private func pollLine(for line: ChatLineRow) -> PollLine? {
+    guard line.poll else { return nil }
+    return PollLine(
+      votes: line.votes, decided: line.decided, names: names, meID: meID,
+      canDecide: canDecide(line),
+      onVote: { day, on in
+        var vote = Pochical_V1_ChatVote()
+        vote.threadID = threadID
+        vote.seq = UInt64(line.seq)
+        vote.day = day.key
+        vote.on = on
+        write(.vote(vote))
+      },
+      onDecide: { deciding = line })
+  }
+
+  /// Settles a poll on `day`, and says so to whoever settled it.
+  private func decide(_ line: ChatLineRow, on day: Day) {
+    var decide = Pochical_V1_ChatDecide()
+    decide.threadID = threadID
+    decide.seq = UInt64(line.seq)
+    decide.day = day.key
+    write(.decide(decide))
+    say("\(dayName(day))に決めました")
   }
 
   /// To the latest line, by its id: scrolling to the edge would also
@@ -700,7 +747,7 @@ struct ChatScreen: View {
   /// the danger color (spec/chat.md, Editing and unsending).
   private func actions(for line: ChatLineRow, mine: Bool) -> [MessageAction] {
     let pinned = chat.state.pins.contains { $0.seq == line.seq }
-    // Shared days have no words to copy or change.
+    // Shared days and polls have no words to copy or change.
     let words = line.days.isEmpty
     var actions = words ? [copy(line.text)] : []
     // Anyone's line, for everyone in the chat (spec/chat.md, Pins).
@@ -710,6 +757,12 @@ struct ChatScreen: View {
       ) { pin(line.seq, on: !pinned) })
     if mine, words {
       actions.append(MessageAction(title: "編集", systemImage: "pencil") { edit(line) })
+    }
+    if line.poll, line.decided != nil, canDecide(line) {
+      actions.append(
+        MessageAction(title: "決め直す", systemImage: "calendar.badge.checkmark") {
+          deciding = line
+        })
     }
     if mine {
       actions.append(
@@ -876,6 +929,8 @@ private struct LineView: View {
   var days: [Day] = []
   /// Whose shifts its card shows.
   var members: [GroupMember] = []
+  /// A poll's card, for days put to the vote.
+  var poll: PollLine?
   /// The shift table on its first day, under its card.
   var shifts: GroupRoute?
   let time: Int64
@@ -935,8 +990,8 @@ private struct LineView: View {
         HStack(alignment: .bottom, spacing: 8) {
           if mine { meta }
           LineContent(
-            text: text, days: days, members: members, mine: mine, first: first, waiting: waiting,
-            nameOf: nameOf
+            text: text, days: days, members: members, poll: poll, mine: mine, first: first,
+            waiting: waiting, nameOf: nameOf
           )
           // Rung for a moment when gone to from the pins, as /design's
           // flash: a ring just outside the bubble, held, then fading.
@@ -1053,13 +1108,20 @@ struct LineContent: View {
   let text: String
   let days: [Day]
   let members: [GroupMember]
+  /// Its days are put to the vote, with what the card needs.
+  var poll: PollLine?
   let mine: Bool
   let first: Bool
   let waiting: Bool
   let nameOf: (String) -> String
 
   var body: some View {
-    if days.isEmpty {
+    if let poll {
+      PollCard(
+        days: days, votes: poll.votes, decided: poll.decided, members: members,
+        names: poll.names, meID: poll.meID, canDecide: poll.canDecide, waiting: waiting,
+        onVote: poll.onVote, onDecide: poll.onDecide)
+    } else if days.isEmpty {
       MessageBubble(text: text, mine: mine, first: first, waiting: waiting, nameOf: nameOf)
     } else {
       DayCard(days: days, members: members)

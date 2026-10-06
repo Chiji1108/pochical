@@ -120,11 +120,15 @@ export const chatLines = sqliteTable(
     // The days a line of shared days shares, as a JSON array of
     // YYYY-MM-DD; none for words, and once unsent.
     days: text({ mode: "json" }).$type<string[]>(),
+    // The day a poll was settled on, while settled.
+    decided: text(),
     edited: integer({ mode: "boolean" }).notNull().default(false),
     // The sending edit's op_id: a send taken twice is one line.
     opId: text("op_id").notNull(),
     // The cursor it was last pinned at, while pinned for everyone.
     pinnedAt: integer("pinned_at"),
+    // Its days are put to the vote.
+    poll: integer({ mode: "boolean" }).notNull().default(false),
     sentAt: integer("sent_at", { mode: "timestamp_ms" }).notNull(),
     seq: integer().notNull(),
     text: text().notNull(),
@@ -169,6 +173,24 @@ export const chatReactions = sqliteTable(
   (table) => [
     primaryKey({
       columns: [table.threadId, table.seq, table.userId, table.emoji],
+    }),
+  ]
+);
+
+// Who can come on which of a poll's days, in the order they said so.
+export const chatVotes = sqliteTable(
+  "chat_votes",
+  {
+    day: text().notNull(),
+    // When they said so, for the order: the group's cursor then.
+    madeCursor: integer("made_cursor").notNull(),
+    seq: integer().notNull(),
+    threadId: text("thread_id").notNull(),
+    userId: text("user_id").notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.threadId, table.seq, table.day, table.userId],
     }),
   ]
 );

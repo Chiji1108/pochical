@@ -276,6 +276,44 @@ public  final class ChatSend extends
     days_.add(value.toStringUtf8());
   }
 
+  public static final int POLL_FIELD_NUMBER = 4;
+  private boolean poll_;
+  /**
+   * <pre>
+   * The days put to the vote instead: 2 days at least, in the group chat.
+   * </pre>
+   *
+   * <code>bool poll = 4 [json_name = "poll"];</code>
+   * @return The poll.
+   */
+  @java.lang.Override
+  public boolean getPoll() {
+    return poll_;
+  }
+  /**
+   * <pre>
+   * The days put to the vote instead: 2 days at least, in the group chat.
+   * </pre>
+   *
+   * <code>bool poll = 4 [json_name = "poll"];</code>
+   * @param value The poll to set.
+   */
+  private void setPoll(boolean value) {
+    
+    poll_ = value;
+  }
+  /**
+   * <pre>
+   * The days put to the vote instead: 2 days at least, in the group chat.
+   * </pre>
+   *
+   * <code>bool poll = 4 [json_name = "poll"];</code>
+   */
+  private void clearPoll() {
+
+    poll_ = false;
+  }
+
   public static app.pochical.v1.ChatSend parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -633,6 +671,46 @@ public  final class ChatSend extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The days put to the vote instead: 2 days at least, in the group chat.
+     * </pre>
+     *
+     * <code>bool poll = 4 [json_name = "poll"];</code>
+     * @return The poll.
+     */
+    @java.lang.Override
+    public boolean getPoll() {
+      return instance.getPoll();
+    }
+    /**
+     * <pre>
+     * The days put to the vote instead: 2 days at least, in the group chat.
+     * </pre>
+     *
+     * <code>bool poll = 4 [json_name = "poll"];</code>
+     * @param value The poll to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPoll(boolean value) {
+      copyOnWrite();
+      instance.setPoll(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The days put to the vote instead: 2 days at least, in the group chat.
+     * </pre>
+     *
+     * <code>bool poll = 4 [json_name = "poll"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPoll() {
+      copyOnWrite();
+      instance.clearPoll();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatSend)
   }
   @java.lang.Override
@@ -652,10 +730,11 @@ public  final class ChatSend extends
             "threadId_",
             "text_",
             "days_",
+            "poll_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0001\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u021a";
+              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0001\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u021a\u0004\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

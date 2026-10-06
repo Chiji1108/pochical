@@ -86,4 +86,14 @@ public interface ChatSendOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDaysBytes(int index);
+
+  /**
+   * <pre>
+   * The days put to the vote instead: 2 days at least, in the group chat.
+   * </pre>
+   *
+   * <code>bool poll = 4 [json_name = "poll"];</code>
+   * @return The poll.
+   */
+  boolean getPoll();
 }

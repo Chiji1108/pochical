@@ -180,7 +180,32 @@ public object ChatSendKt {
 @kotlin.jvm.JvmName("setDays")
     public fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.clear() {
       _builder.clearDays()
-    }}
+    }
+    /**
+     * ```
+     * The days put to the vote instead: 2 days at least, in the group chat.
+     * ```
+     *
+     * `bool poll = 4 [json_name = "poll"];`
+     */
+    public var poll: kotlin.Boolean
+      @kotlin.jvm.JvmName("getPoll")
+        get() = _builder.poll
+      @kotlin.jvm.JvmName("setPoll")
+        set(value) {
+        _builder.poll = value
+      }
+    /**
+     * ```
+     * The days put to the vote instead: 2 days at least, in the group chat.
+     * ```
+     *
+     * `bool poll = 4 [json_name = "poll"];`
+     */
+    public fun clearPoll() {
+      _builder.clearPoll()
+    }
+  }
 }
 public inline fun app.pochical.v1.ChatSend.copy(block: `app.pochical.v1`.ChatSendKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatSend =
   `app.pochical.v1`.ChatSendKt.Dsl._create(this.toBuilder()).apply { block() }._build()

@@ -203,6 +203,54 @@ public object ChatEditKt {
     public fun hasPin(): kotlin.Boolean {
       return _builder.hasPin()
     }
+
+    /**
+     * `.pochical.v1.ChatVote vote = 8 [json_name = "vote"];`
+     */
+    public var vote: app.pochical.v1.ChatVote
+      @kotlin.jvm.JvmName("getVote")
+        get() = _builder.vote
+      @kotlin.jvm.JvmName("setVote")
+        set(value) {
+        _builder.vote = value
+      }
+    /**
+     * `.pochical.v1.ChatVote vote = 8 [json_name = "vote"];`
+     */
+    public fun clearVote() {
+      _builder.clearVote()
+    }
+    /**
+     * `.pochical.v1.ChatVote vote = 8 [json_name = "vote"];`
+     * @return Whether the vote field is set.
+     */
+    public fun hasVote(): kotlin.Boolean {
+      return _builder.hasVote()
+    }
+
+    /**
+     * `.pochical.v1.ChatDecide decide = 9 [json_name = "decide"];`
+     */
+    public var decide: app.pochical.v1.ChatDecide
+      @kotlin.jvm.JvmName("getDecide")
+        get() = _builder.decide
+      @kotlin.jvm.JvmName("setDecide")
+        set(value) {
+        _builder.decide = value
+      }
+    /**
+     * `.pochical.v1.ChatDecide decide = 9 [json_name = "decide"];`
+     */
+    public fun clearDecide() {
+      _builder.clearDecide()
+    }
+    /**
+     * `.pochical.v1.ChatDecide decide = 9 [json_name = "decide"];`
+     * @return Whether the decide field is set.
+     */
+    public fun hasDecide(): kotlin.Boolean {
+      return _builder.hasDecide()
+    }
     public val kindCase: app.pochical.v1.ChatEdit.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -232,4 +280,10 @@ public val app.pochical.v1.ChatEditOrBuilder.reactOrNull: app.pochical.v1.ChatRe
 
 public val app.pochical.v1.ChatEditOrBuilder.pinOrNull: app.pochical.v1.ChatPin?
   get() = if (hasPin()) getPin() else null
+
+public val app.pochical.v1.ChatEditOrBuilder.voteOrNull: app.pochical.v1.ChatVote?
+  get() = if (hasVote()) getVote() else null
+
+public val app.pochical.v1.ChatEditOrBuilder.decideOrNull: app.pochical.v1.ChatDecide?
+  get() = if (hasDecide()) getDecide() else null
 
