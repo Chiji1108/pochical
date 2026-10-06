@@ -254,4 +254,21 @@ describe("a group's chat", () => {
     );
     expect(kinds).not.toContain("unreadCount");
   });
+
+  it("keeps the newest count when counts arrive out of order", async () => {
+    const { env } = await import("cloudflare:workers");
+    const { groupId, guest } = await pair();
+    const { userIdOf } = await import("./helpers");
+    const user = env.USERS.getByName(await userIdOf(guest));
+    // Read up at the group's cursor 12, then a send's count from 11.
+    await user.setUnread(groupId, thread, 0, 12);
+    await user.setUnread(groupId, thread, 1, 11);
+    const phone = await device(guest);
+    const counts = changesIn(await phone.frames.next()).filter(
+      ({ kind }) => kind.case === "unreadCount"
+    );
+    expect(counts).toMatchObject([
+      { kind: { value: { count: 0, groupId, threadId: thread } } },
+    ]);
+  });
 });

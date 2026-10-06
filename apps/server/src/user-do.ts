@@ -273,9 +273,8 @@ export class UserDO extends DurableObject<Env> {
   /**
    * How many lines of a chat in one of the user's groups they have not
    * read, as the group counted them at its cursor `groupCursor`, for their
-   * devices' badges. Kept and sent only when it changed; one counted
-   * before the count kept, or for a group they are not in, changes
-   * nothing.
+   * devices' badges, sent to them when it changed. One counted no later
+   * than the count kept, or for a group they are not in, changes nothing.
    */
   setUnread(
     groupId: string,
@@ -300,11 +299,23 @@ export class UserDO extends DurableObject<Env> {
           )
         )
         .get();
-      // No row reads as none unread.
-      if (
-        (stored?.count ?? 0) === count ||
-        (stored?.groupCursor ?? 0) > groupCursor
-      ) {
+      // One counted no later than the count kept says nothing new.
+      if (stored !== undefined && stored.groupCursor >= groupCursor) {
+        return undefined;
+      }
+      // The same count, newer: kept as newer, so an older one arriving
+      // after it changes nothing, but the devices hear nothing.
+      if (stored?.count === count) {
+        this.db
+          .update(unreadCounts)
+          .set({ groupCursor })
+          .where(
+            and(
+              eq(unreadCounts.groupId, groupId),
+              eq(unreadCounts.threadId, threadId)
+            )
+          )
+          .run();
         return undefined;
       }
       const row = {

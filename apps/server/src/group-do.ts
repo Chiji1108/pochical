@@ -410,6 +410,8 @@ export class GroupDO extends DurableObject<Env> {
       }
       counted.set(threadId, users);
     };
+    // The other members, read once for every send in the frame.
+    let others: string[] | undefined;
     const { changed, refused } = this.ctx.storage.transactionSync(() => {
       const made: Change[] = [];
       const back: Change[] = [];
@@ -420,12 +422,10 @@ export class GroupDO extends DurableObject<Env> {
           this.setHead(cursor);
           made.push(taken.change);
           if (edit.kind.case === "send") {
-            recount(
-              edit.kind.value.threadId,
-              this.memberList()
-                .map((member) => member.userId)
-                .filter((id) => id !== userId)
-            );
+            others ??= this.memberList()
+              .map((member) => member.userId)
+              .filter((id) => id !== userId);
+            recount(edit.kind.value.threadId, others);
           } else if (edit.kind.case === "read") {
             recount(edit.kind.value.threadId, [userId]);
           }
