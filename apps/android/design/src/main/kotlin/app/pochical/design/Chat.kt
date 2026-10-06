@@ -13,6 +13,9 @@ object Chat {
   const val linkPreviewSettleMs = 400
   const val maxPins = 5
   const val pageSize = 50
+  const val photoMaxBytes = 4000000
+  const val photoMaxEdge = 2048
+  const val photosPerSend = 4
   const val typingSendMs = 3000
   const val typingShowMs = 5000
 }

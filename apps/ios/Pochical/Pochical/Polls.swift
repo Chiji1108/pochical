@@ -146,7 +146,9 @@ struct PollCard: View {
     .padding(.horizontal, 12)
     .padding(.vertical, 4)
     .frame(minHeight: 48)
-    .background(isDecided ? colors.accentContainer : .clear)
+    // A band across the card, square as /design's: a background left to
+    // itself takes the card's rounded corners.
+    .background(isDecided ? colors.accentContainer : .clear, in: Rectangle())
     .opacity(decided != nil && !isDecided ? 0.45 : 1)
   }
 

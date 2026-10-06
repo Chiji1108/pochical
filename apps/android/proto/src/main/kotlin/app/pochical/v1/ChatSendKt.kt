@@ -205,8 +205,50 @@ public object ChatSendKt {
     public fun clearPoll() {
       _builder.clearPoll()
     }
+
+    /**
+     * ```
+     * A photo instead, the sender's own, uploaded first; no words or days.
+     * ```
+     *
+     * `.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];`
+     */
+    public var photo: app.pochical.v1.ChatPhoto
+      @kotlin.jvm.JvmName("getPhoto")
+        get() = _builder.photo
+      @kotlin.jvm.JvmName("setPhoto")
+        set(value) {
+        _builder.photo = value
+      }
+    /**
+     * ```
+     * A photo instead, the sender's own, uploaded first; no words or days.
+     * ```
+     *
+     * `.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];`
+     */
+    public fun clearPhoto() {
+      _builder.clearPhoto()
+    }
+    /**
+     * ```
+     * A photo instead, the sender's own, uploaded first; no words or days.
+     * ```
+     *
+     * `.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];`
+     * @return Whether the photo field is set.
+     */
+    public fun hasPhoto(): kotlin.Boolean {
+      return _builder.hasPhoto()
+    }
+
+    public val ChatSendKt.Dsl.photoOrNull: app.pochical.v1.ChatPhoto?
+      get() = _builder.photoOrNull
   }
 }
 public inline fun app.pochical.v1.ChatSend.copy(block: `app.pochical.v1`.ChatSendKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatSend =
   `app.pochical.v1`.ChatSendKt.Dsl._create(this.toBuilder()).apply { block() }._build()
+
+public val app.pochical.v1.ChatSendOrBuilder.photoOrNull: app.pochical.v1.ChatPhoto?
+  get() = if (hasPhoto()) getPhoto() else null
 

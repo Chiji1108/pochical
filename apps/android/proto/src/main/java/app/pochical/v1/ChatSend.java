@@ -24,6 +24,7 @@ public  final class ChatSend extends
     text_ = "";
     days_ = emptyProtobufList();
   }
+  private int bitField0_;
   public static final int THREAD_ID_FIELD_NUMBER = 1;
   private java.lang.String threadId_;
   /**
@@ -312,6 +313,73 @@ public  final class ChatSend extends
   private void clearPoll() {
 
     poll_ = false;
+  }
+
+  public static final int PHOTO_FIELD_NUMBER = 5;
+  private app.pochical.v1.ChatPhoto photo_;
+  /**
+   * <pre>
+   * A photo instead, the sender's own, uploaded first; no words or days.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
+   */
+  @java.lang.Override
+  public boolean hasPhoto() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * A photo instead, the sender's own, uploaded first; no words or days.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatPhoto getPhoto() {
+    return photo_ == null ? app.pochical.v1.ChatPhoto.getDefaultInstance() : photo_;
+  }
+  /**
+   * <pre>
+   * A photo instead, the sender's own, uploaded first; no words or days.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
+   */
+  private void setPhoto(app.pochical.v1.ChatPhoto value) {
+    java.util.Objects.requireNonNull(value);
+    photo_ = value;
+    bitField0_ |= 0x00000001;
+  }
+  /**
+   * <pre>
+   * A photo instead, the sender's own, uploaded first; no words or days.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
+   */
+  @java.lang.SuppressWarnings("ReferenceEquality")
+  private void mergePhoto(app.pochical.v1.ChatPhoto value) {
+    java.util.Objects.requireNonNull(value);
+    if (photo_ != null &&
+        photo_ != app.pochical.v1.ChatPhoto.getDefaultInstance()) {
+      photo_ =
+        app.pochical.v1.ChatPhoto.newBuilder(photo_).mergeFrom(value).buildPartial();
+    } else {
+      photo_ = value;
+    }
+    bitField0_ |= 0x00000001;
+  }
+  /**
+   * <pre>
+   * A photo instead, the sender's own, uploaded first; no words or days.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
+   */
+  private void clearPhoto() {
+    photo_ = null;
+    bitField0_ = (bitField0_ & ~0x00000001);
   }
 
   public static app.pochical.v1.ChatSend parseFrom(
@@ -711,6 +779,77 @@ public  final class ChatSend extends
       return this;
     }
 
+    /**
+     * <pre>
+     * A photo instead, the sender's own, uploaded first; no words or days.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
+     */
+    @java.lang.Override
+    public boolean hasPhoto() {
+      return instance.hasPhoto();
+    }
+    /**
+     * <pre>
+     * A photo instead, the sender's own, uploaded first; no words or days.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatPhoto getPhoto() {
+      return instance.getPhoto();
+    }
+    /**
+     * <pre>
+     * A photo instead, the sender's own, uploaded first; no words or days.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
+     */
+    public Builder setPhoto(app.pochical.v1.ChatPhoto value) {
+      copyOnWrite();
+      instance.setPhoto(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * A photo instead, the sender's own, uploaded first; no words or days.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
+     */
+    public Builder setPhoto(
+        app.pochical.v1.ChatPhoto.Builder builderForValue) {
+      copyOnWrite();
+      instance.setPhoto(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * A photo instead, the sender's own, uploaded first; no words or days.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
+     */
+    public Builder mergePhoto(app.pochical.v1.ChatPhoto value) {
+      copyOnWrite();
+      instance.mergePhoto(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A photo instead, the sender's own, uploaded first; no words or days.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
+     */
+    public Builder clearPhoto() {  copyOnWrite();
+      instance.clearPhoto();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatSend)
   }
   @java.lang.Override
@@ -727,14 +866,16 @@ public  final class ChatSend extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
+            "bitField0_",
             "threadId_",
             "text_",
             "days_",
             "poll_",
+            "photo_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0001\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u021a\u0004\u0007";
+              "\u0000\u0005\u0000\u0001\u0001\u0005\u0005\u0000\u0001\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u021a\u0004\u0007\u0005\u1009\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

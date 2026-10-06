@@ -22,6 +22,7 @@ import {
   seenBy,
   takeChatEdit,
   unreadCount,
+  notePhoto,
 } from "./group-chat";
 import migrations from "./group-do-migrations/migrations.js";
 import {
@@ -40,6 +41,7 @@ import {
   takeMemberPattern,
   takeMemberRepeatOrders,
 } from "./group-shifts";
+import { photoKey } from "./photos";
 import {
   acceptSyncSocket,
   answerKeepalive,
@@ -305,6 +307,15 @@ export class GroupDO extends DurableObject<Env> {
     return cursor;
   }
 
+  /**
+   * Notes a photo a member has uploaded, which the Worker asks before it
+   * stores it: false when the id is someone else's photo already, or the
+   * user is not in the group.
+   */
+  notePhoto(photoId: string, userId: string): boolean {
+    return this.isMember(userId) && notePhoto(this.db, photoId, userId);
+  }
+
   /** A member's socket, forwarded once the Worker has checked them. */
   fetch(request: Request): Response {
     return acceptSyncSocket(this.ctx, request);
@@ -414,6 +425,7 @@ export class GroupDO extends DurableObject<Env> {
     };
     // The other members, read once for every send in the frame.
     let others: string[] | undefined;
+    const photosGone: string[] = [];
     const { changed, refused } = this.ctx.storage.transactionSync(() => {
       const made: Change[] = [];
       const back: Change[] = [];
@@ -444,9 +456,19 @@ export class GroupDO extends DurableObject<Env> {
         if (taken.refused) {
           back.push(taken.refused);
         }
+        if (taken.photoGone !== undefined) {
+          photosGone.push(taken.photoGone);
+        }
       }
       return { changed: made, refused: back };
     });
+    // A photo taken back goes from the group's photos for everyone.
+    const groupId = this.ctx.id.name;
+    if (groupId !== undefined && photosGone.length > 0) {
+      this.ctx.waitUntil(
+        this.env.PHOTOS.delete(photosGone.map((id) => photoKey(groupId, id)))
+      );
+    }
     broadcastChanges(this.ctx, changed, seenBy);
     this.tellUnread(counted);
     if (refused.length > 0) {

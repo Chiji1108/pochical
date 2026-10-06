@@ -3,6 +3,7 @@ import { createFetchHandler } from "@connectrpc/connect/protocol";
 
 import { registerGroupService } from "./group-service";
 import { registerInviteService } from "./invite-service";
+import { getPhoto, PHOTO_PATH, putPhoto } from "./photos";
 import { tooManySignIns } from "./rate-limits";
 import { getAuth, sessionUser } from "./session";
 import type { SessionUser } from "./session";
@@ -44,6 +45,33 @@ const forUser = (request: Request, user: SessionUser): Request => {
 
 const signInFirst = (): Response =>
   new Response("Sign in first", { status: 401 });
+
+/** A member's upload of one of the group's photos, or a read of one. */
+const photoRequest = async (
+  request: Request,
+  env: Env,
+  groupId: string,
+  photoId: string
+): Promise<Response> => {
+  const user = await sessionUser(request.headers);
+  if (!user) {
+    return signInFirst();
+  }
+  if (!(await env.USERS.getByName(user.id).isMember(groupId))) {
+    return new Response("Not a member of this group", { status: 403 });
+  }
+  switch (request.method) {
+    case "PUT": {
+      return await putPhoto(request, env, groupId, photoId, user.id);
+    }
+    case "GET": {
+      return await getPhoto(env, groupId, photoId);
+    }
+    default: {
+      return new Response("Method not allowed", { status: 405 });
+    }
+  }
+};
 
 export default {
   async fetch(request, env) {
@@ -87,6 +115,12 @@ export default {
         return new Response("Not a member of this group", { status: 403 });
       }
       return await env.GROUPS.getByName(groupId).fetch(forUser(request, user));
+    }
+
+    // A group's photos, as its socket: its members alone, by their own DO.
+    const photo = PHOTO_PATH.exec(pathname)?.groups;
+    if (photo?.groupId !== undefined && photo.photoId !== undefined) {
+      return await photoRequest(request, env, photo.groupId, photo.photoId);
     }
 
     return new Response("Not found", { status: 404 });

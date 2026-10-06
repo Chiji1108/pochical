@@ -1,3 +1,5 @@
+import Foundation
+import ImageIO
 import PochicalProto
 import SQLiteData
 import Testing
@@ -479,4 +481,53 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     #expect(state.lines[0].decided == tenth)
     #expect(state.pins.map(\.seq) == [1])
   }
+}
+
+@Test func aPhotoLineKeepsItsPhotoWhileWaitingAndLosesItTakenBack() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var photo = line(1, "")
+    photo.chatLine.photo.id = "p1"
+    photo.chatLine.photo.width = 300
+    photo.chatLine.photo.height = 200
+    try GroupSync.take([photo], of: "g", in: db)
+    var send = Pochical_V1_ChatSend()
+    send.threadID = groupThread
+    send.photo.id = "p2"
+    send.photo.width = 10
+    send.photo.height = 20
+    try Chats.edit(.send(send), in: "g", now: 1, db: db)
+    var state = try Chats.state(of: groupThread, in: "g", db: db)
+    #expect(state.lines.map(\.photo) == [LinePhoto(id: "p1", width: 300, height: 200)])
+    #expect(state.waiting.map(\.photo) == [LinePhoto(id: "p2", width: 10, height: 20)])
+
+    var unsend = Pochical_V1_ChatUnsend()
+    unsend.threadID = groupThread
+    unsend.seq = 1
+    try Chats.edit(.unsend(unsend), in: "g", now: 2, db: db)
+    state = try Chats.state(of: groupThread, in: "g", db: db)
+    #expect(state.lines[0].photo == nil)
+  }
+}
+
+@Test func aPhotoIsShrunkToItsLongestSideWithoutItsMetadata() throws {
+  // A 3000×1000 picture with a place in its EXIF.
+  let context = CGContext(
+    data: nil, width: 3000, height: 1000, bitsPerComponent: 8, bytesPerRow: 0,
+    space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+  context.setFillColor(red: 0.2, green: 0.5, blue: 0.3, alpha: 1)
+  context.fill(CGRect(x: 0, y: 0, width: 3000, height: 1000))
+  let out = NSMutableData()
+  let destination = CGImageDestinationCreateWithData(out, "public.jpeg" as CFString, 1, nil)!
+  CGImageDestinationAddImage(
+    destination, context.makeImage()!,
+    [kCGImagePropertyGPSDictionary: [kCGImagePropertyGPSLatitude: 35.68]] as CFDictionary)
+  CGImageDestinationFinalize(destination)
+
+  let shrunk = try #require(ChatPhotos.shrink(out as Data))
+  #expect(shrunk.width == 2048)
+  #expect(shrunk.height == 683)
+  let source = CGImageSourceCreateWithData(shrunk.jpeg as CFData, nil)!
+  let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+  #expect(properties?[kCGImagePropertyGPSDictionary] == nil)
 }

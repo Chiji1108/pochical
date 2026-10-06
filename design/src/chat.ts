@@ -31,6 +31,15 @@ export const chatRules = {
   // each earlier page as it scrolls back. A device catching up gets at
   // most this many new lines of each chat; the rest come as pages.
   pageSize: 50,
+  // The most bytes one photo may be once shrunk to send; the server
+  // refuses a larger one.
+  photoMaxBytes: 4_000_000,
+  // A photo is shrunk to send until its longer side is at most this many
+  // pixels, as chat apps send them; shrinking it again as JPEG also leaves
+  // its location behind.
+  photoMaxEdge: 2048,
+  // The most photos sent at once, each as its own line.
+  photosPerSend: 4,
   // How often, in milliseconds, a client sends a typing frame while
   // someone is writing.
   typingSendMs: 3000,

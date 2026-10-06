@@ -10,6 +10,9 @@
     "linkPreviewSettleMs": 400,
     "maxPins": 5,
     "pageSize": 50,
+    "photoMaxBytes": 4000000,
+    "photoMaxEdge": 2048,
+    "photosPerSend": 4,
     "typingSendMs": 3000,
     "typingShowMs": 5000
   },

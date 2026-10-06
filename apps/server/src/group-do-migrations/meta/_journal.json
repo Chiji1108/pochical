@@ -85,6 +85,13 @@
       "when": 1791325325560,
       "tag": "0011_chat_polls",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1791327448093,
+      "tag": "0012_chat_photos",
+      "breakpoints": true
     }
   ]
 }

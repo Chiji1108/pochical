@@ -1,3 +1,4 @@
+import { chatRules } from "@pochical/design/chat";
 import { X } from "lucide-react";
 import { useContext, useState } from "react";
 import type { Ref } from "react";
@@ -13,7 +14,7 @@ import { srOnly } from "./design-ui";
 
 // How many photos go in one send: a roster is a page or two, and more
 // would flood a small group's chat.
-export const maxPhotos = 4;
+export const maxPhotos = chatRules.photosPerSend;
 
 // A chosen photo with its size, read before it is shown so its line
 // keeps its place; the apps read it while shrinking the photo to send.

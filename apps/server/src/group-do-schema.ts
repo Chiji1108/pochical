@@ -125,6 +125,13 @@ export const chatLines = sqliteTable(
     edited: integer({ mode: "boolean" }).notNull().default(false),
     // The sending edit's op_id: a send taken twice is one line.
     opId: text("op_id").notNull(),
+    // The photo sent as the line, as pochical.v1.ChatPhoto's fields;
+    // none for words or days, and once unsent.
+    photo: text({ mode: "json" }).$type<{
+      id: string;
+      height: number;
+      width: number;
+    }>(),
     // The cursor it was last pinned at, while pinned for everyone.
     pinnedAt: integer("pinned_at"),
     // Its days are put to the vote.
@@ -194,3 +201,13 @@ export const chatVotes = sqliteTable(
     }),
   ]
 );
+
+// Photos members have uploaded to the group's chats (the Worker notes each
+// as it stores it in R2), so a line can send only its uploader's own photo,
+// and only once.
+export const chatPhotos = sqliteTable("chat_photos", {
+  id: text().primaryKey(),
+  // Sent as a line already.
+  sent: integer({ mode: "boolean" }).notNull().default(false),
+  userId: text("user_id").notNull(),
+});
