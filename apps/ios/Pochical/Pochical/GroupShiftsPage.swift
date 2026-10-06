@@ -47,6 +47,10 @@ struct GroupShiftsPage: View {
   @State private var pickedLayout: ShiftsLayout?
   /// The month at the top of the list, named in the row pinned over it.
   @State private var monthInSight = Day.today.firstOfMonth
+  /// Whether today's day or week is in sight; 今日 shows while it isn't.
+  @State private var todayInSight = true
+  /// Where 月を選ぶ or 今日 asked the list to go.
+  @State private var goal: ListGoal?
 
   private var layouts: [ShiftsLayout] {
     DayRowsDensity(members: members.count) == .scroll
@@ -68,15 +72,27 @@ struct GroupShiftsPage: View {
     let opening = picked ?? Day.today
     VStack(spacing: 0) {
       if layout != .person {
-        // The month in sight, pinned over the list (/design's MonthRow).
-        Text(fullMonthName(monthInSight))
-          .font(.title3.bold())
-          .contentTransition(.numericText())
-          .animation(.default, value: monthInSight)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, 16)
-          .padding(.vertical, 8)
-          .accessibilityAddTraits(.isHeader)
+        // The month in sight, pinned over the list, which opens 月を選ぶ,
+        // and 今日 while today is out of sight (/design's MonthRow).
+        HStack {
+          MonthTitleButton(
+            month: monthInSight, first: months[0], last: months[months.count - 1]
+          ) { goal = .month($0) } label: {
+            Text(fullMonthName(monthInSight))
+              .font(.title3.bold())
+              .foregroundStyle(colors.textPrimary)
+              .contentTransition(.numericText())
+              .animation(.default, value: monthInSight)
+          }
+          Spacer()
+          if !todayInSight {
+            TodayButton(unit: "日") { goal = .today }
+          }
+        }
+        .animation(.default, value: todayInSight)
+        .frame(minHeight: Metrics.touch)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 2)
       }
       switch layout {
       case .days: GroupDayHeader(members: members).padding(.horizontal, 16)
@@ -123,8 +139,8 @@ struct GroupShiftsPage: View {
       try? await $members.load(GroupMembersRequest(groupID: group.id, from: first, through: last))
     }
     .sheet(item: $picked) { day in
-      // As tall as its rows, as /design's, up to half the screen.
-      let fitted = PresentationDetent.height(CGFloat(120 + members.count * 52))
+      // As tall as its rows, as /design's.
+      let fitted = PresentationDetent.height(daySheetHeight)
       DaySheet(day: day, members: members)
         .presentationDetents([fitted, .large])
         .presentationBackgroundInteraction(.enabled(upThrough: fitted))
@@ -242,19 +258,29 @@ struct GroupShiftsPage: View {
         if let first = shown.min() {
           monthInSight = (layout == .days ? first : first.adding(days: 6)).firstOfMonth
         }
+        todayInSight = shown.contains(anchor(of: Day.today))
+      }
+      .onChange(of: goal) { _, goal in
+        switch goal {
+        case .month(let month): scroll.scrollTo("heading-\(month.key)", anchor: .top)
+        case .today: withAnimation(Springs.standard) { scroll.scrollTo(anchor(of: Day.today), anchor: .top) }
+        case nil: return
+        }
+        self.goal = nil
       }
       // Opening at the top, the day's month named in the pinned row.
       .onAppear { scroll.scrollTo(anchor(of: opening), anchor: .top) }
       .onChange(of: layout) { scroll.scrollTo(anchor(of: picked ?? Day.today), anchor: .top) }
-      // The day picked stays in sight over its sheet, which takes the
-      // screen's lower half.
-      .onChange(of: picked) { _, day in
-        guard let day else { return }
-        withAnimation(Springs.standard) {
-          scroll.scrollTo(anchor(of: day), anchor: UnitPoint(x: 0.5, y: 0.15))
-        }
-      }
+      // As /design's: the table stays where it is when a day is picked;
+      // room under it while the sheet is up lets a row near the bottom be
+      // scrolled above the sheet.
+      .contentMargins(.bottom, picked == nil ? 0 : daySheetHeight, for: .scrollContent)
     }
+  }
+
+  /// The day's sheet: its bar and a row a member.
+  private var daySheetHeight: CGFloat {
+    CGFloat(120 + members.count * 52)
   }
 
   private func pick(_ day: Day) {
@@ -397,4 +423,10 @@ struct TogetherCount: View {
     .accessibilityElement(children: .ignore)
     .accessibilityLabel("\(count)日")
   }
+}
+
+/// Where the list of months is asked to go.
+private enum ListGoal: Hashable {
+  case month(Day)
+  case today
 }

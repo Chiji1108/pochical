@@ -36,13 +36,22 @@ struct GroupPersonView: View {
     VStack(alignment: .leading, spacing: 12) {
       people(picked: person)
       HStack {
-        RollingMonthTitle(position: position) { Day.today.firstOfMonth.addingMonths($0 - Self.span) }
+        MonthTitleButton(
+          month: shown, first: Day.today.firstOfMonth.addingMonths(-Self.span),
+          last: Day.today.firstOfMonth.addingMonths(Self.span)
+        ) { picked in
+          month = picked
+        } label: {
+          RollingMonthTitle(position: position) {
+            Day.today.firstOfMonth.addingMonths($0 - Self.span)
+          }
+          .foregroundStyle(colors.textPrimary)
+        }
         Spacer()
         if shown != Day.today.firstOfMonth {
-          Button("今月") {
+          TodayButton(unit: "月") {
             withAnimation(Springs.standard) { month = Day.today.firstOfMonth }
           }
-          .buttonStyle(BarButton())
         }
       }
       .frame(minHeight: Metrics.touch)
