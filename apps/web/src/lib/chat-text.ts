@@ -85,6 +85,21 @@ export function mentionsOf(text: string) {
   return [...text.matchAll(MENTION)].flatMap((match) => match.groups?.id ?? []);
 }
 
+// An @ and what follows it at the end of the message being written; a
+// space ends it. A Japanese keyboard types a full-width ＠.
+const MENTION_QUERY = /[@＠](?<query>[^\s@＠]*)$/u;
+
+// What follows the @ being written, the names to list for it.
+export function mentionQuery(draft: string) {
+  return MENTION_QUERY.exec(draft)?.groups?.query;
+}
+
+// The draft with the @ being written turned into the member's @name and
+// a space.
+export function pickingMention(draft: string, name: string) {
+  return draft.replace(MENTION_QUERY, `@${name} `);
+}
+
 const REGEX_SPECIAL = /[.*+?^${}()|[\]\\]/gu;
 
 // A message as sent: each member picked while writing, whose @name is

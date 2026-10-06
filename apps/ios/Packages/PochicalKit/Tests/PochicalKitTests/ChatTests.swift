@@ -257,3 +257,68 @@ private func unreadCount(_ cursor: UInt64, _ count: UInt32, in groupID: String =
     #expect(try Chats.threads(in: "g", db: db) == [groupThread, "direct:aya:me"])
   }
 }
+
+struct MessageTextVectors: Decodable, Sendable {
+  struct Parts: VectorCase {
+    let name: String
+    let text: String
+    let expected: [TextPart]
+  }
+
+  struct Plain: Decodable, Sendable, CustomTestStringConvertible {
+    let text: String
+    let names: [String: String]
+    let expected: String
+    var testDescription: String { text }
+  }
+
+  struct Picked: VectorCase {
+    let name: String
+    let text: String
+    let picked: [PickedMember]
+    let expected: String
+  }
+
+  struct Query: VectorCase {
+    let name: String
+    let text: String
+    let expected: String?
+    let picked: String
+  }
+
+  let textParts: [Parts]
+  let plainText: [Plain]
+  let withMentions: [Picked]
+  let mentionQuery: [Query]
+}
+
+@Test(arguments: try vectors("chat-text", as: MessageTextVectors.self).textParts)
+func textPartsOfAMessage(_ vector: MessageTextVectors.Parts) {
+  #expect(textParts(vector.text) == vector.expected)
+}
+
+@Test(arguments: try vectors("chat-text", as: MessageTextVectors.self).plainText)
+func plainTextOfAMessage(_ vector: MessageTextVectors.Plain) {
+  #expect(plainText(vector.text) { vector.names[$0] ?? "" } == vector.expected)
+}
+
+@Test(arguments: try vectors("chat-text", as: MessageTextVectors.self).withMentions)
+func aMessageWithMentions(_ vector: MessageTextVectors.Picked) {
+  #expect(withMentions(vector.text, picked: vector.picked) == vector.expected)
+}
+
+@Test(arguments: try vectors("chat-text", as: MessageTextVectors.self).mentionQuery)
+func theNamesToListWhileWriting(_ vector: MessageTextVectors.Query) {
+  #expect(mentionQuery(vector.text) == vector.expected)
+  #expect(pickingMention(vector.text, name: "あや") == vector.picked)
+}
+
+@Test func aChatsSummaryMarksAnUnreadMentionOfTheReader() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try GroupSync.take([line(1, "<@me> 来れる？"), line(2, "どう？")], of: "g", in: db)
+    try Sync.take([unreadCount(1, 2)], in: db)
+    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", db: db).mentioned)
+    #expect(try !Chats.summary(of: groupThread, in: "g", me: "aya", db: db).mentioned)
+  }
+}

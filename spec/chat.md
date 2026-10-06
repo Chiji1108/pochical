@@ -59,7 +59,7 @@ The server reads the page, so that people's addresses are not sent to the sites,
 A mention names one member of the group in a group chat (全体チャット). One-to-one chats have none.
 
 - A message keeps a mention as `<@id>`, the member's id in the group, and shows it as @ and their name in the group as it is when read, so a later name change shows the new name. Copying a message, a chat's last line in the list, a quote and a notification show the same @name as plain words. A member who has left keeps their last name.
-- While writing, an `@` at the end of the message lists the other current members whose name contains what follows it. Picking one writes `@name` and a space; only those picked become mentions when the message is sent, and only while `@name` is still followed by a space or the end. Typing a name by hand mentions no one.
+- While writing, an `@` (or the full-width `＠` a Japanese keyboard types) at the end of the message lists the other current members whose name contains what follows it (`spec/vectors/chat-text.json`, mentionQuery). Picking one writes `@name` and a space; only those picked become mentions when the message is sent, and only while `@name` is still followed by a space or the end. Typing a name by hand mentions no one.
 - In a message, a mention is in the name's weight, in others' messages in the accent color; one of the reader looks the same, as the chat list's @ is what finds it. A tap on a mention opens that member's profile, except the reader's own.
 - There is no mention of everyone: a group chat's line already reaches everyone, and a member who turned it off chose quiet.
 
