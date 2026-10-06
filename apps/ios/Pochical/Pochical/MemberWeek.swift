@@ -12,18 +12,24 @@ func thisWeek(start: Int) -> [Day] {
 /// How far ahead the hub looks for the next day everyone is off.
 let nextTogetherDays = 60
 
-/// The width of the members' faces beside a week.
-private let facesWidth: CGFloat = 28
+/// The width of the members' faces beside a week, as /design's columns:
+/// room around a face on the hub's card and more on the month's blocks,
+/// so none touches the block's edge.
+private func facesWidth(compact: Bool) -> CGFloat {
+  compact ? 28 : 34
+}
 
 /// The weekdays over a group's weeks, from the day the week starts on.
 struct GroupWeekdays: View {
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
+  /// Over the hub's card, beside its narrower faces.
+  var compact = false
 
   var body: some View {
     let week = settings.device.week
     HStack(spacing: 0) {
-      Color.clear.frame(width: facesWidth, height: 1)
+      Color.clear.frame(width: facesWidth(compact: compact), height: 1)
       ForEach(0..<7, id: \.self) { index in
         let weekday = (week.start + index) % 7
         Text(WeekdayRow.names[weekday])
@@ -78,7 +84,7 @@ struct GroupWeek: View {
             .accessibilityLabel(member.name)
         }
       }
-      .frame(width: facesWidth)
+      .frame(width: facesWidth(compact: compact))
       ForEach(days, id: \.self) { day in
         let column = VStack(spacing: 0) {
           // A month's 1st says its month, where the week runs into it.
@@ -186,7 +192,7 @@ struct MemberWeek: View {
         onOpen(nil)
       } label: {
         VStack(spacing: 4) {
-          GroupWeekdays()
+          GroupWeekdays(compact: true)
           GroupWeek(days: days, members: members, compact: true)
         }
         .contentShape(.rect)

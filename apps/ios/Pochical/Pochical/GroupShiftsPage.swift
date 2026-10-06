@@ -80,7 +80,9 @@ struct GroupShiftsPage: View {
       }
       switch layout {
       case .days: GroupDayHeader(members: members).padding(.horizontal, 16)
-      case .weeks: GroupWeekdays().padding(.horizontal, 16).padding(.bottom, 6)
+      // Over the blocks' columns, which keep room at their trailing end.
+      case .weeks:
+        GroupWeekdays().padding(.leading, 16).padding(.trailing, 20).padding(.bottom, 6)
       case .person: EmptyView()
       }
       if layout == .person {
@@ -218,7 +220,9 @@ struct GroupShiftsPage: View {
                 GroupWeek(
                   days: week, members: members, month: month, picked: picked, onPick: pick
                 )
+                // Clear of the rounded corners, a band in the last column too.
                 .padding(.vertical, 4)
+                .padding(.trailing, 4)
                 .background(
                   colors.backgroundBase, in: RoundedRectangle(cornerRadius: Radius.xxl)
                 )
