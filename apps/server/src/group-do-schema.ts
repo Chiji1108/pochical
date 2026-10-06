@@ -117,6 +117,9 @@ export const chatLines = sqliteTable(
     authorId: text("author_id").notNull(),
     createdCursor: integer("created_cursor").notNull(),
     cursor: integer().notNull(),
+    // The days a line of shared days shares, as a JSON array of
+    // YYYY-MM-DD; none for words, and once unsent.
+    days: text({ mode: "json" }).$type<string[]>(),
     edited: integer({ mode: "boolean" }).notNull().default(false),
     // The sending edit's op_id: a send taken twice is one line.
     opId: text("op_id").notNull(),

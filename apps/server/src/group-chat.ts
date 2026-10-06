@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { chatRules } from "@pochical/design/chat";
-import { textLimits } from "@pochical/design/limits";
+import { SHARED_DAYS_MAX, textLimits } from "@pochical/design/limits";
 import {
   and,
   asc,
@@ -18,6 +18,7 @@ import {
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
 import { pinStep } from "./chat-pins";
+import { isDate } from "./day-values";
 import { ChangeSchema, ChatLineSchema } from "./gen/pochical/v1/sync_pb";
 import type {
   Change,
@@ -25,6 +26,7 @@ import type {
   ChatLine,
   ChatPin,
   ChatReact,
+  ChatSend,
 } from "./gen/pochical/v1/sync_pb";
 import { chatLines, chatReactions, readMarks } from "./group-do-schema";
 import { isId } from "./ids";
@@ -126,6 +128,7 @@ const reactionsOf = (
 const lineOf = (db: DrizzleSqliteDODatabase, row: LineRow): ChatLine =>
   create(ChatLineSchema, {
     authorId: row.authorId,
+    days: row.days ?? [],
     edited: row.edited,
     opId: row.opId,
     pinnedOrder: BigInt(row.pinnedAt ?? 0),
@@ -161,6 +164,18 @@ export const readMarkChange = (row: MarkRow): Change =>
 
 const fitsLine = (text: string): boolean =>
   fitsText(text, textLimits.chatMessage);
+
+/** Days a line may share: 1 to SHARED_DAYS_MAX dates, each once, in order. */
+const fitsDays = (days: readonly string[]): boolean =>
+  days.length > 0 &&
+  days.length <= SHARED_DAYS_MAX &&
+  days.every(
+    (day, at) => isDate(day) && (at === 0 || (days[at - 1] ?? "") < day)
+  );
+
+/** A new line's words, or its days with no words. */
+const fitsSend = ({ text, days }: ChatSend): boolean =>
+  days.length === 0 ? fitsLine(text) : text === "" && fitsDays(days);
 
 /** The chat's last seq, 0 before any line. */
 export const chatHead = (
@@ -308,9 +323,9 @@ const takeReaction = (
 
 /**
  * New words for one of the member's own lines, or the line taken back
- * with its reactions and pin; the line comes back to the member as the
- * group holds it when it is not theirs, taken back already, or the words
- * do not fit.
+ * with its days, reactions and pin; the line comes back to the member as
+ * the group holds it when it is not theirs, taken back already, a line of
+ * days (which has no words to change), or the words do not fit.
  */
 const takeWords = (
   db: DrizzleSqliteDODatabase,
@@ -324,7 +339,9 @@ const takeWords = (
   }
   const unsend = kind.case === "unsend";
   const text = unsend ? "" : kind.value.text;
-  if (line.authorId !== userId || line.unsent || !(unsend || fitsLine(text))) {
+  // A line of days has no words to change.
+  const words = unsend || (line.days === null && fitsLine(text));
+  if (line.authorId !== userId || line.unsent || !words) {
     return { refused: chatLineChange(db, line) };
   }
   // Taking a line back takes its reactions with it.
@@ -343,7 +360,7 @@ const takeWords = (
     .set(
       // Taking a line back takes its pin off too.
       unsend
-        ? { cursor, pinnedAt: null, text, unsent: true }
+        ? { cursor, days: null, pinnedAt: null, text, unsent: true }
         : { cursor, edited: true, text }
     )
     .where(
@@ -433,7 +450,7 @@ export const takeChatEdit = (
         .from(chatLines)
         .where(eq(chatLines.opId, opId))
         .get();
-      if (taken !== undefined || !fitsLine(kind.value.text)) {
+      if (taken !== undefined || !fitsSend(kind.value)) {
         return {};
       }
       const row = db
@@ -442,6 +459,7 @@ export const takeChatEdit = (
           authorId: userId,
           createdCursor: cursor,
           cursor,
+          days: kind.value.days.length === 0 ? null : kind.value.days,
           opId,
           sentAt: new Date(),
           seq: chatHead(db, kind.value.threadId) + 1,

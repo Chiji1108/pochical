@@ -35,7 +35,16 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   /// Pinned for everyone: the group's cursor when it was last pinned, the
   /// latest the greatest; 0 when not pinned.
   public var pinnedOrder: Int64 = 0
+  /// The days a line of shared days shares, as JSON, `["YYYY-MM-DD"]`;
+  /// none for words, and once unsent.
+  var daysJSON = "[]"
   public var id: Int64 { seq }
+
+  /// The days it shares with everyone's shifts, in order.
+  public var days: [Day] {
+    get { sharedDays(from: daysJSON) }
+    set { daysJSON = sharedDaysJSON(newValue) }
+  }
 
   /// Each emoji on the line, in the order first chosen, with who chose it.
   public var reactions: [LineReaction] {
@@ -46,6 +55,17 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
         ?? "[]"
     }
   }
+}
+
+/// Shared days as a line keeps them, from their JSON.
+func sharedDays(from json: String) -> [Day] {
+  ((try? JSONDecoder().decode([String].self, from: Data(json.utf8))) ?? []).compactMap(Day.init)
+}
+
+/// Shared days as JSON, for a line to keep.
+func sharedDaysJSON(_ days: [Day]) -> String {
+  (try? JSONEncoder().encode(days.map(\.key))).flatMap { String(data: $0, encoding: .utf8) }
+    ?? "[]"
 }
 
 /// One emoji on a line and the members who chose it, in the order they did.
@@ -179,6 +199,14 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep the chats' shared days") { db in
+      try #sql(
+        """
+        ALTER TABLE "chatLines" ADD COLUMN "daysJSON" TEXT NOT NULL DEFAULT '[]'
+        """
+      )
+      .execute(db)
+    }
   }
 }
 
@@ -215,6 +243,7 @@ public enum Chats {
       opID: line.opID)
     row.reactions = line.reactions.map { LineReaction(emoji: $0.emoji, userIDs: $0.userIds) }
     row.pinnedOrder = Int64(line.pinnedOrder)
+    row.days = line.days.compactMap(Day.init)
     try ChatLineRow.insert { row }.execute(db)
   }
 
@@ -355,6 +384,8 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
   public let opID: String
   public let text: String
   public let madeAtMs: Int64
+  /// The days it shares, for a line of shared days.
+  public var days: [Day] = []
   public var id: String { opID }
 }
 
@@ -390,7 +421,10 @@ extension Chats {
       let edit = try Pochical_V1_ChatEdit(serializedBytes: row.edit)
       switch edit.kind {
       case .send(let send) where send.threadID == threadID && !taken.contains(edit.opID):
-        waiting.append(WaitingLine(opID: edit.opID, text: send.text, madeAtMs: row.madeAtMs))
+        waiting.append(
+          WaitingLine(
+            opID: edit.opID, text: send.text, madeAtMs: row.madeAtMs,
+            days: send.days.compactMap(Day.init)))
       case .change(let change) where change.threadID == threadID:
         if let at = lines.firstIndex(where: { $0.seq == Int64(change.seq) }) {
           lines[at].text = change.text
@@ -401,6 +435,7 @@ extension Chats {
           lines[at].text = ""
           lines[at].unsent = true
           lines[at].reactions = []
+          lines[at].days = []
         }
         pinned = pinStep(pinned, unsend: String(unsend.seq)).pins
       case .pin(let pin) where pin.threadID == threadID:
@@ -515,7 +550,8 @@ extension Chats {
       case .read(let read) where read.threadID == threadID:
         ownRead = max(ownRead, Int64(read.lastReadSeq))
       case .send(let send) where send.threadID == threadID:
-        waiting = WaitingLine(opID: edit.opID, text: send.text, madeAtMs: madeAtMs)
+        waiting = WaitingLine(
+          opID: edit.opID, text: send.text, madeAtMs: madeAtMs, days: send.days.compactMap(Day.init))
       default: break
       }
     }

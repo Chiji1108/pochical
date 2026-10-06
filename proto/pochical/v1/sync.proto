@@ -377,8 +377,8 @@ message ChatLine {
   uint64 seq = 2;
   // Who wrote it; it stays theirs after they leave.
   string author_id = 3;
-  // chatMessage characters at most (design/src/limits.ts); empty once
-  // unsent.
+  // chatMessage characters at most (design/src/limits.ts); empty for a
+  // line of shared days, and once unsent.
   string text = 4;
   // When the group took it, in ms since the epoch.
   int64 sent_at_ms = 5;
@@ -395,6 +395,9 @@ message ChatLine {
   // Pinned for everyone in the chat: the group's cursor when it was last
   // pinned, so the latest pin is the greatest; 0 when not pinned.
   uint64 pinned_order = 10;
+  // The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+  // line of days has no words. None once unsent.
+  repeated string days = 11;
 }
 
 // One emoji on a line and the members who chose it.
@@ -451,14 +454,18 @@ message ChatReact {
   bool on = 4;
 }
 
-// A new line at the end of the chat.
+// A new line at the end of the chat: words, or days shared with
+// everyone's shifts (spec/chat.md, Long messages and shared days).
 message ChatSend {
   string thread_id = 1;
-  // 1 to chatMessage characters, not blank.
+  // 1 to chatMessage characters, not blank; empty for days.
   string text = 2;
+  // 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
+  // each once and in order; none for words.
+  repeated string days = 3;
 }
 
-// New words for one of the member's own lines (編集).
+// New words for one of the member's own lines of words (編集).
 message ChatChange {
   string thread_id = 1;
   uint64 seq = 2;
