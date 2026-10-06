@@ -23,6 +23,13 @@ enum DayRowsDensity {
 /// The width of a day's date at the start of its row.
 private let dateWidth: CGFloat = 46
 
+/// Today's bar at a row's start, where every row keeps the room for it.
+private let todayBar: CGFloat = 3
+
+/// How far in a row's band and frame are: clear of today's bar, and of
+/// the row's lines.
+private let rowInset = EdgeInsets(top: 3, leading: todayBar + 3, bottom: 3, trailing: 3)
+
 /// 一覧's pinned heading (/design's DayRowsTable): a column per member,
 /// their face, and their name while few.
 struct GroupDayHeader: View {
@@ -38,7 +45,7 @@ struct GroupDayHeader: View {
           LetterAvatar(name: member.name, size: 24)
           if density == .names {
             Text(member.name)
-              .font(.system(size: 11))
+              .font(.footnote.weight(.semibold))
               .foregroundStyle(colors.textPrimary)
               .lineLimit(1)
           }
@@ -83,7 +90,7 @@ struct GroupDayRow: View {
       onPick(day)
     } label: {
       HStack(spacing: 0) {
-        date(isToday: isToday)
+        date()
         ForEach(Array(members.enumerated()), id: \.element.id) { index, member in
           cell(
             patterns[index],
@@ -104,14 +111,21 @@ struct GroupDayRow: View {
         if together {
           RoundedRectangle(cornerRadius: Radius.sm)
             .fill(colors.accentContainer)
-            .padding(3)
+            .padding(rowInset)
         }
       }
       .overlay {
         if picked {
           RoundedRectangle(cornerRadius: Radius.sm)
             .strokeBorder(colors.accentDefault, lineWidth: 1.5)
-            .padding(3)
+            .padding(rowInset)
+        }
+      }
+      // Today: a bar down the row's start, its whole height, as /design's
+      // border; the band and frame start inside it.
+      .overlay(alignment: .leading) {
+        if isToday {
+          Rectangle().fill(colors.accentDefault).frame(width: todayBar)
         }
       }
       .overlay(alignment: .bottom) {
@@ -126,29 +140,25 @@ struct GroupDayRow: View {
     .accessibilityAddTraits(picked ? .isSelected : [])
   }
 
-  private func date(isToday: Bool) -> some View {
+  private func date() -> some View {
     let week = settings.device.week
     let holiday = week.holiday && Holidays.name(on: day.key, in: "JP") != nil
     let tone: Color =
       switch day.weekday {
+      case _ where day == Day.today: colors.accentDefault
       case 0 where week.sunday: colors.calendarHoliday
       case 6 where week.saturday: colors.calendarSaturday
       default: holiday ? colors.calendarHoliday : colors.textPrimary
       }
     return HStack(alignment: .firstTextBaseline, spacing: 3) {
       Text("\(day.day)")
-        .font(.system(size: 12, weight: .semibold))
+        .font(.system(size: 12, weight: day == Day.today ? .bold : .semibold))
       Text(WeekdayRow.names[day.weekday])
         .font(.system(size: 9))
     }
     .foregroundStyle(tone)
     .padding(.leading, 12)
     .frame(width: dateWidth, alignment: .leading)
-    .overlay(alignment: .leading) {
-      if isToday {
-        Rectangle().fill(colors.accentDefault).frame(width: 3)
-      }
-    }
   }
 
   private func cell(_ pattern: Pattern?, change: TimeChange?, names: Bool, tiled: Bool)

@@ -51,12 +51,38 @@ struct MonthName: View {
   }
 }
 
+/// A month and its year on one line, 2026年9月, rolling as MonthName does
+/// while the pages move (/design's MonthRow under 1人ずつ).
+struct RollingMonthTitle: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  let position: PagerPosition
+  let monthAt: (Int) -> Day
+
+  var body: some View {
+    let at = position.pages
+    let page = Int(at.rounded())
+    let share = reduceMotion ? 0 : at - CGFloat(page)
+    let month = monthAt(page)
+    let coming = share > 0 ? monthAt(page + 1) : share < 0 ? monthAt(page - 1) : month
+    HStack(alignment: .firstTextBaseline, spacing: 0) {
+      RollingText(text: String(month.year), coming: String(coming.year), share: share)
+      Text("年")
+      RollingText(text: String(month.month), coming: String(coming.month), share: share)
+      Text("月")
+    }
+    .font(.title3.bold())
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("\(month.year)年\(month.month)月")
+    .accessibilityAddTraits(.isHeader)
+  }
+}
+
 /// A name rolling within its own line toward `coming`, `share` of the way
 /// to its page (-0.5 to 0.5; toward the next above 0). Half way, the next
 /// page's name takes its place, half rolled in, so the roll runs on
 /// without a break. Its width goes along from the one name's to the
 /// other's, so what follows it (月) moves over as it rolls.
-private struct RollingText: View {
+struct RollingText: View {
   let text: String
   let coming: String
   let share: CGFloat

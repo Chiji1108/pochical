@@ -45,6 +45,12 @@ struct GroupShiftsPage: View {
   @State private var pickedFromList: Day?
   /// The layout picked from the menu; until then the group's size's.
   @State private var pickedLayout: ShiftsLayout?
+  /// The month at the top of the list, named in the row pinned over it.
+  @State private var monthInSight = Day.today.firstOfMonth
+  /// Whether today's day or week is in sight; 今日 shows while it isn't.
+  @State private var todayInSight = true
+  /// Where 月を選ぶ or 今日 asked the list to go.
+  @State private var goal: ListGoal?
 
   private var layouts: [ShiftsLayout] {
     DayRowsDensity(members: members.count) == .scroll
@@ -65,9 +71,34 @@ struct GroupShiftsPage: View {
     let months = (-monthSpan...monthSpan).map { thisMonth.addingMonths($0) }
     let opening = picked ?? Day.today
     VStack(spacing: 0) {
+      if layout != .person {
+        // The month in sight, pinned over the list, which opens 月を選ぶ,
+        // and 今日 while today is out of sight (/design's MonthRow).
+        HStack {
+          MonthTitleButton(
+            month: monthInSight, first: months[0], last: months[months.count - 1]
+          ) { goal = .month($0) } label: {
+            Text(fullMonthName(monthInSight))
+              .font(.title3.bold())
+              .foregroundStyle(colors.textPrimary)
+              .contentTransition(.numericText())
+              .animation(.default, value: monthInSight)
+          }
+          Spacer()
+          if !todayInSight {
+            TodayButton(unit: "日") { goal = .today }
+          }
+        }
+        .animation(.default, value: todayInSight)
+        .frame(minHeight: Metrics.touch)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 2)
+      }
       switch layout {
       case .days: GroupDayHeader(members: members).padding(.horizontal, 16)
-      case .weeks: GroupWeekdays().padding(.horizontal, 16).padding(.bottom, 6)
+      // Over the blocks' columns, which keep room at their trailing end.
+      case .weeks:
+        GroupWeekdays().padding(.leading, 16).padding(.trailing, 20).padding(.bottom, 6)
       case .person: EmptyView()
       }
       if layout == .person {
@@ -86,16 +117,21 @@ struct GroupShiftsPage: View {
     .toolbar {
       if layouts.count > 1 {
         ToolbarItem(placement: .primaryAction) {
-          Menu(layout.name) {
+          Menu {
             Picker("表示", selection: Binding { layout } set: { pickedLayout = $0 }) {
               ForEach(layouts, id: \.self) { Text($0.name).tag($0) }
+            }
+          } label: {
+            HStack(spacing: 4) {
+              Text(layout.name)
+              Image(systemName: "chevron.down").imageScale(.small)
             }
           }
         }
       }
     }
     .task {
-      meID = try? await groupCalls.userID()
+      meID = await groupCalls.userID()
     }
     .task(id: settings.device.week.start) {
       let first = thisMonth.addingMonths(-monthSpan).adding(days: -6)
@@ -103,9 +139,11 @@ struct GroupShiftsPage: View {
       try? await $members.load(GroupMembersRequest(groupID: group.id, from: first, through: last))
     }
     .sheet(item: $picked) { day in
+      // As tall as its rows, as /design's.
+      let fitted = PresentationDetent.height(daySheetHeight)
       DaySheet(day: day, members: members)
-        .presentationDetents([.medium, .large])
-        .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+        .presentationDetents([fitted, .large])
+        .presentationBackgroundInteraction(.enabled(upThrough: fitted))
     }
     .sheet(item: $togetherSheet) {
       if let day = pickedFromList {
@@ -150,7 +188,7 @@ struct GroupShiftsPage: View {
           HStack {
             Text("みんな休み").foregroundStyle(colors.textSecondary)
             Spacer()
-            Text("\(together.days.count)日").foregroundStyle(colors.textPrimary)
+            TogetherCount(count: together.days.count)
             Image(systemName: "chevron.right")
               .imageScale(.small)
               .foregroundStyle(colors.textQuaternary)
@@ -186,6 +224,8 @@ struct GroupShiftsPage: View {
             heading(month)
               .padding(.top, layout == .weeks ? 12 : 36)
               .padding(.bottom, layout == .weeks ? 0 : 12)
+              // Not a day: the month in sight is read off the days.
+              .id("heading-\(month.key)")
             if layout == .days {
               ForEach(month.daysOfMonth, id: \.self) { day in
                 GroupDayRow(day: day, members: members, picked: day == picked, onPick: pick)
@@ -196,7 +236,9 @@ struct GroupShiftsPage: View {
                 GroupWeek(
                   days: week, members: members, month: month, picked: picked, onPick: pick
                 )
+                // Clear of the rounded corners, a band in the last column too.
                 .padding(.vertical, 4)
+                .padding(.trailing, 4)
                 .background(
                   colors.backgroundBase, in: RoundedRectangle(cornerRadius: Radius.xxl)
                 )
@@ -207,12 +249,38 @@ struct GroupShiftsPage: View {
             }
           }
         }
+        .scrollTargetLayout()
         .padding(.horizontal, 16)
         .padding(.bottom, 24)
       }
-      .onAppear { scroll.scrollTo(anchor(of: opening), anchor: .center) }
-      .onChange(of: layout) { scroll.scrollTo(anchor(of: picked ?? Day.today), anchor: .center) }
+      .onScrollTargetVisibilityChange(idType: Day.self, threshold: 0.5) { shown in
+        // A week belongs to the month it ends in.
+        if let first = shown.min() {
+          monthInSight = (layout == .days ? first : first.adding(days: 6)).firstOfMonth
+        }
+        todayInSight = shown.contains(anchor(of: Day.today))
+      }
+      .onChange(of: goal) { _, goal in
+        switch goal {
+        case .month(let month): scroll.scrollTo("heading-\(month.key)", anchor: .top)
+        case .today: withAnimation(Springs.standard) { scroll.scrollTo(anchor(of: Day.today), anchor: .top) }
+        case nil: return
+        }
+        self.goal = nil
+      }
+      // Opening at the top, the day's month named in the pinned row.
+      .onAppear { scroll.scrollTo(anchor(of: opening), anchor: .top) }
+      .onChange(of: layout) { scroll.scrollTo(anchor(of: picked ?? Day.today), anchor: .top) }
+      // As /design's: the table stays where it is when a day is picked;
+      // room under it while the sheet is up lets a row near the bottom be
+      // scrolled above the sheet.
+      .contentMargins(.bottom, picked == nil ? 0 : daySheetHeight, for: .scrollContent)
     }
+  }
+
+  /// The day's sheet: its bar and a row a member.
+  private var daySheetHeight: CGFloat {
+    CGFloat(120 + members.count * 52)
   }
 
   private func pick(_ day: Day) {
@@ -283,23 +351,23 @@ private struct DaySheet: View {
       List(members) { member in
         let entry = member.calendar.shown(from: day, through: day)[day]
         let pattern = entry.flatMap { member.calendar.patternsByID[$0.shift] }
-        HStack(spacing: 12) {
+        // On one line, as /design's: the mark, the pattern and its hours.
+        HStack(spacing: 8) {
           LetterAvatar(name: member.name, size: 28)
           Text(member.name).lineLimit(1)
-          Spacer()
+          Spacer(minLength: 8)
           if let pattern {
             ShiftMark(pattern: pattern, size: 18)
           }
-          VStack(alignment: .trailing, spacing: 2) {
-            Text(pattern?.name ?? "未入力")
-              .foregroundStyle(pattern == nil ? colors.textTertiary : colors.textPrimary)
-            if let hours = hours(entry, pattern) {
-              Text(hours)
-                .font(.caption)
-                .foregroundStyle(colors.textSecondary)
-            }
+          Text(pattern?.name ?? "未入力")
+            .foregroundStyle(pattern == nil ? colors.textTertiary : colors.textSecondary)
+          if let hours = hours(entry, pattern) {
+            Text(hours)
+              .font(.caption)
+              .foregroundStyle(colors.textTertiary)
           }
         }
+        .lineLimit(1)
         .accessibilityElement(children: .combine)
       }
       .navigationTitle(dayName(day))
@@ -328,9 +396,37 @@ private struct DaySheet: View {
     let start = entry.start ?? standard.start
     let end = entry.end ?? standard.end
     guard let change = timeChange(start: entry.start, end: entry.end, standard: standard) else {
-      return "\(start)〜\(end)"
+      return hoursText(start, end)
     }
     let moves = [change.early ? "早出" : nil, change.late ? "残業" : nil].compactMap(\.self)
-    return "\(moves.joined(separator: "・")) \(start)〜\(end)"
+    return "\(moves.joined(separator: "・")) \(hoursText(start, end))"
   }
+}
+
+/// A month with its year, as the pinned row names it: 2026年10月.
+func fullMonthName(_ month: Day) -> String {
+  "\(month.year)年\(month.month)月"
+}
+
+/// How many days everyone is off, large in the accent, as /design's
+/// SummaryRow counts: 4日.
+struct TogetherCount: View {
+  @Environment(\.themeColors) private var colors
+  let count: Int
+
+  var body: some View {
+    HStack(alignment: .firstTextBaseline, spacing: 1) {
+      Text("\(count)").font(.title2.bold())
+      Text("日").font(.footnote.weight(.semibold))
+    }
+    .foregroundStyle(colors.accentDefault)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("\(count)日")
+  }
+}
+
+/// Where the list of months is asked to go.
+private enum ListGoal: Hashable {
+  case month(Day)
+  case today
 }

@@ -74,10 +74,19 @@ public struct GroupCalls: Sendable {
     users = Pochical_V1_UserServiceClient(client: protocolClient)
   }
 
-  /// The signed-in user's id, as groups know them among their members.
-  public func userID() async throws -> String {
-    try await users.getMe(request: Pochical_V1_GetMeRequest(), headers: account.headers()).result
-      .get().userID
+  /// The signed-in user's id, as groups know them among their members:
+  /// the server's, kept on the device, so the screens still know who is
+  /// who offline. Nil only before it was ever heard.
+  public func userID() async -> String? {
+    let store = UserDefaults(suiteName: appGroup) ?? .standard
+    let key = "userID"
+    let answer = await users.getMe(
+      request: Pochical_V1_GetMeRequest(), headers: (try? await account.headers()) ?? [:])
+    if case .success(let me) = answer.result {
+      store.set(me.userID, forKey: key)
+      return me.userID
+    }
+    return store.string(forKey: key)
   }
 
   /// Makes a group with the user in it, as `displayName`. `requestID` is

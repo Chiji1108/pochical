@@ -12,18 +12,24 @@ func thisWeek(start: Int) -> [Day] {
 /// How far ahead the hub looks for the next day everyone is off.
 let nextTogetherDays = 60
 
-/// The width of the members' faces beside a week.
-private let facesWidth: CGFloat = 28
+/// The width of the members' faces beside a week, as /design's columns:
+/// room around a face on the hub's card and more on the month's blocks,
+/// so none touches the block's edge.
+private func facesWidth(compact: Bool) -> CGFloat {
+  compact ? 28 : 34
+}
 
 /// The weekdays over a group's weeks, from the day the week starts on.
 struct GroupWeekdays: View {
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
+  /// Over the hub's card, beside its narrower faces.
+  var compact = false
 
   var body: some View {
     let week = settings.device.week
     HStack(spacing: 0) {
-      Color.clear.frame(width: facesWidth, height: 1)
+      Color.clear.frame(width: facesWidth(compact: compact), height: 1)
       ForEach(0..<7, id: \.self) { index in
         let weekday = (week.start + index) % 7
         Text(WeekdayRow.names[weekday])
@@ -50,6 +56,7 @@ struct GroupWeekdays: View {
 /// date and all, and the picked day framed the same way. Members' marks
 /// show in the viewer's look until each member's own comes with them.
 struct GroupWeek: View {
+  @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
   let days: [Day]
   let members: [GroupMember]
@@ -77,12 +84,13 @@ struct GroupWeek: View {
             .accessibilityLabel(member.name)
         }
       }
-      .frame(width: facesWidth)
+      .frame(width: facesWidth(compact: compact))
       ForEach(days, id: \.self) { day in
         let column = VStack(spacing: 0) {
-          Text("\(day.day)")
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(day == today ? colors.accentDefault : colors.textPrimary)
+          // A month's 1st says its month, where the week runs into it.
+          Text(day.day == 1 && day != days[0] ? "\(day.month)/1" : "\(day.day)")
+            .font(.system(size: 11, weight: day == today ? .bold : .semibold))
+            .foregroundStyle(dateColor(day, today: today))
             .frame(height: dateHeight)
           ForEach(Array(members.enumerated()), id: \.element.id) { index, member in
             let entry = shown[index][day]
@@ -127,6 +135,23 @@ struct GroupWeek: View {
     }
   }
 
+  /// Today in the accent; else Sundays, Saturdays and holidays in their
+  /// colors as the calendar has them.
+  private func dateColor(_ day: Day, today: Day) -> Color {
+    if day == today {
+      return colors.accentDefault
+    }
+    let week = settings.device.week
+    if week.holiday, Holidays.name(on: day.key, in: "JP") != nil {
+      return colors.calendarHoliday
+    }
+    switch day.weekday {
+    case 0 where week.sunday: return colors.calendarHoliday
+    case 6 where week.saturday: return colors.calendarSaturday
+    default: return colors.textPrimary
+    }
+  }
+
   private var dateHeight: CGFloat { compact ? 24 : 26 }
   private var rowHeight: CGFloat { compact ? 26 : 30 }
 
@@ -167,7 +192,7 @@ struct MemberWeek: View {
         onOpen(nil)
       } label: {
         VStack(spacing: 4) {
-          GroupWeekdays()
+          GroupWeekdays(compact: true)
           GroupWeek(days: days, members: members, compact: true)
         }
         .contentShape(.rect)
@@ -193,7 +218,8 @@ struct MemberWeek: View {
         .foregroundStyle(colors.textSecondary)
       Spacer()
       Text(next.map { "\(dayName($0))・\(fromToday($0, today: today))" } ?? "なし")
-        .foregroundStyle(colors.textPrimary)
+        .fontWeight(next == nil ? .regular : .semibold)
+        .foregroundStyle(next == nil ? colors.textTertiary : colors.textPrimary)
       if next != nil {
         Image(systemName: "chevron.right")
           .imageScale(.small)
