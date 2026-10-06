@@ -3,22 +3,33 @@ import PochicalKit
 import SQLiteData
 import SwiftUI
 
-/// The group's chats which have lines, read again as they change.
+/// The group's chats which have lines, and everyone who has been in the
+/// group, read again as they change.
 struct ChatThreadsRequest: FetchKeyRequest, Hashable {
   let groupID: String
 
-  func fetch(_ db: Database) throws -> Set<String> {
-    try Chats.threads(in: groupID, db: db)
+  struct Value: Hashable, Sendable {
+    var threads: Set<String> = []
+    /// Those who left too, whose chats stay to be read.
+    var writers: [GroupMemberRow] = []
+  }
+
+  func fetch(_ db: Database) throws -> Value {
+    Value(
+      threads: try Chats.threads(in: groupID, db: db),
+      writers: try Chats.writers(in: groupID, db: db))
   }
 }
 
 /// The hub's チャット (/design's GroupHub): 全体チャット, then a one-to-one
-/// chat with each member it has been started with, and 個人チャットを始める
-/// while someone is left to start one with, all on one card of rows.
+/// chat with each member it has been started with (one who left too, so
+/// it can still be read and its unread lines cleared), and
+/// 個人チャットを始める while someone is left to start one with, all on one
+/// card of rows.
 struct ChatList: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
-  @Fetch private var threads: Set<String> = []
+  @Fetch private var chats = ChatThreadsRequest.Value()
   let group: GroupRow
   /// Everyone in the group now.
   let members: [GroupMember]
@@ -28,11 +39,15 @@ struct ChatList: View {
   @State private var starting = false
 
   var body: some View {
-    let others = members.filter { $0.userID != meID }
     let talking =
-      meID.map { me in others.filter { threads.contains(directThread(me, $0.userID)) } }
-      ?? []
-    let untouched = others.filter { member in !talking.contains(member) }
+      meID.map { me in
+        chats.writers.filter {
+          $0.userID != me && chats.threads.contains(directThread(me, $0.userID))
+        }
+      } ?? []
+    let untouched = members.filter { member in
+      member.userID != meID && !talking.contains { $0.userID == member.userID }
+    }
     VStack(spacing: 0) {
       if let meID {
         ChatRow(group: group, threadID: groupThread, me: meID, label: "全体チャット") {
@@ -44,13 +59,13 @@ struct ChatList: View {
         } onOpen: {
           onOpen(groupThread, nil)
         }
-        ForEach(talking) { member in
+        ForEach(talking, id: \.userID) { member in
           separator
           ChatRow(
             group: group, threadID: directThread(meID, member.userID), me: meID,
-            label: member.name
+            label: member.displayName
           ) {
-            LetterAvatar(name: member.name, size: 28)
+            LetterAvatar(name: member.displayName, size: 28)
           } onOpen: {
             onOpen(directThread(meID, member.userID), member.userID)
           }
@@ -80,7 +95,7 @@ struct ChatList: View {
     .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
     .task { meID = await groupCalls.userID() }
     .task(id: group.id) {
-      try? await $threads.load(ChatThreadsRequest(groupID: group.id))
+      try? await $chats.load(ChatThreadsRequest(groupID: group.id))
     }
     .sheet(isPresented: $starting) {
       StartChatSheet(members: untouched) { member in

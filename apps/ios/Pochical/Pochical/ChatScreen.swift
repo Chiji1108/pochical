@@ -206,7 +206,20 @@ struct ChatScreen: View {
       }
     }
     .safeAreaInset(edge: .bottom, spacing: 0) {
-      composer
+      // A one-to-one chat with someone who left stays to be read, but
+      // takes no more lines.
+      if let otherID, let gone = chat.writers.first(where: { $0.userID == otherID && $0.left }) {
+        Text("\(gone.displayName)はグループを抜けました")
+          .font(.footnote)
+          .foregroundStyle(colors.textTertiary)
+          .frame(maxWidth: .infinity, minHeight: Metrics.touch)
+          .background(colors.backgroundBase)
+          .overlay(alignment: .top) {
+            Rectangle().fill(colors.separator).frame(height: 1)
+          }
+      } else {
+        composer
+      }
     }
     .background(colors.backgroundBase)
     .navigationTitle(otherID.flatMap { names[$0] } ?? group.name)
