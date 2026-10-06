@@ -28,9 +28,13 @@ private enum PhotoBox {
 struct ChatPhotoImage: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.themeColors) private var colors
+  @Environment(\.displayScale) private var displayScale
   let photo: LinePhoto
   let groupID: String
   var fit = false
+  /// The size it is drawn at in the chat, decoded no larger; nil to draw
+  /// it whole, opened large.
+  var shown: CGSize?
   @State private var image: UIImage?
 
   var body: some View {
@@ -44,8 +48,19 @@ struct ChatPhotoImage: View {
       }
     }
     .task(id: photo.id) {
-      if let data = try? await groupCalls.photo(photo.id, in: groupID) {
-        image = UIImage(data: data)
+      guard let data = try? await groupCalls.photo(photo.id, in: groupID),
+        let whole = UIImage(data: data)
+      else { return }
+      // A line's photo decoded at the size it shows, not 2048 pixels.
+      if let shown {
+        let scale = max(
+          shown.width / whole.size.width, shown.height / whole.size.height) * displayScale
+        image =
+          await whole.byPreparingThumbnail(
+            ofSize: CGSize(width: whole.size.width * scale, height: whole.size.height * scale))
+          ?? whole
+      } else {
+        image = whole
       }
     }
   }
@@ -61,7 +76,7 @@ struct PhotoLine: View {
 
   var body: some View {
     let size = PhotoBox.size(of: photo)
-    ChatPhotoImage(photo: photo, groupID: groupID)
+    ChatPhotoImage(photo: photo, groupID: groupID, shown: size)
       .frame(width: size.width, height: size.height)
       .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
       .overlay(

@@ -81,6 +81,12 @@ public enum ChatPhotos {
     try jpeg.write(to: cached(photoID, in: groupID), options: .atomic)
   }
 
+  /// Takes a photo off the device, as when its line is taken back.
+  public static func forget(_ photoID: String, in groupID: String) {
+    try? FileManager.default.removeItem(at: cached(photoID, in: groupID))
+    try? FileManager.default.removeItem(at: pending(photoID, in: groupID))
+  }
+
   /// The photo's bytes held on the device, if any.
   public static func held(_ photoID: String, in groupID: String) -> Data? {
     (try? Data(contentsOf: cached(photoID, in: groupID)))

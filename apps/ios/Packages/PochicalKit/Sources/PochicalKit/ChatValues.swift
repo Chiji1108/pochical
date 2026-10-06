@@ -324,10 +324,14 @@ public enum Chats {
     throws
   {
     let seq = Int64(line.seq)
-    try ChatLineRow.where {
+    let held = ChatLineRow.where {
       $0.groupID.eq(groupID) && $0.threadID.eq(line.threadID) && $0.seq.eq(seq)
     }
-    .delete().execute(db)
+    // A photo taken back goes from the device too, as from the group.
+    if line.unsent, let photo = try held.fetchOne(db)?.photo {
+      ChatPhotos.forget(photo.id, in: groupID)
+    }
+    try held.delete().execute(db)
     var row = ChatLineRow(
       groupID: groupID, threadID: line.threadID, seq: seq, authorID: line.authorID,
       text: line.text, sentAtMs: line.sentAtMs, edited: line.edited, unsent: line.unsent,
