@@ -66,24 +66,35 @@ export const chatStyle = {
     },
     variants: { mine: { true: { alignItems: "flex-end" } } },
   }),
+  // Round all over, but the first of a run, as LINE and WhatsApp draw
+  // one: its top corner by the writer's side drawn in, by the face and
+  // name the run starts with, so it says whose words follow.
   bubble: cva({
     base: {
       bg: "fill.tertiary",
-      borderRadius:
-        "token(radii.lg) token(radii.lg) token(radii.lg) token(radii.sm)",
+      borderRadius: "lg",
       color: "text.primary",
       display: "flex",
       flexDirection: "column",
       minWidth: 0,
       overflow: "hidden",
     },
+    compoundVariants: [
+      {
+        css: { borderTopLeftRadius: "sm" },
+        first: true,
+        mine: false,
+      },
+      {
+        css: { borderTopRightRadius: "sm" },
+        first: true,
+        mine: true,
+      },
+    ],
     variants: {
+      first: { true: {} },
       mine: {
-        true: {
-          bg: "accent.fill",
-          borderRadius: "token(radii.lg) token(radii.lg) token(radii.sm)",
-          color: "accent.onFill",
-        },
+        true: { bg: "accent.fill", color: "accent.onFill" },
       },
     },
   }),
@@ -395,8 +406,9 @@ export const chatStyle = {
     "& > span:nth-child(3)": { animationDelay: "0.3s" },
     alignItems: "center",
     bg: "fill.tertiary",
+    // A bubble at the start of the writer's run, by their face.
     borderRadius:
-      "token(radii.lg) token(radii.lg) token(radii.lg) token(radii.sm)",
+      "token(radii.sm) token(radii.lg) token(radii.lg) token(radii.lg)",
     display: "flex",
     gap: "4px",
     height: "36px",

@@ -308,7 +308,10 @@ export function PhotoLine({
   return (
     <>
       <span
-        className={quoted ? chatStyle.bubble({ mine }) : chatStyle.photo}
+        // A reply always starts a run.
+        className={
+          quoted ? chatStyle.bubble({ first: true, mine }) : chatStyle.photo
+        }
         data-part="bubble"
         style={{ width: size.width }}
       >

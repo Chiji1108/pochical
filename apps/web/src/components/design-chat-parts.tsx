@@ -146,20 +146,26 @@ export function LineFrame({
 }
 
 // A line's words in their bubble: the others' on the left in a fill,
-// yours on the right in the accent. A bubble with a link's page under
-// its words is wide enough for the page (`linked`).
+// yours on the right in the accent, the first of a run with its corner by
+// the writer drawn in. A bubble with a link's page under its words is
+// wide enough for the page (`linked`).
 export function Bubble({
   mine,
+  first,
   linked = false,
   children,
 }: {
   mine: boolean;
+  first: boolean;
   linked?: boolean;
   children: ReactNode;
 }) {
   return (
     <span
-      className={cx(chatStyle.bubble({ mine }), linked && chatStyle.linked)}
+      className={cx(
+        chatStyle.bubble({ first, mine }),
+        linked && chatStyle.linked
+      )}
       data-part="bubble"
     >
       {children}

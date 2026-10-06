@@ -305,6 +305,7 @@ export function MessageLine({
           // Like the app: the quoted line sits inside the bubble,
           // above a thin rule, and jumps to the original.
           <Bubble
+            first={firstOfRun}
             linked={inviteCode !== undefined || message.link !== undefined}
             mine={mine}
           >

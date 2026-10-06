@@ -17,6 +17,7 @@ A long press on a message (a right click on the web) opens its reactions and men
 
 ## In a message
 
+- A message's bubble is round all over, but the first of a run of one writer's (and a reply, and someone writing's dots): its top corner by the writer's side is drawn in, by their face and name, as LINE and WhatsApp draw one, so it says whose words follow. Others' bubbles are on the left, one's own on the right. The face and the name stay at the top of the run.
 - Links are underlined; in others' messages in the accent color, in one's own in the bubble's text color.
 - A tap on a link opens it in the system's browser sheet over the chat (`SFSafariViewController`, Custom Tabs).
 - A long press on a link (or a right click) opens the link's own small menu under it, リンクを開く and リンクをコピー, as iOS offers on a link in text; the message's menu stays shorter without a link item.
