@@ -146,3 +146,20 @@ public func pickingMention(_ draft: String, name: String) -> String {
   guard mentionQuery(draft) != nil, let at = draft.lastIndex(where: isAt) else { return draft }
   return String(draft[..<at]) + "@\(name) "
 }
+
+/// Whether the text is exactly one emoji, as the pickers and the system
+/// keyboards give one: one character that starts as a pictograph or a
+/// flag, or a keycap (1️⃣, #️⃣), which starts with its plain digit or sign
+/// (spec/text-limits.md; spec/vectors/text.json, isEmoji).
+public func isEmoji(_ text: String) -> Bool {
+  guard text.count == 1, let first = text.unicodeScalars.first else { return false }
+  // A keycap starts with its plain digit or sign, which alone is no emoji.
+  let keycapBase = "#*0123456789".unicodeScalars.contains(first)
+  if keycapBase {
+    return text.unicodeScalars.contains("\u{20E3}")
+  }
+  // A pictograph or a flag's regional indicator; Swift names no
+  // Extended_Pictographic, and the Emoji property covers the same first
+  // characters once the keycaps' bases are set apart.
+  return first.properties.isEmoji
+}

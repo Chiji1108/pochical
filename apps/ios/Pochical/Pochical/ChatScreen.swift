@@ -8,6 +8,8 @@ import SwiftUI
 struct ChatRequest: FetchKeyRequest, Hashable {
   let groupID: String
   let threadID: String
+  /// The reader, whose reactions still on their way show at once.
+  var me: String?
 
   struct Value: Hashable, Sendable {
     var state = ChatState(lines: [], waiting: [], atStart: true, marks: [:])
@@ -17,7 +19,7 @@ struct ChatRequest: FetchKeyRequest, Hashable {
 
   func fetch(_ db: Database) throws -> Value {
     Value(
-      state: try Chats.state(of: threadID, in: groupID, db: db),
+      state: try Chats.state(of: threadID, in: groupID, me: me, db: db),
       writers: try Chats.writers(in: groupID, db: db))
   }
 }
@@ -137,6 +139,8 @@ struct ChatScreen: View {
   /// A link tapped in a line, open in the browser sheet.
   @State private var browsing: OpenedLink?
   @Environment(\.openInvite) private var openInvite
+  /// The line whose ほかの絵文字 is open.
+  @State private var reactingTo: ChatLineRow?
 
   var body: some View {
     let state = chat.state
@@ -235,6 +239,7 @@ struct ChatScreen: View {
     .task {
       try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID))
       meID = await groupCalls.userID()
+      try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID, me: meID))
       await open()
     }
     .task(
@@ -253,6 +258,9 @@ struct ChatScreen: View {
       }
     }
     .environment(\.openURL, OpenURLAction { open($0) })
+    .sheet(item: $reactingTo) { line in
+      EmojiKeyboardSheet { react($0, on: line) }
+    }
     .sheet(item: $browsing) { link in
       SafariView(url: link.url).ignoresSafeArea()
     }
@@ -335,11 +343,18 @@ struct ChatScreen: View {
           .padding(.vertical, 8)
       } else {
         let mine = line.authorID == meID
+        let onReact = { (emoji: String) in react(emoji, on: line) }
         LineView(
           text: line.text, time: line.sentAtMs, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
-          named: otherID == nil, waiting: false, nameOf: nameOf
+          named: otherID == nil, waiting: false, nameOf: nameOf,
+          reactions: line.reactions, meID: meID, onReact: onReact
         ) {
+          ReactionPalette(reactions: line.reactions, meID: meID) {
+            react($0, on: line)
+          } onMore: {
+            reactingTo = line
+          }
           Button("コピー", systemImage: "doc.on.doc") {
             UIPasteboard.general.string = plainText(line.text, nameOf: nameOf)
           }
@@ -601,6 +616,18 @@ struct ChatScreen: View {
     stopEditing()
   }
 
+  /// Puts the reader's `emoji` on the line, or takes it back if it was
+  /// theirs already.
+  private func react(_ emoji: String, on line: ChatLineRow) {
+    let current = chat.state.lines.first { $0.seq == line.seq } ?? line
+    var react = Pochical_V1_ChatReact()
+    react.threadID = threadID
+    react.seq = UInt64(line.seq)
+    react.emoji = emoji
+    react.on = !current.reactions.contains { $0.emoji == emoji && $0.userIDs.contains(meID ?? "") }
+    write(.react(react))
+  }
+
   private func unsend(_ line: ChatLineRow) {
     var unsend = Pochical_V1_ChatUnsend()
     unsend.threadID = threadID
@@ -666,6 +693,10 @@ private struct LineView<Menu: View>: View {
   let waiting: Bool
   /// A member's name, for the line's mentions.
   let nameOf: (String) -> String
+  var reactions: [LineReaction] = []
+  var meID: String?
+  /// Puts the reader's reaction on, or takes it back.
+  var onReact: (String) -> Void = { _ in }
   /// The bubble's long-press menu.
   @ViewBuilder let menu: () -> Menu
 
@@ -707,11 +738,15 @@ private struct LineView<Menu: View>: View {
             .contextMenu(menuItems: menu)
           if !mine { meta }
         }
+        if !reactions.isEmpty {
+          ReactionRow(reactions: reactions, meID: meID, nameOf: nameOf, onReact: onReact)
+        }
       }
       .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
       .padding(mine ? .leading : .trailing, 40)
     }
-    .accessibilityElement(children: .combine)
+    // The line reads as one, its reactions as buttons of their own.
+    .accessibilityElement(children: reactions.isEmpty ? .combine : .contain)
   }
 
   /// The line's words, its mentions as @ and the name in the name's

@@ -148,3 +148,22 @@ export const readMarks = sqliteTable(
     uniqueIndex("read_marks_cursor").on(table.cursor),
   ]
 );
+
+// Who chose which emoji on which line, in the order chosen. A line's
+// reactions change its cursor, as its words do, so they travel with it.
+export const chatReactions = sqliteTable(
+  "chat_reactions",
+  {
+    emoji: text().notNull(),
+    // When it was chosen, for the order: the group's cursor then.
+    madeCursor: integer("made_cursor").notNull(),
+    seq: integer().notNull(),
+    threadId: text("thread_id").notNull(),
+    userId: text("user_id").notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.threadId, table.seq, table.userId, table.emoji],
+    }),
+  ]
+);

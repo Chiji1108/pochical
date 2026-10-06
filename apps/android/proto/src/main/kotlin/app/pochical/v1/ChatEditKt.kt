@@ -155,6 +155,30 @@ public object ChatEditKt {
     public fun hasRead(): kotlin.Boolean {
       return _builder.hasRead()
     }
+
+    /**
+     * `.pochical.v1.ChatReact react = 6 [json_name = "react"];`
+     */
+    public var react: app.pochical.v1.ChatReact
+      @kotlin.jvm.JvmName("getReact")
+        get() = _builder.react
+      @kotlin.jvm.JvmName("setReact")
+        set(value) {
+        _builder.react = value
+      }
+    /**
+     * `.pochical.v1.ChatReact react = 6 [json_name = "react"];`
+     */
+    public fun clearReact() {
+      _builder.clearReact()
+    }
+    /**
+     * `.pochical.v1.ChatReact react = 6 [json_name = "react"];`
+     * @return Whether the react field is set.
+     */
+    public fun hasReact(): kotlin.Boolean {
+      return _builder.hasReact()
+    }
     public val kindCase: app.pochical.v1.ChatEdit.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -178,4 +202,7 @@ public val app.pochical.v1.ChatEditOrBuilder.unsendOrNull: app.pochical.v1.ChatU
 
 public val app.pochical.v1.ChatEditOrBuilder.readOrNull: app.pochical.v1.ChatRead?
   get() = if (hasRead()) getRead() else null
+
+public val app.pochical.v1.ChatEditOrBuilder.reactOrNull: app.pochical.v1.ChatReact?
+  get() = if (hasReact()) getReact() else null
 

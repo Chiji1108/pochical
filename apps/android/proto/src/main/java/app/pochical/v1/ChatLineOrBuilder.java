@@ -125,4 +125,33 @@ public interface ChatLineOrBuilder extends
    */
   com.google.protobuf.ByteString
       getOpIdBytes();
+
+  /**
+   * <pre>
+   * Its reactions, each emoji with who chose it in the order they did,
+   * the emoji in the order first chosen; none once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+   */
+  java.util.List<app.pochical.v1.ChatReaction> 
+      getReactionsList();
+  /**
+   * <pre>
+   * Its reactions, each emoji with who chose it in the order they did,
+   * the emoji in the order first chosen; none once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+   */
+  app.pochical.v1.ChatReaction getReactions(int index);
+  /**
+   * <pre>
+   * Its reactions, each emoji with who chose it in the order they did,
+   * the emoji in the order first chosen; none once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
+   */
+  int getReactionsCount();
 }

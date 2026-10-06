@@ -229,6 +229,112 @@ public object ChatLineKt {
     public fun clearOpId() {
       _builder.clearOpId()
     }
+
+    /**
+     * An uninstantiable, behaviorless type to represent the field in
+     * generics.
+     */
+    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
+    public class ReactionsProxy private constructor() : com.google.protobuf.kotlin.DslProxy()
+    /**
+     * ```
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];`
+     */
+     public val reactions: com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatReaction, ReactionsProxy>
+      @kotlin.jvm.JvmSynthetic
+  get() = com.google.protobuf.kotlin.DslList(
+        _builder.reactionsList
+      )
+    /**
+     * ```
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];`
+     * @param value The reactions to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addReactions")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatReaction, ReactionsProxy>.add(value: app.pochical.v1.ChatReaction) {
+      _builder.addReactions(value)
+    }
+    /**
+     * ```
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];`
+     * @param value The reactions to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignReactions")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatReaction, ReactionsProxy>.plusAssign(value: app.pochical.v1.ChatReaction) {
+      add(value)
+    }
+    /**
+     * ```
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];`
+     * @param values The reactions to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addAllReactions")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatReaction, ReactionsProxy>.addAll(values: kotlin.collections.Iterable<app.pochical.v1.ChatReaction>) {
+      _builder.addAllReactions(values)
+    }
+    /**
+     * ```
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];`
+     * @param values The reactions to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignAllReactions")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatReaction, ReactionsProxy>.plusAssign(values: kotlin.collections.Iterable<app.pochical.v1.ChatReaction>) {
+      addAll(values)
+    }
+    /**
+     * ```
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];`
+     * @param index The index to set the value at.
+     * @param value The reactions to set.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("setReactions")
+    public operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatReaction, ReactionsProxy>.set(index: kotlin.Int, value: app.pochical.v1.ChatReaction) {
+      _builder.setReactions(index, value)
+    }
+    /**
+     * ```
+     * Its reactions, each emoji with who chose it in the order they did,
+     * the emoji in the order first chosen; none once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];`
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("clearReactions")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatReaction, ReactionsProxy>.clear() {
+      _builder.clearReactions()
+    }
   }
 }
 public inline fun app.pochical.v1.ChatLine.copy(block: `app.pochical.v1`.ChatLineKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatLine =

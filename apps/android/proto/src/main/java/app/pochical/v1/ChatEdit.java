@@ -31,6 +31,7 @@ public  final class ChatEdit extends
     CHANGE(3),
     UNSEND(4),
     READ(5),
+    REACT(6),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -50,6 +51,7 @@ public  final class ChatEdit extends
         case 3: return CHANGE;
         case 4: return UNSEND;
         case 5: return READ;
+        case 6: return REACT;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -333,6 +335,56 @@ public  final class ChatEdit extends
    */
   private void clearRead() {
     if (kindCase_ == 5) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int REACT_FIELD_NUMBER = 6;
+  /**
+   * <code>.pochical.v1.ChatReact react = 6 [json_name = "react"];</code>
+   */
+  @java.lang.Override
+  public boolean hasReact() {
+    return kindCase_ == 6;
+  }
+  /**
+   * <code>.pochical.v1.ChatReact react = 6 [json_name = "react"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatReact getReact() {
+    if (kindCase_ == 6) {
+       return (app.pochical.v1.ChatReact) kind_;
+    }
+    return app.pochical.v1.ChatReact.getDefaultInstance();
+  }
+  /**
+   * <code>.pochical.v1.ChatReact react = 6 [json_name = "react"];</code>
+   */
+  private void setReact(app.pochical.v1.ChatReact value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 6;
+  }
+  /**
+   * <code>.pochical.v1.ChatReact react = 6 [json_name = "react"];</code>
+   */
+  private void mergeReact(app.pochical.v1.ChatReact value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 6 &&
+        kind_ != app.pochical.v1.ChatReact.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ChatReact.newBuilder((app.pochical.v1.ChatReact) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 6;
+  }
+  /**
+   * <code>.pochical.v1.ChatReact react = 6 [json_name = "react"];</code>
+   */
+  private void clearReact() {
+    if (kindCase_ == 6) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -714,6 +766,54 @@ public  final class ChatEdit extends
       return this;
     }
 
+    /**
+     * <code>.pochical.v1.ChatReact react = 6 [json_name = "react"];</code>
+     */
+    @java.lang.Override
+    public boolean hasReact() {
+      return instance.hasReact();
+    }
+    /**
+     * <code>.pochical.v1.ChatReact react = 6 [json_name = "react"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatReact getReact() {
+      return instance.getReact();
+    }
+    /**
+     * <code>.pochical.v1.ChatReact react = 6 [json_name = "react"];</code>
+     */
+    public Builder setReact(app.pochical.v1.ChatReact value) {
+      copyOnWrite();
+      instance.setReact(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatReact react = 6 [json_name = "react"];</code>
+     */
+    public Builder setReact(
+        app.pochical.v1.ChatReact.Builder builderForValue) {
+      copyOnWrite();
+      instance.setReact(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatReact react = 6 [json_name = "react"];</code>
+     */
+    public Builder mergeReact(app.pochical.v1.ChatReact value) {
+      copyOnWrite();
+      instance.mergeReact(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatReact react = 6 [json_name = "react"];</code>
+     */
+    public Builder clearReact() {
+      copyOnWrite();
+      instance.clearReact();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatEdit)
   }
   @java.lang.Override
@@ -737,10 +837,11 @@ public  final class ChatEdit extends
             app.pochical.v1.ChatChange.class,
             app.pochical.v1.ChatUnsend.class,
             app.pochical.v1.ChatRead.class,
+            app.pochical.v1.ChatReact.class,
           };
           java.lang.String info =
-              "\u0000\u0005\u0001\u0000\u0001\u0005\u0005\u0000\u0000\u0000\u0001\u0208\u0002<\u0000" +
-              "\u0003<\u0000\u0004<\u0000\u0005<\u0000";
+              "\u0000\u0006\u0001\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001\u0208\u0002<\u0000" +
+              "\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
