@@ -44,7 +44,19 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   var votesJSON = "[]"
   /// The day a poll was settled on, as YYYY-MM-DD; empty while open.
   var decidedKey = ""
+  /// The photo sent as the line, as JSON, `LinePhoto`; empty for none.
+  var photoJSON = ""
   public var id: Int64 { seq }
+
+  /// The photo sent as the line.
+  public var photo: LinePhoto? {
+    get { try? JSONDecoder().decode(LinePhoto.self, from: Data(photoJSON.utf8)) }
+    set {
+      photoJSON =
+        newValue.flatMap { try? JSONEncoder().encode($0) }
+        .flatMap { String(data: $0, encoding: .utf8) } ?? ""
+    }
+  }
 
   /// Who can come on each of a poll's days, in the order they said so.
   public var votes: [DayVotes] {
@@ -278,6 +290,14 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep the chats' photos") { db in
+      try #sql(
+        """
+        ALTER TABLE "chatLines" ADD COLUMN "photoJSON" TEXT NOT NULL DEFAULT ''
+        """
+      )
+      .execute(db)
+    }
   }
 }
 
@@ -320,6 +340,7 @@ public enum Chats {
       Day(votes.day).map { DayVotes(day: $0, userIDs: votes.userIds) }
     }
     row.decidedKey = line.decided
+    row.photo = line.hasPhoto ? linePhoto(line.photo) : nil
     try ChatLineRow.insert { row }.execute(db)
   }
 
@@ -385,6 +406,12 @@ public enum Chats {
   /// sent should they join again.
   static func dropWaiting(of groupID: String, in db: Database) throws {
     try ChatOutboxRow.where { $0.groupID.eq(groupID) }.delete().execute(db)
+  }
+
+  /// An edit that can never go, as a photo no longer on the device, stops
+  /// waiting.
+  static func drop(_ opID: String, in db: Database) throws {
+    try ChatOutboxRow.where { $0.opID.eq(opID) }.delete().execute(db)
   }
 
   /// The edits an Acked names stop waiting.
@@ -464,6 +491,8 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
   public var days: [Day] = []
   /// Its days are put to the vote.
   public var poll = false
+  /// The photo it sends.
+  public var photo: LinePhoto?
   public var id: String { opID }
 }
 
@@ -502,7 +531,8 @@ extension Chats {
         waiting.append(
           WaitingLine(
             opID: edit.opID, text: send.text, madeAtMs: row.madeAtMs,
-            days: send.days.compactMap(Day.init), poll: send.poll))
+            days: send.days.compactMap(Day.init), poll: send.poll,
+            photo: send.hasPhoto ? linePhoto(send.photo) : nil))
       case .change(let change) where change.threadID == threadID:
         if let at = lines.firstIndex(where: { $0.seq == Int64(change.seq) }) {
           lines[at].text = change.text
@@ -516,6 +546,7 @@ extension Chats {
           lines[at].days = []
           lines[at].votes = []
           lines[at].decided = nil
+          lines[at].photo = nil
         }
         pinned = pinStep(pinned, unsend: String(unsend.seq)).pins
       case .pin(let pin) where pin.threadID == threadID:
@@ -645,7 +676,7 @@ extension Chats {
       case .send(let send) where send.threadID == threadID:
         waiting = WaitingLine(
           opID: edit.opID, text: send.text, madeAtMs: madeAtMs, days: send.days.compactMap(Day.init),
-          poll: send.poll)
+          poll: send.poll, photo: send.hasPhoto ? linePhoto(send.photo) : nil)
       default: break
       }
     }
@@ -738,4 +769,9 @@ extension Chats {
       (try Pochical_V1_ChatEdit(serializedBytes: $0.edit), $0.madeAtMs)
     }
   }
+}
+
+/// A photo as the wire carries it.
+func linePhoto(_ photo: Pochical_V1_ChatPhoto) -> LinePhoto {
+  LinePhoto(id: photo.id, width: Int(photo.width), height: Int(photo.height))
 }

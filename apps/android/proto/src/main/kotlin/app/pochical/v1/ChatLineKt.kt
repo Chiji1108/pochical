@@ -623,8 +623,50 @@ public object ChatLineKt {
     public fun clearDecided() {
       _builder.clearDecided()
     }
+
+    /**
+     * ```
+     * A photo sent as the line, with no words; none once unsent.
+     * ```
+     *
+     * `.pochical.v1.ChatPhoto photo = 15 [json_name = "photo"];`
+     */
+    public var photo: app.pochical.v1.ChatPhoto
+      @kotlin.jvm.JvmName("getPhoto")
+        get() = _builder.photo
+      @kotlin.jvm.JvmName("setPhoto")
+        set(value) {
+        _builder.photo = value
+      }
+    /**
+     * ```
+     * A photo sent as the line, with no words; none once unsent.
+     * ```
+     *
+     * `.pochical.v1.ChatPhoto photo = 15 [json_name = "photo"];`
+     */
+    public fun clearPhoto() {
+      _builder.clearPhoto()
+    }
+    /**
+     * ```
+     * A photo sent as the line, with no words; none once unsent.
+     * ```
+     *
+     * `.pochical.v1.ChatPhoto photo = 15 [json_name = "photo"];`
+     * @return Whether the photo field is set.
+     */
+    public fun hasPhoto(): kotlin.Boolean {
+      return _builder.hasPhoto()
+    }
+
+    public val ChatLineKt.Dsl.photoOrNull: app.pochical.v1.ChatPhoto?
+      get() = _builder.photoOrNull
   }
 }
 public inline fun app.pochical.v1.ChatLine.copy(block: `app.pochical.v1`.ChatLineKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatLine =
   `app.pochical.v1`.ChatLineKt.Dsl._create(this.toBuilder()).apply { block() }._build()
+
+public val app.pochical.v1.ChatLineOrBuilder.photoOrNull: app.pochical.v1.ChatPhoto?
+  get() = if (hasPhoto()) getPhoto() else null
 

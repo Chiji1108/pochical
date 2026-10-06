@@ -24,6 +24,10 @@
   ],
   // The Group DO's migrations import their SQL as text (drizzle-kit).
   "rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }],
+  // Photos sent in the groups' chats, each under its group
+  // (groups/{groupId}/photos/{photoId}), read and written only through the
+  // Worker by the group's members (spec/chat.md, Photos).
+  "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "pochical-photos" }],
   // Global lookups a Durable Object cannot answer alone, such as which group
   // an invite code opens. Created in APAC, near Pochical's users.
   "d1_databases": [

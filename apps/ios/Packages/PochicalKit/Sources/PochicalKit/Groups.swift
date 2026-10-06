@@ -81,6 +81,11 @@ public struct GroupCalls: Sendable {
     users = Pochical_V1_UserServiceClient(client: protocolClient)
   }
 
+  /// One of the group's chat photos, from the device or else the server.
+  public func photo(_ photoID: String, in groupID: String) async throws -> Data {
+    try await ChatPhotos.fetch(photoID, in: groupID, account: account)
+  }
+
   /// The signed-in user's id, as groups know them among their members:
   /// the server's, kept on the device, so the screens still know who is
   /// who offline. Nil only before it was ever heard.

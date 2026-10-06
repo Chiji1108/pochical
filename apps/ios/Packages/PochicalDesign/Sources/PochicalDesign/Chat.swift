@@ -11,6 +11,9 @@ public enum Chat {
   public static let linkPreviewSettleMs = 400
   public static let maxPins = 5
   public static let pageSize = 50
+  public static let photoMaxBytes = 4000000
+  public static let photoMaxEdge = 2048
+  public static let photosPerSend = 4
   public static let typingSendMs = 3000
   public static let typingShowMs = 5000
 }

@@ -40,6 +40,7 @@ public actor SyncClient {
   private let account: Account
   private let database: any DatabaseWriter
   private let peer: Peer
+  private let server: URL
   private let socketURL: URL
   private let session = URLSession(configuration: .default)
   private let paths = NWPathMonitor()
@@ -67,6 +68,7 @@ public actor SyncClient {
     self.account = account
     self.database = database
     self.peer = peer
+    self.server = server
     var socket = URLComponents(url: server, resolvingAgainstBaseURL: false)!
     socket.scheme = server.scheme == "https" ? "wss" : "ws"
     switch peer {
@@ -331,7 +333,9 @@ public actor SyncClient {
     }
   }
 
-  /// Sends the group's chat outbox as `sendOutbox` does the user's.
+  /// Sends the group's chat outbox as `sendOutbox` does the user's, a
+  /// photo's line only once the photo is uploaded, so the edits after it
+  /// wait their turn.
   private func sendChatOutbox(of groupID: String, on socket: URLSessionWebSocketTask) async {
     var sent = 0
     let outbox = ValueObservation.tracking { try Chats.lastWaiting(of: groupID, in: $0) }
@@ -341,7 +345,8 @@ public actor SyncClient {
         let (frames, through) = try await database.read { [sent] db in
           try Chats.frames(of: groupID, after: sent, in: db)
         }
-        for frame in frames {
+        for var frame in frames {
+          frame.chatEdits.edits = try await uploadingPhotos(of: frame.chatEdits.edits, in: groupID)
           try await socket.send(.data(frame.serializedData()))
         }
         sent = through
@@ -349,6 +354,43 @@ public actor SyncClient {
     } catch {
       // The socket closed; the next one sends them all again.
     }
+  }
+
+  /// The edits once their photos are uploaded, trying again after a wait
+  /// that doubles while the server cannot be reached; a photo that can
+  /// never go (gone from the device, or refused) takes its line out of
+  /// the outbox.
+  private func uploadingPhotos(of edits: [Pochical_V1_ChatEdit], in groupID: String)
+    async throws -> [Pochical_V1_ChatEdit]
+  {
+    var kept: [Pochical_V1_ChatEdit] = []
+    for edit in edits {
+      guard case .send(let send) = edit.kind, send.hasPhoto else {
+        kept.append(edit)
+        continue
+      }
+      var waitMs = 1000
+      while true {
+        try Task.checkCancellation()
+        do {
+          try await ChatPhotos.upload(
+            send.photo.id, in: groupID, account: account, server: server)
+          kept.append(edit)
+          break
+        } catch ChatPhotos.UploadError.gone {
+          try await database.write { try Chats.drop(edit.opID, in: $0) }
+          break
+        } catch ChatPhotos.UploadError.refused(let status) where (400..<500).contains(status) {
+          Logger.sync.error("A photo was refused: \(status)")
+          try await database.write { try Chats.drop(edit.opID, in: $0) }
+          break
+        } catch {
+          try await Task.sleep(for: .milliseconds(waitMs))
+          waitMs = min(waitMs * 2, 60_000)
+        }
+      }
+    }
+    return kept
   }
 
   /// Sends the keepalive text every so often, and takes the socket for

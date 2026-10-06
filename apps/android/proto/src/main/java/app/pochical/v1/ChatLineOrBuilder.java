@@ -269,4 +269,23 @@ public interface ChatLineOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDecidedBytes();
+
+  /**
+   * <pre>
+   * A photo sent as the line, with no words; none once unsent.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 15 [json_name = "photo"];</code>
+   * @return Whether the photo field is set.
+   */
+  boolean hasPhoto();
+  /**
+   * <pre>
+   * A photo sent as the line, with no words; none once unsent.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 15 [json_name = "photo"];</code>
+   * @return The photo.
+   */
+  app.pochical.v1.ChatPhoto getPhoto();
 }

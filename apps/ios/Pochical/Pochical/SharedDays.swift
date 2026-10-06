@@ -17,9 +17,10 @@ func daysSummary(_ days: [Day]) -> String {
 /// A line in a line of words: its days as daysSummary, else its words
 /// with its mentions as names.
 func lineWords(
-  _ text: String, days: [Day], poll: Bool = false, decided: Day? = nil,
+  _ text: String, days: [Day], poll: Bool = false, decided: Day? = nil, photo: Bool = false,
   nameOf: (String) -> String
 ) -> String {
+  if photo { return "📷 写真" }
   if poll { return pollSummary(days, decided: decided) }
   return days.isEmpty ? plainText(text, nameOf: nameOf) : daysSummary(days)
 }

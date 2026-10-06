@@ -33,6 +33,7 @@ import type {
 } from "./gen/pochical/v1/sync_pb";
 import {
   chatLines,
+  chatPhotos,
   chatReactions,
   chatVotes,
   readMarks,
@@ -164,6 +165,7 @@ const lineOf = (db: DrizzleSqliteDODatabase, row: LineRow): ChatLine =>
     decided: row.decided ?? "",
     edited: row.edited,
     opId: row.opId,
+    photo: row.photo ?? undefined,
     pinnedOrder: BigInt(row.pinnedAt ?? 0),
     poll: row.poll,
     reactions: reactionsOf(db, row),
@@ -210,6 +212,35 @@ const fitsDays = (days: readonly string[]): boolean =>
 
 /** The fewest days a poll puts to the vote. */
 const POLL_MIN_DAYS = 2;
+
+/** A photo's size, as the sender read it while shrinking it to send. */
+const fitsPhotoSize = (side: number): boolean =>
+  side >= 1 && side <= chatRules.photoMaxEdge;
+
+/**
+ * A photo line: the sender's own photo, uploaded and not sent before,
+ * with no words or days.
+ */
+const fitsPhoto = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  { text, days, poll, photo }: ChatSend
+): boolean => {
+  if (photo === undefined || text !== "" || days.length > 0 || poll) {
+    return false;
+  }
+  const uploaded = db
+    .select()
+    .from(chatPhotos)
+    .where(eq(chatPhotos.id, photo.id))
+    .get();
+  return (
+    uploaded?.userId === userId &&
+    !uploaded.sent &&
+    fitsPhotoSize(photo.width) &&
+    fitsPhotoSize(photo.height)
+  );
+};
 
 /**
  * A new line's words, or its days with no words; a poll's days are two
@@ -386,8 +417,9 @@ const takeWords = (
   }
   const unsend = kind.case === "unsend";
   const text = unsend ? "" : kind.value.text;
-  // A line of days has no words to change.
-  const words = unsend || (line.days === null && fitsLine(text));
+  // A line of days or a photo has no words to change.
+  const words =
+    unsend || (line.days === null && line.photo === null && fitsLine(text));
   if (line.authorId !== userId || line.unsent || !words) {
     return { refused: chatLineChange(db, line) };
   }
@@ -416,6 +448,7 @@ const takeWords = (
             cursor,
             days: null,
             decided: null,
+            photo: null,
             pinnedAt: null,
             text,
             unsent: true,
@@ -427,7 +460,13 @@ const takeWords = (
     )
     .returning()
     .get();
-  return row === undefined ? {} : { change: chatLineChange(db, row) };
+  if (row === undefined) {
+    return {};
+  }
+  // Its photo goes from the group's photos too, once the change is kept.
+  return unsend && line.photo !== null
+    ? { change: chatLineChange(db, row), photoGone: line.photo.id }
+    : { change: chatLineChange(db, row) };
 };
 
 /**
@@ -576,6 +615,8 @@ type Taken = {
   // A second line it changed, at the cursor after: the pin a new pin
   // took the place of.
   alsoChanged?: Change;
+  // The photo of a line taken back, to delete from the group's photos.
+  photoGone?: string;
   refused?: Change;
 };
 
@@ -607,8 +648,19 @@ export const takeChatEdit = (
         .from(chatLines)
         .where(eq(chatLines.opId, opId))
         .get();
-      if (taken !== undefined || !fitsSend(kind.value)) {
+      const { photo } = kind.value;
+      const fits =
+        photo === undefined
+          ? fitsSend(kind.value)
+          : fitsPhoto(db, userId, kind.value);
+      if (taken !== undefined || !fits) {
         return {};
+      }
+      if (photo !== undefined) {
+        db.update(chatPhotos)
+          .set({ sent: true })
+          .where(eq(chatPhotos.id, photo.id))
+          .run();
       }
       const row = db
         .insert(chatLines)
@@ -618,6 +670,10 @@ export const takeChatEdit = (
           cursor,
           days: kind.value.days.length === 0 ? null : kind.value.days,
           opId,
+          photo:
+            photo === undefined
+              ? null
+              : { height: photo.height, id: photo.id, width: photo.width },
           poll: kind.value.poll,
           sentAt: new Date(),
           seq: chatHead(db, kind.value.threadId) + 1,
@@ -737,4 +793,25 @@ export const chatChangesAfter = (
     .filter(({ threadId }) => mayRead(threadId, userId))
     .map(readMarkChange);
   return [...lines, ...marks];
+};
+
+/**
+ * Notes a photo a member has uploaded to the group's chats, so they alone
+ * may send it as a line; false when the id is someone else's already.
+ */
+export const notePhoto = (
+  db: DrizzleSqliteDODatabase,
+  photoId: string,
+  userId: string
+): boolean => {
+  const noted = db
+    .select()
+    .from(chatPhotos)
+    .where(eq(chatPhotos.id, photoId))
+    .get();
+  if (noted !== undefined) {
+    return noted.userId === userId;
+  }
+  db.insert(chatPhotos).values({ id: photoId, userId }).run();
+  return true;
 };

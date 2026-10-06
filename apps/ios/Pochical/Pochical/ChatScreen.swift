@@ -1,5 +1,6 @@
 import PochicalDesign
 import PochicalKit
+import PhotosUI
 import PochicalProto
 import SQLiteData
 import SwiftUI
@@ -160,6 +161,14 @@ struct ChatScreen: View {
   @State private var sharingDays = false
   /// The poll whose day is being picked.
   @State private var deciding: ChatLineRow?
+  /// Photos picked for the next send, waiting above the composer.
+  @State private var pickedPhotos: [PickedPhoto] = []
+  /// What the photo picker just handed over, read into `pickedPhotos`.
+  @State private var photoItems: [PhotosPickerItem] = []
+  /// Picked photos are being read and shrunk.
+  @State private var readingPhotos = false
+  /// A photo opened large.
+  @State private var viewing: LinePhoto?
   /// The line whose reactions and menu are open.
   @State private var acting: MessageActionsRequest?
 
@@ -306,6 +315,9 @@ struct ChatScreen: View {
         groupID: group.id, people: otherID.map { Set([$0, meID ?? ""]) }, pollable: otherID == nil,
         onSend: shareDays)
     }
+    .fullScreenCover(item: $viewing) { photo in
+      PhotoViewer(photo: photo, groupID: group.id) { save(photo) }
+    }
     .sheet(item: $deciding) { line in
       DecidePollSheet(days: line.days, votes: line.votes, decided: line.decided) { day in
         decide(line, on: day)
@@ -398,7 +410,8 @@ struct ChatScreen: View {
         let onReact = { (emoji: String) in react(emoji, on: line) }
         let poll = pollLine(for: line)
         LineView(
-          text: line.text, days: line.days, members: cardMembers, poll: poll,
+          text: line.text, days: line.days, members: cardMembers, poll: poll, photo: line.photo,
+          groupID: group.id, onOpenPhoto: { viewing = line.photo },
           shifts: line.poll ? nil : line.days.first.map { GroupRoute.shifts(group, day: $0) },
           time: line.sentAtMs, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
@@ -412,8 +425,9 @@ struct ChatScreen: View {
               lineID: line.opID, frame: frame, mine: mine,
               bubble: AnyView(
                 LineContent(
-                  text: line.text, days: line.days, members: cardMembers, poll: poll, mine: mine,
-                  first: startsRun, waiting: false, nameOf: nameOf)),
+                  text: line.text, days: line.days, members: cardMembers, poll: poll,
+                  photo: line.photo, groupID: group.id, mine: mine, first: startsRun,
+                  waiting: false, nameOf: nameOf)),
               finger: finger, reactions: line.reactions, meID: meID, onReact: onReact,
               onMoreReactions: { reactingTo = line }, actions: actions(for: line, mine: mine)))
         }
@@ -423,13 +437,14 @@ struct ChatScreen: View {
         text: line.text, days: line.days, members: cardMembers,
         poll: line.poll
           ? PollLine(votes: [], decided: nil, names: names, meID: meID, canDecide: true) : nil,
+        photo: line.photo, groupID: group.id,
         time: line.madeAtMs,
         edited: false, mine: true, writer: nil, named: false, first: startsRun, waiting: true,
         nameOf: nameOf, lifted: acting?.lineID == line.opID
       ) { frame, finger in
         // Still on its way: nothing but コピー yet, and days have nothing
         // to copy.
-        guard line.days.isEmpty else { return }
+        guard line.days.isEmpty, line.photo == nil else { return }
         openActions(
           MessageActionsRequest(
             lineID: line.opID, frame: frame, mine: true,
@@ -443,12 +458,90 @@ struct ChatScreen: View {
 
   // MARK: Composer
 
+  /// 写真を送る: the photo picker, up to Chat.photosPerSend in the tray at
+  /// once; past it the picker does not open.
+  @ViewBuilder private var photoButton: some View {
+    let room = Chat.photosPerSend - pickedPhotos.count
+    if room > 0 {
+      PhotosPicker(
+        selection: $photoItems, maxSelectionCount: room, matching: .images,
+        preferredItemEncoding: .compatible
+      ) {
+        Image(systemName: "photo")
+          .font(.system(size: 20))
+          .foregroundStyle(colors.textSecondary)
+          .frame(width: 38, height: 38)
+      }
+      .accessibilityLabel("写真を送る")
+      .onChange(of: photoItems) { _, items in
+        guard !items.isEmpty else { return }
+        photoItems = []
+        Task { await readPhotos(items) }
+      }
+    } else {
+      Button("写真を送る", systemImage: "photo") {
+        say("写真は一度に\(Chat.photosPerSend)枚まで送れます")
+      }
+      .labelStyle(.iconOnly)
+      .font(.system(size: 20))
+      .foregroundStyle(colors.textQuaternary)
+      .frame(width: 38, height: 38)
+    }
+  }
+
+  /// Reads picked photos and shrinks them to send, into the tray.
+  private func readPhotos(_ items: [PhotosPickerItem]) async {
+    readingPhotos = true
+    defer { readingPhotos = false }
+    var unreadable = false
+    for item in items {
+      guard let data = try? await item.loadTransferable(type: Data.self),
+        let shrunk = await Task.detached(operation: { ChatPhotos.shrink(data) }).value
+      else {
+        unreadable = true
+        continue
+      }
+      let picked = PickedPhoto(
+        shrunk: shrunk,
+        thumbnail: UIImage(data: shrunk.jpeg)?.preparingThumbnail(of: CGSize(width: 128, height: 128)))
+      if pickedPhotos.count < Chat.photosPerSend {
+        withAnimation { pickedPhotos.append(picked) }
+      }
+    }
+    if unreadable {
+      say("開けない写真がありました")
+    }
+  }
+
+  /// Sends the tray's photos, each as its own line, kept on the device to
+  /// upload before its line goes.
+  private func sendPhotos() {
+    for picked in pickedPhotos {
+      guard (try? ChatPhotos.keep(picked.shrunk.jpeg, as: picked.id, in: group.id)) != nil else {
+        continue
+      }
+      var send = Pochical_V1_ChatSend()
+      send.threadID = threadID
+      send.photo.id = picked.id
+      send.photo.width = UInt32(picked.shrunk.width)
+      send.photo.height = UInt32(picked.shrunk.height)
+      write(.send(send))
+    }
+    withAnimation { pickedPhotos = [] }
+  }
+
   private var composer: some View {
     let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
     let unchanged = editing.map { $0.text == withMentions(draft, picked: picked) } ?? false
-    let blocked = trimmed.isEmpty || unchanged
+    let blocked =
+      editing == nil
+      ? (trimmed.isEmpty && pickedPhotos.isEmpty) || readingPhotos
+      : trimmed.isEmpty || unchanged
     return VStack(spacing: 0) {
       mentionList
+      if editing == nil, !pickedPhotos.isEmpty {
+        PhotoTray(photos: $pickedPhotos)
+      }
       if let editing {
         HStack(spacing: 8) {
           VStack(alignment: .leading, spacing: 2) {
@@ -479,6 +572,7 @@ struct ChatScreen: View {
       }
       HStack(alignment: .bottom, spacing: 8) {
         if editing == nil {
+          photoButton
           Button("日にちを共有", systemImage: "calendar.badge.plus") { sharingDays = true }
             .labelStyle(.iconOnly)
             .font(.system(size: 20))
@@ -507,8 +601,12 @@ struct ChatScreen: View {
           let text = String(
             field.commit().prefix(TextLimits.chatMessage)
           ).trimmingCharacters(in: .whitespacesAndNewlines)
-          guard !text.isEmpty else { return }
-          if let editing { save(editing, text: text) } else { send(text) }
+          if let editing {
+            if !text.isEmpty { save(editing, text: text) }
+          } else {
+            sendPhotos()
+            if !text.isEmpty { send(text) }
+          }
         } label: {
           Image(systemName: editing == nil ? "arrow.up" : "checkmark")
             .font(.system(size: 16, weight: .bold))
@@ -678,6 +776,13 @@ struct ChatScreen: View {
     write(.send(send))
   }
 
+  /// Saves a photo to the person's library, and says so.
+  private func save(_ photo: LinePhoto) {
+    Task {
+      say(await savePhoto(photo, in: group.id, calls: groupCalls) ? "写真を保存しました" : "保存できませんでした")
+    }
+  }
+
   /// Who may settle a poll: its writer, or anyone once they have left, so
   /// a poll is never stuck.
   private func canDecide(_ line: ChatLineRow) -> Bool {
@@ -747,9 +852,13 @@ struct ChatScreen: View {
   /// the danger color (spec/chat.md, Editing and unsending).
   private func actions(for line: ChatLineRow, mine: Bool) -> [MessageAction] {
     let pinned = chat.state.pins.contains { $0.seq == line.seq }
-    // Shared days and polls have no words to copy or change.
-    let words = line.days.isEmpty
+    // Shared days, polls and photos have no words to copy or change.
+    let words = line.days.isEmpty && line.photo == nil
     var actions = words ? [copy(line.text)] : []
+    if let photo = line.photo {
+      actions.append(
+        MessageAction(title: "保存", systemImage: "square.and.arrow.down") { save(photo) })
+    }
     // Anyone's line, for everyone in the chat (spec/chat.md, Pins).
     actions.append(
       MessageAction(
@@ -931,6 +1040,10 @@ private struct LineView: View {
   var members: [GroupMember] = []
   /// A poll's card, for days put to the vote.
   var poll: PollLine?
+  /// The photo sent as the line, opened large by a tap.
+  var photo: LinePhoto?
+  var groupID = ""
+  var onOpenPhoto: () -> Void = {}
   /// The shift table on its first day, under its card.
   var shifts: GroupRoute?
   let time: Int64
@@ -990,9 +1103,11 @@ private struct LineView: View {
         HStack(alignment: .bottom, spacing: 8) {
           if mine { meta }
           LineContent(
-            text: text, days: days, members: members, poll: poll, mine: mine, first: first,
-            waiting: waiting, nameOf: nameOf
+            text: text, days: days, members: members, poll: poll, photo: photo,
+            groupID: groupID, mine: mine, first: first, waiting: waiting, nameOf: nameOf
           )
+          // A photo opens large at a tap; its menu is the long press's.
+          .onTapGesture { if photo != nil, !waiting { onOpenPhoto() } }
           // Rung for a moment when gone to from the pins, as /design's
           // flash: a ring just outside the bubble, held, then fading.
           .background {
@@ -1062,7 +1177,7 @@ private struct LineView: View {
 
   /// The ring's shape: the bubble's, or the card's.
   private var ringShape: AnyShape {
-    days.isEmpty
+    days.isEmpty && photo == nil
       ? AnyShape(BubbleShape(mine: mine, first: first))
       : AnyShape(RoundedRectangle(cornerRadius: Radius.lg))
   }
@@ -1112,13 +1227,18 @@ struct LineContent: View {
   let members: [GroupMember]
   /// Its days are put to the vote, with what the card needs.
   var poll: PollLine?
+  /// The photo sent as the line, from the group's photos.
+  var photo: LinePhoto?
+  var groupID = ""
   let mine: Bool
   let first: Bool
   let waiting: Bool
   let nameOf: (String) -> String
 
   var body: some View {
-    if let poll {
+    if let photo {
+      PhotoLine(photo: photo, groupID: groupID, waiting: waiting)
+    } else if let poll {
       PollCard(
         days: days, votes: poll.votes, decided: poll.decided, members: members,
         names: poll.names, meID: poll.meID, canDecide: poll.canDecide, waiting: waiting,

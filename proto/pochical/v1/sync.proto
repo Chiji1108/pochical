@@ -405,6 +405,18 @@ message ChatLine {
   repeated ChatVotes votes = 13;
   // The day a poll was settled on, as YYYY-MM-DD; empty while open.
   string decided = 14;
+  // A photo sent as the line, with no words; none once unsent.
+  ChatPhoto photo = 15;
+}
+
+// A photo in a chat (spec/chat.md, Photos): uploaded by its sender to the
+// group's photos (PUT /v1/groups/{group_id}/photos/{id}) before the line
+// is sent, and read from there by the group's members. Its size is sent
+// with it, so the line keeps its place before the photo arrives.
+message ChatPhoto {
+  string id = 1;
+  uint32 width = 2;
+  uint32 height = 3;
 }
 
 // Who can come on one of a poll's days.
@@ -498,6 +510,8 @@ message ChatSend {
   repeated string days = 3;
   // The days put to the vote instead: 2 days at least, in the group chat.
   bool poll = 4;
+  // A photo instead, the sender's own, uploaded first; no words or days.
+  ChatPhoto photo = 5;
 }
 
 // New words for one of the member's own lines of words (編集).

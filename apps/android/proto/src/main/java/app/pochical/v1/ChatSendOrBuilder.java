@@ -96,4 +96,23 @@ public interface ChatSendOrBuilder extends
    * @return The poll.
    */
   boolean getPoll();
+
+  /**
+   * <pre>
+   * A photo instead, the sender's own, uploaded first; no words or days.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
+   * @return Whether the photo field is set.
+   */
+  boolean hasPhoto();
+  /**
+   * <pre>
+   * A photo instead, the sender's own, uploaded first; no words or days.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
+   * @return The photo.
+   */
+  app.pochical.v1.ChatPhoto getPhoto();
 }
