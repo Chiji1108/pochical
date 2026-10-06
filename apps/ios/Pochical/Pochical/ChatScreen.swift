@@ -138,6 +138,14 @@ struct ChatScreen: View {
   @State private var picked: [PickedMember] = []
   /// A link tapped in a line, open in the browser sheet.
   @State private var browsing: OpenedLink?
+  /// All the pins open under the bar.
+  @State private var pinsOpen = false
+  /// A pinned line being gone to, its earlier lines asked for until held.
+  @State private var jumpTarget: Int64?
+  /// The line gone to, ringed for a moment.
+  @State private var ringed: Int64?
+  /// What a pin did, said for a moment over the lines.
+  @State private var notice: String?
   @Environment(\.openInvite) private var openInvite
   /// The line whose ほかの絵文字 is open.
   @State private var reactingTo: ChatLineRow?
@@ -215,6 +223,29 @@ struct ChatScreen: View {
         .padding(12)
         .transition(.opacity)
       }
+    }
+    // Under the pins, over the lines.
+    .overlay(alignment: .top) {
+      if let notice {
+        Text(notice)
+          .font(.footnote)
+          .foregroundStyle(colors.inverseText)
+          .padding(.horizontal, 16)
+          .padding(.vertical, 10)
+          .background(colors.inverseBackground, in: Capsule())
+          .padding(.top, 8)
+          .padding(.horizontal, 16)
+          .transition(.opacity.combined(with: .move(edge: .top)))
+          .accessibilityAddTraits(.isStaticText)
+      }
+    }
+    .safeAreaInset(edge: .top, spacing: 0) {
+      PinBar(
+        pins: chat.state.pins, open: $pinsOpen, nameOf: nameOf,
+        onJump: jump(to:), onUnpin: { pin($0, on: false) })
+    }
+    .task(id: JumpKey(target: jumpTarget, first: chat.state.lines.first?.seq)) {
+      await goToTarget()
     }
     .safeAreaInset(edge: .bottom, spacing: 0) {
       // A one-to-one chat with someone who left stays to be read, but
@@ -351,8 +382,9 @@ struct ChatScreen: View {
           text: line.text, time: line.sentAtMs, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
           named: otherID == nil, first: startsRun, waiting: false, nameOf: nameOf,
-          reactions: line.reactions, meID: meID, onReact: onReact,
-          lifted: acting?.lineID == line.opID
+          reactions: line.reactions,
+          pinned: chat.state.pins.contains { $0.seq == line.seq }, ringed: ringed == line.seq,
+          meID: meID, onReact: onReact, lifted: acting?.lineID == line.opID
         ) { frame in
           openActions(
             MessageActionsRequest(
@@ -622,7 +654,14 @@ struct ChatScreen: View {
   /// A line's menu: コピー, then for one's own 編集, and 送信取消 apart in
   /// the danger color (spec/chat.md, Editing and unsending).
   private func actions(for line: ChatLineRow, mine: Bool) -> [MessageAction] {
-    var actions = [copy(line.text)]
+    let pinned = chat.state.pins.contains { $0.seq == line.seq }
+    var actions = [
+      copy(line.text),
+      // Anyone's line, for everyone in the chat (spec/chat.md, Pins).
+      MessageAction(
+        title: pinned ? "ピン留めを外す" : "ピン留め", systemImage: pinned ? "pin.slash" : "pin"
+      ) { pin(line.seq, on: !pinned) },
+    ]
     if mine {
       actions.append(MessageAction(title: "編集", systemImage: "pencil") { edit(line) })
       actions.append(
@@ -632,6 +671,58 @@ struct ChatScreen: View {
         ) { unsending = line })
     }
     return actions
+  }
+
+  /// Pins a line for everyone, or takes its pin off, and says what
+  /// happened, the oldest pin making room for a new one by name.
+  private func pin(_ seq: Int64, on: Bool) {
+    let current = chat.state.pins.map { String($0.seq) }
+    let dropped = on ? pinStep(current, pin: String(seq)).dropped : nil
+    var pin = Pochical_V1_ChatPin()
+    pin.threadID = threadID
+    pin.seq = UInt64(seq)
+    pin.on = on
+    write(.pin(pin))
+    say(
+      dropped != nil
+        ? "ピン留めは\(Chat.maxPins)件までです。いちばん古いものを外しました"
+        : on ? "ピン留めしました" : "ピン留めを外しました")
+  }
+
+  /// Says `words` over the lines for a moment, as a toast does.
+  private func say(_ words: String) {
+    withAnimation { notice = words }
+    Task { @MainActor in
+      try? await Task.sleep(for: .seconds(2.5))
+      if notice == words {
+        withAnimation { notice = nil }
+      }
+    }
+  }
+
+  /// Goes to a pinned line: closes the list and asks for earlier lines
+  /// until the line is held.
+  private func jump(to seq: Int64) {
+    pinsOpen = false
+    jumpTarget = seq
+  }
+
+  /// Scrolls to the line gone to once held and rings it; else asks for the
+  /// page before the lines held, and comes back as it arrives.
+  private func goToTarget() async {
+    guard let target = jumpTarget else { return }
+    let state = chat.state
+    if let line = state.lines.first(where: { $0.seq == target }) {
+      jumpTarget = nil
+      withAnimation { position.scrollTo(id: "line-\(line.opID)", anchor: .center) }
+      ringed = target
+      try? await Task.sleep(for: .milliseconds(500))
+      withAnimation(.easeOut(duration: 0.7)) { ringed = nil }
+    } else if !state.atStart, let first = state.lines.first?.seq {
+      await socket?.requestPage(of: threadID, before: first)
+    } else {
+      jumpTarget = nil
+    }
   }
 
   private func copy(_ text: String) -> MessageAction {
@@ -740,6 +831,10 @@ private struct LineView: View {
   /// A member's name, for the line's mentions.
   let nameOf: (String) -> String
   var reactions: [LineReaction] = []
+  /// Pinned for everyone: a small pin by its time.
+  var pinned = false
+  /// Gone to from the pins: ringed for a moment.
+  var ringed = false
   var meID: String?
   /// Puts the reader's reaction on, or takes it back.
   var onReact: (String) -> Void = { _ in }
@@ -776,6 +871,13 @@ private struct LineView: View {
         HStack(alignment: .bottom, spacing: 8) {
           if mine { meta }
           MessageBubble(text: text, mine: mine, first: first, waiting: waiting, nameOf: nameOf)
+            // Rung for a moment when gone to from the pins, as /design's
+            // flash: a ring just outside the bubble, held, then fading.
+            .background {
+              BubbleShape(mine: mine, first: first)
+                .stroke(colors.accentBorder, lineWidth: 6)
+                .opacity(ringed ? 1 : 0)
+            }
             // Its own size and where its middle is: the press's give
             // shrinks its frame on the screen, not its size.
             .onGeometryChange(for: CGRect.self) { proxy in
@@ -815,8 +917,17 @@ private struct LineView: View {
   /// 編集済み over the time, toward the bubble; a clock while it waits.
   private var meta: some View {
     VStack(alignment: mine ? .trailing : .leading, spacing: 0) {
-      if edited {
-        Text("編集済み")
+      if edited || pinned {
+        HStack(spacing: 2) {
+          if pinned {
+            Image(systemName: "pin.fill")
+              .imageScale(.small)
+              .accessibilityLabel("ピン留め中")
+          }
+          if edited {
+            Text("編集済み")
+          }
+        }
       }
       if waiting {
         Image(systemName: "clock")

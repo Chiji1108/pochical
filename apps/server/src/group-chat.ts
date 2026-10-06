@@ -8,6 +8,7 @@ import {
   desc,
   eq,
   gt,
+  isNotNull,
   lt,
   lte,
   max,
@@ -16,11 +17,13 @@ import {
 } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
+import { pinStep } from "./chat-pins";
 import { ChangeSchema, ChatLineSchema } from "./gen/pochical/v1/sync_pb";
 import type {
   Change,
   ChatEdit,
   ChatLine,
+  ChatPin,
   ChatReact,
 } from "./gen/pochical/v1/sync_pb";
 import { chatLines, chatReactions, readMarks } from "./group-do-schema";
@@ -125,6 +128,7 @@ const lineOf = (db: DrizzleSqliteDODatabase, row: LineRow): ChatLine =>
     authorId: row.authorId,
     edited: row.edited,
     opId: row.opId,
+    pinnedOrder: BigInt(row.pinnedAt ?? 0),
     reactions: reactionsOf(db, row),
     sentAtMs: BigInt(row.sentAt.getTime()),
     seq: BigInt(row.seq),
@@ -302,8 +306,104 @@ const takeReaction = (
   return row === undefined ? {} : { change: chatLineChange(db, row) };
 };
 
+/**
+ * New words for one of the member's own lines, or the line taken back
+ * with its reactions and pin; the line comes back to the member as the
+ * group holds it when it is not theirs, taken back already, or the words
+ * do not fit.
+ */
+const takeWords = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  kind: Extract<ChatEdit["kind"], { case: "change" | "unsend" }>,
+  cursor: number
+): Taken => {
+  const line = lineAt(db, kind.value.threadId, kind.value.seq);
+  if (line === undefined) {
+    return {};
+  }
+  const unsend = kind.case === "unsend";
+  const text = unsend ? "" : kind.value.text;
+  if (line.authorId !== userId || line.unsent || !(unsend || fitsLine(text))) {
+    return { refused: chatLineChange(db, line) };
+  }
+  // Taking a line back takes its reactions with it.
+  if (unsend) {
+    db.delete(chatReactions)
+      .where(
+        and(
+          eq(chatReactions.threadId, line.threadId),
+          eq(chatReactions.seq, line.seq)
+        )
+      )
+      .run();
+  }
+  const row = db
+    .update(chatLines)
+    .set(
+      // Taking a line back takes its pin off too.
+      unsend
+        ? { cursor, pinnedAt: null, text, unsent: true }
+        : { cursor, edited: true, text }
+    )
+    .where(
+      and(eq(chatLines.threadId, line.threadId), eq(chatLines.seq, line.seq))
+    )
+    .returning()
+    .get();
+  return row === undefined ? {} : { change: chatLineChange(db, row) };
+};
+
+/**
+ * A line pinned for everyone, or its pin taken off, at `cursor`; a pin
+ * that a new one took the place of comes off at the cursor after
+ * (spec/chat.md, Pins). Nothing for a line taken back or gone, nor when
+ * it changes nothing.
+ */
+const takePin = (
+  db: DrizzleSqliteDODatabase,
+  { threadId, seq, on }: ChatPin,
+  cursor: number
+): Taken => {
+  const line = lineAt(db, threadId, seq);
+  // Taking off a pin that is not there changes nothing; pinning a pinned
+  // line moves it up.
+  if (line === undefined || line.unsent || (!on && line.pinnedAt === null)) {
+    return {};
+  }
+  const pinned = db
+    .select({ seq: chatLines.seq })
+    .from(chatLines)
+    .where(and(eq(chatLines.threadId, threadId), isNotNull(chatLines.pinnedAt)))
+    .orderBy(desc(chatLines.pinnedAt))
+    .all()
+    .map((row) => String(row.seq));
+  const id = String(line.seq);
+  const { dropped } = pinStep(pinned, on ? { pin: id } : { unpin: id });
+  const set = (at: number, lineSeq: number, pinnedAt: number | null) =>
+    db
+      .update(chatLines)
+      .set({ cursor: at, pinnedAt })
+      .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, lineSeq)))
+      .returning()
+      .get();
+  const row = set(cursor, line.seq, on ? cursor : null);
+  const off =
+    dropped === null ? undefined : set(cursor + 1, Number(dropped), null);
+  return {
+    alsoChanged: off === undefined ? undefined : chatLineChange(db, off),
+    change: row === undefined ? undefined : chatLineChange(db, row),
+  };
+};
+
 /** What taking an edit did: its change, and the line to send back when it was refused. */
-type Taken = { change?: Change; refused?: Change };
+type Taken = {
+  change?: Change;
+  // A second line it changed, at the cursor after: the pin a new pin
+  // took the place of.
+  alsoChanged?: Change;
+  refused?: Change;
+};
 
 /**
  * A member's edit of a chat, taken at `cursor` when it is theirs to make:
@@ -354,49 +454,13 @@ export const takeChatEdit = (
     }
     case "change":
     case "unsend": {
-      const line = lineAt(db, kind.value.threadId, kind.value.seq);
-      if (line === undefined) {
-        return {};
-      }
-      const unsend = kind.case === "unsend";
-      const text = unsend ? "" : kind.value.text;
-      if (
-        line.authorId !== userId ||
-        line.unsent ||
-        !(unsend || fitsLine(text))
-      ) {
-        return { refused: chatLineChange(db, line) };
-      }
-      // Taking a line back takes its reactions with it.
-      if (unsend) {
-        db.delete(chatReactions)
-          .where(
-            and(
-              eq(chatReactions.threadId, line.threadId),
-              eq(chatReactions.seq, line.seq)
-            )
-          )
-          .run();
-      }
-      const row = db
-        .update(chatLines)
-        .set(
-          unsend
-            ? { cursor, text, unsent: true }
-            : { cursor, edited: true, text }
-        )
-        .where(
-          and(
-            eq(chatLines.threadId, line.threadId),
-            eq(chatLines.seq, line.seq)
-          )
-        )
-        .returning()
-        .get();
-      return row === undefined ? {} : { change: chatLineChange(db, row) };
+      return takeWords(db, userId, kind, cursor);
     }
     case "react": {
       return takeReaction(db, userId, kind.value, cursor);
+    }
+    case "pin": {
+      return takePin(db, kind.value, cursor);
     }
     case "read": {
       // Never past the chat's end, and only forward.
@@ -473,7 +537,9 @@ export const chatChangesAfter = (
           gt(chatLines.cursor, cursor),
           or(
             lte(chatLines.createdCursor, cursor),
-            gt(chatLines.seq, chatHead(db, threadId) - chatRules.pageSize)
+            gt(chatLines.seq, chatHead(db, threadId) - chatRules.pageSize),
+            // Pinned lines however far back, for the pins over the chat.
+            isNotNull(chatLines.pinnedAt)
           )
         )
       )

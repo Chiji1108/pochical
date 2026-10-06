@@ -85,5 +85,16 @@ public interface ChatEditOrBuilder extends
    */
   app.pochical.v1.ChatReact getReact();
 
+  /**
+   * <code>.pochical.v1.ChatPin pin = 7 [json_name = "pin"];</code>
+   * @return Whether the pin field is set.
+   */
+  boolean hasPin();
+  /**
+   * <code>.pochical.v1.ChatPin pin = 7 [json_name = "pin"];</code>
+   * @return The pin.
+   */
+  app.pochical.v1.ChatPin getPin();
+
   public app.pochical.v1.ChatEdit.KindCase getKindCase();
 }

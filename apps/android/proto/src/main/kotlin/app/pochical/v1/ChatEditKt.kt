@@ -179,6 +179,30 @@ public object ChatEditKt {
     public fun hasReact(): kotlin.Boolean {
       return _builder.hasReact()
     }
+
+    /**
+     * `.pochical.v1.ChatPin pin = 7 [json_name = "pin"];`
+     */
+    public var pin: app.pochical.v1.ChatPin
+      @kotlin.jvm.JvmName("getPin")
+        get() = _builder.pin
+      @kotlin.jvm.JvmName("setPin")
+        set(value) {
+        _builder.pin = value
+      }
+    /**
+     * `.pochical.v1.ChatPin pin = 7 [json_name = "pin"];`
+     */
+    public fun clearPin() {
+      _builder.clearPin()
+    }
+    /**
+     * `.pochical.v1.ChatPin pin = 7 [json_name = "pin"];`
+     * @return Whether the pin field is set.
+     */
+    public fun hasPin(): kotlin.Boolean {
+      return _builder.hasPin()
+    }
     public val kindCase: app.pochical.v1.ChatEdit.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -205,4 +229,7 @@ public val app.pochical.v1.ChatEditOrBuilder.readOrNull: app.pochical.v1.ChatRea
 
 public val app.pochical.v1.ChatEditOrBuilder.reactOrNull: app.pochical.v1.ChatReact?
   get() = if (hasReact()) getReact() else null
+
+public val app.pochical.v1.ChatEditOrBuilder.pinOrNull: app.pochical.v1.ChatPin?
+  get() = if (hasPin()) getPin() else null
 

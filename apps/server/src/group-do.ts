@@ -425,6 +425,10 @@ export class GroupDO extends DurableObject<Env> {
         if (taken.change) {
           this.setHead(cursor);
           made.push(taken.change);
+          if (taken.alsoChanged) {
+            this.setHead(cursor + 1);
+            made.push(taken.alsoChanged);
+          }
           if (edit.kind.case === "send") {
             const { threadId } = edit.kind.value;
             // A one-to-one chat's line is the other's alone to read.

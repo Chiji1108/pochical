@@ -369,3 +369,59 @@ func oneEmoji(_ vector: EmojiVectors.Case) {
         == [LineReaction(emoji: "👍", userIDs: ["aya", "me"])])
   }
 }
+
+struct PinVectors: Decodable, Sendable {
+  struct Step: Decodable, Sendable {
+    let pin: String?
+    let unpin: String?
+    let unsend: String?
+    let settle: String?
+  }
+
+  struct Expected: Decodable, Sendable {
+    let pins: [String]
+    let dropped: String?
+  }
+
+  struct Case: VectorCase {
+    let name: String
+    let pins: [String]
+    let step: Step
+    let expected: Expected
+  }
+
+  let pins: [Case]
+}
+
+@Test(arguments: try vectors("chat", as: PinVectors.self).pins)
+func pinsAfterAStep(_ vector: PinVectors.Case) {
+  let step = vector.step
+  let after =
+    if let id = step.pin ?? step.settle {
+      pinStep(vector.pins, pin: id)
+    } else if let id = step.unpin {
+      pinStep(vector.pins, unpin: id)
+    } else {
+      pinStep(vector.pins, unsend: step.unsend ?? "")
+    }
+  #expect(after.pins == vector.expected.pins)
+  #expect(after.dropped == vector.expected.dropped)
+}
+
+@Test func aChatsPinsHoldLinesFarBackAndTheMembersShowAtOnce() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var old = line(1, "ずっと前")
+    old.chatLine.pinnedOrder = 9
+    // 1 is held for its pin, apart from the latest 5–6.
+    try GroupSync.take([old, line(5, "e"), line(6, "f")], of: "g", in: db)
+    var pin = Pochical_V1_ChatPin()
+    pin.threadID = groupThread
+    pin.seq = 6
+    pin.on = true
+    try Chats.edit(.pin(pin), in: "g", now: 1, db: db)
+    let state = try Chats.state(of: groupThread, in: "g", db: db)
+    #expect(state.lines.map(\.seq) == [5, 6])
+    #expect(state.pins.map(\.seq) == [6, 1])
+  }
+}

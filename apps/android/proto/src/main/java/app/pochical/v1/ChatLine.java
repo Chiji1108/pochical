@@ -585,6 +585,47 @@ public  final class ChatLine extends
     reactions_.remove(index);
   }
 
+  public static final int PINNED_ORDER_FIELD_NUMBER = 10;
+  private long pinnedOrder_;
+  /**
+   * <pre>
+   * Pinned for everyone in the chat: the group's cursor when it was last
+   * pinned, so the latest pin is the greatest; 0 when not pinned.
+   * </pre>
+   *
+   * <code>uint64 pinned_order = 10 [json_name = "pinnedOrder"];</code>
+   * @return The pinnedOrder.
+   */
+  @java.lang.Override
+  public long getPinnedOrder() {
+    return pinnedOrder_;
+  }
+  /**
+   * <pre>
+   * Pinned for everyone in the chat: the group's cursor when it was last
+   * pinned, so the latest pin is the greatest; 0 when not pinned.
+   * </pre>
+   *
+   * <code>uint64 pinned_order = 10 [json_name = "pinnedOrder"];</code>
+   * @param value The pinnedOrder to set.
+   */
+  private void setPinnedOrder(long value) {
+    
+    pinnedOrder_ = value;
+  }
+  /**
+   * <pre>
+   * Pinned for everyone in the chat: the group's cursor when it was last
+   * pinned, so the latest pin is the greatest; 0 when not pinned.
+   * </pre>
+   *
+   * <code>uint64 pinned_order = 10 [json_name = "pinnedOrder"];</code>
+   */
+  private void clearPinnedOrder() {
+
+    pinnedOrder_ = 0L;
+  }
+
   public static app.pochical.v1.ChatLine parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1275,6 +1316,49 @@ public  final class ChatLine extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Pinned for everyone in the chat: the group's cursor when it was last
+     * pinned, so the latest pin is the greatest; 0 when not pinned.
+     * </pre>
+     *
+     * <code>uint64 pinned_order = 10 [json_name = "pinnedOrder"];</code>
+     * @return The pinnedOrder.
+     */
+    @java.lang.Override
+    public long getPinnedOrder() {
+      return instance.getPinnedOrder();
+    }
+    /**
+     * <pre>
+     * Pinned for everyone in the chat: the group's cursor when it was last
+     * pinned, so the latest pin is the greatest; 0 when not pinned.
+     * </pre>
+     *
+     * <code>uint64 pinned_order = 10 [json_name = "pinnedOrder"];</code>
+     * @param value The pinnedOrder to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPinnedOrder(long value) {
+      copyOnWrite();
+      instance.setPinnedOrder(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Pinned for everyone in the chat: the group's cursor when it was last
+     * pinned, so the latest pin is the greatest; 0 when not pinned.
+     * </pre>
+     *
+     * <code>uint64 pinned_order = 10 [json_name = "pinnedOrder"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPinnedOrder() {
+      copyOnWrite();
+      instance.clearPinnedOrder();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatLine)
   }
   @java.lang.Override
@@ -1301,10 +1385,11 @@ public  final class ChatLine extends
             "opId_",
             "reactions_",
             app.pochical.v1.ChatReaction.class,
+            "pinnedOrder_",
           };
           java.lang.String info =
-              "\u0000\t\u0000\u0000\u0001\t\t\u0000\u0001\u0000\u0001\u0208\u0002\u0003\u0003\u0208" +
-              "\u0004\u0208\u0005\u0002\u0006\u0007\u0007\u0007\b\u0208\t\u001b";
+              "\u0000\n\u0000\u0000\u0001\n\n\u0000\u0001\u0000\u0001\u0208\u0002\u0003\u0003\u0208" +
+              "\u0004\u0208\u0005\u0002\u0006\u0007\u0007\u0007\b\u0208\t\u001b\n\u0003";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

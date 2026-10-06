@@ -392,6 +392,9 @@ message ChatLine {
   // Its reactions, each emoji with who chose it in the order they did,
   // the emoji in the order first chosen; none once unsent.
   repeated ChatReaction reactions = 9;
+  // Pinned for everyone in the chat: the group's cursor when it was last
+  // pinned, so the latest pin is the greatest; 0 when not pinned.
+  uint64 pinned_order = 10;
 }
 
 // One emoji on a line and the members who chose it.
@@ -424,7 +427,18 @@ message ChatEdit {
     ChatUnsend unsend = 4;
     ChatRead read = 5;
     ChatReact react = 6;
+    ChatPin pin = 7;
   }
+}
+
+// A line pinned for everyone in the chat, or its pin taken off, by any
+// member (spec/chat.md, Pins): at most chatRules.maxPins at once, a new
+// one taking the place of the oldest; pinning a pinned line moves it up.
+message ChatPin {
+  string thread_id = 1;
+  uint64 seq = 2;
+  // Pinned, or taken off.
+  bool on = 3;
 }
 
 // The member's reaction on a line, put on or taken off: anyone's line but

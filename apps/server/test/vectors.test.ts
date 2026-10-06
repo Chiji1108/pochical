@@ -6,6 +6,7 @@ import chat from "../../../spec/vectors/chat.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import orderClears from "../../../spec/vectors/order-clears.json";
 import text from "../../../spec/vectors/text.json";
+import { pinStep } from "../src/chat-pins";
 import { DayField } from "../src/gen/pochical/v1/sync_pb";
 import { directThread } from "../src/group-chat";
 import { compareClocks, isAhead } from "../src/hlc";
@@ -16,6 +17,10 @@ import { characterCount, isEmoji } from "../src/text-limits";
 describe("spec/vectors/chat.json", () => {
   test.each(chat.directThread)("directThread: $name", ({ a, b, expected }) => {
     expect(directThread(a, b)).toBe(expected);
+  });
+
+  test.each(chat.pins)("pins: $name", ({ pins, step, expected }) => {
+    expect(pinStep(pins, step)).toStrictEqual(expected);
   });
 });
 

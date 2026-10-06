@@ -31,6 +31,7 @@ const chat = (
 };
 
 type ChatKind =
+  | { pin: [number, boolean] }
   | { react: [number, string, boolean] }
   | { send: string }
   | { change: [number, string] }
@@ -38,6 +39,13 @@ type ChatKind =
   | { read: number };
 
 function sendChatKind(kind: ChatKind, threadId: string) {
+  if ("pin" in kind) {
+    const [seq, on] = kind.pin;
+    return {
+      case: "pin",
+      value: { on, seq: BigInt(seq), threadId },
+    } as const;
+  }
   if ("react" in kind) {
     const [seq, emoji, on] = kind.react;
     return {
@@ -460,6 +468,80 @@ describe("a group's chat", () => {
     expect(changes).toHaveLength(2);
     expect(changes[1]).toMatchObject({
       kind: { case: "chatLine", value: { reactions: [], unsent: true } },
+    });
+  });
+
+  it("pins a line for everyone, a sixth taking the place of the oldest", async () => {
+    const { groupId, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    const count = chatRules.maxPins + 1;
+    chat(
+      mine.socket,
+      Array.from({ length: count }, (_, at) => ({
+        kind: { send: `${at + 1}` },
+        opId: `s${at}`,
+      }))
+    );
+    await mine.frames.next();
+    await mine.frames.next();
+    chat(
+      mine.socket,
+      Array.from({ length: count }, (_, at) => ({
+        kind: { pin: [at + 1, true] },
+        opId: `p${at}`,
+      }))
+    );
+    const pinned = changesIn(await mine.frames.next()).flatMap(({ kind }) =>
+      kind.case === "chatLine"
+        ? [[Number(kind.value.seq), kind.value.pinnedOrder > 0n]]
+        : []
+    );
+    // The last pin, then the first one coming off for it.
+    expect(pinned.slice(-2)).toStrictEqual([
+      [count, true],
+      [1, false],
+    ]);
+  });
+
+  it("takes a pin off with its line taken back", async () => {
+    const { groupId, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    chat(mine.socket, [{ kind: { send: "大事" }, opId: "a" }]);
+    await mine.frames.next();
+    await mine.frames.next();
+    chat(mine.socket, [
+      { kind: { pin: [1, true] }, opId: "p" },
+      { kind: { unsend: 1 }, opId: "u" },
+      { kind: { pin: [1, false] }, opId: "q" },
+    ]);
+    const lines = changesIn(await mine.frames.next());
+    expect(lines).toHaveLength(2);
+    expect(lines[1]).toMatchObject({
+      kind: { case: "chatLine", value: { pinnedOrder: 0n, unsent: true } },
+    });
+  });
+
+  it("gives a device catching up a pinned line however far back", async () => {
+    const { groupId, guest, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    chat(
+      mine.socket,
+      Array.from({ length: chatRules.pageSize + 5 }, (_, at) => ({
+        kind: { send: `${at + 1}` },
+        opId: `m${at}`,
+      }))
+    );
+    await mine.frames.next();
+    await mine.frames.next();
+    chat(mine.socket, [{ kind: { pin: [1, true] }, opId: "p" }]);
+    await mine.frames.next();
+    await mine.frames.next();
+    const later = await groupSocket(groupId, guest);
+    const first = changesIn(await later.frames.next()).find(
+      ({ kind }) => kind.case === "chatLine" && kind.value.seq === 1n
+    );
+    expect(first).toMatchObject({
+      kind: { value: { text: "1" } },
     });
   });
 });

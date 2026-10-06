@@ -120,6 +120,8 @@ export const chatLines = sqliteTable(
     edited: integer({ mode: "boolean" }).notNull().default(false),
     // The sending edit's op_id: a send taken twice is one line.
     opId: text("op_id").notNull(),
+    // The cursor it was last pinned at, while pinned for everyone.
+    pinnedAt: integer("pinned_at"),
     sentAt: integer("sent_at", { mode: "timestamp_ms" }).notNull(),
     seq: integer().notNull(),
     text: text().notNull(),
