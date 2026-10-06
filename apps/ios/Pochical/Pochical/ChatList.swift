@@ -154,7 +154,20 @@ private struct ChatRow<Icon: View>: View {
                 .foregroundStyle(colors.textQuaternary)
             }
             if summary.unread > 0 {
-              UnreadCount(count: summary.unread)
+              HStack(spacing: 4) {
+                // An unread line mentions the reader, as Telegram marks
+                // one, so it is found among chats whose notifications
+                // are off.
+                if summary.mentioned {
+                  Text("@")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(colors.accentOnFill)
+                    .frame(width: 18, height: 18)
+                    .background(colors.accentFill, in: Circle())
+                    .accessibilityLabel("自分へのメンションあり")
+                }
+                UnreadCount(count: summary.unread)
+              }
             }
           }
         }
@@ -172,14 +185,16 @@ private struct ChatRow<Icon: View>: View {
   /// The latest line as one line of words: 自分： before one's own.
   private var preview: String {
     let summary = chat.summary
+    let nameOf = { (id: String) in chat.names[id] ?? "メンバー" }
     if let waiting = summary.waiting {
-      return "自分：\(waiting.text)"
+      return "自分：\(plainText(waiting.text, nameOf: nameOf))"
     }
     guard let last = summary.last else { return "まだメッセージはありません" }
     if last.unsent {
-      return unsentLine(chat.lastWriter, mine: last.authorID == me)
+      return unsentLine(chat.names[last.authorID], mine: last.authorID == me)
     }
-    return last.authorID == me ? "自分：\(last.text)" : last.text
+    let words = plainText(last.text, nameOf: nameOf)
+    return last.authorID == me ? "自分：\(words)" : words
   }
 }
 

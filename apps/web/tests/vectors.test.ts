@@ -41,7 +41,9 @@ import {
 import {
   inviteCodeOf,
   largeEmojiCount,
+  mentionQuery,
   mentionsOf,
+  pickingMention,
   plainText,
   siteOf,
   textParts,
@@ -234,6 +236,12 @@ describe("spec/vectors/chat-text.json", () => {
   } of chatText.withMentions) {
     test(name, () => {
       expect(withMentions(message, picked)).toBe(expected);
+    });
+  }
+  for (const { name, text: draft, expected, picked } of chatText.mentionQuery) {
+    test(`mentionQuery: ${name}`, () => {
+      expect(mentionQuery(draft) ?? null).toBe(expected);
+      expect(pickingMention(draft, "あや")).toBe(picked);
     });
   }
   test("inviteCode", () => {

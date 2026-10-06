@@ -1,5 +1,5 @@
 {
-  "about": "A chat message's words as spec/chat.md has them. textParts cuts a message into words, links and mentions, in order: a link starts http:// or https://, runs over the characters a URL is written in, needs a host, and leaves out what closes the sentence after it (a full stop, a comma, a bracket opened before it). A mention is kept as <@id>. plainText shows each mention as @ and the member's name. withMentions turns only a picked member's whole @name (followed by a space or the end) into their mention. inviteCode: the code of Pochical's own invitation links, https://pochical.app/invite/{code}, known by the path alone, whatever query follows. site: a link's host without a leading www. largeEmoji: how many emoji a message of nothing but 1 to chatRules.largeEmojiMax (3) emoji has, each one emoji as text.json's isEmoji has it, shown large without a bubble; 0 for any other message, so a space, a line or a word among them keeps the bubble.",
+  "about": "A chat message's words as spec/chat.md has them. textParts cuts a message into words, links and mentions, in order: a link starts http:// or https://, runs over the characters a URL is written in, needs a host, and leaves out what closes the sentence after it (a full stop, a comma, a bracket opened before it). A mention is kept as <@id>. plainText shows each mention as @ and the member's name. withMentions turns only a picked member's whole @name (followed by a space or the end) into their mention. inviteCode: the code of Pochical's own invitation links, https://pochical.app/invite/{code}, known by the path alone, whatever query follows. site: a link's host without a leading www. largeEmoji: how many emoji a message of nothing but 1 to chatRules.largeEmojiMax (3) emoji has, each one emoji as text.json's isEmoji has it, shown large without a bubble; 0 for any other message, so a space, a line or a word among them keeps the bubble. mentionQuery: while writing, what follows an @ (or a full-width ＠, as a Japanese keyboard types one) at the end of the message, the names to list for it; null without one, a space ending it. `picked` is the draft once a member named あや is picked from the list: their @name (with a half-width @) and a space in place of the @ being written.",
   "textParts": [
     {
       "name": "a message without links",
@@ -337,6 +337,38 @@
       "name": "nothing",
       "text": "",
       "expected": 0
+    }
+  ],
+  "mentionQuery": [
+    {
+      "name": "an @ alone lists everyone",
+      "text": "明日 @",
+      "expected": "",
+      "picked": "明日 @あや "
+    },
+    {
+      "name": "what follows it narrows the list",
+      "text": "明日 @あ",
+      "expected": "あ",
+      "picked": "明日 @あや "
+    },
+    {
+      "name": "a full-width ＠, as a Japanese keyboard types it",
+      "text": "＠あ",
+      "expected": "あ",
+      "picked": "@あや "
+    },
+    {
+      "name": "a space ends it",
+      "text": "@あや どう",
+      "expected": null,
+      "picked": "@あや どう"
+    },
+    {
+      "name": "no @, no list",
+      "text": "どう？",
+      "expected": null,
+      "picked": "どう？"
     }
   ]
 }

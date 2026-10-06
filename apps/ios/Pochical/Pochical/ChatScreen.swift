@@ -22,8 +22,8 @@ struct ChatRequest: FetchKeyRequest, Hashable {
   }
 }
 
-/// A chat's latest line and unread count for `me`, and the latest line's
-/// writer by name, read again as they change.
+/// A chat's latest line and unread count for `me`, and everyone's names
+/// for its writer and mentions, read again as they change.
 struct ChatSummaryRequest: FetchKeyRequest, Hashable {
   let groupID: String
   let threadID: String
@@ -31,16 +31,16 @@ struct ChatSummaryRequest: FetchKeyRequest, Hashable {
 
   struct Value: Hashable, Sendable {
     var summary = ChatSummary()
-    var lastWriter: String?
+    /// Everyone who has been in the group by id, those who left too.
+    var names: [String: String] = [:]
   }
 
   func fetch(_ db: Database) throws -> Value {
-    let summary = try Chats.summary(of: threadID, in: groupID, me: me, db: db)
-    let writer = try summary.last.flatMap { last in
-      try GroupMemberRow.where { $0.groupID.eq(groupID) && $0.userID.eq(last.authorID) }
-        .fetchOne(db)?.displayName
-    }
-    return Value(summary: summary, lastWriter: writer)
+    Value(
+      summary: try Chats.summary(of: threadID, in: groupID, me: me, db: db),
+      names: Dictionary(
+        try Chats.writers(in: groupID, db: db).map { ($0.userID, $0.displayName) },
+        uniquingKeysWith: { _, last in last }))
   }
 }
 
@@ -131,11 +131,16 @@ struct ChatScreen: View {
   @State private var field = ComposerBox()
   /// A word is being converted in the composer.
   @State private var composing = false
+  /// Members picked from the list of names while writing, to be sent as
+  /// mentions while their @name stays.
+  @State private var picked: [PickedMember] = []
+  /// A link tapped in a line, open in the browser sheet.
+  @State private var browsing: OpenedLink?
+  @Environment(\.openInvite) private var openInvite
 
   var body: some View {
     let state = chat.state
-    let names = Dictionary(
-      chat.writers.map { ($0.userID, $0.displayName) }, uniquingKeysWith: { _, last in last })
+    let names = self.names
     ScrollView {
       LazyVStack(spacing: 8) {
         if !state.atStart {
@@ -247,6 +252,10 @@ struct ChatScreen: View {
         withAnimation { toLatest() }
       }
     }
+    .environment(\.openURL, OpenURLAction { open($0) })
+    .sheet(item: $browsing) { link in
+      SafariView(url: link.url).ignoresSafeArea()
+    }
     .alert(
       "送信を取り消しますか？",
       isPresented: Binding {
@@ -329,9 +338,11 @@ struct ChatScreen: View {
         LineView(
           text: line.text, time: line.sentAtMs, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
-          named: otherID == nil, waiting: false
+          named: otherID == nil, waiting: false, nameOf: nameOf
         ) {
-          Button("コピー", systemImage: "doc.on.doc") { UIPasteboard.general.string = line.text }
+          Button("コピー", systemImage: "doc.on.doc") {
+            UIPasteboard.general.string = plainText(line.text, nameOf: nameOf)
+          }
           if mine {
             Button("編集", systemImage: "pencil") { edit(line) }
             Divider()
@@ -344,9 +355,11 @@ struct ChatScreen: View {
     case .waiting(let line):
       LineView(
         text: line.text, time: line.madeAtMs, edited: false, mine: true, writer: nil,
-        named: false, waiting: true
+        named: false, waiting: true, nameOf: nameOf
       ) {
-        Button("コピー", systemImage: "doc.on.doc") { UIPasteboard.general.string = line.text }
+        Button("コピー", systemImage: "doc.on.doc") {
+          UIPasteboard.general.string = plainText(line.text, nameOf: nameOf)
+        }
       }
     }
   }
@@ -355,16 +368,17 @@ struct ChatScreen: View {
 
   private var composer: some View {
     let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-    let unchanged = editing.map { $0.text == draft } ?? false
+    let unchanged = editing.map { $0.text == withMentions(draft, picked: picked) } ?? false
     let blocked = trimmed.isEmpty || unchanged
     return VStack(spacing: 0) {
+      mentionList
       if let editing {
         HStack(spacing: 8) {
           VStack(alignment: .leading, spacing: 2) {
             Text("メッセージを編集")
               .font(.caption.weight(.semibold))
               .foregroundStyle(colors.accentDefault)
-            Text(editing.text)
+            Text(plainText(editing.text, nameOf: nameOf))
               .font(.footnote)
               .foregroundStyle(colors.textSecondary)
               .lineLimit(1)
@@ -444,6 +458,79 @@ struct ChatScreen: View {
     }
   }
 
+  // MARK: Mentions
+
+  /// Everyone who has been in the group by id, those who left too.
+  private var names: [String: String] {
+    Dictionary(
+      chat.writers.map { ($0.userID, $0.displayName) }, uniquingKeysWith: { _, last in last })
+  }
+
+  /// A member's name in the group as it is now, for their mentions.
+  private func nameOf(_ id: String) -> String {
+    names[id] ?? "メンバー"
+  }
+
+  /// The others to mention, over the composer, while an @ is being
+  /// written at the end of the message: in the group's chat only, those in
+  /// it now whose name has what follows the @.
+  @ViewBuilder private var mentionList: some View {
+    let others =
+      otherID != nil
+      ? []
+      : mentionQuery(draft).map { query in
+        chat.writers.filter {
+          !$0.left && $0.userID != meID && (query.isEmpty || $0.displayName.contains(query))
+        }
+      } ?? []
+    if !others.isEmpty {
+      ScrollView {
+        VStack(spacing: 0) {
+          ForEach(others, id: \.userID) { member in
+            Button {
+              // The ＠ a Japanese keyboard is still converting is
+              // confirmed first, so the field takes the name.
+              draft = pickingMention(field.commit(), name: member.displayName)
+              picked.removeAll { $0.id == member.userID }
+              picked.append(PickedMember(id: member.userID, name: member.displayName))
+            } label: {
+              HStack(spacing: 12) {
+                LetterAvatar(name: member.displayName, size: 28)
+                Text(member.displayName)
+                  .foregroundStyle(colors.textPrimary)
+                  .lineLimit(1)
+                  .frame(maxWidth: .infinity, alignment: .leading)
+              }
+              .padding(.horizontal, 8)
+              .frame(height: Metrics.touch)
+              .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+          }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+      }
+      // A few in sight, the rest a scroll away.
+      .frame(height: min(CGFloat(others.count) * Metrics.touch + 8, 180))
+      .accessibilityLabel("メンションする人")
+      .overlay(alignment: .top) {
+        Rectangle().fill(colors.separator).frame(height: 1)
+      }
+    }
+  }
+
+  /// A link tapped in a line: Pochical's invitations on their join
+  /// screen, other pages in the browser sheet over the chat.
+  private func open(_ url: URL) -> OpenURLAction.Result {
+    if let code = inviteCode(of: url) {
+      openInvite(code)
+    } else {
+      browsing = OpenedLink(url: url)
+    }
+    return .handled
+  }
+
   // MARK: Doing
 
   /// Opens on the first unread line under ここから新着, else stays on the
@@ -477,9 +564,10 @@ struct ChatScreen: View {
   private func send(_ text: String) {
     var send = Pochical_V1_ChatSend()
     send.threadID = threadID
-    send.text = text
+    send.text = withMentions(text, picked: picked)
     write(.send(send))
     draft = ""
+    picked = []
   }
 
   /// To the latest line, by its id: scrolling to the edge would also
@@ -492,20 +580,23 @@ struct ChatScreen: View {
 
   private func edit(_ line: ChatLineRow) {
     editing = line
-    draft = line.text
+    // Its mentions as @name again, still picked.
+    draft = plainText(line.text, nameOf: nameOf)
+    picked = mentions(in: line.text).map { PickedMember(id: $0, name: nameOf($0)) }
     field.focus()
   }
 
   private func stopEditing() {
     editing = nil
     draft = ""
+    picked = []
   }
 
   private func save(_ line: ChatLineRow, text: String) {
     var change = Pochical_V1_ChatChange()
     change.threadID = threadID
     change.seq = UInt64(line.seq)
-    change.text = text
+    change.text = withMentions(text, picked: picked)
     write(.change(change))
     stopEditing()
   }
@@ -573,6 +664,8 @@ private struct LineView<Menu: View>: View {
   /// Their name shows over the run too, as in a group chat.
   let named: Bool
   let waiting: Bool
+  /// A member's name, for the line's mentions.
+  let nameOf: (String) -> String
   /// The bubble's long-press menu.
   @ViewBuilder let menu: () -> Menu
 
@@ -600,10 +693,11 @@ private struct LineView<Menu: View>: View {
         }
         HStack(alignment: .bottom, spacing: 8) {
           if mine { meta }
-          Text(text)
+          Text(words)
             .font(.subheadline)
             .lineSpacing(3)
             .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
+            .tint(mine ? colors.accentOnFill : colors.accentDefault)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(mine ? colors.accentFill : colors.fillTertiary, in: bubble)
@@ -618,6 +712,25 @@ private struct LineView<Menu: View>: View {
       .padding(mine ? .leading : .trailing, 40)
     }
     .accessibilityElement(children: .combine)
+  }
+
+  /// The line's words, its mentions as @ and the name in the name's
+  /// weight and its links underlined, both in the accent in others' lines
+  /// and in the bubble's color in one's own (spec/chat.md, In a message).
+  private var words: AttributedString {
+    var words = AttributedString()
+    for part in textParts(text) {
+      var piece = AttributedString(part.mention.map { "@\(nameOf($0))" } ?? part.text)
+      if part.mention != nil {
+        piece.font = .subheadline.weight(.semibold)
+        if !mine { piece.foregroundColor = colors.accentDefault }
+      } else if let link = part.url.flatMap({ URL(string: $0, encodingInvalidCharacters: true) }) {
+        piece.link = link
+        piece.underlineStyle = .single
+      }
+      words += piece
+    }
+    return words
   }
 
   /// Rounded but at the corner by the writer, toward the foot.

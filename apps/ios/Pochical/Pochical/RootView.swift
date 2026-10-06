@@ -41,6 +41,7 @@ struct RootView: View {
       guard let meID else { return }
       try? await $unread.load(UnreadRequest(me: meID))
     }
+    .environment(\.openInvite) { code in invite = OpenedInvite(code: code) }
     .onOpenURL { url in
       if let code = openedInviteCode(of: url) {
         invite = OpenedInvite(code: code)

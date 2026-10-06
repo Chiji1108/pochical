@@ -374,12 +374,6 @@ public func firstUnread(_ writers: [LineWriter], unread: Int) -> Int? {
   return writers.firstIndex(of: .others)
 }
 
-/// The members a message mentions, by their id, in order: each kept as
-/// `<@id>` (spec/chat.md, Mentions; spec/vectors/chat-text.json).
-public func mentions(in text: String) -> [String] {
-  text.matches(of: /<@([\w-]+)>/).map { String($0.output.1) }
-}
-
 /// How many of a chat's unread lines count, as what notifies: all of them
 /// in a chat that is on; in one turned off only those mentioning `me`,
 /// and those only while mentions always notify (spec/chat.md, Unread
@@ -400,11 +394,17 @@ public struct ChatSummary: Hashable, Sendable {
   /// The member's latest line still on its way, newer than `last`.
   public var waiting: WaitingLine?
   public var unread: Int
+  /// An unread line the device holds mentions the reader.
+  public var mentioned: Bool
 
-  public init(last: ChatLineRow? = nil, waiting: WaitingLine? = nil, unread: Int = 0) {
+  public init(
+    last: ChatLineRow? = nil, waiting: WaitingLine? = nil, unread: Int = 0,
+    mentioned: Bool = false
+  ) {
     self.last = last
     self.waiting = waiting
     self.unread = unread
+    self.mentioned = mentioned
   }
 }
 
@@ -436,9 +436,13 @@ extension Chats {
     {
       waiting = nil
     }
-    return ChatSummary(
-      last: last, waiting: waiting,
-      unread: try unread(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db))
+    let unread = try unread(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db)
+    let mentioned =
+      unread > 0
+      ? try unreadLines(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db)
+        .contains { mentions(in: $0).contains(me) }
+      : false
+    return ChatSummary(last: last, waiting: waiting, unread: unread, mentioned: mentioned)
   }
 
   /// The chat's unread lines that count: the group's count, which reaches
@@ -452,18 +456,25 @@ extension Chats {
       return try UnreadCountRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
         .fetchOne(db)?.count ?? 0
     }
+    let lines = try unreadLines(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db)
+    return notifyingUnread(lines, muted: false, mentionsWhenMuted: true, me: me)
+  }
+
+  /// The words of others' lines the device holds past the reader's read.
+  private static func unreadLines(
+    of threadID: String, in groupID: String, me: String, ownRead: Int64, db: Database
+  ) throws -> [String] {
     let mark =
       try ReadMarkRow.where {
         $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && $0.userID.eq(me)
       }
       .fetchOne(db)?.lastReadSeq ?? 0
     let read = max(mark, ownRead)
-    let lines = try ChatLineRow.where {
+    return try ChatLineRow.where {
       $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && $0.seq > read
         && $0.authorID.neq(me)
     }
     .select(\.text).fetchAll(db)
-    return notifyingUnread(lines, muted: false, mentionsWhenMuted: true, me: me)
   }
 
   /// The member's newest read waiting to be sent in each of the group's

@@ -13,7 +13,9 @@ import { useEffect, useRef, useState } from "react";
 import {
   firstLink,
   inviteCodeOf,
+  mentionQuery,
   mentionsOf,
+  pickingMention,
   plainText,
   siteOf,
 } from "../lib/chat-text";
@@ -63,15 +65,13 @@ export function useComposer({
   // An @ being written at the end of the message lists the others whose
   // name has what follows it, as LINE does; one picked goes in as @name
   // and a space.
-  const mentionQuery = MENTION_QUERY.exec(draft)?.groups?.query;
+  const query = mentionQuery(draft);
   const mentionable =
-    mentionQuery === undefined
+    query === undefined
       ? []
-      : members.filter(
-          (member) => !member.me && member.name.includes(mentionQuery)
-        );
+      : members.filter((member) => !member.me && member.name.includes(query));
   const pickMention = (member: Member) => {
-    setDraft(draft.replace(MENTION_QUERY, `@${member.name} `));
+    setDraft(pickingMention(draft, member.name));
     setPicked((before) => [
       ...before.filter((other) => other.id !== member.id),
       { id: member.id, name: member.name },
@@ -425,10 +425,6 @@ export function Composer({
     </>
   );
 }
-
-// An @ and what follows it at the end of the message being written; a
-// space ends it.
-const MENTION_QUERY = /@(?<query>[^\s@]*)$/u;
 
 // The composer's tools: each one's width, how many, and how they fold
 // into a › and back, as quick as the calendar's own fold.
