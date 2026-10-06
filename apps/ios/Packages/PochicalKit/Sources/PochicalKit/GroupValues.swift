@@ -235,6 +235,7 @@ public enum GroupSync {
         try MemberOrderRow.insert { row }.execute(db)
       }
     case .day, .pattern, .patternOrder, .repeatOrders, .coworker, .coworkerOrder, .membership,
+      .chatLine, .readMark,
       nil:
       return
     }

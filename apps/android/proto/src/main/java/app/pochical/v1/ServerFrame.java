@@ -30,6 +30,7 @@ public  final class ServerFrame extends
     CHANGES(4),
     ACKED(5),
     RESET(6),
+    CHAT_PAGE(7),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -51,6 +52,7 @@ public  final class ServerFrame extends
         case 4: return CHANGES;
         case 5: return ACKED;
         case 6: return RESET;
+        case 7: return CHAT_PAGE;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -447,6 +449,76 @@ public  final class ServerFrame extends
    */
   private void clearReset() {
     if (kindCase_ == 6) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int CHAT_PAGE_FIELD_NUMBER = 7;
+  /**
+   * <pre>
+   * A page of a chat's lines, answering a ChatPageRequest.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPage chat_page = 7 [json_name = "chatPage"];</code>
+   */
+  @java.lang.Override
+  public boolean hasChatPage() {
+    return kindCase_ == 7;
+  }
+  /**
+   * <pre>
+   * A page of a chat's lines, answering a ChatPageRequest.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPage chat_page = 7 [json_name = "chatPage"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatPage getChatPage() {
+    if (kindCase_ == 7) {
+       return (app.pochical.v1.ChatPage) kind_;
+    }
+    return app.pochical.v1.ChatPage.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * A page of a chat's lines, answering a ChatPageRequest.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPage chat_page = 7 [json_name = "chatPage"];</code>
+   */
+  private void setChatPage(app.pochical.v1.ChatPage value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 7;
+  }
+  /**
+   * <pre>
+   * A page of a chat's lines, answering a ChatPageRequest.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPage chat_page = 7 [json_name = "chatPage"];</code>
+   */
+  private void mergeChatPage(app.pochical.v1.ChatPage value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 7 &&
+        kind_ != app.pochical.v1.ChatPage.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ChatPage.newBuilder((app.pochical.v1.ChatPage) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 7;
+  }
+  /**
+   * <pre>
+   * A page of a chat's lines, answering a ChatPageRequest.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPage chat_page = 7 [json_name = "chatPage"];</code>
+   */
+  private void clearChatPage() {
+    if (kindCase_ == 7) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -949,6 +1021,78 @@ public  final class ServerFrame extends
       return this;
     }
 
+    /**
+     * <pre>
+     * A page of a chat's lines, answering a ChatPageRequest.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPage chat_page = 7 [json_name = "chatPage"];</code>
+     */
+    @java.lang.Override
+    public boolean hasChatPage() {
+      return instance.hasChatPage();
+    }
+    /**
+     * <pre>
+     * A page of a chat's lines, answering a ChatPageRequest.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPage chat_page = 7 [json_name = "chatPage"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatPage getChatPage() {
+      return instance.getChatPage();
+    }
+    /**
+     * <pre>
+     * A page of a chat's lines, answering a ChatPageRequest.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPage chat_page = 7 [json_name = "chatPage"];</code>
+     */
+    public Builder setChatPage(app.pochical.v1.ChatPage value) {
+      copyOnWrite();
+      instance.setChatPage(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A page of a chat's lines, answering a ChatPageRequest.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPage chat_page = 7 [json_name = "chatPage"];</code>
+     */
+    public Builder setChatPage(
+        app.pochical.v1.ChatPage.Builder builderForValue) {
+      copyOnWrite();
+      instance.setChatPage(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * A page of a chat's lines, answering a ChatPageRequest.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPage chat_page = 7 [json_name = "chatPage"];</code>
+     */
+    public Builder mergeChatPage(app.pochical.v1.ChatPage value) {
+      copyOnWrite();
+      instance.mergeChatPage(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A page of a chat's lines, answering a ChatPageRequest.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPage chat_page = 7 [json_name = "chatPage"];</code>
+     */
+    public Builder clearChatPage() {
+      copyOnWrite();
+      instance.clearChatPage();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ServerFrame)
   }
   @java.lang.Override
@@ -973,10 +1117,11 @@ public  final class ServerFrame extends
             app.pochical.v1.Changes.class,
             app.pochical.v1.Acked.class,
             app.pochical.v1.Reset.class,
+            app.pochical.v1.ChatPage.class,
           };
           java.lang.String info =
-              "\u0000\u0006\u0001\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001<\u0000\u0002<" +
-              "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000";
+              "\u0000\u0007\u0001\u0000\u0001\u0007\u0007\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

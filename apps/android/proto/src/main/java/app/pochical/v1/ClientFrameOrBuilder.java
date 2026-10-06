@@ -110,5 +110,45 @@ public interface ClientFrameOrBuilder extends
    */
   app.pochical.v1.CoworkerEdits getCoworkerEdits();
 
+  /**
+   * <pre>
+   * A member's lines and read marks in the group's chats, from their
+   * outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatEdits chat_edits = 7 [json_name = "chatEdits"];</code>
+   * @return Whether the chatEdits field is set.
+   */
+  boolean hasChatEdits();
+  /**
+   * <pre>
+   * A member's lines and read marks in the group's chats, from their
+   * outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatEdits chat_edits = 7 [json_name = "chatEdits"];</code>
+   * @return The chatEdits.
+   */
+  app.pochical.v1.ChatEdits getChatEdits();
+
+  /**
+   * <pre>
+   * Asks for a page of a chat's earlier lines; Group DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPageRequest chat_page_request = 8 [json_name = "chatPageRequest"];</code>
+   * @return Whether the chatPageRequest field is set.
+   */
+  boolean hasChatPageRequest();
+  /**
+   * <pre>
+   * Asks for a page of a chat's earlier lines; Group DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPageRequest chat_page_request = 8 [json_name = "chatPageRequest"];</code>
+   * @return The chatPageRequest.
+   */
+  app.pochical.v1.ChatPageRequest getChatPageRequest();
+
   public app.pochical.v1.ClientFrame.KindCase getKindCase();
 }

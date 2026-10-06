@@ -395,6 +395,69 @@ public object ChangeKt {
     public fun hasMember(): kotlin.Boolean {
       return _builder.hasMember()
     }
+
+    /**
+     * ```
+     * On a Group DO socket: a line of a chat, and how far a member has
+     * read one (spec/sync-protocol.md, Chat).
+     * ```
+     *
+     * `.pochical.v1.ChatLine chat_line = 14 [json_name = "chatLine"];`
+     */
+    public var chatLine: app.pochical.v1.ChatLine
+      @kotlin.jvm.JvmName("getChatLine")
+        get() = _builder.chatLine
+      @kotlin.jvm.JvmName("setChatLine")
+        set(value) {
+        _builder.chatLine = value
+      }
+    /**
+     * ```
+     * On a Group DO socket: a line of a chat, and how far a member has
+     * read one (spec/sync-protocol.md, Chat).
+     * ```
+     *
+     * `.pochical.v1.ChatLine chat_line = 14 [json_name = "chatLine"];`
+     */
+    public fun clearChatLine() {
+      _builder.clearChatLine()
+    }
+    /**
+     * ```
+     * On a Group DO socket: a line of a chat, and how far a member has
+     * read one (spec/sync-protocol.md, Chat).
+     * ```
+     *
+     * `.pochical.v1.ChatLine chat_line = 14 [json_name = "chatLine"];`
+     * @return Whether the chatLine field is set.
+     */
+    public fun hasChatLine(): kotlin.Boolean {
+      return _builder.hasChatLine()
+    }
+
+    /**
+     * `.pochical.v1.ReadMark read_mark = 15 [json_name = "readMark"];`
+     */
+    public var readMark: app.pochical.v1.ReadMark
+      @kotlin.jvm.JvmName("getReadMark")
+        get() = _builder.readMark
+      @kotlin.jvm.JvmName("setReadMark")
+        set(value) {
+        _builder.readMark = value
+      }
+    /**
+     * `.pochical.v1.ReadMark read_mark = 15 [json_name = "readMark"];`
+     */
+    public fun clearReadMark() {
+      _builder.clearReadMark()
+    }
+    /**
+     * `.pochical.v1.ReadMark read_mark = 15 [json_name = "readMark"];`
+     * @return Whether the readMark field is set.
+     */
+    public fun hasReadMark(): kotlin.Boolean {
+      return _builder.hasReadMark()
+    }
     public val kindCase: app.pochical.v1.Change.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -442,4 +505,10 @@ public val app.pochical.v1.ChangeOrBuilder.groupProfileOrNull: app.pochical.v1.G
 
 public val app.pochical.v1.ChangeOrBuilder.memberOrNull: app.pochical.v1.Member?
   get() = if (hasMember()) getMember() else null
+
+public val app.pochical.v1.ChangeOrBuilder.chatLineOrNull: app.pochical.v1.ChatLine?
+  get() = if (hasChatLine()) getChatLine() else null
+
+public val app.pochical.v1.ChangeOrBuilder.readMarkOrNull: app.pochical.v1.ReadMark?
+  get() = if (hasReadMark()) getReadMark() else null
 

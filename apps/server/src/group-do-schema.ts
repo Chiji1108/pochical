@@ -106,3 +106,45 @@ export const memberRepeatOrders = sqliteTable(
   },
   (table) => [uniqueIndex("member_repeat_orders_cursor").on(table.cursor)]
 );
+
+// The lines of the group's chats (spec/sync-protocol.md, Chat): each at
+// its place in its chat (seq, from 1) and at the cursor it got when it was
+// written (created_cursor) and last changed (cursor). Unsent lines keep
+// their row without words, so a quote of one says it was taken back.
+export const chatLines = sqliteTable(
+  "chat_lines",
+  {
+    authorId: text("author_id").notNull(),
+    createdCursor: integer("created_cursor").notNull(),
+    cursor: integer().notNull(),
+    edited: integer({ mode: "boolean" }).notNull().default(false),
+    // The sending edit's op_id: a send taken twice is one line.
+    opId: text("op_id").notNull(),
+    sentAt: integer("sent_at", { mode: "timestamp_ms" }).notNull(),
+    seq: integer().notNull(),
+    text: text().notNull(),
+    threadId: text("thread_id").notNull(),
+    unsent: integer({ mode: "boolean" }).notNull().default(false),
+  },
+  (table) => [
+    primaryKey({ columns: [table.threadId, table.seq] }),
+    uniqueIndex("chat_lines_cursor").on(table.cursor),
+    uniqueIndex("chat_lines_op").on(table.opId),
+  ]
+);
+
+// How far each member has read each chat, a mark that only moves forward,
+// at the cursor it last moved.
+export const readMarks = sqliteTable(
+  "read_marks",
+  {
+    cursor: integer().notNull(),
+    lastReadSeq: integer("last_read_seq").notNull(),
+    threadId: text("thread_id").notNull(),
+    userId: text("user_id").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.threadId] }),
+    uniqueIndex("read_marks_cursor").on(table.cursor),
+  ]
+);

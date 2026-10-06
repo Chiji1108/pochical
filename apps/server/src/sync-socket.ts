@@ -10,6 +10,8 @@ import {
 } from "./gen/pochical/v1/sync_pb";
 import type {
   Change,
+  ChatEdits,
+  ChatPageRequest,
   ClientFrame,
   CoworkerEdits,
   DayEdits,
@@ -55,11 +57,20 @@ type EditHandlers = {
   [Kind in keyof EditFrames]?: (ws: WebSocket, edits: EditFrames[Kind]) => void;
 };
 
-/** What a DO does with a socket once it is past the handshake. */
-type SyncHandlers = EditHandlers & {
-  // Hello was accepted: send Welcome and every change after `cursor`.
-  welcome: (ws: WebSocket, cursor: bigint) => void;
+/** What a Group DO does with a member's chat frames. */
+type ChatHandlers = {
+  chatEdits?: (ws: WebSocket, userId: string, edits: ChatEdits) => void;
+  chatPageRequest?: (ws: WebSocket, request: ChatPageRequest) => void;
 };
+
+/** What a DO does with a socket once it is past the handshake. */
+type SyncHandlers = EditHandlers &
+  ChatHandlers & {
+    // Hello was accepted: send Welcome and every change after `cursor`.
+    welcome: (ws: WebSocket, cursor: bigint) => void;
+  };
+
+const GROUP_SOCKET_ONLY = "Chats go to a group's socket";
 
 const OWN_SOCKET_ONLY = "Edits go to the user's own socket";
 
@@ -317,6 +328,22 @@ export const handleSyncMessage = (
     case "repeatOrdersEdits":
     case "coworkerEdits": {
       handleEdits(ws, kind, handlers);
+      return;
+    }
+    case "chatEdits": {
+      if (handlers.chatEdits) {
+        handlers.chatEdits(ws, attachment.userId, kind.value);
+      } else {
+        rejectAndClose(ws, ServerError_Code.BAD_FRAME, GROUP_SOCKET_ONLY);
+      }
+      return;
+    }
+    case "chatPageRequest": {
+      if (handlers.chatPageRequest) {
+        handlers.chatPageRequest(ws, kind.value);
+      } else {
+        rejectAndClose(ws, ServerError_Code.BAD_FRAME, GROUP_SOCKET_ONLY);
+      }
       return;
     }
     // A frame kind from a newer client decodes as undefined.

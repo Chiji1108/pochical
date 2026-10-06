@@ -108,5 +108,24 @@ public interface ServerFrameOrBuilder extends
    */
   app.pochical.v1.Reset getReset();
 
+  /**
+   * <pre>
+   * A page of a chat's lines, answering a ChatPageRequest.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPage chat_page = 7 [json_name = "chatPage"];</code>
+   * @return Whether the chatPage field is set.
+   */
+  boolean hasChatPage();
+  /**
+   * <pre>
+   * A page of a chat's lines, answering a ChatPageRequest.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPage chat_page = 7 [json_name = "chatPage"];</code>
+   * @return The chatPage.
+   */
+  app.pochical.v1.ChatPage getChatPage();
+
   public app.pochical.v1.ServerFrame.KindCase getKindCase();
 }
