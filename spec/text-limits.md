@@ -18,6 +18,7 @@ A mark's emoji (a group's, a shift pattern's) is one emoji, as the pickers and t
 
 - Typing stops at the limit. Pasted text is cut to the limit.
 - A word still being converted with a Japanese keyboard (marked text, a composition) may run past the limit until it is confirmed; it is then cut to the limit. A conversion is never broken off halfway.
+- Sending a chat message while a word is still being converted confirms it and sends it with the rest, as Messages and LINE do, cut to the limit as confirming it would.
 - While the field is in use, a count `{used}/{limit}` shows after it. For a limit of `textFields.countAlwaysUpTo` or less it shows all the while; for a longer one only once `textFields.countWhenLeft` or fewer characters are left, so a memo or a message does not carry a count all the while it is written. It turns to the danger color only while a composition runs past the limit.
 - A field too small to show the count, like the chip for adding a person to a day, still stops at the limit and shows no count. A mark's letter shows none either: the mark beside it already shows what fits.
 - A mark's letter takes its first character, so 夜勤 typed or converted there becomes 夜. While it is being written it may be empty; left empty, it goes back to the letter it had.

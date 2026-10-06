@@ -43,6 +43,7 @@ enum Groups {
     if membership.left {
       try GroupRow.find(membership.groupID).delete().execute(db)
       try GroupSync.reset(membership.groupID, in: db)
+      try Chats.dropWaiting(of: membership.groupID, in: db)
       return
     }
     let row = GroupRow(

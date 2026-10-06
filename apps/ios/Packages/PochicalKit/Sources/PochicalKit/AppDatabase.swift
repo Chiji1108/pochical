@@ -85,5 +85,6 @@ var migrator: DatabaseMigrator {
   migrator.registerOwnValues()
   migrator.registerGroups()
   migrator.registerGroupValues()
+  migrator.registerChats()
   return migrator
 }
