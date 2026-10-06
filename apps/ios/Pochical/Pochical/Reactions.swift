@@ -6,34 +6,6 @@ import UIKit
 /// The emoji a line's menu offers first (/design's reactionChoices).
 let reactionChoices = ["👍", "❤️", "😂", "👀", "🙏", "🎉"]
 
-/// The reactions at the top of a line's long-press menu, as Messages puts
-/// its tapbacks over the menu: the first choices in a row, and
-/// ほかの絵文字 under them for any other. A pick closes the menu; the
-/// reader's own show on the line, in the accent.
-struct ReactionPalette: View {
-  let reactions: [LineReaction]
-  let meID: String?
-  let onReact: (String) -> Void
-  let onMore: () -> Void
-
-  var body: some View {
-    ControlGroup {
-      ForEach(reactionChoices, id: \.self) { emoji in
-        let chosen = reactions.contains { $0.emoji == emoji && $0.userIDs.contains(meID ?? "") }
-        Button {
-          onReact(emoji)
-        } label: {
-          Text(emoji)
-        }
-        .menuActionDismissBehavior(.enabled)
-        .accessibilityLabel(chosen ? "\(emoji)のリアクションを外す" : "\(emoji)でリアクション")
-      }
-    }
-    .controlGroupStyle(.palette)
-    Button("ほかの絵文字", systemImage: "face.smiling", action: onMore)
-  }
-}
-
 /// A line's reactions under its bubble, wrapping to more rows as needed.
 struct ReactionRow: View {
   let reactions: [LineReaction]
