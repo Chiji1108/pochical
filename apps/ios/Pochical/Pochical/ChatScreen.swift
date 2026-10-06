@@ -650,9 +650,15 @@ struct ChatScreen: View {
       .environment(\.themeColors, colors))
   }
 
+  /// Gives the line back its bubble in the chat, then takes the overlay
+  /// away once the chat has drawn it, so the bubble never blinks out
+  /// between the two.
   private func closeActions() {
-    OverlayWindow.shared.hide()
     acting = nil
+    Task { @MainActor in
+      try? await Task.sleep(for: .milliseconds(50))
+      OverlayWindow.shared.hide()
+    }
   }
 
   /// Puts the reader's `emoji` on the line, or takes it back if it was

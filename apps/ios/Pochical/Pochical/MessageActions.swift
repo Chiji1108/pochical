@@ -71,9 +71,13 @@ struct MessageActionsOverlay: View {
         request.bubble
           .frame(width: request.frame.width, height: place.bubbleHeight, alignment: .bottom)
           .clipped()
-          // Grown about its own middle, before it is put in place.
+          // Grown about its own middle, before it is put in place; it
+          // rises from where it was and goes back there.
           .scaleEffect(shown ? 1.02 : 1)
-          .offset(x: request.frame.minX, y: place.bubbleY)
+          .offset(
+            x: request.frame.minX,
+            y: shown ? place.bubbleY : request.frame.maxY - place.bubbleHeight
+          )
           .accessibilityHidden(true)
         menu
           .frame(width: Self.menuWidth)
