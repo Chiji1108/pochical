@@ -175,7 +175,19 @@ message Change {
     // read one (spec/sync-protocol.md, Chat).
     ChatLine chat_line = 14;
     ReadMark read_mark = 15;
+    // On the User DO socket: how many of a chat's lines the user has not
+    // read, from the group, for badges without a socket to each group
+    // (spec/sync-protocol.md, Unread summary).
+    UnreadCount unread_count = 16;
   }
+}
+
+// How many lines of a group's chat the user has not read: others' lines
+// past their read mark. One value per chat, the group's latest.
+message UnreadCount {
+  string group_id = 1;
+  string thread_id = 2;
+  uint32 count = 3;
 }
 
 // A group the user is in, with its name and mark as their User DO last

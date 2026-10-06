@@ -152,3 +152,24 @@ export const orderClears = sqliteTable("order_clears", {
   hlcDevice: text("hlc_device").notNull(),
   hlcMs: integer("hlc_ms").notNull(),
 });
+
+// How many lines of each chat in the user's groups they have not read, as
+// the group last said, so their devices badge every group without a
+// socket to each (spec/sync-protocol.md, Unread summary). Cursors are
+// shared with day_fields.
+export const unreadCounts = sqliteTable(
+  "unread_counts",
+  {
+    count: integer().notNull(),
+    cursor: integer().notNull(),
+    // The group's own cursor the count was taken at: counts can arrive out
+    // of order, and an older one changes nothing.
+    groupCursor: integer("group_cursor").notNull(),
+    groupId: text("group_id").notNull(),
+    threadId: text("thread_id").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.groupId, table.threadId] }),
+    uniqueIndex("unread_counts_cursor").on(table.cursor),
+  ]
+);

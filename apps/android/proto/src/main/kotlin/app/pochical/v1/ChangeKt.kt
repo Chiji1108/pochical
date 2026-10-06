@@ -458,6 +458,48 @@ public object ChangeKt {
     public fun hasReadMark(): kotlin.Boolean {
       return _builder.hasReadMark()
     }
+
+    /**
+     * ```
+     * On the User DO socket: how many of a chat's lines the user has not
+     * read, from the group, for badges without a socket to each group
+     * (spec/sync-protocol.md, Unread summary).
+     * ```
+     *
+     * `.pochical.v1.UnreadCount unread_count = 16 [json_name = "unreadCount"];`
+     */
+    public var unreadCount: app.pochical.v1.UnreadCount
+      @kotlin.jvm.JvmName("getUnreadCount")
+        get() = _builder.unreadCount
+      @kotlin.jvm.JvmName("setUnreadCount")
+        set(value) {
+        _builder.unreadCount = value
+      }
+    /**
+     * ```
+     * On the User DO socket: how many of a chat's lines the user has not
+     * read, from the group, for badges without a socket to each group
+     * (spec/sync-protocol.md, Unread summary).
+     * ```
+     *
+     * `.pochical.v1.UnreadCount unread_count = 16 [json_name = "unreadCount"];`
+     */
+    public fun clearUnreadCount() {
+      _builder.clearUnreadCount()
+    }
+    /**
+     * ```
+     * On the User DO socket: how many of a chat's lines the user has not
+     * read, from the group, for badges without a socket to each group
+     * (spec/sync-protocol.md, Unread summary).
+     * ```
+     *
+     * `.pochical.v1.UnreadCount unread_count = 16 [json_name = "unreadCount"];`
+     * @return Whether the unreadCount field is set.
+     */
+    public fun hasUnreadCount(): kotlin.Boolean {
+      return _builder.hasUnreadCount()
+    }
     public val kindCase: app.pochical.v1.Change.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -511,4 +553,7 @@ public val app.pochical.v1.ChangeOrBuilder.chatLineOrNull: app.pochical.v1.ChatL
 
 public val app.pochical.v1.ChangeOrBuilder.readMarkOrNull: app.pochical.v1.ReadMark?
   get() = if (hasReadMark()) getReadMark() else null
+
+public val app.pochical.v1.ChangeOrBuilder.unreadCountOrNull: app.pochical.v1.UnreadCount?
+  get() = if (hasUnreadCount()) getUnreadCount() else null
 

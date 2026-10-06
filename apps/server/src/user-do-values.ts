@@ -27,6 +27,7 @@ import type {
   patternOrder,
   patterns,
   repeatOrders,
+  unreadCounts,
 } from "./user-do-schema";
 
 // The User DO's stored values as the Changes devices receive, and the
@@ -189,5 +190,16 @@ export const membershipChange = (row: MembershipRow): Change =>
         left: row.leftAt !== null,
         name: row.name,
       },
+    },
+  });
+
+type UnreadCountRow = typeof unreadCounts.$inferSelect;
+
+export const unreadCountChange = (row: UnreadCountRow): Change =>
+  create(ChangeSchema, {
+    cursor: BigInt(row.cursor),
+    kind: {
+      case: "unreadCount",
+      value: { count: row.count, groupId: row.groupId, threadId: row.threadId },
     },
   });

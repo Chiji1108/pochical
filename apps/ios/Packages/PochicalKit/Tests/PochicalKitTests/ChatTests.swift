@@ -135,3 +135,100 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
     #expect(try Chats.lastWaiting(of: "g", in: db) == nil)
   }
 }
+
+struct MentionVector: Decodable, Sendable, CustomTestStringConvertible {
+  let text: String
+  let expected: [String]
+  var testDescription: String { text }
+}
+
+struct MentionVectors: Decodable, Sendable {
+  let mentions: [MentionVector]
+}
+
+@Test(arguments: try vectors("chat-text", as: MentionVectors.self).mentions)
+func mentionsInAMessage(_ vector: MentionVector) {
+  #expect(mentions(in: vector.text) == vector.expected)
+}
+
+struct UnreadVectors: Decodable, Sendable {
+  struct Chat: Decodable, Sendable {
+    let muted: Bool
+    let read: [String]
+    let unread: [String]
+  }
+
+  struct Group: Decodable, Sendable {
+    let chats: [Chat]
+  }
+
+  struct Notifying: VectorCase {
+    let name: String
+    let mentionsWhenMuted: Bool
+    let groups: [Group]
+    let expected: Int
+  }
+
+  let notifying: [Notifying]
+}
+
+@Test(arguments: try vectors("unread", as: UnreadVectors.self).notifying)
+func unreadThatNotifies(_ vector: UnreadVectors.Notifying) {
+  let total = vector.groups.flatMap(\.chats).reduce(0) { total, chat in
+    total
+      + notifyingUnread(
+        chat.unread, muted: chat.muted, mentionsWhenMuted: vector.mentionsWhenMuted, me: "me")
+  }
+  #expect(total == vector.expected)
+}
+
+private func unreadCount(_ cursor: UInt64, _ count: UInt32, in groupID: String = "g")
+  -> Pochical_V1_Change
+{
+  var change = Pochical_V1_Change()
+  change.cursor = cursor
+  change.unreadCount.groupID = groupID
+  change.unreadCount.threadID = groupThread
+  change.unreadCount.count = count
+  return change
+}
+
+@Test func aChatCountsAsTheGroupSaysUntilAReadOfTheMembersWaits() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var mine = line(2, "自分の")
+    mine.chatLine.authorID = "me"
+    try GroupSync.take([line(1, "a"), mine, line(3, "c")], of: "g", in: db)
+    // Every group's count comes from the user's own socket.
+    try Sync.take([unreadCount(1, 2), unreadCount(2, 4, in: "other")], in: db)
+    var summary = try Chats.summary(of: groupThread, in: "g", me: "me", db: db)
+    #expect(summary.last?.seq == 3)
+    #expect(summary.unread == 2)
+    #expect(try Chats.unreadByGroup(me: "me", db: db) == ["g": 2, "other": 4])
+
+    var send = Pochical_V1_ChatSend()
+    send.threadID = groupThread
+    send.text = "まだ"
+    try Chats.edit(.send(send), in: "g", now: 5, db: db)
+    var read = Pochical_V1_ChatRead()
+    read.threadID = groupThread
+    read.lastReadSeq = 3
+    try Chats.edit(.read(read), in: "g", now: 6, db: db)
+    summary = try Chats.summary(of: groupThread, in: "g", me: "me", db: db)
+    #expect(summary.waiting?.text == "まだ")
+    #expect(summary.unread == 0)
+    #expect(try Chats.unreadByGroup(me: "me", db: db) == ["other": 4])
+  }
+}
+
+@Test func aGroupLeftTakesItsCountsWithIt() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var left = Pochical_V1_Change()
+    left.cursor = 2
+    left.membership.groupID = "g"
+    left.membership.left = true
+    try Sync.take([unreadCount(1, 3), left], in: db)
+    #expect(try Chats.unreadByGroup(me: "me", db: db).isEmpty)
+  }
+}

@@ -39,6 +39,7 @@ public  final class Change extends
     MEMBER(13),
     CHAT_LINE(14),
     READ_MARK(15),
+    UNREAD_COUNT(16),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -68,6 +69,7 @@ public  final class Change extends
         case 13: return MEMBER;
         case 14: return CHAT_LINE;
         case 15: return READ_MARK;
+        case 16: return UNREAD_COUNT;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -930,6 +932,86 @@ public  final class Change extends
    */
   private void clearReadMark() {
     if (kindCase_ == 15) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int UNREAD_COUNT_FIELD_NUMBER = 16;
+  /**
+   * <pre>
+   * On the User DO socket: how many of a chat's lines the user has not
+   * read, from the group, for badges without a socket to each group
+   * (spec/sync-protocol.md, Unread summary).
+   * </pre>
+   *
+   * <code>.pochical.v1.UnreadCount unread_count = 16 [json_name = "unreadCount"];</code>
+   */
+  @java.lang.Override
+  public boolean hasUnreadCount() {
+    return kindCase_ == 16;
+  }
+  /**
+   * <pre>
+   * On the User DO socket: how many of a chat's lines the user has not
+   * read, from the group, for badges without a socket to each group
+   * (spec/sync-protocol.md, Unread summary).
+   * </pre>
+   *
+   * <code>.pochical.v1.UnreadCount unread_count = 16 [json_name = "unreadCount"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.UnreadCount getUnreadCount() {
+    if (kindCase_ == 16) {
+       return (app.pochical.v1.UnreadCount) kind_;
+    }
+    return app.pochical.v1.UnreadCount.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * On the User DO socket: how many of a chat's lines the user has not
+   * read, from the group, for badges without a socket to each group
+   * (spec/sync-protocol.md, Unread summary).
+   * </pre>
+   *
+   * <code>.pochical.v1.UnreadCount unread_count = 16 [json_name = "unreadCount"];</code>
+   */
+  private void setUnreadCount(app.pochical.v1.UnreadCount value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 16;
+  }
+  /**
+   * <pre>
+   * On the User DO socket: how many of a chat's lines the user has not
+   * read, from the group, for badges without a socket to each group
+   * (spec/sync-protocol.md, Unread summary).
+   * </pre>
+   *
+   * <code>.pochical.v1.UnreadCount unread_count = 16 [json_name = "unreadCount"];</code>
+   */
+  private void mergeUnreadCount(app.pochical.v1.UnreadCount value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 16 &&
+        kind_ != app.pochical.v1.UnreadCount.getDefaultInstance()) {
+      kind_ = app.pochical.v1.UnreadCount.newBuilder((app.pochical.v1.UnreadCount) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 16;
+  }
+  /**
+   * <pre>
+   * On the User DO socket: how many of a chat's lines the user has not
+   * read, from the group, for badges without a socket to each group
+   * (spec/sync-protocol.md, Unread summary).
+   * </pre>
+   *
+   * <code>.pochical.v1.UnreadCount unread_count = 16 [json_name = "unreadCount"];</code>
+   */
+  private void clearUnreadCount() {
+    if (kindCase_ == 16) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -1893,6 +1975,90 @@ public  final class Change extends
       return this;
     }
 
+    /**
+     * <pre>
+     * On the User DO socket: how many of a chat's lines the user has not
+     * read, from the group, for badges without a socket to each group
+     * (spec/sync-protocol.md, Unread summary).
+     * </pre>
+     *
+     * <code>.pochical.v1.UnreadCount unread_count = 16 [json_name = "unreadCount"];</code>
+     */
+    @java.lang.Override
+    public boolean hasUnreadCount() {
+      return instance.hasUnreadCount();
+    }
+    /**
+     * <pre>
+     * On the User DO socket: how many of a chat's lines the user has not
+     * read, from the group, for badges without a socket to each group
+     * (spec/sync-protocol.md, Unread summary).
+     * </pre>
+     *
+     * <code>.pochical.v1.UnreadCount unread_count = 16 [json_name = "unreadCount"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.UnreadCount getUnreadCount() {
+      return instance.getUnreadCount();
+    }
+    /**
+     * <pre>
+     * On the User DO socket: how many of a chat's lines the user has not
+     * read, from the group, for badges without a socket to each group
+     * (spec/sync-protocol.md, Unread summary).
+     * </pre>
+     *
+     * <code>.pochical.v1.UnreadCount unread_count = 16 [json_name = "unreadCount"];</code>
+     */
+    public Builder setUnreadCount(app.pochical.v1.UnreadCount value) {
+      copyOnWrite();
+      instance.setUnreadCount(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * On the User DO socket: how many of a chat's lines the user has not
+     * read, from the group, for badges without a socket to each group
+     * (spec/sync-protocol.md, Unread summary).
+     * </pre>
+     *
+     * <code>.pochical.v1.UnreadCount unread_count = 16 [json_name = "unreadCount"];</code>
+     */
+    public Builder setUnreadCount(
+        app.pochical.v1.UnreadCount.Builder builderForValue) {
+      copyOnWrite();
+      instance.setUnreadCount(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * On the User DO socket: how many of a chat's lines the user has not
+     * read, from the group, for badges without a socket to each group
+     * (spec/sync-protocol.md, Unread summary).
+     * </pre>
+     *
+     * <code>.pochical.v1.UnreadCount unread_count = 16 [json_name = "unreadCount"];</code>
+     */
+    public Builder mergeUnreadCount(app.pochical.v1.UnreadCount value) {
+      copyOnWrite();
+      instance.mergeUnreadCount(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * On the User DO socket: how many of a chat's lines the user has not
+     * read, from the group, for badges without a socket to each group
+     * (spec/sync-protocol.md, Unread summary).
+     * </pre>
+     *
+     * <code>.pochical.v1.UnreadCount unread_count = 16 [json_name = "unreadCount"];</code>
+     */
+    public Builder clearUnreadCount() {
+      copyOnWrite();
+      instance.clearUnreadCount();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.Change)
   }
   @java.lang.Override
@@ -1926,11 +2092,12 @@ public  final class Change extends
             app.pochical.v1.Member.class,
             app.pochical.v1.ChatLine.class,
             app.pochical.v1.ReadMark.class,
+            app.pochical.v1.UnreadCount.class,
           };
           java.lang.String info =
-              "\u0000\u000f\u0001\u0000\u0001\u000f\u000f\u0000\u0000\u0000\u0001\u0003\u0002<\u0000" +
+              "\u0000\u0010\u0001\u0000\u0001\u0010\u0010\u0000\u0000\u0000\u0001\u0003\u0002<\u0000" +
               "\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000" +
-              "\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000";
+              "\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   PAIR_ROSTER,
   changesIn,
+  device,
   pair,
   sendFrame,
   settled,
@@ -211,5 +212,63 @@ describe("a group's chat", () => {
         value: { atStart: true, lines: [{ seq: 1n }, {}, {}, {}, { seq: 5n }] },
       },
     });
+  });
+
+  it("tells each member's own devices how many lines they have not read", async () => {
+    const { groupId, guest, maker } = await pair();
+    const phone = await device(guest);
+    await phone.frames.next();
+    const mine = await groupSocket(groupId, maker);
+    chat(mine.socket, [
+      { kind: { send: "明日ひま？" }, opId: "a" },
+      { kind: { send: "ご飯いこ" }, opId: "b" },
+    ]);
+    const unread = (n: number) => [
+      {
+        kind: {
+          case: "unreadCount",
+          value: { count: n, groupId, threadId: thread },
+        },
+      },
+    ];
+    expect(changesIn(await phone.frames.next())).toMatchObject(unread(2));
+
+    const theirs = await groupSocket(groupId, guest);
+    chat(theirs.socket, [{ kind: { read: 2 }, opId: "r" }]);
+    expect(changesIn(await phone.frames.next())).toMatchObject(unread(0));
+  });
+
+  it("drops a group's counts as the member leaves it", async () => {
+    const { call } = await import("./helpers");
+    const { groupId, guest, maker } = await pair();
+    const phone = await device(guest);
+    await phone.frames.next();
+    const mine = await groupSocket(groupId, maker);
+    chat(mine.socket, [{ kind: { send: "明日ひま？" }, opId: "a" }]);
+    await phone.frames.next();
+
+    await call("GroupService/LeaveGroup", { groupId }, guest);
+    const later = await device(guest);
+    const kinds = changesIn(await later.frames.next()).map(
+      ({ kind }) => kind.case
+    );
+    expect(kinds).not.toContain("unreadCount");
+  });
+
+  it("keeps the newest count when counts arrive out of order", async () => {
+    const { env } = await import("cloudflare:workers");
+    const { groupId, guest } = await pair();
+    const { userIdOf } = await import("./helpers");
+    const user = env.USERS.getByName(await userIdOf(guest));
+    // Read up at the group's cursor 12, then a send's count from 11.
+    await user.setUnread(groupId, thread, 0, 12);
+    await user.setUnread(groupId, thread, 1, 11);
+    const phone = await device(guest);
+    const counts = changesIn(await phone.frames.next()).filter(
+      ({ kind }) => kind.case === "unreadCount"
+    );
+    expect(counts).toMatchObject([
+      { kind: { value: { count: 0, groupId, threadId: thread } } },
+    ]);
   });
 });

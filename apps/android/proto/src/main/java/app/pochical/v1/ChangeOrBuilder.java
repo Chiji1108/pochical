@@ -218,5 +218,28 @@ public interface ChangeOrBuilder extends
    */
   app.pochical.v1.ReadMark getReadMark();
 
+  /**
+   * <pre>
+   * On the User DO socket: how many of a chat's lines the user has not
+   * read, from the group, for badges without a socket to each group
+   * (spec/sync-protocol.md, Unread summary).
+   * </pre>
+   *
+   * <code>.pochical.v1.UnreadCount unread_count = 16 [json_name = "unreadCount"];</code>
+   * @return Whether the unreadCount field is set.
+   */
+  boolean hasUnreadCount();
+  /**
+   * <pre>
+   * On the User DO socket: how many of a chat's lines the user has not
+   * read, from the group, for badges without a socket to each group
+   * (spec/sync-protocol.md, Unread summary).
+   * </pre>
+   *
+   * <code>.pochical.v1.UnreadCount unread_count = 16 [json_name = "unreadCount"];</code>
+   * @return The unreadCount.
+   */
+  app.pochical.v1.UnreadCount getUnreadCount();
+
   public app.pochical.v1.Change.KindCase getKindCase();
 }

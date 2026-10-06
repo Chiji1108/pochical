@@ -22,20 +22,41 @@ struct ChatRequest: FetchKeyRequest, Hashable {
   }
 }
 
+/// A chat's latest line and unread count for `me`, and the latest line's
+/// writer by name, read again as they change.
+struct ChatSummaryRequest: FetchKeyRequest, Hashable {
+  let groupID: String
+  let threadID: String
+  let me: String
+
+  struct Value: Hashable, Sendable {
+    var summary = ChatSummary()
+    var lastWriter: String?
+  }
+
+  func fetch(_ db: Database) throws -> Value {
+    let summary = try Chats.summary(of: threadID, in: groupID, me: me, db: db)
+    let writer = try summary.last.flatMap { last in
+      try GroupMemberRow.where { $0.groupID.eq(groupID) && $0.userID.eq(last.authorID) }
+        .fetchOne(db)?.displayName
+    }
+    return Value(summary: summary, lastWriter: writer)
+  }
+}
+
 /// 全体チャット in the hub's list (/design's ChatRow): its latest line and
 /// time, and how many of others' lines are unread.
 struct ChatRow: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
-  @Fetch private var chat = ChatRequest.Value()
+  @Fetch private var chat = ChatSummaryRequest.Value()
   let group: GroupRow
   let onOpen: () -> Void
   @State private var meID: String?
 
   var body: some View {
-    let state = chat.state
-    let unread = meID.map { state.unread(by: $0) } ?? 0
-    let time = state.waiting.last?.madeAtMs ?? state.lines.last?.sentAtMs
+    let summary = chat.summary
+    let time = summary.waiting?.madeAtMs ?? summary.last?.sentAtMs
     Button(action: onOpen) {
       HStack(spacing: 12) {
         Image(systemName: "bubble.left.and.bubble.right")
@@ -54,15 +75,15 @@ struct ChatRow: View {
             .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        if time != nil || unread > 0 {
+        if time != nil || summary.unread > 0 {
           VStack(alignment: .trailing, spacing: 4) {
             if let time {
               Text(ChatTime.listed(time))
                 .font(.caption2)
                 .foregroundStyle(colors.textQuaternary)
             }
-            if unread > 0 {
-              UnreadCount(count: unread)
+            if summary.unread > 0 {
+              UnreadCount(count: summary.unread)
             }
           }
         }
@@ -73,22 +94,23 @@ struct ChatRow: View {
       .contentShape(.rect)
     }
     .buttonStyle(.plain)
-    .task(id: group.id) {
-      try? await $chat.load(ChatRequest(groupID: group.id, threadID: groupThread))
-    }
     .task { meID = await groupCalls.userID() }
+    .task(id: meID.map { ChatSummaryRequest(groupID: group.id, threadID: groupThread, me: $0) }) {
+      guard let meID else { return }
+      try? await $chat.load(
+        ChatSummaryRequest(groupID: group.id, threadID: groupThread, me: meID))
+    }
   }
 
   /// The latest line as one line of words: 自分： before one's own.
   private var preview: String {
-    let state = chat.state
-    if let waiting = state.waiting.last {
+    let summary = chat.summary
+    if let waiting = summary.waiting {
       return "自分：\(waiting.text)"
     }
-    guard let last = state.lines.last else { return "まだメッセージはありません" }
-    let writer = chat.writers.first { $0.userID == last.authorID }
+    guard let last = summary.last else { return "まだメッセージはありません" }
     if last.unsent {
-      return unsentLine(writer?.displayName, mine: last.authorID == meID)
+      return unsentLine(chat.lastWriter, mine: last.authorID == meID)
     }
     return last.authorID == meID ? "自分：\(last.text)" : last.text
   }
@@ -225,15 +247,28 @@ struct ChatScreen: View {
       place = now
     }
     .overlay(alignment: .bottomTrailing) {
-      if place.away {
-        Button("最新のメッセージへ", systemImage: "chevron.down") {
+      // Others' lines below not yet read, counted on the ↓ as a chat's
+      // unread are; reading happens at the latest, so none while there.
+      let unseen = place.atLatest ? 0 : meID.map { state.unread(by: $0) } ?? 0
+      if place.away || unseen > 0 {
+        Button {
           withAnimation { toLatest() }
+        } label: {
+          Image(systemName: "chevron.down")
+            .font(.body.weight(.semibold))
+            .foregroundStyle(colors.textPrimary)
+            .frame(width: Metrics.touch, height: Metrics.touch)
+            .glassEffect(.regular.interactive(), in: .circle)
+            .overlay(alignment: .topTrailing) {
+              if unseen > 0 {
+                UnreadCount(count: unseen).offset(x: 4, y: -4)
+              }
+            }
         }
-        .labelStyle(.iconOnly)
-        .font(.body.weight(.semibold))
-        .foregroundStyle(colors.textPrimary)
-        .frame(width: Metrics.touch, height: Metrics.touch)
-        .glassEffect(.regular.interactive(), in: .circle)
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+          unseen > 0 ? "最新のメッセージへ、まだ見ていない新着\(unseen)件" : "最新のメッセージへ"
+        )
         .padding(12)
         .transition(.opacity)
       }

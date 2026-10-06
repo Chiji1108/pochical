@@ -47,6 +47,16 @@ struct ChatOutboxRow: Hashable, Sendable {
   var madeAtMs: Int64
 }
 
+/// How many lines of a chat the user has not read, as the group counted
+/// them, from the user's own socket (spec/sync-protocol.md, Unread
+/// summary): every group's, without a socket to each.
+@Table("unreadCounts")
+struct UnreadCountRow: Hashable, Sendable {
+  var groupID: String
+  var threadID: String
+  var count: Int
+}
+
 extension DatabaseMigrator {
   mutating func registerChats() {
     registerMigration("Create the groups' chats") { db in
@@ -87,6 +97,19 @@ extension DatabaseMigrator {
           "opID" TEXT NOT NULL UNIQUE,
           "edit" BLOB NOT NULL,
           "madeAtMs" INTEGER NOT NULL
+        ) STRICT
+        """
+      )
+      .execute(db)
+    }
+    registerMigration("Keep the chats' unread counts") { db in
+      try #sql(
+        """
+        CREATE TABLE "unreadCounts" (
+          "groupID" TEXT NOT NULL,
+          "threadID" TEXT NOT NULL,
+          "count" INTEGER NOT NULL,
+          PRIMARY KEY ("groupID", "threadID")
         ) STRICT
         """
       )
@@ -157,6 +180,20 @@ public enum Chats {
       ChatOutboxRow.Draft(groupID: groupID, opID: edit.opID, edit: data, madeAtMs: now)
     }
     .execute(db)
+  }
+
+  /// A chat's unread count from the user's socket.
+  static func take(_ unread: Pochical_V1_UnreadCount, in db: Database) throws {
+    let row = UnreadCountRow(
+      groupID: unread.groupID, threadID: unread.threadID, count: Int(unread.count))
+    try UnreadCountRow.where { $0.groupID.eq(row.groupID) && $0.threadID.eq(row.threadID) }
+      .delete().execute(db)
+    try UnreadCountRow.insert { row }.execute(db)
+  }
+
+  /// A group left takes its counts with it.
+  static func dropUnread(of groupID: String, in db: Database) throws {
+    try UnreadCountRow.where { $0.groupID.eq(groupID) }.delete().execute(db)
   }
 
   /// A group left takes the member's waiting edits with it, so none is
@@ -314,4 +351,137 @@ public func firstUnread(_ writers: [LineWriter], unread: Int) -> Int? {
     }
   }
   return writers.firstIndex(of: .others)
+}
+
+/// The members a message mentions, by their id, in order: each kept as
+/// `<@id>` (spec/chat.md, Mentions; spec/vectors/chat-text.json).
+public func mentions(in text: String) -> [String] {
+  text.matches(of: /<@([\w-]+)>/).map { String($0.output.1) }
+}
+
+/// How many of a chat's unread lines count, as what notifies: all of them
+/// in a chat that is on; in one turned off only those mentioning `me`,
+/// and those only while mentions always notify (spec/chat.md, Unread
+/// lines; spec/vectors/unread.json).
+public func notifyingUnread(
+  _ unread: [String], muted: Bool, mentionsWhenMuted: Bool, me: String
+) -> Int {
+  guard muted else { return unread.count }
+  guard mentionsWhenMuted else { return 0 }
+  return unread.count { mentions(in: $0).contains(me) }
+}
+
+/// A chat as a list shows it: its latest line, and how many lines count
+/// as unread.
+public struct ChatSummary: Hashable, Sendable {
+  /// The latest line the group holds.
+  public var last: ChatLineRow?
+  /// The member's latest line still on its way, newer than `last`.
+  public var waiting: WaitingLine?
+  public var unread: Int
+
+  public init(last: ChatLineRow? = nil, waiting: WaitingLine? = nil, unread: Int = 0) {
+    self.last = last
+    self.waiting = waiting
+    self.unread = unread
+  }
+}
+
+extension Chats {
+  /// A chat's latest line and its unread lines that count, for `me`: as
+  /// the group counted them, or, while a read of theirs waits to be sent,
+  /// others' lines the device holds past it.
+  public static func summary(of threadID: String, in groupID: String, me: String, db: Database)
+    throws -> ChatSummary
+  {
+    let reads = try waitingEdits(of: groupID, in: db)
+    var ownRead: Int64 = 0
+    var waiting: WaitingLine?
+    for (edit, madeAtMs) in reads {
+      switch edit.kind {
+      case .read(let read) where read.threadID == threadID:
+        ownRead = max(ownRead, Int64(read.lastReadSeq))
+      case .send(let send) where send.threadID == threadID:
+        waiting = WaitingLine(opID: edit.opID, text: send.text, madeAtMs: madeAtMs)
+      default: break
+      }
+    }
+    let last = try ChatLineRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
+      .order { $0.seq.desc() }.fetchOne(db)
+    // Shown as the group's line once it has come.
+    if let sent = waiting,
+      try ChatLineRow.where({ $0.groupID.eq(groupID) && $0.opID.eq(sent.opID) }).fetchCount(db)
+        > 0
+    {
+      waiting = nil
+    }
+    return ChatSummary(
+      last: last, waiting: waiting,
+      unread: try unread(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db))
+  }
+
+  /// The chat's unread lines that count: the group's count, which reaches
+  /// every group without a socket to each, but, while the member's own
+  /// read waits, the device's own, so reading clears it at once.
+  private static func unread(
+    of threadID: String, in groupID: String, me: String, ownRead: Int64, db: Database
+  ) throws -> Int {
+    guard ownRead > 0 else {
+      // No chat can be turned off yet, so every unread line counts.
+      return try UnreadCountRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
+        .fetchOne(db)?.count ?? 0
+    }
+    let mark =
+      try ReadMarkRow.where {
+        $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && $0.userID.eq(me)
+      }
+      .fetchOne(db)?.lastReadSeq ?? 0
+    let read = max(mark, ownRead)
+    let lines = try ChatLineRow.where {
+      $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && $0.seq > read
+        && $0.authorID.neq(me)
+    }
+    .select(\.text).fetchAll(db)
+    return notifyingUnread(lines, muted: false, mentionsWhenMuted: true, me: me)
+  }
+
+  /// The member's newest read waiting to be sent in each of the group's
+  /// chats.
+  private static func waitingReads(of groupID: String, in db: Database) throws -> [String: Int64] {
+    var reads: [String: Int64] = [:]
+    for (edit, _) in try waitingEdits(of: groupID, in: db) {
+      if case .read(let read) = edit.kind {
+        reads[read.threadID] = max(reads[read.threadID] ?? 0, Int64(read.lastReadSeq))
+      }
+    }
+    return reads
+  }
+
+  /// Each group's unread lines that count, its chats' together, for the
+  /// list of groups; a group with none is left out.
+  public static func unreadByGroup(me: String, db: Database) throws -> [String: Int] {
+    var counts: [String: Int] = [:]
+    var reads: [String: [String: Int64]] = [:]
+    for row in try UnreadCountRow.where({ $0.count > 0 }).fetchAll(db) {
+      if reads[row.groupID] == nil {
+        reads[row.groupID] = try waitingReads(of: row.groupID, in: db)
+      }
+      let unread = try unread(
+        of: row.threadID, in: row.groupID, me: me,
+        ownRead: reads[row.groupID]?[row.threadID] ?? 0, db: db)
+      if unread > 0 {
+        counts[row.groupID, default: 0] += unread
+      }
+    }
+    return counts
+  }
+
+  /// The group's waiting edits in the order made, with when each was made.
+  private static func waitingEdits(of groupID: String, in db: Database) throws
+    -> [(Pochical_V1_ChatEdit, Int64)]
+  {
+    try ChatOutboxRow.where { $0.groupID.eq(groupID) }.order(by: \.id).fetchAll(db).map {
+      (try Pochical_V1_ChatEdit(serializedBytes: $0.edit), $0.madeAtMs)
+    }
+  }
 }

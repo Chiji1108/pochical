@@ -48,6 +48,7 @@ import {
   patternOrder,
   patterns,
   repeatOrders,
+  unreadCounts,
 } from "./user-do-schema";
 import {
   clockOfHlc,
@@ -58,6 +59,7 @@ import {
   orderChange,
   patternChange,
   repeatOrdersChange,
+  unreadCountChange,
 } from "./user-do-values";
 
 // Values in one push to a group.
@@ -84,7 +86,8 @@ type SyncedLog = {
     | typeof repeatOrders
     | typeof coworkers
     | typeof coworkerOrder
-    | typeof memberships;
+    | typeof memberships
+    | typeof unreadCounts;
 };
 
 /**
@@ -240,21 +243,100 @@ export class UserDO extends DurableObject<Env> {
   /**
    * The user left the group: it stays as left, at the next cursor, so
    * their devices catching up hear of it, and nothing more is pushed to it.
+   * Its unread counts go.
    */
   removeMembership(groupId: string): void {
     const left = this.ctx.storage.transactionSync(() => {
       if (!this.isMember(groupId)) {
         return undefined;
       }
+      // Taken before its counts go, so the head never goes back.
+      const cursor = this.head() + 1;
+      // Its counts go with it: devices drop them as they hear of the
+      // leaving, and joining again starts at the chats' end.
+      this.db
+        .delete(unreadCounts)
+        .where(eq(unreadCounts.groupId, groupId))
+        .run();
       return this.db
         .update(memberships)
-        .set({ cursor: this.head() + 1, leftAt: new Date() })
+        .set({ cursor, leftAt: new Date() })
         .where(eq(memberships.groupId, groupId))
         .returning()
         .get();
     });
     if (left !== undefined) {
       broadcastChanges(this.ctx, [membershipChange(left)]);
+    }
+  }
+
+  /**
+   * How many lines of a chat in one of the user's groups they have not
+   * read, as the group counted them at its cursor `groupCursor`, for their
+   * devices' badges, sent to them when it changed. One counted no later
+   * than the count kept, or for a group they are not in, changes nothing.
+   */
+  setUnread(
+    groupId: string,
+    threadId: string,
+    count: number,
+    groupCursor: number
+  ): void {
+    const changed = this.ctx.storage.transactionSync(() => {
+      if (!this.isMember(groupId)) {
+        return undefined;
+      }
+      const stored = this.db
+        .select({
+          count: unreadCounts.count,
+          groupCursor: unreadCounts.groupCursor,
+        })
+        .from(unreadCounts)
+        .where(
+          and(
+            eq(unreadCounts.groupId, groupId),
+            eq(unreadCounts.threadId, threadId)
+          )
+        )
+        .get();
+      // One counted no later than the count kept says nothing new.
+      if (stored !== undefined && stored.groupCursor >= groupCursor) {
+        return undefined;
+      }
+      // The same count, newer: kept as newer, so an older one arriving
+      // after it changes nothing, but the devices hear nothing.
+      if (stored?.count === count) {
+        this.db
+          .update(unreadCounts)
+          .set({ groupCursor })
+          .where(
+            and(
+              eq(unreadCounts.groupId, groupId),
+              eq(unreadCounts.threadId, threadId)
+            )
+          )
+          .run();
+        return undefined;
+      }
+      const row = {
+        count,
+        cursor: this.head() + 1,
+        groupCursor,
+        groupId,
+        threadId,
+      };
+      return this.db
+        .insert(unreadCounts)
+        .values(row)
+        .onConflictDoUpdate({
+          set: { count, cursor: row.cursor, groupCursor },
+          target: [unreadCounts.groupId, unreadCounts.threadId],
+        })
+        .returning()
+        .get();
+    });
+    if (changed !== undefined) {
+      broadcastChanges(this.ctx, [unreadCountChange(changed)]);
     }
   }
 
@@ -432,6 +514,17 @@ export class UserDO extends DurableObject<Env> {
             .map(membershipChange),
         shared: false,
         table: memberships,
+      },
+      {
+        after: (cursor) =>
+          db
+            .select()
+            .from(unreadCounts)
+            .where(gt(unreadCounts.cursor, cursor))
+            .all()
+            .map(unreadCountChange),
+        shared: false,
+        table: unreadCounts,
       },
     ];
   }

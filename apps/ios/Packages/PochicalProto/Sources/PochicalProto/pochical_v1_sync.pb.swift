@@ -661,6 +661,17 @@ public nonisolated struct Pochical_V1_Change: Sendable {
     set {kind = .readMark(newValue)}
   }
 
+  /// On the User DO socket: how many of a chat's lines the user has not
+  /// read, from the group, for badges without a socket to each group
+  /// (spec/sync-protocol.md, Unread summary).
+  public var unreadCount: Pochical_V1_UnreadCount {
+    get {
+      if case .unreadCount(let v)? = kind {return v}
+      return Pochical_V1_UnreadCount()
+    }
+    set {kind = .unreadCount(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Kind: Equatable, Sendable {
@@ -687,8 +698,30 @@ public nonisolated struct Pochical_V1_Change: Sendable {
     /// read one (spec/sync-protocol.md, Chat).
     case chatLine(Pochical_V1_ChatLine)
     case readMark(Pochical_V1_ReadMark)
+    /// On the User DO socket: how many of a chat's lines the user has not
+    /// read, from the group, for badges without a socket to each group
+    /// (spec/sync-protocol.md, Unread summary).
+    case unreadCount(Pochical_V1_UnreadCount)
 
   }
+
+  public init() {}
+}
+
+/// How many lines of a group's chat the user has not read: others' lines
+/// past their read mark. One value per chat, the group's latest.
+public nonisolated struct Pochical_V1_UnreadCount: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var groupID: String = String()
+
+  public var threadID: String = String()
+
+  public var count: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 }
@@ -2195,7 +2228,7 @@ nonisolated extension Pochical_V1_Changes: SwiftProtobuf.Message, SwiftProtobuf.
 
 nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Change"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cursor\0\u{1}day\0\u{1}pattern\0\u{3}pattern_order\0\u{3}member_day\0\u{3}member_pattern\0\u{3}repeat_orders\0\u{1}coworker\0\u{3}coworker_order\0\u{3}member_repeat_orders\0\u{1}membership\0\u{3}group_profile\0\u{1}member\0\u{3}chat_line\0\u{3}read_mark\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cursor\0\u{1}day\0\u{1}pattern\0\u{3}pattern_order\0\u{3}member_day\0\u{3}member_pattern\0\u{3}repeat_orders\0\u{1}coworker\0\u{3}coworker_order\0\u{3}member_repeat_orders\0\u{1}membership\0\u{3}group_profile\0\u{1}member\0\u{3}chat_line\0\u{3}read_mark\0\u{3}unread_count\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2386,6 +2419,19 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
           self.kind = .readMark(v)
         }
       }()
+      case 16: try {
+        var v: Pochical_V1_UnreadCount?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .unreadCount(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .unreadCount(v)
+        }
+      }()
       default: break
       }
     }
@@ -2456,6 +2502,10 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
       guard case .readMark(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
     }()
+    case .unreadCount?: try {
+      guard case .unreadCount(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
+    }()
     case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -2464,6 +2514,46 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
   public static func ==(lhs: Pochical_V1_Change, rhs: Pochical_V1_Change) -> Bool {
     if lhs.cursor != rhs.cursor {return false}
     if lhs.kind != rhs.kind {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_UnreadCount: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".UnreadCount"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}group_id\0\u{3}thread_id\0\u{1}count\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.groupID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.threadID) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.count) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.groupID.isEmpty {
+      try visitor.visitSingularStringField(value: self.groupID, fieldNumber: 1)
+    }
+    if !self.threadID.isEmpty {
+      try visitor.visitSingularStringField(value: self.threadID, fieldNumber: 2)
+    }
+    if self.count != 0 {
+      try visitor.visitSingularUInt32Field(value: self.count, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_UnreadCount, rhs: Pochical_V1_UnreadCount) -> Bool {
+    if lhs.groupID != rhs.groupID {return false}
+    if lhs.threadID != rhs.threadID {return false}
+    if lhs.count != rhs.count {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
