@@ -28,7 +28,9 @@ struct MessageAction: Identifiable {
 
 /// The long press that opens a line's menu, followed past its opening
 /// as UIKit's long press is: where the finger moves, and where it lifts.
-/// It sees the same press as the line's own, alongside it.
+/// It sees the same press as the line's own, alongside it, but never
+/// alongside the chat's scrolling, which would carry the lines away under
+/// the open menu.
 struct HeldPress: UIGestureRecognizerRepresentable {
   static let duration = 0.35
   let onMove: (CGPoint) -> Void
@@ -58,12 +60,12 @@ struct HeldPress: UIGestureRecognizerRepresentable {
     func gestureRecognizer(
       _ gestureRecognizer: UIGestureRecognizer,
       shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
-    ) -> Bool { true }
+    ) -> Bool { !(other is UIPanGestureRecognizer) }
   }
 }
 
 /// What a line's long press opens: the line lifted where it was, the
-/// reactions over it and the menu under it.
+/// reactions over it and the menu under it or over them.
 struct MessageActionsRequest: Identifiable {
   let id = UUID()
   /// The line's op_id, so its bubble in the chat stands empty meanwhile.
@@ -88,8 +90,7 @@ struct MessageActionsRequest: Identifiable {
 /// A line's long press (/design's MessageActions), as Messages and LINE
 /// draw one: the rest of the screen dims while the line stays bright, the
 /// first reactions in a bar over it with + for any other, and the menu
-/// under it, all moved together to stay on the screen; a bubble too tall
-/// for the room is drawn smaller, as a context menu's preview is. A tap
+/// under it or, with no room there, over the bar (placement(in:)). A tap
 /// elsewhere closes it; a pick, by a tap or by the finger that opened it
 /// lifting over one, closes it, then acts.
 struct MessageActionsOverlay: View {
