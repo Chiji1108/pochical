@@ -880,51 +880,31 @@ struct MessageBubble: View {
 
 }
 
-/// A bubble's outline: round all over, but the first of a run, as LINE
-/// draws one: its top corner by the writer's side square, with a tail
-/// reaching out from it toward the face and name the run starts with
-/// (/design's BubbleTail, the same curve). The tail is drawn past the
-/// bubble's leading edge, outside its frame.
+/// A bubble's outline: round all over, the first of a run with a tail
+/// over its top corner by the writer's side, flicking up and out toward
+/// the face and name the run starts with, as LINE draws one (/design's
+/// BubbleTail, the same curve). The tail reaches past the bubble's frame.
 struct BubbleShape: Shape {
   let mine: Bool
   let first: Bool
 
   nonisolated func path(in rect: CGRect) -> Path {
-    guard first else {
-      return Path(roundedRect: rect, cornerRadius: Radius.lg, style: .continuous)
-    }
-    let width = rect.width
-    let height = rect.height
-    let radius = min(Radius.lg, height / 2, width / 2)
-    // Drawn for the others' side, its tail to the left of x = 0.
-    var path = Path()
-    path.move(to: CGPoint(x: -5.6, y: 0))
-    path.addLine(to: CGPoint(x: width - radius, y: 0))
-    path.addArc(
-      tangent1End: CGPoint(x: width, y: 0), tangent2End: CGPoint(x: width, y: radius),
-      radius: radius)
-    path.addLine(to: CGPoint(x: width, y: height - radius))
-    path.addArc(
-      tangent1End: CGPoint(x: width, y: height), tangent2End: CGPoint(x: width - radius, y: height),
-      radius: radius)
-    path.addLine(to: CGPoint(x: radius, y: height))
-    path.addArc(
-      tangent1End: CGPoint(x: 0, y: height), tangent2End: CGPoint(x: 0, y: height - radius),
-      radius: radius)
-    path.addLine(to: CGPoint(x: 0, y: min(12, height - radius)))
-    // Its lower edge bowed in, so it reads as a horn, not a wedge.
-    path.addCurve(
-      to: CGPoint(x: -6.8, y: 1.8), control1: CGPoint(x: -0.5, y: 7),
-      control2: CGPoint(x: -3.5, y: 3.2))
-    path.addCurve(
-      to: CGPoint(x: -5.6, y: 0), control1: CGPoint(x: -7.6, y: 1.3),
-      control2: CGPoint(x: -7, y: 0))
-    path.closeSubpath()
+    let bubble = Path(roundedRect: rect, cornerRadius: Radius.lg, style: .continuous)
+    guard first else { return bubble }
+    // Drawn for the others' side, over the top-left corner.
+    var tail = Path()
+    tail.move(to: CGPoint(x: 0, y: 20))
+    tail.addCurve(
+      to: CGPoint(x: -7, y: -2), control1: CGPoint(x: -1, y: 10), control2: CGPoint(x: -4, y: 3))
+    tail.addCurve(
+      to: CGPoint(x: 14, y: 0), control1: CGPoint(x: -2, y: -1), control2: CGPoint(x: 4, y: 0))
+    tail.addLine(to: CGPoint(x: 14, y: 20))
+    tail.closeSubpath()
     // One's own is the same, mirrored to the right.
     let place =
       mine
       ? CGAffineTransform(a: -1, b: 0, c: 0, d: 1, tx: rect.maxX, ty: rect.minY)
       : CGAffineTransform(translationX: rect.minX, y: rect.minY)
-    return path.applying(place)
+    return bubble.union(tail.applying(place))
   }
 }

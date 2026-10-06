@@ -145,20 +145,17 @@ export function LineFrame({
   );
 }
 
-// The tail on a run's first bubble, reaching out from its top corner
-// toward the writer's side, as LINE draws one: drawn for the others' side
-// and mirrored for yours.
+// The tail on a run's first bubble, flicking up and out from its top
+// corner toward the writer's side, as LINE draws one: drawn for the
+// others' side and mirrored for yours.
 export function BubbleTail({ mine }: { mine: boolean }) {
   return (
     <svg
       aria-hidden="true"
       className={chatStyle.tail({ mine })}
-      viewBox="0 0 8 12"
+      viewBox="0 0 21 22"
     >
-      <path
-        d="M8 0H1.4C0 0-.6 1.3.2 1.8 3.5 3.2 6.5 7 7 12H8Z"
-        fill="currentColor"
-      />
+      <path d="M7 22C6 12 3 5 0 0c5 1 11 2 21 2v20Z" fill="currentColor" />
     </svg>
   );
 }
@@ -181,7 +178,7 @@ export function Bubble({
   return (
     <span className={cx(chatStyle.bubbleHold, linked && chatStyle.linked)}>
       {first && <BubbleTail mine={mine} />}
-      <span className={chatStyle.bubble({ first, mine })} data-part="bubble">
+      <span className={chatStyle.bubble({ mine })} data-part="bubble">
         {children}
       </span>
     </span>

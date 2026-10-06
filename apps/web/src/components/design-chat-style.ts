@@ -66,10 +66,9 @@ export const chatStyle = {
     },
     variants: { mine: { true: { alignItems: "flex-end" } } },
   }),
-  // Round all over, but the first of a run, as LINE draws one: its top
-  // corner by the writer's side square, with a tail (BubbleTail) reaching
-  // out from it toward the face and name the run starts with, so it says
-  // whose words follow.
+  // Round all over; the first of a run has a tail (BubbleTail) flicking
+  // up from its top corner by the writer's side, as LINE draws one, by
+  // the face and name the run starts with, so it says whose words follow.
   bubble: cva({
     base: {
       bg: "fill.tertiary",
@@ -80,20 +79,7 @@ export const chatStyle = {
       minWidth: 0,
       overflow: "hidden",
     },
-    compoundVariants: [
-      {
-        css: { borderTopLeftRadius: 0 },
-        first: true,
-        mine: false,
-      },
-      {
-        css: { borderTopRightRadius: 0 },
-        first: true,
-        mine: true,
-      },
-    ],
     variants: {
-      first: { true: {} },
       mine: {
         true: { bg: "accent.fill", color: "accent.onFill" },
       },
@@ -108,16 +94,17 @@ export const chatStyle = {
     minWidth: 0,
     position: "relative",
   }),
-  // The tail at the top of a run's first bubble, in the bubble's color,
-  // overlapping its edge by a point so no seam shows between them.
+  // The tail on a run's first bubble, in the bubble's color, over its
+  // top corner and flicking up and out past it; the bubble drawn after
+  // it hides where the two overlap.
   tail: cva({
     base: {
       color: "fill.tertiary",
-      height: "12px",
+      height: "22px",
       left: "-7px",
       position: "absolute",
-      top: 0,
-      width: "8px",
+      top: "-2px",
+      width: "21px",
     },
     variants: {
       mine: {
@@ -439,7 +426,7 @@ export const chatStyle = {
     alignItems: "center",
     bg: "fill.tertiary",
     // A bubble at the start of the writer's run, by their face.
-    borderRadius: "0 token(radii.lg) token(radii.lg) token(radii.lg)",
+    borderRadius: "lg",
     display: "flex",
     gap: "4px",
     height: "36px",
