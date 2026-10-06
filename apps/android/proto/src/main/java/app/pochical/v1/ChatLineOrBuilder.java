@@ -288,4 +288,23 @@ public interface ChatLineOrBuilder extends
    * @return The photo.
    */
   app.pochical.v1.ChatPhoto getPhoto();
+
+  /**
+   * <pre>
+   * Its first link's page, under its words; none once unsent.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
+   * @return Whether the preview field is set.
+   */
+  boolean hasPreview();
+  /**
+   * <pre>
+   * Its first link's page, under its words; none once unsent.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
+   * @return The preview.
+   */
+  app.pochical.v1.LinkPreview getPreview();
 }

@@ -21,8 +21,21 @@ struct ChatVectors: Decodable, Sendable {
     let expected: String
   }
 
+  struct Edited: VectorCase {
+    let name: String
+    let text: String
+    let edit: String
+    let expected: String
+  }
+
   let firstUnread: [FirstUnread]
   let directThread: [DirectThread]
+  let edited: [Edited]
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).edited)
+func anEditKeepsItsPageWhileItsFirstLinkStays(_ vector: ChatVectors.Edited) {
+  #expect(keepsPreview(of: vector.text, editedTo: vector.edit) == (vector.expected == "kept"))
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).directThread)
@@ -530,4 +543,34 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
   let source = CGImageSourceCreateWithData(shrunk.jpeg as CFData, nil)!
   let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
   #expect(properties?[kCGImagePropertyGPSDictionary] == nil)
+}
+
+@Test func aLinksPageIsAskedForButNotAnInvitations() {
+  #expect(previewLink("ここ https://cafe.example/menu どう？") == "https://cafe.example/menu")
+  #expect(previewLink("https://pochical.app/invite/ABCDEFGH") == nil)
+  #expect(previewLink("リンクなし") == nil)
+}
+
+@Test func aWaitingChangeKeepsOrReplacesTheLinesPage() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var sent = line(1, "ここ https://cafe.example")
+    sent.chatLine.preview.url = "https://cafe.example"
+    sent.chatLine.preview.title = "店"
+    try GroupSync.take([sent], of: "g", in: db)
+    var change = Pochical_V1_ChatChange()
+    change.threadID = groupThread
+    change.seq = 1
+    change.text = "ここどう？ https://cafe.example"
+    change.keepsPreview = true
+    try Chats.edit(.change(change), in: "g", now: 1, db: db)
+    var state = try Chats.state(of: groupThread, in: "g", db: db)
+    #expect(state.lines[0].preview?.title == "店")
+
+    change.text = "やっぱりいいや"
+    change.keepsPreview = false
+    try Chats.edit(.change(change), in: "g", now: 2, db: db)
+    state = try Chats.state(of: groupThread, in: "g", db: db)
+    #expect(state.lines[0].preview == nil)
+  }
 }

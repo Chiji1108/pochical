@@ -46,7 +46,19 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   var decidedKey = ""
   /// The photo sent as the line, as JSON, `LinePhoto`; empty for none.
   var photoJSON = ""
+  /// Its first link's page, as JSON, `LinePreview`; empty for none.
+  var previewJSON = ""
   public var id: Int64 { seq }
+
+  /// Its first link's page, under its words.
+  public var preview: LinePreview? {
+    get { try? JSONDecoder().decode(LinePreview.self, from: Data(previewJSON.utf8)) }
+    set {
+      previewJSON =
+        newValue.flatMap { try? JSONEncoder().encode($0) }
+        .flatMap { String(data: $0, encoding: .utf8) } ?? ""
+    }
+  }
 
   /// The photo sent as the line.
   public var photo: LinePhoto? {
@@ -298,6 +310,14 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep the chats' link previews") { db in
+      try #sql(
+        """
+        ALTER TABLE "chatLines" ADD COLUMN "previewJSON" TEXT NOT NULL DEFAULT ''
+        """
+      )
+      .execute(db)
+    }
   }
 }
 
@@ -345,6 +365,7 @@ public enum Chats {
     }
     row.decidedKey = line.decided
     row.photo = line.hasPhoto ? linePhoto(line.photo) : nil
+    row.preview = line.hasPreview ? LinePreview(line.preview) : nil
     try ChatLineRow.insert { row }.execute(db)
   }
 
@@ -497,6 +518,8 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
   public var poll = false
   /// The photo it sends.
   public var photo: LinePhoto?
+  /// Its first link's page.
+  public var preview: LinePreview?
   public var id: String { opID }
 }
 
@@ -536,11 +559,15 @@ extension Chats {
           WaitingLine(
             opID: edit.opID, text: send.text, madeAtMs: row.madeAtMs,
             days: send.days.compactMap(Day.init), poll: send.poll,
-            photo: send.hasPhoto ? linePhoto(send.photo) : nil))
+            photo: send.hasPhoto ? linePhoto(send.photo) : nil,
+            preview: send.hasPreview ? LinePreview(send.preview) : nil))
       case .change(let change) where change.threadID == threadID:
         if let at = lines.firstIndex(where: { $0.seq == Int64(change.seq) }) {
           lines[at].text = change.text
           lines[at].edited = true
+          if !change.keepsPreview {
+            lines[at].preview = change.hasPreview ? LinePreview(change.preview) : nil
+          }
         }
       case .unsend(let unsend) where unsend.threadID == threadID:
         if let at = lines.firstIndex(where: { $0.seq == Int64(unsend.seq) }) {
@@ -551,6 +578,7 @@ extension Chats {
           lines[at].votes = []
           lines[at].decided = nil
           lines[at].photo = nil
+          lines[at].preview = nil
         }
         pinned = pinStep(pinned, unsend: String(unsend.seq)).pins
       case .pin(let pin) where pin.threadID == threadID:
@@ -680,7 +708,8 @@ extension Chats {
       case .send(let send) where send.threadID == threadID:
         waiting = WaitingLine(
           opID: edit.opID, text: send.text, madeAtMs: madeAtMs, days: send.days.compactMap(Day.init),
-          poll: send.poll, photo: send.hasPhoto ? linePhoto(send.photo) : nil)
+          poll: send.poll, photo: send.hasPhoto ? linePhoto(send.photo) : nil,
+          preview: send.hasPreview ? LinePreview(send.preview) : nil)
       default: break
       }
     }

@@ -22,6 +22,7 @@ public  final class ChatChange extends
     threadId_ = "";
     text_ = "";
   }
+  private int bitField0_;
   public static final int THREAD_ID_FIELD_NUMBER = 1;
   private java.lang.String threadId_;
   /**
@@ -160,6 +161,114 @@ public  final class ChatChange extends
     checkByteStringIsUtf8(value);
     text_ = value.toStringUtf8();
 
+  }
+
+  public static final int KEEPS_PREVIEW_FIELD_NUMBER = 4;
+  private boolean keepsPreview_;
+  /**
+   * <pre>
+   * The words' first link is the line's still: its page stays, and
+   * `preview` is not looked at (spec/vectors/chat.json, edited).
+   * </pre>
+   *
+   * <code>bool keeps_preview = 4 [json_name = "keepsPreview"];</code>
+   * @return The keepsPreview.
+   */
+  @java.lang.Override
+  public boolean getKeepsPreview() {
+    return keepsPreview_;
+  }
+  /**
+   * <pre>
+   * The words' first link is the line's still: its page stays, and
+   * `preview` is not looked at (spec/vectors/chat.json, edited).
+   * </pre>
+   *
+   * <code>bool keeps_preview = 4 [json_name = "keepsPreview"];</code>
+   * @param value The keepsPreview to set.
+   */
+  private void setKeepsPreview(boolean value) {
+    
+    keepsPreview_ = value;
+  }
+  /**
+   * <pre>
+   * The words' first link is the line's still: its page stays, and
+   * `preview` is not looked at (spec/vectors/chat.json, edited).
+   * </pre>
+   *
+   * <code>bool keeps_preview = 4 [json_name = "keepsPreview"];</code>
+   */
+  private void clearKeepsPreview() {
+
+    keepsPreview_ = false;
+  }
+
+  public static final int PREVIEW_FIELD_NUMBER = 5;
+  private app.pochical.v1.LinkPreview preview_;
+  /**
+   * <pre>
+   * Else the new first link's page, or none.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 5 [json_name = "preview"];</code>
+   */
+  @java.lang.Override
+  public boolean hasPreview() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * Else the new first link's page, or none.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 5 [json_name = "preview"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.LinkPreview getPreview() {
+    return preview_ == null ? app.pochical.v1.LinkPreview.getDefaultInstance() : preview_;
+  }
+  /**
+   * <pre>
+   * Else the new first link's page, or none.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 5 [json_name = "preview"];</code>
+   */
+  private void setPreview(app.pochical.v1.LinkPreview value) {
+    java.util.Objects.requireNonNull(value);
+    preview_ = value;
+    bitField0_ |= 0x00000001;
+  }
+  /**
+   * <pre>
+   * Else the new first link's page, or none.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 5 [json_name = "preview"];</code>
+   */
+  @java.lang.SuppressWarnings("ReferenceEquality")
+  private void mergePreview(app.pochical.v1.LinkPreview value) {
+    java.util.Objects.requireNonNull(value);
+    if (preview_ != null &&
+        preview_ != app.pochical.v1.LinkPreview.getDefaultInstance()) {
+      preview_ =
+        app.pochical.v1.LinkPreview.newBuilder(preview_).mergeFrom(value).buildPartial();
+    } else {
+      preview_ = value;
+    }
+    bitField0_ |= 0x00000001;
+  }
+  /**
+   * <pre>
+   * Else the new first link's page, or none.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 5 [json_name = "preview"];</code>
+   */
+  private void clearPreview() {
+    preview_ = null;
+    bitField0_ = (bitField0_ & ~0x00000001);
   }
 
   public static app.pochical.v1.ChatChange parseFrom(
@@ -409,6 +518,120 @@ public  final class ChatChange extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The words' first link is the line's still: its page stays, and
+     * `preview` is not looked at (spec/vectors/chat.json, edited).
+     * </pre>
+     *
+     * <code>bool keeps_preview = 4 [json_name = "keepsPreview"];</code>
+     * @return The keepsPreview.
+     */
+    @java.lang.Override
+    public boolean getKeepsPreview() {
+      return instance.getKeepsPreview();
+    }
+    /**
+     * <pre>
+     * The words' first link is the line's still: its page stays, and
+     * `preview` is not looked at (spec/vectors/chat.json, edited).
+     * </pre>
+     *
+     * <code>bool keeps_preview = 4 [json_name = "keepsPreview"];</code>
+     * @param value The keepsPreview to set.
+     * @return This builder for chaining.
+     */
+    public Builder setKeepsPreview(boolean value) {
+      copyOnWrite();
+      instance.setKeepsPreview(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The words' first link is the line's still: its page stays, and
+     * `preview` is not looked at (spec/vectors/chat.json, edited).
+     * </pre>
+     *
+     * <code>bool keeps_preview = 4 [json_name = "keepsPreview"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearKeepsPreview() {
+      copyOnWrite();
+      instance.clearKeepsPreview();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * Else the new first link's page, or none.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 5 [json_name = "preview"];</code>
+     */
+    @java.lang.Override
+    public boolean hasPreview() {
+      return instance.hasPreview();
+    }
+    /**
+     * <pre>
+     * Else the new first link's page, or none.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 5 [json_name = "preview"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.LinkPreview getPreview() {
+      return instance.getPreview();
+    }
+    /**
+     * <pre>
+     * Else the new first link's page, or none.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 5 [json_name = "preview"];</code>
+     */
+    public Builder setPreview(app.pochical.v1.LinkPreview value) {
+      copyOnWrite();
+      instance.setPreview(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * Else the new first link's page, or none.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 5 [json_name = "preview"];</code>
+     */
+    public Builder setPreview(
+        app.pochical.v1.LinkPreview.Builder builderForValue) {
+      copyOnWrite();
+      instance.setPreview(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Else the new first link's page, or none.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 5 [json_name = "preview"];</code>
+     */
+    public Builder mergePreview(app.pochical.v1.LinkPreview value) {
+      copyOnWrite();
+      instance.mergePreview(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Else the new first link's page, or none.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 5 [json_name = "preview"];</code>
+     */
+    public Builder clearPreview() {  copyOnWrite();
+      instance.clearPreview();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatChange)
   }
   @java.lang.Override
@@ -425,13 +648,16 @@ public  final class ChatChange extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
+            "bitField0_",
             "threadId_",
             "seq_",
             "text_",
+            "keepsPreview_",
+            "preview_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0003" +
-              "\u0003\u0208";
+              "\u0000\u0005\u0000\u0001\u0001\u0005\u0005\u0000\u0000\u0000\u0001\u0208\u0002\u0003" +
+              "\u0003\u0208\u0004\u0007\u0005\u1009\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

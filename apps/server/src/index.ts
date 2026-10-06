@@ -1,9 +1,16 @@
 import { createConnectRouter } from "@connectrpc/connect";
 import { createFetchHandler } from "@connectrpc/connect/protocol";
 
+import { registerChatService } from "./chat-service";
 import { registerGroupService } from "./group-service";
 import { registerInviteService } from "./invite-service";
-import { getPhoto, PHOTO_PATH, putPhoto } from "./photos";
+import {
+  getPhoto,
+  getPreviewImage,
+  PHOTO_PATH,
+  PREVIEW_IMAGE_PATH,
+  putPhoto,
+} from "./photos";
 import { tooManySignIns } from "./rate-limits";
 import { getAuth, sessionUser } from "./session";
 import type { SessionUser } from "./session";
@@ -20,6 +27,7 @@ registerSystemService(router);
 registerInviteService(router);
 registerGroupService(router);
 registerUserService(router);
+registerChatService(router);
 
 const rpcHandlers = new Map(
   router.handlers.map((handler) => [
@@ -115,6 +123,16 @@ export default {
         return new Response("Not a member of this group", { status: 403 });
       }
       return await env.GROUPS.getByName(groupId).fetch(forUser(request, user));
+    }
+
+    // A link preview's picture, for anyone signed in: its id comes only
+    // with a preview.
+    const previewImage = PREVIEW_IMAGE_PATH.exec(pathname)?.groups?.imageId;
+    if (previewImage !== undefined) {
+      if (!(await sessionUser(request.headers))) {
+        return signInFirst();
+      }
+      return await getPreviewImage(env, previewImage);
     }
 
     // A group's photos, as its socket: its members alone, by their own DO.

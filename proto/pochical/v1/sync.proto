@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package pochical.v1;
 
+import "pochical/v1/chat.proto";
+
 // Every binary WebSocket message from a client is one ClientFrame.
 message ClientFrame {
   oneof kind {
@@ -407,6 +409,8 @@ message ChatLine {
   string decided = 14;
   // A photo sent as the line, with no words; none once unsent.
   ChatPhoto photo = 15;
+  // Its first link's page, under its words; none once unsent.
+  LinkPreview preview = 16;
 }
 
 // A photo in a chat (spec/chat.md, Photos): uploaded by its sender to the
@@ -512,6 +516,9 @@ message ChatSend {
   bool poll = 4;
   // A photo instead, the sender's own, uploaded first; no words or days.
   ChatPhoto photo = 5;
+  // The page of the words' first link, as GetLinkPreview gave it; none
+  // when the sender took it off (×) or it had not come.
+  LinkPreview preview = 6;
 }
 
 // New words for one of the member's own lines of words (編集).
@@ -520,6 +527,11 @@ message ChatChange {
   uint64 seq = 2;
   // 1 to chatMessage characters, not blank.
   string text = 3;
+  // The words' first link is the line's still: its page stays, and
+  // `preview` is not looked at (spec/vectors/chat.json, edited).
+  bool keeps_preview = 4;
+  // Else the new first link's page, or none.
+  LinkPreview preview = 5;
 }
 
 // One of the member's own lines taken back (送信取消).

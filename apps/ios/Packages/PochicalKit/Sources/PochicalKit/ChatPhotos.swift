@@ -150,6 +150,24 @@ public enum ChatPhotos {
     return data
   }
 
+  /// A link preview's picture, from the device or else the server, kept
+  /// once fetched.
+  static func fetchPreviewImage(
+    _ imageID: String, account: Account, server: URL = Server.url
+  ) async throws -> Data {
+    let kept = directory(.cachesDirectory, "LinkPreviews").appending(path: imageID)
+    if let held = try? Data(contentsOf: kept) {
+      return held
+    }
+    var request = URLRequest(url: server.appending(path: "v1/previews/\(imageID)"))
+    request.setValue("Bearer \(try await account.token())", forHTTPHeaderField: "Authorization")
+    let (data, response) = try await URLSession.shared.data(for: request)
+    let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+    guard status == 200 else { throw UploadError.refused(status) }
+    try? data.write(to: kept, options: .atomic)
+    return data
+  }
+
   private static func photoURL(_ photoID: String, in groupID: String, server: URL) -> URL {
     server.appending(path: "v1/groups/\(groupID)/photos/\(photoID)")
   }

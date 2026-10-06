@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package pochical.v1;
+
+// What a chat asks the server beyond its socket (spec/chat.md).
+service ChatService {
+  // A link's preview, read by the server so people's addresses are not
+  // sent to the sites (spec/chat.md, Reading a page), cached by URL for a
+  // day. Signed-in users only. The preview is unset when no page was
+  // found; INVALID_ARGUMENT for a URL that is not http(s) on 80 or 443.
+  rpc GetLinkPreview(GetLinkPreviewRequest) returns (GetLinkPreviewResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+message GetLinkPreviewRequest {
+  string url = 1;
+}
+
+message GetLinkPreviewResponse {
+  LinkPreview preview = 1;
+}
+
+// A link's page as a message carries it, sent with the message so every
+// reader sees the same and none of them fetches the page.
+message LinkPreview {
+  // The link it is for, the message's first.
+  string url = 1;
+  // og:title, else <title>, else the address without its scheme.
+  string title = 2;
+  // og:site_name, else the host without www.
+  string site = 3;
+  // The page's picture as the server keeps it (GET /v1/previews/{id});
+  // empty for none.
+  string image_id = 4;
+  uint32 image_width = 5;
+  uint32 image_height = 6;
+}

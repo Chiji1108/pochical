@@ -115,4 +115,25 @@ public interface ChatSendOrBuilder extends
    * @return The photo.
    */
   app.pochical.v1.ChatPhoto getPhoto();
+
+  /**
+   * <pre>
+   * The page of the words' first link, as GetLinkPreview gave it; none
+   * when the sender took it off (×) or it had not come.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+   * @return Whether the preview field is set.
+   */
+  boolean hasPreview();
+  /**
+   * <pre>
+   * The page of the words' first link, as GetLinkPreview gave it; none
+   * when the sender took it off (×) or it had not come.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+   * @return The preview.
+   */
+  app.pochical.v1.LinkPreview getPreview();
 }

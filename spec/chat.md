@@ -52,7 +52,8 @@ The server reads the page, so that people's addresses are not sent to the sites,
 
 - The title is the page's `og:title`, else its `<title>`; the site's name is `og:site_name`, else the host without `www.`; the picture is `og:image`. A page with neither title gives its address without the scheme as the title.
 - Only `http` and `https` on ports 80 and 443, to hosts that resolve to public addresses (no private, loopback or link-local ranges, checked again after each redirect). At most 3 redirects, 5 seconds, and the first 512 KB of HTML.
-- The picture is fetched by the server, shrunk and stored with the preview, and served from Pochical's own storage, so it keeps showing after the site changes or removes it.
+- The picture is fetched by the server (an image of at most 2 MB, as the site serves it) and stored with the preview, served to signed-in users from Pochical's own storage (`GET /v1/previews/{id}`), so it keeps showing after the site changes or removes it. A larger picture is left out.
+- The server asks `ChatService.GetLinkPreview` with the link; the preview goes with the message (`ChatSend.preview`), and an edit says whether its first link stayed (`ChatChange.keeps_preview`) or gives the new link's page.
 - Previews are cached by URL for a day.
 
 ## Mentions

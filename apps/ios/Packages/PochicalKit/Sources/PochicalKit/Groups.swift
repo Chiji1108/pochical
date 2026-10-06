@@ -70,6 +70,7 @@ public struct GroupCalls: Sendable {
   let account: Account
   let client: Pochical_V1_GroupServiceClient
   private let users: Pochical_V1_UserServiceClient
+  private let chats: Pochical_V1_ChatServiceClient
 
   public init(account: Account, server: URL = Server.url) {
     self.account = account
@@ -79,6 +80,22 @@ public struct GroupCalls: Sendable {
         host: server.absoluteString, networkProtocol: .connect, codec: ProtoCodec()))
     client = Pochical_V1_GroupServiceClient(client: protocolClient)
     users = Pochical_V1_UserServiceClient(client: protocolClient)
+    chats = Pochical_V1_ChatServiceClient(client: protocolClient)
+  }
+
+  /// A link's page as the server reads it (spec/chat.md, Reading a page),
+  /// nil when no page was found.
+  public func linkPreview(_ url: String) async throws -> LinePreview? {
+    var request = Pochical_V1_GetLinkPreviewRequest()
+    request.url = url
+    let answer = try await chats.getLinkPreview(request: request, headers: account.headers())
+      .result.get()
+    return answer.hasPreview ? LinePreview(answer.preview) : nil
+  }
+
+  /// A link preview's picture, from the device or else the server.
+  public func previewImage(_ imageID: String) async throws -> Data {
+    try await ChatPhotos.fetchPreviewImage(imageID, account: account)
   }
 
   /// One of the group's chat photos, from the device or else the server.

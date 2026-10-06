@@ -169,6 +169,10 @@ struct ChatScreen: View {
   @State private var readingPhotos = false
   /// A photo opened large.
   @State private var viewing: LinePhoto?
+  /// The page of the words' first link, while writing.
+  @State private var composerPreview: ComposerPreview?
+  /// A link whose page was taken off with ×, until sent or changed.
+  @State private var previewRemoved: String?
   /// The line whose reactions and menu are open.
   @State private var acting: MessageActionsRequest?
 
@@ -310,6 +314,7 @@ struct ChatScreen: View {
       try? await $dayMembers.load(
         GroupMembersRequest(groupID: group.id, from: span.from, through: span.through))
     }
+    .task(id: previewLink(draft)) { await readPreview(of: previewLink(draft)) }
     .sheet(isPresented: $sharingDays) {
       ShareDaysSheet(
         groupID: group.id, people: otherID.map { Set([$0, meID ?? ""]) }, pollable: otherID == nil,
@@ -410,7 +415,8 @@ struct ChatScreen: View {
         let onReact = { (emoji: String) in react(emoji, on: line) }
         let poll = pollLine(for: line)
         LineView(
-          text: line.text, days: line.days, members: cardMembers, poll: poll, photo: line.photo,
+          text: line.text, preview: line.preview, days: line.days, members: cardMembers,
+          poll: poll, photo: line.photo,
           groupID: group.id, onOpenPhoto: { viewing = line.photo },
           shifts: line.poll ? nil : line.days.first.map { GroupRoute.shifts(group, day: $0) },
           time: line.sentAtMs, edited: line.edited, mine: mine,
@@ -425,7 +431,8 @@ struct ChatScreen: View {
               lineID: line.opID, frame: frame, mine: mine,
               bubble: AnyView(
                 LineContent(
-                  text: line.text, days: line.days, members: cardMembers, poll: poll,
+                  text: line.text, preview: line.preview, days: line.days, members: cardMembers,
+                  poll: poll,
                   photo: line.photo, groupID: group.id, mine: mine, first: startsRun,
                   waiting: false, nameOf: nameOf)),
               finger: finger, reactions: line.reactions, meID: meID, onReact: onReact,
@@ -434,7 +441,7 @@ struct ChatScreen: View {
       }
     case .waiting(let line, let startsRun):
       LineView(
-        text: line.text, days: line.days, members: cardMembers,
+        text: line.text, preview: line.preview, days: line.days, members: cardMembers,
         poll: line.poll
           ? PollLine(votes: [], decided: nil, names: names, meID: meID, canDecide: true) : nil,
         photo: line.photo, groupID: group.id,
@@ -541,6 +548,11 @@ struct ChatScreen: View {
       mentionList
       if editing == nil, !pickedPhotos.isEmpty {
         PhotoTray(photos: $pickedPhotos)
+      }
+      if let composerPreview, !composerPreview.none, composerPreview.url != previewRemoved {
+        ComposerPreviewBar(state: composerPreview) {
+          withAnimation { previewRemoved = composerPreview.url }
+        }
       }
       if let editing {
         HStack(spacing: 8) {
@@ -747,9 +759,13 @@ struct ChatScreen: View {
     var send = Pochical_V1_ChatSend()
     send.threadID = threadID
     send.text = withMentions(text, picked: picked)
+    if let preview = attachedPreview(for: text) {
+      send.preview = preview.wire
+    }
     write(.send(send))
     draft = ""
     picked = []
+    previewRemoved = nil
   }
 
   /// The first and last of the days the chat's lines share, for their
@@ -765,6 +781,31 @@ struct ChatScreen: View {
   private var cardMembers: [GroupMember] {
     guard let otherID else { return dayMembers }
     return dayMembers.filter { $0.userID == otherID || $0.userID == meID }
+  }
+
+  /// The page to send with `text`: its first link's, read and not taken
+  /// off; none while it is still being asked for.
+  private func attachedPreview(for text: String) -> LinePreview? {
+    guard let link = previewLink(text), let state = composerPreview, state.url == link,
+      link != previewRemoved
+    else { return nil }
+    return state.preview
+  }
+
+  /// Asks for the page of the words' first link once it has stayed the
+  /// same a moment, as chatRules.linkPreviewSettleMs.
+  private func readPreview(of link: String?) async {
+    guard let link else {
+      composerPreview = nil
+      return
+    }
+    if composerPreview?.url == link { return }
+    try? await Task.sleep(for: .milliseconds(Chat.linkPreviewSettleMs))
+    guard !Task.isCancelled else { return }
+    withAnimation { composerPreview = ComposerPreview(url: link) }
+    let preview = try? await groupCalls.linkPreview(link)
+    guard !Task.isCancelled, composerPreview?.url == link else { return }
+    withAnimation { composerPreview = ComposerPreview(url: link, preview: preview, none: preview == nil) }
   }
 
   /// Shares days with everyone's shifts, as a line of their own.
@@ -844,7 +885,14 @@ struct ChatScreen: View {
     change.threadID = threadID
     change.seq = UInt64(line.seq)
     change.text = withMentions(text, picked: picked)
+    // The page stays while the first link does (spec/vectors/chat.json,
+    // edited); else the new link's, if it has come.
+    change.keepsPreview = keepsPreview(of: line.text, editedTo: change.text)
+    if !change.keepsPreview, let preview = attachedPreview(for: text) {
+      change.preview = preview.wire
+    }
     write(.change(change))
+    previewRemoved = nil
     stopEditing()
   }
 
@@ -1034,6 +1082,8 @@ private struct ReadKey: Hashable {
 private struct LineView: View {
   @Environment(\.themeColors) private var colors
   let text: String
+  /// Its first link's page.
+  var preview: LinePreview?
   /// The days a line of shared days shares, drawn on a card.
   var days: [Day] = []
   /// Whose shifts its card shows.
@@ -1103,7 +1153,7 @@ private struct LineView: View {
         HStack(alignment: .bottom, spacing: 8) {
           if mine { meta }
           LineContent(
-            text: text, days: days, members: members, poll: poll, photo: photo,
+            text: text, preview: preview, days: days, members: members, poll: poll, photo: photo,
             groupID: groupID, mine: mine, first: first, waiting: waiting, nameOf: nameOf
           )
           // A photo opens large at a tap; its menu is the long press's.
@@ -1223,6 +1273,8 @@ private struct DaySpan: Hashable {
 /// What a line is drawn as: its words in a bubble, or its days on a card.
 struct LineContent: View {
   let text: String
+  /// Its first link's page.
+  var preview: LinePreview?
   let days: [Day]
   let members: [GroupMember]
   /// Its days are put to the vote, with what the card needs.
@@ -1244,7 +1296,8 @@ struct LineContent: View {
         names: poll.names, meID: poll.meID, canDecide: poll.canDecide, waiting: waiting,
         onVote: poll.onVote, onDecide: poll.onDecide)
     } else if days.isEmpty {
-      MessageBubble(text: text, mine: mine, first: first, waiting: waiting, nameOf: nameOf)
+      MessageBubble(
+        text: text, mine: mine, first: first, waiting: waiting, nameOf: nameOf, preview: preview)
     } else {
       DayCard(days: days, members: members)
         .opacity(waiting ? 0.6 : 1)
@@ -1260,15 +1313,26 @@ struct MessageBubble: View {
   let waiting: Bool
   /// A member's name, for the line's mentions.
   let nameOf: (String) -> String
+  /// Its first link's page, under its words.
+  var preview: LinePreview?
+
+  /// How wide a bubble with a page is, as /design's linked bubble.
+  private static var linkedWidth: CGFloat { 240 }
 
   var body: some View {
-    Text(words)
-      .font(.subheadline)
-      .lineSpacing(3)
-      .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
-      .tint(mine ? colors.accentOnFill : colors.accentDefault)
-      .padding(.horizontal, 12)
-      .padding(.vertical, 8)
+    VStack(alignment: .leading, spacing: 8) {
+      Text(words)
+        .font(.subheadline)
+        .lineSpacing(3)
+        .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
+        .tint(mine ? colors.accentOnFill : colors.accentDefault)
+      if let preview {
+        LinkPreviewCard(preview: preview, mine: mine)
+      }
+    }
+    .frame(width: preview == nil ? nil : Self.linkedWidth, alignment: .leading)
+    .padding(.horizontal, 12)
+    .padding(.vertical, 8)
       .background(
         mine ? colors.accentFill : colors.fillTertiary,
         in: BubbleShape(mine: mine, first: first)
