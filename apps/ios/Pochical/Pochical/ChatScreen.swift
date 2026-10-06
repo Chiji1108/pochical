@@ -388,14 +388,14 @@ struct ChatScreen: View {
           reactions: line.reactions,
           pinned: chat.state.pins.contains { $0.seq == line.seq }, ringed: ringed == line.seq,
           meID: meID, onReact: onReact, lifted: acting?.lineID == line.opID
-        ) { frame in
+        ) { frame, finger in
           openActions(
             MessageActionsRequest(
               lineID: line.opID, frame: frame, mine: mine,
               bubble: AnyView(
                 MessageBubble(
                   text: line.text, mine: mine, first: startsRun, waiting: false, nameOf: nameOf)),
-              reactions: line.reactions, meID: meID, onReact: onReact,
+              finger: finger, reactions: line.reactions, meID: meID, onReact: onReact,
               onMoreReactions: { reactingTo = line }, actions: actions(for: line, mine: mine)))
         }
       }
@@ -404,7 +404,7 @@ struct ChatScreen: View {
         text: line.text, time: line.madeAtMs, edited: false, mine: true, writer: nil,
         named: false, first: startsRun, waiting: true, nameOf: nameOf,
         lifted: acting?.lineID == line.opID
-      ) { frame in
+      ) { frame, finger in
         // Still on its way: nothing but コピー yet.
         openActions(
           MessageActionsRequest(
@@ -412,7 +412,7 @@ struct ChatScreen: View {
             bubble: AnyView(
               MessageBubble(
                 text: line.text, mine: true, first: startsRun, waiting: true, nameOf: nameOf)),
-            actions: [copy(line.text)]))
+            finger: finger, actions: [copy(line.text)]))
       }
     }
   }
@@ -848,11 +848,14 @@ private struct LineView: View {
   var onReact: (String) -> Void = { _ in }
   /// Its bubble is lifted over the chat, its place standing empty.
   var lifted = false
-  /// Opens the line's reactions and menu, from where its bubble is.
-  let onActions: (CGRect) -> Void
+  /// Opens the line's reactions and menu, from where its bubble is, with
+  /// the finger that opened them while it stays down.
+  let onActions: (CGRect, HeldFinger?) -> Void
   /// Where the bubble is on the screen, for its menu.
   @State private var frame = CGRect.zero
   @State private var pressing = false
+  /// The finger that opened the menu, followed until it lifts.
+  @State private var held: HeldFinger?
 
   private static var avatar: CGFloat { 32 }
 
@@ -897,18 +900,29 @@ private struct LineView: View {
               frame = $0
             }
             // Gives a little under the finger, as Messages' bubble does,
-            // and opens its reactions and menu once held.
+            // and opens its reactions and menu once held; the finger then
+            // picks one by lifting over it, as a system menu's does.
             .scaleEffect(pressing ? 0.96 : 1)
             .opacity(lifted ? 0 : 1)
             .animation(.easeOut(duration: 0.2), value: pressing)
-            .onLongPressGesture(minimumDuration: 0.35) {
+            .onLongPressGesture(minimumDuration: HeldPress.duration) {
               UIImpactFeedbackGenerator(style: .medium).impactOccurred()
               pressing = false
-              onActions(frame)
+              let finger = HeldFinger()
+              held = finger
+              onActions(frame, finger)
             } onPressingChanged: {
               pressing = $0
             }
-            .accessibilityAction(named: "リアクションとメニュー") { onActions(frame) }
+            .gesture(
+              HeldPress {
+                held?.point = $0
+              } onLift: {
+                held?.point = $0
+                held?.lifted = true
+                held = nil
+              })
+            .accessibilityAction(named: "リアクションとメニュー") { onActions(frame, nil) }
           if !mine { meta }
         }
         if !reactions.isEmpty {

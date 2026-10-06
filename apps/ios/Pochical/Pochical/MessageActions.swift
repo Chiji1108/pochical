@@ -15,6 +15,53 @@ struct MessageAction: Identifiable {
   var id: String { title }
 }
 
+/// The finger still on the screen from the long press that opened a
+/// line's menu, as a system menu follows it: what it is over is picked
+/// when it lifts. It belongs to the chat's window, where the press began,
+/// so the line follows it there and tells the overlay.
+@MainActor @Observable final class HeldFinger {
+  /// Where it is on the screen, once it has moved.
+  var point: CGPoint?
+  /// Lifted from the screen.
+  var lifted = false
+}
+
+/// The long press that opens a line's menu, followed past its opening
+/// as UIKit's long press is: where the finger moves, and where it lifts.
+/// It sees the same press as the line's own, alongside it.
+struct HeldPress: UIGestureRecognizerRepresentable {
+  static let duration = 0.35
+  let onMove: (CGPoint) -> Void
+  let onLift: (CGPoint) -> Void
+
+  func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
+
+  func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
+    let press = UILongPressGestureRecognizer()
+    press.minimumPressDuration = Self.duration
+    press.delegate = context.coordinator
+    return press
+  }
+
+  func handleUIGestureRecognizerAction(
+    _ recognizer: UILongPressGestureRecognizer, context: Context
+  ) {
+    let point = context.converter.location(in: .global)
+    switch recognizer.state {
+    case .changed: onMove(point)
+    case .ended: onLift(point)
+    default: break
+    }
+  }
+
+  final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+    func gestureRecognizer(
+      _ gestureRecognizer: UIGestureRecognizer,
+      shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+    ) -> Bool { true }
+  }
+}
+
 /// What a line's long press opens: the line lifted where it was, the
 /// reactions over it and the menu under it.
 struct MessageActionsRequest: Identifiable {
@@ -26,6 +73,9 @@ struct MessageActionsRequest: Identifiable {
   let mine: Bool
   /// The bubble itself, drawn again over the dimming.
   let bubble: AnyView
+  /// The finger that opened it, while it is still down; none when opened
+  /// otherwise.
+  var finger: HeldFinger?
   /// The line's reactions and the reader, for the bar; none for a line
   /// that takes none yet, like one still on its way.
   var reactions: [LineReaction]?
@@ -38,14 +88,18 @@ struct MessageActionsRequest: Identifiable {
 /// A line's long press (/design's MessageActions), as Messages and LINE
 /// draw one: the rest of the screen dims while the line stays bright, the
 /// first reactions in a bar over it with + for any other, and the menu
-/// under it, all moved together to stay on the screen. A tap elsewhere
-/// closes it; a pick closes it, then acts.
+/// under it, all moved together to stay on the screen; a bubble too tall
+/// for the room is drawn smaller, as a context menu's preview is. A tap
+/// elsewhere closes it; a pick, by a tap or by the finger that opened it
+/// lifting over one, closes it, then acts.
 struct MessageActionsOverlay: View {
   @Environment(\.themeColors) private var colors
   let request: MessageActionsRequest
   /// Closes the overlay, then runs the picked action, if any.
   let onClose: ((() -> Void)?) -> Void
   @State private var shown = false
+  /// Where each choice is on the screen, for the held finger.
+  @State private var targets: [Target: CGRect] = [:]
 
   private static var barHeight: CGFloat { 48 }
   private static var gap: CGFloat { 8 }
@@ -53,6 +107,9 @@ struct MessageActionsOverlay: View {
   private static var rowHeight: CGFloat { 44 }
   private static var groupGap: CGFloat { 8 }
   private static var margin: CGFloat { 12 }
+  /// How small a tall bubble is drawn at least; past that its end is cut
+  /// off.
+  private static var leastScale: CGFloat { 0.5 }
 
   var body: some View {
     GeometryReader { proxy in
@@ -69,15 +126,19 @@ struct MessageActionsOverlay: View {
             .opacity(shown ? 1 : 0)
         }
         request.bubble
-          .frame(width: request.frame.width, height: place.bubbleHeight, alignment: .bottom)
+          .frame(width: request.frame.width, height: request.frame.height)
+          // Drawn smaller about its top corner by the writer when too tall,
+          // then cut to the room.
+          .scaleEffect(shown ? place.scale : 1, anchor: request.mine ? .topTrailing : .topLeading)
+          .frame(
+            width: request.frame.width, height: shown ? place.bubbleHeight : request.frame.height,
+            alignment: .top
+          )
           .clipped()
           // Grown about its own middle, before it is put in place; it
           // rises from where it was and goes back there.
           .scaleEffect(shown ? 1.02 : 1)
-          .offset(
-            x: request.frame.minX,
-            y: shown ? place.bubbleY : request.frame.maxY - place.bubbleHeight
-          )
+          .offset(x: request.frame.minX, y: shown ? place.bubbleY : request.frame.minY)
           .accessibilityHidden(true)
         menu
           .frame(width: Self.menuWidth)
@@ -90,6 +151,13 @@ struct MessageActionsOverlay: View {
     .ignoresSafeArea()
     .accessibilityAddTraits(.isModal)
     .accessibilityAction(.escape) { close(nil) }
+    .sensoryFeedback(.selection, trigger: underFinger) { _, now in now != nil }
+    .onChange(of: request.finger?.lifted) { _, lifted in
+      // Lifted over nothing, it stays open for a tap, as a system menu does.
+      if lifted == true, let target = underFinger {
+        pick(target)
+      }
+    }
     .onAppear {
       withAnimation(.spring(duration: 0.28, bounce: 0.2)) { shown = true }
     }
@@ -104,27 +172,33 @@ struct MessageActionsOverlay: View {
           $0.emoji == emoji && $0.userIDs.contains(request.meID ?? "")
         }
         Button {
-          close { request.onReact(emoji) }
+          pick(.reaction(emoji))
         } label: {
           Text(emoji)
             .font(.system(size: 26))
             .frame(width: 40, height: 40)
             .background(chosen ? colors.accentContainer : .clear, in: Circle())
+            .scaleEffect(underFinger == .reaction(emoji) ? 1.3 : 1)
+            .animation(.spring(duration: 0.2), value: underFinger)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(chosen ? "\(emoji)のリアクションを外す" : "\(emoji)でリアクション")
+        .modifier(Tracked(target: .reaction(emoji), targets: $targets))
       }
       Button {
-        close(request.onMoreReactions)
+        pick(.moreReactions)
       } label: {
         Image(systemName: "plus")
           .font(.system(size: 18, weight: .semibold))
           .foregroundStyle(colors.textSecondary)
           .frame(width: 40, height: 40)
           .background(colors.fillTertiary, in: Circle())
+          .scaleEffect(underFinger == .moreReactions ? 1.3 : 1)
+          .animation(.spring(duration: 0.2), value: underFinger)
       }
       .buttonStyle(.plain)
       .accessibilityLabel("ほかの絵文字でリアクション")
+      .modifier(Tracked(target: .moreReactions, targets: $targets))
     }
     .padding(4)
     .frame(height: Self.barHeight)
@@ -144,7 +218,7 @@ struct MessageActionsOverlay: View {
             .frame(height: action.startsGroup ? Self.groupGap : 0.5)
         }
         Button {
-          close(action.run)
+          pick(.action(action.id))
         } label: {
           HStack {
             Text(action.title)
@@ -157,7 +231,8 @@ struct MessageActionsOverlay: View {
           .frame(height: Self.rowHeight)
           .contentShape(.rect)
         }
-        .buttonStyle(MenuRowStyle())
+        .buttonStyle(MenuRowStyle(held: underFinger == .action(action.id)))
+        .modifier(Tracked(target: .action(action.id), targets: $targets))
       }
     }
     .background(colors.backgroundElevated)
@@ -171,16 +246,18 @@ struct MessageActionsOverlay: View {
   // MARK: Placing
 
   /// Where the bar, the bubble and the menu go: as the line was, moved
-  /// together to stay between the screen's edges, the bubble cut short at
-  /// its top when the three cannot fit.
+  /// together to stay between the screen's edges, the bubble drawn smaller
+  /// when the three cannot fit, and cut short at its end past that.
   private func placement(in size: CGSize) -> Placement {
     let insets = Self.safeInsets
     let top = insets.top + Self.margin
     let bottom = size.height - insets.bottom - Self.margin
     let barSpace = request.reactions == nil ? 0 : Self.barHeight + Self.gap
     let menuSpace = Self.gap + menuHeight
-    let bubbleHeight = min(request.frame.height, max(bottom - top - barSpace - menuSpace, 60))
-    var bubbleY = request.frame.maxY - bubbleHeight
+    let room = max(bottom - top - barSpace - menuSpace, 60)
+    let scale = min(1, max(room / request.frame.height, Self.leastScale))
+    let bubbleHeight = min(request.frame.height * scale, room)
+    var bubbleY = request.frame.minY
     if bubbleY - barSpace < top {
       bubbleY = top + barSpace
     }
@@ -193,6 +270,7 @@ struct MessageActionsOverlay: View {
       barY: bubbleY - barSpace,
       bubbleY: bubbleY,
       bubbleHeight: bubbleHeight,
+      scale: scale,
       menuY: bubbleY + bubbleHeight + Self.gap)
   }
 
@@ -207,6 +285,24 @@ struct MessageActionsOverlay: View {
     UIApplication.shared.connectedScenes
       .compactMap { ($0 as? UIWindowScene)?.keyWindow }
       .first?.safeAreaInsets ?? .zero
+  }
+
+  /// The choice under the held finger, if any.
+  private var underFinger: Target? {
+    guard let point = request.finger?.point else { return nil }
+    return targets.first { $0.value.contains(point) }?.key
+  }
+
+  /// Closes, then does what `target` stands for.
+  private func pick(_ target: Target) {
+    switch target {
+    case .reaction(let emoji):
+      close { request.onReact(emoji) }
+    case .moreReactions:
+      close(request.onMoreReactions)
+    case .action(let id):
+      close(request.actions.first { $0.id == id }?.run)
+    }
   }
 
   /// Fades out, then closes and acts.
@@ -227,7 +323,28 @@ private struct Placement {
   let barY: CGFloat
   let bubbleY: CGFloat
   let bubbleHeight: CGFloat
+  /// How large the bubble is drawn: below 1 when too tall for the room.
+  let scale: CGFloat
   let menuY: CGFloat
+}
+
+/// One of the overlay's choices.
+private enum Target: Hashable {
+  case reaction(String)
+  case moreReactions
+  case action(String)
+}
+
+/// Keeps where a choice is on the screen, for the held finger.
+private struct Tracked: ViewModifier {
+  let target: Target
+  @Binding var targets: [Target: CGRect]
+
+  func body(content: Content) -> some View {
+    content.onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: {
+      targets[target] = $0
+    }
+  }
 }
 
 /// A view put at `y`, its leading or trailing edge at `x`, kept inside
@@ -250,13 +367,14 @@ private struct Placed: ViewModifier {
 }
 
 /// A menu row's press, the fill a system menu gives the row under the
-/// finger.
+/// finger, a tap's or the held one's.
 private struct MenuRowStyle: ButtonStyle {
   @Environment(\.themeColors) private var colors
+  let held: Bool
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .background(configuration.isPressed ? colors.fillSecondary : .clear)
+      .background(configuration.isPressed || held ? colors.fillSecondary : .clear)
   }
 }
 
