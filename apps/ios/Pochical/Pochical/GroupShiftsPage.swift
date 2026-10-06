@@ -63,6 +63,9 @@ struct GroupShiftsPage: View {
 
   /// The day it opens on, its sheet up.
   private let openingDay: Day?
+  /// That day's sheet has come up, so the list coming back (from 1人ずつ)
+  /// does not put it up again.
+  @State private var openedDay = false
 
   init(group: GroupRow, day: Day?) {
     self.group = group
@@ -276,7 +279,8 @@ struct GroupShiftsPage: View {
       // keeps it from scrolling.
       .onAppear { scroll.scrollTo(anchor(of: opening), anchor: .top) }
       .task {
-        if let openingDay, picked == nil {
+        if let openingDay, !openedDay {
+          openedDay = true
           picked = openingDay
         }
       }

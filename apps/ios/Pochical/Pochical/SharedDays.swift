@@ -125,9 +125,8 @@ struct DayCard: View {
             Text(WeekdayRow.names[day.weekday]).font(.system(size: 9))
           }
           .foregroundStyle(dateTone(day, week: settings.device.week, colors: colors))
-          .frame(width: 44, alignment: .leading)
           .padding(.leading, 4)
-          .frame(width: 44)
+          .frame(width: 44, alignment: .leading)
           ForEach(members) { member in
             cell(shifts.pattern(of: member, on: day))
               .frame(width: 26)
