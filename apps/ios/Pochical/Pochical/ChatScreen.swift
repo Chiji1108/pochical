@@ -110,11 +110,15 @@ enum ChatTime {
 /// opens a line's menu: コピー, and on one's own 編集 and 送信取消.
 struct ChatScreen: View {
   @Environment(\.themeColors) private var colors
+  @Environment(Settings.self) private var settings
+  @Environment(\.look) private var look
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.groupSocket) private var socket
   @Environment(\.scenePhase) private var scenePhase
   @Dependency(\.defaultDatabase) private var database
   @Fetch private var chat = ChatRequest.Value()
+  /// Everyone with their shifts over the days the chat's lines share.
+  @Fetch private var dayMembers: [GroupMember] = []
   let group: GroupRow
   let threadID: String
   /// The other member of a one-to-one chat; none for 全体チャット.
@@ -152,6 +156,8 @@ struct ChatScreen: View {
   @Environment(\.openInvite) private var openInvite
   /// The line whose ほかの絵文字 is open.
   @State private var reactingTo: ChatLineRow?
+  /// The days to share are being picked.
+  @State private var sharingDays = false
   /// The line whose reactions and menu are open.
   @State private var acting: MessageActionsRequest?
 
@@ -230,16 +236,8 @@ struct ChatScreen: View {
     // Under the pins, over the lines.
     .overlay(alignment: .top) {
       if let notice {
-        Text(notice)
-          .font(.footnote)
-          .foregroundStyle(colors.inverseText)
-          .padding(.horizontal, 16)
-          .padding(.vertical, 10)
-          .background(colors.inverseBackground, in: Capsule())
-          .padding(.top, 8)
-          .padding(.horizontal, 16)
+        NoticeCapsule(words: notice)
           .transition(.opacity.combined(with: .move(edge: .top)))
-          .accessibilityAddTraits(.isStaticText)
       }
     }
     .safeAreaInset(edge: .top, spacing: 0) {
@@ -296,6 +294,15 @@ struct ChatScreen: View {
     .environment(\.openURL, OpenURLAction { open($0) })
     // Leaving the chat takes its open menu with it.
     .onDisappear { closeActions() }
+    .task(id: sharedSpan) {
+      guard let span = sharedSpan else { return }
+      try? await $dayMembers.load(
+        GroupMembersRequest(groupID: group.id, from: span.from, through: span.through))
+    }
+    .sheet(isPresented: $sharingDays) {
+      ShareDaysSheet(
+        groupID: group.id, people: otherID.map { Set([$0, meID ?? ""]) }, onSend: shareDays)
+    }
     .sheet(item: $reactingTo) { line in
       EmojiKeyboardSheet { react($0, on: line) }
     }
@@ -382,7 +389,9 @@ struct ChatScreen: View {
         let mine = line.authorID == meID
         let onReact = { (emoji: String) in react(emoji, on: line) }
         LineView(
-          text: line.text, time: line.sentAtMs, edited: line.edited, mine: mine,
+          text: line.text, days: line.days, members: cardMembers,
+          shifts: line.days.first.map { GroupRoute.shifts(group, day: $0) },
+          time: line.sentAtMs, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
           named: otherID == nil, first: startsRun, waiting: false, nameOf: nameOf,
           reactions: line.reactions,
@@ -393,19 +402,22 @@ struct ChatScreen: View {
             MessageActionsRequest(
               lineID: line.opID, frame: frame, mine: mine,
               bubble: AnyView(
-                MessageBubble(
-                  text: line.text, mine: mine, first: startsRun, waiting: false, nameOf: nameOf)),
+                LineContent(
+                  text: line.text, days: line.days, members: cardMembers, mine: mine,
+                  first: startsRun, waiting: false, nameOf: nameOf)),
               finger: finger, reactions: line.reactions, meID: meID, onReact: onReact,
               onMoreReactions: { reactingTo = line }, actions: actions(for: line, mine: mine)))
         }
       }
     case .waiting(let line, let startsRun):
       LineView(
-        text: line.text, time: line.madeAtMs, edited: false, mine: true, writer: nil,
-        named: false, first: startsRun, waiting: true, nameOf: nameOf,
-        lifted: acting?.lineID == line.opID
+        text: line.text, days: line.days, members: cardMembers, time: line.madeAtMs,
+        edited: false, mine: true, writer: nil, named: false, first: startsRun, waiting: true,
+        nameOf: nameOf, lifted: acting?.lineID == line.opID
       ) { frame, finger in
-        // Still on its way: nothing but コピー yet.
+        // Still on its way: nothing but コピー yet, and days have nothing
+        // to copy.
+        guard line.days.isEmpty else { return }
         openActions(
           MessageActionsRequest(
             lineID: line.opID, frame: frame, mine: true,
@@ -454,6 +466,13 @@ struct ChatScreen: View {
         .padding(.top, 4)
       }
       HStack(alignment: .bottom, spacing: 8) {
+        if editing == nil {
+          Button("日にちを共有", systemImage: "calendar.badge.plus") { sharingDays = true }
+            .labelStyle(.iconOnly)
+            .font(.system(size: 20))
+            .foregroundStyle(colors.textSecondary)
+            .frame(width: 38, height: 38)
+        }
         ComposerField(
           placeholder: "メッセージ", text: $draft, limit: TextLimits.chatMessage,
           composing: $composing, box: field
@@ -623,6 +642,29 @@ struct ChatScreen: View {
     picked = []
   }
 
+  /// The first and last of the days the chat's lines share, for their
+  /// cards' shifts.
+  private var sharedSpan: DaySpan? {
+    let days = chat.state.lines.flatMap(\.days) + chat.state.waiting.flatMap(\.days)
+    guard let from = days.min(), let through = days.max() else { return nil }
+    return DaySpan(from: from, through: through)
+  }
+
+  /// Whose shifts a card of days shows: everyone in the group, or the two
+  /// of a one-to-one chat.
+  private var cardMembers: [GroupMember] {
+    guard let otherID else { return dayMembers }
+    return dayMembers.filter { $0.userID == otherID || $0.userID == meID }
+  }
+
+  /// Shares days with everyone's shifts, as a line of their own.
+  private func shareDays(_ days: [Day]) {
+    var send = Pochical_V1_ChatSend()
+    send.threadID = threadID
+    send.days = days.map(\.key)
+    write(.send(send))
+  }
+
   /// To the latest line, by its id: scrolling to the edge would also
   /// move the lines sideways.
   private func toLatest() {
@@ -658,15 +700,18 @@ struct ChatScreen: View {
   /// the danger color (spec/chat.md, Editing and unsending).
   private func actions(for line: ChatLineRow, mine: Bool) -> [MessageAction] {
     let pinned = chat.state.pins.contains { $0.seq == line.seq }
-    var actions = [
-      copy(line.text),
-      // Anyone's line, for everyone in the chat (spec/chat.md, Pins).
+    // Shared days have no words to copy or change.
+    let words = line.days.isEmpty
+    var actions = words ? [copy(line.text)] : []
+    // Anyone's line, for everyone in the chat (spec/chat.md, Pins).
+    actions.append(
       MessageAction(
         title: pinned ? "ピン留めを外す" : "ピン留め", systemImage: pinned ? "pin.slash" : "pin"
-      ) { pin(line.seq, on: !pinned) },
-    ]
-    if mine {
+      ) { pin(line.seq, on: !pinned) })
+    if mine, words {
       actions.append(MessageAction(title: "編集", systemImage: "pencil") { edit(line) })
+    }
+    if mine {
       actions.append(
         MessageAction(
           title: "送信取消", systemImage: "arrow.uturn.backward", destructive: true,
@@ -748,7 +793,9 @@ struct ChatScreen: View {
         closeActions()
         action?()
       }
-      .environment(\.themeColors, colors))
+      .environment(\.themeColors, colors)
+      .environment(settings)
+      .environment(\.look, look))
   }
 
   /// Gives the line back its bubble in the chat, then takes the overlay
@@ -825,6 +872,12 @@ private struct ReadKey: Hashable {
 private struct LineView: View {
   @Environment(\.themeColors) private var colors
   let text: String
+  /// The days a line of shared days shares, drawn on a card.
+  var days: [Day] = []
+  /// Whose shifts its card shows.
+  var members: [GroupMember] = []
+  /// The shift table on its first day, under its card.
+  var shifts: GroupRoute?
   let time: Int64
   let edited: Bool
   let mine: Bool
@@ -881,14 +934,17 @@ private struct LineView: View {
         }
         HStack(alignment: .bottom, spacing: 8) {
           if mine { meta }
-          MessageBubble(text: text, mine: mine, first: first, waiting: waiting, nameOf: nameOf)
-            // Rung for a moment when gone to from the pins, as /design's
-            // flash: a ring just outside the bubble, held, then fading.
-            .background {
-              BubbleShape(mine: mine, first: first)
-                .stroke(colors.accentBorder, lineWidth: 6)
-                .opacity(ringed ? 1 : 0)
-            }
+          LineContent(
+            text: text, days: days, members: members, mine: mine, first: first, waiting: waiting,
+            nameOf: nameOf
+          )
+          // Rung for a moment when gone to from the pins, as /design's
+          // flash: a ring just outside the bubble, held, then fading.
+          .background {
+            ringShape
+              .stroke(colors.accentBorder, lineWidth: 6)
+              .opacity(ringed ? 1 : 0)
+          }
             // Its own size and where its middle is: the press's give
             // shrinks its frame on the screen, not its size.
             .onGeometryChange(for: CGRect.self) { proxy in
@@ -925,6 +981,17 @@ private struct LineView: View {
             .accessibilityAction(named: "リアクションとメニュー") { onActions(frame, nil) }
           if !mine { meta }
         }
+        if let shifts {
+          // All the days, with everyone's shifts round them.
+          NavigationLink(value: shifts) {
+            Text("シフト表で見る")
+              .font(.caption)
+              .underline()
+              .foregroundStyle(colors.accentDefault)
+              .padding(.horizontal, 4)
+          }
+          .buttonStyle(.plain)
+        }
         if !reactions.isEmpty {
           ReactionRow(reactions: reactions, meID: meID, nameOf: nameOf, onReact: onReact)
         }
@@ -934,6 +1001,13 @@ private struct LineView: View {
     }
     // The line reads as one, its reactions as buttons of their own.
     .accessibilityElement(children: reactions.isEmpty ? .combine : .contain)
+  }
+
+  /// The ring's shape: the bubble's, or the card's.
+  private var ringShape: AnyShape {
+    days.isEmpty
+      ? AnyShape(BubbleShape(mine: mine, first: first))
+      : AnyShape(RoundedRectangle(cornerRadius: Radius.lg))
   }
 
   /// 編集済み over the time, toward the bubble; a clock while it waits.
@@ -968,6 +1042,32 @@ private struct LineView: View {
 /// A line's words in its bubble: others' on the quiet fill, one's own in
 /// the accent, the first of a run with its corner by the writer drawn in,
 /// dimmed while it waits to be sent.
+/// The days from one through another.
+private struct DaySpan: Hashable {
+  let from: Day
+  let through: Day
+}
+
+/// What a line is drawn as: its words in a bubble, or its days on a card.
+struct LineContent: View {
+  let text: String
+  let days: [Day]
+  let members: [GroupMember]
+  let mine: Bool
+  let first: Bool
+  let waiting: Bool
+  let nameOf: (String) -> String
+
+  var body: some View {
+    if days.isEmpty {
+      MessageBubble(text: text, mine: mine, first: first, waiting: waiting, nameOf: nameOf)
+    } else {
+      DayCard(days: days, members: members)
+        .opacity(waiting ? 0.6 : 1)
+    }
+  }
+}
+
 struct MessageBubble: View {
   @Environment(\.themeColors) private var colors
   let text: String

@@ -1300,8 +1300,8 @@ public nonisolated struct Pochical_V1_ChatLine: Sendable {
   /// Who wrote it; it stays theirs after they leave.
   public var authorID: String = String()
 
-  /// chatMessage characters at most (design/src/limits.ts); empty once
-  /// unsent.
+  /// chatMessage characters at most (design/src/limits.ts); empty for a
+  /// line of shared days, and once unsent.
   public var text: String = String()
 
   /// When the group took it, in ms since the epoch.
@@ -1324,6 +1324,10 @@ public nonisolated struct Pochical_V1_ChatLine: Sendable {
   /// Pinned for everyone in the chat: the group's cursor when it was last
   /// pinned, so the latest pin is the greatest; 0 when not pinned.
   public var pinnedOrder: UInt64 = 0
+
+  /// The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+  /// line of days has no words. None once unsent.
+  public var days: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1492,7 +1496,8 @@ public nonisolated struct Pochical_V1_ChatReact: Sendable {
   public init() {}
 }
 
-/// A new line at the end of the chat.
+/// A new line at the end of the chat: words, or days shared with
+/// everyone's shifts (spec/chat.md, Long messages and shared days).
 public nonisolated struct Pochical_V1_ChatSend: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1500,15 +1505,19 @@ public nonisolated struct Pochical_V1_ChatSend: Sendable {
 
   public var threadID: String = String()
 
-  /// 1 to chatMessage characters, not blank.
+  /// 1 to chatMessage characters, not blank; empty for days.
   public var text: String = String()
+
+  /// 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
+  /// each once and in order; none for words.
+  public var days: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 }
 
-/// New words for one of the member's own lines (編集).
+/// New words for one of the member's own lines of words (編集).
 public nonisolated struct Pochical_V1_ChatChange: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -3526,7 +3535,7 @@ nonisolated extension Pochical_V1_Reset: SwiftProtobuf.Message, SwiftProtobuf._M
 
 nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatLine"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{3}author_id\0\u{1}text\0\u{3}sent_at_ms\0\u{1}edited\0\u{1}unsent\0\u{3}op_id\0\u{1}reactions\0\u{3}pinned_order\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{3}author_id\0\u{1}text\0\u{3}sent_at_ms\0\u{1}edited\0\u{1}unsent\0\u{3}op_id\0\u{1}reactions\0\u{3}pinned_order\0\u{1}days\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3544,6 +3553,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
       case 8: try { try decoder.decodeSingularStringField(value: &self.opID) }()
       case 9: try { try decoder.decodeRepeatedMessageField(value: &self.reactions) }()
       case 10: try { try decoder.decodeSingularUInt64Field(value: &self.pinnedOrder) }()
+      case 11: try { try decoder.decodeRepeatedStringField(value: &self.days) }()
       default: break
       }
     }
@@ -3580,6 +3590,9 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
     if self.pinnedOrder != 0 {
       try visitor.visitSingularUInt64Field(value: self.pinnedOrder, fieldNumber: 10)
     }
+    if !self.days.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.days, fieldNumber: 11)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -3594,6 +3607,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
     if lhs.opID != rhs.opID {return false}
     if lhs.reactions != rhs.reactions {return false}
     if lhs.pinnedOrder != rhs.pinnedOrder {return false}
+    if lhs.days != rhs.days {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -3931,7 +3945,7 @@ nonisolated extension Pochical_V1_ChatReact: SwiftProtobuf.Message, SwiftProtobu
 
 nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatSend"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}text\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}text\0\u{1}days\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3941,6 +3955,7 @@ nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.threadID) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.text) }()
+      case 3: try { try decoder.decodeRepeatedStringField(value: &self.days) }()
       default: break
       }
     }
@@ -3953,12 +3968,16 @@ nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf
     if !self.text.isEmpty {
       try visitor.visitSingularStringField(value: self.text, fieldNumber: 2)
     }
+    if !self.days.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.days, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_ChatSend, rhs: Pochical_V1_ChatSend) -> Bool {
     if lhs.threadID != rhs.threadID {return false}
     if lhs.text != rhs.text {return false}
+    if lhs.days != rhs.days {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

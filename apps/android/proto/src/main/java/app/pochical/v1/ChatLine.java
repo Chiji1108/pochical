@@ -25,6 +25,7 @@ public  final class ChatLine extends
     text_ = "";
     opId_ = "";
     reactions_ = emptyProtobufList();
+    days_ = emptyProtobufList();
   }
   public static final int THREAD_ID_FIELD_NUMBER = 1;
   private java.lang.String threadId_;
@@ -182,8 +183,8 @@ public  final class ChatLine extends
   private java.lang.String text_;
   /**
    * <pre>
-   * chatMessage characters at most (design/src/limits.ts); empty once
-   * unsent.
+   * chatMessage characters at most (design/src/limits.ts); empty for a
+   * line of shared days, and once unsent.
    * </pre>
    *
    * <code>string text = 4 [json_name = "text"];</code>
@@ -195,8 +196,8 @@ public  final class ChatLine extends
   }
   /**
    * <pre>
-   * chatMessage characters at most (design/src/limits.ts); empty once
-   * unsent.
+   * chatMessage characters at most (design/src/limits.ts); empty for a
+   * line of shared days, and once unsent.
    * </pre>
    *
    * <code>string text = 4 [json_name = "text"];</code>
@@ -209,8 +210,8 @@ public  final class ChatLine extends
   }
   /**
    * <pre>
-   * chatMessage characters at most (design/src/limits.ts); empty once
-   * unsent.
+   * chatMessage characters at most (design/src/limits.ts); empty for a
+   * line of shared days, and once unsent.
    * </pre>
    *
    * <code>string text = 4 [json_name = "text"];</code>
@@ -224,8 +225,8 @@ public  final class ChatLine extends
   }
   /**
    * <pre>
-   * chatMessage characters at most (design/src/limits.ts); empty once
-   * unsent.
+   * chatMessage characters at most (design/src/limits.ts); empty for a
+   * line of shared days, and once unsent.
    * </pre>
    *
    * <code>string text = 4 [json_name = "text"];</code>
@@ -236,8 +237,8 @@ public  final class ChatLine extends
   }
   /**
    * <pre>
-   * chatMessage characters at most (design/src/limits.ts); empty once
-   * unsent.
+   * chatMessage characters at most (design/src/limits.ts); empty for a
+   * line of shared days, and once unsent.
    * </pre>
    *
    * <code>string text = 4 [json_name = "text"];</code>
@@ -626,6 +627,144 @@ public  final class ChatLine extends
     pinnedOrder_ = 0L;
   }
 
+  public static final int DAYS_FIELD_NUMBER = 11;
+  private com.google.protobuf.Internal.ProtobufList<java.lang.String> days_;
+  /**
+   * <pre>
+   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+   * line of days has no words. None once unsent.
+   * </pre>
+   *
+   * <code>repeated string days = 11 [json_name = "days"];</code>
+   * @return A list containing the days.
+   */
+  @java.lang.Override
+  public java.util.List<java.lang.String> getDaysList() {
+    return days_;
+  }
+  /**
+   * <pre>
+   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+   * line of days has no words. None once unsent.
+   * </pre>
+   *
+   * <code>repeated string days = 11 [json_name = "days"];</code>
+   * @return The count of days.
+   */
+  @java.lang.Override
+  public int getDaysCount() {
+    return days_.size();
+  }
+  /**
+   * <pre>
+   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+   * line of days has no words. None once unsent.
+   * </pre>
+   *
+   * <code>repeated string days = 11 [json_name = "days"];</code>
+   * @param index The index of the element to return.
+   * @return The days at the given index.
+   */
+  @java.lang.Override
+  public java.lang.String getDays(int index) {
+    return days_.get(index);
+  }
+  /**
+   * <pre>
+   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+   * line of days has no words. None once unsent.
+   * </pre>
+   *
+   * <code>repeated string days = 11 [json_name = "days"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the days at the given index.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDaysBytes(int index) {
+    return com.google.protobuf.ByteString.copyFromUtf8(
+        days_.get(index));
+  }
+  private void ensureDaysIsMutable() {
+    com.google.protobuf.Internal.ProtobufList<java.lang.String> tmp =
+        days_;  if (!tmp.isModifiable()) {
+      days_ =
+          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+     }
+  }
+  /**
+   * <pre>
+   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+   * line of days has no words. None once unsent.
+   * </pre>
+   *
+   * <code>repeated string days = 11 [json_name = "days"];</code>
+   * @param index The index to set the value at.
+   * @param value The days to set.
+   */
+  private void setDays(
+      int index, java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+    ensureDaysIsMutable();
+    days_.set(index, value);
+  }
+  /**
+   * <pre>
+   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+   * line of days has no words. None once unsent.
+   * </pre>
+   *
+   * <code>repeated string days = 11 [json_name = "days"];</code>
+   * @param value The days to add.
+   */
+  private void addDays(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+    ensureDaysIsMutable();
+    days_.add(value);
+  }
+  /**
+   * <pre>
+   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+   * line of days has no words. None once unsent.
+   * </pre>
+   *
+   * <code>repeated string days = 11 [json_name = "days"];</code>
+   * @param values The days to add.
+   */
+  private void addAllDays(
+      java.lang.Iterable<java.lang.String> values) {
+    ensureDaysIsMutable();
+    com.google.protobuf.AbstractMessageLite.addAll(
+        values, days_);
+  }
+  /**
+   * <pre>
+   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+   * line of days has no words. None once unsent.
+   * </pre>
+   *
+   * <code>repeated string days = 11 [json_name = "days"];</code>
+   */
+  private void clearDays() {
+    days_ = emptyProtobufList();
+  }
+  /**
+   * <pre>
+   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+   * line of days has no words. None once unsent.
+   * </pre>
+   *
+   * <code>repeated string days = 11 [json_name = "days"];</code>
+   * @param value The bytes of the days to add.
+   */
+  private void addDaysBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    ensureDaysIsMutable();
+    days_.add(value.toStringUtf8());
+  }
+
   public static app.pochical.v1.ChatLine parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -888,8 +1027,8 @@ public  final class ChatLine extends
 
     /**
      * <pre>
-     * chatMessage characters at most (design/src/limits.ts); empty once
-     * unsent.
+     * chatMessage characters at most (design/src/limits.ts); empty for a
+     * line of shared days, and once unsent.
      * </pre>
      *
      * <code>string text = 4 [json_name = "text"];</code>
@@ -901,8 +1040,8 @@ public  final class ChatLine extends
     }
     /**
      * <pre>
-     * chatMessage characters at most (design/src/limits.ts); empty once
-     * unsent.
+     * chatMessage characters at most (design/src/limits.ts); empty for a
+     * line of shared days, and once unsent.
      * </pre>
      *
      * <code>string text = 4 [json_name = "text"];</code>
@@ -915,8 +1054,8 @@ public  final class ChatLine extends
     }
     /**
      * <pre>
-     * chatMessage characters at most (design/src/limits.ts); empty once
-     * unsent.
+     * chatMessage characters at most (design/src/limits.ts); empty for a
+     * line of shared days, and once unsent.
      * </pre>
      *
      * <code>string text = 4 [json_name = "text"];</code>
@@ -931,8 +1070,8 @@ public  final class ChatLine extends
     }
     /**
      * <pre>
-     * chatMessage characters at most (design/src/limits.ts); empty once
-     * unsent.
+     * chatMessage characters at most (design/src/limits.ts); empty for a
+     * line of shared days, and once unsent.
      * </pre>
      *
      * <code>string text = 4 [json_name = "text"];</code>
@@ -945,8 +1084,8 @@ public  final class ChatLine extends
     }
     /**
      * <pre>
-     * chatMessage characters at most (design/src/limits.ts); empty once
-     * unsent.
+     * chatMessage characters at most (design/src/limits.ts); empty for a
+     * line of shared days, and once unsent.
      * </pre>
      *
      * <code>string text = 4 [json_name = "text"];</code>
@@ -1359,6 +1498,143 @@ public  final class ChatLine extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+     * line of days has no words. None once unsent.
+     * </pre>
+     *
+     * <code>repeated string days = 11 [json_name = "days"];</code>
+     * @return A list containing the days.
+     */
+    @java.lang.Override
+    public java.util.List<java.lang.String>
+        getDaysList() {
+      return java.util.Collections.unmodifiableList(
+          instance.getDaysList());
+    }
+    /**
+     * <pre>
+     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+     * line of days has no words. None once unsent.
+     * </pre>
+     *
+     * <code>repeated string days = 11 [json_name = "days"];</code>
+     * @return The count of days.
+     */
+    @java.lang.Override
+    public int getDaysCount() {
+      return instance.getDaysCount();
+    }
+    /**
+     * <pre>
+     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+     * line of days has no words. None once unsent.
+     * </pre>
+     *
+     * <code>repeated string days = 11 [json_name = "days"];</code>
+     * @param index The index of the element to return.
+     * @return The days at the given index.
+     */
+    @java.lang.Override
+    public java.lang.String getDays(int index) {
+      return instance.getDays(index);
+    }
+    /**
+     * <pre>
+     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+     * line of days has no words. None once unsent.
+     * </pre>
+     *
+     * <code>repeated string days = 11 [json_name = "days"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the days at the given index.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getDaysBytes(int index) {
+      return instance.getDaysBytes(index);
+    }
+    /**
+     * <pre>
+     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+     * line of days has no words. None once unsent.
+     * </pre>
+     *
+     * <code>repeated string days = 11 [json_name = "days"];</code>
+     * @param index The index to set the value at.
+     * @param value The days to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDays(
+        int index, java.lang.String value) {
+      copyOnWrite();
+      instance.setDays(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+     * line of days has no words. None once unsent.
+     * </pre>
+     *
+     * <code>repeated string days = 11 [json_name = "days"];</code>
+     * @param value The days to add.
+     * @return This builder for chaining.
+     */
+    public Builder addDays(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.addDays(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+     * line of days has no words. None once unsent.
+     * </pre>
+     *
+     * <code>repeated string days = 11 [json_name = "days"];</code>
+     * @param values The days to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllDays(
+        java.lang.Iterable<java.lang.String> values) {
+      copyOnWrite();
+      instance.addAllDays(values);
+      return this;
+    }
+    /**
+     * <pre>
+     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+     * line of days has no words. None once unsent.
+     * </pre>
+     *
+     * <code>repeated string days = 11 [json_name = "days"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDays() {
+      copyOnWrite();
+      instance.clearDays();
+      return this;
+    }
+    /**
+     * <pre>
+     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+     * line of days has no words. None once unsent.
+     * </pre>
+     *
+     * <code>repeated string days = 11 [json_name = "days"];</code>
+     * @param value The bytes of the days to add.
+     * @return This builder for chaining.
+     */
+    public Builder addDaysBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.addDaysBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatLine)
   }
   @java.lang.Override
@@ -1386,10 +1662,12 @@ public  final class ChatLine extends
             "reactions_",
             app.pochical.v1.ChatReaction.class,
             "pinnedOrder_",
+            "days_",
           };
           java.lang.String info =
-              "\u0000\n\u0000\u0000\u0001\n\n\u0000\u0001\u0000\u0001\u0208\u0002\u0003\u0003\u0208" +
-              "\u0004\u0208\u0005\u0002\u0006\u0007\u0007\u0007\b\u0208\t\u001b\n\u0003";
+              "\u0000\u000b\u0000\u0000\u0001\u000b\u000b\u0000\u0002\u0000\u0001\u0208\u0002\u0003" +
+              "\u0003\u0208\u0004\u0208\u0005\u0002\u0006\u0007\u0007\u0007\b\u0208\t\u001b\n\u0003" +
+              "\u000b\u021a";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

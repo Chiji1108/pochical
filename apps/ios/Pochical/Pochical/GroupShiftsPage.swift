@@ -61,15 +61,18 @@ struct GroupShiftsPage: View {
     pickedLayout.flatMap { layouts.contains($0) ? $0 : nil } ?? layouts[0]
   }
 
+  /// The day it opens on, its sheet up.
+  private let openingDay: Day?
+
   init(group: GroupRow, day: Day?) {
     self.group = group
-    _picked = State(initialValue: day)
+    openingDay = day
   }
 
   var body: some View {
     let thisMonth = Day.today.firstOfMonth
     let months = (-monthSpan...monthSpan).map { thisMonth.addingMonths($0) }
-    let opening = picked ?? Day.today
+    let opening = openingDay ?? Day.today
     VStack(spacing: 0) {
       if layout != .person {
         // The month in sight, pinned over the list, which opens 月を選ぶ,
@@ -268,8 +271,15 @@ struct GroupShiftsPage: View {
         }
         self.goal = nil
       }
-      // Opening at the top, the day's month named in the pinned row.
+      // Opening at the top, the day's month named in the pinned row, and
+      // its sheet up once there: a sheet coming up as the list appears
+      // keeps it from scrolling.
       .onAppear { scroll.scrollTo(anchor(of: opening), anchor: .top) }
+      .task {
+        if let openingDay, picked == nil {
+          picked = openingDay
+        }
+      }
       .onChange(of: layout) { scroll.scrollTo(anchor(of: picked ?? Day.today), anchor: .top) }
       // As /design's: the table stays where it is when a day is picked;
       // room under it while the sheet is up lets a row near the bottom be

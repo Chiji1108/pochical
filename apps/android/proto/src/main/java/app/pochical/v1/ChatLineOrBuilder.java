@@ -54,8 +54,8 @@ public interface ChatLineOrBuilder extends
 
   /**
    * <pre>
-   * chatMessage characters at most (design/src/limits.ts); empty once
-   * unsent.
+   * chatMessage characters at most (design/src/limits.ts); empty for a
+   * line of shared days, and once unsent.
    * </pre>
    *
    * <code>string text = 4 [json_name = "text"];</code>
@@ -64,8 +64,8 @@ public interface ChatLineOrBuilder extends
   java.lang.String getText();
   /**
    * <pre>
-   * chatMessage characters at most (design/src/limits.ts); empty once
-   * unsent.
+   * chatMessage characters at most (design/src/limits.ts); empty for a
+   * line of shared days, and once unsent.
    * </pre>
    *
    * <code>string text = 4 [json_name = "text"];</code>
@@ -165,4 +165,49 @@ public interface ChatLineOrBuilder extends
    * @return The pinnedOrder.
    */
   long getPinnedOrder();
+
+  /**
+   * <pre>
+   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+   * line of days has no words. None once unsent.
+   * </pre>
+   *
+   * <code>repeated string days = 11 [json_name = "days"];</code>
+   * @return A list containing the days.
+   */
+  java.util.List<java.lang.String>
+      getDaysList();
+  /**
+   * <pre>
+   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+   * line of days has no words. None once unsent.
+   * </pre>
+   *
+   * <code>repeated string days = 11 [json_name = "days"];</code>
+   * @return The count of days.
+   */
+  int getDaysCount();
+  /**
+   * <pre>
+   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+   * line of days has no words. None once unsent.
+   * </pre>
+   *
+   * <code>repeated string days = 11 [json_name = "days"];</code>
+   * @param index The index of the element to return.
+   * @return The days at the given index.
+   */
+  java.lang.String getDays(int index);
+  /**
+   * <pre>
+   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+   * line of days has no words. None once unsent.
+   * </pre>
+   *
+   * <code>repeated string days = 11 [json_name = "days"];</code>
+   * @param index The index of the element to return.
+   * @return The days at the given index.
+   */
+  com.google.protobuf.ByteString
+      getDaysBytes(int index);
 }

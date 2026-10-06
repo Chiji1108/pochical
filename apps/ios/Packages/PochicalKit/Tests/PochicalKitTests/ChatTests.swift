@@ -425,3 +425,26 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     #expect(state.pins.map(\.seq) == [6, 1])
   }
 }
+
+@Test func aLineOfDaysKeepsItsDaysWhileWaitingAndLosesThemTakenBack() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var days = line(1, "")
+    days.chatLine.days = ["2026-10-10", "2026-10-12"]
+    try GroupSync.take([days], of: "g", in: db)
+    var send = Pochical_V1_ChatSend()
+    send.threadID = groupThread
+    send.days = ["2026-11-03"]
+    try Chats.edit(.send(send), in: "g", now: 10, db: db)
+    var unsend = Pochical_V1_ChatUnsend()
+    unsend.threadID = groupThread
+    unsend.seq = 1
+    var state = try Chats.state(of: groupThread, in: "g", db: db)
+    #expect(state.lines.map(\.days) == [[Day(year: 2026, month: 10, day: 10), Day(year: 2026, month: 10, day: 12)]])
+    #expect(state.waiting.map(\.days) == [[Day(year: 2026, month: 11, day: 3)]])
+
+    try Chats.edit(.unsend(unsend), in: "g", now: 11, db: db)
+    state = try Chats.state(of: groupThread, in: "g", db: db)
+    #expect(state.lines.map(\.days) == [[]])
+  }
+}

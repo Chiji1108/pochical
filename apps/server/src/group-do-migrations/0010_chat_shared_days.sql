@@ -1,0 +1,1 @@
+ALTER TABLE `chat_lines` ADD `days` text;

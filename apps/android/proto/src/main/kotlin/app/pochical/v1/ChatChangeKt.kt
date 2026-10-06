@@ -12,7 +12,7 @@ public inline fun chatChange(block: app.pochical.v1.ChatChangeKt.Dsl.() -> kotli
   app.pochical.v1.ChatChangeKt.Dsl._create(app.pochical.v1.ChatChange.newBuilder()).apply { block() }._build()
 /**
  * ```
- * New words for one of the member's own lines (編集).
+ * New words for one of the member's own lines of words (編集).
  * ```
  *
  * Protobuf type `pochical.v1.ChatChange`

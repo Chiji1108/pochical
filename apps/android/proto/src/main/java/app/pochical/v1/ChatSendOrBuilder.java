@@ -24,7 +24,7 @@ public interface ChatSendOrBuilder extends
 
   /**
    * <pre>
-   * 1 to chatMessage characters, not blank.
+   * 1 to chatMessage characters, not blank; empty for days.
    * </pre>
    *
    * <code>string text = 2 [json_name = "text"];</code>
@@ -33,7 +33,7 @@ public interface ChatSendOrBuilder extends
   java.lang.String getText();
   /**
    * <pre>
-   * 1 to chatMessage characters, not blank.
+   * 1 to chatMessage characters, not blank; empty for days.
    * </pre>
    *
    * <code>string text = 2 [json_name = "text"];</code>
@@ -41,4 +41,49 @@ public interface ChatSendOrBuilder extends
    */
   com.google.protobuf.ByteString
       getTextBytes();
+
+  /**
+   * <pre>
+   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
+   * each once and in order; none for words.
+   * </pre>
+   *
+   * <code>repeated string days = 3 [json_name = "days"];</code>
+   * @return A list containing the days.
+   */
+  java.util.List<java.lang.String>
+      getDaysList();
+  /**
+   * <pre>
+   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
+   * each once and in order; none for words.
+   * </pre>
+   *
+   * <code>repeated string days = 3 [json_name = "days"];</code>
+   * @return The count of days.
+   */
+  int getDaysCount();
+  /**
+   * <pre>
+   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
+   * each once and in order; none for words.
+   * </pre>
+   *
+   * <code>repeated string days = 3 [json_name = "days"];</code>
+   * @param index The index of the element to return.
+   * @return The days at the given index.
+   */
+  java.lang.String getDays(int index);
+  /**
+   * <pre>
+   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
+   * each once and in order; none for words.
+   * </pre>
+   *
+   * <code>repeated string days = 3 [json_name = "days"];</code>
+   * @param index The index of the element to return.
+   * @return The days at the given index.
+   */
+  com.google.protobuf.ByteString
+      getDaysBytes(int index);
 }

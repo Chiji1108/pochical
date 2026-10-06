@@ -31,6 +31,7 @@ const chat = (
 };
 
 type ChatKind =
+  | { days: string[] }
   | { pin: [number, boolean] }
   | { react: [number, string, boolean] }
   | { send: string }
@@ -39,6 +40,12 @@ type ChatKind =
   | { read: number };
 
 function sendChatKind(kind: ChatKind, threadId: string) {
+  if ("days" in kind) {
+    return {
+      case: "send",
+      value: { days: kind.days, text: "", threadId },
+    } as const;
+  }
   if ("pin" in kind) {
     const [seq, on] = kind.pin;
     return {
@@ -449,6 +456,45 @@ describe("a group's chat", () => {
     await expect(reactionsIn()).resolves.toMatchObject([
       { emoji: "👍", userIds: [guestId, makerId] },
       { emoji: "🎉", userIds: [guestId] },
+    ]);
+  });
+
+  it("shares days with no words, in order and a month at most", async () => {
+    const { SHARED_DAYS_MAX } = await import("@pochical/design/limits");
+    const { groupId, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    const month = Array.from(
+      { length: SHARED_DAYS_MAX + 1 },
+      (_, at) =>
+        `2026-${at < 31 ? "10" : "11"}-${String((at % 31) + 1).padStart(2, "0")}`
+    );
+    chat(mine.socket, [
+      { kind: { days: ["2026-10-11", "2026-10-10"] }, opId: "backward" },
+      { kind: { days: ["2026-10-10", "2026-10-10"] }, opId: "twice" },
+      { kind: { days: ["2026-02-30"] }, opId: "no-day" },
+      { kind: { days: month }, opId: "too-many" },
+      { kind: { days: ["2026-10-10", "2026-10-12"] }, opId: "a" },
+    ]);
+    expect(changesIn(await mine.frames.next())).toMatchObject([
+      {
+        kind: {
+          value: { days: ["2026-10-10", "2026-10-12"], seq: 1n, text: "" },
+        },
+      },
+    ]);
+    await mine.frames.next();
+
+    // A line of days has no words to change; taken back, its days go.
+    chat(mine.socket, [{ kind: { change: [1, "ことば"] }, opId: "b" }]);
+    expect(changesIn(await mine.frames.next())).toMatchObject([
+      {
+        kind: { value: { days: ["2026-10-10", "2026-10-12"], edited: false } },
+      },
+    ]);
+    await mine.frames.next();
+    chat(mine.socket, [{ kind: { unsend: 1 }, opId: "c" }]);
+    expect(changesIn(await mine.frames.next())).toMatchObject([
+      { kind: { value: { days: [], unsent: true } } },
     ]);
   });
 

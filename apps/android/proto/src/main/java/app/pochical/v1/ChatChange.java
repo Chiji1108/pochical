@@ -7,7 +7,7 @@ package app.pochical.v1;
 
 /**
  * <pre>
- * New words for one of the member's own lines (編集).
+ * New words for one of the member's own lines of words (編集).
  * </pre>
  *
  * Protobuf type {@code pochical.v1.ChatChange}
@@ -247,7 +247,7 @@ public  final class ChatChange extends
 
   /**
    * <pre>
-   * New words for one of the member's own lines (編集).
+   * New words for one of the member's own lines of words (編集).
    * </pre>
    *
    * Protobuf type {@code pochical.v1.ChatChange}

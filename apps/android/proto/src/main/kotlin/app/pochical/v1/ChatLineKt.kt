@@ -103,8 +103,8 @@ public object ChatLineKt {
 
     /**
      * ```
-     * chatMessage characters at most (design/src/limits.ts); empty once
-     * unsent.
+     * chatMessage characters at most (design/src/limits.ts); empty for a
+     * line of shared days, and once unsent.
      * ```
      *
      * `string text = 4 [json_name = "text"];`
@@ -118,8 +118,8 @@ public object ChatLineKt {
       }
     /**
      * ```
-     * chatMessage characters at most (design/src/limits.ts); empty once
-     * unsent.
+     * chatMessage characters at most (design/src/limits.ts); empty for a
+     * line of shared days, and once unsent.
      * ```
      *
      * `string text = 4 [json_name = "text"];`
@@ -362,7 +362,112 @@ public object ChatLineKt {
     public fun clearPinnedOrder() {
       _builder.clearPinnedOrder()
     }
-  }
+
+    /**
+     * An uninstantiable, behaviorless type to represent the field in
+     * generics.
+     */
+    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
+    public class DaysProxy private constructor() : com.google.protobuf.kotlin.DslProxy()
+    /**
+     * ```
+     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+     * line of days has no words. None once unsent.
+     * ```
+     *
+     * `repeated string days = 11 [json_name = "days"];`
+     * @return A list containing the days.
+     */
+    public val days: com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>
+    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
+      get() = com.google.protobuf.kotlin.DslList(
+        _builder.daysList
+      )
+    /**
+     * ```
+     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+     * line of days has no words. None once unsent.
+     * ```
+     *
+     * `repeated string days = 11 [json_name = "days"];`
+     * @param value The days to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addDays")
+    public fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.add(value: kotlin.String) {
+      _builder.addDays(value)
+    }
+    /**
+     * ```
+     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+     * line of days has no words. None once unsent.
+     * ```
+     *
+     * `repeated string days = 11 [json_name = "days"];`
+     * @param value The days to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignDays")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.plusAssign(value: kotlin.String) {
+      add(value)
+    }
+    /**
+     * ```
+     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+     * line of days has no words. None once unsent.
+     * ```
+     *
+     * `repeated string days = 11 [json_name = "days"];`
+     * @param values The days to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addAllDays")
+    public fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.addAll(values: kotlin.collections.Iterable<kotlin.String>) {
+      _builder.addAllDays(values)
+    }
+    /**
+     * ```
+     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+     * line of days has no words. None once unsent.
+     * ```
+     *
+     * `repeated string days = 11 [json_name = "days"];`
+     * @param values The days to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignAllDays")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.plusAssign(values: kotlin.collections.Iterable<kotlin.String>) {
+      addAll(values)
+    }
+    /**
+     * ```
+     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+     * line of days has no words. None once unsent.
+     * ```
+     *
+     * `repeated string days = 11 [json_name = "days"];`
+     * @param index The index to set the value at.
+     * @param value The days to set.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("setDays")
+    public operator fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.set(index: kotlin.Int, value: kotlin.String) {
+      _builder.setDays(index, value)
+    }/**
+     * ```
+     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
+     * line of days has no words. None once unsent.
+     * ```
+     *
+     * `repeated string days = 11 [json_name = "days"];`
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("setDays")
+    public fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.clear() {
+      _builder.clearDays()
+    }}
 }
 public inline fun app.pochical.v1.ChatLine.copy(block: `app.pochical.v1`.ChatLineKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatLine =
   `app.pochical.v1`.ChatLineKt.Dsl._create(this.toBuilder()).apply { block() }._build()
