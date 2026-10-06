@@ -146,6 +146,9 @@ struct ChatScreen: View {
   @State private var ringed: Int64?
   /// What a pin did, said for a moment over the lines.
   @State private var notice: String?
+  /// How many notices have been said, so only the latest one's time
+  /// takes it away.
+  @State private var notices = 0
   @Environment(\.openInvite) private var openInvite
   /// The line whose ほかの絵文字 is open.
   @State private var reactingTo: ChatLineRow?
@@ -691,10 +694,12 @@ struct ChatScreen: View {
 
   /// Says `words` over the lines for a moment, as a toast does.
   private func say(_ words: String) {
+    notices += 1
+    let said = notices
     withAnimation { notice = words }
     Task { @MainActor in
       try? await Task.sleep(for: .seconds(2.5))
-      if notice == words {
+      if notices == said {
         withAnimation { notice = nil }
       }
     }
@@ -708,7 +713,8 @@ struct ChatScreen: View {
   }
 
   /// Scrolls to the line gone to once held and rings it; else asks for the
-  /// page before the lines held, and comes back as it arrives.
+  /// page before the lines held, again until the socket is open to ask,
+  /// and comes back as it arrives.
   private func goToTarget() async {
     guard let target = jumpTarget else { return }
     let state = chat.state
@@ -719,7 +725,9 @@ struct ChatScreen: View {
       try? await Task.sleep(for: .milliseconds(500))
       withAnimation(.easeOut(duration: 0.7)) { ringed = nil }
     } else if !state.atStart, let first = state.lines.first?.seq {
-      await socket?.requestPage(of: threadID, before: first)
+      while !Task.isCancelled, await socket?.requestPage(of: threadID, before: first) != true {
+        try? await Task.sleep(for: .seconds(1))
+      }
     } else {
       jumpTarget = nil
     }
