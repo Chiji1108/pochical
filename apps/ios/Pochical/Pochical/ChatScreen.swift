@@ -655,10 +655,7 @@ struct ChatScreen: View {
   /// between the two.
   private func closeActions() {
     acting = nil
-    Task { @MainActor in
-      try? await Task.sleep(for: .milliseconds(50))
-      OverlayWindow.shared.hide()
-    }
+    OverlayWindow.shared.hide(after: .milliseconds(50))
   }
 
   /// Puts the reader's `emoji` on the line, or takes it back if it was

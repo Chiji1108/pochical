@@ -284,8 +284,14 @@ private struct MenuRowStyle: ButtonStyle {
     self.window = window
   }
 
-  func hide() {
-    window?.isHidden = true
+  /// Takes the window shown now away after `delay`; one shown meanwhile,
+  /// for another line, stays.
+  func hide(after delay: Duration = .zero) {
+    guard let closing = window else { return }
     window = nil
+    Task { @MainActor in
+      try? await Task.sleep(for: delay)
+      closing.isHidden = true
+    }
   }
 }
