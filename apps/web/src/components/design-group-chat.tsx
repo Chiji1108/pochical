@@ -29,7 +29,12 @@ import { Composer, useComposer } from "./design-chat-composer";
 import { useChatEdits } from "./design-chat-edits";
 import { ChatContext, MessageLine } from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
-import { ChatListRow, LineFrame, MutedMark } from "./design-chat-parts";
+import {
+  BubbleTail,
+  ChatListRow,
+  LineFrame,
+  MutedMark,
+} from "./design-chat-parts";
 import { PinBar } from "./design-chat-pins";
 import { DecidePollSheet } from "./design-chat-poll";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
@@ -459,14 +464,17 @@ export function ChatPage({
                 avatar={<Avatar member={typingMember} size={chatAvatarSize} />}
                 mine={false}
               >
-                <span
-                  aria-label={`${typingMember.name}が入力中`}
-                  className={chatStyle.typing}
-                  role="status"
-                >
-                  <span />
-                  <span />
-                  <span />
+                <span className={chatStyle.bubbleHold}>
+                  <BubbleTail mine={false} />
+                  <span
+                    aria-label={`${typingMember.name}が入力中`}
+                    className={chatStyle.typing}
+                    role="status"
+                  >
+                    <span />
+                    <span />
+                    <span />
+                  </span>
                 </span>
               </LineFrame>
             )}

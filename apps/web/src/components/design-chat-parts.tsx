@@ -145,24 +145,45 @@ export function LineFrame({
   );
 }
 
+// The tail on a run's first bubble, reaching out from its top corner
+// toward the writer's side, as LINE draws one: drawn for the others' side
+// and mirrored for yours.
+export function BubbleTail({ mine }: { mine: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={chatStyle.tail({ mine })}
+      viewBox="0 0 8 12"
+    >
+      <path
+        d="M8 0H1.4C0 0-.6 1.3.2 1.8 3.5 3.2 6.5 7 7 12H8Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 // A line's words in their bubble: the others' on the left in a fill,
-// yours on the right in the accent. A bubble with a link's page under
-// its words is wide enough for the page (`linked`).
+// yours on the right in the accent, the first of a run with a tail toward
+// the writer. A bubble with a link's page under its words is wide enough
+// for the page (`linked`).
 export function Bubble({
   mine,
+  first,
   linked = false,
   children,
 }: {
   mine: boolean;
+  first: boolean;
   linked?: boolean;
   children: ReactNode;
 }) {
   return (
-    <span
-      className={cx(chatStyle.bubble({ mine }), linked && chatStyle.linked)}
-      data-part="bubble"
-    >
-      {children}
+    <span className={cx(chatStyle.bubbleHold, linked && chatStyle.linked)}>
+      {first && <BubbleTail mine={mine} />}
+      <span className={chatStyle.bubble({ first, mine })} data-part="bubble">
+        {children}
+      </span>
     </span>
   );
 }

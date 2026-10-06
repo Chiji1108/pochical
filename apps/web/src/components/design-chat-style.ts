@@ -66,23 +66,66 @@ export const chatStyle = {
     },
     variants: { mine: { true: { alignItems: "flex-end" } } },
   }),
+  // Round all over, but the first of a run, as LINE draws one: its top
+  // corner by the writer's side square, with a tail (BubbleTail) reaching
+  // out from it toward the face and name the run starts with, so it says
+  // whose words follow.
   bubble: cva({
     base: {
       bg: "fill.tertiary",
-      borderRadius:
-        "token(radii.lg) token(radii.lg) token(radii.lg) token(radii.sm)",
+      borderRadius: "lg",
       color: "text.primary",
       display: "flex",
       flexDirection: "column",
       minWidth: 0,
       overflow: "hidden",
     },
+    compoundVariants: [
+      {
+        css: { borderTopLeftRadius: 0 },
+        first: true,
+        mine: false,
+      },
+      {
+        css: { borderTopRightRadius: 0 },
+        first: true,
+        mine: true,
+      },
+    ],
+    variants: {
+      first: { true: {} },
+      mine: {
+        true: { bg: "accent.fill", color: "accent.onFill" },
+      },
+    },
+  }),
+  // Holds a bubble and its tail, which reaches out past the bubble's
+  // edge, where the bubble's own clipping cannot cut it off.
+  bubbleHold: css({
+    "& > [data-part=bubble]": { flex: 1 },
+    display: "flex",
+    maxWidth: "100%",
+    minWidth: 0,
+    position: "relative",
+  }),
+  // The tail at the top of a run's first bubble, in the bubble's color,
+  // overlapping its edge by a point so no seam shows between them.
+  tail: cva({
+    base: {
+      color: "fill.tertiary",
+      height: "12px",
+      left: "-7px",
+      position: "absolute",
+      top: 0,
+      width: "8px",
+    },
     variants: {
       mine: {
         true: {
-          bg: "accent.fill",
-          borderRadius: "token(radii.lg) token(radii.lg) token(radii.sm)",
-          color: "accent.onFill",
+          color: "accent.fill",
+          left: "auto",
+          right: "-7px",
+          transform: "scaleX(-1)",
         },
       },
     },
@@ -395,8 +438,8 @@ export const chatStyle = {
     "& > span:nth-child(3)": { animationDelay: "0.3s" },
     alignItems: "center",
     bg: "fill.tertiary",
-    borderRadius:
-      "token(radii.lg) token(radii.lg) token(radii.lg) token(radii.sm)",
+    // A bubble at the start of the writer's run, by their face.
+    borderRadius: "0 token(radii.lg) token(radii.lg) token(radii.lg)",
     display: "flex",
     gap: "4px",
     height: "36px",

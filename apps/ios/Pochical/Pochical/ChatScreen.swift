@@ -314,8 +314,7 @@ struct ChatScreen: View {
       items.append(.line(line, startsRun: starts || line.seq == unreadFrom))
     }
     for line in state.waiting {
-      startsRun(at: line.madeAtMs, writer: meID)
-      items.append(.waiting(line))
+      items.append(.waiting(line, startsRun: startsRun(at: line.madeAtMs, writer: meID)))
     }
     return items
   }
@@ -351,7 +350,7 @@ struct ChatScreen: View {
         LineView(
           text: line.text, time: line.sentAtMs, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
-          named: otherID == nil, waiting: false, nameOf: nameOf,
+          named: otherID == nil, first: startsRun, waiting: false, nameOf: nameOf,
           reactions: line.reactions, meID: meID, onReact: onReact,
           lifted: acting?.lineID == line.opID
         ) { frame in
@@ -359,22 +358,25 @@ struct ChatScreen: View {
             MessageActionsRequest(
               lineID: line.opID, frame: frame, mine: mine,
               bubble: AnyView(
-                MessageBubble(text: line.text, mine: mine, waiting: false, nameOf: nameOf)),
+                MessageBubble(
+                  text: line.text, mine: mine, first: startsRun, waiting: false, nameOf: nameOf)),
               reactions: line.reactions, meID: meID, onReact: onReact,
               onMoreReactions: { reactingTo = line }, actions: actions(for: line, mine: mine)))
         }
       }
-    case .waiting(let line):
+    case .waiting(let line, let startsRun):
       LineView(
         text: line.text, time: line.madeAtMs, edited: false, mine: true, writer: nil,
-        named: false, waiting: true, nameOf: nameOf, lifted: acting?.lineID == line.opID
+        named: false, first: startsRun, waiting: true, nameOf: nameOf,
+        lifted: acting?.lineID == line.opID
       ) { frame in
         // Still on its way: nothing but コピー yet.
         openActions(
           MessageActionsRequest(
             lineID: line.opID, frame: frame, mine: true,
             bubble: AnyView(
-              MessageBubble(text: line.text, mine: true, waiting: true, nameOf: nameOf)),
+              MessageBubble(
+                text: line.text, mine: true, first: startsRun, waiting: true, nameOf: nameOf)),
             actions: [copy(line.text)]))
       }
     }
@@ -691,7 +693,7 @@ private enum ChatItem: Identifiable {
   case day(Day)
   case unread
   case line(ChatLineRow, startsRun: Bool)
-  case waiting(WaitingLine)
+  case waiting(WaitingLine, startsRun: Bool)
 
   var id: String {
     switch self {
@@ -699,7 +701,7 @@ private enum ChatItem: Identifiable {
     case .unread: "unread"
     case .line(let line, _): "line-\(line.opID)"
     // As the group's line will be, so it stays in place once taken.
-    case .waiting(let line): "line-\(line.opID)"
+    case .waiting(let line, _): "line-\(line.opID)"
     }
   }
 }
@@ -732,6 +734,8 @@ private struct LineView: View {
   let writer: String?
   /// Their name shows over the run too, as in a group chat.
   let named: Bool
+  /// It starts a run of one writer's lines, its bubble with a tail.
+  let first: Bool
   let waiting: Bool
   /// A member's name, for the line's mentions.
   let nameOf: (String) -> String
@@ -771,7 +775,7 @@ private struct LineView: View {
         }
         HStack(alignment: .bottom, spacing: 8) {
           if mine { meta }
-          MessageBubble(text: text, mine: mine, waiting: waiting, nameOf: nameOf)
+          MessageBubble(text: text, mine: mine, first: first, waiting: waiting, nameOf: nameOf)
             // Its own size and where its middle is: the press's give
             // shrinks its frame on the screen, not its size.
             .onGeometryChange(for: CGRect.self) { proxy in
@@ -829,11 +833,13 @@ private struct LineView: View {
 }
 
 /// A line's words in its bubble: others' on the quiet fill, one's own in
-/// the accent, dimmed while it waits to be sent.
+/// the accent, the first of a run with a tail toward the writer, dimmed
+/// while it waits to be sent.
 struct MessageBubble: View {
   @Environment(\.themeColors) private var colors
   let text: String
   let mine: Bool
+  let first: Bool
   let waiting: Bool
   /// A member's name, for the line's mentions.
   let nameOf: (String) -> String
@@ -846,7 +852,10 @@ struct MessageBubble: View {
       .tint(mine ? colors.accentOnFill : colors.accentDefault)
       .padding(.horizontal, 12)
       .padding(.vertical, 8)
-      .background(mine ? colors.accentFill : colors.fillTertiary, in: bubble)
+      .background(
+        mine ? colors.accentFill : colors.fillTertiary,
+        in: BubbleShape(mine: mine, first: first)
+      )
       .opacity(waiting ? 0.6 : 1)
   }
 
@@ -869,11 +878,53 @@ struct MessageBubble: View {
     return words
   }
 
-  /// Rounded but at the corner by the writer, toward the foot.
-  private var bubble: UnevenRoundedRectangle {
-    UnevenRoundedRectangle(
-      topLeadingRadius: Radius.lg, bottomLeadingRadius: mine ? Radius.lg : Radius.sm,
-      bottomTrailingRadius: mine ? Radius.sm : Radius.lg, topTrailingRadius: Radius.lg)
-  }
+}
 
+/// A bubble's outline: round all over, but the first of a run, as LINE
+/// draws one: its top corner by the writer's side square, with a tail
+/// reaching out from it toward the face and name the run starts with
+/// (/design's BubbleTail, the same curve). The tail is drawn past the
+/// bubble's leading edge, outside its frame.
+struct BubbleShape: Shape {
+  let mine: Bool
+  let first: Bool
+
+  nonisolated func path(in rect: CGRect) -> Path {
+    guard first else {
+      return Path(roundedRect: rect, cornerRadius: Radius.lg, style: .continuous)
+    }
+    let width = rect.width
+    let height = rect.height
+    let radius = min(Radius.lg, height / 2, width / 2)
+    // Drawn for the others' side, its tail to the left of x = 0.
+    var path = Path()
+    path.move(to: CGPoint(x: -5.6, y: 0))
+    path.addLine(to: CGPoint(x: width - radius, y: 0))
+    path.addArc(
+      tangent1End: CGPoint(x: width, y: 0), tangent2End: CGPoint(x: width, y: radius),
+      radius: radius)
+    path.addLine(to: CGPoint(x: width, y: height - radius))
+    path.addArc(
+      tangent1End: CGPoint(x: width, y: height), tangent2End: CGPoint(x: width - radius, y: height),
+      radius: radius)
+    path.addLine(to: CGPoint(x: radius, y: height))
+    path.addArc(
+      tangent1End: CGPoint(x: 0, y: height), tangent2End: CGPoint(x: 0, y: height - radius),
+      radius: radius)
+    path.addLine(to: CGPoint(x: 0, y: min(12, height - radius)))
+    // Its lower edge bowed in, so it reads as a horn, not a wedge.
+    path.addCurve(
+      to: CGPoint(x: -6.8, y: 1.8), control1: CGPoint(x: -0.5, y: 7),
+      control2: CGPoint(x: -3.5, y: 3.2))
+    path.addCurve(
+      to: CGPoint(x: -5.6, y: 0), control1: CGPoint(x: -7.6, y: 1.3),
+      control2: CGPoint(x: -7, y: 0))
+    path.closeSubpath()
+    // One's own is the same, mirrored to the right.
+    let place =
+      mine
+      ? CGAffineTransform(a: -1, b: 0, c: 0, d: 1, tx: rect.maxX, ty: rect.minY)
+      : CGAffineTransform(translationX: rect.minX, y: rect.minY)
+    return path.applying(place)
+  }
 }
