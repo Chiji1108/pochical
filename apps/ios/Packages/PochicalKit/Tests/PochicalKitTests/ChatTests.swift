@@ -119,3 +119,19 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
     #expect(try Chats.writers(in: "g", db: db).map(\.displayName) == ["さくら"])
   }
 }
+
+@Test func leavingAGroupDropsTheEditsWaitingForIt() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var send = Pochical_V1_ChatSend()
+    send.threadID = groupThread
+    send.text = "抜ける前に"
+    try Chats.edit(.send(send), in: "g", now: 1, db: db)
+    var left = Pochical_V1_Change()
+    left.cursor = 1
+    left.membership.groupID = "g"
+    left.membership.left = true
+    try Sync.take([left], in: db)
+    #expect(try Chats.lastWaiting(of: "g", in: db) == nil)
+  }
+}

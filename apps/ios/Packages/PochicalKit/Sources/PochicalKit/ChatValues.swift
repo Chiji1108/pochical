@@ -159,6 +159,12 @@ public enum Chats {
     .execute(db)
   }
 
+  /// A group left takes the member's waiting edits with it, so none is
+  /// sent should they join again.
+  static func dropWaiting(of groupID: String, in db: Database) throws {
+    try ChatOutboxRow.where { $0.groupID.eq(groupID) }.delete().execute(db)
+  }
+
   /// The edits an Acked names stop waiting.
   static func acknowledge(_ opIDs: [String], in db: Database) throws {
     try ChatOutboxRow.where { $0.opID.in(opIDs) }.delete().execute(db)

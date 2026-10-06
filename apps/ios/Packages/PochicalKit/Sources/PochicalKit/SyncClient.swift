@@ -316,12 +316,19 @@ public actor SyncClient {
 
   /// Asks the group for a page of a chat's lines before `seq` (the latest
   /// with 0), when its socket is open; the page comes into the database.
-  public func requestPage(of threadID: String, before seq: Int64) async {
-    guard connected, let socket else { return }
+  /// False when it could not be asked.
+  @discardableResult
+  public func requestPage(of threadID: String, before seq: Int64) async -> Bool {
+    guard connected, let socket else { return false }
     var frame = Pochical_V1_ClientFrame()
     frame.chatPageRequest.threadID = threadID
     frame.chatPageRequest.beforeSeq = UInt64(max(seq, 0))
-    try? await socket.send(.data(frame.serializedData()))
+    do {
+      try await socket.send(.data(frame.serializedData()))
+      return true
+    } catch {
+      return false
+    }
   }
 
   /// Sends the group's chat outbox as `sendOutbox` does the user's.

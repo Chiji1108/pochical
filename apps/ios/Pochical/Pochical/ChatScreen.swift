@@ -188,7 +188,12 @@ struct ChatScreen: View {
           ProgressView()
             .frame(maxWidth: .infinity, minHeight: Metrics.touch)
             .task(id: state.lines.first?.seq) {
-              await socket?.requestPage(of: groupThread, before: state.lines.first?.seq ?? 0)
+              // Asked again until the socket is open to ask.
+              let first = state.lines.first?.seq ?? 0
+              while !Task.isCancelled {
+                if await socket?.requestPage(of: groupThread, before: first) == true { return }
+                try? await Task.sleep(for: .seconds(1))
+              }
             }
         }
         ForEach(items(state)) { item in
