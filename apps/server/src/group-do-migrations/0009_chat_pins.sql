@@ -1,0 +1,1 @@
+ALTER TABLE `chat_lines` ADD `pinned_at` integer;

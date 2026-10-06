@@ -154,4 +154,15 @@ public interface ChatLineOrBuilder extends
    * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
    */
   int getReactionsCount();
+
+  /**
+   * <pre>
+   * Pinned for everyone in the chat: the group's cursor when it was last
+   * pinned, so the latest pin is the greatest; 0 when not pinned.
+   * </pre>
+   *
+   * <code>uint64 pinned_order = 10 [json_name = "pinnedOrder"];</code>
+   * @return The pinnedOrder.
+   */
+  long getPinnedOrder();
 }

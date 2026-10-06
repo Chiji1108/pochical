@@ -32,6 +32,9 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   public var opID: String
   /// Its reactions as JSON, `[LineReaction]`.
   var reactionsJSON = "[]"
+  /// Pinned for everyone: the group's cursor when it was last pinned, the
+  /// latest the greatest; 0 when not pinned.
+  public var pinnedOrder: Int64 = 0
   public var id: Int64 { seq }
 
   /// Each emoji on the line, in the order first chosen, with who chose it.
@@ -168,6 +171,14 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep the chats' pins") { db in
+      try #sql(
+        """
+        ALTER TABLE "chatLines" ADD COLUMN "pinnedOrder" INTEGER NOT NULL DEFAULT 0
+        """
+      )
+      .execute(db)
+    }
   }
 }
 
@@ -203,6 +214,7 @@ public enum Chats {
       text: line.text, sentAtMs: line.sentAtMs, edited: line.edited, unsent: line.unsent,
       opID: line.opID)
     row.reactions = line.reactions.map { LineReaction(emoji: $0.emoji, userIDs: $0.userIds) }
+    row.pinnedOrder = Int64(line.pinnedOrder)
     try ChatLineRow.insert { row }.execute(db)
   }
 
@@ -311,6 +323,9 @@ public struct ChatState: Hashable, Sendable {
   public var marks: [String: Int64]
   /// How far the member's own read waiting in the outbox goes, 0 with none.
   public var ownRead: Int64
+  /// The pinned lines, the latest first, the member's own pins and
+  /// unpins on their way already in place; held however far back.
+  public var pins: [ChatLineRow] = []
 
   public init(
     lines: [ChatLineRow], waiting: [WaitingLine], atStart: Bool, marks: [String: Int64],
@@ -365,6 +380,12 @@ extension Chats {
     var lines = Array(block.reversed())
     var waiting: [WaitingLine] = []
     var ownRead: Int64 = 0
+    let unpinned: Int64 = 0
+    var pinned = try ChatLineRow.where {
+      $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && $0.pinnedOrder > unpinned
+        && !$0.unsent
+    }
+    .order { $0.pinnedOrder.desc() }.fetchAll(db).map { String($0.seq) }
     for row in waitingEdits {
       let edit = try Pochical_V1_ChatEdit(serializedBytes: row.edit)
       switch edit.kind {
@@ -381,6 +402,10 @@ extension Chats {
           lines[at].unsent = true
           lines[at].reactions = []
         }
+        pinned = pinStep(pinned, unsend: String(unsend.seq)).pins
+      case .pin(let pin) where pin.threadID == threadID:
+        let id = String(pin.seq)
+        pinned = (pin.on ? pinStep(pinned, pin: id) : pinStep(pinned, unpin: id)).pins
       case .react(let react) where react.threadID == threadID:
         if let me, let at = lines.firstIndex(where: { $0.seq == Int64(react.seq) }) {
           lines[at].reactions = lines[at].reactions.toggling(react.emoji, by: me, on: react.on)
@@ -392,10 +417,25 @@ extension Chats {
     }
     let marks = try ReadMarkRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
       .fetchAll(db)
-    return ChatState(
+    var state = ChatState(
       lines: lines, waiting: waiting, atStart: (lines.first?.seq ?? 1) <= 1,
       marks: Dictionary(marks.map { ($0.userID, $0.lastReadSeq) }, uniquingKeysWith: max),
       ownRead: ownRead)
+    let pinnedSeqs = pinned.compactMap { Int64($0) }
+    let heldRows = try ChatLineRow.where {
+      $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && $0.seq.in(pinnedSeqs)
+    }
+    .fetchAll(db)
+    var held: [String: ChatLineRow] = [:]
+    for row in heldRows {
+      held[String(row.seq)] = row
+    }
+    state.pins = pinned.compactMap { id in
+      // As the screen shows it: changed or taken back while waiting.
+      lines.first { String($0.seq) == id } ?? held[id]
+    }
+    .filter { !$0.unsent }
+    return state
   }
 
   /// Everyone who has been in the group, those who left too, for the

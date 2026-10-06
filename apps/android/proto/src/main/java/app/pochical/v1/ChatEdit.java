@@ -32,6 +32,7 @@ public  final class ChatEdit extends
     UNSEND(4),
     READ(5),
     REACT(6),
+    PIN(7),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -52,6 +53,7 @@ public  final class ChatEdit extends
         case 4: return UNSEND;
         case 5: return READ;
         case 6: return REACT;
+        case 7: return PIN;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -385,6 +387,56 @@ public  final class ChatEdit extends
    */
   private void clearReact() {
     if (kindCase_ == 6) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int PIN_FIELD_NUMBER = 7;
+  /**
+   * <code>.pochical.v1.ChatPin pin = 7 [json_name = "pin"];</code>
+   */
+  @java.lang.Override
+  public boolean hasPin() {
+    return kindCase_ == 7;
+  }
+  /**
+   * <code>.pochical.v1.ChatPin pin = 7 [json_name = "pin"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatPin getPin() {
+    if (kindCase_ == 7) {
+       return (app.pochical.v1.ChatPin) kind_;
+    }
+    return app.pochical.v1.ChatPin.getDefaultInstance();
+  }
+  /**
+   * <code>.pochical.v1.ChatPin pin = 7 [json_name = "pin"];</code>
+   */
+  private void setPin(app.pochical.v1.ChatPin value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 7;
+  }
+  /**
+   * <code>.pochical.v1.ChatPin pin = 7 [json_name = "pin"];</code>
+   */
+  private void mergePin(app.pochical.v1.ChatPin value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 7 &&
+        kind_ != app.pochical.v1.ChatPin.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ChatPin.newBuilder((app.pochical.v1.ChatPin) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 7;
+  }
+  /**
+   * <code>.pochical.v1.ChatPin pin = 7 [json_name = "pin"];</code>
+   */
+  private void clearPin() {
+    if (kindCase_ == 7) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -814,6 +866,54 @@ public  final class ChatEdit extends
       return this;
     }
 
+    /**
+     * <code>.pochical.v1.ChatPin pin = 7 [json_name = "pin"];</code>
+     */
+    @java.lang.Override
+    public boolean hasPin() {
+      return instance.hasPin();
+    }
+    /**
+     * <code>.pochical.v1.ChatPin pin = 7 [json_name = "pin"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatPin getPin() {
+      return instance.getPin();
+    }
+    /**
+     * <code>.pochical.v1.ChatPin pin = 7 [json_name = "pin"];</code>
+     */
+    public Builder setPin(app.pochical.v1.ChatPin value) {
+      copyOnWrite();
+      instance.setPin(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatPin pin = 7 [json_name = "pin"];</code>
+     */
+    public Builder setPin(
+        app.pochical.v1.ChatPin.Builder builderForValue) {
+      copyOnWrite();
+      instance.setPin(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatPin pin = 7 [json_name = "pin"];</code>
+     */
+    public Builder mergePin(app.pochical.v1.ChatPin value) {
+      copyOnWrite();
+      instance.mergePin(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatPin pin = 7 [json_name = "pin"];</code>
+     */
+    public Builder clearPin() {
+      copyOnWrite();
+      instance.clearPin();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatEdit)
   }
   @java.lang.Override
@@ -838,10 +938,11 @@ public  final class ChatEdit extends
             app.pochical.v1.ChatUnsend.class,
             app.pochical.v1.ChatRead.class,
             app.pochical.v1.ChatReact.class,
+            app.pochical.v1.ChatPin.class,
           };
           java.lang.String info =
-              "\u0000\u0006\u0001\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001\u0208\u0002<\u0000" +
-              "\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000";
+              "\u0000\u0007\u0001\u0000\u0001\u0007\u0007\u0000\u0000\u0000\u0001\u0208\u0002<\u0000" +
+              "\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

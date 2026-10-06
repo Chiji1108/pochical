@@ -335,6 +335,33 @@ public object ChatLineKt {
     public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatReaction, ReactionsProxy>.clear() {
       _builder.clearReactions()
     }
+
+    /**
+     * ```
+     * Pinned for everyone in the chat: the group's cursor when it was last
+     * pinned, so the latest pin is the greatest; 0 when not pinned.
+     * ```
+     *
+     * `uint64 pinned_order = 10 [json_name = "pinnedOrder"];`
+     */
+    public var pinnedOrder: kotlin.Long
+      @kotlin.jvm.JvmName("getPinnedOrder")
+        get() = _builder.pinnedOrder
+      @kotlin.jvm.JvmName("setPinnedOrder")
+        set(value) {
+        _builder.pinnedOrder = value
+      }
+    /**
+     * ```
+     * Pinned for everyone in the chat: the group's cursor when it was last
+     * pinned, so the latest pin is the greatest; 0 when not pinned.
+     * ```
+     *
+     * `uint64 pinned_order = 10 [json_name = "pinnedOrder"];`
+     */
+    public fun clearPinnedOrder() {
+      _builder.clearPinnedOrder()
+    }
   }
 }
 public inline fun app.pochical.v1.ChatLine.copy(block: `app.pochical.v1`.ChatLineKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatLine =
