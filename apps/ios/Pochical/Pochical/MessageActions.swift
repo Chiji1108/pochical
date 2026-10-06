@@ -65,7 +65,7 @@ struct MessageActionsOverlay: View {
         if request.reactions != nil {
           reactionBar
             .modifier(Placed(edge: place.edge, x: place.x, y: place.barY, width: proxy.size.width))
-            .scaleEffect(shown ? 1 : 0.6, anchor: request.mine ? .bottomTrailing : .bottomLeading)
+            .scaleEffect(shown ? 1 : 0.85, anchor: request.mine ? .bottomTrailing : .bottomLeading)
             .opacity(shown ? 1 : 0)
         }
         request.bubble
@@ -78,7 +78,7 @@ struct MessageActionsOverlay: View {
         menu
           .frame(width: Self.menuWidth)
           .modifier(Placed(edge: place.edge, x: place.x, y: place.menuY, width: proxy.size.width))
-          .scaleEffect(shown ? 1 : 0.6, anchor: request.mine ? .topTrailing : .topLeading)
+          .scaleEffect(shown ? 1 : 0.85, anchor: request.mine ? .topTrailing : .topLeading)
           .opacity(shown ? 1 : 0)
       }
       .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
@@ -253,5 +253,35 @@ private struct MenuRowStyle: ButtonStyle {
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .background(configuration.isPressed ? colors.fillSecondary : .clear)
+  }
+}
+
+/// A window over the app's own, for what must cover everything at once,
+/// bars included, with no presentation of its own: a line's reactions
+/// and menu draw their coming in themselves, where a full-screen cover
+/// would slide in first.
+@MainActor final class OverlayWindow {
+  static let shared = OverlayWindow()
+  private var window: UIWindow?
+
+  func show(_ view: some View) {
+    guard
+      let scene = UIApplication.shared.connectedScenes
+        .compactMap({ $0 as? UIWindowScene })
+        .first(where: { $0.activationState == .foregroundActive })
+    else { return }
+    let host = UIHostingController(rootView: AnyView(view))
+    host.view.backgroundColor = .clear
+    let window = UIWindow(windowScene: scene)
+    window.windowLevel = .alert
+    window.backgroundColor = .clear
+    window.rootViewController = host
+    window.isHidden = false
+    self.window = window
+  }
+
+  func hide() {
+    window?.isHidden = true
+    window = nil
   }
 }

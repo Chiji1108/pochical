@@ -143,8 +143,6 @@ struct ChatScreen: View {
   @State private var reactingTo: ChatLineRow?
   /// The line whose reactions and menu are open.
   @State private var acting: MessageActionsRequest?
-  /// What was picked there, done once it has closed.
-  @State private var afterActing: (() -> Void)?
 
   var body: some View {
     let state = chat.state
@@ -262,18 +260,8 @@ struct ChatScreen: View {
       }
     }
     .environment(\.openURL, OpenURLAction { open($0) })
-    .fullScreenCover(item: $acting) {
-      afterActing?()
-      afterActing = nil
-    } content: { request in
-      MessageActionsOverlay(request: request) { action in
-        afterActing = action
-        var transaction = Transaction()
-        transaction.disablesAnimations = true
-        withTransaction(transaction) { acting = nil }
-      }
-      .presentationBackground(.clear)
-    }
+    // Leaving the chat takes its open menu with it.
+    .onDisappear { closeActions() }
     .sheet(item: $reactingTo) { line in
       EmojiKeyboardSheet { react($0, on: line) }
     }
@@ -653,9 +641,18 @@ struct ChatScreen: View {
   /// Opens a line's reactions and menu over everything, at once: the
   /// overlay draws its own coming in.
   private func openActions(_ request: MessageActionsRequest) {
-    var transaction = Transaction()
-    transaction.disablesAnimations = true
-    withTransaction(transaction) { acting = request }
+    acting = request
+    OverlayWindow.shared.show(
+      MessageActionsOverlay(request: request) { action in
+        closeActions()
+        action?()
+      }
+      .environment(\.themeColors, colors))
+  }
+
+  private func closeActions() {
+    OverlayWindow.shared.hide()
+    acting = nil
   }
 
   /// Puts the reader's `emoji` on the line, or takes it back if it was
