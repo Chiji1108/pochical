@@ -66,9 +66,9 @@ export const chatStyle = {
     },
     variants: { mine: { true: { alignItems: "flex-end" } } },
   }),
-  // Round all over; the first of a run has a tail (BubbleTail) flicking
-  // up from its top corner by the writer's side, as LINE draws one, by
-  // the face and name the run starts with, so it says whose words follow.
+  // Round all over, but the first of a run, as LINE and WhatsApp draw
+  // one: its top corner by the writer's side drawn in, by the face and
+  // name the run starts with, so it says whose words follow.
   bubble: cva({
     base: {
       bg: "fill.tertiary",
@@ -79,41 +79,22 @@ export const chatStyle = {
       minWidth: 0,
       overflow: "hidden",
     },
+    compoundVariants: [
+      {
+        css: { borderTopLeftRadius: "sm" },
+        first: true,
+        mine: false,
+      },
+      {
+        css: { borderTopRightRadius: "sm" },
+        first: true,
+        mine: true,
+      },
+    ],
     variants: {
+      first: { true: {} },
       mine: {
         true: { bg: "accent.fill", color: "accent.onFill" },
-      },
-    },
-  }),
-  // Holds a bubble and its tail, which reaches out past the bubble's
-  // edge, where the bubble's own clipping cannot cut it off.
-  bubbleHold: css({
-    "& > [data-part=bubble]": { flex: 1 },
-    display: "flex",
-    maxWidth: "100%",
-    minWidth: 0,
-    position: "relative",
-  }),
-  // The tail on a run's first bubble, in the bubble's color, over its
-  // top corner and flicking up and out past it; the bubble drawn after
-  // it hides where the two overlap.
-  tail: cva({
-    base: {
-      color: "fill.tertiary",
-      height: "22px",
-      left: "-7px",
-      position: "absolute",
-      top: "-2px",
-      width: "21px",
-    },
-    variants: {
-      mine: {
-        true: {
-          color: "accent.fill",
-          left: "auto",
-          right: "-7px",
-          transform: "scaleX(-1)",
-        },
       },
     },
   }),
@@ -426,7 +407,8 @@ export const chatStyle = {
     alignItems: "center",
     bg: "fill.tertiary",
     // A bubble at the start of the writer's run, by their face.
-    borderRadius: "lg",
+    borderRadius:
+      "token(radii.sm) token(radii.lg) token(radii.lg) token(radii.lg)",
     display: "flex",
     gap: "4px",
     height: "36px",

@@ -8,7 +8,6 @@ import { dateKey, formatDay } from "../lib/design-days";
 import type { Photo } from "../lib/design-sample-photos";
 import { MessageActions, useLongPress } from "./design-chat-actions";
 import type { LineActions } from "./design-chat-actions";
-import { BubbleTail } from "./design-chat-parts";
 import { photoSize } from "./design-chat-photos";
 import { PeopleList, PhonePopover } from "./design-chat-popover";
 import { chatStyle } from "./design-chat-style";
@@ -308,24 +307,23 @@ export function PhotoLine({
   );
   return (
     <>
-      <span className={chatStyle.bubbleHold}>
-        {/* A reply always starts a run; a photo alone has no bubble. */}
-        {quoted && <BubbleTail mine={mine} />}
-        <span
-          className={quoted ? chatStyle.bubble({ mine }) : chatStyle.photo}
-          data-part="bubble"
-          style={{ width: size.width }}
+      <span
+        // A reply always starts a run.
+        className={
+          quoted ? chatStyle.bubble({ first: true, mine }) : chatStyle.photo
+        }
+        data-part="bubble"
+        style={{ width: size.width }}
+      >
+        {quote}
+        <MessageActions
+          {...actions}
+          disabled={upload !== undefined}
+          keyboardOpens={false}
+          onSave={onSave}
         >
-          {quote}
-          <MessageActions
-            {...actions}
-            disabled={upload !== undefined}
-            keyboardOpens={false}
-            onSave={onSave}
-          >
-            {open}
-          </MessageActions>
-        </span>
+          {open}
+        </MessageActions>
       </span>
       <PhotoViewer
         label={label}

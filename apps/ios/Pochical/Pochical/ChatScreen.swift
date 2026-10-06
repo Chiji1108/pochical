@@ -734,7 +734,7 @@ private struct LineView: View {
   let writer: String?
   /// Their name shows over the run too, as in a group chat.
   let named: Bool
-  /// It starts a run of one writer's lines, its bubble with a tail.
+  /// It starts a run of one writer's lines, its bubble's corner drawn in.
   let first: Bool
   let waiting: Bool
   /// A member's name, for the line's mentions.
@@ -833,8 +833,8 @@ private struct LineView: View {
 }
 
 /// A line's words in its bubble: others' on the quiet fill, one's own in
-/// the accent, the first of a run with a tail toward the writer, dimmed
-/// while it waits to be sent.
+/// the accent, the first of a run with its corner by the writer drawn in,
+/// dimmed while it waits to be sent.
 struct MessageBubble: View {
   @Environment(\.themeColors) private var colors
   let text: String
@@ -880,31 +880,20 @@ struct MessageBubble: View {
 
 }
 
-/// A bubble's outline: round all over, the first of a run with a tail
-/// over its top corner by the writer's side, flicking up and out toward
-/// the face and name the run starts with, as LINE draws one (/design's
-/// BubbleTail, the same curve). The tail reaches past the bubble's frame.
+/// A bubble's outline: round all over, but the first of a run, as LINE
+/// and WhatsApp draw one: its top corner by the writer's side drawn in, by
+/// the face and name the run starts with, so it says whose words follow.
 struct BubbleShape: Shape {
   let mine: Bool
   let first: Bool
 
   nonisolated func path(in rect: CGRect) -> Path {
-    let bubble = Path(roundedRect: rect, cornerRadius: Radius.lg, style: .continuous)
-    guard first else { return bubble }
-    // Drawn for the others' side, over the top-left corner.
-    var tail = Path()
-    tail.move(to: CGPoint(x: 0, y: 20))
-    tail.addCurve(
-      to: CGPoint(x: -7, y: -2), control1: CGPoint(x: -1, y: 10), control2: CGPoint(x: -4, y: 3))
-    tail.addCurve(
-      to: CGPoint(x: 14, y: 0), control1: CGPoint(x: -2, y: -1), control2: CGPoint(x: 4, y: 0))
-    tail.addLine(to: CGPoint(x: 14, y: 20))
-    tail.closeSubpath()
-    // One's own is the same, mirrored to the right.
-    let place =
-      mine
-      ? CGAffineTransform(a: -1, b: 0, c: 0, d: 1, tx: rect.maxX, ty: rect.minY)
-      : CGAffineTransform(translationX: rect.minX, y: rect.minY)
-    return bubble.union(tail.applying(place))
+    let drawnIn = first ? Radius.sm : Radius.lg
+    return UnevenRoundedRectangle(
+      topLeadingRadius: mine ? Radius.lg : drawnIn, bottomLeadingRadius: Radius.lg,
+      bottomTrailingRadius: Radius.lg, topTrailingRadius: mine ? drawnIn : Radius.lg,
+      style: .continuous
+    )
+    .path(in: rect)
   }
 }
