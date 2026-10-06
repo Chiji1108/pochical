@@ -60,14 +60,19 @@ type EditHandlers = {
 /** What a Group DO does with a member's chat frames. */
 type ChatHandlers = {
   chatEdits?: (ws: WebSocket, userId: string, edits: ChatEdits) => void;
-  chatPageRequest?: (ws: WebSocket, request: ChatPageRequest) => void;
+  chatPageRequest?: (
+    ws: WebSocket,
+    userId: string,
+    request: ChatPageRequest
+  ) => void;
 };
 
 /** What a DO does with a socket once it is past the handshake. */
 type SyncHandlers = EditHandlers &
   ChatHandlers & {
-    // Hello was accepted: send Welcome and every change after `cursor`.
-    welcome: (ws: WebSocket, cursor: bigint) => void;
+    // Hello was accepted: send Welcome and every change after `cursor`
+    // that the socket's user may see.
+    welcome: (ws: WebSocket, cursor: bigint, userId: string) => void;
   };
 
 const GROUP_SOCKET_ONLY = "Chats go to a group's socket";
@@ -151,7 +156,7 @@ const handleHello = (
     ...attachment,
     protocolVersion,
   } satisfies SocketAttachment);
-  handlers.welcome(ws, cursor);
+  handlers.welcome(ws, cursor, attachment.userId);
 };
 
 /** Changes in cursor order, as frames of up to syncLimits.changesPerFrame. */
@@ -163,10 +168,6 @@ const sendChanges = (ws: WebSocket, changes: Change[]): void => {
     });
   }
 };
-
-/** Whether the socket is past Hello, so changes may be sent to it. */
-const isSynced = (ws: WebSocket): boolean =>
-  attachmentOf(ws)?.protocolVersion !== undefined;
 
 /** Changes gathered from a DO's several logs, in cursor order. */
 export const byCursor = (changes: Change[]): Change[] =>
@@ -195,15 +196,25 @@ export const welcome = (
 
 /**
  * Sends changes to every socket of the DO past Hello: each of the user's
- * devices, or everyone with the group open.
+ * devices, or everyone with the group open; with `seenBy`, each socket
+ * only the changes its user may see.
  */
 export const broadcastChanges = (
   ctx: DurableObjectState,
-  changes: Change[]
+  changes: Change[],
+  seenBy?: (change: Change, userId: string) => boolean
 ): void => {
   for (const socket of ctx.getWebSockets()) {
-    if (isSynced(socket)) {
-      sendChanges(socket, changes);
+    const attachment = attachmentOf(socket);
+    if (attachment?.protocolVersion === undefined) {
+      continue;
+    }
+    const seen =
+      seenBy === undefined
+        ? changes
+        : changes.filter((change) => seenBy(change, attachment.userId));
+    if (seen.length > 0) {
+      sendChanges(socket, seen);
     }
   }
 };
@@ -340,7 +351,7 @@ export const handleSyncMessage = (
     }
     case "chatPageRequest": {
       if (handlers.chatPageRequest) {
-        handlers.chatPageRequest(ws, kind.value);
+        handlers.chatPageRequest(ws, attachment.userId, kind.value);
       } else {
         rejectAndClose(ws, ServerError_Code.BAD_FRAME, GROUP_SOCKET_ONLY);
       }

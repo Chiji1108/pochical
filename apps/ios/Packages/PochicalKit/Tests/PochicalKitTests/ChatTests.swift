@@ -12,7 +12,20 @@ struct ChatVectors: Decodable, Sendable {
     let expected: Int?
   }
 
+  struct DirectThread: VectorCase {
+    let name: String
+    let a: String
+    let b: String
+    let expected: String
+  }
+
   let firstUnread: [FirstUnread]
+  let directThread: [DirectThread]
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).directThread)
+func directThreadOfTwo(_ vector: ChatVectors.DirectThread) {
+  #expect(directThread(vector.a, vector.b) == vector.expected)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).firstUnread)
@@ -230,5 +243,17 @@ private func unreadCount(_ cursor: UInt64, _ count: UInt32, in groupID: String =
     left.membership.left = true
     try Sync.take([unreadCount(1, 3), left], in: db)
     #expect(try Chats.unreadByGroup(me: "me", db: db).isEmpty)
+  }
+}
+
+@Test func aGroupsChatsAreThoseWithALineOrASendOnItsWay() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try GroupSync.take([line(1, "a")], of: "g", in: db)
+    var send = Pochical_V1_ChatSend()
+    send.threadID = directThread("me", "aya")
+    send.text = "ふたりで"
+    try Chats.edit(.send(send), in: "g", now: 1, db: db)
+    #expect(try Chats.threads(in: "g", db: db) == [groupThread, "direct:aya:me"])
   }
 }

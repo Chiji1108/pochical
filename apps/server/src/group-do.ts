@@ -18,6 +18,8 @@ import {
   chatPage,
   GROUP_THREAD,
   moveReadMark,
+  otherIn,
+  seenBy,
   takeChatEdit,
   unreadCount,
 } from "./group-chat";
@@ -313,19 +315,19 @@ export class GroupDO extends DurableObject<Env> {
       chatEdits: (socket, userId, edits) => {
         this.takeChatEdits(socket, userId, edits);
       },
-      chatPageRequest: (socket, { threadId, beforeSeq }) => {
+      chatPageRequest: (socket, userId, { threadId, beforeSeq }) => {
         send(socket, {
           case: "chatPage",
           value: {
             beforeSeq,
             threadId,
-            ...chatPage(this.db, threadId, beforeSeq),
+            ...chatPage(this.db, userId, threadId, beforeSeq),
           },
         });
       },
-      welcome: (socket, cursor) => {
+      welcome: (socket, cursor, userId) => {
         welcome(socket, cursor, this.head(), (after) =>
-          this.changesAfter(after)
+          this.changesAfter(after, userId)
         );
       },
     });
@@ -417,15 +419,20 @@ export class GroupDO extends DurableObject<Env> {
       const back: Change[] = [];
       for (const edit of edits) {
         const cursor = this.head() + 1;
-        const taken = takeChatEdit(this.db, userId, edit, cursor);
+        const taken = takeChatEdit(this.db, userId, edit, cursor, (id) =>
+          this.isMember(id)
+        );
         if (taken.change) {
           this.setHead(cursor);
           made.push(taken.change);
           if (edit.kind.case === "send") {
+            const { threadId } = edit.kind.value;
+            // A one-to-one chat's line is the other's alone to read.
+            const other = otherIn(threadId, userId);
             others ??= this.memberList()
               .map((member) => member.userId)
               .filter((id) => id !== userId);
-            recount(edit.kind.value.threadId, others);
+            recount(threadId, other === undefined ? others : [other]);
           } else if (edit.kind.case === "read") {
             recount(edit.kind.value.threadId, [userId]);
           }
@@ -436,7 +443,7 @@ export class GroupDO extends DurableObject<Env> {
       }
       return { changed: made, refused: back };
     });
-    broadcastChanges(this.ctx, changed);
+    broadcastChanges(this.ctx, changed, seenBy);
     this.tellUnread(counted);
     if (refused.length > 0) {
       send(ws, { case: "changes", value: { changes: refused } });
@@ -549,13 +556,13 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /**
-   * Every value changed after `cursor`, in cursor order; of the chats'
-   * lines, those chatChangesAfter gives.
+   * Every value changed after `cursor` that the member may see, in cursor
+   * order; of the chats' lines, those chatChangesAfter gives.
    */
-  private changesAfter(cursor: number): Change[] {
+  private changesAfter(cursor: number, userId: string): Change[] {
     return byCursor([
       ...this.logs().flatMap(({ after }) => after(cursor)),
-      ...chatChangesAfter(this.db, cursor),
+      ...chatChangesAfter(this.db, userId, cursor),
     ]);
   }
 }

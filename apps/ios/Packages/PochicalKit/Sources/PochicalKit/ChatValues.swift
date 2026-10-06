@@ -10,6 +10,13 @@ import SQLiteData
 /// The group's own chat, 全体チャット.
 public let groupThread = "group"
 
+/// Two members' one-to-one chat: "direct:" and their ids in order, so
+/// either of them names it alike (spec/vectors/chat.json, directThread).
+public func directThread(_ a: String, _ b: String) -> String {
+  let (first, second) = a.utf16.lexicographicallyPrecedes(b.utf16) ? (a, b) : (b, a)
+  return "direct:\(first):\(second)"
+}
+
 /// A line of a chat as the group holds it.
 @Table("chatLines")
 public struct ChatLineRow: Hashable, Sendable, Identifiable {
@@ -189,6 +196,20 @@ public enum Chats {
     try UnreadCountRow.where { $0.groupID.eq(row.groupID) && $0.threadID.eq(row.threadID) }
       .delete().execute(db)
     try UnreadCountRow.insert { row }.execute(db)
+  }
+
+  /// The group's chats that have a line, or one of the member's own on
+  /// its way: the one-to-one chats a list shows.
+  public static func threads(in groupID: String, db: Database) throws -> Set<String> {
+    var threads = Set(
+      try ChatLineRow.where { $0.groupID.eq(groupID) }.select(\.threadID).distinct()
+        .fetchAll(db))
+    for (edit, _) in try waitingEdits(of: groupID, in: db) {
+      if case .send(let send) = edit.kind {
+        threads.insert(send.threadID)
+      }
+    }
+    return threads
   }
 
   /// A group left takes its counts with it.

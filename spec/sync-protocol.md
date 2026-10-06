@@ -195,7 +195,14 @@ Chat has two orders that must not be mixed:
 - `seq`: a message's position in the conversation, used for display and paging (`before_seq`, page size).
 - `cursor`: the Group DO's change log, used for sync. New messages, edits, deletions and read states all arrive in cursor order.
 
-The Group DO keeps the lines (`ChatLine`) and read marks (`ReadMark`) of its chats as values on its change log, beside its members' shifts. For now a group has its own chat alone (`thread_id` "group", 全体チャット); one-to-one chats come later.
+The Group DO keeps the lines (`ChatLine`) and read marks (`ReadMark`) of its chats as values on its change log, beside its members' shifts. A group has its own chat (`thread_id` "group", 全体チャット) and a one-to-one chat for any two of its members.
+
+### One-to-one chats
+
+- Two members' chat is the thread `direct:{a}:{b}`, their two user ids in order (by UTF-16 code units; every id is ASCII), so either names it alike without asking the server (`spec/vectors/chat.json`, directThread). It exists once it has a line; there is nothing to create.
+- Only its two members see it: the Group DO sends its lines and read marks only to their sockets, leaves them out of anyone else's catch-up, answers anyone else's `ChatPageRequest` for it with an empty page at its start, and drops anyone else's edits of it.
+- A new line is taken only while the other is in the group; a member who left keeps their lines and the chat can still be read, but takes no more. The apps keep listing it under the group's chats, so it can be read and its unread lines cleared, and in place of the composer say 〇〇はグループを抜けました. A line counts as unread for the other member alone.
+- Its lines and read marks share the group's change log with everything else, so a device's cursor still covers all it may see; the other members simply never receive those changes.
 
 - A member writes through their group socket, from their outbox like a shift edit: `ChatEdits` of `ChatSend` (a new line at the end), `ChatChange` (new words for one of their own lines, 編集), `ChatUnsend` (one of their own lines taken back, 送信取消) and `ChatRead` (their read mark). Lines need no clock: the group orders them as it takes them, giving each new line the chat's next `seq`. Each edit has an `op_id`; a send taken twice is one line, and the line carries its `op_id`, so the sending device swaps the line it showed while waiting for the group's. As on the User DO socket, the changes go to everyone with the group open first, then `Acked` to the sender.
 - A change or unsend of someone else's line, or of an unsent one, or words that do not fit (1 to `textLimits.chatMessage` characters, not blank) are refused: the line comes back to the sender as the group holds it, and the edit is acknowledged. A send that does not fit is dropped.

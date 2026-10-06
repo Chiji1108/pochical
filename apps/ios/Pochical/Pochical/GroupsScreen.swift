@@ -45,8 +45,8 @@ struct GroupsScreen: View {
               path.append(.settings(open))
             } onShifts: { day in
               path.append(.shifts(open, day: day))
-            } onChat: {
-              path.append(.chat(open))
+            } onChat: { thread, other in
+              path.append(.chat(open, thread: thread, with: other))
             }
             .padding(.horizontal, 16)
           }
@@ -69,8 +69,8 @@ struct GroupsScreen: View {
           InvitePage(group: live(group))
         case .shifts(let group, let day):
           GroupShiftsPage(group: live(group), day: day)
-        case .chat(let group):
-          ChatScreen(group: live(group))
+        case .chat(let group, let thread, let other):
+          ChatScreen(group: live(group), threadID: thread, otherID: other)
         case .settings(let group):
           GroupSettingsPage(group: live(group)) {
             path.append(.invite(group))
@@ -106,8 +106,9 @@ enum GroupRoute: Hashable {
   /// Everyone's shifts by the month, on a day when one is given.
   case shifts(GroupRow, day: Day?)
   case settings(GroupRow)
-  /// 全体チャット.
-  case chat(GroupRow)
+  /// One of the group's chats: 全体チャット, or a one-to-one chat with the
+  /// member `with`.
+  case chat(GroupRow, thread: String, with: String?)
 }
 
 /// No group yet: what sharing shifts is for, then 作成 and QR参加
@@ -258,7 +259,8 @@ private struct GroupHub: View {
   let onSettings: () -> Void
   /// Opens everyone's shifts by the month, on a day when one is given.
   let onShifts: (Day?) -> Void
-  let onChat: () -> Void
+  /// Opens a chat: its thread, and the other member of a one-to-one chat.
+  let onChat: (String, String?) -> Void
 
   var body: some View {
     ScrollView {
@@ -290,7 +292,9 @@ private struct GroupHub: View {
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(colors.textTertiary)
             .accessibilityAddTraits(.isHeader)
-          ChatRow(group: group, onOpen: onChat)
+          ChatList(group: group, members: members) { thread, other in
+            onChat(thread, other)
+          }
         }
       }
       .padding(.bottom, 24)

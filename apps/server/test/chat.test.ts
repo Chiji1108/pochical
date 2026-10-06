@@ -11,16 +11,19 @@ import {
   syncSocket,
 } from "./sync-helpers";
 
+const thread = "group";
+
 // A member's chat edit as their outbox sends it.
 const chat = (
   socket: WebSocket,
-  edits: { opId: string; kind: Parameters<typeof sendChatKind>[0] }[]
+  edits: { opId: string; kind: Parameters<typeof sendChatKind>[0] }[],
+  threadId = thread
 ): void => {
   sendFrame(socket, {
     case: "chatEdits",
     value: {
       edits: edits.map(({ opId, kind }) => ({
-        kind: sendChatKind(kind),
+        kind: sendChatKind(kind, threadId),
         opId,
       })),
     },
@@ -33,13 +36,11 @@ type ChatKind =
   | { unsend: number }
   | { read: number };
 
-const thread = "group";
-
-function sendChatKind(kind: ChatKind) {
+function sendChatKind(kind: ChatKind, threadId: string) {
   if ("send" in kind) {
     return {
       case: "send",
-      value: { text: kind.send, threadId: thread },
+      value: { text: kind.send, threadId },
     } as const;
   }
   if ("change" in kind) {
@@ -48,19 +49,19 @@ function sendChatKind(kind: ChatKind) {
       value: {
         seq: BigInt(kind.change[0]),
         text: kind.change[1],
-        threadId: thread,
+        threadId,
       },
     } as const;
   }
   if ("unsend" in kind) {
     return {
       case: "unsend",
-      value: { seq: BigInt(kind.unsend), threadId: thread },
+      value: { seq: BigInt(kind.unsend), threadId },
     } as const;
   }
   return {
     case: "read",
-    value: { lastReadSeq: BigInt(kind.read), threadId: thread },
+    value: { lastReadSeq: BigInt(kind.read), threadId },
   } as const;
 }
 
@@ -69,6 +70,32 @@ const groupSocket = async (
   token: string,
   cursor = PAIR_ROSTER
 ) => await syncSocket(`/v1/groups/${groupId}/socket`, token, cursor);
+
+// A group of three, its maker's and the guest's one-to-one chat, and
+// each member's group socket past the third joining (no read mark is kept
+// for an empty chat).
+const trio = async () => {
+  const { call, signInAnonymously, userIdOf } = await import("./helpers");
+  const { directThread } = await import("../src/group-chat");
+  const { groupId, guest, inviteCode, maker, makerId } = await pair();
+  const third = await signInAnonymously();
+  await call(
+    "GroupService/JoinGroup",
+    { displayName: "あや", inviteCode },
+    third
+  );
+  const roster = PAIR_ROSTER + 1n;
+  return {
+    aside: await groupSocket(groupId, third, roster),
+    direct: directThread(await userIdOf(guest), makerId),
+    groupId,
+    guest,
+    mine: await groupSocket(groupId, maker, roster),
+    roster,
+    theirs: await groupSocket(groupId, guest, roster),
+    third,
+  };
+};
 
 describe("a group's chat", () => {
   it("takes a member's line once and gives it to everyone with the group open", async () => {
@@ -270,5 +297,70 @@ describe("a group's chat", () => {
     expect(counts).toMatchObject([
       { kind: { value: { count: 0, groupId, threadId: thread } } },
     ]);
+  });
+
+  it("gives a one-to-one chat's line to its two members alone", async () => {
+    const { aside, direct, mine, theirs } = await trio();
+    chat(mine.socket, [{ kind: { send: "ふたりで" }, opId: "d" }], direct);
+    const line = [{ kind: { case: "chatLine", value: { threadId: direct } } }];
+    expect(changesIn(await mine.frames.next())).toMatchObject(line);
+    expect(changesIn(await theirs.frames.next())).toMatchObject(line);
+    await expect(settled(aside.socket, aside.frames)).resolves.toMatchObject({
+      kind: { case: "pong" },
+    });
+  });
+
+  it("counts a one-to-one chat's line unread for the other alone", async () => {
+    const { direct, guest, mine, third } = await trio();
+    const guestPhone = await device(guest);
+    await guestPhone.frames.next();
+    const thirdPhone = await device(third);
+    await thirdPhone.frames.next();
+    chat(mine.socket, [{ kind: { send: "ふたりで" }, opId: "d" }], direct);
+    expect(changesIn(await guestPhone.frames.next())).toMatchObject([
+      { kind: { case: "unreadCount", value: { count: 1, threadId: direct } } },
+    ]);
+    await expect(
+      settled(thirdPhone.socket, thirdPhone.frames)
+    ).resolves.toMatchObject({ kind: { case: "pong" } });
+  });
+
+  it("lets no one else read or write in a one-to-one chat", async () => {
+    const { direct, groupId, mine, roster, theirs, third } = await trio();
+    chat(mine.socket, [{ kind: { send: "ふたりで" }, opId: "d" }], direct);
+    await mine.frames.next();
+    await theirs.frames.next();
+    // Catching up brings them nothing of it.
+    const later = await groupSocket(groupId, third, roster);
+    await expect(settled(later.socket, later.frames)).resolves.toMatchObject({
+      kind: { case: "pong" },
+    });
+    sendFrame(later.socket, {
+      case: "chatPageRequest",
+      value: { beforeSeq: 0n, threadId: direct },
+    });
+    await expect(later.frames.next()).resolves.toMatchObject({
+      kind: { case: "chatPage", value: { atStart: true, lines: [] } },
+    });
+    chat(later.socket, [{ kind: { send: "割り込み" }, opId: "x" }], direct);
+    await expect(later.frames.next()).resolves.toMatchObject({
+      kind: { case: "acked" },
+    });
+    await expect(settled(theirs.socket, theirs.frames)).resolves.toMatchObject({
+      kind: { case: "pong" },
+    });
+  });
+
+  it("takes no new line in a one-to-one chat once the other has left", async () => {
+    const { call, userIdOf } = await import("./helpers");
+    const { directThread } = await import("../src/group-chat");
+    const { groupId, guest, maker, makerId } = await pair();
+    const direct = directThread(makerId, await userIdOf(guest));
+    await call("GroupService/LeaveGroup", { groupId }, guest);
+    const mine = await groupSocket(groupId, maker, PAIR_ROSTER + 1n);
+    chat(mine.socket, [{ kind: { send: "いる？" }, opId: "a" }], direct);
+    await expect(mine.frames.next()).resolves.toMatchObject({
+      kind: { case: "acked" },
+    });
   });
 });
