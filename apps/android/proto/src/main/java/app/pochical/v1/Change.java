@@ -37,6 +37,8 @@ public  final class Change extends
     MEMBERSHIP(11),
     GROUP_PROFILE(12),
     MEMBER(13),
+    CHAT_LINE(14),
+    READ_MARK(15),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -64,6 +66,8 @@ public  final class Change extends
         case 11: return MEMBERSHIP;
         case 12: return GROUP_PROFILE;
         case 13: return MEMBER;
+        case 14: return CHAT_LINE;
+        case 15: return READ_MARK;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -801,6 +805,131 @@ public  final class Change extends
    */
   private void clearMember() {
     if (kindCase_ == 13) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int CHAT_LINE_FIELD_NUMBER = 14;
+  /**
+   * <pre>
+   * On a Group DO socket: a line of a chat, and how far a member has
+   * read one (spec/sync-protocol.md, Chat).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatLine chat_line = 14 [json_name = "chatLine"];</code>
+   */
+  @java.lang.Override
+  public boolean hasChatLine() {
+    return kindCase_ == 14;
+  }
+  /**
+   * <pre>
+   * On a Group DO socket: a line of a chat, and how far a member has
+   * read one (spec/sync-protocol.md, Chat).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatLine chat_line = 14 [json_name = "chatLine"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatLine getChatLine() {
+    if (kindCase_ == 14) {
+       return (app.pochical.v1.ChatLine) kind_;
+    }
+    return app.pochical.v1.ChatLine.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * On a Group DO socket: a line of a chat, and how far a member has
+   * read one (spec/sync-protocol.md, Chat).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatLine chat_line = 14 [json_name = "chatLine"];</code>
+   */
+  private void setChatLine(app.pochical.v1.ChatLine value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 14;
+  }
+  /**
+   * <pre>
+   * On a Group DO socket: a line of a chat, and how far a member has
+   * read one (spec/sync-protocol.md, Chat).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatLine chat_line = 14 [json_name = "chatLine"];</code>
+   */
+  private void mergeChatLine(app.pochical.v1.ChatLine value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 14 &&
+        kind_ != app.pochical.v1.ChatLine.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ChatLine.newBuilder((app.pochical.v1.ChatLine) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 14;
+  }
+  /**
+   * <pre>
+   * On a Group DO socket: a line of a chat, and how far a member has
+   * read one (spec/sync-protocol.md, Chat).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatLine chat_line = 14 [json_name = "chatLine"];</code>
+   */
+  private void clearChatLine() {
+    if (kindCase_ == 14) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int READ_MARK_FIELD_NUMBER = 15;
+  /**
+   * <code>.pochical.v1.ReadMark read_mark = 15 [json_name = "readMark"];</code>
+   */
+  @java.lang.Override
+  public boolean hasReadMark() {
+    return kindCase_ == 15;
+  }
+  /**
+   * <code>.pochical.v1.ReadMark read_mark = 15 [json_name = "readMark"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ReadMark getReadMark() {
+    if (kindCase_ == 15) {
+       return (app.pochical.v1.ReadMark) kind_;
+    }
+    return app.pochical.v1.ReadMark.getDefaultInstance();
+  }
+  /**
+   * <code>.pochical.v1.ReadMark read_mark = 15 [json_name = "readMark"];</code>
+   */
+  private void setReadMark(app.pochical.v1.ReadMark value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 15;
+  }
+  /**
+   * <code>.pochical.v1.ReadMark read_mark = 15 [json_name = "readMark"];</code>
+   */
+  private void mergeReadMark(app.pochical.v1.ReadMark value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 15 &&
+        kind_ != app.pochical.v1.ReadMark.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ReadMark.newBuilder((app.pochical.v1.ReadMark) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 15;
+  }
+  /**
+   * <code>.pochical.v1.ReadMark read_mark = 15 [json_name = "readMark"];</code>
+   */
+  private void clearReadMark() {
+    if (kindCase_ == 15) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -1638,6 +1767,132 @@ public  final class Change extends
       return this;
     }
 
+    /**
+     * <pre>
+     * On a Group DO socket: a line of a chat, and how far a member has
+     * read one (spec/sync-protocol.md, Chat).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatLine chat_line = 14 [json_name = "chatLine"];</code>
+     */
+    @java.lang.Override
+    public boolean hasChatLine() {
+      return instance.hasChatLine();
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: a line of a chat, and how far a member has
+     * read one (spec/sync-protocol.md, Chat).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatLine chat_line = 14 [json_name = "chatLine"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatLine getChatLine() {
+      return instance.getChatLine();
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: a line of a chat, and how far a member has
+     * read one (spec/sync-protocol.md, Chat).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatLine chat_line = 14 [json_name = "chatLine"];</code>
+     */
+    public Builder setChatLine(app.pochical.v1.ChatLine value) {
+      copyOnWrite();
+      instance.setChatLine(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: a line of a chat, and how far a member has
+     * read one (spec/sync-protocol.md, Chat).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatLine chat_line = 14 [json_name = "chatLine"];</code>
+     */
+    public Builder setChatLine(
+        app.pochical.v1.ChatLine.Builder builderForValue) {
+      copyOnWrite();
+      instance.setChatLine(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: a line of a chat, and how far a member has
+     * read one (spec/sync-protocol.md, Chat).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatLine chat_line = 14 [json_name = "chatLine"];</code>
+     */
+    public Builder mergeChatLine(app.pochical.v1.ChatLine value) {
+      copyOnWrite();
+      instance.mergeChatLine(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * On a Group DO socket: a line of a chat, and how far a member has
+     * read one (spec/sync-protocol.md, Chat).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatLine chat_line = 14 [json_name = "chatLine"];</code>
+     */
+    public Builder clearChatLine() {
+      copyOnWrite();
+      instance.clearChatLine();
+      return this;
+    }
+
+    /**
+     * <code>.pochical.v1.ReadMark read_mark = 15 [json_name = "readMark"];</code>
+     */
+    @java.lang.Override
+    public boolean hasReadMark() {
+      return instance.hasReadMark();
+    }
+    /**
+     * <code>.pochical.v1.ReadMark read_mark = 15 [json_name = "readMark"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ReadMark getReadMark() {
+      return instance.getReadMark();
+    }
+    /**
+     * <code>.pochical.v1.ReadMark read_mark = 15 [json_name = "readMark"];</code>
+     */
+    public Builder setReadMark(app.pochical.v1.ReadMark value) {
+      copyOnWrite();
+      instance.setReadMark(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ReadMark read_mark = 15 [json_name = "readMark"];</code>
+     */
+    public Builder setReadMark(
+        app.pochical.v1.ReadMark.Builder builderForValue) {
+      copyOnWrite();
+      instance.setReadMark(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ReadMark read_mark = 15 [json_name = "readMark"];</code>
+     */
+    public Builder mergeReadMark(app.pochical.v1.ReadMark value) {
+      copyOnWrite();
+      instance.mergeReadMark(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ReadMark read_mark = 15 [json_name = "readMark"];</code>
+     */
+    public Builder clearReadMark() {
+      copyOnWrite();
+      instance.clearReadMark();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.Change)
   }
   @java.lang.Override
@@ -1669,11 +1924,13 @@ public  final class Change extends
             app.pochical.v1.Membership.class,
             app.pochical.v1.GroupProfile.class,
             app.pochical.v1.Member.class,
+            app.pochical.v1.ChatLine.class,
+            app.pochical.v1.ReadMark.class,
           };
           java.lang.String info =
-              "\u0000\r\u0001\u0000\u0001\r\r\u0000\u0000\u0000\u0001\u0003\u0002<\u0000\u0003<" +
-              "\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<\u0000" +
-              "\u000b<\u0000\f<\u0000\r<\u0000";
+              "\u0000\u000f\u0001\u0000\u0001\u000f\u000f\u0000\u0000\u0000\u0001\u0003\u0002<\u0000" +
+              "\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000" +
+              "\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

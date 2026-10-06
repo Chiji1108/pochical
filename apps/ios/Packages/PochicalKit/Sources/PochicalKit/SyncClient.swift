@@ -271,7 +271,8 @@ public actor SyncClient {
       case .clockAhead: throw ClockAhead()
       default: throw ServerRefused(code: error.code, message: error.message)
       }
-    case .pong, nil:
+    // Chat pages are asked for by the chat, which comes later.
+    case .pong, .chatPage, nil:
       break
     }
   }

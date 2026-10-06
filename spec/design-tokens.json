@@ -9,6 +9,7 @@
     "linkPreviewAspect": 1.91,
     "linkPreviewSettleMs": 400,
     "maxPins": 5,
+    "pageSize": 50,
     "typingSendMs": 3000,
     "typingShowMs": 5000
   },

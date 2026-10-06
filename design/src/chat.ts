@@ -27,6 +27,10 @@ export const chatRules = {
   // The most lines pinned at once, as LINE keeps five announcements; a
   // new one takes the place of the oldest.
   maxPins: 5,
+  // How many lines a page of a chat holds: the latest when it opens, and
+  // each earlier page as it scrolls back. A device catching up gets at
+  // most this many new lines of each chat; the rest come as pages.
+  pageSize: 50,
   // How often, in milliseconds, a client sends a typing frame while
   // someone is writing.
   typingSendMs: 3000,

@@ -16,6 +16,11 @@ message ClientFrame {
     RepeatOrdersEdits repeat_orders_edits = 5;
     // The owner's coworkers, from the same outbox; User DO socket only.
     CoworkerEdits coworker_edits = 6;
+    // A member's lines and read marks in the group's chats, from their
+    // outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+    ChatEdits chat_edits = 7;
+    // Asks for a page of a chat's earlier lines; Group DO socket only.
+    ChatPageRequest chat_page_request = 8;
   }
 }
 
@@ -35,6 +40,8 @@ message ServerFrame {
     // The client's cursor is ahead of the server's: drop this DO's cache.
     // A Changes with everything the DO holds follows.
     Reset reset = 6;
+    // A page of a chat's lines, answering a ChatPageRequest.
+    ChatPage chat_page = 7;
   }
 }
 
@@ -164,6 +171,10 @@ message Change {
     // On a Group DO socket: the group's name and mark, and who is in it.
     GroupProfile group_profile = 12;
     Member member = 13;
+    // On a Group DO socket: a line of a chat, and how far a member has
+    // read one (spec/sync-protocol.md, Chat).
+    ChatLine chat_line = 14;
+    ReadMark read_mark = 15;
   }
 }
 
@@ -345,3 +356,94 @@ message CoworkerEdit {
 }
 
 message Reset {}
+
+// A line of a chat as the group holds it, at the cursor it got when it was
+// written or last changed. A chat is the group's own (thread_id "group").
+message ChatLine {
+  string thread_id = 1;
+  // Its place in the chat, from 1, given by the group as it takes it.
+  uint64 seq = 2;
+  // Who wrote it; it stays theirs after they leave.
+  string author_id = 3;
+  // chatMessage characters at most (design/src/limits.ts); empty once
+  // unsent.
+  string text = 4;
+  // When the group took it, in ms since the epoch.
+  int64 sent_at_ms = 5;
+  // Its words were changed after it was sent (編集済み).
+  bool edited = 6;
+  // Taken back by its writer (送信取消): its words are gone for everyone.
+  bool unsent = 7;
+  // The op_id of the edit that sent it, so the sending device puts the
+  // group's line in place of the one it showed while it waited.
+  string op_id = 8;
+}
+
+// How far a member has read a chat: every line up to last_read_seq.
+message ReadMark {
+  string user_id = 1;
+  string thread_id = 2;
+  uint64 last_read_seq = 3;
+}
+
+message ChatEdits {
+  repeated ChatEdit edits = 1;
+}
+
+// One of a member's edits of a chat, which the group takes in the order it
+// arrives; lines and their changes need no clock, as the group alone
+// orders them.
+message ChatEdit {
+  // Unique per edit, as a DayEdit's: a send taken twice is one line.
+  string op_id = 1;
+  oneof kind {
+    ChatSend send = 2;
+    ChatChange change = 3;
+    ChatUnsend unsend = 4;
+    ChatRead read = 5;
+  }
+}
+
+// A new line at the end of the chat.
+message ChatSend {
+  string thread_id = 1;
+  // 1 to chatMessage characters, not blank.
+  string text = 2;
+}
+
+// New words for one of the member's own lines (編集).
+message ChatChange {
+  string thread_id = 1;
+  uint64 seq = 2;
+  // 1 to chatMessage characters, not blank.
+  string text = 3;
+}
+
+// One of the member's own lines taken back (送信取消).
+message ChatUnsend {
+  string thread_id = 1;
+  uint64 seq = 2;
+}
+
+// The member has read the chat up to here; the group only moves a mark
+// forward.
+message ChatRead {
+  string thread_id = 1;
+  uint64 last_read_seq = 2;
+}
+
+message ChatPageRequest {
+  string thread_id = 1;
+  // The lines before this one; 0 for the latest.
+  uint64 before_seq = 2;
+}
+
+// Up to chatRules.pageSize lines of a chat before the asked one, oldest
+// first.
+message ChatPage {
+  string thread_id = 1;
+  uint64 before_seq = 2;
+  repeated ChatLine lines = 3;
+  // The page reaches the chat's first line.
+  bool at_start = 4;
+}

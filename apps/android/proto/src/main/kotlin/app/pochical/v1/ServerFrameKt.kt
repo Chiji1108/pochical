@@ -224,6 +224,42 @@ public object ServerFrameKt {
     public fun hasReset(): kotlin.Boolean {
       return _builder.hasReset()
     }
+
+    /**
+     * ```
+     * A page of a chat's lines, answering a ChatPageRequest.
+     * ```
+     *
+     * `.pochical.v1.ChatPage chat_page = 7 [json_name = "chatPage"];`
+     */
+    public var chatPage: app.pochical.v1.ChatPage
+      @kotlin.jvm.JvmName("getChatPage")
+        get() = _builder.chatPage
+      @kotlin.jvm.JvmName("setChatPage")
+        set(value) {
+        _builder.chatPage = value
+      }
+    /**
+     * ```
+     * A page of a chat's lines, answering a ChatPageRequest.
+     * ```
+     *
+     * `.pochical.v1.ChatPage chat_page = 7 [json_name = "chatPage"];`
+     */
+    public fun clearChatPage() {
+      _builder.clearChatPage()
+    }
+    /**
+     * ```
+     * A page of a chat's lines, answering a ChatPageRequest.
+     * ```
+     *
+     * `.pochical.v1.ChatPage chat_page = 7 [json_name = "chatPage"];`
+     * @return Whether the chatPage field is set.
+     */
+    public fun hasChatPage(): kotlin.Boolean {
+      return _builder.hasChatPage()
+    }
     public val kindCase: app.pochical.v1.ServerFrame.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -253,4 +289,7 @@ public val app.pochical.v1.ServerFrameOrBuilder.ackedOrNull: app.pochical.v1.Ack
 
 public val app.pochical.v1.ServerFrameOrBuilder.resetOrNull: app.pochical.v1.Reset?
   get() = if (hasReset()) getReset() else null
+
+public val app.pochical.v1.ServerFrameOrBuilder.chatPageOrNull: app.pochical.v1.ChatPage?
+  get() = if (hasChatPage()) getChatPage() else null
 

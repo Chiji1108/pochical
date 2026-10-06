@@ -186,5 +186,37 @@ public interface ChangeOrBuilder extends
    */
   app.pochical.v1.Member getMember();
 
+  /**
+   * <pre>
+   * On a Group DO socket: a line of a chat, and how far a member has
+   * read one (spec/sync-protocol.md, Chat).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatLine chat_line = 14 [json_name = "chatLine"];</code>
+   * @return Whether the chatLine field is set.
+   */
+  boolean hasChatLine();
+  /**
+   * <pre>
+   * On a Group DO socket: a line of a chat, and how far a member has
+   * read one (spec/sync-protocol.md, Chat).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatLine chat_line = 14 [json_name = "chatLine"];</code>
+   * @return The chatLine.
+   */
+  app.pochical.v1.ChatLine getChatLine();
+
+  /**
+   * <code>.pochical.v1.ReadMark read_mark = 15 [json_name = "readMark"];</code>
+   * @return Whether the readMark field is set.
+   */
+  boolean hasReadMark();
+  /**
+   * <code>.pochical.v1.ReadMark read_mark = 15 [json_name = "readMark"];</code>
+   * @return The readMark.
+   */
+  app.pochical.v1.ReadMark getReadMark();
+
   public app.pochical.v1.Change.KindCase getKindCase();
 }

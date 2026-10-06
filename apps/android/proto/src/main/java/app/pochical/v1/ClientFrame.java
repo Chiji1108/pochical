@@ -30,6 +30,8 @@ public  final class ClientFrame extends
     PATTERN_EDITS(4),
     REPEAT_ORDERS_EDITS(5),
     COWORKER_EDITS(6),
+    CHAT_EDITS(7),
+    CHAT_PAGE_REQUEST(8),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -51,6 +53,8 @@ public  final class ClientFrame extends
         case 4: return PATTERN_EDITS;
         case 5: return REPEAT_ORDERS_EDITS;
         case 6: return COWORKER_EDITS;
+        case 7: return CHAT_EDITS;
+        case 8: return CHAT_PAGE_REQUEST;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -452,6 +456,151 @@ public  final class ClientFrame extends
    */
   private void clearCoworkerEdits() {
     if (kindCase_ == 6) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int CHAT_EDITS_FIELD_NUMBER = 7;
+  /**
+   * <pre>
+   * A member's lines and read marks in the group's chats, from their
+   * outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatEdits chat_edits = 7 [json_name = "chatEdits"];</code>
+   */
+  @java.lang.Override
+  public boolean hasChatEdits() {
+    return kindCase_ == 7;
+  }
+  /**
+   * <pre>
+   * A member's lines and read marks in the group's chats, from their
+   * outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatEdits chat_edits = 7 [json_name = "chatEdits"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatEdits getChatEdits() {
+    if (kindCase_ == 7) {
+       return (app.pochical.v1.ChatEdits) kind_;
+    }
+    return app.pochical.v1.ChatEdits.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * A member's lines and read marks in the group's chats, from their
+   * outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatEdits chat_edits = 7 [json_name = "chatEdits"];</code>
+   */
+  private void setChatEdits(app.pochical.v1.ChatEdits value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 7;
+  }
+  /**
+   * <pre>
+   * A member's lines and read marks in the group's chats, from their
+   * outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatEdits chat_edits = 7 [json_name = "chatEdits"];</code>
+   */
+  private void mergeChatEdits(app.pochical.v1.ChatEdits value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 7 &&
+        kind_ != app.pochical.v1.ChatEdits.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ChatEdits.newBuilder((app.pochical.v1.ChatEdits) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 7;
+  }
+  /**
+   * <pre>
+   * A member's lines and read marks in the group's chats, from their
+   * outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatEdits chat_edits = 7 [json_name = "chatEdits"];</code>
+   */
+  private void clearChatEdits() {
+    if (kindCase_ == 7) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int CHAT_PAGE_REQUEST_FIELD_NUMBER = 8;
+  /**
+   * <pre>
+   * Asks for a page of a chat's earlier lines; Group DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPageRequest chat_page_request = 8 [json_name = "chatPageRequest"];</code>
+   */
+  @java.lang.Override
+  public boolean hasChatPageRequest() {
+    return kindCase_ == 8;
+  }
+  /**
+   * <pre>
+   * Asks for a page of a chat's earlier lines; Group DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPageRequest chat_page_request = 8 [json_name = "chatPageRequest"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatPageRequest getChatPageRequest() {
+    if (kindCase_ == 8) {
+       return (app.pochical.v1.ChatPageRequest) kind_;
+    }
+    return app.pochical.v1.ChatPageRequest.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * Asks for a page of a chat's earlier lines; Group DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPageRequest chat_page_request = 8 [json_name = "chatPageRequest"];</code>
+   */
+  private void setChatPageRequest(app.pochical.v1.ChatPageRequest value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 8;
+  }
+  /**
+   * <pre>
+   * Asks for a page of a chat's earlier lines; Group DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPageRequest chat_page_request = 8 [json_name = "chatPageRequest"];</code>
+   */
+  private void mergeChatPageRequest(app.pochical.v1.ChatPageRequest value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 8 &&
+        kind_ != app.pochical.v1.ChatPageRequest.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ChatPageRequest.newBuilder((app.pochical.v1.ChatPageRequest) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 8;
+  }
+  /**
+   * <pre>
+   * Asks for a page of a chat's earlier lines; Group DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPageRequest chat_page_request = 8 [json_name = "chatPageRequest"];</code>
+   */
+  private void clearChatPageRequest() {
+    if (kindCase_ == 8) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -960,6 +1109,156 @@ public  final class ClientFrame extends
       return this;
     }
 
+    /**
+     * <pre>
+     * A member's lines and read marks in the group's chats, from their
+     * outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatEdits chat_edits = 7 [json_name = "chatEdits"];</code>
+     */
+    @java.lang.Override
+    public boolean hasChatEdits() {
+      return instance.hasChatEdits();
+    }
+    /**
+     * <pre>
+     * A member's lines and read marks in the group's chats, from their
+     * outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatEdits chat_edits = 7 [json_name = "chatEdits"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatEdits getChatEdits() {
+      return instance.getChatEdits();
+    }
+    /**
+     * <pre>
+     * A member's lines and read marks in the group's chats, from their
+     * outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatEdits chat_edits = 7 [json_name = "chatEdits"];</code>
+     */
+    public Builder setChatEdits(app.pochical.v1.ChatEdits value) {
+      copyOnWrite();
+      instance.setChatEdits(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A member's lines and read marks in the group's chats, from their
+     * outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatEdits chat_edits = 7 [json_name = "chatEdits"];</code>
+     */
+    public Builder setChatEdits(
+        app.pochical.v1.ChatEdits.Builder builderForValue) {
+      copyOnWrite();
+      instance.setChatEdits(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * A member's lines and read marks in the group's chats, from their
+     * outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatEdits chat_edits = 7 [json_name = "chatEdits"];</code>
+     */
+    public Builder mergeChatEdits(app.pochical.v1.ChatEdits value) {
+      copyOnWrite();
+      instance.mergeChatEdits(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A member's lines and read marks in the group's chats, from their
+     * outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatEdits chat_edits = 7 [json_name = "chatEdits"];</code>
+     */
+    public Builder clearChatEdits() {
+      copyOnWrite();
+      instance.clearChatEdits();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * Asks for a page of a chat's earlier lines; Group DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPageRequest chat_page_request = 8 [json_name = "chatPageRequest"];</code>
+     */
+    @java.lang.Override
+    public boolean hasChatPageRequest() {
+      return instance.hasChatPageRequest();
+    }
+    /**
+     * <pre>
+     * Asks for a page of a chat's earlier lines; Group DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPageRequest chat_page_request = 8 [json_name = "chatPageRequest"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatPageRequest getChatPageRequest() {
+      return instance.getChatPageRequest();
+    }
+    /**
+     * <pre>
+     * Asks for a page of a chat's earlier lines; Group DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPageRequest chat_page_request = 8 [json_name = "chatPageRequest"];</code>
+     */
+    public Builder setChatPageRequest(app.pochical.v1.ChatPageRequest value) {
+      copyOnWrite();
+      instance.setChatPageRequest(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Asks for a page of a chat's earlier lines; Group DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPageRequest chat_page_request = 8 [json_name = "chatPageRequest"];</code>
+     */
+    public Builder setChatPageRequest(
+        app.pochical.v1.ChatPageRequest.Builder builderForValue) {
+      copyOnWrite();
+      instance.setChatPageRequest(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Asks for a page of a chat's earlier lines; Group DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPageRequest chat_page_request = 8 [json_name = "chatPageRequest"];</code>
+     */
+    public Builder mergeChatPageRequest(app.pochical.v1.ChatPageRequest value) {
+      copyOnWrite();
+      instance.mergeChatPageRequest(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Asks for a page of a chat's earlier lines; Group DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPageRequest chat_page_request = 8 [json_name = "chatPageRequest"];</code>
+     */
+    public Builder clearChatPageRequest() {
+      copyOnWrite();
+      instance.clearChatPageRequest();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ClientFrame)
   }
   @java.lang.Override
@@ -984,10 +1283,12 @@ public  final class ClientFrame extends
             app.pochical.v1.PatternEdits.class,
             app.pochical.v1.RepeatOrdersEdits.class,
             app.pochical.v1.CoworkerEdits.class,
+            app.pochical.v1.ChatEdits.class,
+            app.pochical.v1.ChatPageRequest.class,
           };
           java.lang.String info =
-              "\u0000\u0006\u0001\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001<\u0000\u0002<" +
-              "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000";
+              "\u0000\b\u0001\u0000\u0001\b\b\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
+              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

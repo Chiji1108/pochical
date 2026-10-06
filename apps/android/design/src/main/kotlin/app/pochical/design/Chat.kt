@@ -12,6 +12,7 @@ object Chat {
   const val linkPreviewAspect = 1.91f
   const val linkPreviewSettleMs = 400
   const val maxPins = 5
+  const val pageSize = 50
   const val typingSendMs = 3000
   const val typingShowMs = 5000
 }

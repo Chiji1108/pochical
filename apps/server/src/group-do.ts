@@ -1,13 +1,25 @@
 import { create, fromBinary } from "@bufbuild/protobuf";
-import { GROUP_MAX_MEMBERS } from "@pochical/design/limits";
+import { GROUP_MAX_MEMBERS, syncLimits } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
 import { and, asc, count, eq, gt, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
-import { ChangeSchema, ChangesSchema } from "./gen/pochical/v1/sync_pb";
-import type { Change } from "./gen/pochical/v1/sync_pb";
+import {
+  ChangeSchema,
+  ChangesSchema,
+  ServerError_Code,
+} from "./gen/pochical/v1/sync_pb";
+import type { Change, ChatEdits } from "./gen/pochical/v1/sync_pb";
+import {
+  chatChangesAfter,
+  chatHead,
+  chatPage,
+  GROUP_THREAD,
+  moveReadMark,
+  takeChatEdit,
+} from "./group-chat";
 import migrations from "./group-do-migrations/migrations.js";
 import {
   logHead,
@@ -29,6 +41,8 @@ import {
   acceptSyncSocket,
   answerKeepalive,
   broadcastChanges,
+  rejectAndClose,
+  send,
   byCursor,
   closeSessionSockets,
   closeUserSockets,
@@ -143,7 +157,18 @@ export class GroupDO extends DurableObject<Env> {
     if (this.memberCount() >= GROUP_MAX_MEMBERS) {
       return "full";
     }
-    broadcastChanges(this.ctx, [this.writeMember({ displayName, userId })]);
+    const joined = this.ctx.storage.transactionSync(() => {
+      const member = this.writeMember({ displayName, userId });
+      // Lines from before they joined are not unread to them.
+      const head = chatHead(this.db, GROUP_THREAD);
+      const cursor = this.head() + 1;
+      const mark = moveReadMark(this.db, userId, GROUP_THREAD, head, cursor);
+      if (mark) {
+        this.setHead(cursor);
+      }
+      return mark ? [member, mark] : [member];
+    });
+    broadcastChanges(this.ctx, joined);
     return "added";
   }
 
@@ -273,11 +298,7 @@ export class GroupDO extends DurableObject<Env> {
   /** Gives out the cursor after the newest, for a value written now. */
   private nextCursor(): number {
     const cursor = this.head() + 1;
-    this.db
-      .insert(logHead)
-      .values({ cursor, id: 1 })
-      .onConflictDoUpdate({ set: { cursor }, target: logHead.id })
-      .run();
+    this.setHead(cursor);
     return cursor;
   }
 
@@ -288,6 +309,19 @@ export class GroupDO extends DurableObject<Env> {
 
   webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): void {
     handleSyncMessage(ws, message, {
+      chatEdits: (socket, userId, edits) => {
+        this.takeChatEdits(socket, userId, edits);
+      },
+      chatPageRequest: (socket, { threadId, beforeSeq }) => {
+        send(socket, {
+          case: "chatPage",
+          value: {
+            beforeSeq,
+            threadId,
+            ...chatPage(this.db, threadId, beforeSeq),
+          },
+        });
+      },
       welcome: (socket, cursor) => {
         welcome(socket, cursor, this.head(), (after) =>
           this.changesAfter(after)
@@ -339,6 +373,65 @@ export class GroupDO extends DurableObject<Env> {
       return kept;
     });
     broadcastChanges(this.ctx, taken);
+  }
+
+  /**
+   * A member's chat edits in one transaction, each change at the next
+   * cursor; sends what changed to everyone with the group open, the lines
+   * a refused edit concerned back to the sender, then acknowledges every
+   * edit to the sender, as the User DO does its owner's (spec/sync-protocol.md,
+   * Outbox). Someone not in the group is refused.
+   */
+  private takeChatEdits(
+    ws: WebSocket,
+    userId: string,
+    { edits }: ChatEdits
+  ): void {
+    if (edits.length > syncLimits.editsPerFrame) {
+      rejectAndClose(
+        ws,
+        ServerError_Code.BAD_FRAME,
+        `At most ${syncLimits.editsPerFrame} edits a frame`
+      );
+      return;
+    }
+    if (!this.isMember(userId)) {
+      rejectAndClose(ws, ServerError_Code.BAD_FRAME, "Not in the group");
+      return;
+    }
+    const { changed, refused } = this.ctx.storage.transactionSync(() => {
+      const made: Change[] = [];
+      const back: Change[] = [];
+      for (const edit of edits) {
+        const cursor = this.head() + 1;
+        const taken = takeChatEdit(this.db, userId, edit, cursor);
+        if (taken.change) {
+          this.setHead(cursor);
+          made.push(taken.change);
+        }
+        if (taken.refused) {
+          back.push(taken.refused);
+        }
+      }
+      return { changed: made, refused: back };
+    });
+    broadcastChanges(this.ctx, changed);
+    if (refused.length > 0) {
+      send(ws, { case: "changes", value: { changes: refused } });
+    }
+    send(ws, {
+      case: "acked",
+      value: { opIds: edits.map(({ opId }) => opId) },
+    });
+  }
+
+  /** Moves the log's head to `cursor`, a value having been written there. */
+  private setHead(cursor: number): void {
+    this.db
+      .insert(logHead)
+      .values({ cursor, id: 1 })
+      .onConflictDoUpdate({ set: { cursor }, target: logHead.id })
+      .run();
   }
 
   /**
@@ -408,8 +501,14 @@ export class GroupDO extends DurableObject<Env> {
     );
   }
 
-  /** Every value changed after `cursor`, in cursor order. */
+  /**
+   * Every value changed after `cursor`, in cursor order; of the chats'
+   * lines, those chatChangesAfter gives.
+   */
   private changesAfter(cursor: number): Change[] {
-    return byCursor(this.logs().flatMap(({ after }) => after(cursor)));
+    return byCursor([
+      ...this.logs().flatMap(({ after }) => after(cursor)),
+      ...chatChangesAfter(this.db, cursor),
+    ]);
   }
 }

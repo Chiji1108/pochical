@@ -195,6 +195,12 @@ Chat has two orders that must not be mixed:
 - `seq`: a message's position in the conversation, used for display and paging (`before_seq`, page size).
 - `cursor`: the Group DO's change log, used for sync. New messages, edits, deletions and read states all arrive in cursor order.
 
+The Group DO keeps the lines (`ChatLine`) and read marks (`ReadMark`) of its chats as values on its change log, beside its members' shifts. For now a group has its own chat alone (`thread_id` "group", 全体チャット); one-to-one chats come later.
+
+- A member writes through their group socket, from their outbox like a shift edit: `ChatEdits` of `ChatSend` (a new line at the end), `ChatChange` (new words for one of their own lines, 編集), `ChatUnsend` (one of their own lines taken back, 送信取消) and `ChatRead` (their read mark). Lines need no clock: the group orders them as it takes them, giving each new line the chat's next `seq`. Each edit has an `op_id`; a send taken twice is one line, and the line carries its `op_id`, so the sending device swaps the line it showed while waiting for the group's. As on the User DO socket, the changes go to everyone with the group open first, then `Acked` to the sender.
+- A change or unsend of someone else's line, or of an unsent one, or words that do not fit (1 to `textLimits.chatMessage` characters, not blank) are refused: the line comes back to the sender as the group holds it, and the edit is acknowledged. A send that does not fit is dropped.
+- Catching up, a device gets every read mark and every change to a line written by its cursor, but of the lines written since, only each chat's latest `chatRules.pageSize`; earlier ones it asks for as pages (`ChatPageRequest` with `before_seq`, 0 for the latest, answered by `ChatPage`: up to `chatRules.pageSize` lines before it, oldest first, and `at_start` once they reach the first). So a device away for long, or new, is not sent a chat's whole history.
+
 The client caches messages by `seq` and records which contiguous ranges it holds (`cached_ranges(min_seq, max_seq)`).
 
 - Scrolling past the edge of a cached range fetches the previous page and extends or merges ranges.
@@ -205,10 +211,10 @@ The client caches messages by `seq` and records which contiguous ranges it holds
 
 A thread is a group's shared chat or a direct chat between two members. Each (user, thread) pair has one watermark, `last_read_seq`: everything up to it counts as read. Chat is read in order, so per-message receipts are not needed.
 
-- The Group DO stores `read_states(user_id, thread_id, last_read_seq)` and only moves a watermark forward (`max`). Updates from several devices, out of order or repeated, converge without conflict resolution.
+- The Group DO stores `read_marks(user_id, thread_id, last_read_seq)` and only moves a watermark forward (`max`), never past the chat's last line. Updates from several devices, out of order or repeated, converge without conflict resolution. No mark reads as nothing read.
 - Watermark changes go through the change log, so members see read markers update live. A message counts as read by every member whose watermark is at or past its `seq`.
 - Unread count for a thread: messages with `seq > last_read_seq` not authored by the user.
-- A member who joins starts at the thread's current head, so history before joining is not unread.
+- A member who joins starts at the thread's current head, so history before joining is not unread: joining moves their mark there.
 
 Clients advance the watermark to the newest message shown on screen, batching updates while the user scrolls. The update goes through the outbox like a shift edit; since the server applies `max`, redelivery is harmless.
 
@@ -241,7 +247,7 @@ Presence means "has this thread open on screen", not "online in the app": mobile
 
 - Deleting an account: what goes (the User DO, memberships and what groups hold of the user, their messages' authorship) and how the user's other devices learn of it. Apple asks apps to revoke a deleted user's Sign in with Apple tokens; with none kept, deletion has the person sign in with Apple once more for a fresh code to revoke with
 - Snapshot format for resets and how long each DO keeps its change log
-- Wire messages for chat pages, and resets for DOs that do not keep values as registers
+- Resets for DOs that do not keep values as registers
 - Push notifications (chat, mentions): the server sends a localization key and its arguments (APNs `loc-key`/`loc-args`, FCM `body_loc_key`/`body_loc_args`), never text it has put together, so the app words them in its own language and the server need not know each reader's
 - Presence and "last seen": whether to show them at all. Pochical is for family and friends, where visible presence and read markers can feel like pressure; typing alone may be enough. "Last seen" would also need storing in the User DO.
 - Read state options: whether members see read markers (and whether users can turn them off), "mark as unread" (it moves the watermark back, so `max` would become a per-thread LWW register), and muted threads left out of badge totals (mentions: spec/chat.md)

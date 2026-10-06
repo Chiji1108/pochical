@@ -227,6 +227,81 @@ public object ClientFrameKt {
     public fun hasCoworkerEdits(): kotlin.Boolean {
       return _builder.hasCoworkerEdits()
     }
+
+    /**
+     * ```
+     * A member's lines and read marks in the group's chats, from their
+     * outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+     * ```
+     *
+     * `.pochical.v1.ChatEdits chat_edits = 7 [json_name = "chatEdits"];`
+     */
+    public var chatEdits: app.pochical.v1.ChatEdits
+      @kotlin.jvm.JvmName("getChatEdits")
+        get() = _builder.chatEdits
+      @kotlin.jvm.JvmName("setChatEdits")
+        set(value) {
+        _builder.chatEdits = value
+      }
+    /**
+     * ```
+     * A member's lines and read marks in the group's chats, from their
+     * outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+     * ```
+     *
+     * `.pochical.v1.ChatEdits chat_edits = 7 [json_name = "chatEdits"];`
+     */
+    public fun clearChatEdits() {
+      _builder.clearChatEdits()
+    }
+    /**
+     * ```
+     * A member's lines and read marks in the group's chats, from their
+     * outbox; Group DO socket only (spec/sync-protocol.md, Chat).
+     * ```
+     *
+     * `.pochical.v1.ChatEdits chat_edits = 7 [json_name = "chatEdits"];`
+     * @return Whether the chatEdits field is set.
+     */
+    public fun hasChatEdits(): kotlin.Boolean {
+      return _builder.hasChatEdits()
+    }
+
+    /**
+     * ```
+     * Asks for a page of a chat's earlier lines; Group DO socket only.
+     * ```
+     *
+     * `.pochical.v1.ChatPageRequest chat_page_request = 8 [json_name = "chatPageRequest"];`
+     */
+    public var chatPageRequest: app.pochical.v1.ChatPageRequest
+      @kotlin.jvm.JvmName("getChatPageRequest")
+        get() = _builder.chatPageRequest
+      @kotlin.jvm.JvmName("setChatPageRequest")
+        set(value) {
+        _builder.chatPageRequest = value
+      }
+    /**
+     * ```
+     * Asks for a page of a chat's earlier lines; Group DO socket only.
+     * ```
+     *
+     * `.pochical.v1.ChatPageRequest chat_page_request = 8 [json_name = "chatPageRequest"];`
+     */
+    public fun clearChatPageRequest() {
+      _builder.clearChatPageRequest()
+    }
+    /**
+     * ```
+     * Asks for a page of a chat's earlier lines; Group DO socket only.
+     * ```
+     *
+     * `.pochical.v1.ChatPageRequest chat_page_request = 8 [json_name = "chatPageRequest"];`
+     * @return Whether the chatPageRequest field is set.
+     */
+    public fun hasChatPageRequest(): kotlin.Boolean {
+      return _builder.hasChatPageRequest()
+    }
     public val kindCase: app.pochical.v1.ClientFrame.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -256,4 +331,10 @@ public val app.pochical.v1.ClientFrameOrBuilder.repeatOrdersEditsOrNull: app.poc
 
 public val app.pochical.v1.ClientFrameOrBuilder.coworkerEditsOrNull: app.pochical.v1.CoworkerEdits?
   get() = if (hasCoworkerEdits()) getCoworkerEdits() else null
+
+public val app.pochical.v1.ClientFrameOrBuilder.chatEditsOrNull: app.pochical.v1.ChatEdits?
+  get() = if (hasChatEdits()) getChatEdits() else null
+
+public val app.pochical.v1.ClientFrameOrBuilder.chatPageRequestOrNull: app.pochical.v1.ChatPageRequest?
+  get() = if (hasChatPageRequest()) getChatPageRequest() else null
 
