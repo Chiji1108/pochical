@@ -143,7 +143,7 @@ struct MessageActionsOverlay: View {
         menu
           .frame(width: Self.menuWidth)
           .modifier(Placed(edge: place.edge, x: place.x, y: place.menuY, width: proxy.size.width))
-          .scaleEffect(shown ? 1 : 0.85, anchor: request.mine ? .topTrailing : .topLeading)
+          .scaleEffect(shown ? 1 : 0.85, anchor: menuAnchor(under: place.menuUnder))
           .opacity(shown ? 1 : 0)
       }
       .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
@@ -245,19 +245,36 @@ struct MessageActionsOverlay: View {
 
   // MARK: Placing
 
-  /// Where the bar, the bubble and the menu go: as the line was, moved
-  /// together to stay between the screen's edges, the bubble drawn smaller
-  /// when the three cannot fit, and cut short at its end past that.
+  /// Where the bar, the bubble and the menu go: the bubble where it was,
+  /// the bar over it and the menu under it, or over the bar when there is
+  /// no room under it, as LINE turns it. Only when neither fits are the
+  /// three moved together to stay between the screen's edges, the bubble
+  /// drawn smaller when they cannot fit, and cut short at its end past
+  /// that.
   private func placement(in size: CGSize) -> Placement {
     let insets = Self.safeInsets
     let top = insets.top + Self.margin
     let bottom = size.height - insets.bottom - Self.margin
     let barSpace = request.reactions == nil ? 0 : Self.barHeight + Self.gap
     let menuSpace = Self.gap + menuHeight
+    let frame = request.frame
+    let stays = frame.minY - barSpace >= top && frame.maxY <= bottom
+    if stays, frame.maxY + menuSpace <= bottom || frame.minY - barSpace - menuSpace >= top {
+      let under = frame.maxY + menuSpace <= bottom
+      return Placement(
+        edge: request.mine ? .trailing : .leading,
+        x: request.mine ? frame.maxX : frame.minX,
+        barY: frame.minY - barSpace,
+        bubbleY: frame.minY,
+        bubbleHeight: frame.height,
+        scale: 1,
+        menuY: under ? frame.maxY + Self.gap : frame.minY - barSpace - menuSpace,
+        menuUnder: under)
+    }
     let room = max(bottom - top - barSpace - menuSpace, 60)
-    let scale = min(1, max(room / request.frame.height, Self.leastScale))
-    let bubbleHeight = min(request.frame.height * scale, room)
-    var bubbleY = request.frame.minY
+    let scale = min(1, max(room / frame.height, Self.leastScale))
+    let bubbleHeight = min(frame.height * scale, room)
+    var bubbleY = frame.minY
     if bubbleY - barSpace < top {
       bubbleY = top + barSpace
     }
@@ -271,7 +288,18 @@ struct MessageActionsOverlay: View {
       bubbleY: bubbleY,
       bubbleHeight: bubbleHeight,
       scale: scale,
-      menuY: bubbleY + bubbleHeight + Self.gap)
+      menuY: bubbleY + bubbleHeight + Self.gap,
+      menuUnder: true)
+  }
+
+  /// Where the menu grows from: its corner by the bubble.
+  private func menuAnchor(under: Bool) -> UnitPoint {
+    switch (under, request.mine) {
+    case (true, true): .topTrailing
+    case (true, false): .topLeading
+    case (false, true): .bottomTrailing
+    case (false, false): .bottomLeading
+    }
   }
 
   private var menuHeight: CGFloat {
@@ -326,6 +354,8 @@ private struct Placement {
   /// How large the bubble is drawn: below 1 when too tall for the room.
   let scale: CGFloat
   let menuY: CGFloat
+  /// The menu under the bubble; else over the bar.
+  let menuUnder: Bool
 }
 
 /// One of the overlay's choices.
