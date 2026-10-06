@@ -363,4 +363,43 @@ describe("a group's chat", () => {
       kind: { case: "acked" },
     });
   });
+
+  it("goes on with a one-to-one chat once the other joins again", async () => {
+    const { call, userIdOf } = await import("./helpers");
+    const { directThread } = await import("../src/group-chat");
+    const { groupId, guest, inviteCode, maker, makerId } = await pair();
+    const direct = directThread(makerId, await userIdOf(guest));
+    const before = await groupSocket(groupId, maker);
+    chat(before.socket, [{ kind: { send: "またね" }, opId: "a" }], direct);
+    await before.frames.next();
+    await before.frames.next();
+
+    await call("GroupService/LeaveGroup", { groupId }, guest);
+    await call(
+      "GroupService/JoinGroup",
+      { displayName: "ゆうき", inviteCode },
+      guest
+    );
+    // Back, they catch up on what was said before they left…
+    const theirs = await groupSocket(groupId, guest, 0n);
+    const earlier = changesIn(await theirs.frames.next()).flatMap(({ kind }) =>
+      kind.case === "chatLine" ? [kind.value.text] : []
+    );
+    expect(earlier).toContain("またね");
+
+    // …and the chat takes new lines again.
+    chat(theirs.socket, [{ kind: { send: "ただいま" }, opId: "b" }], direct);
+    await expect(theirs.frames.next()).resolves.toMatchObject({
+      kind: {
+        case: "changes",
+        value: {
+          changes: [
+            {
+              kind: { case: "chatLine", value: { seq: 2n, text: "ただいま" } },
+            },
+          ],
+        },
+      },
+    });
+  });
 });
