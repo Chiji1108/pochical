@@ -83,7 +83,9 @@ struct PollCard: View {
       }
     }
     .foregroundStyle(colors.textPrimary)
-    .frame(width: 264)
+    // 264 where the row has room, narrower where it does not, so the time
+    // beside it stays in the row.
+    .frame(maxWidth: 264)
     .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.lg))
     .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
     .overlay(

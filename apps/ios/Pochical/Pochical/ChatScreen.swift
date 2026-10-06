@@ -1054,8 +1054,10 @@ private struct LineView: View {
       .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
       .padding(mine ? .leading : .trailing, 40)
     }
-    // The line reads as one, its reactions as buttons of their own.
-    .accessibilityElement(children: reactions.isEmpty ? .combine : .contain)
+    // The line reads as one; its reactions, a poll's 行ける and シフト表で見る
+    // stay buttons of their own.
+    .accessibilityElement(
+      children: reactions.isEmpty && poll == nil && shifts == nil ? .combine : .contain)
   }
 
   /// The ring's shape: the bubble's, or the card's.
