@@ -246,22 +246,29 @@ export const chatChangesAfter = (
   db: DrizzleSqliteDODatabase,
   cursor: number
 ): Change[] => {
-  const head = chatHead(db, GROUP_THREAD);
-  const lines = db
-    .select()
+  // Each chat's own latest page, by its own last seq.
+  const threads = db
+    .selectDistinct({ threadId: chatLines.threadId })
     .from(chatLines)
-    .where(
-      and(
-        gt(chatLines.cursor, cursor),
-        or(
-          lte(chatLines.createdCursor, cursor),
-          gt(chatLines.seq, head - chatRules.pageSize)
+    .all();
+  const lines = threads.flatMap(({ threadId }) =>
+    db
+      .select()
+      .from(chatLines)
+      .where(
+        and(
+          eq(chatLines.threadId, threadId),
+          gt(chatLines.cursor, cursor),
+          or(
+            lte(chatLines.createdCursor, cursor),
+            gt(chatLines.seq, chatHead(db, threadId) - chatRules.pageSize)
+          )
         )
       )
-    )
-    .orderBy(asc(chatLines.cursor))
-    .all()
-    .map(chatLineChange);
+      .orderBy(asc(chatLines.cursor))
+      .all()
+      .map(chatLineChange)
+  );
   const marks = db
     .select()
     .from(readMarks)
