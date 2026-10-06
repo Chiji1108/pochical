@@ -6,7 +6,7 @@ The numbers named `chatRules.*` here are in `design/src/chat.ts`, the one place 
 
 ## Opening a message's menu
 
-A long press on a message (the system's context-menu press: `.contextMenu` on iOS, `combinedClickable`'s long click on Android; a right click on the web) opens its reactions and menu, as LINE and iMessage do. A tap is the message's own: a link or a mention opens, a photo opens large, a shared day or a poll's head does nothing. So scrolling past a line never opens its menu by accident. A long press on a link opens the link's menu instead. With a keyboard or a screen reader, activating the message opens its menu (a photo's activation opens it large; its menu is in the screen reader's actions).
+A long press on a message (a right click on the web) opens its reactions and menu, as LINE, WhatsApp and iMessage do: the rest of the screen dims, the message stays where it was, lifted a little, with the reactions in a bar over it and the menu under it, all moved together when they would run off the screen (a tall message cut short at its top), and the message's place in the chat left empty meanwhile. A tap outside closes it; a pick closes it, then acts. The apps draw it themselves rather than the system's context menu, which puts reactions inside the menu. The press gives a little under the finger and a light haptic marks it opening. A tap is the message's own: a link or a mention opens, a photo opens large, a shared day or a poll's head does nothing. So scrolling past a line never opens its menu by accident. A long press on a link opens the link's menu instead. With a keyboard or a screen reader, activating the message opens its menu (a photo's activation opens it large; its menu is in the screen reader's actions).
 
 ## What is a link
 
@@ -80,7 +80,7 @@ A member can change or take back their own messages, at any time. Others' messag
 
 ## Reactions
 
-- Any member reacts to any line (not one taken back) with an emoji, from the top of its long-press menu: 👍 ❤️ 😂 👀 🙏 🎉 in a row, as Messages puts its tapbacks over the menu, then ほかの絵文字 for any other, from the system's emoji keyboard. A pick closes the menu. Several emoji may be on a line, and one member may choose several.
+- Any member reacts to any line (not one taken back) with an emoji, from the bar over it on a long press: 👍 ❤️ 😂 👀 🙏 🎉, the reader's own on the accent's container, then + for any other, from the system's emoji keyboard (Opening a message's menu). Several emoji may be on a line, and one member may choose several.
 - Under the line, each emoji sits with the faces of who chose it, in the order they did, past three two faces and +N, in a pill on the card's ground; the reader's own on the accent's container, edged in the accent. A tap puts yours on or takes it back; a long press lists everyone who chose it by name.
 - Emoji keep the order they were first chosen in, and one nobody holds any more goes. Taking a line back (送信取消) takes its reactions off. A reaction sends no notification and changes no unread count.
 - A reaction is the member's edit of the line (`ChatReact`, on or off), which the group takes only for one emoji (spec/text-limits.md, isEmoji). The line comes again with every reaction on it, so a device simply shows the latest.

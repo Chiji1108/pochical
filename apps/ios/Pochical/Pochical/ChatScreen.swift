@@ -141,6 +141,8 @@ struct ChatScreen: View {
   @Environment(\.openInvite) private var openInvite
   /// The line whose ほかの絵文字 is open.
   @State private var reactingTo: ChatLineRow?
+  /// The line whose reactions and menu are open.
+  @State private var acting: MessageActionsRequest?
 
   var body: some View {
     let state = chat.state
@@ -258,6 +260,8 @@ struct ChatScreen: View {
       }
     }
     .environment(\.openURL, OpenURLAction { open($0) })
+    // Leaving the chat takes its open menu with it.
+    .onDisappear { closeActions() }
     .sheet(item: $reactingTo) { line in
       EmojiKeyboardSheet { react($0, on: line) }
     }
@@ -348,33 +352,30 @@ struct ChatScreen: View {
           text: line.text, time: line.sentAtMs, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
           named: otherID == nil, waiting: false, nameOf: nameOf,
-          reactions: line.reactions, meID: meID, onReact: onReact
-        ) {
-          ReactionPalette(reactions: line.reactions, meID: meID) {
-            react($0, on: line)
-          } onMore: {
-            reactingTo = line
-          }
-          Button("コピー", systemImage: "doc.on.doc") {
-            UIPasteboard.general.string = plainText(line.text, nameOf: nameOf)
-          }
-          if mine {
-            Button("編集", systemImage: "pencil") { edit(line) }
-            Divider()
-            Button("送信取消", systemImage: "arrow.uturn.backward", role: .destructive) {
-              unsending = line
-            }
-          }
+          reactions: line.reactions, meID: meID, onReact: onReact,
+          lifted: acting?.lineID == line.opID
+        ) { frame in
+          openActions(
+            MessageActionsRequest(
+              lineID: line.opID, frame: frame, mine: mine,
+              bubble: AnyView(
+                MessageBubble(text: line.text, mine: mine, waiting: false, nameOf: nameOf)),
+              reactions: line.reactions, meID: meID, onReact: onReact,
+              onMoreReactions: { reactingTo = line }, actions: actions(for: line, mine: mine)))
         }
       }
     case .waiting(let line):
       LineView(
         text: line.text, time: line.madeAtMs, edited: false, mine: true, writer: nil,
-        named: false, waiting: true, nameOf: nameOf
-      ) {
-        Button("コピー", systemImage: "doc.on.doc") {
-          UIPasteboard.general.string = plainText(line.text, nameOf: nameOf)
-        }
+        named: false, waiting: true, nameOf: nameOf, lifted: acting?.lineID == line.opID
+      ) { frame in
+        // Still on its way: nothing but コピー yet.
+        openActions(
+          MessageActionsRequest(
+            lineID: line.opID, frame: frame, mine: true,
+            bubble: AnyView(
+              MessageBubble(text: line.text, mine: true, waiting: true, nameOf: nameOf)),
+            actions: [copy(line.text)]))
       }
     }
   }
@@ -616,6 +617,47 @@ struct ChatScreen: View {
     stopEditing()
   }
 
+  /// A line's menu: コピー, then for one's own 編集, and 送信取消 apart in
+  /// the danger color (spec/chat.md, Editing and unsending).
+  private func actions(for line: ChatLineRow, mine: Bool) -> [MessageAction] {
+    var actions = [copy(line.text)]
+    if mine {
+      actions.append(MessageAction(title: "編集", systemImage: "pencil") { edit(line) })
+      actions.append(
+        MessageAction(
+          title: "送信取消", systemImage: "arrow.uturn.backward", destructive: true,
+          startsGroup: true
+        ) { unsending = line })
+    }
+    return actions
+  }
+
+  private func copy(_ text: String) -> MessageAction {
+    MessageAction(title: "コピー", systemImage: "doc.on.doc") {
+      UIPasteboard.general.string = plainText(text, nameOf: nameOf)
+    }
+  }
+
+  /// Opens a line's reactions and menu over everything, at once: the
+  /// overlay draws its own coming in.
+  private func openActions(_ request: MessageActionsRequest) {
+    acting = request
+    OverlayWindow.shared.show(
+      MessageActionsOverlay(request: request) { action in
+        closeActions()
+        action?()
+      }
+      .environment(\.themeColors, colors))
+  }
+
+  /// Gives the line back its bubble in the chat, then takes the overlay
+  /// away once the chat has drawn it, so the bubble never blinks out
+  /// between the two.
+  private func closeActions() {
+    acting = nil
+    OverlayWindow.shared.hide(after: .milliseconds(50))
+  }
+
   /// Puts the reader's `emoji` on the line, or takes it back if it was
   /// theirs already.
   private func react(_ emoji: String, on line: ChatLineRow) {
@@ -679,7 +721,7 @@ private struct ReadKey: Hashable {
 /// A line of words: others' on the left with their face and, at the start
 /// of a run, their name; one's own on the right in the accent, dimmed
 /// while it waits to be sent. The time beside the bubble, 編集済み over it.
-private struct LineView<Menu: View>: View {
+private struct LineView: View {
   @Environment(\.themeColors) private var colors
   let text: String
   let time: Int64
@@ -697,8 +739,13 @@ private struct LineView<Menu: View>: View {
   var meID: String?
   /// Puts the reader's reaction on, or takes it back.
   var onReact: (String) -> Void = { _ in }
-  /// The bubble's long-press menu.
-  @ViewBuilder let menu: () -> Menu
+  /// Its bubble is lifted over the chat, its place standing empty.
+  var lifted = false
+  /// Opens the line's reactions and menu, from where its bubble is.
+  let onActions: (CGRect) -> Void
+  /// Where the bubble is on the screen, for its menu.
+  @State private var frame = CGRect.zero
+  @State private var pressing = false
 
   private static var avatar: CGFloat { 32 }
 
@@ -724,18 +771,30 @@ private struct LineView<Menu: View>: View {
         }
         HStack(alignment: .bottom, spacing: 8) {
           if mine { meta }
-          Text(words)
-            .font(.subheadline)
-            .lineSpacing(3)
-            .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
-            .tint(mine ? colors.accentOnFill : colors.accentDefault)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(mine ? colors.accentFill : colors.fillTertiary, in: bubble)
-            .opacity(waiting ? 0.6 : 1)
-            // The bubble alone lifts, as Messages lifts one.
-            .contentShape(.contextMenuPreview, bubble)
-            .contextMenu(menuItems: menu)
+          MessageBubble(text: text, mine: mine, waiting: waiting, nameOf: nameOf)
+            // Its own size and where its middle is: the press's give
+            // shrinks its frame on the screen, not its size.
+            .onGeometryChange(for: CGRect.self) { proxy in
+              let global = proxy.frame(in: .global)
+              return CGRect(
+                x: global.midX - proxy.size.width / 2, y: global.midY - proxy.size.height / 2,
+                width: proxy.size.width, height: proxy.size.height)
+            } action: {
+              frame = $0
+            }
+            // Gives a little under the finger, as Messages' bubble does,
+            // and opens its reactions and menu once held.
+            .scaleEffect(pressing ? 0.96 : 1)
+            .opacity(lifted ? 0 : 1)
+            .animation(.easeOut(duration: 0.2), value: pressing)
+            .onLongPressGesture(minimumDuration: 0.35) {
+              UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+              pressing = false
+              onActions(frame)
+            } onPressingChanged: {
+              pressing = $0
+            }
+            .accessibilityAction(named: "リアクションとメニュー") { onActions(frame) }
           if !mine { meta }
         }
         if !reactions.isEmpty {
@@ -747,6 +806,48 @@ private struct LineView<Menu: View>: View {
     }
     // The line reads as one, its reactions as buttons of their own.
     .accessibilityElement(children: reactions.isEmpty ? .combine : .contain)
+  }
+
+  /// 編集済み over the time, toward the bubble; a clock while it waits.
+  private var meta: some View {
+    VStack(alignment: mine ? .trailing : .leading, spacing: 0) {
+      if edited {
+        Text("編集済み")
+      }
+      if waiting {
+        Image(systemName: "clock")
+          .accessibilityLabel("送信中")
+      } else {
+        Text(ChatTime.clock(time))
+      }
+    }
+    .font(.caption2)
+    .foregroundStyle(colors.textQuaternary)
+    .padding(.bottom, 2)
+    .fixedSize()
+  }
+}
+
+/// A line's words in its bubble: others' on the quiet fill, one's own in
+/// the accent, dimmed while it waits to be sent.
+struct MessageBubble: View {
+  @Environment(\.themeColors) private var colors
+  let text: String
+  let mine: Bool
+  let waiting: Bool
+  /// A member's name, for the line's mentions.
+  let nameOf: (String) -> String
+
+  var body: some View {
+    Text(words)
+      .font(.subheadline)
+      .lineSpacing(3)
+      .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
+      .tint(mine ? colors.accentOnFill : colors.accentDefault)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 8)
+      .background(mine ? colors.accentFill : colors.fillTertiary, in: bubble)
+      .opacity(waiting ? 0.6 : 1)
   }
 
   /// The line's words, its mentions as @ and the name in the name's
@@ -775,22 +876,4 @@ private struct LineView<Menu: View>: View {
       bottomTrailingRadius: mine ? Radius.sm : Radius.lg, topTrailingRadius: Radius.lg)
   }
 
-  /// 編集済み over the time, toward the bubble; a clock while it waits.
-  private var meta: some View {
-    VStack(alignment: mine ? .trailing : .leading, spacing: 0) {
-      if edited {
-        Text("編集済み")
-      }
-      if waiting {
-        Image(systemName: "clock")
-          .accessibilityLabel("送信中")
-      } else {
-        Text(ChatTime.clock(time))
-      }
-    }
-    .font(.caption2)
-    .foregroundStyle(colors.textQuaternary)
-    .padding(.bottom, 2)
-    .fixedSize()
-  }
 }
