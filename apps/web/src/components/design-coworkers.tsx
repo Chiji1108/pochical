@@ -208,7 +208,7 @@ export function CoworkersPage({
 }
 
 // Renaming shows on every day the person is on; deleting takes them off
-// those days, which the second press confirms.
+// those days, which the second press confirms when there are any.
 function CoworkerEditor({
   name,
   days,
@@ -268,7 +268,11 @@ function CoworkerEditor({
       </Note>
       <DestructiveButton
         onClick={() => {
-          setConfirming(true);
+          if (days === 0) {
+            onDelete();
+          } else {
+            setConfirming(true);
+          }
         }}
       >
         この人を削除

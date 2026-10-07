@@ -125,7 +125,7 @@ struct CoworkersPage: View {
 }
 
 /// Someone's name, changed on every day they are on; deleting takes them
-/// off those days, asked first.
+/// off those days, asked first when there are any.
 private struct CoworkerEditor: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
@@ -162,7 +162,13 @@ private struct CoworkerEditor: View {
       .settingsRows()
 
       Section {
-        Button("この人を削除", role: .destructive) { confirming = true }
+        Button("この人を削除", role: .destructive) {
+          if days == 0 {
+            delete()
+          } else {
+            confirming = true
+          }
+        }
           .frame(maxWidth: .infinity)
       }
       .settingsRows()
@@ -183,12 +189,14 @@ private struct CoworkerEditor: View {
     }
     .alert("\(person.name)を削除しますか？", isPresented: $confirming) {
       Button("キャンセル", role: .cancel) {}
-      Button("削除", role: .destructive) {
-        try? database.write { try OwnValues.deleteCoworker(person.id, now: nowMs(), in: $0) }
-        dismiss()
-      }
+      Button("削除", role: .destructive) { delete() }
     } message: {
       Text("\(days)日の予定から\(person.name)が外れます。")
     }
+  }
+
+  private func delete() {
+    try? database.write { try OwnValues.deleteCoworker(person.id, now: nowMs(), in: $0) }
+    dismiss()
   }
 }
