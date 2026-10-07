@@ -392,9 +392,8 @@ export const markValue = css({
   justifyContent: "flex-end",
 });
 
-// 見本 on a preview's top edge at the right, as the style page's calendar
-// has it: what is under it shows how something looks, and is not a row
-// to press. The preview is positioned.
+// A tag on a preview's top edge at the right, as the style page's calendar
+// has it, naming the place the preview shows. The preview is positioned.
 const sampleTagStyle = css({
   bg: "background.base",
   border: "1px solid token(colors.separator)",
@@ -408,9 +407,9 @@ const sampleTagStyle = css({
   top: "-8px",
 });
 
-// A preview that pages between places names the one shown instead, as
-// the style page's カレンダー and ウィジェット.
-export function SampleTag({ label = "見本" }: { label?: ReactNode }) {
+// The style page's preview pages between places and names the one shown,
+// カレンダー or ホーム画面.
+export function SampleTag({ label }: { label: ReactNode }) {
   return (
     <span aria-hidden="true" className={sampleTagStyle}>
       {label}
@@ -419,8 +418,8 @@ export function SampleTag({ label = "見本" }: { label?: ReactNode }) {
 }
 
 // A mark shown large at the top of the page that edits it, with its name
-// and time beside it, or alone in the middle; marked 見本, as it looks
-// like a list's row but is not one.
+// and time beside it, or alone in the middle: the pattern itself as it is
+// being changed, so nothing says it is a sample.
 export const markPreview = cva({
   base: {
     "& strong": { textStyle: "body" },

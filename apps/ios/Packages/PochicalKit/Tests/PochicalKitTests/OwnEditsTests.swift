@@ -142,3 +142,28 @@ private func outbox(_ db: Database) throws -> [Pochical_V1_DayValue] {
       == OwnDay(shift: Days.noShift, note: "棚卸し"))
   }
 }
+
+@Test func patternsAreAddedLastAndDeletedFromTheList() throws {
+  let database = try calendarWithAnOrder()
+  try database.write { db in
+    let gym = Pattern(id: "gym", name: "ジム", emoji: "⭐️", symbol: "ジ", icon: "letter", color: 4)
+    try OwnValues.save(gym, now: 1, in: db)
+    #expect(try OwnValues.patterns(in: db).last?.id == "gym")
+
+    try OwnValues.deletePattern("off", now: 2, in: db)
+    #expect(try !OwnValues.patterns(in: db).map(\.id).contains("off"))
+  }
+}
+
+@Test func aPatternInTheOrderInUseIsKeptAndItsDaysAreCounted() throws {
+  let database = try calendarWithAnOrder()
+  try database.write { db in
+    #expect(try OwnValues.isRepeating("day", in: db))
+    #expect(try !OwnValues.isRepeating("night", in: db))
+    // 夜勤 and the 明け it brings on the day after.
+    try OwnValues.enter("night", on: Day("2026-10-05")!, now: 1, in: db)
+    #expect(try OwnValues.daysShowing("night", in: db) == 1)
+    #expect(try OwnValues.daysShowing("after", in: db) == 1)
+    #expect(try OwnValues.daysShowing("off", in: db) == 0)
+  }
+}

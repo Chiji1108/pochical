@@ -930,10 +930,10 @@ function Cards() {
         android="Surface の小さな札（独自）"
         ios="Text ＋ .background(in: .capsule)"
         name="SampleTag"
-        where="見本の絵の角"
+        where="スタイルのプレビューの角（見ているページの名前）"
       >
         <div className={catalog.tagStage}>
-          <SampleTag />
+          <SampleTag label="カレンダー" />
         </div>
       </Item>
     </Group>

@@ -13,7 +13,6 @@ import {
   LimitedInput,
   markPreview,
   markValue,
-  SampleTag,
   TimeRange,
 } from "./design-fields";
 import { BackButton, HeaderAction, PageHeader } from "./design-header";
@@ -447,7 +446,6 @@ function PatternEditor({
         title={isNew ? "パターンを追加" : "パターンを編集"}
       />
       <div className={markPreview()}>
-        <SampleTag />
         <MarkGlyph look={draft} size={44} style={style} />
         <span className={editor.name}>
           {/* Until it is named, what it is, faint: not 名前を入力, which

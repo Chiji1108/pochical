@@ -18,6 +18,23 @@ struct SettingsScreen: View {
   var body: some View {
     NavigationStack {
       List {
+        Section("シフト") {
+          NavigationLink {
+            PatternsPage()
+          } label: {
+            LabeledContent("シフトパターン") {
+              HStack(spacing: 4) {
+                ForEach(ownPatterns.prefix(6), id: \.id) { pattern in
+                  ShiftMark(pattern: pattern, size: 14)
+                }
+                Text("\(ownPatterns.count)つ")
+              }
+            }
+            .accessibilityValue("\(ownPatterns.count)つ")
+          }
+        }
+        .settingsRows()
+
         Section("表示") {
           NavigationLink {
             StyleSettings()
