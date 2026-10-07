@@ -1,3 +1,5 @@
+import Foundation
+import PochicalDesign
 /// A pattern's id, as a day names its shift.
 public typealias PatternID = String
 
@@ -97,4 +99,25 @@ extension Pattern {
     other.id = id
     return self == other
   }
+}
+
+/// A new pattern's mark from its name (spec/vectors/patterns.json,
+/// guessLook): the first hint with a word anywhere in the name gives its
+/// emoji and icon, else a star and the letter icon; the letter is the
+/// name's first character, trimmed.
+public func guessLook(_ name: String) -> (emoji: String, icon: String, symbol: String) {
+  let hint = ReadyPatterns.lookHints.first { hint in
+    hint.words.contains { name.contains($0) }
+  }
+  let letter = name.trimmingCharacters(in: .whitespacesAndNewlines).first.map(String.init) ?? ""
+  return (
+    hint?.emoji ?? ReadyPatterns.fallbackEmoji, hint?.icon ?? ReadyPatterns.fallbackIcon, letter
+  )
+}
+
+/// A new pattern's color slot (spec/vectors/patterns.json, nextColor): the
+/// first of the palette's `slots` no pattern uses, else the count of
+/// patterns modulo the slots.
+public func nextColor(_ used: [Int], slots: Int) -> Int {
+  (0..<slots).first { !used.contains($0) } ?? used.count % slots
 }

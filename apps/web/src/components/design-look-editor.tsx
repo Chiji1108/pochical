@@ -1,3 +1,4 @@
+import { offeredMarkIcons } from "@pochical/design/patterns";
 import { Plus } from "lucide-react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
@@ -35,59 +36,9 @@ export const styleNames: Record<ShiftMarkStyle, string> = {
   icon: "アイコン",
 };
 
-// The icons offered first, a row of eight for each kind like the emoji:
-// the sky through the day, days off, work, jobs, care, and the rest of
-// life. Every other one is in IconPickerSheet.
-const offeredIcons: readonly MarkIcon[] = [
-  "letter",
-  "sunHorizon",
-  "cloudSun",
-  "sun",
-  "cloudMoon",
-  "moon",
-  "moonStar",
-  "star",
-  "leaf",
-  "flower",
-  "bed",
-  "couch",
-  "coffee",
-  "treePalm",
-  "plane",
-  "heart",
-  "briefcase",
-  "laptop",
-  "building",
-  "house",
-  "users",
-  "phone",
-  "book",
-  "clock",
-  "storefront",
-  "utensils",
-  "scissors",
-  "wrench",
-  "truck",
-  "car",
-  "train",
-  "teacher",
-  "hospital",
-  "stethoscope",
-  "syringe",
-  "ambulance",
-  "siren",
-  "shield",
-  "handHeart",
-  "baby",
-  "graduationCap",
-  "music",
-  "dumbbell",
-  "pawPrint",
-  "shoppingBag",
-  "gift",
-  "partyPopper",
-  "calendarCheck",
-];
+// The icons offered first, a row of eight for each kind like the emoji
+// (design/src/patterns.ts). Every other one is in IconPickerSheet.
+const offeredIcons = offeredMarkIcons;
 
 // One screen for choosing how something is marked in every style: shift
 // patterns and groups alike. Each tab shows its own look, so what people

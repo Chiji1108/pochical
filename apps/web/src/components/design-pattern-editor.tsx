@@ -1,11 +1,12 @@
 import { PATTERNS_PER_PAGE } from "@pochical/design/limits";
+import { readyPatternOrder } from "@pochical/design/patterns";
 import { Plus } from "lucide-react";
 import { Fragment, useContext, useState } from "react";
 import { css } from "styled-system/css";
 
 import { isRepeating, patternsWithout } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
-import type { Pattern, PresetShift } from "../lib/design-patterns";
+import type { Pattern } from "../lib/design-patterns";
 import { useShownDays, useUser } from "../lib/design-user-store";
 import { ChoiceList, ChoiceRow } from "./design-choices";
 import {
@@ -271,22 +272,9 @@ export function PatternsPage({ onBack }: { onBack: () => void }) {
   );
 }
 
-// Common patterns to add with one tap, leaving out ones already there.
-const suggestionKeys: PresetShift[] = [
-  "early",
-  "day",
-  "late",
-  "night",
-  "after",
-  "evening",
-  "junya",
-  "midnight",
-  "duty",
-  "offDuty",
-  "training",
-  "paid",
-  "off",
-];
+// Common patterns to add with one tap, leaving out ones already there
+// (design/src/patterns.ts).
+const suggestionKeys = readyPatternOrder;
 
 function AddPatternPage({
   items,

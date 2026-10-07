@@ -30,6 +30,7 @@ import type {
   Message,
 } from "../src/components/design-group-data";
 import { defaultWeekSettings } from "../src/components/design-week";
+import { guessLook, nextColor } from "../src/components/shift-mark";
 import {
   decidePoll,
   editMessage,
@@ -384,6 +385,16 @@ describe("spec/vectors/patterns.json", () => {
       expect(idsOf(patternsWithout(patterns.map(patternOf), id))).toEqual(
         expected.patterns
       );
+    });
+  }
+  for (const { name, text: written, expected } of patternChanges.guessLook) {
+    test(`guessLook: ${name}`, () => {
+      expect(guessLook(written)).toEqual(expected);
+    });
+  }
+  for (const { name, used, expected } of patternChanges.nextColor) {
+    test(`nextColor: ${name}`, () => {
+      expect(nextColor(used)).toBe(expected);
     });
   }
   for (const { name, ...job } of patternChanges.newJob) {
