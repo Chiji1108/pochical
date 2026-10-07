@@ -6,6 +6,7 @@
     "foldLines": 10,
     "largeEmojiMax": 3,
     "largeEmojiSize": 48,
+    "lineGap": 4,
     "linkPreviewAspect": 1.91,
     "linkPreviewSettleMs": 400,
     "maxPins": 5,
@@ -13,6 +14,7 @@
     "photoMaxBytes": 4000000,
     "photoMaxEdge": 2048,
     "photosPerSend": 4,
+    "runGap": 12,
     "typingSendMs": 3000,
     "typingShowMs": 5000
   },

@@ -85,10 +85,30 @@ function useChatScope() {
 
 const nothing = () => undefined;
 
+// Whether a line starts its writer's run rather than going on the one
+// above it.
+const startsRun = (message: Message, previous: Message | undefined) =>
+  previous?.from !== message.from ||
+  previous.notice !== undefined ||
+  previous.unsent === true ||
+  message.replyTo !== undefined;
+
+// Whether a line's time shows: not when the line after it goes on its
+// run, sent in the same minute, as LINE shows one time for them
+// (spec/chat.md, In a message).
+const showsTime = (message: Message, next: Message | undefined) =>
+  next === undefined ||
+  next.notice !== undefined ||
+  next.unsent === true ||
+  startsRun(next, message) ||
+  next.when !== message.when ||
+  next.time !== message.time;
+
 // One line of the chat as it is drawn: a message, or one of the app's.
 export function MessageLine({
   message,
   previous,
+  next,
   quoted,
   hidden,
   flash,
@@ -104,6 +124,8 @@ export function MessageLine({
   message: Message;
   // The line above, after which a new day or a new run starts.
   previous?: Message;
+  // The line below, which may show the time for this one.
+  next?: Message;
   // The line it answers.
   quoted?: Message;
   // Written by someone you blocked: folded away until shown.
@@ -154,11 +176,7 @@ export function MessageLine({
   const member = writerOf(message.from);
   const current = member !== undefined && members.includes(member);
   const mine = member?.me === true;
-  const firstOfRun =
-    previous?.from !== message.from ||
-    previous.notice !== undefined ||
-    previous.unsent === true ||
-    message.replyTo !== undefined;
+  const firstOfRun = startsRun(message, previous);
   // A message whose first link is an invitation shows its group instead
   // of a page.
   const firstUrl = message.text ? firstLink(message.text) : undefined;
@@ -234,6 +252,7 @@ export function MessageLine({
       id={`message-${message.id}`}
       mine={mine}
       name={isGroup && firstOfRun ? (member?.name ?? "") : undefined}
+      runStart={firstOfRun}
     >
       <span
         className={cx(
@@ -410,7 +429,7 @@ export function MessageLine({
                 {message.edited && "編集済み"}
               </span>
             )}
-            {message.time}
+            {showsTime(message, next) && message.time}
           </small>
         )}
       </span>

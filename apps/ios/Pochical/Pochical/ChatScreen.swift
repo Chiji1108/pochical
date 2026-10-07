@@ -196,7 +196,7 @@ struct ChatScreen: View {
     let state = chat.state
     let names = self.names
     ScrollView {
-      LazyVStack(spacing: 8) {
+      LazyVStack(spacing: CGFloat(Chat.lineGap)) {
         if !state.atStart {
           ProgressView()
             .frame(maxWidth: .infinity, minHeight: Metrics.touch)
@@ -209,12 +209,19 @@ struct ChatScreen: View {
               }
             }
         }
-        ForEach(items(state)) { item in
-          row(item, names: names)
+        let listed = items(state)
+        let timeless = linesWithoutTime(listed)
+        ForEach(listed) { item in
+          // Lines close within a run, parted where the writer changes; the
+          // first has the list's own margin over it.
+          let parted = item.startsRun && item.id != listed.first?.id
+          row(item, names: names, showsTime: !timeless.contains(item.id))
+            .padding(.top, parted ? CGFloat(Chat.runGap - Chat.lineGap) : 0)
         }
         // Who is writing now, under the latest line; not someone blocked.
         ForEach(typers.keys.filter { !blocked.contains($0) }.sorted(), id: \.self) { userID in
           TypingLine(name: names[userID] ?? "メンバー")
+            .padding(.top, CGFloat(Chat.runGap - Chat.lineGap))
             .id("typing-\(userID)")
             .transition(.opacity)
         }
@@ -492,7 +499,24 @@ struct ChatScreen: View {
     return items
   }
 
-  @ViewBuilder private func row(_ item: ChatItem, names: [String: String]) -> some View {
+  /// The lines whose time is left to the next (spec/chat.md, In a
+  /// message): one going on the run of the line after it, sent in the
+  /// same minute, as LINE shows one time for them.
+  private func linesWithoutTime(_ items: [ChatItem]) -> Set<String> {
+    var timeless: Set<String> = []
+    for (item, next) in zip(items, items.dropFirst()) {
+      guard case .line(let line, _) = item, case .line(let after, let startsRun) = next,
+        !startsRun, !line.unsent, !after.unsent,
+        ChatTime.clock(line.sentAtMs) == ChatTime.clock(after.sentAtMs)
+      else { continue }
+      timeless.insert(item.id)
+    }
+    return timeless
+  }
+
+  @ViewBuilder private func row(
+    _ item: ChatItem, names: [String: String], showsTime: Bool = true
+  ) -> some View {
     switch item {
     case .day(let day):
       Text(ChatTime.day(day))
@@ -539,7 +563,7 @@ struct ChatScreen: View {
             profileOf = ProfileOf(id: line.authorID, name: names[line.authorID] ?? "メンバー")
           },
           shifts: line.poll ? nil : line.days.first.map { GroupRoute.shifts(group, day: $0) },
-          time: line.sentAtMs, edited: line.edited, mine: mine,
+          time: line.sentAtMs, showsTime: showsTime, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
           named: otherID == nil, first: startsRun, waiting: false, nameOf: nameOf,
           reactions: line.reactions,
@@ -1249,6 +1273,15 @@ private enum ChatItem: Identifiable {
     case .waiting(let line, _): "line-\(line.opID)"
     }
   }
+
+  /// Whether more room goes before it: a run's first line, a day's title
+  /// and ここから新着.
+  var startsRun: Bool {
+    switch self {
+    case .day, .unread: true
+    case .line(_, let startsRun), .waiting(_, let startsRun): startsRun
+    }
+  }
 }
 
 /// Where the lines are scrolled: at the latest, and more than half a
@@ -1288,6 +1321,8 @@ private struct LineView: View {
   /// The shift table on its first day, under its card.
   var shifts: GroupRoute?
   let time: Int64
+  /// Left to the next line of the run sent in the same minute.
+  var showsTime = true
   let edited: Bool
   let mine: Bool
   /// The writer's name at the start of a run of others' lines, for their
@@ -1444,7 +1479,7 @@ private struct LineView: View {
       if waiting {
         Image(systemName: "clock")
           .accessibilityLabel("送信中")
-      } else {
+      } else if showsTime {
         Text(ChatTime.clock(time))
       }
     }
@@ -1522,7 +1557,7 @@ struct MessageBubble: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       Text(words)
-        .font(.subheadline)
+        .font(.body)
         .lineSpacing(3)
         .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
         .tint(mine ? colors.accentOnFill : colors.accentDefault)
@@ -1552,7 +1587,7 @@ struct MessageBubble: View {
     for part in textParts(text) {
       var piece = AttributedString(part.mention.map { "@\(nameOf($0))" } ?? part.text)
       if part.mention != nil {
-        piece.font = .subheadline.weight(.semibold)
+        piece.font = .body.weight(.semibold)
         if !mine { piece.foregroundColor = colors.accentDefault }
       } else if let link = part.url.flatMap({ URL(string: $0, encodingInvalidCharacters: true) }) {
         piece.link = link

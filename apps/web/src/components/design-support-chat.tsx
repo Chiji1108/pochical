@@ -12,7 +12,7 @@ import { Composer, useComposer } from "./design-chat-composer";
 import { useChatEdits } from "./design-chat-edits";
 import { ChatContext, MessageLine } from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
-import { ChatListRow } from "./design-chat-parts";
+import { ChatListRow, chatGaps } from "./design-chat-parts";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
 import { summaryOf, unsentLine } from "./design-chat-summary";
 import { EmojiPickerSheet } from "./design-emoji-picker";
@@ -225,6 +225,7 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
           <ol
             aria-label={`${site.name}とのメッセージ`}
             className={chatStyle.messages}
+            style={chatGaps}
             ref={listRef}
           >
             <Intro icon={icon} />
@@ -245,6 +246,7 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
                 onSelect={() => {
                   setSelected(line.id);
                 }}
+                next={lines[index + 1]}
                 previous={lines[index - 1]}
                 quoted={byId(line.replyTo)}
               />
