@@ -314,11 +314,13 @@ export function StepHeader({
 const kinds = [
   {
     icon: "📋",
+    id: "roster",
     note: "勤務表・シフト表・店長からの連絡など",
     title: "シフトがその都度決まる",
   },
   {
     icon: "🔁",
+    id: "rotation",
     note: "消防・工場の交代勤務・曜日で固定など",
     title: "決まった順番で回っている",
   },
@@ -355,9 +357,9 @@ function KindStep({
           {kinds.map((kind) => (
             <OptionCard
               icon={kind.icon}
-              key={kind.icon}
+              key={kind.id}
               note={kind.note}
-              onClick={kind.icon === "📋" ? onRoster : onRotation}
+              onClick={kind.id === "roster" ? onRoster : onRotation}
               title={kind.title}
             />
           ))}
@@ -367,14 +369,14 @@ function KindStep({
           {kinds.map((kind) => (
             <ListRow
               detail={kind.note}
-              key={kind.icon}
+              key={kind.id}
               label={kind.title}
               leading={
                 <span aria-hidden="true" className={answerRow.emoji}>
                   {kind.icon}
                 </span>
               }
-              onClick={kind.icon === "📋" ? onRoster : onRotation}
+              onClick={kind.id === "roster" ? onRoster : onRotation}
             />
           ))}
         </List>
