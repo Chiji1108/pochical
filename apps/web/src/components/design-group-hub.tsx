@@ -194,7 +194,8 @@ const rail = {
     maskImage:
       "linear-gradient(to bottom, #000 calc(100% - var(--tab-bar-bottom) - 128px), transparent calc(100% - var(--tab-bar-bottom) - 56px))",
     overflowY: "auto",
-    padding: "12px 0",
+    // The last of many groups can rise clear of the fade.
+    padding: "12px 0 calc(var(--tab-bar-bottom) + 128px)",
     width: "58px",
   }),
 };
