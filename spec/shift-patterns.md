@@ -62,9 +62,9 @@ A person may follow a repeating order: a sequence of their patterns laid over th
 
 ### Typing an order
 
-An order is typed on a month, as ポチポチ入力 enters days, with the same keys under it (settings' 新しい繰り返し and 今の繰り返しを直す, and the order of はじめの設定 and 新しい仕事にする alike):
+An order is typed on a month, as ポチポチ入力 enters days (settings' 新しい繰り返し and 今の繰り返しを直す, and the order of はじめの設定 and 新しい仕事にする alike). The month fills the screen as 1人ずつ's does, swiped a month at a time with room for six weeks, so ポチポチ入力's keys at its foot stay put; the order's first day and length go under the page's title, and 祝日は休みにする beside the month's name. There is no 今月: the month that matters is the order's, which typing keeps in sight.
 
-- The day pressed is the order's 1st day, its `anchor`; each key fills the next day and moves on, turning the month when the next day falls in the next one. ⌫ takes the last day back.
+- The day pressed is the order's 1st day, its `anchor`; each key fills the next day and moves on, turning to the next day's month when it is not in sight. ⌫ takes the last day back.
 - The days typed show solid. After them, and before them back to the order's `start`, the order comes round with its marks faint, as the calendar will show it, 祝日は休みにする included. Days before the `start` show what they hold now, faded, as they stay.
 - A day typed, pressed, is chosen: a key takes its place and ⌫ takes it out. Any other day pressed moves the order to start there, what was typed kept; for a new order that day is also its `start`.
 - A kind of work with an order of its own opens with it typed from the first day it could start, asking for a day of its first shift; pressing that day moves the order there.

@@ -12,11 +12,15 @@ import {
 } from "../lib/design-patterns";
 import type { PresetShift, Shift } from "../lib/design-patterns";
 import { designMonth } from "../lib/design-today";
-import { BackButton } from "./design-header";
+import { BackButton, PageHeader } from "./design-header";
 import { List, ListRow, listRow } from "./design-list";
-import { RepeatCalendar, SequenceTiles } from "./design-repeat-editor";
+import {
+  OrderTitle,
+  RepeatCalendar,
+  SequenceTiles,
+} from "./design-repeat-editor";
 import { KeysPreview } from "./design-shift-input";
-import { Button, OptionCard, optionList, pushToBottom } from "./design-ui";
+import { Button, OptionCard, optionList } from "./design-ui";
 
 type Template = JobTemplate;
 
@@ -175,6 +179,7 @@ export function WorkSetupSteps({
   onBack,
   onFinish,
   initialStep,
+  onOrdering,
 }: {
   month?: Date;
   // The day the order starts on, as a new job's first day; a first run's
@@ -186,8 +191,15 @@ export function WorkSetupSteps({
   onBack?: () => void;
   onFinish: (setup: WorkSetup) => void;
   initialStep?: Step;
+  // Told when the order's calendar comes and goes, which in settings
+  // takes the screen from the tab bar.
+  onOrdering?: (ordering: boolean) => void;
 }) {
-  const [step, setStep] = useState<Step>(initialStep ?? { name: "kind" });
+  const [step, setStepState] = useState<Step>(initialStep ?? { name: "kind" });
+  const setStep = (next: Step) => {
+    setStepState(next);
+    onOrdering?.(next.name === "order");
+  };
 
   // The templates' patterns are ready-made ones, drawn as they come even
   // when the person has their own under the same ids.
@@ -471,36 +483,40 @@ function OrderStep({
   const first = usePatterns()[template.sequence?.[0] ?? ""]?.name;
   return (
     <>
-      <StepHeader
-        description={
-          template.custom
-            ? "1日目にする日を押してから、順番にシフトを押します。"
-            : "その日から並びが始まります。シフトを押して直すこともできます。"
+      {/* A bar's title, as the settings' order pages, leaving the
+      screen to the month and its keys. */}
+      <PageHeader
+        inlineTitle={
+          <OrderTitle
+            anchor={order.anchor}
+            sequence={order.sequence}
+            title={
+              template.custom || first === undefined
+                ? "並びを入れる"
+                : `「${first}」の日を押す`
+            }
+          />
         }
         onBack={onBack}
-        title={
-          template.custom || first === undefined
-            ? "並びを入れてください"
-            : `「${first}」の日を押してください`
-        }
       />
       <RepeatCalendar
         anchor={order.anchor}
+        footer={
+          <Button
+            variant="primary"
+            disabled={order.sequence.length === 0}
+            onClick={() => {
+              onStart(order);
+            }}
+          >
+            {finishLabel}
+          </Button>
+        }
         from={from}
         onChange={setOrder}
         patternKeys={template.patternKeys}
         sequence={order.sequence}
       />
-      <Button
-        variant="primary"
-        className={pushToBottom}
-        disabled={order.sequence.length === 0}
-        onClick={() => {
-          onStart(order);
-        }}
-      >
-        {finishLabel}
-      </Button>
     </>
   );
 }

@@ -33,13 +33,21 @@ struct JobChangePage: View {
 
   var body: some View {
     let step = steps.last ?? .day
+    if case .order(let template) = step {
+      orderStep(template)
+    } else {
+      questions(step)
+    }
+  }
+
+  private func questions(_ step: JobStep) -> some View {
     Form {
       switch step {
       case .day: dayStep
       case .kind: kindStep
       case .roster: templates(ReadyPatterns.rosterTemplates)
       case .rotation: templates(ReadyPatterns.rotationTemplates)
-      case .order(let template): orderStep(template)
+      case .order: EmptyView()
       }
     }
     .settingsList()
@@ -122,36 +130,34 @@ struct JobChangePage: View {
     .settingsRows()
   }
 
-  /// The order on the calendar: a kind of work's own, from the new job's
-  /// first day, or one typed from nothing; either typed over, and the day
-  /// pressed moves where it starts.
-  @ViewBuilder private func orderStep(_ template: JobTemplate) -> some View {
+  /// The order on the calendar, filling the screen: a kind of work's
+  /// own, from the new job's first day, or one typed from nothing; either
+  /// typed over, and the day pressed moves where it starts.
+  private func orderStep(_ template: JobTemplate) -> some View {
     let first = template.sequence?.first.flatMap { readyByID[$0]?.name }
-    if template.custom || first == nil {
-      question("並びを入れてください", "1日目にする日を押してから、順番にシフトを押します。")
-    } else {
-      question("「\(first ?? "")」の日を押してください", "その日から並びが始まります。シフトを押して直すこともできます。")
-    }
-    Section {
-      RepeatCalendar(
-        sequence: $sequence, anchor: $anchor, cover: .from(start),
-        patterns: template.patternIDs.compactMap { readyByID[$0] }, holidayCountry: country)
-    } header: {
-      HStack {
-        Text("\(dayName(anchor))から")
-        Spacer()
-        if !sequence.isEmpty {
-          Text("\(sequence.count)日ごとに繰り返し")
-        }
-      }
-    }
-    .settingsRows()
-    Section {
+    return RepeatCalendar(
+      sequence: $sequence, anchor: $anchor, cover: .from(start),
+      patterns: template.patternIDs.compactMap { readyByID[$0] }, holidayCountry: country
+    ) {
+      EmptyView()
+    } footer: {
       next("\(start.month)/\(start.day)から切り替える") {
         finish(template, sequence: sequence, anchor: anchor)
       }
       .disabled(sequence.isEmpty)
     }
+    .background(colors.backgroundBase)
+    .navigationTitle(template.custom || first == nil ? "並びを入れる" : "「\(first ?? "")」の日を押す")
+    .navigationBarTitleDisplayMode(.inline)
+    .navigationBarBackButtonHidden()
+    .toolbar {
+      ToolbarItem(placement: .topBarLeading) {
+        Button("戻る", systemImage: "chevron.left") {
+          withAnimation { _ = steps.popLast() }
+        }
+      }
+    }
+    .toolbarVisibility(.hidden, for: .tabBar)
   }
 
   // MARK: Pieces

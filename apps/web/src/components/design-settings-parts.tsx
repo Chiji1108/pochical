@@ -71,7 +71,27 @@ export const settingsParts = {
     margin: "12px 0 0",
     textStyle: "footnote",
   }),
-  job: css({ display: "flex", flexDirection: "column", gap: "16px" }),
+  // A page that fills the screen, its foot kept at the bottom, as typing
+  // an order on the calendar.
+  fullPage: css({
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "8px",
+    minHeight: 0,
+    paddingBottom: "8px",
+    paddingInline: "16px",
+  }),
+  holidays: css({
+    alignItems: "center",
+    color: "text.secondary",
+    display: "flex",
+    flexShrink: 0,
+    gap: "8px",
+    textStyle: "caption",
+  }),
+  // Grows to the screen's height, so an order's keys sit at its foot.
+  job: css({ display: "flex", flex: 1, flexDirection: "column", gap: "16px" }),
   marks: css({
     alignItems: "center",
     display: "inline-flex",

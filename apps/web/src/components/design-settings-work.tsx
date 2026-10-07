@@ -15,8 +15,12 @@ import type { Pattern, Shift } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
 import { InputDatePicker } from "./design-date-picker";
 import { PageHeader } from "./design-header";
-import { List, ListRow, SwitchRow } from "./design-list";
-import { RepeatCalendar, SequenceTiles } from "./design-repeat-editor";
+import { List, ListRow, SwitchRow, Toggle } from "./design-list";
+import {
+  OrderTitle,
+  RepeatCalendar,
+  SequenceTiles,
+} from "./design-repeat-editor";
 import {
   ListSection,
   nextMonthStart,
@@ -113,9 +117,10 @@ const repeatModes: Record<RepeatMode, { title: string; action: string }> = {
   switch: { action: "から切り替える", title: "新しい繰り返し" },
 };
 
-// Sets an order on the calendar. A new one starts on its 1st day, the
-// days before it staying; fixing keeps the rule's start and moves only
-// the day the order counts from, so no gap opens before it.
+// Sets an order on the calendar, filling the screen as ポチポチ入力 does.
+// A new one starts on its 1st day, the days before it staying; fixing
+// keeps the rule's start and moves only the day the order counts from, so
+// no gap opens before it.
 export function RepeatEditorPage({
   mode,
   current,
@@ -152,47 +157,55 @@ export function RepeatEditorPage({
     holidaysChoice ?? defaultHolidaysOff(sequence, anchor, book);
   const rule: RepeatRule = { anchor, holidaysOff, sequence, start };
   return (
-    <>
-      <PageHeader back="働き方" onBack={onBack} title={text.title} />
+    <div className={settingsParts.fullPage}>
+      <PageHeader
+        back="働き方"
+        inlineTitle={
+          <OrderTitle anchor={anchor} sequence={sequence} title={text.title} />
+        }
+        onBack={onBack}
+      />
       <RepeatCalendar
+        accessory={
+          <span className={settingsParts.holidays}>
+            <span aria-hidden="true">祝日は休み</span>
+            <Toggle
+              checked={holidaysOff}
+              label="祝日は休みにする"
+              onChange={setHolidaysChoice}
+            />
+          </span>
+        }
         anchor={anchor}
         before={shown}
+        footer={
+          <>
+            {fixing && (
+              <Note>
+                {formatDay(start)}
+                からのシフトを入れ直します。その間に自分で直した日も、並びのとおりに戻ります。
+              </Note>
+            )}
+            <Button
+              variant="primary"
+              disabled={sequence.length === 0}
+              onClick={() => {
+                onApply(rule);
+              }}
+            >
+              <ArrowRight aria-hidden="true" size={16} />
+              {shortDay(start)}
+              {text.action}
+            </Button>
+          </>
+        }
         from={fixing ? current.start : undefined}
         holidayShift={holidaysOff ? holidayShiftOf(patterns) : undefined}
         onChange={setOrder}
         patternKeys={patternKeys}
         sequence={sequence}
       />
-      <Note>
-        {fixing
-          ? "並びの1つ目のシフトが入る日を押してから、順番にシフトを押します。"
-          : "始める日を押してから、順番にシフトを押します。押した日が並びの1日目です。"}
-      </Note>
-      <List>
-        <SwitchRow
-          checked={holidaysOff}
-          label="祝日は休みにする"
-          onChange={setHolidaysChoice}
-        />
-      </List>
-      {fixing && (
-        <Note>
-          {formatDay(start)}
-          からのシフトを入れ直します。その間に自分で直した日も、並びのとおりに戻ります。
-        </Note>
-      )}
-      <Button
-        variant="primary"
-        disabled={sequence.length === 0}
-        onClick={() => {
-          onApply(rule);
-        }}
-      >
-        {shortDay(start)}
-        {text.action}
-        <ArrowRight aria-hidden="true" size={16} />
-      </Button>
-    </>
+    </div>
   );
 }
 
@@ -201,9 +214,13 @@ export function RepeatEditorPage({
 export function JobChangePage({
   onBack,
   onApply,
+  onOrdering,
 }: {
   onBack: () => void;
   onApply: (job: { patterns: Pattern[]; rule: RepeatRule }) => void;
+  // Told when the order's calendar comes and goes, as it takes the
+  // screen from the tab bar.
+  onOrdering: (ordering: boolean) => void;
 }) {
   const [start, setStart] = useState(nextMonthStart);
   const [asking, setAsking] = useState(false);
@@ -214,10 +231,12 @@ export function JobChangePage({
           finishLabel={`${shortDay(start)}から切り替える`}
           from={start}
           month={start}
+          onOrdering={onOrdering}
           onExit={() => {
             setAsking(false);
           }}
           onFinish={({ patternKeys, sequence, anchor }) => {
+            onOrdering(false);
             onApply({
               patterns: presetList(patternKeys),
               rule: {

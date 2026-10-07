@@ -98,6 +98,9 @@ export function DesignSettings({
 }) {
   const coworkers = useCoworkerList();
   const [page, setPage] = useState<Page>(initialPage);
+  // A new job's order on the calendar takes the screen, its keys where
+  // the tab bar was, as typing an order does.
+  const [jobOrdering, setJobOrdering] = useState(false);
   const weekTools = useWeek();
   const patternKeys = patterns.map((pattern) => pattern.id);
   const preview = stylePreviewOf(patterns, weekTools.weekDates);
@@ -116,36 +119,10 @@ export function DesignSettings({
     [];
   // A chat fills the screen, its composer where the tab bar was, as the
   // group chats do.
-  if (page === "support") {
+  // Typing an order fills the screen, its keys at the foot, as ポチポチ入力.
+  if (page === "repeat-new" || page === "repeat-fix") {
     return (
-      <SupportChatPage
-        onBack={() => {
-          setPage("top");
-        }}
-      />
-    );
-  }
-  return (
-    <Screen>
-      <ScreenScroll>
-        {page === "top" && (
-          <SettingsTop
-            coworkerCount={coworkers.list.length}
-            current={current}
-            onOpen={setPage}
-            patternKeys={patternKeys}
-            profile={profile}
-          />
-        )}
-        {page === "profile" && (
-          <ProfilePage
-            onBack={() => {
-              setPage("top");
-            }}
-            onChange={onProfile}
-            profile={profile}
-          />
-        )}
+      <Screen>
         {page === "repeat-new" && (
           <RepeatEditorPage
             initialSequence={lastSequence}
@@ -177,6 +154,39 @@ export function DesignSettings({
             shown={schedule}
           />
         )}
+      </Screen>
+    );
+  }
+  if (page === "support") {
+    return (
+      <SupportChatPage
+        onBack={() => {
+          setPage("top");
+        }}
+      />
+    );
+  }
+  return (
+    <Screen>
+      <ScreenScroll fill={page === "job" && jobOrdering}>
+        {page === "top" && (
+          <SettingsTop
+            coworkerCount={coworkers.list.length}
+            current={current}
+            onOpen={setPage}
+            patternKeys={patternKeys}
+            profile={profile}
+          />
+        )}
+        {page === "profile" && (
+          <ProfilePage
+            onBack={() => {
+              setPage("top");
+            }}
+            onChange={onProfile}
+            profile={profile}
+          />
+        )}
         {page === "job" && (
           <JobChangePage
             onApply={(job) => {
@@ -186,6 +196,7 @@ export function DesignSettings({
             onBack={() => {
               setPage("work");
             }}
+            onOrdering={setJobOrdering}
           />
         )}
         {page === "work" && (
@@ -292,7 +303,9 @@ export function DesignSettings({
           />
         )}
       </ScreenScroll>
-      <TabBar active="settings" onSelect={onTab} />
+      {!(page === "job" && jobOrdering) && (
+        <TabBar active="settings" onSelect={onTab} />
+      )}
     </Screen>
   );
 }

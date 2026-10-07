@@ -299,54 +299,38 @@ private struct RepeatEditor: View {
         ?? holidaysOffByDefault(steps, start: picked, patterns: byID))
     let shown = OwnCalendar(
       days: days, patterns: patternRows, patternOrder: patternOrder, orders: orderRows)
-    Form {
-      Section {
-        RepeatCalendar(
-          sequence: Binding(get: { steps }, set: { sequence = $0 }),
-          anchor: Binding(get: { picked }, set: { day = $0 }),
-          cover: mode == .fix ? .from(start) : .anchor, patterns: values.patterns,
-          before: shown, holidayShift: holidays ? offShift : nil, holidayCountry: country)
-      } header: {
-        HStack {
-          Text("\(dayName(picked))から")
-          Spacer()
-          if !steps.isEmpty {
-            Text("\(steps.count)日ごとに繰り返し")
-          }
-        }
-      } footer: {
-        Text(
-          mode == .fix
-            ? "並びの1つ目のシフトが入る日を押してから、順番にシフトを押します。"
-            : "始める日を押してから、順番にシフトを押します。押した日が並びの1日目です。")
+    RepeatCalendar(
+      sequence: Binding(get: { steps }, set: { sequence = $0 }),
+      anchor: Binding(get: { picked }, set: { day = $0 }),
+      cover: mode == .fix ? .from(start) : .anchor, patterns: values.patterns,
+      before: shown, holidayShift: holidays ? offShift : nil, holidayCountry: country
+    ) {
+      Toggle(isOn: Binding(get: { holidays }, set: { holidaysOff = $0 })) {
+        Text("祝日は休み").font(.footnote).foregroundStyle(colors.textSecondary)
       }
-      .settingsRows()
-
-      Section {
-        Toggle("祝日は休みにする", isOn: Binding(get: { holidays }, set: { holidaysOff = $0 }))
-          .disabled(offShift == nil)
-      } footer: {
-        if mode == .fix {
-          Text("\(dayName(start))からのシフトを入れ直します。その間に自分で直した日も、並びのとおりに戻ります。")
-        }
+      .fixedSize()
+      .disabled(offShift == nil)
+    } footer: {
+      if mode == .fix {
+        Text("\(dayName(start))からのシフトを入れ直します。その間に自分で直した日も、並びのとおりに戻ります。")
+          .font(.caption)
+          .foregroundStyle(colors.textTertiary)
+          .frame(maxWidth: .infinity, alignment: .leading)
       }
-      .settingsRows()
-
-      Section {
-        Button {
-          save(steps, start: start, anchor: picked, holidays: holidays, shift: offShift)
-        } label: {
-          Label("\(shortDay(start))\(mode.action)", systemImage: "arrow.right")
-            .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.borderedProminent)
-        .disabled(steps.isEmpty)
-        .settingsOnPage()
+      Button {
+        save(steps, start: start, anchor: picked, holidays: holidays, shift: offShift)
+      } label: {
+        Label("\(shortDay(start))\(mode.action)", systemImage: "arrow.right")
+          .frame(maxWidth: .infinity)
       }
+      .buttonStyle(.borderedProminent)
+      .controlSize(.large)
+      .disabled(steps.isEmpty)
     }
-    .settingsList()
+    .background(colors.backgroundBase)
     .navigationTitle(mode.title)
     .navigationBarTitleDisplayMode(.inline)
+    .toolbarVisibility(.hidden, for: .tabBar)
   }
 
   /// The sequence it starts from: the order in use's when correcting it,
