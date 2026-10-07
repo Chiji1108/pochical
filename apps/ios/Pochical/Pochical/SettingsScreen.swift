@@ -12,6 +12,7 @@ struct SettingsScreen: View {
   @FetchAll private var patternOrder: [PatternOrderRow]
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
   @FetchAll private var coworkerRows: [CoworkerRow]
+  @Fetch(RepeatOrdersRequest()) private var orders: [RepeatOrder] = []
   @Fetch(ChatNotificationsRequest()) private var notifications = ChatNotificationState()
   /// The icon in use, read again as the page comes back from changing it.
   @State private var appIcon = AppIconChoice.current
@@ -20,6 +21,11 @@ struct SettingsScreen: View {
     NavigationStack {
       List {
         Section("シフト") {
+          NavigationLink {
+            WorkStylePage()
+          } label: {
+            LabeledContent("働き方", value: workSummary(orders))
+          }
           NavigationLink {
             PatternsPage()
           } label: {

@@ -200,6 +200,7 @@ export function RepeatEditorPage({
         onChange={setSequence}
         patternKeys={patternKeys}
         sequence={sequence}
+        start={day}
       />
       <Note>
         {fixing
