@@ -277,3 +277,89 @@ export const lookHints: readonly {
 // What a mark falls back to when no word suggests one: a star, and the
 // letter icon, drawing the name's first letter.
 export const lookFallback = { emoji: "⭐️", icon: "letter" } as const;
+
+// The kinds of work はじめの設定 and 新しい仕事にする offer: their
+// ready-made patterns, and for work that repeats, its order.
+export type JobTemplate = {
+  id: string;
+  title: string;
+  note: string;
+  patternKeys: ReadyPatternId[];
+  // Present only for work that repeats in a fixed order.
+  sequence?: ReadyPatternId[];
+  // The sequence starts on Sunday, so the first day comes from the weekday.
+  weekly?: boolean;
+  custom?: boolean;
+};
+
+// The work whose shifts are given out each time (a roster): the patterns
+// to start with.
+export const rosterTemplates: readonly JobTemplate[] = [
+  {
+    id: "two-shift",
+    note: "日勤と夜勤、夜勤の翌日は明け",
+    patternKeys: ["day", "night", "after", "off"],
+    title: "二交代制",
+  },
+  {
+    id: "three-shift",
+    note: "日勤・準夜・深夜",
+    patternKeys: ["day", "junya", "midnight", "off"],
+    title: "三交代制",
+  },
+  {
+    id: "two-shift-early-late",
+    note: "時間の違う日勤が混ざる",
+    patternKeys: ["early", "day", "late", "night", "after", "off"],
+    title: "二交代制 + 早番・遅番",
+  },
+  {
+    id: "roster-custom",
+    note: "まずは二交代制で始めて、あとで設定から変えられます",
+    patternKeys: ["day", "night", "after", "off"],
+    title: "自分で作る",
+  },
+];
+
+// The work whose shifts come round in a fixed order: the order too.
+export const rotationTemplates: readonly JobTemplate[] = [
+  {
+    id: "duty",
+    note: "消防などの24時間勤務",
+    patternKeys: ["duty", "offDuty", "off"],
+    sequence: ["duty", "offDuty", "off"],
+    title: "当番・非番・休み",
+  },
+  {
+    id: "factory",
+    note: "工場などの3交代（2日ずつ回る例）",
+    patternKeys: ["day", "evening", "midnight", "off"],
+    sequence: [
+      "day",
+      "day",
+      "evening",
+      "evening",
+      "midnight",
+      "midnight",
+      "off",
+      "off",
+    ],
+    title: "日勤・夕勤・深夜の交代",
+  },
+  {
+    id: "weekdays",
+    note: "曜日で決まっている勤務",
+    patternKeys: ["day", "off"],
+    sequence: ["off", "day", "day", "day", "day", "day", "off"],
+    title: "平日は日勤、土日は休み",
+    weekly: true,
+  },
+  {
+    custom: true,
+    id: "rotation-custom",
+    note: "並びを組み立てる",
+    patternKeys: ["duty", "offDuty", "day", "night", "after", "off"],
+    sequence: [],
+    title: "自分で作る",
+  },
+];

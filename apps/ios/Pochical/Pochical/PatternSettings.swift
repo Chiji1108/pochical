@@ -182,17 +182,6 @@ private struct AddPatternPage: View {
   }
 }
 
-extension Pattern {
-  /// A ready-made pattern as the person's copy, its next day kept only
-  /// when that pattern is theirs.
-  init(_ ready: ReadyPattern, keeping ids: Set<PatternID>) {
-    self.init(
-      id: ready.id, name: ready.name, emoji: ready.emoji, symbol: ready.symbol, icon: ready.icon,
-      color: ready.color, time: ready.time.map { ShiftTime(start: $0.start, end: $0.end) },
-      countsAsOff: ready.countsAsOff, nextDay: ready.nextDay.flatMap { ids.contains($0) ? $0 : nil })
-  }
-}
-
 /// Which of a mark's parts the person picked by hand: those are never
 /// guessed from the name again (spec/shift-patterns.md, A new pattern's
 /// mark).

@@ -7,8 +7,10 @@ import {
   offeredMarkIcons,
   readyPatternOrder,
   readyPatterns,
+  rosterTemplates,
+  rotationTemplates,
 } from "../src/patterns";
-import type { ReadyPattern } from "../src/patterns";
+import type { JobTemplate, ReadyPattern } from "../src/patterns";
 
 const quoted = (text: string) => JSON.stringify(text);
 const list = (items: readonly string[]) => items.map(quoted).join(", ");
@@ -28,6 +30,32 @@ const swiftPattern = (id: string, pattern: ReadyPattern) => {
     `nextDay: ${pattern.nextDay === undefined ? "nil" : quoted(pattern.nextDay)}`,
   ];
   return `    ReadyPattern(${fields.join(", ")}),`;
+};
+
+const swiftTemplate = (template: JobTemplate) => {
+  const fields = [
+    `id: ${quoted(template.id)}`,
+    `title: ${quoted(template.title)}`,
+    `note: ${quoted(template.note)}`,
+    `patternIDs: [${list(template.patternKeys)}]`,
+    `sequence: ${template.sequence ? `[${list(template.sequence)}]` : "nil"}`,
+    `weekly: ${template.weekly === true}`,
+    `custom: ${template.custom === true}`,
+  ];
+  return `    JobTemplate(${fields.join(", ")}),`;
+};
+
+const kotlinTemplate = (template: JobTemplate) => {
+  const fields = [
+    `id = ${quoted(template.id)}`,
+    `title = ${quoted(template.title)}`,
+    `note = ${quoted(template.note)}`,
+    `patternIds = listOf(${list(template.patternKeys)})`,
+    `sequence = ${template.sequence ? `listOf(${list(template.sequence)})` : "null"}`,
+    `weekly = ${template.weekly === true}`,
+    `custom = ${template.custom === true}`,
+  ];
+  return `    JobTemplate(${fields.join(", ")}),`;
 };
 
 export const swiftReadyPatterns = (): string[] => [
@@ -80,6 +108,27 @@ export const swiftReadyPatterns = (): string[] => [
   "  /// The mark when no word suggests one.",
   `  public static let fallbackEmoji = ${quoted(lookFallback.emoji)}`,
   `  public static let fallbackIcon = ${quoted(lookFallback.icon)}`,
+  "",
+  "  /// Work whose shifts are given out each time: the patterns to start with.",
+  "  public static let rosterTemplates: [JobTemplate] = [",
+  ...rosterTemplates.map(swiftTemplate),
+  "  ]",
+  "",
+  "  /// Work whose shifts come round in a fixed order: the order too.",
+  "  public static let rotationTemplates: [JobTemplate] = [",
+  ...rotationTemplates.map(swiftTemplate),
+  "  ]",
+  "}",
+  "",
+  "/// A kind of work はじめの設定 and 新しい仕事にする offer (design/src/patterns.ts): its ready-made patterns, and for work that repeats, its order; `weekly` starts it on a Sunday, `custom` has it built.",
+  "public struct JobTemplate: Sendable, Hashable, Identifiable {",
+  "  public let id: String",
+  "  public let title: String",
+  "  public let note: String",
+  "  public let patternIDs: [String]",
+  "  public let sequence: [String]?",
+  "  public let weekly: Bool",
+  "  public let custom: Bool",
   "}",
 ];
 
@@ -136,5 +185,24 @@ export const kotlinReadyPatterns = (): string[] => [
   "",
   `  const val FALLBACK_EMOJI = ${quoted(lookFallback.emoji)}`,
   `  const val FALLBACK_ICON = ${quoted(lookFallback.icon)}`,
+  "",
+  "  val rosterTemplates: List<JobTemplate> = listOf(",
+  ...rosterTemplates.map(kotlinTemplate),
+  "  )",
+  "",
+  "  val rotationTemplates: List<JobTemplate> = listOf(",
+  ...rotationTemplates.map(kotlinTemplate),
+  "  )",
   "}",
+  "",
+  "/** A kind of work はじめの設定 and 新しい仕事にする offer (design/src/patterns.ts). */",
+  "data class JobTemplate(",
+  "  val id: String,",
+  "  val title: String,",
+  "  val note: String,",
+  "  val patternIds: List<String>,",
+  "  val sequence: List<String>?,",
+  "  val weekly: Boolean,",
+  "  val custom: Boolean,",
+  ")",
 ];

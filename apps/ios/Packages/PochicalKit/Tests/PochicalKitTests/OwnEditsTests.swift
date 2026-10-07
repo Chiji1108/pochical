@@ -216,3 +216,24 @@ private func outbox(_ db: Database) throws -> [Pochical_V1_DayValue] {
     #expect(try OwnValues.repeatOrders(in: db).last?.holidayShift == "off")
   }
 }
+
+@Test func aNewJobTakesOverThePatternsKeepingThoseOnDaysBefore() throws {
+  let database = try calendarWithAnOrder()
+  try database.write { db in
+    // 日勤 repeats from October; 夜勤 and its 明け were entered once.
+    try OwnValues.enter("night", on: Day("2026-10-20")!, now: 1, in: db)
+    let ids: Set<PatternID> = ["duty", "offDuty", "off"]
+    let incoming = ["duty", "offDuty", "off"].compactMap(ReadyPatterns.pattern).map {
+      Pattern($0, keeping: ids)
+    }
+    let start = Day("2026-11-01")!
+    try OwnValues.changeJob(
+      to: incoming, sequence: ["duty", "offDuty", "off"], start: start, anchor: start,
+      holidayCountry: "JP", now: 2, in: db)
+    let names = try OwnValues.patterns(in: db).map(\.name)
+    // The new job's first; 日勤, 夜勤 and 明け stay for the days before.
+    #expect(Array(names.prefix(3)) == ["当番", "非番", "休み"])
+    #expect(Set(names.dropFirst(3)) == ["day", "night", "after"])
+    #expect(try OwnValues.repeatOrders(in: db).last?.sequence.count == 3)
+  }
+}
