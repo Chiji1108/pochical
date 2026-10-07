@@ -1,3 +1,4 @@
+import PochicalDesign
 import PochicalKit
 import Testing
 
@@ -43,4 +44,21 @@ import Testing
   #expect(firstBlankDay(in: month, days: filled).key == "2026-10-04")
   let full = Dictionary(uniqueKeysWithValues: month.daysOfMonth.map { ($0, DayEntry(shift: "day")) })
   #expect(firstBlankDay(in: month, days: full).key == "2026-10-01")
+}
+
+@Test func takesHolidaysFromItsRegionElseJapan() {
+  #expect(Holidays.country(for: "JP") == "JP")
+  // Pochical has no holidays of these yet.
+  #expect(Holidays.country(for: "KR") == "JP")
+  #expect(Holidays.country(for: nil) == "JP")
+}
+
+@Test func writesADayInOneWay() {
+  let day = Day("2026-10-12")!
+  #expect(day.fullText == "10月12日(月)")
+  #expect(day.monthDayText == "10月12日")
+  #expect(day.dayWeekdayText == "12日(月)")
+  #expect(day.slashText == "10/12")
+  #expect(day.yearSlashText == "2026/10/12")
+  #expect(day.yearMonthText == "2026年10月")
 }

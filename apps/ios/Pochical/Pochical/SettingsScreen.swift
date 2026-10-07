@@ -82,7 +82,7 @@ struct SettingsScreen: View {
             CalendarSettings()
           } label: {
             LabeledContent(
-              "カレンダー", value: "\(WeekdayRow.names[settings.device.week.start])曜はじまり")
+              "カレンダー", value: "\(Day.weekdayNames[settings.device.week.start])曜はじまり")
           }
         }
         .settingsRows()
@@ -174,8 +174,8 @@ private struct CalendarSettings: View {
       Section("週の始まり") {
         Picker("週の始まり", selection: $settings.device.week.start) {
           ForEach(0..<7, id: \.self) { day in
-            Text(WeekdayRow.names[day])
-              .accessibilityLabel("\(WeekdayRow.names[day])曜")
+            Text(Day.weekdayNames[day])
+              .accessibilityLabel("\(Day.weekdayNames[day])曜")
               .tag(day)
           }
         }

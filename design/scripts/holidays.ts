@@ -7,6 +7,10 @@ import holidayJp from "@holiday-jp/holiday_jp";
 // Days before this are older than any shift kept in the app.
 const FROM = "2000-01-01";
 
+// The country whose holidays a device takes when its region has none
+// here: Japan, Pochical's home (spec/calendar.md, Holidays).
+export const fallbackCountry = "JP";
+
 type Names = Record<string, string>;
 
 export const holidaysByCountry: Record<string, Names> = {
@@ -32,6 +36,7 @@ export const webHolidays = (header: string) =>
   [
     `// ${header}`,
     `// ${DOC}`,
+    `export const fallbackHolidayCountry = ${JSON.stringify(fallbackCountry)};`,
     "export const holidays: Record<string, Record<string, string | undefined> | undefined> = {",
     ...countries.flatMap(([country, names]) => [
       `  ${country}: {`,
@@ -50,6 +55,11 @@ export const swiftHolidays = () => [
   '  /// The holiday\'s name on `date` ("YYYY-MM-DD") in `country` ("JP"), or nil.',
   "  public static func name(on date: String, in country: String) -> String? {",
   "    table[country]?[date]",
+  "  }",
+  "",
+  "  /// The country whose holidays a device in `region` takes: its own when they are here, else Japan's.",
+  "  public static func country(for region: String?) -> String {",
+  `    region.flatMap { table[$0] == nil ? nil : $0 } ?? ${JSON.stringify(fallbackCountry)}`,
   "  }",
   "",
   "  private static let table: [String: [String: String]] = [",
@@ -78,6 +88,9 @@ export const kotlinHolidays = () => [
   "object Holidays {",
   '  /** The holiday\'s name on [date] ("YYYY-MM-DD") in [country] ("JP"), or null. */',
   "  fun nameOf(date: String, country: String): String? = table[country]?.get(date)",
+  "",
+  "  /** The country whose holidays a device in [region] takes: its own when they are here, else Japan's. */",
+  `  fun countryFor(region: String?): String = region?.takeIf { it in table } ?: ${JSON.stringify(fallbackCountry)}`,
   "",
   "  private val table: Map<String, Map<String, String>> by lazy {",
   `    mapOf(${countries.map(([country]) => `"${country}" to parse(${country})`).join(", ")})`,

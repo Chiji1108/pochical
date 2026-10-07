@@ -56,19 +56,19 @@ struct TrayDateLabel: View {
 
   var body: some View {
     HStack(spacing: 2) {
-      Text("\(day.month)月\(day.day)日")
+      Text(day.monthDayText)
         .font(.system(size: 17, weight: .semibold))
         .foregroundStyle(colors.textPrimary)
-      Text("(\(WeekdayRow.names[day.weekday]))")
+      Text("(\(day.weekdayName))")
         .font(.system(size: 14))
         .foregroundStyle(weekdayColor)
     }
     .accessibilityElement(children: .combine)
-    .accessibilityLabel("入力する日付：\(day.month)月\(day.day)日")
+    .accessibilityLabel("入力する日付：\(day.monthDayText)")
   }
 
   private var weekdayColor: Color {
-    let isHoliday = Holidays.name(on: day.key, in: "JP") != nil
+    let isHoliday = day.holidayName != nil
     if (isHoliday && week.holiday) || (day.weekday == 0 && week.sunday) {
       return colors.calendarHoliday
     }

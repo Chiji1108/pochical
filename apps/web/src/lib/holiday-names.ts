@@ -1,5 +1,6 @@
 // Code generated from design/ by `mise run gen`. Do not edit.
 // National holidays by country code ("JP") and date ("YYYY-MM-DD"), from design/scripts/holidays.ts.
+export const fallbackHolidayCountry = "JP";
 export const holidays: Record<string, Record<string, string | undefined> | undefined> = {
   JP: {
     "2000-01-01": "元日",

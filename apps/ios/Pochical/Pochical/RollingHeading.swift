@@ -46,7 +46,7 @@ struct MonthName: View {
       .foregroundStyle(colors.textPrimary)
     }
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel("\(month.year)年\(month.month)月")
+    .accessibilityLabel(month.yearMonthText)
     .accessibilityAddTraits(.isHeader)
   }
 }
@@ -72,7 +72,7 @@ struct RollingMonthTitle: View {
     }
     .font(.title3.bold())
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel("\(month.year)年\(month.month)月")
+    .accessibilityLabel(month.yearMonthText)
     .accessibilityAddTraits(.isHeader)
   }
 }

@@ -10,7 +10,7 @@ import SwiftUI
 /// open, as /design's pollSummary.
 func pollSummary(_ days: [Day], decided: Day?) -> String {
   if let decided {
-    return "📅 \(dayName(decided))に決定"
+    return "📅 \(decided.fullText)に決定"
   }
   return "📅 日にちの投票：\(daysSummary(days).replacingOccurrences(of: "📅 ", with: ""))"
 }
@@ -60,7 +60,7 @@ struct PollCard: View {
           .accessibilityHidden(true)
         VStack(alignment: .leading, spacing: 2) {
           Text("日にちの投票").font(.subheadline.weight(.semibold))
-          Text(decided.map { "\(dayName($0))に決定" } ?? "\(voters.count)人が投票")
+          Text(decided.map { "\($0.fullText)に決定" } ?? "\(voters.count)人が投票")
             .font(.caption2)
             .foregroundStyle(colors.textTertiary)
         }
@@ -100,8 +100,8 @@ struct PollCard: View {
     return HStack(spacing: 8) {
       VStack(alignment: .leading, spacing: 0) {
         HStack(alignment: .firstTextBaseline, spacing: 2) {
-          Text("\(day.month)/\(day.day)").font(.system(size: 13, weight: .semibold))
-          Text(WeekdayRow.names[day.weekday]).font(.system(size: 10))
+          Text(day.slashText).font(.system(size: 13, weight: .semibold))
+          Text(day.weekdayName).font(.system(size: 10))
         }
         .foregroundStyle(dayTone(day))
         if together(day) {
@@ -139,7 +139,7 @@ struct PollCard: View {
         }
         .buttonStyle(.plain)
         .disabled(waiting)
-        .accessibilityLabel("\(dayName(day))に行ける")
+        .accessibilityLabel("\(day.fullText)に行ける")
         .accessibilityAddTraits(yours ? .isSelected : [])
       }
     }
@@ -164,7 +164,7 @@ struct PollCard: View {
 
   private func dayTone(_ day: Day) -> Color {
     let week = settings.device.week
-    let holiday = week.holiday && Holidays.name(on: day.key, in: "JP") != nil
+    let holiday = week.holiday && day.holidayName != nil
     return switch day.weekday {
     case 0 where week.sunday: colors.calendarHoliday
     case 6 where week.saturday: colors.calendarSaturday
@@ -206,10 +206,10 @@ private struct Voters: View {
     }
     .buttonStyle(.plain)
     .disabled(people.isEmpty)
-    .accessibilityLabel("\(dayName(day))に行ける人：\(people.joined(separator: "、"))")
+    .accessibilityLabel("\(day.fullText)に行ける人：\(people.joined(separator: "、"))")
     .popover(isPresented: $listing) {
       VStack(alignment: .leading, spacing: 8) {
-        Text(dayName(day)).font(.footnote.weight(.semibold))
+        Text(day.fullText).font(.footnote.weight(.semibold))
         ForEach(Array(people.enumerated()), id: \.offset) { _, name in
           HStack(spacing: 8) {
             LetterAvatar(name: name, size: 24)
@@ -241,7 +241,7 @@ struct DecidePollSheet: View {
           picked = day
         } label: {
           HStack {
-            Text(dayName(day)).foregroundStyle(colors.textPrimary)
+            Text(day.fullText).foregroundStyle(colors.textPrimary)
             Spacer()
             Text("\(votes.voters(on: day).count)人")
               .foregroundStyle(colors.textTertiary)

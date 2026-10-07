@@ -85,7 +85,7 @@ struct DayDetail: View {
     .background(colors.backgroundBase)
     .safeAreaInset(edge: .top, spacing: 0) {
       HStack {
-        Text("\(day.month)月\(day.day)日(\(WeekdayRow.names[day.weekday]))")
+        Text(day.fullText)
           .font(.title3.weight(.semibold))
           .foregroundStyle(colors.textPrimary)
           .accessibilityAddTraits(.isHeader)

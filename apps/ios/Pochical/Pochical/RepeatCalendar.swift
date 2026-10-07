@@ -40,7 +40,7 @@ struct RepeatCalendar<Accessory: View>: View {
   var before: OwnCalendar?
   /// 祝日は休みにする's pattern, when it is on.
   var holidayShift: PatternID?
-  var holidayCountry = "JP"
+  var holidayCountry = HolidayCountry.current
   @ViewBuilder let accessory: () -> Accessory
   /// The month shown, from the swiped pages; until then the 1st day's.
   @State private var month: Day?
@@ -113,7 +113,7 @@ struct RepeatCalendar<Accessory: View>: View {
     .padding(.bottom, 8)
     // Its first day and length under the page's title.
     .navigationSubtitle(
-      dayName(anchor) + "から" + (sequence.isEmpty ? "" : "・\(sequence.count)日ごとに繰り返し"))
+      anchor.fullText + "から" + (sequence.isEmpty ? "" : "・\(sequence.count)日ごとに繰り返し"))
     .onAppear {
       origin = origin ?? anchor.firstOfMonth
       month = month ?? anchor.firstOfMonth
@@ -170,7 +170,7 @@ struct RepeatCalendar<Accessory: View>: View {
               note: nil,
               pattern: shift.flatMap { byID[$0] ?? before?.patternsByID[$0] },
               outside: day.month != month.month || !inOrder, isToday: day == .today,
-              isHoliday: Holidays.name(on: day.key, in: "JP") != nil,
+              isHoliday: day.holidayName != nil,
               colorsHoliday: settings.device.week.holiday, isSelected: index == cursor,
               isEntering: true, faint: inOrder && !typed,
               onSelect: press)

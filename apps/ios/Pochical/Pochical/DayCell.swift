@@ -126,8 +126,8 @@ struct DayCell: View {
   }
 
   private var accessibilityText: String {
-    var parts = ["\(day.month)月\(day.day)日"]
-    if isHoliday, let name = Holidays.name(on: day.key, in: "JP") {
+    var parts = [day.monthDayText]
+    if isHoliday, let name = day.holidayName {
       parts.append(name)
     }
     parts.append(pattern?.name ?? "未入力")

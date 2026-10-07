@@ -19,10 +19,6 @@ private var nextMonthStart: Day {
   Day.today.firstOfMonth.addingMonths(1)
 }
 
-/// The day as M/D, as the buttons say it.
-private func shortDay(_ day: Day) -> String {
-  "\(day.month)/\(day.day)"
-}
 
 /// The person's patterns and orders, read again as they change.
 private struct WorkValues: FetchKeyRequest, Hashable {
@@ -100,7 +96,7 @@ struct WorkStylePage: View {
                 .foregroundStyle(colors.textSecondary)
             }
             SequenceTiles(sequence: current.sequence, patterns: byID)
-            Text("\(dayName(current.start))から")
+            Text("\(current.start.fullText)から")
               .font(.footnote)
               .foregroundStyle(colors.textTertiary)
           }
@@ -155,7 +151,7 @@ struct WorkStylePage: View {
             let end = index + 1 < values.orders.count
               ? values.orders[index + 1].start.adding(days: -1) : nil
             LabeledContent(
-              "\(shortDay(order.start))〜\(end.map(shortDay) ?? "")",
+              "\(order.start.slashText)〜\(end.map(\.slashText) ?? "")",
               value: sequenceLabel(order.sequence, byID))
           }
         }
@@ -184,7 +180,7 @@ struct SequenceTiles: View {
     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
       ForEach(Array(sequence.enumerated()), id: \.offset) { index, id in
         VStack(spacing: 1) {
-          Text(weekly ? WeekdayRow.names[index % 7] : "\(index + 1)")
+          Text(weekly ? Day.weekdayNames[index % 7] : "\(index + 1)")
             .font(.system(size: 9))
             .foregroundStyle(tone(index))
           if let pattern = patterns[id] {
@@ -321,7 +317,7 @@ private struct RepeatEditor: View {
       sequence: Binding(get: { steps }, set: { sequence = $0 }),
       anchor: Binding(get: { picked }, set: { day = $0 }),
       cover: mode == .fix ? .from(start) : .anchor, patterns: values.patterns,
-      before: shown, holidayShift: holidays ? offShift : nil, holidayCountry: country
+      before: shown, holidayShift: holidays ? offShift : nil, holidayCountry: HolidayCountry.current
     ) {
       Toggle(isOn: Binding(get: { holidays }, set: { holidaysOff = $0 })) {
         Text("祝日は休み").font(.footnote).foregroundStyle(colors.textSecondary)
@@ -340,7 +336,7 @@ private struct RepeatEditor: View {
       }
     }
     // The days from its start change, so 完了 asks first.
-    .alert("\(shortDay(start))\(mode.question)", isPresented: $confirming) {
+    .alert("\(start.slashText)\(mode.question)", isPresented: $confirming) {
       Button("キャンセル", role: .cancel) {}
       Button(mode.action) {
         save(steps, start: start, anchor: picked, holidays: holidays, shift: offShift)
@@ -357,10 +353,6 @@ private struct RepeatEditor: View {
     return values.orders.last { !$0.sequence.isEmpty }?.sequence ?? []
   }
 
-  /// The device's region, whose holidays a new order takes.
-  private var country: String {
-    Locale.current.region?.identifier ?? "JP"
-  }
 
   private func save(
     _ steps: [PatternID], start: Day, anchor: Day, holidays: Bool, shift: PatternID?
@@ -368,7 +360,7 @@ private struct RepeatEditor: View {
     let order = RepeatOrder(
       sequence: steps, start: start, anchor: anchor, holidaysOff: holidays,
       holidayShift: holidays ? shift : nil,
-      holidayCountry: mode == .fix ? values.orders.current?.holidayCountry ?? country : country)
+      holidayCountry: mode == .fix ? values.orders.current?.holidayCountry ?? HolidayCountry.current : HolidayCountry.current)
     try? database.write {
       if mode == .fix {
         try OwnValues.fix(order, now: nowMs(), in: $0)
@@ -405,11 +397,11 @@ private struct RosterSwitchPage: View {
       Section {
         Button {
           let order = RepeatOrder(
-            sequence: [], start: day, holidayCountry: Locale.current.region?.identifier ?? "JP")
+            sequence: [], start: day, holidayCountry: HolidayCountry.current)
           try? database.write { try OwnValues.start(order, now: nowMs(), in: $0) }
           dismiss()
         } label: {
-          Label("\(shortDay(day))から順番をやめる", systemImage: "arrow.right")
+          Label("\(day.slashText)から順番をやめる", systemImage: "arrow.right")
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)

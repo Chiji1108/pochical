@@ -32,7 +32,7 @@ struct GroupWeekdays: View {
       Color.clear.frame(width: facesWidth(compact: compact), height: 1)
       ForEach(0..<7, id: \.self) { index in
         let weekday = (week.start + index) % 7
-        Text(WeekdayRow.names[weekday])
+        Text(Day.weekdayNames[weekday])
           .font(.system(size: 10))
           .foregroundStyle(color(of: weekday, week: week))
           .frame(maxWidth: .infinity)
@@ -88,7 +88,7 @@ struct GroupWeek: View {
       ForEach(days, id: \.self) { day in
         let column = VStack(spacing: 0) {
           // A month's 1st says its month, where the week runs into it.
-          Text(day.day == 1 && day != days[0] ? "\(day.month)/1" : "\(day.day)")
+          Text(day.day == 1 && day != days[0] ? day.slashText : "\(day.day)")
             .font(.system(size: 11, weight: day == today ? .bold : .semibold))
             .foregroundStyle(dateColor(day, today: today))
             .frame(height: dateHeight)
@@ -123,7 +123,7 @@ struct GroupWeek: View {
         .opacity(month.map { $0.month == day.month } ?? true ? 1 : 0.35)
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(day.month)月\(day.day)日\(together.contains(day) ? "、みんな休み" : "")")
+        .accessibilityLabel("\(day.monthDayText)\(together.contains(day) ? "、みんな休み" : "")")
         .accessibilityAddTraits(day == picked ? .isSelected : [])
         if let onPick {
           Button { onPick(day) } label: { column }
@@ -142,7 +142,7 @@ struct GroupWeek: View {
       return colors.accentDefault
     }
     let week = settings.device.week
-    if week.holiday, Holidays.name(on: day.key, in: "JP") != nil {
+    if week.holiday, day.holidayName != nil {
       return colors.calendarHoliday
     }
     switch day.weekday {
@@ -217,7 +217,7 @@ struct MemberWeek: View {
       Text("次のみんな休み")
         .foregroundStyle(colors.textSecondary)
       Spacer()
-      Text(next.map { "\(dayName($0))・\(fromToday($0, today: today))" } ?? "なし")
+      Text(next.map { "\($0.fullText)・\(fromToday($0, today: today))" } ?? "なし")
         .fontWeight(next == nil ? .regular : .semibold)
         .foregroundStyle(next == nil ? colors.textTertiary : colors.textPrimary)
       if next != nil {
@@ -252,7 +252,3 @@ struct MemberWeek: View {
   }
 }
 
-/// A day as the group's screens name it: 10月5日(月).
-func dayName(_ day: Day) -> String {
-  "\(day.month)月\(day.day)日(\(WeekdayRow.names[day.weekday]))"
-}
