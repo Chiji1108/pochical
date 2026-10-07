@@ -170,7 +170,7 @@ export const chatStyle = {
     overflowWrap: "anywhere",
     padding: "8px 12px",
     textAlign: "left",
-    textStyle: "subheadline",
+    textStyle: "body",
     whiteSpace: "pre-wrap",
   }),
   // A message of nothing but a few emoji (LargeEmoji), large and without
@@ -351,6 +351,15 @@ export const chatStyle = {
   item: cva({
     base: { display: "flex", flexDirection: "column", gap: "8px" },
     variants: {
+      // A run's first line, a day's title and whatever else stands apart:
+      // more room before it than between one writer's lines.
+      runStart: {
+        true: {
+          "&:not(:first-child)": {
+            marginTop: "calc(var(--run-gap) - var(--line-gap))",
+          },
+        },
+      },
       flash: {
         true: {
           "& :is([data-part=bubble], [data-part=day-card])": {
@@ -420,7 +429,7 @@ export const chatStyle = {
     display: "flex",
     flex: 1,
     flexDirection: "column",
-    gap: "8px",
+    gap: "var(--line-gap)",
     listStyle: "none",
     margin: 0,
     minHeight: 0,

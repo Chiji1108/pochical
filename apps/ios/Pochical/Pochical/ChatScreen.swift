@@ -196,7 +196,7 @@ struct ChatScreen: View {
     let state = chat.state
     let names = self.names
     ScrollView {
-      LazyVStack(spacing: 8) {
+      LazyVStack(spacing: CGFloat(Chat.lineGap)) {
         if !state.atStart {
           ProgressView()
             .frame(maxWidth: .infinity, minHeight: Metrics.touch)
@@ -210,11 +210,14 @@ struct ChatScreen: View {
             }
         }
         ForEach(items(state)) { item in
+          // Lines close within a run, parted where the writer changes.
           row(item, names: names)
+            .padding(.top, item.startsRun ? CGFloat(Chat.runGap - Chat.lineGap) : 0)
         }
         // Who is writing now, under the latest line; not someone blocked.
         ForEach(typers.keys.filter { !blocked.contains($0) }.sorted(), id: \.self) { userID in
           TypingLine(name: names[userID] ?? "メンバー")
+            .padding(.top, CGFloat(Chat.runGap - Chat.lineGap))
             .id("typing-\(userID)")
             .transition(.opacity)
         }
@@ -1249,6 +1252,15 @@ private enum ChatItem: Identifiable {
     case .waiting(let line, _): "line-\(line.opID)"
     }
   }
+
+  /// Whether more room goes before it: a run's first line, a day's title
+  /// and ここから新着.
+  var startsRun: Bool {
+    switch self {
+    case .day, .unread: true
+    case .line(_, let startsRun), .waiting(_, let startsRun): startsRun
+    }
+  }
 }
 
 /// Where the lines are scrolled: at the latest, and more than half a
@@ -1522,7 +1534,7 @@ struct MessageBubble: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       Text(words)
-        .font(.subheadline)
+        .font(.body)
         .lineSpacing(3)
         .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
         .tint(mine ? colors.accentOnFill : colors.accentDefault)
@@ -1552,7 +1564,7 @@ struct MessageBubble: View {
     for part in textParts(text) {
       var piece = AttributedString(part.mention.map { "@\(nameOf($0))" } ?? part.text)
       if part.mention != nil {
-        piece.font = .subheadline.weight(.semibold)
+        piece.font = .body.weight(.semibold)
         if !mine { piece.foregroundColor = colors.accentDefault }
       } else if let link = part.url.flatMap({ URL(string: $0, encodingInvalidCharacters: true) }) {
         piece.link = link

@@ -29,7 +29,12 @@ import { Composer, useComposer } from "./design-chat-composer";
 import { useChatEdits } from "./design-chat-edits";
 import { ChatContext, MessageLine } from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
-import { ChatListRow, LineFrame, MutedMark } from "./design-chat-parts";
+import {
+  ChatListRow,
+  LineFrame,
+  MutedMark,
+  chatGaps,
+} from "./design-chat-parts";
 import { PinBar } from "./design-chat-pins";
 import { DecidePollSheet } from "./design-chat-poll";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
@@ -416,6 +421,7 @@ export function ChatPage({
           <ol
             aria-label={`${title}のメッセージ`}
             className={chatStyle.messages}
+            style={chatGaps}
             onScroll={handleScroll}
             ref={listRef}
           >

@@ -234,6 +234,7 @@ export function MessageLine({
       id={`message-${message.id}`}
       mine={mine}
       name={isGroup && firstOfRun ? (member?.name ?? "") : undefined}
+      runStart={firstOfRun}
     >
       <span
         className={cx(

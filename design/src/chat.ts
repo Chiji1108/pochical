@@ -17,6 +17,9 @@ export const chatRules = {
   // The size such emoji are drawn at, in points (sp on Android) at the
   // reader's default text size, growing with it as body does.
   largeEmojiSize: 48,
+  // The room between one writer's lines in a run, in points: close, so a
+  // run reads as one turn, as iMessage and LINE draw them.
+  lineGap: 4,
   // The width over height a link preview's picture is cropped to, the
   // size pages give their og:image.
   linkPreviewAspect: 1.91,
@@ -40,6 +43,9 @@ export const chatRules = {
   photoMaxEdge: 2048,
   // The most photos sent at once, each as its own line.
   photosPerSend: 4,
+  // The room before a run's first line, a day's title and ここから新着,
+  // in points: where the writer changes, the lines part more.
+  runGap: 12,
   // How often, in milliseconds, a client sends a typing frame while
   // someone is writing.
   typingSendMs: 3000,

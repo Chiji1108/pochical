@@ -9,6 +9,7 @@ object Chat {
   const val foldLines = 10
   const val largeEmojiMax = 3
   const val largeEmojiSize = 48
+  const val lineGap = 4
   const val linkPreviewAspect = 1.91f
   const val linkPreviewSettleMs = 400
   const val maxPins = 5
@@ -16,6 +17,7 @@ object Chat {
   const val photoMaxBytes = 4000000
   const val photoMaxEdge = 2048
   const val photosPerSend = 4
+  const val runGap = 12
   const val typingSendMs = 3000
   const val typingShowMs = 5000
 }

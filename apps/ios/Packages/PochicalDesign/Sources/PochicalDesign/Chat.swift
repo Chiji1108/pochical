@@ -7,6 +7,7 @@ public enum Chat {
   public static let foldLines = 10
   public static let largeEmojiMax = 3
   public static let largeEmojiSize = 48
+  public static let lineGap = 4
   public static let linkPreviewAspect = 1.91
   public static let linkPreviewSettleMs = 400
   public static let maxPins = 5
@@ -14,6 +15,7 @@ public enum Chat {
   public static let photoMaxBytes = 4000000
   public static let photoMaxEdge = 2048
   public static let photosPerSend = 4
+  public static let runGap = 12
   public static let typingSendMs = 3000
   public static let typingShowMs = 5000
 }

@@ -91,6 +91,7 @@ export function ChatItem({
   day,
   id,
   flash = false,
+  runStart = true,
   children,
 }: {
   // The day, when this line is its first.
@@ -98,10 +99,18 @@ export function ChatItem({
   id?: string;
   // Rung, as a pin or a quote jumped to it.
   flash?: boolean;
+  // More room before it: false for a line that goes on its writer's run.
+  runStart?: boolean;
   children: ReactNode;
 }) {
   return (
-    <li className={chatStyle.item({ flash })} id={id}>
+    <li
+      className={chatStyle.item({
+        flash,
+        runStart: runStart || day !== undefined,
+      })}
+      id={id}
+    >
       {day !== undefined && <span className={chatStyle.when}>{day}</span>}
       {children}
     </li>
@@ -128,6 +137,7 @@ export function LineFrame({
   avatar?: ReactNode;
   // Over the line, at the start of a run in a chat of more than two.
   name?: string;
+  runStart?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -172,6 +182,13 @@ export function Bubble({
     </span>
   );
 }
+
+// The room between a chat's lines, set on its list of them (chatRules'
+// lineGap and runGap), as a variable for the same reason as below.
+export const chatGaps: CSSProperties = {
+  "--line-gap": `${chatRules.lineGap}px`,
+  "--run-gap": `${chatRules.runGap}px`,
+};
 
 // The size LargeEmoji draws at. Panda reads styles before the code runs,
 // so it reaches them as a variable rather than from chatRules.
