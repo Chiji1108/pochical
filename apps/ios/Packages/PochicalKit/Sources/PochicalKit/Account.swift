@@ -2,9 +2,11 @@ import Foundation
 import Security
 
 /// Where the apps reach the server: `mise run server` on the Mac while
-/// developing, which the simulator reaches as localhost.
+/// developing in the simulator, which reaches it as localhost. A Debug
+/// build on an iPhone cannot, so it uses the deployed server, the only
+/// one that can send its notifications.
 public enum Server {
-  #if DEBUG
+  #if DEBUG && targetEnvironment(simulator)
     public static let url = URL(string: "http://localhost:8787")!
   #else
     public static let url = URL(string: "https://api.pochical.app")!
