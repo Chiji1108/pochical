@@ -167,3 +167,22 @@ private func outbox(_ db: Database) throws -> [Pochical_V1_DayValue] {
     #expect(try OwnValues.daysShowing("off", in: db) == 0)
   }
 }
+
+@Test func coworkersAreRenamedReorderedAndDeletedWithTheirDaysCounted() throws {
+  let database = try calendarWithAnOrder()
+  try database.write { db in
+    let aya = try OwnValues.addCoworker(named: "あや", now: 1, in: db)
+    let ken = try OwnValues.addCoworker(named: "けん", now: 2, in: db)
+    try OwnValues.set(
+      Day("2026-10-05")!, to: DayEntry(shift: "night", people: [aya]), now: 3, in: db)
+    #expect(try OwnValues.daysWithCoworker(aya, in: db) == 1)
+    #expect(try OwnValues.daysWithCoworker(ken, in: db) == 0)
+
+    try OwnValues.renameCoworker(aya, to: "あやか", now: 4, in: db)
+    try OwnValues.orderCoworkers([ken, aya], now: 5, in: db)
+    #expect(try OwnValues.coworkers(in: db).map(\.name) == ["けん", "あやか"])
+
+    try OwnValues.deleteCoworker(ken, now: 6, in: db)
+    #expect(try OwnValues.coworkers(in: db).map(\.name) == ["あやか"])
+  }
+}
