@@ -136,6 +136,16 @@ export const chatLines = sqliteTable(
     pinnedAt: integer("pinned_at"),
     // Its days are put to the vote.
     poll: integer({ mode: "boolean" }).notNull().default(false),
+    // Its first link's page, as pochical.v1.LinkPreview's fields; none
+    // without one, and once unsent.
+    preview: text({ mode: "json" }).$type<{
+      imageHeight: number;
+      imageId: string;
+      imageWidth: number;
+      site: string;
+      title: string;
+      url: string;
+    }>(),
     sentAt: integer("sent_at", { mode: "timestamp_ms" }).notNull(),
     seq: integer().notNull(),
     text: text().notNull(),

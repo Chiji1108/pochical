@@ -91,8 +91,77 @@ public object ChatChangeKt {
     public fun clearText() {
       _builder.clearText()
     }
+
+    /**
+     * ```
+     * The words' first link is the line's still: its page stays, and
+     * `preview` is not looked at (spec/vectors/chat.json, edited).
+     * ```
+     *
+     * `bool keeps_preview = 4 [json_name = "keepsPreview"];`
+     */
+    public var keepsPreview: kotlin.Boolean
+      @kotlin.jvm.JvmName("getKeepsPreview")
+        get() = _builder.keepsPreview
+      @kotlin.jvm.JvmName("setKeepsPreview")
+        set(value) {
+        _builder.keepsPreview = value
+      }
+    /**
+     * ```
+     * The words' first link is the line's still: its page stays, and
+     * `preview` is not looked at (spec/vectors/chat.json, edited).
+     * ```
+     *
+     * `bool keeps_preview = 4 [json_name = "keepsPreview"];`
+     */
+    public fun clearKeepsPreview() {
+      _builder.clearKeepsPreview()
+    }
+
+    /**
+     * ```
+     * Else the new first link's page, or none.
+     * ```
+     *
+     * `.pochical.v1.LinkPreview preview = 5 [json_name = "preview"];`
+     */
+    public var preview: app.pochical.v1.LinkPreview
+      @kotlin.jvm.JvmName("getPreview")
+        get() = _builder.preview
+      @kotlin.jvm.JvmName("setPreview")
+        set(value) {
+        _builder.preview = value
+      }
+    /**
+     * ```
+     * Else the new first link's page, or none.
+     * ```
+     *
+     * `.pochical.v1.LinkPreview preview = 5 [json_name = "preview"];`
+     */
+    public fun clearPreview() {
+      _builder.clearPreview()
+    }
+    /**
+     * ```
+     * Else the new first link's page, or none.
+     * ```
+     *
+     * `.pochical.v1.LinkPreview preview = 5 [json_name = "preview"];`
+     * @return Whether the preview field is set.
+     */
+    public fun hasPreview(): kotlin.Boolean {
+      return _builder.hasPreview()
+    }
+
+    public val ChatChangeKt.Dsl.previewOrNull: app.pochical.v1.LinkPreview?
+      get() = _builder.previewOrNull
   }
 }
 public inline fun app.pochical.v1.ChatChange.copy(block: `app.pochical.v1`.ChatChangeKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatChange =
   `app.pochical.v1`.ChatChangeKt.Dsl._create(this.toBuilder()).apply { block() }._build()
+
+public val app.pochical.v1.ChatChangeOrBuilder.previewOrNull: app.pochical.v1.LinkPreview?
+  get() = if (hasPreview()) getPreview() else null
 

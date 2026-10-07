@@ -20,6 +20,7 @@ import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { pinStep } from "./chat-pins";
 import type { PinStep } from "./chat-pins";
 import { isDate } from "./day-values";
+import type { LinkPreview } from "./gen/pochical/v1/chat_pb";
 import { ChangeSchema, ChatLineSchema } from "./gen/pochical/v1/sync_pb";
 import type {
   Change,
@@ -168,6 +169,7 @@ const lineOf = (db: DrizzleSqliteDODatabase, row: LineRow): ChatLine =>
     photo: row.photo ?? undefined,
     pinnedOrder: BigInt(row.pinnedAt ?? 0),
     poll: row.poll,
+    preview: row.preview ?? undefined,
     reactions: reactionsOf(db, row),
     sentAtMs: BigInt(row.sentAt.getTime()),
     seq: BigInt(row.seq),
@@ -212,6 +214,31 @@ const fitsDays = (days: readonly string[]): boolean =>
 
 /** The fewest days a poll puts to the vote. */
 const POLL_MIN_DAYS = 2;
+
+/** The most characters of a preview's title or site name. */
+const PREVIEW_TEXT_MAX = 300;
+
+/** A link's page as a line keeps it, if it is one the server could make. */
+const keptPreview = (preview: LinkPreview | undefined): LineRow["preview"] => {
+  const link = preview === undefined ? null : URL.parse(preview.url);
+  const fits =
+    preview !== undefined &&
+    (link?.protocol === "https:" || link?.protocol === "http:") &&
+    preview.title.length <= PREVIEW_TEXT_MAX &&
+    preview.site.length <= PREVIEW_TEXT_MAX &&
+    (preview.imageId === "" || isId(preview.imageId));
+  if (!fits) {
+    return null;
+  }
+  return {
+    imageHeight: preview.imageHeight,
+    imageId: preview.imageId,
+    imageWidth: preview.imageWidth,
+    site: preview.site,
+    title: preview.title,
+    url: preview.url,
+  };
+};
 
 /** A photo's size, as the sender read it while shrinking it to send. */
 const fitsPhotoSize = (side: number): boolean =>
@@ -450,10 +477,23 @@ const takeWords = (
             decided: null,
             photo: null,
             pinnedAt: null,
+            preview: null,
             text,
             unsent: true,
           }
-        : { cursor, edited: true, text }
+        : {
+            cursor,
+            edited: true,
+            // The page stays while the first link does (spec/vectors/chat.json,
+            // edited); else the new link's, or none.
+            preview:
+              kind.case === "change" && kind.value.keepsPreview
+                ? line.preview
+                : keptPreview(
+                    kind.case === "change" ? kind.value.preview : undefined
+                  ),
+            text,
+          }
     )
     .where(
       and(eq(chatLines.threadId, line.threadId), eq(chatLines.seq, line.seq))
@@ -675,6 +715,9 @@ export const takeChatEdit = (
               ? null
               : { height: photo.height, id: photo.id, width: photo.width },
           poll: kind.value.poll,
+          // A page goes with words alone.
+          preview:
+            kind.value.text === "" ? null : keptPreview(kind.value.preview),
           sentAt: new Date(),
           seq: chatHead(db, kind.value.threadId) + 1,
           text: kind.value.text,

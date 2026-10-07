@@ -1,6 +1,8 @@
+import type { MessageInitShape } from "@bufbuild/protobuf";
 import { chatRules } from "@pochical/design/chat";
 import { describe, expect, it } from "vitest";
 
+import type { ChatEditSchema } from "../src/gen/pochical/v1/sync_pb";
 import {
   PAIR_ROSTER,
   changesIn,
@@ -110,6 +112,9 @@ function sendChatKind(kind: ChatKind, threadId: string) {
     value: { lastReadSeq: BigInt(kind.read), threadId },
   } as const;
 }
+
+// A link's page as the app attaches one.
+const page = (url: string) => ({ site: "Cafe", title: "店", url });
 
 const groupSocket = async (
   groupId: string,
@@ -590,6 +595,58 @@ describe("a group's chat", () => {
     chat(theirs.socket, [{ kind: { decide: [1, "2026-10-10"] }, opId: "d" }]);
     expect(changesIn(await theirs.frames.next())).toMatchObject([
       { kind: { value: { decided: "2026-10-10" } } },
+    ]);
+  });
+
+  it("keeps a line's page while its first link stays, as the edit says", async () => {
+    const { groupId, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    const edit = (
+      opId: string,
+      kind: MessageInitShape<typeof ChatEditSchema>["kind"]
+    ) => {
+      sendFrame(mine.socket, {
+        case: "chatEdits",
+        value: { edits: [{ kind, opId }] },
+      });
+    };
+    const lineAfter = async () => {
+      const [change] = changesIn(await mine.frames.next());
+      await mine.frames.next();
+      return change?.kind.case === "chatLine" ? change.kind.value : undefined;
+    };
+    edit("a", {
+      case: "send",
+      value: {
+        preview: page("https://cafe.example"),
+        text: "ここ https://cafe.example",
+        threadId: thread,
+      },
+    });
+    const sent = await lineAfter();
+    edit("b", {
+      case: "change",
+      value: {
+        keepsPreview: true,
+        seq: 1n,
+        text: "ここどう？ https://cafe.example",
+        threadId: thread,
+      },
+    });
+    const kept = await lineAfter();
+    edit("c", {
+      case: "change",
+      value: { seq: 1n, text: "やっぱりいいや", threadId: thread },
+    });
+    const none = await lineAfter();
+    expect([
+      sent?.preview?.url,
+      kept?.preview?.url,
+      none?.preview,
+    ]).toStrictEqual([
+      "https://cafe.example",
+      "https://cafe.example",
+      undefined,
     ]);
   });
 

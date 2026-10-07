@@ -1089,6 +1089,73 @@ public  final class ChatLine extends
     bitField0_ = (bitField0_ & ~0x00000001);
   }
 
+  public static final int PREVIEW_FIELD_NUMBER = 16;
+  private app.pochical.v1.LinkPreview preview_;
+  /**
+   * <pre>
+   * Its first link's page, under its words; none once unsent.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
+   */
+  @java.lang.Override
+  public boolean hasPreview() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <pre>
+   * Its first link's page, under its words; none once unsent.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.LinkPreview getPreview() {
+    return preview_ == null ? app.pochical.v1.LinkPreview.getDefaultInstance() : preview_;
+  }
+  /**
+   * <pre>
+   * Its first link's page, under its words; none once unsent.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
+   */
+  private void setPreview(app.pochical.v1.LinkPreview value) {
+    java.util.Objects.requireNonNull(value);
+    preview_ = value;
+    bitField0_ |= 0x00000002;
+  }
+  /**
+   * <pre>
+   * Its first link's page, under its words; none once unsent.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
+   */
+  @java.lang.SuppressWarnings("ReferenceEquality")
+  private void mergePreview(app.pochical.v1.LinkPreview value) {
+    java.util.Objects.requireNonNull(value);
+    if (preview_ != null &&
+        preview_ != app.pochical.v1.LinkPreview.getDefaultInstance()) {
+      preview_ =
+        app.pochical.v1.LinkPreview.newBuilder(preview_).mergeFrom(value).buildPartial();
+    } else {
+      preview_ = value;
+    }
+    bitField0_ |= 0x00000002;
+  }
+  /**
+   * <pre>
+   * Its first link's page, under its words; none once unsent.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
+   */
+  private void clearPreview() {
+    preview_ = null;
+    bitField0_ = (bitField0_ & ~0x00000002);
+  }
+
   public static app.pochical.v1.ChatLine parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -2301,6 +2368,77 @@ public  final class ChatLine extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Its first link's page, under its words; none once unsent.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
+     */
+    @java.lang.Override
+    public boolean hasPreview() {
+      return instance.hasPreview();
+    }
+    /**
+     * <pre>
+     * Its first link's page, under its words; none once unsent.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.LinkPreview getPreview() {
+      return instance.getPreview();
+    }
+    /**
+     * <pre>
+     * Its first link's page, under its words; none once unsent.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
+     */
+    public Builder setPreview(app.pochical.v1.LinkPreview value) {
+      copyOnWrite();
+      instance.setPreview(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * Its first link's page, under its words; none once unsent.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
+     */
+    public Builder setPreview(
+        app.pochical.v1.LinkPreview.Builder builderForValue) {
+      copyOnWrite();
+      instance.setPreview(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Its first link's page, under its words; none once unsent.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
+     */
+    public Builder mergePreview(app.pochical.v1.LinkPreview value) {
+      copyOnWrite();
+      instance.mergePreview(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Its first link's page, under its words; none once unsent.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
+     */
+    public Builder clearPreview() {  copyOnWrite();
+      instance.clearPreview();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatLine)
   }
   @java.lang.Override
@@ -2335,11 +2473,12 @@ public  final class ChatLine extends
             app.pochical.v1.ChatVotes.class,
             "decided_",
             "photo_",
+            "preview_",
           };
           java.lang.String info =
-              "\u0000\u000f\u0000\u0001\u0001\u000f\u000f\u0000\u0003\u0000\u0001\u0208\u0002\u0003" +
+              "\u0000\u0010\u0000\u0001\u0001\u0010\u0010\u0000\u0003\u0000\u0001\u0208\u0002\u0003" +
               "\u0003\u0208\u0004\u0208\u0005\u0002\u0006\u0007\u0007\u0007\b\u0208\t\u001b\n\u0003" +
-              "\u000b\u021a\f\u0007\r\u001b\u000e\u0208\u000f\u1009\u0000";
+              "\u000b\u021a\f\u0007\r\u001b\u000e\u0208\u000f\u1009\u0000\u0010\u1009\u0001";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

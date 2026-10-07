@@ -244,6 +244,48 @@ public object ChatSendKt {
 
     public val ChatSendKt.Dsl.photoOrNull: app.pochical.v1.ChatPhoto?
       get() = _builder.photoOrNull
+
+    /**
+     * ```
+     * The page of the words' first link, as GetLinkPreview gave it; none
+     * when the sender took it off (×) or it had not come.
+     * ```
+     *
+     * `.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];`
+     */
+    public var preview: app.pochical.v1.LinkPreview
+      @kotlin.jvm.JvmName("getPreview")
+        get() = _builder.preview
+      @kotlin.jvm.JvmName("setPreview")
+        set(value) {
+        _builder.preview = value
+      }
+    /**
+     * ```
+     * The page of the words' first link, as GetLinkPreview gave it; none
+     * when the sender took it off (×) or it had not come.
+     * ```
+     *
+     * `.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];`
+     */
+    public fun clearPreview() {
+      _builder.clearPreview()
+    }
+    /**
+     * ```
+     * The page of the words' first link, as GetLinkPreview gave it; none
+     * when the sender took it off (×) or it had not come.
+     * ```
+     *
+     * `.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];`
+     * @return Whether the preview field is set.
+     */
+    public fun hasPreview(): kotlin.Boolean {
+      return _builder.hasPreview()
+    }
+
+    public val ChatSendKt.Dsl.previewOrNull: app.pochical.v1.LinkPreview?
+      get() = _builder.previewOrNull
   }
 }
 public inline fun app.pochical.v1.ChatSend.copy(block: `app.pochical.v1`.ChatSendKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatSend =
@@ -251,4 +293,7 @@ public inline fun app.pochical.v1.ChatSend.copy(block: `app.pochical.v1`.ChatSen
 
 public val app.pochical.v1.ChatSendOrBuilder.photoOrNull: app.pochical.v1.ChatPhoto?
   get() = if (hasPhoto()) getPhoto() else null
+
+public val app.pochical.v1.ChatSendOrBuilder.previewOrNull: app.pochical.v1.LinkPreview?
+  get() = if (hasPreview()) getPreview() else null
 

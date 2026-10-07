@@ -1,6 +1,7 @@
 import { chatRules } from "@pochical/design/chat";
 
 import { isId } from "./ids";
+import { previewImageKey } from "./link-preview";
 
 // Photos sent in a group's chats (spec/chat.md, Photos), kept in R2 under
 // the group and passed through the Worker to its members alone: a member
@@ -74,6 +75,26 @@ export const getPhoto = async (
       "Cache-Control": "private, max-age=31536000, immutable",
       "Content-Type": "image/jpeg",
       ETag: photo.httpEtag,
+    },
+  });
+};
+
+/** A link preview's picture by its path: /v1/previews/{imageId}. */
+export const PREVIEW_IMAGE_PATH = /^\/v1\/previews\/(?<imageId>[^/]+)$/u;
+
+/** A link preview's picture, kept by the device as a photo is. */
+export const getPreviewImage = async (
+  env: Env,
+  imageId: string
+): Promise<Response> => {
+  const image = await env.PHOTOS.get(previewImageKey(imageId));
+  if (image === null) {
+    return new Response("No such picture", { status: 404 });
+  }
+  return new Response(image.body, {
+    headers: {
+      "Cache-Control": "private, max-age=31536000, immutable",
+      "Content-Type": image.httpMetadata?.contentType ?? "image/jpeg",
     },
   });
 };

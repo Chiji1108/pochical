@@ -47,4 +47,34 @@ public interface ChatChangeOrBuilder extends
    */
   com.google.protobuf.ByteString
       getTextBytes();
+
+  /**
+   * <pre>
+   * The words' first link is the line's still: its page stays, and
+   * `preview` is not looked at (spec/vectors/chat.json, edited).
+   * </pre>
+   *
+   * <code>bool keeps_preview = 4 [json_name = "keepsPreview"];</code>
+   * @return The keepsPreview.
+   */
+  boolean getKeepsPreview();
+
+  /**
+   * <pre>
+   * Else the new first link's page, or none.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 5 [json_name = "preview"];</code>
+   * @return Whether the preview field is set.
+   */
+  boolean hasPreview();
+  /**
+   * <pre>
+   * Else the new first link's page, or none.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 5 [json_name = "preview"];</code>
+   * @return The preview.
+   */
+  app.pochical.v1.LinkPreview getPreview();
 }
