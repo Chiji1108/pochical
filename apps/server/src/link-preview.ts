@@ -329,7 +329,13 @@ export const linkPreview = async (
         : create(LinkPreviewSchema, kept.preview);
     }
   }
-  const preview = await readPreview(bucket, url).catch(() => null);
-  await bucket.put(key, JSON.stringify({ at: Date.now(), preview }));
-  return preview;
+  // A page that could not be reached (a timeout, a dropped connection) is
+  // not kept, so it is read again next time; one read without a page is.
+  try {
+    const preview = await readPreview(bucket, url);
+    await bucket.put(key, JSON.stringify({ at: Date.now(), preview }));
+    return preview;
+  } catch {
+    return null;
+  }
 };
