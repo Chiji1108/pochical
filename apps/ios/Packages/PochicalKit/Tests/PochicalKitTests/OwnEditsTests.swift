@@ -186,3 +186,33 @@ private func outbox(_ db: Database) throws -> [Pochical_V1_DayValue] {
     #expect(try OwnValues.coworkers(in: db).map(\.name) == ["あやか"])
   }
 }
+
+@Test func aNewOrderTakesTheDaysFromItsStartAndAFixKeepsItsStart() throws {
+  let database = try calendarWithAnOrder()
+  try database.write { db in
+    let before = Day("2026-10-20")!
+    let after = Day("2026-11-03")!
+    try OwnValues.enter("night", on: before, now: 1, in: db)
+    try OwnValues.enter("night", on: after, now: 2, in: db)
+    try OwnValues.setNote(after, to: "歯医者", now: 3, in: db)
+
+    let switched = RepeatOrder(
+      sequence: ["day", "off"], start: Day("2026-11-01")!, holidayCountry: "JP")
+    try OwnValues.start(switched, now: 4, in: db)
+    #expect(try OwnValues.repeatOrders(in: db).map(\.start.key) == ["2026-10-01", "2026-11-01"])
+    // The day before the switch keeps its shift; after it, only the memo.
+    #expect(try DayRow.find(before.key).fetchOne(db)?.pattern == "night")
+    #expect(try DayRow.find(after.key).fetchOne(db)?.pattern == nil)
+    #expect(try DayRow.find(after.key).fetchOne(db)?.note == "歯医者")
+
+    var fixed = switched
+    fixed.anchor = Day("2026-11-02")
+    try OwnValues.fix(fixed, now: 5, in: db)
+    let orders = try OwnValues.repeatOrders(in: db)
+    #expect(orders.count == 2)
+    #expect(orders.last?.anchor == Day("2026-11-02"))
+
+    try OwnValues.setHolidaysOff(true, now: 6, in: db)
+    #expect(try OwnValues.repeatOrders(in: db).last?.holidayShift == "off")
+  }
+}

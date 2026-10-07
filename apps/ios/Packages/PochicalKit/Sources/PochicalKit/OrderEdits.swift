@@ -1,0 +1,82 @@
+import Foundation
+import PochicalProto
+import SQLiteData
+
+// The person's repeating orders as 設定 › 働き方 changes them
+// (spec/shift-patterns.md, Repeating orders): the timeline as one value,
+// a new or corrected order taking the days from its start back from the
+// person's own.
+
+extension OwnValues {
+  /// Starts an order on its start: an order starting on or after that day
+  /// gives way to it, and the days from it show the new one. An empty
+  /// sequence ends repeating there.
+  public static func start(_ order: RepeatOrder, now: Int64, in db: Database) throws {
+    try setOrders(orders(try repeatOrders(in: db), adding: order), clearFrom: order.start,
+      now: now, in: db)
+  }
+
+  /// Corrects the order in use in place, its days from its start shown by
+  /// it again.
+  public static func fix(_ order: RepeatOrder, now: Int64, in db: Database) throws {
+    let kept = try repeatOrders(in: db).dropLast()
+    try setOrders(Array(kept) + [order], clearFrom: order.start, now: now, in: db)
+  }
+
+  /// Turns 祝日は休みにする on or off for the order in use, holidays then
+  /// taking the person's first pattern that counts as off; with none it
+  /// cannot be turned on (spec/shift-patterns.md, Holidays).
+  public static func setHolidaysOff(_ on: Bool, now: Int64, in db: Database) throws {
+    var all = try repeatOrders(in: db)
+    guard var current = all.popLast() else { return }
+    let shift = holidayShift(of: try patterns(in: db))
+    if on, shift == nil { return }
+    current.holidaysOff = on
+    current.holidayShift = on ? shift : nil
+    try setOrders(all + [current], clearFrom: nil, now: now, in: db)
+  }
+
+  /// The orders as one value; from `clearFrom`, the days give their own
+  /// pattern and times back to the orders, here at once as the server
+  /// does (spec/vectors/own-days.json, givenToOrder).
+  private static func setOrders(
+    _ orders: [RepeatOrder], clearFrom: Day?, now: Int64, in db: Database
+  ) throws {
+    var value = Pochical_V1_RepeatOrders()
+    value.orders = orders.map(\.wire)
+    value.hlc = try nextClock(now: now, in: db)
+    var change = Pochical_V1_Change()
+    change.repeatOrders = value
+    try edit(change, opID: UUID().uuidString.lowercased(), clearFrom: clearFrom, in: db)
+    guard let clearFrom else { return }
+    let rows = try DayRow.where { $0.date >= clearFrom.key }.fetchAll(db)
+    for var row in rows {
+      row.pattern = nil
+      row.start = nil
+      row.end = nil
+      if row == DayRow(date: row.date) {
+        try DayRow.find(row.date).delete().execute(db)
+      } else {
+        try DayRow.upsert { row }.execute(db)
+      }
+    }
+  }
+}
+
+extension RepeatOrder {
+  /// The order as the wire carries it.
+  var wire: Pochical_V1_RepeatOrder {
+    var order = Pochical_V1_RepeatOrder()
+    order.sequence = sequence
+    order.start = start.key
+    if let anchor {
+      order.anchor = anchor.key
+    }
+    order.holidaysOff = holidaysOff
+    if let holidayShift {
+      order.holidayShift = holidayShift
+    }
+    order.holidayCountry = holidayCountry
+    return order
+  }
+}
