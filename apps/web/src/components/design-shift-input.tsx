@@ -23,12 +23,13 @@ import { ShiftMark } from "./shift-mark";
 // ポチポチ入力 and the save buttons that stand in its place share its
 // edges.
 // A kind of work's patterns as ポチポチ入力's keys will show them,
-// smaller and not to press: the buttons it gives, in no order of days.
+// smaller and not to press: the buttons it gives, in no order of days, as
+// wide as an order's days beside them.
 const keysPreview = {
   grid: css({
     display: "grid",
-    gap: "8px",
-    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+    gap: "4px",
+    gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
     listStyle: "none",
     margin: 0,
     padding: 0,
@@ -37,15 +38,15 @@ const keysPreview = {
     alignItems: "center",
     bg: "background.card",
     border: "1px solid token(colors.border.default)",
-    borderRadius: "lg",
+    borderRadius: "md",
     color: "text.primary",
     display: "flex",
     flexDirection: "column",
+    fontSize: "10px",
     gap: "4px",
     justifyContent: "center",
-    minHeight: "52px",
+    minHeight: "48px",
     minWidth: 0,
-    textStyle: "caption2",
   }),
 };
 
@@ -62,7 +63,7 @@ export function KeysPreview({
     >
       {patternKeys.map((key) => (
         <li aria-hidden="true" className={keysPreview.key} key={key}>
-          <ShiftMark shift={key} size={20} />
+          <ShiftMark shift={key} size={16} />
           <span className={shiftInput.name}>{book[key]?.name}</span>
         </li>
       ))}

@@ -92,8 +92,9 @@ struct JobChangePage: View {
 
   @ViewBuilder private func templates(_ templates: [JobTemplate]) -> some View {
     question("近い働き方を選んでください", "あとから名前や時間を変えられます。")
-    ForEach(templates) { template in
-      Section {
+    // One list, a row each, as the system's settings list choices.
+    Section {
+      ForEach(templates) { template in
         Button {
           choose(template)
         } label: {
@@ -101,16 +102,13 @@ struct JobChangePage: View {
             VStack(alignment: .leading, spacing: 6) {
               Text(template.title).font(.headline).foregroundStyle(colors.textPrimary)
               Text(template.note).font(.footnote).foregroundStyle(colors.textSecondary)
-              if !template.custom {
-                // An order's days, or the keys a roster's work gives.
-                Group {
-                  if let sequence = template.sequence {
-                    SequenceTiles(sequence: sequence, patterns: readyByID, weekly: template.weekly)
-                  } else {
-                    KeysPreview(patternIDs: template.patternIDs, patterns: readyByID)
-                  }
-                }
-                .padding(.top, 2)
+              // An order's days, or the keys a roster's work gives.
+              if let sequence = template.sequence, !template.custom {
+                SequenceTiles(sequence: sequence, patterns: readyByID, weekly: template.weekly)
+                  .padding(.top, 2)
+              } else if !template.custom {
+                KeysPreview(patternIDs: template.patternIDs, patterns: readyByID)
+                  .padding(.top, 2)
               }
             }
             Spacer(minLength: 8)
@@ -118,13 +116,13 @@ struct JobChangePage: View {
               .font(.footnote.weight(.semibold))
               .foregroundStyle(colors.textQuaternary)
           }
-          .padding(.vertical, 6)
+          .padding(.vertical, 4)
           .contentShape(.rect)
         }
         .buttonStyle(.plain)
       }
-      .settingsRows()
     }
+    .settingsRows()
   }
 
   @ViewBuilder private func customStep(_ template: JobTemplate) -> some View {

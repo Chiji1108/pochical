@@ -216,27 +216,28 @@ struct SequenceTiles: View {
 }
 
 /// A kind of work's patterns as ポチポチ入力's keys will show them,
-/// smaller and not to press: the buttons it gives, in no order of days.
+/// smaller and not to press: the buttons it gives, in no order of days, as
+/// wide as an order's days beside them.
 struct KeysPreview: View {
   @Environment(\.themeColors) private var colors
   let patternIDs: [PatternID]
   let patterns: [PatternID: Pattern]
 
   var body: some View {
-    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
+    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
       ForEach(patternIDs, id: \.self) { id in
-        VStack(spacing: 4) {
+        VStack(spacing: 3) {
           if let pattern = patterns[id] {
-            ShiftMark(pattern: pattern, size: 20)
+            ShiftMark(pattern: pattern, size: 16)
           }
           Text(patterns[id]?.name ?? "")
-            .font(.caption2)
+            .font(.system(size: 10))
             .foregroundStyle(colors.textPrimary)
             .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, minHeight: 52)
-        .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(colors.borderDefault))
+        .frame(maxWidth: .infinity, minHeight: 48)
+        .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.md))
+        .overlay(RoundedRectangle(cornerRadius: Radius.md).strokeBorder(colors.borderDefault))
       }
     }
     .accessibilityElement(children: .ignore)
