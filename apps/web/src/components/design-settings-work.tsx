@@ -8,24 +8,18 @@ import {
   formatDay,
   holidayShiftOf,
   isRepeating,
-  repeatSchedule,
 } from "../lib/design-days";
-import type { RepeatRule } from "../lib/design-days";
+import type { RepeatRule, Schedule } from "../lib/design-days";
 import { presetList, usePatterns } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
 import { InputDatePicker } from "./design-date-picker";
 import { PageHeader } from "./design-header";
 import { List, ListRow, SwitchRow } from "./design-list";
-import {
-  RepeatSequenceEditor,
-  SequenceTiles,
-  ShiftPreview,
-} from "./design-repeat-editor";
+import { RepeatCalendar, SequenceTiles } from "./design-repeat-editor";
 import {
   ListSection,
   nextMonthStart,
-  previewDays,
   sequenceLabel,
   settingsParts,
   shortDay,
@@ -113,37 +107,21 @@ function RuleHistory({ rules }: { rules: RepeatRule[] }) {
 
 type RepeatMode = "first" | "switch" | "fix";
 
-const repeatModes: Record<
-  RepeatMode,
-  { title: string; back: string; dayLabel: string; action: string }
-> = {
-  first: {
-    action: "から繰り返す",
-    back: "働き方",
-    dayLabel: "始める日",
-    title: "繰り返しを設定",
-  },
-  fix: {
-    action: "から入れ直す",
-    back: "働き方",
-    dayLabel: "並びの1日目",
-    title: "今の繰り返しを直す",
-  },
-  switch: {
-    action: "から切り替える",
-    back: "働き方",
-    dayLabel: "切り替える日",
-    title: "新しい繰り返し",
-  },
+const repeatModes: Record<RepeatMode, { title: string; action: string }> = {
+  first: { action: "から繰り返す", title: "繰り返しを設定" },
+  fix: { action: "から入れ直す", title: "今の繰り返しを直す" },
+  switch: { action: "から切り替える", title: "新しい繰り返し" },
 };
 
-// Sets an order from a day. Fixing keeps the rule's start and moves only
-// the day the order begins on, so no gap opens before it.
+// Sets an order on the calendar. A new one starts on its 1st day, the
+// days before it staying; fixing keeps the rule's start and moves only
+// the day the order counts from, so no gap opens before it.
 export function RepeatEditorPage({
   mode,
   current,
   initialSequence,
   patternKeys,
+  shown,
   onBack,
   onApply,
 }: {
@@ -151,48 +129,44 @@ export function RepeatEditorPage({
   current?: RepeatRule;
   initialSequence: Shift[];
   patternKeys: Shift[];
+  // The days as they show now, for those the order leaves.
+  shown: Schedule;
   onBack: () => void;
   onApply: (rule: RepeatRule) => void;
 }) {
   const book = usePatterns();
+  const patterns = useUser((state) => state.patterns);
   const fixing = mode === "fix" && current !== undefined;
   const text = repeatModes[mode];
-  const [sequence, setSequence] = useState(initialSequence);
-  const [day, setDay] = useState(() =>
-    fixing ? (current.anchor ?? current.start) : nextMonthStart()
-  );
-  const start = fixing ? current.start : day;
+  const [order, setOrder] = useState(() => ({
+    anchor: fixing ? (current.anchor ?? current.start) : nextMonthStart(),
+    sequence: initialSequence,
+  }));
+  const { anchor, sequence } = order;
+  const start = fixing ? current.start : anchor;
   // Follows the order until the person sets it.
   const [holidaysChoice, setHolidaysChoice] = useState(
     fixing ? current.holidaysOff : undefined
   );
-  const holidaysOff = holidaysChoice ?? defaultHolidaysOff(sequence, day, book);
-  const rule: RepeatRule = { anchor: day, holidaysOff, sequence, start };
+  const holidaysOff =
+    holidaysChoice ?? defaultHolidaysOff(sequence, anchor, book);
+  const rule: RepeatRule = { anchor, holidaysOff, sequence, start };
   return (
     <>
-      <PageHeader back={text.back} onBack={onBack} title={text.title} />
-      <div className={settingsParts.field}>
-        <span className={fieldLabel({ place: "row" })}>{text.dayLabel}</span>
-        <InputDatePicker
-          ariaLabel={`${text.dayLabel}：${formatDay(day)}。タップで変更`}
-          look="field"
-          date={day}
-          onSelect={setDay}
-          title={text.dayLabel}
-        >
-          <span>{formatDay(day)}</span>
-        </InputDatePicker>
-      </div>
-      <RepeatSequenceEditor
-        onChange={setSequence}
+      <PageHeader back="働き方" onBack={onBack} title={text.title} />
+      <RepeatCalendar
+        anchor={anchor}
+        before={shown}
+        from={fixing ? current.start : undefined}
+        holidayShift={holidaysOff ? holidayShiftOf(patterns) : undefined}
+        onChange={setOrder}
         patternKeys={patternKeys}
         sequence={sequence}
-        start={day}
       />
       <Note>
         {fixing
-          ? "並びの1つ目のシフトが入る日を選びます。"
-          : `${text.dayLabel}が、並びの1日目になります。`}
+          ? "並びの1つ目のシフトが入る日を押してから、順番にシフトを押します。"
+          : "始める日を押してから、順番にシフトを押します。押した日が並びの1日目です。"}
       </Note>
       <List>
         <SwitchRow
@@ -201,7 +175,6 @@ export function RepeatEditorPage({
           onChange={setHolidaysChoice}
         />
       </List>
-      {sequence.length > 0 && <RepeatPreview rule={rule} />}
       {fixing && (
         <Note>
           {formatDay(start)}
@@ -223,28 +196,6 @@ export function RepeatEditorPage({
   );
 }
 
-// The first two weeks of a rule, from its start.
-function RepeatPreview({ rule }: { rule: RepeatRule }) {
-  const { sequence, start, holidaysOff } = rule;
-  const patterns = useUser((state) => state.patterns);
-  const planned = repeatSchedule(
-    sequence,
-    rule.anchor ?? start,
-    start,
-    addDays(start, previewDays - 1),
-    holidaysOff ? holidayShiftOf(patterns) : undefined
-  );
-  return (
-    <ShiftPreview
-      days={Array.from({ length: previewDays }, (_, index) => {
-        const date = addDays(start, index);
-        return { date, shift: planned[dateKey(date)]?.shift };
-      })}
-      label="はじめの2週間"
-    />
-  );
-}
-
 // Changing jobs: the day it happens, then the same questions as onboarding.
 // Shifts before that day stay; everything after follows the new job.
 export function JobChangePage({
@@ -261,6 +212,7 @@ export function JobChangePage({
       <div className={settingsParts.job}>
         <WorkSetupSteps
           finishLabel={`${shortDay(start)}から切り替える`}
+          from={start}
           month={start}
           onExit={() => {
             setAsking(false);

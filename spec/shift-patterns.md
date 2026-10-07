@@ -60,6 +60,15 @@ A person may follow a repeating order: a sequence of their patterns laid over th
 - Starting a new order, or correcting the one in use, clears the days' own pattern and times from its start, so the new order shows there; memos and people stay (`spec/vectors/own-days.json`, givenToOrder).
 - Everything that reads days reads them this way, the day's own value, else its order's: the month, counting days off, 次の休み, widgets, reminders and a group's tables.
 
+### Typing an order
+
+An order is typed on a month, as ポチポチ入力 enters days, with the same keys under it (settings' 新しい繰り返し and 今の繰り返しを直す, and the order of はじめの設定 and 新しい仕事にする alike):
+
+- The day pressed is the order's 1st day, its `anchor`; each key fills the next day and moves on, turning the month when the next day falls in the next one. ⌫ takes the last day back.
+- The days typed show solid. After them, and before them back to the order's `start`, the order comes round with its marks faint, as the calendar will show it, 祝日は休みにする included. Days before the `start` show what they hold now, faded, as they stay.
+- A day typed, pressed, is chosen: a key takes its place and ⌫ takes it out. Any other day pressed moves the order to start there, what was typed kept; for a new order that day is also its `start`.
+- A kind of work with an order of its own opens with it typed from the first day it could start, asking for a day of its first shift; pressing that day moves the order there.
+
 ## Holidays
 
 An order with 祝日は休みにする on puts its `holidayShift` on the national holidays of its `holidayCountry` (`design/scripts/holidays.ts`) in place of the sequence's shift.
@@ -71,7 +80,7 @@ An order with 祝日は休みにする on puts its `holidayShift` on the nationa
 
 ## Changing jobs
 
-The kinds of work はじめの設定 and 新しい仕事にする offer, their ready-made patterns and orders, are shared data in `design/src/patterns.ts` (`rosterTemplates`, `rotationTemplates`). Where an order is shown, its days are tiles as its editor draws them, seven a row; a kind of work without an order shows its patterns as ポチポチ入力's keys will. In 新しい仕事にする the answers are rows of one list, as the settings pages around them are; はじめの設定, with no list around it, shows them as large cards.
+The kinds of work はじめの設定 and 新しい仕事にする offer, their ready-made patterns and orders, are shared data in `design/src/patterns.ts` (`rosterTemplates`, `rotationTemplates`). Where an order is shown, its days are small tiles, seven a row; a kind of work without an order shows its patterns as ポチポチ入力's keys will. In 新しい仕事にする the answers are rows of one list, as the settings pages around them are; はじめの設定, with no list around it, shows them as large cards.
 
 The new job's patterns replace the list, and its repeating order starts on the day of the switch. An old pattern still on a day before the switch, of its own or from an earlier order, stays in the list, so those days keep their marks.
 

@@ -18,8 +18,7 @@ private let readyByID: [PatternID: Pattern] = Dictionary(
 /// Where the questions are.
 private enum JobStep: Hashable {
   case day, kind, roster, rotation
-  case custom(JobTemplate)
-  case anchor(JobTemplate, [PatternID])
+  case order(JobTemplate)
 }
 
 /// 新しい仕事にする.
@@ -30,8 +29,7 @@ struct JobChangePage: View {
   @State private var start = Day.today.firstOfMonth.addingMonths(1)
   @State private var steps: [JobStep] = [.day]
   @State private var sequence: [PatternID] = []
-  @State private var chosen: Int?
-  @State private var anchor: Day?
+  @State private var anchor = Day.today
 
   var body: some View {
     let step = steps.last ?? .day
@@ -41,8 +39,7 @@ struct JobChangePage: View {
       case .kind: kindStep
       case .roster: templates(ReadyPatterns.rosterTemplates)
       case .rotation: templates(ReadyPatterns.rotationTemplates)
-      case .custom(let template): customStep(template)
-      case .anchor(let template, let sequence): anchorStep(template, sequence)
+      case .order(let template): orderStep(template)
       }
     }
     .settingsList()
@@ -125,55 +122,35 @@ struct JobChangePage: View {
     .settingsRows()
   }
 
-  @ViewBuilder private func customStep(_ template: JobTemplate) -> some View {
-    question("並びを組み立てる", "1日目から順番に、シフトを追加してください。")
+  /// The order on the calendar: a kind of work's own, from the new job's
+  /// first day, or one typed from nothing; either typed over, and the day
+  /// pressed moves where it starts.
+  @ViewBuilder private func orderStep(_ template: JobTemplate) -> some View {
+    let first = template.sequence?.first.flatMap { readyByID[$0]?.name }
+    if template.custom || first == nil {
+      question("並びを入れてください", "1日目にする日を押してから、順番にシフトを押します。")
+    } else {
+      question("「\(first ?? "")」の日を押してください", "その日から並びが始まります。シフトを押して直すこともできます。")
+    }
     Section {
-      SequenceBuilder(
-        steps: $sequence, patterns: template.patternIDs.compactMap { readyByID[$0] }, first: nil,
-        selected: $chosen)
+      RepeatCalendar(
+        sequence: $sequence, anchor: $anchor, cover: .from(start),
+        patterns: template.patternIDs.compactMap { readyByID[$0] }, holidayCountry: country)
     } header: {
       HStack {
-        Text("並び")
+        Text("\(dayName(anchor))から")
         Spacer()
-        Text(sequence.isEmpty ? "下から順番に追加してください" : "\(sequence.count)日ごとに繰り返し")
-      }
-    }
-    .settingsRows()
-    Section {
-      next("次へ") { askAnchor(template, sequence) }
-        .disabled(sequence.isEmpty)
-    }
-  }
-
-  @ViewBuilder private func anchorStep(_ template: JobTemplate, _ sequence: [PatternID])
-    -> some View
-  {
-    let first = sequence.first.flatMap { readyByID[$0]?.name } ?? ""
-    question("「\(first)」の日を1日選んでください", "今日でも、これからの日でも大丈夫です。")
-    Section {
-      DatePicker(
-        "\(first)の日",
-        selection: Binding { date(of: anchor ?? start) } set: { anchor = Day($0, in: .current) },
-        displayedComponents: .date)
-      .datePickerStyle(.graphical)
-    }
-    .settingsRows()
-    if let anchor {
-      Section {
-        TwoWeeks(
-          schedule: repeatSchedule(
-            sequence, anchor: anchor, from: anchor, through: anchor.adding(days: 13),
-            holidayCountry: country),
-          start: anchor)
-      } header: {
-        Text("\(dayName(anchor))からの2週間")
-      }
-      .settingsRows()
-      Section {
-        next("\(start.month)/\(start.day)から切り替える") {
-          finish(template, sequence: sequence, anchor: anchor)
+        if !sequence.isEmpty {
+          Text("\(sequence.count)日ごとに繰り返し")
         }
       }
+    }
+    .settingsRows()
+    Section {
+      next("\(start.month)/\(start.day)から切り替える") {
+        finish(template, sequence: sequence, anchor: anchor)
+      }
+      .disabled(sequence.isEmpty)
     }
   }
 
@@ -227,28 +204,17 @@ struct JobChangePage: View {
   /// A kind of work picked: a roster's patterns, or a weekly order, end
   /// the questions; others go on to building their order or its first day.
   private func choose(_ template: JobTemplate) {
-    if template.custom {
-      sequence = []
-      chosen = nil
-      go(.custom(template))
-    } else if let order = template.sequence {
-      if template.weekly {
-        // A week starts on Sunday: its order lines up with the weekdays.
-        finish(template, sequence: order, anchor: start.adding(days: -start.weekday))
-      } else {
-        askAnchor(template, order)
-      }
+    if let order = template.sequence, template.weekly {
+      // A week starts on Sunday: its order lines up with the weekdays.
+      finish(template, sequence: order, anchor: start.adding(days: -start.weekday))
+    } else if template.custom || template.sequence != nil {
+      // Typed from the new job's first day until another is pressed.
+      sequence = template.sequence ?? []
+      anchor = start
+      go(.order(template))
     } else {
       finish(template, sequence: [], anchor: start)
     }
-  }
-
-  /// Asks for a day on the order's first shift, starting from the new
-  /// job's first day: a date picker always has one chosen, so it counts
-  /// until another is picked.
-  private func askAnchor(_ template: JobTemplate, _ order: [PatternID]) {
-    anchor = start
-    go(.anchor(template, order))
   }
 
   private func finish(_ template: JobTemplate, sequence: [PatternID], anchor: Day) {
@@ -272,29 +238,5 @@ struct JobChangePage: View {
   private func date(of day: Day) -> Date {
     Calendar.current.date(from: DateComponents(year: day.year, month: day.month, day: day.day))
       ?? .now
-  }
-}
-
-/// Two weeks of an order from its first day, a mark a day.
-private struct TwoWeeks: View {
-  @Environment(\.themeColors) private var colors
-  let schedule: [Day: PatternID]
-  let start: Day
-
-  var body: some View {
-    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
-      ForEach(0..<14, id: \.self) { offset in
-        let day = start.adding(days: offset)
-        VStack(spacing: 2) {
-          Text("\(day.day)").font(.caption2).foregroundStyle(colors.textSecondary)
-          if let pattern = schedule[day].flatMap({ readyByID[$0] }) {
-            ShiftMark(pattern: pattern, size: 16)
-          }
-        }
-      }
-    }
-    .padding(.vertical, 4)
-    .accessibilityElement(children: .combine)
-    .accessibilityLabel("最初の2週間")
   }
 }

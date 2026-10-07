@@ -1,65 +1,41 @@
-import { Delete } from "lucide-react";
+import { ChevronLeft, ChevronRight, Delete } from "lucide-react";
 import { useMotionValue } from "motion/react";
 import { useState } from "react";
 import { css, cva } from "styled-system/css";
 
-import { dateKey } from "../lib/design-days";
+import {
+  addDays,
+  dateKey,
+  dayMilliseconds,
+  formatDay,
+  monthAfter,
+  repeatSchedule,
+} from "../lib/design-days";
+import type { Schedule } from "../lib/design-days";
 import { usePatterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { PageDots } from "./design-choices";
+import { monthGrid } from "./design-date-picker";
+import { DayCell } from "./design-day-cell";
+import { dayGrid, WeekdayRow } from "./design-day-grid";
+import { monthWithYearOf } from "./design-month-name";
 import { PatternKeys, patternPagesOf, shiftInput } from "./design-shift-input";
-import { fieldHint, fieldLabel } from "./design-ui";
+import { fieldHint, fieldLabel, srOnly } from "./design-ui";
 import { useWeek, weekdayNameOf } from "./design-week";
 import { ShiftMark } from "./shift-mark";
 
-// A repeating order being put together: the days so far as tiles, one
-// chosen ringed in the accent, over ポチポチ入力's keys.
-const repeatEditor = {
+// A repeating order typed on a month, as ポチポチ入力 enters days: its
+// keys under the month, and ⌫ and the pages' dots under them.
+const repeatCalendar = {
   actions: css({
     alignItems: "center",
     display: "flex",
     gap: "8px",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
     marginTop: "4px",
   }),
-  day: cva({
-    base: {
-      "& > small": { color: "text.quaternary", fontSize: "8px" },
-      "& > span": { fontFamily: "emoji", fontSize: "18px", lineHeight: 1.2 },
-      alignItems: "center",
-      bg: "background.card",
-      border: "1px solid token(colors.border.default)",
-      borderRadius: "lg",
-      color: "text.secondary",
-      display: "flex",
-      flexDirection: "column",
-      fontSize: "9px",
-      gap: "1px",
-      height: "58px",
-      justifyContent: "center",
-      position: "relative",
-      width: "38px",
-    },
-    variants: {
-      chosen: {
-        true: {
-          borderColor: "accent.default",
-          boxShadow: "0 0 0 1px token(colors.accent.default)",
-        },
-      },
-    },
-  }),
-  sequence: css({
-    bg: "fill.quaternary",
-    borderRadius: "2xl",
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "4px",
-    listStyle: "none",
-    margin: "0 0 8px",
-    minHeight: "58px",
-    padding: "8px",
-  }),
+  heading: css({ marginBottom: "4px" }),
+  keys: css({ marginTop: "12px" }),
 };
 
 // An order's days as its editor draws them, smaller and not to press:
@@ -88,21 +64,6 @@ const sequenceTiles = {
     margin: 0,
     padding: 0,
   }),
-};
-
-// Days with the shift each gets, as a strip of small tiles a week wide:
-// the first two weeks of an order being set up, in the first run and in
-// settings alike.
-const shiftPreview = {
-  day: css({
-    alignItems: "center",
-    bg: "fill.quaternary",
-    borderRadius: "sm",
-    display: "flex",
-    flexDirection: "column",
-    gap: "1px",
-    padding: "4px 0",
-  }),
   number: cva({
     base: {
       color: "text.tertiary",
@@ -117,142 +78,199 @@ const shiftPreview = {
       },
     },
   }),
-  strip: css({
-    display: "grid",
-    fontFamily: "emoji",
-    fontSize: "16px",
-    gap: "4px",
-    gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
-    textAlign: "center",
-  }),
 };
 
-export function ShiftPreview({
-  label,
-  days,
-}: {
-  label: string;
-  days: { date: Date; shift: Shift | undefined }[];
-}) {
-  const weekTools = useWeek();
-  return (
-    <div aria-label={label} className={shiftPreview.strip} role="img">
-      {days.map(({ date, shift }) => (
-        <span className={shiftPreview.day} key={dateKey(date)}>
-          <small
-            className={shiftPreview.number({ tone: weekTools.dateTone(date) })}
-          >
-            {date.getDate()}
-          </small>
-          {shift && <ShiftMark shift={shift} size={16} />}
-        </span>
-      ))}
-    </div>
+// Whole days from one date to another.
+function daysFrom(from: Date, to: Date) {
+  return Math.round(
+    (Date.UTC(to.getFullYear(), to.getMonth(), to.getDate()) -
+      Date.UTC(from.getFullYear(), from.getMonth(), from.getDate())) /
+      dayMilliseconds
   );
 }
 
-// The order typed as ポチポチ入力 enters days: the patterns' keys add to
-// its end, and ⌫ takes the last day back. A day pressed is chosen: a key
-// then takes its place, and ⌫ takes it out. With the day it starts on,
-// each day says its date, so where the weekend falls shows.
-export function RepeatSequenceEditor({
+function monthOf(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+// A repeating order typed on the calendar (spec/shift-patterns.md,
+// Typing an order): the day pressed is its 1st, each key fills the next
+// day, and the order comes round faintly after the days typed, as the
+// calendar will show it. A day typed, pressed, is chosen: a key then
+// takes its place and ⌫ takes it out. Any other day pressed moves the
+// order to start there, keeping what was typed.
+export function RepeatCalendar({
   sequence,
+  anchor,
+  from,
+  before,
+  holidayShift,
   patternKeys,
-  start,
   onChange,
 }: {
   sequence: Shift[];
+  // The order's 1st day.
+  anchor: Date;
+  // The first day the order covers, when it starts before its 1st day
+  // or after it; with none, it starts on its 1st day. Null covers every
+  // day shown, as a first run does.
+  from?: Date | null;
+  // What the days before the order show, staying as they are.
+  before?: Schedule;
+  // 祝日は休みにする's pattern, when it is on.
+  holidayShift?: Shift;
   patternKeys: Shift[];
-  // The first day's date, when it is known.
-  start?: Date;
-  onChange: (sequence: Shift[]) => void;
+  onChange: (order: { sequence: Shift[]; anchor: Date }) => void;
 }) {
-  const book = usePatterns();
   const weekTools = useWeek();
+  const [month, setMonth] = useState(() => monthOf(anchor));
   const [chosen, setChosen] = useState<number>();
   const [page, setPage] = useState(0);
   const progress = useMotionValue(0);
   const pages = patternPagesOf(patternKeys).length;
-  const dateOf = (index: number) =>
-    start &&
-    new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);
+  const dates = weekTools.monthDates(month);
+  const first = dates[0] ?? month;
+  const last = dates.at(-1) ?? month;
+  const orderStart = from === undefined ? anchor : from;
+  const coversFrom =
+    orderStart === null || orderStart < first ? first : orderStart;
+  const planned =
+    sequence.length > 0 && coversFrom <= last
+      ? repeatSchedule(sequence, anchor, coversFrom, last, holidayShift)
+      : {};
+  const cursor = chosen ?? sequence.length;
+
+  const pick = (key: Shift) => {
+    if (chosen !== undefined && chosen < sequence.length) {
+      onChange({
+        anchor,
+        sequence: sequence.map((shift, index) =>
+          index === chosen ? key : shift
+        ),
+      });
+      setChosen(undefined);
+      return;
+    }
+    onChange({ anchor, sequence: [...sequence, key] });
+    // The next day to type turns the month, as ポチポチ入力 moves on.
+    const next = addDays(anchor, sequence.length + 1);
+    if (next.getMonth() !== month.getMonth() && next > last) {
+      setMonth(monthOf(next));
+    }
+  };
+
+  const press = (date: Date) => {
+    const index = daysFrom(anchor, date);
+    if (index >= 0 && index < sequence.length) {
+      setChosen(chosen === index ? undefined : index);
+      return;
+    }
+    setChosen(undefined);
+    if (index !== sequence.length) {
+      onChange({ anchor: date, sequence });
+    }
+  };
+
   return (
     <div>
       <p className={fieldLabel()}>
-        並び
-        <span className={fieldHint}>
-          {sequence.length > 0
-            ? `${sequence.length}日ごとに繰り返し`
-            : "下から順番に追加してください"}
-        </span>
+        {formatDay(anchor)}から
+        {sequence.length > 0 && (
+          <span className={fieldHint}>{sequence.length}日ごとに繰り返し</span>
+        )}
       </p>
-      <ol className={repeatEditor.sequence}>
-        {sequence.map((shift, index) => {
-          const date = dateOf(index);
+      <div className={`${monthGrid.heading} ${repeatCalendar.heading}`}>
+        <button
+          aria-label="前の月"
+          className={monthGrid.arrow}
+          onClick={() => {
+            setMonth(monthAfter(month, -1));
+          }}
+          type="button"
+        >
+          <ChevronLeft aria-hidden="true" size={20} />
+        </button>
+        <strong aria-live="polite">
+          <span className={srOnly}>
+            {month.getFullYear()}年{month.getMonth() + 1}月
+          </span>
+          <span aria-hidden="true">
+            {monthWithYearOf(month, weekTools.english)}
+          </span>
+        </strong>
+        <button
+          aria-label="次の月"
+          className={monthGrid.arrow}
+          onClick={() => {
+            setMonth(monthAfter(month, 1));
+          }}
+          type="button"
+        >
+          <ChevronRight aria-hidden="true" size={20} />
+        </button>
+      </div>
+      <WeekdayRow compact />
+      <section aria-label="繰り返しの並び" className={dayGrid}>
+        {dates.map((date) => {
+          const key = dateKey(date);
+          const index = daysFrom(anchor, date);
+          const typed = index >= 0 && index < sequence.length;
+          const inOrder = orderStart === null || date >= orderStart;
+          let entry = before?.[key];
+          if (typed) {
+            entry = { shift: sequence[index] ?? "" };
+          } else if (inOrder) {
+            entry = planned[key];
+          }
           return (
-            // oxlint-disable-next-line react/no-array-index-key -- the same shift repeats, so its position is its identity.
-            <li key={index}>
-              <button
-                aria-label={`${index + 1}日目、${book[shift]?.name}`}
-                aria-pressed={chosen === index}
-                className={repeatEditor.day({ chosen: chosen === index })}
-                onClick={() => {
-                  setChosen(chosen === index ? undefined : index);
-                }}
-                type="button"
-              >
-                <small
-                  className={
-                    date &&
-                    shiftPreview.number({ tone: weekTools.dateTone(date) })
-                  }
-                >
-                  {date
-                    ? `${date.getMonth() + 1}/${date.getDate()}${weekdayNameOf(date.getDay())}`
-                    : index + 1}
-                </small>
-                <ShiftMark shift={shift} size={18} />
-                {book[shift]?.name}
-              </button>
-            </li>
+            <DayCell
+              active={index === cursor}
+              date={date}
+              dimmed={!inOrder}
+              editing
+              entry={entry}
+              faint={inOrder && !typed}
+              key={key}
+              onPress={() => {
+                press(date);
+              }}
+              outside={date.getMonth() !== month.getMonth()}
+            />
           );
         })}
-      </ol>
-      <PatternKeys
-        onPage={setPage}
-        onPick={(key) => {
-          if (chosen !== undefined && chosen < sequence.length) {
-            onChange(
-              sequence.map((shift, index) => (index === chosen ? key : shift))
-            );
-            setChosen(undefined);
-          } else {
-            onChange([...sequence, key]);
-          }
-        }}
-        page={page}
-        patternKeys={patternKeys}
-        progress={progress}
-      />
-      <div className={repeatEditor.actions}>
-        {pages > 1 && (
-          <PageDots
-            count={pages}
-            current={Math.min(page, pages - 1)}
-            label="シフトのページ"
-            onPick={setPage}
-            progress={progress}
-          />
-        )}
+      </section>
+      <div className={repeatCalendar.keys}>
+        <PatternKeys
+          onPage={setPage}
+          onPick={pick}
+          page={page}
+          patternKeys={patternKeys}
+          progress={progress}
+        />
+      </div>
+      <div className={repeatCalendar.actions}>
+        <span>
+          {pages > 1 && (
+            <PageDots
+              count={pages}
+              current={Math.min(page, pages - 1)}
+              label="シフトのページ"
+              onPick={setPage}
+              progress={progress}
+            />
+          )}
+        </span>
         <button
           className={shiftInput.action}
           disabled={sequence.length === 0}
           onClick={() => {
-            onChange(
-              chosen === undefined
-                ? sequence.slice(0, -1)
-                : sequence.filter((_, index) => index !== chosen)
-            );
+            onChange({
+              anchor,
+              sequence:
+                chosen === undefined
+                  ? sequence.slice(0, -1)
+                  : sequence.filter((_, index) => index !== chosen),
+            });
             setChosen(undefined);
           }}
           type="button"
@@ -263,7 +281,7 @@ export function RepeatSequenceEditor({
       </div>
       {chosen !== undefined && (
         <p className={fieldHint}>
-          下のパターンを押すと、選んだ日と置き換わります。
+          下のシフトを押すと、選んだ日と置き換わります。
         </p>
       )}
     </div>
@@ -291,7 +309,7 @@ export function SequenceTiles({
         // oxlint-disable-next-line react/no-array-index-key -- the same shift repeats, so its position is its identity.
         <li aria-hidden="true" className={sequenceTiles.day} key={index}>
           <small
-            className={shiftPreview.number({
+            className={sequenceTiles.number({
               tone: weekly ? weeklyTone(index) : "plain",
             })}
           >

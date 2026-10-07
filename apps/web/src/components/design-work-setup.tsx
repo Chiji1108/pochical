@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import { addDays, formatDay } from "../lib/design-days";
+import { addDays } from "../lib/design-days";
 import {
   PatternsContext,
   presetPatterns,
@@ -12,14 +12,9 @@ import {
 } from "../lib/design-patterns";
 import type { PresetShift, Shift } from "../lib/design-patterns";
 import { designMonth } from "../lib/design-today";
-import { MonthPicker } from "./design-date-picker";
 import { BackButton } from "./design-header";
 import { List, ListRow, listRow } from "./design-list";
-import {
-  RepeatSequenceEditor,
-  SequenceTiles,
-  ShiftPreview,
-} from "./design-repeat-editor";
+import { RepeatCalendar, SequenceTiles } from "./design-repeat-editor";
 import { KeysPreview } from "./design-shift-input";
 import { Button, OptionCard, optionList, pushToBottom } from "./design-ui";
 
@@ -29,8 +24,7 @@ export type Step =
   | { name: "kind" }
   | { name: "roster" }
   | { name: "rotation" }
-  | { name: "custom"; template: Template; sequence: Shift[] }
-  | { name: "anchor"; template: Template; sequence: Shift[] };
+  | { name: "order"; template: Template };
 
 // What the setup questions end with: the patterns to use, and for work
 // that repeats, the order and a day that falls on its first shift.
@@ -175,6 +169,7 @@ export const onboarding = {
 // `onExit` it is the first run and greets the person.
 export function WorkSetupSteps({
   month = designMonth,
+  from = null,
   finishLabel,
   onExit,
   onBack,
@@ -182,6 +177,9 @@ export function WorkSetupSteps({
   initialStep,
 }: {
   month?: Date;
+  // The day the order starts on, as a new job's first day; a first run's
+  // covers every day.
+  from?: Date | null;
   finishLabel: string;
   onExit?: () => void;
   // Back from the first question on the first run, to the welcome.
@@ -194,17 +192,15 @@ export function WorkSetupSteps({
   // The templates' patterns are ready-made ones, drawn as they come even
   // when the person has their own under the same ids.
   function chooseRotation(template: Template) {
-    if (template.custom) {
-      setStep({ name: "custom", sequence: [], template });
-    } else if (template.weekly && template.sequence) {
+    if (template.weekly && template.sequence) {
       // Any Sunday works as the first day of a week-based sequence.
       onFinish({
         anchor: addDays(month, -month.getDay()),
         patternKeys: template.patternKeys,
         sequence: template.sequence,
       });
-    } else if (template.sequence) {
-      setStep({ name: "anchor", sequence: template.sequence, template });
+    } else {
+      setStep({ name: "order", template });
     }
   }
 
@@ -246,41 +242,18 @@ export function WorkSetupSteps({
           title="どんな順番で回りますか？"
         />
       )}
-      {step.name === "custom" && (
-        <CustomStep
-          initialSequence={step.sequence}
+      {step.name === "order" && (
+        <OrderStep
+          finishLabel={finishLabel}
+          from={from}
+          month={month}
           onBack={() => {
             setStep({ name: "rotation" });
           }}
-          onNext={(sequence) => {
-            setStep({ name: "anchor", sequence, template: step.template });
+          onStart={(order) => {
+            onFinish({ ...order, patternKeys: step.template.patternKeys });
           }}
           template={step.template}
-        />
-      )}
-      {step.name === "anchor" && (
-        <AnchorStep
-          finishLabel={finishLabel}
-          month={month}
-          onBack={() => {
-            setStep(
-              step.template.custom
-                ? {
-                    name: "custom",
-                    sequence: step.sequence,
-                    template: step.template,
-                  }
-                : { name: "rotation" }
-            );
-          }}
-          onStart={(anchor) => {
-            onFinish({
-              anchor,
-              patternKeys: step.template.patternKeys,
-              sequence: step.sequence,
-            });
-          }}
-          sequence={step.sequence}
         />
       )}
     </PatternsContext>
@@ -474,86 +447,57 @@ function TemplateStep({
   );
 }
 
-function CustomStep({
+// The order on the calendar: a kind of work's own, from its first day
+// as it falls, or one typed from nothing. Either is typed over as
+// ポチポチ入力 enters days, and the day pressed moves where it starts.
+function OrderStep({
   template,
-  initialSequence,
-  onBack,
-  onNext,
-}: {
-  template: Template;
-  initialSequence: Shift[];
-  onBack: () => void;
-  onNext: (sequence: Shift[]) => void;
-}) {
-  const [sequence, setSequence] = useState(initialSequence);
-  return (
-    <>
-      <StepHeader
-        description="1日目から順番に、シフトを追加してください。"
-        onBack={onBack}
-        title="並びを組み立てる"
-      />
-      <RepeatSequenceEditor
-        onChange={setSequence}
-        patternKeys={template.patternKeys}
-        sequence={sequence}
-      />
-      <Button
-        variant="primary"
-        className={pushToBottom}
-        disabled={sequence.length === 0}
-        onClick={() => {
-          onNext(sequence);
-        }}
-      >
-        次へ
-      </Button>
-    </>
-  );
-}
-
-function AnchorStep({
-  sequence,
   month,
+  from,
   finishLabel,
   onBack,
   onStart,
 }: {
-  sequence: Shift[];
+  template: Template;
   month: Date;
+  from: Date | null;
   finishLabel: string;
   onBack: () => void;
-  onStart: (anchor: Date) => void;
+  onStart: (order: { sequence: Shift[]; anchor: Date }) => void;
 }) {
-  const [anchor, setAnchor] = useState<Date>();
-  const first = usePatterns()[sequence[0]]?.name;
+  const [order, setOrder] = useState<{ anchor: Date; sequence: Shift[] }>(
+    () => ({ anchor: from ?? month, sequence: template.sequence ?? [] })
+  );
+  const first = usePatterns()[template.sequence?.[0] ?? ""]?.name;
   return (
     <>
       <StepHeader
-        description="今日でも、これからの日でも大丈夫です。"
+        description={
+          template.custom
+            ? "1日目にする日を押してから、順番にシフトを押します。"
+            : "その日から並びが始まります。シフトを押して直すこともできます。"
+        }
         onBack={onBack}
-        title={`「${first}」の日を1日選んでください`}
+        title={
+          template.custom || first === undefined
+            ? "並びを入れてください"
+            : `「${first}」の日を押してください`
+        }
       />
-      <MonthPicker month={month} onSelect={setAnchor} value={anchor} />
-      {anchor && (
-        <p className={onboarding.previewLabel}>
-          {formatDay(anchor)}からの2週間
-        </p>
-      )}
-      {anchor && (
-        <ShiftPreview
-          days={Array.from({ length: 14 }, (_, index) => ({
-            date: addDays(anchor, index),
-            shift: sequence[index % sequence.length],
-          }))}
-          label="最初の2週間"
-        />
-      )}
+      <RepeatCalendar
+        anchor={order.anchor}
+        from={from}
+        onChange={setOrder}
+        patternKeys={template.patternKeys}
+        sequence={order.sequence}
+      />
       <Button
         variant="primary"
         className={pushToBottom}
-        disabled={!anchor}
-        onClick={() => anchor && onStart(anchor)}
+        disabled={order.sequence.length === 0}
+        onClick={() => {
+          onStart(order);
+        }}
       >
         {finishLabel}
       </Button>

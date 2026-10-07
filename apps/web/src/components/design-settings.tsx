@@ -158,6 +158,7 @@ export function DesignSettings({
               setPage("work");
             }}
             patternKeys={patternKeys}
+            shown={schedule}
           />
         )}
         {page === "repeat-fix" && current && (
@@ -173,6 +174,7 @@ export function DesignSettings({
               setPage("work");
             }}
             patternKeys={patternKeys}
+            shown={schedule}
           />
         )}
         {page === "job" && (

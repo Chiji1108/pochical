@@ -56,9 +56,7 @@ function stepOf(screen: OnboardingScreen): Step | undefined {
   }
   if (screen === "anchor") {
     const template = rotationTemplates[1] ?? rotationTemplates[0];
-    return template
-      ? { name: "anchor", sequence: template.sequence ?? [], template }
-      : undefined;
+    return template ? { name: "order", template } : undefined;
   }
   return undefined;
 }
