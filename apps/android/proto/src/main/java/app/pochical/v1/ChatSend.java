@@ -454,6 +454,44 @@ public  final class ChatSend extends
     bitField0_ = (bitField0_ & ~0x00000002);
   }
 
+  public static final int REPLY_TO_FIELD_NUMBER = 7;
+  private long replyTo_;
+  /**
+   * <pre>
+   * The line it answers (返信), an earlier one of the same chat; 0 for none.
+   * </pre>
+   *
+   * <code>uint64 reply_to = 7 [json_name = "replyTo"];</code>
+   * @return The replyTo.
+   */
+  @java.lang.Override
+  public long getReplyTo() {
+    return replyTo_;
+  }
+  /**
+   * <pre>
+   * The line it answers (返信), an earlier one of the same chat; 0 for none.
+   * </pre>
+   *
+   * <code>uint64 reply_to = 7 [json_name = "replyTo"];</code>
+   * @param value The replyTo to set.
+   */
+  private void setReplyTo(long value) {
+    
+    replyTo_ = value;
+  }
+  /**
+   * <pre>
+   * The line it answers (返信), an earlier one of the same chat; 0 for none.
+   * </pre>
+   *
+   * <code>uint64 reply_to = 7 [json_name = "replyTo"];</code>
+   */
+  private void clearReplyTo() {
+
+    replyTo_ = 0L;
+  }
+
   public static app.pochical.v1.ChatSend parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -999,6 +1037,46 @@ public  final class ChatSend extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The line it answers (返信), an earlier one of the same chat; 0 for none.
+     * </pre>
+     *
+     * <code>uint64 reply_to = 7 [json_name = "replyTo"];</code>
+     * @return The replyTo.
+     */
+    @java.lang.Override
+    public long getReplyTo() {
+      return instance.getReplyTo();
+    }
+    /**
+     * <pre>
+     * The line it answers (返信), an earlier one of the same chat; 0 for none.
+     * </pre>
+     *
+     * <code>uint64 reply_to = 7 [json_name = "replyTo"];</code>
+     * @param value The replyTo to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReplyTo(long value) {
+      copyOnWrite();
+      instance.setReplyTo(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The line it answers (返信), an earlier one of the same chat; 0 for none.
+     * </pre>
+     *
+     * <code>uint64 reply_to = 7 [json_name = "replyTo"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReplyTo() {
+      copyOnWrite();
+      instance.clearReplyTo();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatSend)
   }
   @java.lang.Override
@@ -1022,10 +1100,11 @@ public  final class ChatSend extends
             "poll_",
             "photo_",
             "preview_",
+            "replyTo_",
           };
           java.lang.String info =
-              "\u0000\u0006\u0000\u0001\u0001\u0006\u0006\u0000\u0001\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u021a\u0004\u0007\u0005\u1009\u0000\u0006\u1009\u0001";
+              "\u0000\u0007\u0000\u0001\u0001\u0007\u0007\u0000\u0001\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u021a\u0004\u0007\u0005\u1009\u0000\u0006\u1009\u0001\u0007\u0003";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

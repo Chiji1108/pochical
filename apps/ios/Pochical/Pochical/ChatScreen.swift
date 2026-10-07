@@ -146,6 +146,8 @@ struct ChatScreen: View {
   @State private var draft = ""
   /// The line of one's own being changed in the composer.
   @State private var editing: ChatLineRow?
+  /// The line being answered (返信), quoted over the composer.
+  @State private var replying: ChatLineRow?
   @State private var unsending: ChatLineRow?
   @State private var field = ComposerBox()
   /// A word is being converted in the composer.
@@ -491,10 +493,13 @@ struct ChatScreen: View {
       if line.seq == unreadFrom {
         items.append(.unread)
       }
-      items.append(.line(line, startsRun: starts || line.seq == unreadFrom))
+      // A reply starts a run, as its quote begins it.
+      items.append(
+        .line(line, startsRun: starts || line.seq == unreadFrom || line.replyTo != nil))
     }
     for line in state.waiting {
-      items.append(.waiting(line, startsRun: startsRun(at: line.madeAtMs, writer: meID)))
+      let starts = startsRun(at: line.madeAtMs, writer: meID)
+      items.append(.waiting(line, startsRun: starts || line.replyTo != nil))
     }
     return items
   }
@@ -557,8 +562,9 @@ struct ChatScreen: View {
         let poll = pollLine(for: line)
         LineView(
           text: line.text, preview: line.preview, days: line.days, members: cardMembers,
-          poll: poll, photo: line.photo,
+          poll: poll, photo: line.photo, quote: line.replyTo.map(quote(of:)),
           groupID: group.id, onOpenPhoto: { viewing = line.photo },
+          onOpenQuote: { line.replyTo.map(jump(to:)) },
           onOpenProfile: {
             profileOf = ProfileOf(id: line.authorID, name: names[line.authorID] ?? "メンバー")
           },
@@ -577,8 +583,8 @@ struct ChatScreen: View {
                 LineContent(
                   text: line.text, preview: line.preview, days: line.days, members: cardMembers,
                   poll: poll,
-                  photo: line.photo, groupID: group.id, mine: mine, first: startsRun,
-                  waiting: false, nameOf: nameOf)),
+                  photo: line.photo, quote: line.replyTo.map(quote(of:)), groupID: group.id,
+                  mine: mine, first: startsRun, waiting: false, nameOf: nameOf)),
               finger: finger, reactions: line.reactions, meID: meID, onReact: onReact,
               onMoreReactions: { reactingTo = line }, actions: actions(for: line, mine: mine)))
         }
@@ -588,7 +594,7 @@ struct ChatScreen: View {
         text: line.text, preview: line.preview, days: line.days, members: cardMembers,
         poll: line.poll
           ? PollLine(votes: [], decided: nil, names: names, meID: meID, canDecide: true) : nil,
-        photo: line.photo, groupID: group.id,
+        photo: line.photo, quote: line.replyTo.map(quote(of:)), groupID: group.id,
         time: line.madeAtMs,
         edited: false, mine: true, writer: nil, named: false, first: startsRun, waiting: true,
         nameOf: nameOf, lifted: acting?.lineID == line.opID
@@ -601,7 +607,8 @@ struct ChatScreen: View {
             lineID: line.opID, frame: frame, mine: true,
             bubble: AnyView(
               MessageBubble(
-                text: line.text, mine: true, first: startsRun, waiting: true, nameOf: nameOf)),
+                text: line.text, mine: true, first: startsRun, waiting: true, nameOf: nameOf,
+                quote: line.replyTo.map(quote(of:)), groupID: group.id)),
             finger: finger, actions: [copy(line.text)]))
       }
     }
@@ -676,6 +683,7 @@ struct ChatScreen: View {
       send.photo.id = picked.id
       send.photo.width = UInt32(picked.shrunk.width)
       send.photo.height = UInt32(picked.shrunk.height)
+      send.replyTo = takeReply()
       write(.send(send))
     }
     withAnimation { pickedPhotos = [] }
@@ -696,6 +704,11 @@ struct ChatScreen: View {
       if let composerPreview, !composerPreview.none, composerPreview.url != previewRemoved {
         ComposerPreviewBar(state: composerPreview) {
           withAnimation { previewRemoved = composerPreview.url }
+        }
+      }
+      if editing == nil, let replying {
+        ReplyBar(quote: quote(of: replying.seq), groupID: group.id) {
+          withAnimation { self.replying = nil }
         }
       }
       if let editing {
@@ -920,6 +933,7 @@ struct ChatScreen: View {
     if let preview = attachedPreview(for: text) {
       send.preview = preview.wire
     }
+    send.replyTo = takeReply()
     write(.send(send))
     draft = ""
     picked = []
@@ -972,6 +986,7 @@ struct ChatScreen: View {
     send.threadID = threadID
     send.days = days.map(\.key)
     send.poll = poll
+    send.replyTo = takeReply()
     write(.send(send))
   }
 
@@ -1072,7 +1087,42 @@ struct ChatScreen: View {
     }
   }
 
+  /// Answers a line (返信): quoted over the composer until sent or ×.
+  private func reply(to line: ChatLineRow) {
+    if editing != nil { stopEditing() }
+    withAnimation { replying = line }
+    field.focus()
+  }
+
+  /// The line being answered, for the first line sent: then no more.
+  private func takeReply() -> UInt64 {
+    defer { replying = nil }
+    return replying.map { UInt64($0.seq) } ?? 0
+  }
+
+  /// The line a reply answers, as its quote shows it (spec/chat.md, Replies):
+  /// as the device holds it, else said to be earlier, gone to at a tap.
+  private func quote(of seq: Int64) -> LineQuote {
+    guard let line = chat.state.lines.first(where: { $0.seq == seq }) else {
+      return LineQuote(seq: seq, words: "以前のメッセージ")
+    }
+    let writer = names[line.authorID] ?? "メンバー"
+    if line.unsent {
+      return LineQuote(seq: seq, writer: writer, words: "取り消されたメッセージ")
+    }
+    if blocked.contains(line.authorID) {
+      return LineQuote(seq: seq, words: "ブロック中のメンバーのメッセージ")
+    }
+    return LineQuote(
+      seq: seq, writer: writer,
+      words: lineWords(
+        line.text, days: line.days, poll: line.poll, decided: line.decided,
+        photo: line.photo != nil, nameOf: nameOf),
+      photo: line.photo)
+  }
+
   private func edit(_ line: ChatLineRow) {
+    replying = nil
     editing = line
     // Its mentions as @name again, still picked.
     draft = plainText(line.text, nameOf: nameOf)
@@ -1108,7 +1158,13 @@ struct ChatScreen: View {
     let pinned = chat.state.pins.contains { $0.seq == line.seq }
     // Shared days, polls and photos have no words to copy or change.
     let words = line.days.isEmpty && line.photo == nil
-    var actions = words ? [copy(line.text)] : []
+    // First, for any line (/design's menu).
+    var actions = [
+      MessageAction(title: "返信", systemImage: "arrowshape.turn.up.left") { reply(to: line) }
+    ]
+    if words {
+      actions.append(copy(line.text))
+    }
     if let photo = line.photo {
       actions.append(
         MessageAction(title: "保存", systemImage: "square.and.arrow.down") { save(photo) })
@@ -1314,8 +1370,12 @@ private struct LineView: View {
   var poll: PollLine?
   /// The photo sent as the line, opened large by a tap.
   var photo: LinePhoto?
+  /// The line it answers, inside its bubble.
+  var quote: LineQuote?
   var groupID = ""
   var onOpenPhoto: () -> Void = {}
+  /// Goes to the line it answers.
+  var onOpenQuote: () -> Void = {}
   /// Opens the writer's profile, from their face.
   var onOpenProfile: () -> Void = {}
   /// The shift table on its first day, under its card.
@@ -1383,7 +1443,8 @@ private struct LineView: View {
           if mine { meta }
           LineContent(
             text: text, preview: preview, days: days, members: members, poll: poll, photo: photo,
-            groupID: groupID, mine: mine, first: first, waiting: waiting, nameOf: nameOf
+            quote: quote, groupID: groupID, mine: mine, first: first, waiting: waiting,
+            nameOf: nameOf, onOpenQuote: onOpenQuote
           )
           // A photo opens large at a tap; its menu is the long press's.
           .onTapGesture { if photo != nil, !waiting { onOpenPhoto() } }
@@ -1510,14 +1571,32 @@ struct LineContent: View {
   var poll: PollLine?
   /// The photo sent as the line, from the group's photos.
   var photo: LinePhoto?
+  /// The line it answers, over its words or photo; shared days and polls
+  /// show none, as /design's cards.
+  var quote: LineQuote?
   var groupID = ""
   let mine: Bool
   let first: Bool
   let waiting: Bool
   let nameOf: (String) -> String
+  var onOpenQuote: () -> Void = {}
+  @Environment(\.themeColors) private var colors
 
   var body: some View {
-    if let photo {
+    if let photo, let quote {
+      // A photo answering a line sits in a bubble under its quote.
+      VStack(alignment: .leading, spacing: 8) {
+        BubbleQuote(quote: quote, groupID: groupID, onOpen: onOpenQuote)
+          .padding(.horizontal, 12)
+          .padding(.top, 8)
+          .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
+        PhotoLine(photo: photo, groupID: groupID, waiting: waiting)
+          .padding([.horizontal, .bottom], 4)
+      }
+      .fixedSize()
+      .background(
+        mine ? colors.accentFill : colors.fillTertiary, in: BubbleShape(mine: mine, first: first))
+    } else if let photo {
       PhotoLine(photo: photo, groupID: groupID, waiting: waiting)
     } else if let poll {
       PollCard(
@@ -1526,7 +1605,8 @@ struct LineContent: View {
         onVote: poll.onVote, onDecide: poll.onDecide)
     } else if days.isEmpty {
       MessageBubble(
-        text: text, mine: mine, first: first, waiting: waiting, nameOf: nameOf, preview: preview)
+        text: text, mine: mine, first: first, waiting: waiting, nameOf: nameOf, preview: preview,
+        quote: quote, groupID: groupID, onOpenQuote: onOpenQuote)
     } else {
       DayCard(days: days, members: members)
         .opacity(waiting ? 0.6 : 1)
@@ -1544,6 +1624,10 @@ struct MessageBubble: View {
   let nameOf: (String) -> String
   /// Its first link's page, under its words.
   var preview: LinePreview?
+  /// The line it answers, over its words.
+  var quote: LineQuote?
+  var groupID = ""
+  var onOpenQuote: () -> Void = {}
 
   /// The invitation code of its first link, when that is one of
   /// Pochical's invitations.
@@ -1556,6 +1640,10 @@ struct MessageBubble: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
+      if let quote {
+        BubbleQuote(quote: quote, groupID: groupID, onOpen: onOpenQuote)
+          .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
+      }
       Text(words)
         .font(.body)
         .lineSpacing(3)

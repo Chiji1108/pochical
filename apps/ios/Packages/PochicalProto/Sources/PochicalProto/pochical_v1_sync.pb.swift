@@ -1546,6 +1546,13 @@ public nonisolated struct Pochical_V1_ChatLine: @unchecked Sendable {
     set {_uniqueStorage()._hidden = newValue}
   }
 
+  /// The line it answers (返信), by its seq in the same chat; 0 for none,
+  /// and none once unsent.
+  public var replyTo: UInt64 {
+    get {_storage._replyTo}
+    set {_uniqueStorage()._replyTo = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1846,6 +1853,9 @@ public nonisolated struct Pochical_V1_ChatSend: Sendable {
   public var hasPreview: Bool {self._preview != nil}
   /// Clears the value of `preview`. Subsequent reads from it will return its default value.
   public mutating func clearPreview() {self._preview = nil}
+
+  /// The line it answers (返信), an earlier one of the same chat; 0 for none.
+  public var replyTo: UInt64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -4124,7 +4134,7 @@ nonisolated extension Pochical_V1_Reset: SwiftProtobuf.Message, SwiftProtobuf._M
 
 nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatLine"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{3}author_id\0\u{1}text\0\u{3}sent_at_ms\0\u{1}edited\0\u{1}unsent\0\u{3}op_id\0\u{1}reactions\0\u{3}pinned_order\0\u{1}days\0\u{1}poll\0\u{1}votes\0\u{1}decided\0\u{1}photo\0\u{1}preview\0\u{1}hidden\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{3}author_id\0\u{1}text\0\u{3}sent_at_ms\0\u{1}edited\0\u{1}unsent\0\u{3}op_id\0\u{1}reactions\0\u{3}pinned_order\0\u{1}days\0\u{1}poll\0\u{1}votes\0\u{1}decided\0\u{1}photo\0\u{1}preview\0\u{1}hidden\0\u{3}reply_to\0")
 
   fileprivate class _StorageClass {
     var _threadID: String = String()
@@ -4144,6 +4154,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
     var _photo: Pochical_V1_ChatPhoto? = nil
     var _preview: Pochical_V1_LinkPreview? = nil
     var _hidden: Bool = false
+    var _replyTo: UInt64 = 0
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -4171,6 +4182,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
       _photo = source._photo
       _preview = source._preview
       _hidden = source._hidden
+      _replyTo = source._replyTo
     }
   }
 
@@ -4206,6 +4218,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
         case 15: try { try decoder.decodeSingularMessageField(value: &_storage._photo) }()
         case 16: try { try decoder.decodeSingularMessageField(value: &_storage._preview) }()
         case 17: try { try decoder.decodeSingularBoolField(value: &_storage._hidden) }()
+        case 18: try { try decoder.decodeSingularUInt64Field(value: &_storage._replyTo) }()
         default: break
         }
       }
@@ -4269,6 +4282,9 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
       if _storage._hidden != false {
         try visitor.visitSingularBoolField(value: _storage._hidden, fieldNumber: 17)
       }
+      if _storage._replyTo != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._replyTo, fieldNumber: 18)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -4295,6 +4311,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
         if _storage._photo != rhs_storage._photo {return false}
         if _storage._preview != rhs_storage._preview {return false}
         if _storage._hidden != rhs_storage._hidden {return false}
+        if _storage._replyTo != rhs_storage._replyTo {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -4830,7 +4847,7 @@ nonisolated extension Pochical_V1_ChatReact: SwiftProtobuf.Message, SwiftProtobu
 
 nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatSend"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}text\0\u{1}days\0\u{1}poll\0\u{1}photo\0\u{1}preview\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}text\0\u{1}days\0\u{1}poll\0\u{1}photo\0\u{1}preview\0\u{3}reply_to\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4844,6 +4861,7 @@ nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf
       case 4: try { try decoder.decodeSingularBoolField(value: &self.poll) }()
       case 5: try { try decoder.decodeSingularMessageField(value: &self._photo) }()
       case 6: try { try decoder.decodeSingularMessageField(value: &self._preview) }()
+      case 7: try { try decoder.decodeSingularUInt64Field(value: &self.replyTo) }()
       default: break
       }
     }
@@ -4872,6 +4890,9 @@ nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf
     try { if let v = self._preview {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
     } }()
+    if self.replyTo != 0 {
+      try visitor.visitSingularUInt64Field(value: self.replyTo, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -4882,6 +4903,7 @@ nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf
     if lhs.poll != rhs.poll {return false}
     if lhs._photo != rhs._photo {return false}
     if lhs._preview != rhs._preview {return false}
+    if lhs.replyTo != rhs.replyTo {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

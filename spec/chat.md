@@ -81,6 +81,14 @@ A member can change or take back their own messages, at any time. Others' messag
 - In the message's menu, 編集 comes after the other actions and 送信取消 last, apart and in the danger color.
 - Neither sends a notification, and neither changes unread counts. Both go through the change log as edits (spec/sync-protocol.md).
 
+## Replies
+
+- **返信** is the first item in every line's menu, one's own and others', words, photos, shared days and polls alike. It stops editing, quotes the line over the composer (〇〇に返信, the line in one line of words, a photo small beside it, × 返信をやめる) and goes to the composer. The quote goes with the first line sent then (shared days, then each photo, then the words), and is gone from the composer.
+- A reply keeps the line it answers by its place in the chat (`reply_to`, the seq): the group takes it only for a line of the same chat the writer can see, not taken back. Taking the reply back drops it.
+- In the chat, a reply's words or photo sit in a bubble under the quote: the writer's name and the line in one line of words, in the bubble's own color, over a thin rule across it; shared days and polls show none. A reply starts a run. A tap on the quote goes to the line, asking for earlier lines until it is held, and rings it, as a pin does.
+- The quote reads as the line does in a line of words (quotes, below), 取り消されたメッセージ once taken back, and ブロック中のメンバーのメッセージ for a blocked member's. While the device does not hold the line yet (an earlier page), it says 以前のメッセージ.
+- A reply notifies and counts as any line does.
+
 ## Reactions
 
 - Any member reacts to any line (not one taken back) with an emoji, from the bar over it on a long press: 👍 ❤️ 😂 👀 🙏 🎉, the reader's own on the accent's container, then + for any other, from the system's emoji keyboard (Opening a message's menu). Several emoji may be on a line, and one member may choose several.

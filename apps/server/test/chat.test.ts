@@ -40,6 +40,7 @@ type ChatKind =
   | { pin: [number, boolean] }
   | { react: [number, string, boolean] }
   | { send: string }
+  | { reply: [number, string] }
   | { change: [number, string] }
   | { unsend: number }
   | { read: number };
@@ -89,6 +90,13 @@ function sendChatKind(kind: ChatKind, threadId: string) {
     return {
       case: "send",
       value: { text: kind.send, threadId },
+    } as const;
+  }
+  if ("reply" in kind) {
+    const [seq, text] = kind.reply;
+    return {
+      case: "send",
+      value: { replyTo: BigInt(seq), text, threadId },
     } as const;
   }
   if ("change" in kind) {
@@ -203,6 +211,31 @@ describe("a group's chat", () => {
     chat(mine.socket, [{ kind: { unsend: 1 }, opId: "d" }]);
     expect(changesIn(await theirs.frames.next())).toMatchObject([
       { kind: { value: { text: "", unsent: true } } },
+    ]);
+  });
+
+  it("takes a reply to a line of the chat, and drops it as the reply is taken back", async () => {
+    const { groupId, guest, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    const theirs = await groupSocket(groupId, guest);
+    chat(mine.socket, [{ kind: { send: "はじめ" }, opId: "a" }]);
+    // The line, then its acknowledgement.
+    await mine.frames.next();
+    await mine.frames.next();
+    await theirs.frames.next();
+
+    // A line that is not there cannot be answered: nothing is taken.
+    chat(theirs.socket, [
+      { kind: { reply: [9, "どれ？"] }, opId: "b" },
+      { kind: { reply: [1, "なに？"] }, opId: "c" },
+    ]);
+    expect(changesIn(await mine.frames.next())).toMatchObject([
+      { kind: { value: { replyTo: 1n, seq: 2n, text: "なに？" } } },
+    ]);
+
+    chat(theirs.socket, [{ kind: { unsend: 2 }, opId: "d" }]);
+    expect(changesIn(await mine.frames.next())).toMatchObject([
+      { kind: { value: { replyTo: 0n, seq: 2n, unsent: true } } },
     ]);
   });
 

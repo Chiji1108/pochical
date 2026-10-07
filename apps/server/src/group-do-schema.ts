@@ -149,6 +149,9 @@ export const chatLines = sqliteTable(
       title: string;
       url: string;
     }>(),
+    // The line it answers (返信), by its seq in the same chat; none once
+    // unsent.
+    replyTo: integer("reply_to"),
     sentAt: integer("sent_at", { mode: "timestamp_ms" }).notNull(),
     seq: integer().notNull(),
     text: text().notNull(),

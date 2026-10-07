@@ -136,4 +136,14 @@ public interface ChatSendOrBuilder extends
    * @return The preview.
    */
   app.pochical.v1.LinkPreview getPreview();
+
+  /**
+   * <pre>
+   * The line it answers (返信), an earlier one of the same chat; 0 for none.
+   * </pre>
+   *
+   * <code>uint64 reply_to = 7 [json_name = "replyTo"];</code>
+   * @return The replyTo.
+   */
+  long getReplyTo();
 }

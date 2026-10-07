@@ -639,3 +639,13 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     #expect(try Chats.unreadByGroup(me: "me", db: db) == ["g": 3])
   }
 }
+
+@Test func aReplyKeepsTheLineItAnswers() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var reply = line(2, "なに？")
+    reply.chatLine.replyTo = 1
+    try GroupSync.take([line(1, "はじめ"), reply], of: "g", in: db)
+    #expect(try Chats.state(of: groupThread, in: "g", db: db).lines.map(\.replyTo) == [nil, 1])
+  }
+}
