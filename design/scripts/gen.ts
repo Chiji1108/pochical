@@ -52,6 +52,7 @@ import { textStyles } from "../src/type";
 import { widgetRules } from "../src/widgets";
 import { kotlinHolidays, swiftHolidays, webHolidays } from "./holidays";
 import { kotlinMarkIcons, swiftMarkIcons } from "./mark-icon-code";
+import { kotlinReadyPatterns, swiftReadyPatterns } from "./pattern-code";
 import { swiftPhrases } from "./phrases";
 
 const root = path.join(import.meta.dir, "../..");
@@ -586,6 +587,8 @@ const outputs = {
   [`${KOTLIN_DIR}/Holidays.kt`]: kotlinFile(kotlinHolidays()),
   [`${SWIFT_DIR}/MarkIcons.swift`]: swiftFile(swiftMarkIcons()),
   [`${KOTLIN_DIR}/MarkIcons.kt`]: kotlinFile(kotlinMarkIcons()),
+  [`${SWIFT_DIR}/ReadyPatterns.swift`]: swiftFile(swiftReadyPatterns()),
+  [`${KOTLIN_DIR}/ReadyPatterns.kt`]: kotlinFile(kotlinReadyPatterns()),
   "apps/web/src/lib/holiday-names.ts": webHolidays(HEADER),
   ...sharedOutputs,
   "spec/design-tokens.json": json(),

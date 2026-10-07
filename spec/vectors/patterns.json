@@ -1,5 +1,5 @@
 {
-  "about": "Changing the list of patterns (spec/shift-patterns.md). deleted: deleting pattern `id` takes it from `patterns` and changes nothing that names it: other patterns keep it as their `nextDay`, and days and orders keep it, each read as naming a pattern that is gone (spec/sync-protocol.md, Deleted values). newJob: changing jobs; the new job's `incoming` patterns take over from the person's `own`, and an old one still on a day before the switch (`usedBefore`) stays after them. A ready-made pattern sharing an id with one of the person's that differs (name, mark, time, off, next day) and is still used before the switch keeps the person's id; the new job's takes a fresh one, which `sequence` (the new order) and next days use. Fresh ids are \"new-1\", \"new-2\"… in the order of `incoming`. `expected` lists the patterns by id, in order, with their next day.",
+  "about": "Changing the list of patterns (spec/shift-patterns.md). deleted: deleting pattern `id` takes it from `patterns` and changes nothing that names it: other patterns keep it as their `nextDay`, and days and orders keep it, each read as naming a pattern that is gone (spec/sync-protocol.md, Deleted values). newJob: changing jobs; the new job's `incoming` patterns take over from the person's `own`, and an old one still on a day before the switch (`usedBefore`) stays after them. A ready-made pattern sharing an id with one of the person's that differs (name, mark, time, off, next day) and is still used before the switch keeps the person's id; the new job's takes a fresh one, which `sequence` (the new order) and next days use. Fresh ids are \"new-1\", \"new-2\"… in the order of `incoming`. `expected` lists the patterns by id, in order, with their next day. guessLook: a new pattern's mark from its name (design/src/patterns.ts, lookHints): the first hint with a word anywhere in the name gives its emoji and icon, else ⭐️ and the letter icon; the letter is the name's first character, trimmed. A mark picked by hand is never guessed again. nextColor: a new pattern's color, the first palette slot no pattern uses, else the count of patterns modulo the palette's 12 slots.",
   "deleted": [
     {
       "name": "it goes from the list, and patterns that name it keep it",
@@ -249,6 +249,88 @@
         ],
         "sequence": ["day"]
       }
+    }
+  ],
+  "guessLook": [
+    {
+      "name": "a hint's word",
+      "text": "日勤",
+      "expected": {
+        "emoji": "☀️",
+        "icon": "sun",
+        "symbol": "日"
+      }
+    },
+    {
+      "name": "longer words first",
+      "text": "夜間待機",
+      "expected": {
+        "emoji": "📞",
+        "icon": "phone",
+        "symbol": "夜"
+      }
+    },
+    {
+      "name": "a word anywhere in the name",
+      "text": "早出",
+      "expected": {
+        "emoji": "🌤️",
+        "icon": "cloudSun",
+        "symbol": "早"
+      }
+    },
+    {
+      "name": "the letter trimmed",
+      "text": "  明け ",
+      "expected": {
+        "emoji": "🌅",
+        "icon": "sunHorizon",
+        "symbol": "明"
+      }
+    },
+    {
+      "name": "no hint",
+      "text": "ジム",
+      "expected": {
+        "emoji": "⭐️",
+        "icon": "letter",
+        "symbol": "ジ"
+      }
+    },
+    {
+      "name": "an emoji's whole character",
+      "text": "👨‍👩‍👧家族",
+      "expected": {
+        "emoji": "⭐️",
+        "icon": "letter",
+        "symbol": "👨‍👩‍👧"
+      }
+    },
+    {
+      "name": "empty",
+      "text": "",
+      "expected": {
+        "emoji": "⭐️",
+        "icon": "letter",
+        "symbol": ""
+      }
+    }
+  ],
+  "nextColor": [
+    {
+      "name": "none used",
+      "used": [],
+      "expected": 0
+    },
+    {
+      "name": "the first free",
+      "used": [0, 1, 3],
+      "expected": 2
+    },
+    {
+      "name": "every slot used",
+      "used": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 4],
+      "expected": 1
     }
   ]
 }

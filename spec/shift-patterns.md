@@ -15,9 +15,16 @@ Each person has their own list of patterns, in their order. ポチポチ入力 s
 | `countsAsOff` | Counted among the month's days off and marked as one. |
 | `nextDay` | Another pattern entered on the following day too, like 明け after 夜勤. Optional. |
 
+The ready-made patterns, the marks offered first in each look and the words that suggest a mark from a name are shared data in `design/src/patterns.ts`, which `mise run gen` writes out for the native apps (`ReadyPatterns`).
+
 There is no fixed catalogue of pattern kinds: whether a day is off, and what follows it, come only from these fields. The ready-made patterns (日勤, 夜勤, 明け, …) are templates copied into the person's list.
 
 A person's patterns sync between their devices as whole values, each last-writer-wins, and their order as one more (spec/sync-protocol.md, On the wire; `pochical.v1.Pattern`).
+
+## A new pattern's mark
+
+- A pattern made from scratch starts with its mark guessed from its name as it is typed: the first of `lookHints` with a word anywhere in the name gives its emoji and icon, else ⭐️ and the letter icon, and its letter is the name's first character (`spec/vectors/patterns.json`, guessLook). A mark picked by hand, in any look, is never guessed again, and renaming a saved pattern never changes its mark.
+- Its color is set once, as it is made: the first palette slot no pattern of the person's uses, else their count of patterns modulo the palette's slots (`spec/vectors/patterns.json`, nextColor). The name never changes it.
 
 ## The next day
 

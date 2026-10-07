@@ -691,3 +691,39 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [false, false])
   }
 }
+
+struct LookVectors: Decodable, Sendable {
+  struct Look: Decodable, Sendable {
+    let emoji: String
+    let icon: String
+    let symbol: String
+  }
+
+  struct GuessCase: VectorCase {
+    let name: String
+    let text: String
+    let expected: Look
+  }
+
+  struct ColorCase: VectorCase {
+    let name: String
+    let used: [Int]
+    let expected: Int
+  }
+
+  let guessLook: [GuessCase]
+  let nextColor: [ColorCase]
+}
+
+@Test(arguments: try vectors("patterns", as: LookVectors.self).guessLook)
+func aMarkGuessedFromTheName(_ vector: LookVectors.GuessCase) {
+  let look = guessLook(vector.text)
+  #expect(look.emoji == vector.expected.emoji)
+  #expect(look.icon == vector.expected.icon)
+  #expect(look.symbol == vector.expected.symbol)
+}
+
+@Test(arguments: try vectors("patterns", as: LookVectors.self).nextColor)
+func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
+  #expect(nextColor(vector.used, slots: 12) == vector.expected)
+}

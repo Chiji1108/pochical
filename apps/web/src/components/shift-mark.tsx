@@ -2,6 +2,7 @@ import { markColorIn, markColors } from "@pochical/design/colors";
 import { markIconPaths } from "@pochical/design/mark-icon-paths";
 import { markIconGlyphs } from "@pochical/design/mark-icons";
 import type { MarkIcon } from "@pochical/design/mark-icons";
+import { lookFallback, lookHints } from "@pochical/design/patterns";
 import {
   markPalette,
   THEME_SLOT,
@@ -182,56 +183,7 @@ export function sameIcon(a: Look, b: Look) {
   return markIconGlyphs[a.icon] === markIconGlyphs[b.icon];
 }
 
-export const markEmojis = [
-  "🌅",
-  "🌤️",
-  "☀️",
-  "🌇",
-  "🌆",
-  "🌜",
-  "🌙",
-  "🌛",
-  "⭐️",
-  "🌿",
-  "🌷",
-  "🛌",
-  "☕️",
-  "🌴",
-  "✈️",
-  "❤️",
-  "💼",
-  "💻",
-  "🏢",
-  "🏠",
-  "👥",
-  "📞",
-  "📚",
-  "⏰",
-  "🏪",
-  "🍽️",
-  "✂️",
-  "🔧",
-  "🚚",
-  "🚗",
-  "🚃",
-  "🧑‍🏫",
-  "🏥",
-  "🩺",
-  "💉",
-  "🚑",
-  "🚒",
-  "🚓",
-  "🫶",
-  "👶",
-  "🎓",
-  "🎵",
-  "💪",
-  "🐾",
-  "🛍️",
-  "🎁",
-  "🎉",
-  "📅",
-];
+export { markEmojis } from "@pochical/design/patterns";
 
 export type Look = {
   emoji: string;
@@ -244,30 +196,6 @@ export type Look = {
 // An index into the palette below.
 export type MarkColor = number;
 
-// Longer words first, so 待機 wins over a single-letter match.
-const lookHints: {
-  words: string[];
-  icon: Look["icon"];
-  emoji: string;
-}[] = [
-  { emoji: "📞", icon: "phone", words: ["待機", "オンコール"] },
-  { emoji: "🏠", icon: "house", words: ["在宅", "テレワーク"] },
-  { emoji: "💼", icon: "briefcase", words: ["出張"] },
-  { emoji: "👥", icon: "users", words: ["会議", "ミーティング"] },
-  { emoji: "📚", icon: "book", words: ["研修", "勉強", "講習", "学校"] },
-  { emoji: "🚒", icon: "siren", words: ["当番", "当直"] },
-  { emoji: "🛌", icon: "bed", words: ["非番"] },
-  { emoji: "🌷", icon: "flower", words: ["有休", "有給", "年休"] },
-  { emoji: "🌅", icon: "sunHorizon", words: ["明け"] },
-  { emoji: "🌆", icon: "sunHorizon", words: ["夕"] },
-  { emoji: "🌜", icon: "cloudMoon", words: ["準夜"] },
-  { emoji: "🌙", icon: "moon", words: ["深夜", "夜"] },
-  { emoji: "🌤️", icon: "cloudSun", words: ["早"] },
-  { emoji: "🌇", icon: "cloudMoon", words: ["遅"] },
-  { emoji: "🌿", icon: "leaf", words: ["休", "公"] },
-  { emoji: "☀️", icon: "sun", words: ["日", "昼"] },
-];
-
 // Fills in a look from the name alone; the letter icon and a star cover
 // names the hints do not know.
 export function guessLook(name: string): Omit<Look, "color"> {
@@ -275,8 +203,8 @@ export function guessLook(name: string): Omit<Look, "color"> {
     words.some((word) => name.includes(word))
   );
   return {
-    emoji: hint?.emoji ?? "⭐️",
-    icon: hint?.icon ?? "letter",
+    emoji: hint?.emoji ?? lookFallback.emoji,
+    icon: hint?.icon ?? lookFallback.icon,
     symbol: firstCharacter(name),
   };
 }
