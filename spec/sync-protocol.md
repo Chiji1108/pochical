@@ -246,7 +246,7 @@ Tab and app icon badges need unread counts across every group, without a socket 
 ## Reports and blocks
 
 - `ChatService.Report` keeps a report in D1 (`reports`): the reason, who reported whom, and what they saw, the line and the three on each side as the Group DO holds them, or the member's name. Only a member reports, only someone else, and only a line they may read. Nobody in the group is told.
-- `UserService.SetBlocked` keeps the block in the user's User DO (`blocks`, one row a person, kept when unblocked so devices catching up hear of it) and sends it to their devices as a `Block` change. The User DO tells each of the user's groups (`member_blocks`), before answering, and a group they join hears all their blocks.
+- `UserService.SetBlocked` keeps the block in the user's User DO (`blocks`, one row a person, kept when unblocked so devices catching up hear of it) and sends it to their devices as a `Block` change. The User DO tells each of the user's groups (`member_blocks`) all of the user's blocks, before answering, so a group that missed one is put right by the next, and a group they join hears them too.
 - A one-to-one chat's line from someone the other member had blocked when it was sent is kept with `hidden_from` and goes to that member without its content, `hidden` set, so their device keeps its place and shows nothing; it never counts as unread for them. Group chat lines go to everyone as they are, and the blocker's device folds them.
 
 ## Ephemeral state

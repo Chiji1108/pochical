@@ -592,6 +592,8 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     hidden.chatLine.hidden = true
     try GroupSync.take([hidden], of: "g", in: db)
     #expect(try Chats.state(of: groupThread, in: "g", db: db).lines.map(\.hidden) == [true])
+    // Nor is it the chat's latest line in the list.
+    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", db: db).last == nil)
   }
 }
 

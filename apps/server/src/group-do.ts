@@ -30,7 +30,7 @@ import {
   unreadCount,
   notePhoto,
   reportContext,
-  setMemberBlock,
+  setMemberBlocks,
 } from "./group-chat";
 import migrations from "./group-do-migrations/migrations.js";
 import {
@@ -334,12 +334,14 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /**
-   * A member's block of someone, or its undoing, as their User DO says it
+   * Whom a member has blocked, all of them, as their User DO says it
    * (spec/chat.md, Reporting and blocking): kept so a one-to-one chat's
    * line from them is not delivered.
    */
-  setBlock(userId: string, blockedId: string, on: boolean): void {
-    setMemberBlock(this.db, userId, blockedId, on);
+  setBlocks(userId: string, blockedIds: string[]): void {
+    this.ctx.storage.transactionSync(() => {
+      setMemberBlocks(this.db, userId, blockedIds);
+    });
   }
 
   /**
