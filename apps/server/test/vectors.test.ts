@@ -2,19 +2,28 @@ import { syncLimits } from "@pochical/design/limits";
 import { describe, expect, test } from "vitest";
 
 // The cases every platform checks its own code against (spec/vectors).
+import chatText from "../../../spec/vectors/chat-text.json";
 import chat from "../../../spec/vectors/chat.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import orderClears from "../../../spec/vectors/order-clears.json";
 import text from "../../../spec/vectors/text.json";
 import { pinStep } from "../src/chat-pins";
 import { DayField } from "../src/gen/pochical/v1/sync_pb";
-import { directThread } from "../src/group-chat";
+import { directThread, plainText } from "../src/group-chat";
 import { compareClocks, isAhead } from "../src/hlc";
 import { givesWay, heldBackBy } from "../src/order-clears";
 import { characterCount, isEmoji } from "../src/text-limits";
 
 // Which thread two members' one-to-one chat is, as their apps name it.
 describe("spec/vectors/chat.json", () => {
+  test.each(chatText.plainText)(
+    "plainText: $text",
+    ({ text: words, names, expected }) => {
+      const byId = new Map(Object.entries(names));
+      expect(plainText(words, (id) => byId.get(id) ?? id)).toBe(expected);
+    }
+  );
+
   test.each(chat.directThread)("directThread: $name", ({ a, b, expected }) => {
     expect(directThread(a, b)).toBe(expected);
   });

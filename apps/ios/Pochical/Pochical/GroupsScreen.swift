@@ -20,6 +20,7 @@ extension EnvironmentValues {
 /// /design's rail, and the one open beside them.
 struct GroupsScreen: View {
   @Environment(\.account) private var account
+  @Environment(\.groupCalls) private var groupCalls
   @Environment(\.scenePhase) private var scenePhase
   @Dependency(\.defaultDatabase) private var database
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
@@ -28,6 +29,8 @@ struct GroupsScreen: View {
   @State private var socket: SyncClient?
   /// The group open beside the rail, the first until one is picked.
   @Binding var openID: String?
+  /// A chat a notification opened, shown once its group is.
+  @Binding var openingChat: OpenedChat?
   /// Each group's unread lines that count.
   let unread: [String: Int]
   /// Opens the camera to read a group's QR code.
@@ -85,6 +88,7 @@ struct GroupsScreen: View {
       }
     }
     .environment(\.groupSocket, socket)
+    .task(id: openingChat?.threadID) { await showOpeningChat() }
     .task(id: SocketKey(groupID: openGroupID ?? "", active: scenePhase == .active)) {
       guard scenePhase == .active, let groupID = openGroupID else { return }
       let client = SyncClient(account: account, database: database, peer: .group(groupID))
@@ -95,6 +99,17 @@ struct GroupsScreen: View {
       }
       await client.stop()
     }
+  }
+
+  /// Shows the chat a notification opened, over its group.
+  private func showOpeningChat() async {
+    guard let chat = openingChat,
+      let group = groups.first(where: { $0.id == chat.groupID })
+    else { return }
+    let me = await groupCalls.userID()
+    let other = me.flatMap { otherIn(chat.threadID, me: $0) }
+    path = [.chat(group, thread: chat.threadID, with: other)]
+    openingChat = nil
   }
 
   /// The group open, whose socket is kept.

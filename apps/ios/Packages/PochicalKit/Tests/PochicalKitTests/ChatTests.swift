@@ -594,3 +594,11 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     #expect(try Chats.state(of: groupThread, in: "g", db: db).lines.map(\.hidden) == [true])
   }
 }
+
+@Test func theOtherOfAOneToOneChat() {
+  let thread = directThread("b", "a")
+  #expect(otherIn(thread, me: "a") == "b")
+  #expect(otherIn(thread, me: "b") == "a")
+  #expect(otherIn(thread, me: "c") == nil)
+  #expect(otherIn(groupThread, me: "a") == nil)
+}

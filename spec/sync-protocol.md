@@ -233,7 +233,15 @@ Tab and app icon badges need unread counts across every group, without a socket 
 - Leaving a group deletes its rows, in the transaction that marks the membership left at a newer cursor, so the head never goes back; devices drop a group's counts as they hear of the leaving, and joining again starts at the chats' end.
 - A device shows the group's count, except in a chat where a read of its own still waits to be sent: there it counts the lines it holds past that read, so reading clears the badge at once. A group's icon adds up its chats', the グループ tab all groups' (spec/chat.md, Unread lines).
 - Reading on one device clears the badge on the user's other devices through the User DO.
-- The APNs `badge` and FCM notification count will come from the User DO's total (not built yet, with push).
+- The APNs `badge` is the User DO's total of these counts, sent with each notification (Push); the app also sets it from its own counts as lines are read.
+
+## Push
+
+- Each launch, a device with notifications allowed sends its APNs token (`UserService.RegisterPushToken`, `sandbox` from a development build); the User DO keeps it (`push_tokens`) and drops one APNs says is gone (410, or 400 BadDeviceToken).
+- When a line is sent, the Group DO words a notification for each other member who may read the chat and has not blocked the writer, and gives it to their User DO with their new unread count (`setUnread`). The User DO sends it to each of their devices, its badge the user's total of unread lines.
+- The server sends a localization key and its arguments (APNs `title-loc-key`/`loc-key` with their args), never words it has put together, so the app words them from its own strings: the title is the group's name (`CHAT_TITLE`), or the writer's in a one-to-one chat; the body is `CHAT_GROUP_{TEXT,PHOTO,DAYS,POLL}` with the writer's name first, or `CHAT_{…}` in a one-to-one chat. Words are sent with mentions as @name, cut at 200 characters. The payload carries `groupId` and `threadId`, which a tap opens, and `thread-id` stacks a chat's notifications together.
+- Sent from the Worker straight to APNs over HTTP/2 with a token key (`APNS_KEY_ID`, `APNS_TEAM_ID`, the `.p8` as the `APNS_KEY` secret), its JWT reused for 50 minutes. A local `wrangler dev` cannot reach APNs, so it sends nothing.
+- A notification is not shown while its chat is open on the device. Turning a chat's notifications off is not built yet; until then every chat notifies.
 
 ## Reports and blocks
 
@@ -264,6 +272,5 @@ Presence means "has this thread open on screen", not "online in the app": mobile
 - Deleting an account: what goes (the User DO, memberships and what groups hold of the user, their messages' authorship) and how the user's other devices learn of it. Apple asks apps to revoke a deleted user's Sign in with Apple tokens; with none kept, deletion has the person sign in with Apple once more for a fresh code to revoke with
 - Snapshot format for resets and how long each DO keeps its change log
 - Resets for DOs that do not keep values as registers
-- Push notifications (chat, mentions): the server sends a localization key and its arguments (APNs `loc-key`/`loc-args`, FCM `body_loc_key`/`body_loc_args`), never text it has put together, so the app words them in its own language and the server need not know each reader's
 - Presence and "last seen": whether to show them at all. Pochical is for family and friends, where visible presence and read markers can feel like pressure; typing alone may be enough. "Last seen" would also need storing in the User DO.
 - Read state options: whether members see read markers (and whether users can turn them off), "mark as unread" (it moves the watermark back, so `max` would become a per-thread LWW register), and muted threads left out of badge totals (mentions: spec/chat.md)

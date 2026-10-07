@@ -2,6 +2,7 @@ import PochicalDesign
 import PochicalKit
 import SQLiteData
 import SwiftUI
+import UserNotifications
 
 /// The app's tabs, as /design's tab bar has them: カレンダー, グループ and
 /// 設定. An invitation link opened in the app shows its join screen over
@@ -15,6 +16,8 @@ struct RootView: View {
   @State private var meID: String?
   @State private var tab = RootTab.calendar
   @State private var openGroupID: String?
+  /// A chat a notification opened, for the groups to show.
+  @State private var openingChat: OpenedChat?
   @State private var invite: OpenedInvite?
   @State private var scanning = false
   /// An invitation read by the camera, opened once the camera has gone:
@@ -27,7 +30,9 @@ struct RootView: View {
         CalendarScreen()
       }
       Tab("グループ", systemImage: "person.2", value: .groups) {
-        GroupsScreen(openID: $openGroupID, unread: unread) { scanning = true }
+        GroupsScreen(openID: $openGroupID, openingChat: $openingChat, unread: unread) {
+          scanning = true
+        }
       }
       .badge(unread.values.reduce(0, +))
       Tab("設定", systemImage: "gearshape", value: .settings) {
@@ -42,6 +47,19 @@ struct RootView: View {
       try? await $unread.load(UnreadRequest(me: meID))
     }
     .environment(\.openInvite) { code in invite = OpenedInvite(code: code) }
+    // The app icon's badge follows what is read here too, as the
+    // notifications set it from the server.
+    .onChange(of: unread.values.reduce(0, +), initial: true) { _, total in
+      UNUserNotificationCenter.current().setBadgeCount(total)
+    }
+    // A tapped notification opens its chat.
+    .onChange(of: Notifications.shared.opening) { _, chat in
+      guard let chat else { return }
+      tab = .groups
+      openGroupID = chat.groupID
+      openingChat = chat
+      Notifications.shared.opening = nil
+    }
     .onOpenURL { url in
       if let code = openedInviteCode(of: url) {
         invite = OpenedInvite(code: code)

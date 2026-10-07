@@ -19,6 +19,7 @@ import {
 } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
+import type { Alert } from "./apns";
 import { pinStep } from "./chat-pins";
 import type { PinStep } from "./chat-pins";
 import { isDate } from "./day-values";
@@ -1020,3 +1021,61 @@ export const reportContext = (
     }));
   return { context: JSON.stringify(around), targetId: line.authorId };
 };
+
+const MENTION = /<@(?<id>[\w-]+)>/gu;
+
+/** A message's words with each mention as @ and the name (spec/vectors/chat-text.json, plainText). */
+export const plainText = (
+  text: string,
+  nameOf: (id: string) => string
+): string => text.replace(MENTION, (_, id: string) => `@${nameOf(id)}`);
+
+const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
+
+/** The most characters of a message's words a notification carries. */
+const ALERT_TEXT_MAX = 200;
+
+/**
+ * A new line as its notification words it (spec/sync-protocol.md, Push):
+ * keys from the app's strings and their arguments, never words put
+ * together here, so the app says them in its own language. A group
+ * chat's line is titled with the group and says who wrote it; a
+ * one-to-one chat's is titled with the writer.
+ */
+export const alertOf = (
+  line: ChatLine,
+  group: { id: string; name: string },
+  nameOf: (id: string) => string
+): Alert => {
+  const writer = nameOf(line.authorId);
+  const direct = line.threadId !== GROUP_THREAD;
+  let kind = "TEXT";
+  if (line.photo !== undefined) {
+    kind = "PHOTO";
+  } else if (line.poll) {
+    kind = "POLL";
+  } else if (line.days.length > 0) {
+    kind = "DAYS";
+  }
+  // Cut between characters as people see them, emoji whole.
+  const words = [...graphemes.segment(plainText(line.text, nameOf))]
+    .slice(0, ALERT_TEXT_MAX)
+    .map(({ segment }) => segment)
+    .join("");
+  const said = kind === "TEXT" ? [words] : [];
+  return {
+    body: direct
+      ? { args: said, key: `CHAT_${kind}` }
+      : { args: [writer, ...said], key: `CHAT_GROUP_${kind}` },
+    groupId: group.id,
+    threadId: line.threadId,
+    title: { args: [direct ? writer : group.name], key: "CHAT_TITLE" },
+  };
+};
+
+/** Whether `userId` would hear of a line by `authorId`: not if they blocked them. */
+export const hearsFrom = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  authorId: string
+): boolean => !hasBlocked(db, userId, authorId);

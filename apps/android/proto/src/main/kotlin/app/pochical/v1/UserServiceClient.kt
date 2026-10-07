@@ -52,4 +52,21 @@ public class UserServiceClient(
     ),
   )
 
+
+  /**
+   *  Keeps a device's push token for the user's notifications (spec/chat.md,
+   *  Notifications); sent each launch, as iOS may change it.
+   */
+  override suspend fun registerPushToken(request: RegisterPushTokenRequest, headers: Headers): ResponseMessage<RegisterPushTokenResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.UserService/RegisterPushToken",
+      app.pochical.v1.RegisterPushTokenRequest::class,
+      app.pochical.v1.RegisterPushTokenResponse::class,
+      StreamType.UNARY,
+      idempotency = Idempotency.IDEMPOTENT,
+    ),
+  )
+
 }

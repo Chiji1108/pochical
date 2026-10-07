@@ -186,3 +186,12 @@ export const blocks = sqliteTable(
   },
   (table) => [uniqueIndex("blocks_cursor").on(table.cursor)]
 );
+
+// The user's devices' push tokens (spec/sync-protocol.md, Push), each
+// sent each launch; one APNs says is gone is dropped.
+export const pushTokens = sqliteTable("push_tokens", {
+  // From a development build: through APNs' sandbox.
+  sandbox: integer({ mode: "boolean" }).notNull(),
+  token: text().primaryKey(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});

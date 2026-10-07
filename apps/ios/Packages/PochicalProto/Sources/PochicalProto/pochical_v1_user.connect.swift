@@ -23,6 +23,11 @@ public protocol Pochical_V1_UserServiceClientInterface: Sendable {
     /// Block change. Blocking oneself is INVALID_ARGUMENT.
     @available(iOS 13, *)
     func `setBlocked`(request: Pochical_V1_SetBlockedRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetBlockedResponse>
+
+    /// Keeps a device's push token for the user's notifications (spec/chat.md,
+    /// Notifications); sent each launch, as iOS may change it.
+    @available(iOS 13, *)
+    func `registerPushToken`(request: Pochical_V1_RegisterPushTokenRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_RegisterPushTokenResponse>
 }
 
 /// Concrete implementation of `Pochical_V1_UserServiceClientInterface`.
@@ -43,10 +48,16 @@ public final class Pochical_V1_UserServiceClient: Pochical_V1_UserServiceClientI
         return await self.client.unary(path: "/pochical.v1.UserService/SetBlocked", idempotencyLevel: .idempotent, request: request, headers: headers)
     }
 
+    @available(iOS 13, *)
+    public func `registerPushToken`(request: Pochical_V1_RegisterPushTokenRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_RegisterPushTokenResponse> {
+        return await self.client.unary(path: "/pochical.v1.UserService/RegisterPushToken", idempotencyLevel: .idempotent, request: request, headers: headers)
+    }
+
     public enum Metadata {
         public enum Methods {
             public static let getMe = Connect.MethodSpec(name: "GetMe", service: "pochical.v1.UserService", type: .unary)
             public static let setBlocked = Connect.MethodSpec(name: "SetBlocked", service: "pochical.v1.UserService", type: .unary)
+            public static let registerPushToken = Connect.MethodSpec(name: "RegisterPushToken", service: "pochical.v1.UserService", type: .unary)
         }
     }
 }

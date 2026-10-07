@@ -1,11 +1,13 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { syncLimits } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
-import { and, eq, gt, inArray, isNull, max } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, max, sum } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
+import { sendAlert } from "./apns";
+import type { Alert, Sent } from "./apns";
 import { hasKey, SHARED_DAY_FIELDS } from "./day-values";
 import { ChangesSchema, ServerError_Code } from "./gen/pochical/v1/sync_pb";
 import type {
@@ -49,6 +51,7 @@ import {
   patterns,
   repeatOrders,
   blocks,
+  pushTokens,
   unreadCounts,
 } from "./user-do-schema";
 import {
@@ -354,6 +357,65 @@ export class UserDO extends DurableObject<Env> {
    * than the count kept, or for a group they are not in, changes nothing.
    */
   setUnread(
+    groupId: string,
+    threadId: string,
+    count: number,
+    groupCursor: number,
+    // A new line to tell the user's devices of, with the count.
+    alert?: Alert
+  ): void {
+    this.storeUnread(groupId, threadId, count, groupCursor);
+    if (alert !== undefined && this.isMember(groupId)) {
+      this.ctx.waitUntil(this.notify(alert));
+    }
+  }
+
+  /**
+   * Keeps a device's push token, sent each launch as iOS may change it
+   * (spec/sync-protocol.md, Push).
+   */
+  registerPushToken(token: string, sandbox: boolean): void {
+    const row = { sandbox, token, updatedAt: new Date() };
+    this.db
+      .insert(pushTokens)
+      .values(row)
+      .onConflictDoUpdate({ set: row, target: pushTokens.token })
+      .run();
+  }
+
+  /**
+   * Tells each of the user's devices of `alert`, the app icon's badge at
+   * the user's unread lines in every group; a token APNs says is gone is
+   * dropped.
+   */
+  private async notify(alert: Alert): Promise<void> {
+    const devices = this.db.select().from(pushTokens).all();
+    if (devices.length === 0) {
+      return;
+    }
+    const badge =
+      this.db
+        .select({ total: sum(unreadCounts.count) })
+        .from(unreadCounts)
+        .get()?.total ?? 0;
+    const sent = await Promise.all(
+      devices.map(async (device) => ({
+        device,
+        sent: await sendAlert(this.env, device, alert, Number(badge)).catch(
+          (): Sent => "failed"
+        ),
+      }))
+    );
+    const gone = sent.filter((each) => each.sent === "gone");
+    for (const { device } of gone) {
+      this.db
+        .delete(pushTokens)
+        .where(eq(pushTokens.token, device.token))
+        .run();
+    }
+  }
+
+  private storeUnread(
     groupId: string,
     threadId: string,
     count: number,

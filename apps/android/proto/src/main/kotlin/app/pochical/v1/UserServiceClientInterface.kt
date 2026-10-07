@@ -24,4 +24,10 @@ public interface UserServiceClientInterface {
    *  Block change. Blocking oneself is INVALID_ARGUMENT.
    */
   public suspend fun setBlocked(request: SetBlockedRequest, headers: Headers = emptyMap()): ResponseMessage<SetBlockedResponse>
+
+  /**
+   *  Keeps a device's push token for the user's notifications (spec/chat.md,
+   *  Notifications); sent each launch, as iOS may change it.
+   */
+  public suspend fun registerPushToken(request: RegisterPushTokenRequest, headers: Headers = emptyMap()): ResponseMessage<RegisterPushTokenResponse>
 }

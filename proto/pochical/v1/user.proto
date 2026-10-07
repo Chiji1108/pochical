@@ -17,7 +17,22 @@ service UserService {
   rpc SetBlocked(SetBlockedRequest) returns (SetBlockedResponse) {
     option idempotency_level = IDEMPOTENT;
   }
+
+  // Keeps a device's push token for the user's notifications (spec/chat.md,
+  // Notifications); sent each launch, as iOS may change it.
+  rpc RegisterPushToken(RegisterPushTokenRequest) returns (RegisterPushTokenResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
 }
+
+message RegisterPushTokenRequest {
+  // The device's APNs token, as hex.
+  string token = 1;
+  // From a development build: sent through APNs' sandbox.
+  bool sandbox = 2;
+}
+
+message RegisterPushTokenResponse {}
 
 message SetBlockedRequest {
   string user_id = 1;
