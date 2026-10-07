@@ -223,7 +223,7 @@ struct KeysPreview: View {
   let patterns: [PatternID: Pattern]
 
   var body: some View {
-    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 5), spacing: 6) {
+    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
       ForEach(patternIDs, id: \.self) { id in
         VStack(spacing: 4) {
           if let pattern = patterns[id] {

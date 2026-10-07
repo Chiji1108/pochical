@@ -27,7 +27,7 @@ import { ShiftMark } from "./shift-mark";
 const keysPreview = {
   grid: css({
     display: "grid",
-    gap: "6px",
+    gap: "8px",
     gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
     listStyle: "none",
     margin: 0,
