@@ -43,7 +43,7 @@ A link to `https://pochical.app/invite/{code}` (the host in any case, an optiona
 
 - A tap on it, in the words or on its card, opens the group's join screen in the app, as reading its QR code does; when you are in the group already, it opens the group. Nothing opens in the browser, and nothing joins until you confirm on the join screen.
 - Its card shows the group instead of a page: the group's mark at the hub's size on a tint, its name, and グループへの招待・{n}人 (参加中のグループ once you are in it). A long press opens the message's actions, as on a page's card.
-- The card is not made while writing or sent with the message. Each app asks the server's `InviteService.GetInvitePreview` as the message shows, so a link that was remade or whose group was deleted turns into この招待は使えません for everyone, and a renamed group shows its new name. That card opens nothing; a tap on the link's words says the link cannot be used.
+- The card is not made while writing or sent with the message. Each app asks the server as the message shows (`GroupService.GetInvite`, which also says whether the reader is in the group), so a link that was remade or whose group was deleted turns into この招待は使えません for everyone, and a renamed group shows its new name. That card opens nothing; a tap on the link's words says the link cannot be used.
 - Nothing is shown above the composer for it, and it takes the place of the message's one preview: a message whose first link is an invitation shows no page for later links.
 
 ## Reading a page

@@ -127,3 +127,59 @@ struct ComposerPreviewBar: View {
     .padding(.top, 4)
   }
 }
+
+/// One of Pochical's invitations under a message's words (spec/chat.md,
+/// Pochical's invitation links): the group as it is now, asked as the
+/// message shows, so a remade link or a deleted group reads この招待は使えま
+/// せん and a renamed group its new name. A tap opens the join screen, or
+/// the group once in it; a long press is the line's.
+struct InviteCard: View {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.groupCalls) private var groupCalls
+  @Environment(\.openInvite) private var openInvite
+  let code: String
+  let mine: Bool
+  @State private var invite: InviteDetails?
+  @State private var unusable = false
+
+  var body: some View {
+    HStack(spacing: 12) {
+      Text(unusable ? "🔗" : (invite?.emoji.isEmpty == false ? invite?.emoji ?? "" : "👥"))
+        .font(.system(size: 22))
+        .frame(width: 42, height: 42)
+        .background(colors.accentContainer, in: RoundedRectangle(cornerRadius: Radius.lg))
+        .opacity(unusable ? 0.5 : 1)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(unusable ? "この招待は使えません" : invite?.name ?? "読み込み中…")
+          .font(.footnote.weight(.semibold))
+          .lineLimit(2)
+        if let invite, !unusable {
+          Text(invite.alreadyMember ? "参加中のグループ" : "グループへの招待・\(invite.members.count)人")
+            .font(.caption2)
+            .opacity(0.7)
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
+    .padding(10)
+    .background(mine ? Color.black.opacity(0.12) : colors.backgroundCard)
+    .clipShape(RoundedRectangle(cornerRadius: Radius.md))
+    .contentShape(.rect)
+    // A tap, not a button, so the long press stays the line's.
+    .onTapGesture {
+      if !unusable { openInvite(code) }
+    }
+    .accessibilityElement(children: .combine)
+    .accessibilityAddTraits(unusable ? [] : .isButton)
+    .task(id: code) {
+      do throws(InviteError) {
+        invite = try await groupCalls.invite(code: code)
+        unusable = false
+      } catch {
+        // No connection leaves the name for the next time it shows.
+        unusable = error == .unusable
+      }
+    }
+  }
+}
