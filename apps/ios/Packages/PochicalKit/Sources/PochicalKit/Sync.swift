@@ -172,7 +172,7 @@ extension Pochical_V1_ClientFrame {
     case .patternEdits(let edits): edits.edits.count
     case .repeatOrdersEdits(let edits): edits.edits.count
     case .coworkerEdits(let edits): edits.edits.count
-    case .hello, .ping, .chatEdits, .chatPageRequest, nil: 0
+    case .hello, .ping, .chatEdits, .chatPageRequest, .typing, nil: 0
     }
   }
 }

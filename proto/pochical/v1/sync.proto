@@ -23,6 +23,9 @@ message ClientFrame {
     ChatEdits chat_edits = 7;
     // Asks for a page of a chat's earlier lines; Group DO socket only.
     ChatPageRequest chat_page_request = 8;
+    // The member is writing in a chat, or stopped; Group DO socket only.
+    // Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+    Typing typing = 9;
   }
 }
 
@@ -44,7 +47,20 @@ message ServerFrame {
     Reset reset = 6;
     // A page of a chat's lines, answering a ChatPageRequest.
     ChatPage chat_page = 7;
+    // Someone else is writing in a chat the device may read, or stopped.
+    Typing typing = 8;
   }
+}
+
+// Someone writing in a chat, or no longer (spec/sync-protocol.md,
+// Typing): sent at most every chatRules.typingSendMs while writing, and
+// shown for chatRules.typingShowMs unless sent again.
+message Typing {
+  string thread_id = 1;
+  // Who is writing; set by the group as it relays, ignored from a client.
+  string user_id = 2;
+  // Writing, or stopped (sent, or the field emptied).
+  bool on = 3;
 }
 
 // First frame a client sends after the socket opens.

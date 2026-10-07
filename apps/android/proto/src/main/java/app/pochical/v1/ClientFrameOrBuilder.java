@@ -150,5 +150,26 @@ public interface ClientFrameOrBuilder extends
    */
   app.pochical.v1.ChatPageRequest getChatPageRequest();
 
+  /**
+   * <pre>
+   * The member is writing in a chat, or stopped; Group DO socket only.
+   * Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+   * </pre>
+   *
+   * <code>.pochical.v1.Typing typing = 9 [json_name = "typing"];</code>
+   * @return Whether the typing field is set.
+   */
+  boolean hasTyping();
+  /**
+   * <pre>
+   * The member is writing in a chat, or stopped; Group DO socket only.
+   * Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+   * </pre>
+   *
+   * <code>.pochical.v1.Typing typing = 9 [json_name = "typing"];</code>
+   * @return The typing.
+   */
+  app.pochical.v1.Typing getTyping();
+
   public app.pochical.v1.ClientFrame.KindCase getKindCase();
 }

@@ -10,6 +10,7 @@ import {
   ChangeSchema,
   ChangesSchema,
   ServerError_Code,
+  TypingSchema,
 } from "./gen/pochical/v1/sync_pb";
 import type { Change, ChatEdits } from "./gen/pochical/v1/sync_pb";
 import {
@@ -17,6 +18,7 @@ import {
   chatHead,
   chatPage,
   GROUP_THREAD,
+  mayRead,
   moveReadMark,
   otherIn,
   seenBy,
@@ -52,6 +54,7 @@ import {
   closeSessionSockets,
   closeUserSockets,
   handleSyncMessage,
+  relayTyping,
   welcome,
 } from "./sync-socket";
 
@@ -335,6 +338,16 @@ export class GroupDO extends DurableObject<Env> {
             ...chatPage(this.db, userId, threadId, beforeSeq),
           },
         });
+      },
+      typing: (_socket, userId, { threadId, on }) => {
+        // Only a member writing in a chat they may write in is relayed.
+        if (this.isMember(userId) && mayRead(threadId, userId)) {
+          relayTyping(
+            this.ctx,
+            create(TypingSchema, { on, threadId, userId }),
+            mayRead
+          );
+        }
       },
       welcome: (socket, cursor, userId) => {
         welcome(socket, cursor, this.head(), (after) =>

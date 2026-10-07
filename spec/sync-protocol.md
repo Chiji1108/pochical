@@ -251,6 +251,7 @@ Presence means "has this thread open on screen", not "online in the app": mobile
 
 - While composing, the client sends a typing frame at most every `chatRules.typingSendMs` (`design/src/chat.ts`), and a stop frame when it sends the message or the field becomes empty.
 - Receivers show the indicator for `chatRules.typingShowMs` unless it is refreshed, so a lost stop frame cannot leave it stuck.
+- The frames are `Typing` (thread, on) on the group socket. The Group DO relays each, with the writer's id it sets itself, to the sockets of the other users who may read that thread (both members alone for a one-to-one chat), never to the writer's own devices, and keeps nothing. The app also stops when the chat closes.
 
 ## Not yet specified
 

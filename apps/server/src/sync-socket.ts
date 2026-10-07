@@ -17,6 +17,7 @@ import type {
   DayEdits,
   PatternEdits,
   RepeatOrdersEdits,
+  Typing,
 } from "./gen/pochical/v1/sync_pb";
 import { MIN_PROTOCOL_VERSION } from "./protocol";
 
@@ -65,6 +66,7 @@ type ChatHandlers = {
     userId: string,
     request: ChatPageRequest
   ) => void;
+  typing?: (ws: WebSocket, userId: string, typing: Typing) => void;
 };
 
 /** What a DO does with a socket once it is past the handshake. */
@@ -199,6 +201,29 @@ export const welcome = (
  * devices, or everyone with the group open; with `seenBy`, each socket
  * only the changes its user may see.
  */
+/**
+ * Relays someone's typing to the other users' sockets that may read the
+ * chat, never kept (spec/sync-protocol.md, Ephemeral state).
+ */
+export const relayTyping = (
+  ctx: DurableObjectState,
+  typing: Typing,
+  mayRead: (threadId: string, userId: string) => boolean
+): void => {
+  for (const socket of ctx.getWebSockets()) {
+    const attachment = attachmentOf(socket);
+    const reader = attachment?.userId;
+    const relays =
+      attachment?.protocolVersion !== undefined &&
+      reader !== undefined &&
+      reader !== typing.userId &&
+      mayRead(typing.threadId, reader);
+    if (relays) {
+      send(socket, { case: "typing", value: typing });
+    }
+  }
+};
+
 export const broadcastChanges = (
   ctx: DurableObjectState,
   changes: Change[],
@@ -352,6 +377,14 @@ export const handleSyncMessage = (
     case "chatPageRequest": {
       if (handlers.chatPageRequest) {
         handlers.chatPageRequest(ws, attachment.userId, kind.value);
+      } else {
+        rejectAndClose(ws, ServerError_Code.BAD_FRAME, GROUP_SOCKET_ONLY);
+      }
+      return;
+    }
+    case "typing": {
+      if (handlers.typing) {
+        handlers.typing(ws, attachment.userId, kind.value);
       } else {
         rejectAndClose(ws, ServerError_Code.BAD_FRAME, GROUP_SOCKET_ONLY);
       }

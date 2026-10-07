@@ -302,6 +302,45 @@ public object ClientFrameKt {
     public fun hasChatPageRequest(): kotlin.Boolean {
       return _builder.hasChatPageRequest()
     }
+
+    /**
+     * ```
+     * The member is writing in a chat, or stopped; Group DO socket only.
+     * Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+     * ```
+     *
+     * `.pochical.v1.Typing typing = 9 [json_name = "typing"];`
+     */
+    public var typing: app.pochical.v1.Typing
+      @kotlin.jvm.JvmName("getTyping")
+        get() = _builder.typing
+      @kotlin.jvm.JvmName("setTyping")
+        set(value) {
+        _builder.typing = value
+      }
+    /**
+     * ```
+     * The member is writing in a chat, or stopped; Group DO socket only.
+     * Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+     * ```
+     *
+     * `.pochical.v1.Typing typing = 9 [json_name = "typing"];`
+     */
+    public fun clearTyping() {
+      _builder.clearTyping()
+    }
+    /**
+     * ```
+     * The member is writing in a chat, or stopped; Group DO socket only.
+     * Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+     * ```
+     *
+     * `.pochical.v1.Typing typing = 9 [json_name = "typing"];`
+     * @return Whether the typing field is set.
+     */
+    public fun hasTyping(): kotlin.Boolean {
+      return _builder.hasTyping()
+    }
     public val kindCase: app.pochical.v1.ClientFrame.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -337,4 +376,7 @@ public val app.pochical.v1.ClientFrameOrBuilder.chatEditsOrNull: app.pochical.v1
 
 public val app.pochical.v1.ClientFrameOrBuilder.chatPageRequestOrNull: app.pochical.v1.ChatPageRequest?
   get() = if (hasChatPageRequest()) getChatPageRequest() else null
+
+public val app.pochical.v1.ClientFrameOrBuilder.typingOrNull: app.pochical.v1.Typing?
+  get() = if (hasTyping()) getTyping() else null
 
