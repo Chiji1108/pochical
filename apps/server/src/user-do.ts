@@ -48,6 +48,7 @@ import {
   patternOrder,
   patterns,
   repeatOrders,
+  blocks,
   unreadCounts,
 } from "./user-do-schema";
 import {
@@ -59,6 +60,7 @@ import {
   orderChange,
   patternChange,
   repeatOrdersChange,
+  blockChange,
   unreadCountChange,
 } from "./user-do-values";
 
@@ -87,7 +89,8 @@ type SyncedLog = {
     | typeof coworkers
     | typeof coworkerOrder
     | typeof memberships
-    | typeof unreadCounts;
+    | typeof unreadCounts
+    | typeof blocks;
 };
 
 /**
@@ -201,8 +204,82 @@ export class UserDO extends DurableObject<Env> {
     });
     if (added !== undefined) {
       broadcastChanges(this.ctx, [membershipChange(added)]);
+      // The group learns whom the user has blocked, as the others did.
+      this.ctx.waitUntil(this.tellGroup(groupId, this.blockedIds()));
     }
     this.schedulePush();
+  }
+
+  /**
+   * Blocks someone in every group the two share, or unblocks them
+   * (spec/chat.md, Reporting and blocking): kept, sent to the user's
+   * devices, and told to each of the user's groups. Setting it as it is
+   * changes nothing.
+   */
+  async setBlocked(blockedId: string, on: boolean): Promise<void> {
+    const changed = this.ctx.storage.transactionSync(() => {
+      const kept = this.db
+        .select()
+        .from(blocks)
+        .where(eq(blocks.userId, blockedId))
+        .get();
+      if ((kept?.blocked ?? false) === on) {
+        return undefined;
+      }
+      const row = { blocked: on, cursor: this.head() + 1, userId: blockedId };
+      return this.db
+        .insert(blocks)
+        .values(row)
+        .onConflictDoUpdate({ set: row, target: blocks.userId })
+        .returning()
+        .get();
+    });
+    if (changed === undefined) {
+      return;
+    }
+    broadcastChanges(this.ctx, [blockChange(changed)]);
+    const groups = this.db
+      .select({ groupId: memberships.groupId })
+      .from(memberships)
+      .where(isNull(memberships.leftAt))
+      .all();
+    // Told before answering, so the block holds once the call returns.
+    await Promise.allSettled(
+      groups.map(async ({ groupId }) => {
+        await this.tellGroup(groupId, [blockedId], on);
+      })
+    );
+  }
+
+  /** Whom the user has blocked now. */
+  private blockedIds(): string[] {
+    return this.db
+      .select({ userId: blocks.userId })
+      .from(blocks)
+      .where(eq(blocks.blocked, true))
+      .all()
+      .map(({ userId }) => userId);
+  }
+
+  /**
+   * Tells a group of the user's blocks; one that fails is told again with
+   * the next block, or when the user joins again.
+   */
+  private async tellGroup(
+    groupId: string,
+    blockedIds: string[],
+    on = true
+  ): Promise<void> {
+    const userId = this.ctx.id.name;
+    if (userId === undefined || blockedIds.length === 0) {
+      return;
+    }
+    const group = this.env.GROUPS.getByName(groupId);
+    await Promise.allSettled(
+      blockedIds.map(async (blockedId) => {
+        await group.setBlock(userId, blockedId, on);
+      })
+    );
   }
 
   /**
@@ -525,6 +602,17 @@ export class UserDO extends DurableObject<Env> {
             .map(unreadCountChange),
         shared: false,
         table: unreadCounts,
+      },
+      {
+        after: (cursor) =>
+          db
+            .select()
+            .from(blocks)
+            .where(gt(blocks.cursor, cursor))
+            .all()
+            .map(blockChange),
+        shared: false,
+        table: blocks,
       },
     ];
   }

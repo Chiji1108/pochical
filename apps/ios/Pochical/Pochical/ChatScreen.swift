@@ -120,6 +120,16 @@ struct ChatScreen: View {
   @Fetch private var chat = ChatRequest.Value()
   /// Everyone with their shifts over the days the chat's lines share.
   @Fetch private var dayMembers: [GroupMember] = []
+  /// Whom the user has blocked: their lines fold away.
+  @Fetch(BlocksRequest()) private var blocked: Set<String> = []
+  /// What is being reported.
+  @State private var reporting: ReportTarget?
+  /// Blocking or unblocking someone, asked first.
+  @State private var blockQuestion: BlockQuestion?
+  /// Someone else's profile, from their face.
+  @State private var profileOf: ProfileOf?
+  /// Blocked members' lines shown this once at a tap.
+  @State private var shownBlocked: Set<Int64> = []
   let group: GroupRow
   let threadID: String
   /// The other member of a one-to-one chat; none for 全体チャット.
@@ -364,6 +374,11 @@ struct ChatScreen: View {
     .fullScreenCover(item: $viewing) { photo in
       PhotoViewer(photo: photo, groupID: group.id) { save(photo) }
     }
+    .modifier(
+      ReportAndBlock(
+        groupID: group.id, groupName: group.name, blocked: blocked, reporting: $reporting,
+        profileOf: $profileOf, blockQuestion: $blockQuestion, onReported: reported,
+        onSetBlocked: setBlocked))
     .sheet(item: $deciding) { line in
       DecidePollSheet(days: line.days, votes: line.votes, decided: line.decided) { day in
         decide(line, on: day)
@@ -443,7 +458,17 @@ struct ChatScreen: View {
         Rectangle().fill(colors.accentBorder).frame(height: 1)
       }
       .padding(.vertical, 4)
-    case .line(let line, let startsRun):
+    case .line(let line, _) where line.hidden:
+      // Never delivered to the reader: nothing shows.
+      EmptyView()
+    case .line(let line, _)
+    where otherID == nil && blocked.contains(line.authorID) && !shownBlocked.contains(line.seq)
+      && !line.unsent:
+      BlockedLine { shownBlocked.insert(line.seq) }
+    case .line(let line, let runStart):
+      // A blocked member's line shown at a tap stands alone between the
+      // folded ones, with their face, the way to their profile.
+      let startsRun = runStart || (otherID == nil && blocked.contains(line.authorID))
       if line.unsent {
         Text(unsentLine(names[line.authorID], mine: line.authorID == meID))
           .font(.caption)
@@ -459,6 +484,9 @@ struct ChatScreen: View {
           text: line.text, preview: line.preview, days: line.days, members: cardMembers,
           poll: poll, photo: line.photo,
           groupID: group.id, onOpenPhoto: { viewing = line.photo },
+          onOpenProfile: {
+            profileOf = ProfileOf(id: line.authorID, name: names[line.authorID] ?? "メンバー")
+          },
           shifts: line.poll ? nil : line.days.first.map { GroupRoute.shifts(group, day: $0) },
           time: line.sentAtMs, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
@@ -872,6 +900,28 @@ struct ChatScreen: View {
     }
   }
 
+  /// A report sent: blocking them is offered, unless they are already.
+  private func reported(_ target: ReportTarget) {
+    if blocked.contains(target.memberID) {
+      say("通報しました")
+    } else {
+      blockQuestion = BlockQuestion(
+        userID: target.memberID, name: target.name, block: true, afterReport: true)
+    }
+  }
+
+  /// Blocks or unblocks someone, and says so.
+  private func setBlocked(_ question: BlockQuestion) {
+    Task {
+      do {
+        try await groupCalls.setBlocked(question.userID, question.block)
+        say(question.block ? "\(question.name)をブロックしました" : "\(question.name)のブロックを解除しました")
+      } catch {
+        say("できませんでした。通信できるところでもう一度どうぞ")
+      }
+    }
+  }
+
   /// Who may settle a poll: its writer, or anyone once they have left, so
   /// a poll is never stuck.
   private func canDecide(_ line: ChatLineRow) -> Bool {
@@ -975,6 +1025,13 @@ struct ChatScreen: View {
           title: "送信取消", systemImage: "arrow.uturn.backward", destructive: true,
           startsGroup: true
         ) { unsending = line })
+    } else {
+      // Last, apart and in the danger color (spec/chat.md).
+      actions.append(
+        MessageAction(
+          title: "通報", systemImage: "exclamationmark.bubble", destructive: true,
+          startsGroup: true
+        ) { reporting = .line(line, writer: names[line.authorID] ?? "メンバー") })
     }
     return actions
   }
@@ -1142,6 +1199,8 @@ private struct LineView: View {
   var photo: LinePhoto?
   var groupID = ""
   var onOpenPhoto: () -> Void = {}
+  /// Opens the writer's profile, from their face.
+  var onOpenProfile: () -> Void = {}
   /// The shift table on its first day, under its card.
   var shifts: GroupRoute?
   let time: Int64
@@ -1183,13 +1242,16 @@ private struct LineView: View {
       if !mine {
         Group {
           if let writer {
-            LetterAvatar(name: writer, size: Self.avatar)
+            Button { onOpenProfile() } label: {
+              LetterAvatar(name: writer, size: Self.avatar)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(writer)のプロフィール")
           } else {
             Color.clear
           }
         }
         .frame(width: Self.avatar, height: writer == nil ? 0 : Self.avatar)
-        .accessibilityHidden(true)
       }
       VStack(alignment: mine ? .trailing : .leading, spacing: 4) {
         if let writer, named {
@@ -1434,5 +1496,67 @@ struct BubbleShape: Shape {
       style: .continuous
     )
     .path(in: rect)
+  }
+}
+
+/// Someone else whose profile is open.
+private struct ProfileOf: Identifiable {
+  let id: String
+  let name: String
+}
+
+/// Reporting a line or a member, their profile, and blocking them asked
+/// first (spec/chat.md, Reporting and blocking).
+private struct ReportAndBlock: ViewModifier {
+  let groupID: String
+  let groupName: String
+  let blocked: Set<String>
+  @Binding var reporting: ReportTarget?
+  @Binding var profileOf: ProfileOf?
+  @Binding var blockQuestion: BlockQuestion?
+  let onReported: (ReportTarget) -> Void
+  let onSetBlocked: (BlockQuestion) -> Void
+  /// What follows once a sheet has gone: one cannot come up while another
+  /// is going.
+  @State private var next: (() -> Void)?
+
+  func body(content: Content) -> some View {
+    content
+      .sheet(item: $reporting, onDismiss: runNext) { target in
+        ReportSheet(target: target, groupID: groupID) { next = { onReported(target) } }
+      }
+      .sheet(item: $profileOf, onDismiss: runNext) { person in
+        MemberProfileSheet(
+          name: person.name, groupName: groupName, blocked: blocked.contains(person.id),
+          onReport: { next = { reporting = .member(id: person.id, name: person.name) } },
+          onBlock: {
+            next = {
+              blockQuestion = BlockQuestion(userID: person.id, name: person.name, block: true)
+            }
+          },
+          onUnblock: {
+            next = {
+              blockQuestion = BlockQuestion(userID: person.id, name: person.name, block: false)
+            }
+          })
+      }
+      .alert(
+        blockQuestion?.title ?? "", isPresented: Binding(
+          get: { blockQuestion != nil }, set: { if !$0 { blockQuestion = nil } }),
+        presenting: blockQuestion
+      ) { question in
+        Button(question.afterReport ? "しない" : "キャンセル", role: .cancel) {}
+        Button(question.block ? "ブロック" : "解除", role: question.block ? .destructive : nil) {
+          onSetBlocked(question)
+        }
+      } message: { question in
+        Text(question.message)
+      }
+  }
+
+  private func runNext() {
+    let action = next
+    next = nil
+    action?()
   }
 }

@@ -574,3 +574,23 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     #expect(state.lines[0].preview == nil)
   }
 }
+
+@Test func blocksComeFromTheUsersSocketAndGo() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var block = Pochical_V1_Change()
+    block.cursor = 1
+    block.block.userID = "u2"
+    block.block.on = true
+    try Groups.take(block, in: db)
+    #expect(try Blocks.all(in: db) == ["u2"])
+    block.block.on = false
+    try Groups.take(block, in: db)
+    #expect(try Blocks.all(in: db).isEmpty)
+
+    var hidden = line(1, "")
+    hidden.chatLine.hidden = true
+    try GroupSync.take([hidden], of: "g", in: db)
+    #expect(try Chats.state(of: groupThread, in: "g", db: db).lines.map(\.hidden) == [true])
+  }
+}

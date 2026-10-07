@@ -42,6 +42,10 @@ enum Groups {
       try Chats.take(unread, in: db)
       return
     }
+    if case .block(let block) = change.kind {
+      try Blocks.take(block, in: db)
+      return
+    }
     guard case .membership(let membership) = change.kind else { return }
     // A group left goes, with what the device holds of it.
     if membership.left {
@@ -61,6 +65,7 @@ enum Groups {
   static func reset(in db: Database) throws {
     try GroupRow.delete().execute(db)
     try UnreadCountRow.delete().execute(db)
+    try Blocks.reset(in: db)
   }
 }
 
@@ -69,8 +74,8 @@ enum Groups {
 public struct GroupCalls: Sendable {
   let account: Account
   let client: Pochical_V1_GroupServiceClient
-  private let users: Pochical_V1_UserServiceClient
-  private let chats: Pochical_V1_ChatServiceClient
+  let users: Pochical_V1_UserServiceClient
+  let chats: Pochical_V1_ChatServiceClient
 
   public init(account: Account, server: URL = Server.url) {
     self.account = account

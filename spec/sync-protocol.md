@@ -235,6 +235,12 @@ Tab and app icon badges need unread counts across every group, without a socket 
 - Reading on one device clears the badge on the user's other devices through the User DO.
 - The APNs `badge` and FCM notification count will come from the User DO's total (not built yet, with push).
 
+## Reports and blocks
+
+- `ChatService.Report` keeps a report in D1 (`reports`): the reason, who reported whom, and what they saw, the line and the three on each side as the Group DO holds them, or the member's name. Only a member reports, only someone else, and only a line they may read. Nobody in the group is told.
+- `UserService.SetBlocked` keeps the block in the user's User DO (`blocks`, one row a person, kept when unblocked so devices catching up hear of it) and sends it to their devices as a `Block` change. The User DO tells each of the user's groups (`member_blocks`), before answering, and a group they join hears all their blocks.
+- A one-to-one chat's line from someone the other member had blocked when it was sent is kept with `hidden_from` and goes to that member without its content, `hidden` set, so their device keeps its place and shows nothing; it never counts as unread for them. Group chat lines go to everyone as they are, and the blocker's device folds them.
+
 ## Ephemeral state
 
 Presence and typing describe the present moment only. They are never written to the change log, SQLite or the outbox, and nothing is replayed after a reconnect. The Group DO relays them as their own `ServerFrame` kinds to the sockets that need them.

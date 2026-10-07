@@ -17,6 +17,7 @@ import {
   chatChangesAfter,
   chatHead,
   chatPage,
+  forReader,
   GROUP_THREAD,
   mayRead,
   moveReadMark,
@@ -25,6 +26,8 @@ import {
   takeChatEdit,
   unreadCount,
   notePhoto,
+  reportContext,
+  setMemberBlock,
 } from "./group-chat";
 import migrations from "./group-do-migrations/migrations.js";
 import {
@@ -311,6 +314,33 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /**
+   * A member's block of someone, or its undoing, as their User DO says it
+   * (spec/chat.md, Reporting and blocking): kept so a one-to-one chat's
+   * line from them is not delivered.
+   */
+  setBlock(userId: string, blockedId: string, on: boolean): void {
+    setMemberBlock(this.db, userId, blockedId, on);
+  }
+
+  /**
+   * What a member's report of a line or a member is kept with: the line
+   * and the few around it as they are, or the member's name; null when the
+   * reporter is not in the group, cannot read the line, or reports
+   * themselves.
+   */
+  reportContext(
+    reporterId: string,
+    target: { threadId: string; seq: number } | { userId: string }
+  ): { targetId: string; context: string } | null {
+    if (!this.isMember(reporterId)) {
+      return null;
+    }
+    return reportContext(this.db, reporterId, target, (id) =>
+      this.memberList().find((member) => member.userId === id)
+    );
+  }
+
+  /**
    * Notes a photo a member has uploaded, which the Worker asks before it
    * stores it: false when the id is someone else's photo already, or the
    * user is not in the group.
@@ -482,7 +512,9 @@ export class GroupDO extends DurableObject<Env> {
         this.env.PHOTOS.delete(photosGone.map((id) => photoKey(groupId, id)))
       );
     }
-    broadcastChanges(this.ctx, changed, seenBy);
+    broadcastChanges(this.ctx, changed, seenBy, (change, reader) =>
+      forReader(this.db, change, reader)
+    );
     this.tellUnread(counted);
     if (refused.length > 0) {
       send(ws, { case: "changes", value: { changes: refused } });

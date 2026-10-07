@@ -1156,6 +1156,47 @@ public  final class ChatLine extends
     bitField0_ = (bitField0_ & ~0x00000002);
   }
 
+  public static final int HIDDEN_FIELD_NUMBER = 17;
+  private boolean hidden_;
+  /**
+   * <pre>
+   * Sent in a one-to-one chat by someone the reader had blocked: never
+   * delivered to them, so it comes without its content and shows nothing.
+   * </pre>
+   *
+   * <code>bool hidden = 17 [json_name = "hidden"];</code>
+   * @return The hidden.
+   */
+  @java.lang.Override
+  public boolean getHidden() {
+    return hidden_;
+  }
+  /**
+   * <pre>
+   * Sent in a one-to-one chat by someone the reader had blocked: never
+   * delivered to them, so it comes without its content and shows nothing.
+   * </pre>
+   *
+   * <code>bool hidden = 17 [json_name = "hidden"];</code>
+   * @param value The hidden to set.
+   */
+  private void setHidden(boolean value) {
+    
+    hidden_ = value;
+  }
+  /**
+   * <pre>
+   * Sent in a one-to-one chat by someone the reader had blocked: never
+   * delivered to them, so it comes without its content and shows nothing.
+   * </pre>
+   *
+   * <code>bool hidden = 17 [json_name = "hidden"];</code>
+   */
+  private void clearHidden() {
+
+    hidden_ = false;
+  }
+
   public static app.pochical.v1.ChatLine parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -2439,6 +2480,49 @@ public  final class ChatLine extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Sent in a one-to-one chat by someone the reader had blocked: never
+     * delivered to them, so it comes without its content and shows nothing.
+     * </pre>
+     *
+     * <code>bool hidden = 17 [json_name = "hidden"];</code>
+     * @return The hidden.
+     */
+    @java.lang.Override
+    public boolean getHidden() {
+      return instance.getHidden();
+    }
+    /**
+     * <pre>
+     * Sent in a one-to-one chat by someone the reader had blocked: never
+     * delivered to them, so it comes without its content and shows nothing.
+     * </pre>
+     *
+     * <code>bool hidden = 17 [json_name = "hidden"];</code>
+     * @param value The hidden to set.
+     * @return This builder for chaining.
+     */
+    public Builder setHidden(boolean value) {
+      copyOnWrite();
+      instance.setHidden(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Sent in a one-to-one chat by someone the reader had blocked: never
+     * delivered to them, so it comes without its content and shows nothing.
+     * </pre>
+     *
+     * <code>bool hidden = 17 [json_name = "hidden"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearHidden() {
+      copyOnWrite();
+      instance.clearHidden();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatLine)
   }
   @java.lang.Override
@@ -2474,11 +2558,13 @@ public  final class ChatLine extends
             "decided_",
             "photo_",
             "preview_",
+            "hidden_",
           };
           java.lang.String info =
-              "\u0000\u0010\u0000\u0001\u0001\u0010\u0010\u0000\u0003\u0000\u0001\u0208\u0002\u0003" +
+              "\u0000\u0011\u0000\u0001\u0001\u0011\u0011\u0000\u0003\u0000\u0001\u0208\u0002\u0003" +
               "\u0003\u0208\u0004\u0208\u0005\u0002\u0006\u0007\u0007\u0007\b\u0208\t\u001b\n\u0003" +
-              "\u000b\u021a\f\u0007\r\u001b\u000e\u0208\u000f\u1009\u0000\u0010\u1009\u0001";
+              "\u000b\u021a\f\u0007\r\u001b\u000e\u0208\u000f\u1009\u0000\u0010\u1009\u0001\u0011" +
+              "\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

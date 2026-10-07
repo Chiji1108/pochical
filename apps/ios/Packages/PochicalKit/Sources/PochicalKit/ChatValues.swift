@@ -48,6 +48,9 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   var photoJSON = ""
   /// Its first link's page, as JSON, `LinePreview`; empty for none.
   var previewJSON = ""
+  /// Sent in a one-to-one chat by someone the reader had blocked: never
+  /// delivered, and shown as nothing.
+  public var hidden = false
   public var id: Int64 { seq }
 
   /// Its first link's page, under its words.
@@ -318,6 +321,14 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep lines hidden from the reader") { db in
+      try #sql(
+        """
+        ALTER TABLE "chatLines" ADD COLUMN "hidden" INTEGER NOT NULL DEFAULT 0
+        """
+      )
+      .execute(db)
+    }
   }
 }
 
@@ -366,6 +377,7 @@ public enum Chats {
     row.decidedKey = line.decided
     row.photo = line.hasPhoto ? linePhoto(line.photo) : nil
     row.preview = line.hasPreview ? LinePreview(line.preview) : nil
+    row.hidden = line.hidden
     try ChatLineRow.insert { row }.execute(db)
   }
 

@@ -34,4 +34,22 @@ public class UserServiceClient(
     ),
   )
 
+
+  /**
+   *  Blocks someone in every group the two share, or unblocks them
+   *  (spec/chat.md, Reporting and blocking); their devices hear of it as a
+   *  Block change. Blocking oneself is INVALID_ARGUMENT.
+   */
+  override suspend fun setBlocked(request: SetBlockedRequest, headers: Headers): ResponseMessage<SetBlockedResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.UserService/SetBlocked",
+      app.pochical.v1.SetBlockedRequest::class,
+      app.pochical.v1.SetBlockedResponse::class,
+      StreamType.UNARY,
+      idempotency = Idempotency.IDEMPOTENT,
+    ),
+  )
+
 }

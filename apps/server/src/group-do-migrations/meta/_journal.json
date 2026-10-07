@@ -99,6 +99,13 @@
       "when": 1791329468676,
       "tag": "0013_chat_link_previews",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1791348257555,
+      "tag": "0014_member_blocks",
+      "breakpoints": true
     }
   ]
 }

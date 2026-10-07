@@ -10,7 +10,42 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/user.proto.
  */
 export const file_pochical_v1_user: GenFile = /*@__PURE__*/
-  fileDesc("ChZwb2NoaWNhbC92MS91c2VyLnByb3RvEgtwb2NoaWNhbC52MSIOCgxHZXRNZVJlcXVlc3QiMwoNR2V0TWVSZXNwb25zZRIPCgd1c2VyX2lkGAEgASgJEhEKCWFub255bW91cxgCIAEoCDJSCgtVc2VyU2VydmljZRJDCgVHZXRNZRIZLnBvY2hpY2FsLnYxLkdldE1lUmVxdWVzdBoaLnBvY2hpY2FsLnYxLkdldE1lUmVzcG9uc2UiA5ACAUJpCg9hcHAucG9jaGljYWwudjFCCVVzZXJQcm90b1ABogIDUFhYqgILUG9jaGljYWwuVjHKAgtQb2NoaWNhbFxWMeICF1BvY2hpY2FsXFYxXEdQQk1ldGFkYXRh6gIMUG9jaGljYWw6OlYxYgZwcm90bzM");
+  fileDesc("ChZwb2NoaWNhbC92MS91c2VyLnByb3RvEgtwb2NoaWNhbC52MSI1ChFTZXRCbG9ja2VkUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEg8KB2Jsb2NrZWQYAiABKAgiFAoSU2V0QmxvY2tlZFJlc3BvbnNlIg4KDEdldE1lUmVxdWVzdCIzCg1HZXRNZVJlc3BvbnNlEg8KB3VzZXJfaWQYASABKAkSEQoJYW5vbnltb3VzGAIgASgIMqYBCgtVc2VyU2VydmljZRJDCgVHZXRNZRIZLnBvY2hpY2FsLnYxLkdldE1lUmVxdWVzdBoaLnBvY2hpY2FsLnYxLkdldE1lUmVzcG9uc2UiA5ACARJSCgpTZXRCbG9ja2VkEh4ucG9jaGljYWwudjEuU2V0QmxvY2tlZFJlcXVlc3QaHy5wb2NoaWNhbC52MS5TZXRCbG9ja2VkUmVzcG9uc2UiA5ACAkJpCg9hcHAucG9jaGljYWwudjFCCVVzZXJQcm90b1ABogIDUFhYqgILUG9jaGljYWwuVjHKAgtQb2NoaWNhbFxWMeICF1BvY2hpY2FsXFYxXEdQQk1ldGFkYXRh6gIMUG9jaGljYWw6OlYxYgZwcm90bzM");
+
+/**
+ * @generated from message pochical.v1.SetBlockedRequest
+ */
+export type SetBlockedRequest = Message<"pochical.v1.SetBlockedRequest"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: bool blocked = 2;
+   */
+  blocked: boolean;
+};
+
+/**
+ * Describes the message pochical.v1.SetBlockedRequest.
+ * Use `create(SetBlockedRequestSchema)` to create a new message.
+ */
+export const SetBlockedRequestSchema: GenMessage<SetBlockedRequest> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 0);
+
+/**
+ * @generated from message pochical.v1.SetBlockedResponse
+ */
+export type SetBlockedResponse = Message<"pochical.v1.SetBlockedResponse"> & {
+};
+
+/**
+ * Describes the message pochical.v1.SetBlockedResponse.
+ * Use `create(SetBlockedResponseSchema)` to create a new message.
+ */
+export const SetBlockedResponseSchema: GenMessage<SetBlockedResponse> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 1);
 
 /**
  * @generated from message pochical.v1.GetMeRequest
@@ -23,7 +58,7 @@ export type GetMeRequest = Message<"pochical.v1.GetMeRequest"> & {
  * Use `create(GetMeRequestSchema)` to create a new message.
  */
 export const GetMeRequestSchema: GenMessage<GetMeRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 0);
+  messageDesc(file_pochical_v1_user, 2);
 
 /**
  * @generated from message pochical.v1.GetMeResponse
@@ -47,7 +82,7 @@ export type GetMeResponse = Message<"pochical.v1.GetMeResponse"> & {
  * Use `create(GetMeResponseSchema)` to create a new message.
  */
 export const GetMeResponseSchema: GenMessage<GetMeResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 1);
+  messageDesc(file_pochical_v1_user, 3);
 
 /**
  * The signed-in user. Every call here needs the session token from
@@ -66,6 +101,18 @@ export const UserService: GenService<{
     methodKind: "unary";
     input: typeof GetMeRequestSchema;
     output: typeof GetMeResponseSchema;
+  },
+  /**
+   * Blocks someone in every group the two share, or unblocks them
+   * (spec/chat.md, Reporting and blocking); their devices hear of it as a
+   * Block change. Blocking oneself is INVALID_ARGUMENT.
+   *
+   * @generated from rpc pochical.v1.UserService.SetBlocked
+   */
+  setBlocked: {
+    methodKind: "unary";
+    input: typeof SetBlockedRequestSchema;
+    output: typeof SetBlockedResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_pochical_v1_user, 0);

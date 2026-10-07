@@ -17,6 +17,12 @@ public protocol Pochical_V1_UserServiceClientInterface: Sendable {
     /// Who the token belongs to, for the apps to check a stored session.
     @available(iOS 13, *)
     func `getMe`(request: Pochical_V1_GetMeRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_GetMeResponse>
+
+    /// Blocks someone in every group the two share, or unblocks them
+    /// (spec/chat.md, Reporting and blocking); their devices hear of it as a
+    /// Block change. Blocking oneself is INVALID_ARGUMENT.
+    @available(iOS 13, *)
+    func `setBlocked`(request: Pochical_V1_SetBlockedRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetBlockedResponse>
 }
 
 /// Concrete implementation of `Pochical_V1_UserServiceClientInterface`.
@@ -32,9 +38,15 @@ public final class Pochical_V1_UserServiceClient: Pochical_V1_UserServiceClientI
         return await self.client.unary(path: "/pochical.v1.UserService/GetMe", idempotencyLevel: .noSideEffects, request: request, headers: headers)
     }
 
+    @available(iOS 13, *)
+    public func `setBlocked`(request: Pochical_V1_SetBlockedRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_SetBlockedResponse> {
+        return await self.client.unary(path: "/pochical.v1.UserService/SetBlocked", idempotencyLevel: .idempotent, request: request, headers: headers)
+    }
+
     public enum Metadata {
         public enum Methods {
             public static let getMe = Connect.MethodSpec(name: "GetMe", service: "pochical.v1.UserService", type: .unary)
+            public static let setBlocked = Connect.MethodSpec(name: "SetBlocked", service: "pochical.v1.UserService", type: .unary)
         }
     }
 }

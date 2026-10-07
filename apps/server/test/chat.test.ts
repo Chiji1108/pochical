@@ -676,6 +676,66 @@ describe("a group's chat", () => {
     ).toBeTruthy();
   });
 
+  it("keeps a report of a line with the lines around it", async () => {
+    const { call } = await import("./helpers");
+    const { env } = await import("cloudflare:workers");
+    const { groupId, guest, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    chat(mine.socket, [{ kind: { send: "ひどい" }, opId: "a" }]);
+    await mine.frames.next();
+    await mine.frames.next();
+    const report = async (token: string) => {
+      const answer = await call(
+        "ChatService/Report",
+        {
+          groupId,
+          line: { seq: "1", threadId: thread },
+          reason: "REPORT_REASON_HARASSMENT",
+        },
+        token
+      );
+      return answer.status;
+    };
+    // The writer cannot report their own line.
+    expect([await report(maker), await report(guest)]).toStrictEqual([
+      404, 200,
+    ]);
+    const kept = await env.DB.prepare(
+      "select reason, context from reports where group_id = ?"
+    )
+      .bind(groupId)
+      .all<{ reason: string; context: string }>();
+    const [row] = kept.results;
+    expect([row?.reason, row?.context.includes("ひどい")]).toStrictEqual([
+      "harassment",
+      true,
+    ]);
+  });
+
+  it("keeps a blocked member's one-to-one lines from the one who blocked them", async () => {
+    const { call, userIdOf } = await import("./helpers");
+    const { directThread } = await import("../src/group-chat");
+    const { groupId, guest, maker, makerId } = await pair();
+    const guestId = await userIdOf(guest);
+    const direct = directThread(guestId, makerId);
+    const blocked = await call(
+      "UserService/SetBlocked",
+      { blocked: true, userId: guestId },
+      maker
+    );
+    expect(blocked.status).toBe(200);
+    const mine = await groupSocket(groupId, maker);
+    const theirs = await groupSocket(groupId, guest);
+    chat(theirs.socket, [{ kind: { send: "見て" }, opId: "a" }], direct);
+    // Sent for the writer, never delivered to the one who blocked them.
+    const [toWriter] = changesIn(await theirs.frames.next());
+    const [toBlocker] = changesIn(await mine.frames.next());
+    expect([toWriter?.kind.value, toBlocker?.kind.value]).toMatchObject([
+      { hidden: false, text: "見て" },
+      { hidden: true, text: "" },
+    ]);
+  });
+
   it("takes reactions off with a line taken back, and takes no word as one", async () => {
     const { groupId, maker } = await pair();
     const mine = await groupSocket(groupId, maker);

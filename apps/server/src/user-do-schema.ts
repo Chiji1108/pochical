@@ -173,3 +173,16 @@ export const unreadCounts = sqliteTable(
     uniqueIndex("unread_counts_cursor").on(table.cursor),
   ]
 );
+
+// Who the user has blocked (spec/chat.md, Reporting and blocking), one row
+// a person, the latest; unblocking keeps the row, so devices catching up
+// hear of it. Cursors are shared with day_fields.
+export const blocks = sqliteTable(
+  "blocks",
+  {
+    blocked: integer({ mode: "boolean" }).notNull(),
+    cursor: integer().notNull(),
+    userId: text("user_id").primaryKey(),
+  },
+  (table) => [uniqueIndex("blocks_cursor").on(table.cursor)]
+);

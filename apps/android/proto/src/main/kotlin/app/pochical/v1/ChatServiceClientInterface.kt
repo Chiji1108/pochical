@@ -18,4 +18,12 @@ public interface ChatServiceClientInterface {
    *  found; INVALID_ARGUMENT for a URL that is not http(s) on 80 or 443.
    */
   public suspend fun getLinkPreview(request: GetLinkPreviewRequest, headers: Headers = emptyMap()): ResponseMessage<GetLinkPreviewResponse>
+
+  /**
+   *  Tells Pochical about another member's line or about the member
+   *  (spec/chat.md, Reporting and blocking): kept with what was reported,
+   *  and nobody in the group is told. Members of the group only, about
+   *  someone else; NOT_FOUND for a line the reporter cannot read.
+   */
+  public suspend fun report(request: ReportRequest, headers: Headers = emptyMap()): ResponseMessage<ReportResponse>
 }
