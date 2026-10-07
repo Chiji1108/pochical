@@ -260,6 +260,42 @@ public object ServerFrameKt {
     public fun hasChatPage(): kotlin.Boolean {
       return _builder.hasChatPage()
     }
+
+    /**
+     * ```
+     * Someone else is writing in a chat the device may read, or stopped.
+     * ```
+     *
+     * `.pochical.v1.Typing typing = 8 [json_name = "typing"];`
+     */
+    public var typing: app.pochical.v1.Typing
+      @kotlin.jvm.JvmName("getTyping")
+        get() = _builder.typing
+      @kotlin.jvm.JvmName("setTyping")
+        set(value) {
+        _builder.typing = value
+      }
+    /**
+     * ```
+     * Someone else is writing in a chat the device may read, or stopped.
+     * ```
+     *
+     * `.pochical.v1.Typing typing = 8 [json_name = "typing"];`
+     */
+    public fun clearTyping() {
+      _builder.clearTyping()
+    }
+    /**
+     * ```
+     * Someone else is writing in a chat the device may read, or stopped.
+     * ```
+     *
+     * `.pochical.v1.Typing typing = 8 [json_name = "typing"];`
+     * @return Whether the typing field is set.
+     */
+    public fun hasTyping(): kotlin.Boolean {
+      return _builder.hasTyping()
+    }
     public val kindCase: app.pochical.v1.ServerFrame.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -292,4 +328,7 @@ public val app.pochical.v1.ServerFrameOrBuilder.resetOrNull: app.pochical.v1.Res
 
 public val app.pochical.v1.ServerFrameOrBuilder.chatPageOrNull: app.pochical.v1.ChatPage?
   get() = if (hasChatPage()) getChatPage() else null
+
+public val app.pochical.v1.ServerFrameOrBuilder.typingOrNull: app.pochical.v1.Typing?
+  get() = if (hasTyping()) getTyping() else null
 

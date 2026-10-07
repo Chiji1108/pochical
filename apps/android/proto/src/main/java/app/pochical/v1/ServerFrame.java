@@ -31,6 +31,7 @@ public  final class ServerFrame extends
     ACKED(5),
     RESET(6),
     CHAT_PAGE(7),
+    TYPING(8),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -53,6 +54,7 @@ public  final class ServerFrame extends
         case 5: return ACKED;
         case 6: return RESET;
         case 7: return CHAT_PAGE;
+        case 8: return TYPING;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -519,6 +521,76 @@ public  final class ServerFrame extends
    */
   private void clearChatPage() {
     if (kindCase_ == 7) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int TYPING_FIELD_NUMBER = 8;
+  /**
+   * <pre>
+   * Someone else is writing in a chat the device may read, or stopped.
+   * </pre>
+   *
+   * <code>.pochical.v1.Typing typing = 8 [json_name = "typing"];</code>
+   */
+  @java.lang.Override
+  public boolean hasTyping() {
+    return kindCase_ == 8;
+  }
+  /**
+   * <pre>
+   * Someone else is writing in a chat the device may read, or stopped.
+   * </pre>
+   *
+   * <code>.pochical.v1.Typing typing = 8 [json_name = "typing"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.Typing getTyping() {
+    if (kindCase_ == 8) {
+       return (app.pochical.v1.Typing) kind_;
+    }
+    return app.pochical.v1.Typing.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * Someone else is writing in a chat the device may read, or stopped.
+   * </pre>
+   *
+   * <code>.pochical.v1.Typing typing = 8 [json_name = "typing"];</code>
+   */
+  private void setTyping(app.pochical.v1.Typing value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 8;
+  }
+  /**
+   * <pre>
+   * Someone else is writing in a chat the device may read, or stopped.
+   * </pre>
+   *
+   * <code>.pochical.v1.Typing typing = 8 [json_name = "typing"];</code>
+   */
+  private void mergeTyping(app.pochical.v1.Typing value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 8 &&
+        kind_ != app.pochical.v1.Typing.getDefaultInstance()) {
+      kind_ = app.pochical.v1.Typing.newBuilder((app.pochical.v1.Typing) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 8;
+  }
+  /**
+   * <pre>
+   * Someone else is writing in a chat the device may read, or stopped.
+   * </pre>
+   *
+   * <code>.pochical.v1.Typing typing = 8 [json_name = "typing"];</code>
+   */
+  private void clearTyping() {
+    if (kindCase_ == 8) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -1093,6 +1165,78 @@ public  final class ServerFrame extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Someone else is writing in a chat the device may read, or stopped.
+     * </pre>
+     *
+     * <code>.pochical.v1.Typing typing = 8 [json_name = "typing"];</code>
+     */
+    @java.lang.Override
+    public boolean hasTyping() {
+      return instance.hasTyping();
+    }
+    /**
+     * <pre>
+     * Someone else is writing in a chat the device may read, or stopped.
+     * </pre>
+     *
+     * <code>.pochical.v1.Typing typing = 8 [json_name = "typing"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.Typing getTyping() {
+      return instance.getTyping();
+    }
+    /**
+     * <pre>
+     * Someone else is writing in a chat the device may read, or stopped.
+     * </pre>
+     *
+     * <code>.pochical.v1.Typing typing = 8 [json_name = "typing"];</code>
+     */
+    public Builder setTyping(app.pochical.v1.Typing value) {
+      copyOnWrite();
+      instance.setTyping(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Someone else is writing in a chat the device may read, or stopped.
+     * </pre>
+     *
+     * <code>.pochical.v1.Typing typing = 8 [json_name = "typing"];</code>
+     */
+    public Builder setTyping(
+        app.pochical.v1.Typing.Builder builderForValue) {
+      copyOnWrite();
+      instance.setTyping(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Someone else is writing in a chat the device may read, or stopped.
+     * </pre>
+     *
+     * <code>.pochical.v1.Typing typing = 8 [json_name = "typing"];</code>
+     */
+    public Builder mergeTyping(app.pochical.v1.Typing value) {
+      copyOnWrite();
+      instance.mergeTyping(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Someone else is writing in a chat the device may read, or stopped.
+     * </pre>
+     *
+     * <code>.pochical.v1.Typing typing = 8 [json_name = "typing"];</code>
+     */
+    public Builder clearTyping() {
+      copyOnWrite();
+      instance.clearTyping();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ServerFrame)
   }
   @java.lang.Override
@@ -1118,10 +1262,11 @@ public  final class ServerFrame extends
             app.pochical.v1.Acked.class,
             app.pochical.v1.Reset.class,
             app.pochical.v1.ChatPage.class,
+            app.pochical.v1.Typing.class,
           };
           java.lang.String info =
-              "\u0000\u0007\u0001\u0000\u0001\u0007\u0007\u0000\u0000\u0000\u0001<\u0000\u0002<" +
-              "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000";
+              "\u0000\b\u0001\u0000\u0001\b\b\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
+              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

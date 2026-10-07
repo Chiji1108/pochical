@@ -169,6 +169,10 @@ struct ChatScreen: View {
   @State private var readingPhotos = false
   /// A photo opened large.
   @State private var viewing: LinePhoto?
+  /// Others writing now, each until their typing lapses.
+  @State private var typers: [String: Date] = [:]
+  /// When the member's own typing was last sent.
+  @State private var typingSentAt = Date.distantPast
   /// The page of the words' first link, while writing.
   @State private var composerPreview: ComposerPreview?
   /// A link whose page was taken off with ×, until sent or changed.
@@ -195,6 +199,12 @@ struct ChatScreen: View {
         }
         ForEach(items(state)) { item in
           row(item, names: names)
+        }
+        // Who is writing now, under the latest line.
+        ForEach(typers.keys.sorted(), id: \.self) { userID in
+          TypingLine(name: names[userID] ?? "メンバー")
+            .id("typing-\(userID)")
+            .transition(.opacity)
         }
       }
       .scrollTargetLayout()
@@ -301,6 +311,34 @@ struct ChatScreen: View {
       }
     }
     // One's own line just sent shows at the foot, wherever the lines were.
+    // Others' typing, as it comes, each shown until it lapses.
+    .task(id: socket != nil) {
+      guard let socket else { return }
+      for await typing in await socket.typing() where typing.threadID == threadID {
+        withAnimation {
+          typers[typing.userID] = typing.on ? Date.now.addingTimeInterval(
+            Double(Chat.typingShowMs) / 1000) : nil
+        }
+      }
+    }
+    .task(id: typers) {
+      guard let next = typers.values.min() else { return }
+      try? await Task.sleep(for: .seconds(max(next.timeIntervalSinceNow, 0)))
+      withAnimation { typers = typers.filter { $0.value > .now } }
+    }
+    // The member's own typing: at most every typingSendMs while the field
+    // holds words, and a stop once it empties.
+    .onChange(of: draft.isEmpty) { _, empty in
+      if empty { stopTyping() }
+    }
+    .onChange(of: draft) { _, words in
+      guard !words.isEmpty else { return }
+      let now = Date.now
+      if now.timeIntervalSince(typingSentAt) * 1000 >= Double(Chat.typingSendMs) {
+        typingSentAt = now
+        Task { await socket?.sendTyping(in: threadID, on: true) }
+      }
+    }
     .onChange(of: state.waiting.last?.opID) { _, sent in
       if sent != nil {
         withAnimation { toLatest() }
@@ -308,7 +346,10 @@ struct ChatScreen: View {
     }
     .environment(\.openURL, OpenURLAction { open($0) })
     // Leaving the chat takes its open menu with it.
-    .onDisappear { closeActions() }
+    .onDisappear {
+      closeActions()
+      stopTyping()
+    }
     .task(id: sharedSpan) {
       guard let span = sharedSpan else { return }
       try? await $dayMembers.load(
@@ -753,6 +794,13 @@ struct ChatScreen: View {
     read.threadID = threadID
     read.lastReadSeq = UInt64(latest)
     write(.read(read))
+  }
+
+  /// Says the member stopped writing, once they said they were.
+  private func stopTyping() {
+    guard typingSentAt != .distantPast else { return }
+    typingSentAt = .distantPast
+    Task { await socket?.sendTyping(in: threadID, on: false) }
   }
 
   private func send(_ text: String) {

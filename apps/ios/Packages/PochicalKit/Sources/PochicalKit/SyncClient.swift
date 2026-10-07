@@ -61,6 +61,8 @@ public actor SyncClient {
   /// Waiting for the outbox to empty before closing, in the background.
   private var finishing: Task<Void, Never>?
   public private(set) var stopped: Stop?
+  /// The screens told of others' typing, as it comes; never kept.
+  private var typingWatchers: [UUID: AsyncStream<Pochical_V1_Typing>.Continuation] = [:]
 
   public init(
     account: Account, database: any DatabaseWriter, peer: Peer = .user, server: URL = Server.url
@@ -289,6 +291,10 @@ public actor SyncClient {
       if case .group(let groupID) = peer {
         try await database.write { db in try Chats.take(page, of: groupID, in: db) }
       }
+    case .typing(let typing):
+      for watcher in typingWatchers.values {
+        watcher.yield(typing)
+      }
     case .pong, nil:
       break
     }
@@ -314,6 +320,32 @@ public actor SyncClient {
     } catch {
       // The socket closed; the next one sends them all again.
     }
+  }
+
+  /// Others' typing in the group's chats as it comes (spec/sync-protocol.md,
+  /// Typing), until the stream is let go.
+  public func typing() -> AsyncStream<Pochical_V1_Typing> {
+    let (stream, continuation) = AsyncStream<Pochical_V1_Typing>.makeStream()
+    let id = UUID()
+    typingWatchers[id] = continuation
+    continuation.onTermination = { [weak self] _ in
+      Task { await self?.stopWatchingTyping(id) }
+    }
+    return stream
+  }
+
+  private func stopWatchingTyping(_ id: UUID) {
+    typingWatchers[id] = nil
+  }
+
+  /// Says the member is writing in a chat, or stopped, when the socket is
+  /// open; nothing waits to be sent again, as typing is only now.
+  public func sendTyping(in threadID: String, on: Bool) async {
+    guard connected, let socket else { return }
+    var frame = Pochical_V1_ClientFrame()
+    frame.typing.threadID = threadID
+    frame.typing.on = on
+    try? await socket.send(.data(frame.serializedData()))
   }
 
   /// Asks the group for a page of a chat's lines before `seq` (the latest

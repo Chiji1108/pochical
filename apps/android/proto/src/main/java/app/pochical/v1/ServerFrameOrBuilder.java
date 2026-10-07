@@ -127,5 +127,24 @@ public interface ServerFrameOrBuilder extends
    */
   app.pochical.v1.ChatPage getChatPage();
 
+  /**
+   * <pre>
+   * Someone else is writing in a chat the device may read, or stopped.
+   * </pre>
+   *
+   * <code>.pochical.v1.Typing typing = 8 [json_name = "typing"];</code>
+   * @return Whether the typing field is set.
+   */
+  boolean hasTyping();
+  /**
+   * <pre>
+   * Someone else is writing in a chat the device may read, or stopped.
+   * </pre>
+   *
+   * <code>.pochical.v1.Typing typing = 8 [json_name = "typing"];</code>
+   * @return The typing.
+   */
+  app.pochical.v1.Typing getTyping();
+
   public app.pochical.v1.ServerFrame.KindCase getKindCase();
 }

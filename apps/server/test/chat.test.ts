@@ -650,6 +650,32 @@ describe("a group's chat", () => {
     ]);
   });
 
+  it("relays typing to the others who may read the chat, never kept", async () => {
+    const { aside, direct, mine, theirs } = await trio();
+    const typing = (threadId: string) => {
+      sendFrame(theirs.socket, {
+        case: "typing",
+        value: { on: true, threadId, userId: "forged" },
+      });
+    };
+    typing(thread);
+    typing(direct);
+    // A one-to-one chat's typing goes to its other member alone.
+    const toMaker = [await mine.frames.next(), await mine.frames.next()];
+    const toThird = await aside.frames.next();
+    expect(
+      toMaker.map(({ kind }) =>
+        kind.case === "typing" ? kind.value.threadId : kind.case
+      )
+    ).toStrictEqual([thread, direct]);
+    expect(toThird).toMatchObject({
+      kind: { case: "typing", value: { on: true, threadId: thread } },
+    });
+    expect(
+      toThird.kind.case === "typing" && toThird.kind.value.userId !== "forged"
+    ).toBeTruthy();
+  });
+
   it("takes reactions off with a line taken back, and takes no word as one", async () => {
     const { groupId, maker } = await pair();
     const mine = await groupSocket(groupId, maker);

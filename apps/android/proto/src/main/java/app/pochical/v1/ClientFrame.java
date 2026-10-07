@@ -32,6 +32,7 @@ public  final class ClientFrame extends
     COWORKER_EDITS(6),
     CHAT_EDITS(7),
     CHAT_PAGE_REQUEST(8),
+    TYPING(9),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -55,6 +56,7 @@ public  final class ClientFrame extends
         case 6: return COWORKER_EDITS;
         case 7: return CHAT_EDITS;
         case 8: return CHAT_PAGE_REQUEST;
+        case 9: return TYPING;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -601,6 +603,81 @@ public  final class ClientFrame extends
    */
   private void clearChatPageRequest() {
     if (kindCase_ == 8) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int TYPING_FIELD_NUMBER = 9;
+  /**
+   * <pre>
+   * The member is writing in a chat, or stopped; Group DO socket only.
+   * Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+   * </pre>
+   *
+   * <code>.pochical.v1.Typing typing = 9 [json_name = "typing"];</code>
+   */
+  @java.lang.Override
+  public boolean hasTyping() {
+    return kindCase_ == 9;
+  }
+  /**
+   * <pre>
+   * The member is writing in a chat, or stopped; Group DO socket only.
+   * Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+   * </pre>
+   *
+   * <code>.pochical.v1.Typing typing = 9 [json_name = "typing"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.Typing getTyping() {
+    if (kindCase_ == 9) {
+       return (app.pochical.v1.Typing) kind_;
+    }
+    return app.pochical.v1.Typing.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * The member is writing in a chat, or stopped; Group DO socket only.
+   * Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+   * </pre>
+   *
+   * <code>.pochical.v1.Typing typing = 9 [json_name = "typing"];</code>
+   */
+  private void setTyping(app.pochical.v1.Typing value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 9;
+  }
+  /**
+   * <pre>
+   * The member is writing in a chat, or stopped; Group DO socket only.
+   * Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+   * </pre>
+   *
+   * <code>.pochical.v1.Typing typing = 9 [json_name = "typing"];</code>
+   */
+  private void mergeTyping(app.pochical.v1.Typing value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 9 &&
+        kind_ != app.pochical.v1.Typing.getDefaultInstance()) {
+      kind_ = app.pochical.v1.Typing.newBuilder((app.pochical.v1.Typing) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 9;
+  }
+  /**
+   * <pre>
+   * The member is writing in a chat, or stopped; Group DO socket only.
+   * Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+   * </pre>
+   *
+   * <code>.pochical.v1.Typing typing = 9 [json_name = "typing"];</code>
+   */
+  private void clearTyping() {
+    if (kindCase_ == 9) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -1259,6 +1336,84 @@ public  final class ClientFrame extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The member is writing in a chat, or stopped; Group DO socket only.
+     * Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+     * </pre>
+     *
+     * <code>.pochical.v1.Typing typing = 9 [json_name = "typing"];</code>
+     */
+    @java.lang.Override
+    public boolean hasTyping() {
+      return instance.hasTyping();
+    }
+    /**
+     * <pre>
+     * The member is writing in a chat, or stopped; Group DO socket only.
+     * Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+     * </pre>
+     *
+     * <code>.pochical.v1.Typing typing = 9 [json_name = "typing"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.Typing getTyping() {
+      return instance.getTyping();
+    }
+    /**
+     * <pre>
+     * The member is writing in a chat, or stopped; Group DO socket only.
+     * Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+     * </pre>
+     *
+     * <code>.pochical.v1.Typing typing = 9 [json_name = "typing"];</code>
+     */
+    public Builder setTyping(app.pochical.v1.Typing value) {
+      copyOnWrite();
+      instance.setTyping(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The member is writing in a chat, or stopped; Group DO socket only.
+     * Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+     * </pre>
+     *
+     * <code>.pochical.v1.Typing typing = 9 [json_name = "typing"];</code>
+     */
+    public Builder setTyping(
+        app.pochical.v1.Typing.Builder builderForValue) {
+      copyOnWrite();
+      instance.setTyping(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The member is writing in a chat, or stopped; Group DO socket only.
+     * Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+     * </pre>
+     *
+     * <code>.pochical.v1.Typing typing = 9 [json_name = "typing"];</code>
+     */
+    public Builder mergeTyping(app.pochical.v1.Typing value) {
+      copyOnWrite();
+      instance.mergeTyping(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The member is writing in a chat, or stopped; Group DO socket only.
+     * Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
+     * </pre>
+     *
+     * <code>.pochical.v1.Typing typing = 9 [json_name = "typing"];</code>
+     */
+    public Builder clearTyping() {
+      copyOnWrite();
+      instance.clearTyping();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ClientFrame)
   }
   @java.lang.Override
@@ -1285,10 +1440,11 @@ public  final class ClientFrame extends
             app.pochical.v1.CoworkerEdits.class,
             app.pochical.v1.ChatEdits.class,
             app.pochical.v1.ChatPageRequest.class,
+            app.pochical.v1.Typing.class,
           };
           java.lang.String info =
-              "\u0000\b\u0001\u0000\u0001\b\b\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
-              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000";
+              "\u0000\t\u0001\u0000\u0001\t\t\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
+              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
