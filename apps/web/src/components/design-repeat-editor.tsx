@@ -9,6 +9,7 @@ import {
   dateKey,
   dayMilliseconds,
   formatDay,
+  formatMonthDay,
   monthAfter,
   repeatSchedule,
 } from "../lib/design-days";
@@ -37,20 +38,7 @@ import { ShiftMark } from "./shift-mark";
 // pages' dots under them. No 今月: the month that matters is the order's,
 // which typing keeps in sight, and the month's name picks any other.
 const repeatCalendar = {
-  actions: css({
-    alignItems: "center",
-    display: "flex",
-    gap: "8px",
-    justifyContent: "space-between",
-    minHeight: "32px",
-  }),
-  foot: css({
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-    marginTop: "auto",
-    paddingTop: "8px",
-  }),
+  foot: css({ marginTop: "auto", paddingTop: "2px" }),
   monthRow: css({
     alignItems: "center",
     display: "flex",
@@ -262,6 +250,7 @@ export function RepeatCalendar({
   const pages = patternPagesOf(patternKeys).length;
   const orderStart = from === undefined ? anchor : from;
   const cursor = chosen ?? sequence.length;
+  const cursorDate = addDays(anchor, cursor);
   const goTo = (target: Date) => {
     setSwipedTo(undefined);
     setMonth(monthOf(target));
@@ -335,7 +324,19 @@ export function RepeatCalendar({
           )}
         />
       </div>
+      {/* ポチポチ入力's tray as it is, ⌫ in 消す's place: the day typed
+      next, or the one chosen, over the keys. */}
       <div className={repeatCalendar.foot}>
+        <p className={shiftInput.dateLabel}>
+          {formatMonthDay(cursorDate)}
+          <span
+            className={shiftInput.weekday({
+              tone: weekTools.dateTone(cursorDate),
+            })}
+          >
+            ({weekdayNameOf(cursorDate.getDay())})
+          </span>
+        </p>
         <PatternKeys
           onPage={setPage}
           onPick={pick}
@@ -343,18 +344,7 @@ export function RepeatCalendar({
           patternKeys={patternKeys}
           progress={progress}
         />
-        <div className={repeatCalendar.actions}>
-          <span>
-            {pages > 1 && (
-              <PageDots
-                count={pages}
-                current={Math.min(page, pages - 1)}
-                label="シフトのページ"
-                onPick={setPage}
-                progress={progress}
-              />
-            )}
-          </span>
+        <div className={shiftInput.actions}>
           <button
             className={shiftInput.action}
             disabled={sequence.length === 0}
@@ -373,6 +363,19 @@ export function RepeatCalendar({
             <Delete aria-hidden="true" size={14} />
             {chosen === undefined ? "1つ消す" : "選んだ日を消す"}
           </button>
+          <span>
+            {pages > 1 && (
+              <PageDots
+                count={pages}
+                current={Math.min(page, pages - 1)}
+                label="シフトのページ"
+                onPick={setPage}
+                progress={progress}
+              />
+            )}
+          </span>
+          {/* Nothing in 翌日へ's place: an order has no days to skip. */}
+          <span />
         </div>
       </div>
     </div>

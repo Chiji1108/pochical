@@ -14,7 +14,7 @@ import { presetList, usePatterns } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
 import { InputDatePicker } from "./design-date-picker";
-import { HeaderAction, PageHeader } from "./design-header";
+import { DoneButton, PageHeader } from "./design-header";
 import { List, ListRow, SwitchRow, Toggle } from "./design-list";
 import {
   OrderTitle,
@@ -189,14 +189,12 @@ export function RepeatEditorPage({
         }
         onBack={onBack}
         trailing={
-          <HeaderAction
+          <DoneButton
             disabled={sequence.length === 0}
             onClick={() => {
               setConfirming(true);
             }}
-          >
-            完了
-          </HeaderAction>
+          />
         }
       />
       <RepeatCalendar

@@ -335,7 +335,7 @@ private struct RepeatEditor: View {
     .toolbarVisibility(.hidden, for: .tabBar)
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
-        Button("完了", role: .confirm) { confirming = true }
+        Button("完了", systemImage: "checkmark", role: .confirm) { confirming = true }
           .disabled(steps.isEmpty)
       }
     }

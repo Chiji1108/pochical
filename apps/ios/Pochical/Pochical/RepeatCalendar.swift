@@ -47,6 +47,8 @@ struct RepeatCalendar<Accessory: View>: View {
   @State private var position = PagerPosition(pages: span)
   @State private var chosen: Int?
   @State private var keyPage = 0
+  /// Every key pressed, to tick alike as ポチポチ入力's.
+  @State private var keys = 0
 
   private static var span: Int { 24 }
   /// The month the pages count from: this one.
@@ -69,20 +71,28 @@ struct RepeatCalendar<Accessory: View>: View {
         accessory()
       }
       .frame(minHeight: Metrics.touch)
-      VStack(spacing: 4) {
+      // Under the weekdays as the calendar's month is.
+      VStack(spacing: 0) {
         WeekdayRow(week: settings.device.week)
         pager
       }
       Spacer(minLength: 0)
+      // ポチポチ入力's tray as it is, ⌫ in 消す's place: the day typed
+      // next, or the one chosen, over the keys.
       VStack(spacing: 8) {
-        PatternKeys(patterns: patterns, page: $keyPage, onPick: pick)
-        HStack {
-          let pages = (patterns.count + patternsPerPage - 1) / patternsPerPage
-          if pages > 1 {
-            PageDots(count: pages, current: $keyPage, label: "シフトのページ")
-          }
-          Spacer()
-          Button(chosen == nil ? "1つ消す" : "選んだ日を消す", systemImage: "delete.left") {
+        TrayDateLabel(day: anchor.adding(days: chosen ?? sequence.count), week: settings.device.week)
+        PatternKeys(patterns: patterns, page: $keyPage) { pattern in
+          keys += 1
+          pick(pattern)
+        }
+        TrayActionsRow(
+          pages: (patterns.count + patternsPerPage - 1) / patternsPerPage, page: $keyPage
+        ) {
+          TrayAction(
+            title: chosen == nil ? "1つ消す" : "選んだ日を消す", systemImage: "delete.left",
+            enabled: !sequence.isEmpty
+          ) {
+            keys += 1
             if let chosen, chosen < sequence.count {
               sequence.remove(at: chosen)
             } else if !sequence.isEmpty {
@@ -90,10 +100,12 @@ struct RepeatCalendar<Accessory: View>: View {
             }
             chosen = nil
           }
-          .font(.subheadline)
-          .disabled(sequence.isEmpty)
+        } trailing: {
+          // Nothing in 翌日へ's place: an order has no days to skip.
+          Color.clear.frame(height: 0)
         }
       }
+      .sensoryFeedback(.selection, trigger: keys)
     }
     .padding(.horizontal, 16)
     .padding(.bottom, 8)

@@ -37,12 +37,29 @@ export const shiftInput = {
     padding: "4px 16px",
     textStyle: "caption",
   }),
+  // The words under the keys with the pages' dots between them, the dots
+  // in the middle whatever the words, so they sit in one place in every
+  // tray: ポチポチ入力's and an order's being typed.
   actions: css({
+    "& > :first-child": { justifySelf: "end" },
+    "& > :last-child": { justifySelf: "start" },
     alignItems: "center",
-    display: "flex",
+    display: "grid",
     gap: "8px",
-    justifyContent: "center",
+    gridTemplateColumns: "1fr auto 1fr",
     marginTop: "4px",
+  }),
+  // The day a tray enters next, over its keys, where ポチポチ入力 has its
+  // date to pick: the same line, only shown.
+  dateLabel: css({
+    alignItems: "center",
+    color: "text.primary",
+    display: "flex",
+    fontWeight: 600,
+    justifyContent: "center",
+    margin: "0 auto 8px",
+    minHeight: "touch",
+    textStyle: "headline",
   }),
   // The mark's own emoji font, so an emoji mark draws the same everywhere.
   mark: css({
@@ -349,15 +366,17 @@ export function ShiftInputControls({
           <Trash2 aria-hidden="true" size={14} />
           消す
         </button>
-        {pages.length > 1 && (
-          <PageDots
-            count={pages.length}
-            current={shown}
-            label="シフトのページ"
-            onPick={setPage}
-            progress={progress}
-          />
-        )}
+        <span>
+          {pages.length > 1 && (
+            <PageDots
+              count={pages.length}
+              current={shown}
+              label="シフトのページ"
+              onPick={setPage}
+              progress={progress}
+            />
+          )}
+        </span>
         <button
           className={shiftInput.action}
           disabled={!canSkip}

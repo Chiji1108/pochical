@@ -153,7 +153,7 @@ struct JobChangePage: View {
         }
       }
       ToolbarItem(placement: .confirmationAction) {
-        Button("完了", role: .confirm) { confirming = true }
+        Button("完了", systemImage: "checkmark", role: .confirm) { confirming = true }
           .disabled(sequence.isEmpty)
       }
     }

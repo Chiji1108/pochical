@@ -12,7 +12,7 @@ import {
 } from "../lib/design-patterns";
 import type { PresetShift, Shift } from "../lib/design-patterns";
 import { designMonth } from "../lib/design-today";
-import { BackButton, HeaderAction, PageHeader } from "./design-header";
+import { BackButton, DoneButton, PageHeader } from "./design-header";
 import { List, ListRow, listRow } from "./design-list";
 import {
   OrderTitle,
@@ -506,7 +506,7 @@ function OrderStep({
         }
         onBack={onBack}
         trailing={
-          <HeaderAction
+          <DoneButton
             disabled={order.sequence.length === 0}
             onClick={() => {
               if (confirm) {
@@ -515,9 +515,7 @@ function OrderStep({
                 onStart(order);
               }
             }}
-          >
-            完了
-          </HeaderAction>
+          />
         }
       />
       <RepeatCalendar
