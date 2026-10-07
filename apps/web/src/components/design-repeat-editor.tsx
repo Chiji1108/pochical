@@ -395,6 +395,10 @@ export function SequenceTiles({
   weekly?: boolean;
 }) {
   const book = usePatterns();
+  const { weekdays } = useWeek();
+  // A weekday's color as the person's カレンダー settings color it.
+  const weeklyTone = (index: number) =>
+    weekdays.find((weekday) => weekday.day === index % 7)?.tone ?? "plain";
   return (
     <ol
       aria-label={sequence
@@ -418,11 +422,4 @@ export function SequenceTiles({
       ))}
     </ol>
   );
-}
-
-function weeklyTone(index: number) {
-  if (index % 7 === 0) {
-    return "holiday";
-  }
-  return index % 7 === 6 ? "saturday" : "plain";
 }

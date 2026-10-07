@@ -172,6 +172,7 @@ struct WorkStylePage: View {
 /// order that starts on a Sunday, its weekday.
 struct SequenceTiles: View {
   @Environment(\.themeColors) private var colors
+  @Environment(Settings.self) private var settings
   let sequence: [PatternID]
   let patterns: [PatternID: Pattern]
   var weekly = false
@@ -201,11 +202,13 @@ struct SequenceTiles: View {
       sequence.map { patterns[$0]?.name ?? "削除したパターン" }.joined(separator: "、"))
   }
 
+  /// A weekday's color as the person's カレンダー settings color it.
   private func tone(_ index: Int) -> Color {
     guard weekly else { return colors.textTertiary }
+    let week = settings.device.week
     switch index % 7 {
-    case 0: return colors.calendarHoliday
-    case 6: return colors.calendarSaturday
+    case 0 where week.sunday: return colors.calendarHoliday
+    case 6 where week.saturday: return colors.calendarSaturday
     default: return colors.textTertiary
     }
   }

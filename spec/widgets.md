@@ -18,7 +18,7 @@ Each day in an entry has:
 | --- | --- |
 | `date` | The calendar day. |
 | `weekday` | Its day-of-week name (日, 月, … 土). |
-| `tone` | `holiday` when it is a national holiday of Japan and 祝日 coloring is on, or a Sunday and Sunday coloring is on; else `saturday` when it is a Saturday and Saturday coloring is on; else `plain`. |
+| `tone` | `holiday` when it is a national holiday of the device's holiday country (`spec/calendar.md`, The month) and 祝日 coloring is on, or a Sunday and Sunday coloring is on; else `saturday` when it is a Saturday and Saturday coloring is on; else `plain`. |
 | `shift` | The pattern entered on that day, if any. |
 | `name` | That pattern's name, as the person named it. |
 | `time` | The shift's time range (read aloud, not shown), for patterns with a time: the day's own start and end when set, else the pattern's. It is written as `9:00 – 18:00`, dropping a leading zero from the hour. An end at or before the start reads `翌` before it (`16:30 – 翌9:30`). |
