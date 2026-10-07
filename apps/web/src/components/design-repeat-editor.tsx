@@ -1,4 +1,4 @@
-import { Delete } from "lucide-react";
+import { ArrowRight, Trash2 } from "lucide-react";
 import { useMotionValue } from "motion/react";
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -206,12 +206,14 @@ function OrderMonth({
 }
 
 // A repeating order typed on the calendar (spec/shift-patterns.md,
-// Typing an order): the day pressed is its 1st, each key fills the next
-// day, and the order comes round faintly after the days typed, as the
-// calendar will show it. A day typed, pressed, is chosen: a key then
-// takes its place and ⌫ takes it out. Any other day pressed moves the
-// order to start there, keeping what was typed. `accessory` goes at the
-// end of the month's row; what saves it is the page's 完了.
+// Typing an order): the day pressed is its 1st, and the order comes round
+// faintly after the days typed, as the calendar will show it. It is typed
+// as ポチポチ入力 enters days: a key fills the framed day and the frame
+// moves on, 翌日へ moves it without typing, and 消す takes the framed day
+// out, those after it closing up. A day typed, pressed, takes the frame;
+// any other moves the order to start there, keeping what was typed.
+// `accessory` goes at the end of the month's row; what saves it is the
+// page's 完了.
 export function RepeatCalendar({
   sequence,
   anchor,
@@ -243,44 +245,50 @@ export function RepeatCalendar({
   // the month a swipe last landed on, whose name the drag brought in.
   const pageDrag = useMotionValue(0);
   const [swipedTo, setSwipedTo] = useState<number>();
-  const [chosen, setChosen] = useState<number>();
+  // The framed day, among those typed; none frames the day after them.
+  const [framed, setFramed] = useState<number>();
   const [page, setPage] = useState(0);
   const progress = useMotionValue(0);
   const pages = patternPagesOf(patternKeys).length;
   const orderStart = from === undefined ? anchor : from;
-  const cursor = chosen ?? sequence.length;
+  const cursor = framed ?? sequence.length;
   const goTo = (target: Date) => {
     setSwipedTo(undefined);
     setMonth(monthOf(target));
   };
 
-  const pick = (key: Shift) => {
-    if (chosen !== undefined && chosen < sequence.length) {
-      onChange({
-        anchor,
-        sequence: sequence.map((shift, index) =>
-          index === chosen ? key : shift
-        ),
-      });
-      setChosen(undefined);
-      return;
-    }
-    onChange({ anchor, sequence: [...sequence, key] });
-    // The day after it kept in sight, as ポチポチ入力 moves on.
-    const next = addDays(anchor, sequence.length + 1);
+  // The frame to the day after `at`, at most the one after those typed,
+  // its month turned to when it is out of sight.
+  const moveOn = (at: number, length: number) => {
+    const next = at + 1 < length ? at + 1 : undefined;
+    setFramed(next);
+    const day = addDays(anchor, next ?? length);
     const shown = weekTools.monthDates(month);
-    if (!shown.some((date) => dateKey(date) === dateKey(next))) {
-      goTo(next);
+    if (!shown.some((date) => dateKey(date) === dateKey(day))) {
+      goTo(day);
     }
   };
 
+  // A key: on the framed day, the frame moving on, as ポチポチ入力 does.
+  const pick = (key: Shift) => {
+    const at = framed ?? sequence.length;
+    const next =
+      at < sequence.length
+        ? sequence.map((shift, index) => (index === at ? key : shift))
+        : [...sequence, key];
+    onChange({ anchor, sequence: next });
+    moveOn(at, next.length);
+  };
+
+  // A day typed takes the frame, as the next one does; any other moves
+  // the order there.
   const press = (date: Date) => {
     const index = daysFrom(anchor, date);
     if (index >= 0 && index < sequence.length) {
-      setChosen(chosen === index ? undefined : index);
+      setFramed(index);
       return;
     }
-    setChosen(undefined);
+    setFramed(undefined);
     if (index !== sequence.length) {
       onChange({ anchor: date, sequence });
     }
@@ -322,8 +330,8 @@ export function RepeatCalendar({
           )}
         />
       </div>
-      {/* ポチポチ入力's tray, ⌫ in 消す's place. No date over the keys: the
-      framed day shows where typing goes, and the room is the month's. */}
+      {/* ポチポチ入力's tray. No date over the keys: the framed day shows
+      where typing goes, and the room is the month's. */}
       <div className={repeatCalendar.foot}>
         <PatternKeys
           onPage={setPage}
@@ -335,21 +343,19 @@ export function RepeatCalendar({
         <div className={shiftInput.actions}>
           <button
             className={shiftInput.action}
-            disabled={sequence.length === 0}
+            disabled={framed === undefined}
             onClick={() => {
-              onChange({
-                anchor,
-                sequence:
-                  chosen === undefined
-                    ? sequence.slice(0, -1)
-                    : sequence.filter((_, index) => index !== chosen),
-              });
-              setChosen(undefined);
+              if (framed === undefined) {
+                return;
+              }
+              const rest = sequence.filter((_, index) => index !== framed);
+              onChange({ anchor, sequence: rest });
+              setFramed(framed < rest.length ? framed : undefined);
             }}
             type="button"
           >
-            <Delete aria-hidden="true" size={14} />
-            {chosen === undefined ? "1つ消す" : "選んだ日を消す"}
+            <Trash2 aria-hidden="true" size={14} />
+            消す
           </button>
           <span>
             {pages > 1 && (
@@ -362,8 +368,17 @@ export function RepeatCalendar({
               />
             )}
           </span>
-          {/* Nothing in 翌日へ's place: an order has no days to skip. */}
-          <span />
+          <button
+            className={shiftInput.action}
+            disabled={framed === undefined}
+            onClick={() => {
+              moveOn(framed ?? sequence.length, sequence.length);
+            }}
+            type="button"
+          >
+            翌日へ
+            <ArrowRight aria-hidden="true" size={14} />
+          </button>
         </div>
       </div>
     </div>

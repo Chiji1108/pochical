@@ -15,11 +15,12 @@ enum OrderCover: Hashable {
 
 /// A repeating order typed on a month, as ポチポチ入力 enters days
 /// (/design's RepeatCalendar; spec/shift-patterns.md, Typing an order):
-/// the day pressed is its 1st, each key fills the next day, and the order
-/// comes round faintly after the days typed, as the calendar will show it.
-/// A day typed, pressed, is chosen: a key then takes its place and ⌫ takes
-/// it out. Any other day pressed moves the order to start there, keeping
-/// what was typed.
+/// the day pressed is its 1st, and the order comes round faintly after the
+/// days typed, as the calendar will show it. It is typed as ポチポチ入力
+/// enters days: a key fills the framed day and the frame moves on, 翌日へ
+/// moves it without typing, and 消す takes the framed day out, those after
+/// it closing up. A day typed, pressed, takes the frame; any other moves
+/// the order to start there, keeping what was typed.
 ///
 /// It fills the screen as 1人ずつ's month does, swiped sideways a month at
 /// a time, with the keys kept at the foot as ポチポチ入力's are. No 今月:
@@ -45,7 +46,8 @@ struct RepeatCalendar<Accessory: View>: View {
   @State private var month: Day?
   /// Where the pages are as a finger moves them, for the month's name.
   @State private var position = PagerPosition(pages: span)
-  @State private var chosen: Int?
+  /// The framed day, among those typed; none frames the day after them.
+  @State private var framed: Int?
   @State private var keyPage = 0
   /// Every key pressed, to tick alike as ポチポチ入力's.
   @State private var keys = 0
@@ -77,8 +79,8 @@ struct RepeatCalendar<Accessory: View>: View {
         pager
       }
       Spacer(minLength: 0)
-      // ポチポチ入力's tray, ⌫ in 消す's place. No date over the keys: the
-      // framed day shows where typing goes, and the room is the month's.
+      // ポチポチ入力's tray. No date over the keys: the framed day shows
+      // where typing goes, and the room is the month's.
       VStack(spacing: 8) {
         PatternKeys(patterns: patterns, page: $keyPage) { pattern in
           keys += 1
@@ -87,21 +89,20 @@ struct RepeatCalendar<Accessory: View>: View {
         TrayActionsRow(
           pages: (patterns.count + patternsPerPage - 1) / patternsPerPage, page: $keyPage
         ) {
-          TrayAction(
-            title: chosen == nil ? "1つ消す" : "選んだ日を消す", systemImage: "delete.left",
-            enabled: !sequence.isEmpty
-          ) {
+          TrayAction(title: "消す", systemImage: "trash", enabled: framed != nil) {
             keys += 1
-            if let chosen, chosen < sequence.count {
-              sequence.remove(at: chosen)
-            } else if !sequence.isEmpty {
-              sequence.removeLast()
-            }
-            chosen = nil
+            guard let at = framed, at < sequence.count else { return }
+            sequence.remove(at: at)
+            framed = at < sequence.count ? at : nil
           }
         } trailing: {
-          // Nothing in 翌日へ's place: an order has no days to skip.
-          Color.clear.frame(height: 0)
+          TrayAction(
+            title: "翌日へ", systemImage: "arrow.right", enabled: framed != nil,
+            trailingIcon: true
+          ) {
+            keys += 1
+            moveOn()
+          }
         }
       }
       .sensoryFeedback(.selection, trigger: keys)
@@ -150,7 +151,7 @@ struct RepeatCalendar<Accessory: View>: View {
       sequence, anchor: anchor, from: start.map { max($0, first) } ?? first, through: last,
       holidayShift: holidayShift, holidayCountry: holidayCountry)
     let kept = before?.shown(from: first, through: last) ?? [:]
-    let cursor = chosen ?? sequence.count
+    let cursor = framed ?? sequence.count
     return VStack(spacing: 4) {
       ForEach(weeks, id: \.self) { week in
         HStack(spacing: 4) {
@@ -184,30 +185,37 @@ struct RepeatCalendar<Accessory: View>: View {
     }
   }
 
-  /// A key: in the chosen day's place, else on the next day, turning to
-  /// the month of the day after it as ポチポチ入力 moves on.
+  /// A key: on the framed day, the frame moving on, as ポチポチ入力 does.
   private func pick(_ pattern: Pattern) {
-    if let chosen, chosen < sequence.count {
-      sequence[chosen] = pattern.id
-      self.chosen = nil
-      return
+    if let at = framed, at < sequence.count {
+      sequence[at] = pattern.id
+    } else {
+      sequence.append(pattern.id)
     }
-    sequence.append(pattern.id)
-    let next = anchor.adding(days: sequence.count)
+    moveOn()
+  }
+
+  /// The frame to the next day, at most the one after those typed, its
+  /// month turned to when it is out of sight.
+  private func moveOn() {
+    let next = (framed ?? sequence.count) + 1
+    framed = next < sequence.count ? next : nil
+    let day = anchor.adding(days: framed ?? sequence.count)
     let shown = month ?? anchor.firstOfMonth
-    if !monthWeeks(shown, weekStart: settings.device.week.start).contains(where: { $0.contains(next) }) {
-      withAnimation(Springs.standard) { month = next.firstOfMonth }
+    if !monthWeeks(shown, weekStart: settings.device.week.start).contains(where: { $0.contains(day) }) {
+      withAnimation(Springs.standard) { month = day.firstOfMonth }
     }
   }
 
-  /// A day typed is chosen, or let go; any other moves the order there.
+  /// A day typed takes the frame, as the next one does; any other moves
+  /// the order there.
   private func press(_ day: Day) {
     let index = day.days(since: anchor)
     if index >= 0, index < sequence.count {
-      chosen = chosen == index ? nil : index
+      framed = index
       return
     }
-    chosen = nil
+    framed = nil
     if index != sequence.count {
       anchor = day
     }
