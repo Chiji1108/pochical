@@ -1,7 +1,7 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { syncLimits } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
-import { and, eq, gt, inArray, isNull, max, sum } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, max } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
@@ -51,6 +51,8 @@ import {
   patterns,
   repeatOrders,
   blocks,
+  chatMutes,
+  chatSettings,
   pushTokens,
   unreadCounts,
 } from "./user-do-schema";
@@ -64,6 +66,9 @@ import {
   patternChange,
   repeatOrdersChange,
   blockChange,
+  chatMuteChange,
+  chatSettingsChange,
+  notifyingCount,
   unreadCountChange,
 } from "./user-do-values";
 
@@ -80,6 +85,9 @@ const PUSH_RETRIES_MOST = 30;
 // How many pushes to the group have failed in a row, in the DO's storage.
 const pushFailuresKey = (groupId: string): string => `pushFailures:${groupId}`;
 
+/** A chat's unread lines for the user, and how many mention them. */
+export type Unread = { count: number; mentions: number };
+
 /** One kind of value the user owns, as UserDO.logs lists them. */
 type SyncedLog = {
   after: (cursor: number, sharedOnly: boolean) => Change[];
@@ -93,7 +101,9 @@ type SyncedLog = {
     | typeof coworkerOrder
     | typeof memberships
     | typeof unreadCounts
-    | typeof blocks;
+    | typeof blocks
+    | typeof chatMutes
+    | typeof chatSettings;
 };
 
 /**
@@ -353,15 +363,110 @@ export class UserDO extends DurableObject<Env> {
   setUnread(
     groupId: string,
     threadId: string,
-    count: number,
+    unread: Unread,
     groupCursor: number,
-    // A new line to tell the user's devices of, with the count.
-    alert?: Alert
+    // A new line to tell the user's devices of, with the count, and
+    // whether it mentions the user.
+    line?: { alert: Alert; mentioned: boolean }
   ): void {
-    this.storeUnread(groupId, threadId, count, groupCursor);
-    if (alert !== undefined && this.isMember(groupId)) {
-      this.ctx.waitUntil(this.notify(alert));
+    this.storeUnread(groupId, threadId, unread, groupCursor);
+    if (
+      line !== undefined &&
+      this.notifies(groupId, threadId, line.mentioned)
+    ) {
+      this.ctx.waitUntil(this.notify(line.alert));
     }
+  }
+
+  /**
+   * Whether a new line in a chat notifies (spec/chat.md, Notifications):
+   * in a group the user is in, a chat that is on, or one turned off when
+   * the line mentions them and mentions notify.
+   */
+  private notifies(
+    groupId: string,
+    threadId: string,
+    mentioned: boolean
+  ): boolean {
+    if (!this.isMember(groupId)) {
+      return false;
+    }
+    return (
+      notifyingCount(
+        { count: 1, mentions: mentioned ? 1 : 0 },
+        this.isMuted(groupId, threadId),
+        this.mentionsWhenMuted()
+      ) > 0
+    );
+  }
+
+  private isMuted(groupId: string, threadId: string): boolean {
+    return (
+      this.db
+        .select({ muted: chatMutes.muted })
+        .from(chatMutes)
+        .where(
+          and(eq(chatMutes.groupId, groupId), eq(chatMutes.threadId, threadId))
+        )
+        .get()?.muted ?? false
+    );
+  }
+
+  /** メンションはいつも通知: on until the user turns it off. */
+  private mentionsWhenMuted(): boolean {
+    return (
+      this.db
+        .select({ on: chatSettings.mentionsWhenMuted })
+        .from(chatSettings)
+        .get()?.on ?? true
+    );
+  }
+
+  /**
+   * Turns a chat's notifications off, or on again (spec/chat.md,
+   * Notifications): kept and sent to the user's devices. Setting it as it
+   * is changes nothing; false for a group the user is not in.
+   */
+  setChatMuted(groupId: string, threadId: string, muted: boolean): boolean {
+    if (!this.isMember(groupId)) {
+      return false;
+    }
+    const changed = this.ctx.storage.transactionSync(() => {
+      if (this.isMuted(groupId, threadId) === muted) {
+        return undefined;
+      }
+      const row = { cursor: this.head() + 1, groupId, muted, threadId };
+      return this.db
+        .insert(chatMutes)
+        .values(row)
+        .onConflictDoUpdate({
+          set: { cursor: row.cursor, muted },
+          target: [chatMutes.groupId, chatMutes.threadId],
+        })
+        .returning()
+        .get();
+    });
+    if (changed !== undefined) {
+      broadcastChanges(this.ctx, [chatMuteChange(changed)]);
+    }
+    return true;
+  }
+
+  /** Sets メンションはいつも通知, sent to the user's devices. */
+  setChatNotifications(mentionsWhenMuted: boolean): void {
+    const changed = this.ctx.storage.transactionSync(() => {
+      const row = { cursor: this.head() + 1, id: 1, mentionsWhenMuted };
+      return this.db
+        .insert(chatSettings)
+        .values(row)
+        .onConflictDoUpdate({
+          set: { cursor: row.cursor, mentionsWhenMuted },
+          target: chatSettings.id,
+        })
+        .returning()
+        .get();
+    });
+    broadcastChanges(this.ctx, [chatSettingsChange(changed)]);
   }
 
   /**
@@ -387,15 +492,11 @@ export class UserDO extends DurableObject<Env> {
     if (devices.length === 0) {
       return;
     }
-    const badge =
-      this.db
-        .select({ total: sum(unreadCounts.count) })
-        .from(unreadCounts)
-        .get()?.total ?? 0;
+    const badge = this.badge();
     const sent = await Promise.all(
       devices.map(async (device) => ({
         device,
-        sent: await sendAlert(this.env, device, alert, Number(badge)).catch(
+        sent: await sendAlert(this.env, device, alert, badge).catch(
           (): Sent => "failed"
         ),
       }))
@@ -409,10 +510,35 @@ export class UserDO extends DurableObject<Env> {
     }
   }
 
+  /**
+   * The app icon's badge: the unread lines that count in every chat of
+   * every group, as what notifies (spec/chat.md, Unread lines).
+   */
+  private badge(): number {
+    const muted = new Set(
+      this.db
+        .select({ groupId: chatMutes.groupId, threadId: chatMutes.threadId })
+        .from(chatMutes)
+        .where(eq(chatMutes.muted, true))
+        .all()
+        .map(({ groupId, threadId }) => `${groupId}\n${threadId}`)
+    );
+    const mentionsWhenMuted = this.mentionsWhenMuted();
+    let total = 0;
+    for (const row of this.db.select().from(unreadCounts).all()) {
+      total += notifyingCount(
+        row,
+        muted.has(`${row.groupId}\n${row.threadId}`),
+        mentionsWhenMuted
+      );
+    }
+    return total;
+  }
+
   private storeUnread(
     groupId: string,
     threadId: string,
-    count: number,
+    { count, mentions }: Unread,
     groupCursor: number
   ): void {
     const changed = this.ctx.storage.transactionSync(() => {
@@ -423,6 +549,7 @@ export class UserDO extends DurableObject<Env> {
         .select({
           count: unreadCounts.count,
           groupCursor: unreadCounts.groupCursor,
+          mentions: unreadCounts.mentions,
         })
         .from(unreadCounts)
         .where(
@@ -438,7 +565,7 @@ export class UserDO extends DurableObject<Env> {
       }
       // The same count, newer: kept as newer, so an older one arriving
       // after it changes nothing, but the devices hear nothing.
-      if (stored?.count === count) {
+      if (stored?.count === count && stored.mentions === mentions) {
         this.db
           .update(unreadCounts)
           .set({ groupCursor })
@@ -456,13 +583,14 @@ export class UserDO extends DurableObject<Env> {
         cursor: this.head() + 1,
         groupCursor,
         groupId,
+        mentions,
         threadId,
       };
       return this.db
         .insert(unreadCounts)
         .values(row)
         .onConflictDoUpdate({
-          set: { count, cursor: row.cursor, groupCursor },
+          set: { count, cursor: row.cursor, groupCursor, mentions },
           target: [unreadCounts.groupId, unreadCounts.threadId],
         })
         .returning()
@@ -669,6 +797,28 @@ export class UserDO extends DurableObject<Env> {
             .map(blockChange),
         shared: false,
         table: blocks,
+      },
+      {
+        after: (cursor) =>
+          db
+            .select()
+            .from(chatMutes)
+            .where(gt(chatMutes.cursor, cursor))
+            .all()
+            .map(chatMuteChange),
+        shared: false,
+        table: chatMutes,
+      },
+      {
+        after: (cursor) =>
+          db
+            .select()
+            .from(chatSettings)
+            .where(gt(chatSettings.cursor, cursor))
+            .all()
+            .map(chatSettingsChange),
+        shared: false,
+        table: chatSettings,
       },
     ];
   }

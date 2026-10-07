@@ -339,8 +339,8 @@ describe("a group's chat", () => {
     const { userIdOf } = await import("./helpers");
     const user = env.USERS.getByName(await userIdOf(guest));
     // Read up at the group's cursor 12, then a send's count from 11.
-    await user.setUnread(groupId, thread, 0, 12);
-    await user.setUnread(groupId, thread, 1, 11);
+    await user.setUnread(groupId, thread, { count: 0, mentions: 0 }, 12);
+    await user.setUnread(groupId, thread, { count: 1, mentions: 0 }, 11);
     const phone = await device(guest);
     const counts = changesIn(await phone.frames.next()).filter(
       ({ kind }) => kind.case === "unreadCount"

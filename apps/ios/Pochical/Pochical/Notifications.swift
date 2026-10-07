@@ -25,28 +25,52 @@ nonisolated struct OpenedChat: Hashable, Sendable {
   var openChat: OpenedChat?
   /// A chat a tapped notification asks to open.
   var opening: OpenedChat?
+  /// Whether the person has let Pochical notify, as the system last said.
+  private(set) var permission = Permission.notAsked
   private var token: Data?
+
+  /// Whether notifications may be shown (/design's PermissionCard).
+  enum Permission {
+    /// Not asked yet: the system's question can still be put.
+    case notAsked
+    /// Refused, in the system's settings now.
+    case denied
+    case allowed
+  }
 
   /// Registers for notifications when they are allowed, each launch.
   func start() {
     UNUserNotificationCenter.current().delegate = self
     Task {
-      let settings = await UNUserNotificationCenter.current().notificationSettings()
-      if settings.authorizationStatus == .authorized {
+      await readPermission()
+      if permission == .allowed {
         UIApplication.shared.registerForRemoteNotifications()
       }
     }
   }
 
+  /// Reads the permission again: it may have changed in the system's
+  /// settings while the app was away.
+  func readPermission() async {
+    let settings = await UNUserNotificationCenter.current().notificationSettings()
+    permission =
+      switch settings.authorizationStatus {
+      case .notDetermined: .notAsked
+      case .denied: .denied
+      default: .allowed
+      }
+  }
+
   /// Asks the system once, the first time a notification is wanted: when
-  /// the person first writes in a chat.
+  /// the person first writes in a chat, or turns a chat's on.
   func askOnce() {
     Task {
+      await readPermission()
+      guard permission == .notAsked else { return }
       let center = UNUserNotificationCenter.current()
-      guard await center.notificationSettings().authorizationStatus == .notDetermined else {
-        return
-      }
-      if (try? await center.requestAuthorization(options: [.alert, .badge, .sound])) == true {
+      let allowed = (try? await center.requestAuthorization(options: [.alert, .badge, .sound]))
+      await readPermission()
+      if allowed == true {
         UIApplication.shared.registerForRemoteNotifications()
       }
     }

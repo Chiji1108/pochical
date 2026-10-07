@@ -200,7 +200,29 @@ message Change {
     // Someone the user has blocked, or no longer (spec/chat.md, Reporting
     // and blocking); User DO only.
     Block block = 17;
+    // A chat whose notifications the user turned off, or on again, and
+    // whether mentions notify in one turned off (spec/chat.md,
+    // Notifications); User DO only.
+    ChatMute chat_mute = 18;
+    ChatNotifications chat_notifications = 19;
   }
+}
+
+// A chat whose notifications the user turned off, or back on: one value
+// per chat, the latest.
+message ChatMute {
+  string group_id = 1;
+  string thread_id = 2;
+  // Off, or on again since.
+  bool muted = 3;
+}
+
+// The user's chat notification settings for the whole account. Before
+// the user sets them, none is sent, and mentions notify.
+message ChatNotifications {
+  // メンションはいつも通知: a line mentioning the user notifies, and
+  // counts, in a chat turned off.
+  bool mentions_when_muted = 1;
 }
 
 // Someone the user has blocked, in every group they share: one value per
@@ -217,6 +239,9 @@ message UnreadCount {
   string group_id = 1;
   string thread_id = 2;
   uint32 count = 3;
+  // How many of them mention the user: what counts, and notifies, in a
+  // chat turned off (spec/chat.md, Unread lines).
+  uint32 mentions = 4;
 }
 
 // A group the user is in, with its name and mark as their User DO last

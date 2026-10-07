@@ -10,7 +10,79 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/user.proto.
  */
 export const file_pochical_v1_user: GenFile = /*@__PURE__*/
-  fileDesc("ChZwb2NoaWNhbC92MS91c2VyLnByb3RvEgtwb2NoaWNhbC52MSI6ChhSZWdpc3RlclB1c2hUb2tlblJlcXVlc3QSDQoFdG9rZW4YASABKAkSDwoHc2FuZGJveBgCIAEoCCIbChlSZWdpc3RlclB1c2hUb2tlblJlc3BvbnNlIjUKEVNldEJsb2NrZWRSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSDwoHYmxvY2tlZBgCIAEoCCIUChJTZXRCbG9ja2VkUmVzcG9uc2UiDgoMR2V0TWVSZXF1ZXN0IjMKDUdldE1lUmVzcG9uc2USDwoHdXNlcl9pZBgBIAEoCRIRCglhbm9ueW1vdXMYAiABKAgyjwIKC1VzZXJTZXJ2aWNlEkMKBUdldE1lEhkucG9jaGljYWwudjEuR2V0TWVSZXF1ZXN0GhoucG9jaGljYWwudjEuR2V0TWVSZXNwb25zZSIDkAIBElIKClNldEJsb2NrZWQSHi5wb2NoaWNhbC52MS5TZXRCbG9ja2VkUmVxdWVzdBofLnBvY2hpY2FsLnYxLlNldEJsb2NrZWRSZXNwb25zZSIDkAICEmcKEVJlZ2lzdGVyUHVzaFRva2VuEiUucG9jaGljYWwudjEuUmVnaXN0ZXJQdXNoVG9rZW5SZXF1ZXN0GiYucG9jaGljYWwudjEuUmVnaXN0ZXJQdXNoVG9rZW5SZXNwb25zZSIDkAICQmkKD2FwcC5wb2NoaWNhbC52MUIJVXNlclByb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw");
+  fileDesc("ChZwb2NoaWNhbC92MS91c2VyLnByb3RvEgtwb2NoaWNhbC52MSJJChNTZXRDaGF0TXV0ZWRSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJEhEKCXRocmVhZF9pZBgCIAEoCRINCgVtdXRlZBgDIAEoCCIWChRTZXRDaGF0TXV0ZWRSZXNwb25zZSI6ChtTZXRDaGF0Tm90aWZpY2F0aW9uc1JlcXVlc3QSGwoTbWVudGlvbnNfd2hlbl9tdXRlZBgBIAEoCCIeChxTZXRDaGF0Tm90aWZpY2F0aW9uc1Jlc3BvbnNlIjoKGFJlZ2lzdGVyUHVzaFRva2VuUmVxdWVzdBINCgV0b2tlbhgBIAEoCRIPCgdzYW5kYm94GAIgASgIIhsKGVJlZ2lzdGVyUHVzaFRva2VuUmVzcG9uc2UiNQoRU2V0QmxvY2tlZFJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIPCgdibG9ja2VkGAIgASgIIhQKElNldEJsb2NrZWRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiMwoNR2V0TWVSZXNwb25zZRIPCgd1c2VyX2lkGAEgASgJEhEKCWFub255bW91cxgCIAEoCDLbAwoLVXNlclNlcnZpY2USQwoFR2V0TWUSGS5wb2NoaWNhbC52MS5HZXRNZVJlcXVlc3QaGi5wb2NoaWNhbC52MS5HZXRNZVJlc3BvbnNlIgOQAgESUgoKU2V0QmxvY2tlZBIeLnBvY2hpY2FsLnYxLlNldEJsb2NrZWRSZXF1ZXN0Gh8ucG9jaGljYWwudjEuU2V0QmxvY2tlZFJlc3BvbnNlIgOQAgISZwoRUmVnaXN0ZXJQdXNoVG9rZW4SJS5wb2NoaWNhbC52MS5SZWdpc3RlclB1c2hUb2tlblJlcXVlc3QaJi5wb2NoaWNhbC52MS5SZWdpc3RlclB1c2hUb2tlblJlc3BvbnNlIgOQAgISWAoMU2V0Q2hhdE11dGVkEiAucG9jaGljYWwudjEuU2V0Q2hhdE11dGVkUmVxdWVzdBohLnBvY2hpY2FsLnYxLlNldENoYXRNdXRlZFJlc3BvbnNlIgOQAgIScAoUU2V0Q2hhdE5vdGlmaWNhdGlvbnMSKC5wb2NoaWNhbC52MS5TZXRDaGF0Tm90aWZpY2F0aW9uc1JlcXVlc3QaKS5wb2NoaWNhbC52MS5TZXRDaGF0Tm90aWZpY2F0aW9uc1Jlc3BvbnNlIgOQAgJCaQoPYXBwLnBvY2hpY2FsLnYxQglVc2VyUHJvdG9QAaICA1BYWKoCC1BvY2hpY2FsLlYxygILUG9jaGljYWxcVjHiAhdQb2NoaWNhbFxWMVxHUEJNZXRhZGF0YeoCDFBvY2hpY2FsOjpWMWIGcHJvdG8z");
+
+/**
+ * @generated from message pochical.v1.SetChatMutedRequest
+ */
+export type SetChatMutedRequest = Message<"pochical.v1.SetChatMutedRequest"> & {
+  /**
+   * @generated from field: string group_id = 1;
+   */
+  groupId: string;
+
+  /**
+   * "group" for the group's chat, or a one-to-one chat the user is in.
+   *
+   * @generated from field: string thread_id = 2;
+   */
+  threadId: string;
+
+  /**
+   * @generated from field: bool muted = 3;
+   */
+  muted: boolean;
+};
+
+/**
+ * Describes the message pochical.v1.SetChatMutedRequest.
+ * Use `create(SetChatMutedRequestSchema)` to create a new message.
+ */
+export const SetChatMutedRequestSchema: GenMessage<SetChatMutedRequest> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 0);
+
+/**
+ * @generated from message pochical.v1.SetChatMutedResponse
+ */
+export type SetChatMutedResponse = Message<"pochical.v1.SetChatMutedResponse"> & {
+};
+
+/**
+ * Describes the message pochical.v1.SetChatMutedResponse.
+ * Use `create(SetChatMutedResponseSchema)` to create a new message.
+ */
+export const SetChatMutedResponseSchema: GenMessage<SetChatMutedResponse> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 1);
+
+/**
+ * @generated from message pochical.v1.SetChatNotificationsRequest
+ */
+export type SetChatNotificationsRequest = Message<"pochical.v1.SetChatNotificationsRequest"> & {
+  /**
+   * @generated from field: bool mentions_when_muted = 1;
+   */
+  mentionsWhenMuted: boolean;
+};
+
+/**
+ * Describes the message pochical.v1.SetChatNotificationsRequest.
+ * Use `create(SetChatNotificationsRequestSchema)` to create a new message.
+ */
+export const SetChatNotificationsRequestSchema: GenMessage<SetChatNotificationsRequest> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 2);
+
+/**
+ * @generated from message pochical.v1.SetChatNotificationsResponse
+ */
+export type SetChatNotificationsResponse = Message<"pochical.v1.SetChatNotificationsResponse"> & {
+};
+
+/**
+ * Describes the message pochical.v1.SetChatNotificationsResponse.
+ * Use `create(SetChatNotificationsResponseSchema)` to create a new message.
+ */
+export const SetChatNotificationsResponseSchema: GenMessage<SetChatNotificationsResponse> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 3);
 
 /**
  * @generated from message pochical.v1.RegisterPushTokenRequest
@@ -36,7 +108,7 @@ export type RegisterPushTokenRequest = Message<"pochical.v1.RegisterPushTokenReq
  * Use `create(RegisterPushTokenRequestSchema)` to create a new message.
  */
 export const RegisterPushTokenRequestSchema: GenMessage<RegisterPushTokenRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 0);
+  messageDesc(file_pochical_v1_user, 4);
 
 /**
  * @generated from message pochical.v1.RegisterPushTokenResponse
@@ -49,7 +121,7 @@ export type RegisterPushTokenResponse = Message<"pochical.v1.RegisterPushTokenRe
  * Use `create(RegisterPushTokenResponseSchema)` to create a new message.
  */
 export const RegisterPushTokenResponseSchema: GenMessage<RegisterPushTokenResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 1);
+  messageDesc(file_pochical_v1_user, 5);
 
 /**
  * @generated from message pochical.v1.SetBlockedRequest
@@ -71,7 +143,7 @@ export type SetBlockedRequest = Message<"pochical.v1.SetBlockedRequest"> & {
  * Use `create(SetBlockedRequestSchema)` to create a new message.
  */
 export const SetBlockedRequestSchema: GenMessage<SetBlockedRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 2);
+  messageDesc(file_pochical_v1_user, 6);
 
 /**
  * @generated from message pochical.v1.SetBlockedResponse
@@ -84,7 +156,7 @@ export type SetBlockedResponse = Message<"pochical.v1.SetBlockedResponse"> & {
  * Use `create(SetBlockedResponseSchema)` to create a new message.
  */
 export const SetBlockedResponseSchema: GenMessage<SetBlockedResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 3);
+  messageDesc(file_pochical_v1_user, 7);
 
 /**
  * @generated from message pochical.v1.GetMeRequest
@@ -97,7 +169,7 @@ export type GetMeRequest = Message<"pochical.v1.GetMeRequest"> & {
  * Use `create(GetMeRequestSchema)` to create a new message.
  */
 export const GetMeRequestSchema: GenMessage<GetMeRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 4);
+  messageDesc(file_pochical_v1_user, 8);
 
 /**
  * @generated from message pochical.v1.GetMeResponse
@@ -121,7 +193,7 @@ export type GetMeResponse = Message<"pochical.v1.GetMeResponse"> & {
  * Use `create(GetMeResponseSchema)` to create a new message.
  */
 export const GetMeResponseSchema: GenMessage<GetMeResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 5);
+  messageDesc(file_pochical_v1_user, 9);
 
 /**
  * The signed-in user. Every call here needs the session token from
@@ -163,6 +235,29 @@ export const UserService: GenService<{
     methodKind: "unary";
     input: typeof RegisterPushTokenRequestSchema;
     output: typeof RegisterPushTokenResponseSchema;
+  },
+  /**
+   * Turns a chat's notifications off or on again (spec/chat.md,
+   * Notifications); the user's devices hear of it as a ChatMute change.
+   * NOT_FOUND for a group the user is not in or a chat not theirs.
+   *
+   * @generated from rpc pochical.v1.UserService.SetChatMuted
+   */
+  setChatMuted: {
+    methodKind: "unary";
+    input: typeof SetChatMutedRequestSchema;
+    output: typeof SetChatMutedResponseSchema;
+  },
+  /**
+   * Sets メンションはいつも通知 for the account; the devices hear of it as a
+   * ChatNotifications change.
+   *
+   * @generated from rpc pochical.v1.UserService.SetChatNotifications
+   */
+  setChatNotifications: {
+    methodKind: "unary";
+    input: typeof SetChatNotificationsRequestSchema;
+    output: typeof SetChatNotificationsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_pochical_v1_user, 0);

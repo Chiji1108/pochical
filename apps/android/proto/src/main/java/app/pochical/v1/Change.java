@@ -41,6 +41,8 @@ public  final class Change extends
     READ_MARK(15),
     UNREAD_COUNT(16),
     BLOCK(17),
+    CHAT_MUTE(18),
+    CHAT_NOTIFICATIONS(19),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -72,6 +74,8 @@ public  final class Change extends
         case 15: return READ_MARK;
         case 16: return UNREAD_COUNT;
         case 17: return BLOCK;
+        case 18: return CHAT_MUTE;
+        case 19: return CHAT_NOTIFICATIONS;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -1089,6 +1093,136 @@ public  final class Change extends
    */
   private void clearBlock() {
     if (kindCase_ == 17) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int CHAT_MUTE_FIELD_NUMBER = 18;
+  /**
+   * <pre>
+   * A chat whose notifications the user turned off, or on again, and
+   * whether mentions notify in one turned off (spec/chat.md,
+   * Notifications); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatMute chat_mute = 18 [json_name = "chatMute"];</code>
+   */
+  @java.lang.Override
+  public boolean hasChatMute() {
+    return kindCase_ == 18;
+  }
+  /**
+   * <pre>
+   * A chat whose notifications the user turned off, or on again, and
+   * whether mentions notify in one turned off (spec/chat.md,
+   * Notifications); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatMute chat_mute = 18 [json_name = "chatMute"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatMute getChatMute() {
+    if (kindCase_ == 18) {
+       return (app.pochical.v1.ChatMute) kind_;
+    }
+    return app.pochical.v1.ChatMute.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * A chat whose notifications the user turned off, or on again, and
+   * whether mentions notify in one turned off (spec/chat.md,
+   * Notifications); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatMute chat_mute = 18 [json_name = "chatMute"];</code>
+   */
+  private void setChatMute(app.pochical.v1.ChatMute value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 18;
+  }
+  /**
+   * <pre>
+   * A chat whose notifications the user turned off, or on again, and
+   * whether mentions notify in one turned off (spec/chat.md,
+   * Notifications); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatMute chat_mute = 18 [json_name = "chatMute"];</code>
+   */
+  private void mergeChatMute(app.pochical.v1.ChatMute value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 18 &&
+        kind_ != app.pochical.v1.ChatMute.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ChatMute.newBuilder((app.pochical.v1.ChatMute) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 18;
+  }
+  /**
+   * <pre>
+   * A chat whose notifications the user turned off, or on again, and
+   * whether mentions notify in one turned off (spec/chat.md,
+   * Notifications); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatMute chat_mute = 18 [json_name = "chatMute"];</code>
+   */
+  private void clearChatMute() {
+    if (kindCase_ == 18) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int CHAT_NOTIFICATIONS_FIELD_NUMBER = 19;
+  /**
+   * <code>.pochical.v1.ChatNotifications chat_notifications = 19 [json_name = "chatNotifications"];</code>
+   */
+  @java.lang.Override
+  public boolean hasChatNotifications() {
+    return kindCase_ == 19;
+  }
+  /**
+   * <code>.pochical.v1.ChatNotifications chat_notifications = 19 [json_name = "chatNotifications"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatNotifications getChatNotifications() {
+    if (kindCase_ == 19) {
+       return (app.pochical.v1.ChatNotifications) kind_;
+    }
+    return app.pochical.v1.ChatNotifications.getDefaultInstance();
+  }
+  /**
+   * <code>.pochical.v1.ChatNotifications chat_notifications = 19 [json_name = "chatNotifications"];</code>
+   */
+  private void setChatNotifications(app.pochical.v1.ChatNotifications value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 19;
+  }
+  /**
+   * <code>.pochical.v1.ChatNotifications chat_notifications = 19 [json_name = "chatNotifications"];</code>
+   */
+  private void mergeChatNotifications(app.pochical.v1.ChatNotifications value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 19 &&
+        kind_ != app.pochical.v1.ChatNotifications.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ChatNotifications.newBuilder((app.pochical.v1.ChatNotifications) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 19;
+  }
+  /**
+   * <code>.pochical.v1.ChatNotifications chat_notifications = 19 [json_name = "chatNotifications"];</code>
+   */
+  private void clearChatNotifications() {
+    if (kindCase_ == 19) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -2214,6 +2348,138 @@ public  final class Change extends
       return this;
     }
 
+    /**
+     * <pre>
+     * A chat whose notifications the user turned off, or on again, and
+     * whether mentions notify in one turned off (spec/chat.md,
+     * Notifications); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatMute chat_mute = 18 [json_name = "chatMute"];</code>
+     */
+    @java.lang.Override
+    public boolean hasChatMute() {
+      return instance.hasChatMute();
+    }
+    /**
+     * <pre>
+     * A chat whose notifications the user turned off, or on again, and
+     * whether mentions notify in one turned off (spec/chat.md,
+     * Notifications); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatMute chat_mute = 18 [json_name = "chatMute"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatMute getChatMute() {
+      return instance.getChatMute();
+    }
+    /**
+     * <pre>
+     * A chat whose notifications the user turned off, or on again, and
+     * whether mentions notify in one turned off (spec/chat.md,
+     * Notifications); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatMute chat_mute = 18 [json_name = "chatMute"];</code>
+     */
+    public Builder setChatMute(app.pochical.v1.ChatMute value) {
+      copyOnWrite();
+      instance.setChatMute(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A chat whose notifications the user turned off, or on again, and
+     * whether mentions notify in one turned off (spec/chat.md,
+     * Notifications); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatMute chat_mute = 18 [json_name = "chatMute"];</code>
+     */
+    public Builder setChatMute(
+        app.pochical.v1.ChatMute.Builder builderForValue) {
+      copyOnWrite();
+      instance.setChatMute(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * A chat whose notifications the user turned off, or on again, and
+     * whether mentions notify in one turned off (spec/chat.md,
+     * Notifications); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatMute chat_mute = 18 [json_name = "chatMute"];</code>
+     */
+    public Builder mergeChatMute(app.pochical.v1.ChatMute value) {
+      copyOnWrite();
+      instance.mergeChatMute(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A chat whose notifications the user turned off, or on again, and
+     * whether mentions notify in one turned off (spec/chat.md,
+     * Notifications); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatMute chat_mute = 18 [json_name = "chatMute"];</code>
+     */
+    public Builder clearChatMute() {
+      copyOnWrite();
+      instance.clearChatMute();
+      return this;
+    }
+
+    /**
+     * <code>.pochical.v1.ChatNotifications chat_notifications = 19 [json_name = "chatNotifications"];</code>
+     */
+    @java.lang.Override
+    public boolean hasChatNotifications() {
+      return instance.hasChatNotifications();
+    }
+    /**
+     * <code>.pochical.v1.ChatNotifications chat_notifications = 19 [json_name = "chatNotifications"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatNotifications getChatNotifications() {
+      return instance.getChatNotifications();
+    }
+    /**
+     * <code>.pochical.v1.ChatNotifications chat_notifications = 19 [json_name = "chatNotifications"];</code>
+     */
+    public Builder setChatNotifications(app.pochical.v1.ChatNotifications value) {
+      copyOnWrite();
+      instance.setChatNotifications(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatNotifications chat_notifications = 19 [json_name = "chatNotifications"];</code>
+     */
+    public Builder setChatNotifications(
+        app.pochical.v1.ChatNotifications.Builder builderForValue) {
+      copyOnWrite();
+      instance.setChatNotifications(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatNotifications chat_notifications = 19 [json_name = "chatNotifications"];</code>
+     */
+    public Builder mergeChatNotifications(app.pochical.v1.ChatNotifications value) {
+      copyOnWrite();
+      instance.mergeChatNotifications(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatNotifications chat_notifications = 19 [json_name = "chatNotifications"];</code>
+     */
+    public Builder clearChatNotifications() {
+      copyOnWrite();
+      instance.clearChatNotifications();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.Change)
   }
   @java.lang.Override
@@ -2249,12 +2515,14 @@ public  final class Change extends
             app.pochical.v1.ReadMark.class,
             app.pochical.v1.UnreadCount.class,
             app.pochical.v1.Block.class,
+            app.pochical.v1.ChatMute.class,
+            app.pochical.v1.ChatNotifications.class,
           };
           java.lang.String info =
-              "\u0000\u0011\u0001\u0000\u0001\u0011\u0011\u0000\u0000\u0000\u0001\u0003\u0002<\u0000" +
+              "\u0000\u0013\u0001\u0000\u0001\u0013\u0013\u0000\u0000\u0000\u0001\u0003\u0002<\u0000" +
               "\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000" +
               "\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011" +
-              "<\u0000";
+              "<\u0000\u0012<\u0000\u0013<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

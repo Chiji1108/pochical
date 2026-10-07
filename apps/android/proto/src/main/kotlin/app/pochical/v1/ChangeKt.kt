@@ -539,6 +539,72 @@ public object ChangeKt {
     public fun hasBlock(): kotlin.Boolean {
       return _builder.hasBlock()
     }
+
+    /**
+     * ```
+     * A chat whose notifications the user turned off, or on again, and
+     * whether mentions notify in one turned off (spec/chat.md,
+     * Notifications); User DO only.
+     * ```
+     *
+     * `.pochical.v1.ChatMute chat_mute = 18 [json_name = "chatMute"];`
+     */
+    public var chatMute: app.pochical.v1.ChatMute
+      @kotlin.jvm.JvmName("getChatMute")
+        get() = _builder.chatMute
+      @kotlin.jvm.JvmName("setChatMute")
+        set(value) {
+        _builder.chatMute = value
+      }
+    /**
+     * ```
+     * A chat whose notifications the user turned off, or on again, and
+     * whether mentions notify in one turned off (spec/chat.md,
+     * Notifications); User DO only.
+     * ```
+     *
+     * `.pochical.v1.ChatMute chat_mute = 18 [json_name = "chatMute"];`
+     */
+    public fun clearChatMute() {
+      _builder.clearChatMute()
+    }
+    /**
+     * ```
+     * A chat whose notifications the user turned off, or on again, and
+     * whether mentions notify in one turned off (spec/chat.md,
+     * Notifications); User DO only.
+     * ```
+     *
+     * `.pochical.v1.ChatMute chat_mute = 18 [json_name = "chatMute"];`
+     * @return Whether the chatMute field is set.
+     */
+    public fun hasChatMute(): kotlin.Boolean {
+      return _builder.hasChatMute()
+    }
+
+    /**
+     * `.pochical.v1.ChatNotifications chat_notifications = 19 [json_name = "chatNotifications"];`
+     */
+    public var chatNotifications: app.pochical.v1.ChatNotifications
+      @kotlin.jvm.JvmName("getChatNotifications")
+        get() = _builder.chatNotifications
+      @kotlin.jvm.JvmName("setChatNotifications")
+        set(value) {
+        _builder.chatNotifications = value
+      }
+    /**
+     * `.pochical.v1.ChatNotifications chat_notifications = 19 [json_name = "chatNotifications"];`
+     */
+    public fun clearChatNotifications() {
+      _builder.clearChatNotifications()
+    }
+    /**
+     * `.pochical.v1.ChatNotifications chat_notifications = 19 [json_name = "chatNotifications"];`
+     * @return Whether the chatNotifications field is set.
+     */
+    public fun hasChatNotifications(): kotlin.Boolean {
+      return _builder.hasChatNotifications()
+    }
     public val kindCase: app.pochical.v1.Change.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -598,4 +664,10 @@ public val app.pochical.v1.ChangeOrBuilder.unreadCountOrNull: app.pochical.v1.Un
 
 public val app.pochical.v1.ChangeOrBuilder.blockOrNull: app.pochical.v1.Block?
   get() = if (hasBlock()) getBlock() else null
+
+public val app.pochical.v1.ChangeOrBuilder.chatMuteOrNull: app.pochical.v1.ChatMute?
+  get() = if (hasChatMute()) getChatMute() else null
+
+public val app.pochical.v1.ChangeOrBuilder.chatNotificationsOrNull: app.pochical.v1.ChatNotifications?
+  get() = if (hasChatNotifications()) getChatNotifications() else null
 

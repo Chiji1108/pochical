@@ -30,4 +30,17 @@ public interface UserServiceClientInterface {
    *  Notifications); sent each launch, as iOS may change it.
    */
   public suspend fun registerPushToken(request: RegisterPushTokenRequest, headers: Headers = emptyMap()): ResponseMessage<RegisterPushTokenResponse>
+
+  /**
+   *  Turns a chat's notifications off or on again (spec/chat.md,
+   *  Notifications); the user's devices hear of it as a ChatMute change.
+   *  NOT_FOUND for a group the user is not in or a chat not theirs.
+   */
+  public suspend fun setChatMuted(request: SetChatMutedRequest, headers: Headers = emptyMap()): ResponseMessage<SetChatMutedResponse>
+
+  /**
+   *  Sets メンションはいつも通知 for the account; the devices hear of it as a
+   *  ChatNotifications change.
+   */
+  public suspend fun setChatNotifications(request: SetChatNotificationsRequest, headers: Headers = emptyMap()): ResponseMessage<SetChatNotificationsResponse>
 }

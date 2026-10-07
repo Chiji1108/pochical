@@ -46,6 +46,14 @@ enum Groups {
       try Blocks.take(block, in: db)
       return
     }
+    if case .chatMute(let mute) = change.kind {
+      try ChatNotifications.take(mute, in: db)
+      return
+    }
+    if case .chatNotifications(let settings) = change.kind {
+      try ChatNotifications.take(settings, in: db)
+      return
+    }
     guard case .membership(let membership) = change.kind else { return }
     // A group left goes, with what the device holds of it.
     if membership.left {
@@ -66,6 +74,7 @@ enum Groups {
     try GroupRow.delete().execute(db)
     try UnreadCountRow.delete().execute(db)
     try Blocks.reset(in: db)
+    try ChatNotifications.reset(in: db)
   }
 }
 

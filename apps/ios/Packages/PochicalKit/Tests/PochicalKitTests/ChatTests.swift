@@ -604,3 +604,38 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
   #expect(otherIn(thread, me: "c") == nil)
   #expect(otherIn(groupThread, me: "a") == nil)
 }
+
+@Test func aChatTurnedOffCountsItsMentionsWhileMentionsNotify() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var unread = Pochical_V1_Change()
+    unread.cursor = 1
+    unread.unreadCount.groupID = "g"
+    unread.unreadCount.threadID = groupThread
+    unread.unreadCount.count = 3
+    unread.unreadCount.mentions = 1
+    try Groups.take(unread, in: db)
+    #expect(try Chats.unreadByGroup(me: "me", db: db) == ["g": 3])
+
+    var mute = Pochical_V1_Change()
+    mute.cursor = 2
+    mute.chatMute.groupID = "g"
+    mute.chatMute.threadID = groupThread
+    mute.chatMute.muted = true
+    try Groups.take(mute, in: db)
+    #expect(try ChatNotifications.state(in: db).isMuted(groupThread, in: "g"))
+    #expect(try Chats.unreadByGroup(me: "me", db: db) == ["g": 1])
+    // A chat's own row still counts every unread line.
+    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", db: db).unread == 3)
+
+    var settings = Pochical_V1_Change()
+    settings.cursor = 3
+    settings.chatNotifications.mentionsWhenMuted = false
+    try Groups.take(settings, in: db)
+    #expect(try Chats.unreadByGroup(me: "me", db: db).isEmpty)
+
+    mute.chatMute.muted = false
+    try Groups.take(mute, in: db)
+    #expect(try Chats.unreadByGroup(me: "me", db: db) == ["g": 3])
+  }
+}

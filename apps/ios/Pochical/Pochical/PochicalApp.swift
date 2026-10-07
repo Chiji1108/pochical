@@ -60,6 +60,9 @@ struct PochicalApp: App {
         }
       case .active:
         NotificationCenter.default.post(name: Database.resumeNotification, object: nil)
+        // Notifications may have been allowed or refused in the system's
+        // settings meanwhile.
+        Task { await Notifications.shared.readPermission() }
         Task { await sync.start() }
       default:
         break

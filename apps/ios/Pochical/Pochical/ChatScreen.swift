@@ -122,6 +122,8 @@ struct ChatScreen: View {
   @Fetch private var dayMembers: [GroupMember] = []
   /// Whom the user has blocked: their lines fold away.
   @Fetch(BlocksRequest()) private var blocked: Set<String> = []
+  /// Whether this chat's notifications are off.
+  @Fetch(ChatNotificationsRequest()) private var notifications = ChatNotificationState()
   /// What is being reported.
   @State private var reporting: ReportTarget?
   /// Blocking or unblocking someone, asked first.
@@ -300,11 +302,44 @@ struct ChatScreen: View {
       }
     }
     .background(colors.backgroundBase)
-    .navigationTitle(otherID.flatMap { names[$0] } ?? group.name)
-    .navigationSubtitle(otherID == nil ? "\(chat.writers.count { !$0.left })人" : group.name)
+    .navigationTitle(title)
     .navigationBarTitleDisplayMode(.inline)
     .toolbarVisibility(.visible, for: .navigationBar)
     .toolbarVisibility(.hidden, for: .tabBar)
+    .toolbar {
+      // The title drawn here only to carry 通知オフ's bell after it, which
+      // the bar's own title does not draw.
+      ToolbarItem(placement: .principal) {
+        VStack(spacing: 0) {
+          HStack(spacing: 4) {
+            Text(title).font(.headline).lineLimit(1)
+            if isMuted {
+              Image(systemName: "bell.slash")
+                .font(.caption)
+                .foregroundStyle(colors.textTertiary)
+                .accessibilityLabel("通知オフ")
+            }
+          }
+          Text(subtitle)
+            .font(.caption)
+            .foregroundStyle(colors.textSecondary)
+            .lineLimit(1)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+      }
+      ToolbarItem(placement: .primaryAction) {
+        Menu("チャットのメニュー", systemImage: "ellipsis") {
+          let muted = isMuted
+          Button(
+            muted ? "通知をオンにする" : "通知をオフにする",
+            systemImage: muted ? "bell" : "bell.slash"
+          ) {
+            setMuted(!muted)
+          }
+        }
+      }
+    }
     .task {
       try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID))
       meID = await groupCalls.userID()
@@ -939,6 +974,32 @@ struct ChatScreen: View {
       do {
         try await groupCalls.setBlocked(question.userID, question.block)
         say(question.block ? "\(question.name)をブロックしました" : "\(question.name)のブロックを解除しました")
+      } catch {
+        say("できませんでした。通信できるところでもう一度どうぞ")
+      }
+    }
+  }
+
+  private var isMuted: Bool {
+    notifications.isMuted(threadID, in: group.id)
+  }
+
+  /// The other member's name, or the group's (/design's ChatTitle).
+  private var title: String {
+    otherID.flatMap { names[$0] } ?? group.name
+  }
+
+  /// How many are in the group's chat, or the group a one-to-one chat is in.
+  private var subtitle: String {
+    otherID == nil ? "\(chat.writers.count { !$0.left })人" : group.name
+  }
+
+  /// Turns this chat's notifications off or on, and says so.
+  private func setMuted(_ muted: Bool) {
+    Task {
+      do {
+        try await groupCalls.setChatMuted(threadID, in: group.id, muted: muted)
+        say(muted ? "通知をオフにしました" : "通知をオンにしました")
       } catch {
         say("できませんでした。通信できるところでもう一度どうぞ")
       }

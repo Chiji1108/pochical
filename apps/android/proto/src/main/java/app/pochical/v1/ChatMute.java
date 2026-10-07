@@ -7,19 +7,19 @@ package app.pochical.v1;
 
 /**
  * <pre>
- * How many lines of a group's chat the user has not read: others' lines
- * past their read mark. One value per chat, the group's latest.
+ * A chat whose notifications the user turned off, or back on: one value
+ * per chat, the latest.
  * </pre>
  *
- * Protobuf type {@code pochical.v1.UnreadCount}
+ * Protobuf type {@code pochical.v1.ChatMute}
  */
 @com.google.protobuf.Generated
-public  final class UnreadCount extends
+public  final class ChatMute extends
     com.google.protobuf.GeneratedMessageLite<
-        UnreadCount, UnreadCount.Builder> implements
-    // @@protoc_insertion_point(message_implements:pochical.v1.UnreadCount)
-    UnreadCountOrBuilder {
-  private UnreadCount() {
+        ChatMute, ChatMute.Builder> implements
+    // @@protoc_insertion_point(message_implements:pochical.v1.ChatMute)
+    ChatMuteOrBuilder {
+  private ChatMute() {
     groupId_ = "";
     threadId_ = "";
   }
@@ -117,117 +117,88 @@ public  final class UnreadCount extends
 
   }
 
-  public static final int COUNT_FIELD_NUMBER = 3;
-  private int count_;
+  public static final int MUTED_FIELD_NUMBER = 3;
+  private boolean muted_;
   /**
-   * <code>uint32 count = 3 [json_name = "count"];</code>
-   * @return The count.
+   * <pre>
+   * Off, or on again since.
+   * </pre>
+   *
+   * <code>bool muted = 3 [json_name = "muted"];</code>
+   * @return The muted.
    */
   @java.lang.Override
-  public int getCount() {
-    return count_;
+  public boolean getMuted() {
+    return muted_;
   }
   /**
-   * <code>uint32 count = 3 [json_name = "count"];</code>
-   * @param value The count to set.
+   * <pre>
+   * Off, or on again since.
+   * </pre>
+   *
+   * <code>bool muted = 3 [json_name = "muted"];</code>
+   * @param value The muted to set.
    */
-  private void setCount(int value) {
+  private void setMuted(boolean value) {
     
-    count_ = value;
-  }
-  /**
-   * <code>uint32 count = 3 [json_name = "count"];</code>
-   */
-  private void clearCount() {
-
-    count_ = 0;
-  }
-
-  public static final int MENTIONS_FIELD_NUMBER = 4;
-  private int mentions_;
-  /**
-   * <pre>
-   * How many of them mention the user: what counts, and notifies, in a
-   * chat turned off (spec/chat.md, Unread lines).
-   * </pre>
-   *
-   * <code>uint32 mentions = 4 [json_name = "mentions"];</code>
-   * @return The mentions.
-   */
-  @java.lang.Override
-  public int getMentions() {
-    return mentions_;
+    muted_ = value;
   }
   /**
    * <pre>
-   * How many of them mention the user: what counts, and notifies, in a
-   * chat turned off (spec/chat.md, Unread lines).
+   * Off, or on again since.
    * </pre>
    *
-   * <code>uint32 mentions = 4 [json_name = "mentions"];</code>
-   * @param value The mentions to set.
+   * <code>bool muted = 3 [json_name = "muted"];</code>
    */
-  private void setMentions(int value) {
-    
-    mentions_ = value;
-  }
-  /**
-   * <pre>
-   * How many of them mention the user: what counts, and notifies, in a
-   * chat turned off (spec/chat.md, Unread lines).
-   * </pre>
-   *
-   * <code>uint32 mentions = 4 [json_name = "mentions"];</code>
-   */
-  private void clearMentions() {
+  private void clearMuted() {
 
-    mentions_ = 0;
+    muted_ = false;
   }
 
-  public static app.pochical.v1.UnreadCount parseFrom(
+  public static app.pochical.v1.ChatMute parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static app.pochical.v1.UnreadCount parseFrom(
+  public static app.pochical.v1.ChatMute parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static app.pochical.v1.UnreadCount parseFrom(
+  public static app.pochical.v1.ChatMute parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static app.pochical.v1.UnreadCount parseFrom(
+  public static app.pochical.v1.ChatMute parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static app.pochical.v1.UnreadCount parseFrom(byte[] data)
+  public static app.pochical.v1.ChatMute parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static app.pochical.v1.UnreadCount parseFrom(
+  public static app.pochical.v1.ChatMute parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static app.pochical.v1.UnreadCount parseFrom(java.io.InputStream input)
+  public static app.pochical.v1.ChatMute parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static app.pochical.v1.UnreadCount parseFrom(
+  public static app.pochical.v1.ChatMute parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -235,24 +206,24 @@ public  final class UnreadCount extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static app.pochical.v1.UnreadCount parseDelimitedFrom(java.io.InputStream input)
+  public static app.pochical.v1.ChatMute parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static app.pochical.v1.UnreadCount parseDelimitedFrom(
+  public static app.pochical.v1.ChatMute parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static app.pochical.v1.UnreadCount parseFrom(
+  public static app.pochical.v1.ChatMute parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static app.pochical.v1.UnreadCount parseFrom(
+  public static app.pochical.v1.ChatMute parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -263,24 +234,24 @@ public  final class UnreadCount extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(app.pochical.v1.UnreadCount prototype) {
+  public static Builder newBuilder(app.pochical.v1.ChatMute prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
    * <pre>
-   * How many lines of a group's chat the user has not read: others' lines
-   * past their read mark. One value per chat, the group's latest.
+   * A chat whose notifications the user turned off, or back on: one value
+   * per chat, the latest.
    * </pre>
    *
-   * Protobuf type {@code pochical.v1.UnreadCount}
+   * Protobuf type {@code pochical.v1.ChatMute}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        app.pochical.v1.UnreadCount, Builder> implements
-      // @@protoc_insertion_point(builder_implements:pochical.v1.UnreadCount)
-      app.pochical.v1.UnreadCountOrBuilder {
-    // Construct using app.pochical.v1.UnreadCount.newBuilder()
+        app.pochical.v1.ChatMute, Builder> implements
+      // @@protoc_insertion_point(builder_implements:pochical.v1.ChatMute)
+      app.pochical.v1.ChatMuteOrBuilder {
+    // Construct using app.pochical.v1.ChatMute.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
@@ -385,77 +356,46 @@ public  final class UnreadCount extends
     }
 
     /**
-     * <code>uint32 count = 3 [json_name = "count"];</code>
-     * @return The count.
+     * <pre>
+     * Off, or on again since.
+     * </pre>
+     *
+     * <code>bool muted = 3 [json_name = "muted"];</code>
+     * @return The muted.
      */
     @java.lang.Override
-    public int getCount() {
-      return instance.getCount();
+    public boolean getMuted() {
+      return instance.getMuted();
     }
     /**
-     * <code>uint32 count = 3 [json_name = "count"];</code>
-     * @param value The count to set.
+     * <pre>
+     * Off, or on again since.
+     * </pre>
+     *
+     * <code>bool muted = 3 [json_name = "muted"];</code>
+     * @param value The muted to set.
      * @return This builder for chaining.
      */
-    public Builder setCount(int value) {
+    public Builder setMuted(boolean value) {
       copyOnWrite();
-      instance.setCount(value);
+      instance.setMuted(value);
       return this;
     }
     /**
-     * <code>uint32 count = 3 [json_name = "count"];</code>
+     * <pre>
+     * Off, or on again since.
+     * </pre>
+     *
+     * <code>bool muted = 3 [json_name = "muted"];</code>
      * @return This builder for chaining.
      */
-    public Builder clearCount() {
+    public Builder clearMuted() {
       copyOnWrite();
-      instance.clearCount();
+      instance.clearMuted();
       return this;
     }
 
-    /**
-     * <pre>
-     * How many of them mention the user: what counts, and notifies, in a
-     * chat turned off (spec/chat.md, Unread lines).
-     * </pre>
-     *
-     * <code>uint32 mentions = 4 [json_name = "mentions"];</code>
-     * @return The mentions.
-     */
-    @java.lang.Override
-    public int getMentions() {
-      return instance.getMentions();
-    }
-    /**
-     * <pre>
-     * How many of them mention the user: what counts, and notifies, in a
-     * chat turned off (spec/chat.md, Unread lines).
-     * </pre>
-     *
-     * <code>uint32 mentions = 4 [json_name = "mentions"];</code>
-     * @param value The mentions to set.
-     * @return This builder for chaining.
-     */
-    public Builder setMentions(int value) {
-      copyOnWrite();
-      instance.setMentions(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * How many of them mention the user: what counts, and notifies, in a
-     * chat turned off (spec/chat.md, Unread lines).
-     * </pre>
-     *
-     * <code>uint32 mentions = 4 [json_name = "mentions"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearMentions() {
-      copyOnWrite();
-      instance.clearMentions();
-      return this;
-    }
-
-    // @@protoc_insertion_point(builder_scope:pochical.v1.UnreadCount)
+    // @@protoc_insertion_point(builder_scope:pochical.v1.ChatMute)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -464,7 +404,7 @@ public  final class UnreadCount extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new app.pochical.v1.UnreadCount();
+        return new app.pochical.v1.ChatMute();
       }
       case NEW_BUILDER: {
         return new Builder();
@@ -473,25 +413,24 @@ public  final class UnreadCount extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "groupId_",
             "threadId_",
-            "count_",
-            "mentions_",
+            "muted_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u000b\u0004\u000b";
+              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<app.pochical.v1.UnreadCount> parser = PARSER;
+        com.google.protobuf.Parser<app.pochical.v1.ChatMute> parser = PARSER;
         if (parser == null) {
-          synchronized (app.pochical.v1.UnreadCount.class) {
+          synchronized (app.pochical.v1.ChatMute.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<app.pochical.v1.UnreadCount>(
+                  new DefaultInstanceBasedParser<app.pochical.v1.ChatMute>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -511,24 +450,24 @@ public  final class UnreadCount extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:pochical.v1.UnreadCount)
-  private static final app.pochical.v1.UnreadCount DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:pochical.v1.ChatMute)
+  private static final app.pochical.v1.ChatMute DEFAULT_INSTANCE;
   static {
-    UnreadCount defaultInstance = new UnreadCount();
+    ChatMute defaultInstance = new ChatMute();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      UnreadCount.class, defaultInstance);
+      ChatMute.class, defaultInstance);
   }
 
-  public static app.pochical.v1.UnreadCount getDefaultInstance() {
+  public static app.pochical.v1.ChatMute getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<UnreadCount> PARSER;
+  private static volatile com.google.protobuf.Parser<ChatMute> PARSER;
 
-  public static com.google.protobuf.Parser<UnreadCount> parser() {
+  public static com.google.protobuf.Parser<ChatMute> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

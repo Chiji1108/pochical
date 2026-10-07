@@ -22,6 +22,7 @@ import {
   forReader,
   GROUP_THREAD,
   hearsFrom,
+  mentionOf,
   mayRead,
   moveReadMark,
   otherIn,
@@ -481,8 +482,9 @@ export class GroupDO extends DurableObject<Env> {
     // Whose unread lines changed, by chat: everyone else's with a new
     // line, the reader's with a read.
     const counted = new Map<string, Set<string>>();
-    // Each reader's notification of a new line, the latest of a chat's.
-    const alerts = new Map<string, Alert>();
+    // Each reader's notification of a new line, the latest of a chat's,
+    // and whether it mentions them.
+    const alerts = new Map<string, { alert: Alert; mentioned: boolean }>();
     const recount = (threadId: string, userIds: string[]): void => {
       const users = counted.get(threadId) ?? new Set<string>();
       for (const id of userIds) {
@@ -518,10 +520,14 @@ export class GroupDO extends DurableObject<Env> {
             const readers = other === undefined ? others : [other];
             recount(threadId, readers);
             if (taken.change.kind.case === "chatLine") {
-              const alert = this.alertOf(taken.change.kind.value);
+              const line = taken.change.kind.value;
+              const alert = this.alertOf(line);
               for (const reader of readers) {
                 if (hearsFrom(this.db, reader, userId)) {
-                  alerts.set(`${threadId}\n${reader}`, alert);
+                  alerts.set(`${threadId}\n${reader}`, {
+                    alert,
+                    mentioned: line.text.includes(mentionOf(reader)),
+                  });
                 }
               }
             }
@@ -566,7 +572,7 @@ export class GroupDO extends DurableObject<Env> {
    */
   private tellUnread(
     counted: Map<string, Set<string>>,
-    alerts = new Map<string, Alert>()
+    alerts = new Map<string, { alert: Alert; mentioned: boolean }>()
   ): void {
     const groupId = this.ctx.id.name;
     if (groupId === undefined || counted.size === 0) {

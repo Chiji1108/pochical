@@ -166,6 +166,8 @@ export const unreadCounts = sqliteTable(
     // of order, and an older one changes nothing.
     groupCursor: integer("group_cursor").notNull(),
     groupId: text("group_id").notNull(),
+    // How many of them mention the user: what counts in a chat turned off.
+    mentions: integer().notNull().default(0),
     threadId: text("thread_id").notNull(),
   },
   (table) => [
@@ -195,3 +197,38 @@ export const pushTokens = sqliteTable("push_tokens", {
   token: text().primaryKey(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
+
+// Chats whose notifications the user turned off (spec/chat.md,
+// Notifications), one row a chat, the latest; turning one on again keeps
+// the row, so devices catching up hear of it. Cursors are shared with
+// day_fields.
+export const chatMutes = sqliteTable(
+  "chat_mutes",
+  {
+    cursor: integer().notNull(),
+    groupId: text("group_id").notNull(),
+    muted: integer({ mode: "boolean" }).notNull(),
+    threadId: text("thread_id").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.groupId, table.threadId] }),
+    uniqueIndex("chat_mutes_cursor").on(table.cursor),
+  ]
+);
+
+// The user's chat notification settings for the account, one row once
+// they set them; before, mentions notify in chats turned off.
+export const chatSettings = sqliteTable(
+  "chat_settings",
+  {
+    cursor: integer().notNull(),
+    id: integer().primaryKey(),
+    mentionsWhenMuted: integer("mentions_when_muted", {
+      mode: "boolean",
+    }).notNull(),
+  },
+  (table) => [
+    check("chat_settings_one_row", sql`${table.id} = 1`),
+    uniqueIndex("chat_settings_cursor").on(table.cursor),
+  ]
+);
