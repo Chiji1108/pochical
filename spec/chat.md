@@ -140,6 +140,7 @@ A group chat can put days to the vote, as LINE's 日程調整 does, for the step
 - In the chat a photo has no bubble: rounded at `lg` with a hairline edge, the size it was sent at within 220×260 points, cropped at its ends when wider than 2:1 or taller than 1:2. While it uploads it is dimmed with 送信中. A tap opens it large on black, whole, with × and 保存, and a pull down closes it. Its menu has 保存 and ピン留め, and 送信取消 for its sender; no コピー or 編集. Saving says 写真を保存しました.
 - In a line of words (quotes, the pin bar) it reads 📷 写真; the chat list says 写真を送りました (自分：写真を送りました for one's own).
 - Photos are kept by the server under their group, readable by its members alone through the server, never by a public address. Taking a photo's line back deletes the photo for everyone.
+- A photo that cannot be uploaded (refused, gone from the phone, or failing five tries a few seconds apart) leaves its line waiting, marked: a red ! beside it and 送れませんでした under it, and the lines after it go on. A tap on the ! opens 送れなかった写真: もう一度送る sends it again after the rest, 削除 takes it away with the photo kept for it.
 
 ## Long messages and shared days
 
