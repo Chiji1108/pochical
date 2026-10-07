@@ -231,6 +231,10 @@ private struct RepeatEditor: View {
   @State private var day: Day?
   /// Set by hand; until then it follows holidaysOffByDefault.
   @State private var holidaysOff: Bool?
+  /// A day of the sequence chosen, to put another pattern in its place or
+  /// take it out; with none, keys add to the end.
+  @State private var selected: Int?
+  @State private var keyPage = 0
 
   var body: some View {
     let byID = Dictionary(values.patterns.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
@@ -255,13 +259,15 @@ private struct RepeatEditor: View {
       Section {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 6) {
           ForEach(Array(steps.enumerated()), id: \.offset) { index, id in
+            let date = picked.adding(days: index)
+            let isSelected = selected == index
             Button {
-              var next = steps
-              next.remove(at: index)
-              sequence = next
+              selected = isSelected ? nil : index
             } label: {
               VStack(spacing: 2) {
-                Text("\(index + 1)").font(.caption2).foregroundStyle(colors.textTertiary)
+                Text("\(date.month)/\(date.day)\(WeekdayRow.names[date.weekday])")
+                  .font(.system(size: 9))
+                  .foregroundStyle(weekdayTone(date))
                 if let pattern = byID[id] {
                   ShiftMark(pattern: pattern, size: 18)
                 }
@@ -269,32 +275,48 @@ private struct RepeatEditor: View {
               }
               .frame(maxWidth: .infinity, minHeight: 58)
               .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.sm))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(index + 1)日目、\(byID[id]?.name ?? "削除したパターン")。タップで外す")
-          }
-        }
-        .padding(.vertical, 4)
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 6)], alignment: .leading, spacing: 6) {
-          ForEach(values.patterns) { pattern in
-            Button {
-              sequence = steps + [pattern.id]
-            } label: {
-              HStack(spacing: 4) {
-                Image(systemName: "plus").font(.caption2)
-                ShiftMark(pattern: pattern, size: 13)
-                Text(pattern.name).font(.caption).lineLimit(1)
+              .overlay {
+                RoundedRectangle(cornerRadius: Radius.sm)
+                  .strokeBorder(isSelected ? colors.accentDefault : colors.borderDefault, lineWidth: isSelected ? 2 : 1)
               }
-              .padding(.horizontal, 8)
-              .padding(.vertical, 6)
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .overlay(Capsule().strokeBorder(colors.borderDefault, style: StrokeStyle(lineWidth: 1, dash: [3])))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("\(pattern.name)を並びに追加")
+            .accessibilityLabel("\(index + 1)日目、\(dayName(date))、\(byID[id]?.name ?? "削除したパターン")")
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
+            .accessibilityHint(isSelected ? "" : "選ぶと、置き換えたり消したりできます")
           }
         }
         .padding(.vertical, 4)
+        PatternKeys(patterns: values.patterns, page: $keyPage) { pattern in
+          var next = steps
+          if let selected, selected < next.count {
+            next[selected] = pattern.id
+            self.selected = nil
+          } else {
+            next.append(pattern.id)
+          }
+          sequence = next
+        }
+        .padding(.vertical, 4)
+        HStack {
+          let pages = (values.patterns.count + patternsPerPage - 1) / patternsPerPage
+          if pages > 1 {
+            PageDots(count: pages, current: $keyPage, label: "シフトのページ")
+          }
+          Spacer()
+          Button(selected == nil ? "1つ消す" : "選んだ日を消す", systemImage: "delete.left") {
+            var next = steps
+            if let selected, selected < next.count {
+              next.remove(at: selected)
+            } else if !next.isEmpty {
+              next.removeLast()
+            }
+            selected = nil
+            sequence = next
+          }
+          .font(.subheadline)
+          .disabled(steps.isEmpty)
+        }
       } header: {
         HStack {
           Text("並び")
@@ -302,7 +324,11 @@ private struct RepeatEditor: View {
           Text(steps.isEmpty ? "下から順番に追加してください" : "\(steps.count)日ごとに繰り返し")
         }
       } footer: {
-        Text(mode == .fix ? "並びの1つ目のシフトが入る日を選びます。" : "\(mode.dayLabel)が、並びの1日目になります。")
+        if selected != nil {
+          Text("下のパターンを押すと、選んだ日と置き換わります。")
+        } else {
+          Text(mode == .fix ? "並びの1つ目のシフトが入る日を選びます。" : "\(mode.dayLabel)が、並びの1日目になります。")
+        }
       }
       .settingsRows()
 
@@ -349,6 +375,15 @@ private struct RepeatEditor: View {
   private var initialSequence: [PatternID] {
     if mode == .fix { return values.orders.current?.sequence ?? [] }
     return values.orders.last { !$0.sequence.isEmpty }?.sequence ?? []
+  }
+
+  /// A date's color by its weekday: Sundays and holidays red, Saturdays
+  /// blue.
+  private func weekdayTone(_ day: Day) -> Color {
+    if day.weekday == 0 || Holidays.name(on: day.key, in: "JP") != nil {
+      return colors.calendarHoliday
+    }
+    return day.weekday == 6 ? colors.calendarSaturday : colors.textTertiary
   }
 
   /// The device's region, whose holidays a new order takes.

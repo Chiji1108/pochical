@@ -1,6 +1,7 @@
 import { PATTERNS_PER_PAGE } from "@pochical/design/limits";
 import { ArrowRight, Pencil, Trash2 } from "lucide-react";
 import { useMotionValue } from "motion/react";
+import type { MotionValue } from "motion/react";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
@@ -175,6 +176,87 @@ export function StartArea({
   );
 }
 
+// A key for each pattern, as ポチポチ入力's tray has them: up to
+// PATTERNS_PER_PAGE on a page, fewer in fewer columns, more paged and
+// swiped. The tray and 働き方's order are entered with them alike; the
+// page is kept by whoever shows its dots.
+export function PatternKeys({
+  patternKeys,
+  page,
+  onPage,
+  progress,
+  onPick,
+}: {
+  patternKeys: Shift[];
+  page: number;
+  onPage: (page: number) => void;
+  progress: MotionValue<number>;
+  onPick: (shift: Shift) => void;
+}) {
+  const book = usePatterns();
+  const pages = patternPagesOf(patternKeys);
+  const shown = Math.min(page, pages.length - 1);
+  const paged = pages.length > 1;
+  const buttons = (keys: Shift[]) =>
+    keys.map((key) => (
+      <button
+        className={shiftInput.pattern({ rows: keys.length > 4 || paged })}
+        key={key}
+        onClick={() => {
+          onPick(key);
+        }}
+        type="button"
+      >
+        <span className={shiftInput.mark}>
+          <ShiftMark shift={key} size={26} />
+        </span>
+        <span className={shiftInput.name}>{book[key]?.name}</span>
+      </button>
+    ));
+  return paged ? (
+    <fieldset aria-label="入力するシフト" className={shiftInput.patternPages}>
+      <Pager
+        ends={{ back: shown > 0, forward: shown < pages.length - 1 }}
+        gap={PATTERN_PAGE_GAP}
+        onStep={(direction) => {
+          onPage(shown + direction);
+        }}
+        page={String(shown)}
+        progress={progress}
+        renderPage={(offset) => {
+          const keys = pages[shown + offset];
+          return (
+            keys && (
+              <div className={shiftInput.patterns({ columns: "paged" })}>
+                {buttons(keys)}
+              </div>
+            )
+          );
+        }}
+      />
+    </fieldset>
+  ) : (
+    <fieldset
+      aria-label="入力するシフト"
+      className={shiftInput.patterns({ columns: columnsFor(patternKeys) })}
+    >
+      {buttons(patternKeys)}
+    </fieldset>
+  );
+}
+
+// The patterns a page at a time, PATTERNS_PER_PAGE to one.
+export function patternPagesOf(patternKeys: Shift[]) {
+  return Array.from(
+    { length: Math.ceil(patternKeys.length / PATTERNS_PER_PAGE) },
+    (_, index) =>
+      patternKeys.slice(
+        index * PATTERNS_PER_PAGE,
+        (index + 1) * PATTERNS_PER_PAGE
+      )
+  );
+}
+
 export function ShiftInputControls({
   datePicker,
   patternKeys,
@@ -190,75 +272,22 @@ export function ShiftInputControls({
   onEnter: (shift: Shift | undefined) => void;
   onSkip: () => void;
 }) {
-  const book = usePatterns();
-  const pages = Array.from(
-    { length: Math.ceil(patternKeys.length / PATTERNS_PER_PAGE) },
-    (_, index) =>
-      patternKeys.slice(
-        index * PATTERNS_PER_PAGE,
-        (index + 1) * PATTERNS_PER_PAGE
-      )
-  );
+  const pages = patternPagesOf(patternKeys);
   // The page stays where the person swiped it: moving on to the next day
   // does not turn it, even to that day's shift.
   const [page, setPage] = useState(0);
   const progress = useMotionValue(0);
   const shown = Math.min(page, pages.length - 1);
-  const paged = pages.length > 1;
-  const buttons = (keys: Shift[]) =>
-    keys.map((key) => (
-      <button
-        className={shiftInput.pattern({ rows: keys.length > 4 || paged })}
-        key={key}
-        onClick={() => {
-          onEnter(key);
-        }}
-        type="button"
-      >
-        <span className={shiftInput.mark}>
-          <ShiftMark shift={key} size={26} />
-        </span>
-        <span className={shiftInput.name}>{book[key]?.name}</span>
-      </button>
-    ));
   return (
     <>
       {datePicker}
-      {paged ? (
-        <fieldset
-          aria-label="入力するシフト"
-          className={shiftInput.patternPages}
-        >
-          <Pager
-            ends={{ back: shown > 0, forward: shown < pages.length - 1 }}
-            gap={PATTERN_PAGE_GAP}
-            onStep={(direction) => {
-              setPage(shown + direction);
-            }}
-            page={String(shown)}
-            progress={progress}
-            renderPage={(offset) => {
-              const keys = pages[shown + offset];
-              return (
-                keys && (
-                  <div className={shiftInput.patterns({ columns: "paged" })}>
-                    {buttons(keys)}
-                  </div>
-                )
-              );
-            }}
-          />
-        </fieldset>
-      ) : (
-        <fieldset
-          aria-label="入力するシフト"
-          className={shiftInput.patterns({
-            columns: columnsFor(patternKeys),
-          })}
-        >
-          {buttons(patternKeys)}
-        </fieldset>
-      )}
+      <PatternKeys
+        onPage={setPage}
+        onPick={onEnter}
+        page={page}
+        patternKeys={patternKeys}
+        progress={progress}
+      />
       <div className={shiftInput.actions}>
         <button
           className={shiftInput.action}
@@ -271,7 +300,7 @@ export function ShiftInputControls({
           <Trash2 aria-hidden="true" size={14} />
           消す
         </button>
-        {paged && (
+        {pages.length > 1 && (
           <PageDots
             count={pages.length}
             current={shown}

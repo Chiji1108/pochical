@@ -1,47 +1,54 @@
-import { Plus } from "lucide-react";
+import { Delete } from "lucide-react";
+import { useMotionValue } from "motion/react";
+import { useState } from "react";
 import { css, cva } from "styled-system/css";
 
 import { dateKey } from "../lib/design-days";
 import { usePatterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
+import { PageDots } from "./design-choices";
+import { PatternKeys, patternPagesOf, shiftInput } from "./design-shift-input";
 import { fieldHint, fieldLabel } from "./design-ui";
-import { useWeek } from "./design-week";
+import { useWeek, weekdayNameOf } from "./design-week";
 import { ShiftMark } from "./shift-mark";
 
-// A repeating order being put together: the days so far as tiles, each
-// taken out by a tap, over the patterns to add, dashed like the
-// platforms' add buttons.
+// A repeating order being put together: the days so far as tiles, one
+// chosen ringed in the accent, over ポチポチ入力's keys.
 const repeatEditor = {
-  add: css({
+  actions: css({
     alignItems: "center",
-    bg: "transparent",
-    border: "1px dashed token(colors.border.strong)",
-    borderRadius: "full",
-    color: "accent.default",
-    display: "inline-flex",
-    gap: "4px",
-    minHeight: "32px",
-    padding: "0 12px",
-    textStyle: "caption",
-  }),
-  day: css({
-    "& > small": { color: "text.quaternary", fontSize: "8px" },
-    "& > span": { fontFamily: "emoji", fontSize: "18px", lineHeight: 1.2 },
-    alignItems: "center",
-    bg: "background.card",
-    border: "1px solid token(colors.border.default)",
-    borderRadius: "lg",
-    color: "text.secondary",
     display: "flex",
-    flexDirection: "column",
-    fontSize: "9px",
-    gap: "1px",
-    height: "58px",
-    justifyContent: "center",
-    position: "relative",
-    width: "38px",
+    gap: "8px",
+    justifyContent: "flex-end",
+    marginTop: "4px",
   }),
-  palette: css({ display: "flex", flexWrap: "wrap", gap: "8px" }),
+  day: cva({
+    base: {
+      "& > small": { color: "text.quaternary", fontSize: "8px" },
+      "& > span": { fontFamily: "emoji", fontSize: "18px", lineHeight: 1.2 },
+      alignItems: "center",
+      bg: "background.card",
+      border: "1px solid token(colors.border.default)",
+      borderRadius: "lg",
+      color: "text.secondary",
+      display: "flex",
+      flexDirection: "column",
+      fontSize: "9px",
+      gap: "1px",
+      height: "58px",
+      justifyContent: "center",
+      position: "relative",
+      width: "38px",
+    },
+    variants: {
+      chosen: {
+        true: {
+          borderColor: "accent.default",
+          boxShadow: "0 0 0 1px token(colors.accent.default)",
+        },
+      },
+    },
+  }),
   sequence: css({
     bg: "fill.quaternary",
     borderRadius: "2xl",
@@ -116,16 +123,31 @@ export function ShiftPreview({
   );
 }
 
+// The order typed as ポチポチ入力 enters days: the patterns' keys add to
+// its end, and ⌫ takes the last day back. A day pressed is chosen: a key
+// then takes its place, and ⌫ takes it out. With the day it starts on,
+// each day says its date, so where the weekend falls shows.
 export function RepeatSequenceEditor({
   sequence,
   patternKeys,
+  start,
   onChange,
 }: {
   sequence: Shift[];
   patternKeys: Shift[];
+  // The first day's date, when it is known.
+  start?: Date;
   onChange: (sequence: Shift[]) => void;
 }) {
   const book = usePatterns();
+  const weekTools = useWeek();
+  const [chosen, setChosen] = useState<number>();
+  const [page, setPage] = useState(0);
+  const progress = useMotionValue(0);
+  const pages = patternPagesOf(patternKeys).length;
+  const dateOf = (index: number) =>
+    start &&
+    new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);
   return (
     <div>
       <p className={fieldLabel()}>
@@ -137,40 +159,85 @@ export function RepeatSequenceEditor({
         </span>
       </p>
       <ol className={repeatEditor.sequence}>
-        {sequence.map((shift, index) => (
-          // oxlint-disable-next-line react/no-array-index-key -- the same shift repeats, so its position is its identity.
-          <li key={index}>
-            <button
-              aria-label={`${index + 1}日目、${book[shift]?.name}。タップで外す`}
-              className={repeatEditor.day}
-              onClick={() => {
-                onChange(sequence.filter((_, position) => position !== index));
-              }}
-              type="button"
-            >
-              <small>{index + 1}</small>
-              <ShiftMark shift={shift} size={18} />
-              {book[shift]?.name}
-            </button>
-          </li>
-        ))}
+        {sequence.map((shift, index) => {
+          const date = dateOf(index);
+          return (
+            // oxlint-disable-next-line react/no-array-index-key -- the same shift repeats, so its position is its identity.
+            <li key={index}>
+              <button
+                aria-label={`${index + 1}日目、${book[shift]?.name}`}
+                aria-pressed={chosen === index}
+                className={repeatEditor.day({ chosen: chosen === index })}
+                onClick={() => {
+                  setChosen(chosen === index ? undefined : index);
+                }}
+                type="button"
+              >
+                <small
+                  className={
+                    date &&
+                    shiftPreview.number({ tone: weekTools.dateTone(date) })
+                  }
+                >
+                  {date
+                    ? `${date.getMonth() + 1}/${date.getDate()}${weekdayNameOf(date.getDay())}`
+                    : index + 1}
+                </small>
+                <ShiftMark shift={shift} size={18} />
+                {book[shift]?.name}
+              </button>
+            </li>
+          );
+        })}
       </ol>
-      <div className={repeatEditor.palette}>
-        {patternKeys.map((key) => (
-          <button
-            className={repeatEditor.add}
-            key={key}
-            onClick={() => {
-              onChange([...sequence, key]);
-            }}
-            type="button"
-          >
-            <Plus aria-hidden="true" size={11} />
-            <ShiftMark shift={key} size={13} />
-            {book[key]?.name}
-          </button>
-        ))}
+      <PatternKeys
+        onPage={setPage}
+        onPick={(key) => {
+          if (chosen !== undefined && chosen < sequence.length) {
+            onChange(
+              sequence.map((shift, index) => (index === chosen ? key : shift))
+            );
+            setChosen(undefined);
+          } else {
+            onChange([...sequence, key]);
+          }
+        }}
+        page={page}
+        patternKeys={patternKeys}
+        progress={progress}
+      />
+      <div className={repeatEditor.actions}>
+        {pages > 1 && (
+          <PageDots
+            count={pages}
+            current={Math.min(page, pages - 1)}
+            label="シフトのページ"
+            onPick={setPage}
+            progress={progress}
+          />
+        )}
+        <button
+          className={shiftInput.action}
+          disabled={sequence.length === 0}
+          onClick={() => {
+            onChange(
+              chosen === undefined
+                ? sequence.slice(0, -1)
+                : sequence.filter((_, index) => index !== chosen)
+            );
+            setChosen(undefined);
+          }}
+          type="button"
+        >
+          <Delete aria-hidden="true" size={14} />
+          {chosen === undefined ? "1つ消す" : "選んだ日を消す"}
+        </button>
       </div>
+      {chosen !== undefined && (
+        <p className={fieldHint}>
+          下のパターンを押すと、選んだ日と置き換わります。
+        </p>
+      )}
     </div>
   );
 }
