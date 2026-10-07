@@ -11,6 +11,7 @@ struct SettingsScreen: View {
   @FetchAll private var patterns: [PatternRow]
   @FetchAll private var patternOrder: [PatternOrderRow]
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
+  @FetchAll private var coworkerRows: [CoworkerRow]
   @Fetch(ChatNotificationsRequest()) private var notifications = ChatNotificationState()
   /// The icon in use, read again as the page comes back from changing it.
   @State private var appIcon = AppIconChoice.current
@@ -31,6 +32,11 @@ struct SettingsScreen: View {
               }
             }
             .accessibilityValue("\(ownPatterns.count)つ")
+          }
+          NavigationLink {
+            CoworkersPage()
+          } label: {
+            LabeledContent("一緒に働く人", value: "\(coworkerRows.count)人")
           }
         }
         .settingsRows()
