@@ -138,7 +138,7 @@ struct JobChangePage: View {
     let first = template.sequence?.first.flatMap { readyByID[$0]?.name }
     return RepeatCalendar(
       sequence: $sequence, anchor: $anchor, cover: .from(start),
-      patterns: template.patternIDs.compactMap { readyByID[$0] }, holidayCountry: country
+      patterns: template.patternIDs.compactMap { readyByID[$0] }, holidayCountry: HolidayCountry.current
     ) {
       EmptyView()
     }
@@ -159,7 +159,7 @@ struct JobChangePage: View {
     }
     .toolbarVisibility(.hidden, for: .tabBar)
     // The days from the new job's first change, so 完了 asks first.
-    .alert("\(start.month)/\(start.day)から新しい仕事にしますか？", isPresented: $confirming) {
+    .alert("\(start.slashText)から新しい仕事にしますか？", isPresented: $confirming) {
       Button("キャンセル", role: .cancel) {}
       Button("切り替える") { finish(template, sequence: sequence, anchor: anchor) }
     } message: {
@@ -239,14 +239,11 @@ struct JobChangePage: View {
     try? database.write {
       try OwnValues.changeJob(
         to: incoming, sequence: sequence, start: start, anchor: anchor,
-        holidayCountry: country, now: now, in: $0)
+        holidayCountry: HolidayCountry.current, now: now, in: $0)
     }
     dismiss()
   }
 
-  private var country: String {
-    Locale.current.region?.identifier ?? "JP"
-  }
 
   private func date(of day: Day) -> Date {
     Calendar.current.date(from: DateComponents(year: day.year, month: day.month, day: day.day))

@@ -11,7 +11,7 @@ import SwiftUI
 /// as /design's daysSummary: 📅 10月10日(土)ほか.
 func daysSummary(_ days: [Day]) -> String {
   guard let first = days.first else { return "" }
-  return "📅 \(dayName(first))\(days.count > 1 ? "ほか" : "")"
+  return "📅 \(first.fullText)\(days.count > 1 ? "ほか" : "")"
 }
 
 /// A line in a line of words: its days as daysSummary, else its words
@@ -28,7 +28,7 @@ func lineWords(
 /// The date's color by the week's: Sundays and holidays in red, Saturdays
 /// in blue, as the person has them.
 private func dateTone(_ day: Day, week: DeviceSettings.Week, colors: ThemeColors) -> Color {
-  let holiday = week.holiday && Holidays.name(on: day.key, in: "JP") != nil
+  let holiday = week.holiday && day.holidayName != nil
   return switch day.weekday {
   case 0 where week.sunday: colors.calendarHoliday
   case 6 where week.saturday: colors.calendarSaturday
@@ -70,7 +70,7 @@ struct DayCard: View {
   private func oneDay(_ day: Day, shifts: Shifts) -> some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack(spacing: 8) {
-        Text(dayName(day))
+        Text(day.fullText)
           .font(.caption.weight(.semibold))
           .foregroundStyle(colors.textPrimary)
         if shifts.together(day) {
@@ -128,8 +128,8 @@ struct DayCard: View {
       ForEach(shown, id: \.self) { day in
         HStack(spacing: 4) {
           HStack(alignment: .firstTextBaseline, spacing: 2) {
-            Text("\(day.month)/\(day.day)").font(.system(size: 11, weight: .semibold))
-            Text(WeekdayRow.names[day.weekday]).font(.system(size: 9))
+            Text(day.slashText).font(.system(size: 11, weight: .semibold))
+            Text(day.weekdayName).font(.system(size: 9))
           }
           .foregroundStyle(dateTone(day, week: settings.device.week, colors: colors))
           .lineLimit(1)
@@ -163,16 +163,16 @@ struct DayCard: View {
       HStack(spacing: 4) {
         // As in the shift table, the month once in the corner and the
         // days by number, with a new month's where it turns.
-        Text(shown.first.map { "\($0.month)月" } ?? "")
+        Text(shown.first?.monthText ?? "")
           .font(.system(size: 9))
           .foregroundStyle(colors.textTertiary)
           .frame(width: 26)
         ForEach(Array(shown.enumerated()), id: \.element) { index, day in
           let turns = index > 0 && day.month != shown[index - 1].month
           VStack(spacing: 0) {
-            Text(turns ? "\(day.month)/\(day.day)" : "\(day.day)")
+            Text(turns ? day.slashText : "\(day.day)")
               .font(.system(size: 11, weight: .semibold))
-            Text(WeekdayRow.names[day.weekday]).font(.system(size: 9))
+            Text(day.weekdayName).font(.system(size: 9))
           }
           .foregroundStyle(dateTone(day, week: settings.device.week, colors: colors))
           .padding(.vertical, 2)
@@ -192,7 +192,7 @@ struct DayCard: View {
             cell(shifts.pattern(of: member, on: day))
               .frame(width: 28)
               .accessibilityLabel(
-                "\(dayName(day))：\(shifts.pattern(of: member, on: day)?.name ?? "未入力")")
+                "\(day.fullText)：\(shifts.pattern(of: member, on: day)?.name ?? "未入力")")
           }
         }
         .frame(minHeight: 28)
@@ -362,8 +362,8 @@ struct ShareDaysSheet: View {
                 toggle(day)
               } label: {
                 HStack(alignment: .firstTextBaseline, spacing: 2) {
-                  Text("\(day.month)/\(day.day)").font(.subheadline.weight(.semibold))
-                  Text(WeekdayRow.names[day.weekday]).font(.caption2)
+                  Text(day.slashText).font(.subheadline.weight(.semibold))
+                  Text(day.weekdayName).font(.caption2)
                 }
                 .foregroundStyle(on ? colors.accentOnFill : colors.accentDefault)
                 .padding(.horizontal, 12)
@@ -371,7 +371,7 @@ struct ShareDaysSheet: View {
                 .background(on ? colors.accentFill : colors.accentContainer, in: Capsule())
               }
               .buttonStyle(.plain)
-              .accessibilityLabel(dayName(day))
+              .accessibilityLabel(day.fullText)
               .accessibilityAddTraits(on ? .isSelected : [])
             }
           }
@@ -441,7 +441,7 @@ struct ShareDaysSheet: View {
         .contentShape(.rect)
     }
     .buttonStyle(.plain)
-    .accessibilityLabel("\(dayName(day))\(together ? "、みんな休み" : "")")
+    .accessibilityLabel("\(day.fullText)\(together ? "、みんな休み" : "")")
     .accessibilityAddTraits(on ? .isSelected : [])
   }
 

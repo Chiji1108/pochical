@@ -474,13 +474,11 @@ struct WeekdayRow: View {
   @Environment(\.themeColors) private var colors
   let week: DeviceSettings.Week
 
-  static let names = ["日", "月", "火", "水", "木", "金", "土"]
-
   var body: some View {
     HStack(spacing: 4) {
       ForEach(0..<7, id: \.self) { index in
         let weekday = (week.start + index) % 7
-        Text(Self.names[weekday])
+        Text(Day.weekdayNames[weekday])
           .font(.system(size: 11))
           .foregroundStyle(color(of: weekday))
           .frame(maxWidth: .infinity)
@@ -530,7 +528,7 @@ struct PageDays {
           day: day, entry: entry, note: calendar.note(on: day),
           pattern: entry.flatMap { calendar.patternsByID[$0.shift] },
           outside: month.map { day.month != $0.month } ?? false, isToday: day == today,
-          isHoliday: Holidays.name(on: day.key, in: "JP") != nil,
+          isHoliday: day.holidayName != nil,
           colorsHoliday: colorsHolidays, offShown: offShown, isSelected: day == selected,
           isEntering: isEntering,
           onSelect: onSelect)

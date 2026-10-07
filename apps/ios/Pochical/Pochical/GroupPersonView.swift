@@ -154,7 +154,7 @@ struct GroupPersonView: View {
             DayCell(
               day: day, entry: entry, note: nil, pattern: pattern, outside: outside,
               isToday: day == Day.today,
-              isHoliday: Holidays.name(on: day.key, in: "JP") != nil,
+              isHoliday: day.holidayName != nil,
               colorsHoliday: settings.device.week.holiday, isSelected: day == picked,
               onSelect: outside ? nil : { picked = picked == $0 ? nil : $0 }
             )
@@ -181,7 +181,7 @@ struct GroupPersonView: View {
       members.count > 1
       ? Together.days(offs, from: days[0], through: days[days.count - 1])
       : (days: [], unsure: false)
-    let title = "\(month == Day.today.firstOfMonth ? "今月" : "\(month.month)月")のみんな休み"
+    let title = "\(month == Day.today.firstOfMonth ? "今月" : month.monthText)のみんな休み"
     let row = HStack {
       Text(title).foregroundStyle(colors.textSecondary)
       Spacer()

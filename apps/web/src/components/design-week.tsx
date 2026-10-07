@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 
-import { holidays } from "../lib/holiday-names";
+import { fallbackHolidayCountry, holidays } from "../lib/holiday-names";
 
 // 週の始まり and 色をつける日 from settings. They are the viewer's own and
 // shape every calendar and group view on their screen; members never see
@@ -73,9 +73,14 @@ export function holidayName(date: Date) {
   return holidayNameOfKey(dateKey(date));
 }
 
+// The country whose holidays the prototype's days take: the apps take
+// their device's region when it has them (spec/calendar.md, Holidays), and
+// /design is shown as in Japan.
+const holidayCountry = fallbackHolidayCountry;
+
 // For dates already written as "YYYY-MM-DD".
 export function holidayNameOfKey(key: string) {
-  return holidays.JP?.[key];
+  return holidays[holidayCountry]?.[key];
 }
 
 // Sundays read red and Saturdays blue, each only while it is turned on.

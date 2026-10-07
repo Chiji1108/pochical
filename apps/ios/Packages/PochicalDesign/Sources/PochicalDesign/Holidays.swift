@@ -7,6 +7,11 @@ public enum Holidays {
     table[country]?[date]
   }
 
+  /// The country whose holidays a device in `region` takes: its own when they are here, else Japan's.
+  public static func country(for region: String?) -> String {
+    region.flatMap { table[$0] == nil ? nil : $0 } ?? "JP"
+  }
+
   private static let table: [String: [String: String]] = [
     "JP": parse(JP),
   ]

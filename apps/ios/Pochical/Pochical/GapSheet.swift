@@ -55,7 +55,7 @@ struct GapSheet: View {
         ScrollView(.horizontal) {
           HStack(spacing: 8) {
             ForEach(days, id: \.self) { day in
-              Text("\(day.day)日(\(WeekdayRow.names[day.weekday]))")
+              Text(day.dayWeekdayText)
                 .font(.footnote)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
@@ -103,8 +103,8 @@ struct GapSheet: View {
       .fontWeight(.bold)
       .foregroundStyle(colors.accentDefault)
     let change = Text(
-      "\(offPattern.name)にすると、\(month.month)月のお休みが\(count)になります。")
+      "\(offPattern.name)にすると、\(month.monthText)のお休みが\(count)になります。")
     guard completes else { return change }
-    return Text("\(change)\nこれで\(month.month)月が全部埋まります。")
+    return Text("\(change)\nこれで\(month.monthText)が全部埋まります。")
   }
 }

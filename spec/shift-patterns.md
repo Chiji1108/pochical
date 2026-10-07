@@ -73,7 +73,7 @@ An order is typed on a month, as ポチポチ入力 enters days (settings' 新�
 
 An order with 祝日は休みにする on puts its `holidayShift` on the national holidays of its `holidayCountry` (`design/scripts/holidays.ts`) in place of the sequence's shift.
 
-- `holidayCountry` is the device's region when the order is made, so every device marks the same days whatever its language.
+- `holidayCountry` is the device's holiday country when the order is made (spec/calendar.md, The month), so every device marks the same days whatever its language or region.
 - Turning it on records the person's first pattern with `countsAsOff` at that moment; with none it cannot be turned on, but it can always be turned off. Turning it off shows the sequence on holidays again.
 - Days the person changed keep their own value either way, so nothing they entered is overwritten.
 - A new order starts with it on when it reads as office hours: a week (seven shifts) with a pattern counting as off on a Saturday or Sunday (`spec/vectors/repeat.json`, holidaysOffByDefault).

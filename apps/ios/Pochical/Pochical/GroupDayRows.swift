@@ -136,13 +136,13 @@ struct GroupDayRow: View {
     .buttonStyle(.plain)
     .accessibilityElement(children: .combine)
     .accessibilityLabel(
-      "\(day.month)月\(day.day)日\(together ? "、みんな休み" : "")")
+      "\(day.monthDayText)\(together ? "、みんな休み" : "")")
     .accessibilityAddTraits(picked ? .isSelected : [])
   }
 
   private func date() -> some View {
     let week = settings.device.week
-    let holiday = week.holiday && Holidays.name(on: day.key, in: "JP") != nil
+    let holiday = week.holiday && day.holidayName != nil
     let tone: Color =
       switch day.weekday {
       case _ where day == Day.today: colors.accentDefault
@@ -153,7 +153,7 @@ struct GroupDayRow: View {
     return HStack(alignment: .firstTextBaseline, spacing: 3) {
       Text("\(day.day)")
         .font(.system(size: 12, weight: day == Day.today ? .bold : .semibold))
-      Text(WeekdayRow.names[day.weekday])
+      Text(day.weekdayName)
         .font(.system(size: 9))
     }
     .foregroundStyle(tone)

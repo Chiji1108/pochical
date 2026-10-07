@@ -15,6 +15,7 @@ How カレンダー, the person's own month, behaves on screen: what each part s
 - The screens are drawn in the person's テーマ (設定 > スタイル, kept on the device), in light or dark as 外観 says (the phone's by default, or always one of them), but for the テーマ drawn dark whatever 外観 says, which turns the screens dark. シフトの色 ワントーン draws every shift in the テーマ's own color, the palette's first; emoji keep theirs.
 - スタイル shows this week and the next in the look being set, and each テーマ on a card; カレンダー shows this week under the month's heading. Their days are a made-up run of the person's own patterns (each working one with what follows it, like 明け after 夜勤, and a day off after every second one), the same whatever they have entered, so a change shows in the same places every time; no memo, 早出 or 残業 shows there. ☀︎ / ☾ on the preview's edge shows it and the テーマ cards in the other of light and dark, without touching 外観; a テーマ drawn dark keeps its preview dark, its ☾ on and not to be turned. Every preview of the calendar has its own ☀︎ / ☾, and no other place does.
 - The week starts on the day the person sets (設定 > カレンダー, kept on the device). Saturdays and Sundays color the weekdays' heading and holidays their date, in Sunday's red, each unless the person turns it off.
+- Holidays are those of the device's holiday country: its region's when Pochical has that country's holidays (`design/scripts/holidays.ts`), else Japan's, its home. Every date colored as a holiday reads this one country, and a new order's 祝日は休みにする takes it too (spec/shift-patterns.md, Holidays).
 
 ## ポチポチ入力
 
@@ -33,6 +34,10 @@ How カレンダー, the person's own month, behaves on screen: what each part s
 - 一緒に働く人 shows for a pattern that does not count as off, naming those on the day (なし for none). How they are picked follows each platform's own way of choosing several: on Android and /design it unfolds into the person's coworkers as filter chips, in their order, picked or not, and 追加, staying unfolded as another day is opened, for noting people day after day; on iOS the row opens the coworkers as a list to check them in, as the Clock app's 繰り返し picks days, with 人を追加… at its foot and 完了. Either adds while under `COWORKERS_MAX`, else says 一緒に働く人は{n}人までです; someone added there goes to the end of the list and is on the day too.
 - The memo can be written on any day, shift or not, up to `textLimits.dayNote`, and is kept as text fields are (below). While it holds words, a clear button in the field empties it at once and keeps that, as a one-line field's does: the memo alone goes, the shift stays.
 - この日のシフトを消す, with a shift, clears it with its own hours and people; the memo stays. When a time change or people would go with it, it asks first and names them: 「一緒に働く人も消えます。」.
+
+## How days are written
+
+Each platform writes a day, its weekday and its month through one set of helpers, so another language changes them in one place: Swift's `DayText.swift` in PochicalKit, and on the web `design-days.ts` (`formatDay` and its kin) with `design-week.tsx`'s weekday names. In Japanese they are 11月1日(日) in full, 11月1日, 1日(日) where the month goes without saying, 11/1 where room is short, a year before them (2026年…, 2026/…) for a day of another year, and 2026年11月 or 11月 for a month. Screens never put a day's numbers together themselves.
 
 ## Text fields
 

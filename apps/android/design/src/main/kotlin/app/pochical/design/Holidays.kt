@@ -7,6 +7,9 @@ object Holidays {
   /** The holiday's name on [date] ("YYYY-MM-DD") in [country] ("JP"), or null. */
   fun nameOf(date: String, country: String): String? = table[country]?.get(date)
 
+  /** The country whose holidays a device in [region] takes: its own when they are here, else Japan's. */
+  fun countryFor(region: String?): String = region?.takeIf { it in table } ?: "JP"
+
   private val table: Map<String, Map<String, String>> by lazy {
     mapOf("JP" to parse(JP))
   }

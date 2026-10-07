@@ -171,7 +171,7 @@ struct GroupShiftsPage: View {
   @ViewBuilder private func heading(_ month: Day) -> some View {
     let today = Day.today
     let thisYear = month.year == today.year
-    let name = thisYear ? "\(month.month)月" : "\(month.year)年\(month.month)月"
+    let name = thisYear ? month.monthText : month.yearMonthText
     let days = month.daysOfMonth
     let offs = members.map { $0.offDays(from: days[0], through: days[days.count - 1]) }
     let together =
@@ -335,7 +335,7 @@ private struct TogetherSheet: View {
         Button {
           onPick(day)
         } label: {
-          LabeledContent(dayName(day), value: Holidays.name(on: day.key, in: "JP") ?? "")
+          LabeledContent(day.fullText, value: day.holidayName ?? "")
         }
         .tint(.primary)
       }
@@ -384,7 +384,7 @@ private struct DaySheet: View {
         .lineLimit(1)
         .accessibilityElement(children: .combine)
       }
-      .navigationTitle(dayName(day))
+      .navigationTitle(day.fullText)
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
@@ -393,7 +393,7 @@ private struct DaySheet: View {
         if members.count > 1, Together.allOff(offs) {
           ToolbarItem(placement: .principal) {
             VStack(spacing: 2) {
-              Text(dayName(day)).font(.headline)
+              Text(day.fullText).font(.headline)
               Text("みんな休み")
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(colors.accentDefault)
@@ -419,7 +419,7 @@ private struct DaySheet: View {
 
 /// A month with its year, as the pinned row names it: 2026年10月.
 func fullMonthName(_ month: Day) -> String {
-  "\(month.year)年\(month.month)月"
+  month.yearMonthText
 }
 
 /// How many days everyone is off, large in the accent, as /design's

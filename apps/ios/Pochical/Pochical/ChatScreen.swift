@@ -88,7 +88,7 @@ enum ChatTime {
     let today = Day.today
     if day == today { return "今日" }
     if day == today.adding(days: -1) { return "昨日" }
-    return day.year == today.year ? dayName(day) : "\(day.year)年\(dayName(day))"
+    return day.year == today.year ? day.fullText : day.yearFullText
   }
 
   /// The time in the list of chats: the time today, 昨日, else the date.
@@ -98,7 +98,7 @@ enum ChatTime {
     if day == today { return clock(ms) }
     if day == today.adding(days: -1) { return "昨日" }
     return day.year == today.year
-      ? "\(day.month)/\(day.day)" : "\(day.year)/\(day.month)/\(day.day)"
+      ? day.slashText : day.yearSlashText
   }
 }
 
@@ -1107,7 +1107,7 @@ struct ChatScreen: View {
     decide.seq = UInt64(line.seq)
     decide.day = day.key
     write(.decide(decide))
-    say("\(dayName(day))に決めました")
+    say("\(day.fullText)に決めました")
   }
 
   /// To the latest line, by its id: scrolling to the edge would also
