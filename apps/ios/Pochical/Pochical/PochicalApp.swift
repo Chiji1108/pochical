@@ -60,6 +60,8 @@ struct PochicalApp: App {
         }
       case .active:
         NotificationCenter.default.post(name: Database.resumeNotification, object: nil)
+        // Another day of use, for when to ask for a review.
+        ReviewPrompt.opened()
         // Notifications may have been allowed or refused in the system's
         // settings meanwhile.
         Task { await Notifications.shared.readPermission() }

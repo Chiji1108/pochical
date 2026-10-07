@@ -214,6 +214,7 @@ private struct GroupEditPage: View {
         try await groupCalls.rename(group.id, name: name, emoji: emoji)
         dismiss()
       } catch {
+        ReviewPrompt.troubled = true
         failed = true
       }
     }
@@ -269,6 +270,7 @@ private struct DisplayNamePage: View {
         try await groupCalls.setDisplayName(name, in: group.id)
         dismiss()
       } catch {
+        ReviewPrompt.troubled = true
         failed = true
       }
     }
