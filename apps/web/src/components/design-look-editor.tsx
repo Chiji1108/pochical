@@ -12,7 +12,7 @@ import {
   SegmentedControl,
 } from "./design-choices";
 import { EmojiPickerSheet } from "./design-emoji-picker";
-import { MarkLetterInput, markPreview, SampleTag } from "./design-fields";
+import { MarkLetterInput, markPreview } from "./design-fields";
 import { PageHeader } from "./design-header";
 import { IconPickerSheet, iconNames } from "./design-icon-picker";
 import { List, ListRow } from "./design-list";
@@ -69,7 +69,6 @@ export function LookEditorPage({
     <>
       <PageHeader back={back} onBack={onBack} title={title} />
       <div className={markPreview({ alone: true })}>
-        <SampleTag />
         <LookGlyph look={look} size={48} style={tab} />
       </div>
       <SegmentedControl

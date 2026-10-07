@@ -260,9 +260,6 @@ struct PatternEditor: View {
               .foregroundStyle(colors.textTertiary)
           }
           Spacer()
-          Text("見本")
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(colors.textTertiary)
         }
         .padding(.vertical, 4)
       }
@@ -495,11 +492,6 @@ private struct LookEditor: View {
           .environment(\.look, sampleLook(shown))
           .frame(maxWidth: .infinity)
           .padding(.vertical, 12)
-          .overlay(alignment: .topTrailing) {
-            Text("見本")
-              .font(.caption2.weight(.semibold))
-              .foregroundStyle(colors.textTertiary)
-          }
         Picker("どの見た目の印を選ぶか", selection: Binding(get: { shown }, set: { tab = $0 })) {
           Text("アイコン").tag(MarkStyle.icon)
           Text("絵文字").tag(MarkStyle.emoji)
