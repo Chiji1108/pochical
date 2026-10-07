@@ -71,6 +71,8 @@ An order with 祝日は休みにする on puts its `holidayShift` on the nationa
 
 ## Changing jobs
 
+The kinds of work はじめの設定 and 新しい仕事にする offer, their ready-made patterns and orders, are shared data in `design/src/patterns.ts` (`rosterTemplates`, `rotationTemplates`). Where an order is shown, its days are tiles as its editor draws them, seven a row; a kind of work without an order shows its patterns as ポチポチ入力's keys will.
+
 The new job's patterns replace the list, and its repeating order starts on the day of the switch. An old pattern still on a day before the switch, of its own or from an earlier order, stays in the list, so those days keep their marks.
 
 A new job's ready-made pattern can share an id with one the person already has. If theirs differs (they renamed it, changed its time or mark…) and is still on a day before the switch, theirs keeps the id and the new job's gets a fresh one; the new order and any `nextDay` links use the fresh id. Past days never change meaning because of a job change (`spec/vectors/patterns.json`, newJob).

@@ -14,11 +14,14 @@ import type { RepeatRule } from "../lib/design-days";
 import { presetList, usePatterns } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
-import { ChipGroup, Tag } from "./design-choices";
 import { InputDatePicker } from "./design-date-picker";
 import { PageHeader } from "./design-header";
 import { List, ListRow, SwitchRow } from "./design-list";
-import { RepeatSequenceEditor, ShiftPreview } from "./design-repeat-editor";
+import {
+  RepeatSequenceEditor,
+  SequenceTiles,
+  ShiftPreview,
+} from "./design-repeat-editor";
 import {
   ListSection,
   nextMonthStart,
@@ -29,25 +32,9 @@ import {
 } from "./design-settings-parts";
 import { Button, fieldLabel, Note } from "./design-ui";
 import { WorkSetupSteps } from "./design-work-setup";
-import { ShiftMark } from "./shift-mark";
 
 // The pages about how someone works: a repeating order and its history,
 // changing jobs, and switching to a roster.
-
-function SequenceChips({ sequence }: { sequence: Shift[] }) {
-  const book = usePatterns();
-  return (
-    <ChipGroup as="ol">
-      {sequence.map((shift, index) => (
-        // oxlint-disable-next-line react/no-array-index-key -- a sequence repeats the same shift, so position is its identity.
-        <Tag as="li" key={index} tone="raised">
-          <ShiftMark shift={shift} size={13} />
-          {book[shift]?.name}
-        </Tag>
-      ))}
-    </ChipGroup>
-  );
-}
 
 // The order in use and what can change about it, under the work style.
 function RepeatDetails({
@@ -70,7 +57,7 @@ function RepeatDetails({
             {current.sequence.length}日ごと
           </span>
         </p>
-        <SequenceChips sequence={current.sequence} />
+        <SequenceTiles sequence={current.sequence} />
         <p className={settingsParts.cardMeta}>{formatDay(current.start)}から</p>
       </div>
       <List>

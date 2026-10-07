@@ -99,7 +99,7 @@ struct WorkStylePage: View {
                 .font(.subheadline)
                 .foregroundStyle(colors.textSecondary)
             }
-            SequenceTags(sequence: current.sequence, patterns: byID)
+            SequenceTiles(sequence: current.sequence, patterns: byID)
             Text("\(dayName(current.start))から")
               .font(.footnote)
               .foregroundStyle(colors.textTertiary)
@@ -136,6 +136,16 @@ struct WorkStylePage: View {
             Text(current == nil ? "🔁" : "📋")
           }
         }
+        NavigationLink {
+          JobChangePage()
+        } label: {
+          Label {
+            Text("新しい仕事にする")
+            Text("シフトパターンも選び直す")
+          } icon: {
+            Text("💼")
+          }
+        }
       }
       .settingsRows()
 
@@ -161,29 +171,76 @@ struct WorkStylePage: View {
   }
 }
 
-/// A sequence as tags, a mark and a name each, in order.
-private struct SequenceTags: View {
+/// An order's days as its editor draws them, smaller and not to press:
+/// seven a row, so a week reads as one; each says its place, or, for an
+/// order that starts on a Sunday, its weekday.
+struct SequenceTiles: View {
   @Environment(\.themeColors) private var colors
   let sequence: [PatternID]
   let patterns: [PatternID: Pattern]
+  var weekly = false
 
   var body: some View {
-    LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: 6)], alignment: .leading, spacing: 6) {
-      ForEach(Array(sequence.enumerated()), id: \.offset) { _, id in
-        HStack(spacing: 4) {
+    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
+      ForEach(Array(sequence.enumerated()), id: \.offset) { index, id in
+        VStack(spacing: 1) {
+          Text(weekly ? WeekdayRow.names[index % 7] : "\(index + 1)")
+            .font(.system(size: 9))
+            .foregroundStyle(tone(index))
           if let pattern = patterns[id] {
-            ShiftMark(pattern: pattern, size: 13)
+            ShiftMark(pattern: pattern, size: 16)
           }
-          Text(patterns[id]?.name ?? "削除したパターン")
-            .font(.caption)
+          Text(patterns[id]?.name ?? "削除")
+            .font(.system(size: 10))
+            .foregroundStyle(colors.textSecondary)
             .lineLimit(1)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(colors.backgroundCard, in: Capsule())
+        .frame(maxWidth: .infinity, minHeight: 48)
+        .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.sm))
+        .overlay(RoundedRectangle(cornerRadius: Radius.sm).strokeBorder(colors.borderDefault))
       }
     }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(
+      sequence.map { patterns[$0]?.name ?? "削除したパターン" }.joined(separator: "、"))
+  }
+
+  private func tone(_ index: Int) -> Color {
+    guard weekly else { return colors.textTertiary }
+    switch index % 7 {
+    case 0: return colors.calendarHoliday
+    case 6: return colors.calendarSaturday
+    default: return colors.textTertiary
+    }
+  }
+}
+
+/// A kind of work's patterns as ポチポチ入力's keys will show them,
+/// smaller and not to press: the buttons it gives, in no order of days.
+struct KeysPreview: View {
+  @Environment(\.themeColors) private var colors
+  let patternIDs: [PatternID]
+  let patterns: [PatternID: Pattern]
+
+  var body: some View {
+    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 5), spacing: 6) {
+      ForEach(patternIDs, id: \.self) { id in
+        VStack(spacing: 4) {
+          if let pattern = patterns[id] {
+            ShiftMark(pattern: pattern, size: 20)
+          }
+          Text(patterns[id]?.name ?? "")
+            .font(.caption2)
+            .foregroundStyle(colors.textPrimary)
+            .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, minHeight: 52)
+        .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.lg))
+        .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(colors.borderDefault))
+      }
+    }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(patternIDs.compactMap { patterns[$0]?.name }.joined(separator: "、"))
   }
 }
 
@@ -234,7 +291,6 @@ private struct RepeatEditor: View {
   /// A day of the sequence chosen, to put another pattern in its place or
   /// take it out; with none, keys add to the end.
   @State private var selected: Int?
-  @State private var keyPage = 0
 
   var body: some View {
     let byID = Dictionary(values.patterns.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
@@ -257,66 +313,9 @@ private struct RepeatEditor: View {
       .settingsRows()
 
       Section {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 6) {
-          ForEach(Array(steps.enumerated()), id: \.offset) { index, id in
-            let date = picked.adding(days: index)
-            let isSelected = selected == index
-            Button {
-              selected = isSelected ? nil : index
-            } label: {
-              VStack(spacing: 2) {
-                Text("\(date.month)/\(date.day)\(WeekdayRow.names[date.weekday])")
-                  .font(.system(size: 9))
-                  .foregroundStyle(weekdayTone(date))
-                if let pattern = byID[id] {
-                  ShiftMark(pattern: pattern, size: 18)
-                }
-                Text(byID[id]?.name ?? "削除").font(.caption2).lineLimit(1)
-              }
-              .frame(maxWidth: .infinity, minHeight: 58)
-              .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.sm))
-              .overlay {
-                RoundedRectangle(cornerRadius: Radius.sm)
-                  .strokeBorder(isSelected ? colors.accentDefault : colors.borderDefault, lineWidth: isSelected ? 2 : 1)
-              }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(index + 1)日目、\(dayName(date))、\(byID[id]?.name ?? "削除したパターン")")
-            .accessibilityAddTraits(isSelected ? .isSelected : [])
-            .accessibilityHint(isSelected ? "" : "選ぶと、置き換えたり消したりできます")
-          }
-        }
-        .padding(.vertical, 4)
-        PatternKeys(patterns: values.patterns, page: $keyPage) { pattern in
-          var next = steps
-          if let selected, selected < next.count {
-            next[selected] = pattern.id
-            self.selected = nil
-          } else {
-            next.append(pattern.id)
-          }
-          sequence = next
-        }
-        .padding(.vertical, 4)
-        HStack {
-          let pages = (values.patterns.count + patternsPerPage - 1) / patternsPerPage
-          if pages > 1 {
-            PageDots(count: pages, current: $keyPage, label: "シフトのページ")
-          }
-          Spacer()
-          Button(selected == nil ? "1つ消す" : "選んだ日を消す", systemImage: "delete.left") {
-            var next = steps
-            if let selected, selected < next.count {
-              next.remove(at: selected)
-            } else if !next.isEmpty {
-              next.removeLast()
-            }
-            selected = nil
-            sequence = next
-          }
-          .font(.subheadline)
-          .disabled(steps.isEmpty)
-        }
+        SequenceBuilder(
+          steps: Binding(get: { steps }, set: { sequence = $0 }), patterns: values.patterns,
+          first: picked, selected: $selected)
       } header: {
         HStack {
           Text("並び")
@@ -375,15 +374,6 @@ private struct RepeatEditor: View {
   private var initialSequence: [PatternID] {
     if mode == .fix { return values.orders.current?.sequence ?? [] }
     return values.orders.last { !$0.sequence.isEmpty }?.sequence ?? []
-  }
-
-  /// A date's color by its weekday: Sundays and holidays red, Saturdays
-  /// blue.
-  private func weekdayTone(_ day: Day) -> Color {
-    if day.weekday == 0 || Holidays.name(on: day.key, in: "JP") != nil {
-      return colors.calendarHoliday
-    }
-    return day.weekday == 6 ? colors.calendarSaturday : colors.textTertiary
   }
 
   /// The device's region, whose holidays a new order takes.
@@ -489,5 +479,96 @@ private struct RosterSwitchPage: View {
     .settingsList()
     .navigationTitle("順番をやめる")
     .navigationBarTitleDisplayMode(.inline)
+  }
+}
+
+/// An order's sequence typed as ポチポチ入力 enters days: the patterns'
+/// keys add to its end and ⌫ takes the last day back; a day pressed is
+/// chosen, a key then takes its place and ⌫ takes it out. With the day it
+/// starts on, each day says its date and weekday.
+struct SequenceBuilder: View {
+  @Environment(\.themeColors) private var colors
+  @Binding var steps: [PatternID]
+  let patterns: [Pattern]
+  /// The first day's date, when it is known.
+  let first: Day?
+  @Binding var selected: Int?
+  @State private var keyPage = 0
+
+  var body: some View {
+    let byID = Dictionary(patterns.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 6) {
+      ForEach(Array(steps.enumerated()), id: \.offset) { index, id in
+        let date = first?.adding(days: index)
+        let isSelected = selected == index
+        Button {
+          selected = isSelected ? nil : index
+        } label: {
+          VStack(spacing: 2) {
+            if let date {
+              Text("\(date.month)/\(date.day)\(WeekdayRow.names[date.weekday])")
+                .font(.system(size: 9))
+                .foregroundStyle(weekdayTone(date))
+            } else {
+              Text("\(index + 1)").font(.system(size: 9)).foregroundStyle(colors.textTertiary)
+            }
+            if let pattern = byID[id] {
+              ShiftMark(pattern: pattern, size: 18)
+            }
+            Text(byID[id]?.name ?? "削除").font(.caption2).lineLimit(1)
+          }
+          .frame(maxWidth: .infinity, minHeight: 58)
+          .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.sm))
+          .overlay {
+            RoundedRectangle(cornerRadius: Radius.sm)
+              .strokeBorder(isSelected ? colors.accentDefault : colors.borderDefault, lineWidth: isSelected ? 2 : 1)
+          }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(index + 1)日目、\(date.map(dayName) ?? "")、\(byID[id]?.name ?? "削除したパターン")")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityHint(isSelected ? "" : "選ぶと、置き換えたり消したりできます")
+      }
+    }
+    .padding(.vertical, 4)
+    PatternKeys(patterns: patterns, page: $keyPage) { pattern in
+      var next = steps
+      if let selected, selected < next.count {
+        next[selected] = pattern.id
+        self.selected = nil
+      } else {
+        next.append(pattern.id)
+      }
+      steps = next
+    }
+    .padding(.vertical, 4)
+    HStack {
+      let pages = (patterns.count + patternsPerPage - 1) / patternsPerPage
+      if pages > 1 {
+        PageDots(count: pages, current: $keyPage, label: "シフトのページ")
+      }
+      Spacer()
+      Button(selected == nil ? "1つ消す" : "選んだ日を消す", systemImage: "delete.left") {
+        var next = steps
+        if let selected, selected < next.count {
+          next.remove(at: selected)
+        } else if !next.isEmpty {
+          next.removeLast()
+        }
+        selected = nil
+        steps = next
+      }
+      .font(.subheadline)
+      .disabled(steps.isEmpty)
+    }
+  }
+
+  /// A date's color by its weekday: Sundays and holidays red, Saturdays
+  /// blue.
+  private func weekdayTone(_ day: Day) -> Color {
+    if day.weekday == 0 || Holidays.name(on: day.key, in: "JP") != nil {
+      return colors.calendarHoliday
+    }
+    return day.weekday == 6 ? colors.calendarSaturday : colors.textTertiary
   }
 }

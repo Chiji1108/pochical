@@ -62,6 +62,34 @@ const repeatEditor = {
   }),
 };
 
+// An order's days as its editor draws them, smaller and not to press:
+// seven a row, so a week reads as one.
+const sequenceTiles = {
+  day: css({
+    "& > small": { fontSize: "9px" },
+    alignItems: "center",
+    bg: "background.card",
+    border: "1px solid token(colors.border.default)",
+    borderRadius: "sm",
+    color: "text.secondary",
+    display: "flex",
+    flexDirection: "column",
+    fontSize: "10px",
+    gap: "1px",
+    justifyContent: "center",
+    minHeight: "48px",
+    minWidth: 0,
+  }),
+  grid: css({
+    display: "grid",
+    gap: "4px",
+    gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+    listStyle: "none",
+    margin: 0,
+    padding: 0,
+  }),
+};
+
 // Days with the shift each gets, as a strip of small tiles a week wide:
 // the first two weeks of an order being set up, in the first run and in
 // settings alike.
@@ -240,4 +268,46 @@ export function RepeatSequenceEditor({
       )}
     </div>
   );
+}
+
+// An order's days in a card or a summary: each says its place, or, for an
+// order that starts on a Sunday, its weekday.
+export function SequenceTiles({
+  sequence,
+  weekly = false,
+}: {
+  sequence: readonly Shift[];
+  weekly?: boolean;
+}) {
+  const book = usePatterns();
+  return (
+    <ol
+      aria-label={sequence
+        .map((shift) => book[shift]?.name ?? "削除したパターン")
+        .join("、")}
+      className={sequenceTiles.grid}
+    >
+      {sequence.map((shift, index) => (
+        // oxlint-disable-next-line react/no-array-index-key -- the same shift repeats, so its position is its identity.
+        <li aria-hidden="true" className={sequenceTiles.day} key={index}>
+          <small
+            className={shiftPreview.number({
+              tone: weekly ? weeklyTone(index) : "plain",
+            })}
+          >
+            {weekly ? weekdayNameOf(index % 7) : index + 1}
+          </small>
+          <ShiftMark shift={shift} size={16} />
+          {book[shift]?.name ?? "削除"}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function weeklyTone(index: number) {
+  if (index % 7 === 0) {
+    return "holiday";
+  }
+  return index % 7 === 6 ? "saturday" : "plain";
 }

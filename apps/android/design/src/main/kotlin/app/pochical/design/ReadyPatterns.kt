@@ -63,4 +63,29 @@ object ReadyPatterns {
 
   const val FALLBACK_EMOJI = "⭐️"
   const val FALLBACK_ICON = "letter"
+
+  val rosterTemplates: List<JobTemplate> = listOf(
+    JobTemplate(id = "two-shift", title = "二交代制", note = "日勤と夜勤、夜勤の翌日は明け", patternIds = listOf("day", "night", "after", "off"), sequence = null, weekly = false, custom = false),
+    JobTemplate(id = "three-shift", title = "三交代制", note = "日勤・準夜・深夜", patternIds = listOf("day", "junya", "midnight", "off"), sequence = null, weekly = false, custom = false),
+    JobTemplate(id = "two-shift-early-late", title = "二交代制 + 早番・遅番", note = "時間の違う日勤が混ざる", patternIds = listOf("early", "day", "late", "night", "after", "off"), sequence = null, weekly = false, custom = false),
+    JobTemplate(id = "roster-custom", title = "自分で作る", note = "まずは二交代制で始めて、あとで設定から変えられます", patternIds = listOf("day", "night", "after", "off"), sequence = null, weekly = false, custom = false),
+  )
+
+  val rotationTemplates: List<JobTemplate> = listOf(
+    JobTemplate(id = "duty", title = "当番・非番・休み", note = "消防などの24時間勤務", patternIds = listOf("duty", "offDuty", "off"), sequence = listOf("duty", "offDuty", "off"), weekly = false, custom = false),
+    JobTemplate(id = "factory", title = "日勤・夕勤・深夜の交代", note = "工場などの3交代（2日ずつ回る例）", patternIds = listOf("day", "evening", "midnight", "off"), sequence = listOf("day", "day", "evening", "evening", "midnight", "midnight", "off", "off"), weekly = false, custom = false),
+    JobTemplate(id = "weekdays", title = "平日は日勤、土日は休み", note = "曜日で決まっている勤務", patternIds = listOf("day", "off"), sequence = listOf("off", "day", "day", "day", "day", "day", "off"), weekly = true, custom = false),
+    JobTemplate(id = "rotation-custom", title = "自分で作る", note = "並びを組み立てる", patternIds = listOf("duty", "offDuty", "day", "night", "after", "off"), sequence = listOf(), weekly = false, custom = true),
+  )
 }
+
+/** A kind of work はじめの設定 and 新しい仕事にする offer (design/src/patterns.ts). */
+data class JobTemplate(
+  val id: String,
+  val title: String,
+  val note: String,
+  val patternIds: List<String>,
+  val sequence: List<String>?,
+  val weekly: Boolean,
+  val custom: Boolean,
+)

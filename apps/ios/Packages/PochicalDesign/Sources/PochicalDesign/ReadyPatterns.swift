@@ -73,4 +73,31 @@ public enum ReadyPatterns {
   /// The mark when no word suggests one.
   public static let fallbackEmoji = "⭐️"
   public static let fallbackIcon = "letter"
+
+  /// Work whose shifts are given out each time: the patterns to start with.
+  public static let rosterTemplates: [JobTemplate] = [
+    JobTemplate(id: "two-shift", title: "二交代制", note: "日勤と夜勤、夜勤の翌日は明け", patternIDs: ["day", "night", "after", "off"], sequence: nil, weekly: false, custom: false),
+    JobTemplate(id: "three-shift", title: "三交代制", note: "日勤・準夜・深夜", patternIDs: ["day", "junya", "midnight", "off"], sequence: nil, weekly: false, custom: false),
+    JobTemplate(id: "two-shift-early-late", title: "二交代制 + 早番・遅番", note: "時間の違う日勤が混ざる", patternIDs: ["early", "day", "late", "night", "after", "off"], sequence: nil, weekly: false, custom: false),
+    JobTemplate(id: "roster-custom", title: "自分で作る", note: "まずは二交代制で始めて、あとで設定から変えられます", patternIDs: ["day", "night", "after", "off"], sequence: nil, weekly: false, custom: false),
+  ]
+
+  /// Work whose shifts come round in a fixed order: the order too.
+  public static let rotationTemplates: [JobTemplate] = [
+    JobTemplate(id: "duty", title: "当番・非番・休み", note: "消防などの24時間勤務", patternIDs: ["duty", "offDuty", "off"], sequence: ["duty", "offDuty", "off"], weekly: false, custom: false),
+    JobTemplate(id: "factory", title: "日勤・夕勤・深夜の交代", note: "工場などの3交代（2日ずつ回る例）", patternIDs: ["day", "evening", "midnight", "off"], sequence: ["day", "day", "evening", "evening", "midnight", "midnight", "off", "off"], weekly: false, custom: false),
+    JobTemplate(id: "weekdays", title: "平日は日勤、土日は休み", note: "曜日で決まっている勤務", patternIDs: ["day", "off"], sequence: ["off", "day", "day", "day", "day", "day", "off"], weekly: true, custom: false),
+    JobTemplate(id: "rotation-custom", title: "自分で作る", note: "並びを組み立てる", patternIDs: ["duty", "offDuty", "day", "night", "after", "off"], sequence: [], weekly: false, custom: true),
+  ]
+}
+
+/// A kind of work はじめの設定 and 新しい仕事にする offer (design/src/patterns.ts): its ready-made patterns, and for work that repeats, its order; `weekly` starts it on a Sunday, `custom` has it built.
+public struct JobTemplate: Sendable, Hashable, Identifiable {
+  public let id: String
+  public let title: String
+  public let note: String
+  public let patternIDs: [String]
+  public let sequence: [String]?
+  public let weekly: Bool
+  public let custom: Bool
 }

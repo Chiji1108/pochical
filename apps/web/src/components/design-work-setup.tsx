@@ -1,3 +1,5 @@
+import { rosterTemplates, rotationTemplates } from "@pochical/design/patterns";
+import type { JobTemplate } from "@pochical/design/patterns";
 import { useState } from "react";
 import { css, cva } from "styled-system/css";
 
@@ -9,93 +11,17 @@ import {
 } from "../lib/design-patterns";
 import type { PresetShift, Shift } from "../lib/design-patterns";
 import { designMonth } from "../lib/design-today";
-import { Tag } from "./design-choices";
 import { MonthPicker } from "./design-date-picker";
 import { BackButton } from "./design-header";
-import { RepeatSequenceEditor, ShiftPreview } from "./design-repeat-editor";
+import {
+  RepeatSequenceEditor,
+  SequenceTiles,
+  ShiftPreview,
+} from "./design-repeat-editor";
+import { KeysPreview } from "./design-shift-input";
 import { Button, OptionCard, optionList, pushToBottom } from "./design-ui";
-import { ShiftMark } from "./shift-mark";
 
-type Template = {
-  id: string;
-  title: string;
-  note: string;
-  patternKeys: PresetShift[];
-  // Present only for work that repeats in a fixed order.
-  sequence?: PresetShift[];
-  // The sequence starts on Sunday, so the first day comes from the weekday.
-  weekly?: boolean;
-  custom?: boolean;
-};
-
-const rosterTemplates: Template[] = [
-  {
-    id: "two-shift",
-    note: "日勤と夜勤、夜勤の翌日は明け",
-    patternKeys: ["day", "night", "after", "off"],
-    title: "二交代制",
-  },
-  {
-    id: "three-shift",
-    note: "日勤・準夜・深夜",
-    patternKeys: ["day", "junya", "midnight", "off"],
-    title: "三交代制",
-  },
-  {
-    id: "two-shift-early-late",
-    note: "時間の違う日勤が混ざる",
-    patternKeys: ["early", "day", "late", "night", "after", "off"],
-    title: "二交代制 + 早番・遅番",
-  },
-  {
-    id: "roster-custom",
-    note: "まずは二交代制で始めて、あとで設定から変えられます",
-    patternKeys: ["day", "night", "after", "off"],
-    title: "自分で作る",
-  },
-];
-
-export const rotationTemplates: Template[] = [
-  {
-    id: "duty",
-    note: "消防などの24時間勤務",
-    patternKeys: ["duty", "offDuty", "off"],
-    sequence: ["duty", "offDuty", "off"],
-    title: "当番・非番・休み",
-  },
-  {
-    id: "factory",
-    note: "工場などの3交代（2日ずつ回る例）",
-    patternKeys: ["day", "evening", "midnight", "off"],
-    sequence: [
-      "day",
-      "day",
-      "evening",
-      "evening",
-      "midnight",
-      "midnight",
-      "off",
-      "off",
-    ],
-    title: "日勤・夕勤・深夜の交代",
-  },
-  {
-    id: "weekdays",
-    note: "曜日で決まっている勤務",
-    patternKeys: ["day", "off"],
-    sequence: ["off", "day", "day", "day", "day", "day", "off"],
-    title: "平日は日勤、土日は休み",
-    weekly: true,
-  },
-  {
-    custom: true,
-    id: "rotation-custom",
-    note: "並びを組み立てる",
-    patternKeys: ["duty", "offDuty", "day", "night", "after", "off"],
-    sequence: [],
-    title: "自分で作る",
-  },
-];
+type Template = JobTemplate;
 
 export type Step =
   | { name: "kind" }
@@ -113,12 +39,8 @@ export type WorkSetup = {
 };
 
 // The template's shifts under its title, inside the option's button.
-const templateChips = css({
-  display: "flex",
-  flexWrap: "wrap",
-  gap: "4px",
-  marginTop: "4px",
-});
+// A template's order or keys, under its note.
+const templateChips = css({ marginTop: "8px" });
 
 // The first run, in the phone: a welcome with the app's poodle, then a
 // step at a time, each a heading with what it asks, its answers, and its
@@ -423,7 +345,7 @@ function TemplateStep({
   onChoose,
 }: {
   title: string;
-  templates: Template[];
+  templates: readonly Template[];
   onBack: () => void;
   onChoose: (template: Template) => void;
 }) {
@@ -445,17 +367,17 @@ function TemplateStep({
             title={template.title}
           >
             {!template.custom && (
-              <span aria-hidden="true" className={templateChips}>
-                {(template.sequence ?? template.patternKeys).map(
-                  (key, index) => (
-                    // oxlint-disable-next-line react/no-array-index-key -- a sequence repeats the same shift, so position is its identity.
-                    <Tag key={index} size="sm" tone="raised">
-                      <ShiftMark shift={key} size={11} />
-                      {presetPatterns[key].name}
-                    </Tag>
-                  )
+              // An order's days, or the keys a roster's work gives.
+              <div className={templateChips}>
+                {template.sequence ? (
+                  <SequenceTiles
+                    sequence={template.sequence}
+                    weekly={template.weekly}
+                  />
+                ) : (
+                  <KeysPreview patternKeys={template.patternKeys} />
                 )}
-              </span>
+              </div>
             )}
           </OptionCard>
         ))}

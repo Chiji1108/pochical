@@ -22,6 +22,54 @@ import { ShiftMark } from "./shift-mark";
 // 72px of the one row, shrinking only when the screen is too narrow.
 // ポチポチ入力 and the save buttons that stand in its place share its
 // edges.
+// A kind of work's patterns as ポチポチ入力's keys will show them,
+// smaller and not to press: the buttons it gives, in no order of days.
+const keysPreview = {
+  grid: css({
+    display: "grid",
+    gap: "6px",
+    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+    listStyle: "none",
+    margin: 0,
+    padding: 0,
+  }),
+  key: css({
+    alignItems: "center",
+    bg: "background.card",
+    border: "1px solid token(colors.border.default)",
+    borderRadius: "lg",
+    color: "text.primary",
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    justifyContent: "center",
+    minHeight: "52px",
+    minWidth: 0,
+    textStyle: "caption2",
+  }),
+};
+
+export function KeysPreview({
+  patternKeys,
+}: {
+  patternKeys: readonly Shift[];
+}) {
+  const book = usePatterns();
+  return (
+    <ul
+      aria-label={patternKeys.map((key) => book[key]?.name ?? "").join("、")}
+      className={keysPreview.grid}
+    >
+      {patternKeys.map((key) => (
+        <li aria-hidden="true" className={keysPreview.key} key={key}>
+          <ShiftMark shift={key} size={20} />
+          <span className={shiftInput.name}>{book[key]?.name}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export const shiftInput = {
   action: css({
     _disabled: { color: "text.disabled", cursor: "default" },

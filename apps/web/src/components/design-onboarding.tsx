@@ -1,3 +1,4 @@
+import { rotationTemplates } from "@pochical/design/patterns";
 import { useContext, useState } from "react";
 
 import type { RepeatRule } from "../lib/design-days";
@@ -15,12 +16,7 @@ import { DARK_DRAWING, useAppIcons } from "./design-app-icon";
 import { Phone } from "./design-phone";
 import { ColorSchemeContext, useThemeStyle } from "./design-theme";
 import { Button, pushToBottom } from "./design-ui";
-import {
-  onboarding,
-  rotationTemplates,
-  StepHeader,
-  WorkSetupSteps,
-} from "./design-work-setup";
+import { onboarding, StepHeader, WorkSetupSteps } from "./design-work-setup";
 import type { Step, WorkSetup } from "./design-work-setup";
 
 // The order a new person starts on: from the month before the one shown,
