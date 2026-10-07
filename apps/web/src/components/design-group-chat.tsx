@@ -454,6 +454,7 @@ export function ChatPage({
                   onVote={(key) => {
                     vote(message.id, key);
                   }}
+                  next={chat.messages[index + 1]}
                   previous={chat.messages[index - 1]}
                   quoted={byId(message.replyTo)}
                   upload={uploads[message.id]}

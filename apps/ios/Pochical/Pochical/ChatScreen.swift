@@ -209,9 +209,11 @@ struct ChatScreen: View {
               }
             }
         }
-        ForEach(items(state)) { item in
+        let listed = items(state)
+        let timeless = linesWithoutTime(listed)
+        ForEach(listed) { item in
           // Lines close within a run, parted where the writer changes.
-          row(item, names: names)
+          row(item, names: names, showsTime: !timeless.contains(item.id))
             .padding(.top, item.startsRun ? CGFloat(Chat.runGap - Chat.lineGap) : 0)
         }
         // Who is writing now, under the latest line; not someone blocked.
@@ -495,7 +497,24 @@ struct ChatScreen: View {
     return items
   }
 
-  @ViewBuilder private func row(_ item: ChatItem, names: [String: String]) -> some View {
+  /// The lines whose time is left to the next (spec/chat.md, In a
+  /// message): one going on the run of the line after it, sent in the
+  /// same minute, as LINE shows one time for them.
+  private func linesWithoutTime(_ items: [ChatItem]) -> Set<String> {
+    var timeless: Set<String> = []
+    for (item, next) in zip(items, items.dropFirst()) {
+      guard case .line(let line, _) = item, case .line(let after, let startsRun) = next,
+        !startsRun, !line.unsent, !after.unsent,
+        ChatTime.clock(line.sentAtMs) == ChatTime.clock(after.sentAtMs)
+      else { continue }
+      timeless.insert(item.id)
+    }
+    return timeless
+  }
+
+  @ViewBuilder private func row(
+    _ item: ChatItem, names: [String: String], showsTime: Bool = true
+  ) -> some View {
     switch item {
     case .day(let day):
       Text(ChatTime.day(day))
@@ -542,7 +561,7 @@ struct ChatScreen: View {
             profileOf = ProfileOf(id: line.authorID, name: names[line.authorID] ?? "メンバー")
           },
           shifts: line.poll ? nil : line.days.first.map { GroupRoute.shifts(group, day: $0) },
-          time: line.sentAtMs, edited: line.edited, mine: mine,
+          time: line.sentAtMs, showsTime: showsTime, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
           named: otherID == nil, first: startsRun, waiting: false, nameOf: nameOf,
           reactions: line.reactions,
@@ -1300,6 +1319,8 @@ private struct LineView: View {
   /// The shift table on its first day, under its card.
   var shifts: GroupRoute?
   let time: Int64
+  /// Left to the next line of the run sent in the same minute.
+  var showsTime = true
   let edited: Bool
   let mine: Bool
   /// The writer's name at the start of a run of others' lines, for their
@@ -1456,7 +1477,7 @@ private struct LineView: View {
       if waiting {
         Image(systemName: "clock")
           .accessibilityLabel("送信中")
-      } else {
+      } else if showsTime {
         Text(ChatTime.clock(time))
       }
     }

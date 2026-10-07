@@ -246,6 +246,7 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
                 onSelect={() => {
                   setSelected(line.id);
                 }}
+                next={lines[index + 1]}
                 previous={lines[index - 1]}
                 quoted={byId(line.replyTo)}
               />
