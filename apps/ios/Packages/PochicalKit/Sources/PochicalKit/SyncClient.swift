@@ -61,6 +61,13 @@ public actor SyncClient {
   /// Waiting for the outbox to empty before closing, in the background.
   private var finishing: Task<Void, Never>?
   public private(set) var stopped: Stop?
+  /// Everything the DO had for this device at Welcome has been taken: the
+  /// Pong to the Ping sent after it has come (Keepalive).
+  private var caughtUp = false
+  /// The nonce of that Ping.
+  private var catchUpNonce: UInt32 = 0
+  /// Screens waiting for the catch-up, each for a while at most.
+  private var catchUpWaiters: [UUID: CheckedContinuation<Void, Never>] = [:]
   /// The screens told of others' typing, as it comes; never kept.
   private var typingWatchers: [UUID: AsyncStream<Pochical_V1_Typing>.Continuation] = [:]
 
@@ -161,6 +168,7 @@ public actor SyncClient {
       }
       tries += 1
       connected = false
+      caughtUp = false
       do {
         try await connect()
       } catch let stop as Stop {
@@ -234,6 +242,7 @@ public actor SyncClient {
     case .welcome(let welcome):
       tries = 0
       connected = true
+      askCaughtUp()
       // A group's socket sends its chat outbox; the user's corrects the
       // time and sends theirs.
       guard peer == .user else {
@@ -295,7 +304,15 @@ public actor SyncClient {
       for watcher in typingWatchers.values {
         watcher.yield(typing)
       }
-    case .pong, nil:
+    case .pong(let pong):
+      if pong.nonce == catchUpNonce {
+        caughtUp = true
+        for waiter in catchUpWaiters.values {
+          waiter.resume()
+        }
+        catchUpWaiters = [:]
+      }
+    case nil:
       break
     }
   }
@@ -320,6 +337,35 @@ public actor SyncClient {
     } catch {
       // The socket closed; the next one sends them all again.
     }
+  }
+
+  /// Sends the Ping whose Pong says the catch-up has all arrived.
+  private func askCaughtUp() {
+    caughtUp = false
+    catchUpNonce &+= 1
+    var frame = Pochical_V1_ClientFrame()
+    frame.ping.nonce = catchUpNonce
+    guard let socket, let data = try? frame.serializedData() else { return }
+    Task { try? await socket.send(.data(data)) }
+  }
+
+  /// Waits until what the DO had at Welcome has been taken, or `limit`
+  /// has passed, as when there is no connection: a chat opening on its
+  /// unread lines knows them all then.
+  public func catchUp(within limit: Duration) async {
+    guard !caughtUp else { return }
+    let id = UUID()
+    await withCheckedContinuation { continuation in
+      catchUpWaiters[id] = continuation
+      Task { [weak self] in
+        try? await Task.sleep(for: limit)
+        await self?.stopWaitingForCatchUp(id)
+      }
+    }
+  }
+
+  private func stopWaitingForCatchUp(_ id: UUID) {
+    catchUpWaiters.removeValue(forKey: id)?.resume()
   }
 
   /// Others' typing in the group's chats as it comes (spec/sync-protocol.md,

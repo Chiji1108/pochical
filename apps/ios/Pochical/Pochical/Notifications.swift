@@ -12,7 +12,9 @@ nonisolated struct OpenedChat: Hashable, Sendable {
 /// The chat notifications (spec/chat.md, Notifications): the device's push
 /// token kept by the server, a notification shown unless its chat is open,
 /// and a tap opening its chat.
-@MainActor @Observable final class Notifications: NSObject, UNUserNotificationCenterDelegate {
+@MainActor @Observable final class Notifications: NSObject,
+  @MainActor UNUserNotificationCenterDelegate
+{
   static let shared = Notifications()
 
   /// The calls the token goes through, once the app has made them.
@@ -62,19 +64,21 @@ nonisolated struct OpenedChat: Hashable, Sendable {
 
   // MARK: UNUserNotificationCenterDelegate
 
-  nonisolated func userNotificationCenter(
+  // On the main actor: iOS's completion handlers behind these async
+  // methods must be called there, or a tap that launches the app ends it.
+
+  func userNotificationCenter(
     _ center: UNUserNotificationCenter, willPresent notification: UNNotification
   ) async -> UNNotificationPresentationOptions {
     let chat = Self.chat(of: notification)
-    let open = await MainActor.run { openChat }
-    return chat != nil && chat == open ? [] : [.banner, .list, .sound]
+    return chat != nil && chat == openChat ? [] : [.banner, .list, .sound]
   }
 
-  nonisolated func userNotificationCenter(
+  func userNotificationCenter(
     _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse
   ) async {
     guard let chat = Self.chat(of: response.notification) else { return }
-    await MainActor.run { opening = chat }
+    opening = chat
   }
 
   private nonisolated static func chat(of notification: UNNotification) -> OpenedChat? {
